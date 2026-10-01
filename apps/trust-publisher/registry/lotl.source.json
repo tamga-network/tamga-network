@@ -1,0 +1,150 @@
+{
+  "list_format_version": "1.0",
+  "list_type": "lotl",
+  "next_update_days": 90,
+  "operator": {
+    "name": "Tamga Network",
+    "status": "provisional",
+    "on_behalf_of": "Tamga Trust Framework consortium (TDT member states to be designated)",
+    "note": "Founding provisional operator, until multi-party governance takes over (tamga-network ADR-0002).",
+    "trust_framework": "https://tamga.network/trust-framework/v0.1",
+    "transparency_report": "https://tamga.network/transparency",
+    "lote_contact": {
+      "postal": {
+        "StreetAddress": "(to be published)",
+        "Country": "TR"
+      },
+      "electronic": [
+        "mailto:info@tamga.network",
+        "https://tamga.network"
+      ],
+      "info": [
+        "https://tamga.network",
+        "https://arf.tamga.network"
+      ]
+    }
+  },
+  "catalogue": {
+    "note": "Type Metadata resolution path (IETF SD-JWT VC §5.3.2). vct URNs are resolved here.",
+    "url": "https://schemas.tamga.network/v1/catalogue.json"
+  },
+  "anchor_signing_certs": [
+    "tl-signer-1"
+  ],
+  "national_lists": [
+    {
+      "state_code": "TR",
+      "status": "ACTIVE",
+      "membership": "TDT_MEMBER",
+      "list_url": "https://trust.tamga.network/tl-tr.jws",
+      "operator": {
+        "name": "Tamga Network",
+        "status": "provisional",
+        "on_behalf_of": "TR national authority (to be designated)"
+      },
+      "signing_certs": [
+        "tl-signer-1"
+      ],
+      "roles": {
+        "registrar": {
+          "status": "PROVISIONAL",
+          "operated_by": "Tamga Network",
+          "signing_certs": [
+            "registrar-1"
+          ]
+        },
+        "tlso": {
+          "status": "PROVISIONAL",
+          "operated_by": "Tamga Network"
+        },
+        "pid_provider": {
+          "status": "RESERVED"
+        },
+        "access_ca": {
+          "status": "PROVISIONAL",
+          "operated_by": "Tamga Network"
+        },
+        "national_root_ca": {
+          "status": "ACTIVE",
+          "cert": "root-ca",
+          "operated_by": "Tamga Network (provisional)"
+        }
+      },
+      "recognition": {
+        "mode": "unilateral",
+        "recognizes": [
+          "TR"
+        ]
+      }
+    },
+    {
+      "state_code": "AZ",
+      "status": "RESERVED",
+      "membership": "TDT_MEMBER"
+    },
+    {
+      "state_code": "KZ",
+      "status": "RESERVED",
+      "membership": "TDT_MEMBER"
+    },
+    {
+      "state_code": "KG",
+      "status": "RESERVED",
+      "membership": "TDT_MEMBER"
+    },
+    {
+      "state_code": "UZ",
+      "status": "RESERVED",
+      "membership": "TDT_MEMBER"
+    },
+    {
+      "state_code": "HU",
+      "status": "RESERVED",
+      "membership": "TDT_OBSERVER"
+    },
+    {
+      "state_code": "TM",
+      "status": "RESERVED",
+      "membership": "TDT_OBSERVER"
+    }
+  ],
+  "eaa_categories": {
+    "urn:tamga:eaa:pub": "Issued by or on behalf of a member-state public body / authentic source (PuB-EAA equivalent)",
+    "urn:tamga:eaa:qualified": "Issuer accredited in the Tamga Trust Framework (I3; QEAA equivalent)"
+  },
+  "wallet_providers": [
+    {
+      "provider_id": "TAMGA-WP-1",
+      "legal_name": "Tamga Network",
+      "wua_signing_certs": [
+        "wallet-provider"
+      ],
+      "solutions": [
+        {
+          "solution_id": "tamga-wallet-expo",
+          "min_version": "0.1.0",
+          "status": "ACTIVE",
+          "security_level": "W1",
+          "note": "Deviation S-9: Expo Go, software key. W2 in the pilot."
+        }
+      ],
+      "status": "ACTIVE"
+    }
+  ],
+  "pid_providers": [],
+  "lote": {
+    "enabled": false,
+    "note": "ETSI TS 119 602 LoTE projection (lote/*.jws). Enable after the URI names and the operator postal address are approved."
+  },
+  "zk_circuits": [
+    {
+      "circuit_id": "5a8938159603876eb537a117cfe9e2eaec5a01a042b316a8e57e52e4bb3c9291",
+      "system": "longfellow-libzk-v1",
+      "version": 8,
+      "attributes": 1,
+      "sha256": "f44ab1a415f284251ea6ad5451d2588c1e7011eb9ba46091116e8caa4c8e0d83",
+      "status": "ACTIVE",
+      "note": "ADR-0032: Longfellow mdoc ZK circuit v8, one attribute (first predicate age_over_18). Upstream longfellow-zk d5e6be77; deterministic."
+    }
+  ]
+}

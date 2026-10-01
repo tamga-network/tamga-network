@@ -1,0 +1,28 @@
+{
+  "name": "@tamga-network/sd-jwt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "SD-JWT VC Tamga tel profili (SPEC-CRED-0002 C1–C17): disclosure üretimi, _sd, cnf, dc+sd-jwt, KB-JWT ve format katmanı doğrulaması (A1–A6).",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@tamga-network/core": "*",
+    "jose": "^6.0.0",
+    "@peculiar/x509": "^1.12.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamga-network/tamga-network.git",
+    "directory": "packages/sd-jwt"
+  },
+  "homepage": "https://docs.tamga.network",
+  "sideEffects": false
+}

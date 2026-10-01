@@ -1,0 +1,41 @@
+# @tamga-network/verifier/zk — Longfellow ZK mdoc doğrulayıcısının WebAssembly derlemesi (ADR-0032 Aşama 3).
+# Yalnız DOĞRULAMA (ispat üretimi cüzdanda). Çıktı `../src/zk/longfellow-verifier.wasm` depoya girer; kullanıcı Rust gerektirmez.
+# Derleme: `npm run zk:build` (packages/verifier). Upstream sabit commit'le (aşağıda `rev`); C bağımlılığı `zstd` saf Rust
+# ara katmanla yamalanır (`zstd-shim`), upstream koduna dokunulmaz.
+[package]
+name = "tamga-zk-verifier"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+# Yerel (native) doğrulayıcı: Tamga Verify gibi yoğun sunucular için (WASM ~3 s → yerel ~0,2 s). Uzun ömürlü alt süreç olarak
+# çalışır (stdin/stdout çerçeveli; bkz. src/bin/tamga-zk-verify.rs). WASM derlemesi bu ikiliyi içermez (özellik kapalı).
+[[bin]]
+name = "tamga-zk-verify"
+path = "src/bin/tamga-zk-verify.rs"
+required-features = ["native"]
+
+[features]
+native = []
+
+[dependencies]
+mdoc-zk-runtime = { git = "https://github.com/longfellow-zk/longfellow-zk", rev = "d5e6be77336933d50bf7f25a954f8ec273eb51ce" }
+# Doğrulayıcı rastgelelik kullanmaz; WASM'da getrandom "custom" arka ucu hata döndürür (src/lib.rs).
+getrandom = "0.3"
+
+[patch.crates-io]
+zstd = { path = "zstd-shim" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[workspace]

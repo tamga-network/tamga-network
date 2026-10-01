@@ -1,0 +1,193 @@
+openapi: 3.1.0
+info:
+  title: Tamga — Hosted Issuer API
+  version: 1.0.0
+  summary: API an institution calls to have Tamga's hosted issuer offer, sell or revoke credentials.
+  description: |
+    Implemented by **Tamga** (ADR-0016, ADR-0020). The dependency-free Node client is `@tamga-network/issuer/client`.
+
+    **Authentication.** `Authorization: Bearer tmg_<slug>_…` — a scoped API key issued per institution, valid 90 days, rotated
+    by issuing a new key. Keep it on your server only. Each key has a per-minute rate limit (`429` with `Retry-After`).
+
+    **Offers.** Two kinds:
+    - *Identity-bound* (recommended; ADR-0020 path A): send `bind`. No PIN. The person opens the link in the wallet and presents
+      their Tamga identity attestation; the credential is issued only if the presented national identification number and date
+      of birth match. Tamga stores only a keyed hash of these keys. Valid 7 days, single use. **You send the link** to the person
+      through your own channel (email, student portal); Tamga never receives contact details.
+    - *Pre-authorized with PIN* (fallback for people without an identity attestation): the response carries `tx_code`. Never
+      send the PIN through the same channel as the link.
+
+    Credential data is not sent with the offer: Tamga reads it from your source endpoint at issuance time
+    (`institution-source.openapi.yaml`).
+
+    Errors use RFC 9457 problem details (`title`, `status`).
+  license:
+    name: CC BY 4.0
+    url: https://creativecommons.org/licenses/by/4.0/
+servers:
+  - url: https://issuer.tamga.network/{slug}/api/v1
+    variables:
+      slug:
+        default: bilgi
+        description: Your institution's short name in the Tamga trust list.
+security:
+  - apiKey: []
+paths:
+  /offers:
+    post:
+      operationId: createOffer
+      summary: Offer a credential to a person in your records (scope `offers:write`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject_id, vct]
+              properties:
+                subject_id:
+                  type: string
+                  maxLength: 128
+                  description: Your opaque subject reference (`SubjectRecord.id` in your source endpoint).
+                vct:
+                  type: string
+                  example: urn:tamga:edu:DiplomaCredential:1
+                klass:
+                  enum: [on-screen, out-of-band]
+                  description: PIN delivery for pre-authorized offers; ignored when `bind` is present.
+                bind:
+                  type: object
+                  description: Makes the offer identity-bound (ADR-0020). Only a keyed hash is stored.
+                  required: [personal_administrative_number, birth_date]
+                  properties:
+                    personal_administrative_number: { type: string, pattern: "^[0-9]{11}$" }
+                    birth_date: { type: string, format: date }
+      responses:
+        "200":
+          description: Offer created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [offer_id, expires_at, offer_uri, deep_link, offer]
+                properties:
+                  offer_id: { type: string }
+                  expires_at: { type: integer, description: Unix seconds }
+                  offer_uri: { type: string, format: uri }
+                  deep_link:
+                    type: string
+                    description: "`openid-credential-offer://?credential_offer_uri=…` — show as QR or link."
+                  offer:
+                    type: object
+                    description: OpenID4VCI credential offer. Identity-bound offers carry the `authorization_code` grant with `issuer_state`.
+                  tx_code:
+                    type: string
+                    description: Present only for pre-authorized offers. Deliver through a different channel than the link.
+                  identity_bound: { type: boolean }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "404":
+          description: The subject is not in your source.
+        "429": { $ref: "#/components/responses/Problem" }
+        "503":
+          description: Your source endpoint was not reachable.
+  /tickets:
+    post:
+      operationId: sellTicket
+      summary: Record a ticket sale and offer the ticket credential (scope `tickets:write`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, ticket_class]
+              properties:
+                event_id: { type: string }
+                ticket_class: { type: string }
+                seat: { type: string }
+                klass: { enum: [on-screen, out-of-band] }
+      responses:
+        "200":
+          description: Ticket sold; the offer carries no personal data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ticket_id: { type: string }
+                  ticket_no: { type: string }
+                  event:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      start: { type: string }
+                      venue: { type: string }
+                  offer:
+                    type: object
+                    properties:
+                      offer_id: { type: string }
+                      tx_code: { type: string }
+                      expires_at: { type: integer }
+                      offer_uri: { type: string }
+                      deep_link: { type: string }
+        "400": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+    get:
+      operationId: listTickets
+      summary: List sold tickets (scope `tickets:read`)
+      responses:
+        "200":
+          description: Tickets.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tickets: { type: array, items: { type: object } }
+  /revocations:
+    post:
+      operationId: changeStatus
+      summary: Revoke, suspend or reinstate an issued credential (scope `revocations:write`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [credential_id]
+              properties:
+                credential_id: { type: string }
+                action: { enum: [revoke, suspend, reinstate], default: revoke }
+                reason: { type: string, description: Kept in your audit log; never published. }
+      responses:
+        "200":
+          description: Accepted. Takes effect at the next fixed-interval status list publication.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  effective_after_next_publish: { type: boolean }
+                  interval_sec: { type: integer }
+        "400": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    apiKey:
+      type: http
+      scheme: bearer
+      description: "`tmg_<slug>_…` scoped key (ADR-0016)."
+  responses:
+    Problem:
+      description: RFC 9457 problem details.
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            properties:
+              type: { type: string }
+              title: { type: string }
+              status: { type: integer }

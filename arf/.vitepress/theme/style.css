@@ -1,0 +1,105 @@
+/* Tamga ARF — resmî belge görünümü. Marka: Al Kızıl #B01E22, Altın #C8A24C, Obsidyen #17110F, Parşömen #F4EDE2; başlık Sora, gövde IBM Plex Sans, kod IBM Plex Mono. */
+:root {
+  --arf-red: #b01e22;
+  --arf-red-soft: rgba(176, 30, 34, 0.08);
+  --arf-gold: #9c7a2c;
+  --arf-rule: #e4d9c6;
+  --arf-meta-bg: #faf6ef;
+
+  --vp-c-brand-1: #b01e22;
+  --vp-c-brand-2: #951a1d;
+  --vp-c-brand-3: #b01e22;
+  --vp-c-brand-soft: rgba(176, 30, 34, 0.1);
+  --vp-c-bg: #fffdfa;
+  --vp-c-bg-alt: #f7f1e7;
+  --vp-c-bg-soft: #f4ede2;
+  --vp-c-divider: #e6dccb;
+  --vp-c-text-1: #17110f;
+  --vp-c-text-2: #4a403a;
+
+  --vp-font-family-base: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --vp-font-family-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --arf-font-display: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+.dark {
+  --arf-red: #e0676a;
+  --arf-red-soft: rgba(224, 103, 106, 0.12);
+  --arf-gold: #d4b36a;
+  --arf-rule: #3a302b;
+  --arf-meta-bg: #1f1815;
+
+  --vp-c-brand-1: #e0676a;
+  --vp-c-brand-2: #e88285;
+  --vp-c-brand-3: #b01e22;
+  --vp-c-brand-soft: rgba(224, 103, 106, 0.14);
+  --vp-c-bg: #17110f;
+  --vp-c-bg-alt: #120d0b;
+  --vp-c-bg-soft: #211a17;
+  --vp-c-divider: #3a302b;
+  --vp-c-text-1: #f4ede2;
+  --vp-c-text-2: #c9bfb2;
+}
+
+/* Başlıklar: Sora (marka başlık yazısı) */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  font-family: var(--arf-font-display);
+  text-wrap: balance;
+  letter-spacing: 0;
+}
+.vp-doc h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  border-bottom: 2px solid var(--arf-red);
+  padding-bottom: 0.6rem;
+}
+.vp-doc h2 {
+  border-top: 1px solid var(--arf-rule);
+}
+
+/* Belge künyesi */
+.vp-doc .arf-meta {
+  margin: 1rem 0 1.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--arf-meta-bg);
+  border: 1px solid var(--arf-rule);
+  border-left: 3px solid var(--arf-gold);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+  font-variant-numeric: tabular-nums;
+}
+.vp-doc .arf-meta p {
+  margin: 0;
+}
+
+/* Kural kodları ve atıflar */
+.vp-doc a.doc-id {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.85em;
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+.vp-doc table {
+  font-size: 0.9rem;
+}
+.vp-doc td:first-child code,
+.vp-doc td:first-child strong {
+  white-space: nowrap;
+}
+
+/* Ana sayfa belge listesi */
+.vp-doc .arf-release {
+  display: inline-block;
+  margin: 0 0 1rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--arf-red);
+  color: var(--arf-red);
+  background: var(--arf-red-soft);
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

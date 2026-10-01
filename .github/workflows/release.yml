@@ -1,0 +1,50 @@
+# @tamga-network/* npm yayını — YALNIZCA elle başlatılır (Actions → release → Run workflow). Proje yönetiminin onayı olmadan çalıştırılmaz.
+# Önkoşullar (skill npm-yayin): npmjs.com'da `tamga-network` organizasyonu; her paket için Trusted Publisher (bu depo +
+# bu iş akışı) ya da ilk yayın için kısa ömürlü NPM_TOKEN sırrı. Sürümler önceden commit'lenmiş olmalı (npm version -w ...).
+# Provenance: npm, paketin bu depodaki bu commit'ten GitHub Actions ile üretildiğini imzalı olarak kaydeder (ARCH-0005 P2/P3).
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "Yayınlanacak paketler (boşluklu; boş = hepsi). Ör: core trust verifier"
+        required: false
+        default: ""
+      dry_run:
+        description: "Yalnızca prova (npm publish --dry-run)"
+        type: boolean
+        default: true
+permissions:
+  contents: read
+  id-token: write # npm provenance + trusted publishing (OIDC)
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: npm # GitHub ortam koruması: onaylayıcı proje yönetimi
+    env:
+      TAMGA_REQUIRE_FIXTURES: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm ci --no-audit --no-fund
+      - run: npm run pki && npm run schemas:build && npm run trust:build && npm run trust:build && npm run trust:heartbeat
+      - run: npm test && npm run typecheck
+      - run: npm run release:check
+      - name: npm publish (.publish/<paket>)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # trusted publishing kuruluysa boş kalabilir
+        run: |
+          set -euo pipefail
+          SEL="${{ inputs.packages }}"
+          DRY="${{ inputs.dry_run && '--dry-run' || '' }}"
+          for dir in .publish/*/; do
+            p=$(basename "$dir"); [ "$p" = "tarballs" ] && continue
+            if [ -n "$SEL" ] && ! echo " $SEL " | grep -q " $p "; then continue; fi
+            name=$(node -p "require('./$dir/package.json').name"); ver=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name@$ver" version >/dev/null 2>&1; then echo "↷ $name@$ver zaten yayında, atlanıyor"; continue; fi
+            (cd "$dir" && npm publish --provenance --access public $DRY)
+          done

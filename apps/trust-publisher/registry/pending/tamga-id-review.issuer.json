@@ -1,0 +1,45 @@
+{
+  "slug": "tamga-id-review",
+  "legal_name": "Tamga Network — Identity Service, App Store Review (DEMO)",
+  "trade_name": "Tamga Identity Service — Review (DEMO)",
+  "category": "IDENTITY",
+  "class": "EAA",
+  "assurance": "I1",
+  "assurance_basis": "ADR-0033: DEMO signer for app-store review only. Credentials are issued after a single-use review code with simulated identity proofing (no real person, no real document). Registered at I1 so that every production policy (I2+) rejects them; only the review policies of Tamga Verify accept them. Never valid for real use.",
+  "cert": "issuer-id-review",
+  "status_cert": "issuer-id-status",
+  "parent_ca": "root-ca",
+  "issuer_url": "https://id.tamga.network",
+  "status_list_base": "https://id.tamga.network/status/",
+  "valid_years": 1,
+  "vcts": [
+    "urn:tamga:id:IdentityAttestation:1",
+    "urn:tamga:id:PseudonymSeed:1"
+  ],
+  "authentic_source": {
+    "name": "Simulated identity proofing for app-store review (no real person) — ADR-0033",
+    "mode": "IDV_PROVIDER"
+  },
+  "identifiers": [
+    {
+      "scheme": "TR-VKN",
+      "value": "[DOLDURULACAK]"
+    }
+  ],
+  "postal_address": {
+    "street_address": "[DOLDURULACAK]",
+    "locality": "[DOLDURULACAK]",
+    "postal_code": "[DOLDURULACAK]",
+    "country": "TR"
+  },
+  "contact": {
+    "support_uri": "https://tamga.network",
+    "email": "info@tamga.network"
+  },
+  "supervisory_authority": {
+    "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+    "country": "TR",
+    "info_uri": "https://www.kvkk.gov.tr",
+    "form_uri": "https://www.kvkk.gov.tr"
+  }
+}

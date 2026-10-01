@@ -1,0 +1,33 @@
+{
+  "name": "@tamga-network/issuer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Issuer kütüphanesi: credential fabrikası (şema doğrulama + türetilmiş claim + batch), OpenID4VCI sunucu yardımcıları (offer, tx_code, c_nonce, proof), Token Status List yayıncısı (bits=2, rastgele idx, sabit aralık) ve çapa isteği. Servis (tamga-platform) bunu kullanır. Alt yol `./client`: barındırılan ihraç servisini kullanan kurumun bağımlılıksız istemcisi (teklif, bilet satışı, iptal/askı).",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@tamga-network/core": "*",
+    "@tamga-network/sd-jwt": "*",
+    "@tamga-network/schemas": "*",
+    "@tamga-network/trust": "*",
+    "jose": "^6.0.0",
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamga-network/tamga-network.git",
+    "directory": "packages/issuer"
+  },
+  "homepage": "https://docs.tamga.network",
+  "sideEffects": false
+}

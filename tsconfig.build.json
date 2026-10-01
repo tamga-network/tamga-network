@@ -1,0 +1,30 @@
+{
+  "//": "Tüm paketleri bağımlılık sırasıyla derler: npx tsc -b tsconfig.build.json",
+  "files": [],
+  "references": [
+    {
+      "path": "packages/core/tsconfig.build.json"
+    },
+    {
+      "path": "packages/trust/tsconfig.build.json"
+    },
+    {
+      "path": "packages/schemas/tsconfig.build.json"
+    },
+    {
+      "path": "packages/sd-jwt/tsconfig.build.json"
+    },
+    {
+      "path": "packages/mdoc/tsconfig.build.json"
+    },
+    {
+      "path": "packages/issuer/tsconfig.build.json"
+    },
+    {
+      "path": "packages/verifier/tsconfig.build.json"
+    },
+    {
+      "path": "packages/wallet-core/tsconfig.build.json"
+    }
+  ]
+}

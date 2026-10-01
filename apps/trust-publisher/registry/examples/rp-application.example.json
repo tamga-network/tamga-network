@@ -1,0 +1,50 @@
+{
+  "dns_name": "shop.example.com",
+  "legal_name": "Example Shop Ltd.",
+  "trade_name": "Example Shop",
+  "access_cert": "rp-example-shop",
+  "info_uri": "https://shop.example.com",
+  "service_description": {
+    "en-US": "Online shop offering student discounts.",
+    "tr-TR": "Öğrenci indirimi sunan çevrim içi mağaza."
+  },
+  "is_public_sector_body": false,
+  "entitlements": [
+    "service_provider"
+  ],
+  "scopes": [
+    {
+      "scope_id": "student-discount-1",
+      "purpose": "Student discount",
+      "purpose_localized": {
+        "tr-TR": "Öğrenci indirimi"
+      },
+      "vct": "urn:tamga:edu:StudentCredential:1",
+      "claims": [
+        "is_enrolled"
+      ],
+      "privacy_policy_uri": "https://shop.example.com/privacy"
+    }
+  ],
+  "identifiers": [
+    {
+      "scheme": "TR-VKN",
+      "value": "TR0000000000"
+    }
+  ],
+  "postal_address": {
+    "street_address": "Example Street 1",
+    "locality": "Istanbul",
+    "postal_code": "34000",
+    "country": "TR"
+  },
+  "contact": {
+    "support_uri": "https://shop.example.com/help"
+  },
+  "supervisory_authority": {
+    "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+    "country": "TR",
+    "info_uri": "https://www.kvkk.gov.tr",
+    "form_uri": "https://www.kvkk.gov.tr"
+  }
+}

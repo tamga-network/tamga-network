@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["TamgaBleModule"]
+  },
+  "android": {
+    "modules": ["network.tamga.ble.TamgaBleModule"]
+  }
+}

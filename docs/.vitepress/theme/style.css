@@ -1,0 +1,189 @@
+/* Tamga geliştirici belgeleri — marka renkleri ve yazıları (tamga.network/brand): Al Kızıl #B01E22, Altın #C8A24C,
+   Obsidyen #17110F, Parşömen #F4EDE2; başlık Sora, gövde IBM Plex Sans, kod IBM Plex Mono. */
+:root {
+  --vp-font-family-base: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --vp-font-family-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --vp-c-bg: #fffdfa;
+  --vp-c-bg-alt: #f7f1e7;
+  --vp-c-bg-soft: #f4ede2;
+  --vp-c-divider: #e6dccb;
+  --vp-c-text-1: #17110f;
+  --vp-c-text-2: #4a403a;
+  --vp-c-brand-1: #b01e22;
+  --vp-c-brand-2: #951a1d;
+  --vp-c-brand-3: #b01e22;
+  --vp-c-brand-soft: rgba(176, 30, 34, 0.1);
+  --doc-ok: #1f7a4d;
+  --doc-ok-bg: rgba(31, 122, 77, 0.1);
+  --doc-draft: #8a6a12;
+  --doc-draft-bg: rgba(200, 162, 76, 0.16);
+  --doc-old: #6b6b6b;
+  --doc-old-bg: rgba(107, 107, 107, 0.12);
+}
+.dark {
+  --vp-c-bg: #17110f;
+  --vp-c-bg-alt: #120d0b;
+  --vp-c-bg-soft: #211a17;
+  --vp-c-divider: #3a302b;
+  --vp-c-text-1: #f4ede2;
+  --vp-c-text-2: #c9bfb2;
+  --vp-c-brand-1: #e0676a;
+  --vp-c-brand-2: #e88285;
+  --vp-c-brand-3: #b01e22;
+  --vp-c-brand-soft: rgba(224, 103, 106, 0.14);
+  --doc-ok: #6fd3a0;
+  --doc-ok-bg: rgba(111, 211, 160, 0.12);
+  --doc-draft: #e3c26b;
+  --doc-draft-bg: rgba(227, 194, 107, 0.14);
+  --doc-old: #a8a8a8;
+  --doc-old-bg: rgba(168, 168, 168, 0.12);
+}
+
+.doc-status {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.doc-status.ok {
+  color: var(--doc-ok);
+  background: var(--doc-ok-bg);
+}
+.doc-status.draft {
+  color: var(--doc-draft);
+  background: var(--doc-draft-bg);
+}
+.doc-status.old {
+  color: var(--doc-old);
+  background: var(--doc-old-bg);
+}
+.vp-doc a.doc-id {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.88em;
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+
+/* Başlıklar: Sora (marka başlık yazısı) */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.VPNavBarTitle .title {
+  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  text-wrap: balance;
+}
+
+/* ---- Yerleşim (Stripe benzeri): geniş içerik, sakin kenar çubuğu, kart ızgarası ---- */
+:root {
+  --vp-layout-max-width: 1520px;
+  --vp-sidebar-width: 280px;
+  --tg-card-border: var(--vp-c-divider);
+}
+@media (min-width: 1440px) {
+  .VPDoc.has-aside .content-container {
+    max-width: 820px;
+  }
+}
+.vp-doc {
+  font-size: 15.5px;
+  line-height: 1.7;
+}
+.vp-doc h1 {
+  font-size: 2rem;
+  letter-spacing: -0.01em;
+}
+.vp-doc h2 {
+  border-top: none;
+  margin-top: 2.4rem;
+  padding-top: 0;
+  font-size: 1.35rem;
+}
+.VPSidebarItem.level-0 > .item > .text {
+  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vp-c-text-2);
+}
+.vp-doc div[class*="language-"] {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+}
+.vp-doc table {
+  font-size: 14px;
+}
+
+/* Kart ızgarası (ana sayfa, Kavramlar) */
+.tg-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+  margin: 1.25rem 0 2rem;
+}
+.tg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--tg-card-border);
+  border-radius: 12px;
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1) !important;
+  text-decoration: none !important;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+.tg-card:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-1px);
+}
+.tg-card strong {
+  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+}
+.tg-card span {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--vp-c-text-2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tg-card {
+    transition: none;
+  }
+  .tg-card:hover {
+    transform: none;
+  }
+}
+
+/* Ana sayfa: kahraman ve içerik */
+.VPHome .VPHero .name,
+.VPHome .VPHero .text {
+  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+.VPHome .VPHero .name {
+  color: var(--vp-c-brand-1);
+}
+.VPHome .VPFeature {
+  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg);
+}
+.VPHome .VPFeature:hover {
+  border-color: var(--vp-c-brand-1);
+}
+.tg-home {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 0 24px 64px;
+}
+.tg-home h2 {
+  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+}
+@media (max-width: 640px) {
+  .tg-home {
+    padding: 0 16px 48px;
+  }
+}

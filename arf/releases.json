@@ -1,0 +1,188 @@
+{
+  "latest": "0.7",
+  "releases": [
+    {
+      "id": "0.7",
+      "date": "2026-10-01",
+      "languages": [
+        "en",
+        "tr"
+      ],
+      "docs": {
+        "FW-ARF-0001": "0.3.1",
+        "FW-TF-0001": "0.3.1",
+        "FW-RB-0001": "0.4.0",
+        "FW-RB-0002": "0.2.0",
+        "FW-RB-0003": "0.3.1",
+        "FW-RB-0004": "0.2.0",
+        "FW-DEF-0001": "0.1.0",
+        "FW-REF-0001": "0.1.0"
+      },
+      "notes": {
+        "en": [
+          "Restructured on the model of the EU ARF: the main document now runs use cases → roles → architecture → data model → trust model → security → governance, written for people to read; the federation model and positioning (ADR-0035) are described in Chapters 1 and 6.",
+          "New Annex D — Definitions and Annex E — References. The source columns of the rule tables and the in-text document identifiers moved to Annex E; rule texts are unchanged.",
+          "External lists (federation) in Annex A §6.1 and the main document §6.2; EU PID and mDL recognised as external types with nested selective disclosure in Annex C (identity) §10."
+        ],
+        "tr": [
+          "AB ARF düzeninde yeniden yapılandırıldı: ana belge kullanım durumları → roller → mimari → veri modeli → güven modeli → güvenlik → yönetişim sırasıyla, insanın okuyacağı biçimde yazıldı; federasyon modeli ve konumlanma (ADR-0035) Bölüm 1 ve 6'da.",
+          "Yeni Ek D — Tanımlar ve Ek E — Kaynaklar. Kural tablolarındaki kaynak sütunları ve metin içi belge kimlikleri Ek E'ye taşındı; kural metinleri değişmedi.",
+          "Dış listeler (federasyon) Ek A §6.1'de ve ana belge §6.2'de; AB PID ve mDL dış tür olarak, iç içe seçici açıklamayla Ek C (kimlik) §10'da."
+        ]
+      }
+    },
+    {
+      "id": "0.6",
+      "date": "2026-10-01",
+      "languages": [
+        "en",
+        "tr"
+      ],
+      "docs": {
+        "FW-ARF-0001": "0.2.2",
+        "FW-TF-0001": "0.2.2",
+        "FW-RB-0001": "0.3.1",
+        "FW-RB-0002": "0.1.1",
+        "FW-RB-0003": "0.2.1",
+        "FW-RB-0004": "0.1.0"
+      },
+      "notes": {
+        "en": [
+          "App-store review access (ADR-0033): a separate DEMO signer `tamga-id-review` (I1) issues review credentials (`verification_method: review-demo`, at most 7 days) after a single-use review code; no production policy accepts them (Annex C — Identity §1, §2)."
+        ],
+        "tr": [
+          "Mağaza incelemesi erişimi (ADR-0033): ayrı DEMO imzacısı `tamga-id-review` (I1), tek kullanımlık inceleme kodundan sonra deneme belgesi verir (`verification_method: review-demo`, en çok 7 gün); hiçbir gerçek politika kabul etmez (Ek C — Kimlik §1, §2)."
+        ]
+      }
+    },
+    {
+      "id": "0.5",
+      "date": "2026-10-01",
+      "languages": [
+        "en",
+        "tr"
+      ],
+      "docs": {
+        "FW-ARF-0001": "0.2.2",
+        "FW-TF-0001": "0.2.2",
+        "FW-RB-0001": "0.3.1",
+        "FW-RB-0002": "0.1.1",
+        "FW-RB-0003": "0.2.0",
+        "FW-RB-0004": "0.1.0"
+      },
+      "notes": {
+        "en": [
+          "HAIP 1.0 alignment (ADR-0034): verifiers identify themselves with the `x509_hash` client identifier computed from their access certificate; the registration keeps a permanent `dns_name` so pseudonyms, credential copies and access passes survive certificate renewal (Architecture §3.2, Annex A §3, Annex B RB-RP-01)."
+        ],
+        "tr": [
+          "HAIP 1.0 uyumu (ADR-0034): doğrulayıcılar kendilerini erişim sertifikasından hesaplanan `x509_hash` istemci kimliğiyle tanıtır; kayıt kalıcı `dns_name` taşır — takma adlar, belge kopyaları ve geçiş kartları sertifika yenilemesinden etkilenmez (ARF §3.2, Ek A §3, Ek B RB-RP-01)."
+        ]
+      }
+    },
+    {
+      "id": "0.4",
+      "date": "2026-10-01",
+      "languages": [
+        "en",
+        "tr"
+      ],
+      "docs": {
+        "FW-ARF-0001": "0.2.1",
+        "FW-TF-0001": "0.2.1",
+        "FW-RB-0001": "0.3.0",
+        "FW-RB-0002": "0.1.1",
+        "FW-RB-0003": "0.2.0",
+        "FW-RB-0004": "0.1.0"
+      },
+      "notes": {
+        "en": [
+          "Per-site pseudonyms (ADR-0031): \"Sign in with Tamga\" gives each website its own stable pseudonym instead of a document value; sites cannot match a person across sites (Annex B RB-AP-ID-07, RB-RP-13; Annex C identity §7)."
+        ],
+        "tr": [
+          "Site başına takma ad (ADR-0031): \"Tamga ile giriş yap\" her siteye belge değeri yerine o siteye özel, kararlı bir takma ad verir; siteler kişiyi eşleştiremez (Ek B RB-AP-ID-07, RB-RP-13; Ek C kimlik §7)."
+        ]
+      }
+    },
+    {
+      "id": "0.3",
+      "date": "2026-09-27",
+      "languages": [
+        "en",
+        "tr"
+      ],
+      "docs": {
+        "FW-ARF-0001": "0.2.1",
+        "FW-TF-0001": "0.2.1",
+        "FW-RB-0001": "0.2.0",
+        "FW-RB-0002": "0.1.1",
+        "FW-RB-0003": "0.1.2",
+        "FW-RB-0004": "0.1.0"
+      },
+      "notes": {
+        "en": [
+          "Two new attestation rulebooks in Annex C, as drafts awaiting approval: Tamga Identity Attestation and Event Ticket.",
+          "Annex A §3.5: the identity document's display name is \"Tamga Identity Attestation\".",
+          "Annex C (identity): the document-number digest is keyed (HMAC-SHA256, key held only by the identity service) and cannot be reversed.",
+          "§4: the institution side of hosted services is the Institution Console (console.tamga.network, ADR-0019); the student portal was removed."
+        ],
+        "tr": [
+          "Ek C'ye iki yeni attestation rulebook'u, onay bekleyen taslak olarak: Tamga Kimlik Belgesi ve Etkinlik Bileti.",
+          "Ek A §3.5: kimlik belgesinin görünen adı \"Tamga Kimlik Belgesi\".",
+          "Ek C (kimlik belgesi): belge numarası özeti anahtarlı (HMAC-SHA256, anahtar yalnızca kimlik servisinde); özetten numara geri bulunamaz.",
+          "§4: barındırılan hizmetlerin kurum tarafı Kurum Konsolu (console.tamga.network, ADR-0019); öğrenci portalı kaldırıldı."
+        ]
+      }
+    },
+    {
+      "id": "0.2",
+      "date": "2026-09-27",
+      "languages": [
+        "en",
+        "tr"
+      ],
+      "docs": {
+        "FW-ARF-0001": "0.2.0",
+        "FW-TF-0001": "0.2.0",
+        "FW-RB-0001": "0.2.0",
+        "FW-RB-0002": "0.1.1"
+      },
+      "notes": {
+        "en": [
+          "Own site, English and Turkish, three annexes (ADR-0018).",
+          "Architecture §4 brought up to date: identity service, hosted issuing API, hosted verifier as an intermediary.",
+          "New participant rules for the hosted services: RB-OP-17/18, RB-AP-25, RB-WP-13, RB-RP-12; RB-OP-09 corrected.",
+          "Education policies aligned with the reference verifier; fee wording; private archive paths removed."
+        ],
+        "tr": [
+          "Kendi sitesi, İngilizce ve Türkçe, üç ek (ADR-0018).",
+          "Mimari §4 güncellendi: kimlik servisi, barındırılan ihraç API'si, aracı olarak barındırılan doğrulayıcı.",
+          "Barındırılan hizmetler için yeni katılımcı kuralları: RB-OP-17/18, RB-AP-25, RB-WP-13, RB-RP-12; RB-OP-09 düzeltildi.",
+          "Eğitim politikaları referans doğrulayıcıyla eşlendi; ücret dili; özel arşiv yolları çıkarıldı."
+        ]
+      }
+    },
+    {
+      "id": "0.1",
+      "date": "2026-09-24",
+      "languages": [
+        "tr"
+      ],
+      "docs": {
+        "FW-ARF-0001": "0.1.3",
+        "FW-TF-0001": "0.1.2",
+        "FW-RB-0001": "0.1.1",
+        "FW-RB-0002": "0.1.0"
+      },
+      "notes": {
+        "en": [
+          "First version of the framework set, in Turkish only: ARF, Trust Framework, Rulebook, education attestation rulebook.",
+          "Accepted on 24 September 2026 (D-GOV-6); patch updates until 27 September (ADR-0013 dual format, ADR-0015/0016/0017)."
+        ],
+        "tr": [
+          "Çerçeve belge setinin ilk sürümü, yalnızca Türkçe: ARF, Trust Framework, Rulebook, eğitim attestation rulebook'u.",
+          "24 Eylül 2026'da kabul edildi (D-GOV-6); 27 Eylül'e kadar yama güncellemeleri (ADR-0013 çift format, ADR-0015/0016/0017)."
+        ]
+      }
+    }
+  ]
+}

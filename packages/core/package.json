@@ -1,0 +1,27 @@
+{
+  "name": "@tamga-network/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Tamga ortak çekirdek: hash (SHA-256/keccak), kimlik türetimleri (issuer_id/ca_id/schema_id), base64url, sertifika yardımcıları. Sıfır çalışma zamanı bağımlılığı hedefi (ARCH-0005 S4).",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./sd-structure": "./src/sd-structure.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamga-network/tamga-network.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://docs.tamga.network",
+  "sideEffects": false
+}

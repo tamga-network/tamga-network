@@ -1,0 +1,134 @@
+openapi: 3.1.0
+info:
+  title: Tamga — Institution Source Endpoint
+  version: 1.0.0
+  summary: The lookup endpoint an institution exposes so that Tamga's hosted issuer can read credential data at issuance time.
+  description: |
+    Implemented by the **institution** (ADR-0020, authentic source at the institution). Tamga's hosted issuer calls it; it
+    never stores the response (AS1). Two operations share one URL and are selected by the `op` claim of the signed request:
+
+    - `lookup` — the person started the request from the wallet and presented a Tamga identity attestation. Tamga sends the
+      matching keys (national identification number + date of birth). Return the matching subject or 404.
+    - `fetch` — Tamga already knows the institution's opaque subject reference (identity-bound offer, credential issuance,
+      credential refresh). Return the current record or 404 (the person is no longer in your records).
+
+    **Authentication.** The body carries a short-lived JWT (`typ: tamga-source-request+jwt`, ES256, lifetime 60 s) signed with
+    the access key Tamga uses for your institution. Verify it with the certificate in the `x5c` header and check that this
+    certificate is listed for Tamga's hosted issuer in the Tamga signed trust list; check `aud` equals your endpoint URL,
+    `exp`, and reject a repeated `jti`. Serve only over TLS.
+
+    **Privacy.** Return only the fields needed for the requested `vct`. Do not log the matching keys.
+    Errors other than 404 make Tamga answer the wallet with `temporarily_unavailable`; no credential is issued.
+  license:
+    name: CC BY 4.0
+    url: https://creativecommons.org/licenses/by/4.0/
+servers:
+  - url: https://sis.example.edu/tamga
+    description: Example — the institution chooses the URL; it is configured on Tamga's side per institution.
+paths:
+  /:
+    post:
+      operationId: sourceRequest
+      summary: Lookup or fetch a subject record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request]
+              properties:
+                request:
+                  type: string
+                  description: Compact JWS; payload is `SourceRequestClaims`.
+            example:
+              request: eyJhbGciOiJFUzI1NiIsInR5cCI6InRhbWdhLXNvdXJjZS1yZXF1ZXN0K2p3dCIsIng1YyI6WyIuLi4iXX0.eyJvcCI6ImZldGNoIn0.sig
+      responses:
+        "200":
+          description: Record found.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subject]
+                properties:
+                  subject:
+                    $ref: "#/components/schemas/SubjectRecord"
+        "404":
+          description: No matching record. Body may be `{"subject": null}`.
+        "401":
+          description: Request signature, audience, lifetime or replay check failed.
+        "503":
+          description: Temporarily unavailable. Tamga issues nothing and the person retries later.
+components:
+  schemas:
+    SourceRequestClaims:
+      type: object
+      required: [op, iss, aud, iat, exp, jti, vct]
+      properties:
+        op:
+          enum: [lookup, fetch]
+        iss:
+          type: string
+          description: Tamga's client identifier for the hosted issuer — `x509_hash:` + base64url(SHA-256(its access certificate)) (HAIP 1.0).
+        aud:
+          type: string
+          description: Your endpoint URL.
+        iat: { type: integer }
+        exp: { type: integer, description: "iat + 60" }
+        jti: { type: string }
+        vct:
+          type: string
+          description: Credential type being issued, e.g. `urn:tamga:edu:DiplomaCredential:1`.
+        match:
+          description: Present when `op` = `lookup`.
+          type: object
+          required: [personal_administrative_number, birth_date]
+          properties:
+            personal_administrative_number: { type: string, pattern: "^[0-9]{11}$" }
+            birth_date: { type: string, format: date }
+        subject_ref:
+          description: Present when `op` = `fetch`. Your opaque identifier returned earlier as `SubjectRecord.id`.
+          type: string
+    SubjectRecord:
+      description: |
+        Education profile (student and diploma credentials). `id` is your opaque, stable subject reference; Tamga keeps only this
+        value (for revocation and refresh). Other profiles are added per credential type.
+      type: object
+      required: [id, family_name, given_name, birth_date, student_no, programme_title_tr, study_level, enrollment_year, student_status]
+      properties:
+        id: { type: string, maxLength: 128 }
+        student_no: { type: string }
+        family_name: { type: string }
+        given_name: { type: string }
+        birth_date: { type: string, format: date }
+        personal_administrative_number:
+          type: string
+          description: Optional; used only for matching, never written into education credentials.
+        programme_title_tr: { type: string }
+        programme_title_en: { type: string }
+        faculty_tr: { type: string }
+        isced_f_code: { type: [string, "null"] }
+        study_level: { type: integer, description: "EQF/ISCED level" }
+        enrollment_year: { type: integer }
+        student_status: { enum: [ACTIVE, ON_LEAVE] }
+        expected_graduation_year: { type: integer }
+        programme_credit_points:
+          type: number
+          description: Programme workload in ECTS (EU proof of enrolment, EUHEPOE). Optional.
+        enrollment_date:
+          type: string
+          format: date
+          description: Date of enrolment (EU proof of enrolment, EUHEPOE). Optional; enrollment_year stays required.
+        graduate:
+          description: Present only for graduates; required for `DiplomaCredential`.
+          type: object
+          required: [qualification_tr, eqf_level, awarding_date]
+          properties:
+            qualification_tr: { type: string }
+            qualification_en: { type: string }
+            eqf_level: { type: integer }
+            awarding_date: { type: string, format: date }
+            grade: { type: string }
+            thesis_title_tr: { type: string }
+            mode_of_study: { enum: [FULL_TIME, PART_TIME, DISTANCE, BLENDED] }

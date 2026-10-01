@@ -1,0 +1,41 @@
+{
+  "slug": "example-uni",
+  "legal_name": "Example University",
+  "trade_name": "Example University",
+  "category": "EDUCATION",
+  "class": "EAA",
+  "assurance": "I2",
+  "assurance_basis": "Recognised university; identity proofing by presentation of a Tamga Identity Attestation.",
+  "cert": "issuer-example-uni",
+  "status_cert": "issuer-example-uni-status",
+  "vcts": [
+    "urn:tamga:edu:StudentCredential:1",
+    "urn:tamga:edu:DiplomaCredential:1"
+  ],
+  "authentic_source": {
+    "name": "Example University Student Information System",
+    "mode": "REMOTE"
+  },
+  "identifiers": [
+    {
+      "scheme": "TR-VKN",
+      "value": "TR0000000000"
+    }
+  ],
+  "postal_address": {
+    "street_address": "Example Street 1",
+    "locality": "Istanbul",
+    "postal_code": "34000",
+    "country": "TR"
+  },
+  "contact": {
+    "support_uri": "https://example.edu.tr/support",
+    "email": "privacy@example.edu.tr"
+  },
+  "supervisory_authority": {
+    "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+    "country": "TR",
+    "info_uri": "https://www.kvkk.gov.tr",
+    "form_uri": "https://www.kvkk.gov.tr"
+  }
+}

@@ -1,0 +1,9 @@
+# Satır sonu depoda ve çalışma kopyasında LF (sistemde core.autocrlf=true; prettier endOfLine=lf, .sh betikleri)
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.ttf binary
+*.exe binary

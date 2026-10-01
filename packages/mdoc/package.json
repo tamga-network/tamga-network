@@ -1,0 +1,28 @@
+{
+  "name": "@tamga-network/mdoc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "ISO/IEC 18013-5 mdoc (mobile document) minimal profili: deterministik CBOR, COSE_Sign1, MobileSecurityObject ihracı ve doğrulaması. Saf @noble (RN uyumlu); taşıma katmanı (BLE) kapsam dışı — sunum OpenID4VP/DC API üzerinden (18013-7).",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@noble/ciphers": "^2.0.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamga-network/tamga-network.git",
+    "directory": "packages/mdoc"
+  },
+  "homepage": "https://docs.tamga.network",
+  "sideEffects": false
+}

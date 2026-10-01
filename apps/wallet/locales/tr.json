@@ -1,0 +1,7 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Kamera, belge davetlerini ve doğrulama isteklerini (QR kod) okumak için kullanılır.",
+    "NSFaceIDUsageDescription": "Face ID, belgelerini açmak ve her paylaşımı onaylamak için kullanılır.",
+    "NSBluetoothAlwaysUsageDescription": "Bluetooth, belgeni yüz yüze gösterirken yakındaki okuyucuya bağlanmak için kullanılır."
+  }
+}

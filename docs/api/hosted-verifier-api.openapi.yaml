@@ -1,0 +1,248 @@
+openapi: 3.1.0
+info:
+  title: Tamga — Hosted Verifier API
+  version: 1.0.0
+  summary: API a website or service calls to ask a person for credentials and receive the verified result.
+  description: |
+    Implemented by **Tamga** (ADR-0017). The browser part is `@tamga-network/verifier/web`; server-side verification without
+    the hosted verifier is `@tamga-network/verifier`.
+
+    **Flow.** Your server opens a presentation for a policy (which credential and which fields) → the page shows the QR code or
+    the "Open in Tamga Wallet" link and polls the status with the `status_token` → when the status is `DONE`, your server reads
+    the result and, once, the approved values.
+
+    **Authentication.** `Authorization: Bearer <RP assertion>` — a short-lived JWS (`typ: tamga-rp+jwt`, ES256) signed with the
+    private key of your access certificate registered in the Tamga trust list. Header `x5c` carries the certificate; payload
+    `{ iss: <your client_id>, aud: "https://verify.tamga.network", iat, exp ≤ iat + 60, jti }`. No shared secret; `jti` is
+    single-use. Helper: `createRpAssertion()` in `@tamga-network/verifier`.
+
+    **Privacy.** The result and values go only to the relying party that opened the presentation. Values can be read once and
+    are deleted at the latest 5 minutes after the result. The browser sees only the status, never values.
+
+    **Outcomes.** `ACCEPTED`, `REJECTED` (with the failing step) or `INDETERMINATE` ("could not check right now" — never treat
+    it as invalid).
+  license:
+    name: CC BY 4.0
+    url: https://creativecommons.org/licenses/by/4.0/
+servers:
+  - url: https://verify.tamga.network
+security:
+  - rpAssertion: []
+tags:
+  - name: Presentations
+    description: Ask for credentials and read the result.
+  - name: Policies
+    description: What can be asked.
+paths:
+  /presentations:
+    post:
+      tags: [Presentations]
+      operationId: createPresentation
+      summary: Open a presentation request
+      description: |
+        Creates a signed OpenID4VP request for the policy. The policy must be within your registered scope (otherwise
+        `400 policy_exceeds_scope`). Send `Accept: application/json` to get JSON; without it the verifier redirects to its own
+        waiting page.
+      parameters:
+        - in: header
+          name: Accept
+          required: true
+          schema: { type: string, const: application/json }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [policy_id]
+              properties:
+                policy_id:
+                  type: string
+                  description: A policy from `GET /policies`, e.g. `site-signup`, `age-over-18-mdoc`.
+                dc_api_origin:
+                  type: string
+                  format: uri
+                  description: |
+                    Optional. The page origin (`https://…`, no path) when the presentation is answered through the browser's
+                    Digital Credentials API. The request is then bound to this origin (`expected_origins`).
+            example: { policy_id: site-signup }
+      responses:
+        "200":
+          description: Presentation opened.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StartedPresentation" }
+        "400":
+          description: Unknown policy, policy outside your registered scope, or invalid `dc_api_origin`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: The RP assertion is missing, expired, reused or not signed by a registered, active relying party.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /presentations/{id}:
+    get:
+      tags: [Presentations]
+      operationId: getPresentation
+      summary: Get the status or the verification result
+      description: |
+        With your RP assertion: the full verification result (`PENDING` until the wallet answers). With only the status token
+        (`?st=` or `X-Tamga-Status-Token`, no `Authorization`): the status for the browser, without values or names.
+      security:
+        - rpAssertion: []
+        - statusToken: []
+      parameters:
+        - $ref: "#/components/parameters/PresentationId"
+        - in: query
+          name: st
+          required: false
+          schema: { type: string }
+          description: Status token from `createPresentation`, for the browser.
+      responses:
+        "200":
+          description: Status or result.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Pending"
+                  - $ref: "#/components/schemas/BrowserStatus"
+                  - $ref: "#/components/schemas/VerificationResult"
+        "404":
+          description: Unknown presentation, or not yours (existence is not revealed).
+  /presentations/{id}/claims:
+    get:
+      tags: [Presentations]
+      operationId: getClaims
+      summary: Read the approved values (once)
+      description: Returns the values the person approved. Available once, at most 5 minutes after the result.
+      parameters:
+        - $ref: "#/components/parameters/PresentationId"
+      responses:
+        "200":
+          description: Values, or `null` while the presentation is pending.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  claims:
+                    type: [object, "null"]
+                    additionalProperties: true
+              example: { claims: { age_over_18: true } }
+        "404":
+          description: Unknown presentation, or not yours.
+        "410":
+          description: Values already read or expired (`claims_gone`).
+  /policies:
+    get:
+      tags: [Policies]
+      operationId: listPolicies
+      summary: List the policies
+      security: []
+      responses:
+        "200":
+          description: Policy summaries (no personal data).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    policy_id: { type: string }
+                    purpose: { type: string, description: Purpose in English. }
+                    purpose_localized: { type: object, additionalProperties: { type: string } }
+                    vct_values: { type: array, items: { type: string } }
+                    claims: { type: array, items: { type: string }, description: Requested fields. }
+                    proximity: { type: boolean, description: The policy also issues a gate pass. }
+                    format: { type: string, enum: [dc+sd-jwt, mso_mdoc] }
+components:
+  securitySchemes:
+    rpAssertion:
+      type: http
+      scheme: bearer
+      bearerFormat: tamga-rp+jwt
+      description: Short-lived JWS signed with your registered access certificate's key (see the introduction).
+    statusToken:
+      type: apiKey
+      in: header
+      name: X-Tamga-Status-Token
+      description: Status-only token for the browser (also accepted as `?st=`).
+  parameters:
+    PresentationId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, pattern: "^prs_" }
+  schemas:
+    StartedPresentation:
+      type: object
+      required: [presentation_id, request_uri, qr_payload, expires_at, status_token]
+      properties:
+        presentation_id: { type: string, example: prs_Q2x0dVJmNkp3 }
+        request_uri: { type: string, format: uri }
+        qr_payload:
+          type: string
+          description: "`openid4vp://…` link — show as a QR code on desktop, as a button on phones."
+        expires_at: { type: string, format: date-time }
+        status_token: { type: string, description: Give only this to the browser. }
+        dc_api_request:
+          type: object
+          description: Present when `dc_api_origin` was sent — input for `navigator.credentials.get({ digital })`.
+          properties:
+            protocol: { type: string, const: openid4vp-v1-signed }
+            data:
+              type: object
+              properties:
+                request: { type: string, description: Signed request object (JWS). }
+    Pending:
+      type: object
+      properties:
+        state: { type: string, const: PENDING }
+    BrowserStatus:
+      type: object
+      properties:
+        state: { type: string, enum: [PENDING, DONE] }
+        outcome: { type: string, enum: [ACCEPTED, REJECTED, INDETERMINATE] }
+        failed_reason: { type: [string, "null"] }
+        indeterminate_reason: { type: [string, "null"] }
+    VerificationResult:
+      type: object
+      properties:
+        verification_id: { type: string }
+        outcome: { type: string, enum: [ACCEPTED, REJECTED, INDETERMINATE] }
+        failed_step:
+          type: [string, "null"]
+          description: The first failing step of the pipeline (T0, A1…E3) when REJECTED.
+        failed_reason: { type: [string, "null"] }
+        indeterminate_reason: { type: [string, "null"] }
+        checks_performed: { type: array, items: { type: string } }
+        checks_skipped: { type: array, items: { type: string } }
+        issuer:
+          type: [object, "null"]
+          properties:
+            issuer_id: { type: string }
+            state_code: { type: string }
+            legal_name: { type: string }
+        schema:
+          type: [object, "null"]
+          properties:
+            schema_id: { type: string }
+            vct: { type: string }
+        disclosed_claims:
+          type: array
+          items: { type: string }
+          description: Names of the disclosed fields (values via `/claims`).
+        status:
+          type: object
+          properties:
+            value: { type: string, enum: [VALID, INVALID, SUSPENDED, NOT_APPLICABLE, UNKNOWN] }
+        evaluated_at: { type: string, format: date-time }
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        error_description: { type: string }

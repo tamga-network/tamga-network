@@ -1,0 +1,17 @@
+<!-- Example 01 — the page. The kit draws the QR code (or "Open in Tamga Wallet" on a phone) and polls
+     a status token. It never sees the person's data and never decides: your server does (server.ts). -->
+<script src="https://verify.tamga.network/tamga-verifier.js"></script>
+<div id="tamga"></div>
+<script>
+  const post = (url, body) =>
+    fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+
+  TamgaVerifier.mount(document.getElementById("tamga"), {
+    verifier: "https://verify.tamga.network",
+    policy: "site-signup", // sign-in for an existing account: "site-signin"
+    start: () => post("/tamga/start", { policy: "site-signup" }).then((r) => r.json()),
+    onResult: (presentationId) =>
+      post("/tamga/session", { presentation_id: presentationId }).then(() => location.reload()),
+    onError: (e) => console.warn("Tamga:", e),
+  });
+</script>

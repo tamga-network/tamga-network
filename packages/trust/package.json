@@ -1,0 +1,30 @@
+{
+  "name": "@tamga-network/trust",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TrustSource(list): imzalı güven listelerini (lotl/tl/anchors) doğrular, yansıtır ve SPEC-BC-0001 §11.2 okuma setini sunar. Zincire geçişte aynı arayüzü TrustSource(chain) sağlar.",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": "./src/core.ts"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamga-network/tamga-network.git",
+    "directory": "packages/trust"
+  },
+  "homepage": "https://docs.tamga.network",
+  "sideEffects": false,
+  "dependencies": {
+    "@tamga-network/core": "*",
+    "jose": "^6.0.0",
+    "zod": "^4.0.0",
+    "@noble/hashes": "^2.0.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "list_id": "example-pid-list",
+  "territory": "TR",
+  "format": "etsi-lote-json",
+  "list_url": "https://example.org/lote/pid-providers.jws",
+  "signing_keys": [{ "fingerprint_sha256": "[DOLDURULACAK]", "status": "ACTIVE" }],
+  "operator": { "name": "[DOLDURULACAK]" },
+  "status": "ACTIVE",
+  "scope": {
+    "entity_kinds": ["pid_provider", "wallet_provider"],
+    "vct": ["urn:eudi:pid:1", "eu.europa.ec.eudi.pid.1"],
+    "category": "IDENTITY",
+    "assurance": "I3",
+    "class": "PUB",
+    "recognized_by": ["TR"],
+    "min_key_storage": "secure_enclave"
+  },
+  "approval": { "approved_at": "[DOLDURULACAK]", "ref": "[DOLDURULACAK]" }
+}

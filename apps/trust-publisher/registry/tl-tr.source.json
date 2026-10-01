@@ -1,0 +1,367 @@
+{
+  "list_format_version": "1.0",
+  "list_type": "trusted_list",
+  "state_code": "TR",
+  "next_update_days": 90,
+  "operator": {
+    "name": "Tamga Network",
+    "status": "provisional",
+    "on_behalf_of": "TR national authority (to be designated)"
+  },
+  "root_cas": [
+    {
+      "cert": "root-ca",
+      "legal_name": "TR National Root CA (Tamga Trust Framework)",
+      "service_type": "NationalRootCA-QC",
+      "operator": {
+        "name": "Tamga Network",
+        "status": "provisional",
+        "on_behalf_of": "TR national authority (to be designated)"
+      },
+      "status": "ACTIVE",
+      "valid_from": "2026-09-24T00:00:00Z",
+      "valid_until": "2036-09-24T00:00:00Z",
+      "successor_ca_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-09-24T00:00:00Z",
+          "reason": "initial-registration"
+        }
+      ]
+    }
+  ],
+  "issuers": [
+    {
+      "cert": "issuer-bilgi",
+      "status_cert": "issuer-bilgi-status",
+      "parent_ca": "root-ca",
+      "slug": "bilgi",
+      "legal_name": "İstanbul Bilgi Üniversitesi",
+      "category": "EDUCATION",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Foundation university; recognition by the Council of Higher Education (YÖK) is public. Identity proofing: institution registrar desk or presentation of a Tamga Identity Attestation (T2).",
+      "issuer_url": "https://issuer.tamga.network/bilgi",
+      "status_list_base": "https://status.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-09-24T00:00:00Z",
+      "valid_until": "2028-09-24T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-09-24T00:00:00Z",
+          "reason": "initial-registration"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "allowed": true,
+          "valid_from": "2026-09-24T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "allowed": true,
+          "valid_from": "2026-09-24T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Bilgi Student Information System",
+        "mode": "PORTAL_DB"
+      }
+    },
+    {
+      "cert": "issuer-id",
+      "status_cert": "issuer-id-status",
+      "parent_ca": "root-ca",
+      "slug": "tamga-id",
+      "legal_name": "Tamga Network — Identity Attestation Provider",
+      "category": "IDENTITY",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "ADR-0011 K1, ADR-0022: provisional operator, non-qualified EAA (no independent conformity assessment yet); remote identity proofing at ETSI TS 119 461 Substantial (document + liveness + face), High with NFC. This is NOT a PID; superseded via successor once a state PID provider is designated (TL8).",
+      "issuer_url": "https://id.tamga.network",
+      "status_list_base": "https://id.tamga.network/status/",
+      "status": "ACTIVE",
+      "valid_from": "2026-09-25T00:00:00Z",
+      "valid_until": "2028-09-25T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-09-25T00:00:00Z",
+          "reason": "ADR-0011 provisional identity attestation provider"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "allowed": true,
+          "valid_from": "2026-09-25T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:contact:EmailAddress:1",
+          "allowed": true,
+          "valid_from": "2026-09-29T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:contact:PhoneNumber:1",
+          "allowed": true,
+          "valid_from": "2026-09-29T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:id:PseudonymSeed:1",
+          "allowed": true,
+          "valid_from": "2026-09-30T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Remote identity verification provider (Didit v3) — Tamga is the data controller (ADR-0011 K4)",
+        "mode": "IDV_PROVIDER"
+      },
+      "trade_name": "Tamga Identity Service",
+      "info_uri": "https://id.tamga.network",
+      "contact": {
+        "support_uri": "https://tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr"
+      }
+    },
+    {
+      "cert": "issuer-bubilet",
+      "status_cert": "issuer-bubilet-status",
+      "parent_ca": "root-ca",
+      "slug": "bubilet",
+      "legal_name": "Bubilet",
+      "category": "EVENTS",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Ticket seller; Tamga hosts the issuing service, the seller is the issuer in the trusted list. Tickets carry no personal data (T0).",
+      "issuer_url": "https://issuer.tamga.network/bubilet",
+      "status_list_base": "https://status.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-09-26T00:00:00Z",
+      "valid_until": "2028-09-26T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-09-26T00:00:00Z",
+          "reason": "initial-registration (D10 bilet)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:tkt:EventTicket:1",
+          "allowed": true,
+          "valid_from": "2026-09-26T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Bubilet sales system",
+        "mode": "TICKET_SALES"
+      }
+    }
+  ],
+  "relying_parties": [
+    {
+      "access_cert": "rp-verify",
+      "dns_name": "verify.tamga.network",
+      "legal_name": "Tamga Verification Service",
+      "status": "ACTIVE",
+      "registered_at": "2026-09-24T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-09-24T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "job-application-1",
+          "purpose": "Proof of graduation for a job application",
+          "purpose_localized": {
+            "tr-TR": "İş başvurusunda mezuniyet teyidi",
+            "tk-TM": "Iş arzasy üçin uçurymlygy tassyklamak"
+          },
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "claims": [
+            "is_graduate",
+            "eqf_level",
+            "qualification_title",
+            "awarding_body_name",
+            "family_name",
+            "given_name"
+          ],
+          "valid_from": "2026-09-24T00:00:00Z",
+          "valid_until": "2027-09-24T00:00:00Z"
+        },
+        {
+          "scope_id": "student-discount-1",
+          "purpose": "Student discount",
+          "purpose_localized": {
+            "tr-TR": "Öğrenci indirimi",
+            "tk-TM": "Talyp arzanladyşy"
+          },
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "claims": [
+            "is_enrolled",
+            "awarding_body_name"
+          ],
+          "valid_from": "2026-09-24T00:00:00Z",
+          "valid_until": "2027-09-24T00:00:00Z"
+        },
+        {
+          "scope_id": "campus-access-1",
+          "purpose": "Campus access (turnstile) — access pass registration",
+          "purpose_localized": {
+            "tr-TR": "Kampüs geçişi (turnike) — geçiş kartı kaydı",
+            "tk-TM": "Kampusa giriş (turniket) — geçiş kartyny hasaba almak"
+          },
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "claims": [
+            "is_enrolled"
+          ],
+          "valid_from": "2026-09-25T00:00:00Z",
+          "valid_until": "2027-09-25T00:00:00Z"
+        },
+        {
+          "scope_id": "event-tamga-id-1",
+          "purpose": "Event entry — holder of a Tamga identity (no personal details requested)",
+          "purpose_localized": {
+            "tr-TR": "Etkinlik girişi — Tamga kimliği sahipliği (kişisel bilgi istenmez)",
+            "tk-TM": "Çärä girmek — Tamga şahsyýetnamasynyň eýesi (şahsy maglumat soralmaýar)"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [],
+          "valid_from": "2026-09-25T00:00:00Z",
+          "valid_until": "2027-09-25T00:00:00Z"
+        },
+        {
+          "scope_id": "site-signup-1",
+          "purpose": "Website sign-up — given name, family name (the site gets its own pseudonym)",
+          "purpose_localized": {
+            "tr-TR": "Web sitesine üyelik — ad, soyad (site kendine özel takma adı alır)",
+            "tk-TM": "Saýta agza bolmak — ady, familiýasy (saýt özüne degişli lakamy alýar)"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [
+            "given_name",
+            "family_name"
+          ],
+          "valid_from": "2026-09-25T00:00:00Z",
+          "valid_until": "2027-09-25T00:00:00Z"
+        },
+        {
+          "scope_id": "event-ticket-1",
+          "purpose": "Event gate — ticket access pass (single use)",
+          "purpose_localized": {
+            "tr-TR": "Etkinlik kapısı — bilet geçiş kartı (tek kullanım)",
+            "tk-TM": "Çäre derwezesi — bilet geçiş kartysy (bir gezeklik)"
+          },
+          "vct": "urn:tamga:tkt:EventTicket:1",
+          "claims": [
+            "event_id",
+            "ticket_class"
+          ],
+          "valid_from": "2026-09-26T00:00:00Z",
+          "valid_until": "2027-09-26T00:00:00Z"
+        },
+        {
+          "scope_id": "age-over-18-1",
+          "purpose": "Over-18 check — yes/no only",
+          "purpose_localized": {
+            "tr-TR": "18 yaş üstü doğrulaması — yalnızca evet/hayır",
+            "tk-TM": "18 ýaşdan ulydygyny barlamak — diňe hawa/ýok"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [
+            "age_over_18"
+          ],
+          "valid_from": "2026-09-26T00:00:00Z",
+          "valid_until": "2027-09-26T00:00:00Z"
+        }
+      ],
+      "terminal_groups": [
+        {
+          "group_id": "bilgi-campus",
+          "label": "İstanbul Bilgi Üniversitesi campus turnstiles",
+          "offline_allowed": true,
+          "valid_from": "2026-09-25T00:00:00Z"
+        },
+        {
+          "group_id": "bubilet-gate",
+          "label": "Bubilet event gates — single-use ticket entry",
+          "offline_allowed": false,
+          "valid_from": "2026-09-26T00:00:00Z"
+        }
+      ],
+      "trade_name": "Tamga Verify",
+      "info_uri": "https://verify.tamga.network",
+      "contact": {
+        "support_uri": "https://tamga.network",
+        "email": "info@tamga.network"
+      },
+      "service_description": {
+        "en-US": "Hosted verification service: sites and gates check Tamga credentials without storing them.",
+        "tr-TR": "Barındırılan doğrulama hizmeti: siteler ve kapılar Tamga belgelerini saklamadan doğrular."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ],
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr"
+      },
+      "pseudonyms": "single"
+    },
+    {
+      "access_cert": "rp-issuer-bilgi",
+      "dns_name": "issuer.tamga.network",
+      "legal_name": "İstanbul Bilgi Üniversitesi — identity matching at issuance",
+      "status": "ACTIVE",
+      "registered_at": "2026-09-25T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-09-25T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "bilgi-identity-matching-1",
+          "purpose": "Identity matching for issuance: national ID number and birth date are compared with the institution record and not stored",
+          "purpose_localized": {
+            "tr-TR": "Belge ihracı için kimlik eşleştirme: T.C. kimlik no ve doğum tarihi kurum kaydıyla karşılaştırılır, saklanmaz",
+            "tk-TM": "Resminama bermek üçin şahsyýeti deňeşdirmek: şahsyýet belgisi we doglan senesi edaranyň ýazgysy bilen deňeşdirilýär, saklanmaýar"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [
+            "personal_administrative_number",
+            "birth_date",
+            "given_name",
+            "family_name"
+          ],
+          "valid_from": "2026-09-25T00:00:00Z",
+          "valid_until": "2027-09-25T00:00:00Z"
+        }
+      ]
+    }
+  ],
+  "national_schemas": []
+}

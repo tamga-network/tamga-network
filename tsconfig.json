@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@tamga-network/verifier/web": ["packages/verifier/src/web/index.ts"],
+      "@tamga-network/verifier/zk": ["packages/verifier/src/zk/index.ts"],
+      "@tamga-network/issuer/client": ["packages/issuer/src/client.ts"],
+      "@tamga-network/core/sd-structure": ["packages/core/src/sd-structure.ts"],
+      "@tamga-network/core": ["packages/core/src/index.ts"],
+      "@tamga-network/trust/core": ["packages/trust/src/core.ts"],
+      "@tamga-network/trust": ["packages/trust/src/index.ts"],
+      "@tamga-network/sd-jwt": ["packages/sd-jwt/src/index.ts"],
+      "@tamga-network/issuer": ["packages/issuer/src/index.ts"],
+      "@tamga-network/schemas": ["packages/schemas/src/index.ts"],
+      "@tamga-network/wallet-core": ["packages/wallet-core/src/index.ts"],
+      "@tamga-network/verifier": ["packages/verifier/src/index.ts"],
+      "@tamga-network/mdoc": ["packages/mdoc/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/**/*.ts",
+    "apps/_shared/**/*.ts",
+    "apps/trust-publisher/**/*.ts",
+    "apps/verify/**/*.ts",
+    "apps/wallet-provider/**/*.ts",
+    "ops/**/*.ts",
+    "conformance/**/*.ts",
+    "examples/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "**/dist/**", "packages/*/lib/**", ".publish/**"],
+  "extends": "expo/tsconfig.base"
+}

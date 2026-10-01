@@ -1,0 +1,23 @@
+{
+  "name": "@tamga-network/verify-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Referans verifier (verify.tamga.network): politika seçimi → imzalı OpenID4VP isteği (QR) → şifreli yanıt → kanonik doğrulama (T0 + A–E) → üç değerli sonuç ekranı + 'arka planda ne oldu' paneli.",
+  "main": "src/server.ts",
+  "dependencies": {
+    "@fastify/formbody": "^8.0.0",
+    "@simplewebauthn/server": "^13.3.3",
+    "@tamga-network/core": "*",
+    "@tamga-network/trust": "*",
+    "@tamga-network/verifier": "*",
+    "esbuild": "^0.28.2",
+    "fastify": "^5.0.0",
+    "jose": "^6.0.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.5"
+  }
+}

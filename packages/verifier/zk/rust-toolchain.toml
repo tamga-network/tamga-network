@@ -1,0 +1,5 @@
+# Sabit Rust sürümü: WASM çıktısı (src/zk/longfellow-verifier.wasm) bayt bayt tekrarlanabilir olsun ve sunucudaki yerel
+# doğrulayıcı (tamga-zk-verify, deploy.sh 4b) aynı derleyiciyle derlensin. Güncellemek = WASM'ı yeniden üretmek (npm run zk:build).
+[toolchain]
+channel = "1.98.1"
+profile = "minimal"

@@ -1,0 +1,26 @@
+{
+  "name": "@tamga-network/schemas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tamga şema kataloğu — Type Metadata + JSON Schema (SPEC-SCHEMA-0001/0002), vct URN (ADR-0010), content_hash üretimi.",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamga-network/tamga-network.git",
+    "directory": "packages/schemas"
+  },
+  "homepage": "https://docs.tamga.network",
+  "sideEffects": false,
+  "dependencies": {
+    "@tamga-network/core": "*"
+  }
+}

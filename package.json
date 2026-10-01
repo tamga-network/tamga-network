@@ -1,0 +1,80 @@
+{
+  "name": "tamga-network",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tamga Network — eIDAS 2.0 / ETSI / EUDI uyumlu dijital güven altyapısı (public monorepo). Faz B: imzalı güven listeleri; Faz 0: Besu.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "pki": "tsx ops/gen-pki.ts",
+    "schemas:build": "tsx packages/schemas/src/build.ts",
+    "trust:build": "tsx apps/trust-publisher/src/cli.ts build",
+    "trust:anchor": "tsx apps/trust-publisher/src/cli.ts anchor",
+    "trust:heartbeat": "tsx apps/trust-publisher/src/cli.ts heartbeat",
+    "trust:verify": "tsx apps/trust-publisher/src/cli.ts verify",
+    "trust:archive": "tsx apps/trust-publisher/src/cli.ts archive",
+    "conformance:gen": "tsx conformance/generate.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "d1": "npm run pki && npm run schemas:build && npm run trust:build && npm run trust:heartbeat && npm run trust:verify && npm test",
+    "d2": "npm run conformance:gen && npm test",
+    "docs:sync": "node scripts/docs-sync-root.mjs",
+    "docs:dev": "npm run docs:sync && vitepress dev docs",
+    "docs:build": "npm run docs:sync && node scripts/public-text-check.mjs && vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "docs:check": "node scripts/public-text-check.mjs",
+    "arf:sync": "node scripts/arf-sync.mjs",
+    "arf:check": "node scripts/arf-sync.mjs --check",
+    "arf:snapshot": "node scripts/arf-sync.mjs --snapshot",
+    "arf:dev": "npm run arf:sync && vitepress dev arf",
+    "arf:build": "npm run arf:sync && vitepress build arf",
+    "arf:preview": "vitepress preview arf",
+    "d3": "npm test && npm run typecheck && npm --prefix apps/wallet run typecheck && npm --prefix apps/wallet run export:check",
+    "wallet:start": "npm --prefix apps/wallet run start:lan",
+    "verify": "tsx apps/verify/src/server.ts",
+    "wallet-provider": "tsx apps/wallet-provider/src/server.ts",
+    "trust:status": "tsx apps/trust-publisher/src/cli.ts status",
+    "trust:register": "tsx apps/trust-publisher/src/cli.ts register",
+    "trust:scope": "tsx apps/trust-publisher/src/cli.ts scope",
+    "trust:authorize": "tsx apps/trust-publisher/src/cli.ts authorize",
+    "trust:list": "tsx apps/trust-publisher/src/cli.ts list",
+    "pki:issue": "tsx ops/pki-issue.ts",
+    "d4": "npm run pki && npm run trust:build && npm test && npm run typecheck",
+    "format": "prettier --write \"apps/**/*.ts\" \"packages/**/*.ts\" \"conformance/**/*.ts\" \"scripts/**/*.mjs\" \"ops/**/*.ts\"",
+    "format:check": "prettier --check \"apps/**/*.ts\" \"packages/**/*.ts\" \"conformance/**/*.ts\" \"scripts/**/*.mjs\" \"ops/**/*.ts\"",
+    "build:packages": "tsc -b tsconfig.build.json",
+    "pack:packages": "node scripts/pack-packages.mjs",
+    "smoke:packages": "node scripts/smoke-packages.mjs",
+    "release:check": "npm run -s pack:packages && npm run -s smoke:packages",
+    "trust:external": "tsx apps/trust-publisher/src/cli.ts external-fetch"
+  },
+  "devDependencies": {
+    "@scalar/api-reference": "^1.72.2",
+    "@types/node": "^22.10.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitepress": "^1.6.4",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "@noble/ciphers": "^2.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.0.0",
+    "@peculiar/x509": "^1.12.0",
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.1",
+    "jose": "^6.0.0",
+    "zod": "^4.0.0"
+  },
+  "overrides": {
+    "react": "19.2.3"
+  }
+}
