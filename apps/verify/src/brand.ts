@@ -17,7 +17,7 @@ const read = (f: string) => {
 const CSS = read("tamga-ui.css");
 const JS = read("tamga-ui.js");
 /**
- * Logo tek kaynaktan: üst çubukta (30 px) küçük boyut işareti `ops/brand/logo/mark-small.svg` (NS). SVG'nin kendi viewBox'ı
+ * Logo tek kaynaktan: üst çubukta (30 px) tam işaret `ops/brand/logo/mark.svg` (N1; tamga.network başlığıyla aynı). SVG'nin kendi viewBox'ı
  * aynen kullanılır (sabit 0 0 100 100 değil); Gök dolgusu sayfa temasına bağlanır (--primary, koyu temada açık Gök).
  */
 function markSvg(file: string): { vb: string; body: string } {
@@ -31,7 +31,7 @@ function markSvg(file: string): { vb: string; body: string } {
     .replace(/#C8A24C/gi, "var(--gold-bright)");
   return { vb, body };
 }
-const MARK_SMALL = markSvg("logo/mark-small.svg");
+const MARK_HEADER = markSvg("logo/mark.svg");
 
 export type Lang = "en" | "tr";
 /** ADR-0038 SB4: sandbox sürecinde her sayfanın üstünde görünür "test" şeridi (ağ ortamdan: TAMGA_NETWORK). */
@@ -61,7 +61,7 @@ export function brandPage(o: { lang: Lang; title: string; host: string; body: st
 <script>try{const t=localStorage.getItem("tamga.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch{}</script>
 <style>${CSS}</style></head><body>${sandboxBar(o.lang)}
 <header class="bar"><div class="shell">
-<a class="brand" href="https://tamga.network" aria-label="Tamga Network"><svg width="30" height="30" viewBox="${MARK_SMALL.vb}" aria-hidden="true">${MARK_SMALL.body}</svg><span class="words"><b>Tamga</b><small>Network</small></span></a>
+<a class="brand" href="https://tamga.network" aria-label="Tamga Network"><svg width="30" height="30" viewBox="${MARK_HEADER.vb}" aria-hidden="true">${MARK_HEADER.body}</svg><span class="words"><b>Tamga</b><small>Network</small></span></a>
 <span class="crumb">${escHtml(sub ?? "")}.<span>${escHtml(rest.join("."))}</span></span>
 <div class="bar-end"><div class="theme" role="group" aria-label="${tr ? "Tema" : "Theme"}">
 <button type="button" data-theme-choice="system" aria-label="${ts}" title="${ts}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>
