@@ -10,7 +10,7 @@ import { verifySdJwtVc } from "@tamga-network/sd-jwt";
 import { computeSchemaId } from "@tamga-network/core";
 import { ALL as SCHEMA_DEFS, externalType, type SchemaDef } from "@tamga-network/schemas";
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
-import { verifyStatusListToken } from "@tamga-network/issuer";
+import { verifyStatusListToken } from "@tamga-network/sd-jwt";
 import type { ExternalIssuerAnswer, TrustSource } from "@tamga-network/trust";
 import { assuranceAtLeast, constraintOk, type Policy } from "./policy.js";
 import { verifyMdocFormat, type FormatResult } from "./mdoc-format.js";

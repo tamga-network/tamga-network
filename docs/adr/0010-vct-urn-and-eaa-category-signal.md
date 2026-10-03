@@ -1,39 +1,12 @@
 ---
 document_id: ADR-0010
-title: Credential Tip Kimliği = URN (urn:tamga) ve Tamga EAA Kategori Sinyali
-category: ADR
-domain: Schema
+title: "Belge türü kimliği (URN)"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-09-24
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - architects
-  - ai-agents
-tags:
-  - adr
-  - schema
-  - vct
-  - urn
-  - type-metadata
-  - eaa-category
-  - eidas
-keywords:
-  - SD-JWT VC vct URN
-  - type metadata registry retrieval
-  - vct#integrity mandatory
-  - domain-independent type identity
-  - ETSI TS 119 472-1 EAA category
-  - urn:tamga namespace
-  - supersedes D-SCHEMA-1
+last_updated: 2026-10-02
 summary: >
-  D-SCHEMA-1 ("vct kararlı HTTPS URL") süpersede edilir: credential tipinin
+  D-SCHEMA-1 ("vct kararlı HTTPS URL") süpersede edilir: belge tipinin
   kimliği urn:tamga:<domain>:<Type>:<major> biçiminde bir URN olur; Type
   Metadata, IETF SD-JWT VC §5.3.2 "registry" yoluyla Tamga kataloğundan
   (metadata_url + content_hash) çözülür; vct#integrity zorunlu kalır (ETSI TS
@@ -42,24 +15,9 @@ summary: >
   bağlı olamaz; EUDI'nin PID sözleşmesi (urn:eudi:pid:1 + katalog) aynı
   desendir. Ayrıca ETSI 119 472-1'in bağlam-özel EAA kategori sinyaline izin
   vermesine dayanarak Tamga kendi kategori URN'lerini tanımlar
-  (urn:tamga:eaa:pub, urn:tamga:eaa:qualified); I1–I2 issuer'lar kategori
-  taşımaz; holder LoA credential'a hiçbir zaman girmez (PR7 korunur).
-priority: High
-related:
-  - ADR-0007
-  - ADR-0009
-  - SPEC-SCHEMA-0001
-  - SPEC-SCHEMA-0002
-  - SPEC-SCHEMA-0003
-  - SPEC-CRED-0002
-  - SPEC-PROTO-0001
-  - PM-ASSUR-0001
-  - PM-SCHEMA-0001
-  - RS-EIDAS-0001
-depends_on:
-  - ADR-0007
-supersedes:
-  - ADR-0007 Karar 1 (vct HTTPS URL) — kısmi
+  (urn:tamga:eaa:pub, urn:tamga:eaa:qualified); I1–I2 belge verenler kategori
+  taşımaz; belge sahibinin LoA'sı belgeye hiçbir zaman girmez (PR7 korunur).
+domain: Credentials
 ---
 
 # ADR-0010 — Tip Kimliği URN ve EAA Kategori Sinyali
@@ -74,7 +32,7 @@ Kabul edildiğinde [[DECISIONS]] D-SCHEMA-1 → **D-SCHEMA-4** (süpersede), yen
 
 ## Mevcut karar ve neden yeniden açıldı
 
-[[ADR-0007]] Karar 1 / [[DECISIONS]] D-SCHEMA-1: `vct` kararlı bir HTTPS URL'dir
+[[ADR-0007]] Karar 1 / [[DECISIONS]] D-SCHEMA-1: `vct` ([[t:vct]]) kararlı bir HTTPS URL'dir
 (`https://schema.tamga.network/v1/edu/DiplomaCredential/1.0.0`), Type Metadata doğrudan bu
 URL'den alınır, `vct#integrity` zorunludur ve zincirdeki `contentHash`'e eşittir.
 
@@ -95,14 +53,14 @@ Yani mevcut HTTPS kararı standarda **uygundur**; URN de uygundur. Seçim teknik
 vakfın alan adına (`tamga.network`) bağlı olamaz. [[SPEC-SCHEMA-0001]] §10.3 "alan adı riski"
 bölümü bu bağımlılığı zaten "ekosistemik olay" olarak kaydetmişti.
 
-## İkinci konu: issuer sınıfı credential'da nasıl görünür?
+## İkinci konu: belge veren sınıfı belgede nasıl görünür?
 
-eIDAS'ta QEAA ve PuB-EAA, credential **içinde** kategori sinyali taşır (Annex V/VII "otomatik
-işlemeye uygun gösterge"); nitelikli olmayan EU EAA'lar taşımaz. Tamga'nın kanonik modelinde
-issuer derecesi (I1–I3) yalnızca kayıtta tutulur; credential'da sınıf sinyali yoktur. TDT-first
-kurguda Tamga ekosistemi eIDAS yapısını **aynalamalı**: devlet kurumu/authentic source adına
-verilen belge ile Trust Framework'te akredite kurumun belgesi, verifier'a credential içinden
-ayırt edilebilir olmalı. Holder LoA ise (PR7) credential'a **girmez** — eIDAS'ta da girmez.
+[[t:eIDAS]]'ta [[t:QEAA]] ve [[t:PuB-EAA]], [[t:credential]] **içinde** kategori sinyali taşır (Annex V/VII "otomatik
+işlemeye uygun gösterge"); nitelikli olmayan EU [[t:EAA|EAA'lar]] taşımaz. Tamga'nın kanonik modelinde
+[[t:issuer]] derecesi (I1–I3) yalnızca kayıtta tutulur; belgede sınıf sinyali yoktur. TDT-first
+kurguda Tamga ekosistemi eIDAS yapısını **aynalamalı**: devlet kurumu/yetkili kaynak adına
+verilen belge ile Trust Framework'te akredite kurumun belgesi, [[t:verifier|doğrulayıcıya]] belge içinden
+ayırt edilebilir olmalı. [[t:holder]] [[t:LoA]] ise (PR7) belgeye **girmez** — eIDAS'ta da girmez.
 
 ---
 
@@ -132,7 +90,7 @@ Kategori sinyalleri (Karar 5):
 
 IETF §5.3.2 "trusted registry" yolu birincildir. Kayıt (zincir `SchemaRegistry` / Faz B
 `lotl › schemas[]`) her tip için şunu tutar: `vct`, `metadata_url`, `content_hash`, `status`,
-`status_history`. Verifier/cüzdan:
+`status_history`. Doğrulayıcı/cüzdan:
 
 ```
 Ş1. vct + vct#integrity oku (yoksa RED)
@@ -151,7 +109,7 @@ Katalog aynı zamanda ARF "Catalogue of attestation schemes" muadilidir; toplu p
 
 [[SPEC-SCHEMA-0001]]/D1 "yayınlanmış bir `vct` URL'inin içeriği asla değişmez" →
 "yayınlanmış bir `metadata_url`'in içeriği asla değişmez"; D2 "`contentHash` = `vct#integrity` =
-SHA-256(yayınlanan baytlar)" aynen; D3 aynen. `vct#integrity` credential'da **zorunlu**
+SHA-256(yayınlanan baytlar)" aynen; D3 aynen. `vct#integrity` belgede **zorunlu**
 (ETSI 472-1 EAA-5.2.1.2-03; IETF'te opsiyonel — biz sıkı kalırız).
 
 ## Karar 4 — Sürümleme
@@ -160,24 +118,24 @@ SHA-256(yayınlanan baytlar)" aynen; D3 aynen. `vct#integrity` credential'da **z
   URN ile doğrulanmaya devam eder (SC3 DEPRECATED penceresi).
 - **minor/patch** Type Metadata `version` alanında; her yayın **yeni** `metadata_url` +
   `content_hash` (D1 gereği eski URL değişmez); kayıt "güncel" işaretler; aynı URN altında
-  birden çok metadata sürümü olabilir ve credential'daki `vct#integrity` hangisini kastettiğini
+  birden çok metadata sürümü olabilir ve belgedeki `vct#integrity` hangisini kastettiğini
   kesinleştirir. [[SPEC-SCHEMA-0001]] §9 semver kuralları buna göre yeniden yazılır.
 
 ## Karar 5 — Tamga EAA kategori sinyali
 
-Credential'da (SD-JWT VC claim, `sd: never`, seçici açıklamaya tabi değil):
+Belgede (SD-JWT VC claim, `sd: never`, seçici açıklamaya tabi değil):
 
-| Issuer kaydı `class` | `category` claim'i | AB muadili | Kim |
+| Belge veren kaydı `class` | `category` claim'i | AB muadili | Kim |
 |---|---|---|---|
-| `PUB` | `urn:tamga:eaa:pub` | PuB-EAA | Üye devlet kurumu veya authentic source adına (NVİ, YÖK, MERSİS…) — kayıt devletçe (`onlyOwnerState`) |
-| `QUALIFIED` | `urn:tamga:eaa:qualified` | QEAA | Trust Framework'te akredite **I3** issuer (ESHS e-Mühür/HSM/denetim/sigorta) |
-| `EAA` | **yok** | EAA (nitelikli olmayan) | I1–I2 issuer'lar |
+| `PUB` | `urn:tamga:eaa:pub` | PuB-EAA | Üye devlet kurumu veya yetkili kaynak adına (NVİ, YÖK, MERSİS…) — kayıt devletçe (`onlyOwnerState`) |
+| `QUALIFIED` | `urn:tamga:eaa:qualified` | QEAA | Trust Framework'te akredite **I3** belge veren (ESHS e-Mühür/HSM/denetim/sigorta) |
+| `EAA` | **yok** | EAA (nitelikli olmayan) | I1–I2 belge verenler |
 
-Kurallar: (a) issuer yalnızca kayıttaki `class`'ının sinyalini koyabilir; verifier C-katmanında
+Kurallar: (a) belge veren yalnızca kayıttaki `class`'ının sinyalini koyabilir; doğrulayıcı C-katmanında
 kayıtla karşılaştırır, uyuşmazlık → REJECTED (yeni adım kodu **C4**, [[SPEC-API-0001]] AP1
-uyarınca yeni kod); (b) holder assurance (T0–T3) **hiçbir zaman** credential'a yazılmaz — PR7
+uyarınca yeni kod); (b) belge sahibinin güvence seviyesi (T0–T3) **hiçbir zaman** belgeye yazılmaz — PR7
 korunur, seviye tipin ön koşuludur (DB-6); (c) AB URN'leri (`urn:etsi:esi:eaa:eu:*`) Tamga
-issuer'ları tarafından **kullanılamaz** (AB bağlamı dışıyız); (d) Faz 1'de bir devlet kendi
+belge verenleri tarafından **kullanılamaz** (AB bağlamı dışıyız); (d) Faz 1'de bir devlet kendi
 nitelikli sınıfını tanımlarsa `urn:tamga:<cc>:eaa:qualified` alt-namespace'i açılır.
 
 ## Karar 6 — `urn:tamga` isim alanı yönetimi
@@ -188,11 +146,11 @@ Framework'te; Faz 0+ zincirde Governance 2/3.
 
 ## Karar 7 — Geçiş
 
-Henüz hiçbir credential verilmedi; **çift destek yok**. [[SPEC-SCHEMA-0001]] v2.0.0,
+Henüz hiçbir belge verilmedi; **çift destek yok**. [[SPEC-SCHEMA-0001]] v2.0.0,
 [[SPEC-SCHEMA-0002]] v2.0.0 (vct değerleri, Type Metadata örnekleri), [[SPEC-SCHEMA-0003]]
 (iskelet vct'leri), [[SPEC-CRED-0002]] v1.3.0 (`category` claim'i + C-yeni), [[SPEC-API-0001]]
 (C4 adımı), [[SPEC-PROTO-0001]] (PR2 metni: "metadata'daki her `vct` kayıtlı" aynen).
-`docs/delivery/04-TRUST-LIST-FORMAT.md` zaten bu biçimdedir.
+`docs/_internal/delivery/04-TRUST-LIST-FORMAT.md` zaten bu biçimdedir.
 
 ---
 
@@ -202,14 +160,14 @@ Henüz hiçbir credential verilmedi; **çift destek yok**. [[SPEC-SCHEMA-0001]] 
    `ca_id`, `issuer_id` nasıl operatörden bağımsızsa `vct` de öyle olmalıdır. HTTPS vct,
    `tamga.network` alan adını sonsuza kadar tip kimliğinin parçası yapar.
 2. **EUDI ile aynı görünüm.** PID `urn:eudi:pid:1` + katalog; ETSI kategorileri URN. Bir EUDI
-   verifier'ı için `urn:tamga:…` + katalog, `urn:eudi:…` + katalogla aynı işlem yoludur.
+   doğrulayıcısı için `urn:tamga:…` + katalog, `urn:eudi:…` + katalogla aynı işlem yoludur.
 3. **Standart uyumu kaybı yok.** IETF §5.3.2 ve ETSI 472-1 "metadata'ya işaret" şartı katalog
    yoluyla karşılanır; `#integrity` zorunluluğu bizi ARF kataloğundan (hash şartı yok) daha
    güçlü kılar (R-13).
 4. **Maliyet şimdi sıfıra yakın.** Kod yok; yalnızca spec metinleri. Kod yazıldıktan sonra bu
-   değişiklik her cüzdan/verifier/issuer'ı etkilerdi.
-5. **Kategori sinyali eIDAS yapısını aynalar** ve verifier'a "devlet kurumu mu, akredite mi,
-   kayıtlı mı" sorusunu credential'dan cevaplatır; kayıtla çapraz kontrol (C4) sahte sinyali
+   değişiklik her cüzdanı, doğrulayıcıyı ve belge vereni etkilerdi.
+5. **Kategori sinyali eIDAS yapısını aynalar** ve doğrulayıcıya "devlet kurumu mu, akredite mi,
+   kayıtlı mı" sorusunu belgeden cevaplatır; kayıtla çapraz kontrol (C4) sahte sinyali
    engeller.
 
 ---
@@ -217,7 +175,7 @@ Henüz hiçbir credential verilmedi; **çift destek yok**. [[SPEC-SCHEMA-0001]] 
 # Değerlendirilen Alternatifler
 
 ## A — HTTPS URL'de kal (D-SCHEMA-1) — Reddedildi (yönetişim gerekçesiyle)
-Standarda uygun, dış verifier için kendinden-çözümlenir (IETF §5.3.1 her kütüphanede var),
+Standarda uygun, dış doğrulayıcı için kendinden-çözümlenir (IETF §5.3.1 her kütüphanede var),
 §10.3 azaltmaları mevcut. Ancak tip kimliği alan adına bağlı kalır; TDT-first ile çelişir.
 Teknik olarak **yanlış değildi**; bu ADR onu "hatalı" değil "kurguya uymayan" olarak süpersede eder.
 
@@ -230,9 +188,9 @@ draft-19'da yoktur (ara taslaklarda vardı). Standart dışı yol tanımlamak in
 ## D — Kategori sinyalini koymamak (önceki DB-15) — Reddedildi
 AB gözünde nitelikli olmayan EAA olduğumuz doğru; ama ETSI 472-1 bağlam-özel kategoriye izin
 verir ve TDT-first kurgu kendi sınıflarını gerektirir. Koymamak, PUB/QUALIFIED ayrımını yalnızca
-kayıtta bırakır ve credential'ı AB muadillerinden daha az kendinden-açıklayıcı yapar.
+kayıtta bırakır ve belgeyi AB muadillerinden daha az kendinden-açıklayıcı yapar.
 
-## E — Holder LoA'yı credential'a koymak — Reddedildi (yeniden)
+## E — Belge sahibinin LoA'sını belgeye koymak — Reddedildi (yeniden)
 eIDAS koymaz; PR7 koymaz; PM-TRUST-0001 gerekçesi geçerli. Seviye tipin ön koşuludur.
 
 ---
@@ -241,21 +199,21 @@ eIDAS koymaz; PR7 koymaz; PM-TRUST-0001 gerekçesi geçerli. Seviye tipin ön ko
 
 ## Bağlayıcı
 1. [[DECISIONS]]: D-SCHEMA-1 → Değiştirilen Kararlar tablosu; yeni **D-SCHEMA-4** (vct URN +
-   katalog), **D-CRED-4** (kategori sinyali, holder LoA asla).
+   katalog), **D-CRED-4** (kategori sinyali, belge sahibinin LoA'sı asla).
 2. [[SPEC-SCHEMA-0001]] v2.0.0: §1 "URL şeması" → "URN şeması + katalog"; §1.4 çözümleme; §7 Ş3;
    §9 sürümleme; D1 yeniden ifade; `tamga` bloğuna `category_allowed`.
 3. [[SPEC-SCHEMA-0002]] v2.0.0, [[SPEC-SCHEMA-0003]] v1.1.0: vct değerleri.
 4. [[SPEC-CRED-0002]] v1.3.0: `category` claim'i (opsiyonel, kayıtla eşleşmeli), yeni değişmez
-   **C18** "`category` yalnızca kayıttaki `class`'a eşitse kabul edilir; holder assurance claim'i
+   **C18** "`category` yalnızca kayıttaki `class`'a eşitse kabul edilir; belge sahibi güvence seviyesi claim'i
    yoktur".
 5. [[SPEC-API-0001]] v1.2.0: adım **C4** (kategori ↔ kayıt), sonuç nesnesine `issuer.class`.
 6. [[PM-ASSUR-0001]] v1.1.0: Eksen B tablosuna `class` sütunu; politika örneği "tip × sınıf".
 7. `/sync-index`: INVARIANTS D1 metni, C18, C4 kaydı; MASTER_INDEX sürümleri.
 
 ## Kabul edilen ödünleşimler
-- Tamga dışı bir verifier, Tamga kataloğunu bilmeden `urn:tamga:…` metadata'sını çözemez
+- Tamga dışı bir doğrulayıcı, Tamga kataloğunu bilmeden `urn:tamga:…` metadata'sını çözemez
   (HTTPS'te GET yeterdi). Karşılık: katalog URL'i Trust Framework'te ilan edilir; SDK bunu
-  varsayılan taşır; EUDI verifier'ları da EU URN'leri için aynı şeyi yapar.
+  varsayılan taşır; EUDI doğrulayıcıları da EU URN'leri için aynı şeyi yapar.
 - Kategori claim'i bir iddia daha demektir; C4 çapraz kontrolü olmadan anlamsızdır (bu yüzden
   atlanamaz).
 
@@ -267,11 +225,10 @@ eIDAS koymaz; PR7 koymaz; PM-TRUST-0001 gerekçesi geçerli. Seviye tipin ön ko
 **Korur:** [[ADR-0007]] K2–K6 (off-chain metadata + çapa, `#integrity`, iki katman, allowlist)
 **Dayanır:** [[ADR-0009]] Karar 5 (TDT-first) · [[RS-EIDAS-0001]] §4.4/§5.1 · IETF SD-JWT VC-19 · ETSI TS 119 472-1
 **Değiştirir:** [[SPEC-SCHEMA-0001]], [[SPEC-SCHEMA-0002]], [[SPEC-SCHEMA-0003]], [[SPEC-CRED-0002]], [[SPEC-API-0001]], [[PM-ASSUR-0001]]
-**Analiz kaynağı:** `docs/beta/05-kurallar` R-12, R-15, R-19, R-22; `06-eidas-uyum-mimarisi` §3.2–3.3; `04-karar-onerileri` DB-14, DB-15, DB-6
+**Analiz kaynağı:** `docs/_internal/beta/05-kurallar` R-12, R-15, R-19, R-22; `06-eidas-uyum-mimarisi` §3.2–3.3; `04-karar-onerileri` DB-14, DB-15, DB-6
 
 ---
 
 # Durum
 
 **Accepted ✅** — 2026-09-24. [[DECISIONS]]'a D-SCHEMA-4, D-CRED-4 olarak işlendi; etkilenen SPEC sürüm güncellemeleri DECISIONS §10 açık taahhütler listesindedir.
-

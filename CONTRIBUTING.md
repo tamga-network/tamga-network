@@ -19,15 +19,16 @@ Her katkı şunlardan en az birini iyileştirmelidir:
 
 # Doğru Katmanı Seç
 
-| Katman | Amaç |
-|--------|------|
-| `docs/project-memory/` | Tarihsel mühendislik gerekçesi (neden) |
-| `docs/architecture/` | Mimari vizyon ve prensipler (ne) |
-| `docs/specifications/` | Teknik spesifikasyon (nasıl) |
-| `docs/research/` | Dış teknoloji analizi |
-| `docs/academy/` | Öğrenme materyali |
-| `docs/adr/` | Kabul edilmiş kararlar |
-| `docs/rfc/` | Öneriler |
+| Klasör | Ne için |
+|--------|--------|
+| `docs/guides/` | Başlarken: adım adım rehberler (GUIDE-*) |
+| `docs/concepts/` | Kavramlar: sade anlatım |
+| `docs/specifications/` | Şartnameler: kesin kurallar (SPEC-*) |
+| `docs/adr/` | Kararlar (ADR-*) |
+| `docs/architecture/` | Bileşen mimarisi (ARCH-*) |
+| `docs/framework/` | Tamga ARF ve ekleri (FW-*) |
+| `docs/background/` | Gerekçe (PM-*) ve araştırma (RS-*) |
+| `docs/ledger/` | Zincir aşaması (bugün kullanılmıyor) |
 
 Katkını doğru konuma yerleştir. Katman sınırlarını karıştırma.
 
@@ -47,15 +48,15 @@ Her doküman:
 
 # Bir Doküman Tamamlandığında
 
-1. `review_status`'u `Completed` yap.
-2. `MASTER_INDEX.md`'i güncelle.
-3. İlgili dokümanlara çapraz referans ekle.
+1. Sürümü ve `last_updated`'i güncelle; değişikliği `CHANGELOG.md`'ye yaz.
+2. İngilizce çeviriyi (`docs/en/…`) aynı çalışmada güncelle.
+3. `npm run docs:index` ve `node scripts/sync-invariants.mjs` çalıştır.
 
 ---
 
 # Kod
 
-Kod `packages/` (npm paketleri `@tamga-network/*`) ve `apps/` (cüzdan, verifier, wallet-provider, trust-publisher)
+Kod `packages/` (npm paketleri `@tamga-network/*`) ve `apps/` (verify, wallet-provider, trust-publisher)
 altındadır. Kod, test, adlandırma, commit ve sürüm kuralları: [`CONVENTIONS.md`](CONVENTIONS.md). Değişiklikler
 [`CHANGELOG.md`](CHANGELOG.md)'ye yazılır.
 

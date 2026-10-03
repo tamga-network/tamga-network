@@ -1,7 +1,7 @@
 /**
  * scripts/sync-invariants.mjs — INVARIANTS.md'yi kaynak dokümanların "Değişmezler" tablolarından yeniden üretir (/sync-index adım 3).
  * Kural: kod DOKÜMAN KAPSAMLIDIR; çapraz atıf `DOC-ID/KOD`. Bu betik içerik yazmaz; yalnızca derler ve sayar.
- * Kaynak: docs/{specifications,architecture,project-memory}/**.md — başlığında "Değişmez" geçen bölümlerdeki `| **KOD** | metin |`
+ * Kaynak: docs/{specifications,architecture,background,ledger}/**.md — başlığında "Değişmez" geçen bölümlerdeki `| **KOD** | metin |`
  * satırları + önceki INVARIANTS.md'de zaten indekslenmiş (doküman, kod) çiftleri (W1–W3, SEV1–3, SG1–7 gibi bölüm dışı tablolar) —
  * kaynak dokümanda hâlâ varsa korunur, yoksa düşer. Çıktı: INVARIANTS.md (aynı biçim) + stdout özeti. `--check` yalnızca karşılaştırır.
  */
@@ -19,7 +19,7 @@ function walk(d, out = []) {
   for (const n of readdirSync(d)) {
     const p = join(d, n);
     if (statSync(p).isDirectory()) {
-      if (!/_archive|beta|delivery|framework|rfc|academy|research|guides/.test(n)) walk(p, out);
+      if (n !== "en" && !/_archive|beta|delivery|framework|rfc|academy|research|guides/.test(n)) walk(p, out);
     } else if (n.endsWith(".md")) out.push(p);
   }
   return out;
@@ -110,30 +110,11 @@ for (const [id, m] of prev) if (!docs.some((d) => d.id === id)) for (const c of 
 const today = new Date().toISOString().slice(0, 10);
 const body = `---
 document_id: INVARIANTS
-title: Değişmezler İndeksi — Tüm Dokümanların Bağlayıcı Kuralları
-category: Reference
-domain: Platform
+title: Bağlayıcı kurallar
 status: Active
-review_status: Draft
-version: 1.1.0
-created: 2026-09-09
+version: 1.0.0
+created: 2026-10-02
 last_updated: ${today}
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: reference
-audience:
-  - engineers
-  - architects
-  - ai-agents
-tags:
-  - invariants
-  - reference
-  - index
-keywords:
-  - invariant index
-  - document scoped codes
-  - cross document citation
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"

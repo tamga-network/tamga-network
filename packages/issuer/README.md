@@ -1,6 +1,6 @@
 # @tamga-network/issuer
 
-Everything an institution needs to issue: a credential factory, OpenID4VCI helpers and the revocation-list publisher (Token Status List, fixed interval, random positions). The `/client` subpath talks to Tamga's hosted issuing service with your institution's API key.
+Everything an institution needs to issue: a credential factory, OpenID4VCI helpers and the revocation-list publisher (Token Status List, fixed interval, random positions; the list format itself is in `@tamga-network/sd-jwt` and re-exported here). The `/client` subpath talks to Tamga's hosted issuing service with your institution's API key.
 
 ## Install
 
@@ -23,11 +23,11 @@ A complete, tested version: [`examples/03-issue-hosted`](https://github.com/tamg
 
 ## Status
 
-Pre-release (`0.1.0`) on npm — written and tested; the API may still change before `1.0`. Every release is built from this
+Pre-release (`0.x`) on npm — written and tested; the API may still change before `1.0`. Every release is built from this
 repository by GitHub Actions and carries npm provenance (verifiable link to the source commit).
 
 ## Links
 
 - Working examples, run in CI against the real packages: [`examples/`](https://github.com/tamga-network/tamga-network/tree/main/examples)
-- Integration guides and specifications: [docs.tamga.network](https://docs.tamga.network/guides/README)
+- Integration guides and specifications: [docs.tamga.network](https://docs.tamga.network/guides/)
 - Code: Apache-2.0 · Documentation: CC BY 4.0

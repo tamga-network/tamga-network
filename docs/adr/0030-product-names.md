@@ -1,35 +1,15 @@
 ---
 document_id: ADR-0030
-title: Ürün Adları — Tamga Wallet, "Tamga ile giriş yap", Tamga Verify
-category: ADR
-domain: Brand
+title: "Ürün adları"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-09-30
-last_updated: 2026-09-30
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - public
-tags:
-  - adr
-  - naming
-  - brand
-keywords:
-  - Tamga Wallet
-  - Sign in with Tamga
-  - Tamga Verify
+last_updated: 2026-10-02
 summary: >
   Kullanıcıya görünen ürün adları sabitlenir: cüzdan uygulaması Tamga Wallet, web sitesi girişi "Tamga ile giriş yap"
   (Sign in with Tamga), barındırılan doğrulayıcı Tamga Verify. "TamgaID" ürün adı olarak kullanılmaz. D-OSS-2'deki "kullanıcıya
   görünen marka (TamgaID ile Giriş Yap) değişmez" cümlesinin yerini alır.
-related:
-  - "[[ADR-0017]]"
-  - "[[ADR-0011]]"
+domain: Governance
 ---
 
 # Bağlam
@@ -38,7 +18,7 @@ D-OSS-2 (2026-09-27) npm kapsamını `@tamga-network` olarak belirlerken kullan�
 anıyordu. Aynı ad sitede cüzdanın adı olarak da geçiyordu. Oysa:
 
 - Cüzdan uygulamasının adı başından beri **Tamga Wallet**'tır (mağaza adı, paket kimliği `network.tamga.wallet`).
-- `id.tamga.network` ve `tamga-id` kiracısı ayrı bir hizmettir: geçici kimlik attestation servisi ([[ADR-0011]]).
+- `id.tamga.network` ve `tamga-id` kiracısı ayrı bir hizmettir: geçici kimlik [[t:attestation]] servisi ([[ADR-0011]]).
 - Cüzdan yalnız kimlik taşımaz: kurum belgeleri, biletler ve ileride ödeme ve varlık tutma gibi işlevler de aynı uygulamada
   olabilir. Ürüne "ID" demek onu kimlikle sınırlar.
 
@@ -47,7 +27,7 @@ Tek bir adın üç ayrı şeye (cüzdan, giriş, kimlik servisi) karşılık gel
 # Karar
 
 Kullanıcıya görünen üç ürün adı sabitlenir: cüzdan **Tamga Wallet**, web girişi **"Tamga ile giriş yap"**, barındırılan
-doğrulayıcı **Tamga Verify**. "TamgaID" ürün adı olarak kullanılmaz.
+[[t:verifier]] **Tamga Verify**. "TamgaID" ürün adı olarak kullanılmaz.
 
 # Değişmezler
 
@@ -68,10 +48,10 @@ doğrulayıcı **Tamga Verify**. "TamgaID" ürün adı olarak kullanılmaz.
 
 # Sonuçlar
 
-- Site, belgeler, verify sayfaları, örnekler ve sözlükten "TamgaID" kaldırıldı; sürümlü belgelerde yama sürümü ve sürüm notu.
+- Site, belgeler, verify sayfaları, örnekler ve sözlükte "TamgaID" kullanılmaz.
 - D-OSS-2'deki marka cümlesi bu ADR ile değişir (DECISIONS §9b).
 - Paket adları değişmez (`@tamga-network/verifier`, `/web`).
 
 # Durum
 
-Accepted (2026-09-30) — proje yönetimi onayı.
+**Accepted — 2026-09-30.** Proje yönetimi onayıyla.

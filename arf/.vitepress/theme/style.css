@@ -1,47 +1,52 @@
-/* Tamga ARF — resmî belge görünümü. Marka: Al Kızıl #B01E22, Altın #C8A24C, Obsidyen #17110F, Parşömen #F4EDE2; başlık Sora, gövde IBM Plex Sans, kod IBM Plex Mono. */
+/* Tamga ARF — resmî belge görünümü. Marka: kâğıt #F8F6F1, mürekkep #14120F, Gök (50 #EEF5F8 · 600 #1E5A78 · 900 #0D2938),
+   çizgi #E2DCCF; koyu tema #101820 + #6FB3D2. Başlık Onest, gövde IBM Plex Sans, kod IBM Plex Mono. */
 :root {
-  --arf-red: #b01e22;
-  --arf-red-soft: rgba(176, 30, 34, 0.08);
-  --arf-gold: #9c7a2c;
-  --arf-rule: #e4d9c6;
-  --arf-meta-bg: #faf6ef;
+  --arf-accent: #1e5a78;
+  --arf-accent-strong: #0d2938;
+  --arf-accent-soft: #eef5f8;
+  --arf-rule: #e2dccf;
+  --arf-meta-bg: #eef5f8;
 
-  --vp-c-brand-1: #b01e22;
-  --vp-c-brand-2: #951a1d;
-  --vp-c-brand-3: #b01e22;
-  --vp-c-brand-soft: rgba(176, 30, 34, 0.1);
-  --vp-c-bg: #fffdfa;
-  --vp-c-bg-alt: #f7f1e7;
-  --vp-c-bg-soft: #f4ede2;
-  --vp-c-divider: #e6dccb;
-  --vp-c-text-1: #17110f;
-  --vp-c-text-2: #4a403a;
+  --vp-c-brand-1: #1e5a78;
+  --vp-c-brand-2: #0d2938;
+  --vp-c-brand-3: #1e5a78;
+  --vp-c-brand-soft: rgba(30, 90, 120, 0.1);
+  --vp-c-bg: #f8f6f1;
+  --vp-c-bg-alt: #f2efe7;
+  --vp-c-bg-soft: #eef5f8;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-divider: #e2dccf;
+  --vp-c-gutter: #e2dccf;
+  --vp-c-text-1: #14120f;
+  --vp-c-text-2: #4a4640;
 
   --vp-font-family-base: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --vp-font-family-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --arf-font-display: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --arf-font-display: "Onest", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 .dark {
-  --arf-red: #e0676a;
-  --arf-red-soft: rgba(224, 103, 106, 0.12);
-  --arf-gold: #d4b36a;
-  --arf-rule: #3a302b;
-  --arf-meta-bg: #1f1815;
+  --arf-accent: #6fb3d2;
+  --arf-accent-strong: #eef5f8;
+  --arf-accent-soft: rgba(111, 179, 210, 0.12);
+  --arf-rule: #263440;
+  --arf-meta-bg: #15212b;
 
-  --vp-c-brand-1: #e0676a;
-  --vp-c-brand-2: #e88285;
-  --vp-c-brand-3: #b01e22;
-  --vp-c-brand-soft: rgba(224, 103, 106, 0.14);
-  --vp-c-bg: #17110f;
-  --vp-c-bg-alt: #120d0b;
-  --vp-c-bg-soft: #211a17;
-  --vp-c-divider: #3a302b;
-  --vp-c-text-1: #f4ede2;
-  --vp-c-text-2: #c9bfb2;
+  --vp-c-brand-1: #6fb3d2;
+  --vp-c-brand-2: #8fc5de;
+  --vp-c-brand-3: #1e5a78;
+  --vp-c-brand-soft: rgba(111, 179, 210, 0.14);
+  --vp-c-bg: #101820;
+  --vp-c-bg-alt: #0b1218;
+  --vp-c-bg-soft: #15212b;
+  --vp-c-bg-elv: #15212b;
+  --vp-c-divider: #263440;
+  --vp-c-gutter: #0b1218;
+  --vp-c-text-1: #f8f6f1;
+  --vp-c-text-2: #b9c2c8;
 }
 
-/* Başlıklar: Sora (marka başlık yazısı) */
+/* Başlıklar: Onest (marka başlık yazısı) */
 .vp-doc h1,
 .vp-doc h2,
 .vp-doc h3 {
@@ -52,7 +57,7 @@
 .vp-doc h1 {
   font-size: 2rem;
   line-height: 1.2;
-  border-bottom: 2px solid var(--arf-red);
+  border-bottom: 2px solid var(--arf-accent);
   padding-bottom: 0.6rem;
 }
 .vp-doc h2 {
@@ -65,7 +70,7 @@
   padding: 0.75rem 1rem;
   background: var(--arf-meta-bg);
   border: 1px solid var(--arf-rule);
-  border-left: 3px solid var(--arf-gold);
+  border-left: 3px solid var(--arf-accent);
   font-size: 0.85rem;
   line-height: 1.6;
   color: var(--vp-c-text-2);
@@ -95,11 +100,58 @@
   display: inline-block;
   margin: 0 0 1rem;
   padding: 0.2rem 0.6rem;
-  border: 1px solid var(--arf-red);
-  color: var(--arf-red);
-  background: var(--arf-red-soft);
+  border: 1px solid var(--arf-accent);
+  color: var(--arf-accent);
+  background: var(--arf-accent-soft);
   font-family: var(--vp-font-family-mono);
   font-size: 0.8rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+/* Terim ipucu ([[t:QTSP]] → docs/.vitepress/terms.ts): (i) üzerine gelince ya da dokununca okurun dilindeki açıklama. */
+.term {
+  position: relative;
+}
+.term-i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05em;
+  height: 1.05em;
+  margin-left: 0.2em;
+  padding: 0;
+  border: 1px solid var(--vp-c-brand-1);
+  border-radius: 50%;
+  color: var(--vp-c-brand-1);
+  font: italic 600 0.68em/1 var(--vp-font-family-base);
+  vertical-align: 0.15em;
+  cursor: help;
+}
+.term-i:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+.term-tip {
+  display: none;
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  top: calc(100% + 6px);
+  width: max-content;
+  max-width: min(320px, 80vw);
+  padding: 8px 10px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg-elv);
+  box-shadow: var(--vp-shadow-3);
+  color: var(--vp-c-text-1);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.term-i:hover + .term-tip,
+.term-i:focus + .term-tip {
+  display: block;
 }

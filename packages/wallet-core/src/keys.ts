@@ -1,5 +1,5 @@
 /**
- * KeyProvider — SPEC-WALLET-0001 §2 / docs/delivery/12 §1.
+ * KeyProvider — SPEC-WALLET-0001 §2 / docs/_internal/delivery/12 §1.
  *  Holder anahtarları credential kopyası başına üretilir (PR6/WL5), asla seed'den türetilmez (WL1), dışa aktarılmaz.
  *  Demo: SoftwareKeyProvider (P-256, @noble) + KeyStore (uygulama: expo-secure-store) — sapma S-9, WUA'da "software" beyan edilir.
  *  Pilot: SecureEnclaveKeyProvider / StrongBoxKeyProvider aynı arayüzü uygular; iş mantığı değişmez.

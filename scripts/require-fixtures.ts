@@ -2,7 +2,7 @@
  * Vitest globalSetup — test ön koşulları (iç inceleme O1). Dev PKI ve güven listesi yoksa uçtan uca testler
  * `describe.skipIf` ile sessizce atlanır; yerelde bu kolaylıktır ama CI'da "geçti" yanıltır.
  * `TAMGA_REQUIRE_FIXTURES=1` verilirse eksik ön koşul testi başlatmadan açık hatayla durdurur.
- * Hazırlamak için: tamga-network kökünde `npm run d1` (pki → schemas:build → trust:build → heartbeat → verify).
+ * Hazırlamak için: tamga-network kökünde `npm run setup` (pki → schemas:build → trust:build → heartbeat → verify).
  * tamga-platform da bu dosyayı kullanır (kök: bu dosyanın iki üst klasörü = tamga-network).
  */
 import { existsSync } from "node:fs";
@@ -22,7 +22,7 @@ const REQUIRED = [
 export default function setup() {
   const missing = REQUIRED.filter((p) => !existsSync(resolve(NET, p)));
   if (!missing.length) return;
-  const msg = `Test ön koşulları eksik (${missing.join(", ")}) — uçtan uca testler ATLANACAK. Hazırlamak için tamga-network'te: npm run d1`;
+  const msg = `Test ön koşulları eksik (${missing.join(", ")}) — uçtan uca testler ATLANACAK. Hazırlamak için tamga-network'te: npm run setup`;
   if (process.env.TAMGA_REQUIRE_FIXTURES === "1") throw new Error(msg);
   console.warn(`⚠ ${msg}`);
 }

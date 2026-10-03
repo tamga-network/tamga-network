@@ -1,7 +1,0 @@
-{
-  "ios": {
-    "NSCameraUsageDescription": "The camera is used to scan credential invitations and verification requests (QR codes).",
-    "NSFaceIDUsageDescription": "Face ID is used to open your credentials and to approve each sharing.",
-    "NSBluetoothAlwaysUsageDescription": "Bluetooth connects to a reader nearby when you show a credential in person."
-  }
-}

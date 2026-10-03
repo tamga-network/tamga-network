@@ -1,5 +1,7 @@
 /**
- * docs.tamga.network ve arf.tamga.network ortak belge indeksi: document_id → yol, [[DOC-ID]] bağlantı eklentisi.
+ * docs.tamga.network ve arf.tamga.network ortak belge indeksi: document_id → yol, [[DOC-ID]] bağlantı eklentisi,
+ * Türkçe sayfalarda site içi bağlantılara `/tr` öneki.
+ * Dil düzeni (2026-10-02): İngilizce kökte (`docs/en/…` kaynağından), Türkçe `/tr/` altında (`docs/…` kaynağı, normatif metin).
  * Çerçeve belgeleri (FW-*) yalnızca Tamga ARF sitesinde yayınlanır (ADR-0018/DY1); diğer siteler oraya bağlanır.
  */
 import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
@@ -8,28 +10,43 @@ import type MarkdownIt from "markdown-it";
 
 export const DOCS_BASE = "https://docs.tamga.network";
 export const ARF_BASE = "https://arf.tamga.network";
+export const GITHUB = "https://github.com/tamga-network/tamga-network/blob/main";
+
+export type Lang = "en" | "tr";
+/** Kaynak yolundan sayfanın dili: `en/…` İngilizce, gerisi Türkçe (docs); ARF'de `tr/…` Türkçe. */
+export const docsLangOf = (rel: string): Lang => (rel.startsWith("en/") ? "en" : "tr");
 
 /** Tamga ARF sayfaları: document_id → yayın yolu (her iki dilde aynı; Türkçe `/tr/` önekli). */
 export const ARF_PAGES: Record<string, string> = {
   "FW-ARF-0001": "architecture",
-  "FW-TF-0001": "annex-a-trust-framework",
-  "FW-RB-0001": "annex-b-participant-rules",
-  "FW-RB-0002": "annex-c-education",
-  "FW-RB-0003": "annex-c-identity",
-  "FW-RB-0004": "annex-c-event-ticket",
-  "FW-DEF-0001": "annex-d-definitions",
-  "FW-REF-0001": "annex-e-references",
+  "FW-TF-0001": "trust-framework",
+  "FW-RB-0001": "rulebook",
+  "FW-RB-0002": "rulebooks/education",
+  "FW-RB-0003": "rulebooks/identity",
+  "FW-RB-0004": "rulebooks/event-ticket",
+  "FW-DEF-0001": "definitions",
+  "FW-REF-0001": "references",
+  "FW-READ-0001": "reading-path",
+  "FW-ROLE-0001": "roles",
+  "FW-ONB-0001": "onboarding",
 };
 
-/** Kök md dosyaları docs sitesinde /root/<AD> olarak yayınlanır (scripts/docs-sync-root.mjs). */
-export const ROOT_IDS = ["DECISIONS", "GLOSSARY", "INVARIANTS", "SCENARIOS", "MASTER_INDEX", "DOCUMENTATION-STANDARD"];
+/** Sitede sayfası olmayan kök belgeler: GitHub'daki kaynağa bağlanır. INVARIANTS sitede /rules sayfasıdır. */
+const ROOT_LINKS: Record<string, { title: string; path?: string; github?: string }> = {
+  INVARIANTS: { title: "Binding rules · Bağlayıcı kurallar", path: "/rules" },
+  DECISIONS: { title: "DECISIONS", github: "DECISIONS.md" },
+  SCENARIOS: { title: "SCENARIOS", github: "SCENARIOS.md" },
+  MASTER_INDEX: { title: "MASTER_INDEX", github: "MASTER_INDEX.md" },
+  "DOCUMENTATION-STANDARD": { title: "DOCUMENTATION-STANDARD", github: "DOCUMENTATION-STANDARD.md" },
+};
 
-export type Entry = { id: string; title: string; path: string; version?: string; status?: string };
+/** `src`: docs/'a göre kaynak yolu (`specifications/wallet.md`, `en/specifications/wallet.md`); `path`: sitedeki adres. */
+export type Entry = { id: string; title: string; path: string; src: string; version?: string; status?: string };
 
-export function walk(dir: string, out: string[] = []): string[] {
+export function walk(dir: string, out: string[] = [], skip: string[] = []): string[] {
   if (!existsSync(dir)) return out;
   for (const name of readdirSync(dir)) {
-    if (name.startsWith(".") || name === "node_modules") continue;
+    if (name.startsWith(".") || name === "node_modules" || skip.includes(name)) continue;
     const p = join(dir, name);
     if (statSync(p).isDirectory()) walk(p, out);
     else if (name.endsWith(".md")) out.push(p);
@@ -56,20 +73,40 @@ export function firstHeading(file: string, base: string): string {
   return m ? m[1].trim() : relative(base, file);
 }
 
+/** Kaynak yolu → site yolu (`index` klasör köküdür). */
 export function toUrl(file: string, base: string): string {
-  return "/" + relative(base, file).split(sep).join("/").replace(/\.md$/, "");
+  return ("/" + relative(base, file).split(sep).join("/").replace(/\.md$/, "")).replace(/\/index$/, "/");
 }
 
-/** docs/ altındaki tüm document_id'ler (yollar docs sitesine göre). */
-export function buildDocIndex(docsDir: string): Map<string, Entry> {
+/**
+ * Bir dilin belge indeksi. Türkçe: docs/ (en/ hariç), yollar `/tr/…`. İngilizce: docs/en/; çevirisi olmayan belge Türkçe
+ * sayfasına düşer (atıf kopmaz).
+ */
+export function buildDocIndex(docsDir: string, lang: Lang = "tr"): Map<string, Entry> {
   const entries = new Map<string, Entry>();
-  for (const f of walk(docsDir)) {
+  const add = (f: string, base: string, prefix: string, srcPrefix: string) => {
     const fm = frontMatter(f);
     const id = fm.document_id;
-    if (id && !entries.has(id))
-      entries.set(id, { id, title: fm.title ?? firstHeading(f, docsDir), path: toUrl(f, docsDir), version: fm.version, status: fm.status });
-  }
-  for (const id of ROOT_IDS) if (!entries.has(id)) entries.set(id, { id, title: id, path: `/root/${id}` });
+    if (!id || entries.has(id)) return;
+    entries.set(id, {
+      id,
+      title: fm.title ?? firstHeading(f, base),
+      path: prefix + toUrl(f, base),
+      src: srcPrefix + relative(base, f).split(sep).join("/"),
+      version: fm.version,
+      status: fm.status,
+    });
+  };
+  if (lang === "en") for (const f of walk(join(docsDir, "en"))) add(f, join(docsDir, "en"), "", "en/");
+  for (const f of walk(docsDir, [], ["en"])) add(f, docsDir, "/tr", "");
+  for (const [id, r] of Object.entries(ROOT_LINKS))
+    if (!entries.has(id))
+      entries.set(id, {
+        id,
+        title: r.title,
+        path: r.path ? (lang === "tr" ? "/tr" : "") + r.path : `${GITHUB}/${r.github}`,
+        src: r.github ?? "",
+      });
   return entries;
 }
 
@@ -93,6 +130,29 @@ export function docLinks(md: MarkdownIt, resolve: (id: string, relativePath: str
             ? `<a class="doc-id" href="${md.normalizeLink(r.href)}" title="${md.utils.escapeHtml(r.title)}">${label}</a>`
             : `<code>${label}</code>`;
         });
+      }
+    }
+  });
+}
+
+/**
+ * Türkçe sayfalarda (kaynağı `en/` olmayan) site içi mutlak bağlantılara `/tr` öneki: markdown bağlantıları ve ham HTML
+ * (`href="/…"`). `/api/`, `/tr/`, dosya bağlantıları (`.json`, `.yaml`, `.pdf`) ve dış adresler dokunulmaz.
+ */
+export function localeLinks(md: MarkdownIt, isTr: (relativePath: string) => boolean): void {
+  const skip = (href: string) => !href.startsWith("/") || href.startsWith("//") || /^\/(tr|api)(\/|$)/.test(href) || /\.(json|ya?ml|pdf|svg|png|ico)$/.test(href);
+  const fix = (href: string) => (skip(href) ? href : "/tr" + href);
+  const fixHtml = (html: string) => html.replace(/href="(\/[^"]*)"/g, (_m, h: string) => `href="${fix(h)}"`);
+  md.core.ruler.push("tamga-locale-links", (state) => {
+    const rel: string = (state.env as { relativePath?: string })?.relativePath ?? "";
+    if (!isTr(rel)) return;
+    for (const tok of state.tokens) {
+      if (tok.type === "html_block") tok.content = fixHtml(tok.content);
+      for (const child of tok.children ?? []) {
+        if (child.type === "link_open") {
+          const href = child.attrGet("href");
+          if (href) child.attrSet("href", fix(href));
+        } else if (child.type === "html_inline") child.content = fixHtml(child.content);
       }
     }
   });

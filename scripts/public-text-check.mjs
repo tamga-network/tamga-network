@@ -8,10 +8,9 @@ import { PRIVATE_NAMES_RE } from "./private-names.mjs";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 /** docs/.vitepress/config.ts srcExclude ile aynı: yayınlanmayan iç kayıtlar. */
-export const DOCS_UNPUBLISHED = ["_archive", "reviews", "beta", "delivery", "rfc", "root", "packages", ".vitepress"];
+export const DOCS_UNPUBLISHED = ["_archive", "_internal", "root", "packages", ".vitepress"];
 const ROOT_PUBLISHED = [
   "DECISIONS.md",
-  "GLOSSARY.md",
   "INVARIANTS.md",
   "MASTER_INDEX.md",
   "SCENARIOS.md",
@@ -20,7 +19,11 @@ const ROOT_PUBLISHED = [
 const FORBIDDEN = [
   [PRIVATE_NAMES_RE, "kişi adı"],
   [/\bClaude\b|\bOpus\b|\bFable\b|\bSonnet\b/, "araç adı"],
-  [/TOPARLAMA|_reports\/|tamga-platform\/docs\//, "iç kayıt yolu"],
+  [/TOPARLAMA|_reports\/|tamga-platform\/docs\/|-konusma-/, "iç kayıt yolu"],
+  // 2026-10-02: yayınlanan belgelerde (docs sitesi) özel depo adı yok — "operatör deposu" yazılır
+  [/tamga-platform/, "özel depo adı", (rel) => /^docs\//.test(rel)],
+  // 2026-10-02: çalışma alanının ortak (private) docs/ klasörü
+  [/docs\/records\/|docs\/roadmap\/|docs\/strategy\/|docs\/business\/|acik-isler\.md|onay-kayitlari/, "iç kayıt yolu"],
 ];
 
 function walk(dir, out = []) {
@@ -45,8 +48,9 @@ const problems = [];
 for (const f of files) {
   const lines = readFileSync(f, "utf8").split(/\r?\n/);
   lines.forEach((l, i) => {
-    for (const [re, what] of FORBIDDEN)
-      if (re.test(l)) problems.push(`${relative(repo, f)}:${i + 1} ${what}: ${l.trim().slice(0, 90)}`);
+    for (const [re, what, only] of FORBIDDEN)
+      if ((!only || only(relative(repo, f).split("\\").join("/"))) && re.test(l))
+        problems.push(`${relative(repo, f)}:${i + 1} ${what}: ${l.trim().slice(0, 90)}`);
   });
 }
 if (problems.length) {

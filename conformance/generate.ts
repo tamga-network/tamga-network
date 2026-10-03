@@ -221,7 +221,7 @@ async function sdJwtVectors() {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   (async () => {
-    if (!existsSync(resolve(DIST, "lotl.jws"))) throw new Error("önce npm run d1");
+    if (!existsSync(resolve(DIST, "lotl.jws"))) throw new Error("önce npm run setup");
     const t = await trustVectors();
     const s = await sdJwtVectors();
     writeFileSync(resolve(OUT, "VERSION"), "2\n"); // 2: ADR-0034 — RP kaydında dns_name, client_id x509_hash

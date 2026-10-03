@@ -21,14 +21,14 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       # dev PKI + şema kataloğu + güven listeleri (geçici; CI anahtarları hiçbir yere yayınlanmaz)
-      - run: npm run pki && npm run schemas:build && npm run trust:build && npm run trust:build && npm run trust:heartbeat && npm run trust:verify
+      # setup: güven listesi iki kez derlenir — geri sarma testi eski (imzası geçerli) bir sürüm ister
+      - run: npm run setup
       - run: npm test
       - run: npm run typecheck
       - run: npm run format:check
       - run: node scripts/sync-invariants.mjs --check
+      - run: node scripts/master-index.mjs --check
       - run: npm run arf:check
       - run: npm run docs:check
-      - name: cüzdan (format + lint + typecheck)
-        run: npm --prefix apps/wallet run check
       - name: yayın hazırlığı + duman testi (npm'e yayın YOK)
         run: npm run release:check

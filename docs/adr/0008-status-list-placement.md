@@ -1,54 +1,23 @@
 ---
 document_id: ADR-0008
-title: Status List Yerleşimi — Off-Chain Liste, On-Chain Çapa
-category: ADR
-domain: Credential
+title: "İptal listesinin yeri"
 status: Active
-review_status: Draft
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-09-09
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - architects
-  - ai-agents
-tags:
-  - adr
-  - revocation
-  - status-list
-  - privacy
-  - blockchain
-keywords:
-  - IETF Token Status List
-  - bitstring status list
-  - revocation timing leak
-  - herd privacy
-  - StatusListRegistry contract rewrite
-  - status list anchor
+last_updated: 2026-10-02
 summary: >
   Depoda kod ile spesifikasyon çelişiyordu: SPEC-CRED-0001 §5 "liste off-chain,
   pointer on-chain" derken StatusListRegistry.sol bitmap'i zincirde tutuyordu
   (_setBit, getChunk). Bu ADR çelişkiyi kapatır. Karar: bitstring listesi
-  off-chain, issuer tarafından imzalı Status List Token olarak host edilir;
+  off-chain, belge veren tarafından imzalı Status List Token olarak host edilir;
   zincirde yalnızca URI + içerik hash'i + sürüm + boyut çapası durur. Ana
   gerekçe mahremiyettir: her iptali zincire yazmak, izinli bir ağda tüm
   validator'lara iptal ANINI sızdırır ve blok zaman damgası ile birleşince
   belge sahibini daraltır. StatusListRegistry.sol yeniden yazılacaktır.
-priority: Critical
-related:
-  - SPEC-CRED-0001
-  - SPEC-CRED-0003
-  - SPEC-BC-0001
-  - PM-TRUST-0001
-  - ADR-0006
-  - ADR-0007
+domain: Credentials
 ---
 
-# ADR-0008 — Status List Yerleşimi
+# ADR-0008 — İptal Listesinin Yeri
 
 **Durum: Accepted** ✅ (2026-09-09)
 
@@ -58,12 +27,12 @@ related:
 
 ## Tespit edilen çelişki
 
-2026-09-09 depo denetiminde, iptal mekanizmasının **iki farklı yerde iki farklı
+2026-09-09 depo denetiminde, [[t:revocation]] mekanizmasının **iki farklı yerde iki farklı
 şekilde** tanımlandığı bulundu:
 
 **[[SPEC-CRED-0001]] §5 diyor ki:**
 
-> Liste off-chain (issuer host eder, imzalı/versiyonlu); zincirde yalnızca URI +
+> Liste off-chain ([[t:issuer]] host eder, imzalı/versiyonlu); zincirde yalnızca URI +
 > hash + versiyon + bitmap.
 
 (Cümlenin sonundaki "+ bitmap" ifadesi zaten kendi içinde tutarsızdır — liste
@@ -97,14 +66,14 @@ sorusu hiç sorulmamış.
 
 ## Karar 1 — Bitstring listesi off-chain durur
 
-İptal listesi, IETF Token Status List (draft-ietf-oauth-status-list) uyarınca
-**imzalı bir Status List Token** olarak issuer tarafından yayınlanır:
+[[t:status-list|İptal listesi]], IETF Token Status List (draft-ietf-oauth-status-list) uyarınca
+**imzalı bir Status List Token** olarak belge veren tarafından yayınlanır:
 
 ```
 https://status.<issuer-domain>/v1/statuslist/<listId>
 ```
 
-Token, issuer'ın credential imzalama anahtarıyla **aynı güven zincirine** bağlı
+Token, belge verenin [[t:credential]] imzalama anahtarıyla **aynı güven zincirine** bağlı
 bir anahtarla imzalanır ([[SPEC-ID-0002]] X.509). İçeriği sıkıştırılmış
 bitstring'dir.
 
@@ -127,7 +96,7 @@ Zincirde **tek bir bit bile** iptal verisi yoktur.
 
 ## Karar 3 — Yayın döngüsü sabit ve gürültülüdür
 
-Issuer, listeyi **sabit aralıklarla** yeniden yayınlar (öneri: 1 saat) —
+Belge veren, listeyi **sabit aralıklarla** yeniden yayınlar (öneri: 1 saat) —
 o aralıkta iptal olsa da olmasa da. Her yayında `contentHash` ve `version`
 zincirde güncellenir.
 
@@ -147,16 +116,16 @@ görünen bir arayüz bırakmak tehlikelidir.
 
 ## Karar 5 — Doğrulama akışı
 
-Verifier:
+[[t:verifier]]:
 
-1. Credential'ın `status` claim'inden `listURI` + `index` alınır.
+1. Belgenin `status` claim'inden `listURI` + `index` alınır.
 2. Status List Token indirilir (veya önbellekten alınır).
 3. Token'ın imzası doğrulanır.
 4. Token'ın hash'i, zincirdeki `contentHash` ile karşılaştırılır.
 5. `version` yeterince taze mi kontrol edilir (politika: örn. son 24 saat).
 6. Bitstring'de `index` okunur.
 
-Adım 4 kritiktir: issuer'ın kendi sunucusunda listeyi sessizce geri alması
+Adım 4 kritiktir: belge verenin kendi sunucusunda listeyi sessizce geri alması
 (iptal edilmiş bir belgeyi "geçerli" göstermesi) böyle engellenir.
 
 ---
@@ -178,7 +147,7 @@ Tek başına bu, index'in kime ait olduğunu söylemez. Ama korelasyonla daralt�
 
 - Bir üniversite disiplin kararıyla diplomayı iptal ettiğinde, o kararın tarihi
   genelde bilinir veya kamuya açıktır.
-- Bir kurumdan ayrılan çalışanın credential'ı ayrılış günü iptal edilir. İşten
+- Bir kurumdan ayrılan çalışanın belgesi ayrılış günü iptal edilir. İşten
   ayrılma tarihi ile zincirdeki damga eşleşir.
 - Toplu iptal (bir bölümün kapanması) zincirde belirgin bir küme olarak görünür.
 
@@ -191,11 +160,11 @@ mantığın zaman boyutundaki uygulamasıdır.
 
 ## 2. Standart uyumu
 
-[[ADR-0006]] revocation'ı **Token Status List**'e devretti. O standardın
-mimarisi zaten "issuer bir token yayınlar, verifier onu çeker" şeklindedir.
+[[ADR-0006]] iptali **Token Status List**'e devretti. O standardın
+mimarisi zaten "belge veren bir token yayınlar, doğrulayıcı onu çeker" şeklindedir.
 Bitmap'i zincire koymak, standardın veri yapısını alıp taşıma modelini
 terk etmek olurdu — yani yarım uyum. Yarım uyum, dış cüzdanlarla ve dış
-verifier'larla çalışmayı bozar.
+doğrulayıcılarla çalışmayı bozar.
 
 ## 3. Maliyet ve ölçek
 
@@ -204,14 +173,14 @@ diskinde tutulur ve sonsuza kadar kalır.
 
 Kaba büyüklük: tek bir üniversite için 100.000 indekslik liste = 12,5 KB
 bitmap. Türkiye'de ~200 yükseköğretim kurumu → 2,5 MB. Türk dünyası ölçeğinde
-binlerce issuer × liste büyümesi → onlarca MB kalıcı durum, üstelik her
+binlerce belge veren × liste büyümesi → onlarca MB kalıcı durum, üstelik her
 iptalde bir işlem ve bir blok.
 
 Off-chain'de aynı veri CDN'den servis edilir, sıfır zincir durumu tüketir.
 
 ## 4. Ölçeklenebilirlik ve tazelik dengesi
 
-Off-chain liste, verifier tarafında agresif önbelleklenebilir. On-chain okuma
+Off-chain liste, doğrulayıcı tarafında agresif önbelleklenebilir. On-chain okuma
 her seferinde RPC node'a gitmeyi gerektirir — ve doğrulama, ağın en sık yapılan
 işlemidir.
 
@@ -228,37 +197,37 @@ olduğunu söyler.*
 
 ## A — Bitmap tamamen zincirde (mevcut kod) — Reddedildi
 
-- **Artı:** Tek kaynak; verifier ek HTTP çağrısı yapmaz; issuer'ın sunucusu
+- **Artı:** Tek kaynak; doğrulayıcı ek HTTP çağrısı yapmaz; belge verenin sunucusu
   çökse de iptal bilgisi ayakta.
 - **Eksi:** İptal anı sızıntısı (§1), kalıcı durum maliyeti, standarttan
   sapma, RPC bağımlılığı.
 
-Reddedildi. Tek gerçek avantajı olan "issuer sunucusu çökerse" senaryosu,
+Reddedildi. Tek gerçek avantajı olan "belge veren sunucusu çökerse" senaryosu,
 Karar 5 adım 4 + önbellekleme ile yeterince karşılanır.
 
 ## B — Kriptografik akümülatör / ZK iptal — Ertelendi
 
 Merkle/RSA akümülatörü veya ZK üyelik ispatı ile iptal, mahremiyet açısından
-en güçlü çözümdür (verifier hangi index'i sorguladığını bile açığa vurmaz).
+en güçlü çözümdür (doğrulayıcı hangi index'i sorguladığını bile açığa vurmaz).
 
 Reddedilmedi, **ertelendi.** Gerekçe: olgun kütüphane ve cüzdan desteği yok,
 [[ADR-0006]]'nın ES256 tabanı ile uyumu ek araştırma gerektirir, ve pilotu
 gereksiz yere karmaşıklaştırır. `RS-REVOCATION-0001` bunu Faz 2 için
 değerlendirecektir.
 
-## C — Kısa ömürlü credential (iptal yok) — Kısmen benimsendi
+## C — Kısa ömürlü belge (iptal yok) — Kısmen benimsendi
 
-İptali tamamen ortadan kaldırmanın yolu, credential'ı çok kısa ömürlü yapıp
+İptali tamamen ortadan kaldırmanın yolu, belgeyi çok kısa ömürlü yapıp
 sürekli yenilemektir.
 
 - **Öğrenci belgesi** için doğru cevap budur: 30 gün TTL, iptal listesine hiç
   girmez.
 - **Diploma** için yanlıştır: diploma kalıcıdır, sürekli yenilenmesi hem
-  issuer'a yük hem de her yenilemede issuer'a "bu kişi hâlâ aktif" sinyali verir
+  belge verene yük hem de her yenilemede belge verene "bu kişi hâlâ aktif" sinyali verir
   (takip yüzeyi).
 
 **Benimsenen:** Karma. Şema bazında TTL politikası [[SPEC-SCHEMA-0002]]'de
-tanımlanır; kısa ömürlü tipler status list kullanmaz.
+tanımlanır; kısa ömürlü tipler iptal listesi kullanmaz.
 
 ## D — Hibrit: acil iptal zincirde, normal iptal off-chain — Reddedildi
 
@@ -283,19 +252,19 @@ iptaldir. Sızıntıyı azaltmaz, yoğunlaştırır.
 4. [[SPEC-CRED-0001]] §5'teki "+ bitmap" ifadesi düzeltilir.
 5. [[SPEC-CRED-0003]] bu kararı normatif olarak yazar: token formatı, yayın
    döngüsü, önbellek politikası, tazelik eşiği.
-6. `status.<issuer-domain>` her issuer için işletilen bir bileşendir —
-   [[ARCH-0004]] envanterine ve issuer onboarding kontrol listesine girer.
+6. `status.<issuer-domain>` her belge veren için işletilen bir bileşendir —
+   [[ARCH-0004]] envanterine ve belge veren onboarding kontrol listesine girer.
 
 ## Kabul edilen ödünleşimler
 
-- **Issuer'a operasyon yükü.** Her issuer artık bir status sunucusu
+- **Belge verene operasyon yükü.** Her belge veren artık bir status sunucusu
   işletmek zorunda. Küçük kurumlar için Tamga barındırma hizmeti sunabilir —
   ama o zaman Tamga tüm iptalleri görür. Bu bir merkezîleşme noktasıdır ve
   [[PM-GOV-0001]]'de politika olarak ele alınmalıdır.
 - **Tazelik penceresi.** Sabit aralıklı yayın, en kötü durumda bir yayın
   aralığı kadar (1 saat) gecikme demektir. Anında iptal gerektiren senaryolar
   için Karar 3'ün aralığı şema bazında kısaltılabilir.
-- **Ek ağ çağrısı.** Verifier doğrulamada bir HTTP isteği daha yapar.
+- **Ek ağ çağrısı.** Doğrulayıcı doğrulamada bir HTTP isteği daha yapar.
   Önbellekleme ile pratikte ihmal edilebilir.
 
 ---

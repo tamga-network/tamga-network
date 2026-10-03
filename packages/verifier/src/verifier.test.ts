@@ -1,12 +1,12 @@
 /**
  * @tamga-network/verifier: politika → DCQL, AP6, kanonik hat T0 + A–E — dev PKI + trust-publisher dist (ListTrustSource) ile.
- * Belge @tamga-network/sd-jwt ile ihraç edilir, sunum @tamga-network/wallet-core ile (KB-JWT, saf TS), status token @tamga-network/issuer ile.
+ * Belge @tamga-network/sd-jwt ile ihraç edilir, sunum @tamga-network/wallet-core ile (KB-JWT, saf TS), status token @tamga-network/sd-jwt ile.
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { issueSdJwtVc, pemIssuerSigner } from "@tamga-network/sd-jwt";
-import { signStatusListToken, StatusBitstring, MIN_CAPACITY, StatusValue } from "@tamga-network/issuer";
+import { signStatusListToken, StatusBitstring, MIN_CAPACITY, StatusValue } from "@tamga-network/sd-jwt";
 import { loadTrustSourceFromDir, pemToDer, x509HashClientId, type ListTrustSource } from "@tamga-network/trust";
 import { SoftwareKeyProvider, MemoryKeyStore, presentSdJwt } from "@tamga-network/wallet-core";
 import {

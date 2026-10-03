@@ -15,8 +15,8 @@ import {
   type JWK,
 } from "jose";
 import { b64ToDer, derToPem, certFingerprintSha256Hex } from "@tamga-network/core";
-import { KEY_STORAGE_RANK, type KeyStorage } from "./wallet-attestation.js";
-import { verifyStatusListToken } from "./status-list.js";
+import { KEY_STORAGE_RANK, type KeyStorage, type StatusRef, type StatusValueOf } from "@tamga-network/trust";
+import { verifyStatusListToken } from "@tamga-network/sd-jwt";
 
 export const KA_TYP = "keyattestation+jwt";
 export const PROOF_TYP_KA = "openid4vci-proof+jwt";
@@ -36,11 +36,7 @@ export const STORAGE_TO_ISO18045: Record<KeyStorage, string> = {
   wscd: "iso_18045_high",
 };
 
-export interface StatusRef {
-  idx: number;
-  uri: string;
-}
-export type StatusValueOf = (ref: StatusRef, now: number) => Promise<"VALID" | "INVALID" | "UNKNOWN">;
+export type { StatusRef, StatusValueOf };
 
 export interface KeyAttestationOk {
   ok: true;

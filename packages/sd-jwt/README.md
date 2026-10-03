@@ -1,6 +1,6 @@
 # @tamga-network/sd-jwt
 
-SD-JWT VC in the Tamga profile: issue with selective disclosure and holder binding, present with a key-binding JWT, and run the format checks of the verification pipeline.
+SD-JWT VC in the Tamga profile: issue with selective disclosure and holder binding, present with a key-binding JWT, and run the format checks of the verification pipeline. Also holds the Token Status List (revocation list) format: `StatusBitstring`, `signStatusListToken`, `verifyStatusListToken`.
 
 ## Install
 
@@ -20,11 +20,11 @@ const { combined } = await issueSdJwtVc({ signer, iss, vct, vctIntegrity, iat, c
 
 ## Status
 
-Pre-release (`0.1.0`) on npm — written and tested; the API may still change before `1.0`. Every release is built from this
+Pre-release (`0.x`) on npm — written and tested; the API may still change before `1.0`. Every release is built from this
 repository by GitHub Actions and carries npm provenance (verifiable link to the source commit).
 
 ## Links
 
 - Working examples, run in CI against the real packages: [`examples/`](https://github.com/tamga-network/tamga-network/tree/main/examples)
-- Integration guides and specifications: [docs.tamga.network](https://docs.tamga.network/guides/README)
+- Integration guides and specifications: [docs.tamga.network](https://docs.tamga.network/guides/)
 - Code: Apache-2.0 · Documentation: CC BY 4.0

@@ -7,7 +7,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { issueSdJwtVc, pemIssuerSigner } from "@tamga-network/sd-jwt";
-import { signStatusListToken, StatusBitstring, MIN_CAPACITY } from "@tamga-network/issuer";
+import { signStatusListToken, StatusBitstring, MIN_CAPACITY } from "@tamga-network/sd-jwt";
 import {
   certFingerprintSha256Hex,
   computeIssuerId,

@@ -8,6 +8,7 @@
  *  T6 hash zinciri kırık anchors → DUR
  *  T7 iat-zamanlı: SUSPENDED sonrası ihraç NO, öncesi YES (D-BC-3 / GV1)
  *  T8 şema yetkisi penceresi ve allowlist varsayılanı false (I1/I3/D9)
+ *  SB2 sandbox listesi gerçek ağ istemcisinde DURUR; sandbox istemcisi kabul eder (ADR-0038)
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { webcrypto } from "node:crypto";
@@ -69,6 +70,8 @@ async function makeSet(
      * Kontrol noktası durumu, arşivde kalan 0xold listesinin çapasını taşır (yükleyici bunu arşivi okumadan bilmeli).
      */
     checkpoint?: "ok" | "bad" | "seq" | "nostate";
+    /** ADR-0038: listeler bu ağı taşır (yoksa alan yazılmaz = gerçek ağ). */
+    environment?: "sandbox" | "production";
   } = {},
 ) {
   const tlSigner = await mkCert("TL Signer");
@@ -80,6 +83,7 @@ async function makeSet(
   const now = new Date("2026-09-24T12:00:00Z");
   const next = opts.staleLotl ? "2026-09-01T00:00:00Z" : "2026-12-24T00:00:00Z";
   const tl = {
+    ...(opts.environment ? { environment: opts.environment } : {}),
     list_format_version: "1.0",
     list_type: "trusted_list",
     state_code: "TR",
@@ -131,6 +135,7 @@ async function makeSet(
     national_schemas: [],
   };
   const lotl = {
+    ...(opts.environment ? { environment: opts.environment } : {}),
     list_format_version: opts.badFormat ? "9.9" : "1.0",
     list_type: "lotl",
     version: 1,
@@ -240,8 +245,9 @@ async function makeSet(
     issuerId,
     caId,
     tlSigner,
-    load: () =>
+    load: (environment?: "sandbox" | "production") =>
       loadTrustSet({
+        environment,
         lotlJws,
         nationalListJws: { TR: tlJws },
         anchorsJsonl: cp ? `${cp}\n${a1}\n` : `${a0}\n${a1}\n`,
@@ -309,6 +315,13 @@ describe("TrustSource(list) taahhüt testleri", () => {
   it("T3: bilinmeyen list_format_version → DUR (CMP2)", async () => {
     const c = await makeSet({ badFormat: true });
     await expect(c.load()).rejects.toThrow(/CMP2/);
+  });
+  it("SB2: sandbox listesi gerçek ağ istemcisinde DURUR, sandbox istemcisinde yüklenir", async () => {
+    const c = await makeSet({ environment: "sandbox" });
+    await expect(c.load()).rejects.toThrow(/SB2/);
+    const { report } = await c.load("sandbox");
+    expect(report.lotlVersion).toBe(1);
+    await expect(ctx.load("sandbox")).rejects.toThrow(/SB2/); // gerçek ağ listesi sandbox istemcisinde de DURUR
   });
   it("T4: kurcalanmış payload → imza doğrulaması başarısız", async () => {
     const c = await makeSet({ tamper: true });

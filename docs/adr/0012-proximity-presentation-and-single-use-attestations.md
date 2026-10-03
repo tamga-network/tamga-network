@@ -1,39 +1,10 @@
 ---
 document_id: ADR-0012
-title: Yakın Alan Sunumu (Cüzdan QR Gösterir) ve Tek Kullanımlık Attestation'lar
-category: ADR
-domain: Presentation
+title: "Yakın alanda belge gösterme"
 status: Active
-review_status: Completed
-version: 1.0.1
+version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-10-01
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - architects
-  - operators
-  - ai-agents
-tags:
-  - adr
-  - presentation
-  - proximity
-  - qr
-  - iso-18013-5
-  - openid4vp
-  - single-use
-  - consent
-keywords:
-  - proximity presentation wallet shows QR
-  - pass token turnstile offline verification
-  - reverse-initiated OpenID4VP request link
-  - ISO/IEC 18013-5 device engagement migration
-  - single-use attestation status list
-  - bounded pre-consent S-16
-  - relying party terminal class
+last_updated: 2026-10-02
 summary: >
   Cüzdanın QR gösterdiği yakın alan sunumu (turnike, etkinlik, yüz yüze kontrol) için Tamga
   profili: (B) kayıtlı bir doğrulayıcıya bir kez standart sunumla kayıt, sonra kişisel veri
@@ -42,11 +13,8 @@ summary: >
   akışının (ISO/IEC 18013-5) yerine geçmez, ona kadar köprüdür ve aynı "Göster" ekranından
   Faz 1'de Bluetooth'a geçer. Tek kullanımlık attestation'lar status biti + kapılar arası ortak
   kullanıldı listesiyle; geçişte PIN sorulmaması sınırlı ve süreli rızayla (S-16).
-priority: High
-supersedes: []
+domain: Wallet
 ---
-
-> **Sürüm notu 1.0.1 (2026-10-01) — [[ADR-0034]] (D-PROTO-2):** geçiş kartı jetonunun `aud`'u RP'nin kalıcı `dns_name`'i (B yolu; `x509_hash` uzun ve yenilemede değişir; QR ≤ 400 bayt korunur).
 
 # ADR-0012 — Yakın Alan Sunumu (Cüzdan QR Gösterir) ve Tek Kullanımlık Attestation'lar
 
@@ -56,11 +24,11 @@ Ekran akışı
 
 # Bağlam
 
-Bugünkü tek sunum akışı uzaktan sunumdur: doğrulayıcı QR gösterir, cüzdan tarar (OpenID4VP cross-device; [[SPEC-PROTO-0002]]).
+Bugünkü tek sunum akışı uzaktan sunumdur: [[t:verifier]] QR gösterir, cüzdan tarar ([[t:OpenID4VP]] cross-device; [[SPEC-PROTO-0002]]).
 Hedeflenen kullanımlar — kampüs turnikesi, etkinlik girişi, müze, kafe kasası, yüz yüze yetki kontrolü — **cüzdanın QR
-göstermesini** gerektirir. ARF bu alanı "proximity presentation" olarak tanımlar ve **ISO/IEC 18013-5** ile çözer: cüzdanın
-gösterdiği QR yalnızca *device engagement*tir; ardından BLE/NFC üzerinden nonce'lu istek-cevap yürür ve belge formatı **mdoc**tur.
-Bizim belgelerimiz **SD-JWT VC**; 18013-5 üzerinden SD-JWT VC taşımak standart değildir. Doğru uzun vadeli yol, kimlik ve
+göstermesini** gerektirir. [[t:ARF]] bu alanı "proximity presentation" olarak tanımlar ve **ISO/IEC 18013-5** ile çözer: cüzdanın
+gösterdiği QR yalnızca *device engagement*tir; ardından BLE/NFC üzerinden [[t:nonce|nonce'lu]] istek-cevap yürür ve [[t:credential]] formatı **[[t:mdoc]]**tur.
+Bizim belgelerimiz **[[t:SD-JWT-VC]]**; 18013-5 üzerinden SD-JWT VC taşımak standart değildir. Doğru uzun vadeli yol, kimlik ve
 öğrenci belgelerinin **mdoc olarak da** ihracı ve 18013-5'in gerçek derlemede (BLE native modül) uygulanmasıdır (Faz 1, EAS).
 Bugün Expo Go'da BLE yok; mdoc ihracı, cüzdan mdoc deposu ve terminal BLE yığını haftalar sürer.
 
@@ -75,7 +43,7 @@ penceresi + tekrar listesiyle yetinilir. Tek QR'ın boyutu (≈2.9 KB) SD-JWT VC
 |---|---|---|---|
 | **A — Uzak sunum** (mevcut) | doğrulayıcı QR gösterir | OpenID4VP cross-device | ARF aynen |
 | **B — Geçiş kartı** | kayıtlı terminal her gün okur (turnike, etkinlik kapısı) | (1) **Kayıt:** A yolu ile kayıtlı RP'ye sunum; RP `pass_grant` (RP imzalı: `pass_id`, kopya anahtarı parmak izi `cnf_kid`, `terminal_group`, `valid_until`) döner. (2) **Göster:** cüzdan kopya anahtarıyla **`tamga-pass+jwt`** imzalar: `{iss: pass_id, aud: rp client_id, iat, exp = iat+60, jti}`; QR = kompakt JWS (≤ 400 bayt). Terminal çevrim dışı doğrular: `pass_grant`'taki anahtar, `aud`, `exp`, `jti` tekrar listesi. | Tamga profili (köprü) |
-| **C — Yüz yüze kontrol** | insan kontrol eder (görevli, kasa) | cüzdan QR'da kısa ömürlü **`openid4vp://…request_uri`** gösterir: bu, kontrol edenin Tamga Verifier uygulamasında tarayınca **standart OpenID4VP isteğini başlatan** bağlantıdır (cüzdan, kayıtlı RP'nin `/vp/req` ucundan kendisi için bir istek kimliği almıştır). Sunum standart yoldan (A) yürür; kullanıcı alanları Göster'de önceden onaylar. | OpenID4VP; başlatma tersine |
+| **C — Yüz yüze kontrol** | insan kontrol eder (görevli, kasa) | cüzdan QR'da kısa ömürlü **`openid4vp://…request_uri`** gösterir: bu, kontrol edenin Tamga doğrulayıcı uygulamasında tarayınca **standart OpenID4VP isteğini başlatan** bağlantıdır (cüzdan, kayıtlı RP'nin `/vp/req` ucundan kendisi için bir istek kimliği almıştır). Sunum standart yoldan (A) yürür; kullanıcı alanları Göster'de önceden onaylar. | OpenID4VP; başlatma tersine |
 | **Faz 1 — ISO 18013-5** | tüm yakın alan | QR = device engagement, BLE/NFC oturum, mdoc | ARF |
 
 - **Göster ekranı** tek tasarımdır (kart + canlı saat + büyük QR + "ne paylaşıyorsun" + Değiştir); B/C/Faz 1 yalnızca QR'ın
@@ -88,7 +56,7 @@ penceresi + tekrar listesiyle yetinilir. Tek QR'ın boyutu (≈2.9 KB) SD-JWT VC
   `alg: ES256`, `kid: cnf_kid`. Terminal kişiyi tanımaz, yalnızca "geçerli geçiş hakkı" görür; kimlik `pass_grant` ile RP'nin
   kayıt sisteminde eşleşir (kampüs zaten öğrenciyi tanır).
 - `pass_grant` cüzdanda saklanır (`WalletState.passes[]`), belge kopyasına ve anahtarına bağlıdır (WL5 korunur: bir RP = bir kopya).
-  Belge iptal/süresi dolunca grant düşer; RP grant'ı süresinden önce iptal edebilir (RP status listesi, Faz 1).
+  Belge [[t:revocation]]/süresi dolunca grant düşer; RP grant'ı süresinden önce iptal edebilir (RP status listesi, Faz 1).
 - Ekran: canlı saat + 60 s geri sayım; ekran görüntüsü süre dolunca işe yaramaz.
 
 ## K3 — Tekrar oynatma
@@ -96,12 +64,12 @@ penceresi + tekrar listesiyle yetinilir. Tek QR'ın boyutu (≈2.9 KB) SD-JWT VC
   süre denetler ve bu riski **kabul eder** (60 s içinde kopyalanan QR başka kapıda geçebilir); risk ADR'de açıkça kayıtlıdır.
 
 ## K4 — Tek kullanımlık attestation'lar (bilet)
-- Organizatör hem issuer hem verifier: bağlanamazlık anlamsız, kabul. Mekanizma: **1 kopya/koltuk**, `exp` = etkinlik bitişi,
+- Organizatör hem [[t:issuer]] hem doğrulayıcı: bağlanamazlık anlamsız, kabul. Mekanizma: **1 kopya/koltuk**, `exp` = etkinlik bitişi,
   kapı geçişte **status biti** "kullanıldı"; S6 (sabit aralık yayını) korunur → kapılar arası **ortak kullanıldı listesi zorunlu**
   (aralık içinde ikinci geçişi bu liste keser).
 
 ## K5 — RP kaydına terminal sınıfı
-- `relying_parties[]` kaydına `terminal_groups[]` (grup kimliği, sertifika parmak izi, çevrim dışı izinli mi) eklenir; terminal
+- `relying_parties[]` ([[t:relying-party]]) kaydına `terminal_groups[]` (grup kimliği, sertifika parmak izi, çevrim dışı izinli mi) eklenir; terminal
   ancak kayıtlı bir RP'nin altında tanımlanır ([[SPEC-TRUST-0001]] küçük sürüm). Cüzdan Göster'de yalnızca kayıtlı RP/terminal
   grubuna geçiş kartı üretir.
 
@@ -133,7 +101,7 @@ katmanını değiştirir. AltID emsali bu yaklaşımın bir devlet uygulamasınd
 # Sonuçlar
 - Kod: `@tamga-network/wallet-core` `pass.ts` (grant saklama, jeton üretimi), `apps/wallet` Göster ekranı gerçek QR, `@tamga-network/verifier`
   `pass.ts` (grant ihracı + jeton doğrulama + jti listesi), `apps/verify` `/terminal` sayfası ve `/terminal/verify`, kampüs
-  politikası (`campus-access`), sahne 12 (`demo-scenes`). C yolu (ters başlatma + Verifier "Kontrol et" ekranı) ikinci adım.
+  politikası (`campus-access`), sahne 12 (`demo-scenes`). C yolu (ters başlatma + doğrulayıcı "Kontrol et" ekranı) ikinci adım.
 - Belgeler: [[SPEC-WALLET-0001]] WL12–WL14; [[SPEC-API-0001]] AP13; [[SPEC-TRUST-0001]] `terminal_groups` (küçük sürüm);
   FW-TF-0001 §3.7 + ilke; FW-ARF-0001 tablo satırı; 09-DEMO-KURGU S-16 + sahne 12; 08-BACKLOG D9.
 

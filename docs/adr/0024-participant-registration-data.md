@@ -1,47 +1,21 @@
 ---
 document_id: ADR-0024
-title: Katılımcı Kayıt Verisi — Doğrulayıcılar ve Belge Verenler için AB Ortak Veri Seti
-category: ADR
-domain: Trust
+title: "Katılımcı kayıt verisi"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-09-29
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - institutions
-  - relying-parties
-  - engineers
-tags:
-  - adr
-  - registration
-  - relying-party
-  - trusted-list
-keywords:
-  - relying party registration
-  - privacy policy
-  - supervisory authority
-  - entitlements
-  - CIR 2025/848
+last_updated: 2026-10-02
 summary: >
   Güven listesindeki doğrulayıcı (RP) ve belge veren kayıtları, AB'nin ortak kayıt veri setini (CIR 2025/848 Ek I, CIR 2026/1730
   değişikliğiyle; AB teknik şartnameleri TS5/TS6) taşır: resmî ad ve ticari ad, resmî kimlik numarası, adres, iletişim, hizmet
   açıklaması, her kullanım için amaç + gizlilik politikası, kamu kurumu işareti, yetki türü, aracı ilişkileri ve veri koruma
   kurumu. Cüzdan bunları onay ekranında gösterir; silme talebi ve şikâyet akışları bunlara dayanır.
-related:
-  - "[[ADR-0017]]"
-  - "[[ADR-0022]]"
-  - "[[FW-TF-0001]]"
-  - "[[SPEC-TRUST-0001]]"
+domain: Trust
 ---
 
 # Bağlam
 
-Bugünkü doğrulayıcı kaydı yalnız şunları taşır:
+Bugünkü [[t:verifier]] kaydı yalnız şunları taşır:
 - `client_id`,
 - yasal ad,
 - erişim sertifikası parmak izi,
@@ -57,7 +31,7 @@ Proje yönetimi, AB'de toplanan bilgilerin Tamga'da da toplanmasını onayladı.
 
 ## K1 — Doğrulayıcı kaydı: AB ortak veri seti
 
-Güven listesindeki `relying_parties[]` kaydı şu alanları taşır. Adlar TS5 `WalletRelyingParty` sınıfının karşılığıdır.
+[[t:trust-list|güven listesindeki]] `relying_parties[]` kaydı şu alanları taşır. Adlar TS5 `WalletRelyingParty` sınıfının karşılığıdır.
 
 | TS6 | Alan | Tamga | Zorunlu |
 |---|---|---|---|
@@ -79,8 +53,8 @@ Güven listesindeki `relying_parties[]` kaydı şu alanları taşır. Adlar TS5 
 ## K2 — Belge verenler de aynı kimlik ve iletişim alanlarını taşır
 
 `issuers[]` kaydı şu alanları taşır: `trade_name`, `identifiers[]`, `postal_address`, `info_uri`, `contact`,
-`supervisory_authority`. Belge veren için `entitlements` otomatik yazılır: sınıf EAA → `non_q_eaa_provider`, PUB →
-`pub_eaa_provider`. Bu alanlar ETSI TS 119 602 (LoTE) listelerindeki adres ve iletişim bilgisinin kaynağıdır.
+`supervisory_authority`. [[t:issuer]] için `entitlements` otomatik yazılır: sınıf EAA → `non_q_eaa_provider`, PUB →
+`pub_eaa_provider`. Bu alanlar ETSI TS 119 602 ([[t:LoTE]]) listelerindeki adres ve iletişim bilgisinin kaynağıdır.
 
 ## K3 — Cüzdan
 
@@ -97,7 +71,7 @@ yazılmaz.
 
 - Liste biçiminde yeni alanlar **isteğe bağlı** eklenir; eski kayıtlar bozulmaz.
 - Yayıncı, yeni ya da güncellenen her kayıtta K1/K2'nin zorunlu alanlarını ister. Pilot öncesinde bütün kayıtlar tamamlanır.
-- Kayıt sertifikası (WRPRC, `verifier_info`) ve kayıt API'si (TS5) sonraki adımdır.
+- Kayıt sertifikası ([[t:WRPRC]], `verifier_info`) ve kayıt API'si (TS5) sonraki adımdır.
 
 # Değerlendirilen seçenekler
 

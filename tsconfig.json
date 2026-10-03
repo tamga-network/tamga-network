@@ -37,6 +37,5 @@
     "conformance/**/*.ts",
     "examples/**/*.ts"
   ],
-  "exclude": ["node_modules", "dist", "**/dist/**", "packages/*/lib/**", ".publish/**"],
-  "extends": "expo/tsconfig.base"
+  "exclude": ["node_modules", "dist", "**/dist/**", "packages/*/lib/**", ".publish/**"]
 }

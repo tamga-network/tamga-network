@@ -1,0 +1,98 @@
+{
+  "generated_at": "2026-10-03T09:26:26.251Z",
+  "profile": "sandbox",
+  "warning": "SANDBOX (TEST) PKI — ADR-0038. Never in a real list; never trusted by a real wallet or verifier.",
+  "root-ca": {
+    "subject": "CN=Tamga Sandbox Root CA (TEST), O=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "e82b26a910e4ec860add463323a978e2d8050783891e373278705eb1ff511fb4",
+    "not_after": "2036-10-03T09:26:26.000Z"
+  },
+  "tl-signer-1": {
+    "subject": "CN=Tamga Sandbox Trust List Signer (TEST), O=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "49d1a7873996342f2ad4123789f48e5c1167b2c327774eba34278facffc29fee",
+    "not_after": "2028-10-03T09:26:26.000Z"
+  },
+  "wallet-provider": {
+    "subject": "CN=Tamga Sandbox Wallet Provider (TEST), O=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "8b7702005c734d0fa1cd9a43ffdecce6ffe71014c0119b3643de4eb08e07e746",
+    "not_after": "2028-10-03T09:26:26.000Z"
+  },
+  "registrar-1": {
+    "subject": "CN=Tamga Sandbox Registrar (TEST), O=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "4bc0ae1a04bac158690119eb04d7e69b1b66b2141a1cba6e8a14c5655f83c93a",
+    "not_after": "2028-10-03T09:26:26.000Z"
+  },
+  "rp-verify": {
+    "subject": "CN=verify.sandbox.tamga.network, O=Tamga Sandbox Dogrulama (TEST), C=TR",
+    "fingerprint_sha256": "85b400194cdfc47481a8ec1065f4c5d7a7dd22665b918d3feb33daca59cf5c78",
+    "not_after": "2028-10-03T09:26:26.000Z"
+  },
+  "issuer-id": {
+    "subject": "CN=Tamga Sandbox Kimlik (TEST), OU=Identity, O=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "b35dd743161ea33a0bdcec718212f6444fd51e5a2e64d1998acdb1329c77511a",
+    "not_after": "2028-10-03T09:26:26.000Z"
+  },
+  "issuer-id-status": {
+    "subject": "CN=Tamga Sandbox Kimlik - Status List (TEST), OU=Status, O=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "04d39d410f71e9c3b3f0508fd714f13a0fd9630a25e15fae40a257eebf612f83",
+    "not_after": "2028-10-03T09:26:26.000Z"
+  },
+  "issuer-istanbul-bilgi": {
+    "subject": "CN=Istanbul Bilgi Universitesi (TEST), OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi (TEST), C=TR",
+    "fingerprint_sha256": "fc19792b36b802a7d280f575f5037aa55aabdddfe8ee00347818bf1720538725",
+    "not_after": "2028-10-03T15:11:37.000Z",
+    "created_at": "2026-10-03T15:11:37.319Z"
+  },
+  "issuer-istanbul-bilgi-status": {
+    "subject": "CN=Istanbul Bilgi Universitesi - Status List (TEST), OU=Status, O=Istanbul Bilgi Universitesi (TEST), C=TR",
+    "fingerprint_sha256": "ffc04d70b9e7077cef8343b4230fe90712c30164abfb4c4345a89f36ecf38f1a",
+    "not_after": "2028-10-03T15:11:37.000Z",
+    "created_at": "2026-10-03T15:11:37.319Z"
+  },
+  "rp-issuer-istanbul-bilgi": {
+    "subject": "CN=issuer.sandbox.tamga.network, O=Istanbul Bilgi Universitesi - kimlik eslestirme (TEST), C=TR",
+    "fingerprint_sha256": "addf1149e5f177928b117a6b32699e05ebc85bb0e2e7dd0364bb2892aa179f57",
+    "not_after": "2028-10-03T15:11:37.000Z",
+    "created_at": "2026-10-03T15:11:37.319Z"
+  },
+  "issuer-bubilet": {
+    "subject": "CN=Bubilet (TEST), OU=Bilet Satisi, O=Bubilet (TEST), C=TR",
+    "fingerprint_sha256": "430f991ffcf32c45c19eed000b5c0b3844396bb746bef8689422116bb514dbd2",
+    "not_after": "2028-10-03T15:11:37.000Z",
+    "created_at": "2026-10-03T15:11:37.319Z"
+  },
+  "issuer-bubilet-status": {
+    "subject": "CN=Bubilet - Status List (TEST), OU=Status, O=Bubilet (TEST), C=TR",
+    "fingerprint_sha256": "0734e0dc578f495e970e211797f26ddebc012cc32f13c0413646b43baf513bd5",
+    "not_after": "2028-10-03T15:11:37.000Z",
+    "created_at": "2026-10-03T15:11:37.319Z"
+  },
+  "issuer-paribu-cineverse": {
+    "subject": "CN=Paribu Cineverse (TEST), OU=Bilet Satisi, O=Paribu Cineverse (TEST), C=TR",
+    "fingerprint_sha256": "eaf96112b67436513447c05381470213ffbff1ded2448395a8ebe7123fceb121",
+    "not_after": "2028-10-03T15:11:37.000Z",
+    "created_at": "2026-10-03T15:11:37.319Z"
+  },
+  "issuer-paribu-cineverse-status": {
+    "subject": "CN=Paribu Cineverse - Status List (TEST), OU=Status, O=Paribu Cineverse (TEST), C=TR",
+    "fingerprint_sha256": "78adf5597182a319ad1fd637ee9c7b6d46e2ef366d2feac29b974e743b8927a9",
+    "not_after": "2028-10-03T15:11:37.000Z",
+    "created_at": "2026-10-03T15:11:37.319Z"
+  },
+  "ids": {
+    "root-ca": "0x77c545c337206d1cdc74a259d815db411a651fd5f16a31b25b6739cc23bf9b12",
+    "tl-signer-1": "0xb02cf6392def2df946f246b8bb6bdfb6ab9f8aeb59e9b4c532736ed622ff7977",
+    "wallet-provider": "0xb3a90464be7295eefd71c6e3dee0fe07692c434f48c55ae51e3f7207a04d90b9",
+    "registrar-1": "0x0d7ff82bbf309ee9170650bebabde074525fc72afba9b177d1a8986b3196dbb2",
+    "rp-verify": "0x2d3d793bcd771c3f930663f9a6650c305f1403628389d72bdae51f513cf0f49b",
+    "issuer-id": "0x66d2f0be3ab12755dd6412445d496812a5658e82534d2064e60805d9ebd7579d",
+    "issuer-id-status": "0x426c1c9593477c452a1de65f279bdfbbe877299f4430c05cba8ad1fa1f50c192",
+    "issuer-istanbul-bilgi": "0xb72da8c31077fd092cb7c437139b0a3ba0751a299b823a60fac2f12ee81cb24e",
+    "issuer-istanbul-bilgi-status": "0x1a23ea2f0f57f0deddd2cb0dab8dbe9c8a3dd08d7e2a96eacfd2b41c51f131c2",
+    "rp-issuer-istanbul-bilgi": "0x79104a18cefd41df9c6cf2295d2c026577dbb5b97f597ab1ff1a17fbd647fdde",
+    "issuer-bubilet": "0xee705124fba254d9e95c46131a559b9ad4310d877fedf42057612faa02c188a1",
+    "issuer-bubilet-status": "0x751fe4b7cc737759f9145e841f9ee68b7335509e8c8b6ce0d2c5c128eb227e05",
+    "issuer-paribu-cineverse": "0xdc679435ff51cf30e1339fc8264cb15b01b77e8525887a3ab2cf2e7d2e795341",
+    "issuer-paribu-cineverse-status": "0x65e8d781cbae07a6316158e633519a6cf1b7706d8a950d733d3987c973118f1d"
+  }
+}

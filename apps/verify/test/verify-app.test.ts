@@ -1067,7 +1067,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(req.onBehalfOf).toBe(SITE);
     expect(req.rpKey).toBe(SITE); // kayıt çözülmeden önce asıl sitenin client_id'si
     const inter = app.trust().relyingParty(cfg.clientId) as unknown as RpRecord;
-    const match = { queryId: "diploma", credential: { vct: VCT } as never, requested: ["is_graduate"], missing: [] };
+    const match = { queryId: "diploma", credential: { vct: VCT } as never, requested: ["is_graduate"] };
     const site = {
       ...inter,
       client_id: SITE,

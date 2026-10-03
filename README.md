@@ -5,7 +5,7 @@ Kurumlar belgeleri kişinin telefonuna verir, kişi yalnız istenen alanları pa
 sormadan saniyeler içinde denetler.
 
 Bu depo açık kaynak kodu ve kanonik belgeleri taşır: spesifikasyonlar, kararlar (ADR), çerçeve belgeleri, `@tamga-network/*`
-paketleri, cüzdan, doğrulayıcı, cüzdan sağlayıcısı, güven listesi yayıncısı ve akıllı kontratlar.
+paketleri, referans doğrulayıcı, cüzdan sağlayıcısı (geçici; Tamga Wallet deposuna taşınacak), güven listesi yayıncısı ve akıllı kontratlar.
 
 > Güven çapası bugün **imzalı, sürümlü, hash-zincirli güven listeleridir** (ETSI TS 119 612 / EUDI modeli) ve herkese açık
 > bir çapa günlüğüdür. En az iki bağımsız validator operatörü katıldığında aynı kayıtlar izinli bir **Besu / QBFT** defterine
@@ -32,7 +32,6 @@ packages/            npm paketleri (@tamga-network/*)
   verifier           doğrulama hattı (T0 + A–E), OpenID4VP istekleri; /web sayfa kiti
   wallet-core        cüzdan çekirdeği (Node ve React Native): anahtarlar, alma, yerel denetim, sunma
 apps/
-  wallet             Tamga Wallet (Expo / React Native)
   verify             referans doğrulayıcı (verify.tamga.network)
   wallet-provider    cüzdan sağlayıcısı: cüzdan birimi onayı, cihaz kanıtı (wallet.tamga.network)
   trust-publisher    güven listesi yayıncısı ve kayıt aracı (trust.tamga.network)
@@ -46,19 +45,19 @@ ops/                 geliştirme PKI'sı, sertifika imzalama (pki:issue), ortak 
 ```
 
 Kök dosyalar: `DECISIONS.md` (karar kütüğü), `INVARIANTS.md` (bağlayıcı kurallar), `MASTER_INDEX.md` (belge dizini),
-`GLOSSARY.md`, `SCENARIOS.md`, `CONVENTIONS.md` (kod kuralları), `DOCUMENTATION-STANDARD.md`, `CHANGELOG.md`.
+`SCENARIOS.md`, `CONVENTIONS.md` (kod kuralları), `DOCUMENTATION-STANDARD.md`, `CHANGELOG.md`.
 
 ## Çalıştırma
 
 ```bash
 npm install
-npm run d1          # geliştirme PKI'sı → şema kataloğu → güven listeleri → çapa → doğrulama → testler
-npm test            # bütün testler
+npm run setup       # geliştirme PKI'sı → şema kataloğu → güven listeleri → çapa → doğrulama
+npm run check       # testler + tip denetimi
 npm run docs:dev    # docs.tamga.network önizlemesi
 ```
 
 Çıktılar: `apps/trust-publisher/dist/` = `trust.tamga.network`, `packages/schemas/dist/` = `schemas.tamga.network/v1`.
-Ayrıntı: `ops/README.md`. Cüzdan: `apps/wallet/README.md`.
+Ayrıntı: `ops/README.md`. Cüzdan uygulaması (Tamga Wallet) ayrı depodadır; bu depodaki `@tamga-network/wallet-core`'u kullanır.
 
 ## Standartlar
 

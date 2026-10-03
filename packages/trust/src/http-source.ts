@@ -40,6 +40,8 @@ export async function fetchListTrustSource(
      */
     externalLists?: boolean;
     anchorMaxAgeMs?: number;
+    /** ADR-0038: beklenen ağ (varsayılan "production"); sandbox listesi gerçek ağ istemcisinde reddedilir. */
+    environment?: "production" | "sandbox";
   },
 ): Promise<{ source: ListTrustSource; store: TrustStore; report: LoadReport }> {
   if (!opts.rootFingerprints.length) throw new TrustListError("no trust anchor (pin) configured");
@@ -66,6 +68,7 @@ export async function fetchListTrustSource(
       skipAnchors: !opts.anchors,
       states: [cc],
       anchorMaxAgeMs: opts.anchorMaxAgeMs,
+      environment: opts.environment,
     },
     opts.verifyJws,
   );

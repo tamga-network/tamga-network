@@ -1,314 +1,137 @@
-# Documentation Standard
+# Belge Standardı
 
-**Standard Version:** 1.1.0 (2026-09-24: `Framework` katmanı ve `FW-<DOMAIN>-<NUMBER>` kimliği eklendi)
-**Status:** Active
-**Applies To:** Tamga Network Engineering Workspace içindeki tüm Markdown dokümanları
+**Sürüm:** 1.0.0 (2026-10-02) · **Kapsam:** bu depodaki bütün Markdown belgeleri (docs.tamga.network ve arf.tamga.network kaynakları)
 
----
-
-# Amaç
-
-Bu doküman, Tamga Network Engineering Workspace'in resmi dokümantasyon standardını tanımlar.
-
-Hedef; şu özelliklere sahip dokümantasyon üretmektir:
-
-- insanlar için kolay okunur,
-- AI sistemleri için kolay ayrıştırılır (parse),
-- zamanla kolay bakım yapılır,
-- depo genelinde izlenebilir (traceable),
-- tüm katmanlarda tutarlı.
-
-Dokümantasyon birinci sınıf bir mühendislik ürünü olarak ele alınır.
+Belgeler bir rehber gibi okunur: **sadeden başlar, derine iner.** Bu standart belgelerin nerede durduğunu, nasıl adlandırıldığını,
+nasıl yazıldığını ve iki dilde nasıl tutulduğunu tanımlar.
 
 ---
 
-# Tasarım Prensipleri
+# 1. Klasörler
 
-- Dokümantasyon mühendislik gerekçesini korur.
-- Dokümantasyon versiyonlanır.
-- Dokümantasyon izlenebilirdir.
-- Dokümantasyon yıllarca değerli kalmalıdır.
-- Dokümantasyon hem insanlar hem AI için optimize edilir.
-- Project Memory kararların **neden** verildiğini açıklar.
-- Architecture sistemin **ne** olduğunu açıklar.
-- Specification sistemin **nasıl** çalıştığını açıklar.
-- Research dış sistemleri açıklar.
-- Academy kavramları öğretir.
-- ADR kabul edilmiş kararları kaydeder.
-- RFC önerilen değişiklikleri kaydeder.
+Klasörler okurun amacına göre ayrılır. Adlar (dosya, klasör, adres) İngilizcedir; içerik Türkçedir ve İngilizce çevirisi vardır.
 
----
+| Klasör | Ne için | Sitede |
+|---|---|---|
+| `docs/guides/` | Başlarken: adım adım rehberler (GUIDE-*) | evet |
+| `docs/concepts/` | Kavramlar: sade anlatım, kod ve kural kodu yok | evet |
+| `docs/specifications/` | Şartnameler: kesin kurallar (SPEC-*) | evet |
+| `docs/adr/` | Kararlar (ADR-*), konu grubuyla (`domain`) | evet |
+| `docs/architecture/` | Bileşen mimarisi (ARCH-*) | kısmen |
+| `docs/framework/` | Tamga ARF ve ekleri (FW-*) — arf.tamga.network | ARF sitesinde |
+| `docs/glossary.md` | Sözlük | evet |
+| `docs/background/` | Gerekçe (PM-*) ve araştırma (RS-*) | hayır |
+| `docs/ledger/` | Zincir aşaması — bugün kullanılmıyor ([[ADR-0009]]) | hayır |
+| `docs/_internal/`, `docs/_archive/` | İç kayıtlar ve arşiv — public depoya girmez | hayır |
+| `docs/en/` | İngilizce çeviriler (Türkçe kaynakla aynı yol) | evet, kökte |
 
-# YAML Front Matter
+Dosya adı kısa ve İngilizcedir: `specifications/identity-proofing.md`, `guides/verify-on-server.md`. ADR'ler numarasıyla:
+`adr/0031-per-site-pseudonyms.md`. Klasör kökü `index.md`'dir.
 
-Her Markdown doküman **mutlaka** YAML front matter ile başlamalıdır.
+# 2. Kimlik
 
-## Zorunlu Alanlar
+Her belgenin kalıcı bir kimliği (`document_id`) vardır; klasör, dosya adı ya da başlık değişse de kimlik değişmez.
+Belgeler birbirine kimlikle bağlanır: `[[SPEC-CRED-0003]]`; bir kurala `[[SPEC-CRED-0003]]/S1`.
+
+| Önek | Tür | Örnek |
+|---|---|---|
+| `GUIDE-NNNN` | rehber | GUIDE-0002 |
+| `SPEC-<ALAN>-NNNN` | şartname | SPEC-PROTO-0002 |
+| `ADR-NNNN` | karar | ADR-0031 |
+| `ARCH-NNNN` | mimari | ARCH-0003 |
+| `FW-<ALAN>-NNNN` | çerçeve belgesi (ARF, Trust Framework, rulebook) | FW-RB-0002 |
+| `PM-<ALAN>-NNNN` · `RS-<KONU>-NNNN` | gerekçe · araştırma | PM-ASSUR-0001 |
+
+Alan kısaltmaları: `ID` kimlik · `TRUST` güven · `CRED` belge biçimi · `SCHEMA` şema · `PROTO` protokol · `API` · `WALLET` ·
+`BC` zincir · `ARF` · `TF` Trust Framework · `RB` rulebook.
+
+Çerçeve belgeleri (FW-*) **karar üretmez**: kuralları ADR/SPEC kaynaklarından derler, kendi kurallarını `RB-<ROL>-<NN>`
+biçiminde numaralar. Tamga Rulebook ([[FW-RB-0001]]) bütün katılımcılar ve belge türleri için ortak kuralları taşır; her belge
+türünün rulebook'u (Education, Identity, Event Ticket) ondan dallanır.
+
+# 3. Ön bilgi (front matter)
 
 ```yaml
 ---
-document_id:
-title:
-category:
-domain:
-status:
-review_status:
-version:
-created:
-last_updated:
-authors:
-tags:
-keywords:
-summary:
-priority:
----
-```
-
-## Opsiyonel Alanlar
-
-Yalnızca değer kattığında ekle:
-
-```yaml
-language:
-document_type:
-audience:
-stability:
-maturity:
-related:
-depends_on:
-see_also:
-specs:
-adrs:
-rfcs:
-research:
-academy:
-implementation:
-references:
-supersedes:
-superseded_by:
-review_cycle:
----
-```
-
-Uygulanmayan alanı yazma.
-
----
-
-# Alan Tanımları
-
-## document_id
-Benzersiz doküman kimliği. Bkz. **Document ID Convention**.
-
-## title
-İnsan okunabilir başlık.
-
-## category
-Üst düzey kategori. Örnekler: `Philosophy`, `Identity`, `Trust`, `Architecture`, `Specification`, `Research`, `Academy`, `ADR`, `RFC`, `README`.
-
-## domain
-Birincil mühendislik alanı. Örnekler: `Philosophy`, `Identity`, `Trust`, `Credential`, `Authorization`, `Consent`, `Protocol`, `Event`, `Blockchain`, `Security`, `Governance`, `Platform`, `Documentation`.
-
-## status
-Dokümanın durumu. İzinli değerler: `Draft`, `Active`, `Deprecated`, `Superseded`, `Archived`.
-
-## review_status
-Dokümantasyon inceleme durumu (bkz. `DOCUMENTATION-LIFECYCLE.md`). İzinli değerler:
-`Draft`, `Completed`, `In Review`, `Reviewed`, `Frozen`, `Deprecated`, `Archived`.
-
-## version
-Dokümanın semantik versiyonu. Örnek: `1.0.0`.
-
-## created / last_updated
-Tarih formatı: `YYYY-MM-DD`.
-
-## authors
-Örnek:
-```yaml
-authors:
-  - Tamga Network Engineering
-```
-
-## tags
-Kısa aranabilir etiketler.
-
-## keywords
-AI ve arama için daha uzun semantik anahtar kelimeler.
-
-## summary
-Katlanmış (folded) YAML ile kısa açıklama:
-```yaml
+document_id: SPEC-ID-0003
+title: "Kimlik ispatı"
+status: Active            # Draft · Active · Deprecated  (ADR: Proposed · Active · Superseded)
+version: 1.0.0
+created: 2026-09-24
+last_updated: 2026-10-02
 summary: >
-  Kimlik-öncelikli mimari prensibini tanımlar.
-```
-
-## priority
-İzinli değerler: `Critical`, `High`, `Medium`, `Low`.
-
-## stability (opsiyonel)
-İzinli değerler: `Timeless`, `Stable`, `Evolutionary`, `Experimental`.
-
-## maturity (opsiyonel)
-İzinli değerler: `Foundational`, `Developing`, `Draft`, `Stable`, `Final`.
-
+  Bir-iki cümle: belge ne anlatır, kimin işine yarar.
+domain: Identity          # yalnız ADR: Trust · Credentials · Identity · Wallet · Services · Governance
 ---
-
-# Document ID Convention
-
-## Project Memory
-```text
-PM-<DOMAIN>-<NUMBER>
-```
-Örnek: `PM-PH-0001`, `PM-ID-0001`, `PM-TRUST-0001`
-
-## Architecture
-```text
-ARCH-<NUMBER>
-```
-Örnek: `ARCH-0001`
-
-## Specification
-```text
-SPEC-<DOMAIN>-<NUMBER>
-```
-Örnek: `SPEC-ID-0001`, `SPEC-PROTO-0001`
-
-## Academy
-```text
-ACA-<DOMAIN>-<NUMBER>
-```
-Örnek: `ACA-ID-0001`
-
-## Research
-```text
-RS-<TOPIC>-<NUMBER>
-```
-Örnek: `RS-DID-0001`, `RS-W3C-VC-0001`
-
-## ADR
-```text
-ADR-<NUMBER>
 ```
 
-## RFC
-```text
-RFC-<NUMBER>
-```
+İngilizce çeviride ayrıca `translation_of: <document_id>` ve `source_version: <Türkçe kaynağın sürümü>` bulunur; `document_id`
+aynı kalır, `title` ve `summary` İngilizcedir.
 
-## Framework (dışa dönük çerçeve belgeleri — `docs/framework/`)
-```text
-FW-<DOMAIN>-<NUMBER>
-```
-Örnek: `FW-ARF-0001` (Tamga ARF), `FW-TF-0001` (Trust Framework), `FW-RB-0001` (Rulebook),
-`FW-RB-0002` (Attestation Rulebook — eğitim), `FW-RISK-0001` (risk kütüğü). Kategori değeri
-`Framework`. Bu katman **karar üretmez**: her kuralı bir ADR/SPEC/PM/INVARIANTS koduna atıfla
-derler; kaynağı olmayan madde "ÖNERİ" etiketi taşır. Değişmez tablosu **içermez** (INVARIANTS'a
-kod eklemez); kurallar `RB-<ROL>-<NN>` biçiminde numaralanır ve kaynak koda atıf verir.
+# 4. Başlık
 
-### Yaygın Domain Kısaltmaları
-`PH` Philosophy · `ID` Identity · `TRUST` Trust · `CRED` Credential · `SCHEMA` Schema · `AUTH` Authorization · `CONSENT` Consent · `PROTO` Protocol · `EVENT` Event · `BC` Blockchain · `SEC` Security · `GOV` Governance · `PLAT` Platform · (Framework için) `ARF` · `TF` · `RB` · `RISK`
+- **En fazla 6 kelime / 45 karakter**, alt başlık ("— …") yok; ayrıntı `summary`'ye.
+- İç kısaltma ve süreç adı yok ("Faz B", "WL4", "D-ID-2"). Standart adı olabilir: "OpenID4VP profili".
+- Kenar çubuğu ve sekme başlığı aynı addır (site `title`'ı kullanır).
 
-> `SCHEMA` 2026-09-09'da eklendi ([[ADR-0007]], [[PM-SCHEMA-0001]]). Şema kayıt defteri,
-> credential formatından ayrı bir domaindir: `CRED` belgenin *nasıl taşındığını*,
-> `SCHEMA` *ne anlama geldiğini* tanımlar.
+# 5. Sayfa iskeleti
 
+1. **Bir cümle:** bu belge ne, kimin işine yarar.
+2. **Ne zaman okunur:** önce ne okunmalı, sonra nereye gidilir (2–3 madde).
+3. **Sade anlatım:** kavram, akış ya da şekil — kod ve kural kodu yok.
+4. **Adımlar / kurallar:** kural kodu ilk geçtiği yerde kısa açıklamasıyla.
+5. **Derinlik:** ayrıntı, kenar durumları, standarda atıf.
+6. **Durum:** tek satır — "**Yürürlükte** — sürüm 1.0.0 (tarih)".
 
-### Değişmez (Invariant) Kodları
+Şartnamelerde kural tabloları ve değişmezler tam ve kesin yazılır; iskelet girişi ve akışı düzenler.
 
-Değişmez kodları **doküman kapsamlıdır**; farklı dokümanlarda aynı kod
-bulunabilir. Bu yüzden:
+# 6. Terimler (karma kural)
 
-- Doküman **içinde** kısa kod kullanılır: `S1`
-- Doküman **dışına** atıfta doküman kimliği zorunludur: `[[SPEC-CRED-0003]]/S1`
-- Bir dokümanın **adım kodları** (doğrulama hattı `A1…E4`) değişmez kodu
-  DEĞİLDİR ve aynı harf-rakam biçimini kullansa bile ayrı bir isim alanıdır.
+Türkçe metin **Türkçe okunur**; İngilizce terim cümlenin içine melez tamlama olarak girmez ("registration certificate
+sağlayıcısı" yazılmaz). Kural iki gruba ayrılır:
 
-Tüm değişmezlerin indeksi [[INVARIANTS]]'tadır ve **üretilen** bir dosyadır.
-Yeni doküman eklendiğinde yeniden üretilir; çakışma bölümü boş kalmalıdır.
+| Grup | Türkçe metinde | Örnek |
+|---|---|---|
+| **Rol ve gündelik kavram** | Türkçe yazılır; ilk kullanımda İngilizce terim parantezde | belge (credential), belge veren (issuer), doğrulayıcı (verifier), belge sahibi (holder), cüzdan sağlayıcısı (wallet provider), güven listesi (trust list), iptal listesi (status list), kayıt sertifikası (registration certificate), takma ad (pseudonym), kimlik doğrulama (identity proofing) |
+| **Teknik, kriptografik, protokol terimi ve kısaltma** | İngilizce kalır; kısaltmanın açılımı ilk kullanımda | salted hash, disclosure, selective disclosure, nonce, holder binding, key binding, proof of possession, attestation, relying party, wallet unit, PID, EAA, QTSP (Qualified Trust Service Provider), SD-JWT VC, OpenID4VP |
 
----
+İngilizce metinde bütün terimler İngilizcedir.
 
-# Markdown Kuralları
+**Yazım.** Terimin sayfadaki ilk kullanımı ipucuyla yazılır: `[[t:trust-list]]`. Türkçe sayfada "güven listesi (trust list) ⓘ",
+İngilizce sayfada "trust list ⓘ" görünür; kısaltmada açılım: "QTSP (Qualified Trust Service Provider) ⓘ". (i) üzerine gelince ya
+da dokununca okurun dilindeki kısa açıklama açılır. Türkçe çekim için: `[[t:trust-list|güven listesinde]]`; İngilizce terime ek
+gerekirse kesme işaretiyle: `[[t:PID|PID'in]]`. Sonraki kullanımlar düz yazılır. Başlıkta, tabloda, kod örneğinde ve `[[ID]]`
+atfında ipucu kullanılmaz.
 
-Her doküman:
+Terimler tek kaynakta: `docs/.vitepress/terms.json` (docs ve ARF ortak). Her terimde `label` (İngilizce), varsa `tr_label`
+(Türkçe metindeki karşılığı — rol ve gündelik kavram grubu), kısaltmada `expansion`, `en` ve `tr` açıklama bulunur. Yeni terim
+önce oraya eklenir; hangi gruba gireceği orada `tr_label` ile belirlenir.
 
-- problemi açıklamalı,
-- gerekçeyi açıklamalı,
-- alternatifleri açıklamalı,
-- ödünleşimleri açıklamalı,
-- desteksiz görüşlerden kaçınmalı,
-- tutarlı terminoloji kullanmalı,
-- tarihsel gerekçeyi korumalı,
-- yıllar sonra bile anlaşılır kalmalı.
+# 7. Diller
 
----
+- **docs.tamga.network:** İngilizce kökte, Türkçe `/tr/` altında. Türkçe metin kaynaktır (`docs/<yol>`); İngilizce çeviri
+  `docs/en/<aynı yol>`. Çeviri, kaynağın sürümünü `source_version` ile taşır; kaynak değişince çeviri aynı çalışmada
+  güncellenir (`npm run docs:check` denetler).
+- **arf.tamga.network:** İngilizce kökte, Türkçe `/tr/` altında; Türkçe kaynak `docs/framework/`, İngilizce `arf/`
+  (`npm run arf:check`).
+- Site içi bağlantı İngilizce yolla yazılır (`/guides/code-examples`); Türkçe sayfada `/tr/` öneki kendiliğinden eklenir.
 
-# Kararlı Başlık Yapısı (Project Memory)
+# 8. Sürümler
 
-Uygun olduğunda Project Memory dokümanları şu yapıyı izler:
+- Her belge SemVer taşır. **1.0.0 ilk yayındır (2026-10-02).** Anlamı değiştirmeyen düzeltme yama (`1.0.1`), yeni kural ya da
+  bölüm ara sürüm (`1.1.0`), uyumu bozan değişiklik ana sürüm (`2.0.0`).
+- Değişiklik geçmişi belgenin içinde tutulmaz: belge değişiklikleri depo kökündeki `CHANGELOG.md`'ye, ARF yayınları
+  `arf/releases.json` ve "What changed" sayfasına yazılır.
+- Kapatılmış bir karar ancak yeni bir ADR ile değişir; eski ADR silinmez, `Superseded` olur.
 
-```text
-Giriş
-Problem
-Evrim (Evolution)
-Mimari (Architecture)
-İlişkiler (Relationships)
-Araştırma (Research)
-Gelecek (Future)
-Sonuç
-İlgili Dokümanlar
-Durum (Status)
-```
+# 9. Bağlayıcı kurallar (değişmezler)
 
-Her başlık zorunlu değildir, ancak yapı öngörülebilir kalmalıdır.
+Şartname ve kararlardaki bağlayıcı kurallar başlığında "Değişmez" geçen bölümlerde `| **KOD** | metin |` tablolarıyla yazılır.
+Kod belge kapsamlıdır: belge içinde `S1`, dışarıdan `[[SPEC-CRED-0003]]/S1`. Doğrulama hattının adım kodları (`A1…E4`) değişmez
+değildir. Bütün kurallar `INVARIANTS.md`'de toplanır — **üretilen** dosyadır (`node scripts/sync-invariants.mjs`); çakışma
+bölümü boş kalır. Belge dizini `MASTER_INDEX.md` de üretilir (`npm run docs:index`).
 
----
+# 10. Kamuya açık metin
 
-# Çapraz Referans ve Bilgi Grafiği
-
-Dokümanlar mümkün olduğunca diğer iç dokümanlara `document_id` ile referans vermelidir.
-
-```text
-PM-PH-0001, PM-ID-0001, ADR-0002, SPEC-ID-0001
-```
-
-Bu, izlenebilir bir **mühendislik bilgi grafiği (knowledge graph)** oluşturur. İzole dokümandan kaçın.
-
----
-
-# Research First Kuralı
-
-Önemli mühendislik kararları mümkün olduğunca araştırma ile desteklenmelidir. Bir doküman şunları açıklamalı:
-
-- hangi problem incelendi,
-- hangi alternatifler değerlendirildi,
-- ne öğrenildi,
-- bazı yaklaşımlar neden reddedildi,
-- seçilen yön neden tercih edildi.
-
----
-
-# AI Optimizasyonu
-
-Kaçın: belirsiz terimler, açıklanmamış kısaltmalar, gizli varsayımlar, dokümante edilmemiş bağımlılıklar.
-
-Tercih et: açık ilişkiler, kararlı kimlikler, semantik metadata, öngörülebilir başlıklar, deterministik yapı.
-
----
-
-# Kurallar
-
-- Her Markdown doküman YAML front matter içermelidir.
-- Her dokümanın benzersiz bir `document_id`'si olmalıdır.
-- Her doküman `DOCUMENTATION-LIFECYCLE.md`'deki yaşam döngüsünü izlemelidir.
-- Temel (foundational) dokümanlar sonunda `Frozen` review_status'a ulaşmalıdır.
-- Dokümantasyon yalnızca sonuçları değil, mühendislik gerekçesini de korumalıdır.
-- Project Memory ≠ Specification.
-- Specification ≠ Research.
-- Academy ≠ Project Memory.
-- Research ≠ pazarlama materyali.
-
----
-
-# Sonuç
-
-Tamga Network dokümantasyon sistemi, projenin ömrü boyunca mühendislik bilgisini korumak için tasarlanmıştır. Nihai amaç; hem insanlar hem AI sistemleri için yıllarca anlaşılır, sürdürülebilir ve kullanılabilir bir bilgi tabanı oluşturmaktır.
+Yayınlanan belgelerde kişi adı, araç adı, iç kayıt yolu ve özel depo yolu bulunmaz; kararlar "proje yönetimi" onayıyla anılır.
+`npm run docs:check` ve `npm run arf:check` denetler.

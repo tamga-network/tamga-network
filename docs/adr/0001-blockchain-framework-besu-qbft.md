@@ -1,46 +1,17 @@
 ---
 document_id: ADR-0001
-title: Blockchain Framework ve Consensus — Hyperledger Besu (QBFT)
-category: ADR
-domain: Blockchain
+title: "Besu QBFT defteri"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-07-29
-last_updated: 2026-07-29
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - architects
-  - ai-agents
-stability: Stable
-maturity: Stable
-tags:
-  - adr
-  - decision
-  - hyperledger-besu
-  - qbft
-  - consensus
-keywords:
-  - architecture decision record
-  - Hyperledger Besu
-  - QBFT
-  - permissioned blockchain
-  - framework selection
-related:
-  - PM-BC-0001
-  - RS-FRAMEWORKS-0001
-  - RS-EBSI-0001
+last_updated: 2026-10-02
 summary: >
   Tamga Network'ün blockchain motoru olarak Hyperledger Besu'nun QBFT consensus
   ile kullanılmasına karar verilmiştir. Gerekçe: yerel EVM (gelecek varlık/ödeme),
   EBSI ile aynı yığın, tek-zincil basitlik, izinli/eşit-güç/anında-kesinlik
   gereksinimlerinin yerleşik karşılanması ve tam egemenlik. Validator ölçekleme
   sınırı "devletler=validator, kurumlar=full node" tasarımıyla giderilir.
-priority: Critical
+domain: Trust
 ---
 
 # ADR-0001 — Blockchain Framework ve Consensus: Hyperledger Besu (QBFT)

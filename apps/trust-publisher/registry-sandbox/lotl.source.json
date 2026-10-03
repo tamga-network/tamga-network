@@ -1,0 +1,120 @@
+{
+  "list_format_version": "1.0",
+  "list_type": "lotl",
+  "environment": "sandbox",
+  "next_update_days": 90,
+  "operator": {
+    "name": "Tamga Network Sandbox (TEST)",
+    "status": "provisional",
+    "on_behalf_of": "Test network — not part of the Tamga Network trust framework (ADR-0038)",
+    "note": "SANDBOX — test network. Lists, keys and credentials here are not valid in the real network. Data is reset regularly.",
+    "trust_framework": "https://arf.tamga.network",
+    "lote_contact": {
+      "postal": {
+        "StreetAddress": "(to be published)",
+        "Country": "TR"
+      },
+      "electronic": [
+        "mailto:info@tamga.network",
+        "https://tamga.network"
+      ],
+      "info": [
+        "https://tamga.network",
+        "https://arf.tamga.network"
+      ]
+    }
+  },
+  "catalogue": {
+    "note": "Type Metadata resolution path (IETF SD-JWT VC §5.3.2). vct URNs are resolved here.",
+    "url": "https://schemas.tamga.network/v1/catalogue.json"
+  },
+  "anchor_signing_certs": [
+    "tl-signer-1"
+  ],
+  "national_lists": [
+    {
+      "state_code": "TR",
+      "status": "ACTIVE",
+      "membership": "TDT_MEMBER",
+      "list_url": "https://trust.sandbox.tamga.network/tl-tr.jws",
+      "operator": {
+        "name": "Tamga Network Sandbox (TEST)",
+        "status": "provisional",
+        "on_behalf_of": "Test network — not part of the Tamga Network trust framework (ADR-0038)"
+      },
+      "signing_certs": [
+        "tl-signer-1"
+      ],
+      "roles": {
+        "registrar": {
+          "status": "PROVISIONAL",
+          "operated_by": "Tamga Network Sandbox (TEST)",
+          "signing_certs": [
+            "registrar-1"
+          ]
+        },
+        "tlso": {
+          "status": "PROVISIONAL",
+          "operated_by": "Tamga Network Sandbox (TEST)"
+        },
+        "pid_provider": {
+          "status": "RESERVED"
+        },
+        "access_ca": {
+          "status": "PROVISIONAL",
+          "operated_by": "Tamga Network Sandbox (TEST)"
+        },
+        "national_root_ca": {
+          "status": "ACTIVE",
+          "cert": "root-ca",
+          "operated_by": "Tamga Network Sandbox (TEST)"
+        }
+      },
+      "recognition": {
+        "mode": "unilateral",
+        "recognizes": [
+          "TR"
+        ]
+      }
+    }
+  ],
+  "eaa_categories": {
+    "urn:tamga:eaa:pub": "Issued by or on behalf of a member-state public body / authentic source (PuB-EAA equivalent)",
+    "urn:tamga:eaa:qualified": "Issuer accredited in the Tamga Trust Framework (I3; QEAA equivalent)"
+  },
+  "wallet_providers": [
+    {
+      "provider_id": "TAMGA-SANDBOX-WP",
+      "legal_name": "Tamga Network Sandbox (TEST)",
+      "wua_signing_certs": [
+        "wallet-provider"
+      ],
+      "solutions": [
+        {
+          "solution_id": "tamga-wallet-expo",
+          "min_version": "0.1.0",
+          "status": "ACTIVE",
+          "security_level": "W1",
+          "note": "Sandbox: development devices and emulators accepted."
+        }
+      ],
+      "status": "ACTIVE"
+    }
+  ],
+  "pid_providers": [],
+  "lote": {
+    "enabled": false,
+    "note": "ETSI TS 119 602 LoTE projection (lote/*.jws). Enable after the URI names and the operator postal address are approved."
+  },
+  "zk_circuits": [
+    {
+      "circuit_id": "5a8938159603876eb537a117cfe9e2eaec5a01a042b316a8e57e52e4bb3c9291",
+      "system": "longfellow-libzk-v1",
+      "version": 8,
+      "attributes": 1,
+      "sha256": "f44ab1a415f284251ea6ad5451d2588c1e7011eb9ba46091116e8caa4c8e0d83",
+      "status": "ACTIVE",
+      "note": "ADR-0032: Longfellow mdoc ZK circuit v8, one attribute (first predicate age_over_18). Upstream longfellow-zk d5e6be77; deterministic."
+    }
+  ]
+}

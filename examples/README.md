@@ -1,7 +1,7 @@
 # Tamga kod örnekleri
 
 Dört çalışan örnek. Her biri `examples.test.ts` içinde gerçek paketlerle çalıştırılır (`npx vitest run examples`); docs sitesi
-(`docs/guides/04-kod-ornekleri.md`) ve tamga.network bu dosyaları doğrudan gösterir. Bir paket değişip örnek bozulursa test
+(`docs/guides/code-examples.md`) ve tamga.network bu dosyaları doğrudan gösterir. Bir paket değişip örnek bozulursa test
 kırmızı yanar — sitede bayat kod kalmaz.
 
 | Klasör | Ne gösterir | Paketler |

@@ -121,7 +121,7 @@ export function buildLote(i: LoteInput) {
         // a) bilgi sayfası, b) önceki bütün yayınlar
         SchemeInformationURI: [enUri(`${TAMGA_LOTE_ROOT}/`), enUri("https://trust.tamga.network/archive/")],
         StatusDeterminationApproach: `${TAMGA_LOTE_ROOT}/status-determination/TamgaTrustFramework`,
-        SchemeTypeCommunityRules: [enUri("https://arf.tamga.network/annex-a-trust-framework")],
+        SchemeTypeCommunityRules: [enUri("https://arf.tamga.network/trust-framework")],
         SchemeTerritory: i.territory,
         PolicyOrLegalNotice: [
           {

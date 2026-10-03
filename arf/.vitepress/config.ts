@@ -8,10 +8,12 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { ARF_PAGES, DOCS_BASE, buildDocIndex, docLinks } from "../../docs/.vitepress/doc-index";
+import { termTips } from "../../docs/.vitepress/terms";
 import { brandHead, pageHead } from "../../docs/.vitepress/seo";
 
 const REPO = join(__dirname, "..", "..");
-const byId = buildDocIndex(join(REPO, "docs"));
+// Geliştirici belgelerine bağlantı sayfanın diline göre: İngilizce ARF → docs kökü, Türkçe ARF → docs /tr/.
+const IDX = { en: buildDocIndex(join(REPO, "docs"), "en"), tr: buildDocIndex(join(REPO, "docs"), "tr") };
 const REL: { latest: string; releases: { id: string; languages: string[]; docs: Record<string, string> }[] } =
   JSON.parse(readFileSync(join(__dirname, "..", "releases.json"), "utf8"));
 const RELEASE = REL.latest;
@@ -26,16 +28,20 @@ const T: Record<
     doc: [
       "Architecture and Reference Framework",
       "Annex A — Trust Framework",
-      "Annex B — Participant Rules",
-      "Annex C — Education",
-      "Annex C — Identity",
-      "Annex C — Event ticket",
+      "Annex B — Tamga Rulebook",
+      "Education Rulebook",
+      "Identity Rulebook",
+      "Event Ticket Rulebook",
       "Annex D — Definitions",
       "Annex E — References",
+      "Reading path",
+      "Roles",
+      "Onboarding",
     ],
     nav: {
       framework: "Framework",
       annexes: "Annexes",
+      joining: "Taking part",
       changes: "What changed",
       general: "General docs",
       developers: "Developer docs",
@@ -49,16 +55,20 @@ const T: Record<
     doc: [
       "Mimari ve Referans Çerçevesi",
       "Ek A — Trust Framework",
-      "Ek B — Katılımcı Kuralları",
-      "Ek C — Eğitim",
-      "Ek C — Kimlik belgesi",
-      "Ek C — Etkinlik bileti",
+      "Ek B — Tamga Rulebook",
+      "Education Rulebook",
+      "Identity Rulebook",
+      "Event Ticket Rulebook",
       "Ek D — Tanımlar",
       "Ek E — Kaynaklar",
+      "Okuma yolu",
+      "Roller",
+      "Katılım süreci",
     ],
     nav: {
       framework: "Çerçeve",
       annexes: "Ekler",
+      joining: "Katılım",
       changes: "Ne değişti",
       general: "Genel belgeler",
       developers: "Geliştirici belgeleri",
@@ -73,6 +83,9 @@ const PAGES = Object.values(ARF_PAGES);
 
 function theme(l: Loc): DefaultTheme.Config {
   const t = T[l];
+  /** Yayında bulunan belgeler (sıra numarasıyla seçilir): Ek C rulebook'ları ayrı bir grup altında. */
+  const docItems = (docs: Record<string, string>, root: string, idx: number[]): DefaultTheme.SidebarItem[] =>
+    idx.filter((i) => docs[IDS[i]]).map((i) => ({ text: t.doc[i], link: `${root}${PAGES[i]}` }));
   const link = (i: number) => `${t.prefix}${PAGES[i]}`;
   const general = l === "tr" ? "https://tamga.network/tr/docs" : "https://tamga.network/en/docs";
   return {
@@ -80,8 +93,9 @@ function theme(l: Loc): DefaultTheme.Config {
       { text: t.nav.framework, link: link(0) },
       {
         text: t.nav.annexes,
-        items: PAGES.slice(1).map((_p, k) => ({ text: t.doc[k + 1], link: link(k + 1) })),
+        items: [1, 2, 3, 4, 5, 6, 7].map((i) => ({ text: t.doc[i], link: link(i) })),
       },
+      { text: t.nav.joining, items: [8, 9, 10].map((i) => ({ text: t.doc[i], link: link(i) })) },
       { text: t.nav.changes, link: `${t.prefix}changes` },
       { text: t.nav.developers, link: DOCS_BASE },
       { text: t.nav.general, link: general },
@@ -97,10 +111,17 @@ function theme(l: Loc): DefaultTheme.Config {
             text: `Tamga ARF ${r.id}${cur ? (l === "tr" ? " · güncel" : " · latest") : ""}`,
             items: [
               { text: l === "tr" ? "Genel bakış" : "Overview", link: root },
-              ...t.doc
-                .map((text, i) => ({ text, link: `${docRoot}${PAGES[i]}`, id: IDS[i] }))
-                .filter((x) => r.docs[x.id])
-                .map(({ text, link }) => ({ text, link })),
+              ...docItems(r.docs, docRoot, [8]),
+              ...docItems(r.docs, docRoot, [0, 1, 2]),
+              {
+                text: l === "tr" ? "Ek C — Rulebook'lar" : "Annex C — Rulebooks",
+                collapsed: false,
+                items: docItems(r.docs, docRoot, [3, 4, 5]),
+              },
+              ...docItems(r.docs, docRoot, [6, 7]),
+              ...(r.docs[IDS[9]]
+                ? [{ text: t.nav.joining, collapsed: false, items: docItems(r.docs, docRoot, [9, 10]) }]
+                : []),
               { text: t.nav.changes, link: `${t.prefix}changes` },
             ],
           },
@@ -148,7 +169,7 @@ export default defineConfig({
       "link",
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Onest:wght@500;600;700&display=swap",
       },
     ],
   ],
@@ -167,10 +188,12 @@ export default defineConfig({
         // Sayfanın dili ve yayını: tr/v0.1/… → /tr/v0.1/; çerçeve atıfları aynı yayının sayfalarına gider.
         const prefix = "/" + (/^(tr\/)?(v\d+\.\d+\/)?/.exec(rel)?.[0] ?? "");
         const page = ARF_PAGES[id];
-        const e = byId.get(id);
+        const e = IDX[rel.startsWith("tr/") ? "tr" : "en"].get(id);
         if (page) return { href: `${prefix}${page}`, title: e?.title ?? id };
-        return e ? { href: `${DOCS_BASE}${e.path}`, title: e.title } : undefined;
+        if (!e) return undefined;
+        return { href: e.path.startsWith("http") ? e.path : `${DOCS_BASE}${e.path}`, title: e.title };
       });
+      termTips(md, (rel) => (rel.startsWith("tr/") ? "tr" : "en"));
     },
   },
 });

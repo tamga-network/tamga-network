@@ -17,6 +17,11 @@ import {
   type RpRecord,
   parseDcApiRequest,
   DC_API_PROTOCOL,
+  selectDcql,
+  chooseDcqlOption,
+  checkDcqlShape,
+  PSEUDONYM_FORMAT,
+  type DcqlQuery,
 } from "./index.js";
 
 const PKI = resolve(import.meta.dirname, "../../../ops/pki");
@@ -61,7 +66,7 @@ describe("parseVpUri / DCQL / RP", () => {
     expect(r.requestUri).toContain("/vp/req/prs_1");
     expect(() => parseVpUri("openid4vp://?client_id=x")).toThrow(/request_uri/);
   });
-  it("matchDcql: vct + values koşulu; eşleşmeyen sorgu unmatched", () => {
+  it("matchDcql: vct + values koşulu; eşleşmeyen sorgu unmatched (nedeniyle)", () => {
     const creds = [
       cred("urn:tamga:edu:StudentCredential:1", { is_enrolled: true, awarding_body_name: "B" }),
       cred("urn:tamga:edu:DiplomaCredential:1", { is_graduate: true, eqf_level: 6, grade: "3" }),
@@ -72,15 +77,15 @@ describe("parseVpUri / DCQL / RP", () => {
           id: "diploma",
           format: "dc+sd-jwt",
           meta: { vct_values: ["urn:tamga:edu:DiplomaCredential:1"] },
-          claims: [{ path: ["is_graduate"], values: [true] }, { path: ["eqf_level"] }, { path: ["thesis_title"] }],
+          claims: [{ path: ["is_graduate"], values: [true] }, { path: ["eqf_level"] }],
         },
         { id: "x", format: "dc+sd-jwt", meta: { vct_values: ["urn:tamga:edu:Other:1"] }, claims: [] },
       ],
     };
     const m = matchDcql(q, creds);
     expect(m.matches[0].requested).toEqual(["is_graduate", "eqf_level"]);
-    expect(m.matches[0].missing).toEqual(["thesis_title"]);
     expect(m.unmatched).toEqual(["x"]);
+    expect(m.gaps).toEqual([{ queryId: "x", reason: "no_credential", claims: [] }]);
     const bad = matchDcql(
       {
         credentials: [
@@ -95,6 +100,103 @@ describe("parseVpUri / DCQL / RP", () => {
       creds,
     );
     expect(bad.unmatched).toEqual(["d"]);
+    expect(bad.gaps[0]).toMatchObject({ queryId: "d", reason: "values", claims: ["is_graduate"] });
+  });
+  it("C24 / OpenID4VP §6.4.1: claim_sets yoksa istenen alan belgede yoksa belge sorguyu KARŞILAMAZ (eksik alanla gitmez)", () => {
+    const DIP = "urn:tamga:edu:DiplomaCredential:1";
+    const q: DcqlQuery = {
+      credentials: [
+        {
+          id: "diploma",
+          format: "dc+sd-jwt",
+          meta: { vct_values: [DIP] },
+          claims: [{ path: ["is_graduate"], values: [true] }, { path: ["eqf_level"] }, { path: ["thesis_title"] }],
+        },
+      ],
+    };
+    const dip = cred(DIP, { is_graduate: true, eqf_level: 6 });
+    const m = matchDcql(q, [dip]);
+    expect(m.matches).toEqual([]);
+    expect(m.unmatched).toEqual(["diploma"]);
+    // neden: belgede thesis_title yok (cüzdan kullanıcıya bunu söyler)
+    expect(m.gaps).toEqual([
+      { queryId: "diploma", reason: "missing_claims", claims: ["thesis_title"], credential: dip },
+    ]);
+    const sel = selectDcql(q, m.matches);
+    expect(sel).toMatchObject({ ok: false, missing: ["diploma"] });
+    // alan belgede varsa eşleşir ve hepsi gönderilir
+    const full = matchDcql(q, [cred(DIP, { is_graduate: true, eqf_level: 6, thesis_title: "T" })]);
+    expect(full.matches[0].requested).toEqual(["is_graduate", "eqf_level", "thesis_title"]);
+    expect(full.gaps).toEqual([]);
+  });
+  it("C24: isteğe bağlı alan claim_sets ile istenir — belgede yoksa eşleşir, varsa gönderilir", () => {
+    const DIP = "urn:tamga:edu:DiplomaCredential:1";
+    const q: DcqlQuery = {
+      credentials: [
+        {
+          id: "diploma",
+          format: "dc+sd-jwt",
+          meta: { vct_values: [DIP] },
+          claims: [
+            { id: "g", path: ["is_graduate"], values: [true] },
+            { id: "l", path: ["eqf_level"] },
+            { id: "t", path: ["thesis_title"] },
+          ],
+          claim_sets: [
+            ["g", "l", "t"],
+            ["g", "l"],
+          ],
+        },
+      ],
+    };
+    expect(matchDcql(q, [cred(DIP, { is_graduate: true, eqf_level: 6 })]).matches[0].requested).toEqual([
+      "is_graduate",
+      "eqf_level",
+    ]);
+    expect(
+      matchDcql(q, [cred(DIP, { is_graduate: true, eqf_level: 6, thesis_title: "T" })]).matches[0].requested,
+    ).toEqual(["is_graduate", "eqf_level", "thesis_title"]);
+    // zorunlu alan (her kombinasyonda) yoksa yine eşleşmez; neden en yakın kombinasyondan
+    const none = matchDcql(q, [cred(DIP, { is_graduate: true })]);
+    expect(none.gaps[0]).toMatchObject({ reason: "missing_claims", claims: ["eqf_level"] });
+  });
+  it("C24: credential_sets seçenekleriyle — eksik alanlı belge seçenek olmaz, öbür seçenek önerilir", () => {
+    const q: DcqlQuery = {
+      credentials: [
+        {
+          id: "p",
+          format: "dc+sd-jwt",
+          meta: { vct_values: ["urn:tamga:test:Passport:1"] },
+          claims: [{ path: ["birth_date"] }],
+        },
+        {
+          id: "i",
+          format: "dc+sd-jwt",
+          meta: { vct_values: ["urn:tamga:test:IdCard:1"] },
+          claims: [{ path: ["birth_date"] }],
+        },
+      ],
+      credential_sets: [{ options: [["p"], ["i"]] }],
+    };
+    // pasaportta doğum tarihi yok → pasaport seçeneği karşılanamaz; kimlik kartı önerilir
+    const creds = [
+      cred("urn:tamga:test:Passport:1", {}),
+      cred("urn:tamga:test:IdCard:1", { birth_date: "2000-01-01" }),
+    ];
+    const m = matchDcql(q, creds);
+    expect(m.unmatched).toEqual(["p"]);
+    expect(selectDcql(q, m.matches)).toMatchObject({
+      ok: true,
+      queryIds: ["i"],
+      sets: [{ satisfiable: [1], chosen: 1 }],
+    });
+    // ikisinde de yoksa zorunlu küme karşılanamaz; neden her sorgu için ayrı
+    const m2 = matchDcql(q, [cred("urn:tamga:test:Passport:1", {})]);
+    expect(selectDcql(q, m2.matches)).toMatchObject({ ok: false, missing: ["p"] });
+    expect(m2.gaps.map((g) => [g.queryId, g.reason, g.claims])).toEqual([
+      ["p", "missing_claims", ["birth_date"]],
+      ["i", "no_credential", []],
+    ]);
   });
   it("matchDcql: aynı türden birden çok belge → alternatives (OIA_11, kullanıcı seçer)", () => {
     const EMAIL = "urn:tamga:contact:EmailAddress:1";
@@ -109,6 +211,114 @@ describe("parseVpUri / DCQL / RP", () => {
       "b@example.com",
     ]);
     expect(matchDcql(q, creds.slice(0, 1)).matches[0].alternatives).toBeUndefined();
+  });
+  // OpenID4VP 1.0 §6: claim_sets / credential_sets — yalnız seçilen seçenek gider (en az veri), zorunlu / isteğe bağlı ayrımı
+  const PASS = "urn:tamga:test:Passport:1",
+    IDC = "urn:tamga:test:IdCard:1",
+    BILL = "urn:tamga:test:UtilityBill:1";
+  const sd = (id: string, vct: string, claims: DcqlQuery["credentials"][number]["claims"] = []) => ({
+    id,
+    format: "dc+sd-jwt",
+    meta: { vct_values: [vct] },
+    claims,
+  });
+  it("claim_sets: karşılanabilen İLK kombinasyon istenir, öbür alanlar gitmez", () => {
+    const q: DcqlQuery = {
+      credentials: [
+        {
+          ...sd("addr", IDC, [
+            { id: "street", path: ["street"] },
+            { id: "city", path: ["city"] },
+            { id: "postal", path: ["postal_code"] },
+          ]),
+          claim_sets: [
+            ["street", "city", "postal"],
+            ["postal", "city"],
+          ],
+        },
+      ],
+    };
+    // tam adres varsa birinci seçenek (doğrulayıcının tercihi) — üç alan
+    const full = matchDcql(q, [cred(IDC, { street: "S", city: "C", postal_code: "P" })]);
+    expect(full.matches[0].requested).toEqual(["street", "city", "postal_code"]);
+    // sokak yoksa ikinci seçenek (sokak gönderilmez)
+    const part = matchDcql(q, [cred(IDC, { city: "C", postal_code: "P" })]);
+    expect(part.matches[0].requested).toEqual(["postal_code", "city"]);
+    // hiçbir seçenek karşılanamıyorsa belge eşleşmez
+    expect(matchDcql(q, [cred(IDC, { city: "C" })]).unmatched).toEqual(["addr"]);
+  });
+  it("credential_sets yoksa her sorgu zorunlu; biri eksikse ok=false", () => {
+    const q: DcqlQuery = { credentials: [sd("p", PASS), sd("i", IDC)] };
+    const both = selectDcql(q, matchDcql(q, [cred(PASS, {}), cred(IDC, {})]).matches);
+    expect(both).toMatchObject({ ok: true, sets: [], queryIds: ["p", "i"], missing: [] });
+    const one = selectDcql(q, matchDcql(q, [cred(PASS, {})]).matches);
+    expect(one).toMatchObject({ ok: false, missing: ["i"] });
+  });
+  it("credential_sets: 'pasaport YA DA kimlik' — ikisi de varsa yalnız ilki gider; yalnız biri varsa o yeter", () => {
+    const q: DcqlQuery = {
+      credentials: [sd("p", PASS), sd("i", IDC), sd("b", BILL)],
+      credential_sets: [{ options: [["p"], ["i"]] }, { options: [["b"]], required: false }],
+    };
+    const all = selectDcql(q, matchDcql(q, [cred(PASS, {}), cred(IDC, {}), cred(BILL, {})]).matches);
+    expect(all.ok).toBe(true);
+    expect(all.sets[0]).toMatchObject({ required: true, satisfiable: [0, 1], chosen: 0 });
+    // isteğe bağlı küme varsayılan olarak paylaşılmaz
+    expect(all.sets[1]).toMatchObject({ required: false, satisfiable: [0], chosen: null });
+    expect(all.queryIds).toEqual(["p"]);
+    // yalnız kimlik kartı: istek yine karşılanır (eskiden "eşleşme yok" hatası)
+    const idOnly = selectDcql(q, matchDcql(q, [cred(IDC, {})]).matches);
+    expect(idOnly).toMatchObject({ ok: true, queryIds: ["i"] });
+    // hiçbiri yoksa zorunlu küme karşılanamaz
+    const none = selectDcql(q, matchDcql(q, [cred(BILL, {})]).matches);
+    expect(none).toMatchObject({ ok: false, missing: ["p"] });
+  });
+  it("chooseDcqlOption: kullanıcı seçeneği değiştirir / isteğe bağlıyı açar; geçersiz seçim yok sayılır", () => {
+    const q: DcqlQuery = {
+      credentials: [sd("p", PASS), sd("i", IDC), sd("b", BILL)],
+      credential_sets: [{ options: [["p"], ["i"]] }, { options: [["b"]], required: false }],
+    };
+    const sel = selectDcql(q, matchDcql(q, [cred(PASS, {}), cred(IDC, {}), cred(BILL, {})]).matches);
+    expect(chooseDcqlOption(sel, 0, 1).queryIds).toEqual(["i"]);
+    expect(chooseDcqlOption(sel, 1, 0).queryIds).toEqual(["p", "b"]);
+    expect(chooseDcqlOption(sel, 0, null)).toBe(sel); // zorunlu küme kapatılamaz
+    const noBill = selectDcql(q, matchDcql(q, [cred(PASS, {})]).matches);
+    expect(chooseDcqlOption(noBill, 1, 0)).toBe(noBill); // belgesi olmayan seçenek seçilemez
+  });
+  it("takma ad sorgusu belge gerektirmez: kümede karşılanabilir sayılır", () => {
+    const q: DcqlQuery = {
+      credentials: [sd("p", PASS), { id: "ps", format: PSEUDONYM_FORMAT }],
+      credential_sets: [{ options: [["ps"], ["p"]] }],
+    };
+    expect(selectDcql(q, matchDcql(q, []).matches)).toMatchObject({ ok: true, queryIds: ["ps"] });
+  });
+  it("checkDcqlShape: bozuk seçenekler reddedilir", () => {
+    const ok: DcqlQuery = {
+      credentials: [{ ...sd("a", IDC, [{ id: "x", path: ["x"] }]), claim_sets: [["x"]] }],
+      credential_sets: [{ options: [["a"]] }],
+    };
+    expect(() => checkDcqlShape(ok)).not.toThrow();
+    const cases: DcqlQuery[] = [
+      { credentials: [sd("a", IDC), sd("a", PASS)] }, // aynı id
+      { credentials: [{ ...sd("a", IDC, [{ path: ["x"] }]), claim_sets: [["x"]] }] }, // claim id yok
+      { credentials: [{ ...sd("a", IDC, [{ id: "x", path: ["x"] }]), claim_sets: [["y"]] }] }, // olmayan claim id
+      { credentials: [{ ...sd("a", IDC), claim_sets: [["x"]] }] }, // claims olmadan claim_sets
+      { credentials: [sd("a", IDC)], credential_sets: [{ options: [["b"]] }] }, // olmayan sorgu id
+      { credentials: [sd("a", IDC)], credential_sets: [{ options: [] }] }, // boş seçenek
+      {
+        credentials: [
+          {
+            id: "m",
+            format: "mso_mdoc",
+            claims: [
+              { id: "a", path: ["ns1", "x"] },
+              { id: "b", path: ["ns2", "y"] },
+            ],
+            claim_sets: [["b"], ["a"]],
+          },
+        ],
+      }, // mdoc: iki namespace
+    ];
+    for (const c of cases) expect(() => checkDcqlShape(c)).toThrow(/invalid dcql_query/);
   });
   it("checkRp: kayıtlı + scope içi / scope dışı / kayıtsız", () => {
     const rp: RpRecord = {
@@ -132,7 +342,6 @@ describe("parseVpUri / DCQL / RP", () => {
       queryId: "d",
       credential: cred("urn:tamga:edu:DiplomaCredential:1", { is_graduate: true, eqf_level: 6, grade: "3" }),
       requested: ["is_graduate", "eqf_level", "grade"],
-      missing: [],
     };
     const req = { leafFingerprint: "ab" } as never;
     const c = checkRp(rp, req, match);

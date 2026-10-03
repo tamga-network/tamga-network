@@ -159,10 +159,15 @@ export const NationalListPointer = z
   })
   .passthrough();
 
+/** ADR-0038 SB2: listenin ait olduğu ağ; alan yoksa gerçek ağ ("production"). */
+export const NetworkEnvironment = z.enum(["production", "sandbox"]);
+export type NetworkEnvironment = z.infer<typeof NetworkEnvironment>;
+
 export const Lotl = z
   .object({
     list_format_version: z.string(),
     list_type: z.literal("lotl"),
+    environment: NetworkEnvironment.optional(),
     version: z.number().int().nonnegative(),
     issued_at: IsoDate,
     next_update: IsoDate,
@@ -334,6 +339,7 @@ export const NationalList = z
   .object({
     list_format_version: z.string(),
     list_type: z.literal("trusted_list"),
+    environment: NetworkEnvironment.optional(),
     state_code: z.string().regex(/^[A-Z]{2}$/),
     version: z.number().int().nonnegative(),
     issued_at: IsoDate,

@@ -7,11 +7,16 @@ export const LATEST: string = data.latest;
 /** Sayfa → belge kimliği (docs/.vitepress/doc-index.ts ARF_PAGES ile aynı). */
 const PAGE_IDS: Record<string, string> = {
   architecture: "FW-ARF-0001",
-  "annex-a-trust-framework": "FW-TF-0001",
-  "annex-b-participant-rules": "FW-RB-0001",
-  "annex-c-education": "FW-RB-0002",
-  "annex-c-identity": "FW-RB-0003",
-  "annex-c-event-ticket": "FW-RB-0004",
+  "trust-framework": "FW-TF-0001",
+  rulebook: "FW-RB-0001",
+  "rulebooks/education": "FW-RB-0002",
+  "rulebooks/identity": "FW-RB-0003",
+  "rulebooks/event-ticket": "FW-RB-0004",
+  definitions: "FW-DEF-0001",
+  references: "FW-REF-0001",
+  "reading-path": "FW-READ-0001",
+  roles: "FW-ROLE-0001",
+  onboarding: "FW-ONB-0001",
 };
 
 /** Adresten dil, yayın ve sayfa: /tr/v0.1/architecture → { tr: true, release: "0.1", page: "architecture" }. */

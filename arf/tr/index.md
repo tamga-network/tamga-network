@@ -5,61 +5,55 @@ aside: false
 
 # Tamga ARF
 
-<span class="arf-release">Yayın 0.7 · 1 Ekim 2026</span>
+<span class="arf-release">Yayın 1.0 · 2 Ekim 2026</span>
 
-**Tamga Network'ün Mimari ve Referans Çerçevesi** — Türk dünyası için, eIDAS 2.0 ve Avrupa Dijital Kimlik Cüzdanı
-ekosistemiyle uyumlu dijital güven altyapısı. Tamga ARF kimin, hangi kurallarla ve hangi mimariyle katıldığını anlatır:
+**Tamga Network'ün Mimari ve Referans Çerçevesi** — Türk dünyası için, [[t:eIDAS]] 2.0 ve Avrupa Dijital Kimlik Cüzdanı
+ekosistemiyle uyumlu dijital güven altyapısı. Tamga [[t:ARF]] kimin, hangi kurallarla ve hangi mimariyle katıldığını anlatır:
 kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim, ve her katılımcının bağlayıcı kuralları.
 
-AB ARF'sinin yapısını izler: bir ana belge ve beş ek.
+AB ARF'sinin yapısını izler: bir ana belge ve beş ek (Ek C üç rulebook'tan oluşur). Bağlayıcı kurallar tek bir ana kitapta, **Tamga [[t:rulebook|Rulebook]]**'ta toplanır;
+her belge türünün bu kitaptan dallanan kendi rulebook'u vardır.
 
 ## Belgeler
 
-| Belge | Sürüm | Kimin için |
-|---|---|---|
-| [Mimari ve Referans Çerçevesi](/tr/architecture) | 0.3.0 | herkes — buradan başlayın |
-| [Ek A — Güven Çerçevesi](/tr/annex-a-trust-framework) | 0.3.0 | düzenleyiciler, devletler, kurumlar: yönetişim, katılım, uyum, sözleşmeler, devir |
-| [Ek B — Katılımcı Kuralları](/tr/annex-b-participant-rules) | 0.4.0 | her katılımcı: rol başına numaralı kurallar |
-| [Ek C — Eğitim](/tr/annex-c-education) | 0.2.0 | üniversiteler ve doğrulayıcılar: öğrenci belgesi ve diploma |
-| [Ek C — Kimlik belgesi](/tr/annex-c-identity) | 0.3.0 · taslak | kurumlar ve doğrulayıcılar: geçici kimlik belgesi |
-| [Ek C — Etkinlik bileti](/tr/annex-c-event-ticket) | 0.2.0 · taslak | bilet satıcıları ve kapılar |
-| [Ek D — Tanımlar](/tr/annex-d-definitions) | 0.1.0 | terimler ve kısaltmalar |
-| [Ek E — Kaynaklar](/tr/annex-e-references) | 0.1.0 | standartlar, Tamga belgeleri ve her kuralın kaynağı |
+| Belge                                                 | Sürüm | Kimin için                                                                        |
+| ----------------------------------------------------- | ----- | --------------------------------------------------------------------------------- |
+| [Mimari ve Referans Çerçevesi](/tr/architecture)      | 1.0.0 | herkes — buradan başlayın                                                         |
+| [Ek A — Trust Framework](/tr/trust-framework)         | 1.0.0 | düzenleyiciler, devletler, kurumlar: yönetişim, katılım, uyum, sözleşmeler, devir |
+| [Ek B — Tamga Rulebook](/tr/rulebook)                 | 1.0.0 | her katılımcı: rol başına ortak, numaralı kurallar                                |
+| Ek C — Rulebook'lar                                   |       | Tamga Rulebook'tan dallanan belge türü kuralları:                                 |
+| · [Education Rulebook](/tr/rulebooks/education)       | 1.0.0 | üniversiteler ve doğrulayıcılar: öğrenci belgesi ve diploma                       |
+| · [Identity Rulebook](/tr/rulebooks/identity)         | 1.0.0 | kurumlar ve doğrulayıcılar: geçici kimlik belgesi                                 |
+| · [Event Ticket Rulebook](/tr/rulebooks/event-ticket) | 1.0.0 | bilet satıcıları ve kapılar                                                       |
+| [Ek D — Tanımlar](/tr/definitions)                    | 1.0.0 | terimler ve kısaltmalar                                                           |
+| [Ek E — Kaynaklar](/tr/references)                    | 1.0.0 | standartlar, Tamga belgeleri ve her kuralın kaynağı                               |
+| [Okuma yolu](/tr/reading-path)                        | 1.0.0 | rolünüze göre neyi hangi sırayla okuyacağınız                                     |
+| [Roller](/tr/roles)                                   | 1.0.0 | her rolün ayrıntısı: ne yapar, kuralları, neye ihtiyaç duyar                      |
+| [Katılım süreci](/tr/onboarding)                      | 1.0.0 | katılımın adımları, askıya alma ve çıkış                                          |
 
 ## Nasıl okunur
 
-- **Kurum ya da entegratör:** [ana belge](/tr/architecture), bölüm 2–6 → rolünüz için [Ek B](/tr/annex-b-participant-rules)
-  → belge türünüzün Ek C kuralları.
-- **Düzenleyici ya da devlet:** [Ek A](/tr/annex-a-trust-framework) → ana belge, bölüm 6 ve 8.
-- **Geliştirici:** [geliştirici belgelerinde](https://docs.tamga.network) entegrasyon kılavuzları, kod örnekleri ve bu
-  çerçevenin dayandığı spesifikasyonlar var.
+[Okuma yolu](/tr/reading-path) her rol için önce çerçevenin hangi bölümlerini, sonra hangi geliştirici belgelerini
+okuyacağınızı gösterir. [Geliştirici belgeleri](https://docs.tamga.network) entegrasyon rehberlerini, kod örneklerini ve bu
+çerçevenin dayandığı şartnameleri içerir.
 
 ## Nerede durur
 
-| Katman | AB'de | Tamga'da |
-|---|---|---|
-| Hukuk ve yönetişim | eIDAS 2.0 ve uygulama tüzükleri | Ek A — Güven Çerçevesi |
-| Mimari ve roller | AB ARF | Ana belge |
-| Katılımcı kuralları | AB ARF Ek 2 (üst düzey gereksinimler) | Ek B — Katılımcı Kuralları |
-| Belge türü kuralları | Attestation rulebook'ları | Ek C |
-| Teknik standartlar | ETSI, IETF, OpenID, ISO | Tamga spesifikasyonları (docs.tamga.network), Ek E'de listeli |
+| Katman               | AB'de                                 | Tamga'da                                                 |
+| -------------------- | ------------------------------------- | -------------------------------------------------------- |
+| Hukuk ve yönetişim   | eIDAS 2.0 ve uygulama tüzükleri       | Ek A — Trust Framework                                   |
+| Mimari ve roller     | AB ARF                                | Ana belge                                                |
+| Katılımcı kuralları  | AB ARF Ek 2 (üst düzey gereksinimler) | Ek B — Tamga Rulebook                                    |
+| Belge türü kuralları | Attestation rulebook'ları             | Ek C — Rulebook'lar                                      |
+| Teknik standartlar   | ETSI, IETF, OpenID, ISO               | Tamga şartnameleri (docs.tamga.network), Ek E'de listeli |
 
 ## Dil ve durum
 
-Tamga ARF İngilizce ve Türkçe yayınlanır. Türkçe metin kaynaktır; İngilizce metin aynı sürümün resmî çevirisidir ve iki
-dil farklıyken yayın yapılmaz. Hâlâ **ÖNERİ** etiketli maddeler Ek A, bölüm 9'da listelidir.
+Tamga ARF İngilizce ve Türkçe yayınlanır. Türkçe metin kaynaktır; İngilizce metin aynı sürümün resmî çevirisidir ve iki dil
+her zaman aynı sürümdedir.
 
 ## Yayınlar
 
-Her yayın, yayınlandığı hâliyle çevrimiçi kalır; sürüm menüsünden seçebilirsiniz. [Yayınlar arasında ne değişti →](/tr/changes)
-
-- **0.7 (1 Ekim 2026)** — AB ARF düzeninde, insanın okuyacağı biçimde yeniden yapılandırıldı; federasyon modeli ve
-  konumlanma; yeni Ek D (Tanımlar) ve kural kaynaklarını taşıyan Ek E (Kaynaklar).
-- **0.6 (1 Ekim 2026)** — Kimlik belgesi için mağaza incelemesi erişimi.
-- **0.5 (1 Ekim 2026)** — HAIP 1.0 uyumu: doğrulayıcı istemci kimliği `x509_hash`.
-- **0.4 (1 Ekim 2026)** — Site başına takma ad.
-- **0.3 (27 Eylül 2026)** — Kimlik belgesi ve etkinlik bileti kuralları (taslak).
-- **0.2 (27 Eylül 2026)** — Kendi sitesi, İngilizce ve Türkçe, üç ek.
-- **0.1 (24 Eylül 2026)** — Çerçevenin ilk sürümü (Türkçe).
+- **1.0 (2 Ekim 2026)** — ilk yayın.
 
 Belgeler CC BY 4.0 · Kod Apache-2.0.

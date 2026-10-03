@@ -1,53 +1,40 @@
 /**
  * docs.tamga.network — geliştirici belgeleri (ADR-0018: üç kapı). VitePress yapılandırması.
- * Yapı (Stripe benzeri): üst menü Başlarken · Kavramlar · API · SDK'lar · Spesifikasyonlar · Sürüm notları; her bölümün
- * kendi kenar çubuğu. İç kayıtlar ve geçersiz tasarımlar yayınlanmaz (UNPUBLISHED).
- * Kök md dosyaları ve paket sayfaları derleme öncesi scripts/docs-sync-root.mjs ile üretilir (docs/root/, docs/packages/ — gitignore).
- * Çerçeve belgeleri (docs/framework) burada yayınlanmaz; Tamga ARF sitesinde yayınlanır, [[FW-*]] atıfları oraya bağlanır (DY1).
+ * Diller (2026-10-02): İngilizce kökte, Türkçe /tr/ altında. Kaynak: Türkçe `docs/<bölüm>/…` (normatif metin), İngilizce
+ * çevirisi `docs/en/<bölüm>/…` (`translation_of` + `source_version`). `rewrites` en/ → kök, gerisi → tr/.
+ * Yapı (Stripe benzeri): Başlarken · Kavramlar · API · SDK'lar · Şartnameler · Sürüm notları; her bölümün kendi kenar çubuğu.
+ * Üretilen sayfalar (scripts/docs-sync-root.mjs, gitignore): paketler, sürüm notları, bağlayıcı kurallar.
+ * Çerçeve belgeleri (docs/framework) Tamga ARF sitesinde yayınlanır; [[FW-*]] atıfları oraya bağlanır (DY1).
  */
 import { defineConfig, type DefaultTheme } from "vitepress";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { brandHead, pageHead } from "./seo";
-import { ARF_BASE, ARF_PAGES, buildDocIndex, docLinks } from "./doc-index";
+import { ARF_BASE, ARF_PAGES, GITHUB, buildDocIndex, docLinks, docsLangOf, localeLinks, type Lang } from "./doc-index";
+import { termTips } from "./terms";
 
 const DOCS = __dirname.replace(/[\\/]\.vitepress$/, "");
-const byId = buildDocIndex(DOCS);
+const IDX = { en: buildDocIndex(DOCS, "en"), tr: buildDocIndex(DOCS, "tr") };
 
 /**
- * Yayın kapsamı (2026-10-01, ADR-0035 konumlanması): geliştiriciye bugün gereken belgeler yayında; geçersiz ya da iç kayıtlar
- * (zincir-önce tasarımlar, DID yöntemi, EBSI araştırmaları, proje hafızası, akademi) depoda kalır, sitede yayınlanmaz.
- * Yayında olmayan bir belgeye verilen [[DOC-ID]] atfı GitHub'daki kaynağına gider (atıf kopmaz).
+ * Yayın kapsamı: geliştiriciye bugün gereken belgeler yayında; arka plan, zincir aşaması, iç kayıtlar ve arşiv depoda kalır.
+ * Yayında olmayan belgeye verilen [[DOC-ID]] atfı GitHub'daki kaynağına gider (atıf kopmaz).
  */
 const UNPUBLISHED = [
   "api/**", // Scalar sayfası public/api altından statik yayınlanır
   "framework/**", // Tamga ARF sitesinde
   "_archive/**",
-  "reviews/**",
-  "beta/**",
-  "delivery/**",
-  "rfc/**",
-  "project-memory/**",
-  "research/**",
-  "academy/**",
-  "specifications/0001-trust-layer-contracts.md", // zincir kontratları — zincir aşamasında (ADR-0009)
-  "specifications/0002-tamga-did-method.md", // DID yöntemi — kullanılmıyor (kurum kimliği X.509)
-  "specifications/0003-guardian-escrow-accountable-disclosure.md", // araştırma
-  "specifications/0015-agent-delegation-and-credential-gating.md", // zincir aşaması
-  "architecture/0001-network-architecture.md", // zincir-önce topoloji
-  "architecture/0002-besu-network-setup-step-by-step.md",
-  "architecture/0004-server-inventory-and-operations.md", // işletim içi
-  "architecture/0005-sdk-and-package-publishing.md",
-  "architecture/0006-getting-started-runbook.md",
-  "architecture/README.md",
-  "root/DECISIONS.md",
-  "root/MASTER_INDEX.md",
-  "root/DOCUMENTATION-STANDARD.md",
-  "root/SCENARIOS.md",
+  "_internal/**",
+  "ledger/**",
+  "background/**",
+  "architecture/servers.md", // işletim içi
+  "architecture/package-publishing.md",
+  "architecture/index.md",
 ];
-const GITHUB = "https://github.com/tamga-network/tamga-network/blob/main";
 const unpublishedRe = UNPUBLISHED.map(
   (g) =>
     new RegExp(
-      "^" +
+      "^(en/)?" +
         g
           .replace(/[.+^${}()|[\]\\]/g, "\\$&")
           .replace(/\*\*/g, "\u0000")
@@ -56,127 +43,265 @@ const unpublishedRe = UNPUBLISHED.map(
         "$",
     ),
 );
-/** Site yolu (/specifications/0002-…) yayında mı? */
-const isPublished = (path: string) => !unpublishedRe.some((re) => re.test(path.replace(/^\//, "") + ".md"));
-/** Yayında olmayan belgenin GitHub kaynağı. */
-const sourceUrl = (path: string) =>
-  path.startsWith("/root/") ? `${GITHUB}/${path.slice(6)}.md` : `${GITHUB}/docs${path}.md`;
-
-/** Belge kimliğiyle kenar çubuğu öğesi; etiket verilmezse başlığın ilk parçası. */
-function doc(id: string, text?: string): DefaultTheme.SidebarItem {
-  const e = byId.get(id);
-  if (!e) throw new Error(`docs config: ${id} bulunamadı`);
-  if (!isPublished(e.path)) throw new Error(`docs config: ${id} yayında değil`);
-  return { text: text ?? e.title.split(" — ")[0], link: e.path };
-}
-
-/** ADR'ler: "0035 · Konumlanma" biçiminde, yeniden eskiye. */
-function adrItems(): DefaultTheme.SidebarItem[] {
-  return [...byId.values()]
-    .filter((e) => e.id.startsWith("ADR-"))
-    .sort((a, b) => b.id.localeCompare(a.id))
-    .map((e) => ({ text: `${e.id.slice(4)} · ${e.title.split(" — ")[0]}`, link: e.path }));
-}
+const isPublished = (src: string) => !unpublishedRe.some((re) => re.test(src));
 
 const PACKAGES = ["core", "trust", "schemas", "sd-jwt", "mdoc", "issuer", "verifier", "wallet-core"];
-const ARF_TR = `${ARF_BASE}/tr/`;
-const SITE = "https://tamga.network/tr";
 
-const CONCEPTS: DefaultTheme.SidebarItem[] = [
-  { text: "Genel bakış", link: "/concepts/" },
-  { text: "Güven listeleri ve federasyon", link: "/concepts/guven-listeleri" },
-  { text: "Belge biçimleri", link: "/concepts/belge-bicimleri" },
-  { text: "Belge verme (OpenID4VCI)", link: "/concepts/belge-verme" },
-  { text: "Belge gösterme (OpenID4VP)", link: "/concepts/belge-gosterme" },
-  { text: "Gizlilik", link: "/concepts/gizlilik" },
-  { text: "İptal ve tazelik", link: "/concepts/iptal" },
-];
+/** Arayüz metinleri. */
+const T = {
+  en: {
+    prefix: "/",
+    getStarted: "Get started",
+    concepts: "Concepts",
+    sdks: "SDKs",
+    specs: "Specifications",
+    releaseNotes: "Release notes",
+    more: "More",
+    arf: "Tamga ARF — roles and rules",
+    site: "tamga.network — overview",
+    learn: "Learn — from zero to the network",
+    joining: "Joining the network",
+    help: "Help",
+    overview: "Overview",
+    codeExamples: "Code examples",
+    verify: "Verifying credentials",
+    issue: "Issuing credentials",
+    wallet: "Wallets",
+    trust: "Trust lists",
+    groups: ["Credentials", "Protocols", "Trust and identity", "Schemas", "Wallet", "Architecture"],
+    decisions: "Decisions (ADR)",
+    allDecisions: "All decisions",
+    adrGroups: {
+      Trust: "Trust",
+      Credentials: "Credentials",
+      Identity: "Identity and privacy",
+      Wallet: "Wallet",
+      Services: "Services",
+      Governance: "Governance",
+    },
+    glossaryRules: "Glossary and rules",
+    glossary: "Glossary",
+    rules: "Binding rules",
+    allPackages: "All packages",
+    apiRef: "API reference",
+    hostedApis: "Hosted service APIs ↗",
+    outline: "On this page",
+    edit: "Edit this page on GitHub",
+    prev: "Previous",
+    next: "Next",
+    footer: "Docs CC BY 4.0 · Code Apache-2.0",
+    title: "Tamga Developer Docs",
+    description:
+      "Tamga Network developer docs: guides, code examples, packages and specifications for verifiers, issuers, wallet developers and network operators.",
+  },
+  tr: {
+    prefix: "/tr/",
+    getStarted: "Başlarken",
+    concepts: "Kavramlar",
+    sdks: "SDK'lar",
+    specs: "Şartnameler",
+    releaseNotes: "Sürüm notları",
+    more: "Daha fazla",
+    arf: "Tamga ARF — roller ve kurallar",
+    site: "tamga.network — genel anlatım",
+    learn: "Öğren — sıfırdan ağa",
+    joining: "Ağa katılım",
+    help: "Yardım",
+    overview: "Genel bakış",
+    codeExamples: "Kod örnekleri",
+    verify: "Belge doğrulama",
+    issue: "Belge verme",
+    wallet: "Cüzdan",
+    trust: "Güven listeleri",
+    groups: ["Belgeler", "Protokoller", "Güven ve kimlik", "Şemalar", "Cüzdan", "Mimari"],
+    decisions: "Kararlar (ADR)",
+    allDecisions: "Tüm kararlar",
+    adrGroups: {
+      Trust: "Güven",
+      Credentials: "Belgeler",
+      Identity: "Kimlik ve gizlilik",
+      Wallet: "Cüzdan",
+      Services: "Hizmetler",
+      Governance: "Yönetişim",
+    },
+    glossaryRules: "Sözlük ve kurallar",
+    glossary: "Sözlük",
+    rules: "Bağlayıcı kurallar",
+    allPackages: "Tüm paketler",
+    apiRef: "API başvurusu",
+    hostedApis: "Barındırılan servis API'leri ↗",
+    outline: "Bu sayfada",
+    edit: "Bu sayfayı GitHub'da düzenle",
+    prev: "Önceki",
+    next: "Sonraki",
+    footer: "Belgeler CC BY 4.0 · Kod Apache-2.0",
+    title: "Tamga Geliştirici Belgeleri",
+    description:
+      "Tamga Network geliştirici belgeleri: doğrulayıcılar, belge veren kurumlar, cüzdan geliştiricileri ve ağ operatörleri için rehberler, kod örnekleri, paketler ve şartnameler.",
+  },
+};
 
-const GUIDES: DefaultTheme.SidebarItem[] = [
-  { text: "Başlarken", items: [doc("GUIDE-0000", "Genel bakış"), doc("GUIDE-0004", "Kod örnekleri")] },
-  {
-    text: "Belge doğrulama",
-    items: [doc("GUIDE-0001", "Web sitesine “Tamga ile giriş yap”"), doc("GUIDE-0002", "Sunucuda doğrulama")],
-  },
-  { text: "Belge verme", items: [doc("GUIDE-0003", "Kurum olarak belge vermek")] },
-  { text: "Cüzdan", items: [doc("GUIDE-0005", "Uyumlu cüzdan geliştirmek")] },
-  { text: "Güven listeleri", items: [doc("GUIDE-0006", "Listeleri okumak ve ağ")] },
-];
+/** ADR konu grupları (ön bilgideki `domain`), okuma sırasıyla. */
+const ADR_GROUPS = ["Trust", "Credentials", "Identity", "Wallet", "Services", "Governance"] as const;
 
-const REFERENCE: DefaultTheme.SidebarItem[] = [
-  { text: "Spesifikasyonlar", link: "/specifications/README" },
-  {
-    text: "Belgeler",
-    collapsed: false,
-    items: [
-      doc("SPEC-CRED-0001", "Belge biçimi ve protokoller"),
-      doc("SPEC-CRED-0002", "SD-JWT VC profili"),
-      doc("SPEC-CRED-0003", "İptal listesi"),
-    ],
-  },
-  {
-    text: "Protokoller",
-    collapsed: false,
-    items: [
-      doc("SPEC-PROTO-0001", "Belge verme (OpenID4VCI)"),
-      doc("SPEC-PROTO-0002", "Belge gösterme (OpenID4VP)"),
-      doc("SPEC-API-0001", "Doğrulama hattı ve servis API'si"),
-    ],
-  },
-  {
-    text: "Güven ve kimlik",
-    collapsed: false,
-    items: [
-      doc("SPEC-TRUST-0001", "Güven listesi biçimi"),
-      doc("SPEC-ID-0002", "Kurum kimliği (X.509)"),
-      doc("SPEC-ID-0003", "Kimlik doğrulama profili"),
-    ],
-  },
-  {
-    text: "Şemalar",
-    collapsed: true,
-    items: [
-      doc("SPEC-SCHEMA-0001", "Şema kataloğu"),
-      doc("SPEC-SCHEMA-0002", "Eğitim şemaları"),
-      doc("SPEC-SCHEMA-0003", "Sektör şemaları"),
-    ],
-  },
-  { text: "Cüzdan", collapsed: true, items: [doc("SPEC-WALLET-0001", "Cüzdan kuralları")] },
-  { text: "Mimari", collapsed: true, items: [doc("ARCH-0003", "Bileşen mimarisi")] },
-  {
-    text: "Kararlar (ADR)",
-    collapsed: true,
-    items: [{ text: "Tüm kararlar", link: "/adr/README" }, ...adrItems()],
-  },
-  {
-    text: "Sözlük ve kurallar",
-    collapsed: true,
-    items: [
-      { text: "Sözlük", link: "/root/GLOSSARY" },
-      { text: "Bağlayıcı kurallar", link: "/root/INVARIANTS" },
-    ],
-  },
-  { text: "Sürüm notları", link: "/root/CHANGELOG" },
-];
+function sidebars(l: Lang): DefaultTheme.Sidebar {
+  const t = T[l];
+  const p = l === "tr" ? "/tr" : "";
+  const idx = IDX[l];
+  const doc = (id: string, text?: string): DefaultTheme.SidebarItem => {
+    const e = idx.get(id);
+    if (!e) throw new Error(`docs config: ${id} bulunamadı`);
+    if (!isPublished(e.src)) throw new Error(`docs config: ${id} yayında değil`);
+    return { text: text ?? e.title, link: e.path };
+  };
+  const adrs = [...idx.values()].filter((e) => e.id.startsWith("ADR-"));
+  const domainOf = (e: { src: string }) => {
+    const src = join(DOCS, e.src);
+    return existsSync(src) ? /^domain:\s*(\S+)/m.exec(readFileSync(src, "utf8"))?.[1] : undefined;
+  };
+  const adrGroup = (g: string) =>
+    adrs
+      .filter((e) => domainOf(e) === g)
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((e) => ({ text: `${e.id.slice(4)} · ${e.title}`, link: e.path }));
 
-const PACKAGE_SIDEBAR: DefaultTheme.SidebarItem[] = [
-  {
-    text: "SDK'lar",
-    items: [
-      { text: "Tüm paketler", link: "/packages/" },
-      ...PACKAGES.map((p) => ({ text: `@tamga-network/${p}`, link: `/packages/${p}` })),
+  const guides: DefaultTheme.SidebarItem[] = [
+    { text: t.getStarted, items: [doc("GUIDE-0000", t.overview), doc("GUIDE-0004")] },
+    { text: t.joining, items: [doc("GUIDE-0007"), doc("GUIDE-0008"), doc("GUIDE-0009"), doc("GUIDE-0013")] },
+    { text: t.verify, items: [doc("GUIDE-0001"), doc("GUIDE-0002")] },
+    { text: t.issue, items: [doc("GUIDE-0003")] },
+    { text: t.wallet, items: [doc("GUIDE-0005"), doc("GUIDE-0010")] },
+    { text: t.trust, items: [doc("GUIDE-0006"), doc("GUIDE-0011")] },
+    { text: t.help, items: [doc("GUIDE-0012")] },
+  ];
+  const concepts: DefaultTheme.SidebarItem[] = [
+    {
+      text: t.concepts,
+      items: [
+        { text: t.overview, link: `${p}/concepts/` },
+        ...["trust-lists", "federation", "credential-formats", "issuance", "presentation", "privacy", "revocation"].map((s) => ({
+          text: conceptTitle(l, s),
+          link: `${p}/concepts/${s}`,
+        })),
+      ],
+    },
+  ];
+  const reference: DefaultTheme.SidebarItem[] = [
+    { text: t.specs, link: `${p}/specifications/` },
+    { text: t.groups[0], collapsed: false, items: ["SPEC-CRED-0001", "SPEC-CRED-0002", "SPEC-CRED-0003"].map((i) => doc(i)) },
+    { text: t.groups[1], collapsed: false, items: ["SPEC-PROTO-0001", "SPEC-PROTO-0002", "SPEC-API-0001"].map((i) => doc(i)) },
+    { text: t.groups[2], collapsed: false, items: ["SPEC-TRUST-0001", "SPEC-ID-0002", "SPEC-ID-0003"].map((i) => doc(i)) },
+    { text: t.groups[3], collapsed: true, items: ["SPEC-SCHEMA-0001", "SPEC-SCHEMA-0002", "SPEC-SCHEMA-0003"].map((i) => doc(i)) },
+    { text: t.groups[4], collapsed: true, items: [doc("SPEC-WALLET-0001")] },
+    { text: t.groups[5], collapsed: true, items: [doc("ARCH-0003")] },
+    {
+      text: t.decisions,
+      collapsed: true,
+      items: [
+        { text: t.allDecisions, link: `${p}/adr/` },
+        ...ADR_GROUPS.map((g) => ({ text: t.adrGroups[g], collapsed: true, items: adrGroup(g) })),
+      ],
+    },
+    {
+      text: t.glossaryRules,
+      collapsed: true,
+      items: [
+        { text: t.glossary, link: `${p}/glossary` },
+        { text: t.rules, link: `${p}/rules` },
+      ],
+    },
+    { text: t.releaseNotes, link: `${p}/changelog` },
+  ];
+  const packages: DefaultTheme.SidebarItem[] = [
+    {
+      text: t.sdks,
+      items: [
+        { text: t.allPackages, link: `${p}/packages/` },
+        ...PACKAGES.map((n) => ({ text: `@tamga-network/${n}`, link: `${p}/packages/${n}` })),
+      ],
+    },
+    { text: t.apiRef, items: [{ text: t.hostedApis, link: "/api/", target: "_self" }] },
+  ];
+  return {
+    [`${p}/guides/`]: guides,
+    [`${p}/concepts/`]: concepts,
+    [`${p}/packages/`]: packages,
+    [`${p}/specifications/`]: reference,
+    [`${p}/adr/`]: reference,
+    [`${p}/architecture/`]: reference,
+    [`${p}/glossary`]: reference,
+    [`${p}/rules`]: reference,
+    [`${p}/changelog`]: reference,
+  };
+}
+
+/** Kavram sayfalarının başlığı (ön bilgide document_id yok; başlık dosyadan). */
+function conceptTitle(l: Lang, slug: string): string {
+  const f = join(DOCS, l === "en" ? "en" : "", "concepts", `${slug}.md`);
+  const src = existsSync(f) ? f : join(DOCS, "concepts", `${slug}.md`);
+  return /^title:\s*"?([^"\n]+)"?/m.exec(readFileSync(src, "utf8"))?.[1] ?? slug;
+}
+
+function theme(l: Lang): DefaultTheme.Config {
+  const t = T[l];
+  const p = l === "tr" ? "/tr" : "";
+  const arf = l === "tr" ? `${ARF_BASE}/tr/` : `${ARF_BASE}/`;
+  const site = l === "tr" ? "https://tamga.network/tr" : "https://tamga.network/en";
+  const learn = `${site}/learn`;
+  return {
+    nav: [
+      { text: t.getStarted, link: `${p}/guides/`, activeMatch: `^${p}/guides/` },
+      { text: t.concepts, link: `${p}/concepts/`, activeMatch: `^${p}/concepts/` },
+      { text: "API", link: "/api/", target: "_self" },
+      { text: t.sdks, link: `${p}/packages/`, activeMatch: `^${p}/packages/` },
+      {
+        text: t.specs,
+        link: `${p}/specifications/`,
+        activeMatch: `^${p}/(specifications|adr|architecture|glossary|rules)`,
+      },
+      { text: t.releaseNotes, link: `${p}/changelog` },
+      {
+        text: t.more,
+        items: [
+          { text: t.learn, link: learn },
+          { text: t.arf, link: arf },
+          { text: t.site, link: site },
+          { text: "GitHub", link: "https://github.com/tamga-network" },
+        ],
+      },
     ],
-  },
-  { text: "API başvurusu", items: [{ text: "Barındırılan servis API'leri ↗", link: "/api/", target: "_self" }] },
-];
+    sidebar: sidebars(l),
+    outline: { level: [2, 3], label: t.outline },
+    editLink: {
+      // Üretilen sayfalar (docs-sync-root) kaynak dosyalarına bağlanır; gerisi docs/ altındaki dosyaya.
+      pattern: ({ filePath }) => {
+        // İstemcide çalışır (dizgeye çevrilir): dış sabit kullanılamaz.
+        const G = "https://github.com/tamga-network/tamga-network/blob/main";
+        const s = filePath.replace(/^en\//, "");
+        if (s === "changelog.md") return `${G}/CHANGELOG.md`;
+        if (s === "rules.md") return `${G}/INVARIANTS.md`;
+        const m = /^packages\/(.+)\.md$/.exec(s);
+        if (m) return m[1] === "index" ? `${G}/packages` : `${G}/packages/${m[1]}/README.md`;
+        return `${G}/docs/${filePath}`;
+      },
+      text: t.edit,
+    },
+    docFooter: { prev: t.prev, next: t.next },
+    footer: {
+      message: `${t.footer} · <a href="${arf}">Tamga ARF</a> · <a href="${site}">tamga.network</a>`,
+      copyright: "Tamga Network",
+    },
+  };
+}
 
 export default defineConfig({
-  lang: "tr-TR",
-  title: "Tamga Geliştirici Belgeleri",
-  description:
-    "Tamga Network geliştirici belgeleri: doğrulayıcılar, belge veren kurumlar, cüzdan geliştiricileri ve ağ operatörleri için rehberler, kod örnekleri, paketler ve spesifikasyonlar.",
+  title: T.en.title,
+  titleTemplate: ":title · Tamga Docs",
+  description: T.en.description,
   srcDir: ".",
-  srcExclude: UNPUBLISHED,
+  srcExclude: UNPUBLISHED.flatMap((g) => [g, `en/${g}`]),
+  // İngilizce (en/) kökte, Türkçe kaynak /tr/ altında.
+  rewrites: (id) => (id.startsWith("en/") ? id.slice(3) : `tr/${id}`),
   outDir: "./.vitepress/dist",
   cleanUrls: true,
   ignoreDeadLinks: true,
@@ -190,72 +315,70 @@ export default defineConfig({
       "link",
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Onest:wght@500;600;700&display=swap",
       },
     ],
   ],
   sitemap: { hostname: "https://docs.tamga.network" },
-  transformHead: (ctx) => pageHead("docs.tamga.network", ctx),
+  // Dil eşleri: kök (en) ↔ /tr/ — yalnız iki dilde de sayfa varsa.
+  transformHead: (ctx) =>
+    pageHead("docs.tamga.network", ctx, (rel) => {
+      const en = rel.replace(/^tr\//, "");
+      const src = (base: string) => {
+        const f = en === "" || en.endsWith("/") ? `${en}index` : en;
+        return existsSync(join(DOCS, base, `${f}.md`));
+      };
+      if (!src("en") || !src("")) return undefined;
+      return { en, tr: `tr/${en}`, "x-default": en };
+    }),
+  locales: {
+    root: { label: "English", lang: "en", title: T.en.title, description: T.en.description, themeConfig: theme("en") },
+    tr: {
+      label: "Türkçe",
+      lang: "tr-TR",
+      link: "/tr/",
+      title: T.tr.title,
+      description: T.tr.description,
+      themeConfig: theme("tr"),
+    },
+  },
   themeConfig: {
     logo: "/mark.svg",
     siteTitle: "Tamga Docs",
     search: {
       provider: "local",
       options: {
-        translations: {
-          button: { buttonText: "Ara", buttonAriaLabel: "Belgelerde ara" },
-          modal: {
-            displayDetails: "Ayrıntıları göster",
-            resetButtonTitle: "Aramayı temizle",
-            backButtonTitle: "Kapat",
-            noResultsText: "Sonuç yok:",
-            footer: { selectText: "seç", navigateText: "gezin", closeText: "kapat" },
+        locales: {
+          tr: {
+            translations: {
+              button: { buttonText: "Ara", buttonAriaLabel: "Belgelerde ara" },
+              modal: {
+                displayDetails: "Ayrıntıları göster",
+                resetButtonTitle: "Aramayı temizle",
+                backButtonTitle: "Kapat",
+                noResultsText: "Sonuç yok:",
+                footer: { selectText: "seç", navigateText: "gezin", closeText: "kapat" },
+              },
+            },
           },
         },
       },
     },
-    outline: { level: [2, 3], label: "Bu sayfada" },
-    editLink: { pattern: `${GITHUB}/docs/:path`, text: "Bu sayfayı GitHub'da düzenle" },
-    docFooter: { prev: "Önceki", next: "Sonraki" },
-    nav: [
-      { text: "Başlarken", link: "/guides/README", activeMatch: "^/guides/" },
-      { text: "Kavramlar", link: "/concepts/", activeMatch: "^/concepts/" },
-      { text: "API", link: "/api/", target: "_self" },
-      { text: "SDK'lar", link: "/packages/", activeMatch: "^/packages/" },
-      { text: "Spesifikasyonlar", link: "/specifications/README", activeMatch: "^/(specifications|adr|root|architecture)/" },
-      { text: "Sürüm notları", link: "/root/CHANGELOG" },
-      {
-        text: "Daha fazla",
-        items: [
-          { text: "Tamga ARF — roller ve kurallar", link: ARF_TR },
-          { text: "tamga.network — genel anlatım", link: `${SITE}/docs` },
-          { text: "GitHub", link: "https://github.com/tamga-network" },
-        ],
-      },
-    ],
-    sidebar: {
-      "/guides/": GUIDES,
-      "/concepts/": [{ text: "Kavramlar", items: CONCEPTS }],
-      "/packages/": PACKAGE_SIDEBAR,
-      "/specifications/": REFERENCE,
-      "/adr/": REFERENCE,
-      "/root/": REFERENCE,
-      "/architecture/": REFERENCE,
-    },
-    footer: {
-      message: `Belgeler CC BY 4.0 · Kod Apache-2.0 · <a href="${ARF_TR}">Tamga ARF</a> · <a href="${SITE}">tamga.network</a>`,
-      copyright: "Tamga Network",
-    },
   },
   markdown: {
+    lineNumbers: true,
     config(md) {
-      docLinks(md, (id) => {
+      docLinks(md, (id, rel) => {
+        const l = docsLangOf(rel);
         const page = ARF_PAGES[id];
-        if (page) return { href: `${ARF_TR}${page}`, title: byId.get(id)?.title ?? id };
-        const e = byId.get(id);
+        if (page) return { href: `${ARF_BASE}/${l === "tr" ? "tr/" : ""}${page}`, title: IDX[l].get(id)?.title ?? id };
+        const e = IDX[l].get(id);
         if (!e) return undefined;
-        return { href: isPublished(e.path) ? e.path : sourceUrl(e.path), title: e.title };
+        if (e.path.startsWith("http")) return { href: e.path, title: e.title };
+        return { href: isPublished(e.src) ? e.path : `${GITHUB}/docs/${e.src}`, title: e.title };
       });
+      termTips(md, docsLangOf);
+      localeLinks(md, (rel) => docsLangOf(rel) === "tr");
     },
   },
 });

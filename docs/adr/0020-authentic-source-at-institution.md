@@ -1,41 +1,16 @@
 ---
 document_id: ADR-0020
-title: Yetkili Kaynak Kurumdadır — Tamga Kişi Kaydı Tutmaz; Kimliğe Bağlı Teklif ve Kurum Sorgu Ucu
-category: ADR
-domain: Platform
+title: "Yetkili kaynak kurumdadır"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-09-29
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - institutions
-  - engineers
-tags:
-  - adr
-  - authentic-source
-  - hosted-issuer
-  - privacy
-keywords:
-  - authentic source
-  - identity-bound offer
-  - issuer_state
-  - lookup endpoint
+last_updated: 2026-10-02
 summary: >
   Barındırılan ihraçta kişi verisinin yetkili kaynağı kurumdur; Tamga kişi kaydı tutmaz. İki yol: (A) kurum API ile kişinin kimliğine
   bağlı bir teklif oluşturur, bağlantıyı kendisi gönderir; kişi cüzdanda kimliğini sunar, eşleşirse belge verilir. (B) kişi cüzdandan
   ister, kimliğini sunar; Tamga kurumun sorgu ucuna imzalı istekle sorar. Belge bilgileri her iki yolda imza anında kurumdan okunur,
   saklanmaz. Kurum Konsolu'ndaki kayıt defteri yalnız "örnek kaynak" (deneme) olarak kalır.
-related:
-  - "[[ADR-0011]]"
-  - "[[ADR-0016]]"
-  - "[[ADR-0019]]"
-  - "[[ADR-0023]]"
-  - "[[SPEC-PROTO-0001]]"
+domain: Services
 ---
 
 # Bağlam
@@ -52,7 +27,7 @@ Proje yönetimi (2026-09-29) bu yapıyı istemedi:
 - öğrencinin cüzdandan isteyip Tamga'nın kuruma sorması onaylandı,
 - teklifin kişinin kimliğine bağlı olması onaylandı.
 
-AB tarafında da bir PID ya da belge sağlayıcı, özniteliği yetkili kaynaktan alır (ARF konu 42; CIR 2025/1569). Kaynak veriyi
+AB tarafında da bir [[t:PID]] ya da belge sağlayıcı, özniteliği [[t:authentic-source|yetkili kaynaktan]] alır ([[t:ARF]] konu 42; CIR 2025/1569). Kaynak veriyi
 aracının kalıcı olarak tutması beklenmez.
 
 # Karar
@@ -67,7 +42,7 @@ Her kurum için bir **kaynak bağlantısı** tanımlanır (`tenants/<slug>.json`
   - `fetch`: `subject_ref` ile belge bilgileri (yenileme ve kimliğe bağlı teklif için).
 
   İstek Tamga'nın kurum için kullandığı erişim anahtarıyla imzalı kısa ömürlü bir JWT'dir (`aud` = sorgu ucu, `iat`, `jti`); kurum
-  isteği Tamga'nın güven listesindeki sertifikasıyla doğrular. Yanıt ve biçim OpenAPI ile tanımlıdır.
+  isteği Tamga'nın [[t:trust-list|güven listesindeki]] sertifikasıyla doğrular. Yanıt ve biçim OpenAPI ile tanımlıdır.
 - **`sandbox`** (deneme): Kurum Konsolu'ndaki örnek kayıt defteri ([[ADR-0019]] KC4). Yalnız deneme ve gösterim içindir; gerçek
   kişi verisiyle kullanılmaz.
 
@@ -84,11 +59,11 @@ Her kurum için bir **kaynak bağlantısı** tanımlanır (`tenants/<slug>.json`
    - belge türü,
    - kurumun `subject_ref`'i,
    - eşleştirme anahtarları: `bind { personal_administrative_number, birth_date }`.
-2. Tamga bir **kimliğe bağlı teklif** üretir: OpenID4VCI `authorization_code` grant'ı, `issuer_state` = teklif kimliği. Yanıtta
+2. Tamga bir **kimliğe bağlı teklif** üretir: [[t:OpenID4VCI]] `authorization_code` grant'ı, `issuer_state` = teklif kimliği. Yanıtta
    bağlantı ve QR gelir. **E-postayı ya da mesajı kurum kendi gönderir**; Tamga iletişim adresi görmez.
-3. Kişi bağlantıyı cüzdanda açar. Cüzdan PAR'da `issuer_state`'i gönderir. Yetkilendirme sırasında kişi Tamga kimlik belgesini
+3. Kişi bağlantıyı cüzdanda açar. Cüzdan [[t:PAR|PAR'da]] `issuer_state`'i gönderir. Yetkilendirme sırasında kişi Tamga kimlik belgesini
    sunar (mevcut satır içi akış).
-4. Kurum issuer'ı kimlik belgesini doğrular ve T.C. kimlik no + doğum tarihinin özetini teklifteki özetle karşılaştırır. Eşleşmezse
+4. Kurum [[t:issuer|belge vereni]] kimlik belgesini doğrular ve T.C. kimlik no + doğum tarihinin özetini teklifteki özetle karşılaştırır. Eşleşmezse
    belge verilmez. Teklifi başkası açsa bile belge alamaz.
 5. Belge bilgileri imza anında kaynaktan (`fetch`) okunur.
 6. `tx_code`'lu ön-yetkili teklif, kimlik belgesi olmayanlar için **yedek** olarak kalır. Kod teklifle aynı kanaldan gönderilmez
@@ -97,7 +72,7 @@ Her kurum için bir **kaynak bağlantısı** tanımlanır (`tenants/<slug>.json`
 
 ## K4 — Yol B: kişi başlatır
 
-Kişi cüzdandan kurumu seçer ve kimliğini sunar. Kurum issuer'ı kaynak bağlantısına `lookup` ile sorar (`sandbox`'ta kayıt defteri).
+Kişi cüzdandan kurumu seçer ve kimliğini sunar. Kurum belge vereni kaynak bağlantısına `lookup` ile sorar (`sandbox`'ta kayıt defteri).
 Kayıt varsa belge verilir; kayıt yoksa "kurum kaydında bulunamadı" döner. Yanıt saklanmaz.
 
 ## K5 — Yenileme ve iptal
@@ -109,7 +84,7 @@ Kurum iptali API'den ya da Konsol'dan yapar ([[ADR-0016]]).
 
 - **OpenAPI:** Tamga API'si (teklif, iptal) ve kurumun sorgu ucu sözleşmesi.
 - **Node SDK:** `@tamga-network/issuer/client`'e kimliğe bağlı teklif eklenir.
-- Kendi sunucusunda issuer çalıştırma seçeneği korunur ([[ADR-0016]]).
+- Kendi sunucusunda belge veren çalıştırma seçeneği korunur ([[ADR-0016]]).
 
 ## K7 — Kurum Konsolu
 
@@ -137,8 +112,8 @@ Kurum iptali API'den ya da Konsol'dan yapar ([[ADR-0016]]).
 
 # Sonuçlar
 
-- `tamga-platform/apps/issuer`: kaynak bağlantısı soyutlaması (`sandbox` / `remote`), kimliğe bağlı teklif (`issuer_state`),
-  Yol B'de `lookup`, credential ucunda `fetch`, yenilemede `fetch`.
+- `apps/issuer` (operatör deposu): kaynak bağlantısı soyutlaması (`sandbox` / `remote`), kimliğe bağlı teklif (`issuer_state`),
+  Yol B'de `lookup`, belge ucunda `fetch`, yenilemede `fetch`.
 - `@tamga-network/issuer`: `createPar` `issuer_state`; teklif nesnesi `authorization_code` grant'ı. `wallet-core`: teklif
   `authorization_code` grant'ı → `issuer_state`'li yetkilendirme.
 - [[ADR-0011]] K3 ve [[ADR-0019]] kayıt defteri maddeleri bu ADR ile daralır. [[SPEC-PROTO-0001]] §3 ve §11.2 güncellenir.

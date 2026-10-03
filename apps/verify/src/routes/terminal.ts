@@ -2,8 +2,9 @@
 import type { FastifyInstance } from "fastify";
 import type { VerifyContext } from "../app.js";
 import { langOf, terminalPage } from "../html.js";
+import { CAMPUS_GROUP } from "../policies.js";
 
-const DEFAULT_GROUP = "bilgi-campus";
+const DEFAULT_GROUP = CAMPUS_GROUP;
 
 const GROUP_RE = /^[a-z0-9-]{1,40}$/;
 

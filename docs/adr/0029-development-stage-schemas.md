@@ -1,40 +1,22 @@
 ---
 document_id: ADR-0029
-title: Geliştirme Evresinde Şemalar Yerinde Düzeltilir — Sürüm Geçişi Beta ile Başlar
-category: ADR
-domain: Schema
+title: "Geliştirme evresinde şemalar"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-09-30
-last_updated: 2026-09-30
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-tags:
-  - adr
-  - schema
-  - versioning
-keywords:
-  - development stage
-  - schema immutability
-  - D1
+last_updated: 2026-10-02
 summary: >
-  Beta yayınına kadar belge şemaları yerinde düzeltilir: yanlış ya da eksik bir şema aynı sürüm yolunda güncellenir, eski deneme
+  Beta yayınına kadar belge şemaları yerinde düzeltilir: yanlış ya da eksik bir şema aynı sürüm yolunda güncellenir, deneme
   belgeleri geçersiz kalır ve yeniden alınır. Yayımlanmış şemanın değişmezliği (SPEC-SCHEMA-0001/D1) ve küçük sürüm kuralı
   ([[ADR-0010]] K4) beta ile birlikte uygulanmaya başlar. Tek ayar `SCHEMA_STAGE` ile.
-related:
-  - "[[ADR-0010]]"
-  - "[[SPEC-SCHEMA-0001]]"
+domain: Credentials
 ---
 
 # Bağlam
 
-[[ADR-0010]] ve SPEC-SCHEMA-0001/D1 gereği yayımlanmış bir şema dosyası asla değişmez. Değişiklik yeni sürüm yolu ister; eski
-belgeler kendi sürümüyle doğrulanmaya devam eder. Bu kural gerçek kullanıcıların elinde belge varken doğrudur.
+[[ADR-0010]] ve SPEC-SCHEMA-0001/D1 gereği yayımlanmış bir şema dosyası asla değişmez. Değişiklik yeni sürüm yolu ister; daha önce
+verilmiş [[t:credential|belgeler]] kendi sürümüyle doğrulanmaya devam eder. Bu kural gerçek kullanıcıların elinde belge varken
+doğrudur.
 
 Tamga bugün geliştirme evresindedir:
 
@@ -52,16 +34,17 @@ sürüm ya da kayıt sistemine belli bir olgunluğa gelince (beta) geçilmesini 
 `SCHEMA_STAGE = "development"` iken (`packages/schemas`):
 
 - Şema tanımı aynı sürüm yolunda (ör. `1.0.0`) düzeltilir. Derleyici değişen dosyanın üzerine yazar ve uyarı basar.
-- Yeni sürüm yolu açılmaz. Güven listesinde tür başına tek geçerli özet bulunur.
-- Eski özetle verilmiş deneme belgeleri doğrulamada reddedilir ve yeniden alınır.
-- Kırıcı değişiklik (alan adı, anlam) da yerinde yapılabilir. `vct` URN'i yalnız tür gerçekten başka bir şeye dönüşürse değişir.
+- Yeni sürüm yolu açılmaz. [[t:trust-list|güven listesinde]] tür başına tek geçerli özet bulunur.
+- Önceki özetle verilmiş deneme belgeleri doğrulamada reddedilir ve yeniden alınır.
+- Kırıcı değişiklik (alan adı, anlam) da yerinde yapılabilir. [[t:vct]] URN'i yalnız tür gerçekten başka bir şeye dönüşürse
+  değişir.
 
 ## K2 — Beta ile geçiş
 
 Beta yayınında `SCHEMA_STAGE = "stable"` yapılır. O andan itibaren:
 
 - SPEC-SCHEMA-0001/D1 (yayımlanmış şema değişmez),
-- küçük sürüm kuralı ([[ADR-0010]] K4: aynı `vct`, yeni metadata sürümü, eski özetler geçerli kalır; güven listesinde
+- küçük sürüm kuralı ([[ADR-0010]] K4: aynı `vct`, yeni metadata sürümü, önceki özetler geçerli kalır; güven listesinde
   `content_hashes` — okuma tarafı hazır).
 
 Aşamanın değiştirilmesi STATUS ve DECISIONS'a işlenir.

@@ -3,6 +3,9 @@
  *  PV1 yalnızca DCQL · PV2 client_id kayıtla çözülür (aşırı talep denetimi) · PV3 şifreli yanıt (direct_post.jwt, ECDH-ES/A128GCM)
  *  PV4 origin prefix'i istekte kabul edilmez · PV6 istek nesnesi imzalı, redirect_uri prefix'i reddedilir · PV7 KB-JWT aud = client_id (tam)
  *  PV8 sunum kaydı cihazda · PV9 ≤3 credential, ≤2 credential_sets · PV10 nonce tek kullanımlık (verifier)
+ *  DCQL seçenekleri (OpenID4VP 1.0 §6): `claim_sets` (alan seçenekleri) ve `credential_sets` (belge seçenekleri, zorunlu /
+ *  isteğe bağlı) — `matchDcql` + `selectDcql`; yalnız seçilen seçenek gönderilir (en az veri). §6.4.1: istenen alanı olmayan belge
+ *  gönderilmez (eksik alanla sunum yok); karşılanamayan sorgunun nedeni `gaps`'te.
  */
 import { b64Decode, b64u, utf8 } from "./b64.js";
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
@@ -20,6 +23,8 @@ import { NON_PRESENTABLE_VCTS, PSEUDONYM_FORMAT } from "./pseudonym.js";
 export const REQUEST_TYP = "oauth-authz-req+jwt";
 
 export interface DcqlClaim {
+  /** `claim_sets` varsa zorunlu (OpenID4VP 1.0 §6.3) */
+  id?: string;
   path: Array<string | number | null>;
   values?: unknown[];
 }
@@ -34,10 +39,17 @@ export interface DcqlCredential {
   claims?: DcqlClaim[];
   /** OpenID4VP 1.0 §6.1.1 (HAIP §5: `aki` desteklenmeli) */
   trusted_authorities?: DcqlTrustedAuthority[];
+  /** Alan seçenekleri: `claims` id'lerinin kombinasyonları, doğrulayıcının tercih sırasıyla (§6.1, §6.4.1) */
+  claim_sets?: string[][];
+}
+/** Belge seçenekleri (§6.2): `options` = birlikte karşılayan sorgu id'leri listeleri; `required` yoksa true. */
+export interface DcqlCredentialSet {
+  options: string[][];
+  required?: boolean;
 }
 export interface DcqlQuery {
   credentials: DcqlCredential[];
-  credential_sets?: unknown[];
+  credential_sets?: DcqlCredentialSet[];
 }
 
 export interface VpRequest {
@@ -152,6 +164,7 @@ export function verifyRequestObject(jwt: string, expectedClientId?: string, opts
   if (!dcql?.credentials?.length) throw new WalletError("unsupported", "dcql_query missing");
   if (dcql.credentials.length > 3 || (dcql.credential_sets?.length ?? 0) > 2)
     throw new WalletError("unsupported", "request too large (PV9)");
+  checkDcqlShape(dcql);
   const jwks = (p.client_metadata as { jwks?: { keys?: EncJwk[] } } | undefined)?.jwks?.keys ?? [];
   const encJwk = jwks.find((k) => k.kty === "EC" && k.crv === "P-256" && (k.use === "enc" || !k.use));
   if (!encJwk) throw new WalletError("unsupported", "client_metadata.jwks has no encryption key (PV3)");
@@ -283,8 +296,8 @@ export async function fetchRpRecord(
 export interface Match {
   queryId: string;
   credential: StoredCredential;
+  /** Gönderilecek alanlar. Belge, istenen alanların hepsine (ya da `claim_sets`'ten bir kombinasyona) sahipse eşleşir (§6.4.1). */
   requested: string[];
-  missing: string[];
   /** D-CRED-5: istenen format; `mso_mdoc` ise sunum DeviceResponse olarak üretilir (yoksa `dc+sd-jwt`). */
   format?: "dc+sd-jwt" | "mso_mdoc";
   /** mso_mdoc: DCQL claim yolu [namespace, element] — açıklamanın namespace'i. */
@@ -322,10 +335,134 @@ function trustedAuthorityOk(q: DcqlCredential, c: StoredCredential): boolean {
   const have = new Set(chainAkis(c));
   return ta.some((t) => t.values.some((v) => have.has(v)));
 }
-/** DCQL → cüzdandaki belgeler: vct eşleşmesi, `trusted_authorities` (aki), `values` koşulları, istenen claim adları. */
-export function matchDcql(dcql: DcqlQuery, credentials: StoredCredential[]): { matches: Match[]; unmatched: string[] } {
+const DCQL_ID = /^[A-Za-z0-9_-]+$/;
+const isIdList = (x: unknown): x is string[] =>
+  Array.isArray(x) && x.length > 0 && x.every((v) => typeof v === "string" && DCQL_ID.test(v));
+/**
+ * DCQL'in yapısal kuralları (OpenID4VP 1.0 §6): sorgu id'leri tekil; `claim_sets` yalnız `claims` ile ve her alanın `id`'si
+ * varken; `credential_sets` seçenekleri var olan sorgu id'lerine işaret eder. Bozuk istek reddedilir, seçenek tahmin edilmez.
+ */
+export function checkDcqlShape(dcql: DcqlQuery): void {
+  const bad = (why: string): never => {
+    throw new WalletError("unsupported", `invalid dcql_query: ${why}`);
+  };
+  const ids = new Set<string>();
+  for (const q of dcql.credentials) {
+    if (typeof q.id !== "string" || !DCQL_ID.test(q.id)) bad("credential query id");
+    if (ids.has(q.id)) bad(`duplicate credential query id ${q.id}`);
+    ids.add(q.id);
+    // mso_mdoc: yol [namespace, element] ve tek namespace — açıklama tek namespace'te yapılır (seçenek başka namespace'e kaçmaz)
+    if (q.format === MDOC_FORMAT && q.claims?.length) {
+      const ns = q.claims[0].path[0];
+      for (const c of q.claims)
+        if (c.path.length !== 2 || typeof c.path[0] !== "string" || typeof c.path[1] !== "string" || c.path[0] !== ns)
+          bad(`mso_mdoc claim path must be [namespace, element] in one namespace (${q.id})`);
+    }
+    if (q.claim_sets === undefined) continue;
+    const claims = q.claims ?? [];
+    if (!claims.length) bad(`claim_sets without claims (${q.id})`);
+    const claimIds = new Set<string>();
+    for (const c of claims) {
+      if (typeof c.id !== "string" || !DCQL_ID.test(c.id)) bad(`claim id required with claim_sets (${q.id})`);
+      else if (claimIds.has(c.id)) bad(`duplicate claim id ${c.id} (${q.id})`);
+      else claimIds.add(c.id);
+    }
+    if (!Array.isArray(q.claim_sets) || !q.claim_sets.length) bad(`empty claim_sets (${q.id})`);
+    for (const o of q.claim_sets)
+      if (!isIdList(o) || o.some((x) => !claimIds.has(x))) bad(`claim_sets option (${q.id})`);
+  }
+  if (dcql.credential_sets === undefined) return;
+  if (!Array.isArray(dcql.credential_sets) || !dcql.credential_sets.length) bad("empty credential_sets");
+  for (const set of dcql.credential_sets) {
+    if (!Array.isArray(set?.options) || !set.options.length) bad("credential_sets without options");
+    if (set.required !== undefined && typeof set.required !== "boolean") bad("credential_sets.required");
+    for (const o of set.options) if (!isIdList(o) || o.some((x) => !ids.has(x))) bad("credential_sets option");
+  }
+}
+
+/** Bir belge seçenekleri kümesi (`credential_sets` girişi) ve seçim. */
+export interface DcqlSetChoice {
+  required: boolean;
+  options: string[][];
+  /** Cüzdandaki belgelerle karşılanabilen seçeneklerin sırası (doğrulayıcının tercih sırası korunur) */
+  satisfiable: number[];
+  /** Seçilen seçenek; isteğe bağlı kümede `null` = paylaşma (varsayılan, en az veri) */
+  chosen: number | null;
+}
+export interface DcqlSelection {
+  /** Bütün zorunlu kısımlar karşılanabiliyor mu */
+  ok: boolean;
+  /** `credential_sets` girişleri; istekte yoksa boş (her sorgu zorunlu) */
+  sets: DcqlSetChoice[];
+  /** Gönderilecek sorgu id'leri (seçilen seçeneklerin birleşimi) */
+  queryIds: string[];
+  /** Karşılanamayan zorunlu sorgu id'leri (hata iletisi için) */
+  missing: string[];
+}
+const selectedIds = (sets: DcqlSetChoice[]): string[] => [
+  ...new Set(sets.flatMap((s) => (s.chosen === null ? [] : s.options[s.chosen]))),
+];
+/**
+ * §6.4.2: `credential_sets` yoksa her sorgu istenir. Varsa her zorunlu kümeden bir seçenek karşılanır (cüzdan doğrulayıcının
+ * tercih sırasındaki ilk karşılanabilir seçeneği önerir; kullanıcı değiştirebilir); isteğe bağlı kümeler varsayılan olarak
+ * paylaşılmaz — kullanıcı açarsa gönderilir. Hiçbir kümede geçmeyen sorgu gönderilmez. Takma ad sorgusu (ADR-0031) belge
+ * gerektirmez; karşılanabilir sayılır.
+ */
+export function selectDcql(dcql: DcqlQuery, matches: Match[]): DcqlSelection {
+  const answerable = new Set([
+    ...matches.map((m) => m.queryId),
+    ...dcql.credentials.filter((q) => q.format === PSEUDONYM_FORMAT).map((q) => q.id),
+  ]);
+  if (!dcql.credential_sets) {
+    const all = dcql.credentials.map((q) => q.id);
+    const missing = all.filter((id) => !answerable.has(id));
+    return { ok: missing.length === 0, sets: [], queryIds: all, missing };
+  }
+  const missing: string[] = [];
+  const sets = dcql.credential_sets.map((cs): DcqlSetChoice => {
+    const required = cs.required !== false;
+    const satisfiable = cs.options.flatMap((o, i) => (o.every((id) => answerable.has(id)) ? [i] : []));
+    const chosen = required ? (satisfiable[0] ?? null) : null;
+    if (required && chosen === null) missing.push(...cs.options[0].filter((id) => !answerable.has(id)));
+    return { required, options: cs.options, satisfiable, chosen };
+  });
+  return { ok: missing.length === 0, sets, queryIds: selectedIds(sets), missing: [...new Set(missing)] };
+}
+/** Kullanıcı bir kümede başka bir seçenek seçer (ya da isteğe bağlı kümede `null` = paylaşma). Geçersiz seçim yok sayılır. */
+export function chooseDcqlOption(sel: DcqlSelection, setIndex: number, option: number | null): DcqlSelection {
+  const set = sel.sets[setIndex];
+  if (!set) return sel;
+  if (option === null ? set.required : !set.satisfiable.includes(option)) return sel;
+  const sets = sel.sets.map((x, i) => (i === setIndex ? { ...x, chosen: option } : x));
+  return { ...sel, sets, queryIds: selectedIds(sets) };
+}
+
+/**
+ * Bir sorgu neden karşılanamadı (cüzdan kullanıcıya sade söyler). `no_credential`: uygun türde (ve güvenilir kaynaktan) belge yok ·
+ * `missing_claims`: belge var ama istenen alan(lar) belgede yok · `values`: alan var ama değeri istenen koşulu tutmuyor.
+ * `claims` ve `credential` sorguya en yakın belge (ve `claim_sets` varsa en yakın kombinasyon) içindir.
+ */
+export interface DcqlGap {
+  queryId: string;
+  reason: "no_credential" | "missing_claims" | "values";
+  claims: string[];
+  credential?: StoredCredential;
+}
+export interface DcqlMatchResult {
+  matches: Match[];
+  unmatched: string[];
+  /** `unmatched` sorgularının nedeni (aynı sıra) */
+  gaps: DcqlGap[];
+}
+/**
+ * DCQL → cüzdandaki belgeler: vct eşleşmesi, `trusted_authorities` (aki), `values` koşulları, istenen claim adları.
+ * OpenID4VP 1.0 §6.4.1: `claim_sets` yoksa istenen alanların HEPSİ belgede olmalı — biri eksikse belge sorguyu karşılamaz (eksik
+ * alanla gönderilmez; isteğe bağlı alan isteyen doğrulayıcı `claim_sets` kullanır). `claim_sets` varsa karşılanabilen ilk kombinasyon.
+ */
+export function matchDcql(dcql: DcqlQuery, credentials: StoredCredential[]): DcqlMatchResult {
   const matches: Match[] = [];
   const unmatched: string[] = [];
+  const gaps: DcqlGap[] = [];
   for (const q of dcql.credentials) {
     if (q.format === PSEUDONYM_FORMAT) continue; // ADR-0031: takma ad belge değil, ayrı üretilir (pseudonymQueryOf)
     const isMdoc = q.format === MDOC_FORMAT;
@@ -345,37 +482,48 @@ export function matchDcql(dcql: DcqlQuery, credentials: StoredCredential[]): { m
       .filter((c) => trustedAuthorityOk(q, c));
     const namespace = isMdoc ? (q.claims?.[0]?.path[0] as string | undefined) : undefined;
     const ok: Match[] = [];
+    let closest: DcqlGap | undefined;
     for (const c of cands) {
-      const requested: string[] = [];
-      const missing: string[] = [];
-      let fits = true;
-      for (const cl of q.claims ?? []) {
-        // SD-JWT: path [claim] · mdoc: path [namespace, element] (MD1: element adları SD-JWT claim adlarıyla aynı)
-        // ADR-0036: SD-JWT yolu iç içe olabilir (["address","country"], ["nationalities", null|i]) → nokta yolu
+      // SD-JWT: path [claim] · mdoc: path [namespace, element] (MD1: element adları SD-JWT claim adlarıyla aynı)
+      // ADR-0036: SD-JWT yolu iç içe olabilir (["address","country"], ["nationalities", null|i]) → nokta yolu
+      const evals = (q.claims ?? []).map((cl) => {
         const name = isMdoc ? String(cl.path[1]) : dcqlPathToName(cl.path);
         const value = isMdoc ? c.claims[name] : getClaimAtPath(c.claims, name);
         const has = isMdoc ? Object.prototype.hasOwnProperty.call(c.claims, name) : value !== undefined;
-        if (cl.values && (!has || !cl.values.some((v) => JSON.stringify(v) === JSON.stringify(value)))) {
-          fits = false;
-          break;
-        }
-        if (!has) missing.push(name);
-        else requested.push(name);
-      }
-      if (fits)
+        const valueOk = !cl.values || (has && cl.values.some((v) => JSON.stringify(v) === JSON.stringify(value)));
+        return { id: cl.id, name, has, valueOk };
+      });
+      // §6.4.1: claim_sets'ten YALNIZ bir kombinasyon istenir; cüzdan karşılayabildiği ilk seçeneği gönderir (öbürleri gitmez).
+      // claim_sets yoksa bütün alanlar tek kombinasyondur.
+      const options = q.claim_sets ? q.claim_sets.map((o) => o.map((id) => evals.find((e) => e.id === id)!)) : [evals];
+      const option = options.find((o) => o.every((e) => e.has && e.valueOk));
+      if (option) {
         ok.push({
           queryId: q.id,
           credential: c,
-          requested,
-          missing,
+          requested: option.map((e) => e.name),
           format: isMdoc ? MDOC_FORMAT : "dc+sd-jwt",
           ...(namespace ? { namespace } : {}),
         });
+        continue;
+      }
+      // neden karşılanamadı: en az eksik alanlı kombinasyon (eşitse değer koşulu tutmayan alanı az olan)
+      for (const o of options) {
+        const missing = o.filter((e) => !e.has).map((e) => e.name);
+        const gap: DcqlGap = missing.length
+          ? { queryId: q.id, reason: "missing_claims", claims: missing, credential: c }
+          : { queryId: q.id, reason: "values", claims: o.filter((e) => !e.valueOk).map((e) => e.name), credential: c };
+        const rank = (g: DcqlGap) => (g.reason === "values" ? 0 : 1000) + g.claims.length;
+        if (!closest || rank(gap) < rank(closest)) closest = gap;
+      }
     }
     if (ok.length) matches.push(ok.length > 1 ? { ...ok[0], alternatives: ok } : ok[0]);
-    else unmatched.push(q.id);
+    else {
+      unmatched.push(q.id);
+      gaps.push(closest ?? { queryId: q.id, reason: "no_credential", claims: [] });
+    }
   }
-  return { matches, unmatched };
+  return { matches, unmatched, gaps };
 }
 
 export interface RpCheck {

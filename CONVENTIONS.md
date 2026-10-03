@@ -5,7 +5,7 @@ Tamga'nın TypeScript depolarında (`tamga-network`, `tamga-platform`) geçerli 
 
 ## 1. Dil ve biçim
 - TypeScript `strict`, ES2022, ESM (`"type": "module"`), `moduleResolution: NodeNext` → göreli import'lar **`.js` uzantılı**
-  (`./verify.js`). Cüzdan (`apps/wallet`) Expo/Metro kurallarıyla ayrı derlenir, kök tsconfig'ten hariçtir.
+  (`./verify.js`). Cüzdan uygulaması (Tamga Wallet, Expo) ayrı depodadır; `@tamga-network/wallet-core`'u kullanır.
 - Prettier: 120 sütun, çift tırnak, sonda virgül, LF (`.prettierrc`, `.gitattributes`). `npm run format` / `format:check`.
 - Yorumlar ve kullanıcıya görünen metin **Türkçe**; tanımlayıcılar İngilizce. Kullanıcı metni sade: teknik terim yerine
   günlük dil ("kopya", "kurum", "doğrulayıcı").
@@ -36,7 +36,7 @@ Tamga'nın TypeScript depolarında (`tamga-network`, `tamga-platform`) geçerli 
 - Uçtan uca testler `fastify.inject` ile ağsız; dış HTTP sahte `fetch`/`Http` ile. Canlı servis provası `ops/demo-scenes.ts`.
 - Dev PKI / güven listesi gerektiren testler `describe.skipIf(!ready)` kullanır; ön koşul eksikse `scripts/require-fixtures.ts`
   (vitest globalSetup, iki depoda) uyarır. **CI'da `TAMGA_REQUIRE_FIXTURES=1`** → eksik ön koşul hata olur (sessiz atlama yok);
-  önce `npm run d1`.
+  önce `npm run setup`.
 - Her hata düzeltmesine onu yakalayan bir test.
 
 ## 5. Git ve sürüm

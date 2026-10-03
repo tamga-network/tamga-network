@@ -20,7 +20,6 @@
     "@tamga-network/sd-jwt": "*",
     "@tamga-network/trust": "*",
     "@tamga-network/schemas": "*",
-    "@tamga-network/issuer": "*",
     "@tamga-network/mdoc": "*",
     "@peculiar/x509": "^1.12.0",
     "jose": "^6.0.0",

@@ -1,47 +1,10 @@
 ---
 document_id: ADR-0003
-title: Değer Katmanı Kancaları — Bugün Bedava, Sonra İmkânsız Beş Karar
-category: ADR
-domain: Authorization
+title: "Değer katmanı kancaları"
 status: Active
-review_status: Completed
-version: 1.0.1
+version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-09-10
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - architects
-  - ai-agents
-stability: Stable
-maturity: Stable
-tags:
-  - adr
-  - authorization
-  - account-abstraction
-  - smart-contract-wallet
-  - key-separation
-  - delegation
-  - credential-gating
-keywords:
-  - value layer hooks
-  - smart contract wallet
-  - key space separation
-  - scope-generic delegation
-  - credential gating primitive
-  - no native token
-  - permissioned token issuance
-related:
-  - PM-AUTH-0001
-  - ADR-0001
-  - ADR-0002
-  - SPEC-BC-0001
-  - SPEC-BC-0002
-  - PM-ID-0002
-supersedes: []
+last_updated: 2026-10-02
 summary: >
   [[PM-AUTH-0001]] stratejisi uyarınca, değer/ödeme/agent kapısını AÇIK tutmak için
   BUGÜN alınması gereken beş bağlayıcı mimari karar. Hepsi bugün neredeyse sıfır
@@ -50,9 +13,9 @@ summary: >
   kesin ayrık — kimlik/varlık/agent — ve VARLIK kurtarması kimlik escrow'undan ayrı,
   KULLANICI-SEÇİMLİ kurtarıcılarla (zorunlu devlet değil); (3) delegasyon kayıt defteri
   kapsam-genel (scope-generic); (4) credential-gating genel bir kontrat primitifi;
-  (5) kendi token yok, ama token standardı yasak değil — ihraç FINANCE issuer izin
+  (5) kendi token yok, ama token standardı yasak değil — ihraç FINANCE belge veren izin
   listesine bağlı. Bu kararlar contracts/ implementasyonuna bağlayıcı kısıttır.
-priority: Critical
+domain: Governance
 ---
 
 # ADR-0003 — Değer Katmanı Kancaları
@@ -107,9 +70,9 @@ Agent anahtarı   → delegasyon kapsamında işlem.             Süreli. Anınd
 ```
 
 **Kurtarma ayrımı (bağlayıcı):** Kurtarma mekanizması **yalnızca varlık anahtarına/
-hesabına** uygulanır. Kimlik anahtarı ve credential'lar bu mekanizmaya **asla** dahil
-edilmez — aksi halde "kurtarıcılar" kimliği ele geçirebilir. (*Kimlik/pseudonym'ler
-ana tohumdan deterministik yeniden üretilir; credential'lar issuer'dan yeniden
+hesabına** uygulanır. Kimlik anahtarı ve [[t:credential|belgeler]] bu mekanizmaya **asla** dahil
+edilmez — aksi halde "kurtarıcılar" kimliği ele geçirebilir. (*Kimlik/[[t:pseudonym|takma adlar]]
+ana tohumdan deterministik yeniden üretilir; belgeler [[t:issuer|belge verenden]] yeniden
 talep edilir — bunlar "kurtarma" değil, yeniden türetme/talep.)
 
 **Kurtarıcı kompozisyonu (karar, 2026-08-06):** Varlık cüzdanı kurtarıcıları
@@ -131,12 +94,12 @@ sistemini sonradan yazmak, mevcut tüm delegasyonları geçersiz kılardı.
 
 Delegasyonun değişmez ilkeleri (SPEC-AGENT-0001'de detaylanır): agent'ın kendi kimliği
 yok, türetilmiş yetkisi var; **süresiz delegasyon yok** (`validUntil` zorunlu); **anında
-iptal (kill switch)** koşulsuz; **sorumluluk velidedir**; her işlem delegasyon
-referansıyla loglanır; agent kimlik credential'ı **sunamaz** (yalnızca işlemsel yetki).
+[[t:revocation]] (kill switch)** koşulsuz; **sorumluluk velidedir**; her işlem delegasyon
+referansıyla loglanır; agent kimlik belgesini **sunamaz** (yalnızca işlemsel yetki).
 
 ## Karar 4 — Credential-gating genel bir primitif olsun
 
-"Bu işlemi yapmak için şu credential gerekir" kuralı ödemeye-özel değil, genel bir
+"Bu işlemi yapmak için şu belge gerekir" kuralı ödemeye-özel değil, genel bir
 kontrat kütüphanesi olmalı:
 
 ```solidity
@@ -149,10 +112,10 @@ doğrulamasıyla hizalıdır.
 
 > **Daraltma (2026-09-10, [[SPEC-AGENT-0001]]):** Bu karar **daraltıldı**.
 > [[ADR-0008]] ile iptal listesi zincir dışına çıktığından zincir bir
-> credential'ın geçerliliğini göremez; bu yüzden **Faz 0'da zincir üstü
+> belgenin geçerliliğini göremez; bu yüzden **Faz 0'da zincir üstü
 > credential-gating yoktur** ve `requiresCredential` bir zincir primitifi
 > olarak yazılmaz. Doğrulama off-chain'de ([[SPEC-API-0001]]) yapılır. Gelecek
-> açılma yolu (kayıtlı verifier'ın imzalı beyanı + tazelik + nonce) tasarım
+> açılma yolu (kayıtlı [[t:verifier|doğrulayıcının]] imzalı beyanı + tazelik + [[t:nonce]]) tasarım
 > olarak [[SPEC-AGENT-0001]] §4'te kayıtlıdır. Karar 3 (delegasyon) etkilenmez.
 
 ## Karar 5 — Kendi token'ını çıkarma, ama token standardını yasaklama
@@ -205,7 +168,7 @@ spam'ini engeller ve düzenleyicilere güven verir.
 - [[SPEC-AGENT-0001]] — agent delegasyon yüzeyi (Karar 3) + credential-gating
   daraltması (Karar 4).
 
-**review_status: Completed.** Beş kanca kararı sabitlendi (2026-08-06). `contracts/`
+Beş kanca kararı sabitlendi (2026-08-06). `contracts/`
 implementasyonu bu kısıtlara uyar. Kurtarma kompozisyonu ve agent delegasyon detayı
 ayrı dokümanlara havale edildi. **2026-09-10:** Karar 4, [[SPEC-AGENT-0001]] ile
 daraltıldı (Faz 0'da zincir üstü credential-gating yok; bkz. Karar 4 notu).

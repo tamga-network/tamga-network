@@ -1,47 +1,21 @@
 ---
 document_id: ADR-0019
-title: Kurum Konsolu (console.tamga.network) ve Operatör Veritabanı — Öğrenci Portalının Kaldırılması
-category: ADR
-domain: Platform
+title: "Kurum Konsolu"
 status: Active
-review_status: Completed
-version: 1.0.1
+version: 1.0.0
 created: 2026-09-28
-last_updated: 2026-09-28
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - institutions
-  - operators
-  - engineers
-tags:
-  - adr
-  - console
-  - database
-  - hosted-issuer
-keywords:
-  - institution console
-  - console.tamga.network
-  - PostgreSQL
-  - passkey
-  - authentic source
+last_updated: 2026-10-02
 summary: >
   Barındırılan hizmetlerin kurum tarafı tek bir Kurum Konsolu'nda toplanır (console.tamga.network): kurum personeli davetle
   hesap açar ve passkey ile girer; verilen belgeler, iptal/askı, kayıt defteri (ör. öğrenciler), API anahtarları, kullanıcılar
   ve kurum kaydı buradan yönetilir. Öğrenciye dönük "belgemi cüzdanıma al" portalı kaldırılır — kişi belgeyi cüzdandan ister.
   Operatör verisi JSON dosyalarından PostgreSQL'e taşınır. D-NAME-1'deki portal.tamga.network satırını değiştirir.
-related:
-  - "[[ADR-0011]]"
-  - "[[ADR-0016]]"
-  - "[[ADR-0017]]"
-  - "[[FW-TF-0001]]"
+domain: Services
 ---
 
 # Bağlam
 
-Faz B'de Tamga, kurumlar adına ihraç servisini barındırır ([[ADR-0016]]). Bugün kurum tarafı `portal.tamga.network/{slug}`
+Liste aşamasında Tamga, [[t:issuer|belge veren]] kurumlar adına belge verme servisini barındırır ([[ADR-0016]]). Bugün kurum tarafı `portal.tamga.network/{slug}`
 iki şeyi birden yapıyor: (1) öğrenciye "belgemi cüzdanıma al" sayfası — kurumun kendi öğrenci bilgi sisteminin taklidi; (2)
 öğrenci işleri paneli (verilen belgeler, iptal). Veriler sunucuda JSON dosyalarında (`data/<kurum>/state.json`,
 `students.json`, `tickets.json`, `api-keys.json`); kurum kendi verisini güncelleyemiyor, girişi tek ortak parola.
@@ -59,14 +33,14 @@ Barındırılan hizmetlerin kurum tarafı **Kurum Konsolu**'dur (İngilizce "Ins
 
 | Sekme | Kim | İçerik |
 |---|---|---|
-| Belgeler | ihraççı | verilen belgeler (tür, tarih, kopya sayısı), iptal / askı / geri alma, masada teklif (QR + PIN) |
-| Kayıt defteri (ör. Öğrenciler) | ihraççı | kurumun eşleştirme kayıtları: ekle, düzenle, sil. **Örnek kayıt defteri** olarak işaretlenir: kurumun kendi sistemi bağlanana kadar kullanılır |
+| Belgeler | belge veren | verilen belgeler (tür, tarih, kopya sayısı), iptal / askı / geri alma, masada teklif (QR + PIN) |
+| Kayıt defteri (ör. Öğrenciler) | belge veren | kurumun eşleştirme kayıtları: ekle, düzenle, sil. **Örnek kayıt defteri** olarak işaretlenir: kurumun kendi sistemi bağlanana kadar kullanılır |
 | Biletler / etkinlikler | bilet satıcısı | satışlar, etkinlikler |
-| API anahtarları | ihraççı | oluştur (bir kez gösterilir), iptal et, kapsam ve süre ([[ADR-0016]]) |
+| API anahtarları | belge veren | oluştur (bir kez gösterilir), iptal et, kapsam ve süre ([[ADR-0016]]) |
 | Kullanıcılar | kurum yöneticisi | personel daveti, rol (yönetici / personel), kaldırma |
 | Kurum kaydı | herkes | güven listesindeki kayıt: yetkili belge türleri, durum, sertifika parmak izi (salt okunur) |
 
-Doğrulayıcı istatistikleri (kapı geçiş sayıları; kişisel veri yok) konsola sonraki adımda eklenir.
+[[t:verifier]] istatistikleri (kapı geçiş sayıları; kişisel veri yok) konsola sonraki adımda eklenir.
 
 ## K2 — Giriş: davet + passkey
 
@@ -86,7 +60,7 @@ konsoldaki kayıt defterine karşı yapılır. Masada yüz yüze ihraç gerekirs
 
 Barındırılan hizmetlerin kalıcı verisi **PostgreSQL**'dedir: kurumlar, kayıt defteri, verilen belgeler, iptal listesi durumu,
 olay günlüğü, biletler, API anahtarı özetleri, konsol kullanıcıları / passkey'ler / davetler / oturumlar. Kısa ömürlü protokol
-durumu (teklif, PAR, erişim belirteci, nonce — dakikalar) servis belleğinde kalır. Yerel geliştirme ve testler aynı SQL'i gömülü
+durumu (teklif, [[t:PAR]], erişim belirteci, [[t:nonce]] — dakikalar) servis belleğinde kalır. Yerel geliştirme ve testler aynı SQL'i gömülü
 PostgreSQL (PGlite) ile çalıştırır; canlıda `DATABASE_URL`. Veritabanı kişisel veriyi yalnızca kayıt defterinde tutar (kurumun
 kendi verisi, kurum adına); günlükler kişisel veri içermez (AP3/AP4 aynen).
 
@@ -115,16 +89,16 @@ D-NAME-1 v1.2: `portal.tamga.network/{slug}` → **`console.tamga.network`** (ku
 
 # Sonuçlar
 
-- `tamga-platform`: `apps/console` (portalın yerine), `shared/db` (PostgreSQL / PGlite, sürümlü şema), issuer'ın kalıcı verisi
+- operatör deposu: `apps/console` (portalın yerine), `shared/db` (PostgreSQL / PGlite, sürümlü şema), belge verenin kalıcı verisi
   veritabanında; JSON dosyaları yalnızca ilk yükleme (seed) içindir.
 - `ops`: PostgreSQL kurulumu, `console.tamga.network` nginx bloğu + sertifika adı, `DATABASE_URL`, davet komutu.
-- D-NAME-1 → v1.2 (DECISIONS "Değiştirilen Kararlar"); `docs/delivery/10-ALAN-ADLARI.md`.
+- D-NAME-1 → v1.2 (DECISIONS "Değiştirilen Kararlar"); `docs/_internal/delivery/10-ALAN-ADLARI.md`.
 - Kimlik servisi (`apps/id`) verisinin taşınması ve doğrulayıcı istatistikleri sonraki adımdır.
 
 # Durum
 
 **Accepted — 2026-09-28.** Seçilen: PostgreSQL, davet + passkey, `console.tamga.network`. DECISIONS: D-CONSOLE-1.
 
-**Uygulama notu (1.0.1, 2026-09-28).** Kimlik servisinin kalıcı verisi de veritabanında; akış durumu ve kişi alanları yalnız
+**Uygulama notu (2026-09-28).** Kimlik servisinin kalıcı verisi de veritabanında; akış durumu ve kişi alanları yalnız
 bellekte (diske hiç yazılmaz). Konsola **Kapılar** sekmesi eklendi: kurumun kapı gruplarında gün başına geçiş / red / neden —
 yalnız sayı; kişi, kart kimliği, saat tutulmaz (doğrulayıcı `/stats/gates`, iç ağ).

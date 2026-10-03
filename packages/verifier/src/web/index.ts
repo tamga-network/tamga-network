@@ -212,7 +212,7 @@ export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void }
               type: "button",
               class: "tamga-dcapi",
               style:
-                "background:#B01E22;color:#fff;padding:12px 18px;border:0;border-radius:8px;font-weight:700;cursor:pointer",
+                "background:var(--tamga-accent,#1E5A78);color:var(--tamga-on-accent,#fff);padding:12px 18px;border:0;border-radius:8px;font-weight:700;cursor:pointer",
               onclick: () => {
                 presentViaDigitalCredentials(opts.verifier, dcReq).catch(() => {
                   /* kişi vazgeçti ya da cüzdan yok: QR yolu açık kalır */
@@ -232,7 +232,7 @@ export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void }
               href: p.qr_payload,
               class: "tamga-open",
               style:
-                "display:inline-block;background:#B01E22;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700",
+                "display:inline-block;background:var(--tamga-accent,#1E5A78);color:var(--tamga-on-accent,#fff);padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:700",
             },
             [m.open],
           ),

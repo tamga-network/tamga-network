@@ -16,15 +16,34 @@ const read = (f: string) => {
 };
 const CSS = read("tamga-ui.css");
 const JS = read("tamga-ui.js");
-/** Logo tek kaynaktan (`ops/brand/logo/mark.svg`); renkler sayfa temasına bağlanır. */
-const MARK_SVG = read("logo/mark.svg")
-  .replace(/^[\s\S]*?<svg[^>]*>/, "")
-  .replace(/<\/svg>\s*$/, "")
-  .trim()
-  .replace(/#C8A24C/gi, "var(--gold-bright)")
-  .replace(/#B01E22/gi, "var(--primary)");
+/**
+ * Logo tek kaynaktan: üst çubukta (30 px) küçük boyut işareti `ops/brand/logo/mark-small.svg` (NS). SVG'nin kendi viewBox'ı
+ * aynen kullanılır (sabit 0 0 100 100 değil); Gök dolgusu sayfa temasına bağlanır (--primary, koyu temada açık Gök).
+ */
+function markSvg(file: string): { vb: string; body: string } {
+  const src = read(file);
+  const vb = /viewBox="([^"]+)"/.exec(src)?.[1] ?? "0 0 100 100";
+  const body = src
+    .replace(/^[\s\S]*?<svg[^>]*>/, "")
+    .replace(/<\/svg>\s*$/, "")
+    .trim()
+    .replace(/#1E5A78/gi, "var(--primary)")
+    .replace(/#C8A24C/gi, "var(--gold-bright)");
+  return { vb, body };
+}
+const MARK_SMALL = markSvg("logo/mark-small.svg");
 
 export type Lang = "en" | "tr";
+/** ADR-0038 SB4: sandbox sürecinde her sayfanın üstünde görünür "test" şeridi (ağ ortamdan: TAMGA_NETWORK). */
+export const sandboxBar = (lang: "en" | "tr"): string =>
+  process.env.TAMGA_NETWORK === "sandbox"
+    ? `<div role="note" style="background:#B45309;color:#fff;font:600 13px/1.4 system-ui,sans-serif;text-align:center;padding:6px 12px">${
+        lang === "tr"
+          ? "SANDBOX · TEST — Bu ortamdaki kurumlar, kişiler ve belgeler örnektir; gerçek işlemde geçmez."
+          : "SANDBOX · TEST — Institutions, people and credentials here are examples; they are not valid in real transactions."
+      }</div>`
+    : "";
+
 export const langOf = (acceptLanguage?: string | string[]): Lang => {
   const h = Array.isArray(acceptLanguage) ? acceptLanguage[0] : (acceptLanguage ?? "");
   return h.split(",")[0]?.trim().toLowerCase().startsWith("tr") ? "tr" : "en";
@@ -38,11 +57,11 @@ export function brandPage(o: { lang: Lang; title: string; host: string; body: st
   const tr = o.lang === "tr";
   const [ts, tl, td] = tr ? ["Sistem", "Açık", "Koyu"] : ["System", "Light", "Dark"];
   return `<!doctype html><html lang="${o.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escHtml(o.title)}</title><meta name="description" content="${tr ? "Tamga'nın barındırılan doğrulayıcısı: Tamga Wallet'tan belge ister ve doğrular (OpenID4VP)." : "Tamga's hosted verifier: requests and verifies credentials from Tamga Wallet (OpenID4VP)."}"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#17110F">${o.headExtra ?? ""}
+<title>${escHtml(o.title)}</title><meta name="description" content="${tr ? "Tamga'nın barındırılan doğrulayıcısı: ağın kurallarına uyan cüzdanlardan belge ister ve doğrular (OpenID4VP)." : "Tamga's hosted verifier: requests and verifies credentials from wallets that follow the network's rules (OpenID4VP)."}"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1E5A78" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#101820" media="(prefers-color-scheme: dark)">${o.headExtra ?? ""}
 <script>try{const t=localStorage.getItem("tamga.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch{}</script>
-<style>${CSS}</style></head><body>
+<style>${CSS}</style></head><body>${sandboxBar(o.lang)}
 <header class="bar"><div class="shell">
-<a class="brand" href="https://tamga.network" aria-label="Tamga Network"><svg width="30" height="30" viewBox="0 0 100 100" aria-hidden="true">${MARK_SVG}</svg><span class="words"><b>Tamga</b><small>Network</small></span></a>
+<a class="brand" href="https://tamga.network" aria-label="Tamga Network"><svg width="30" height="30" viewBox="${MARK_SMALL.vb}" aria-hidden="true">${MARK_SMALL.body}</svg><span class="words"><b>Tamga</b><small>Network</small></span></a>
 <span class="crumb">${escHtml(sub ?? "")}.<span>${escHtml(rest.join("."))}</span></span>
 <div class="bar-end"><div class="theme" role="group" aria-label="${tr ? "Tema" : "Theme"}">
 <button type="button" data-theme-choice="system" aria-label="${ts}" title="${ts}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></button>

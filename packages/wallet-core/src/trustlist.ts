@@ -22,6 +22,8 @@ import { WalletError, type Http } from "./http.js";
 /** Uygulamaya derleme zamanında gömülen güven çapası: LOTL imzacı sertifikalarının SHA-256 parmak izleri (hex). */
 export interface TrustPins {
   lotlSigners: string[];
+  /** ADR-0038: sabitlenen kökün ağı (varsayılan "production"); sandbox listesi gerçek ağ pinleriyle yüklenmez (SB2). */
+  environment?: "production" | "sandbox";
 }
 
 export interface VerifiedTrust {
@@ -72,6 +74,7 @@ export async function fetchTrustSource(
       verifyJws: walletJwsVerifier,
       stateCode: cc,
       now: new Date(opts.now ?? Date.now()),
+      environment: opts.pins.environment,
     });
     const tl = store.national.get(cc)!.list;
     return {

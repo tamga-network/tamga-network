@@ -8,10 +8,10 @@ hero:
   actions:
     - theme: brand
       text: Başlarken
-      link: /guides/README
+      link: /tr/guides/
     - theme: alt
       text: Kavramlar
-      link: /concepts/
+      link: /tr/concepts/
     - theme: alt
       text: API başvurusu
       link: /api/
@@ -20,33 +20,34 @@ features:
   - icon: ✓
     title: Belge doğrulayın
     details: Web sitenize "Tamga ile giriş yap" ekleyin ya da sunucunuzda diploma, kimlik, yaş ve bilet doğrulayın.
-    link: /guides/01-web-giris
+    link: /tr/guides/sign-in-with-tamga
     linkText: Doğrulama rehberi
   - icon: ⬇
     title: Belge verin
     details: Kurumunuzun belgelerini kişilerin cüzdanına verin — barındırılan servisle ya da kendi sunucunuzla.
-    link: /guides/03-kurum-ihrac
+    link: /tr/guides/issue-credentials
     linkText: Belge verme rehberi
   - icon: ▣
     title: Cüzdan geliştirin
-    details: Tamga uyumlu bir cüzdan yapın; belgeleri alın, saklayın, seçici olarak gösterin.
-    link: /guides/05-cuzdan-gelistirme
+    details: Tamga uyumlu bir cüzdan yapın; belgeleri alın, saklayın, selective disclosure ile gösterin.
+    link: /tr/guides/build-a-wallet
     linkText: Cüzdan rehberi
   - icon: ⛓
     title: Güven listelerini okuyun
-    details: İmzalı güven listelerini kökünüze sabitleyin; ileride ülke listeleri ve ortak defter.
-    link: /guides/06-guven-listeleri-ve-ag
-    linkText: Güven listeleri rehberi
+    details: İmzalı güven listelerini kök anahtarınıza sabitleyin; ileride ülke listeleri ve ortak defter.
+    link: /tr/guides/read-trust-lists
+    linkText: Güven listesi rehberi
 ---
 
 <div class="tg-home">
 
 ## Beş dakikada doğrulama
 
-Bir diplomayı kendi sunucunuzda doğrulamak için iki paket yeter.
+Bir diplomayı kendi sunucunuzda doğrulamak için iki paket yeter: [[t:trust-list|güven listesi]] okuyucu ve
+[[t:verifier|doğrulayıcı]] hattı.
 
 ```sh
-npm install @tamga-network/verifier @tamga-network/trust @tamga-network/core
+npm install @tamga-network/verifier @tamga-network/trust
 ```
 
 ```ts
@@ -64,8 +65,8 @@ const req = await createPresentationRequest({ signer, dcql: dcqlFromPolicy(DIPLO
 show(req.qrPayload);
 ```
 
-Tam, testli örnek: [Kod örnekleri](/guides/04-kod-ornekleri). Barındırılan doğrulayıcıyı kullanmak isterseniz sunucu kodu
-gerekmez: [Web sitesine "Tamga ile giriş yap"](/guides/01-web-giris).
+Tam, testli örnek: [Kod örnekleri](/guides/code-examples). Barındırılan doğrulayıcı Tamga Verify'ı kullanırsanız
+sunucu kodu gerekmez: [Web sitesine "Tamga ile giriş yap"](/guides/sign-in-with-tamga).
 
 ## Göz atın
 
@@ -86,8 +87,8 @@ gerekmez: [Web sitesine "Tamga ile giriş yap"](/guides/01-web-giris).
 <span>Barındırılan belge verme ve doğrulama servislerinin uç noktaları.</span>
 </a>
 
-<a class="tg-card" href="/specifications/README">
-<strong>Spesifikasyonlar</strong>
+<a class="tg-card" href="/specifications/">
+<strong>Şartnameler</strong>
 <span>Bağlayıcı kurallar: biçimler, protokoller, güven listesi, doğrulama hattı.</span>
 </a>
 
@@ -102,6 +103,13 @@ gerekmez: [Web sitesine "Tamga ile giriş yap"](/guides/01-web-giris).
 | `issuer.tamga.network/{kurum}` | Barındırılan belge verme servisi |
 | `verify.tamga.network` | Tamga Verify — barındırılan doğrulayıcı ve sayfa kiti |
 | `status.tamga.network` | İptal listeleri |
+| `console.tamga.network` | Kurum Konsolu — belge veren kurumların yönetim ekranı |
+| `id.tamga.network` | Kimlik servisi — geçici kimlik belgesi (devlet PID’i gelene kadar) |
+| `wallet.tamga.network` | Cüzdan sağlayıcısı — cüzdan örneği ve anahtar kanıtı (Tamga Wallet’a ait) |
+| `docs.tamga.network` | Bu belgeler |
+| `arf.tamga.network` | Tamga ARF — çerçeve ve kurallar |
+
+Adreslerin hepsi, ne işe yaradıklarıyla: [tamga.network/network](https://tamga.network/tr/network).
 
 Roller, katılım kuralları ve güven çerçevesi: [Tamga ARF](https://arf.tamga.network/tr/). Lisans: belgeler CC BY 4.0, kod
 Apache-2.0.

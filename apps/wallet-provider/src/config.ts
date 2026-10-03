@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { loadDotenv } from "../../_shared/dotenv.js";
+import { loadServiceEnv } from "../../_shared/dotenv.js";
 
 export interface WpConfig {
   publicBase: string;
@@ -16,12 +16,11 @@ export interface WpConfig {
 }
 
 export function loadWpConfig(root = resolve(import.meta.dirname, "../../..")): WpConfig {
-  for (const p of [
+  loadServiceEnv([
     resolve(root, "apps/wallet-provider/.env"),
     resolve(root, ".env"),
     resolve(root, "../tamga-platform/.env"),
-  ])
-    loadDotenv(p);
+  ]);
   const e = process.env;
   return {
     publicBase: (e.TAMGA_WP_BASE ?? "http://localhost:4005").replace(/\/$/, ""),

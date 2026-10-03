@@ -1,56 +1,20 @@
 ---
 document_id: ADR-0002
-title: Egemenlik-Öncelikli Yönetişim — Üç Katmanlı Karar Modeli
-category: ADR
-domain: Governance
+title: "Egemenlik öncelikli yönetişim"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-08-05
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - architects
-  - ai-agents
-stability: Stable
-maturity: Stable
-tags:
-  - adr
-  - governance
-  - sovereignty
-  - permissioned
-  - eidas-lotl
-  - cross-recognition
-keywords:
-  - sovereignty-first governance
-  - three-layer decision model
-  - onlyOwnerState
-  - namespace ownership
-  - cross recognition
-  - right to exit
-  - eIDAS List of Trusted Lists
-related:
-  - PM-BC-0001
-  - ADR-0001
-  - ARCH-0001
-  - SPEC-BC-0001
-  - PM-ID-0001
-  - PM-ID-0002
-supersedes: []
+last_updated: 2026-10-02
 summary: >
   Tamga Network yönetişimini EGEMENLİK-ÖNCELİKLİ üç katmana ayırır: (1) Ağa üyelik
   (yeni devletin validator olması) validator çoğunluğuyla (2/3) oylanır; (2) Ulusal
-  kayıtlar (issuer, relying party) YALNIZCA ilgili devletin yetkisindedir, hiçbir
+  kayıtlar (belge veren, relying party) YALNIZCA ilgili devletin yetkisindedir, hiçbir
   dış oy yoktur (kod seviyesinde onlyOwnerState); (3) Sınır-ötesi tanıma her devlet
-  tarafından tek taraflı belirlenir. Devlet çıkarma vatandaş credential'larını
+  tarafından tek taraflı belirlenir. Devlet çıkarma vatandaş belgelerini
   geçersiz kılmaz; çıkış hakkı (withdraw) kod garantilidir. Model eIDAS LOTL
   emsalini izler. PM-BC-0001'in "kurucu konsorsiyum + on-chain oylama" ifadesini
   inceltir; SPEC-BC-0001 ile uygulanır.
-priority: Critical
+domain: Governance
 ---
 
 # ADR-0002 — Egemenlik-Öncelikli Yönetişim
@@ -67,12 +31,12 @@ priority: Critical
 [[PM-BC-0001]] yönetişimi geniş biçimde "kurucu konsorsiyum + on-chain oylama"
 olarak bırakmıştı. Ancak kritik bir soru bunu inceltmeyi gerektirdi:
 
-> **Türkiye kendi kurumunu (ör. MEB) issuer yaparken neden Kazakistan'ın oyunu beklesin?**
+> **Türkiye kendi kurumunu (ör. MEB) [[t:issuer]] yaparken neden Kazakistan'ın oyunu beklesin?**
 
 Beklememeli. Aksi, kabul edilemez bir **egemenlik ihlali** ve benimsenmenin önündeki
-en büyük engel olurdu. Emsal nettir: **eIDAS**'ta her üye devlet kendi Trusted
-List'ini bağımsız yayınlar; AB yalnızca listeleri toplar (LOTL). Hiçbir devlet
-başkasının hangi kurumu issuer yapacağına oy vermez. Karşılıklı tanıma bir
+en büyük engel olurdu. Emsal nettir: [[t:eIDAS]]'ta her üye devlet kendi Trusted
+List'ini bağımsız yayınlar; AB yalnızca listeleri toplar ([[t:LOTL]]). Hiçbir devlet
+başkasının hangi kurumu belge veren yapacağına oy vermez. Karşılıklı tanıma bir
 **anlaşma/tercih**tir, kurum-kurum oylanan bir şey değil.
 
 ---
@@ -84,8 +48,8 @@ Yönetişim üç katmana ayrılır; her katmanda karar **farklı** aktördedir:
 | Katman | Konu | Karar kimde | Eşik |
 |--------|------|-------------|------|
 | **1 — Ağa üyelik** | Yeni devletin validator olması / çıkarılması / protokol yükseltme | Validator çoğunluğu (mevcut devletler) | **2/3** |
-| **2 — Ulusal kayıtlar** | Kendi issuer'ları, kendi relying party'leri | **Yalnızca ilgili devlet** | Oy YOK (`onlyOwnerState`) |
-| **3 — Sınır-ötesi tanıma** | "X ülkesinin credential'larını kabul ediyor muyum?" | Her devlet, kendi adına | Tek taraflı |
+| **2 — Ulusal kayıtlar** | Kendi belge verenleri, kendi relying party'leri | **Yalnızca ilgili devlet** | Oy YOK (`onlyOwnerState`) |
+| **3 — Sınır-ötesi tanıma** | "X ülkesinin belgelerini kabul ediyor muyum?" | Her devlet, kendi adına | Tek taraflı |
 
 ## Alt kararlar
 1. **Katman 1 eşikleri:** yeni devlet kabulü **2/3**; devlet çıkarma **2/3** (çıkarılanın
@@ -98,12 +62,12 @@ Yönetişim üç katmana ayrılır; her katmanda karar **farklı** aktördedir:
 3. **Katman 3 — varsayılan tanıma politikası:** **kurucu üyeler arasında FULL**
    (birbirini baştan tam tanır); **sonradan katılanlar için NONE** (opt-in) — devletler
    kendi mevzuat hızında açar. Bu, "hepsi ya da hiçbiri" tuzağını önler.
-4. **Çıkarma ≠ credential imhası:** bir devletin çıkarılması yalnızca "yeni kayıt
-   yazamaz + blok üretemez" demektir. Vatandaşlarının cüzdanındaki credential'lar
+4. **Çıkarma ≠ belge imhası:** bir devletin çıkarılması yalnızca "yeni kayıt
+   yazamaz + blok üretemez" demektir. Vatandaşlarının cüzdanındaki [[t:credential|belgeler]]
    geçersiz olmaz; akıbetleri diğer devletlerin Katman 3 tanıma kararına kalır.
 5. **Çıkış hakkı (exit):** bir devlet tek taraflı `withdraw()` ile çekilebilir; oy
    gerekmez. Kod seviyesinde garanti.
-6. **Sınır-ötesi yargı (home-state egemenliği):** bir vatandaşın pseudonym'ini
+6. **Sınır-ötesi yargı (home-state egemenliği):** bir vatandaşın [[t:pseudonym|takma adını]]
    YALNIZCA kendi devletinin guardian eşiği + kendi mahkemesi açabilir; başka devlet
    açamaz. Detay [[PM-ID-0002]] (accountable disclosure) ile işlenir; [[PM-ID-0001]]
    "açıklama = home-state egemenliği" ilkesiyle tutarlıdır.
@@ -126,13 +90,13 @@ Yönetişim üç katmana ayrılır; her katmanda karar **farklı** aktördedir:
 # Sonuçlar
 
 **Olumlu:**
-- Güçlü benimsenme teşviki (egemenlik + çıkış + credential dayanıklılığı).
+- Güçlü benimsenme teşviki (egemenlik + çıkış + belge dayanıklılığı).
 - Governance kontratının kapsamı daralır → daha basit, daha az saldırı yüzeyi.
 - eIDAS ile kavramsal hizalı → interoperability kolaylığı.
 
 **Maliyet / dikkat:**
 - Cross-recognition matris yönetimi (her devlet × her devlet × kategori) operasyonel
-  yük getirir; cüzdan/verifier UX'i bunu gizlemeli.
+  yük getirir; cüzdan/[[t:verifier]] UX'i bunu gizlemeli.
 - "Kurucular FULL" varsayılanı, kurucu setin dikkatli seçilmesini gerektirir.
 - Home-state yargı, sınır-ötesi suç senaryolarında sınırlı kalabilir (gelecekte
   devletler-arası anlaşma gerekebilir — [[PM-ID-0002]] açık konu).
@@ -163,6 +127,6 @@ Yönetişim üç katmana ayrılır; her katmanda karar **farklı** aktördedir:
 
 # Durum
 
-**review_status: Completed.** Yönetişim modeli karara bağlandı. Uygulama detayları
+Yönetişim modeli karara bağlandı. Uygulama detayları
 (kontrat arayüzleri, eşik parametreleri) [[SPEC-BC-0001]]'de; guardian kompozisyonu
 ve sınır-ötesi yargı [[PM-ID-0002]] + [[PM-GOV-0001]] (planlı) ile derinleşecek.

@@ -1,86 +1,106 @@
 /*
- * Tamga UI — service pages (trust., schemas., status., issuer., wallet., id., verify.) share one look with tamga.network.
- * Palette (tamga.network/brand): Al Kızıl #B01E22 · Altın #C8A24C · Obsidyen #17110F · Parşömen #F4EDE2 · Göktürk blue #2A6F8E. Type: Sora (display) · IBM Plex Sans · IBM Plex Mono.
+ * Tamga UI — service pages (trust., schemas., status., issuer., wallet., id., verify., console.) share one look with tamga.network.
+ * Brand (2026-10-02, tamga.network/brand): Gök #1E5A78 (primary; ramp gok-50…900) · ink #14120F · paper #F8F6F1 · rule #E2DCCF ·
+ * deep band #101820 · gold #C8A24C (small accents only). Type: Onest (display) · IBM Plex Sans · IBM Plex Mono — latin-ext + cyrillic.
  * Theme: no stamp = follows the OS; <html data-theme="light|dark"> = explicit choice (tamga-ui.js).
  */
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Onest:wght@500;600;700&display=swap&subset=latin,latin-ext,cyrillic");
 
 :root {
-  --bg: #fbf8f3;
+  --gok-50: #eef5f8;
+  --gok-100: #d6e7ef;
+  --gok-200: #adcfdf;
+  --gok-300: #7fb3cb;
+  --gok-400: #4e93b2;
+  --gok-500: #2e7698;
+  --gok-600: #1e5a78;
+  --gok-700: #174a63;
+  --gok-800: #123a4e;
+  --gok-900: #0d2938;
+  --bg: #f8f6f1;
   --bg-el: #ffffff;
-  --surface: #f4ede2;
-  --surface-2: #ebe2d4;
-  --fg: #17110f;
-  --fg-muted: #564b43;
-  --fg-subtle: #7a6e64;
-  --border: #e6dccd;
-  --border-strong: #d5c7b3;
-  --primary: #b01e22;
-  --primary-strong: #8a1619;
+  --surface: #efebe2;
+  --surface-2: #e7e2d6;
+  --fg: #14120f;
+  --fg-muted: #5d564e;
+  --fg-subtle: #7d756b;
+  --border: #e2dccf;
+  --border-strong: #cfc6b6;
+  --primary: var(--gok-600);
+  --primary-strong: var(--gok-700);
   --on-primary: #ffffff;
-  --gold: #9a7a2e;
+  --gold: #8a6a1f;
   --gold-bright: #c8a24c;
-  --accent: #2a6f8e;
+  --accent: var(--gok-500);
   --ok: #1f7a4d;
   --ok-bg: #e4f2ea;
   --warn: #8a5a00;
   --warn-bg: #f7eed8;
   --bad: #a8261f;
   --bad-bg: #f8e3e1;
-  --ring: rgba(176, 30, 34, 0.3);
+  --ring: rgba(30, 90, 120, 0.35);
+  --code-bg: #101820;
+  --code-fg: #d8e2ea;
+  --code-border: #1f2c38;
   --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --display: "Sora", ui-sans-serif, system-ui, sans-serif;
+  --display: "Onest", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #17110f;
-    --bg-el: #1e1714;
-    --surface: #241c18;
-    --surface-2: #2c231e;
-    --fg: #f4ede2;
-    --fg-muted: #bfb3a5;
-    --fg-subtle: #8e8276;
-    --border: #33291f;
-    --border-strong: #463a2f;
-    --primary: #e0554b;
-    --primary-strong: #b01e22;
-    --on-primary: #ffffff;
-    --gold: #c8a24c;
+    --bg: #101820;
+    --bg-el: #14202a;
+    --surface: #182531;
+    --surface-2: #1d2c39;
+    --fg: #e9eef2;
+    --fg-muted: #a9b8c4;
+    --fg-subtle: #7f93a3;
+    --border: #22313e;
+    --border-strong: #2f4150;
+    --primary: #6fb3d2;
+    --primary-strong: #9fcbe0;
+    --on-primary: #0b1218;
+    --gold: #e0bf6f;
     --gold-bright: #e0bf6f;
-    --accent: #4d9ec0;
+    --accent: #7fb3cb;
     --ok: #5cc28f;
-    --ok-bg: #16281f;
+    --ok-bg: #12261c;
     --warn: #e0bf6f;
     --warn-bg: #2a2416;
     --bad: #f07a70;
     --bad-bg: #2e1817;
-    --ring: rgba(224, 85, 75, 0.4);
+    --ring: rgba(111, 179, 210, 0.45);
+    --code-bg: #0b1218;
+    --code-fg: #d8e2ea;
+    --code-border: #22313e;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #17110f;
-  --bg-el: #1e1714;
-  --surface: #241c18;
-  --surface-2: #2c231e;
-  --fg: #f4ede2;
-  --fg-muted: #bfb3a5;
-  --fg-subtle: #8e8276;
-  --border: #33291f;
-  --border-strong: #463a2f;
-  --primary: #e0554b;
-  --primary-strong: #b01e22;
-  --on-primary: #ffffff;
-  --gold: #c8a24c;
+  --bg: #101820;
+  --bg-el: #14202a;
+  --surface: #182531;
+  --surface-2: #1d2c39;
+  --fg: #e9eef2;
+  --fg-muted: #a9b8c4;
+  --fg-subtle: #7f93a3;
+  --border: #22313e;
+  --border-strong: #2f4150;
+  --primary: #6fb3d2;
+  --primary-strong: #9fcbe0;
+  --on-primary: #0b1218;
+  --gold: #e0bf6f;
   --gold-bright: #e0bf6f;
-  --accent: #4d9ec0;
+  --accent: #7fb3cb;
   --ok: #5cc28f;
-  --ok-bg: #16281f;
+  --ok-bg: #12261c;
   --warn: #e0bf6f;
   --warn-bg: #2a2416;
   --bad: #f07a70;
   --bad-bg: #2e1817;
-  --ring: rgba(224, 85, 75, 0.4);
+  --ring: rgba(111, 179, 210, 0.45);
+  --code-bg: #0b1218;
+  --code-fg: #d8e2ea;
+  --code-border: #22313e;
 }
 
 * {
@@ -114,15 +134,30 @@ code,
   font-family: var(--mono);
   font-size: 0.88em;
 }
+/* Kod ve özet blokları: sitedeki kod penceresi görünümü (koyu zemin, üç nokta) */
 pre {
+  position: relative;
   font-family: var(--mono);
   font-size: 0.82rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 14px;
+  line-height: 1.65;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--code-border);
+  border-radius: 10px;
+  padding: 36px 16px 14px;
   overflow: auto;
   max-height: 420px;
+}
+pre::before {
+  content: "";
+  position: absolute;
+  top: 13px;
+  left: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ff5f57;
+  box-shadow: 15px 0 0 #febc2e, 30px 0 0 #28c840;
 }
 h1,
 h2,
@@ -264,6 +299,18 @@ h1 {
   color: var(--fg-muted);
   max-width: 62ch;
   margin: 0;
+}
+.lede-tr {
+  margin: 14px 0 0;
+  max-width: 62ch;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-strong);
+  font-size: 0.95rem;
+  color: var(--fg-subtle);
+}
+.lede-tr b {
+  color: var(--fg-muted);
+  font-weight: 600;
 }
 .seal {
   width: 150px;
@@ -730,17 +777,24 @@ footer .shell > :first-child {
   }
 }
 @media (prefers-reduced-motion: no-preference) {
+  /* N1 işareti parça parça basılır: üst çubuk, gövde, iki kol */
   .seal path {
-    stroke-dasharray: 400;
-    stroke-dashoffset: 400;
-    animation: tamga-draw 1.6s ease-out forwards;
+    opacity: 0;
+    transform: translateY(-6px);
+    transform-box: fill-box;
+    animation: tamga-stamp 0.6s ease-out forwards;
   }
-  .seal path + path {
-    animation-delay: 0.5s;
+  .seal path:nth-child(2) {
+    animation-delay: 0.15s;
   }
-  @keyframes tamga-draw {
+  .seal path:nth-child(3),
+  .seal path:nth-child(4) {
+    animation-delay: 0.3s;
+  }
+  @keyframes tamga-stamp {
     to {
-      stroke-dashoffset: 0;
+      opacity: 1;
+      transform: none;
     }
   }
 }

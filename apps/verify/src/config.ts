@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { loadDotenv } from "../../_shared/dotenv.js";
+import { loadServiceEnv, networkOf } from "../../_shared/dotenv.js";
 
 export interface VerifyConfig {
   publicBase: string; // https://verify.tamga.network (LAN: http://<ip>:4004)
@@ -9,6 +9,8 @@ export interface VerifyConfig {
    * listedeki kaydın `client_id`'siyle aynıdır.
    */
   clientId: string;
+  /** ADR-0038: beklenen ağ — güven listesinin `environment` alanı bununla eşleşmeli (SB2). */
+  network?: "production" | "sandbox";
   pkiDir: string; // rp-verify.cert.pem / rp-verify.pkcs8.pem (demo)
   trustDist: string; // trust-publisher dist (veya trust.tamga.network aynası)
   stateCode: string;
@@ -26,10 +28,10 @@ export interface VerifyConfig {
 
 /** .env sırası: apps/verify/.env → tamga-network/.env → ../tamga-platform/.env (tek sunucuda ortak dosya). */
 export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")): VerifyConfig {
-  for (const p of [resolve(root, "apps/verify/.env"), resolve(root, ".env"), resolve(root, "../tamga-platform/.env")])
-    loadDotenv(p);
+  loadServiceEnv([resolve(root, "apps/verify/.env"), resolve(root, ".env"), resolve(root, "../tamga-platform/.env")]);
   const e = process.env;
   return {
+    network: networkOf(e),
     publicBase: (e.TAMGA_VERIFY_BASE ?? "http://localhost:4004").replace(/\/$/, ""),
     port: Number(e.TAMGA_VERIFY_PORT ?? 4004),
     clientId: "", // app.ts: imzacının sertifikasından (x509_hash)

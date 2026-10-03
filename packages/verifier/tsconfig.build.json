@@ -5,12 +5,8 @@
     "outDir": "lib",
     "tsBuildInfoFile": "lib/.tsbuildinfo"
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "src/**/*.test.ts"
-  ],
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"],
   "references": [
     {
       "path": "../core/tsconfig.build.json"
@@ -23,9 +19,6 @@
     },
     {
       "path": "../schemas/tsconfig.build.json"
-    },
-    {
-      "path": "../issuer/tsconfig.build.json"
     },
     {
       "path": "../mdoc/tsconfig.build.json"

@@ -106,7 +106,6 @@ const match = (requested: string[]): Match => ({
   queryId: "student",
   credential: { vct: "urn:tamga:edu:StudentCredential:1" } as StoredCredential,
   requested,
-  missing: [],
 });
 
 describe("kayıt sertifikası doğrulaması (ADR-0026)", () => {

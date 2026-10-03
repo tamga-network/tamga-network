@@ -2,7 +2,7 @@
  * ADR-0032 Aşama 3 — `mso_mdoc_zk` testleri için GERÇEK fikstürler üretir (Rust ispatçısı gerekir; testler gerektirmez).
  *
  *   TAMGA_ZK_BIN=<tamga-zk ikilisi> npx tsx packages/verifier/scripts/zk-fixtures.ts     (tamga-network kökünden)
- *   İkili: experiments/zk-longfellow (README "Derleme"); varsayılan ~/tools/lf-target-native/release/tamga-zk(.exe)
+ *   İkili: tools/zk-circuit (README "Derleme"); varsayılan ~/tools/lf-target-native/release/tamga-zk(.exe)
  *
  * Üretilen (packages/verifier/src/zk/fixtures/): root.der (deneme kök CA), issuer.der (kurum yaprağı, köke zincirli),
  * other-issuer.der (aynı köke zincirli BAŞKA kurum — yanlış anahtar testi), valid.cbor (ZK DeviceResponse: age_over_18 = true),

@@ -1,0 +1,484 @@
+{
+  "access-certificate": {
+    "label": "access certificate",
+    "en": "The X.509 certificate a relying party signs its requests with; its client identifier is derived from this certificate's hash.",
+    "tr": "Relying party'nin isteklerini imzaladığı X.509 sertifikası; client kimliği bu sertifikanın özetinden türetilir.",
+    "tr_label": "erişim sertifikası"
+  },
+  "accountable-disclosure": {
+    "label": "accountable disclosure",
+    "en": "A design (chain stage, research) where an identity can be revealed only by a threshold of independent guardians under legal order.",
+    "tr": "Kimliğin yalnız bağımsız emanetçilerin eşik kararıyla ve hukuki emirle açılabildiği tasarım (zincir aşaması, araştırma)."
+  },
+  "anchor-log": {
+    "label": "anchor log",
+    "en": "A public, append-only log of hashes of signed lists, so anyone can check that a list was not silently changed.",
+    "tr": "İmzalı listelerin özetlerinin eklendiği, herkese açık ve geri alınamaz kayıt; bir listenin sessizce değiştirilmediği denetlenebilir.",
+    "tr_label": "çapa günlüğü"
+  },
+  "ARF": {
+    "label": "ARF",
+    "expansion": "Architecture and Reference Framework",
+    "en": "The document set that describes roles, architecture, trust model and rules. Tamga ARF follows the structure of the EU ARF.",
+    "tr": "Rolleri, mimariyi, güven modelini ve kuralları anlatan belge seti. Tamga ARF, AB ARF'sinin düzenini izler."
+  },
+  "attestation": {
+    "label": "attestation",
+    "en": "A signed statement about a person or a thing that is carried in a wallet, such as a student certificate or a diploma.",
+    "tr": "Bir kişi ya da şey hakkında imzalı beyan; cüzdanda taşınır. Öğrenci belgesi ya da diploma gibi."
+  },
+  "authentic-source": {
+    "label": "authentic source",
+    "en": "The system that actually owns the data in a credential, for example a university's student information system.",
+    "tr": "Belgedeki bilginin asıl sahibi olan sistem; örneğin üniversitenin öğrenci bilgi sistemi.",
+    "tr_label": "yetkili kaynak"
+  },
+  "batch-issuance": {
+    "label": "batch issuance",
+    "en": "Issuing several single-use copies of the same credential at once, so that each verifier sees a different copy (unlinkability).",
+    "tr": "Aynı belgenin birden çok tek kullanımlık kopyasının birlikte verilmesi; her doğrulayıcı farklı kopya görür (ilişkilendirilemezlik).",
+    "tr_label": "toplu belge verme"
+  },
+  "conformance": {
+    "label": "conformance",
+    "en": "Proof that an implementation follows the rules, shown by passing the published test vectors and checks.",
+    "tr": "Bir uygulamanın kurallara uyduğunun, yayınlanan test vektörlerini ve denetimleri geçerek gösterilmesi.",
+    "tr_label": "uyum testi"
+  },
+  "credential": {
+    "label": "credential",
+    "en": "A digital document signed by an issuer and held in the person's wallet; the person shows only the fields that are asked for.",
+    "tr": "Belge verenin imzaladığı ve kişinin cüzdanında duran dijital belge; kişi yalnız istenen alanları gösterir.",
+    "tr_label": "belge"
+  },
+  "credential-offer": {
+    "label": "credential offer",
+    "en": "A message (usually a QR code or link) by which an issuer invites a wallet to collect a credential.",
+    "tr": "Belge verenin cüzdanı bir belgeyi almaya çağırdığı ileti; genelde QR kod ya da bağlantı.",
+    "tr_label": "belge teklifi"
+  },
+  "DCQL": {
+    "label": "DCQL",
+    "expansion": "Digital Credentials Query Language",
+    "en": "The query language a verifier uses in OpenID4VP to say which credentials and which fields it needs.",
+    "tr": "Doğrulayıcının OpenID4VP'de hangi belgeleri ve hangi alanları istediğini yazdığı sorgu dili."
+  },
+  "device-attestation": {
+    "label": "device attestation",
+    "en": "Proof from the phone's operating system (App Attest, Play Integrity) that a genuine, unmodified app runs on a real device.",
+    "tr": "Telefonun işletim sisteminden (App Attest, Play Integrity) gelen, gerçek cihazda değiştirilmemiş uygulamanın çalıştığına dair kanıt.",
+    "tr_label": "cihaz kanıtı"
+  },
+  "disclosure": {
+    "label": "disclosure",
+    "en": "In SD-JWT, one field value packed with a random salt; the holder hands over only the disclosures the verifier needs.",
+    "tr": "SD-JWT'de bir alanın değeri, rastgele bir salt ile paketlenmiş hâli; belge sahibi yalnız gereken disclosure'ları verir."
+  },
+  "DPoP": {
+    "label": "DPoP",
+    "expansion": "Demonstrating Proof of Possession",
+    "en": "A way to bind an access token to a key, so a stolen token cannot be used without that key.",
+    "tr": "Erişim belirtecini bir anahtara bağlama yöntemi; çalınan belirteç o anahtar olmadan kullanılamaz."
+  },
+  "EAA": {
+    "label": "EAA",
+    "expansion": "Electronic Attestation of Attributes",
+    "en": "The eIDAS term for a credential that attests attributes of a person, such as a degree or a membership.",
+    "tr": "Kişinin bir özniteliğini (diploma, üyelik gibi) doğrulayan belge için eIDAS'taki ad."
+  },
+  "ECTS": {
+    "label": "ECTS",
+    "expansion": "European Credit Transfer and Accumulation System",
+    "en": "The European system of study credits used to describe course workload.",
+    "tr": "Ders yükünü anlatan Avrupa kredi transfer ve biriktirme sistemi."
+  },
+  "eIDAS": {
+    "label": "eIDAS",
+    "expansion": "electronic IDentification, Authentication and trust Services",
+    "en": "The EU regulation on electronic identification and trust services; eIDAS 2.0 introduces the European Digital Identity Wallet.",
+    "tr": "AB'nin elektronik kimlik ve güven hizmetleri tüzüğü; eIDAS 2.0 Avrupa Dijital Kimlik Cüzdanı'nı getirir."
+  },
+  "ELM": {
+    "label": "ELM",
+    "expansion": "European Learning Model",
+    "en": "The EU data model for describing learning achievements, qualifications and credits.",
+    "tr": "Öğrenme kazanımlarını, nitelikleri ve kredileri tanımlayan AB veri modeli."
+  },
+  "ETSI": {
+    "label": "ETSI",
+    "expansion": "European Telecommunications Standards Institute",
+    "en": "The European standards body that writes the technical standards for trust lists, signatures and trust services.",
+    "tr": "Güven listeleri, imzalar ve güven hizmetleri için teknik standartları yazan Avrupa standart kuruluşu."
+  },
+  "EUDI-Wallet": {
+    "label": "EUDI Wallet",
+    "en": "The European Digital Identity Wallet defined by eIDAS 2.0; Tamga uses the same formats and protocols.",
+    "tr": "eIDAS 2.0'ın tanımladığı Avrupa Dijital Kimlik Cüzdanı; Tamga aynı biçim ve protokolleri kullanır."
+  },
+  "federation": {
+    "label": "federation",
+    "en": "A model in which each country runs its own trust list and a list of trusted lists brings them together; Tamga can also show external lists.",
+    "tr": "Her ülkenin kendi güven listesini işlettiği ve listelerin listesinde birleştiği model; Tamga dış listeleri de gösterebilir.",
+    "tr_label": "federasyon"
+  },
+  "HAIP": {
+    "label": "HAIP",
+    "expansion": "High Assurance Interoperability Profile",
+    "en": "The OpenID4VC profile that fixes the choices for high-assurance use, as in the EUDI Wallet.",
+    "tr": "Yüksek güvenceli kullanım için OpenID4VC seçeneklerini sabitleyen profil; EUDI Wallet'ta da kullanılır."
+  },
+  "holder": {
+    "label": "holder",
+    "en": "The person who keeps a credential in their wallet and decides whom to show it to.",
+    "tr": "Belgeyi cüzdanında tutan ve kime göstereceğine karar veren kişi.",
+    "tr_label": "belge sahibi"
+  },
+  "holder-binding": {
+    "label": "holder binding",
+    "en": "Tying a credential to a key that only the holder's device has, so a copied credential cannot be presented.",
+    "tr": "Belgeyi yalnız belge sahibinin cihazındaki bir anahtara bağlamak; kopyalanan belge gösterilemez."
+  },
+  "identity-proofing": {
+    "label": "identity proofing",
+    "en": "Checking that a person really is who they claim to be before a credential is issued, for example with an ID card and a liveness check.",
+    "tr": "Belge verilmeden önce kişinin gerçekten o kişi olduğunun doğrulanması; örneğin kimlik kartı ve canlılık testiyle.",
+    "tr_label": "kimlik doğrulama"
+  },
+  "intermediary": {
+    "label": "intermediary",
+    "en": "A service that verifies credentials on behalf of a relying party; the wallet shows both the intermediary and the relying party it serves.",
+    "tr": "Bir relying party adına belge doğrulayan hizmet; cüzdan hem aracıyı hem de hizmet verdiği relying party'yi gösterir.",
+    "tr_label": "aracı"
+  },
+  "ISCED-F": {
+    "label": "ISCED-F",
+    "expansion": "International Standard Classification of Education: Fields",
+    "en": "UNESCO's classification of fields of education and training.",
+    "tr": "UNESCO'nun eğitim ve öğretim alanları sınıflandırması."
+  },
+  "issuance": {
+    "label": "issuance",
+    "en": "The process by which an issuer delivers a credential into a holder's wallet (in Tamga: OpenID4VCI).",
+    "tr": "Belge verenin belgeyi kişinin cüzdanına teslim etmesi (Tamga'da OpenID4VCI ile).",
+    "tr_label": "belge verme"
+  },
+  "issuer": {
+    "label": "issuer",
+    "en": "The institution that signs and issues credentials: a university, a professional body, a public institution or a company.",
+    "tr": "Belgeyi imzalayıp veren kurum: üniversite, meslek kuruluşu, kamu kurumu ya da şirket.",
+    "tr_label": "belge veren"
+  },
+  "KB-JWT": {
+    "label": "KB-JWT",
+    "expansion": "Key Binding JWT",
+    "en": "A short token the wallet signs with the credential's key at presentation time, proving the holder has the key.",
+    "tr": "Cüzdanın gösterme anında belge anahtarıyla imzaladığı kısa belirteç; anahtarın belge sahibinde olduğunu kanıtlar."
+  },
+  "key-attestation": {
+    "label": "key attestation",
+    "en": "A short-lived statement by the wallet provider that a credential key was created and is kept in secure hardware.",
+    "tr": "Cüzdan sağlayıcısının, belge anahtarının güvenli donanımda üretildiğini ve tutulduğunu bildiren kısa ömürlü beyanı."
+  },
+  "key-binding": {
+    "label": "key binding",
+    "en": "Binding a credential to a key held by the holder's wallet, so that only that wallet can present it.",
+    "tr": "Belgeyin kişinin cüzdanındaki bir anahtara bağlanması; yalnız o cüzdan gösterebilir."
+  },
+  "ledger": {
+    "label": "ledger",
+    "tr_label": "ortak defter",
+    "en": "A record of trust entries kept jointly by several independent operators (a permissioned blockchain). Tamga adds it only when at least two independent operators take part; until then signed trust lists do the job.",
+    "tr": "Güven kayıtlarının birden çok bağımsız işletmeci tarafından birlikte tutulduğu kayıt (izinli bir blockchain). Tamga onu en az iki bağımsız işletmeci katıldığında ekler; o güne kadar işi imzalı güven listeleri görür."
+  },
+  "LoA": {
+    "label": "LoA",
+    "expansion": "Level of Assurance",
+    "en": "How much confidence can be placed in an identity or a credential; Tamga uses separate levels for proofing (T), issuer (I) and wallet (W).",
+    "tr": "Bir kimliğe ya da belgeye ne kadar güvenilebileceği; Tamga kimlik doğrulama (T), belge veren (I) ve cüzdan (W) için ayrı seviyeler kullanır."
+  },
+  "Longfellow-ZK": {
+    "label": "Longfellow ZK",
+    "en": "An open zero-knowledge proof system for mdoc credentials; Tamga uses it to prove facts such as age over 18 without revealing the birth date.",
+    "tr": "mdoc belgeleri için açık bir sıfır bilgi ispatı sistemi; Tamga doğum tarihini göstermeden \"18 yaşından büyük\" gibi bilgileri kanıtlamak için kullanır."
+  },
+  "LoTE": {
+    "label": "LoTE",
+    "expansion": "List of Trusted Entities",
+    "en": "The ETSI TS 119 602 list format; Tamga publishes a LoTE view of its lists and can read external LoTE lists.",
+    "tr": "ETSI TS 119 602 liste biçimi; Tamga listelerinin LoTE görünümünü yayınlar ve dış LoTE listelerini okuyabilir."
+  },
+  "LOTL": {
+    "label": "LOTL",
+    "expansion": "List of Trusted Lists",
+    "en": "The signed list that points to the countries' trust lists, their signers and their recognition status.",
+    "tr": "Ülke güven listelerinin adreslerini, imzacılarını ve tanınma durumlarını gösteren imzalı liste."
+  },
+  "mDL": {
+    "label": "mDL",
+    "expansion": "mobile Driving Licence",
+    "en": "A driving licence held in a wallet in the mdoc format (ISO/IEC 18013-5).",
+    "tr": "Cüzdanda mdoc biçiminde (ISO/IEC 18013-5) tutulan sürücü belgesi."
+  },
+  "mdoc": {
+    "label": "mdoc",
+    "en": "The ISO/IEC 18013-5 mobile document format, encoded in CBOR; used for in-person presentation and for the mobile driving licence.",
+    "tr": "ISO/IEC 18013-5 mobil belge biçimi, CBOR ile kodlanır; yüz yüze gösterme ve mobil ehliyet için kullanılır."
+  },
+  "nonce": {
+    "label": "nonce",
+    "en": "A random value used once; the verifier sends it and the wallet signs it, so an old presentation cannot be replayed.",
+    "tr": "Bir kez kullanılan rastgele değer; doğrulayıcı gönderir, cüzdan imzalar, böylece eski bir gösterme yeniden kullanılamaz."
+  },
+  "OpenID4VCI": {
+    "label": "OpenID4VCI",
+    "expansion": "OpenID for Verifiable Credential Issuance",
+    "en": "The protocol an issuer uses to deliver a credential to a wallet.",
+    "tr": "Belge verenin belgeyi cüzdana teslim ettiği protokol."
+  },
+  "OpenID4VP": {
+    "label": "OpenID4VP",
+    "expansion": "OpenID for Verifiable Presentations",
+    "en": "The protocol a verifier uses to request a credential from a wallet and receive the presentation.",
+    "tr": "Doğrulayıcının cüzdandan belge istediği ve gösterimi aldığı protokol."
+  },
+  "OTS": {
+    "label": "OTS",
+    "expansion": "Organization of Turkic States",
+    "en": "The intergovernmental organisation of Turkic states; Tamga's governance leaves seats for its member states.",
+    "tr": "Türk Devletleri Teşkilatı (TDT); Tamga yönetişimi üye devletlere yer ayırır."
+  },
+  "PAR": {
+    "label": "PAR",
+    "expansion": "Pushed Authorization Request",
+    "en": "An OAuth step in which the authorization request is sent to the server first, so its contents are not exposed in the browser address.",
+    "tr": "Yetkilendirme isteğinin önce sunucuya gönderildiği OAuth adımı; içerik tarayıcı adresinde görünmez."
+  },
+  "passkey": {
+    "label": "passkey",
+    "en": "A phishing-resistant sign-in credential (WebAuthn/FIDO2) stored on the user's device.",
+    "tr": "Kullanıcının cihazında duran, oltalamaya dayanıklı oturum açma anahtarı (WebAuthn/FIDO2)."
+  },
+  "PID": {
+    "label": "PID",
+    "expansion": "Person Identification Data",
+    "en": "The core identity data a state issues at the highest assurance level. Tamga does not take this role; its identity credential is not a PID.",
+    "tr": "Devletin en yüksek güvence seviyesinde verdiği temel kimlik verisi. Tamga bu rolü üstlenmez; Tamga'nın kimlik belgesi PID değildir."
+  },
+  "proof-of-possession": {
+    "label": "proof of possession",
+    "en": "Proof that the presenter controls the private key a credential is bound to, by signing a fresh challenge.",
+    "tr": "Gösteren kişinin, belgenin bağlı olduğu özel anahtarı elinde tuttuğunun taze bir meydan okumayı imzalayarak kanıtlanması."
+  },
+  "pseudonym": {
+    "label": "pseudonym",
+    "en": "A stable account identifier the wallet derives separately for each website; two sites cannot link the same person.",
+    "tr": "Cüzdanın her web sitesi için ayrı türettiği kararlı hesap kimliği; iki site aynı kişiyi eşleştiremez.",
+    "tr_label": "takma ad"
+  },
+  "PuB-EAA": {
+    "label": "PuB-EAA",
+    "expansion": "Public-Body Electronic Attestation of Attributes",
+    "en": "An attestation issued by or on behalf of a public body responsible for an authentic source.",
+    "tr": "Bir authentic source'tan sorumlu kamu kurumunun ya da onun adına verilen attestation."
+  },
+  "QEAA": {
+    "label": "QEAA",
+    "expansion": "Qualified Electronic Attestation of Attributes",
+    "en": "An EAA issued by a qualified trust service provider (QTSP); it has the strongest legal effect among attestations.",
+    "tr": "Nitelikli güven hizmeti sağlayıcısının (QTSP) verdiği EAA; attestation'lar arasında hukuki etkisi en güçlü olandır."
+  },
+  "QES": {
+    "label": "QES",
+    "expansion": "Qualified Electronic Signature",
+    "en": "An electronic signature made with a qualified certificate on a qualified device; legally equivalent to a handwritten signature in the EU.",
+    "tr": "Nitelikli sertifika ve nitelikli cihazla atılan elektronik imza; AB'de ıslak imzayla eşdeğerdir."
+  },
+  "QSCD": {
+    "label": "QSCD",
+    "expansion": "Qualified Signature Creation Device",
+    "en": "Certified hardware or a remote service that protects the signing key for qualified signatures.",
+    "tr": "Nitelikli imza anahtarını koruyan sertifikalı donanım ya da uzak hizmet."
+  },
+  "QTSP": {
+    "label": "QTSP",
+    "expansion": "Qualified Trust Service Provider",
+    "en": "A trust service provider granted qualified status by a national supervisory body under eIDAS.",
+    "tr": "eIDAS kapsamında ulusal denetim kurumundan nitelikli statü almış güven hizmeti sağlayıcısı."
+  },
+  "refresh-token": {
+    "label": "refresh token",
+    "en": "A long-lived token that lets the wallet obtain fresh credential copies without the holder repeating the whole issuance flow.",
+    "tr": "Cüzdanın, kişi bütün akışı tekrarlamadan yeni belge kopyaları almasını sağlayan uzun ömürlü jeton."
+  },
+  "registrar": {
+    "label": "registrar",
+    "en": "The body that registers issuers and relying parties and checks their registration data before they enter the trust list.",
+    "tr": "Belge verenleri ve relying party'leri kaydeden, güven listesine girmeden önce kayıt verilerini denetleyen birim.",
+    "tr_label": "kayıt kurumu"
+  },
+  "registration-certificate": {
+    "label": "registration certificate",
+    "en": "A signed statement from the registrar listing which fields a relying party may request and for what purpose (valid up to 12 months).",
+    "tr": "Kayıt kurumunun, bir relying party'nin hangi alanları hangi amaçla isteyebileceğini bildiren imzalı belgesi (en çok 12 ay).",
+    "tr_label": "kayıt sertifikası"
+  },
+  "relying-party": {
+    "label": "relying party",
+    "en": "A registered organisation that requests credentials from wallets and verifies them: an employer, a website, an institution.",
+    "tr": "Cüzdandan belge isteyen ve doğrulayan kayıtlı kuruluş: işveren, web sitesi, kurum."
+  },
+  "revocation": {
+    "label": "revocation",
+    "en": "Withdrawing a credential before it expires; the issuer marks it in a status list that verifiers check.",
+    "tr": "Bir belgenin süresi dolmadan geçersiz kılınması; belge veren bunu doğrulayıcıların denetlediği iptal listesinde işaretler.",
+    "tr_label": "iptal"
+  },
+  "root-ca": {
+    "label": "root CA",
+    "en": "The top certificate authority whose key anchors a chain of certificates; in Tamga, pinned through the trust list.",
+    "tr": "Bir sertifika zincirinin dayandığı en üst sertifika otoritesi; Tamga'da güven listesi üzerinden sabitlenir.",
+    "tr_label": "kök sertifika"
+  },
+  "RP": {
+    "label": "RP",
+    "expansion": "Relying Party",
+    "en": "Short for relying party: the organisation that requests and verifies credentials.",
+    "tr": "Relying party'nin kısaltması: belge isteyen ve doğrulayan kuruluş."
+  },
+  "rulebook": {
+    "label": "rulebook",
+    "en": "A set of binding rules. The Tamga Rulebook holds the rules for all participants; each credential type has its own rulebook that branches from it.",
+    "tr": "Bağlayıcı kurallar seti. Tamga Rulebook tüm katılımcıların kurallarını taşır; her belge türünün ondan dallanan kendi rulebook'u vardır."
+  },
+  "salted-hash": {
+    "label": "salted hash",
+    "en": "A hash computed over a value together with a random salt, so the value cannot be guessed from the hash; SD-JWT hides fields this way.",
+    "tr": "Bir değerin rastgele bir salt ile birlikte alınan özeti; değer özetten tahmin edilemez. SD-JWT alanları bu yolla gizler."
+  },
+  "schema-catalogue": {
+    "label": "schema catalogue",
+    "en": "The published list of credential types (vct), their schemas and integrity digests (schemas.tamga.network).",
+    "tr": "Belge türlerinin (vct), şemalarının ve bütünlük özetlerinin yayımlandığı katalog (schemas.tamga.network).",
+    "tr_label": "şema kataloğu"
+  },
+  "SD-JWT-VC": {
+    "label": "SD-JWT VC",
+    "expansion": "Selective Disclosure JWT Verifiable Credential",
+    "en": "The JSON-based credential format with selective disclosure, used for online presentation in the EUDI Wallet and in Tamga.",
+    "tr": "Selective disclosure destekli JSON tabanlı belge biçimi; EUDI Wallet'ta ve Tamga'da çevrimiçi gösterme için kullanılır."
+  },
+  "selective-disclosure": {
+    "label": "selective disclosure",
+    "en": "Showing only the fields a verifier asks for from a credential, and nothing else.",
+    "tr": "Bir belgeden yalnız doğrulayıcının istediği alanların gösterilmesi, fazlasının değil."
+  },
+  "status-list": {
+    "label": "status list",
+    "en": "A compressed, signed list in which each credential has one position that tells whether it is valid, suspended or revoked.",
+    "tr": "Her belgenin tek bir konumu olduğu sıkıştırılmış, imzalı liste; geçerli, askıda ya da iptal olduğunu söyler.",
+    "tr_label": "iptal listesi"
+  },
+  "TLSO": {
+    "label": "TLSO",
+    "expansion": "Trusted List Scheme Operator",
+    "en": "The organisation that compiles, signs and publishes a national trust list. Today Tamga does this for Türkiye, provisionally on behalf of the state.",
+    "tr": "Ulusal güven listesini derleyen, imzalayan ve yayınlayan kuruluş. Bugün Türkiye için bunu Tamga, devlet adına geçici olarak yapar."
+  },
+  "transaction-log": {
+    "label": "transaction log",
+    "en": "The wallet's on-device record of issuances and presentations; only the holder can export it.",
+    "tr": "Cüzdanın cihazda tuttuğu verme ve gösterme kaydı; yalnız kişi dışa aktarabilir.",
+    "tr_label": "işlem günlüğü"
+  },
+  "trust-anchor": {
+    "label": "trust anchor",
+    "en": "The root key or certificate a verifier trusts first; everything else is checked back to it.",
+    "tr": "Doğrulayıcının ilk güvendiği kök anahtar ya da sertifika; geri kalan her şey ona kadar denetlenir.",
+    "tr_label": "güven çapası"
+  },
+  "trust-framework": {
+    "label": "trust framework",
+    "en": "The governance part of the ARF: who may join, how onboarding and compliance work, agreements and hand-over to states.",
+    "tr": "ARF'nin yönetişim bölümü: kimin katılabileceği, katılım ve uyumun nasıl işlediği, sözleşmeler ve devletlere devir."
+  },
+  "trust-list": {
+    "label": "trust list",
+    "en": "A signed list of a country's root certificates, issuers and registered relying parties. Today trust in Tamga rests on these lists; a shared ledger comes later.",
+    "tr": "Bir ülkenin kök sertifikalarını, belge verenlerini ve kayıtlı relying party'lerini taşıyan imzalı liste. Bugün Tamga'da güven bu listelere dayanır; ortak defter sonra gelir.",
+    "tr_label": "güven listesi"
+  },
+  "trusted-list": {
+    "label": "Trusted List",
+    "en": "The ETSI TS 119 612 format in which EU member states publish their qualified trust service providers.",
+    "tr": "AB üye devletlerinin nitelikli güven hizmeti sağlayıcılarını yayımladığı ETSI TS 119 612 biçimi."
+  },
+  "validator": {
+    "label": "validator",
+    "en": "An operator node that signs blocks in the permissioned ledger planned for the chain stage (Besu / QBFT).",
+    "tr": "Zincir aşamasında planlanan izinli defterde (Besu / QBFT) blok imzalayan işletmeci düğümü."
+  },
+  "vct": {
+    "label": "vct",
+    "expansion": "Verifiable Credential Type",
+    "en": "The permanent identifier of a credential type in SD-JWT VC; in Tamga it is a URN such as urn:tamga:edu:Diploma:1.",
+    "tr": "SD-JWT VC'de belge türünün kalıcı kimliği; Tamga'da urn:tamga:edu:Diploma:1 gibi bir URN'dir."
+  },
+  "verification-pipeline": {
+    "label": "verification pipeline",
+    "en": "The fixed sequence of checks a verifier runs on a presentation: signature, issuer, trust list, status, holder binding, policy.",
+    "tr": "Doğrulayıcının bir gösterimde yaptığı sabit denetim sırası: imza, belge veren, güven listesi, status, holder binding, politika.",
+    "tr_label": "doğrulama hattı"
+  },
+  "verifier": {
+    "label": "verifier",
+    "en": "The party that checks a presented credential: signature, issuer in the trust list, status and policy. Also called relying party.",
+    "tr": "Gösterilen belgeyi denetleyen taraf: imza, belge verenin güven listesindeki kaydı, durum ve politika. Relying party diye de anılır.",
+    "tr_label": "doğrulayıcı"
+  },
+  "wallet-provider": {
+    "label": "wallet provider",
+    "en": "The organisation that offers a wallet and signs wallet and key attestations. Tamga Wallet is the network's first wallet.",
+    "tr": "Cüzdanı sunan ve cüzdan ile anahtar kanıtlarını imzalayan kuruluş. Tamga Wallet ağın ilk cüzdanıdır.",
+    "tr_label": "cüzdan sağlayıcısı"
+  },
+  "wallet-unit": {
+    "label": "wallet unit",
+    "en": "One installation of a wallet on a specific device.",
+    "tr": "Bir cüzdanın belirli bir cihazdaki kurulumu."
+  },
+  "WIA": {
+    "label": "WIA",
+    "expansion": "Wallet Instance Attestation",
+    "en": "A short-lived statement signed by the wallet provider that a wallet installation is genuine; issuers check it before issuing.",
+    "tr": "Cüzdan sağlayıcısının imzaladığı, cüzdan kurulumunun gerçek olduğunu bildiren kısa ömürlü beyan; belge veren, belgeyi vermeden önce denetler."
+  },
+  "WRPAC": {
+    "label": "WRPAC",
+    "expansion": "Wallet-Relying Party Access Certificate",
+    "en": "The access certificate a relying party uses to sign its requests to wallets.",
+    "tr": "Relying party'nin cüzdanlara gönderdiği istekleri imzaladığı erişim sertifikası."
+  },
+  "WRPRC": {
+    "label": "WRPRC",
+    "expansion": "Wallet-Relying Party Registration Certificate",
+    "en": "The registration certificate that states which fields a relying party may request and why.",
+    "tr": "Relying party'nin hangi alanları neden isteyebileceğini bildiren kayıt sertifikası."
+  },
+  "WUA": {
+    "label": "WUA",
+    "expansion": "Wallet Unit Attestation",
+    "en": "An attestation by the wallet provider about a wallet unit and the security of its keys; in the current EU texts it is split into WIA and key attestation.",
+    "tr": "Cüzdan sağlayıcısının bir cüzdan birimi ve anahtarlarının güvenliği hakkındaki attestation'ı; güncel AB metinlerinde WIA ve key attestation olarak ikiye ayrılır."
+  },
+  "x509_hash": {
+    "label": "x509_hash",
+    "en": "A client identifier scheme from HAIP: the identifier is the base64url SHA-256 hash of the relying party's access certificate.",
+    "tr": "HAIP'teki client kimliği biçimi: kimlik, relying party'nin erişim sertifikasının base64url SHA-256 özetidir."
+  },
+  "ZK": {
+    "label": "ZK",
+    "expansion": "Zero-Knowledge proof",
+    "en": "A proof that a statement is true without revealing the underlying data, for example \"over 18\" without the birth date.",
+    "tr": "Bir bilginin doğru olduğunu, bilginin kendisini göstermeden kanıtlayan ispat; örneğin doğum tarihi olmadan \"18 yaşından büyük\"."
+  }
+}

@@ -37,6 +37,8 @@ export interface StoredCredential {
   refresh?: import("./oid4vci.js").RefreshBinding & { dueAt?: number };
   /** ARF VCR_19: ihraççının iptal listesindeki son bilinen durum (cüzdan düzenli yeniler). */
   status?: { value: "valid" | "suspended" | "revoked" | "unknown"; checkedAt: number };
+  /** ADR-0038: belgenin alındığı ağ (yoksa "production"); cüzdan yalnız seçili ağın belgelerini gösterir ve kullanır (SB2). */
+  network?: "production" | "sandbox";
 }
 export interface PresentationLogEntry {
   ts: number;
@@ -80,6 +82,8 @@ export interface WalletState {
     providerBase?: string;
     idBase?: string;
     issuerBase?: string;
+    /** ADR-0038: geliştirici ayarı — bağlı ağ (yoksa "production"); güven çapası ve varsayılan adresler buna göre seçilir. */
+    network?: "production" | "sandbox";
   };
   wua?: WuaRecord;
   /** ADR-0025: cüzdan sağlayıcıda kayıtlı birim (birim anahtarı KeyProvider'da "wallet.unit") */

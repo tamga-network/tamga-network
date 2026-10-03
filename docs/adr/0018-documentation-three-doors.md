@@ -1,55 +1,26 @@
 ---
 document_id: ADR-0018
-title: Belge Yayın Düzeni — Üç Kapı (Genel · Geliştirici · Tamga ARF) ve arf.tamga.network
-category: ADR
-domain: Governance
+title: "Belgelerin üç kapısı"
 status: Active
-review_status: Completed
-version: 1.0.1
+version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-09-30
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - institutions
-  - regulators
-  - integrators
-  - engineers
-tags:
-  - adr
-  - documentation
-  - framework
-  - arf
-  - publishing
-keywords:
-  - Tamga ARF publication
-  - arf.tamga.network
-  - developer documentation
-  - English Turkish framework
+last_updated: 2026-10-02
 summary: >
   Dışa dönük belgeler, AB'deki düzen gibi üç ayrı kapıdan yayınlanır: genel anlatım (tamga.network/docs), geliştirici
   belgeleri (docs.tamga.network) ve Tamga ARF (arf.tamga.network — mimari ve referans çerçevesi ile ekleri). Tamga ARF
   İngilizce ve Türkçe yayınlanır; Türkçe metin kaynak kalır, İngilizce aynı sürümün resmî çevirisidir ve sürüm kayması
   derlemede yakalanır. D-GOV-6'nın yayın satırını değiştirir.
-related:
-  - "[[FW-ARF-0001]]"
-  - "[[FW-TF-0001]]"
-  - "[[FW-RB-0001]]"
-  - "[[FW-RB-0002]]"
-  - "[[GUIDE-0000]]"
+domain: Governance
 ---
-> **Sürüm notu 1.0.1 (2026-09-30) — ürün adı:** TamgaID → Tamga Wallet / “Tamga ile giriş yap” (proje yönetimi kararı; anlam değişmedi).
 
 # Bağlam
 
-D-GOV-6 (2026-09-24) çerçeve belge setini (Tamga ARF, Trust Framework, Rulebook, attestation rulebook'ları) tanımladı ve
-yayın yerini `docs.tamga.network` olarak koydu ("Türkçe kanonik, İngilizce v0.2"). Bugünkü durum:
+D-GOV-6 (2026-09-24) çerçeve belge setini (Tamga ARF, [[t:trust-framework|Trust Framework]], [[t:rulebook|Rulebook]], [[t:attestation]] rulebook'ları) tanımladı ve
+yayın yerini `docs.tamga.network` olarak koydu. Bugünkü durum:
 
 - `tamga.network/docs` genel anlatımla geliştirici sayfalarını (entegrasyon, kod) karıştırıyor.
 - `docs.tamga.network` her şeyi bir arada sunuyor: çerçeve belgeleri, kılavuzlar, spesifikasyonlar, ADR'ler, iç çalışma
-  kayıtları (teslimat, Faz B analizi). Düzenleyici ya da kurum için ARF bu kalabalıkta kayboluyor.
+  kayıtları (teslimat, Faz B analizi). Düzenleyici ya da kurum için [[t:ARF]] bu kalabalıkta kayboluyor.
 - AB'de aynı ihtiyaç üç ayrı yerle karşılanır: vatandaş/kurum anlatımı (Komisyon sitesi), geliştirici merkezi ve **ARF**
   (ayrı, sürüm numaralı, İngilizce yayın; ekleri: yüksek seviye gereksinimler, attestation rulebook'ları).
 
@@ -85,7 +56,7 @@ adı `arf.tamga.network` (statik; D-NAME-1 hizmet listesine belge yayını olara
 
 ## K4 — Sürüm
 
-Tamga ARF bir **yayın numarası** taşır (ör. "Tamga ARF 0.2"); her belgenin kendi sürümü ayrıca görünür. Yayın numarası,
+Tamga ARF bir **yayın numarası** taşır (ör. "Tamga ARF 1.0"); her belgenin kendi sürümü ayrıca görünür. Yayın numarası,
 setteki herhangi bir belgenin MINOR ya da MAJOR artışında yükselir; sürüm geçmişi ARF sitesinde herkese açıktır.
 
 # Değerlendirilen seçenekler
@@ -103,7 +74,7 @@ setteki herhangi bir belgenin MINOR ya da MAJOR artışında yükselir; sürüm 
 - `tamga-network/arf/` (VitePress, iki dil) + `scripts/arf-sync.mjs` (Türkçe kaynaktan üretim, `--check` sürüm denetimi).
 - `docs.tamga.network` geliştirici belgeleri olarak yeniden düzenlenir; çerçeve bölümü ARF'ye bağlanır.
 - `tamga-web`: menü ve alt bilgi üç kapıyı gösterir; `/docs` genel anlatımda kalır.
-- `tamga-platform/ops`: nginx `arf.tamga.network` bloğu, `deploy.sh` derleme + yayın; DNS kaydı (operatör).
+- `ops` (operatör deposu): nginx `arf.tamga.network` bloğu, `deploy.sh` derleme + yayın; DNS kaydı (operatör).
 - D-GOV-6'nın "Yayın" satırı bu ADR'ye bağlanır (DECISIONS "Değiştirilen Kararlar").
 - K4 uygulaması: yayınlar `arf/releases.json`'da; her yayın `arf/archive/<yayın>/` altında dondurulur (`npm run arf:snapshot`)
   ve `/v<yayın>/` adresinde okunabilir kalır; sitede sürüm menüsü ("latest" etiketi) ve yayınlar arası satır farkı sayfası
@@ -120,3 +91,5 @@ setteki herhangi bir belgenin MINOR ya da MAJOR artışında yükselir; sürüm 
 # Durum
 
 **Accepted — 2026-09-27.** Seçilen: ayrı adresler, İngilizce + Türkçe ARF, ad "Tamga ARF". DECISIONS: D-DOCS-1.
+
+**Not (2026-10-02):** genel anlatım kapısı `tamga.network/learn` adresine taşındı ("Öğren": sıfırdan Tamga Network'e uzanan öğrenme yolu). Karar değişmedi; yalnız adres değişti.

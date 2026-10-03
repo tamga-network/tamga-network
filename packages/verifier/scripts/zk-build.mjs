@@ -5,7 +5,7 @@
 // Kaynak: packages/verifier/zk (Cargo.toml `rev` = upstream longfellow-zk sabit commit). C bağımlılığı `zstd` saf Rust ara
 // katmanla yamalıdır (zk/zstd-shim), bu yüzden C derleyicisi gerekmez. Çıktı depoya girer; paketi kullananlar Rust gerektirmez.
 // Devre dosyaları (src/zk/circuits/<circuit_id>.zst) doğrulayıcı derlemesinden bağımsızdır: Longfellow devre üreticisi
-// (experiments/zk-longfellow `tamga-zk circuit`) belirlenimci üretir; özetleri imzalı güven listesinde (`lotl.zk_circuits`).
+// (tools/zk-circuit `tamga-zk circuit`) belirlenimci üretir; özetleri imzalı güven listesinde (`lotl.zk_circuits`).
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";

@@ -78,7 +78,7 @@ export async function buildVerifyApp(
   let rootDer: Uint8Array[] = [];
   const statusCache = new PrefetchStatusCache(opts.fetchText);
   const loadTrust = async () => {
-    const { trust: t, rootCertPem } = await loadTrustSourceFromDir(cfg.trustDist);
+    const { trust: t, rootCertPem } = await loadTrustSourceFromDir(cfg.trustDist, { environment: cfg.network });
     trust = t;
     rootDer = rootCertPem ? [pemToDer(rootCertPem)] : [];
   };

@@ -1,0 +1,544 @@
+{
+  "list_format_version": "1.0",
+  "list_type": "trusted_list",
+  "state_code": "TR",
+  "next_update_days": 90,
+  "operator": {
+    "name": "Tamga Network Sandbox (TEST)",
+    "status": "provisional",
+    "on_behalf_of": "Test network — not part of the Tamga Network trust framework (ADR-0038)"
+  },
+  "root_cas": [
+    {
+      "cert": "root-ca",
+      "legal_name": "Tamga Sandbox Root CA (TEST)",
+      "service_type": "NationalRootCA-QC",
+      "operator": {
+        "name": "Tamga Network Sandbox (TEST)",
+        "status": "provisional",
+        "on_behalf_of": "Test network — not part of the Tamga Network trust framework (ADR-0038)"
+      },
+      "status": "ACTIVE",
+      "valid_from": "2026-10-03T00:00:00Z",
+      "valid_until": "2036-10-03T00:00:00Z",
+      "successor_ca_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-03T00:00:00Z",
+          "reason": "sandbox"
+        }
+      ]
+    }
+  ],
+  "issuers": [
+    {
+      "cert": "issuer-istanbul-bilgi",
+      "status_cert": "issuer-istanbul-bilgi-status",
+      "parent_ca": "root-ca",
+      "slug": "istanbul-bilgi",
+      "legal_name": "İstanbul Bilgi Üniversitesi (TEST)",
+      "category": "EDUCATION",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox example institution (ADR-0038). Real institution name used only for a realistic test environment; no relationship or agreement with the institution. Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/istanbul-bilgi",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-10-03T00:00:00Z",
+      "valid_until": "2028-09-24T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-03T00:00:00Z",
+          "reason": "initial-registration"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Sandbox example registry",
+        "mode": "PORTAL_DB"
+      },
+      "trade_name": "İstanbul Bilgi Üniversitesi (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000001",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Istanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
+    },
+    {
+      "cert": "issuer-id",
+      "status_cert": "issuer-id-status",
+      "parent_ca": "root-ca",
+      "slug": "tamga-id",
+      "legal_name": "Tamga Sandbox — Identity Attestation (TEST)",
+      "category": "IDENTITY",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox: fake identity verification provider only; no real identity data (ADR-0038 SB3).",
+      "issuer_url": "https://id.sandbox.tamga.network",
+      "status_list_base": "https://id.sandbox.tamga.network/status/",
+      "status": "ACTIVE",
+      "valid_from": "2026-10-03T00:00:00Z",
+      "valid_until": "2028-09-25T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-03T00:00:00Z",
+          "reason": "ADR-0011 provisional identity attestation provider"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:contact:EmailAddress:1",
+          "allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:contact:PhoneNumber:1",
+          "allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:id:PseudonymSeed:1",
+          "allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Fake identity verification provider (sandbox)",
+        "mode": "IDV_PROVIDER"
+      },
+      "trade_name": "Tamga Sandbox Identity",
+      "info_uri": "https://id.sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000002",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Istanbul",
+        "country": "TR"
+      }
+    },
+    {
+      "cert": "issuer-bubilet",
+      "status_cert": "issuer-bubilet-status",
+      "parent_ca": "root-ca",
+      "slug": "bubilet",
+      "legal_name": "Bubilet (TEST)",
+      "category": "EVENTS",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox example ticket seller (concert tickets; ADR-0038). Tickets carry no personal data. Real institution name used only for a realistic test environment; no relationship or agreement with the institution. Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/bubilet",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-10-03T00:00:00Z",
+      "valid_until": "2028-09-26T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-03T00:00:00Z",
+          "reason": "initial-registration (D10 bilet)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:tkt:EventTicket:1",
+          "allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Sandbox example sales system",
+        "mode": "TICKET_SALES"
+      },
+      "trade_name": "Bubilet (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000003",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Istanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
+    },
+    {
+      "cert": "issuer-paribu-cineverse",
+      "status_cert": "issuer-paribu-cineverse-status",
+      "parent_ca": "root-ca",
+      "slug": "paribu-cineverse",
+      "legal_name": "Paribu Cineverse (TEST)",
+      "category": "EVENTS",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox example cinema ticket seller (film screenings; ADR-0038). Tickets carry no personal data. Real institution name used only for a realistic test environment; no relationship or agreement with the institution. Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/paribu-cineverse",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-10-03T00:00:00Z",
+      "valid_until": "2028-09-26T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-03T00:00:00Z",
+          "reason": "initial-registration (cinema tickets)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:tkt:EventTicket:1",
+          "allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Sandbox example sales system",
+        "mode": "TICKET_SALES"
+      },
+      "trade_name": "Paribu Cineverse (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000006",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Istanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
+    }
+  ],
+  "relying_parties": [
+    {
+      "access_cert": "rp-verify",
+      "dns_name": "verify.sandbox.tamga.network",
+      "legal_name": "Tamga Sandbox Verification (TEST)",
+      "status": "ACTIVE",
+      "registered_at": "2026-10-03T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-03T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "job-application-1",
+          "purpose": "Proof of graduation for a job application",
+          "purpose_localized": {
+            "tr-TR": "İş başvurusunda mezuniyet teyidi",
+            "tk-TM": "Iş arzasy üçin uçurymlygy tassyklamak"
+          },
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "claims": [
+            "is_graduate",
+            "eqf_level",
+            "qualification_title",
+            "awarding_body_name",
+            "family_name",
+            "given_name"
+          ],
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": "2027-09-24T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "student-discount-1",
+          "purpose": "Student discount",
+          "purpose_localized": {
+            "tr-TR": "Öğrenci indirimi",
+            "tk-TM": "Talyp arzanladyşy"
+          },
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "claims": [
+            "is_enrolled",
+            "awarding_body_name"
+          ],
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": "2027-09-24T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "campus-access-1",
+          "purpose": "Campus access (turnstile) — access pass registration",
+          "purpose_localized": {
+            "tr-TR": "Kampüs geçişi (turnike) — geçiş kartı kaydı",
+            "tk-TM": "Kampusa giriş (turniket) — geçiş kartyny hasaba almak"
+          },
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "claims": [
+            "is_enrolled"
+          ],
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": "2027-09-25T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "event-tamga-id-1",
+          "purpose": "Event entry — holder of a Tamga identity (no personal details requested)",
+          "purpose_localized": {
+            "tr-TR": "Etkinlik girişi — Tamga kimliği sahipliği (kişisel bilgi istenmez)",
+            "tk-TM": "Çärä girmek — Tamga şahsyýetnamasynyň eýesi (şahsy maglumat soralmaýar)"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [],
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": "2027-09-25T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "site-signup-1",
+          "purpose": "Website sign-up — given name, family name (the site gets its own pseudonym)",
+          "purpose_localized": {
+            "tr-TR": "Web sitesine üyelik — ad, soyad (site kendine özel takma adı alır)",
+            "tk-TM": "Saýta agza bolmak — ady, familiýasy (saýt özüne degişli lakamy alýar)"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [
+            "given_name",
+            "family_name"
+          ],
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": "2027-09-25T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "event-ticket-1",
+          "purpose": "Event gate — ticket access pass (single use)",
+          "purpose_localized": {
+            "tr-TR": "Etkinlik kapısı — bilet geçiş kartı (tek kullanım)",
+            "tk-TM": "Çäre derwezesi — bilet geçiş kartysy (bir gezeklik)"
+          },
+          "vct": "urn:tamga:tkt:EventTicket:1",
+          "claims": [
+            "event_id",
+            "ticket_class"
+          ],
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": "2027-09-26T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "age-over-18-1",
+          "purpose": "Over-18 check — yes/no only",
+          "purpose_localized": {
+            "tr-TR": "18 yaş üstü doğrulaması — yalnızca evet/hayır",
+            "tk-TM": "18 ýaşdan ulydygyny barlamak — diňe hawa/ýok"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [
+            "age_over_18"
+          ],
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": "2027-09-26T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        }
+      ],
+      "terminal_groups": [
+        {
+          "group_id": "istanbul-bilgi-campus",
+          "label": "İstanbul Bilgi Üniversitesi campus turnstiles (TEST)",
+          "offline_allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z"
+        },
+        {
+          "group_id": "bubilet-gate",
+          "label": "Bubilet event gates (TEST)",
+          "offline_allowed": false,
+          "valid_from": "2026-10-03T00:00:00Z"
+        },
+        {
+          "group_id": "paribu-cineverse-gate",
+          "label": "Paribu Cineverse cinema gates (TEST)",
+          "offline_allowed": false,
+          "valid_from": "2026-10-03T00:00:00Z"
+        }
+      ],
+      "trade_name": "Tamga Sandbox Verify",
+      "info_uri": "https://verify.sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "service_description": {
+        "en-US": "Sandbox verification service for testing (ADR-0038).",
+        "tr-TR": "Deneme için sandbox doğrulama hizmeti (ADR-0038)."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ],
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "pseudonyms": "single",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000004",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Istanbul",
+        "country": "TR"
+      }
+    },
+    {
+      "access_cert": "rp-issuer-istanbul-bilgi",
+      "dns_name": "issuer.sandbox.tamga.network",
+      "legal_name": "İstanbul Bilgi Üniversitesi — identity matching at issuance (TEST)",
+      "status": "ACTIVE",
+      "registered_at": "2026-10-03T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-03T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "istanbul-bilgi-identity-matching-1",
+          "purpose": "Identity matching for issuance: national ID number and birth date are compared with the institution record and not stored",
+          "purpose_localized": {
+            "tr-TR": "Belge ihracı için kimlik eşleştirme: T.C. kimlik no ve doğum tarihi kurum kaydıyla karşılaştırılır, saklanmaz",
+            "tk-TM": "Resminama bermek üçin şahsyýeti deňeşdirmek: şahsyýet belgisi we doglan senesi edaranyň ýazgysy bilen deňeşdirilýär, saklanmaýar"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [
+            "personal_administrative_number",
+            "birth_date",
+            "given_name",
+            "family_name"
+          ],
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": "2027-09-25T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        }
+      ],
+      "trade_name": "İstanbul Bilgi Üniversitesi (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000005",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Istanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "service_description": {
+        "en-US": "Sandbox identity matching at issuance (test).",
+        "tr-TR": "Sandbox belge verirken kimlik eşleştirme (test)."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ]
+    }
+  ],
+  "national_schemas": [],
+  "environment": "sandbox"
+}

@@ -43,6 +43,8 @@ export interface TrustSetInput {
    * bağlı sorular UNKNOWN döner (TrustSource). Verilmezse dış liste yüklenmez.
    */
   externalListJws?: Record<string, string>;
+  /** ADR-0038 SB2: beklenen ağ (varsayılan "production"); listedeki `environment` farklıysa yükleme DURUR. */
+  environment?: "production" | "sandbox";
 }
 
 export interface LoadReport {
@@ -87,6 +89,9 @@ export async function loadTrustSetWith(
     throw new Error(`CMP2: bilinmeyen list_format_version=${lotlRaw.list_format_version} — DURDU`);
   }
   const lotl: Lotl = Lotl.parse(lotlV.payload);
+  const expectedEnv = input.environment ?? "production";
+  if ((lotl.environment ?? "production") !== expectedEnv)
+    throw new Error(`SB2: lotl environment=${lotl.environment ?? "production"}, beklenen ${expectedEnv} — DURDU`);
   let healthy = true;
   if (new Date(lotl.next_update) < now) {
     healthy = false;
@@ -114,6 +119,10 @@ export async function loadTrustSetWith(
     if (!KNOWN_FORMAT_VERSIONS.has(String(raw.list_format_version)))
       throw new Error(`CMP2: tl-${ptr.state_code} bilinmeyen format — DURDU`);
     const tl: NationalList = NationalList.parse(v.payload);
+    if ((tl.environment ?? "production") !== expectedEnv)
+      throw new Error(
+        `SB2: tl-${ptr.state_code} environment=${tl.environment ?? "production"}, beklenen ${expectedEnv} — DURDU`,
+      );
     if (tl.state_code !== ptr.state_code)
       throw new Error(`tl state_code mismatch: ${tl.state_code} ≠ ${ptr.state_code}`);
     if (new Date(tl.next_update) < now) {

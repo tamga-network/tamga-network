@@ -64,7 +64,11 @@ const app = resolve(here, "..");
 const REG = resolve(process.env.TAMGA_TP_REGISTRY ?? resolve(app, "registry"));
 const DIST = resolve(process.env.TAMGA_TP_DIST ?? resolve(app, "dist"));
 const ARCHIVE = resolve(DIST, "archive");
-const PKI = resolve(app, "..", "..", "ops", "pki");
+const PKI = resolve(process.env.TAMGA_TP_PKI ?? resolve(app, "..", "..", "ops", "pki"));
+/** ADR-0038: kayıt defterinin ortamı (lotl.source.json `environment`; yoksa gerçek ağ). */
+const ENVIRONMENT: "production" | "sandbox" = existsSync(resolve(REG, "lotl.source.json"))
+  ? (JSON.parse(readFileSync(resolve(REG, "lotl.source.json"), "utf8")).environment ?? "production")
+  : "production";
 const SCHEMAS_INDEX = resolve(app, "..", "..", "packages", "schemas", "dist", "index.json");
 
 const readJson = (p: string) => JSON.parse(readFileSync(p, "utf8"));
@@ -73,6 +77,12 @@ const plusDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400_000);
 function cert(name: string) {
   const pem = readFileSync(resolve(PKI, `${name}.cert.pem`), "utf8");
   const der = pemToDer(pem);
+  // ADR-0038 SB1: test sertifikası gerçek listeye, gerçek sertifika sandbox listesine girmez
+  const isTest = /(TEST)/.test(new X509Certificate(der).subject);
+  if (isTest !== (ENVIRONMENT === "sandbox"))
+    throw new Error(
+      `SB1: ${name} sertifikası ${isTest ? "test" : "gerçek"}, kayıt defteri ${ENVIRONMENT} — karıştırılamaz`,
+    );
   return { pem, der, fp: certFingerprintSha256Hex(der) };
 }
 function keyEntry(name: string) {
@@ -358,6 +368,7 @@ async function build() {
   const tl = {
     list_format_version: tlSrc.list_format_version,
     list_type: "trusted_list",
+    ...(ENVIRONMENT === "sandbox" ? { environment: "sandbox" } : {}),
     state_code: cc,
     version: tlPrev.version + 1,
     issued_at: iso(now),
@@ -429,6 +440,7 @@ async function build() {
   const lotl = {
     list_format_version: lotlSrc.list_format_version,
     list_type: "lotl",
+    ...(ENVIRONMENT === "sandbox" ? { environment: "sandbox" } : {}),
     version: lotlPrev.version + 1,
     issued_at: iso(now),
     next_update: iso(plusDays(now, lotlSrc.next_update_days)),
@@ -775,6 +787,7 @@ async function verify() {
     nationalListJws,
     anchorsJsonl: anchors.jsonl,
     rootFingerprints: rootFps,
+    environment: ENVIRONMENT,
   });
   console.log(
     JSON.stringify(

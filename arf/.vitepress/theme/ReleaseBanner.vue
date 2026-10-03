@@ -24,7 +24,7 @@ const here = computed(() => parsePath(route.path));
 .arf-old {
   margin-bottom: 20px;
   padding: 10px 14px;
-  border: 1px solid var(--arf-gold);
+  border: 1px solid var(--arf-accent);
   border-radius: 6px;
   background: var(--arf-meta-bg);
   font-size: 14px;

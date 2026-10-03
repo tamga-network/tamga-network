@@ -1,39 +1,10 @@
 ---
 document_id: ADR-0009
-title: Faz B — Zincirsiz Beta, Zincir Başlangıç Eşiği, Çapa İkamesi ve TDT-first İlkesi
-category: ADR
-domain: Blockchain
+title: "Zincirsiz beta ve zincir eşiği"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-09-24
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - architects
-  - operators
-  - ai-agents
-tags:
-  - adr
-  - beta
-  - trusted-list
-  - blockchain-threshold
-  - anchor
-  - governance
-  - pilot
-keywords:
-  - chainless beta
-  - signed trusted list
-  - hash-chained anchor log
-  - validator independence threshold
-  - single-operator chain provides no byzantine trust
-  - TDT-first design
-  - ETSI TS 119 612
-  - replay migration
+last_updated: 2026-10-02
 summary: >
   Pilotu zincire bağlayan ön koşullar (PM-GTM-0001 Ö1/Ö2) kaldırılır; Faz 0'ın
   önüne "Faz B — zincirsiz beta" eklenir. Güven çapası beta'da Tamga'nın geçici
@@ -45,25 +16,7 @@ summary: >
   (TDT) kurguyu bugünden taşır; Tamga her yerde "vekâleten, geçici" operatördür
   ve devir yalnızca operatör alanını değiştirir. Geçiş = liste geçmişinin
   kontratlara yeniden oynatılması + eşdeğerlik testi.
-priority: Critical
-related:
-  - ADR-0001
-  - ADR-0002
-  - ADR-0007
-  - ADR-0008
-  - ARCH-0001
-  - ARCH-0003
-  - PM-GTM-0001
-  - PM-GOV-0001
-  - PM-ASSUR-0001
-  - SPEC-BC-0001
-  - SPEC-CRED-0003
-  - SPEC-SCHEMA-0001
-  - SPEC-ID-0002
-depends_on:
-  - ADR-0001
-  - ADR-0002
-  - ADR-0008
+domain: Trust
 ---
 
 # ADR-0009 — Faz B: Zincirsiz Beta
@@ -99,12 +52,12 @@ eşiklerini (≥3 devlet, ≥4 devlet + 12 ay) tanımlar ama **başlangıç eşi
 
 ## Avrupa ne yapıyor
 
-EUDI Wallet ekosisteminde güven çapası zincir değil, her üye devletin imzaladığı **Trusted
-List** (ETSI TS 119 612) + Komisyon'un **LOTL**'üdür; digest Resmî Gazete'de ilan edilir.
+[[t:EUDI-Wallet]] ekosisteminde güven çapası ([[t:trust-anchor]]) zincir değil, her üye devletin imzaladığı **Trusted
+List** ([[t:ETSI]] TS 119 612) + Komisyon'un [[t:LOTL]]'üdür; digest Resmî Gazete'de ilan edilir.
 EBSI aynı kayıtları zincirde tutar. Tamga'nın kanonik tasarımı EBSI modelini EUDI/ETSI veri
 semantiğiyle kullanır ([[SPEC-ID-0002]] §8.1). Beta için EUDI'nin kendi modeline (imzalı liste)
 inmek mimariden sapma değil, aynı semantiğin tek-imzacılı özel hâlidir. Analiz:
-`docs/beta/02-mimari-yeniden-analiz.md` §1–§2, `docs/beta/05-kurallar-en-iyi-pratik.md` R-2/R-6.
+`docs/_internal/beta/02-mimari-yeniden-analiz.md` §1–§2, `docs/_internal/beta/05-kurallar-en-iyi-pratik.md` R-2/R-6.
 
 ## Proje yönetiminin yönü (2026-09-23/24)
 
@@ -118,7 +71,7 @@ bu kurgu sonra zincire taşınır.
 ## Karar 1 — Faz B eklenir
 
 Faz sırası **Faz B → Faz 0 → Faz 1 → Faz 2** olur. Faz B = zincirsiz beta: üniversite pilotu,
-verifier'lar, Trust Framework, ölçülmüş sonuç. Uygulama kod tabanı `tamga (bu depo, `packages/` + `apps/`)`
+[[t:verifier|doğrulayıcılar]], Trust Framework, ölçülmüş sonuç. Uygulama kod tabanı `tamga (bu depo, `packages/` + `apps/`)`
 (tamga-network dışı, ancak tamga-network dokümanları otoritedir).
 
 ## Karar 2 — Beta'nın güven çapası: imzalı, sürümlü, hash-zincirli listeler + çapa günlüğü
@@ -127,12 +80,12 @@ verifier'lar, Trust Framework, ölçülmüş sonuç. Uygulama kod tabanı `tamga
 
 | Dosya | Zincir karşılığı | Kural |
 |---|---|---|
-| `lotl.jws` | `Governance` üye listesi + `SchemaRegistry` (NETWORK) + wallet provider çapası | `version` monoton, `previous_version_hash`, `next_update` ≤ 90 gün, değişiklik olmasa da yeniden imza |
+| `lotl.jws` | `Governance` üye listesi + `SchemaRegistry` (NETWORK) + cüzdan sağlayıcısı çapası | `version` monoton, `previous_version_hash`, `next_update` ≤ 90 gün, değişiklik olmasa da yeniden imza |
 | `tl-<cc>.jws` | `RootCARegistry` + `IssuerRegistry` (+ `SchemaAuth`) + `RelyingPartyRegistry` + `CrossRecognition` | aynı; ulusal namespace yalnızca o devletin (beta: Tamga vekâleten) anahtarıyla imzalanır (N1'in beta okuması) |
 | `anchors.jsonl` | `StatusListRegistry.publishList` + şema `contentHash` çapaları | append-only; **saatlik** imza (heartbeat dahil); satır silinmez; `previous_hash` |
 | `keys/` + kalıcı web sayfası | Resmî Gazete ilanı | LOTL imza sertifikası parmak izleri; ≥2 kaydırmalı sertifika (ETSI 119 612 Annex A.2); rotasyon ≥30 gün önce, yeni anahtar eskisiyle imzalanır |
 
-Kanonik alan adları ve örnekler: `docs/delivery/04-TRUST-LIST-FORMAT.md` (kabulle birlikte
+Kanonik alan adları ve örnekler: `docs/_internal/delivery/04-TRUST-LIST-FORMAT.md` (kabulle birlikte
 **SPEC-TRUST-0001** olarak resmileşir — DB-11).
 
 ## Karar 3 — Çapa ikamesi: "zincire kaydedilir" ifadelerinin beta okuması
@@ -147,7 +100,7 @@ Aşağıdaki değişmezlerin **anlamı korunur**, taşıyıcısı değişir:
 | [[SPEC-BC-0001]]/DP1 | Hiçbir kontrat kişisel veri… saklamaz | Hiçbir liste/günlük/log kişisel veri… saklamaz |
 | [[SPEC-BC-0001]]/N1 | Namespace sahibi dışında yazma yok | Ulusal listeyi yalnızca o namespace'in imza anahtarı imzalar |
 | [[SPEC-BC-0001]]/GV2 | NETWORK şeması yalnızca Governance ile | NETWORK şeması yalnızca `lotl.jws` içinde, operatör imzasıyla (**askıda**: tek üye) |
-| [[ARCH-0003]]/CMP1 | Verifier zinciri doğrudan sorgulamaz; indeksleyiciden okur | Verifier liste dosyalarını doğrudan yorumlamaz; `TrustSource` önbelleğinden okur |
+| [[ARCH-0003]]/CMP1 | Doğrulayıcı zinciri doğrudan sorgulamaz; indeksleyiciden okur | Doğrulayıcı liste dosyalarını doğrudan yorumlamaz; `TrustSource` önbelleğinden okur |
 | [[ARCH-0003]]/CMP2 | Bilinmeyen implementasyon sürümü → dur | Bilinmeyen `list_format_version` → dur |
 | [[ARCH-0003]]/CMP4 | Bayat indeksleyici → INDETERMINATE | `next_update` geçmiş/erişilemeyen liste → INDETERMINATE |
 
@@ -155,9 +108,9 @@ Bu okumalar ilgili spec'lere **sürüm notu** olarak eklenir; değişmez metinle
 [[ADR-0007]] ve [[ADR-0008]]'in "içerik off-chain, çapa on-chain" ilkesi "içerik off-chain,
 çapa **kanonik kayıtta** (zincir veya Faz B listesi)" olarak okunur.
 
-**Bilinen zayıflama (dürüst kayıt):** Zincirde çapa, issuer'ın çift-konuşmasını (iki verifier'a
+**Bilinen zayıflama (dürüst kayıt):** Zincirde çapa, [[t:issuer|belge verenin]] çift-konuşmasını (iki doğrulayıcıya
 iki farklı liste) mutabakatla imkânsız kılar. Faz B'de çapa operatör imzasına dayanır; operatör
-ile issuer birlikte hareket ederse çift-konuşma **mümkündür**; herkese açık günlük, üç aylık
+ile belge veren birlikte hareket ederse çift-konuşma **mümkündür**; herkese açık günlük, üç aylık
 şeffaflık raporu (G8) ve bağımsız denetim bunu **caydırır**, imkânsız kılmaz. Bu, Faz 0
 sınırları bildirimine **madde 6** olarak girer (Karar 6).
 
@@ -186,7 +139,7 @@ içermez.** Somut kurallar:
    national authority (to be designated)" }`.
 4. Kök ve kayıt adları devlete aittir: "TR National Root CA (provisional operator: Tamga)";
    `ca_id`, `issuer_id`, `vct` devirde **değişmez**, yalnızca `operator` alanı değişir.
-5. Tamga Trust Framework, TDT üyeliği varsayılarak yazılır: üyelik, Registrar atama, kök devri,
+5. Tamga Trust Framework, TDT üyeliği varsayılarak yazılır: üyelik, kayıt birimi atama, kök devri,
    uyuşmazlık, çıkış; Tamga'nın bugünkü rolü "kurucu vekil" olarak belgede tanımlıdır; 2/3
    kuralı ([[ADR-0002]]) belgede yazılıdır, kodda değil.
 6. Cross-recognition alanı her listede bulunur (beta: TR → TR).
@@ -196,19 +149,19 @@ içermez.** Somut kurallar:
 [[PM-GTM-0001]] v2.0.0: **Ö1'** liste taahhüt testleri geçiyor, imzalı ve hash-zincirli;
 **Ö2'** `trust.tamga.network` + `schema.tamga.network` yayında, kök parmak izi sayfası açık;
 **Ö5'** sınırlar bildirimi **v2** (8 madde: madde 5 "blockchain yok, kayıtlar imzalı ve herkese
-açık", madde 6 "çapa tek operatör imzasına dayanır", madde 7 "iptal ≤ 90 dk"); **Ö7'** bu ADR
-kabul; **Ö8'** issuer credential anahtarı üniversitenin kontrolünde (G1 aynen). GT1–GT7 aynen.
+açık", madde 6 "çapa tek operatör imzasına dayanır", madde 7 "[[t:revocation]] ≤ 90 dk"); **Ö7'** bu ADR
+kabul; **Ö8'** belge verenin imza anahtarı üniversitenin kontrolünde (G1 aynen). GT1–GT7 aynen.
 Ölçüt **B10** (iptal etkili olma ≤ 90 dk) ve **B11** (T0 INDETERMINATE oranı ≤ %0,5) eklenir.
 
 ## Karar 7 — Geçiş = replay + eşdeğerlik testi
 
 Faz B → Faz 0 geçişi, liste sürüm arşivinin kontrat çağrılarına **yeniden oynatılması**dır
-(`docs/delivery/05-MIGRATION-TO-CHAIN.md` §2); statü geçmişindeki `since` zamanları
+(`docs/_internal/delivery/05-MIGRATION-TO-CHAIN.md` §2); statü geçmişindeki `since` zamanları
 `revokedAt`/`validFrom` alanlarına yazılır ki `isCredentialAcceptable(issuerId, iat)` beta
 dönemi belgeleri için aynı cevabı versin (D-BC-3). **Kabul ölçütü:** pilot boyunca kaydedilen
 her `(issuer_id, schema_id, iat, list_id, version)` sorgusu için `TrustSource(list)` ve
 `TrustSource(chain)` aynı C1/C2/C3/D5 cevabını vermelidir; ACCEPTED/REJECTED farkı = geçiş
-tamamlanmamıştır. Verilmiş credential'lar yeniden verilmez; cüzdan ve issuer servisi değişmez.
+tamamlanmamıştır. Verilmiş [[t:credential|belgeler]] yeniden verilmez; cüzdan ve belge veren servisi değişmez.
 
 ---
 
@@ -217,7 +170,7 @@ tamamlanmamıştır. Verilmiş credential'lar yeniden verilmez; cüzdan ve issue
 1. **Güven eşdeğerliği (F1).** Tek operatörlü zincir ile tek operatörün imzaladığı liste aynı
    güven varsayımına dayanır; ikincisi ucuz, standart (ETSI 119 612) ve EUDI'nin kendi modelidir.
 2. **Mimari korunur.** Okuma arayüzü (`TrustSource` = [[SPEC-BC-0001]] §11.2 okuma seti),
-   A–E doğrulama hattı, SD-JWT VC profili, status list, şema kayıt defteri, cüzdan, protokoller
+   A–E [[t:verification-pipeline]], [[t:SD-JWT-VC]] profili, [[t:status-list]], şema kayıt defteri, cüzdan, protokoller
    iki fazda birebir aynıdır. Beta bir "hack" değil, kanonik mimarinin tek-imzacılı özel hâlidir.
 3. **Geri dönülebilirlik.** Liste → zincir replay ile geçer; zincir → liste (ARCH-0004 SEV1'de)
    indeksleyici projeksiyonuyla geri dönebilir. İki yön de aynı formatı kullanır.
@@ -240,7 +193,7 @@ O1, indeksleyici) beta'ya taşır. "Blockchain'li pilot" pazarlaması yanıltıc
 "blockchain" değil "doğrulanabilir kayıt altyapısı").
 
 ## C — Web2 demo (tamga-demo tarzı) ile pilot — Reddedildi
-Güven listesi, X.509, SD-JWT VC, status list olmadan yapılan bir demo "aynı mimari" değildir;
+[[t:trust-list|Güven listesi]], X.509, SD-JWT VC, iptal listesi olmadan yapılan bir demo "aynı mimari" değildir;
 zincire geçişte her şey yeniden yazılır; kriptografik iddialar gösterilemez. tamga-demo yalnızca
 ekran/anlatı referansıdır (BIP39 seed cüzdanı WL1'i ihlal eder).
 
@@ -285,11 +238,10 @@ zaman** kurulacağını ve o güne kadar çapanın **kimin imzası** olduğunu t
 **Dayanır:** [[ADR-0001]] (değişmez), [[ADR-0002]] (egemenlik, cross-recognition), [[PM-ASSUR-0001]] (devletsiz bootstrap)
 **Doğurur:** SPEC-TRUST-0001, Tamga Trust Framework, `(bu depo) `
 **Kardeş:** [[ADR-0010]] (vct URN + kategori — TDT-first'ün tip kimliğine uygulanması)
-**Analiz kaynağı:** `docs/beta/02`, `03`, `04` (DB-1, DB-2, DB-10, DB-17), `05` (R-2, R-5, R-6), `06` §3.4
+**Analiz kaynağı:** `docs/_internal/beta/02`, `03`, `04` (DB-1, DB-2, DB-10, DB-17), `05` (R-2, R-5, R-6), `06` §3.4
 
 ---
 
 # Durum
 
 **Accepted ✅** — 2026-09-24. [[DECISIONS]]'a D-BC-6, D-GTM-2, D-GOV-5 olarak işlendi; etkilenen SPEC sürüm güncellemeleri DECISIONS §10 açık taahhütler listesindedir.
-

@@ -6,6 +6,8 @@ import { ListTrustSource } from "./trust-source.js";
 
 export interface DistLoadOptions {
   anchorMaxAgeMs?: number;
+  /** ADR-0038: beklenen ağ (varsayılan "production"). */
+  environment?: "production" | "sandbox";
   now?: Date;
 }
 
@@ -43,6 +45,7 @@ export async function loadTrustSourceFromDir(
     now: opt.now,
     anchorMaxAgeMs: opt.anchorMaxAgeMs ?? 365 * 86400_000,
     externalListJws: external,
+    environment: opt.environment,
   });
   const rootPath = resolve(dir, "keys", "root-ca.cert.pem");
   return {

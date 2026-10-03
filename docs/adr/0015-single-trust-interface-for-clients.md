@@ -1,52 +1,25 @@
 ---
 document_id: ADR-0015
-title: İstemciler Dahil Tek Güven Arayüzü (TrustSource Çekirdeğinin Taşınabilir Hâli)
-category: ADR
-domain: Trust
+title: "Tek güven arayüzü"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-09-27
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - architects
-  - ai-agents
-tags:
-  - adr
-  - trust
-  - trust-source
-  - wallet
-  - phase-b
-  - phase-0
-keywords:
-  - single trust interface clients
-  - TrustSource portable core React Native
-  - list vs chain trust source
-  - wallet trust list verification duplication
+last_updated: 2026-10-02
 summary: >
   Servisler güven sorularını tek arayüzden (`TrustSource`, @tamga-network/trust) soruyor; cüzdan ise React Native'de
   bu paketi kullanamadığı için aynı liste doğrulamasını `wallet-core` içinde ayrıca yapıyor. Öneri: `@tamga-network/trust`'ın
   doğrulama çekirdeği platformdan bağımsız (saf TS, node:fs'siz, jose'suz) bir alt yola ayrılır; cüzdan dahil her istemci
   aynı arayüzü kullanır. Faz 0'da zincir kaynağı (`ChainTrustSource`) yine aynı arayüzün arkasına girer. Bu belge geçiş
   planını yazar, uygulamaz.
-related:
-  - "[[ADR-0009]]"
-  - "[[SPEC-TRUST-0001]]"
-  - "[[SPEC-WALLET-0001]]"
-  - "[[SPEC-BC-0001]]"
+domain: Trust
 ---
 
 # Bağlam
 
 Çalışma altyapısı kurulumunda (2026-09-27) hedef şuydu: istemciler beta'ya ya da zincire doğrudan
 değil, ortak bir kimlik/güven arayüzüne bağlanır. Tamga'da bu arayüz **zaten var**: `TrustSource` ([[ADR-0009]] K3, BT4) —
-Faz B'de imzalı listeler (`ListTrustSource`), Faz 0'da zincir (`ChainTrustSource`). Beta bir veritabanı değil, imzalı liste
-dosyalarıdır; istemciler (cüzdan) veritabanına hiç bağlanmaz, servislere standart protokollerle (OpenID4VCI/VP) konuşur.
+Faz B'de imzalı [[t:trust-list|güven listeleri]] (`ListTrustSource`), Faz 0'da zincir (`ChainTrustSource`). Beta bir veritabanı değil, imzalı liste
+dosyalarıdır; istemciler (cüzdan) veritabanına hiç bağlanmaz, servislere standart protokollerle ([[t:OpenID4VCI]]/VP) konuşur.
 
 Keşifte bulunan tek sapma cüzdan tarafıdır. `@tamga-network/trust` `node:fs`, `jose` ve `zod`'a dayandığı için Expo/React
 Native'de kullanılmıyor; S-13 kapanışı sırasında aynı doğrulama `wallet-core`'a ayrıca yazıldı. Bugün listeyi arayüz dışında
@@ -58,7 +31,7 @@ yorumlayan yerler:
 | `packages/wallet-core/src/directory.ts` | `issuers[]` ham alanlarını (`issuer_url`, `schema_authorizations`, `category`) okuyup kurum dizini üretir |
 | `packages/wallet-core/src/oid4vp.ts` (`fetchRpRecord`) | `relying_parties[]`'ten RP kaydını seçer |
 
-Servisler (`apps/verify`, `tamga-platform/apps/issuer`, `apps/id`) arayüz üzerinden geçer (dosyayı okuyup `loadTrustSet`'e verir).
+Servisler (`apps/verify`, `apps/issuer` (operatör deposu), `apps/id`) arayüz üzerinden geçer (dosyayı okuyup `loadTrustSet`'e verir).
 
 Risk: iki doğrulama gerçeklemesi zamanla ayrışır (ör. TL12 kontrol noktası, yeni alanlar); Faz 0'da cüzdan zincir kaynağına
 geçemez, çünkü liste biçimine bağlıdır.
@@ -69,7 +42,7 @@ geçemez, çünkü liste biçimine bağlıdır.
    `TrustSource` sorguları) `node:fs`/`jose`/`zod` gerektirmeyen bir alt yola ayrılır: `@tamga-network/trust/core`
    (imza `@noble/curves`, şema doğrulama elle ya da hafif). Node uyumlu mevcut giriş (`fs.ts`, `guardedReload`) ana yolda kalır.
 2. **K2 — İstemci kaynağı.** `wallet-core`, `trustlist.ts`/`directory.ts`/`fetchRpRecord` yerine `trust/core`'dan bir
-   `HttpListTrustSource` (HTTP ile çeken, gömülü pin ile doğrulayan) kullanır; kurum dizini ve RP kaydı `TrustSource`
+   `HttpListTrustSource` (HTTP ile çeken, gömülü pin ile doğrulayan) kullanır; kurum dizini ve [[t:RP]] kaydı `TrustSource`
    sorgularından (`issuers()`, `relyingParty()`) gelir.
 3. **K3 — Faz 0 aynı arayüz.** `ChainTrustSource` servislerde doğrudan; cüzdanda doğrudan RPC yerine aynı arayüzün
    arkasında (liste aynası ya da hafif indeksleyici) — cüzdan kodu değişmez.
@@ -101,4 +74,4 @@ geçemez, çünkü liste biçimine bağlıdır.
 
 **Accepted — 2026-09-27.** DECISIONS: D-TRUST-1.
 
-Uygulama: ROADMAP "ADR-0015 geçişi" (yukarıdaki geçiş planı).
+Uygulama: yukarıdaki geçiş planı.

@@ -1,6 +1,6 @@
 # @tamga-network/trust
 
-Signed trust lists (who may issue which document, since when, and their status) behind one `TrustSource` interface. Verifies the list of lists, the national lists and the public anchor log; answers in three values (YES / NO / UNKNOWN). `@tamga-network/trust/core` is the platform-independent core (React Native too).
+Signed trust lists (who may issue which document, since when, and their status) behind one `TrustSource` interface. Verifies the list of lists, the national lists and the public anchor log; answers in three values (YES / NO / UNKNOWN). `@tamga-network/trust/core` is the platform-independent core (React Native too). Wallet unit attestation checks (`verifyWalletAttestation`, WUA/WIA) live here too.
 
 ## Install
 
@@ -28,11 +28,11 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 
 ## Status
 
-Pre-release (`0.1.0`) on npm — written and tested; the API may still change before `1.0`. Every release is built from this
+Pre-release (`0.x`) on npm — written and tested; the API may still change before `1.0`. Every release is built from this
 repository by GitHub Actions and carries npm provenance (verifiable link to the source commit).
 
 ## Links
 
 - Working examples, run in CI against the real packages: [`examples/`](https://github.com/tamga-network/tamga-network/tree/main/examples)
-- Integration guides and specifications: [docs.tamga.network](https://docs.tamga.network/guides/README)
+- Integration guides and specifications: [docs.tamga.network](https://docs.tamga.network/guides/)
 - Code: Apache-2.0 · Documentation: CC BY 4.0

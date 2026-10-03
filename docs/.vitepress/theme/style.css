@@ -1,18 +1,44 @@
-/* Tamga geliştirici belgeleri — marka renkleri ve yazıları (tamga.network/brand): Al Kızıl #B01E22, Altın #C8A24C,
-   Obsidyen #17110F, Parşömen #F4EDE2; başlık Sora, gövde IBM Plex Sans, kod IBM Plex Mono. */
+/* Tamga Network geliştirici belgeleri — marka (tamga.network/brand, 2026-10-02): kâğıt #F8F6F1, mürekkep #14120F,
+   Gök #1E5A78 ve ton skalası (--tg-gok-50…900), koyu temada açık Gök #6FB3D2; başlık Onest, gövde IBM Plex Sans, kod IBM Plex Mono.
+   Token adları ARF teması ile ortaktır (arf/.vitepress/theme/style.css aynı --tg-* değerlerini kullanır). */
 :root {
+  --tg-gok-50: #eef5f8;
+  --tg-gok-100: #d6e7ef;
+  --tg-gok-200: #adcfdf;
+  --tg-gok-300: #7fb3cb;
+  --tg-gok-400: #4e93b2;
+  --tg-gok-500: #2e7698;
+  --tg-gok-600: #1e5a78;
+  --tg-gok-700: #174a63;
+  --tg-gok-800: #123a4e;
+  --tg-gok-900: #0d2938;
+  --tg-paper: #f8f6f1;
+  --tg-ink: #14120f;
+  --tg-ink-band: #101820;
+  --tg-rule: #e2dccf;
+  --tg-gold: #c8a24c;
+  --tg-font-display: "Onest", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+
   --vp-font-family-base: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --vp-font-family-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --vp-c-bg: #fffdfa;
-  --vp-c-bg-alt: #f7f1e7;
-  --vp-c-bg-soft: #f4ede2;
-  --vp-c-divider: #e6dccb;
-  --vp-c-text-1: #17110f;
-  --vp-c-text-2: #4a403a;
-  --vp-c-brand-1: #b01e22;
-  --vp-c-brand-2: #951a1d;
-  --vp-c-brand-3: #b01e22;
-  --vp-c-brand-soft: rgba(176, 30, 34, 0.1);
+  --vp-c-bg: var(--tg-paper);
+  --vp-c-bg-alt: #f1ede4;
+  --vp-c-bg-soft: #efebe2;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-divider: var(--tg-rule);
+  --vp-c-gutter: var(--tg-rule);
+  --vp-c-text-1: var(--tg-ink);
+  --vp-c-text-2: #5d564e;
+  --vp-c-text-3: #8a8278;
+  --vp-c-brand-1: var(--tg-gok-600);
+  --vp-c-brand-2: var(--tg-gok-700);
+  --vp-c-brand-3: var(--tg-gok-600);
+  --vp-c-brand-soft: rgba(30, 90, 120, 0.1);
+  --vp-code-bg: #f1ede4;
+  --vp-code-block-bg: #ffffff;
+  --vp-code-block-divider-color: var(--tg-rule);
+  --vp-code-copy-code-bg: #f1ede4;
+
   --doc-ok: #1f7a4d;
   --doc-ok-bg: rgba(31, 122, 77, 0.1);
   --doc-draft: #8a6a12;
@@ -21,16 +47,24 @@
   --doc-old-bg: rgba(107, 107, 107, 0.12);
 }
 .dark {
-  --vp-c-bg: #17110f;
-  --vp-c-bg-alt: #120d0b;
-  --vp-c-bg-soft: #211a17;
-  --vp-c-divider: #3a302b;
-  --vp-c-text-1: #f4ede2;
-  --vp-c-text-2: #c9bfb2;
-  --vp-c-brand-1: #e0676a;
-  --vp-c-brand-2: #e88285;
-  --vp-c-brand-3: #b01e22;
-  --vp-c-brand-soft: rgba(224, 103, 106, 0.14);
+  --vp-c-bg: var(--tg-ink-band);
+  --vp-c-bg-alt: #0c1318;
+  --vp-c-bg-soft: #16212b;
+  --vp-c-bg-elv: #16212b;
+  --vp-c-divider: #24313d;
+  --vp-c-gutter: #24313d;
+  --vp-c-text-1: #eef2f5;
+  --vp-c-text-2: #a9b6c1;
+  --vp-c-text-3: #7f8e9b;
+  --vp-c-brand-1: #6fb3d2;
+  --vp-c-brand-2: #8ec4dc;
+  --vp-c-brand-3: var(--tg-gok-500);
+  --vp-c-brand-soft: rgba(111, 179, 210, 0.14);
+  --vp-code-bg: #16212b;
+  --vp-code-block-bg: #0b1218;
+  --vp-code-block-divider-color: #24313d;
+  --vp-code-copy-code-bg: #16212b;
+
   --doc-ok: #6fd3a0;
   --doc-ok-bg: rgba(111, 211, 160, 0.12);
   --doc-draft: #e3c26b;
@@ -66,16 +100,16 @@
   border-bottom: 1px dotted currentColor;
 }
 
-/* Başlıklar: Sora (marka başlık yazısı) */
+/* Başlıklar: Onest (marka başlık yazısı; Latin, Latin-ext ve Kiril) */
 .vp-doc h1,
 .vp-doc h2,
 .vp-doc h3,
 .VPNavBarTitle .title {
-  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--tg-font-display);
   text-wrap: balance;
 }
 
-/* ---- Yerleşim (Stripe benzeri): geniş içerik, sakin kenar çubuğu, kart ızgarası ---- */
+/* ---- Yerleşim (Stripe benzeri): geniş içerik, sakin kenar çubuğu, ince çizgiler ---- */
 :root {
   --vp-layout-max-width: 1520px;
   --vp-sidebar-width: 280px;
@@ -91,58 +125,139 @@
   line-height: 1.7;
 }
 .vp-doc h1 {
-  font-size: 2rem;
-  letter-spacing: -0.01em;
+  font-size: 2.1rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 .vp-doc h2 {
-  border-top: none;
-  margin-top: 2.4rem;
-  padding-top: 0;
-  font-size: 1.35rem;
+  border-top: 1px solid var(--vp-c-divider);
+  margin-top: 2.6rem;
+  padding-top: 1.4rem;
+  font-size: 1.38rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.vp-doc h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.VPNav .VPNavBar {
+  border-bottom: 1px solid var(--vp-c-divider);
 }
 .VPSidebarItem.level-0 > .item > .text {
-  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  font-size: 12.5px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 11.5px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--vp-c-text-2);
-}
-.vp-doc div[class*="language-"] {
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 10px;
+  letter-spacing: 0.08em;
+  color: var(--vp-c-text-3);
 }
 .vp-doc table {
   font-size: 14px;
+}
+.vp-doc th {
+  font-family: var(--vp-font-family-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vp-c-text-2);
+}
+
+/* ---- Kod blokları: macOS pencere görünümü (üç nokta + dil/dosya etiketi), satır numaraları açık ---- */
+.vp-doc div[class*="language-"] {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  overflow: hidden;
+  padding-top: 36px;
+  box-shadow: 0 1px 2px rgba(20, 18, 15, 0.04);
+}
+.vp-doc div[class*="language-"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  border-bottom: 1px solid var(--vp-c-divider);
+  background:
+    radial-gradient(circle at 18px 18px, #ff5f57 5px, transparent 5.5px),
+    radial-gradient(circle at 36px 18px, #febc2e 5px, transparent 5.5px),
+    radial-gradient(circle at 54px 18px, #28c840 5px, transparent 5.5px),
+    var(--vp-c-bg-alt);
+  z-index: 1;
+}
+.vp-doc div[class*="language-"] > span.lang {
+  top: 10px;
+  right: 14px;
+  z-index: 2;
+  font-family: var(--vp-font-family-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--vp-c-text-3);
+}
+.vp-doc div[class*="language-"] > button.copy {
+  top: 44px;
+}
+.vp-doc div[class*="language-"].line-numbers-mode {
+  padding-top: 36px;
+}
+.vp-doc div[class*="language-"].line-numbers-mode .line-numbers-wrapper {
+  top: 36px;
+  border-right-color: var(--vp-c-divider);
+}
+.vp-doc .vp-code-group .tabs {
+  border: 1px solid var(--vp-c-divider);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--vp-c-bg-alt);
+  padding-left: 72px;
+  background-image:
+    radial-gradient(circle at 18px 50%, #ff5f57 5px, transparent 5.5px),
+    radial-gradient(circle at 36px 50%, #febc2e 5px, transparent 5.5px),
+    radial-gradient(circle at 54px 50%, #28c840 5px, transparent 5.5px);
+  background-repeat: no-repeat;
+}
+.vp-doc .vp-code-group div[class*="language-"] {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  padding-top: 0;
+}
+.vp-doc .vp-code-group div[class*="language-"]::before {
+  display: none;
+}
+.vp-doc .vp-code-group div[class*="language-"].line-numbers-mode .line-numbers-wrapper {
+  top: 0;
 }
 
 /* Kart ızgarası (ana sayfa, Kavramlar) */
 .tg-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-  gap: 12px;
+  gap: 0;
   margin: 1.25rem 0 2rem;
+  border-top: 1px solid var(--tg-card-border);
+  border-left: 1px solid var(--tg-card-border);
 }
 .tg-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 16px 18px;
-  border: 1px solid var(--tg-card-border);
-  border-radius: 12px;
+  padding: 20px 20px 22px;
+  border-right: 1px solid var(--tg-card-border);
+  border-bottom: 1px solid var(--tg-card-border);
   background: var(--vp-c-bg);
   color: var(--vp-c-text-1) !important;
   text-decoration: none !important;
-  transition:
-    border-color 0.15s,
-    transform 0.15s;
+  transition: background-color 0.15s;
 }
 .tg-card:hover {
-  border-color: var(--vp-c-brand-1);
-  transform: translateY(-1px);
+  background: var(--vp-c-brand-soft);
 }
 .tg-card strong {
-  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--tg-font-display);
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .tg-card span {
   font-size: 14px;
@@ -153,37 +268,106 @@
   .tg-card {
     transition: none;
   }
-  .tg-card:hover {
-    transform: none;
-  }
 }
 
 /* Ana sayfa: kahraman ve içerik */
 .VPHome .VPHero .name,
 .VPHome .VPHero .text {
-  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.02em;
+  font-family: var(--tg-font-display);
+  letter-spacing: -0.03em;
+  font-weight: 600;
 }
 .VPHome .VPHero .name {
   color: var(--vp-c-brand-1);
 }
+.VPHome .VPHero .tagline {
+  color: var(--vp-c-text-2);
+}
+.VPHome .VPHero {
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+.VPHome .VPFeatures {
+  padding-top: 40px;
+}
 .VPHome .VPFeature {
   border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
   background: var(--vp-c-bg);
+  transition: border-color 0.15s;
 }
 .VPHome .VPFeature:hover {
   border-color: var(--vp-c-brand-1);
 }
+.VPHome .VPFeature .title {
+  font-family: var(--tg-font-display);
+  font-weight: 600;
+}
 .tg-home {
   max-width: 1152px;
   margin: 0 auto;
-  padding: 0 24px 64px;
+  padding: 24px 24px 72px;
 }
 .tg-home h2 {
-  font-family: "Sora", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--tg-font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.tg-eyebrow {
+  font-family: var(--vp-font-family-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--vp-c-brand-1);
 }
 @media (max-width: 640px) {
   .tg-home {
-    padding: 0 16px 48px;
+    padding: 16px 16px 48px;
   }
+}
+
+/* Terim ipucu ([[t:QTSP]] → docs/.vitepress/terms.ts): (i) üzerine gelince ya da dokununca okurun dilindeki açıklama. */
+.term {
+  position: relative;
+}
+.term-i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05em;
+  height: 1.05em;
+  margin-left: 0.2em;
+  padding: 0;
+  border: 1px solid var(--vp-c-brand-1);
+  border-radius: 50%;
+  color: var(--vp-c-brand-1);
+  font: italic 600 0.68em/1 var(--vp-font-family-base);
+  vertical-align: 0.15em;
+  cursor: help;
+}
+.term-i:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 2px;
+}
+.term-tip {
+  display: none;
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  top: calc(100% + 6px);
+  width: max-content;
+  max-width: min(320px, 80vw);
+  padding: 8px 10px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  background: var(--vp-c-bg-elv);
+  box-shadow: var(--vp-shadow-3);
+  color: var(--vp-c-text-1);
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.term-i:hover + .term-tip,
+.term-i:focus + .term-tip {
+  display: block;
 }

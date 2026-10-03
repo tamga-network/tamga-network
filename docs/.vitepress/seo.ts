@@ -23,7 +23,7 @@ export function brandHead(siteName: string): HeadConfig[] {
     ["link", { rel: "icon", href: "/favicon.ico", sizes: "48x48" }],
     ["link", { rel: "icon", href: "/icon.svg", type: "image/svg+xml" }],
     ["link", { rel: "apple-touch-icon", href: "/apple-touch-icon.png" }],
-    ["meta", { name: "theme-color", content: "#17110F" }],
+    ["meta", { name: "theme-color", content: "#1E5A78" }],
     ["meta", { property: "og:site_name", content: siteName }],
     ["meta", { property: "og:type", content: "article" }],
     ["meta", { name: "twitter:card", content: "summary_large_image" }],

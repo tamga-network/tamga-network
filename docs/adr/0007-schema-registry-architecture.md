@@ -1,55 +1,20 @@
 ---
 document_id: ADR-0007
-title: Şema Kayıt Defteri Mimarisi — schema.tamga.network + On-Chain Çapa
-category: ADR
-domain: Schema
+title: "Şema kayıt defteri"
 status: Active
-review_status: Draft
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-09-09
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - architects
-  - ai-agents
-tags:
-  - adr
-  - schema
-  - registry
-  - vct
-  - type-metadata
-keywords:
-  - SchemaRegistry contract
-  - schema.tamga.network
-  - vct HTTPS URL
-  - SD-JWT VC Type Metadata
-  - vct#integrity subresource integrity
-  - JSON Schema 2020-12
-  - issuer schema authorization
-  - NETWORK NATIONAL schema tiers
+last_updated: 2026-10-02
 summary: >
   Tamga şema kayıt defterinin mimarisini sabitler. Yedi karar: (1) vct = kararlı
   HTTPS URL, schema.tamga.network altında; (2) şema dokümanı off-chain, SD-JWT VC
   Type Metadata + JSON Schema 2020-12 olarak; (3) vct#integrity zorunlu;
   (4) SchemaRegistry kontratı yalnızca çapa tutar (URI + hash + sürüm + durum);
   (5) iki katmanlı şema alanı — NETWORK (2/3 oy) ve NATIONAL (onlyOwnerState);
-  (6) issuer↔şema yetkisi zincirde, verifier doğrulamasında zorunlu adım;
+  (6) belge veren↔şema yetkisi zincirde, doğrulayıcı doğrulamasında zorunlu adım;
   (7) semver + değişmez URL + extends ile sürümleme. Reddedilen alternatifler
   ve bağlayıcı sonuçlar kayıtlıdır.
-priority: Critical
-related:
-  - PM-SCHEMA-0001
-  - RS-SCHEMA-0001
-  - SPEC-SCHEMA-0001
-  - SPEC-BC-0001
-  - ADR-0002
-  - ADR-0006
-  - ADR-0008
-supersedes: []
+domain: Credentials
 ---
 
 # ADR-0007 — Şema Kayıt Defteri Mimarisi
@@ -60,13 +25,13 @@ supersedes: []
 
 # Bağlam
 
-[[PM-SCHEMA-0001]] üç zafiyeti kaydetti: kategori aşımı (eğitim issuer'ının
-sağlık belgesi imzalayabilmesi), anlam parçalanması (her issuer'ın kendi alan
+[[PM-SCHEMA-0001]] üç zafiyeti kaydetti: kategori aşımı (eğitim [[t:issuer|belge vereninin]]
+sağlık belgesi imzalayabilmesi), anlam parçalanması (her belge verenin kendi alan
 adlarını kullanması) ve aşırı talep denetiminin dayanaksız kalması. Üçünün de
 kökeni aynıdır: ağın **şema kaydı yoktu.**
 
-[[ADR-0006]] credential formatını **SD-JWT VC** olarak sabitledi. SD-JWT VC'de
-credential tipini `vct` claim'i taşır ve tipin anlamı **Type Metadata**
+[[ADR-0006]] [[t:credential]] formatını **[[t:SD-JWT-VC]]** olarak sabitledi. SD-JWT VC'de
+belge tipini `vct` claim'i ([[t:vct]]) taşır ve tipin anlamı **Type Metadata**
 dokümanıyla tanımlanır. Dolayısıyla şema kaydı soyut bir mimari tercih değil,
 seçilmiş formatın doğrudan gerektirdiği bir bileşendir.
 
@@ -89,7 +54,7 @@ verilmesi gereken, bu çerçevenin Tamga'ya nasıl oturtulacağıdır.
 
 ## Karar 1 — `vct` kararlı bir HTTPS URL'dir
 
-Tamga credential'larında `vct`, `schema.tamga.network` alan adı altında kararlı
+Tamga belgelerinde `vct`, `schema.tamga.network` alan adı altında kararlı
 bir HTTPS URL'dir. URN, serbest dize veya kurum-yerel tanımlayıcı **kullanılmaz.**
 
 ```
@@ -98,7 +63,7 @@ https://schema.tamga.network/v1/tr/edu/YOKDenklikCredential/1.0.0
 ```
 
 **Gerekçe:** HTTPS URL'de tip hem tanımlayıcı hem çözümlenebilir adrestir.
-Tamga'yı hiç tanımayan bir verifier bile URL'i açıp ne olduğunu görebilir. URN
+Tamga'yı hiç tanımayan bir [[t:verifier]] bile URL'i açıp ne olduğunu görebilir. URN
 seçseydik, çözümleme için Tamga'ya özel bir servis bilmek zorunlu olurdu — ki
 bu, ağ dışına açılmayı zorlaştırır.
 
@@ -119,14 +84,14 @@ CDN'den servis edilmesi doğru mimaridir.
 
 ## Karar 3 — `vct#integrity` zorunludur
 
-Her Tamga credential'ı `vct` claim'inin yanında `vct#integrity` claim'i taşır.
-Uyumlu bir Tamga verifier'ı, integrity değeri olmayan Type Metadata'yı
+Her Tamga belgesi `vct` claim'inin yanında `vct#integrity` claim'i taşır.
+Uyumlu bir Tamga doğrulayıcısı, integrity değeri olmayan Type Metadata'yı
 **kullanmaz.**
 
 **Gerekçe:** Karar 2'nin doğal bedeli, şema dokümanının bir HTTP sunucusunda
 durmasıdır. O sunucu ele geçirilirse şema sessizce değiştirilebilir — örneğin
-`eqf_level` alanının anlamı kaydırılabilir. `vct#integrity`, credential'ın
-imzasının içinde taşındığı için bu saldırıyı kapatır: issuer, belgeyi
+`eqf_level` alanının anlamı kaydırılabilir. `vct#integrity`, belgenin
+imzasının içinde taşındığı için bu saldırıyı kapatır: belge veren, belgeyi
 imzalarken hangi şemayı kastettiğini kriptografik olarak sabitlemiş olur.
 
 Bu aynı zamanda **süresiz önbelleklemeyi** mümkün kılar: integrity değeri
@@ -168,28 +133,28 @@ için de geçerli olan hâli.
 olanlar NATIONAL.**
 
 Bir devlet NATIONAL şemasını kimseye sormadan kaydeder ve kimse engelleyemez.
-Başka devletin verifier'ının o şemayı tanıma zorunluluğu da yoktur —
+Başka devletin doğrulayıcısının o şemayı tanıma zorunluluğu da yoktur —
 cross-recognition mantığının şema katmanındaki karşılığı.
 
 **Gerekçe:** [[ADR-0002]] egemenlik ilkesi ile ağ etkisi arasındaki gerilimin
 çözümü. Her şemayı oya bağlamak egemenliği çiğner; hiçbirini bağlamamak anlam
 parçalanmasını devlet ölçeğinde geri getirir.
 
-## Karar 6 — Issuer ↔ şema yetkisi zincirdedir ve doğrulamada zorunlu adımdır
+## Karar 6 — Belge veren ↔ şema yetkisi zincirdedir ve doğrulamada zorunlu adımdır
 
-`IssuerRegistry`, her issuer için izin verilen `schemaId` kümesini tutar.
+`IssuerRegistry`, her belge veren için izin verilen `schemaId` kümesini tutar.
 
-Verifier doğrulama zincirine yeni normatif adım eklenir:
+Doğrulayıcı doğrulama zincirine yeni normatif adım eklenir:
 
-> **Adım N:** Credential'ın `vct`'sinden türetilen `schemaId`, issuer'ın izinli
-> şema kümesinde mi? Değilse credential **reddedilir.**
+> **Adım N:** Belgenin `vct`'sinden türetilen `schemaId`, belge verenin izinli
+> şema kümesinde mi? Değilse belge **reddedilir.**
 
 Bu adım atlanabilir değildir. [[PM-SCHEMA-0001]] Zafiyet 1 (kategori aşımı) tam
 olarak bu adımla kapanır: `EDUCATION` kategorili üniversite, sağlık şemasına
-yetkilendirilmediği için o belgeyi imzalasa bile hiçbir uyumlu verifier kabul
+yetkilendirilmediği için o belgeyi imzalasa bile hiçbir uyumlu doğrulayıcı kabul
 etmez.
 
-**Yetkilendirme kimde:** Issuer'ı hangi devlet kaydettiyse, şema yetkisini de o
+**Yetkilendirme kimde:** Belge vereni hangi devlet kaydettiyse, şema yetkisini de o
 devlet verir (`onlyOwnerState`). Vakıf Faz 0'da bu rolü yürütür.
 
 ## Karar 7 — Sürümleme: semver, değişmez URL, `extends`
@@ -232,7 +197,7 @@ Karar hattı üç ilkeye dayanır:
 
 | Alternatif | Neden reddedildi |
 |---|---|
-| Şema kaydı yok, `vct` serbest | Zafiyet 1-2-3 açık kalır; verifier tarafı ölür |
+| Şema kaydı yok, `vct` serbest | Zafiyet 1-2-3 açık kalır; doğrulayıcı tarafı ölür |
 | Şemanın tamamı zincirde | Maliyet, değişmezlik yanlış yerde, çok dillilik, CDN kaybı |
 | EBSI Trusted Schemas Registry'ye bağlanmak | [[ADR-0002]] egemenlik ilkesiyle çatışır |
 | `vct` = URN + özel çözümleyici | Ağ dışına açılmayı zorlaştırır |
@@ -256,9 +221,9 @@ Ayrıntılı gerekçeler [[PM-SCHEMA-0001]]'dedir.
    > çiğnenir. Bkz. [[SPEC-BC-0001]] 2.1.0 §3.4.
 3. [[SPEC-BC-0001]] yeniden yazımında `SchemaRegistry` kanonik arayüzü
    tanımlanacaktır.
-4. Verifier doğrulama algoritmasına **şema yetki adımı** normatif olarak
+4. Doğrulayıcı doğrulama algoritmasına **şema yetki adımı** normatif olarak
    girecektir ([[SPEC-API-0001]]).
-5. Tüm Tamga credential'ları `vct` **ve** `vct#integrity` taşıyacaktır —
+5. Tüm Tamga belgeleri `vct` **ve** `vct#integrity` taşıyacaktır —
    [[SPEC-CRED-0002]] bunu zorunlu alan olarak yazacaktır.
 6. `schema.tamga.network` bir işletilen bileşendir; [[ARCH-0004]] sunucu
    envanterine girer (statik + CDN, ayrı uptime hedefi).
@@ -288,7 +253,7 @@ Ayrıntılı gerekçeler [[PM-SCHEMA-0001]]'dedir.
 **Dayanır:** [[PM-SCHEMA-0001]] · [[RS-SCHEMA-0001]] · [[ADR-0002]] · [[ADR-0006]] · [[PM-TRUST-0001]]
 **Uygular:** [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] · [[SPEC-SCHEMA-0003]]
 **Etkiler:** [[SPEC-BC-0001]] · [[SPEC-CRED-0002]] · [[SPEC-API-0001]] · [[ARCH-0004]] · [[ARCH-0005]]
-**Kardeş karar:** [[ADR-0008]] (status list yerleşimi — aynı "off-chain içerik + on-chain çapa" deseni)
+**Kardeş karar:** [[ADR-0008]] ([[t:status-list]] yerleşimi — aynı "off-chain içerik + on-chain çapa" deseni)
 
 ---
 

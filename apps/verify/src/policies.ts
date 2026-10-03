@@ -27,6 +27,9 @@ const TRUST_REVIEW: Policy["trust"] = {
   require_recognition: true,
   state_code: "TR",
 };
+/** ADR-0038: kapı grubu adları ortamdan (sandbox kendi örnek kurumlarının gruplarını kullanır); varsayılan gerçek ağ. */
+export const CAMPUS_GROUP = process.env.TAMGA_VERIFY_CAMPUS_GROUP ?? "bilgi-campus";
+export const TICKET_GROUP = process.env.TAMGA_VERIFY_TICKET_GROUP ?? "bubilet-gate";
 const FRESH: Policy["freshness"] = { max_status_token_age_sec: 6 * 3600, max_trust_age_sec: 24 * 3600 };
 
 export const POLICIES: Policy[] = [
@@ -80,7 +83,7 @@ export const POLICIES: Policy[] = [
     ],
     trust: TRUST_EDU,
     freshness: FRESH,
-    proximity: { terminal_group: "bilgi-campus", valid_days: 180 }, // ADR-0012 B; rıza süresi ≤ 6 ay (S-16)
+    proximity: { terminal_group: CAMPUS_GROUP, valid_days: 180 }, // ADR-0012 B; rıza süresi ≤ 6 ay (S-16)
   },
   {
     policy_id: "event-tamga-id",
@@ -114,7 +117,7 @@ export const POLICIES: Policy[] = [
     },
     freshness: FRESH,
     // Kartı bilet alınır alınmaz hazırlamak yaygın; etkinlik haftalar sonra olabilir → süre uzun tutulur, tek geçiş zaten sınırlar (K4).
-    proximity: { terminal_group: "bubilet-gate", valid_days: 400, single_use: true },
+    proximity: { terminal_group: TICKET_GROUP, valid_days: 400, single_use: true },
   },
   // D12 / D-CRED-5 — yaş doğrulaması ISO 18013-5 mdoc ile: yalnızca age_over_18 (evet/hayır); ad, doğum tarihi, TCKN açıklanmaz.
   // mdoc'un klasik kullanımı; Safari/iOS tarayıcı API'sinin kabul ettiği tek format bu (ADR-0013).

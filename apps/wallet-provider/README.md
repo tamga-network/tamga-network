@@ -1,5 +1,7 @@
 # apps/wallet-provider — Tamga Wallet Provider (wallet.tamga.network)
 
+> **Geçici olarak burada.** Bu servis Tamga Wallet'a aittir; cüzdan deposuna (`provider/`) taşınacak. Taşınana kadar burada çalışır.
+
 Cüzdan sağlayıcısı (ADR-0025, AB TS3): cüzdan birimini kaydeder, kısa ömürlü **Cüzdan Örneği Kanıtı** (WIA) ve belge
 anahtarları için **Anahtar Kanıtı** (KA, `key_attestation`) verir, ikisi için iptal listesi yayınlar. Kişisel veri tutmaz.
 Belge veren kurum, ihraçta WIA ve KA'yı güven listesindeki sağlayıcı anahtarıyla doğrular.

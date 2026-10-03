@@ -1,8 +1,9 @@
-# ops — D1 çalıştırma
+# ops — geliştirme ortamı ve kayıt araçları
 
 ```bash
 npm install                 # kök (npm workspaces)
-npm run d1                  # pki → şema kataloğu → liste yayını → heartbeat → doğrulama → testler
+npm run setup               # pki → şema kataloğu → liste yayını (×2) → heartbeat → doğrulama
+npm run check               # testler + tip denetimi
 ```
 
 Adım adım:

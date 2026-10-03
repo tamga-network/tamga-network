@@ -6,13 +6,19 @@ dist/
 # Geliştirme PKI'sı — asla commit'leme (üretim anahtarı KMS'te, dosyada değil)
 ops/pki/*.key.pem
 ops/pki/*.pkcs8.pem
+ops/pki-sandbox/*.pkcs8.pem
+ops/pki-sandbox/*.key.pem
 # Yayın çıktıları (trust.tamga.network / schemas.tamga.network) ayrı yayınlanır
 apps/trust-publisher/dist/
 packages/schemas/dist/
 # docs sitesi (docs.tamga.network): derleme çıktısı ve kök md kopyaları
 docs/.vitepress/dist/
 docs/.vitepress/cache/
-docs/root/
+docs/changelog.md
+docs/rules.md
+docs/en/changelog.md
+docs/en/rules.md
+docs/en/packages/
 docs/packages/
 docs/public/api/
 # marka simgeleri ops/brand/icons/ kaynağından kopyalanır (docs:sync, arf:sync)
@@ -29,11 +35,6 @@ arf/tr/*
 arf/v*/
 arf/changes.md
 .DS_Store
-# Expo cüzdan (apps/wallet)
-apps/wallet/.expo/
-apps/wallet/.expo-export-check/
-apps/wallet/ios/
-apps/wallet/android/
 
 # verifier geçiş kartı kayıtları (ADR-0012 B; kişisel veri yok ama çalışma verisi)
 apps/verify/data/
@@ -46,3 +47,4 @@ packages/*/lib/
 .publish/
 *.tgz
 apps/wallet-provider/data/
+apps/trust-publisher/dist-sandbox/

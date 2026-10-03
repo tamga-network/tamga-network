@@ -1,48 +1,24 @@
 ---
 document_id: ADR-0016
-title: Barındırılan İhraç Servisine Dış Kurum Erişimi (Kiracı API Anahtarı)
-category: ADR
-domain: Platform
+title: "Barındırılan belge vermeye erişim"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-09-27
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - operators
-  - ai-agents
-tags:
-  - adr
-  - issuer
-  - api
-  - authentication
-  - multi-tenant
-keywords:
-  - hosted issuer API tenant key
-  - operator admin endpoint localhost only
-  - "@tamga-network/issuer/client external access"
+last_updated: 2026-10-02
 summary: >
   Barındırılan ihraç servisinin operatör uçları (`/{slug}/admin/*`) bugün yalnızca sunucunun kendisinden (127.0.0.1) erişilebilir ve
   tek bir paylaşılan yönetici anahtarıyla korunur. `@tamga-network/issuer/client` ile dış kurumun (bilet satıcısı, üniversite
   sistemi) kendi sunucusundan teklif/bilet/iptal çağırabilmesi için ayrı, kiracıya bağlı, yetki kapsamlı bir API yüzeyi önerilir.
-related:
-  - "[[ADR-0011]]"
-  - "[[ADR-0014]]"
-  - "[[SPEC-PROTO-0001]]"
+domain: Services
 ---
 
 # Bağlam
 
 - nginx `issuer.` bloğu `/{slug}/admin/` yolunu `allow 127.0.0.1; deny all` ile kapatır; uygulama `x-admin-token` (tek, tüm
   kiracılar için ortak) bekler. Bu, demo portalı (aynı sunucu) için doğrudur.
-- D10/D14 ile dış kurumlar için istemci yazıldı (`@tamga-network/issuer/client`: `createOffer`, `sellTicket`, `revoke`…); üretimde
-  bu uçlara dışarıdan ulaşmanın güvenli yolu yok. Ortak yönetici anahtarını kurumlara vermek bir kiracının diğerinin belgelerini
-  iptal edebilmesi demektir.
+- D10/D14 ile dış kurumlar ([[t:issuer]]) için istemci yazıldı (`@tamga-network/issuer/client`: `createOffer`, `sellTicket`, `revoke`…); üretimde
+  bu uçlara dışarıdan ulaşmanın güvenli yolu yok. Ortak yönetici anahtarını kurumlara vermek bir kiracının diğerinin [[t:credential|belgelerini]]
+  [[t:revocation]] edebilmesi demektir.
 
 # Karar
 
@@ -54,7 +30,7 @@ related:
    döndürme); iptal anında etkili.
 4. **K4 — Sınırlar:** anahtar başına hız sınırı, istek boyutu sınırı; denetim kaydında anahtar kimliği (özet öneki) ve olay adı —
    kişisel veri ve anahtarın kendisi yok (PR14/AP3).
-5. **K5 — Pilot seçeneği:** üniversite gibi kurumsal entegrasyonlarda mTLS (kurumun X.509'u, güven listesindeki kaydıyla eşleşen)
+5. **K5 — Pilot seçeneği:** üniversite gibi kurumsal entegrasyonlarda mTLS (kurumun X.509'u, [[t:trust-list|güven listesindeki]] kaydıyla eşleşen)
    K2'ye ek olarak zorunlu kılınabilir.
 6. **K6 — İstemci:** `createIssuerClient({ baseUrl, slug, apiKey })`; `adminToken` yalnızca iç kullanım için kalır.
 
@@ -76,5 +52,5 @@ related:
 
 **Accepted — 2026-09-27.** DECISIONS: D-API-1. Not: pilot üniversitesi entegrasyonunda K5 (mTLS) değerlendirilecek.
 
-Uygulama: `tamga-platform/apps/issuer` API rotaları + anahtar deposu, nginx `api/v1` bloğu, `issuer/client` `apiKey` seçeneği,
+Uygulama: `apps/issuer` (operatör deposu) API rotaları + anahtar deposu, nginx `api/v1` bloğu, `issuer/client` `apiKey` seçeneği,
 kurum kılavuzu (docs sitesi).

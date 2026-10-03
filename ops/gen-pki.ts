@@ -9,6 +9,9 @@
  *   4. Tamga Wallet Provider cert                          — self-signed; WUA imzalar
  *   5. Referans verifier erişim sertifikası (rp-verify)    — kökçe imzalı; SAN dns verify.tamga.network; istek nesnesini imzalar
  *
+ * Sandbox (ADR-0038, SB1): `--profile=sandbox` ayrı bir test kökü ve yaprakları `ops/pki-sandbox/`'a üretir; gerçek PKI ile
+ * hiçbir anahtar paylaşılmaz. Konu adları "… (TEST)"; örnek kurumlar `istanbul-bilgi`, `bubilet`, `paribu-cineverse` (gerçek
+ * kurum adları yalnız gerçekçi bir deneme için; kurumlarla ilişki ya da anlaşma yok, belgeler test anahtarıyla imzalı ve geçersiz).
  * Kip: eksik olan sertifikalar üretilir, var olanlar KORUNUR (issuer_id değişmez); tamamını yenilemek için --force.
  * Sapma S-1 (09-DEMO-KURGU §6): issuer özel anahtarı burada dosyada; pilotta üniversite KMS'inde.
  * Çıktı: ops/pki/*.cert.pem, *.pkcs8.pem (gitignore), ops/pki/pki.json (parmak izleri, id'ler).
@@ -34,7 +37,9 @@ cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
 
 const here = dirname(fileURLToPath(import.meta.url));
-const outDir = resolve(here, "pki");
+const PROFILE = (process.argv.find((a) => a.startsWith("--profile="))?.slice(10) ?? "network") as "network" | "sandbox";
+if (PROFILE !== "network" && PROFILE !== "sandbox") throw new Error(`bilinmeyen profil: ${PROFILE}`);
+const outDir = resolve(here, PROFILE === "sandbox" ? "pki-sandbox" : "pki");
 mkdirSync(outDir, { recursive: true });
 
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
@@ -102,7 +107,10 @@ async function main() {
     const kp = await keys();
     const cert = await X509CertificateGenerator.createSelfSigned({
       serialNumber: serial(1),
-      name: "CN=TR National Root CA (provisional operator: Tamga), O=Tamga Trust Framework, C=TR",
+      name:
+        PROFILE === "sandbox"
+          ? "CN=Tamga Sandbox Root CA (TEST), O=Tamga Network Sandbox, C=TR"
+          : "CN=TR National Root CA (provisional operator: Tamga), O=Tamga Trust Framework, C=TR",
       notBefore,
       notAfter: years(10),
       signingAlgorithm: ALG,
@@ -152,6 +160,8 @@ async function main() {
     });
     return { cert, privateKey: kp.privateKey };
   };
+
+  if (PROFILE === "sandbox") return finish(root, await sandboxItems(root, signedByRoot, selfSigned), notBefore);
 
   const items: Item[] = [
     root,
@@ -208,9 +218,90 @@ async function main() {
     ),
   ];
 
+  await finish(root, items, notBefore);
+}
+
+type Make = () => Promise<{ cert: X509Certificate; privateKey: CryptoKey }>;
+type SignedByRoot = (serialNo: number, subject: string, extra?: (pub: CryptoKey) => Promise<unknown[]>) => Make;
+
+/** Sandbox (ADR-0038): gerçek ağla aynı dosya adları (servis ayarları değişmesin), test konu adları, sandbox SAN'ı. */
+async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: (n: number, name: string) => Make) {
+  const san = (host: string) => async () => [new SubjectAlternativeNameExtension([{ type: "dns", value: host }])];
+  return [
+    root,
+    await ensure(
+      "tl-signer-1",
+      selfSigned(2, "CN=Tamga Sandbox Trust List Signer (TEST), O=Tamga Network Sandbox, C=TR"),
+    ),
+    await ensure(
+      "wallet-provider",
+      selfSigned(3, "CN=Tamga Sandbox Wallet Provider (TEST), O=Tamga Network Sandbox, C=TR"),
+    ),
+    await ensure("registrar-1", selfSigned(4, "CN=Tamga Sandbox Registrar (TEST), O=Tamga Network Sandbox, C=TR")),
+    await ensure(
+      "rp-verify",
+      signedByRoot(
+        2001,
+        "CN=verify.sandbox.tamga.network, O=Tamga Sandbox Dogrulama (TEST), C=TR",
+        san("verify.sandbox.tamga.network"),
+      ),
+    ),
+    await ensure(
+      "issuer-id",
+      signedByRoot(1101, "CN=Tamga Sandbox Kimlik (TEST), OU=Identity, O=Tamga Network Sandbox, C=TR"),
+    ),
+    await ensure(
+      "issuer-id-status",
+      signedByRoot(1102, "CN=Tamga Sandbox Kimlik - Status List (TEST), OU=Status, O=Tamga Network Sandbox, C=TR"),
+    ),
+    // Örnek kurumlar: gerçek kurum adları yalnız gerçekçi deneme için (ilişki/anlaşma yok); seri numaraları ilk örnek
+    // kurumların (1001/1002/2002/1201/1202, kaldırıldı) numaralarını yeniden kullanmaz.
+    await ensure(
+      "issuer-istanbul-bilgi",
+      signedByRoot(
+        1011,
+        "CN=Istanbul Bilgi Universitesi (TEST), OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi (TEST), C=TR",
+      ),
+    ),
+    await ensure(
+      "issuer-istanbul-bilgi-status",
+      signedByRoot(
+        1012,
+        "CN=Istanbul Bilgi Universitesi - Status List (TEST), OU=Status, O=Istanbul Bilgi Universitesi (TEST), C=TR",
+      ),
+    ),
+    await ensure(
+      "rp-issuer-istanbul-bilgi",
+      signedByRoot(
+        2012,
+        "CN=issuer.sandbox.tamga.network, O=Istanbul Bilgi Universitesi - kimlik eslestirme (TEST), C=TR",
+        san("issuer.sandbox.tamga.network"),
+      ),
+    ),
+    await ensure("issuer-bubilet", signedByRoot(1211, "CN=Bubilet (TEST), OU=Bilet Satisi, O=Bubilet (TEST), C=TR")),
+    await ensure(
+      "issuer-bubilet-status",
+      signedByRoot(1212, "CN=Bubilet - Status List (TEST), OU=Status, O=Bubilet (TEST), C=TR"),
+    ),
+    await ensure(
+      "issuer-paribu-cineverse",
+      signedByRoot(1301, "CN=Paribu Cineverse (TEST), OU=Bilet Satisi, O=Paribu Cineverse (TEST), C=TR"),
+    ),
+    await ensure(
+      "issuer-paribu-cineverse-status",
+      signedByRoot(1302, "CN=Paribu Cineverse - Status List (TEST), OU=Status, O=Paribu Cineverse (TEST), C=TR"),
+    ),
+  ];
+}
+
+async function finish(root: Item, items: Item[], notBefore: Date) {
   const summary: Record<string, unknown> = {
     generated_at: notBefore.toISOString(),
-    warning: "DEV/DEMO PKI — private keys on disk (sapma S-1). Never use in pilot.",
+    profile: PROFILE,
+    warning:
+      PROFILE === "sandbox"
+        ? "SANDBOX (TEST) PKI — ADR-0038. Never in a real list; never trusted by a real wallet or verifier."
+        : "DEV/DEMO PKI — private keys on disk (sapma S-1). Never use in pilot.",
   };
   const prev = existsSync(resolve(outDir, "pki.json"))
     ? (JSON.parse(readFileSync(resolve(outDir, "pki.json"), "utf8")) as Record<string, unknown>)
@@ -226,16 +317,28 @@ async function main() {
     };
   }
   const der = (n: string) => pemToDer(readFileSync(resolve(outDir, `${n}.cert.pem`), "utf8"));
-  summary.ids = {
-    ca_id: computeCaId(STATE, der("root-ca")),
-    issuer_id_bilgi: computeIssuerId(STATE, der("issuer-bilgi")),
-    rp_id_verify: computeRpId(STATE, der("rp-verify")),
-    issuer_id_id: computeIssuerId(STATE, der("issuer-id")),
-    issuer_id_id_review: computeIssuerId(STATE, der("issuer-id-review")),
-    issuer_id_bubilet: computeIssuerId(STATE, der("issuer-bubilet")),
-    rp_id_issuer_bilgi: computeRpId(STATE, der("rp-issuer-bilgi")),
-    note: "issuer_id = keccak256(utf8(stateCode) || SHA-256(leafCertDER)); zincire geçişte abi.encodePacked ile aynı bayt dizisi doğrulanacak (05-MIGRATION).",
-  };
+  summary.ids =
+    PROFILE === "sandbox"
+      ? Object.fromEntries(
+          items.map((it) => [
+            it.name,
+            it === root
+              ? computeCaId(STATE, der(it.name))
+              : it.name.startsWith("rp-")
+                ? computeRpId(STATE, der(it.name))
+                : computeIssuerId(STATE, der(it.name)),
+          ]),
+        )
+      : {
+          ca_id: computeCaId(STATE, der("root-ca")),
+          issuer_id_bilgi: computeIssuerId(STATE, der("issuer-bilgi")),
+          rp_id_verify: computeRpId(STATE, der("rp-verify")),
+          issuer_id_id: computeIssuerId(STATE, der("issuer-id")),
+          issuer_id_id_review: computeIssuerId(STATE, der("issuer-id-review")),
+          issuer_id_bubilet: computeIssuerId(STATE, der("issuer-bubilet")),
+          rp_id_issuer_bilgi: computeRpId(STATE, der("rp-issuer-bilgi")),
+          note: "issuer_id = keccak256(utf8(stateCode) || SHA-256(leafCertDER)); zincire geçişte abi.encodePacked ile aynı bayt dizisi doğrulanacak (05-MIGRATION).",
+        };
   writeFileSync(resolve(outDir, "pki.json"), JSON.stringify(summary, null, 2) + "\n");
   console.log(
     `PKI: ${

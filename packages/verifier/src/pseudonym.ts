@@ -9,7 +9,7 @@
  * Sınır (ADR-0031 K4): türetmenin doğruluğu gerçek cüzdan varsayımına dayanır; kesin kanıt sıfır bilgi ispatıyla (Z5).
  */
 import { calculateJwkThumbprint, decodeProtectedHeader, importJWK, jwtVerify, type JWK } from "jose";
-import { verifyWalletAttestation, type StatusValueOf } from "@tamga-network/issuer";
+import { verifyWalletAttestation, type StatusValueOf } from "@tamga-network/trust";
 import type { TrustSource } from "@tamga-network/trust";
 
 export const PSEUDONYM_FORMAT = "tamga-pseudonym";

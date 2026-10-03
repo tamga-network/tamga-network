@@ -27,7 +27,7 @@ import {
   type TrustStore,
 } from "@tamga-network/trust";
 import { SoftwareKeyProvider, MemoryKeyStore, presentSdJwt } from "@tamga-network/wallet-core";
-import { verifyWalletAttestation } from "@tamga-network/issuer";
+import { verifyWalletAttestation } from "@tamga-network/trust";
 import { verifyPresentation, MemoryStatusCache, dcqlFromPolicy, type Policy } from "./index.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);

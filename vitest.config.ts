@@ -24,7 +24,7 @@ export default defineConfig({
   test: {
     include: ["packages/**/*.test.ts", "apps/**/*.test.ts", "conformance/**/*.test.ts", "examples/**/*.test.ts"],
     globalSetup: ["./scripts/require-fixtures.ts"], // O1: CI'da TAMGA_REQUIRE_FIXTURES=1 → eksik PKI/liste sessiz atlama değil hata
-    exclude: ["**/node_modules/**", "apps/wallet/**"],
+    exclude: ["**/node_modules/**"],
     testTimeout: 20_000,
     hookTimeout: 60_000, // güven listesi yüklemesi (çapa günlüğü JWS doğrulaması) tam pakette 10 sn sınırını aşıyor // WUA/PKI testleri tam pakette 5 sn sınırına takılıyordu (2026-09-25)
   },

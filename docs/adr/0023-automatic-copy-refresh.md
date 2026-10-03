@@ -1,41 +1,16 @@
 ---
 document_id: ADR-0023
-title: Otomatik Kopya Yenileme — Yenileme Belirteciyle, Eşikte ve Rastgele Gecikmeyle
-category: ADR
-domain: Wallet
+title: "Otomatik kopya yenileme"
 status: Active
-review_status: Completed
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-09-29
-authors:
-  - Tamga Network Engineering
-language: tr
-document_type: adr
-audience:
-  - engineers
-  - institutions
-tags:
-  - adr
-  - wallet
-  - batch-issuance
-  - privacy
-keywords:
-  - automatic re-issuance
-  - refresh token
-  - credential_reuse_policy
-  - unlinkability
+last_updated: 2026-10-02
 summary: >
   Cüzdan, kopyaları azalan ya da süresi bitmek üzere olan kurum belgelerini kullanıcıya sormadan yeniler: OpenID4VCI yenileme
   belirteci (DPoP'a ve cüzdan onayına bağlı, tek kullanımlık, döndürülen), kurumun ilan ettiği eşiklerde (credential_reuse_policy),
   uygulama öndeyken ve rastgele gecikmeyle. Kişi alanlarını tutmayan kimlik ve iletişim belgelerinde yenileme kullanıcı eylemi
   olarak kalır. SPEC-WALLET-0001/WL7 değişir (ARF ISSU_42, ISSU_45, ISSU_63).
-related:
-  - "[[ADR-0011]]"
-  - "[[ADR-0021]]"
-  - "[[SPEC-WALLET-0001]]"
-  - "[[SPEC-PROTO-0001]]"
-  - "[[SPEC-SCHEMA-0002]]"
+domain: Wallet
 ---
 
 # Bağlam
@@ -43,15 +18,15 @@ related:
 [[SPEC-WALLET-0001]]/WL7 "otomatik yenileme yoktur" der. Gerekçe: cüzdan arka planda kuruma giderse kurum belgenin ne sıklıkta
 kullanıldığını öğrenir ([[SPEC-SCHEMA-0002]] §2.1).
 
-AB ARF 3.0 ters yönde: yeniden ihraç **mümkün olduğunca kullanıcı eylemi gerektirmemeli** (ISSU_42). Tek kullanımlık paket
-yönteminde cüzdan, alt eşiğe inince yeni paket istemeli (ISSU_45). Cüzdan ve kurum, OpenID4VCI'nin yeniden ihraç özelliklerini
+AB [[t:ARF]] 3.0 ters yönde: yeniden ihraç **mümkün olduğunca kullanıcı eylemi gerektirmemeli** (ISSU_42). Tek kullanımlık paket
+yönteminde cüzdan, alt eşiğe inince yeni paket istemeli (ISSU_45). Cüzdan ve kurum, [[t:OpenID4VCI|OpenID4VCI'nin]] yeniden ihraç özelliklerini
 desteklemeli (ISSU_63).
 
 Tamga kurumları eşikleri 2026-09-29'dan beri metadata'da ilan ediyor (`credential_reuse_policy`: 10'luk paket, 2 kopya kalınca,
 süre bitimine 7 gün kala). Proje yönetimi AB ile aynı davranışı onayladı.
 
 Kısıt: sessiz yenileme, kurumun kullanıcıya sormadan yeniden imza atabilmesini gerektirir.
-- **Kurum belgeleri** (öğrenci, diploma): kurum öznitelikleri kendi yetkili kaynağından yeniden okur.
+- **Kurum belgeleri** (öğrenci, diploma): kurum öznitelikleri kendi [[t:authentic-source|yetkili kaynağından]] yeniden okur.
 - **Kimlik belgesi** ([[ADR-0011]] K4) ve **iletişim belgeleri** ([[ADR-0021]] K3): servis, kişi alanlarını ihraçtan sonra tutmaz.
   Bunları sessizce yenilemek, kişi verisini saklamayı gerektirirdi. Bu yüzden kapsam dışıdır.
 
@@ -69,9 +44,9 @@ Yenileme yalnız şu koşullar birlikteyken yapılır: uygulama önde, kilit aç
 ## K2 — Nasıl: yenileme belirteci
 
 - Kurum, ilk ihraçta token yanıtında bir `refresh_token` verir (OpenID4VCI 1.0, RFC 6749 §6).
-- Belirteç o belge için üretilen **DPoP anahtarına bağlıdır** (RFC 9449 §5). Cüzdan bu anahtarı belge ömrü boyunca saklar; her
+- Belirteç o belge için üretilen **[[t:DPoP]] anahtarına bağlıdır** (RFC 9449 §5). Cüzdan bu anahtarı belge ömrü boyunca saklar; her
   mantıksal belgenin anahtarı ayrıdır.
-- Her yenilemede cüzdan onayı (WUA) yeniden sunulur.
+- Her yenilemede cüzdan onayı ([[t:WUA]]) yeniden sunulur.
 - Belirteç tek kullanımlıktır ve her kullanımda yenisiyle değişir (rotation). Ömrü belgenin azami geçerliliğini aşmaz.
 - Yenileme sonunda yeni bir paket (10 kopya, yeni anahtarlar) alınır; eski kullanılmamış kopyalar silinir.
 
@@ -94,7 +69,7 @@ geçerlidir.
 
 ## K6 — Mahremiyet dengesi
 
-Kalıntı risk: kurum, yenileme sıklığından belgenin kaç **yeni** doğrulayıcıya gösterildiğini kabaca çıkarabilir (her 8 yeni
+Kalıntı risk: kurum, yenileme sıklığından belgenin kaç **yeni** [[t:verifier|doğrulayıcıya]] gösterildiğini kabaca çıkarabilir (her 8 yeni
 doğrulayıcıda bir istek). Azaltımlar:
 - aynı doğrulayıcıya aynı kopya (WL5); tekrar sunumlar kopya tüketmez,
 - rastgele gecikme,
@@ -124,8 +99,8 @@ Bu, AB modeliyle aynı dengedir. Proje yönetimi kabul etti.
 # Sonuçlar
 
 - [[SPEC-WALLET-0001]]/WL7 yeniden ifade edilir: "Kullanıcı eylemi olmadan yenileme yalnızca AR1–AR4 koşullarında yapılır."
-- [[SPEC-PROTO-0001]]: token ucu `refresh_token` (kurum issuer'ı); `grant_type=refresh_token` (DPoP + WUA); belirteç iptali.
-- `tamga-platform/apps/issuer`: yenileme belirteci deposu (özet olarak), yetkili kaynaktan yeniden okuma.
+- [[SPEC-PROTO-0001]]: token ucu `refresh_token` (kurum [[t:issuer|belge vereni]]); `grant_type=refresh_token` (DPoP + WUA); belirteç iptali.
+- `apps/issuer` (operatör deposu): yenileme belirteci deposu (özet olarak), yetkili kaynaktan yeniden okuma.
 - `wallet-core`: belge başına DPoP anahtarı + yenileme belirteci saklama; eşik denetimi. Cüzdan: arka plan yenileme, ayar,
   değişen alan bildirimi.
 

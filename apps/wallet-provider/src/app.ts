@@ -91,7 +91,7 @@ export async function buildWalletProviderApp(
   app.get("/", async (_req, reply) =>
     reply.type("text/html")
       .send(`<!doctype html><html lang="en"><meta charset="utf-8"><title>Tamga Wallet Provider</title>
-<body style="font:16px system-ui;max-width:720px;margin:40px auto;padding:0 16px"><h1>Tamga Wallet — trust mark</h1>
+<body style="font:16px system-ui;max-width:720px;margin:40px auto;padding:0 16px">${process.env.TAMGA_NETWORK === "sandbox" ? '<p style="background:#B45309;color:#fff;padding:6px 12px;font-weight:600">SANDBOX · TEST — not valid in the real network (ADR-0038)</p>' : ""}<h1>Tamga Wallet — trust mark</h1>
 <p>This service issues wallet instance attestations (WIA) and key attestations (KA) for <b>Tamga Wallet</b>, the solution of the wallet provider registered in the Tamga trusted list (<code>lotl › wallet_providers[]</code>). In production this address shows the full page from <code>ops/pages</code>.</p>
 <p id="certification"><b>Certification:</b> not certified. Keys are held in a software keystore and devices are not yet attested; key attestations state this as <code>iso_18045_basic</code>.</p>
 <p>Signing certificate (SHA-256): <code>${fp}</code></p>
