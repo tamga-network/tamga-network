@@ -5,7 +5,12 @@
  *   heartbeat  boş çapa satırı (saatlik kadans, S5 mantığı)
  *   verify     dist/ setini yükleyici ile doğrular ve özet basar; --full: arşivlerle seq 0'dan tam zincir (TL10 replay)
  *   archive    çapa günlüğünü kontrol noktasıyla arşivler (TL12; otomatik eşik TAMGA_ANCHORS_MAX_LINES=500)
- *   status <slug> <ACTIVE|SUSPENDED|REVOKED|RETIRED> [--reason r]   issuer statüsünü kayıt defterinde değiştirir (status_history'ye ekler), listeyi yeniden imzalar (≤24 s kuralı; CHANGELOG)
+ *   status <slug> <ACTIVE|SUSPENDED|REVOKED|RETIRED> [--reason r] [--invalidates-from <iso>|valid_from]
+ *                                                 issuer statüsünü değiştirir (status_history'ye ekler; kayıt silinmez — TL2), listeyi
+ *                                                 yeniden imzalar (≤24 s kuralı; CHANGELOG). REVOKED + --invalidates-from: o andan sonraki
+ *                                                 belgeler düşer (`valid_from` = kurumun bütün belgeleri)
+ *   rp-status <dns_name> <STATUS> [--reason r]    doğrulayıcı statüsü (aynı kural)
+ *   end-use <dns_name> <scope_id|group_id>        doğrulayıcının bir kullanımını ya da kapı grubunu sona erdirir (valid_until = şimdi)
  *   register issuer|rp <başvuru.json> [--check]   kurum / doğrulayıcı ekler (ADR-0024 kayıt verisi denetlenir), listeyi imzalar
  *   scope <dns_name> <kullanım.json> [--check]    kayıtlı doğrulayıcıya yeni kullanım (kapsam) ekler (ADR-0034: alan adıyla)
  *   authorize <slug> <vct> [--revoke]             kuruma şema yetkisi verir / kaldırır (kayıt silinmez, bitiş tarihi konur)
@@ -55,6 +60,9 @@ import {
   addRelyingParty,
   addScope,
   setAuthorization,
+  setIssuerStatus,
+  setRpStatus,
+  endRpUse,
   summarize,
   type RegistryEnv,
 } from "./registry-ops.js";
@@ -512,7 +520,7 @@ async function build() {
           await appendAnchor({ kind: "schema", schema_id: x.schema_id, vct: x.vct, content_hash: h });
   }
   changelog(
-    `build: lotl v${lotl.version}, tl-${cc.toLowerCase()} v${tl.version}; issuers=${issuers.map((i: { slug: string }) => i.slug).join(",")}; schemas=${schemasIndex.length}`,
+    `build: lotl v${lotl.version}, tl-${cc.toLowerCase()} v${tl.version}; issuers=${issuers.map((i: { slug: string; status: string }) => (i.status === "ACTIVE" ? i.slug : `${i.slug}(${i.status})`)).join(",")}; schemas=${schemasIndex.length}`,
   );
   console.log(
     JSON.stringify(
@@ -728,7 +736,8 @@ async function registryCommand(cmd: string, args: string[]) {
     ),
   };
   const check = args.includes("--check");
-  const pos = args.filter((a) => !a.startsWith("--"));
+  const VALUED = new Set(["--reason", "--invalidates-from"]); // değer alan bayraklar (değerleri konumsal sayılmaz)
+  const pos = args.filter((a, k) => !a.startsWith("--") && !VALUED.has(args[k - 1] ?? ""));
   let next: Record<string, unknown>;
   let line: string;
   try {
@@ -745,6 +754,30 @@ async function registryCommand(cmd: string, args: string[]) {
       const scope = readJson(resolve(file));
       next = addScope(src, clientId, scope, env);
       line = `relying_party ${clientId}: scope ${scope.scope_id} added`;
+    } else if (cmd === "status") {
+      const [slug, st] = pos;
+      if (!slug || !st)
+        throw new RegistryError([
+          "kullanım: status <slug> <ACTIVE|SUSPENDED|REVOKED|RETIRED> [--reason r] [--invalidates-from <iso>|valid_from]",
+        ]);
+      const reason = arg("reason", "operator");
+      let inv = arg("invalidates-from");
+      if (inv === "valid_from")
+        inv = (src.issuers as Array<{ slug: string; valid_from: string }>).find((x) => x.slug === slug)?.valid_from;
+      next = setIssuerStatus(src, slug, st, { reason, invalidatesFrom: inv }, env);
+      line = `issuer ${slug}: ${st} (${reason}${inv ? `; credentials issued from ${inv} invalid` : ""}) — history kept (status_history)`;
+    } else if (cmd === "rp-status") {
+      const [dns, st] = pos;
+      if (!dns || !st)
+        throw new RegistryError(["kullanım: rp-status <dns_name> <ACTIVE|SUSPENDED|REVOKED|RETIRED> [--reason r]"]);
+      const reason = arg("reason", "operator");
+      next = setRpStatus(src, dns, st, { reason }, env);
+      line = `relying_party ${dns}: ${st} (${reason}) — history kept (status_history)`;
+    } else if (cmd === "end-use") {
+      const [dns, id] = pos;
+      if (!dns || !id) throw new RegistryError(["kullanım: end-use <dns_name> <scope_id|group_id>"]);
+      next = endRpUse(src, dns, id, env);
+      line = `relying_party ${dns}: ${id} ended (valid_until) — record kept`;
     } else {
       const [slug, vct] = pos;
       if (!slug || !vct) throw new RegistryError(["kullanım: authorize <slug> <vct> [--revoke]"]);
@@ -864,37 +897,11 @@ const cmd = process.argv[2];
     // TL12: operatör komutu — günlüğü şimdi arşivle (otomatik eşik: TAMGA_ANCHORS_MAX_LINES, varsayılan 500)
     const cp = await withAnchorLock(rotateAnchorsLocked);
     console.log(cp ? JSON.stringify(cp) : "anchors: arşivlenecek satır yok");
-  } else if (cmd === "status") {
-    const slug = process.argv[3],
-      st = process.argv[4];
-    const reason = arg("reason", "operator");
-    if (!slug || !["ACTIVE", "SUSPENDED", "REVOKED", "RETIRED"].includes(st ?? "")) {
-      console.error("kullanım: status <slug> <ACTIVE|SUSPENDED|REVOKED|RETIRED> [--reason r]");
-      process.exit(1);
-    }
-    const p = resolve(REG, "tl-tr.source.json");
-    const src = readJson(p);
-    const i = (
-      src.issuers as Array<{
-        slug: string;
-        status: string;
-        status_history: Array<{ status: string; since: string; reason?: string }>;
-      }>
-    ).find((x) => x.slug === slug);
-    if (!i) {
-      console.error("issuer yok: " + slug);
-      process.exit(1);
-    }
-    i.status = st;
-    i.status_history.push({ status: st, since: iso(new Date()), reason });
-    writeFileSync(p, JSON.stringify(src, null, 2) + "\n");
-    changelog(`issuer ${slug}: ${st} (${reason}) — history kept (status_history)`);
-    await build();
-  } else if (["register", "scope", "authorize", "list"].includes(cmd ?? "")) {
+  } else if (["register", "scope", "authorize", "list", "status", "rp-status", "end-use"].includes(cmd ?? "")) {
     await registryCommand(cmd!, process.argv.slice(3));
   } else {
     console.error(
-      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list",
+      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list",
     );
     process.exit(1);
   }

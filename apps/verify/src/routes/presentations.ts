@@ -62,7 +62,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
   // 4.1 Sunum isteği başlat
   app.post("/presentations", async (req, reply) => {
     const body = req.body as { policy_id?: string; dc_api_origin?: unknown };
-    const policy = findPolicy(body.policy_id);
+    const policy = findPolicy(body.policy_id, ctx.policies);
     if (!policy) return reply.code(400).send({ error: "unknown_policy" });
     // Digital Credentials API: sayfa kökeni verildiyse istek tarayıcı yoluna göre (dc_api.jwt + expected_origins) kurulur
     let dcApiOrigin: string | undefined;
@@ -210,19 +210,35 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
           ? `${out.result.failed_step}: ${out.result.failed_reason}`
           : `${out.result.checks_performed.length} checks passed`,
       });
-      const extra: Record<string, string> = {};
+      const extra: Record<string, unknown> = {};
       if (out.result.outcome === "ACCEPTED") {
         extra.show_url = `${cfg.publicBase}/p/${pid}?show=${p.showKey}`; // ADR-0012 C: kontrol görünümü, 5 dk
         if (p.policy.proximity && pres) {
-          // ADR-0012 B: politika geçiş kartı istiyorsa kabulde pass_grant ver (kişisel veri yok; holder anahtarına bağlı)
-          const g = await ctx.passes.issue({ presentation: pres, presentationId: pid, policy: p.policy.proximity });
-          extra.pass_grant = g.jws;
-          p.trace.push({
-            t: Date.now(),
-            step: "Access pass issued (pass_grant)",
-            detail: `${g.record.passId} · group ${g.record.terminalGroup} · ${p.policy.proximity.valid_days} days`,
-          });
-          ctx.audit({ event: "pass.issued", pass_id: g.record.passId, terminal_group: g.record.terminalGroup });
+          // ADR-0012 B: politika geçiş kartı istiyorsa kabulde pass_grant ver (kişisel veri yok). a3/WL13: cüzdan ayrı kart
+          // anahtarı kanıtı (`pass_key`) gönderdiyse kart ona bağlanır; yoksa holder anahtarına. Kanıt geçersizse kart
+          // VERİLMEZ ama sunum kabulü bozulmaz: yanıtta `pass: { issued: false, reason }`.
+          let g: Awaited<ReturnType<typeof ctx.passes.issue>> | null = null;
+          try {
+            g = await ctx.passes.issue({
+              presentation: pres,
+              presentationId: pid,
+              policy: p.policy.proximity,
+              ...(typeof dec.pass_key === "string" ? { passKey: { jws: dec.pass_key, nonce: p.req.nonce } } : {}),
+            });
+          } catch {
+            extra.pass = { issued: false, reason: "invalid_pass_key" };
+            p.trace.push({ t: Date.now(), step: "Access pass not issued", detail: "invalid pass_key proof" });
+          }
+          if (g) {
+            extra.pass_grant = g.jws;
+            extra.pass = { issued: true };
+            p.trace.push({
+              t: Date.now(),
+              step: "Access pass issued (pass_grant)",
+              detail: `${g.record.passId} · group ${g.record.terminalGroup} · ${p.policy.proximity.valid_days} days`,
+            });
+            ctx.audit({ event: "pass.issued", pass_id: g.record.passId, terminal_group: g.record.terminalGroup });
+          }
         }
       }
       return { redirect_uri: `${cfg.publicBase}/p/${pid}`, ...extra };
@@ -299,6 +315,7 @@ export async function createPresentation(
     requestUriBase: `${cfg.publicBase}/vp/req`,
     purpose: policy.purpose["en-US"],
     onBehalfOf: owner,
+    passGrantOffered: !!policy.proximity, // a3/WL13: cüzdan geçiş kartı için ayrı anahtar hazırlar
     // ADR-0026 K4: kullanımın kayıt sertifikası (varsa) verifier_info ile
     registrationCerts: registrationCertsFor(cfg.trustDist, owner ?? cfg.clientId, registrationScopesFor(policy, rpRec)),
     ...(dcApiOrigin ? { dcApi: { expectedOrigins: [dcApiOrigin] } } : {}),

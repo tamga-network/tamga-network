@@ -1,7 +1,7 @@
 /** ADR-0012 B: turnike/terminal uçları. Terminaller (kapılar) bu servisi çağırır → jti tekrar listesi kapılar arasında ortaktır (K3). */
 import type { FastifyInstance } from "fastify";
 import type { VerifyContext } from "../app.js";
-import { langOf, terminalPage } from "../html.js";
+import { langOf, noTerminalPage, terminalPage } from "../html.js";
 import { CAMPUS_GROUP } from "../policies.js";
 
 const DEFAULT_GROUP = CAMPUS_GROUP;
@@ -9,7 +9,10 @@ const DEFAULT_GROUP = CAMPUS_GROUP;
 const GROUP_RE = /^[a-z0-9-]{1,40}$/;
 
 export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext) {
+  // Kapı politikası (proximity) olmayan ağda (bugün gerçek ağ) kapı yüzü kapalıdır; sayaç ve yönetici uçları kalır.
+  const hasGates = ctx.policies.some((p) => p.proximity);
   app.post("/terminal/verify", async (req, reply) => {
+    if (!hasGates) return reply.code(404).send({ ok: false, reason: "no terminal groups on this network" });
     const b = req.body as { token?: string; terminal_group?: string };
     if (!b.token) return reply.code(400).send({ ok: false, reason: "token required" });
     const group = b.terminal_group ?? DEFAULT_GROUP;
@@ -49,6 +52,11 @@ export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext)
   });
 
   app.get("/terminal", async (req, reply) => {
+    if (!hasGates)
+      return reply
+        .code(404)
+        .type("text/html")
+        .send(noTerminalPage(langOf(req.headers["accept-language"])));
     const group = (req.query as { group?: string }).group ?? DEFAULT_GROUP;
     // grup kimliği biçimi (politikalardaki terminal_group: bilgi-campus, bubilet-gate …) — başka her şey reddedilir (K1)
     if (!GROUP_RE.test(group)) return reply.code(400).type("text/plain").send("invalid terminal group");

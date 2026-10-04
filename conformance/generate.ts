@@ -1,6 +1,6 @@
 /**
  * conformance/generate.ts — vektör üreteci.
- * Girdi: apps/trust-publisher/dist (imzalı listeler), ops/pki (dev sertifikalar + issuer anahtarı — S-1),
+ * Girdi: apps/trust-publisher/dist-test (test listesi; imzalı), ops/pki (dev sertifikalar + issuer anahtarı — S-1),
  *        packages/schemas/dist/index.json (vct, content_hash).
  * Çıktı: conformance/vectors/trust/basic.json, conformance/vectors/sd-jwt/diploma-basic.json
  */
@@ -15,7 +15,7 @@ import { issueSdJwtVc, presentSdJwtVc, pemIssuerSigner, verifySdJwtVc } from "@t
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, "..");
-const DIST = resolve(ROOT, "apps", "trust-publisher", "dist");
+const DIST = resolve(ROOT, "apps", "trust-publisher", "dist-test"); // test listesi (npm run trust:test-fixtures)
 const PKI = resolve(ROOT, "ops", "pki");
 const OUT = resolve(here, "vectors");
 const rj = (p: string) => JSON.parse(readFileSync(p, "utf8"));

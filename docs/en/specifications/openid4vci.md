@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -221,7 +221,7 @@ the person's matching keys (`bind { personal_administrative_number, birth_date }
 
 ```json
 {
-  "credential_issuer": "https://issuer.tamga.network/bilgi",
+  "credential_issuer": "https://issuer.tamga.network/example-university",
   "credential_configuration_ids": ["urn:tamga:edu:DiplomaCredential:1"],
   "grants": { "authorization_code": { "issuer_state": "b3f1c2…" } }
 }

@@ -3,8 +3,9 @@
  * (`dueAt`) yenileme belirteci kullanılır: DPoP (belgeye özel anahtar) + WUA ile token → yeni paket → eski belgenin yerine.
  * Geçiş kartları yeni belgeye taşınır (anahtarları silinmez). Kurum belirteci reddederse bağ kaldırılır; uyarı akışı bugünkü gibi.
  */
-import { WalletError, readJson, type Http } from "./http.js";
-import type { KeyProvider } from "./keys.js";
+import { b64u } from "./b64.js";
+import { readJson, type Http } from "./http.js";
+import { isAuthRequired, type KeyProvider } from "./keys.js";
 import type { WuaRecord } from "./wua.js";
 import { wuaHeaders } from "./authcode.js";
 import { dpopRequest, type DpopSigner } from "./dpop.js";
@@ -87,6 +88,25 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
     return { ok: false, state: p.state, revoked: false, reason: "no refresh binding", removedKeyRefs: [] };
   const r = old.refresh;
   const dpop: DpopSigner = { keys: p.keys, ref: r.dpopRef, jwk: r.dpopJwk };
+  const skip = (reason: string, state = p.state): AutoRefreshResult => ({
+    ok: false,
+    state,
+    revoked: false,
+    reason,
+    removedKeyRefs: [],
+  });
+  // a3 ön deneme (AĞA ÇIKMADAN): yeni kopya anahtarları belge anahtarı politikasında (`user_auth`) üretilir ve proof'ları
+  // imzalanır. Kurumun yenileme belirteci TEK KULLANIMLIKTIR; değişimden sonra imza `auth_required` ile düşerse belirteç boşa
+  // harcanırdı. Aynı politikada bir deneme anahtarıyla istemsiz imza denenir; doğrulama bekliyorsa tur ağa hiç çıkmadan atlanır.
+  const probeRef = `probe.${b64u(p.randomBytes(9))}`;
+  try {
+    await p.keys.generate(probeRef);
+    await p.keys.sign(probeRef, p.randomBytes(32));
+  } catch (e) {
+    return skip(isAuthRequired(e) ? "auth_required" : (e as Error).message);
+  } finally {
+    await p.keys.delete(probeRef).catch(() => {});
+  }
   let tr;
   try {
     tr = await dpopRequest(
@@ -133,9 +153,20 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
       removedKeyRefs: [],
     };
   }
-  const metadata = await fetchIssuerMetadata(old.issuer, p.http);
+  // Belirteç değişimi yapıldı: kurum döndürdüyse ESKİ belirteç artık geçersiz. Bundan sonraki her hatada yeni belirteç ve DPoP
+  // anahtarı SAKLANIR (silinmez) — sonraki tur / kullanıcı eylemi bunlarla sürer; aksi hâlde bağ invalid_grant ile kopar.
+  const kept: WalletState =
+    tok.refresh_token && tok.refresh_token !== r.token
+      ? {
+          ...p.state,
+          credentials: p.state.credentials.map((c) =>
+            c.id === old.id ? { ...c, refresh: { ...r, token: tok.refresh_token! } } : c,
+          ),
+        }
+      : p.state;
   let out;
   try {
+    const metadata = await fetchIssuerMetadata(old.issuer, p.http);
     out = await obtainCredential({
       issuer: old.issuer,
       vct: old.vct,
@@ -150,11 +181,11 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
       refreshToken: tok.refresh_token,
       tokenEndpoint: r.tokenEndpoint,
       keyAttestor: p.keyAttestor,
+      retainDpop: true, // belgeye bağlı kalıcı DPoP anahtarı: hata olsa da silinmez
     });
   } catch (e) {
-    if (e instanceof WalletError)
-      return { ok: false, state: p.state, revoked: false, reason: e.message, removedKeyRefs: [] };
-    throw e;
+    // `auth_required` (ön denemeden sonra pencere kapandı), kurum ya da ağ hatası: iptal değil; yeni belirteç korunur
+    return skip(isAuthRequired(e) ? "auth_required" : (e as Error).message, kept);
   }
   const rec = receiveCredentials(p.state, out, { ...p.receive, typeName: old.typeName, now });
   const neu = rec.credential;

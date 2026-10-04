@@ -4,7 +4,7 @@ title: "Wallet and key attestations"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Instead of a single 30-day WUA, the EU TS3 model: a Wallet Instance Attestation (WIA) living less than 24 hours, with a fresh key
   and a fresh status list entry for every credential transaction, plus a key attestation (KA, `key_attestation`) describing where
@@ -131,6 +131,29 @@ every refresh" still applies.
 - `wallet-core`: unit key, per-transaction WIA, KA request, proof with KA. Wallet: registration, "Revoke this wallet".
 - [[SPEC-PROTO-0001]] §11.1 and D-CRED-6 are written according to this decision.
 - ARF: topics 9, 38 and VCR_01a/03a/07 are largely met. WSCD and device attestation are in Z1.
+
+# Implementation notes (2026-10-04)
+
+These notes do not change the decision; they record how the reference wallet (Tamga Wallet) and the provider implement K1–K3.
+
+1. **Key access policy (WL1/WL11).** Hardware keys are bound to the phone lock: a key is accessible only while the device is
+   unlocked, and each use is authorised by the device biometrics or, failing that, the device passcode. iOS: Secure Enclave,
+   `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, `.privateKeyUsage` + `.biometryCurrentSet | .or | .devicePasscode` (only
+   `.devicePasscode` when no biometrics are enrolled). Android: StrongBox/TEE, `setUserAuthenticationRequired(true)`,
+   `setUserAuthenticationParameters(60 s, AUTH_BIOMETRIC_STRONG | AUTH_DEVICE_CREDENTIAL)`, `setUnlockedDeviceRequired(true)`,
+   `setInvalidatedByBiometricEnrollment(true)` (chosen as `true` because neither this record nor [[SPEC-WALLET-0001]] defines the
+   flag; the system does not apply it to timeout-based keys, and removing the screen lock invalidates the key). The app PIN
+   remains the screen lock of the app; the presentation approval is the key-use prompt (a single prompt; no second PIN
+   prompt). No key is created on a phone without a screen lock. Protocol keys that do not represent the person — the unit key
+   (K1), WIA PoP keys (K2), DPoP keys and the access-pass key (WL13: no approval) — are accessible only while the device is
+   unlocked but their use needs no prompt, so silent refresh and pass renewal never prompt. Flows the person did not start try
+   credential keys without a prompt; when authentication is required they skip silently and retry on the next user action.
+   There is no migration ([[ADR-0029]]): existing test wallets are set up again when the policy changes.
+2. **Play Integrity — not mandatory.** The Android wallet may send a Play Integrity (standard API) token alongside the key
+   attestation; when a service account is configured, the provider has Google decode it and stores only the verdict classes in
+   the unit's device record. The `key_storage` level in the KA comes from the Android key attestation; Play Integrity does not
+   lower it, its absence does not block registration, and verification is skipped without a service account. Making Play
+   Integrity mandatory (tying registration or the level to it) changes K1/K3 and **requires a separate ADR**.
 
 # Status
 

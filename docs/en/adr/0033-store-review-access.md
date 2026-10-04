@@ -4,7 +4,7 @@ title: "App store review code"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Apple and Google reviewers must be able to try Tamga Wallet's identity flow without a real Turkish identity document.
   Decision: a time-limited, single-use review code; once the code is entered, the identity service uses the fake verification
@@ -142,3 +142,15 @@ Estimated effort: 2–3 days (with tests).
 # Status
 
 **Accepted — 2026-10-01** (approved by project management: all three questions accepted). Implementation: the plan above.
+
+# Implementation note — 2026-10-04: store review covers the identity flow only
+
+No test or demo content stays on the real network; all of it is in the sandbox ([[ADR-0038]]; approved by project management,
+2026-10-04). The **code-less paths** in Context and K4 (buying a ticket and showing it at the gate, the Tamga Verify sample
+policies page, the "Sign in with Tamga" example site) therefore no longer exist on the real network and are not written into the
+review notes; they are tried in the sandbox. The store review covers the identity flow only: review code → DEMO identity
+credential → Tamga Verify review policies (`review-age-over-18`, `review-site-signup`). The review policies stay on the real
+network but are not showcased on the Tamga Verify home page; the reviewer is given a direct link. The decision (option D, K1–K3,
+K5, RV1–RV3) does not change.
+On the same date the fake identity provider was closed completely on the real network by a code lock (the service does not start
+with `TAMGA_IDV_DIDIT_FAKE=1`); the review code path is independent of it.

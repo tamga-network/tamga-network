@@ -59,6 +59,35 @@ export function parsePassGrant(
   };
 }
 
+/**
+ * Geçiş kartı anahtarı (a3 / WL13): kart jetonu belge anahtarıyla DEĞİL, ayrı bir donanım anahtarıyla imzalanır — `device_unlocked`
+ * politikası (yalnız kilit açıkken erişilebilir; biyometri koşulu yok). Jeton kişisel veri taşımaz, kayıt onayla yapıldı; kartın
+ * 60 sn'lik yenilemeleri istem çıkarmaz. Cüzdan, istek nesnesi `pass_grant_offered: true` dediğinde anahtarı üretir, yanıt
+ * yüküne `pass_key` (bu anahtarla imzalı, nonce'a bağlı sahiplik kanıtı) koyar; RP grant'ı bu anahtara bağlar.
+ */
+export const PASS_KEY_TYP = "tamga-pass-key+jwt";
+const PASS_KEY_PREFIX = "pass.";
+export const newPassKeyRef = (randomBytes: (n: number) => Uint8Array) => PASS_KEY_PREFIX + b64u(randomBytes(9));
+/** Kart anahtarı mı (silinebilir) — belge kopyası anahtarı değil (eski kayıtlarda kart kopya anahtarına bağlıydı). */
+export const isPassKeyRef = (ref: string) => ref.startsWith(PASS_KEY_PREFIX);
+/** Sahiplik kanıtı: başlıkta açık anahtar (jwk), gövdede aud = RP client_id, nonce = isteğin nonce'u. */
+export async function makePassKeyProof(p: {
+  keys: KeyProvider;
+  ref: string;
+  clientId: string;
+  nonce: string;
+  nowSec?: number;
+}): Promise<string> {
+  const jwk = await p.keys.publicKey(p.ref);
+  if (!jwk) throw new Error(`pass key not found: ${p.ref}`);
+  return signJwt(
+    { typ: PASS_KEY_TYP, jwk },
+    { aud: p.clientId, nonce: p.nonce, iat: p.nowSec ?? Math.floor(Date.now() / 1000) },
+    p.keys,
+    p.ref,
+  );
+}
+
 /** WL12: yalnızca iss/aud/iat/exp/jti; belge içeriği yok. */
 export async function mintPassToken(
   grant: PassGrant,

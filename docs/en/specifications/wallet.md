@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -150,18 +150,26 @@ refused with a clear warning to the user.
 
 ## 2.3 PIN
 
-The PIN is the **user verification** condition for access to the key in the secure area; it does not encrypt the key (the
-hardware does that).
+Access to the key in the secure area is conditioned on **user verification**; verification does not encrypt the key (the
+hardware does that). How the user is verified depends on where the key lives:
+
+- **On a device with a secure hardware key** the credential key is bound to the phone lock: it is used only while the phone is
+  unlocked and after the device's biometrics or device passcode. The presentation approval is this operating-system prompt (a
+  single prompt); app settings cannot turn it off. On this path the app PIN and in-app biometrics only unlock the wallet.
+- **On the software-key path** (an environment that cannot use secure hardware, temporary deviation S-9) the presentation
+  approval is the app PIN or in-app biometrics.
 
 | Rule | Value |
 |---|---|
-| Length | At least 6 digits |
+| Length (app PIN) | At least 6 digits |
 | Biometrics | Next to the PIN, **not instead of** it (the fallback is the PIN) |
 | Attempts | 5 wrong → 30 s delay; 10 → the wallet locks, the seed is required |
-| Presentation approval | PIN or biometrics **mandatory** for every presentation |
+| Presentation approval | User verification **mandatory** for every presentation: device biometrics or device passcode on secure hardware; PIN or biometrics on the software-key path |
+| Fallback | If the operating-system prompt cannot be shown for a technical or temporary reason (no foreground window, authentication service unavailable), the app PIN is asked. If the user **cancels** the prompt there is no fallback: nothing is presented |
 
-**The last row matters:** a presentation must be a deliberate act of the user. An unlocked wallet is prevented from
-presenting silently in the background.
+**The presentation approval row matters:** a presentation must be a deliberate act of the user. An unlocked wallet is
+prevented from presenting silently in the background. Flows the person did not start (pass refresh, copy refresh) show no
+prompt; if verification is needed, that round is skipped.
 
 ---
 
@@ -434,7 +442,7 @@ my data").
 | **WL8** | The over-request warning requires a separate visual block + a delayed button. |
 | **WL9** | No request to the schema server at presentation time. |
 | **WL10** | Tamga does not hold a recovery key on the user's behalf. |
-| **WL11** | Every presentation requires PIN or biometric approval. |
+| **WL11** | Every presentation requires user verification: on a device with a secure hardware key, the device's biometrics or device passcode (the credential key is bound to the phone lock); on the software-key path (S-9), the app PIN or biometrics. Fallback and cancellation in §2.3. |
 | **WL12** | The pass token (`tamga-pass+jwt`) carries no personal data: only `iss` (opaque pass_id), `aud`, `iat`, `exp` (≤ 60 s), `jti`; credential content and claims do not enter the QR code ([[ADR-0012]]). |
 | **WL13** | A pass is generated only for an RP/terminal group registered in the trust list, and the consent given at registration is time-limited (≤ 6 months) and scoped; the user can withdraw consent at any moment (the grant is deleted). It is the only exception to WL11. |
 | **WL14** | Every display of a pass is written to the `presentation_log` (within WL4, on the device); the Show screen displays a live clock and the remaining time. |
@@ -483,4 +491,4 @@ risk — the alternative is to leave it open to brute force.
 
 # Status
 
-**In force** — version 1.0.0 (2026-10-02).
+**In force** — version 1.0.0 (2026-10-02; last updated 2026-10-04).

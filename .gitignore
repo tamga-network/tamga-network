@@ -48,3 +48,4 @@ packages/*/lib/
 *.tgz
 apps/wallet-provider/data/
 apps/trust-publisher/dist-sandbox/
+apps/trust-publisher/dist-test/

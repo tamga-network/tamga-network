@@ -82,9 +82,12 @@ never `ACCEPTED`, never `REJECTED`.
 
 ## Wallet: device attestation and WUA
 
-- **`device_attestation_failed`:** the wallet provider could not verify the device evidence. The core retries without evidence
-  and the unit registers at software level. The cause is usually a development build, an emulator, or an app identity
-  (Bundle ID, package name) different from what the provider expects.
+- **Registration response says `attestation: "software"`:** the wallet provider could not use the device evidence; the unit
+  still registered, at software level. `reason` tells why: `not_configured` (the provider has no App ID or roots for that
+  platform), `invalid` (the evidence did not verify — usually an app identity, Bundle ID or package name different from what the
+  provider expects), `unsupported` (development build, emulator, unlocked device or a key outside secure hardware).
+  `attestation: "none"` means no evidence was presented at all (Expo Go, no native module). Registration is never rejected for
+  these reasons.
 - **Registered at software level:** you are running in Expo Go or without the native key module. Use a development build
   ([[GUIDE-0005]] §1).
 - **WUA expired:** check with `wuaExpiringSoon` before receiving credentials and renew.

@@ -13,7 +13,7 @@ import type { Http } from "./http.js";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
-const DIST = resolve(ROOT, "apps/trust-publisher/dist");
+const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
 const ready = existsSync(resolve(DIST, "lotl.jws")) && existsSync(resolve(PKI, "rp-verify.cert.pem"));
 const BASE = "https://trust.test";
 // ADR-0034: doğrulayıcının listedeki client_id'si x509_hash (erişim sertifikasından)

@@ -11,7 +11,10 @@ import { resolve } from "node:path";
 import {
   MemoryKeyStore,
   SoftwareKeyProvider,
+  isPassKeyRef,
+  makePassKeyProof,
   mintPassToken,
+  newPassKeyRef,
   parsePassGrant,
   signJwt,
 } from "@tamga-network/wallet-core";
@@ -121,6 +124,53 @@ describe("PassRegistry (ADR-0012 B)", () => {
       reg.verifyToken(b, { terminalGroup: "gate" }),
     ]);
     expect(results.filter((r) => r.ok).length).toBe(1);
+  });
+
+  it("a3/WL13: cüzdanın ayrı kart anahtarı (pass_key kanıtı) → kart o anahtara bağlanır; belge anahtarı DUR; bozuk kanıt reddedilir", async () => {
+    const signer = await pemRpSigner(
+      readFileSync(resolve(PKI, "rp-verify.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"),
+    );
+    const reg = new PassRegistry(signer, undefined, "verify.tamga.network");
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    const pres = await fakePresentation(keys, "holder");
+    const passRef = newPassKeyRef(nodeRandom);
+    expect(isPassKeyRef(passRef)).toBe(true);
+    await keys.generate(passRef);
+    const nonce = "n-123";
+    const proof = await makePassKeyProof({ keys, ref: passRef, clientId: signer.clientId, nonce });
+    const { record, jws } = await reg.issue({
+      presentation: pres,
+      presentationId: "prs_pk",
+      policy: { terminal_group: "g1", valid_days: 30 },
+      passKey: { jws: proof, nonce },
+    });
+    expect(record.cnfKid).not.toBe(holderCnfOf(pres).kid);
+    const grant = parsePassGrant(jws, { rpClientId: CLIENT, rpName: "Test", credentialId: "c1", keyRef: passRef });
+    expect(
+      (await reg.verifyToken((await mintPassToken(grant, keys, nodeRandom)).token, { terminalGroup: "g1" })).ok,
+    ).toBe(true);
+    // belge anahtarıyla imzalanmış jeton bu karta uymaz
+    const withHolder = await mintPassToken({ ...grant, keyRef: "holder" }, keys, nodeRandom);
+    expect((await reg.verifyToken(withHolder.token, { terminalGroup: "g1" })).ok).toBe(false);
+    // yanlış nonce / aud → kanıt reddedilir (sunum kabulü ayrı; kart verilmez)
+    await expect(
+      reg.issue({
+        presentation: pres,
+        presentationId: "prs_pk2",
+        policy: { terminal_group: "g1", valid_days: 30 },
+        passKey: { jws: proof, nonce: "other" },
+      }),
+    ).rejects.toThrow(/nonce/);
+    const foreign = await makePassKeyProof({ keys, ref: passRef, clientId: "x509_hash:other", nonce });
+    await expect(
+      reg.issue({
+        presentation: pres,
+        presentationId: "prs_pk3",
+        policy: { terminal_group: "g1", valid_days: 30 },
+        passKey: { jws: foreign, nonce },
+      }),
+    ).rejects.toThrow(/aud/);
   });
 
   it("dosya deposu: kayıtlar ve tekrar listesi yeniden başlatmada korunur", async () => {

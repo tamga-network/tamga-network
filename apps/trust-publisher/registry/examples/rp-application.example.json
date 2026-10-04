@@ -9,9 +9,7 @@
     "tr-TR": "Öğrenci indirimi sunan çevrim içi mağaza."
   },
   "is_public_sector_body": false,
-  "entitlements": [
-    "service_provider"
-  ],
+  "entitlements": ["service_provider"],
   "scopes": [
     {
       "scope_id": "student-discount-1",
@@ -20,9 +18,7 @@
         "tr-TR": "Öğrenci indirimi"
       },
       "vct": "urn:tamga:edu:StudentCredential:1",
-      "claims": [
-        "is_enrolled"
-      ],
+      "claims": ["is_enrolled"],
       "privacy_policy_uri": "https://shop.example.com/privacy"
     }
   ],

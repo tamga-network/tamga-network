@@ -44,7 +44,7 @@
       "assurance_basis": "Foundation university; recognition by the Council of Higher Education (YÖK) is public. Identity proofing: institution registrar desk or presentation of a Tamga Identity Attestation (T2).",
       "issuer_url": "https://issuer.tamga.network/bilgi",
       "status_list_base": "https://status.tamga.network/",
-      "status": "REVOKED",
+      "status": "ACTIVE",
       "valid_from": "2026-09-24T00:00:00Z",
       "valid_until": "2028-09-24T00:00:00Z",
       "successor_id": null,
@@ -53,12 +53,6 @@
           "status": "ACTIVE",
           "since": "2026-09-24T00:00:00Z",
           "reason": "initial-registration"
-        },
-        {
-          "status": "REVOKED",
-          "since": "2026-10-04T16:49:37.992Z",
-          "reason": "demonstration registration withdrawn from the production network (moved to the sandbox network)",
-          "invalidates_from": "2026-09-24T00:00:00Z"
         }
       ],
       "schema_authorizations": [
@@ -66,13 +60,13 @@
           "vct": "urn:tamga:edu:StudentCredential:1",
           "allowed": true,
           "valid_from": "2026-09-24T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:37.992Z"
+          "valid_until": null
         },
         {
           "vct": "urn:tamga:edu:DiplomaCredential:1",
           "allowed": true,
           "valid_from": "2026-09-24T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:37.992Z"
+          "valid_until": null
         }
       ],
       "authentic_source": {
@@ -163,7 +157,7 @@
       "assurance_basis": "Ticket seller; Tamga hosts the issuing service, the seller is the issuer in the trusted list. Tickets carry no personal data (T0).",
       "issuer_url": "https://issuer.tamga.network/bubilet",
       "status_list_base": "https://status.tamga.network/",
-      "status": "REVOKED",
+      "status": "ACTIVE",
       "valid_from": "2026-09-26T00:00:00Z",
       "valid_until": "2028-09-26T00:00:00Z",
       "successor_id": null,
@@ -172,12 +166,6 @@
           "status": "ACTIVE",
           "since": "2026-09-26T00:00:00Z",
           "reason": "initial-registration (D10 bilet)"
-        },
-        {
-          "status": "REVOKED",
-          "since": "2026-10-04T16:49:40.045Z",
-          "reason": "demonstration registration withdrawn from the production network (moved to the sandbox network)",
-          "invalidates_from": "2026-09-26T00:00:00Z"
         }
       ],
       "schema_authorizations": [
@@ -185,7 +173,7 @@
           "vct": "urn:tamga:tkt:EventTicket:1",
           "allowed": true,
           "valid_from": "2026-09-26T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:40.045Z"
+          "valid_until": null
         }
       ],
       "authentic_source": {
@@ -225,7 +213,7 @@
             "given_name"
           ],
           "valid_from": "2026-09-24T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:44.098Z"
+          "valid_until": "2027-09-24T00:00:00Z"
         },
         {
           "scope_id": "student-discount-1",
@@ -235,12 +223,9 @@
             "tk-TM": "Talyp arzanladyşy"
           },
           "vct": "urn:tamga:edu:StudentCredential:1",
-          "claims": [
-            "is_enrolled",
-            "awarding_body_name"
-          ],
+          "claims": ["is_enrolled", "awarding_body_name"],
           "valid_from": "2026-09-24T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:46.049Z"
+          "valid_until": "2027-09-24T00:00:00Z"
         },
         {
           "scope_id": "campus-access-1",
@@ -250,11 +235,9 @@
             "tk-TM": "Kampusa giriş (turniket) — geçiş kartyny hasaba almak"
           },
           "vct": "urn:tamga:edu:StudentCredential:1",
-          "claims": [
-            "is_enrolled"
-          ],
+          "claims": ["is_enrolled"],
           "valid_from": "2026-09-25T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:47.925Z"
+          "valid_until": "2027-09-25T00:00:00Z"
         },
         {
           "scope_id": "event-tamga-id-1",
@@ -266,7 +249,7 @@
           "vct": "urn:tamga:id:IdentityAttestation:1",
           "claims": [],
           "valid_from": "2026-09-25T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:49.886Z"
+          "valid_until": "2027-09-25T00:00:00Z"
         },
         {
           "scope_id": "site-signup-1",
@@ -276,10 +259,7 @@
             "tk-TM": "Saýta agza bolmak — ady, familiýasy (saýt özüne degişli lakamy alýar)"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": [
-            "given_name",
-            "family_name"
-          ],
+          "claims": ["given_name", "family_name"],
           "valid_from": "2026-09-25T00:00:00Z",
           "valid_until": "2027-09-25T00:00:00Z"
         },
@@ -291,12 +271,9 @@
             "tk-TM": "Çäre derwezesi — bilet geçiş kartysy (bir gezeklik)"
           },
           "vct": "urn:tamga:tkt:EventTicket:1",
-          "claims": [
-            "event_id",
-            "ticket_class"
-          ],
+          "claims": ["event_id", "ticket_class"],
           "valid_from": "2026-09-26T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:51.829Z"
+          "valid_until": "2027-09-26T00:00:00Z"
         },
         {
           "scope_id": "age-over-18-1",
@@ -306,9 +283,7 @@
             "tk-TM": "18 ýaşdan ulydygyny barlamak — diňe hawa/ýok"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": [
-            "age_over_18"
-          ],
+          "claims": ["age_over_18"],
           "valid_from": "2026-09-26T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z"
         },
@@ -320,12 +295,9 @@
             "tk-TM": "Awtoulag kärendesi — sürüjilik şahadatnamasynyň derejeleri we 18 ýaşdan uly (barlanan sürüjilik şahadatnamasy maglumaty; resmi sürüjilik şahadatnamasynyň ornuny tutmaýar)"
           },
           "vct": "urn:tamga:id:DrivingLicenceAttestation:1",
-          "claims": [
-            "driving_privileges",
-            "age_over_18"
-          ],
+          "claims": ["driving_privileges", "age_over_18"],
           "valid_from": "2026-10-04T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:53.764Z"
+          "valid_until": "2027-10-04T00:00:00Z"
         }
       ],
       "terminal_groups": [
@@ -333,15 +305,13 @@
           "group_id": "bilgi-campus",
           "label": "İstanbul Bilgi Üniversitesi campus turnstiles",
           "offline_allowed": true,
-          "valid_from": "2026-09-25T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:55.673Z"
+          "valid_from": "2026-09-25T00:00:00Z"
         },
         {
           "group_id": "bubilet-gate",
           "label": "Bubilet event gates — single-use ticket entry",
           "offline_allowed": false,
-          "valid_from": "2026-09-26T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:57.611Z"
+          "valid_from": "2026-09-26T00:00:00Z"
         }
       ],
       "trade_name": "Tamga Verify",
@@ -355,9 +325,7 @@
         "tr-TR": "Barındırılan doğrulama hizmeti: siteler ve kapılar Tamga belgelerini saklamadan doğrular."
       },
       "is_public_sector_body": false,
-      "entitlements": [
-        "service_provider"
-      ],
+      "entitlements": ["service_provider"],
       "supervisory_authority": {
         "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
         "country": "TR",
@@ -369,17 +337,12 @@
       "access_cert": "rp-issuer-bilgi",
       "dns_name": "issuer.tamga.network",
       "legal_name": "İstanbul Bilgi Üniversitesi — identity matching at issuance",
-      "status": "REVOKED",
+      "status": "ACTIVE",
       "registered_at": "2026-09-25T00:00:00Z",
       "status_history": [
         {
           "status": "ACTIVE",
           "since": "2026-09-25T00:00:00Z"
-        },
-        {
-          "status": "REVOKED",
-          "since": "2026-10-04T16:49:42.130Z",
-          "reason": "demonstration registration withdrawn from the production network (moved to the sandbox network)"
         }
       ],
       "scopes": [
@@ -391,14 +354,9 @@
             "tk-TM": "Resminama bermek üçin şahsyýeti deňeşdirmek: şahsyýet belgisi we doglan senesi edaranyň ýazgysy bilen deňeşdirilýär, saklanmaýar"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": [
-            "personal_administrative_number",
-            "birth_date",
-            "given_name",
-            "family_name"
-          ],
+          "claims": ["personal_administrative_number", "birth_date", "given_name", "family_name"],
           "valid_from": "2026-09-25T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:42.130Z"
+          "valid_until": "2027-09-25T00:00:00Z"
         }
       ]
     }

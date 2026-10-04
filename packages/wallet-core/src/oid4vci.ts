@@ -346,6 +346,8 @@ export interface ObtainInput {
   /** ADR-0023: token yanıtındaki yenileme belirteci — varsa DPoP anahtarı silinmez, belgeyle saklanır */
   refreshToken?: string;
   tokenEndpoint?: string;
+  /** ADR-0023 sessiz yenileme: `dpop` belgeye bağlı kalıcı anahtardır — hata olsa da silinmez (yenileme bağı kopmasın) */
+  retainDpop?: boolean;
 }
 
 /** credential_reuse_policy (ETSI TS 119 472-3 §4.2.4.2) → yenileme eşikleri */
@@ -454,7 +456,7 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
     for (const c of copies) await p.keys.delete(c.keyRef).catch(() => {});
     throw e;
   } finally {
-    if (p.dpop && !keepDpop) await p.keys.delete(p.dpop.ref).catch(() => {});
+    if (p.dpop && !keepDpop && !p.retainDpop) await p.keys.delete(p.dpop.ref).catch(() => {});
   }
 }
 

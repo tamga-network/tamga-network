@@ -14,23 +14,15 @@
         "StreetAddress": "(to be published)",
         "Country": "TR"
       },
-      "electronic": [
-        "mailto:info@tamga.network",
-        "https://tamga.network"
-      ],
-      "info": [
-        "https://tamga.network",
-        "https://arf.tamga.network"
-      ]
+      "electronic": ["mailto:info@tamga.network", "https://tamga.network"],
+      "info": ["https://tamga.network", "https://arf.tamga.network"]
     }
   },
   "catalogue": {
     "note": "Type Metadata resolution path (IETF SD-JWT VC §5.3.2). vct URNs are resolved here.",
     "url": "https://schemas.tamga.network/v1/catalogue.json"
   },
-  "anchor_signing_certs": [
-    "tl-signer-1"
-  ],
+  "anchor_signing_certs": ["tl-signer-1"],
   "national_lists": [
     {
       "state_code": "TR",
@@ -42,16 +34,12 @@
         "status": "provisional",
         "on_behalf_of": "Test network — not part of the Tamga Network trust framework (ADR-0038)"
       },
-      "signing_certs": [
-        "tl-signer-1"
-      ],
+      "signing_certs": ["tl-signer-1"],
       "roles": {
         "registrar": {
           "status": "PROVISIONAL",
           "operated_by": "Tamga Network Sandbox (TEST)",
-          "signing_certs": [
-            "registrar-1"
-          ]
+          "signing_certs": ["registrar-1"]
         },
         "tlso": {
           "status": "PROVISIONAL",
@@ -72,9 +60,7 @@
       },
       "recognition": {
         "mode": "unilateral",
-        "recognizes": [
-          "TR"
-        ]
+        "recognizes": ["TR"]
       }
     }
   ],
@@ -86,9 +72,7 @@
     {
       "provider_id": "TAMGA-SANDBOX-WP",
       "legal_name": "Tamga Network Sandbox (TEST)",
-      "wua_signing_certs": [
-        "wallet-provider"
-      ],
+      "wua_signing_certs": ["wallet-provider"],
       "solutions": [
         {
           "solution_id": "tamga-wallet-expo",

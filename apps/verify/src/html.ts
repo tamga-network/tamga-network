@@ -322,6 +322,112 @@ export function policiesPage(
   );
 }
 
+const DOCS = "https://docs.tamga.network";
+const HOME = {
+  en: {
+    title: "Hosted verifier",
+    eyebrow: "Relying party · OpenID4VP · hosted verifier",
+    lede: "Tamga Verify checks Tamga credentials for sites, apps and gates without storing them. A registered site opens a presentation request; the person approves only the fields that the site's registered purpose allows; the result is one of three — valid, invalid or could not verify — and the values go once, only to the site that asked.",
+    how: "How it works",
+    howItems: [
+      "Each request stays within a purpose registered for the site in the trusted list; anything beyond it is refused before the request is made.",
+      "The credential is checked against the signed trusted list, the issuer's status list and the wallet's key.",
+      "Nothing is kept: no credential, no field values, no IP address in the logs.",
+    ],
+    dev: "For developers",
+    links: [
+      ["guides/sign-in-with-tamga", "Sign in with Tamga", "add sign-up / sign-in to a website"],
+      ["guides/verify-on-server", "Verify on your server", "run the checks yourself with @tamga-network/verifier"],
+      ["guides/register-verifier", "Register as a verifier", "get listed with your purposes"],
+    ],
+    api: "Hosted Verifier API",
+    apiNote: "OpenAPI reference",
+    tryTitle: "Try it",
+    tryText:
+      "There are no demos on the live network. Sample institutions, test people and ready-made scenarios (campus, tickets, sign-up) are in the sandbox.",
+    tryBtn: "Open the sandbox",
+    rp: "Relying party",
+    reg: "Registered",
+    unreg: "Unregistered",
+    notListed: "not in the trusted list",
+    scopes: "Scopes",
+    scopesNote: "registered purposes",
+    list: "Trusted list",
+    cache: "Status cache",
+    cacheNote: "lists prefetched",
+    pathPrefix: "en/",
+  },
+  tr: {
+    title: "Barındırılan doğrulayıcı",
+    eyebrow: "Doğrulayıcı · OpenID4VP · barındırılan doğrulayıcı",
+    lede: "Tamga Verify, siteler, uygulamalar ve kapılar için Tamga belgelerini saklamadan doğrular. Kayıtlı bir site sunum isteği açar; kişi yalnız sitenin kayıtlı amacının izin verdiği alanları onaylar; sonuç üç değerden biridir — geçerli, geçersiz ya da doğrulanamadı — ve değerler yalnız soran siteye, bir kez gider.",
+    how: "Nasıl çalışır",
+    howItems: [
+      "Her istek, sitenin güven listesindeki kayıtlı amacıyla sınırlıdır; fazlası istek yapılmadan reddedilir.",
+      "Belge imzalı güven listesine, kurumun iptal listesine ve cüzdanın anahtarına karşı denetlenir.",
+      "Hiçbir şey saklanmaz: belge yok, alan değeri yok, kayıtlarda IP adresi yok.",
+    ],
+    dev: "Geliştiriciler için",
+    links: [
+      ["guides/sign-in-with-tamga", "Tamga ile giriş", "web sitesine kayıt / giriş ekleyin"],
+      ["guides/verify-on-server", "Kendi sunucunuzda doğrulayın", "denetimleri @tamga-network/verifier ile siz yapın"],
+      ["guides/register-verifier", "Doğrulayıcı olarak kaydolun", "amaçlarınızla listeye girin"],
+    ],
+    api: "Hosted Verifier API",
+    apiNote: "OpenAPI başvurusu",
+    tryTitle: "Deneyin",
+    tryText:
+      "Gerçek ağda deneme yoktur. Örnek kurumlar, test kişileri ve hazır senaryolar (kampüs, bilet, kayıt) sandbox'tadır.",
+    tryBtn: "Sandbox'ı aç",
+    rp: "Doğrulayıcı",
+    reg: "Kayıtlı",
+    unreg: "Kayıtsız",
+    notListed: "güven listesinde yok",
+    scopes: "Amaçlar",
+    scopesNote: "kayıtlı amaç",
+    list: "Güven listesi",
+    cache: "Durum önbelleği",
+    cacheNote: "liste önceden çekildi",
+    pathPrefix: "",
+  },
+} as const;
+
+/**
+ * Gerçek ağ ana sayfası (2026-10-04): deneme paneli yok — Tamga Verify'ın ne olduğu, geliştirici bağlantıları ve
+ * "denemek için sandbox". Politika listesi API'dedir (/policies); inceleme politikaları vitrin olarak gösterilmez.
+ */
+export function homePage(
+  lang: Lang,
+  rp: RelyingParty | null | undefined,
+  trust: { version: number; source: string },
+  cachedLists: number,
+  sandboxHref: string,
+) {
+  const h = HOME[lang];
+  const rpState = rp
+    ? `${rp.status === "ACTIVE" ? `<span class="pill">${h.reg}</span>` : `<span class="pill warn">${esc(rp.status)}</span>`}<small>${esc(rp.legal_name)}</small>`
+    : `<span class="pill bad">${h.unreg}</span><small>${h.notListed}</small>`;
+  const links = h.links
+    .map(
+      ([path, name, note]) =>
+        `<li><a href="${DOCS}/${h.pathPrefix}${path}">${esc(name)}</a> — <span class="muted">${esc(note)}</span></li>`,
+    )
+    .join("");
+  return page(
+    lang,
+    h.title,
+    `<p class="eyebrow">${h.eyebrow}</p><h1>Tamga Verify</h1>
+<p class="lede">${esc(h.lede)}</p>
+<dl class="status" style="margin-top:32px"><div><dt>${h.rp}</dt><dd>${rpState}</dd></div>
+<div><dt>${h.scopes}</dt><dd>${rp ? rp.scopes.length : 0}<small>${h.scopesNote}</small></dd></div>
+<div><dt>${h.list}</dt><dd>v${trust.version}<small>${esc(trust.source)}</small></dd></div>
+<div><dt>${h.cache}</dt><dd>${cachedLists}<small>${h.cacheNote}</small></dd></div></dl>
+<section><h2>${h.how}</h2><ul>${h.howItems.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></section>
+<section><h2>${h.dev}</h2><ul>${links}<li><a href="${DOCS}/api/">${h.api}</a> — <span class="muted">${h.apiNote}</span> · <a href="/policies">/policies</a> (JSON)</li></ul></section>
+<section id="sandbox"><h2>${h.tryTitle}</h2><p class="sub">${esc(h.tryText)}</p><a class="btn" href="${esc(sandboxHref)}">${h.tryBtn}</a></section>`,
+  );
+}
+
 export function pendingPage(lang: Lang, p: Presentation, id: string, qrDataUrl: string) {
   const t = T[lang];
   const left = Math.max(0, p.req.expiresAt - Math.floor(Date.now() / 1000));
@@ -437,6 +543,38 @@ document.getElementById("pklogin").onclick=pkLogin;
 }
 
 /** ADR-0012 B: turnike/terminal sayfası (kamera: BarcodeDetector; yoksa jsQR; yoksa yapıştır). */
+/**
+ * ADR-0033: mağaza inceleyicisinin doğrudan bağlantısı (/app-review) — yalnız inceleme politikaları; ana sayfadan bağlanmaz,
+ * arama motorlarına kapalı (noindex). Düğme sunum isteğini açar ve bekleme sayfasına (QR) gider.
+ */
+export function appReviewPage(lang: Lang, policies: Policy[]) {
+  const tr = lang === "tr";
+  const rows = policies
+    .map(
+      (p) =>
+        `<tr><td><b>${esc(purposeOf(p, lang))}</b><br><span class="mono small muted">${esc(p.policy_id)}</span></td><td><form method="post" action="/presentations"><input type="hidden" name="policy_id" value="${esc(p.policy_id)}"><button class="btn secondary">${tr ? "QR oluştur" : "Create QR"}</button></form></td></tr>`,
+    )
+    .join("");
+  return page(
+    lang,
+    tr ? "Uygulama incelemesi" : "App review",
+    `<h1>${tr ? "Uygulama incelemesi" : "App review"}</h1>
+<p class="lede">${tr ? "Yalnız mağaza incelemesi içindir: inceleme kodu ile alınan DEMO kimlik belgesini kabul eder; gerçek doğrulamalarda kullanılmaz." : "For app store review only: accepts the DEMO identity credential obtained with the review code; not used for real checks."}</p>
+<div class="table-wrap"><table><tbody>${rows}</tbody></table></div>`,
+    '<meta name="robots" content="noindex, nofollow">',
+  );
+}
+
+/** Kapı politikası olmayan ağda /terminal: nötr bilgi (kapı denemesi sandbox'ta). */
+export const noTerminalPage = (lang: Lang) =>
+  page(
+    lang,
+    lang === "tr" ? "Kapı doğrulaması" : "Gate check",
+    lang === "tr"
+      ? `<div class="panel"><h2>Bu ağda kapı doğrulaması yok.</h2><p class="muted">Turnike ve bilet kapısı senaryoları sandbox'ta denenir.</p></div>`
+      : `<div class="panel"><h2>No gate checks on this network.</h2><p class="muted">Turnstile and ticket gate scenarios can be tried in the sandbox.</p></div>`,
+  );
+
 export function terminalPage(lang: Lang, group: string) {
   const t = T[lang];
   return page(

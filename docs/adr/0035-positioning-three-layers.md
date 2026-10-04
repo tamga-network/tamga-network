@@ -4,7 +4,7 @@ title: "Konumlanma"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Tamga üç katmanda konumlanır: (1) taban — bütün belgeler, protokoller ve güven listeleri AB (eIDAS 2.0 / EUDI)
   standartlarında; (2) Tamga Network — Türk dünyası için hafif bir güven federasyonu: ülke listelerini toplar ve birbirine tanıtır,
@@ -12,6 +12,9 @@ summary: >
   (ağın ilk ve referans cüzdanı, her uyumlu ortamda çalışır) ve kurumlara hizmetler (Kurum Konsolu, Tamga Verify, entegrasyon, destek).
 domain: Governance
 ---
+
+> **[[ADR-0037]] ile kısmen değiştirildi (2026-10-02):** üçüncü katmandaki hizmetler ağın dışına, ayrı bir şirkete
+> taşındı; Tamga Network yalnızca ağdır ve hizmet satmaz. Taban (AB uyumu), federasyon katmanı ve PO1–PO4 geçerlidir.
 
 # Bağlam
 

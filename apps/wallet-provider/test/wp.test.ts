@@ -26,7 +26,7 @@ import {
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
-const DIST = resolve(ROOT, "apps/trust-publisher/dist");
+const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
 const ready = existsSync(resolve(PKI, "wallet-provider.pkcs8.pem")) && existsSync(resolve(DIST, "lotl.jws"));
 const BASE = "http://wp.local";
 const ISSUER = "https://issuer.tamga.network/bilgi";

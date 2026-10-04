@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -113,7 +113,10 @@ CHANGELOG.md                  herkese açık değişiklik günlüğü
 
 Statü sözlüğü: `ACTIVE | SUSPENDED | REVOKED | RETIRED` (+ kök: `ROLLING_OVER`). Geçmiş silinmez; doğrulama
 `status_history`'ye belgenin `iat`'ı ile bakar (D-BC-3, [[SPEC-BC-0001]]/I2–I3). `REVOKED` kurumun listesini halefi
-(`successor_id`) yayınlayabilir (I4). Operatör aracı: `trust-publisher status <slug> <STATUS> --reason r`.
+(`successor_id`) yayınlayabilir (I4). Operatör aracı: `trust-publisher status <slug> <STATUS> --reason r`
+(`REVOKED --invalidates-from <tarih>`: o andan sonra verilmiş belgeler düşer; `valid_from` = kurumun bütün belgeleri),
+doğrulayıcı için `rp-status <dns_name> <STATUS>`, tek kullanım ya da kapı grubu için `end-use <dns_name> <id>` (bitiş tarihi).
+Kayıt listeden çıkarılmaz (TL2); geri çekilen kurum ETSI izdüşümünde `withdrawn` olur ve LoTE'ye girmez.
 
 ---
 

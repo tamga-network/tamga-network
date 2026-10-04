@@ -4,11 +4,12 @@ title: "Add “Sign in with Tamga”"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Adding sign-up and sign-in with Tamga to a website: the `@tamga-network/verifier/web` kit on the page (QR code / open the
   wallet on the phone), fetching the result from the verifier on the server and opening a session, and passkey sign-in without
-  the phone after sign-up. Working example: verify.tamga.network/sample-site (apps/verify/src/routes/site.ts).
+  the phone after sign-up. Working example in the
+  sandbox: verify.sandbox.tamga.network/sample-site (apps/verify/src/routes/site.ts).
 translation_of: GUIDE-0001
 source_version: 1.0.0
 ---
@@ -20,6 +21,9 @@ This guide is for developers who want to add sign-up and sign-in with Tamga Wall
 
 **When to read:** when you want password-free sign-up and sign-in with a phone on your site. Take a look at [[GUIDE-0000]]
 first. If you would rather do the whole verification on your own server, go to [[GUIDE-0002]].
+
+**To try it:** the working sample site is on the test network: `https://verify.sandbox.tamga.network/sample-site` (once the
+sandbox is live; addresses and the test wallet setting are in [[GUIDE-0013]]). Tamga Verify on the real network has no sample site.
 
 ## How it works
 

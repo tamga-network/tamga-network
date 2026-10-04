@@ -30,11 +30,15 @@ const TRUST_REVIEW: Policy["trust"] = {
   require_recognition: true,
   state_code: "TR",
 };
-/** ADR-0038: kapı grubu adları ortamdan (sandbox kendi örnek kurumlarının gruplarını kullanır); varsayılan gerçek ağ. */
-export const CAMPUS_GROUP = process.env.TAMGA_VERIFY_CAMPUS_GROUP ?? "bilgi-campus";
+/**
+ * ADR-0038: kapı grubu adları ortamdan; varsayılan sandbox örnek kurumlarının grupları. Kapı politikaları kurgusal senaryodur ve
+ * yalnız sandbox'ta yüklenir (2026-10-04) — gerçek ağda kapı grubu yoktur.
+ */
+export const CAMPUS_GROUP = process.env.TAMGA_VERIFY_CAMPUS_GROUP ?? "istanbul-bilgi-campus";
 export const TICKET_GROUP = process.env.TAMGA_VERIFY_TICKET_GROUP ?? "bubilet-gate";
 const FRESH: Policy["freshness"] = { max_status_token_age_sec: 6 * 3600, max_trust_age_sec: 24 * 3600 };
 
+/** Bütün politikalar (iki ağın birleşimi). Bir sürecin kullandığı küme: `policiesFor(ağ)`. */
 export const POLICIES: Policy[] = [
   {
     policy_id: "job-application-degree",
@@ -256,16 +260,35 @@ POLICIES.push(
   },
 );
 
-export const findPolicy = (id: string | undefined) => POLICIES.find((p) => p.policy_id === id);
+/**
+ * Politika kümeleri ortama göre (ADR-0038; 2026-10-04 "gerçek ağda test/demo kalmaz"):
+ *  - GENEL (her iki ağ, API): yaş doğrulaması ve "Tamga ile kayıt ol / giriş yap" — gerçek sitelerin kullanacağı amaçlar.
+ *  - İNCELEME (her iki ağ): ADR-0033 mağaza incelemesi; gerçek ağda kalır ama ana sayfada vitrin olarak gösterilmez.
+ *  - SENARYO (yalnız sandbox): kurgusal doğrulayıcı senaryoları (kampüs, bilet, indirim, işe alım, araç kiralama …).
+ */
+export const GENERAL_POLICY_IDS = ["age-over-18-mdoc", "age-over-18-zk", "site-signup", "site-signin"] as const;
+export const REVIEW_POLICY_IDS = ["review-age-over-18", "review-site-signup"] as const;
+const PRODUCTION_IDS = new Set<string>([...GENERAL_POLICY_IDS, ...REVIEW_POLICY_IDS]);
+export const isScenarioPolicy = (p: Policy) => !PRODUCTION_IDS.has(p.policy_id);
+export const isReviewPolicy = (p: Policy) => (REVIEW_POLICY_IDS as readonly string[]).includes(p.policy_id);
+
+/** Sürecin politika kümesi: gerçek ağda genel + inceleme; sandbox'ta hepsi (senaryolar dahil). */
+export const policiesFor = (network: "production" | "sandbox" | undefined): Policy[] =>
+  network === "sandbox" ? POLICIES : POLICIES.filter((p) => !isScenarioPolicy(p));
+
+export const findPolicy = (id: string | undefined, policies: Policy[] = POLICIES) =>
+  policies.find((p) => p.policy_id === id);
 
 /** Cüzdanın "Kontrol ettir" ekranı için özet (kişisel veri yok). Yalnız takma adla giriş politikaları (belge yok) listelenmez. */
-export const policySummaries = () =>
-  POLICIES.filter((p) => p.credentials.length > 0).map((p) => ({
-    policy_id: p.policy_id,
-    purpose: p.purpose["en-US"],
-    purpose_localized: p.purpose,
-    vct_values: p.credentials.flatMap((c) => c.vct_values),
-    claims: p.credentials.flatMap((c) => c.required_claims),
-    proximity: !!p.proximity,
-    format: p.credentials[0]?.format ?? "dc+sd-jwt",
-  }));
+export const policySummaries = (policies: Policy[] = POLICIES) =>
+  policies
+    .filter((p) => p.credentials.length > 0)
+    .map((p) => ({
+      policy_id: p.policy_id,
+      purpose: p.purpose["en-US"],
+      purpose_localized: p.purpose,
+      vct_values: p.credentials.flatMap((c) => c.vct_values),
+      claims: p.credentials.flatMap((c) => c.required_claims),
+      proximity: !!p.proximity,
+      format: p.credentials[0]?.format ?? "dc+sd-jwt",
+    }));

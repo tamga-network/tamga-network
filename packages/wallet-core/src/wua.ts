@@ -41,7 +41,7 @@ export async function requestWua(p: {
   platform: string;
 }): Promise<WuaRecord> {
   const ref = p.keyRef ?? WUA_INSTANCE_REF;
-  const jwk = (await p.keys.publicKey(ref)) ?? (await p.keys.generate(ref));
+  const jwk = (await p.keys.publicKey(ref)) ?? (await p.keys.generate(ref, undefined, { policy: "device_unlocked" }));
   const att = await p.keys.attestation();
   const r = await p.http(`${p.providerBase.replace(/\/$/, "")}/wua`, {
     method: "POST",
@@ -137,7 +137,8 @@ async function unitProof(
   action: string,
   extra: Record<string, unknown> = {},
 ): Promise<string> {
-  const jwk = (await p.keys.publicKey(UNIT_REF)) ?? (await p.keys.generate(UNIT_REF));
+  const jwk =
+    (await p.keys.publicKey(UNIT_REF)) ?? (await p.keys.generate(UNIT_REF, undefined, { policy: "device_unlocked" }));
   const now = p.now ?? Math.floor(Date.now() / 1000);
   const header = action === "register" ? { typ: UNIT_POP_TYP, jwk } : { typ: UNIT_POP_TYP, kid: thumb(jwk) };
   return signJwt(
@@ -159,6 +160,28 @@ async function postJson(http: Http, url: string, body: unknown) {
 const failed = (what: string, b: Record<string, unknown>, status: number) =>
   new WalletError("issuer_error", `${what}: ${String(b.error_description ?? b.error ?? status)}`);
 
+/**
+ * Cihaz kanıtının sonucu (sağlayıcı yanıtı `attestation`): `hardware` = platform kanıtı doğrulandı, birim anahtarı güvenli
+ * donanımda; `software` = kanıt sunuldu ama kullanılamadı (neden `reason`), birim yazılım seviyesinde (S-9); `none` = kanıt
+ * sunulmadı (Expo Go, yerel modül yok). Kayıt hiçbir durumda reddedilmez; seviye KA'da `key_storage` ile dürüstçe söylenir (WIA3).
+ */
+export type AttestationLevel = "none" | "software" | "hardware";
+/**
+ * `not_configured` = sağlayıcı o platform için ayarlı değil (App ID / kökler yok); `invalid` = kanıt doğrulanamadı (zincir, meydan
+ * okuma, anahtar, uygulama kimliği); `unsupported` = kanıt biçimi tanınmıyor ya da cihaz durumu desteklenmiyor (kilidi açık cihaz,
+ * geliştirme ortamı, donanımsız anahtar). Kişisel ya da cihaz verisi taşımaz.
+ */
+export type AttestationReason = "not_configured" | "invalid" | "unsupported";
+const ATT_LEVELS: ReadonlySet<string> = new Set<AttestationLevel>(["none", "software", "hardware"]);
+const ATT_REASONS: ReadonlySet<string> = new Set<AttestationReason>(["not_configured", "invalid", "unsupported"]);
+
+export interface UnitRegistration {
+  unitId: string;
+  keyStorage?: KeyStorage;
+  attestation?: AttestationLevel;
+  reason?: AttestationReason;
+}
+
 /** Cüzdan birimini sağlayıcıya kaydeder (ilk kurulum; tekrar çağrılabilir). */
 export async function registerUnit(p: {
   providerBase: string;
@@ -171,44 +194,50 @@ export async function registerUnit(p: {
   /**
    * P4-2 cihaz kanıtı. Verilirse sağlayıcıdan tek kullanımlık meydan okuma alınır; birim anahtarı (yoksa) bu meydan okumayla
    * üretilir (Android anahtar kanıtı) ve dönen kanıt kayıtla gönderilir (Android: key_attestation; iOS: App Attest).
-   * Kanıt doğrulanmazsa sağlayıcı reddeder; cüzdan kanıtsız (yazılım seviyesi) yeniden dener.
+   * Kanıt doğrulanmazsa kayıt yine yapılır: birim yazılım seviyesinde kalır, yanıt `attestation` + `reason` söyler.
    */
   deviceEvidence?: (ctx: { challenge: string; unitThumbprint: string }) => Promise<DeviceEvidence | undefined>;
-}): Promise<{ unitId: string; keyStorage?: string }> {
-  const register = async (withDevice: boolean) => {
-    let challenge: string | undefined;
-    if (withDevice && p.deviceEvidence) {
-      const c = await postJson(p.http, `${base(p.providerBase)}/units/challenge`, {});
-      if (c.status === 200 && typeof c.body.challenge === "string") challenge = c.body.challenge;
-    }
-    if (!(await p.keys.publicKey(UNIT_REF)))
-      await p.keys.generate(UNIT_REF, challenge ? b64uDecode(challenge) : undefined);
-    const jwk = (await p.keys.publicKey(UNIT_REF))!;
-    const evidence =
-      challenge && p.deviceEvidence ? await p.deviceEvidence({ challenge, unitThumbprint: thumb(jwk) }) : undefined;
-    const proof = await unitProof(p, "register", {
-      solution_id: p.solutionId ?? "tamga-wallet-expo",
-      app_version: p.appVersion,
-      platform: p.platform,
-      ...(evidence ? { challenge } : {}),
-    });
-    return postJson(p.http, `${base(p.providerBase)}/units`, {
-      proof,
-      ...(evidence ? { device_evidence: evidence } : {}),
-    });
-  };
-  let r = await register(true);
-  if (r.status === 400 && r.body.error === "device_attestation_failed") r = await register(false);
+}): Promise<UnitRegistration> {
+  let challenge: string | undefined;
+  if (p.deviceEvidence) {
+    const c = await postJson(p.http, `${base(p.providerBase)}/units/challenge`, {});
+    if (c.status === 200 && typeof c.body.challenge === "string") challenge = c.body.challenge;
+  }
+  if (!(await p.keys.publicKey(UNIT_REF)))
+    // a3: birim anahtarı kişiyi temsil etmez → kilide bağlı, istem gerektirmez (arka plan kayıt/WIA akışları sessiz)
+    await p.keys.generate(UNIT_REF, challenge ? b64uDecode(challenge) : undefined, { policy: "device_unlocked" });
+  const jwk = (await p.keys.publicKey(UNIT_REF))!;
+  const evidence =
+    challenge && p.deviceEvidence ? await p.deviceEvidence({ challenge, unitThumbprint: thumb(jwk) }) : undefined;
+  const proof = await unitProof(p, "register", {
+    solution_id: p.solutionId ?? "tamga-wallet-expo",
+    app_version: p.appVersion,
+    platform: p.platform,
+    ...(evidence ? { challenge } : {}),
+  });
+  const r = await postJson(p.http, `${base(p.providerBase)}/units`, {
+    proof,
+    ...(evidence ? { device_evidence: evidence } : {}),
+  });
   if (r.status !== 201 && r.status !== 200) throw failed("wallet unit registration failed", r.body, r.status);
+  const b = r.body;
   return {
-    unitId: String(r.body.unit_id),
-    ...(typeof r.body.key_storage === "string" ? { keyStorage: r.body.key_storage } : {}),
+    unitId: String(b.unit_id),
+    ...(typeof b.key_storage === "string" ? { keyStorage: b.key_storage as KeyStorage } : {}),
+    ...(typeof b.attestation === "string" && ATT_LEVELS.has(b.attestation)
+      ? { attestation: b.attestation as AttestationLevel }
+      : {}),
+    ...(typeof b.reason === "string" && ATT_REASONS.has(b.reason) ? { reason: b.reason as AttestationReason } : {}),
   };
 }
 
-/** P4-2: sağlayıcıya giden cihaz kanıtı (Android anahtar kanıtı zinciri ya da Apple App Attest). */
+/**
+ * P4-2: sağlayıcıya giden cihaz kanıtı (Android anahtar kanıtı zinciri ya da Apple App Attest). `play_integrity` (a2, zorunlu
+ * değil): Android Play Integrity standart API jetonu — proje numarası ayarlıysa eklenir, sağlayıcı Google'a çözdürür; seviyeyi
+ * belirlemez.
+ */
 export type DeviceEvidence =
-  | { platform: "android"; key_attestation: string[] }
+  | { platform: "android"; key_attestation: string[]; play_integrity?: string }
   | { platform: "ios"; app_attest: { key_id: string; attestation: string } };
 
 /**
@@ -222,7 +251,7 @@ export async function requestWia(p: {
   randomBytes?: (n: number) => Uint8Array;
 }): Promise<WuaRecord> {
   const keyRef = `wia.${b64u((p.randomBytes ?? nobleRandom)(9))}`;
-  const wiaJwk = await p.keys.generate(keyRef);
+  const wiaJwk = await p.keys.generate(keyRef, undefined, { policy: "device_unlocked" }); // a3: PoP anahtarı, istemsiz
   const proof = await unitProof(p, "wia", { wia_jkt: thumb(wiaJwk) });
   const r = await postJson(p.http, `${base(p.providerBase)}/wia`, { proof, wia_jwk: wiaJwk });
   if (r.status !== 200 || typeof r.body.wia !== "string") {

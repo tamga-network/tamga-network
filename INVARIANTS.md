@@ -741,7 +741,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-WALLET-0001/WL8` | Aşırı talep uyarısı ayrı görsel blok + gecikmeli düğme gerektirir. |
 | `SPEC-WALLET-0001/WL9` | Sunum anında şema sunucusuna istek yapılmaz. |
 | `SPEC-WALLET-0001/WL10` | Tamga kullanıcı adına kurtarma anahtarı tutmaz. |
-| `SPEC-WALLET-0001/WL11` | Her sunum PIN veya biyometri onayı gerektirir. |
+| `SPEC-WALLET-0001/WL11` | Her sunum kullanıcı doğrulaması gerektirir: güvenli donanım anahtarı olan cihazda cihazın biyometrisi ya da cihaz parolası (belge anahtarı telefon kilidine bağlıdır); yazılım anahtarı yolunda (S-9) uygulama PIN'i ya da biyometri. Geri düşüş ve vazgeçme §2.3'te. |
 | `SPEC-WALLET-0001/WL12` | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat`, `exp` (≤ 60 s), `jti`; belge içeriği ve claim'ler QR'a girmez ([[ADR-0012]]). |
 | `SPEC-WALLET-0001/WL13` | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsamlıdır; kullanıcı rızayı istediği an geri alır (grant silinir). WL11'in tek istisnasıdır. |
 | `SPEC-WALLET-0001/WL14` | Her geçiş kartı gösterimi `presentation_log`'a yazılır (WL4 kapsamında, cihazda); Göster ekranı canlı saat ve süre gösterir. |

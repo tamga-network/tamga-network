@@ -254,6 +254,14 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
       "issuer-id-status",
       signedByRoot(1102, "CN=Tamga Sandbox Kimlik - Status List (TEST), OU=Status, O=Tamga Network Sandbox, C=TR"),
     ),
+    // ADR-0033: mağaza inceleme kodu provası sandbox'ta — DEMO imzacısı gerçek ağdakiyle aynı dosya adı, I1 kaydı registry-sandbox'ta
+    await ensure(
+      "issuer-id-review",
+      signedByRoot(
+        1103,
+        "CN=Tamga Sandbox Kimlik - Magaza Incelemesi DEMO (TEST), OU=Review, O=Tamga Network Sandbox, C=TR",
+      ),
+    ),
     // Örnek kurumlar: gerçek kurum adları yalnız gerçekçi deneme için (ilişki/anlaşma yok); seri numaraları ilk örnek
     // kurumların (1001/1002/2002/1201/1202, kaldırıldı) numaralarını yeniden kullanmaz.
     await ensure(

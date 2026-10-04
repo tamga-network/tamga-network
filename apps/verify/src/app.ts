@@ -35,8 +35,10 @@ import { NativeZkBackend, defaultZkBackend, type ZkBackend } from "@tamga-networ
 import { registerTerminalRoutes } from "./routes/terminal.js";
 import { registerMiscRoutes } from "./routes/misc.js";
 import { registerSiteRoutes } from "./routes/site.js";
+import { policiesFor } from "./policies.js";
+import type { Policy } from "@tamga-network/verifier";
 
-export { POLICIES } from "./policies.js";
+export { POLICIES, policiesFor } from "./policies.js";
 
 /** Bellekteki denetim kaydı üst sınırı (kayıt yalnızca son olayları gösterir; kalıcı günlük değildir). */
 const AUDIT_MAX = 1000;
@@ -60,6 +62,13 @@ export interface VerifyContext {
   gateStats: GateStats;
   /** ADR-0032: ZK doğrulama arka ucu — yerel ikili varsa o, yoksa WASM (`cfg.zkNativeBin`). */
   zk: ZkBackend;
+  /**
+   * Deneme vitrini (sandbox): kurgusal senaryo politikaları, ana sayfadaki "QR üret" paneli, örnek site ve kapı sayfası.
+   * Gerçek ağda kapalı — yalnız genel ve inceleme politikaları (policies.ts `policiesFor`).
+   */
+  showcase: boolean;
+  /** Bu süreçte yüklü politika kümesi. */
+  policies: Policy[];
 }
 
 export interface VerifyApp extends FastifyInstance {
@@ -72,8 +81,15 @@ export interface VerifyApp extends FastifyInstance {
 
 export async function buildVerifyApp(
   cfg: VerifyConfig,
-  opts: { fetchText?: (url: string) => Promise<string | null>; signer?: RpSigner } = {},
+  opts: {
+    fetchText?: (url: string) => Promise<string | null>;
+    signer?: RpSigner;
+    /** Varsayılan: `cfg.network === "sandbox"`. Testler vitrini gerçek ağ biçimli test listesiyle açabilir. */
+    showcase?: boolean;
+  } = {},
 ): Promise<VerifyApp> {
+  const showcase = opts.showcase ?? cfg.network === "sandbox";
+  const policies = policiesFor(showcase ? "sandbox" : "production");
   let trust: TrustSource;
   let rootDer: Uint8Array[] = [];
   const statusCache = new PrefetchStatusCache(opts.fetchText);
@@ -109,6 +125,8 @@ export async function buildVerifyApp(
     cfg,
     signer,
     zk,
+    showcase,
+    policies,
     rpAuth: (authorization) =>
       verifyRpAssertion(authorization, {
         audience: cfg.publicBase,

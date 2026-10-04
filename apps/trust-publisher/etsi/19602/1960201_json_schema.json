@@ -11,9 +11,7 @@
           "$ref": "#/definitions/TrustedEntitiesList"
         }
       },
-      "required": [
-        "ListAndSchemeInformation"
-      ],
+      "required": ["ListAndSchemeInformation"],
       "additionalProperties": false
     },
     "ListAndSchemeInformation": {
@@ -100,10 +98,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "lang",
-        "value"
-      ],
+      "required": ["lang", "value"],
       "additionalProperties": false
     },
     "NonEmptyMultiLangURI": {
@@ -118,10 +113,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "lang",
-        "uriValue"
-      ],
+      "required": ["lang", "uriValue"],
       "additionalProperties": false
     },
     "SchemeOperatorName": {
@@ -141,10 +133,7 @@
           "$ref": "#/definitions/ElectronicAddress"
         }
       },
-      "required": [
-        "SchemeOperatorPostalAddress",
-        "SchemeOperatorElectronicAddress"
-      ],
+      "required": ["SchemeOperatorPostalAddress", "SchemeOperatorElectronicAddress"],
       "additionalProperties": false
     },
     "PostalAddresses": {
@@ -176,11 +165,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "lang",
-        "StreetAddress",
-        "Country"
-      ],
+      "required": ["lang", "StreetAddress", "Country"],
       "additionalProperties": false
     },
     "ElectronicAddress": {
@@ -231,9 +216,7 @@
                 "$ref": "#/definitions/NonEmptyMultiLangURI"
               }
             },
-            "required": [
-              "LoTEPolicy"
-            ]
+            "required": ["LoTEPolicy"]
           }
         },
         {
@@ -244,9 +227,7 @@
                 "type": "string"
               }
             },
-            "required": [
-              "LoTELegalNotice"
-            ]
+            "required": ["LoTELegalNotice"]
           }
         }
       ],
@@ -284,11 +265,7 @@
           "minItems": 1
         }
       },
-      "required": [
-        "LoTELocation",
-        "ServiceDigitalIdentities",
-        "LoTEQualifiers"
-      ],
+      "required": ["LoTELocation", "ServiceDigitalIdentities", "LoTEQualifiers"],
       "additionalProperties": false
     },
     "ServiceDigitalIdentity": {
@@ -329,7 +306,7 @@
           },
           "minItems": 1
         },
-      "additionalProperties": false
+        "additionalProperties": false
       }
     },
     "pkiOb": {
@@ -347,9 +324,7 @@
           "contentEncoding": "base64"
         }
       },
-      "required": [
-        "val"
-      ],
+      "required": ["val"],
       "additionalProperties": false
     },
     "X509SubjectName": {
@@ -384,11 +359,7 @@
           "$ref": "#/definitions/MimeType"
         }
       },
-      "required": [
-        "LoTEType",
-        "SchemeOperatorName",
-        "MimeType"
-      ],
+      "required": ["LoTEType", "SchemeOperatorName", "MimeType"],
       "additionalProperties": false
     },
     "MimeType": {
@@ -431,10 +402,7 @@
           "$ref": "#/definitions/TrustedEntityServices"
         }
       },
-      "required": [
-        "TrustedEntityInformation",
-        "TrustedEntityServices"
-      ],
+      "required": ["TrustedEntityInformation", "TrustedEntityServices"],
       "additionalProperties": false
     },
     "TrustedEntityServices": {
@@ -454,9 +422,7 @@
           "$ref": "#/definitions/ServiceHistory"
         }
       },
-      "required": [
-        "ServiceInformation"
-      ],
+      "required": ["ServiceInformation"],
       "additionalProperties": false
     },
     "ServiceInformation": {
@@ -490,10 +456,7 @@
           "$ref": "#/definitions/ServiceInformationExtensions"
         }
       },
-      "required": [
-        "ServiceName",
-        "ServiceDigitalIdentity"
-      ],
+      "required": ["ServiceName", "ServiceDigitalIdentity"],
       "additionalProperties": false
     },
     "ServiceTypeIdentifier": {
@@ -543,9 +506,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "uriValue"
-      ],
+      "required": ["uriValue"],
       "additionalProperties": false
     },
     "ServiceDefinitionURI": {
@@ -559,7 +520,7 @@
       "type": "array",
       "minItems": 1
     },
-    "ServiceHistory":{
+    "ServiceHistory": {
       "type": "array",
       "items": {
         "$ref": "#/definitions/ServiceHistoryInstance"
@@ -588,12 +549,7 @@
           "$ref": "#/definitions/ServiceInformationExtensions"
         }
       },
-      "required": [
-        "ServiceName",
-        "ServiceDigitalIdentity",
-        "ServiceStatus",
-        "StatusStartingTime"
-      ],
+      "required": ["ServiceName", "ServiceDigitalIdentity", "ServiceStatus", "StatusStartingTime"],
       "additionalProperties": false
     },
     "TrustedEntityInformation": {
@@ -615,11 +571,7 @@
           "$ref": "#/definitions/TEInformationExtensions"
         }
       },
-      "required": [
-        "TEName",
-        "TEAddress",
-        "TEInformationURI"
-      ],
+      "required": ["TEName", "TEAddress", "TEInformationURI"],
       "additionalProperties": false
     },
     "TEName": {
@@ -637,7 +589,6 @@
       "minItems": 1
     },
 
-
     "TEAddress": {
       "type": "object",
       "properties": {
@@ -648,10 +599,7 @@
           "$ref": "#/definitions/ElectronicAddress"
         }
       },
-      "required": [
-        "TEPostalAddress",
-        "TEElectronicAddress"
-      ],
+      "required": ["TEPostalAddress", "TEElectronicAddress"],
       "additionalProperties": false
     },
     "TEInformationURI": {
@@ -668,9 +616,7 @@
   },
 
   "type": "object",
-  "required": [
-    "LoTE"
-  ],
+  "required": ["LoTE"],
   "additionalProperties": false,
   "properties": {
     "LoTE": {

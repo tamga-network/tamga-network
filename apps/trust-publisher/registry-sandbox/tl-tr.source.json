@@ -182,6 +182,72 @@
       }
     },
     {
+      "cert": "issuer-id-review",
+      "status_cert": "issuer-id-status",
+      "parent_ca": "root-ca",
+      "slug": "tamga-id-review",
+      "legal_name": "Tamga Sandbox — Identity Service, App Store Review (DEMO, TEST)",
+      "category": "IDENTITY",
+      "assurance": "I1",
+      "class": "EAA",
+      "assurance_basis": "ADR-0033: DEMO signer for app-store review only (sandbox rehearsal). Credentials are issued after a single-use review code with simulated identity proofing (no real person, no real document). Registered at I1 so that every production policy (I2+) rejects them; only the review policies of Tamga Verify accept them. Never valid for real use.",
+      "issuer_url": "https://id.sandbox.tamga.network",
+      "status_list_base": "https://id.sandbox.tamga.network/status/",
+      "status": "ACTIVE",
+      "valid_from": "2026-10-04T00:00:00Z",
+      "valid_until": "2027-10-04T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-04T00:00:00Z",
+          "reason": "ADR-0033 app-store review DEMO signer (sandbox)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "allowed": true,
+          "valid_from": "2026-10-04T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:id:PseudonymSeed:1",
+          "allowed": true,
+          "valid_from": "2026-10-04T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Simulated identity proofing for app-store review (no real person) — ADR-0033",
+        "mode": "IDV_PROVIDER"
+      },
+      "trade_name": "Tamga Sandbox Identity — Review (DEMO)",
+      "info_uri": "https://id.sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000007",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Istanbul",
+        "country": "TR"
+      }
+    },
+    {
       "cert": "issuer-bubilet",
       "status_cert": "issuer-bubilet-status",
       "parent_ca": "root-ca",

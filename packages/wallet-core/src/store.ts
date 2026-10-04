@@ -3,9 +3,9 @@
  * Depo soyut: uygulama JSON'u nereye yazacağını seçer (expo-file-system); anahtarlar KeyProvider'da (ayrı).
  */
 import { verifyIssuedSdJwt, type LocalVerifyOk } from "./sdjwt.js";
-import type { PublicJwk } from "./keys.js";
+import type { KeyStorage, PublicJwk } from "./keys.js";
 import type { RedeemOutput } from "./oid4vci.js";
-import type { WuaRecord } from "./wua.js";
+import type { AttestationLevel, AttestationReason, WuaRecord } from "./wua.js";
 import { verifyReceivedMdoc } from "./mdoc.js";
 
 export interface StoredCopy {
@@ -89,7 +89,15 @@ export interface WalletState {
   };
   wua?: WuaRecord;
   /** ADR-0025: cüzdan sağlayıcıda kayıtlı birim (birim anahtarı KeyProvider'da "wallet.unit") */
-  walletUnit?: { unitId: string; provider: string; registeredAt: number };
+  walletUnit?: {
+    unitId: string;
+    provider: string;
+    registeredAt: number;
+    /** sağlayıcının yazdığı depo seviyesi ve cihaz kanıtı sonucu (ADR-0025 K3; "Cüzdan bilgisi" ekranı) */
+    keyStorage?: KeyStorage;
+    attestation?: AttestationLevel;
+    reason?: AttestationReason;
+  };
   /** WA-ADR-0002 K1: kapatma kodu oluşturuldu (kodun kendisi cihazda SAKLANMAZ; yalnız tarih + kaydedildiği sağlayıcı) */
   lockCode?: { createdAt: number; provider: string };
 } // idBase: Tamga kimlik servisi (ADR-0011; geliştirme)

@@ -4,7 +4,7 @@ title: "Cüzdan ve anahtar kanıtı"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Tek, 30 günlük WUA yerine AB TS3 modeli: 24 saatten kısa ömürlü, her belge işleminde yeni anahtarlı ve yeni iptal listesi
   girişli Wallet Instance Attestation (WIA) + belge anahtarlarının deposunu anlatan key attestation (KA, `key_attestation`).
@@ -128,6 +128,29 @@ kuralı aynen geçerlidir.
 - `wallet-core`: birim anahtarı, işlem başına WIA, KA isteği, KA'lı proof. Cüzdan: kayıt, "Bu cüzdanı iptal et".
 - [[SPEC-PROTO-0001]] §11.1 ve D-CRED-6 bu karara göre yazılır.
 - ARF: konu 9, 38 ve VCR_01a/03a/07 büyük ölçüde karşılanır. WSCD ve cihaz kanıtı Z1'dedir.
+
+# Uygulama notları (2026-10-04)
+
+Bu notlar kararı değiştirmez; referans cüzdanın (Tamga Wallet) ve sağlayıcının K1–K3'ü nasıl uyguladığını kayda geçirir.
+
+1. **Anahtar erişim politikası (WL1/WL11).** Donanım anahtarları telefonun kilidine bağlıdır: anahtar yalnız kilit açıkken
+   erişilebilir ve kullanımı cihazın biyometrisi, yoksa cihaz parolasıyla doğrulanır. iOS: Secure Enclave,
+   `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`, `.privateKeyUsage` + `.biometryCurrentSet | .or | .devicePasscode`
+   (biyometri kayıtlı değilse yalnız `.devicePasscode`). Android: StrongBox/TEE, `setUserAuthenticationRequired(true)`,
+   `setUserAuthenticationParameters(60 sn, AUTH_BIOMETRIC_STRONG | AUTH_DEVICE_CREDENTIAL)`, `setUnlockedDeviceRequired(true)`,
+   `setInvalidatedByBiometricEnrollment(true)` (bu belge ve [[SPEC-WALLET-0001]] bu bayrağı tanımlamadığı için `true` seçildi;
+   pencereli anahtarlarda sistem onu uygulamaz, kilit kaldırılırsa anahtar geçersiz olur). Uygulama PIN'i ekran kilidi olarak
+   kalır; sunum onayı anahtar kullanım istemidir (tek istem; PIN ekranıyla çift sorma yok). Kilit kurulmamış telefonda anahtar
+   üretilmez. Kişiyi temsil etmeyen protokol anahtarları — birim anahtarı (K1), WIA PoP (K2), DPoP ve geçiş kartı anahtarı
+   (WL13: onay istemez) — yalnız kilit açıkken erişilebilir ama kullanımı istem gerektirmez; böylece sessiz yenileme ve kart
+   yenilemesi kişiye istem çıkarmaz. Kişinin başlatmadığı akışlar belge anahtarını istemsiz dener; doğrulama gerekiyorsa
+   sessizce atlar ve kullanıcı eyleminde yeniden dener. Geçiş kodu yoktur ([[ADR-0029]]): politika değişince mevcut test
+   cüzdanları yeniden kurulur.
+2. **Play Integrity — zorunlu değil.** Android cüzdan, anahtar kanıtıyla birlikte Play Integrity (standart API) jetonu
+   gönderebilir; sağlayıcı, servis hesabı ayarlıysa jetonu Google'a çözdürür ve yalnız hüküm sınıflarını birimin cihaz kaydına
+   yazar. KA'daki `key_storage` seviyesi Android anahtar kanıtından gelir; Play Integrity onu düşürmez, yokluğu kaydı
+   engellemez, servis hesabı yoksa doğrulama atlanır. Play Integrity'yi zorunlu kılmak (kaydı ya da seviyeyi ona bağlamak)
+   bu kararın K1/K3'ünü değiştirir ve **ayrı bir ADR gerektirir**.
 
 # Durum
 

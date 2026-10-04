@@ -8,6 +8,7 @@
  *    sertifika uzantısında (1.2.840.113635.100.8.2); rpIdHash = SHA-256(TeamID.BundleID); sayaç 0; anahtar kimliği.
  *    clientData birim anahtarının parmak izini içerdiğinden birim anahtarı gerçek uygulamanın ürettiği anahtara bağlanır.
  * Kökler: `roots/` (resmî kaynaklardan; testte kendi test kökü). Başarısızlık ayrıntısı kişisel veri içermez.
+ * Başarısız kanıt kaydı DÜŞÜRMEZ: birim yazılım seviyesinde (S-9) kaydolur; `code` nedenin sınıfını söyler (app.ts `/units`).
  */
 import { createHash } from "node:crypto";
 import { readFileSync, existsSync } from "node:fs";
@@ -35,7 +36,13 @@ export type DeviceEvidence =
 export interface DeviceCheck {
   ok: boolean;
   storage: KeyStorage;
+  /** başarısızlık açıklaması (sabit metin; kişisel ya da cihaz verisi yok) */
   reason?: string;
+  /**
+   * Başarısızlık sınıfı (ADR-0025 K3 / S-9 düşüşü): `invalid` = kanıt doğrulanamadı — sahtecilik şüphesi, yalnız sayaç tutulur;
+   * `unsupported` = cihaz durumu ya da ortam desteklenmiyor (kilidi açık cihaz, geliştirme ortamı, donanımsız anahtar) — olağan.
+   */
+  code?: "invalid" | "unsupported";
   /** bilgi: doğrulanmış açılış, uygulama kimliği vb. (kişisel veri yok) */
   details?: Record<string, unknown>;
 }
@@ -54,7 +61,12 @@ export function officialRoots(): { android: X509Certificate[]; apple: X509Certif
 const sha256 = (b: Uint8Array | string) => new Uint8Array(createHash("sha256").update(b).digest());
 const eq = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((x, i) => x === b[i]);
 const b64d = (s: string) => new Uint8Array(Buffer.from(s, "base64"));
-const fail = (reason: string): DeviceCheck => ({ ok: false, storage: "software", reason });
+const fail = (reason: string, code: NonNullable<DeviceCheck["code"]> = "invalid"): DeviceCheck => ({
+  ok: false,
+  storage: "software",
+  reason,
+  code,
+});
 
 /** Zincir: her sertifika bir sonrakiyle imzalı, geçerlilik içinde; son sertifika güvenilir köklerden birine eşit ya da onunla imzalı. */
 async function verifyChain(chain: X509Certificate[], roots: X509Certificate[], now: Date): Promise<string | null> {
@@ -123,10 +135,10 @@ export async function verifyAndroidKeyAttestation(
   if (!eq(await p256Raw(chain[0]), p.expectedKey)) return fail("android: attested key is not the unit key");
   const level = kd.attestationSecurityLevel;
   if (level !== SecurityLevel.trustedEnvironment && level !== SecurityLevel.strongBox)
-    return fail("android: key not in secure hardware");
+    return fail("android: key not in secure hardware", "unsupported");
   const rot = kd.teeEnforced.findProperty("rootOfTrust");
   const booted = rot?.verifiedBootState === VerifiedBootState.verified && rot?.deviceLocked === true;
-  if (!booted && !p.allowUnlocked) return fail("android: device not in verified boot state");
+  if (!booted && !p.allowUnlocked) return fail("android: device not in verified boot state", "unsupported");
   const appIdOs =
     kd.softwareEnforced.findProperty("attestationApplicationId") ??
     kd.teeEnforced.findProperty("attestationApplicationId");
@@ -205,7 +217,8 @@ export async function verifyAppAttest(p: {
   if (counter !== 0) return fail("ios: counter not zero");
   const aaguid = authData.subarray(37, 53);
   const dev = eq(aaguid, AAGUID_DEV);
-  if (!eq(aaguid, AAGUID_PROD) && !(dev && p.allowDevelopment)) return fail("ios: environment");
+  if (!eq(aaguid, AAGUID_PROD) && !(dev && p.allowDevelopment))
+    return fail("ios: environment", dev ? "unsupported" : "invalid");
   const credLen = new DataView(authData.buffer, authData.byteOffset + 53, 2).getUint16(0);
   if (!eq(authData.subarray(55, 55 + credLen), keyId)) return fail("ios: credential id mismatch");
   return { ok: true, storage: "secure_enclave", details: { environment: dev ? "development" : "production" } };

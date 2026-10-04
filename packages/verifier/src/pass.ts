@@ -52,6 +52,34 @@ export function holderCnfOf(presentation: string): { jwk: JWK; kid: string } {
   };
 }
 
+export const PASS_KEY_TYP = "tamga-pass-key+jwt";
+/** Kanıtın yaşı (cüzdan yanıtı anında üretir; istek ömrü 5 dk) */
+const PASS_KEY_MAX_AGE_SEC = 600;
+/**
+ * a3/WL13: cüzdanın ayrı geçiş kartı anahtarı — başlıkta açık anahtar (P-256), gövdede aud = RP client_id ve isteğin nonce'u;
+ * imza o anahtarla. Doğrulanırsa grant bu anahtara bağlanır (kart yenilemeleri belge anahtarını, dolayısıyla biyometri
+ * istemini gerektirmez). Geçersiz kanıt kabul edilmez (hata; çağıran karta düşmeden sunumu yine kabul edebilir).
+ */
+export async function verifyPassKeyProof(
+  jws: string,
+  p: { clientId: string; nonce: string; now?: number },
+): Promise<{ jwk: JWK; kid: string }> {
+  const now = p.now ?? Math.floor(Date.now() / 1000);
+  const h = decodeProtectedHeader(jws) as { typ?: string; alg?: string; jwk?: JWK };
+  if (h.typ !== PASS_KEY_TYP || h.alg !== "ES256") throw new Error("pass_key: unexpected type");
+  const j = h.jwk;
+  if (!j || j.kty !== "EC" || j.crv !== "P-256" || typeof j.x !== "string" || typeof j.y !== "string" || "d" in j)
+    throw new Error("pass_key: header key");
+  const jwk: JWK = { kty: "EC", crv: "P-256", x: j.x, y: j.y };
+  const { payload } = await compactVerify(jws, await importJWK(jwk, "ES256"));
+  const body = JSON.parse(Buffer.from(payload).toString("utf8")) as { aud?: string; nonce?: string; iat?: number };
+  if (body.aud !== p.clientId) throw new Error("pass_key: aud mismatch");
+  if (body.nonce !== p.nonce) throw new Error("pass_key: nonce mismatch");
+  if (typeof body.iat !== "number" || Math.abs(now - body.iat) > PASS_KEY_MAX_AGE_SEC) throw new Error("pass_key: iat");
+  const canon = JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x, y: jwk.y });
+  return { jwk, kid: createHash("sha256").update(canon).digest("base64url") };
+}
+
 export interface PassStoreData {
   records: PassRecord[];
   replay: Array<{ jti: string; exp: number }>;
@@ -110,9 +138,13 @@ export class PassRegistry {
     presentationId: string;
     policy: PassPolicy;
     now?: number;
+    /** a3/WL13: cüzdanın ayrı kart anahtarı kanıtı (yanıt yükü `pass_key`) — varsa kart bu anahtara bağlanır */
+    passKey?: { jws: string; nonce: string };
   }): Promise<{ record: PassRecord; jws: string }> {
     const now = input.now ?? Math.floor(Date.now() / 1000);
-    const { jwk, kid } = holderCnfOf(input.presentation);
+    const { jwk, kid } = input.passKey
+      ? await verifyPassKeyProof(input.passKey.jws, { clientId: this.signer.clientId, nonce: input.passKey.nonce, now })
+      : holderCnfOf(input.presentation);
     const passId = "pass_" + randomBytes(9).toString("base64url");
     const validUntil = now + input.policy.valid_days * 86400;
     const jws = await new SignJWT({

@@ -33,7 +33,7 @@ import { verifyPresentation, MemoryStatusCache, dcqlFromPolicy, type Policy } fr
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
-const DIST = resolve(ROOT, "apps/trust-publisher/dist");
+const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
 const ready = existsSync(resolve(PKI, "rp-verify.cert.pem")) && existsSync(resolve(DIST, "lotl.jws"));
 const AUD = ready ? x509HashClientId(pemToDer(readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"))) : "";
 const PID_VCT = "urn:eudi:pid:1";

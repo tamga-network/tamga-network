@@ -11,8 +11,17 @@ export interface WpConfig {
   /** ADR-0025: birim kayıtları + iptal listeleri (null = yalnız bellek, test) */
   dataDir: string | null;
   solutions: Array<{ solution_id: string; min_version: string }>;
-  /** P4-2 cihaz kanıtı: Android paket adı, Apple App ID (TeamID.BundleID; yoksa iOS kanıtı kabul edilmez), geliştirme gevşekliği */
-  device: { androidPackage: string; appleAppId: string | null; allowDevelopment: boolean };
+  /**
+   * P4-2 cihaz kanıtı: Android paket adı, Apple App ID (TeamID.BundleID; yoksa iOS kanıtı kabul edilmez), geliştirme gevşekliği.
+   * `playIntegritySa` (a2, zorunlu değil): Play Integrity çözümü için Google servis hesabı JSON'unun yolu ya da içeriği; boşsa
+   * Play Integrity doğrulaması atlanır ve seviye değişmez.
+   */
+  device: {
+    androidPackage: string;
+    appleAppId: string | null;
+    allowDevelopment: boolean;
+    playIntegritySa?: string | null;
+  };
 }
 
 export function loadWpConfig(root = resolve(import.meta.dirname, "../../..")): WpConfig {
@@ -39,6 +48,7 @@ export function loadWpConfig(root = resolve(import.meta.dirname, "../../..")): W
       androidPackage: e.TAMGA_WP_ANDROID_PACKAGE ?? "network.tamga.wallet",
       appleAppId: e.TAMGA_WP_APPLE_APP_ID || null, // ör. ABCDE12345.network.tamga.wallet (Apple geliştirici hesabı gelince)
       allowDevelopment: e.TAMGA_WP_DEVICE_DEV === "1", // yalnız geliştirme: kilidi açık cihaz / App Attest development
+      playIntegritySa: e.TAMGA_WP_PLAY_INTEGRITY_SA || null, // a2: servis hesabı (GİZLİ; .env) — boşsa atlanır
     },
   };
 }

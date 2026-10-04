@@ -21,12 +21,39 @@ export interface KeyAttestation {
   platform: string;
 }
 
+/**
+ * Anahtar erişim politikası (proje yönetimi 2026-10-04, a3). `user_auth` (varsayılan): belge sahibi anahtarı — yalnız kilit açıkken
+ * ve cihaz biyometrisi / parolasıyla kullanılır (WL1/WL11). `device_unlocked`: kişiyi temsil etmeyen protokol anahtarları — birim
+ * anahtarı, WIA PoP, DPoP ve geçiş kartı anahtarı (WL13: onay istemez) — yalnız kilit açıkken erişilebilir, kullanımı istem
+ * gerektirmez; arka plan akışları (sessiz yenileme, kart yenileme) kişiyi rahatsız etmez. Yazılım sağlayıcıda ikisi aynıdır.
+ */
+export type KeyPolicy = "user_auth" | "device_unlocked";
+export interface GenerateOptions {
+  policy?: KeyPolicy;
+}
+export interface SignOptions {
+  /**
+   * `false`: kişinin başlatmadığı akış — anahtar cihaz doğrulaması istiyorsa istem ÇIKMAZ, `AUTH_REQUIRED` kodlu hata döner;
+   * akış sessizce atlar ve kullanıcı eyleminde yeniden dener. Varsayılan `true` (tek istem; WL11).
+   */
+  interactive?: boolean;
+}
+/** `sign({ interactive: false })` için: anahtar kullanımı cihaz doğrulaması bekliyor (istem gösterilmedi). */
+export const AUTH_REQUIRED = "auth_required";
+export const isAuthRequired = (e: unknown) => (e as { code?: unknown } | null)?.code === AUTH_REQUIRED;
+/**
+ * Donanım anahtarı kalıcı olarak kullanılamaz (Android `KeyPermanentlyInvalidatedException` — ekran kilidi kaldırıldı / değişti,
+ * biyometri yeniden kaydı; iOS: cihaz parolası kaldırıldı). Anahtar geri gelmez: belgeler kurumdan yeniden alınır (WL1).
+ */
+export const KEY_INVALIDATED = "key_invalidated";
+export const isKeyInvalidated = (e: unknown) => (e as { code?: unknown } | null)?.code === KEY_INVALIDATED;
+
 export interface KeyProvider {
   /** `challenge`: donanım sağlayıcıda anahtar kanıtı (Android key attestation) için; yazılımda yok sayılır */
-  generate(ref: string, challenge?: Uint8Array): Promise<PublicJwk>;
+  generate(ref: string, challenge?: Uint8Array, opts?: GenerateOptions): Promise<PublicJwk>;
   publicKey(ref: string): Promise<PublicJwk | null>;
   /** ES256 imzası: raw r||s (64 bayt). Veri ham baytlardır; sağlayıcı SHA-256'yı kendisi uygular. */
-  sign(ref: string, data: Uint8Array): Promise<Uint8Array>;
+  sign(ref: string, data: Uint8Array, opts?: SignOptions): Promise<Uint8Array>;
   delete(ref: string): Promise<void>;
   attestation(): Promise<KeyAttestation>;
 }

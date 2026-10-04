@@ -16,6 +16,8 @@ const REQUIRED = [
   "ops/pki/rp-verify.pkcs8.pem",
   "apps/trust-publisher/dist/lotl.jws",
   "apps/trust-publisher/dist/tl-tr.jws",
+  "apps/trust-publisher/dist-test/lotl.jws", // test listesi (örnek kurumlar; npm run trust:test-fixtures)
+  "apps/trust-publisher/dist-test/tl-tr.jws",
   "packages/schemas/dist/index.json",
 ];
 

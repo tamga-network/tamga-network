@@ -4,7 +4,7 @@ title: "Kurum olarak belge vermek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Üniversite, kamu kurumu ya da bilet satıcısı olarak kişilerin cüzdanına belge vermek: Tamga'nın barındırdığı belge verme
   servisini `@tamga-network/issuer/client` ile çağırmak (teklif, bilet satışı, iptal/askı) ya da kendi belge verme servisinizi
@@ -39,10 +39,15 @@ içindir: üniversite (diploma, öğrenci belgesi), kamu kurumu ya da bilet sat�
 
 ## Barındırılan servis: istemci
 
+> **Önce sandbox'ta deneyin.** Aşağıdaki örnek, test ağındaki kurgusal bilet satıcısının (`bubilet`,
+> `issuer.sandbox.tamga.network`) adresini kullanır; sandbox'ın adresleri ve örnek kurumları [[GUIDE-0013]]'te. Gerçek ağda
+> `baseUrl` `https://issuer.tamga.network`, `slug` kurumunuzun kayıtlı adıdır; API anahtarını kurum kaydından sonra Kurum
+> Konsolu verir.
+
 ```ts
 import { createIssuerClient } from "@tamga-network/issuer/client";
 
-const tamga = createIssuerClient({ baseUrl: "https://issuer.tamga.network", slug: "bubilet", apiKey: process.env.TAMGA_API_KEY! });
+const tamga = createIssuerClient({ baseUrl: "https://issuer.sandbox.tamga.network", slug: "bubilet", apiKey: process.env.TAMGA_API_KEY! });
 
 // Bilet sattınız → cüzdana teklif (bilette kişisel veri yok)
 const sale = await tamga.sellTicket({ eventId: "EVT-2026-KONSER-01", ticketClass: "STANDARD" });
@@ -90,7 +95,8 @@ ve güvenli kanaldan bir kez iletir; sunucuda yalnızca özeti tutulur ([[ADR-00
 - `fetch`: kimliğe bağlı teklifte, belge verilirken ve kopya yenilemede — sizin opak kişi kimliğinizle okuma.
 - İstek, Tamga'nın [[t:trust-list|güven listesindeki]] kaydında yer alan [[t:access-certificate|erişim sertifikasıyla]]
   imzalı 60 saniyelik bir JWT'dir; `aud`, `exp` ve `jti`'yi denetleyin.
-- Sorgu ucu bağlanana kadar Kurum Konsolu'ndaki **örnek kaynak** ile deneme yapılabilir; oraya üretim için gerçek kişi verisi girilmez.
+- Sorgu ucu bağlanana kadar belge vermeyi sandbox'taki örnek kurumlarla deneyin ([[GUIDE-0013]]). Kurum Konsolu'nun **örnek
+  kaynağı** yalnız sandbox ortamında açılır; gerçek ağda kapalıdır ve oraya gerçek kişi verisi girilmez.
 
 Tamga API'sinin tamamı: `docs/api/tamga-issuer-api.openapi.yaml`.
 

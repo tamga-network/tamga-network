@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -114,7 +114,10 @@ CHANGELOG.md                  public change log
 
 Status vocabulary: `ACTIVE | SUSPENDED | REVOKED | RETIRED` (+ root: `ROLLING_OVER`). History is never deleted; verification
 looks at `status_history` with the credential's `iat` (D-BC-3, [[SPEC-BC-0001]]/I2–I3). The list of a `REVOKED` institution
-may be published by its successor (`successor_id`) (I4). Operator tool: `trust-publisher status <slug> <STATUS> --reason r`.
+may be published by its successor (`successor_id`) (I4). Operator tool: `trust-publisher status <slug> <STATUS> --reason r`
+(`REVOKED --invalidates-from <date>`: credentials issued from that moment fail; `valid_from` = all of the institution's credentials),
+`rp-status <dns_name> <STATUS>` for a relying party, `end-use <dns_name> <id>` for a single use or gate group (end date).
+A record is never removed from the list (TL2); a withdrawn institution becomes `withdrawn` in the ETSI projection and leaves the LoTE.
 
 ---
 

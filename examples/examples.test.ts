@@ -29,7 +29,7 @@ import { institutionStatus } from "./04-check-institution/check.js";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const PKI = resolve(ROOT, "ops/pki");
-const DIST = resolve(ROOT, "apps/trust-publisher/dist");
+const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
 const ready = existsSync(resolve(PKI, "rp-verify.pkcs8.pem")) && existsSync(resolve(DIST, "lotl.jws"));
 const TRUST = "https://trust.test";
 const ISS = "https://issuer.tamga.network/bilgi";

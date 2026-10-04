@@ -44,6 +44,18 @@ First release of the Tamga Network documentation set and reference implementatio
   Without `claim_sets`, a credential that lacks any requested claim does not satisfy the query. `matchDcql` returns `gaps` —
   why each unmatched query failed (`no_credential`, `missing_claims` with the claim names, `values`) — so the wallet can tell
   the user. Verifiers ask for a claim the credential may not carry with `claim_sets`.
+- `wallet-core`: key access policy (`KeyPolicy`): `user_auth` credential keys are bound to the phone lock (device biometrics or
+  passcode, one prompt per presentation); `device_unlocked` protocol keys (unit, WIA, DPoP, pass) need only an unlocked phone.
+  `sign(…, { interactive: false })` / `HardwareKeyProvider.quiet()` never prompt and fail with `auth_required` — background
+  flows (copy refresh, pass refresh) skip silently. Native `ERR_KEY_INVALIDATED` maps to `key_invalidated`. Passes get their
+  own key: `newPassKeyRef` / `makePassKeyProof` (`pass_key`, bound to the request nonce); the verifier binds the grant to it.
+  Silent copy refresh tries a non-interactive signature with a credential-policy key before contacting the institution, so a
+  single-use refresh token is never spent when the phone lock is needed; if a later step fails, the rotated token and the
+  DPoP key are kept.
+- Reference verifier: an invalid `pass_key` proof no longer rejects the presentation; the pass is simply not issued
+  (`pass: { issued: false, reason }`).
+- Wallet rules (SPEC-WALLET-0001): WL11 and §2.3 state how presentations are verified on secure hardware (phone lock) and on
+  the software-key path, and when the app PIN is the fallback.
 
 ### Services
 
@@ -56,3 +68,9 @@ First release of the Tamga Network documentation set and reference implementatio
   entries revoked. Unknown and malformed codes get the same answer after the same slow hash and a minimum response time; no
   global attempt counter (it would let one source lock everyone out), instead a cap on concurrent slow hashes (503 +
   Retry-After); nothing about the code or the caller is logged. Metadata advertises the endpoints.
+- `wallet-provider`: device attestation never blocks registration — an unverifiable attestation registers the unit at
+  software level and the response says why (`attestation`, `reason`); the invalid-attestation counter is not exposed on
+  `/healthz`. Optional Play Integrity: the token is sent to Google only when the Android key attestation of the same request
+  verified; the token and decode calls, including reading the bodies, share one 5 s budget; a malformed service account file
+  or unusable private key disables Play Integrity at start-up with one fixed log line that prints no content. For an
+  `invalid` attestation the response carries only the reason code.

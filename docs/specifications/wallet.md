@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -161,18 +161,26 @@ Tamga Wallet kurulmaz — kullanıcıya açık bir uyarıyla reddedilir.
 
 ## 2.3 PIN
 
-PIN, güvenli bölgedeki anahtara erişimin **kullanıcı doğrulaması** koşuludur;
-anahtarı şifrelemez (onu donanım yapar).
+Güvenli bölgedeki anahtara erişimin koşulu **kullanıcı doğrulamasıdır**; doğrulama anahtarı şifrelemez (onu donanım yapar).
+Doğrulamanın yolu anahtarın nerede durduğuna bağlıdır:
+
+- **Güvenli donanım anahtarı olan cihazda** belge anahtarı telefonun kilidine bağlıdır: yalnız kilit açıkken ve cihazın
+  biyometrisi ya da cihaz parolasıyla kullanılır. Sunum onayı bu işletim sistemi istemidir (tek istem); uygulamanın ayarları
+  bunu kapatamaz. Uygulama PIN'i ve uygulama içi biyometri bu yolda yalnız cüzdanın kilidini açar.
+- **Yazılım anahtarı yolunda** (güvenli donanımı kullanamayan ortam, geçici sapma S-9) sunum onayı uygulama PIN'i ya da
+  uygulama içi biyometridir.
 
 | Kural | Değer |
 |---|---|
-| Uzunluk | En az 6 hane |
+| Uzunluk (uygulama PIN'i) | En az 6 hane |
 | Biyometri | PIN'in **yerine** değil, yanında (geri düşüş PIN'dir) |
 | Deneme | 5 hatalı → 30 sn gecikme; 10 → cüzdan kilitlenir, tohum gerekir |
-| Sunum onayı | Her sunumda PIN veya biyometri **zorunlu** |
+| Sunum onayı | Her sunumda kullanıcı doğrulaması **zorunlu**: güvenli donanımda cihaz biyometrisi ya da cihaz parolası; yazılım anahtarı yolunda PIN ya da biyometri |
+| Geri düşüş | İşletim sistemi istemi teknik ya da geçici bir nedenle gösterilemezse (ön planda pencere yok, doğrulama hizmeti kullanılamıyor) uygulama PIN'i sorulur. Kullanıcı istemden **vazgeçerse** geri düşüş yoktur: sunum yapılmaz |
 
-**Son satır önemlidir:** Sunum, kullanıcının bilinçli eylemi olmalıdır. Açık bir
-cüzdanın arka planda sessizce sunum yapması engellenir.
+**Sunum onayı satırı önemlidir:** Sunum, kullanıcının bilinçli eylemi olmalıdır. Açık bir
+cüzdanın arka planda sessizce sunum yapması engellenir. Kişinin başlatmadığı akışlar (geçiş kartı yenilemesi, kopya
+yenileme) istem göstermez; doğrulama gerekiyorsa o tur atlanır.
 
 ---
 
@@ -458,7 +466,7 @@ veri kurumdadır; yol TS7 silme talebidir (Geçmiş → "Verilerimi silmesini is
 | **WL8** | Aşırı talep uyarısı ayrı görsel blok + gecikmeli düğme gerektirir. |
 | **WL9** | Sunum anında şema sunucusuna istek yapılmaz. |
 | **WL10** | Tamga kullanıcı adına kurtarma anahtarı tutmaz. |
-| **WL11** | Her sunum PIN veya biyometri onayı gerektirir. |
+| **WL11** | Her sunum kullanıcı doğrulaması gerektirir: güvenli donanım anahtarı olan cihazda cihazın biyometrisi ya da cihaz parolası (belge anahtarı telefon kilidine bağlıdır); yazılım anahtarı yolunda (S-9) uygulama PIN'i ya da biyometri. Geri düşüş ve vazgeçme §2.3'te. |
 | **WL12** | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat`, `exp` (≤ 60 s), `jti`; belge içeriği ve claim'ler QR'a girmez ([[ADR-0012]]). |
 | **WL13** | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsamlıdır; kullanıcı rızayı istediği an geri alır (grant silinir). WL11'in tek istisnasıdır. |
 | **WL14** | Her geçiş kartı gösterimi `presentation_log`'a yazılır (WL4 kapsamında, cihazda); Göster ekranı canlı saat ve süre gösterir. |
@@ -513,5 +521,5 @@ saldırısına açık bırakmak.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; son güncelleme 2026-10-04).
 

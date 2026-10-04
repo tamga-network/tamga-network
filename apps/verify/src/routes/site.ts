@@ -34,6 +34,7 @@ import type { VerifyContext } from "../app.js";
 import { demoSitePage, langOf } from "../html.js";
 import { findPolicy } from "../policies.js";
 import { createPresentation } from "./presentations.js";
+import { sandboxSampleSiteUrl } from "../config.js";
 
 interface Account {
   /** Site-anahtarlı özet: HMAC(siteSırrı, takma ad) — ham değer saklanmaz. */
@@ -133,6 +134,24 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     return reply.type("image/png").send(await QRCode.toBuffer(p.req.qrPayload, { margin: 1, width: 440 }));
   });
 
+  // Gerçek ağda örnek site yok (2026-10-04: deneme sandbox'ta) — eski ve yeni adresler sandbox'taki örnek siteye (yayında
+  // değilse sandbox rehberine) yönlenir. Site kiti ve QR görüntüsü gerçek siteler için kalır.
+  if (!ctx.showcase) {
+    const toSandbox = async (
+      req: { headers: Record<string, unknown> },
+      reply: { redirect: (u: string, c: number) => unknown },
+    ) =>
+      reply.redirect(
+        sandboxSampleSiteUrl(ctx.cfg.sandboxLive, langOf(String(req.headers["accept-language"] ?? ""))),
+        302,
+      );
+    for (const path of ["/sample-site", "/sample-site/*", "/demo-site", "/demo-site/*", "/ornek-site"]) {
+      app.get(path, toSandbox as never);
+      if (path.endsWith("*")) app.post(path, toSandbox as never);
+    }
+    return;
+  }
+
   const cookieOf = (req: { headers: Record<string, unknown> }) => {
     const raw = String(req.headers.cookie ?? "");
     const m = new RegExp(`(?:^|;\\s*)${SESSION_COOKIE}=([^;]+)`).exec(raw);
@@ -175,7 +194,7 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     if (!sameSiteJson(req as never))
       return reply.code(403).send({ ok: false, reason: "istek bu siteden gelmeli (JSON)" });
     const policyId = (req.body as { policy?: string }).policy ?? "";
-    const policy = SITE_POLICIES.has(policyId) ? findPolicy(policyId) : undefined;
+    const policy = SITE_POLICIES.has(policyId) ? findPolicy(policyId, ctx.policies) : undefined;
     if (!policy) return reply.code(400).send({ ok: false, reason: "bu politika site girişi için değil" });
     const made = await createPresentation(ctx, policy, ctx.cfg.clientId);
     if ("error" in made) return reply.code(400).send(made);

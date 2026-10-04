@@ -1,6 +1,8 @@
 /**
  * Tamga Wallet Provider — wallet.tamga.network (D-NAME-1). ADR-0025 / AB TS3:
- *  POST /units            birim kaydı (birim anahtarıyla imzalı kanıt; kişi verisi yok)
+ *  POST /units            birim kaydı (birim anahtarıyla imzalı kanıt; kişi verisi yok). Cihaz kanıtı isteğe bağlı: doğrulanırsa
+ *                         donanım seviyesi; yoksa ya da doğrulanamazsa kayıt REDDEDİLMEZ, birim yazılım seviyesinde (S-9) kalır;
+ *                         yanıt `attestation: none|software|hardware` + `reason: not_configured|invalid|unsupported`
  *  POST /wia              24 saatten kısa ömürlü Cüzdan Örneği Kanıtı — her belge işleminde yeni anahtar + yeni iptal girişi
  *  POST /ka               Anahtar Kanıtı (key_attestation) — belge anahtarları + gerçek depo seviyesi
  *  POST /units/revoke     kullanıcı isteğiyle birim iptali (bütün WIA girişleri iptal) — imzalı kanıtla YA DA yalnız kapatma
@@ -38,7 +40,7 @@ import {
   signStatusListToken,
   type KeyStorage,
 } from "@tamga-network/issuer";
-import { WP_PATHS } from "@tamga-network/wallet-core";
+import { WP_PATHS, type AttestationLevel, type AttestationReason } from "@tamga-network/wallet-core";
 import type { WpConfig } from "./config.js";
 import { WpStore, KA_TYPE_INDEX } from "./store.js";
 import {
@@ -63,6 +65,7 @@ import {
   type DeviceCheck,
   type DeviceEvidence,
 } from "./device-attestation.js";
+import { loadServiceAccount, serviceAccountUsable, verifyPlayIntegrity } from "./play-integrity.js";
 
 export const UNIT_POP_TYP = "tamga-unit-pop+jwt";
 /** TS3: WIA < 24 saat; client_status ≥ 31 gün sonrasına kadar korunur */
@@ -78,6 +81,8 @@ export async function buildWalletProviderApp(
     deviceRoots?: { android: X509Certificate[]; apple: X509Certificate[] };
     /** test: kod girişi eşzamanlılık sınırı ve en az yanıt süresi (üretimde LOST_LIMITS) */
     lost?: { concurrent?: number; minDelayMs?: number; retryAfterSec?: number };
+    /** test: dış HTTP (Play Integrity → Google); üretimde global fetch */
+    fetch?: typeof fetch;
   } = {},
 ): Promise<FastifyInstance> {
   const certPem = readFileSync(resolve(cfg.pkiDir, `${cfg.certName}.cert.pem`), "utf8");
@@ -96,6 +101,9 @@ export async function buildWalletProviderApp(
   const seenJti = new Map<string, number>();
 
   app.get("/healthz", async () => ({ ok: true, provider: cfg.publicBase, ...store.counts() }));
+  // Geçersiz kanıt sayacı herkese açık uçta gösterilmez (kurcalama denemelerinin geri bildirimi olmasın); süreç içi okunur
+  // (test, ileride iç izleme). Birim ya da cihaz bilgisi yok.
+  app.decorate("attestationInvalid", () => attestationInvalid);
   app.get("/.well-known/wallet-provider", async () => ({
     provider_id: "TAMGA-WP-1",
     legal_name: "Tamga Network",
@@ -177,19 +185,36 @@ export async function buildWalletProviderApp(
     return { challenge, expires_in: 300 };
   });
   const roots = opts.deviceRoots ?? officialRoots();
-  /** Kanıt doğrulanırsa seviye; yoksa null. Başarısızlık nedeni yanıtta (kişisel veri yok). */
+  // a2 Play Integrity (zorunlu değil): servis hesabı yoksa null → jeton gelse de çözülmez, seviye değişmez
+  // Özel anahtar açılışta denenir: bozuksa Play Integrity kapalı sayılır (kayıtlar sürer) + tek sabit günlük satırı (içerik yok)
+  let playSa = loadServiceAccount(cfg.device.playIntegritySa);
+  if (playSa && !(await serviceAccountUsable(playSa))) {
+    app.log.warn("play_integrity_config_invalid: service account key unusable, Play Integrity disabled");
+    playSa = null;
+  }
+  /**
+   * Kanıt doğrulanamayınca kayıt DÜŞMEZ (S-9 düşüşü, proje yönetimi 2026-10-04): birim yazılım seviyesinde kaydolur, yanıt nedenini
+   * kodla söyler. `invalid` (gerçek kanıt sunuldu, doğrulanamadı — sahtecilik şüphesi) ADR-0025'te ayrıca ele alınmaz → yazılım
+   * seviyesine düşer, yalnız süreç içi sayaç tutulur (herkese açık uçta gösterilmez); günlükte birim, kanıt ya da cihaz verisi yok.
+   */
+  let attestationInvalid = 0;
   async function checkDevice(
     ev: DeviceEvidence | undefined,
     challenge: unknown,
     unitId: string,
     jwk: JWK,
-  ): Promise<{ result: DeviceCheck | null; error?: string }> {
-    if (!ev) return { result: null };
+  ): Promise<{ result?: DeviceCheck; reason?: AttestationReason; detail?: string }> {
+    if (!ev) return {};
+    const fallback = (reason: AttestationReason, detail: string) => {
+      if (reason === "invalid") attestationInvalid++;
+      return { reason, detail };
+    };
     if (typeof challenge !== "string" || !challenges.has(challenge) || challenges.get(challenge)! < nowSec())
-      return { result: null, error: "device challenge unknown or expired" };
+      return fallback("invalid", "device challenge unknown or expired");
     challenges.delete(challenge); // tek kullanımlık
     let r: DeviceCheck;
     if (ev.platform === "android" && Array.isArray(ev.key_attestation)) {
+      if (!roots.android.length) return fallback("not_configured", "android attestation roots not configured");
       const raw = new Uint8Array([
         4,
         ...Buffer.from(String(jwk.x), "base64url"),
@@ -202,7 +227,9 @@ export async function buildWalletProviderApp(
         roots: roots.android,
         allowUnlocked: cfg.device.allowDevelopment,
       });
-    } else if (ev.platform === "ios" && ev.app_attest && cfg.device.appleAppId) {
+    } else if (ev.platform === "ios" && ev.app_attest) {
+      if (!cfg.device.appleAppId) return fallback("not_configured", "apple app id not configured");
+      if (!roots.apple.length) return fallback("not_configured", "apple attestation root not configured");
       r = await verifyAppAttest({
         keyIdB64: String(ev.app_attest.key_id),
         attestationB64: String(ev.app_attest.attestation),
@@ -211,8 +238,8 @@ export async function buildWalletProviderApp(
         roots: roots.apple,
         allowDevelopment: cfg.device.allowDevelopment,
       });
-    } else return { result: null, error: "device evidence not supported" };
-    return r.ok ? { result: r } : { result: null, error: r.reason };
+    } else return fallback("unsupported", "device evidence not supported");
+    return r.ok ? { result: r } : fallback(r.code ?? "invalid", r.reason ?? "device attestation failed");
   }
 
   app.post("/units", async (req, reply) => {
@@ -227,18 +254,17 @@ export async function buildWalletProviderApp(
     const existing = store.unit(p.unitId);
     if (existing?.revoked_at) return reply.code(403).send({ error: "unit_revoked" });
     const dev = await checkDevice(b.device_evidence, p.payload.challenge, p.unitId, p.jwk);
-    if (dev.error) return reply.code(400).send({ error: "device_attestation_failed", error_description: dev.error });
     if (!existing)
       await store.addUnit(p.unitId, {
         jwk: { kty: "EC", crv: "P-256", x: p.jwk.x, y: p.jwk.y },
         solution_id,
         app_version: app_version ?? "0",
         platform: platform ?? "unknown",
-        storage: "software", // S-14: cihaz kanıtı yok → beyan dikkate alınmaz (WIA3)
+        storage: "software", // S-14: cihaz kanıtı doğrulanmadıkça yazılım seviyesi; beyan dikkate alınmaz (WIA3)
         created_at: nowSec(),
         wia_idx: [],
       });
-    // P4-2: seviye yalnız doğrulanmış platform kanıtından
+    // P4-2: seviye yalnız doğrulanmış platform kanıtından; daha önce doğrulanmış birim kanıtsız yeniden kayıtta düşürülmez
     if (dev.result) {
       const platform = b.device_evidence!.platform;
       await store.setUnitDevice(p.unitId, dev.result.storage, {
@@ -247,8 +273,45 @@ export async function buildWalletProviderApp(
         details: dev.result.details,
       });
     }
+    // a2 Play Integrity (ZORUNLU DEĞİL): Android kanıtıyla gelen jeton, servis hesabı ayarlıysa Google'a çözdürülür; yalnız hüküm
+    // sınıfları birimin cihaz kaydına yazılır. Depo seviyesi değişmez (anahtar kanıtından); jeton yoksa / çözülemezse kayıt sürer.
+    // Google'a YALNIZ Android anahtar kanıtı bu istekte doğrulandıysa gidilir: doğrulanmamış (sahte / tekrar) istekler dış servise
+    // ve servis hesabı kotasına yük bindiremez.
+    const piToken = (b.device_evidence as { play_integrity?: unknown } | undefined)?.play_integrity;
+    const pi =
+      playSa &&
+      dev.result?.ok === true &&
+      b.device_evidence?.platform === "android" &&
+      typeof p.payload.challenge === "string"
+        ? await verifyPlayIntegrity(piToken, {
+            packageName: cfg.device.androidPackage,
+            requestHash: p.payload.challenge,
+            serviceAccount: playSa,
+            fetch: opts.fetch,
+            allowDevelopment: cfg.device.allowDevelopment,
+          })
+        : null;
+    if (pi) {
+      const cur = store.unit(p.unitId)!;
+      await store.setUnitDevice(p.unitId, cur.storage, {
+        platform: "android",
+        verified_at: cur.device?.verified_at ?? nowSec(),
+        details: { ...cur.device?.details, play_integrity: { ok: pi.ok, device: pi.device, app: pi.app } },
+      });
+    }
     const u = store.unit(p.unitId)!;
-    return reply.code(201).send({ unit_id: p.unitId, key_storage: u.storage });
+    const attestation: AttestationLevel =
+      u.storage !== "software" ? "hardware" : b.device_evidence ? "software" : "none";
+    return reply.code(201).send({
+      unit_id: p.unitId,
+      key_storage: u.storage,
+      attestation,
+      // `invalid` (sahtecilik şüphesi): yalnız kod — hangi denetimin düştüğü kurcalayana geri bildirim olmasın
+      ...(attestation === "software" && dev.reason
+        ? { reason: dev.reason, ...(dev.reason !== "invalid" ? { detail: dev.detail } : {}) }
+        : {}),
+      ...(pi ? { play_integrity: { ok: pi.ok, device: pi.device } } : {}),
+    });
   });
 
   app.post("/wia", async (req, reply) => {

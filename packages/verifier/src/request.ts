@@ -76,6 +76,11 @@ export async function createPresentationRequest(p: {
    * `expected_origins` imzalı istekte — başka bir sitenin isteği yeniden kullanmasını engeller (Ek A.2).
    */
   dcApi?: { expectedOrigins: string[] };
+  /**
+   * ADR-0012 B: politika kabulde geçiş kartı veriyor → istekte `pass_grant_offered: true`; cüzdan kart için ayrı (istemsiz)
+   * anahtar üretir ve yanıta `pass_key` sahiplik kanıtı koyar (a3/WL13). Yoksa kart belge anahtarına bağlanır.
+   */
+  passGrantOffered?: boolean;
 }): Promise<PresentationRequest> {
   const now = p.now ?? Math.floor(Date.now() / 1000);
   const presentationId = "prs_" + randomBytes(9).toString("base64url");
@@ -117,6 +122,7 @@ export async function createPresentationRequest(p: {
         }
       : {}),
     ...(p.onBehalfOf && p.onBehalfOf !== p.signer.clientId ? { tamga_on_behalf_of: p.onBehalfOf } : {}),
+    ...(p.passGrantOffered ? { pass_grant_offered: true } : {}),
   })
     .setProtectedHeader({ alg: "ES256", typ: REQUEST_TYP, x5c: [derToB64(p.signer.leafDer)] })
     .setIssuedAt(now)
@@ -144,6 +150,8 @@ export async function createPresentationRequest(p: {
 export interface DecryptedResponse {
   vp_token: Record<string, string[]>;
   state?: string;
+  /** a3/WL13: geçiş kartı anahtarının sahiplik kanıtı (tamga-pass-key+jwt); `PassRegistry.issue` doğrular */
+  pass_key?: string;
 }
 export async function decryptResponse(jwe: string, encPrivateKey: KeyLike): Promise<DecryptedResponse> {
   const { plaintext, protectedHeader } = await compactDecrypt(jwe, encPrivateKey, {

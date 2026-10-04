@@ -80,9 +80,11 @@ Güven listesi bayatsa ya da indirilemiyorsa güven soruları `UNKNOWN` döner v
 
 ## Cüzdan: cihaz kanıtı ve WUA
 
-- **`device_attestation_failed`:** cüzdan sağlayıcısı cihaz kanıtını doğrulayamadı. Çekirdek kanıtsız yeniden dener ve birim yazılım
-  seviyesinde kaydolur. Sebep çoğunlukla geliştirme derlemesi, emülatör ya da uygulama kimliğinin (Bundle ID, paket adı)
-  sağlayıcının beklediğinden farklı olmasıdır.
+- **Kayıt yanıtında `attestation: "software"`:** cüzdan sağlayıcısı cihaz kanıtını kullanamadı; kayıt yine yapıldı ve birim yazılım
+  seviyesinde. `reason` nedeni söyler: `not_configured` (sağlayıcıda o platform için App ID ya da kökler ayarlı değil), `invalid`
+  (kanıt doğrulanamadı — çoğunlukla uygulama kimliği, Bundle ID ya da paket adı sağlayıcının beklediğinden farklı), `unsupported`
+  (geliştirme derlemesi, emülatör, kilidi açık cihaz ya da donanımsız anahtar). `attestation: "none"` kanıt hiç sunulmadı demektir
+  (Expo Go, yerel modül yok). Kayıt bu nedenlerle reddedilmez.
 - **Yazılım seviyesinde kayıt:** Expo Go'da ya da yerel anahtar modülü olmadan çalışıyorsunuz. Geliştirme derlemesi kullanın
   ([[GUIDE-0005]] §1).
 - **WUA süresi doldu:** belge almadan önce `wuaExpiringSoon` ile denetleyip yenileyin.

@@ -8,10 +8,7 @@
   "assurance_basis": "Recognised university; identity proofing by presentation of a Tamga Identity Attestation.",
   "cert": "issuer-example-uni",
   "status_cert": "issuer-example-uni-status",
-  "vcts": [
-    "urn:tamga:edu:StudentCredential:1",
-    "urn:tamga:edu:DiplomaCredential:1"
-  ],
+  "vcts": ["urn:tamga:edu:StudentCredential:1", "urn:tamga:edu:DiplomaCredential:1"],
   "authentic_source": {
     "name": "Example University Student Information System",
     "mode": "REMOTE"

@@ -37,7 +37,7 @@ describe.skipIf(!ready)("LoTE izdüşümü (ETSI TS 119 602)", () => {
   const read = (f: string) => readFileSync(join(DIST, "lote", f), "utf8");
 
   beforeAll(() => {
-    cpSync(resolve(APP, "registry"), REG, { recursive: true });
+    cpSync(resolve(APP, "test/fixtures/registry"), REG, { recursive: true }); // test listesi (örnek kurumlar ACTIVE)
     const l = JSON.parse(readFileSync(join(REG, "lotl.source.json"), "utf8"));
     l.lote = { ...l.lote, enabled: true };
     writeFileSync(join(REG, "lotl.source.json"), JSON.stringify(l, null, 2));

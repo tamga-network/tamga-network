@@ -208,3 +208,86 @@ function withScopeDates(s: Rec, now: Date): Rec {
     valid_until: s.valid_until ?? iso(plusYears(now, Number(valid_years ?? 1))),
   };
 }
+
+export const STATUSES = ["ACTIVE", "SUSPENDED", "REVOKED", "RETIRED"];
+
+/**
+ * Kurum durumunu değiştirir (SPEC-TRUST-0001 TL2: kayıt silinmez, değişiklik `status_history`'ye eklenir). `invalidatesFrom`
+ * yalnız REVOKED ile: o andan sonra verilmiş belgeler düşer (ele geçirilme ya da hiç geçerli olmaması gereken kayıt; tarih
+ * `valid_from` verilirse kurumun bütün belgeleri). REVOKED/RETIRED'da açık şema yetkileri de kapanır (bitiş tarihi).
+ */
+export function setIssuerStatus(
+  src: Rec,
+  slug: string,
+  status: string,
+  opts: { reason?: string; invalidatesFrom?: string },
+  env: Pick<RegistryEnv, "now">,
+): Rec {
+  const out = clone(src);
+  const i = ((out.issuers ?? []) as Rec[]).find((x) => x.slug === slug);
+  const p: string[] = [];
+  if (!i) p.push(`kurum yok: ${slug}`);
+  if (!STATUSES.includes(status)) p.push(`durum: ${STATUSES.join(" | ")}`);
+  if (opts.invalidatesFrom !== undefined) {
+    if (status !== "REVOKED") p.push("invalidates_from yalnız REVOKED ile");
+    if (!Number.isFinite(Date.parse(opts.invalidatesFrom)))
+      p.push(`invalidates_from tarih değil: ${opts.invalidatesFrom}`);
+  }
+  if (i && i.status === status && opts.invalidatesFrom === undefined) p.push(`${slug} zaten ${status}`);
+  if (p.length) throw new RegistryError(p);
+  const now = iso(env.now);
+  i!.status = status;
+  i!.status_history.push({
+    status,
+    since: now,
+    reason: opts.reason ?? "operator",
+    ...(opts.invalidatesFrom !== undefined ? { invalidates_from: opts.invalidatesFrom } : {}),
+  });
+  if (status === "REVOKED" || status === "RETIRED")
+    for (const a of i!.schema_authorizations as Rec[]) if (a.allowed && !a.valid_until) a.valid_until = now;
+  return out;
+}
+
+/** Doğrulayıcı durumunu değiştirir (TL2: kayıt silinmez; `status_history`'ye eklenir). REVOKED/RETIRED'da açık kullanımlar kapanır. */
+export function setRpStatus(
+  src: Rec,
+  dnsName: string,
+  status: string,
+  opts: { reason?: string },
+  env: Pick<RegistryEnv, "now">,
+): Rec {
+  const out = clone(src);
+  const rp = ((out.relying_parties ?? []) as Rec[]).find((r) => r.dns_name === dnsName);
+  const p: string[] = [];
+  if (!rp) p.push(`doğrulayıcı yok: ${dnsName}`);
+  if (!STATUSES.includes(status)) p.push(`durum: ${STATUSES.join(" | ")}`);
+  if (rp && rp.status === status) p.push(`${dnsName} zaten ${status}`);
+  if (p.length) throw new RegistryError(p);
+  const now = iso(env.now);
+  rp!.status = status;
+  rp!.status_history.push({ status, since: now, reason: opts.reason ?? "operator" });
+  if (status === "REVOKED" || status === "RETIRED") for (const u of rp!.scopes as Rec[]) endUse(u, env.now);
+  return out;
+}
+
+/**
+ * Doğrulayıcının bir kullanımını (`scopes[].scope_id`) ya da kapı grubunu (`terminal_groups[].group_id`) sona erdirir: kayıt
+ * kalır, bitiş tarihi (`valid_until`) şimdi olur (TL2; kayıt sertifikası artık üretilmez, AP6 kullanımı kabul etmez).
+ */
+export function endRpUse(src: Rec, dnsName: string, id: string, env: Pick<RegistryEnv, "now">): Rec {
+  const out = clone(src);
+  const rp = ((out.relying_parties ?? []) as Rec[]).find((r) => r.dns_name === dnsName);
+  if (!rp) throw new RegistryError([`doğrulayıcı yok: ${dnsName}`]);
+  const u = [...((rp.scopes ?? []) as Rec[]), ...((rp.terminal_groups ?? []) as Rec[])].find(
+    (x) => x.scope_id === id || x.group_id === id,
+  );
+  if (!u) throw new RegistryError([`${dnsName}: kullanım ya da kapı grubu yok: ${id}`]);
+  if (!endUse(u, env.now)) throw new RegistryError([`${dnsName}: ${id} zaten sona ermiş`]);
+  return out;
+}
+
+function endUse(u: Rec, now: Date): boolean {
+  if (u.valid_until && Date.parse(u.valid_until) <= now.getTime()) return false;
+  u.valid_until = iso(now);
+  return true;
+}

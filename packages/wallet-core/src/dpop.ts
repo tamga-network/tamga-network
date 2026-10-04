@@ -21,7 +21,7 @@ export interface DpopSigner {
 }
 
 export async function newDpopSigner(keys: KeyProvider, ref: string): Promise<DpopSigner> {
-  return { keys, ref, jwk: await keys.generate(ref) };
+  return { keys, ref, jwk: await keys.generate(ref, undefined, { policy: "device_unlocked" }) }; // a3: protokol anahtarı, istemsiz
 }
 
 /** Tek kullanımlık DPoP kanıtı. `accessToken` verilirse `ath` (belirtecin SHA-256'sı) eklenir. */

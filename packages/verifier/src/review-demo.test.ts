@@ -20,7 +20,7 @@ import { verifyPresentation, MemoryStatusCache, type Policy } from "./index.js";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
-const DIST = resolve(ROOT, "apps/trust-publisher/dist");
+const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
 const ready =
   existsSync(resolve(PKI, "issuer-id-review.pkcs8.pem")) &&
   existsSync(resolve(PKI, "issuer-id-status.pkcs8.pem")) &&

@@ -31,7 +31,7 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
       - run: npm ci --no-audit --no-fund
-      - run: npm run pki && npm run schemas:build && npm run trust:build && npm run trust:build && npm run trust:heartbeat
+      - run: npm run pki && npm run schemas:build && npm run trust:build && npm run trust:build && npm run trust:heartbeat && npm run trust:test-fixtures
       - run: npm test && npm run typecheck
       - run: npm run release:check
       - name: npm publish (.publish/<paket>)

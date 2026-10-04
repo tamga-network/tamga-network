@@ -12,10 +12,7 @@
   "issuer_url": "https://id.tamga.network",
   "status_list_base": "https://id.tamga.network/status/",
   "valid_years": 1,
-  "vcts": [
-    "urn:tamga:id:IdentityAttestation:1",
-    "urn:tamga:id:PseudonymSeed:1"
-  ],
+  "vcts": ["urn:tamga:id:IdentityAttestation:1", "urn:tamga:id:PseudonymSeed:1"],
   "authentic_source": {
     "name": "Simulated identity proofing for app-store review (no real person) — ADR-0033",
     "mode": "IDV_PROVIDER"

@@ -4,7 +4,7 @@ title: "Mağaza inceleme kodu"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Apple ve Google inceleyicileri Tamga Wallet'ın kimlik akışını gerçek bir Türk kimlik belgesi olmadan deneyebilmelidir.
   Karar: süreli, tek kullanımlık bir inceleme kodu; kod girilince kimlik servisi yalnız o oturum için sahte doğrulama
@@ -135,3 +135,14 @@ Tahmini iş: 2–3 gün (testlerle).
 # Durum
 
 **Accepted — 2026-10-01** (proje yönetimi onayı: üç soru da kabul). Uygulama: yukarıdaki plan.
+
+# Uygulama notu — 2026-10-04: mağaza incelemesi yalnız kimlik akışı
+
+Gerçek ağda test ve demo içeriği kalmaz; hepsi sandbox'tadır ([[ADR-0038]]; proje yönetimi onayı, 2026-10-04). Bu yüzden
+Bağlam ve K4'teki **kodsuz yollar** (bilet satın alma ve kapıda gösterme, Tamga Verify deneme politikaları sayfası, "Tamga ile giriş
+yap" örnek sitesi) gerçek ağda artık yoktur ve inceleme notuna yazılmaz; bunlar sandbox'ta denenir. Mağaza incelemesi yalnız
+kimlik akışıdır: inceleme kodu → DEMO kimlik belgesi → Tamga Verify inceleme politikaları (`review-age-over-18`,
+`review-site-signup`). İnceleme politikaları gerçek ağda kalır ama Tamga Verify ana sayfasında vitrin olarak gösterilmez;
+inceleyiciye doğrudan bağlantı verilir. Karar (D seçeneği, K1–K3, K5, RV1–RV3) değişmez.
+Aynı tarihte sahte kimlik sağlayıcı gerçek ağda kod kilidiyle tamamen kapandı (`TAMGA_IDV_DIDIT_FAKE=1` ile servis açılmaz);
+inceleme kodu yolu bundan bağımsızdır.

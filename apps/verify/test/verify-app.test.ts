@@ -30,6 +30,7 @@ import {
   clientAttestationPop,
   derivePseudonym,
   stableRpKey,
+  makePassKeyProof,
   type Http,
   type RpRecord,
 } from "@tamga-network/wallet-core";
@@ -45,7 +46,7 @@ import type { VerifyConfig } from "../src/config.js";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
-const DIST = resolve(ROOT, "apps/trust-publisher/dist");
+const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
 const ready = existsSync(resolve(PKI, "rp-verify.pkcs8.pem")) && existsSync(resolve(DIST, "lotl.jws"));
 const BASE = "http://verify.local";
 
@@ -82,7 +83,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       iat: now,
       ttlSec: 3600,
     });
-    app = await buildVerifyApp(cfg, { fetchText: async (u) => (u === STATUS_URI ? statusTok : null) });
+    // Senaryo politikaları (kampüs, işe alım …) yalnız sandbox vitrininde; test listesi gerçek ağ biçimli → vitrin açıkça açılır
+    app = await buildVerifyApp(cfg, { showcase: true, fetchText: async (u) => (u === STATUS_URI ? statusTok : null) });
     await app.statusCache.refresh([STATUS_URI]); // ön çekim (S12)
   });
   const http: Http = async (url, init) => {
@@ -208,6 +210,96 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(html.body).toContain("What happened in the background");
   });
 
+  it("a3/WL13: geçersiz pass_key → sunum yine ACCEPTED, geçiş kartı verilmez; geçerli kanıtla kart verilir", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const SVCT = "urn:tamga:edu:StudentCredential:1";
+    const catalogue = JSON.parse(readFileSync(resolve(ROOT, "packages/schemas/dist/index.json"), "utf8")) as Array<{
+      vct: string;
+      content_hash: string;
+    }>;
+    const signer = await pemIssuerSigner(
+      readFileSync(resolve(PKI, "issuer-bilgi.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "issuer-bilgi.cert.pem"), "utf8"),
+    );
+    const run = async (passKey: (nonce: string, clientId: string) => Promise<string>, ref: string) => {
+      const cnf = await keys.generate(ref);
+      const issued = await issueSdJwtVc({
+        signer,
+        iss: ISS,
+        vct: SVCT,
+        vctIntegrity: catalogue.find((c) => c.vct === SVCT)!.content_hash,
+        iat: now,
+        exp: now + 86400 * 30,
+        cnfJwk: cnf as never,
+        claims: {
+          family_name: "Yılmaz",
+          given_name: "Ayşe",
+          birth_date: "2001-05-05",
+          awarding_body_name: { "tr-TR": "Bilgi" },
+          awarding_body_id: "bilgi",
+          awarding_body_country: "TR",
+          student_status: "ACTIVE",
+          enrollment_year: 2022,
+          study_level: 6,
+          programme_title: { "tr-TR": "Bilgisayar Müh." },
+          isced_f_code: "0613",
+          is_enrolled: true,
+        },
+        sdPolicy: {},
+      });
+      const st = receiveCredentials(
+        newState("w"),
+        {
+          credentialIssuer: ISS,
+          vct: SVCT,
+          issuedAt: now,
+          copies: [{ combined: issued.combined, keyRef: ref, cnf }],
+          metadata: {
+            credential_issuer: ISS,
+            credential_endpoint: ISS + "/credential",
+            credential_configurations_supported: { [SVCT]: { format: "dc+sd-jwt" } },
+          },
+        },
+        { now },
+      );
+      const created = (
+        await app.inject({
+          method: "POST",
+          url: "/presentations",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          payload: { policy_id: "campus-access" },
+        })
+      ).json() as { presentation_id: string; qr_payload: string };
+      const uri = parseVpUri(created.qr_payload);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId);
+      expect(req.passGrantOffered).toBe(true);
+      const { matches } = matchDcql(req.dcql, st.state.credentials);
+      const copy = matches[0].credential.copies[0];
+      const out = await respond({
+        request: req,
+        matches: [{ match: matches[0], keyRef: copy.keyRef, combined: copy.combined, disclose: matches[0].requested }],
+        passKey: await passKey(req.nonce, req.clientId),
+        keys,
+        http,
+        now,
+      });
+      const res = (await app.inject({ method: "GET", url: `/presentations/${created.presentation_id}` })).json() as {
+        outcome: string;
+        failed_reason: string | null;
+      };
+      return { out, outcome: res.outcome, reason: res.failed_reason };
+    };
+    const bad = await run(async () => "not.a.proof", "wl13.s0");
+    expect(bad.reason).toBeNull();
+    expect(bad.out.status).toBe(200);
+    expect(bad.outcome).toBe("ACCEPTED");
+    expect(bad.out.passGrant).toBeUndefined();
+    await keys.generate("pass.t1");
+    const good = await run((nonce, clientId) => makePassKeyProof({ keys, ref: "pass.t1", clientId, nonce }), "wl13.s1");
+    expect(good.out.status).toBe(200);
+    expect(good.out.passGrant).toBeTruthy();
+  });
+
   it("D11 + ADR-0031: site-signup → takma adla hesap; site-signin → yalnız takma ad; başka siteye türetilmiş / eksik takma ad → RED; kit + QR PNG", async () => {
     const ID_ISS = "https://id.tamga.network";
     const ID_VCT = "urn:tamga:id:IdentityAttestation:1";
@@ -227,6 +319,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       ttlSec: 3600,
     });
     const app2 = await buildVerifyApp(cfg, {
+      showcase: true,
       fetchText: async (u) => (u === ID_STATUS ? idStatusTok : u === STATUS_URI ? statusTok : null),
     });
     await app2.statusCache.refresh([ID_STATUS]);
@@ -624,7 +717,10 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       iat: now,
       ttlSec: 3600,
     });
-    const app3 = await buildVerifyApp(cfg, { fetchText: async (u) => (u === ID_STATUS ? idStatusTok : null) });
+    const app3 = await buildVerifyApp(cfg, {
+      showcase: true,
+      fetchText: async (u) => (u === ID_STATUS ? idStatusTok : null),
+    });
     await app3.statusCache.refresh([ID_STATUS]);
     const http3: Http = async (url, init) => {
       const r = await app3.inject({
@@ -892,7 +988,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
   it("ADR-0017: sıkı kip — RP beyanı, sahiplik, durum jetonu, değerler bir kez; sayfada değer yok; örnek site sunucudan başlatır", async () => {
     const strict = await buildVerifyApp(
       { ...cfg, requireRpAuth: true, dataDir: join(tmpdir(), "tamga-verify-strict-" + process.pid) },
-      { fetchText: async (u) => (u === STATUS_URI ? statusTok : null) },
+      { showcase: true, fetchText: async (u) => (u === STATUS_URI ? statusTok : null) },
     );
     await strict.statusCache.refresh([STATUS_URI]);
     const httpS: Http = async (url, init) => {

@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -230,7 +230,7 @@ anahtarlarını (`bind { personal_administrative_number, birth_date }`) gönderi
 
 ```json
 {
-  "credential_issuer": "https://issuer.tamga.network/bilgi",
+  "credential_issuer": "https://issuer.tamga.network/example-university",
   "credential_configuration_ids": ["urn:tamga:edu:DiplomaCredential:1"],
   "grants": { "authorization_code": { "issuer_state": "b3f1c2…" } }
 }

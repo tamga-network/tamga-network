@@ -631,6 +631,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 | SPEC-SCHEMA-0001/D1 "yayımlanmış şema asla değişmez" | **Askıda (2026-09-30), beta ile yeniden yürürlükte.** Geliştirme evresinde gerçek kullanıcı yok; şemalar doğrusu bulunana kadar yerinde düzeltilir. | **D-SCHEMA-5** ([[ADR-0029]]) |
 | SPEC-WALLET-0001/WL4 "`presentation_log` cihazdan çıkmaz" | **Daraldı (2026-09-29).** AB (CIR 2024/2979 md. 9, 13; TS10) kişinin günlüğünü dışa aktarabilmesini ister. Yalnız kişinin başlattığı, parolalı dosyada; sunucuya asla. | **D-WALLET-2** ([[ADR-0027]]) |
 | D-CRED-6 biçimi: tek 30 günlük WUA, `key_storage` WUA beyanında | **Değişti (2026-09-29).** AB TS3: 24 saatten kısa, işlem başına WIA + sağlayıcı imzalı KA + iptal listeleri. İlke (ihraçtan önce cüzdan doğrulaması) aynı. | **D-CRED-7** ([[ADR-0025]]) |
+| [[ADR-0035]] üçüncü katman "ürün ve hizmetler" (D-GOV-7: ağ kurumlara hizmet sunar) | **Kısmen değişti (2026-10-02).** Tamga Network yalnızca ağdır, hizmet satmaz; ticari hizmetler (entegrasyon, destek, connector) ağın dışındaki şirkette. Taban ve federasyon katmanı, PO1–PO4 geçerli. | **D-GOV-8** ([[ADR-0037]]) |
 | ADR-0011 K3 / ADR-0019 kayıt defteri: kişi kayıtları Tamga veritabanında, teklif ve eşleştirme defterden | **Daraldı (2026-09-29).** Yetkili kaynak kurumda; defter yalnız deneme (sandbox). Teklif kimliğe bağlı, bilgi imza anında kaynaktan. | **D-SRC-1** ([[ADR-0020]]) |
 ---
 

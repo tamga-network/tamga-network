@@ -76,6 +76,8 @@ export interface VpRequest {
   rpKey: string;
   /** Digital Credentials API ile geldiyse isteği yapan sayfanın kökeni (işletim sistemi/tarayıcı verir); yanıt sayfaya döner. */
   origin?: string;
+  /** ADR-0012 B: RP kabulde geçiş kartı verecek (`pass_grant_offered`); cüzdan kart anahtarını üretip `pass_key` ekler (a3/WL13). */
+  passGrantOffered?: boolean;
 }
 
 /** QR: openid4vp://?client_id=…&request_uri=…  (veya doğrudan request_uri URL'i) */
@@ -208,6 +210,7 @@ export function verifyRequestObject(jwt: string, expectedClientId?: string, opts
     ...(onBehalfOf ? { onBehalfOf } : {}),
     rpKey: onBehalfOf ?? clientId,
     ...(dcApi ? { origin: opts.origin } : {}),
+    ...(p.pass_grant_offered === true ? { passGrantOffered: true } : {}),
   };
 }
 
@@ -618,6 +621,8 @@ export interface RespondInput {
   matches: Array<{ match: Match; keyRef: string; combined: string; disclose: string[] }>;
   /** ADR-0031: takma ad sunumu (`presentPseudonym` çıktısı) — istekteki takma ad sorgusunun id'siyle */
   pseudonym?: { queryId: string; jwt: string };
+  /** a3/WL13: geçiş kartı anahtarının sahiplik kanıtı (`makePassKeyProof`) — RP grant'ı bu anahtara bağlar */
+  passKey?: string;
   keys: KeyProvider;
   http: Http;
   randomBytes?: (n: number) => Uint8Array;
@@ -671,6 +676,7 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
   if (p.pseudonym) vpToken[p.pseudonym.queryId] = [p.pseudonym.jwt];
   const payload: Record<string, unknown> = { vp_token: vpToken };
   if (p.request.state) payload.state = p.request.state;
+  if (p.passKey) payload.pass_key = p.passKey; // şifreli yük içinde; RP dışında kimse görmez
   const jwe = encryptJwe(utf8(JSON.stringify(payload)), p.request.encJwk, {
     randomBytes: p.randomBytes,
     enc: p.request.enc ?? "A128GCM",

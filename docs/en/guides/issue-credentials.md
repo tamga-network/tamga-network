@@ -4,7 +4,7 @@ title: "Issue credentials as an institution"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Issuing credentials to people's wallets as a university, a public body or a ticket seller: calling the issuer service hosted
   by Tamga with `@tamga-network/issuer/client` (offers, ticket sales, revocation/suspension), or building your own issuer
@@ -43,10 +43,15 @@ There are two ways:
 
 ## Hosted service: the client
 
+> **Try it in the sandbox first.** The example below uses the address of the fictional ticket seller on the test network
+> (`bubilet`, `issuer.sandbox.tamga.network`); the sandbox addresses and sample institutions are in [[GUIDE-0013]]. On the real
+> network `baseUrl` is `https://issuer.tamga.network` and `slug` is your institution's registered name; the Institution Console
+> gives you the API key after registration.
+
 ```ts
 import { createIssuerClient } from "@tamga-network/issuer/client";
 
-const tamga = createIssuerClient({ baseUrl: "https://issuer.tamga.network", slug: "bubilet", apiKey: process.env.TAMGA_API_KEY! });
+const tamga = createIssuerClient({ baseUrl: "https://issuer.sandbox.tamga.network", slug: "bubilet", apiKey: process.env.TAMGA_API_KEY! });
 
 // You sold a ticket → an offer to the wallet (no personal data in the ticket)
 const sale = await tamga.sellTicket({ eventId: "EVT-2026-KONSER-01", ticketClass: "STANDARD" });
@@ -99,8 +104,9 @@ moment of issuance it asks your system's **source endpoint** with a signed reque
 - `fetch`: for identity-bound offers, at issuance and when copies are renewed — a read with your opaque person identifier.
 - The request is a 60-second JWT signed with the [[t:access-certificate]] in Tamga's [[t:trust-list]] entry; check `aud`,
   `exp` and `jti`.
-- Until the source endpoint is connected, you can test with the **sample source** in the Institution Console; never enter real
-  personal data there for production.
+- Until the source endpoint is connected, try issuance with the sample institutions in the sandbox ([[GUIDE-0013]]). The
+  Institution Console's **sample source** opens only in the sandbox environment; it is closed on the real network and real
+  personal data is never entered there.
 
 The whole Tamga API: `docs/api/tamga-issuer-api.openapi.yaml`.
 

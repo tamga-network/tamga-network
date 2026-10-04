@@ -4,11 +4,11 @@ title: "“Tamga ile giriş yap” eklemek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Bir web sitesine Tamga ile kayıt ve giriş eklemek: sayfada `@tamga-network/verifier/web` kiti (QR / telefonda cüzdanı aç),
-  sunucuda sonucun doğrulayıcıdan alınıp oturum açılması, kayıttan sonra passkey ile telefonsuz giriş. Çalışan örnek:
-  verify.tamga.network/sample-site (apps/verify/src/routes/site.ts).
+  sunucuda sonucun doğrulayıcıdan alınıp oturum açılması, kayıttan sonra passkey ile telefonsuz giriş. Çalışan örnek
+  sandbox'ta: verify.sandbox.tamga.network/sample-site (apps/verify/src/routes/site.ts).
 ---
 
 # Web sitenize "Tamga ile giriş yap" eklemek
@@ -18,6 +18,9 @@ barındırılan [[t:verifier|doğrulayıcısı]] Tamga Verify yapar; size bir sa
 
 **Ne zaman okunur:** sitenize şifresiz, telefonla kayıt ve giriş eklemek istediğinizde. Önce [[GUIDE-0000]]'a göz atın.
 Doğrulamayı tamamen kendi sunucunuzda yapmak isterseniz [[GUIDE-0002]]'ye geçin.
+
+**Denemek için:** çalışan örnek site test ağındadır: `https://verify.sandbox.tamga.network/sample-site` (sandbox yayına
+girince; adresler ve test cüzdanı ayarı [[GUIDE-0013]]'te). Gerçek ağdaki Tamga Verify'da örnek site yoktur.
 
 ## Nasıl çalışır?
 
