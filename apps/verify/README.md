@@ -33,7 +33,7 @@ npm run verify            # :4004; env: TAMGA_VERIFY_BASE, TAMGA_VERIFY_CLIENT_I
 `policies.ts` `policiesFor(ağ)`: **gerçek ağ** = genel (`age-over-18-mdoc`, `age-over-18-zk`, `site-signup`, `site-signin`) +
 mağaza inceleme (`review-age-over-18`, `review-site-signup`; ADR-0033). **Sandbox** (`TAMGA_NETWORK=sandbox`) = hepsi; kurgusal
 senaryolar (kampüs, bilet, indirim, işe alım, araç kiralama), ana sayfa paneli, `/sample-site` ve `/terminal` yalnız orada.
-Gerçek ağda `/sample-site` (ve eski `/demo-site`) sandbox'taki örnek siteye 302 yönlenir; `TAMGA_SANDBOX_LIVE=1` değilse
+Gerçek ağda `/sample-site` (ve eski `/demo-site`) sandbox'taki örnek siteye 302 yönlenir; `TAMGA_SANDBOX_LIVE=0` ise
 docs sandbox rehberine. Kapı politikası olmayan ağda `/terminal` ve `/terminal/verify` 404 (nötr).
 
 Status list'ler doğrulama başına **çekilmez**; güven çapalarındaki liste URI'leri periyodik toplu çekilir (S12).

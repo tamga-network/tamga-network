@@ -59,6 +59,6 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
     dataDir: e.TAMGA_VERIFY_DATA_DIR ?? resolve(root, "apps/verify/data"),
     requireRpAuth: e.TAMGA_VERIFY_REQUIRE_RP_AUTH === "1",
     zkNativeBin: e.TAMGA_ZK_NATIVE_BIN?.trim() || undefined,
-    sandboxLive: e.TAMGA_SANDBOX_LIVE === "1",
+    sandboxLive: e.TAMGA_SANDBOX_LIVE !== "0", // 2026-10-04 sandbox yayında: varsayılan açık
   };
 }
