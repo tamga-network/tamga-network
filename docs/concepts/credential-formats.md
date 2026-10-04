@@ -28,6 +28,7 @@ tanımına ([[t:vct]]) `vct#integrity` özetiyle bağlıdır; [[t:verifier|doğr
 | `urn:tamga:edu:StudentCredential:1` | üniversite |
 | `urn:tamga:edu:DiplomaCredential:1` | üniversite |
 | `urn:tamga:id:IdentityAttestation:1` | kimlik servisi (geçici; devletin kimlik belgesi gelene kadar) |
+| `urn:tamga:id:DrivingLicenceAttestation:1` | kimlik servisi — sürücü belgesi bilgisi; resmî sürücü belgesi değil, kimlik belgesi ön koşul |
 | `urn:tamga:tkt:EventTicket:1` | bilet satıcısı |
 | `urn:tamga:contact:EmailAddress:1`, `PhoneNumber:1` | kimlik servisi |
 

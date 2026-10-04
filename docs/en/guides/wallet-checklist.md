@@ -2,7 +2,7 @@
 document_id: GUIDE-0010
 title: "Wallet pre-release checklist"
 status: Active
-version: 1.0.1
+version: 1.0.0
 created: 2026-10-03
 last_updated: 2026-10-03
 summary: >
@@ -10,7 +10,7 @@ summary: >
   registration, receiving credentials, presenting and the consent screen, privacy and the transaction log, changing devices and
   deletion, the trust list, conformance tests and the stores.
 translation_of: GUIDE-0010
-source_version: 1.0.1
+source_version: 1.0.0
 ---
 
 # Wallet pre-release checklist

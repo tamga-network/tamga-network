@@ -2,7 +2,7 @@
 document_id: GUIDE-0006
 title: "Read trust lists"
 status: Active
-version: 1.1.0
+version: 1.0.0
 created: 2026-09-27
 last_updated: 2026-10-03
 summary: >
@@ -10,7 +10,7 @@ summary: >
   three-valued answers; where registration is covered; and, once the ledger stage (Besu/QBFT) opens, configuration for node and
   validator operators, the contracts and what the switch means for your application.
 translation_of: GUIDE-0006
-source_version: 1.1.0
+source_version: 1.0.0
 ---
 
 # Trust lists and the network

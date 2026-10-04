@@ -2,7 +2,7 @@
 document_id: GUIDE-0005
 title: "Cüzdan geliştirmek"
 status: Active
-version: 1.1.1
+version: 1.0.0
 created: 2026-09-27
 last_updated: 2026-10-03
 summary: >

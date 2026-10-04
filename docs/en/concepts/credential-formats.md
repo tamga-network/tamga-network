@@ -29,6 +29,7 @@ catalogue at `https://schemas.tamga.network/v1/catalogue.json`. A credential is 
 | `urn:tamga:edu:StudentCredential:1` | university |
 | `urn:tamga:edu:DiplomaCredential:1` | university |
 | `urn:tamga:id:IdentityAttestation:1` | identity service (provisional, until the state identity credential arrives) |
+| `urn:tamga:id:DrivingLicenceAttestation:1` | identity service — driving licence information; not an official driving licence, identity credential required first |
 | `urn:tamga:tkt:EventTicket:1` | ticket seller |
 | `urn:tamga:contact:EmailAddress:1`, `PhoneNumber:1` | identity service |
 

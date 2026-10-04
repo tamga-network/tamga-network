@@ -84,10 +84,14 @@ export interface WalletState {
     issuerBase?: string;
     /** ADR-0038: geliştirici ayarı — bağlı ağ (yoksa "production"); güven çapası ve varsayılan adresler buna göre seçilir. */
     network?: "production" | "sandbox";
+    /** Tamga Wallet WA-ADR-0003 K2: telefonun yerel bildirimleri (yok = henüz sorulmadı; false = kapalı; true = açık) */
+    localNotifications?: boolean;
   };
   wua?: WuaRecord;
   /** ADR-0025: cüzdan sağlayıcıda kayıtlı birim (birim anahtarı KeyProvider'da "wallet.unit") */
   walletUnit?: { unitId: string; provider: string; registeredAt: number };
+  /** WA-ADR-0002 K1: kapatma kodu oluşturuldu (kodun kendisi cihazda SAKLANMAZ; yalnız tarih + kaydedildiği sağlayıcı) */
+  lockCode?: { createdAt: number; provider: string };
 } // idBase: Tamga kimlik servisi (ADR-0011; geliştirme)
 export interface Manifest {
   version: 1;

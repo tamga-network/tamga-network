@@ -121,6 +121,12 @@
           "allowed": true,
           "valid_from": "2026-09-30T00:00:00Z",
           "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:id:DrivingLicenceAttestation:1",
+          "allowed": true,
+          "valid_from": "2026-10-03T00:00:00Z",
+          "valid_until": null
         }
       ],
       "authentic_source": {
@@ -217,10 +223,7 @@
             "tk-TM": "Talyp arzanladyşy"
           },
           "vct": "urn:tamga:edu:StudentCredential:1",
-          "claims": [
-            "is_enrolled",
-            "awarding_body_name"
-          ],
+          "claims": ["is_enrolled", "awarding_body_name"],
           "valid_from": "2026-09-24T00:00:00Z",
           "valid_until": "2027-09-24T00:00:00Z"
         },
@@ -232,9 +235,7 @@
             "tk-TM": "Kampusa giriş (turniket) — geçiş kartyny hasaba almak"
           },
           "vct": "urn:tamga:edu:StudentCredential:1",
-          "claims": [
-            "is_enrolled"
-          ],
+          "claims": ["is_enrolled"],
           "valid_from": "2026-09-25T00:00:00Z",
           "valid_until": "2027-09-25T00:00:00Z"
         },
@@ -258,10 +259,7 @@
             "tk-TM": "Saýta agza bolmak — ady, familiýasy (saýt özüne degişli lakamy alýar)"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": [
-            "given_name",
-            "family_name"
-          ],
+          "claims": ["given_name", "family_name"],
           "valid_from": "2026-09-25T00:00:00Z",
           "valid_until": "2027-09-25T00:00:00Z"
         },
@@ -273,10 +271,7 @@
             "tk-TM": "Çäre derwezesi — bilet geçiş kartysy (bir gezeklik)"
           },
           "vct": "urn:tamga:tkt:EventTicket:1",
-          "claims": [
-            "event_id",
-            "ticket_class"
-          ],
+          "claims": ["event_id", "ticket_class"],
           "valid_from": "2026-09-26T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z"
         },
@@ -288,11 +283,21 @@
             "tk-TM": "18 ýaşdan ulydygyny barlamak — diňe hawa/ýok"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": [
-            "age_over_18"
-          ],
+          "claims": ["age_over_18"],
           "valid_from": "2026-09-26T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z"
+        },
+        {
+          "scope_id": "car-rental-driving-1",
+          "purpose": "Car rental — driving licence categories and over-18 (verified driving licence information; not an official driving licence)",
+          "purpose_localized": {
+            "tr-TR": "Araç kiralama — sürücü belgesi sınıfları ve 18 yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)",
+            "tk-TM": "Awtoulag kärendesi — sürüjilik şahadatnamasynyň derejeleri we 18 ýaşdan uly (barlanan sürüjilik şahadatnamasy maglumaty; resmi sürüjilik şahadatnamasynyň ornuny tutmaýar)"
+          },
+          "vct": "urn:tamga:id:DrivingLicenceAttestation:1",
+          "claims": ["driving_privileges", "age_over_18"],
+          "valid_from": "2026-10-04T00:00:00Z",
+          "valid_until": "2027-10-04T00:00:00Z"
         }
       ],
       "terminal_groups": [
@@ -320,9 +325,7 @@
         "tr-TR": "Barındırılan doğrulama hizmeti: siteler ve kapılar Tamga belgelerini saklamadan doğrular."
       },
       "is_public_sector_body": false,
-      "entitlements": [
-        "service_provider"
-      ],
+      "entitlements": ["service_provider"],
       "supervisory_authority": {
         "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
         "country": "TR",
@@ -351,12 +354,7 @@
             "tk-TM": "Resminama bermek üçin şahsyýeti deňeşdirmek: şahsyýet belgisi we doglan senesi edaranyň ýazgysy bilen deňeşdirilýär, saklanmaýar"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": [
-            "personal_administrative_number",
-            "birth_date",
-            "given_name",
-            "family_name"
-          ],
+          "claims": ["personal_administrative_number", "birth_date", "given_name", "family_name"],
           "valid_from": "2026-09-25T00:00:00Z",
           "valid_until": "2027-09-25T00:00:00Z"
         }

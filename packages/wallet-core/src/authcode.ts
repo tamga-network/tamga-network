@@ -90,6 +90,11 @@ export interface StartInput {
   signerFingerprints?: string[];
   /** ARF RPRC_22a/23: LOTL kayıt kurumu anahtarları — verilirse metadata'daki issuer_info denetlenir */
   registrarKeys?: string[];
+  /**
+   * PAR gövdesine eklenen, belge verene özel ek alanlar (ADR-0039: `identity_presentation` — kimlik belgesinin SD-JWT VC + KB-JWT
+   * sunumu, aud = belge veren, nonce = belge verenin /nonce ucundan). Standart alanların üzerine yazamaz.
+   */
+  parExtra?: Record<string, string>;
 }
 
 export async function wuaHeaders(p: {
@@ -136,6 +141,7 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
     method: "POST",
     headers,
     body: form({
+      ...(p.parExtra ?? {}),
       client_id: p.wua.sub,
       response_type: "code",
       redirect_uri: p.redirectUri,

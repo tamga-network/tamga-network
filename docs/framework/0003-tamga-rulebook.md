@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -163,6 +163,9 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-AP-ID-05 | Aynı belge numarası için ikinci etkin kimlik belgesi **MUST NOT** verilmek; yeniden doğrulama eskisini iptal eder. |
 | RB-AP-ID-06 | Devletin PID sağlayıcısı atandığında sağlayıcı kaydı `successor_id` ile **MUST** devretmek ve yeni belge vermeyi durdurmak; mevcut belgeler süreleri dolana kadar geçerli kalır. |
 | RB-AP-ID-07 | Kimlik belgesiyle birlikte site başına [[t:pseudonym|takma ad]] tohumu **MUST** ayrı ve gösterilemeyen bir türde (`urn:tamga:id:PseudonymSeed:1`) verilmek; tohum kişinin değişmeyen kimliğinden, belge özeti anahtarından **ayrı** bir anahtarla türetilir ve **MUST NOT** saklanmak (her doğrulamada yeniden hesaplanır); bu tür hiçbir doğrulayıcı kapsamında **MUST NOT** yer almak. |
+| RB-AP-ID-08 | Sürücü belgesi bilgisi (`urn:tamga:id:DrivingLicenceAttestation:1`) **MUST NOT** resmî mDL docType'ını ya da namespace'ini kullanmak ve **MUST** metadata'sında, her zaman açık `not_official_licence` alanında, kartında ve doğrulama sonucunda resmî sürücü belgesi yerine geçmediğini yazmak; ulusal kimlik numarası, kısıtlama ya da sağlık kodu, fotoğraf ve adres **MUST NOT** taşınmak; belge numarası yalnız anahtarlı özettir. |
+| RB-AP-ID-09 | Sürücü belgesi bilgisi **MUST** yalnız cüzdandaki etkin Tamga kimlik belgesinin sunumu üzerine ve karttaki ad ile doğum tarihi o kimlikle eşleşirse verilmek; sınıflar okunamıyorsa ya da kart süresi geçmişse **MUST NOT** verilmek; süresi kartın bitişini ve kartın incelendiği günden itibaren bir yılı **MUST NOT** geçmek; biçimi yalnız SD-JWT VC'dir. |
+| RB-AP-ID-10 | Bağlı kimlik belgesi iptal edilince, yeniden verilince ya da silinince sürücü belgesi bilgisi **MUST** iptal edilmek ya da silinmek; bir ülkenin yetkili makamı dijital sürücü belgesi vermeye başlayınca o ülke için bu tür **MUST NOT** yeniden verilmek. |
 
 ---
 

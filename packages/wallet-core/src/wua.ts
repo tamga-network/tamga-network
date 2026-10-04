@@ -12,6 +12,9 @@ import type { KeyProvider, KeyStorage, PublicJwk } from "./keys.js";
 import { jwkThumbprint } from "./jwe.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { WalletError, type Http, readJson } from "./http.js";
+import { lockCodePrehash } from "./lock-code.js";
+import { parseStatusToken, statusBitAt } from "./status.js";
+import type { TrustSource } from "@tamga-network/trust/core";
 
 export const WUA_TYP = "oauth-client-attestation+jwt";
 export const WUA_POP_TYP = "oauth-client-attestation-pop+jwt";
@@ -104,6 +107,26 @@ export const wuaExpiringSoon = (w: WuaRecord | undefined, now = Math.floor(Date.
 export const UNIT_REF = "wallet.unit";
 export const UNIT_POP_TYP = "tamga-unit-pop+jwt";
 export const PROOF_TYP_KA = "openid4vci-proof+jwt";
+
+/**
+ * Cüzdan sağlayıcı yolları — TEK yer (cüzdan istemcisi ve sağlayıcı servisi aynı sabitleri kullanır). Adlar proje yönetimi
+ * onayıyla (2026-10-04): teknik uçlar `units/` altında (ARF "wallet unit revocation"), kişi sayfası `/lost`.
+ */
+export const WP_PATHS = {
+  challenge: "/units/challenge",
+  register: "/units",
+  wia: "/wia",
+  ka: "/ka",
+  /** Birim iptali: cihazdan imzalı kanıtla YA DA (WA-ADR-0002) yalnız kapatma koduyla (`revocation_code`). */
+  revoke: "/units/revoke",
+  delete: "/units/delete",
+  /** WA-ADR-0002 K1: kapatma kodunun ön özetini birime bağlar (imzalı kanıt). */
+  revocationCode: "/units/revocation-code",
+  /** WA-ADR-0002 K3: birimin durumu (`active` / `revoked`) — imzalı kanıt; WIA girişi harcamaz. */
+  status: "/units/status",
+  /** WA-ADR-0002 K2: "Telefonumu kaybettim" sayfası (TR/EN); kod girişi → `revoke`. */
+  lost: "/lost",
+} as const;
 
 const base = (u: string) => u.replace(/\/$/, "");
 const thumb = (jwk: PublicJwk) => b64u(jwkThumbprint(jwk));
@@ -204,7 +227,7 @@ export async function requestWia(p: {
   const r = await postJson(p.http, `${base(p.providerBase)}/wia`, { proof, wia_jwk: wiaJwk });
   if (r.status !== 200 || typeof r.body.wia !== "string") {
     await p.keys.delete(keyRef).catch(() => {});
-    if (r.body.error === "unit_revoked") throw new WalletError("unsupported", "This wallet has been revoked.");
+    if (r.body.error === "unit_revoked") throw new WalletError("unit_revoked", "This wallet has been revoked.");
     throw failed("WIA could not be obtained", r.body, r.status);
   }
   const claims = decodeJwt(r.body.wia).payload as { sub?: string; exp?: number; wallet_name?: string };
@@ -261,6 +284,72 @@ export async function deleteUnit(p: {
   const r = await postJson(p.http, `${base(p.providerBase)}/units/delete`, { proof });
   if (r.status === 400 && /unknown unit/.test(String(r.body.error_description ?? ""))) return;
   if (r.status !== 200) throw failed("wallet deletion failed", r.body, r.status);
+}
+
+/**
+ * WA-ADR-0002 K1: kapatma kodunun ÖN ÖZETİNİ (kodun kendisini değil) birime bağlar; sağlayıcı yavaş özetini tutar, eskisini
+ * siler. Kod bu çağrıdan sonra cihazda saklanmaz — çağıran yalnız "oluşturuldu" bilgisini yazar.
+ */
+export async function registerLockCode(p: {
+  providerBase: string;
+  keys: KeyProvider;
+  http: Http;
+  code: string;
+  randomBytes?: (n: number) => Uint8Array;
+}): Promise<void> {
+  const proof = await unitProof(p, "revocation-code", { lock_prehash: lockCodePrehash(p.code) });
+  const r = await postJson(p.http, `${base(p.providerBase)}${WP_PATHS.revocationCode}`, { proof });
+  if (r.status === 403 && r.body.error === "unit_revoked")
+    throw new WalletError("unit_revoked", "This wallet has been revoked.");
+  if (r.status !== 200) throw failed("revocation code could not be saved", r.body, r.status);
+}
+
+/**
+ * WA-ADR-0002 K3 — yalnız İPUCU: birimin sağlayıcıdaki durumu (imzasız JSON). Cüzdan buna dayanarak hiçbir şey SİLMEZ; silme
+ * kararı yalnız imzalı iptal listesiyle verilir (`wiaRevokedByList`). Bilinmeyen birim / ağ hatası fırlatılır.
+ */
+export async function unitStatus(p: {
+  providerBase: string;
+  keys: KeyProvider;
+  http: Http;
+  randomBytes?: (n: number) => Uint8Array;
+}): Promise<"active" | "revoked"> {
+  const proof = await unitProof(p, "status");
+  const r = await postJson(p.http, `${base(p.providerBase)}${WP_PATHS.status}`, { proof });
+  if (r.status === 200 && (r.body.status === "active" || r.body.status === "revoked")) return r.body.status;
+  if (r.status === 403 && r.body.error === "unit_revoked") return "revoked";
+  throw failed("wallet status could not be read", r.body, r.status);
+}
+
+/** WIA'nın iptal listesi girişi (ADR-0025 `client_status`); eski WUA'da yok. */
+export function wiaStatusRef(wua: WuaRecord): { uri: string; idx: number } | undefined {
+  const c = decodeJwt(wua.jwt).payload as {
+    client_status?: { status?: { status_list?: { uri?: unknown; idx?: unknown } } };
+  };
+  const sl = c.client_status?.status?.status_list;
+  return sl && typeof sl.uri === "string" && typeof sl.idx === "number" ? { uri: sl.uri, idx: sl.idx } : undefined;
+}
+
+/**
+ * WA-ADR-0002 K3 / RL4 — silmenin TEK dayanağı: sağlayıcının herkese açık, İMZALI WIA iptal listesi (kimlik servisinin
+ * denetlediği listenin aynısı). Listeyi çekmek kimliksizdir (hangi girişin arandığı görünmez); imzacı, pin'li güven listesindeki
+ * bir cüzdan sağlayıcı anahtarı olmalıdır — TLS'e tek başına güvenilmez. Kendi WIA girişi INVALID ise `true`. Giriş yoksa (eski
+ * WUA) `false`; ağ ya da doğrulama hatası fırlatılır (çağıran silmez, sonraki öne gelişte yeniden dener).
+ */
+export async function wiaRevokedByList(p: {
+  wua: WuaRecord;
+  http: Http;
+  trust: Pick<TrustSource, "isWalletProviderKey">;
+  now?: number;
+}): Promise<boolean> {
+  const ref = wiaStatusRef(p.wua);
+  if (!ref) return false;
+  const r = await p.http(ref.uri, { method: "GET" });
+  if (r.status !== 200) throw new WalletError("network", `wallet status list: HTTP ${r.status}`);
+  const list = parseStatusToken((await r.text()).trim(), ref.uri, p.now ?? Math.floor(Date.now() / 1000));
+  if (p.trust.isWalletProviderKey(list.signerFingerprint) !== "YES")
+    throw new WalletError("trust_error", "wallet status list: signer is not a registered wallet provider");
+  return statusBitAt(list, ref.idx) === 1;
 }
 
 /** Belge akışlarına verilen KA üretici (obtainCredential). */

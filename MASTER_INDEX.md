@@ -13,20 +13,20 @@ Adım adım: doğrulayıcı, belge veren kurum, cüzdan geliştirici.
 
 | Kimlik | Başlık | Sürüm | Durum | Dosya |
 |---|---|---|---|---|
-| `GUIDE-0000` | Başlarken | 1.0.1 | Active | `docs/guides/index.md` |
+| `GUIDE-0000` | Başlarken | 1.0.0 | Active | `docs/guides/index.md` |
 | `GUIDE-0001` | “Tamga ile giriş yap” eklemek | 1.0.0 | Active | `docs/guides/sign-in-with-tamga.md` |
 | `GUIDE-0002` | Sunucuda doğrulama | 1.0.0 | Active | `docs/guides/verify-on-server.md` |
 | `GUIDE-0003` | Kurum olarak belge vermek | 1.0.0 | Active | `docs/guides/issue-credentials.md` |
 | `GUIDE-0004` | Kod örnekleri | 1.0.0 | Active | `docs/guides/code-examples.md` |
-| `GUIDE-0005` | Cüzdan geliştirmek | 1.1.1 | Active | `docs/guides/build-a-wallet.md` |
-| `GUIDE-0006` | Güven listelerini okumak | 1.1.0 | Active | `docs/guides/read-trust-lists.md` |
+| `GUIDE-0005` | Cüzdan geliştirmek | 1.0.0 | Active | `docs/guides/build-a-wallet.md` |
+| `GUIDE-0006` | Güven listelerini okumak | 1.0.0 | Active | `docs/guides/read-trust-lists.md` |
 | `GUIDE-0007` | Kurum olarak ağa katılmak | 1.0.0 | Active | `docs/guides/join-as-institution.md` |
 | `GUIDE-0008` | Doğrulayıcı olarak kayıt olmak | 1.0.0 | Active | `docs/guides/register-verifier.md` |
-| `GUIDE-0009` | Uyum testleri | 1.0.1 | Active | `docs/guides/conformance.md` |
-| `GUIDE-0010` | Cüzdan yayın öncesi kontrol listesi | 1.0.1 | Active | `docs/guides/wallet-checklist.md` |
+| `GUIDE-0009` | Uyum testleri | 1.0.0 | Active | `docs/guides/conformance.md` |
+| `GUIDE-0010` | Cüzdan yayın öncesi kontrol listesi | 1.0.0 | Active | `docs/guides/wallet-checklist.md` |
 | `GUIDE-0011` | Ulusal güven listesi yayınlamak | 1.0.0 | Active | `docs/guides/publish-national-list.md` |
 | `GUIDE-0012` | Sorun giderme | 1.0.0 | Active | `docs/guides/troubleshooting.md` |
-| `GUIDE-0013` | Sandbox: test ağı | 1.1.0 | Active | `docs/guides/sandbox.md` |
+| `GUIDE-0013` | Sandbox: test ağı | 1.0.0 | Active | `docs/guides/sandbox.md` |
 
 ## Şartnameler
 
@@ -41,11 +41,11 @@ Kesin kurallar; uygulama bunlara uyar.
 | `SPEC-ID-0002` | Kurum kimliği (X.509) | 1.0.0 | Active | `docs/specifications/x509-identity.md` |
 | `SPEC-ID-0003` | Kimlik doğrulama | 1.0.0 | Active | `docs/specifications/identity-proofing.md` |
 | `SPEC-PROTO-0001` | OpenID4VCI profili | 1.0.0 | Active | `docs/specifications/openid4vci.md` |
-| `SPEC-PROTO-0002` | OpenID4VP profili | 1.1.0 | Active | `docs/specifications/openid4vp.md` |
+| `SPEC-PROTO-0002` | OpenID4VP profili | 1.0.0 | Active | `docs/specifications/openid4vp.md` |
 | `SPEC-SCHEMA-0001` | Şema kataloğu | 1.0.0 | Active | `docs/specifications/schema-catalog.md` |
 | `SPEC-SCHEMA-0002` | Eğitim şemaları | 1.0.0 | Active | `docs/specifications/education-schemas.md` |
 | `SPEC-SCHEMA-0003` | Sektör şemaları | 1.0.0 | Active | `docs/specifications/sector-schemas.md` |
-| `SPEC-TRUST-0001` | Güven listeleri | 1.1.0 | Active | `docs/specifications/trust-lists.md` |
+| `SPEC-TRUST-0001` | Güven listeleri | 1.0.0 | Active | `docs/specifications/trust-lists.md` |
 | `SPEC-WALLET-0001` | Cüzdan kuralları | 1.0.0 | Active | `docs/specifications/wallet.md` |
 
 ## Tamga ARF ve ekleri
@@ -119,7 +119,8 @@ Kapatılmış kararlar; değişiklik yeni ADR ile.
 | `ADR-0035` | Konumlanma | 1.0.0 | Active | `docs/adr/0035-positioning-three-layers.md` |
 | `ADR-0036` | Güven federasyonu | 1.0.0 | Active | `docs/adr/0036-trust-federation-external-lists.md` |
 | `ADR-0037` | Tamga Network yalnızca bir ağdır | 1.0.0 | Active | `docs/adr/0037-network-only.md` |
-| `ADR-0038` | Sandbox: test ağı | 1.2.0 | Active | `docs/adr/0038-sandbox.md` |
+| `ADR-0038` | Sandbox: test ağı | 1.0.0 | Active | `docs/adr/0038-sandbox.md` |
+| `ADR-0039` | Doğrulanmış sürücü belgesi bilgisi | 1.0.0 | Active | `docs/adr/0039-driving-licence-attestation.md` |
 
 ## Arka plan
 
@@ -155,4 +156,4 @@ Bugün kullanılmıyor (ADR-0009 eşiği); sitede yayınlanmaz.
 | `SPEC-BC-0001` | Güven katmanı kontratları | 1.0.0 | Active | `docs/ledger/specifications/0001-trust-layer-contracts.md` |
 | `SPEC-BC-0002` | Emanet ve hesap verebilir açıklama | 1.0.0 | Draft | `docs/ledger/specifications/0003-guardian-escrow-accountable-disclosure.md` |
 
-**Toplam:** 99 belge.
+**Toplam:** 100 belge.

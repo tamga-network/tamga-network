@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-02 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-04 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -18,7 +18,8 @@ The rulebook for the identity credential Tamga issues as the provisional identit
 (`urn:tamga:id:IdentityAttestation:1`), branching from the Tamga [[t:rulebook|Rulebook]] ([[FW-RB-0001]]): who issues it, with which [[t:identity-proofing]], which attributes and which
 selective disclosure rule; validity and [[t:revocation]]; the two formats ([[t:SD-JWT-VC]] + ISO 18013-5 [[t:mdoc]]); rules for institutions
 and verifiers; hand-over to a state [[t:PID]] provider. Written on the pattern of the EUDI [[t:ARF]] PID Rulebook — this document is not a
-PID but an [[t:EAA]].
+PID but an [[t:EAA]]. §10: the driving licence information the same service issues
+(`urn:tamga:id:DrivingLicenceAttestation:1`) — not an official driving licence.
 
 ## 0. Scope and status
 
@@ -162,6 +163,30 @@ The attribute names of the Tamga identity credential are unchanged. EU PID equiv
 
 When a state PID is available (§8), institutions may also accept the PID instead of the Tamga identity credential to match a
 person; this is enabled by a separate decision.
+
+
+## 10. Driving licence information (`urn:tamga:id:DrivingLicenceAttestation:1`)
+
+The identity service's second personal credential ([[ADR-0039]]): the person's physical driving licence card is inspected
+remotely (document + liveness + face match) and the categories and dates on the card are issued as a credential. **It is not an
+official driving licence and not an [[t:mDL]];** it is not used in traffic checks or official procedures. The credential says so
+through the always-visible `not_official_licence` claim, its display name ("Driving licence information — not a substitute for an
+official driving licence") and its card; verifier screens show the same statement.
+
+| Topic | Rule |
+| --- | --- |
+| Catalogue | `schemas.tamga.network/v1/id/DrivingLicenceAttestation/1.0.0`; SD-JWT VC only (no mdoc) |
+| Issuer | The identity service only (`IDENTITY` · `EAA` · I2); institutions cannot issue it; no `category` claim |
+| Prerequisite | The **active Tamga identity credential** in the wallet is presented (given name, family name, date of birth only); the name and date of birth on the card must match it. No credential if they do not match, if the card is not a driving licence, if it has expired or if the categories cannot be read |
+| Attributes | `given_name`, `family_name`, `birth_date` (if present), `issuing_country`, `document_number_hash` (keyed digest), `driving_privileges` (`[{ category, issue_date?, expiry_date? }]`; EU 2006/126 category codes, national additions as they are), `licence_issue_date` (if present), `licence_expiry_date`, `verified_at` (day), `verification_method`, `age_over_18`, `not_official_licence` (always `true`, not selectively disclosable) |
+| Not included | National ID number, restriction and health codes (field 12; no `has_restrictions` fact either), photo, signature, address; the provider's note fields are never read |
+| Validity | `exp` = the earlier of the card's expiry and one year after inspection; automatic refresh does not extend it |
+| Revocation | Revocation list mandatory. Reasons: the person's request, an erasure request, re-verification with the same card (the old one), wallet unit revocation, **revocation, re-issuance or erasure of the linked identity credential** (cascade) |
+| Data protection | Tamga is the controller; notice and explicit consent are specific to the driving licence; personal attributes are not kept after issuance; name and date of birth are not sent to the provider — matching happens at the identity service with a keyed digest |
+| Competent authority | Once a country's competent authority starts issuing digital driving licences, Tamga no longer issues this type for that country; the entry points to the official type via `successor` (the `org.iso.18013.5.1.mDL` of §9 is already recognised as an external type) |
+| Law | Legal review before issuance to real people is switched on; the sandbox does not wait for it |
+
+The rules are RB-AP-ID-08…10 in the Tamga Rulebook; the source is [[ADR-0039]] DL1–DL5.
 
 ## References
 

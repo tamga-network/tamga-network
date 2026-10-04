@@ -2,7 +2,7 @@
 document_id: GUIDE-0005
 title: "Build a wallet"
 status: Active
-version: 1.1.1
+version: 1.0.0
 created: 2026-09-27
 last_updated: 2026-10-03
 summary: >
@@ -11,7 +11,7 @@ summary: >
   OpenID4VCI, selective disclosure with OpenID4VP, the consent screen, the transaction log and export, changing devices, the
   pre-release check and the rules to follow. The reference app, Tamga Wallet (separate repository, Expo), uses this package.
 translation_of: GUIDE-0005
-source_version: 1.1.1
+source_version: 1.0.0
 ---
 
 # Build a Tamga-compatible wallet

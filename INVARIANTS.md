@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 338 kodlanmış değişmez, 45 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 343 kodlanmış değişmez, 46 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -334,6 +334,19 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0038/SB3` | Sandbox'ta gerçek kişisel veri bulunmaz; kimlik doğrulama sahte sağlayıcıyla yapılır ve örnek kimlik numaraları geçersiz biçimdedir. |
 | `ADR-0038/SB4` | Sandbox'ta verilen her belge ve sandbox'a bağlı her ekran test olduğunu görünür biçimde belirtir. |
 | `ADR-0038/SB5` | Sandbox verileri her an sıfırlanabilir; sandbox'a bağlı hiçbir süreç kalıcılık varsaymaz. |
+
+
+## ADR-0039
+
+*"Doğrulanmış sürücü belgesi bilgisi"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0039/DL1` | Tamga'nın sürücü belgesi bilgisi belgesi resmî mDL docType'ını ya da namespace'ini kullanmaz; metadata'sında, `not_official_licence` alanında, kartında ve doğrulama sonucunda resmî sürücü belgesi yerine geçmediğini yazar. |
+| `ADR-0039/DL2` | Belge kimlik numarası, kısıtlama ya da sağlık kodu, fotoğraf ve adres taşımaz; belge numarası yalnız anahtarlı özet olarak bulunur; sağlayıcının not alanları okunmaz. |
+| `ADR-0039/DL3` | Belgenin süresi kartın bitiş tarihini ve kartın incelendiği günden itibaren bir yılı geçmez; otomatik yenileme süreyi uzatmaz. |
+| `ADR-0039/DL4` | Bir ülkenin yetkili makamı dijital sürücü belgesi vermeye başlayınca Tamga o ülke için bu türü yeniden vermez. |
+| `ADR-0039/DL5` | Belge yalnız cüzdandaki etkin Tamga kimlik belgesinin sunumu üzerine ve karttaki ad ile doğum tarihi o kimlikle eşleşirse verilir; sınıflar okunamıyorsa ya da kart süresi geçmişse verilmez; bağlı kimlik belgesi iptal edilince, yeniden verilince ya da silinince bu belge de iptal edilir ya da silinir. |
 
 
 ## ARCH-0003
@@ -750,12 +763,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 338 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 343 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, O, P, PN, PO, PR, PS, PV, R, RPR, RV, S, SB, SC, SEV, SG, SK, TL, TS, W, WIA, WL, WRC, XC, ZK.
+AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, O, P, PN, PO, PR, PS, PV, R, RPR, RV, S, SB, SC, SEV, SG, SK, TL, TS, W, WIA, WL, WRC, XC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-03 (`scripts/sync-invariants.mjs`). Toplam 338 kodlanmış değişmez, 45 dokümanda.
+**Üretilen dosya** — 2026-10-04 (`scripts/sync-invariants.mjs`). Toplam 343 kodlanmış değişmez, 46 dokümanda.

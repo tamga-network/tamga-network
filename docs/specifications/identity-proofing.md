@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
@@ -245,6 +245,21 @@ yoktur (PS2); kişi kimliğini yeniden doğrularsa aynı tohum yeniden türer ([
 | Sınır | PAR başına 5 hatalı deneme; servis geneli 10 dakikada 20 hatada 15 dakika kilit (IP kullanılmaz); nginx `/authorize/consent` hız sınırı |
 | Kapalı | DEMO anahtarı yoksa ya da güven listesi `tamga-id-review`'ı tanımıyorsa kod girilse de "etkin değil" (503) |
 | Günlük | `review_code.accepted` / `.used` (kod kimliği), `.rejected` (ayrıntısız); kod ve özeti asla |
+
+## 9.3 Sürücü belgesi bilgisi — `urn:tamga:id:DrivingLicenceAttestation:1` ([[ADR-0039]])
+
+Aynı servis, kişinin fiziksel sürücü belgesini sağlayıcıda **ayrı bir akışla** (yalnız sürücü belgesi kabul eden) inceler ve
+karttaki sınıfları ve tarihleri verir. Resmî sürücü belgesi / mDL değildir (DL1); belge bunu her zaman açık
+`not_official_licence: true` alanıyla söyler.
+
+| Öğe | Değer |
+|---|---|
+| Ön koşul | PAR'da `identity_presentation`: cüzdandaki Tamga kimlik belgesinin SD-JWT VC + KB-JWT sunumu (`aud` = servis, `nonce` = `POST /nonce`, tek kullanımlık; yalnız `given_name`, `family_name`, `birth_date` açılır). Servis imzayı, kaydın etkin olduğunu ve yalnız üç alanın açıldığını denetler; akış kaydında kişi alanı değil anahtarlı **eşleşme özeti** (HMAC) ve bağlı kimlik kaydının kimliği durur |
+| Akış | `/authorize` sürücü belgesine özel aydınlatma + açık rıza (inceleme kodu alanı yok) → sağlayıcıda sürücü belgesi akışı (ayar: ayrı akış kimliği; ayarsızsa tür ilan edilmez) → `/idv/return`: belge türü sürücü belgesi mi, kart süresi geçmiş mi, sınıf okunmuş mu, karttaki ad + doğum tarihi özete eşleşiyor mu → `code` → token → 10 kopya |
+| Sağlayıcıdan okunan | ad, soyad, doğum tarihi, veren ülke, belge numarası (yalnız HMAC özeti kalır), veriliş/bitiş tarihi, süresi geçmiş olgusu, sınıf başına başlangıç/bitiş (`extra_fields.dl_class_code_<sınıf>_from/_to`). **Okunmayan:** `_notes` alanları, kısıtlama kodları, görüntü, skor |
+| Claim'ler | `given_name`, `family_name`, `birth_date`, `issuing_country`, `document_number_hash`, `driving_privileges[]`, `licence_issue_date?`, `licence_expiry_date`, `verified_at`, `verification_method` (`remote-document-liveness-face`), `age_over_18`, `not_official_licence` |
+| Ret | `access_denied`: sürücü belgesi değil · kart süresi geçmiş · sınıf okunamadı · bütün sınıfların süresi geçmiş (süresi geçmiş sınıflar belgeye girmez) · ad ya da veren ülke okunamadı (tahmin yok) · kimlikle eşleşmiyor · bağlı kimlik artık etkin değil (PAR'dan sonra iptal / yeniden verme / silme; `/idv/return` ve `/credential`'da yeniden denetlenir). Açıklamada kişi verisi yok; günlüğe yalnız neden kodu. Belge verilmeyen her sonuçta (sağlayıcı reddi/incelemesi dahil) sağlayıcıdaki oturum (kart görüntüsü, özçekim) hemen silinir; yarım kalan akışların oturumu çöp toplamada, kimliği unutulmadan önce silinir |
+| Süre / iptal | `exp` = min(kart bitişi, inceleme + 1 yıl, bağlı kimlik belgesinin bitişi; DL3/DL5); yalnız SD-JWT VC; status list; kayıt `parentId` ile kimlik kaydına bağlı — kimlik iptal/yeniden verme/silme bağlı belgeyi de kapsar; silme, daha önce iptal edilmiş bağlı kayıtları ve sağlayıcı oturumlarını da siler (DL5) |
 
 # Güvenlik ve Mahremiyet Notları
 

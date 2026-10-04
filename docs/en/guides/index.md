@@ -2,14 +2,14 @@
 document_id: GUIDE-0000
 title: "Get started"
 status: Active
-version: 1.0.1
+version: 1.0.0
 created: 2026-09-27
 last_updated: 2026-10-03
 summary: >
   An introduction for developers: the four paths in Tamga (verifier, issuer, wallet developer, network/node operator),
   which package to install, which addresses to use, how to set up a local development environment and what is ready today.
 translation_of: GUIDE-0000
-source_version: 1.0.1
+source_version: 1.0.0
 ---
 
 # Get started

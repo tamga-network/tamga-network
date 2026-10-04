@@ -2,7 +2,7 @@
 document_id: GUIDE-0013
 title: "Sandbox: test ağı"
 status: Active
-version: 1.1.0
+version: 1.0.0
 created: 2026-10-03
 last_updated: 2026-10-03
 summary: >

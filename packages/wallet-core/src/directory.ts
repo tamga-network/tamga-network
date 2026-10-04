@@ -22,6 +22,8 @@ export interface DirectoryEntry {
   certFingerprint?: string;
 }
 export const IDENTITY_VCT = "urn:tamga:id:IdentityAttestation:1";
+/** ADR-0039: sürücü belgesi bilgisi — kimlik servisi verir; PAR'da kimlik belgesi sunumu ön koşul (`identity_presentation`). */
+export const DRIVING_LICENCE_VCT = "urn:tamga:id:DrivingLicenceAttestation:1";
 export const CATEGORY_LABELS: Record<string, string> = {
   EDUCATION: "Education",
   IDENTITY: "Identity",
@@ -102,6 +104,7 @@ export const typeLabel = (vct: string) =>
       "urn:tamga:edu:DiplomaCredential:1": "Diploma",
       "urn:tamga:edu:StudentCredential:1": "Student Certificate",
       [IDENTITY_VCT]: "Identity Attestation",
+      [DRIVING_LICENCE_VCT]: "Driving Licence Information",
     }) as Record<string, string>
   )[vct] ?? vct.split(":").slice(-2, -1)[0];
 

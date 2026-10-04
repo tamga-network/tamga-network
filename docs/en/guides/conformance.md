@@ -2,7 +2,7 @@
 document_id: GUIDE-0009
 title: "Conformance tests"
 status: Active
-version: 1.0.1
+version: 1.0.0
 created: 2026-10-03
 last_updated: 2026-10-03
 summary: >
@@ -10,7 +10,7 @@ summary: >
   verification, positive and negative cases), running the runner, testing a library written in another language against the
   vectors, and the evidence asked for when joining.
 translation_of: GUIDE-0009
-source_version: 1.0.1
+source_version: 1.0.0
 ---
 
 # Conformance tests

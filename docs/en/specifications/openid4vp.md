@@ -2,7 +2,7 @@
 document_id: SPEC-PROTO-0002
 title: "OpenID4VP profile"
 status: Active
-version: 1.1.0
+version: 1.0.0
 created: 2026-09-09
 last_updated: 2026-10-03
 summary: >
@@ -14,7 +14,7 @@ summary: >
   ([[SPEC-BC-0001]] §6) at protocol level. Also: detection of unrequested fields, the user's post-presentation log and
   response encryption rules.
 translation_of: SPEC-PROTO-0002
-source_version: 1.1.0
+source_version: 1.0.0
 ---
 **This specification defines how a [[t:credential]] is presented from the wallet to the [[t:verifier]] over [[t:OpenID4VP]] 1.0 and
 [[t:HAIP]] 1.0.** It is for developers writing a verifier or a wallet.
@@ -552,4 +552,4 @@ verifier — it would need the private key of the certificate.
 
 # Status
 
-**In force** — version 1.1.0 (2026-10-03).
+**In force** — version 1.0.0 (2026-10-02).

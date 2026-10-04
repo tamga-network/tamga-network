@@ -6,6 +6,7 @@ import type { RelyingParty } from "@tamga-network/trust";
 import type { Policy, Step, VerificationResult } from "@tamga-network/verifier";
 import type { Presentation } from "./state.js";
 import { brandPage, type Lang } from "./brand.js";
+import { isDrivingPolicy } from "./policies.js";
 
 export { langOf, type Lang } from "./brand.js";
 
@@ -65,6 +66,9 @@ const T = {
     disclosedFields: "Disclosed fields",
     newCheck: "New verification",
     resultJson: "Result object (JSON)",
+    // ADR-0039 K1/DL1: her sürücü belgesi bilgisi doğrulamasında görünür
+    notOfficialLicence:
+      "Not an official driving licence: this is information the Tamga identity service verified from the person's card (categories and validity). It does not replace the card and is not valid in traffic checks or official procedures.",
     // sample site
     welcome: (n: string) => `Welcome, ${n}`,
     accountNew: "Your account has just been created.",
@@ -148,6 +152,8 @@ const T = {
     disclosedFields: "Açıklanan alanlar",
     newCheck: "Yeni doğrulama",
     resultJson: "Sonuç nesnesi (JSON)",
+    notOfficialLicence:
+      "Resmî sürücü belgesi yerine geçmez: bu, Tamga kimlik servisinin kişinin kartından doğruladığı bilgidir (sınıflar ve geçerlilik). Kartın yerini tutmaz; trafik denetiminde ve resmî işlemlerde geçmez.",
     welcome: (n: string) => `Hoş geldin, ${n}`,
     accountNew: "Hesabın şimdi açıldı.",
     loginN: (n: number) => `Bu ${n}. girişin.`,
@@ -206,6 +212,11 @@ export const expiredPage = (lang: Lang) =>
   );
 
 const purposeOf = (p: Policy, lang: Lang) => p.purpose[lang === "tr" ? "tr-TR" : "en-US"] ?? p.purpose["en-US"] ?? "";
+/** ADR-0039 K1/DL1: sürücü belgesi bilgisi isteyen her politikada, bekleme ve sonuç sayfalarında ibare. */
+const drivingNote = (p: Policy, lang: Lang) =>
+  isDrivingPolicy(p)
+    ? `<p class="sub" role="note" data-not-official style="border:1px solid currentColor;border-radius:8px;padding:10px 12px"><b>${T[lang].notOfficialLicence}</b></p>`
+    : "";
 
 const META = new Set(["iss", "vct", "vct#integrity", "iat", "exp", "cnf", "status", "category"]);
 const text = (v: unknown, lang: Lang) =>
@@ -322,7 +333,7 @@ export function pendingPage(lang: Lang, p: Presentation, id: string, qrDataUrl: 
   return page(
     lang,
     t.waiting,
-    `<h1>${esc(purposeOf(p.policy, lang))}</h1><p class="lede">${t.scan} ${t.requested}: <b>${wanted}</b>. ${t.nothingElse}</p>
+    `<h1>${esc(purposeOf(p.policy, lang))}</h1><p class="lede">${t.scan} ${t.requested}: <b>${wanted}</b>. ${t.nothingElse}</p>${drivingNote(p.policy, lang)}
 <section class="row" style="align-items:flex-start;gap:28px"><img class="qr" src="${qrDataUrl}" alt="QR" width="280" height="280">
 <div class="stack" style="flex:1;min-width:240px"><div class="result PENDING">${t.waiting}… <span class="mono small">${left} ${t.secondsLeft}</span></div>
 <pre>${esc(p.req.qrPayload)}</pre></div></section>${tracePanel(p, lang)}
@@ -340,7 +351,7 @@ export function checkPage(lang: Lang, p: Presentation, r: VerificationResult, id
     lang,
     head,
     `<div class="result big ${r.outcome}">${head}</div>
-<section><h2>${esc(purposeOf(p.policy, lang))}</h2><p class="muted small">${t.presentedAgo(ago)} · ${t.verifier} ${esc(verifierName)} · ${t.knowingly}</p>
+<section><h2>${esc(purposeOf(p.policy, lang))}</h2><p class="muted small">${t.presentedAgo(ago)} · ${t.verifier} ${esc(verifierName)} · ${t.knowingly}</p>${drivingNote(p.policy, lang)}
 ${rows ? `<div class="table-wrap"><table class="kv"><tbody>${rows}</tbody></table></div>` : `<p class="muted">${t.noFields}</p>`}
 <p class="muted small" style="margin-top:14px">${t.issuer}: ${esc(r.issuer?.legal_name ?? "—")} · ${t.revocation}: ${esc(r.status.value)} · <a href="/p/${esc(id)}">${t.fullTrace}</a></p></section>`,
   );
@@ -366,7 +377,7 @@ export function resultPage(lang: Lang, p: Presentation, r: VerificationResult, i
   return page(
     lang,
     r.outcome,
-    `<div class="result ${r.outcome}">${r.outcome}</div><p class="lede" style="margin-top:16px">${explain}</p>
+    `<div class="result ${r.outcome}">${r.outcome}</div><p class="lede" style="margin-top:16px">${explain}</p>${drivingNote(p.policy, lang)}
 <section><div class="checks">${steps}</div></section>
 <section><div class="table-wrap"><table class="kv"><tbody>
 <tr><td>${t.issuer}</td><td>${esc(r.issuer?.legal_name ?? "—")} · ${esc(r.issuer?.assurance ?? "")} ${esc(r.issuer?.class ?? "")}<br><span class="code small">${esc(r.issuer?.issuer_id ?? "")}</span></td></tr>

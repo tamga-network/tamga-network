@@ -27,7 +27,7 @@ artınca aynı çalışmada İngilizcesi de güncellenir.
 | `FW-TF-0001` | `0002-trust-framework.md` | **Ek A — Trust Framework**: yönetişim, katılım kapıları, uyum, sözleşmeler, devir planı | Ulusal eID/EUDI güven şeması; CIR 2024/2977–2982'nin karşılığı | 1.0.0 · Active |
 | `FW-RB-0001` | `0003-tamga-rulebook.md` | **Ek B — Tamga Rulebook** (ana rulebook): bütün katılımcılar ve belge türleri için ortak, numaralı kurallar (RB-*) | ARF Annex 2 HLR (rol bazlı) | 1.0.0 · Active |
 | `FW-RB-0002` | `0004-education-rulebook.md` | **Education Rulebook** (Ek C): `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` | ARF Annex 3 attestation rulebook | 1.0.0 · Active |
-| `FW-RB-0003` | `0005-identity-rulebook.md` | **Identity Rulebook** (Ek C): `urn:tamga:id:IdentityAttestation:1` | ARF PID Rulebook deseni (PID değil, EAA) | 1.0.0 · Active |
+| `FW-RB-0003` | `0005-identity-rulebook.md` | **Identity Rulebook** (Ek C): `urn:tamga:id:IdentityAttestation:1`, `urn:tamga:id:DrivingLicenceAttestation:1` | ARF PID Rulebook deseni (PID değil, EAA) | 1.0.0 · Active |
 | `FW-RB-0004` | `0006-event-ticket-rulebook.md` | **Event Ticket Rulebook** (Ek C): `urn:tamga:tkt:EventTicket:1` | ARF Annex 3 attestation rulebook | 1.0.0 · Active |
 | `FW-DEF-0001` | `0007-definitions.md` | **Ek D — Tanımlar** | ARF Annex 1 | 1.0.0 · Active |
 | `FW-REF-0001` | `0008-references.md` | **Ek E — Kaynaklar**: standartlar, karar kayıtları, kural kaynakları | — | 1.0.0 · Active |
@@ -50,7 +50,7 @@ FW-<DOMAIN>-<NUMBER>
 ```
 
 Domainler: `ARF` (mimari çerçeve), `TF` (trust framework / yönetişim), `RB` (rulebook), `DEF` (tanımlar), `REF`
-(kaynaklar), `READ` (okuma yolu), `ROLE` (roller), `ONB` (katılım süreci), `RISK` (risk kütüğü). Bkz. `DOCUMENTATION-STANDARD.md` §Document ID Convention (v1.1.0).
+(kaynaklar), `READ` (okuma yolu), `ROLE` (roller), `ONB` (katılım süreci), `RISK` (risk kütüğü). Bkz. `DOCUMENTATION-STANDARD.md` §2 Kimlik.
 
 ---
 

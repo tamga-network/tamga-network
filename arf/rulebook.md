@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-02 · **Licence** CC BY 4.0
+**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-04 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -170,6 +170,9 @@ Today Tamga is the provisional operator; at hand-over the role passes to the nat
 | RB-AP-ID-05 | A second active identity credential **MUST NOT** be issued for the same document number; re-verification revokes the earlier one.                                                                                                                                                                                                                                                                                    |
 | RB-AP-ID-06 | When the state's PID Provider is appointed, the provider **MUST** hand over its entry with `successor_id` and stop issuing; existing credentials remain valid until they expire.                                                                                                                                                                                                                                     |
 | RB-AP-ID-07 | Together with the identity credential, a per-site [[t:pseudonym]] seed **MUST** be issued in a separate type that cannot be presented (`urn:tamga:id:PseudonymSeed:1`); the seed is derived from the person's unchanging identity with a key **separate** from the credential digest key and **MUST NOT** be stored (it is recomputed at every verification); this type **MUST NOT** appear in any verifier's scope. |
+| RB-AP-ID-08 | Driving licence information (`urn:tamga:id:DrivingLicenceAttestation:1`) **MUST NOT** use the official mDL docType or namespace and **MUST** state in its metadata, in the always-visible `not_official_licence` claim, on its card and in the verification result that it is not a substitute for an official driving licence; the national ID number, restriction or health codes, photo and address **MUST NOT** be carried; the document number is a keyed hash only. |
+| RB-AP-ID-09 | Driving licence information **MUST** be issued only upon presentation of an active Tamga identity credential from the wallet and only if the name and date of birth on the card match that identity; it **MUST NOT** be issued if the categories cannot be read or the card has expired; its validity **MUST NOT** exceed the card's expiry or one year from the day the card was inspected; its format is SD-JWT VC only. |
+| RB-AP-ID-10 | When the linked identity credential is revoked, re-issued or erased, the driving licence information **MUST** be revoked or erased; once a country's competent authority starts issuing digital driving licences, this type **MUST NOT** be re-issued for that country. |
 
 ---
 

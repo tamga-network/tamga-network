@@ -2,7 +2,7 @@
 document_id: GUIDE-0006
 title: "Güven listelerini okumak"
 status: Active
-version: 1.1.0
+version: 1.0.0
 created: 2026-09-27
 last_updated: 2026-10-03
 summary: >

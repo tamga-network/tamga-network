@@ -3,10 +3,15 @@
  *  POST /units            birim kaydı (birim anahtarıyla imzalı kanıt; kişi verisi yok)
  *  POST /wia              24 saatten kısa ömürlü Cüzdan Örneği Kanıtı — her belge işleminde yeni anahtar + yeni iptal girişi
  *  POST /ka               Anahtar Kanıtı (key_attestation) — belge anahtarları + gerçek depo seviyesi
- *  POST /units/revoke     kullanıcı isteğiyle birim iptali (bütün WIA girişleri iptal)
+ *  POST /units/revoke     kullanıcı isteğiyle birim iptali (bütün WIA girişleri iptal) — imzalı kanıtla YA DA yalnız kapatma
+ *                         koduyla (`revocation_code`; Tamga Wallet WA-ADR-0002, telefonsuz)
+ *  POST /units/revocation-code  kapatma kodunun ön özetini birime bağlar (WA-ADR-0002 K1; imzalı kanıt)
+ *  POST /units/status     birimin durumu `active` / `revoked` (WA-ADR-0002 K3; imzalı kanıt, WIA girişi harcamaz)
+ *  GET|POST /lost         "Telefonumu kaybettim" sayfası (TR/EN; WA-ADR-0002 K2) — kod girişi → iptal
  *  GET  /status/wia|ka    iptal listeleri (Token Status List; imzacı = sağlayıcı anahtarı)
  *  GET  /.well-known/wallet-provider · GET / (Trust Mark sayfası; üretimde ops/pages)
  * Sapma S-9/S-14: anahtarlar yazılım deposunda ve cihaz kanıtı yok — KA bunu dürüstçe `iso_18045_basic` olarak söyler (WIA3).
+ * Yol adları tek yerde: wallet-core `WP_PATHS` (proje yönetimi ad onayı 2026-10-04).
  */
 import Fastify, { type FastifyInstance } from "fastify";
 import { readFileSync } from "node:fs";
@@ -33,8 +38,23 @@ import {
   signStatusListToken,
   type KeyStorage,
 } from "@tamga-network/issuer";
+import { WP_PATHS } from "@tamga-network/wallet-core";
 import type { WpConfig } from "./config.js";
 import { WpStore, KA_TYPE_INDEX } from "./store.js";
+import {
+  ConcurrencyGate,
+  HTTP_STATUS,
+  LOST_LIMITS,
+  LOST_PATH,
+  hashEqual,
+  lostFormHtml,
+  lostResultHtml,
+  pickLang,
+  prehashOfInput,
+  sleep,
+  slowHash,
+  type LostOutcome,
+} from "./lock.js";
 import {
   officialRoots,
   unitClientData,
@@ -53,8 +73,12 @@ const POP_WINDOW_SEC = 300;
 
 export async function buildWalletProviderApp(
   cfg: WpConfig,
-  /** test: cihaz kanıtı kökleri (üretimde roots/ — Google, Apple) */
-  opts: { deviceRoots?: { android: X509Certificate[]; apple: X509Certificate[] } } = {},
+  opts: {
+    /** test: cihaz kanıtı kökleri (üretimde roots/ — Google, Apple) */
+    deviceRoots?: { android: X509Certificate[]; apple: X509Certificate[] };
+    /** test: kod girişi eşzamanlılık sınırı ve en az yanıt süresi (üretimde LOST_LIMITS) */
+    lost?: { concurrent?: number; minDelayMs?: number; retryAfterSec?: number };
+  } = {},
 ): Promise<FastifyInstance> {
   const certPem = readFileSync(resolve(cfg.pkiDir, `${cfg.certName}.cert.pem`), "utf8");
   const keyPem = readFileSync(resolve(cfg.pkiDir, `${cfg.certName}.pkcs8.pem`), "utf8");
@@ -79,8 +103,12 @@ export async function buildWalletProviderApp(
     unit_registration_endpoint: `${cfg.publicBase}/units`,
     wia_endpoint: `${cfg.publicBase}/wia`,
     key_attestation_endpoint: `${cfg.publicBase}/ka`,
-    unit_revocation_endpoint: `${cfg.publicBase}/units/revoke`,
-    unit_deletion_endpoint: `${cfg.publicBase}/units/delete`,
+    unit_revocation_endpoint: `${cfg.publicBase}${WP_PATHS.revoke}`,
+    unit_deletion_endpoint: `${cfg.publicBase}${WP_PATHS.delete}`,
+    // WA-ADR-0002: kapatma kodu (kayıt), birim durumu, telefonsuz kapatma sayfası
+    unit_revocation_code_endpoint: `${cfg.publicBase}${WP_PATHS.revocationCode}`,
+    unit_status_endpoint: `${cfg.publicBase}${WP_PATHS.status}`,
+    lost_phone_page: `${cfg.publicBase}${LOST_PATH}`,
     status_lists: { wia: wiaStatusUri, ka: kaStatusUri },
     signing_cert_fingerprint_sha256: fp,
     solutions: cfg.solutions.map((s) => ({ ...s, status: "ACTIVE" })),
@@ -288,12 +316,115 @@ export async function buildWalletProviderApp(
     return { key_attestation: ka };
   });
 
-  app.post("/units/revoke", async (req, reply) => {
-    const b = (req.body ?? {}) as { proof?: string };
+  // ---------------------------------------------------------------- WA-ADR-0002: uzaktan kapatma (kapatma kodu)
+  const lostLimits = { ...LOST_LIMITS, ...opts.lost };
+  const gate = new ConcurrencyGate(lostLimits.concurrent);
+  /**
+   * Kod girişi: her denemede aynı yavaş özet (biçim bozuk olsa da) ve en az sabit yanıt süresi; bulunamayan kod ile biçim
+   * hatası aynı sonuç (`unknown`). Genel deneme sayacı YOK (tek kaynak herkesin sayfasını kapatamaz); eşzamanlı scrypt üst
+   * sınırı aşılırsa `busy` (503 + Retry-After). Kod, ön özet ve IP günlüğe yazılmaz (RL2).
+   */
+  async function revokeByCode(input: unknown): Promise<LostOutcome> {
+    const started = Date.now();
+    if (!gate.take()) return "busy";
+    try {
+      const { valid, prehash } = prehashOfInput(input);
+      const hash = await slowHash(prehash);
+      let outcome: LostOutcome = "unknown";
+      const hit = store.unitByLockHash(hash);
+      if (valid && hit && hit.unit.lock_hash && hashEqual(hit.unit.lock_hash, hash)) {
+        if (hit.unit.revoked_at) outcome = "already_revoked";
+        else {
+          await store.revokeUnit(hit.unitId, nowSec()); // birim + bütün WIA girişleri (ADR-0025 K4, RL3)
+          outcome = "revoked";
+        }
+      }
+      await sleep(Math.max(0, lostLimits.minDelayMs - (Date.now() - started)));
+      return outcome;
+    } finally {
+      gate.release();
+    }
+  }
+  const retryAfter = (reply: { header: (k: string, v: string) => unknown }, outcome: LostOutcome) => {
+    if (outcome === "busy") reply.header("retry-after", String(lostLimits.retryAfterSec));
+  };
+
+  app.post(WP_PATHS.revoke, async (req, reply) => {
+    const b = (req.body ?? {}) as { proof?: string; revocation_code?: unknown };
+    if (b.revocation_code !== undefined) {
+      // telefonsuz: yalnız kod (sayfanın JSON hâli)
+      const outcome = await revokeByCode(b.revocation_code);
+      reply.header("cache-control", "no-store");
+      retryAfter(reply, outcome);
+      return reply
+        .code(HTTP_STATUS[outcome])
+        .send(outcome === "revoked" ? { revoked: true } : { error: outcome === "unknown" ? "code_unknown" : outcome });
+    }
     const p = await unitProof(b.proof, "revoke");
     if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
     const n = await store.revokeUnit(p.unitId, nowSec());
     return { revoked: true, entries: n };
+  });
+
+  // K1: kodun ön özeti (43 karakter base64url) → yavaş özet, birime bağlanır; eskisi silinir. İptal edilmiş birim kod alamaz.
+  app.post(WP_PATHS.revocationCode, async (req, reply) => {
+    const b = (req.body ?? {}) as { proof?: string };
+    const p = await unitProof(b.proof, "revocation-code");
+    if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
+    const u = store.unit(p.unitId)!;
+    if (u.revoked_at) return reply.code(403).send({ error: "unit_revoked" });
+    const pre = p.payload.lock_prehash;
+    if (typeof pre !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(pre))
+      return reply.code(400).send({ error: "invalid_request", error_description: "lock_prehash" });
+    if (!(await store.setLockHash(p.unitId, await slowHash(pre))))
+      return reply.code(409).send({ error: "code_in_use", error_description: "choose another code" });
+    return { saved: true };
+  });
+
+  // K3: birim durumu — telefon öne gelişte sorar (en çok 15 dk'da bir); WIA girişi harcamaz
+  app.post(WP_PATHS.status, async (req, reply) => {
+    const b = (req.body ?? {}) as { proof?: string };
+    const p = await unitProof(b.proof, "status");
+    if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
+    const u = store.unit(p.unitId)!;
+    return { status: u.revoked_at ? "revoked" : "active" };
+  });
+
+  // K2: "Telefonumu kaybettim" sayfası (TR/EN). Dış betik yok; önbellek yok; çerçeve içinde açılmaz.
+  const pageHeaders = (reply: { header: (k: string, v: string) => unknown }) => {
+    reply.header("cache-control", "no-store");
+    reply.header("x-frame-options", "DENY");
+    reply.header("referrer-policy", "no-referrer");
+    reply.header("x-content-type-options", "nosniff");
+    reply.header(
+      "content-security-policy",
+      "default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+    );
+  };
+  // Form ayrıştırıcı yalnız bu kapsamda (Fastify eklenti sınırı): öbür uçlar form gövdesi kabul etmez.
+  await app.register(async (lost) => {
+    lost.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, (_req, body, done) => {
+      try {
+        done(null, Object.fromEntries(new URLSearchParams(String(body).slice(0, 4096))));
+      } catch (e) {
+        done(e as Error);
+      }
+    });
+    lost.get(LOST_PATH, async (req, reply) => {
+      pageHeaders(reply);
+      return reply
+        .type("text/html; charset=utf-8")
+        .send(lostFormHtml(pickLang(req.query, req.headers["accept-language"])));
+    });
+    lost.post(LOST_PATH, async (req, reply) => {
+      pageHeaders(reply);
+      const b = (req.body ?? {}) as { code?: unknown; confirm?: unknown; lang?: unknown };
+      const lang = pickLang({ lang: b.lang }, req.headers["accept-language"]);
+      if (b.confirm !== "1") return reply.code(400).type("text/html; charset=utf-8").send(lostFormHtml(lang));
+      const outcome = await revokeByCode(b.code);
+      retryAfter(reply, outcome);
+      return reply.code(HTTP_STATUS[outcome]).type("text/html; charset=utf-8").send(lostResultHtml(lang, outcome));
+    });
   });
 
   // Kişinin silme isteği (Apple 5.1.1(v), Google Play; KVKK md. 7): birim iptal + kayıt silinir. Kimlik = birim anahtarı (PoP).

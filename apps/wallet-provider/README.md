@@ -17,7 +17,10 @@ npm run wallet-provider   # :4005; env: TAMGA_WP_BASE, TAMGA_WP_PORT, TAMGA_PKI_
 | `POST /units` | Birim kaydı: birim anahtarıyla imzalı kanıt + isteğe bağlı cihaz kanıtı (Android anahtar kanıtı / Apple App Attest) → `{unit_id, key_storage}` |
 | `POST /wia` | 24 saatten kısa ömürlü WIA — her belge işleminde yeni anahtar ve yeni iptal girişi |
 | `POST /ka` | Anahtar Kanıtı: belge anahtarları ve **doğrulanmış** depo seviyesi |
-| `POST /units/revoke` | Kişinin isteğiyle birim iptali (bütün WIA girişleri iptal edilir) |
+| `POST /units/revoke` | Kişinin isteğiyle birim iptali (bütün WIA girişleri iptal edilir): cihazdan imzalı kanıtla **ya da** telefonsuz, yalnız kapatma koduyla (`revocation_code`; Tamga Wallet WA-ADR-0002) |
+| `POST /units/revocation-code` | Kapatma kodunun ön özetini birime bağlar (imzalı kanıt). Sunucuda yalnız scrypt yavaş özeti; kod ve ön özet tutulmaz, günlüğe yazılmaz |
+| `POST /units/status` | Yalnız ipucu: `active` / `revoked` (imzalı kanıt). Telefon silme kararını buna değil imzalı `GET /status/wia` listesindeki kendi WIA girişine bakarak verir (çekim kimliksiz) |
+| `GET` · `POST /lost` | "Telefonumu kaybettim" sayfası (TR/EN; `?lang=`): kod + geri alınamaz onayı → iptal. Kişisel veri istenmez/gösterilmez; `no-store`, çerçeve yok, dış betik yok; genel deneme sayacı YOK (DoS), eşzamanlı scrypt üst sınırı (`503` + `Retry-After`); IP başına dakika sınırı nginx'te; form gövdesi yalnız bu rotada |
 | `GET /status/wia` · `GET /status/ka` | İptal listeleri (Token Status List; imzacı = sağlayıcı anahtarı) |
 | `GET /.well-known/wallet-provider` | Sağlayıcı kimliği, çözümler, imza sertifikası parmak izi |
 | `GET /` · `GET /healthz` | Trust Mark sayfası · sağlık |

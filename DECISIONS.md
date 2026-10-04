@@ -9,7 +9,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 - Detay ve gerekçe her zaman ilgili dokümandadır (bağlantı verildi); burası karar yüzeyidir.
 - **Durum kodları:** 🟢 karara bağlandı · ⚪ ilke kararlaştı, sayısal/teknik detay uygulama/denetim aşamasında · 🟡 dış girdiye bağlı (logo, denetim, kaynak metin)
 
-**Son güncelleme:** 2026-10-03 (ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
+**Son güncelleme:** 2026-10-04 (ADR-0039 sürücü belgesi bilgisi — D-ID-8; ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
 
 ---
 
@@ -259,6 +259,16 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
   güvenmez; cüzdan ancak geliştirici ayarıyla geçer ve bunu gösterir. Gerçek kişisel veri yok, veriler sıfırlanabilir. Kendi
   kendine kayıt ve otomatik uyum servisi sonraki aşamalar, ayrı karar ister.
 - **Nerede:** [[ADR-0038]] SB1–SB5.
+
+### D-ID-8 — Doğrulanmış sürücü belgesi bilgisi (resmî sürücü belgesi değil) 🟢 (2026-10-04; [[ADR-0039]])
+- **KARAR:** Kimlik servisi, kişinin fiziksel sürücü belgesini uzaktan (belge + canlılık + yüz) inceleyip karttaki sınıfları ve
+  tarihleri `urn:tamga:id:DrivingLicenceAttestation:1` ("Sürücü belgesi bilgisi") olarak verir: nitelikli olmayan EAA, yalnız
+  SD-JWT VC, kategori yok, süre ≤ kart bitişi ve ≤ 1 yıl, iptal listeli. Resmî sürücü belgesi / mDL değildir; `not_official_licence`
+  alanı her zaman açıktır, kart ve doğrulayıcı ekranı aynı ibareyi taşır. Ön koşul cüzdandaki etkin Tamga kimlik belgesinin PAR'da
+  sunumudur; karttaki ad ve doğum tarihi eşleşmeli. Kimlik numarası, kısıtlama/sağlık kodu (ve `has_restrictions` olgusu),
+  fotoğraf, adres taşınmaz; sınıf okunamazsa belge verilmez. Kimlik iptal/yeniden verme/silme bağlı belgeyi de kapsar. Yetkili
+  makam dijital sürücü belgesi verince o ülke için ihraç durur. Gerçek kişilere ihraçtan önce hukuki inceleme.
+- **Nerede:** [[ADR-0039]] DL1–DL5; `packages/schemas`, `tamga-platform/apps/id`, güven listeleri (gerçek + sandbox), [[FW-RB-0003]] §10, cüzdan.
 
 ### D-REVIEW-1 — Mağaza incelemesi için tek kullanımlık inceleme kodu 🟢 (2026-10-01; [[ADR-0033]])
 - **KARAR:** Mağaza inceleyicisi kimlik akışını gerçek kimlik belgesi olmadan, tek kullanımlık ve en çok 14 gün geçerli bir

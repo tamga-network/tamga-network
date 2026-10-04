@@ -2,7 +2,7 @@
 document_id: SPEC-TRUST-0001
 title: "Güven listeleri"
 status: Active
-version: 1.1.0
+version: 1.0.0
 created: 2026-09-24
 last_updated: 2026-10-03
 summary: >
@@ -131,7 +131,7 @@ Her satır bağımsız JWS; payload `{seq, previous_hash, ts, kind, …}`:
 Kurallar: saatte ≥1 satır; `list_version` kurum başına monoton (L1/S3); `content_hash` doğrulayıcı D5'te Status List
 Token hash'iyle karşılaştırılır; satır silinmez; günlük herkese açık; `list_uri` opak (S8).
 
-**Arşivleme ve kontrol noktası (TL12, v1.1.0).** Günlük büyüdükçe yükleme süresi satır sayısıyla doğrusal artar (her satır bir
+**Arşivleme ve kontrol noktası (TL12).** Günlük büyüdükçe yükleme süresi satır sayısıyla doğrusal artar (her satır bir
 JWS doğrulaması). Operatör, günlük bir eşiği aşınca (varsayılan 500 satır) mevcut satırların **hepsini** `archive/anchors-<from>-<to>.jsonl`
 dosyasına taşır ve yeni günlüğün ilk satırı olarak imzalı bir `checkpoint` yazar: `seq = seq_to + 1`,
 `previous_hash = sha256(arşivdeki son satır)`, `archive.sha256 = sha256(arşiv dosyası)` ve **`state`** — arşive giden satırların ürettiği son durum (liste başına en yüksek `list_version`'lı status çapası + şema çapaları). Sonraki çapa normal biçimde kontrol
@@ -214,5 +214,5 @@ Devir: yalnızca `operator` alanı değişir.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.1.0 (2026-10-03): `environment` alanı (test ağı, [[ADR-0038]]). 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
 

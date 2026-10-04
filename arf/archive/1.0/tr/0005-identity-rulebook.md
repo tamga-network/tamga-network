@@ -4,12 +4,13 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Tamga'nın geçici kimlik belgesi sağlayıcısı olarak verdiği kimlik belgesinin (`urn:tamga:id:IdentityAttestation:1`)
   rulebook'u (Tamga Rulebook'tan dallanır): kim verir, hangi kimlik doğrulamayla, hangi alanlarla ve hangi seçici paylaşım kuralıyla; geçerlilik
   ve iptal; iki biçim (SD-JWT VC + ISO 18013-5 mdoc); kurumların ve doğrulayıcıların kullanım kuralları; devlet PID
-  sağlayıcısına devir. EUDI ARF PID Rulebook deseniyle yazılmıştır; bu belge PID değildir, bir EAA'dır.
+  sağlayıcısına devir. EUDI ARF PID Rulebook deseniyle yazılmıştır; bu belge PID değildir, bir EAA'dır. §10: aynı servisin
+  verdiği sürücü belgesi bilgisi (`urn:tamga:id:DrivingLicenceAttestation:1`) — resmî sürücü belgesi değildir.
 ---
 
 # 0. Kapsam ve statü
@@ -167,6 +168,30 @@ Tamga kimlik belgesinin alan adları değiştirilmemiştir. AB PID karşılıkla
 
 Devlet PID'i geldiğinde (§8) kurumlar, kişiyi eşleştirmek için Tamga kimlik belgesi yerine PID'i de kabul edebilir; bu ayrı bir
 kararla açılır.
+
+---
+
+# 10. Sürücü belgesi bilgisi (`urn:tamga:id:DrivingLicenceAttestation:1`)
+
+Kimlik servisinin ikinci kişi belgesi ([[ADR-0039]]): kişinin fiziksel sürücü belgesi kartı uzaktan incelenir (belge + canlılık +
+yüz eşleştirme) ve karttaki sınıflar ile tarihler bir belge olarak verilir. **Resmî sürücü belgesi değildir, [[t:mDL]] değildir;**
+trafik denetiminde ve resmî işlemlerde kullanılmaz. Belge bunu her zaman açık `not_official_licence` alanıyla, görünen adıyla
+("Sürücü belgesi bilgisi — resmî sürücü belgesi yerine geçmez") ve kartıyla söyler; doğrulayıcı ekranları aynı ibareyi gösterir.
+
+| Konu | Kural |
+|---|---|
+| Katalog | `schemas.tamga.network/v1/id/DrivingLicenceAttestation/1.0.0`; yalnız SD-JWT VC (mdoc yok) |
+| Kim verir | Yalnız kimlik servisi (`IDENTITY` · `EAA` · I2); kurumlar veremez; `category` alanı yok |
+| Ön koşul | Cüzdandaki **etkin Tamga kimlik belgesi** sunulur (yalnız ad, soyad, doğum tarihi); karttaki ad ve doğum tarihi onunla eşleşmeli. Eşleşmezse, kart sürücü belgesi değilse, süresi geçmişse ya da sınıflar okunamıyorsa belge verilmez |
+| Alanlar | `given_name`, `family_name`, `birth_date` (varsa), `issuing_country`, `document_number_hash` (anahtarlı özet), `driving_privileges` (`[{ category, issue_date?, expiry_date? }]`; AB 2006/126 sınıf kodları, ulusal ekler aynen), `licence_issue_date` (varsa), `licence_expiry_date`, `verified_at` (gün), `verification_method`, `age_over_18`, `not_official_licence` (her zaman `true`, seçici paylaşımsız) |
+| Yok | Ulusal kimlik numarası, kısıtlama ve sağlık kodları (12. alan; `has_restrictions` olgusu da yok), fotoğraf, imza, adres; sağlayıcının not alanları okunmaz |
+| Geçerlilik | `exp` = kartın bitişi ile incelemeden 1 yıl sonrasından erken olanı; otomatik yenileme süreyi uzatmaz |
+| İptal | İptal listesi zorunlu. Nedenler: kişinin isteği, silme isteği, aynı kartla yeniden doğrulama (eskisi), cüzdan birimi iptali, **bağlı kimlik belgesinin iptali, yeniden verilmesi ya da silinmesi** (zincirleme) |
+| Veri koruma | Tamga veri sorumlusudur; aydınlatma ve açık rıza sürücü belgesine özeldir; kişi alanları ihraçtan sonra tutulmaz; sağlayıcıya ad/doğum tarihi gönderilmez, eşleşme kimlik servisinde anahtarlı özetle yapılır |
+| Yetkili makam | Bir ülkenin yetkili makamı dijital sürücü belgesi vermeye başlayınca Tamga o ülke için bu türü yeniden vermez; kayıt `successor` ile resmî türe işaret eder (§9'daki `org.iso.18013.5.1.mDL` dış tür olarak zaten tanınır) |
+| Hukuk | Gerçek kişilere ihraç açılmadan önce hukuki inceleme; sandbox bunu beklemez |
+
+Kurallar Tamga Rulebook RB-AP-ID-08…10'dadır; kaynak [[ADR-0039]] DL1–DL5.
 
 ---
 

@@ -807,7 +807,214 @@ export const PSEUDONYM_SEED: SchemaDef = {
   },
 };
 
-export const ALL: SchemaDef[] = [BASE, STUDENT, DIPLOMA, IDENTITY, TICKET, EMAIL, PHONE, PSEUDONYM_SEED];
+/**
+ * ADR-0039 — doğrulanmış sürücü belgesi bilgisi (EAA, nitelikli değil). Resmî sürücü belgesi DEĞİLDİR, mDL değildir (DL1):
+ * kimlik servisi kartı uzaktan inceler (belge + canlılık + yüz) ve karttaki sınıfları/tarihleri verir. Kimlik numarası,
+ * kısıtlama/sağlık kodu, fotoğraf, adres yok (DL2); belge numarası yalnız anahtarlı özet. Süre ≤ kart bitişi ve ≤ 1 yıl (DL3).
+ * Yalnız SD-JWT VC. `not_official_licence` her zaman açık (sd: never) — her doğrulayıcı ibareyi görür.
+ * Geliştirme evresi (ADR-0029): `driving_privileges` tek seçici alan (dizi bütünüyle açılır); sınıf başına açıklama sonra.
+ */
+export const DRIVING_LICENCE: SchemaDef = {
+  vct: "urn:tamga:id:DrivingLicenceAttestation:1",
+  path: "id/DrivingLicenceAttestation/1.0.0",
+  metadataVersion: "1.0.0",
+  layer: "NETWORK",
+  extends: BASE.vct,
+  jsonSchema: {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: `${CATALOGUE_BASE}/id/DrivingLicenceAttestation/1.0.0/schema.json`,
+    title: "TamgaDrivingLicenceAttestation",
+    type: "object",
+    required: [
+      "iss",
+      "vct",
+      "vct#integrity",
+      "iat",
+      "exp",
+      "cnf",
+      "status",
+      "family_name",
+      "given_name",
+      "issuing_country",
+      "document_number_hash",
+      "driving_privileges",
+      "licence_expiry_date",
+      "verified_at",
+      "verification_method",
+      "not_official_licence",
+    ],
+    properties: {
+      iss: { type: "string", format: "uri" },
+      vct: { const: "urn:tamga:id:DrivingLicenceAttestation:1" },
+      "vct#integrity": { type: "string", pattern: "^sha256-" },
+      iat: { type: "integer" },
+      exp: { type: "integer" },
+      cnf: { type: "object" },
+      status: contactStatus,
+      family_name: { type: "string", minLength: 1, maxLength: 200 },
+      given_name: { type: "string", minLength: 1, maxLength: 200 },
+      birth_date: DATE,
+      issuing_country: { type: "string", pattern: "^[A-Z]{2}$" },
+      document_number_hash: { type: "string", pattern: "^sha256-" },
+      // Karttaki sınıflar (AB 2006/126 kodları: AM, A1, A2, A, B1, B, BE, C1, C1E, C, CE, D1, D1E, D, DE; ulusal ekler F, G, M …)
+      driving_privileges: {
+        type: "array",
+        minItems: 1,
+        maxItems: 32,
+        items: {
+          type: "object",
+          required: ["category"],
+          properties: {
+            category: { type: "string", pattern: "^[A-Z][A-Z0-9]{0,3}$" },
+            issue_date: DATE,
+            expiry_date: DATE,
+          },
+          additionalProperties: false,
+        },
+      },
+      licence_issue_date: DATE,
+      licence_expiry_date: DATE,
+      verified_at: DATE,
+      verification_method: { enum: ["remote-document-liveness-face"] },
+      age_over_18: { type: "boolean" },
+      // DL1: sabit ibare; şema değeri true'ya kilitler, metadata görünen metni taşır
+      not_official_licence: { const: true },
+    },
+    additionalProperties: false,
+  },
+  typeMetadata: {
+    name: "Tamga Driving Licence Information",
+    description:
+      "Verified driving licence information (ADR-0039): the categories and validity printed on a physical driving licence card that the Tamga identity service inspected remotely (document + liveness + face match). NOT an official driving licence and NOT a mobile driving licence (mDL); not valid in traffic checks or official procedures.",
+    display: [
+      {
+        lang: "tr-TR",
+        name: "Sürücü belgesi bilgisi",
+        description: "Resmî sürücü belgesi yerine geçmez · karttaki sınıflar ve geçerlilik, uzaktan doğrulanmış",
+      },
+      {
+        lang: "en-US",
+        name: "Driving licence information",
+        description: "Not an official driving licence · categories and validity from the card, verified remotely",
+      },
+    ],
+    claims: [
+      {
+        path: ["family_name"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Soyad" },
+          { lang: "en-US", label: "Family name" },
+        ],
+      },
+      {
+        path: ["given_name"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Ad" },
+          { lang: "en-US", label: "Given name" },
+        ],
+      },
+      {
+        path: ["birth_date"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Doğum tarihi" },
+          { lang: "en-US", label: "Date of birth" },
+        ],
+      },
+      {
+        path: ["issuing_country"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Veren ülke" },
+          { lang: "en-US", label: "Issuing country" },
+        ],
+      },
+      { path: ["document_number_hash"], sd: "always" },
+      {
+        path: ["driving_privileges"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Sınıflar" },
+          { lang: "en-US", label: "Categories" },
+        ],
+      },
+      {
+        path: ["licence_issue_date"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Kartın veriliş tarihi" },
+          { lang: "en-US", label: "Card issue date" },
+        ],
+      },
+      {
+        path: ["licence_expiry_date"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Kartın geçerlilik sonu" },
+          { lang: "en-US", label: "Card expiry date" },
+        ],
+      },
+      {
+        path: ["verified_at"],
+        sd: "never",
+        display: [
+          { lang: "tr-TR", label: "Kartın incelendiği gün" },
+          { lang: "en-US", label: "Card inspected on" },
+        ],
+      },
+      {
+        path: ["verification_method"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Doğrulama yöntemi" },
+          { lang: "en-US", label: "Verification method" },
+        ],
+      },
+      {
+        path: ["age_over_18"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "18 yaş üstü" },
+          { lang: "en-US", label: "Over 18" },
+        ],
+      },
+      {
+        path: ["not_official_licence"],
+        sd: "never",
+        display: [
+          { lang: "tr-TR", label: "Resmî sürücü belgesi yerine geçmez" },
+          { lang: "en-US", label: "Not an official driving licence" },
+        ],
+      },
+      { path: ["status"], sd: "never" },
+    ],
+    tamga: {
+      tier: "NETWORK",
+      issuer_categories: ["IDENTITY"],
+      default_ttl_days: 365,
+      uses_status_list: true,
+      min_issuer_assurance: "I2",
+      min_binding_level: "T2",
+      derived_claims: ["document_number_hash", "age_over_18", "not_official_licence"],
+      status: "ACTIVE",
+      note: "ADR-0039 DL1–DL4: not the official mDL docType/namespace; no national ID number, restriction or health codes, photo or address; validity ≤ card expiry and ≤ 1 year from inspection; issuance for a country stops once its competent authority issues digital driving licences. Prerequisite: a Tamga identity credential presented at the PAR; name and date of birth must match the card.",
+    },
+  },
+};
+
+export const ALL: SchemaDef[] = [
+  BASE,
+  STUDENT,
+  DIPLOMA,
+  IDENTITY,
+  TICKET,
+  EMAIL,
+  PHONE,
+  PSEUDONYM_SEED,
+  DRIVING_LICENCE,
+];
 
 /** ADR-0031 PS3: sunulamayan türler (cüzdan sunum ekranında listelemez, güven listesi kapsama yazdırmaz). */
 export const NON_PRESENTABLE_VCTS: readonly string[] = ALL.filter(

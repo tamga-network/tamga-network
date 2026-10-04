@@ -2,7 +2,7 @@
 document_id: ADR-0038
 title: "Sandbox: the test network"
 status: Active
-version: 1.2.0
+version: 1.0.0
 created: 2026-10-03
 last_updated: 2026-10-03
 summary: >
@@ -12,7 +12,7 @@ summary: >
   network trusts the sandbox; the sandbox holds no real personal data and its data can be reset at any time.
 domain: Trust
 translation_of: ADR-0038
-source_version: 1.2.0
+source_version: 1.0.0
 ---
 
 # In brief

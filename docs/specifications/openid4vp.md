@@ -2,7 +2,7 @@
 document_id: SPEC-PROTO-0002
 title: "OpenID4VP profili"
 status: Active
-version: 1.1.0
+version: 1.0.0
 created: 2026-09-09
 last_updated: 2026-10-03
 summary: >
@@ -585,5 +585,5 @@ anahtarına ihtiyaç duyar.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.1.0 (2026-10-03).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
 

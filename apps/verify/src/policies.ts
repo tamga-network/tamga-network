@@ -16,6 +16,9 @@ const TRUST_ID: Policy["trust"] = {
   require_recognition: true,
   state_code: "TR",
 };
+/** ADR-0039: kimlik servisinin sürücü belgesi bilgisi — resmî sürücü belgesi DEĞİL (DL1); sonuç sayfaları ibareyi gösterir. */
+export const DRIVING_LICENCE_VCT = "urn:tamga:id:DrivingLicenceAttestation:1";
+export const isDrivingPolicy = (p: Policy) => p.credentials.some((c) => c.vct_values.includes(DRIVING_LICENCE_VCT));
 /**
  * ADR-0033: mağaza incelemesi — DEMO imzacısı (`tamga-id-review`) güven listesinde I1'dir; gerçek politikalar I2 ister ve onu
  * reddeder. Yalnız aşağıdaki "review-" politikaları I1 kabul eder; bunlar inceleyicinin akışı denemesi içindir, gerçek kararda
@@ -189,6 +192,27 @@ export const POLICIES: Policy[] = [
     },
     credentials: [],
     pseudonym: { mode: "single" },
+    trust: TRUST_ID,
+    freshness: FRESH,
+  },
+  // ADR-0039 — araç kiralama: doğrulanmış sürücü belgesi bilgisi (resmî sürücü belgesi DEĞİL, DL1). Yalnız sınıflar + 18 yaş
+  // üstü; ad, doğum tarihi, veren ülke ve kart tarihleri İSTENMEZ. Sonuç/bekleme sayfaları K1 ibaresini gösterir (html.ts).
+  {
+    policy_id: "car-rental-driving",
+    purpose: {
+      "en-US":
+        "Car rental — driving licence categories and over-18 (verified driving licence information; not an official driving licence)",
+      "tr-TR":
+        "Araç kiralama — sürücü belgesi sınıfları ve 18 yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)",
+    },
+    credentials: [
+      {
+        id: "driving",
+        vct_values: [DRIVING_LICENCE_VCT],
+        required_claims: ["driving_privileges", "age_over_18"],
+        constraints: { age_over_18: true },
+      },
+    ],
     trust: TRUST_ID,
     freshness: FRESH,
   },

@@ -4,7 +4,7 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-02
+last_updated: 2026-10-04
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
@@ -248,6 +248,21 @@ there is nothing to delete (PS2); if the person verifies their identity again, t
 | Limits | 5 failed attempts per PAR; service-wide, 20 failures in 10 minutes lock it for 15 minutes (IP addresses are not used); nginx rate limit on `/authorize/consent` |
 | Off | If there is no DEMO key or the trust list does not know `tamga-id-review`, entering a code returns "not active" (503) |
 | Log | `review_code.accepted` / `.used` (code identifier), `.rejected` (no detail); never the code or its digest |
+
+## 9.3 Driving licence information — `urn:tamga:id:DrivingLicenceAttestation:1` ([[ADR-0039]])
+
+The same service inspects the person's physical driving licence at the provider in a **separate flow** (accepting driving licences
+only) and issues the categories and dates on the card. It is not an official driving licence / mDL (DL1); the credential says so
+through the always-visible `not_official_licence: true` claim.
+
+| Item | Value |
+|---|---|
+| Prerequisite | `identity_presentation` in the PAR: an SD-JWT VC + KB-JWT presentation of the Tamga identity credential in the wallet (`aud` = the service, `nonce` = `POST /nonce`, single use; only `given_name`, `family_name`, `birth_date` disclosed). The service checks the signature, that the record is active and that only the three claims are disclosed; the flow record holds no personal attribute, only a keyed **match digest** (HMAC) and the id of the linked identity record |
+| Flow | `/authorize` driving-licence-specific notice + explicit consent (no review code field) → the provider's driving licence flow (setting: separate flow id; without it the type is not announced) → `/idv/return`: is the document a driving licence, has the card expired, were categories read, do the name + date of birth on the card match the digest → `code` → token → 10 copies |
+| Read from the provider | given name, family name, date of birth, issuing country, document number (only its HMAC digest is kept), issue/expiry dates, expired fact, per-category from/to dates (`extra_fields.dl_class_code_<category>_from/_to`). **Never read:** `_notes` fields, restriction codes, images, scores |
+| Claims | `given_name`, `family_name`, `birth_date`, `issuing_country`, `document_number_hash`, `driving_privileges[]`, `licence_issue_date?`, `licence_expiry_date`, `verified_at`, `verification_method` (`remote-document-liveness-face`), `age_over_18`, `not_official_licence` |
+| Refusal | `access_denied`: not a driving licence · card expired · categories could not be read · all categories expired (expired categories are not written into the credential) · name or issuing country could not be read (no guessing) · does not match the identity · the linked identity is no longer active (revoked / re-issued / erased after the PAR; re-checked at `/idv/return` and `/credential`). No personal data in the description; only the reason code is logged. On every outcome without issuance (including provider decline/review) the provider session (card images, selfie) is deleted at once; sessions of abandoned flows are deleted during garbage collection before their id is forgotten |
+| Validity / revocation | `exp` = min(card expiry, inspection + 1 year, expiry of the linked identity credential; DL3/DL5); SD-JWT VC only; status list; the record is linked to the identity record via `parentId` — revocation, re-issuance or erasure of the identity covers the linked credential; erasure also removes previously revoked linked records and their provider sessions (DL5) |
 
 # Security and privacy notes
 

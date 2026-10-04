@@ -55,7 +55,9 @@ export class WalletError extends Error {
       | "issuer_error"
       | "unsupported"
       | "network"
-      | "trust_error",
+      | "trust_error"
+      /** WA-ADR-0002: cüzdan birimi sağlayıcıda iptal edilmiş (uzaktan kapatma ya da kişinin isteği) */
+      | "unit_revoked",
     message: string,
     public detail?: unknown,
   ) {

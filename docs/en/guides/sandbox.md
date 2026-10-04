@@ -2,7 +2,7 @@
 document_id: GUIDE-0013
 title: "Sandbox: the test network"
 status: Active
-version: 1.1.0
+version: 1.0.0
 created: 2026-10-03
 last_updated: 2026-10-03
 summary: >
@@ -10,7 +10,7 @@ summary: >
   trust anchor, connecting a wallet to the sandbox, getting credentials with example people, presenting them to example
   verifiers, trying revocation and suspension, rules and resets.
 translation_of: GUIDE-0013
-source_version: 1.1.0
+source_version: 1.0.0
 ---
 
 # Sandbox: the test network

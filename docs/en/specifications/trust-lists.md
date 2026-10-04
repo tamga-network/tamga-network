@@ -2,7 +2,7 @@
 document_id: SPEC-TRUST-0001
 title: "Trust lists"
 status: Active
-version: 1.1.0
+version: 1.0.0
 created: 2026-09-24
 last_updated: 2026-10-03
 summary: >
@@ -11,7 +11,7 @@ summary: >
   slots, record lifecycle and the rules of equivalence with the chain. Every field maps to a SPEC-BC-0001 contract record;
   reading is done only through the TrustSource interface.
 translation_of: SPEC-TRUST-0001
-source_version: 1.1.0
+source_version: 1.0.0
 ---
 
 # In brief
@@ -217,4 +217,4 @@ Migration: the `archive/` versions are replayed in order as contract calls; the 
 
 # Status
 
-**In force** — version 1.1.0 (2026-10-03): the `environment` field (test network, [[ADR-0038]]). 1.0.0 (2026-10-02).
+**In force** — version 1.0.0 (2026-10-02).

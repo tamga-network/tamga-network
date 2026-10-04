@@ -120,6 +120,10 @@ Terimler tek kaynakta: `docs/.vitepress/terms.json` (docs ve ARF ortak). Her ter
 
 - Her belge SemVer taşır. **1.0.0 ilk yayındır (2026-10-02).** Anlamı değiştirmeyen düzeltme yama (`1.0.1`), yeni kural ya da
   bölüm ara sürüm (`1.1.0`), uyumu bozan değişiklik ana sürüm (`2.0.0`).
+- **Canlıya çıkış duyurusuna kadar bütün belgeler 1.0.0'da kalır** (proje yönetimi kararı, 2026-10-04): değişiklik yerinde
+  yapılır, sürüm artmaz, `last_updated` güncellenir ([[ADR-0029]] ruhu — geliştirme evresinde sürüm geçişi yok). Tamga ARF
+  tek yayındır (1.0); ARF belgesi değişince aynı çalışmada İngilizcesi güncellenir ve 1.0 anlık görüntüsü yeniden alınır
+  (`npm run arf:snapshot`). Sürüm artışı kuralı duyuru ile başlar.
 - Değişiklik geçmişi belgenin içinde tutulmaz: belge değişiklikleri depo kökündeki `CHANGELOG.md`'ye, ARF yayınları
   `arf/releases.json` ve "What changed" sayfasına yazılır.
 - Kapatılmış bir karar ancak yeni bir ADR ile değişir; eski ADR silinmez, `Superseded` olur.

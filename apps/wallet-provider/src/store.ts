@@ -1,6 +1,7 @@
 /**
  * Cüzdan sağlayıcı durumu (ADR-0025): birim kayıtları (birim anahtarı parmak izi → açık anahtar, çözüm, sürüm, iptal) ve iptal
- * listeleri. Kişisel veri yok (WIA2). Tek JSON dosyası, atomik yazma; pilot hacmi için yeterli.
+ * listeleri; kapatma kodu yavaş özetleri (WA-ADR-0002). Kişisel veri yok (WIA2). Tek JSON dosyası, atomik yazma; pilot hacmi
+ * için yeterli.
  */
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -27,12 +28,16 @@ export interface UnitRecord {
   wia_idx: number[];
   /** P4-2: doğrulanmış cihaz kanıtı (kişi verisi yok) */
   device?: { platform: "android" | "ios"; verified_at: number; details?: Record<string, unknown> };
+  /** WA-ADR-0002 K1: kapatma kodunun yavaş özeti (hex); kodun kendisi ve ön özeti hiç tutulmaz */
+  lock_hash?: string;
 }
 interface State {
   units: Record<string, UnitRecord>;
   wia_bits: string; // base64
   wia_used: number[];
   ka_bits: string;
+  /** WA-ADR-0002: yavaş özet → birim (kod girişinde arama dizini) */
+  lock_index?: Record<string, string>;
 }
 
 export class WpStore {
@@ -110,10 +115,39 @@ export class WpStore {
    */
   async deleteUnit(unitId: string, now: number): Promise<number> {
     const n = await this.revokeUnit(unitId, now);
-    if (!this.unit(unitId)) return n;
+    const u = this.unit(unitId);
+    if (!u) return n;
+    if (u.lock_hash) delete this.lockIndex()[u.lock_hash];
     delete this.s.units[unitId];
     await this.save();
     return n;
+  }
+  private lockIndex(): Record<string, string> {
+    return (this.s.lock_index ??= {});
+  }
+  /**
+   * WA-ADR-0002 K1: birime yeni kapatma kodu özeti; eskisi silinir (eski kod geçersiz). Özet BAŞKA bir birime aitse `false`
+   * (çarpışma ya da kötü niyetli ele geçirme denemesi): o birimin kodu değişmez, çağıran 409 döner.
+   */
+  async setLockHash(unitId: string, hash: string): Promise<boolean> {
+    const u = this.unit(unitId);
+    if (!u) return false;
+    const idx = this.lockIndex();
+    const owner = Object.prototype.hasOwnProperty.call(idx, hash) ? idx[hash] : undefined;
+    if (owner && owner !== unitId) return false;
+    if (u.lock_hash) delete idx[u.lock_hash];
+    for (const [h, id] of Object.entries(idx)) if (id === unitId) delete idx[h];
+    u.lock_hash = hash;
+    idx[hash] = unitId;
+    await this.save();
+    return true;
+  }
+  /** Kod özetine bağlı birim (yoksa undefined). Sabit zamanlı karşılaştırma `lock.ts`; burada yalnız dizin araması. */
+  unitByLockHash(hash: string): { unitId: string; unit: UnitRecord } | undefined {
+    const idx = this.lockIndex();
+    const unitId = Object.prototype.hasOwnProperty.call(idx, hash) ? idx[hash] : undefined;
+    const unit = unitId ? this.unit(unitId) : undefined;
+    return unitId && unit ? { unitId, unit } : undefined;
   }
   async setKaType(storage: KeyStorage, v: StatusValue) {
     this.kaBits.set(KA_TYPE_INDEX[storage], v);
