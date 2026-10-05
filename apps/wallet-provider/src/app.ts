@@ -138,7 +138,10 @@ export async function buildWalletProviderApp(
   async function unitProof(
     token: unknown,
     action: string,
-  ): Promise<{ ok: true; unitId: string; jwk: JWK; payload: Record<string, unknown> } | { ok: false; error: string }> {
+  ): Promise<
+    | { ok: true; unitId: string; jwk: JWK; payload: Record<string, unknown> }
+    | { ok: false; error: string; code?: "unknown_unit" }
+  > {
     if (typeof token !== "string") return { ok: false, error: "proof missing" };
     let h: ReturnType<typeof decodeProtectedHeader>;
     try {
@@ -149,9 +152,13 @@ export async function buildWalletProviderApp(
     if (h.typ !== UNIT_POP_TYP || h.alg !== "ES256") return { ok: false, error: "proof header" };
     let jwk: JWK | undefined;
     if (action === "register") jwk = h.jwk as JWK | undefined;
-    else if (typeof h.kid === "string") jwk = store.unit(h.kid)?.jwk;
-    if (!jwk || jwk.kty !== "EC" || jwk.crv !== "P-256" || "d" in jwk)
-      return { ok: false, error: "unknown unit or bad key" };
+    else if (typeof h.kid === "string") {
+      jwk = store.unit(h.kid)?.jwk;
+      // Kayıt yok (silindi ya da veritabanı yeniden kuruldu): cüzdan ayrı koddan tanır ve yeniden kaydolur. İptal edilmiş birimin
+      // kaydı durduğu için o `unit_revoked` alır — bu kod uzaktan kapatmayı delmez (WA-ADR-0002).
+      if (!jwk) return { ok: false, code: "unknown_unit", error: "unknown unit" };
+    }
+    if (!jwk || jwk.kty !== "EC" || jwk.crv !== "P-256" || "d" in jwk) return { ok: false, error: "bad key" };
     const now = nowSec();
     try {
       const { payload } = await jwtVerify(token, await importJWK(jwk, "ES256"), {
@@ -169,6 +176,11 @@ export async function buildWalletProviderApp(
       return { ok: false, error: `proof: ${(e as Error).message}` };
     }
   }
+  /** Kanıt hatası yanıtı: kayıtsız birim `unknown_unit` (cüzdan yeniden kaydolur), öbürleri `invalid_request`. */
+  const proofError = (p: { error: string; code?: "unknown_unit" }) => ({
+    error: p.code ?? "invalid_request",
+    error_description: p.error,
+  });
   const coordOk = (v: unknown) => typeof v === "string" && /^[A-Za-z0-9_-]{43}$/.test(v);
   const isP256 = (j: JWK | undefined): j is JWK =>
     !!j && j.kty === "EC" && j.crv === "P-256" && coordOk(j.x) && coordOk(j.y) && !("d" in j);
@@ -245,7 +257,7 @@ export async function buildWalletProviderApp(
   app.post("/units", async (req, reply) => {
     const b = (req.body ?? {}) as { proof?: string; device_evidence?: DeviceEvidence };
     const p = await unitProof(b.proof, "register");
-    if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
+    if (!p.ok) return reply.code(400).send(proofError(p));
     const { solution_id = "tamga-wallet-expo", app_version, platform } = p.payload as Record<string, string>;
     if (!short(solution_id) || !short(app_version) || !short(platform))
       return reply.code(400).send({ error: "invalid_request", error_description: "attestation fields" });
@@ -317,7 +329,7 @@ export async function buildWalletProviderApp(
   app.post("/wia", async (req, reply) => {
     const b = (req.body ?? {}) as { proof?: string; wia_jwk?: JWK };
     const p = await unitProof(b.proof, "wia");
-    if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
+    if (!p.ok) return reply.code(400).send(proofError(p));
     const u = store.unit(p.unitId)!;
     if (u.revoked_at) return reply.code(403).send({ error: "unit_revoked" });
     if (!isP256(b.wia_jwk)) return reply.code(400).send({ error: "invalid_request", error_description: "wia_jwk" });
@@ -349,7 +361,7 @@ export async function buildWalletProviderApp(
   app.post("/ka", async (req, reply) => {
     const b = (req.body ?? {}) as { proof?: string; keys?: JWK[] };
     const p = await unitProof(b.proof, "ka");
-    if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
+    if (!p.ok) return reply.code(400).send(proofError(p));
     const u = store.unit(p.unitId)!;
     if (u.revoked_at) return reply.code(403).send({ error: "unit_revoked" });
     const keys = b.keys ?? [];
@@ -424,7 +436,7 @@ export async function buildWalletProviderApp(
         .send(outcome === "revoked" ? { revoked: true } : { error: outcome === "unknown" ? "code_unknown" : outcome });
     }
     const p = await unitProof(b.proof, "revoke");
-    if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
+    if (!p.ok) return reply.code(400).send(proofError(p));
     const n = await store.revokeUnit(p.unitId, nowSec());
     return { revoked: true, entries: n };
   });
@@ -433,7 +445,7 @@ export async function buildWalletProviderApp(
   app.post(WP_PATHS.revocationCode, async (req, reply) => {
     const b = (req.body ?? {}) as { proof?: string };
     const p = await unitProof(b.proof, "revocation-code");
-    if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
+    if (!p.ok) return reply.code(400).send(proofError(p));
     const u = store.unit(p.unitId)!;
     if (u.revoked_at) return reply.code(403).send({ error: "unit_revoked" });
     const pre = p.payload.lock_prehash;
@@ -448,7 +460,7 @@ export async function buildWalletProviderApp(
   app.post(WP_PATHS.status, async (req, reply) => {
     const b = (req.body ?? {}) as { proof?: string };
     const p = await unitProof(b.proof, "status");
-    if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
+    if (!p.ok) return reply.code(400).send(proofError(p));
     const u = store.unit(p.unitId)!;
     return { status: u.revoked_at ? "revoked" : "active" };
   });
@@ -494,7 +506,7 @@ export async function buildWalletProviderApp(
   app.post("/units/delete", async (req, reply) => {
     const b = (req.body ?? {}) as { proof?: string };
     const p = await unitProof(b.proof, "delete");
-    if (!p.ok) return reply.code(400).send({ error: "invalid_request", error_description: p.error });
+    if (!p.ok) return reply.code(400).send(proofError(p));
     const n = await store.deleteUnit(p.unitId, nowSec());
     return { deleted: true, revoked_entries: n };
   });

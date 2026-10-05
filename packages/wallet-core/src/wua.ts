@@ -158,7 +158,62 @@ async function postJson(http: Http, url: string, body: unknown) {
   return { status: r.status, body: (await readJson(r, "wallet provider")) as Record<string, unknown> };
 }
 const failed = (what: string, b: Record<string, unknown>, status: number) =>
-  new WalletError("issuer_error", `${what}: ${String(b.error_description ?? b.error ?? status)}`);
+  unitRejection(status, b) === "unknown_unit"
+    ? new WalletError("unit_unknown", `${what}: wallet unit not registered at the wallet provider (${status})`)
+    : new WalletError("issuer_error", `${what}: ${String(b.error_description ?? b.error ?? status)}`);
+
+/**
+ * Sağlayıcının birim kanıtına verdiği ret: `unknown_unit` = birim kaydı yok (yeni sağlayıcı `error: "unknown_unit"`; eski
+ * sağlayıcı 400 + "unknown unit or bad key"); `unit_revoked` = birim iptal (403); öbürü `other`. Saf.
+ */
+export function unitRejection(
+  status: number,
+  body: Record<string, unknown>,
+): "unknown_unit" | "unit_revoked" | "other" {
+  if (body.error === "unit_revoked") return "unit_revoked";
+  if (status === 400 && (body.error === "unknown_unit" || /^unknown unit\b/.test(String(body.error_description ?? ""))))
+    return "unknown_unit";
+  return "other";
+}
+
+/** Birim isteği neden düştü (uygulama `decideUnitRecovery`'ye verir). */
+export type UnitFailure = "unknown_unit" | "unit_revoked" | "network" | "other";
+export function unitFailureOf(e: unknown): UnitFailure {
+  if (e instanceof WalletError) {
+    if (e.code === "unit_unknown") return "unknown_unit";
+    if (e.code === "unit_revoked") return "unit_revoked";
+    if (e.code === "network") return "network";
+    return "other";
+  }
+  return /network request failed|fetch failed|timeout|abort/i.test((e as Error)?.message ?? String(e))
+    ? "network"
+    : "other";
+}
+
+/**
+ * Bilinmeyen birimden kurtulma kararı (saf; WA-ADR-0002 güvencesiyle):
+ *  - `unit_revoked` → ASLA yeniden kayıt yok: `remote_lock` (uygulama imzalı listeyle doğrular ve ancak öyle siler).
+ *  - ağ hatası → `retry_later` (yerel kayda dokunulmaz).
+ *  - `unknown_unit` → önce imzalı WIA iptal listesi (`wiaRevokedByList`, son WIA'nın girişi): `revoked` → `remote_lock`
+ *    (kapatma sayfasında "verilerimi de sil" birim kaydını siler ama iptal biti listede kalır — yeniden kayıt kapatmayı
+ *    delemez); liste okunamadı → `retry_later`; iptal değil ya da denetlenecek WIA yok → `re_register`, ama TEK SEFER
+ *    (`attempted` ise `fail`: döngü yok).
+ */
+export type UnitRecovery = "re_register" | "remote_lock" | "retry_later" | "fail";
+export function decideUnitRecovery(p: {
+  failure: UnitFailure;
+  /** son WIA'nın imzalı listedeki durumu; `unknown_unit` için gerekir */
+  list?: "revoked" | "not_revoked" | "error";
+  /** bu akışta yeniden kayıt zaten denendi */
+  attempted: boolean;
+}): UnitRecovery {
+  if (p.failure === "unit_revoked") return "remote_lock";
+  if (p.failure === "network") return "retry_later";
+  if (p.failure !== "unknown_unit") return "fail";
+  if (p.list === "revoked") return "remote_lock";
+  if (p.list !== "not_revoked") return "retry_later";
+  return p.attempted ? "fail" : "re_register";
+}
 
 /**
  * Cihaz kanıtının sonucu (sağlayıcı yanıtı `attestation`): `hardware` = platform kanıtı doğrulandı, birim anahtarı güvenli
@@ -256,7 +311,8 @@ export async function requestWia(p: {
   const r = await postJson(p.http, `${base(p.providerBase)}/wia`, { proof, wia_jwk: wiaJwk });
   if (r.status !== 200 || typeof r.body.wia !== "string") {
     await p.keys.delete(keyRef).catch(() => {});
-    if (r.body.error === "unit_revoked") throw new WalletError("unit_revoked", "This wallet has been revoked.");
+    if (unitRejection(r.status, r.body) === "unit_revoked")
+      throw new WalletError("unit_revoked", "This wallet has been revoked.");
     throw failed("WIA could not be obtained", r.body, r.status);
   }
   const claims = decodeJwt(r.body.wia).payload as { sub?: string; exp?: number; wallet_name?: string };
@@ -282,8 +338,11 @@ export async function requestKeyAttestation(p: {
   const keysHash = b64u(sha256(new TextEncoder().encode(p.jwks.map(thumb).join("."))));
   const proof = await unitProof(p, "ka", { keys_hash: keysHash });
   const r = await postJson(p.http, `${base(p.providerBase)}/ka`, { proof, keys: p.jwks });
-  if (r.status !== 200 || typeof r.body.key_attestation !== "string")
+  if (r.status !== 200 || typeof r.body.key_attestation !== "string") {
+    if (unitRejection(r.status, r.body) === "unit_revoked")
+      throw new WalletError("unit_revoked", "This wallet has been revoked.");
     throw failed("key attestation could not be obtained", r.body, r.status);
+  }
   return r.body.key_attestation;
 }
 
@@ -311,7 +370,7 @@ export async function deleteUnit(p: {
 }): Promise<void> {
   const proof = await unitProof(p, "delete");
   const r = await postJson(p.http, `${base(p.providerBase)}/units/delete`, { proof });
-  if (r.status === 400 && /unknown unit/.test(String(r.body.error_description ?? ""))) return;
+  if (unitRejection(r.status, r.body) === "unknown_unit") return;
   if (r.status !== 200) throw failed("wallet deletion failed", r.body, r.status);
 }
 
@@ -378,6 +437,9 @@ export async function wiaRevokedByList(p: {
   const list = parseStatusToken((await r.text()).trim(), ref.uri, p.now ?? Math.floor(Date.now() / 1000));
   if (p.trust.isWalletProviderKey(list.signerFingerprint) !== "YES")
     throw new WalletError("trust_error", "wallet status list: signer is not a registered wallet provider");
+  // İmzalı liste girişten kısaysa giriş yok (sağlayıcının listesi yeniden kuruldu): iptal değil. Bunu ancak listenin kayıtlı
+  // imzacısı söyleyebilir; o imzacı zaten biti 0 da yazabilir — güvence azalmaz.
+  if (ref.idx >= list.bytes.length * 4) return false;
   return statusBitAt(list, ref.idx) === 1;
 }
 

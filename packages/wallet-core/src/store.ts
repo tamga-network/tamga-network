@@ -97,6 +97,11 @@ export interface WalletState {
     keyStorage?: KeyStorage;
     attestation?: AttestationLevel;
     reason?: AttestationReason;
+    /**
+     * Birim, sağlayıcı onu tanımadığı için (kayıt silinmiş / veritabanı yeniden kurulmuş) yeniden kaydedildi — eski kapatma kodu
+     * eski birime bağlıydı, artık geçmez; ana ekran "kapatma kodunu yeniden oluştur" der (WA-ADR-0002 K1).
+     */
+    renewedAt?: number;
   };
   /** WA-ADR-0002 K1: kapatma kodu oluşturuldu (kodun kendisi cihazda SAKLANMAZ; yalnız tarih + kaydedildiği sağlayıcı) */
   lockCode?: { createdAt: number; provider: string };

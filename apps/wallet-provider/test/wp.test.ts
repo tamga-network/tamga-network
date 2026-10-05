@@ -151,7 +151,11 @@ describe.skipIf(!ready)("wallet-provider (TS3: WIA + KA)", () => {
     expect((await verifyWia(keys, wia)).ok).toBe(true);
     await revokeUnit({ providerBase: BASE, keys, http });
     expect(await verifyWia(keys, wia)).toMatchObject({ ok: false, reason: expect.stringMatching(/revoked/) });
-    await expect(requestWia({ providerBase: BASE, keys, http })).rejects.toThrow(/revoked/);
+    await expect(requestWia({ providerBase: BASE, keys, http })).rejects.toMatchObject({ code: "unit_revoked" });
+    // iptal edilmiş birim "bilinmeyen" görünmez: kayıt durur, yeniden kayıt da reddedilir (uzaktan kapatma delinmez)
+    await expect(
+      registerUnit({ providerBase: BASE, keys, http, appVersion: "0.2.0", platform: "ios" }),
+    ).rejects.toThrow();
   });
 
   it("kişinin silme isteği: birim iptal edilir ve kaydı silinir; ikinci istek de başarılı (bilinmeyen birim)", async () => {
@@ -164,7 +168,8 @@ describe.skipIf(!ready)("wallet-provider (TS3: WIA + KA)", () => {
     const after = (await app.inject({ method: "GET", url: "/healthz" })).json() as { units: number };
     expect(after.units).toBe(before.units - 1); // kayıt (açık anahtar, sürüm, cihaz bilgisi) yok
     expect(JSON.stringify(after)).not.toContain(unitId);
-    await expect(requestWia({ providerBase: BASE, keys, http })).rejects.toThrow();
+    // kayıt yok → ayrı kod (cüzdan imzalı listeye bakıp yeniden kaydolabilir); eski WIA'nın iptal biti listede kalır (yukarıda)
+    await expect(requestWia({ providerBase: BASE, keys, http })).rejects.toMatchObject({ code: "unit_unknown" });
     await deleteUnit({ providerBase: BASE, keys, http }); // tekrar: hata vermez
     const meta = (await app.inject({ method: "GET", url: "/.well-known/wallet-provider" })).json() as Record<
       string,

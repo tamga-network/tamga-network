@@ -74,7 +74,12 @@ export class WalletError extends Error {
       | "network"
       | "trust_error"
       /** WA-ADR-0002: cüzdan birimi sağlayıcıda iptal edilmiş (uzaktan kapatma ya da kişinin isteği) */
-      | "unit_revoked",
+      | "unit_revoked"
+      /**
+       * Cüzdan birimi sağlayıcıda kayıtlı değil (kayıt silindi ya da sağlayıcının veritabanı yeniden kuruldu). İptal DEĞİLDİR:
+       * cüzdan imzalı WIA iptal listesine baktıktan sonra yeniden kaydolabilir (`decideUnitRecovery`).
+       */
+      | "unit_unknown",
     message: string,
     public detail?: unknown,
   ) {
