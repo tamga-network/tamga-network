@@ -4,7 +4,7 @@ title: "Sandbox: test ağı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-04
+last_updated: 2026-10-05
 summary: >
   Tamga Network, gerçek ağdan tamamen ayrı bir test ağı işletir: sandbox.tamga.network. Kendi test kök sertifikası, kendi
   güven listesi, örnek kurumları, sahte kişileri ve her belge türünden örnek belgeleri vardır. Cüzdan geliştiricileri,
@@ -13,8 +13,9 @@ summary: >
 domain: Trust
 ---
 
-> **[[ADR-0040]] ve [[ADR-0041]] ile kısmen değiştirildi (2026-10-04):** sandbox'ta gerçek kimlik doğrulama adımları yalnız
-> davet koduyla ve en az veriyle denenebilir (K4 ve SB3 değişti); kurumlar kendi test kurumunu açıp sandbox'ta yeniden açılan
+> **[[ADR-0040]] ve [[ADR-0041]] ile kısmen değiştirildi (2026-10-04; ADR-0040 2026-10-05'te güncellendi):** sandbox'ta
+> gerçek kimlik doğrulama adımları herkese açık, gerçek ağın sağlayıcı hesabıyla, günlük/aylık tavanla ve en az veriyle
+> denenebilir (K4 ve SB3 değişti); kurumlar kendi test kurumunu açıp sandbox'ta yeniden açılan
 > Kurum Konsolu'nda deneyebilir (K1'deki "konsol yok" ve K7'deki kurumların kendi kendine kaydı değişti). Diğer maddeler geçerlidir.
 
 # Kısaca
@@ -78,7 +79,7 @@ uyum servisi sonraki aşamalardır; açılmadan önce ayrıca karara bağlanır.
 |---|---|
 | SB1 | Sandbox kök sertifikası ve sandbox liste imzacıları gerçek ağın hiçbir listesinde yer almaz; gerçek ağın kök ve imza anahtarları sandbox'ta hiçbir şey imzalamaz. |
 | SB2 | Sandbox listelerin listesi kendini test olarak işaretler; gerçek ağ için yapılandırılmış bir cüzdan ya da doğrulayıcı sandbox listesini kabul etmez. |
-| SB3 | Sandbox'ta kimlik doğrulama varsayılan olarak sahte sağlayıcıyla yapılır ve örnek kimlik numaraları geçersiz biçimdedir; gerçek kişinin verisi yalnız [[ADR-0040]] davetli yolunda ve oradaki sınırlarla girer (gerçek kimlik ve belge numarası belgeye yazılmaz, sağlayıcı oturumu belge verilince silinir, her şey gece sıfırlamasında silinir). |
+| SB3 | Sandbox'ın varsayılan kimlik doğrulaması sahte sağlayıcıdır (hızlı deneme) ve örnek kimlik numaraları geçersiz biçimdedir; gerçek kişinin verisi yalnız kişinin kendisinin seçtiği [[ADR-0040]] gerçek yolunda ve oradaki sınırlarla girer (taramadan önce uyarı ve onay, günlük/aylık tavan, gerçek kimlik ve belge numarası belgeye yazılmaz, sağlayıcı oturumu hemen silinir, her şey gece sıfırlamasında silinir). |
 | SB4 | Sandbox'ta verilen her belge ve sandbox'a bağlı her ekran test olduğunu görünür biçimde belirtir. |
 | SB5 | Sandbox verileri her an sıfırlanabilir; sandbox'a bağlı hiçbir süreç kalıcılık varsaymaz. |
 
@@ -105,6 +106,6 @@ uyum servisi sonraki aşamalardır; açılmadan önce ayrıca karara bağlanır.
 
 # Durum
 
-**Accepted — 2026-10-03** (proje yönetimi onayı; birebir alıntı özel onay kaydında). K4 ve SB3 [[ADR-0040]] ile (davetli gerçek
-kimlik doğrulama), K1'deki "kurum konsolu çalışmaz" ve K7'deki kurumların kendi kendine kaydı [[ADR-0041]] ile (kurum test
+**Accepted — 2026-10-03** (proje yönetimi onayı; birebir alıntı özel onay kaydında). K4 ve SB3 [[ADR-0040]] ile (sandbox'ta gerçek
+kimlik doğrulama; 2026-10-05'te herkese açık), K1'deki "kurum konsolu çalışmaz" ve K7'deki kurumların kendi kendine kaydı [[ADR-0041]] ile (kurum test
 hesapları) değişti (2026-10-04).

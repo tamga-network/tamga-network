@@ -121,7 +121,7 @@ Kapatılmış kararlar; değişiklik yeni ADR ile.
 | `ADR-0037` | Tamga Network yalnızca bir ağdır | 1.0.0 | Active | `docs/adr/0037-network-only.md` |
 | `ADR-0038` | Sandbox: test ağı | 1.0.0 | Active | `docs/adr/0038-sandbox.md` |
 | `ADR-0039` | Doğrulanmış sürücü belgesi bilgisi | 1.0.0 | Active | `docs/adr/0039-driving-licence-attestation.md` |
-| `ADR-0040` | Sandbox'ta davetli gerçek kimlik doğrulama | 1.0.0 | Active | `docs/adr/0040-sandbox-invited-real-identity.md` |
+| `ADR-0040` | Sandbox'ta gerçek kimlik doğrulama | 1.0.0 | Active | `docs/adr/0040-sandbox-invited-real-identity.md` |
 | `ADR-0041` | Sandbox'ta kurum test hesapları | 1.0.0 | Active | `docs/adr/0041-sandbox-institution-test-accounts.md` |
 
 ## Arka plan

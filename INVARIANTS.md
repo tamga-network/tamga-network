@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-04
+last_updated: 2026-10-05
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 355 kodlanmış değişmez, 48 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 356 kodlanmış değişmez, 48 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -331,7 +331,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 |---|---|
 | `ADR-0038/SB1` | Sandbox kök sertifikası ve sandbox liste imzacıları gerçek ağın hiçbir listesinde yer almaz; gerçek ağın kök ve imza anahtarları sandbox'ta hiçbir şey imzalamaz. |
 | `ADR-0038/SB2` | Sandbox listelerin listesi kendini test olarak işaretler; gerçek ağ için yapılandırılmış bir cüzdan ya da doğrulayıcı sandbox listesini kabul etmez. |
-| `ADR-0038/SB3` | Sandbox'ta kimlik doğrulama varsayılan olarak sahte sağlayıcıyla yapılır ve örnek kimlik numaraları geçersiz biçimdedir; gerçek kişinin verisi yalnız [[ADR-0040]] davetli yolunda ve oradaki sınırlarla girer (gerçek kimlik ve belge numarası belgeye yazılmaz, sağlayıcı oturumu belge verilince silinir, her şey gece sıfırlamasında silinir). |
+| `ADR-0038/SB3` | Sandbox'ın varsayılan kimlik doğrulaması sahte sağlayıcıdır (hızlı deneme) ve örnek kimlik numaraları geçersiz biçimdedir; gerçek kişinin verisi yalnız kişinin kendisinin seçtiği [[ADR-0040]] gerçek yolunda ve oradaki sınırlarla girer (taramadan önce uyarı ve onay, günlük/aylık tavan, gerçek kimlik ve belge numarası belgeye yazılmaz, sağlayıcı oturumu hemen silinir, her şey gece sıfırlamasında silinir). |
 | `ADR-0038/SB4` | Sandbox'ta verilen her belge ve sandbox'a bağlı her ekran test olduğunu görünür biçimde belirtir. |
 | `ADR-0038/SB5` | Sandbox verileri her an sıfırlanabilir; sandbox'a bağlı hiçbir süreç kalıcılık varsaymaz. |
 
@@ -351,16 +351,17 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 ## ADR-0040
 
-*"Sandbox'ta davetli gerçek kimlik doğrulama"*
+*"Sandbox'ta gerçek kimlik doğrulama"*
 
 | Kod | Açıklama |
 |---|---|
-| `ADR-0040/RI1` | Sandbox'ta gerçek kimlik doğrulama sağlayıcısına yalnız geçerli bir davet koduyla gidilir; davet kodu olmayan akış sahte sağlayıcıyla yapılır. |
-| `ADR-0040/RI2` | Gerçek ağın kimlik doğrulama sağlayıcısı anahtarı sandbox'ta hiçbir zaman kullanılmaz; sandbox ayrı bir sağlayıcı uygulamasının ayrı adlı anahtarıyla çalışır ve gerçek ağ bu adları kabul etmez. |
-| `ADR-0040/RI3` | Davetli akışta kişi, sağlayıcıya yönlendirilmeden önce test ortamı uyarısını açıkça onaylar. |
+| `ADR-0040/RI1` | Sandbox'ta kimlik akışı iki seçenek sunar (gerçek kimlikle sağlayıcı ya da hızlı deneme); seçim yapılmayan akış sahte sağlayıcıyla yapılır. Gerçek yol herkese açıktır; yalnız isteğe bağlı davet kipinde geçerli bir davet kodu gerekir. |
+| `ADR-0040/RI2` | Sandbox'ın gerçek yolu gerçek ağın sağlayıcı hesabını yalnız ayrı adlı sandbox değişkenleriyle kullanır; bu değerler yalnız sandbox kullanıcısına okunur, gerçek ağın ayarları, imza anahtarları ve verisi sandbox'a kapalıdır; gerçek ağ sandbox adlarını kabul etmez. Sandbox sağlayıcı bildirimine (webhook) güvenmez, kararı sağlayıcının API'sinden çeker; gerçek ağ kendi açmadığı oturumun bildirimini yok sayar. |
+| `ADR-0040/RI3` | Gerçek yolda kişi, sağlayıcıya yönlendirilmeden önce test ortamı uyarısını açıkça onaylar. |
 | `ADR-0040/RI4` | Sandbox belgesine gerçek kimlik numarası ve belge numarası yazılmaz; kişiden yalnız ad, soyad ve doğum tarihi (ve türetilen yaş bilgisi) geçer. |
-| `ADR-0040/RI5` | Sağlayıcıdaki doğrulama oturumu belge verildiğinde ya da akış belgeyle sonuçlanmadığında hemen silinir; sandbox kimlik servisi oturum kimliğini kalıcı kayıtta tutmaz. |
+| `ADR-0040/RI5` | Sağlayıcıdaki doğrulama oturumu belge verildiğinde ya da akış belgeyle sonuçlanmadığında hemen silinir, açık kalan oturum en geç gece sıfırlamasında silinir; sandbox kimlik servisi oturum kimliğini kalıcı kayıtta tutmaz; akış başına en çok bir gerçek oturum açılır. |
 | `ADR-0040/RI6` | Davet kodları yalnız anahtarlı özetle saklanır; düz kod, ad, doğum tarihi ve sağlayıcı yanıtı hiçbir günlüğe yazılmaz; hepsi gece sıfırlamasında silinir. |
+| `ADR-0040/RI7` | Sandbox'ta açılan her gerçek sağlayıcı oturumu (açık ya da davetli) günlük ve aylık tavana sayılır; tavan dolunca gerçek oturum açılmaz, yalnız hızlı deneme kalır; sayaç gece sıfırlamasıyla sıfırlanmaz. |
 
 
 ## ADR-0041
@@ -791,7 +792,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 355 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 356 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
 AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, ZK.
 
@@ -799,4 +800,4 @@ AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV,
 
 # Durum
 
-**Üretilen dosya** — 2026-10-04 (`scripts/sync-invariants.mjs`). Toplam 355 kodlanmış değişmez, 48 dokümanda.
+**Üretilen dosya** — 2026-10-05 (`scripts/sync-invariants.mjs`). Toplam 356 kodlanmış değişmez, 48 dokümanda.
