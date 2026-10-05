@@ -7,19 +7,36 @@ export interface HttpResponse {
 }
 export type Http = (
   url: string,
-  init?: { method?: "GET" | "POST"; headers?: Record<string, string>; body?: string },
+  init?: {
+    method?: "GET" | "POST";
+    headers?: Record<string, string>;
+    body?: string;
+    /**
+     * Önbelleği atla: yanıt cihazın HTTP önbelleğinden gelmesin (ör. `immutable` başlıklı ama yerinde değişen şema kataloğu).
+     * Expo/React Native fetch'i `cache` seçeneğini uygulamadığından GET adresine `_=<ms>` sorgusu da eklenir.
+     */
+    fresh?: boolean;
+  },
 ) => Promise<HttpResponse>;
+/** `fresh` GET isteğinin adresi: önbellek anahtarı her seferinde farklı olsun diye `_=<ms>` (whatwg-fetch ile aynı ad). */
+export const freshUrl = (url: string, now = Date.now()) =>
+  /[?&]_=[^&]*/.test(url)
+    ? url.replace(/([?&])_=[^&]*/, `$1_=${now}`)
+    : `${url}${url.includes("?") ? "&" : "?"}_=${now}`;
 /** Varsayılan taşıyıcı; yanıt vermeyen sunucu cüzdanı sonsuza dek bekletmesin diye istek başına zaman aşımı (20 sn). */
 export const HTTP_TIMEOUT_MS = 20_000;
 export const fetchHttp: Http = async (url, init) => {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), HTTP_TIMEOUT_MS);
   try {
-    const r = await fetch(url, {
-      method: init?.method ?? "GET",
-      headers: init?.headers,
+    const method = init?.method ?? "GET";
+    const fresh = !!init?.fresh && method === "GET";
+    const r = await fetch(fresh ? freshUrl(url) : url, {
+      method,
+      headers: fresh ? { ...init?.headers, "cache-control": "no-cache" } : init?.headers,
       body: init?.body,
       signal: ctl.signal,
+      ...(fresh ? { cache: "no-store" as const } : {}),
     });
     const body = await r.text();
     const headers: Record<string, string> = {};

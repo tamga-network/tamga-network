@@ -4,7 +4,7 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 summary: >
   Tamga Network runs a test network that is completely separate from the real network: sandbox.tamga.network. It has its
   own test root certificate, its own trust list, example institutions, fake people and example credentials of every type.
@@ -14,6 +14,11 @@ domain: Trust
 translation_of: ADR-0038
 source_version: 1.0.0
 ---
+
+> **Partly changed by [[ADR-0040]] and [[ADR-0041]] (2026-10-04):** real identity verification steps can be tried in the
+> sandbox only with an invitation code and with minimal data (K4 and SB3 changed); institutions can open their own test
+> institution and try it in the Institution Console, which runs again in the sandbox ("no console" in K1 and institutions'
+> self-registration in K7 changed). The other points stay in force.
 
 # In brief
 
@@ -77,7 +82,7 @@ automatically and reports, are later stages; each is decided separately before i
 |---|---|
 | SB1 | The sandbox root certificate and the sandbox list signers appear in no list of the real network; the real network's root and signing keys sign nothing in the sandbox. |
 | SB2 | The sandbox list of trusted lists marks itself as test; a wallet or verifier configured for the real network does not accept the sandbox list. |
-| SB3 | The sandbox holds no real personal data; identity verification uses a fake provider and example identity numbers have an invalid form. |
+| SB3 | In the sandbox, identity verification uses a fake provider by default and example identity numbers have an invalid form; a real person's data enters only through the invited path of [[ADR-0040]] and within its limits (the real identity and document numbers are not written into the credential, the provider session is deleted once the credential is issued, everything is deleted at the nightly reset). |
 | SB4 | Every credential issued in the sandbox and every screen connected to the sandbox visibly states that it is a test. |
 | SB5 | Sandbox data can be reset at any time; no process connected to the sandbox assumes persistence. |
 
@@ -104,4 +109,6 @@ automatically and reports, are later stages; each is decided separately before i
 
 # Status
 
-**Accepted — 2026-10-03** (project management approval; the verbatim quote is in the private approval record).
+**Accepted — 2026-10-03** (project management approval; the verbatim quote is in the private approval record). K4 and SB3
+changed with [[ADR-0040]] (invited real identity verification); "no institution console" in K1 and institutions'
+self-registration in K7 changed with [[ADR-0041]] (institution test accounts) (2026-10-04).

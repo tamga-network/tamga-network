@@ -15,6 +15,8 @@
  *   scope <dns_name> <kullanım.json> [--check]    kayıtlı doğrulayıcıya yeni kullanım (kapsam) ekler (ADR-0034: alan adıyla)
  *   authorize <slug> <vct> [--revoke]             kuruma şema yetkisi verir / kaldırır (kayıt silinmez, bitiş tarihi konur)
  *   list                                          kurumlar ve doğrulayıcılar; eksik kayıt verisi
+ *   sandbox-institution add                       (yalnız sandbox; ADR-0041) stdin'den test kurumu isteği (JSON): ara makamla yaprak
+ *                                                 sertifikalar, TAMGA_SANDBOX_SELF_DIR'e kayıt, liste imzalanır · sandbox-institution list
  * Kurallar: version monoton, previous_version_hash = önceki .jws'in sha256'sı; dist/ değişmez arşivi.
  */
 import {
@@ -55,6 +57,16 @@ import { buildLote, contactFromRegistration, jadesHeader, type LoteContact, type
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
 import { buildWrprcPayloads, wrprcHeader } from "./wrprc.js";
 import {
+  MAX_TEST_INSTITUTIONS,
+  TEST_CA,
+  issueLeaf,
+  issuedByTestCa,
+  subjects,
+  testInstitutionSource,
+  validateRequest,
+  type TestInstitutionRequest,
+} from "./sandbox-institutions.js";
+import {
   RegistryError,
   addIssuer,
   addRelyingParty,
@@ -78,12 +90,30 @@ const ENVIRONMENT: "production" | "sandbox" = existsSync(resolve(REG, "lotl.sour
   ? (JSON.parse(readFileSync(resolve(REG, "lotl.source.json"), "utf8")).environment ?? "production")
   : "production";
 const SCHEMAS_INDEX = resolve(app, "..", "..", "packages", "schemas", "dist", "index.json");
+/** ADR-0041: sandbox test kurumlarının klasörü (anahtarlar `pki/`, kayıtlar `issuers.json`); yalnız sandbox kayıt defteriyle okunur. */
+const SELF_DIR = process.env.TAMGA_SANDBOX_SELF_DIR ? resolve(process.env.TAMGA_SANDBOX_SELF_DIR) : null;
+const SELF_FILE = () => (SELF_DIR ? resolve(SELF_DIR, "issuers.json") : null);
+function selfIssuers(): Array<Record<string, unknown>> {
+  const f = SELF_FILE();
+  if (ENVIRONMENT !== "sandbox" || !f || !existsSync(f)) return [];
+  return (readJson(f).issuers ?? []) as Array<Record<string, unknown>>;
+}
 
 const readJson = (p: string) => JSON.parse(readFileSync(p, "utf8"));
 const iso = (d: Date) => d.toISOString();
 const plusDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400_000);
 function cert(name: string) {
-  const pem = readFileSync(resolve(PKI, `${name}.cert.pem`), "utf8");
+  // ADR-0041: `self:<ad>` = sandbox test kurumu sertifikası (TAMGA_SANDBOX_SELF_DIR/pki); yalnız test kurumları ara makamınca
+  // imzalanmışsa (TI1) ve yalnız sandbox kayıt defteriyle
+  const self = name.startsWith("self:");
+  if (self && (ENVIRONMENT !== "sandbox" || !SELF_DIR))
+    throw new Error(`TI1: ${name} yalnız sandbox'ta (TAMGA_SANDBOX_SELF_DIR)`);
+  const pem = readFileSync(
+    self ? resolve(SELF_DIR!, "pki", `${name.slice(5)}.cert.pem`) : resolve(PKI, `${name}.cert.pem`),
+    "utf8",
+  );
+  if (self && !issuedByTestCa(pem, readFileSync(resolve(PKI, `${TEST_CA}.cert.pem`), "utf8")))
+    throw new Error(`TI1: ${name} test kurumları ara makamınca imzalanmamış`);
   const der = pemToDer(pem);
   // ADR-0038 SB1: test sertifikası gerçek listeye, gerçek sertifika sandbox listesine girmez
   const isTest = /(TEST)/.test(new X509Certificate(der).subject);
@@ -313,7 +343,9 @@ async function build() {
   const caIdByRef = new Map<string, string>(
     tlSrc.root_cas.map((r: { cert: string }, i: number) => [r.cert, rootCas[i].ca_id]),
   );
-  const issuers = tlSrc.issuers.map((r: Record<string, unknown>) => {
+  // ADR-0041: sandbox'ta kendi kendine açılmış test kurumları kaynağa eklenir (gece sıfırlamasında klasörle birlikte silinir — TI5)
+  const sourceIssuers: typeof tlSrc.issuers = [...tlSrc.issuers, ...selfIssuers()];
+  const issuers = sourceIssuers.map((r: Record<string, unknown>) => {
     const c = cert(r.cert as string);
     const {
       cert: _c,
@@ -543,7 +575,11 @@ type AnchorBody = Anchor extends infer A ? (A extends Anchor ? Omit<A, "seq" | "
  * 30 sn üstü kilit bayat sayılır. Bekleme ≤ 10 sn.
  */
 async function withAnchorLock<T>(fn: () => Promise<T>): Promise<T> {
-  const lock = resolve(DIST, "anchors.lock");
+  return withDirLock("anchors.lock", fn);
+}
+/** Aynı kilit düzeni, başka bir ad için (ADR-0041: test kurumu kaydı + liste imzası tek seferde bir süreç). */
+async function withDirLock<T>(name: string, fn: () => Promise<T>): Promise<T> {
+  const lock = resolve(DIST, name);
   const t0 = Date.now();
   for (;;) {
     try {
@@ -558,7 +594,7 @@ async function withAnchorLock<T>(fn: () => Promise<T>): Promise<T> {
       } catch {
         /* yarışta silinmiş olabilir */
       }
-      if (Date.now() - t0 > 10_000) throw new Error("anchors: kilit alınamadı (10 sn)");
+      if (Date.now() - t0 > 10_000) throw new Error(`${name}: kilit alınamadı (10 sn)`);
       await new Promise((r) => setTimeout(r, 50 + Math.floor(Math.random() * 100)));
     }
   }
@@ -874,9 +910,74 @@ async function externalFetch() {
   }
 }
 
+/**
+ * ADR-0041: test kurumu kaydı (yalnız sandbox). İstek stdin'den JSON (`TestInstitutionRequest`). Ara makamla iki yaprak sertifika
+ * üretir, kaydı `issuers.json`'a ekler ve listeyi imzalar; çıktı JSON: slug, issuer_id, sertifika adları. Kişisel veri yoktur.
+ */
+async function sandboxInstitution(sub: string | undefined) {
+  if (ENVIRONMENT !== "sandbox" || !SELF_DIR)
+    throw new Error("sandbox-institution: yalnız sandbox kayıt defteriyle ve TAMGA_SANDBOX_SELF_DIR ile (ADR-0041)");
+  const file = SELF_FILE()!;
+  if (sub === "list") return console.log(JSON.stringify({ issuers: selfIssuers().map((i) => i.slug) }));
+  if (sub === "remove") {
+    // ADR-0041 K7: dolu sınırda en eski BOŞ test kurumu yer açmak için kaldırılır (sandbox listesinde "kayıt silinmez" istisnası, TI5)
+    const slug = process.argv[4] ?? "";
+    if (!/^t-[a-z0-9]{6,12}$/.test(slug)) throw new RegistryError(["slug: t-<6–12 küçük harf/rakam>"]);
+    await withDirLock("registry.lock", async () => {
+      const cur = selfIssuers();
+      if (!cur.some((i) => i.slug === slug)) throw new RegistryError([`test kurumu yok: ${slug}`]);
+      writeAtomic(file, `${JSON.stringify({ issuers: cur.filter((i) => i.slug !== slug) }, null, 2)}\n`);
+      for (const suffix of ["", "-status"])
+        for (const ext of ["cert.pem", "pkcs8.pem"])
+          rmSync(resolve(SELF_DIR!, "pki", `issuer-${slug}${suffix}.${ext}`), { force: true });
+      await build();
+      changelog(`test institution ${slug} removed from the sandbox list (ADR-0041 K7)`);
+    });
+    return console.log(JSON.stringify({ removed: slug }));
+  }
+  if (sub !== "add") throw new Error("kullanım: sandbox-institution add < istek.json | remove <slug> | list");
+  const chunks: Buffer[] = [];
+  for await (const c of process.stdin) chunks.push(c as Buffer);
+  const req = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}") as TestInstitutionRequest;
+  const problems = validateRequest(req);
+  if (problems.length) throw new RegistryError(problems);
+  const out = await withDirLock("registry.lock", async () => {
+    const cur = selfIssuers();
+    if (cur.length >= MAX_TEST_INSTITUTIONS)
+      throw new RegistryError([`en çok ${MAX_TEST_INSTITUTIONS} test kurumu (K7)`]);
+    const tl = readJson(resolve(REG, "tl-tr.source.json"));
+    if ([...tl.issuers, ...cur].some((i: Record<string, unknown>) => i.slug === req.slug))
+      throw new RegistryError([`slug zaten kayıtlı: ${req.slug}`]);
+    const ca = {
+      certPem: readFileSync(resolve(PKI, `${TEST_CA}.cert.pem`), "utf8"),
+      keyPem: readFileSync(resolve(PKI, `${TEST_CA}.pkcs8.pem`), "utf8"),
+    };
+    const now = new Date();
+    const subj = subjects(req.name);
+    const pkiDir = resolve(SELF_DIR!, "pki");
+    mkdirSync(pkiDir, { recursive: true });
+    for (const [suffix, subject] of [
+      ["", subj.credential],
+      ["-status", subj.status],
+    ] as const) {
+      const leaf = await issueLeaf(ca, subject, now);
+      writeFileSync(resolve(pkiDir, `issuer-${req.slug}${suffix}.cert.pem`), leaf.certPem);
+      writeFileSync(resolve(pkiDir, `issuer-${req.slug}${suffix}.pkcs8.pem`), leaf.keyPem, { mode: 0o600 });
+    }
+    const rec = testInstitutionSource(req, now);
+    writeAtomic(file, `${JSON.stringify({ issuers: [...cur, rec] }, null, 2)}\n`);
+    await build();
+    changelog(`test institution ${req.slug} added to the sandbox list (ADR-0041)`);
+    return { slug: req.slug, issuer_id: computeIssuerId("TR", cert(`self:issuer-${req.slug}`).der) };
+  });
+  console.log(JSON.stringify({ ...out, cert_ref: `issuer-${req.slug}`, status_cert_ref: `issuer-${req.slug}-status` }));
+}
+
 const cmd = process.argv[2];
 (async () => {
-  if (cmd === "build") await build();
+  // build de kayıt kilidini alır: test kurumu kaydıyla (sandbox-institution) aynı anda liste imzalanmasın
+  if (cmd === "build") await withDirLock("registry.lock", build);
+  else if (cmd === "sandbox-institution") await sandboxInstitution(process.argv[3]);
   else if (cmd === "heartbeat") {
     const a = await appendAnchor({ kind: "heartbeat" });
     console.log(JSON.stringify(a));

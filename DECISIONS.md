@@ -9,7 +9,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 - Detay ve gerekçe her zaman ilgili dokümandadır (bağlantı verildi); burası karar yüzeyidir.
 - **Durum kodları:** 🟢 karara bağlandı · ⚪ ilke kararlaştı, sayısal/teknik detay uygulama/denetim aşamasında · 🟡 dış girdiye bağlı (logo, denetim, kaynak metin)
 
-**Son güncelleme:** 2026-10-04 (ADR-0039 sürücü belgesi bilgisi — D-ID-8; ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
+**Son güncelleme:** 2026-10-04 (ADR-0040 sandbox'ta davetli gerçek kimlik doğrulama — D-ID-9; ADR-0041 sandbox'ta kurum test hesapları — D-TRUST-4; ADR-0039 sürücü belgesi bilgisi — D-ID-8; ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
 
 ---
 
@@ -269,6 +269,26 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
   fotoğraf, adres taşınmaz; sınıf okunamazsa belge verilmez. Kimlik iptal/yeniden verme/silme bağlı belgeyi de kapsar. Yetkili
   makam dijital sürücü belgesi verince o ülke için ihraç durur. Gerçek kişilere ihraçtan önce hukuki inceleme.
 - **Nerede:** [[ADR-0039]] DL1–DL5; `packages/schemas`, `tamga-platform/apps/id`, güven listeleri (gerçek + sandbox), [[FW-RB-0003]] §10, cüzdan.
+
+### D-ID-9 — Sandbox'ta davetli gerçek kimlik doğrulama 🟢 (2026-10-04; [[ADR-0040]])
+- **KARAR:** Sandbox'ta kimlik doğrulama varsayılan olarak sahte. Gerçek sağlayıcı adımları yalnız sandbox yöneticisinin verdiği
+  davet koduyla (kişiye özel: tek kullanım ≤ 7 gün; süreli: ≤ 72 saat, ≤ 25 kullanım) ve sağlayıcının yalnız sandbox için açılmış
+  ayrı uygulamasıyla (ayrı adlı anahtar; gerçek ağın anahtarı sandbox'a girmez) açılır. Taramadan önce açık test ortamı uyarısı
+  onaylanır. Belgeye kişiden yalnız ad, soyad, doğum tarihi geçer; gerçek kimlik ve belge numarası yerine `SANDBOX-…`. Sağlayıcı
+  oturumu belge verilince ya da akış belgesiz bitince hemen silinir; her şey gece silinir; günlükte kişi verisi yok. Aydınlatma
+  metni hukuki incelemeden geçene kadar davet yalnız ekip ve yazılı kabul veren sınırlı test kullanıcısına. ADR-0038 K4/SB3 değişti.
+- **Nerede:** [[ADR-0040]] RI1–RI6; `ADR-0038/SB3` (yeni metin); `tamga-platform/apps/id` (sandbox kipi), sandbox portalı, `ops/server/sandbox-setup.sh`.
+
+### D-TRUST-4 — Sandbox'ta kurum test hesapları 🟢 (2026-10-04; [[ADR-0041]])
+- **KARAR:** Kurum sandbox sayfasından e-posta doğrulaması olmadan test kurumu açar (yalnız uydurma kurum adı + tür; ad "(TEST)"
+  ile biter), ilk yönetici passkey ile `console.sandbox.tamga.network`'e girer; konsol sandbox'ta yalnız test kurumlarına açılır.
+  Kayıtlar elle ya da CSV ile; kimlik numarası sağlamasını geçen 11 haneli sayı reddedilir. Yaprak sertifikalar ayrı bir ara
+  sertifika makamından ("Tamga Sandbox Test Institutions CA (TEST)", yol uzunluğu 0; kök anahtarı sunucuda değil); kurum sandbox
+  listesine `test_institution: true` ile kendiliğinden eklenir. Her gece silinir (7 gün reddedildi). Sınırlar: 30 kurum (dolunca en eski boş kurum yer açar), 10 dk'da 10
+  açılış, kurum başına 200 kayıt, CSV'de 200 satır, saatte 100 teklif; IP kullanılmaz. Resmî kurum sözcükleri ve listedeki adlar RED. Aşama 1 eğitim; aşama 2 bilet, cüzdan
+  başlatmalı ihraç, API anahtarı. ADR-0038 K1/K7 kurumlar için değişti.
+- **Nerede:** [[ADR-0041]] TI1–TI6; [[SPEC-TRUST-0001]] §4 `test_institution`; `ops/gen-pki.ts` (sandbox ara makam),
+  `apps/trust-publisher` (`sandbox-institution`), `tamga-platform` issuer + Kurum Konsolu (sandbox kipi), sandbox portalı.
 
 ### D-REVIEW-1 — Mağaza incelemesi için tek kullanımlık inceleme kodu 🟢 (2026-10-01; [[ADR-0033]])
 - **KARAR:** Mağaza inceleyicisi kimlik akışını gerçek kimlik belgesi olmadan, tek kullanımlık ve en çok 14 gün geçerli bir
@@ -632,6 +652,8 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 | SPEC-WALLET-0001/WL4 "`presentation_log` cihazdan çıkmaz" | **Daraldı (2026-09-29).** AB (CIR 2024/2979 md. 9, 13; TS10) kişinin günlüğünü dışa aktarabilmesini ister. Yalnız kişinin başlattığı, parolalı dosyada; sunucuya asla. | **D-WALLET-2** ([[ADR-0027]]) |
 | D-CRED-6 biçimi: tek 30 günlük WUA, `key_storage` WUA beyanında | **Değişti (2026-09-29).** AB TS3: 24 saatten kısa, işlem başına WIA + sağlayıcı imzalı KA + iptal listeleri. İlke (ihraçtan önce cüzdan doğrulaması) aynı. | **D-CRED-7** ([[ADR-0025]]) |
 | [[ADR-0035]] üçüncü katman "ürün ve hizmetler" (D-GOV-7: ağ kurumlara hizmet sunar) | **Kısmen değişti (2026-10-02).** Tamga Network yalnızca ağdır, hizmet satmaz; ticari hizmetler (entegrasyon, destek, connector) ağın dışındaki şirkette. Taban ve federasyon katmanı, PO1–PO4 geçerli. | **D-GOV-8** ([[ADR-0037]]) |
+| [[ADR-0038]] K4 / SB3 "kimlik doğrulama yalnız sahte sağlayıcıyla" | **Daraldı (2026-10-04).** Sahte sağlayıcı varsayılan; gerçek adımlar yalnız davet koduyla, sandbox'a ayrı sağlayıcı uygulamasıyla ve en az veriyle (gerçek kimlik/belge numarası belgeye yazılmaz). | **D-ID-9** ([[ADR-0040]]) |
+| [[ADR-0038]] K1 "sandbox'ta kurum konsolu yok" / K7 kendi kendine kayıt sonraki aşama | **Değişti — kurumlar için (2026-10-04).** Konsol sandbox'ta yalnız test kurumlarına açılır; kurum kendi test kurumunu açar, sandbox listesine otomatik eklenir. Doğrulayıcı ve cüzdan sağlayıcı kaydı hâlâ ayrı karar ister. | **D-TRUST-4** ([[ADR-0041]]) |
 | ADR-0011 K3 / ADR-0019 kayıt defteri: kişi kayıtları Tamga veritabanında, teklif ve eşleştirme defterden | **Daraldı (2026-09-29).** Yetkili kaynak kurumda; defter yalnız deneme (sandbox). Teklif kimliğe bağlı, bilgi imza anında kaynaktan. | **D-SRC-1** ([[ADR-0020]]) |
 ---
 

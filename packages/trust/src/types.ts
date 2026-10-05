@@ -286,6 +286,8 @@ export const Issuer = z
     schema_authorizations: z.array(SchemaAuthorization),
     delegate_keys: z.array(SigningKey.extend({ purpose: z.string() })).optional(),
     authentic_source: z.any().optional(),
+    /** ADR-0041 TI2: yalnız sandbox listesinde — kendi kendine açılmış test kurumu (gece sıfırlamasında silinir). */
+    test_institution: z.boolean().optional(),
     ...RegistrationData,
   })
   .passthrough();

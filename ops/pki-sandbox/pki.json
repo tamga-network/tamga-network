@@ -40,8 +40,7 @@
   "issuer-id-review": {
     "subject": "CN=Tamga Sandbox Kimlik - Magaza Incelemesi DEMO (TEST), OU=Review, O=Tamga Network Sandbox, C=TR",
     "fingerprint_sha256": "fa94adeca82c585e5c970f2935d7619062f49399df1e413872001380ef1d8198",
-    "not_after": "2028-10-04T11:20:52.000Z",
-    "created_at": "2026-10-04T11:20:52.723Z"
+    "not_after": "2028-10-04T11:20:52.000Z"
   },
   "issuer-istanbul-bilgi": {
     "subject": "CN=Istanbul Bilgi Universitesi (TEST), OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi (TEST), C=TR",
@@ -78,6 +77,12 @@
     "fingerprint_sha256": "78adf5597182a319ad1fd637ee9c7b6d46e2ef366d2feac29b974e743b8927a9",
     "not_after": "2028-10-03T15:11:37.000Z"
   },
+  "test-institutions-ca": {
+    "subject": "CN=Tamga Sandbox Test Institutions CA (TEST), O=Tamga Network Sandbox, C=TR",
+    "fingerprint_sha256": "2f8667951aea66a08fc085c0b1b13e129080ae3312e0d8400ca2fed65d61ba1c",
+    "not_after": "2027-10-05T04:34:26.000Z",
+    "created_at": "2026-10-05T04:34:26.570Z"
+  },
   "ids": {
     "root-ca": "0x77c545c337206d1cdc74a259d815db411a651fd5f16a31b25b6739cc23bf9b12",
     "tl-signer-1": "0xb02cf6392def2df946f246b8bb6bdfb6ab9f8aeb59e9b4c532736ed622ff7977",
@@ -93,6 +98,7 @@
     "issuer-bubilet": "0xee705124fba254d9e95c46131a559b9ad4310d877fedf42057612faa02c188a1",
     "issuer-bubilet-status": "0x751fe4b7cc737759f9145e841f9ee68b7335509e8c8b6ce0d2c5c128eb227e05",
     "issuer-paribu-cineverse": "0xdc679435ff51cf30e1339fc8264cb15b01b77e8525887a3ab2cf2e7d2e795341",
-    "issuer-paribu-cineverse-status": "0x65e8d781cbae07a6316158e633519a6cf1b7706d8a950d733d3987c973118f1d"
+    "issuer-paribu-cineverse-status": "0x65e8d781cbae07a6316158e633519a6cf1b7706d8a950d733d3987c973118f1d",
+    "test-institutions-ca": "0x746b935c11d2a9bba85643e12c91f2e0d1071ecf10d99b1465ad6718b4f3826a"
   }
 }

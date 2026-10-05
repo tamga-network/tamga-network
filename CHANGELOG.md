@@ -14,13 +14,17 @@ First release of the Tamga Network documentation set and reference implementatio
   supporting pages Reading path, Roles and Onboarding.
 - Developer docs in English and Turkish: guides (including the sandbox test network), concepts, specifications (credential
   format, SD-JWT VC, OpenID4VCI, OpenID4VP, verification pipeline and API, trust lists, status list, X.509 institutional
-  identity, identity proofing, schema catalogue, wallet rules), architecture decisions (ADR-0001 … ADR-0039) and a glossary.
+  identity, identity proofing, schema catalogue, wallet rules), architecture decisions (ADR-0001 … ADR-0041) and a glossary.
 - Driving licence information (ADR-0039, D-ID-8): Identity Rulebook §10, Tamga Rulebook RB-AP-ID-08…10, SPEC-ID-0003 §9.3,
   credential types table.
+- Sandbox (2026-10-04): invited real identity verification steps (ADR-0040, D-ID-9; RI1–RI6; `ADR-0038/SB3` rewritten) and
+  institution test accounts (ADR-0041, D-TRUST-4; TI1–TI6); SPEC-TRUST-0001 §4 optional `issuers[].test_institution` (sandbox
+  list only); Sandbox guide §8–§9; list publisher `sandbox-institution add` (sandbox intermediate CA `test-institutions-ca`).
 
 ### Packages (`@tamga-network/*`, pre-release `0.x`)
 
 - `core`, `trust`, `schemas`, `sd-jwt`, `mdoc`, `issuer` (+ `/client`), `verifier` (+ `/web`, `/zk`), `wallet-core`.
+- `trust`: optional `test_institution` on trusted list issuer entries (ADR-0041 TI2).
 - `wallet-core`: revocation code for remote wallet closure (Tamga Wallet WA-ADR-0002). `generateLockCode` (4×5 characters,
   30-letter unambiguous alphabet, ≈ 98 bit), `normalizeLockCode` / `isLockCode` / `formatLockCode`, `lockCodePrehash`
   (domain-separated SHA-256 — the only thing the wallet provider ever receives). `registerLockCode` binds the pre-hash to the

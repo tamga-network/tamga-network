@@ -26,6 +26,8 @@ import {
   AuthorityKeyIdentifierExtension,
   SubjectAlternativeNameExtension,
   X509Certificate,
+  Extension,
+  Name,
 } from "@peculiar/x509";
 import { webcrypto } from "node:crypto";
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
@@ -299,7 +301,46 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
       "issuer-paribu-cineverse-status",
       signedByRoot(1302, "CN=Paribu Cineverse - Status List (TEST), OU=Status, O=Paribu Cineverse (TEST), C=TR"),
     ),
+    // ADR-0041 K4: test kurumları ara sertifika makamı — kökçe burada (kök anahtarının durduğu bilgisayarda) imzalanır; yol uzunluğu
+    // 0 (yalnız yaprak verir), yalnız sertifika imzalar, ad kısıtı: yalnız `C=TR, OU=Tamga Sandbox Test Institutions` altındaki
+    // konu adları (RFC 5280 §4.2.1.10, directoryName). Anahtarı sandbox sunucusuna gider (kök anahtarı gitmez); sunucuda liste
+    // yayıncısı (`sandbox-institution add`) test kurumlarının yaprak sertifikalarını bununla verir.
+    // Süre 1 yıl. YENİLEME: süre dolmadan bu bilgisayarda `ops/pki-sandbox/test-institutions-ca.*` silinip
+    // `npx tsx ops/gen-pki.ts --profile=sandbox` çalıştırılır, paket sunucuya yüklenir (upload.ps1 -WithSandboxPki) ve sandbox
+    // yeniden başlatılır; kök ve diğer anahtarlar değişmez (cüzdan pin'i aynı). Eski makamın yaprakları gece sıfırlamasıyla zaten silinir.
+    await ensure("test-institutions-ca", async () => {
+      const kp = await keys();
+      const cert = await X509CertificateGenerator.create({
+        serialNumber: serial(3001),
+        subject: "CN=Tamga Sandbox Test Institutions CA (TEST), O=Tamga Network Sandbox, C=TR",
+        issuer: root.cert.subject,
+        notBefore: new Date(),
+        notAfter: years(1),
+        signingAlgorithm: ALG,
+        publicKey: kp.publicKey,
+        signingKey: root.privateKey,
+        extensions: [
+          new BasicConstraintsExtension(true, 0, true),
+          new KeyUsagesExtension(KeyUsageFlags.keyCertSign, true),
+          await SubjectKeyIdentifierExtension.create(kp.publicKey),
+          await AuthorityKeyIdentifierExtension.create(root.cert.publicKey),
+          nameConstraintsDirName(TEST_INSTITUTIONS_SUBTREE),
+        ] as never,
+      });
+      return { cert, privateKey: kp.privateKey };
+    }),
   ];
+}
+
+/** ADR-0041: test kurumu yapraklarının konu adı bu ön ekle başlar (liste yayıncısı `sandbox-institutions.ts` ile aynı). */
+const TEST_INSTITUTIONS_SUBTREE = "C=TR, OU=Tamga Sandbox Test Institutions";
+/** NameConstraints (2.5.29.30, kritik): permittedSubtrees = [ directoryName(prefix) ] — DER elle (ek bağımlılık yok). */
+function nameConstraintsDirName(prefix: string): Extension {
+  const len = (n: number) => (n < 0x80 ? [n] : n < 0x100 ? [0x81, n] : [0x82, (n >> 8) & 0xff, n & 0xff]);
+  const tlv = (tag: number, body: Uint8Array) => new Uint8Array([tag, ...len(body.length), ...body]);
+  const name = new Uint8Array(new Name(prefix).toArrayBuffer());
+  const der = tlv(0x30, tlv(0xa0, tlv(0x30, tlv(0xa4, name)))); // NameConstraints{ [0] GeneralSubtrees{ GeneralSubtree{ [4] Name } } }
+  return new Extension("2.5.29.30", true, der);
 }
 
 async function finish(root: Item, items: Item[], notBefore: Date) {
@@ -330,7 +371,7 @@ async function finish(root: Item, items: Item[], notBefore: Date) {
       ? Object.fromEntries(
           items.map((it) => [
             it.name,
-            it === root
+            it === root || it.name.endsWith("-ca")
               ? computeCaId(STATE, der(it.name))
               : it.name.startsWith("rp-")
                 ? computeRpId(STATE, der(it.name))

@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 343 kodlanmış değişmez, 46 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 355 kodlanmış değişmez, 48 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -331,7 +331,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 |---|---|
 | `ADR-0038/SB1` | Sandbox kök sertifikası ve sandbox liste imzacıları gerçek ağın hiçbir listesinde yer almaz; gerçek ağın kök ve imza anahtarları sandbox'ta hiçbir şey imzalamaz. |
 | `ADR-0038/SB2` | Sandbox listelerin listesi kendini test olarak işaretler; gerçek ağ için yapılandırılmış bir cüzdan ya da doğrulayıcı sandbox listesini kabul etmez. |
-| `ADR-0038/SB3` | Sandbox'ta gerçek kişisel veri bulunmaz; kimlik doğrulama sahte sağlayıcıyla yapılır ve örnek kimlik numaraları geçersiz biçimdedir. |
+| `ADR-0038/SB3` | Sandbox'ta kimlik doğrulama varsayılan olarak sahte sağlayıcıyla yapılır ve örnek kimlik numaraları geçersiz biçimdedir; gerçek kişinin verisi yalnız [[ADR-0040]] davetli yolunda ve oradaki sınırlarla girer (gerçek kimlik ve belge numarası belgeye yazılmaz, sağlayıcı oturumu belge verilince silinir, her şey gece sıfırlamasında silinir). |
 | `ADR-0038/SB4` | Sandbox'ta verilen her belge ve sandbox'a bağlı her ekran test olduğunu görünür biçimde belirtir. |
 | `ADR-0038/SB5` | Sandbox verileri her an sıfırlanabilir; sandbox'a bağlı hiçbir süreç kalıcılık varsaymaz. |
 
@@ -347,6 +347,34 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0039/DL3` | Belgenin süresi kartın bitiş tarihini ve kartın incelendiği günden itibaren bir yılı geçmez; otomatik yenileme süreyi uzatmaz. |
 | `ADR-0039/DL4` | Bir ülkenin yetkili makamı dijital sürücü belgesi vermeye başlayınca Tamga o ülke için bu türü yeniden vermez. |
 | `ADR-0039/DL5` | Belge yalnız cüzdandaki etkin Tamga kimlik belgesinin sunumu üzerine ve karttaki ad ile doğum tarihi o kimlikle eşleşirse verilir; sınıflar okunamıyorsa ya da kart süresi geçmişse verilmez; bağlı kimlik belgesi iptal edilince, yeniden verilince ya da silinince bu belge de iptal edilir ya da silinir. |
+
+
+## ADR-0040
+
+*"Sandbox'ta davetli gerçek kimlik doğrulama"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0040/RI1` | Sandbox'ta gerçek kimlik doğrulama sağlayıcısına yalnız geçerli bir davet koduyla gidilir; davet kodu olmayan akış sahte sağlayıcıyla yapılır. |
+| `ADR-0040/RI2` | Gerçek ağın kimlik doğrulama sağlayıcısı anahtarı sandbox'ta hiçbir zaman kullanılmaz; sandbox ayrı bir sağlayıcı uygulamasının ayrı adlı anahtarıyla çalışır ve gerçek ağ bu adları kabul etmez. |
+| `ADR-0040/RI3` | Davetli akışta kişi, sağlayıcıya yönlendirilmeden önce test ortamı uyarısını açıkça onaylar. |
+| `ADR-0040/RI4` | Sandbox belgesine gerçek kimlik numarası ve belge numarası yazılmaz; kişiden yalnız ad, soyad ve doğum tarihi (ve türetilen yaş bilgisi) geçer. |
+| `ADR-0040/RI5` | Sağlayıcıdaki doğrulama oturumu belge verildiğinde ya da akış belgeyle sonuçlanmadığında hemen silinir; sandbox kimlik servisi oturum kimliğini kalıcı kayıtta tutmaz. |
+| `ADR-0040/RI6` | Davet kodları yalnız anahtarlı özetle saklanır; düz kod, ad, doğum tarihi ve sağlayıcı yanıtı hiçbir günlüğe yazılmaz; hepsi gece sıfırlamasında silinir. |
+
+
+## ADR-0041
+
+*"Sandbox'ta kurum test hesapları"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0041/TI1` | Test kurumu yalnız sandbox'ta vardır; yaprak sertifikalarını yalnız sandbox test kurumları ara sertifika makamı verir; sandbox kökünün özel anahtarı hiçbir sunucuda bulunmaz. |
+| `ADR-0041/TI2` | Her test kurumu sandbox listesinde `test_institution: true` taşır ve görünen adı "(TEST)" ile biter. |
+| `ADR-0041/TI3` | Sandbox'ta Kurum Konsolu yalnız test kurumlarına hizmet verir; gerçek ağda deneme kayıt defteri kipi açılamaz. |
+| `ADR-0041/TI4` | Kimlik numarası sağlama kuralını geçen 11 haneli bir sayı taşıyan test kaydı reddedilir; her kayıt ekranı gerçek kişi verisi girilmemesi için uyarır. |
+| `ADR-0041/TI5` | Test kurumları ve onlara ait hesap, kayıt, belge kaydı ve sertifikalar gece sıfırlamasında silinir ve sandbox listesinden çıkar. |
+| `ADR-0041/TI6` | Test kurumu açma ve kullanma sınırları IP adresi kullanılmadan uygulanır. |
 
 
 ## ARCH-0003
@@ -763,12 +791,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 343 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 355 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, O, P, PN, PO, PR, PS, PV, R, RPR, RV, S, SB, SC, SEV, SG, SK, TL, TS, W, WIA, WL, WRC, XC, ZK.
+AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-04 (`scripts/sync-invariants.mjs`). Toplam 343 kodlanmış değişmez, 46 dokümanda.
+**Üretilen dosya** — 2026-10-04 (`scripts/sync-invariants.mjs`). Toplam 355 kodlanmış değişmez, 48 dokümanda.
