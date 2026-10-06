@@ -123,6 +123,7 @@ Kapatılmış kararlar; değişiklik yeni ADR ile.
 | `ADR-0039` | Doğrulanmış sürücü belgesi bilgisi | 1.0.0 | Active | `docs/adr/0039-driving-licence-attestation.md` |
 | `ADR-0040` | Sandbox'ta gerçek kimlik doğrulama | 1.0.0 | Active | `docs/adr/0040-sandbox-invited-real-identity.md` |
 | `ADR-0041` | Sandbox'ta kurum test hesapları | 1.0.0 | Active | `docs/adr/0041-sandbox-institution-test-accounts.md` |
+| `ADR-0042` | Ağ ve cüzdanlar: ağ cüzdan işletmez | 1.0.0 | Active | `docs/adr/0042-network-and-wallets.md` |
 
 ## Arka plan
 
@@ -158,4 +159,4 @@ Bugün kullanılmıyor (ADR-0009 eşiği); sitede yayınlanmaz.
 | `SPEC-BC-0001` | Güven katmanı kontratları | 1.0.0 | Active | `docs/ledger/specifications/0001-trust-layer-contracts.md` |
 | `SPEC-BC-0002` | Emanet ve hesap verebilir açıklama | 1.0.0 | Draft | `docs/ledger/specifications/0003-guardian-escrow-accountable-disclosure.md` |
 
-**Toplam:** 102 belge.
+**Toplam:** 103 belge.

@@ -39,13 +39,9 @@ arf/changes.md
 # verifier geçiş kartı kayıtları (ADR-0012 B; kişisel veri yok ama çalışma verisi)
 apps/verify/data/
 
-# Expo CLI kökten çalıştırılınca oluşan klasör
-/.expo/
-
 # npm yayını: paket derleme çıktısı ve yayın hazırlık klasörü (scripts/build-packages.mjs, pack-packages.mjs)
 packages/*/lib/
 .publish/
 *.tgz
-apps/wallet-provider/data/
 apps/trust-publisher/dist-sandbox/
 apps/trust-publisher/dist-test/

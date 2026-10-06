@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ONB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-02 · **Licence** CC BY 4.0
+**Document** FW-ONB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-06 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -81,6 +81,11 @@ Technical steps: [[GUIDE-0008]], then [[GUIDE-0002]] or [[GUIDE-0001]].
 | 2. Agreement                   | The wallet provider agreement: attestations, secure hardware level, update and revocation times, not holding recovery keys (Annex A §5.1).          |
 | 3. Conformance tests           | The wallet rules, the wallet instance attestation and key attestation, the presentation protocol; a demonstration on a device.                      |
 | 4. Entry into the list         | The attestation signing key is added to the list of lists, in the wallet provider's entry. From then on, issuers accept this wallet's attestations. |
+
+The wallet provider is run by the organisation that offers the wallet; the network only lists it. Before entering the list,
+a wallet developer tries the wallet in the sandbox: they have their own wallet provider registered in the sandbox list (today
+by request to project management) and test the wallet against the sandbox's sample institutions, identity service and
+verifier ([[GUIDE-0013]]).
 
 When states join, a list of certified wallet solutions follows and prior assessment begins (Annex A §4.1). Technical steps:
 [[GUIDE-0005]] and [[GUIDE-0010]].

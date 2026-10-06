@@ -9,7 +9,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 - Detay ve gerekçe her zaman ilgili dokümandadır (bağlantı verildi); burası karar yüzeyidir.
 - **Durum kodları:** 🟢 karara bağlandı · ⚪ ilke kararlaştı, sayısal/teknik detay uygulama/denetim aşamasında · 🟡 dış girdiye bağlı (logo, denetim, kaynak metin)
 
-**Son güncelleme:** 2026-10-05 (ADR-0040 güncellendi: sandbox'ta gerçek kimlik doğrulama herkese açık, gerçek ağın sağlayıcı hesabıyla, tavanlı — D-ID-9; 2026-10-04: ADR-0040 sandbox'ta davetli gerçek kimlik doğrulama — D-ID-9; ADR-0041 sandbox'ta kurum test hesapları — D-TRUST-4; ADR-0039 sürücü belgesi bilgisi — D-ID-8; ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
+**Son güncelleme:** 2026-10-06 (ADR-0042 ağ ve cüzdanlar: ağ cüzdan işletmez, sandbox tek — D-GOV-9; 2026-10-05: ADR-0040 güncellendi: sandbox'ta gerçek kimlik doğrulama herkese açık, gerçek ağın sağlayıcı hesabıyla, tavanlı — D-ID-9; 2026-10-04: ADR-0040 sandbox'ta davetli gerçek kimlik doğrulama — D-ID-9; ADR-0041 sandbox'ta kurum test hesapları — D-TRUST-4; ADR-0039 sürücü belgesi bilgisi — D-ID-8; ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
 
 ---
 
@@ -139,7 +139,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
   politikasını karşılıyor. Taşıma: `OAuth-Client-Attestation` + `-PoP` başlıkları (HAIP). Sonuç token ve denetim kaydına yazılır,
   **credential'a girmez**. Kiracı ayarı `wallet_policy {require_wua, min_key_storage}`. Demo `software` kabul (S-9/S-14); pilot
   `secure_enclave`/`strongbox`.
-- **Nerede:** [[SPEC-PROTO-0001]] §11.1, PR11; [[SPEC-CRED-0001]] §4; `apps/wallet-provider`, `@tamga-network/issuer verifyWalletAttestation`.
+- **Nerede:** [[SPEC-PROTO-0001]] §11.1, PR11; [[SPEC-CRED-0001]] §4; cüzdan sağlayıcısı (cüzdanı sunan kuruluşta; [[ADR-0042]]), `@tamga-network/issuer verifyWalletAttestation`.
 
 ### D-SRC-1 — Yetkili kaynak kurumdadır; Tamga kişi kaydı tutmaz 🟢 (2026-09-29; [[ADR-0020]])
 - **KARAR:** Barındırılan ihraçta belge bilgileri imza anında kurumun kaynağından okunur, saklanmaz (kaynak bağlantısı: `remote`
@@ -153,7 +153,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
   ömürlü, yeni anahtarlı ve yeni iptal girişli WIA (`client_status`); belge anahtarları sağlayıcı imzalı KA'da
   (`key_attestation`, `key_storage` gerçek seviye, tür başına iptal girişi); sağlayıcı iki iptal listesi yayınlar, kullanıcı
   isteğiyle birimi iptal eder; belge verenler WIA/KA ve iptal durumlarını doğrular. D-CRED-6'nın biçimini değiştirir (ilke aynı).
-- **Nerede:** [[ADR-0025]] WIA1–WIA4; `apps/wallet-provider`, `@tamga-network/issuer`, wallet-core, kurum issuer'ı, kimlik servisi.
+- **Nerede:** [[ADR-0025]] WIA1–WIA4; cüzdan sağlayıcısı (cüzdanı sunan kuruluşta; [[ADR-0042]]), `@tamga-network/issuer`, wallet-core, kurum issuer'ı, kimlik servisi.
 
 ### D-ASSUR-2 — Holder seviyesi bağlama yolundan gelir, tipin ön koşuludur; ETSI TS 119 461 eşlemesi 🟢 (2026-09-26; DB-6, DB-6 rev., DB-18)
 - **KARAR:** Holder seviyesi (T1–T3) credential'a **yazılmaz** (PR7); eIDAS modelindeki gibi **belge tipinin ön koşuludur**: issuer
@@ -244,6 +244,16 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
   Entegrasyon, destek, sözleşmeli barındırma, danışmanlık, connector gibi ticari hizmetler ağın dışındaki şirketlerce kendi
   adlarıyla sunulur; Tamga ekibinin şirketi de dahil hiçbirine ayrıcalık yoktur. Tamga Wallet ayrı üründür, ağın ilk cüzdanıdır.
 - **Nerede:** [[ADR-0037]] PO5–PO6.
+
+### D-GOV-9 — Ağ cüzdan işletmez; cüzdanları listeler; sandbox tek 🟢 (2026-10-06; [[ADR-0042]])
+- **KARAR:** Ağ hiçbir cüzdanın uygulamasını, cüzdan sağlayıcısını ya da sitesini işletmez; cüzdanları güven listesindeki
+  `wallet_providers[]` kaydıyla tanır. Ağın alan adlarında cüzdana ait hizmet çalışmaz: `wallet.tamga.network` ve
+  `wallet.sandbox.tamga.network` 2026-10-06'da ağdan kaldırıldı (kullanan olmadığı için geçiş süresi beklenmedi); Tamga Wallet'ın
+  sağlayıcısını cüzdanın işletmecisi `provider.tamgawallet.com`'da işletir, listelerdeki adres yenilendi. Sandbox tektir ve ağındır; sandbox'ta da
+  cüzdan sağlayıcıyı cüzdan işletir ve sandbox listesine kaydolur (ayrı cüzdan sandbox'ı yok). Ağın arayüzleri ve paketleri cüzdan
+  adını sabit yazmaz; test PKI'si genel "test cüzdan sağlayıcısı" kullanır. Sonraki iş: sandbox'ta cüzdan sağlayıcı kendi
+  kendine kaydı ve otomatik cüzdan uyum testi (ayrı karar).
+- **Nerede:** [[ADR-0042]] NW1–NW4. [[ADR-0038]]'in test cüzdan sağlayıcısını ağın çalıştırdığı kısmı değişti.
 
 ### D-TRUST-2 — Güven federasyonu: dış listeler LOTL'da işaretçi + sabit imzacı + kapsam; AB PID/mDL doğrulama 🟢 (2026-10-01; [[ADR-0036]])
 - **KARAR:** Tamga LOTL başka işletmecilerin güven listelerini (ilk biçim ETSI TS 119 602 LoTE JSON) adres, LOTL'da sabitlenmiş
@@ -658,6 +668,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 | [[ADR-0035]] üçüncü katman "ürün ve hizmetler" (D-GOV-7: ağ kurumlara hizmet sunar) | **Kısmen değişti (2026-10-02).** Tamga Network yalnızca ağdır, hizmet satmaz; ticari hizmetler (entegrasyon, destek, connector) ağın dışındaki şirkette. Taban ve federasyon katmanı, PO1–PO4 geçerli. | **D-GOV-8** ([[ADR-0037]]) |
 | [[ADR-0038]] K4 / SB3 "kimlik doğrulama yalnız sahte sağlayıcıyla" | **Daraldı (2026-10-04), genişledi (2026-10-05).** Sahte sağlayıcı varsayılan (hızlı deneme); gerçek adımlar isteyen herkese, gerçek ağın sağlayıcı hesabıyla, günlük/aylık tavanla ve en az veriyle (gerçek kimlik/belge numarası belgeye yazılmaz). | **D-ID-9** ([[ADR-0040]]) |
 | [[ADR-0038]] K1 "sandbox'ta kurum konsolu yok" / K7 kendi kendine kayıt sonraki aşama | **Değişti — kurumlar için (2026-10-04).** Konsol sandbox'ta yalnız test kurumlarına açılır; kurum kendi test kurumunu açar, sandbox listesine otomatik eklenir. Doğrulayıcı ve cüzdan sağlayıcı kaydı hâlâ ayrı karar ister. | **D-TRUST-4** ([[ADR-0041]]) |
+| [[ADR-0038]] sandbox'ın test cüzdan sağlayıcısı (`wallet.sandbox`) ağca çalıştırılır | **Değişti (2026-10-06).** Ağ cüzdan sağlayıcı işletmez; sandbox'ta da sağlayıcıyı cüzdan işletir ve sandbox listesine kaydolur. `wallet.sandbox.tamga.network` 2026-10-06'da kaldırıldı; sandbox'ın kendi cüzdan sağlayıcısı yok. | **D-GOV-9** ([[ADR-0042]]) |
 | ADR-0011 K3 / ADR-0019 kayıt defteri: kişi kayıtları Tamga veritabanında, teklif ve eşleştirme defterden | **Daraldı (2026-09-29).** Yetkili kaynak kurumda; defter yalnız deneme (sandbox). Teklif kimliğe bağlı, bilgi imza anında kaynaktan. | **D-SRC-1** ([[ADR-0020]]) |
 ---
 

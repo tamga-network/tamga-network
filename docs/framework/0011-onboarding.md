@@ -4,7 +4,7 @@ title: "Katılım süreci"
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 summary: >
   Tamga Network'e katılımın adımları: belge veren, doğrulayıcı, cüzdan sağlayıcısı ve devlet için başvuru, gereken belgeler,
   inceleme, uyum testleri, listeye giriş; ardından kayıt değişikliği, askıya alma ve çıkış. Kurallar Ek A §3.2–§3.3 ve Ek B'de,
@@ -73,6 +73,10 @@ Teknik adımlar: [[GUIDE-0008]], ardından [[GUIDE-0002]] ya da [[GUIDE-0001]].
 | 2. Sözleşme | Cüzdan sağlayıcısı sözleşmesi: kanıtlar, güvenli donanım seviyesi, güncelleme ve iptal süreleri, kurtarma anahtarı tutmama (Ek A §5.1). |
 | 3. Uyum testleri | Cüzdan kuralları, cüzdan örneği kanıtı ve anahtar kanıtı, gösterim protokolü; cihaz üzerinde gösterim. |
 | 4. Listeye giriş | Kanıt imza anahtarı listelerin listesine, cüzdan sağlayıcısı kaydına eklenir. Belge verenler bundan sonra bu cüzdanın kanıtlarını kabul eder. |
+
+Cüzdan sağlayıcısını cüzdanı sunan kuruluş işletir; ağ yalnızca listeler. Listeye girmeden önce cüzdan geliştiricisi cüzdanını
+sandbox'ta dener: kendi cüzdan sağlayıcısını sandbox listesine kaydettirir (bugün proje yönetimine başvuruyla) ve cüzdanını
+sandbox'taki örnek kurumlarla, kimlik servisiyle ve doğrulayıcıyla sınar ([[GUIDE-0013]]).
 
 Devletler katıldığında sertifikalı cüzdan çözümleri listesi gelir ve önceden denetim başlar (Ek A §4.1). Teknik adımlar:
 [[GUIDE-0005]] ve [[GUIDE-0010]].

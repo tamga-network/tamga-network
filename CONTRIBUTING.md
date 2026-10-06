@@ -56,8 +56,9 @@ Her doküman:
 
 # Kod
 
-Kod `packages/` (npm paketleri `@tamga-network/*`) ve `apps/` (verify, wallet-provider, trust-publisher)
-altındadır. Kod, test, adlandırma, commit ve sürüm kuralları: [`CONVENTIONS.md`](CONVENTIONS.md). Değişiklikler
+Kod `packages/` (npm paketleri `@tamga-network/*`) ve `apps/` (verify, trust-publisher)
+altındadır. Ağ cüzdan sağlayıcı işletmez (ADR-0042); Tamga Wallet'ın cüzdan sağlayıcısına yapılacak değişiklik cüzdanın kendi
+deposuna gider. Kod, test, adlandırma, commit ve sürüm kuralları: [`CONVENTIONS.md`](CONVENTIONS.md). Değişiklikler
 [`CHANGELOG.md`](CHANGELOG.md)'ye yazılır.
 
 ---

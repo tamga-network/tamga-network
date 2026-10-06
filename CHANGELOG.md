@@ -1,7 +1,7 @@
 # Changelog — tamga-network
 
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Packages follow SemVer; they are published on npm as a
-pre-release (`0.x`), so their interfaces may still change before `1.0`.
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Everything is 1.0.0 until the public announcement; changes
+before it are folded into this release (packages are published to npm once, at the announcement).
 
 ## [1.0.0] — 2026-10-04
 
@@ -21,9 +21,16 @@ First release of the Tamga Network documentation set and reference implementatio
   institution test accounts (ADR-0041, D-TRUST-4; TI1–TI6); SPEC-TRUST-0001 §4 optional `issuers[].test_institution` (sandbox
   list only); Sandbox guide §8–§9; list publisher `sandbox-institution add` (sandbox intermediate CA `test-institutions-ca`).
 
-### Packages (`@tamga-network/*`, pre-release `0.x`)
+### Packages (`@tamga-network/*`, 1.0.0)
 
-- `core`, `trust`, `schemas`, `sd-jwt`, `mdoc`, `issuer` (+ `/client`), `verifier` (+ `/web`, `/zk`), `wallet-core`.
+- `core`, `trust`, `schemas`, `sd-jwt`, `mdoc`, `issuer` (+ `/client`), `verifier` (+ `/web`, `/zk`), `wallet-core`, `zk`.
+- `zk` (2026-10-06, ADR-0032 Stage 2a): wallet-side zero-knowledge proofs (Longfellow ZK) — DCQL `mso_mdoc_zk` → claims,
+  circuit selection and ZK2 check, TS13 `ZkDocument`; `/node` desktop prover (Rust child process), `/react-native` Expo module
+  scaffold (Rust C ABI / JNI). End-to-end test: the package's proof passes `verifier/zk`.
+- `wallet-core` (2026-10-06, ADR-0042): the Tamga Wallet provider API client (unit registration, WIA/KA requests, unit
+  revoke/delete/status, revocation code) moved to the Tamga Wallet repository; the package keeps only wallet-generic parts
+  (WUA/WIA types, client attestation PoP, WIA status checks). `solutionId` is no longer defaulted.
+- `verifier/web`: "Open in your wallet" instead of a wallet name (ADR-0042 K4).
 - `trust`: optional `test_institution` on trusted list issuer entries (ADR-0041 TI2).
 - `wallet-core`: revocation code for remote wallet closure (Tamga Wallet WA-ADR-0002). `generateLockCode` (4×5 characters,
   30-letter unambiguous alphabet, ≈ 98 bit), `normalizeLockCode` / `isLockCode` / `formatLockCode`, `lockCodePrehash`
@@ -63,8 +70,13 @@ First release of the Tamga Network documentation set and reference implementatio
 
 ### Services
 
-- Trust list publisher (`trust.tamga.network`), reference verifier (Tamga Verify, `verify.tamga.network`), wallet provider
-  (`wallet.tamga.network`; moves to the Tamga Wallet repository), sandbox test network (`sandbox.tamga.network`).
+- Trust list publisher (`trust.tamga.network`), reference verifier (Tamga Verify, `verify.tamga.network`), sandbox test network
+  (`sandbox.tamga.network`).
+- Removed (2026-10-06, ADR-0042 / D-GOV-9): the network operates no wallet. `apps/wallet-provider` (`wallet.tamga.network`,
+  `wallet.sandbox.tamga.network`) left the network; its code now lives in the Tamga Wallet repository. Trust lists keep a
+  reserved entry for Tamga Wallet's provider (operator Brosgrup, `provider.tamgawallet.com`) until it supplies its certificate;
+  the sandbox list has a generic test wallet provider for the network's own demo scenes. The entries below describe the removed
+  service as it was.
 - `wallet-provider`: `POST /units/revocation-code` (scrypt slow hash of the pre-hash, bound to the unit; the previous code
   stops working; a hash already bound to another unit is refused with 409), `POST /units/status`, and `POST /units/revoke`
   also accepts a `revocation_code` instead of a signed proof. `GET|POST /lost` — the "I lost my phone" page (TR/EN, no scripts,

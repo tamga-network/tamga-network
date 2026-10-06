@@ -4,7 +4,7 @@ title: "Cüzdan ve anahtar kanıtı"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 summary: >
   Tek, 30 günlük WUA yerine AB TS3 modeli: 24 saatten kısa ömürlü, her belge işleminde yeni anahtarlı ve yeni iptal listesi
   girişli Wallet Instance Attestation (WIA) + belge anahtarlarının deposunu anlatan key attestation (KA, `key_attestation`).
@@ -155,3 +155,9 @@ Bu notlar kararı değiştirmez; referans cüzdanın (Tamga Wallet) ve sağlayı
 # Durum
 
 **Accepted — 2026-09-29.** Proje yönetimi onayıyla (H1 planı, P3). DECISIONS: D-CRED-7.
+
+> **Değişiklik (2026-10-06, [[ADR-0042]]):** Cüzdan sağlayıcısını cüzdanı sunan kuruluş işletir; ağ cüzdan sağlayıcısı işletmez,
+> güven listesinde (`wallet_providers[]`) listeler. Bağlamdaki `wallet.tamga.network` ve Sonuçlar'daki `apps/wallet-provider`,
+> Tamga Wallet'ın cüzdan sağlayıcısıdır: kodu cüzdanın deposuna taşındı, bu depodaki kopya ve `wallet.tamga.network`
+> 2026-10-06'da ağdan kaldırıldı; sağlayıcıyı cüzdanın işletmecisi `provider.tamgawallet.com`'da işletir. Karar (K1–K3, WIA1–WIA4) değişmez: WIA ve
+> KA biçimi ile doğrulaması (`@tamga-network/trust`) ağın kuralıdır ve her cüzdan sağlayıcısı için aynıdır.

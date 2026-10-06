@@ -1,0 +1,5 @@
+# Derleme çıktıları (scripts/): depoya girmez, paket yayınında dahil edilir
+/bin/
+android/src/main/jniLibs/
+ios/TamgaZkProver.xcframework/
+/lib/

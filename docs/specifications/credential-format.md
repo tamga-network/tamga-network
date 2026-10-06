@@ -4,7 +4,7 @@ title: "Belge biçimi ve protokoller"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 summary: >
   Tamga belgelerinin kanonik biçimini ve belge verme/gösterme protokollerini tanımlar.
   Birincil format SD-JWT VC (selective disclosure yerleşik, EUDI ARF ana formatı),
@@ -176,7 +176,7 @@ olduğu, cihazın root'lu/jailbreak'li olmadığı, [[t:wallet-provider]] kimli�
 | Biçim | JWT, `typ: oauth-client-attestation+jwt`, `alg: ES256`, `x5c` = Cüzdan sağlayıcısı sertifikası (liste aşamasında: `wallet-provider`; listede `lotl.wallet_providers[].wua_signing_keys`) |
 | Claim'ler | `iss` (provider URL), `sub` (örnek anahtarı JWK thumbprint), `cnf.jwk` (P-256 **örnek anahtarı** — belge anahtarlarından ayrı), `wallet_name`, `wallet_version`, `solution_id`, `key_storage` (`software` \| `secure_enclave` \| `strongbox` \| `wscd`), `user_auth`, `security_level` (W1-DEMO/W2/W3), `iat`, `exp` (30 gün) |
 | Taşıma (belge verme) | OpenID4VCI token isteğinde `OAuth-Client-Attestation` + `OAuth-Client-Attestation-PoP` (PoP: `iss` = WUA `sub`, `aud` = belge veren, `jti`, iat ±300 s) — [[SPEC-PROTO-0001]] §11.1, PR11 |
-| Provider tarafı | `apps/wallet-provider` (`wallet.tamga.network/wua`); cihaz beyanı demo'da self-reported (sapma S-14), pilotta App Attest / Play Integrity |
+| Provider tarafı | Cüzdanı sunan kuruluşun cüzdan sağlayıcısı; ağ işletmez, listeler ([[ADR-0042]]). Tamga Wallet'ınkini cüzdanın işletmecisi `provider.tamgawallet.com`'da işletir (henüz canlı değil); cihaz beyanı demo'da self-reported (sapma S-14), pilotta App Attest / Play Integrity |
 | Sunum | WUA doğrulayıcıya gönderilmez; doğrulayıcı gerekirse DCQL ile ayrıca ister (devlet aşaması) |
 
 ---

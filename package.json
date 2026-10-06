@@ -1,7 +1,7 @@
 {
   "name": "tamga-network",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Tamga Network — eIDAS 2.0 / ETSI / EUDI uyumlu dijital güven altyapısı (public monorepo). Faz B: imzalı güven listeleri; Faz 0: Besu.",
   "license": "Apache-2.0",
   "type": "module",
@@ -40,7 +40,6 @@
     "arf:build": "npm run arf:sync && vitepress build arf",
     "arf:preview": "vitepress preview arf",
     "verify": "tsx apps/verify/src/server.ts",
-    "wallet-provider": "tsx apps/wallet-provider/src/server.ts",
     "trust:status": "tsx apps/trust-publisher/src/cli.ts status",
     "trust:register": "tsx apps/trust-publisher/src/cli.ts register",
     "trust:scope": "tsx apps/trust-publisher/src/cli.ts scope",
@@ -73,8 +72,5 @@
     "ajv-formats": "^3.0.1",
     "jose": "^6.0.0",
     "zod": "^4.0.0"
-  },
-  "overrides": {
-    "react": "19.2.3"
   }
 }

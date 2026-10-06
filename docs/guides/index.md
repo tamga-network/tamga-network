@@ -4,7 +4,7 @@ title: "Başlarken"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-03
+last_updated: 2026-10-06
 summary: >
   Geliştiriciler için giriş: Tamga'da dört yol (doğrulayıcı, belge veren, cüzdan geliştiricisi, ağ/düğüm operatörü),
   hangi paketi kuracağınız, hangi adresleri kullanacağınız, yerel geliştirme ortamının kurulumu ve bugün neyin hazır olduğu.
@@ -89,7 +89,6 @@ arayüz değişebilir. Her sürüm bu depodan GitHub Actions ile üretilir ve ka
 | `https://issuer.tamga.network/{kurum}` | barındırılan belge verme servisi (OpenID4VCI + `/api/v1`) | belge veren, cüzdan |
 | `https://status.tamga.network/{opak}` | iptal listeleri (Token Status List) | doğrulayıcı |
 | `https://verify.tamga.network` | Tamga Verify: barındırılan doğrulayıcı + sayfa kiti (`/tamga-verifier.js`) | web sitesi, doğrulayıcı |
-| `https://wallet.tamga.network` | cüzdan sağlayıcısı: Wallet Instance Attestation (WIA) | cüzdan |
 | `https://id.tamga.network` | geçici kimlik belgesi servisi | cüzdan |
 
 ## Bugün ne hazır?

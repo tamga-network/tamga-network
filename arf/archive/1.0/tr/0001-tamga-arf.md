@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -184,7 +184,7 @@ Tamga'nın bugün üstlendiği devlet rolleri geçicidir ve devlet adına yürü
 | Geçici kimlik belgesi sağlayıcısı | PID sağlayıcısı yokken uzaktan kimlik doğrulamasıyla kimlik belgesi verir | Tamga kimlik servisi | PID sağlayıcısı devralır |
 | Belge veren (Attestation Provider) | Elektronik öznitelik belgesi verir | Üniversiteler, bilet satıcıları | Kurumlar ve kamu kurumları |
 | Yetkili kaynak | Bilginin asıl sahibi olan sistem | Kurumun kendi sistemi | Aynı, ayrıca kamu kaynakları |
-| Cüzdan sağlayıcısı | Cüzdanı sunar; cüzdan örneği kanıtı ve anahtar kanıtı imzalar | Tamga Wallet'ın sağlayıcısı (ağın ilk cüzdanı; ayrı ürün) | Kurallara uyan her sağlayıcı |
+| Cüzdan sağlayıcısı | Cüzdanı sunar; cüzdan örneği kanıtı ve anahtar kanıtı imzalar | Cüzdanı sunan kuruluş (ilki Tamga Wallet; ayrı ürün). Ağ cüzdan sağlayıcısı işletmez, listeler | Kurallara uyan her sağlayıcı |
 | Doğrulayıcı (Relying Party) | Belge ister ve doğrular; kayıtlı ve kapsamı sınırlıdır | İşveren, web sitesi, kurum | Aynı |
 | Aracı doğrulayıcı (Intermediary) | Bir doğrulayıcı adına belge ister ve doğrular | Tamga Verify | Aynı |
 | Belge sahibi (Holder) | Belgeyi cüzdanında taşır ve kime göstereceğine karar verir | Öğrenci, mezun, kullanıcı | Vatandaş |
@@ -202,8 +202,8 @@ sayfasındadır ([[FW-ROLE-0001]]).
 
 | Bileşen | Görev | Sahibi |
 |---|---|---|
-| Tamga Wallet | Kişinin belgelerini tutar, gösterir, geçmişi ve takma adları yönetir | Tamga Wallet (ağın ilk cüzdanı; ayrı ürün, açık kaynak) |
-| Cüzdan sağlayıcısı | Cüzdan birimini kaydeder; cüzdan örneği kanıtı ve anahtar kanıtı imzalar | Tamga Wallet (geçici olarak ağın altyapısında; cüzdanın kendi adresine taşınır) |
+| Cüzdan | Kişinin belgelerini tutar, gösterir, geçmişi ve takma adları yönetir | Cüzdanı sunan kuruluş; ağın ilk cüzdanı Tamga Wallet (ayrı ürün, açık kaynak) |
+| Cüzdan sağlayıcısı | Cüzdan birimini kaydeder; cüzdan örneği kanıtı ve anahtar kanıtı imzalar | Cüzdanı sunan kuruluş; ağ işletmez, güven listesinde listeler (Tamga Wallet'ınki cüzdanın işletmecisinde, `provider.tamgawallet.com`) |
 | Belge verme hizmeti | Kurumlar adına OpenID4VCI ile belge verir, iptal listeleri yayınlar | Barındırılan hizmet (kurum kendi hizmetini de çalıştırabilir) |
 | Kurum Konsolu | Kurum personelinin belgeleri, kayıtları, API anahtarlarını ve kullanıcıları yönettiği ekran | Barındırılan hizmet |
 | Kimlik servisi | Geçici kimlik belgesi verir; takma ad tohumunu türetir | Tamga, geçici |
@@ -211,9 +211,15 @@ sayfasındadır ([[FW-ROLE-0001]]).
 | Güven listesi yayıncısı | Listelerin listesini, ulusal listeyi ve çapa günlüğünü imzalar ve yayınlar | Tamga, geçici |
 | Belge türü kataloğu | Belge türlerinin tanımlarını ve şemalarını değişmez dosyalar olarak yayınlar | Tamga |
 | Açık kaynak paketler | Belge biçimleri, güven listesi okuma, belge verme ve doğrulama kütüphaneleri | Tamga (Apache-2.0) |
+| Sandbox | Gerçek ağla aynı kurallarla çalışan tek test ağı; ayrı kökü ve listeleri vardır | Tamga |
 
 Kütüphaneler açıktır; barındırılan hizmetler işletmecidedir. Bir kurum kendi belge verme ya da doğrulama yazılımını
 paketlerle kurabilir; kurallar aynıdır.
+
+Ağ hiçbir cüzdanın uygulamasını, cüzdan sağlayıcısını ya da sitesini işletmez; cüzdanları güven listesindeki cüzdan
+sağlayıcısı kayıtlarıyla tanır. Sandbox tektir ve ağındır: cüzdan, kurum ve doğrulayıcı geliştiricileri ağın kurallarını
+orada dener. Sandbox'ta da cüzdan sağlayıcısını cüzdan işletir; cüzdan geliştiricisi kendi sağlayıcısını sandbox listesine
+kaydettirir ve cüzdanını sandbox'taki örnek kurumlar, kimlik servisi ve doğrulayıcıyla sınar.
 
 ## 4.2 Hizmet adresleri
 
@@ -228,8 +234,11 @@ paketlerle kurabilir; kurallar aynıdır.
 | `status.tamga.network` | İptal (durum) listeleri |
 | `console.tamga.network` | Kurum Konsolu |
 | `verify.tamga.network` | Tamga Verify |
-| `wallet.tamga.network` | Cüzdan sağlayıcısı |
 | `id.tamga.network` | Kimlik servisi |
+| `*.sandbox.tamga.network` | Sandbox: aynı hizmetlerin test kopyaları (`trust.sandbox`, `issuer.sandbox`, `verify.sandbox`, `id.sandbox` …) |
+
+Ağın alan adlarında yalnız ağın hizmetleri çalışır; ağ cüzdan sağlayıcı işletmez. Her cüzdanın sağlayıcısını cüzdanı sunan
+kuruluş kendi alan adında işletir (Tamga Wallet'ınki `provider.tamgawallet.com`); ağ onu güven listesinde listeler.
 
 Alan adı bir hizmetin adresidir, kimlik değildir. Bir kurum kendi alan adına geçtiğinde kaydındaki adres değişir; kurumun
 kimliği ve verdiği belgeler değişmez.

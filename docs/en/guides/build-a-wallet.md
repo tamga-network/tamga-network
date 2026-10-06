@@ -4,7 +4,7 @@ title: "Build a wallet"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-03
+last_updated: 2026-10-06
 summary: >
   Building a wallet that receives, stores and presents Tamga credentials: registering as a wallet provider, device keys,
   device attestation (App Attest, Android key attestation), the Wallet Unit Attestation (WUA), receiving credentials with
@@ -65,7 +65,8 @@ solution must be registered in the trust list under `lotl › wallet_providers[]
    backup model.
 2. The key you sign the WUA with is added to the list. Registration requirements:
    [Tamga ARF — Annex A §3.2](https://arf.tamga.network/trust-framework).
-3. Until you are registered, you can develop against Tamga's wallet provider (`wallet.tamga.network`).
+3. You run the wallet provider; the network runs none ([[ADR-0042]]). Before registering on the real network, try your
+   wallet in the sandbox: have your own provider registered in the sandbox list ([[GUIDE-0013]] §2).
 
 ## 3. Device keys
 
@@ -119,26 +120,17 @@ device's own claim. Until the evidence is verified, the unit counts as software 
 Register the unit at first launch and supply the evidence through `deviceEvidence`:
 
 ```ts
-import { registerUnit, unitClientData, UNIT_REF, fetchHttp } from "@tamga-network/wallet-core";
-
-const { unitId, keyStorage } = await registerUnit({
-  providerBase: "https://wallet.tamga.network",
-  keys,
-  http: fetchHttp,
-  appVersion: "1.0.0",
-  platform: "android 15",
-  deviceEvidence: async ({ challenge, unitThumbprint }) => {
-    if (os === "android") {
-      const chain = keys.keyEvidence(UNIT_REF); // the unit key was generated with the challenge; the chain is ready
-      return chain ? { platform: "android", key_attestation: chain } : undefined;
-    }
-    const hash = base64(sha256(unitClientData(challenge, unitThumbprint)));
-    return { platform: "ios", app_attest: await TamgaKeys.appAttest(hash) };
-  },
+// Unit registration and fetching attestations are YOUR wallet provider's own API; the network does not define it (ADR-0042).
+// What the network expects: the evidence is the platform's signed attestation, and your provider verifies it and writes the
+// verified key-storage level into the WIA/KA.
+const unit = await myProvider.registerUnit({
+  deviceEvidence: os === "android"
+    ? { platform: "android", key_attestation: keys.keyEvidence(UNIT_KEY) } // chain of the key generated with the challenge
+    : { platform: "ios", app_attest: await appAttest(clientDataHash) }, // client data carries the unit key's thumbprint
 });
 ```
 
-If the evidence is rejected, `registerUnit` retries without it; the unit registers at software level and `keyStorage` says so.
+If the evidence is rejected, the unit registers at software level; your provider states this clearly in the attestations.
 Tell the person that high-assurance credentials cannot be received on this device; do not carry on silently.
 
 ::: info Store release
@@ -149,23 +141,18 @@ came from the store, is added at that step; today the hardware key attestation i
 ## 5. Wallet Unit Attestation (WUA)
 
 ```ts
-import { requestWua, fetchHttp } from "@tamga-network/wallet-core";
+import { clientAttestationPop, wuaExpiringSoon, type WuaRecord } from "@tamga-network/wallet-core";
 
-const wua = await requestWua({
-  providerBase: "https://wallet.tamga.network",
-  keys,
-  http: fetchHttp,
-  appVersion: "1.0.0",
-  platform: "ios",
-});
+const wia: WuaRecord = await myProvider.requestWia(unit); // from your own provider (a JWT in EU TS3 form)
+const pop = await clientAttestationPop({ keys, wua: wia, aud: credentialIssuer }); // added to the institution's token request
 ```
 
 The attestation is added to the institution's token request during issuance. Renew it before it expires (`wuaExpiringSoon`).
 
 A registered unit has two more attestations: a new, short-lived (under 24 hours) wallet instance attestation for each
-credential operation ([[t:WIA]], `requestWia`), and the key attestation showing that the credential keys are in the secure area
-([[t:key-attestation|KA]], `requestKeyAttestation`). The provider publishes a status list for both; when the person hands the
-device over, `revokeUnit` revokes all of them.
+credential operation ([[t:WIA]]), and the key attestation showing that the credential keys are in the secure area
+([[t:key-attestation|KA]]). The provider publishes a status list for both (checked with `wiaRevokedByList`); when the person
+hands the device over, the unit is revoked.
 
 ## 6. Receiving credentials (OpenID4VCI)
 
@@ -256,7 +243,7 @@ const { state: next, toReissue } = applyMigration(emptyState, data, { restoreLog
 // toReissue: shown to the person as a "receive again" list
 ```
 
-- When handing the old device over, revoke the unit (`revokeUnit`).
+- When handing the old device over, revoke the unit (your provider's unit revocation).
 - If the person wants everything deleted: `deleteUnit` at the wallet provider and `requestIdentityErasure` at Tamga's identity
   service. Data institutions hold is the institution's responsibility; the wallet shows the person how to file an erasure
   request with the institution.

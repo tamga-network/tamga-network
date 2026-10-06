@@ -4,7 +4,7 @@ title: "Roller"
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 summary: >
   Tamga Network'teki rollerin ayrıntısı: işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak,
   doğrulayıcı, cüzdan sağlayıcısı, kişi, devlet ve denetçi. Her rol için ne yaptığı, bugün kimin üstlendiği, bağlı olduğu
@@ -30,7 +30,7 @@ Rulebook'tadır (Ek B); burada her rolün hangi kural grubuna bağlı olduğu g�
 | Belge veren | Üniversiteler, bilet satıcıları; Tamga kimlik servisi (kimlik belgesi için, geçici) | RB-AP, RB-AP-ID | [[FW-ONB-0001]] §2 |
 | Yetkili kaynak | Kurumların kayıt sistemleri | RB-AS | Belge verenin sözleşmesiyle |
 | Doğrulayıcı | İşverenler, web siteleri, kapılar | RB-RP | [[FW-ONB-0001]] §3 |
-| Cüzdan sağlayıcısı | Tamga Wallet (ağın ilk cüzdanı) | RB-WP | [[FW-ONB-0001]] §4 |
+| Cüzdan sağlayıcısı | Cüzdanı sunan kuruluşlar (ilki Tamga Wallet) | RB-WP | [[FW-ONB-0001]] §4 |
 | Kişi (belge sahibi) | Cüzdanı kullanan herkes | RB-H | Gönüllü |
 | Devlet | Henüz yok; her üye devlet için yer ayrılmıştır | Ek A §1.6, §7 | [[FW-ONB-0001]] §5 |
 | Denetçi | Bugün öz beyan; devletler katılınca bağımsız kuruluşlar | Ek A §4 | — |
@@ -120,10 +120,15 @@ sertifikası; doğrulama yazılımı ve güncel güven listeleri.
 
 **Ne yapar.** Kişinin belgelerini tuttuğu ve gösterdiği cüzdanı sunar; cüzdan birimlerini kaydeder; her işlem için cüzdan örneği
 kanıtı (WIA) ve anahtar kanıtı (KA) imzalar; cüzdan çözümünde açık bulunursa kanıtları iptal eder. Ağ cüzdan seçmez, tanır:
-kurallara uyan ve uyum testlerini geçen her cüzdan ağda çalışır.
+kurallara uyan ve uyum testlerini geçen her cüzdan ağda çalışır. Cüzdan sağlayıcısını cüzdanı sunan kuruluş işletir; ağ
+hiçbir cüzdan sağlayıcısını işletmez, yalnızca güven listesinde listeler.
 
-**Bugün kim.** Tamga Wallet: ağın ilk cüzdanı; ayrı bir ürün ve açık kaynaktır. Sağlayıcı servisi geçici olarak ağın
-altyapısında çalışır ve cüzdanın kendi adresine taşınır. Tamga Wallet ağın kurallarına her cüzdan gibi uyar.
+**Bugün kim.** Tamga Wallet: ağın ilk cüzdanı; ayrı bir ürün ve açık kaynaktır. Sağlayıcı servisini cüzdanın
+işletmecisi `provider.tamgawallet.com`'da işletir (henüz canlı değil); ağ yalnız listeler. Tamga Wallet ağın kurallarına her cüzdan gibi uyar.
+
+**Sandbox.** Cüzdan geliştiricisi cüzdanını ağın tek test ağı olan sandbox'ta dener: kendi cüzdan sağlayıcısını sandbox
+listesine kaydettirir, cüzdanını sandbox'taki örnek kurumlar, kimlik servisi ve doğrulayıcıyla sınar. Ayrı bir cüzdan
+sandbox'ı yoktur.
 
 **Yükümlülükler.** Ek B §6 (RB-WP-01…13): anahtarların güvenli donanımda üretilmesi ve dışa aktarılamaması, yazılım anahtarlı
 cüzdana belge verilmemesi, her gösterimde PIN ya da biyometri, alanların tek tek gösterildiği onay ekranı ve aşırı talep

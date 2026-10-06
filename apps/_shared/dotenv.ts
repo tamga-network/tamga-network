@@ -1,5 +1,5 @@
 /**
- * Servisler (verify, wallet-provider) için ortak `.env` okuyucu — yayımlanan paketlerde değil (yalnızca apps/ içi, iç inceleme S6).
+ * Servisler (verify) için ortak `.env` okuyucu — yayımlanan paketlerde değil (yalnızca apps/ içi, iç inceleme S6).
  * Kurallar: `AD=değer` satırları; `#` sonrası yorum; ortamda zaten tanımlı değişken EZİLMEZ (ilk dosya kazanır).
  * Tırnak soyulmaz; değerde `#` kullanmayın (tamga-platform/shared/config.ts ile aynı davranış).
  */

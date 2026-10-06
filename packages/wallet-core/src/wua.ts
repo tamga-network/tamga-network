@@ -1,18 +1,18 @@
 /**
- * Wallet Unit Attestation — cüzdan tarafı (SPEC-CRED-0001 §4, DB-16).
- *  Cüzdan örneği bir "örnek anahtarı" üretir (wua.instance, KeyProvider'da), açık anahtarı + kendi beyanını Wallet Provider'a
- *  gönderir; Provider WUA (JWT, x5c = wallet-provider sertifikası) döner. İhraçta token isteğine iki başlık eklenir:
- *  OAuth-Client-Attestation (WUA) + OAuth-Client-Attestation-PoP (örnek anahtarıyla, aud = credential_issuer).
- *  Demo: beyan self-reported (key_storage "software" — S-9/S-14); pilot: App Attest / Play Integrity.
+ * Wallet Unit Attestation / Wallet Instance Attestation — cüzdan tarafının GENEL kısmı (SPEC-CRED-0001 §4, ADR-0025; AB TS3,
+ * OAuth Attestation-Based Client Authentication). Her cüzdan için aynıdır:
+ *  - `WuaRecord`: cüzdan sağlayıcıdan alınmış kanıt (JWT, x5c = güven listesindeki sağlayıcı sertifikası) ve PoP anahtarının adı.
+ *  - İhraçta token isteğine iki başlık: OAuth-Client-Attestation (WUA/WIA) + OAuth-Client-Attestation-PoP
+ *    (`clientAttestationPop`, örnek anahtarıyla, aud = credential_issuer).
+ *  - WIA iptal listesi denetimi (`wiaStatusRef`, `wiaRevokedByList`): imzacı güven listesindeki bir cüzdan sağlayıcı olmalı.
+ * Kanıtın sağlayıcıdan NASIL alındığı (kayıt, WIA/KA uçları, iptal, kapatma kodu) her cüzdanın kendi sağlayıcı protokolüdür; bu
+ * paketin parçası değildir (ağın ADR-0042) — çağıran `WuaRecord`'u ve `keyAttestor`'u kendisi verir.
  */
 import { randomBytes as nobleRandom } from "@noble/hashes/utils.js";
-import { b64u, b64uDecode } from "./b64.js";
+import { b64u } from "./b64.js";
 import { decodeJwt, signJwt } from "./jws.js";
-import type { KeyProvider, KeyStorage, PublicJwk } from "./keys.js";
-import { jwkThumbprint } from "./jwe.js";
-import { sha256 } from "@noble/hashes/sha2.js";
-import { WalletError, type Http, readJson } from "./http.js";
-import { lockCodePrehash } from "./lock-code.js";
+import type { KeyProvider, KeyStorage } from "./keys.js";
+import { WalletError, type Http } from "./http.js";
 import { parseStatusToken, statusBitAt } from "./status.js";
 import type { TrustSource } from "@tamga-network/trust/core";
 
@@ -29,58 +29,6 @@ export interface WuaRecord {
   solutionId: string;
   securityLevel?: string;
   provider: string;
-}
-
-export async function requestWua(p: {
-  providerBase: string;
-  keys: KeyProvider;
-  http: Http;
-  keyRef?: string;
-  solutionId?: string;
-  appVersion: string;
-  platform: string;
-}): Promise<WuaRecord> {
-  const ref = p.keyRef ?? WUA_INSTANCE_REF;
-  const jwk = (await p.keys.publicKey(ref)) ?? (await p.keys.generate(ref, undefined, { policy: "device_unlocked" }));
-  const att = await p.keys.attestation();
-  const r = await p.http(`${p.providerBase.replace(/\/$/, "")}/wua`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      jwk,
-      attestation: {
-        storage: att.storage,
-        platform: p.platform,
-        app_version: p.appVersion,
-        solution_id: p.solutionId ?? "tamga-wallet-expo",
-      },
-    }),
-  });
-  const body = (await readJson(r, "wallet provider")) as {
-    wua?: string;
-    exp?: number;
-    sub?: string;
-    key_storage?: KeyStorage;
-    solution_id?: string;
-    security_level?: string;
-    error?: string;
-    error_description?: string;
-  };
-  if (r.status !== 200 || !body.wua)
-    throw new WalletError(
-      "issuer_error",
-      `WUA could not be obtained: ${body.error_description ?? body.error ?? r.status}`,
-    );
-  return {
-    jwt: body.wua,
-    sub: body.sub ?? String(decodeJwt(body.wua).payload.sub),
-    exp: body.exp ?? Number(decodeJwt(body.wua).payload.exp),
-    keyRef: ref,
-    keyStorage: body.key_storage ?? att.storage,
-    solutionId: body.solution_id ?? "tamga-wallet-expo",
-    securityLevel: body.security_level,
-    provider: p.providerBase,
-  };
 }
 
 /** PoP: {iss = WUA sub, aud = credential_issuer, iat, exp, jti}; örnek anahtarıyla imzalı. */
@@ -103,312 +51,6 @@ export async function clientAttestationPop(p: {
 export const wuaExpiringSoon = (w: WuaRecord | undefined, now = Math.floor(Date.now() / 1000), marginSec = 7 * 86400) =>
   !w || w.exp - now < marginSec;
 
-// ---------------------------------------------------------------- ADR-0025 / AB TS3: birim kaydı, WIA, anahtar kanıtı
-export const UNIT_REF = "wallet.unit";
-export const UNIT_POP_TYP = "tamga-unit-pop+jwt";
-export const PROOF_TYP_KA = "openid4vci-proof+jwt";
-
-/**
- * Cüzdan sağlayıcı yolları — TEK yer (cüzdan istemcisi ve sağlayıcı servisi aynı sabitleri kullanır). Adlar proje yönetimi
- * onayıyla (2026-10-04): teknik uçlar `units/` altında (ARF "wallet unit revocation"), kişi sayfası `/lost`.
- */
-export const WP_PATHS = {
-  challenge: "/units/challenge",
-  register: "/units",
-  wia: "/wia",
-  ka: "/ka",
-  /** Birim iptali: cihazdan imzalı kanıtla YA DA (WA-ADR-0002) yalnız kapatma koduyla (`revocation_code`). */
-  revoke: "/units/revoke",
-  delete: "/units/delete",
-  /** WA-ADR-0002 K1: kapatma kodunun ön özetini birime bağlar (imzalı kanıt). */
-  revocationCode: "/units/revocation-code",
-  /** WA-ADR-0002 K3: birimin durumu (`active` / `revoked`) — imzalı kanıt; WIA girişi harcamaz. */
-  status: "/units/status",
-  /** WA-ADR-0002 K2: "Telefonumu kaybettim" sayfası (TR/EN); kod girişi → `revoke`. */
-  lost: "/lost",
-} as const;
-
-const base = (u: string) => u.replace(/\/$/, "");
-const thumb = (jwk: PublicJwk) => b64u(jwkThumbprint(jwk));
-
-/** Birim anahtarıyla imzalı tek kullanımlık kanıt (sağlayıcıya). */
-async function unitProof(
-  p: { providerBase: string; keys: KeyProvider; randomBytes?: (n: number) => Uint8Array; now?: number },
-  action: string,
-  extra: Record<string, unknown> = {},
-): Promise<string> {
-  const jwk =
-    (await p.keys.publicKey(UNIT_REF)) ?? (await p.keys.generate(UNIT_REF, undefined, { policy: "device_unlocked" }));
-  const now = p.now ?? Math.floor(Date.now() / 1000);
-  const header = action === "register" ? { typ: UNIT_POP_TYP, jwk } : { typ: UNIT_POP_TYP, kid: thumb(jwk) };
-  return signJwt(
-    header,
-    { aud: base(p.providerBase), iat: now, jti: b64u((p.randomBytes ?? nobleRandom)(16)), action, ...extra },
-    p.keys,
-    UNIT_REF,
-  );
-}
-
-async function postJson(http: Http, url: string, body: unknown) {
-  const r = await http(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return { status: r.status, body: (await readJson(r, "wallet provider")) as Record<string, unknown> };
-}
-const failed = (what: string, b: Record<string, unknown>, status: number) =>
-  unitRejection(status, b) === "unknown_unit"
-    ? new WalletError("unit_unknown", `${what}: wallet unit not registered at the wallet provider (${status})`)
-    : new WalletError("issuer_error", `${what}: ${String(b.error_description ?? b.error ?? status)}`);
-
-/**
- * Sağlayıcının birim kanıtına verdiği ret: `unknown_unit` = birim kaydı yok (yeni sağlayıcı `error: "unknown_unit"`; eski
- * sağlayıcı 400 + "unknown unit or bad key"); `unit_revoked` = birim iptal (403); öbürü `other`. Saf.
- */
-export function unitRejection(
-  status: number,
-  body: Record<string, unknown>,
-): "unknown_unit" | "unit_revoked" | "other" {
-  if (body.error === "unit_revoked") return "unit_revoked";
-  if (status === 400 && (body.error === "unknown_unit" || /^unknown unit\b/.test(String(body.error_description ?? ""))))
-    return "unknown_unit";
-  return "other";
-}
-
-/** Birim isteği neden düştü (uygulama `decideUnitRecovery`'ye verir). */
-export type UnitFailure = "unknown_unit" | "unit_revoked" | "network" | "other";
-export function unitFailureOf(e: unknown): UnitFailure {
-  if (e instanceof WalletError) {
-    if (e.code === "unit_unknown") return "unknown_unit";
-    if (e.code === "unit_revoked") return "unit_revoked";
-    if (e.code === "network") return "network";
-    return "other";
-  }
-  return /network request failed|fetch failed|timeout|abort/i.test((e as Error)?.message ?? String(e))
-    ? "network"
-    : "other";
-}
-
-/**
- * Bilinmeyen birimden kurtulma kararı (saf; WA-ADR-0002 güvencesiyle):
- *  - `unit_revoked` → ASLA yeniden kayıt yok: `remote_lock` (uygulama imzalı listeyle doğrular ve ancak öyle siler).
- *  - ağ hatası → `retry_later` (yerel kayda dokunulmaz).
- *  - `unknown_unit` → önce imzalı WIA iptal listesi (`wiaRevokedByList`, son WIA'nın girişi): `revoked` → `remote_lock`
- *    (kapatma sayfasında "verilerimi de sil" birim kaydını siler ama iptal biti listede kalır — yeniden kayıt kapatmayı
- *    delemez); liste okunamadı → `retry_later`; iptal değil ya da denetlenecek WIA yok → `re_register`, ama TEK SEFER
- *    (`attempted` ise `fail`: döngü yok).
- */
-export type UnitRecovery = "re_register" | "remote_lock" | "retry_later" | "fail";
-export function decideUnitRecovery(p: {
-  failure: UnitFailure;
-  /** son WIA'nın imzalı listedeki durumu; `unknown_unit` için gerekir */
-  list?: "revoked" | "not_revoked" | "error";
-  /** bu akışta yeniden kayıt zaten denendi */
-  attempted: boolean;
-}): UnitRecovery {
-  if (p.failure === "unit_revoked") return "remote_lock";
-  if (p.failure === "network") return "retry_later";
-  if (p.failure !== "unknown_unit") return "fail";
-  if (p.list === "revoked") return "remote_lock";
-  if (p.list !== "not_revoked") return "retry_later";
-  return p.attempted ? "fail" : "re_register";
-}
-
-/**
- * Cihaz kanıtının sonucu (sağlayıcı yanıtı `attestation`): `hardware` = platform kanıtı doğrulandı, birim anahtarı güvenli
- * donanımda; `software` = kanıt sunuldu ama kullanılamadı (neden `reason`), birim yazılım seviyesinde (S-9); `none` = kanıt
- * sunulmadı (Expo Go, yerel modül yok). Kayıt hiçbir durumda reddedilmez; seviye KA'da `key_storage` ile dürüstçe söylenir (WIA3).
- */
-export type AttestationLevel = "none" | "software" | "hardware";
-/**
- * `not_configured` = sağlayıcı o platform için ayarlı değil (App ID / kökler yok); `invalid` = kanıt doğrulanamadı (zincir, meydan
- * okuma, anahtar, uygulama kimliği); `unsupported` = kanıt biçimi tanınmıyor ya da cihaz durumu desteklenmiyor (kilidi açık cihaz,
- * geliştirme ortamı, donanımsız anahtar). Kişisel ya da cihaz verisi taşımaz.
- */
-export type AttestationReason = "not_configured" | "invalid" | "unsupported";
-const ATT_LEVELS: ReadonlySet<string> = new Set<AttestationLevel>(["none", "software", "hardware"]);
-const ATT_REASONS: ReadonlySet<string> = new Set<AttestationReason>(["not_configured", "invalid", "unsupported"]);
-
-export interface UnitRegistration {
-  unitId: string;
-  keyStorage?: KeyStorage;
-  attestation?: AttestationLevel;
-  reason?: AttestationReason;
-}
-
-/** Cüzdan birimini sağlayıcıya kaydeder (ilk kurulum; tekrar çağrılabilir). */
-export async function registerUnit(p: {
-  providerBase: string;
-  keys: KeyProvider;
-  http: Http;
-  appVersion: string;
-  platform: string;
-  solutionId?: string;
-  randomBytes?: (n: number) => Uint8Array;
-  /**
-   * P4-2 cihaz kanıtı. Verilirse sağlayıcıdan tek kullanımlık meydan okuma alınır; birim anahtarı (yoksa) bu meydan okumayla
-   * üretilir (Android anahtar kanıtı) ve dönen kanıt kayıtla gönderilir (Android: key_attestation; iOS: App Attest).
-   * Kanıt doğrulanmazsa kayıt yine yapılır: birim yazılım seviyesinde kalır, yanıt `attestation` + `reason` söyler.
-   */
-  deviceEvidence?: (ctx: { challenge: string; unitThumbprint: string }) => Promise<DeviceEvidence | undefined>;
-}): Promise<UnitRegistration> {
-  let challenge: string | undefined;
-  if (p.deviceEvidence) {
-    const c = await postJson(p.http, `${base(p.providerBase)}/units/challenge`, {});
-    if (c.status === 200 && typeof c.body.challenge === "string") challenge = c.body.challenge;
-  }
-  if (!(await p.keys.publicKey(UNIT_REF)))
-    // a3: birim anahtarı kişiyi temsil etmez → kilide bağlı, istem gerektirmez (arka plan kayıt/WIA akışları sessiz)
-    await p.keys.generate(UNIT_REF, challenge ? b64uDecode(challenge) : undefined, { policy: "device_unlocked" });
-  const jwk = (await p.keys.publicKey(UNIT_REF))!;
-  const evidence =
-    challenge && p.deviceEvidence ? await p.deviceEvidence({ challenge, unitThumbprint: thumb(jwk) }) : undefined;
-  const proof = await unitProof(p, "register", {
-    solution_id: p.solutionId ?? "tamga-wallet-expo",
-    app_version: p.appVersion,
-    platform: p.platform,
-    ...(evidence ? { challenge } : {}),
-  });
-  const r = await postJson(p.http, `${base(p.providerBase)}/units`, {
-    proof,
-    ...(evidence ? { device_evidence: evidence } : {}),
-  });
-  if (r.status !== 201 && r.status !== 200) throw failed("wallet unit registration failed", r.body, r.status);
-  const b = r.body;
-  return {
-    unitId: String(b.unit_id),
-    ...(typeof b.key_storage === "string" ? { keyStorage: b.key_storage as KeyStorage } : {}),
-    ...(typeof b.attestation === "string" && ATT_LEVELS.has(b.attestation)
-      ? { attestation: b.attestation as AttestationLevel }
-      : {}),
-    ...(typeof b.reason === "string" && ATT_REASONS.has(b.reason) ? { reason: b.reason as AttestationReason } : {}),
-  };
-}
-
-/**
- * P4-2: sağlayıcıya giden cihaz kanıtı (Android anahtar kanıtı zinciri ya da Apple App Attest). `play_integrity` (a2, zorunlu
- * değil): Android Play Integrity standart API jetonu — proje numarası ayarlıysa eklenir, sağlayıcı Google'a çözdürür; seviyeyi
- * belirlemez.
- */
-export type DeviceEvidence =
-  | { platform: "android"; key_attestation: string[]; play_integrity?: string }
-  | { platform: "ios"; app_attest: { key_id: string; attestation: string } };
-
-/**
- * Tek bir belge işlemi için yeni WIA (< 24 saat): yeni PoP anahtarı + sağlayıcıda yeni iptal girişi (WIA1). Dönen kayıt
- * eski WUA kaydıyla aynı biçimde; token isteğine aynı başlıklarla gider.
- */
-export async function requestWia(p: {
-  providerBase: string;
-  keys: KeyProvider;
-  http: Http;
-  randomBytes?: (n: number) => Uint8Array;
-}): Promise<WuaRecord> {
-  const keyRef = `wia.${b64u((p.randomBytes ?? nobleRandom)(9))}`;
-  const wiaJwk = await p.keys.generate(keyRef, undefined, { policy: "device_unlocked" }); // a3: PoP anahtarı, istemsiz
-  const proof = await unitProof(p, "wia", { wia_jkt: thumb(wiaJwk) });
-  const r = await postJson(p.http, `${base(p.providerBase)}/wia`, { proof, wia_jwk: wiaJwk });
-  if (r.status !== 200 || typeof r.body.wia !== "string") {
-    await p.keys.delete(keyRef).catch(() => {});
-    if (unitRejection(r.status, r.body) === "unit_revoked")
-      throw new WalletError("unit_revoked", "This wallet has been revoked.");
-    throw failed("WIA could not be obtained", r.body, r.status);
-  }
-  const claims = decodeJwt(r.body.wia).payload as { sub?: string; exp?: number; wallet_name?: string };
-  return {
-    jwt: r.body.wia,
-    sub: String(claims.sub),
-    exp: Number(claims.exp),
-    keyRef,
-    keyStorage: "software", // WIA depo bilgisi taşımaz; gerçek seviye KA'da
-    solutionId: String(claims.wallet_name ?? "tamga-wallet-expo"),
-    provider: p.providerBase,
-  };
-}
-
-/** Belge anahtarları için sağlayıcı imzalı anahtar kanıtı (KA). */
-export async function requestKeyAttestation(p: {
-  providerBase: string;
-  keys: KeyProvider;
-  http: Http;
-  jwks: PublicJwk[];
-  randomBytes?: (n: number) => Uint8Array;
-}): Promise<string> {
-  const keysHash = b64u(sha256(new TextEncoder().encode(p.jwks.map(thumb).join("."))));
-  const proof = await unitProof(p, "ka", { keys_hash: keysHash });
-  const r = await postJson(p.http, `${base(p.providerBase)}/ka`, { proof, keys: p.jwks });
-  if (r.status !== 200 || typeof r.body.key_attestation !== "string") {
-    if (unitRejection(r.status, r.body) === "unit_revoked")
-      throw new WalletError("unit_revoked", "This wallet has been revoked.");
-    throw failed("key attestation could not be obtained", r.body, r.status);
-  }
-  return r.body.key_attestation;
-}
-
-/** Kullanıcı isteğiyle birimi iptal eder (cihaz devri / satış): bütün WIA girişleri iptal olur. */
-export async function revokeUnit(p: {
-  providerBase: string;
-  keys: KeyProvider;
-  http: Http;
-  randomBytes?: (n: number) => Uint8Array;
-}): Promise<void> {
-  const proof = await unitProof(p, "revoke");
-  const r = await postJson(p.http, `${base(p.providerBase)}/units/revoke`, { proof });
-  if (r.status !== 200) throw failed("wallet revocation failed", r.body, r.status);
-}
-
-/**
- * Kişinin silme isteği (Apple 5.1.1(v), Google Play; KVKK md. 7): birim iptal edilir ve sağlayıcıdaki kaydı silinir. Kimlik
- * birim anahtarıyla (PoP). Birim zaten silinmişse (bilinmeyen birim) başarılı sayılır.
- */
-export async function deleteUnit(p: {
-  providerBase: string;
-  keys: KeyProvider;
-  http: Http;
-  randomBytes?: (n: number) => Uint8Array;
-}): Promise<void> {
-  const proof = await unitProof(p, "delete");
-  const r = await postJson(p.http, `${base(p.providerBase)}/units/delete`, { proof });
-  if (unitRejection(r.status, r.body) === "unknown_unit") return;
-  if (r.status !== 200) throw failed("wallet deletion failed", r.body, r.status);
-}
-
-/**
- * WA-ADR-0002 K1: kapatma kodunun ÖN ÖZETİNİ (kodun kendisini değil) birime bağlar; sağlayıcı yavaş özetini tutar, eskisini
- * siler. Kod bu çağrıdan sonra cihazda saklanmaz — çağıran yalnız "oluşturuldu" bilgisini yazar.
- */
-export async function registerLockCode(p: {
-  providerBase: string;
-  keys: KeyProvider;
-  http: Http;
-  code: string;
-  randomBytes?: (n: number) => Uint8Array;
-}): Promise<void> {
-  const proof = await unitProof(p, "revocation-code", { lock_prehash: lockCodePrehash(p.code) });
-  const r = await postJson(p.http, `${base(p.providerBase)}${WP_PATHS.revocationCode}`, { proof });
-  if (r.status === 403 && r.body.error === "unit_revoked")
-    throw new WalletError("unit_revoked", "This wallet has been revoked.");
-  if (r.status !== 200) throw failed("revocation code could not be saved", r.body, r.status);
-}
-
-/**
- * WA-ADR-0002 K3 — yalnız İPUCU: birimin sağlayıcıdaki durumu (imzasız JSON). Cüzdan buna dayanarak hiçbir şey SİLMEZ; silme
- * kararı yalnız imzalı iptal listesiyle verilir (`wiaRevokedByList`). Bilinmeyen birim / ağ hatası fırlatılır.
- */
-export async function unitStatus(p: {
-  providerBase: string;
-  keys: KeyProvider;
-  http: Http;
-  randomBytes?: (n: number) => Uint8Array;
-}): Promise<"active" | "revoked"> {
-  const proof = await unitProof(p, "status");
-  const r = await postJson(p.http, `${base(p.providerBase)}${WP_PATHS.status}`, { proof });
-  if (r.status === 200 && (r.body.status === "active" || r.body.status === "revoked")) return r.body.status;
-  if (r.status === 403 && r.body.error === "unit_revoked") return "revoked";
-  throw failed("wallet status could not be read", r.body, r.status);
-}
-
 /** WIA'nın iptal listesi girişi (ADR-0025 `client_status`); eski WUA'da yok. */
 export function wiaStatusRef(wua: WuaRecord): { uri: string; idx: number } | undefined {
   const c = decodeJwt(wua.jwt).payload as {
@@ -419,10 +61,11 @@ export function wiaStatusRef(wua: WuaRecord): { uri: string; idx: number } | und
 }
 
 /**
- * WA-ADR-0002 K3 / RL4 — silmenin TEK dayanağı: sağlayıcının herkese açık, İMZALI WIA iptal listesi (kimlik servisinin
- * denetlediği listenin aynısı). Listeyi çekmek kimliksizdir (hangi girişin arandığı görünmez); imzacı, pin'li güven listesindeki
- * bir cüzdan sağlayıcı anahtarı olmalıdır — TLS'e tek başına güvenilmez. Kendi WIA girişi INVALID ise `true`. Giriş yoksa (eski
- * WUA) `false`; ağ ya da doğrulama hatası fırlatılır (çağıran silmez, sonraki öne gelişte yeniden dener).
+ * WIA'nın iptal edilip edilmediği — cüzdanın yerel veriyi silme gibi kararlarının TEK dayanağı olması gereken kaynak: sağlayıcının
+ * herkese açık, İMZALI WIA iptal listesi (belge veren kurumların denetlediği listenin aynısı). Listeyi çekmek kimliksizdir
+ * (hangi girişin arandığı görünmez); imzacı, pin'li güven listesindeki bir cüzdan sağlayıcı anahtarı olmalıdır — TLS'e tek
+ * başına güvenilmez. Kendi WIA girişi INVALID ise `true`. Giriş yoksa (eski WUA) `false`; ağ ya da doğrulama hatası fırlatılır
+ * (çağıran silmez, sonra yeniden dener).
  */
 export async function wiaRevokedByList(p: {
   wua: WuaRecord;
@@ -442,13 +85,3 @@ export async function wiaRevokedByList(p: {
   if (ref.idx >= list.bytes.length * 4) return false;
   return statusBitAt(list, ref.idx) === 1;
 }
-
-/** Belge akışlarına verilen KA üretici (obtainCredential). */
-export const keyAttestorFor =
-  (p: { providerBase: string; keys: KeyProvider; http: Http; randomBytes?: (n: number) => Uint8Array }) =>
-  (jwks: PublicJwk[]) =>
-    requestKeyAttestation({ ...p, jwks });
-
-/** P4-2 App Attest istemci verisi: meydan okuma + birim anahtarı parmak izi (sağlayıcı aynı biçimle doğrular). */
-export const unitClientData = (challenge: string, unitThumbprint: string) =>
-  new TextEncoder().encode(`tamga-unit|${challenge}|${unitThumbprint}`);

@@ -1,10 +1,10 @@
 {
   "name": "@tamga-network/wallet-core",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
-  "description": "Tamga Wallet çekirdeği (SPEC-WALLET-0001, SPEC-PROTO-0001/0002): KeyProvider soyutlaması, OpenID4VCI alma, SD-JWT VC yerel doğrulama ve sunum (KB-JWT), cüzdan deposu. Node ve React Native (Hermes) uyumlu: node:crypto/Buffer/jose yok; @noble ile saf TS.",
+  "description": "Cüzdan çekirdeği (SPEC-WALLET-0001, SPEC-PROTO-0001/0002): KeyProvider soyutlaması, OpenID4VCI alma, SD-JWT VC yerel doğrulama ve sunum (KB-JWT), cüzdan deposu. Node ve React Native (Hermes) uyumlu: node:crypto/Buffer/jose yok; @noble ile saf TS.",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts"

@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-02 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-06 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -189,21 +189,21 @@ release. Where proofs are not supported, the presentation is made in the usual w
 The set of roles comes from the EU ARF. Each national list reserves a place for each of these roles; the place exists even
 when empty. The state roles Tamga holds today are provisional and carried out on behalf of the state.
 
-| Role (EU name)                                     | Definition                                                                                    | Today                                                                         | When the state joins                               |
-| -------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------- |
-| Trusted List Scheme Operator                       | Compiles, signs and publishes the national trusted list                                       | Tamga, provisionally on behalf of the state                                   | The national authority or a body it designates     |
-| Registrar                                          | Registers issuers, verifiers and wallet providers; grants no legal authority                  | Tamga, provisionally                                                          | The state registrar                                |
-| National root certification authority              | The root of institutional certificates                                                        | Tamga, provisionally; the root identifier does not change at hand-over        | The state root or a qualified certificate provider |
-| Access and registration certificate provider       | Issues access and registration certificates to verifiers                                      | Tamga, provisionally                                                          | The state                                          |
-| Person Identification Data Provider (PID Provider) | Issues person identity data at the highest assurance level                                    | Empty; Tamga does not take this role                                          | The state                                          |
-| Provisional identity credential provider           | Issues an identity credential after remote identity verification while no PID Provider exists | The Tamga identity service                                                    | Taken over by the PID Provider                     |
-| Attestation Provider                               | Issues electronic attestations of attributes                                                  | Universities, ticket sellers                                                  | Institutions and public bodies                     |
-| Authentic Source                                   | The system that owns the data                                                                 | The institution's own system                                                  | The same, plus public sources                      |
-| Wallet Provider                                    | Provides the wallet; signs wallet instance attestations and key attestations                  | The provider of Tamga Wallet (the network's first wallet; a separate product) | Every provider that follows the rules              |
-| Relying Party                                      | Requests and verifies credentials; registered and limited in scope                            | Employers, websites, institutions                                             | The same                                           |
-| Intermediary                                       | Requests and verifies credentials on behalf of a relying party                                | Tamga Verify                                                                  | The same                                           |
-| Holder                                             | Carries the credential in the wallet and decides whom to show it to                           | Students, graduates, users                                                    | Citizens                                           |
-| Ledger operator                                    | Runs a node of the shared ledger                                                              | None                                                                          | At least two independent institutions              |
+| Role (EU name)                                     | Definition                                                                                    | Today                                                                                                                                             | When the state joins                               |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Trusted List Scheme Operator                       | Compiles, signs and publishes the national trusted list                                       | Tamga, provisionally on behalf of the state                                                                                                       | The national authority or a body it designates     |
+| Registrar                                          | Registers issuers, verifiers and wallet providers; grants no legal authority                  | Tamga, provisionally                                                                                                                              | The state registrar                                |
+| National root certification authority              | The root of institutional certificates                                                        | Tamga, provisionally; the root identifier does not change at hand-over                                                                            | The state root or a qualified certificate provider |
+| Access and registration certificate provider       | Issues access and registration certificates to verifiers                                      | Tamga, provisionally                                                                                                                              | The state                                          |
+| Person Identification Data Provider (PID Provider) | Issues person identity data at the highest assurance level                                    | Empty; Tamga does not take this role                                                                                                              | The state                                          |
+| Provisional identity credential provider           | Issues an identity credential after remote identity verification while no PID Provider exists | The Tamga identity service                                                                                                                        | Taken over by the PID Provider                     |
+| Attestation Provider                               | Issues electronic attestations of attributes                                                  | Universities, ticket sellers                                                                                                                      | Institutions and public bodies                     |
+| Authentic Source                                   | The system that owns the data                                                                 | The institution's own system                                                                                                                      | The same, plus public sources                      |
+| Wallet Provider                                    | Provides the wallet; signs wallet instance attestations and key attestations                  | The organisation that offers the wallet (the first is Tamga Wallet; a separate product). The network does not run wallet providers; it lists them | Every provider that follows the rules              |
+| Relying Party                                      | Requests and verifies credentials; registered and limited in scope                            | Employers, websites, institutions                                                                                                                 | The same                                           |
+| Intermediary                                       | Requests and verifies credentials on behalf of a relying party                                | Tamga Verify                                                                                                                                      | The same                                           |
+| Holder                                             | Carries the credential in the wallet and decides whom to show it to                           | Students, graduates, users                                                                                                                        | Citizens                                           |
+| Ledger operator                                    | Runs a node of the shared ledger                                                              | None                                                                                                                                              | At least two independent institutions              |
 
 Separation rule: Tamga does not hold institutions' signing keys in any service it hosts. Even when the issuing service runs
 at Tamga, the signing key of the credential belongs to the institution. What each role does, its obligations and what it
@@ -215,36 +215,47 @@ needs are on the **Roles** page ([[FW-ROLE-0001]]).
 
 ### 4.1 Components
 
-| Component                 | Task                                                                                     | Owner                                                                                            |
-| ------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Tamga Wallet              | Holds and presents the person's credentials; manages history and pseudonyms              | Tamga Wallet (the network's first wallet; a separate, open-source product)                       |
-| Wallet provider           | Registers wallet units; signs wallet instance attestations and key attestations          | Tamga Wallet (provisionally on the network's infrastructure; moving to the wallet's own address) |
-| Issuing service           | Issues credentials with OpenID4VCI on behalf of institutions; publishes revocation lists | Hosted service (an institution may run its own)                                                  |
-| Institution Console       | Where institution staff manage credentials, records, API keys and users                  | Hosted service                                                                                   |
-| Identity service          | Issues the provisional identity credential; derives the pseudonym seed                   | Tamga, provisionally                                                                             |
-| Tamga Verify              | Requests and verifies credentials on behalf of relying parties                           | Hosted service (a relying party may run its own software)                                        |
-| Trusted-list publisher    | Signs and publishes the list of lists, the national list and the anchor log              | Tamga, provisionally                                                                             |
-| Credential type catalogue | Publishes credential type definitions and schemas as immutable files                     | Tamga                                                                                            |
-| Open-source packages      | Libraries for credential formats, reading trusted lists, issuing and verifying           | Tamga (Apache-2.0)                                                                               |
+| Component                 | Task                                                                                                     | Owner                                                                                                                                                                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Wallet                    | Holds and presents the person's credentials; manages history and pseudonyms                              | The organisation that offers the wallet; the network's first wallet is Tamga Wallet (a separate, open-source product)                                                                                                    |
+| Wallet provider           | Registers wallet units; signs wallet instance attestations and key attestations                          | The organisation that offers the wallet; the network does not run it but lists it in the trusted list (Tamga Wallet's provider is run by the wallet's operator at `provider.tamgawallet.com`) |
+| Issuing service           | Issues credentials with OpenID4VCI on behalf of institutions; publishes revocation lists                 | Hosted service (an institution may run its own)                                                                                                                                                                          |
+| Institution Console       | Where institution staff manage credentials, records, API keys and users                                  | Hosted service                                                                                                                                                                                                           |
+| Identity service          | Issues the provisional identity credential; derives the pseudonym seed                                   | Tamga, provisionally                                                                                                                                                                                                     |
+| Tamga Verify              | Requests and verifies credentials on behalf of relying parties                                           | Hosted service (a relying party may run its own software)                                                                                                                                                                |
+| Trusted-list publisher    | Signs and publishes the list of lists, the national list and the anchor log                              | Tamga, provisionally                                                                                                                                                                                                     |
+| Credential type catalogue | Publishes credential type definitions and schemas as immutable files                                     | Tamga                                                                                                                                                                                                                    |
+| Open-source packages      | Libraries for credential formats, reading trusted lists, issuing and verifying                           | Tamga (Apache-2.0)                                                                                                                                                                                                       |
+| Sandbox                   | The single test network, running under the same rules as the real network; it has its own root and lists | Tamga                                                                                                                                                                                                                    |
 
 The libraries are open; the hosted services are run by the operator. An institution can build its own issuing or
 verification software with the packages; the rules are the same.
 
+The network does not run any wallet's app, wallet provider or website; it recognises wallets through the wallet provider
+entries in the trusted list. There is a single sandbox and it belongs to the network: wallet, institution and relying party
+developers try the network's rules there. In the sandbox too the wallet runs its own wallet provider; a wallet developer has
+their provider registered in the sandbox list and tests the wallet against the sandbox's sample institutions, identity
+service and verifier.
+
 ### 4.2 Service addresses
 
-| Address                              | Service                                                    |
-| ------------------------------------ | ---------------------------------------------------------- |
-| `tamga.network`                      | Website; root key fingerprints on the `/trust-anchor` page |
-| `arf.tamga.network`                  | This framework and its annexes                             |
-| `docs.tamga.network`                 | Developer documentation                                    |
-| `trust.tamga.network`                | Trusted lists, anchor log, archive                         |
-| `schemas.tamga.network`              | Credential type catalogue                                  |
-| `issuer.tamga.network/{institution}` | Hosted issuing service                                     |
-| `status.tamga.network`               | Revocation (status) lists                                  |
-| `console.tamga.network`              | Institution Console                                        |
-| `verify.tamga.network`               | Tamga Verify                                               |
-| `wallet.tamga.network`               | Wallet provider                                            |
-| `id.tamga.network`                   | Identity service                                           |
+| Address                              | Service                                                                                                         |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `tamga.network`                      | Website; root key fingerprints on the `/trust-anchor` page                                                      |
+| `arf.tamga.network`                  | This framework and its annexes                                                                                  |
+| `docs.tamga.network`                 | Developer documentation                                                                                         |
+| `trust.tamga.network`                | Trusted lists, anchor log, archive                                                                              |
+| `schemas.tamga.network`              | Credential type catalogue                                                                                       |
+| `issuer.tamga.network/{institution}` | Hosted issuing service                                                                                          |
+| `status.tamga.network`               | Revocation (status) lists                                                                                       |
+| `console.tamga.network`              | Institution Console                                                                                             |
+| `verify.tamga.network`               | Tamga Verify                                                                                                    |
+| `id.tamga.network`                   | Identity service                                                                                                |
+| `*.sandbox.tamga.network`            | Sandbox: test copies of the same services (`trust.sandbox`, `issuer.sandbox`, `verify.sandbox`, `id.sandbox` …) |
+
+Only the network's own services run on the network's domains; the network operates no wallet provider. Each wallet's provider
+is operated by the organisation that offers the wallet, on its own domain (Tamga Wallet's is `provider.tamgawallet.com`); the
+network lists it in the trust list.
 
 A domain name is the address of a service, not an identity. When an institution moves to its own domain, the address in
 its entry changes; the institution's identifier and the credentials it issued do not.

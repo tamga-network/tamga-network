@@ -4,7 +4,7 @@ title: "Get started"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-03
+last_updated: 2026-10-06
 summary: >
   An introduction for developers: the four paths in Tamga (verifier, issuer, wallet developer, network/node operator),
   which package to install, which addresses to use, how to set up a local development environment and what is ready today.
@@ -92,7 +92,6 @@ interfaces may change before `1.0`. Each release is built from this repository b
 | `https://issuer.tamga.network/{institution}` | hosted issuer service (OpenID4VCI + `/api/v1`) | issuer, wallet |
 | `https://status.tamga.network/{opaque}` | status lists (Token Status List) | verifier |
 | `https://verify.tamga.network` | Tamga Verify: hosted verifier + page kit (`/tamga-verifier.js`) | website, verifier |
-| `https://wallet.tamga.network` | wallet provider: Wallet Instance Attestation (WIA) | wallet |
 | `https://id.tamga.network` | provisional identity credential service | wallet |
 
 ## What is ready today?

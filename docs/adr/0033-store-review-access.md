@@ -4,9 +4,10 @@ title: "Mağaza inceleme kodu"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 summary: >
-  Apple ve Google inceleyicileri Tamga Wallet'ın kimlik akışını gerçek bir Türk kimlik belgesi olmadan deneyebilmelidir.
+  Apple ve Google inceleyicileri, güven listesindeki bir cüzdanın kimlik akışını gerçek bir Türk kimlik belgesi olmadan
+  deneyebilmelidir. İnceleme kodu ağın hizmetidir ve listedeki her cüzdana aynı koşullarla açıktır.
   Karar: süreli, tek kullanımlık bir inceleme kodu; kod girilince kimlik servisi yalnız o oturum için sahte doğrulama
   sağlayıcısını kullanır ve ayrı bir deneme imzacısıyla, gerçek doğrulayıcıların hiçbir politikasında geçmeyen bir deneme kimlik
   belgeyi verir. Kimlik gerektirmeyen yollar (bilet, Tamga Verify, "Tamga ile giriş yap") kodsuz denenir.
@@ -25,7 +26,7 @@ yolu görmez; kod bir kez kullanılınca biter.
 
 - Apple App Review ve Google Play incelemesi, uygulamanın bütün akışlarının denenebilmesini ister; gerektiğinde inceleme notunda
   deneme hesabı ya da "demo modu" verilir.
-- Tamga Wallet'ın kimlik akışı ([[SPEC-ID-0003]] §9) gerçek kimlik belgesi + canlılık + yüz eşleştirme ister;
+- Cüzdanın kimlik akışı ([[SPEC-ID-0003]] §9) gerçek kimlik belgesi + canlılık + yüz eşleştirme ister;
   bu bir [[t:identity-proofing]] adımıdır. Canlıda sahte sağlayıcı kapalıdır (`TAMGA_IDV_DIDIT_FAKE` yalnız açıkça açılırsa; GT1: canlıda gerçek
   kimlik yok sayılmaz).
 - Kimlik gerektirmeyen akışlar kodsuz denenebilir: bilet alma ve kapıda gösterme, Tamga Verify örnek politikaları, "Tamga ile
@@ -102,7 +103,7 @@ bütün yolları denemesini sağlayan tek seçenek. Bedeli: kimlik servisinde ik
 | 2 | `ops` (operatör deposu) | `review-code.ts` (üret / listele / iptal) |
 | 3 | `tamga-network` güven listesi | `DEMO` deneme imzacısı kaydı; kurum belge verenlerinin eşleştirme politikası onu dışlar |
 | 4 | `apps/verify` | "inceleme" politikaları (deneme imzacısını kabul eden) |
-| 5 | Tamga Wallet (ayrı depo) | "DEMO" rozeti (belge `verification_method: review-demo`) |
+| 5 | Cüzdan (ilki Tamga Wallet; ayrı depo) | "DEMO" rozeti (belge `verification_method: review-demo`) |
 | 6 | Belgeler | SPEC-ID-0003 §9, mağaza inceleme notu |
 
 Tahmini iş: 2–3 gün (testlerle).
@@ -146,3 +147,11 @@ kimlik akışıdır: inceleme kodu → DEMO kimlik belgesi → Tamga Verify ince
 inceleyiciye doğrudan bağlantı verilir. Karar (D seçeneği, K1–K3, K5, RV1–RV3) değişmez.
 Aynı tarihte sahte kimlik sağlayıcı gerçek ağda kod kilidiyle tamamen kapandı (`TAMGA_IDV_DIDIT_FAKE=1` ile servis açılmaz);
 inceleme kodu yolu bundan bağımsızdır.
+
+# Uygulama notu — 2026-10-06: her cüzdana açık ağ hizmeti
+
+İnceleme kodu kimlik servisinin, yani ağın hizmetidir; tek bir cüzdana ait değildir ([[ADR-0042]] K6). Güven listesinde kayıtlı
+her cüzdan sağlayıcısı, kendi uygulamasının mağaza incelemesi için aynı koşullarla kod ister: kod proje yönetimi onayıyla
+üretilir ve cüzdana iletilir, cüzdan onu kendi inceleme notuna yazar. K1–K5 ve RV1–RV3 her cüzdan için aynıdır; deneme belgesi
+hangi cüzdana verilirse verilsin yalnız inceleme politikalarında geçer. DEMO işaretini göstermek ([[SPEC-ID-0003]] §9) her
+cüzdanın işidir.

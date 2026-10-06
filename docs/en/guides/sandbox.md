@@ -4,10 +4,11 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 summary: >
   End-to-end testing on sandbox.tamga.network, the test network kept apart from the real network: addresses, pinning the
-  trust anchor, connecting a wallet to the sandbox, getting credentials with example people, presenting them to example
+  trust anchor, connecting a wallet to the sandbox, registering your own wallet provider in the sandbox list as a wallet
+  developer, getting credentials with example people, presenting them to example
   verifiers, trying revocation and suspension, trying your institution as a test institution, real identity verification
   steps with your own identity, rules and resets.
 translation_of: GUIDE-0013
@@ -54,9 +55,11 @@ only the addresses and the trust anchor.
 | `https://issuer.sandbox.tamga.network/{institution}` | issuance service of the example institutions ([[t:OpenID4VCI]]) | `issuer.tamga.network` |
 | `https://status.sandbox.tamga.network` | status lists (Token Status List) | `status.tamga.network` |
 | `https://verify.sandbox.tamga.network` | test verifier ([[t:OpenID4VP]]) | `verify.tamga.network` |
-| `https://wallet.sandbox.tamga.network` | test wallet provider (Wallet Instance Attestation) | `wallet.tamga.network` |
 | `https://id.sandbox.tamga.network` | identity and contact credentials; quick trial (made-up person) or verification with your real identity | `id.tamga.network` |
 | `https://console.sandbox.tamga.network` | Institution Console — only for test institutions opened in the sandbox | `console.tamga.network` |
+
+The sandbox has no wallet provider of its own: the network runs no wallet provider, and wallet developers register their own
+provider in the sandbox list (§2, [[ADR-0042]]).
 
 Example institutions, people and permissions come from seed data and return to their initial state at every reset; the
 example institutions have no console. The Institution Console serves only the test institutions you open (§9, [[ADR-0041]]).
@@ -85,27 +88,45 @@ list (absent means `production`); stop if it does not match ([[SPEC-TRUST-0001]]
 
 ## 2. Connect the wallet to the sandbox
 
-**Tamga Wallet:** Settings → Developer → **Network: Tamga Network | Sandbox**. When the sandbox is selected the wallet switches
-to the sandbox trust root and the addresses above; a "SANDBOX · test" strip appears at the top of every screen. Trust in the
-real network and in the sandbox never mixes.
+There is a single sandbox and it belongs to the network: wallet developers use the same sandbox as institutions and
+verifiers; there is no separate wallet sandbox ([[ADR-0042]]). The network runs no wallet provider; in the sandbox too you run
+your own wallet provider.
 
-**Another wallet:** follow the steps in [[GUIDE-0005]] with the sandbox addresses:
+**Connect your wallet to the sandbox:** follow the steps in [[GUIDE-0005]] with the sandbox addresses:
 
 | Setting | Sandbox value |
 |---|---|
 | trusted lists | `https://trust.sandbox.tamga.network` + sandbox pins + `environment: "sandbox"` |
-| wallet provider (WIA / WUA) | `https://wallet.sandbox.tamga.network` |
+| wallet provider (WIA / WUA) | the test address of your own wallet provider (must be registered in the sandbox list; see below) |
 | identity credential service | `https://id.sandbox.tamga.network` |
 | issuer directory | `issuers[]` in the sandbox national list (addresses on `issuer.sandbox.tamga.network`) |
 
 Make the sandbox visible on screen (`ADR-0038/SB4`) and do not mix credentials received in the sandbox with real network
-credentials.
+credentials. You can switch between the real network and the sandbox with a developer setting you offer; keep the trust roots
+and credentials of the two networks apart. For example, in Tamga Wallet, the network's first wallet, the setting is under
+Settings → Developer → **Network**.
+
+### Register your wallet provider in the sandbox list
+
+As on the real network, the sandbox issuers and identity service accept a wallet instance attestation (WIA) and key
+attestation (KA) only when they are signed by a wallet provider registered in the list. So before you try your wallet, your
+own provider must be registered under `wallet_providers[]` in the sandbox list:
+
+1. Generate a separate provider signing key for testing; do not use your real network key in the sandbox.
+2. Send your provider's address, its signing certificate and your wallet solution's name (`solution_id`) to project
+   management. Today registration is done by hand, with project management approval.
+3. Once your entry is published in the sandbox list, try your wallet end to end with the sandbox's example institutions
+   (§3), identity service (§5, §8) and example verifiers (§6).
+
+Self-registration of wallet providers, and an automatic conformance test in which the sandbox tries the wallet at the address
+you give against the network's rules and reports back, are later stages and need their own decision. Until then, run the
+[[GUIDE-0009|conformance tests]] in your own environment.
 
 ## 3. Example institutions and credential types
 
 ::: warning About the institution names
-Institution names are used only to make this test environment realistic; there is no relationship or agreement with these
-institutions. The credentials here are signed with a test key and are not valid anywhere. The institutions' logos are not used.
+Institution names are used to make this test environment realistic. İstanbul Bilgi Üniversitesi is our pilot partner; there is
+no relationship or agreement with Bubilet or Paribu Cineverse. The credentials here are signed with a test key and are not valid anywhere. The institutions' logos are not used.
 :::
 
 | Institution | Credential types (`vct`) |
@@ -165,8 +186,8 @@ same page.
 | `identity` | event entry with the identity credential |
 
 To try your own verifier: connect it to the sandbox list and the sandbox pins, then present credentials received in the
-sandbox. You can open your institution in the sandbox yourself (§9); verifiers and wallet providers adding themselves to the
-sandbox list is a later stage.
+sandbox. You can open your institution in the sandbox yourself (§9); today you register your wallet provider by request to project
+management (§2). Verifiers and wallet providers adding themselves to the sandbox list is a later stage.
 
 ## 7. Try revocation and suspension
 
@@ -240,4 +261,4 @@ phase.
 
 ## Related
 
-[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]]
+[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]]

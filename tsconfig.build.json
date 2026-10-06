@@ -25,6 +25,9 @@
     },
     {
       "path": "packages/wallet-core/tsconfig.build.json"
+    },
+    {
+      "path": "packages/zk/tsconfig.build.json"
     }
   ]
 }

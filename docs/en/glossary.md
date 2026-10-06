@@ -65,7 +65,7 @@ page gathers the same terms in reading order.
 
 **Verifier** — The party that checks a presented credential: signature, issuer in the trust list, status and policy. Also called relying party.
 
-**Wallet provider** — The organisation that offers a wallet and signs wallet and key attestations. Tamga Wallet is the network's first wallet.
+**Wallet provider** — The organisation that offers a wallet, registers its wallet units and signs wallet and key attestations. Each wallet runs its own provider; the network does not run one, it lists them in the trusted list.
 
 ## Credentials
 

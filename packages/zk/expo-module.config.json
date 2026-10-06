@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["TamgaZkModule"]
+  },
+  "android": {
+    "modules": ["network.tamga.zk.TamgaZkModule"]
+  }
+}

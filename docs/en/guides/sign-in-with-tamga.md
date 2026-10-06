@@ -4,7 +4,7 @@ title: "Add “Sign in with Tamga”"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 summary: >
   Adding sign-up and sign-in with Tamga to a website: the `@tamga-network/verifier/web` kit on the page (QR code / open the
   wallet on the phone), fetching the result from the verifier on the server and opening a session, and passkey sign-in without
@@ -16,7 +16,7 @@ source_version: 1.0.0
 
 # Add "Sign in with Tamga" to your website
 
-This guide is for developers who want to add sign-up and sign-in with Tamga Wallet to a website. Tamga's hosted
+This guide is for developers who want to add sign-up and sign-in with a wallet that follows the network's rules (e.g. Tamga Wallet) to a website. Tamga's hosted
 [[t:verifier]] (Tamga Verify) does the verification; you are left with a page kit and a few server endpoints.
 
 **When to read:** when you want password-free sign-up and sign-in with a phone on your site. Take a look at [[GUIDE-0000]]
@@ -28,7 +28,7 @@ sandbox is live; addresses and the test wallet setting are in [[GUIDE-0013]]). T
 ## How it works
 
 1. **Sign-up (once).** Your site starts a request with a *policy* (e.g. "given name, family name" + [[t:pseudonym]]). On a
-   computer a QR code appears; on a phone, an "Open in Tamga Wallet" button. In the wallet the person sees **only these
+   computer a QR code appears; on a phone, an "Open in your wallet" button. In the wallet the person sees **only these
    fields** and the line "a pseudonym for this site", and approves.
 2. **Verification.** The verifier checks the [[t:credential]]: signature, [[t:trust-list]], [[t:revocation]],
    [[t:holder-binding]]. Your page watches the result; on `ACCEPTED` it sends the presentation identifier (`presentation_id`)

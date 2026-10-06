@@ -1,6 +1,6 @@
 {
   "name": "@tamga-network/trust-publisher",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Faz B güven listesi yayıncısı (provisional TLSO): registry/ kaynaklarından lotl.jws, tl-<cc>.jws, anchors.jsonl üretir, imzalar, arşivler, doğrular."

@@ -101,18 +101,20 @@
   "wallet_providers": [
     {
       "provider_id": "TAMGA-WP-1",
-      "legal_name": "Tamga Network",
-      "wua_signing_certs": ["wallet-provider"],
+      "legal_name": "Brosgrup",
+      "wua_signing_certs": [],
+      "lote_supply_point": "https://provider.tamgawallet.com",
       "solutions": [
         {
           "solution_id": "tamga-wallet-expo",
-          "min_version": "0.1.0",
-          "status": "ACTIVE",
+          "min_version": "1.0.0",
+          "status": "RESERVED",
           "security_level": "W1",
-          "note": "Deviation S-9: Expo Go, software key. W2 in the pilot."
+          "lote_service_name": "Tamga Wallet (tamga-wallet-expo)"
         }
       ],
-      "status": "ACTIVE"
+      "status": "RESERVED",
+      "note": "ADR-0042: Tamga Wallet's provider is operated by Brosgrup; reserved until it supplies its own signing certificate."
     }
   ],
   "pid_providers": [],

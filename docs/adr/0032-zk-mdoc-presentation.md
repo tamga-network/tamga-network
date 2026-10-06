@@ -4,7 +4,7 @@ title: "Sıfır bilgi ispatı (ZK)"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 summary: >
   Cüzdan, kurumların ES256 imzalı mdoc belgelerini DEĞİŞTİRMEDEN, bu belgeler hakkında Longfellow ZK ile sıfır bilgi
   ispatı üretir (ilk yüklem: 18 yaş üstü). Doğrulayıcı yalnız ispatlanan alanı ve belge vereni görür; iki gösterim birbirine
@@ -106,9 +106,22 @@ hâlde ispat ~7× yavaşlar (ölçüm).
 | Aşama | İş | Önkoşul |
 |---|---|---|
 | 1 | ✅ Masaüstünde gerçek ispat + doğrulama, ölçümler, negatif testler, Node köprüsü prototipi (2026-10-01) | — |
-| 2 | Cüzdan: Rust çekirdeği → UniFFI → Expo native modülü; ispat üretimi | Mağaza derlemesi (Z1) |
+| 2a | ✅ `@tamga-network/zk`: ispatçı paketi — çekirdek (DCQL → öğeler, devre seçimi ve ZK2 denetimi, ZkDocument), masaüstü ispatçı (`/node`, Rust alt süreç), telefon modülü iskeleti (`/react-native`, Expo; Rust C ABI / JNI); uçtan uca test: paketin ispatı ağın doğrulayıcısından geçer (2026-10-06) | Aşama 1, 3 |
+| 2b | Telefon kütüphanelerinin derlenmesi (Android NDK, iOS xcframework) ve cihazda ölçüm | Android NDK; macOS |
+| 2c | Cüzdan bağlantısı: `wallet-core` sunum akışında `mso_mdoc_zk` sorgusunu ispatçıya yönlendirme; Tamga Wallet'ta etkinleştirme | Mağaza derlemesi (Z1) |
 | 3 | ✅ `@tamga-network/verifier`: `mso_mdoc_zk` doğrulama (paketle gelen WASM, `/zk`); devre özetleri güven listesinde (`lotl.zk_circuits`); politika `format: "mso_mdoc_zk"`; Tamga Verify `age-over-18-zk` (2026-10-01) | Aşama 1 |
 | 4 | Taşıma (DCQL + DC API), AB örnek doğrulayıcıyla karşılıklı test; `/docs/selective-disclosure` ve SPEC-WALLET-0001 güncellemesi | Aşama 3 |
+
+## İspatçı paketi (Aşama 2)
+
+İspat üretimi ağın açık paketidir (`@tamga-network/zk`), cüzdanın değil: ağ kurallarına uyan her cüzdan aynı ispatçıyı kullanır
+([[ADR-0035]]). Paket üç girişlidir: saf TS çekirdek (React Native uyumlu) DCQL `mso_mdoc_zk` sorgusunu ispatlanacak öğelere
+çevirir, güven listesinden devreyi seçer ve baytlarını özetle denetler (ZK2), ispatı TS13 `ZkDocument` olarak paketler; `/react-native`
+telefonda yerel ispatçıdır (Expo modülü `TamgaZk`, Rust çekirdeği C ABI ile — Android'de JNI); `/node` aynı Rust kodunu masaüstünde alt
+süreç olarak çalıştırır (test, uyum denemesi). Rust çekirdeği doğrulayıcıyla aynı upstream commit'e sabitlidir. Cüzdan önce o oturumun
+olağan, cihaz imzalı DeviceResponse'unu üretir (donanım anahtarı ve telefon kilidi — WL11 aynen); ispatçı bu yanıtı girdi olarak alır,
+doğrulayıcıya yalnız ispat gider. İspatçı yoksa (`available() === false`) sunum olağan yoldan yapılır (ZK5). Devre dosyaları uygulamayla
+gelebilir ya da ağdan indirilebilir; her durumda listedeki özetle denetlenir.
 
 ## Doğrulayıcı (Aşama 3)
 

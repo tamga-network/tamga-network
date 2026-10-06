@@ -437,8 +437,8 @@
   },
   "wallet-provider": {
     "label": "wallet provider",
-    "en": "The organisation that offers a wallet and signs wallet and key attestations. Tamga Wallet is the network's first wallet.",
-    "tr": "Cüzdanı sunan ve cüzdan ile anahtar kanıtlarını imzalayan kuruluş. Tamga Wallet ağın ilk cüzdanıdır.",
+    "en": "The organisation that offers a wallet, registers its wallet units and signs wallet and key attestations. Each wallet runs its own provider; the network does not run one, it lists them in the trusted list.",
+    "tr": "Cüzdanı sunan, cüzdan birimlerini kaydeden ve cüzdan ile anahtar kanıtlarını imzalayan kuruluş. Her cüzdan kendi sağlayıcısını işletir; ağ sağlayıcı işletmez, güven listesinde listeler.",
     "tr_label": "cüzdan sağlayıcısı"
   },
   "wallet-unit": {

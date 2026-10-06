@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 356 kodlanmış değişmez, 48 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 360 kodlanmış değişmez, 49 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -376,6 +376,18 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0041/TI4` | Kimlik numarası sağlama kuralını geçen 11 haneli bir sayı taşıyan test kaydı reddedilir; her kayıt ekranı gerçek kişi verisi girilmemesi için uyarır. |
 | `ADR-0041/TI5` | Test kurumları ve onlara ait hesap, kayıt, belge kaydı ve sertifikalar gece sıfırlamasında silinir ve sandbox listesinden çıkar. |
 | `ADR-0041/TI6` | Test kurumu açma ve kullanma sınırları IP adresi kullanılmadan uygulanır. |
+
+
+## ADR-0042
+
+*"Ağ ve cüzdanlar: ağ cüzdan işletmez"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0042/NW1` | Ağ hiçbir cüzdanın uygulamasını, cüzdan sağlayıcısını ya da sitesini işletmez; cüzdanları yalnız güven listesindeki kayıtlarıyla tanır. |
+| `ADR-0042/NW2` | Ağın alan adlarında cüzdana ait hizmet çalışmaz. |
+| `ADR-0042/NW3` | Sandbox tek test ortamıdır; sandbox'ta cüzdan sağlayıcıyı cüzdan işletir ve sandbox listesine kaydolur. |
+| `ADR-0042/NW4` | Ağın arayüzleri ve paketleri cüzdan adını sabit yazmaz; gerekirse güven listesindeki kayıt verisinden alır. |
 
 
 ## ARCH-0003
@@ -792,12 +804,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 356 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 360 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, ZK.
+AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, NW, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-05 (`scripts/sync-invariants.mjs`). Toplam 356 kodlanmış değişmez, 48 dokümanda.
+**Üretilen dosya** — 2026-10-06 (`scripts/sync-invariants.mjs`). Toplam 360 kodlanmış değişmez, 49 dokümanda.

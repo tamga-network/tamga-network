@@ -4,7 +4,7 @@ title: "Wallet and key attestations"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 summary: >
   Instead of a single 30-day WUA, the EU TS3 model: a Wallet Instance Attestation (WIA) living less than 24 hours, with a fresh key
   and a fresh status list entry for every credential transaction, plus a key attestation (KA, `key_attestation`) describing where
@@ -158,3 +158,10 @@ These notes do not change the decision; they record how the reference wallet (Ta
 # Status
 
 **Accepted — 2026-09-29.** Approved by project management (H1 plan, P3). DECISIONS: D-CRED-7.
+
+> **Change (2026-10-06, [[ADR-0042]]):** the wallet provider is run by the organisation that offers the wallet; the network runs
+> no wallet provider and lists them in the trusted list (`wallet_providers[]`). `wallet.tamga.network` in the Context and
+> `apps/wallet-provider` in the Consequences are Tamga Wallet's wallet provider: its code moved to the wallet's repository, and
+> the copy in this repository and `wallet.tamga.network` were removed from the network on 2026-10-06; the provider is operated
+> by the wallet's operator at `provider.tamgawallet.com`. The decision (K1–K3, WIA1–WIA4) does not change: the WIA and KA format and their verification
+> (`@tamga-network/trust`) are network rules and are the same for every wallet provider.

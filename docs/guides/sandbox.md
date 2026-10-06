@@ -4,10 +4,10 @@ title: "Sandbox: test ağı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 summary: >
   Gerçek ağdan ayrı test ağı sandbox.tamga.network ile uçtan uca deneme: adresler, güven çapasını sabitlemek, cüzdanı
-  sandbox'a bağlamak, örnek kişilerle belge almak, örnek doğrulayıcılarda göstermek, iptal ve askı durumlarını denemek,
+  sandbox'a bağlamak, cüzdan geliştiricisi olarak kendi cüzdan sağlayıcını sandbox listesine kaydettirmek, örnek kişilerle belge almak, örnek doğrulayıcılarda göstermek, iptal ve askı durumlarını denemek,
   kurumunu test kurumu olarak denemek, gerçek kimliğinle kimlik doğrulama adımları, kurallar ve sıfırlama.
 ---
 
@@ -51,9 +51,11 @@ Sandbox, gerçek ağın adres düzenini `sandbox` alt adıyla tekrarlar. Bir cü
 | `https://issuer.sandbox.tamga.network/{kurum}` | örnek kurumların belge verme servisi ([[t:OpenID4VCI]]) | `issuer.tamga.network` |
 | `https://status.sandbox.tamga.network` | iptal listeleri (Token Status List) | `status.tamga.network` |
 | `https://verify.sandbox.tamga.network` | test doğrulayıcısı ([[t:OpenID4VP]]) | `verify.tamga.network` |
-| `https://wallet.sandbox.tamga.network` | test cüzdan sağlayıcısı (Wallet Instance Attestation) | `wallet.tamga.network` |
 | `https://id.sandbox.tamga.network` | kimlik ve iletişim belgeleri; hızlı deneme (sahte kişi) ya da gerçek kimlikle doğrulama | `id.tamga.network` |
 | `https://console.sandbox.tamga.network` | Kurum Konsolu — yalnız sandbox'ta açılan test kurumları için | `console.tamga.network` |
+
+Sandbox'ın kendi cüzdan sağlayıcısı yoktur: ağ cüzdan sağlayıcısı işletmez, cüzdan geliştiricileri kendi sağlayıcılarını
+sandbox listesine kaydettirir (§2, [[ADR-0042]]).
 
 Örnek kurumlar, kişiler ve yetkiler tohum verisinden gelir ve her sıfırlamada ilk hâline döner; örnek kurumların konsolu
 yoktur. Kurum Konsolu yalnız sizin açtığınız test kurumlarına hizmet verir (§9, [[ADR-0041]]).
@@ -82,25 +84,43 @@ karşılaştırın (alan yoksa `production` sayılır); eşleşmiyorsa durun ([[
 
 ## 2. Cüzdanı sandbox'a bağlayın
 
-**Tamga Wallet:** Ayarlar → Geliştirici → **Ağ: Tamga Network | Sandbox**. Sandbox seçilince cüzdan sandbox güven köküne ve
-yukarıdaki adreslere geçer; her ekranın üstünde "SANDBOX · test" şeridi görünür. Gerçek ağ ile sandbox güveni karışmaz.
+Sandbox tektir ve ağındır: cüzdan geliştiricileri de kurumlar ve doğrulayıcılarla aynı sandbox'ı kullanır; ayrı bir cüzdan
+sandbox'ı yoktur ([[ADR-0042]]). Ağ cüzdan sağlayıcısı işletmez; sandbox'ta da cüzdan sağlayıcınızı siz işletirsiniz.
 
-**Başka bir cüzdan:** [[GUIDE-0005]]'teki adımları sandbox adresleriyle uygulayın:
+**Cüzdanınızı sandbox'a bağlayın:** [[GUIDE-0005]]'teki adımları sandbox adresleriyle uygulayın:
 
 | Ayar | Sandbox değeri |
 |---|---|
 | güven listeleri | `https://trust.sandbox.tamga.network` + sandbox pinleri + `environment: "sandbox"` |
-| cüzdan sağlayıcısı (WIA / WUA) | `https://wallet.sandbox.tamga.network` |
+| cüzdan sağlayıcısı (WIA / WUA) | kendi cüzdan sağlayıcınızın test adresi (sandbox listesine kayıtlı olmalı; aşağıda) |
 | kimlik belgesi servisi | `https://id.sandbox.tamga.network` |
 | belge veren dizini | sandbox ulusal listesindeki `issuers[]` (adresleri `issuer.sandbox.tamga.network`) |
 
 Sandbox'ı ekranda belli edin (`ADR-0038/SB4`) ve sandbox'ta alınan belgeleri gerçek ağın belgeleriyle karıştırmayın.
+Kullanıcıya sunduğunuz bir geliştirici ayarıyla gerçek ağ ile sandbox arasında geçiş yapabilirsiniz; iki ağın güven kökleri
+ve belgeleri ayrı tutulmalıdır. Örneğin ağın ilk cüzdanı Tamga Wallet'ta bu ayar Ayarlar → Geliştirici → **Ağ** altındadır.
+
+### Cüzdan sağlayıcınızı sandbox listesine kaydettirin
+
+Sandbox'taki belge verenler ve kimlik servisi, gerçek ağdaki gibi yalnız listede kayıtlı bir cüzdan sağlayıcısının
+imzaladığı cüzdan örneği kanıtını (WIA) ve anahtar kanıtını (KA) kabul eder. Bu yüzden cüzdanınızı denemeden önce kendi
+sağlayıcınız sandbox listesinin `wallet_providers[]` bölümüne kayıtlı olmalıdır:
+
+1. Test için ayrı bir sağlayıcı imza anahtarı üretin; gerçek ağdaki anahtarınızı sandbox'ta kullanmayın.
+2. Sağlayıcınızın adresini, imza sertifikasını ve cüzdan çözümünüzün adını (`solution_id`) proje yönetimine iletin. Kayıt
+   bugün elle, proje yönetimi onayıyla yapılır.
+3. Kaydınız sandbox listesinde yayınlandıktan sonra cüzdanınızı sandbox'taki örnek kurumlar (§3), kimlik servisi (§5, §8) ve
+   örnek doğrulayıcılarla (§6) uçtan uca deneyin.
+
+Cüzdan sağlayıcılarının kendi kendine kaydı ve sandbox'ın, verdiğiniz adresteki cüzdanı ağın kurallarına karşı
+kendiliğinden deneyip rapor verdiği otomatik uyum testi sonraki aşamalardır ve ayrı karar ister. O zamana kadar
+[[GUIDE-0009|uyum testlerini]] kendi ortamınızda çalıştırın.
 
 ## 3. Örnek kurumlar ve belge türleri
 
 ::: warning Kurum adları hakkında
-Kurum adları yalnızca gerçekçi bir deneme ortamı için kullanılmıştır; bu kurumlarla bir ilişki ya da anlaşma yoktur. Buradaki
-belgeler test anahtarıyla imzalıdır ve hiçbir yerde geçerli değildir. Kurumların logoları kullanılmaz.
+Kurum adları gerçekçi bir deneme ortamı için kullanılmıştır. İstanbul Bilgi Üniversitesi pilot ortağımızdır; Bubilet ve Paribu
+Cineverse ile bir ilişki ya da anlaşma yoktur. Buradaki belgeler test anahtarıyla imzalıdır ve hiçbir yerde geçerli değildir. Kurumların logoları kullanılmaz.
 :::
 
 | Kurum | Belge türleri (`vct`) |
@@ -160,8 +180,8 @@ sayfada görünür.
 | `identity` | kimlik belgesiyle etkinlik girişi |
 
 Kendi doğrulayıcınızı denemek için: doğrulayıcınızı sandbox listesine ve sandbox pinlerine bağlayın, sandbox'ta alınmış
-belgeleri gösterin. Kurumunuzu sandbox'ta kendiniz açabilirsiniz (§9); doğrulayıcının ve cüzdan sağlayıcısının kendini sandbox
-listesine eklemesi sonraki bir aşamadır.
+belgeleri gösterin. Kurumunuzu sandbox'ta kendiniz açabilirsiniz (§9); cüzdan sağlayıcınızı bugün proje yönetimine başvurarak kaydettirirsiniz
+(§2). Doğrulayıcının ve cüzdan sağlayıcısının kendini sandbox listesine eklemesi sonraki bir aşamadır.
 
 ## 7. İptal ve askıyı deneyin
 
@@ -228,4 +248,4 @@ kurumları, cüzdanın başlattığı ihraç ve test kurumu için API anahtarı 
 
 ## İlgili
 
-[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]]
+[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]]

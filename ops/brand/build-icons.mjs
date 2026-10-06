@@ -37,8 +37,6 @@ function inner(file) {
 }
 const MARK = inner("mark.svg");
 const MONO = inner("mark-mono.svg");
-const SMALL_MONO = { ...inner("mark-small.svg") };
-SMALL_MONO.body = SMALL_MONO.body.replace(/fill="#[0-9A-Fa-f]{6}"/g, 'fill="#FFFFFF"');
 
 /** İşareti `size` karelik tuvale, kenar payı `pad` (oran) ile yerleştirir. */
 function composed({ size, pad, bg, radius = 0, mark = MARK }) {
@@ -53,7 +51,7 @@ function composed({ size, pad, bg, radius = 0, mark = MARK }) {
 const png = (svg, file) => sharp(Buffer.from(svg)).png().toFile(file);
 const flatPng = (svg, file, bg) => sharp(Buffer.from(svg)).flatten({ background: bg }).png().toFile(file);
 
-/** PNG girdili ICO (16/32/48) — tarayıcıların /favicon.ico isteği için. */
+/** PNG girdili ICO (16/32/48) — tarayıcıların /favicon.ico isteği için. Her boyutta tam işaret N1 (2026-10-06 kararı). */
 async function ico(file) {
   const sizes = [16, 32, 48];
   const pngs = await Promise.all(
@@ -65,7 +63,7 @@ async function ico(file) {
             pad: z <= 32 ? 0.08 : 0.12,
             bg: GOK,
             radius: z * 0.2,
-            mark: z <= 32 ? SMALL_MONO : MONO,
+            mark: MONO,
           }),
         ),
       )
@@ -106,7 +104,7 @@ function ogSvg() {
 }
 
 mkdirSync(OUT, { recursive: true });
-// Siteler (2026-10-02 logo: N1, Gök zemin üstünde beyaz işaret; 32 px ve altı sade işaret NS). Cüzdan simgeleri artık
+// Siteler (2026-10-02 logo: N1, Gök zemin üstünde beyaz işaret; 2026-10-06'dan beri her boyutta N1, sade işaret NS kaldırıldı). Cüzdan simgeleri artık
 // Tamga Wallet'ın kendi logosundan, çalışma alanının marka kitinden üretilir (ağ deposu cüzdana yazmaz).
 writeFileSync(join(OUT, "icon.svg"), composed({ size: 100, pad: 0.14, bg: GOK, radius: 20, mark: MONO }));
 writeFileSync(join(OUT, "mark.svg"), readFileSync(join(HERE, "logo/mark.svg")));

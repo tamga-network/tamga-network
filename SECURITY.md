@@ -4,7 +4,8 @@
 
 **Kapsam:** bu depo (`@tamga-network/*` paketleri, `apps/`, güven listesi biçimi, kontratlar) ve çalışan servisler:
 `trust.tamga.network`, `schemas.tamga.network`, `status.tamga.network`, `issuer.tamga.network`, `verify.tamga.network`,
-`wallet.tamga.network`, `id.tamga.network`, `console.tamga.network`.
+`id.tamga.network`, `console.tamga.network`. Ağ cüzdan işletmez (ADR-0042): Tamga Wallet ve cüzdan sağlayıcısı
+(`provider.tamgawallet.com`) bu politikanın kapsamında değildir; onlarla ilgili bulguyu cüzdanın işletmecisine bildirin.
 
 ## Pilottan önce kapanacak bilinen kısayollar
 
@@ -13,7 +14,7 @@ Bunlar bilinçli ve kayıtlı kısayollardır; açık olarak bildirmeye gerek yo
 - **Kurum imza anahtarı Tamga'nın geliştirme ortamında.** Pilotta anahtar kurumun kendi anahtar kasasına (KMS / HSM) geçer;
   eski sertifika iptal edilir.
 - **Cüzdan anahtarları yazılımda** (geliştirme uygulaması). Telefonun güvenli donanımı (Secure Enclave / StrongBox) ve
-  cihaz kanıtı (App Attest / Play Integrity) mağaza sürümüyle zorunlu olur; o zamana kadar cüzdan sağlayıcısı her cüzdanı
+  cihaz kanıtı (App Attest / Play Integrity) mağaza sürümüyle zorunlu olur; o zamana kadar Tamga Wallet'ın cüzdan sağlayıcısı her cüzdanı
   `software` olarak işaretler, doğrulanmamış bir cihaz beyanını kabul etmez.
 - **Güven listesi tek imza anahtarıyla** yayınlanıyor; kaydırmalı ikinci anahtar pilottan önce eklenir.
 - **Bağımsız güvenlik denetimi** henüz yapılmadı.

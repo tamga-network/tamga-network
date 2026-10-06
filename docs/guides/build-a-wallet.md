@@ -4,7 +4,7 @@ title: "Cüzdan geliştirmek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-03
+last_updated: 2026-10-06
 summary: >
   Tamga belgelerini alan, saklayan ve gösteren bir cüzdan geliştirmek: cüzdan sağlayıcısı olarak kayıt, cihaz anahtarları,
   cihaz kanıtı (App Attest, Android anahtar kanıtı), Wallet Unit Attestation (WUA), OpenID4VCI ile belge alma, OpenID4VP ile
@@ -57,7 +57,8 @@ güven listesinde `lotl › wallet_providers[]` altında kayıtlı olmalıdır:
 
 1. Cüzdan çözümü beyanı: platformlar, anahtar deposu seviyesi (asgari W2: cihazın güvenli bölgesi), PIN/biyometri, yedek modeli.
 2. WUA'yı imzaladığınız anahtar listeye eklenir. Kayıt şartları: [Tamga ARF — Ek A §3.2](https://arf.tamga.network/tr/trust-framework).
-3. Kayıt olana kadar Tamga'nın cüzdan sağlayıcısını (`wallet.tamga.network`) kullanarak geliştirebilirsiniz.
+3. Cüzdan sağlayıcısını siz işletirsiniz; ağ cüzdan sağlayıcısı işletmez ([[ADR-0042]]). Gerçek ağa kaydolmadan önce
+   cüzdanınızı sandbox'ta deneyin: kendi sağlayıcınızı sandbox listesine kaydettirin ([[GUIDE-0013]] §2).
 
 ## 3. Cihaz anahtarları
 
@@ -110,26 +111,16 @@ verir. Kanıt doğrulanmadıkça birim yazılım seviyesinde sayılır.
 Birimi ilk kurulumda kaydedin ve kanıtı `deviceEvidence` ile verin:
 
 ```ts
-import { registerUnit, unitClientData, UNIT_REF, fetchHttp } from "@tamga-network/wallet-core";
-
-const { unitId, keyStorage } = await registerUnit({
-  providerBase: "https://wallet.tamga.network",
-  keys,
-  http: fetchHttp,
-  appVersion: "1.0.0",
-  platform: "android 15",
-  deviceEvidence: async ({ challenge, unitThumbprint }) => {
-    if (os === "android") {
-      const chain = keys.keyEvidence(UNIT_REF); // birim anahtarı meydan okumayla üretildi; zincir hazır
-      return chain ? { platform: "android", key_attestation: chain } : undefined;
-    }
-    const hash = base64(sha256(unitClientData(challenge, unitThumbprint)));
-    return { platform: "ios", app_attest: await TamgaKeys.appAttest(hash) };
-  },
+// Birim kaydı ve kanıtların alınması KENDİ cüzdan sağlayıcınızın API'sidir; ağ bunu tanımlamaz (ADR-0042). Ağın beklediği:
+// kanıt platformun imzalı kanıtı olsun ve sağlayıcınız onu doğrulayıp WIA/KA'ya doğrulanmış depo seviyesini yazsın.
+const unit = await myProvider.registerUnit({
+  deviceEvidence: os === "android"
+    ? { platform: "android", key_attestation: keys.keyEvidence(UNIT_KEY) } // meydan okumayla üretilmiş anahtarın zinciri
+    : { platform: "ios", app_attest: await appAttest(clientDataHash) }, // istemci verisi birim anahtarının parmak izini taşır
 });
 ```
 
-Kanıt reddedilirse `registerUnit` kanıtsız yeniden dener; birim yazılım seviyesinde kaydolur ve `keyStorage` bunu söyler.
+Kanıt reddedilirse birim yazılım seviyesinde kaydolur; sağlayıcınız bunu kanıtlarda açıkça belirtir.
 Kişiye bu cihazda yüksek güvenlikli belge alınamayacağını söyleyin; sessizce devam etmeyin.
 
 ::: info Mağaza sürümü
@@ -140,22 +131,17 @@ o adımda eklenir; bugün Android'de donanım anahtar kanıtı, iOS'ta App Attes
 ## 5. Wallet Unit Attestation (WUA)
 
 ```ts
-import { requestWua, fetchHttp } from "@tamga-network/wallet-core";
+import { clientAttestationPop, wuaExpiringSoon, type WuaRecord } from "@tamga-network/wallet-core";
 
-const wua = await requestWua({
-  providerBase: "https://wallet.tamga.network",
-  keys,
-  http: fetchHttp,
-  appVersion: "1.0.0",
-  platform: "ios",
-});
+const wia: WuaRecord = await myProvider.requestWia(unit); // kendi sağlayıcınızdan (AB TS3 biçiminde JWT)
+const pop = await clientAttestationPop({ keys, wua: wia, aud: credentialIssuer }); // kurumun token isteğine eklenir
 ```
 
 Kanıt, belge alma sırasında kurumun token isteğine eklenir. Süresi dolmadan yenileyin (`wuaExpiringSoon`).
 
 Kayıtlı bir birim için iki kanıt daha vardır: her belge işlemi için yeni ve kısa ömürlü (24 saatten az) bir cüzdan örneği
-kanıtı ([[t:WIA]], `requestWia`) ve belge anahtarlarının güvenli bölgede olduğunu gösteren anahtar kanıtı ([[t:key-attestation|KA]],
-`requestKeyAttestation`). Sağlayıcı ikisi için de iptal listesi yayınlar; kişi cihazını devrederken `revokeUnit` hepsini iptal eder.
+kanıtı ([[t:WIA]]) ve belge anahtarlarının güvenli bölgede olduğunu gösteren anahtar kanıtı ([[t:key-attestation|KA]]).
+Sağlayıcı ikisi için de iptal listesi yayınlar (`wiaRevokedByList` ile denetlenir); kişi cihazını devrederken birim iptal edilir.
 
 ## 6. Belge almak (OpenID4VCI)
 
@@ -245,7 +231,7 @@ const { state: next, toReissue } = applyMigration(emptyState, data, { restoreLog
 // toReissue: kişiye "yeniden al" listesi olarak gösterilir
 ```
 
-- Eski cihazı devrederken birimi iptal edin (`revokeUnit`).
+- Eski cihazı devrederken birimi iptal edin (sağlayıcınızın birim iptali).
 - Kişi her şeyi silmek isterse: cüzdan sağlayıcısında `deleteUnit`, Tamga'nın kimlik servisinde `requestIdentityErasure`.
   Kurumların tuttuğu veri kurumun sorumluluğundadır; cüzdan kişiye kurumun silme başvurusu yolunu gösterir.
 

@@ -4,7 +4,7 @@ title: "Zero-knowledge proofs (ZK)"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 summary: >
   WITHOUT CHANGING the institutions' ES256-signed mdoc credentials, the wallet produces zero-knowledge proofs about them with
   Longfellow ZK (first predicate: over 18). The verifier sees only the proven attribute and the issuer; two presentations cannot
@@ -112,9 +112,23 @@ proving is ~7× slower (measured).
 | Stage | Work | Prerequisite |
 |---|---|---|
 | 1 | ✅ Real proof + verification on the desktop, measurements, negative tests, Node bridge prototype (2026-10-01) | — |
-| 2 | Wallet: Rust core → UniFFI → Expo native module; proof generation | Store build (Z1) |
+| 2a | ✅ `@tamga-network/zk`: prover package — core (DCQL → claims, circuit selection and ZK2 check, ZkDocument), desktop prover (`/node`, Rust child process), phone module scaffold (`/react-native`, Expo; Rust C ABI / JNI); end-to-end test: the package's proof passes the network verifier (2026-10-06) | Stages 1, 3 |
+| 2b | Building the phone libraries (Android NDK, iOS xcframework) and on-device measurement | Android NDK; macOS |
+| 2c | Wallet wiring: `wallet-core` routes `mso_mdoc_zk` queries to the prover in the presentation flow; enabled in Tamga Wallet | Store build (Z1) |
 | 3 | ✅ `@tamga-network/verifier`: `mso_mdoc_zk` verification (bundled WASM, `/zk`); circuit digests in the trust list (`lotl.zk_circuits`); policy `format: "mso_mdoc_zk"`; Tamga Verify `age-over-18-zk` (2026-10-01) | Stage 1 |
 | 4 | Transport (DCQL + DC API), cross-testing with the EU reference verifier; updates to `/docs/selective-disclosure` and SPEC-WALLET-0001 | Stage 3 |
+
+## Prover package (Stage 2)
+
+Proof generation is an open network package (`@tamga-network/zk`), not part of one wallet: every wallet that follows the network's
+rules uses the same prover ([[ADR-0035]]). The package has three entry points: a pure-TS core (React Native safe) turns a DCQL
+`mso_mdoc_zk` query into the claims to prove, picks the circuit from the trust list and checks its bytes against the hash (ZK2), and
+wraps the proof as a TS13 `ZkDocument`; `/react-native` is the on-device prover (Expo module `TamgaZk`, Rust core over a C ABI — JNI on
+Android); `/node` runs the same Rust code on the desktop as a child process (tests, conformance runs). The Rust core is pinned to the
+same upstream commit as the verifier. The wallet first produces the usual device-signed DeviceResponse for the session (hardware key
+and phone lock — WL11 unchanged); the prover takes that response as input and only the proof reaches the verifier. Without a prover
+(`available() === false`) the presentation goes the usual way (ZK5). Circuit files may ship with the app or be downloaded; either way
+they are checked against the hash in the list.
 
 ## Verifier (Stage 3)
 

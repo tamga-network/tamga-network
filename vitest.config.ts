@@ -19,6 +19,8 @@ export default defineConfig({
       "@tamga-network/schemas": r("./packages/schemas/src/index.ts"),
       "@tamga-network/wallet-core": r("./packages/wallet-core/src/index.ts"),
       "@tamga-network/verifier": r("./packages/verifier/src/index.ts"),
+      "@tamga-network/zk/node": r("./packages/zk/src/node.ts"),
+      "@tamga-network/zk": r("./packages/zk/src/index.ts"),
     },
   },
   test: {

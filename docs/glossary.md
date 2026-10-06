@@ -51,7 +51,7 @@ gelince (telefonda dokununca) kısa bir açıklama açılır.
 
 **Belge veren** (issuer) — Belgeyi imzalayıp veren kurum: üniversite, meslek kuruluşu, kamu kurumu ya da şirket.
 
-**Cüzdan sağlayıcısı** (wallet provider) — Cüzdanı sunan ve cüzdan ile anahtar kanıtlarını imzalayan kuruluş. Tamga Wallet ağın ilk cüzdanıdır.
+**Cüzdan sağlayıcısı** (wallet provider) — Cüzdanı sunan, cüzdan birimlerini kaydeden ve cüzdan ile anahtar kanıtlarını imzalayan kuruluş. Her cüzdan kendi sağlayıcısını işletir; ağ sağlayıcı işletmez, güven listesinde listeler.
 
 **Doğrulayıcı** (verifier) — Gösterilen belgeyi denetleyen taraf: imza, belge verenin güven listesindeki kaydı, durum ve politika. Relying party diye de anılır.
 

@@ -8,7 +8,7 @@ info:
     the hosted verifier is `@tamga-network/verifier`.
 
     **Flow.** Your server opens a presentation for a policy (which credential and which fields) → the page shows the QR code or
-    the "Open in Tamga Wallet" link and polls the status with the `status_token` → when the status is `DONE`, your server reads
+    the "Open in your wallet" link and polls the status with the `status_token` → when the status is `DONE`, your server reads
     the result and, once, the approved values.
 
     **Authentication.** `Authorization: Bearer <RP assertion>` — a short-lived JWS (`typ: tamga-rp+jwt`, ES256) signed with the

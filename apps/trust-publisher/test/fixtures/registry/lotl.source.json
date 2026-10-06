@@ -100,16 +100,18 @@
   },
   "wallet_providers": [
     {
-      "provider_id": "TAMGA-WP-1",
-      "legal_name": "Tamga Network",
+      "provider_id": "TEST-WP-1",
+      "legal_name": "Test Wallet Provider",
       "wua_signing_certs": ["wallet-provider"],
+      "lote_supply_point": "https://wallet-provider.test",
       "solutions": [
         {
-          "solution_id": "tamga-wallet-expo",
+          "solution_id": "test-wallet",
           "min_version": "0.1.0",
           "status": "ACTIVE",
           "security_level": "W1",
-          "note": "Deviation S-9: Expo Go, software key. W2 in the pilot."
+          "note": "Test wallet for the network's own tests.",
+          "lote_service_name": "Test Wallet (test-wallet)"
         }
       ],
       "status": "ACTIVE"

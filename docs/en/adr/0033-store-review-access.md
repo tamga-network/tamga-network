@@ -4,9 +4,10 @@ title: "App store review code"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 summary: >
-  Apple and Google reviewers must be able to try Tamga Wallet's identity flow without a real Turkish identity document.
+  Apple and Google reviewers must be able to try the identity flow of a wallet listed in the trusted list without a real
+  Turkish identity document. The review code is a network service, open to every listed wallet on the same terms.
   Decision: a time-limited, single-use review code; once the code is entered, the identity service uses the fake verification
   provider for that session only and issues, with a separate test signer, a test identity credential that passes none of the real
   verifiers' policies. Paths that need no identity (tickets, Tamga Verify, "Sign in with Tamga") can be tried without a code.
@@ -27,7 +28,7 @@ accepts**. Real users never see this path; the code is spent after one use.
 
 - Apple App Review and Google Play review require every flow of the app to be testable; where needed a test account or a "demo
   mode" is provided in the review notes.
-- Tamga Wallet's identity flow ([[SPEC-ID-0003]] §9) requires a real identity document + liveness + face matching
+- A wallet's identity flow ([[SPEC-ID-0003]] §9) requires a real identity document + liveness + face matching
   ([[t:identity-proofing]]). In production the fake provider is off (`TAMGA_IDV_DIDIT_FAKE` only if explicitly enabled; GT1: in
   production a missing real identity is never treated as present).
 - Flows that need no identity can be tried without a code: buying a ticket and showing it at the gate, the Tamga Verify example
@@ -107,7 +108,7 @@ list.
 | 2 | `ops` (operator repository) | `review-code.ts` (create / list / revoke) |
 | 3 | `tamga-network` trust list | `DEMO` test signer record; the institution issuers' matching policy excludes it |
 | 4 | `apps/verify` | "review" policies (accepting the test signer) |
-| 5 | Tamga Wallet (separate repository) | "DEMO" badge (credential `verification_method: review-demo`) |
+| 5 | Wallet (the first is Tamga Wallet; separate repository) | "DEMO" badge (credential `verification_method: review-demo`) |
 | 6 | Documentation | SPEC-ID-0003 §9, store review notes |
 
 Estimated effort: 2–3 days (with tests).
@@ -154,3 +155,11 @@ network but are not showcased on the Tamga Verify home page; the reviewer is giv
 K5, RV1–RV3) does not change.
 On the same date the fake identity provider was closed completely on the real network by a code lock (the service does not start
 with `TAMGA_IDV_DIDIT_FAKE=1`); the review code path is independent of it.
+
+# Implementation note — 2026-10-06: a network service open to every wallet
+
+The review code is a service of the identity service, that is, of the network; it does not belong to any one wallet
+([[ADR-0042]] K6). Every wallet provider registered in the trusted list asks for a code for its own app's store review on the
+same terms: the code is generated with project management approval and handed to the wallet, which writes it into its own review
+notes. K1–K5 and RV1–RV3 are the same for every wallet; whichever wallet receives the test credential, it passes only the review
+policies. Showing the DEMO mark ([[SPEC-ID-0003]] §9) is each wallet's job.

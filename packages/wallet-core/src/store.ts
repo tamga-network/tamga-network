@@ -5,7 +5,7 @@
 import { verifyIssuedSdJwt, type LocalVerifyOk } from "./sdjwt.js";
 import type { KeyStorage, PublicJwk } from "./keys.js";
 import type { RedeemOutput } from "./oid4vci.js";
-import type { AttestationLevel, AttestationReason, WuaRecord } from "./wua.js";
+import type { WuaRecord } from "./wua.js";
 import { verifyReceivedMdoc } from "./mdoc.js";
 
 export interface StoredCopy {
@@ -93,10 +93,13 @@ export interface WalletState {
     unitId: string;
     provider: string;
     registeredAt: number;
-    /** sağlayıcının yazdığı depo seviyesi ve cihaz kanıtı sonucu (ADR-0025 K3; "Cüzdan bilgisi" ekranı) */
+    /**
+     * sağlayıcının yazdığı depo seviyesi ve cihaz kanıtı sonucu (ADR-0025 K3; "Cüzdan bilgisi" ekranı): `attestation` =
+     * kanıt yok / sunuldu ama kullanılamadı / donanım doğrulandı; `reason` = neden kullanılamadı (kişisel veri yok)
+     */
     keyStorage?: KeyStorage;
-    attestation?: AttestationLevel;
-    reason?: AttestationReason;
+    attestation?: "none" | "software" | "hardware";
+    reason?: "not_configured" | "invalid" | "unsupported";
     /**
      * Birim, sağlayıcı onu tanımadığı için (kayıt silinmiş / veritabanı yeniden kurulmuş) yeniden kaydedildi — eski kapatma kodu
      * eski birime bağlıydı, artık geçmez; ana ekran "kapatma kodunu yeniden oluştur" der (WA-ADR-0002 K1).

@@ -70,19 +70,38 @@
   },
   "wallet_providers": [
     {
-      "provider_id": "TAMGA-SANDBOX-WP",
-      "legal_name": "Tamga Network Sandbox (TEST)",
+      "provider_id": "TAMGA-SANDBOX-TEST-WP",
+      "legal_name": "Tamga Network Sandbox Test Wallet Provider (TEST)",
       "wua_signing_certs": ["wallet-provider"],
+      "lote_supply_point": "https://sandbox.tamga.network",
+      "note": "ADR-0042 K5: test key for the network's own demo scenes; not a wallet service.",
       "solutions": [
         {
-          "solution_id": "tamga-wallet-expo",
-          "min_version": "0.1.0",
+          "solution_id": "test-wallet",
+          "min_version": "1.0.0",
           "status": "ACTIVE",
           "security_level": "W1",
-          "note": "Sandbox: development devices and emulators accepted."
+          "lote_service_name": "Test Wallet (test-wallet)"
         }
       ],
       "status": "ACTIVE"
+    },
+    {
+      "provider_id": "TAMGA-SANDBOX-WP",
+      "legal_name": "Brosgrup (TEST)",
+      "wua_signing_certs": [],
+      "lote_supply_point": "https://provider.tamgawallet.com",
+      "solutions": [
+        {
+          "solution_id": "tamga-wallet-expo",
+          "min_version": "1.0.0",
+          "status": "RESERVED",
+          "security_level": "W1",
+          "lote_service_name": "Tamga Wallet (tamga-wallet-expo)"
+        }
+      ],
+      "status": "RESERVED",
+      "note": "ADR-0042: Tamga Wallet's provider is operated by Brosgrup; reserved until it supplies its own signing certificate."
     }
   ],
   "pid_providers": [],

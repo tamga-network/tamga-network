@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -736,7 +736,7 @@ budur.
    (yapışkan eşleme), **yeni** doğrulayıcıda kullanıcıya seçim sunulur — yenile
    veya korelasyon uyarısıyla mevcut kopyayı yeniden kullan.
 2. ~~Wallet Unit Attestation (WUA) belge verme anında zorunlu mu olmalı?~~ — **KAPANDI (§11.1, DB-16):**
-   zorunlu; cüzdan sağlayıcısı kaydı liste aşamasında güven listesinde (`lotl.wallet_providers[]`), Provider servisi `apps/wallet-provider`.
+   zorunlu; cüzdan sağlayıcısı kaydı liste aşamasında güven listesinde (`lotl.wallet_providers[]`), Provider servisini cüzdanı sunan kuruluş işletir ([[ADR-0042]]); ağ işletmez.
 3. ~~Authorization code akışı ilk aşamada hiç uygulanacak mı?~~ — **KAPANDI (§11.2, [[ADR-0011]] D-ID-6):** uygulandı;
    PAR + PKCE + WUA istemci kimliği; kurumda kimlik attestation sunumu, Tamga kimlik servisinde tarayıcı + IDV.
 4. `batch_size` = 10 tahminîdir; pilot kullanım verisiyle kalibre edilmeli.

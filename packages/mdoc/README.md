@@ -22,7 +22,7 @@ in-person presentation: device engagement (QR), session encryption, BLE message 
 
 ## Not included (by design)
 
-- The BLE radio itself — the transport is supplied by the app (Tamga Wallet uses a native module).
+- The BLE radio itself — the transport is supplied by the wallet app (typically through a native module).
 - NFC engagement and reader authentication — planned.
 
 ## Status

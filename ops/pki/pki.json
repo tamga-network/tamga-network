@@ -1,5 +1,6 @@
 {
   "generated_at": "2026-09-24T14:36:53.381Z",
+  "profile": "network",
   "warning": "DEV/DEMO PKI — private keys on disk (sapma S-1). Never use in pilot.",
   "root-ca": {
     "subject": "CN=TR National Root CA (provisional operator: Tamga), O=Tamga Trust Framework, C=TR",
@@ -49,8 +50,7 @@
   "issuer-id-review": {
     "subject": "CN=Tamga Kimlik Servisi - Magaza Incelemesi (DEMO), OU=Review, O=Tamga Network, C=TR",
     "fingerprint_sha256": "8567049cc7373afe4f211d4e1100d5a4e43fdf57464c9adcc7287ee806e6b37c",
-    "not_after": "2028-10-01T09:43:29.000Z",
-    "created_at": "2026-10-01T09:43:29.925Z"
+    "not_after": "2028-10-01T09:43:29.000Z"
   },
   "issuer-bubilet": {
     "subject": "CN=Bubilet, OU=Bilet Satisi, O=Bubilet, C=TR",

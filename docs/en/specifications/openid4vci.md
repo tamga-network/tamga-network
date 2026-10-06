@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -715,7 +715,7 @@ own key to one of the copies.
    refresh, or reuse an existing copy with a correlation warning.
 2. ~~Should the Wallet Unit Attestation (WUA) be mandatory at issuance?~~ — **CLOSED (§11.1, DB-16):** mandatory; the
    wallet provider is registered in the trust list (list stage) (`lotl.wallet_providers[]`), the provider service is
-   `apps/wallet-provider`.
+   run by the organisation that offers the wallet, not by the network ([[ADR-0042]]).
 3. ~~Will the authorization code flow be implemented at all in the initial stage?~~ — **CLOSED (§11.2, [[ADR-0011]] D-ID-6):**
    implemented; PAR + PKCE + WUA client identity; presentation of the identity attestation at the institution, browser +
    IDV at the Tamga identity service.

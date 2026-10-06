@@ -41,7 +41,7 @@
       "category": "EDUCATION",
       "assurance": "I2",
       "class": "EAA",
-      "assurance_basis": "Sandbox example institution (ADR-0038). Real institution name used only for a realistic test environment; no relationship or agreement with the institution. Credentials are signed with test keys and are not valid anywhere.",
+      "assurance_basis": "Sandbox example institution (ADR-0038). Pilot partner institution; in the sandbox it is a test institution only. Credentials are signed with test keys and are not valid anywhere.",
       "issuer_url": "https://issuer.sandbox.tamga.network/istanbul-bilgi",
       "status_list_base": "https://status.sandbox.tamga.network/",
       "status": "ACTIVE",

@@ -202,12 +202,13 @@ async function writeLotes(
           contact: w.lote_contact ?? opContact,
           services: (w.solutions as Array<Record<string, string>>)
             .filter((x) => x.status === "ACTIVE")
+            // ADR-0042 NW4: cüzdan adı ve adresi kod içinde sabit değil, kayıt verisinden (lote_service_name, lote_supply_point)
             .map((x) => ({
               role: "Issuance" as const,
-              name: `Tamga Wallet (${x.solution_id})`,
+              name: x.lote_service_name ?? `${w.legal_name} (${x.solution_id})`,
               certsDer: (w.wua_signing_certs as string[]).map((n) => cert(n).der),
               uniqueId: x.solution_id,
-              supplyPoint: "https://wallet.tamga.network",
+              ...(w.lote_supply_point ? { supplyPoint: w.lote_supply_point as string } : {}),
             })),
         })),
     },
@@ -504,8 +505,18 @@ async function build() {
       })),
     eaa_categories: lotlSrc.eaa_categories,
     wallet_providers: (lotlSrc.wallet_providers as Array<Record<string, unknown>>).map((w) => {
-      const { wua_signing_certs, ...rest } = w as Record<string, unknown> & { wua_signing_certs: string[] };
-      return { ...rest, wua_signing_keys: wua_signing_certs.map(keyEntry) };
+      // lote_supply_point / solutions[].lote_service_name yalnız LoTE çıktısı içindir; LoTL JSON'a girmez
+      const {
+        wua_signing_certs,
+        lote_supply_point: _sp,
+        ...rest
+      } = w as Record<string, unknown> & {
+        wua_signing_certs: string[];
+      };
+      const solutions = (rest.solutions as Array<Record<string, unknown>> | undefined)?.map(
+        ({ lote_service_name: _n, ...s }) => s,
+      );
+      return { ...rest, ...(solutions ? { solutions } : {}), wua_signing_keys: wua_signing_certs.map(keyEntry) };
     }),
     pid_providers: lotlSrc.pid_providers,
     // ADR-0032 ZK2: kabul edilen sıfır bilgi ispatı devreleri (Longfellow combined_hash + dosya özeti)

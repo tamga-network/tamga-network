@@ -5,7 +5,8 @@ Kurumlar belgeleri kişinin telefonuna verir, kişi yalnız istenen alanları pa
 sormadan saniyeler içinde denetler.
 
 Bu depo açık kaynak kodu ve kanonik belgeleri taşır: spesifikasyonlar, kararlar (ADR), çerçeve belgeleri, `@tamga-network/*`
-paketleri, referans doğrulayıcı, cüzdan sağlayıcısı (geçici; Tamga Wallet deposuna taşınacak), güven listesi yayıncısı ve akıllı kontratlar.
+paketleri, referans doğrulayıcı, güven listesi yayıncısı ve akıllı kontratlar. Ağ cüzdan işletmez; cüzdanları güven listesinde
+listeler (ADR-0042).
 
 > Güven çapası bugün **imzalı, sürümlü, hash-zincirli güven listeleridir** (ETSI TS 119 612 / EUDI modeli) ve herkese açık
 > bir çapa günlüğüdür. En az iki bağımsız validator operatörü katıldığında aynı kayıtlar izinli bir **Besu / QBFT** defterine
@@ -33,7 +34,6 @@ packages/            npm paketleri (@tamga-network/*)
   wallet-core        cüzdan çekirdeği (Node ve React Native): anahtarlar, alma, yerel denetim, sunma
 apps/
   verify             referans doğrulayıcı (verify.tamga.network)
-  wallet-provider    cüzdan sağlayıcısı: cüzdan birimi onayı, cihaz kanıtı (wallet.tamga.network)
   trust-publisher    güven listesi yayıncısı ve kayıt aracı (trust.tamga.network)
 examples/            dört çalışan örnek (her testte paketlerle çalışır)
 conformance/         uyum vektörleri

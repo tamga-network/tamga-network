@@ -6,12 +6,15 @@
  *   2. İstanbul Bilgi Üniversitesi issuer sertifikası — kökçe imzalı yaprak
  *   2b. Bilgi status list anahtarı (K1: credential anahtarından ayrı)
  *   3. Tamga Trust List signing cert (TLSO)                — self-signed; lotl/tl/anchors imzalar
- *   4. Tamga Wallet Provider cert                          — self-signed; WUA imzalar
+ *   4. Test cüzdan sağlayıcı sertifikası                   — self-signed; WUA imzalar. YALNIZ TEST: ağın kendi testleri ve
+ *      liste fixture'ları WIA/WUA doğrulamasını bununla dener; hiçbir gerçek cüzdanın sertifikası değildir (ADR-0042 K5: ağ
+ *      cüzdan sağlayıcı işletmez; gerçek cüzdan sağlayıcının anahtarını cüzdan kendisi üretir, ağ yalnız sertifikasını listeler)
  *   5. Referans verifier erişim sertifikası (rp-verify)    — kökçe imzalı; SAN dns verify.tamga.network; istek nesnesini imzalar
  *
  * Sandbox (ADR-0038, SB1): `--profile=sandbox` ayrı bir test kökü ve yaprakları `ops/pki-sandbox/`'a üretir; gerçek PKI ile
  * hiçbir anahtar paylaşılmaz. Konu adları "… (TEST)"; örnek kurumlar `istanbul-bilgi`, `bubilet`, `paribu-cineverse` (gerçek
- * kurum adları yalnız gerçekçi bir deneme için; kurumlarla ilişki ya da anlaşma yok, belgeler test anahtarıyla imzalı ve geçersiz).
+ * kurum adları gerçekçi bir deneme için; İstanbul Bilgi Üniversitesi pilot ortak, diğerleriyle ilişki ya da anlaşma yok; belgeler
+ * test anahtarıyla imzalı ve geçersiz).
  * Kip: eksik olan sertifikalar üretilir, var olanlar KORUNUR (issuer_id değişmez); tamamını yenilemek için --force.
  * Sapma S-1 (09-DEMO-KURGU §6): issuer özel anahtarı burada dosyada; pilotta üniversite KMS'inde.
  * Çıktı: ops/pki/*.cert.pem, *.pkcs8.pem (gitignore), ops/pki/pki.json (parmak izleri, id'ler).
@@ -182,7 +185,9 @@ async function main() {
       "tl-signer-1",
       selfSigned(2, "CN=Tamga Trust List Signer 1 (provisional TLSO), O=Tamga Network, C=TR"),
     ),
-    await ensure("wallet-provider", selfSigned(3, "CN=Tamga Wallet Provider (WUA), O=Tamga Network, C=TR")),
+    // ADR-0042 K5: YALNIZ TEST — genel "test cüzdan sağlayıcısı"; dosya adı uyumluluk için `wallet-provider` kalır.
+    // Var olan sertifika korunur (yeni ad yalnız yeni üretimde geçerli)
+    await ensure("wallet-provider", selfSigned(3, "CN=Test Wallet Provider (WUA), O=Test Wallet Provider, C=TR")),
     // ADR-0026 K1: kayıt kurumu anahtarı (WRPRC imzası) — liste imza anahtarından ayrı; LOTL roles.registrar.signing_keys
     await ensure(
       "registrar-1",
@@ -235,10 +240,7 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
       "tl-signer-1",
       selfSigned(2, "CN=Tamga Sandbox Trust List Signer (TEST), O=Tamga Network Sandbox, C=TR"),
     ),
-    await ensure(
-      "wallet-provider",
-      selfSigned(3, "CN=Tamga Sandbox Wallet Provider (TEST), O=Tamga Network Sandbox, C=TR"),
-    ),
+    await ensure("wallet-provider", selfSigned(3, "CN=Test Wallet Provider (TEST), O=Tamga Network Sandbox, C=TR")),
     await ensure("registrar-1", selfSigned(4, "CN=Tamga Sandbox Registrar (TEST), O=Tamga Network Sandbox, C=TR")),
     await ensure(
       "rp-verify",

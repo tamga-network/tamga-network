@@ -11,7 +11,6 @@ export * from "./ts10.js";
 export * from "./hwkeys.js";
 export * from "./proximity.js";
 export * from "./wua.js";
-export * from "./lock-code.js";
 export * from "./erasure.js";
 export * from "./http.js";
 export * from "./authcode.js";

@@ -4,7 +4,7 @@ title: "HAIP 1.0 uyumu"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 summary: >
   HAIP 1.0'ın iki kuralı uygulanır: doğrulayıcı imzalı istekte yalnız `x509_hash` istemci kimliğini kullanır, cüzdan yalnız onu
   kabul eder (§5); WIA'nın `sub`'ı aynı cüzdan çözümünü kullanan bütün örneklerde ortak değerdir (§4.4.1). `x509_hash`
@@ -35,7 +35,8 @@ bırakıldı:
    tanımlar (CIR 2026/1730).
 2. **[[t:WIA]] `sub`.** HAIP 1.0 §4.4.1: "The subject claim for the Wallet Attestation MUST be a value that is shared by all Wallet
    instances using the present type of wallet implementation"; ayrıca [[t:PAR|PAR'daki]] `client_id` bu `sub` değeridir. Tamga
-   [[t:wallet-provider|cüzdan sağlayıcısını]] (`apps/wallet-provider`) `sub` olarak her işleme özel efemer anahtarın parmak izini yazıyordu
+   Wallet'ın [[t:wallet-provider|cüzdan sağlayıcısı]] (o gün bu depoda `apps/wallet-provider`; [[ADR-0042]] ile cüzdanın kendi
+   deposuna taşındı) `sub` olarak her işleme özel efemer anahtarın parmak izini yazıyordu
    ([[ADR-0025]] K2). İzlenemezlik açısından sorun değildi, ama kuralın harfine uymuyordu.
 
 Proje yönetimi 2026-10-01'de iki maddede AB yolunu onayladı.

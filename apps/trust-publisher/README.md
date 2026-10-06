@@ -44,3 +44,9 @@ Yerel geliştirme için hepsini birden: `npm run setup`.
 Bir kayıt listeden **silinmez** (SPEC-TRUST-0001 TL2): kurum ya da doğrulayıcı geri çekilirken durumu değişir ve
 `status_history`'ye eklenir. Hiç geçerli olmaması gereken kayıt (ör. gerçek ağdaki örnek kurum) `REVOKED` +
 `invalidates_from = valid_from` ile çekilir; o kurumun verdiği hiçbir belge doğrulanmaz, LoTE'den düşer.
+
+**Cüzdan sağlayıcılar (`wallet_providers[]`, ADR-0042):** ağ cüzdan sağlayıcı işletmez, yalnız listeler. Tamga Wallet'ın kaydı
+(işletmeci Brosgrup; adres `https://provider.tamgawallet.com`, gerçek ağda ve sandbox'ta aynı) bugün `wua_signing_certs` için
+geliştirme PKI'sindeki genel test sertifikasına (`wallet-provider`) bakar. Cüzdan işletmecisi canlıya geçerken kendi cüzdan
+sağlayıcı sertifikasını verir; kayıt o sertifikayla güncellenir. Test listesindeki (`test/fixtures/registry/`) kayıt geneldir
+(`Test Wallet Provider`, `test-wallet`).

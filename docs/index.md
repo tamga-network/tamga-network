@@ -105,7 +105,6 @@ sunucu kodu gerekmez: [Web sitesine "Tamga ile giriş yap"](/guides/sign-in-with
 | `status.tamga.network` | İptal listeleri |
 | `console.tamga.network` | Kurum Konsolu — belge veren kurumların yönetim ekranı |
 | `id.tamga.network` | Kimlik servisi — geçici kimlik belgesi (devlet PID’i gelene kadar) |
-| `wallet.tamga.network` | Cüzdan sağlayıcısı — cüzdan örneği ve anahtar kanıtı (Tamga Wallet’a ait) |
 | `docs.tamga.network` | Bu belgeler |
 | `arf.tamga.network` | Tamga ARF — çerçeve ve kurallar |
 

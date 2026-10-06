@@ -104,7 +104,6 @@ code at all: [Add "Sign in with Tamga" to a website](/guides/sign-in-with-tamga)
 | `status.tamga.network` | Status lists (revocation) |
 | `console.tamga.network` | Institution Console — the management screen for issuers |
 | `id.tamga.network` | Identity service — provisional identity credential (until a state PID exists) |
-| `wallet.tamga.network` | Wallet provider — wallet instance and key attestation (belongs to Tamga Wallet) |
 | `docs.tamga.network` | These docs |
 | `arf.tamga.network` | Tamga ARF — framework and rules |
 

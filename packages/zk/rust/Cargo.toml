@@ -1,0 +1,43 @@
+# @tamga-network/zk — Longfellow ZK mdoc İSPATÇISI (ADR-0032 Aşama 2). Doğrulayıcı ayrı: packages/verifier/zk (WASM).
+# Tek kaynak, üç çıktı:
+#   - `tamga-zk-prove` ikilisi (`--features cli`): masaüstü, test ve uyum denemeleri; `@tamga-network/zk/node` alt süreç olarak çağırır.
+#   - Android (`cargo ndk`, staticlib/cdylib) ve iOS (xcframework) yerel kütüphanesi: `@tamga-network/zk/react-native` Expo modülü
+#     C ABI'yi (`tzp_*`) çağırır. Mobil derleme betikleri ../scripts/ (Android NDK / macOS gerekir).
+# Upstream sabit commit'le (doğrulayıcıyla AYNI `rev`); C bağımlılığı `zstd` saf Rust ara katmanla yamalanır (`zstd-shim`).
+[package]
+name = "tamga-zk-prover"
+version = "1.0.0"
+edition = "2021"
+publish = false
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["rlib", "staticlib", "cdylib"]
+path = "src/lib.rs"
+
+[[bin]]
+name = "tamga-zk-prove"
+path = "src/bin/tamga-zk-prove.rs"
+required-features = ["cli"]
+
+[features]
+cli = []
+
+[dependencies]
+mdoc-zk-runtime = { git = "https://github.com/longfellow-zk/longfellow-zk", rev = "d5e6be77336933d50bf7f25a954f8ec273eb51ce" }
+
+# Android: Kotlin `ZkNative` (packages/zk/android) JNI ile çağırır.
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.21", default-features = false }
+
+[patch.crates-io]
+zstd = { path = "zstd-shim" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[workspace]

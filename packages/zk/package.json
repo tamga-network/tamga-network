@@ -1,0 +1,51 @@
+{
+  "name": "@tamga-network/zk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Cüzdan tarafında sıfır bilgi ispatı (ADR-0032, Longfellow ZK): ISO mdoc belgesi hakkında \"şu öğe şu değerdedir\" ispatını cihazda üretir (ilk kullanım: 18 yaş üstü). Çekirdek saf TS (React Native uyumlu); /react-native yerel ispatçı (Expo modülü, Rust), /node masaüstü ispatçı. Doğrulama: @tamga-network/verifier/zk.",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts",
+    "./react-native": "./src/react-native.ts"
+  },
+  "react-native": "src/index.ts",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.0.0",
+    "@tamga-network/mdoc": "*"
+  },
+  "peerDependencies": {
+    "expo-modules-core": "*"
+  },
+  "peerDependenciesMeta": {
+    "expo-modules-core": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "zk:build": "node scripts/build-cli.mjs",
+    "zk:android": "node scripts/build-android.mjs",
+    "zk:ios": "bash scripts/build-ios.sh"
+  },
+  "files": [
+    "src",
+    "types",
+    "android",
+    "ios",
+    "expo-module.config.json",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamga-network/tamga-network.git",
+    "directory": "packages/zk"
+  },
+  "homepage": "https://docs.tamga.network",
+  "sideEffects": false
+}

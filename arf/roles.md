@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ROLE-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-02 · **Licence** CC BY 4.0
+**Document** FW-ROLE-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-06 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -38,7 +38,7 @@ Two basic distinctions apply to every role:
 | Issuer                     | Universities, ticket sellers; the Tamga identity service (for the identity credential, provisionally) | RB-AP, RB-AP-ID  | [[FW-ONB-0001]] §2             |
 | Authentic source           | Institutions' record systems                                                                          | RB-AS            | Through the issuer's agreement |
 | Verifier                   | Employers, websites, gates                                                                            | RB-RP            | [[FW-ONB-0001]] §3             |
-| Wallet provider            | Tamga Wallet (the network's first wallet)                                                             | RB-WP            | [[FW-ONB-0001]] §4             |
+| Wallet provider            | The organisations that offer wallets (the first is Tamga Wallet)                                      | RB-WP            | [[FW-ONB-0001]] §4             |
 | Person (holder)            | Everyone who uses a wallet                                                                            | RB-H             | Voluntary                      |
 | State                      | None yet; a place is reserved for every member state                                                  | Annex A §1.6, §7 | [[FW-ONB-0001]] §5             |
 | Auditor                    | Self-declaration today; independent bodies once states join                                           | Annex A §4       | —                              |
@@ -132,11 +132,16 @@ certificate; verification software and up-to-date trusted lists.
 **What it does.** Provides the wallet in which the person holds and presents credentials; registers wallet units; signs a
 wallet instance attestation (WIA) and key attestation (KA) for each transaction; revokes attestations if a flaw is found in the
 wallet solution. The network recognises wallets rather than picking them: every wallet that follows the rules and passes the
-conformance tests works in the network.
+conformance tests works in the network. The wallet provider is run by the organisation that offers the wallet; the
+network runs no wallet provider and only lists them in the trusted list.
 
-**Who today.** Tamga Wallet: the network's first wallet; a separate, open-source product. Its provider service runs
-provisionally on the network's infrastructure and moves to the wallet's own address. Tamga Wallet follows the network's rules
+**Who today.** Tamga Wallet: the network's first wallet; a separate, open-source product. Its provider service is
+run by the wallet's operator at `provider.tamgawallet.com` (not live yet); the network only lists it. Tamga Wallet follows the network's rules
 like any other wallet.
+
+**Sandbox.** A wallet developer tries the wallet in the sandbox, the network's single test network: they have their own
+wallet provider registered in the sandbox list and test the wallet against the sandbox's sample institutions, identity service
+and verifier. There is no separate wallet sandbox.
 
 **Obligations.** Annex B §6 (RB-WP-01…13): keys generated in secure hardware and not exportable, no credentials for wallets with
 software keys, PIN or biometrics at every presentation, a consent screen showing attributes one by one with an over-asking

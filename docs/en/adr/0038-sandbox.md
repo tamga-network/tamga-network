@@ -4,7 +4,7 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 summary: >
   Tamga Network runs a test network that is completely separate from the real network: sandbox.tamga.network. It has its
   own test root certificate, its own trust list, example institutions, fake people and example credentials of every type.
@@ -73,6 +73,16 @@ the usage guide state clearly that the names are used only to make the test envi
 relationship or agreement with these institutions, and that the credentials are signed with a test key and are therefore not
 valid anywhere; the institutions' logos are not used.
 
+> **Note (2026-10-06, project management):** there is a pilot partnership agreement with İstanbul Bilgi Üniversitesi. For this
+> institution the note says "our pilot partner"; in the sandbox it is still only a test institution. The "no relationship or
+> agreement" sentence applies to the other example institutions. The test-key warning and the logo rule do not change.
+
+> **Change (2026-10-06, [[ADR-0042]] K3):** `wallet.sandbox` in K1 and the "test wallet provider" in K6 are not network
+> services. The network runs no wallet provider; in the sandbox too every wallet runs its own provider and registers it in the
+> sandbox list (today with project management approval). The former `wallet.sandbox.tamga.network` was removed on 2026-10-06;
+> the sandbox has no wallet provider of its own, and Tamga Wallet's provider (`provider.tamgawallet.com`) is registered in the
+> sandbox list. There is a single sandbox; no separate wallet sandbox is set up.
+
 **K7 — Later steps need their own decision.** External participants adding their own institutions, verifiers or wallet
 providers to the sandbox list themselves (self-service registration), and a conformance service that tests wallets
 automatically and reports, are later stages; each is decided separately before it opens.
@@ -112,4 +122,5 @@ automatically and reports, are later stages; each is decided separately before i
 
 **Accepted — 2026-10-03** (project management approval; the verbatim quote is in the private approval record). K4 and SB3
 changed with [[ADR-0040]] (real identity verification in the sandbox; open to everyone since 2026-10-05); "no institution console" in K1 and institutions'
-self-registration in K7 changed with [[ADR-0041]] (institution test accounts) (2026-10-04).
+self-registration in K7 changed with [[ADR-0041]] (institution test accounts) (2026-10-04). The network running the test wallet
+provider in K1/K6 changed with [[ADR-0042]] (2026-10-06): in the sandbox the wallet runs its wallet provider.

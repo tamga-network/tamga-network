@@ -4,7 +4,7 @@ title: "Credential format and protocols"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 summary: >
   Defines the canonical format of Tamga credentials and the issuance and presentation protocols. The primary format is
   SD-JWT VC (selective disclosure built in, the main EUDI ARF format); the secondary format is mdoc / ISO 18013-5 (expansion stage,
@@ -170,7 +170,7 @@ not rooted/jailbroken, and the identity of the [[t:wallet-provider]].
 | Format | JWT, `typ: oauth-client-attestation+jwt`, `alg: ES256`, `x5c` = Wallet Provider certificate (list stage: `wallet-provider`; in the list `lotl.wallet_providers[].wua_signing_keys`) |
 | Claims | `iss` (provider URL), `sub` (JWK thumbprint of the instance key), `cnf.jwk` (P-256 **instance key** — separate from the credential keys), `wallet_name`, `wallet_version`, `solution_id`, `key_storage` (`software` \| `secure_enclave` \| `strongbox` \| `wscd`), `user_auth`, `security_level` (W1-DEMO/W2/W3), `iat`, `exp` (30 days) |
 | Transport (issuance) | `OAuth-Client-Attestation` + `OAuth-Client-Attestation-PoP` in the OpenID4VCI token request (PoP: `iss` = WUA `sub`, `aud` = issuer, `jti`, iat ±300 s) — [[SPEC-PROTO-0001]] §11.1, PR11 |
-| Provider side | `apps/wallet-provider` (`wallet.tamga.network/wua`); the device statement is self-reported in the demo (deviation S-14), App Attest / Play Integrity in the pilot |
+| Provider side | The wallet provider of the organisation that offers the wallet; the network does not run it, it lists it ([[ADR-0042]]). Tamga Wallet's provider is operated by the wallet's operator at `provider.tamgawallet.com` (not live yet); the device statement is self-reported in the demo (deviation S-14), App Attest / Play Integrity in the pilot |
 | Presentation | The WUA is not sent to the verifier; a verifier that needs it requests it separately with DCQL (state stage) |
 
 ---

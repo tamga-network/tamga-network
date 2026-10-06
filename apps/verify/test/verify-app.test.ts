@@ -395,7 +395,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       { now },
     ).state;
 
-    // ADR-0031: cüzdanın takma ad tohumu (kimlik servisinin verdiği) + cüzdan örneği kanıtı (WIA, dev PKI cüzdan sağlayıcısı)
+    // ADR-0031: cüzdanın takma ad tohumu (kimlik servisinin verdiği) + cüzdan örneği kanıtı (WIA, dev PKI'nin test cüzdan sağlayıcısı)
     const seed = Buffer.from(randomBytes(32)).toString("base64url");
     const wiaKey = "w.wia";
     const wiaJwk = await keys.generate(wiaKey);
@@ -407,16 +407,16 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const wia = await new SignJWT({
       sub: wiaSub,
       cnf: { jwk: wiaJwk },
-      wallet_name: "tamga-wallet-expo",
+      wallet_name: "test-wallet",
       wallet_version: "0.1.0",
-      client_status: { status: { status_list: { idx: 3, uri: "https://wallet.tamga.network/status/wia" } } },
+      client_status: { status: { status_list: { idx: 3, uri: "https://wallet-provider.test/status/wia" } } },
     })
       .setProtectedHeader({
         alg: "ES256",
         typ: "oauth-client-attestation+jwt",
         x5c: [derToB64(pemToDer(readFileSync(resolve(PKI, "wallet-provider.cert.pem"), "utf8")))],
       })
-      .setIssuer("https://wallet.tamga.network")
+      .setIssuer("https://wallet-provider.test")
       .setIssuedAt(now)
       .setExpirationTime(now + 3600)
       .sign(await importPKCS8(readFileSync(resolve(PKI, "wallet-provider.pkcs8.pem"), "utf8"), "ES256"));
@@ -426,7 +426,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       exp: now + 3600,
       keyRef: wiaKey,
       keyStorage: "software" as const,
-      solutionId: "tamga-wallet-expo",
+      solutionId: "test-wallet",
       provider: "test",
     };
     const seen: string[] = [];

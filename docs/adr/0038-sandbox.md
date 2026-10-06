@@ -4,7 +4,7 @@ title: "Sandbox: test ağı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 summary: >
   Tamga Network, gerçek ağdan tamamen ayrı bir test ağı işletir: sandbox.tamga.network. Kendi test kök sertifikası, kendi
   güven listesi, örnek kurumları, sahte kişileri ve her belge türünden örnek belgeleri vardır. Cüzdan geliştiricileri,
@@ -69,6 +69,15 @@ kullanım rehberi, adların yalnızca gerçekçi bir deneme ortamı için kullan
 olmadığını ve belgelerin test anahtarıyla imzalandığı için hiçbir yerde geçerli olmadığını açıkça yazar; kurum logoları
 kullanılmaz.
 
+> **Not (2026-10-06, proje yönetimi):** İstanbul Bilgi Üniversitesi ile pilot ortaklık anlaşması vardır. Bu kurum için not
+> "pilot ortağımızdır" der; sandbox'taki hâli yine yalnız test kurumudur. "İlişki ya da anlaşma yoktur" cümlesi diğer örnek
+> kurumlar için geçerlidir. Test anahtarı uyarısı ve logo kuralı değişmez.
+
+> **Değişiklik (2026-10-06, [[ADR-0042]] K3):** K1'deki `wallet.sandbox` ve K6'daki "test cüzdan sağlayıcısı" ağın hizmeti
+> değildir. Ağ cüzdan sağlayıcısı işletmez; sandbox'ta da her cüzdan kendi sağlayıcısını işletir ve sandbox listesine
+> kaydolur (bugün proje yönetimi onayıyla). Önceden çalışan `wallet.sandbox.tamga.network` 2026-10-06'da kaldırıldı; sandbox'ın
+> kendi cüzdan sağlayıcısı yoktur, Tamga Wallet'ın sağlayıcısı (`provider.tamgawallet.com`) sandbox listesinde kayıtlıdır. Sandbox tektir; ayrı bir cüzdan sandbox'ı kurulmaz.
+
 **K7 — Sonraki adımlar ayrı karar ister.** Dış katılımcıların kendi kurumlarını, doğrulayıcılarını ya da cüzdan
 sağlayıcılarını sandbox listesine kendileri eklemesi (kendi kendine kayıt) ve cüzdanları otomatik sınayıp rapor veren bir
 uyum servisi sonraki aşamalardır; açılmadan önce ayrıca karara bağlanır.
@@ -108,4 +117,5 @@ uyum servisi sonraki aşamalardır; açılmadan önce ayrıca karara bağlanır.
 
 **Accepted — 2026-10-03** (proje yönetimi onayı; birebir alıntı özel onay kaydında). K4 ve SB3 [[ADR-0040]] ile (sandbox'ta gerçek
 kimlik doğrulama; 2026-10-05'te herkese açık), K1'deki "kurum konsolu çalışmaz" ve K7'deki kurumların kendi kendine kaydı [[ADR-0041]] ile (kurum test
-hesapları) değişti (2026-10-04).
+hesapları) değişti (2026-10-04). K1/K6'daki test cüzdan sağlayıcısını ağın çalıştırması [[ADR-0042]] ile değişti (2026-10-06):
+sandbox'ta cüzdan sağlayıcısını cüzdan işletir.

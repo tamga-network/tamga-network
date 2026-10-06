@@ -4,7 +4,7 @@ title: "“Tamga ile giriş yap” eklemek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-04
+last_updated: 2026-10-06
 summary: >
   Bir web sitesine Tamga ile kayıt ve giriş eklemek: sayfada `@tamga-network/verifier/web` kiti (QR / telefonda cüzdanı aç),
   sunucuda sonucun doğrulayıcıdan alınıp oturum açılması, kayıttan sonra passkey ile telefonsuz giriş. Çalışan örnek
@@ -13,7 +13,7 @@ summary: >
 
 # Web sitenize "Tamga ile giriş yap" eklemek
 
-Bu rehber, web sitenize Tamga Wallet ile kayıt ve giriş eklemek isteyen geliştiriciler içindir. Doğrulamayı Tamga'nın
+Bu rehber, web sitenize, ağın kurallarına uyan bir cüzdanla (ör. Tamga Wallet) kayıt ve giriş eklemek isteyen geliştiriciler içindir. Doğrulamayı Tamga'nın
 barındırılan [[t:verifier|doğrulayıcısı]] Tamga Verify yapar; size bir sayfa kiti ve birkaç sunucu ucu kalır.
 
 **Ne zaman okunur:** sitenize şifresiz, telefonla kayıt ve giriş eklemek istediğinizde. Önce [[GUIDE-0000]]'a göz atın.
@@ -25,7 +25,7 @@ girince; adresler ve test cüzdanı ayarı [[GUIDE-0013]]'te). Gerçek ağdaki T
 ## Nasıl çalışır?
 
 1. **Kayıt (bir kez).** Siteniz bir *politika* ile istek başlatır (ör. "ad, soyad" + [[t:pseudonym|takma ad]]). Bilgisayarda QR, telefonda
-   "Tamga Wallet'ta aç" düğmesi çıkar. Kişi cüzdanda **yalnızca bu alanları** ve "bu siteye özel takma ad" satırını görür ve onaylar.
+   "Cüzdanında aç" düğmesi çıkar. Kişi cüzdanda **yalnızca bu alanları** ve "bu siteye özel takma ad" satırını görür ve onaylar.
 2. **Doğrulama.** Doğrulayıcı [[t:credential|belgeyi]] denetler: imza, [[t:trust-list|güven listesi]], [[t:revocation|iptal]],
    [[t:holder-binding]]. Sayfanız sonucu izler; `ACCEPTED`
    olunca sunum kimliğini (`presentation_id`) **kendi sunucunuza** gönderir. Sunucunuz onaylanan alanları doğrulayıcıdan alır,

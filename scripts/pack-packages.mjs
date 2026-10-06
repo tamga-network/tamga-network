@@ -15,7 +15,9 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
-const PKGS = ["core", "mdoc", "schemas", "sd-jwt", "trust", "issuer", "verifier", "wallet-core"];
+const PKGS = ["core", "mdoc", "schemas", "sd-jwt", "trust", "issuer", "verifier", "wallet-core", "zk"];
+// ADR-0032 Aşama 2: @tamga-network/zk yerel modülü (Expo) — derlenmiş Android/iOS kütüphaneleri pakete bu yollarla girer.
+const NATIVE = ["android", "ios", "expo-module.config.json"];
 const OUT = join(ROOT, ".publish");
 const errors = [];
 
@@ -58,6 +60,9 @@ for (const p of PKGS) {
     mkdirSync(join(dest, "lib", rel, ".."), { recursive: true });
     cpSync(f, join(dest, "lib", rel));
   }
+  const native = NATIVE.filter((n) => existsSync(join(dir, n)));
+  for (const n of native)
+    cpSync(join(dir, n), join(dest, n), { recursive: true, filter: (f) => !/[\\/]build[\\/]/.test(f) });
   cpSync(join(ROOT, "LICENSE"), join(dest, "LICENSE"));
   if (existsSync(join(dir, "README.md"))) cpSync(join(dir, "README.md"), join(dest, "README.md"));
   else
@@ -91,10 +96,12 @@ for (const p of PKGS) {
     main: exportsOut["."].default,
     types: exportsOut["."].types,
     exports: exportsOut,
-    files: ["lib", "README.md", "LICENSE"],
+    files: ["lib", "README.md", "LICENSE", ...native],
     sideEffects: src.sideEffects ?? false,
     engines: { node: ">=22" },
     dependencies: deps,
+    ...(src.peerDependencies ? { peerDependencies: src.peerDependencies } : {}),
+    ...(src.peerDependenciesMeta ? { peerDependenciesMeta: src.peerDependenciesMeta } : {}),
     repository: src.repository,
     homepage: src.homepage,
     publishConfig: src.publishConfig ?? { access: "public", provenance: true },
@@ -113,7 +120,7 @@ for (const p of PKGS) {
       const spec = m[1] ?? m[2];
       if (!spec || spec.startsWith(".") || builtins.has(spec)) continue;
       const base = spec.startsWith("@") ? spec.split("/").slice(0, 2).join("/") : spec.split("/")[0];
-      if (base !== src.name && !deps[base])
+      if (base !== src.name && !deps[base] && !src.peerDependencies?.[base])
         errors.push(`${src.name}: ${rel} "${spec}" içe aktarıyor ama dependencies'te yok`);
     }
   }

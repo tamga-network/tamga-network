@@ -19,7 +19,7 @@ Tamga'nın TypeScript depolarında (`tamga-network`, `tamga-platform`) geçerli 
 - Kamuya açık yeni ad (paket, global, kategori, alan adı, politika kimliği) → önce proje yönetimine sor.
 - `vct` URN: `urn:tamga:<domain>:<Type>:<major>` (D-SCHEMA-4). IssuerCategory kapalı küme, yeni değer ADR ile ve sona (ADR-0014).
 - Ortam değişkeni `TAMGA_<SERVİS>_<AD>` (`TAMGA_VERIFY_BASE`). Gizli değerler `.env`'de, `.env.example`'da yer tutucu.
-- Portlar: issuer 4001 · portal 4003 · verify 4004 · wallet-provider 4005 · id 4006 · Metro 8081.
+- Portlar: issuer 4001 · portal 4003 · verify 4004 · id 4006 (4005 Tamga Wallet'ın cüzdan sağlayıcısının yerel portudur; ağın servisi değil, ADR-0042) · Metro 8081.
 
 ## 3. Mimari kurallar (özet; tam liste INVARIANTS)
 - Güven sorusu yalnızca `TrustSource` üzerinden (BT4); liste dosyası iş mantığında doğrudan okunmaz.

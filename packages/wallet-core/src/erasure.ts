@@ -4,7 +4,7 @@
  *  - Kimlik servisi (kimlik ve iletişim belgelerini veren): `POST {issuer}/erasure` — her belge için alan açmadan sunum
  *    (SD-JWT VC + KB-JWT; aud = servis, nonce = servisin /nonce'ı). Servis kaydı ve olay satırlarını siler, kopyaları iptal eder,
  *    kimlik doğrulama sağlayıcısındaki oturumu ve görüntüleri sildirir.
- *  - Cüzdan sağlayıcısı: `deleteUnit` (wua.ts) — birim iptal + kayıt silinir.
+ *  - Cüzdan sağlayıcısındaki birim kaydının silinmesi her cüzdanın kendi sağlayıcı protokolüdür (bu paketin dışında).
  * Kurumların (üniversite vb.) tuttuğu veri kurumun sorumluluğundadır; o yol TS7 silme talebidir (cüzdanda "Haklarım").
  */
 import { presentSdJwt } from "./sdjwt.js";

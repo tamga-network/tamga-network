@@ -4,7 +4,7 @@ title: "HAIP 1.0 conformance"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-06
 summary: >
   Two HAIP 1.0 rules are applied: in signed requests the verifier uses only the `x509_hash` client identifier and the wallet accepts
   only that (§5); the WIA `sub` is a value shared by all instances of the same wallet solution (§4.4.1). Because `x509_hash` changes
@@ -37,8 +37,9 @@ decisions, were left for an ADR:
    record and the [[ADR-0017]] intermediary relationships were keyed on this string). ETSI TS 119 475 defines the
    [[t:access-certificate]] as the `x509_hash` leaf (CIR 2026/1730).
 2. **[[t:WIA]] `sub`.** HAIP 1.0 §4.4.1: "The subject claim for the Wallet Attestation MUST be a value that is shared by all Wallet
-   instances using the present type of wallet implementation"; moreover the `client_id` in the [[t:PAR]] is this `sub` value. The
-   Tamga [[t:wallet-provider]] (`apps/wallet-provider`) wrote the fingerprint of a per-transaction ephemeral key as `sub`
+   instances using the present type of wallet implementation"; moreover the `client_id` in the [[t:PAR]] is this `sub` value. Tamga
+   Wallet's [[t:wallet-provider]] (then `apps/wallet-provider` in this repository; moved to the wallet's own repository by
+   [[ADR-0042]]) wrote the fingerprint of a per-transaction ephemeral key as `sub`
    ([[ADR-0025]] K2). That was fine for untraceability, but did not follow the letter of the rule.
 
 On 2026-10-01 project management approved the EU path for both items.
