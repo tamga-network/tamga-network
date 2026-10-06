@@ -108,7 +108,7 @@ hâlde ispat ~7× yavaşlar (ölçüm).
 | 1 | ✅ Masaüstünde gerçek ispat + doğrulama, ölçümler, negatif testler, Node köprüsü prototipi (2026-10-01) | — |
 | 2a | ✅ `@tamga-network/zk`: ispatçı paketi — çekirdek (DCQL → öğeler, devre seçimi ve ZK2 denetimi, ZkDocument), masaüstü ispatçı (`/node`, Rust alt süreç), telefon modülü iskeleti (`/react-native`, Expo; Rust C ABI / JNI); uçtan uca test: paketin ispatı ağın doğrulayıcısından geçer (2026-10-06) | Aşama 1, 3 |
 | 2b | Telefon kütüphanelerinin derlenmesi (Android NDK, iOS xcframework) ve cihazda ölçüm | Android NDK; macOS |
-| 2c | Cüzdan bağlantısı: `wallet-core` sunum akışında `mso_mdoc_zk` sorgusunu ispatçıya yönlendirme; Tamga Wallet'ta etkinleştirme | Mağaza derlemesi (Z1) |
+| 2c | ✅ Cüzdan bağlantısı (2026-10-06): `wallet-core` `mso_mdoc_zk` sorgusunu mdoc gibi eşler, olağan cihaz imzalı yanıtı ispatçı kancasına (`RespondInput.zk`) verir, vp_token'a yalnız ispat girer; ispatçı yoksa ZK sorgusu önerilmez, `credential_sets`'te klasik seçenek seçilir (ZK5). Tamga Wallet kancayı `@tamga-network/zk` ile bağladı; telefon kütüphaneleri ve devre dosyaları gelene kadar (2b) ispat kapalı kalır | 2b; mağaza derlemesi (Z1) |
 | 3 | ✅ `@tamga-network/verifier`: `mso_mdoc_zk` doğrulama (paketle gelen WASM, `/zk`); devre özetleri güven listesinde (`lotl.zk_circuits`); politika `format: "mso_mdoc_zk"`; Tamga Verify `age-over-18-zk` (2026-10-01) | Aşama 1 |
 | 4 | Taşıma (DCQL + DC API), AB örnek doğrulayıcıyla karşılıklı test; `/docs/selective-disclosure` ve SPEC-WALLET-0001 güncellemesi | Aşama 3 |
 

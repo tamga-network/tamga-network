@@ -114,7 +114,7 @@ proving is ~7× slower (measured).
 | 1 | ✅ Real proof + verification on the desktop, measurements, negative tests, Node bridge prototype (2026-10-01) | — |
 | 2a | ✅ `@tamga-network/zk`: prover package — core (DCQL → claims, circuit selection and ZK2 check, ZkDocument), desktop prover (`/node`, Rust child process), phone module scaffold (`/react-native`, Expo; Rust C ABI / JNI); end-to-end test: the package's proof passes the network verifier (2026-10-06) | Stages 1, 3 |
 | 2b | Building the phone libraries (Android NDK, iOS xcframework) and on-device measurement | Android NDK; macOS |
-| 2c | Wallet wiring: `wallet-core` routes `mso_mdoc_zk` queries to the prover in the presentation flow; enabled in Tamga Wallet | Store build (Z1) |
+| 2c | ✅ Wallet wiring (2026-10-06): `wallet-core` matches `mso_mdoc_zk` queries like mdoc, hands the usual device-signed response to a prover hook (`RespondInput.zk`) and puts only the proof in the vp_token; without a prover ZK queries are not offered and the classic option in `credential_sets` is chosen (ZK5). Tamga Wallet wires the hook with `@tamga-network/zk`; proving stays off until the phone libraries and circuit files arrive (2b) | 2b; store build (Z1) |
 | 3 | ✅ `@tamga-network/verifier`: `mso_mdoc_zk` verification (bundled WASM, `/zk`); circuit digests in the trust list (`lotl.zk_circuits`); policy `format: "mso_mdoc_zk"`; Tamga Verify `age-over-18-zk` (2026-10-01) | Stage 1 |
 | 4 | Transport (DCQL + DC API), cross-testing with the EU reference verifier; updates to `/docs/selective-disclosure` and SPEC-WALLET-0001 | Stage 3 |
 

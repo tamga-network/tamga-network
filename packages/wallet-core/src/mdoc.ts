@@ -35,14 +35,7 @@ export function jwkToPoint(jwk: PublicJwk): Uint8Array {
 
 /** IssuerSigned'dan issuerAuth x5chain yaprağını çıkarır (MSO imzasını doğrulamak için). */
 function leafOf(issuerSigned: Uint8Array): Uint8Array {
-  const m = decode(issuerSigned);
-  if (!(m instanceof Map)) throw new Error("mdoc: IssuerSigned is not a map");
-  const ia = m.get("issuerAuth");
-  if (ia === undefined) throw new Error("mdoc: issuerAuth missing");
-  // issuerAuth, çözülmüş COSE_Sign1 dizisi olarak durur; yeniden kodlayıp ayrıştır
-  const x5 = parseCoseSign1(encode(ia as CborValue)).x5chain;
-  if (!x5.length) throw new Error("mdoc: x5chain missing (MD3)");
-  return x5[0];
+  return x5chainOf(issuerSigned)[0];
 }
 
 const eqVal = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -80,11 +73,31 @@ export function verifyReceivedMdoc(
   return { namespace: ns, elements: Object.keys(el) };
 }
 
+/** Sıfır bilgi ispatlı mdoc sunumu (ADR-0032; AB TS13 DCQL `format`). */
+export const MDOC_ZK_FORMAT = "mso_mdoc_zk";
+
+/** IssuerSigned'dan issuerAuth x5chain'i (yaprak ilk). */
+function x5chainOf(issuerSigned: Uint8Array): Uint8Array[] {
+  const m = decode(issuerSigned);
+  if (!(m instanceof Map)) throw new Error("mdoc: IssuerSigned is not a map");
+  const ia = m.get("issuerAuth");
+  if (ia === undefined) throw new Error("mdoc: issuerAuth missing");
+  // issuerAuth, çözülmüş COSE_Sign1 dizisi olarak durur; yeniden kodlayıp ayrıştır
+  const x5 = parseCoseSign1(encode(ia as CborValue)).x5chain;
+  if (!x5.length) throw new Error("mdoc: x5chain missing (MD3)");
+  return x5;
+}
+
 /**
- * OpenID4VP sunumu (OpenID4VP 1.0 Ek B.2.6): seçici açıklama + ayrık cihaz imzası; SessionTranscript = OpenID4VPHandover
- * (client_id, nonce, şifreleme anahtarının JWK parmak izi, response_uri) → base64url(DeviceResponse).
+ * Kurumun mdoc'u imzalayan sertifika zinciri (DER, yaprak ilk) ve yaprağın P-256 anahtarı (65 bayt, 04||X||Y) — ZK ispatçısının
+ * girdisi (ADR-0032: ispat kurum anahtarına bağlanır; zincir ZkDocument'te `msoX5chain` olarak doğrulayıcıya gider).
  */
-export async function presentMdoc(p: {
+export function mdocIssuerKeys(mdocB64u: string): { x5chain: Uint8Array[]; key: Uint8Array } {
+  const x5chain = x5chainOf(b64uDecode(mdocB64u));
+  return { x5chain, key: p256PointFromCertDer(x5chain[0]) };
+}
+
+export interface PresentMdocArgs {
   mdocB64u: string;
   docType: string;
   namespace: string;
@@ -98,12 +111,29 @@ export async function presentMdoc(p: {
   encJwk?: PublicJwk;
   keys: KeyProvider;
   keyRef: string;
-}): Promise<string> {
+}
+
+/**
+ * Cihaz imzalı DeviceResponse ve SessionTranscript baytları (CBOR). Olağan sunumda yanıt doğrulayıcıya gider (`presentMdoc`);
+ * ZK sunumunda (ADR-0032) yalnız ispatçının girdisidir, doğrulayıcıya GİTMEZ.
+ */
+export async function buildMdocPresentation(
+  p: PresentMdocArgs,
+): Promise<{ deviceResponse: Uint8Array; transcript: Uint8Array }> {
   const partial = discloseMdoc(b64uDecode(p.mdocB64u), { [p.namespace]: p.disclose });
   const thumb = p.encJwk ? jwkThumbprint(p.encJwk) : null;
-  const st = p.origin
+  const transcript = p.origin
     ? dcApiSessionTranscript(p.origin, p.nonce, thumb)
     : oid4vpSessionTranscript(p.clientId, p.nonce, p.responseUri, thumb);
-  const devSig = await deviceSignAsync(st, p.docType, (tbs) => p.keys.sign(p.keyRef, tbs));
-  return b64u(buildDeviceResponse({ docType: p.docType, issuerSigned: partial, deviceSignature: devSig }));
+  const devSig = await deviceSignAsync(transcript, p.docType, (tbs) => p.keys.sign(p.keyRef, tbs));
+  const deviceResponse = buildDeviceResponse({ docType: p.docType, issuerSigned: partial, deviceSignature: devSig });
+  return { deviceResponse, transcript };
+}
+
+/**
+ * OpenID4VP sunumu (OpenID4VP 1.0 Ek B.2.6): seçici açıklama + ayrık cihaz imzası; SessionTranscript = OpenID4VPHandover
+ * (client_id, nonce, şifreleme anahtarının JWK parmak izi, response_uri) → base64url(DeviceResponse).
+ */
+export async function presentMdoc(p: PresentMdocArgs): Promise<string> {
+  return b64u((await buildMdocPresentation(p)).deviceResponse);
 }

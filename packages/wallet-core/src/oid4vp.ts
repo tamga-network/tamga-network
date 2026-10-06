@@ -6,6 +6,9 @@
  *  DCQL seçenekleri (OpenID4VP 1.0 §6): `claim_sets` (alan seçenekleri) ve `credential_sets` (belge seçenekleri, zorunlu /
  *  isteğe bağlı) — `matchDcql` + `selectDcql`; yalnız seçilen seçenek gönderilir (en az veri). §6.4.1: istenen alanı olmayan belge
  *  gönderilmez (eksik alanla sunum yok); karşılanamayan sorgunun nedeni `gaps`'te.
+ *  ZK (ADR-0032, AB TS13 `mso_mdoc_zk`): eşleşme mdoc gibidir; sunumda olağan cihaz imzalı yanıt üretilir ve çağıranın ispatçısına
+ *  (`RespondInput.zk`) verilir, doğrulayıcıya yalnız ispat gider. Çekirdek ispatçıya bağımlı değildir; ispatçı yoksa ZK sorgusu
+ *  önerilmez (`matchDcql(..., { zk: false })`, ZK5 — `credential_sets`'te klasik seçenek seçilir).
  */
 import { b64Decode, b64u, utf8 } from "./b64.js";
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
@@ -17,7 +20,7 @@ import { WalletError, type Http, readJson } from "./http.js";
 import type { StoredCredential } from "./store.js";
 import { certAuthorityKeyId, certSanDnsNames } from "./asn1.js";
 import { fetchTrustSource, type TrustPins } from "./trustlist.js";
-import { MDOC_FORMAT, presentMdoc } from "./mdoc.js";
+import { MDOC_FORMAT, MDOC_ZK_FORMAT, buildMdocPresentation, mdocIssuerKeys, presentMdoc } from "./mdoc.js";
 import { NON_PRESENTABLE_VCTS, PSEUDONYM_FORMAT } from "./pseudonym.js";
 
 export const REQUEST_TYP = "oauth-authz-req+jwt";
@@ -35,7 +38,12 @@ export interface DcqlTrustedAuthority {
 export interface DcqlCredential {
   id: string;
   format: string;
-  meta?: { vct_values?: string[]; doctype_value?: string };
+  meta?: {
+    vct_values?: string[];
+    doctype_value?: string;
+    /** ADR-0032 / AB TS13: doğrulayıcının kabul ettiği ZK devreleri (`circuit_hash` = güven listesindeki `circuit_id`) */
+    zk_system_type?: Array<{ zkSystemId?: string; system?: string; params?: { circuit_hash?: string } }>;
+  };
   claims?: DcqlClaim[];
   /** OpenID4VP 1.0 §6.1.1 (HAIP §5: `aki` desteklenmeli) */
   trusted_authorities?: DcqlTrustedAuthority[];
@@ -301,8 +309,11 @@ export interface Match {
   credential: StoredCredential;
   /** Gönderilecek alanlar. Belge, istenen alanların hepsine (ya da `claim_sets`'ten bir kombinasyona) sahipse eşleşir (§6.4.1). */
   requested: string[];
-  /** D-CRED-5: istenen format; `mso_mdoc` ise sunum DeviceResponse olarak üretilir (yoksa `dc+sd-jwt`). */
-  format?: "dc+sd-jwt" | "mso_mdoc";
+  /**
+   * D-CRED-5: istenen format; `mso_mdoc` ise sunum DeviceResponse olarak üretilir (yoksa `dc+sd-jwt`). `mso_mdoc_zk` (ADR-0032):
+   * belge gösterilmez, yalnız `zk.claims` ispatlanır.
+   */
+  format?: "dc+sd-jwt" | "mso_mdoc" | "mso_mdoc_zk";
   /** mso_mdoc: DCQL claim yolu [namespace, element] — açıklamanın namespace'i. */
   namespace?: string;
   /**
@@ -310,6 +321,14 @@ export interface Match {
    * (ARF OIA_11 — ör. birden çok doğrulanmış e-posta, ADR-0021).
    */
   alternatives?: Match[];
+  /** ADR-0032: ZK eşleşmesinde ispatlanacak öğeler (sorgudaki sabit değerler) ve doğrulayıcının kabul ettiği devreler */
+  zk?: { claims: ZkClaimValue[]; circuits?: string[] };
+}
+/** ZK ile ispatlanan öğe: "bu ad alanında bu öğe şu değerdir" (`@tamga-network/zk` ZkClaim ile aynı biçim). */
+export interface ZkClaimValue {
+  namespace: string;
+  element: string;
+  value: boolean | string | number;
 }
 /** Belgenin (SD-JWT kopyası) x5c zincirindeki sertifikaların AKI'leri, base64url. */
 function chainAkis(c: StoredCredential): string[] {
@@ -354,12 +373,23 @@ export function checkDcqlShape(dcql: DcqlQuery): void {
     if (typeof q.id !== "string" || !DCQL_ID.test(q.id)) bad("credential query id");
     if (ids.has(q.id)) bad(`duplicate credential query id ${q.id}`);
     ids.add(q.id);
-    // mso_mdoc: yol [namespace, element] ve tek namespace — açıklama tek namespace'te yapılır (seçenek başka namespace'e kaçmaz)
-    if (q.format === MDOC_FORMAT && q.claims?.length) {
+    // mso_mdoc (ve ZK): yol [namespace, element] ve tek namespace — açıklama tek namespace'te yapılır (seçenek başka namespace'e kaçmaz)
+    if ((q.format === MDOC_FORMAT || q.format === MDOC_ZK_FORMAT) && q.claims?.length) {
       const ns = q.claims[0].path[0];
       for (const c of q.claims)
         if (c.path.length !== 2 || typeof c.path[0] !== "string" || typeof c.path[1] !== "string" || c.path[0] !== ns)
-          bad(`mso_mdoc claim path must be [namespace, element] in one namespace (${q.id})`);
+          bad(`${q.format} claim path must be [namespace, element] in one namespace (${q.id})`);
+    }
+    // ADR-0032: ZK açıklama değil ispattır — her öğenin tek, sabit bir beklenen değeri olmalı ("age_over_18 = true")
+    if (q.format === MDOC_ZK_FORMAT) {
+      if (!q.claims?.length) bad(`mso_mdoc_zk query without claims (${q.id})`);
+      for (const c of q.claims ?? [])
+        if (
+          !Array.isArray(c.values) ||
+          c.values.length !== 1 ||
+          !["boolean", "string", "number"].includes(typeof c.values[0])
+        )
+          bad(`mso_mdoc_zk claim needs exactly one expected value (${q.id})`);
     }
     if (q.claim_sets === undefined) continue;
     const claims = q.claims ?? [];
@@ -447,7 +477,11 @@ export function chooseDcqlOption(sel: DcqlSelection, setIndex: number, option: n
  */
 export interface DcqlGap {
   queryId: string;
-  reason: "no_credential" | "missing_claims" | "values";
+  /**
+   * `zk_unavailable` (ADR-0032 ZK5): belge istenen koşulu karşılıyor ama sorgu yalnız sıfır bilgi ispatı istiyor ve cüzdan bu
+   * cihazda ispat üretemiyor.
+   */
+  reason: "no_credential" | "missing_claims" | "values" | "zk_unavailable";
   claims: string[];
   credential?: StoredCredential;
 }
@@ -461,14 +495,21 @@ export interface DcqlMatchResult {
  * DCQL → cüzdandaki belgeler: vct eşleşmesi, `trusted_authorities` (aki), `values` koşulları, istenen claim adları.
  * OpenID4VP 1.0 §6.4.1: `claim_sets` yoksa istenen alanların HEPSİ belgede olmalı — biri eksikse belge sorguyu karşılamaz (eksik
  * alanla gönderilmez; isteğe bağlı alan isteyen doğrulayıcı `claim_sets` kullanır). `claim_sets` varsa karşılanabilen ilk kombinasyon.
+ * `mso_mdoc_zk` (ADR-0032) mdoc gibi eşlenir; yalnız `opts.zk` (cüzdan bu cihazda ispat üretebilir) ise önerilir — değilse sorgu
+ * karşılanamaz (`zk_unavailable`) ve `credential_sets`'te klasik seçenek seçilir (ZK5).
  */
-export function matchDcql(dcql: DcqlQuery, credentials: StoredCredential[]): DcqlMatchResult {
+export function matchDcql(
+  dcql: DcqlQuery,
+  credentials: StoredCredential[],
+  opts: { zk?: boolean } = {},
+): DcqlMatchResult {
   const matches: Match[] = [];
   const unmatched: string[] = [];
   const gaps: DcqlGap[] = [];
   for (const q of dcql.credentials) {
     if (q.format === PSEUDONYM_FORMAT) continue; // ADR-0031: takma ad belge değil, ayrı üretilir (pseudonymQueryOf)
-    const isMdoc = q.format === MDOC_FORMAT;
+    const isZk = q.format === MDOC_ZK_FORMAT;
+    const isMdoc = q.format === MDOC_FORMAT || isZk;
     const vcts = q.meta?.vct_values ?? [];
     const docType = q.meta?.doctype_value;
     const cands = credentials
@@ -505,8 +546,17 @@ export function matchDcql(dcql: DcqlQuery, credentials: StoredCredential[]): Dcq
           queryId: q.id,
           credential: c,
           requested: option.map((e) => e.name),
-          format: isMdoc ? MDOC_FORMAT : "dc+sd-jwt",
+          format: isZk ? MDOC_ZK_FORMAT : isMdoc ? MDOC_FORMAT : "dc+sd-jwt",
           ...(namespace ? { namespace } : {}),
+          ...(isZk
+            ? {
+                zk: zkOf(
+                  q,
+                  namespace ?? "",
+                  option.map((e) => e.name),
+                ),
+              }
+            : {}),
         });
         continue;
       }
@@ -520,13 +570,29 @@ export function matchDcql(dcql: DcqlQuery, credentials: StoredCredential[]): Dcq
         if (!closest || rank(gap) < rank(closest)) closest = gap;
       }
     }
-    if (ok.length) matches.push(ok.length > 1 ? { ...ok[0], alternatives: ok } : ok[0]);
+    if (ok.length && isZk && !opts.zk) {
+      // ZK5: belge var ama bu cihazda ispat yok — sorgu önerilmez (klasik seçenek varsa o seçilir)
+      unmatched.push(q.id);
+      gaps.push({ queryId: q.id, reason: "zk_unavailable", claims: ok[0].requested, credential: ok[0].credential });
+    } else if (ok.length) matches.push(ok.length > 1 ? { ...ok[0], alternatives: ok } : ok[0]);
     else {
       unmatched.push(q.id);
       gaps.push(closest ?? { queryId: q.id, reason: "no_credential", claims: [] });
     }
   }
   return { matches, unmatched, gaps };
+}
+
+/** ZK sorgusundan ispatlanacak öğeler (checkDcqlShape her öğenin tek sabit değerini denetledi) ve kabul edilen devreler. */
+function zkOf(q: DcqlCredential, namespace: string, names: string[]): NonNullable<Match["zk"]> {
+  const claims = names.map((element) => {
+    const cl = (q.claims ?? []).find((c) => String(c.path[1]) === element);
+    return { namespace, element, value: cl?.values?.[0] as ZkClaimValue["value"] };
+  });
+  const circuits = (q.meta?.zk_system_type ?? [])
+    .map((z) => z.params?.circuit_hash ?? z.zkSystemId)
+    .filter((x): x is string => typeof x === "string");
+  return { claims, ...(circuits.length ? { circuits } : {}) };
 }
 
 export interface RpCheck {
@@ -616,6 +682,28 @@ export function checkRp(
   };
 }
 
+/**
+ * ADR-0032: ZK ispatçısına verilen girdi. `deviceResponse` bu oturumun olağan, cihaz imzalı yanıtıdır (donanım anahtarı ve telefon
+ * kilidi — WL11) ve doğrulayıcıya GİTMEZ; ispatçı ondan ZK DeviceResponse (TS13 ZkDocument) üretir.
+ */
+export interface ZkProveRequest {
+  queryId: string;
+  deviceResponse: Uint8Array;
+  transcript: Uint8Array;
+  docType: string;
+  namespace: string;
+  claims: ZkClaimValue[];
+  /** Doğrulayıcının kabul ettiği devreler (DCQL `zk_system_type`); yoksa güven listesindeki her etkin devre */
+  circuits?: string[];
+  /** Kurumun mdoc imza zinciri (DER, yaprak ilk) ve yaprağın P-256 anahtarı (65 bayt) */
+  issuerX5chain: Uint8Array[];
+  issuerKey: Uint8Array;
+}
+/** ZK sunumu yapılamadı (WalletError `unsupported`, `detail`): ispatçı yok (`unavailable`) ya da ispat üretilemedi (ZK5). */
+export interface ZkFailureDetail {
+  zk: string;
+}
+
 export interface RespondInput {
   request: VpRequest;
   matches: Array<{ match: Match; keyRef: string; combined: string; disclose: string[] }>;
@@ -627,6 +715,11 @@ export interface RespondInput {
   http: Http;
   randomBytes?: (n: number) => Uint8Array;
   now?: number;
+  /**
+   * ADR-0032: ZK ispatçısı (cüzdan verir; ör. `@tamga-network/zk` presentZk). Dönen baytlar ZK DeviceResponse'tur ve vp_token'a
+   * base64url olarak girer. Çekirdek ispatçıya bağımlı değildir; yoksa ya da hata verirse ZK sunumu yapılmaz.
+   */
+  zk?: (a: ZkProveRequest) => Promise<Uint8Array>;
 }
 export interface RespondOutput {
   status: number;
@@ -641,6 +734,10 @@ export interface RespondOutput {
 export async function respond(p: RespondInput): Promise<RespondOutput> {
   const vpToken: Record<string, string[]> = {};
   for (const m of p.matches) {
+    if (m.match.format === MDOC_ZK_FORMAT) {
+      vpToken[m.match.queryId] = [await presentZkMatch(p, m)];
+      continue;
+    }
     if (m.match.format === MDOC_FORMAT) {
       // D-CRED-5: aynı kopyanın mdoc temsili (anahtar referansıyla bulunur; çağıran değişmez)
       const copy = m.match.credential.copies.find((k) => k.keyRef === m.keyRef);
@@ -700,6 +797,52 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
     /* boş gövde olabilir */
   }
   return { status: r.status, redirectUri, vpToken, passGrant, showUrl }; // passGrant: ADR-0012 B (geçiş kartı) · showUrl: ADR-0012 C (kontrol görünümü, 5 dk)
+}
+
+/**
+ * ADR-0032 ZK sunumu: olağan cihaz imzalı DeviceResponse (aynı kopya, aynı imza akışı — WL5, WL11) → ispatçı → base64url(ZK yanıtı).
+ * İspatçı yoksa ya da başarısızsa `unsupported` (`detail.zk`); belge asla ispat yerine gönderilmez.
+ */
+async function presentZkMatch(p: RespondInput, m: RespondInput["matches"][number]): Promise<string> {
+  const fail = (zk: string, msg: string) => new WalletError("unsupported", msg, { zk } satisfies ZkFailureDetail);
+  if (!p.zk || !m.match.zk) throw fail("unavailable", "zero-knowledge proofs are not available in this wallet (ZK5)");
+  const copy = m.match.credential.copies.find((k) => k.keyRef === m.keyRef);
+  if (!copy?.mdoc) throw new WalletError("issuer_error", "this copy has no mdoc representation");
+  const docType = m.match.credential.vct;
+  const namespace = m.match.namespace ?? "";
+  const { deviceResponse, transcript } = await buildMdocPresentation({
+    mdocB64u: copy.mdoc,
+    docType,
+    namespace,
+    disclose: m.match.zk.claims.map((c) => c.element),
+    clientId: p.request.clientId,
+    nonce: p.request.nonce,
+    responseUri: p.request.responseUri,
+    origin: p.request.origin,
+    encJwk: p.request.encJwk,
+    keys: p.keys,
+    keyRef: m.keyRef,
+  });
+  const issuer = mdocIssuerKeys(copy.mdoc);
+  let out: Uint8Array;
+  try {
+    out = await p.zk({
+      queryId: m.match.queryId,
+      deviceResponse,
+      transcript,
+      docType,
+      namespace,
+      claims: m.match.zk.claims,
+      ...(m.match.zk.circuits ? { circuits: m.match.zk.circuits } : {}),
+      issuerX5chain: issuer.x5chain,
+      issuerKey: issuer.key,
+    });
+  } catch (e) {
+    const code = (e as { code?: unknown } | null)?.code;
+    throw fail(typeof code === "string" ? code : "prove_failed", "the zero-knowledge proof could not be created (ZK5)");
+  }
+  if (!(out instanceof Uint8Array) || !out.length) throw fail("prove_failed", "the zero-knowledge proof is empty");
+  return b64u(out);
 }
 
 /**
