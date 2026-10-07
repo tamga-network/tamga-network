@@ -4,7 +4,7 @@ title: "Verify on your server"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Verifying Tamga credentials on your own server: loading the trust source, prefetching status lists, policy → signed
   OpenID4VP request, decrypting the encrypted response and the canonical verification pipeline (T0 + A–E). Reference
@@ -101,6 +101,7 @@ const policy: Policy = {
     id: "identity", vct_values: ["urn:tamga:id:IdentityAttestation:1"],
     format: "mso_mdoc_zk", namespace: "tamga.id.1",
     required_claims: ["age_over_18"], constraints: { age_over_18: true }, // equality only
+    accept_unrevocable_zk: true, // knowingly accept a ZK presentation whose revocation cannot be checked (ZK4)
   }],
   trust: { ... }, freshness: { ... },
 };
@@ -119,10 +120,14 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
   binary does not respond, it falls back to WASM.
 - **New step `Z1`:** is the circuit in the signed list, was only the requested element disclosed, is the timestamp fresh, is
   the proof valid? The institution signature, the device signature and the validity are checked inside the proof
-  (`checks_skipped`: A4–A7). No revocation status comes with it (`status: NOT_APPLICABLE`); credentials presented with ZK are
-  short-lived.
+  (`checks_skipped`: A4–A7). No revocation status comes with it (`status.value: NOT_APPLICABLE`, the reason in
+  `status.reason`); credentials presented with ZK are short-lived.
+- **`accept_unrevocable_zk`:** a policy that uses `mso_mdoc_zk` must state it explicitly. `true` accepts a presentation whose
+  revocation cannot be checked; with `false` every ZK presentation returns `INDETERMINATE` (step `D1`, `STATUS_UNREACHABLE`) —
+  if a revocation check is required, use the classic `mso_mdoc` policy.
 - **Fallback:** if the wallet does not support ZK, your query will not match; ask the same question with the classic
-  `mso_mdoc` policy (`age-over-18-mdoc`). ZK proving in Tamga Wallet ships with the phone release.
+  `mso_mdoc` policy (`age-over-18-mdoc`). Wallet side: `@tamga-network/zk` (Android native library ready, iOS pending); a
+  wallet without a prover uses the classic path (ZK5).
 
 ## Rules
 

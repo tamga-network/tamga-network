@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -69,8 +69,8 @@ Tamga üç katmanda konumlanır ve her katman tek başına ayakta durur:
 2. **Tamga Network — hafif bir güven federasyonu.** Ağ, ülke güven listelerini toplar ve birbirine tanıtır; yayınlanmış
    kurallara uyan her cüzdan sağlayıcısını tanır. Bugün Türkiye listesini Tamga geçici olarak, devlet adına işletir. Devletler
    katıldıkça listeler devredilir, bir yönetişim kurumu kurulur ve ortak defter (zincir) gelir.
-3. **Ağın üstündekiler.** Ağın kurallarına uyan cüzdanlar ve hizmet sağlayıcılar. Tamga Wallet ağın ilk ve referans
-   cüzdanıdır, ama ayrı bir üründür ve her AB uyumlu ortamda çalışır. Tamga Network hizmet satmaz: ağ kuralları, güven listelerini,
+3. **Ağın üstündekiler.** Ağın kurallarına uyan cüzdanlar ve hizmet sağlayıcılar. Tamga Wallet ağın ilk
+   cüzdanıdır; bir şirketin ayrı ürünüdür ve her AB uyumlu ortamda çalışır. Tamga Network hizmet satmaz: ağ kuralları, güven listelerini,
    açık kodu ve referans hizmetleri (barındırılan belge verme, Kurum Konsolu, barındırılan [[t:verifier]] Tamga Verify) işletir;
    entegrasyon, destek ve danışmanlık gibi ticari hizmetler ağın dışındaki şirketlerce, kendi adlarıyla sunulur ([[ADR-0037]]).
 
@@ -118,13 +118,14 @@ kaydın izin verdiğinden fazla alan isteniyorsa uyarır. Kişi PIN ya da biyome
 yalnız onaylanan alanları içerir.
 
 Doğrulayıcı kendi doğrulama yazılımını çalıştırabilir ya da Tamga Verify'ı (barındırılan doğrulayıcı) kullanabilir. Gösterme
-aynı cihazda tarayıcı üzerinden (Digital Credentials API) ya da farklı cihazda karekodla yapılabilir.
+cüzdan bağlantısıyla (aynı cihazda) ya da farklı cihazda karekodla yapılır. Tarayıcı üzerinden gösterme (Digital Credentials
+API) için doğrulayıcı hazırdır; cüzdan bağlantısı henüz yoktur.
 
 ## 2.3 Yüz yüze gösterme
 
 Kapı, kampüs girişi ya da gişe gibi yerlerde belge yakın alanda gösterilir. Kalıcı çözüm ISO/IEC 18013-5 standardının
-Bluetooth yakın alan akışıdır. Bu akış mağaza sürümüyle birlikte devreye girer; o zamana kadar kısa ömürlü, kapsamı
-sınırlı geçiş kartları kullanılır.
+Bluetooth yakın alan akışıdır. Bu akış kodlandı, cihaz testi bekliyor; devreye girene kadar kısa ömürlü, kapsamı sınırlı
+geçiş kartları kullanılır.
 
 ## 2.4 Web sitelerine giriş
 
@@ -142,15 +143,16 @@ biletin ikinci kez kullanılması reddedilir.
 
 Kişi "18 yaşından büyüğüm" bilgisini doğum tarihini ya da kimlik numarasını göstermeden kanıtlayabilir. Cüzdan, kurumun
 imzaladığı belgeyi değiştirmeden bu belge hakkında bir sıfır bilgi ispatı üretir. Doğrulayıcı yalnız güven listesinde
-yayınlanan ispat devrelerini kabul eder. Doğrulayıcı tarafı hazırdır; cüzdan tarafı mağaza sürümüyle gelir. İspat
-desteklenmediğinde gösterme olağan yolla yapılır.
+yayınlanan ispat devrelerini kabul eder. Doğrulayıcı tarafı yayındadır. Cüzdan tarafı ağın açık ispatçı paketine bağlandı;
+Android yerel kütüphanesi hazır, iOS kütüphanesi bekliyor; cihaz testi mağaza sürümüyle yapılır. İspat desteklenmediğinde
+gösterme olağan yolla yapılır.
 
 ## 2.7 Kişinin denetimi
 
 - **Geçmiş.** Kişi hangi belgeyi kime, ne zaman ve hangi alanlarla gösterdiğini cüzdanda görür. Geçmiş cihazda kalır;
   yalnız kişinin başlattığı parolalı bir dosyayla dışarı aktarılır.
-- **Silme.** Kişi cüzdanı sıfırlayarak Tamga hizmetlerindeki kaydını (kimlik servisi, [[t:wallet-provider]]) ve cihazdaki
-  bütün verisini siler.
+- **Silme.** Kişi cüzdanı sıfırlayarak Tamga'nın kimlik servisindeki kaydını ve [[t:wallet-provider|cüzdan sağlayıcısındaki]]
+  birim kaydını (cüzdanı sunan kuruluşta) ve cihazdaki bütün verisini siler.
 - **Kurumdan silme talebi ve şikâyet.** Kişi bir kurumdan verilerini silmesini cüzdandan isteyebilir; doğrulayıcının
   bağlı olduğu veri koruma kurumuna şikâyet yolunu da cüzdanda görür.
 
@@ -163,9 +165,11 @@ desteklenmediğinde gösterme olağan yolla yapılır.
 | Bilet ve tek kullanımlık kapı geçişi | Yayında |
 | Veri silme, geçmiş, dışa aktarım | Yayında |
 | Sıfır bilgi ispatı — doğrulayıcı tarafı | Yayında |
-| Sıfır bilgi ispatı — cüzdan tarafı | Mağaza sürümüyle |
-| Bluetooth yakın alan gösterme, tarayıcı üzerinden gösterme (Digital Credentials API) | Kodlandı; cihaz testi mağaza sürümüyle |
+| Sıfır bilgi ispatı — cüzdan tarafı | Cüzdana bağlandı; Android yerel kütüphanesi hazır, iOS bekliyor; cihaz testi mağaza sürümüyle |
+| Bluetooth yakın alan gösterme | Kodlandı; cihaz testi bekliyor |
+| Tarayıcı üzerinden gösterme (Digital Credentials API) | Doğrulayıcı hazır; cüzdan bağlantısı yok |
 | Donanım anahtarları ve cihaz kanıtı | Kodlandı; cihaz testi mağaza sürümüyle |
+| Sandbox (herkese açık; kimlik doğrulaması günlük/aylık tavanlı) | Yayında |
 
 ---
 
@@ -442,8 +446,9 @@ uygulamasını değiştirir.
 ## 8.3 Yönetişim kurumu
 
 Yönetişim kurumu ilk günden kurulmaz. Bir ya da iki devlet katılmaya istekli olduğunda konsey ya da vakıf kurulur ve
-listeler devredilir. O zamana kadar Tamga geçici işletmecidir; vakıf kurulduğunda işletmecilik ona devredilir. Ağ hiçbir
-ürün satmaz ve ticari hizmet sunmaz; Tamga Wallet ağın ilk cüzdanıdır ama ayrı bir üründür; hizmet sağlayıcılar ağın dışındadır ve kayıt sürecine
+listeler devredilir. O zamana kadar Tamga geçici işletmecidir; vakıf kurulduğunda işletmecilik ona devredilir. Tamga Network
+kâr amacı gütmez; işletmecilik ileride bir vakfa devredilir. Ağ hiçbir
+ürün satmaz ve ticari hizmet sunmaz; Tamga Wallet ağın ilk cüzdanıdır; bir şirketin ayrı ürünüdür; hizmet sağlayıcılar ağın dışındadır ve kayıt sürecine
 herkes gibi aynı koşullarla katılır ([[ADR-0037]]).
 
 ## 8.4 Standart uyum haritası

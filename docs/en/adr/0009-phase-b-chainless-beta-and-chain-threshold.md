@@ -4,7 +4,7 @@ title: "Chainless beta and chain threshold"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   The preconditions that tied the pilot to the ledger (PM-GTM-0001 Ö1/Ö2) are removed; "phase B — chainless beta" is added
   before phase 0. In the beta the trust anchor is a set of versioned, hash-chained trust lists (LOTL + national list)
@@ -54,8 +54,8 @@ In the [[t:EUDI-Wallet]] ecosystem the [[t:trust-anchor]] is not a ledger but th
 state ([[t:ETSI]] TS 119 612) + the Commission's [[t:LOTL]]; the digest is announced in the Official Journal. EBSI keeps the
 same records on a ledger. Tamga's canonical design uses the EBSI model with EUDI/ETSI data semantics ([[SPEC-ID-0002]]
 §8.1). Stepping down to EUDI's own model (a signed list) for the beta is not a deviation from the architecture but the
-single-signer special case of the same semantics. Analysis: `docs/_internal/beta/02-mimari-yeniden-analiz.md` §1–§2,
-`docs/_internal/beta/05-kurallar-en-iyi-pratik.md` R-2/R-6.
+single-signer special case of the same semantics. Analysis: the operator's internal
+record.
 
 ## Direction from project management (2026-09-23/24)
 
@@ -83,7 +83,7 @@ Under `trust.tamga.network`:
 | `anchors.jsonl` | `StatusListRegistry.publishList` + schema `contentHash` anchors | append-only; **hourly** signature (heartbeat included); lines are never deleted; `previous_hash` |
 | `keys/` + a permanent web page | Official Journal announcement | fingerprints of the LOTL signing certificates; ≥2 rolling certificates (ETSI 119 612 Annex A.2); rotation ≥30 days ahead, the new key signed with the old one |
 
-Canonical field names and examples: `docs/_internal/delivery/04-TRUST-LIST-FORMAT.md` (formalised on acceptance as
+Canonical field names and examples: the operator's internal record (formalised on acceptance as
 **SPEC-TRUST-0001** — DB-11).
 
 ## Decision 3 — Anchor substitution: the beta reading of "recorded on the ledger"
@@ -153,7 +153,7 @@ is met would mean presenting a single-operator ledger as "multi-party" and is co
 ## Decision 7 — Migration = replay + equivalence test
 
 Migrating from phase B to phase 0 means **replaying** the list version archive as contract calls
-(`docs/_internal/delivery/05-MIGRATION-TO-CHAIN.md` §2); the `since` times in the status history are written to the
+(the operator's internal record); the `since` times in the status history are written to the
 `revokedAt`/`validFrom` fields so that `isCredentialAcceptable(issuerId, iat)` gives the same answer for documents of the
 beta period (D-BC-3). **Acceptance criterion:** for every `(issuer_id, schema_id, iat, list_id, version)` query recorded
 during the pilot, `TrustSource(list)` and `TrustSource(chain)` must give the same C1/C2/C3/D5 answer; any ACCEPTED/REJECTED
@@ -234,7 +234,7 @@ anchor is until then.
 **Builds on:** [[ADR-0001]] (unchanged), [[ADR-0002]] (sovereignty, cross-recognition), [[PM-ASSUR-0001]] (stateless bootstrap)
 **Gives rise to:** SPEC-TRUST-0001, Tamga Trust Framework, this repository's code base
 **Sibling:** [[ADR-0010]] (vct URN + category — the Organization-of-Turkic-States-first principle applied to type identity)
-**Analysis source:** `docs/_internal/beta/02`, `03`, `04` (DB-1, DB-2, DB-10, DB-17), `05` (R-2, R-5, R-6), `06` §3.4
+**Analysis source:** the operator's internal record.
 
 ---
 

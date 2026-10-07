@@ -4,7 +4,7 @@ title: "Wallet pre-release checklist"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-07
 summary: >
   The checklist to go through before submitting a Tamga-compatible wallet to the app stores: keys and device attestation,
   registration, receiving credentials, presenting and the consent screen, privacy and the transaction log, changing devices and
@@ -63,8 +63,8 @@ codes are in [[SPEC-WALLET-0001]], the full list in [Tamga ARF — Tamga Ruleboo
 
 - Backup and migration files carry no keys; on a new device credentials come back through a "receive again" list (WL2, WL10).
 - The person is asked whether to restore the log.
-- When a device is handed over, the unit is revoked (`revokeUnit`).
-- Account and data deletion works from inside the app (`deleteUnit`, `requestIdentityErasure`); for data institutions hold,
+- When a device is handed over, the unit is revoked (your provider's unit revocation).
+- Account and data deletion works from inside the app (your provider's unit deletion, `requestIdentityErasure`); for data institutions hold,
   the way to file a request is shown.
 
 ## Trust list

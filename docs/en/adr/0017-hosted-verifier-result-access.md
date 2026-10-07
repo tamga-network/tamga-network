@@ -4,7 +4,7 @@ title: "Access to verification results"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   The endpoint of the hosted verifier (`verify.tamga.network`) that returns disclosed values
   (`GET /presentations/:id/claims`) currently answers anyone who knows the presentation identifier (a capability URL). Before
@@ -100,6 +100,10 @@ mandatory.
 
 Implementation: `apps/verify` (rpAuth, presentation owner, single read, status_token), `@tamga-network/verifier/web`, the
 wallet consent screen (K7), guides GUIDE-0001/0002.
+
+Implementation note (K7, 2026-10-07): the intermediary relationship must be written in both records — the RP lists the
+intermediary in `uses_intermediaries` and the intermediary lists the RP in `served_relying_parties`. On a one-sided claim the
+wallet refuses the request (`@tamga-network/wallet-core`; [[SPEC-PROTO-0002]]/PV14).
 
 **Implementation note.** The K5 pattern also applies to the verifier's own flows: in strict mode, an unasserted
 `POST /presentations` (the "Generate QR" button on the home page; the check and pass-card flows started by the wallet,

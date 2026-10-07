@@ -4,7 +4,7 @@ title: "Sıfır bilgi ispatı (ZK)"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   Cüzdan, kurumların ES256 imzalı mdoc belgelerini DEĞİŞTİRMEDEN, bu belgeler hakkında Longfellow ZK ile sıfır bilgi
   ispatı üretir (ilk yüklem: 18 yaş üstü). Doğrulayıcı yalnız ispatlanan alanı ve belge vereni görür; iki gösterim birbirine
@@ -67,6 +67,8 @@ Toplu kopyalar kaldırılmaz.
 ## K6 — İptal durumu
 Devre iptal durumunu denetlemez; [[t:status-list]] indeksini açmak bağlanabilirliği geri getirir. Geçici çözüm: ZK ile sunulan
 belgeler kısa ömürlüdür (sessiz yenileme, [[ADR-0023]]); gizli iptal kanıtı AB TS13'ün iptal şeması netleşince ayrı ADR.
+Politika bunu açıkça seçer: `accept_unrevocable_zk: true` iptali denetlenemeyen ZK sunumunu bilerek kabul eder (sonuçta
+`status.value = NOT_APPLICABLE` ve `status.reason`); `false` ise sonuç DOĞRULANAMADI olur (adım D1, `STATUS_UNREACHABLE`).
 
 ## K7 — Cihaz bağlaması
 İspat, cihaz anahtarının SessionTranscript üzerindeki ES256 imzasını içerir ve cihaz açık anahtarını gizler; anahtar güvenli
@@ -95,7 +97,7 @@ hâlde ispat ~7× yavaşlar (ölçüm).
 | Kod | Kural |
 |---|---|
 | ZK1 | Kurum belgesinin biçimi ve imzası ZK sunumu için değiştirilmez; ZK yalnız cüzdanda ve doğrulayıcıda. |
-| ZK2 | Doğrulayıcı yalnız imzalı güven listesinde yayımlanan devre özetlerini kabul eder; bilinmeyen devre = RED. |
+| ZK2 | Doğrulayıcı yalnız imzalı güven listesinde yayımlanan ve durumu ACTIVE olan devre özetlerini kabul eder; bilinmeyen ya da etkin olmayan devre = RED. |
 | ZK3 | ZK sunumu yalnız DCQL'de istenen alanları ispatlar; ispat dışı alan doğrulayıcıya gitmez. |
 | ZK4 | ZK sunumunda iptal listesi indeksi açılmaz; ZK ile sunulan belgenin geçerlilik süresi kısa tutulur (K6). |
 | ZK5 | ZK desteklenmezse sunum klasik kurallarla (WL5 dahil) yapılır; ispat hatası kullanıcıya "şu an bu yolla gösterilemiyor" diye yansır, veri sızdırmaz. |
@@ -107,7 +109,7 @@ hâlde ispat ~7× yavaşlar (ölçüm).
 |---|---|---|
 | 1 | ✅ Masaüstünde gerçek ispat + doğrulama, ölçümler, negatif testler, Node köprüsü prototipi (2026-10-01) | — |
 | 2a | ✅ `@tamga-network/zk`: ispatçı paketi — çekirdek (DCQL → öğeler, devre seçimi ve ZK2 denetimi, ZkDocument), masaüstü ispatçı (`/node`, Rust alt süreç), telefon modülü iskeleti (`/react-native`, Expo; Rust C ABI / JNI); uçtan uca test: paketin ispatı ağın doğrulayıcısından geçer (2026-10-06) | Aşama 1, 3 |
-| 2b | Telefon kütüphanelerinin derlenmesi (Android NDK, iOS xcframework) ve cihazda ölçüm | Android NDK; macOS |
+| 2b | Telefon kütüphanelerinin derlenmesi ve cihazda ölçüm: Android ✅ (2026-10-07; arm64-v8a, armeabi-v7a, x86_64), iOS xcframework bekliyor (macOS); cihaz ölçümü mağaza derlemesiyle | macOS (iOS) |
 | 2c | ✅ Cüzdan bağlantısı (2026-10-06): `wallet-core` `mso_mdoc_zk` sorgusunu mdoc gibi eşler, olağan cihaz imzalı yanıtı ispatçı kancasına (`RespondInput.zk`) verir, vp_token'a yalnız ispat girer; ispatçı yoksa ZK sorgusu önerilmez, `credential_sets`'te klasik seçenek seçilir (ZK5). Tamga Wallet kancayı `@tamga-network/zk` ile bağladı; telefon kütüphaneleri ve devre dosyaları gelene kadar (2b) ispat kapalı kalır | 2b; mağaza derlemesi (Z1) |
 | 3 | ✅ `@tamga-network/verifier`: `mso_mdoc_zk` doğrulama (paketle gelen WASM, `/zk`); devre özetleri güven listesinde (`lotl.zk_circuits`); politika `format: "mso_mdoc_zk"`; Tamga Verify `age-over-18-zk` (2026-10-01) | Aşama 1 |
 | 4 | Taşıma (DCQL + DC API), AB örnek doğrulayıcıyla karşılıklı test; `/docs/selective-disclosure` ve SPEC-WALLET-0001 güncellemesi | Aşama 3 |
@@ -130,8 +132,10 @@ C bağımlılığı `zstd` saf Rust ara katmanla yamalı, upstream koduna dokunu
 `npm run zk:build -- --check`). WASM 889 KB, dışa bağımlılık yok; doğrulama masaüstünde ~3 sn (yerel derleme 0,2 sn — K9; hız
 gerekirse `VerifyInput.zk` ile yerel arka uç). Format `mso_mdoc_zk` (TS13 ZkDocument), adım `Z1` ([[SPEC-API-0001]]), devreler
 `lotl.zk_circuits` ([[SPEC-TRUST-0001]]). Testler gerçek ispat fikstürüyle (`scripts/zk-fixtures.ts`); Rust gerektirmez.
-"prefer" kipi (DCQL `credential_sets` ile ZK + klasik seçenek) cüzdan desteğiyle (Aşama 2) gelir; o zamana kadar ZK5 =
-doğrulayıcının klasik politikayla yeniden sorması.
+Doğrulayıcı tarafında bir altyapı hatası (devre dosyası yok, WASM yüklenemiyor) sunumun suçu değildir: sonuç DOĞRULANAMADI
+(`SDK_VERSION_MISMATCH`), RED değil. "prefer" kipini (DCQL `credential_sets` ile ZK + klasik seçenek) cüzdan tarafı destekler
+(Aşama 2c: ispatçısı olmayan cüzdan klasik seçeneği seçer); Tamga Verify bugün ZK ve klasik politikaları ayrı sunar, ZK5 =
+doğrulayıcının klasik politikayla (`age-over-18-mdoc`) yeniden sorması.
 
 ## Yerel arka uç (K9)
 
@@ -150,4 +154,5 @@ denetlenir. Tamga Verify `TAMGA_ZK_NATIVE_BIN` ile kullanır; sunucuda derleme `
 # Durum
 
 **Accepted — 2026-10-01** (proje yönetimi onayı: ispat sistemi Longfellow, ilk yüklem `age_over_18`). Aşama 1 masaüstü denemesi
-ve Aşama 3 (doğrulayıcı) tamam; Aşama 2 (telefon) mağaza derlemesinden (Z1) sonra. Deney: `tools/zk-circuit/README.md`.
+ve Aşama 3 (doğrulayıcı) tamam; Aşama 2a/2c tamam, 2b'de Android yerel kütüphanesi derlendi (2026-10-07), iOS xcframework ve
+cihaz ölçümü bekliyor (mağaza derlemesi, Z1). Deney: `tools/zk-circuit/README.md`.

@@ -4,7 +4,7 @@ title: "Get started"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   An introduction for developers: the four paths in Tamga (verifier, issuer, wallet developer, network/node operator),
   which package to install, which addresses to use, how to set up a local development environment and what is ready today.
@@ -78,9 +78,10 @@ keys never enter the repository). You can test your code against these local lis
 | `@tamga-network/issuer` (+ `/client`) | credential creation, OpenID4VCI; `/client` for the hosted service | issuer |
 | `@tamga-network/verifier` (+ `/web`, `/zk`) | verification pipeline, three-valued result, OpenID4VP; `/web` page kit, `/zk` zero-knowledge proofs | verifier, website |
 | `@tamga-network/wallet-core` | wallet core: keys, receiving credentials, local checks, presentation (Node + React Native) | wallet developer |
+| `@tamga-network/zk` (+ `/node`, `/react-native`) | wallet-side zero-knowledge prover (mdoc, Longfellow); `/react-native` native prover on the phone, `/node` on the desktop | wallet developer |
 
-Every package has its own page in the **SDKs** section. The packages are published on npm as a **pre-release** (`0.x`);
-interfaces may change before `1.0`. Each release is built from this repository by GitHub Actions and carries provenance.
+Every package has its own page in the **SDKs** section. The packages are at version **1.0.0**; they are published on npm
+with the go-live announcement. Each release is built from this repository by GitHub Actions and carries provenance.
 
 ## Addresses
 
@@ -98,11 +99,12 @@ interfaces may change before `1.0`. Each release is built from this repository b
 
 | Part | Status |
 |---|---|
-| Packages | pre-release on npm (`0.x`); interfaces may change before `1.0` |
+| Packages | version 1.0.0; published on npm with the go-live announcement |
 | Hosted verifier | running: the website's server opens the presentation with a signed statement, and the values are given only to it, only once ([[ADR-0017]]); policies are fixed for now |
 | Hosted issuer | running: a scoped API key per institution ([[ADR-0016]]) |
 | Trust anchor | signed trust lists ([[ADR-0009]]); the Tamga operator registers issuers and verifiers |
-| Privacy | a pseudonym per site ([[ADR-0031]]); age verification with a zero-knowledge proof (ZK) — the verifier side is ready ([[ADR-0032]]) |
+| Privacy | a pseudonym per site ([[ADR-0031]]); age verification with a zero-knowledge proof (ZK) — the verifier side is live; the wallet side is wired through `@tamga-network/zk`, the Android native library is ready, iOS is pending ([[ADR-0032]]) |
+| Sandbox | live: a single test network with the same rules as the real network, open to everyone; real identity verification with daily/monthly caps ([[GUIDE-0013]]) |
 | Ledger (Besu/QBFT) | designed, contracts written; opens once there are at least two independent validator operators ([[GUIDE-0006]]) |
 
 ## Rules for every integration

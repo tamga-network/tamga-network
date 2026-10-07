@@ -4,7 +4,7 @@ title: "Zincirsiz beta ve zincir eşiği"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Pilotu zincire bağlayan ön koşullar (PM-GTM-0001 Ö1/Ö2) kaldırılır; Faz 0'ın
   önüne "Faz B — zincirsiz beta" eklenir. Güven çapası beta'da Tamga'nın geçici
@@ -57,7 +57,7 @@ List** ([[t:ETSI]] TS 119 612) + Komisyon'un [[t:LOTL]]'üdür; digest Resmî Ga
 EBSI aynı kayıtları zincirde tutar. Tamga'nın kanonik tasarımı EBSI modelini EUDI/ETSI veri
 semantiğiyle kullanır ([[SPEC-ID-0002]] §8.1). Beta için EUDI'nin kendi modeline (imzalı liste)
 inmek mimariden sapma değil, aynı semantiğin tek-imzacılı özel hâlidir. Analiz:
-`docs/_internal/beta/02-mimari-yeniden-analiz.md` §1–§2, `docs/_internal/beta/05-kurallar-en-iyi-pratik.md` R-2/R-6.
+operatörün iç kaydı.
 
 ## Proje yönetiminin yönü (2026-09-23/24)
 
@@ -85,7 +85,7 @@ Faz sırası **Faz B → Faz 0 → Faz 1 → Faz 2** olur. Faz B = zincirsiz bet
 | `anchors.jsonl` | `StatusListRegistry.publishList` + şema `contentHash` çapaları | append-only; **saatlik** imza (heartbeat dahil); satır silinmez; `previous_hash` |
 | `keys/` + kalıcı web sayfası | Resmî Gazete ilanı | LOTL imza sertifikası parmak izleri; ≥2 kaydırmalı sertifika (ETSI 119 612 Annex A.2); rotasyon ≥30 gün önce, yeni anahtar eskisiyle imzalanır |
 
-Kanonik alan adları ve örnekler: `docs/_internal/delivery/04-TRUST-LIST-FORMAT.md` (kabulle birlikte
+Kanonik alan adları ve örnekler: operatörün iç kaydı (kabulle birlikte
 **SPEC-TRUST-0001** olarak resmileşir — DB-11).
 
 ## Karar 3 — Çapa ikamesi: "zincire kaydedilir" ifadelerinin beta okuması
@@ -156,7 +156,7 @@ kabul; **Ö8'** belge verenin imza anahtarı üniversitenin kontrolünde (G1 ayn
 ## Karar 7 — Geçiş = replay + eşdeğerlik testi
 
 Faz B → Faz 0 geçişi, liste sürüm arşivinin kontrat çağrılarına **yeniden oynatılması**dır
-(`docs/_internal/delivery/05-MIGRATION-TO-CHAIN.md` §2); statü geçmişindeki `since` zamanları
+(operatörün iç kaydı); statü geçmişindeki `since` zamanları
 `revokedAt`/`validFrom` alanlarına yazılır ki `isCredentialAcceptable(issuerId, iat)` beta
 dönemi belgeleri için aynı cevabı versin (D-BC-3). **Kabul ölçütü:** pilot boyunca kaydedilen
 her `(issuer_id, schema_id, iat, list_id, version)` sorgusu için `TrustSource(list)` ve
@@ -238,7 +238,7 @@ zaman** kurulacağını ve o güne kadar çapanın **kimin imzası** olduğunu t
 **Dayanır:** [[ADR-0001]] (değişmez), [[ADR-0002]] (egemenlik, cross-recognition), [[PM-ASSUR-0001]] (devletsiz bootstrap)
 **Doğurur:** SPEC-TRUST-0001, Tamga Trust Framework, `(bu depo) `
 **Kardeş:** [[ADR-0010]] (vct URN + kategori — TDT-first'ün tip kimliğine uygulanması)
-**Analiz kaynağı:** `docs/_internal/beta/02`, `03`, `04` (DB-1, DB-2, DB-10, DB-17), `05` (R-2, R-5, R-6), `06` §3.4
+**Analiz kaynağı:** operatörün iç kaydı.
 
 ---
 

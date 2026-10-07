@@ -4,12 +4,12 @@ title: "Build a wallet"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   Building a wallet that receives, stores and presents Tamga credentials: registering as a wallet provider, device keys,
   device attestation (App Attest, Android key attestation), the Wallet Unit Attestation (WUA), receiving credentials with
   OpenID4VCI, selective disclosure with OpenID4VP, the consent screen, the transaction log and export, changing devices, the
-  pre-release check and the rules to follow. The reference app, Tamga Wallet (separate repository, Expo), uses this package.
+  pre-release check and the rules to follow. The network's first wallet, Tamga Wallet (a company's separate product; separate repository, Expo), uses this package.
 translation_of: GUIDE-0005
 source_version: 1.0.0
 ---
@@ -45,7 +45,7 @@ npm install @tamga-network/wallet-core @tamga-network/trust
 
 The core is pure TypeScript, so it is the same everywhere; you supply the three platform-specific parts:
 
-| Part | What | In the reference app |
+| Part | What | In the example app (Tamga Wallet) |
 |---|---|---|
 | Key back end | Generating and signing with P-256 keys in the device's secure area (`NativeKeyBackend`) | Native module `TamgaKeys` (iOS Secure Enclave, Android StrongBox/TEE) |
 | Signature verifier | A function that verifies trust list signatures (passed to `@tamga-network/trust/core`) | A pure TypeScript cryptography library |
@@ -197,7 +197,7 @@ The response is sent encrypted (`direct_post.jwt`). `combined` is the SD-JWT tex
 
 For a request that comes through an intermediary verifier (`request.onBehalfOf`), show the **actual site's** name on screen
 (`checkRp` gives it to you) and check the scope against its entry; `request.rpKey` assigns the copy by the actual site
-([[ADR-0017]]). Reference flow: Tamga Wallet `app/src/present.ts`.
+([[ADR-0017]]). Example flow: Tamga Wallet `app/src/present.ts`.
 
 ## 8. Consent screen
 
@@ -244,7 +244,7 @@ const { state: next, toReissue } = applyMigration(emptyState, data, { restoreLog
 ```
 
 - When handing the old device over, revoke the unit (your provider's unit revocation).
-- If the person wants everything deleted: `deleteUnit` at the wallet provider and `requestIdentityErasure` at Tamga's identity
+- If the person wants everything deleted: your provider's unit deletion and `requestIdentityErasure` at Tamga's identity
   service. Data institutions hold is the institution's responsibility; the wallet shows the person how to file an erasure
   request with the institution.
 
@@ -278,6 +278,6 @@ real phone on the test network, without touching the real network ([[GUIDE-0013]
 
 ## 14. Working code
 
-- Reference app: Tamga Wallet (separate repository; Expo, React Native) — uses this core; runs on iOS and Android.
+- First wallet (example app): Tamga Wallet (a company's separate product; separate repository; Expo, React Native) — uses this core; runs on iOS and Android.
 - The core's tests: `packages/wallet-core/src/*.test.ts` — receiving, presenting, copy selection, trust list.
 - Pass card (turnstile, event gate): `pass.ts`, [[ADR-0012]].

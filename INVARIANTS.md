@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 360 kodlanmış değişmez, 49 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 362 kodlanmış değişmez, 49 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -256,7 +256,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | Kod | Açıklama |
 |---|---|
 | `ADR-0032/ZK1` | Kurum belgesinin biçimi ve imzası ZK sunumu için değiştirilmez; ZK yalnız cüzdanda ve doğrulayıcıda. |
-| `ADR-0032/ZK2` | Doğrulayıcı yalnız imzalı güven listesinde yayımlanan devre özetlerini kabul eder; bilinmeyen devre = RED. |
+| `ADR-0032/ZK2` | Doğrulayıcı yalnız imzalı güven listesinde yayımlanan ve durumu ACTIVE olan devre özetlerini kabul eder; bilinmeyen ya da etkin olmayan devre = RED. |
 | `ADR-0032/ZK3` | ZK sunumu yalnız DCQL'de istenen alanları ispatlar; ispat dışı alan doğrulayıcıya gitmez. |
 | `ADR-0032/ZK4` | ZK sunumunda iptal listesi indeksi açılmaz; ZK ile sunulan belgenin geçerlilik süresi kısa tutulur (K6). |
 | `ADR-0032/ZK5` | ZK desteklenmezse sunum klasik kurallarla (WL5 dahil) yapılır; ispat hatası kullanıcıya "şu an bu yolla gösterilemiyor" diye yansır, veri sızdırmaz. |
@@ -510,7 +510,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-API-0001/AP8` | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. |
 | `SPEC-API-0001/AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
 | `SPEC-API-0001/AP12` | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
-| `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, `exp` ≤ 60 s, `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. |
+| `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. |
 | `SPEC-API-0001/AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır. |
 | `SPEC-API-0001/AP10` | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
 
@@ -660,7 +660,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-PROTO-0001/PR10` | Kopya↔indeks eşlemesi belge verende kalır, asla dışarı çıkmaz. |
 | `SPEC-PROTO-0001/PR11` | İhraçtan önce Wallet Unit Attestation + PoP doğrulanır; WUA imzacısı güven listesindeki cüzdan sağlayıcısı anahtarlarından biridir; `key_storage` kiracı politikasını karşılamıyorsa belge verilmez (§11.1). |
 | `SPEC-PROTO-0001/PR12` | `out-of-band` offer'da `tx_code` offer ile **farklı kanaldan** iletilir; üç yanlış deneme offer'ı geçersiz kılar; kanal adresi yalnızca kurumun kayıtlı verisinden gelir (§3.3). |
-| `SPEC-PROTO-0001/PR13` | Authorization code akışında PAR ve PKCE (S256) zorunludur; istemci kimliği Wallet Unit Attestation'dır (`client_secret` yok); `redirect_uri` PAR'da bağlanır ve `/authorize`'da değiştirilemez; code tek kullanımlık ve ≤ 60 s (§11.2). |
+| `SPEC-PROTO-0001/PR13` | Authorization code akışında PAR ve PKCE (S256) zorunludur; istemci kimliği Wallet Unit Attestation'dır (`client_secret` yok); `redirect_uri` PAR'da bağlanır ve `/authorize`'da değiştirilemez; `redirect_uri` istemcinin kayıtlı adresleriyle birebir eşleşmelidir (izin listesi; aksi hâlde `invalid_redirect_uri`); token isteği PAR'daki `redirect_uri`'yi ve aynı `client_id`'yi (WUA `sub`) taşımalıdır (aksi hâlde `invalid_grant`); cüzdan token ucunu yetkilendirme sunucusunun meta verisinden (`token_endpoint`, RFC 8414) alır; code tek kullanımlık ve ≤ 60 s (§11.2). |
 | `SPEC-PROTO-0001/PR14` | Kurumun belge verme servisi cüzdanın başlattığı belge vermede kimliği yalnızca **kimlik attestation'ının sunumu** ile ve tam doğrulama hattından (T0 + A–E) geçerek eşler; eşleştirme anahtarları (TCKN, doğum tarihi) saklanmaz ve loglanmaz; eşleşmezse belge verilmez (§11.2, [[ADR-0011]] K3/K6). |
 | `SPEC-PROTO-0001/PR15` | Cüzdan kurum dizinini yalnızca güven listesinden alır; listede olmayan belge verene PAR göndermez (§11.2). |
 | `SPEC-PROTO-0001/PR17` | Erişim belirteci DPoP'a bağlıdır (RFC 9449): `/token` geçerli bir DPoP kanıtı olmadan belirteç vermez; `/credential` yalnızca `Authorization: DPoP` ve aynı anahtarla, bu uç ve bu belirteç (`ath`) için üretilmiş, daha önce görülmemiş kanıtla çalışır (§4, §7.1). |
@@ -687,6 +687,8 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-PROTO-0002/PV10` | `nonce` tek kullanımlıktır; doğrulayıcı tekrar kabul etmez. |
 | `SPEC-PROTO-0002/PV11` | `mso_mdoc` sunumunda cihaz imzası, client identifier'ın tamamını (prefix dahil), `nonce`'u, `response_uri`'yi ve yanıtın şifrelendiği anahtarın parmak izini bağlayan SessionTranscript (OpenID4VPHandover) üzerindedir; başka bir isteğe taşınan DeviceResponse A6'da reddedilir. |
 | `SPEC-PROTO-0002/PV12` | Cüzdan, istenen alanlardan birini taşımayan belgeyi göndermez (`claim_sets` yoksa bütün alanlar, varsa seçilen kombinasyonun bütün alanları belgede olmalıdır); isteğe bağlı alan `claim_sets` ile istenir. |
+| `SPEC-PROTO-0002/PV13` | Cüzdan imzalı istek nesnesini zamanla ve hedefle denetler: `exp` zorunludur ve geçmiş olamaz, `iat` 60 sn'den fazla ileri tarihli olamaz (saat kayması toleransı 60 sn), `aud` verilmişse `https://self-issued.me/v2` olmalıdır; aksi hâlde istek reddedilir. `dc+sd-jwt` sorgusu türü `meta.vct_values` ile belirtmelidir (türsüz sorgu reddedilir). |
+| `SPEC-PROTO-0002/PV14` | Aracı doğrulayıcı ([[ADR-0017]] K7) bir RP adına ancak ilişki iki kayıtta da yazılıysa istek gönderebilir: asıl RP aracıyı `uses_intermediaries`'te, aracı asıl RP'yi `served_relying_parties`'te listeler; tek taraflı beyanda cüzdan isteği reddeder. |
 
 
 ## SPEC-SCHEMA-0001
@@ -774,7 +776,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 |---|---|
 | `SPEC-WALLET-0001/WL1` | Belge sahibi anahtarları seed'den türetilmez; güvenli bölgeden çıkmaz. |
 | `SPEC-WALLET-0001/WL2` | Yedek belgeleri ve manifestoyu taşır; anahtarları taşımaz — cihaz değişiminde belgelerin yeniden verilmesi gerekir. |
-| `SPEC-WALLET-0001/WL3` | W1 (yazılım anahtarlı) cüzdan desteklenmez. |
+| `SPEC-WALLET-0001/WL3` | W1 (yazılım anahtarlı) cüzdan desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5). |
 | `SPEC-WALLET-0001/WL4` | `presentation_log` sunucuya ve otomatik olarak hiçbir koşulda çıkmaz, sunucu yedeğine girmez; yalnız kişinin başlattığı, kişinin parolasıyla şifreli dışa aktarmada (TS10) cihazdan çıkar ([[ADR-0027]]). |
 | `SPEC-WALLET-0001/WL5` | Bir doğrulayıcıya her zaman aynı kopya; farklı doğrulayıcıya farklı kopya. |
 | `SPEC-WALLET-0001/WL6` | Aynı doğrulayıcı + aynı `vct` için disclosure seti tutarlıdır. |
@@ -783,11 +785,11 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-WALLET-0001/WL9` | Sunum anında şema sunucusuna istek yapılmaz. |
 | `SPEC-WALLET-0001/WL10` | Tamga kullanıcı adına kurtarma anahtarı tutmaz. |
 | `SPEC-WALLET-0001/WL11` | Her sunum kullanıcı doğrulaması gerektirir: güvenli donanım anahtarı olan cihazda cihazın biyometrisi ya da cihaz parolası (belge anahtarı telefon kilidine bağlıdır); yazılım anahtarı yolunda (S-9) uygulama PIN'i ya da biyometri. Geri düşüş ve vazgeçme §2.3'te. |
-| `SPEC-WALLET-0001/WL12` | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat`, `exp` (≤ 60 s), `jti`; belge içeriği ve claim'ler QR'a girmez ([[ADR-0012]]). |
+| `SPEC-WALLET-0001/WL12` | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat` (≤ şimdi + 30 s), `exp` (ömür ≤ 60 s; ≤ şimdi + 60 s + 30 s saat kayması toleransı), `jti`; belge içeriği ve claim'ler QR'a girmez ([[ADR-0012]]). |
 | `SPEC-WALLET-0001/WL13` | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsamlıdır; kullanıcı rızayı istediği an geri alır (grant silinir). WL11'in tek istisnasıdır. |
 | `SPEC-WALLET-0001/WL14` | Her geçiş kartı gösterimi `presentation_log`'a yazılır (WL4 kapsamında, cihazda); Göster ekranı canlı saat ve süre gösterir. |
 | `SPEC-WALLET-0001/WL15` | Site takma ad anahtarları belge sahibi anahtarı değildir: yalnız [[ADR-0031]] tohumundan site ve sıra başına türetilir, kalıcı saklanmaz; tohum yalnız cihazın güvenli deposunda durur, yedeğe, taşıma dosyasına ve hiçbir sunuma girmez. |
-| `SPEC-WALLET-0001/W1` | Yazılım (güvenli bölge yok) | Desteklenmez |
+| `SPEC-WALLET-0001/W1` | Yazılım (güvenli bölge yok) | Desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5) |
 | `SPEC-WALLET-0001/W2` | Cihaz güvenli bölgesi (Secure Enclave / StrongBox) | **ilk aşama asgarisi** |
 | `SPEC-WALLET-0001/W3` | Sertifikalı WSCD | Devlet aşaması |
 
@@ -804,7 +806,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 360 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 362 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
 AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, NW, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, ZK.
 
@@ -812,4 +814,4 @@ AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV,
 
 # Durum
 
-**Üretilen dosya** — 2026-10-06 (`scripts/sync-invariants.mjs`). Toplam 360 kodlanmış değişmez, 49 dokümanda.
+**Üretilen dosya** — 2026-10-07 (`scripts/sync-invariants.mjs`). Toplam 362 kodlanmış değişmez, 49 dokümanda.

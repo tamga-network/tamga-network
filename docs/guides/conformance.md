@@ -4,7 +4,7 @@ title: "Uyum testleri"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-07
 summary: >
   Bir uygulamanın Tamga kurallarına uyduğunu göstermek: açık uyum test vektörleri (güven listesi soruları, SD-JWT doğrulaması,
   olumlu ve olumsuz durumlar), koşucuyu çalıştırmak, başka bir dilde yazılmış kütüphaneyi vektörlerle sınamak ve katılımda
@@ -57,7 +57,7 @@ Sınanan sorgular: `isCredentialAcceptable`, `isCredentialSchemaAcceptable`, `is
 `isWalletProviderKey`. Liste setinin yüklenme raporu da (`healthy`, liste sürümü) beklentiyle karşılaştırılır.
 
 **`sd-jwt/diploma-basic.json`** bir sunumun doğrulanmasını sınar: hangi alanların açıldığı, hangilerinin gizli kaldığı,
-`issuer_id` ve geçilen adımlar ([[SPEC-API-0001]] A1–A6). Olumsuz durumlar da vardır ve her biri **reddedilmelidir**:
+`issuer_id` ve geçilen adımlar ([[SPEC-API-0001]] A1–A7). Olumsuz durumlar da vardır ve her biri **reddedilmelidir**:
 
 | Olumsuz durum | Beklenen |
 |---|---|
@@ -65,6 +65,7 @@ Sınanan sorgular: `isCredentialAcceptable`, `isCredentialSchemaAcceptable`, `is
 | Yanlış `nonce` | Red — yeniden oynatma |
 | `iat` penceresi dışında (+301 s) | Red — zaman penceresi |
 | Sunulmayan bir disclosure eklenmiş | Red — eşleşmeyen digest |
+| Süresi geçmiş belge (`exp` < `now`) | Red — A7, süre |
 
 Her vektör sabit bir `now` alanı taşır; zamana bağlı adımlar her makinede aynı sonucu verir.
 

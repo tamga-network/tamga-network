@@ -4,7 +4,7 @@ title: "Code examples"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Four working examples: sign-in with Tamga on a website, verifying credentials on your own server, issuing credentials as
   an institution and checking an institution's authorisation. The code is pulled into this page from the real files in the
@@ -42,8 +42,8 @@ yarn add @tamga-network/verifier @tamga-network/trust @tamga-network/issuer
 
 :::
 
-::: tip Pre-release
-The packages are published on npm as a pre-release (`0.x`); interfaces may change before `1.0`. They can also be used from
+::: tip Version
+The packages are at version 1.0.0; they are published on npm with the go-live announcement. They can also be used from
 the source repository (`npm run release:check` builds publish-ready packages in the `.publish/` folder).
 :::
 

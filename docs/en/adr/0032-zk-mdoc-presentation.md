@@ -4,7 +4,7 @@ title: "Zero-knowledge proofs (ZK)"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   WITHOUT CHANGING the institutions' ES256-signed mdoc credentials, the wallet produces zero-knowledge proofs about them with
   Longfellow ZK (first predicate: over 18). The verifier sees only the proven attribute and the issuer; two presentations cannot
@@ -71,7 +71,9 @@ If the wallet cannot produce a proof or the verifier does not request `mso_mdoc_
 ## K6 — Revocation status
 The circuit does not check revocation status; opening the [[t:status-list]] index would bring linkability back. Interim solution:
 credentials presented with ZK are short-lived (silent refresh, [[ADR-0023]]); private revocation proof gets a separate ADR once the
-revocation scheme of EU TS13 is settled.
+revocation scheme of EU TS13 is settled. The policy chooses explicitly: `accept_unrevocable_zk: true` knowingly accepts a ZK
+presentation whose revocation cannot be checked (the result carries `status.value = NOT_APPLICABLE` and `status.reason`); with
+`false` the outcome is INDETERMINATE (step D1, `STATUS_UNREACHABLE`).
 
 ## K7 — Device binding
 The proof contains the device key's ES256 signature over the SessionTranscript and hides the device public key; the key stays in
@@ -101,7 +103,7 @@ proving is ~7× slower (measured).
 | Code | Rule |
 |---|---|
 | ZK1 | The format and signature of the institutional credential are not changed for ZK presentation; ZK lives only in the wallet and the verifier. |
-| ZK2 | The verifier accepts only circuit digests published in the signed trust list; an unknown circuit = REJECTED. |
+| ZK2 | The verifier accepts only circuit digests published in the signed trust list with status ACTIVE; an unknown or inactive circuit = REJECTED. |
 | ZK3 | A ZK presentation proves only the attributes requested in DCQL; no attribute outside the proof reaches the verifier. |
 | ZK4 | A ZK presentation does not reveal the status list index; credentials presented with ZK are kept short-lived (K6). |
 | ZK5 | If ZK is not supported, the presentation follows the classic rules (including WL5); a proof failure is shown to the user as "cannot be shown this way right now" and leaks no data. |
@@ -113,7 +115,7 @@ proving is ~7× slower (measured).
 |---|---|---|
 | 1 | ✅ Real proof + verification on the desktop, measurements, negative tests, Node bridge prototype (2026-10-01) | — |
 | 2a | ✅ `@tamga-network/zk`: prover package — core (DCQL → claims, circuit selection and ZK2 check, ZkDocument), desktop prover (`/node`, Rust child process), phone module scaffold (`/react-native`, Expo; Rust C ABI / JNI); end-to-end test: the package's proof passes the network verifier (2026-10-06) | Stages 1, 3 |
-| 2b | Building the phone libraries (Android NDK, iOS xcframework) and on-device measurement | Android NDK; macOS |
+| 2b | Building the phone libraries and on-device measurement: Android ✅ (2026-10-07; arm64-v8a, armeabi-v7a, x86_64), iOS xcframework pending (macOS); on-device measurement with the store build | macOS (iOS) |
 | 2c | ✅ Wallet wiring (2026-10-06): `wallet-core` matches `mso_mdoc_zk` queries like mdoc, hands the usual device-signed response to a prover hook (`RespondInput.zk`) and puts only the proof in the vp_token; without a prover ZK queries are not offered and the classic option in `credential_sets` is chosen (ZK5). Tamga Wallet wires the hook with `@tamga-network/zk`; proving stays off until the phone libraries and circuit files arrive (2b) | 2b; store build (Z1) |
 | 3 | ✅ `@tamga-network/verifier`: `mso_mdoc_zk` verification (bundled WASM, `/zk`); circuit digests in the trust list (`lotl.zk_circuits`); policy `format: "mso_mdoc_zk"`; Tamga Verify `age-over-18-zk` (2026-10-01) | Stage 1 |
 | 4 | Transport (DCQL + DC API), cross-testing with the EU reference verifier; updates to `/docs/selective-disclosure` and SPEC-WALLET-0001 | Stage 3 |
@@ -137,8 +139,11 @@ The verifier compiles only Longfellow's VERIFICATION code to WebAssembly (`packa
 `npm run zk:build -- --check`). The WASM is 889 KB with no external dependencies; verification takes ~3 s on the desktop (0.2 s with
 a native build — K9; if speed is needed, a native backend via `VerifyInput.zk`). Format `mso_mdoc_zk` (TS13 ZkDocument), step `Z1`
 ([[SPEC-API-0001]]), circuits in `lotl.zk_circuits` ([[SPEC-TRUST-0001]]). Tests use a real proof fixture
-(`scripts/zk-fixtures.ts`); no Rust needed. The "prefer" mode (ZK + classic option via DCQL `credential_sets`) arrives with wallet
-support (Stage 2); until then ZK5 = the verifier asks again with the classic policy.
+(`scripts/zk-fixtures.ts`); no Rust needed. An infrastructure failure on the verifier side (circuit file missing, WASM cannot be
+loaded) is not the presentation's fault: the outcome is INDETERMINATE (`SDK_VERSION_MISMATCH`), not REJECTED. The wallet side
+supports the "prefer" mode (ZK + classic option via DCQL `credential_sets`; Stage 2c: a wallet without a prover picks the classic
+option); Tamga Verify currently offers the ZK and classic policies separately, so ZK5 = the verifier asks again with the classic
+policy (`age-over-18-mdoc`).
 
 ## Native backend (K9)
 
@@ -158,4 +163,5 @@ server it is built in `deploy.sh` step 4b (only when the source changes). Measur
 # Status
 
 **Accepted — 2026-10-01** (approved by project management: proof system Longfellow, first predicate `age_over_18`). Stage 1 desktop
-trial and Stage 3 (verifier) done; Stage 2 (phone) after the store build (Z1). Experiment: `tools/zk-circuit/README.md`.
+trial and Stage 3 (verifier) done; Stages 2a/2c done, in 2b the Android native library was built (2026-10-07), the iOS
+xcframework and on-device measurement are pending (store build, Z1). Experiment: `tools/zk-circuit/README.md`.

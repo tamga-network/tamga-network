@@ -6,7 +6,7 @@ sormadan saniyeler içinde denetler.
 
 Bu depo açık kaynak kodu ve kanonik belgeleri taşır: spesifikasyonlar, kararlar (ADR), çerçeve belgeleri, `@tamga-network/*`
 paketleri, referans doğrulayıcı, güven listesi yayıncısı ve akıllı kontratlar. Ağ cüzdan işletmez; cüzdanları güven listesinde
-listeler (ADR-0042).
+listeler (ADR-0042). Tamga Network kâr amacı gütmez; işletmecilik ileride bir vakfa devredilir.
 
 > Güven çapası bugün **imzalı, sürümlü, hash-zincirli güven listeleridir** (ETSI TS 119 612 / EUDI modeli) ve herkese açık
 > bir çapa günlüğüdür. En az iki bağımsız validator operatörü katıldığında aynı kayıtlar izinli bir **Besu / QBFT** defterine
@@ -30,8 +30,9 @@ packages/            npm paketleri (@tamga-network/*)
   sd-jwt             SD-JWT VC: seçici açıklama, cihaz bağı, biçim denetimleri
   mdoc               ISO/IEC 18013-5 mdoc: CBOR, COSE, verme, doğrulama, yakın alan (BLE)
   issuer             belge verme (OpenID4VCI), iptal listesi yayıncısı; /client barındırılan servis için
-  verifier           doğrulama hattı (T0 + A–E), OpenID4VP istekleri; /web sayfa kiti
+  verifier           doğrulama hattı (T0 + A–E), OpenID4VP istekleri; /web sayfa kiti, /zk sıfır bilgi ispatı doğrulaması
   wallet-core        cüzdan çekirdeği (Node ve React Native): anahtarlar, alma, yerel denetim, sunma
+  zk                 cüzdan tarafı sıfır bilgi ispatçısı (Longfellow, mdoc); /node masaüstü, /react-native telefon (ADR-0032)
 apps/
   verify             referans doğrulayıcı (verify.tamga.network)
   trust-publisher    güven listesi yayıncısı ve kayıt aracı (trust.tamga.network)

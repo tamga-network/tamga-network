@@ -4,7 +4,7 @@ title: "Belge türü kimliği (URN)"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   D-SCHEMA-1 ("vct kararlı HTTPS URL") süpersede edilir: belge tipinin
   kimliği urn:tamga:<domain>:<Type>:<major> biçiminde bir URN olur; Type
@@ -150,7 +150,7 @@ Henüz hiçbir belge verilmedi; **çift destek yok**. [[SPEC-SCHEMA-0001]] v2.0.
 [[SPEC-SCHEMA-0002]] v2.0.0 (vct değerleri, Type Metadata örnekleri), [[SPEC-SCHEMA-0003]]
 (iskelet vct'leri), [[SPEC-CRED-0002]] v1.3.0 (`category` claim'i + C-yeni), [[SPEC-API-0001]]
 (C4 adımı), [[SPEC-PROTO-0001]] (PR2 metni: "metadata'daki her `vct` kayıtlı" aynen).
-`docs/_internal/delivery/04-TRUST-LIST-FORMAT.md` zaten bu biçimdedir.
+Operatörün iç kaydındaki liste biçimi zaten böyledir.
 
 ---
 
@@ -225,7 +225,7 @@ eIDAS koymaz; PR7 koymaz; PM-TRUST-0001 gerekçesi geçerli. Seviye tipin ön ko
 **Korur:** [[ADR-0007]] K2–K6 (off-chain metadata + çapa, `#integrity`, iki katman, allowlist)
 **Dayanır:** [[ADR-0009]] Karar 5 (TDT-first) · [[RS-EIDAS-0001]] §4.4/§5.1 · IETF SD-JWT VC-19 · ETSI TS 119 472-1
 **Değiştirir:** [[SPEC-SCHEMA-0001]], [[SPEC-SCHEMA-0002]], [[SPEC-SCHEMA-0003]], [[SPEC-CRED-0002]], [[SPEC-API-0001]], [[PM-ASSUR-0001]]
-**Analiz kaynağı:** `docs/_internal/beta/05-kurallar` R-12, R-15, R-19, R-22; `06-eidas-uyum-mimarisi` §3.2–3.3; `04-karar-onerileri` DB-14, DB-15, DB-6
+**Analiz kaynağı:** operatörün iç kaydı.
 
 ---
 

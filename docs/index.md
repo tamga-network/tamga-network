@@ -79,7 +79,7 @@ sunucu kodu gerekmez: [Web sitesine "Tamga ile giriş yap"](/guides/sign-in-with
 
 <a class="tg-card" href="/packages/">
 <strong>SDK'lar</strong>
-<span>Sekiz <code>@tamga-network/*</code> paketi; Node ve React Native. npm'de ön sürüm.</span>
+<span>Dokuz <code>@tamga-network/*</code> paketi; Node ve React Native. Sürüm 1.0.0; canlıya çıkış duyurusuyla npm'de.</span>
 </a>
 
 <a class="tg-card" href="/api/" target="_self">

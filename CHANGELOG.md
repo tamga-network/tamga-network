@@ -7,6 +7,29 @@ before it are folded into this release (packages are published to npm once, at t
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-07 — hardening
+
+- Packages (`core`, `trust`, `sd-jwt`, `mdoc`, `schemas`): externally signed lists with JAdES `crit` load (federation); a
+  request for an array element discloses only that element; an expired credential fails at A7; status lists have
+  decompression/size limits, a required `exp` and a bound on future `iat`; WUA/WIA `exp` is required and the PoP `jti` is
+  returned; list version memory and `previous_version_hash` check; intermediate certificates must be CA with `keyCertSign` and
+  within `pathLenConstraint`; metadata getters return null on a stale list; only ACTIVE ZK circuits are accepted; mdoc random
+  digest IDs, reserved namespaces refused, COSE tag 18, strict COSE_Key.
+- Protocol (`issuer`, `verifier`, `wallet-core`, `zk`): the ADR-0017 K7 intermediary rule is checked in the wallet in both
+  directions; pass tokens have `iat`/`exp` bounds; a ZK verification infrastructure failure is INDETERMINATE and WASM runs in a
+  separate worker; PAR `redirect_uri` allowlist and `clientId` required on code redemption; the token endpoint is taken from the
+  authorization server metadata; policy field `accept_unrevocable_zk`; request object `exp`/`aud` checks; size limits; the `zk`
+  package requires its Android libraries and checksums and ships Android-only until the iOS xcframework arrives; `release.yml`
+  input injection closed.
+- Services and tools (`trust-publisher`, `verify`, scripts): `keys/` publishes only certificates the list references (the old
+  "Tamga Wallet Provider" certificate left publication); `/trust` path check; `/p/:id` result detail only with the status token;
+  presentation store cap and rate limits (429 + `Retry-After`); sandbox PKI/lists in setup and CI (the test is no longer
+  skipped); test institution name check; Brosgrup entry W2; anchor archive conflict; `noindex`, SRI, same-site check on passkey
+  endpoints; wider public text check; the non-working contracts CI disabled; version texts 1.0.0.
+- Documentation: OpenAPI (`mso_mdoc_zk`, `status.reason`, 429), verification pipeline and API (A7, INDETERMINATE causes, pass
+  token bounds), OpenID4VP PV13–PV14, OpenID4VCI PR13, trust list layout, ARF status of functions; Tamga Network is
+  not-for-profit and its operation will later be handed over to a foundation (ARF §8.3).
+
 ### Documentation
 
 - Tamga ARF 1.0: the Architecture and Reference Framework, Annex A — Trust Framework, Annex B — Tamga Rulebook with the
@@ -14,10 +37,10 @@ First release of the Tamga Network documentation set and reference implementatio
   supporting pages Reading path, Roles and Onboarding.
 - Developer docs in English and Turkish: guides (including the sandbox test network), concepts, specifications (credential
   format, SD-JWT VC, OpenID4VCI, OpenID4VP, verification pipeline and API, trust lists, status list, X.509 institutional
-  identity, identity proofing, schema catalogue, wallet rules), architecture decisions (ADR-0001 … ADR-0041) and a glossary.
+  identity, identity proofing, schema catalogue, wallet rules), architecture decisions (ADR-0001 … ADR-0042) and a glossary.
 - Driving licence information (ADR-0039, D-ID-8): Identity Rulebook §10, Tamga Rulebook RB-AP-ID-08…10, SPEC-ID-0003 §9.3,
   credential types table.
-- Sandbox (2026-10-04): invited real identity verification steps (ADR-0040, D-ID-9; RI1–RI6; `ADR-0038/SB3` rewritten) and
+- Sandbox (2026-10-04): real identity verification steps, open to everyone with daily/monthly caps (ADR-0040, D-ID-9; RI1–RI6; `ADR-0038/SB3` rewritten) and
   institution test accounts (ADR-0041, D-TRUST-4; TI1–TI6); SPEC-TRUST-0001 §4 optional `issuers[].test_institution` (sandbox
   list only); Sandbox guide §8–§9; list publisher `sandbox-institution add` (sandbox intermediate CA `test-institutions-ca`).
 
@@ -26,19 +49,16 @@ First release of the Tamga Network documentation set and reference implementatio
 - `core`, `trust`, `schemas`, `sd-jwt`, `mdoc`, `issuer` (+ `/client`), `verifier` (+ `/web`, `/zk`), `wallet-core`, `zk`.
 - `zk` (2026-10-06, ADR-0032 Stage 2a): wallet-side zero-knowledge proofs (Longfellow ZK) — DCQL `mso_mdoc_zk` → claims,
   circuit selection and ZK2 check, TS13 `ZkDocument`; `/node` desktop prover (Rust child process), `/react-native` Expo module
-  scaffold (Rust C ABI / JNI). End-to-end test: the package's proof passes `verifier/zk`.
+  (Rust C ABI / JNI; Android native library built 2026-10-07 for arm64-v8a, armeabi-v7a, x86_64; iOS pending). End-to-end test: the package's proof passes `verifier/zk`.
 - `wallet-core` (2026-10-06, ADR-0042): the Tamga Wallet provider API client (unit registration, WIA/KA requests, unit
   revoke/delete/status, revocation code) moved to the Tamga Wallet repository; the package keeps only wallet-generic parts
   (WUA/WIA types, client attestation PoP, WIA status checks). `solutionId` is no longer defaulted.
 - `verifier/web`: "Open in your wallet" instead of a wallet name (ADR-0042 K4).
 - `trust`: optional `test_institution` on trusted list issuer entries (ADR-0041 TI2).
-- `wallet-core`: revocation code for remote wallet closure (Tamga Wallet WA-ADR-0002). `generateLockCode` (4×5 characters,
-  30-letter unambiguous alphabet, ≈ 98 bit), `normalizeLockCode` / `isLockCode` / `formatLockCode`, `lockCodePrehash`
-  (domain-separated SHA-256 — the only thing the wallet provider ever receives). `registerLockCode` binds the pre-hash to the
-  wallet unit; `wiaRevokedByList` reads the wallet's own entry from the provider's **signed** WIA status list (signer must be a
-  wallet provider key in the pinned trusted list) — the only input a wallet may wipe itself on; `unitStatus` is a hint only.
-  `WP_PATHS` names every wallet-provider route in one place. `WalletError` code `unit_revoked`; `WalletState.lockCode` and
-  `settings.localNotifications` fields.
+- `wallet-core`: `wiaRevokedByList` reads the wallet's own entry from the provider's **signed** WIA status list (signer must be
+  a wallet provider key in the pinned trusted list) — the only input a wallet may wipe itself on. `WalletError` code
+  `unit_revoked`; `WalletState.lockCode` and `settings.localNotifications` fields. The revocation (lock) code helpers and the
+  provider route helpers moved to the Tamga Wallet repository (ADR-0042).
 - `schemas`: `urn:tamga:id:DrivingLicenceAttestation:1` — verified driving licence information issued by the identity service
   (ADR-0039). Not an official driving licence or mDL: the always-visible `not_official_licence` claim and the display name say so.
   Claims: names, `birth_date`, `issuing_country`, `document_number_hash`, `driving_privileges[]` (category + dates), card

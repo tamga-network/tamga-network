@@ -173,6 +173,26 @@ async function sdJwtVectors() {
     rootCertsDer: [pemToDer(rootPem)],
   });
   if (!verify.ok) throw new Error("üretilen vektör doğrulanamadı: " + verify.reason);
+  // Olumsuz A7: süresi geçmiş belge (exp < now); KB-JWT taze, yalnız süre başarısız olur
+  const expired = await issueSdJwtVc({
+    signer,
+    iss: "https://issuer.tamga.network/bilgi",
+    vct: diploma.vct,
+    vctIntegrity: diploma.content_hash,
+    iat: SD_NOW - 86400,
+    exp: SD_NOW - 3600,
+    cnfJwk: holderJwk,
+    claims: { is_graduate: true, eqf_level: 6, awarding_date: "2026-06-20" },
+    sdPolicy: {},
+  });
+  const expiredPresentation = await presentSdJwtVc({
+    combined: expired.combined,
+    discloseClaims: ["is_graduate"],
+    holderKey: hk.privateKey,
+    aud: AUD,
+    nonce: NONCE,
+    iat: SD_NOW,
+  });
   const vec = {
     vector: "sd-jwt/diploma-basic",
     version: 1,
@@ -212,6 +232,7 @@ async function sdJwtVectors() {
         })(),
         expect_failed_step: "A5",
       },
+      { name: "süresi geçmiş belge (exp)", input: expiredPresentation, expect_failed_step: "A7" },
     ],
   };
   mkdirSync(resolve(OUT, "sd-jwt"), { recursive: true });

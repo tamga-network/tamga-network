@@ -74,8 +74,12 @@ lotl.jws · lotl.json          list of lists + NETWORK schemas + wallet provider
 tl-tr.jws · tl-tr.json        TR national list (root_cas, issuers, relying_parties, national_schemas)
 tl-<cc>.jws (RESERVED)        AZ/KZ/KG/UZ (members), HU/TM (observers) — slot
 anchors.jsonl                 anchor log (one line = one JWS)
-keys/root-fingerprints.json   LOTL signing certificate fingerprints (= tamga.network/trust-anchor)
-keys/<name>.cert.pem          operator/root/wallet-provider/rp certificates (published)
+keys/root-fingerprints.json   LOTL signing certificate and national root fingerprints (= tamga.network/trust-anchor);
+                              explanation in the note field
+keys/<name>.cert.pem          only certificates the list references (operator/root/registrar/wallet-provider/rp; published)
+wrprc/index.json · wrprc/…    registration certificates (ETSI TS 119 475 rc-wrp+jwt) and their index (ADR-0026)
+lote/<type>.json · .jws       ETSI TS 119 602 LoTE views (wallet-providers, wrpac-providers, eaa-providers);
+                              only when LoTE publication is enabled (lote.enabled)
 archive/<file>.v<NNNN>.jws    immutable version archive (replay input)
 CHANGELOG.md                  public change log
 ```
@@ -96,7 +100,7 @@ CHANGELOG.md                  public change log
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], recognition{mode, recognizes[]}}` | `Governance` member list + `CrossRecognition` |
 | `schemas[]` | `{schema_id, vct, metadata_url, content_hash, content_hashes[], layer: NETWORK, governance, status, registered_at, status_history[]}` | `SchemaRegistry` (NETWORK); `registered_at` is **permanent** (time of the first anchor); `content_hashes` = digests of the valid versions ([[ADR-0010]] K4; in the development stage only the current digest, [[ADR-0029]]), each anchored once |
 | `eaa_categories` | `{urn → description}` | Category namespace ([[ADR-0010]] K5) |
-| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA trust anchor (R-7; not yet on the chain — ADR candidate). `status` (of the entry and of `solutions[].status`) is from the `Status` set: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA validation uses only the `ACTIVE` keys of an `ACTIVE` entry. A `RESERVED` entry holds a place (e.g. a wallet provider whose operator has not yet supplied its own certificate, [[ADR-0042]]): `wua_signing_keys` may be empty and it is not used for WUA validation. `security_level` is the wallet assurance level ([[SPEC-WALLET-0001]] §2.2; W1 is not supported) |
+| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA trust anchor (R-7; not yet on the chain — ADR candidate). `status` (of the entry and of `solutions[].status`) is from the `Status` set: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA validation uses only the `ACTIVE` keys of an `ACTIVE` entry. A `RESERVED` entry holds a place (e.g. a wallet provider whose operator has not yet supplied its own certificate, [[ADR-0042]]): `wua_signing_keys` may be empty and it is not used for WUA validation. `security_level` is the wallet assurance level ([[SPEC-WALLET-0001]] §2.2; W1 is not supported (except the test key for the network's own trial scenes in the sandbox list — [[ADR-0042]] K5)) |
 | `zk_circuits[]` | `{circuit_id, system, version, attributes, sha256, status}` | Accepted ZK circuits ([[ADR-0032]] ZK2; not yet on the chain) |
 | `pid_providers[]` | empty, reserved | BT8 → TL8 |
 

@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-04
+last_updated: 2026-10-07
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -152,11 +152,11 @@ yönetilebilir kılar.
 
 | Seviye | Anahtar deposu | Faz |
 |---|---|---|
-| **W1** | Yazılım (güvenli bölge yok) | Desteklenmez |
+| **W1** | Yazılım (güvenli bölge yok) | Desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5) |
 | **W2** | Cihaz güvenli bölgesi (Secure Enclave / StrongBox) | **ilk aşama asgarisi** |
 | **W3** | Sertifikalı WSCD | Devlet aşaması |
 
-**Değişmez WL3:** W1 cüzdan desteklenmez. Güvenli bölgesi olmayan bir cihazda
+**Değişmez WL3:** W1 cüzdan desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5). Güvenli bölgesi olmayan bir cihazda
 Tamga Wallet kurulmaz — kullanıcıya açık bir uyarıyla reddedilir.
 
 ## 2.3 PIN
@@ -458,7 +458,7 @@ veri kurumdadır; yol TS7 silme talebidir (Geçmiş → "Verilerimi silmesini is
 |---|---|
 | **WL1** | Belge sahibi anahtarları seed'den türetilmez; güvenli bölgeden çıkmaz. |
 | **WL2** | Yedek belgeleri ve manifestoyu taşır; anahtarları taşımaz — cihaz değişiminde belgelerin yeniden verilmesi gerekir. |
-| **WL3** | W1 (yazılım anahtarlı) cüzdan desteklenmez. |
+| **WL3** | W1 (yazılım anahtarlı) cüzdan desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5). |
 | **WL4** | `presentation_log` sunucuya ve otomatik olarak hiçbir koşulda çıkmaz, sunucu yedeğine girmez; yalnız kişinin başlattığı, kişinin parolasıyla şifreli dışa aktarmada (TS10) cihazdan çıkar ([[ADR-0027]]). |
 | **WL5** | Bir doğrulayıcıya her zaman aynı kopya; farklı doğrulayıcıya farklı kopya. |
 | **WL6** | Aynı doğrulayıcı + aynı `vct` için disclosure seti tutarlıdır. |
@@ -467,7 +467,7 @@ veri kurumdadır; yol TS7 silme talebidir (Geçmiş → "Verilerimi silmesini is
 | **WL9** | Sunum anında şema sunucusuna istek yapılmaz. |
 | **WL10** | Tamga kullanıcı adına kurtarma anahtarı tutmaz. |
 | **WL11** | Her sunum kullanıcı doğrulaması gerektirir: güvenli donanım anahtarı olan cihazda cihazın biyometrisi ya da cihaz parolası (belge anahtarı telefon kilidine bağlıdır); yazılım anahtarı yolunda (S-9) uygulama PIN'i ya da biyometri. Geri düşüş ve vazgeçme §2.3'te. |
-| **WL12** | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat`, `exp` (≤ 60 s), `jti`; belge içeriği ve claim'ler QR'a girmez ([[ADR-0012]]). |
+| **WL12** | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat` (≤ şimdi + 30 s), `exp` (ömür ≤ 60 s; ≤ şimdi + 60 s + 30 s saat kayması toleransı), `jti`; belge içeriği ve claim'ler QR'a girmez ([[ADR-0012]]). |
 | **WL13** | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsamlıdır; kullanıcı rızayı istediği an geri alır (grant silinir). WL11'in tek istisnasıdır. |
 | **WL14** | Her geçiş kartı gösterimi `presentation_log`'a yazılır (WL4 kapsamında, cihazda); Göster ekranı canlı saat ve süre gösterir. |
 | **WL15** | Site takma ad anahtarları belge sahibi anahtarı değildir: yalnız [[ADR-0031]] tohumundan site ve sıra başına türetilir, kalıcı saklanmaz; tohum yalnız cihazın güvenli deposunda durur, yedeğe, taşıma dosyasına ve hiçbir sunuma girmez. |

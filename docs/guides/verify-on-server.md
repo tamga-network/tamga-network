@@ -4,7 +4,7 @@ title: "Sunucuda doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Kendi sunucunuzda Tamga belgesi doğrulamak: güven kaynağını yükleme, iptal listesi ön çekimi, politika → imzalı OpenID4VP isteği,
   şifreli yanıtı çözme ve kanonik doğrulama hattı (T0 + A–E). Referans uygulama: apps/verify.
@@ -95,6 +95,7 @@ const policy: Policy = {
     id: "identity", vct_values: ["urn:tamga:id:IdentityAttestation:1"],
     format: "mso_mdoc_zk", namespace: "tamga.id.1",
     required_claims: ["age_over_18"], constraints: { age_over_18: true }, // yalnız eşitlik
+    accept_unrevocable_zk: true, // iptali denetlenemeyen ZK sunumunu bilerek kabul et (ZK4)
   }],
   trust: { ... }, freshness: { ... },
 };
@@ -111,9 +112,13 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
   `zkBackendFromEnv()` (`TAMGA_ZK_NATIVE_BIN`) → `VerifyInput.zk`. Doğrulama ~0,2–0,3 sn sürer; ikili yanıt vermezse WASM'a düşer.
 - **Yeni adım `Z1`:** devre imzalı listede mi, yalnızca istenen öğe mi açıklandı, zaman damgası taze mi, ispat geçerli mi?
   Kurum imzası, cihaz imzası ve geçerlilik ispatın içinde denetlenir (`checks_skipped`: A4–A7). İptal durumu gelmez
-  (`status: NOT_APPLICABLE`); ZK ile sunulan belgeler kısa ömürlüdür.
+  (`status.value: NOT_APPLICABLE`, nedeni `status.reason`'da); ZK ile sunulan belgeler kısa ömürlüdür.
+- **`accept_unrevocable_zk`:** `mso_mdoc_zk` kullanan politika bunu açıkça yazmalıdır. `true` iptali denetlenemeyen sunumu
+  kabul eder; `false` yazarsanız her ZK sunumu `INDETERMINATE` döner (adım `D1`, `STATUS_UNREACHABLE`) — iptal denetimi şartsa
+  klasik `mso_mdoc` politikasını kullanın.
 - **Yedek yol:** cüzdan ZK desteklemiyorsa sorgunuz eşleşmez; aynı soruyu klasik `mso_mdoc` politikasıyla
-  (`age-over-18-mdoc`) sorun. Tamga Wallet'ta ZK üretimi telefon sürümüyle gelir (Aşama 2).
+  (`age-over-18-mdoc`) sorun. Cüzdan tarafı: `@tamga-network/zk` (Android yerel kütüphanesi hazır, iOS bekliyor); ispatçısı
+  olmayan cüzdan klasik yolu kullanır (ZK5).
 
 ## Kurallar
 

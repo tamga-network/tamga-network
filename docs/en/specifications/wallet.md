@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-04
+last_updated: 2026-10-07
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -141,11 +141,11 @@ The wallet-side component of Axis A in [[PM-ASSUR-0001]]:
 
 | Level | Key storage | Phase |
 |---|---|---|
-| **W1** | Software (no secure area) | Not supported |
+| **W1** | Software (no secure area) | Not supported (except the test key for the network's own trial scenes in the sandbox list — [[ADR-0042]] K5) |
 | **W2** | Device secure area (Secure Enclave / StrongBox) | **Initial-stage minimum** |
 | **W3** | Certified WSCD | The state stage |
 
-**Invariant WL3:** W1 wallets are not supported. Tamga Wallet is not installed on a device without a secure area — it is
+**Invariant WL3:** W1 wallets are not supported (except the test key for the network's own trial scenes in the sandbox list — [[ADR-0042]] K5). Tamga Wallet is not installed on a device without a secure area — it is
 refused with a clear warning to the user.
 
 ## 2.3 PIN
@@ -434,7 +434,7 @@ my data").
 |---|---|
 | **WL1** | Holder keys are not derived from a seed; they do not leave the secure area. |
 | **WL2** | The backup carries the credentials and the manifest; it does not carry keys — a device change requires re-issuance. |
-| **WL3** | W1 (software-key) wallets are not supported. |
+| **WL3** | W1 (software-key) wallets are not supported (except the test key for the network's own trial scenes in the sandbox list — [[ADR-0042]] K5). |
 | **WL4** | The `presentation_log` never leaves the device to a server or automatically and does not enter the server backup; it leaves the device only in an export the person starts, encrypted with the person's password (TS10) ([[ADR-0027]]). |
 | **WL5** | Always the same batch copy to a verifier; a different copy to a different verifier. |
 | **WL6** | The disclosure set is consistent for the same verifier + the same `vct`. |
@@ -443,7 +443,7 @@ my data").
 | **WL9** | No request to the schema server at presentation time. |
 | **WL10** | Tamga does not hold a recovery key on the user's behalf. |
 | **WL11** | Every presentation requires user verification: on a device with a secure hardware key, the device's biometrics or device passcode (the credential key is bound to the phone lock); on the software-key path (S-9), the app PIN or biometrics. Fallback and cancellation in §2.3. |
-| **WL12** | The pass token (`tamga-pass+jwt`) carries no personal data: only `iss` (opaque pass_id), `aud`, `iat`, `exp` (≤ 60 s), `jti`; credential content and claims do not enter the QR code ([[ADR-0012]]). |
+| **WL12** | The pass token (`tamga-pass+jwt`) carries no personal data: only `iss` (opaque pass_id), `aud`, `iat` (≤ now + 30 s), `exp` (lifetime ≤ 60 s; ≤ now + 60 s + 30 s clock-skew tolerance), `jti`; credential content and claims do not enter the QR code ([[ADR-0012]]). |
 | **WL13** | A pass is generated only for an RP/terminal group registered in the trust list, and the consent given at registration is time-limited (≤ 6 months) and scoped; the user can withdraw consent at any moment (the grant is deleted). It is the only exception to WL11. |
 | **WL14** | Every display of a pass is written to the `presentation_log` (within WL4, on the device); the Show screen displays a live clock and the remaining time. |
 | **WL15** | Site pseudonym keys are not holder keys: they are derived only from the [[ADR-0031]] seed per site and index, and are not stored persistently; the seed stays only in the device's secure storage and enters no backup, no migration file and no presentation. |

@@ -4,7 +4,7 @@ title: "Sorun giderme"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-07
 summary: >
   Sık karşılaşılan sorunlar ve çözümleri: doğrulamada "doğrulanamadı" sebepleri, reddedilen adımlar, güven listesi yükleme
   hataları, cüzdanda belge alma ve gösterme hataları, cihaz kanıtı, kayıt başvurusu ve servis hata biçimi.
@@ -53,6 +53,7 @@ Güven listesi bayatsa ya da indirilemiyorsa güven soruları `UNKNOWN` döner v
 | `A3b` | Belgeyi imzalayan sertifika, `iss` alanındaki kurumla eşleşmiyor | Kurum kimliği her zaman sertifikadan türetilir; `iss` değerine güvenmeyin |
 | `A3d` / `A6` | Belge sahibine bağlılık kanıtı (KB-JWT) yok ya da `aud`, `nonce`, `iat` tutmuyor | İstekte gönderdiğiniz `nonce` ile doğruladığınız aynı mı? Saatler senkron mu? |
 | `A5` | Bir disclosure belgedeki özetlerle eşleşmiyor | Sunum değiştirilmiş; yeniden isteyin |
+| `A7` | Belgenin süresi geçmiş (`exp`) ya da henüz geçerli değil (`nbf`) | Kişi belgesini kurumdan yenilemeli; sunucunuzun saati doğru mu? |
 | `C1` | Kurum, belgenin verildiği anda etkin değildi | Kurumun kayıt geçmişine bakın ([[GUIDE-0006]]) |
 | `C2` | Kurum bu belge türünü vermeye yetkili değildi | Kurumun belge türü yetkisi ([[GUIDE-0007]] §5) |
 | `D6` | Belge iptal edilmiş ya da askıya alınmış | Belgeyi veren kuruma sorun |
@@ -79,6 +80,9 @@ Güven listesi bayatsa ya da indirilemiyorsa güven soruları `UNKNOWN` döner v
 | `network` | Bağlantı yok | Yeniden deneyin |
 
 ## Cüzdan: cihaz kanıtı ve WUA
+
+Aşağıdaki yanıt alanları cüzdan sağlayıcısına göre değişir; örnekler bir sağlayıcıdan alınmıştır (örnek: Tamga Wallet
+sağlayıcısı). Kendi sağlayıcınızın belgesine bakın.
 
 - **Kayıt yanıtında `attestation: "software"`:** cüzdan sağlayıcısı cihaz kanıtını kullanamadı; kayıt yine yapıldı ve birim yazılım
   seviyesinde. `reason` nedeni söyler: `not_configured` (sağlayıcıda o platform için App ID ya da kökler ayarlı değil), `invalid`

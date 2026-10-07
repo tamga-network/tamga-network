@@ -73,8 +73,12 @@ lotl.jws · lotl.json          listelerin listesi + NETWORK şemaları + cüzdan
 tl-tr.jws · tl-tr.json        TR ulusal listesi (root_cas, issuers, relying_parties, national_schemas)
 tl-<cc>.jws (RESERVED)        AZ/KZ/KG/UZ (üye), HU/TM (gözlemci) — slot
 anchors.jsonl                 çapa günlüğü (satır = JWS)
-keys/root-fingerprints.json   LOTL imza sertifikası parmak izleri (= tamga.network/trust-anchor)
-keys/<ad>.cert.pem            operatör/kök/wallet-provider/rp sertifikaları (ilan)
+keys/root-fingerprints.json   LOTL imza sertifikası ve ulusal kök parmak izleri (= tamga.network/trust-anchor);
+                              açıklama note alanında
+keys/<ad>.cert.pem            yalnız listenin andığı sertifikalar (operatör/kök/kayıt kurumu/wallet-provider/rp; ilan)
+wrprc/index.json · wrprc/…    kayıt sertifikaları (ETSI TS 119 475 rc-wrp+jwt) ve dizini (ADR-0026)
+lote/<tür>.json · .jws        ETSI TS 119 602 LoTE görünümleri (wallet-providers, wrpac-providers, eaa-providers);
+                              yalnız LoTE yayını açıksa (lote.enabled)
 archive/<dosya>.v<NNNN>.jws   değişmez sürüm arşivi (replay girdisi)
 CHANGELOG.md                  herkese açık değişiklik günlüğü
 ```
@@ -95,7 +99,7 @@ CHANGELOG.md                  herkese açık değişiklik günlüğü
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], recognition{mode, recognizes[]}}` | `Governance` üye listesi + `CrossRecognition` |
 | `schemas[]` | `{schema_id, vct, metadata_url, content_hash, content_hashes[], layer: NETWORK, governance, status, registered_at, status_history[]}` | `SchemaRegistry` (NETWORK); `registered_at` **kalıcıdır** (ilk çapa zamanı); `content_hashes` = geçerli sürüm özetleri ([[ADR-0010]] K4; geliştirme evresinde yalnız güncel özet, [[ADR-0029]]), her biri bir kez çapalanır |
 | `eaa_categories` | `{urn → açıklama}` | Kategori namespace'i ([[ADR-0010]] K5) |
-| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA güven çapasını (R-7; zincirde henüz yok — ADR adayı). `status` (kayıt ve `solutions[].status`) `Status` kümesindendir: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA doğrulamasında yalnız `ACTIVE` kaydın `ACTIVE` anahtarları kullanılır. `RESERVED` kayıt yer ayırır (ör. işletmecisi kendi sertifikasını henüz vermemiş cüzdan sağlayıcı, [[ADR-0042]]): `wua_signing_keys` boş olabilir ve WUA doğrulamasında kullanılmaz. `security_level` cüzdan güvence seviyesidir ([[SPEC-WALLET-0001]] §2.2; W1 desteklenmez) |
+| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA güven çapasını (R-7; zincirde henüz yok — ADR adayı). `status` (kayıt ve `solutions[].status`) `Status` kümesindendir: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA doğrulamasında yalnız `ACTIVE` kaydın `ACTIVE` anahtarları kullanılır. `RESERVED` kayıt yer ayırır (ör. işletmecisi kendi sertifikasını henüz vermemiş cüzdan sağlayıcı, [[ADR-0042]]): `wua_signing_keys` boş olabilir ve WUA doğrulamasında kullanılmaz. `security_level` cüzdan güvence seviyesidir ([[SPEC-WALLET-0001]] §2.2; W1 desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5)) |
 | `zk_circuits[]` | `{circuit_id, system, version, attributes, sha256, status}` | Kabul edilen ZK devreleri ([[ADR-0032]] ZK2; zincirde henüz yok) |
 | `pid_providers[]` | boş, rezerve | BT8 → TL8 |
 

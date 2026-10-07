@@ -4,7 +4,7 @@ title: "Doğrulama sonucuna erişim"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Barındırılan doğrulayıcının (`verify.tamga.network`) onaylanan alanları döndüren ucu (`GET /presentations/:id/claims`) bugün
   sunum kimliğini bilen herkese cevap verir (yetenek URL'si). Gerçek sitelere açılmadan önce: sunumu açan doğrulayıcı (RP),
@@ -93,6 +93,10 @@ olmayan ya da aracının kendi kaydıyla eşleşmeyen `tamga_on_behalf_of` iste�
 
 Uygulama: `apps/verify` (rpAuth, sunum sahibi, tek okuma, status_token), `@tamga-network/verifier/web`, cüzdan onay ekranı (K7),
 kılavuzlar GUIDE-0001/0002.
+
+Uygulama notu (K7, 2026-10-07): aracı ilişkisi iki kayıtta da yazılı olmalıdır — asıl RP aracıyı `uses_intermediaries`'te,
+aracı asıl RP'yi `served_relying_parties`'te listeler. Tek taraflı beyanda cüzdan isteği reddeder (`@tamga-network/wallet-core`;
+[[SPEC-PROTO-0002]]/PV14).
 
 **Uygulama notu.** K5 örüntüsü doğrulayıcının kendi akışlarına da uygulanır: sıkı kipte beyansız `POST /presentations`
 (ana sayfadaki "QR üret"; cüzdanın başlattığı kontrol ve geçiş kartı akışları, [[ADR-0012]] B/C) sunumu doğrulayıcının **kendi**

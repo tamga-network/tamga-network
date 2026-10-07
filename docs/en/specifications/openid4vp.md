@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-03
+last_updated: 2026-10-07
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -505,6 +505,8 @@ verifier could map which credentials the user holds by sending queries.
 | **PV10** | `nonce` is single use; the verifier does not accept it again. |
 | **PV11** | In an `mso_mdoc` presentation, the device signature is over the SessionTranscript (OpenID4VPHandover) that binds the full client identifier (prefix included), the `nonce`, the `response_uri` and the thumbprint of the key the response is encrypted to; a DeviceResponse carried to another request is rejected in A6. |
 | **PV12** | The wallet does not send a credential that lacks any requested claim (without `claim_sets` every claim, with `claim_sets` every claim of the chosen combination must be in the credential); an optional claim is requested with `claim_sets`. |
+| **PV13** | The wallet checks the signed request object's time and audience: `exp` is required and must not have passed, `iat` must not be more than 60 s in the future (clock-skew tolerance 60 s), and `aud`, if present, must be `https://self-issued.me/v2`; otherwise the request is refused. A `dc+sd-jwt` query must name the type with `meta.vct_values` (an untyped query is refused). |
+| **PV14** | An intermediary verifier ([[ADR-0017]] K7) may send a request on behalf of an RP only when the relationship is written in both records: the RP lists the intermediary in `uses_intermediaries` and the intermediary lists the RP in `served_relying_parties`; on a one-sided claim the wallet refuses the request. |
 
 ---
 

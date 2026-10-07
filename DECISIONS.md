@@ -9,7 +9,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 - Detay ve gerekçe her zaman ilgili dokümandadır (bağlantı verildi); burası karar yüzeyidir.
 - **Durum kodları:** 🟢 karara bağlandı · ⚪ ilke kararlaştı, sayısal/teknik detay uygulama/denetim aşamasında · 🟡 dış girdiye bağlı (logo, denetim, kaynak metin)
 
-**Son güncelleme:** 2026-10-06 (ADR-0042 ağ ve cüzdanlar: ağ cüzdan işletmez, sandbox tek — D-GOV-9; 2026-10-05: ADR-0040 güncellendi: sandbox'ta gerçek kimlik doğrulama herkese açık, gerçek ağın sağlayıcı hesabıyla, tavanlı — D-ID-9; 2026-10-04: ADR-0040 sandbox'ta davetli gerçek kimlik doğrulama — D-ID-9; ADR-0041 sandbox'ta kurum test hesapları — D-TRUST-4; ADR-0039 sürücü belgesi bilgisi — D-ID-8; ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
+**Son güncelleme:** 2026-10-07 (D-NAME-1 `wallet` hizmeti D-GOV-9 ile kaldırıldı olarak işlendi; 2026-10-06: ADR-0042 ağ ve cüzdanlar: ağ cüzdan işletmez, sandbox tek — D-GOV-9; 2026-10-05: ADR-0040 güncellendi: sandbox'ta gerçek kimlik doğrulama herkese açık, gerçek ağın sağlayıcı hesabıyla, tavanlı — D-ID-9; 2026-10-04: ADR-0040 sandbox'ta davetli gerçek kimlik doğrulama — D-ID-9; ADR-0041 sandbox'ta kurum test hesapları — D-TRUST-4; ADR-0039 sürücü belgesi bilgisi — D-ID-8; ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
 
 ---
 
@@ -28,7 +28,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 - **KARAR:** Ö1/Ö2 (kontrat derleme, testnet) → **Ö1'** (liste taahhüt testleri) / **Ö2'**
   (trust + schemas siteleri yayında) / **Ö8'** (issuer anahtarı üniversitede); bildirim v2 (8 madde);
   ölçüt B10 (iptal ≤ 90 dk), B11. Demo yolu (sahte veri, gerçek kriptografi) pilotun önündedir;
-  demo sapmaları `docs/_internal/delivery/09-DEMO-KURGU.md` §6'da kayıtlıdır.
+  demo sapmaları operatörün iç kaydında kayıtlıdır.
 - **Nerede:** [[ADR-0009]] K6; PM-GTM-0001 v2.0.0 (yazılacak, §10).
 
 ### D-GOV-5 — TDT-first ilkesi 🟢 (2026-09-24)
@@ -57,7 +57,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 
 ### D-NAME-1 — Alan adı şeması 🟢 (2026-09-24, **v1.1 aynı gün**)
 - **KARAR (v1.1):** Ağ hizmetleri `<hizmet>.tamga.network`: **`trust`** (listeler, çapa günlüğü,
-  anahtarlar), **`schemas`** (katalog; çoğul, bir katalogdur), **`wallet`**, **`verify`**. Kurum
+  anahtarlar), **`schemas`** (katalog; çoğul, bir katalogdur), ~~**`wallet`**~~ (→ D-GOV-9, 2026-10-06: ağ cüzdan sağlayıcı işletmez), **`verify`**. Kurum
   hizmetleri **tek hizmet, çok kiracı, yol tabanlı**: `issuer.tamga.network/{slug}`
   (OpenID4VCI; metadata RFC 8414 kuralıyla `/.well-known/openid-credential-issuer/{slug}`),
   ~~`portal.tamga.network/{slug}`~~ → **`console.tamga.network`** (v1.2, 2026-09-28, [[ADR-0019]]), `status.tamga.network/{opak-id}` (kurumu kodlamaz, S8). Kurum
@@ -66,7 +66,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
   `*.dev.tamga.network`; `demo.tamga.network` tamga-demo'da kalır. Slug: küçük harf ASCII, tire.
   *v1.0'daki `<hizmet>.<kurum>.tamga.network` (kurum başına alt alan adı) proje yönetiminin isteğiyle
   geri çekildi: gereksiz DNS/TLS/dağıtım yükü; kurum başına kod yok, çok kiracılı tek uygulama.*
-- **Nerede:** `docs/_internal/delivery/10-ALAN-ADLARI.md`; SPEC-SCHEMA-0001 v2'de `schema.` → `schemas.`.
+- **Nerede:** operatörün iç kaydı; SPEC-SCHEMA-0001 v2'de `schema.` → `schemas.`.
 
 ### D-GOV-6 — Çerçeve belge seti (Tamga ARF · Trust Framework · Tamga Rulebook · belge türü rulebook'ları) 🟢 (2026-09-24; DB-12)
 - **KARAR:** Dışa dönük çerçeve belgeleri `docs/framework/` altında ayrı bir **Framework** katmanıdır
@@ -100,8 +100,8 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
   verisini görür, belge içeriğini görmez.
 - **Nerede:** [[ADR-0011]]; [[SPEC-PROTO-0001]] v1.2.0 §11.2 (PR13–PR15); [[SPEC-ID-0003]] v0.2.0 §9
   (IDP3', IDP9–IDP11); [[SPEC-TRUST-0001]] v1.0.1 (TL8); [[FW-TF-0001]] §3.6; [[FW-RB-0001]] §4.5;
-  `docs/_internal/delivery/18`. Kod: `tamga-platform/apps/id`, `@tamga-network/issuer` authcode, `@tamga-network/wallet-core`
-  authcode/directory, `apps/wallet` (kimlik doğrula, kurum ara, satır içi sunum), kurum issuer'ı
+  operatörün iç kaydı. Kod: `tamga-platform/apps/id`, `@tamga-network/issuer` authcode, `@tamga-network/wallet-core`
+  authcode/directory, Tamga Wallet (ayrı depo; kimlik doğrula, kurum ara, satır içi sunum), kurum issuer'ı
   `/par` `/authorize` `/vp/response` `/token`. Demo: FAKE IDV (sapma S-15); gerçek Didit API anahtarı `.env`.
 
 ### D-PROX-1 — Yakın alan sunumu: cüzdan QR gösterir; köprü yollar B/C, hedef ISO 18013-5 🟢 (2026-09-25; [[ADR-0012]])
@@ -172,8 +172,8 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
   adı**; eski "`tamga`" adı geri çekildi. İleride `github.com/tamga-network` organizasyonuna transfer.
   Repo sınırı = görünürlük sınırı (gitignore gizlilik yöntemi değildir); bileşen başına değil yayın
   başına repo (paketler tek monorepodan ayrı yayınlanır); "beta/network" klasör değil çalışma kipidir
-  (`TRUST_SOURCE=list|chain`). Public yapma öncesi kontrol listesi `docs/_internal/beta/10` §7. `tamga-demo` arşiv.
-- **Nerede:** `docs/_internal/beta/10-depo-yapisi-ve-acik-kaynak.md` (D-MONO v2 olarak okunur); `../README.md`.
+  (`TRUST_SOURCE=list|chain`). Public yapma öncesi kontrol listesi operatörün iç kaydında. `tamga-demo` arşiv.
+- **Nerede:** operatörün iç kaydı (D-MONO v2 olarak okunur); `../README.md`.
 
 ### D-CAT-1 — IssuerCategory'ye EVENTS (etkinlik) 🟢 (2026-09-27; DB-23)
 - **KARAR:** Kapalı kümeye yalnızca **EVENTS** eklenir (etkinlik/bilet ihraççısı); TRANSPORT ve TELECOM gerçek bir ihraççı
@@ -322,7 +322,10 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 ### D-ZK-1 — Sıfır bilgi ispatlı mdoc sunumu: Longfellow, ilk yüklem yaş 🟢 (2026-10-01; [[ADR-0032]])
 - **KARAR:** Kurum belgeleri değişmeden (ECDSA P-256 mdoc) cüzdan Longfellow ZK (devre sürümü ≥ 8) ile ispat üretir; ilk yüklem
   `age_over_18`. Doğrulayıcı yalnız imzalı güven listesindeki devre özetlerini kabul eder; ZK yoksa bugünkü toplu kopya yolu.
-  Aşama 1 (masaüstü) tamam: ispat 518 ms, doğrulama 211 ms, ~343 KB; 11 negatif test. Aşama 2 telefon (Z1'den sonra).
+  Aşama 1 (masaüstü) tamam: ispat 518 ms, doğrulama 211 ms, ~343 KB; 11 negatif test. Aşama 3 (doğrulayıcı) yayında; Aşama 2:
+  ispatçı paketi `@tamga-network/zk` ve cüzdan bağlantısı tamam, Android yerel kütüphanesi derlendi (2026-10-07), iOS xcframework
+  ve cihaz ölçümü bekliyor (mağaza derlemesi, Z1). İptal denetlenemeyen ZK sunumunu politika `accept_unrevocable_zk` ile açıkça
+  kabul eder (ZK4).
 - **Nerede:** [[ADR-0032]] ZK1–ZK6; `tools/zk-circuit/` (deney, üretimde değil). Backlog Z5.
 
 ### D-PRIV-1 — Site başına takma ad 🟢 (2026-10-01; [[ADR-0031]])
@@ -638,7 +641,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 | **D-GOV-5** | **TDT-first**: üye devlet slotları, tam ARF rol seti, vekâleten operatör; devir = yalnızca operatör alanı | [[ADR-0009]] K5 |
 | **D-SCHEMA-4** | **`vct` = `urn:tamga:…`**, metadata katalogdan, `#integrity` zorunlu; D-SCHEMA-1 süpersede | [[ADR-0010]] |
 | **D-CRED-4** | **Kategori sinyali** `urn:tamga:eaa:pub\|qualified` (yalnız PUB/QUALIFIED), C4 çapraz kontrol; holder LoA asla credential'da | [[ADR-0010]] K5 |
-| **D-NAME-1** | Alan adı şeması v1.1: `trust` / `schemas` / `wallet` / `verify` + yol tabanlı `issuer.tamga.network/{slug}`, `console.tamga.network` (v1.2; ADR-0019), `status.tamga.network/{opak}` | `docs/_internal/delivery/10-ALAN-ADLARI.md` |
+| **D-NAME-1** | Alan adı şeması v1.1: `trust` / `schemas` / ~~`wallet`~~ (→ D-GOV-9) / `verify` + yol tabanlı `issuer.tamga.network/{slug}`, `console.tamga.network` (v1.2; ADR-0019), `status.tamga.network/{opak}` | operatörün iç kaydı |
 
 ---
 
@@ -659,7 +662,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 | D-NAME-1 v1.1 `portal.tamga.network/{slug}` | **Değişti (2026-09-28).** Kurum tarafı `console.tamga.network` (kurum oturumdan; yolda slug yok); öğrenci portalı kaldırıldı. | **D-CONSOLE-1**, [[ADR-0019]] |
 | D-GOV-6 yayın satırı (`docs.tamga.network`, Türkçe kanonik, İngilizce v0.2) | **Değişti (2026-09-27).** Çerçeve belgeleri kendi sitesinde (`arf.tamga.network`), İngilizce + Türkçe birlikte; Türkçe kaynak kalır. | **D-DOCS-1**, [[ADR-0018]] |
 | `schema.tamga.network` (tekil, SPEC-SCHEMA-0001) | **Yeniden adlandırıldı (2026-09-24).** `schemas.tamga.network` (katalog); alan adı artık tip kimliği değil. Henüz yayın yok, kırılma yok. | **D-NAME-1** |
-
+| D-NAME-1 v1.1 `wallet.tamga.network` (ağın cüzdan sağlayıcı hizmeti) | **Kaldırıldı (2026-10-06).** Ağ cüzdan sağlayıcı işletmez; sağlayıcıyı cüzdanı sunan kuruluş kendi alan adında işletir ve güven listesine kaydolur. | **D-GOV-9** ([[ADR-0042]]) |
 | D-ID-6 kimlik servisi `class: QUALIFIED`, I3, `category: urn:tamga:eaa:qualified` | **Değişti (2026-09-29).** Bağımsız uygunluk değerlendirmesi yok; "nitelikli" AB hukuki unvanı. Nitelikli olmayan EAA / I2, belgede kategori yok. | **D-ID-7** ([[ADR-0022]]) |
 | SPEC-WALLET-0001/WL7 "Otomatik yenileme yoktur" | **Değişti (2026-09-29).** ARF ISSU_42/45/63: yeniden ihraç mümkün olduğunca kullanıcı eylemi gerektirmez. Yenileme belirteciyle, eşikte ve rastgele gecikmeyle; kimlik/iletişim hariç. | **D-WALLET-1** ([[ADR-0023]]) |
 | SPEC-SCHEMA-0001/D1 "yayımlanmış şema asla değişmez" | **Askıda (2026-09-30), beta ile yeniden yürürlükte.** Geliştirme evresinde gerçek kullanıcı yok; şemalar doğrusu bulunana kadar yerinde düzeltilir. | **D-SCHEMA-5** ([[ADR-0029]]) |
@@ -706,8 +709,8 @@ Bunların hiçbiri mühendislik ilerlemesini engellemez.
    ve ~~D-OSS-1 adayı~~ ✅ **D-OSS-1** kabul edildi (§0). Kalan açık: `SPEC-ID-0003`
    Draft (D-ID-2 uygulaması; DB-6 rev./DB-18 satırları onaya bağlı; IDP1–IDP8 `/sync-index` bekliyor);
    demo sapma adayları **S-10** (diploma T2 kimlik ispatı olmadan), **S-11** (cüzdan yerel deposu şifresiz),
-   **S-12/S-13** (SAN heuristiği, imzasız RP görünümü), **S-14** (self-reported WUA beyanı) `docs/_internal/delivery/09` §6'da
-   ÖNERİ; FW belgeleri İngilizce + PDF (v0.2). **DB-16 kodda uygulandı** (WUA + PoP başlıkları, `docs/_internal/delivery/15`);
+   **S-12/S-13** (SAN heuristiği, imzasız RP görünümü), **S-14** (self-reported WUA beyanı) operatörün iç kaydında
+   ÖNERİ; FW belgeleri İngilizce + PDF (v0.2). **DB-16 kodda uygulandı** (WUA + PoP başlıkları, operatörün iç kaydı);
    SPEC-PROTO-0001 v1.1 ve SPEC-CRED-0001 §4 metni madde 7 senkronunda. **2026-09-25:** DB-21/DB-22 → [[ADR-0011]] ile
    kapandı (D-ID-6); demo sapması **S-15** (FAKE IDV) ÖNERİ; onay isteği (DB-5/6/16/18, S-10…S-15) açık.
    ✅ **KAPANDI (2026-09-26):** DB-5 → **D-PROTO-1**, DB-16 → **D-CRED-6**, DB-6/DB-6 rev./DB-18 →

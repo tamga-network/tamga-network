@@ -4,7 +4,7 @@ title: "Credential type identifier (URN)"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   D-SCHEMA-1 ("vct is a stable HTTPS URL") is superseded: the credential type identifier becomes a URN of the form
   urn:tamga:<domain>:<Type>:<major>; Type Metadata is resolved from the Tamga catalogue (metadata_url + content_hash) via
@@ -145,7 +145,7 @@ ledger.
 No credential has been issued yet; **no dual support**. [[SPEC-SCHEMA-0001]], [[SPEC-SCHEMA-0002]] (vct values, Type
 Metadata examples), [[SPEC-SCHEMA-0003]] (skeleton vcts), [[SPEC-CRED-0002]] (`category` claim + new C rule),
 [[SPEC-API-0001]] (step C4), [[SPEC-PROTO-0001]] (PR2 text "every `vct` in the metadata is registered" unchanged).
-`docs/_internal/delivery/04-TRUST-LIST-FORMAT.md` is already in this form.
+The list format in the operator's internal record is already in this form.
 
 ---
 
@@ -217,7 +217,7 @@ eIDAS does not; PR7 does not; the PM-TRUST-0001 rationale holds. The level is a 
 **Keeps:** [[ADR-0007]] K2–K6 (off-chain metadata + anchor, `#integrity`, two tiers, allow-list)
 **Builds on:** [[ADR-0009]] decision 5 (multi-state first) · [[RS-EIDAS-0001]] §4.4/§5.1 · IETF SD-JWT VC-19 · ETSI TS 119 472-1
 **Changes:** [[SPEC-SCHEMA-0001]], [[SPEC-SCHEMA-0002]], [[SPEC-SCHEMA-0003]], [[SPEC-CRED-0002]], [[SPEC-API-0001]], [[PM-ASSUR-0001]]
-**Analysis source:** `docs/_internal/beta/05-kurallar` R-12, R-15, R-19, R-22; `06-eidas-uyum-mimarisi` §3.2–3.3; `04-karar-onerileri` DB-14, DB-15, DB-6
+**Analysis source:** the operator's internal record.
 
 ---
 

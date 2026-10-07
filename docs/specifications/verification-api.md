@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -60,14 +60,14 @@ onun özet görünümüdür.
 |---|---|
 | `A1` | Birleşik dizeyi `~` ile böl; KB-JWT var mı |
 | `A2` | Başlık: `alg=ES256`, `typ=dc+sd-jwt`, `x5c` var mı |
-| `A3` | `x5c` zinciri + JWT imzası; kök `RootCARegistry`'de **`isChainAcceptable`** (ACTIVE veya RETIRED) |
+| `A3` | `x5c` zinciri + JWT imzası; kök `RootCARegistry`'de **`isChainAcceptable`** (ACTIVE veya RETIRED); ara sertifikalar CA olmalı (`basicConstraints cA=true`), `keyCertSign` taşımalı ve `pathLenConstraint`'i aşmamalı; `iat` 300 sn'den fazla ileri tarihliyse RED |
 | `A3b` | **`issuerId`, `x5c` yaprak sertifikasının parmak izinden türetilir** — `iss` claim'inden DEĞİL (§1.2) |
 | `A3c` | Yaprak sertifika CRL/OCSP'de iptal edilmiş mi ([[SPEC-ID-0002]]) |
 | `A3d` | `cnf` claim'i **mevcut** mu — yoksa RED (Tamga'da KB istisnasız zorunlu) |
 | `A4` | `_sd_alg == "sha-256"` |
 | `A5` | Her disclosure: **önce hash, sonra çöz**; digest `_sd`'de eşleşiyor mu |
 | `A6` | KB-JWT: imza, `aud`, `nonce`, `iat`, `sd_hash` |
-| `A7` | `exp` varsa geçmiş mi |
+| `A7` | `exp` geçmiş ya da `nbf` gelmemiş mi |
 | `A8` | Yinelenen digest / açıktaki claim ile çakışma yok mu |
 
 **`Z1` — zero-knowledge proof (`mso_mdoc_zk`, [[ADR-0032]]):** devre imzalı listede ve dosya özeti eşleşiyor (ZK2); açıklanan
@@ -184,7 +184,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@2.1.0",
+  "sdk_version": "@tamga-network/verifier@1.0.0",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",
@@ -222,6 +222,10 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
 }
 ```
 
+| Alan | Anlamı |
+|---|---|
+| `status.reason` | İsteğe bağlı metin (`string \| null`): durum değerinin nedeni, kendiliğinden anlaşılmadığında. Ör. `NOT_APPLICABLE` + ZK sunumu: iptal indeksi açılmaz ([[ADR-0032]] ZK4; belge kısa ömürlü). Kişisel veri taşımaz. |
+
 ## 2.3 `indeterminate_reason`
 
 `outcome == INDETERMINATE` olduğunda **zorunlu**:
@@ -233,7 +237,16 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
 | `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 tazelik eşiği aşıldı; ya da D5'te doğrulayıcının ön çekim gecikmesi / saat toleransı penceresi / okunamayan çapa zamanı |
 | `CHAIN_UNREACHABLE` | Zincir ve indeksleyici erişilemez |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
-| `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2 |
+| `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; ayrıca `Z1`'de doğrulayıcı tarafının ZK bileşeni kullanılamıyorsa (devre dosyası yok, WASM yüklenemiyor) — sunumun değil doğrulayıcının eksiği |
+
+Ayrıca şu durumlar `INDETERMINATE` verir, `REJECTED` vermez:
+
+- **Beklenmeyen istisna** (kütüphane hatası, bozuk güven kaydı …): o adımda `INDETERMINATE`, nedeni o katmanın değeri (A →
+  `CHAIN_UNREACHABLE`, B → `SCHEMA_UNREACHABLE`, C/E/T0 → `INDEXER_STALE`, D → `STATUS_UNREACHABLE`); `failed_reason`'a
+  istisna iletisi girmez (AP3), yalnız adım ve hata türü. Sonuç E4 denetim kaydına yine düşer.
+- **ZK sunumu ve `accept_unrevocable_zk: false`:** ZK sunumunda iptal indeksi gelmez (ZK4); politika iptal denetimini şart
+  koşuyorsa sonuç `D1` / `STATUS_UNREACHABLE`. `true` (ya da verilmemişse) kabul edilir: `status.value = NOT_APPLICABLE`,
+  `status.reason` dolu.
 
 ## 2.4 `disclosed_claims` — yalnızca adlar
 
@@ -516,7 +529,8 @@ paralel yaşar ([[ARCH-0005]] §5.3 ile aynı politika).
 ## 6.5 Hız sınırı
 
 `429` + `Retry-After`. Öneri: `/offers` için kurum başına 100/dk,
-`/presentations` için 1000/dk.
+`/presentations` için 1000/dk. Tamga Verify sunum açma (`/presentations`), cüzdan yanıtı (`/vp/response`) ve kapı doğrulama
+(`/terminal/verify`) uçlarında `429 rate_limited` + `Retry-After` döner; istemci adresi saklanmaz ve loglanmaz.
 
 ---
 
@@ -534,7 +548,7 @@ paralel yaşar ([[ARCH-0005]] §5.3 ile aynı politika).
 | **AP8** | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. |
 | **AP11** | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
 | **AP12** | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
-| **AP13** | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, `exp` ≤ 60 s, `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. |
+| **AP13** | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. |
 | **AP9** | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır. |
 | **AP10** | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
 

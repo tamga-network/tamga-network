@@ -4,7 +4,7 @@ title: "Troubleshooting"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-07
 summary: >
   Common problems and how to fix them: reasons for "could not be verified", rejected steps, trust list loading errors, wallet
   errors when receiving and presenting credentials, device attestation, registration applications and the service error format.
@@ -55,6 +55,7 @@ never `ACCEPTED`, never `REJECTED`.
 | `A3b` | The certificate that signed the credential does not match the institution in `iss` | The institution identity is always derived from the certificate; do not trust the `iss` value |
 | `A3d` / `A6` | No proof of holder binding (KB-JWT), or `aud`, `nonce`, `iat` do not match | Is the `nonce` you verify the one you sent in the request? Are clocks in sync? |
 | `A5` | A disclosure does not match the digests in the credential | The presentation was altered; ask again |
+| `A7` | The credential has expired (`exp`) or is not yet valid (`nbf`) | The person should renew the credential with the institution; is your server's clock correct? |
 | `C1` | The institution was not active when the credential was issued | Check the institution's status history ([[GUIDE-0006]]) |
 | `C2` | The institution was not authorised for this credential type | The institution's type authorisation ([[GUIDE-0007]] §5) |
 | `D6` | The credential is revoked or suspended | Ask the institution that issued it |
@@ -81,6 +82,9 @@ never `ACCEPTED`, never `REJECTED`.
 | `network` | No connection | Try again |
 
 ## Wallet: device attestation and WUA
+
+The response fields below depend on the wallet provider; the examples come from one provider (example: the Tamga Wallet
+provider). Check your own provider's documentation.
 
 - **Registration response says `attestation: "software"`:** the wallet provider could not use the device evidence; the unit
   still registered, at software level. `reason` tells why: `not_configured` (the provider has no App ID or roots for that

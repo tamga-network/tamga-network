@@ -4,7 +4,7 @@ title: "Kurum Konsolu"
 status: Active
 version: 1.0.0
 created: 2026-09-28
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Barındırılan hizmetlerin kurum tarafı tek bir Kurum Konsolu'nda toplanır (console.tamga.network): kurum personeli davetle
   hesap açar ve passkey ile girer; verilen belgeler, iptal/askı, kayıt defteri (ör. öğrenciler), API anahtarları, kullanıcılar
@@ -92,7 +92,7 @@ D-NAME-1 v1.2: `portal.tamga.network/{slug}` → **`console.tamga.network`** (ku
 - operatör deposu: `apps/console` (portalın yerine), `shared/db` (PostgreSQL / PGlite, sürümlü şema), belge verenin kalıcı verisi
   veritabanında; JSON dosyaları yalnızca ilk yükleme (seed) içindir.
 - `ops`: PostgreSQL kurulumu, `console.tamga.network` nginx bloğu + sertifika adı, `DATABASE_URL`, davet komutu.
-- D-NAME-1 → v1.2 (DECISIONS "Değiştirilen Kararlar"); `docs/_internal/delivery/10-ALAN-ADLARI.md`.
+- D-NAME-1 → v1.2 (DECISIONS "Değiştirilen Kararlar"); operatörün iç kaydı.
 - Kimlik servisi (`apps/id`) verisinin taşınması ve doğrulayıcı istatistikleri sonraki adımdır.
 
 # Durum

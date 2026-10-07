@@ -4,7 +4,7 @@ title: "Bileşen mimarisi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Zincirin üstünde çalışan uygulama bileşenlerini tanımlar. Merkezî bulgu:
   doğrulama okuma seti 3'ten 5'e çıktığı için indeksleyici artık opsiyonel bir
@@ -68,9 +68,9 @@ Fiziksel yerleşim, donanım ve operasyon [[ARCH-0004]]'tedir. SDK paketleri
                   └─────────────────────┘
 
         OpenID4VCI ▲                    ▼ OpenID4VP
-                ┌──────────────────────────┐
-                │      TAMGA WALLET        │
-                └──────────────────────────┘
+               ┌────────────────────────────┐
+               │ CÜZDAN (ör. Tamga Wallet)  │
+               └────────────────────────────┘
 ```
 
 **Yön kuralı:** Hiçbir uygulama bileşeni zincire **yazmak zorunda değildir**
@@ -368,7 +368,10 @@ bütünlük hash'i sayesinde süresiz önbelleklenebilirler. Bu, SLO'larını ci
 
 ---
 
-# 6. Tamga Wallet
+# 6. Cüzdan
+
+Ağın kurallarına uyan her cüzdan bu katmanları taşır. Örnek: Tamga Wallet — ağın ilk cüzdanı; bir şirketin ayrı ürünüdür
+([[ADR-0042]]).
 
 | Katman | Sorumluluk |
 |---|---|

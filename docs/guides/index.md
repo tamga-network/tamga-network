@@ -4,7 +4,7 @@ title: "Başlarken"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   Geliştiriciler için giriş: Tamga'da dört yol (doğrulayıcı, belge veren, cüzdan geliştiricisi, ağ/düğüm operatörü),
   hangi paketi kuracağınız, hangi adresleri kullanacağınız, yerel geliştirme ortamının kurulumu ve bugün neyin hazır olduğu.
@@ -75,9 +75,10 @@ depoya girmez). Kodunuzu bu yerel listelere karşı deneyebilirsiniz. Uyum vekt�
 | `@tamga-network/issuer` (+ `/client`) | belge üretimi, OpenID4VCI; `/client` barındırılan servis için | belge veren |
 | `@tamga-network/verifier` (+ `/web`, `/zk`) | doğrulama hattı, üç değerli sonuç, OpenID4VP; `/web` sayfa kiti, `/zk` sıfır bilgi ispatı | doğrulayıcı, web sitesi |
 | `@tamga-network/wallet-core` | cüzdan çekirdeği: anahtarlar, belge alma, yerel denetim, gösterme (Node + React Native) | cüzdan geliştiricisi |
+| `@tamga-network/zk` (+ `/node`, `/react-native`) | cüzdan tarafı sıfır bilgi ispatçısı (mdoc, Longfellow); `/react-native` telefonda yerel ispatçı, `/node` masaüstünde | cüzdan geliştiricisi |
 
-Her paketin kendi sayfası **SDK'lar** bölümündedir. Paketler npm'de **ön sürüm** (`0.x`) olarak yayında; `1.0`'a kadar
-arayüz değişebilir. Her sürüm bu depodan GitHub Actions ile üretilir ve kaynak kanıtı (provenance) taşır.
+Her paketin kendi sayfası **SDK'lar** bölümündedir. Paketler sürüm **1.0.0**; canlıya çıkış duyurusuyla npm'de
+yayımlanır. Her sürüm bu depodan GitHub Actions ile üretilir ve kaynak kanıtı (provenance) taşır.
 
 ## Adresler
 
@@ -95,11 +96,12 @@ arayüz değişebilir. Her sürüm bu depodan GitHub Actions ile üretilir ve ka
 
 | Parça | Durum |
 |---|---|
-| Paketler | npm'de ön sürüm (`0.x`); `1.0`'a kadar arayüz değişebilir |
+| Paketler | sürüm 1.0.0; canlıya çıkış duyurusuyla npm'de yayımlanır |
 | Barındırılan doğrulayıcı | çalışıyor: sunumu sitenin sunucusu imzalı beyanla açar, değerler yalnızca ona ve bir kez verilir ([[ADR-0017]]); politikalar bugün sabit |
 | Barındırılan belge verme | çalışıyor: kurum başına kapsamlı API anahtarı ([[ADR-0016]]) |
 | Güven çapası | imzalı güven listeleri ([[ADR-0009]]); belge veren ve doğrulayıcı kaydını Tamga operatörü yapar |
-| Gizlilik | site başına takma ad ([[ADR-0031]]); sıfır bilgi ispatıyla (ZK) yaş doğrulama — doğrulayıcı tarafı hazır ([[ADR-0032]]) |
+| Gizlilik | site başına takma ad ([[ADR-0031]]); sıfır bilgi ispatıyla (ZK) yaş doğrulama — doğrulayıcı tarafı yayında; cüzdan tarafı `@tamga-network/zk` ile bağlandı, Android yerel kütüphanesi hazır, iOS bekliyor ([[ADR-0032]]) |
+| Sandbox | yayında: gerçek ağla aynı kurallarla tek test ağı, herkese açık; gerçek kimlik doğrulaması günlük/aylık tavanlı ([[GUIDE-0013]]) |
 | Zincir (Besu/QBFT) | tasarlandı, kontratlar yazıldı; en az iki bağımsız validator operatörüyle açılır ([[GUIDE-0006]]) |
 
 ## Her entegrasyonda ortak kurallar

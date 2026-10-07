@@ -82,6 +82,19 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+        "429":
+          description: |
+            Too many requests (`rate_limited`). Wait the number of seconds in `Retry-After` and try again. The client
+            address is not stored or logged; the wallet-facing `/vp/response` and the gate `/terminal/verify` endpoints
+            have the same protection.
+          headers:
+            Retry-After:
+              schema: { type: integer, minimum: 1 }
+              description: Seconds to wait before the next attempt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example: { error: rate_limited }
   /presentations/{id}:
     get:
       tags: [Presentations]
@@ -158,7 +171,19 @@ paths:
                     vct_values: { type: array, items: { type: string } }
                     claims: { type: array, items: { type: string }, description: Requested fields. }
                     proximity: { type: boolean, description: The policy also issues a gate pass. }
-                    format: { type: string, enum: [dc+sd-jwt, mso_mdoc] }
+                    format:
+                      type: string
+                      enum: [dc+sd-jwt, mso_mdoc, mso_mdoc_zk]
+                      description: |
+                        `mso_mdoc_zk` = zero-knowledge proof over an mdoc (ADR-0032). A wallet that cannot produce the
+                        proof uses the classic `mso_mdoc` policy instead (e.g. `age-over-18-mdoc`).
+            example:
+              - policy_id: age-over-18-zk
+                purpose: Over-18 check with a zero-knowledge proof — yes/no only, nothing else
+                vct_values: ["urn:tamga:id:IdentityAttestation:1"]
+                claims: [age_over_18]
+                proximity: false
+                format: mso_mdoc_zk
 components:
   securitySchemes:
     rpAssertion:
@@ -240,6 +265,15 @@ components:
           type: object
           properties:
             value: { type: string, enum: [VALID, INVALID, SUSPENDED, NOT_APPLICABLE, UNKNOWN] }
+            list_version: { type: [integer, "null"] }
+            token_age_sec: { type: [integer, "null"] }
+            reason:
+              type: [string, "null"]
+              description: |
+                Why the status has this value, when it is not self-explanatory — e.g. `NOT_APPLICABLE` for a
+                zero-knowledge presentation, which does not reveal the revocation index (ADR-0032 ZK4; the credential is
+                short-lived). The policy decides whether this is accepted (`accept_unrevocable_zk`; if not, the outcome
+                is `INDETERMINATE` at D1). Contains no personal data.
         evaluated_at: { type: string, format: date-time }
     Error:
       type: object

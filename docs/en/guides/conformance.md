@@ -4,7 +4,7 @@ title: "Conformance tests"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-07
 summary: >
   Showing that an application follows the Tamga rules: the open conformance test vectors (trust list questions, SD-JWT
   verification, positive and negative cases), running the runner, testing a library written in another language against the
@@ -58,7 +58,7 @@ Queries tested: `isCredentialAcceptable`, `isCredentialSchemaAcceptable`, `isRec
 `isWalletProviderKey`. The load report of the list set (`healthy`, list version) is also compared with the expectation.
 
 **`sd-jwt/diploma-basic.json`** tests verifying a presentation: which fields are disclosed, which stay hidden, the `issuer_id`
-and the steps passed ([[SPEC-API-0001]] A1–A6). There are negative cases too, and each one **must be rejected**:
+and the steps passed ([[SPEC-API-0001]] A1–A7). There are negative cases too, and each one **must be rejected**:
 
 | Negative case | Expected |
 |---|---|
@@ -66,6 +66,7 @@ and the steps passed ([[SPEC-API-0001]] A1–A6). There are negative cases too, 
 | Wrong `nonce` | Rejected — replay |
 | `iat` outside the window (+301 s) | Rejected — time window |
 | An undisclosed disclosure added | Rejected — digest does not match |
+| Expired credential (`exp` < `now`) | Rejected — A7, validity period |
 
 Every vector carries a fixed `now` field, so time-dependent steps give the same result on every machine.
 

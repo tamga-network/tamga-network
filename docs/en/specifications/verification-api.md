@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -59,14 +59,14 @@ Verification proceeds in five layers. This table is **canonical**; [[ARCH-0003]]
 |---|---|
 | `A1` | Split the combined string on `~`; is there a KB-JWT |
 | `A2` | Header: `alg=ES256`, `typ=dc+sd-jwt`, is `x5c` present |
-| `A3` | `x5c` chain + JWT signature; root in `RootCARegistry` **`isChainAcceptable`** (ACTIVE or RETIRED) |
+| `A3` | `x5c` chain + JWT signature; root in `RootCARegistry` **`isChainAcceptable`** (ACTIVE or RETIRED); intermediates must be CAs (`basicConstraints cA=true`), carry `keyCertSign` and stay within `pathLenConstraint`; an `iat` more than 300 s in the future is REJECTED |
 | `A3b` | **`issuerId` is derived from the fingerprint of the `x5c` leaf certificate** — NOT from the `iss` claim (§1.2) |
 | `A3c` | Is the leaf certificate revoked in CRL/OCSP ([[SPEC-ID-0002]]) |
 | `A3d` | Is the `cnf` claim **present** — if not, REJECT (in Tamga KB is mandatory without exception) |
 | `A4` | `_sd_alg == "sha-256"` |
 | `A5` | Every disclosure: **hash first, then decode**; does the digest match in `_sd` |
 | `A6` | KB-JWT: signature, `aud`, `nonce`, `iat`, `sd_hash` |
-| `A7` | If `exp` is present, has it passed |
+| `A7` | Has `exp` passed, or is `nbf` not yet reached |
 | `A8` | No duplicate digests / no collision with a plaintext claim |
 
 **`Z1` — zero-knowledge proof (`mso_mdoc_zk`, [[ADR-0032]]):** the circuit is in the signed list and the file digest matches
@@ -178,7 +178,7 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@2.1.0",
+  "sdk_version": "@tamga-network/verifier@1.0.0",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",
@@ -216,6 +216,10 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
 }
 ```
 
+| Field | Meaning |
+|---|---|
+| `status.reason` | Optional text (`string \| null`): why the status has this value, when it is not self-explanatory. E.g. `NOT_APPLICABLE` + a ZK presentation: the revocation index is not revealed ([[ADR-0032]] ZK4; the credential is short-lived). Carries no personal data. |
+
 ## 2.3 `indeterminate_reason`
 
 **Mandatory** when `outcome == INDETERMINATE`:
@@ -227,7 +231,16 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
 | `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 freshness threshold exceeded; or, at D5, the verifier's prefetch delay / clock-tolerance window / unreadable anchor time |
 | `CHAIN_UNREACHABLE` | Chain and indexer unreachable |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
-| `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2 |
+| `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; also at `Z1` when the verifier's own ZK component is unavailable (circuit file missing, WASM cannot be loaded) — the verifier's shortcoming, not the presentation's |
+
+The following also give `INDETERMINATE`, not `REJECTED`:
+
+- **Unexpected exception** (library error, corrupt trust record …): `INDETERMINATE` at that step, with that layer's reason (A →
+  `CHAIN_UNREACHABLE`, B → `SCHEMA_UNREACHABLE`, C/E/T0 → `INDEXER_STALE`, D → `STATUS_UNREACHABLE`); the exception message is
+  not put in `failed_reason` (AP3), only the step and the error type. The result still goes to the E4 audit record.
+- **ZK presentation with `accept_unrevocable_zk: false`:** a ZK presentation carries no revocation index (ZK4); if the policy
+  requires a revocation check the outcome is `D1` / `STATUS_UNREACHABLE`. With `true` (or when omitted) it is accepted:
+  `status.value = NOT_APPLICABLE`, with `status.reason` set.
 
 ## 2.4 `disclosed_claims` — names only
 
@@ -499,7 +512,9 @@ Path-based: `/api/v1`. A breaking change opens `/v2`; `/v1` lives in parallel fo
 
 ## 6.5 Rate limit
 
-`429` + `Retry-After`. Recommendation: 100/min per institution for `/offers`, 1000/min for `/presentations`.
+`429` + `Retry-After`. Recommendation: 100/min per institution for `/offers`, 1000/min for `/presentations`. Tamga Verify
+returns `429 rate_limited` + `Retry-After` on opening presentations (`/presentations`), the wallet response (`/vp/response`) and
+gate verification (`/terminal/verify`); the client address is not stored or logged.
 
 ---
 
@@ -517,7 +532,7 @@ Path-based: `/api/v1`. A breaking change opens `/v2`; `/v1` lives in parallel fo
 | **AP8** | `C2` (schema authorisation) cannot be skipped by any configuration. |
 | **AP11** | `C1` and `C2` take the credential's `iat`; issuance-time queries are not used in verification. |
 | **AP12** | `issuerId` is derived from the `x5c` leaf fingerprint, not from the `iss` claim. |
-| **AP13** | Pass token verification ([[ADR-0012]] B): signature with the copy key in `pass_grant`, `aud` = the terminal's RP client_id, `exp` ≤ 60 s, a `jti` replay list (shared online within the terminal group); no personal data is extracted from the token or logged. |
+| **AP13** | Pass token verification ([[ADR-0012]] B): signature with the copy key in `pass_grant`, `aud` = the terminal's RP client_id, lifetime (`exp` − `iat`) ≤ 60 s, `iat` ≤ now + 30 s, `exp` ≤ now + 60 s + 30 s (clock-skew tolerance), a `jti` replay list (shared online within the terminal group); no personal data is extracted from the token or logged. |
 | **AP9** | `E4` (audit record) also runs for rejected verifications. |
 | **AP10** | `tx_code` is stored nowhere outside the response. |
 

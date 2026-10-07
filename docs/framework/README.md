@@ -37,7 +37,7 @@ artınca aynı çalışmada İngilizcesi de güncellenir.
 
 Belge türü rulebook'ları Tamga Rulebook'tan dallanır: ortak kuralların hepsini devralır, yalnızca türe özgü kuralları ekler.
 
-Planlı: `FW-RISK-0001` Tamga Risk Register (ARF R1–R14 türevi, `docs/_internal/beta/05` R-40);
+Planlı: `FW-RISK-0001` Tamga Risk Register (ARF R1–R14 türevi);
 `FW-RB-0005+` diğer belge türü rulebook'ları (tüzel kişilik, oda üyeliği) — `SPEC-SCHEMA-0003`
 kontrol listesi (SG1–SG7) geçildikçe.
 
@@ -67,7 +67,7 @@ Domainler: `ARF` (mimari çerçeve), `TF` (trust framework / yönetişim), `RB` 
 - **PDF:** sürüm etiketlendiğinde Typst ile (tamga-web whitepaper hattı) — planlı.
 - **Dil:** Türkçe kaynak; İngilizce aynı sürümün resmî çevirisi (TDT üyeleri ve AB muhatapları için).
 - **Atıf:** güven listelerindeki `operator.trust_framework` alanı bu belgenin yayın URL'ine
-  işaret eder (`docs/_internal/delivery/04-TRUST-LIST-FORMAT.md` §2).
+  işaret eder.
 
 ---
 

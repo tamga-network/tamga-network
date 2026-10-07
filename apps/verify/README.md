@@ -18,7 +18,7 @@ npm run verify            # :4004; env: TAMGA_VERIFY_BASE, TAMGA_TRUST_DIST, TAM
 | `POST /vp/response`             | `direct_post.jwt` — `response=<JWE ECDH-ES/A128GCM>`; nonce tek kullanımlık (PV10)                                                                   |
 | `GET /presentations/:id`        | `PENDING` ya da sonuç nesnesi (claim değeri yok — AP3; idx yok — AP4)                                                                                |
 | `GET /presentations/:id/claims` | Açıklanan değerler (ayrı uç)                                                                                                                         |
-| `GET /p/:id`                    | HTML: ACCEPTED / REJECTED / INDETERMINATE ayrı, adım şeridi, arka plan paneli                                                                        |
+| `GET /p/:id`                    | HTML: ACCEPTED / REJECTED / INDETERMINATE ayrı, adım şeridi, arka plan paneli. Sahibi olan sunumda ayrıntı yalnız `?st=<durum jetonu>` ya da sahibin RP beyanıyla; aksi hâlde nötr durum |
 | `GET /audit`                    | Son denetim kayıtları (yalnızca `x-admin-token`)                                                                                                     |
 | `GET /policies`                 | Cüzdanın "Kontrol ettir" ekranı için senaryo özeti (ADR-0012 C)                                                                                      |
 | `GET /p/:id?show=<key>`         | Kontrol görünümü: büyük sonuç + yalnızca açıklanan alanlar; anahtar yanıtla gelir (`show_url`), 5 dk geçerli, aksi 410                               |
@@ -27,6 +27,9 @@ npm run verify            # :4004; env: TAMGA_VERIFY_BASE, TAMGA_TRUST_DIST, TAM
 | `GET /terminal/passes`          | Kayıtlı geçiş kartları (kişisel veri yok; yalnız `x-admin-token` ile)                                                                                |
 | `GET /stats/gates`              | Kapı sayaçları: gün × grup → kabul / red / neden (yalnız sayı; `x-admin-token`; Kurum Konsolu okur)                                                  |
 | `GET /trust/*`                  | Geliştirme: `TAMGA_VERIFY_SERVE_TRUST=1` iken güven listesi dosyaları (LAN demo)                                                                     |
+
+**Hız sınırı:** `POST /presentations`, `POST /vp/response` ve `POST /terminal/verify` süreç içi jeton kovasıyla sınırlıdır; aşılınca
+`429 {"error":"rate_limited"}` + `Retry-After`. İstemci adresi saklanmaz ve loglanmaz (yalnız bellekte, rastgele anahtarlı HMAC).
 
 ## Politika kümeleri ortama göre (2026-10-04)
 

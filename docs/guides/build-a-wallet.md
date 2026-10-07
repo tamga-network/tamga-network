@@ -4,11 +4,11 @@ title: "Cüzdan geliştirmek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   Tamga belgelerini alan, saklayan ve gösteren bir cüzdan geliştirmek: cüzdan sağlayıcısı olarak kayıt, cihaz anahtarları,
   cihaz kanıtı (App Attest, Android anahtar kanıtı), Wallet Unit Attestation (WUA), OpenID4VCI ile belge alma, OpenID4VP ile
-  selective disclosure, onay ekranı, işlem günlüğü ve dışa aktarma, cihaz değiştirme, yayın öncesi kontrol ve uyulması gereken kurallar. Referans uygulama Tamga Wallet (ayrı depo, Expo) bu paketi kullanır.
+  selective disclosure, onay ekranı, işlem günlüğü ve dışa aktarma, cihaz değiştirme, yayın öncesi kontrol ve uyulması gereken kurallar. Ağın ilk cüzdanı Tamga Wallet (bir şirketin ayrı ürünü; ayrı depo, Expo) bu paketi kullanır.
 ---
 
 # Tamga uyumlu cüzdan geliştirmek
@@ -39,7 +39,7 @@ npm install @tamga-network/wallet-core @tamga-network/trust
 
 Çekirdek saf TypeScript olduğu için her ortamda aynıdır; platforma bağlı üç parçayı siz verirsiniz:
 
-| Parça | Ne | Referans uygulamada |
+| Parça | Ne | Örnek uygulamada (Tamga Wallet) |
 |---|---|---|
 | Anahtar arka ucu | Cihazın güvenli bölgesinde P-256 anahtar üretme ve imzalama (`NativeKeyBackend`) | Yerel modül `TamgaKeys` (iOS Secure Enclave, Android StrongBox/TEE) |
 | İmza doğrulayıcı | Güven listesi imzalarını doğrulayan fonksiyon (`@tamga-network/trust/core`'a verilir) | Saf TypeScript kriptografi kütüphanesiyle |
@@ -184,7 +184,7 @@ if (plan.kind !== "exhausted") {
 Yanıt şifreli gider (`direct_post.jwt`). `combined`, seçilen kopyanın SD-JWT metnidir.
 
 [[t:intermediary|Aracı]] doğrulayıcı üzerinden gelen istekte (`request.onBehalfOf`) ekranda **asıl sitenin** adını gösterin (`checkRp` bunu verir)
-ve kapsamı onun kaydına göre denetleyin; `request.rpKey` kopyayı asıl siteye göre ayırır ([[ADR-0017]]). Referans akış:
+ve kapsamı onun kaydına göre denetleyin; `request.rpKey` kopyayı asıl siteye göre ayırır ([[ADR-0017]]). Örnek akış:
 Tamga Wallet `app/src/present.ts`.
 
 ## 8. Onay ekranı
@@ -232,7 +232,7 @@ const { state: next, toReissue } = applyMigration(emptyState, data, { restoreLog
 ```
 
 - Eski cihazı devrederken birimi iptal edin (sağlayıcınızın birim iptali).
-- Kişi her şeyi silmek isterse: cüzdan sağlayıcısında `deleteUnit`, Tamga'nın kimlik servisinde `requestIdentityErasure`.
+- Kişi her şeyi silmek isterse: sağlayıcınızın birim silme işlemi, Tamga'nın kimlik servisinde `requestIdentityErasure`.
   Kurumların tuttuğu veri kurumun sorumluluğundadır; cüzdan kişiye kurumun silme başvurusu yolunu gösterir.
 
 ## 11. Güven listesi
@@ -265,6 +265,6 @@ uçtan uca denemeyi gerçek ağa dokunmadan test ağında yapın ([[GUIDE-0013]]
 
 ## 14. Çalışan kod
 
-- Referans uygulama: Tamga Wallet (ayrı depo; Expo, React Native) — bu çekirdeği kullanır; iOS ve Android'de çalışır.
+- İlk cüzdan (örnek uygulama): Tamga Wallet (bir şirketin ayrı ürünü; ayrı depo; Expo, React Native) — bu çekirdeği kullanır; iOS ve Android'de çalışır.
 - Çekirdeğin testleri: `packages/wallet-core/src/*.test.ts` — alma, gösterme, kopya seçimi, güven listesi.
 - Geçiş kartı (turnike, etkinlik kapısı): `pass.ts`, [[ADR-0012]].

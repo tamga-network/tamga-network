@@ -4,7 +4,7 @@ title: "Institution Console"
 status: Active
 version: 1.0.0
 created: 2026-09-28
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   The institution side of the hosted services is gathered in one Institution Console (console.tamga.network): institution
   staff open an account by invitation and sign in with a passkey; issued credentials, revocation/suspension, the register
@@ -102,7 +102,7 @@ no slug in the path).
   issuer's persistent data in the database; JSON files are used only for the initial load (seed).
 - `ops`: PostgreSQL setup, the `console.tamga.network` nginx block + certificate name, `DATABASE_URL`, the invitation
   command.
-- D-NAME-1 → v1.2 (DECISIONS "Changed decisions"); `docs/_internal/delivery/10-ALAN-ADLARI.md`.
+- D-NAME-1 → v1.2 (DECISIONS "Changed decisions"); the operator's internal record.
 - Moving the identity service (`apps/id`) data and verifier statistics are the next step.
 
 # Status

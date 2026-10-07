@@ -4,7 +4,7 @@ title: "Component architecture"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Describes the application components that run on top of the ledger. Central finding: because the verification read set grew
   from 3 to 5, the indexer is no longer an optional optimisation but a MANDATORY component; QBFT's instant finality means no reorg
@@ -64,9 +64,9 @@ Physical placement, hardware and operations are in [[ARCH-0004]]. SDK packages a
                   └─────────────────────┘
 
         OpenID4VCI ▲                    ▼ OpenID4VP
-                ┌──────────────────────────┐
-                │      TAMGA WALLET        │
-                └──────────────────────────┘
+               ┌────────────────────────────┐
+               │ WALLET (e.g. Tamga Wallet) │
+               └────────────────────────────┘
 ```
 
 **Direction rule:** no application component **has to write** to the ledger — the only exceptions are the issuer service's status
@@ -348,7 +348,10 @@ indefinitely. This makes their SLOs much cheaper ([[ARCH-0004]]).
 
 ---
 
-# 6. Tamga Wallet
+# 6. Wallet
+
+Every wallet that follows the network's rules has these layers. Example: Tamga Wallet — the network's first wallet; a
+company's separate product ([[ADR-0042]]).
 
 | Layer | Responsibility |
 |---|---|

@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-06 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-07 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -81,7 +81,7 @@ Tamga is positioned in three layers, each able to stand on its own:
    provisionally, on behalf of the state. As states join, the lists are handed over, a governance body is formed and a
    shared ledger follows.
 3. **On top of the network.** Wallets and service providers that follow the network's rules. Tamga Wallet is the
-   network's first and reference wallet, but a separate product that works in any EU-compatible setting. Tamga Network sells no
+   network's first wallet; it is a company's separate product and works in any EU-compatible setting. Tamga Network sells no
    services: it runs the rules, the trust lists, open code and reference services (hosted issuance, the Institution Console, the
    hosted [[t:verifier]] Tamga Verify); commercial services such as integration, support and consulting are offered by companies
    outside the network, under their own names ([[ADR-0037]]).
@@ -132,13 +132,14 @@ carries the verifier's registered identity. The wallet checks the verifier's ent
 than the registration allows. The person approves with a PIN or biometrics; the response is encrypted and contains only the
 approved fields.
 
-A verifier may run its own verification software or use Tamga Verify (the hosted verifier). Presentation can happen on the
-same device through the browser (Digital Credentials API) or across devices through a QR code.
+A verifier may run its own verification software or use Tamga Verify (the hosted verifier). Presentation happens through a
+wallet link (same device) or across devices through a QR code. For presentation through the browser (Digital Credentials API)
+the verifier is ready; the wallet connection does not exist yet.
 
 ### 2.3 In-person presentation
 
 At gates, campus entrances or service counters, the credential is shown at close range. The long-term solution is the
-Bluetooth proximity flow of ISO/IEC 18013-5. This flow becomes available with the app-store release; until then
+Bluetooth proximity flow of ISO/IEC 18013-5. This flow is implemented and awaits device testing; until it goes live,
 short-lived access passes with a limited scope are used.
 
 ### 2.4 Website sign-in
@@ -157,15 +158,16 @@ it and a second use of the same ticket is refused.
 
 A person can prove "I am over 18" without showing the date of birth or the identity number. The wallet produces a
 zero-knowledge proof about the credential the institution signed, without changing that credential. The verifier accepts
-only proof circuits published in the trusted list. The verifier side is ready; the wallet side comes with the app-store
+only proof circuits published in the trusted list. The verifier side is live. The wallet side is wired to the network's open
+prover package; the Android native library is ready, the iOS library is pending; device testing comes with the app-store
 release. Where proofs are not supported, the presentation is made in the usual way.
 
 ### 2.7 The person's control
 
 - **History.** The person sees in the wallet which credential was shown to whom, when and with which fields. The history
   stays on the device and leaves it only in a password-protected file the person creates.
-- **Deletion.** By resetting the wallet the person deletes their records in Tamga services (the identity service, the
-  wallet provider) and all data on the device.
+- **Deletion.** By resetting the wallet the person deletes their record in Tamga's identity service, the unit record at the
+  [[t:wallet-provider]] (with the organisation that offers the wallet) and all data on the device.
 - **Erasure requests and complaints.** The person can ask an institution from the wallet to delete their data, and finds
   in the wallet the way to complain to the verifier's data protection authority.
 
@@ -178,9 +180,11 @@ release. Where proofs are not supported, the presentation is made in the usual w
 | Tickets and single-use gate entry                                                | Live                                                   |
 | Data deletion, history, export                                                   | Live                                                   |
 | Zero-knowledge proof — verifier side                                             | Live                                                   |
-| Zero-knowledge proof — wallet side                                               | With the app-store release                             |
-| Bluetooth proximity presentation, browser presentation (Digital Credentials API) | Implemented; device testing with the app-store release |
+| Zero-knowledge proof — wallet side                                               | Wired to the wallet; Android native library ready, iOS pending; device testing with the app-store release |
+| Bluetooth proximity presentation                                                 | Implemented; device testing pending                    |
+| Browser presentation (Digital Credentials API)                                   | Verifier ready; no wallet connection yet               |
 | Hardware-backed keys and device attestation                                      | Implemented; device testing with the app-store release |
+| Sandbox (open to everyone; identity verification with daily/monthly caps)       | Live                                                   |
 
 ---
 
@@ -467,8 +471,8 @@ changes. Wallets and verifiers only change the implementation of the trust sourc
 
 The governance body is not set up on day one. When one or two states are willing to join, a council or foundation is formed
 and the lists are handed over. Until then Tamga is the provisional operator; once the foundation is formed, operation is handed
-over to it. The network sells no product and offers no commercial services; Tamga Wallet is the network's first wallet but a
-separate product; service providers sit outside the network and join the
+over to it. Tamga Network is not-for-profit; its operation will later be handed over to a foundation. The network sells no
+product and offers no commercial services; Tamga Wallet is the network's first wallet, a company's separate product; service providers sit outside the network and join the
 registration process on the same terms as everyone else ([[ADR-0037]]).
 
 ### 8.4 Standards map

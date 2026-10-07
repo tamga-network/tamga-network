@@ -4,7 +4,7 @@ title: "Cüzdan yayın öncesi kontrol listesi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-07
 summary: >
   Tamga uyumlu bir cüzdanı mağazaya göndermeden önce geçilecek kontrol listesi: anahtarlar ve cihaz kanıtı, kayıt, belge alma,
   gösterme ve onay ekranı, gizlilik ve günlük, cihaz değiştirme ve silme, güven listesi, uyum testleri ve mağaza.
@@ -60,8 +60,8 @@ Bu sayfa, [[GUIDE-0005]]'te anlatılan cüzdanı yayına hazırlayan ekipler iç
 
 - Yedek ve taşıma dosyası anahtar taşımıyor; yeni cihazda belgeler "yeniden al" listesiyle geri geliyor (WL2, WL10).
 - Günlüğün geri yüklenmesi kişiye soruluyor.
-- Cihaz devrinde birim iptal ediliyor (`revokeUnit`).
-- Uygulama içinden hesap ve veri silme çalışıyor (`deleteUnit`, `requestIdentityErasure`); kurum verisi için başvuru yolu
+- Cihaz devrinde birim iptal ediliyor (sağlayıcınızın birim iptal işlemi).
+- Uygulama içinden hesap ve veri silme çalışıyor (sağlayıcınızın birim silme işlemi, `requestIdentityErasure`); kurum verisi için başvuru yolu
   gösteriliyor.
 
 ## Güven listesi

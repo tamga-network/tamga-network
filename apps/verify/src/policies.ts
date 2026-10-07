@@ -149,7 +149,7 @@ export const POLICIES: Policy[] = [
   },
   // ADR-0032 — 18 yaş üstü, sıfır bilgi ispatıyla (Longfellow): doğrulayıcı belgeyi, kurum imzasını, cihaz anahtarını ve
   // durum indeksini görmez; yalnız "kayıtlı bir kurumun kimlik belgesinde age_over_18 = true" ispatını. Cüzdan ZK
-  // yapamıyorsa (bugün: Aşama 2 telefon modülü gelene kadar) doğrulayıcı `age-over-18-mdoc` ile sorar (ZK5).
+  // yapamıyorsa doğrulayıcı `age-over-18-mdoc` ile sorar (ZK5).
   {
     policy_id: "age-over-18-zk",
     purpose: {
@@ -164,6 +164,8 @@ export const POLICIES: Policy[] = [
         namespace: "tamga.id.1",
         required_claims: ["age_over_18"],
         constraints: { age_over_18: true },
+        // ADR-0032 ZK4: iptal indeksi gelmez; kısa ömürlü belge (K6) bilinerek kabul edilir (sonuç NOT_APPLICABLE + reason)
+        accept_unrevocable_zk: true,
       },
     ],
     trust: TRUST_ID,

@@ -17,11 +17,11 @@ sormadan hesaplar. Protokol **[[t:OpenID4VP]] 1.0** (AB profili [[t:HAIP]] 1.0),
 
 ## Kanallar
 
-| Kanal | Ne zaman |
-|---|---|
-| QR / bağlantı (`openid4vp://`) | başka bir cihazdaki site ya da kiosk |
-| Digital Credentials API | aynı telefondaki tarayıcıda site (tarayıcı cüzdanı açar) |
-| ISO 18013-5 yakın alan (BLE) | kapı, turnike, gişe — yüz yüze |
+| Kanal | Ne zaman | Durum |
+|---|---|---|
+| QR / bağlantı (`openid4vp://`) | başka bir cihazdaki site ya da kiosk | yayında |
+| Digital Credentials API | aynı telefondaki tarayıcıda site (tarayıcı cüzdanı açar) | doğrulayıcı hazır; cüzdan bağlantısı yok |
+| ISO 18013-5 yakın alan (BLE) | kapı, turnike, gişe — yüz yüze | kodlandı; cihaz testi bekliyor (o zamana kadar kısa ömürlü geçiş kartı) |
 
 ## Doğrulama ve üç sonuç
 

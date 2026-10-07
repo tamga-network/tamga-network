@@ -4,7 +4,7 @@ title: Kimlik Modeli — Root Identity, Cüzdan-Vatandaş Bağı ve Çok-Ülkeli
 status: Draft
 version: 1.0.0
 created: 2026-07-29
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Tamga'nın kimlik modelinin temelini kaydeder. Önceki olgun kimlik
   araştırmasından içselleştirilen Root Identity ilkesini (kimlik ≠ cüzdan/anahtar) benimser; "cüzdan kimin?"
@@ -25,7 +25,7 @@ Bu doküman Tamga'nın **kimlik modelinin temel kararlarını** kaydeder. Üç s
 
 Bu kararlar, önceki olgun kimlik araştırmasından içselleştirilmiştir (Root Identity, Guardian, Legal Disclosure, Recovery, Vault, Policy Engine). Ham kaynak arşivde saklanır: `_archive/solidus-workspace/project-memory/identity/`.
 
-> **Not:** Accountable disclosure / escrowed identity (threshold M-of-N, mahkeme-kriptografik token, audit log, HSM ayrımı) bu dokümanın kardeşi olan [[PM-ID-0002]]'de ele alınır. Kurtarma/guardian/vault ise [[PM-ID-0003]]'te.
+> **Not:** Accountable disclosure / escrowed identity (threshold M-of-N, mahkeme-kriptografik token, audit log, HSM ayrımı) bu dokümanın kardeşi olan [[PM-ID-0002]]'de ele alınır. Kurtarma/guardian/vault ise PM-ID-0003'te (planlı).
 
 ---
 
@@ -159,7 +159,7 @@ Devletlerin verdiği kimliklerin güven seviyesi eşit olmayabilir; bu yönetilm
 - [[PM-PH-0001]] — Vizyon; katmanlı model, Türk dünyası.
 - [[PM-TRUST-0001]] — Kişisel veri/eşleştirme zincirde değil.
 - [[PM-ID-0002]] (planlı) — Accountable Disclosure & Escrowed Identity (threshold model).
-- [[PM-ID-0003]] (planlı) — Recovery, Guardian, Vault (kurtarma/kurtarma).
+- PM-ID-0003 (planlı) — Recovery, Guardian, Vault (kurtarma/kurtarma).
 - [[PM-GOV-0001]] (planlı) — Devlet katılımı, sınır-ötesi açıklama yönetişimi.
 - [[RS-EIDAS-0001]] — PID Provider modeli.
 - [[RS-EBSI-0001]] — Sınır-ötesi tanıma, trust registry.

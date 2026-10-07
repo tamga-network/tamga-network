@@ -18,11 +18,11 @@ computes the result locally, without asking the source. The protocol is **[[t:Op
 
 ## Channels
 
-| Channel | When |
-|---|---|
-| QR code / link (`openid4vp://`) | a website or kiosk on another device |
-| Digital Credentials API | a website in the browser on the same phone (the browser opens the wallet) |
-| ISO 18013-5 proximity (BLE) | a gate, turnstile or counter — in person |
+| Channel | When | Status |
+|---|---|---|
+| QR code / link (`openid4vp://`) | a website or kiosk on another device | live |
+| Digital Credentials API | a website in the browser on the same phone (the browser opens the wallet) | verifier ready; no wallet connection yet |
+| ISO 18013-5 proximity (BLE) | a gate, turnstile or counter — in person | implemented; device testing pending (until then a short-lived pass) |
 
 ## Verification and three outcomes
 

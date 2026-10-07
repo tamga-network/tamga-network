@@ -4,7 +4,7 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   End-to-end testing on sandbox.tamga.network, the test network kept apart from the real network: addresses, pinning the
   trust anchor, connecting a wallet to the sandbox, registering your own wallet provider in the sandbox list as a wallet
@@ -59,7 +59,9 @@ only the addresses and the trust anchor.
 | `https://console.sandbox.tamga.network` | Institution Console — only for test institutions opened in the sandbox | `console.tamga.network` |
 
 The sandbox has no wallet provider of its own: the network runs no wallet provider, and wallet developers register their own
-provider in the sandbox list (§2, [[ADR-0042]]).
+provider in the sandbox list (§2, [[ADR-0042]]). The list has two special entries: `TAMGA-SANDBOX-TEST-WP` is a generic test
+key for the network's own trial scenes (not a real wallet; [[ADR-0042]] K5); the Brosgrup entry (Tamga Wallet's provider) stays
+`RESERVED` until the operator supplies its own certificate and is not used in validation.
 
 Example institutions, people and permissions come from seed data and return to their initial state at every reset; the
 example institutions have no console. The Institution Console serves only the test institutions you open (§9, [[ADR-0041]]).

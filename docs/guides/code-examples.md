@@ -4,7 +4,7 @@ title: "Kod örnekleri"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Dört çalışan örnek: web sitesine Tamga ile giriş, kendi sunucusunda belge doğrulama, kurum olarak belge verme ve kurum
   yetkisini sorgulama. Kodlar `examples/` klasöründeki gerçek dosyalardan bu sayfaya alınır ve her testte çalıştırılır; bu
@@ -39,8 +39,8 @@ yarn add @tamga-network/verifier @tamga-network/trust @tamga-network/issuer
 
 :::
 
-::: tip Ön sürüm
-Paketler npm'de ön sürüm (`0.x`) olarak yayında; `1.0`'a kadar arayüz değişebilir. Kaynak depodan da kullanılabilir
+::: tip Sürüm
+Paketler sürüm 1.0.0; canlıya çıkış duyurusuyla npm'de yayımlanır. Kaynak depodan da kullanılabilir
 (`npm run release:check` yayına hazır paketleri `.publish/` klasöründe üretir).
 :::
 
