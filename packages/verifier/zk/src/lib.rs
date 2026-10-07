@@ -1,11 +1,14 @@
 //! Longfellow ZK mdoc doğrulayıcısı — WebAssembly (wasm32-unknown-unknown), wasm-bindgen'siz, C ABI.
 //!
-//! JS tarafı (`packages/verifier/src/zk/wasm.ts`) belleği `tz_alloc` ile ayırır, girdileri tek tampona yazar ve
+//! JS tarafı (`packages/verifier/src/zk/backend.ts`) belleği `tz_alloc` ile ayırır, girdileri tek tampona yazar ve
 //! `tz_verify` çağırır. Tampon: art arda `u32 LE uzunluk + bayt` alanları:
 //!   combined_hash(32) · circuit(zstd) · pkx("0x…") · pky · transcript · now · doc_type · proof · attr_count(u32 LE, 4 bayt)
 //!   · her öznitelik için namespace · id · cbor_value
 //! Dönüş: 0 = geçerli; 1..=11 Longfellow `MdocVerifierErrorCode`; 100 = tampon biçimi; 101 = bilinmeyen devre özeti.
 use mdoc_zk_runtime::{req_attr, run_mdoc_verifier, RequestedAttribute, CURRENT_VERSION, CURRENT_ZK_SPECS};
+
+/// Tek ispatta açıklanabilecek en çok öznitelik (Longfellow devreleri 1–4; pay bırakılır).
+const MAX_ATTRIBUTES: usize = 8;
 
 #[no_mangle]
 pub extern "C" fn tz_alloc(len: usize) -> *mut u8 {
@@ -94,6 +97,10 @@ fn verify(input: &[u8]) -> Result<i32, ()> {
     let doc_type = r.text().ok_or(())?;
     let proof = r.field().ok_or(())?;
     let count = u32::from_le_bytes(r.field().ok_or(())?.try_into().map_err(|_| ())?) as usize;
+    // Devreler en çok birkaç öznitelik açıklar; sınırsız sayı `with_capacity` ile belleği tüketirdi (tampon biçimi hatası)
+    if count > MAX_ATTRIBUTES {
+        return Err(());
+    }
     let mut attrs: Vec<RequestedAttribute> = Vec::with_capacity(count);
     for _ in 0..count {
         attrs.push(req_attr(r.field().ok_or(())?, r.field().ok_or(())?, r.field().ok_or(())?));

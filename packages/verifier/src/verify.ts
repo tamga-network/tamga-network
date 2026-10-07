@@ -84,6 +84,8 @@ export interface VerificationResult {
     value: "VALID" | "INVALID" | "SUSPENDED" | "NOT_APPLICABLE" | "UNKNOWN";
     list_version: number | null;
     token_age_sec: number | null;
+    /** Neden (ör. NOT_APPLICABLE: ZK sunumunda iptal indeksi yok — ADR-0032 ZK4). Kişisel veri yok. */
+    reason?: string;
   };
   freshness: { trust_source: "list" | "chain"; trust_version: number; trust_age_sec: number };
   evaluated_at: string;
@@ -129,8 +131,8 @@ export interface VerifyOutput {
   claims: Record<string, unknown> | null;
 } // claims: AP3 — ayrı kanal
 
-export const SPEC_VERSION = "SPEC-API-0001@1.7.0"; // spec sürüm notuyla birlikte güncellenir
-export const SDK_VERSION = "@tamga-network/verifier@0.1.0";
+export const SPEC_VERSION = "SPEC-API-0001@1.0.0"; // spec sürüm notuyla birlikte güncellenir
+export const SDK_VERSION = "@tamga-network/verifier@1.0.0";
 const ALL_STEPS: Step[] = [
   "T0",
   "A1",
@@ -167,6 +169,15 @@ const ALL_STEPS: Step[] = [
   "E4",
 ];
 
+/** Güven kaynağı tazeliği; sorgu istisna atarsa "sağlıksız" (T0 → DOĞRULANAMADI, AP2). */
+function freshnessOf(trust: TrustSource): ReturnType<TrustSource["freshness"]> {
+  try {
+    return trust.freshness();
+  } catch {
+    return { source: "list", version: 0, ageSec: 0, healthy: false };
+  }
+}
+
 /**
  * Yönetici: adımları spec sırasıyla çalıştırır (steps.ts), ilk başarısızlıkta durur. Her sonuç — kabul, red, doğrulanamadı —
  * E4 denetim kaydına düşer (AP9; değer/idx yok — AP3/AP4). Onaylanan claim değerleri yalnızca ACCEPTED'da, ayrı alanda (AP3).
@@ -176,7 +187,7 @@ export async function verifyPresentation(input: VerifyInput): Promise<VerifyOutp
   const ctx: VerifyCtx = {
     input,
     now,
-    fr: input.trust.freshness(),
+    fr: freshnessOf(input.trust),
     done: [],
     skipped: [],
     issuerInfo: null,
@@ -186,16 +197,26 @@ export async function verifyPresentation(input: VerifyInput): Promise<VerifyOutp
     status: { value: "UNKNOWN", list_version: null, token_age_sec: null },
   };
   const vid = input.verificationId ?? `vrf_${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-  const steps: Array<(c: VerifyCtx) => StepFail | undefined | Promise<StepFail | undefined>> = [
-    stepT0,
-    stepA,
-    stepB,
-    stepC,
-    stepD,
-    stepE,
+  // Beklenmeyen istisna (kütüphane hatası, bozuk güven kaydı …) RED değildir ve denetim kaydını atlamaz: DOĞRULANAMADI + E4.
+  // Neden metnine istisna iletisi konmaz (kişisel veri içerebilir — AP3); yalnız adım ve hata türü.
+  const steps: Array<
+    [Step, IndeterminateReason, (c: VerifyCtx) => StepFail | undefined | Promise<StepFail | undefined>]
+  > = [
+    ["T0", "INDEXER_STALE", stepT0],
+    ["A1", "CHAIN_UNREACHABLE", stepA],
+    ["B1", "SCHEMA_UNREACHABLE", stepB],
+    ["C1", "INDEXER_STALE", stepC],
+    ["D1", "STATUS_UNREACHABLE", stepD],
+    ["E1", "INDEXER_STALE", stepE],
   ];
-  for (const step of steps) {
-    const fail = await step(ctx);
+  for (const [code, why, step] of steps) {
+    let fail: StepFail | undefined;
+    try {
+      fail = await step(ctx);
+    } catch (e) {
+      const kind = e instanceof Error ? e.name : typeof e;
+      return finish(ctx, vid, "INDETERMINATE", code, `internal error during step ${code[0]} (${kind})`, why);
+    }
     if (fail)
       return fail.kind === "reject"
         ? finish(ctx, vid, "REJECTED", fail.step, fail.reason, null)

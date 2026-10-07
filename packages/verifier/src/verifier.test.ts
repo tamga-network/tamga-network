@@ -470,6 +470,54 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     const dec = await decryptResponse(jwe, pr.encPrivateKey);
     expect(dec.state).toBe(pr.state);
     expect(dec.vp_token.diploma[0]).toBe("x~");
+    // vp_token biçimi: her sorgu için boş olmayan dize dizisi; state/pass_key dize
+    const bad = async (body: unknown) =>
+      decryptResponse(encryptJwe(utf8(JSON.stringify(body)), pr.encPublicJwk as never), pr.encPrivateKey);
+    await expect(bad({ vp_token: { diploma: "x~" } })).rejects.toThrow(/non-empty array/);
+    await expect(bad({ vp_token: { diploma: [] } })).rejects.toThrow(/non-empty array/);
+    await expect(bad({ vp_token: { diploma: [1] } })).rejects.toThrow(/non-empty array/);
+    await expect(bad({ vp_token: ["x~"] })).rejects.toThrow(/vp_token missing/);
+    await expect(bad({ vp_token: { diploma: ["x~"] }, state: 5 })).rejects.toThrow(/state/);
+    // istek nesnesi mso_mdoc_zk biçimini de ilan eder (ADR-0032)
+    const reqPayload = JSON.parse(Buffer.from(pr.requestJwt.split(".")[1], "base64url").toString("utf8"));
+    expect(Object.keys(reqPayload.client_metadata.vp_formats_supported)).toEqual(
+      expect.arrayContaining(["dc+sd-jwt", "mso_mdoc", "mso_mdoc_zk"]),
+    );
+  });
+  it("AP6 ile E3 aynı kapsam kuralı: atası kapsamdaysa iç içe alan kapsamda", () => {
+    const rp = trust.relyingParty(AUD)!;
+    const parent = rp.scopes.find((s) => s.vct === VCT)!.claims[0];
+    const nested = { ...policy, credentials: [{ ...policy.credentials[0], required_claims: [`${parent}.sub`] }] };
+    expect(policyScopeViolations(nested, rp)).toEqual([]);
+  });
+  it("beklenmeyen istisna → INDETERMINATE (RED değil), E4 denetim kaydı yine düşer; ileti dışarı sızmaz", async () => {
+    const audits: string[] = [];
+    const base = {
+      presentation: "x~",
+      aud: AUD,
+      nonce: "n",
+      policyCredentialId: "diploma",
+      statusCache: new MemoryStatusCache(),
+      rootCertsDer: [new Uint8Array([1])],
+      audit: (e: { outcome: string }) => audits.push(e.outcome),
+    };
+    // adım içinde istisna (bozuk politika nesnesi)
+    const out = await verifyPresentation({ ...base, trust, policy: { ...policy, freshness: undefined as never } });
+    expect(out.result.outcome).toBe("INDETERMINATE");
+    expect(out.result.failed_step).toBe("T0");
+    expect(out.result.failed_reason).toMatch(/internal error/);
+    // güven kaynağının tazelik sorgusu istisna atarsa: T0 DOĞRULANAMADI; iletideki ayrıntı sonuca girmez
+    const thrower = {
+      ...trust,
+      freshness: () => {
+        throw new Error("gizli-12345");
+      },
+    } as unknown as typeof trust;
+    const out2 = await verifyPresentation({ ...base, trust: thrower, policy });
+    expect(out2.result.outcome).toBe("INDETERMINATE");
+    expect(out2.result.failed_step).toBe("T0");
+    expect(JSON.stringify(out2.result)).not.toContain("gizli-12345");
+    expect(audits).toEqual(["INDETERMINATE", "INDETERMINATE"]);
   });
 
   it("ADR-0026: kullanım seçimi + verifier_info (registration_cert, credential_ids)", async () => {

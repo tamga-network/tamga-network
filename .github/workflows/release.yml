@@ -2,6 +2,10 @@
 # Önkoşullar (skill npm-yayin): npmjs.com'da `tamga-network` organizasyonu; her paket için Trusted Publisher (bu depo +
 # bu iş akışı) ya da ilk yayın için kısa ömürlü NPM_TOKEN sırrı. Sürümler önceden commit'lenmiş olmalı (npm version -w ...).
 # Provenance: npm, paketin bu depodaki bu commit'ten GitHub Actions ile üretildiğini imzalı olarak kaydeder (ARCH-0005 P2/P3).
+# @tamga-network/zk (ADR-0032): telefon ispatçısının derlenmiş Android kütüphaneleri (jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/
+# libtamga_zk_prover.so) depoda yoktur ve çalıştırıcıda NDK yoktur: yayından önce `node packages/zk/scripts/build-android.mjs`
+# ile derlenip çalıştırıcıya sağlanmalıdır (sağlama adımı eklenene kadar zk bu iş akışından yayınlanamaz — aşağıdaki denetim
+# bunu açıkça söyler; diğer paketler `packages` girdisiyle zk olmadan yayınlanabilir). iOS xcframework yoksa paket yalnız Android'dir.
 name: release
 on:
   workflow_dispatch:
@@ -33,14 +37,32 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run pki && npm run schemas:build && npm run trust:build && npm run trust:build && npm run trust:heartbeat && npm run trust:test-fixtures
       - run: npm test && npm run typecheck
+      - name: Paket seçimi + zk yerel kütüphaneleri
+        env:
+          PACKAGES: ${{ inputs.packages }} # girdi kabuğa doğrudan gömülmez (betik enjeksiyonu): ortamdan, tırnaklı
+        run: |
+          set -euo pipefail
+          if ! [[ "$PACKAGES" =~ ^[a-z0-9\ -]*$ ]]; then echo "::error::packages yalnız paket adları içerebilir"; exit 1; fi
+          echo "TAMGA_PACK_PACKAGES=$PACKAGES" >> "$GITHUB_ENV"
+          if [ -z "$PACKAGES" ] || echo " $PACKAGES " | grep -q " zk "; then
+            for abi in arm64-v8a armeabi-v7a x86_64; do
+              f="packages/zk/android/src/main/jniLibs/$abi/libtamga_zk_prover.so"
+              if [ ! -f "$f" ]; then
+                echo "::error::$f yok — zk yayını için Android kütüphaneleri önceden derlenip (node packages/zk/scripts/build-android.mjs) sağlanmalı; ya da packages girdisinde zk'yı çıkarın"
+                exit 1
+              fi
+            done
+          fi
       - run: npm run release:check
       - name: npm publish (.publish/<paket>)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # trusted publishing kuruluysa boş kalabilir
+          PACKAGES: ${{ inputs.packages }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
-          SEL="${{ inputs.packages }}"
-          DRY="${{ inputs.dry_run && '--dry-run' || '' }}"
+          SEL="$PACKAGES"
+          DRY=""; [ "$DRY_RUN" = "true" ] && DRY="--dry-run"
           for dir in .publish/*/; do
             p=$(basename "$dir"); [ "$p" = "tarballs" ] && continue
             if [ -n "$SEL" ] && ! echo " $SEL " | grep -q " $p "; then continue; fi

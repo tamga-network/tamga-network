@@ -193,7 +193,7 @@ async function sdJwtVectors() {
       disclosed_claim_names: [...verify.disclosedClaimNames].sort(),
       hidden_claims: ["grade", "birth_date"],
       vct: diploma.vct,
-      checks: ["A1", "A2", "A3", "A4", "A5", "A6"],
+      checks: ["A1", "A2", "A3", "A4", "A5", "A6", "A7"],
     },
     negative: [
       { name: "KB-JWT yok", input: issued.combined, expect_failed_step: "A1" },

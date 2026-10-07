@@ -109,6 +109,8 @@ export async function createPresentationRequest(p: {
       vp_formats_supported: {
         "dc+sd-jwt": { "sd-jwt_alg_values": ["ES256"], "kb-jwt_alg_values": ["ES256"] },
         mso_mdoc: { issuerauth_alg_values: [-7], deviceauth_alg_values: [-7] }, // COSE ES256
+        // ADR-0032: sıfır bilgi ispatlı mdoc (AB TS13); kabul edilen devreler DCQL `meta.zk_system_type`'ta
+        mso_mdoc_zk: { issuerauth_alg_values: [-7] },
       },
     },
     ...(p.purpose ? { purpose: p.purpose } : {}),
@@ -160,7 +162,20 @@ export async function decryptResponse(jwe: string, encPrivateKey: KeyLike): Prom
   });
   if (protectedHeader.alg !== "ECDH-ES" || !(RESPONSE_ENC as readonly string[]).includes(String(protectedHeader.enc)))
     throw new Error("JWE alg/enc outside the profile");
-  const body = JSON.parse(new TextDecoder().decode(plaintext)) as DecryptedResponse;
-  if (!body.vp_token || typeof body.vp_token !== "object") throw new Error("vp_token missing");
+  let body: DecryptedResponse;
+  try {
+    body = JSON.parse(new TextDecoder().decode(plaintext)) as DecryptedResponse;
+  } catch {
+    throw new Error("response body is not JSON");
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("response body is not an object");
+  // OpenID4VP 1.0 §8.1 (DCQL): vp_token = { <sorgu kimliği>: [sunum, …] } — her değer boş olmayan dizelerden dizi
+  if (!body.vp_token || typeof body.vp_token !== "object" || Array.isArray(body.vp_token))
+    throw new Error("vp_token missing");
+  for (const [k, v] of Object.entries(body.vp_token))
+    if (!Array.isArray(v) || !v.length || v.some((x) => typeof x !== "string" || !x))
+      throw new Error(`vp_token.${k} must be a non-empty array of strings`);
+  if (body.state !== undefined && typeof body.state !== "string") throw new Error("state must be a string");
+  if (body.pass_key !== undefined && typeof body.pass_key !== "string") throw new Error("pass_key must be a string");
   return body;
 }

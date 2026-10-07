@@ -3,8 +3,8 @@
 //! Girdi tamponu: art arda `u32 LE uzunluk + bayt` alanları
 //!   combined_hash(32) · circuit(zstd) · device_response(CBOR) · transcript · pkx("0x…") · pky · now · doc_type
 //!   · attr_count(u32 LE, 4 bayt) · her öznitelik için namespace · id · cbor_value
-//! Çıktı: ispat baytları. Hata kodları: 1..=99 Longfellow ispatçı hatası (ayrıntı verilmez), 100 = tampon biçimi,
-//! 101 = bilinmeyen devre özeti (combined_hash + öznitelik sayısı), 102 = devre sürümü uyumsuz.
+//! Çıktı: ispat baytları. Hata kodları: 1 = Longfellow ispatçı hatası (ayrıntı verilmez), 100 = tampon biçimi
+//! (öznitelik sayısı 1..=8 dışında dahil), 101 = bilinmeyen devre özeti (combined_hash + öznitelik sayısı).
 //! İspatçı yalnız cihazda çalışır: belge, cihaz imzası ve kişi verisi girdidir ve hiçbir yere yazılmaz (log yok).
 use mdoc_zk_runtime::{req_attr, run_mdoc_prover, RequestedAttribute, CURRENT_VERSION, CURRENT_ZK_SPECS};
 

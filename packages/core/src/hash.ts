@@ -9,9 +9,13 @@ export function sha256(bytes: Uint8Array): Uint8Array {
 export function toHex(b: Uint8Array): string {
   return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 }
+/** Onaltılık dize → bayt ("0x" öneki isteğe bağlı). Geçersiz karakter ya da tek sayıda hane HATA (sessiz kesme yok). */
 export function fromHex(h: string): Uint8Array {
   const s = h.startsWith("0x") ? h.slice(2) : h;
-  return new Uint8Array(s.match(/.{2}/g)!.map((x) => parseInt(x, 16)));
+  if (!/^(?:[0-9a-fA-F]{2})*$/.test(s)) throw new Error("fromHex: invalid hex string");
+  const out = new Uint8Array(s.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.slice(i * 2, i * 2 + 2), 16);
+  return out;
 }
 export const sha256Hex = (b: Uint8Array) => toHex(sha256(b));
 /** "sha256:<hex>" — liste/çapa zinciri gösterimi */

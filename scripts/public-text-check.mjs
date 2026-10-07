@@ -4,7 +4,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PRIVATE_NAMES_RE } from "./private-names.mjs";
+import { PRIVATE_NAMES_FILE_FOUND, PRIVATE_NAMES_RE, TOOL_NAMES_RE } from "./private-names.mjs";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 /** docs/.vitepress/config.ts srcExclude ile aynı: yayınlanmayan iç kayıtlar. */
@@ -15,10 +15,15 @@ const ROOT_PUBLISHED = [
   "MASTER_INDEX.md",
   "SCENARIOS.md",
   "DOCUMENTATION-STANDARD.md",
+  "README.md",
+  "SECURITY.md",
+  "CONTRIBUTING.md",
+  "CHANGELOG.md",
+  "CONVENTIONS.md",
 ];
 const FORBIDDEN = [
   [PRIVATE_NAMES_RE, "kişi adı"],
-  [/\bClaude\b|\bOpus\b|\bFable\b|\bSonnet\b/, "araç adı"],
+  [TOOL_NAMES_RE, "araç adı"],
   [/TOPARLAMA|_reports\/|tamga-platform\/docs\/|-konusma-/, "iç kayıt yolu"],
   // 2026-10-02: yayınlanan belgelerde (docs sitesi) özel depo adı yok — "operatör deposu" yazılır
   [/tamga-platform/, "özel depo adı", (rel) => /^docs\//.test(rel)],
@@ -39,6 +44,10 @@ function walk(dir, out = []) {
   return out;
 }
 
+if (!PRIVATE_NAMES_FILE_FOUND)
+  console.warn(
+    "public-text: uyarı — kişi adı listesi bulunamadı (operatör deposu yok); yalnızca genel kurallar uygulanıyor",
+  );
 const files = [
   ...walk(join(repo, "docs")),
   ...ROOT_PUBLISHED.map((f) => join(repo, f)).filter(existsSync),

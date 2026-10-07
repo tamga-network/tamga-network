@@ -1,5 +1,5 @@
 /**
- * Liste formatı — tamga-beta/docs/04-TRUST-LIST-FORMAT.md (SPEC-TRUST-0001 taslağı).
+ * Liste formatı — SPEC-TRUST-0001 (docs/specifications/trust-lists.md).
  * Zod şemaları `passthrough` ile bilinmeyen alanları korur (ileri uyumluluk); bilinmeyen
  * `list_format_version` ise CMP2 gereği yükleyicide DURDURUR.
  */

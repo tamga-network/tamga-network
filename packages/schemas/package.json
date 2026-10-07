@@ -6,7 +6,8 @@
   "description": "Tamga şema kataloğu — Type Metadata + JSON Schema (SPEC-SCHEMA-0001/0002), vct URN (ADR-0010), content_hash üretimi.",
   "main": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./build": "./src/build.ts"
   },
   "license": "Apache-2.0",
   "publishConfig": {

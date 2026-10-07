@@ -10,7 +10,14 @@
  * kullanılır; `stateCode`'un tipi (string vs bytes2) kontrat derlenince buradaki bayt dizilimiyle
  * eşitlenir. Beta boyunca bu dosya kanoniktir; değişirse eşdeğerlik testi bunu yakalar.
  */
-import { concat, keccak256Hex, sha256, sha256Hex, utf8 } from "./hash.js";
+import { concat, fromHex, keccak256Hex, sha256, sha256Hex, utf8 } from "./hash.js";
+
+/** SHA-256 parmak izi (64 onaltılık hane) → 32 bayt; biçim dışı girdi HATA (yanlış kimlik türetilmesin). */
+function fingerprintBytes(fingerprintHex: string): Uint8Array {
+  if (!/^[0-9a-fA-F]{64}$/.test(fingerprintHex))
+    throw new Error("fingerprint must be a SHA-256 value in hex (64 hex digits)");
+  return fromHex(fingerprintHex);
+}
 
 export const certFingerprintSha256Hex = (certDer: Uint8Array) => sha256Hex(certDer);
 
@@ -24,8 +31,7 @@ export function computeSchemaId(vct: string): string {
 }
 /** Parmak izinden (hex) id — sertifika elde yokken, listedeki fingerprint alanından */
 export function computeIdFromFingerprintHex(stateCode: string, fingerprintHex: string): string {
-  const fp = new Uint8Array(fingerprintHex.match(/.{2}/g)!.map((x) => parseInt(x, 16)));
-  return keccak256Hex(concat(utf8(stateCode), fp));
+  return keccak256Hex(concat(utf8(stateCode), fingerprintBytes(fingerprintHex)));
 }
 
 /**
@@ -38,4 +44,4 @@ export const x509HashClientId = (leafCertDer: Uint8Array): string =>
   X509_HASH_PREFIX + Buffer.from(sha256(leafCertDer)).toString("base64url");
 /** Aynısı, listedeki SHA-256 parmak izinden (hex). */
 export const x509HashClientIdFromFingerprintHex = (fingerprintHex: string): string =>
-  X509_HASH_PREFIX + Buffer.from(fingerprintHex, "hex").toString("base64url");
+  X509_HASH_PREFIX + Buffer.from(fingerprintBytes(fingerprintHex)).toString("base64url");

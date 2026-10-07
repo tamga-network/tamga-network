@@ -65,6 +65,11 @@ describe("PassRegistry (ADR-0012 B)", () => {
     expect((await reg.verifyToken(t1.token, { terminalGroup: "g1" })).reason).toMatch(/replay/);
     const old = await mintPassToken(grant, keys, nodeRandom, Math.floor(Date.now() / 1000) - 120);
     expect((await reg.verifyToken(old.token, { terminalGroup: "g1" })).reason).toMatch(/expired/);
+    // AP13/WL12: ileri tarihli jeton (saat kayması dışında) DUR; kayma içindeki GEÇ
+    const future = await mintPassToken(grant, keys, nodeRandom, Math.floor(Date.now() / 1000) + 600);
+    expect((await reg.verifyToken(future.token, { terminalGroup: "g1" })).reason).toMatch(/future/);
+    const slight = await mintPassToken(grant, keys, nodeRandom, Math.floor(Date.now() / 1000) + 10);
+    expect((await reg.verifyToken(slight.token, { terminalGroup: "g1" })).ok).toBe(true);
     const t2 = await mintPassToken(grant, keys, nodeRandom);
     expect((await reg.verifyToken(t2.token, { terminalGroup: "g2" })).reason).toMatch(/terminal group/);
 

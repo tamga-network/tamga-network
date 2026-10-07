@@ -105,4 +105,61 @@ describe("iç içe seçici açıklama (RFC 9901 §7.1)", () => {
     const proto = disc(["__proto__", { x: 1 }]);
     expect(() => resolveSdPayload({ a: { _sd: [proto.h] } }, enc([proto]))).toThrow(/cannot be selectively/);
   });
+
+  it("somut dizi indeksi yalnız o öğeyi açar; joker (`a`, `a[]`) bütün öğeleri (fazla açıklama yok)", () => {
+    const { payload, all } = sample();
+    const { resolved } = resolveSdPayload(
+      payload,
+      decodeDisclosures(
+        all.map((x) => x.d),
+        digest,
+        decode,
+      ),
+    );
+    const paths = (want: string[]) =>
+      selectDisclosuresForPaths(resolved, want)
+        .map((d) => d.path)
+        .sort();
+    expect(paths(["nationalities[0]"])).toEqual(["nationalities[0]"]);
+    expect(paths(["nationalities[1]"])).toEqual(["nationalities[1]"]);
+    expect(paths(["nationalities[]"])).toEqual(["nationalities[0]", "nationalities[1]"]);
+    expect(paths(["nationalities"])).toEqual(["nationalities[0]", "nationalities[1]"]);
+    expect(() => paths(["nationalities[7]"])).toThrow(SdStructureError);
+  });
+
+  it("RFC 9901 §7.1: eşleşmeyen (gizli/sahte) özet de yükte iki kez görünürse RED", () => {
+    const enc = (xs: { d: string }[]) =>
+      decodeDisclosures(
+        xs.map((x) => x.d),
+        digest,
+        decode,
+      );
+    const n = disc(["given_name", "Ayşe"]);
+    expect(() => resolveSdPayload({ _sd: ["decoy", "decoy"] }, [])).toThrow(/more than once/);
+    expect(() => resolveSdPayload({ _sd: ["decoy"], a: { _sd: ["decoy"] } }, [])).toThrow(/more than once/);
+    expect(() => resolveSdPayload({ _sd: [n.h], list: [{ "...": "decoy" }, { "...": "decoy" }] }, enc([n]))).toThrow(
+      /more than once/,
+    );
+  });
+
+  it("C11: iç içe seçici açıklama en fazla 2 düzey; aşırı yapı derinliği RED", () => {
+    const enc = (xs: { d: string }[]) =>
+      decodeDisclosures(
+        xs.map((x) => x.d),
+        digest,
+        decode,
+      );
+    const l3 = disc(["c", 1]);
+    const l2 = disc(["b", { _sd: [l3.h] }]);
+    const l1 = disc(["a", { _sd: [l2.h] }]);
+    // 2 düzey kabul (a → b), 3. düzey RED
+    const ok2 = disc(["b", 1]);
+    const ok1 = disc(["a", { _sd: [ok2.h] }]);
+    expect(resolveSdPayload({ _sd: [ok1.h] }, enc([ok1, ok2])).claims).toEqual({ a: { b: 1 } });
+    expect(() => resolveSdPayload({ _sd: [l1.h] }, enc([l1, l2, l3]))).toThrow(/C11/);
+    // açık (seçici olmayan) iç içelik düzey saymaz ama yapı derinliği sınırlı
+    let deep: Record<string, unknown> = { x: 1 };
+    for (let i = 0; i < 40; i++) deep = { n: deep };
+    expect(() => resolveSdPayload(deep, [])).toThrow(/nesting limit/);
+  });
 });

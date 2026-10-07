@@ -40,9 +40,20 @@ export class LoteParseError extends Error {
 }
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-/** Saf base64 çözücü (standart ya da URL güvenli; boşluk ve '=' yok sayılır). */
+/**
+ * Saf base64 çözücü — standart ya da URL güvenli alfabe (ikisi karışık değil); boşluk yok sayılır. '=' dolgusu yalnız sonda ve
+ * en çok iki tane; dolgu varsa uzunluk 4'ün katı; 4'e bölümünden 1 artan uzunluk ve geçersiz karakter HATA.
+ */
 export function b64ToBytes(s: string): Uint8Array {
-  const clean = s.replace(/[\s=]/g, "").replace(/-/g, "+").replace(/_/g, "/");
+  const compact = s.replace(/\s/g, "");
+  const m = /^([A-Za-z0-9+/_-]*)(={0,2})$/.exec(compact);
+  if (!m) throw new LoteParseError("invalid base64 in certificate");
+  const [, body, pad] = m;
+  if (/[+/]/.test(body) && /[-_]/.test(body))
+    throw new LoteParseError("invalid base64 in certificate (mixed alphabets)");
+  if (body.length % 4 === 1 || (pad && compact.length % 4 !== 0))
+    throw new LoteParseError("invalid base64 in certificate (length/padding)");
+  const clean = body.replace(/-/g, "+").replace(/_/g, "/");
   const out: number[] = [];
   let buf = 0;
   let bits = 0;
@@ -101,20 +112,28 @@ export function parseLote(json: unknown): ParsedLote {
     throw new LoteParseError("ListIssueDateTime / NextUpdate unreadable");
   const sequence = Number(info.LoTESequenceNumber);
   if (!Number.isInteger(sequence) || sequence < 0) throw new LoteParseError("LoTESequenceNumber invalid");
+  const territory = typeof info.SchemeTerritory === "string" ? info.SchemeTerritory.trim() : "";
+  if (!territory) throw new LoteParseError("SchemeTerritory missing");
+  const arr = (v: unknown, what: string): unknown[] => {
+    if (v === undefined || v === null) return [];
+    if (!Array.isArray(v)) throw new LoteParseError(`${what} is not an array`);
+    return v;
+  };
   const entities: LoteEntity[] = [];
-  for (const te of (root.TrustedEntitiesList ?? []) as Array<Record<string, unknown>>) {
+  for (const te of arr(root.TrustedEntitiesList, "TrustedEntitiesList") as Array<Record<string, unknown>>) {
+    if (!te || typeof te !== "object") throw new LoteParseError("TrustedEntity is not an object");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tei = te.TrustedEntityInformation as any;
     const services: LoteService[] = [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const s of (te.TrustedEntityServices ?? []) as any[]) {
+    for (const s of arr(te.TrustedEntityServices, "TrustedEntityServices") as any[]) {
       const si = s?.ServiceInformation;
       if (!si) continue;
       const typeUri = String(si.ServiceTypeIdentifier ?? "");
       const status = si.ServiceStatus ? String(si.ServiceStatus) : "";
       if (status && INACTIVE.test(status)) continue;
       const certs: Uint8Array[] = [];
-      for (const c of (si.ServiceDigitalIdentity?.X509Certificates ?? []) as Array<{ val?: string }>)
+      for (const c of arr(si.ServiceDigitalIdentity?.X509Certificates, "X509Certificates") as Array<{ val?: string }>)
         if (typeof c?.val === "string" && c.val) certs.push(b64ToBytes(c.val));
       services.push({
         kind: serviceKind(typeUri),
@@ -128,7 +147,7 @@ export function parseLote(json: unknown): ParsedLote {
   }
   return {
     sequence,
-    territory: String(info.SchemeTerritory ?? ""),
+    territory,
     issuedAt,
     nextUpdate,
     loteType: String(info.LoTEType ?? ""),

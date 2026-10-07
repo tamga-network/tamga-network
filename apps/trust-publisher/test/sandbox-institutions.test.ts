@@ -17,6 +17,7 @@ import {
   subjects,
   testInstitutionSource,
   validateRequest,
+  reservedNamesOf,
 } from "../src/sandbox-institutions.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
@@ -46,7 +47,7 @@ async function ca(name: string) {
 
 const req = {
   slug: "t-abc123",
-  name: "Deneme Üniversitesi (TEST)",
+  name: "Deneme Okulu Çağ (TEST)",
   kind: "education" as const,
   issuer_url: "https://issuer.sandbox.tamga.network/t-abc123",
   status_list_base: "https://status.sandbox.tamga.network/",
@@ -58,7 +59,7 @@ describe("sandbox test kurumları (ADR-0041)", () => {
     const other = await ca("CN=Other CA (TEST), C=TR");
     const leaf = await issueLeaf(testCa, subjects(req.name).credential);
     const x = new X509Certificate(leaf.certPem);
-    expect(x.subject).toContain("Deneme Universitesi (TEST)");
+    expect(x.subject).toContain("Deneme Okulu Cag (TEST)");
     expect(x.subject.split("\n").slice(0, 2)).toEqual(["C=TR", "OU=Tamga Sandbox Test Institutions"]); // ad kısıtı ön eki
     expect(x.ca).toBe(false);
     expect(new Date(x.validTo).getTime() - Date.now()).toBeLessThanOrEqual(30 * 86400_000 + 120_000);
@@ -82,8 +83,28 @@ describe("sandbox test kurumları (ADR-0041)", () => {
   it("istek denetimi: slug biçimi, (TEST) eki, tür", () => {
     expect(validateRequest(req)).toEqual([]);
     expect(validateRequest({ ...req, slug: "istanbul-bilgi" }).length).toBe(1);
-    expect(validateRequest({ ...req, name: "Deneme Üniversitesi" }).length).toBe(1);
+    expect(validateRequest({ ...req, name: "Deneme Okulu Çağ" }).length).toBe(1);
     expect(validateRequest({ ...req, kind: "health" as never }).length).toBe(1);
     expect(asciiName('Ç"ağ,=Ş (TEST)')).toBe("C ag S");
+  });
+
+  it("K1: resmî kurum sözcüğü / marka adı ve listedeki kurum adına benzeyen ad reddedilir", () => {
+    for (const name of [
+      "Deneme Üniversitesi (TEST)",
+      "Ankara Valiliği (TEST)",
+      "T.C. Deneme (TEST)",
+      "Sağlık Bakanlığı (TEST)",
+      "Tamga Okulu (TEST)",
+      "Example University (TEST)",
+    ])
+      expect(validateRequest({ ...req, name }), name).toHaveLength(1);
+    const reserved = reservedNamesOf(
+      { issuers: [{ legal_name: "İstanbul Bilgi Okulu" }], relying_parties: [{ trade_name: "Bubilet" }] },
+      { issuers: [{ legal_name: { tr: "Örnek Kurs Merkezi" } }] },
+    );
+    expect(validateRequest({ ...req, name: "Istanbul Bilgi Okulu (TEST)" }, reserved)).toHaveLength(1);
+    expect(validateRequest({ ...req, name: "Bubilet Plus (TEST)" }, reserved)).toHaveLength(1);
+    expect(validateRequest({ ...req, name: "ornek kurs merkezi (TEST)" }, reserved)).toHaveLength(1);
+    expect(validateRequest(req, reserved)).toEqual([]);
   });
 });

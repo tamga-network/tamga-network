@@ -2,7 +2,7 @@
  * ADR-0031 — site başına takma adın doğrulanması (PS5; ARF Topic 11 PA_11–PA_14).
  * Cüzdan vp_token'da, istekteki `format: "tamga-pseudonym"` sorgusunun id'siyle bir JWT gönderir:
  *   başlık  { alg: ES256, typ: "tamga-pseudonym+jwt", jwk: <takma ad açık anahtarı> }
- *   gövde   { aud: <client_id>, nonce, iat, rp: <asıl RP'nin kayıtlı kimliği>, wia: <cüzdan örneği kanıtı>, wia_pop: <PoP> }
+ *   gövde   { aud: <client_id>, nonce, iat, rp: <asıl RP'nin kalıcı kayıt kimliği (`dns_name`)>, wia: <cüzdan örneği kanıtı>, wia_pop: <PoP> }
  * Denetim: imza başlıktaki anahtarla · aud = bu doğrulayıcının client_id'si · nonce = isteğinki · iat penceresi · rp = beklenen
  * site · WIA güven listesindeki cüzdan sağlayıcısınca imzalı, süresi içinde, iptal edilmemiş (varsa durum denetimi) · PoP WIA
  * anahtarıyla, aud = client_id. Takma ad = başlıktaki açık anahtarın RFC 7638 parmak izi. Takma ad değeri denetim kaydına yazılmaz.
@@ -25,7 +25,10 @@ export async function verifyPseudonym(p: {
   /** bu doğrulayıcının client_id'si (istek nesnesindeki tam dize) */
   aud: string;
   nonce: string;
-  /** beklenen site: asıl RP'nin kayıtlı kimliği (aracıda `tamga_on_behalf_of`, yoksa client_id) */
+  /**
+   * beklenen site: asıl RP kaydının kalıcı alan adı (`dns_name`, ADR-0034; aracıda `tamga_on_behalf_of` ile gösterilen RP'nin);
+   * kayıt çözülemezse cüzdan `client_id`'yi kullanır (wallet-core `stableRpKey`).
+   */
   rpKey: string;
   trust: TrustSource;
   /** WIA iptal durumu (verilmezse denetlenmez) */

@@ -53,6 +53,11 @@ export interface ParInput {
   walletAttestation?: ParRequest["walletAttestation"];
   /** ADR-0020: teklifteki issuer_state (kimliğe bağlı teklif) */
   issuerState?: string;
+  /**
+   * İzinli dönüş adresleri (RFC 9126 §2.4 / RFC 9700 §4.1: tam dize eşleşmesi). Dizi ya da istemciye göre (`clientId` → liste)
+   * işlev; verilirse ve liste dönerse `redirectUri` listede olmalıdır. Verilmezse yalnız biçim/şema denetimi yapılır.
+   */
+  allowedRedirectUris?: readonly string[] | ((clientId: string) => readonly string[] | null | undefined);
 }
 export type ParError = "invalid_request" | "invalid_redirect_uri" | "unsupported_code_challenge";
 
@@ -70,6 +75,9 @@ export function createPar(
   // Tarayıcıda kod çalıştırabilen şemalar dönüş adresi olamaz (bağlantı olarak gösterilirse XSS)
   if (/^(javascript|data|vbscript|file|blob):/i.test(i.redirectUri.trim()))
     return { ok: false, error: "invalid_redirect_uri", description: "this redirect_uri scheme is not accepted" };
+  const allow = typeof i.allowedRedirectUris === "function" ? i.allowedRedirectUris(i.clientId) : i.allowedRedirectUris;
+  if (allow && !allow.includes(i.redirectUri))
+    return { ok: false, error: "invalid_redirect_uri", description: "redirect_uri is not registered for this client" };
   const ad = Array.isArray(i.authorizationDetails)
     ? (i.authorizationDetails as Array<{ type?: string; credential_configuration_id?: string }>)
     : undefined;
@@ -133,10 +141,13 @@ export const errorCallbackUrl = (par: ParRequest, error: string, description: st
   `${par.redirectUri}${sep(par)}error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(description)}${tail(par)}`;
 
 export type CodeError = "invalid_grant" | "invalid_request";
-/** Token isteği: code + code_verifier + redirect_uri + (istemci = aynı WUA sub). */
+/**
+ * Token isteği: code + code_verifier + redirect_uri + istemci (aynı WUA sub). RFC 6749 §4.1.3: PAR'da dönüş adresi verildiyse
+ * token isteğinde de aynısı ZORUNLU; istemci kimliği her zaman zorunlu (başka bir cüzdan çalınmış kodu kullanamaz).
+ */
 export function redeemCode(
   par: ParRequest | undefined,
-  p: { code: string; codeVerifier?: string; redirectUri?: string; clientId?: string; now?: number },
+  p: { code: string; codeVerifier?: string; redirectUri?: string; clientId: string; now?: number },
 ):
   | { ok: true; accessToken: string; cNonce: string; expiresIn: number }
   | { ok: false; error: CodeError; description: string } {
@@ -145,9 +156,9 @@ export function redeemCode(
   if (par.codeUsed) return { ok: false, error: "invalid_grant", description: "code already used" };
   if (!par.codeExpiresAt || now > par.codeExpiresAt)
     return { ok: false, error: "invalid_grant", description: "code expired" };
-  if (p.redirectUri && p.redirectUri !== par.redirectUri)
-    return { ok: false, error: "invalid_grant", description: "redirect_uri does not match the PAR" };
-  if (p.clientId && p.clientId !== par.clientId)
+  if (par.redirectUri && p.redirectUri !== par.redirectUri)
+    return { ok: false, error: "invalid_grant", description: "redirect_uri missing or does not match the PAR" };
+  if (!p.clientId || p.clientId !== par.clientId)
     return { ok: false, error: "invalid_grant", description: "client (WUA) does not match the PAR" };
   if (!p.codeVerifier) return { ok: false, error: "invalid_request", description: "code_verifier required (PKCE)" };
   const challenge = createHash("sha256").update(p.codeVerifier, "ascii").digest("base64url");

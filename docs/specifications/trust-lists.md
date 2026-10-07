@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-04
+last_updated: 2026-10-07
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -89,13 +89,13 @@ CHANGELOG.md                  herkese açık değişiklik günlüğü
 | `list_type` | `"lotl"` | |
 | `environment` | `"production"` \| `"sandbox"` (isteğe bağlı; yoksa `production`) | Listenin ait olduğu ağ ([[ADR-0038]]). Test ağının listesi `sandbox` taşır; yükleyici beklediği ağla eşleşmeyen listede **durur** (`ADR-0038/SB2`) |
 | `version`, `issued_at`, `next_update`, `previous_version_hash` | | Sürüm/hash zinciri (§1.3, §1.6) |
-| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report}` | Kurucu vekil; [[FW-TF-0001]] URL'i |
+| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report?}` | Kurucu vekil; `trust_framework` = [[FW-TF-0001]] URL'i (`https://arf.tamga.network/trust-framework`); `transparency_report` isteğe bağlı, yayın sayfası açılınca eklenir |
 | `catalogue` | `{url}` | Type Metadata çözümleme yolu (`schemas.tamga.network/v1/catalogue.json`) |
 | `anchor_signing_keys[]` | `{fingerprint_sha256, cert_ref, status}` | Çapa günlüğü imzacıları (≥2 kaydırmalı — TL3) |
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], recognition{mode, recognizes[]}}` | `Governance` üye listesi + `CrossRecognition` |
 | `schemas[]` | `{schema_id, vct, metadata_url, content_hash, content_hashes[], layer: NETWORK, governance, status, registered_at, status_history[]}` | `SchemaRegistry` (NETWORK); `registered_at` **kalıcıdır** (ilk çapa zamanı); `content_hashes` = geçerli sürüm özetleri ([[ADR-0010]] K4; geliştirme evresinde yalnız güncel özet, [[ADR-0029]]), her biri bir kez çapalanır |
 | `eaa_categories` | `{urn → açıklama}` | Kategori namespace'i ([[ADR-0010]] K5) |
-| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA güven çapasını (R-7; zincirde henüz yok — ADR adayı) |
+| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA güven çapasını (R-7; zincirde henüz yok — ADR adayı). `status` (kayıt ve `solutions[].status`) `Status` kümesindendir: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA doğrulamasında yalnız `ACTIVE` kaydın `ACTIVE` anahtarları kullanılır. `RESERVED` kayıt yer ayırır (ör. işletmecisi kendi sertifikasını henüz vermemiş cüzdan sağlayıcı, [[ADR-0042]]): `wua_signing_keys` boş olabilir ve WUA doğrulamasında kullanılmaz. `security_level` cüzdan güvence seviyesidir ([[SPEC-WALLET-0001]] §2.2; W1 desteklenmez) |
 | `zk_circuits[]` | `{circuit_id, system, version, attributes, sha256, status}` | Kabul edilen ZK devreleri ([[ADR-0032]] ZK2; zincirde henüz yok) |
 | `pid_providers[]` | boş, rezerve | BT8 → TL8 |
 
@@ -136,7 +136,7 @@ Token hash'iyle karşılaştırılır; satır silinmez; günlük herkese açık;
 
 **Arşivleme ve kontrol noktası (TL12).** Günlük büyüdükçe yükleme süresi satır sayısıyla doğrusal artar (her satır bir
 JWS doğrulaması). Operatör, günlük bir eşiği aşınca (varsayılan 500 satır) mevcut satırların **hepsini** `archive/anchors-<from>-<to>.jsonl`
-dosyasına taşır ve yeni günlüğün ilk satırı olarak imzalı bir `checkpoint` yazar: `seq = seq_to + 1`,
+dosyasına taşır (aynı adla farklı içerikte bir arşiv zaten varsa — ör. sandbox sıfırlamasından sonra seq yeniden 0'dan başladıysa — ada zaman eki konur: `anchors-<from>-<to>-<epoch_ms>.jsonl`; eski arşiv ezilmez) ve yeni günlüğün ilk satırı olarak imzalı bir `checkpoint` yazar: `seq = seq_to + 1`,
 `previous_hash = sha256(arşivdeki son satır)`, `archive.sha256 = sha256(arşiv dosyası)` ve **`state`** — arşive giden satırların ürettiği son durum (liste başına en yüksek `list_version`'lı status çapası + şema çapaları). Sonraki çapa normal biçimde kontrol
 noktasına bağlanır; zincir kesintisizdir, hiçbir satır silinmez (TL2). Yükleyici: ilk satır `checkpoint` ise imzasını doğrular
 (çapa imza anahtarı), `seq`'in `seq_to + 1` olduğunu denetler, **`state`'i depoya uygular (yoksa reddeder)** ve zinciri oradan sürdürür; `checkpoint` `TrustSource`'a kayıt

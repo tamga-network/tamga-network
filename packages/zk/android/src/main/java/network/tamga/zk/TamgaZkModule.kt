@@ -18,7 +18,7 @@ internal object ZkNative {
 
   @JvmStatic external fun circuitVersion(): Int
 
-  /** Başarıda ispat baytları; hatada `null` (kod `lastError`). */
+  /** Başarıda ispat baytları; hatada `null` — hata kodu/ayrıntısı Kotlin'e geçmez (kişi verisi içerebilir; rust/src/lib.rs). */
   @JvmStatic external fun prove(input: ByteArray): ByteArray?
 }
 

@@ -51,7 +51,7 @@ import {
   ExternalListPointer,
   Anchor as AnchorSchema,
   type Anchor,
-} from "../../../packages/trust/src/index.js";
+} from "@tamga-network/trust";
 
 import { buildLote, contactFromRegistration, jadesHeader, type LoteContact, type LoteInput } from "./lote.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
@@ -61,6 +61,8 @@ import {
   TEST_CA,
   issueLeaf,
   issuedByTestCa,
+  nameProblems,
+  reservedNamesOf,
   subjects,
   testInstitutionSource,
   validateRequest,
@@ -116,7 +118,7 @@ function cert(name: string) {
     throw new Error(`TI1: ${name} test kurumları ara makamınca imzalanmamış`);
   const der = pemToDer(pem);
   // ADR-0038 SB1: test sertifikası gerçek listeye, gerçek sertifika sandbox listesine girmez
-  const isTest = /(TEST)/.test(new X509Certificate(der).subject);
+  const isTest = /\(TEST\)/.test(new X509Certificate(der).subject);
   if (isTest !== (ENVIRONMENT === "sandbox"))
     throw new Error(
       `SB1: ${name} sertifikası ${isTest ? "test" : "gerçek"}, kayıt defteri ${ENVIRONMENT} — karıştırılamaz`,
@@ -434,20 +436,20 @@ async function build() {
   )
     ? (readJson(resolve(DIST, "lotl.json")).schemas ?? [])
     : [];
-  const firstSchemaAnchor = (schemaId: string): string | null => {
-    if (!existsSync(resolve(DIST, "anchors.jsonl"))) return null;
-    // TL9: ilk şema çapası arşive taşınmış olabilir → tam zincir (kontrol noktaları izlenir)
+  // TL9: ilk şema çapası arşive taşınmış olabilir → tam zincir (kontrol noktaları izlenir). Build başına bir kez okunur.
+  const schemaAnchors: Array<{ schema_id: string; content_hash: string; ts: string }> = [];
+  if (existsSync(ANCHORS_FILE()))
     for (const line of fullAnchorsJsonl().jsonl.split(/\r?\n/)) {
       if (!line.trim()) continue;
       try {
         const pl = JSON.parse(Buffer.from(line.split(".")[1], "base64url").toString("utf8"));
-        if (pl.kind === "schema" && pl.schema_id === schemaId) return pl.ts;
+        if (pl.kind === "schema") schemaAnchors.push(pl);
       } catch {
         /* atla */
       }
     }
-    return null;
-  };
+  const firstSchemaAnchor = (schemaId: string): string | null =>
+    schemaAnchors.find((a) => a.schema_id === schemaId)?.ts ?? null;
   const schemaReg = (schemaId: string) => {
     const prev = prevLotlSchemas.find((x) => x.schema_id === schemaId);
     const at = prev?.registered_at ?? firstSchemaAnchor(schemaId) ?? iso(now);
@@ -538,25 +540,25 @@ async function build() {
     })),
   };
   writeFileSync(resolve(DIST, "keys", "root-fingerprints.json"), JSON.stringify(rootFps, null, 2) + "\n");
-  for (const n of ["tl-signer-1", "root-ca", "wallet-provider", "rp-verify"])
-    writeFileSync(resolve(DIST, "keys", `${n}.cert.pem`), cert(n).pem);
+  // Yalnız listenin gerçekten andığı sertifikalar ilan edilir (ADR-0042: gerçek ağda cüzdan sağlayıcı anahtarı yok — RESERVED
+  // kayıt boş `wua_signing_certs`). Sandbox test cüzdan sağlayıcısı (TAMGA-SANDBOX-TEST-WP) `wallet-provider`'ı anar.
+  const published = new Set<string>([
+    ...(lotlSrc.anchor_signing_certs as string[]),
+    ...(tlSrc.root_cas as Array<{ cert: string }>).map((r) => r.cert),
+    ...(tlSrc.relying_parties as Array<{ access_cert: string }>).map((r) => r.access_cert),
+    ...(lotlSrc.wallet_providers as Array<{ wua_signing_certs?: string[] }>).flatMap((w) => w.wua_signing_certs ?? []),
+  ]);
+  for (const f of readdirSync(resolve(DIST, "keys")))
+    if (f.endsWith(".cert.pem") && !published.has(f.slice(0, -".cert.pem".length)))
+      rmSync(resolve(DIST, "keys", f), { force: true });
+  for (const n of published) writeFileSync(resolve(DIST, "keys", `${n}.cert.pem`), cert(n).pem);
 
   // ---- LoTE izdüşümü (ETSI TS 119 602; ARF OIA_15b) — kaynakta açıkken üretilir
   if (lotlSrc.lote?.enabled) await writeLotes(lotlSrc, tlSrc, cc, lotl.version, tl.version, now, s.certDer);
 
   // Şema çapaları: her yayımlanmış sürüm özeti bir kez (D8 kayıt anı; ADR-0010 K4 yeni küçük sürüm = yeni çapa)
   {
-    const anchored = new Set<string>();
-    if (existsSync(resolve(DIST, "anchors.jsonl")))
-      for (const line of fullAnchorsJsonl().jsonl.split(/\r?\n/)) {
-        if (!line.trim()) continue;
-        try {
-          const pl = JSON.parse(Buffer.from(line.split(".")[1], "base64url").toString("utf8"));
-          if (pl.kind === "schema") anchored.add(`${pl.schema_id}|${pl.content_hash}`);
-        } catch {
-          /* atla */
-        }
-      }
+    const anchored = new Set<string>(schemaAnchors.map((a) => `${a.schema_id}|${a.content_hash}`));
     for (const x of schemasIndex)
       for (const h of x.content_hashes ?? [x.content_hash])
         if (!anchored.has(`${x.schema_id}|${h}`))
@@ -645,7 +647,14 @@ async function appendAnchor(body: AnchorBody) {
     const s = await signer();
     const line = await signJson(s, payload);
     appendFileSync(file, line + "\n");
-    if (lines.length + 1 > ANCHORS_MAX_LINES) await rotateAnchorsLocked();
+    // Ekleme tamamlandı; arşivleme ayrı adımdır. Arşivleme hatası eklenmiş çapayı geri almaz ve komutu düşürmez
+    // (günlük geçerli kalır, bir sonraki eklemede ya da `trust:archive` ile yeniden denenir).
+    if (lines.length + 1 > ANCHORS_MAX_LINES)
+      try {
+        await rotateAnchorsLocked();
+      } catch (e) {
+        console.warn(`[uyarı] anchors: arşivleme yapılamadı, sonra yeniden denenecek — ${(e as Error).message}`);
+      }
     return payload;
   });
 }
@@ -662,13 +671,19 @@ async function rotateAnchorsLocked() {
   const first = payloadOf(lines[0]);
   const last = payloadOf(lines[lines.length - 1]);
   const pad = (n: number) => String(n).padStart(7, "0");
-  const name = `anchors-${pad(first.seq)}-${pad(last.seq)}.jsonl`;
-  mkdirSync(ARCHIVE, { recursive: true });
-  const archivePath = resolve(ARCHIVE, name);
-  if (existsSync(archivePath)) throw new Error(`anchors: arşiv zaten var: ${name}`);
   const bytes = lines.join("\n") + "\n";
+  mkdirSync(ARCHIVE, { recursive: true });
+  // Ad çakışması: aynı içerik = yarıda kalmış önceki arşivleme (dosya yazıldı, kontrol noktası yazılamadı) → aynı dosya
+  // yeniden kullanılır. Farklı içerik = günlük sıfırlanmış (sandbox gece sıfırlaması, seq yeniden 0) → ada zaman eki konur;
+  // eski arşiv ezilmez.
+  let name = `anchors-${pad(first.seq)}-${pad(last.seq)}.jsonl`;
+  const existing = resolve(ARCHIVE, name);
+  const reuse = existsSync(existing) && readFileSync(existing, "utf8") === bytes;
+  if (existsSync(existing) && !reuse) name = `anchors-${pad(first.seq)}-${pad(last.seq)}-${Date.now()}.jsonl`;
+  const archivePath = resolve(ARCHIVE, name);
+  if (!reuse && existsSync(archivePath)) throw new Error(`anchors: arşiv zaten var: ${name}`);
   const state = snapshotOf(lines); // arşive gidecek satırların ürettiği son durum (yazmadan ÖNCE hesapla)
-  writeFileSync(archivePath, bytes);
+  if (!reuse) writeAtomic(archivePath, bytes);
   const payload: Anchor = {
     seq: last.seq + 1,
     previous_hash: sha256Tag(utf8(lines[lines.length - 1])),
@@ -959,6 +974,13 @@ async function sandboxInstitution(sub: string | undefined) {
     const tl = readJson(resolve(REG, "tl-tr.source.json"));
     if ([...tl.issuers, ...cur].some((i: Record<string, unknown>) => i.slug === req.slug))
       throw new RegistryError([`slug zaten kayıtlı: ${req.slug}`]);
+    // ADR-0041 K1: gerçek ve sandbox kayıt defterindeki ya da şu anki test kurumlarının adına benzeyen ad RED
+    const prodSrc = resolve(app, "registry", "tl-tr.source.json");
+    const nameIssues = nameProblems(
+      req.name,
+      reservedNamesOf(tl, existsSync(prodSrc) ? readJson(prodSrc) : undefined, { issuers: cur }),
+    );
+    if (nameIssues.length) throw new RegistryError(nameIssues);
     const ca = {
       certPem: readFileSync(resolve(PKI, `${TEST_CA}.cert.pem`), "utf8"),
       keyPem: readFileSync(resolve(PKI, `${TEST_CA}.pkcs8.pem`), "utf8"),
@@ -979,7 +1001,7 @@ async function sandboxInstitution(sub: string | undefined) {
     writeAtomic(file, `${JSON.stringify({ issuers: [...cur, rec] }, null, 2)}\n`);
     await build();
     changelog(`test institution ${req.slug} added to the sandbox list (ADR-0041)`);
-    return { slug: req.slug, issuer_id: computeIssuerId("TR", cert(`self:issuer-${req.slug}`).der) };
+    return { slug: req.slug, issuer_id: computeIssuerId(tl.state_code, cert(`self:issuer-${req.slug}`).der) };
   });
   console.log(JSON.stringify({ ...out, cert_ref: `issuer-${req.slug}`, status_cert_ref: `issuer-${req.slug}-status` }));
 }

@@ -17,6 +17,8 @@ import { CborTag, decode, encode, encodeEmbedded, type CborValue } from "./cbor.
 import { coseKeyFromPoint, pointFromCoseKey } from "./cose.js";
 
 export const CIPHER_SUITE_1 = 1;
+/** Kabul edilen DeviceEngagement sürümleri (biz "1.0" üretiriz). */
+export const DEVICE_ENGAGEMENT_VERSIONS: ReadonlySet<string> = new Set(["1.0", "1.1"]);
 export const SESSION_STATUS_END = 20;
 /** ISO 18013-5 §8.3.3.1.1.4 mdoc peripheral server mode karakteristikleri */
 export const BLE_STATE_UUID = "00000001-A123-48CE-896B-4C76973373E6";
@@ -122,7 +124,9 @@ export function parseEngagement(qr: string): {
   if (!qr.startsWith("mdoc:")) throw new Error("engagement: not an mdoc QR");
   const deviceEngagementBytes = b64uDecode(qr.slice(5));
   const de = decode(deviceEngagementBytes);
-  if (!(de instanceof Map) || de.get(0) !== "1.0") throw new Error("engagement: version");
+  // ISO 18013-5: DeviceEngagement "1.0"; "1.1" ek alanlar (ör. yetenekler) taşır — okuduğumuz alanlar iki sürümde aynı
+  if (!(de instanceof Map) || !DEVICE_ENGAGEMENT_VERSIONS.has(de.get(0) as string))
+    throw new Error("engagement: version");
   const sec = de.get(1);
   if (!Array.isArray(sec) || sec[0] !== CIPHER_SUITE_1 || !(sec[1] instanceof CborTag) || sec[1].tag !== 24)
     throw new Error("engagement: security");

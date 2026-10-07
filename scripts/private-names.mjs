@@ -14,7 +14,12 @@ const file = join(
 );
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-export const PRIVATE_NAMES = existsSync(file)
+/** Ad listesi dosyası bulundu mu (yoksa denetleyiciler uyarır: yalnızca genel kurallar uygulanır). */
+export const PRIVATE_NAMES_FILE_FOUND = existsSync(file);
+/** Kamuya açık metinde geçmeyen araç adları (public-text-check ve arf-sync ortak). */
+export const TOOL_NAMES_RE = /\bClaude\b|\bOpus\b|\bFable\b|\bSonnet\b/;
+
+export const PRIVATE_NAMES = PRIVATE_NAMES_FILE_FOUND
   ? readFileSync(file, "utf8")
       .split(/\r?\n/)
       .map((l) => l.trim())

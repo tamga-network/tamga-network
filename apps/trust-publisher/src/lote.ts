@@ -98,7 +98,9 @@ export function contactFromRegistration(rec: Record<string, any>, cc: string): L
       ...(c.email ? [`mailto:${c.email}`] : []),
       ...(c.phone ? [`tel:${String(c.phone).replace(/\s+/g, "")}`] : []),
       ...(c.support_uri ? [c.support_uri] : []),
-    ].concat(c.email || c.phone || c.support_uri ? [] : [rec.issuer_url ?? rec.info_uri]),
+    ]
+      .concat(c.email || c.phone || c.support_uri ? [] : [rec.issuer_url ?? rec.info_uri])
+      .filter((x): x is string => typeof x === "string" && x.length > 0),
     info: [rec.info_uri ?? rec.issuer_url].filter(Boolean),
   };
 }

@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { loadTrustSet } from "./jws.js";
+import type { ListVersionMemory } from "./loader.js";
 import { ListTrustSource } from "./trust-source.js";
 
 export interface DistLoadOptions {
@@ -9,6 +10,8 @@ export interface DistLoadOptions {
   /** ADR-0038: beklenen ağ (varsayılan "production"). */
   environment?: "production" | "sandbox";
   now?: Date;
+  /** TL2: kalıcı "son görülen" sürüm belleği (bkz. `ListVersionMemory`). */
+  versionMemory?: ListVersionMemory;
 }
 
 /** `dist/` düzeni: lotl.jws, tl-<cc>.jws, anchors.jsonl, keys/root-fingerprints.json ({ lotl_signing_keys: [{fingerprint_sha256}] }). */
@@ -46,6 +49,7 @@ export async function loadTrustSourceFromDir(
     anchorMaxAgeMs: opt.anchorMaxAgeMs ?? 365 * 86400_000,
     externalListJws: external,
     environment: opt.environment,
+    versionMemory: opt.versionMemory,
   });
   const rootPath = resolve(dir, "keys", "root-ca.cert.pem");
   return {

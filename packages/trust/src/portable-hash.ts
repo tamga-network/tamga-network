@@ -4,17 +4,18 @@
  */
 import { sha256 } from "@noble/hashes/sha2.js";
 
+/** UTF-8 kodlama — `TextEncoder` ile birebir: eşi olmayan vekil (lone surrogate) U+FFFD olarak kodlanır. */
 export function utf8(s: string): Uint8Array {
   const out: number[] = [];
   for (let i = 0; i < s.length; i++) {
     let c = s.charCodeAt(i);
-    if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
-      const d = s.charCodeAt(i + 1);
+    if (c >= 0xd800 && c <= 0xdbff) {
+      const d = i + 1 < s.length ? s.charCodeAt(i + 1) : 0;
       if (d >= 0xdc00 && d <= 0xdfff) {
         c = 0x10000 + ((c - 0xd800) << 10) + (d - 0xdc00);
         i++;
-      }
-    }
+      } else c = 0xfffd; // eşsiz yüksek vekil
+    } else if (c >= 0xdc00 && c <= 0xdfff) c = 0xfffd; // eşsiz düşük vekil
     if (c < 0x80) out.push(c);
     else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
     else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));

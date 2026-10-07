@@ -36,6 +36,8 @@ import { registerTerminalRoutes } from "./routes/terminal.js";
 import { registerMiscRoutes } from "./routes/misc.js";
 import { registerSiteRoutes } from "./routes/site.js";
 import { policiesFor } from "./policies.js";
+import { DEFAULT_RATE_RULES, TokenBucketLimiter, type RateRules } from "./rate-limit.js";
+import { sandboxBar } from "./brand.js";
 import type { Policy } from "@tamga-network/verifier";
 
 export { POLICIES, policiesFor } from "./policies.js";
@@ -69,6 +71,8 @@ export interface VerifyContext {
   showcase: boolean;
   /** Bu süreçte yüklü politika kümesi. */
   policies: Policy[];
+  /** Hız sınırları (bellekte; istemci adresi saklanmaz — rate-limit.ts). */
+  limits: Record<keyof RateRules, TokenBucketLimiter>;
 }
 
 export interface VerifyApp extends FastifyInstance {
@@ -86,6 +90,8 @@ export async function buildVerifyApp(
     signer?: RpSigner;
     /** Varsayılan: `cfg.network === "sandbox"`. Testler vitrini gerçek ağ biçimli test listesiyle açabilir. */
     showcase?: boolean;
+    /** Hız sınırı kuralları (varsayılan DEFAULT_RATE_RULES); testler küçültür. */
+    rateRules?: Partial<RateRules>;
   } = {},
 ): Promise<VerifyApp> {
   const showcase = opts.showcase ?? cfg.network === "sandbox";
@@ -127,6 +133,9 @@ export async function buildVerifyApp(
     zk,
     showcase,
     policies,
+    limits: Object.fromEntries(
+      Object.entries({ ...DEFAULT_RATE_RULES, ...opts.rateRules }).map(([k, r]) => [k, new TokenBucketLimiter(r)]),
+    ) as VerifyContext["limits"],
     rpAuth: (authorization) =>
       verifyRpAssertion(authorization, {
         audience: cfg.publicBase,
@@ -169,6 +178,20 @@ export async function buildVerifyApp(
     presentations: ctx.presentations,
   });
   if (zk instanceof NativeZkBackend) app.addHook("onClose", async () => zk.close());
+  // HTML yanıtları: sunum ve kapı sayfaları dizine girmez; sandbox'ta her sayfanın üstünde "test" şeridi (ADR-0038 SB4; ağ
+  // cfg'den — süreç ortamından değil)
+  app.addHook("onSend", async (req, reply, payload) => {
+    if (typeof payload !== "string" || !String(reply.getHeader("content-type") ?? "").startsWith("text/html"))
+      return payload;
+    const path = req.url.split("?")[0];
+    if (path.startsWith("/p/") || path === "/terminal" || path.startsWith("/terminal/"))
+      reply.header("x-robots-tag", "noindex, nofollow");
+    if (cfg.network !== "sandbox" || !payload.includes("<body>")) return payload;
+    return payload.replace(
+      "<body>",
+      `<body>${sandboxBar(/^<!doctype html><html lang="tr"/i.test(payload) ? "tr" : "en")}`,
+    );
+  });
   registerMiscRoutes(app, ctx);
   registerPresentationRoutes(app, ctx);
   registerTerminalRoutes(app, ctx);

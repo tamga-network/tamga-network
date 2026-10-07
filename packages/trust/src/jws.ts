@@ -3,12 +3,19 @@
  * typ: "tamga-tl+jwt". Doğrulama: x5c[0] parmak izi izin verilen listede olmalı (BT3/ETSI A.2),
  * imza sertifikadaki açık anahtarla doğrulanmalı. Kök zinciri değil parmak izi eşleşmesi esas
  * alınır: listeyi imzalayan anahtar, üst listede (lotl) veya ilan sayfasında parmak iziyle kayıtlıdır.
+ * `crit`: Tamga listelerinde kritik uzantı yok (jose varsayılanı: bilinmeyen `crit` → RED). Dış (JAdES, ETSI TS 119 182-1)
+ * listelerde yalnız `JADES_CRIT_PARAMS` tanınır; başka bir kritik başlık taşıyan dış liste de reddedilir (RFC 7515 §4.1.11).
  */
 import { CompactSign, compactVerify, importPKCS8, importX509, decodeProtectedHeader } from "jose";
 import { sha256Hex, utf8, pemToDer, derToB64, b64ToDer, derToPem } from "@tamga-network/core";
 import { loadTrustSetWith, type TrustSetInput } from "./loader.js";
 
 export const TL_TYP = "tamga-tl+jwt";
+/**
+ * Dış (JAdES compact) listelerde tanınan kritik başlıklar: `sigT` (imza zamanı, ETSI TS 119 182-1 §5.2.1). Liste yayıncısının
+ * LoTE başlığı da yalnız bunu kritik işaretler (`jadesHeader`). Değer `true`: başlık korunan (protected) başlıkta olmalı.
+ */
+export const JADES_CRIT_PARAMS: Readonly<Record<string, boolean>> = Object.freeze({ sigT: true });
 export { pemToDer, derToB64, b64ToDer, derToPem };
 
 export interface Signer {
@@ -67,7 +74,7 @@ export async function verifyJws<T = unknown>(
   const fp = sha256Hex(leafDer);
   if (allowedFingerprints && !allowedFingerprints.has(fp)) throw new Error(`signer fingerprint not registered: ${fp}`);
   const pub = await importX509(derToPem(leafDer), "ES256");
-  const { payload } = await compactVerify(jws, pub);
+  const { payload } = await compactVerify(jws, pub, typ === null ? { crit: { ...JADES_CRIT_PARAMS } } : undefined);
   return { payload: JSON.parse(new TextDecoder().decode(payload)) as T, signerFingerprint: fp, raw: jws };
 }
 

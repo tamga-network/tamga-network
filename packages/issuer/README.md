@@ -23,7 +23,7 @@ A complete, tested version: [`examples/03-issue-hosted`](https://github.com/tamg
 
 ## Status
 
-Pre-release (`0.x`) on npm — written and tested; the API may still change before `1.0`. Every release is built from this
+Version `1.0.0` — written and tested; published to npm with the network's public launch. Every release is built from this
 repository by GitHub Actions and carries npm provenance (verifiable link to the source commit).
 
 ## Links

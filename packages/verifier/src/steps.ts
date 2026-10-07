@@ -12,7 +12,7 @@ import { ALL as SCHEMA_DEFS, externalType, type SchemaDef } from "@tamga-network
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
 import { verifyStatusListToken } from "@tamga-network/sd-jwt";
 import type { ExternalIssuerAnswer, TrustSource } from "@tamga-network/trust";
-import { assuranceAtLeast, constraintOk, type Policy } from "./policy.js";
+import { assuranceAtLeast, constraintOk, scopeCovers, type Policy } from "./policy.js";
 import { verifyMdocFormat, type FormatResult } from "./mdoc-format.js";
 import { verifyMdocZkFormat } from "./mdoc-zk-format.js";
 import type { IndeterminateReason, Step, VerificationResult, VerifyInput } from "./verify.js";
@@ -93,7 +93,7 @@ export async function stepA(ctx: VerifyCtx): Promise<StepFail | undefined> {
   if (!input.rootCertsDer?.length)
     return indet("A3", "CHAIN_UNREACHABLE", "national root certificate not configured; chain cannot be checked");
   const a = await formatStep(input, ctx.now);
-  if (!a.ok) return reject(a.failedStep, a.reason);
+  if (!a.ok) return a.indeterminate ? indet(a.failedStep, a.indeterminate, a.reason) : reject(a.failedStep, a.reason);
   ctx.done.push(...a.aDone);
   ctx.skipped.push(...a.aSkipped);
   ctx.disclosed = a.disclosedClaimNames;
@@ -187,6 +187,19 @@ export function stepC(ctx: VerifyCtx): StepFail | undefined {
   const { input } = ctx;
   const a = ctx.a!;
   if (ctx.ext) return stepCExternal(ctx);
+  const issuerRec = input.trust.issuer(a.issuerId);
+  ctx.issuerRec = issuerRec;
+  // A3b tutarlılığı (SPEC-API-0001 §1.2): issuerId sertifikadan; `iss` yalnız kayıtlı issuer_url ile tutarlılık için. Kayıt
+  // gerektirdiği için burada, ama C adımlarından ÖNCE (sıra A3b → C1; tutarsız `iss` güven sorgusuna hiç girmez).
+  const issClaim = String(a.claims.iss ?? "");
+  if (
+    issuerRec &&
+    issClaim &&
+    issuerRec.issuer_url &&
+    issClaim !== issuerRec.issuer_url &&
+    !(input.allowLocalIssuerUrls && isLocalUrl(issClaim))
+  )
+    return reject("A3b", "iss claim inconsistent with the registered issuer_url");
   const c1 = input.trust.isCredentialAcceptable(a.issuerId, a.iat);
   if (c1 === "UNKNOWN") return indet("C1", "INDEXER_STALE", "issuer sorgusu UNKNOWN");
   if (c1 === "NO") return reject("C1", "issuer not acceptable at iat");
@@ -195,8 +208,6 @@ export function stepC(ctx: VerifyCtx): StepFail | undefined {
   if (c2 === "UNKNOWN") return indet("C2", "INDEXER_STALE", "schema authorisation UNKNOWN");
   if (c2 === "NO") return reject("C2", "issuer not authorised for this type at iat (AP8)");
   ctx.done.push("C2");
-  const issuerRec = input.trust.issuer(a.issuerId);
-  ctx.issuerRec = issuerRec;
   if (issuerRec)
     ctx.issuerInfo = {
       ...ctx.issuerInfo!,
@@ -221,15 +232,6 @@ export function stepC(ctx: VerifyCtx): StepFail | undefined {
       return reject("C4", `category claim (${cat ?? "none"}) does not match the registered class (${cls ?? "?"})`);
     ctx.done.push("C4");
   }
-  const issClaim = String(a.claims.iss ?? "");
-  if (
-    issuerRec &&
-    issClaim &&
-    issuerRec.issuer_url &&
-    issClaim !== issuerRec.issuer_url &&
-    !(input.allowLocalIssuerUrls && isLocalUrl(issClaim))
-  )
-    return reject("A3b", "iss claim inconsistent with the registered issuer_url");
 }
 
 /**
@@ -264,7 +266,21 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   const a = ctx.a!;
   const issuerRec = ctx.issuerRec;
   if (!a.status) {
-    ctx.status = { value: "NOT_APPLICABLE", list_version: null, token_age_sec: null };
+    if (a.format === "mso_mdoc_zk") {
+      // ADR-0032 ZK4: indeks gelmez → iptal denetlenemez; politika bunu kabul etmiyorsa DOĞRULANAMADI
+      if (ctx.pc?.accept_unrevocable_zk === false)
+        return indet(
+          "D1",
+          "STATUS_UNREACHABLE",
+          "revocation cannot be checked for a ZK presentation (ZK4); policy requires it",
+        );
+      ctx.status = {
+        value: "NOT_APPLICABLE",
+        list_version: null,
+        token_age_sec: null,
+        reason: "ZK4: revocation index is not disclosed in a zero-knowledge presentation; short-lived credential (K6)",
+      };
+    } else ctx.status = { value: "NOT_APPLICABLE", list_version: null, token_age_sec: null };
     ctx.skipped.push("D1", "D2", "D3", "D4", "D5", "D6");
     return;
   }
@@ -379,15 +395,8 @@ export function stepE(ctx: VerifyCtx): StepFail | undefined {
         )
         .flatMap((s) => s.claims),
     );
-    // iç içe yol: kapsamda kendisi ya da bir atası varsa izinli (address → address.locality)
-    const covered = (c: string) => {
-      for (let p = c; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
-        if (allowed.has(p)) return true;
-        if (!/[.[]/.test(p)) break;
-      }
-      return false;
-    };
-    const over = ctx.disclosed.filter((c) => !covered(c));
+    // iç içe yol: kapsamda kendisi ya da bir atası varsa izinli (address → address.locality) — AP6 ile aynı kural
+    const over = ctx.disclosed.filter((c) => !scopeCovers(allowed, c));
     if (over.length) return reject("E3", `scope exceeded: ${over.join(",")} (AP6)`);
     ctx.done.push("E3");
   } else ctx.skipped.push("E3");

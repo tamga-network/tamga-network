@@ -7,6 +7,7 @@ import type { KeyStorage, PublicJwk } from "./keys.js";
 import type { RedeemOutput } from "./oid4vci.js";
 import type { WuaRecord } from "./wua.js";
 import { verifyReceivedMdoc } from "./mdoc.js";
+import type { TrustSource } from "@tamga-network/trust/core";
 
 export interface StoredCopy {
   keyRef: string;
@@ -160,6 +161,13 @@ export interface ReceiveOptions {
   stateCode?: string;
   catalogueHash?: (vct: string) => string | string[] | undefined;
   now?: number;
+  /**
+   * Güven denetimi (verilirse uygulanır; imzası doğrulanmış güven kaynağı — `fetchTrustSource`): belgenin `iss`'i teklifin
+   * `credential_issuer`'ıyla aynı olmalı ve sertifikadan türetilen kurum (issuer_id) güven listesinde belgenin `iat`'ında belge
+   * verebilir olmalı (C1). Aksi hâlde belge alınmaz — başka kurumun sertifikasıyla imzalanmış ya da listede olmayan kurumun
+   * belgesi cüzdana "kurum belgesi" olarak girmez.
+   */
+  trust?: TrustSource;
 }
 /** Alınan kopyaları doğrular (her kopya kendi anahtarına bağlı mı — PR6) ve tek belge kaydı olarak ekler. Hatalı kopya seti reddedilir. */
 export function receiveCredentials(
@@ -179,6 +187,17 @@ export function receiveCredentials(
     if (!v.ok) throw new Error(`copy rejected (${v.failedStep}): ${v.reason}`);
     if (first && (first.vct !== v.vct || first.issuerId !== v.issuerId))
       throw new Error("copies are not of the same type/issuer");
+    if (opt.trust) {
+      if (v.iss !== out.credentialIssuer)
+        throw new Error("credential iss does not match the offer's credential_issuer");
+      const c1 = opt.trust.isCredentialAcceptable(v.issuerId, v.iat);
+      if (c1 !== "YES")
+        throw new Error(
+          c1 === "UNKNOWN"
+            ? "the trusted list could not be checked; try again later"
+            : "the issuer is not in the trusted list (C1)",
+        );
+    }
     first ??= v;
     // D-CRED-5: mdoc ikinci temsil — SD-JWT kopyasıyla çapraz doğrulanır (MD1–MD3); tutarsızsa kopya reddedilir
     if (c.mdoc) verifyReceivedMdoc(c.mdoc, { sdjwt: v, cnf: c.cnf, now: opt.now });

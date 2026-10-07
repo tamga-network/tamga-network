@@ -51,6 +51,10 @@ describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", () => {
       expect(existsSync(join(DIST, f)), f).toBe(true);
     expect(json("lotl.json").version).toBe(1);
     expect(json("tl-tr.json").previous_version_hash).toBeNull();
+    // keys/: yalnız listenin andığı sertifikalar (ADR-0042: gerçek ağda cüzdan sağlayıcı anahtarı yok)
+    expect(existsSync(join(DIST, "keys", "tl-signer-1.cert.pem"))).toBe(true);
+    expect(existsSync(join(DIST, "keys", "root-ca.cert.pem"))).toBe(true);
+    expect(existsSync(join(DIST, "keys", "wallet-provider.cert.pem"))).toBe(false);
     const v = verify();
     expect(v.code).toBe(0);
     expect(v.report.healthy).toBe(true);
@@ -96,7 +100,22 @@ describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", () => {
     const full = verify(true);
     expect(full.code, full.err).toBe(0);
     expect(full.report.healthy).toBe(true);
-  });
+  }, 60_000); // alt süreç zinciri: yük altında 20 sn sınırını aşabilir
+
+  it("TL12 sıfırlama: seq 0'dan yeniden başlayan günlüğün arşivi eski arşivi ezmez (ada zaman eki); zincir sağlıklı", () => {
+    rmSync(join(DIST, "anchors.jsonl")); // sandbox gece sıfırlaması gibi: günlük gider, arşiv klasörü kalır
+    for (let i = 0; i < 2; i++) expect(run(["heartbeat"]).code).toBe(0); // seq 0, 1
+    const clash = join(DIST, "archive", "anchors-0000000-0000001.jsonl");
+    const old = "eski sıfırlama öncesi arşiv\n";
+    writeFileSync(clash, old);
+    const a = run(["archive"]);
+    expect(a.code, a.err).toBe(0);
+    expect(readFileSync(clash, "utf8")).toBe(old); // ezilmedi
+    expect(readdirSync(join(DIST, "archive")).some((f) => /^anchors-0000000-0000001-\d+\.jsonl$/.test(f))).toBe(true);
+    const full = verify(true);
+    expect(full.code, full.err).toBe(0);
+    expect(full.report.healthy).toBe(true);
+  }, 60_000); // alt süreç zinciri: yük altında 20 sn sınırını aşabilir
 
   it("kurcalanmış liste: imzalı gövdede tek bayt değişirse doğrulama sağlıksız (çıkış 2 ya da hata)", () => {
     const f = join(DIST, "tl-tr.jws");

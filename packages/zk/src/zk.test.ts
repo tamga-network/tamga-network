@@ -4,7 +4,7 @@
  * BU PAKETLE ispat → ağın doğrulayıcısı (`@tamga-network/verifier/zk`, WASM) kabul eder; doğrulayıcı doğum tarihini görmez.
  */
 import { describe, expect, it } from "vitest";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { randomBytes, webcrypto } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { X509CertificateGenerator, cryptoProvider } from "@peculiar/x509";
@@ -22,6 +22,7 @@ import { WasmZkBackend, verifyMdocZkFormat } from "@tamga-network/verifier/zk";
 import {
   ZkError,
   encodeProveBuffer,
+  httpCircuitSource,
   loadCircuit,
   memoryCircuitSource,
   presentZk,
@@ -140,6 +141,57 @@ describe("zk — arka uç tamponu ve olağan yol (ZK5)", () => {
         issuerKey: new Uint8Array(65),
       }),
     ).rejects.toMatchObject({ code: "unavailable" });
+  });
+});
+
+describe("zk — devre kaynakları ve doğrulayıcının kabul ettiği devreler", () => {
+  const good = new Uint8Array(readFileSync(`${CIRCUIT_DIR}${CIRCUIT_ID}.zst`));
+  const fakeFetch = (body: Uint8Array, headers: Record<string, string> = {}) =>
+    (async () => new Response(body.slice().buffer as ArrayBuffer, { status: 200, headers })) as unknown as typeof fetch;
+  const memCache = () => {
+    const m = new Map<string, Uint8Array>();
+    return { m, get: async (id: string) => m.get(id), set: async (id: string, b: Uint8Array) => void m.set(id, b) };
+  };
+  it("httpCircuitSource: önbelleğe yalnız listedeki özetle tutan dosya yazılır; boyut sınırı", async () => {
+    const c1 = memCache();
+    const ok = httpCircuitSource("https://x", { fetch: fakeFetch(good), cache: c1, trustedCircuits: [CIRCUIT] });
+    expect((await ok.get(CIRCUIT_ID))?.length).toBe(good.length);
+    expect(c1.m.has(CIRCUIT_ID)).toBe(true);
+    const c2 = memCache();
+    const bad = httpCircuitSource("https://x", {
+      fetch: fakeFetch(new Uint8Array([1, 2])),
+      cache: c2,
+      trustedCircuits: [CIRCUIT],
+    });
+    expect(await bad.get(CIRCUIT_ID)).toBeUndefined();
+    expect(c2.m.size).toBe(0);
+    const c3 = memCache();
+    const noList = httpCircuitSource("https://x", { fetch: fakeFetch(good), cache: c3 });
+    expect(await noList.get(CIRCUIT_ID)).toBeDefined();
+    expect(c3.m.size).toBe(0); // liste yoksa önbelleğe yazılmaz
+    const big = httpCircuitSource("https://x", { fetch: fakeFetch(good), maxBytes: 1000 });
+    expect(await big.get(CIRCUIT_ID)).toBeUndefined();
+  });
+  it("presentZk: doğrulayıcının kabul etmediği devre kullanılmaz (acceptedCircuits)", async () => {
+    const prover = {
+      name: "t",
+      available: async () => true,
+      circuitVersion: async () => 8,
+      prove: async () => new Uint8Array([1]),
+    };
+    await expect(
+      presentZk({
+        prover,
+        circuits: memoryCircuitSource({ [CIRCUIT_ID]: good }),
+        trustedCircuits: [CIRCUIT],
+        acceptedCircuits: ["0".repeat(64)],
+        query: zkQueryFromDcql(AGE_QUERY),
+        deviceResponse: new Uint8Array(),
+        transcript: new Uint8Array(),
+        issuerX5chain: [],
+        issuerKey: new Uint8Array(65),
+      }),
+    ).rejects.toMatchObject({ code: "no_circuit" });
   });
 });
 

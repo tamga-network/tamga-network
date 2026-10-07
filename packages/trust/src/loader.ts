@@ -7,12 +7,18 @@
  *  - lotl imzacısı: `rootFingerprints` (ilan sayfası / keys/root-fingerprints.json).
  *  - tl-<cc> imzacısı: lotl.national_lists[cc].signing_keys (ACTIVE olanlar).
  *  - anchors satırları: lotl.anchor_signing_keys; her satır önceki satırın sha256'sını taşır.
+ *  - TL1: liste aşamasında operatör "provisional" ise `on_behalf_of` boş olamaz.
+ *  - TL2 (geri sarma): `versionMemory` verilirse (kalıcı "son görülen" kaydı) lotl ve tl-<cc> için daha eski sürüm reddedilir;
+ *    aynı sürüm farklı içerikle gelirse reddedilir; bir sonraki sürümde `previous_version_hash` son görülen JWS'in özetiyle
+ *    (`sha256Tag(jws)`) eşleşmelidir. Verilmezse bu denetim yapılmaz (önceki davranış). Dış listelerde (`LoTESequenceNumber`)
+ *    sıra belleği depodan BAĞIMSIZDIR: verilen `versionMemory`, yoksa süreç içi varsayılan bellek — her yeniden yüklemede yeni
+ *    depo kurulsa da eski sıra numaralı liste reddedilir.
  * ADR-0015 (D-TRUST-1): kurallar TEK gerçeklemede ve platformdan bağımsızdır; imza doğrulama `JwsVerifier` olarak verilir
  * (Node: jose — `loadTrustSet`; cüzdan/React Native: saf TS doğrulayıcı). Bu dosya jose/node:fs içe aktarmaz.
  */
 import { Anchor, Lotl, NationalList, KNOWN_FORMAT_VERSIONS } from "./types.js";
 import { sha256Tag, utf8 } from "./portable-hash.js";
-import { TrustStore } from "./store.js";
+import { TrustStore, activeFps } from "./store.js";
 import { parseLote } from "./lote-reader.js";
 
 /**
@@ -25,6 +31,54 @@ export type JwsVerifier = <T = unknown>(
   allowedFingerprints: Set<string> | null,
   opts?: { typ?: string | null },
 ) => Promise<{ payload: T; signerFingerprint: string; raw: string }>;
+
+/** Bir listenin son kabul edilen sürümü ve JWS özeti (`sha256:<hex>`, yayıncının `previous_version_hash` biçimi). */
+export interface ListMark {
+  version: number;
+  hash: string;
+}
+/**
+ * TL2: "son görülen" sürüm belleği — çağıran kalıcı kılar (dosya, veritabanı, cüzdan deposu). Anahtarlar: `lotl`,
+ * `tl-<CC>` (ör. `tl-TR`), `ext:<list_id>` (dış liste; `version` = LoTESequenceNumber). `set` yalnız başarılı yüklemede çağrılır.
+ */
+export interface ListVersionMemory {
+  get(key: string): ListMark | null | undefined;
+  set(key: string, mark: ListMark): void;
+}
+/** Bellek içi `ListVersionMemory` (süreç ömrü; testler ve tek süreçli servisler için). */
+export class MemoryListVersionMemory implements ListVersionMemory {
+  private m = new Map<string, ListMark>();
+  get(key: string) {
+    return this.m.get(key) ?? null;
+  }
+  set(key: string, mark: ListMark) {
+    this.m.set(key, mark);
+  }
+}
+/** Dış listelerin varsayılan sıra belleği (süreç içi; `versionMemory` verilmezse). */
+const defaultExternalMemory = new MemoryListVersionMemory();
+
+/** TL2: yeni sürümü son görülenle karşılaştırır; sorun varsa hata iletisi döner. */
+function rollbackProblem(
+  label: string,
+  last: ListMark | null | undefined,
+  next: { version: number; hash: string; previous_version_hash: string | null },
+): string | null {
+  if (!last) return null;
+  if (next.version < last.version)
+    return `TL2: ${label} version ${next.version} older than last seen ${last.version} (rollback)`;
+  if (next.version === last.version)
+    return next.hash === last.hash ? null : `TL2: ${label} version ${next.version} seen before with different content`;
+  if (next.version === last.version + 1 && next.previous_version_hash !== last.hash)
+    return `TL2: ${label} previous_version_hash does not match the last seen version`;
+  return null;
+}
+
+/** TL1: liste aşamasında operatör vekildir; kimin adına çalıştığı boş bırakılamaz. */
+function checkOperator(label: string, op: { status: string; on_behalf_of?: string }) {
+  if (op.status === "provisional" && !op.on_behalf_of?.trim())
+    throw new Error(`TL1: ${label} operator is provisional but on_behalf_of is empty — DURDU`);
+}
 
 export interface TrustSetInput {
   lotlJws: string;
@@ -45,6 +99,8 @@ export interface TrustSetInput {
   externalListJws?: Record<string, string>;
   /** ADR-0038 SB2: beklenen ağ (varsayılan "production"); listedeki `environment` farklıysa yükleme DURUR. */
   environment?: "production" | "sandbox";
+  /** TL2: kalıcı "son görülen" sürüm belleği (bkz. `ListVersionMemory`); verilmezse lotl/tl için geri sarma denetimi yok. */
+  versionMemory?: ListVersionMemory;
 }
 
 export interface LoadReport {
@@ -57,22 +113,6 @@ export interface LoadReport {
   checkpoint: { file: string; sha256: string; seq_from: number; seq_to: number; lines: number } | null;
   healthy: boolean;
   warnings: string[];
-}
-
-function activeFps(
-  keys: Array<{ fingerprint_sha256: string; status?: string }> | undefined,
-  now: Date,
-  extra?: Array<{ valid_from?: string; valid_to?: string }>,
-): Set<string> {
-  const out = new Set<string>();
-  for (const k of keys ?? []) {
-    if (k.status && k.status !== "ACTIVE") continue;
-    const kk = k as { valid_from?: string; valid_to?: string };
-    if (kk.valid_from && new Date(kk.valid_from) > now) continue;
-    if (kk.valid_to && new Date(kk.valid_to) < now) continue;
-    out.add(k.fingerprint_sha256);
-  }
-  return out;
 }
 
 export async function loadTrustSetWith(
@@ -92,6 +132,16 @@ export async function loadTrustSetWith(
   const expectedEnv = input.environment ?? "production";
   if ((lotl.environment ?? "production") !== expectedEnv)
     throw new Error(`SB2: lotl environment=${lotl.environment ?? "production"}, beklenen ${expectedEnv} — DURDU`);
+  checkOperator("lotl", lotl.operator);
+  const mem = input.versionMemory;
+  const marks: Array<[string, ListMark]> = [];
+  const lotlMark = { version: lotl.version, hash: sha256Tag(utf8(lotlV.raw)) };
+  const lotlProblem = rollbackProblem("lotl", mem?.get("lotl"), {
+    ...lotlMark,
+    previous_version_hash: lotl.previous_version_hash,
+  });
+  if (lotlProblem) throw new Error(`${lotlProblem} — DURDU`);
+  marks.push(["lotl", lotlMark]);
   let healthy = true;
   if (new Date(lotl.next_update) < now) {
     healthy = false;
@@ -99,7 +149,7 @@ export async function loadTrustSetWith(
   }
 
   const store = new TrustStore();
-  store.applyLotl(lotl, lotlV.raw);
+  store.applyLotl(lotl, lotlV.raw, now);
 
   // 2) Ulusal listeler
   const nationalVersions: Record<string, number> = {};
@@ -125,6 +175,15 @@ export async function loadTrustSetWith(
       );
     if (tl.state_code !== ptr.state_code)
       throw new Error(`tl state_code mismatch: ${tl.state_code} ≠ ${ptr.state_code}`);
+    checkOperator(`tl-${tl.state_code}`, tl.operator);
+    const key = `tl-${tl.state_code}`;
+    const tlMark = { version: tl.version, hash: sha256Tag(utf8(v.raw)) };
+    const tlProblem = rollbackProblem(key, mem?.get(key), {
+      ...tlMark,
+      previous_version_hash: tl.previous_version_hash,
+    });
+    if (tlProblem) throw new Error(`${tlProblem} — DURDU`);
+    marks.push([key, tlMark]);
     if (new Date(tl.next_update) < now) {
       healthy = false;
       warnings.push(`tl-${tl.state_code} next_update passed`);
@@ -135,7 +194,7 @@ export async function loadTrustSetWith(
 
   // 2b) ADR-0036 dış listeler — imzacı LOTL'da sabitlenmiş parmak izi; kapsam dışı kayıtlar alınmaz (FD2)
   if (input.externalListJws)
-    warnings.push(...(await applyExternalListsWith(store, input.externalListJws, verifyJws, now)));
+    warnings.push(...(await applyExternalListsWith(store, input.externalListJws, verifyJws, now, mem)));
 
   // 3) Çapa günlüğü — hash zinciri + imza (istemci atlayabilir)
   const anchorFps = activeFps(lotl.anchor_signing_keys, now);
@@ -165,7 +224,7 @@ export async function loadTrustSetWith(
     expectedSeq++;
     lastTs = new Date(a.ts);
   }
-  // Saatlik kadans: son satır 2 saatten eskiyse bayat (S5 mantığı; demo'da aralık parametreyle kısalır)
+  // Saatlik kadans: son satır 2 saatten eskiyse bayat (S5 mantığı; yayın aralığı kısaltılan ortamlarda `anchorMaxAgeMs` ile)
   const maxAgeMs = input.anchorMaxAgeMs ?? 2 * 3600 * 1000;
   if (!input.skipAnchors && (!lastTs || now.getTime() - lastTs.getTime() > maxAgeMs)) {
     healthy = false;
@@ -183,6 +242,8 @@ export async function loadTrustSetWith(
     loadedAt: now,
     staleAfter: new Date(Math.min(...deadlines)),
   });
+  // TL2: bellek yalnız bütün yükleme başarılıysa ilerler
+  if (mem) for (const [k, m] of marks) mem.set(k, m);
   return {
     store,
     report: {
@@ -199,13 +260,16 @@ export async function loadTrustSetWith(
 
 /**
  * ADR-0036: LOTL'daki ETKİN dış listeleri (`external_lists`) verilen JWS'lerle doğrular ve depoya uygular. Her liste bağımsızdır:
- * biri doğrulanamazsa yalnız o yüklenmez (uyarı); Tamga listelerinin tazeliği etkilenmez.
+ * biri doğrulanamazsa yalnız o yüklenmez (uyarı); Tamga listelerinin tazeliği etkilenmez. Geri sarma: son görülen
+ * `LoTESequenceNumber`'dan küçük sıra numaralı liste yüklenmez; bellek `memory` (yoksa süreç içi varsayılan) — depo her
+ * yüklemede yeni kurulsa da bellek kalır.
  */
 export async function applyExternalListsWith(
   store: TrustStore,
   externalListJws: Record<string, string>,
   verifyJws: JwsVerifier,
   now: Date,
+  memory: ListVersionMemory = defaultExternalMemory,
 ): Promise<string[]> {
   const warnings: string[] = [];
   for (const ptr of store.lotl.external_lists ?? []) {
@@ -224,11 +288,15 @@ export async function applyExternalListsWith(
       if (fps.size === 0) throw new Error("no active signing key");
       const v = await verifyJws<unknown>(jws, fps, { typ: null });
       const lote = parseLote(v.payload);
-      if (ptr.territory !== "EU" && lote.territory && lote.territory !== ptr.territory)
-        throw new Error(`territory mismatch: ${lote.territory} ≠ ${ptr.territory}`);
+      if (lote.territory !== ptr.territory) throw new Error(`territory mismatch: ${lote.territory} ≠ ${ptr.territory}`);
+      const key = `ext:${ptr.list_id}`;
       const prev = store.external_lists.get(ptr.list_id);
-      if (prev && lote.sequence < prev.sequence) throw new Error("sequence older than the loaded list (rollback)");
+      const last = memory.get(key);
+      const lastSeq = Math.max(prev?.sequence ?? -1, last?.version ?? -1);
+      if (lote.sequence < lastSeq)
+        throw new Error(`sequence ${lote.sequence} older than the last seen list (${lastSeq}, rollback)`);
       warnings.push(...store.applyExternalList(ptr, lote));
+      memory.set(key, { version: lote.sequence, hash: sha256Tag(utf8(v.raw)) });
       if (lote.nextUpdate < now)
         warnings.push(`external ${ptr.list_id}: NextUpdate passed — its entries answer UNKNOWN`);
     } catch (e) {

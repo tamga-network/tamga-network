@@ -17,6 +17,24 @@ import type {
 } from "./types.js";
 import { derToPemPortable, sha256HexPortable as sha256Hex, type ParsedLote } from "./lote-reader.js";
 
+/**
+ * Şu an geçerli imza anahtarlarının parmak izleri: `status` ACTIVE (yoksa ACTIVE sayılır) ve `now`, `valid_from..valid_to`
+ * penceresinde. Liste imzacıları, çapa imzacıları ve cüzdan sağlayıcı anahtarları aynı kuralla seçilir.
+ */
+export function activeFps(
+  keys: Array<{ fingerprint_sha256: string; status?: string; valid_from?: string; valid_to?: string }> | undefined,
+  now: Date,
+): Set<string> {
+  const out = new Set<string>();
+  for (const k of keys ?? []) {
+    if (k.status && k.status !== "ACTIVE") continue;
+    if (k.valid_from && new Date(k.valid_from) > now) continue;
+    if (k.valid_to && new Date(k.valid_to) < now) continue;
+    out.add(k.fingerprint_sha256);
+  }
+  return out;
+}
+
 /** ADR-0036: dış listeden gelen kurum hizmeti (yalnız kapsamdaki roller). Kişisel veri yok. */
 export interface ExternalEntity {
   list_id: string;
@@ -80,14 +98,14 @@ export class TrustStore {
   recognition = new Map<string, Set<string>>(); // state → recognized states
   private freshness: Freshness | null = null;
 
-  applyLotl(lotl: Lotl, raw: string) {
+  /** `now`: cüzdan sağlayıcı anahtarlarının geçerlilik penceresi (valid_from/valid_to) bu ana göre (yükleme anı). */
+  applyLotl(lotl: Lotl, raw: string, now: Date = new Date()) {
     this.lotl = lotl;
     this.lotlRaw = raw;
     for (const s of lotl.schemas) this.schemas.set(s.schema_id, s);
     for (const wp of lotl.wallet_providers)
       if (wp.status === "ACTIVE")
-        for (const k of wp.wua_signing_keys)
-          if (k.status === "ACTIVE") this.wallet_provider_keys.add(k.fingerprint_sha256);
+        for (const fp of activeFps(wp.wua_signing_keys, now)) this.wallet_provider_keys.add(fp);
     this.zk_circuits.clear();
     for (const c of lotl.zk_circuits ?? []) if (c.status === "ACTIVE") this.zk_circuits.set(c.circuit_id, c);
     for (const n of lotl.national_lists)

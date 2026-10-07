@@ -5,6 +5,8 @@
  *   dist/catalogue.json          vct → {schema_id, metadata_url, content_hash, layer, status}
  *   dist/index.json              build özeti (trust-publisher bunu lotl.schemas'a alır)
  * D1: dist/ içinde var olan bir dosya farklı baytlarla yeniden yazılmak istenirse HATA (değişmezlik).
+ * Node'a özgüdür (node:fs) — paket kökünden değil `@tamga-network/schemas/build` alt yolundan alınır; kök giriş tarayıcı/RN'de
+ * de çalışan tanımları verir.
  */
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -81,8 +83,22 @@ export function build() {
     layer: string;
     status: string;
   }> = [];
-  // Ebeveynler önce (extends#integrity için)
-  const order = [...byVct.values()].sort((a, b) => (a.def.extends ? 1 : 0) - (b.def.extends ? 1 : 0));
+  // Ebeveynler önce (extends#integrity için): topolojik sıra — çok düzeyli `extends` zincirinde de ata her zaman önce; döngü ya
+  // da katalogda olmayan ebeveyn HATA
+  const order: Array<{ def: SchemaDef; schemaBytes: Uint8Array; metaBytes?: Uint8Array }> = [];
+  const state = new Map<string, "visiting" | "done">();
+  const visit = (vct: string, from?: string) => {
+    const item = byVct.get(vct);
+    if (!item) throw new Error(`extends target not in the catalogue: ${vct}${from ? ` (from ${from})` : ""}`);
+    const st = state.get(vct);
+    if (st === "done") return;
+    if (st === "visiting") throw new Error(`extends cycle at ${vct}`);
+    state.set(vct, "visiting");
+    if (item.def.extends) visit(item.def.extends, vct);
+    state.set(vct, "done");
+    order.push(item);
+  };
+  for (const vct of byVct.keys()) visit(vct);
   for (const item of order) {
     const { def, schemaBytes } = item;
     const metaBytes = render(def, schemaBytes, def.extends ? byVct.get(def.extends)?.metaBytes : undefined);

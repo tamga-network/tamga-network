@@ -20,6 +20,7 @@ import {
   selectDcql,
   chooseDcqlOption,
   checkDcqlShape,
+  stableRpKey,
   PSEUDONYM_FORMAT,
   type DcqlQuery,
 } from "./index.js";
@@ -317,6 +318,8 @@ describe("parseVpUri / DCQL / RP", () => {
           },
         ],
       }, // mdoc: iki namespace
+      { credentials: [{ id: "t", format: "dc+sd-jwt", claims: [{ path: ["x"] }] }] }, // dc+sd-jwt türsüz (vct_values yok)
+      { credentials: [{ id: "t", format: "dc+sd-jwt", meta: { vct_values: [] } }] }, // boş vct_values
     ];
     for (const c of cases) expect(() => checkDcqlShape(c)).toThrow(/invalid dcql_query/);
   });
@@ -355,6 +358,52 @@ describe("parseVpUri / DCQL / RP", () => {
     expect(fake.impersonation).toBe(true);
     expect(fake.legalName).toBeUndefined();
   });
+  it("ADR-0017 K7: aracı ilişkisi iki kayıtta karşılıklı yazılı değilse asıl RP kabul edilmez (ad, kopya, takma ad)", () => {
+    const SITE = `x509_hash:${"S".repeat(43)}`;
+    const VCT = "urn:tamga:edu:DiplomaCredential:1";
+    const scope = {
+      scope_id: "s",
+      purpose: "p",
+      vct: VCT,
+      claims: ["is_graduate"],
+      valid_from: "2026-01-01T00:00:00Z",
+      valid_until: null,
+    };
+    const inter: RpRecord = {
+      client_id: `x509_hash:${"A".repeat(43)}`,
+      dns_name: "verify.tamga.network",
+      legal_name: "Aracı",
+      status: "ACTIVE",
+      access_cert_fingerprint_sha256: "ab",
+      scopes: [],
+      served_relying_parties: ["site.example"],
+    };
+    const site: RpRecord = {
+      client_id: SITE,
+      dns_name: "site.example",
+      legal_name: "Örnek Site",
+      status: "ACTIVE",
+      access_cert_fingerprint_sha256: "cd",
+      scopes: [scope],
+      uses_intermediaries: ["verify.tamga.network"],
+    };
+    const req = { leafFingerprint: "ab", onBehalfOf: SITE, clientId: inter.client_id } as never;
+    const match = { queryId: "d", credential: cred(VCT, { is_graduate: true }), requested: ["is_graduate"] };
+    const ok = checkRp(inter, req, match, Date.now(), site);
+    expect(ok.registered && ok.legalName === "Örnek Site" && ok.via === "Aracı").toBe(true);
+    expect(stableRpKey(req, inter, site)).toBe("site.example");
+    // tek taraflı: site aracıyı listelemiyor / aracı siteyi listelemiyor / kayıt başka client_id'nin
+    for (const [i, s] of [
+      [inter, { ...site, uses_intermediaries: [] }],
+      [{ ...inter, served_relying_parties: undefined }, site],
+      [inter, { ...site, client_id: `x509_hash:${"Z".repeat(43)}` }],
+    ] as Array<[RpRecord, RpRecord]>) {
+      const c = checkRp(i, req, match, Date.now(), s);
+      expect(c.registered).toBe(false);
+      expect(c.legalName).toBeUndefined();
+      expect(stableRpKey(req, i, s)).toBe(inter.client_id); // asıl RP'nin kimliği kullanılmaz
+    }
+  });
 });
 
 describe.skipIf(!havePki)("İstek nesnesi (jose imzalı, rp-verify x5c) → cüzdan doğrular", () => {
@@ -364,6 +413,8 @@ describe.skipIf(!havePki)("İstek nesnesi (jose imzalı, rp-verify x5c) → cüz
   // ADR-0034 / HAIP 1.0 §5: x509_hash = base64url(SHA-256(yaprak DER))
   const CID = `x509_hash:${Buffer.from(createHash("sha256").update(Buffer.from(x5c, "base64")).digest()).toString("base64url")}`;
   const base = {
+    exp: Math.floor(Date.now() / 1000) + 300,
+    aud: "https://self-issued.me/v2",
     response_type: "vp_token",
     response_mode: "direct_post.jwt",
     response_uri: "https://verify.tamga.network/vp/response",
@@ -465,5 +516,20 @@ describe.skipIf(!havePki)("İstek nesnesi (jose imzalı, rp-verify x5c) → cüz
       }),
     );
     expect(lan.responseUri).toContain("192.168.1.100");
+  });
+  it("istek nesnesi zamanı ve hedefi: exp zorunlu, süresi geçmiş / ileri tarihli / başka aud reddedilir", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { exp: _e, ...noExp } = base;
+    await expect(sign({ client_id: CID, ...noExp }).then((j) => verifyRequestObject(j))).rejects.toThrow(/without exp/);
+    await expect(sign({ client_id: CID, ...base, exp: now - 600 }).then((j) => verifyRequestObject(j))).rejects.toThrow(
+      /expired/,
+    );
+    await expect(sign({ client_id: CID, ...base, iat: now + 600 }).then((j) => verifyRequestObject(j))).rejects.toThrow(
+      /future/,
+    );
+    await expect(
+      sign({ client_id: CID, ...base, aud: "https://evil.example" }).then((j) => verifyRequestObject(j)),
+    ).rejects.toThrow(/aud/);
+    expect(verifyRequestObject(await sign({ client_id: CID, ...base, iat: now })).nonce.length).toBe(24);
   });
 });

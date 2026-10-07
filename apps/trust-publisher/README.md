@@ -28,6 +28,7 @@ Liste biçimi: [[SPEC-TRUST-0001]]. Dış listeler (federasyon, ETSI TS 119 602)
 | `npx tsx apps/trust-publisher/src/cli.ts rp-status <dns_name> <durum>`  | doğrulayıcı durumu (aynı kural)                                            |
 | `npx tsx apps/trust-publisher/src/cli.ts end-use <dns_name> <kullanım>` | doğrulayıcının bir kullanımını / kapı grubunu sona erdirir                 |
 | `npm run trust:test-fixtures`                                           | testlerin listesini üretir (`test/fixtures/registry` → `dist-test/`)       |
+| `npm run trust:build:sandbox`                                           | sandbox listesini üretir (`registry-sandbox` + `ops/pki-sandbox` → `dist-sandbox/`) |
 | `npm run trust:list`                                                    | kayıtlı kurumlar ve doğrulayıcılar                                         |
 | `npm run trust:external`                                                | dış güven listelerini çeker                                                |
 
@@ -45,8 +46,10 @@ Bir kayıt listeden **silinmez** (SPEC-TRUST-0001 TL2): kurum ya da doğrulayıc
 `status_history`'ye eklenir. Hiç geçerli olmaması gereken kayıt (ör. gerçek ağdaki örnek kurum) `REVOKED` +
 `invalidates_from = valid_from` ile çekilir; o kurumun verdiği hiçbir belge doğrulanmaz, LoTE'den düşer.
 
-**Cüzdan sağlayıcılar (`wallet_providers[]`, ADR-0042):** ağ cüzdan sağlayıcı işletmez, yalnız listeler. Tamga Wallet'ın kaydı
-(işletmeci Brosgrup; adres `https://provider.tamgawallet.com`, gerçek ağda ve sandbox'ta aynı) bugün `wua_signing_certs` için
-geliştirme PKI'sindeki genel test sertifikasına (`wallet-provider`) bakar. Cüzdan işletmecisi canlıya geçerken kendi cüzdan
-sağlayıcı sertifikasını verir; kayıt o sertifikayla güncellenir. Test listesindeki (`test/fixtures/registry/`) kayıt geneldir
-(`Test Wallet Provider`, `test-wallet`).
+**Cüzdan sağlayıcılar (`wallet_providers[]`, ADR-0042):** ağ cüzdan sağlayıcı işletmez, yalnız listeler. Gerçek ağın
+kaydı `TAMGA-WP-1` (Tamga Wallet; işletmeci Brosgrup, adres `https://provider.tamgawallet.com`) `RESERVED` durumdadır ve
+anahtar taşımaz (`wua_signing_certs: []`); işletmeci kendi cüzdan sağlayıcı sertifikasını verince kayıt o sertifikayla
+güncellenip etkinleşir. Sandbox listesinde iki kayıt var: `TAMGA-SANDBOX-TEST-WP` — ağın kendi demo sahneleri için test
+anahtarı (`wallet-provider`, ADR-0042 K5; bir cüzdan hizmeti değildir) — ve Brosgrup'un `RESERVED` kaydı. `RESERVED` kayıt
+WUA doğrulamasında kullanılmaz. Test listesindeki (`test/fixtures/registry/`) kayıt geneldir (`Test Wallet Provider`,
+`test-wallet`). `keys/` klasörüne yalnız listenin andığı sertifikalar yazılır.

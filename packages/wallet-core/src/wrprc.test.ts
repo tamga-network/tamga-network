@@ -96,6 +96,7 @@ async function request(verifierInfo?: unknown[]) {
       ],
     },
     client_metadata: { jwks: { keys: [jwk] } },
+    exp: Math.floor(Date.now() / 1000) + 300,
     ...(verifierInfo ? { verifier_info: verifierInfo } : {}),
   })
     .setProtectedHeader({ alg: "ES256", typ: "oauth-authz-req+jwt", x5c: [shop.b64] })

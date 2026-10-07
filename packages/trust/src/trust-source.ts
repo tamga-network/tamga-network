@@ -8,6 +8,10 @@
  *    REVOKED + `invalidates_from` ≤ iat ise düşer (ele geçirilme, CA2 mantığı).
  *  - Şema yetkisi: allowed && valid_from ≤ iat < valid_until (I3).
  *  - Şema: REVOKED → NO; DEPRECATED → yalnızca deprecation anından önce verilmişse YES (SC3).
+ *
+ * Tazelik (BT5/CMP4): kaynak bayatken kayıt okuyucuları da (issuer, schema, relyingParty, statusAnchor, şema özetleri, kurum
+ * dizini) cevap VERMEZ — null / boş döner. Bayat listeden okunan kayıt kararda kullanılmasın; doğrulayıcı tazeliği T0'da
+ * `freshness()` ile ayrıca denetler ve bayat kaynakta INDETERMINATE döner.
  */
 import type { TrustStore, StatusAnchorRow, ExternalEntity } from "./store.js";
 import type { Issuer, RelyingParty, SchemaEntry, StatusHistoryEntry, ZkCircuit } from "./types.js";
@@ -128,40 +132,51 @@ export class ListTrustSource implements TrustSource {
   }
 
   schemaContentHash(schemaId: string): string | null {
+    if (this.unhealthy()) return null;
     return this.store.schemas.get(schemaId)?.content_hash ?? null;
   }
   schemaContentHashes(schemaId: string): string[] {
+    if (this.unhealthy()) return [];
     const s = this.store.schemas.get(schemaId);
     if (!s) return [];
     return s.content_hashes?.length ? s.content_hashes : [s.content_hash];
   }
   statusAnchor(listId: string): StatusAnchorRow | null {
+    if (this.unhealthy()) return null;
     return this.store.status_anchors.get(listId) ?? null;
   }
   relyingParty(clientId: string): RelyingParty | null {
+    if (this.unhealthy()) return null;
     return this.store.relying_parties.get(clientId) ?? null;
   }
   relyingPartyByDnsName(dnsName: string): RelyingParty | null {
+    if (this.unhealthy()) return null;
     return this.store.relying_parties_by_dns.get(dnsName.toLowerCase()) ?? null;
   }
-  /** Kayıtlı tüm belge verenler (kurum dizini; ADR-0015 K2). Kişisel veri yok. */
+  /** Kayıtlı tüm belge verenler (kurum dizini; ADR-0015 K2). Kişisel veri yok. Bayat kaynakta boş. */
   issuers(): Issuer[] {
+    if (this.unhealthy()) return [];
     return [...this.store.issuers.values()];
   }
   issuer(issuerId: string): Issuer | null {
+    if (this.unhealthy()) return null;
     return this.store.issuers.get(issuerId) ?? null;
   }
   schema(schemaId: string): SchemaEntry | null {
+    if (this.unhealthy()) return null;
     return this.store.schemas.get(schemaId) ?? null;
   }
+  /** ADR-0032 ZK2: yalnız ETKİN (ACTIVE) devreler; bayat kaynakta boş. */
   zkCircuits(): ZkCircuit[] {
     if (this.unhealthy()) return [];
-    return [...this.store.zk_circuits.values()];
+    return [...this.store.zk_circuits.values()].filter((c) => c.status === "ACTIVE");
   }
 
+  /** ADR-0032 ZK2: devre yalnız ACTIVE ise döner (askıdaki/geri çekilmiş/bilinmeyen → null → ispat RED). */
   zkCircuit(circuitId: string): ZkCircuit | null {
     if (this.unhealthy()) return null;
-    return this.store.zk_circuits.get(circuitId) ?? null;
+    const c = this.store.zk_circuits.get(circuitId);
+    return c && c.status === "ACTIVE" ? c : null;
   }
 
   isWalletProviderKey(fp: string): Tri {
@@ -197,6 +212,7 @@ export class ListTrustSource implements TrustSource {
   }
 
   walletProviderMinKeyStorage(fp: string): string | null {
+    if (this.unhealthy()) return null;
     return this.store.external_wallet_keys.get(fp)?.scope.min_key_storage ?? null;
   }
 

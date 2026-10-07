@@ -56,6 +56,13 @@ describe("özetler", () => {
   it("hex ve birleştirme", () => {
     expect(toHex(fromHex("00ff10"))).toBe("00ff10");
     expect([...concat(new Uint8Array([1]), new Uint8Array([2, 3]))]).toEqual([1, 2, 3]);
+    expect(toHex(fromHex("0xABcd"))).toBe("abcd");
+    expect(fromHex("").length).toBe(0);
+  });
+
+  it("geçersiz hex HATA: tek sayıda hane ya da onaltılık olmayan karakter (sessiz kesme yok)", () => {
+    expect(() => fromHex("abc")).toThrow(/invalid hex/);
+    expect(() => fromHex("zz")).toThrow(/invalid hex/);
   });
 });
 
@@ -78,5 +85,13 @@ describe("kimlik türetimleri", () => {
     expect(id.startsWith(X509_HASH_PREFIX)).toBe(true);
     expect(id.slice(X509_HASH_PREFIX.length)).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(x509HashClientIdFromFingerprintHex(certFingerprintSha256Hex(DER))).toBe(id);
+  });
+
+  it("parmak izinden türetimde biçim dışı parmak izi HATA (64 onaltılık hane)", () => {
+    const fp = certFingerprintSha256Hex(DER);
+    expect(() => computeIdFromFingerprintHex("TR", fp.slice(2))).toThrow(/64 hex/);
+    expect(() => computeIdFromFingerprintHex("TR", "zz" + fp.slice(2))).toThrow(/64 hex/);
+    expect(() => x509HashClientIdFromFingerprintHex(fp + "00")).toThrow(/64 hex/);
+    expect(() => x509HashClientIdFromFingerprintHex("g".repeat(64))).toThrow(/64 hex/);
   });
 });

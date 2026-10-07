@@ -11,6 +11,8 @@ import type { RpSigner } from "./request.js";
 export const PASS_TOKEN_TYP = "tamga-pass+jwt";
 export const PASS_GRANT_TYP = "tamga-pass-grant+jwt";
 export const PASS_TOKEN_MAX_TTL_SEC = 60;
+/** Terminal ile telefon saati arasında izin verilen fark (sn) — gelecekten jeton bu kadarını aşamaz (AP13/WL12). */
+export const PASS_TOKEN_CLOCK_SKEW_SEC = 30;
 
 export interface PassPolicy {
   terminal_group: string;
@@ -188,8 +190,12 @@ export class PassRegistry {
   }
 
   /** AP13: terminal doğrulaması. Hata nedenleri kişisel veri içermez. */
-  async verifyToken(token: string, opts: { terminalGroup: string; now?: number }): Promise<PassCheck> {
+  async verifyToken(
+    token: string,
+    opts: { terminalGroup: string; now?: number; maxClockSkewSec?: number },
+  ): Promise<PassCheck> {
     const now = opts.now ?? Math.floor(Date.now() / 1000);
+    const skew = opts.maxClockSkewSec ?? PASS_TOKEN_CLOCK_SKEW_SEC;
     let header: { typ?: string; alg?: string; kid?: string };
     try {
       header = decodeProtectedHeader(token) as typeof header;
@@ -214,6 +220,9 @@ export class PassRegistry {
       payload.exp - payload.iat > PASS_TOKEN_MAX_TTL_SEC
     )
       return { ok: false, reason: "invalid time fields" };
+    // AP13/WL12: ileri tarihli jeton (saat kayması dışında) önceden üretilip saklanabilirdi → reddedilir
+    if (payload.iat > now + skew || payload.exp > now + PASS_TOKEN_MAX_TTL_SEC + skew)
+      return { ok: false, reason: "token issued in the future (check the phone clock)" };
     if (now > payload.exp) return { ok: false, reason: "token expired (show again)" };
     if (now > rec.validUntil) return { ok: false, reason: "pass registration expired" };
     if (!payload.jti) return { ok: false, reason: "jti missing" };

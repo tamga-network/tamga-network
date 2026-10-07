@@ -17,7 +17,7 @@ listeler (ADR-0042).
 | Web sitesi | [tamga.network](https://tamga.network) |
 | Geliştirici belgeleri | [docs.tamga.network](https://docs.tamga.network) · API: [docs.tamga.network/api](https://docs.tamga.network/api/) |
 | Mimari ve referans çerçevesi | [arf.tamga.network](https://arf.tamga.network) |
-| Paketler | [npm: @tamga-network](https://www.npmjs.com/org/tamga-network) (ön sürüm 0.1.0) |
+| Paketler | [npm: @tamga-network](https://www.npmjs.com/org/tamga-network) (sürüm 1.0.0; duyuruyla yayımlanır) |
 | Lisans | kod Apache-2.0 (`LICENSE`) · belgeler CC BY 4.0 (`LICENSE-docs`) |
 
 ## İçerik

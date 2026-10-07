@@ -131,7 +131,16 @@ export function certHasDnsName(der: Uint8Array, dns: string): boolean {
 }
 
 /** İmzalı istek nesnesini doğrular ve Tamga profili kurallarını uygular. Zincir/kayıt kontrolü çağırana (resolveRp). */
-export function verifyRequestObject(jwt: string, expectedClientId?: string, opts: { origin?: string } = {}): VpRequest {
+/** OpenID4VP 1.0 §5 (statik yapılandırma): imzalı istek nesnesinin `aud`'ı. */
+const REQUEST_AUD = "https://self-issued.me/v2";
+/** İstek nesnesi zaman denetimlerinde saat kayması toleransı (sn). */
+const REQUEST_CLOCK_SKEW_SEC = 60;
+
+export function verifyRequestObject(
+  jwt: string,
+  expectedClientId?: string,
+  opts: { origin?: string; now?: number } = {},
+): VpRequest {
   const d = decodeJwt(jwt);
   if (d.header.typ !== REQUEST_TYP) throw new WalletError("unsupported", `request typ=${String(d.header.typ)}`);
   const x5c = d.header.x5c as string[] | undefined;
@@ -139,6 +148,14 @@ export function verifyRequestObject(jwt: string, expectedClientId?: string, opts
   const leafDer = b64Decode(x5c[0]);
   verifyJwt(jwt, p256PointFromCertDer(leafDer));
   const p = d.payload;
+  // RFC 9101 §10.2 / OpenID4VP: istek nesnesi kısa ömürlüdür — süresi geçmiş ya da ileri tarihli istek tekrar oynatılabilirdi
+  const now = opts.now ?? Math.floor(Date.now() / 1000);
+  if (typeof p.exp !== "number") throw new WalletError("unsupported", "request object without exp");
+  if (now > p.exp + REQUEST_CLOCK_SKEW_SEC) throw new WalletError("unsupported", "request object expired");
+  if (p.iat !== undefined && (typeof p.iat !== "number" || p.iat > now + REQUEST_CLOCK_SKEW_SEC))
+    throw new WalletError("unsupported", "request object issued in the future");
+  if (p.aud !== undefined && p.aud !== REQUEST_AUD && !(Array.isArray(p.aud) && p.aud.includes(REQUEST_AUD)))
+    throw new WalletError("unsupported", "request object aud is not for wallets");
   const clientId = String(p.client_id ?? "");
   if (expectedClientId && expectedClientId !== clientId)
     throw new WalletError("unsupported", "client_id differs between the QR code and the request object");
@@ -246,7 +263,7 @@ export function parseDcApiRequest(req: { protocol?: unknown; data?: unknown }, o
   return verifyRequestObject(jwt, undefined, { origin });
 }
 
-// ---- Kayıt çözümü (PV2) — v0: trust.tamga.network/tl-<cc>.json (imzasız görünüm); imzalı liste doğrulaması D5/pilot
+// ---- Kayıt çözümü (PV2) — imzası doğrulanmış ulusal listeden (`fetchRpRecord` → `fetchTrustSource`, S-13; LOTL imzacı pinleri)
 export interface RpScope {
   scope_id: string;
   purpose: string;
@@ -273,6 +290,25 @@ export interface RpRecord {
   contact?: { support_uri?: string; email?: string; phone?: string };
   /** ADR-0024 / TS8: bağlı olduğu veri koruma kurumu */
   supervisory_authority?: SupervisoryAuthorityInfo;
+  /** ADR-0017 K7 / TS6 14–16: RP'nin kullandığı aracı doğrulayıcılar (`dns_name`) */
+  uses_intermediaries?: string[];
+  /** ADR-0017 K7 / TS6 14–16: aracının hizmet verdiği RP'ler (`dns_name`) */
+  served_relying_parties?: string[];
+}
+
+/**
+ * ADR-0017 K7: aracı ilişkisi İKİ kayıtta da yazılı olmalı — asıl RP aracıyı `uses_intermediaries`'te, aracı asıl RP'yi
+ * `served_relying_parties`'te listeler (tek taraflı beyan yetmez: aracı kendi başına bir RP adına konuşamaz). Asıl RP'nin kaydı
+ * isteğin `tamga_on_behalf_of` kimliğiyle çözülmüş olmalı.
+ */
+function intermediaryAllowed(req: VpRequest, signer: RpRecord, onBehalf: RpRecord): boolean {
+  return (
+    onBehalf.client_id === req.onBehalfOf &&
+    !!signer.dns_name &&
+    !!onBehalf.dns_name &&
+    (onBehalf.uses_intermediaries ?? []).includes(signer.dns_name) &&
+    (signer.served_relying_parties ?? []).includes(onBehalf.dns_name)
+  );
 }
 export interface SupervisoryAuthorityInfo {
   name: string;
@@ -373,6 +409,16 @@ export function checkDcqlShape(dcql: DcqlQuery): void {
     if (typeof q.id !== "string" || !DCQL_ID.test(q.id)) bad("credential query id");
     if (ids.has(q.id)) bad(`duplicate credential query id ${q.id}`);
     ids.add(q.id);
+    // OpenID4VP 1.0 §6.4.1 / Ek B.3.5: dc+sd-jwt sorgusu türü (`meta.vct_values`) belirtmeli — türsüz sorgu her belgeyle eşleşirdi
+    if (
+      q.format === "dc+sd-jwt" &&
+      !(
+        Array.isArray(q.meta?.vct_values) &&
+        q.meta.vct_values.length &&
+        q.meta.vct_values.every((v) => typeof v === "string" && v)
+      )
+    )
+      bad(`dc+sd-jwt query without meta.vct_values (${q.id})`);
     // mso_mdoc (ve ZK): yol [namespace, element] ve tek namespace — açıklama tek namespace'te yapılır (seçenek başka namespace'e kaçmaz)
     if ((q.format === MDOC_FORMAT || q.format === MDOC_ZK_FORMAT) && q.claims?.length) {
       const ns = q.claims[0].path[0];
@@ -625,7 +671,8 @@ export interface RpCheck {
 }
 /**
  * `rp`: isteği imzalayanın (client_id) kaydı. Aracı istekte (`req.onBehalfOf`) `onBehalf` asıl RP'nin kaydıdır: ad ve kapsam ondan,
- * sertifika eşleşmesi imzalayandan denetlenir (HV6). Asıl RP kayıtsızsa `registered: false` — cüzdan isteği reddeder.
+ * sertifika eşleşmesi imzalayandan denetlenir (HV6). Asıl RP kayıtsızsa ya da aracı ilişkisi iki kayıtta karşılıklı yazılı
+ * değilse (ADR-0017 K7: `uses_intermediaries` ↔ `served_relying_parties`) `registered: false` — cüzdan isteği reddeder.
  * İmzalayan sertifika kayıttakiyle eşleşmiyorsa `registered: false`, `impersonation: true` (kayıtlı ad asla gösterilmez).
  */
 export function checkRp(
@@ -648,6 +695,9 @@ export function checkRp(
   if (req.onBehalfOf) {
     if (!rp || !onBehalf) return { registered: false, active: false, scopeClaims: [], overAsk: match.requested };
     if (rp.access_cert_fingerprint_sha256 !== req.leafFingerprint) return impostor();
+    // K7: kayıtlarda karşılıklı yazılı olmayan aracı ilişkisi → kayıtsız (asıl RP'nin adı gösterilmez, paylaşım yok)
+    if (!intermediaryAllowed(req, rp, onBehalf))
+      return { registered: false, active: false, scopeClaims: [], overAsk: match.requested, certMatches: true };
     const inner = checkRp(onBehalf, { ...req, onBehalfOf: undefined }, match, now, undefined, true);
     return {
       ...inner,
@@ -847,13 +897,18 @@ async function presentZkMatch(p: RespondInput, m: RespondInput["matches"][number
 
 /**
  * ADR-0034: kopya ayrımı, takma ad ve günlük için kalıcı RP kimliği. Kayıt çözülmüş ve sertifika eşleşmişse asıl RP'nin (aracıda
- * `onBehalf`) kalıcı alan adı (`dns_name`); değilse isteğin client_id'si (kayıtsız RP — takma ad zaten verilmez).
+ * `onBehalf`, yalnız K7 ilişkisi iki kayıtta yazılıysa) kalıcı alan adı (`dns_name`); değilse isteği imzalayanın client_id'si
+ * (kayıtsız RP ya da doğrulanmamış aracı — paylaşım zaten yapılmaz).
  */
 export function stableRpKey(req: VpRequest, rp: RpRecord | null, onBehalf?: RpRecord | null): string {
-  const owner = req.onBehalfOf ? onBehalf : rp;
-  if (owner?.dns_name && (req.onBehalfOf ? !!rp : rp?.access_cert_fingerprint_sha256 === req.leafFingerprint))
-    return owner.dns_name;
-  return req.onBehalfOf ?? req.clientId;
+  const signerOk = !!rp && rp.access_cert_fingerprint_sha256 === req.leafFingerprint;
+  if (req.onBehalfOf) {
+    // K7: ilişki doğrulanmadıysa asıl RP'nin kimliği kopya ayrımı / takma ad için KULLANILMAZ
+    if (signerOk && onBehalf?.dns_name && intermediaryAllowed(req, rp!, onBehalf)) return onBehalf.dns_name;
+    return req.clientId;
+  }
+  if (signerOk && rp!.dns_name) return rp!.dns_name;
+  return req.clientId;
 }
 
 /** DCQL claim yolu → nokta yolu: dizgi = alan, sayı = dizi öğesi, null = dizinin tamamı (yolu orada keser). */

@@ -4,7 +4,13 @@
  * olarak verilir; jose/node:fs yok. Ek istemci kuralları: istenen devletin listesi ACTIVE olmalı, bayat liste reddedilir,
  * oturum içinde daha önce görülen sürümden eski liste reddedilir (geri sarma — TL2).
  */
-import { applyExternalListsWith, loadTrustSetWith, type JwsVerifier, type LoadReport } from "./loader.js";
+import {
+  applyExternalListsWith,
+  loadTrustSetWith,
+  type JwsVerifier,
+  type ListVersionMemory,
+  type LoadReport,
+} from "./loader.js";
 import type { TrustStore } from "./store.js";
 import { ListTrustSource } from "./trust-source.js";
 
@@ -42,6 +48,11 @@ export async function fetchListTrustSource(
     anchorMaxAgeMs?: number;
     /** ADR-0038: beklenen ağ (varsayılan "production"); sandbox listesi gerçek ağ istemcisinde reddedilir. */
     environment?: "production" | "sandbox";
+    /**
+     * TL2: kalıcı "son görülen" sürüm belleği (cüzdan deposu vb.) — oturumlar arası geri sarmayı da yakalar; yoksa yalnız
+     * oturum içi denetim.
+     */
+    versionMemory?: ListVersionMemory;
   },
 ): Promise<{ source: ListTrustSource; store: TrustStore; report: LoadReport }> {
   if (!opts.rootFingerprints.length) throw new TrustListError("no trust anchor (pin) configured");
@@ -69,6 +80,7 @@ export async function fetchListTrustSource(
       states: [cc],
       anchorMaxAgeMs: opts.anchorMaxAgeMs,
       environment: opts.environment,
+      versionMemory: opts.versionMemory,
     },
     opts.verifyJws,
   );
@@ -84,7 +96,7 @@ export async function fetchListTrustSource(
           .catch(() => ""));
       if (body) jwsMap[ptr.list_id] = body;
     }
-    report.warnings.push(...(await applyExternalListsWith(store, jwsMap, opts.verifyJws, now)));
+    report.warnings.push(...(await applyExternalListsWith(store, jwsMap, opts.verifyJws, now, opts.versionMemory)));
   }
   const tl = store.national.get(cc)?.list;
   if (!tl) throw new TrustListError(`no active ${cc} list in the lotl`);

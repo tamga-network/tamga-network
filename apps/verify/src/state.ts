@@ -37,9 +37,12 @@ export const SHOW_TTL_MS = 5 * 60 * 1000;
 /** ADR-0017 K3 / HV3: okunmayan değerler sonuçtan en geç 5 dk sonra silinir. */
 export const CLAIMS_TTL_MS = 5 * 60 * 1000;
 const RETAIN_MS = 30 * 60 * 1000; // sonuçtan 30 dk sonra kayıt (ve claim değerleri) silinir
+/** Bellekteki sunum üst sınırı: dolunca önce en eski yanıtsız (bekleyen) sunum, yoksa en eski kayıt atılır (taşma koruması). */
+export const MAX_PRESENTATIONS = 10_000;
 
 export class PresentationStore {
   private map = new Map<string, Presentation>();
+  constructor(private max = MAX_PRESENTATIONS) {}
 
   create(req: PresentationRequest, policy: Policy, firstTrace: TraceEntry, owner?: string): Presentation {
     const p: Presentation = {
@@ -52,8 +55,9 @@ export class PresentationStore {
       statusToken: randomBytes(16).toString("base64url"),
       ...(owner ? { owner } : {}),
     };
-    this.map.set(req.presentationId, p);
     this.sweep();
+    while (this.map.size >= this.max) this.evictOne();
+    this.map.set(req.presentationId, p);
     return p;
   }
 
@@ -78,6 +82,17 @@ export class PresentationStore {
 
   size() {
     return this.map.size;
+  }
+
+  /** Map ekleme sırasını korur: ilk yanıtsız sunum en eskisidir; hepsi yanıtlıysa en eski kayıt. */
+  private evictOne() {
+    for (const [id, p] of this.map)
+      if (!p.result) {
+        this.map.delete(id);
+        return;
+      }
+    const first = this.map.keys().next();
+    if (!first.done) this.map.delete(first.value);
   }
 
   private sweep(now = Date.now()) {

@@ -3,7 +3,7 @@
  * zorunlu alan varsa yayını durdurur; daha eski kayıtlar için uyarı basar (pilot öncesi tamamlanır).
  */
 export const REGISTRATION_ENFORCED_FROM = "2026-09-30T00:00:00Z";
-import { NON_PRESENTABLE_VCTS } from "../../../packages/schemas/src/definitions.js";
+import { NON_PRESENTABLE_VCTS } from "@tamga-network/schemas";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Rec = Record<string, any>;

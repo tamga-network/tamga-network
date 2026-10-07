@@ -18,7 +18,7 @@ import {
   encode,
   type CborValue,
 } from "@tamga-network/mdoc";
-import type { Step } from "./verify.js";
+import type { IndeterminateReason, Step } from "./verify.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const toAB = (u8: Uint8Array): ArrayBuffer => new Uint8Array(u8).buffer as ArrayBuffer;
@@ -45,6 +45,8 @@ export interface FormatFail {
   ok: false;
   failedStep: Step;
   reason: string;
+  /** Verilirse sonuç RED değil DOĞRULANAMADI (AP2): doğrulayıcı tarafı eksik/bozuk (ör. ZK devre dosyası, WASM). */
+  indeterminate?: IndeterminateReason;
 }
 export type FormatResult = FormatOk | FormatFail;
 

@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { VerifyContext } from "../app.js";
 import { langOf, noTerminalPage, terminalPage } from "../html.js";
 import { CAMPUS_GROUP } from "../policies.js";
+import { rateLimitHook } from "../rate-limit.js";
 
 const DEFAULT_GROUP = CAMPUS_GROUP;
 
@@ -11,7 +12,7 @@ const GROUP_RE = /^[a-z0-9-]{1,40}$/;
 export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext) {
   // Kapı politikası (proximity) olmayan ağda (bugün gerçek ağ) kapı yüzü kapalıdır; sayaç ve yönetici uçları kalır.
   const hasGates = ctx.policies.some((p) => p.proximity);
-  app.post("/terminal/verify", async (req, reply) => {
+  app.post("/terminal/verify", { preHandler: rateLimitHook(ctx.limits.terminal) }, async (req, reply) => {
     if (!hasGates) return reply.code(404).send({ ok: false, reason: "no terminal groups on this network" });
     const b = req.body as { token?: string; terminal_group?: string };
     if (!b.token) return reply.code(400).send({ ok: false, reason: "token required" });

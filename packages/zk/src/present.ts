@@ -13,6 +13,11 @@ export interface ZkPresentArgs {
   circuits: ZkCircuitSource;
   /** Güven listesindeki devreler (`lotl.zk_circuits`). */
   trustedCircuits: readonly ZkCircuitEntry[] | undefined;
+  /**
+   * Doğrulayıcının kabul ettiği devre kimlikleri (DCQL `meta.zk_system_type[].params.circuit_hash`). Verilirse yalnız hem güven
+   * listesinde hem bu listede olan devre kullanılır — doğrulayıcının kabul etmeyeceği ispat üretilmez.
+   */
+  acceptedCircuits?: readonly string[];
   query: ZkQuery;
   /** Bu oturumun cihaz imzalı DeviceResponse'u (cüzdanın olağan mdoc sunumu; doğrulayıcıya gönderilmez). */
   deviceResponse: Uint8Array;
@@ -32,7 +37,10 @@ export async function presentZk(a: ZkPresentArgs): Promise<Uint8Array> {
   if (!(await a.prover.available()))
     throw new ZkError("unavailable", "zero-knowledge proofs are not available on this device");
   const version = await a.prover.circuitVersion();
-  const entry = selectCircuit(a.trustedCircuits, a.query.claims.length, version);
+  const trusted = a.acceptedCircuits
+    ? (a.trustedCircuits ?? []).filter((c) => a.acceptedCircuits!.includes(c.circuit_id))
+    : a.trustedCircuits;
+  const entry = selectCircuit(trusted, a.query.claims.length, version);
   const circuit = await loadCircuit(a.circuits, entry);
   const timestamp = isoSeconds(a.now ?? new Date());
   let proof: Uint8Array;

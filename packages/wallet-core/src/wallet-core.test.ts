@@ -30,6 +30,7 @@ import {
   computeIssuerId,
   assertIssuerAuthorized,
   type DirectoryEntry,
+  type ReceiveOptions,
 } from "./index.js";
 
 const PKI = resolve(import.meta.dirname, "../../../ops/pki");
@@ -209,6 +210,19 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
     // kopyalardan biri başka anahtara bağlıysa set reddedilir
     const wrong = { ...out, copies: [{ ...copies[0], cnf: copies[1].cnf }] };
     expect(() => receiveCredentials(newState("x"), wrong, { now })).toThrow(/A3/);
+    // isteğe bağlı güven denetimi: iss = teklifin credential_issuer'ı ve kurum listede (C1)
+    const id = r.credential.issuerId;
+    const trust = (ans: "YES" | "NO" | "UNKNOWN") =>
+      ({ isCredentialAcceptable: (x: string) => (x === id ? ans : "NO") }) as unknown as NonNullable<
+        ReceiveOptions["trust"]
+      >;
+    expect(receiveCredentials(newState("x"), out, { now, trust: trust("YES") }).credential.issuerId).toBe(id);
+    expect(() => receiveCredentials(newState("x"), out, { now, trust: trust("NO") })).toThrow(/trusted list/);
+    expect(() => receiveCredentials(newState("x"), out, { now, trust: trust("UNKNOWN") })).toThrow(/later/);
+    const otherIss = { ...out, credentialIssuer: "https://evil.example/x" };
+    expect(() => receiveCredentials(newState("x"), otherIss, { now, trust: trust("YES") })).toThrow(
+      /credential_issuer/,
+    );
   });
 
   it("seçici açıklanamaz ad disclosure olarak gelirse yerel doğrulama A5 RED (status, iss, __proto__)", async () => {

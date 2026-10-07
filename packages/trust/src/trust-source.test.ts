@@ -1,5 +1,5 @@
 /**
- * Taahhüt testleri (ARCH-0005 T1–T8 uyarlaması, tamga-beta 08-BACKLOG D1):
+ * Taahhüt testleri (ARCH-0005 T1–T8 uyarlaması; SPEC-TRUST-0001 docs/specifications/trust-lists.md):
  *  T1 imzalı set yüklenir, sorgular YES
  *  T2 bayat lotl (next_update geçmiş) → UNKNOWN (BT5/CMP4)
  *  T3 bilinmeyen list_format_version → yükleyici DURUR (CMP2)
@@ -24,6 +24,8 @@ import {
   utf8,
   TL_TYP,
   certFingerprintSha256Hex,
+  MemoryListVersionMemory,
+  type TrustSetInput,
 } from "./index.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
@@ -72,6 +74,13 @@ async function makeSet(
     checkpoint?: "ok" | "bad" | "seq" | "nostate";
     /** ADR-0038: listeler bu ağı taşır (yoksa alan yazılmaz = gerçek ağ). */
     environment?: "sandbox" | "production";
+    /** TL2 testleri: sürümler ve önceki sürüm özetleri */
+    lotlVersion?: number;
+    tlVersion?: number;
+    prevLotlHash?: string;
+    prevTlHash?: string;
+    /** TL1: tl operatörünün on_behalf_of'u boş */
+    noOnBehalf?: boolean;
   } = {},
 ) {
   const tlSigner = await mkCert("TL Signer");
@@ -87,18 +96,18 @@ async function makeSet(
     list_format_version: "1.0",
     list_type: "trusted_list",
     state_code: "TR",
-    version: 1,
+    version: opts.tlVersion ?? 1,
     issued_at: T0,
     next_update: next,
-    previous_version_hash: null,
-    operator: { name: "Tamga", status: "provisional" },
+    previous_version_hash: opts.prevTlHash ?? null,
+    operator: { name: "Tamga", status: "provisional", on_behalf_of: opts.noOnBehalf ? "" : "TR national authority" },
     root_cas: [
       {
         ca_id: caId,
         legal_name: "TR Root",
         cert_fingerprint_sha256: root.fp,
         service_type: "NationalRootCA-QC",
-        operator: { name: "Tamga", status: "provisional" },
+        operator: { name: "Tamga", status: "provisional", on_behalf_of: "TR national authority" },
         status: "ACTIVE",
         valid_from: T0,
         valid_until: "2036-01-01T00:00:00Z",
@@ -138,11 +147,11 @@ async function makeSet(
     ...(opts.environment ? { environment: opts.environment } : {}),
     list_format_version: opts.badFormat ? "9.9" : "1.0",
     list_type: "lotl",
-    version: 1,
+    version: opts.lotlVersion ?? 1,
     issued_at: T0,
     next_update: next,
-    previous_version_hash: null,
-    operator: { name: "Tamga", status: "provisional" },
+    previous_version_hash: opts.prevLotlHash ?? null,
+    operator: { name: "Tamga", status: "provisional", on_behalf_of: "Tamga Trust Framework consortium" },
     anchor_signing_keys: [{ fingerprint_sha256: tlSigner.fp, status: "ACTIVE" }],
     national_lists: [
       {
@@ -245,8 +254,11 @@ async function makeSet(
     issuerId,
     caId,
     tlSigner,
-    load: (environment?: "sandbox" | "production") =>
+    lotlJws,
+    tlJws,
+    load: (environment?: "sandbox" | "production", extra: Partial<TrustSetInput> = {}) =>
       loadTrustSet({
+        ...extra,
         environment,
         lotlJws,
         nationalListJws: { TR: tlJws },
@@ -342,6 +354,82 @@ describe("TrustSource(list) taahhüt testleri", () => {
     await expect((await makeSet({ checkpoint: "nostate" })).load()).rejects.toThrow(/state snapshot/);
     await expect((await makeSet({ checkpoint: "bad" })).load()).rejects.toThrow();
     await expect((await makeSet({ checkpoint: "seq" })).load()).rejects.toThrow(/checkpoint seq/);
+  });
+  it("TL1: provisional operatörün on_behalf_of'u boşsa yükleme DURUR", async () => {
+    await expect((await makeSet({ noOnBehalf: true })).load()).rejects.toThrow(/TL1/);
+  });
+  it("TL2: son görülen sürüm belleği — eski sürüm, aynı sürüm farklı içerik ve uymayan previous_version_hash DURUR", async () => {
+    const mem = new MemoryListVersionMemory();
+    const v2 = await makeSet({ lotlVersion: 2, tlVersion: 2 });
+    await v2.load(undefined, { versionMemory: mem });
+    expect(mem.get("lotl")).toEqual({ version: 2, hash: sha256Tag(utf8(v2.lotlJws)) });
+    expect(mem.get("tl-TR")?.version).toBe(2);
+    // aynı liste yeniden: kabul
+    await expect(v2.load(undefined, { versionMemory: mem })).resolves.toBeTruthy();
+    // eski sürüm (geri sarma)
+    await expect((await makeSet()).load(undefined, { versionMemory: mem })).rejects.toThrow(/TL2: lotl.*rollback/);
+    // aynı sürüm, farklı içerik
+    await expect(
+      (await makeSet({ lotlVersion: 2, tlVersion: 2 })).load(undefined, { versionMemory: mem }),
+    ).rejects.toThrow(/different content/);
+    // bir sonraki sürüm, yanlış zincir özeti
+    const badChain = await makeSet({
+      lotlVersion: 3,
+      tlVersion: 3,
+      prevLotlHash: "sha256:00",
+      prevTlHash: "sha256:00",
+    });
+    await expect(badChain.load(undefined, { versionMemory: mem })).rejects.toThrow(/previous_version_hash/);
+    // doğru zincir: kabul, bellek ilerler; tl eski sürümle gelirse DUR
+    const v3 = await makeSet({
+      lotlVersion: 3,
+      tlVersion: 3,
+      prevLotlHash: sha256Tag(utf8(v2.lotlJws)),
+      prevTlHash: sha256Tag(utf8(v2.tlJws)),
+    });
+    await v3.load(undefined, { versionMemory: mem });
+    expect(mem.get("lotl")?.version).toBe(3);
+    const oldTl = await makeSet({ lotlVersion: 5, tlVersion: 1 }); // lotl sürüm boşluğu (zincir doğrulanamaz) kabul; tl eski
+    await expect(oldTl.load(undefined, { versionMemory: mem })).rejects.toThrow(/TL2: tl-TR.*rollback/);
+    expect(mem.get("lotl")?.version).toBe(3); // başarısız yükleme belleği ilerletmez
+    // bellek verilmezse denetim yok (önceki davranış)
+    await expect((await makeSet()).load()).resolves.toBeTruthy();
+  });
+  it("tazelik: bayat kaynakta kayıt okuyucuları da cevap vermez (null/boş)", async () => {
+    const c = await makeSet({ staleLotl: true });
+    const { store } = await c.load();
+    const ts = new ListTrustSource(store, () => c.now);
+    const schemaId = computeSchemaId(VCT_D);
+    expect(store.issuers.get(c.issuerId)).toBeTruthy(); // depoda var
+    expect(ts.issuer(c.issuerId)).toBeNull();
+    expect(ts.issuers()).toEqual([]);
+    expect(ts.schema(schemaId)).toBeNull();
+    expect(ts.schemaContentHash(schemaId)).toBeNull();
+    expect(ts.schemaContentHashes(schemaId)).toEqual([]);
+    expect(ts.statusAnchor("0xabc")).toBeNull();
+    expect(ts.relyingParty("x509_hash:x")).toBeNull();
+    expect(ts.relyingPartyByDnsName("example.com")).toBeNull();
+    // taze kaynakta aynı okuyucular cevap verir
+    const fresh = new ListTrustSource((await ctx.load()).store, () => ctx.now);
+    expect(fresh.issuer(ctx.issuerId)?.slug).toBe("bilgi");
+    expect(fresh.schemaContentHashes(schemaId)).toEqual(["sha256-AAAA"]);
+    expect(fresh.statusAnchor("0xabc")?.version).toBe(7);
+  });
+  it("ZK2: depoya ACTIVE olmayan devre girse bile zkCircuit/zkCircuits yalnız ACTIVE döndürür", async () => {
+    const { store } = await ctx.load();
+    const id = "ea4c66add149cbc8fcbf3546bc3e7da1c8ddf28a330881871e28b3edbc971ca4";
+    store.zk_circuits.set(id, {
+      circuit_id: id,
+      system: "longfellow-libzk-v1",
+      version: 8,
+      attributes: 2,
+      sha256: "0".repeat(64),
+      status: "SUSPENDED",
+    });
+    const ts = new ListTrustSource(store, () => ctx.now);
+    expect(ts.zkCircuit(id)).toBeNull();
+    expect(ts.zkCircuits().every((c) => c.status === "ACTIVE")).toBe(true);
+    expect(ts.zkCircuits().map((c) => c.circuit_id)).not.toContain(id);
   });
   it("T6: kırık hash zinciri → DUR", async () => {
     const c = await makeSet({ breakChain: true });

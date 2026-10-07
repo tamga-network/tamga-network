@@ -9,13 +9,13 @@ import {
 } from "@peculiar/x509";
 import { exportJWK, generateKeyPair, type JWK } from "jose";
 import type { SigningKey } from "./issue.js";
-import { computeIssuerId, b64u } from "@tamga-network/core";
+import { computeIssuerId, b64u, b64uToUtf8 } from "@tamga-network/core";
+import { decodeDisclosures } from "@tamga-network/core/sd-structure";
 import {
   issueSdJwtVc,
   presentSdJwtVc,
   verifySdJwtVc,
   digestOf,
-  decodeDisclosure,
   splitCombined,
   makeDisclosure,
   type IssuerSigner,
@@ -134,7 +134,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     expect(r.claims.grade).toBeUndefined();
     expect(r.claims.birth_date).toBeUndefined();
     expect(r.issuerId).toBe(computeIssuerId("TR", leafDer));
-    expect(r.checksPerformed).toEqual(["A1", "A2", "A3", "A4", "A5", "A6"]);
+    expect(r.checksPerformed).toEqual(["A1", "A2", "A3", "A4", "A5", "A6", "A7"]);
   });
   it("KB-JWT yoksa A1 RED (C8); yanlış nonce A6; aud uyuşmazlığı A6; iat penceresi A6 (C17)", async () => {
     const out = await issueDiploma();
@@ -170,7 +170,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       iat: NOW,
     });
     const { jwt, disclosures, kb } = splitCombined(pres);
-    const dec = decodeDisclosure(disclosures[0]);
+    const [dec] = decodeDisclosures([disclosures[0]], digestOf, (d) => JSON.parse(b64uToUtf8(d)));
     const forged = b64u(JSON.stringify([dec.salt, dec.name, 8]));
     const tampered = [jwt, forged, ""].join("~") + kb;
     const r = await verifySdJwtVc(tampered, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW });
@@ -255,7 +255,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       if (!r.ok) expect(r.failedStep, name).toBe("A5");
     }
   });
-  it("iat yoksa A3; nbf gelecekteyse RED; sertifika iat anında geçersizse A3", async () => {
+  it("iat yoksa A3; nbf gelecekteyse A7; sertifika iat anında geçersizse A3", async () => {
     const { iat: _iat, ...noIat } = basePayload();
     const r1 = await check(await present(await craft(noIat, [["is_graduate", true]]), ["is_graduate"]));
     expect(r1.ok).toBe(false);
@@ -264,6 +264,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       await present(await craft({ ...basePayload(), nbf: NOW + 600 }, [["is_graduate", true]]), ["is_graduate"]),
     );
     expect(r2.ok).toBe(false);
+    if (!r2.ok) expect(r2.failedStep).toBe("A7");
     const r3 = await check(
       await present(await craft({ ...basePayload(), iat: -10 }, [["is_graduate", true]]), ["is_graduate"]),
     );
@@ -271,5 +272,138 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     if (!r3.ok) expect(r3.failedStep).toBe("A3");
     const ok = await check(await present(await craft(basePayload(), [["is_graduate", true]]), ["is_graduate"]));
     expect(ok.ok).toBe(true);
+  });
+
+  it("A7: süresi dolmuş belge (exp geçmiş) RED; adımlar A1–A6 tamamlanmış görünür (SPEC-API-0001)", async () => {
+    const r = await check(
+      await present(await craft({ ...basePayload(), exp: NOW - 1 }, [["is_graduate", true]]), ["is_graduate"]),
+    );
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.failedStep).toBe("A7");
+    expect(r.reason).toMatch(/expired/);
+    expect(r.checksPerformed).toEqual(["A1", "A2", "A3", "A4", "A5", "A6"]);
+  });
+
+  it("A3: gelecekteki iat (saat kayması payından fazla) ve nesne olmayan yük RED", async () => {
+    const future = await check(
+      await present(await craft({ ...basePayload(), iat: NOW + 3600 }, [["is_graduate", true]]), ["is_graduate"]),
+    );
+    expect(future.ok).toBe(false);
+    if (!future.ok) expect(future.failedStep).toBe("A3");
+    if (!future.ok) expect(future.reason).toMatch(/future/);
+    // imzalı yük JSON dizisi: ayrıştırılır ama nesne değil
+    const header = { alg: "ES256", typ: "dc+sd-jwt", x5c: signer.x5c.map((d) => Buffer.from(d).toString("base64")) };
+    const jwt = await signer.sign(header, new TextEncoder().encode(JSON.stringify([1, 2])));
+    const arr = await verifySdJwtVc(`${jwt}~`, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW, requireKb: false });
+    expect(arr.ok).toBe(false);
+    if (!arr.ok) expect(arr.failedStep).toBe("A3");
+    if (!arr.ok) expect(arr.reason).toMatch(/not a JSON object/);
+  });
+
+  it("A1: birleşik biçimde boş ara parça (~~) RED", async () => {
+    const out = await issueDiploma();
+    const { jwt, disclosures } = splitCombined(out.combined);
+    expect(() => splitCombined(`${jwt}~${disclosures[0]}~~`)).toThrow(/empty disclosure/);
+    const r = await verifySdJwtVc(`${jwt}~~${disclosures[0]}~`, {
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: NOW,
+      requireKb: false,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.failedStep).toBe("A1");
+  });
+
+  describe("A3 ara CA denetimi (RFC 5280: cA, keyCertSign, pathLen, iat anında geçerlilik)", () => {
+    type Cert = Awaited<ReturnType<typeof X509CertificateGenerator.create>>;
+    type KC = { keys: CryptoKeyPair; cert: Cert };
+    let root: KC;
+    const gen = () => crypto.subtle.generateKey(ALG, true, ["sign", "verify"]) as Promise<CryptoKeyPair>;
+    let serial = 100;
+    const mk = async (
+      name: string,
+      parent: KC,
+      exts: unknown[],
+      validity: { from: Date; to: Date } = { from: new Date(0), to: new Date("2099-01-01") },
+    ): Promise<KC> => {
+      const keys = await gen();
+      const cert = await X509CertificateGenerator.create({
+        serialNumber: String(serial++),
+        subject: `CN=${name}`,
+        issuer: parent.cert.subject,
+        notBefore: validity.from,
+        notAfter: validity.to,
+        signingAlgorithm: ALG,
+        publicKey: keys.publicKey,
+        signingKey: parent.keys.privateKey,
+        extensions: exts as never,
+      });
+      return { keys, cert };
+    };
+    const CA = (pathLen?: number) => [
+      new BasicConstraintsExtension(true, pathLen, true),
+      new KeyUsagesExtension(KeyUsageFlags.keyCertSign, true),
+    ];
+    const LEAF = [new KeyUsagesExtension(KeyUsageFlags.digitalSignature, true)];
+    beforeAll(async () => {
+      const keys = await gen();
+      const cert = await X509CertificateGenerator.createSelfSigned({
+        serialNumber: "77",
+        name: "CN=Chain Root (test)",
+        notBefore: new Date(0),
+        notAfter: new Date("2099-01-01"),
+        signingAlgorithm: ALG,
+        keys,
+        extensions: CA(),
+      });
+      root = { keys, cert };
+    });
+    /** Yaprak + ara zinciriyle ihraç et, sun, kökle doğrula. */
+    const run = async (leaf: KC, intermediates: KC[]) => {
+      const s: IssuerSigner = {
+        x5c: [leaf, ...intermediates].map((k) => new Uint8Array(k.cert.rawData)),
+        sign: (h, p) => new CompactSign(p).setProtectedHeader(h as never).sign(leaf.keys.privateKey),
+      };
+      const c = await craft(basePayload(), [["is_graduate", true]], s);
+      return verifySdJwtVc(await present(c, ["is_graduate"]), {
+        aud: AUD,
+        nonce: NONCE,
+        stateCode: "TR",
+        now: NOW,
+        rootCertsDer: [new Uint8Array(root.cert.rawData)],
+      });
+    };
+    it("geçerli ara CA kabul; CA olmayan, sertifika imzalayamayan, pathLen aşan ve iat anında geçersiz ara RED", async () => {
+      const ica = await mk("ICA ok", root, CA(1));
+      const good = await run(await mk("Leaf ok", ica, LEAF), [ica]);
+      expect(good.ok).toBe(true);
+
+      const notCa = await mk("ICA not CA", root, [new KeyUsagesExtension(KeyUsageFlags.keyCertSign, true)]);
+      const r1 = await run(await mk("Leaf 1", notCa, LEAF), [notCa]);
+      expect(r1.ok).toBe(false);
+      if (!r1.ok) expect(r1.reason).toMatch(/not a CA/);
+
+      const noSign = await mk("ICA no sign", root, [
+        new BasicConstraintsExtension(true, undefined, true),
+        new KeyUsagesExtension(KeyUsageFlags.digitalSignature, true),
+      ]);
+      const r2 = await run(await mk("Leaf 2", noSign, LEAF), [noSign]);
+      expect(r2.ok).toBe(false);
+      if (!r2.ok) expect(r2.reason).toMatch(/keyCertSign/);
+
+      const top0 = await mk("ICA pathLen 0", root, CA(0));
+      const mid = await mk("ICA under pathLen 0", top0, CA());
+      const r3 = await run(await mk("Leaf 3", mid, LEAF), [mid, top0]);
+      expect(r3.ok).toBe(false);
+      if (!r3.ok) expect(r3.reason).toMatch(/pathLen/);
+
+      const late = await mk("ICA later", root, CA(), { from: new Date((NOW + 10) * 1000), to: new Date("2099-01-01") });
+      const r4 = await run(await mk("Leaf 4", late, LEAF), [late]);
+      expect(r4.ok).toBe(false);
+      if (!r4.ok) expect(r4.failedStep).toBe("A3");
+      if (!r4.ok) expect(r4.reason).toMatch(/intermediate not valid/);
+    });
   });
 });

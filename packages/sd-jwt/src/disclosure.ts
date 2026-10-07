@@ -4,7 +4,7 @@
  *  asla çözüp yeniden serileştirme (C14).  C5: _sd sıralı.  C6: decoy yok.
  */
 import { randomBytes } from "node:crypto";
-import { b64u, b64uToUtf8, sha256, utf8 } from "@tamga-network/core";
+import { b64u, sha256, utf8 } from "@tamga-network/core";
 
 export const SD_ALG = "sha-256";
 export const SD_JWT_TYP = "dc+sd-jwt";
@@ -31,22 +31,16 @@ export function digestOf(disclosure: string): string {
   return b64u(sha256(new TextEncoder().encode(disclosure)));
 }
 
-export function decodeDisclosure(disclosure: string): { salt: string; name: string; value: unknown } {
-  const arr = JSON.parse(b64uToUtf8(disclosure));
-  if (!Array.isArray(arr) || arr.length !== 3) throw new Error("Ş5d: disclosure is not a 3-element array");
-  const [salt, name, value] = arr as [string, string, unknown];
-  if (typeof salt !== "string" || Buffer.from(salt, "base64url").length < 16) throw new Error("Ş5e: salt < 128 bits");
-  if (typeof name !== "string") throw new Error("Ş5d: claim name is not a string");
-  return { salt, name, value };
-}
-
-/** Birleşik biçim ayrıştırma: "<jwt>~<d1>~…~[<kb>]" */
+/** Birleşik biçim ayrıştırma: "<jwt>~<d1>~…~[<kb>]". Aradaki boş parça ("~~") biçim hatasıdır (RFC 9901 §4). Disclosure
+ *  çözümü ortak kuralda: `decodeDisclosures` (@tamga-network/core/sd-structure). */
 export function splitCombined(combined: string): { jwt: string; disclosures: string[]; kb: string } {
   const parts = combined.split("~");
   if (parts.length < 2) throw new Error("Ş1: missing ~ separator");
   const jwt = parts[0];
+  if (!jwt) throw new Error("Ş1: issuer-signed JWT missing");
   const kb = parts[parts.length - 1]; // sunumda KB-JWT, ihraç biçiminde boş
-  const disclosures = parts.slice(1, -1).filter((d) => d.length > 0);
+  const disclosures = parts.slice(1, -1);
+  if (disclosures.some((d) => d.length === 0)) throw new Error("Ş1: empty disclosure segment (~~)");
   return { jwt, disclosures, kb };
 }
 

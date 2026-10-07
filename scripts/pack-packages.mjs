@@ -6,8 +6,14 @@
  *   3) denetim: lib'deki çıplak import'lar dependencies'te mi; yasak dosya (pem, .env, test) yok; postinstall yok (P1)
  *   4) npm pack → .publish/tarballs/*.tgz
  * Kaynak depo dosyaları DEĞİŞMEZ. Yayın (npm publish) bu betiğin işi değil — CI (release.yml) ve proje yönetiminin onayıyla.
- * Kullanım: node scripts/pack-packages.mjs [--no-build]
+ * @tamga-network/zk (ADR-0032 Aşama 2): derlenmiş yerel kütüphaneler depoda yoktur (gitignore) ve pakete girmek ZORUNDADIR —
+ *   Android `.so` (üç ABI) eksikse paketleme BAŞARISIZ olur (`npm run zk:android -w @tamga-network/zk`, NDK gerekir). iOS
+ *   xcframework (`npm run zk:ios`, macOS gerekir) yoksa `ios/` pakete girmez ve paketteki expo-module.config.json yalnız
+ *   "android" der (iOS uygulaması derlenebilir kalır; ZK5: olağan sunum); xcframework varsa iOS kendiliğinden eklenir. Paketlenen
+ *   yerel dosyaların SHA-256 özetleri `lib/native-checksums.json`'a yazılır; smoke-packages.mjs kurulumdan sonra denetler.
+ * Kullanım: node scripts/pack-packages.mjs [--no-build]   ·   yalnız bazı paketler: TAMGA_PACK_PACKAGES="core trust" (boş = hepsi)
  */
+import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { builtinModules } from "node:module";
@@ -15,9 +21,16 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
-const PKGS = ["core", "mdoc", "schemas", "sd-jwt", "trust", "issuer", "verifier", "wallet-core", "zk"];
+const ALL_PKGS = ["core", "mdoc", "schemas", "sd-jwt", "trust", "issuer", "verifier", "wallet-core", "zk"];
+const SEL = (process.env.TAMGA_PACK_PACKAGES ?? "").split(/\s+/).filter(Boolean);
+for (const s of SEL) if (!ALL_PKGS.includes(s)) throw new Error(`TAMGA_PACK_PACKAGES: bilinmeyen paket "${s}"`);
+const PKGS = SEL.length ? ALL_PKGS.filter((p) => SEL.includes(p)) : ALL_PKGS;
 // ADR-0032 Aşama 2: @tamga-network/zk yerel modülü (Expo) — derlenmiş Android/iOS kütüphaneleri pakete bu yollarla girer.
 const NATIVE = ["android", "ios", "expo-module.config.json"];
+const ZK_ANDROID_ABIS = ["arm64-v8a", "armeabi-v7a", "x86_64"];
+const zkSo = (abi) => `android/src/main/jniLibs/${abi}/libtamga_zk_prover.so`;
+const ZK_XCFRAMEWORK = "ios/TamgaZkProver.xcframework";
+const sha256File = (f) => createHash("sha256").update(readFileSync(f)).digest("hex");
 const OUT = join(ROOT, ".publish");
 const errors = [];
 
@@ -29,7 +42,7 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(join(OUT, "tarballs"), { recursive: true });
 
 const versions = Object.fromEntries(
-  PKGS.map((p) => {
+  ALL_PKGS.map((p) => {
     const j = JSON.parse(readFileSync(join(ROOT, "packages", p, "package.json"), "utf8"));
     return [j.name, j.version];
   }),
@@ -60,9 +73,38 @@ for (const p of PKGS) {
     mkdirSync(join(dest, "lib", rel, ".."), { recursive: true });
     cpSync(f, join(dest, "lib", rel));
   }
-  const native = NATIVE.filter((n) => existsSync(join(dir, n)));
+  let native = NATIVE.filter((n) => existsSync(join(dir, n)));
+  if (p === "zk") {
+    // Android .so zorunlu: eksikse paket telefonda hiç ispat üretemezdi (sessizce "desteklenmiyor" yerine yayın durur)
+    const missing = ZK_ANDROID_ABIS.map(zkSo).filter((f) => !existsSync(join(dir, f)));
+    if (missing.length)
+      errors.push(
+        `${src.name}: yerel Android kütüphanesi eksik (${missing.join(", ")}) — önce: npm run zk:android -w @tamga-network/zk`,
+      );
+    // iOS: xcframework yoksa ios/ dışarıda kalır, modül yalnız Android'de bağlanır (podspec olmayan çerçeveyi istemesin)
+    if (!existsSync(join(dir, ZK_XCFRAMEWORK))) {
+      native = native.filter((n) => n !== "ios");
+      console.log(`  ${src.name}: ${ZK_XCFRAMEWORK} yok → iOS pakete girmiyor (platforms: android)`);
+    }
+  }
   for (const n of native)
     cpSync(join(dir, n), join(dest, n), { recursive: true, filter: (f) => !/[\\/]build[\\/]/.test(f) });
+  if (p === "zk" && native.includes("expo-module.config.json")) {
+    const cfg = JSON.parse(readFileSync(join(dir, "expo-module.config.json"), "utf8"));
+    cfg.platforms = native.includes("ios") ? ["apple", "android"] : ["android"];
+    writeFileSync(join(dest, "expo-module.config.json"), JSON.stringify(cfg, null, 2) + "\n");
+    // Paketlenen yerel ikililerin özetleri (smoke-packages.mjs kurulumdan sonra denetler; kullanıcı da karşılaştırabilir)
+    const files = {};
+    for (const n of native.filter((x) => x !== "expo-module.config.json"))
+      for (const f of walk(join(dest, n))) {
+        const rel = relative(dest, f).replaceAll("\\", "/");
+        if (/\.(so|a|dylib)$/.test(rel) || rel.includes(".xcframework/")) files[rel] = sha256File(f);
+      }
+    writeFileSync(
+      join(dest, "lib", "native-checksums.json"),
+      JSON.stringify({ note: "SHA-256 of the packed native prover libraries (ADR-0032)", files }, null, 2) + "\n",
+    );
+  }
   cpSync(join(ROOT, "LICENSE"), join(dest, "LICENSE"));
   if (existsSync(join(dir, "README.md"))) cpSync(join(dir, "README.md"), join(dest, "README.md"));
   else

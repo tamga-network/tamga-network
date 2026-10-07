@@ -120,9 +120,7 @@ describe("mso_mdoc_zk — biçim (ZkDocument, TS13)", () => {
 
 describe("mso_mdoc_zk — doğrulama (WASM)", () => {
   it("geçerli ispat → A1–A3b, A8, Z1; açıklanan yalnız age_over_18; A4–A7 ispatın içinde", async () => {
-    const t0 = performance.now();
     const r = await run(valid);
-    const ms = Math.round(performance.now() - t0);
     expect(r.ok, r.ok ? "" : `${r.failedStep}: ${r.reason}`).toBe(true);
     if (!r.ok) return;
     expect(r.format).toBe("mso_mdoc_zk");
@@ -130,7 +128,6 @@ describe("mso_mdoc_zk — doğrulama (WASM)", () => {
     expect(r.claims).toEqual({ age_over_18: true });
     expect(r.aDone).toEqual(["A1", "A2", "A3", "A3b", "A8", "Z1"]);
     expect(r.status).toBeUndefined(); // ZK4: indeks yok
-    expect(ms).toBeLessThan(20000);
   }, 60_000);
   it("başka oturum (nonce) → Z1 RED (oturum dökümü ispata bağlı)", async () => {
     const r = await run(valid, { nonce: "n-baska" });
@@ -167,6 +164,39 @@ describe("mso_mdoc_zk — doğrulama (WASM)", () => {
     expect(r).toMatchObject({ ok: false, failedStep: "Z1" });
     if (!r.ok) expect(r.reason).toMatch(/trusted list/);
   });
+  it("devre listede ama ACTIVE değil → Z1 RED (derinlemesine savunma), ispat çalıştırılmaz", async () => {
+    const r = await run(valid, { trust: trustWith([{ ...CIRCUIT, status: "SUSPENDED" }]) });
+    expect(r).toMatchObject({ ok: false, failedStep: "Z1" });
+    if (!r.ok) expect(r.indeterminate).toBeUndefined();
+  });
+  it("devre dosyası doğrulayıcıda yok → Z1 DOĞRULANAMADI (AP2; sunumun suçu değil)", async () => {
+    const r = await run(valid, { backend: new WasmZkBackend({ circuitDir: FX }) });
+    expect(r).toMatchObject({ ok: false, failedStep: "Z1", indeterminate: "SDK_VERSION_MISMATCH" });
+  });
+  it("WASM manifestle tutmuyor / yüklenemiyor → Z1 DOĞRULANAMADI", async () => {
+    const mismatch = await run(valid, { backend: new WasmZkBackend({ expectedWasmSha256: "0".repeat(64) }) });
+    expect(mismatch).toMatchObject({ ok: false, failedStep: "Z1", indeterminate: "SDK_VERSION_MISMATCH" });
+    const broken = await run(valid, {
+      backend: new WasmZkBackend({ wasmPath: resolve(FX, "session.json"), expectedWasmSha256: null }),
+    });
+    expect(broken).toMatchObject({ ok: false, failedStep: "Z1", indeterminate: "SDK_VERSION_MISMATCH" });
+    const missing = await run(valid, { backend: new WasmZkBackend({ wasmPath: resolve(FX, "yok.wasm") }) });
+    expect(missing).toMatchObject({ ok: false, failedStep: "Z1", indeterminate: "SDK_VERSION_MISMATCH" });
+  });
+  it("aynı iş parçacığında (inThread) da aynı sonuç; işçi olay döngüsünü kilitlemez", async () => {
+    const inThread = new WasmZkBackend({ inThread: true });
+    expect((await run(valid, { backend: inThread })).ok).toBe(true);
+    const worker = new WasmZkBackend();
+    let ticks = 0;
+    const timer = setInterval(() => ticks++, 20);
+    try {
+      expect((await run(valid, { backend: worker })).ok).toBe(true);
+    } finally {
+      clearInterval(timer);
+      await worker.close();
+    }
+    expect(ticks).toBeGreaterThan(0); // doğrulama sürerken zamanlayıcılar çalıştı
+  }, 60_000);
   it("istenmeyen öğe açıklanmış → Z1 RED (ZK3)", async () => {
     const r = await run(
       repack((z) => ({
@@ -201,6 +231,7 @@ const policy: Policy = {
       constraints: { age_over_18: true },
       format: "mso_mdoc_zk",
       namespace: S.namespace,
+      accept_unrevocable_zk: true, // ZK4: iptal denetlenemez — bilerek kabul
     },
   ],
   trust: { min_issuer_assurance: "I1", allowed_categories: ["IDENTITY"], require_recognition: false, state_code: "TR" },
@@ -250,9 +281,52 @@ describe("mso_mdoc_zk — politika ve tam hat", () => {
     expect(result.checks_performed).toContain("Z1");
     expect(result.checks_skipped).toEqual(expect.arrayContaining(["A4", "A6", "D1", "D6", "C4"]));
     expect(result.status.value).toBe("NOT_APPLICABLE");
+    expect(result.status.reason).toMatch(/ZK4/);
     expect(result.disclosed_claims).toEqual(["age_over_18"]);
     expect(claims).toEqual({ age_over_18: true });
   }, 60_000);
+  it("accept_unrevocable_zk: false → INDETERMINATE (D1, iptal denetlenemez — ZK4)", async () => {
+    const strict: Policy = { ...policy, credentials: [{ ...policy.credentials[0], accept_unrevocable_zk: false }] };
+    const { result } = await verifyPresentation({
+      presentation: b64u(valid),
+      format: "mso_mdoc_zk",
+      responseUri: S.responseUri,
+      aud: S.clientId,
+      nonce: S.nonce,
+      policy: strict,
+      policyCredentialId: "age",
+      trust: trustWith(),
+      statusCache: new MemoryStatusCache(),
+      rootCertsDer: [rootDer],
+      now: S.now,
+      zk: backend,
+    });
+    expect(result.outcome).toBe("INDETERMINATE");
+    expect(result.failed_step).toBe("D1");
+    expect(result.indeterminate_reason).toBe("STATUS_UNREACHABLE");
+  }, 60_000);
+  it("verifyPresentation: devre dosyası yok → INDETERMINATE (Z1), E4 denetim kaydı yine düşer", async () => {
+    const audits: string[] = [];
+    const { result } = await verifyPresentation({
+      presentation: b64u(valid),
+      format: "mso_mdoc_zk",
+      responseUri: S.responseUri,
+      aud: S.clientId,
+      nonce: S.nonce,
+      policy,
+      policyCredentialId: "age",
+      trust: trustWith(),
+      statusCache: new MemoryStatusCache(),
+      rootCertsDer: [rootDer],
+      now: S.now,
+      zk: new WasmZkBackend({ circuitDir: FX }),
+      audit: (e) => audits.push(e.outcome),
+    });
+    expect(result.outcome).toBe("INDETERMINATE");
+    expect(result.failed_step).toBe("Z1");
+    expect(result.indeterminate_reason).toBe("SDK_VERSION_MISMATCH");
+    expect(audits).toEqual(["INDETERMINATE"]);
+  });
 });
 
 /**

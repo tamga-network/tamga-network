@@ -27,8 +27,8 @@ in-person presentation: device engagement (QR), session encryption, BLE message 
 
 ## Status
 
-Pre-release (`0.x`) on npm — written and tested; the API may still change before `1.0`. Every release is built from this
-repository by GitHub Actions and carries npm provenance (verifiable link to the source commit).
+Version `1.0.0`, written and tested; it will be published to npm at the public announcement. Every release is built from
+this repository by GitHub Actions and carries npm provenance (verifiable link to the source commit).
 
 ## Links
 

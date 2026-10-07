@@ -3,7 +3,7 @@
  * imzacının kurumun güven listesinde kayıtlı iptal anahtarı olması (S11) doğrulanır. Liste tüm kurum belgelerini taşıdığı için
  * çekmek hangi belgenin sorgulandığını açığa vurmaz (sürü mahremiyeti). Her kopyanın kendi indeksi okunur.
  */
-import { unzlibSync } from "fflate";
+import { Unzlib } from "fflate";
 import type { TrustSource } from "@tamga-network/trust/core";
 import { b64Decode, b64uDecode } from "./b64.js";
 import { verifyJwt } from "./jws.js";
@@ -25,8 +25,34 @@ export interface StatusList {
   iss: string;
 }
 
+/** Status token ve açılmış bit dizisi üst sınırları (bellek tüketme / sıkıştırma bombası). 16 MiB = 64 milyon belge. */
+const MAX_STATUS_TOKEN_CHARS = 2 * 1024 * 1024;
+const MAX_STATUS_LIST_BYTES = 16 * 1024 * 1024;
+
+/** zlib açma, çıktı üst sınırıyla: girdi küçük parçalarla verilir, sınır aşılınca durur. */
+function unzlibCapped(data: Uint8Array, max: number): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  let n = 0;
+  const z = new Unzlib((chunk) => {
+    n += chunk.length;
+    if (n > max) throw new Error("status list too large");
+    chunks.push(chunk);
+  });
+  const STEP = 4096;
+  for (let i = 0; i < data.length; i += STEP) z.push(data.subarray(i, i + STEP), i + STEP >= data.length);
+  if (!data.length) z.push(data, true);
+  const out = new Uint8Array(n);
+  let o = 0;
+  for (const c of chunks) {
+    out.set(c, o);
+    o += c.length;
+  }
+  return out;
+}
+
 /** Status token'ı doğrular ve bit dizisini açar. `now` saniye. */
 export function parseStatusToken(token: string, expectedUri: string, now: number): StatusList {
+  if (token.length > MAX_STATUS_TOKEN_CHARS) throw new Error("status token too large");
   const [h] = token.split(".");
   const header = JSON.parse(new TextDecoder().decode(b64uDecode(h))) as { typ?: string; x5c?: string[] };
   if (header.typ !== "statuslist+jwt" || !header.x5c?.length) throw new Error("status token header");
@@ -47,7 +73,7 @@ export function parseStatusToken(token: string, expectedUri: string, now: number
   return {
     uri: expectedUri,
     bits: 2,
-    bytes: unzlibSync(b64uDecode(p.status_list.lst)),
+    bytes: unzlibCapped(b64uDecode(p.status_list.lst), MAX_STATUS_LIST_BYTES),
     signerFingerprint: certFingerprintHex(leaf),
     iss: String(p.iss ?? ""),
   };
@@ -69,7 +95,8 @@ export function credentialStatusFrom(cred: StoredCredential, list: StatusList, t
   for (const c of cred.copies) {
     if (c.idx === undefined) continue;
     const v = statusBitAt(list, c.idx);
-    if (v === 1) return "revoked";
+    // 3 (uygulamaya özgü / tanımsız) iptal sayılır: doğrulayıcı 0 ve 2 dışındaki her değeri reddeder (fail-closed)
+    if (v === 1 || v === 3) return "revoked";
     if (v === 2) suspended = true;
   }
   return suspended ? "suspended" : "valid";

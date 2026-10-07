@@ -3,7 +3,7 @@
 name: ci
 on:
   push:
-    branches: [main, "claude-setup", "feat/**", "fix/**"]
+    branches: [main] # geliştirme yansısı iş dalını main'e iter; konu dalları pull_request ile denetlenir
   pull_request:
 permissions:
   contents: read

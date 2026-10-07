@@ -7,7 +7,10 @@
  *  - Dizi öğesi disclosure'ı: [salt, değer]; dizide `{"...": özet}` öğesiyle eşleşir.
  *  - Açıklanan değer de iç içe `_sd` / `...` taşıyabilir (özyineleme).
  *  - Her disclosure tam bir kez kullanılmalı; eşleşmeyen disclosure RED (C10). Eşleşmeyen özet = gizli ya da sahte (decoy) → yok sayılır.
- *  - Yol adları: nesne alanı `a.b`, dizi öğesi `a[i]` (i = sonuç dizisindeki konum). Kök düzeydeki alan yalnız adıyla (geriye uyum).
+ *  - Yol adları: nesne alanı `a.b`, dizi öğesi `a[i]` (i = sonuç dizisindeki konum). Kök düzeydeki alan yalnız adıyla.
+ *  - Bir özet yükte (doğrudan ya da açıklanan değerlerin içinde) bir kez görünebilir; ikinci kez görünürse RED (RFC 9901 §7.1
+ *    4. adım) — eşleşen disclosure olmasa da (gizli ya da sahte özet).
+ *  - SPEC-CRED-0002 C11: iç içe seçici açıklama en fazla 2 düzey (disclosure içinde disclosure); yapı derinliği sınırlı (DoS).
  */
 
 export interface DecodedDisclosure {
@@ -33,6 +36,11 @@ export class SdStructureError extends Error {
 
 /** Yapısal ve güvenlik açısından yasak alan adları (her düzeyde). */
 const FORBIDDEN_NAMES = new Set(["_sd", "_sd_alg", "...", "__proto__", "constructor", "prototype"]);
+
+/** SPEC-CRED-0002 C11: disclosure içinde disclosure en fazla bu kadar düzey. */
+export const MAX_SD_LEVELS = 2;
+/** Yük + açıklanan değerlerin toplam iç içelik sınırı (güvenilmeyen girdide yığın taşmasın). */
+export const MAX_STRUCTURE_DEPTH = 32;
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
@@ -83,28 +91,35 @@ export function resolveSdPayload(
   const used = new Set<string>();
   const resolved: ResolvedDisclosure[] = [];
 
-  const take = (dg: string): DecodedDisclosure | undefined => {
+  // RFC 9901 §7.1: yükte görülen HER özet (eşleşen disclosure olsun olmasın) — ikinci görünüş RED
+  const seen = new Set<string>();
+  const take = (dg: string, level: number): DecodedDisclosure | undefined => {
+    if (seen.has(dg)) throw new SdStructureError("digest appears more than once in the payload (RFC 9901 §7.1, Ş6)");
+    seen.add(dg);
     const d = byDigest.get(dg);
     if (!d) return undefined;
-    if (used.has(dg)) throw new SdStructureError("digest referenced more than once (Ş6)");
+    if (level > MAX_SD_LEVELS)
+      throw new SdStructureError(`selective disclosure nested deeper than ${MAX_SD_LEVELS} levels (C11)`);
     used.add(dg);
     return d;
   };
 
-  const walk = (node: unknown, path: string, root: boolean): unknown => {
+  /** `level`: bu düğüme kadar geçilen disclosure sayısı; `depth`: yapı derinliği. */
+  const walk = (node: unknown, path: string, root: boolean, level: number, depth: number): unknown => {
+    if (depth > MAX_STRUCTURE_DEPTH) throw new SdStructureError("payload nesting limit exceeded");
     if (Array.isArray(node)) {
       const out: unknown[] = [];
       for (const el of node) {
         if (isPlainObject(el) && Object.keys(el).length === 1 && Object.prototype.hasOwnProperty.call(el, "...")) {
           const dg = el["..."];
           if (typeof dg !== "string") throw new SdStructureError("array element digest is not a string");
-          const d = take(dg);
+          const d = take(dg, level + 1);
           if (!d) continue; // gizli öğe ya da sahte özet — sonuçta yok
           if (d.name !== undefined) throw new SdStructureError("object-property disclosure used for an array element");
           const p = `${path}[${out.length}]`;
           resolved.push({ ...d, path: p });
-          out.push(walk(d.value, p, false));
-        } else out.push(walk(el, `${path}[${out.length}]`, false));
+          out.push(walk(d.value, p, false, level + 1, depth + 1));
+        } else out.push(walk(el, `${path}[${out.length}]`, false, level, depth + 1));
       }
       return out;
     }
@@ -113,14 +128,14 @@ export function resolveSdPayload(
     for (const [k, v] of Object.entries(node)) {
       if (k === "_sd" || (root && k === "_sd_alg")) continue;
       if (k === "...") throw new SdStructureError(`"..." is only allowed inside array elements`);
-      out[k] = walk(v, path ? `${path}.${k}` : k, false);
+      out[k] = walk(v, path ? `${path}.${k}` : k, false, level, depth + 1);
     }
     const sd = node._sd;
     if (sd !== undefined) {
       if (!Array.isArray(sd) || sd.some((x) => typeof x !== "string"))
         throw new SdStructureError("_sd is not a string array");
       for (const dg of sd as string[]) {
-        const d = take(dg);
+        const d = take(dg, level + 1);
         if (!d) continue; // gizli alan ya da sahte özet
         if (d.name === undefined) throw new SdStructureError("array-element disclosure used for an object property");
         if (FORBIDDEN_NAMES.has(d.name) || (root && topLevelNonSelective.has(d.name)))
@@ -129,13 +144,13 @@ export function resolveSdPayload(
           throw new SdStructureError(`conflicting claim: ${d.name} (Ş5f)`);
         const p = path ? `${path}.${d.name}` : d.name;
         resolved.push({ ...d, path: p });
-        out[d.name] = walk(d.value, p, false);
+        out[d.name] = walk(d.value, p, false, level + 1, depth + 1);
       }
     }
     return out;
   };
 
-  const claims = walk(payload, "", true) as Record<string, unknown>;
+  const claims = walk(payload, "", true, 0, 0) as Record<string, unknown>;
   for (const d of disclosures) if (!used.has(d.digest)) throw new SdStructureError("unmatched disclosure (C10)");
   return { claims, resolved };
 }
@@ -143,24 +158,32 @@ export function resolveSdPayload(
 /**
  * Sunum seçimi (cüzdan): istenen yollar için açılması gereken disclosure'lar. Bir yol istenirse (ör. `address.locality`)
  * hem kendisi hem atası (`address` bir disclosure ise) hem de altındakiler (`address` istenirse bütün alt alanları) açılır.
- * Dizi için `nationalities` istenirse bütün öğeleri açılır. Bilinmeyen yol hata verir (cüzdan olmayan alanı sunmaz).
+ * Dizi için `nationalities` (ya da `nationalities[]`, DCQL `null`) istenirse bütün öğeleri açılır; somut indeks
+ * (`nationalities[0]`, DCQL tamsayı) yalnız O öğeyi açar — başka öğe açılmaz (fazla açıklama yok). Bilinmeyen yol hata verir
+ * (cüzdan olmayan alanı sunmaz).
  */
 export function selectDisclosuresForPaths(resolved: ResolvedDisclosure[], paths: string[]): ResolvedDisclosure[] {
-  const norm = (p: string) => p.replace(/\[\d+\]/g, "[]");
   const isUnder = (child: string, parent: string) =>
     child === parent || child.startsWith(parent + ".") || child.startsWith(parent + "[");
+  /** `a[].b` → `a[<her indeks>].b` ve altı; joker yalnız istenen yolda `[]` varsa. */
+  const wildcard = (want: string) => {
+    const re = want.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\\\[\\\]/g, "\\[\\d+\\]");
+    return new RegExp(`^${re}(?:$|[.[])`);
+  };
   const chosen = new Set<ResolvedDisclosure>();
   const missing: string[] = [];
   for (const want of paths) {
     let hit = false;
+    const wc = want.includes("[]") ? wildcard(want) : null;
     for (const d of resolved) {
-      // istenen yolun altı (alt alanlar ya da öğeler) ya da kendisi
-      if (isUnder(d.path, want) || norm(d.path) === norm(want)) {
+      // istenen yolun altı (alt alanlar ya da öğeler) ya da kendisi; `[]` jokeri her öğeyle eşleşir
+      if (isUnder(d.path, want) || (wc && wc.test(d.path))) {
         chosen.add(d);
         hit = true;
       }
-      // istenen yolun atası bir disclosure ise o da açılmalı (yoksa alt alan yerleşemez)
-      if (isUnder(want, d.path) && want !== d.path) chosen.add(d);
+      // istenen yolun atası bir disclosure ise o da açılmalı (yoksa alt alan yerleşemez); joker yolda ataları aşağıdaki
+      // kapanış döngüsü ekler
+      if (!wc && isUnder(want, d.path) && want !== d.path) chosen.add(d);
     }
     if (!hit) missing.push(want);
   }

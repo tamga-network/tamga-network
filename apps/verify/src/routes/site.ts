@@ -269,6 +269,8 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
   };
 
   app.post("/sample-site/passkey/register/options", async (req, reply) => {
+    if (!sameSiteJson(req as never))
+      return reply.code(403).send({ ok: false, reason: "istek bu siteden gelmeli (JSON)" });
     const sid = cookieOf(req as never);
     const acc = currentAccount(req as never);
     if (!sid || !acc) return reply.code(401).send({ ok: false, reason: "önce Tamga ile kaydolun ya da giriş yapın" });
@@ -292,6 +294,8 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
   });
 
   app.post("/sample-site/passkey/register/verify", async (req, reply) => {
+    if (!sameSiteJson(req as never))
+      return reply.code(403).send({ ok: false, reason: "istek bu siteden gelmeli (JSON)" });
     const sid = cookieOf(req as never);
     const acc = currentAccount(req as never);
     const rp = rpOf(req as never);
@@ -320,6 +324,8 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
   });
 
   app.post("/sample-site/passkey/login/options", async (req, reply) => {
+    if (!sameSiteJson(req as never))
+      return reply.code(403).send({ ok: false, reason: "istek bu siteden gelmeli (JSON)" });
     const rp = rpOf(req as never);
     if (!rp) return reply.code(400).send(noRp);
     // allowCredentials boş: keşfedilebilir passkey — site kullanıcıyı sormadan önce tanımaz
@@ -330,6 +336,8 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
   });
 
   app.post("/sample-site/passkey/login/verify", async (req, reply) => {
+    if (!sameSiteJson(req as never))
+      return reply.code(403).send({ ok: false, reason: "istek bu siteden gelmeli (JSON)" });
     const rp = rpOf(req as never);
     if (!rp) return reply.code(400).send(noRp);
     const { flow, response } = req.body as { flow?: string; response?: AuthenticationResponseJSON };

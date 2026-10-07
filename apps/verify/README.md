@@ -6,7 +6,7 @@ Politika seç → imzalı OpenID4VP isteği (QR) → cüzdanın şifreli sunumu 
 `@tamga-network/verifier` ile de kurabilir. API: [docs.tamga.network/api](https://docs.tamga.network/api/) (Hosted Verifier API).
 
 ```bash
-npm run verify            # :4004; env: TAMGA_VERIFY_BASE, TAMGA_VERIFY_CLIENT_ID, TAMGA_TRUST_DIST, TAMGA_PKI_DIR (rp-verify)
+npm run verify            # :4004; env: TAMGA_VERIFY_BASE, TAMGA_TRUST_DIST, TAMGA_PKI_DIR (rp-verify)
 ```
 
 | Uç                              | Ne                                                                                                                                                   |

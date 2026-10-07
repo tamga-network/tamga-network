@@ -12,7 +12,7 @@ import { dcApiSessionTranscript, oid4vpSessionTranscript, parseZkDeviceResponse 
 import type { TrustSource } from "@tamga-network/trust";
 import type { FormatResult } from "./mdoc-format.js";
 import type { Step } from "./verify.js";
-import { ZK_CODES, defaultZkBackend, type ZkBackend } from "./zk/backend.js";
+import { ZK_CODES, defaultZkBackend, isZkUnavailable, type ZkBackend } from "./zk/backend.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const toAB = (u8: Uint8Array): ArrayBuffer => new Uint8Array(u8).buffer as ArrayBuffer;
@@ -90,6 +90,8 @@ export async function verifyMdocZkFormat(
   // Z1 — devre imzalı listede (ZK2)
   const circuit = opt.trust.zkCircuit?.(z.zkSystemId) ?? null;
   if (!circuit) return fail("Z1", "ZK circuit not in the signed trusted list (ZK2)");
+  // Derinlemesine savunma: güven kaynağı zaten yalnız ACTIVE devre verir; yine de askıdaki/emekli devre kabul edilmez
+  if (circuit.status !== "ACTIVE") return fail("Z1", `ZK circuit is not active (${circuit.status}) (ZK2)`);
   // Z1 — zaman damgası: biçim + doğrulayıcı saatine yakınlık (oturum dökümü zaten bu isteğe bağlı; damga devrede "şimdi")
   if (!TS_RE.test(z.timestamp)) return fail("Z1", "ZK timestamp format invalid");
   const tsSec = Math.floor(new Date(z.timestamp).getTime() / 1000);
@@ -126,6 +128,15 @@ export async function verifyMdocZkFormat(
       proof: z.proof,
     });
   } catch (e) {
+    // Doğrulayıcı tarafı eksik/bozuk (devre dosyası yok, WASM manifestle tutmuyor ya da yüklenemiyor): sunumun suçu değil →
+    // DOĞRULANAMADI (AP2). İspatın kendisinden doğan işleme hatası RED kalır.
+    if (isZkUnavailable(e))
+      return {
+        ok: false,
+        failedStep: "Z1",
+        reason: `ZK verifier unavailable: ${(e as Error).message}`,
+        indeterminate: "SDK_VERSION_MISMATCH",
+      };
     return fail("Z1", `ZK proof could not be processed: ${(e as Error).message}`);
   }
   if (code !== 0) return fail("Z1", `ZK proof rejected: ${ZK_CODES[code] ?? `code ${code}`}`);

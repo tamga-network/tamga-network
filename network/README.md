@@ -1,5 +1,7 @@
 # network/ — Besu Ağ Yapılandırması
 
+> **Durum: iskelet (ADR-0009 eşiği beklenir).** Bugün kullanılmıyor; zincir aşamasında doldurulur.
+
 Tamga Network'ün izinli Besu/QBFT ağının çalıştırma yapılandırması: genesis,
 QBFT ayarları, permissioning (izinli erişim), node/deploy tanımları. Adım adım
 kurulum akışı: [[ARCH-0002]].

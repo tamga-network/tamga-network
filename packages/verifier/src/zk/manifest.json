@@ -7,8 +7,8 @@
   },
   "wasm": {
     "file": "longfellow-verifier.wasm",
-    "sha256": "6be599c9cb23f204245a6206b27ee519974eb5706b0e3454a200d42787371d7c",
-    "bytes": 888343
+    "sha256": "7fe1b3f3e335a6f875ff6408a00d47b3bf02fa64dd8fcd74292b7d1bc18e38cb",
+    "bytes": 888324
   },
   "circuits": {
     "5a8938159603876eb537a117cfe9e2eaec5a01a042b316a8e57e52e4bb3c9291": "f44ab1a415f284251ea6ad5451d2588c1e7011eb9ba46091116e8caa4c8e0d83"

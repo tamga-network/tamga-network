@@ -1,6 +1,8 @@
 /**
  * ADR-0032 Aşama 3 — sıfır bilgi ispatı doğrulama arka ucu. Varsayılan: paketle gelen Longfellow WASM doğrulayıcısı
- * (`longfellow-verifier.wasm`, `scripts/zk-build.mjs`); her işletim sisteminde çalışır, Rust gerektirmez. Hız gereken sunucu
+ * (`longfellow-verifier.wasm`, `scripts/zk-build.mjs`); her işletim sisteminde çalışır, Rust gerektirmez. WASM doğrulaması
+ * ~3 s CPU sürer: ana iş parçacığını (sunucunun olay döngüsünü) kilitlememek için ayrı bir `worker_threads` işçisinde
+ * çalışır (API aynı, async). Hız gereken sunucu
  * aynı arayüzle yerel (native) bir arka uç takabilir (`VerifyInput.zk`): `NativeZkBackend` paketin Rust kaynağından
  * (`zk/`, `--features native`) derlenen `tamga-zk-verify` ikilisini uzun ömürlü alt süreç olarak çalıştırır (WASM ~3 s →
  * yerel ~0,2 s); ikili yoksa, çökerse ya da süre aşılırsa o istek WASM ile doğrulanır.
@@ -12,6 +14,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { Worker } from "node:worker_threads";
 
 /** Longfellow `MdocVerifierErrorCode` + Tamga kodları. */
 export const ZK_CODES: Record<number, string> = {
@@ -53,9 +56,18 @@ export interface ZkVerifyArgs {
   proof: Uint8Array;
 }
 export interface ZkBackend {
-  /** 0 = geçerli; diğerleri ZK_CODES. Atılan hata = işlenemedi (çağıran RED sayar). */
+  /**
+   * 0 = geçerli; diğerleri ZK_CODES. Atılan hata = işlenemedi (çağıran RED sayar) — ANCAK hata nesnesinde
+   * `zkUnavailable: true` varsa doğrulayıcı tarafı eksik/bozuktur (devre dosyası yok, WASM yüklenemedi): DOĞRULANAMADI (AP2).
+   */
   verify(a: ZkVerifyArgs): Promise<number>;
 }
+
+/** Doğrulayıcı tarafı eksik/bozuk (sunumun suçu değil): `zkUnavailable: true` taşıyan hata. */
+const unavailable = (msg: string): Error => Object.assign(new Error(msg), { zkUnavailable: true as const });
+/** Hata doğrulayıcı tarafı eksikliğinden mi (→ INDETERMINATE), yoksa ispatın işlenememesinden mi (→ RED)? */
+export const isZkUnavailable = (e: unknown): boolean =>
+  typeof e === "object" && e !== null && (e as { zkUnavailable?: unknown }).zkUnavailable === true;
 
 interface WasmExports {
   memory: WebAssembly.Memory;
@@ -99,7 +111,13 @@ class CircuitStore {
     if (have) return have;
     if (!/^[0-9a-f]{64}$/.test(id)) throw new Error("circuit id is not a 64-hex value");
     const path = this.circuitDir ? `${this.circuitDir}/${id}.zst` : HERE(`./circuits/${id}.zst`);
-    const bytes = new Uint8Array(readFileSync(path));
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(readFileSync(path));
+    } catch (e) {
+      // Listede olan devrenin dosyası bu doğrulayıcıda yok (paket eski/eksik): sunumun suçu değil
+      throw unavailable(`circuit file missing (${(e as { code?: string }).code ?? "unreadable"})`);
+    }
     if (sha256(bytes) !== sha) throw new Error("circuit file does not match the trusted list (ZK2)");
     this.circuits.set(id, bytes);
     return bytes;
@@ -122,34 +140,134 @@ function encodeInput(a: ZkVerifyArgs, circuit: Uint8Array): Uint8Array {
   ]);
 }
 
-/** Paketle gelen WASM doğrulayıcısı. `circuitDir` verilmezse paketteki `zk/circuits/`. */
+/**
+ * İşçi iş parçacığı kodu (CommonJS, `eval`): ana iş parçacığında derlenmiş ve özeti denetlenmiş `WebAssembly.Module`'ü alır,
+ * istekleri sırayla çalıştırır. Rust panic = WASM tuzağı → örnek atılır, sonraki istek yeniden kurar; hata RED olarak döner.
+ */
+const WORKER_SRC = `
+const { parentPort, workerData } = require("node:worker_threads");
+let inst = null;
+parentPort.on("message", ({ id, input }) => {
+  try {
+    inst = inst || new WebAssembly.Instance(workerData.module, {}).exports;
+    const p = inst.tz_alloc(input.length);
+    new Uint8Array(inst.memory.buffer, p, input.length).set(input);
+    const code = inst.tz_verify(p, input.length);
+    inst.tz_free(p, input.length);
+    parentPort.postMessage({ id, code });
+  } catch (e) {
+    inst = null;
+    parentPort.postMessage({ id, error: String((e && e.message) || e) });
+  }
+});
+`;
+
+interface Pending {
+  resolve: (code: number) => void;
+  reject: (e: Error) => void;
+}
+
+/**
+ * Paketle gelen WASM doğrulayıcısı. `circuitDir` verilmezse paketteki `zk/circuits/`. Varsayılan: işçi iş parçacığında
+ * (olay döngüsü kilitlenmez); `inThread: true` aynı iş parçacığında çalıştırır (işçi kurulamayan ortamlar, kısa betikler).
+ */
 export class WasmZkBackend implements ZkBackend {
   private mod: WebAssembly.Module | null = null;
   private inst: WasmExports | null = null;
+  private worker: { w: Worker; pending: Map<number, Pending> } | null = null;
+  private seq = 0;
   private circuits: CircuitStore;
 
-  constructor(private opts: { wasmPath?: string; circuitDir?: string; expectedWasmSha256?: string | null } = {}) {
+  constructor(
+    private opts: {
+      wasmPath?: string;
+      circuitDir?: string;
+      expectedWasmSha256?: string | null;
+      inThread?: boolean;
+    } = {},
+  ) {
     this.circuits = new CircuitStore(opts.circuitDir);
+  }
+
+  /** WASM modülü: bir kez okunur, manifestteki özetle denetlenir, derlenir. Her hata "doğrulayıcı eksik/bozuk"tur. */
+  private module(): WebAssembly.Module {
+    if (this.mod) return this.mod;
+    let bytes: Uint8Array<ArrayBuffer>;
+    let expected: string | null;
+    try {
+      bytes = new Uint8Array(readFileSync(this.opts.wasmPath ?? HERE("./longfellow-verifier.wasm")));
+      expected =
+        this.opts.expectedWasmSha256 === undefined
+          ? (JSON.parse(readFileSync(HERE("./manifest.json"), "utf8")) as { wasm: { sha256: string } }).wasm.sha256
+          : this.opts.expectedWasmSha256;
+    } catch (e) {
+      throw unavailable(`ZK verifier wasm could not be read: ${(e as Error).message}`);
+    }
+    if (expected && sha256(bytes) !== expected) throw unavailable("ZK verifier wasm does not match its manifest");
+    try {
+      this.mod = new WebAssembly.Module(bytes);
+    } catch (e) {
+      throw unavailable(`ZK verifier wasm could not be loaded: ${(e as Error).message}`);
+    }
+    return this.mod;
   }
 
   private exports(): WasmExports {
     if (this.inst) return this.inst;
-    if (!this.mod) {
-      const bytes = readFileSync(this.opts.wasmPath ?? HERE("./longfellow-verifier.wasm"));
-      const expected =
-        this.opts.expectedWasmSha256 === undefined
-          ? (JSON.parse(readFileSync(HERE("./manifest.json"), "utf8")) as { wasm: { sha256: string } }).wasm.sha256
-          : this.opts.expectedWasmSha256;
-      if (expected && sha256(bytes) !== expected) throw new Error("ZK verifier wasm does not match its manifest");
-      this.mod = new WebAssembly.Module(bytes);
-    }
     // Rust panic = WASM tuzağı; tuzaktan sonra örnek atılır (bellek tutarsız olabilir), sonraki çağrı yeniden kurar.
-    this.inst = new WebAssembly.Instance(this.mod, {}).exports as unknown as WasmExports;
+    const mod = this.module();
+    try {
+      this.inst = new WebAssembly.Instance(mod, {}).exports as unknown as WasmExports;
+    } catch (e) {
+      throw unavailable(`ZK verifier wasm could not be instantiated: ${(e as Error).message}`);
+    }
     return this.inst;
+  }
+
+  private ensureWorker(): { w: Worker; pending: Map<number, Pending> } {
+    if (this.worker) return this.worker;
+    const mod = this.module();
+    let w: Worker;
+    try {
+      w = new Worker(WORKER_SRC, { eval: true, workerData: { module: mod } });
+    } catch (e) {
+      throw unavailable(`ZK worker could not be started: ${(e as Error).message}`);
+    }
+    const pending = new Map<number, Pending>();
+    const slot = { w, pending };
+    w.on("message", (m: { id: number; code?: number; error?: string }) => {
+      const p = pending.get(m.id);
+      if (!p) return;
+      pending.delete(m.id);
+      if (!pending.size) w.unref(); // boştayken süreci ayakta tutmaz
+      if (m.error !== undefined) p.reject(new Error(m.error));
+      else p.resolve(m.code as number);
+    });
+    const failAll = (err: Error) => {
+      if (this.worker === slot) this.worker = null;
+      for (const p of pending.values()) p.reject(err);
+      pending.clear();
+    };
+    w.on("error", (e: Error) => failAll(unavailable(`ZK worker failed: ${e.message}`)));
+    w.on("exit", (c: number) => failAll(unavailable(`ZK worker exited (${c})`)));
+    w.unref();
+    this.worker = slot;
+    return slot;
   }
 
   async verify(a: ZkVerifyArgs): Promise<number> {
     const input = encodeInput(a, this.circuits.get(a.circuitId, a.circuitSha256));
+    if (this.opts.inThread) return this.verifyInThread(input);
+    const { w, pending } = this.ensureWorker();
+    const id = ++this.seq;
+    return new Promise<number>((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      w.ref(); // yanıt gelene kadar süreç kapanmasın
+      w.postMessage({ id, input });
+    });
+  }
+
+  private verifyInThread(input: Uint8Array): number {
     const x = this.exports();
     try {
       const p = x.tz_alloc(input.length);
@@ -161,6 +279,13 @@ export class WasmZkBackend implements ZkBackend {
       this.inst = null;
       throw e;
     }
+  }
+
+  /** İşçiyi kapatır (servis kapanırken ya da testte); sonraki çağrı yeniden kurar. */
+  async close(): Promise<void> {
+    const slot = this.worker;
+    this.worker = null;
+    await slot?.w.terminate();
   }
 }
 

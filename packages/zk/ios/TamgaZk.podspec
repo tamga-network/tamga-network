@@ -18,7 +18,8 @@ Pod::Spec.new do |s|
 
   s.source_files = '*.{h,swift}'
   s.public_header_files = 'TamgaZkProver.h'
-  # scripts/build-ios.sh üretir (depoya girmez; paket yayınında dahil edilir)
+  # scripts/build-ios.sh üretir (depoya girmez; macOS gerekir). xcframework yoksa scripts/pack-packages.mjs ios/'u pakete
+  # KOYMAZ ve expo-module.config.json yalnız "android" der; varsa iOS ("apple") kendiliğinden eklenir.
   s.vendored_frameworks = 'TamgaZkProver.xcframework'
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',

@@ -1,10 +1,16 @@
 /**
- * Format katmanı doğrulaması — SPEC-CRED-0002 §8 (Ş1–Ş10) → SPEC-API-0001 adım kodları A1–A6.
+ * Format katmanı doğrulaması — SPEC-CRED-0002 §8 (Ş1–Ş10) → SPEC-API-0001 adım kodları A1–A7 (A7 = exp/nbf geçerlilik).
  * Güven katmanı (C: TrustSource), şema (B) ve iptal (D) BU PAKETTE DEĞİL; verifier paketi birleştirir.
  * Çıktı üç değerli değil: format hatası kesin RED'dir; INDETERMINATE yalnızca dış kaynak (liste/CDN) için.
  */
 import { compactVerify, decodeProtectedHeader, importJWK, importX509, jwtVerify, type JWK } from "jose";
-import { X509Certificate, cryptoProvider } from "@peculiar/x509";
+import {
+  BasicConstraintsExtension,
+  KeyUsageFlags,
+  KeyUsagesExtension,
+  X509Certificate,
+  cryptoProvider,
+} from "@peculiar/x509";
 import { webcrypto } from "node:crypto";
 import { b64ToDer, b64uToUtf8, certFingerprintSha256Hex, computeIssuerId, derToPem } from "@tamga-network/core";
 import { decodeDisclosures, resolveSdPayload, SdStructureError } from "@tamga-network/core/sd-structure";
@@ -34,7 +40,21 @@ export const NON_SELECTIVE_CLAIMS = new Set([
 ]);
 const toAB = (u8: Uint8Array): ArrayBuffer => new Uint8Array(u8).buffer as ArrayBuffer;
 
-export type FormatStep = "A1" | "A2" | "A3" | "A4" | "A5" | "A6";
+export type FormatStep = "A1" | "A2" | "A3" | "A4" | "A5" | "A6" | "A7";
+
+/** Belgenin `iat`'ı doğrulayıcı saatinden en fazla bu kadar ileride olabilir (saat kayması; KB-JWT penceresiyle aynı). */
+export const IAT_FUTURE_SKEW_SEC = 300;
+
+/** RFC 5280 §4.2.1.9 / §4.2.1.3: ara halka CA olmalı (basicConstraints cA=true), sertifika imzalayabilmeli (keyCertSign) ve
+ *  pathLenConstraint'i altındaki ara CA sayısını aşmamalı. `below` = bu halkanın altındaki ara CA sayısı (yaprak hariç). */
+function intermediateProblem(c: X509Certificate, below: number): string | null {
+  const bc = c.getExtension(BasicConstraintsExtension);
+  if (!bc?.ca) return "x5c intermediate is not a CA (basicConstraints)";
+  const ku = c.getExtension(KeyUsagesExtension);
+  if (ku && !(ku.usages & KeyUsageFlags.keyCertSign)) return "x5c intermediate lacks keyCertSign";
+  if (typeof bc.pathLength === "number" && below > bc.pathLength) return "x5c intermediate pathLenConstraint exceeded";
+  return null;
+}
 
 export interface VerifyOptions {
   aud: string;
@@ -117,14 +137,17 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   let leafDer: Uint8Array;
   let leaf: X509Certificate;
   let anchorFingerprint: string | null = null;
+  let chain: X509Certificate[] = [];
   try {
     leafDer = b64ToDer(header.x5c[0]);
     leaf = new X509Certificate(toAB(leafDer));
     if (opt.rootCertsDer?.length) {
       // x5c: yaprak + (varsa) ara CA'lar, kök hariç (C7). Her halka bir sonrakince imzalanmış olmalı; son halka bir köke bağlanır.
-      const chain = header.x5c.map((c) => new X509Certificate(toAB(b64ToDer(c))));
+      chain = header.x5c.map((c) => new X509Certificate(toAB(b64ToDer(c))));
       for (let i = 0; i + 1 < chain.length; i++) {
         if (chain[i].issuer !== chain[i + 1].subject) return fail("A3", "x5c chain order broken");
+        const bad = intermediateProblem(chain[i + 1], i);
+        if (bad) return fail("A3", bad);
         if (!(await chain[i].verify({ publicKey: chain[i + 1].publicKey, signatureOnly: true })))
           return fail("A3", "x5c intermediate signature invalid");
       }
@@ -151,6 +174,8 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   } catch (e) {
     return fail("A3", `signature/chain: ${(e as Error).message}`);
   }
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload))
+    return fail("A3", "JWT payload is not a JSON object");
   const leafFingerprint = certFingerprintSha256Hex(leafDer);
   const issuerId = computeIssuerId(opt.stateCode, leafDer);
   const cnf = payload.cnf as { jwk?: JWK } | undefined;
@@ -161,9 +186,14 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   if (typeof payload.iat !== "number" || !Number.isFinite(payload.iat))
     return fail("A3", "iat missing or not a number");
   // Sertifika, belgenin imzalandığı anda (iat) geçerli olmalı — güven kararları da iat'a göre verilir (D-BC-3)
+  if (payload.iat > now + IAT_FUTURE_SKEW_SEC) return fail("A3", "iat is in the future");
   const iatMs = payload.iat * 1000;
   if (iatMs < leaf.notBefore.getTime() || iatMs > leaf.notAfter.getTime())
     return fail("A3", "signing certificate not valid at the time of issuance");
+  // ara CA'lar da imza anında (iat) geçerli olmalı (yaprakla aynı zaman kuralı, D-BC-3)
+  for (const ca of chain.slice(1))
+    if (iatMs < ca.notBefore.getTime() || iatMs > ca.notAfter.getTime())
+      return fail("A3", "x5c intermediate not valid at the time of issuance");
   done.push("A3");
 
   // A4 — _sd_alg
@@ -207,9 +237,10 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   }
   done.push("A6");
 
-  // Ş9 — exp / nbf
-  if (typeof payload.exp === "number" && payload.exp < now) return fail("A6", "expired (Ş9)");
-  if (typeof payload.nbf === "number" && payload.nbf > now) return fail("A6", "not yet valid (nbf)");
+  // A7 (Ş9) — exp / nbf
+  if (typeof payload.exp === "number" && payload.exp < now) return fail("A7", "expired (Ş9)");
+  if (typeof payload.nbf === "number" && payload.nbf > now) return fail("A7", "not yet valid (nbf)");
+  done.push("A7");
 
   return {
     ok: true,

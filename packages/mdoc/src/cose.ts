@@ -1,7 +1,8 @@
 /**
  * COSE_Sign1 (RFC 9052) — mdoc issuerAuth ve deviceSignature için gereken alt küme. Yalnızca ES256 (P-256 + SHA-256).
  * Saf @noble; imza 64 baytlık compact (r‖s). Sig_structure = ["Signature1", protected, external_aad, payload].
- * COSE_Sign1 = [protected: bstr, unprotected: map, payload: bstr|nil, signature: bstr].
+ * COSE_Sign1 = [protected: bstr, unprotected: map, payload: bstr|nil, signature: bstr]; etiketli biçim (#6.18, RFC 9052 §4.2)
+ * de okunur — ISO 18013-5 etiketsiz kullanır, bazı uygulamalar etiketli gönderir.
  */
 import { p256 } from "@noble/curves/nist.js";
 import { encode, decode, CborTag, type CborValue } from "./cbor.js";
@@ -9,6 +10,8 @@ import { encode, decode, CborTag, type CborValue } from "./cbor.js";
 const ALG_ES256 = -7;
 const HDR_ALG = 1;
 const HDR_X5CHAIN = 33;
+/** RFC 9052 §2: COSE_Sign1 CBOR etiketi */
+const TAG_COSE_SIGN1 = 18;
 
 /** ["Signature1", protected(bstr), external_aad(bstr), payload(bstr)] → imzalanacak baytlar. */
 function sigStructure(protectedBstr: Uint8Array, external: Uint8Array, payload: Uint8Array): Uint8Array {
@@ -68,7 +71,8 @@ export interface CoseSign1Parsed {
 }
 
 export function parseCoseSign1(bytes: Uint8Array): CoseSign1Parsed {
-  const arr = decode(bytes);
+  const top = decode(bytes);
+  const arr = top instanceof CborTag && top.tag === TAG_COSE_SIGN1 ? top.value : top;
   if (!Array.isArray(arr) || arr.length !== 4) throw new Error("COSE_Sign1: expected a 4-element array");
   const [protectedBstr, unprotected, payload, signature] = arr;
   if (
@@ -123,11 +127,15 @@ export function coseKeyFromPoint(pointRaw: Uint8Array): Map<number, CborValue> {
     [-3, pointRaw.slice(33, 65)], // y
   ]);
 }
+/** COSE_Key → 65 baytlık sıkıştırılmamış nokta. Yalnız EC2 (kty 2) + P-256 (crv 1), 32'şer baytlık x/y kabul edilir. */
 export function pointFromCoseKey(k: CborValue): Uint8Array {
   if (!(k instanceof Map)) throw new Error("coseKey: expected a map");
+  if (k.get(1) !== 2) throw new Error("coseKey: kty must be EC2 (2)");
+  if (k.get(-1) !== 1) throw new Error("coseKey: crv must be P-256 (1)");
   const x = k.get(-2);
   const y = k.get(-3);
   if (!(x instanceof Uint8Array) || !(y instanceof Uint8Array)) throw new Error("coseKey: x/y missing");
+  if (x.length !== 32 || y.length !== 32) throw new Error("coseKey: x/y must be 32 bytes");
   return Uint8Array.from([0x04, ...x, ...y]);
 }
 

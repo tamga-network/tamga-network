@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-04
+last_updated: 2026-10-07
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -90,13 +90,13 @@ CHANGELOG.md                  public change log
 | `list_type` | `"lotl"` | |
 | `environment` | `"production"` \| `"sandbox"` (optional; absent means `production`) | The network the list belongs to ([[ADR-0038]]). The test network's list carries `sandbox`; the loader **stops** on a list that does not match the network it expects (`ADR-0038/SB2`) |
 | `version`, `issued_at`, `next_update`, `previous_version_hash` | | Version/hash chain (§1.3, §1.6) |
-| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report}` | Founding proxy; URL of [[FW-TF-0001]] |
+| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report?}` | Founding proxy; `trust_framework` = URL of [[FW-TF-0001]] (`https://arf.tamga.network/trust-framework`); `transparency_report` is optional, added once its page is published |
 | `catalogue` | `{url}` | Type Metadata resolution path (`schemas.tamga.network/v1/catalogue.json`) |
 | `anchor_signing_keys[]` | `{fingerprint_sha256, cert_ref, status}` | Anchor log signers (≥2, rolling — TL3) |
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], recognition{mode, recognizes[]}}` | `Governance` member list + `CrossRecognition` |
 | `schemas[]` | `{schema_id, vct, metadata_url, content_hash, content_hashes[], layer: NETWORK, governance, status, registered_at, status_history[]}` | `SchemaRegistry` (NETWORK); `registered_at` is **permanent** (time of the first anchor); `content_hashes` = digests of the valid versions ([[ADR-0010]] K4; in the development stage only the current digest, [[ADR-0029]]), each anchored once |
 | `eaa_categories` | `{urn → description}` | Category namespace ([[ADR-0010]] K5) |
-| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA trust anchor (R-7; not yet on the chain — ADR candidate) |
+| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA trust anchor (R-7; not yet on the chain — ADR candidate). `status` (of the entry and of `solutions[].status`) is from the `Status` set: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA validation uses only the `ACTIVE` keys of an `ACTIVE` entry. A `RESERVED` entry holds a place (e.g. a wallet provider whose operator has not yet supplied its own certificate, [[ADR-0042]]): `wua_signing_keys` may be empty and it is not used for WUA validation. `security_level` is the wallet assurance level ([[SPEC-WALLET-0001]] §2.2; W1 is not supported) |
 | `zk_circuits[]` | `{circuit_id, system, version, attributes, sha256, status}` | Accepted ZK circuits ([[ADR-0032]] ZK2; not yet on the chain) |
 | `pid_providers[]` | empty, reserved | BT8 → TL8 |
 
@@ -137,7 +137,7 @@ Status List Token hash in D5; lines are never deleted; the log is public; `list_
 
 **Archiving and checkpoints (TL12).** As the log grows, load time grows linearly with the number of lines (each line is one
 JWS verification). When the log passes a threshold (500 lines by default), the operator moves **all** current lines into
-`archive/anchors-<from>-<to>.jsonl` and writes a signed `checkpoint` as the first line of the new log: `seq = seq_to + 1`,
+`archive/anchors-<from>-<to>.jsonl` (if an archive with that name but different content already exists — e.g. after a sandbox reset restarted seq at 0 — a time suffix is added: `anchors-<from>-<to>-<epoch_ms>.jsonl`; the old archive is never overwritten) and writes a signed `checkpoint` as the first line of the new log: `seq = seq_to + 1`,
 `previous_hash = sha256(last line of the archive)`, `archive.sha256 = sha256(archive file)` and **`state`** — the final state
 produced by the archived lines (the status anchor with the highest `list_version` per list + the schema anchors). The next
 anchor links to the checkpoint as usual; the chain is unbroken and no line is deleted (TL2). The loader: if the first line is

@@ -27,14 +27,69 @@ describe("authcode", () => {
     const r = createPar(base);
     if (!r.ok) throw new Error("par");
     const code = mintCode(r.par, "subj", "T2", 1000);
-    expect(redeemCode(r.par, { code, codeVerifier: verifier, clientId: "başka", now: 1001 }).ok).toBe(false);
-    expect(redeemCode(r.par, { code, codeVerifier: "y".repeat(43), clientId: "wua-sub", now: 1001 }).ok).toBe(false);
-    expect(redeemCode(r.par, { code, codeVerifier: verifier, clientId: "wua-sub", now: 1001 }).ok).toBe(false); // yandı
+    expect(
+      redeemCode(r.par, { code, codeVerifier: verifier, clientId: "başka", redirectUri: base.redirectUri, now: 1001 })
+        .ok,
+    ).toBe(false);
+    expect(
+      redeemCode(r.par, {
+        code,
+        codeVerifier: "y".repeat(43),
+        clientId: "wua-sub",
+        redirectUri: base.redirectUri,
+        now: 1001,
+      }).ok,
+    ).toBe(false);
+    expect(
+      redeemCode(r.par, { code, codeVerifier: verifier, clientId: "wua-sub", redirectUri: base.redirectUri, now: 1001 })
+        .ok,
+    ).toBe(false); // yandı
     const r2 = createPar(base);
     if (!r2.ok) throw new Error("par");
     const c2 = mintCode(r2.par, "subj", "T2", 1000);
-    expect(redeemCode(r2.par, { code: c2, codeVerifier: verifier, clientId: "wua-sub", now: 1001 }).ok).toBe(true);
-    expect(redeemCode(r2.par, { code: c2, codeVerifier: verifier, clientId: "wua-sub", now: 1002 }).ok).toBe(false);
+    expect(
+      redeemCode(r2.par, {
+        code: c2,
+        codeVerifier: verifier,
+        clientId: "wua-sub",
+        redirectUri: base.redirectUri,
+        now: 1001,
+      }).ok,
+    ).toBe(true);
+    expect(
+      redeemCode(r2.par, {
+        code: c2,
+        codeVerifier: verifier,
+        clientId: "wua-sub",
+        redirectUri: base.redirectUri,
+        now: 1002,
+      }).ok,
+    ).toBe(false);
+  });
+  it("redirect_uri izin listesi (verilirse tam eşleşme); token isteğinde redirect_uri ve istemci zorunlu", () => {
+    expect(createPar({ ...base, allowedRedirectUris: ["tamga-wallet://cb"] }).ok).toBe(true);
+    expect(createPar({ ...base, allowedRedirectUris: ["tamga-wallet://other"] })).toMatchObject({
+      ok: false,
+      error: "invalid_redirect_uri",
+    });
+    const byClient = (c: string) => (c === "wua-sub" ? ["tamga-wallet://cb"] : []);
+    expect(createPar({ ...base, allowedRedirectUris: byClient }).ok).toBe(true);
+    expect(createPar({ ...base, clientId: "x", allowedRedirectUris: byClient }).ok).toBe(false);
+    expect(createPar({ ...base, allowedRedirectUris: () => undefined }).ok).toBe(true); // istemci için liste yok → biçim denetimi
+    const r = createPar(base);
+    if (!r.ok) throw new Error("par");
+    const code = mintCode(r.par, "subj", "T2", 1000);
+    expect(redeemCode(r.par, { code, codeVerifier: verifier, clientId: "wua-sub", now: 1001 })).toMatchObject({
+      ok: false,
+      description: expect.stringMatching(/redirect_uri/),
+    });
+    expect(
+      redeemCode(r.par, { code, codeVerifier: verifier, clientId: "", redirectUri: base.redirectUri, now: 1001 }).ok,
+    ).toBe(false);
+    expect(
+      redeemCode(r.par, { code, codeVerifier: verifier, clientId: "wua-sub", redirectUri: base.redirectUri, now: 1001 })
+        .ok,
+    ).toBe(true);
   });
   it("HAIP §4.3: tür scope ile istenebilir; scope ile authorization_details çelişirse ya da birden çok scope varsa ret", () => {
     const vct = "urn:tamga:id:IdentityAttestation:1";

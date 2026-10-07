@@ -8,7 +8,7 @@
     "status": "provisional",
     "on_behalf_of": "Test network — not part of the Tamga Network trust framework (ADR-0038)",
     "note": "SANDBOX — test network. Lists, keys and credentials here are not valid in the real network. Data is reset regularly.",
-    "trust_framework": "https://arf.tamga.network",
+    "trust_framework": "https://arf.tamga.network/trust-framework",
     "lote_contact": {
       "postal": {
         "StreetAddress": "(to be published)",
@@ -96,7 +96,7 @@
           "solution_id": "tamga-wallet-expo",
           "min_version": "1.0.0",
           "status": "RESERVED",
-          "security_level": "W1",
+          "security_level": "W2",
           "lote_service_name": "Tamga Wallet (tamga-wallet-expo)"
         }
       ],

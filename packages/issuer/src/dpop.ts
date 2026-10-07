@@ -11,17 +11,32 @@ export const DPOP_TYP = "dpop+jwt";
 /** Kanıtın kabul edildiği saat penceresi (sn). */
 export const DPOP_MAX_AGE_SEC = 300;
 
-/** Görülen `jti` değerleri (bellekte, pencere süresince). */
+/**
+ * Görülen `jti` değerleri (bellekte, pencere süresince). Kesin üst sınır `max`: dolunca önce süresi geçenler atılır, yine
+ * doluysa EN ESKİ kayıtlar (ekleme sırası) atılır — kanıtları herkes kendi anahtarıyla üretebildiği için sınırsız büyüme bellek
+ * tüketme saldırısı olurdu; atılan bir kanıtın tekrarı ayrıca çalınmış belirteç (ath/jkt bağı) gerektirir.
+ */
 export class DpopReplayCache {
   private seen = new Map<string, number>();
   constructor(private max = 50_000) {}
   /** İlk kez görülüyorsa kaydeder ve true döner. */
   claim(jti: string, until: number, now: number): boolean {
-    if (this.seen.size >= this.max) for (const [k, v] of this.seen) if (v < now) this.seen.delete(k);
     const prev = this.seen.get(jti);
     if (prev !== undefined && prev >= now) return false;
+    if (prev !== undefined) this.seen.delete(jti);
+    if (this.seen.size >= this.max) {
+      for (const [k, v] of this.seen) if (v < now) this.seen.delete(k);
+      for (const k of this.seen.keys()) {
+        if (this.seen.size < this.max) break;
+        this.seen.delete(k);
+      }
+    }
     this.seen.set(jti, until);
     return true;
+  }
+  /** Kayıtlı jti sayısı (gözlem ve test). */
+  get size(): number {
+    return this.seen.size;
   }
 }
 

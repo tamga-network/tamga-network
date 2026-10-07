@@ -2,7 +2,7 @@
 
 ```bash
 npm install                 # kök (npm workspaces)
-npm run setup               # pki → şema kataloğu → liste yayını (×2) → heartbeat → doğrulama
+npm run setup               # pki → şema kataloğu → liste yayını (×2) → heartbeat → doğrulama → test ve sandbox listeleri
 npm run check               # testler + tip denetimi
 ```
 
@@ -10,7 +10,7 @@ Adım adım:
 
 | Komut | Ne yapar | Çıktı |
 |---|---|---|
-| `npm run pki` | Geliştirme PKI'sı: TR National Root CA (provisional), Bilgi (DEMO) issuer yaprağı, liste imzacısı, wallet provider — P-256 | `ops/pki/*.cert.pem`, `*.pkcs8.pem` (gitignore), `pki.json` (parmak izleri, `issuer_id`, `ca_id`) |
+| `npm run pki` | Geliştirme PKI'sı: TR National Root CA (provisional), Bilgi (DEMO) issuer yaprağı, liste imzacısı, test cüzdan sağlayıcısı (yalnız test) — P-256 | `ops/pki/*.cert.pem`, `*.pkcs8.pem` (gitignore), `pki.json` (parmak izleri, `issuer_id`, `ca_id`) |
 | `npm run schemas:build` | Type Metadata + JSON Schema (vct URN), `#integrity` ve `content_hash` | `packages/schemas/dist/` = `schemas.tamga.network/v1` |
 | `npm run trust:build` | `lotl.jws`, `tl-tr.jws` (sürüm +1, önceki hash), `keys/`, `CHANGELOG.md`, arşiv; ilk çalışmada şema çapaları | `apps/trust-publisher/dist/` = `trust.tamga.network` |
 | `npm run trust:heartbeat` | Çapa günlüğüne boş satır (saatlik kadans) | `dist/anchors.jsonl` |
@@ -22,9 +22,10 @@ Adım adım:
 
 | Komut | Ne yapar |
 |---|---|
+| `npm run pki:sandbox` | Sandbox (test ağı) PKI'sı (ADR-0038): ayrı test kökü ve yapraklar, konu adları "(TEST)" | `ops/pki-sandbox/*.cert.pem`, `*.pkcs8.pem` (gitignore), `pki.json` |
 | `npm run pki:issue -- --name issuer-<ad> --csr <dosya>` | Kurumun CSR'ını kök CA ile imzalar (anahtar kurumda kalır); doğrulayıcı için `--name rp-<ad> --dns <alan adı>`; demo için `--generate --subject "CN=…"` (anahtar dosyada, S-1) |
 | `npm run trust:register -- issuer\|rp <başvuru.json> [--check]` | Başvuruyu denetler (ad çakışması, sertifika, şema kataloğu, ADR-0024 kayıt verisi) — eksiklerin tamamı tek seferde; `--check` yazmaz |
-| `npm run trust:scope -- <client_id> <kullanım.json>` | Kayıtlı doğrulayıcıya yeni kullanım (gizlilik politikası zorunlu) |
+| `npm run trust:scope -- <dns_name> <kullanım.json>` | Kayıtlı doğrulayıcıya yeni kullanım (gizlilik politikası zorunlu) |
 | `npm run trust:authorize -- <slug> <vct> [--revoke]` | Şema yetkisi verir / bitirir (kayıt silinmez, geçmiş belgeler doğru doğrulanır) |
 | `npm run trust:list` | Kurumlar ve doğrulayıcılar, durum, eksik kayıt verisi |
 | `npm run trust:external` | Dış güven listelerinin kopyasını çeker, LOTL'daki sabit imzacıya karşı doğrular, `dist/external/` altına yazar; hata olursa eski kopya kalır (ADR-0036) |

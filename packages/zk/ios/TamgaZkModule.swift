@@ -24,6 +24,8 @@ public final class TamgaZkModule: Module {
 
     // Ağır iş: AsyncFunction Expo'nun arka plan kuyruğunda çalışır.
     AsyncFunction("prove") { (input: Data) -> Data in
+      // Boş girdi: `baseAddress` nil olur — Rust'a geçersiz işaretçi verilmez
+      guard !input.isEmpty else { throw ProveFailedException() }
       var out: UnsafeMutablePointer<UInt8>? = nil
       var outLen: Int = 0
       let code: Int32 = input.withUnsafeBytes { raw in

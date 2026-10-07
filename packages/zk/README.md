@@ -51,7 +51,13 @@ Nothing leaves the device except the proof.
 | Android (`android/src/main/jniLibs/`) | `npm run zk:android -w @tamga-network/zk` | Android NDK, `cargo-ndk` |
 | iOS (`ios/TamgaZkProver.xcframework`) | `npm run zk:ios -w @tamga-network/zk` | macOS, Xcode |
 
-Build outputs are not committed; the published package includes them. The Rust core (`rust/`) uses the same pinned upstream commit
+Build outputs are not committed; the published package includes them. Packing (`scripts/pack-packages.mjs`) fails if any of the
+three Android libraries is missing, and writes their SHA-256 checksums to `lib/native-checksums.json`.
+
+**iOS (for now):** the iOS library needs macOS to build and has not been built yet. Until `ios/TamgaZkProver.xcframework` exists,
+the module is Android-only: `expo-module.config.json` lists only `"android"` and the published package does not contain `ios/`, so
+iOS apps build normally and `available()` returns `false` there (usual presentation, ZK5). Once the xcframework is built, packing
+adds `ios/` and the `"apple"` platform automatically. The Rust core (`rust/`) uses the same pinned upstream commit
 as the verifier (`packages/verifier/zk`).
 
 ## License

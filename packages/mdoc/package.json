@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
-  "description": "ISO/IEC 18013-5 mdoc (mobile document) minimal profili: deterministik CBOR, COSE_Sign1, MobileSecurityObject ihracı ve doğrulaması. Saf @noble (RN uyumlu); taşıma katmanı (BLE) kapsam dışı — sunum OpenID4VP/DC API üzerinden (18013-7).",
+  "description": "ISO/IEC 18013-5 mdoc (mobile document) minimal profili: deterministik CBOR, COSE_Sign1, MobileSecurityObject ihracı ve doğrulaması, cihaz imzası, OpenID4VP/DC API oturum dökümü (18013-7) ve yakın alan sunumu (cihaz tanıtımı, oturum şifrelemesi, BLE ileti çerçeveleme). Saf @noble (RN uyumlu); BLE/NFC radyosu kapsam dışı (taşıyıcıyı uygulama sağlar).",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts"

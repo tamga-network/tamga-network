@@ -8,7 +8,7 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PRIVATE_NAMES_RE } from "./private-names.mjs";
+import { PRIVATE_NAMES_RE, TOOL_NAMES_RE } from "./private-names.mjs";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = join(repo, "docs", "framework");
@@ -97,8 +97,8 @@ const DOCS = [
   },
 ];
 // Yayınlanan metinde özel depo yolu, kişi adı ya da araç adı olmaz (DY3; onay alıntıları operatörün onay kaydında).
-const PRIVATE_BASE = /tamga-platform\/|_reports\/|\.local\.json|\.env\b|\bClaude\b|\bOpus\b|\bFable\b|TOPARLAMA/;
-const PRIVATE = { test: (s) => PRIVATE_BASE.test(s) || PRIVATE_NAMES_RE.test(s) };
+const PRIVATE_BASE = /tamga-platform\/|_reports\/|\.local\.json|\.env\b|TOPARLAMA/;
+const PRIVATE = { test: (s) => PRIVATE_BASE.test(s) || TOOL_NAMES_RE.test(s) || PRIVATE_NAMES_RE.test(s) };
 /** Arşive giren metinden özel depo yolları çıkarılır (DY3); güncel kaynakta aynı ifadeler kullanılır. */
 const SANITIZE = [
   [/Onay kaydı: `\.\.\/tamga-platform\/docs\/_reports\/[^`]+`\./g, "Onay kaydı operatörün arşivindedir."],

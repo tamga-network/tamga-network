@@ -7,8 +7,7 @@
     "status": "provisional",
     "on_behalf_of": "Tamga Trust Framework consortium (TDT member states to be designated)",
     "note": "Founding provisional operator, until multi-party governance takes over (tamga-network ADR-0002).",
-    "trust_framework": "https://tamga.network/trust-framework/v0.1",
-    "transparency_report": "https://tamga.network/transparency",
+    "trust_framework": "https://arf.tamga.network/trust-framework",
     "lote_contact": {
       "postal": {
         "StreetAddress": "(to be published)",
@@ -107,7 +106,7 @@
       "solutions": [
         {
           "solution_id": "test-wallet",
-          "min_version": "0.1.0",
+          "min_version": "1.0.0",
           "status": "ACTIVE",
           "security_level": "W1",
           "note": "Test wallet for the network's own tests.",

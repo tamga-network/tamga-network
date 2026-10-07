@@ -36,6 +36,8 @@ const T = {
     expiredTitle: "Link invalid or expired",
     expiredText: "A check link is valid for 5 minutes; ask the person to show it again.",
     waiting: "Waiting for the wallet",
+    statusDone: "This check is complete",
+    statusOnlyText: "Details are shown only on the page that started the check.",
     scan: "Scan the QR code with your wallet and approve the fields.",
     requested: "Requested",
     onlyValid: "a valid credential only",
@@ -122,6 +124,8 @@ const T = {
     expiredTitle: "Bağlantı geçersiz ya da süresi dolmuş",
     expiredText: "Kontrol bağlantısı 5 dakika geçerlidir; kişiden yeniden göstermesini isteyin.",
     waiting: "Cüzdan bekleniyor",
+    statusDone: "Bu kontrol tamamlandı",
+    statusOnlyText: "Ayrıntılar yalnızca kontrolü başlatan sayfada görünür.",
     scan: "Cüzdanınızla QR'ı okutun ve alanları onaylayın.",
     requested: "İstenen",
     onlyValid: "yalnızca geçerli belge",
@@ -447,6 +451,20 @@ export function pendingPage(lang: Lang, p: Presentation, id: string, qrDataUrl: 
   );
 }
 
+/**
+ * ADR-0017 HV1/HV2 (sıkı kip): sunum kimliğini bilen ama durum jetonu (`?st=`) ya da sahip beyanı olmayan biri yalnızca nötr
+ * durumu görür — sonuç, kurum, alanlar, iz ve durum jetonu yok.
+ */
+export function statusOnlyPage(lang: Lang, done: boolean) {
+  const t = T[lang];
+  const head = done ? t.statusDone : t.waiting;
+  return page(
+    lang,
+    head,
+    `<div class="result PENDING">${head}</div><p class="muted" style="margin-top:16px">${t.statusOnlyText}</p>`,
+  );
+}
+
 /** ADR-0012 C: kontrol edenin görünümü — büyük sonuç + yalnızca açıklanan alanlar. */
 export function checkPage(lang: Lang, p: Presentation, r: VerificationResult, id: string, verifierName: string) {
   const t = T[lang];
@@ -586,7 +604,7 @@ export function terminalPage(lang: Lang, group: string) {
 <div class="row"><button class="btn" id="cam" type="button">${t.openCam}</button><button class="btn secondary" id="chk" type="button">${t.check}</button></div>
 <textarea id="tok" rows="4" placeholder="tamga-pass+jwt …"></textarea>
 <div id="res" class="result PENDING">${t.waitingShort}</div><div id="det" class="muted"></div></section>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" integrity="sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx" crossorigin="anonymous"></script>
 <script>
 const $=(i)=>document.getElementById(i);let last="";
 async function check(tk){const r=await fetch("/terminal/verify",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:tk,terminal_group:${jsLit(group)}})});const j=await r.json();$("res").className="result "+(j.ok?"ACCEPTED":"REJECTED");$("res").textContent=j.ok?${jsLit(t.pass)}:${jsLit(t.stop)};$("det").textContent=j.ok?("pass "+j.passId+" · "+j.expiresIn+" "+${jsLit(t.left)}):(j.reason||"");}

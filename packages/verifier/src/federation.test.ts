@@ -2,7 +2,8 @@
  * ADR-0036 federasyon + AB PID uyum testleri: sentetik bir dış ETSI TS 119 602 (LoTE) listesi (deneme imzacısı), AB PID
  * kural kitabı biçiminde iç içe seçici açıklamalı bir SD-JWT VC (urn:eudi:pid:1; address{…}, nationalities[]) ve olumsuz
  * durumlar: kapsam dışı tür (FD2), imzacı uyuşmazlığı, bayat liste (UNKNOWN), tanınmayan ülke (C3), kurcalanmış iç içe disclosure,
- * dış cüzdan sağlayıcısı + kapsam anahtar deposu kuralı.
+ * dış cüzdan sağlayıcısı + kapsam anahtar deposu kuralı, JAdES kritik başlıkları (`crit: ["sigT"]` tanınır, bilinmeyen RED), dış
+ * liste geri sarması (eski LoTESequenceNumber, depo yeniden kurulsa da).
  * Tamga listeleri dev PKI + trust-publisher dist'ten; dış liste test içinde üretilir (kişisel veri yok, anahtarlar atılır).
  */
 import { describe, it, expect, beforeAll } from "vitest";
@@ -83,13 +84,14 @@ function lote(opts: {
   nextUpdate: Date;
   entities: Array<{ name: string; services: Array<{ type: string; certs: Uint8Array[] }> }>;
   version?: number;
+  sequence?: number;
 }) {
   const iso = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, "Z");
   return {
     LoTE: {
       ListAndSchemeInformation: {
         LoTEVersionIdentifier: opts.version ?? 1,
-        LoTESequenceNumber: 3,
+        LoTESequenceNumber: opts.sequence ?? 3,
         LoTEType: "http://uri.etsi.org/19602/LoTEType/test",
         SchemeOperatorName: [{ lang: "en", value: "Test scheme operator" }],
         SchemeTerritory: opts.territory,
@@ -109,10 +111,20 @@ function lote(opts: {
     },
   };
 }
-async function signLote(obj: unknown, signer: KeyCert) {
+/** JAdES (ETSI TS 119 182-1) compact başlığı — liste yayıncısının `jadesHeader`'ı gibi: `sigT` korunan ve kritik. */
+async function signLote(obj: unknown, signer: KeyCert, crit: string[] = ["sigT"]) {
+  const extra = Object.fromEntries(crit.filter((k) => k !== "sigT").map((k) => [k, "x"]));
   return new CompactSign(new TextEncoder().encode(JSON.stringify(obj)))
-    .setProtectedHeader({ alg: "ES256", typ: "JOSE", x5c: [b64(signer.der)] })
-    .sign(signer.keys.privateKey);
+    .setProtectedHeader({
+      alg: "ES256",
+      cty: "application/json",
+      x5c: [b64(signer.der)],
+      "x5t#S256": b64u(createHash("sha256").update(signer.der).digest()),
+      sigT: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+      crit,
+      ...extra,
+    })
+    .sign(signer.keys.privateKey, { crit: Object.fromEntries(crit.map((k) => [k, true])) });
 }
 
 /** AB PID kural kitabı biçiminde (iç içe address, dizi nationalities) seçici açıklamalı SD-JWT VC — ihraç biçimi. */
@@ -186,6 +198,8 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     signer?: KeyCert;
     pinned?: KeyCert;
     version?: number;
+    sequence?: number;
+    crit?: string[];
   }) {
     const { trust } = await loadTrustSourceFromDir(DIST);
     const store = (trust as unknown as { store: TrustStore }).store;
@@ -214,6 +228,7 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
         territory: "TR",
         nextUpdate: o.nextUpdate ?? new Date(Date.now() + 7 * DAY),
         version: o.version,
+        sequence: o.sequence,
         entities: [
           {
             name: "Test PID Provider",
@@ -228,6 +243,7 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
         ],
       }),
       o.signer ?? listSigner,
+      o.crit,
     );
     const warnings = await applyExternalListsWith(store, { "test-pid": jws }, verifyJws, new Date());
     return { trust: trust as ListTrustSource, warnings };
@@ -376,6 +392,23 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
       scope: { entity_kinds: ["pid_provider"], vct: [PID_VCT], category: "IDENTITY", assurance: "I3" },
     });
     expect(t2.isWalletProviderKey(wpFp)).toBe("NO");
+  });
+
+  it("JAdES: crit [sigT] tanınır ve liste yüklenir; bilinmeyen kritik başlık taşıyan dış liste yüklenmez (RFC 7515 §4.1.11)", async () => {
+    const ok = await federated({});
+    expect(ok.trust.externalAnchorCertsDer?.().length).toBe(1);
+    const { trust, warnings } = await federated({ crit: ["sigT", "x-unknown"] });
+    expect(warnings.some((w) => /not loaded/.test(w))).toBe(true);
+    expect(trust.externalAnchorCertsDer?.()).toEqual([]);
+  });
+
+  it("dış liste geri sarması: depo her yüklemede yeni kurulsa da eski LoTESequenceNumber reddedilir", async () => {
+    await federated({ sequence: 3 });
+    const { trust, warnings } = await federated({ sequence: 2 });
+    expect(warnings.some((w) => /rollback/.test(w))).toBe(true);
+    expect(trust.externalAnchorCertsDer?.()).toEqual([]);
+    // aynı ya da daha yeni sıra yüklenir
+    expect((await federated({ sequence: 3 })).trust.externalAnchorCertsDer?.().length).toBe(1);
   });
 
   it("kurcalanmış iç içe disclosure (eşleşmeyen) → A5 RED", async () => {

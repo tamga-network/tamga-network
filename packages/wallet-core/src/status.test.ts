@@ -23,6 +23,7 @@ describe.skipIf(!have)("cüzdan: belge iptal durumu (VCR_19)", async () => {
   const bits = new StatusBitstring();
   bits.set(7, StatusValue.INVALID);
   bits.set(9, StatusValue.SUSPENDED);
+  bits.set(11, 3 as StatusValue); // uygulamaya özgü değer
   const token = await signStatusListToken({
     signer,
     iss: "https://issuer.tamga.network/bilgi",
@@ -57,6 +58,8 @@ describe.skipIf(!have)("cüzdan: belge iptal durumu (VCR_19)", async () => {
     expect(credentialStatusFrom(cred([1, 2]), list, trust([fp]))).toBe("valid");
     expect(credentialStatusFrom(cred([1, 7]), list, trust([fp]))).toBe("revoked");
     expect(credentialStatusFrom(cred([9]), list, trust([fp]))).toBe("suspended");
+    // 3: doğrulayıcı reddeder → cüzdan da "geçerli" göstermez (iptal sayılır)
+    expect(credentialStatusFrom(cred([11]), list, trust([fp]))).toBe("revoked");
   });
   it("imzacı kurumun kayıtlı iptal anahtarı değilse sonuç yok (S11)", () => {
     const list = parseStatusToken(token, URI, now);

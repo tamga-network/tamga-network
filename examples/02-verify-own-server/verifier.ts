@@ -70,7 +70,25 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
   const statusCache = new PrefetchStatusCache(cfg.fetchStatus);
   await statusCache.refresh([...store.status_anchors.values()].map((a) => a.list_uri));
 
+  // Open requests, in memory. Each expires with its request object (expiresAt) and the map is capped, so abandoned QR codes
+  // cannot grow it without limit. A multi-instance deployment keeps these in a shared store instead.
+  const MAX_PENDING = 10_000;
   const pending = new Map<string, { req: PresentationRequest; policy: Policy }>();
+  const sweep = (now = Math.floor(Date.now() / 1000)) => {
+    for (const [id, e] of pending) if (e.req.expiresAt < now) pending.delete(id);
+    for (const id of pending.keys()) {
+      if (pending.size < MAX_PENDING) break;
+      pending.delete(id); // oldest first
+    }
+  };
+  const live = (id: string) => {
+    const e = pending.get(id);
+    if (e && e.req.expiresAt < Math.floor(Date.now() / 1000)) {
+      pending.delete(id);
+      return undefined;
+    }
+    return e;
+  };
 
   /** 2) Start: returns the QR payload. Serve `requestObject(id)` at GET /vp/req/:id. */
   async function start(policy: Policy = DIPLOMA_POLICY) {
@@ -81,18 +99,19 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
       requestUriBase: `${cfg.publicBase}/vp/req`,
       purpose: Object.values(policy.purpose)[0],
     });
+    sweep();
     pending.set(req.presentationId, { req, policy });
     return { presentationId: req.presentationId, qrPayload: req.qrPayload };
   }
 
   /** GET /vp/req/:id → body with content-type application/oauth-authz-req+jwt. */
-  const requestObject = (id: string) => pending.get(id)?.req.requestJwt ?? null;
+  const requestObject = (id: string) => live(id)?.req.requestJwt ?? null;
 
   /** 3) POST /vp/response (form field `response`) → verify. Each request answers once. */
   async function handleResponse(jwe: string) {
     const kid = JSON.parse(Buffer.from(jwe.split(".")[0], "base64url").toString("utf8")).kid as string;
-    const entry = pending.get(String(kid).replace(/^enc-/, ""));
-    if (!entry) throw new Error("unknown or already answered request");
+    const entry = live(String(kid).replace(/^enc-/, ""));
+    if (!entry) throw new Error("unknown, expired or already answered request");
     pending.delete(entry.req.presentationId);
     const answer = await decryptResponse(jwe, entry.req.encPrivateKey);
     if (answer.state !== entry.req.state) throw new Error("state mismatch");

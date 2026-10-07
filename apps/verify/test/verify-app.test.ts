@@ -356,7 +356,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         given_name: "Ayşe",
         birth_date: "2001-05-05",
         nationality: "TR",
-        personal_administrative_number: "10000000146",
+        personal_administrative_number: "10000000147", // TCKN sağlama toplamını geçmez (gerçek numara biçiminde değil)
         document_type: "ID_CARD",
         document_number_hash: "sha256-abc123",
         issuing_country: "TR",
@@ -574,19 +574,24 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       app2.inject({
         method: "POST",
         url,
-        headers: { "content-type": "application/json", origin: ORIGIN, ...headers },
+        // passkey uçları aynı site denetimi ister (Origin = Host, JSON)
+        headers: { "content-type": "application/json", origin: ORIGIN, host: new URL(ORIGIN).host, ...headers },
         payload: payload as object,
       });
 
     // oturumsuz passkey kaydı → 401; IP adresinden → 400 (WebAuthn güvenli bağlam)
     expect((await post("/sample-site/passkey/register/options", {})).statusCode).toBe(401);
+    // başka siteden (Origin ≠ Host) ya da JSON olmayan istek → 403
+    expect((await post("/sample-site/passkey/login/options", {}, { origin: "https://evil.example" })).statusCode).toBe(
+      403,
+    );
     const cookie2 = String(s2.headers["set-cookie"]).split(";")[0];
     expect(
       (
         await post(
           "/sample-site/passkey/register/options",
           {},
-          { cookie: cookie2, origin: "http://192.168.1.100:4004" },
+          { cookie: cookie2, origin: "http://192.168.1.100:4004", host: "192.168.1.100:4004" },
         )
       ).statusCode,
     ).toBe(400);
@@ -744,7 +749,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       given_name: "Ayşe",
       birth_date: "2001-05-05",
       nationality: "TR",
-      personal_administrative_number: "10000000146",
+      personal_administrative_number: "10000000147", // TCKN sağlama toplamını geçmez (gerçek numara biçiminde değil)
       document_type: "ID_CARD",
       document_number_hash: "sha256-abc123",
       issuing_country: "TR",
@@ -1034,6 +1039,15 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(
       (await strict.inject({ method: "GET", url: `/presentations/${id}?st=${created.status_token}` })).json(),
     ).toEqual({ state: "PENDING" });
+    // HV1/HV2: /p/:id — kimliği bilen ama jetonu olmayan yalnız nötr durumu görür (QR, durum jetonu, iz yok); jetonla tam sayfa
+    const anon = await strict.inject({ method: "GET", url: `/p/${id}` });
+    expect(anon.statusCode).toBe(200);
+    expect(anon.headers["x-robots-tag"]).toContain("noindex");
+    expect(anon.body).not.toContain(created.status_token);
+    expect(anon.body).not.toContain('class="qr"');
+    const withSt = await strict.inject({ method: "GET", url: `/p/${id}?st=${created.status_token}` });
+    expect(withSt.body).toContain('class="qr"');
+    expect((await strict.inject({ method: "GET", url: `/p/${id}?st=yanlis` })).body).not.toContain('class="qr"');
     // QR'daki kimliği bilen biri çözülemeyen bir yanıtla sunumu tüketemez
     const fakeHdr = Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid: `enc-${id}` })).toString(
       "base64url",
@@ -1125,8 +1139,24 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       strict.inject({ method: "GET", url: `/presentations/${id}/claims`, headers: { authorization: await bearer() } });
     expect(((await read()).json() as { claims: Record<string, unknown> }).claims.eqf_level).toBe(6);
     expect((await read()).statusCode).toBe(410);
-    // sayfa değer göstermez (HV4)
-    expect((await strict.inject({ method: "GET", url: `/p/${id}` })).body).not.toContain("Yılmaz");
+    // sayfa değer göstermez (HV4); jetonsuz bakan sonucu da görmez (HV1/HV2), jetonla sonuç (değersiz) görünür
+    const doneAnon = (await strict.inject({ method: "GET", url: `/p/${id}` })).body;
+    expect(doneAnon).not.toContain("Yılmaz");
+    expect(doneAnon).not.toContain('class="result ACCEPTED"');
+    expect(doneAnon).not.toContain("What happened in the background");
+    const doneSt = (await strict.inject({ method: "GET", url: `/p/${id}?st=${created.status_token}` })).body;
+    expect(doneSt).toContain('class="result ACCEPTED"');
+    expect(doneSt).not.toContain("Yılmaz");
+    // form yolu: sunumu açan sayfa jetonla yönlenir
+    const form = await strict.inject({
+      method: "POST",
+      url: "/presentations",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      payload: "policy_id=job-application-degree",
+    });
+    expect(form.statusCode).toBe(302);
+    expect(form.headers.location).toMatch(/^\/p\/[^?]+\?st=.+/);
+    expect((await strict.inject({ method: "GET", url: form.headers.location as string })).body).toContain('class="qr"');
 
     // örnek site: sunumu sunucu açar (K5); site dışı politika 400
     const start = (policy: string) =>
@@ -1162,13 +1192,16 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const req = verifyRequestObject(pr.requestJwt, cfg.clientId);
     expect(req.onBehalfOf).toBe(SITE);
     expect(req.rpKey).toBe(SITE); // kayıt çözülmeden önce asıl sitenin client_id'si
-    const inter = app.trust().relyingParty(cfg.clientId) as unknown as RpRecord;
+    // K7: aracı ilişkisi iki kayıtta da yazılı (aracı asıl siteyi, site aracıyı listeler)
+    const listed = app.trust().relyingParty(cfg.clientId) as unknown as RpRecord;
+    const inter = { ...listed, served_relying_parties: ["site.example"] } as RpRecord;
     const match = { queryId: "diploma", credential: { vct: VCT } as never, requested: ["is_graduate"] };
     const site = {
       ...inter,
       client_id: SITE,
       dns_name: "site.example",
       legal_name: "Örnek Site A.Ş.",
+      uses_intermediaries: [listed.dns_name],
       scopes: [{ ...inter.scopes[0], vct: VCT, claims: ["is_graduate"] }],
     } as RpRecord;
     const ok = checkRp(inter, req, match, Date.now(), site);

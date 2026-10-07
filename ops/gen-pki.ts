@@ -360,11 +360,19 @@ async function finish(root: Item, items: Item[], notBefore: Date) {
   if (!FORCE && prev.generated_at) summary.generated_at = prev.generated_at;
   for (const it of items) {
     const der = new Uint8Array(it.cert.rawData);
+    // yeniden kullanılan sertifikanın önceki üretim zamanı korunur (setup izlenen pki.json'u boşuna değiştirmesin)
+    const prevCreated = (prev[it.name] as { created_at?: string; fingerprint_sha256?: string } | undefined) ?? {};
+    const fp = certFingerprintSha256Hex(der);
+    const createdAt = it.created
+      ? notBefore.toISOString()
+      : prevCreated.fingerprint_sha256 === fp
+        ? prevCreated.created_at
+        : undefined;
     summary[it.name] = {
       subject: it.cert.subject,
-      fingerprint_sha256: certFingerprintSha256Hex(der),
+      fingerprint_sha256: fp,
       not_after: it.cert.notAfter.toISOString(),
-      ...(it.created ? { created_at: notBefore.toISOString() } : {}),
+      ...(createdAt ? { created_at: createdAt } : {}),
     };
   }
   const der = (n: string) => pemToDer(readFileSync(resolve(outDir, `${n}.cert.pem`), "utf8"));

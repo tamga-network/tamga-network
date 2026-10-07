@@ -79,6 +79,8 @@ describe.skipIf(!prodReady)("gerçek ağ kipi (uygulama)", () => {
     expect(en.body).toContain("https://docs.tamga.network/en/guides/sign-in-with-tamga");
     expect(en.body).toContain("https://docs.tamga.network/en/guides/sandbox");
     expect(en.body).not.toContain("/sample-site");
+    expect(en.body).not.toContain("SANDBOX · TEST"); // gerçek ağda şerit yok
+    expect(en.headers["x-robots-tag"]).toBeUndefined(); // ana sayfa dizine girebilir
     const tr = await app.inject({ method: "GET", url: "/", headers: { "accept-language": "tr-TR" } });
     expect(tr.body).toContain("https://docs.tamga.network/guides/sandbox");
     expect(tr.body).toContain("Gerçek ağda deneme yoktur");
@@ -160,7 +162,13 @@ describe.skipIf(!sbReady)("sandbox kipi (uygulama)", () => {
     const site = await app.inject({ method: "GET", url: "/sample-site" });
     expect(site.statusCode).toBe(200);
     expect(site.body).toContain("Sign up with Tamga");
-    expect((await app.inject({ method: "GET", url: "/terminal" })).statusCode).toBe(200);
+    const term = await app.inject({ method: "GET", url: "/terminal" });
+    expect(term.statusCode).toBe(200);
+    expect(term.headers["x-robots-tag"]).toContain("noindex");
+    // ADR-0038 SB4: "test" şeridi ağ ayarından (cfg.network), süreç ortamından değil
+    expect(process.env.TAMGA_NETWORK).not.toBe("sandbox");
+    expect(home.body).toContain("SANDBOX · TEST");
+    expect(term.body).toContain("SANDBOX · TEST");
     await app.close();
   });
 });

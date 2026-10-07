@@ -2,6 +2,9 @@
 
 Foundry projesi. Spesifikasyon: **SPEC-BC-0001 v2.0.0**.
 
+> **CI henüz etkin değil (zincir aşaması, ADR-0009).** İş akışı taslağı `ci/contracts.yml.disabled`'da durur; zincir aşamasında
+> kök `.github/workflows/` altına taşınınca çalışır (GitHub iç içe klasördeki iş akışlarını çalıştırmaz).
+
 ## Hızlı başlangıç
 
 ```bash

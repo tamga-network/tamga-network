@@ -77,11 +77,62 @@ export function asciiName(name: string): string {
   return s || "Test Institution";
 }
 
-export function validateRequest(r: Partial<TestInstitutionRequest>): string[] {
+/** Karşılaştırma için katlama: Türkçe küçük harf, aksan ve noktalı i farkları atılır (tamga-platform issuer ile aynı). */
+export const foldName = (x: string) =>
+  x.toLocaleLowerCase("tr").normalize("NFD").replace(/\p{M}/gu, "").replace(/ı/g, "i");
+/**
+ * ADR-0041 K1: resmî kurum sözcükleri ve kısaltmaları, marka ve sistem adları (katlanmış metinde). Test kurumu resmî bir kurumu
+ * ya da Tamga'yı taklit edemez (yalnız uydurma ad). Sandbox portalının (issuer) listesiyle aynı tutulur; yayıncı ikinci kapıdır.
+ */
+const RESERVED_PATTERNS: RegExp[] = [
+  /(^|[^a-z])t\.?\s*c\.?([^a-z]|$)/, // T.C. / TC
+  /bakanl/, // Bakanlık, Bakanlığı
+  /belediye/,
+  /valilig|valilik/,
+  /kaymakaml/,
+  /cumhurbaskanl/,
+  /universit/, // Üniversitesi, University
+  /ministr/,
+  /mahkeme|savcilig|emniyet|jandarma|devlet/,
+  /(^|[^a-z])(tamga|didit|apple|google|tbmm|meb|sgk|kvkk|tubitak|osym|egm|tsk|btk|gib|e-?devlet)([^a-z]|$)/,
+];
+const nameKey = (x: string) => foldName(x.replace(/\(\s*TEST\s*\)/gi, "")).replace(/[^\p{L}\p{N}]+/gu, "");
+
+/**
+ * ADR-0041 K1 ad denetimi: resmî kurum sözcüğü / marka adı ya da listelerdeki bir kurumun adına (legal_name, trade_name) çok
+ * benzeyen ad RED. `reserved`: gerçek ve sandbox kayıt defterindeki kurum adları + şu anki test kurumları.
+ */
+export function nameProblems(name: string, reserved: string[] = []): string[] {
+  const n = name.replace(/\(\s*TEST\s*\)/gi, "").trim();
+  if (/\bYÖK\b/u.test(n) || RESERVED_PATTERNS.some((r) => r.test(foldName(n))))
+    return ["name: resmî kurum sözcüğü ya da marka adı içeriyor (ADR-0041 K1)"];
+  const k = nameKey(n);
+  for (const r of reserved) {
+    const rk = nameKey(r);
+    if (rk && (rk === k || (rk.length >= 6 && k.includes(rk)) || (k.length >= 6 && rk.includes(k))))
+      return ["name: listedeki bir kurumun adına çok benziyor (ADR-0041 K1)"];
+  }
+  return [];
+}
+
+/** Kayıt kaynaklarından (tl-tr.source.json biçimi) ayrılmış adlar: kurum ve doğrulayıcıların legal_name / trade_name değerleri. */
+export function reservedNamesOf(...sources: Array<{ issuers?: unknown[]; relying_parties?: unknown[] } | undefined>) {
+  const out: string[] = [];
+  for (const s of sources)
+    for (const x of [...(s?.issuers ?? []), ...(s?.relying_parties ?? [])] as Array<Record<string, unknown>>)
+      for (const v of [x.legal_name, x.trade_name])
+        if (typeof v === "string") out.push(v);
+        else if (v && typeof v === "object")
+          out.push(...Object.values(v).filter((y): y is string => typeof y === "string"));
+  return out;
+}
+
+export function validateRequest(r: Partial<TestInstitutionRequest>, reserved: string[] = []): string[] {
   const p: string[] = [];
   if (!SLUG.test(String(r.slug ?? ""))) p.push("slug: t-<6–12 küçük harf/rakam>");
   if (!r.name || r.name.length < 3 || r.name.length > 80 || !/\(TEST\)$/.test(r.name))
     p.push('name: 3–80 karakter ve "(TEST)" ile biter (TI2)');
+  else p.push(...nameProblems(r.name, reserved));
   if (!r.kind || !(r.kind in TEST_KINDS)) p.push(`kind: ${Object.keys(TEST_KINDS).join(" | ")}`);
   for (const k of ["issuer_url", "status_list_base"] as const)
     if (!/^https?:\/\//.test(String(r[k] ?? ""))) p.push(`${k}: http(s) adres`);

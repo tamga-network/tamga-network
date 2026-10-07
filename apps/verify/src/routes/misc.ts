@@ -1,7 +1,7 @@
 /** Yardımcı uçlar: sağlık, politika listesi, ana sayfa, denetim kaydı, LAN'da güven listesi aynası. */
 import type { FastifyInstance } from "fastify";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { isAbsolute, resolve, sep } from "node:path";
 import { policyScopeViolations } from "@tamga-network/verifier";
 import type { VerifyContext } from "../app.js";
 import { isReviewPolicy, policySummaries } from "../policies.js";
@@ -62,9 +62,14 @@ export function registerMiscRoutes(app: FastifyInstance, ctx: VerifyContext) {
   if (process.env.TAMGA_VERIFY_SERVE_TRUST === "1") {
     app.get("/trust/*", async (req, reply) => {
       const rel = (req.params as { "*": string })["*"];
-      if (!/^[a-z0-9_./-]+$/i.test(rel) || rel.includes("..")) return reply.code(400).send("bad path");
+      // Yalnız güven listesi klasörünün içi: mutlak yol, baştaki "/" ve ".." yok; çözülen yol kökün altında kalmalı
+      if (!/^[a-z0-9_./-]+$/i.test(rel) || rel.includes("..") || rel.startsWith("/") || isAbsolute(rel))
+        return reply.code(400).send("bad path");
+      const root = resolve(cfg.trustDist);
+      const file = resolve(root, rel);
+      if (!file.startsWith(root + sep)) return reply.code(400).send("bad path");
       try {
-        const body = readFileSync(resolve(cfg.trustDist, rel), "utf8");
+        const body = readFileSync(file, "utf8");
         const type = rel.endsWith(".json")
           ? "application/json"
           : rel.endsWith(".jws")

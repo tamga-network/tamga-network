@@ -22,6 +22,12 @@ export interface PolicyCredential {
    * (tip `aki` = issuer sertifikasının AKI'si, base64url; `akiValuesFromCaCerts` ile). Doğrulayıcı güveni yine kendisi denetler.
    */
   trusted_authorities?: Array<{ type: "aki" | "etsi_tl" | "openid_federation"; values: string[] }>;
+  /**
+   * ADR-0032 ZK4: ZK sunumunda iptal listesi indeksi gelmez → iptal denetlenemez (belge kısa ömürlü, K6). `true`: bu
+   * bilinerek kabul edilir (sonuç `status.value = NOT_APPLICABLE`, `status.reason` ile). `false`: iptal denetlenemediği için
+   * DOĞRULANAMADI (D1). Verilmezse `true` sayılır; `mso_mdoc_zk` kullanan politikalar bunu AÇIKÇA yazmalıdır.
+   */
+  accept_unrevocable_zk?: boolean;
 }
 export interface Policy {
   policy_id: string;
@@ -132,6 +138,18 @@ export function dcqlFromPolicy(p: Policy, opts: { zkCircuits?: ZkCircuit[] } = {
   };
 }
 
+/**
+ * Kapsam denetimi (AP6/E3 ortak): alan kapsamda kendisi ya da bir atası varsa izinli (iç içe yol: address → address.locality,
+ * nationalities → nationalities[0]).
+ */
+export function scopeCovers(allowed: Set<string>, claim: string): boolean {
+  for (let p = claim; p; p = p.replace(/(\.[^.[\]]+|\[\d+\])$/, "")) {
+    if (allowed.has(p)) return true;
+    if (!/[.[]/.test(p)) break;
+  }
+  return false;
+}
+
 /** AP6 — politika RP'nin kayıtlı scope'unu aşıyorsa hata listesi döner (boş = uygun). */
 export function policyScopeViolations(p: Policy, rp: RelyingParty | null, now = Date.now()): string[] {
   if (!rp) return ["relying party not registered"];
@@ -150,7 +168,7 @@ export function policyScopeViolations(p: Policy, rp: RelyingParty | null, now = 
         )
         .flatMap((s) => s.claims),
     );
-    for (const cl of c.required_claims) if (!allowed.has(cl)) out.push(`${c.id}.${cl} outside scope`);
+    for (const cl of c.required_claims) if (!scopeCovers(allowed, cl)) out.push(`${c.id}.${cl} outside scope`);
   }
   return out;
 }

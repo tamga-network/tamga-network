@@ -7,7 +7,9 @@
  *
  * ADR-0025 (AB TS3): aynı başlıklarla **WIA** da kabul edilir — `client_status` taşıyan, 24 saatten kısa ömürlü, işlem başına yeni
  * anahtarlı cüzdan örneği kanıtı. WIA anahtar deposu bilgisi taşımaz (o KA'dadır); `client_status` iptal durumu denetlenir.
- * Eski WUA biçimi pilot öncesine kadar kabul edilir.
+ * Eski WUA biçimi pilot öncesine kadar kabul edilir (bugün test yardımcıları ve kurumun eski cüzdanları üretiyor).
+ * Her iki biçimde `exp` zorunlu (süresiz kanıt yok). PoP tek kullanımlıktır: `jti` ve `iat` sonuçta döner; çağıran
+ * `jtiSeen` ile tekrar oynatmayı (replay) reddeder.
  */
 import { decodeProtectedHeader, importJWK, importX509, jwtVerify, type JWK } from "jose";
 import { b64ToDer, derToPem, certFingerprintSha256Hex } from "@tamga-network/core";
@@ -56,7 +58,14 @@ export interface WuaClaims {
   exp: number;
 }
 export type WuaResult =
-  | { ok: true; claims: WuaClaims; providerFingerprint: string; kind: "wua" | "wia" }
+  | {
+      ok: true;
+      claims: WuaClaims;
+      providerFingerprint: string;
+      kind: "wua" | "wia";
+      /** PoP kimliği ve zamanı — çağıran tekrar oynatma kaydı için (`jti` en az `iat + POP_MAX_AGE_SEC`'e kadar saklanmalı). */
+      pop: { jti: string; iat: number };
+    }
   | { ok: false; reason: string; indeterminate?: boolean };
 
 export async function verifyWalletAttestation(p: {
@@ -73,6 +82,11 @@ export async function verifyWalletAttestation(p: {
    * politikasından sıkıysa o uygulanır (WUA beyanında burada; WIA'da credential ucundaki KA denetiminde).
    */
   minKeyStorageFor?: (fingerprintHex: string) => string | null;
+  /**
+   * PoP tekrar oynatma denetimi: bu `jti` (aynı cüzdan anahtarı için) daha önce görüldüyse true döndürür; görülmediyse kaydeder ve
+   * false döndürür. Verilmezse denetlenmez (çağıran sonuçtaki `pop.jti` ile kendisi yapar).
+   */
+  jtiSeen?: (jti: string, iat: number) => boolean | Promise<boolean>;
 }): Promise<WuaResult> {
   const now = p.now ?? Math.floor(Date.now() / 1000);
   try {
@@ -89,6 +103,7 @@ export async function verifyWalletAttestation(p: {
       currentDate: new Date(now * 1000),
     });
     const c = payload as unknown as WuaClaims;
+    if (typeof c.exp !== "number" || !Number.isFinite(c.exp)) return { ok: false, reason: "WUA/WIA exp missing" };
     if (!c.cnf?.jwk || c.cnf.jwk.kty !== "EC" || c.cnf.jwk.crv !== "P-256")
       return { ok: false, reason: "WUA cnf is not P-256" };
     const kind: "wua" | "wia" = c.client_status ? "wia" : "wua";
@@ -126,7 +141,8 @@ export async function verifyWalletAttestation(p: {
     if (typeof pp.iat !== "number" || Math.abs(now - pp.iat) > POP_MAX_AGE_SEC)
       return { ok: false, reason: "PoP iat outside the allowed window" };
     if (typeof pp.jti !== "string" || !pp.jti) return { ok: false, reason: "PoP jti missing" };
-    return { ok: true, claims: c, providerFingerprint: fp, kind };
+    if (p.jtiSeen && (await p.jtiSeen(pp.jti, pp.iat))) return { ok: false, reason: "PoP jti replayed" };
+    return { ok: true, claims: c, providerFingerprint: fp, kind, pop: { jti: pp.jti, iat: pp.iat } };
   } catch (e) {
     return { ok: false, reason: `WUA/PoP: ${(e as Error).message}` };
   }

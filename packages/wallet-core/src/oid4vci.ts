@@ -21,6 +21,8 @@ export interface CredentialOffer {
     [PRE_AUTH_GRANT]?: {
       "pre-authorized_code": string;
       tx_code?: { length?: number; input_mode?: string; description?: string };
+      /** OpenID4VCI 1.0 §4.1.1: metadata'daki `authorization_servers`'tan hangisi (birden çoksa) */
+      authorization_server?: string;
     };
     /** ADR-0020: kimliğe bağlı teklif — cüzdan PAR'da issuer_state gönderir, kişi kimliğini sunar */
     authorization_code?: { issuer_state?: string };
@@ -58,6 +60,48 @@ export interface IssuerMetadata {
     }
   >;
   display?: Array<{ name?: string; locale?: string }>;
+  /** OpenID4VCI 1.0 §12.2.4: yetkilendirme sunucuları (yoksa kurumun kendisi) */
+  authorization_servers?: string[];
+}
+
+/**
+ * Belirteç ucu (OpenID4VCI 1.0 §6, RFC 8414): yetkilendirme sunucusunun metadata'sındaki `token_endpoint` — sunucu teklifin
+ * `authorization_server`'ı, yoksa metadata'daki ilk `authorization_servers`, yoksa kurumun kendisi (authcode.ts ile aynı keşif).
+ * Metadata yayımlanmamışsa (404/erişilemez) kurumun `/token` ucu. `token_endpoint` https olmalı (yerel http geliştirmesi hariç)
+ * ve metadata'nın `issuer`'ı sorulan sunucu olmalı (RFC 8414 §3.3).
+ */
+async function resolveTokenEndpoint(
+  issuer: string,
+  md: IssuerMetadata,
+  http: Http,
+  preferredAs?: string,
+): Promise<string> {
+  const servers = md.authorization_servers ?? [];
+  if (preferredAs && !servers.includes(preferredAs))
+    throw new WalletError("invalid_offer", "offer names an authorization server the issuer does not list");
+  const as = (preferredAs ?? servers[0] ?? issuer).replace(/\/$/, "");
+  const m = /^(https?:\/\/[^/]+)(\/.*)?$/.exec(as);
+  if (!m) throw new WalletError("issuer_error", "authorization server is not a URL");
+  let meta = null as { issuer?: unknown; token_endpoint?: unknown } | null;
+  try {
+    const r = await http(`${m[1]}/.well-known/oauth-authorization-server${m[2] ?? ""}`);
+    if (r.status === 200) meta = (await readJson(r, "yetkilendirme sunucusu")) as typeof meta;
+  } catch {
+    meta = null;
+  }
+  if (!meta || meta.token_endpoint === undefined) {
+    if (as !== issuer.replace(/\/$/, ""))
+      throw new WalletError("issuer_error", "authorization server metadata could not be fetched");
+    return `${issuer}/token`;
+  }
+  if (typeof meta.issuer === "string" && meta.issuer.replace(/\/$/, "") !== as)
+    throw new WalletError("issuer_error", "authorization server metadata issuer mismatch (RFC 8414 §3.3)");
+  const te = meta.token_endpoint;
+  if (typeof te !== "string" || !/^https?:\/\//.test(te))
+    throw new WalletError("issuer_error", "token_endpoint is not a URL");
+  if (as.startsWith("https://") && !te.startsWith("https://"))
+    throw new WalletError("issuer_error", "token_endpoint must use https");
+  return te;
 }
 
 /** QR/deep link/URL/JSON → offer kaynağı. Kabul: openid-credential-offer://?credential_offer_uri=… | ?credential_offer=… | https://… | {json} */
@@ -268,12 +312,13 @@ export async function redeem(p: RedeemInput): Promise<RedeemOutput> {
         }
       : {}),
   });
+  const tokenEndpoint = await resolveTokenEndpoint(issuer, md, p.http, grant.authorization_server);
   // DPoP (RFC 9449): belirteç bu işlemin anahtarına bağlanır; sunucu nonce isterse bir kez yeniden denenir
   const dpop = await newDpopSigner(p.keys, `dpop.${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`);
   const tr = await dpopRequest(
     p.http,
     dpop,
-    `${issuer}/token`,
+    tokenEndpoint,
     {
       method: "POST",
       headers: tokenHeaders,
@@ -323,7 +368,7 @@ export async function redeem(p: RedeemInput): Promise<RedeemOutput> {
     dpop,
     randomBytes: p.randomBytes,
     refreshToken: tokenBody.refresh_token,
-    tokenEndpoint: `${issuer}/token`,
+    tokenEndpoint,
   });
 }
 

@@ -2,8 +2,10 @@
  * Minimal, deterministik CBOR (RFC 8949) — mdoc/COSE için gereken alt küme. Saf JS (RN uyumlu), bağımlılık yok.
  * Kapsam: uint/negint (number ve gerekirse bigint), bstr (Uint8Array), tstr (string), array, map (Map | düz nesne),
  * bool, null, tag (CborTag), float64. Deterministik kural (RFC 8949 §4.2.1): tamsayı en kısa biçim, kesin uzunluk,
- * map anahtarları KODLANMIŞ hâllerinin bayt sırasına göre (bytewise). Not: ISO 18013-5 RFC 7049 §3.9 (uzunluk-önce) atar;
- * biz tüm ekosistemi kontrol ettiğimiz için öz-tutarlı §4.2.1 yeterli — pilot tam interop gerekirse sıralama tek satır değişir.
+ * map anahtarları KODLANMIŞ hâllerinin bayt sırasına göre (bytewise). Not: ISO 18013-5 RFC 7049 §3.9 (önce uzunluk, sonra
+ * bayt) sıralamasına atıf yapar; ikisi anahtarların kodlanmış uzunlukları eşitken aynı sonucu verir, farklı uzunluklu anahtarlarda
+ * ayrışabilir. İmza ve özet doğrulaması bu sıralamaya BAĞLI DEĞİLDİR: imzalı yapılar (MSO, IssuerSignedItem) gömülü bstr
+ * olarak taşınır ve doğrulayıcı alınan baytlar üzerinde çalışır; sıralama yalnız bizim ürettiğimiz kodlamayı belirler.
  */
 export class CborTag {
   constructor(
@@ -185,9 +187,16 @@ function decodeItem(c: Cur, depth: number): CborValue {
     case 5: {
       need(c, len * 2);
       const m = new Map<CborValue, CborValue>();
+      // Yinelenen anahtar KODLANMIŞ baytlarıyla denetlenir (RFC 8949 §5.6): bstr/dizi gibi nesne anahtarları Map'te kimlikle
+      // karşılaştırıldığı için aynı içerikli iki anahtar yoksa gözden kaçardı.
+      const seenKeys = new Set<string>();
       for (let i = 0; i < len; i++) {
+        const ks = c.p;
         const k = decodeItem(c, depth + 1);
-        if ((typeof k === "string" || typeof k === "number") && m.has(k)) throw new Error("CBOR: duplicate map key");
+        const kb = Array.from(c.b.subarray(ks, c.p), (x) => x.toString(16).padStart(2, "0")).join("");
+        if (seenKeys.has(kb) || ((typeof k === "string" || typeof k === "number") && m.has(k)))
+          throw new Error("CBOR: duplicate map key");
+        seenKeys.add(kb);
         m.set(k, decodeItem(c, depth + 1));
       }
       return m;

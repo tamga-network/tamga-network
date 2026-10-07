@@ -24,7 +24,8 @@ import type { VerifyContext } from "../app.js";
 import type { Presentation } from "../state.js";
 import { findPolicy } from "../policies.js";
 import { registrationCertsFor } from "../wrprc.js";
-import { checkPage, expiredPage, langOf, notFoundPage, pendingPage, resultPage } from "../html.js";
+import { rateLimitHook } from "../rate-limit.js";
+import { checkPage, expiredPage, langOf, notFoundPage, pendingPage, resultPage, statusOnlyPage } from "../html.js";
 
 export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyContext) {
   const { cfg, presentations } = ctx;
@@ -59,8 +60,18 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     return true;
   };
 
+  /** HTML sayfası için sahip denetimi: geçerli RP beyanı sunumu açan RP'ninse (hata yanıtı göndermez). */
+  const isOwner = async (p: Presentation, authorization: string | undefined): Promise<boolean> => {
+    if (!authorization || !p.owner) return false;
+    try {
+      return (await ctx.rpAuth(authorization)) === p.owner;
+    } catch {
+      return false;
+    }
+  };
+
   // 4.1 Sunum isteği başlat
-  app.post("/presentations", async (req, reply) => {
+  app.post("/presentations", { preHandler: rateLimitHook(ctx.limits.presentations) }, async (req, reply) => {
     const body = req.body as { policy_id?: string; dc_api_origin?: unknown };
     const policy = findPolicy(body.policy_id, ctx.policies);
     if (!policy) return reply.code(400).send({ error: "unknown_policy" });
@@ -92,7 +103,8 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         status_token: p.statusToken,
         ...(p.req.dcApiRequest ? { dc_api_request: p.req.dcApiRequest } : {}),
       };
-    return reply.redirect(`/p/${p.req.presentationId}`);
+    // Sunumu açan sayfa durum jetonunu taşır: sıkı kipte /p/:id ayrıntıları yalnızca jetonla gösterir (HV1/HV2)
+    return reply.redirect(`/p/${p.req.presentationId}?st=${encodeURIComponent(p.statusToken)}`);
   });
 
   // İstek nesnesi
@@ -104,7 +116,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
   });
 
   // Şifreli yanıt → doğrulama
-  app.post("/vp/response", async (req, reply) => {
+  app.post("/vp/response", { preHandler: rateLimitHook(ctx.limits.vpResponse) }, async (req, reply) => {
     const jwe = (req.body as { response?: string }).response;
     if (!jwe) return reply.code(400).send({ error: "invalid_request" });
     const pid = presentationIdOf(jwe);
@@ -241,7 +253,8 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
           }
         }
       }
-      return { redirect_uri: `${cfg.publicBase}/p/${pid}`, ...extra };
+      // Aynı cihaz akışı: cüzdan bu adresi tarayıcıda açar; durum jetonu yalnızca bu yanıtla (şifreli yanıtı gönderen cüzdana) gider
+      return { redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}`, ...extra };
     } catch (e) {
       p.trace.push({ t: Date.now(), step: "Response could not be processed", detail: (e as Error).message });
       p.result = rejectedResult(pid, (e as Error).message, ctx);
@@ -283,12 +296,20 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         .send(notFoundPage(langOf(req.headers["accept-language"])));
     reply.type("text/html");
     const lang = langOf(req.headers["accept-language"]);
-    if (!p.result) return pendingPage(lang, p, id, await QRCode.toDataURL(p.req.qrPayload, { margin: 1, width: 280 }));
-    const key = (req.query as { show?: string }).show;
-    if (key !== undefined) {
-      if (!presentations.showAllowed(p, key)) return reply.code(410).send(expiredPage(lang));
+    const q = req.query as { show?: string; st?: string };
+    // ADR-0012 C: kontrol görünümü kendi anahtarıyla (5 dk)
+    if (q.show !== undefined && p.result) {
+      if (!presentations.showAllowed(p, q.show)) return reply.code(410).send(expiredPage(lang));
       return checkPage(lang, p, p.result, id, ctx.trust().relyingParty(cfg.clientId)?.dns_name ?? cfg.clientId);
     }
+    // ADR-0017 HV1/HV2: sahibi olan sunumda ayrıntı (QR + durum jetonlu bekleme, sonuç, iz) yalnızca durum jetonuyla ya da
+    // sahibin beyanıyla; sunum kimliği QR'da açık olduğundan kimliği bilen herkes yalnızca nötr durumu görür
+    const full =
+      !p.owner ||
+      (q.st !== undefined && sameSecret(q.st, p.statusToken)) ||
+      (await isOwner(p, req.headers.authorization));
+    if (!full) return statusOnlyPage(lang, !!p.result);
+    if (!p.result) return pendingPage(lang, p, id, await QRCode.toDataURL(p.req.qrPayload, { margin: 1, width: 280 }));
     return resultPage(lang, p, p.result, id, !cfg.requireRpAuth && !p.owner);
   });
 }

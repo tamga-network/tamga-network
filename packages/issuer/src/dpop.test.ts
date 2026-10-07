@@ -71,4 +71,12 @@ describe("DPoP (RFC 9449)", () => {
     expect(parseAuthorization("Bearer abc")).toEqual({ scheme: "Bearer", token: "abc" });
     expect(parseAuthorization(undefined).scheme).toBeNull();
   });
+  it("tekrar önbelleği kesin üst sınırlı: dolunca en eski atılır, boyut sınırı aşılmaz", () => {
+    const c = new DpopReplayCache(3);
+    for (const j of ["a", "b", "c", "d", "e"]) expect(c.claim(j, 2000, 1000)).toBe(true);
+    expect(c.size).toBe(3);
+    expect(c.claim("e", 2000, 1000)).toBe(false); // yeni kayıt korunur
+    expect(c.claim("a", 2000, 1000)).toBe(true); // en eski atılmıştı
+    expect(c.size).toBe(3);
+  });
 });

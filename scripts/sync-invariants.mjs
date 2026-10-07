@@ -25,7 +25,8 @@ function walk(d, out = []) {
   return out;
 }
 function fm(txt) {
-  const m = /^---\n([\s\S]*?)\n---/.exec(txt);
+  // CRLF ile kaydedilmiş belgenin (Windows) ön bilgisi de okunur
+  const m = /^---\n([\s\S]*?)\n---/.exec(txt.replace(/\r\n?/g, "\n"));
   const o = {};
   if (m)
     for (const l of m[1].split("\n")) {

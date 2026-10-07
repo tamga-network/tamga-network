@@ -2,8 +2,10 @@
  * ISO/IEC 18013-5 mdoc — minimal profil: IssuerSigned (nameSpaces + issuerAuth) ihracı, seçici açıklama, doğrulama.
  * Selektif açıklama mekanizması: issuer TÜM alanların IssuerSignedItem'ını verir; MSO her alanın digest'ini taşır. Cüzdan
  * sunumda yalnızca seçtiği IssuerSignedItem'ları koyar; doğrulayıcı digest'lerle bütünlüğü ve MSO imzasını denetler.
- * Cihaz bağlaması: MSO deviceKey (holder açık anahtarı) + DeviceAuth (COSE_Sign1) SessionTranscript üzerinde.
- * Kapsam dışı: BLE/NFC taşıması, tam 18013-7 Annex B SessionTranscript (demo'da deterministik özet; pilot notu).
+ * Cihaz bağlaması: MSO deviceKey (holder açık anahtarı) + DeviceAuth (COSE_Sign1) SessionTranscript üzerinde; SessionTranscript
+ * OpenID4VP 1.0 Ek B.2.6 (yönlendirmeli akış ve Digital Credentials API) ve ISO 18013-5 yakın alan (proximity.ts) biçiminde.
+ * digestID'ler ISO 18013-5 §9.1.2.4 önerisiyle rastgele ve tekildir (sıralı değil — açıklanan alanlar gizlenenleri ele vermesin).
+ * Kapsam dışı: BLE/NFC radyosu (taşıyıcıyı uygulama sağlar).
  */
 import { sha256 } from "@noble/hashes/sha2.js";
 import { p256 } from "@noble/curves/nist.js";
@@ -48,15 +50,25 @@ export interface IssuedMdoc {
   docType: string;
 }
 
+/** Rastgele, tekil digestID (31 bit; ISO 18013-5 §9.1.2.4 — sıralı olmayan kimlikler alan sayısını/sırasını sızdırmaz). */
+function randomDigestId(randomBytes: (n: number) => Uint8Array, used: Set<number>): number {
+  const b = randomBytes(4);
+  let id = ((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) & 0x7fffffff;
+  // çakışmada (ya da sabit rastgelelik veren test kaynağında) sonraki boş değere geç — her zaman sonlanır
+  while (used.has(id)) id = (id + 1) & 0x7fffffff;
+  used.add(id);
+  return id;
+}
+
 export function issueMdoc(input: IssueMdocInput): IssuedMdoc {
   const nameSpaces = new Map<string, CborValue>();
   const valueDigests = new Map<string, CborValue>();
-  let nextId = 0;
+  const usedIds = new Set<number>();
   for (const [ns, elems] of Object.entries(input.namespaces)) {
     const items: CborValue[] = [];
     const digests = new Map<number, CborValue>();
     for (const [id, value] of Object.entries(elems)) {
-      const digestID = nextId++;
+      const digestID = randomDigestId(input.randomBytes, usedIds);
       const random = input.randomBytes(16);
       const bytes = issuerSignedItemBytes(digestID, id, value, random);
       items.push(decode(bytes)); // CborTag (tag24) olarak sakla
@@ -206,6 +218,7 @@ export function verifyIssuerSigned(
   const claims: Record<string, Record<string, CborValue>> = {};
   for (const [ns, items] of nsV.entries()) {
     if (typeof ns !== "string" || !Array.isArray(items)) continue;
+    if (RESERVED_IDS.has(ns)) return { valid: false, reason: `reserved namespace name: ${ns}` };
     const nsDigests = valueDigests.get(ns);
     if (!(nsDigests instanceof Map)) return { valid: false, reason: `namespace digest missing: ${ns}` };
     claims[ns] = {};
@@ -264,7 +277,7 @@ export function verifyIssuerSigned(
   };
 }
 
-/** Nesne prototipi adları alan adı olamaz (doğrulayıcı alanları düz nesneye yerleştirir). */
+/** Nesne prototipi adları alan ya da ad alanı adı olamaz (doğrulayıcı bunları düz nesneye yerleştirir). */
 const RESERVED_IDS = new Set(["__proto__", "constructor", "prototype"]);
 
 function eqBytes(a: Uint8Array, b: Uint8Array): boolean {
