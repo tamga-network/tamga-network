@@ -1,0 +1,10 @@
+# Longfellow ZK'nın AArch64 hızlı yolu ARMv8-A kripto uzantılarını ister (AES / PMULL, SHA2). Android 9+ ve iPhone'ların hepsi
+# bu uzantılara sahiptir; telefon hedeflerinde açık olarak etkinleştirilir (yoksa derleme compile_error ile durur).
+[target.aarch64-linux-android]
+rustflags = ["-C", "target-feature=+aes,+sha2"]
+
+[target.aarch64-apple-ios]
+rustflags = ["-C", "target-feature=+aes,+sha2"]
+
+[target.aarch64-apple-ios-sim]
+rustflags = ["-C", "target-feature=+aes,+sha2"]
