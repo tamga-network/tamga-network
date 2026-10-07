@@ -1,11 +1,15 @@
 /**
  * ops/pki-issue.ts — yeni katılımcıya (kurum / doğrulayıcı) kök CA imzalı yaprak sertifika (operatör kayıt aracının ilk adımı).
  *
- *   npx tsx ops/pki-issue.ts --name issuer-yeni --csr yeni.csr.pem            pilot: kurum anahtarını kendi tutar, CSR gönderir
- *   npx tsx ops/pki-issue.ts --name rp-shop --csr shop.csr.pem --dns shop.example.com --org-id VATTR-1234567890   doğrulayıcı erişim sertifikası (SAN + kurum kimlik no, ADR-0026)
- *   npx tsx ops/pki-issue.ts --name issuer-yeni --generate --subject "CN=Yeni, O=Yeni, C=TR"   DEMO: anahtar burada (sapma S-1)
+ *   npx tsx ops/pki-issue.ts --prod --name issuer-yeni --csr yeni.csr.pem     pilot: kurum anahtarını kendi tutar, CSR gönderir
+ *   npx tsx ops/pki-issue.ts --prod --name rp-shop --csr shop.csr.pem --dns shop.example.com --org-id VATTR-1234567890   doğrulayıcı erişim sertifikası (SAN + kurum kimlik no, ADR-0026)
+ *   npx tsx ops/pki-issue.ts --dev --name issuer-yeni --generate --subject "CN=Yeni, O=Yeni, C=TR"   yerel deneme: anahtar dosyada (sapma S-1)
  *
- * Çıktı `ops/pki/<name>.cert.pem` (+ `--generate` ile `<name>.pkcs8.pem`, gitignore). Var olan ad üzerine yazılmaz.
+ * Hangi kökle imzalanacağı AÇIKÇA seçilir (varsayılan yok):
+ *   --prod                 gerçek ağın kökü: klasör TAMGA_PROD_PKI_DIR (ya da --pki-dir <klasör>); depo dışında, operatörün gizli
+ *                          klasöründe (kök CA özel anahtarı yalnız orada). Üretilen sertifika oraya yazılır.
+ *   --dev                  depodaki geliştirme PKI'sı (`ops/pki/`, rastgele yerel anahtarlar; gerçek listede geçmez)
+ * Çıktı `<klasör>/<name>.cert.pem` (+ `--generate` ile `<name>.pkcs8.pem`). Var olan ad üzerine yazılmaz.
  * Sonra: `npm run trust:register -- issuer|rp <başvuru.json>` (başvurudaki `cert` / `access_cert` = bu ad).
  * Kurallar: yalnız P-256 / ES256; CSR imzası doğrulanır; 2 yıl (en çok 3); seri numarası rastgele.
  */
@@ -29,7 +33,7 @@ import { certFingerprintSha256Hex, pemToDer } from "@tamga-network/core";
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
-const PKI = resolve(dirname(fileURLToPath(import.meta.url)), "pki");
+const DEV_PKI = resolve(dirname(fileURLToPath(import.meta.url)), "pki");
 
 const arg = (n: string) => {
   const i = process.argv.indexOf(`--${n}`);
@@ -39,6 +43,24 @@ const fail = (m: string): never => {
   console.error(m);
   process.exit(2);
 };
+const PROD = process.argv.includes("--prod");
+const DEV = process.argv.includes("--dev");
+if (PROD === DEV)
+  fail(
+    "Hangi kök? --prod (gerçek ağ; TAMGA_PROD_PKI_DIR ya da --pki-dir <klasör>, depo dışındaki gizli klasör) ya da --dev (depodaki geliştirme PKI'sı ops/pki).",
+  );
+const PKI = PROD
+  ? resolve(
+      arg("pki-dir") ??
+        process.env.TAMGA_PROD_PKI_DIR ??
+        fail(
+          "--prod: üretim PKI klasörü verilmedi (TAMGA_PROD_PKI_DIR=<klasör> ya da --pki-dir <klasör>; ops/README.md)",
+        ),
+    )
+  : DEV_PKI;
+if (PROD && resolve(PKI) === DEV_PKI) fail("--prod ile depodaki ops/pki kullanılmaz (orası geliştirme PKI'sı)");
+if (!existsSync(resolve(PKI, "root-ca.cert.pem")) || !existsSync(resolve(PKI, "root-ca.pkcs8.pem")))
+  fail(`kök CA bulunamadı (root-ca.cert.pem + root-ca.pkcs8.pem): ${PKI}${DEV ? " — önce npm run pki" : ""}`);
 const pemBody = (pem: string) => Buffer.from(pem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, ""), "base64");
 const toPem = (label: string, der: Uint8Array) =>
   `-----BEGIN ${label}-----\n${Buffer.from(der)
@@ -49,7 +71,8 @@ const toPem = (label: string, der: Uint8Array) =>
 async function main() {
   const name = arg("name") ?? fail("--name gerekli (ör. issuer-yeni, rp-shop)");
   if (!/^(issuer|rp)-[a-z0-9-]{2,40}$/.test(name)) fail("--name: issuer-<ad> ya da rp-<ad> (küçük harf, rakam, tire)");
-  if (existsSync(resolve(PKI, `${name}.cert.pem`))) fail(`zaten var: ops/pki/${name}.cert.pem (üzerine yazılmaz)`);
+  if (existsSync(resolve(PKI, `${name}.cert.pem`)))
+    fail(`zaten var: ${resolve(PKI, `${name}.cert.pem`)} (üzerine yazılmaz)`);
   const yearsN = Number(arg("years") ?? 2);
   if (!(yearsN >= 1 && yearsN <= 3)) fail("--years 1–3");
   const dns = arg("dns");
@@ -116,7 +139,7 @@ async function main() {
       resolve(PKI, `${name}.pkcs8.pem`),
       toPem("PRIVATE KEY", new Uint8Array(await crypto.subtle.exportKey("pkcs8", privateKey))),
     );
-  console.log(`ops/pki/${name}.cert.pem — ${subject}`);
+  console.log(`${PROD ? "ÜRETİM" : "geliştirme"} PKI: ${resolve(PKI, `${name}.cert.pem`)} — ${subject}`);
   console.log(
     `sha256 ${certFingerprintSha256Hex(pemToDer(cert.toString("pem")))} · ${notAfter.toISOString()} tarihine kadar`,
   );

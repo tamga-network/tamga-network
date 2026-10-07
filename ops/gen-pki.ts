@@ -1,7 +1,16 @@
 /**
- * ops/gen-pki.ts — Geliştirme PKI'sı (DEMO / DEV ONLY)
+ * ops/gen-pki.ts — PKI üretimi: geliştirme (varsayılan), sandbox ve gerçek ağ (üretim) kipleri
  *
- * Üretir (P-256, ES256):
+ * Üç ayrı anahtar seti — hiçbiri diğeriyle anahtar paylaşmaz:
+ *   - GELİŞTİRME (varsayılan, `npm run pki`): `ops/pki/` — her bilgisayarda rastgele üretilen yerel anahtarlar; testler ve yerel
+ *     servisler bunlarla çalışır. Gerçek ağın anahtarları DEĞİLDİR; klasörün tamamı gitignore.
+ *   - SANDBOX (`--profile=sandbox`): `ops/pki-sandbox/` — aşağıda.
+ *   - ÜRETİM (`--prod-dir <klasör>` ya da `--prod` + `TAMGA_PROD_PKI_DIR`): gerçek ağın PKI'sı depoların DIŞINDA, operatörün
+ *     bilgisayarındaki gizli klasörde durur (kök CA özel anahtarı yalnız orada). Bu kip yalnız EKSİK yaprakları üretir; kökü
+ *     yeniden üretmez, `--force` kabul etmez, anahtarı olmayan (iptal edilmiş kurumların yalnız sertifikası kalan) kayıtları
+ *     yeniden üretmez ve test cüzdan sağlayıcısını (`wallet-provider`, ADR-0042) hiç üretmez.
+ *
+ * Geliştirme kipi üretir (P-256, ES256):
  *   1. TR National Root CA (provisional operator: Tamga)  — self-signed, çevrimdışı kök muadili
  *   2. İstanbul Bilgi Üniversitesi issuer sertifikası — kökçe imzalı yaprak
  *   2b. Bilgi status list anahtarı (K1: credential anahtarından ayrı)
@@ -17,7 +26,8 @@
  * test anahtarıyla imzalı ve geçersiz).
  * Kip: eksik olan sertifikalar üretilir, var olanlar KORUNUR (issuer_id değişmez); tamamını yenilemek için --force.
  * Sapma S-1 (09-DEMO-KURGU §6): issuer özel anahtarı burada dosyada; pilotta üniversite KMS'inde.
- * Çıktı: ops/pki/*.cert.pem, *.pkcs8.pem (gitignore), ops/pki/pki.json (parmak izleri, id'ler).
+ * Çıktı: <klasör>/*.cert.pem, *.pkcs8.pem, pki.json (parmak izleri, id'ler). `ops/pki/` tamamen gitignore (geliştirme anahtarları
+ * makineye özeldir); `ops/pki-sandbox/` sertifikaları ve pki.json depoda izlenir (cüzdandaki sandbox pin'i).
  */
 import {
   X509CertificateGenerator,
@@ -34,7 +44,7 @@ import {
 } from "@peculiar/x509";
 import { webcrypto } from "node:crypto";
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import { computeCaId, computeIssuerId, computeRpId, certFingerprintSha256Hex, pemToDer } from "@tamga-network/core";
 
@@ -44,12 +54,46 @@ const crypto = webcrypto as unknown as Crypto;
 const here = dirname(fileURLToPath(import.meta.url));
 const PROFILE = (process.argv.find((a) => a.startsWith("--profile="))?.slice(10) ?? "network") as "network" | "sandbox";
 if (PROFILE !== "network" && PROFILE !== "sandbox") throw new Error(`bilinmeyen profil: ${PROFILE}`);
-const outDir = resolve(here, PROFILE === "sandbox" ? "pki-sandbox" : "pki");
+const FORCE = process.argv.includes("--force");
+const die = (m: string): never => {
+  console.error(m);
+  process.exit(2);
+};
+
+// Üretim kipi: klasör açıkça verilir (`--prod-dir <klasör>` ya da `--prod` + TAMGA_PROD_PKI_DIR); varsayılan yol YOK — gerçek
+// kökle imzalamak bilinçli bir iştir. Klasör var olmalı ve kök sertifikası + özel anahtarı içinde olmalı.
+const prodDirArg = (() => {
+  const i = process.argv.indexOf("--prod-dir");
+  return i > 0 ? (process.argv[i + 1] ?? die("--prod-dir <klasör> gerekli")) : undefined;
+})();
+const PROD = prodDirArg !== undefined || process.argv.includes("--prod");
+const insideRepo = (d: string) => {
+  const r = relative(resolve(here, ".."), d);
+  return !r.startsWith("..") && !isAbsolute(r);
+};
+function prodDir(): string {
+  const d =
+    prodDirArg ??
+    process.env.TAMGA_PROD_PKI_DIR ??
+    die(
+      "Üretim PKI klasörü verilmedi: --prod-dir <klasör> ya da TAMGA_PROD_PKI_DIR=<klasör> (gerçek ağın PKI'sı depo dışında, operatörün gizli klasöründe; ops/README.md).",
+    );
+  const abs = resolve(d);
+  if (PROFILE !== "network") die("--prod / --prod-dir yalnız gerçek ağ profiliyle (sandbox'ın kendi klasörü var)");
+  if (FORCE)
+    die("Üretim kipinde --force yok: gerçek anahtarlar yeniden üretilmez (cüzdan pin'leri ve liste kayıtları bozulur)");
+  if (insideRepo(abs)) die(`Üretim PKI klasörü depo içinde olamaz: ${abs}`);
+  if (!existsSync(resolve(abs, "root-ca.cert.pem")) || !existsSync(resolve(abs, "root-ca.pkcs8.pem")))
+    die(
+      `Üretim PKI klasöründe kök yok (root-ca.cert.pem + root-ca.pkcs8.pem): ${abs}\nYeni bir gerçek kök bu araçla üretilmez (bütün cüzdanların yeniden sabitlenmesi gerekir).`,
+    );
+  return abs;
+}
+const outDir = PROD ? prodDir() : resolve(here, PROFILE === "sandbox" ? "pki-sandbox" : "pki");
 mkdirSync(outDir, { recursive: true });
 
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
 const STATE = "TR";
-const FORCE = process.argv.includes("--force");
 
 const keys = () => crypto.subtle.generateKey(ALG, true, ["sign", "verify"]) as Promise<CryptoKeyPair>;
 async function pkcs8Pem(k: CryptoKey) {
@@ -75,15 +119,17 @@ const exists = (name: string) =>
 interface Item {
   name: string;
   cert: X509Certificate;
-  privateKey: CryptoKey;
+  /** Yalnız sertifikası tutulan kayıtta (üretim kipinde iptal edilmiş kurumlar) yok */
+  privateKey?: CryptoKey;
   created: boolean;
 }
 async function load(name: string): Promise<Item> {
   const cert = new X509Certificate(readFileSync(resolve(outDir, `${name}.cert.pem`), "utf8"));
+  const keyFile = resolve(outDir, `${name}.pkcs8.pem`);
   return {
     name,
     cert,
-    privateKey: await loadKey(readFileSync(resolve(outDir, `${name}.pkcs8.pem`), "utf8")),
+    privateKey: existsSync(keyFile) ? await loadKey(readFileSync(keyFile, "utf8")) : undefined,
     created: false,
   };
 }
@@ -92,6 +138,9 @@ async function ensure(
   make: () => Promise<{ cert: X509Certificate; privateKey: CryptoKey }>,
 ): Promise<Item> {
   if (!FORCE && exists(name)) return load(name);
+  // Üretim kipi: sertifikası olup anahtarı olmayan kayıt üzerine yazılmaz (anahtar başka yerde ya da kayıt iptal edilmiş)
+  if (PROD && existsSync(resolve(outDir, `${name}.cert.pem`)))
+    die(`Üretim PKI: ${name}.cert.pem var ama özel anahtarı yok — üzerine yazılmaz (anahtarı geri koyun).`);
   const { cert, privateKey } = await make();
   writeFileSync(resolve(outDir, `${name}.cert.pem`), cert.toString("pem") + "\n");
   writeFileSync(resolve(outDir, `${name}.pkcs8.pem`), await pkcs8Pem(privateKey));
@@ -128,6 +177,7 @@ async function main() {
     });
     return { cert, privateKey: kp.privateKey };
   });
+  const rootKey = () => root.privateKey ?? die("kök CA özel anahtarı yok — yeni sertifika imzalanamaz");
   const signedByRoot =
     (serialNo: number, subject: string, extra?: (pub: CryptoKey) => Promise<unknown[]>) => async () => {
       const kp = await keys();
@@ -139,7 +189,7 @@ async function main() {
         notAfter: years(2),
         signingAlgorithm: ALG,
         publicKey: kp.publicKey,
-        signingKey: root.privateKey,
+        signingKey: rootKey(),
         // RFC 5280 §4.2.1.1: kökçe imzalı sertifikada AKI zorunlu (= kökün SKI'si); OpenID4VP DCQL `trusted_authorities` (aki)
         // eşleşmesi bu alanla yapılır (HAIP §5). Var olan sertifikalar korunur; yeni üretilenler AKI taşır.
         extensions: (await leafExt(kp.publicKey, [
@@ -168,26 +218,39 @@ async function main() {
 
   if (PROFILE === "sandbox") return finish(root, await sandboxItems(root, signedByRoot, selfSigned), notBefore);
 
+  // Üretim kipinde iptal edilmiş ilk örnek kurumlar (Bilgi, Bubilet; gerçek listede REVOKED): yalnız sertifikaları kalır (kayıt
+  // defteri ve geçmiş belgeler onları anar); asla yeniden üretilmez, özel anahtarları yoktur. Geliştirme kipinde test anahtarı.
+  const devOrCertOnly = async (name: string, make: Make): Promise<Item[]> => {
+    if (!PROD) return [await ensure(name, make)];
+    if (existsSync(resolve(outDir, `${name}.cert.pem`))) return [await load(name)];
+    console.warn(`[uyarı] üretim PKI: ${name}.cert.pem yok (iptal edilmiş kayıt; yeniden üretilmez)`);
+    return [];
+  };
   const items: Item[] = [
     root,
-    await ensure(
+    ...(await devOrCertOnly(
       "issuer-bilgi",
       signedByRoot(1001, "CN=Istanbul Bilgi Universitesi, OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi, C=TR"),
-    ),
-    await ensure(
+    )),
+    ...(await devOrCertOnly(
       "issuer-bilgi-status",
       signedByRoot(
         1002,
         "CN=Istanbul Bilgi Universitesi - Status List, OU=Status, O=Istanbul Bilgi Universitesi, C=TR",
       ),
-    ),
+    )),
     await ensure(
       "tl-signer-1",
       selfSigned(2, "CN=Tamga Trust List Signer 1 (provisional TLSO), O=Tamga Network, C=TR"),
     ),
-    // ADR-0042 K5: YALNIZ TEST — genel "test cüzdan sağlayıcısı"; dosya adı uyumluluk için `wallet-provider` kalır.
-    // Var olan sertifika korunur (yeni ad yalnız yeni üretimde geçerli)
-    await ensure("wallet-provider", selfSigned(3, "CN=Test Wallet Provider (WUA), O=Test Wallet Provider, C=TR")),
+    // ADR-0042 K5: YALNIZ GELİŞTİRME/TEST — genel "test cüzdan sağlayıcısı" (ağın testleri, liste fixture'ları ve platform
+    // testleri WIA/WUA doğrulamasını bununla dener). Gerçek ağ listesinde YOKTUR (TAMGA-WP-1 `wua_signing_certs: []`); üretim
+    // kipinde hiç üretilmez. Dosya adı uyumluluk için `wallet-provider` kalır.
+    ...(PROD
+      ? []
+      : [
+          await ensure("wallet-provider", selfSigned(3, "CN=Test Wallet Provider (WUA), O=Test Wallet Provider, C=TR")),
+        ]),
     // ADR-0026 K1: kayıt kurumu anahtarı (WRPRC imzası) — liste imza anahtarından ayrı; LOTL roles.registrar.signing_keys
     await ensure(
       "registrar-1",
@@ -212,17 +275,20 @@ async function main() {
       signedByRoot(1103, "CN=Tamga Kimlik Servisi - Magaza Incelemesi (DEMO), OU=Review, O=Tamga Network, C=TR"),
     ),
     // 8) D10: bilet satıcısı — operatör modeli: Tamga barındırır, satıcı güven listesinde issuer (credential + status)
-    await ensure("issuer-bubilet", signedByRoot(1201, "CN=Bubilet, OU=Bilet Satisi, O=Bubilet, C=TR")),
-    await ensure("issuer-bubilet-status", signedByRoot(1202, "CN=Bubilet - Status List, OU=Status, O=Bubilet, C=TR")),
+    ...(await devOrCertOnly("issuer-bubilet", signedByRoot(1201, "CN=Bubilet, OU=Bilet Satisi, O=Bubilet, C=TR"))),
+    ...(await devOrCertOnly(
+      "issuer-bubilet-status",
+      signedByRoot(1202, "CN=Bubilet - Status List, OU=Status, O=Bubilet, C=TR"),
+    )),
     // 7) ADR-0011 K3: kurum issuer'ı kimlik attestation'ını SUNUM olarak ister → RP erişim sertifikası (SAN issuer.tamga.network; client_id = x509_hash, ADR-0034)
-    await ensure(
+    ...(await devOrCertOnly(
       "rp-issuer-bilgi",
       signedByRoot(
         2002,
         "CN=issuer.tamga.network, O=Istanbul Bilgi Universitesi - kimlik eslestirme, C=TR",
         async () => [new SubjectAlternativeNameExtension([{ type: "dns", value: "issuer.tamga.network" }])],
       ),
-    ),
+    )),
   ];
 
   await finish(root, items, notBefore);
@@ -320,7 +386,7 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
         notAfter: years(1),
         signingAlgorithm: ALG,
         publicKey: kp.publicKey,
-        signingKey: root.privateKey,
+        signingKey: root.privateKey ?? die("sandbox kök özel anahtarı yok"),
         extensions: [
           new BasicConstraintsExtension(true, 0, true),
           new KeyUsagesExtension(KeyUsageFlags.keyCertSign, true),
@@ -348,11 +414,12 @@ function nameConstraintsDirName(prefix: string): Extension {
 async function finish(root: Item, items: Item[], notBefore: Date) {
   const summary: Record<string, unknown> = {
     generated_at: notBefore.toISOString(),
-    profile: PROFILE,
-    warning:
-      PROFILE === "sandbox"
+    profile: PROD ? "production" : PROFILE === "sandbox" ? "sandbox" : "development",
+    warning: PROD
+      ? "PRODUCTION PKI — kept outside the repositories on the operator's computer (TAMGA_PROD_PKI_DIR); the root CA private key never leaves it. Private keys on disk (sapma S-1; pilot: KMS). Never use for development or tests."
+      : PROFILE === "sandbox"
         ? "SANDBOX (TEST) PKI — ADR-0038. Never in a real list; never trusted by a real wallet or verifier."
-        : "DEV/DEMO PKI — private keys on disk (sapma S-1). Never use in pilot.",
+        : "DEVELOPMENT PKI — random keys generated on this machine for local services and tests. Not the production keys; never in a real list. wallet-provider is a test key (ADR-0042).",
   };
   const prev = existsSync(resolve(outDir, "pki.json"))
     ? (JSON.parse(readFileSync(resolve(outDir, "pki.json"), "utf8")) as Record<string, unknown>)
@@ -376,6 +443,7 @@ async function finish(root: Item, items: Item[], notBefore: Date) {
     };
   }
   const der = (n: string) => pemToDer(readFileSync(resolve(outDir, `${n}.cert.pem`), "utf8"));
+  const has = (n: string) => items.some((i) => i.name === n);
   summary.ids =
     PROFILE === "sandbox"
       ? Object.fromEntries(
@@ -390,12 +458,12 @@ async function finish(root: Item, items: Item[], notBefore: Date) {
         )
       : {
           ca_id: computeCaId(STATE, der("root-ca")),
-          issuer_id_bilgi: computeIssuerId(STATE, der("issuer-bilgi")),
+          ...(has("issuer-bilgi") ? { issuer_id_bilgi: computeIssuerId(STATE, der("issuer-bilgi")) } : {}),
           rp_id_verify: computeRpId(STATE, der("rp-verify")),
           issuer_id_id: computeIssuerId(STATE, der("issuer-id")),
           issuer_id_id_review: computeIssuerId(STATE, der("issuer-id-review")),
-          issuer_id_bubilet: computeIssuerId(STATE, der("issuer-bubilet")),
-          rp_id_issuer_bilgi: computeRpId(STATE, der("rp-issuer-bilgi")),
+          ...(has("issuer-bubilet") ? { issuer_id_bubilet: computeIssuerId(STATE, der("issuer-bubilet")) } : {}),
+          ...(has("rp-issuer-bilgi") ? { rp_id_issuer_bilgi: computeRpId(STATE, der("rp-issuer-bilgi")) } : {}),
           note: "issuer_id = keccak256(utf8(stateCode) || SHA-256(leafCertDER)); zincire geçişte abi.encodePacked ile aynı bayt dizisi doğrulanacak (05-MIGRATION).",
         };
   writeFileSync(resolve(outDir, "pki.json"), JSON.stringify(summary, null, 2) + "\n");

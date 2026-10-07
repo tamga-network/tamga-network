@@ -3,9 +3,9 @@ dist/
 *.tsbuildinfo
 .env
 .env.*
-# Geliştirme PKI'sı — asla commit'leme (üretim anahtarı KMS'te, dosyada değil)
-ops/pki/*.key.pem
-ops/pki/*.pkcs8.pem
+# Geliştirme PKI'sı (npm run pki; her bilgisayarda rastgele yerel anahtarlar) — klasörün tamamı izlenmez. Gerçek ağın PKI'sı
+# depoların dışında, operatörün gizli klasöründe (TAMGA_PROD_PKI_DIR; ops/README.md).
+ops/pki/
 ops/pki-sandbox/*.pkcs8.pem
 ops/pki-sandbox/*.key.pem
 # Yayın çıktıları (trust.tamga.network / schemas.tamga.network) ayrı yayınlanır

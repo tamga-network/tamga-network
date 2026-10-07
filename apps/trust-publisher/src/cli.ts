@@ -610,6 +610,7 @@ async function withAnchorLock<T>(fn: () => Promise<T>): Promise<T> {
 /** Aynı kilit düzeni, başka bir ad için (ADR-0041: test kurumu kaydı + liste imzası tek seferde bir süreç). */
 async function withDirLock<T>(name: string, fn: () => Promise<T>): Promise<T> {
   const lock = resolve(DIST, name);
+  mkdirSync(DIST, { recursive: true }); // ilk derlemede (yeni klon) çıktı klasörü henüz yok
   const t0 = Date.now();
   for (;;) {
     try {
