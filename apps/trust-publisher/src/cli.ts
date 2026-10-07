@@ -31,7 +31,7 @@ import {
   renameSync,
 } from "node:fs";
 import { resolve, dirname } from "node:path";
-import { X509Certificate } from "node:crypto";
+import { createHash, X509Certificate } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import {
   pemSigner,
@@ -552,6 +552,23 @@ async function build() {
     if (f.endsWith(".cert.pem") && !published.has(f.slice(0, -".cert.pem".length)))
       rmSync(resolve(DIST, "keys", f), { force: true });
   for (const n of published) writeFileSync(resolve(DIST, "keys", `${n}.cert.pem`), cert(n).pem);
+
+  // ---- zk/ (ADR-0032): listedeki devre dosyaları `zk/<circuit_id>.zst` — cüzdanlar buradan indirir ve listedeki özetle
+  // denetler. Kaynak: doğrulayıcı paketinin devreleri; özet tutmazsa yayın durur. Listede olmayan eski dosya silinir.
+  {
+    const circuitsDir = resolve(app, "..", "..", "packages", "verifier", "src", "zk", "circuits");
+    const entries = (lotlSrc.zk_circuits ?? []) as Array<{ circuit_id: string; sha256: string }>;
+    mkdirSync(resolve(DIST, "zk"), { recursive: true });
+    const keep = new Set(entries.map((c) => `${c.circuit_id}.zst`));
+    for (const f of readdirSync(resolve(DIST, "zk"))) if (!keep.has(f)) rmSync(resolve(DIST, "zk", f), { force: true });
+    for (const c of entries) {
+      if (!/^[0-9a-f]{64}$/.test(c.circuit_id)) throw new Error(`zk_circuits: geçersiz circuit_id ${c.circuit_id}`);
+      const bytes = readFileSync(resolve(circuitsDir, `${c.circuit_id}.zst`));
+      if (createHash("sha256").update(bytes).digest("hex") !== c.sha256)
+        throw new Error(`zk_circuits: ${c.circuit_id} dosyasının özeti listedekiyle tutmuyor`);
+      writeFileSync(resolve(DIST, "zk", `${c.circuit_id}.zst`), bytes);
+    }
+  }
 
   // ---- LoTE izdüşümü (ETSI TS 119 602; ARF OIA_15b) — kaynakta açıkken üretilir
   if (lotlSrc.lote?.enabled) await writeLotes(lotlSrc, tlSrc, cc, lotl.version, tl.version, now, s.certDer);

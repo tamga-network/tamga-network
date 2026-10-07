@@ -78,6 +78,7 @@ keys/root-fingerprints.json   LOTL signing certificate and national root fingerp
                               explanation in the note field
 keys/<name>.cert.pem          only certificates the list references (operator/root/registrar/wallet-provider/rp; published)
 wrprc/index.json · wrprc/…    registration certificates (ETSI TS 119 475 rc-wrp+jwt) and their index (ADR-0026)
+zk/<circuit_id>.zst           ZK circuit files listed in `zk_circuits` (ADR-0032); wallets download them and check `zk_circuits[].sha256`
 lote/<type>.json · .jws       ETSI TS 119 602 LoTE views (wallet-providers, wrpac-providers, eaa-providers);
                               only when LoTE publication is enabled (lote.enabled)
 archive/<file>.v<NNNN>.jws    immutable version archive (replay input)

@@ -77,6 +77,7 @@ keys/root-fingerprints.json   LOTL imza sertifikası ve ulusal kök parmak izler
                               açıklama note alanında
 keys/<ad>.cert.pem            yalnız listenin andığı sertifikalar (operatör/kök/kayıt kurumu/wallet-provider/rp; ilan)
 wrprc/index.json · wrprc/…    kayıt sertifikaları (ETSI TS 119 475 rc-wrp+jwt) ve dizini (ADR-0026)
+zk/<circuit_id>.zst           listedeki ZK devre dosyaları (ADR-0032); cüzdan indirir, `zk_circuits[].sha256` ile denetler
 lote/<tür>.json · .jws        ETSI TS 119 602 LoTE görünümleri (wallet-providers, wrpac-providers, eaa-providers);
                               yalnız LoTE yayını açıksa (lote.enabled)
 archive/<dosya>.v<NNNN>.jws   değişmez sürüm arşivi (replay girdisi)
