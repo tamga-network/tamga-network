@@ -4,7 +4,7 @@ title: "Ürün adları"
 status: Active
 version: 1.0.0
 created: 2026-09-30
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   Kullanıcıya görünen ürün adları sabitlenir: cüzdan uygulaması Tamga Wallet, web sitesi girişi "Tamga ile giriş yap"
   (Sign in with Tamga), barındırılan doğrulayıcı Tamga Verify. "TamgaID" ürün adı olarak kullanılmaz. D-OSS-2'deki "kullanıcıya
@@ -17,7 +17,7 @@ domain: Governance
 D-OSS-2 (2026-09-27) npm kapsamını `@tamga-network` olarak belirlerken kullanıcıya görünen markayı "TamgaID ile Giriş Yap" diye
 anıyordu. Aynı ad sitede cüzdanın adı olarak da geçiyordu. Oysa:
 
-- Cüzdan uygulamasının adı başından beri **Tamga Wallet**'tır (mağaza adı, paket kimliği `network.tamga.wallet`).
+- Cüzdan uygulamasının adı başından beri **Tamga Wallet**'tır (mağaza adı; paket kimliği o gün ~~`network.tamga.wallet`~~ — bkz. 2026-10-07 değişiklik notu).
 - `id.tamga.network` ve `tamga-id` kiracısı ayrı bir hizmettir: geçici kimlik [[t:attestation]] servisi ([[ADR-0011]]).
 - Cüzdan yalnız kimlik taşımaz: kurum belgeleri, biletler ve ileride ödeme ve varlık tutma gibi işlevler de aynı uygulamada
   olabilir. Ürüne "ID" demek onu kimlikle sınırlar.
@@ -55,3 +55,8 @@ Kullanıcıya görünen üç ürün adı sabitlenir: cüzdan **Tamga Wallet**, w
 # Durum
 
 **Accepted — 2026-09-30.** Proje yönetimi onayıyla.
+
+# Değişiklik notu
+
+- **2026-10-07:** Tamga Wallet'ın uygulama kimliği cüzdanın kendi kararıyla `com.tamgawallet` ([[ADR-0042]] — ağ cüzdan
+  adlandırmaz). Bağlam bölümünde anılan `network.tamga.wallet` artık kullanılmaz. Ürün adları (PN1–PN4) değişmez.

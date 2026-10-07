@@ -104,7 +104,18 @@ function selfIssuers(): Array<Record<string, unknown>> {
 const readJson = (p: string) => JSON.parse(readFileSync(p, "utf8"));
 const iso = (d: Date) => d.toISOString();
 const plusDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400_000);
-function cert(name: string) {
+/**
+ * ADR-0042 uygulama notu (2026-10-07): ayrı cüzdan sandbox'ı yoktur — bir cüzdan sağlayıcı gerçek ve sandbox listesinde AYNI
+ * kayıtla (aynı provider_id, aynı WUA sertifikası) yer alabilir. Bu yüzden sandbox listesinde gerçek sertifikaya (SB1 istisnası)
+ * yalnız, gerçek kayıt defterinde de aynı provider_id ile kayıtlı bir cüzdan sağlayıcının WUA sertifikası için izin verilir.
+ */
+const SHARED_WALLET_PROVIDERS: ReadonlySet<string> = (() => {
+  const prod = resolve(app, "registry", "lotl.source.json");
+  if (!existsSync(prod)) return new Set<string>();
+  const wps = (JSON.parse(readFileSync(prod, "utf8")).wallet_providers ?? []) as Array<{ provider_id: string }>;
+  return new Set(wps.map((w) => w.provider_id));
+})();
+function cert(name: string, opts: { sharedWalletProvider?: string } = {}) {
   // ADR-0041: `self:<ad>` = sandbox test kurumu sertifikası (TAMGA_SANDBOX_SELF_DIR/pki); yalnız test kurumları ara makamınca
   // imzalanmışsa (TI1) ve yalnız sandbox kayıt defteriyle
   const self = name.startsWith("self:");
@@ -119,14 +130,19 @@ function cert(name: string) {
   const der = pemToDer(pem);
   // ADR-0038 SB1: test sertifikası gerçek listeye, gerçek sertifika sandbox listesine girmez
   const isTest = /\(TEST\)/.test(new X509Certificate(der).subject);
-  if (isTest !== (ENVIRONMENT === "sandbox"))
+  const sharedReal =
+    !isTest &&
+    ENVIRONMENT === "sandbox" &&
+    opts.sharedWalletProvider !== undefined &&
+    SHARED_WALLET_PROVIDERS.has(opts.sharedWalletProvider);
+  if (!sharedReal && isTest !== (ENVIRONMENT === "sandbox"))
     throw new Error(
       `SB1: ${name} sertifikası ${isTest ? "test" : "gerçek"}, kayıt defteri ${ENVIRONMENT} — karıştırılamaz`,
     );
   return { pem, der, fp: certFingerprintSha256Hex(der) };
 }
-function keyEntry(name: string) {
-  const c = cert(name);
+function keyEntry(name: string, opts: { sharedWalletProvider?: string } = {}) {
+  const c = cert(name, opts);
   return { fingerprint_sha256: c.fp, cert_ref: name, status: "ACTIVE" };
 }
 async function signer(name = "tl-signer-1") {
@@ -208,7 +224,9 @@ async function writeLotes(
             .map((x) => ({
               role: "Issuance" as const,
               name: x.lote_service_name ?? `${w.legal_name} (${x.solution_id})`,
-              certsDer: (w.wua_signing_certs as string[]).map((n) => cert(n).der),
+              certsDer: (w.wua_signing_certs as string[]).map(
+                (n) => cert(n, { sharedWalletProvider: w.provider_id }).der,
+              ),
               uniqueId: x.solution_id,
               ...(w.lote_supply_point ? { supplyPoint: w.lote_supply_point as string } : {}),
             })),
@@ -461,7 +479,7 @@ async function build() {
       roles?: Record<string, Record<string, unknown>>;
     };
     const out: Record<string, unknown> = { ...rest };
-    if (signing_certs) out.signing_keys = signing_certs.map(keyEntry);
+    if (signing_certs) out.signing_keys = signing_certs.map((n) => keyEntry(n));
     if (roles) {
       out.roles = Object.fromEntries(
         Object.entries(roles).map(([k, v]) => {
@@ -472,7 +490,7 @@ async function build() {
           // ADR-0026 K1: kayıt kurumu anahtarı (WRPRC imzası) parmak iziyle yayınlanır
           if (Array.isArray(v.signing_certs)) {
             const { signing_certs: sc, ...rv } = v;
-            return [k, { ...rv, signing_keys: (sc as string[]).map(keyEntry) }];
+            return [k, { ...rv, signing_keys: (sc as string[]).map((n) => keyEntry(n)) }];
           }
           return [k, v];
         }),
@@ -490,7 +508,7 @@ async function build() {
     previous_version_hash: lotlPrev.hash,
     operator: lotlSrc.operator,
     catalogue: lotlSrc.catalogue,
-    anchor_signing_keys: (lotlSrc.anchor_signing_certs as string[]).map(keyEntry),
+    anchor_signing_keys: (lotlSrc.anchor_signing_certs as string[]).map((n) => keyEntry(n)),
     national_lists: national,
     schemas: schemasIndex
       .filter((x) => x.layer === "NETWORK")
@@ -518,7 +536,13 @@ async function build() {
       const solutions = (rest.solutions as Array<Record<string, unknown>> | undefined)?.map(
         ({ lote_service_name: _n, ...s }) => s,
       );
-      return { ...rest, ...(solutions ? { solutions } : {}), wua_signing_keys: wua_signing_certs.map(keyEntry) };
+      return {
+        ...rest,
+        ...(solutions ? { solutions } : {}),
+        wua_signing_keys: wua_signing_certs.map((n) =>
+          keyEntry(n, { sharedWalletProvider: rest.provider_id as string }),
+        ),
+      };
     }),
     pid_providers: lotlSrc.pid_providers,
     // ADR-0032 ZK2: kabul edilen sıfır bilgi ispatı devreleri (Longfellow combined_hash + dosya özeti)
@@ -532,7 +556,7 @@ async function build() {
   mkdirSync(resolve(DIST, "keys"), { recursive: true });
   const rootFps = {
     note: "LOTL signing certificate fingerprints — the same values are published at tamga.network/trust-anchor and in the Trust Framework.",
-    lotl_signing_keys: (lotlSrc.anchor_signing_certs as string[]).map(keyEntry),
+    lotl_signing_keys: (lotlSrc.anchor_signing_certs as string[]).map((n) => keyEntry(n)),
     national_root_cas: rootCas.map((r: { ca_id: string; legal_name: string; cert_fingerprint_sha256: string }) => ({
       ca_id: r.ca_id,
       legal_name: r.legal_name,
@@ -551,7 +575,11 @@ async function build() {
   for (const f of readdirSync(resolve(DIST, "keys")))
     if (f.endsWith(".cert.pem") && !published.has(f.slice(0, -".cert.pem".length)))
       rmSync(resolve(DIST, "keys", f), { force: true });
-  for (const n of published) writeFileSync(resolve(DIST, "keys", `${n}.cert.pem`), cert(n).pem);
+  const wpOfCert = new Map<string, string>();
+  for (const w of lotlSrc.wallet_providers as Array<{ provider_id: string; wua_signing_certs?: string[] }>)
+    for (const n of w.wua_signing_certs ?? []) wpOfCert.set(n, w.provider_id);
+  for (const n of published)
+    writeFileSync(resolve(DIST, "keys", `${n}.cert.pem`), cert(n, { sharedWalletProvider: wpOfCert.get(n) }).pem);
 
   // ---- zk/ (ADR-0032): listedeki devre dosyaları `zk/<circuit_id>.zst` — cüzdanlar buradan indirir ve listedeki özetle
   // denetler. Kaynak: doğrulayıcı paketinin devreleri; özet tutmazsa yayın durur. Listede olmayan eski dosya silinir.

@@ -4,7 +4,7 @@ title: "Ağ ve cüzdanlar: ağ cüzdan işletmez"
 status: Active
 version: 1.0.0
 created: 2026-10-06
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   Tamga Network bağımsız bir ağdır (ileride vakıf); hiçbir cüzdanın uygulamasını, cüzdan sağlayıcısını ya da sitesini işletmez.
   Ağ kuralları, güven listelerini, açık paketleri ve ortak hizmetleri (doğrulayıcı, kimlik servisi, sandbox) sağlar; bir cüzdanı
@@ -93,3 +93,10 @@ hizmetleridir ve listedeki her cüzdana aynı koşullarla açıktır.
 
 **Accepted — 2026-10-06** (proje yönetimi onayı; birebir alıntı özel onay kaydında). DECISIONS: D-GOV-9. [[ADR-0038]]'de
 sandbox'ın test cüzdan sağlayıcısını ağın çalıştırdığı kısmı değişir (K3).
+
+**Uygulama notu (2026-10-07, proje yönetimi):** Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) hem gerçek hem sandbox listesinde
+aynı kayıtla yer alır (aynı işletmeci, aynı adres `https://provider.tamgawallet.com`, işletmeci sertifikasını verene kadar
+`RESERVED`); ayrı cüzdan sandbox'ı ve sandbox'a özel ikinci sağlayıcı kaydı yoktur. Sandbox listesindeki ağın kendi test anahtarı
+(`TAMGA-SANDBOX-TEST-WP`, K5) değişmez. İşletmeci sertifikasını verdiğinde aynı sertifika iki listeye girer; liste yayıncısının
+"gerçek sertifika sandbox listesine girmez" denetimi ([[ADR-0038]] SB1) o gün cüzdan sağlayıcı sertifikaları için ayrıca ele
+alınır.

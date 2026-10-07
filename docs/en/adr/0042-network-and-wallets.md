@@ -4,7 +4,7 @@ title: "The network and wallets: the network operates no wallet"
 status: Active
 version: 1.0.0
 created: 2026-10-06
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 summary: >
   Tamga Network is an independent network (later a foundation); it does not operate any wallet's app, wallet provider or
   website. The network provides the rules, the trust lists, open packages and shared services (verifier, identity service,
@@ -104,3 +104,10 @@ certificate. A real wallet provider generates and keeps its key itself; the netw
 
 **Accepted — 2026-10-06** (project management approval; the verbatim quote is in the private approval record). DECISIONS:
 D-GOV-9. Changes the part of [[ADR-0038]] where the network runs the sandbox's test wallet provider (K3).
+
+**Implementation note (2026-10-07, project management):** Tamga Wallet's provider (`TAMGA-WP-1`) appears with the same entry in
+both the production and the sandbox list (same operator, same address `https://provider.tamgawallet.com`, `RESERVED` until the
+operator supplies its certificate); there is no separate wallet sandbox and no second, sandbox-only provider entry. The network's
+own test key in the sandbox list (`TAMGA-SANDBOX-TEST-WP`, K5) does not change. When the operator supplies its certificate, the
+same certificate enters both lists; the list publisher's "a real certificate does not enter the sandbox list" check ([[ADR-0038]]
+SB1) will then be handled separately for wallet provider certificates.

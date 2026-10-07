@@ -4,7 +4,7 @@ title: "Product names"
 status: Active
 version: 1.0.0
 created: 2026-09-30
-last_updated: 2026-10-02
+last_updated: 2026-10-07
 summary: >
   The product names users see are fixed: the wallet app is Tamga Wallet, website sign-in is "Sign in with Tamga" (Turkish "Tamga
   ile giriş yap"), the hosted verifier is Tamga Verify. "TamgaID" is not used as a product name. Replaces the sentence in D-OSS-2
@@ -19,7 +19,7 @@ source_version: 1.0.0
 When D-OSS-2 (2026-09-27) set the npm scope to `@tamga-network`, it referred to the user-facing brand as "Sign in with TamgaID".
 The same name also appeared on the site as the name of the wallet. However:
 
-- The wallet app has been called **Tamga Wallet** from the start (store name, package id `network.tamga.wallet`).
+- The wallet app has been called **Tamga Wallet** from the start (store name; package id at the time ~~`network.tamga.wallet`~~ — see the 2026-10-07 change note).
 - `id.tamga.network` and the `tamga-id` tenant are a separate service: the provisional identity [[t:attestation]] service
   ([[ADR-0011]]).
 - The wallet does not carry identity only: institutional credentials, tickets and, later, payment and asset functions may live in
@@ -58,3 +58,9 @@ Three user-facing product names are fixed: the wallet **Tamga Wallet**, web sign
 # Status
 
 **Accepted — 2026-09-30.** Approved by project management.
+
+# Change note
+
+- **2026-10-07:** Tamga Wallet's app identifier is `com.tamgawallet`, by the wallet's own decision ([[ADR-0042]] — the network
+  does not name wallets). The `network.tamga.wallet` mentioned under Context is no longer used. The product names (PN1–PN4) do not
+  change.

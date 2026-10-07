@@ -87,8 +87,8 @@
       "status": "ACTIVE"
     },
     {
-      "provider_id": "TAMGA-SANDBOX-WP",
-      "legal_name": "Brosgrup (TEST)",
+      "provider_id": "TAMGA-WP-1",
+      "legal_name": "Brosgrup",
       "wua_signing_certs": [],
       "lote_supply_point": "https://provider.tamgawallet.com",
       "solutions": [
@@ -101,7 +101,7 @@
         }
       ],
       "status": "RESERVED",
-      "note": "ADR-0042: Tamga Wallet's provider is operated by Brosgrup; reserved until it supplies its own signing certificate."
+      "note": "ADR-0042: Tamga Wallet's provider is operated by Brosgrup; the same entry as in the production list (one provider, no separate wallet sandbox); reserved until it supplies its own signing certificate."
     }
   ],
   "pid_providers": [],

@@ -7,6 +7,13 @@ before it are folded into this release (packages are published to npm once, at t
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-07 — sandbox wallet provider entry
+
+- Sandbox list: Tamga Wallet's provider appears with the same entry as in the production list (`TAMGA-WP-1`, same operator and
+  address, `RESERVED`); the separate `TAMGA-SANDBOX-WP` entry is gone and there is no separate wallet sandbox (ADR-0042
+  implementation note). `TAMGA-SANDBOX-TEST-WP` is unchanged. ADR-0030 gets a dated change note: the wallet's app identifier is
+  set by the wallet (`com.tamgawallet`). Sandbox guide (TR/EN) updated.
+
 ### 2026-10-07 — hardening
 
 - Packages (`core`, `trust`, `sd-jwt`, `mdoc`, `schemas`): externally signed lists with JAdES `crit` load (federation); a

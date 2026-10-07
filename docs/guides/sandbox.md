@@ -56,8 +56,9 @@ Sandbox, gerçek ağın adres düzenini `sandbox` alt adıyla tekrarlar. Bir cü
 
 Sandbox'ın kendi cüzdan sağlayıcısı yoktur: ağ cüzdan sağlayıcısı işletmez, cüzdan geliştiricileri kendi sağlayıcılarını
 sandbox listesine kaydettirir (§2, [[ADR-0042]]). Listede iki özel kayıt vardır: `TAMGA-SANDBOX-TEST-WP`, ağın kendi deneme
-sahneleri için genel test anahtarıdır (gerçek bir cüzdan değildir; [[ADR-0042]] K5); Brosgrup kaydı (Tamga Wallet'ın
-sağlayıcısı) işletmeci kendi sertifikasını verene kadar `RESERVED` durur ve doğrulamada kullanılmaz.
+sahneleri için genel test anahtarıdır (gerçek bir cüzdan değildir; [[ADR-0042]] K5); Tamga Wallet'ın sağlayıcısı
+(`TAMGA-WP-1`) hem gerçek hem sandbox listesinde aynı kayıtla yer alır; ayrı cüzdan sandbox'ı yoktur. Kayıt, işletmeci kendi
+sertifikasını verene kadar `RESERVED` durur ve doğrulamada kullanılmaz.
 
 Örnek kurumlar, kişiler ve yetkiler tohum verisinden gelir ve her sıfırlamada ilk hâline döner; örnek kurumların konsolu
 yoktur. Kurum Konsolu yalnız sizin açtığınız test kurumlarına hizmet verir (§9, [[ADR-0041]]).

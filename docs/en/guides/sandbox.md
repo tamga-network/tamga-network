@@ -60,7 +60,8 @@ only the addresses and the trust anchor.
 
 The sandbox has no wallet provider of its own: the network runs no wallet provider, and wallet developers register their own
 provider in the sandbox list (§2, [[ADR-0042]]). The list has two special entries: `TAMGA-SANDBOX-TEST-WP` is a generic test
-key for the network's own trial scenes (not a real wallet; [[ADR-0042]] K5); the Brosgrup entry (Tamga Wallet's provider) stays
+key for the network's own trial scenes (not a real wallet; [[ADR-0042]] K5); Tamga Wallet's provider (`TAMGA-WP-1`)
+appears with the same entry in both the production and the sandbox list; there is no separate wallet sandbox. The entry stays
 `RESERVED` until the operator supplies its own certificate and is not used in validation.
 
 Example institutions, people and permissions come from seed data and return to their initial state at every reset; the
