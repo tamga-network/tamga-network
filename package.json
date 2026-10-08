@@ -54,7 +54,8 @@
     "pack:packages": "node scripts/pack-packages.mjs",
     "smoke:packages": "node scripts/smoke-packages.mjs",
     "release:check": "npm run -s pack:packages && npm run -s smoke:packages",
-    "trust:external": "tsx apps/trust-publisher/src/cli.ts external-fetch"
+    "trust:external": "tsx apps/trust-publisher/src/cli.ts external-fetch",
+    "release:version": "node scripts/set-version.mjs"
   },
   "devDependencies": {
     "@scalar/api-reference": "^1.73.1",
