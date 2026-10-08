@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-07
+last_updated: 2026-10-08
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 362 kodlanmış değişmez, 49 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 364 kodlanmış değişmez, 50 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -388,6 +388,16 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0042/NW2` | Ağın alan adlarında cüzdana ait hizmet çalışmaz. |
 | `ADR-0042/NW3` | Sandbox tek test ortamıdır; sandbox'ta cüzdan sağlayıcıyı cüzdan işletir ve sandbox listesine kaydolur. |
 | `ADR-0042/NW4` | Ağın arayüzleri ve paketleri cüzdan adını sabit yazmaz; gerekirse güven listesindeki kayıt verisinden alır. |
+
+
+## ADR-0043
+
+*"Yaş sınırı yok: AB yaklaşımı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0043/YS1` | Ağ, cüzdanların güven listesine kaydı için ve kimlik servisinin kimlik belgesi vermesi için asgari yaş şartı koymaz. |
+| `ADR-0043/YS2` | Bir belgeyi kimin alabileceğini o belgenin belge vereni belirler; yaşa bağlı doğrulama, doğrulayıcının yalnız gereken bilgiyi istemesiyle yapılır. |
 
 
 ## ARCH-0003
@@ -806,12 +816,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 362 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 364 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, NW, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, ZK.
+AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, NW, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-07 (`scripts/sync-invariants.mjs`). Toplam 362 kodlanmış değişmez, 49 dokümanda.
+**Üretilen dosya** — 2026-10-08 (`scripts/sync-invariants.mjs`). Toplam 364 kodlanmış değişmez, 50 dokümanda.

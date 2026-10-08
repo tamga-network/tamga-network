@@ -9,7 +9,7 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
 - Detay ve gerekçe her zaman ilgili dokümandadır (bağlantı verildi); burası karar yüzeyidir.
 - **Durum kodları:** 🟢 karara bağlandı · ⚪ ilke kararlaştı, sayısal/teknik detay uygulama/denetim aşamasında · 🟡 dış girdiye bağlı (logo, denetim, kaynak metin)
 
-**Son güncelleme:** 2026-10-07 (D-NAME-1 `wallet` hizmeti D-GOV-9 ile kaldırıldı olarak işlendi; 2026-10-06: ADR-0042 ağ ve cüzdanlar: ağ cüzdan işletmez, sandbox tek — D-GOV-9; 2026-10-05: ADR-0040 güncellendi: sandbox'ta gerçek kimlik doğrulama herkese açık, gerçek ağın sağlayıcı hesabıyla, tavanlı — D-ID-9; 2026-10-04: ADR-0040 sandbox'ta davetli gerçek kimlik doğrulama — D-ID-9; ADR-0041 sandbox'ta kurum test hesapları — D-TRUST-4; ADR-0039 sürücü belgesi bilgisi — D-ID-8; ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
+**Son güncelleme:** 2026-10-08 (ADR-0043 yaş sınırı yok, AB yaklaşımı — D-ID-10; 2026-10-07: D-NAME-1 `wallet` hizmeti D-GOV-9 ile kaldırıldı olarak işlendi; 2026-10-06: ADR-0042 ağ ve cüzdanlar: ağ cüzdan işletmez, sandbox tek — D-GOV-9; 2026-10-05: ADR-0040 güncellendi: sandbox'ta gerçek kimlik doğrulama herkese açık, gerçek ağın sağlayıcı hesabıyla, tavanlı — D-ID-9; 2026-10-04: ADR-0040 sandbox'ta davetli gerçek kimlik doğrulama — D-ID-9; ADR-0041 sandbox'ta kurum test hesapları — D-TRUST-4; ADR-0039 sürücü belgesi bilgisi — D-ID-8; ADR-0038 sandbox — D-TRUST-3; ADR-0037 yalnızca ağ — D-GOV-8; ADR-0036 güven federasyonu — D-TRUST-2; ADR-0035 konumlanma — D-GOV-7; ADR-0033 inceleme kodu — D-REVIEW-1; ADR-0034 HAIP istemci kimliği + WIA sub — D-PROTO-2; ADR-0032 sıfır bilgi ispatı — D-ZK-1; ADR-0031 site başına takma ad — D-PRIV-1; ADR-0030 ürün adları — D-NAME-3; ADR-0029 geliştirme evresi şemaları — D-SCHEMA-5; ADR-0027 günlük dışa aktarımı — D-WALLET-2; ADR-0026 kayıt sertifikaları — D-REG-2; ADR-0020 yetkili kaynak — D-SRC-1; ADR-0025 WIA/KA — D-CRED-7; ADR-0023 otomatik yenileme — D-WALLET-1; ADR-0024 kayıt verisi — D-REG-1; ADR-0022 kimlik servisi sınıfı — D-ID-7; ADR-0021 iletişim belgeleri — D-CONTACT-1; önceki 2026-09-26: onay isteği DB-5/6/16/18 + S-10…S-18 kabul — D-PROTO-1, D-CRED-6, D-ASSUR-2; ADR-0013 mdoc çift format — D-CRED-5; önceki: ADR-0012 — D-PROX-1, ADR-0011 — D-ID-6)
 
 ---
 
@@ -292,6 +292,14 @@ bağımsız kripto denetimi gibi) birkaç madde "uygulama aşamasına bırakıld
   yalnız ad, soyad, doğum tarihi geçer; gerçek kimlik ve belge numarası yerine `SANDBOX-…`. Sağlayıcı oturumu her yolda hemen
   silinir (açık kalan gece sıfırlamasında); her şey gece silinir; günlükte kişi verisi yok. ADR-0038 K4/SB3 değişti.
 - **Nerede:** [[ADR-0040]] RI1–RI7; `ADR-0038/SB3` (yeni metin); `tamga-platform/apps/id` (sandbox kipi), sandbox portalı, `ops/server/sandbox-setup.sh`.
+
+### D-ID-10 — Yaş sınırı yok: AB yaklaşımı 🟢 (2026-10-08; [[ADR-0043]])
+- **KARAR:** Ağ yaş sınırı koymaz: ne ağda listelenen cüzdanlar (güven listesine kayıt şartı) ne de ağın kimlik servisi ve kimlik
+  belgesi için asgari yaş vardır; eIDAS 2.0 (Tüzük (AB) 2024/1183) cüzdan için asgari yaş öngörmez. Şart, geçerli bir kimlik
+  belgesiyle kimlik doğrulamasıdır. Ağdaki cüzdanlar kendi hukukları başka türlüsünü gerektirmedikçe aynı yaklaşımı izler; belge
+  türüne uygunluğu (ör. öğrenci kartı) belge veren belirler. Sonraki iş: veli onayı akışı (GDPR m. 8; Türk hukukunda 18 yaş altı
+  sınırlı ehliyet — hukuki inceleme, ayrı karar) ve kimlik doğrulama sağlayıcısının küçükler için sınırının teyidi.
+- **Nerede:** [[ADR-0043]] YS1–YS2; [[FW-RB-0003]] §3, [[SPEC-ID-0003]] §9.
 
 ### D-TRUST-4 — Sandbox'ta kurum test hesapları 🟢 (2026-10-04; [[ADR-0041]])
 - **KARAR:** Kurum sandbox sayfasından e-posta doğrulaması olmadan test kurumu açar (yalnız uydurma kurum adı + tür; ad "(TEST)"

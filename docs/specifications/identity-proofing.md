@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-04
+last_updated: 2026-10-08
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
@@ -214,6 +214,7 @@ I2; belgede `category` claim'i yok — [[ADR-0022]]) verdiği nitelikli olmayan 
 | Seviye | Uzaktan belge + canlılık + yüz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` (High teknik; hukuken T3 = NES/Mobil İmza, IDP7) |
 | Veri sorumlusu | Tamga Network (K4): saklama kayıt + hash; silme talebi = §9.1 (kayıt silinir, kopyalar iptal, sağlayıcıda görüntüler silinir); sağlayıcı sözleşmesinde ≤ 30 gün görüntü saklama |
 | Webhook | Tek hedef `https://id.tamga.network/idv/webhook`, olay `status.updated`; kurum başına webhook yoktur |
+| Yaş | Asgari yaş yok (2026-10-08, [[ADR-0043]]); şart geçerli bir kimlik belgesiyle kimlik doğrulamasıdır. Veli onayı akışı ve sağlayıcının küçükler için sınırı açık konudur |
 
 Uygulama: `apps/id` (operatör deposu) (config/didit/store/app), `IdvProvider` arayüzü §6 ile aynı (`DiditProvider`, `FakeIdvProvider`).
 
@@ -276,6 +277,8 @@ karttaki sınıfları ve tarihleri verir. Resmî sürücü belgesi / mDL değild
 1. Sonuç yeniden kullanım süresi (12 ay) ve deneme sınırları — sayılar ÖNERİ.
 2. Cüzdan içi IDV (SDK) hiçbir zaman mı? Devlet aşamasında PID ile gereksizleşir; şimdilik hayır.
 3. Sağlayıcı çeşitliliği: ikinci adaptör (yerli sağlayıcı / e-Devlet) — tedarikçi kilidi tripwire'ı.
+4. Küçükler ([[ADR-0043]]): veli onayı akışı (GDPR m. 8; Türk hukukunda 18 yaş altı sınırlı ehliyet — hukuki inceleme) ve
+   sağlayıcının küçük yaştaki kişiler için sınırı ya da koşulu (henüz teyit edilmedi).
 
 # İlgili Dokümanlar
 

@@ -4,7 +4,7 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-04
+last_updated: 2026-10-08
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
@@ -216,6 +216,7 @@ an issuer (`category: IDENTITY`, `class: EAA`, I2; no `category` claim in the cr
 | Level | Remote document + liveness + face = **T2** (ETSI 119 461 Substantial); NFC chip = `document_chip_verified: true` (technically High; legally T3 = qualified e-signature/mobile signature, IDP7) |
 | Data controller | Tamga Network (K4): it keeps the record + hash; erasure request = §9.1 (the record is deleted, copies are revoked, images are deleted at the provider); the provider contract allows ≤ 30 days of image retention |
 | Webhook | A single target `https://id.tamga.network/idv/webhook`, event `status.updated`; there is no per-institution webhook |
+| Age | No minimum age (2026-10-08, [[ADR-0043]]); the condition is identity verification with a valid identity document. A guardian-consent flow and the provider's limit for minors are open items |
 
 Implementation: `apps/id` (operator repository) (config/didit/store/app); the `IdvProvider` interface is the same as in §6
 (`DiditProvider`, `FakeIdvProvider`).
@@ -279,6 +280,8 @@ through the always-visible `not_official_licence: true` claim.
 1. Result reuse period (12 months) and attempt limits — the numbers are PROPOSALS.
 2. In-wallet IDV (SDK) never? It becomes unnecessary with the PID in the state stage; not for now.
 3. Provider diversity: a second adapter (a domestic provider / e-Devlet) — a vendor lock-in tripwire.
+4. Minors ([[ADR-0043]]): a guardian-consent flow (GDPR Art. 8; under Turkish law limited legal capacity below 18 — legal
+   review) and the provider's own limit or condition for minors (not yet confirmed).
 
 # Related documents
 

@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-04
+last_updated: 2026-10-08
 summary: >
   Tamga'nın geçici kimlik belgesi sağlayıcısı olarak verdiği kimlik belgesinin (`urn:tamga:id:IdentityAttestation:1`)
   rulebook'u (Tamga Rulebook'tan dallanır): kim verir, hangi kimlik doğrulamayla, hangi alanlarla ve hangi seçici paylaşım kuralıyla; geçerlilik
@@ -74,6 +74,9 @@ Kurallar: kimlik doğrulama yalnızca kimlik servisinde yapılır; kurum [[t:iss
 konuşmaz. Doğrulama başlamadan **aydınlatma metni gösterilir ve açık rıza alınır**. Sağlayıcının kararı her zaman
 sağlayıcının karar ucundan teyit edilir; bildirim (webhook) yalnızca tetikleyicidir. Sağlayıcı kesintisi seviyeyi düşürmez,
 belge verme durur.
+
+**Yaş sınırı yoktur** (2026-10-08, [[ADR-0043]]): kimlik belgesi için asgari yaş aranmaz; şart geçerli bir kimlik belgesiyle
+kimlik doğrulamasıdır. Çocuklar için veli onayı akışı hukuki inceleme sonrası ayrı kararla ele alınır.
 
 ---
 

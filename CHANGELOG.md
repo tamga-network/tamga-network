@@ -7,6 +7,13 @@ before it are folded into this release (packages are published to npm once, at t
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-08 — no age limit
+
+- ADR-0043 (D-ID-10): the network sets no age limit, neither for wallets listed on the network nor for the identity service;
+  the condition is identity verification with a valid identity document; the issuer decides eligibility for its credentials.
+  Identity Rulebook §3 and the identity proofing specification §9 refer to it; a guardian-consent flow and the identity
+  verification provider's limit for minors are open items.
+
 ### 2026-10-07 — sandbox wallet provider entry
 
 - Sandbox list: Tamga Wallet's provider appears with the same entry as in the production list (`TAMGA-WP-1`, same operator and
@@ -44,7 +51,7 @@ First release of the Tamga Network documentation set and reference implementatio
   supporting pages Reading path, Roles and Onboarding.
 - Developer docs in English and Turkish: guides (including the sandbox test network), concepts, specifications (credential
   format, SD-JWT VC, OpenID4VCI, OpenID4VP, verification pipeline and API, trust lists, status list, X.509 institutional
-  identity, identity proofing, schema catalogue, wallet rules), architecture decisions (ADR-0001 … ADR-0042) and a glossary.
+  identity, identity proofing, schema catalogue, wallet rules), architecture decisions (ADR-0001 … ADR-0043) and a glossary.
 - Driving licence information (ADR-0039, D-ID-8): Identity Rulebook §10, Tamga Rulebook RB-AP-ID-08…10, SPEC-ID-0003 §9.3,
   credential types table.
 - Sandbox (2026-10-04): real identity verification steps, open to everyone with daily/monthly caps (ADR-0040, D-ID-9; RI1–RI6; `ADR-0038/SB3` rewritten) and

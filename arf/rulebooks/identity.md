@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-04 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-08 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -79,6 +79,10 @@ Rules: identity verification happens only in the identity service; institutional
 talk to the provider. Before verification starts, an **information notice is shown and explicit consent is obtained**.
 The provider's decision is always confirmed from its decision endpoint; the webhook is only a trigger. A
 provider outage does not lower the level; issuance stops.
+
+**There is no age limit** (2026-10-08, [[ADR-0043]]): no minimum age is required for the identity credential; the condition is
+identity verification with a valid identity document. A guardian-consent flow for children is handled by a separate decision
+after legal review.
 
 ## 4. Data protection
 
