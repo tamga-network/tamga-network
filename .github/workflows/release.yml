@@ -1,11 +1,17 @@
 # @tamga-network/* npm yayını — YALNIZCA elle başlatılır (Actions → release → Run workflow). Proje yönetiminin onayı olmadan çalıştırılmaz.
-# Önkoşullar (skill npm-yayin): npmjs.com'da `tamga-network` organizasyonu; her paket için Trusted Publisher (bu depo +
-# bu iş akışı) ya da ilk yayın için kısa ömürlü NPM_TOKEN sırrı. Sürümler önceden commit'lenmiş olmalı (npm version -w ...).
-# Provenance: npm, paketin bu depodaki bu commit'ten GitHub Actions ile üretildiğini imzalı olarak kaydeder (ARCH-0005 P2/P3).
+# Sürüm: paketler 0.x deneme sürümleriyle yayımlanır (bugün 0.2.0; kararlı 1.0.0 hazır olunca). Dağıtım etiketi npm'in varsayılanı
+# `latest` kalır: `npm install @tamga-network/core` en son deneme sürümünü kurar (0.x'te `next` etiketi gerekmez).
+# Kimlik: npm Trusted Publishing (OIDC) — her paketin npmjs.com ayarlarında Trusted Publisher = GitHub Actions, bu depo
+# (tamga-network/tamga-network), iş akışı `release.yml`, ortam `npm`. Uzun ömürlü token yok (ARCH-0005 P2). Trusted Publishing
+# npm CLI >= 11.5.1 ister (Node 22'nin npm'i 10.x) → aşağıda npm güncellenir. Trusted Publisher yalnız npm'de VAR OLAN pakete
+# tanımlanabilir: yeni bir paketin (bugün @tamga-network/zk) ilk yayını proje yönetimince elle, 2FA ile yapılır (adımlar iç
+# teslimat notunda); sonra Trusted Publisher tanımlanır ve sonraki sürümler bu iş akışından çıkar.
+# Sürümler önceden commit'lenmiş olmalı. Provenance: npm, paketin bu depodaki bu commit'ten GitHub Actions ile üretildiğini
+# imzalı olarak kaydeder (ARCH-0005 P2/P3).
 # @tamga-network/zk (ADR-0032): telefon ispatçısının derlenmiş Android kütüphaneleri (jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/
-# libtamga_zk_prover.so) depoda yoktur ve çalıştırıcıda NDK yoktur: yayından önce `node packages/zk/scripts/build-android.mjs`
-# ile derlenip çalıştırıcıya sağlanmalıdır (sağlama adımı eklenene kadar zk bu iş akışından yayınlanamaz — aşağıdaki denetim
-# bunu açıkça söyler; diğer paketler `packages` girdisiyle zk olmadan yayınlanabilir). iOS xcframework yoksa paket yalnız Android'dir.
+# libtamga_zk_prover.so) depoda yoktur ve çalıştırıcıda NDK yoktur: sağlama adımı eklenene kadar zk bu iş akışından yayınlanamaz
+# — aşağıdaki denetim bunu açıkça söyler; diğer paketler `packages` girdisiyle zk olmadan yayınlanır:
+#   packages = "core mdoc schemas sd-jwt trust issuer verifier wallet-core". iOS xcframework yoksa zk paketi yalnız Android'dir.
 name: release
 on:
   workflow_dispatch:
@@ -34,6 +40,8 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      - name: npm CLI (Trusted Publishing için >= 11.5.1)
+        run: npm install -g npm@11 --no-audit --no-fund && npm --version
       - run: npm ci --no-audit --no-fund
       - run: npm run pki && npm run schemas:build && npm run trust:build && npm run trust:build && npm run trust:heartbeat && npm run trust:test-fixtures
       - run: npm test && npm run typecheck
@@ -56,7 +64,7 @@ jobs:
       - run: npm run release:check
       - name: npm publish (.publish/<paket>)
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # trusted publishing kuruluysa boş kalabilir
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # Trusted Publishing (OIDC) kuruluysa sır tanımlanmaz, boş kalır
           PACKAGES: ${{ inputs.packages }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |

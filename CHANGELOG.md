@@ -1,11 +1,19 @@
 # Changelog — tamga-network
 
-Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Everything is 1.0.0 until the public announcement; changes
-before it are folded into this release (packages are published to npm once, at the announcement).
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The documents (docs, ARF) are 1.0.0 until the public
+announcement; changes before it are folded into this release. The `@tamga-network/*` packages are versioned separately: they
+are published on npm as the `0.2.0` test release (the API may change in test releases); the stable `1.0.0` comes when
+everything is ready.
 
 ## [1.0.0] — 2026-10-04
 
 First release of the Tamga Network documentation set and reference implementation.
+
+### 2026-10-08 — packages: 0.2.0 test release
+
+- The `@tamga-network/*` packages are versioned `0.2.0` (test release) instead of `1.0.0`, so testers get the current API from
+  npm; later test rounds are `0.2.x`/`0.3.0`, and `1.0.0` comes when everything is ready. The documents stay at 1.0.0. The
+  verification result's `sdk_version` is `@tamga-network/verifier@0.2.0` (checked against the package version by a test).
 
 ### 2026-10-08 — no age limit
 
@@ -58,7 +66,7 @@ First release of the Tamga Network documentation set and reference implementatio
   institution test accounts (ADR-0041, D-TRUST-4; TI1–TI6); SPEC-TRUST-0001 §4 optional `issuers[].test_institution` (sandbox
   list only); Sandbox guide §8–§9; list publisher `sandbox-institution add` (sandbox intermediate CA `test-institutions-ca`).
 
-### Packages (`@tamga-network/*`, 1.0.0)
+### Packages (`@tamga-network/*`, 0.2.0 test release)
 
 - `core`, `trust`, `schemas`, `sd-jwt`, `mdoc`, `issuer` (+ `/client`), `verifier` (+ `/web`, `/zk`), `wallet-core`, `zk`.
 - `zk` (2026-10-06, ADR-0032 Stage 2a): wallet-side zero-knowledge proofs (Longfellow ZK) — DCQL `mso_mdoc_zk` → claims,

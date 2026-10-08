@@ -43,7 +43,8 @@ yarn add @tamga-network/verifier @tamga-network/trust @tamga-network/issuer
 :::
 
 ::: tip Version
-The packages are at version 1.0.0; they are published on npm with the go-live announcement. They can also be used from
+The packages are published on npm as the 0.2.0 test release; the stable 1.0.0 comes when everything is ready. In test
+releases the API may change. They can also be used from
 the source repository (`npm run release:check` builds publish-ready packages in the `.publish/` folder).
 :::
 

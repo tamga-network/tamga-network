@@ -140,14 +140,16 @@ for (const lang of ["en", "tr"]) {
           "# Packages",
           "",
           "Tamga's open-source packages (`@tamga-network/*`, Apache-2.0). Each page is the package's own README — the same text",
-          "as on npm. The packages are versioned **1.0.0** and are published on npm with the announcement.",
+          "as on npm. The packages are published on npm as the **0.2.0** test release; the stable 1.0.0 comes when everything is",
+          "ready. In test releases the API may change.",
           "Working examples: [Code examples](/guides/code-examples).",
         ]
       : [
           "# Paketler",
           "",
           "Tamga'nın açık kaynak paketleri (`@tamga-network/*`, Apache-2.0). Her sayfa paketin kendi README'sidir — npm'deki",
-          "metinle aynı, İngilizce. Paketlerin sürümü **1.0.0**; npm'de duyuruyla yayımlanır.",
+          "metinle aynı, İngilizce. Paketler npm'de **0.2.0** deneme sürümüyle yayımlanır; kararlı 1.0.0 hazır olunca gelir.",
+          "Deneme sürümünde arayüz değişebilir.",
           "Çalışan örnekler: [Kod örnekleri](/guides/code-examples).",
         ];
   writeFileSync(

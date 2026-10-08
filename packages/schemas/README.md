@@ -18,8 +18,9 @@ import { build } from "@tamga-network/schemas/build"; // Node only: writes the s
 
 ## Status
 
-Version `1.0.0`, written and tested; it will be published to npm at the public announcement. Every release is built from
-this repository by GitHub Actions and carries npm provenance (verifiable link to the source commit).
+Published on npm as the `0.2.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
+the source commit).
 
 ## Links
 

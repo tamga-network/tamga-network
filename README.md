@@ -17,7 +17,7 @@ listeler (ADR-0042). Tamga Network kâr amacı gütmez; işletmecilik ileride bi
 | Web sitesi | [tamga.network](https://tamga.network) |
 | Geliştirici belgeleri | [docs.tamga.network](https://docs.tamga.network) · API: [docs.tamga.network/api](https://docs.tamga.network/api/) |
 | Mimari ve referans çerçevesi | [arf.tamga.network](https://arf.tamga.network) |
-| Paketler | [npm: @tamga-network](https://www.npmjs.com/org/tamga-network) (sürüm 1.0.0; duyuruyla yayımlanır) |
+| Paketler | [npm: @tamga-network](https://www.npmjs.com/org/tamga-network) (0.2.0 deneme sürümü; kararlı 1.0.0 hazır olunca gelir — deneme sürümünde arayüz değişebilir) |
 | Lisans | kod Apache-2.0 (`LICENSE`) · belgeler CC BY 4.0 (`LICENSE-docs`) |
 
 ## İçerik

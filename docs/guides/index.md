@@ -77,8 +77,8 @@ depoya girmez). Kodunuzu bu yerel listelere karşı deneyebilirsiniz. Uyum vekt�
 | `@tamga-network/wallet-core` | cüzdan çekirdeği: anahtarlar, belge alma, yerel denetim, gösterme (Node + React Native) | cüzdan geliştiricisi |
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | cüzdan tarafı sıfır bilgi ispatçısı (mdoc, Longfellow); `/react-native` telefonda yerel ispatçı, `/node` masaüstünde | cüzdan geliştiricisi |
 
-Her paketin kendi sayfası **SDK'lar** bölümündedir. Paketler sürüm **1.0.0**; canlıya çıkış duyurusuyla npm'de
-yayımlanır. Her sürüm bu depodan GitHub Actions ile üretilir ve kaynak kanıtı (provenance) taşır.
+Her paketin kendi sayfası **SDK'lar** bölümündedir. Paketler npm'de **0.2.0** deneme sürümüyle yayımlanır; kararlı 1.0.0
+hazır olunca gelir. Deneme sürümünde arayüz değişebilir. Her sürüm bu depodan GitHub Actions ile üretilir ve kaynak kanıtı (provenance) taşır.
 
 ## Adresler
 
@@ -96,7 +96,7 @@ yayımlanır. Her sürüm bu depodan GitHub Actions ile üretilir ve kaynak kan�
 
 | Parça | Durum |
 |---|---|
-| Paketler | sürüm 1.0.0; canlıya çıkış duyurusuyla npm'de yayımlanır |
+| Paketler | npm'de 0.2.0 deneme sürümü; kararlı 1.0.0 hazır olunca gelir (deneme sürümünde arayüz değişebilir) |
 | Barındırılan doğrulayıcı | çalışıyor: sunumu sitenin sunucusu imzalı beyanla açar, değerler yalnızca ona ve bir kez verilir ([[ADR-0017]]); politikalar bugün sabit |
 | Barındırılan belge verme | çalışıyor: kurum başına kapsamlı API anahtarı ([[ADR-0016]]) |
 | Güven çapası | imzalı güven listeleri ([[ADR-0009]]); belge veren ve doğrulayıcı kaydını Tamga operatörü yapar |

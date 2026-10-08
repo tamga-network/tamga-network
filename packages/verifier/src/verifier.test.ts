@@ -18,6 +18,7 @@ import {
   createPresentationRequest,
   decryptResponse,
   pemRpSigner,
+  SDK_VERSION,
   type Policy,
 } from "./index.js";
 import { encryptJwe, utf8 } from "@tamga-network/wallet-core";
@@ -45,6 +46,13 @@ const policy: Policy = {
   trust: { min_issuer_assurance: "I2", allowed_categories: ["EDUCATION"], require_recognition: true, state_code: "TR" },
   freshness: { max_status_token_age_sec: 6 * 3600, max_trust_age_sec: 86400 },
 };
+
+describe("sdk_version", () => {
+  it("SDK_VERSION = paketin package.json sürümü (sonuçtaki sdk_version yayınlanan sürümü söyler)", () => {
+    const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, "../package.json"), "utf8"));
+    expect(SDK_VERSION).toBe(`${pkg.name}@${pkg.version}`);
+  });
+});
 
 describe("policy", () => {
   it("DCQL: kısıt eşitlik → values; aralık → yalnız path", () => {
