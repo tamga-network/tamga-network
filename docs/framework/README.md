@@ -24,7 +24,7 @@ artınca aynı çalışmada İngilizcesi de güncellenir.
 | ID | Dosya | Ne | EUDI muadili | Sürüm / statü |
 |---|---|---|---|---|
 | `FW-ARF-0001` | `0001-tamga-arf.md` | **Mimari ve Referans Çerçevesi** (ana belge): kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik, yönetişim | EUDI ARF | 1.0.0 · Active |
-| `FW-TF-0001` | `0002-trust-framework.md` | **Ek A — Trust Framework**: yönetişim, katılım kapıları, uyum, sözleşmeler, devir planı | Ulusal eID/EUDI güven şeması; CIR 2024/2977–2982'nin karşılığı | 1.0.0 · Active |
+| `FW-TF-0001` | `0002-trust-framework.md` | **Ek A — Trust Framework**: yönetişim, katılım kapıları, uyum, sözleşmeler, devir planı | Ulusal eID/EUDI güven şeması; CIR 2024/2977, 2979, 2980, 2981 ve 2982'nin karşılığı | 1.0.0 · Active |
 | `FW-RB-0001` | `0003-tamga-rulebook.md` | **Ek B — Tamga Rulebook** (ana rulebook): bütün katılımcılar ve belge türleri için ortak, numaralı kurallar (RB-*) | ARF Annex 2 HLR (rol bazlı) | 1.0.0 · Active |
 | `FW-RB-0002` | `0004-education-rulebook.md` | **Education Rulebook** (Ek C): `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` | ARF Annex 3 attestation rulebook | 1.0.0 · Active |
 | `FW-RB-0003` | `0005-identity-rulebook.md` | **Identity Rulebook** (Ek C): `urn:tamga:id:IdentityAttestation:1`, `urn:tamga:id:DrivingLicenceAttestation:1` | ARF PID Rulebook deseni (PID değil, EAA) | 1.0.0 · Active |
