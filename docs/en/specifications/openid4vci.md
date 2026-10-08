@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-07
+last_updated: 2026-10-08
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -477,10 +477,12 @@ Ten bits changing at once would be a correlation signal; but because publication
 | Credential | Batch |
 |---|---|
 | `TamgaStudentCredential` | **Active in the initial stage** — short life + frequent use |
-| `TamgaDiplomaCredential` | **Deferred to the state stage** — managing status indices adds complexity |
+| `TamgaDiplomaCredential` | **Active in the initial stage** — 10 copies, each with its own status index (§8.4) |
 
-In the pilot a diploma is issued as a single copy, and `idx` correlation is disclosed to participants as an **accepted
-risk** ([[PM-GOV-0001]] §Pilot).
+The diploma is also issued as 10 copies (project management decision, 2026-10-08; previous decision: a single copy in the
+pilot, batch at the state stage). Each copy carries its own status index; the indices of one diploma are mapped in the
+institution's own database, all of them are set together on revocation (§8.4), and the mapping never leaves. Each
+verifier therefore gets its own copy and presentations cannot be linked through `idx`.
 
 ---
 
@@ -720,8 +722,8 @@ own key to one of the copies.
    implemented; PAR + PKCE + WUA client identity; presentation of the identity attestation at the institution, browser +
    IDV at the Tamga identity service.
 4. `batch_size` = 10 is an estimate; it should be calibrated with pilot usage data.
-5. The diploma batch was deferred to the state stage (§8.5) — status index capacity and the revocation procedure must be
-   recalculated then.
+5. ~~The diploma batch was deferred to the state stage~~ — **CLOSED (2026-10-08, §8.5):** the diploma is also issued as 10
+   copies; status index capacity is covered by opening lists per institution (§8.4), revocation sets every copy's index.
 
 ---
 

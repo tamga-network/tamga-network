@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-07
+last_updated: 2026-10-08
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -494,10 +494,12 @@ görünmez.
 | Belge | Batch |
 |---|---|
 | `TamgaStudentCredential` | **ilk aşamada etkin** — kısa ömür + sık kullanım |
-| `TamgaDiplomaCredential` | **devlet aşamasına ertelendi** — status indeksi yönetimi ek karmaşıklık |
+| `TamgaDiplomaCredential` | **ilk aşamada etkin** — 10 kopya, her kopya ayrı status indeksi (§8.4) |
 
-Pilotta diploma tek kopya verilir ve `idx` korelasyonu **kabul edilmiş risk**
-olarak katılımcılara bildirilir ([[PM-GOV-0001]] §Pilot).
+Diploma da 10 kopya verilir (proje yönetimi kararı, 2026-10-08; önceki karar: pilotta tek kopya, devlet aşamasında
+batch). Her kopya kendi status indeksini taşır; aynı diplomanın indeksleri kurumun kendi veritabanında eşlenir, iptalde
+hepsi birlikte işaretlenir (§8.4) ve bu eşleme dışarı çıkmaz. Böylece her doğrulayıcıya ayrı kopya gider ve gösterimler
+`idx` üzerinden birbirine bağlanamaz.
 
 ---
 
@@ -740,8 +742,8 @@ budur.
 3. ~~Authorization code akışı ilk aşamada hiç uygulanacak mı?~~ — **KAPANDI (§11.2, [[ADR-0011]] D-ID-6):** uygulandı;
    PAR + PKCE + WUA istemci kimliği; kurumda kimlik attestation sunumu, Tamga kimlik servisinde tarayıcı + IDV.
 4. `batch_size` = 10 tahminîdir; pilot kullanım verisiyle kalibre edilmeli.
-5. Diploma batch'i devlet aşamasına ertelendi (§8.5) — status indeksi kapasitesi ve
-   iptal prosedürü o zaman yeniden hesaplanmalı.
+5. ~~Diploma batch'i devlet aşamasına ertelendi~~ — **KAPANDI (2026-10-08, §8.5):** diploma da 10 kopya; status indeksi
+   kapasitesi kurum başına liste açılarak karşılanır (§8.4), iptal bütün kopyaların indeksini işaretler.
 
 ---
 

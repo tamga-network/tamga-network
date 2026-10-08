@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-07
+last_updated: 2026-10-08
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -261,12 +261,11 @@ Yenileme belirteci olan kurum belgeleri, kurumun
 ilan ettiği eşikte, uygulama önde ve kilit açıkken, rastgele gecikmeyle yenilenir; kimlik ve iletişim belgelerinde yenileme
 kullanıcı eylemidir. Kullanıcı ayarlardan kapatabilir.
 
-## 4.4 Diploma — ilk aşama
+## 4.4 Diploma
 
-[[SPEC-PROTO-0001]] §8.5 uyarınca diploma ilk aşamada **tek kopya** verilir.
-Yapışkan eşleme yine uygulanır (tek kopya her doğrulayıcıya gider) ve `idx`
-korelasyonu kabul edilmiş risktir — kullanıcıya **cüzdan içinde** de
-gösterilir, yalnızca pilot sözleşmesinde değil.
+[[SPEC-PROTO-0001]] §8.5 uyarınca diploma da diğer kurum belgeleri gibi **10 kopya** verilir (2026-10-08; önceki karar
+pilotta tek kopyaydı). Yapışkan eşleme uygulanır: her doğrulayıcıya ayrı kopya gider. Kopyalar tükenince cüzdan yeniden
+imzalatır; kullanıcı aynı kopyayı bilerek yeniden kullanırsa cüzdan bunun bağlanabilirlik doğurduğunu gösterir.
 
 ---
 
