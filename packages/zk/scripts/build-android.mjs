@@ -4,12 +4,15 @@
  * cargo-ndk gerekmez: NDK'nin clang sarmalayıcısı bağlayıcı olarak verilir (Windows'ta cargo-ndk derlenemiyor). Gerekenler:
  *   - Android NDK (ANDROID_NDK_HOME ya da ~/tools/android-ndk-*),
  *   - rustup target add --toolchain <rust-toolchain.toml sürümü> aarch64-linux-android armv7-linux-androideabi x86_64-linux-android
- * AArch64 kripto uzantıları rust/.cargo/config.toml'da (Longfellow ister). Mağaza derlemesi öncesi bir kez (ya da Rust kaynağı
+ * AArch64 kripto uzantıları rust/.cargo/config.toml'da (Longfellow ister). Derleyen makinenin yolları (kullanıcı adı dahil:
+ * cargo kayıt/git klonları, rustup, depo, hedef klasörü) .so'ya gömülmez: --remap-path-prefix ile nötr öneklere (/cargo, /rustup,
+ * /src, /target, ~) yazılır (packages/verifier zk-build ile aynı yöntem). Bu bayraklar CARGO_ENCODED_RUSTFLAGS ile verildiği için
+ * config.toml'daki hedef bayrakları cargo'ca okunmaz; betik onları config.toml'dan okuyup ekler (tek kaynak config.toml). Mağaza derlemesi öncesi bir kez (ya da Rust kaynağı
  * değişince) çalıştırılır; Expo Go bu modülü yüklemez (ZK5: olağan yol). İlk derleme 2026-10-06 (NDK r27c, API 28 = Android 9).
  *   node scripts/build-android.mjs      (ya da: npm run zk:android -w @tamga-network/zk)
  */
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -48,10 +51,33 @@ for (const [, rustTarget, clangTriple] of TARGETS) {
   env[`CC_${key}`] = clang(clangTriple);
   env[`AR_${key}`] = ar;
 }
+/** rust/.cargo/config.toml → [target.<hedef>] rustflags (yoksa boş). */
+const CONFIG = readFileSync(join(PKG, "rust", ".cargo", "config.toml"), "utf8");
+function configRustflags(rustTarget) {
+  const lines = CONFIG.split(/\r?\n/).map((l) => l.trim());
+  const at = lines.indexOf(`[target.${rustTarget}]`);
+  if (at < 0) return [];
+  for (const l of lines.slice(at + 1)) {
+    if (l.startsWith("[")) break;
+    if (l.startsWith("rustflags")) return JSON.parse(l.slice(l.indexOf("=") + 1));
+  }
+  return [];
+}
+// Sonra gelen eşleşme kazanır: genelden (ev klasörü) özele.
+const REMAP = [
+  [homedir(), "~"],
+  [process.env.CARGO_HOME ?? join(homedir(), ".cargo"), "/cargo"],
+  [process.env.RUSTUP_HOME ?? join(homedir(), ".rustup"), "/rustup"],
+  [TARGET_DIR, "/target"],
+  [resolve(PKG, "..", ".."), "/src"],
+].map(([from, to]) => `--remap-path-prefix=${from}=${to}`);
 for (const [abi, rustTarget] of TARGETS) {
   execFileSync("cargo", ["build", "--release", "--target", rustTarget], {
     cwd: join(PKG, "rust"),
-    env,
+    env: {
+      ...env,
+      CARGO_ENCODED_RUSTFLAGS: [...configRustflags(rustTarget), ...REMAP].join(String.fromCharCode(0x1f)),
+    },
     stdio: "inherit",
   });
   const out = join(PKG, "android", "src", "main", "jniLibs", abi);
