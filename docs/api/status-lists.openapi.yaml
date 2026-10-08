@@ -1,0 +1,116 @@
+openapi: 3.1.0
+info:
+  title: Status Lists
+  version: 1.0.0
+  summary: Revocation status lists of the issuers (IETF Token Status List) — public, no authentication, no personal data.
+  description: |
+    Every credential carries a `status` claim with a list address (`uri`) and an index (`idx`). The verifier downloads the
+    list at that address and reads the two bits at the index: `0` valid, `1` revoked, `2` suspended. The list is a signed
+    JWT (`typ: statuslist+jwt`, ES256, issuer's X.509 chain in `x5c`) with `bits: 2` and a compressed bitstring; it is
+    republished at a fixed interval (default 1 hour) even when nothing changed, so a download reveals nothing about any
+    person. Each publication is recorded in the trust list anchor log (`kind: status_list`) with its content digest.
+
+    The list address is opaque — it does not encode the institution or a cohort. Take it from the credential; the base
+    address of each issuer is `status_list_base` in the national trust list. `@tamga-network/verifier` does all of this for
+    you (step D of the verification pipeline). The full profile is in SPEC-CRED-0003.
+  x-tr:
+    title: Durum listeleri
+    summary: Belge veren kurumların iptal durum listeleri (IETF Token Status List) — herkese açık, kimlik doğrulama yok, kişisel veri yok.
+    description: |
+      Her belge, bir liste adresi (`uri`) ve bir indeks (`idx`) içeren `status` alanı taşır. Doğrulayıcı listeyi bu adresten
+      indirir ve indeksteki iki biti okur: `0` geçerli, `1` iptal, `2` askıda. Liste imzalı bir JWT'dir (`typ: statuslist+jwt`,
+      ES256, `x5c` içinde kurumun X.509 zinciri); `bits: 2` ve sıkıştırılmış bit dizisi taşır. Hiçbir şey değişmese de sabit
+      aralıkla (varsayılan 1 saat) yeniden yayınlanır; böylece bir indirme hiçbir kişi hakkında bir şey açığa vurmaz. Her yayın
+      içerik özetiyle birlikte güven listesi çapa günlüğüne yazılır (`kind: status_list`).
+
+      Liste adresi opaktır — kurumu ya da bir grubu kodlamaz. Adresi belgeden alın; her kurumun temel adresi ulusal güven
+      listesindeki `status_list_base` alanıdır. `@tamga-network/verifier` bunların hepsini sizin için yapar (doğrulama hattının
+      D adımı). Profilin tamamı SPEC-CRED-0003'te.
+  license:
+    name: CC BY 4.0
+    url: https://creativecommons.org/licenses/by/4.0/
+externalDocs:
+  description: Revocation — concept
+  url: https://docs.tamga.network/concepts/revocation
+servers:
+  - url: https://status.tamga.network
+    description: Hosted issuer status lists (real network)
+    x-tr: Barındırılan belge verme servisinin listeleri (gerçek ağ)
+  - url: https://id.tamga.network/status
+    description: Identity attestation status lists (real network)
+    x-tr: Kimlik belgesi durum listeleri (gerçek ağ)
+  - url: https://status.sandbox.tamga.network
+    description: Sandbox (test network)
+    x-tr: Sandbox (deneme ağı)
+security: []
+tags:
+  - name: Status lists
+    description: Download a status list token.
+    x-tr:
+      name: Durum listeleri
+      description: Bir durum listesi belirtecini indirin.
+paths:
+  /{list_id}:
+    get:
+      tags: [Status lists]
+      operationId: getStatusList
+      summary: Get a status list token
+      description: |
+        Returns the latest signed Status List Token for the list. Check the signature against the issuer's certificate chain,
+        that `sub` equals the address you requested, and `exp` (`iat` + 50 hours); then read the bits at the credential's index.
+      x-tr:
+        summary: Durum listesi belirtecini al
+        description: |
+          Listenin son imzalı Status List Token'ını döndürür. İmzayı kurumun sertifika zincirine göre, `sub` alanının
+          istediğiniz adrese eşit olduğunu ve `exp` alanını (`iat` + 50 saat) denetleyin; sonra belgenin indeksindeki bitleri
+          okuyun.
+      parameters:
+        - in: path
+          name: list_id
+          required: true
+          schema: { type: string, example: 88565603be702c85 }
+          description: Opaque list identifier — the last part of the `status.status_list.uri` in the credential.
+          x-tr: Opak liste kimliği — belgedeki `status.status_list.uri` adresinin son parçası.
+        - in: header
+          name: Accept
+          required: false
+          schema: { type: string, const: application/statuslist+jwt }
+      responses:
+        "200":
+          description: Signed Status List Token (JWT); the payload is `StatusListToken`.
+          x-tr: İmzalı Status List Token (JWT); içeriği `StatusListToken`.
+          content:
+            application/statuslist+jwt:
+              schema: { type: string }
+              example: eyJhbGciOiJFUzI1NiIsInR5cCI6InN0YXR1c2xpc3Qrand0IiwieDVjIjpbIuKApiJdfQ.eyJzdWIiOiLigKYifQ.…
+        "404":
+          description: "`not_found` — unknown list."
+          x-tr: "`not_found` — bilinmeyen liste."
+components:
+  schemas:
+    StatusListToken:
+      type: object
+      description: Payload of the Status List Token (IETF Token Status List, Tamga profile).
+      x-tr: Status List Token içeriği (IETF Token Status List, Tamga profili).
+      properties:
+        sub:
+          type: string
+          format: uri
+          description: The list address — exactly the `uri` in the credential.
+          x-tr: Liste adresi — belgedeki `uri` ile birebir aynı.
+        iss: { type: string, format: uri, description: The issuer., x-tr: Belge veren kurum. }
+        iat: { type: integer }
+        exp: { type: integer, description: "`iat` + 50 hours.", x-tr: "`iat` + 50 saat." }
+        ttl: { type: integer, description: Seconds until the next publication., x-tr: Bir sonraki yayına kadar saniye. }
+        status_list:
+          type: object
+          properties:
+            bits: { type: integer, const: 2 }
+            lst: { type: string, description: Compressed bitstring (base64url)., x-tr: Sıkıştırılmış bit dizisi (base64url). }
+      example:
+        sub: https://status.tamga.network/7f3a9c21d4e5b6a7
+        iss: https://issuer.tamga.network/your-institution
+        iat: 1791500000
+        exp: 1791680000
+        ttl: 3600
+        status_list: { bits: 2, lst: eNrbuRgAAhcBXQ }

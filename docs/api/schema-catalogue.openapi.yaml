@@ -1,0 +1,153 @@
+openapi: 3.1.0
+info:
+  title: Schema Catalogue
+  version: 1.0.0
+  summary: The credential type catalogue — type metadata and JSON Schemas for every `vct`. Static, public, no authentication.
+  description: |
+    Every Tamga credential type has a URN (`vct`, e.g. `urn:tamga:edu:DiplomaCredential:1`). The catalogue maps each `vct` to
+    its SD-JWT VC Type Metadata and JSON Schema (IETF SD-JWT VC registry resolution). The credential carries
+    `vct#integrity`; compare it with the catalogue entry's `content_hash` before trusting the metadata. Files are versioned
+    by path and never change once published; the trust lists anchor every schema's digest.
+
+    `@tamga-network/schemas` contains the same catalogue for offline use. The rules are in SPEC-SCHEMA-0001.
+  x-tr:
+    title: Şema kataloğu
+    summary: Belge türü kataloğu — her `vct` için tür metadatası ve JSON Schema. Statik, herkese açık, kimlik doğrulama yok.
+    description: |
+      Her Tamga belge türünün bir URN'si vardır (`vct`, ör. `urn:tamga:edu:DiplomaCredential:1`). Katalog her `vct`'yi SD-JWT VC
+      Type Metadata'sına ve JSON Schema'sına bağlar (IETF SD-JWT VC kayıt çözümlemesi). Belge `vct#integrity` taşır;
+      metadataya güvenmeden önce bunu katalog kaydındaki `content_hash` ile karşılaştırın. Dosyalar yol ile sürümlenir ve
+      yayınlandıktan sonra değişmez; güven listeleri her şemanın özetini çapalar.
+
+      Aynı katalog çevrim dışı kullanım için `@tamga-network/schemas` paketindedir. Kurallar SPEC-SCHEMA-0001'de.
+  license:
+    name: CC BY 4.0
+    url: https://creativecommons.org/licenses/by/4.0/
+externalDocs:
+  description: Schema catalogue — specification
+  url: https://docs.tamga.network/specifications/schema-catalog
+servers:
+  - url: https://schemas.tamga.network/v1
+    description: Catalogue (shared by the real network and the sandbox)
+    x-tr: Katalog (gerçek ağ ve sandbox ortak)
+security: []
+tags:
+  - name: Catalogue
+    description: Find a credential type and its files.
+    x-tr:
+      name: Katalog
+      description: Bir belge türünü ve dosyalarını bulun.
+paths:
+  /catalogue.json:
+    get:
+      tags: [Catalogue]
+      operationId: getCatalogue
+      summary: Get the catalogue
+      description: Every credential type with its metadata and schema addresses, digests and status.
+      x-tr:
+        summary: Kataloğu al
+        description: Her belge türü; metadata ve şema adresleri, özetleri ve durumuyla.
+      responses:
+        "200":
+          description: The catalogue.
+          x-tr: Katalog.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  catalogue_version: { type: integer }
+                  generated_at: { type: string, format: date-time }
+                  base: { type: string, format: uri }
+                  entries: { type: array, items: { $ref: "#/components/schemas/CatalogueEntry" } }
+  /index.json:
+    get:
+      tags: [Catalogue]
+      operationId: getIndex
+      summary: Get the plain index
+      description: The catalogue entries as a plain array (no envelope).
+      x-tr:
+        summary: Düz dizini al
+        description: Katalog kayıtları, zarfsız düz dizi olarak.
+      responses:
+        "200":
+          description: Entries.
+          x-tr: Kayıtlar.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CatalogueEntry" }
+  /{domain}/{type}/{version}/metadata.json:
+    get:
+      tags: [Catalogue]
+      operationId: getTypeMetadata
+      summary: Get a type's metadata
+      description: |
+        SD-JWT VC Type Metadata: display names in each language, the parent type (`extends` + `extends#integrity`), the schema
+        address with `schema_uri#integrity`, and claim display rules. Use the `metadata_url` from the catalogue rather than
+        building the path yourself.
+      x-tr:
+        summary: Bir türün metadatasını al
+        description: |
+          SD-JWT VC Type Metadata: her dilde görünen adlar, üst tür (`extends` + `extends#integrity`), `schema_uri#integrity`
+          ile şema adresi ve alan gösterim kuralları. Yolu kendiniz kurmak yerine katalogdaki `metadata_url` değerini kullanın.
+      parameters:
+        - { in: path, name: domain, required: true, schema: { type: string, example: edu } }
+        - { in: path, name: type, required: true, schema: { type: string, example: StudentCredential } }
+        - { in: path, name: version, required: true, schema: { type: string, example: 1.0.0 } }
+      responses:
+        "200":
+          description: Type Metadata.
+          content:
+            application/json:
+              schema: { type: object }
+              example:
+                vct: urn:tamga:edu:StudentCredential:1
+                version: 1.0.0
+                name: Tamga Student Credential
+                extends: urn:tamga:core:TamgaBaseCredential:1
+                schema_uri: https://schemas.tamga.network/v1/edu/StudentCredential/1.0.0/schema.json
+                display: [{ lang: tr-TR, name: Öğrenci Belgesi }, { lang: en-US, name: Student Certificate }]
+        "404":
+          description: Unknown type or version.
+          x-tr: Bilinmeyen tür ya da sürüm.
+  /{domain}/{type}/{version}/schema.json:
+    get:
+      tags: [Catalogue]
+      operationId: getTypeSchema
+      summary: Get a type's JSON Schema
+      description: The JSON Schema of the credential's claims (use the `schema_url` from the catalogue).
+      x-tr:
+        summary: Bir türün JSON Schema'sını al
+        description: Belge alanlarının JSON Schema'sı (katalogdaki `schema_url` değerini kullanın).
+      parameters:
+        - { in: path, name: domain, required: true, schema: { type: string, example: edu } }
+        - { in: path, name: type, required: true, schema: { type: string, example: StudentCredential } }
+        - { in: path, name: version, required: true, schema: { type: string, example: 1.0.0 } }
+      responses:
+        "200":
+          description: JSON Schema.
+          content:
+            application/json:
+              schema: { type: object }
+        "404":
+          description: Unknown type or version.
+          x-tr: Bilinmeyen tür ya da sürüm.
+components:
+  schemas:
+    CatalogueEntry:
+      type: object
+      properties:
+        vct: { type: string, example: "urn:tamga:edu:StudentCredential:1" }
+        schema_id: { type: string, description: "`keccak256(vct)`" }
+        metadata_url: { type: string, format: uri }
+        schema_url: { type: string, format: uri }
+        content_hash:
+          type: string
+          description: Digest of the current metadata — equals `vct#integrity` in the credential.
+          x-tr: Güncel metadatanın özeti — belgedeki `vct#integrity` ile eşittir.
+        content_hashes: { type: array, items: { type: string }, description: Digests of the valid versions., x-tr: Geçerli sürümlerin özetleri. }
+        version: { type: string, example: 1.0.0 }
+        layer: { type: string, enum: [NETWORK, NATIONAL] }
+        status: { type: string, example: ACTIVE }

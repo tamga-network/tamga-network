@@ -47,4 +47,4 @@ wallet                         institution (issuer.tamga.network/{institution})
 
 - Protocol: [[SPEC-PROTO-0001]]
 - Status list: [[SPEC-CRED-0003]]
-- API: [Hosted service APIs](/api/)
+- API: [Hosted issuer API](/api/issuer)

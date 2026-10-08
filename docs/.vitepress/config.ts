@@ -3,7 +3,8 @@
  * Diller (2026-10-02): İngilizce kökte, Türkçe /tr/ altında. Kaynak: Türkçe `docs/<bölüm>/…` (normatif metin), İngilizce
  * çevirisi `docs/en/<bölüm>/…` (`translation_of` + `source_version`). `rewrites` en/ → kök, gerisi → tr/.
  * Yapı (Stripe benzeri): Başlarken · Kavramlar · API · SDK'lar · Şartnameler · Sürüm notları; her bölümün kendi kenar çubuğu.
- * Üretilen sayfalar (scripts/docs-sync-root.mjs, gitignore): paketler, sürüm notları, bağlayıcı kurallar.
+ * Üretilen sayfalar (scripts/docs-sync-root.mjs, gitignore): paketler, sürüm notları, bağlayıcı kurallar, API başvuru sayfaları
+ * (docs/api/*.openapi.yaml → scripts/openapi-pages.mjs; genel bakış api/index.md elle yazılır).
  * Çerçeve belgeleri (docs/framework) Tamga ARF sitesinde yayınlanır; [[FW-*]] atıfları oraya bağlanır (DY1).
  */
 import { defineConfig, type DefaultTheme } from "vitepress";
@@ -21,7 +22,6 @@ const IDX = { en: buildDocIndex(DOCS, "en"), tr: buildDocIndex(DOCS, "tr") };
  * Yayında olmayan belgeye verilen [[DOC-ID]] atfı GitHub'daki kaynağına gider (atıf kopmaz).
  */
 const UNPUBLISHED = [
-  "api/**", // Scalar sayfası public/api altından statik yayınlanır
   "framework/**", // Tamga ARF sitesinde
   "_archive/**",
   "_internal/**",
@@ -84,7 +84,17 @@ const T = {
     rules: "Binding rules",
     allPackages: "All packages",
     apiRef: "API reference",
-    hostedApis: "Hosted service APIs ↗",
+    apiServices: "Services",
+    apiRegistries: "Public registries",
+    apiProtocols: "Standard protocols",
+    apiPages: {
+      verify: "Tamga Verify API",
+      issuer: "Hosted issuer API",
+      "institution-source": "Institution source endpoint",
+      "trust-lists": "Trust lists",
+      "status-lists": "Status lists",
+      "schema-catalogue": "Schema catalogue",
+    },
     outline: "On this page",
     edit: "Edit this page on GitHub",
     prev: "Previous",
@@ -129,7 +139,17 @@ const T = {
     rules: "Bağlayıcı kurallar",
     allPackages: "Tüm paketler",
     apiRef: "API başvurusu",
-    hostedApis: "Barındırılan servis API'leri ↗",
+    apiServices: "Hizmetler",
+    apiRegistries: "Herkese açık kayıtlar",
+    apiProtocols: "Standart protokoller",
+    apiPages: {
+      verify: "Tamga Verify API",
+      issuer: "Belge verme API'si",
+      "institution-source": "Kurum sorgu ucu",
+      "trust-lists": "Güven listeleri",
+      "status-lists": "Durum listeleri",
+      "schema-catalogue": "Şema kataloğu",
+    },
     outline: "Bu sayfada",
     edit: "Bu sayfayı GitHub'da düzenle",
     prev: "Önceki",
@@ -220,12 +240,20 @@ function sidebars(l: Lang): DefaultTheme.Sidebar {
         ...PACKAGES.map((n) => ({ text: `@tamga-network/${n}`, link: `${p}/packages/${n}` })),
       ],
     },
-    { text: t.apiRef, items: [{ text: t.hostedApis, link: "/api/", target: "_self" }] },
+    { text: t.apiRef, items: [{ text: t.overview, link: `${p}/api/` }] },
+  ];
+  const apiPage = (slug: keyof typeof t.apiPages) => ({ text: t.apiPages[slug], link: `${p}/api/${slug}` });
+  const api: DefaultTheme.SidebarItem[] = [
+    { text: t.apiRef, items: [{ text: t.overview, link: `${p}/api/` }] },
+    { text: t.apiServices, items: [apiPage("verify"), apiPage("issuer"), apiPage("institution-source")] },
+    { text: t.apiRegistries, items: [apiPage("trust-lists"), apiPage("status-lists"), apiPage("schema-catalogue")] },
+    { text: t.apiProtocols, items: [doc("SPEC-PROTO-0001"), doc("SPEC-PROTO-0002"), doc("SPEC-API-0001")] },
   ];
   return {
     [`${p}/guides/`]: guides,
     [`${p}/concepts/`]: concepts,
     [`${p}/packages/`]: packages,
+    [`${p}/api/`]: api,
     [`${p}/specifications/`]: reference,
     [`${p}/adr/`]: reference,
     [`${p}/architecture/`]: reference,
@@ -252,7 +280,7 @@ function theme(l: Lang): DefaultTheme.Config {
     nav: [
       { text: t.getStarted, link: `${p}/guides/`, activeMatch: `^${p}/guides/` },
       { text: t.concepts, link: `${p}/concepts/`, activeMatch: `^${p}/concepts/` },
-      { text: "API", link: "/api/", target: "_self" },
+      { text: "API", link: `${p}/api/`, activeMatch: `^${p}/api/` },
       { text: t.sdks, link: `${p}/packages/`, activeMatch: `^${p}/packages/` },
       {
         text: t.specs,
@@ -279,6 +307,17 @@ function theme(l: Lang): DefaultTheme.Config {
         const G = "https://github.com/tamga-network/tamga-network/blob/main";
         const s = filePath.replace(/^en\//, "");
         if (s === "changelog.md") return `${G}/CHANGELOG.md`;
+        // API başvuru sayfaları OpenAPI tanımından üretilir: düzenleme YAML'da
+        const api: Record<string, string> = {
+          verify: "hosted-verifier-api",
+          issuer: "tamga-issuer-api",
+          "institution-source": "institution-source",
+          "trust-lists": "trust-lists",
+          "status-lists": "status-lists",
+          "schema-catalogue": "schema-catalogue",
+        };
+        const a = /^api\/(.+)\.md$/.exec(s);
+        if (a && api[a[1]]) return `${G}/docs/api/${api[a[1]]}.openapi.yaml`;
         if (s === "rules.md") return `${G}/INVARIANTS.md`;
         const m = /^packages\/(.+)\.md$/.exec(s);
         if (m) return m[1] === "index" ? `${G}/packages` : `${G}/packages/${m[1]}/README.md`;

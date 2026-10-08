@@ -1,35 +1,62 @@
 openapi: 3.1.0
 info:
-  title: Tamga — Institution Source Endpoint
+  title: Institution Source Endpoint
   version: 1.0.0
-  summary: The lookup endpoint an institution exposes so that Tamga's hosted issuer can read credential data at issuance time.
+  summary: The lookup endpoint an institution exposes so that the hosted issuer can read credential data at issuance time.
   description: |
-    Implemented by the **institution** (ADR-0020, authentic source at the institution). Tamga's hosted issuer calls it; it
-    never stores the response (AS1). Two operations share one URL and are selected by the `op` claim of the signed request:
+    Implemented by the **institution**, not by Tamga (ADR-0020, authentic source at the institution). Tamga's hosted issuer
+    calls it and never stores the response. Two operations share one URL and are selected by the `op` claim of the signed
+    request:
 
     - `lookup` — the person started the request from the wallet and presented a Tamga identity attestation. Tamga sends the
       matching keys (national identification number + date of birth). Return the matching subject or 404.
-    - `fetch` — Tamga already knows the institution's opaque subject reference (identity-bound offer, credential issuance,
-      credential refresh). Return the current record or 404 (the person is no longer in your records).
+    - `fetch` — Tamga already knows your opaque subject reference (identity-bound offer, credential issuance, credential
+      refresh). Return the current record or 404 (the person is no longer in your records).
 
-    **Authentication.** The body carries a short-lived JWT (`typ: tamga-source-request+jwt`, ES256, lifetime 60 s) signed with
-    the access key Tamga uses for your institution. Verify it with the certificate in the `x5c` header and check that this
-    certificate is listed for Tamga's hosted issuer in the Tamga signed trust list; check `aud` equals your endpoint URL,
-    `exp`, and reject a repeated `jti`. Serve only over TLS.
+    **Privacy.** Return only the fields needed for the requested `vct`. Do not log the matching keys. Errors other than 404
+    make Tamga answer the wallet with `temporarily_unavailable`; no credential is issued.
+  x-tr:
+    title: Kurum sorgu ucu
+    summary: Barındırılan belge verme servisinin belge verisini verme anında okuyabilmesi için kurumun açtığı sorgu ucu.
+    description: |
+      Bu ucu Tamga değil, **kurum** uygular (ADR-0020, yetkili kaynak kurumda). Tamga'nın barındırılan belge verme servisi onu
+      çağırır ve yanıtı saklamaz. İki işlem aynı adresi paylaşır; imzalı istekteki `op` alanı hangisi olduğunu söyler:
 
-    **Privacy.** Return only the fields needed for the requested `vct`. Do not log the matching keys.
-    Errors other than 404 make Tamga answer the wallet with `temporarily_unavailable`; no credential is issued.
+      - `lookup` — kişi isteği cüzdandan başlattı ve Tamga kimlik belgesini sundu. Tamga eşleştirme anahtarlarını (kimlik
+        numarası + doğum tarihi) gönderir. Eşleşen kişiyi ya da 404 döndürün.
+      - `fetch` — Tamga kurumunuzun opak kişi referansını zaten biliyor (kimliğe bağlı teklif, belge verme, belge yenileme).
+        Güncel kaydı ya da 404 (kişi artık kayıtlarınızda yok) döndürün.
+
+      **Gizlilik.** Yalnız istenen `vct` için gereken alanları döndürün. Eşleştirme anahtarlarını günlüğe yazmayın. 404 dışındaki
+      hatalarda Tamga cüzdana `temporarily_unavailable` yanıtı verir; belge verilmez.
   license:
     name: CC BY 4.0
     url: https://creativecommons.org/licenses/by/4.0/
+externalDocs:
+  description: Issue credentials — guide
+  url: https://docs.tamga.network/guides/issue-credentials
 servers:
   - url: https://sis.example.edu/tamga
-    description: Example — the institution chooses the URL; it is configured on Tamga's side per institution.
+    description: Example — you choose the URL; it is configured for your institution on the hosted issuer.
+    x-tr: Örnek — adresi siz seçersiniz; barındırılan servis tarafında kurumunuz için tanımlanır.
+security:
+  - signedRequest: []
+tags:
+  - name: Source
+    description: The single operation.
+    x-tr:
+      name: Kaynak
+      description: Tek işlem.
 paths:
   /:
     post:
+      tags: [Source]
       operationId: sourceRequest
-      summary: Lookup or fetch a subject record
+      summary: Look up or fetch a subject record
+      description: The body carries a signed request; its payload is `SourceRequestClaims` (below).
+      x-tr:
+        summary: Kişi kaydını ara ya da getir
+        description: Gövde imzalı bir istek taşır; içeriği `SourceRequestClaims` nesnesidir (aşağıda).
       requestBody:
         required: true
         content:
@@ -41,47 +68,72 @@ paths:
                 request:
                   type: string
                   description: Compact JWS; payload is `SourceRequestClaims`.
+                  x-tr: Kompakt JWS; içeriği `SourceRequestClaims`.
             example:
               request: eyJhbGciOiJFUzI1NiIsInR5cCI6InRhbWdhLXNvdXJjZS1yZXF1ZXN0K2p3dCIsIng1YyI6WyIuLi4iXX0.eyJvcCI6ImZldGNoIn0.sig
       responses:
         "200":
           description: Record found.
+          x-tr: Kayıt bulundu.
           content:
             application/json:
               schema:
                 type: object
                 required: [subject]
                 properties:
-                  subject:
-                    $ref: "#/components/schemas/SubjectRecord"
-        "404":
-          description: No matching record. Body may be `{"subject": null}`.
+                  subject: { $ref: "#/components/schemas/SubjectRecord" }
         "401":
           description: Request signature, audience, lifetime or replay check failed.
+          x-tr: İsteğin imza, hedef (aud), süre ya da tekrar denetimi başarısız.
+        "404":
+          description: "No matching record. Body may be `{\"subject\": null}`."
+          x-tr: "Eşleşen kayıt yok. Gövde `{\"subject\": null}` olabilir."
         "503":
           description: Temporarily unavailable. Tamga issues nothing and the person retries later.
+          x-tr: Geçici olarak kullanılamıyor. Tamga belge vermez; kişi sonra yeniden dener.
 components:
+  securitySchemes:
+    signedRequest:
+      type: http
+      scheme: bearer
+      bearerFormat: tamga-source-request+jwt
+      description: |
+        Not a header: the body carries a short-lived JWT (`typ: tamga-source-request+jwt`, ES256, lifetime 60 s) signed with
+        the access key Tamga uses for your institution. Verify it with the certificate in the `x5c` header and check that this
+        certificate is listed for Tamga's hosted issuer in the Tamga signed trust list; check that `aud` equals your endpoint
+        URL, check `exp`, and reject a repeated `jti`. Serve only over TLS.
+      x-tr: |
+        Başlıkta değil: gövde, Tamga'nın kurumunuz için kullandığı erişim anahtarıyla imzalanmış kısa ömürlü bir JWT taşır
+        (`typ: tamga-source-request+jwt`, ES256, 60 sn). `x5c` başlığındaki sertifikayla doğrulayın ve bu sertifikanın Tamga
+        imzalı güven listesinde Tamga'nın barındırılan belge verme servisi için listelendiğini denetleyin; `aud` alanının uç
+        adresinize eşit olduğunu ve `exp` alanını denetleyin, tekrar eden `jti`'yi reddedin. Yalnız TLS üzerinden sunun.
   schemas:
     SourceRequestClaims:
       type: object
+      description: Payload of the signed request.
+      x-tr: İmzalı isteğin içeriği.
       required: [op, iss, aud, iat, exp, jti, vct]
       properties:
         op:
           enum: [lookup, fetch]
         iss:
           type: string
-          description: Tamga's client identifier for the hosted issuer — `x509_hash:` + base64url(SHA-256(its access certificate)) (HAIP 1.0).
+          description: The hosted issuer's client identifier — `x509_hash:` + base64url(SHA-256(its access certificate)) (HAIP 1.0).
+          x-tr: Barındırılan servisin istemci kimliği — `x509_hash:` + base64url(SHA-256(erişim sertifikası)) (HAIP 1.0).
         aud:
           type: string
           description: Your endpoint URL.
+          x-tr: Uç adresiniz.
         iat: { type: integer }
         exp: { type: integer, description: "iat + 60" }
         jti: { type: string }
         vct:
           type: string
           description: Credential type being issued, e.g. `urn:tamga:edu:DiplomaCredential:1`.
+          x-tr: Verilen belge türü, ör. `urn:tamga:edu:DiplomaCredential:1`.
         match:
           description: Present when `op` = `lookup`.
+          x-tr: "`op` = `lookup` ise gelir."
           type: object
           required: [personal_administrative_number, birth_date]
           properties:
@@ -89,11 +141,15 @@ components:
             birth_date: { type: string, format: date }
         subject_ref:
           description: Present when `op` = `fetch`. Your opaque identifier returned earlier as `SubjectRecord.id`.
+          x-tr: "`op` = `fetch` ise gelir. Daha önce `SubjectRecord.id` olarak döndürdüğünüz opak kimlik."
           type: string
     SubjectRecord:
       description: |
-        Education profile (student and diploma credentials). `id` is your opaque, stable subject reference; Tamga keeps only this
-        value (for revocation and refresh). Other profiles are added per credential type.
+        Education profile (student and diploma credentials). `id` is your opaque, stable subject reference; Tamga keeps only
+        this value (for revocation and refresh). Other profiles are added per credential type.
+      x-tr: |
+        Eğitim profili (öğrenci ve diploma belgeleri). `id` sizin opak ve kalıcı kişi referansınızdır; Tamga yalnızca bu değeri
+        tutar (iptal ve yenileme için). Diğer profiller belge türüne göre eklenir.
       type: object
       required: [id, family_name, given_name, birth_date, student_no, programme_title_tr, study_level, enrollment_year, student_status]
       properties:
@@ -105,23 +161,27 @@ components:
         personal_administrative_number:
           type: string
           description: Optional; used only for matching, never written into education credentials.
+          x-tr: İsteğe bağlı; yalnız eşleştirmede kullanılır, eğitim belgelerine asla yazılmaz.
         programme_title_tr: { type: string }
         programme_title_en: { type: string }
         faculty_tr: { type: string }
         isced_f_code: { type: [string, "null"] }
-        study_level: { type: integer, description: "EQF/ISCED level" }
+        study_level: { type: integer, description: "EQF/ISCED level", x-tr: "EQF/ISCED düzeyi" }
         enrollment_year: { type: integer }
         student_status: { enum: [ACTIVE, ON_LEAVE] }
         expected_graduation_year: { type: integer }
         programme_credit_points:
           type: number
           description: Programme workload in ECTS (EU proof of enrolment, EUHEPOE). Optional.
+          x-tr: Programın AKTS yükü (AB kayıt belgesi, EUHEPOE). İsteğe bağlı.
         enrollment_date:
           type: string
           format: date
-          description: Date of enrolment (EU proof of enrolment, EUHEPOE). Optional; enrollment_year stays required.
+          description: Date of enrolment (EU proof of enrolment, EUHEPOE). Optional; `enrollment_year` stays required.
+          x-tr: Kayıt tarihi (AB kayıt belgesi, EUHEPOE). İsteğe bağlı; `enrollment_year` zorunlu kalır.
         graduate:
           description: Present only for graduates; required for `DiplomaCredential`.
+          x-tr: Yalnız mezunlarda; `DiplomaCredential` için zorunlu.
           type: object
           required: [qualification_tr, eqf_level, awarding_date]
           properties:

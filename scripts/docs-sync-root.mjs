@@ -3,10 +3,12 @@
 //   bağlayıcı kurallar INVARIANTS.md → docs/en/rules.md, docs/rules.md (kural metinleri Türkçe kaynaktır)
 //   paketler       packages/*/README.md → docs/en/packages/, docs/packages/
 //   sözlük         docs/.vitepress/terms.json → docs/glossary.md, docs/en/glossary.md (TERMS:BEGIN…END arası; giriş elle)
-//   API tanımları, marka simgeleri → docs/public/
+//   API başvurusu  docs/api/*.openapi.yaml → docs/api/<slug>.md, docs/en/api/<slug>.md + docs/public/api/ (indirme)
+//   marka simgeleri → docs/public/
 import { mkdirSync, copyFileSync, readdirSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildApiPages } from "./openapi-pages.mjs";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 const docs = join(repo, "docs");
@@ -170,18 +172,15 @@ for (const lang of ["en", "tr"]) {
 }
 console.log("docs: paket sayfaları (en, tr)");
 
-// API tanımları: docs/api/*.openapi.yaml → docs/public/api/ (gitignore) — /api/ sayfasındaki indirme bağlantıları için
+// API tanımları: docs/api/*.openapi.yaml → docs/public/api/ (gitignore; indirme ve OpenAPI araçlarına aktarma için) +
+// başvuru sayfaları docs/api/<slug>.md, docs/en/api/<slug>.md (scripts/openapi-pages.mjs; sitenin kendi temasıyla)
 const apiOut = join(repo, "docs", "public", "api");
+rmSync(apiOut, { recursive: true, force: true }); // eski üretimler (ör. önceki bağımsız başvuru sayfası) kalmasın
 mkdirSync(apiOut, { recursive: true });
 const apiFiles = readdirSync(join(repo, "docs", "api")).filter((f) => f.endsWith(".openapi.yaml"));
 for (const f of apiFiles) copyFileSync(join(repo, "docs", "api", f), join(apiOut, f));
-// API başvuru sayfası (Stripe benzeri, üç sütun): docs/api/site/index.html + Scalar tek dosyalık paketi (@scalar/api-reference)
-copyFileSync(join(repo, "docs", "api", "site", "index.html"), join(apiOut, "index.html"));
-copyFileSync(
-  join(repo, "node_modules", "@scalar", "api-reference", "dist", "browser", "standalone.js"),
-  join(apiOut, "scalar.js"),
-);
-console.log(`docs/public/api: ${apiFiles.length} OpenAPI dosyası + başvuru sayfası`);
+const apiPages = buildApiPages();
+console.log(`docs/api: ${apiFiles.length} OpenAPI dosyası, ${apiPages} başvuru sayfası (en, tr)`);
 
 // Marka simgeleri + robots.txt: ops/brand/icons/ (tek kaynak) → docs/public/ (gitignore). Paylaşım görseli og.png.
 const brandSrc = join(repo, "ops", "brand", "icons");

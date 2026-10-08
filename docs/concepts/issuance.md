@@ -46,4 +46,4 @@ cüzdan                         kurum (issuer.tamga.network/{kurum})
 
 - Protokol: [[SPEC-PROTO-0001]]
 - İptal listesi: [[SPEC-CRED-0003]]
-- API: [Barındırılan servis API'leri](/api/)
+- API: [Belge verme API'si](/api/issuer)

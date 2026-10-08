@@ -1,42 +1,90 @@
 openapi: 3.1.0
 info:
-  title: Tamga — Hosted Issuer API
+  title: Hosted Issuer API
   version: 1.0.0
-  summary: API an institution calls to have Tamga's hosted issuer offer, sell or revoke credentials.
+  summary: The API an institution calls to have Tamga's hosted issuer offer, sell or revoke credentials.
   description: |
-    Implemented by **Tamga** (ADR-0016, ADR-0020). The dependency-free Node client is `@tamga-network/issuer/client`.
-
-    **Authentication.** `Authorization: Bearer tmg_<slug>_…` — a scoped API key issued per institution, valid 90 days, rotated
-    by issuing a new key. Keep it on your server only. Each key has a per-minute rate limit (`429` with `Retry-After`).
+    Run by the Tamga Network operator (ADR-0016, ADR-0020). The dependency-free Node client is `@tamga-network/issuer/client`.
 
     **Offers.** Two kinds:
-    - *Identity-bound* (recommended; ADR-0020 path A): send `bind`. No PIN. The person opens the link in the wallet and presents
+    - *Identity-bound* (recommended; ADR-0020): send `bind`. No PIN. The person opens the link in the wallet and presents
       their Tamga identity attestation; the credential is issued only if the presented national identification number and date
-      of birth match. Tamga stores only a keyed hash of these keys. Valid 7 days, single use. **You send the link** to the person
+      of birth match. Only a keyed hash of these keys is stored. Valid 7 days, single use. **You send the link** to the person
       through your own channel (email, student portal); Tamga never receives contact details.
     - *Pre-authorized with PIN* (fallback for people without an identity attestation): the response carries `tx_code`. Never
       send the PIN through the same channel as the link.
 
-    Credential data is not sent with the offer: Tamga reads it from your source endpoint at issuance time
-    (`institution-source.openapi.yaml`).
+    Credential data is not sent with the offer: the hosted issuer reads it from your source endpoint at issuance time
+    (see the institution source endpoint).
 
-    Errors use RFC 9457 problem details (`title`, `status`).
+    **Errors** use RFC 9457 problem details (`title`, `status`). Each key has a per-minute limit (`429` with `Retry-After`).
+  x-tr:
+    title: Barındırılan belge verme API'si
+    summary: Kurumun, Tamga'nın barındırılan belge verme servisine belge teklif ettirmek, bilet sattırmak ya da belge iptal ettirmek için çağırdığı API.
+    description: |
+      Tamga Network operatörü işletir (ADR-0016, ADR-0020). Bağımlılıksız Node istemcisi `@tamga-network/issuer/client`.
+
+      **Teklifler.** İki tür:
+      - *Kimliğe bağlı* (önerilen; ADR-0020): `bind` gönderin. PIN yok. Kişi bağlantıyı cüzdanında açar ve Tamga kimlik
+        belgesini sunar; belge yalnızca sunulan kimlik numarası ve doğum tarihi eşleşirse verilir. Bu anahtarların yalnızca
+        anahtarlı özeti saklanır. 7 gün geçerli, tek kullanımlık. Bağlantıyı kişiye **siz** kendi kanalınızdan (e-posta, öğrenci
+        portalı) iletirsiniz; Tamga iletişim bilgisi almaz.
+      - *PIN'li ön yetkili* (kimlik belgesi olmayanlar için yedek yol): yanıtta `tx_code` gelir. PIN'i asla bağlantıyla aynı
+        kanaldan göndermeyin.
+
+      Belge verisi teklifle gönderilmez: barındırılan servis onu belge verme anında kurumunuzun sorgu ucundan okur (kurum
+      sorgu ucu sayfasına bakın).
+
+      **Hatalar** RFC 9457 problem ayrıntısı biçimindedir (`title`, `status`). Her anahtarın dakikalık sınırı vardır
+      (`Retry-After` ile `429`).
   license:
     name: CC BY 4.0
     url: https://creativecommons.org/licenses/by/4.0/
+externalDocs:
+  description: Issue credentials — guide
+  url: https://docs.tamga.network/guides/issue-credentials
 servers:
   - url: https://issuer.tamga.network/{slug}/api/v1
+    description: Real network
+    x-tr: Gerçek ağ
     variables:
       slug:
-        default: bilgi
+        default: your-institution
         description: Your institution's short name in the Tamga trust list.
+  - url: https://issuer.sandbox.tamga.network/{slug}/api/v1
+    description: Sandbox (test network)
+    x-tr: Sandbox (deneme ağı)
+    variables:
+      slug:
+        default: your-institution
 security:
   - apiKey: []
+tags:
+  - name: Offers
+    description: Offer a credential to a person in your records.
+    x-tr:
+      name: Teklifler
+      description: Kayıtlarınızdaki bir kişiye belge teklif edin.
+  - name: Tickets
+    description: Sell event tickets as credentials.
+    x-tr:
+      name: Biletler
+      description: Etkinlik biletlerini belge olarak satın.
+  - name: Revocations
+    description: Change the status of an issued credential.
+    x-tr:
+      name: İptaller
+      description: Verilmiş bir belgenin durumunu değiştirin.
 paths:
   /offers:
     post:
+      tags: [Offers]
       operationId: createOffer
-      summary: Offer a credential to a person in your records (scope `offers:write`)
+      summary: Offer a credential
+      description: Scope `offers:write`. The person must exist in your source endpoint.
+      x-tr:
+        summary: Belge teklif et
+        description: Kapsam `offers:write`. Kişi kurumunuzun sorgu ucunda bulunmalıdır.
       requestBody:
         required: true
         content:
@@ -49,22 +97,32 @@ paths:
                   type: string
                   maxLength: 128
                   description: Your opaque subject reference (`SubjectRecord.id` in your source endpoint).
+                  x-tr: Kişiye verdiğiniz opak referans (sorgu ucunuzdaki `SubjectRecord.id`).
                 vct:
                   type: string
                   example: urn:tamga:edu:DiplomaCredential:1
+                  description: Credential type; must be authorised for your institution in the trust list.
+                  x-tr: Belge türü; güven listesinde kurumunuza yetkilendirilmiş olmalıdır.
                 klass:
                   enum: [on-screen, out-of-band]
                   description: PIN delivery for pre-authorized offers; ignored when `bind` is present.
+                  x-tr: Ön yetkili teklifte PIN'in iletim biçimi; `bind` varsa yok sayılır.
                 bind:
                   type: object
                   description: Makes the offer identity-bound (ADR-0020). Only a keyed hash is stored.
+                  x-tr: Teklifi kimliğe bağlar (ADR-0020). Yalnızca anahtarlı özet saklanır.
                   required: [personal_administrative_number, birth_date]
                   properties:
                     personal_administrative_number: { type: string, pattern: "^[0-9]{11}$" }
                     birth_date: { type: string, format: date }
+            example:
+              subject_id: stu_8c41f2
+              vct: urn:tamga:edu:DiplomaCredential:1
+              bind: { personal_administrative_number: "10000000146", birth_date: "2001-04-17" }
       responses:
         "200":
           description: Offer created.
+          x-tr: Teklif oluşturuldu.
           content:
             application/json:
               schema:
@@ -72,29 +130,49 @@ paths:
                 required: [offer_id, expires_at, offer_uri, deep_link, offer]
                 properties:
                   offer_id: { type: string }
-                  expires_at: { type: integer, description: Unix seconds }
+                  expires_at: { type: integer, description: Unix seconds., x-tr: Unix saniyesi. }
                   offer_uri: { type: string, format: uri }
                   deep_link:
                     type: string
                     description: "`openid-credential-offer://?credential_offer_uri=…` — show as QR or link."
+                    x-tr: "`openid-credential-offer://?credential_offer_uri=…` — QR ya da bağlantı olarak gösterin."
                   offer:
                     type: object
                     description: OpenID4VCI credential offer. Identity-bound offers carry the `authorization_code` grant with `issuer_state`.
+                    x-tr: OpenID4VCI belge teklifi. Kimliğe bağlı teklif `issuer_state` ile `authorization_code` izni taşır.
                   tx_code:
                     type: string
                     description: Present only for pre-authorized offers. Deliver through a different channel than the link.
+                    x-tr: Yalnız ön yetkili teklifte gelir. Bağlantıdan farklı bir kanaldan iletin.
                   identity_bound: { type: boolean }
+              example:
+                offer_id: off_3kQ9xV
+                expires_at: 1791504000
+                offer_uri: https://issuer.tamga.network/your-institution/offers/off_3kQ9xV
+                deep_link: openid-credential-offer://?credential_offer_uri=https%3A%2F%2Fissuer.tamga.network%2Fyour-institution%2Foffers%2Foff_3kQ9xV
+                offer:
+                  credential_issuer: https://issuer.tamga.network/your-institution
+                  credential_configuration_ids: ["urn:tamga:edu:DiplomaCredential:1"]
+                  grants: { authorization_code: { issuer_state: off_3kQ9xV } }
+                identity_bound: true
         "400": { $ref: "#/components/responses/Problem" }
-        "401": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "404":
           description: The subject is not in your source.
-        "429": { $ref: "#/components/responses/Problem" }
+          x-tr: Kişi kurumunuzun kaynağında yok.
+        "429": { $ref: "#/components/responses/RateLimited" }
         "503":
           description: Your source endpoint was not reachable.
+          x-tr: Sorgu ucunuza ulaşılamadı.
   /tickets:
     post:
+      tags: [Tickets]
       operationId: sellTicket
-      summary: Record a ticket sale and offer the ticket credential (scope `tickets:write`)
+      summary: Sell a ticket
+      description: Scope `tickets:write`. Records the sale and offers the ticket credential; the offer carries no personal data.
+      x-tr:
+        summary: Bilet sat
+        description: Kapsam `tickets:write`. Satışı kaydeder ve bilet belgesini teklif eder; teklif kişisel veri taşımaz.
       requestBody:
         required: true
         content:
@@ -107,9 +185,11 @@ paths:
                 ticket_class: { type: string }
                 seat: { type: string }
                 klass: { enum: [on-screen, out-of-band] }
+            example: { event_id: evt_2026_konser, ticket_class: standard, seat: B-14 }
       responses:
         "200":
-          description: Ticket sold; the offer carries no personal data.
+          description: Ticket sold.
+          x-tr: Bilet satıldı.
           content:
             application/json:
               schema:
@@ -133,23 +213,42 @@ paths:
                       offer_uri: { type: string }
                       deep_link: { type: string }
         "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
     get:
+      tags: [Tickets]
       operationId: listTickets
-      summary: List sold tickets (scope `tickets:read`)
+      summary: List sold tickets
+      description: Scope `tickets:read`.
+      x-tr:
+        summary: Satılan biletleri listele
+        description: Kapsam `tickets:read`.
       responses:
         "200":
           description: Tickets.
+          x-tr: Biletler.
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   tickets: { type: array, items: { type: object } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
   /revocations:
     post:
+      tags: [Revocations]
       operationId: changeStatus
-      summary: Revoke, suspend or reinstate an issued credential (scope `revocations:write`)
+      summary: Revoke, suspend or reinstate a credential
+      description: |
+        Scope `revocations:write`. Takes effect at the next fixed-interval status list publication. A revoked credential stays
+        revoked; only a suspended one can be reinstated.
+      x-tr:
+        summary: Belgeyi iptal et, askıya al ya da geri al
+        description: |
+          Kapsam `revocations:write`. Bir sonraki sabit aralıklı durum listesi yayınında geçerli olur. İptal edilen belge iptal
+          kalır; yalnız askıdaki belge geri alınabilir.
       requestBody:
         required: true
         content:
@@ -160,10 +259,15 @@ paths:
               properties:
                 credential_id: { type: string }
                 action: { enum: [revoke, suspend, reinstate], default: revoke }
-                reason: { type: string, description: Kept in your audit log; never published. }
+                reason:
+                  type: string
+                  description: Kept in your audit log; never published.
+                  x-tr: Denetim kaydınızda tutulur; asla yayınlanmaz.
+            example: { credential_id: crd_5Hn2Lw, action: suspend, reason: disciplinary review }
       responses:
         "200":
-          description: Accepted. Takes effect at the next fixed-interval status list publication.
+          description: Accepted.
+          x-tr: Kabul edildi.
           content:
             application/json:
               schema:
@@ -172,22 +276,49 @@ paths:
                   ok: { type: boolean }
                   effective_after_next_publish: { type: boolean }
                   interval_sec: { type: integer }
+              example: { ok: true, effective_after_next_publish: true, interval_sec: 3600 }
         "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 components:
   securitySchemes:
     apiKey:
       type: http
       scheme: bearer
-      description: "`tmg_<slug>_…` scoped key (ADR-0016)."
+      description: |
+        `Authorization: Bearer tmg_<slug>_…` — a scoped API key issued per institution in the Institution Console, valid 90
+        days, rotated by issuing a new key. Keep it on your server only.
+      x-tr: |
+        `Authorization: Bearer tmg_<slug>_…` — Kurum Konsolu'nda kurum başına verilen, kapsamlı bir API anahtarı; 90 gün
+        geçerlidir, yenisi verilerek döndürülür. Yalnız sunucunuzda tutun.
   responses:
     Problem:
       description: RFC 9457 problem details.
+      x-tr: RFC 9457 problem ayrıntısı.
       content:
         application/problem+json:
-          schema:
-            type: object
-            properties:
-              type: { type: string }
-              title: { type: string }
-              status: { type: integer }
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unauthorized:
+      description: Missing, expired or wrong-scope API key.
+      x-tr: Anahtar yok, süresi dolmuş ya da kapsamı yetmiyor.
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    RateLimited:
+      description: Per-key limit exceeded. Wait `Retry-After` seconds.
+      x-tr: Anahtar başına sınır aşıldı. `Retry-After` saniye bekleyin.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+          example: { type: about:blank, title: rate limited, status: 429 }
+  schemas:
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }

@@ -13,7 +13,6 @@ const TERMS = JSON.parse(readFileSync(join(docs, ".vitepress", "terms.json"), "u
 /** docs/.vitepress/config.ts UNPUBLISHED ile aynı + üretilen sayfalar. */
 const SKIP_DIRS = new Set([
   "en",
-  "api",
   "framework",
   "_archive",
   "_internal",

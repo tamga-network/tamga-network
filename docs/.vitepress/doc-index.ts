@@ -137,10 +137,10 @@ export function docLinks(md: MarkdownIt, resolve: (id: string, relativePath: str
 
 /**
  * Türkçe sayfalarda (kaynağı `en/` olmayan) site içi mutlak bağlantılara `/tr` öneki: markdown bağlantıları ve ham HTML
- * (`href="/…"`). `/api/`, `/tr/`, dosya bağlantıları (`.json`, `.yaml`, `.pdf`) ve dış adresler dokunulmaz.
+ * (`href="/…"`). `/tr/`, dosya bağlantıları (`.json`, `.yaml`, `.pdf`) ve dış adresler dokunulmaz.
  */
 export function localeLinks(md: MarkdownIt, isTr: (relativePath: string) => boolean): void {
-  const skip = (href: string) => !href.startsWith("/") || href.startsWith("//") || /^\/(tr|api)(\/|$)/.test(href) || /\.(json|ya?ml|pdf|svg|png|ico)$/.test(href);
+  const skip = (href: string) => !href.startsWith("/") || href.startsWith("//") || /^\/tr(\/|$)/.test(href) || /\.(json|ya?ml|pdf|svg|png|ico)$/.test(href);
   const fix = (href: string) => (skip(href) ? href : "/tr" + href);
   const fixHtml = (html: string) => html.replace(/href="(\/[^"]*)"/g, (_m, h: string) => `href="${fix(h)}"`);
   md.core.ruler.push("tamga-locale-links", (state) => {

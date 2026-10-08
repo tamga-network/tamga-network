@@ -14,8 +14,7 @@ hero:
       link: /tr/concepts/
     - theme: alt
       text: API başvurusu
-      link: /api/
-      target: _self
+      link: /tr/api/
 features:
   - icon: ✓
     title: Belge doğrulayın
@@ -82,9 +81,9 @@ sunucu kodu gerekmez: [Web sitesine "Tamga ile giriş yap"](/guides/sign-in-with
 <span>Dokuz <code>@tamga-network/*</code> paketi; Node ve React Native. npm'de 0.2.0 deneme sürümü; kararlı 1.0.0 hazır olunca.</span>
 </a>
 
-<a class="tg-card" href="/api/" target="_self">
+<a class="tg-card" href="/api/">
 <strong>API başvurusu</strong>
-<span>Barındırılan belge verme ve doğrulama servislerinin uç noktaları.</span>
+<span>Tamga Verify, belge verme, güven listeleri, durum listeleri ve şema kataloğu — her uç noktasıyla.</span>
 </a>
 
 <a class="tg-card" href="/specifications/">

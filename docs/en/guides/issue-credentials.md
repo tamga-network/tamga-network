@@ -97,7 +97,7 @@ The Tamga operator creates a scoped key for your institution (`tmg_<slug>_…`; 
 
 The [[t:authentic-source]] is your system (e.g. the student information system). Tamga does not keep credential data; at the
 moment of issuance it asks your system's **source endpoint** with a signed request and does not store the answer
-([[ADR-0020]]). Contract: `docs/api/institution-source.openapi.yaml`.
+([[ADR-0020]]). Contract: [Institution source endpoint](/api/institution-source).
 
 - `lookup`: when the person picks your institution in the wallet and presents their identity — a search by national identity
   number + date of birth.
@@ -108,7 +108,7 @@ moment of issuance it asks your system's **source endpoint** with a signed reque
   Institution Console's **sample source** opens only in the sandbox environment; it is closed on the real network and real
   personal data is never entered there.
 
-The whole Tamga API: `docs/api/tamga-issuer-api.openapi.yaml`.
+The whole Tamga API: [Hosted issuer API](/api/issuer).
 
 ## Personal data and identity
 

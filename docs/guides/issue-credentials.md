@@ -89,7 +89,7 @@ ve güvenli kanaldan bir kez iletir; sunucuda yalnızca özeti tutulur ([[ADR-00
 ## Belge bilgileri sizin sisteminizden: sorgu ucu
 
 [[t:authentic-source|Yetkili kaynak]] sizin sisteminizdir (ör. öğrenci bilgi sistemi). Tamga belge bilgilerini tutmaz; belge verildiği anda sisteminizin
-**sorgu ucuna** imzalı bir istekle sorar ve yanıtı saklamaz ([[ADR-0020]]). Sözleşme: `docs/api/institution-source.openapi.yaml`.
+**sorgu ucuna** imzalı bir istekle sorar ve yanıtı saklamaz ([[ADR-0020]]). Sözleşme: [Kurum sorgu ucu](/api/institution-source).
 
 - `lookup`: kişi cüzdandan kurumunuzu seçip kimliğini sunduğunda — T.C. kimlik no + doğum tarihiyle arama.
 - `fetch`: kimliğe bağlı teklifte, belge verilirken ve kopya yenilemede — sizin opak kişi kimliğinizle okuma.
@@ -98,7 +98,7 @@ ve güvenli kanaldan bir kez iletir; sunucuda yalnızca özeti tutulur ([[ADR-00
 - Sorgu ucu bağlanana kadar belge vermeyi sandbox'taki örnek kurumlarla deneyin ([[GUIDE-0013]]). Kurum Konsolu'nun **örnek
   kaynağı** yalnız sandbox ortamında açılır; gerçek ağda kapalıdır ve oraya gerçek kişi verisi girilmez.
 
-Tamga API'sinin tamamı: `docs/api/tamga-issuer-api.openapi.yaml`.
+Tamga API'sinin tamamı: [Belge verme API'si](/api/issuer).
 
 ## Kişisel veri ve kimlik
 

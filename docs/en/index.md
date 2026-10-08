@@ -15,7 +15,6 @@ hero:
     - theme: alt
       text: API reference
       link: /api/
-      target: _self
 features:
   - icon: ✓
     title: Verify credentials
@@ -81,9 +80,9 @@ code at all: [Add "Sign in with Tamga" to a website](/guides/sign-in-with-tamga)
 <span>Nine <code>@tamga-network/*</code> packages for Node and React Native. 0.2.0 test release on npm; stable 1.0.0 when ready.</span>
 </a>
 
-<a class="tg-card" href="/api/" target="_self">
+<a class="tg-card" href="/api/">
 <strong>API reference</strong>
-<span>Endpoints of the hosted issuance and verification services.</span>
+<span>Tamga Verify, hosted issuance, trust lists, status lists and the schema catalogue — endpoint by endpoint.</span>
 </a>
 
 <a class="tg-card" href="/specifications/">

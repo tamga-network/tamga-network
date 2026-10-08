@@ -21,6 +21,11 @@ docs/en/rules.md
 docs/en/packages/
 docs/packages/
 docs/public/api/
+# API başvuru sayfaları docs/api/*.openapi.yaml'dan üretilir (scripts/openapi-pages.mjs); genel bakış (index.md) elle yazılır
+docs/api/*.md
+!docs/api/index.md
+docs/en/api/*.md
+!docs/en/api/index.md
 # marka simgeleri ops/brand/icons/ kaynağından kopyalanır (docs:sync, arf:sync)
 docs/public/*.ico
 docs/public/*.svg

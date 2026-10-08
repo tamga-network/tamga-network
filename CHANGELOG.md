@@ -9,6 +9,18 @@ everything is ready.
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-09 — API reference in the docs site
+
+- docs.tamga.network/api is now part of the docs site (same theme, navigation, search, English and Turkish) instead of a
+  separate embedded viewer: an overview of every public HTTP interface (services, public registries, standard protocol
+  endpoints, environments, conventions) and one reference page per API, generated from the OpenAPI 3.1 files at build time
+  (method badges, parameter / body / response tables, curl and response examples, object tables).
+- New OpenAPI definitions for the public registries: trust lists, status lists, schema catalogue. The Tamga Verify definition
+  now matches the service (result `spec_version`, `sdk_version`, `freshness`, `status.reason`, `policy_exceeds_scope`
+  detail, QR image and page kit endpoints); all definitions carry Turkish texts (`x-tr`). The YAML files stay downloadable
+  under /api/ for OpenAPI tools.
+- The embedded API viewer dependency and the dependency overrides it needed were removed.
+
 ### 2026-10-08 — packages: 0.2.0 test release
 
 - The `@tamga-network/*` packages are versioned `0.2.0` (test release) instead of `1.0.0`, so testers get the current API from

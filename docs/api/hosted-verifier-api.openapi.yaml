@@ -1,38 +1,68 @@
 openapi: 3.1.0
 info:
-  title: Tamga — Hosted Verifier API
+  title: Tamga Verify API
   version: 1.0.0
-  summary: API a website or service calls to ask a person for credentials and receive the verified result.
+  summary: Ask a person for credentials from your website or service and receive the verified result.
   description: |
-    Implemented by **Tamga** (ADR-0017). The browser part is `@tamga-network/verifier/web`; server-side verification without
-    the hosted verifier is `@tamga-network/verifier`.
+    Tamga Verify is the hosted verifier of Tamga Network (ADR-0017). The browser part is `@tamga-network/verifier/web`;
+    server-side verification without the hosted verifier is `@tamga-network/verifier`.
 
-    **Flow.** Your server opens a presentation for a policy (which credential and which fields) → the page shows the QR code or
-    the "Open in your wallet" link and polls the status with the `status_token` → when the status is `DONE`, your server reads
-    the result and, once, the approved values.
-
-    **Authentication.** `Authorization: Bearer <RP assertion>` — a short-lived JWS (`typ: tamga-rp+jwt`, ES256) signed with the
-    private key of your access certificate registered in the Tamga trust list. Header `x5c` carries the certificate; payload
-    `{ iss: <your client_id>, aud: "https://verify.tamga.network", iat, exp ≤ iat + 60, jti }`. No shared secret; `jti` is
-    single-use. Helper: `createRpAssertion()` in `@tamga-network/verifier`.
+    **Flow.** Your server opens a presentation for a policy (which credential and which fields) → your page shows the QR code
+    or the "Open in your wallet" link and polls the status with the `status_token` → when the status is `DONE`, your server
+    reads the result and, once, the approved values.
 
     **Privacy.** The result and values go only to the relying party that opened the presentation. Values can be read once and
     are deleted at the latest 5 minutes after the result. The browser sees only the status, never values.
 
     **Outcomes.** `ACCEPTED`, `REJECTED` (with the failing step) or `INDETERMINATE` ("could not check right now" — never treat
     it as invalid).
+  x-tr:
+    title: Tamga Verify API
+    summary: Web sitenizden ya da servisinizden kişiden belge isteyin, doğrulanmış sonucu alın.
+    description: |
+      Tamga Verify, Tamga Network'ün barındırılan doğrulayıcısıdır (ADR-0017). Tarayıcı tarafı `@tamga-network/verifier/web`;
+      barındırılan doğrulayıcı olmadan sunucuda doğrulama `@tamga-network/verifier`.
+
+      **Akış.** Sunucunuz bir politika (hangi belge, hangi alanlar) için sunum açar → sayfanız QR kodu ya da "Cüzdanında aç"
+      bağlantısını gösterir ve `status_token` ile durumu sorar → durum `DONE` olunca sunucunuz sonucu ve bir kez onaylanan
+      değerleri okur.
+
+      **Gizlilik.** Sonuç ve değerler yalnızca sunumu açan doğrulayıcıya gider. Değerler bir kez okunabilir ve en geç sonuçtan
+      5 dakika sonra silinir. Tarayıcı yalnızca durumu görür, değerleri hiç görmez.
+
+      **Sonuçlar.** `ACCEPTED`, `REJECTED` (başarısız adımla) ya da `INDETERMINATE` ("şu an denetlenemedi" — asla geçersiz
+      sayılmaz).
   license:
     name: CC BY 4.0
     url: https://creativecommons.org/licenses/by/4.0/
+externalDocs:
+  description: Sign in with Tamga — guide
+  url: https://docs.tamga.network/guides/sign-in-with-tamga
 servers:
   - url: https://verify.tamga.network
+    description: Real network
+    x-tr: Gerçek ağ
+  - url: https://verify.sandbox.tamga.network
+    description: Sandbox (test network)
+    x-tr: Sandbox (deneme ağı)
 security:
   - rpAssertion: []
 tags:
   - name: Presentations
     description: Ask for credentials and read the result.
+    x-tr:
+      name: Sunumlar
+      description: Belge isteyin ve sonucu okuyun.
   - name: Policies
     description: What can be asked.
+    x-tr:
+      name: Politikalar
+      description: Neler istenebilir.
+  - name: Page kit
+    description: Files for the browser side.
+    x-tr:
+      name: Sayfa kiti
+      description: Tarayıcı tarafı dosyaları.
 paths:
   /presentations:
     post:
@@ -43,11 +73,19 @@ paths:
         Creates a signed OpenID4VP request for the policy. The policy must be within your registered scope (otherwise
         `400 policy_exceeds_scope`). Send `Accept: application/json` to get JSON; without it the verifier redirects to its own
         waiting page.
+      x-tr:
+        summary: Sunum isteği aç
+        description: |
+          Politika için imzalı bir OpenID4VP isteği oluşturur. Politika kayıtlı kapsamınızın içinde olmalıdır (değilse
+          `400 policy_exceeds_scope`). JSON almak için `Accept: application/json` gönderin; göndermezseniz doğrulayıcı kendi
+          bekleme sayfasına yönlendirir.
       parameters:
         - in: header
           name: Accept
           required: true
           schema: { type: string, const: application/json }
+          description: Ask for a JSON answer.
+          x-tr: JSON yanıt isteyin.
       requestBody:
         required: true
         content:
@@ -59,38 +97,58 @@ paths:
                 policy_id:
                   type: string
                   description: A policy from `GET /policies`, e.g. `site-signup`, `age-over-18-mdoc`.
+                  x-tr: "`GET /policies` listesinden bir politika, ör. `site-signup`, `age-over-18-mdoc`."
                 dc_api_origin:
                   type: string
                   format: uri
                   description: |
                     Optional. The page origin (`https://…`, no path) when the presentation is answered through the browser's
                     Digital Credentials API. The request is then bound to this origin (`expected_origins`).
+                  x-tr: |
+                    İsteğe bağlı. Sunum tarayıcının Digital Credentials API'siyle yanıtlanacaksa sayfanın kökeni (`https://…`,
+                    yol yok). İstek bu kökene bağlanır (`expected_origins`).
             example: { policy_id: site-signup }
       responses:
         "200":
           description: Presentation opened.
+          x-tr: Sunum açıldı.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/StartedPresentation" }
         "400":
-          description: Unknown policy, policy outside your registered scope, or invalid `dc_api_origin`.
+          description: |
+            `unknown_policy`, `policy_exceeds_scope` (the policy asks for more than your registered scope; `detail` lists
+            what) or `invalid_request` (invalid `dc_api_origin`).
+          x-tr: |
+            `unknown_policy`, `policy_exceeds_scope` (politika kayıtlı kapsamınızdan fazlasını istiyor; `detail` neyi
+            olduğunu listeler) ya da `invalid_request` (geçersiz `dc_api_origin`).
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+              example: { error: policy_exceeds_scope, detail: ["pid.family_name outside scope"] }
         "401":
-          description: The RP assertion is missing, expired, reused or not signed by a registered, active relying party.
+          description: |
+            `invalid_rp_assertion` — the RP assertion is expired, reused or not signed by a registered, active relying party.
+          x-tr: |
+            `invalid_rp_assertion` — RP beyanının süresi dolmuş, tekrar kullanılmış ya da kayıtlı ve etkin bir doğrulayıcı
+            tarafından imzalanmamış.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "429":
           description: |
-            Too many requests (`rate_limited`). Wait the number of seconds in `Retry-After` and try again. The client
-            address is not stored or logged; the wallet-facing `/vp/response` and the gate `/terminal/verify` endpoints
-            have the same protection.
+            `rate_limited` — too many requests. Wait the number of seconds in `Retry-After` and try again. The client address
+            is not stored or logged; the wallet-facing `/vp/response` and the gate `/terminal/verify` endpoints have the same
+            protection.
+          x-tr: |
+            `rate_limited` — çok fazla istek. `Retry-After` başlığındaki saniye kadar bekleyip yeniden deneyin. İstemci adresi
+            saklanmaz ve günlüğe yazılmaz; cüzdanın çağırdığı `/vp/response` ve kapıların `/terminal/verify` uçlarında da aynı
+            koruma vardır.
           headers:
             Retry-After:
               schema: { type: integer, minimum: 1 }
               description: Seconds to wait before the next attempt.
+              x-tr: Yeniden denemeden önce beklenecek saniye.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -101,8 +159,14 @@ paths:
       operationId: getPresentation
       summary: Get the status or the verification result
       description: |
-        With your RP assertion: the full verification result (`PENDING` until the wallet answers). With only the status token
-        (`?st=` or `X-Tamga-Status-Token`, no `Authorization`): the status for the browser, without values or names.
+        With your RP assertion: the full verification result (`{"state": "PENDING"}` until the wallet answers). With only the
+        status token (`?st=` or `X-Tamga-Status-Token`, no `Authorization`): the status for the browser, without values or
+        names.
+      x-tr:
+        summary: Durumu ya da doğrulama sonucunu al
+        description: |
+          RP beyanınızla: doğrulama sonucunun tamamı (cüzdan yanıtlayana kadar `{"state": "PENDING"}`). Yalnız durum
+          jetonuyla (`?st=` ya da `X-Tamga-Status-Token`, `Authorization` yok): tarayıcı için durum; değer ve ad içermez.
       security:
         - rpAssertion: []
         - statusToken: []
@@ -113,29 +177,44 @@ paths:
           required: false
           schema: { type: string }
           description: Status token from `createPresentation`, for the browser.
+          x-tr: "`createPresentation` yanıtındaki durum jetonu; tarayıcı için."
       responses:
         "200":
-          description: Status or result.
+          description: Status (`PENDING`), the browser status, or the full result.
+          x-tr: Durum (`PENDING`), tarayıcı durumu ya da sonucun tamamı.
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: "#/components/schemas/Pending"
-                  - $ref: "#/components/schemas/BrowserStatus"
                   - $ref: "#/components/schemas/VerificationResult"
+                  - $ref: "#/components/schemas/BrowserStatus"
+                  - $ref: "#/components/schemas/Pending"
+        "401":
+          description: "`invalid_rp_assertion`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
         "404":
-          description: Unknown presentation, or not yours (existence is not revealed).
+          description: "`not_found` — unknown presentation, or not yours (existence is not revealed)."
+          x-tr: "`not_found` — bilinmeyen sunum ya da sizin değil (varlığı açığa vurulmaz)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
   /presentations/{id}/claims:
     get:
       tags: [Presentations]
       operationId: getClaims
       summary: Read the approved values (once)
       description: Returns the values the person approved. Available once, at most 5 minutes after the result.
+      x-tr:
+        summary: Onaylanan değerleri oku (bir kez)
+        description: Kişinin onayladığı değerleri döndürür. Bir kez ve en geç sonuçtan 5 dakika sonrasına kadar okunabilir.
       parameters:
         - $ref: "#/components/parameters/PresentationId"
       responses:
         "200":
           description: Values, or `null` while the presentation is pending.
+          x-tr: Değerler; sunum beklerken `null`.
           content:
             application/json:
               schema:
@@ -144,91 +223,162 @@ paths:
                   claims:
                     type: [object, "null"]
                     additionalProperties: true
-              example: { claims: { age_over_18: true } }
+                    description: Field name → value. With a pseudonym policy, also `pseudonym` (the per-site pseudonym).
+                    x-tr: Alan adı → değer. Takma adlı politikada `pseudonym` da gelir (siteye özel takma ad).
+              example: { claims: { given_name: Ayşe, family_name: Yılmaz, pseudonym: "ps_7Qm…" } }
         "404":
-          description: Unknown presentation, or not yours.
+          description: "`not_found` — unknown presentation, or not yours."
+          x-tr: "`not_found` — bilinmeyen sunum ya da sizin değil."
         "410":
-          description: Values already read or expired (`claims_gone`).
+          description: "`claims_gone` — values already read or expired."
+          x-tr: "`claims_gone` — değerler zaten okundu ya da süresi doldu."
+  /presentations/{id}/qr.png:
+    get:
+      tags: [Presentations]
+      operationId: getQrCode
+      summary: Get the QR code image
+      description: A PNG of the `qr_payload` link (440 px), ready to put in an `<img>`.
+      x-tr:
+        summary: QR kodu görüntüsünü al
+        description: "`qr_payload` bağlantısının PNG'si (440 px); doğrudan `<img>` içine konabilir."
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/PresentationId"
+      responses:
+        "200":
+          description: PNG image.
+          x-tr: PNG görüntü.
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        "404":
+          description: Unknown presentation.
+          x-tr: Bilinmeyen sunum.
   /policies:
     get:
       tags: [Policies]
       operationId: listPolicies
       summary: List the policies
+      description: The policies this verifier can ask for. No personal data.
+      x-tr:
+        summary: Politikaları listele
+        description: Bu doğrulayıcının isteyebildiği politikalar. Kişisel veri içermez.
       security: []
       responses:
         "200":
-          description: Policy summaries (no personal data).
+          description: Policy summaries.
+          x-tr: Politika özetleri.
           content:
             application/json:
               schema:
                 type: array
-                items:
-                  type: object
-                  properties:
-                    policy_id: { type: string }
-                    purpose: { type: string, description: Purpose in English. }
-                    purpose_localized: { type: object, additionalProperties: { type: string } }
-                    vct_values: { type: array, items: { type: string } }
-                    claims: { type: array, items: { type: string }, description: Requested fields. }
-                    proximity: { type: boolean, description: The policy also issues a gate pass. }
-                    format:
-                      type: string
-                      enum: [dc+sd-jwt, mso_mdoc, mso_mdoc_zk]
-                      description: |
-                        `mso_mdoc_zk` = zero-knowledge proof over an mdoc (ADR-0032). A wallet that cannot produce the
-                        proof uses the classic `mso_mdoc` policy instead (e.g. `age-over-18-mdoc`).
-            example:
-              - policy_id: age-over-18-zk
-                purpose: Over-18 check with a zero-knowledge proof — yes/no only, nothing else
-                vct_values: ["urn:tamga:id:IdentityAttestation:1"]
-                claims: [age_over_18]
-                proximity: false
-                format: mso_mdoc_zk
+                items: { $ref: "#/components/schemas/PolicySummary" }
+              example:
+                - policy_id: age-over-18-zk
+                  purpose: Over-18 check with a zero-knowledge proof — yes/no only, nothing else
+                  purpose_localized:
+                    en-US: Over-18 check with a zero-knowledge proof — yes/no only, nothing else
+                    tr-TR: Sıfır bilgi ispatıyla 18 yaş üstü doğrulaması — yalnızca evet/hayır, başka hiçbir şey
+                  vct_values: ["urn:tamga:id:IdentityAttestation:1"]
+                  claims: [age_over_18]
+                  proximity: false
+                  format: mso_mdoc_zk
+  /tamga-verifier.js:
+    get:
+      tags: [Page kit]
+      operationId: getPageKit
+      summary: Load the page kit
+      description: |
+        The browser bundle of `@tamga-network/verifier/web` (QR code, "Open in your wallet" button, status polling, Digital
+        Credentials API). Cached for 5 minutes.
+      x-tr:
+        summary: Sayfa kitini yükle
+        description: |
+          `@tamga-network/verifier/web` paketinin tarayıcı dosyası (QR kod, "Cüzdanında aç" düğmesi, durum sorgusu, Digital
+          Credentials API). 5 dakika önbellekte tutulur.
+      security: []
+      responses:
+        "200":
+          description: JavaScript.
+          content:
+            application/javascript:
+              schema: { type: string }
 components:
   securitySchemes:
     rpAssertion:
       type: http
       scheme: bearer
       bearerFormat: tamga-rp+jwt
-      description: Short-lived JWS signed with your registered access certificate's key (see the introduction).
+      description: |
+        `Authorization: Bearer <RP assertion>` — a short-lived JWS (`typ: tamga-rp+jwt`, ES256) signed with the private key of
+        your access certificate registered in the Tamga trust list. Header `x5c` carries the certificate; payload
+        `{ iss: <your client_id>, aud: "https://verify.tamga.network", iat, exp ≤ iat + 60, jti }`. No shared secret; `jti`
+        is single-use. Helper: `createRpAssertion()` in `@tamga-network/verifier`.
+      x-tr: |
+        `Authorization: Bearer <RP beyanı>` — Tamga güven listesinde kayıtlı erişim sertifikanızın özel anahtarıyla imzalanmış
+        kısa ömürlü bir JWS (`typ: tamga-rp+jwt`, ES256). `x5c` başlığı sertifikayı taşır; içerik
+        `{ iss: <client_id'niz>, aud: "https://verify.tamga.network", iat, exp ≤ iat + 60, jti }`. Paylaşılan gizli anahtar
+        yoktur; `jti` tek kullanımlıktır. Yardımcı: `@tamga-network/verifier` içindeki `createRpAssertion()`.
     statusToken:
       type: apiKey
       in: header
       name: X-Tamga-Status-Token
-      description: Status-only token for the browser (also accepted as `?st=`).
+      description: Status-only token for the browser (also accepted as `?st=`). Shows the status, never values.
+      x-tr: Tarayıcı için yalnız durum jetonu (`?st=` olarak da kabul edilir). Durumu gösterir, değerleri asla.
   parameters:
     PresentationId:
       in: path
       name: id
       required: true
-      schema: { type: string, pattern: "^prs_" }
+      schema: { type: string, pattern: "^prs_", example: prs_Q2x0dVJmNkp3 }
+      description: The `presentation_id` from `createPresentation`.
+      x-tr: "`createPresentation` yanıtındaki `presentation_id`."
   schemas:
     StartedPresentation:
       type: object
       required: [presentation_id, request_uri, qr_payload, expires_at, status_token]
       properties:
         presentation_id: { type: string, example: prs_Q2x0dVJmNkp3 }
-        request_uri: { type: string, format: uri }
+        request_uri:
+          type: string
+          format: uri
+          description: Where the wallet fetches the signed request.
+          example: https://verify.tamga.network/vp/req/prs_Q2x0dVJmNkp3
+          x-tr: Cüzdanın imzalı isteği aldığı adres.
         qr_payload:
           type: string
           description: "`openid4vp://…` link — show as a QR code on desktop, as a button on phones."
-        expires_at: { type: string, format: date-time }
-        status_token: { type: string, description: Give only this to the browser. }
+          x-tr: "`openid4vp://…` bağlantısı — masaüstünde QR kod, telefonda düğme olarak gösterin."
+          example: "openid4vp://?client_id=x509_hash%3A…&request_uri=https%3A%2F%2Fverify.tamga.network%2Fvp%2Freq%2Fprs_Q2x0dVJmNkp3"
+        expires_at: { type: string, format: date-time, example: "2026-10-09T12:05:00Z" }
+        status_token:
+          type: string
+          example: 9VdB0qXr7mYk2LwPq1sZ3A
+          description: Give only this to the browser.
+          x-tr: Tarayıcıya yalnız bunu verin.
         dc_api_request:
           type: object
           description: Present when `dc_api_origin` was sent — input for `navigator.credentials.get({ digital })`.
+          x-tr: "`dc_api_origin` gönderildiyse gelir — `navigator.credentials.get({ digital })` girdisi."
           properties:
             protocol: { type: string, const: openid4vp-v1-signed }
             data:
               type: object
               properties:
-                request: { type: string, description: Signed request object (JWS). }
+                request:
+                  type: string
+                  description: Signed request object (JWS).
+                  x-tr: İmzalı istek nesnesi (JWS).
     Pending:
       type: object
+      description: The wallet has not answered yet.
+      x-tr: Cüzdan henüz yanıtlamadı.
       properties:
         state: { type: string, const: PENDING }
     BrowserStatus:
       type: object
+      description: What the browser sees with the status token — no values, no names.
+      x-tr: Tarayıcının durum jetonuyla gördüğü — değer yok, ad yok.
       properties:
         state: { type: string, enum: [PENDING, DONE] }
         outcome: { type: string, enum: [ACCEPTED, REJECTED, INDETERMINATE] }
@@ -236,33 +386,54 @@ components:
         indeterminate_reason: { type: [string, "null"] }
     VerificationResult:
       type: object
+      description: The full result, for the relying party that opened the presentation.
+      x-tr: Sonucun tamamı; yalnız sunumu açan doğrulayıcıya.
       properties:
-        verification_id: { type: string }
-        outcome: { type: string, enum: [ACCEPTED, REJECTED, INDETERMINATE] }
+        verification_id: { type: string, example: vrf_Q2x0dVJmNkp3 }
+        outcome:
+          type: string
+          enum: [ACCEPTED, REJECTED, INDETERMINATE]
+          description: "`INDETERMINATE` means \"could not check right now\" — never treat it as invalid."
+          x-tr: "`INDETERMINATE` \"şu an denetlenemedi\" demektir — asla geçersiz saymayın."
         failed_step:
           type: [string, "null"]
-          description: The first failing step of the pipeline (T0, A1…E3) when REJECTED.
+          description: The first failing step of the verification pipeline (T0, A1…E3, P1) when `REJECTED`.
+          x-tr: "`REJECTED` ise doğrulama hattında ilk başarısız adım (T0, A1…E3, P1)."
         failed_reason: { type: [string, "null"] }
-        indeterminate_reason: { type: [string, "null"] }
-        checks_performed: { type: array, items: { type: string } }
-        checks_skipped: { type: array, items: { type: string } }
+        indeterminate_reason:
+          type: [string, "null"]
+          enum: [SCHEMA_UNREACHABLE, STATUS_UNREACHABLE, STATUS_STALE, CHAIN_UNREACHABLE, INDEXER_STALE, SDK_VERSION_MISMATCH, null]
+        spec_version: { type: string, description: Verification specification version., x-tr: Doğrulama şartnamesi sürümü. }
+        sdk_version: { type: string, description: Verifier package version., x-tr: Doğrulayıcı paket sürümü. }
+        checks_performed: { type: array, items: { type: string }, example: [T0, A1, A2, B1, C1, D1, E1] }
+        checks_skipped: { type: array, items: { type: string }, example: [] }
         issuer:
           type: [object, "null"]
+          description: The institution that issued the credential, from the trust list.
+          x-tr: Belgeyi veren kurum (güven listesinden).
           properties:
             issuer_id: { type: string }
-            state_code: { type: string }
+            state_code: { type: string, example: TR }
             legal_name: { type: string }
+            category: { type: string }
+            assurance: { type: string }
+            class: { type: string, enum: [PUB, QUALIFIED, EAA] }
         schema:
           type: [object, "null"]
           properties:
             schema_id: { type: string }
-            vct: { type: string }
+            vct: { type: string, example: "urn:tamga:id:IdentityAttestation:1" }
+            status: { type: string }
         disclosed_claims:
           type: array
           items: { type: string }
           description: Names of the disclosed fields (values via `/claims`).
+          x-tr: Açılan alanların adları (değerler `/claims` ile).
+          example: [given_name, family_name]
         status:
           type: object
+          description: Revocation status of the credential.
+          x-tr: Belgenin iptal durumu.
           properties:
             value: { type: string, enum: [VALID, INVALID, SUSPENDED, NOT_APPLICABLE, UNKNOWN] }
             list_version: { type: [integer, "null"] }
@@ -270,13 +441,51 @@ components:
             reason:
               type: [string, "null"]
               description: |
-                Why the status has this value, when it is not self-explanatory — e.g. `NOT_APPLICABLE` for a
-                zero-knowledge presentation, which does not reveal the revocation index (ADR-0032 ZK4; the credential is
-                short-lived). The policy decides whether this is accepted (`accept_unrevocable_zk`; if not, the outcome
-                is `INDETERMINATE` at D1). Contains no personal data.
+                Why the status has this value, when it is not self-explanatory — e.g. `NOT_APPLICABLE` for a zero-knowledge
+                presentation, which does not reveal the revocation index (ADR-0032; the credential is short-lived). The policy
+                decides whether this is accepted; if not, the outcome is `INDETERMINATE`. Contains no personal data.
+              x-tr: |
+                Durumun bu değeri neden aldığı (kendiliğinden anlaşılmıyorsa) — ör. sıfır bilgi ispatlı sunumda `NOT_APPLICABLE`;
+                bu sunum iptal indeksini açmaz (ADR-0032; belge kısa ömürlüdür). Kabul edilip edilmeyeceğine politika karar
+                verir; edilmezse sonuç `INDETERMINATE` olur. Kişisel veri içermez.
+        freshness:
+          type: object
+          description: How fresh the trust data used was.
+          x-tr: Kullanılan güven verisinin tazeliği.
+          properties:
+            trust_source: { type: string, enum: [list, chain] }
+            trust_version: { type: integer }
+            trust_age_sec: { type: integer }
         evaluated_at: { type: string, format: date-time }
+    PolicySummary:
+      type: object
+      properties:
+        policy_id: { type: string }
+        purpose: { type: string, description: Purpose in English., x-tr: Amaç (İngilizce). }
+        purpose_localized:
+          type: object
+          additionalProperties: { type: string }
+          description: Purpose by language tag (`en-US`, `tr-TR`).
+          x-tr: Dil etiketine göre amaç (`en-US`, `tr-TR`).
+        vct_values: { type: array, items: { type: string } }
+        claims: { type: array, items: { type: string }, description: Requested fields., x-tr: İstenen alanlar. }
+        proximity: { type: boolean, description: The policy also issues a gate pass., x-tr: Politika ayrıca geçiş kartı verir. }
+        format:
+          type: string
+          enum: [dc+sd-jwt, mso_mdoc, mso_mdoc_zk]
+          description: |
+            `mso_mdoc_zk` = zero-knowledge proof over an mdoc (ADR-0032). A wallet that cannot produce the proof uses the
+            classic `mso_mdoc` policy instead (e.g. `age-over-18-mdoc`).
+          x-tr: |
+            `mso_mdoc_zk` = mdoc üzerinde sıfır bilgi ispatı (ADR-0032). İspatı üretemeyen cüzdan klasik `mso_mdoc` politikasını
+            kullanır (ör. `age-over-18-mdoc`).
     Error:
       type: object
       properties:
         error: { type: string }
         error_description: { type: string }
+        detail:
+          type: array
+          items: { type: string }
+          description: With `policy_exceeds_scope`, what goes beyond your scope.
+          x-tr: "`policy_exceeds_scope` ile birlikte: kapsamınızı aşan kısımlar."

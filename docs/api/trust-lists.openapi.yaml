@@ -1,0 +1,446 @@
+openapi: 3.1.0
+info:
+  title: Trust Lists
+  version: 1.0.0
+  summary: The signed trust lists, the anchor log and the files they reference — static, public, no authentication.
+  description: |
+    Every file is static and public (CORS `*`, cached for 5 minutes; archive files are immutable). The `.jws` files are
+    compact JWS (`alg: ES256`, `typ: tamga-tl+jwt`, `x5c` = list signing certificate) — **verify only the `.jws`**; the
+    `.json` copies are for people to read. Each list has a monotonic `version`, a `previous_version_hash` chain and a
+    `next_update` date (at most 90 days); a change is published within 24 hours.
+
+    In code, do not read these files yourself: use `TrustSource` from `@tamga-network/trust`, which checks the signature
+    against the pinned root fingerprints, the hash chain, the format version and freshness. The field-by-field format is in
+    SPEC-TRUST-0001.
+  x-tr:
+    title: Güven listeleri
+    summary: İmzalı güven listeleri, çapa günlüğü ve listelerin atıf yaptığı dosyalar — statik, herkese açık, kimlik doğrulama yok.
+    description: |
+      Bütün dosyalar statik ve herkese açıktır (CORS `*`, 5 dakika önbellek; arşiv dosyaları değişmez). `.jws` dosyaları
+      kompakt JWS'dir (`alg: ES256`, `typ: tamga-tl+jwt`, `x5c` = liste imza sertifikası) — **yalnız `.jws`'yi doğrulayın**;
+      `.json` kopyaları insanların okuması içindir. Her listenin artan bir `version` değeri, `previous_version_hash` zinciri ve
+      `next_update` tarihi (en çok 90 gün) vardır; bir değişiklik 24 saat içinde yayınlanır.
+
+      Kodda bu dosyaları kendiniz okumayın: `@tamga-network/trust` paketindeki `TrustSource` imzayı sabitlenmiş kök parmak
+      izlerine göre, karma zincirini, biçim sürümünü ve tazeliği denetler. Alan alan biçim SPEC-TRUST-0001'dedir.
+  license:
+    name: CC BY 4.0
+    url: https://creativecommons.org/licenses/by/4.0/
+externalDocs:
+  description: Read the trust lists — guide
+  url: https://docs.tamga.network/guides/read-trust-lists
+servers:
+  - url: https://trust.tamga.network
+    description: Real network
+    x-tr: Gerçek ağ
+  - url: https://trust.sandbox.tamga.network
+    description: Sandbox (test network; `environment` = `sandbox`)
+    x-tr: Sandbox (deneme ağı; `environment` = `sandbox`)
+security: []
+tags:
+  - name: Lists
+    description: The list of lists and the national lists.
+    x-tr:
+      name: Listeler
+      description: Listelerin listesi ve ulusal listeler.
+  - name: Keys and certificates
+    description: Root fingerprints, certificates, registration certificates, ZK circuits.
+    x-tr:
+      name: Anahtarlar ve sertifikalar
+      description: Kök parmak izleri, sertifikalar, kayıt sertifikaları, ZK devreleri.
+  - name: Anchor log and archive
+    description: The hourly anchor log and the immutable version archive.
+    x-tr:
+      name: Çapa günlüğü ve arşiv
+      description: Saatlik çapa günlüğü ve değişmez sürüm arşivi.
+paths:
+  /lotl.jws:
+    get:
+      tags: [Lists]
+      operationId: getLotl
+      summary: Get the list of lists (signed)
+      description: |
+        The top-level list: national list slots and their signing keys, network-level schemas, wallet providers, credential
+        categories, accepted ZK circuits, the catalogue address. Verify the `x5c[0]` fingerprint against
+        `keys/root-fingerprints.json` (and the value you pinned in your configuration).
+      x-tr:
+        summary: Listelerin listesini al (imzalı)
+        description: |
+          En üst liste: ulusal liste yuvaları ve imza anahtarları, ağ düzeyindeki şemalar, cüzdan sağlayıcılar, belge
+          kategorileri, kabul edilen ZK devreleri, katalog adresi. `x5c[0]` parmak izini `keys/root-fingerprints.json` ile (ve
+          yapılandırmanızda sabitlediğiniz değerle) karşılaştırın.
+      responses:
+        "200":
+          description: Compact JWS; the payload is `Lotl`.
+          x-tr: Kompakt JWS; içeriği `Lotl`.
+          content:
+            application/jose:
+              schema: { type: string }
+              example: eyJhbGciOiJFUzI1NiIsInR5cCI6InRhbWdhLXRsK2p3dCIsIng1YyI6WyLigKYiXX0.eyJsaXN0X3R5cGUiOiJsb3RsIn0.…
+  /lotl.json:
+    get:
+      tags: [Lists]
+      operationId: getLotlJson
+      summary: Get the list of lists (readable copy)
+      description: The same content as `lotl.jws`, unsigned. For people and debugging only.
+      x-tr:
+        summary: Listelerin listesini al (okunur kopya)
+        description: "`lotl.jws` ile aynı içerik, imzasız. Yalnız insanlar ve hata ayıklama için."
+      responses:
+        "200":
+          description: The list.
+          x-tr: Liste.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Lotl" }
+  /tl-{cc}.jws:
+    get:
+      tags: [Lists]
+      operationId: getNationalList
+      summary: Get a national list (signed)
+      description: |
+        A national list: root CAs, issuers (with their authorised credential types and status list base), relying parties
+        (with their registered scopes), national schemas. Signed with a key listed in `lotl.national_lists[].signing_keys`.
+        Today only `tl-tr` is published; the other member-state slots are reserved.
+      x-tr:
+        summary: Ulusal listeyi al (imzalı)
+        description: |
+          Bir ulusal liste: kök sertifika makamları, belge veren kurumlar (yetkili belge türleri ve durum listesi adresiyle),
+          doğrulayıcılar (kayıtlı kapsamlarıyla), ulusal şemalar. `lotl.national_lists[].signing_keys` içindeki bir anahtarla
+          imzalanır. Bugün yalnız `tl-tr` yayında; diğer üye devlet yuvaları ayrılmış durumda.
+      parameters:
+        - in: path
+          name: cc
+          required: true
+          schema: { type: string, enum: [tr] }
+          description: Lower-case country code.
+          x-tr: Küçük harfle ülke kodu.
+      responses:
+        "200":
+          description: Compact JWS; the payload is `NationalList`.
+          x-tr: Kompakt JWS; içeriği `NationalList`.
+          content:
+            application/jose:
+              schema: { type: string }
+        "404":
+          description: No list is published for this country yet.
+          x-tr: Bu ülke için henüz liste yayınlanmadı.
+  /tl-{cc}.json:
+    get:
+      tags: [Lists]
+      operationId: getNationalListJson
+      summary: Get a national list (readable copy)
+      description: The same content as `tl-{cc}.jws`, unsigned.
+      x-tr:
+        summary: Ulusal listeyi al (okunur kopya)
+        description: "`tl-{cc}.jws` ile aynı içerik, imzasız."
+      parameters:
+        - in: path
+          name: cc
+          required: true
+          schema: { type: string, enum: [tr] }
+      responses:
+        "200":
+          description: The list.
+          x-tr: Liste.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NationalList" }
+  /keys/root-fingerprints.json:
+    get:
+      tags: [Keys and certificates]
+      operationId: getRootFingerprints
+      summary: Get the root fingerprints
+      description: |
+        The SHA-256 fingerprints of the list signing certificates and of the national root CAs — the top of the chain of trust.
+        The same values are published at tamga.network/trust-anchor and in the Trust Framework; pin them in your
+        configuration rather than trusting this file alone.
+      x-tr:
+        summary: Kök parmak izlerini al
+        description: |
+          Liste imza sertifikalarının ve ulusal kök sertifika makamlarının SHA-256 parmak izleri — güven zincirinin tepesi.
+          Aynı değerler tamga.network/trust-anchor sayfasında ve Güven Çerçevesi'nde yayınlanır; yalnız bu dosyaya güvenmek
+          yerine değerleri yapılandırmanızda sabitleyin.
+      responses:
+        "200":
+          description: Fingerprints.
+          x-tr: Parmak izleri.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RootFingerprints" }
+  /keys/{name}.cert.pem:
+    get:
+      tags: [Keys and certificates]
+      operationId: getCertificate
+      summary: Get a certificate referenced by a list
+      description: |
+        Only certificates the lists reference (operator, root, registrar, relying party) are published here; `name` is the
+        `cert_ref` value in the list.
+      x-tr:
+        summary: Listenin atıf yaptığı bir sertifikayı al
+        description: |
+          Burada yalnız listelerin atıf yaptığı sertifikalar (operatör, kök, kayıt kurumu, doğrulayıcı) yayınlanır; `name`
+          listedeki `cert_ref` değeridir.
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema: { type: string, example: tl-signer-1 }
+      responses:
+        "200":
+          description: PEM certificate.
+          x-tr: PEM sertifika.
+          content:
+            application/x-pem-file:
+              schema: { type: string }
+        "404":
+          description: Unknown certificate.
+          x-tr: Bilinmeyen sertifika.
+  /wrprc/index.json:
+    get:
+      tags: [Keys and certificates]
+      operationId: getRegistrationCertificates
+      summary: List the registration certificates
+      description: |
+        Index of the registration certificates (ETSI TS 119 475 `rc-wrp+jwt`) issued for every valid relying party use and
+        every issuer (ADR-0026). Each item's `path` is the certificate file under this host. Signed with the registrar key
+        listed in `lotl.national_lists[].roles.registrar.signing_keys`.
+      x-tr:
+        summary: Kayıt sertifikalarını listele
+        description: |
+          Her geçerli doğrulayıcı kullanımı ve her belge veren kurum için üretilen kayıt sertifikalarının (ETSI TS 119 475
+          `rc-wrp+jwt`) dizini (ADR-0026). Her öğenin `path` alanı bu sunucudaki sertifika dosyasıdır. Kayıt kurumu anahtarıyla
+          imzalanır (`lotl.national_lists[].roles.registrar.signing_keys`).
+      responses:
+        "200":
+          description: Index.
+          x-tr: Dizin.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  generated_at: { type: string, format: date-time }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        path: { type: string }
+                        exp: { type: string, format: date-time }
+  /zk/{circuit_id}.zst:
+    get:
+      tags: [Keys and certificates]
+      operationId: getZkCircuit
+      summary: Download a ZK circuit
+      description: |
+        The zero-knowledge circuit files listed in `lotl.zk_circuits` (ADR-0032). Wallets download them and check
+        `zk_circuits[].sha256` before use.
+      x-tr:
+        summary: ZK devresini indir
+        description: |
+          `lotl.zk_circuits` içinde listelenen sıfır bilgi devre dosyaları (ADR-0032). Cüzdanlar indirir ve kullanmadan önce
+          `zk_circuits[].sha256` değerini denetler.
+      parameters:
+        - in: path
+          name: circuit_id
+          required: true
+          schema: { type: string, pattern: "^[0-9a-f]{64}$" }
+      responses:
+        "200":
+          description: zstd-compressed circuit.
+          x-tr: zstd ile sıkıştırılmış devre.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+  /anchors.jsonl:
+    get:
+      tags: [Anchor log and archive]
+      operationId: getAnchorLog
+      summary: Get the anchor log
+      description: |
+        One signed JWS per line, in time order: status list publications (`kind: status_list`), schema registrations
+        (`kind: schema`), hourly heartbeats and archive checkpoints. Each line links to the previous one with
+        `previous_hash`. Records only list identifiers and content digests — never personal data.
+      x-tr:
+        summary: Çapa günlüğünü al
+        description: |
+          Her satır bir imzalı JWS, zaman sırasıyla: durum listesi yayınları (`kind: status_list`), şema kayıtları
+          (`kind: schema`), saatlik nabız kayıtları ve arşiv denetim noktaları. Her satır `previous_hash` ile öncekine bağlanır.
+          Yalnız liste kimliklerini ve içerik özetlerini kaydeder — asla kişisel veri değil.
+      responses:
+        "200":
+          description: Newline-delimited JWS; each payload is an `AnchorEntry`.
+          x-tr: Satır satır JWS; her içerik bir `AnchorEntry`.
+          content:
+            application/x-ndjson:
+              schema: { $ref: "#/components/schemas/AnchorEntry" }
+              example:
+                seq: 16902
+                previous_hash: "sha256:df9370353f7c4f1730a28affba41bce711b3a0335e3c402f8e11af30d5299679"
+                ts: "2026-10-08T23:02:04.428Z"
+                kind: status_list
+                list_id: "0x00000000000000000000000000000000000000000000000088565603be702c85"
+                issuer_id: "0xab180a99995cd80e330f38e470691dd1c39f7861bf3a76a0c04ed8deb7bb86e9"
+                list_uri: https://id.tamga.network/status/88565603be702c85
+                content_hash: "sha256:82d6ebd236d760b617f5f7840223ad5368e5394750d02d740502e9056dd7ccb4"
+                list_version: 6901
+                published_at: "2026-10-08T23:02:04.422Z"
+  /archive/{file}:
+    get:
+      tags: [Anchor log and archive]
+      operationId: getArchivedFile
+      summary: Get an archived version
+      description: |
+        Every published list version (`lotl.v0068.jws`, `tl-tr.v0068.jws`) and every archived slice of the anchor log
+        (`anchors-<from>-<to>.jsonl`). Immutable; nothing is deleted. Used to replay the full history.
+      x-tr:
+        summary: Arşivlenmiş bir sürümü al
+        description: |
+          Yayınlanmış her liste sürümü (`lotl.v0068.jws`, `tl-tr.v0068.jws`) ve çapa günlüğünün arşivlenmiş her dilimi
+          (`anchors-<from>-<to>.jsonl`). Değişmez; hiçbir şey silinmez. Tüm geçmişi yeniden oynatmak için kullanılır.
+      parameters:
+        - in: path
+          name: file
+          required: true
+          schema: { type: string, example: lotl.v0068.jws }
+      responses:
+        "200":
+          description: The archived file.
+          x-tr: Arşivlenmiş dosya.
+          content:
+            application/jose:
+              schema: { type: string }
+        "404":
+          description: No such version.
+          x-tr: Böyle bir sürüm yok.
+  /CHANGELOG.md:
+    get:
+      tags: [Lists]
+      operationId: getListChangelog
+      summary: Get the list change log
+      description: A human-readable log of what changed in each published version.
+      x-tr:
+        summary: Liste değişiklik günlüğünü al
+        description: Yayınlanan her sürümde neyin değiştiğini anlatan, insanların okuması için günlük.
+      responses:
+        "200":
+          description: Markdown.
+          content:
+            text/markdown:
+              schema: { type: string }
+components:
+  schemas:
+    Lotl:
+      type: object
+      description: Main fields; the full format is in SPEC-TRUST-0001 §3.
+      x-tr: Ana alanlar; biçimin tamamı SPEC-TRUST-0001 §3'te.
+      properties:
+        list_format_version: { type: string, example: "1.0", description: Unknown version → stop., x-tr: Bilinmeyen sürüm → dur. }
+        list_type: { type: string, const: lotl }
+        environment: { type: string, enum: [production, sandbox], description: Absent means `production`., x-tr: Yoksa `production` demektir. }
+        version: { type: integer, example: 69 }
+        issued_at: { type: string, format: date-time }
+        next_update: { type: string, format: date-time }
+        previous_version_hash: { type: string, example: "sha256:5ec0…" }
+        operator:
+          type: object
+          properties:
+            name: { type: string }
+            status: { type: string, example: provisional }
+            on_behalf_of: { type: string }
+            trust_framework: { type: string, format: uri }
+        catalogue:
+          type: object
+          properties:
+            url: { type: string, format: uri, example: "https://schemas.tamga.network/v1/catalogue.json" }
+        national_lists:
+          type: array
+          items:
+            type: object
+            properties:
+              state_code: { type: string, example: TR }
+              status: { type: string, enum: [ACTIVE, RESERVED] }
+              list_url: { type: string, format: uri }
+              signing_keys: { type: array, items: { $ref: "#/components/schemas/KeyRef" } }
+        schemas: { type: array, items: { type: object }, description: Network-level credential types., x-tr: Ağ düzeyindeki belge türleri. }
+        wallet_providers: { type: array, items: { type: object } }
+        zk_circuits:
+          type: array
+          items:
+            type: object
+            properties:
+              circuit_id: { type: string }
+              system: { type: string, example: longfellow-libzk-v1 }
+              version: { type: integer }
+              sha256: { type: string }
+              status: { type: string }
+    NationalList:
+      type: object
+      description: Main fields; the full format is in SPEC-TRUST-0001 §4.
+      x-tr: Ana alanlar; biçimin tamamı SPEC-TRUST-0001 §4'te.
+      properties:
+        list_type: { type: string, const: trusted_list }
+        state_code: { type: string, example: TR }
+        version: { type: integer }
+        issued_at: { type: string, format: date-time }
+        next_update: { type: string, format: date-time }
+        root_cas: { type: array, items: { type: object } }
+        issuers:
+          type: array
+          items:
+            type: object
+            properties:
+              issuer_id: { type: string }
+              slug: { type: string }
+              legal_name: { type: string }
+              class: { type: string, enum: [PUB, QUALIFIED, EAA] }
+              issuer_url: { type: string, format: uri }
+              status_list_base: { type: string, format: uri }
+              status: { type: string, enum: [ACTIVE, SUSPENDED, REVOKED, RETIRED] }
+              schema_authorizations: { type: array, items: { type: object } }
+        relying_parties:
+          type: array
+          items:
+            type: object
+            properties:
+              client_id: { type: string, description: "`x509_hash:…`" }
+              dns_name: { type: string }
+              legal_name: { type: string }
+              status: { type: string }
+              scopes: { type: array, items: { type: object } }
+        national_schemas: { type: array, items: { type: object } }
+    RootFingerprints:
+      type: object
+      properties:
+        note: { type: string }
+        lotl_signing_keys: { type: array, items: { $ref: "#/components/schemas/KeyRef" } }
+        national_root_cas:
+          type: array
+          items:
+            type: object
+            properties:
+              ca_id: { type: string }
+              legal_name: { type: string }
+              cert_fingerprint_sha256: { type: string }
+    KeyRef:
+      type: object
+      properties:
+        fingerprint_sha256: { type: string, example: 7fd176d58fd3fba3bdea137374d6ae3dc8ffc8dcb9b645c2b08566464764fdc1 }
+        cert_ref: { type: string, example: tl-signer-1 }
+        status: { type: string, example: ACTIVE }
+    AnchorEntry:
+      type: object
+      description: Payload of one anchor log line; the full format is in SPEC-TRUST-0001 §5.
+      x-tr: Çapa günlüğündeki bir satırın içeriği; biçimin tamamı SPEC-TRUST-0001 §5'te.
+      properties:
+        seq: { type: integer }
+        previous_hash: { type: string }
+        ts: { type: string, format: date-time }
+        kind: { type: string, enum: [status_list, schema, heartbeat, checkpoint] }
+        list_id: { type: string }
+        issuer_id: { type: string }
+        list_uri: { type: string, format: uri }
+        content_hash: { type: string }
+        list_version: { type: integer }
+        published_at: { type: string, format: date-time }
