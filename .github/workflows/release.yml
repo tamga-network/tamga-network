@@ -43,7 +43,7 @@ jobs:
       - name: npm CLI (Trusted Publishing için >= 11.5.1)
         run: npm install -g npm@11 --no-audit --no-fund && npm --version
       - run: npm ci --no-audit --no-fund
-      - run: npm run pki && npm run schemas:build && npm run trust:build && npm run trust:build && npm run trust:heartbeat && npm run trust:test-fixtures
+      - run: npm run setup # ci.yml ile aynı hazırlık (sandbox PKI + sandbox listeleri dahil; testlerin ön koşulları)
       - run: npm test && npm run typecheck
       - name: Paket seçimi + zk yerel kütüphaneleri
         env:
