@@ -64,7 +64,6 @@ jobs:
       - run: npm run release:check
       - name: npm publish (.publish/<paket>)
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # Trusted Publishing (OIDC) kuruluysa sır tanımlanmaz, boş kalır
           PACKAGES: ${{ inputs.packages }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
