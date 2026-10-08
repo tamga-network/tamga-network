@@ -137,7 +137,7 @@ link-self-contained=yes"` (Rust'ın kendi CRT nesneleri; gcc yalnız sürücü v
 
 | Aşama | İş | Önkoşul |
 |---|---|---|
-| 2 | Telefon: Rust çekirdeği → UniFFI (Kotlin/Swift) → Expo native modülü (`wallet/tamga-wallet/app/modules/tamga-zk`); ARM'de PMULL/NEON açık; telefonda ölçüm | Mağaza derlemesi (Z1) |
+| 2 | Telefon: Rust çekirdeği → UniFFI (Kotlin/Swift) → Expo native modülü (Tamga Wallet uygulama deposu, `modules/tamga-zk`); ARM'de PMULL/NEON açık; telefonda ölçüm | Mağaza derlemesi (Z1) |
 | 3 | Doğrulayıcı: `@tamga-network/verifier`'da `mso_mdoc_zk` doğrulama (Node eklentisi ya da WASM); devre özeti imzalı güven listesinde | ADR-0032 kabulü |
 | 4 | Taşıma: OpenID4VP DCQL `mso_mdoc_zk` (AB TS13) ve Digital Credentials API; AB örnek doğrulayıcısıyla karşılıklı test | Aşama 3 |
 
