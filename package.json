@@ -57,13 +57,13 @@
     "trust:external": "tsx apps/trust-publisher/src/cli.ts external-fetch"
   },
   "devDependencies": {
-    "@scalar/api-reference": "^1.72.2",
+    "@scalar/api-reference": "^1.73.1",
     "@types/node": "^22.10.0",
     "prettier": "^3.9.9",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "vitepress": "^1.6.4",
-    "vitest": "^3.0.0"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",
@@ -74,5 +74,11 @@
     "ajv-formats": "^3.0.1",
     "jose": "^6.0.0",
     "zod": "^4.0.0"
+  },
+  "overrides": {
+    "vite": "^6.4.4",
+    "source-map-js": "^1.2.2",
+    "ai": "^6.0.302",
+    "@ai-sdk/vue": "^3.0.302"
   }
 }
