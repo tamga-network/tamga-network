@@ -30,7 +30,7 @@ On acceptance it is recorded in [[DECISIONS]] as **D-BC-6**, **D-GTM-2** and **D
 
 ## Problem
 
-Tamga's canonical roadmap tied the pilot to the ledger: the [[PM-GTM-0001]] §2 preconditions **Ö1** "contracts compile and
+Tamga's canonical roadmap tied the pilot to the ledger: the PM-GTM-0001 §2 preconditions **Ö1** "contracts compile and
 tests pass" and **Ö2** "testnet up, contracts deployed" had to be met before real graduate data could be processed (GT1).
 [[ARCH-0001]] §3 defines phase 0 as "4 foundation validators". The contracts had never been compiled (no Foundry; DECISIONS
 §10.5). This locked the university pilot — and with it the university agreement and investor talks — behind the ledger
@@ -143,7 +143,7 @@ is met would mean presenting a single-operator ledger as "multi-party" and is co
 
 ## Decision 6 — Pilot preconditions and the limitations statement are redefined
 
-[[PM-GTM-0001]]: **Ö1'** list commitment tests pass, signed and hash-chained; **Ö2'** `trust.tamga.network` +
+PM-GTM-0001: **Ö1'** list commitment tests pass, signed and hash-chained; **Ö2'** `trust.tamga.network` +
 `schema.tamga.network` live, the root fingerprint page published; **Ö5'** limitations statement **v2** (8 items: item 5
 "no blockchain, records are signed and public", item 6 "the anchor rests on a single operator's signature", item 7
 "revocation ≤ 90 min"); **Ö7'** acceptance of this ADR; **Ö8'** the issuer credential key under the university's control
@@ -207,7 +207,7 @@ Decision 4 defines exactly this threshold.
    (Organization-of-Turkic-States-first); a starting row in the D-GOV-2 table. In the changed-decisions table: PM-GTM Ö1/Ö2
    → Ö1'/Ö2'.
 2. [[ARCH-0001]] §3: a phase B row; phase 0 defined as "≥2 independent validator operators".
-3. [[PM-GTM-0001]] (decision 6).
+3. PM-GTM-0001 (decision 6).
 4. [[SPEC-CRED-0003]], [[SPEC-SCHEMA-0001]], [[SPEC-BC-0001]], [[ARCH-0003]]: the decision 3 readings.
 5. [[SPEC-ID-0002]] §8.1: projection source "canonical record (the ledger or the phase B list)".
 6. New document **SPEC-TRUST-0001** (list format); **PM-TRUST-0002 / Tamga Trust Framework** (World Bank 5 layers).
@@ -229,7 +229,7 @@ anchor is until then.
 
 # Relations
 
-**Adds:** [[ARCH-0001]] phase B · [[PM-GTM-0001]] · D-GOV-2 starting threshold
+**Adds:** [[ARCH-0001]] phase B · PM-GTM-0001 · D-GOV-2 starting threshold
 **Interprets:** [[ADR-0007]], [[ADR-0008]], [[SPEC-CRED-0003]], [[SPEC-SCHEMA-0001]], [[SPEC-BC-0001]], [[ARCH-0003]]
 **Builds on:** [[ADR-0001]] (unchanged), [[ADR-0002]] (sovereignty, cross-recognition), [[PM-ASSUR-0001]] (stateless bootstrap)
 **Gives rise to:** SPEC-TRUST-0001, Tamga Trust Framework, this repository's code base

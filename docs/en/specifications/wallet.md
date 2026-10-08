@@ -471,7 +471,7 @@ risk — the alternative is to leave it open to brute force.
 # Open questions
 
 1. Re-issuance on a new device requires the institution to still recognise the person. What will the university do if a
-   graduate changes device 10 years later? A question of institutional process → [[PM-GTM-0001]].
+   graduate changes device 10 years later? A question of institutional process → PM-GTM-0001.
 2. How will W3 (certified WSCD) be detected in the state stage — device attestation or separate hardware? → `SPEC-WALLET-0002`
 3. How costly is fixed-size padding of the backup? To be measured.
 4. Are multiple devices (tablet + phone) supported? Not now — every device means a separate holder key, so a separate issuance

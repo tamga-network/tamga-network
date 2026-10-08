@@ -71,7 +71,7 @@ Kompozisyon **zorunlu tutulmaz** — her devlet [[ADR-0002]] gereği kendi setin
 
 # 4. Escrow Enrollment — Pseudonym Nasıl Açılabilir Hale Gelir
 
-Pseudonym'ler cüzdanda kök-kimlikten türetilir ([[PM-ID-0001]], [[SPEC-ID-0001]] §5.2) ve **unlinkable**'dır. Guardian setinin sonradan bir pseudonym'i açabilmesi için, o bağın **enrollment anında** şifreli escrow'a yazılması gerekir. Model iki katmanlıdır ve **kaçışa kapalıdır**.
+Pseudonym'ler cüzdanda kök-kimlikten türetilir ([[PM-ID-0001]], SPEC-ID-0001 §5.2) ve **unlinkable**'dır. Guardian setinin sonradan bir pseudonym'i açabilmesi için, o bağın **enrollment anında** şifreli escrow'a yazılması gerekir. Model iki katmanlıdır ve **kaçışa kapalıdır**.
 
 ## 4.1 İki katmanlı escrow
 
@@ -298,7 +298,7 @@ En zayıf nokta dürüstçe: bir devletin **kendi vatandaşı** hakkında setini
 - [[PM-ID-0002]] — Karar kaynağı (3-of-5, threshold+DKG, home-state).
 - [[SPEC-BC-0001]] — Trust layer (`onlyOwnerState`, stateCode, `setRecognition`, RP/issuer escrow-geçerlilik kontrolü).
 - [[SPEC-ID-0002]] — Guardian `entityId` = X.509 `issuerId` (kurumsal guardian kimliği); court-token X.509 imza zinciri.
-- [[SPEC-ID-0001]] — Pseudonym profili (§4 escrow'un öznesi).
+- SPEC-ID-0001 — Pseudonym profili (§4 escrow'un öznesi).
 - [[ADR-0002]] — Egemenlik-öncelikli yönetişim (home-state, 2/3, `setRecognition`).
 - [[PM-TRUST-0001]] — Zincir kişisel/ilişkilendirilebilir veri tutmaz (§4 off-chain sınırı).
 - Kaynak: "Assurance Guardian" ham taslağı — bu dokümana tümüyle içselleştirildi/resmileştirildi.

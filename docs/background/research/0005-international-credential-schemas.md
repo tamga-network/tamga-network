@@ -422,7 +422,7 @@ olmayan bir şemadır — ve bu, hiç hizalanmamış olmaktan daha tehlikelidir,
 
 [[PM-SCHEMA-0001]] · [[ADR-0006]] · [[ADR-0007]] · [[SPEC-CRED-0001]] ·
 [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] · [[SPEC-SCHEMA-0003]] ·
-[[RS-EIDAS-0001]] · [[RS-EBSI-0001]]
+[[RS-EIDAS-0001]] · RS-EBSI-0001
 
 ---
 

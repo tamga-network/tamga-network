@@ -30,7 +30,7 @@ favour of X.509). This ADR closes [[DECISIONS]] D-ID-1.
 
 # Context
 
-[[SPEC-ID-0001]] built identification on two profiles: **Entity** (`did:tamga:<state>:<id>`, an institutional identity
+SPEC-ID-0001 built identification on two profiles: **Entity** (`did:tamga:<state>:<id>`, an institutional identity
 registered on the ledger) and **[[t:pseudonym|Pseudonym]]** (`did:tamga:p:<key>`, self-certifying, pairwise).
 [[DECISIONS]] D-ID-1 tracked, as the highest-priority open decision, whether the entity side should move to **X.509
 certificates**. Project management's working papers argued for X.509; the decision was taken.
@@ -58,7 +58,7 @@ The three layers ([[PM-AUTH-0001]] §Three layers) become:
 
 2. **Citizens are not given a global identifier.** A fixed global ID would string together a person's health, education,
    logistics and payment activity. Personal relationships use **pairwise pseudonyms** — different in each relationship and
-   unlinkable ([[SPEC-ID-0001]] pseudonym profile + [[PM-ID-0002]] accountable disclosure).
+   unlinkable (SPEC-ID-0001 pseudonym profile + [[PM-ID-0002]] accountable disclosure).
 
 3. **Chain transactions use EVM addresses** — separate from the identity [[t:credential]] ([[ADR-0003]] key-domain
    separation). The X.509 decision does not affect layer A.
@@ -89,11 +89,11 @@ The three layers ([[PM-AUTH-0001]] §Three layers) become:
 - The `did:tamga:<state>:<id>` entity profile is **not used**; institutional identity is X.509 + `issuerId` fingerprint.
 - [[SPEC-BC-0002]] guardian `entityId` and the **court-token signature chain** are bound to X.509 (court and guardian
   signatures are verified with the certificate chain). The §7 item "track x509" is **closed**.
-- The entity section of [[SPEC-ID-0001]] is superseded; **SPEC-ID-0002 (X.509 method specification)** is to be written:
+- The entity section of SPEC-ID-0001 is superseded; **SPEC-ID-0002 (X.509 method specification)** is to be written:
   Root CA anchoring, certificate→issuerId mapping, root rollover, chain validation.
 
 **Unchanged:**
-- The pseudonym profile ([[SPEC-ID-0001]]), accountable disclosure ([[SPEC-BC-0002]] escrow), the EVM account model, the
+- The pseudonym profile (SPEC-ID-0001), accountable disclosure ([[SPEC-BC-0002]] escrow), the EVM account model, the
   value layer hooks ([[ADR-0003]]), governance ([[ADR-0002]]).
 
 **New open topics:** anchoring national Root CAs on the ledger + root rollover → SPEC-ID-0002 / RS-X509 (planned). Is a
@@ -103,7 +103,7 @@ bridge to institutions' existing `did:web` identities needed (interop)? → SPEC
 
 # Relations
 
-- [[SPEC-ID-0001]] — entity profile superseded; pseudonym kept.
+- SPEC-ID-0001 — entity profile superseded; pseudonym kept.
 - [[SPEC-BC-0001]] — Issuer Registry (issuerId = certFingerprint, onlyOwnerState).
 - [[SPEC-BC-0002]] — guardian entityId + court token bound to the X.509 signature chain.
 - [[ADR-0002]] — state namespace / onlyOwnerState (Root CA ownership).
@@ -112,4 +112,4 @@ bridge to institutions' existing `did:web` identities needed (interop)? → SPEC
 - SPEC-ID-0002 — the full X.509 method specification.
 
 The X.509 decision was taken on 2026-08-06; D-ID-1 is closed. Entity identity moved to X.509; the pseudonym and value
-layers are kept. The full method specification ([[SPEC-ID-0001]] revision / SPEC-ID-0002) is follow-up work.
+layers are kept. The full method specification (SPEC-ID-0001 revision / SPEC-ID-0002) is follow-up work.

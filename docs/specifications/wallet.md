@@ -497,7 +497,7 @@ saldırısına açık bırakmak.
 
 1. Yeni cihazda belgelerin yeniden verilmesi, kurumun hâlâ o kişiyi tanımasını gerektiriyor.
    Mezun 10 yıl sonra cihaz değiştirirse üniversite ne yapacak? Kurumsal
-   süreç sorusu → [[PM-GTM-0001]].
+   süreç sorusu → PM-GTM-0001.
 2. W3 (sertifikalı WSCD) devlet aşamasında nasıl tespit edilecek — cihaz attestation'ı
    mı, ayrı donanım mı? → `SPEC-WALLET-0002`
 3. Yedeğin sabit boyutlu doldurulması ne kadar maliyetli? Ölçülmeli.

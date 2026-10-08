@@ -124,7 +124,7 @@ için birebir **conformance hedefidir**. Öne çıkanlar:
   **wallet-provider trust anchor'ı henüz tanımsız** → §10 açık soru.
 - **Reuse policy** (`once_only`/`limited-time`/`rotating-batch`/`per-relying-party` +
   batch) = izlenemezliğin *credential seviyesindeki* çözümü; Tamga'nın pairwise pseudonym
-  (identifier seviyesi, [[SPEC-ID-0001]] §7) çözümünü **tamamlar**.
+  (identifier seviyesi, SPEC-ID-0001 §7) çözümünü **tamamlar**.
 - **X509-AC EAA (Annex A, `x509_attr`):** EUDI ekosisteminin kendi profili attestation'ları
   **X.509 Attribute Certificate** olarak ihraç etmeyi resmen tanımlar. → Tamga'nın X.509
   kurumsal kimlik kararının ([[ADR-0004]]) **dış meşruiyeti**: X.509 seçimi DID dünyasından
@@ -271,7 +271,7 @@ Bu araştırmadan doğan, Project Memory / ADR'de karara bağlanması gereken so
    gerektirir (119 472-3); Tamga'da WUA zorunlu ama bu trust anchor tanımsız → SPEC-CRED /
    [[PM-ASSUR-0001]].
 10. **Reuse/batch ↔ pairwise pseudonym:** Credential-seviyesi izlenemezlik (batch, once_only,
-    per-relying-party) ile identifier-seviyesi pairwise pseudonym ([[SPEC-ID-0001]] §7) nasıl
+    per-relying-party) ile identifier-seviyesi pairwise pseudonym (SPEC-ID-0001 §7) nasıl
     birleşecek? → ileride SPEC-CRED.
 11. **ARF sürüm uyumu:** 119 472-3 → ARF v2.4.0; bu doküman → v3.0.0. Profil sabitlenirken
     sürüm izlenmeli.

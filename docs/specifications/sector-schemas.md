@@ -331,7 +331,7 @@ kasıtlıdır.
 3. `id` domaini açıldığında [[SPEC-CRED-0002]] "tek format" varsayımı kırılır.
    O dokümanın mdoc bölümü ne zaman yazılacak?
 4. `org` iskeleti ilk aşamada yazılacak dedik ama pilot kapsamında değil. Ne
-   zaman ve hangi tetikleyiciyle tam şemaya dönüşecek? → [[PM-GTM-0001]]
+   zaman ve hangi tetikleyiciyle tam şemaya dönüşecek? → PM-GTM-0001
 5. §1 kontrol listesinin uygulanmasını kim denetler? İlk aşamada vakıf teknik
    kurulu; devlet aşamasında konsey ([[PM-GOV-0001]]).
 
@@ -342,7 +342,7 @@ kasıtlıdır.
 [[RS-SCHEMA-0001]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] ·
 [[SPEC-CRED-0001]] · [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] ·
 [[SPEC-WALLET-0001]] · [[ADR-0006]] · [[ADR-0007]] · [[PM-TRUST-0001]] ·
-[[PM-GOV-0001]] · [[PM-GTM-0001]] · [[INVARIANTS]]
+[[PM-GOV-0001]] · PM-GTM-0001 · [[INVARIANTS]]
 
 ---
 

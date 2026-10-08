@@ -45,8 +45,8 @@ arf/                 Tamga ARF sitesi (arf.tamga.network)
 ops/                 geliştirme PKI'sı, sertifika imzalama (pki:issue), ortak arayüz stilleri
 ```
 
-Kök dosyalar: `DECISIONS.md` (karar kütüğü), `INVARIANTS.md` (bağlayıcı kurallar), `MASTER_INDEX.md` (belge dizini),
-`SCENARIOS.md`, `CONVENTIONS.md` (kod kuralları), `DOCUMENTATION-STANDARD.md`, `CHANGELOG.md`.
+Kök dosyalar: `DECISIONS.md` (karar dizini: ADR'ler ve karar kodları), `INVARIANTS.md` (bağlayıcı kurallar),
+`CHANGELOG.md` (sürüm notları), `CONTRIBUTING.md` (katkı, kod ve belge kuralları), `SECURITY.md` (güvenlik bildirimi).
 
 ## Çalıştırma
 
@@ -67,4 +67,4 @@ ETSI TS 119 612 (güven listeleri) · ETSI TS 119 471 / 472 (EAA) · ETSI TS 119
 
 ## Katkı ve güvenlik
 
-Katkı: `CONTRIBUTING.md`, `CONVENTIONS.md`. Güvenlik açığı bildirimi: security@tamga.network — `SECURITY.md`.
+Katkı: `CONTRIBUTING.md`. Güvenlik açığı bildirimi: security@tamga.network — `SECURITY.md`.

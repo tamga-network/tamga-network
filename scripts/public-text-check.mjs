@@ -9,17 +9,15 @@ import { PRIVATE_NAMES_FILE_FOUND, PRIVATE_NAMES_RE, TOOL_NAMES_RE } from "./pri
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 /** docs/.vitepress/config.ts srcExclude ile aynı: yayınlanmayan iç kayıtlar. */
 export const DOCS_UNPUBLISHED = ["_archive", "_internal", "root", "packages", ".vitepress"];
+// Public depodaki kök belgeler. DECISIONS.md'nin public hâli .publicoverride/DECISIONS.md'dir (iç kütük public'e girmez;
+// .publicignore). SCENARIOS, MASTER_INDEX, DOCUMENTATION-STANDARD, CONVENTIONS yalnızca geliştirme deposundadır.
 const ROOT_PUBLISHED = [
-  "DECISIONS.md",
+  ".publicoverride/DECISIONS.md",
   "INVARIANTS.md",
-  "MASTER_INDEX.md",
-  "SCENARIOS.md",
-  "DOCUMENTATION-STANDARD.md",
   "README.md",
   "SECURITY.md",
   "CONTRIBUTING.md",
   "CHANGELOG.md",
-  "CONVENTIONS.md",
 ];
 const FORBIDDEN = [
   [PRIVATE_NAMES_RE, "kişi adı"],

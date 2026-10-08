@@ -114,7 +114,7 @@ This is a **procedural**, not a cryptographic, match, and it is weak. But it is 
 today — so Tamga introduces no regression here; it only postpones the expected improvement to the state stage.
 
 **This limitation must be communicated clearly to the pilot participants (university and verifier).** → work item in
-[[PM-GTM-0001]].
+PM-GTM-0001.
 
 ### 1.2.4 Why the identity number is not added
 
@@ -744,7 +744,7 @@ There is a loss of precision; it is cheaper than the risk of a wrong code.
 
 ### 6.4.5 Pilot work item
 
-→ [[PM-GTM-0001]]: *"Importing YÖK's ISCED-F 2013 programme classification, confirming it is current and comparing it with the
+→ PM-GTM-0001: *"Importing YÖK's ISCED-F 2013 programme classification, confirming it is current and comparing it with the
 pilot university's programme list."*
 
 **Confirmation note:** the source dates from 2020 and may have been updated since. It must be checked against YÖK's current
@@ -815,7 +815,7 @@ mandatorily hideable guarantees that the graduate can choose not to give it.
 
 [[SPEC-SCHEMA-0001]] · [[RS-SCHEMA-0001]] · [[ADR-0007]] · [[ADR-0008]] ·
 [[SPEC-CRED-0001]] · [[SPEC-CRED-0002]] · [[SPEC-BC-0001]] · [[PM-ASSUR-0001]] ·
-[[PM-GTM-0001]] · [[ARCH-0003]]
+PM-GTM-0001 · [[ARCH-0003]]
 
 ---
 

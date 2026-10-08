@@ -50,7 +50,7 @@ Alt kararlar:
 # Gerekçe (Rationale)
 
 1. **Yerel EVM → gelecek yetenekler.** Besu'nun EVM'i, varlık/ödeme/saklama işlevlerini olgun ERC kalıplarıyla doğrudan mümkün kılar (Cosmos'ta bu bir ek katmandır).
-2. **EBSI ile aynı yığın.** EBSI, Besu + IBFT 2.0 kullanır ([[RS-EBSI-0001]]). Aynı temel, birlikte çalışabilirliği ve öğrenme transferini kolaylaştırır.
+2. **EBSI ile aynı yığın.** EBSI, Besu + IBFT 2.0 kullanır (RS-EBSI-0001). Aynı temel, birlikte çalışabilirliği ve öğrenme transferini kolaylaştırır.
 3. **Tek-zincil basitlik.** Cosmos'un çok-zincir/IBC avantajı, Tamga'nın "tek ortak zincir" kararında atıl kalır.
 4. **Yerleşik uyum.** İzinli, PoA/eşit-oy, anında kesinlik Besu QBFT'de doğrudan gelir.
 5. **Tam egemenlik.** Apache 2.0, kendi ağ, fork edilebilir; hiçbir şirkete/ağa bağımlılık yok.
@@ -84,5 +84,5 @@ Alt kararlar:
 
 - [[PM-BC-0001]] — Bu ADR, oradaki açık "Katman 4" kararını kapatır.
 - [[RS-FRAMEWORKS-0001]] — Bu kararın dayandığı karşılaştırma.
-- [[RS-EBSI-0001]] — EBSI emsali (Besu + IBFT 2.0).
-- [[ACA-BC-0001]] — Consensus temelleri.
+- RS-EBSI-0001 — EBSI emsali (Besu + IBFT 2.0).
+- ACA-BC-0001 — Consensus temelleri.

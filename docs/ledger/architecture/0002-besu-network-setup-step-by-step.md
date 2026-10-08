@@ -119,7 +119,7 @@ dokümanlarında (SPEC-BC-*) kesinleşecektir.
 
 # Açık Konular
 
-1. QBFT vs IBFT 2.0 kesin seçimi (EBSI IBFT 2.0 kullanır — [[RS-EBSI-0001]]).
+1. QBFT vs IBFT 2.0 kesin seçimi (EBSI IBFT 2.0 kullanır — RS-EBSI-0001).
 2. Blok süresi / gaz politikası kesin değerleri.
 3. Permissioning: on-chain kontrat vs dosya tabanlı (öneri: on-chain, yönetilebilir).
 4. Trust Registry kontrat arayüzleri → SPEC-BC-0001.

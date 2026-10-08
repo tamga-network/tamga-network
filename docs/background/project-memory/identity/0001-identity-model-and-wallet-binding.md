@@ -65,7 +65,7 @@ Bu an, güçlü kimlik ispatı gerektirir (Türkiye'de: e-Devlet, TC Kimlik No, 
 
 ## "Cüzdan kimin?" nasıl cevaplanır?
 - Teknik cevap: cüzdanın taşıdığı, **devletçe imzalanmış geçerli PID credential**'ıyla.
-- Doğrulama: PID'in imzası + issuer'ın (devletin) zincirdeki trust kaydı ([[ACA-ID-0001]] §8, [[PM-TRUST-0001]]).
+- Doğrulama: PID'in imzası + issuer'ın (devletin) zincirdeki trust kaydı (ACA-ID-0001 §8, [[PM-TRUST-0001]]).
 - Adres ↔ gerçek kimlik eşleştirmesi **zincirde tutulmaz** ([[PM-TRUST-0001]]). Gerekirse **escrow** edilir (şifreli, M-of-N) — devlet kurumlarında, off-chain ([[PM-ID-0002]]).
 
 ---
@@ -91,7 +91,7 @@ Legal Disclosure ilkesi "hukuki süreçler teknik mimariyi belirlememeli; farkl�
 
 ## Tanıma (recognition)
 A ülkesi vatandaşı, B ülkesindeki bir verifier'a belge sunduğunda:
-- B kontrol eder: "bu belgeyi veren (A'nın PID provider'ı veya A-akredite issuer) güvenilir mi?" → **zincirdeki ortak trust registry** ([[RS-EBSI-0001]] §4).
+- B kontrol eder: "bu belgeyi veren (A'nın PID provider'ı veya A-akredite issuer) güvenilir mi?" → **zincirdeki ortak trust registry** (RS-EBSI-0001 §4).
 - Güvenilirse B belgeyi kabul eder. Bu, EBSI'nin sınır-ötesi modelinin aynısıdır.
 
 ## Açıklama (disclosure) egemenliği
@@ -162,8 +162,8 @@ Devletlerin verdiği kimliklerin güven seviyesi eşit olmayabilir; bu yönetilm
 - PM-ID-0003 (planlı) — Recovery, Guardian, Vault (kurtarma/kurtarma).
 - [[PM-GOV-0001]] (planlı) — Devlet katılımı, sınır-ötesi açıklama yönetişimi.
 - [[RS-EIDAS-0001]] — PID Provider modeli.
-- [[RS-EBSI-0001]] — Sınır-ötesi tanıma, trust registry.
-- [[ACA-ID-0001]] — DID/VC mekaniği.
+- RS-EBSI-0001 — Sınır-ötesi tanıma, trust registry.
+- ACA-ID-0001 — DID/VC mekaniği.
 - **Kaynak (arşiv):** `_archive/solidus-workspace/project-memory/identity/` — Root Identity, Guardian, Legal Disclosure, Recovery, Vault (içselleştirilmiş ham araştırma).
 
 ---

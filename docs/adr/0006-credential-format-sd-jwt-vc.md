@@ -100,7 +100,7 @@ belge verme 2. faza ertelenir, formatta yeri açık tutulur.
 - [[SPEC-CRED-0001]] — bu kararın tam spesifikasyonu.
 - [[PM-ASSUR-0001]] / [[ADR-0005]] — assurance seviyeleri (formatın taşıdığı güven).
 - [[SPEC-BC-0001]] — issuer registry + Token Status List (iptal).
-- [[SPEC-ID-0002]] — belge veren X.509 (`iss`), [[SPEC-ID-0001]] — belge sahibinin [[t:pseudonym|takma adı]] (`cnf`).
+- [[SPEC-ID-0002]] — belge veren X.509 (`iss`), SPEC-ID-0001 — belge sahibinin [[t:pseudonym|takma adı]] (`cnf`).
 - [[PM-TRUST-0001]] — belge asla zincirde değil.
 
 Format, protokoller, imza, holder binding (zorunlu) ve WUA

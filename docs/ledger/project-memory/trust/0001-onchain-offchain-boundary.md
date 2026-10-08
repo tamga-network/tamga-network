@@ -20,7 +20,7 @@ Bu doküman, Tamga Network'ün güven altyapısına ilişkin en temel veri karar
 
 Bu karar [[PM-BC-0001]]'in doğrudan tamamlayıcısıdır. PM-BC-0001 "ağı kim kurar ve doğrular" sorusunu; bu doküman "o ağa ne yazılır" sorusunu cevaplar. İkisi birlikte Tamga'nın blockchain temelini oluşturur.
 
-Karar, [[RS-EIDAS-0001]] (§7, GDPR) ve [[RS-EBSI-0001]] (§5, on-chain/off-chain tablosu) bulgularına dayanır.
+Karar, [[RS-EIDAS-0001]] (§7, GDPR) ve RS-EBSI-0001 (§5, on-chain/off-chain tablosu) bulgularına dayanır.
 
 ---
 
@@ -51,7 +51,7 @@ Zincirin cevapladığı soru "bu belge nedir / kime ait" değil, **"bu belgeyi v
 
 # On-Chain / Off-Chain Tablosu (Tamga)
 
-Bu tablo, [[RS-EBSI-0001]] §5'teki EBSI modelinin Tamga'ya uyarlanmış halidir ve bağlayıcı referanstır.
+Bu tablo, RS-EBSI-0001 §5'teki EBSI modelinin Tamga'ya uyarlanmış halidir ve bağlayıcı referanstır.
 
 | Zincirde (On-Chain) ✅ | Zincir Dışında (Off-Chain) ❌ |
 |------------------------|-------------------------------|
@@ -80,7 +80,7 @@ Bu tablo, [[RS-EBSI-0001]] §5'teki EBSI modelinin Tamga'ya uyarlanmış halidir
 Kişisel verinin (ve çoğu zaman hash'inin) değiştirilemez deftere yazılması silinme hakkını ihlal eder. Bu, düzenleyiciler (ör. İspanya AEPD) ve topluluk tarafından eIDAS/EUDI bağlamında açıkça işaretlenmiştir ([[RS-EIDAS-0001]] §7).
 
 ## Emsal Doğrulaması
-Hem EUDI (Trusted List + holder cüzdanı) hem EBSI (Verifiable Data Registry) **aynı sınırı** çizer: kişisel veri off-chain, güven kaydı on-chain. EBSI'de gerçek kişiler `did:key` ile zincire hiç yazılmaz; yalnızca kurumlar `did:ebsi` ile zincirdedir ([[RS-EBSI-0001]] §4–5). Tamga bu kanıtlanmış sınırı benimser.
+Hem EUDI (Trusted List + holder cüzdanı) hem EBSI (Verifiable Data Registry) **aynı sınırı** çizer: kişisel veri off-chain, güven kaydı on-chain. EBSI'de gerçek kişiler `did:key` ile zincire hiç yazılmaz; yalnızca kurumlar `did:ebsi` ile zincirdedir (RS-EBSI-0001 §4–5). Tamga bu kanıtlanmış sınırı benimser.
 
 ## "Credentials hashleme" fikrinin doğru hali
 Başlangıç sezgisi yanlış değildi, sadece yanlış nesneyi hedefliyordu. Zincire yazılan **bireyin belgesi/hash'i değil**, o belgeyi **verenin yetkisi ve anahtarıdır**. Bütünlük kanıtı gerekiyorsa, bireysel hash yerine mahremiyet korumalı toplu yapılar (salted commitment, Merkle root) değerlendirilir — bu bir açık tasarım sorusudur (aşağıya bkz.).
@@ -127,7 +127,7 @@ O zaman blockchain'in bir anlamı kalmaz. Kişisel olmayan güven verisi (kim g�
 
 - [[PM-BC-0001]] — Blockchain ve validator modeli. **Bu kararın ikizi.**
 - [[RS-EIDAS-0001]] — GDPR/immutability çatışması (§7), iptal mahremiyeti (§6).
-- [[RS-EBSI-0001]] — On-chain/off-chain emsal tablosu (§5), did:ebsi vs did:key (§4).
+- RS-EBSI-0001 — On-chain/off-chain emsal tablosu (§5), did:ebsi vs did:key (§4).
 - [[PM-PH-0001]] (planlı) — Genel felsefe ve Türk dünyası konumlandırması.
 - SPEC-TRUST (planlı) — Anchoring ve registry teknik spesifikasyonu.
 

@@ -80,7 +80,7 @@ bir üniversitenin kime verdiğini bilmediği (T0) bir cüzdana yazdığı diplo
 
 | Seviye | Anlamı | Türkiye'de bugün nasıl (devletsiz) | eIDAS LoA karşılığı | Devlet gerekir mi |
 |--------|--------|-----------------------------------|--------------------|-------------------|
-| **T0 — Anonim** | Kimlik iddiası **yok**. Cihazda üretilmiş anahtar çifti + e-posta/telefon OTP. Takma adlı (pairwise) DID ([[SPEC-ID-0001]]). | Anında, self-service | (eşik altı) | Hayır |
+| **T0 — Anonim** | Kimlik iddiası **yok**. Cihazda üretilmiş anahtar çifti + e-posta/telefon OTP. Takma adlı (pairwise) DID (SPEC-ID-0001). | Anında, self-service | (eşik altı) | Hayır |
 | **T1 — Düşük** | Bir isme bağlı ama zayıf. | Banka hesabından mikro-transfer ile ad-soyad+IBAN eşleşmesi; veya GSM hat sahipliği doğrulaması | **Low** | Hayır |
 | **T2 — Önemli** | Resmî kimlik belgesi görülmüş + canlılık/yüz eşleştirme. | (a) Lisanslı uzaktan kimlik tespiti; (b) NFC ile çipli pasaport + passive authentication; (c) **kurum kayıt masası** (üniversite/oda RA'sı) | **Substantial** | Hayır |
 | **T3 — Yüksek** | Kriptografik olarak devlet-akredite kimliğe bağlı. | **Nitelikli Elektronik Sertifika (NES) / Mobil İmza ile challenge (nonce) imzalatma** | **High** | **Hayır** |
@@ -129,7 +129,7 @@ zayıf, kurumsal tarafta olağanüstü güçlü.** Bu gözlem doğrudan B2B önc
 
 Verifier politikası **"tip × issuer sınıfı"** olarak ifade edilir; verifier ayrı bir `holder_assurance` alanı görmez — holder
 seviyesi **tipin ön koşuludur** (eIDAS'ta PID = LoA High gibi). Bu, önceki politika örneğindeki `holder_assurance >= T2`
-satırının iç çelişkisini kapatır (`docs/_internal/beta/05` R-19/R-22).
+satırının iç çelişkisini kapatır.
 
 > **Not — IssuerCategory ≠ Issuer Assurance.** [[SPEC-BC-0001]] `IssuerCategory`
 > (GOVERNMENT/EDUCATION/HEALTH/...) issuer'ın **sektörünü** söyler; I1–I3 ise
@@ -255,7 +255,7 @@ Sayı gösterilirse kullanıcı "seviye avcısına" döner ve sistem oyunlaşır
 
 - **eIDAS/EBSI emsali:** İki eksen ayrımı eIDAS'ın holder LoA'sı ile EBSI'nin
   issuer/akreditasyon zincirinin (Root TAO→TAO→TI) birleşimidir. Tekerleği yeniden icat
-  etmiyoruz ([[RS-EIDAS-0001]], [[RS-EBSI-0001]]).
+  etmiyoruz ([[RS-EIDAS-0001]], RS-EBSI-0001).
 - **"Uyumlu ama bağımsız" ([[PM-PH-0001]]):** Kendi T/I seviyelerimiz var ama eIDAS
   LoA'ya 1:1 eşlenir → sınırda EUDI/EBSI verifier bizim seviyemizi anlar, interop kaybı
   yok.

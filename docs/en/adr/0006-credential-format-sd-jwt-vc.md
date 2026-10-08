@@ -97,7 +97,7 @@ in the format.
 - [[SPEC-CRED-0001]] — full specification of this decision.
 - [[PM-ASSUR-0001]] / [[ADR-0005]] — assurance levels (the trust the format carries).
 - [[SPEC-BC-0001]] — issuer registry + Token Status List (revocation).
-- [[SPEC-ID-0002]] — issuer X.509 (`iss`), [[SPEC-ID-0001]] — holder pseudonym (`cnf`).
+- [[SPEC-ID-0002]] — issuer X.509 (`iss`), SPEC-ID-0001 — holder pseudonym (`cnf`).
 - [[PM-TRUST-0001]] — credentials are never on the ledger.
 
 Format, protocols, signature, holder binding (mandatory) and WUA were accepted on 2026-09-03. mdoc and batch issuance

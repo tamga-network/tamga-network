@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 364 kodlanmış değişmez, 50 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 357 kodlanmış değişmez, 49 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -469,21 +469,6 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `PM-GOV-0001/G8` | Şeffaflık raporu üç ayda bir, gecikmesiz yayınlanır. |
 
 
-## PM-GTM-0001
-
-*Pilot Planı — Üniversite Diploma Pilotu, Ön Koşullar ve Durdurma Ölçütleri*
-
-| Kod | Açıklama |
-|---|---|
-| `PM-GTM-0001/GT1` | Ö1–Ö6 tamamlanmadan gerçek mezun verisi işlenmez. |
-| `PM-GTM-0001/GT2` | Pilot, üniversite personeline düzenli yeni iş yüklemez. |
-| `PM-GTM-0001/GT3` | Faz 0 sınırları bildirimi sadeleştirilmeden imzalatılır. |
-| `PM-GTM-0001/GT4` | P2 (sahte veriyle uçtan uca) atlanamaz. |
-| `PM-GTM-0001/GT5` | Pilot 6 ayı aşarsa yazılı gerekçe ve yeni ölçüt gerekir. |
-| `PM-GTM-0001/GT6` | Durdurma koşulu oluştuğunda pilot durur; "izleyip görelim" seçeneği yoktur. |
-| `PM-GTM-0001/GT7` | Katılım gönüllüdür; rıza geri alınabilir ve credential iptal edilir. |
-
-
 ## SPEC-AGENT-0001
 
 *"Ajan yetkilendirme (zincir aşaması)"*
@@ -816,12 +801,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 364 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 357 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GT, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, NW, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZK.
+AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, NW, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-08 (`scripts/sync-invariants.mjs`). Toplam 364 kodlanmış değişmez, 50 dokümanda.
+**Üretilen dosya** — 2026-10-08 (`scripts/sync-invariants.mjs`). Toplam 357 kodlanmış değişmez, 49 dokümanda.

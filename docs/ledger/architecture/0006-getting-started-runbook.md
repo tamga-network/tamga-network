@@ -58,7 +58,7 @@ mainnet **en sondadır**.
 | 4 | Servisler: indexer → issuer → verifier | `services/`, `sdk/` | [[ARCH-0003]], [[SPEC-API-0001]] | Adım 3 |
 | 5 | **Native mobil cüzdan (Tamga Wallet)** | `sdk/` + native | [[SPEC-WALLET-0001]] | Adım 4 |
 | 6 | Paketleri npm'e yayınla (güvenlik-kapılı) | CI | [[ARCH-0005]] §3, §6 | 3–5 olgun |
-| 7 | Yerel 4-node testnet → bulut testnet → pilot → mainnet | `network/` | [[ARCH-0002]] §9–10, [[PM-GTM-0001]] | hepsi |
+| 7 | Yerel 4-node testnet → bulut testnet → pilot → mainnet | `network/` | [[ARCH-0002]] §9–10, PM-GTM-0001 | hepsi |
 
 ## 2.1 Adım 1–2: kontrat (şu anki nokta)
 
@@ -147,8 +147,7 @@ bundan sonra anlamlıdır. İlerleme her oturum operatörün özel raporlarına 
 - [[ARCH-0005]] — SDK paket haritası + yayın güvenliği (Adım 3, 6).
 - [[SPEC-WALLET-0001]] — cüzdan değişmezleri (Adım 5).
 - [[SPEC-BC-0001]] — güven katmanı kontratları (Adım 1).
-- [[PM-GTM-0001]] — pilot planı (Adım 7).
-- [[ROADMAP]] — üst düzey faz görünümü.
+- PM-GTM-0001 — pilot planı (Adım 7).
 
 # Durum
 

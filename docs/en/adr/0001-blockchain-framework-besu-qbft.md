@@ -55,7 +55,7 @@ Sub-decisions:
 
 1. **Native EVM → future capabilities.** Besu's EVM makes asset, payment and custody functions directly possible with
    mature ERC patterns (in Cosmos this is an add-on layer).
-2. **Same stack as EBSI.** EBSI uses Besu + IBFT 2.0 ([[RS-EBSI-0001]]). A common base eases interoperability and the
+2. **Same stack as EBSI.** EBSI uses Besu + IBFT 2.0 (RS-EBSI-0001). A common base eases interoperability and the
    transfer of know-how.
 3. **Single-chain simplicity.** Cosmos's multi-chain/IBC advantage would sit idle under Tamga's "one shared chain" decision.
 4. **Built-in fit.** Permissioned operation, PoA/equal votes and immediate finality come out of the box with Besu QBFT.
@@ -92,5 +92,5 @@ Sub-decisions:
 
 - [[PM-BC-0001]] — this ADR closes the open "layer 4" decision there.
 - [[RS-FRAMEWORKS-0001]] — the comparison this decision rests on.
-- [[RS-EBSI-0001]] — the EBSI precedent (Besu + IBFT 2.0).
-- [[ACA-BC-0001]] — consensus fundamentals.
+- RS-EBSI-0001 — the EBSI precedent (Besu + IBFT 2.0).
+- ACA-BC-0001 — consensus fundamentals.

@@ -50,7 +50,7 @@ FW-<DOMAIN>-<NUMBER>
 ```
 
 Domainler: `ARF` (mimari çerçeve), `TF` (trust framework / yönetişim), `RB` (rulebook), `DEF` (tanımlar), `REF`
-(kaynaklar), `READ` (okuma yolu), `ROLE` (roller), `ONB` (katılım süreci), `RISK` (risk kütüğü). Bkz. `DOCUMENTATION-STANDARD.md` §2 Kimlik.
+(kaynaklar), `READ` (okuma yolu), `ROLE` (roller), `ONB` (katılım süreci), `RISK` (risk kütüğü). Bkz. `CONTRIBUTING.md` (Belgeler — kimlik).
 
 ---
 

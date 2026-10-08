@@ -82,7 +82,7 @@ QBFT'nin doğal ayrımı, Tamga'nın yönetişim ilkesine birebir oturur:
 | **Observer / RPC** | Uygulamalar, doğrulayıcılar, denetçiler | Okur, sorgular | ❌ |
 
 - **Validator seti küçük ve bilinir** (QBFT ~4–20 arası ideal; EBSI ~25-27 ile
-  çalışır — [[RS-EBSI-0001]]). Eşit oy ilkesi ([[PM-BC-0001]] #5) burada uygulanır.
+  çalışır — RS-EBSI-0001). Eşit oy ilkesi ([[PM-BC-0001]] #5) burada uygulanır.
 - **Full node sayısı sınırsızdır**; kurumlar consensus'a katılmadan ağı bağımsız
   doğrular. Bu, "kurumlar node açar ama güç devlette kalır" ilkesini teknik olarak
   garanti eder.
@@ -203,7 +203,7 @@ Adım adım kurulum: [[ARCH-0002]].
 - [[PM-BC-0001]] — Validator modeli ve eşit-güç ilkesinin **nedeni**.
 - [[ADR-0001]] — Besu + QBFT çerçeve kararı.
 - [[PM-TRUST-0001]] — On/off-chain sınırının kaynağı.
-- [[RS-EBSI-0001]] — Emsal node modeli (25-27 eşit validator).
+- RS-EBSI-0001 — Emsal node modeli (25-27 eşit validator).
 - [[ARCH-0002]] — Bu mimarinin Besu üzerinde adım adım kurulumu.
 
 ---
@@ -232,7 +232,7 @@ sonra devletler, sonra kurumlar" vizyonunun mühendislik karşılığıdır.
 
 # İlgili Dokümanlar
 
-- [[PM-BC-0001]] · [[ADR-0001]] · [[PM-TRUST-0001]] · [[RS-EBSI-0001]] ·
+- [[PM-BC-0001]] · [[ADR-0001]] · [[PM-TRUST-0001]] · RS-EBSI-0001 ·
   [[RS-FRAMEWORKS-0001]] · [[ARCH-0002]]
 
 ---

@@ -89,11 +89,11 @@ Değer katmanı, kimlik tanımlayıcısından ayrı bir hesap modeli gerektirir:
 **Kritik:** A katmanı (EVM hesabı) **X.509 vs DID kararından ([[DECISIONS]] D-ID-1)
 bağımsızdır** — Besu EVM olduğu için hesap modeli her hâlükârda Ethereum standardıdır.
 Yani değer katmanı kancaları D-ID-1 beklenmeden kilitlenebilir. X.509/DID tartışması
-yalnızca **B katmanını** ilgilendirir (bkz. [[SPEC-ID-0001]], D-ID-1).
+yalnızca **B katmanını** ilgilendirir (bkz. SPEC-ID-0001, D-ID-1).
 
 **Vatandaşa küresel tanımlayıcı verilmez** (bilinçli). Sabit bir global ID, kişinin
 sağlık/eğitim/lojistik/ödeme işlemlerini tek ipe dizerdi. Pairwise pseudonym bunu
-yapısal olarak engeller ([[PM-ID-0002]], [[SPEC-ID-0001]]).
+yapısal olarak engeller ([[PM-ID-0002]], SPEC-ID-0001).
 
 ---
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Paket sürümünü tek seferde değiştirir (paket güncelleme rehberi: docs/_internal/delivery/20-PAKET-GUNCELLEME.md).
+ * Paket sürümünü tek seferde değiştirir (rehber: operatörün iç paket güncelleme notu).
  *   node scripts/set-version.mjs 0.2.1
  * Değiştirdikleri: 9 `packages/<ad>/package.json` sürümü, doğrulayıcının `SDK_VERSION` sabiti, package-lock.json.
  * Değiştirmedikleri (elle, rehberdeki listeye göre): belgelerdeki sürüm cümleleri, CHANGELOG, tamga-web SDK rozeti.

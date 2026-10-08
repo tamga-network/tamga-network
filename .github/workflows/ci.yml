@@ -1,5 +1,5 @@
 # tamga-network CI — her push / PR'da. Uzak depo (github.com/tamga-network/tamga-network) açılınca etkinleşir.
-# Kurallar: CONVENTIONS.md §4 (ön koşul eksikse sessiz atlama yok: TAMGA_REQUIRE_FIXTURES=1), §5.
+# Kurallar: CONTRIBUTING.md (ön koşul eksikse sessiz atlama yok: TAMGA_REQUIRE_FIXTURES=1).
 name: ci
 on:
   push:
@@ -27,7 +27,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run format:check
       - run: node scripts/sync-invariants.mjs --check
-      - run: node scripts/master-index.mjs --check
+      # iç belge dizini ve karar kütüğünün public kısa sürümü yalnızca geliştirme deposunda bulunur
+      - run: if [ -f MASTER_INDEX.md ]; then node scripts/master-index.mjs --check; fi
+      - run: if [ -f scripts/decisions-public.mjs ]; then node scripts/decisions-public.mjs --check; fi
       - run: npm run arf:check
       - run: npm run docs:check
       - name: yayın hazırlığı + duman testi (npm'e yayın YOK)

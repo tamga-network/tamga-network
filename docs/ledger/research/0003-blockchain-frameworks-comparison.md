@@ -21,7 +21,7 @@ Bu doküman, [[PM-BC-0001]] kararında bilinçli olarak açık bırakılan **Kat
 1. **Hyperledger Besu** (QBFT consensus ile)
 2. **Cosmos SDK** (CometBFT consensus ile)
 
-Amaç, Tamga'nın gereksinimlerine göre birini önermek ve kararı [[ADR-0001]]'e taşımaktır. Temel kavramlar için [[ACA-BC-0001]]'e bakılır.
+Amaç, Tamga'nın gereksinimlerine göre birini önermek ve kararı [[ADR-0001]]'e taşımaktır. Temel kavramlar için ACA-BC-0001'e bakılır.
 
 ---
 
@@ -118,7 +118,7 @@ Temel kaygı: "Kendi ağımız olsun, kimseye/Ethereum'a bağlı olmayalım." He
 Belirleyici üç kriter:
 
 1. **G7 — Gelecek varlık/ödeme yeteneği:** Besu'nun yerel EVM'i, ERC standartlarıyla varlık/transfer/ödeme için doğrudan zemindir. Cosmos'ta bu bir ek katmandır. **Besu lehine.**
-2. **G8 — EBSI birlikte çalışabilirliği:** EBSI Besu + IBFT 2.0 kullanır ([[RS-EBSI-0001]]). Aynı yığın, entegrasyon ve öğrenme transferini kolaylaştırır. **Besu lehine.**
+2. **G8 — EBSI birlikte çalışabilirliği:** EBSI Besu + IBFT 2.0 kullanır (RS-EBSI-0001). Aynı yığın, entegrasyon ve öğrenme transferini kolaylaştırır. **Besu lehine.**
 3. **G6 — Tek ortak zincir:** Cosmos'un en güçlü kozu (egemen çok-zincir + IBC) Tamga'nın tek-zincir kararında atıl kalır. **Besu lehine (basitlik).**
 
 **Cosmos'un tek üstünlüğü** (validator ölçekleme, yüksek TPS) Tamga için kritik değildir ve aşağıdaki tasarımla giderilir.
@@ -180,8 +180,8 @@ Bu öneri [[ADR-0001]]'de resmi karara bağlanır.
 
 - [[PM-BC-0001]] — Blockchain ve validator modeli (Katman 4 bu dokümanla kapanır).
 - [[ADR-0001]] — Framework kararı (bu araştırmanın sonucu).
-- [[RS-EBSI-0001]] — EBSI'nin Besu + IBFT 2.0 seçimi.
-- [[ACA-BC-0001]] — Consensus temelleri.
+- RS-EBSI-0001 — EBSI'nin Besu + IBFT 2.0 seçimi.
+- ACA-BC-0001 — Consensus temelleri.
 
 ---
 

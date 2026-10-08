@@ -614,7 +614,7 @@ belge verme**dir: her sunum için farklı `idx` taşıyan ayrı bir belge kopyas
 ([[SPEC-CRED-0001]] §5, [[SPEC-SCHEMA-0002]] §2.1.3).
 
 **İlk aşamada kabul edilen risktir ve pilot katılımcılarına açıkça
-bildirilmelidir** → [[PM-GTM-0001]].
+bildirilmelidir** → PM-GTM-0001.
 
 ---
 
@@ -701,7 +701,7 @@ Liste türetilmiş bir üründür; kaynak veritabanıdır.
 
 [[ADR-0008]] · [[SPEC-CRED-0001]] · [[SPEC-CRED-0002]] · [[SPEC-SCHEMA-0001]] ·
 [[SPEC-SCHEMA-0002]] · [[SPEC-BC-0001]] · [[SPEC-ID-0002]] · [[PM-TRUST-0001]] ·
-[[ARCH-0004]] · [[ARCH-0005]] · [[PM-GOV-0001]] · [[PM-GTM-0001]]
+[[ARCH-0004]] · [[ARCH-0005]] · [[PM-GOV-0001]] · PM-GTM-0001
 
 ---
 

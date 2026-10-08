@@ -115,7 +115,7 @@ gerekir.
 Bu boşluk Tamga'ya özgü değil; olgun ekosistemlerin hepsi aynı çözüme varmış:
 
 - **EBSI**, `Trusted Issuers Registry`'nin yanına **`Trusted Schemas Registry`**
-  koyar. İki ayrı registry, çünkü iki ayrı soru ([[RS-EBSI-0001]]).
+  koyar. İki ayrı registry, çünkü iki ayrı soru (RS-EBSI-0001).
 - **SD-JWT VC** (draft-ietf-oauth-sd-jwt-vc-19), Type Metadata'nın
   çözümlenmesi için dört yol tanımlar ve bunlardan biri açıkça **registry**
   yoludur: bir consumer, `vct` bir HTTPS URL değilse veya URL'e erişimi yoksa

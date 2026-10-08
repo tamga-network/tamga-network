@@ -30,7 +30,7 @@ Kabul edildiğinde [[DECISIONS]]'a **D-BC-6**, **D-GTM-2**, **D-GOV-5** olarak i
 
 ## Problem
 
-Tamga'nın kanonik yol haritası pilotu zincire bağlar: [[PM-GTM-0001]] §2 ön koşulları
+Tamga'nın kanonik yol haritası pilotu zincire bağlar: PM-GTM-0001 §2 ön koşulları
 **Ö1** "kontratlar derleniyor ve testler geçiyor", **Ö2** "testnet ayakta, kontratlar dağıtılmış"
 tamamlanmadan gerçek mezun verisi işlenemez (GT1). [[ARCH-0001]] §3 Faz 0'ı "4 vakıf
 validator" olarak tanımlar. Kontratlar bugüne kadar hiç derlenmedi (Foundry yok; DECISIONS
@@ -146,7 +146,7 @@ içermez.** Somut kurallar:
 
 ## Karar 6 — Pilot ön koşulları ve sınırlar bildirimi yeniden tanımlanır
 
-[[PM-GTM-0001]] v2.0.0: **Ö1'** liste taahhüt testleri geçiyor, imzalı ve hash-zincirli;
+PM-GTM-0001 v2.0.0: **Ö1'** liste taahhüt testleri geçiyor, imzalı ve hash-zincirli;
 **Ö2'** `trust.tamga.network` + `schema.tamga.network` yayında, kök parmak izi sayfası açık;
 **Ö5'** sınırlar bildirimi **v2** (8 madde: madde 5 "blockchain yok, kayıtlar imzalı ve herkese
 açık", madde 6 "çapa tek operatör imzasına dayanır", madde 7 "[[t:revocation]] ≤ 90 dk"); **Ö7'** bu ADR
@@ -210,7 +210,7 @@ Karar 4 tam olarak bu eşiği tanımlar.
    **D-GOV-5** (TDT-first); D-GOV-2 tablosuna başlangıç satırı. Değiştirilen kararlar tablosuna:
    PM-GTM Ö1/Ö2 → Ö1'/Ö2'.
 2. [[ARCH-0001]] §3: Faz B satırı; Faz 0 tanımı "≥2 bağımsız validator operatörü".
-3. [[PM-GTM-0001]] v2.0.0 (Karar 6).
+3. PM-GTM-0001 v2.0.0 (Karar 6).
 4. [[SPEC-CRED-0003]], [[SPEC-SCHEMA-0001]], [[SPEC-BC-0001]], [[ARCH-0003]]: Karar 3 sürüm notları.
 5. [[SPEC-ID-0002]] §8.1: projeksiyon kaynağı "kanonik kayıt (zincir veya Faz B listesi)".
 6. Yeni doküman **SPEC-TRUST-0001** (liste formatı) `/new-doc` ile; **PM-TRUST-0002 / Tamga
@@ -233,7 +233,7 @@ zaman** kurulacağını ve o güne kadar çapanın **kimin imzası** olduğunu t
 
 # İlişkiler
 
-**Ekler:** [[ARCH-0001]] Faz B · [[PM-GTM-0001]] v2 · D-GOV-2 başlangıç eşiği
+**Ekler:** [[ARCH-0001]] Faz B · PM-GTM-0001 v2 · D-GOV-2 başlangıç eşiği
 **Yorumlar (sürüm notu):** [[ADR-0007]], [[ADR-0008]], [[SPEC-CRED-0003]], [[SPEC-SCHEMA-0001]], [[SPEC-BC-0001]], [[ARCH-0003]]
 **Dayanır:** [[ADR-0001]] (değişmez), [[ADR-0002]] (egemenlik, cross-recognition), [[PM-ASSUR-0001]] (devletsiz bootstrap)
 **Doğurur:** SPEC-TRUST-0001, Tamga Trust Framework, `(bu depo) `

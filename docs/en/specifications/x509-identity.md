@@ -11,7 +11,7 @@ summary: >
   issuerId = keccak256(stateCode, certFingerprint). Covers: the chain of trust (anchoring national Root CAs), the certificate
   hierarchy, issuerId derivation, the credential verification algorithm (chain + registry + revocation), Root CA rollover,
   certificate revocation (CRL/OCSP + registry), guardian/court-token X.509 binding, the retained pseudonym profile +
-  multicodec, and the eIDAS/did:web bridge. Replaces the did:tamga entity profile; the pseudonym profile ([[SPEC-ID-0001]])
+  multicodec, and the eIDAS/did:web bridge. Replaces the did:tamga entity profile; the pseudonym profile (SPEC-ID-0001)
   is retained.
 translation_of: SPEC-ID-0002
 source_version: 1.0.0
@@ -37,7 +37,7 @@ revoked both at certificate level and in the trust list.
 
 This specification defines how **institutional (entity) identity** is established in Tamga Network with X.509 certificates
 ([[ADR-0004]]). It gives the **how**, not the **what**: Root CA anchoring, certificate → `issuerId` mapping, the verification
-algorithm, revocation and rollover. It **replaces the entity DID profile** of [[SPEC-ID-0001]]; **the pseudonym profile is
+algorithm, revocation and rollover. It **replaces the entity DID profile** of SPEC-ID-0001; **the pseudonym profile is
 retained** (see §7).
 
 **Three layers ([[PM-AUTH-0001]]):** A = EVM address (out of scope of this document, unchanged) ·
@@ -172,7 +172,7 @@ In accountable disclosure, guardian institutions and the court are **identified 
 # 7. Retained pseudonym profile (citizen)
 
 **Citizens are not given a global identifier.** Personal relationships are established with **pairwise [[t:pseudonym|pseudonyms]]**
-([[SPEC-ID-0001]] pseudonym profile — **not affected** by the X.509 decision):
+(SPEC-ID-0001 pseudonym profile — **not affected** by the X.509 decision):
 
 - Pseudonym = self-certifying, key-based; different and unlinkable in every relationship.
 - It is **not written** to the chain; resolution is from the local key.
@@ -288,7 +288,7 @@ cadence (≤6 months, noisy republication — aligned with [[ADR-0008]]) → §1
 # 11. Relationships and status
 
 - [[ADR-0004]] — the decision behind this specification (X.509).
-- [[SPEC-ID-0001]] — entity profile superseded; **the pseudonym profile is retained in this document**.
+- SPEC-ID-0001 — entity profile superseded; **the pseudonym profile is retained in this document**.
 - [[SPEC-BC-0001]] — Issuer Registry / StatusList / IssuerCategory (issuerId data source).
 - [[SPEC-BC-0002]] — guardian/court-token X.509 binding (§6).
 - [[ADR-0002]] — onlyOwnerState / cross-recognition (Root CA ownership, eIDAS bridge).

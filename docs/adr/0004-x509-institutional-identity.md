@@ -31,7 +31,7 @@ D-ID-1'i kapatır.
 
 # Bağlam
 
-[[SPEC-ID-0001]] kimlik tanımlamasını iki profille kurmuştu: **Entity**
+SPEC-ID-0001 kimlik tanımlamasını iki profille kurmuştu: **Entity**
 (`did:tamga:<state>:<id>`, zincir-kayıtlı kurumsal kimlik) ve **[[t:pseudonym]]**
 (`did:tamga:p:<key>`, self-certifying, pairwise). [[DECISIONS]] D-ID-1, entity
 tarafının **X.509 sertifikalarına** taşınıp taşınmayacağını en öncelikli açık karar
@@ -61,7 +61,7 @@ olarak izliyordu. Proje yönetiminin çalışma dosyaları X.509'u savundu; kara
 2. **Vatandaşa küresel tanımlayıcı verilmez.** Sabit bir global ID, kişinin
    sağlık/eğitim/lojistik/ödeme işlemlerini tek ipe dizerdi. Kişisel ilişkiler
    **ilişkiye özgü takma ad (pairwise pseudonym)** ile kurulur — her ilişkide farklı, birbirine bağlanamaz
-   ([[SPEC-ID-0001]] takma ad profili + [[PM-ID-0002]] accountable disclosure).
+   (SPEC-ID-0001 takma ad profili + [[PM-ID-0002]] accountable disclosure).
 
 3. **Zincir işlemleri EVM adresidir** — kimlik [[t:credential|belgesinden]] ayrı ([[ADR-0003]]
    anahtar-alanı ayrımı). X.509 kararı A katmanını etkilemez.
@@ -95,12 +95,12 @@ olarak izliyordu. Proje yönetiminin çalışma dosyaları X.509'u savundu; kara
 - [[SPEC-BC-0002]] guardian `entityId` ve **court-token imza zinciri** X.509'a bağlanır
   (mahkeme/guardian imzaları sertifika zinciriyle doğrulanır). §7 "x509 izlenecek"
   maddesi **kapandı**.
-- [[SPEC-ID-0001]] entity bölümü superseded; **SPEC-ID-0002 (X.509 metot spesifikasyonu,
+- SPEC-ID-0001 entity bölümü superseded; **SPEC-ID-0002 (X.509 metot spesifikasyonu,
   planlı)** yazılacak: kök sertifika çıpalama, sertifika→issuerId eşlemesi, kök yenileme
   (rollover), zincir doğrulama.
 
 **Değişmeyen:**
-- Takma ad profili ([[SPEC-ID-0001]]), accountable disclosure ([[SPEC-BC-0002]] escrow),
+- Takma ad profili (SPEC-ID-0001), accountable disclosure ([[SPEC-BC-0002]] escrow),
   EVM hesap modeli, değer katmanı kancaları ([[ADR-0003]]), yönetişim ([[ADR-0002]]).
 
 **Yeni açık konular:** Ulusal kök sertifikaların zincire çıpalanması + kök yenileme
@@ -111,7 +111,7 @@ kimlikleriyle köprü gerekli mi (interop) → SPEC-ID-0002.
 
 # İlişkiler
 
-- [[SPEC-ID-0001]] — entity profili superseded; takma ad korunur.
+- SPEC-ID-0001 — entity profili superseded; takma ad korunur.
 - [[SPEC-BC-0001]] — Issuer Registry (issuerId = certFingerprint, onlyOwnerState).
 - [[SPEC-BC-0002]] — guardian entityId + court-token X.509 imza zincirine bağlanır.
 - [[ADR-0002]] — devlet namespace / onlyOwnerState (kök sertifika sahipliği).
@@ -121,4 +121,4 @@ kimlikleriyle köprü gerekli mi (interop) → SPEC-ID-0002.
 
 X.509 kararı verildi (2026-08-06); D-ID-1 kapandı.
 Entity kimlik X.509'a taşındı; takma ad ve değer katmanı korunur. Tam metot
-spesifikasyonu ([[SPEC-ID-0001]] revizyonu / SPEC-ID-0002) izleyen iş.
+spesifikasyonu (SPEC-ID-0001 revizyonu / SPEC-ID-0002) izleyen iş.

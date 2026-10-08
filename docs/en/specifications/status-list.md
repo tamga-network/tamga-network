@@ -584,7 +584,7 @@ matched if those two verifiers collude.
 This is a known, structural limit of the Token Status List. The fix is **batch issuance**: a separate credential copy with a
 different `idx` for each presentation ([[SPEC-CRED-0001]] §5, [[SPEC-SCHEMA-0002]] §2.1.3).
 
-**This is an accepted risk in the initial stage and must be disclosed openly to pilot participants** → [[PM-GTM-0001]].
+**This is an accepted risk in the initial stage and must be disclosed openly to pilot participants** → PM-GTM-0001.
 
 ---
 
@@ -666,7 +666,7 @@ database.
 # Related documents
 
 [[ADR-0008]] · [[SPEC-CRED-0001]] · [[SPEC-CRED-0002]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] · [[SPEC-BC-0001]] ·
-[[SPEC-ID-0002]] · [[PM-TRUST-0001]] · [[ARCH-0004]] · [[ARCH-0005]] · [[PM-GOV-0001]] · [[PM-GTM-0001]]
+[[SPEC-ID-0002]] · [[PM-TRUST-0001]] · [[ARCH-0004]] · [[ARCH-0005]] · [[PM-GOV-0001]] · PM-GTM-0001
 
 ---
 

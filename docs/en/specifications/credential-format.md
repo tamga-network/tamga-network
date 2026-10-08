@@ -60,7 +60,7 @@ The decisions are fixed by [[ADR-0006]]. This is the formal counterpart of the t
 | **Revocation** | **Token Status List** (bitstring) | Same as [[SPEC-BC-0001]] §5; list off-chain, pointer on-chain |
 | **Anti-correlation** | Batch issuance (single-use copies) — expansion stage | Deferred in the pilot; room is made in the architecture |
 
-The `did:tamga` [[t:pseudonym]] profile ([[SPEC-ID-0001]]) and the X.509 issuer identity ([[SPEC-ID-0002]]) are embedded
+The `did:tamga` [[t:pseudonym]] profile (SPEC-ID-0001) and the X.509 issuer identity ([[SPEC-ID-0002]]) are embedded
 in these formats (issuer = X.509; [[t:holder]] = pseudonym key).
 
 ---
@@ -247,9 +247,9 @@ registry) sits behind it. This means the pilot does not wait for Besu (see [[ARC
 - [[PM-TRUST-0001]] — a credential is never on the chain.
 - [[SPEC-BC-0001]] — issuer registry (source for signature verification) + Token Status List (revocation).
 - [[SPEC-ID-0002]] — issuer X.509 identity (`iss` → `issuerId`).
-- [[SPEC-ID-0001]] — holder pseudonym key (`cnf`).
+- SPEC-ID-0001 — holder pseudonym key (`cnf`).
 - [[ADR-0006]] — acceptance record of these format decisions.
-- [[ACA-ID-0001]] — DID/VC/selective disclosure mechanics (background).
+- ACA-ID-0001 — DID/VC/selective disclosure mechanics (background).
 - [[RS-EIDAS-0001]] — the place of SD-JWT VC / OpenID4VCI-VP in the EUDI ARF.
 
 ---

@@ -67,7 +67,7 @@ Tamga'yı anlamanın anahtarı, iki katmanı ayırmaktır. Bu ayrım, EBSI ve EU
 
 **Kurmaya çalıştığımız asıl şey altyapı katmanıdır (Tamga Network).** Tamga Wallet, bu altyapıyı kullanan ilk üründür.
 
-> **Önemli düzeltme (kalıcı not):** EUDI Wallet, EBSI'nin *üstünde* çalışmaz; ikisi ayrı ama tamamlayıcı girişimlerdir (EUDI'nin güven omurgası Trusted List/PKI'dır; EBSI ayrı bir registry'dir — bkz. [[RS-EIDAS-0001]] §5, [[RS-EBSI-0001]] §6). Aynı şekilde Tamga Wallet, Tamga Network'ün *bir uygulamasıdır* ama Tamga Network yalnızca Tamga Wallet için değildir; başka cüzdanlar ve sektör uygulamaları da (sağlık, eğitim…) aynı altyapıyı kullanabilir.
+> **Önemli düzeltme (kalıcı not):** EUDI Wallet, EBSI'nin *üstünde* çalışmaz; ikisi ayrı ama tamamlayıcı girişimlerdir (EUDI'nin güven omurgası Trusted List/PKI'dır; EBSI ayrı bir registry'dir — bkz. [[RS-EIDAS-0001]] §5, RS-EBSI-0001 §6). Aynı şekilde Tamga Wallet, Tamga Network'ün *bir uygulamasıdır* ama Tamga Network yalnızca Tamga Wallet için değildir; başka cüzdanlar ve sektör uygulamaları da (sağlık, eğitim…) aynı altyapıyı kullanabilir.
 
 ---
 
@@ -153,7 +153,7 @@ Bu, bilinçli olarak **açık bırakılmıştır** ve proje ilerledikçe tanıml
 - [[PM-BC-0001]] — Blockchain ve validator modeli (egemenlik, eşit güç). Türk dünyası = eşit devletler.
 - [[PM-TRUST-0001]] — On-chain/off-chain sınırı; holder-centric ilke.
 - [[RS-EIDAS-0001]] — EUDI/eIDAS zemini; "uyumlu ama bağımsız" standartları.
-- [[RS-EBSI-0001]] — EBSI emsali; katmanlı model ve konumlandırma.
+- RS-EBSI-0001 — EBSI emsali; katmanlı model ve konumlandırma.
 - ARCH-01 (planlı) — "What is Tamga Network" mimari bölümü (bu felsefenin mimariye dökülmesi).
 
 ---

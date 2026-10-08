@@ -98,7 +98,7 @@ Yukarıdaki kararlardan consensus için şu gereksinimler doğar:
 
 Not: Arşivdeki (önceki araştırma, `_archive/solidus-workspace/`) consensus çalışması
 (CometBFT, HotStuff, Hedera) bu kararın girdisidir ve `docs/background/research/` altına
-taşınıp güncellenmelidir (bkz. [[WORKSPACE-AUDIT-0001]] migration backlog).
+taşınıp güncellenmelidir (bkz. WORKSPACE-AUDIT-0001 migration backlog).
 
 ---
 

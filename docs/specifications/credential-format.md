@@ -59,7 +59,7 @@ karşılığıdır.
 | **İptal** | **Token Status List** (bitstring) | [[SPEC-BC-0001]] §5 ile aynı; liste off-chain, pointer on-chain |
 | **Korelasyon karşıtı** | Toplu belge verme (tek kullanımlık kopyalar) — 2. faz | Pilotta ertelenir; mimaride yer açılır |
 
-`did:tamga` [[t:pseudonym]] profili ([[SPEC-ID-0001]]) ve X.509 belge veren kimliği ([[SPEC-ID-0002]])
+`did:tamga` [[t:pseudonym]] profili (SPEC-ID-0001) ve X.509 belge veren kimliği ([[SPEC-ID-0002]])
 bu formatların içine gömülür (belge veren = X.509; [[t:holder]] = takma ad anahtarı).
 
 ---
@@ -257,9 +257,9 @@ beklememesini sağlar (bkz. [[ARCH-0001]] ilk aşama). Karar [[ADR-0006]] + [[AD
 - [[PM-TRUST-0001]] — belge asla zincirde değil.
 - [[SPEC-BC-0001]] — belge veren registry (imza doğrulama kaynağı) + Token Status List (iptal).
 - [[SPEC-ID-0002]] — belge veren X.509 kimliği (`iss` → `issuerId`).
-- [[SPEC-ID-0001]] — belge sahibinin takma ad anahtarı (`cnf`).
+- SPEC-ID-0001 — belge sahibinin takma ad anahtarı (`cnf`).
 - [[ADR-0006]] — bu format kararlarının kabul kaydı.
-- [[ACA-ID-0001]] — DID/VC/seçici açıklama mekaniği (öğretici zemin).
+- ACA-ID-0001 — DID/VC/seçici açıklama mekaniği (öğretici zemin).
 - [[RS-EIDAS-0001]] — SD-JWT VC / OpenID4VCI-VP'nin EUDI ARF'deki yeri.
 
 ---

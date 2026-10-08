@@ -24,5 +24,5 @@ ADR; the old record is not deleted but marked as superseded.
 ## Process
 
 1. It is written as a proposal (status: Proposed).
-2. Project management accepts it; the date is recorded and the decision is entered in the [decision register](https://github.com/tamga-network/tamga-network/blob/main/DECISIONS.md) under a `D-*` code.
+2. Project management accepts it; the date is recorded and the decision is listed in the [decision index](https://github.com/tamga-network/tamga-network/blob/main/DECISIONS.md) under a `D-*` code.
 3. The affected specifications and [Tamga ARF](https://arf.tamga.network/) documents are updated in the same piece of work.

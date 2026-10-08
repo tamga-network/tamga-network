@@ -19,7 +19,9 @@ function walk(d, out = []) {
   for (const n of readdirSync(d)) {
     const p = join(d, n);
     if (statSync(p).isDirectory()) {
-      if (n !== "en" && !/_archive|beta|delivery|framework|rfc|academy|research|guides/.test(n)) walk(p, out);
+      // _internal, gtm: public depoya girmez (.publicignore) — bağlayıcı kural dizinine (docs sitesi /rules) de girmez
+      if (n !== "en" && !/_archive|_internal|gtm|beta|delivery|framework|rfc|academy|research|guides/.test(n))
+        walk(p, out);
     } else if (n.endsWith(".md")) out.push(p);
   }
   return out;

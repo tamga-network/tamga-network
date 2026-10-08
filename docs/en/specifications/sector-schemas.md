@@ -306,7 +306,7 @@ friction of §1 is deliberate.
 3. When the `id` domain opens, the "single format" assumption of [[SPEC-CRED-0002]] breaks. When will that document's mdoc
    section be written?
 4. We said the `org` skeleton would be written in the initial stage, but it is not in the pilot scope. When and on which trigger will it
-   become a full schema? → [[PM-GTM-0001]]
+   become a full schema? → PM-GTM-0001
 5. Who audits the application of the §1 checklist? In the initial stage the foundation's technical board; in the state stage the council
    ([[PM-GOV-0001]]).
 
@@ -317,7 +317,7 @@ friction of §1 is deliberate.
 [[RS-SCHEMA-0001]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] ·
 [[SPEC-CRED-0001]] · [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] ·
 [[SPEC-WALLET-0001]] · [[ADR-0006]] · [[ADR-0007]] · [[PM-TRUST-0001]] ·
-[[PM-GOV-0001]] · [[PM-GTM-0001]] · [[INVARIANTS]]
+[[PM-GOV-0001]] · PM-GTM-0001 · [[INVARIANTS]]
 
 ---
 

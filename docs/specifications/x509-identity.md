@@ -13,7 +13,7 @@ summary: >
   issuerId türetme, credential doğrulama algoritması (zincir + registry + iptal),
   Root CA yenileme (rollover), sertifika iptali (CRL/OCSP + on-chain), guardian/court-
   token X.509 bağlama, korunan pseudonym profili + multicodec, ve eIDAS/did:web köprüsü.
-  did:tamga entity profili yerine geçer; pseudonym profili ([[SPEC-ID-0001]]) korunur.
+  did:tamga entity profili yerine geçer; pseudonym profili (SPEC-ID-0001) korunur.
 ---
 **Bu şartname, [[t:issuer]] kurumların kimliğinin X.509 sertifikalarıyla nasıl kurulduğunu ve doğrulandığını anlatır.** Kurum entegrasyonu yapan ve [[t:verifier]] yazan geliştiriciler içindir.
 
@@ -35,7 +35,7 @@ parmak izinden türetilir. Bir kurumun yetkisi hem sertifika düzeyinde hem de g
 Bu şartname, Tamga Network'te **kurumsal/entity kimliğin** X.509 sertifikalarıyla
 nasıl kurulduğunu tanımlar ([[ADR-0004]]). **Ne'yi** değil **nasıl'ı** verir: kök CA
 çıpalama, sertifika→`issuerId` eşlemesi, doğrulama algoritması, iptal ve yenileme
-(rollover). [[SPEC-ID-0001]]'in **Entity DID profilinin yerine geçer**; **Takma ad
+(rollover). SPEC-ID-0001'in **Entity DID profilinin yerine geçer**; **Takma ad
 profili korunur** (bkz. §7).
 
 **Üç katman ([[PM-AUTH-0001]]):** A=EVM adresi (bu doküman kapsamı dışı, değişmez) ·
@@ -178,7 +178,7 @@ Accountable disclosure'da guardian kurumları ve mahkeme, **X.509 ile kimlikleni
 # 7. Korunan Takma Ad Profili (vatandaş)
 
 **Vatandaşa küresel tanımlayıcı verilmez.** Kişisel ilişkiler **pairwise [[t:pseudonym]]**
-ile kurulur ([[SPEC-ID-0001]] takma ad profili — X.509 kararından **etkilenmez**):
+ile kurulur (SPEC-ID-0001 takma ad profili — X.509 kararından **etkilenmez**):
 
 - Takma ad = self-certifying, anahtar-tabanlı; her ilişkide farklı, unlinkable.
 - Zincire **yazılmaz**; çözümleme yerel anahtardan.
@@ -299,7 +299,7 @@ ve TL yayın kadansı (≤6 ay, gürültülü yeniden yayın — [[ADR-0008]] il
 # 11. İlişkiler ve Durum
 
 - [[ADR-0004]] — bu şartnamenin karar kaynağı (X.509).
-- [[SPEC-ID-0001]] — Entity profili superseded; **Takma ad profili bu dokümanda korunur**.
+- SPEC-ID-0001 — Entity profili superseded; **Takma ad profili bu dokümanda korunur**.
 - [[SPEC-BC-0001]] — Issuer Registry / StatusList / IssuerCategory (issuerId veri kaynağı).
 - [[SPEC-BC-0002]] — guardian/court-token X.509 bağlama (§6).
 - [[ADR-0002]] — onlyOwnerState / cross-recognition (kök CA sahipliği, eIDAS köprüsü).

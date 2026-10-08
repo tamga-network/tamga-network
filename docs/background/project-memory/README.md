@@ -47,4 +47,4 @@ PM-<DOMAIN>-<NUMBER>
 Giriş · Problem · Evrim · Mimari · İlişkiler · Araştırma · Gelecek · Sonuç · İlgili Dokümanlar · Durum
 ```
 
-Bkz. `DOCUMENTATION-STANDARD.md`.
+Bkz. `CONTRIBUTING.md` (Belgeler).

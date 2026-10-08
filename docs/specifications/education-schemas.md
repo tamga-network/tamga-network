@@ -119,7 +119,7 @@ bugün kâğıt diplomayla yapılanın birebir aynısıdır — yani Tamga bu ko
 gerileme getirmez, sadece beklenen iyileşmeyi devlet aşamasına erteler.
 
 **Bu sınırlama pilot katılımcılarına (üniversite ve doğrulayıcı) açıkça
-bildirilmelidir.** → [[PM-GTM-0001]] iş kalemi.
+bildirilmelidir.** → PM-GTM-0001 iş kalemi.
 
 ### 1.2.4 Kimlik numarasının eklenmemesinin gerekçesi
 
@@ -784,7 +784,7 @@ sınır ötesinde okunamayan bir metne dönüşür.
 
 ### 6.4.5 Pilot iş kalemi
 
-→ [[PM-GTM-0001]]: *"YÖK ISCED-F 2013 program sınıflandırmasının içe aktarımı,
+→ PM-GTM-0001: *"YÖK ISCED-F 2013 program sınıflandırmasının içe aktarımı,
 güncelliğinin teyidi ve pilot üniversitenin program listesiyle
 karşılaştırılması."*
 
@@ -863,7 +863,7 @@ olması, mezunun onu vermemeyi seçebilmesini garanti eder.
 
 [[SPEC-SCHEMA-0001]] · [[RS-SCHEMA-0001]] · [[ADR-0007]] · [[ADR-0008]] ·
 [[SPEC-CRED-0001]] · [[SPEC-CRED-0002]] · [[SPEC-BC-0001]] · [[PM-ASSUR-0001]] ·
-[[PM-GTM-0001]] · [[ARCH-0003]]
+PM-GTM-0001 · [[ARCH-0003]]
 
 ---
 

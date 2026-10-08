@@ -1,4 +1,4 @@
-// docs.tamga.network çeviri denetimi (DOCUMENTATION-STANDARD §6–§7):
+// docs.tamga.network çeviri denetimi (CONTRIBUTING.md — Belgeler: diller ve terimler):
 //   - yayınlanan her Türkçe sayfanın İngilizcesi docs/en/<aynı yol>'da var;
 //   - document_id taşıyan sayfada çeviri `translation_of` = kimlik ve `source_version` = kaynağın sürümü;
 //   - [[t:…]] terimlerinin hepsi docs/.vitepress/terms.json'da (docs, docs/en, docs/framework, arf).
