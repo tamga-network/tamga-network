@@ -407,3 +407,22 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     });
   });
 });
+
+describe("SPEC-CRED-0002 §3.4–§3.5: belge veren serileştirme sözleşmesi", () => {
+  const hex = (h: string) => new Uint8Array(Buffer.from(h, "hex"));
+  it("şartnamedeki gerçek değerler: virgül-boşluk ayracı + ASCII dışı karakter kaçışı → aynı disclosure ve digest", () => {
+    const d = makeDisclosure("given_name", "Ayşe", hex("3af29c417b0ed5882691ff4ca307be52"));
+    expect(b64uToUtf8(d.disclosure)).toBe('["OvKcQXsO1Ygmkf9Mowe-Ug", "given_name", "Ay\\u015fe"]');
+    expect(d.disclosure).toBe("WyJPdktjUVhzTzFZZ21rZjlNb3dlLVVnIiwgImdpdmVuX25hbWUiLCAiQXlcdTAxNWZlIl0");
+    expect(d.digest).toBe("nM_EESmLJt3b0fzNu1paGyiAfSLs4Npf2yEjUn0upSo");
+  });
+  it('iç içe nesne ve dizi: ": " / ", " ayraçları, ASCII dışı karakter kaçışlı; değer çözülünce aynı', () => {
+    const v = { "tr-TR": "Bilgisayar Mühendisliği", list: [1, "ç"], ok: true, n: null };
+    const d = makeDisclosure("t", v, hex("00112233445566778899aabbccddeeff"));
+    const json = b64uToUtf8(d.disclosure);
+    expect(json).toBe(
+      '["ABEiM0RVZneImaq7zN3u_w", "t", {"tr-TR": "Bilgisayar M\\u00fchendisli\\u011fi", "list": [1, "\\u00e7"], "ok": true, "n": null}]',
+    );
+    expect(JSON.parse(json)[2]).toEqual(v);
+  });
+});

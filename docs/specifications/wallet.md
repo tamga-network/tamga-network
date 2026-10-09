@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-08
+last_updated: 2026-10-09
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -395,8 +395,8 @@ anahtar tohumdan türer ve tohum sunucuya gitmez.
      ┌──────────────────────────────────────────┐
      │ 4 belgeniz yeniden alınmalı              │
      │                                          │
-     │ ☑ Diploma — İstanbul Bilgi Üniv.         │
-     │ ☑ Öğrenci Belgesi — İstanbul Bilgi Üniv. │
+     │ ☑ Diploma — Örnek Üniversitesi           │
+     │ ☑ Öğrenci Belgesi — Örnek Üniversitesi   │
      │ ☐ Sürücü Belgesi — (devlet aşaması)               │
      │                                          │
      │ [ Seçilenleri yeniden iste ]             │

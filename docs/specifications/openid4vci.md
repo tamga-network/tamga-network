@@ -4,13 +4,13 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-08
+last_updated: 2026-10-09
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
   pre-authorized vs authorization code akış seçimi, Nonce Endpoint'ten c_nonce,
   openid4vci-proof+jwt anahtar kanıtı, credential endpoint, ertelenmiş belge verme
-  (mezuniyet onayı gecikirse) ve bildirim ucu. İki açık konu kapatılır: batch
+  ve bildirim ucunun bugünkü durumu (ikisi de sunulmuyor). İki açık konu kapatılır: batch
   parti büyüklüğü 10 olarak sabitlenir ve batch kopyalarının HER BİRİ FARKLI
   cihaz anahtarı kullanır — aynı `cnf` kullanılsaydı kopyalar birbirine
   bağlanabilir ve batch'in tüm amacı yok olurdu. Ayrıca belge verme anındaki holder
@@ -47,7 +47,7 @@ yanlıştır:
 
 | Konu | Eski taslak | **1.0 Final** |
 |---|---|---|
-| `c_nonce` nereden alınır | Token Endpoint yanıtından | **Nonce Endpoint**'ten (veya belge yanıtından) |
+| `c_nonce` nereden alınır | Token Endpoint yanıtından | **Yalnız Nonce Endpoint**'ten (token ve belge yanıtı `c_nonce` taşımaz; `c_nonce_expires_in` yok) |
 | Anahtar kanıtı | `proof` (tekil) | **`proofs`** (çoğul, tip başına dizi) |
 
 İkincisi toplu belge vermeyi doğrudan mümkün kılar (§8) ve Tamga'nın mahremiyet
@@ -93,27 +93,25 @@ kanaldan (OBS oturumu içinde) verilir.
 
 # 2. Issuer Metadata
 
-`https://issuer.bilgi.edu.tr/.well-known/openid-credential-issuer`
+`https://issuer.tamga.network/.well-known/openid-credential-issuer/example-university` (yol tabanlı kiracı; RFC 8414 yol kuralı)
 
 ```json
 {
-  "credential_issuer": "https://issuer.bilgi.edu.tr",
-  "authorization_servers": ["https://issuer.bilgi.edu.tr"],
-  "credential_endpoint": "https://issuer.bilgi.edu.tr/credential",
-  "nonce_endpoint": "https://issuer.bilgi.edu.tr/nonce",
-  "deferred_credential_endpoint": "https://issuer.bilgi.edu.tr/deferred",
-  "notification_endpoint": "https://issuer.bilgi.edu.tr/notification",
+  "credential_issuer": "https://issuer.tamga.network/example-university",
+  "authorization_servers": ["https://issuer.tamga.network/example-university"],
+  "credential_endpoint": "https://issuer.tamga.network/example-university/credential",
+  "nonce_endpoint": "https://issuer.tamga.network/example-university/nonce",
   "batch_credential_issuance": { "batch_size": 10 },
 
   "display": [
-    { "name": "İstanbul Bilgi Üniversitesi", "locale": "tr-TR" },
-    { "name": "Istanbul Bilgi University",   "locale": "en-US" }
+    { "name": "Örnek Üniversitesi", "locale": "tr-TR" },
+    { "name": "Example University", "locale": "en-US" }
   ],
 
   "credential_configurations_supported": {
-    "TamgaDiplomaCredential": {
+    "urn:tamga:edu:DiplomaCredential:1": {
       "format": "dc+sd-jwt",
-      "scope": "diploma",
+      "scope": "urn:tamga:edu:DiplomaCredential:1",
       "vct": "urn:tamga:edu:DiplomaCredential:1",
       "credential_signing_alg_values_supported": ["ES256"],
       "cryptographic_binding_methods_supported": ["jwk"],
@@ -135,9 +133,9 @@ kanaldan (OBS oturumu içinde) verilir.
       }
     },
 
-    "TamgaStudentCredential": {
+    "urn:tamga:edu:StudentCredential:1": {
       "format": "dc+sd-jwt",
-      "scope": "student",
+      "scope": "urn:tamga:edu:StudentCredential:1",
       "vct": "urn:tamga:edu:StudentCredential:1",
       "credential_signing_alg_values_supported": ["ES256"],
       "cryptographic_binding_methods_supported": ["jwk"],
@@ -157,7 +155,9 @@ kanaldan (OBS oturumu içinde) verilir.
 | `credential_signing_alg_values_supported` | Yalnızca `ES256` |
 | `proof_signing_alg_values_supported` | Yalnızca `ES256` |
 | `vct` | Kayıtlı bir şema olmalı ([[SPEC-SCHEMA-0001]]) |
+| Yapılandırma kimliği ve `scope` | İkisi de belge türünün `vct` URN'üdür (`urn:tamga:edu:DiplomaCredential:1`); ayrı bir yapılandırma adı ya da kısa kapsam adı yoktur. Cüzdan [[t:PAR]]'da türü `scope` ile ister ([[t:HAIP]] §4.3) |
 | `nonce_endpoint` | **Zorunlu** — Tamga her zaman `c_nonce` ister |
+| `deferred_credential_endpoint`, `notification_endpoint` | **İlan edilmez** — bugün iki uç da yoktur (§9, §10) |
 | `batch_credential_issuance.batch_size` | **10** (§8) |
 | `credential_metadata.credential_reuse_policy` | ETSI TS 119 472-3 §4.2.4.2 `arf_annex_ii`: `["per-relying-party", "once_only"]`, `batch_size` 10, `reissue_trigger_unused` 2, `reissue_trigger_lifetime_left` 7 gün (ARF ISSU_37–40) |
 | İmzalı metadata (2026-09-29) | OpenID4VCI §12.2.3, ARF ISSU_32: `Accept: application/jwt` → `typ` `openidvci-issuer-metadata+jwt`, `iss` = `sub` = Credential Issuer Identifier, `iat`, `exp` (+1 gün); imzacı kurumun güven listesindeki belge imza sertifikası (`x5c`). Cüzdan kurumdan belge isterken imzalı metadatayı ister; imzacının parmak izi listedeki kayıtla eşleşmezse metadata kullanılmaz. Düz istek JSON döner. |
@@ -180,8 +180,8 @@ yüzünden reddedilecek belge üretmesinin önüne geçer.
 
 ```json
 {
-  "credential_issuer": "https://issuer.bilgi.edu.tr",
-  "credential_configuration_ids": ["TamgaDiplomaCredential"],
+  "credential_issuer": "https://issuer.tamga.network/example-university",
+  "credential_configuration_ids": ["urn:tamga:edu:DiplomaCredential:1"],
   "grants": {
     "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
       "pre-authorized_code": "oaKazRN8I0IbtZ0C7JuMn5",
@@ -202,7 +202,7 @@ nesnenin kendisi gömülmez:
 
 ```
 openid-credential-offer://?credential_offer_uri=
-  https%3A%2F%2Fissuer.bilgi.edu.tr%2Foffer%2F8a3f9c21
+  https%3A%2F%2Fissuer.tamga.network%2Fexample-university%2Foffers%2F8a3f9c21
 ```
 
 **Değişmez PR3:** Offer URI **tek kullanımlıktır** ve 5 dakika sonra geçersizdir.
@@ -249,8 +249,8 @@ anahtarlarını (`bind { personal_administrative_number, birth_date }`) gönderi
 # 4. Token Endpoint
 
 ```http
-POST /token HTTP/1.1
-Host: issuer.bilgi.edu.tr
+POST /example-university/token HTTP/1.1
+Host: issuer.tamga.network
 Content-Type: application/x-www-form-urlencoded
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Li4ufX0...
 
@@ -306,17 +306,23 @@ iletişim belgeleri belirteç vermez (kişi alanı saklanmaz). AS metadata `gran
 Korumasızdır — erişim belirteci gerekmez.
 
 ```http
-POST /nonce HTTP/1.1
-Host: issuer.bilgi.edu.tr
+POST /example-university/nonce HTTP/1.1
+Host: issuer.tamga.network
 ```
 
-```json
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
 { "c_nonce": "wKI4LT-mMoScTmxmQaMbtcMbtcpaSl" }
 ```
 
+Yanıt yalnız `c_nonce` taşır (OpenID4VCI 1.0 Final §7.2); ömür yanıtta bildirilmez (`c_nonce_expires_in` Final'de yoktur).
+
 | Kural | Değer |
 |---|---|
-| Ömür | 60 saniye |
+| Ömür | 300 saniye (5 dakika) — cüzdan nonce'u aldıktan sonra 10 kopya için donanım anahtarı üretir ve cüzdan sağlayıcısından anahtar kanıtı alır; yavaş bir cihazda bu bir dakikayı aşabilir |
 | Kullanım | **Tek sefer** — tüketilir |
 | Depo | Atomik (yarış koşulu = tekrar oynatma açığı) |
 
@@ -343,7 +349,7 @@ Gövde:
 
 ```json
 {
-  "aud": "https://issuer.bilgi.edu.tr",
+  "aud": "https://issuer.tamga.network/example-university",
   "iat": 1789000012,
   "nonce": "wKI4LT-mMoScTmxmQaMbtcMbtcpaSl"
 }
@@ -368,14 +374,14 @@ reddedilir.
 ## 7.1 İstek
 
 ```http
-POST /credential HTTP/1.1
-Host: issuer.bilgi.edu.tr
+POST /example-university/credential HTTP/1.1
+Host: issuer.tamga.network
 Authorization: DPoP eyJ0eXAiOiJhdCtqd3Qi...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIs...   (aynı anahtar; ath = SHA-256(access_token))
 Content-Type: application/json
 
 {
-  "credential_configuration_id": "TamgaDiplomaCredential",
+  "credential_configuration_id": "urn:tamga:edu:DiplomaCredential:1",
   "proofs": {
     "jwt": ["eyJ0eXAiOiJvcGVuaWQ0dmNpLXByb29mK2p3dCI..."]
   }
@@ -388,13 +394,12 @@ Content-Type: application/json
 {
   "credentials": [
     { "credential": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImRjK3NkLWp3dCJ9...~WyJPdkt...~WyJoTjJ...~" }
-  ],
-  "notification_id": "3fwe98js"
+  ]
 }
 ```
 
 Dönen dize, [[SPEC-CRED-0002]] §2'deki birleşik biçimdir: issuer-signed JWT +
-disclosure'lar + sondaki boş `~` (KB-JWT henüz yok).
+disclosure'lar + sondaki boş `~` (KB-JWT henüz yok). Bildirim ucu sunulmadığı için yanıtta `notification_id` yoktur (§10).
 
 ## 7.3 Belge veren tarafında doğrulama sırası
 
@@ -485,16 +490,16 @@ işaretlenmelidir. Belge veren, hangi indekslerin aynı diplomaya ait olduğunu 
 veritabanında tutar — bu eşleme **asla dışarı çıkmaz**, çünkü çıkarsa
 kopyaların ilişkilendirilemezliği biter.
 
-10 bitin aynı anda değişmesi bir korelasyon sinyali olurdu; ancak yayın sabit
-aralıklı ve gürültülü olduğu için ([[SPEC-CRED-0003]] §5.1) dışarıdan
-görünmez.
+10 bitin aynı anda değişmesi bir korelasyon sinyali olurdu; ancak liste sabit
+aralıkta, değişiklik olsa da olmasa da yayınlandığı için ([[SPEC-CRED-0003]] §5.1)
+hangi bitlerin birlikte değiştiği dışarıdan görünmez.
 
 ## 8.5 Faz kararı
 
 | Belge | Batch |
 |---|---|
-| `TamgaStudentCredential` | **ilk aşamada etkin** — kısa ömür + sık kullanım |
-| `TamgaDiplomaCredential` | **ilk aşamada etkin** — 10 kopya, her kopya ayrı status indeksi (§8.4) |
+| `urn:tamga:edu:StudentCredential:1` | **ilk aşamada etkin** — kısa ömür + sık kullanım |
+| `urn:tamga:edu:DiplomaCredential:1` | **ilk aşamada etkin** — 10 kopya, her kopya ayrı status indeksi (§8.4) |
 
 Diploma da 10 kopya verilir (proje yönetimi kararı, 2026-10-08; önceki karar: pilotta tek kopya, devlet aşamasında
 batch). Her kopya kendi status indeksini taşır; aynı diplomanın indeksleri kurumun kendi veritabanında eşlenir, iptalde
@@ -505,22 +510,36 @@ hepsi birlikte işaretlenir (§8.4) ve bu eşleme dışarı çıkmaz. Böylece h
 
 # 9. Ertelenmiş belge verme (deferred)
 
-Mezuniyet kararı henüz onaylanmamışsa belge veren belgeyi hemen veremez.
+**Bugün sunulmuyor.** Tamga belge verenleri ertelenmiş belge verme ucu ilan etmez (`deferred_credential_endpoint` yok). Kayıt
+henüz belge vermeye uygun değilse (ör. mezuniyet kararı onaylanmamış) `/credential` hemen hata döner (`issuance_halted`, §13);
+kayıt hazır olunca kurum yeni bir teklif oluşturur. Aşağıdakiler, uç eklendiğinde uygulanacak profildir (OpenID4VCI 1.0 Final
+§9).
 
-```json
+Belge hemen verilemiyorsa belge yanıtı **HTTP 202** ile döner; `interval` (saniye) zorunludur:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+
 { "transaction_id": "8xLOxBtZp8", "interval": 300 }
 ```
 
-Cüzdan sonra Deferred Credential Endpoint'e sorar:
+Cüzdan sonra Deferred Credential Endpoint'e **DPoP'a bağlı** belirteçle sorar (PR17; erişim belirteci 5 dakika olduğundan
+gerekirse önce yenileme belirteciyle yenisini alır, §4.1):
 
 ```http
-POST /deferred HTTP/1.1
-Authorization: Bearer ...
+POST /example-university/deferred HTTP/1.1
+Host: issuer.tamga.network
+Authorization: DPoP eyJ0eXAiOiJhdCtqd3Qi...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIs...   (aynı anahtar; ath = SHA-256(access_token))
+Content-Type: application/json
 
 { "transaction_id": "8xLOxBtZp8" }
 ```
 
-Hazır değilse `issuance_pending` hatası döner; cüzdan `interval` kadar bekler.
+Hazırsa yanıt §7.2 ile aynıdır (HTTP 200, `credentials`). Hâlâ hazır değilse yine **HTTP 202** ve yeni bir `interval` döner;
+cüzdan o kadar bekler. Bilinmeyen ya da süresi dolmuş işlem `invalid_transaction_id` hatasıdır. Eski taslaklardaki
+`issuance_pending` hatası 1.0 Final'de yoktur.
 
 **Tamga kuralı:** `transaction_id` ömrü **30 gün**. Fakülte kurulu kararı
 gecikebilir; ama sınırsız bekleyen işlem, belge veren tarafında sınırsız durum
@@ -534,17 +553,23 @@ hâlâ bekliyor" sinyali verir. `interval` en az 300 saniye olmalıdır ve cüzd
 
 # 10. Notification Endpoint
 
-Cüzdan, belgeyi başarıyla sakladığını bildirir:
+**Bugün sunulmuyor.** Tamga belge verenleri `notification_endpoint` ilan etmez ve belge yanıtında `notification_id` dönmez
+(OpenID4VCI 1.0 Final §8.3: `notification_id` yalnız bildirim ucu sunuluyorsa verilir). Cüzdan bildirim göndermez. Uç
+eklenirse profil şudur:
 
 ```json
 { "notification_id": "3fwe98js", "event": "credential_accepted" }
 ```
 
-Değerler: `credential_accepted`, `credential_failure`, `credential_deleted`.
+| Olay | Anlamı (OpenID4VCI 1.0 Final §11.1) |
+|---|---|
+| `credential_accepted` | Belge cüzdanda başarıyla saklandı |
+| `credential_failure` | Belge verme kullanıcı eylemi dışında bir nedenle başarısız oldu (ör. saklanamadı) |
+| `credential_deleted` | Belge verme **kullanıcının eylemiyle** tamamlanmadı (ör. kişi belgeyi cüzdana eklemeyi reddetti). Belgenin sonradan cüzdandan silindiği anlamına **gelmez** |
 
-**Tamga kuralı:** `credential_deleted` bildirimi belge veren tarafında **yalnızca
-sayaç olarak** kullanılır; kullanıcı bazında saklanmaz. Aksi hâlde belge veren,
-kullanıcının belgesini sildiğini öğrenir — gereksiz bir davranış sinyali.
+**Tamga kuralı:** bildirimler belge veren tarafında **yalnızca sayaç olarak** kullanılır; kişi bazında saklanmaz. Aksi hâlde
+belge veren, kişinin belgeyi kabul edip etmediğini öğrenir — gereksiz bir davranış sinyali. Cüzdan, bir belgenin sonradan
+silindiğini hiçbir belge verene bildirmez.
 
 ---
 
@@ -590,7 +615,7 @@ Belge veren imzayı, sağlayıcı anahtarını, PoP'u ve `client_status`'u ([[t:
 liste alınamaz → 503) doğrular. WIA anahtar deposu beyanı taşımaz.
 
 Belge isteğinde paket **tek proof** ile istenir:
-- `typ: openid4vci-proof+jwt`, başlıkta `key_attestation` ([[t:key-attestation]], KA: `keyattestation+jwt`, sağlayıcı imzalı, `attested_keys`,
+- `typ: openid4vci-proof+jwt`, başlıkta `key_attestation` ([[t:key-attestation]], KA: `typ` `key-attestation+jwt` — OpenID4VCI 1.0 Final Ek D.1, sağlayıcı imzalı, `attested_keys`,
   `key_storage` / `user_authentication` ISO 18045, `key_storage_status`),
 - proof `attested_keys[0]` ile imzalıdır.
 
@@ -614,7 +639,7 @@ Kimlik doğrulama bu yolda **kimlik attestation'ının sunumu** ile yapılır; �
 
 | Adım | Cüzdan → belge veren | Kural |
 |---|---|---|
-| 1 | `POST /{slug}/par` — `client_id` = WUA `sub`, `redirect_uri`, `code_challenge` (S256), `authorization_details[{type: openid_credential, credential_configuration_id}]`, `state`, kimliğe bağlı teklifte `issuer_state` (§3.4); başlıklar `OAuth-Client-Attestation` + PoP | PAR zorunlu (RFC 9126); istemci kimliği **WUA** (`attest_jwt_client_auth`); `client_secret` yok; PAR 10 dk |
+| 1 | `POST /{slug}/par` — `client_id` = WUA `sub`, `redirect_uri`, `code_challenge` (S256), `scope` = istenen türün `vct`'si (metadata'daki `scope`, [[t:HAIP]] §4.3; kapsam ilan etmeyen belge verende yedek olarak `authorization_details[{type: openid_credential, credential_configuration_id}]`; ikisi birlikte gelirse aynı türü göstermeli), `state`, kimliğe bağlı teklifte `issuer_state` (§3.4); başlıklar `OAuth-Client-Attestation` + PoP | PAR zorunlu (RFC 9126); istemci kimliği **WUA** (`attest_jwt_client_auth`); `client_secret` yok; PAR 10 dk |
 | 2 | `GET /{slug}/authorize?client_id&request_uri` — `Accept: application/json` | Kurumun belge verme servisi **OpenID4VP isteği** döner (`presentation_request.qr_payload`; DCQL: `IdentityAttestation` → `personal_administrative_number`, `birth_date`, `given_name`, `family_name`); istek `rp-<slug>` sertifikasıyla imzalı, RP kaydı güven listesinde (AP6 scope) |
 | 3 | Cüzdan **standart sunum akışını** çalıştırır (SPEC-PROTO-0002: RP kaydı, onay ekranı, KB-JWT, JWE) → `POST /{slug}/vp/response` | Belge veren T0 + A–E ile doğrular (status ön çekimi S12), **TCKN + doğum tarihi** ile eşler: `issuer_state` varsa teklifteki özetle (§3.4), yoksa kurumun kaynağına `lookup` ([[ADR-0020]]; `docs/api/institution-source.openapi.yaml`); kaynak erişilemezse `temporarily_unavailable`; yanıt `{redirect_uri}` = `redirect_uri?code=…&state=…` veya `error=access_denied` |
 | 4 | `POST /{slug}/token` — `grant_type=authorization_code`, `code`, `code_verifier`, `redirect_uri`, WUA başlıkları | code tek kullanımlık, ≤ 60 s; PKCE; istemci PAR'daki WUA `sub` ile aynı |
@@ -658,9 +683,6 @@ Ayşe                    OBS/Issuer                   Zincir
  │                          │  · status idx rezerve et  │
  │                          │  · HSM ile imzala         │
  │◀─ SD-JWT VC ─────────────│                           │
- │                          │                           │
- │─ POST /notification ────▶│                           │
- │  (credential_accepted)   │                           │
 ```
 
 **Zincire hiçbir şey yazılmadı.** Status indeksi rezervasyonu belge verenin kendi
@@ -672,13 +694,19 @@ veritabanındadır ([[SPEC-BC-0001]] §11.1 adım 7).
 
 | Kod | Ne zaman | Cüzdan davranışı |
 |---|---|---|
-| `invalid_proof` | Kanıt geçersiz veya `nonce` bayat | Yeni `c_nonce` al, tekrar dene |
-| `invalid_nonce` | `nonce` tüketilmiş | Yeni `c_nonce` al |
-| `invalid_credential_request` | Yapı hatalı | **Tekrar deneme** — hata bildir |
-| `unsupported_credential_configuration` | Bilinmeyen configuration | Metadata'yı yenile |
-| `issuance_pending` | Ertelenmiş, hazır değil | `interval` kadar bekle, üstel geri çekilme |
-| `credential_request_denied` | Yetki yok / şema yetkisi düşmüş | **Tekrar deneme** |
+Kodlar OpenID4VCI 1.0 Final §8.3.1.2'dendir; son iki satır Tamga ekidir.
+
+| Kod | Ne zaman | Cüzdan davranışı |
+|---|---|---|
+| `invalid_proof` | Kanıt geçersiz (imza, `typ`, `aud`, `iat`, anahtar kanıtı) | **Aynı kanıtla tekrar deneme** — hata bildir |
+| `invalid_nonce` | Kanıttaki `c_nonce` bilinmiyor, süresi dolmuş ya da tüketilmiş | Yeni `c_nonce` al, kanıtları yeniden imzala |
+| `invalid_credential_request` | Yapı hatalı ya da istenen yapılandırma bu belirtecin kapsamında değil | **Tekrar deneme** — hata bildir |
+| `unknown_credential_configuration` | Belge veren bu yapılandırmayı hiç sunmuyor | Metadata'yı yenile |
+| `credential_request_denied` | Yetki yok / şema yetkisi güven listesinde düşmüş | **Tekrar deneme** |
 | `invalid_token` | Belirteç süresi doldu | Akışı baştan başlat |
+| `invalid_transaction_id` | Ertelenmiş uçta işlem bilinmiyor ya da süresi dolmuş (uç eklenince, §9) | Akışı baştan başlat |
+| `issuance_halted` (Tamga) | Kayıt belge vermeye uygun değil (ör. mezuniyet kaydı yok) | Kuruma başvur |
+| `temporarily_unavailable` (HTTP 503) | Güven listesi ya da kurumun kaynağı geçici olarak erişilemez | Sonra yeniden dene |
 
 **Değişmez PR8:** Hata mesajları kişisel veri içermez. "Ayşe Yılmaz için kayıt
 bulunamadı" yerine `credential_request_denied` döner; ayrıntı yalnızca belge verenin
@@ -721,7 +749,7 @@ belgeyi kendi cüzdanına alabilir. PR1 ve PR3 birlikte bu pencereyi kapatır.
 senaryosunda bu, saldırganın kendi anahtarını kopyalardan birine
 bağlamasına yol açar.
 
-**Yoklama bir sinyaldir.** Ertelenmiş belge vermede cüzdanın sık sorgulaması
+**Yoklama bir sinyaldir.** Ertelenmiş belge vermede (uç eklendiğinde) cüzdanın sık sorgulaması
 belge verene davranış bilgisi verir (§9).
 
 **Batch, kopya sayısını ele verir.** Bir doğrulayıcı, aynı kullanıcıdan gelen

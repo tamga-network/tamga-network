@@ -4,12 +4,12 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-08
+last_updated: 2026-10-09
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
-  openid4vci-proof+jwt key proof, credential endpoint, deferred issuance (when graduation approval is delayed) and the
-  notification endpoint. Two open topics are closed: the batch size is fixed at 10, and EACH copy in a batch uses a
+  openid4vci-proof+jwt key proof, credential endpoint, and the current state of deferred issuance and the notification
+  endpoint (neither is offered). Two open topics are closed: the batch size is fixed at 10, and EACH copy in a batch uses a
   DIFFERENT device key — with the same `cnf` the copies could be linked and the whole point of the batch would be lost.
   It also maps the holder binding method used at issuance to the holder assurance level (T1/T2/T3).
 translation_of: SPEC-PROTO-0001
@@ -47,7 +47,7 @@ Code and documents written against the old OID4VCI drafts are wrong on these two
 
 | Topic | Old draft | **1.0 Final** |
 |---|---|---|
-| Where `c_nonce` comes from | The Token Endpoint response | The **Nonce Endpoint** (or the credential response) |
+| Where `c_nonce` comes from | The Token Endpoint response | **Only the Nonce Endpoint** (the token and credential responses carry no `c_nonce`; there is no `c_nonce_expires_in`) |
 | Key proof | `proof` (singular) | **`proofs`** (plural, an array per type) |
 
 The second makes batch issuance directly possible (§8) and is the basis of Tamga's privacy design.
@@ -89,27 +89,25 @@ read over the shoulder; the `tx_code` is delivered through a separate channel (i
 
 # 2. Issuer metadata
 
-`https://issuer.bilgi.edu.tr/.well-known/openid-credential-issuer`
+`https://issuer.tamga.network/.well-known/openid-credential-issuer/example-university` (path-based tenant; RFC 8414 path rule)
 
 ```json
 {
-  "credential_issuer": "https://issuer.bilgi.edu.tr",
-  "authorization_servers": ["https://issuer.bilgi.edu.tr"],
-  "credential_endpoint": "https://issuer.bilgi.edu.tr/credential",
-  "nonce_endpoint": "https://issuer.bilgi.edu.tr/nonce",
-  "deferred_credential_endpoint": "https://issuer.bilgi.edu.tr/deferred",
-  "notification_endpoint": "https://issuer.bilgi.edu.tr/notification",
+  "credential_issuer": "https://issuer.tamga.network/example-university",
+  "authorization_servers": ["https://issuer.tamga.network/example-university"],
+  "credential_endpoint": "https://issuer.tamga.network/example-university/credential",
+  "nonce_endpoint": "https://issuer.tamga.network/example-university/nonce",
   "batch_credential_issuance": { "batch_size": 10 },
 
   "display": [
-    { "name": "İstanbul Bilgi Üniversitesi", "locale": "tr-TR" },
-    { "name": "Istanbul Bilgi University",   "locale": "en-US" }
+    { "name": "Örnek Üniversitesi", "locale": "tr-TR" },
+    { "name": "Example University", "locale": "en-US" }
   ],
 
   "credential_configurations_supported": {
-    "TamgaDiplomaCredential": {
+    "urn:tamga:edu:DiplomaCredential:1": {
       "format": "dc+sd-jwt",
-      "scope": "diploma",
+      "scope": "urn:tamga:edu:DiplomaCredential:1",
       "vct": "urn:tamga:edu:DiplomaCredential:1",
       "credential_signing_alg_values_supported": ["ES256"],
       "cryptographic_binding_methods_supported": ["jwk"],
@@ -131,9 +129,9 @@ read over the shoulder; the `tx_code` is delivered through a separate channel (i
       }
     },
 
-    "TamgaStudentCredential": {
+    "urn:tamga:edu:StudentCredential:1": {
       "format": "dc+sd-jwt",
-      "scope": "student",
+      "scope": "urn:tamga:edu:StudentCredential:1",
       "vct": "urn:tamga:edu:StudentCredential:1",
       "credential_signing_alg_values_supported": ["ES256"],
       "cryptographic_binding_methods_supported": ["jwk"],
@@ -153,7 +151,9 @@ read over the shoulder; the `tx_code` is delivered through a separate channel (i
 | `credential_signing_alg_values_supported` | Only `ES256` |
 | `proof_signing_alg_values_supported` | Only `ES256` |
 | `vct` | Must be a registered schema ([[SPEC-SCHEMA-0001]]) |
+| Configuration identifier and `scope` | Both are the credential type's `vct` URN (`urn:tamga:edu:DiplomaCredential:1`); there is no separate configuration name or short scope name. The wallet asks for the type with `scope` in the [[t:PAR]] ([[t:HAIP]] §4.3) |
 | `nonce_endpoint` | **Mandatory** — Tamga always requires `c_nonce` |
+| `deferred_credential_endpoint`, `notification_endpoint` | **Not declared** — neither endpoint exists today (§9, §10) |
 | `batch_credential_issuance.batch_size` | **10** (§8) |
 | `credential_metadata.credential_reuse_policy` | ETSI TS 119 472-3 §4.2.4.2 `arf_annex_ii`: `["per-relying-party", "once_only"]`, `batch_size` 10, `reissue_trigger_unused` 2, `reissue_trigger_lifetime_left` 7 days (ARF ISSU_37–40) |
 | Signed metadata (2026-09-29) | OpenID4VCI §12.2.3, ARF ISSU_32: `Accept: application/jwt` → `typ` `openidvci-issuer-metadata+jwt`, `iss` = `sub` = Credential Issuer Identifier, `iat`, `exp` (+1 day); the signer is the institution's credential signing certificate in the trust list (`x5c`). When requesting a credential from an institution the wallet asks for the signed metadata; if the signer's fingerprint does not match the entry in the list, the metadata is not used. A plain request returns JSON. |
@@ -175,8 +175,8 @@ misconfiguration.
 
 ```json
 {
-  "credential_issuer": "https://issuer.bilgi.edu.tr",
-  "credential_configuration_ids": ["TamgaDiplomaCredential"],
+  "credential_issuer": "https://issuer.tamga.network/example-university",
+  "credential_configuration_ids": ["urn:tamga:edu:DiplomaCredential:1"],
   "grants": {
     "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
       "pre-authorized_code": "oaKazRN8I0IbtZ0C7JuMn5",
@@ -196,7 +196,7 @@ To keep the QR code small, **`credential_offer_uri`** is used; the object itself
 
 ```
 openid-credential-offer://?credential_offer_uri=
-  https%3A%2F%2Fissuer.bilgi.edu.tr%2Foffer%2F8a3f9c21
+  https%3A%2F%2Fissuer.tamga.network%2Fexample-university%2Foffers%2F8a3f9c21
 ```
 
 **Invariant PR3:** the offer URI is **single-use** and expires after 5 minutes. Once fetched it returns 404.
@@ -241,8 +241,8 @@ the person's matching keys (`bind { personal_administrative_number, birth_date }
 # 4. Token endpoint
 
 ```http
-POST /token HTTP/1.1
-Host: issuer.bilgi.edu.tr
+POST /example-university/token HTTP/1.1
+Host: issuer.tamga.network
 Content-Type: application/x-www-form-urlencoded
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2IiwiandrIjp7Li4ufX0...
 
@@ -299,17 +299,24 @@ issue no refresh token (no person field is stored). The AS metadata `grant_types
 Unprotected — no access token is needed.
 
 ```http
-POST /nonce HTTP/1.1
-Host: issuer.bilgi.edu.tr
+POST /example-university/nonce HTTP/1.1
+Host: issuer.tamga.network
 ```
 
-```json
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: no-store
+
 { "c_nonce": "wKI4LT-mMoScTmxmQaMbtcMbtcpaSl" }
 ```
 
+The response carries only `c_nonce` (OpenID4VCI 1.0 Final §7.2); the lifetime is not stated in the response (Final has no
+`c_nonce_expires_in`).
+
 | Rule | Value |
 |---|---|
-| Lifetime | 60 seconds |
+| Lifetime | 300 seconds (5 minutes) — after taking the nonce the wallet generates hardware keys for 10 copies and fetches a key attestation from the wallet provider; on a slow device this can take more than a minute |
 | Use | **Once** — it is consumed |
 | Storage | Atomic (race condition = replay gap) |
 
@@ -336,7 +343,7 @@ Body:
 
 ```json
 {
-  "aud": "https://issuer.bilgi.edu.tr",
+  "aud": "https://issuer.tamga.network/example-university",
   "iat": 1789000012,
   "nonce": "wKI4LT-mMoScTmxmQaMbtcMbtcpaSl"
 }
@@ -360,14 +367,14 @@ private key never leaves the device's secure area.
 ## 7.1 Request
 
 ```http
-POST /credential HTTP/1.1
-Host: issuer.bilgi.edu.tr
+POST /example-university/credential HTTP/1.1
+Host: issuer.tamga.network
 Authorization: DPoP eyJ0eXAiOiJhdCtqd3Qi...
 DPoP: eyJ0eXAiOiJkcG9wK2p3dCIs...   (same key; ath = SHA-256(access_token))
 Content-Type: application/json
 
 {
-  "credential_configuration_id": "TamgaDiplomaCredential",
+  "credential_configuration_id": "urn:tamga:edu:DiplomaCredential:1",
   "proofs": {
     "jwt": ["eyJ0eXAiOiJvcGVuaWQ0dmNpLXByb29mK2p3dCI..."]
   }
@@ -380,13 +387,12 @@ Content-Type: application/json
 {
   "credentials": [
     { "credential": "eyJhbGciOiJFUzI1NiIsInR5cCI6ImRjK3NkLWp3dCJ9...~WyJPdkt...~WyJoTjJ...~" }
-  ],
-  "notification_id": "3fwe98js"
+  ]
 }
 ```
 
 The returned string is the combined format of [[SPEC-CRED-0002]] §2: issuer-signed JWT + disclosures + a trailing empty
-`~` (no KB-JWT yet).
+`~` (no KB-JWT yet). Because no notification endpoint is offered, the response has no `notification_id` (§10).
 
 ## 7.3 Verification order on the issuer side
 
@@ -469,15 +475,15 @@ In a list of 100,000 this is minor (10,000 graduates × 10 = 100,000 — borderl
 which indices belong to the same diploma — this mapping **never leaves**, because if it did, the unlinkability of the
 copies would end.
 
-Ten bits changing at once would be a correlation signal; but because publication is at fixed intervals and noisy
-([[SPEC-CRED-0003]] §5.1), it is not visible from outside.
+Ten bits changing at once would be a correlation signal; but because the list is published at a fixed interval whether or
+not anything changed ([[SPEC-CRED-0003]] §5.1), which bits changed together is not visible from outside.
 
 ## 8.5 Phase decision
 
 | Credential | Batch |
 |---|---|
-| `TamgaStudentCredential` | **Active in the initial stage** — short life + frequent use |
-| `TamgaDiplomaCredential` | **Active in the initial stage** — 10 copies, each with its own status index (§8.4) |
+| `urn:tamga:edu:StudentCredential:1` | **Active in the initial stage** — short life + frequent use |
+| `urn:tamga:edu:DiplomaCredential:1` | **Active in the initial stage** — 10 copies, each with its own status index (§8.4) |
 
 The diploma is also issued as 10 copies (project management decision, 2026-10-08; previous decision: a single copy in the
 pilot, batch at the state stage). Each copy carries its own status index; the indices of one diploma are mapped in the
@@ -488,22 +494,37 @@ verifier therefore gets its own copy and presentations cannot be linked through 
 
 # 9. Deferred issuance
 
-If the graduation decision has not yet been approved, the issuer cannot issue the credential right away.
+**Not offered today.** Tamga issuers declare no deferred credential endpoint (no `deferred_credential_endpoint`). If the
+record is not yet ready for issuance (for example the graduation decision has not been approved), `/credential` returns an
+error right away (`issuance_halted`, §13); when the record is ready the institution creates a new offer. What follows is the
+profile that applies once the endpoint is added (OpenID4VCI 1.0 Final §9).
 
-```json
+If the credential cannot be issued right away, the credential response uses **HTTP 202**; `interval` (seconds) is
+required:
+
+```http
+HTTP/1.1 202 Accepted
+Content-Type: application/json
+
 { "transaction_id": "8xLOxBtZp8", "interval": 300 }
 ```
 
-The wallet later asks the Deferred Credential Endpoint:
+The wallet later asks the Deferred Credential Endpoint with a **DPoP-bound** token (PR17; the access token lives 5 minutes,
+so the wallet first gets a new one with its refresh token if needed, §4.1):
 
 ```http
-POST /deferred HTTP/1.1
-Authorization: Bearer ...
+POST /example-university/deferred HTTP/1.1
+Host: issuer.tamga.network
+Authorization: DPoP eyJ0eXAiOiJhdCtqd3Qi...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIs...   (same key; ath = SHA-256(access_token))
+Content-Type: application/json
 
 { "transaction_id": "8xLOxBtZp8" }
 ```
 
-If it is not ready, the `issuance_pending` error is returned; the wallet waits for `interval`.
+If it is ready, the response is the same as §7.2 (HTTP 200, `credentials`). If it is still not ready, **HTTP 202** with a
+new `interval` is returned again; the wallet waits that long. An unknown or expired transaction is the
+`invalid_transaction_id` error. The `issuance_pending` error of the earlier drafts does not exist in 1.0 Final.
 
 **Tamga rule:** the `transaction_id` lifetime is **30 days**. A faculty board decision can be delayed; but a transaction
 waiting without limit means unlimited state on the issuer side.
@@ -515,16 +536,23 @@ at least 300 seconds and the wallet must apply exponential backoff.
 
 # 10. Notification endpoint
 
-The wallet reports that it stored the credential successfully:
+**Not offered today.** Tamga issuers declare no `notification_endpoint` and return no `notification_id` in the credential
+response (OpenID4VCI 1.0 Final §8.3: `notification_id` is given only when a notification endpoint is offered). The wallet
+sends no notifications. If the endpoint is added, this is the profile:
 
 ```json
 { "notification_id": "3fwe98js", "event": "credential_accepted" }
 ```
 
-Values: `credential_accepted`, `credential_failure`, `credential_deleted`.
+| Event | Meaning (OpenID4VCI 1.0 Final §11.1) |
+|---|---|
+| `credential_accepted` | The credential was stored in the wallet successfully |
+| `credential_failure` | Issuance failed for a reason other than a user action (for example it could not be stored) |
+| `credential_deleted` | Issuance did not complete **because of a user action** (for example the person declined to add the credential). It does **not** mean that the credential was later deleted from the wallet |
 
-**Tamga rule:** the `credential_deleted` notification is used on the issuer side **only as a counter**; it is not stored per
-user. Otherwise the issuer would learn that the user deleted their credential — a needless behavioural signal.
+**Tamga rule:** notifications are used on the issuer side **only as counters**; they are not stored per person. Otherwise the
+issuer would learn whether the person accepted the credential — a needless behavioural signal. The wallet never tells an
+issuer that a credential was later deleted.
 
 ---
 
@@ -571,8 +599,8 @@ The issuer verifies the signature, the provider key, the PoP and `client_status`
 List; revoked → `invalid_client`, list unavailable → 503). The WIA carries no key storage statement.
 
 In the credential request the batch is requested with **a single proof**:
-- `typ: openid4vci-proof+jwt`, with `key_attestation` in the header ([[t:key-attestation]], KA: `keyattestation+jwt`,
-  signed by the provider, `attested_keys`, `key_storage` / `user_authentication` ISO 18045, `key_storage_status`),
+- `typ: openid4vci-proof+jwt`, with `key_attestation` in the header ([[t:key-attestation]], KA: `typ`
+  `key-attestation+jwt` — OpenID4VCI 1.0 Final Annex D.1, signed by the provider, `attested_keys`, `key_storage` / `user_authentication` ISO 18045, `key_storage_status`),
 - the proof is signed with `attested_keys[0]`.
 
 The issuer verifies the KA, its revocation status and the nonce, and binds the credentials to `attested_keys`. It applies
@@ -595,7 +623,7 @@ attestation**; no student login/portal is needed. The pre-authorized path (§3) 
 
 | Step | Wallet → issuer | Rule |
 |---|---|---|
-| 1 | `POST /{slug}/par` — `client_id` = WUA `sub`, `redirect_uri`, `code_challenge` (S256), `authorization_details[{type: openid_credential, credential_configuration_id}]`, `state`, `issuer_state` for an identity-bound offer (§3.4); headers `OAuth-Client-Attestation` + PoP | PAR mandatory (RFC 9126); client identity is the **WUA** (`attest_jwt_client_auth`); no `client_secret`; PAR 10 min |
+| 1 | `POST /{slug}/par` — `client_id` = WUA `sub`, `redirect_uri`, `code_challenge` (S256), `scope` = the requested type's `vct` (the `scope` in the metadata, [[t:HAIP]] §4.3; as a fallback at an issuer that declares no scope, `authorization_details[{type: openid_credential, credential_configuration_id}]`; if both are sent they must name the same type), `state`, `issuer_state` for an identity-bound offer (§3.4); headers `OAuth-Client-Attestation` + PoP | PAR mandatory (RFC 9126); client identity is the **WUA** (`attest_jwt_client_auth`); no `client_secret`; PAR 10 min |
 | 2 | `GET /{slug}/authorize?client_id&request_uri` — `Accept: application/json` | The institution's issuer returns an **OpenID4VP request** (`presentation_request.qr_payload`; DCQL: `IdentityAttestation` → `personal_administrative_number`, `birth_date`, `given_name`, `family_name`); the request is signed with the `rp-<slug>` certificate, the RP registration is in the trust list (AP6 scope) |
 | 3 | The wallet runs the **standard presentation flow** (SPEC-PROTO-0002: RP registration, consent screen, KB-JWT, JWE) → `POST /{slug}/vp/response` | The issuer verifies with T0 + A–E (status prefetch S12) and matches by **national ID + birth date**: against the hash in the offer if `issuer_state` is present (§3.4), otherwise via `lookup` at the institution's source ([[ADR-0020]]; `docs/api/institution-source.openapi.yaml`); source unreachable → `temporarily_unavailable`; response `{redirect_uri}` = `redirect_uri?code=…&state=…` or `error=access_denied` |
 | 4 | `POST /{slug}/token` — `grant_type=authorization_code`, `code`, `code_verifier`, `redirect_uri`, WUA headers | code single-use, ≤ 60 s; PKCE; the client is the same WUA `sub` as in the PAR |
@@ -640,9 +668,6 @@ Ayşe                    OBS/Issuer                   Chain
  │                          │  · reserve status index   │
  │                          │  · sign with the HSM      │
  │◀─ SD-JWT VC ─────────────│                           │
- │                          │                           │
- │─ POST /notification ────▶│                           │
- │  (credential_accepted)   │                           │
 ```
 
 (OBS = the university's student information system.)
@@ -654,15 +679,19 @@ step 7).
 
 # 13. Error responses
 
+The codes come from OpenID4VCI 1.0 Final §8.3.1.2; the last two rows are Tamga additions.
+
 | Code | When | Wallet behaviour |
 |---|---|---|
-| `invalid_proof` | The proof is invalid or the `nonce` is stale | Get a new `c_nonce`, retry |
-| `invalid_nonce` | The `nonce` has been consumed | Get a new `c_nonce` |
-| `invalid_credential_request` | Malformed request | **Do not retry** — report the error |
-| `unsupported_credential_configuration` | Unknown configuration | Refresh the metadata |
-| `issuance_pending` | Deferred, not ready | Wait `interval`, exponential backoff |
-| `credential_request_denied` | No authorisation / schema authorisation dropped | **Do not retry** |
+| `invalid_proof` | The proof is invalid (signature, `typ`, `aud`, `iat`, key attestation) | **Do not retry with the same proof** — report the error |
+| `invalid_nonce` | The `c_nonce` in the proof is unknown, expired or already consumed | Get a new `c_nonce` and sign the proofs again |
+| `invalid_credential_request` | Malformed request, or the requested configuration is not covered by this token | **Do not retry** — report the error |
+| `unknown_credential_configuration` | The issuer does not offer this configuration at all | Refresh the metadata |
+| `credential_request_denied` | No authorisation / schema authorisation dropped in the trust list | **Do not retry** |
 | `invalid_token` | The token has expired | Restart the flow |
+| `invalid_transaction_id` | At the deferred endpoint, the transaction is unknown or expired (once the endpoint exists, §9) | Restart the flow |
+| `issuance_halted` (Tamga) | The record is not ready for issuance (for example no graduation record) | Contact the institution |
+| `temporarily_unavailable` (HTTP 503) | The trust list or the institution's source is temporarily unreachable | Retry later |
 
 **Invariant PR8:** error messages contain no personal data. Instead of "No record found for Ayşe Yılmaz",
 `credential_request_denied` is returned; details live only in the issuer's own audit log.
@@ -703,7 +732,7 @@ own wallet. PR1 and PR3 together close this window.
 **Nonce race.** If PR4 is skipped, the same proof can be used twice; in the batch scenario this lets an attacker bind their
 own key to one of the copies.
 
-**Polling is a signal.** In deferred issuance, frequent polling by the wallet gives the issuer behavioural information (§9).
+**Polling is a signal.** In deferred issuance (once the endpoint exists), frequent polling by the wallet gives the issuer behavioural information (§9).
 
 **A batch reveals the number of copies.** A verifier that sees every presentation from the same user carrying a different
 `cnf` can tell that a batch is used — but it cannot tell **which copies belong to the same person**. That is the intent.

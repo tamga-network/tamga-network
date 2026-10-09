@@ -18,6 +18,8 @@ export const OFFER_TTL_SEC: Record<OfferClass, number> = {
 };
 export const TX_CODE_ATTEMPTS = 3;
 export const ACCESS_TOKEN_TTL_SEC = 300; // PR9
+/** c_nonce ömrü (SPEC-PROTO-0001 §5: 5 dk — 10 donanım anahtarı + anahtar kanıtı yavaş cihazda da sığsın). Ömür yanıtta
+ *  bildirilmez: OpenID4VCI 1.0 Final nonce yanıtı yalnız `c_nonce` taşır (`c_nonce_expires_in` yok). */
 export const C_NONCE_TTL_SEC = 300;
 export const BATCH_SIZE = 10; // §8
 export const PROOF_TYP = "openid4vci-proof+jwt";
@@ -98,7 +100,7 @@ export function redeemOffer(
   preAuthorizedCode: string,
   txCode: string | undefined,
   now = Math.floor(Date.now() / 1000),
-): { ok: true; accessToken: string; cNonce: string; expiresIn: number } | { ok: false; error: TokenError } {
+): { ok: true; accessToken: string; expiresIn: number } | { ok: false; error: TokenError } {
   // kimliğe bağlı teklifin ön-yetkili kodu yoktur: boş kodla eşleşme olmaz (ADR-0020 AS2)
   if (o.klass === "identity-bound" || !o.preAuthorizedCode || !preAuthorizedCode)
     return { ok: false, error: "invalid_grant" };
@@ -113,7 +115,8 @@ export function redeemOffer(
     return { ok: false, error: o.used ? "too_many_attempts" : "tx_code_mismatch" };
   }
   o.used = true; // PR3 tek kullanımlık
-  return { ok: true, accessToken: opaque(), cNonce: opaque(16), expiresIn: ACCESS_TOKEN_TTL_SEC };
+  // OpenID4VCI 1.0 Final: token yanıtı c_nonce taşımaz — cüzdan nonce ucundan alır (SPEC-PROTO-0001 §4–§5)
+  return { ok: true, accessToken: opaque(), expiresIn: ACCESS_TOKEN_TTL_SEC };
 }
 
 export type ProofResult = { ok: true; jwk: JWK } | { ok: false; reason: string };

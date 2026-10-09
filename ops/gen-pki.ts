@@ -12,8 +12,9 @@
  *
  * Geliştirme kipi üretir (P-256, ES256):
  *   1. TR National Root CA (provisional operator: Tamga)  — self-signed, çevrimdışı kök muadili
- *   2. İstanbul Bilgi Üniversitesi issuer sertifikası — kökçe imzalı yaprak
- *   2b. Bilgi status list anahtarı (K1: credential anahtarından ayrı)
+ *   2. Örnek üniversite issuer sertifikası (dosya adı tarihsel: `issuer-bilgi`) — kökçe imzalı yaprak; konu adı yalnız örnek
+ *      kurum ("Ornek Universitesi (DEV)"): geliştirme sertifikaları ve uyum vektörleri gerçek bir kurumu belge veren gibi göstermez
+ *   2b. Örnek üniversite status list anahtarı (K1: credential anahtarından ayrı)
  *   3. Tamga Trust List signing cert (TLSO)                — self-signed; lotl/tl/anchors imzalar
  *   4. Test cüzdan sağlayıcı sertifikası                   — self-signed; WUA imzalar. YALNIZ TEST: ağın kendi testleri ve
  *      liste fixture'ları WIA/WUA doğrulamasını bununla dener; hiçbir gerçek cüzdanın sertifikası değildir (ADR-0042 K5: ağ
@@ -251,14 +252,11 @@ async function main() {
     root,
     ...(await devOrCertOnly(
       "issuer-bilgi",
-      signedByRoot(1001, "CN=Istanbul Bilgi Universitesi, OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi, C=TR"),
+      signedByRoot(1001, "CN=Ornek Universitesi (DEV), OU=Ogrenci Isleri, O=Ornek Universitesi (DEV), C=TR"),
     )),
     ...(await devOrCertOnly(
       "issuer-bilgi-status",
-      signedByRoot(
-        1002,
-        "CN=Istanbul Bilgi Universitesi - Status List, OU=Status, O=Istanbul Bilgi Universitesi, C=TR",
-      ),
+      signedByRoot(1002, "CN=Ornek Universitesi (DEV) - Status List, OU=Status, O=Ornek Universitesi (DEV), C=TR"),
     )),
     await ensure(
       "tl-signer-1",
@@ -304,11 +302,9 @@ async function main() {
     // 7) ADR-0011 K3: kurum issuer'ı kimlik attestation'ını SUNUM olarak ister → RP erişim sertifikası (SAN issuer.tamga.network; client_id = x509_hash, ADR-0034)
     ...(await devOrCertOnly(
       "rp-issuer-bilgi",
-      signedByRoot(
-        2002,
-        "CN=issuer.tamga.network, O=Istanbul Bilgi Universitesi - kimlik eslestirme, C=TR",
-        async () => [new SubjectAlternativeNameExtension([{ type: "dns", value: "issuer.tamga.network" }])],
-      ),
+      signedByRoot(2002, "CN=issuer.tamga.network, O=Ornek Universitesi (DEV) - kimlik eslestirme, C=TR", async () => [
+        new SubjectAlternativeNameExtension([{ type: "dns", value: "issuer.tamga.network" }]),
+      ]),
     )),
   ];
 

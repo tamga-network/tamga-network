@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-07
+last_updated: 2026-10-09
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -84,7 +84,7 @@ Z1. A4–A7 Z1 kapsamındadır.
 | `B3` | Type Metadata al (önbellek → URL → registry) |
 | `B4` | Bütünlük: hash `== vct#integrity` **ve** `== contentHash` (zincir) |
 | `B5` | `extends` zinciri; her adımda `extends#integrity` |
-| `B6` | JSON Schema 2020-12 uyumu |
+| `B6` | JSON Schema 2020-12 uyumu (`schema_uri` Tamga ekidir, [[SPEC-SCHEMA-0001]] §2.1) |
 
 ## 1.C — Güven katmanı → [[SPEC-BC-0001]] §11.2
 
@@ -184,7 +184,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.2.0",
+  "sdk_version": "@tamga-network/verifier@0.3.0",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",
@@ -224,7 +224,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
 
 | Alan | Anlamı |
 |---|---|
-| `status.reason` | İsteğe bağlı metin (`string \| null`): durum değerinin nedeni, kendiliğinden anlaşılmadığında. Ör. `NOT_APPLICABLE` + ZK sunumu: iptal indeksi açılmaz ([[ADR-0032]] ZK4; belge kısa ömürlü). Kişisel veri taşımaz. |
+| `status.reason` | İsteğe bağlı metin (`string \| null`): durum değerinin nedeni, kendiliğinden anlaşılmadığında. Ör. `NOT_APPLICABLE` + ZK sunumu: iptal indeksi açılmaz ([[ADR-0032]] ZK4). Kişisel veri taşımaz. |
 
 ## 2.3 `indeterminate_reason`
 
@@ -400,7 +400,7 @@ POST /offers
 Idempotency-Key: 8c21f...
 
 {
-  "credential_configuration_id": "TamgaDiplomaCredential",
+  "credential_configuration_id": "urn:tamga:edu:DiplomaCredential:1",
   "subject_ref": "OBS-2022510041",
   "batch_size": 1
 }
@@ -409,7 +409,7 @@ Idempotency-Key: 8c21f...
 ```json
 {
   "offer_id": "ofr_01J8XM",
-  "offer_uri": "https://issuer.bilgi.edu.tr/offer/8a3f9c21",
+  "offer_uri": "https://issuer.tamga.network/example-university/offers/8a3f9c21",
   "tx_code": "493812",
   "expires_at": "2026-09-09T09:17:44Z"
 }
@@ -425,7 +425,7 @@ gösterilir, sonra unutulur.
 
 ```http
 POST /offers/preflight
-{ "credential_configuration_id": "TamgaDiplomaCredential", "subject_ref": "OBS-2022510041" }
+{ "credential_configuration_id": "urn:tamga:edu:DiplomaCredential:1", "subject_ref": "OBS-2022510041" }
 ```
 
 ```json
@@ -470,7 +470,7 @@ GET /status-lists/{list_id}
 ```json
 {
   "list_id": "0x4f…",
-  "list_uri": "https://status.bilgi.edu.tr/v1/sl/7f3a9c21",
+  "list_uri": "https://status.tamga.network/7f3a9c21",
   "version": 8412,
   "published_at": "2026-09-09T09:00:00Z",
   "next_publish_at": "2026-09-09T10:00:00Z",

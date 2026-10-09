@@ -323,7 +323,8 @@ tohumu (yalnız cüzdanda kalır, hiçbir doğrulayıcıya gösterilmez).
 
 Belge durumu IETF Token Status List ile yayınlanır. Liste adresleri kurumu, yılı ya da öğrenci grubunu ele vermez; bir
 belgenin listedeki yeri rastgeledir. Listeler sabit aralıklarla, değişiklik olmasa da yayınlanır; böylece iptal anı dışarı
-sızmaz. Pilotta yayın aralığı 60 dakikadır; bir iptal en geç 90 dakika içinde doğrulayıcılarda etkili olur.
+sızmaz. Pilotta yayın aralığı 60 dakikadır; bir iptal en geç 90 dakika içinde doğrulayıcılarda etkili olur. Bugünkü deneme
+işletiminde aralık 2 dakikadır; pilot değerine geçiş proje yönetiminin kararını bekliyor.
 
 ---
 

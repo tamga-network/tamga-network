@@ -112,7 +112,8 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
   `zkBackendFromEnv()` (`TAMGA_ZK_NATIVE_BIN`) → `VerifyInput.zk`. Doğrulama ~0,2–0,3 sn sürer; ikili yanıt vermezse WASM'a düşer.
 - **Yeni adım `Z1`:** devre imzalı listede mi, yalnızca istenen öğe mi açıklandı, zaman damgası taze mi, ispat geçerli mi?
   Kurum imzası, cihaz imzası ve geçerlilik ispatın içinde denetlenir (`checks_skipped`: A4–A7). İptal durumu gelmez
-  (`status.value: NOT_APPLICABLE`, nedeni `status.reason`'da); ZK ile sunulan belgeler kısa ömürlüdür.
+  (`status.value: NOT_APPLICABLE`, nedeni `status.reason`'da). ZK ile sunulan kimlik belgesi bugün 2 yıl geçerlidir ve iptali
+  görünmez; bu yolu iptalin sonucu değiştirmediği kullanımlarda (ör. yaş kontrolü) seçin.
 - **`accept_unrevocable_zk`:** `mso_mdoc_zk` kullanan politika bunu açıkça yazmalıdır. `true` iptali denetlenemeyen sunumu
   kabul eder; `false` yazarsanız her ZK sunumu `INDETERMINATE` döner (adım `D1`, `STATUS_UNREACHABLE`) — iptal denetimi şartsa
   klasik `mso_mdoc` politikasını kullanın.

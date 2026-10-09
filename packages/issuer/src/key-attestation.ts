@@ -1,6 +1,6 @@
 /**
  * ADR-0025 / AB TS3 — Anahtar Kanıtı (KA, OpenID4VCI 1.0 Ek D `key_attestation`) ve cüzdan sağlayıcı iptal listesi denetimi.
- *  - KA: cüzdan sağlayıcı imzalı (`keyattestation+jwt`, x5c yaprağı güven listesindeki sağlayıcı anahtarı); `attested_keys`,
+ *  - KA: cüzdan sağlayıcı imzalı (`key-attestation+jwt`, OpenID4VCI 1.0 Ek D.1; x5c yaprağı güven listesindeki sağlayıcı anahtarı); `attested_keys`,
  *    `key_storage` / `user_authentication` (ISO 18045), `key_storage_status {status, exp}`.
  *  - KA'lı proof: `openid4vci-proof+jwt` başlığında `key_attestation`; proof `attested_keys[0]` ile imzalı (TS3 §2.2.2.1).
  *  - WIA `client_status` ve KA `key_storage_status` iptal durumu: sağlayıcının Token Status List'i (imzacı = sağlayıcı anahtarı).
@@ -18,7 +18,7 @@ import { b64ToDer, derToPem, certFingerprintSha256Hex } from "@tamga-network/cor
 import { KEY_STORAGE_RANK, type KeyStorage, type StatusRef, type StatusValueOf } from "@tamga-network/trust";
 import { verifyStatusListToken } from "@tamga-network/sd-jwt";
 
-export const KA_TYP = "keyattestation+jwt";
+export const KA_TYP = "key-attestation+jwt"; // OpenID4VCI 1.0 Final Ek D.1
 export const PROOF_TYP_KA = "openid4vci-proof+jwt";
 
 /** ISO/IEC 18045 saldırı potansiyeli direnci → Tamga anahtar deposu sırası (politika `min_key_storage`). */
@@ -233,7 +233,10 @@ export function hasKeyAttestation(proof: string): boolean {
   }
 }
 /** Credential ucunda proof doğrulamasının ortak sonucu (kurum issuer'ı + kimlik servisi). */
+/** `invalidNonce`: kanıttaki c_nonce bilinmiyor / süresi geçmiş / tüketilmiş → OpenID4VCI 1.0 §8.3.1.2 `invalid_nonce` (cüzdan yeni
+ *  c_nonce alır); diğer başarısızlıklar `invalid_proof`. */
 export type ProofCheck =
-  { ok: true; jwks: JWK[]; keyStorage?: KeyStorage } | { ok: false; reason: string; indeterminate?: boolean };
+  | { ok: true; jwks: JWK[]; keyStorage?: KeyStorage }
+  | { ok: false; reason: string; indeterminate?: boolean; invalidNonce?: boolean };
 /** Anahtar deposu kurum politikasının alt sınırını karşılıyor mu (WL3)? */
 export const meetsKeyStorage = (have: KeyStorage, min: KeyStorage) => KEY_STORAGE_RANK[have] >= KEY_STORAGE_RANK[min];

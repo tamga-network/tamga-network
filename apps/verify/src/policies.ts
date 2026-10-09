@@ -164,7 +164,7 @@ export const POLICIES: Policy[] = [
         namespace: "tamga.id.1",
         required_claims: ["age_over_18"],
         constraints: { age_over_18: true },
-        // ADR-0032 ZK4: iptal indeksi gelmez; kısa ömürlü belge (K6) bilinerek kabul edilir (sonuç NOT_APPLICABLE + reason)
+        // ADR-0032 ZK4: iptal indeksi gelmez; iptali denetlenemeyen sunum (K6) bilinerek kabul edilir (sonuç NOT_APPLICABLE + reason)
         accept_unrevocable_zk: true,
       },
     ],

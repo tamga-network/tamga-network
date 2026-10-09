@@ -4,7 +4,7 @@ title: "Schema catalogue"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   The normative implementation of the [[ADR-0007]] decisions. Defines the schemas.tamga.network URL scheme and namespaces,
   the structure of the SD-JWT VC Type Metadata document published at every vct address, how the vct#integrity value is
@@ -159,6 +159,9 @@ Rules:
 - `schema` (embedded) is **not used**; `schema_uri` is always used. Rationale: to keep the Type Metadata document small and
   make the schema separately cacheable.
 - `schema_uri#integrity` is **mandatory.**
+- **Tamga extension:** `schema_uri` and `schema_uri#integrity` are **not** among the Type Metadata properties of IETF SD-JWT VC
+  draft 19 (earlier drafts had them). Tamga keeps them as its own extension: a standard consumer does not know these two
+  properties and ignores them (rule below); the JSON Schema check (verification step B6) runs only in the Tamga verifier.
 - Every type except the root type (`TamgaBaseCredential`) **must** have `extends` + `extends#integrity`.
 - Unrecognised top-level properties are **ignored** by consumers — a requirement of the standard. This is what makes the
   `tamga` extension block safe.
@@ -294,7 +297,7 @@ printf 'sha256-%s\n' "$(openssl dgst -sha256 -binary dosya.json | openssl base64
 |---|---|---|
 | `vct#integrity` | In the credential's own payload | **Yes** ([[ADR-0007]] Decision 3) |
 | `extends#integrity` | Inside the Type Metadata | Yes (except the root type) |
-| `schema_uri#integrity` | Inside the Type Metadata | Yes |
+| `schema_uri#integrity` | Inside the Type Metadata (Tamga extension, §2.1) | Yes |
 | `contentHash` | In the `SchemaRegistry` contract | Yes |
 
 `contentHash` = the hash of the **same** document that `vct#integrity` points to, as `bytes32` (raw SHA-256, not base64).

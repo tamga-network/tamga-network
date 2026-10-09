@@ -144,14 +144,16 @@ describe("sessiz yenileme zamanlaması", () => {
       if (url === "https://i/token")
         return {
           status: 200,
-          text: async () => JSON.stringify({ access_token: "a", refresh_token: "t2", c_nonce: "n" }),
+          text: async () => JSON.stringify({ access_token: "a", refresh_token: "t2" }),
         };
+      if (url === "https://i/nonce") return { status: 200, text: async () => JSON.stringify({ c_nonce: "n" }) };
       return {
         status: 200,
         text: async () =>
           JSON.stringify({
             credential_issuer: "https://i",
             credential_endpoint: "https://i/credential",
+            nonce_endpoint: "https://i/nonce",
             credential_configurations_supported: { v: { format: "dc+sd-jwt", vct: "v" } },
           }),
       };

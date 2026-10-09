@@ -59,7 +59,7 @@ Kişisel veri tutulmaz. Birimle ilgili istekler birim anahtarıyla imzalanır.
 
 ## K3 — KA (key attestation)
 
-- Biçim: OpenID4VCI 1.0 Ek D (`keyattestation+jwt`), TS3 §2.3.2 alanları:
+- Biçim: OpenID4VCI 1.0 Ek D (`typ` `key-attestation+jwt`, Final Ek D.1; 2026-10-09 düzeltme: önceki metin taslaktaki `keyattestation+jwt` adını anıyordu), TS3 §2.3.2 alanları:
   - `attested_keys` (bir paketteki bütün belge anahtarları),
   - `key_storage` / `user_authentication` (ISO 18045 seviyeleri),
   - `certification`,

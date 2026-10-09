@@ -341,7 +341,8 @@ pseudonym seed (which stays in the wallet and is never shown to any verifier).
 
 Credential status is published with the IETF Token [[t:status-list|Status List]]. List addresses do not reveal the institution, year or
 student group; a credential's position in the list is random. Lists are published at fixed intervals, even without
-changes, so the moment of revocation does not leak. In the pilot the interval is 60 minutes; a revocation takes effect at
+changes, so the moment of revocation does not leak. In the pilot the interval is 60 minutes (2 minutes in today's trial operation; moving to the pilot value awaits a project
+management decision); a revocation takes effect at
 verifiers within 90 minutes at most.
 
 ---

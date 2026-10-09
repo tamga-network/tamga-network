@@ -34,7 +34,7 @@ async function holderKeys(n: number) {
 }
 async function ka(
   p: Awaited<ReturnType<typeof provider>>,
-  o: { nonce?: string; keys?: unknown[] } = {},
+  o: { nonce?: string; keys?: unknown[]; typ?: string } = {},
 ): Promise<string> {
   return new SignJWT({
     attested_keys: o.keys ?? (await holderKeys(2)),
@@ -43,7 +43,7 @@ async function ka(
     key_storage_status: { status: { status_list: { idx: 7, uri: "https://wp.tamga.network/status/1" } } },
     ...(o.nonce !== undefined ? { nonce: o.nonce } : {}),
   })
-    .setProtectedHeader({ alg: "ES256", typ: KA_TYP, x5c: [Buffer.from(p.der).toString("base64")] })
+    .setProtectedHeader({ alg: "ES256", typ: o.typ ?? KA_TYP, x5c: [Buffer.from(p.der).toString("base64")] })
     .setIssuedAt(now)
     .setExpirationTime(now + 3600)
     .sign(p.key);
@@ -75,6 +75,13 @@ describe("attestation proof türü", () => {
       isProviderKey: yes,
     });
     expect(dup).toMatchObject({ ok: false, reason: expect.stringMatching(/duplicate/) });
+  });
+  it("KA typ OpenID4VCI 1.0 Final Ek D.1: key-attestation+jwt; eski taslak adı reddedilir", async () => {
+    expect(KA_TYP).toBe("key-attestation+jwt");
+    const p = await provider();
+    const yes = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
+    const old = await ka(p, { nonce: "n-1", typ: "keyattestation+jwt" });
+    expect(await verifyAttestationProof(old, { nonce: "n-1", now, isProviderKey: yes })).toMatchObject({ ok: false });
   });
   it("readProofs: tam olarak bir proof türü; attestation tek öğe; jwt 1..max", async () => {
     const p = await provider();

@@ -4,7 +4,7 @@ title: "SD-JWT VC profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   Defines the bytes of a Tamga credential: how a disclosure is produced (salt, array structure, JSON serialisation rule,
   base64url), how the _sd array is filled and why it is sorted, the decoy digest policy, the placement of _sd_alg, cnf and
@@ -204,7 +204,9 @@ convention is fixed; otherwise different Tamga issuer implementations could not 
 |---|---|
 | Unicode | `ensure_ascii` — non-ASCII characters are escaped as `\uXXXX` |
 | Element separator | `", "` (comma + space) |
+| Object value | Key–value separator `": "`, member separator `", "`; keys in the order they were produced |
 | Array | Exactly 3 elements, in order salt, name, value |
+| Implementation | `@tamga-network/sd-jwt` produces with this convention; the values in §3.4 are reproduced exactly in the package's tests |
 
 This convention is **for producing only.** The verifier can — and must — verify disclosures that do not follow the
 convention; credentials from external ecosystems may use a different one.
@@ -219,7 +221,7 @@ The digests of hidden claims are collected in the `_sd` array inside the JSON ob
 
 ```json
 {
-  "iss": "https://issuer.bilgi.edu.tr",
+  "iss": "https://issuer.tamga.network/example-university",
   "vct": "urn:tamga:edu:DiplomaCredential:1",
   "_sd_alg": "sha-256",
   "_sd": [

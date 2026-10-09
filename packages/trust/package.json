@@ -1,6 +1,6 @@
 {
   "name": "@tamga-network/trust",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "TrustSource(list): imzalı güven listelerini (lotl/tl/anchors) doğrular, yansıtır ve SPEC-BC-0001 §11.2 okuma setini sunar. Zincire geçişte aynı arayüzü TrustSource(chain) sağlar.",

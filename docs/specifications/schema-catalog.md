@@ -4,7 +4,7 @@ title: "Şema kataloğu"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   [[ADR-0007]] kararlarının normatif uygulaması. schemas.tamga.network URL şemasını
   ve isim alanlarını, her vct adresinde yayınlanan SD-JWT VC Type Metadata
@@ -156,6 +156,9 @@ Kurallar:
 - `schema` (gömülü) **kullanılmaz**; her zaman `schema_uri` kullanılır. Gerekçe:
   Type Metadata dokümanını küçük tutmak, şemayı ayrı önbelleklenebilir kılmak.
 - `schema_uri#integrity` **zorunludur.**
+- **Tamga eki:** `schema_uri` ve `schema_uri#integrity` IETF SD-JWT VC taslak 19'un Type Metadata alanları arasında
+  **yoktur** (önceki taslaklarda vardı). Tamga onları kendi eki olarak tutar: standart bir tüketici bu iki alanı tanımaz ve yok
+  sayar (aşağıdaki kural); JSON Schema denetimi (doğrulama adımı B6) yalnız Tamga doğrulayıcısında çalışır.
 - Kök tip (`TamgaBaseCredential`) dışında her tipte `extends` +
   `extends#integrity` **zorunludur.**
 - Tanınmayan üst düzey özellikler consumer tarafından **yok sayılır** —
@@ -292,7 +295,7 @@ printf 'sha256-%s\n' "$(openssl dgst -sha256 -binary dosya.json | openssl base64
 |---|---|---|
 | `vct#integrity` | Belgenin kendi payload'ında | **Evet** ([[ADR-0007]] Karar 3) |
 | `extends#integrity` | Type Metadata içinde | Evet (kök tip hariç) |
-| `schema_uri#integrity` | Type Metadata içinde | Evet |
+| `schema_uri#integrity` | Type Metadata içinde (Tamga eki, §2.1) | Evet |
 | `contentHash` | `SchemaRegistry` kontratında | Evet |
 
 `contentHash` = `vct#integrity`'nin işaret ettiği **aynı** dokümanın hash'i,

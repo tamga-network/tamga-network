@@ -10,7 +10,9 @@ Kurum, yani [[t:issuer|belge veren]], belgeyi kişinin cüzdanına **[[t:OpenID4
 ## 1. Kurum teklif eder (QR ya da bağlantı)
 
 Kurum bir **[[t:credential-offer|belge teklifi]]** oluşturur; kişi QR'ı cüzdanıyla okutur ya da bağlantıya dokunur. Teklif
-standarttır (`openid-credential-offer://`). İsteğe bağlı tek kullanımlık kod (`tx_code`) teklifle aynı kanaldan gönderilmez.
+standarttır (`openid-credential-offer://`). Ön yetkili (pre-authorized) teklifte tek kullanımlık 6 haneli kod (`tx_code`)
+**zorunludur**: kurumun ekranında, oturum açmış kişiye QR'la birlikte gösterilir; teklif e-postayla gidiyorsa kod başka bir
+kanaldan (SMS) gelir. Kurumun kimliğe bağlı teklifinde kod yoktur; kişi bunun yerine cüzdandaki doğrulanmış kimliğini sunar.
 
 ## 2. Kişi cüzdandan ister
 

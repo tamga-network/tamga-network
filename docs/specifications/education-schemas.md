@@ -4,7 +4,7 @@ title: "Eğitim şemaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   Pilotun iki belge tipini normatif olarak tanımlar. TamgaStudentCredential:
   kısa ömürlü (90 gün), iptal listesi kullanmaz, öğrencilik durumunu kanıtlar.
@@ -310,7 +310,7 @@ eklemesi engellenir; ihtiyaç varsa MINOR sürüm çıkarılır. Serbest bırakm
 
 ```json
 {
-  "iss": "https://issuer.bilgi.edu.tr",
+  "iss": "https://issuer.tamga.network/example-university",
   "vct": "urn:tamga:edu:StudentCredential:1",
   "vct#integrity": "sha256-9Kf2rT8xQm1vB4nL7wZpYc3JdHs0EaXu6GiOoN5RbMk=",
   "iat": 1789000000,
@@ -322,8 +322,8 @@ eklemesi engellenir; ihtiyaç varsa MINOR sürüm çıkarılır. Serbest bırakm
   "birth_date": "2003-04-17",
 
   "awarding_body_name": {
-    "tr-TR": "İstanbul Bilgi Üniversitesi",
-    "en-US": "Istanbul Bilgi University"
+    "tr-TR": "Örnek Üniversitesi",
+    "en-US": "Example University"
   },
   "awarding_body_id": "TR-YOK-038",
   "awarding_body_country": "TR",
@@ -482,7 +482,7 @@ Belge veren bu alanı **her zaman** doldurur; hangi eşiklerde üretileceği
 
 ```json
 {
-  "iss": "https://issuer.bilgi.edu.tr",
+  "iss": "https://issuer.tamga.network/example-university",
   "vct": "urn:tamga:edu:DiplomaCredential:1",
   "vct#integrity": "sha256-3Qm2pV7yLx0KcW9tRfBnEsA4ZhUgJd1MoI6TvXbCqNw=",
   "iat": 1789000000,
@@ -490,7 +490,7 @@ Belge veren bu alanı **her zaman** doldurur; hangi eşiklerde üretileceği
   "status": {
     "status_list": {
       "idx": 48213,
-      "uri": "https://status.bilgi.edu.tr/v1/sl/7f3a9c21"
+      "uri": "https://status.tamga.network/7f3a9c21"
     }
   },
 
@@ -499,8 +499,8 @@ Belge veren bu alanı **her zaman** doldurur; hangi eşiklerde üretileceği
   "birth_date": "2003-04-17",
 
   "awarding_body_name": {
-    "tr-TR": "İstanbul Bilgi Üniversitesi",
-    "en-US": "Istanbul Bilgi University"
+    "tr-TR": "Örnek Üniversitesi",
+    "en-US": "Example University"
   },
   "awarding_body_id": "TR-YOK-038",
   "awarding_body_country": "TR",

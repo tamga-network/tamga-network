@@ -53,8 +53,12 @@ the format itself (CBOR + COSE); Bluetooth transport is separate and needs an Ap
 4. **CBOR determinism:** RFC 8949 §4.2.1 (bytewise). We mark the ISO 18013-5 reference to RFC 7049 §3.9 (length-first) as a
    full-interoperability item for the pilot; since the whole ecosystem uses one library (`@tamga-network/mdoc`), digest
    consistency is ensured.
-5. **SessionTranscript:** in the demo, a deterministic digest of the [[t:OpenID4VP]] [[t:nonce]] + client_id + response_uri;
-   **in the pilot, ISO 18013-7 Annex B (OID4VPHandover)**. Marked as a deviation.
+5. **SessionTranscript:** the handovers of [[t:OpenID4VP]] 1.0 Final Annex B.2.6: `OpenID4VPHandover` in the redirect flow
+   (B.2.6.1 — client_id, [[t:nonce]], the JWK thumbprint of the key the response is encrypted to, response_uri) and
+   `OpenID4VPDCAPIHandover` in the browser Digital Credentials API (B.2.6.2 — origin, nonce, JWK thumbprint). Proximity
+   (Bluetooth) uses the ISO 18013-5 session SessionTranscript. *Implementation note (2026-10-09):* the original text planned a
+   deterministic digest for the demo and ISO 18013-7 Annex B for the pilot; the implementation moved straight to the OpenID4VP
+   1.0 Final form, so no deviation remains here.
 6. **Scope:** only the identity attestation. Student certificate, diploma and ticket stay SD-JWT VC (no need for mdoc; browser
    sign-in and the PID precedent apply only to identity). The same mechanism is extended if a need arises.
 

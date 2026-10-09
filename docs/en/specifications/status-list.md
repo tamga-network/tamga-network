@@ -46,8 +46,9 @@ anchored and verified.
 The decision and its rationale are in [[ADR-0008]] and are not repeated here. In short: the bitstring list is hosted
 **off-chain**; only the URI + content hash + version anchor sits on the chain.
 
-**Standards basis:** IETF Token Status List (draft-ietf-oauth-status-list-**20**, 2026-04-20; the same as EU CIR 2026/1731).
-The draft is in the RFC Editor queue.
+**Standards basis:** IETF Token Status List — the Tamga profile follows draft-ietf-oauth-status-list-**20** (2026-04-20),
+which the EU fixed in CIR 2026/1731. The current draft is **draft-21** (2026-06-21, in the RFC Editor queue); as long as the
+EU reference stays at draft-20, so does Tamga, and the profile is reviewed once the RFC is published.
 
 Out of scope: cryptographic accumulators / [[t:ZK]] revocation (`RS-REVOCATION-0001`, expansion stage).
 
@@ -93,7 +94,7 @@ Every Tamga credential that uses a status list carries a `status` claim ([[SPEC-
 "status": {
   "status_list": {
     "idx": 48213,
-    "uri": "https://status.bilgi.edu.tr/v1/sl/7f3a9c21"
+    "uri": "https://status.tamga.network/7f3a9c21"
   }
 }
 ```
@@ -127,8 +128,8 @@ Body:
 
 ```json
 {
-  "iss": "https://issuer.bilgi.edu.tr",
-  "sub": "https://status.bilgi.edu.tr/v1/sl/7f3a9c21",
+  "iss": "https://issuer.tamga.network/example-university",
+  "sub": "https://status.tamga.network/7f3a9c21",
   "iat": 1789000000,
   "exp": 1789180000,
   "ttl": 3600,
@@ -144,8 +145,8 @@ Body:
 | `iss` | Mandatory | Issuer identifier; in the same trust chain as the Referenced Token's `iss` |
 | `sub` | Mandatory | List URI — **exactly the same** as `uri` in the Referenced Token |
 | `iat` | Mandatory | Publication time |
-| `exp` | **Mandatory in Tamga** | `iat + 50 hours` (§8.2) |
-| `ttl` | **Mandatory in Tamga** | `3600` (seconds) — §8.1 |
+| `exp` | **Mandatory in Tamga** | Target `iat + 50 hours`; today's implementation `iat + 2 × publication interval` (§8.1) |
+| `ttl` | **Mandatory in Tamga** | The publication interval (seconds): pilot target `3600`, `120` in today's trial operation (§5.1, §8.1) |
 | `status_list.bits` | Mandatory | **Always `2` in Tamga** — §3.3 |
 | `status_list.lst` | Mandatory | Compressed byte array, base64url |
 | `status_list.aggregation_uri` | Optional | **Recommended in Tamga** — §9.2 |
@@ -153,8 +154,8 @@ Body:
 ## 3.2 Serving
 
 ```
-GET /v1/sl/7f3a9c21 HTTP/1.1
-Host: status.bilgi.edu.tr
+GET /7f3a9c21 HTTP/1.1
+Host: status.tamga.network
 Accept: application/statuslist+jwt
 
 HTTP/1.1 200 OK
@@ -322,6 +323,10 @@ on-chain credential gating has to rely on fresh proof supplied by the caller →
 
 The Status Provider republishes the list at **fixed intervals**. Default interval: **1 hour.**
 
+> **Operation today (2026-10):** the issuance services run by the network publish the list **every 2 minutes** (trial
+> operation; a revocation shows within minutes) and `ttl` equals the interval. The fixed-interval rule (S5, S6) applies
+> unchanged. When to move to the pilot's 1-hour interval awaits a project management decision (open topic 6).
+
 **It is published even if nothing changed.** This is not optional.
 
 Rationale ([[ADR-0008]] §1): if the list were published only when a revocation happens, the mere existence of a
@@ -392,9 +397,13 @@ information.
 |---|---|
 | Minimum list capacity | **100,000** indices |
 | Maximum fill | 80% — beyond that a new list is opened |
-| Minimum initial noise | When the list is created, **1%** of the capacity is marked as "allocated" at random indices; the bit value stays `0x00` (valid) and they are bound to no credential — indistinguishable from real entries from outside |
+| Minimum initial noise | When the list is created, **1%** of the capacity is marked as "allocated" at random indices; the bit value stays `0x00` (valid) and they are bound to no credential — indistinguishable from real entries from outside. **Not implemented today** (open topic 3) |
 
-The last row prevents a single graduate from being the only filled index during the first days of a new list.
+The last row was written to prevent a single graduate from being the only filled index during the first days of a new list.
+But the bit of a valid credential and the bit of an index never used are the same (`0x00`): someone looking from outside
+cannot see which indices are allocated anyway. Because the noise has no observable effect it is not implemented today; a
+proposal to remove it awaits a decision (open topic 3). Random allocation (§6.1) and the minimum capacity provide the
+protection.
 
 ## 6.3 The list URI must be OPAQUE
 
@@ -415,7 +424,7 @@ Forbidden patterns:
 **Rule:** the list identifier must be **opaque** — a meaningless, randomly generated string:
 
 ```
-https://status.bilgi.edu.tr/v1/sl/7f3a9c21
+https://status.tamga.network/7f3a9c21
 ```
 
 The Status Provider keeps the mapping between this identifier and the cohort **internally**; it never leaves.
@@ -509,8 +518,13 @@ Without the chain anchor the issuer could silently roll back the list on its own
 
 | Claim | Tamga value | Meaning |
 |---|---|---|
-| `ttl` | `3600` | The verifier may use it for this long without refetching |
-| `exp` | `iat + 50 hours` | After this moment the token must not be used at all |
+| `ttl` | `3600` (target) | The verifier may use it for this long without refetching |
+| `exp` | `iat + 50 hours` (target) | After this moment the token must not be used at all |
+
+**Today's implementation (2026-10):** `ttl` equals the publication interval (120 seconds in trial operation) and
+`exp = iat + 2 × ttl` (twice the interval; 4 minutes at a 2-minute interval). A short `exp` means that during a status server
+outage verification falls to CANNOT BE VERIFIED within minutes; moving to the 50-hour buffer below awaits a project
+management decision (open topic 6).
 
 Why `exp` is much longer than `ttl`: `ttl` is the "freshness target", `exp` the "absolute limit". If the status server is
 down for a few hours, verification must be able to continue with the token at hand. 50 hours covers a weekend outage.
@@ -567,8 +581,8 @@ The standard defines an optional aggregation mechanism that lets the issuer publ
 
 ## 9.3 Herd privacy
 
-The fewer indices a list has, the more distinguishing `idx` is. That is the reason for the minimum capacity of 100,000 and
-the 1% initial noise in §6.2.
+The fewer indices a list has, the more distinguishing `idx` is. That is the reason for the minimum capacity of 100,000 in §6.2
+(the 1% initial noise is not implemented today, §6.2).
 
 **The small-institution problem:** a vocational school with 300 graduates means 300 filled indices in a list of 100,000.
 The list is large but the herd is small. In that case the herd is bounded by the **institution**, not by the list, and there
@@ -596,9 +610,9 @@ different `idx` for each presentation ([[SPEC-CRED-0001]] §5, [[SPEC-SCHEMA-000
 |---|---|
 | Address | `status.<issuer-domain>` |
 | Content | Static file (signed token), behind a CDN |
-| Writing | Publication job (cron), once an hour |
+| Writing | Publication job (cron), at a fixed interval (pilot target once an hour; every 2 minutes today, §5.1) |
 | Key | Status signing key, online, separate from the credential key (§3.4) |
-| Availability target | 99.5% — not on the critical path thanks to the `exp`=50h buffer |
+| Availability target | 99.5% — not on the critical path with the targeted `exp`=50h buffer (with today's short `exp` it is, §8.1) |
 
 It is a separate component for every issuer and is part of the issuer onboarding checklist ([[ARCH-0004]]).
 
@@ -611,11 +625,21 @@ This is a real centralisation point and is governed by policy in [[PM-GOV-0001]]
 the institution (the foundation cannot publish a fake status), no access log is kept, the list of hosted issuers is public,
 and if they exceed 30% of active issuers the matter goes to the council agenda.
 
+**Today (2026-10) differs from the policy in two points:**
+
+- **Key:** in the hosted service the status signing key, like the credential signing key, sits in the hosted service; moving
+  it to the institution's own key management (KMS) is a pilot precondition.
+- **Access log:** the server keeps a short access log without IP addresses or request bodies (time, host name, path, status
+  code, response size, duration). The path carries only the opaque list identifier (§6.3); the log does not show which
+  verifier asked about which credential, because the verifier fetches the whole list (§9.1).
+
+Closing the two gaps, or rewriting the policy, awaits a project management decision (open topic 7).
+
 ## 10.3 Disaster scenarios
 
 | Scenario | Effect | Recovery |
 |---|---|---|
-| Status server outage | Continues from cache for up to 50 hours | The server comes back |
+| Status server outage | Target: continues from cache for up to 50 hours (today for as long as `exp`, §8.1) | The server comes back |
 | Loss of the status key | No new publication possible | New key + `kid` rotation; the same list continues |
 | Compromise of the status key | Fake status can be published | Certificate revocation → every token fails at Ş4 → republication with a new key |
 | Loss of the list file | Verification stops | The bitstring is regenerated from the issuer database; **the `contentHash` on the chain is kept to verify past versions** |
@@ -654,12 +678,17 @@ database.
    archive history, ~1.8 GB a year.
 2. How is a return from suspension (`0x02`) to valid represented in the verifier's audit log? Is a retrospective "was it
    suspended at that moment" query needed?
-3. The 1% initial noise of §6.2 consumes capacity because it counts fake indices as "allocated". Is there a more elegant
-   solution?
+3. The 1% initial noise of §6.2 is not implemented today: since a valid bit and an unused index are the same (`0x00`), it has
+   no observable effect from outside and only consumes capacity. **Proposal:** remove the rule (awaiting a decision).
 4. Should Status List Aggregation be mandatory? Today it is "recommended"; if the verifier side takes prefetching seriously,
    making it mandatory may make sense.
 5. Are multiple Status Providers (several lists of one issuer on different servers) supported? Implicitly yes today; should
    it be written explicitly?
+6. **Publication interval and `exp` buffer (awaiting a decision):** target 1 hour / `iat + 50 hours`; today's trial operation
+   2 minutes / `iat + 2 × interval` (§5.1, §8.1). Options: move to the target, stay with today's values and write the
+   specification accordingly, or keep the short interval and lengthen `exp`.
+7. **Hosted status service (awaiting a decision):** move the key to the institution and drop the IP-free access log as the
+   policy says, or rewrite the policy as it is today (§10.2).
 
 ---
 

@@ -40,7 +40,7 @@ yarn add @tamga-network/verifier @tamga-network/trust @tamga-network/issuer
 :::
 
 ::: tip Sürüm
-Paketler npm'de 0.2.0 deneme sürümüyle yayımlanır; kararlı 1.0.0 hazır olunca gelir. Deneme sürümünde arayüz
+Paketler npm'de 0.3.0 deneme sürümüyle yayımlanır; kararlı 1.0.0 hazır olunca gelir. Deneme sürümünde arayüz
 değişebilir. Kaynak depodan da kullanılabilir
 (`npm run release:check` yayına hazır paketleri `.publish/` klasöründe üretir).
 :::

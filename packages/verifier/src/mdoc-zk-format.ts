@@ -3,7 +3,7 @@
  * belgenin kendisi gelmediği için A4–A7 (kurum imzası, özet bütünlüğü, cihaz imzası, geçerlilik) ispatın İÇİNDE denetlenir:
  *  A1 çözme · A8 docType · A2 msoX5chain · A3 yaprak → kök · A3b issuer_id · Z1 ispat (devre imzalı listede — ZK2; yalnız
  *  istenen öğeler — ZK3; zaman damgası tazeliği; Longfellow doğrulaması: kurum anahtarı + docType + değerler + oturum dökümü)
- * B–E ortak hatta. Durum listesi indeksi gelmez (ZK4) → D adımları "uygulanmaz"; ZK ile sunulan belge kısa ömürlüdür (K6).
+ * B–E ortak hatta. Durum listesi indeksi gelmez (ZK4) → D adımları "uygulanmaz"; iptal denetlenemez (K6; "kısa ömür" önlemi bugün yürürlükte değil, ADR-0032 uygulama notu).
  */
 import { X509Certificate as NodeX509, webcrypto } from "node:crypto";
 import { X509Certificate, cryptoProvider } from "@peculiar/x509";

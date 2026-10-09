@@ -148,9 +148,7 @@ export type CodeError = "invalid_grant" | "invalid_request";
 export function redeemCode(
   par: ParRequest | undefined,
   p: { code: string; codeVerifier?: string; redirectUri?: string; clientId: string; now?: number },
-):
-  | { ok: true; accessToken: string; cNonce: string; expiresIn: number }
-  | { ok: false; error: CodeError; description: string } {
+): { ok: true; accessToken: string; expiresIn: number } | { ok: false; error: CodeError; description: string } {
   const now = p.now ?? Math.floor(Date.now() / 1000);
   if (!par || par.code !== p.code) return { ok: false, error: "invalid_grant", description: "code bilinmiyor" };
   if (par.codeUsed) return { ok: false, error: "invalid_grant", description: "code already used" };
@@ -168,7 +166,7 @@ export function redeemCode(
   }
   par.codeUsed = true;
   par.used = true;
-  return { ok: true, accessToken: opaque(), cNonce: opaque(16), expiresIn: 300 };
+  return { ok: true, accessToken: opaque(), expiresIn: 300 }; // c_nonce nonce ucundan (OpenID4VCI 1.0 Final)
 }
 
 /** Bir sunum gövdesinden (verifier claims çıktısı) kurumun eşleştirme anahtarlarını çıkarır; kişisel veri döndürür — çağıran LOGLAMAZ. */

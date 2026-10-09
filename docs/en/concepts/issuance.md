@@ -10,8 +10,10 @@ The institution (the [[t:issuer]]) issues a credential to the person's wallet wi
 ## 1. The institution makes an offer (QR code or link)
 
 The institution creates a **credential offer**; the person scans the QR code with the wallet or taps the link. The offer is
-standard (`openid-credential-offer://`). An optional one-time code (`tx_code`) is never sent over the same channel as the
-offer.
+standard (`openid-credential-offer://`). In a pre-authorized offer the one-time 6-digit code (`tx_code`) is **mandatory**: on
+the institution's screen it is shown with the QR code to the signed-in person; if the offer goes by e-mail, the code comes
+through another channel (SMS). An identity-bound offer from the institution has no code; the person presents the verified
+identity in the wallet instead.
 
 ## 2. The person asks from the wallet
 

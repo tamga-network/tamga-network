@@ -2,12 +2,45 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The documents (docs, ARF) are 1.0.0 until the public
 announcement; changes before it are folded into this release. The `@tamga-network/*` packages are versioned separately: they
-are published on npm as the `0.2.0` test release (the API may change in test releases); the stable `1.0.0` comes when
+are published on npm as the `0.3.0` test release (the API may change in test releases); the stable `1.0.0` comes when
 everything is ready.
 
 ## [1.0.0] — 2026-10-04
 
 First release of the Tamga Network documentation set and reference implementation.
+
+### 2026-10-09 — standards alignment (OpenID4VCI 1.0 Final, OpenID4VP 1.0, HAIP 1.0); packages: 0.3.0 test release
+
+Wire format changes (breaking for test-release users; update issuer, wallet and wallet provider together):
+
+- Key attestation JWT `typ` is `key-attestation+jwt` (OpenID4VCI 1.0 Final Annex D.1); the draft value
+  `keyattestation+jwt` is rejected.
+- The token response no longer carries `c_nonce` / `c_nonce_expires_in`; the nonce endpoint returns only `c_nonce` with
+  `Cache-Control: no-store`. `wallet-core` takes the nonce only from the issuer's `nonce_endpoint` (required).
+- The credential response no longer carries `notification_id` (no notification endpoint is offered).
+- Credential endpoint errors follow OpenID4VCI 1.0 §8.3.1.2: `unknown_credential_configuration` for a configuration the
+  issuer does not offer, `invalid_nonce` for an unknown, expired or consumed `c_nonce` (`ProofCheck.invalidNonce`),
+  `credential_request_denied` when the type is no longer authorised in the trust list.
+- `sd-jwt`: disclosures are serialised with the issuer convention of SPEC-CRED-0002 §3.5 (`", "` / `": "` separators,
+  non-ASCII escaped as `\uXXXX`); verification is unchanged (the string is hashed as it is). The specification's example
+  values are now a test.
+- ZK presentations: the `status.reason` text no longer claims the credential is short-lived.
+
+Documentation:
+
+- OpenID4VCI profile: examples use an example institution and `vct` URNs as configuration identifiers and scopes; nonce
+  lifetime 5 minutes without `c_nonce_expires_in`; deferred issuance (HTTP 202 + `transaction_id` + `interval`, DPoP) and the
+  notification endpoint are documented as not offered today, with the Final semantics of `credential_deleted`; PAR uses
+  `scope`; error table aligned with Final.
+- OpenID4VP profile: response encryption `A128GCM` or `A256GCM` (HAIP §5); browser Digital Credentials API and ISO 18013-5
+  proximity status updated. ADR-0013: SessionTranscript follows the OpenID4VP 1.0 Final handovers.
+- Status list: Token Status List draft-20 (the EU reference in CIR 2026/1731), draft-21 noted; today's publication interval,
+  `exp`, initial noise and hosted-service key/log described as they are, with open topics for decision.
+- SD-JWT VC / schema catalogue: `schema_uri#integrity` documented as a Tamga extension. Concept page: `tx_code` is mandatory in
+  the pre-authorized flow. ADR-0032: implementation note on ZK and revocation.
+- Conformance vectors (version 3) use an example institution; the development PKI's example university leaf is named
+  "Ornek Universitesi (DEV)".
+- The `@tamga-network/*` packages are versioned `0.3.0` (test release); `sdk_version` is `@tamga-network/verifier@0.3.0`.
 
 ### 2026-10-09 — sandbox registration certificates
 

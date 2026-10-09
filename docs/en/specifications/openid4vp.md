@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-07
+last_updated: 2026-10-09
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -41,7 +41,9 @@ This specification defines **presentation**: the journey of a credential from th
 **Standards basis:** OpenID for Verifiable Presentations **1.0 (Final)** and HAIP 1.0. Format [[SPEC-CRED-0002]],
 verification logic [[SPEC-API-0001]].
 
-**Out of scope (state stage and later):** ISO/IEC 18013-5 proximity (BLE/NFC) presentation — comes with the mdoc format ([[ADR-0006]]).
+**Outside this specification:** ISO/IEC 18013-5 proximity (Bluetooth) presentation is not OpenID4VP; it carries mdoc with its own
+session encryption and SessionTranscript ([[ADR-0012]], [[ADR-0013]]; the `@tamga-network/mdoc` proximity module). The code is
+ready; trials with real devices are under way (§7.3).
 
 ---
 
@@ -146,7 +148,7 @@ Signed request object (JAR), `typ: oauth-authz-req+jwt`, `alg: ES256`, `x5c` cha
   "dcql_query": { "...": "§4" },
   "client_metadata": {
     "jwks": { "keys": [ { "kty": "EC", "crv": "P-256", "use": "enc", "...": "..." } ] },
-    "encrypted_response_enc_values_supported": ["A128GCM"],
+    "encrypted_response_enc_values_supported": ["A128GCM", "A256GCM"],
     "vp_formats_supported": {
       "dc+sd-jwt": {
         "sd-jwt_alg_values": ["ES256"],
@@ -350,7 +352,7 @@ RFC 7638 SHA-256 thumbprint of the verifier key the response is encrypted to (PV
 | Parameter | Tamga |
 |---|---|
 | `alg` | `ECDH-ES` |
-| `enc` | `A128GCM` |
+| `enc` | `A128GCM` or `A256GCM` ([[t:HAIP]] §5) — the verifier declares both in `encrypted_response_enc_values_supported` and accepts both; the wallet picks `A256GCM` among the declared values, and the OpenID4VP default `A128GCM` if nothing is declared |
 | Recipient key | From the request's `jwks`, `use: "enc"` |
 
 ---
@@ -412,11 +414,11 @@ they are different problems.
 
 ## 7.3 Phase decision
 
-| Flow | Phase |
+| Flow | Status (2026-10) |
 |---|---|
-| `direct_post.jwt` (QR / deep link) | **initial stage** |
-| `dc_api.jwt` (browser) | The state stage |
-| ISO 18013-5 proximity (BLE/NFC) | The expansion stage, with mdoc |
+| `direct_post.jwt` (QR / deep link) | **In force** |
+| `dc_api.jwt` (browser, OpenID4VP 1.0 Annex A) | **Implemented** — verifier request object and page kit (`@tamga-network/verifier/web`), wallet side (`@tamga-network/wallet-core`); depends on browser and operating system support |
+| ISO 18013-5 proximity (Bluetooth), mdoc | **Code ready** (`@tamga-network/mdoc`, `@tamga-network/wallet-core`); interoperability trials with real devices are under way. No NFC at this stage |
 
 ---
 

@@ -61,7 +61,7 @@ No personal data is kept. Requests about the unit are signed with the unit key.
 
 ## K3 — KA (key attestation)
 
-- Format: OpenID4VCI 1.0 Annex D (`keyattestation+jwt`), TS3 §2.3.2 fields:
+- Format: OpenID4VCI 1.0 Annex D (`typ` `key-attestation+jwt`, Final Annex D.1; correction 2026-10-09: the earlier text named the draft value `keyattestation+jwt`), TS3 §2.3.2 fields:
   - `attested_keys` (all credential keys in a batch),
   - `key_storage` / `user_authentication` (ISO 18045 levels),
   - `certification`,

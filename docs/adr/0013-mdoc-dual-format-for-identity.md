@@ -46,8 +46,11 @@ kapsar; taşıma [[ADR-0012]] Faz 1'de.
    ile, alan digest'lerini MSO ile, cihaz imzasını SessionTranscript üzerinde doğrular.
 4. **CBOR determinizmi:** RFC 8949 §4.2.1 (bytewise). ISO 18013-5 RFC 7049 §3.9 (uzunluk-önce) atıfını pilot tam-interop
    maddesi olarak işaretleriz; tüm ekosistem tek kütüphane (`@tamga-network/mdoc`) kullandığından digest tutarlılığı sağlanır.
-5. **SessionTranscript:** demo'da [[t:OpenID4VP]] [[t:nonce]]+client_id+response_uri'den deterministik özet; **pilotta ISO 18013-7
-   Annex B (OID4VPHandover)**. Sapma olarak işaretlenir.
+5. **SessionTranscript:** [[t:OpenID4VP]] 1.0 Final Ek B.2.6'daki handover'lar: yönlendirmeli akışta `OpenID4VPHandover`
+   (B.2.6.1 — client_id, [[t:nonce]], yanıtın şifrelendiği anahtarın JWK parmak izi, response_uri), tarayıcı Digital Credentials
+   API'sinde `OpenID4VPDCAPIHandover` (B.2.6.2 — origin, nonce, JWK parmak izi). Yakın alanda (Bluetooth) ISO 18013-5 oturum
+   SessionTranscript'i kullanılır. *Uygulama notu (2026-10-09):* ilk metin demo için deterministik bir özet, pilot için ISO 18013-7
+   Ek B öngörüyordu; uygulama doğrudan OpenID4VP 1.0 Final biçimine geçti, bu konuda sapma kalmadı.
 6. **Kapsam:** yalnızca kimlik attestation'ı. Öğrenci/diploma/bilet SD-JWT VC kalır (mdoc'a gerek yok; tarayıcı girişi ve PID
    emsali yalnızca kimlik için geçerli). İhtiyaç doğarsa aynı mekanizma genişletilir.
 

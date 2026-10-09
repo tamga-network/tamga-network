@@ -4,7 +4,7 @@ title: "SD-JWT VC profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   Bir Tamga belgesinin baytlarını tanımlar. Disclosure nasıl üretilir
   (salt, dizi yapısı, JSON serileştirme kuralı, base64url), _sd dizisi nasıl
@@ -211,7 +211,9 @@ uygulamaları karşılaştırılabilir test vektörü üretemez:
 |---|---|
 | Unicode | `ensure_ascii` — ASCII dışı karakterler `\uXXXX` olarak kaçırılır |
 | Eleman ayracı | `", "` (virgül + boşluk) |
+| Nesne değeri | Anahtar–değer ayracı `": "`, öğe ayracı `", "`; anahtarlar üretim sırasında |
 | Dizi | Tam olarak 3 eleman, sırayla salt, ad, değer |
+| Uygulama | `@tamga-network/sd-jwt` bu sözleşmeyle üretir; §3.4'teki değerler paketin testinde birebir yeniden üretilir |
 
 Bu sözleşme **yalnızca üretim içindir.** Doğrulayıcı, sözleşmeye uymayan
 disclosure'ları da doğrulayabilir ve doğrulamalıdır — dış ekosistemlerden gelen
@@ -228,7 +230,7 @@ içindeki `_sd` dizisinde toplanır:
 
 ```json
 {
-  "iss": "https://issuer.bilgi.edu.tr",
+  "iss": "https://issuer.tamga.network/example-university",
   "vct": "urn:tamga:edu:DiplomaCredential:1",
   "_sd_alg": "sha-256",
   "_sd": [

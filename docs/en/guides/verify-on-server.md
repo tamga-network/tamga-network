@@ -121,7 +121,8 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
 - **New step `Z1`:** is the circuit in the signed list, was only the requested element disclosed, is the timestamp fresh, is
   the proof valid? The institution signature, the device signature and the validity are checked inside the proof
   (`checks_skipped`: A4–A7). No revocation status comes with it (`status.value: NOT_APPLICABLE`, the reason in
-  `status.reason`); credentials presented with ZK are short-lived.
+  `status.reason`). The identity credential presented with ZK is valid for 2 years today and its revocation is not
+  visible; choose this path only where revocation does not change the outcome (for example an age check).
 - **`accept_unrevocable_zk`:** a policy that uses `mso_mdoc_zk` must state it explicitly. `true` accepts a presentation whose
   revocation cannot be checked; with `false` every ZK presentation returns `INDETERMINATE` (step `D1`, `STATUS_UNREACHABLE`) —
   if a revocation check is required, use the classic `mso_mdoc` policy.

@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-07
+last_updated: 2026-10-09
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -41,8 +41,9 @@ gidişi. Belge verme (issuance) [[SPEC-PROTO-0001]]'dedir.
 **Standart temeli:** OpenID for Verifiable Presentations **1.0 (Final)** ve
 HAIP 1.0. Format [[SPEC-CRED-0002]], doğrulama mantığı [[SPEC-API-0001]].
 
-**Kapsam dışı (devlet aşaması ve sonrası):** ISO/IEC 18013-5 yakınlık (BLE/NFC) sunumu — mdoc
-formatıyla birlikte gelir ([[ADR-0006]]).
+**Bu şartnamenin dışında:** ISO/IEC 18013-5 yakın alan (Bluetooth) sunumu OpenID4VP değildir; kendi oturum şifrelemesi ve
+SessionTranscript'iyle mdoc taşır ([[ADR-0012]], [[ADR-0013]]; `@tamga-network/mdoc` yakın alan modülü). Kodu hazırdır, gerçek
+cihazlarla deneme sürüyor (§7.3).
 
 ---
 
@@ -153,7 +154,7 @@ kanıtlamaz ve aşırı talep denetimi imkânsız hâle gelir.
   "dcql_query": { "...": "§4" },
   "client_metadata": {
     "jwks": { "keys": [ { "kty": "EC", "crv": "P-256", "use": "enc", "...": "..." } ] },
-    "encrypted_response_enc_values_supported": ["A128GCM"],
+    "encrypted_response_enc_values_supported": ["A128GCM", "A256GCM"],
     "vp_formats_supported": {
       "dc+sd-jwt": {
         "sd-jwt_alg_values": ["ES256"],
@@ -366,7 +367,7 @@ anahtarıyla **JWE** olarak şifrelenir.
 | Parametre | Tamga |
 |---|---|
 | `alg` | `ECDH-ES` |
-| `enc` | `A128GCM` |
+| `enc` | `A128GCM` ya da `A256GCM` ([[t:HAIP]] §5) — doğrulayıcı ikisini de `encrypted_response_enc_values_supported` içinde ilan eder ve kabul eder; cüzdan ilan edilenler arasından `A256GCM`'i seçer, ilan yoksa OpenID4VP varsayılanı `A128GCM` |
 | Alıcı anahtarı | İstekteki `jwks`'ten, `use: "enc"` |
 
 ---
@@ -435,11 +436,11 @@ ikisi farklı problemlerdir.
 
 ## 7.3 Faz kararı
 
-| Akış | Faz |
+| Akış | Durum (2026-10) |
 |---|---|
-| `direct_post.jwt` (QR / derin bağlantı) | **ilk aşama** |
-| `dc_api.jwt` (tarayıcı) | Devlet aşaması |
-| ISO 18013-5 yakınlık (BLE/NFC) | Genişleme aşaması, mdoc ile |
+| `direct_post.jwt` (QR / derin bağlantı) | **Yürürlükte** |
+| `dc_api.jwt` (tarayıcı, OpenID4VP 1.0 Ek A) | **Uygulandı** — doğrulayıcı istek nesnesi ve sayfa kiti (`@tamga-network/verifier/web`), cüzdan tarafı (`@tamga-network/wallet-core`); tarayıcı ve işletim sistemi desteğine bağlıdır |
+| ISO 18013-5 yakın alan (Bluetooth), mdoc | **Kodu hazır** (`@tamga-network/mdoc`, `@tamga-network/wallet-core`); gerçek cihazlarla birlikte çalışma denemesi sürüyor. NFC bu aşamada yok |
 
 ---
 

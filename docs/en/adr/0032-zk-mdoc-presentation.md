@@ -75,6 +75,14 @@ revocation scheme of EU TS13 is settled. The policy chooses explicitly: `accept_
 presentation whose revocation cannot be checked (the result carries `status.value = NOT_APPLICABLE` and `status.reason`); with
 `false` the outcome is INDETERMINATE (step D1, `STATUS_UNREACHABLE`).
 
+*Implementation note (2026-10-09, awaiting a decision):* the "short-lived" safeguard is not in effect today. The only
+credential that can be presented with ZK is the identity credential (mdoc); it is valid for 2 years and, because the identity
+service keeps no person fields, it is not silently refreshed ([[ADR-0023]] AR4). When a revoked identity credential is
+presented with ZK the verifier cannot see it; `accept_unrevocable_zk: true` should be chosen with that in mind and only where
+revocation does not change the outcome (for example an age check). Options: separate short-lived mdoc copies for ZK (renewed by
+a user action), a shorter validity for the identity credential's mdoc representation, or waiting for a private revocation
+proof. Until a decision is made, the second half of ZK4 is not met.
+
 ## K7 — Device binding
 The proof contains the device key's ES256 signature over the SessionTranscript and hides the device public key; the key stays in
 secure hardware (Secure Enclave / StrongBox) and the signing flow does not change.

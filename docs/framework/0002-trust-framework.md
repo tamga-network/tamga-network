@@ -372,7 +372,7 @@ yükümlülüğü değiştiren bir sürüm yeniden imza gerektirir (§8).
 | Güven listelerine erişim (`trust.`) | Aylık %99,9; bir sonraki güncelleme en geç 90 gün sonra; değişiklik en geç 24 saatte |
 | Çapa günlüğü | Saatlik; kaçan döngü en çok bir |
 | Belge türü kataloğu (`schemas.`) | %99,9; yayınlanan dosya değişmez |
-| Belge verenin iptal listesi yayını | Sabit aralık (pilotta 60 dakika); iki döngü kaçarsa yüksek önem |
+| Belge verenin iptal listesi yayını | Sabit aralık (pilotta 60 dakika; bugünkü deneme işletiminde 2 dakika); iki döngü kaçarsa yüksek önem |
 | Olay bildirimi | Kritik en geç 4 saat; yüksek en geç 24 saat |
 | Kayıt değişikliği (kayıt kurumu) | En geç 5 iş günü |
 

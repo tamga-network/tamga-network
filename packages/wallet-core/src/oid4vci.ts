@@ -333,7 +333,6 @@ export async function redeem(p: RedeemInput): Promise<RedeemOutput> {
   const tokenBody = (await readJson(tr, "issuer")) as {
     access_token?: string;
     refresh_token?: string;
-    c_nonce?: string;
     error?: string;
     error_description?: string;
   };
@@ -358,7 +357,6 @@ export async function redeem(p: RedeemInput): Promise<RedeemOutput> {
     vct,
     metadata: md,
     accessToken: tokenBody.access_token,
-    cNonce: tokenBody.c_nonce,
     keys: p.keys,
     http: p.http,
     batch,
@@ -377,7 +375,6 @@ export interface ObtainInput {
   vct: string;
   metadata: IssuerMetadata;
   accessToken: string;
-  cNonce?: string;
   keys: KeyProvider;
   http: Http;
   batch?: number;
@@ -407,13 +404,12 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
   const vct = p.vct;
   const batch = batchOf(p.batch, md);
   const now = p.now ?? Math.floor(Date.now() / 1000);
-  // nonce (OpenID4VCI 1.0 nonce endpoint; token yanıtındaki c_nonce ile aynı havuz)
-  let nonce = p.cNonce;
-  if (md.nonce_endpoint) {
-    const nr = await p.http(md.nonce_endpoint, { method: "POST" });
-    if (nr.status === 200) nonce = ((await readJson(nr, "issuer")) as { c_nonce: string }).c_nonce;
-  }
-  if (!nonce) throw new WalletError("issuer_error", "c_nonce missing");
+  // nonce: yalnız nonce ucundan (OpenID4VCI 1.0 Final §7; token yanıtı c_nonce taşımaz). Tamga profilinde uç zorunlu
+  // (SPEC-PROTO-0001 §2.1)
+  if (!md.nonce_endpoint) throw new WalletError("issuer_error", "issuer metadata has no nonce_endpoint");
+  const nr = await p.http(md.nonce_endpoint, { method: "POST" });
+  const nonce = nr.status === 200 ? ((await readJson(nr, "issuer")) as { c_nonce?: unknown }).c_nonce : undefined;
+  if (typeof nonce !== "string" || !nonce) throw new WalletError("issuer_error", "c_nonce missing");
 
   // anahtarlar + proof'lar (PR6: her kopya farklı anahtar)
   const prefix = p.keyRefPrefix ?? `c${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`;

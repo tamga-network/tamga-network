@@ -278,7 +278,8 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
         value: "NOT_APPLICABLE",
         list_version: null,
         token_age_sec: null,
-        reason: "ZK4: revocation index is not disclosed in a zero-knowledge presentation; short-lived credential (K6)",
+        reason:
+          "ZK4: revocation index is not disclosed in a zero-knowledge presentation; revocation cannot be checked (K6)",
       };
     } else ctx.status = { value: "NOT_APPLICABLE", list_version: null, token_age_sec: null };
     ctx.skipped.push("D1", "D2", "D3", "D4", "D5", "D6");

@@ -129,7 +129,6 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
   const tok = (await readJson(tr, "issuer").catch(() => ({}))) as {
     access_token?: string;
     refresh_token?: string;
-    c_nonce?: string;
     error?: string;
     error_description?: string;
   };
@@ -172,7 +171,6 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
       vct: old.vct,
       metadata,
       accessToken: tok.access_token,
-      cNonce: tok.c_nonce,
       keys: p.keys,
       http: p.http,
       now,

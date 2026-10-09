@@ -135,7 +135,7 @@ async function sdJwtVectors() {
     NONCE = "conf-nonce-0001";
   const issued = await issueSdJwtVc({
     signer,
-    iss: "https://issuer.tamga.network/bilgi",
+    iss: "https://issuer.tamga.network/example-university",
     vct: diploma.vct,
     vctIntegrity: diploma.content_hash,
     iat: SD_NOW - 86400,
@@ -145,8 +145,8 @@ async function sdJwtVectors() {
       family_name: "Örnek",
       given_name: "Vektör",
       birth_date: "2001-01-01",
-      awarding_body_name: { "tr-TR": "İstanbul Bilgi Üniversitesi" },
-      awarding_body_id: "TR-UNI-BILGI",
+      awarding_body_name: { "tr-TR": "Örnek Üniversitesi" },
+      awarding_body_id: "TR-UNI-EXAMPLE",
       awarding_body_country: "TR",
       qualification_title: { "tr-TR": "Bilgisayar Mühendisliği Lisans" },
       eqf_level: 6,
@@ -176,7 +176,7 @@ async function sdJwtVectors() {
   // Olumsuz A7: süresi geçmiş belge (exp < now); KB-JWT taze, yalnız süre başarısız olur
   const expired = await issueSdJwtVc({
     signer,
-    iss: "https://issuer.tamga.network/bilgi",
+    iss: "https://issuer.tamga.network/example-university",
     vct: diploma.vct,
     vctIntegrity: diploma.content_hash,
     iat: SD_NOW - 86400,
@@ -198,7 +198,7 @@ async function sdJwtVectors() {
     version: 1,
     generated_at: new Date().toISOString(),
     now: SD_NOW_ISO,
-    note: "Sahte kişi verisi. Özel anahtar yok. root_cert_pem = TR National Root CA (geliştirme), leaf = İstanbul Bilgi Üniversitesi.",
+    note: "Sahte kişi verisi. Özel anahtar yok. root_cert_pem = TR National Root CA (geliştirme), leaf = örnek kurum (Ornek Universitesi, geliştirme PKI'sı).",
     root_cert_pem: rootPem,
     leaf_fingerprint_sha256: certFingerprintSha256Hex(pemToDer(leafPem)),
     holder_public_jwk: holderJwk,

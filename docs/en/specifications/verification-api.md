@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-07
+last_updated: 2026-10-09
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -83,7 +83,7 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 | `B3` | Fetch Type Metadata (cache → URL → registry) |
 | `B4` | Integrity: hash `== vct#integrity` **and** `== contentHash` (registry) |
 | `B5` | `extends` chain; `extends#integrity` at every step |
-| `B6` | JSON Schema 2020-12 conformance |
+| `B6` | JSON Schema 2020-12 conformance (`schema_uri` is a Tamga extension, [[SPEC-SCHEMA-0001]] §2.1) |
 
 ## 1.C — Trust layer → [[SPEC-BC-0001]] §11.2
 
@@ -178,7 +178,7 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.2.0",
+  "sdk_version": "@tamga-network/verifier@0.3.0",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",
@@ -218,7 +218,7 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
 
 | Field | Meaning |
 |---|---|
-| `status.reason` | Optional text (`string \| null`): why the status has this value, when it is not self-explanatory. E.g. `NOT_APPLICABLE` + a ZK presentation: the revocation index is not revealed ([[ADR-0032]] ZK4; the credential is short-lived). Carries no personal data. |
+| `status.reason` | Optional text (`string \| null`): why the status has this value, when it is not self-explanatory. E.g. `NOT_APPLICABLE` + a ZK presentation: the revocation index is not revealed ([[ADR-0032]] ZK4). Carries no personal data. |
 
 ## 2.3 `indeterminate_reason`
 
@@ -387,7 +387,7 @@ POST /offers
 Idempotency-Key: 8c21f...
 
 {
-  "credential_configuration_id": "TamgaDiplomaCredential",
+  "credential_configuration_id": "urn:tamga:edu:DiplomaCredential:1",
   "subject_ref": "OBS-2022510041",
   "batch_size": 1
 }
@@ -396,7 +396,7 @@ Idempotency-Key: 8c21f...
 ```json
 {
   "offer_id": "ofr_01J8XM",
-  "offer_uri": "https://issuer.bilgi.edu.tr/offer/8a3f9c21",
+  "offer_uri": "https://issuer.tamga.network/example-university/offers/8a3f9c21",
   "tx_code": "493812",
   "expires_at": "2026-09-09T09:17:44Z"
 }
@@ -411,7 +411,7 @@ the credential and is not written to the registry.
 
 ```http
 POST /offers/preflight
-{ "credential_configuration_id": "TamgaDiplomaCredential", "subject_ref": "OBS-2022510041" }
+{ "credential_configuration_id": "urn:tamga:edu:DiplomaCredential:1", "subject_ref": "OBS-2022510041" }
 ```
 
 ```json
@@ -455,7 +455,7 @@ GET /status-lists/{list_id}
 ```json
 {
   "list_id": "0x4f…",
-  "list_uri": "https://status.bilgi.edu.tr/v1/sl/7f3a9c21",
+  "list_uri": "https://status.tamga.network/7f3a9c21",
   "version": 8412,
   "published_at": "2026-09-09T09:00:00Z",
   "next_publish_at": "2026-09-09T10:00:00Z",

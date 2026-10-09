@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-08
+last_updated: 2026-10-09
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -374,8 +374,8 @@ the seed never goes to the server.
      ┌──────────────────────────────────────────┐
      │ 4 of your credentials must be re-issued  │
      │                                          │
-     │ ☑ Diploma — Istanbul Bilgi Univ.         │
-     │ ☑ Student certificate — Istanbul Bilgi U.│
+     │ ☑ Diploma — Example University           │
+     │ ☑ Student certificate — Example Univ.    │
      │ ☐ Driving licence — (state stage)            │
      │                                          │
      │ [ Request the selected ones again ]      │

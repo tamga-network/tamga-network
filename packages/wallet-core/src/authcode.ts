@@ -274,7 +274,6 @@ export async function completeAuthorized(p: CompleteInput): Promise<RedeemOutput
   const tok = (await readJson(tr, "yetkilendirme sunucusu")) as {
     access_token?: string;
     refresh_token?: string;
-    c_nonce?: string;
     error?: string;
     error_description?: string;
   };
@@ -287,7 +286,6 @@ export async function completeAuthorized(p: CompleteInput): Promise<RedeemOutput
     vct: p.start.vct,
     metadata: p.start.metadata,
     accessToken: tok.access_token,
-    cNonce: tok.c_nonce,
     keys: p.keys,
     http: p.http,
     batch: p.batch,

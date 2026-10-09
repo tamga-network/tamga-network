@@ -4,7 +4,7 @@ title: "Education schemas"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   Normatively defines the pilot's two credential types. TamgaStudentCredential: short-lived (90 days), no status list,
   proves student status. TamgaDiplomaCredential: long-lived, uses a status list, proves graduation. For both it gives the
@@ -293,7 +293,7 @@ meaning) back through the back door.
 
 ```json
 {
-  "iss": "https://issuer.bilgi.edu.tr",
+  "iss": "https://issuer.tamga.network/example-university",
   "vct": "urn:tamga:edu:StudentCredential:1",
   "vct#integrity": "sha256-9Kf2rT8xQm1vB4nL7wZpYc3JdHs0EaXu6GiOoN5RbMk=",
   "iat": 1789000000,
@@ -305,8 +305,8 @@ meaning) back through the back door.
   "birth_date": "2003-04-17",
 
   "awarding_body_name": {
-    "tr-TR": "İstanbul Bilgi Üniversitesi",
-    "en-US": "Istanbul Bilgi University"
+    "tr-TR": "Örnek Üniversitesi",
+    "en-US": "Example University"
   },
   "awarding_body_id": "TR-YOK-038",
   "awarding_body_country": "TR",
@@ -458,7 +458,7 @@ The issuer **always** fills in this field; the thresholds at which it is produce
 
 ```json
 {
-  "iss": "https://issuer.bilgi.edu.tr",
+  "iss": "https://issuer.tamga.network/example-university",
   "vct": "urn:tamga:edu:DiplomaCredential:1",
   "vct#integrity": "sha256-3Qm2pV7yLx0KcW9tRfBnEsA4ZhUgJd1MoI6TvXbCqNw=",
   "iat": 1789000000,
@@ -466,7 +466,7 @@ The issuer **always** fills in this field; the thresholds at which it is produce
   "status": {
     "status_list": {
       "idx": 48213,
-      "uri": "https://status.bilgi.edu.tr/v1/sl/7f3a9c21"
+      "uri": "https://status.tamga.network/7f3a9c21"
     }
   },
 
@@ -475,8 +475,8 @@ The issuer **always** fills in this field; the thresholds at which it is produce
   "birth_date": "2003-04-17",
 
   "awarding_body_name": {
-    "tr-TR": "İstanbul Bilgi Üniversitesi",
-    "en-US": "Istanbul Bilgi University"
+    "tr-TR": "Örnek Üniversitesi",
+    "en-US": "Example University"
   },
   "awarding_body_id": "TR-YOK-038",
   "awarding_body_country": "TR",

@@ -18,10 +18,31 @@ export interface Disclosure {
   value: unknown;
 }
 
+/**
+ * Tamga belge veren serileştirme sözleşmesi (SPEC-CRED-0002 §3.5): RFC 9901 örnekleriyle aynı biçim — eleman ayracı `", "`,
+ * nesnede `": "`, ASCII dışı karakterler `\uXXXX` (küçük harf onaltılı, UTF-16 birimi başına). Yalnız ÜRETİM içindir; doğrulama
+ * dizenin kendisini hash'ler, serileştirmeden bağımsızdır (C4/C14).
+ */
+function serializeDisclosureJson(v: unknown): string {
+  if (Array.isArray(v)) return "[" + v.map((x) => serializeDisclosureJson(x === undefined ? null : x)).join(", ") + "]";
+  if (v !== null && typeof v === "object") {
+    const parts: string[] = [];
+    for (const [k, x] of Object.entries(v as Record<string, unknown>))
+      if (x !== undefined) parts.push(asciiJson(k) + ": " + serializeDisclosureJson(x));
+    return "{" + parts.join(", ") + "}";
+  }
+  if (typeof v === "string") return asciiJson(v);
+  const s = JSON.stringify(v);
+  if (s === undefined) throw new Error("C3: disclosure value is not JSON-serializable");
+  return s;
+}
+const asciiJson = (s: string) =>
+  JSON.stringify(s).replace(/[^\x00-\x7f]/g, (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+
 export function makeDisclosure(name: string, value: unknown, salt?: Uint8Array): Disclosure {
   const s = salt ?? new Uint8Array(randomBytes(16));
   if (s.length < 16) throw new Error("C3: salt < 128 bit");
-  const json = JSON.stringify([b64u(s), name, value]); // bu baytlar artık sabittir
+  const json = serializeDisclosureJson([b64u(s), name, value]); // bu baytlar artık sabittir (§3.5 sözleşmesi)
   const disclosure = b64u(utf8(json));
   return { disclosure, digest: digestOf(disclosure), name, value };
 }

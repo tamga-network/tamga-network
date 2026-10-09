@@ -46,8 +46,9 @@ Karar ve gerekçeler [[ADR-0008]]'dedir; burada tekrar edilmez. Özet: bitstring
 listesi **off-chain** host edilir, zincirde yalnızca URI + içerik hash'i +
 sürüm çapası durur.
 
-**Standart temeli:** IETF Token Status List (draft-ietf-oauth-status-list-**20**, 2026-04-20; AB CIR 2026/1731 ile aynı).
-Taslak RFC Editor kuyruğundadır.
+**Standart temeli:** IETF Token Status List — Tamga profili, AB'nin CIR 2026/1731 ile sabitlediği
+draft-ietf-oauth-status-list-**20**'yi (2026-04-20) izler. Güncel taslak **draft-21**'dir (2026-06-21, RFC Editor
+kuyruğunda); AB başvurusu draft-20 kaldıkça Tamga da onda kalır, RFC yayımlanınca profil yeniden değerlendirilir.
 
 Kapsam dışı: kriptografik akümülatör / [[t:ZK]] iptal (`RS-REVOCATION-0001`, genişleme aşaması).
 
@@ -93,7 +94,7 @@ Kapsam dışı: kriptografik akümülatör / [[t:ZK]] iptal (`RS-REVOCATION-0001
 "status": {
   "status_list": {
     "idx": 48213,
-    "uri": "https://status.bilgi.edu.tr/v1/sl/7f3a9c21"
+    "uri": "https://status.tamga.network/7f3a9c21"
   }
 }
 ```
@@ -127,8 +128,8 @@ Gövde:
 
 ```json
 {
-  "iss": "https://issuer.bilgi.edu.tr",
-  "sub": "https://status.bilgi.edu.tr/v1/sl/7f3a9c21",
+  "iss": "https://issuer.tamga.network/example-university",
+  "sub": "https://status.tamga.network/7f3a9c21",
   "iat": 1789000000,
   "exp": 1789180000,
   "ttl": 3600,
@@ -144,8 +145,8 @@ Gövde:
 | `iss` | Zorunlu | Belge veren tanımlayıcısı; Referenced Token'ın `iss`'i ile aynı güven zincirinde |
 | `sub` | Zorunlu | Liste URI'si — Referenced Token'daki `uri` ile **birebir aynı** |
 | `iat` | Zorunlu | Yayın anı |
-| `exp` | **Tamga'da zorunlu** | `iat + 50 saat` (§8.2) |
-| `ttl` | **Tamga'da zorunlu** | `3600` (saniye) — §8.1 |
+| `exp` | **Tamga'da zorunlu** | Hedef `iat + 50 saat`; bugünkü uygulama `iat + 2 × yayın aralığı` (§8.1) |
+| `ttl` | **Tamga'da zorunlu** | Yayın aralığı (saniye): pilot hedefi `3600`, bugünkü deneme işletiminde `120` (§5.1, §8.1) |
 | `status_list.bits` | Zorunlu | **Tamga'da her zaman `2`** — §3.3 |
 | `status_list.lst` | Zorunlu | Sıkıştırılmış bayt dizisi, base64url |
 | `status_list.aggregation_uri` | Opsiyonel | **Tamga'da önerilir** — §9.2 |
@@ -153,8 +154,8 @@ Gövde:
 ## 3.2 Sunulması
 
 ```
-GET /v1/sl/7f3a9c21 HTTP/1.1
-Host: status.bilgi.edu.tr
+GET /7f3a9c21 HTTP/1.1
+Host: status.tamga.network
 Accept: application/statuslist+jwt
 
 HTTP/1.1 200 OK
@@ -330,6 +331,10 @@ sunduğu taze bir kanıta dayanmak zorundadır → `SPEC-AGENT-0001`.
 Status Provider listeyi **sabit aralıklarla** yeniden yayınlar. Varsayılan
 aralık: **1 saat.**
 
+> **Bugünkü işletim (2026-10):** ağın işlettiği belge verme servisleri listeyi **2 dakikada bir** yayınlar (deneme işletimi;
+> bir iptal birkaç dakikada görünür) ve `ttl` aralığa eşittir. Sabit aralık kuralı (S5, S6) aynen uygulanır. Pilotun 1 saatlik
+> aralığına ne zaman geçileceği proje yönetiminin kararını bekliyor (Açık Konu 6).
+
 **Değişiklik olmasa da yayınlanır.** Bu isteğe bağlı değildir.
 
 Gerekçe ([[ADR-0008]] §1): yalnızca iptal olduğunda yayınlanırsa, zincirdeki
@@ -404,10 +409,12 @@ dağılımı yine bilgi taşır.
 |---|---|
 | Asgari liste kapasitesi | **100.000** indeks |
 | Azami doluluk | %80 — aşılırsa yeni liste açılır |
-| Asgari başlangıç gürültüsü | Liste oluşturulurken kapasitenin **%1'i** rastgele indeks "tahsis edilmiş" olarak işaretlenir; bit değeri `0x00` (geçerli) kalır ve hiçbir belgeye bağlı değildir — dışarıdan gerçek girişlerden ayırt edilemez |
+| Asgari başlangıç gürültüsü | Liste oluşturulurken kapasitenin **%1'i** rastgele indeks "tahsis edilmiş" olarak işaretlenir; bit değeri `0x00` (geçerli) kalır ve hiçbir belgeye bağlı değildir — dışarıdan gerçek girişlerden ayırt edilemez. **Bugün uygulanmıyor** (Açık Konu 3) |
 
 Son madde, yeni bir listenin ilk günlerinde tek bir mezunun tek dolu indeks
-olmasını engeller.
+olmasını engellemek için yazılmıştı. Ancak geçerli bir belgenin biti ile hiç kullanılmamış bir indeksin biti aynıdır (`0x00`):
+dışarıdan bakan biri hangi indekslerin tahsis edildiğini zaten göremez. Gürültünün gözlenebilir bir etkisi olmadığı için bugün
+uygulanmıyor; kaldırılması önerisi karar bekliyor (Açık Konu 3). Korumayı rastgele tahsis (§6.1) ve asgari kapasite sağlar.
 
 ## 6.3 Liste URI'si OPAK olmalıdır
 
@@ -430,7 +437,7 @@ Yasak desenler:
 bir dize:
 
 ```
-https://status.bilgi.edu.tr/v1/sl/7f3a9c21
+https://status.tamga.network/7f3a9c21
 ```
 
 Status Provider bu tanımlayıcı ile kohort arasındaki eşlemeyi **kendi
@@ -529,8 +536,12 @@ monotonluğu ve `contentHash` eşleşmesi bunu engeller.
 
 | Claim | Tamga değeri | Anlam |
 |---|---|---|
-| `ttl` | `3600` | Doğrulayıcı bu süre boyunca yeniden çekmeden kullanabilir |
-| `exp` | `iat + 50 saat` | Bu andan sonra token kesinlikle kullanılamaz |
+| `ttl` | `3600` (hedef) | Doğrulayıcı bu süre boyunca yeniden çekmeden kullanabilir |
+| `exp` | `iat + 50 saat` (hedef) | Bu andan sonra token kesinlikle kullanılamaz |
+
+**Bugünkü uygulama (2026-10):** `ttl` yayın aralığına eşittir (deneme işletiminde 120 saniye) ve `exp = iat + 2 × ttl`'dir
+(yayın aralığının iki katı; 2 dakikalık aralıkta 4 dakika). Kısa `exp`, durum sunucusu kesintisinde doğrulamanın birkaç dakika
+içinde DOĞRULANAMADI'ya düşmesi demektir; aşağıdaki 50 saatlik tampona geçiş proje yönetiminin kararını bekliyor (Açık Konu 6).
 
 `exp` neden `ttl`den çok daha uzun: `ttl` "tazelik hedefi", `exp` "mutlak
 sınır"dır. Status sunucusu birkaç saat kesinti yaşarsa, elindeki token'la
@@ -594,8 +605,8 @@ keşfedip toplu indirebilir. §9.1'in uygulanmasını pratikleştirir.
 ## 9.3 Sürü mahremiyeti (herd privacy)
 
 Bir listedeki indeks sayısı ne kadar azsa, `idx`'in taşıdığı ayırt edicilik o
-kadar yüksektir. §6.2'deki 100.000 asgari kapasite ve %1 başlangıç gürültüsü bu
-yüzdendir.
+kadar yüksektir. §6.2'deki 100.000 asgari kapasite bu yüzdendir (%1 başlangıç gürültüsü bugün
+uygulanmıyor, §6.2).
 
 **Küçük kurum problemi:** 300 mezunu olan bir meslek yüksekokulu, 100.000'lik
 listede 300 dolu indeks demektir. Liste büyük ama sürü küçüktür. Bu durumda
@@ -626,9 +637,9 @@ bildirilmelidir** → PM-GTM-0001.
 |---|---|
 | Adres | `status.<issuer-domain>` |
 | İçerik | Statik dosya (imzalı token), CDN arkasında |
-| Yazma | Yayın işi (cron), saatte bir |
+| Yazma | Yayın işi (cron), sabit aralıkta (pilot hedefi saatte bir; bugün 2 dakikada bir, §5.1) |
 | Anahtar | Status imzalama anahtarı, çevrimiçi, belge anahtarından ayrı (§3.4) |
-| Erişilebilirlik hedefi | %99,5 — `exp`=50sa tamponu sayesinde kritik yolda değil |
+| Erişilebilirlik hedefi | %99,5 — hedeflenen `exp`=50sa tamponuyla kritik yolda değil (bugünkü kısa `exp` ile kritik yoldadır, §8.1) |
 
 Her belge veren için ayrı bir bileşendir ve belge veren onboarding kontrol listesine
 girer ([[ARCH-0004]]).
@@ -644,11 +655,21 @@ bağlanmıştır: imzalama anahtarı kurumda kalır (vakıf sahte durum yayınla
 erişim logu tutulmaz, barındırılan belge veren listesi kamuya açıktır ve aktif
 belge verenlerin %30'u aşılırsa konsey gündemine girer.
 
+**Bugünkü durum (2026-10) politikadan iki noktada ayrılır:**
+
+- **Anahtar:** barındırılan hizmette status imzalama anahtarı, belge imza anahtarı gibi barındırılan serviste durur; kurumun
+  kendi anahtar yönetimine (KMS) taşınması pilot ön koşuludur.
+- **Erişim kaydı:** sunucu, IP adresi ve istek gövdesi olmadan kısa bir erişim kaydı tutar (zaman, alan adı, yol, durum kodu,
+  yanıt boyutu, süre). Yol yalnız opak liste kimliğini taşır (§6.3); hangi doğrulayıcının hangi belgeyi sorduğu bu kayıttan
+  çıkmaz, çünkü doğrulayıcı listenin tamamını çeker (§9.1).
+
+İki farkın kapatılması ya da politikanın yeniden yazılması proje yönetiminin kararını bekliyor (Açık Konu 7).
+
 ## 10.3 Felaket senaryoları
 
 | Senaryo | Etki | Kurtarma |
 |---|---|---|
-| Status sunucusu kesinti | 50 saate kadar önbellekten devam | Sunucu geri gelir |
+| Status sunucusu kesinti | Hedef: 50 saate kadar önbellekten devam (bugün `exp` kadar, §8.1) | Sunucu geri gelir |
 | Status anahtarı kaybı | Yeni yayın yapılamaz | Yeni anahtar + `kid` rotasyonu, aynı liste devam eder |
 | Status anahtarı ele geçirilmesi | Sahte durum yayınlanabilir | Sertifika iptali → tüm token'lar Ş4'te düşer → yeni anahtarla yeniden yayın |
 | Liste dosyasının kaybı | Doğrulama durur | Bitstring belge veren veritabanından yeniden üretilir; **zincirdeki `contentHash` geçmiş sürümü doğrulamak için saklanır** |
@@ -688,12 +709,17 @@ Liste türetilmiş bir üründür; kaynak veritabanıdır.
    yazar. Asıl büyüyen arşiv geçmişidir, yılda ~1,8 GB.
 2. Askı (`0x02`) durumundan geçerliye dönüş, doğrulayıcının denetim kaydında nasıl
    temsil edilir? Geçmişe dönük "o an askıdaydı" sorgusu gerekiyor mu?
-3. §6.2'deki %1 başlangıç gürültüsü, sahte indeksleri "tahsis edilmiş" saydığı
-   için kapasiteyi tüketir. Daha zarif bir çözüm var mı?
+3. §6.2'deki %1 başlangıç gürültüsü bugün uygulanmıyor: geçerli bit ile boş indeks aynı (`0x00`) olduğundan dışarıdan
+   gözlenebilir bir etkisi yok, yalnız kapasite tüketir. **Öneri:** kuralı kaldırmak (karar bekliyor).
 4. Status List Aggregation zorunlu mu olmalı? Şu an "önerilir"; doğrulayıcı tarafı
    ön çekimi ciddiye alırsa zorunlu yapmak mantıklı olabilir.
 5. Çoklu Status Provider (bir belge verenin birden çok listesi farklı sunucularda)
    destekleniyor mu? Şu an örtük olarak evet; açıkça yazılmalı mı?
+6. **Yayın aralığı ve `exp` tamponu (karar bekliyor):** hedef 1 saat / `iat + 50 saat`; bugünkü deneme işletimi 2 dakika /
+   `iat + 2 × aralık` (§5.1, §8.1). Seçenekler: hedefe geçmek, bugünküyle kalıp şartnameyi ona göre yazmak ya da aralığı kısa
+   tutup `exp`'i uzatmak.
+7. **Barındırılan status hizmeti (karar bekliyor):** anahtarın kuruma taşınması ve IP'siz erişim kaydının politikaya göre
+   kaldırılması ya da politikanın bu hâliyle yeniden yazılması (§10.2).
 
 ---
 

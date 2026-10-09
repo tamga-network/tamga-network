@@ -23,7 +23,7 @@ export interface PolicyCredential {
    */
   trusted_authorities?: Array<{ type: "aki" | "etsi_tl" | "openid_federation"; values: string[] }>;
   /**
-   * ADR-0032 ZK4: ZK sunumunda iptal listesi indeksi gelmez → iptal denetlenemez (belge kısa ömürlü, K6). `true`: bu
+   * ADR-0032 ZK4: ZK sunumunda iptal listesi indeksi gelmez → iptal denetlenemez (K6; ADR-0032 uygulama notu). `true`: bu
    * bilinerek kabul edilir (sonuç `status.value = NOT_APPLICABLE`, `status.reason` ile). `false`: iptal denetlenemediği için
    * DOĞRULANAMADI (D1). Verilmezse `true` sayılır; `mso_mdoc_zk` kullanan politikalar bunu AÇIKÇA yazmalıdır.
    */
