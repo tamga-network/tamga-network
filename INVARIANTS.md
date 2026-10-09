@@ -476,7 +476,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-CRED-0003/S3` | `version` monoton artar; azalan sürüm reddedilir. |
 | `SPEC-CRED-0003/S4` | Yayın CDN'e yazıldıktan **sonra** zincire kaydedilir (§5.2). |
 | `SPEC-CRED-0003/S5` | Değişiklik olmasa da sabit aralıkta yayınlanır (§5.1). |
-| `SPEC-CRED-0003/S6` | Aralık dışı ("acil") yayın yapılmaz. |
+| `SPEC-CRED-0003/S6` | Aralık dışı ("acil") yayın yapılmaz. Tek istisna: servis yeniden başladığında yayımlı belirteç yoksa ya da süresinin dolmasına bir aralıktan az kalmışsa hemen yeniden yayınlanır — içerik değişmez ve zamanlama bir iptal olayına bağlı değildir, bu yüzden S6'nın koruduğu bilgi (iptal anı) sızmaz. |
 | `SPEC-CRED-0003/S7` | `idx` rastgele tahsis edilir; sıralı sayaç kullanılmaz (§6.1). |
 | `SPEC-CRED-0003/S8` | Liste URI'si opaktır; yıl, bölüm, kohort kodlamaz (§6.3). |
 | `SPEC-CRED-0003/S9` | Listeler tip dışında hiçbir ölçütle bölünmez (§6.4). |

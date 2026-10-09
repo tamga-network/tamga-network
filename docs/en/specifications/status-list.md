@@ -4,7 +4,7 @@ title: "Revocation and status list"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   The normative implementation of the [[ADR-0008]] decision. Defines the Tamga profile of the Status List Token (bits=2,
   ES256, X.509 chain, at least 100,000 indices), the fixed-interval, noisy publication cycle, the rewritten
@@ -634,7 +634,7 @@ database.
 | **S3** | `version` increases monotonically; a decreasing version is rejected. |
 | **S4** | A publication is registered on the chain **after** it has been written to the CDN (§5.2). |
 | **S5** | Published at a fixed interval even if nothing changed (§5.1). |
-| **S6** | No publication outside the interval ("emergency"). |
+| **S6** | No publication outside the interval ("emergency"). Only exception: when the service restarts and there is no published token, or it expires in less than one interval, it is republished at once — the content does not change and the timing is not tied to a revocation event, so the information S6 protects (when a revocation happened) does not leak. |
 | **S7** | `idx` is allocated at random; no sequential counter (§6.1). |
 | **S8** | The list URI is opaque; it encodes no year, department or cohort (§6.3). |
 | **S9** | Lists are split by no criterion other than type (§6.4). |

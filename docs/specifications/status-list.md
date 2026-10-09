@@ -4,7 +4,7 @@ title: "İptal ve durum listesi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   [[ADR-0008]] kararının normatif uygulaması. Status List Token'ın Tamga profilini
   (bits=2, ES256, X.509 zinciri, asgari 100.000 indeks), sabit aralıklı ve
@@ -667,7 +667,7 @@ Liste türetilmiş bir üründür; kaynak veritabanıdır.
 | **S3** | `version` monoton artar; azalan sürüm reddedilir. |
 | **S4** | Yayın CDN'e yazıldıktan **sonra** zincire kaydedilir (§5.2). |
 | **S5** | Değişiklik olmasa da sabit aralıkta yayınlanır (§5.1). |
-| **S6** | Aralık dışı ("acil") yayın yapılmaz. |
+| **S6** | Aralık dışı ("acil") yayın yapılmaz. Tek istisna: servis yeniden başladığında yayımlı belirteç yoksa ya da süresinin dolmasına bir aralıktan az kalmışsa hemen yeniden yayınlanır — içerik değişmez ve zamanlama bir iptal olayına bağlı değildir, bu yüzden S6'nın koruduğu bilgi (iptal anı) sızmaz. |
 | **S7** | `idx` rastgele tahsis edilir; sıralı sayaç kullanılmaz (§6.1). |
 | **S8** | Liste URI'si opaktır; yıl, bölüm, kohort kodlamaz (§6.3). |
 | **S9** | Listeler tip dışında hiçbir ölçütle bölünmez (§6.4). |
