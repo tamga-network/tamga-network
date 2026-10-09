@@ -77,9 +77,9 @@ presentation whose revocation cannot be checked (the result carries `status.valu
 
 *Implementation note (2026-10-09):* "short-lived" is defined by [[ADR-0044]]: a ZK presentation uses only ZK copies that are
 valid for at most 24 hours, carry no revocation list entry and are refreshed silently; no new copy is issued if the main
-credential is revoked or suspended. Implementation is pending. Until then the only credential that can be presented with ZK is
-the 2-year identity credential (mdoc) and its revocation is not visible in a ZK presentation; `accept_unrevocable_zk: true`
-should be chosen with that in mind and only where revocation does not change the outcome (for example an age check).
+credential is revoked or suspended. Implemented (packages 0.4.0): the ZK copy is a separate type
+(`urn:tamga:id:ShortLivedIdentityAttestation:1`), the verifier recognises it from the proof and expects no revocation check;
+`accept_unrevocable_zk: true` only makes sense for a ZK presentation that is not a short-lived copy (unmarked).
 
 ## K7 — Device binding
 The proof contains the device key's ES256 signature over the SessionTranscript and hides the device public key; the key stays in

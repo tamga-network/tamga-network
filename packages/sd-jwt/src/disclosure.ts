@@ -47,6 +47,17 @@ export function makeDisclosure(name: string, value: unknown, salt?: Uint8Array):
   return { disclosure, digest: digestOf(disclosure), name, value };
 }
 
+/**
+ * Dizi öğesi disclosure'ı (RFC 9901 §4.2.2): `[salt, değer]` — ad yok; dizide öğenin yerine `{"...": özet}` durur. `name`
+ * yalnız defter içindir (`<claim>[i]`), disclosure'a girmez.
+ */
+export function makeArrayElementDisclosure(path: string, value: unknown, salt?: Uint8Array): Disclosure {
+  const s = salt ?? new Uint8Array(randomBytes(16));
+  if (s.length < 16) throw new Error("C3: salt < 128 bit");
+  const disclosure = b64u(utf8(serializeDisclosureJson([b64u(s), value])));
+  return { disclosure, digest: digestOf(disclosure), name: path, value };
+}
+
 /** Digest, disclosure dizesinin ASCII baytları üzerinden — önce hash'le, sonra çöz (C4/C14). */
 export function digestOf(disclosure: string): string {
   return b64u(sha256(new TextEncoder().encode(disclosure)));

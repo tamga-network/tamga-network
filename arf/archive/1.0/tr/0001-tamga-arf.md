@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-07
+last_updated: 2026-10-09
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -426,7 +426,7 @@ değerlendirme kuruluşları ve ulusal sertifikasyon gelir. Rol başına neyin t
 | L2 | Bir iptal, durum sunucusu çalışırken birkaç dakikada etkili olur (yayın aralığı 2 dakika + doğrulayıcının ön çekim aralığı). |
 | L3 | Aynı belge verenin belgeleri farklı doğrulayıcılarda birleştirilirse kişi eşleştirilebilir; sıfır bilgi ispatı bu riski kaldırır. |
 | L4 | Cihaz değişiminde belgeler yeniden alınır; onaylı devir tasarımı açıktır. |
-| L5 | Sıfır bilgi ispatıyla sunulan kimlik belgesinin iptali sunumda denetlenemez. Karar: bu sunum yalnız en çok 24 saat geçerli, sessizce yenilenen kısa ömürlü kopyalarla yapılır; iptal edilen belgenin kopyası yenilenmez (AB ARF'nin kısa ömürlü belge yolu). Uygulama sırada; o zamana kadar doğrulayıcı politikası bu riski açıkça kabul etmedikçe böyle bir sunum DOĞRULANAMADI sayılır. |
+| L5 | Sıfır bilgi ispatıyla sunulan kimlik belgesinin iptali sunumda denetlenemez. Karar: bu sunum yalnız en çok 24 saat geçerli, sessizce yenilenen kısa ömürlü kopyalarla yapılır; iptal edilen belgenin kopyası yenilenmez (AB ARF'nin kısa ömürlü belge yolu). İptal ZK sunumunda en geç 24 saatte etkili olur; ispat kopyanın türünü bağladığı için doğrulayıcı kısa ömrü görür. Kısa ömürlü kopya kullanmayan ZK sunumu, doğrulayıcı politikası bu riski açıkça kabul etmedikçe DOĞRULANAMADI sayılır. |
 
 ---
 

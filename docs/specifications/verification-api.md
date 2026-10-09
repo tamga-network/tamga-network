@@ -99,7 +99,7 @@ Z1. A4–A7 Z1 kapsamındadır.
 
 | Kod | Adım |
 |---|---|
-| `D1` | `status.status_list` oku (`idx`, `uri`) |
+| `D1` | `status.status_list` oku (`idx`, `uri`). ZK sunumunda (`mso_mdoc_zk`) indeks gelmez: ispatın bağladığı tür kısa ömürlü ZK kopyasıysa (`urn:tamga:id:ShortLivedIdentityAttestation:1`, tür kuralı ≤ 24 saat, iptal listesi yok — [[ADR-0044]] K5) D adımları uygulanmaz ve `status.value = NOT_APPLICABLE` (gerekçe kısa ömür); işaretsiz ZK sunumu aşağıdaki kurala tabidir |
 | `D2` | Status List Token'ı **ön çekim önbelleğinden** al |
 | `D3` | Token imzası; `sub == uri`; `iss` aynı güven zincirinde |
 | `D4` | Tazelik: `exp` geçmemiş, `iat + ttl` politikaya uygun |
@@ -184,7 +184,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.3.1",
+  "sdk_version": "@tamga-network/verifier@0.4.0",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",
@@ -244,10 +244,11 @@ Ayrıca şu durumlar `INDETERMINATE` verir, `REJECTED` vermez:
 - **Beklenmeyen istisna** (kütüphane hatası, bozuk güven kaydı …): o adımda `INDETERMINATE`, nedeni o katmanın değeri (A →
   `CHAIN_UNREACHABLE`, B → `SCHEMA_UNREACHABLE`, C/E/T0 → `INDEXER_STALE`, D → `STATUS_UNREACHABLE`); `failed_reason`'a
   istisna iletisi girmez (AP3), yalnız adım ve hata türü. Sonuç E4 denetim kaydına yine düşer.
-- **ZK sunumu ve `accept_unrevocable_zk: false`:** ZK sunumunda iptal indeksi gelmez (ZK4); politika iptal denetimini şart
-  koşuyorsa sonuç `D1` / `STATUS_UNREACHABLE`. Yalnız açıkça `true` yazılmışsa kabul edilir: `status.value = NOT_APPLICABLE`,
-  `status.reason` dolu. **Alan verilmemişse `false` sayılır** (`ADR-0044/ZC4`; doğrulayıcı paketi 0.3.0'a kadar verilmeyen
-  alanı `true` sayıyordu).
+- **İşaretsiz ZK sunumu ve `accept_unrevocable_zk: false`:** ZK sunumunda iptal indeksi gelmez (ZK4). Kısa ömür işaretini
+  taşıyan sunum (ispatın bağladığı tür ZK kopyası, [[ADR-0044]] K5) bu bayrak olmadan kabul edilir. İşaretsiz ZK sunumunda
+  politika iptal denetimini şart koşuyorsa sonuç `D1` / `STATUS_UNREACHABLE`; yalnız açıkça `true` yazılmışsa kabul edilir:
+  `status.value = NOT_APPLICABLE`, `status.reason` dolu. **Alan verilmemişse `false` sayılır** (`ADR-0044/ZC4`; doğrulayıcı
+  paketi 0.3.0'a kadar verilmeyen alanı `true` sayıyordu).
 
 ## 2.4 `disclosed_claims` — yalnızca adlar
 

@@ -13,8 +13,11 @@ import {
   oid4vpSessionTranscript,
   parseCoseSign1,
   verifyIssuerSigned,
+  plainElementValue,
+  CborTag,
   type CborValue,
 } from "@tamga-network/mdoc";
+import { pidSdJwtName } from "@tamga-network/core/pid";
 import { b64u, b64uDecode, toHex } from "./b64.js";
 import { jwkThumbprint } from "./jwe.js";
 import type { KeyProvider, PublicJwk } from "./keys.js";
@@ -64,13 +67,39 @@ export function verifyReceivedMdoc(
   if (nss.length !== 1) throw new Error("mdoc: expected a single namespace");
   const ns = nss[0];
   const el = res.claims![ns];
-  for (const [k, v] of Object.entries(el))
-    if (k in ctx.sdjwt.claims && !eqVal(v, ctx.sdjwt.claims[k]))
+  // MD1: aynı veri; ad ve kodlama biçime göre AB PID tablosundan (ADR-0045: mdoc `birth_date` = SD-JWT `birthdate`, full-date)
+  for (const [k, v] of Object.entries(el)) {
+    const sd = pidSdJwtName(k);
+    if (sd in ctx.sdjwt.claims && !eqVal(plainElementValue(v), ctx.sdjwt.claims[sd]))
       throw new Error(`mdoc: field value differs from the SD-JWT copy: ${k} (MD1)`);
+  }
   const sdIdx = ctx.sdjwt.status?.status_list.idx;
   if (sdIdx !== undefined && res.status && res.status.idx !== sdIdx)
     throw new Error("mdoc: status idx differs from the SD-JWT copy");
   return { namespace: ns, elements: Object.keys(el) };
+}
+
+/**
+ * IssuerSigned'daki öğe değerleri (ad alanı → öğe → düz değer; `full-date`/`tdate` dizgiye). İmza denetimi YAPMAZ — cüzdanın
+ * aldığı sırada denetlediği kopyanın eşleşmesi içindir (ADR-0044: ZK kopyasının öğeleri).
+ */
+export function mdocElementValues(mdocB64u: string): Record<string, Record<string, unknown>> {
+  const m = decode(b64uDecode(mdocB64u));
+  const ns = m instanceof Map ? m.get("nameSpaces") : undefined;
+  const out: Record<string, Record<string, unknown>> = {};
+  if (!(ns instanceof Map)) return out;
+  for (const [name, items] of ns.entries()) {
+    if (typeof name !== "string" || !Array.isArray(items)) continue;
+    out[name] = {};
+    for (const item of items) {
+      if (!(item instanceof CborTag) || !(item.value instanceof Uint8Array)) continue;
+      const inner = decode(item.value);
+      if (!(inner instanceof Map)) continue;
+      const id = inner.get("elementIdentifier");
+      if (typeof id === "string") out[name][id] = plainElementValue(inner.get("elementValue"));
+    }
+  }
+  return out;
 }
 
 /** Sıfır bilgi ispatlı mdoc sunumu (ADR-0032; AB TS13 DCQL `format`). */

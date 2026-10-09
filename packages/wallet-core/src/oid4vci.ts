@@ -9,6 +9,8 @@ import { certFingerprintHex, p256PointFromCertDer } from "./sdjwt.js";
 import type { KeyProvider, PublicJwk } from "./keys.js";
 import { clientAttestationPop, type WuaRecord } from "./wua.js";
 import { dpopRequest, newDpopSigner, type DpopSigner } from "./dpop.js";
+import { IDENTITY_VCT, ZK_COPY_VCT } from "./directory.js";
+import type { ZkCopyBinding } from "./store.js";
 
 export const PRE_AUTH_GRANT = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
 export const PROOF_TYP = "openid4vci-proof+jwt";
@@ -41,6 +43,8 @@ export interface IssuerMetadata {
     {
       format: string;
       vct?: string;
+      /** `mso_mdoc` yapılandırmasının docType'ı (ISO 18013-5) */
+      doctype?: string;
       /** HAIP §4.1: yapılandırmanın OAuth kapsamı */
       scope?: string;
       display?: Array<{ name?: string; locale?: string }>;
@@ -277,6 +281,11 @@ export interface RedeemOutput {
   refresh?: RefreshBinding;
   /** ADR-0031: takma ad tohumu belgesi (SD-JWT; yalnız kimlik servisi verir). Cüzdan `readPseudonymSeed` ile doğrular, SeedVault'a koyar. */
   pseudonymSeed?: string;
+  /**
+   * ADR-0044: kimlik belgesinin yenileme belirteci ZK kopyaları içindir (kimlik belgesi sessiz yenilenmez — ADR-0023 AR4 istisnası);
+   * kopyalar `refreshZkCopies` ile alınır.
+   */
+  zk?: Omit<ZkCopyBinding, "copies" | "dueAt">;
 }
 
 const form = (o: Record<string, string>) =>
@@ -484,8 +493,27 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
       copies[i].combined = c.credential;
       if (c.mso_mdoc) copies[i].mdoc = c.mso_mdoc; // Tamga profili PR16: kopya başına ikinci temsil
     });
+    // ADR-0044: kimlik servisi ZK kopyası ilan ediyorsa (mso_mdoc, docType ZK_COPY_VCT) kimlik belgesinin yenileme belirteci ZK
+    // kopyaları içindir; belge kendisi sessiz yenilenmez (ADR-0023 AR4)
+    const zkCfgId =
+      vct === IDENTITY_VCT
+        ? Object.entries(md.credential_configurations_supported).find(
+            ([, c]) => c.format === "mso_mdoc" && c.doctype === ZK_COPY_VCT,
+          )?.[0]
+        : undefined;
+    const zk: RedeemOutput["zk"] =
+      p.refreshToken && p.dpop && p.tokenEndpoint && zkCfgId
+        ? {
+            docType: ZK_COPY_VCT,
+            configurationId: zkCfgId,
+            token: p.refreshToken,
+            tokenEndpoint: p.tokenEndpoint,
+            dpopRef: p.dpop.ref,
+            dpopJwk: p.dpop.jwk,
+          }
+        : undefined;
     const refresh: RefreshBinding | undefined =
-      p.refreshToken && p.dpop && p.tokenEndpoint
+      !zk && p.refreshToken && p.dpop && p.tokenEndpoint
         ? {
             token: p.refreshToken,
             tokenEndpoint: p.tokenEndpoint,
@@ -494,7 +522,7 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
             ...reuseTriggers(md, vct),
           }
         : undefined;
-    keepDpop = !!refresh;
+    keepDpop = !!refresh || !!zk;
     return {
       credentialIssuer: issuer,
       vct,
@@ -502,6 +530,7 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
       copies,
       issuedAt: now,
       ...(refresh ? { refresh } : {}),
+      ...(zk ? { zk } : {}),
       ...(typeof body.pseudonym_seed === "string" ? { pseudonymSeed: body.pseudonym_seed } : {}),
     };
   } catch (e) {

@@ -169,7 +169,10 @@ export function redeemCode(
   return { ok: true, accessToken: opaque(), expiresIn: 300 }; // c_nonce nonce ucundan (OpenID4VCI 1.0 Final)
 }
 
-/** Bir sunum gövdesinden (verifier claims çıktısı) kurumun eşleştirme anahtarlarını çıkarır; kişisel veri döndürür — çağıran LOGLAMAZ. */
+/**
+ * Kimlik belgesi sunumundan (verifier claims çıktısı, SD-JWT VC adları — ADR-0045 `birthdate`) kurumun eşleştirme anahtarlarını
+ * çıkarır; kişisel veri döndürür — çağıran LOGLAMAZ.
+ */
 export function identityMatchKeys(claims: Record<string, unknown>): {
   pan?: string;
   birthDate?: string;
@@ -178,7 +181,7 @@ export function identityMatchKeys(claims: Record<string, unknown>): {
 } {
   return {
     pan: claims.personal_administrative_number as string | undefined,
-    birthDate: claims.birth_date as string | undefined,
+    birthDate: claims.birthdate as string | undefined, // ADR-0045: AB PID adı
     givenName: claims.given_name as string | undefined,
     familyName: claims.family_name as string | undefined,
   };

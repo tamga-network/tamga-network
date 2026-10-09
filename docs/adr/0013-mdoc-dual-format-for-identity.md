@@ -4,7 +4,7 @@ title: "Kimlik belgesi için mdoc"
 status: Active
 version: 1.0.0
 created: 2026-09-26
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   Tamga kimlik attestation'ı ([[ADR-0011]]) bugün yalnızca SD-JWT VC. Bu ADR, aynı belgenin aynı alanlarla ayrıca
   ISO/IEC 18013-5 mdoc (CBOR + COSE) olarak da ihraç edilmesini karara bağlar. Gerekçe: Safari/iOS'un tarayıcı Digital
@@ -40,7 +40,9 @@ kapsar; taşıma [[ADR-0012]] Faz 1'de.
    Aynı alanlar, aynı `iat/exp`, **aynı [[t:holder]] anahtarı** (SD-JWT `cnf.jwk` = mdoc `deviceKey`), ayrı [[t:issuer]] imzaları
    (SD-JWT: JOSE/ES256; mdoc: COSE_Sign1/ES256). İki belge tek ihraç akışında üretilir; cüzdan ikisini de saklar.
 2. **docType** = `urn:tamga:id:IdentityAttestation:1` (vct ile aynı URN); **namespace** = `tamga.id.1`. Alan adları SD-JWT
-   claim adlarıyla birebir (`given_name`, `family_name`, `document_number_hash`, `age_over_18`, …).
+   claim adlarıyla birebir (`given_name`, `family_name`, `document_number_hash`, `age_over_18`, …). *Değişti (2026-10-09,
+   [[ADR-0045]]):* iki biçim aynı veriyi taşır; ad ve kodlama her biçimde AB PID tablosuna göredir (Uygulama Tüzüğü (AB)
+   2026/1731) — SD-JWT `birthdate` / `nationalities` ↔ mdoc `birth_date` (full-date) / `nationality` (dizi); öteki adlar aynı.
 3. **Doğrulama formatı [[t:DCQL]] ile seçilir:** [[t:verifier]] isteğinde `format: dc+sd-jwt` ya da `mso_mdoc` belirtir; kanal (QR /
    derin bağlantı / DC API) aynı kalır. Doğrulayıcı mdoc'ta: issuerAuth COSE imzasını x5chain→[[t:trust-list]] ([[SPEC-TRUST-0001]])
    ile, alan digest'lerini MSO ile, cihaz imzasını SessionTranscript üzerinde doğrular.
@@ -66,7 +68,7 @@ kapsar; taşıma [[ADR-0012]] Faz 1'de.
 
 | # | Değişmez |
 |---|---|
-| **MD1** | mdoc yalnızca SD-JWT VC'nin ikinci temsilidir; SD-JWT VC birincil kalır (ADR-0006 değişmez). Bir tipin mdoc'u varsa alanları, `iat/exp` ve belge sahibi anahtarı SD-JWT ile birebir aynıdır. |
+| **MD1** | mdoc yalnızca SD-JWT VC'nin ikinci temsilidir; SD-JWT VC birincil kalır (ADR-0006 değişmez). Bir tipin mdoc'u varsa alanları (veri; ad ve kodlama biçime göre AB PID tablosundan — [[ADR-0045]]), `iat/exp` ve belge sahibi anahtarı SD-JWT ile birebir aynıdır. |
 | **MD2** | mdoc `deviceKey` = SD-JWT `cnf.jwk` (aynı belge sahibi anahtarı, aynı cihaz bağlaması). Ayrı anahtar üretilmez. |
 | **MD3** | mdoc issuerAuth (COSE_Sign1) yalnızca ES256; belge veren sertifikası x5chain'de taşınır ve [[SPEC-TRUST-0001]] güven listesiyle (issuer_id) eşlenir — SD-JWT ile aynı güven çapası. |
 | **MD4** | Doğrulama üç değerli sonucu ([[SPEC-API-0001]]) korur; digest uyuşmazlığı/süre/iptal REJECTED, altyapı erişilemezliği INDETERMINATE. Sonuç nesnesinde ham CBOR ve açıklanmayan alan bulunmaz. |
@@ -84,3 +86,5 @@ kapsar; taşıma [[ADR-0012]] Faz 1'de.
 
 **Accepted — 2026-09-26.** DECISIONS: D-CRED-5.
 Taslak 2026-09-26 (Proposed, paket + 15 test); aynı gün kabul ve D12 faz 2 uygulaması. ADR-0006'yı değiştirmez, genişletir.
+
+2026-10-09: K2 ve MD1'deki ad kuralı [[ADR-0045]] ile değişti (AB PID kodlaması, D-ID-11).

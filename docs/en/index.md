@@ -77,7 +77,7 @@ code at all: [Add "Sign in with Tamga" to a website](/guides/sign-in-with-tamga)
 
 <a class="tg-card" href="/packages/">
 <strong>SDKs</strong>
-<span>Nine <code>@tamga-network/*</code> packages for Node and React Native. 0.3.1 test release on npm; stable 1.0.0 when ready.</span>
+<span>Nine <code>@tamga-network/*</code> packages for Node and React Native. 0.4.0 test release on npm; stable 1.0.0 when ready.</span>
 </a>
 
 <a class="tg-card" href="/api/">

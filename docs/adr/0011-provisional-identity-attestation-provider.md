@@ -4,7 +4,7 @@ title: "Geçici kimlik belgesi sağlayıcısı"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   Devlet tarafından atanmış bir PID Provider bulunmadığı sürece Tamga, uzaktan
   kimlik doğrulama (Didit: belge + canlılık + yüz eşleştirme; ileride NFC çip
@@ -54,8 +54,8 @@ Claim seti EU PID Rulebook'undan (CIR 2024/2977) türetilir, azaltılmış:
 | Claim | Zorunlu | Seçici açıklama | Not |
 |---|---|---|---|
 | `given_name`, `family_name` | ✓ | ✓ | belgeden (MRZ/OCR; NFC varsa çip) |
-| `birth_date` | ✓ | ✓ | |
-| `nationality` | ✓ | ✓ | ISO 3166-1 alpha-2 |
+| `birthdate` | ✓ | ✓ | (2026-10-09, [[ADR-0045]]: eski adı `birth_date`; mdoc'ta `birth_date`) |
+| `nationalities` | ✓ | ✓ | ISO 3166-1 alpha-2 dizisi (2026-10-09, [[ADR-0045]]: eskiden tek değerli `nationality`) |
 | `personal_administrative_number` | ✓ | ✓ | **TCKN** (TR) / ulusal kimlik no — kurum eşleştirmesi için; yalnızca kayıtlı kapsamı olan RP'lere açıklanır |
 | `document_type`, `document_number` (hash) | ✓ | ✓ | belge numarası yalnızca SHA-256 |
 | `issuing_country` | ✓ | ✓ | |
@@ -73,7 +73,7 @@ Fotoğraf/portre **konmaz** (v1). [[t:holder|Belge sahibinin]] güvence seviyesi
    ikincil, `status.updated`) → **Approved** ise attestation ihraç edilir (10 kopya, [[t:WUA]] zorunlu, PR11).
 3. Kurumdan belge alma: cüzdan kurumu güven listesi dizininden seçer → kurumun belge veren servisi authorization code akışında
    **IdentityAttestation sunumu** ister ([[t:OpenID4VP]], [[t:DCQL]]: `personal_administrative_number`, `given_name`, `family_name`,
-   `birth_date`) → kayıtla eşler → belgeyi ihraç eder. Eşleşmezse belge verilmez; kişisel veri loglanmaz (AP3/AP4).
+   `birthdate`) → kayıtla eşler → belgeyi ihraç eder. Eşleşmezse belge verilmez; kişisel veri loglanmaz (AP3/AP4).
 4. Pre-authorized yollar (OBS ekranı QR, e-posta + SMS tx_code) **aynen kalır**; kurum ikisini de sunabilir.
 
 ## K4 — Veri sorumluluğu ve saklama (KVKK)
@@ -98,7 +98,7 @@ Fotoğraf/portre **konmaz** (v1). [[t:holder|Belge sahibinin]] güvence seviyesi
 ## K6 — Güvenlik sınırları
 - Attestation ihracında WUA zorunlu; demo'da `software` kabul (S-9/S-14), pilotta `secure_enclave`.
 - Aynı belge numarası hash'i ile aktif ikinci attestation verilmez (çift kayıt); yeniden belge verme eskisini iptal eder.
-- Kurum eşleşmesi: en az `personal_administrative_number` + `birth_date`; ad eşleşmesi normalize (Türkçe karakter).
+- Kurum eşleşmesi: en az `personal_administrative_number` + `birthdate`; ad eşleşmesi normalize (Türkçe karakter).
 - Didit "In Review" → attestation verilmez, kullanıcıya bekleme; "Declined" → 24 saat sonra yeniden deneme; 3 ret → manuel.
 
 # Gerekçe

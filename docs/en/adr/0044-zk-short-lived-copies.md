@@ -124,4 +124,16 @@ threshold, this decision is re-evaluated (option B).
 # Status
 
 **Accepted — 2026-10-09.** Approved by project management, on the condition that this is the path the EU recommends (K6).
-DECISIONS: D-ZK-2. Implementation pending.
+DECISIONS: D-ZK-2.
+
+*Implementation (2026-10-09, packages 0.4.0):* the K1 marker is a separate credential type —
+`urn:tamga:id:ShortLivedIdentityAttestation:1` (in the catalogue; type rule ≤ 24 hours, no revocation list; the public name awaits
+project management approval and lives in a single constant in the code). Because the Longfellow proof binds the docType, the
+verifier sees the type from the proof; no separate signing certificate was needed (the same institution key, MD3). Identity
+service: a `refresh_token` in the identity credential's token response (JWE `dir` + A256GCM; linked record, generation counter,
+DPoP thumbprint, expiry, only `age_over_18`); on the server only the generation counter in the record; batch of at most 3
+copies, validity ≤ 24 hours and ≤ the main credential's expiry ([[SPEC-PROTO-0001]] §4.2). Wallet core: `refreshZkCopies`,
+`scheduleZkRefreshes` (window: 8 hours before expiry; random delay at most 6 hours), a ZK query only with a ZK copy
+([[SPEC-WALLET-0001]] §4.5). Verifier: a marked ZK presentation is `NOT_APPLICABLE` (reason: short validity), an unmarked one
+needs `accept_unrevocable_zk` ([[SPEC-API-0001]] D1); Tamga Verify's `age-over-18-zk` policy asks for the ZK copy type and the
+flag was removed.

@@ -98,10 +98,10 @@ const policy: Policy = {
   policy_id: "age-over-18-zk",
   purpose: { "en-US": "Over-18 check — yes/no only" },
   credentials: [{
-    id: "identity", vct_values: ["urn:tamga:id:IdentityAttestation:1"],
+    // ADR-0044: ZK only with the identity credential's short-lived ZK copy (≤ 24 hours, no revocation list)
+    id: "identity", vct_values: ["urn:tamga:id:ShortLivedIdentityAttestation:1"],
     format: "mso_mdoc_zk", namespace: "tamga.id.1",
     required_claims: ["age_over_18"], constraints: { age_over_18: true }, // equality only
-    accept_unrevocable_zk: true, // knowingly accept a ZK presentation whose revocation cannot be checked (ZK4)
   }],
   trust: { ... }, freshness: { ... },
 };
@@ -121,12 +121,13 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
 - **New step `Z1`:** is the circuit in the signed list, was only the requested element disclosed, is the timestamp fresh, is
   the proof valid? The institution signature, the device signature and the validity are checked inside the proof
   (`checks_skipped`: A4–A7). No revocation status comes with it (`status.value: NOT_APPLICABLE`, the reason in
-  `status.reason`). The identity credential presented with ZK is valid for 2 years today and its revocation is not
-  visible; choose this path only where revocation does not change the outcome (for example an age check).
-- **`accept_unrevocable_zk`:** a policy that uses `mso_mdoc_zk` must state it explicitly. `true` accepts a presentation whose
-  revocation cannot be checked; with `false` — or when the field is omitted (the default since 0.3.1) — every ZK
-  presentation returns `INDETERMINATE` (step `D1`, `STATUS_UNREACHABLE`); if a revocation check is required, use the
-  classic `mso_mdoc` policy.
+  `status.reason`). Only the identity credential's short-lived copy is presented with ZK ([[ADR-0044]]): it is valid for at
+  most 24 hours and the copies of a revoked credential are not refreshed; because the proof binds the copy's type, the
+  verifier sees that it is short-lived and expects no revocation check. Revocation takes effect for ZK within 24 hours at
+  most; if you need to see revocation immediately, use the classic `mso_mdoc` policy.
+- **`accept_unrevocable_zk`:** only for a ZK presentation that is NOT a short-lived copy (unmarked). `true` knowingly accepts
+  such a presentation whose revocation cannot be checked; with `false` or when the field is omitted (the default since 0.3.1)
+  an unmarked ZK presentation returns `INDETERMINATE` (step `D1`, `STATUS_UNREACHABLE`).
 - **Fallback:** if the wallet does not support ZK, your query will not match; ask the same question with the classic
   `mso_mdoc` policy (`age-over-18-mdoc`). Wallet side: `@tamga-network/zk` (Android native library ready, iOS pending); a
   wallet without a prover uses the classic path (ZK5).

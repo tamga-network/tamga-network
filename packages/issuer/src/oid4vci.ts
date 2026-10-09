@@ -177,16 +177,36 @@ export function issuerMetadata(p: {
   keyAttestationsRequired?: { key_storage: string[]; user_authentication: string[] };
   /** ETSI TS 119 472-3 §4.2.3 (ARF RPRC_22): kayıt kurumu veri seti + varsa kayıt sertifikası (`verifier_info` yapısında) */
   issuerInfo?: Array<{ format: string; data: unknown }>;
+  /**
+   * ISO 18013-5 mdoc yapılandırmaları (`format: mso_mdoc`, `doctype`). ADR-0044: kimlik servisinin ZK kopyası — yalnız yenileme
+   * belirteciyle alınır (PAR ile başlatılamaz).
+   */
+  mdocConfigurations?: Array<{ id: string; doctype: string; display: unknown[] }>;
 }) {
   const base = p.credentialIssuer;
+  const proofTypes = {
+    jwt: {
+      proof_signing_alg_values_supported: ["ES256"],
+      ...(p.keyAttestationsRequired ? { key_attestations_required: p.keyAttestationsRequired } : {}),
+    },
+    // HAIP §4.5.1 / CIR 2026/1731 TR_KA-4: anahtar kanıtı isteniyorsa `attestation` proof türü de desteklenir
+    ...(p.keyAttestationsRequired
+      ? {
+          attestation: {
+            proof_signing_alg_values_supported: ["ES256"],
+            key_attestations_required: p.keyAttestationsRequired,
+          },
+        }
+      : {}),
+  };
   return {
     credential_issuer: base,
     authorization_servers: [base],
     credential_endpoint: `${base}/credential`,
     nonce_endpoint: `${base}/nonce`,
     batch_credential_issuance: { batch_size: BATCH_SIZE },
-    credential_configurations_supported: Object.fromEntries(
-      p.authorizedVcts.map((c) => [
+    credential_configurations_supported: Object.fromEntries([
+      ...p.authorizedVcts.map((c) => [
         c.vct,
         {
           format: "dc+sd-jwt",
@@ -195,27 +215,27 @@ export function issuerMetadata(p: {
           vct: c.vct,
           cryptographic_binding_methods_supported: ["jwk"],
           credential_signing_alg_values_supported: ["ES256"],
-          proof_types_supported: {
-            jwt: {
-              proof_signing_alg_values_supported: ["ES256"],
-              ...(p.keyAttestationsRequired ? { key_attestations_required: p.keyAttestationsRequired } : {}),
-            },
-            // HAIP §4.5.1 / CIR 2026/1731 TR_KA-4: anahtar kanıtı isteniyorsa `attestation` proof türü de desteklenir
-            ...(p.keyAttestationsRequired
-              ? {
-                  attestation: {
-                    proof_signing_alg_values_supported: ["ES256"],
-                    key_attestations_required: p.keyAttestationsRequired,
-                  },
-                }
-              : {}),
-          },
+          proof_types_supported: proofTypes,
           // OpenID4VCI 1.0: görünüm ve kopya politikası credential_metadata altında (üst düzey display eski cüzdanlar için)
           credential_metadata: { display: c.display, credential_reuse_policy: REUSE_POLICY },
           display: c.display,
         },
       ]),
-    ),
+      // OpenID4VCI 1.0 Ek A.2: mso_mdoc yapılandırması (`doctype`; anahtar bağlaması `cose_key`, imza ES256 = COSE -7)
+      ...(p.mdocConfigurations ?? []).map((c) => [
+        c.id,
+        {
+          format: "mso_mdoc",
+          scope: c.id,
+          doctype: c.doctype,
+          cryptographic_binding_methods_supported: ["cose_key"],
+          credential_signing_alg_values_supported: [-7],
+          proof_types_supported: proofTypes,
+          credential_metadata: { display: c.display },
+          display: c.display,
+        },
+      ]),
+    ]),
     display: [{ name: p.authorizedVcts[0]?.name ?? "Tamga Issuer", locale: "tr-TR" }],
     ...(p.issuerInfo?.length ? { issuer_info: p.issuerInfo } : {}),
   };

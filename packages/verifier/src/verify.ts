@@ -132,7 +132,7 @@ export interface VerifyOutput {
 } // claims: AP3 — ayrı kanal
 
 export const SPEC_VERSION = "SPEC-API-0001@1.0.0"; // spec sürüm notuyla birlikte güncellenir
-export const SDK_VERSION = "@tamga-network/verifier@0.3.1"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
+export const SDK_VERSION = "@tamga-network/verifier@0.4.0"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
 const ALL_STEPS: Step[] = [
   "T0",
   "A1",

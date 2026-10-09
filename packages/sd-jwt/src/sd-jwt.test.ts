@@ -426,3 +426,64 @@ describe("SPEC-CRED-0002 §3.4–§3.5: belge veren serileştirme sözleşmesi",
     expect(JSON.parse(json)[2]).toEqual(v);
   });
 });
+
+describe("ADR-0045 — dizi öğeleri ayrı ayrı açıklanır (RFC 9901 §4.2.2; AB PID `nationalities`)", () => {
+  async function issueId() {
+    return issueSdJwtVc({
+      signer,
+      iss: "https://id.tamga.network",
+      vct: "urn:tamga:id:IdentityAttestation:1",
+      vctIntegrity: "sha256-r+Pdm2xQrKxuuX9WwXGwntrJ7PtDjCbZ5pysOj3u6KA=",
+      iat: NOW - 1000,
+      cnfJwk: holder.jwk,
+      claims: { given_name: "Ayşe", birthdate: "2002-05-14", nationalities: ["TR", "AZ"] },
+      sdPolicy: { given_name: "always", birthdate: "always", nationalities: "always" },
+      arrayElementSd: ["nationalities"],
+    });
+  }
+  it("dizi öğeleri `[salt, değer]` disclosure'ı; dizide `{...: özet}`; kök `_sd` yalnız adlı claim'ler", async () => {
+    const out = await issueId();
+    expect(out.disclosures.length).toBe(5); // 3 ad + 2 öğe
+    expect((out.payload._sd as string[]).length).toBe(3);
+    const parent = out.disclosures.find((d) => d.name === "nationalities")!;
+    const arr = parent.value as Array<{ "...": string }>;
+    expect(arr.map((x) => x["..."])).toEqual(
+      out.disclosures.filter((d) => /^nationalities\[\d\]$/.test(d.name)).map((d) => d.digest),
+    );
+    const el = JSON.parse(b64uToUtf8(out.disclosures.find((d) => d.name === "nationalities[0]")!.disclosure));
+    expect(el).toHaveLength(2);
+    expect(el[1]).toBe("TR");
+  });
+  it("sunumda `nationalities` istenirse dizi ve bütün öğeleri açılır; doğrulayıcı diziyi çözer", async () => {
+    const out = await issueId();
+    const pres = await presentSdJwtVc({
+      combined: out.combined,
+      discloseClaims: ["nationalities"],
+      holderKey: holder.priv,
+      aud: AUD,
+      nonce: NONCE,
+      iat: NOW,
+    });
+    const r = await verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW, rootCertsDer: [rootDer] });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.claims.nationalities).toEqual(["TR", "AZ"]);
+    expect(r.claims.birthdate).toBeUndefined();
+    expect(r.claims.given_name).toBeUndefined();
+  });
+  it("yalnız bir öğe açılabilir (`nationalities[1]`); öteki öğe gizli kalır", async () => {
+    const out = await issueId();
+    const pres = await presentSdJwtVc({
+      combined: out.combined,
+      discloseClaims: ["nationalities[1]"],
+      holderKey: holder.priv,
+      aud: AUD,
+      nonce: NONCE,
+      iat: NOW,
+    });
+    const r = await verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW, rootCertsDer: [rootDer] });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.claims.nationalities).toEqual(["AZ"]);
+  });
+});

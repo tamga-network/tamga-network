@@ -12,6 +12,7 @@
  */
 import { b64Decode, b64u, utf8 } from "./b64.js";
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
+import { pidSdJwtName } from "@tamga-network/core/pid";
 import { decodeJwt, verifyJwt } from "./jws.js";
 import type { KeyProvider } from "./keys.js";
 import { chooseEnc, encryptJwe, type EncJwk, type JweEnc } from "./jwe.js";
@@ -20,7 +21,15 @@ import { WalletError, type Http, readJson } from "./http.js";
 import type { StoredCredential } from "./store.js";
 import { certAuthorityKeyId, certSanDnsNames } from "./asn1.js";
 import { fetchTrustSource, type TrustPins } from "./trustlist.js";
-import { MDOC_FORMAT, MDOC_ZK_FORMAT, buildMdocPresentation, mdocIssuerKeys, presentMdoc } from "./mdoc.js";
+import {
+  MDOC_FORMAT,
+  MDOC_ZK_FORMAT,
+  buildMdocPresentation,
+  mdocElementValues,
+  mdocIssuerKeys,
+  presentMdoc,
+} from "./mdoc.js";
+import { selectZkCopy } from "./zk-copies.js";
 import { NON_PRESENTABLE_VCTS, PSEUDONYM_FORMAT } from "./pseudonym.js";
 
 export const REQUEST_TYP = "oauth-authz-req+jwt";
@@ -357,8 +366,11 @@ export interface Match {
    * (ARF OIA_11 — ör. birden çok doğrulanmış e-posta, ADR-0021).
    */
   alternatives?: Match[];
-  /** ADR-0032: ZK eşleşmesinde ispatlanacak öğeler (sorgudaki sabit değerler) ve doğrulayıcının kabul ettiği devreler */
-  zk?: { claims: ZkClaimValue[]; circuits?: string[] };
+  /**
+   * ADR-0032: ZK eşleşmesinde ispatlanacak öğeler (sorgudaki sabit değerler) ve doğrulayıcının kabul ettiği devreler. ADR-0044:
+   * ispat yalnız ZK kopyasıyla — `copyKeyRef` belgenin `zk.copies`'inden seçilen kopya (ana belgenin kopyaları kullanılmaz).
+   */
+  zk?: { claims: ZkClaimValue[]; circuits?: string[]; copyKeyRef?: string };
 }
 /** ZK ile ispatlanan öğe: "bu ad alanında bu öğe şu değerdir" (`@tamga-network/zk` ZkClaim ile aynı biçim). */
 export interface ZkClaimValue {
@@ -547,8 +559,9 @@ export interface DcqlMatchResult {
 export function matchDcql(
   dcql: DcqlQuery,
   credentials: StoredCredential[],
-  opts: { zk?: boolean } = {},
+  opts: { zk?: boolean; now?: number } = {},
 ): DcqlMatchResult {
+  const now = opts.now ?? Math.floor(Date.now() / 1000);
   const matches: Match[] = [];
   const unmatched: string[] = [];
   const gaps: DcqlGap[] = [];
@@ -565,21 +578,37 @@ export function matchDcql(
         c.status?.value === "revoked" ||
         c.status?.value === "suspended"
           ? false
-          : isMdoc
-            ? c.vct === docType && c.copies.some((k) => !!k.mdoc) // D-CRED-5: yalnızca mdoc'u olan belge
-            : q.format === "dc+sd-jwt" && (vcts.length === 0 || vcts.includes(c.vct)),
+          : isZk
+            ? c.zk?.docType === docType // ADR-0044 ZC1: ZK yalnız ZK kopyasıyla (ana belgenin mdoc'u ZK'da kullanılmaz)
+            : isMdoc
+              ? c.vct === docType && c.copies.some((k) => !!k.mdoc) // D-CRED-5: yalnızca mdoc'u olan belge
+              : q.format === "dc+sd-jwt" && (vcts.length === 0 || vcts.includes(c.vct)),
       )
       .filter((c) => trustedAuthorityOk(q, c));
     const namespace = isMdoc ? (q.claims?.[0]?.path[0] as string | undefined) : undefined;
     const ok: Match[] = [];
     let closest: DcqlGap | undefined;
+    let zkMissing: StoredCredential | undefined;
     for (const c of cands) {
-      // SD-JWT: path [claim] · mdoc: path [namespace, element] (MD1: element adları SD-JWT claim adlarıyla aynı)
+      // ADR-0044: ZK sorgusu belgenin geçerli bir ZK kopyasıyla karşılanır; öğe değerleri kopyanın kendisinden
+      const zkCopy = isZk ? selectZkCopy(c, now) : null;
+      if (isZk && !zkCopy) {
+        zkMissing ??= c;
+        continue;
+      }
+      const zkEls = zkCopy ? (mdocElementValues(zkCopy.mdoc)[namespace ?? ""] ?? {}) : undefined;
+      // SD-JWT: path [claim] · mdoc: path [namespace, element]; mdoc öğesinin değeri belgenin SD-JWT claim'inden, ad AB PID
+      // tablosuyla (MD1 / ADR-0045: `birth_date` ↔ `birthdate`, `nationality` ↔ `nationalities`)
       // ADR-0036: SD-JWT yolu iç içe olabilir (["address","country"], ["nationalities", null|i]) → nokta yolu
       const evals = (q.claims ?? []).map((cl) => {
         const name = isMdoc ? String(cl.path[1]) : dcqlPathToName(cl.path);
-        const value = isMdoc ? c.claims[name] : getClaimAtPath(c.claims, name);
-        const has = isMdoc ? Object.prototype.hasOwnProperty.call(c.claims, name) : value !== undefined;
+        const sdName = isMdoc ? pidSdJwtName(name) : name;
+        const value = zkEls ? zkEls[name] : isMdoc ? c.claims[sdName] : getClaimAtPath(c.claims, name);
+        const has = zkEls
+          ? Object.prototype.hasOwnProperty.call(zkEls, name)
+          : isMdoc
+            ? Object.prototype.hasOwnProperty.call(c.claims, sdName)
+            : value !== undefined;
         const valueOk = !cl.values || (has && cl.values.some((v) => JSON.stringify(v) === JSON.stringify(value)));
         return { id: cl.id, name, has, valueOk };
       });
@@ -596,11 +625,14 @@ export function matchDcql(
           ...(namespace ? { namespace } : {}),
           ...(isZk
             ? {
-                zk: zkOf(
-                  q,
-                  namespace ?? "",
-                  option.map((e) => e.name),
-                ),
+                zk: {
+                  ...zkOf(
+                    q,
+                    namespace ?? "",
+                    option.map((e) => e.name),
+                  ),
+                  copyKeyRef: zkCopy!.keyRef,
+                },
               }
             : {}),
         });
@@ -620,6 +652,15 @@ export function matchDcql(
       // ZK5: belge var ama bu cihazda ispat yok — sorgu önerilmez (klasik seçenek varsa o seçilir)
       unmatched.push(q.id);
       gaps.push({ queryId: q.id, reason: "zk_unavailable", claims: ok[0].requested, credential: ok[0].credential });
+    } else if (!ok.length && zkMissing && !closest) {
+      // ADR-0044: belge var ama geçerli ZK kopyası yok (henüz alınmadı / süresi doldu) — cüzdan yenileyip yeniden deneyebilir
+      unmatched.push(q.id);
+      gaps.push({
+        queryId: q.id,
+        reason: "zk_unavailable",
+        claims: (q.claims ?? []).map((cl) => String(cl.path[1])),
+        credential: zkMissing,
+      });
     } else if (ok.length) matches.push(ok.length > 1 ? { ...ok[0], alternatives: ok } : ok[0]);
     else {
       unmatched.push(q.id);
@@ -727,7 +768,8 @@ export function checkRp(
     contact: rp.contact,
     supervisoryAuthority: rp.supervisory_authority,
     scopeClaims,
-    overAsk: match.requested.filter((c) => !scopeClaims.includes(c)),
+    // kapsam adları SD-JWT adlarıdır; Tamga türünün mdoc öğesi AB PID tablosuyla çevrilir (ADR-0045)
+    overAsk: match.requested.filter((c) => !scopeClaims.includes(scopeName(match, c))),
     certMatches: true,
   };
 }
@@ -856,9 +898,11 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
 async function presentZkMatch(p: RespondInput, m: RespondInput["matches"][number]): Promise<string> {
   const fail = (zk: string, msg: string) => new WalletError("unsupported", msg, { zk } satisfies ZkFailureDetail);
   if (!p.zk || !m.match.zk) throw fail("unavailable", "zero-knowledge proofs are not available in this wallet (ZK5)");
-  const copy = m.match.credential.copies.find((k) => k.keyRef === m.keyRef);
-  if (!copy?.mdoc) throw new WalletError("issuer_error", "this copy has no mdoc representation");
-  const docType = m.match.credential.vct;
+  // ADR-0044 ZC1: ispat yalnız ZK kopyasıyla (kısa ömürlü, ayrı tür); ana belgenin kopyası ZK'da kullanılmaz
+  const ref = m.match.zk.copyKeyRef ?? m.keyRef;
+  const copy = m.match.credential.zk?.copies.find((k) => k.keyRef === ref);
+  if (!copy) throw fail("no_zk_copy", "no short-lived ZK copy is available for this credential (ADR-0044)");
+  const docType = m.match.credential.zk!.docType;
   const namespace = m.match.namespace ?? "";
   const { deviceResponse, transcript } = await buildMdocPresentation({
     mdocB64u: copy.mdoc,
@@ -871,7 +915,7 @@ async function presentZkMatch(p: RespondInput, m: RespondInput["matches"][number
     origin: p.request.origin,
     encJwk: p.request.encJwk,
     keys: p.keys,
-    keyRef: m.keyRef,
+    keyRef: copy.keyRef,
   });
   const issuer = mdocIssuerKeys(copy.mdoc);
   let out: Uint8Array;
@@ -909,6 +953,22 @@ export function stableRpKey(req: VpRequest, rp: RpRecord | null, onBehalf?: RpRe
   }
   if (signerOk && rp!.dns_name) return rp!.dns_name;
   return req.clientId;
+}
+
+/**
+ * Eşleşmede istenen alanın değeri (onay ekranında göstermek için): SD-JWT'de yol; mdoc'ta öğe adı AB PID tablosuyla belgenin
+ * SD-JWT claim'ine çevrilir (ADR-0045: `birth_date` → `birthdate`); ZK'da ispatlanan sabit değer (ADR-0032/0044).
+ */
+export function matchClaimValue(match: Match, name: string): unknown {
+  if (match.format === MDOC_ZK_FORMAT) return match.zk?.claims.find((c) => c.element === name)?.value;
+  if (match.format === MDOC_FORMAT) return match.credential.claims[scopeName(match, name)];
+  return getClaimAtPath(match.credential.claims, name);
+}
+
+/** Kapsam (RP kaydı) adı: SD-JWT claim adı; Tamga türünün mdoc öğesi AB PID tablosuyla çevrilir (ADR-0045). */
+function scopeName(match: Match, name: string): string {
+  const mdoc = match.format === MDOC_FORMAT || match.format === MDOC_ZK_FORMAT;
+  return mdoc && match.credential.vct.startsWith("urn:tamga:") ? pidSdJwtName(name) : name;
 }
 
 /** DCQL claim yolu → nokta yolu: dizgi = alan, sayı = dizi öğesi, null = dizinin tamamı (yolu orada keser). */

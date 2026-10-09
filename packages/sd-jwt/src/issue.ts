@@ -9,7 +9,7 @@ import { CompactSign, importPKCS8, type JWK } from "jose";
 import type { KeyObject } from "node:crypto";
 export type SigningKey = CryptoKey | KeyObject;
 import { derToB64, pemToDer, utf8 } from "@tamga-network/core";
-import { makeDisclosure, SD_ALG, SD_JWT_TYP, type Disclosure } from "./disclosure.js";
+import { makeArrayElementDisclosure, makeDisclosure, SD_ALG, SD_JWT_TYP, type Disclosure } from "./disclosure.js";
 
 export type SdPolicy = "always" | "allowed" | "never";
 
@@ -41,6 +41,11 @@ export interface IssueInput {
   category?: "urn:tamga:eaa:pub" | "urn:tamga:eaa:qualified";
   claims: Record<string, unknown>;
   sdPolicy: Record<string, SdPolicy>; // Type Metadata claims[].sd; listelenmeyen claim → "allowed"
+  /**
+   * Öğeleri ayrı ayrı seçici açıklanan diziler (Type Metadata `path: [ad, null]`, sd ≠ never; RFC 9901 §4.2.2). AB PID kodlaması
+   * (CIR 2026/1731 §4.2, ARF PID_21): `nationalities` gibi dizilerin her öğesi ayrı disclosure; dizi `{"...": özet}` taşır.
+   */
+  arrayElementSd?: readonly string[];
 }
 
 export interface IssueOutput {
@@ -83,13 +88,27 @@ export async function issueSdJwtVc(input: IssueInput): Promise<IssueOutput> {
   if (input.category) plain.category = input.category;
 
   const disclosures: Disclosure[] = [];
-  for (const [name, value] of Object.entries(input.claims)) {
+  const elementSd = new Set(input.arrayElementSd ?? []);
+  const elementDisclosures = new Set<Disclosure>();
+  for (const [name, raw] of Object.entries(input.claims)) {
     if (RESERVED.has(name)) throw new Error(`reserved claim name: ${name}`);
+    let value = raw;
+    if (elementSd.has(name) && Array.isArray(raw)) {
+      // dizi öğeleri önce: her biri ayrı disclosure, dizide yerini özeti tutar (sıra korunur)
+      value = raw.map((el, i) => {
+        const d = makeArrayElementDisclosure(`${name}[${i}]`, el);
+        disclosures.push(d);
+        elementDisclosures.add(d);
+        return { "...": d.digest };
+      });
+    }
     const pol = input.sdPolicy[name] ?? "allowed";
     if (pol === "never") plain[name] = value;
     else disclosures.push(makeDisclosure(name, value));
   }
-  const payload = { ...plain, _sd_alg: SD_ALG, _sd: disclosures.map((d) => d.digest).sort() }; // C5 sıralı, C6 decoy yok
+  // C5 sıralı, C6 decoy yok. Kök `_sd` yalnız adlı (nesne üyesi) disclosure'ları taşır; dizi öğeleri dizinin içinde
+  const top = disclosures.filter((d) => !elementDisclosures.has(d));
+  const payload = { ...plain, _sd_alg: SD_ALG, _sd: top.map((d) => d.digest).sort() };
   const header = { alg: "ES256", typ: SD_JWT_TYP, x5c: input.signer.x5c.map(derToB64) };
   const jwt = await input.signer.sign(header, utf8(JSON.stringify(payload)));
   const combined = [jwt, ...disclosures.map((d) => d.disclosure), ""].join("~");

@@ -14,6 +14,7 @@ import {
   parseDeviceResponse,
   verifyDeviceAuth,
   verifyIssuerSigned,
+  plainElementValue,
   decode,
   encode,
   type CborValue,
@@ -162,9 +163,11 @@ export async function verifyMdocFormat(
     : oid4vpSessionTranscript(opt.clientId, opt.nonce, opt.responseUri, opt.encJwkThumbprint ?? null);
   if (!verifyDeviceAuth(dr.deviceSignature, st, dr.docType, v.deviceKeyRaw))
     return fail("A6", "device signature invalid (holder binding / SessionTranscript)");
-  // açıklanan alanlar — tek namespace (Tamga profili); element adları SD-JWT claim adlarıyla aynı (MD1)
+  // açıklanan alanlar — tek namespace (Tamga profili); öğe adları mdoc tanımlayıcısıdır (AB PID kodlaması, ADR-0045: SD-JWT'deki
+  // `birthdate` burada `birth_date`), `full-date`/`tdate` etiketleri dizgiye çevrilir
   const claims: Record<string, unknown> = {};
-  for (const els of Object.values(v.claims ?? {})) Object.assign(claims, els);
+  for (const els of Object.values(v.claims ?? {}))
+    for (const [k, val] of Object.entries(els)) claims[k] = plainElementValue(val);
   return {
     ok: true,
     format: "mso_mdoc",

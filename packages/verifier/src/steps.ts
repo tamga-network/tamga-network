@@ -7,12 +7,12 @@
 import _Ajv2020 from "ajv/dist/2020.js";
 import _addFormats from "ajv-formats";
 import { verifySdJwtVc } from "@tamga-network/sd-jwt";
-import { computeSchemaId } from "@tamga-network/core";
-import { ALL as SCHEMA_DEFS, externalType, type SchemaDef } from "@tamga-network/schemas";
+import { computeSchemaId, pidSdJwtName } from "@tamga-network/core";
+import { ALL as SCHEMA_DEFS, externalType, isShortLivedType, type SchemaDef } from "@tamga-network/schemas";
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
 import { verifyStatusListToken } from "@tamga-network/sd-jwt";
 import type { ExternalIssuerAnswer, TrustSource } from "@tamga-network/trust";
-import { assuranceAtLeast, constraintOk, scopeCovers, type Policy } from "./policy.js";
+import { assuranceAtLeast, constraintOk, scopeClaimName, scopeCovers, type Policy } from "./policy.js";
 import { verifyMdocFormat, type FormatResult } from "./mdoc-format.js";
 import { verifyMdocZkFormat } from "./mdoc-zk-format.js";
 import type { IndeterminateReason, Step, VerificationResult, VerifyInput } from "./verify.js";
@@ -156,8 +156,13 @@ export function stepB(ctx: VerifyCtx): StepFail | undefined {
   ctx.skipped.push("B5");
   // B6: yalnızca AÇIKLANAN alanlar doğrulanır — gizlenen zorunlu alanlar eksik görünür, bu yüzden `required` gevşetilir
   // (tip/enum/format kontrolü kalır)
+  // mdoc öğe adları AB PID tablosuyla SD-JWT adına (ADR-0045: `birth_date` → `birthdate`); şema SD-JWT adlarıyla yazılır
+  const named =
+    a.format === "dc+sd-jwt"
+      ? a.claims
+      : Object.fromEntries(Object.entries(a.claims).map(([k, v]) => [pidSdJwtName(k), v]));
   const sample = {
-    ...a.claims,
+    ...named,
     cnf: {},
     ...(a.status ? { status: { status_list: { idx: 0, uri: a.status.status_list.uri } } } : {}),
   };
@@ -266,9 +271,19 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   const a = ctx.a!;
   const issuerRec = ctx.issuerRec;
   if (!a.status) {
-    if (a.format === "mso_mdoc_zk") {
-      // ADR-0032 ZK4: indeks gelmez → iptal denetlenemez; politika bunu AÇIKÇA kabul etmiyorsa DOĞRULANAMADI (ADR-0044/ZC4:
-      // alan yoksa false)
+    if (a.format === "mso_mdoc_zk" && isShortLivedType(a.vct)) {
+      // ADR-0044 K5: kısa ömür işareti — ispatın bağladığı tür ZK kopyasıdır (tür kuralı: ≤ 24 sa, iptal listesi yok; AB ARF
+      // VCR_01). İptal denetimi gerekmez; ana belge iptal/askıdaysa kimlik servisi yeni kopya vermez (ZC2)
+      ctx.status = {
+        value: "NOT_APPLICABLE",
+        list_version: null,
+        token_age_sec: null,
+        reason:
+          "short-lived ZK copy: valid for at most 24 hours and carries no revocation list entry; short validity replaces revocation (ADR-0044 ZC1, EU ARF VCR_01)",
+      };
+    } else if (a.format === "mso_mdoc_zk") {
+      // ADR-0032 ZK4: indeks gelmez → iptal denetlenemez; işaretsiz ZK sunumunu politika AÇIKÇA kabul etmiyorsa DOĞRULANAMADI
+      // (ADR-0044 ZC4: alan yoksa false)
       if (ctx.pc?.accept_unrevocable_zk !== true)
         return indet(
           "D1",
@@ -398,7 +413,7 @@ export function stepE(ctx: VerifyCtx): StepFail | undefined {
         .flatMap((s) => s.claims),
     );
     // iç içe yol: kapsamda kendisi ya da bir atası varsa izinli (address → address.locality) — AP6 ile aynı kural
-    const over = ctx.disclosed.filter((c) => !scopeCovers(allowed, c));
+    const over = ctx.disclosed.filter((c) => !scopeCovers(allowed, scopeClaimName(a.vct, a.format, c)));
     if (over.length) return reject("E3", `scope exceeded: ${over.join(",")} (AP6)`);
     ctx.done.push("E3");
   } else ctx.skipped.push("E3");

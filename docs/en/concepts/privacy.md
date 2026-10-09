@@ -31,9 +31,11 @@ default.
 The proof "I am over 18" is produced without showing the credential itself ([[t:ZK]]): the verifier sees neither the date of
 birth nor the credential, and two presentations cannot be linked. The proof system is [[t:Longfellow-ZK]]; the verifier side
 is ready in the `@tamga-network/verifier/zk` subpath, and the wallet side ships with the store release. Because the proof does
-not disclose the position in the status list, revocation cannot be checked in the presentation; short-lived copies (at most
-24 hours) will be used for it ([[ADR-0044]], implementation pending). Until then a verifier accepts such a presentation only
-when its policy explicitly sets `accept_unrevocable_zk`.
+not disclose the position in the status list, revocation cannot be checked in the presentation; instead a ZK presentation is
+made only with short-lived copies of the identity credential (valid for at most 24 hours, refreshed by the wallet on its own)
+([[ADR-0044]]). The copies of a revoked credential are not refreshed; because the proof binds the copy's type, the verifier
+sees that it is short-lived. A ZK presentation made without such a copy (unmarked) is accepted only when the verifier's policy
+explicitly sets `accept_unrevocable_zk`.
 
 ## What a verifier must do
 

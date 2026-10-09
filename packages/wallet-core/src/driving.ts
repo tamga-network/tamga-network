@@ -16,7 +16,8 @@ import type { StoredCredential } from "./store.js";
 /** PAR alanı: kimlik belgesinin sunumu (kimlik servisi `IDENTITY_PRESENTATION_PARAM` ile aynı ad). */
 export const IDENTITY_PRESENTATION_PARAM = "identity_presentation";
 /** K4: kimlik belgesinden açılan alanlar — başka hiçbir alan açılmaz (servis fazlasını reddeder). */
-export const DRIVING_IDENTITY_CLAIMS: readonly string[] = ["given_name", "family_name", "birth_date"];
+/** ADR-0045: kimlik belgesinin AB PID adları (SD-JWT VC). */
+export const DRIVING_IDENTITY_CLAIMS: readonly string[] = ["given_name", "family_name", "birthdate"];
 
 /** Kimlik servisi sürücü belgesi bilgisini bugün veriyor mu (metadata'da `dc+sd-jwt` olarak ilan ediyor mu)? */
 export const drivingOffered = (md: IssuerMetadata): boolean =>

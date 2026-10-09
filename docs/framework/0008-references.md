@@ -4,7 +4,7 @@ title: "Ek E — Kaynaklar"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-04
+last_updated: 2026-10-09
 summary: >
   Tamga ARF'nin dayandığı standartlar ve düzenlemeler, Tamga karar kayıtları ve şartnameleri ve eklerdeki her bağlayıcı
   kuralın kaynağı.
@@ -134,6 +134,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-AP-ID-08 | [[ADR-0039]] DL1, DL2 |
 | RB-AP-ID-09 | [[ADR-0039]] DL3, DL5 |
 | RB-AP-ID-10 | [[ADR-0039]] DL4, DL5 |
+| RB-AP-ID-11 | [[ADR-0044]] ZC1–ZC3 |
 | RB-AS-01 | [[FW-TF-0001]] §5.1 |
 | RB-AS-02 | [[SPEC-SCHEMA-0002]]/E11 |
 | RB-AS-03 | [[SPEC-SCHEMA-0002]]/E1, [[SPEC-SCHEMA-0003]]/SK6 |

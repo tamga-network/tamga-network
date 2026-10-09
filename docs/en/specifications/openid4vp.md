@@ -298,8 +298,9 @@ asks for the least data first.
 }
 ```
 
-In [[t:mdoc]] the claim path is **`[namespace, element]`**; the Tamga identity namespace is `tamga.id.1`, and the element names
-match the SD-JWT claim names one to one ([[ADR-0013]] MD1). The verifier sees only `age_over_18`; the name, date of birth and
+In [[t:mdoc]] the claim path is **`[namespace, element]`**; the Tamga identity namespace is `tamga.id.1`; element names and
+encodings follow the EU PID table ([[ADR-0045]]: SD-JWT `birthdate` / `nationalities` ↔ mdoc `birth_date` (full-date) /
+`nationality`; the other names are the same). The verifier sees only `age_over_18`; the name, date of birth and
 identity number are not disclosed. `docType` = the vct URN.
 
 ---

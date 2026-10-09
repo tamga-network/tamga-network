@@ -411,8 +411,8 @@ export const IDENTITY: SchemaDef = {
       "status",
       "family_name",
       "given_name",
-      "birth_date",
-      "nationality",
+      "birthdate",
+      "nationalities",
       "personal_administrative_number",
       "document_type",
       "document_number_hash",
@@ -440,8 +440,15 @@ export const IDENTITY: SchemaDef = {
       },
       family_name: { type: "string", minLength: 1, maxLength: 200 },
       given_name: { type: "string", minLength: 1, maxLength: 200 },
-      birth_date: DATE,
-      nationality: { type: "string", pattern: "^[A-Z]{2}$" },
+      // ADR-0045: AB PID SD-JWT VC kodlaması (CIR 2026/1731 Tablo 7) — `birthdate`, `nationalities` (ISO 3166-1 alpha-2 dizisi;
+      // bilinmiyorsa "QU", uyruksuz "QS")
+      birthdate: DATE,
+      nationalities: {
+        type: "array",
+        minItems: 1,
+        uniqueItems: true,
+        items: { type: "string", pattern: "^[A-Z]{2}$" },
+      },
       personal_administrative_number: { type: "string", minLength: 5, maxLength: 32 },
       document_type: { enum: ["ID_CARD", "PASSPORT", "RESIDENCE_PERMIT", "DRIVING_LICENSE"] },
       document_number_hash: { type: "string", pattern: "^sha256-" },
@@ -488,8 +495,24 @@ export const IDENTITY: SchemaDef = {
           { lang: "en-US", label: "Given name" },
         ],
       },
-      { path: ["birth_date"], sd: "always", display: [{ lang: "tr-TR", label: "Doğum tarihi" }] },
-      { path: ["nationality"], sd: "always", display: [{ lang: "tr-TR", label: "Uyruk" }] },
+      {
+        path: ["birthdate"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Doğum tarihi" },
+          { lang: "en-US", label: "Date of birth" },
+        ],
+      },
+      {
+        path: ["nationalities"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Uyruk" },
+          { lang: "en-US", label: "Nationality" },
+        ],
+      },
+      // AB PID (CIR 2026/1731 §4.2; ARF PID_21): dizinin her öğesi ayrı ayrı açıklanır
+      { path: ["nationalities", null], sd: "always" },
       {
         path: ["personal_administrative_number"],
         sd: "always",
@@ -519,7 +542,7 @@ export const IDENTITY: SchemaDef = {
       min_binding_level: "T2",
       derived_claims: ["age_over_18", "document_number_hash"],
       status: "ACTIVE",
-      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact).",
+      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact). ADR-0045: attribute names and encodings follow the EU PID encoding of Implementing Regulation (EU) 2026/1731 (SD-JWT VC: birthdate, nationalities[]; mdoc namespace tamga.id.1: birth_date as full-date, nationality as an array); age_over_18 is a Tamga attribute (not in the EU PID set) with the ISO/IEC 18013-5 name in both formats.",
     },
   },
 };
@@ -1004,6 +1027,79 @@ export const DRIVING_LICENCE: SchemaDef = {
   },
 };
 
+/**
+ * ADR-0044 — ZK kopyası: kimlik belgesinin yalnız sıfır bilgi ispatlı sunumda (`mso_mdoc_zk`) kullanılan kısa ömürlü mdoc kopyası.
+ * Ayırt edici işaret (K1) bu türdür: Longfellow ispatı docType'ı bağlar, doğrulayıcı ispattan türü görür. Tür kuralı (ZC1):
+ * geçerlilik en çok 24 saat, iptal listesi yok (AB ARF VCR_01) — doğrulayıcı iptal denetimi beklemez (K5). Yalnız ZK ile sunulur;
+ * öğeler yalnız ZK ile ispatlanabilenler (bugün `age_over_18`). Tür adı kamuya açık yeni addır — proje yönetiminin onayını bekler.
+ */
+export const ZK_COPY_VCT = "urn:tamga:id:ShortLivedIdentityAttestation:1";
+/** ADR-0044 ZC1: ZK kopyasının azami geçerliliği (sn) — AB ARF VCR_01 eşiği. */
+export const ZK_COPY_MAX_VALIDITY_SEC = 24 * 3600;
+export const ZK_COPY: SchemaDef = {
+  vct: ZK_COPY_VCT,
+  path: "id/ShortLivedIdentityAttestation/1.0.0",
+  metadataVersion: "1.0.0",
+  layer: "NETWORK",
+  jsonSchema: {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    $id: `${CATALOGUE_BASE}/id/ShortLivedIdentityAttestation/1.0.0/schema.json`,
+    title: "TamgaShortLivedIdentityAttestation",
+    description:
+      "ISO/IEC 18013-5 mdoc only (docType = vct, namespace tamga.id.1). Elements of the ZK copy; the validity (validFrom → validUntil) is at most 24 hours and the MSO carries no status.",
+    type: "object",
+    required: ["age_over_18"],
+    properties: {
+      age_over_18: { type: "boolean" },
+      // cihaz bağlaması (mdoc deviceKey; doğrulayıcının B6 örneğinde `cnf` olarak durur)
+      cnf: { type: "object" },
+    },
+    additionalProperties: false,
+  },
+  typeMetadata: {
+    name: "Tamga Identity Attestation — short-lived copy",
+    description:
+      "Short-lived technical copy of the Tamga identity attestation, presented only with a zero-knowledge proof (ADR-0044). Valid for at most 24 hours; carries no revocation list entry — short validity replaces revocation (EU ARF VCR_01). Not issued once the main identity attestation is revoked or suspended.",
+    display: [
+      {
+        lang: "tr-TR",
+        name: "Tamga Kimlik Belgesi — kısa ömürlü kopya",
+        description: "Yalnız sıfır bilgi ispatıyla gösterilen, en çok 24 saat geçerli teknik kopya",
+      },
+      {
+        lang: "en-US",
+        name: "Tamga Identity Attestation — short-lived copy",
+        description: "Technical copy shown only with a zero-knowledge proof, valid for at most 24 hours",
+      },
+    ],
+    claims: [
+      {
+        path: ["age_over_18"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "18 yaş üstü" },
+          { lang: "en-US", label: "Over 18" },
+        ],
+      },
+    ],
+    tamga: {
+      tier: "NETWORK",
+      issuer_categories: ["IDENTITY"],
+      default_ttl_days: null,
+      max_validity_sec: ZK_COPY_MAX_VALIDITY_SEC,
+      uses_status_list: false,
+      formats: ["mso_mdoc"],
+      presentation: ["mso_mdoc_zk"],
+      mdoc_namespace: "tamga.id.1",
+      copy_of: IDENTITY.vct,
+      min_issuer_assurance: "I2",
+      min_binding_level: "T2",
+      status: "ACTIVE",
+      note: "ADR-0044 ZC1–ZC4: issued only by the identity service, in small batches refreshed silently with a DPoP- and WIA-bound refresh token; validity ≤ 24 h, no status; presented only as mso_mdoc_zk. The verifier treats a ZK presentation of this type as short-lived (status NOT_APPLICABLE) without accept_unrevocable_zk.",
+    },
+  },
+};
+
 export const ALL: SchemaDef[] = [
   BASE,
   STUDENT,
@@ -1014,7 +1110,23 @@ export const ALL: SchemaDef[] = [
   PHONE,
   PSEUDONYM_SEED,
   DRIVING_LICENCE,
+  ZK_COPY,
 ];
+
+/**
+ * ADR-0044 K5: tür kuralı gereği kısa ömürlü mü (en çok 24 saat geçerli, iptal listesi yok — AB ARF VCR_01)? Doğrulayıcı bu türün
+ * ZK sunumunda iptal denetimi beklemez. Katalogda olmayan tür `false`.
+ */
+export function isShortLivedType(vct: string): boolean {
+  const t = ALL.find((d) => d.vct === vct)?.typeMetadata.tamga as
+    { max_validity_sec?: number; uses_status_list?: boolean } | undefined;
+  return (
+    !!t &&
+    t.uses_status_list === false &&
+    typeof t.max_validity_sec === "number" &&
+    t.max_validity_sec <= ZK_COPY_MAX_VALIDITY_SEC
+  );
+}
 
 /** ADR-0031 PS3: sunulamayan türler (cüzdan sunum ekranında listelemez, güven listesi kapsama yazdırmaz). */
 export const NON_PRESENTABLE_VCTS: readonly string[] = ALL.filter(

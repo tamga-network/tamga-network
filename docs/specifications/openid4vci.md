@@ -296,8 +296,37 @@ grant_type=refresh_token&refresh_token=…
 
 Belge veren belirteci tek kullanımlık olarak alır (siler). DPoP anahtarı ve WUA `sub` eşleşmeli. Kaydı yetkili kaynaktan yeniden okur;
 kayıt yoksa `invalid_grant` döner ve belirteç düşer. Kişi kayıt defterinden silinince o kişinin bütün belirteçleri silinir.
-Yanıt yeni erişim belirteci ve **yeni** `refresh_token` taşır (rotation). Belge isteği §7 ile aynıdır. Kimlik servisi ve
-iletişim belgeleri belirteç vermez (kişi alanı saklanmaz). AS metadata `grant_types_supported` `refresh_token` içerir.
+Yanıt yeni erişim belirteci ve **yeni** `refresh_token` taşır (rotation). Belge isteği §7 ile aynıdır. İletişim belgeleri
+belirteç vermez (kişi alanı saklanmaz); kimlik servisi yalnız ZK kopyası belirteci verir (§4.2). AS metadata
+`grant_types_supported` `refresh_token` içerir.
+
+## 4.2 Kimlik servisi: ZK kopyası belirteci ([[ADR-0044]], 2026-10-09)
+
+Kimlik belgesi verilirken (authorization code) token yanıtı bir `refresh_token` taşır; bu belirteç kimlik belgesini **yenilemez**,
+yalnız kısa ömürlü ZK kopyası alır ([[ADR-0023]] AR4'ün tek istisnası). Kimlik servisinin metadata'sı ZK kopyasını ayrı bir
+`mso_mdoc` yapılandırması olarak ilan eder:
+
+```json
+"urn:tamga:id:ShortLivedIdentityAttestation:1": {
+  "format": "mso_mdoc", "doctype": "urn:tamga:id:ShortLivedIdentityAttestation:1",
+  "cryptographic_binding_methods_supported": ["cose_key"], "credential_signing_alg_values_supported": [-7], …
+}
+```
+
+- **Belirteç:** cüzdana opaktır; içeriği yalnız kimlik servisinin anahtarıyla açılan doğrulanmış şifrelemeyle (JWE `dir` +
+  A256GCM) korunur: bağlı kimlik kaydı, kuşak sayacı, ilk ihraçtaki DPoP anahtarının parmak izi, bitiş (≤ kimlik belgesinin
+  bitişi) ve ZK kopyasına girecek **asgari** öğeler (bugün `age_over_18`). Sunucuda belirteç ve kişi alanı tutulmaz; tek kullanım
+  için kimlik kaydında yalnız kuşak sayacı durur (ZC3).
+- **Yenileme:** §4.1'deki istek (`grant_type=refresh_token`, aynı DPoP anahtarı, geçerli ve iptal edilmemiş WIA). Servis kuşağı
+  ve DPoP bağını denetler, kimlik kaydının **bütün iptal listesi bitlerinin 0** olduğunu kendi listesinden okur; kayıt yoksa,
+  süresi dolmuşsa, iptal ya da askıdaysa `invalid_grant` (ZC2). Yanıt: yalnız ZK kopyası için erişim belirteci + yeni
+  `refresh_token` (kuşak +1).
+- **Belge isteği:** `credential_configuration_id` = `urn:tamga:id:ShortLivedIdentityAttestation:1`, en çok 3 proof (ya da anahtar
+  kanıtı). Yanıtta kopya başına `credential` = base64url IssuerSigned: docType = yapılandırma, ad alanı `tamga.id.1`, yalnız
+  belirteçteki öğeler, `validUntil − validFrom ≤ 24 saat` ve ≤ kimlik belgesinin bitişi, MSO'da `status` YOK (ZC1); imza kimlik
+  belgesininkiyle aynı sertifika. Erişim belirteci başka bir yapılandırma için kullanılamaz.
+- **Günlük:** yalnız sayı ve red nedeni; kişi verisi, belirteç ve kayıt kimliği yazılmaz. Kalıntı risk: servis yenileme
+  sıklığından cüzdanın etkin olduğunu öğrenir, neyin kime gösterildiğini öğrenmez ([[ADR-0044]] Sonuçlar).
 
 ---
 
@@ -640,7 +669,7 @@ Kimlik doğrulama bu yolda **kimlik attestation'ının sunumu** ile yapılır; �
 | Adım | Cüzdan → belge veren | Kural |
 |---|---|---|
 | 1 | `POST /{slug}/par` — `client_id` = WUA `sub`, `redirect_uri`, `code_challenge` (S256), `scope` = istenen türün `vct`'si (metadata'daki `scope`, [[t:HAIP]] §4.3; kapsam ilan etmeyen belge verende yedek olarak `authorization_details[{type: openid_credential, credential_configuration_id}]`; ikisi birlikte gelirse aynı türü göstermeli), `state`, kimliğe bağlı teklifte `issuer_state` (§3.4); başlıklar `OAuth-Client-Attestation` + PoP | PAR zorunlu (RFC 9126); istemci kimliği **WUA** (`attest_jwt_client_auth`); `client_secret` yok; PAR 10 dk |
-| 2 | `GET /{slug}/authorize?client_id&request_uri` — `Accept: application/json` | Kurumun belge verme servisi **OpenID4VP isteği** döner (`presentation_request.qr_payload`; DCQL: `IdentityAttestation` → `personal_administrative_number`, `birth_date`, `given_name`, `family_name`); istek `rp-<slug>` sertifikasıyla imzalı, RP kaydı güven listesinde (AP6 scope) |
+| 2 | `GET /{slug}/authorize?client_id&request_uri` — `Accept: application/json` | Kurumun belge verme servisi **OpenID4VP isteği** döner (`presentation_request.qr_payload`; DCQL: `IdentityAttestation` → `personal_administrative_number`, `birthdate`, `given_name`, `family_name`); istek `rp-<slug>` sertifikasıyla imzalı, RP kaydı güven listesinde (AP6 scope) |
 | 3 | Cüzdan **standart sunum akışını** çalıştırır (SPEC-PROTO-0002: RP kaydı, onay ekranı, KB-JWT, JWE) → `POST /{slug}/vp/response` | Belge veren T0 + A–E ile doğrular (status ön çekimi S12), **TCKN + doğum tarihi** ile eşler: `issuer_state` varsa teklifteki özetle (§3.4), yoksa kurumun kaynağına `lookup` ([[ADR-0020]]; `docs/api/institution-source.openapi.yaml`); kaynak erişilemezse `temporarily_unavailable`; yanıt `{redirect_uri}` = `redirect_uri?code=…&state=…` veya `error=access_denied` |
 | 4 | `POST /{slug}/token` — `grant_type=authorization_code`, `code`, `code_verifier`, `redirect_uri`, WUA başlıkları | code tek kullanımlık, ≤ 60 s; PKCE; istemci PAR'daki WUA `sub` ile aynı |
 | 5 | `/nonce` → proof'lar → `/credential` | §5–§8 aynen (10 kopya, PR6) |

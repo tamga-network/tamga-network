@@ -113,5 +113,14 @@ değerlendirilir (seçenek B).
 
 # Durum
 
-**Accepted — 2026-10-09.** Proje yönetimi onayıyla, AB'nin önerdiği yol olması koşuluyla (K6). DECISIONS: D-ZK-2. Uygulama
-sırada.
+**Accepted — 2026-10-09.** Proje yönetimi onayıyla, AB'nin önerdiği yol olması koşuluyla (K6). DECISIONS: D-ZK-2.
+
+*Uygulama (2026-10-09, paketler 0.4.0):* K1 işareti ayrı belge türüdür — `urn:tamga:id:ShortLivedIdentityAttestation:1`
+(katalogda; tür kuralı ≤ 24 saat, iptal listesi yok; kamuya açık ad proje yönetiminin onayını bekliyor, kodda tek sabitte).
+Longfellow ispatı docType'ı bağladığı için doğrulayıcı türü ispattan görür; ayrı imza sertifikası gerekmedi (aynı kurum
+anahtarı, MD3). Kimlik servisi: kimlik belgesinin token yanıtında `refresh_token` (JWE `dir` + A256GCM; bağlı kayıt, kuşak
+sayacı, DPoP parmak izi, bitiş, yalnız `age_over_18`); sunucuda yalnız kayıttaki kuşak sayacı; paket en çok 3 kopya, geçerlilik
+≤ 24 saat ve ≤ ana belgenin bitişi ([[SPEC-PROTO-0001]] §4.2). Cüzdan çekirdeği: `refreshZkCopies`, `scheduleZkRefreshes`
+(pencere: bitişe 8 saat; rastgele gecikme en çok 6 saat), ZK sorgusu yalnız ZK kopyasıyla ([[SPEC-WALLET-0001]] §4.5).
+Doğrulayıcı: işaretli ZK sunumu `NOT_APPLICABLE` (gerekçe kısa ömür), işaretsiz sunum `accept_unrevocable_zk` ister
+([[SPEC-API-0001]] D1); Tamga Verify'ın `age-over-18-zk` politikası ZK kopyası türünü ister, bayrak kaldırıldı.

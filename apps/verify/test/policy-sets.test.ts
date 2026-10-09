@@ -3,6 +3,7 @@
  * gerçek ağ = genel (yaş, Tamga ile giriş) + mağaza inceleme (ADR-0033); kurgusal senaryolar, deneme paneli, örnek site ve kapı
  * sayfası yalnız sandbox'ta. /sample-site gerçek ağda sandbox'a (yayında değilse rehbere) yönlenir.
  */
+import { ZK_COPY_VCT, isShortLivedType } from "@tamga-network/schemas";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { existsSync } from "node:fs";
@@ -41,14 +42,20 @@ describe("policiesFor", () => {
     for (const s of [...SCENARIOS, ...GENERAL, ...REVIEW]) expect(ids).toContain(s);
     expect(policySummaries(policiesFor("production")).map((p) => p.policy_id)).not.toContain("campus-access");
   });
-  it("ADR-0044/ZC4: ZK kullanan her politika accept_unrevocable_zk'yı açıkça yazar; özet bayrağı gösterir", () => {
+  it("ADR-0044: ZK politikası yalnız kısa ömürlü ZK kopyası türünü ister (K5) ve accept_unrevocable_zk kullanmaz", () => {
     const zk = POLICIES.filter((p) => p.credentials.some((c) => c.format === "mso_mdoc_zk"));
     expect(zk.map((p) => p.policy_id)).toContain("age-over-18-zk");
     for (const p of zk)
-      for (const c of p.credentials.filter((x) => x.format === "mso_mdoc_zk"))
-        expect(typeof c.accept_unrevocable_zk, p.policy_id).toBe("boolean");
+      for (const c of p.credentials.filter((x) => x.format === "mso_mdoc_zk")) {
+        expect(c.vct_values, p.policy_id).toEqual([ZK_COPY_VCT]);
+        expect(c.vct_values.every(isShortLivedType), p.policy_id).toBe(true);
+        expect(c.accept_unrevocable_zk, p.policy_id).toBeUndefined();
+      }
     const s = policySummaries(POLICIES);
-    expect(s.find((p) => p.policy_id === "age-over-18-zk")).toMatchObject({ accept_unrevocable_zk: true });
+    expect(s.find((p) => p.policy_id === "age-over-18-zk")).toMatchObject({
+      accept_unrevocable_zk: false,
+      vct_values: [ZK_COPY_VCT],
+    });
     expect(s.find((p) => p.policy_id === "age-over-18-mdoc")).not.toHaveProperty("accept_unrevocable_zk");
   });
   it("sandbox bağlantısı: yayındaysa portal / sandbox örnek sitesi, değilse rehber (TR/EN)", () => {

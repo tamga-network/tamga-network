@@ -3,6 +3,7 @@
  * `proximity` olan politika kabulde geçiş kartı verir (ADR-0012 B). Kişisel veri istemeyen politikada `required_claims: []`.
  */
 import type { Policy } from "@tamga-network/verifier";
+import { ZK_COPY_VCT } from "@tamga-network/schemas";
 
 const TRUST_EDU: Policy["trust"] = {
   min_issuer_assurance: "I2",
@@ -150,6 +151,8 @@ export const POLICIES: Policy[] = [
   // ADR-0032 — 18 yaş üstü, sıfır bilgi ispatıyla (Longfellow): doğrulayıcı belgeyi, kurum imzasını, cihaz anahtarını ve
   // durum indeksini görmez; yalnız "kayıtlı bir kurumun kimlik belgesinde age_over_18 = true" ispatını. Cüzdan ZK
   // yapamıyorsa doğrulayıcı `age-over-18-mdoc` ile sorar (ZK5).
+  // ADR-0044: ZK sunumu yalnız kimlik servisinin kısa ömürlü ZK kopyasıyla (tür ZK_COPY_VCT — ≤ 24 sa, iptal listesi yok); ispat
+  // türü bağladığı için kısa ömür doğrulayıcıda görünür (K5) — `accept_unrevocable_zk` gerekmez (ZC4 yalnız işaretsiz sunum için).
   {
     policy_id: "age-over-18-zk",
     purpose: {
@@ -159,14 +162,11 @@ export const POLICIES: Policy[] = [
     credentials: [
       {
         id: "identity",
-        vct_values: ["urn:tamga:id:IdentityAttestation:1"],
+        vct_values: [ZK_COPY_VCT],
         format: "mso_mdoc_zk",
         namespace: "tamga.id.1",
         required_claims: ["age_over_18"],
         constraints: { age_over_18: true },
-        // ADR-0032 ZK4: iptal indeksi gelmez; iptali denetlenemeyen sunum (K6) bilinerek kabul edilir (sonuç NOT_APPLICABLE + reason).
-        // Varsayılan false (ADR-0044/ZC4) — until ADR-0044 short-lived ZK copies ship (0.4.0)
-        accept_unrevocable_zk: true,
       },
     ],
     trust: TRUST_ID,

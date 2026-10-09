@@ -259,13 +259,32 @@ alanları vermiştiniz" bilgisi gösterilir.
 **Değişmez WL7:** Kullanıcı eylemi olmadan yenileme yalnızca [[ADR-0023]] AR1–AR4 koşullarında yapılır.
 Yenileme belirteci olan kurum belgeleri, kurumun
 ilan ettiği eşikte, uygulama önde ve kilit açıkken, rastgele gecikmeyle yenilenir; kimlik ve iletişim belgelerinde yenileme
-kullanıcı eylemidir. Kullanıcı ayarlardan kapatabilir.
+kullanıcı eylemidir (tek istisna §4.5'teki ZK kopyaları). Kullanıcı ayarlardan kapatabilir.
 
 ## 4.4 Diploma
 
 [[SPEC-PROTO-0001]] §8.5 uyarınca diploma da diğer kurum belgeleri gibi **10 kopya** verilir (2026-10-08; önceki karar
 pilotta tek kopyaydı). Yapışkan eşleme uygulanır: her doğrulayıcıya ayrı kopya gider. Kopyalar tükenince cüzdan yeniden
 imzalatır; kullanıcı aynı kopyayı bilerek yeniden kullanırsa cüzdan bunun bağlanabilirlik doğurduğunu gösterir.
+
+## 4.5 ZK kopyaları ([[ADR-0044]])
+
+Sıfır bilgi ispatlı sunum (`mso_mdoc_zk`, [[ADR-0032]]) iptal listesindeki yeri açmaz. Bu yüzden ZK ile kimlik belgesinin
+kendisi değil, kimlik servisinin ayrıca verdiği **kısa ömürlü ZK kopyası** gösterilir:
+
+| Konu | Kural |
+|---|---|
+| Tür | `urn:tamga:id:ShortLivedIdentityAttestation:1` (yalnız ISO 18013-5 mdoc; ad alanı `tamga.id.1`). İspat türü bağladığı için doğrulayıcı kısa ömrü görür |
+| İçerik | Yalnız ZK ile ispatlanabilen öğeler (bugün `age_over_18`); ad, doğum tarihi, kimlik numarası yok |
+| Geçerlilik | En çok 24 saat (ve ana belgenin bitişinden sonra değil); iptal listesi girdisi yok (ARF VCR_01) |
+| Paket | Küçük paket (3 kopya); her kopya kendi cihaz anahtarına bağlı |
+| Alma | Kimlik belgesiyle birlikte gelen yenileme belirteciyle (OpenID4VCI `grant_type=refresh_token`, DPoP + WIA); belirteç tek kullanımlıktır, her kullanımda değişir; içi cüzdana kapalıdır |
+| Yenileme | Son kopyanın bitişine 8 saat kala pencere açılır, rastgele gecikmeyle (en çok 6 saat) sessizce yenilenir; geçerli kopya yoksa hemen ya da ZK isteği geldiğinde. [[ADR-0023]] K1 koşulları ve "kopyaları otomatik yenile" ayarı geçerlidir: ayar kapalıysa ZK kopyası alınmaz ve ZK sunumu yapılmaz |
+| İptal | Ana belge iptal ya da askıdaysa kimlik servisi yeni kopya vermez (`invalid_grant`); cüzdan bağı ve kopyaları siler. Elde kalan kopya en geç 24 saatte geçersiz olur |
+| Sunum | ZK sorgusu yalnız geçerli ZK kopyasıyla karşılanır; ana belgenin kopyaları ZK'da kullanılmaz. Kopya yoksa sorgu karşılanmaz ve klasik seçenek (`mso_mdoc` / `dc+sd-jwt`) seçilir (ZK5). ZK ispatı bağlanamaz olduğundan yapışkan kopya (WL5) gerekmez |
+
+Kod: `@tamga-network/wallet-core` `refreshZkCopies`, `scheduleZkRefreshes`, `selectZkCopy`; kimlik servisinin ucu
+[[SPEC-PROTO-0001]] §4.1.
 
 ---
 

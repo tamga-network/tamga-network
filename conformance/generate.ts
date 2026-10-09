@@ -2,7 +2,8 @@
  * conformance/generate.ts — vektör üreteci.
  * Girdi: apps/trust-publisher/dist-test (test listesi; imzalı), ops/pki (dev sertifikalar + issuer anahtarı — S-1),
  *        packages/schemas/dist/index.json (vct, content_hash).
- * Çıktı: conformance/vectors/trust/basic.json, conformance/vectors/sd-jwt/diploma-basic.json
+ * Çıktı: conformance/vectors/trust/basic.json, conformance/vectors/sd-jwt/diploma-basic.json,
+ *        conformance/vectors/sd-jwt/identity-pid-names.json (ADR-0045)
  */
 import { mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { X509Certificate } from "node:crypto";
@@ -240,13 +241,105 @@ async function sdJwtVectors() {
   return 1 + vec.negative.length;
 }
 
+/**
+ * ADR-0045 — kimlik belgesi AB PID adlarıyla (Uygulama Tüzüğü (AB) 2026/1731): `birthdate`, `nationalities` dizisi (her öğe ayrı
+ * disclosure, RFC 9901 §4.2.2). Sahte kişi; kimlik numarası sağlamayı geçmez.
+ */
+async function identityVectors() {
+  const leafPem = readFileSync(resolve(PKI, "issuer-id.cert.pem"), "utf8");
+  const keyPem = readFileSync(resolve(PKI, "issuer-id.pkcs8.pem"), "utf8");
+  const rootPem = readFileSync(resolve(PKI, "root-ca.cert.pem"), "utf8");
+  const signer = await pemIssuerSigner(keyPem, leafPem);
+  const leafFrom = Math.floor(new Date(new X509Certificate(leafPem).validFrom).getTime() / 1000);
+  const SD_NOW = Math.max(NOW, leafFrom + 2 * 86400);
+  const SD_NOW_ISO = new Date(SD_NOW * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
+  const schemas = rj(resolve(ROOT, "packages", "schemas", "dist", "index.json")) as Array<{
+    vct: string;
+    content_hash: string;
+  }>;
+  const identity = schemas.find((s) => s.vct === "urn:tamga:id:IdentityAttestation:1")!;
+  const hk = await generateKeyPair("ES256", { extractable: true });
+  const holderJwk = await exportJWK(hk.publicKey);
+  const AUD = x509HashClientId(pemToDer(readFileSync(resolve(ROOT, "ops", "pki", "rp-verify.cert.pem"), "utf8"))),
+    NONCE = "conf-nonce-0002";
+  const claims = {
+    family_name: "Örnek",
+    given_name: "Vektör",
+    birthdate: "2001-01-01",
+    nationalities: ["TR", "AZ"],
+    personal_administrative_number: "10000000147",
+    document_type: "ID_CARD",
+    document_number_hash: "sha256-conformance",
+    issuing_country: "TR",
+    document_chip_verified: false,
+    verification_method: "remote-document-liveness-face",
+    age_over_18: true,
+  };
+  const issued = await issueSdJwtVc({
+    signer,
+    iss: "https://id.tamga.network",
+    vct: identity.vct,
+    vctIntegrity: identity.content_hash,
+    iat: SD_NOW - 86400,
+    exp: SD_NOW + 365 * 86400,
+    cnfJwk: holderJwk,
+    status: { status_list: { idx: 1207, uri: "https://id.tamga.network/status/conformance" } },
+    claims,
+    sdPolicy: Object.fromEntries(Object.keys(claims).map((k) => [k, "always" as const])),
+    arrayElementSd: ["nationalities"],
+  });
+  const presentation = await presentSdJwtVc({
+    combined: issued.combined,
+    discloseClaims: ["birthdate", "nationalities[1]"],
+    holderKey: hk.privateKey,
+    aud: AUD,
+    nonce: NONCE,
+    iat: SD_NOW,
+  });
+  const verify = await verifySdJwtVc(presentation, {
+    aud: AUD,
+    nonce: NONCE,
+    stateCode: "TR",
+    now: SD_NOW,
+    rootCertsDer: [pemToDer(rootPem)],
+  });
+  if (!verify.ok) throw new Error("üretilen kimlik vektörü doğrulanamadı: " + verify.reason);
+  const vec = {
+    vector: "sd-jwt/identity-pid-names",
+    version: 1,
+    generated_at: new Date().toISOString(),
+    now: SD_NOW_ISO,
+    note: "ADR-0045: Tamga kimlik belgesi AB PID adlarıyla (birthdate, nationalities[] — her öğe ayrı disclosure). Sahte kişi verisi; özel anahtar yok.",
+    root_cert_pem: rootPem,
+    holder_public_jwk: holderJwk,
+    issued_combined: issued.combined,
+    presentation,
+    aud: AUD,
+    nonce: NONCE,
+    state_code: "TR",
+    expect: {
+      ok: true,
+      issuer_id: verify.issuerId,
+      vct: identity.vct,
+      disclosed_claim_names: [...verify.disclosedClaimNames].sort(),
+      claims: { birthdate: "2001-01-01", nationalities: ["AZ"] },
+      hidden_claims: ["given_name", "family_name", "personal_administrative_number", "birth_date", "nationality"],
+    },
+  };
+  mkdirSync(resolve(OUT, "sd-jwt"), { recursive: true });
+  writeFileSync(resolve(OUT, "sd-jwt", "identity-pid-names.json"), JSON.stringify(vec, null, 2) + "\n");
+  return 1;
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   (async () => {
     if (!existsSync(resolve(DIST, "lotl.jws"))) throw new Error("önce npm run setup");
     const t = await trustVectors();
     const s = await sdJwtVectors();
-    writeFileSync(resolve(OUT, "VERSION"), "3\n"); // 3: SPEC-CRED-0002 §3.5 disclosure serileştirme (2: ADR-0034 dns_name, x509_hash)
-    console.log(JSON.stringify({ trust_cases: t, sd_jwt_cases: s, out: OUT }, null, 2));
+    const i = await identityVectors();
+    // 4: ADR-0045 kimlik belgesi AB PID adları (3: SPEC-CRED-0002 §3.5 disclosure serileştirme; 2: ADR-0034 dns_name, x509_hash)
+    writeFileSync(resolve(OUT, "VERSION"), "4\n");
+    console.log(JSON.stringify({ trust_cases: t, sd_jwt_cases: s, identity_cases: i, out: OUT }, null, 2));
   })().catch((e) => {
     console.error(e);
     process.exit(1);

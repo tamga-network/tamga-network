@@ -279,11 +279,11 @@ paths:
                   purpose_localized:
                     en-US: Over-18 check with a zero-knowledge proof — yes/no only, nothing else
                     tr-TR: Sıfır bilgi ispatıyla 18 yaş üstü doğrulaması — yalnızca evet/hayır, başka hiçbir şey
-                  vct_values: ["urn:tamga:id:IdentityAttestation:1"]
+                  vct_values: ["urn:tamga:id:ShortLivedIdentityAttestation:1"]
                   claims: [age_over_18]
                   proximity: false
                   format: mso_mdoc_zk
-                  accept_unrevocable_zk: true
+                  accept_unrevocable_zk: false
   /tamga-verifier.js:
     get:
       tags: [Page kit]
@@ -443,12 +443,14 @@ components:
               type: [string, "null"]
               description: |
                 Why the status has this value, when it is not self-explanatory — e.g. `NOT_APPLICABLE` for a zero-knowledge
-                presentation, which does not reveal the revocation index (ADR-0032; the credential is short-lived). The policy
-                decides whether this is accepted; if not, the outcome is `INDETERMINATE`. Contains no personal data.
+                presentation, which does not reveal the revocation index (ADR-0032). For the short-lived ZK copy (valid for at
+                most 24 hours, no revocation list — ADR-0044) the reason is the short validity; an unmarked ZK presentation is
+                accepted only if the policy says so, otherwise the outcome is `INDETERMINATE`. Contains no personal data.
               x-tr: |
                 Durumun bu değeri neden aldığı (kendiliğinden anlaşılmıyorsa) — ör. sıfır bilgi ispatlı sunumda `NOT_APPLICABLE`;
-                bu sunum iptal indeksini açmaz (ADR-0032; belge kısa ömürlüdür). Kabul edilip edilmeyeceğine politika karar
-                verir; edilmezse sonuç `INDETERMINATE` olur. Kişisel veri içermez.
+                bu sunum iptal indeksini açmaz (ADR-0032). Kısa ömürlü ZK kopyasında (en çok 24 saat, iptal listesi yok —
+                ADR-0044) gerekçe kısa ömürdür; işaretsiz ZK sunumu yalnız politika öyle diyorsa kabul edilir, değilse sonuç
+                `INDETERMINATE` olur. Kişisel veri içermez.
         freshness:
           type: object
           description: How fresh the trust data used was.
@@ -483,14 +485,17 @@ components:
         accept_unrevocable_zk:
           type: boolean
           description: |
-            Only for `mso_mdoc_zk` policies (absent otherwise). `true`: the policy knowingly accepts a zero-knowledge
-            presentation whose revocation cannot be checked (`status.value = NOT_APPLICABLE`). In a policy definition the
-            field defaults to `false` (ADR-0044/ZC4): without an explicit `true` every ZK presentation is `INDETERMINATE`
-            (step `D1`).
+            Only for `mso_mdoc_zk` policies (absent otherwise). A ZK presentation of the short-lived ZK copy
+            (`urn:tamga:id:ShortLivedIdentityAttestation:1`, ADR-0044) is accepted without this flag. `true`: the policy
+            knowingly accepts an unmarked zero-knowledge presentation whose revocation cannot be checked
+            (`status.value = NOT_APPLICABLE`). In a policy definition the field defaults to `false` (ADR-0044/ZC4): without an
+            explicit `true` an unmarked ZK presentation is `INDETERMINATE` (step `D1`).
           x-tr: |
-            Yalnız `mso_mdoc_zk` politikalarında (diğerlerinde yok). `true`: politika iptali denetlenemeyen sıfır bilgi ispatlı
-            sunumu bilerek kabul eder (`status.value = NOT_APPLICABLE`). Politika tanımında alanın varsayılanı `false`'tur
-            (ADR-0044/ZC4): açıkça `true` yazılmadıkça her ZK sunumu `INDETERMINATE` olur (adım `D1`).
+            Yalnız `mso_mdoc_zk` politikalarında (diğerlerinde yok). Kısa ömürlü ZK kopyasının
+            (`urn:tamga:id:ShortLivedIdentityAttestation:1`, ADR-0044) ZK sunumu bu bayrak olmadan kabul edilir. `true`: politika
+            iptali denetlenemeyen işaretsiz sıfır bilgi ispatlı sunumu bilerek kabul eder (`status.value = NOT_APPLICABLE`).
+            Politika tanımında alanın varsayılanı `false`'tur (ADR-0044/ZC4): açıkça `true` yazılmadıkça işaretsiz ZK sunumu
+            `INDETERMINATE` olur (adım `D1`).
     Error:
       type: object
       properties:

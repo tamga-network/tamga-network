@@ -6,8 +6,10 @@
  *
  * Üretilen (packages/verifier/src/zk/fixtures/): root.der (deneme kök CA), issuer.der (kurum yaprağı, köke zincirli),
  * other-issuer.der (aynı köke zincirli BAŞKA kurum — yanlış anahtar testi), valid.cbor (ZK DeviceResponse: age_over_18 = true),
- * session.json (oturum + zaman damgası + devre). Anahtarlar bellekte üretilir ve ATILIR — depoya yalnız sertifikalar girer.
- * Kişi verileri SAHTE. Belge: urn:tamga:id:IdentityAttestation:1 / tamga.id.1 (MSO'da durum listesi var; ispat açmaz — ZK4).
+ * session.json (oturum + zaman damgası + devre); ADR-0044: zk-copy.cbor + session-zk-copy.json (aynı kurumun ZK kopyası —
+ * docType ShortLivedIdentityAttestation, ≤ 24 saat, durum listesi yok). Anahtarlar bellekte üretilir ve ATILIR — depoya yalnız
+ * sertifikalar girer. Kişi verileri SAHTE. Belge: urn:tamga:id:IdentityAttestation:1 / tamga.id.1 (MSO'da durum listesi var;
+ * ispat açmaz — ZK4).
  */
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -118,13 +120,13 @@ async function main() {
 
   // İspat (Longfellow, deneyin ikilisi)
   const dir = mkdtempSync(join(tmpdir(), "tamga-zk-fx-"));
-  try {
-    writeFileSync(join(dir, "mdoc.bin"), dr);
+  const prove = (deviceResponse: Uint8Array, dt: string, tag: string): Uint8Array => {
+    writeFileSync(join(dir, `${tag}.mdoc.bin`), deviceResponse);
     writeFileSync(join(dir, "t.bin"), transcript);
     writeFileSync(
-      join(dir, "m.json"),
+      join(dir, `${tag}.m.json`),
       JSON.stringify({
-        docType,
+        docType: dt,
         namespace,
         attribute: "age_over_18",
         valueCborHex: "f5",
@@ -135,21 +137,66 @@ async function main() {
     );
     const out = execFileSync(
       BIN,
-      ["prove", CIRCUIT, join(dir, "mdoc.bin"), join(dir, "t.bin"), join(dir, "m.json"), join(dir, "p.bin")],
-      {
-        encoding: "utf8",
-      },
+      [
+        "prove",
+        CIRCUIT,
+        join(dir, `${tag}.mdoc.bin`),
+        join(dir, "t.bin"),
+        join(dir, `${tag}.m.json`),
+        join(dir, `${tag}.p.bin`),
+      ],
+      { encoding: "utf8" },
     );
-    console.log("prove:", out.trim());
-    const proof = new Uint8Array(readFileSync(join(dir, "p.bin")));
-    const zkResponse = buildZkDeviceResponse({
-      docType,
+    console.log(`prove (${tag}):`, out.trim());
+    const proof = new Uint8Array(readFileSync(join(dir, `${tag}.p.bin`)));
+    return buildZkDeviceResponse({
+      docType: dt,
       zkSystemId: CIRCUIT_ID,
       timestamp,
       disclosed: { namespace, elements: { age_over_18: true } },
       msoX5chain: [issuerDer],
       proof,
     });
+  };
+  // ADR-0044: aynı kurumun ZK kopyası — ayrı tür (kısa ömür işareti), yalnız age_over_18, ≤ 24 saat, durum listesi yok
+  const zkCopyDocType = "urn:tamga:id:ShortLivedIdentityAttestation:1";
+  const copyDeviceSk = p256.utils.randomSecretKey();
+  const copy = issueMdoc({
+    docType: zkCopyDocType,
+    namespaces: { [namespace]: { age_over_18: true } },
+    deviceKeyRaw: p256.getPublicKey(copyDeviceSk, false),
+    issuerSk,
+    x5chain: [issuerDer],
+    signed: now - 120,
+    validFrom: now - 120,
+    validUntil: now - 120 + 24 * 3600,
+    randomBytes: rnd,
+  });
+  const copyDr = buildDeviceResponse({
+    docType: zkCopyDocType,
+    issuerSigned: copy.issuerSigned,
+    deviceSignature: deviceSign(transcript, zkCopyDocType, copyDeviceSk),
+  });
+  try {
+    const zkResponse = prove(dr, docType, "main");
+    const zkCopyResponse = prove(copyDr, zkCopyDocType, "copy");
+    writeFileSync(join(OUT, "zk-copy.cbor"), zkCopyResponse);
+    writeFileSync(
+      join(OUT, "session-zk-copy.json"),
+      JSON.stringify(
+        {
+          ...session,
+          timestamp,
+          now,
+          docType: zkCopyDocType,
+          namespace,
+          circuitId: CIRCUIT_ID,
+          presentationBytes: zkCopyResponse.length,
+        },
+        null,
+        2,
+      ) + "\n",
+    );
     writeFileSync(join(OUT, "root.der"), new Uint8Array(root.rawData));
     writeFileSync(join(OUT, "issuer.der"), issuerDer);
     writeFileSync(join(OUT, "other-issuer.der"), new Uint8Array(other.rawData));

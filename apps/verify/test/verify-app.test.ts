@@ -38,7 +38,7 @@ import { SignJWT, importPKCS8 } from "jose";
 import { derToB64 } from "@tamga-network/core";
 import { createHash, createPrivateKey, generateKeyPairSync, randomBytes, sign as cryptoSign } from "node:crypto";
 import { pemToDer } from "@tamga-network/core";
-import { issueMdoc, encode as cborEncode, type CborValue } from "@tamga-network/mdoc";
+import { issueMdoc, encode as cborEncode, toPidMdocElements, type CborValue } from "@tamga-network/mdoc";
 import { createPresentationRequest, createRpAssertion, dcqlFromPolicy, pemRpSigner } from "@tamga-network/verifier";
 import { buildVerifyApp } from "../src/app.js";
 import { jsLit } from "../src/html.js";
@@ -354,8 +354,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       claims: {
         family_name: "Yılmaz",
         given_name: "Ayşe",
-        birth_date: "2001-05-05",
-        nationality: "TR",
+        birthdate: "2001-05-05",
+        nationalities: ["TR"],
         personal_administrative_number: "10000000147", // TCKN sağlama toplamını geçmez (gerçek numara biçiminde değil)
         document_type: "ID_CARD",
         document_number_hash: "sha256-abc123",
@@ -368,8 +368,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       sdPolicy: {
         family_name: "always",
         given_name: "always",
-        birth_date: "always",
-        nationality: "always",
+        birthdate: "always",
+        nationalities: "always",
         personal_administrative_number: "always",
         document_type: "always",
         document_number_hash: "always",
@@ -747,8 +747,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const claims = {
       family_name: "Yılmaz",
       given_name: "Ayşe",
-      birth_date: "2001-05-05",
-      nationality: "TR",
+      birthdate: "2001-05-05",
+      nationalities: ["TR"],
       personal_administrative_number: "10000000147", // TCKN sağlama toplamını geçmez (gerçek numara biçiminde değil)
       document_type: "ID_CARD",
       document_number_hash: "sha256-abc123",
@@ -774,7 +774,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const d = (createPrivateKey(idKeyPem).export({ format: "jwk" }) as { d: string }).d;
     const mdoc = issueMdoc({
       docType: ID_VCT,
-      namespaces: { [NS]: claims as Record<string, CborValue> },
+      namespaces: { [NS]: toPidMdocElements(claims) }, // ADR-0045: AB PID mdoc kodlaması
       deviceKeyRaw: jwkToPoint(cnf),
       issuerSk: new Uint8Array(Buffer.from(d, "base64url")),
       x5chain: [pemToDer(idCertPem)],

@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-08 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-09 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -23,10 +23,11 @@ PID but an [[t:EAA]]. §10: the driving licence information the same service iss
 
 ## 0. Scope and status
 
-| Type                        | `vct`                                | Catalogue                                               |
-| --------------------------- | ------------------------------------ | ------------------------------------------------------- |
-| Tamga identity credential   | `urn:tamga:id:IdentityAttestation:1` | `schemas.tamga.network/v1/id/IdentityAttestation/1.0.0` |
-| The same credential as mdoc | docType `tamga.id.1`                 | [[ADR-0013]]                                            |
+| Type                                       | `vct`                                                                         | Catalogue                                                                        |
+| ------------------------------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Tamga identity credential                  | `urn:tamga:id:IdentityAttestation:1`                                          | `schemas.tamga.network/v1/id/IdentityAttestation/1.0.0`                          |
+| The same credential as mdoc                | docType = `vct`, namespace `tamga.id.1`                                       | [[ADR-0013]]                                                                     |
+| ZK copy (zero-knowledge presentation only) | `urn:tamga:id:ShortLivedIdentityAttestation:1` (mdoc, namespace `tamga.id.1`) | `schemas.tamga.network/v1/id/ShortLivedIdentityAttestation/1.0.0` · [[ADR-0044]] |
 
 The technical definition is in [[SPEC-ID-0003]] §9 and the schema catalogue; in a conflict they prevail. This rulebook creates
 no new rules; it gathers [[ADR-0011]], [[ADR-0013]], [[SPEC-ID-0003]] and the RB-AP-ID rules of Annex B in one place,
@@ -39,19 +40,19 @@ successor (§8).
 
 ## 1. Data model
 
-| Attribute                                               | Type                                                                                          | Selective disclosure | Note                                                                                                                                               |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `given_name`, `family_name`                             | string                                                                                        | `always`             |                                                                                                                                                    |
-| `birth_date`                                            | date                                                                                          | `always`             |                                                                                                                                                    |
-| `nationality`                                           | ISO 3166-1 alpha-2                                                                            | `always`             |                                                                                                                                                    |
-| `personal_administrative_number`                        | string                                                                                        | `always`             | National identity number; **only in this type**                                                                                                    |
-| `document_type`                                         | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE`                            | `always`             | The document that was verified                                                                                                                     |
-| `document_number_hash`                                  | `sha256-…`                                                                                    | `always`             | **Keyed** digest of the document number (HMAC-SHA256; key held only by the identity service) — not the number, and not recoverable from the digest |
-| `issuing_country`                                       | ISO 3166-1 alpha-2                                                                            | `always`             |                                                                                                                                                    |
-| `document_chip_verified`                                | boolean                                                                                       | `always`             | Whether the NFC chip was read (a fact, not a level)                                                                                                |
-| `verification_method`                                   | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `always`             | `review-demo` only in the test credential issued for app store review                                                                              |
-| `age_over_18`                                           | boolean                                                                                       | `always`             | Derived; for age checks only this attribute is disclosed                                                                                           |
-| `status`, `category`, `cnf`, `vct`, `iss`, `iat`, `exp` | —                                                                                             | `never`              | Transport profile                                                                                                                                  |
+| Attribute                                               | Type                                                                                          | Selective disclosure              | Note                                                                                                                                               |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `given_name`, `family_name`                             | string                                                                                        | `always`                          |                                                                                                                                                    |
+| `birthdate`                                             | date (YYYY-MM-DD)                                                                             | `always`                          | EU PID name; `birth_date` (full-date) in mdoc — [[ADR-0045]]                                                                                       |
+| `nationalities`                                         | array of ISO 3166-1 alpha-2 codes                                                             | `always`, each element separately | EU PID name; `nationality` (array) in mdoc; `QU` if unknown, `QS` if stateless                                                                     |
+| `personal_administrative_number`                        | string                                                                                        | `always`                          | National identity number; **only in this type**                                                                                                    |
+| `document_type`                                         | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE`                            | `always`                          | The document that was verified                                                                                                                     |
+| `document_number_hash`                                  | `sha256-…`                                                                                    | `always`                          | **Keyed** digest of the document number (HMAC-SHA256; key held only by the identity service) — not the number, and not recoverable from the digest |
+| `issuing_country`                                       | ISO 3166-1 alpha-2                                                                            | `always`                          | The country that issued the inspected identity document (in the EU PID the same name is the PID provider's country — §9)                           |
+| `document_chip_verified`                                | boolean                                                                                       | `always`                          | Whether the NFC chip was read (a fact, not a level)                                                                                                |
+| `verification_method`                                   | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `always`                          | `review-demo` only in the test credential issued for app store review                                                                              |
+| `age_over_18`                                           | boolean                                                                                       | `always`                          | Derived; for age checks only this attribute is disclosed                                                                                           |
+| `status`, `category`, `cnf`, `vct`, `iss`, `iat`, `exp` | —                                                                                             | `never`                           | Transport profile                                                                                                                                  |
 
 **Not included:** portrait/photo, address, document images, an assurance level ([[t:LoA]]) attribute. All
 personal attributes are selectively disclosable; a [[t:verifier]] may request only the attributes in its registered scope.
@@ -105,19 +106,37 @@ after legal review.
 
 The same credential is issued as SD-JWT VC (primary) and as ISO/IEC 18013-5 mdoc:
 
-- Attributes, `iat/exp` and the [[t:holder]] key are identical in both formats.
+- The data, `iat/exp` and the [[t:holder]] key are identical in both formats. The name and encoding in each format follow the EU PID
+  table ([[ADR-0045]]): SD-JWT VC `birthdate`, `nationalities` ↔ mdoc `birth_date` (full-date, #6.1004), `nationality` (array); the
+  other names are the same.
 - The mdoc signature is ES256 and maps to the same [[t:trust-anchor]]; the result is three-valued.
 - The verifier chooses the format with [[t:DCQL]]; e.g. an age check in a browser asks for `age_over_18` only, through mdoc.
 
+### 6.1 Zero-knowledge proofs: ZK copies ([[ADR-0044]])
+
+A presentation with [[t:ZK]] does not disclose the position in the revocation list. So with ZK it is not the main identity
+credential that is shown but a **short-lived ZK copy** issued separately by the identity service:
+
+| Topic      | Rule                                                                                                                                                                                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Type       | `urn:tamga:id:ShortLivedIdentityAttestation:1`; mdoc only, only in ZK presentations                                                                                                                                                                                      |
+| Content    | Only elements that can be proven with ZK (today `age_over_18`)                                                                                                                                                                                                           |
+| Validity   | At most 24 hours, never beyond the main credential's expiry; no revocation list entry — short validity replaces revocation (EU ARF VCR_01)                                                                                                                               |
+| Issuance   | In small batches with the refresh token that comes with the identity credential; the wallet refreshes them without asking the user. The token holds only the minimum elements, in a form only the identity service can open; no person fields on the server              |
+| Revocation | No new copy is issued while the main credential is revoked or suspended; revocation takes effect for ZK within 24 hours at most                                                                                                                                          |
+| Verifier   | Because the proof binds the type, the verifier sees that it is short-lived and expects no revocation check (`status: NOT_APPLICABLE`, reason: short validity). It accepts a ZK presentation that is not of this type (unmarked) only if its policy explicitly accepts it |
+
+The rules are in the Tamga Rulebook, RB-AP-ID-11.
+
 ## 7. Presentation and verification rules
 
-| Use                                                              | Attributes requested                                                        | Rule                                                                                                                                                                              |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Age check                                                        | `age_over_18`                                                               | No other attribute is requested                                                                                                                                                   |
-| Matching records at an institution (before issuing a credential) | `personal_administrative_number`, `birth_date`, `given_name`, `family_name` | The institution's issuing service receives them only within its registered scope and through the full verification pipeline; it does not store or log matching keys (RB-RP-ID-01) |
-| "Holds a valid Tamga identity"                                   | none                                                                        | Reference policy `event-tamga-id`                                                                                                                                                 |
-| Website sign-up / sign-in ("Sign in with Tamga")                 | `given_name`, `family_name` at sign-up; none at sign-in                     | The account key is the per-site pseudonym; `document_number_hash` and the national ID number are not requested (RB-RP-13)                                                         |
-| High-risk transaction                                            | per scope                                                                   | Face matching, if needed, is the verifier's responsibility; the credential carries no portrait                                                                                    |
+| Use                                                              | Attributes requested                                                       | Rule                                                                                                                                                                              |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Age check                                                        | `age_over_18`                                                              | No other attribute is requested                                                                                                                                                   |
+| Matching records at an institution (before issuing a credential) | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | The institution's issuing service receives them only within its registered scope and through the full verification pipeline; it does not store or log matching keys (RB-RP-ID-01) |
+| "Holds a valid Tamga identity"                                   | none                                                                       | Reference policy `event-tamga-id`                                                                                                                                                 |
+| Website sign-up / sign-in ("Sign in with Tamga")                 | `given_name`, `family_name` at sign-up; none at sign-in                    | The account key is the per-site pseudonym; `document_number_hash` and the national ID number are not requested (RB-RP-13)                                                         |
+| High-risk transaction                                            | per scope                                                                  | Face matching, if needed, is the verifier's responsibility; the credential carries no portrait                                                                                    |
 
 - A verifier requesting the identity number must have that attribute explicitly in its registration; the wallet flags
   out-of-scope requests.
@@ -152,22 +171,25 @@ Tamga verifiers recognise the EU PID and the ISO driving licence ([[t:mDL]]) as 
 - **Age.** The EU PID has no age attributes; in the EU a separate age verification [[t:credential]] is used for age. The mDL carries age
   elements such as `age_over_18`.
 
-The attribute names of the Tamga identity credential are unchanged. EU PID equivalents:
+The Tamga identity credential uses the EU PID names and encoding (Implementing Regulation (EU) 2026/1731; [[ADR-0045]]). The
+type and namespace are Tamga's (the credential is not a PID):
 
-| Tamga identity credential                                                                | EU PID (SD-JWT VC)                       | EU PID (mdoc)                    |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------- | -------------------------------- |
-| `given_name`                                                                             | `given_name`                             | `given_name`                     |
-| `family_name`                                                                            | `family_name`                            | `family_name`                    |
-| `birth_date`                                                                             | `birthdate`                              | `birth_date`                     |
-| `nationality` (single value)                                                             | `nationalities` (array)                  | `nationality` (array)            |
-| `personal_administrative_number`                                                         | `personal_administrative_number`         | `personal_administrative_number` |
-| `issuing_country`                                                                        | `issuing_country`                        | `issuing_country`                |
-| `age_over_18`                                                                            | — (separate age verification credential) | —                                |
-| `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | no equivalent (Tamga-specific)           | no equivalent                    |
+| Tamga identity credential (SD-JWT VC)                                                    | Tamga identity credential (mdoc, `tamga.id.1`) | EU PID (SD-JWT VC)                              | EU PID (mdoc)                    |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------- | -------------------------------- |
+| `given_name`                                                                             | `given_name`                                   | `given_name`                                    | `given_name`                     |
+| `family_name`                                                                            | `family_name`                                  | `family_name`                                   | `family_name`                    |
+| `birthdate`                                                                              | `birth_date` (full-date)                       | `birthdate`                                     | `birth_date` (full-date)         |
+| `nationalities` (array)                                                                  | `nationality` (array)                          | `nationalities` (array)                         | `nationality` (array)            |
+| `personal_administrative_number`                                                         | `personal_administrative_number`               | `personal_administrative_number`                | `personal_administrative_number` |
+| `issuing_country` (country that issued the document)                                     | `issuing_country`                              | `issuing_country` (country of the PID provider) | `issuing_country`                |
+| `age_over_18`                                                                            | `age_over_18`                                  | — (separate age verification credential)        | —                                |
+| `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | the same                                       | no equivalent (Tamga-specific)                  | no equivalent                    |
+
+The name `issuing_country` is the same but its meaning differs: in the Tamga credential it is the country that issued the
+inspected identity document, in the EU PID the country of the PID provider.
 
 When a state PID is available (§8), institutions may also accept the PID instead of the Tamga identity credential to match a
 person; this is enabled by a separate decision.
-
 
 ## 10. Driving licence information (`urn:tamga:id:DrivingLicenceAttestation:1`)
 
@@ -177,18 +199,18 @@ official driving licence and not an [[t:mDL]];** it is not used in traffic check
 through the always-visible `not_official_licence` claim, its display name ("Driving licence information — not a substitute for an
 official driving licence") and its card; verifier screens show the same statement.
 
-| Topic | Rule |
-| --- | --- |
-| Catalogue | `schemas.tamga.network/v1/id/DrivingLicenceAttestation/1.0.0`; SD-JWT VC only (no mdoc) |
-| Issuer | The identity service only (`IDENTITY` · `EAA` · I2); institutions cannot issue it; no `category` claim |
-| Prerequisite | The **active Tamga identity credential** in the wallet is presented (given name, family name, date of birth only); the name and date of birth on the card must match it. No credential if they do not match, if the card is not a driving licence, if it has expired or if the categories cannot be read |
-| Attributes | `given_name`, `family_name`, `birth_date` (if present), `issuing_country`, `document_number_hash` (keyed digest), `driving_privileges` (`[{ category, issue_date?, expiry_date? }]`; EU 2006/126 category codes, national additions as they are), `licence_issue_date` (if present), `licence_expiry_date`, `verified_at` (day), `verification_method`, `age_over_18`, `not_official_licence` (always `true`, not selectively disclosable) |
-| Not included | National ID number, restriction and health codes (field 12; no `has_restrictions` fact either), photo, signature, address; the provider's note fields are never read |
-| Validity | `exp` = the earlier of the card's expiry and one year after inspection; automatic refresh does not extend it |
-| Revocation | Revocation list mandatory. Reasons: the person's request, an erasure request, re-verification with the same card (the old one), wallet unit revocation, **revocation, re-issuance or erasure of the linked identity credential** (cascade) |
-| Data protection | Tamga is the controller; notice and explicit consent are specific to the driving licence; personal attributes are not kept after issuance; name and date of birth are not sent to the provider — matching happens at the identity service with a keyed digest |
-| Competent authority | Once a country's competent authority starts issuing digital driving licences, Tamga no longer issues this type for that country; the entry points to the official type via `successor` (the `org.iso.18013.5.1.mDL` of §9 is already recognised as an external type) |
-| Law | Legal review before issuance to real people is switched on; the sandbox does not wait for it |
+| Topic               | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Catalogue           | `schemas.tamga.network/v1/id/DrivingLicenceAttestation/1.0.0`; SD-JWT VC only (no mdoc)                                                                                                                                                                                                                                                                                                                                                    |
+| Issuer              | The identity service only (`IDENTITY` · `EAA` · I2); institutions cannot issue it; no `category` claim                                                                                                                                                                                                                                                                                                                                     |
+| Prerequisite        | The **active Tamga identity credential** in the wallet is presented (given name, family name, date of birth only); the name and date of birth on the card must match it. No credential if they do not match, if the card is not a driving licence, if it has expired or if the categories cannot be read                                                                                                                                   |
+| Attributes          | `given_name`, `family_name`, `birth_date` (if present), `issuing_country`, `document_number_hash` (keyed digest), `driving_privileges` (`[{ category, issue_date?, expiry_date? }]`; EU 2006/126 category codes, national additions as they are), `licence_issue_date` (if present), `licence_expiry_date`, `verified_at` (day), `verification_method`, `age_over_18`, `not_official_licence` (always `true`, not selectively disclosable) |
+| Not included        | National ID number, restriction and health codes (field 12; no `has_restrictions` fact either), photo, signature, address; the provider's note fields are never read                                                                                                                                                                                                                                                                       |
+| Validity            | `exp` = the earlier of the card's expiry and one year after inspection; automatic refresh does not extend it                                                                                                                                                                                                                                                                                                                               |
+| Revocation          | Revocation list mandatory. Reasons: the person's request, an erasure request, re-verification with the same card (the old one), wallet unit revocation, **revocation, re-issuance or erasure of the linked identity credential** (cascade)                                                                                                                                                                                                 |
+| Data protection     | Tamga is the controller; notice and explicit consent are specific to the driving licence; personal attributes are not kept after issuance; name and date of birth are not sent to the provider — matching happens at the identity service with a keyed digest                                                                                                                                                                              |
+| Competent authority | Once a country's competent authority starts issuing digital driving licences, Tamga no longer issues this type for that country; the entry points to the official type via `successor` (the `org.iso.18013.5.1.mDL` of §9 is already recognised as an external type)                                                                                                                                                                       |
+| Law                 | Legal review before issuance to real people is switched on; the sandbox does not wait for it                                                                                                                                                                                                                                                                                                                                               |
 
 The rules are RB-AP-ID-08…10 in the Tamga Rulebook; the source is [[ADR-0039]] DL1–DL5.
 

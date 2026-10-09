@@ -47,7 +47,7 @@ const identity = (combined: string, keyRef: string): StoredCredential => ({
   leafFingerprint: "ff",
   iat: 1,
   claims: {},
-  disclosureNames: ["given_name", "family_name", "birth_date", "nationality", "personal_administrative_number"],
+  disclosureNames: ["given_name", "family_name", "birthdate", "nationalities", "personal_administrative_number"],
   copies: [{ combined, keyRef, cnf: { kty: "EC", crv: "P-256", x: "", y: "" }, usedBy: [] }],
   receivedAt: 1,
 });
@@ -72,8 +72,8 @@ describe("identityPresentationForIssuer", () => {
     const combined = fakeIdentitySdJwt({
       given_name: "Ad",
       family_name: "Soyad",
-      birth_date: "2000-01-01",
-      nationality: "TR",
+      birthdate: "2000-01-01",
+      nationalities: ["TR"],
       personal_administrative_number: "12345678901",
     });
     const vp = await identityPresentationForIssuer({
@@ -115,7 +115,7 @@ describe("identityPresentationForIssuer", () => {
     const keys = new SoftwareKeyProvider(new MemoryKeyStore());
     await keys.generate("k0");
     const http: Http = async () => ({ status: 503, text: async () => "" });
-    const c = identity(fakeIdentitySdJwt({ given_name: "A", family_name: "B", birth_date: "2000-01-01" }), "k0");
+    const c = identity(fakeIdentitySdJwt({ given_name: "A", family_name: "B", birthdate: "2000-01-01" }), "k0");
     await expect(identityPresentationForIssuer({ issuer: ID, identity: c, keys, http })).rejects.toThrow(/nonce/);
   });
 });

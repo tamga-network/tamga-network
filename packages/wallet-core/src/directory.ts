@@ -22,6 +22,11 @@ export interface DirectoryEntry {
   certFingerprint?: string;
 }
 export const IDENTITY_VCT = "urn:tamga:id:IdentityAttestation:1";
+/**
+ * ADR-0044: ZK kopyası türü — kimlik belgesinin yalnız sıfır bilgi ispatlı sunumda kullanılan kısa ömürlü mdoc kopyası (≤ 24 sa,
+ * iptal listesi yok). İspat türü bağladığı için doğrulayıcı kısa ömrü görür. Kamuya açık ad onay bekliyor (sabit tek yerde).
+ */
+export const ZK_COPY_VCT = "urn:tamga:id:ShortLivedIdentityAttestation:1";
 /** ADR-0039: sürücü belgesi bilgisi — kimlik servisi verir; PAR'da kimlik belgesi sunumu ön koşul (`identity_presentation`). */
 export const DRIVING_LICENCE_VCT = "urn:tamga:id:DrivingLicenceAttestation:1";
 export const CATEGORY_LABELS: Record<string, string> = {

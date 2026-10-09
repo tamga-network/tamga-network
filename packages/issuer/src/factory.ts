@@ -33,9 +33,21 @@ export function schemaDef(vct: string): SchemaDef {
   if (!d) throw new Error(`bilinmeyen vct: ${vct}`);
   return d;
 }
+type ClaimMeta = { path: Array<string | null>; sd: SdPolicy };
+const claimsOf = (def: SchemaDef) => (def.typeMetadata.claims as ClaimMeta[] | undefined) ?? [];
+/** Kök claim'lerin seçici açıklama politikası (Type Metadata `path: [ad]`). */
 export function sdPolicyOf(def: SchemaDef): Record<string, SdPolicy> {
-  const claims = (def.typeMetadata.claims as Array<{ path: string[]; sd: SdPolicy }>) ?? [];
-  return Object.fromEntries(claims.map((c) => [c.path[0], c.sd]));
+  return Object.fromEntries(
+    claimsOf(def)
+      .filter((c) => c.path.length === 1 && typeof c.path[0] === "string")
+      .map((c) => [c.path[0] as string, c.sd]),
+  );
+}
+/** Öğeleri ayrı ayrı açıklanan diziler (Type Metadata `path: [ad, null]`, sd ≠ never — RFC 9901 §4.2.2, ADR-0045). */
+export function arrayElementSdOf(def: SchemaDef): string[] {
+  return claimsOf(def)
+    .filter((c) => c.path.length === 2 && typeof c.path[0] === "string" && c.path[1] === null && c.sd !== "never")
+    .map((c) => c.path[0] as string);
 }
 
 export interface BuildInput {
@@ -83,6 +95,7 @@ export async function buildCredentials(input: BuildInput): Promise<BuiltCredenti
     throw new Error("schema mismatch: " + paths.join("; ")); // alan ADI ve kural; değer yok (PR8)
   }
   const policy = sdPolicyOf(def);
+  const arrayElementSd = arrayElementSdOf(def);
   const seen = new Set<string>();
   const out: BuiltCredential[] = [];
   for (let i = 0; i < input.cnfJwks.length; i++) {
@@ -103,6 +116,7 @@ export async function buildCredentials(input: BuildInput): Promise<BuiltCredenti
       category: input.category,
       claims: input.claims,
       sdPolicy: policy,
+      ...(arrayElementSd.length ? { arrayElementSd } : {}),
     });
     out.push({ combined: r.combined, idx: st?.idx, cnfThumb: thumb });
   }

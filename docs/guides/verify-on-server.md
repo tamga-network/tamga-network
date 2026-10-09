@@ -92,10 +92,10 @@ const policy: Policy = {
   policy_id: "age-over-18-zk",
   purpose: { "en-US": "Over-18 check — yes/no only" },
   credentials: [{
-    id: "identity", vct_values: ["urn:tamga:id:IdentityAttestation:1"],
+    // ADR-0044: ZK yalnız kimlik belgesinin kısa ömürlü ZK kopyasıyla (≤ 24 saat, iptal listesi yok)
+    id: "identity", vct_values: ["urn:tamga:id:ShortLivedIdentityAttestation:1"],
     format: "mso_mdoc_zk", namespace: "tamga.id.1",
     required_claims: ["age_over_18"], constraints: { age_over_18: true }, // yalnız eşitlik
-    accept_unrevocable_zk: true, // iptali denetlenemeyen ZK sunumunu bilerek kabul et (ZK4)
   }],
   trust: { ... }, freshness: { ... },
 };
@@ -112,11 +112,13 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
   `zkBackendFromEnv()` (`TAMGA_ZK_NATIVE_BIN`) → `VerifyInput.zk`. Doğrulama ~0,2–0,3 sn sürer; ikili yanıt vermezse WASM'a düşer.
 - **Yeni adım `Z1`:** devre imzalı listede mi, yalnızca istenen öğe mi açıklandı, zaman damgası taze mi, ispat geçerli mi?
   Kurum imzası, cihaz imzası ve geçerlilik ispatın içinde denetlenir (`checks_skipped`: A4–A7). İptal durumu gelmez
-  (`status.value: NOT_APPLICABLE`, nedeni `status.reason`'da). ZK ile sunulan kimlik belgesi bugün 2 yıl geçerlidir ve iptali
-  görünmez; bu yolu iptalin sonucu değiştirmediği kullanımlarda (ör. yaş kontrolü) seçin.
-- **`accept_unrevocable_zk`:** `mso_mdoc_zk` kullanan politika bunu açıkça yazmalıdır. `true` iptali denetlenemeyen sunumu
-  kabul eder; `false` yazarsanız — ya da alanı hiç yazmazsanız (0.3.1'den beri varsayılan) — her ZK sunumu `INDETERMINATE`
-  döner (adım `D1`, `STATUS_UNREACHABLE`); iptal denetimi şartsa klasik `mso_mdoc` politikasını kullanın.
+  (`status.value: NOT_APPLICABLE`, nedeni `status.reason`'da). ZK ile yalnız kimlik belgesinin kısa ömürlü kopyası sunulur
+  ([[ADR-0044]]): en çok 24 saat geçerlidir, iptal edilen belgenin kopyası yenilenmez; ispat kopyanın türünü bağladığı için
+  doğrulayıcı kısa ömrü görür ve iptal denetimi beklemez. İptal ZK'da en geç 24 saatte etkili olur; anında iptal görmeniz
+  gerekiyorsa klasik `mso_mdoc` politikasını kullanın.
+- **`accept_unrevocable_zk`:** yalnız kısa ömürlü kopya OLMAYAN (işaretsiz) ZK sunumu içindir. `true` iptali denetlenemeyen
+  böyle bir sunumu bilerek kabul eder; `false` ya da alan yoksa (0.3.1'den beri varsayılan) işaretsiz ZK sunumu
+  `INDETERMINATE` döner (adım `D1`, `STATUS_UNREACHABLE`).
 - **Yedek yol:** cüzdan ZK desteklemiyorsa sorgunuz eşleşmez; aynı soruyu klasik `mso_mdoc` politikasıyla
   (`age-over-18-mdoc`) sorun. Cüzdan tarafı: `@tamga-network/zk` (Android yerel kütüphanesi hazır, iOS bekliyor); ispatçısı
   olmayan cüzdan klasik yolu kullanır (ZK5).

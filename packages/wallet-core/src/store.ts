@@ -18,6 +18,31 @@ export interface StoredCopy {
   /** D-CRED-5: aynı anahtara bağlı mdoc (base64url IssuerSigned). */
   mdoc?: string;
 } // usedBy: client_id'ler (WL5)
+/** ADR-0044: ZK kopyası — kimlik belgesinin kısa ömürlü mdoc kopyası; yalnız ZK sunumunda (ZC1). Kendi cihaz anahtarına bağlı. */
+export interface ZkCopy {
+  keyRef: string;
+  cnf: PublicJwk;
+  /** base64url IssuerSigned (docType = `ZkCopyBinding.docType`, durum listesi yok) */
+  mdoc: string;
+  validFrom: number;
+  validUntil: number;
+}
+/**
+ * ADR-0044 K2/K3: ZK kopyası yenileme bağı — kimlik servisinin yenileme belirteci (opak; kişi alanları yalnız servisin açabileceği
+ * biçimde içinde), ona bağlı DPoP anahtarı ve elde kalan kopyalar. Belirteç tek kullanımlıktır, her yenilemede değişir.
+ */
+export interface ZkCopyBinding {
+  /** ZK kopyasının türü (docType) ve OpenID4VCI yapılandırma kimliği */
+  docType: string;
+  configurationId: string;
+  token: string;
+  tokenEndpoint: string;
+  dpopRef: string;
+  dpopJwk: PublicJwk;
+  copies: ZkCopy[];
+  /** sessiz yenileme zamanı (rastgele gecikmeyle; ADR-0023 K1 koşulları) */
+  dueAt?: number;
+}
 export interface StoredCredential {
   id: string;
   vct: string;
@@ -40,6 +65,8 @@ export interface StoredCredential {
   status?: { value: "valid" | "suspended" | "revoked" | "unknown"; checkedAt: number };
   /** ADR-0038: belgenin alındığı ağ (yoksa "production"); cüzdan yalnız seçili ağın belgelerini gösterir ve kullanır (SB2). */
   network?: "production" | "sandbox";
+  /** ADR-0044: kimlik belgesinin ZK kopyaları ve yenileme bağı (yalnız kimlik servisi ZK kopyası ilan ediyorsa) */
+  zk?: ZkCopyBinding;
 }
 export interface PresentationLogEntry {
   ts: number;
@@ -230,6 +257,7 @@ export function receiveCredentials(
     copies,
     receivedAt: opt.now ?? Math.floor(Date.now() / 1000),
     ...(out.refresh ? { refresh: out.refresh } : {}),
+    ...(out.zk ? { zk: { ...out.zk, copies: [] } } : {}),
   };
   return { state: { ...state, credentials: [...state.credentials, credential] }, credential, verified: first };
 }
@@ -350,6 +378,7 @@ export function removeCredential(state: WalletState, credId: string): { state: W
             ...c.copies.map((k) => k.keyRef),
             ...(state.passes ?? []).filter((p) => p.credentialId === credId).map((p) => p.keyRef),
             ...(c.refresh ? [c.refresh.dpopRef] : []),
+            ...(c.zk ? [c.zk.dpopRef, ...c.zk.copies.map((k) => k.keyRef)] : []),
           ]),
         ].filter(Boolean)
       : [],

@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-04
+last_updated: 2026-10-09
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -53,7 +53,7 @@ AS ([[t:authentic-source|yetkili kaynak]]) · WP ([[t:wallet-provider|cüzdan sa
 | RB-GEN-02 | Katılımcı güven verisini **MUST** şartnamedeki doğrulama kurallarına uygun okumak: imzayı, sürüm zincirini ve tazeliği denetlemeden hiçbir liste kaydını kullanmamak. Ağın açık kaynak paketlerinin (`@tamga-network/trust`) kullanılması **SHOULD**; kendi uygulamasını yazan katılımcı uyum testlerini geçer. |
 | RB-GEN-03 | Güven kaynağı bayat (`next_update` geçmiş) ya da erişilemez ise sonuç **MUST** `INDETERMINATE`/`UNKNOWN` olmak; asla `ACCEPTED`, asla `REJECTED`. |
 | RB-GEN-04 | Bilinmeyen `list_format_version` ya da (defter aşamasında) bilinmeyen sözleşme sürümü görüldüğünde bileşen **MUST** durmak ve alarm vermek; kabul etmek yasaktır. |
-| RB-GEN-05 | Hiçbir Tamga altyapı bileşeni **MUST NOT** IP adresi loglamak (ham, özetlenmiş ya da kısaltılmış). Hata ayıklama logu en çok 7 gün tutulur ve IP içermez. |
+| RB-GEN-05 | Hiçbir Tamga altyapı bileşeni **MUST NOT** IP adresi loglamak (ham, özetlenmiş ya da kısaltılmış). Hata ayıklama logu en çok 1 gün tutulur ve IP içermez. |
 | RB-GEN-06 | Loglar ve denetim kayıtları alan **adı** taşıyabilir; alan **değeri** ve iptal listesi konumu (`idx`) **MUST NOT**. |
 | RB-GEN-07 | Katılımcı, Tamga'nın resmî `@tamga-network/*` paketlerini kullanıyorsa yayın kaynağı kanıtını (provenance) doğrulamalı (**SHOULD**); paketlerde `postinstall` betiği **MUST NOT**. |
 | RB-GEN-08 | Dışa dönük güvence ifadeleri eIDAS adlarıyla (Low / Substantial / High; EAA, QEAA karşılığı, kamu belgesi) yapılır; kullanıcıya sayısal seviye gösterilmez (**SHOULD**). |
@@ -166,6 +166,7 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-AP-ID-08 | Sürücü belgesi bilgisi (`urn:tamga:id:DrivingLicenceAttestation:1`) **MUST NOT** resmî mDL docType'ını ya da namespace'ini kullanmak ve **MUST** metadata'sında, her zaman açık `not_official_licence` alanında, kartında ve doğrulama sonucunda resmî sürücü belgesi yerine geçmediğini yazmak; ulusal kimlik numarası, kısıtlama ya da sağlık kodu, fotoğraf ve adres **MUST NOT** taşınmak; belge numarası yalnız anahtarlı özettir. |
 | RB-AP-ID-09 | Sürücü belgesi bilgisi **MUST** yalnız cüzdandaki etkin Tamga kimlik belgesinin sunumu üzerine ve karttaki ad ile doğum tarihi o kimlikle eşleşirse verilmek; sınıflar okunamıyorsa ya da kart süresi geçmişse **MUST NOT** verilmek; süresi kartın bitişini ve kartın incelendiği günden itibaren bir yılı **MUST NOT** geçmek; biçimi yalnız SD-JWT VC'dir. |
 | RB-AP-ID-10 | Bağlı kimlik belgesi iptal edilince, yeniden verilince ya da silinince sürücü belgesi bilgisi **MUST** iptal edilmek ya da silinmek; bir ülkenin yetkili makamı dijital sürücü belgesi vermeye başlayınca o ülke için bu tür **MUST NOT** yeniden verilmek. |
+| RB-AP-ID-11 | Sıfır bilgi ispatlı sunum için ZK kopyası **MUST** ayrı türde (`urn:tamga:id:ShortLivedIdentityAttestation:1`), en çok 24 saat geçerli ve iptal listesi girdisi olmadan verilmek; yalnız ZK ile ispatlanabilen öğeleri taşımak; ana kimlik belgesi iptal ya da askıdaysa **MUST NOT** verilmek. Yenileme belirteci kişi alanlarını sunucuda **MUST NOT** bırakmak (yalnız servisin açabileceği biçimde belirteçte). |
 
 ---
 

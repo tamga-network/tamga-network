@@ -243,8 +243,8 @@ intersection; but the user is shown "you previously gave this verifier these fie
 
 **Invariant WL7:** refresh without user action happens only under the conditions AR1–AR4 of [[ADR-0023]]. Institutional
 credentials that have a refresh token are refreshed at the threshold announced by the institution, with the app in the
-foreground and unlocked, after a random delay; for identity and contact credentials refresh is a user action. The user can
-turn it off in settings.
+foreground and unlocked, after a random delay; for identity and contact credentials refresh is a user action (the only
+exception is the ZK copies in §4.5). The user can turn it off in settings.
 
 ## 4.4 Diploma
 
@@ -252,6 +252,26 @@ Under [[SPEC-PROTO-0001]] §8.5 the diploma, like other institution credentials,
 previous decision was a single copy in the pilot). The sticky mapping applies: each verifier gets its own copy. When the
 copies run out the wallet has them re-signed; if the user knowingly reuses a copy, the wallet shows that this creates
 linkability.
+
+## 4.5 ZK copies ([[ADR-0044]])
+
+A zero-knowledge presentation (`mso_mdoc_zk`, [[ADR-0032]]) does not disclose the position in the revocation list. So with ZK
+it is not the identity credential itself that is shown but a **short-lived ZK copy** issued separately by the identity
+service:
+
+| Topic | Rule |
+|---|---|
+| Type | `urn:tamga:id:ShortLivedIdentityAttestation:1` (ISO 18013-5 mdoc only; namespace `tamga.id.1`). Because the proof binds the type, the verifier sees that it is short-lived |
+| Content | Only elements that can be proven with ZK (today `age_over_18`); no name, date of birth or national ID number |
+| Validity | At most 24 hours (and never after the main credential expires); no revocation list entry (ARF VCR_01) |
+| Batch | A small batch (3 copies); each copy bound to its own device key |
+| Obtaining | With the refresh token that comes with the identity credential (OpenID4VCI `grant_type=refresh_token`, DPoP + WIA); the token is single-use, changes on every use and is opaque to the wallet |
+| Refresh | The window opens 8 hours before the last copy expires; the copies are refreshed silently after a random delay (at most 6 hours); if there is no valid copy, immediately or when a ZK request arrives. The conditions of [[ADR-0023]] K1 and the "refresh copies automatically" setting apply: with the setting off no ZK copy is obtained and no ZK presentation is made |
+| Revocation | If the main credential is revoked or suspended the identity service issues no new copy (`invalid_grant`); the wallet deletes the binding and the copies. A copy still in the wallet expires within 24 hours at most |
+| Presentation | A ZK query is answered only with a valid ZK copy; the copies of the main credential are not used for ZK. Without a copy the query is not answered and the classic option (`mso_mdoc` / `dc+sd-jwt`) is chosen (ZK5). Because ZK proofs are unlinkable, no sticky copy (WL5) is needed |
+
+Code: `@tamga-network/wallet-core` `refreshZkCopies`, `scheduleZkRefreshes`, `selectZkCopy`; the identity service's endpoint in
+[[SPEC-PROTO-0001]] §4.1.
 
 ---
 

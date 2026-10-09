@@ -3,6 +3,8 @@
  * AP6: politikadaki required_claims RP'nin kayıtlı scope'unu aşamaz — politika yüklenirken reddedilir.
  */
 import type { RelyingParty, ZkCircuit } from "@tamga-network/trust";
+import { pidSdJwtName } from "@tamga-network/core/pid";
+import { ALL as SCHEMA_DEFS } from "@tamga-network/schemas";
 
 export type Assurance = "I1" | "I2" | "I3";
 export interface PolicyCredential {
@@ -23,10 +25,10 @@ export interface PolicyCredential {
    */
   trusted_authorities?: Array<{ type: "aki" | "etsi_tl" | "openid_federation"; values: string[] }>;
   /**
-   * ADR-0032 ZK4: ZK sunumunda iptal listesi indeksi gelmez → iptal denetlenemez (K6; ADR-0032 uygulama notu). `true`: bu
-   * bilinerek kabul edilir (sonuç `status.value = NOT_APPLICABLE`, `status.reason` ile). `false`: iptal denetlenemediği için
-   * DOĞRULANAMADI (D1). Verilmezse `false` sayılır (ADR-0044/ZC4: politika açıkça kabul etmedikçe DOĞRULANAMADI; 0.3.1'e
-   * kadar varsayılan `true` idi) — ZK sunumunu kabul edecek politika `true`'yu AÇIKÇA yazmalıdır.
+   * ADR-0032 ZK4: ZK sunumunda iptal listesi indeksi gelmez → iptal denetlenemez. Kısa ömür işaretini taşıyan ZK sunumu
+   * (ispatın bağladığı tür ZK kopyası — `isShortLivedType`, ADR-0044 K5) bu bayrak olmadan kabul edilir (`NOT_APPLICABLE`,
+   * gerekçe kısa ömür). Bayrak yalnız İŞARETSİZ ZK sunumu içindir: `true` iptali denetlenemeyen sunumu bilerek kabul eder,
+   * `false` ya da verilmezse DOĞRULANAMADI (D1; ADR-0044 ZC4).
    */
   accept_unrevocable_zk?: boolean;
 }
@@ -140,6 +142,19 @@ export function dcqlFromPolicy(p: Policy, opts: { zkCircuits?: ZkCircuit[] } = {
 }
 
 /**
+ * Kapsam adları SD-JWT VC claim adlarıdır (katalogdaki tür, bir `vct` — iki biçim). Tamga türünün mdoc öğesi AB PID tablosuyla
+ * SD-JWT adına çevrilir (ADR-0045: `birth_date` → `birthdate`); dış türlerin (AB PID mdoc) kendi `vct`'si ve adları vardır.
+ */
+export function scopeClaimName(
+  vct: string,
+  format: PolicyCredential["format"] | string | undefined,
+  name: string,
+): string {
+  const mdoc = format === "mso_mdoc" || format === "mso_mdoc_zk";
+  return mdoc && SCHEMA_DEFS.some((d) => d.vct === vct) ? pidSdJwtName(name) : name;
+}
+
+/**
  * Kapsam denetimi (AP6/E3 ortak): alan kapsamda kendisi ya da bir atası varsa izinli (iç içe yol: address → address.locality,
  * nationalities → nationalities[0]).
  */
@@ -169,7 +184,9 @@ export function policyScopeViolations(p: Policy, rp: RelyingParty | null, now = 
         )
         .flatMap((s) => s.claims),
     );
-    for (const cl of c.required_claims) if (!scopeCovers(allowed, cl)) out.push(`${c.id}.${cl} outside scope`);
+    for (const cl of c.required_claims)
+      if (!c.vct_values.some((v) => scopeCovers(allowed, scopeClaimName(v, c.format, cl))))
+        out.push(`${c.id}.${cl} outside scope`);
   }
   return out;
 }
@@ -191,7 +208,7 @@ export function registrationScopesFor(
         c.vct_values.includes(x.vct) &&
         new Date(x.valid_from).getTime() <= now &&
         (!x.valid_until || now < new Date(x.valid_until).getTime()) &&
-        c.required_claims.every((cl) => x.claims.includes(cl)),
+        c.required_claims.every((cl) => x.claims.includes(scopeClaimName(x.vct, c.format, cl))),
     );
     if (s) out.push({ queryId: c.id, scopeId: s.scope_id });
   }

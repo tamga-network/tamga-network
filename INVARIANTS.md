@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 291 kodlanmış değişmez, 44 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 293 kodlanmış değişmez, 45 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -46,7 +46,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 | Kod | Açıklama |
 |---|---|
-| `ADR-0013/MD1` | mdoc yalnızca SD-JWT VC'nin ikinci temsilidir; SD-JWT VC birincil kalır (ADR-0006 değişmez). Bir tipin mdoc'u varsa alanları, `iat/exp` ve belge sahibi anahtarı SD-JWT ile birebir aynıdır. |
+| `ADR-0013/MD1` | mdoc yalnızca SD-JWT VC'nin ikinci temsilidir; SD-JWT VC birincil kalır (ADR-0006 değişmez). Bir tipin mdoc'u varsa alanları (veri; ad ve kodlama biçime göre AB PID tablosundan — [[ADR-0045]]), `iat/exp` ve belge sahibi anahtarı SD-JWT ile birebir aynıdır. |
 | `ADR-0013/MD2` | mdoc `deviceKey` = SD-JWT `cnf.jwk` (aynı belge sahibi anahtarı, aynı cihaz bağlaması). Ayrı anahtar üretilmez. |
 | `ADR-0013/MD3` | mdoc issuerAuth (COSE_Sign1) yalnızca ES256; belge veren sertifikası x5chain'de taşınır ve [[SPEC-TRUST-0001]] güven listesiyle (issuer_id) eşlenir — SD-JWT ile aynı güven çapası. |
 | `ADR-0013/MD4` | Doğrulama üç değerli sonucu ([[SPEC-API-0001]]) korur; digest uyuşmazlığı/süre/iptal REJECTED, altyapı erişilemezliği INDETERMINATE. Sonuç nesnesinde ham CBOR ve açıklanmayan alan bulunmaz. |
@@ -412,6 +412,16 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0044/ZC4` | Doğrulayıcı kısa ömür işaretini taşımayan ZK sunumunu, politika açıkça kabul etmedikçe DOĞRULANAMADI sayar. |
 
 
+## ADR-0045
+
+*"Kimlik belgesinin alan adları: AB PID kodlaması"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0045/PD1` | Kimlik belgesinin alan adları ve kodlaması AB PID kodlamasına (Uygulama Tüzüğü (AB) 2026/1731: SD-JWT VC Tablo 7–8, mdoc Tablo 6) uyar; iki biçim aynı veriyi taşır. |
+| `ADR-0045/PD2` | Dizi değerli alanların (`nationalities`) her öğesi ayrı ayrı seçici açıklanır (RFC 9901 §4.2.2). |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -695,12 +705,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 291 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 293 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AP, AR, AS, C, CI, CMP, CT, D, DL, DS, DY, E, FD, HA, HV, IC, IDC, IDP, K, KC, LX, MD, NW, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZC, ZK.
+AP, AR, AS, C, CI, CMP, CT, D, DL, DS, DY, E, FD, HA, HV, IC, IDC, IDP, K, KC, LX, MD, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-09 (`scripts/sync-invariants.mjs`). Toplam 291 kodlanmış değişmez, 44 dokümanda.
+**Üretilen dosya** — 2026-10-09 (`scripts/sync-invariants.mjs`). Toplam 293 kodlanmış değişmez, 45 dokümanda.

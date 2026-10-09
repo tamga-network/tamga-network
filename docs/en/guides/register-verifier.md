@@ -94,6 +94,8 @@ in the sample asks whether the person is a student (`is_enrolled`); it does not 
 
 - Open a separate scope for each separate purpose; write the purpose in language the person understands (`purpose_localized`).
 - Some types are never presented (for example the pseudonym seed, `urn:tamga:id:PseudonymSeed:1`); they cannot be put in a scope.
+- An age check with a zero-knowledge proof uses the identity credential's short-lived ZK copy; the scope's type is
+  `urn:tamga:id:ShortLivedIdentityAttestation:1` and its attribute is `age_over_18` ([[ADR-0044]]).
 - A scope can be time-limited (`valid_from`, `valid_until`); no registration certificate is generated for an expired use.
 
 ## 4. Registration certificate

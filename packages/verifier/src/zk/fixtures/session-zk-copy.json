@@ -1,0 +1,11 @@
+{
+  "clientId": "x509_san_dns:verify.tamga.network",
+  "nonce": "n-3cd0d9043387c060",
+  "responseUri": "https://verify.tamga.network/vp/response",
+  "timestamp": "2026-10-09T19:24:36Z",
+  "now": 1791573876,
+  "docType": "urn:tamga:id:ShortLivedIdentityAttestation:1",
+  "namespace": "tamga.id.1",
+  "circuitId": "5a8938159603876eb537a117cfe9e2eaec5a01a042b316a8e57e52e4bb3c9291",
+  "presentationBytes": 343473
+}

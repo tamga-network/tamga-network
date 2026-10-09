@@ -14,6 +14,7 @@ import { run } from "../generate.js";
 const V = resolve(dirname(fileURLToPath(import.meta.url)), "..", "vectors");
 const trustPath = resolve(V, "trust", "basic.json");
 const sdPath = resolve(V, "sd-jwt", "diploma-basic.json");
+const idPath = resolve(V, "sd-jwt", "identity-pid-names.json");
 
 describe.skipIf(!existsSync(trustPath))("conformance: trust/basic", () => {
   const vec = existsSync(trustPath) ? JSON.parse(readFileSync(trustPath, "utf8")) : null;
@@ -77,4 +78,24 @@ describe.skipIf(!existsSync(sdPath))("conformance: sd-jwt/diploma-basic", () => 
       if (!r.ok) expect(r.failedStep).toBe(n.expect_failed_step);
     });
   }
+});
+
+describe.skipIf(!existsSync(idPath))("conformance: sd-jwt/identity-pid-names (ADR-0045)", () => {
+  const vec = existsSync(idPath) ? JSON.parse(readFileSync(idPath, "utf8")) : null;
+  it("AB PID adları: birthdate + nationalities dizisinin tek öğesi açılır; eski adlar yok", async () => {
+    const r = await verifySdJwtVc(vec.presentation, {
+      aud: vec.aud,
+      nonce: vec.nonce,
+      stateCode: vec.state_code,
+      now: Math.floor(new Date(vec.now).getTime() / 1000),
+      rootCertsDer: [pemToDer(vec.root_cert_pem)],
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.issuerId).toBe(vec.expect.issuer_id);
+    expect(r.vct).toBe(vec.expect.vct);
+    expect([...r.disclosedClaimNames].sort()).toEqual(vec.expect.disclosed_claim_names);
+    for (const [k, v] of Object.entries(vec.expect.claims)) expect(r.claims[k]).toEqual(v);
+    for (const h of vec.expect.hidden_claims) expect(r.claims[h]).toBeUndefined();
+  });
 });

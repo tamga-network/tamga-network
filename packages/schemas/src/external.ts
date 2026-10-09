@@ -1,7 +1,7 @@
 /**
  * ADR-0036 — Tamga kataloğunda OLMAYAN ama dış güven listeleri (federasyon) üzerinden doğrulanabilen belge türleri.
- * Kaynak: AB PID kural kitabı (eu-digital-identity-wallet/eudi-doc-attestation-rulebooks-catalog, `pid-rulebook.md`) ve
- * ISO/IEC 18013-5 (mDL). Bu türler Tamga tarafından verilmez; şema yalnız doğrulayıcının biçim denetimi (B6) içindir ve
+ * Kaynak: Komisyon Uygulama Tüzüğü (AB) 2026/1731 (PID Eki, Tablo 6–8), AB PID kural kitabı
+ * (eu-digital-identity-wallet/eudi-doc-attestation-rulebooks-catalog, `pid-rulebook.md`) ve ISO/IEC 18013-5 (mDL). Bu türler Tamga tarafından verilmez; şema yalnız doğrulayıcının biçim denetimi (B6) içindir ve
  * gevşek tutulur (açıklanan alanların türleri; ek alanlara izin). Tür bütünlüğü (vct#integrity) Tamga kataloğuna bağlanmaz:
  * güven, türü kapsamında sayan dış listenin imzalı kaydından gelir (FD2).
  *
@@ -88,17 +88,18 @@ export const EU_PID_MDOC: ExternalTypeDef = {
     properties: {
       family_name: str,
       given_name: str,
-      birth_date: {},
+      birth_date: {}, // full-date (#6.1004)
       place_of_birth: placeObj,
-      nationality: {},
+      nationality: { type: "array", items: { type: "string", pattern: "^[A-Z]{2}$" } }, // `nationalities` kodlaması (dizi)
       resident_address: str,
       resident_country: str,
       resident_state: str,
       resident_city: str,
       resident_postal_code: str,
       resident_street: str,
-      birth_family_name: str,
-      birth_given_name: str,
+      // CIR 2026/1731 Tablo 6 (mdoc tanımlayıcıları; SD-JWT'de birth_family_name / birth_given_name)
+      family_name_birth: str,
+      given_name_birth: str,
       email_address: str,
       mobile_phone_number: str,
       sex: { type: "integer" },

@@ -45,8 +45,10 @@ shortly" — do not reject.
 
 A presentation with a zero-knowledge proof ([[t:ZK]]) does not disclose the position in the status list, so revocation cannot be
 checked in the presentation. Decision ([[ADR-0044]]): such a presentation uses only short-lived copies, valid for at most 24
-hours and refreshed by the wallet on its own; the copies of a revoked credential are not refreshed. Implementation is pending;
-until then such a presentation returns `INDETERMINATE` unless the policy explicitly sets `accept_unrevocable_zk`.
+hours and refreshed by the wallet on its own; the copies of a revoked credential are not refreshed and the last copy expires
+within 24 hours. Because the proof binds the copy's type, the verifier accepts such a presentation without a revocation check
+(`status: NOT_APPLICABLE`, reason: short validity). A ZK presentation that does not use a short-lived copy returns
+`INDETERMINATE` unless the policy explicitly sets `accept_unrevocable_zk`.
 
 ## Details
 

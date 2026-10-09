@@ -4,6 +4,7 @@
  * Akış: tanıtım QR'ı → okuyucunun şifreli isteği → kişiye istenen alanlar (okuyucu kimliği doğrulanmamış) → onay → seçici
  * açıklama + holder anahtarıyla cihaz imzası (anahtar cihazdan çıkmaz) → şifreli yanıt → günlük. Ret: oturum sonu.
  */
+import { pidSdJwtName } from "@tamga-network/core/pid";
 import {
   BleReassembler,
   bleChunks,
@@ -113,11 +114,13 @@ export async function presentProximity(p: {
           c.status?.value !== "revoked" &&
           c.copies.some((k) => !!k.mdoc),
       ) ?? null;
+    // istenen öğe mdoc tanımlayıcısı; belgenin claim'leri SD-JWT adıyla (AB PID tablosu, ADR-0045: `birth_date` ↔ `birthdate`)
+    const has = (el: string) => !!cred && pidSdJwtName(el) in cred.claims;
     const view: ProximityRequestView = {
       docType: item.docType,
       namespace,
       requested,
-      missing: cred ? requested.filter((r) => !(r in cred.claims)) : requested,
+      missing: cred ? requested.filter((r) => !has(r)) : requested,
       credential: cred,
     };
     const chosen = cred ? await p.approve(view) : null;
@@ -134,7 +137,7 @@ export async function presentProximity(p: {
       await cleanup();
       return { state: log("declined", []), outcome: "declined", view };
     }
-    const disclose = chosen.filter((e) => requested.includes(e) && e in cred.claims);
+    const disclose = chosen.filter((e) => requested.includes(e) && has(e));
     const copy = selectCopy(cred, rpKey);
     if (!copy?.mdoc) throw new Error("no unused copy with an mdoc");
     const partial = discloseMdoc(b64uDecode(copy.mdoc), { [namespace]: disclose });

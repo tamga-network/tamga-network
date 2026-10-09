@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-08
+last_updated: 2026-10-09
 summary: >
   Tamga'nın geçici kimlik belgesi sağlayıcısı olarak verdiği kimlik belgesinin (`urn:tamga:id:IdentityAttestation:1`)
   rulebook'u (Tamga Rulebook'tan dallanır): kim verir, hangi kimlik doğrulamayla, hangi alanlarla ve hangi seçici paylaşım kuralıyla; geçerlilik
@@ -18,7 +18,8 @@ summary: >
 | Tür | `vct` | Katalog |
 |---|---|---|
 | Tamga Kimlik Belgesi | `urn:tamga:id:IdentityAttestation:1` | `schemas.tamga.network/v1/id/IdentityAttestation/1.0.0` |
-| Aynı belgenin mdoc biçimi | docType `tamga.id.1` | [[ADR-0013]] |
+| Aynı belgenin mdoc biçimi | docType = `vct`, ad alanı `tamga.id.1` | [[ADR-0013]] |
+| ZK kopyası (yalnız sıfır bilgi ispatlı sunum) | `urn:tamga:id:ShortLivedIdentityAttestation:1` (mdoc, ad alanı `tamga.id.1`) | `schemas.tamga.network/v1/id/ShortLivedIdentityAttestation/1.0.0` · [[ADR-0044]] |
 
 Teknik tanım [[SPEC-ID-0003]] §9 ve şema kataloğundadır; çelişkide onlar geçerlidir. Bu [[t:rulebook]] yeni kural koymaz; [[ADR-0011]],
 [[ADR-0013]], [[SPEC-ID-0003]] ve Tamga Rulebook (Ek B) RB-AP-ID kurallarını tek yerde, kurum ve [[t:verifier]] gözüyle toplar.
@@ -33,12 +34,12 @@ nitelikli olmayan bir **[[t:EAA]]**'dır; [[t:trust-list|güven listesinde]] `pi
 | Alan | Tür | Seçici paylaşım | Not |
 |---|---|---|---|
 | `given_name`, `family_name` | string | `always` | |
-| `birth_date` | tarih | `always` | |
-| `nationality` | ISO 3166-1 alpha-2 | `always` | |
+| `birthdate` | tarih (YYYY-MM-DD) | `always` | AB PID adı; mdoc'ta `birth_date` (full-date) — [[ADR-0045]] |
+| `nationalities` | ISO 3166-1 alpha-2 dizisi | `always`, her öğe ayrı | AB PID adı; mdoc'ta `nationality` (dizi); bilinmiyorsa `QU`, uyruksuz `QS` |
 | `personal_administrative_number` | string | `always` | Ulusal kimlik numarası; **yalnızca bu türde** |
 | `document_type` | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE` | `always` | Doğrulanan belge |
 | `document_number_hash` | `sha256-…` | `always` | Belge numarasının **anahtarlı** özeti (HMAC-SHA256; anahtar yalnızca kimlik servisinde) — numaranın kendisi yok ve özetten geri bulunamaz |
-| `issuing_country` | ISO 3166-1 alpha-2 | `always` | |
+| `issuing_country` | ISO 3166-1 alpha-2 | `always` | Doğrulanan kimlik belgesini veren ülke (AB PID'de aynı ad PID sağlayıcısının ülkesidir — §9) |
 | `document_chip_verified` | boolean | `always` | NFC çip okundu mu (olgu; seviye değildir) |
 | `verification_method` | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `always` | `review-demo` yalnızca uygulama mağazası incelemesi için verilen deneme belgesinde |
 | `age_over_18` | boolean | `always` | Türetilmiş; yaş doğrulamasında yalnız bu alan açılır |
@@ -105,9 +106,27 @@ kimlik doğrulamasıdır. Çocuklar için veli onayı akışı hukuki inceleme s
 
 Aynı belge [[t:SD-JWT-VC]] (birincil) ve ISO/IEC 18013-5 [[t:mdoc]] olarak birlikte verilir:
 
-- Alanlar, `iat/exp` ve [[t:holder]] anahtarı iki biçimde birebir aynıdır.
+- Veri, `iat/exp` ve [[t:holder]] anahtarı iki biçimde birebir aynıdır. Ad ve kodlama her biçimde AB PID tablosuna göredir
+  ([[ADR-0045]]): SD-JWT VC `birthdate`, `nationalities` ↔ mdoc `birth_date` (full-date, #6.1004), `nationality` (dizi); öteki
+  adlar aynı.
 - mdoc imzası ES256 ve aynı [[t:trust-anchor|güven çapasıyla]] eşlenir; sonuç üç değerlidir.
 - Doğrulayıcı biçimi [[t:DCQL]] ile seçer; örneğin tarayıcıda yaş doğrulaması mdoc üzerinden yalnız `age_over_18` ister.
+
+## 6.1 Sıfır bilgi ispatı: ZK kopyaları ([[ADR-0044]])
+
+[[t:ZK]] ile sunumda iptal listesindeki yer açılmaz. Bu yüzden ZK ile ana kimlik belgesi değil, kimlik servisinin ayrıca verdiği
+**kısa ömürlü ZK kopyası** gösterilir:
+
+| Konu | Kural |
+|---|---|
+| Tür | `urn:tamga:id:ShortLivedIdentityAttestation:1`; yalnız mdoc, yalnız ZK sunumunda |
+| İçerik | Yalnız ZK ile ispatlanabilen öğeler (bugün `age_over_18`) |
+| Geçerlilik | En çok 24 saat, ana belgenin bitişini geçmez; iptal listesi girdisi yok — kısa ömür iptalin yerini tutar (AB ARF VCR_01) |
+| Verme | Kimlik belgesiyle gelen yenileme belirteciyle küçük paketler hâlinde; cüzdan kullanıcıya sormadan yeniler. Belirteçte yalnız asgari öğeler, yalnız kimlik servisinin açabileceği biçimde; sunucuda kişi alanı yok |
+| İptal | Ana belge iptal ya da askıdaysa yeni kopya verilmez; iptal ZK sunumunda en geç 24 saatte etkili olur |
+| Doğrulayıcı | İspat türü bağladığı için doğrulayıcı kısa ömrü görür ve iptal denetimi beklemez (`status: NOT_APPLICABLE`, gerekçe kısa ömür). Bu türü istemeyen (işaretsiz) ZK sunumunu yalnız politikası açıkça kabul ediyorsa kabul eder |
+
+Kurallar Tamga Rulebook RB-AP-ID-11'dedir.
 
 ---
 
@@ -116,7 +135,7 @@ Aynı belge [[t:SD-JWT-VC]] (birincil) ve ISO/IEC 18013-5 [[t:mdoc]] olarak birl
 | Kullanım | İstenen alanlar | Kural |
 |---|---|---|
 | Yaş doğrulaması | `age_over_18` | Başka alan istenmez |
-| Kurumda kayıt eşleştirmesi (belge vermeden önce) | `personal_administrative_number`, `birth_date`, `given_name`, `family_name` | Kurumun belge verme servisi yalnızca kayıtlı kapsamıyla ve tam doğrulama hattından geçirerek alır; eşleştirme anahtarlarını saklamaz ve loglamaz (RB-RP-ID-01) |
+| Kurumda kayıt eşleştirmesi (belge vermeden önce) | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | Kurumun belge verme servisi yalnızca kayıtlı kapsamıyla ve tam doğrulama hattından geçirerek alır; eşleştirme anahtarlarını saklamaz ve loglamaz (RB-RP-ID-01) |
 | "Geçerli Tamga kimliği var mı" | hiçbiri | Referans politika `event-tamga-id` |
 | Web sitesine kayıt ve giriş ("Tamga ile giriş yap") | kayıtta `given_name`, `family_name`; girişte hiçbiri | Hesap anahtarı site başına takma addır; `document_number_hash` ve kimlik numarası istenmez (RB-RP-13) |
 | Yüksek riskli işlem | kapsamına göre | Yüz eşleştirmesi gerekiyorsa doğrulayıcının sorumluluğudur; belge portre taşımaz |
@@ -156,18 +175,22 @@ Tamga doğrulayıcıları AB'nin kişi kimlik belgesini (PID) ve ISO ehliyetini 
 - **Yaş.** AB PID'de yaş alanı yoktur; AB'de yaş için ayrı yaş doğrulama belgesi kullanılır. mDL'de `age_over_18` gibi yaş
   öğeleri vardır.
 
-Tamga kimlik belgesinin alan adları değiştirilmemiştir. AB PID karşılıkları:
+Tamga kimlik belgesi AB PID adlarını ve kodlamasını kullanır (Uygulama Tüzüğü (AB) 2026/1731; [[ADR-0045]]). Tür ve ad alanı
+Tamga'nındır (belge PID değildir):
 
-| Tamga kimlik belgesi | AB PID (SD-JWT VC) | AB PID (mdoc) |
-|---|---|---|
-| `given_name` | `given_name` | `given_name` |
-| `family_name` | `family_name` | `family_name` |
-| `birth_date` | `birthdate` | `birth_date` |
-| `nationality` (tek değer) | `nationalities` (dizi) | `nationality` (dizi) |
-| `personal_administrative_number` | `personal_administrative_number` | `personal_administrative_number` |
-| `issuing_country` | `issuing_country` | `issuing_country` |
-| `age_over_18` | — (ayrı yaş doğrulama belgesi) | — |
-| `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | karşılığı yok (Tamga'ya özgü) | karşılığı yok |
+| Tamga kimlik belgesi (SD-JWT VC) | Tamga kimlik belgesi (mdoc, `tamga.id.1`) | AB PID (SD-JWT VC) | AB PID (mdoc) |
+|---|---|---|---|
+| `given_name` | `given_name` | `given_name` | `given_name` |
+| `family_name` | `family_name` | `family_name` | `family_name` |
+| `birthdate` | `birth_date` (full-date) | `birthdate` | `birth_date` (full-date) |
+| `nationalities` (dizi) | `nationality` (dizi) | `nationalities` (dizi) | `nationality` (dizi) |
+| `personal_administrative_number` | `personal_administrative_number` | `personal_administrative_number` | `personal_administrative_number` |
+| `issuing_country` (belgeyi veren ülke) | `issuing_country` | `issuing_country` (PID sağlayıcısının ülkesi) | `issuing_country` |
+| `age_over_18` | `age_over_18` | — (ayrı yaş doğrulama belgesi) | — |
+| `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | aynı | karşılığı yok (Tamga'ya özgü) | karşılığı yok |
+
+`issuing_country` adı aynıdır ama anlamı farklıdır: Tamga belgesinde doğrulanan kimlik belgesini veren ülke, AB PID'de PID
+sağlayıcısının ülkesidir.
 
 Devlet PID'i geldiğinde (§8) kurumlar, kişiyi eşleştirmek için Tamga kimlik belgesi yerine PID'i de kabul edebilir; bu ayrı bir
 kararla açılır.

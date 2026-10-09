@@ -80,7 +80,7 @@ keys never enter the repository). You can test your code against these local lis
 | `@tamga-network/wallet-core` | wallet core: keys, receiving credentials, local checks, presentation (Node + React Native) | wallet developer |
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | wallet-side zero-knowledge prover (mdoc, Longfellow); `/react-native` native prover on the phone, `/node` on the desktop | wallet developer |
 
-Every package has its own page in the **SDKs** section. The packages are published on npm as the **0.3.1** test release;
+Every package has its own page in the **SDKs** section. The packages are published on npm as the **0.4.0** test release;
 the stable 1.0.0 comes when everything is ready. In test releases the API may change. Each release is built from this repository by GitHub Actions and carries provenance.
 
 ## Addresses
@@ -99,7 +99,7 @@ the stable 1.0.0 comes when everything is ready. In test releases the API may ch
 
 | Part | Status |
 |---|---|
-| Packages | 0.3.1 test release on npm; the stable 1.0.0 comes when everything is ready (the API may change in test releases) |
+| Packages | 0.4.0 test release on npm; the stable 1.0.0 comes when everything is ready (the API may change in test releases) |
 | Hosted verifier | running: the website's server opens the presentation with a signed statement, and the values are given only to it, only once ([[ADR-0017]]); policies are fixed for now |
 | Hosted issuer | running: a scoped API key per institution ([[ADR-0016]]) |
 | Trust anchor | signed trust lists ([[ADR-0009]]); the Tamga operator registers issuers and verifiers |

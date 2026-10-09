@@ -88,6 +88,8 @@ olup olmadığını (`is_enrolled`) sorar; adı, okulu, numarayı sormaz.
 
 - Gereken her ayrı amaç için ayrı kapsam açın; amacı kişinin anlayacağı dilde yazın (`purpose_localized`).
 - Bazı türler hiç gösterilmez (örneğin takma ad tohumu, `urn:tamga:id:PseudonymSeed:1`); bunlar kapsama yazılamaz.
+- Sıfır bilgi ispatıyla yaş doğrulaması kimlik belgesinin kısa ömürlü ZK kopyasıyla yapılır; kapsamın türü
+  `urn:tamga:id:ShortLivedIdentityAttestation:1`, alanı `age_over_18`'dir ([[ADR-0044]]).
 - Kapsam süreli olabilir (`valid_from`, `valid_until`); süresi biten kullanım için kayıt sertifikası üretilmez.
 
 ## 4. Kayıt sertifikası

@@ -13,7 +13,8 @@ suite** (OpenID, EUDI, W3C: vektörleri koşan takım). İki iş görür:
 conformance/
 ├── vectors/
 │   ├── trust/    imzalı liste seti (lotl/tl/anchors/kökler) + sorgu→beklenen cevap
-│   └── sd-jwt/   ihraç edilmiş belge, sunum, kökler + doğrulama beklentileri (olumlu + olumsuz)
+│   └── sd-jwt/   ihraç edilmiş belge, sunum, kökler + doğrulama beklentileri (olumlu + olumsuz); kimlik belgesi AB PID
+│                 adlarıyla (identity-pid-names, ADR-0045)
 ├── runner/       vitest koşucusu — vektörleri okur, @tamga-network/* ile koşar, beklentiyle karşılaştırır
 └── generate.ts   vektör üreteci (dev PKI + dist çıktıları; deterministik alanlar sabit `now`)
 ```

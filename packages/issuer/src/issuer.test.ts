@@ -34,6 +34,7 @@ const schemasIndex = JSON.parse(readFileSync(resolve(here, "../../schemas/dist/i
 }>;
 const DIPLOMA = schemasIndex.find((s) => s.vct === "urn:tamga:edu:DiplomaCredential:1")!;
 const STUDENT = schemasIndex.find((s) => s.vct === "urn:tamga:edu:StudentCredential:1")!;
+const IDENTITY = schemasIndex.find((s) => s.vct === "urn:tamga:id:IdentityAttestation:1")!;
 
 let credSigner: IssuerSigner, statusSigner: IssuerSigner;
 const NOW = 1790000000,
@@ -208,6 +209,69 @@ describe("credential fabrikası", () => {
       expect(r.claims.is_graduate).toBe(true);
       expect(r.status?.status_list.idx).toBe(creds[3].idx);
     }
+  });
+  it("ADR-0045: kimlik belgesi AB PID adlarıyla — `birthdate`, `nationalities` dizisi ve her öğesi ayrı disclosure", async () => {
+    const hs = await holderKeys(1);
+    const claims = {
+      family_name: "Yılmaz",
+      given_name: "Ayşe",
+      birthdate: "2002-05-14",
+      nationalities: ["TR", "AZ"],
+      personal_administrative_number: "10000000146",
+      document_type: "ID_CARD",
+      document_number_hash: "sha256-x",
+      issuing_country: "TR",
+      document_chip_verified: false,
+      verification_method: "remote-document-liveness-face",
+      age_over_18: true,
+    };
+    const [c] = await buildCredentials({
+      vct: IDENTITY.vct,
+      vctIntegrity: IDENTITY.content_hash,
+      signer: credSigner,
+      iss: ISS,
+      claims,
+      cnfJwks: [hs[0].jwk],
+      iat: NOW,
+      exp: NOW + 86400,
+      statusFor: () => ({ idx: 5, uri: "https://id.tamga.network/status/x" }),
+    });
+    expect(c.combined.split("~").length - 2).toBe(Object.keys(claims).length + 2); // + 2 dizi öğesi
+    const pres = await presentSdJwtVc({
+      combined: c.combined,
+      discloseClaims: ["birthdate", "nationalities"],
+      holderKey: hs[0].priv,
+      aud: "x509_san_dns:verify.tamga.network",
+      nonce: "n",
+      iat: NOW,
+    });
+    const r = await verifySdJwtVc(pres, {
+      aud: "x509_san_dns:verify.tamga.network",
+      nonce: "n",
+      stateCode: "TR",
+      now: NOW,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.claims.birthdate).toBe("2002-05-14");
+      expect(r.claims.nationalities).toEqual(["TR", "AZ"]);
+      expect(r.claims.birth_date).toBeUndefined();
+    }
+    // eski adlar şemada yok: ihraç durur
+    const { birthdate: _b, nationalities: _n, ...rest } = claims;
+    await expect(
+      buildCredentials({
+        vct: IDENTITY.vct,
+        vctIntegrity: IDENTITY.content_hash,
+        signer: credSigner,
+        iss: ISS,
+        claims: { ...rest, birth_date: "2002-05-14", nationality: "TR" },
+        cnfJwks: [hs[0].jwk],
+        iat: NOW,
+        exp: NOW + 86400,
+        statusFor: () => ({ idx: 6, uri: "https://id.tamga.network/status/x" }),
+      }),
+    ).rejects.toThrow(/schema mismatch/);
   });
   it("şema uyumsuzluğu (bilinmeyen alan) ve ISCED eksikliği ihracı durdurur (E6, CMP5/E11)", async () => {
     const hs = await holderKeys(1);

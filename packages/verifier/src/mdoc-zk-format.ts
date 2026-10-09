@@ -3,12 +3,18 @@
  * belgenin kendisi gelmediği için A4–A7 (kurum imzası, özet bütünlüğü, cihaz imzası, geçerlilik) ispatın İÇİNDE denetlenir:
  *  A1 çözme · A8 docType · A2 msoX5chain · A3 yaprak → kök · A3b issuer_id · Z1 ispat (devre imzalı listede — ZK2; yalnız
  *  istenen öğeler — ZK3; zaman damgası tazeliği; Longfellow doğrulaması: kurum anahtarı + docType + değerler + oturum dökümü)
- * B–E ortak hatta. Durum listesi indeksi gelmez (ZK4) → D adımları "uygulanmaz"; iptal denetlenemez (K6; "kısa ömür" önlemi bugün yürürlükte değil, ADR-0032 uygulama notu).
+ * B–E ortak hatta. Durum listesi indeksi gelmez (ZK4) → D adımları "uygulanmaz": ispatın bağladığı tür ZK kopyasıysa (ADR-0044,
+ * en çok 24 saat, iptal listesi yok) kısa ömür iptalin yerini tutar; işaretsiz ZK sunumu yalnız `accept_unrevocable_zk` ile (ZC4).
  */
 import { X509Certificate as NodeX509, webcrypto } from "node:crypto";
 import { X509Certificate, cryptoProvider } from "@peculiar/x509";
 import { b64uToBytes, computeIssuerId } from "@tamga-network/core";
-import { dcApiSessionTranscript, oid4vpSessionTranscript, parseZkDeviceResponse } from "@tamga-network/mdoc";
+import {
+  dcApiSessionTranscript,
+  oid4vpSessionTranscript,
+  parseZkDeviceResponse,
+  plainElementValue,
+} from "@tamga-network/mdoc";
 import type { TrustSource } from "@tamga-network/trust";
 import type { FormatResult } from "./mdoc-format.js";
 import type { Step } from "./verify.js";
@@ -141,7 +147,9 @@ export async function verifyMdocZkFormat(
   }
   if (code !== 0) return fail("Z1", `ZK proof rejected: ${ZK_CODES[code] ?? `code ${code}`}`);
 
-  const claims: Record<string, unknown> = { ...z.disclosed.elements };
+  const claims: Record<string, unknown> = Object.fromEntries(
+    Object.entries(z.disclosed.elements).map(([k, val]) => [k, plainElementValue(val)]),
+  );
   return {
     ok: true,
     format: "mso_mdoc_zk",

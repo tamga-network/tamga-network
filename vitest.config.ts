@@ -11,6 +11,7 @@ export default defineConfig({
       "@tamga-network/verifier/zk": r("./packages/verifier/src/zk/index.ts"),
       "@tamga-network/issuer/client": r("./packages/issuer/src/client.ts"),
       "@tamga-network/core/sd-structure": r("./packages/core/src/sd-structure.ts"),
+      "@tamga-network/core/pid": r("./packages/core/src/pid.ts"),
       "@tamga-network/core": r("./packages/core/src/index.ts"),
       "@tamga-network/trust/core": r("./packages/trust/src/core.ts"),
       "@tamga-network/trust": r("./packages/trust/src/index.ts"),

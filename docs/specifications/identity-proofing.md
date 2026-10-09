@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-08
+last_updated: 2026-10-09
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
@@ -207,7 +207,7 @@ I2; belgede `category` claim'i yok — [[ADR-0022]]) verdiği nitelikli olmayan 
 | Öğe | Değer |
 |---|---|
 | `vct` | `urn:tamga:id:IdentityAttestation:1` (katalog: `id/IdentityAttestation/1.0.0`) |
-| Claim'ler | `given_name`, `family_name`, `birth_date`, `nationality`, `personal_administrative_number` (TCKN), `document_type`, `document_number_hash` (anahtarlı SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18` — tümü selective disclosure ile; portre yok; LoA claim'i yok (PR7) |
+| Claim'ler | `given_name`, `family_name`, `birthdate`, `nationalities` (dizi; her öğe ayrı açıklanır), `personal_administrative_number` (TCKN), `document_type`, `document_number_hash` (anahtarlı SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18` — tümü selective disclosure ile; portre yok; LoA claim'i yok (PR7) |
 | Süre / status | `exp` = belge verme + 730 gün; Token Status List (`id.tamga.network/status/{listId}`); aynı belge yeniden doğrulanınca eskisi iptal (K6) |
 | Akış | Cüzdan: PAR (WUA) → tarayıcı `/authorize` (**KVKK aydınlatma + açık rıza**) → sağlayıcı (Didit v3; demo: FAKE, sapma S-15) → `/idv/return` karar sorgulama (webhook yalnızca tetik, IDP5) → `code` → token (PKCE + WUA) → 10 kopya |
 | Kurumda kullanım | Kurumun belge veren servisi belge verilirken kimlik belgesinin **gösterilmesini** ister (DCQL: TCKN, doğum tarihi, ad, soyad), T0 + A–E doğrular, kayıtla eşler (TCKN + doğum tarihi; ad normalize uyarı) — [[SPEC-PROTO-0001]] §11.2 |
@@ -255,7 +255,7 @@ karttaki sınıfları ve tarihleri verir. Resmî sürücü belgesi / mDL değild
 
 | Öğe | Değer |
 |---|---|
-| Ön koşul | PAR'da `identity_presentation`: cüzdandaki Tamga kimlik belgesinin SD-JWT VC + KB-JWT sunumu (`aud` = servis, `nonce` = `POST /nonce`, tek kullanımlık; yalnız `given_name`, `family_name`, `birth_date` açılır). Servis imzayı, kaydın etkin olduğunu ve yalnız üç alanın açıldığını denetler; akış kaydında kişi alanı değil anahtarlı **eşleşme özeti** (HMAC) ve bağlı kimlik kaydının kimliği durur |
+| Ön koşul | PAR'da `identity_presentation`: cüzdandaki Tamga kimlik belgesinin SD-JWT VC + KB-JWT sunumu (`aud` = servis, `nonce` = `POST /nonce`, tek kullanımlık; yalnız `given_name`, `family_name`, `birthdate` açılır). Servis imzayı, kaydın etkin olduğunu ve yalnız üç alanın açıldığını denetler; akış kaydında kişi alanı değil anahtarlı **eşleşme özeti** (HMAC) ve bağlı kimlik kaydının kimliği durur |
 | Akış | `/authorize` sürücü belgesine özel aydınlatma + açık rıza (inceleme kodu alanı yok) → sağlayıcıda sürücü belgesi akışı (ayar: ayrı akış kimliği; ayarsızsa tür ilan edilmez) → `/idv/return`: belge türü sürücü belgesi mi, kart süresi geçmiş mi, sınıf okunmuş mu, karttaki ad + doğum tarihi özete eşleşiyor mu → `code` → token → 10 kopya |
 | Sağlayıcıdan okunan | ad, soyad, doğum tarihi, veren ülke, belge numarası (yalnız HMAC özeti kalır), veriliş/bitiş tarihi, süresi geçmiş olgusu, sınıf başına başlangıç/bitiş (`extra_fields.dl_class_code_<sınıf>_from/_to`). **Okunmayan:** `_notes` alanları, kısıtlama kodları, görüntü, skor |
 | Claim'ler | `given_name`, `family_name`, `birth_date`, `issuing_country`, `document_number_hash`, `driving_privileges[]`, `licence_issue_date?`, `licence_expiry_date`, `verified_at`, `verification_method` (`remote-document-liveness-face`), `age_over_18`, `not_official_licence` |

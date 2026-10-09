@@ -133,6 +133,12 @@
           "allowed": true,
           "valid_from": "2026-10-03T00:00:00Z",
           "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:id:ShortLivedIdentityAttestation:1",
+          "allowed": true,
+          "valid_from": "2026-10-09T00:00:00Z",
+          "valid_until": null
         }
       ],
       "authentic_source": {
@@ -300,6 +306,18 @@
           "valid_until": "2027-09-26T00:00:00Z"
         },
         {
+          "scope_id": "age-over-18-zk-1",
+          "purpose": "Over-18 check with a zero-knowledge proof — yes/no only",
+          "purpose_localized": {
+            "tr-TR": "Sıfır bilgi ispatıyla 18 yaş üstü doğrulaması — yalnızca evet/hayır",
+            "tk-TM": "Hawa/ýok subutnamasy bilen 18 ýaşdan ulydygyny barlamak — diňe hawa/ýok"
+          },
+          "vct": "urn:tamga:id:ShortLivedIdentityAttestation:1",
+          "claims": ["age_over_18"],
+          "valid_from": "2026-10-09T00:00:00Z",
+          "valid_until": "2027-09-26T00:00:00Z"
+        },
+        {
           "scope_id": "car-rental-driving-1",
           "purpose": "Car rental — driving licence categories and over-18 (verified driving licence information; not an official driving licence)",
           "purpose_localized": {
@@ -373,7 +391,7 @@
             "tk-TM": "Resminama bermek üçin şahsyýeti deňeşdirmek: şahsyýet belgisi we doglan senesi edaranyň ýazgysy bilen deňeşdirilýär, saklanmaýar"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": ["personal_administrative_number", "birth_date", "given_name", "family_name"],
+          "claims": ["personal_administrative_number", "birthdate", "given_name", "family_name"],
           "valid_from": "2026-09-25T00:00:00Z",
           "valid_until": "2026-10-04T16:49:42.130Z"
         }

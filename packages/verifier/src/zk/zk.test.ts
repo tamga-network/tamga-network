@@ -37,14 +37,18 @@ const CIRCUIT: ZkCircuit = {
 };
 const issuerId = computeIssuerId("TR", issuerDer);
 const schemaId = computeSchemaId(S.docType);
+// ADR-0044: aynı kurumun ZK kopyası (kısa ömür işareti — ayrı tür), gerçek ispat
+const zkCopy = new Uint8Array(readFileSync(resolve(FX, "zk-copy.cbor")));
+const SC = JSON.parse(readFileSync(resolve(FX, "session-zk-copy.json"), "utf8")) as typeof S;
+const copySchemaId = computeSchemaId(SC.docType);
 const backend: ZkBackend = new WasmZkBackend();
 
 /** Asgari güven kaynağı: deneme kurumu kayıtlı, kimlik türüne yetkili; devre listede. */
-function trustWith(circuits: ZkCircuit[] = [CIRCUIT]): TrustSource {
+function trustWith(circuits: ZkCircuit[] = [CIRCUIT], schemas: string[] = [schemaId, copySchemaId]): TrustSource {
   const yes = (id: string) => (id === issuerId ? "YES" : "NO");
   return {
     isCredentialAcceptable: (id) => yes(id),
-    isCredentialSchemaAcceptable: (id, sid) => (id === issuerId && sid === schemaId ? "YES" : "NO"),
+    isCredentialSchemaAcceptable: (id, sid) => (id === issuerId && schemas.includes(sid) ? "YES" : "NO"),
     isRecognizedBy: () => "YES",
     schemaContentHash: () => null,
     schemaContentHashes: () => [],
@@ -62,8 +66,10 @@ function trustWith(circuits: ZkCircuit[] = [CIRCUIT]): TrustSource {
           } as unknown as ReturnType<TrustSource["issuer"]>)
         : null,
     schema: (sid) =>
-      sid === schemaId
-        ? ({ schema_id: schemaId, vct: S.docType, status: "ACTIVE" } as ReturnType<TrustSource["schema"]>)
+      sid === schemaId || sid === copySchemaId
+        ? ({ schema_id: sid, vct: sid === schemaId ? S.docType : SC.docType, status: "ACTIVE" } as ReturnType<
+            TrustSource["schema"]
+          >)
         : null,
     isWalletProviderKey: () => "NO",
     zkCircuit: (id) => circuits.find((c) => c.circuit_id === id) ?? null,
@@ -402,4 +408,81 @@ describe("mso_mdoc_zk — yerel arka uç (NativeZkBackend)", () => {
     },
     120_000,
   );
+});
+
+/**
+ * ADR-0044 K5 — kısa ömür işareti: ispatın bağladığı tür ZK kopyası (`urn:tamga:id:ShortLivedIdentityAttestation:1`; tür kuralı
+ * ≤ 24 saat, iptal listesi yok). Doğrulayıcı `accept_unrevocable_zk` olmadan kabul eder; işaretsiz sunum yalnız bayrakla (ZC4).
+ */
+describe("ADR-0044 — ZK kopyası (kısa ömür işareti)", () => {
+  const copyPolicy: Policy = {
+    ...policy,
+    credentials: [
+      {
+        id: "age",
+        vct_values: [SC.docType],
+        required_claims: ["age_over_18"],
+        constraints: { age_over_18: true },
+        format: "mso_mdoc_zk",
+        namespace: SC.namespace,
+      },
+    ],
+  };
+  const run = (p: Policy, presentation = zkCopy, trust = trustWith()) =>
+    verifyPresentation({
+      presentation: b64u(presentation),
+      format: "mso_mdoc_zk",
+      responseUri: SC.responseUri,
+      aud: SC.clientId,
+      nonce: SC.nonce,
+      policy: p,
+      policyCredentialId: "age",
+      trust,
+      statusCache: new MemoryStatusCache(),
+      rootCertsDer: [rootDer],
+      now: SC.now,
+      zk: backend,
+    });
+  it("işaretli ZK sunumu bayraksız ACCEPTED; status NOT_APPLICABLE, gerekçe kısa ömür; DCQL türü ZK kopyası", async () => {
+    expect(dcqlFromPolicy(copyPolicy, { zkCircuits: [CIRCUIT] }).credentials[0].meta).toMatchObject({
+      doctype_value: SC.docType,
+    });
+    const { result, claims } = await run(copyPolicy);
+    expect(result.outcome, `${result.failed_step}: ${result.failed_reason}`).toBe("ACCEPTED");
+    expect(result.status.value).toBe("NOT_APPLICABLE");
+    expect(result.status.reason).toMatch(/short-lived ZK copy/);
+    expect(result.checks_skipped).toEqual(expect.arrayContaining(["D1", "D6"]));
+    expect(claims).toEqual({ age_over_18: true });
+  }, 60_000);
+  it("işaretsiz ZK sunumu (ana kimlik türü) bayraksız INDETERMINATE (ZC4)", async () => {
+    const unmarked: Policy = {
+      ...copyPolicy,
+      credentials: [{ ...copyPolicy.credentials[0], vct_values: [S.docType] }],
+    };
+    const { result } = await verifyPresentation({
+      presentation: b64u(valid),
+      format: "mso_mdoc_zk",
+      responseUri: S.responseUri,
+      aud: S.clientId,
+      nonce: S.nonce,
+      policy: unmarked,
+      policyCredentialId: "age",
+      trust: trustWith(),
+      statusCache: new MemoryStatusCache(),
+      rootCertsDer: [rootDer],
+      now: S.now,
+      zk: backend,
+    });
+    expect(result.outcome).toBe("INDETERMINATE");
+    expect(result.failed_step).toBe("D1");
+  }, 60_000);
+  it("politika ZK kopyası türünü istemiyorsa işaretli sunum A8 RED; kurum ZK kopyasına yetkili değilse C2 RED", async () => {
+    const mainOnly: Policy = {
+      ...copyPolicy,
+      credentials: [{ ...copyPolicy.credentials[0], vct_values: [S.docType] }],
+    };
+    expect((await run(mainOnly)).result).toMatchObject({ outcome: "REJECTED", failed_step: "A8" });
+    const { result } = await run(copyPolicy, zkCopy, trustWith([CIRCUIT], [schemaId]));
+    expect(result).toMatchObject({ outcome: "REJECTED", failed_step: "C2" });
+  }, 60_000);
 });

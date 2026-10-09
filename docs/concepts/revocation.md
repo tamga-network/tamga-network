@@ -42,8 +42,9 @@ belki geçerlidir ama şu an kanıtlanamaz. Kullanıcıya "şu an doğrulanamad�
 
 Sıfır bilgi ispatıyla ([[t:ZK]]) yapılan sunum iptal listesindeki yeri açmaz; bu yüzden iptal sunumda denetlenemez. Karar
 ([[ADR-0044]]): bu sunum yalnız en çok 24 saat geçerli, cüzdanın kendiliğinden yenilediği kısa ömürlü kopyalarla yapılır; iptal
-edilen belgenin kopyası yenilenmez. Uygulama sırada; o zamana kadar politika `accept_unrevocable_zk` alanını açıkça
-koymadıkça böyle bir sunum `INDETERMINATE` döner.
+edilen belgenin kopyası yenilenmez, elde kalan kopya en geç 24 saatte geçersiz olur. İspat kopyanın türünü bağladığından
+doğrulayıcı bu sunumu iptal denetimi beklemeden kabul eder (`status: NOT_APPLICABLE`, gerekçe kısa ömür). Kısa ömürlü kopya
+kullanılmayan ZK sunumu, politika `accept_unrevocable_zk` alanını açıkça koymadıkça `INDETERMINATE` döner.
 
 ## Ayrıntı
 

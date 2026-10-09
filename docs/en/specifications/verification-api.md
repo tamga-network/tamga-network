@@ -98,7 +98,7 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 
 | Code | Step |
 |---|---|
-| `D1` | Read `status.status_list` (`idx`, `uri`) |
+| `D1` | Read `status.status_list` (`idx`, `uri`). A ZK presentation (`mso_mdoc_zk`) carries no index: if the type bound by the proof is the short-lived ZK copy (`urn:tamga:id:ShortLivedIdentityAttestation:1`, type rule ≤ 24 hours, no revocation list — [[ADR-0044]] K5) the D steps do not apply and `status.value = NOT_APPLICABLE` (reason: short validity); an unmarked ZK presentation follows the rule below |
 | `D2` | Take the Status List Token **from the prefetch cache** |
 | `D3` | Token signature; `sub == uri`; `iss` in the same chain of trust |
 | `D4` | Freshness: `exp` not passed, `iat + ttl` within policy |
@@ -178,7 +178,7 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.3.1",
+  "sdk_version": "@tamga-network/verifier@0.4.0",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",
@@ -238,10 +238,11 @@ The following also give `INDETERMINATE`, not `REJECTED`:
 - **Unexpected exception** (library error, corrupt trust record …): `INDETERMINATE` at that step, with that layer's reason (A →
   `CHAIN_UNREACHABLE`, B → `SCHEMA_UNREACHABLE`, C/E/T0 → `INDEXER_STALE`, D → `STATUS_UNREACHABLE`); the exception message is
   not put in `failed_reason` (AP3), only the step and the error type. The result still goes to the E4 audit record.
-- **ZK presentation with `accept_unrevocable_zk: false`:** a ZK presentation carries no revocation index (ZK4); if the policy
-  requires a revocation check the outcome is `D1` / `STATUS_UNREACHABLE`. Only with an explicit `true` is it accepted:
-  `status.value = NOT_APPLICABLE`, with `status.reason` set. **When omitted the field means `false`** (`ADR-0044/ZC4`; the
-  verifier package treated a missing field as `true` up to 0.3.0).
+- **Unmarked ZK presentation with `accept_unrevocable_zk: false`:** a ZK presentation carries no revocation index (ZK4). A
+  presentation carrying the short-validity marker (the type bound by the proof is the ZK copy, [[ADR-0044]] K5) is accepted
+  without this flag. For an unmarked ZK presentation, if the policy requires a revocation check the outcome is `D1` /
+  `STATUS_UNREACHABLE`; only with an explicit `true` is it accepted: `status.value = NOT_APPLICABLE`, with `status.reason` set.
+  **When omitted the field means `false`** (`ADR-0044/ZC4`; the verifier package treated a missing field as `true` up to 0.3.0).
 
 ## 2.4 `disclosed_claims` — names only
 

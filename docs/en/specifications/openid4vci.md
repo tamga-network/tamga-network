@@ -289,8 +289,39 @@ grant_type=refresh_token&refresh_token=…
 The issuer takes the token as single-use (deletes it). The DPoP key and the WUA `sub` must match. It rereads the record from
 the authentic source; if there is no record it returns `invalid_grant` and the token is dropped. When a person is deleted
 from the register, all of that person's tokens are deleted. The response carries a new access token and a **new**
-`refresh_token` (rotation). The credential request is the same as in §7. The identity service and the contact credentials
-issue no refresh token (no person field is stored). The AS metadata `grant_types_supported` includes `refresh_token`.
+`refresh_token` (rotation). The credential request is the same as in §7. The contact credentials issue no refresh token (no
+person field is stored); the identity service issues only the ZK copy token (§4.2). The AS metadata `grant_types_supported`
+includes `refresh_token`.
+
+## 4.2 Identity service: the ZK copy token ([[ADR-0044]], 2026-10-09)
+
+When the identity credential is issued (authorization code) the token response carries a `refresh_token`; this token does
+**not** renew the identity credential, it only obtains short-lived ZK copies (the only exception to [[ADR-0023]] AR4). The
+identity service's metadata announces the ZK copy as a separate `mso_mdoc` configuration:
+
+```json
+"urn:tamga:id:ShortLivedIdentityAttestation:1": {
+  "format": "mso_mdoc", "doctype": "urn:tamga:id:ShortLivedIdentityAttestation:1",
+  "cryptographic_binding_methods_supported": ["cose_key"], "credential_signing_alg_values_supported": [-7], …
+}
+```
+
+- **Token:** opaque to the wallet; its content is protected by authenticated encryption that only the identity service's key
+  opens (JWE `dir` + A256GCM): the linked identity record, a generation counter, the thumbprint of the DPoP key from the first
+  issuance, the expiry (≤ the identity credential's expiry) and the **minimum** elements for the ZK copy (today
+  `age_over_18`). Neither the token nor person fields are kept on the server; for single use only the generation counter is
+  kept in the identity record (ZC3).
+- **Refresh:** the request of §4.1 (`grant_type=refresh_token`, the same DPoP key, a valid and unrevoked WIA). The service
+  checks the generation and the DPoP binding and reads from its own list that **all revocation list bits of the identity
+  record are 0**; if the record is gone, expired, revoked or suspended it returns `invalid_grant` (ZC2). Response: an access
+  token for ZK copies only + a new `refresh_token` (generation + 1).
+- **Credential request:** `credential_configuration_id` = `urn:tamga:id:ShortLivedIdentityAttestation:1`, at most 3 proofs (or a
+  key attestation). In the response each copy is a `credential` = base64url IssuerSigned: docType = the configuration,
+  namespace `tamga.id.1`, only the elements from the token, `validUntil − validFrom ≤ 24 hours` and ≤ the identity credential's
+  expiry, NO `status` in the MSO (ZC1); signed with the same certificate as the identity credential. The access token cannot be
+  used for any other configuration.
+- **Log:** only counts and rejection reasons; no personal data, no token and no record id. Residual risk: from the refresh
+  frequency the service learns that the wallet is active, not what was shown to whom ([[ADR-0044]] Consequences).
 
 ---
 
@@ -624,7 +655,7 @@ attestation**; no student login/portal is needed. The pre-authorized path (§3) 
 | Step | Wallet → issuer | Rule |
 |---|---|---|
 | 1 | `POST /{slug}/par` — `client_id` = WUA `sub`, `redirect_uri`, `code_challenge` (S256), `scope` = the requested type's `vct` (the `scope` in the metadata, [[t:HAIP]] §4.3; as a fallback at an issuer that declares no scope, `authorization_details[{type: openid_credential, credential_configuration_id}]`; if both are sent they must name the same type), `state`, `issuer_state` for an identity-bound offer (§3.4); headers `OAuth-Client-Attestation` + PoP | PAR mandatory (RFC 9126); client identity is the **WUA** (`attest_jwt_client_auth`); no `client_secret`; PAR 10 min |
-| 2 | `GET /{slug}/authorize?client_id&request_uri` — `Accept: application/json` | The institution's issuer returns an **OpenID4VP request** (`presentation_request.qr_payload`; DCQL: `IdentityAttestation` → `personal_administrative_number`, `birth_date`, `given_name`, `family_name`); the request is signed with the `rp-<slug>` certificate, the RP registration is in the trust list (AP6 scope) |
+| 2 | `GET /{slug}/authorize?client_id&request_uri` — `Accept: application/json` | The institution's issuer returns an **OpenID4VP request** (`presentation_request.qr_payload`; DCQL: `IdentityAttestation` → `personal_administrative_number`, `birthdate`, `given_name`, `family_name`); the request is signed with the `rp-<slug>` certificate, the RP registration is in the trust list (AP6 scope) |
 | 3 | The wallet runs the **standard presentation flow** (SPEC-PROTO-0002: RP registration, consent screen, KB-JWT, JWE) → `POST /{slug}/vp/response` | The issuer verifies with T0 + A–E (status prefetch S12) and matches by **national ID + birth date**: against the hash in the offer if `issuer_state` is present (§3.4), otherwise via `lookup` at the institution's source ([[ADR-0020]]; `docs/api/institution-source.openapi.yaml`); source unreachable → `temporarily_unavailable`; response `{redirect_uri}` = `redirect_uri?code=…&state=…` or `error=access_denied` |
 | 4 | `POST /{slug}/token` — `grant_type=authorization_code`, `code`, `code_verifier`, `redirect_uri`, WUA headers | code single-use, ≤ 60 s; PKCE; the client is the same WUA `sub` as in the PAR |
 | 5 | `/nonce` → proofs → `/credential` | §5–§8 as is (10 copies, PR6) |

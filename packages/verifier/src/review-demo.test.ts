@@ -92,8 +92,8 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
       claims: {
         family_name: "App Reviewer",
         given_name: "DEMO",
-        birth_date: "1990-01-01",
-        nationality: "TR",
+        birthdate: "1990-01-01",
+        nationalities: ["TR"],
         personal_administrative_number: "DEMO-TEST01",
         document_type: "ID_CARD",
         document_number_hash: "sha256-demo",

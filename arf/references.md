@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-REF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-04 · **Licence** CC BY 4.0
+**Document** FW-REF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-09 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -47,9 +47,9 @@ framework are compiled from the documents below.
 | Registration                  | [[ADR-0024]] · [[ADR-0026]] · [[ADR-0034]]                                                                                               |
 | Credential formats and types  | [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] · [[ADR-0013]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]]                                     |
 | Issuance                      | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]]                                                          |
-| Presentation and verification | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] · [[ADR-0044]]                                     |
+| Presentation and verification | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] · [[ADR-0044]]                                      |
 | Wallet                        | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]]                                                                        |
-| Identity                      | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]]                                                                            |
+| Identity                      | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]]                                                             |
 | Names                         | [[ADR-0030]]                                                                                                                             |
 
 ## 3. Rule sources
@@ -138,9 +138,10 @@ and its source conflict, the source prevails.
 | RB-AP-ID-05 | [[ADR-0011]] K6                                                          |
 | RB-AP-ID-06 | [[SPEC-TRUST-0001]]/TL8                                                  |
 | RB-AP-ID-07 | [[ADR-0031]] PS2, PS3                                                    |
-| RB-AP-ID-08 | [[ADR-0039]] DL1, DL2                                                        |
-| RB-AP-ID-09 | [[ADR-0039]] DL3, DL5                                                        |
-| RB-AP-ID-10 | [[ADR-0039]] DL4, DL5                                                        |
+| RB-AP-ID-08 | [[ADR-0039]] DL1, DL2                                                    |
+| RB-AP-ID-09 | [[ADR-0039]] DL3, DL5                                                    |
+| RB-AP-ID-10 | [[ADR-0039]] DL4, DL5                                                    |
+| RB-AP-ID-11 | [[ADR-0044]] ZC1–ZC3                                                     |
 | RB-AS-01    | [[FW-TF-0001]] §5.1                                                      |
 | RB-AS-02    | [[SPEC-SCHEMA-0002]]/E11                                                 |
 | RB-AS-03    | [[SPEC-SCHEMA-0002]]/E1, [[SPEC-SCHEMA-0003]]/SK6                        |

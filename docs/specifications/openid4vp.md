@@ -311,8 +311,9 @@ isteyen seçeneği öne koyun.
 }
 ```
 
-[[t:mdoc|mdoc'ta]] claim yolu **`[namespace, element]`**'tir; Tamga kimlik namespace'i `tamga.id.1`, element adları SD-JWT claim
-adlarıyla birebir ([[ADR-0013]] MD1). Doğrulayıcı yalnızca `age_over_18` görür; ad, doğum tarihi, kimlik numarası
+[[t:mdoc|mdoc'ta]] claim yolu **`[namespace, element]`**'tir; Tamga kimlik namespace'i `tamga.id.1`; element adları ve kodlaması AB PID
+tablosuna göredir ([[ADR-0045]]: SD-JWT `birthdate` / `nationalities` ↔ mdoc `birth_date` (full-date) / `nationality`; öteki
+adlar aynı). Doğrulayıcı yalnızca `age_over_18` görür; ad, doğum tarihi, kimlik numarası
 açıklanmaz. `docType` = vct URN.
 
 ---

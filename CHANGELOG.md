@@ -2,12 +2,67 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The documents (docs, ARF) are 1.0.0 until the public
 announcement; changes before it are folded into this release. The `@tamga-network/*` packages are versioned separately: they
-are published on npm as the `0.3.1` test release (the API may change in test releases); the stable `1.0.0` comes when
+are published on npm as the `0.4.0` test release (the API may change in test releases); the stable `1.0.0` comes when
 everything is ready.
 
 ## [1.0.0] — 2026-10-04
 
 First release of the Tamga Network documentation set and reference implementation.
+
+### 2026-10-09 — packages: 0.4.0 test release
+
+The nine packages move to `0.4.0` together (`sdk_version` = `@tamga-network/verifier@0.4.0`). Interface changes, so callers
+must update:
+
+- Identity credential attribute names follow the EU PID encoding (ADR-0045): SD-JWT VC `birthdate` and `nationalities[]`;
+  mdoc `birth_date` (full-date) and `nationality` (array). Credentials and requests with the old names no longer match.
+- ZK presentation only with the short-lived ZK copy (ADR-0044): new type `urn:tamga:id:ShortLivedIdentityAttestation:1`; the
+  verifier accepts it without `accept_unrevocable_zk`; `wallet-core` refreshes ZK copies (`refreshZkCopies`) and matches
+  `mso_mdoc_zk` only with them. `Match.zk.copyKeyRef`, `matchDcql(…, { now })`, `StoredCredential.zk` are new;
+  `matchClaimValue(match, name)` gives the value to show for a requested field in either format.
+- New: `@tamga-network/core/pid` subpath; `@tamga-network/mdoc` depends on `@tamga-network/core`; `sd-jwt`
+  `arrayElementSd`; `issuer` `issuerMetadata({ mdocConfigurations })`.
+- Details in the two entries below.
+
+### 2026-10-09 — ZK presentation only with short-lived copies (ADR-0044 implemented)
+
+- New catalogue type `urn:tamga:id:ShortLivedIdentityAttestation:1` (ISO mdoc only, namespace `tamga.id.1`, only
+  `age_over_18`): the ZK copy of the identity credential. Type rule: valid for at most 24 hours, no revocation list entry
+  (EU ARF VCR_01). The Longfellow proof binds the docType, so the type is the short-validity marker (ADR-0044 K1).
+  `@tamga-network/schemas`: `ZK_COPY_VCT`, `isShortLivedType`.
+- `@tamga-network/verifier`: a ZK presentation whose proven type is short-lived is accepted without
+  `accept_unrevocable_zk` (`status.value = NOT_APPLICABLE`, reason: short validity); an unmarked ZK presentation still needs
+  the flag (ZC4). Tamga Verify's `age-over-18-zk` policy asks for the ZK copy type; `accept_unrevocable_zk: true` was removed.
+  The trust lists authorise the identity service for the new type and give Tamga Verify an `age-over-18-zk-1` scope.
+- `@tamga-network/wallet-core`: the identity service's `refresh_token` (identity credential only) becomes a ZK copy binding
+  (`StoredCredential.zk`); `refreshZkCopies` (refresh token grant with DPoP + WIA → a batch of 3 copies, each checked: same
+  issuer certificate, type, device key, no status, ≤ 24 hours), `scheduleZkRefreshes` (window 8 hours before expiry, random
+  delay up to 6 hours), `selectZkCopy`; DCQL `mso_mdoc_zk` matches only a valid ZK copy and the proof is made with it — the
+  main credential's mdoc is never used for ZK (ZC1). `removeCredential` also returns the ZK keys.
+- `@tamga-network/issuer`: `issuerMetadata({ mdocConfigurations })` announces `mso_mdoc` configurations (`doctype`,
+  `cose_key`, COSE `-7`).
+- Specifications: SPEC-PROTO-0001 §4.2 (ZK copy token), SPEC-WALLET-0001 §4.5, SPEC-API-0001 D1, Identity Rulebook §6.1, Tamga
+  Rulebook RB-AP-ID-11, ARF L5, guides and concept pages. Real Longfellow fixtures for the ZK copy (`zk-copy.cbor`).
+
+### 2026-10-09 — identity credential: EU PID attribute names (ADR-0045)
+
+- ADR-0045 (accepted): the identity credential (`urn:tamga:id:IdentityAttestation:1`) uses the EU PID names and encodings of
+  Implementing Regulation (EU) 2026/1731. SD-JWT VC: `birthdate` (was `birth_date`) and `nationalities`, an array whose elements
+  are disclosed one by one (was the single-valued `nationality`). mdoc (namespace `tamga.id.1`): `birth_date` encoded as
+  `full-date` (#6.1004) and an array-valued `nationality`. `age_over_18` stays (it is not in the EU PID set). Type, docType and
+  namespace are unchanged. Development stage (ADR-0029): fixed in place, no compatibility shim — wallets obtain the identity
+  credential again.
+- `@tamga-network/core/pid`: the EU PID name table (mdoc identifier ↔ SD-JWT VC claim name). `@tamga-network/mdoc`:
+  `toPidMdocElements` and `plainElementValue`. `@tamga-network/sd-jwt`: `arrayElementSd` issues array elements as separate
+  disclosures (RFC 9901 §4.2.2); `@tamga-network/issuer` reads it from the Type Metadata (`path: [name, null]`) and
+  `identityMatchKeys` reads `birthdate`. `@tamga-network/verifier`: mdoc element names are mapped to the catalogue names for the
+  schema check (B6) and the scope checks (AP6, E3); `full-date`/`tdate` values come out as strings. `@tamga-network/wallet-core`:
+  mdoc and proximity requests match the credential's SD-JWT claims through the same table (MD1); the driving licence
+  prerequisite discloses `birthdate`.
+- Trust lists: the institutions' identity matching scope asks for `birthdate`. Identity Rulebook §1, §6, §9 and SPEC-ID-0003 §9
+  updated; the EU PID mdoc schema used for external credentials now names `family_name_birth` / `given_name_birth` as in
+  Table 6. Conformance vectors version 4 (new `sd-jwt/identity-pid-names`).
+- Tamga Rulebook RB-GEN-05: debug logs are kept for at most 1 day (was 7 days).
 
 ### 2026-10-09 — packages: 0.3.1 test release (patch)
 

@@ -4,7 +4,7 @@ title: "mdoc for the identity credential"
 status: Active
 version: 1.0.0
 created: 2026-09-26
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   The Tamga identity attestation ([[ADR-0011]]) is issued today only as an SD-JWT VC. This ADR decides that the same
   credential, with the same fields, is also issued as an ISO/IEC 18013-5 mdoc (CBOR + COSE). Reason: the browser Digital
@@ -45,7 +45,10 @@ the format itself (CBOR + COSE); Bluetooth transport is separate and needs an Ap
    [[t:issuer]] signatures (SD-JWT: JOSE/ES256; mdoc: COSE_Sign1/ES256). Both credentials are produced in one issuance flow;
    the wallet stores both.
 2. **docType** = `urn:tamga:id:IdentityAttestation:1` (the same URN as the vct); **namespace** = `tamga.id.1`. Element names
-   match the SD-JWT claim names one to one (`given_name`, `family_name`, `document_number_hash`, `age_over_18`, …).
+   match the SD-JWT claim names one to one (`given_name`, `family_name`, `document_number_hash`, `age_over_18`, …). *Changed
+   (2026-10-09, [[ADR-0045]]):* the two formats carry the same data; the name and encoding in each format follow the EU PID table
+   (Implementing Regulation (EU) 2026/1731) — SD-JWT `birthdate` / `nationalities` ↔ mdoc `birth_date` (full-date) /
+   `nationality` (array); the other names are the same.
 3. **The verification format is chosen with [[t:DCQL]]:** the [[t:verifier]] states `format: dc+sd-jwt` or `mso_mdoc` in its
    request; the channel (QR / deep link / DC API) stays the same. For mdoc the verifier checks the issuerAuth COSE signature
    via x5chain → [[t:trust-list]] ([[SPEC-TRUST-0001]]), the element digests via the MSO, and the device signature over the
@@ -76,7 +79,7 @@ the format itself (CBOR + COSE); Bluetooth transport is separate and needs an Ap
 
 | # | Invariant |
 |---|---|
-| **MD1** | mdoc is only a second representation of the SD-JWT VC; SD-JWT VC remains primary (ADR-0006 unchanged). If a type has an mdoc, its fields, `iat/exp` and holder key are identical to the SD-JWT. |
+| **MD1** | mdoc is only a second representation of the SD-JWT VC; SD-JWT VC remains primary (ADR-0006 unchanged). If a type has an mdoc, its fields (the data; name and encoding per format from the EU PID table — [[ADR-0045]]), `iat/exp` and holder key are identical to the SD-JWT. |
 | **MD2** | mdoc `deviceKey` = SD-JWT `cnf.jwk` (the same holder key, the same device binding). No separate key is generated. |
 | **MD3** | mdoc issuerAuth (COSE_Sign1) is ES256 only; the issuer certificate is carried in x5chain and matched against the [[SPEC-TRUST-0001]] trust list (issuer_id) — the same trust anchor as SD-JWT. |
 | **MD4** | Verification keeps the three-valued result ([[SPEC-API-0001]]); digest mismatch/expiry/revocation is REJECTED, infrastructure unavailability is INDETERMINATE. The result object contains no raw CBOR and no undisclosed element. |
@@ -97,3 +100,5 @@ the format itself (CBOR + COSE); Bluetooth transport is separate and needs an Ap
 **Accepted — 2026-09-26.** DECISIONS: D-CRED-5.
 Drafted 2026-09-26 (Proposed, package + 15 tests); accepted the same day and implemented in D12 phase 2. Extends ADR-0006
 without changing it.
+
+2026-10-09: the naming rule in K2 and MD1 changed with [[ADR-0045]] (EU PID encoding, D-ID-11).

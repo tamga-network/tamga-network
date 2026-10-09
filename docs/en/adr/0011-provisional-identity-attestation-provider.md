@@ -4,7 +4,7 @@ title: "Provisional identity attestation provider"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-10-02
+last_updated: 2026-10-09
 summary: >
   As long as there is no PID Provider appointed by the state, Tamga issues an identity attestation it signs itself
   (urn:tamga:id:IdentityAttestation:1) to people it has verified by remote identity verification (Didit: document +
@@ -60,8 +60,8 @@ The claim set is derived from the EU PID Rulebook (CIR 2024/2977), reduced:
 | Claim | Mandatory | Selective disclosure | Note |
 |---|---|---|---|
 | `given_name`, `family_name` | ✓ | ✓ | from the document (MRZ/OCR; chip if NFC) |
-| `birth_date` | ✓ | ✓ | |
-| `nationality` | ✓ | ✓ | ISO 3166-1 alpha-2 |
+| `birthdate` | ✓ | ✓ | (2026-10-09, [[ADR-0045]]: formerly `birth_date`; `birth_date` in mdoc) |
+| `nationalities` | ✓ | ✓ | array of ISO 3166-1 alpha-2 codes (2026-10-09, [[ADR-0045]]: formerly the single-valued `nationality`) |
 | `personal_administrative_number` | ✓ | ✓ | **TCKN** (TR) / national ID number — for institutional matching; disclosed only to RPs with a registered scope |
 | `document_type`, `document_number` (hash) | ✓ | ✓ | document number only as SHA-256 |
 | `issuing_country` | ✓ | ✓ | |
@@ -80,7 +80,7 @@ fact.
    secondary, `status.updated`) → if **Approved**, the attestation is issued (10 copies, [[t:WUA]] mandatory, PR11).
 3. Getting a document from an institution: the wallet picks the institution from the trust list directory → the
    institution's issuer requests an **IdentityAttestation presentation** in the authorization code flow ([[t:OpenID4VP]],
-   [[t:DCQL]]: `personal_administrative_number`, `given_name`, `family_name`, `birth_date`) → matches it with the record →
+   [[t:DCQL]]: `personal_administrative_number`, `given_name`, `family_name`, `birthdate`) → matches it with the record →
    issues the document. If there is no match, no document is issued; no personal data is logged (AP3/AP4).
 4. The pre-authorised routes (student-system screen QR, e-mail + SMS tx_code) **stay as they are**; an institution may offer
    both.
@@ -110,7 +110,7 @@ fact.
 - WUA mandatory at attestation issuance; `software` accepted in the demo (S-9/S-14), `secure_enclave` in the pilot.
 - No second active attestation is issued for the same document-number hash (duplicate enrolment); re-issuance revokes the
   old one.
-- Institutional matching: at least `personal_administrative_number` + `birth_date`; name matching normalised (Turkish
+- Institutional matching: at least `personal_administrative_number` + `birthdate`; name matching normalised (Turkish
   characters).
 - Didit "In Review" → no attestation, the user waits; "Declined" → retry after 24 hours; 3 rejections → manual handling.
 
