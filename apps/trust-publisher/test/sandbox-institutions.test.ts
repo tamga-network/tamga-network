@@ -18,6 +18,8 @@ import {
   testInstitutionSource,
   validateRequest,
   reservedNamesOf,
+  sb1Problem,
+  sharedWalletProviderFps,
 } from "../src/sandbox-institutions.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
@@ -106,5 +108,47 @@ describe("sandbox test kurumları (ADR-0041)", () => {
     expect(validateRequest({ ...req, name: "Bubilet Plus (TEST)" }, reserved)).toHaveLength(1);
     expect(validateRequest({ ...req, name: "ornek kurs merkezi (TEST)" }, reserved)).toHaveLength(1);
     expect(validateRequest(req, reserved)).toEqual([]);
+  });
+});
+
+describe("SB1 — ortak cüzdan sağlayıcı istisnası (ADR-0042)", () => {
+  const reg = { wallet_providers: [{ provider_id: "WP-1" }, { provider_id: "WP-2" }] };
+  const pub = {
+    wallet_providers: [
+      { provider_id: "WP-1", wua_signing_keys: [{ fingerprint_sha256: "AA11" }] },
+      { provider_id: "WP-2", wua_signing_keys: [] },
+      { provider_id: "WP-X", wua_signing_keys: [{ fingerprint_sha256: "ff" }] }, // kayıt defterinde yok → sayılmaz
+    ],
+  };
+  const shared = sharedWalletProviderFps(reg, pub);
+  const base = { name: "wp", environment: "sandbox" as const, shared };
+
+  it("parmak izleri yalnız gerçek kayıt defterindeki sağlayıcılar için, küçük harfle", () => {
+    expect([...shared.keys()]).toEqual(["WP-1", "WP-2"]);
+    expect([...shared.get("WP-1")!]).toEqual(["aa11"]);
+    expect(shared.get("WP-2")!.size).toBe(0);
+    expect(sharedWalletProviderFps(reg, undefined).get("WP-1")!.size).toBe(0);
+  });
+
+  it("sandbox'ta gerçek sertifika yalnız gerçek ağda yayınlanmış AYNI sertifikaysa kabul", () => {
+    expect(sb1Problem({ ...base, isTest: false, fingerprint: "aa11", sharedWalletProvider: "WP-1" })).toBeNull();
+    expect(sb1Problem({ ...base, isTest: false, fingerprint: "bb22", sharedWalletProvider: "WP-1" })).toMatch(
+      /SB1.*yayınlanmamış/,
+    );
+    expect(sb1Problem({ ...base, isTest: false, fingerprint: "aa11", sharedWalletProvider: "WP-2" })).toMatch(
+      /anahtarı yok/,
+    );
+    expect(sb1Problem({ ...base, isTest: false, fingerprint: "aa11", sharedWalletProvider: "WP-9" })).toMatch(
+      /karıştırılamaz/,
+    );
+    expect(sb1Problem({ ...base, isTest: false, fingerprint: "aa11" })).toMatch(/karıştırılamaz/);
+  });
+
+  it("temel kural değişmez: test sertifikası sandbox'ta, gerçek sertifika gerçek ağda", () => {
+    expect(sb1Problem({ ...base, isTest: true, fingerprint: "x" })).toBeNull();
+    expect(sb1Problem({ ...base, environment: "production", isTest: false, fingerprint: "x" })).toBeNull();
+    expect(
+      sb1Problem({ ...base, environment: "production", isTest: true, fingerprint: "x", sharedWalletProvider: "WP-1" }),
+    ).toMatch(/karıştırılamaz/);
   });
 });

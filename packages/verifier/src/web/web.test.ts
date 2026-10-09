@@ -1,6 +1,6 @@
 /** @tamga-network/verifier/web — DOM gerektirmeyen parçalar (AP2 / S14 sonuç metni). */
 import { describe, it, expect } from "vitest";
-import { outcomeMessage, resolveLang } from "./index.js";
+import { MAX_POLL_DELAY_MS, nextPollDelayMs, outcomeMessage, resolveLang } from "./index.js";
 
 describe("verifier/web", () => {
   it("Y1 / AP2: REJECTED ile INDETERMINATE farklı metin; INDETERMINATE belgeyi suçlamaz", () => {
@@ -22,5 +22,14 @@ describe("verifier/web", () => {
     expect(outcomeMessage({ outcome: "ACCEPTED" }, "tr")).toBe("Doğrulandı.");
     expect(outcomeMessage({ outcome: "INDETERMINATE" }, "tr")).toContain("geçersiz değil");
     expect(outcomeMessage({ outcome: "ACCEPTED" }, "tk")).toBe("Tassyklandy.");
+  });
+
+  it("yoklama 429'da geri çekilir: iki kat, Retry-After alt sınır, üst sınır", () => {
+    expect(nextPollDelayMs(1500, 1500, null)).toBe(3000);
+    expect(nextPollDelayMs(3000, 1500, null)).toBe(6000);
+    expect(nextPollDelayMs(1500, 1500, "10")).toBe(10_000);
+    expect(nextPollDelayMs(1500, 1500, "abc")).toBe(3000);
+    expect(nextPollDelayMs(20_000, 1500, null)).toBe(MAX_POLL_DELAY_MS);
+    expect(nextPollDelayMs(1500, 1500, "120")).toBe(MAX_POLL_DELAY_MS);
   });
 });

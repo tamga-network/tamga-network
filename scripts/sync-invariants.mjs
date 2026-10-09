@@ -204,7 +204,28 @@ if (existsSync(IGNORE)) {
 console.log(`dokümanlar: ${docs.length} · kod: ${total} · eklenen: ${added.length} · düşen: ${removed.length}`);
 if (added.length) console.log("  + " + added.join(", "));
 if (removed.length) console.log("  - " + removed.join(", "));
-if (!CHECK) {
+if (CHECK) {
+  // Üretim tarihi dışında birebir aynı olmalı; değilse CI düşer (çıktı bayat → `node scripts/sync-invariants.mjs`).
+  const norm = (s) =>
+    s
+      .replace(/\r\n?/g, "\n")
+      .replace(/^last_updated: .*$/m, "last_updated: -")
+      .replace(/^\*\*Üretilen dosya\*\* — \S+/m, "**Üretilen dosya** — -");
+  const stale = [];
+  const cmp = (file, want) => {
+    const have = existsSync(file) ? readFileSync(file, "utf8") : null;
+    if (have === null || norm(have) !== norm(want)) stale.push(file.slice(ROOT.length + 1).replace(/\\/g, "/"));
+  };
+  cmp(OUT, body);
+  if (publicBody) cmp(join(ROOT, ".publicoverride", "INVARIANTS.md"), publicBody);
+  if (stale.length) {
+    console.error(
+      `BAYAT: ${stale.join(", ")} kaynak belgelerle eşleşmiyor — node scripts/sync-invariants.mjs ile yeniden üret.`,
+    );
+    process.exit(1);
+  }
+  console.log("güncel");
+} else {
   writeFileSync(OUT, body);
   console.log("INVARIANTS.md yazıldı");
   if (publicBody) {

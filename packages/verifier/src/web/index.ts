@@ -167,6 +167,19 @@ function h(
   return el;
 }
 
+/** Yoklama geri çekilmesi üst sınırı (ms). */
+export const MAX_POLL_DELAY_MS = 30_000;
+
+/**
+ * Başarısız yoklamadan (429 / 5xx / ağ hatası) sonra bekleme: öncekinin iki katı (taban `baseMs`), sunucu `Retry-After`
+ * (saniye) verdiyse en az o kadar; üst sınır `MAX_POLL_DELAY_MS`.
+ */
+export function nextPollDelayMs(prevMs: number, baseMs: number, retryAfter: string | null): number {
+  const ra = retryAfter === null ? NaN : Number(retryAfter);
+  const fromHeader = Number.isFinite(ra) && ra > 0 ? ra * 1000 : 0;
+  return Math.min(MAX_POLL_DELAY_MS, Math.max(fromHeader, Math.max(prevMs, baseMs) * 2));
+}
+
 /** İmzalı OpenID4VP isteğini doğrulayıcıdan alır (kişisel veri yok; yalnızca istek bağlantısı). */
 export async function start(opts: Pick<MountOptions, "verifier" | "policy" | "dcApi">): Promise<StartedPresentation> {
   const dc = opts.dcApi && digitalCredentialsSupported();
@@ -188,10 +201,10 @@ export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void }
   const box = h("div", { style: "display:flex;flex-direction:column;align-items:center;gap:10px" }, [status]);
   el.appendChild(box);
   let stopped = false;
-  let timer: ReturnType<typeof setInterval> | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
   const stop = () => {
     stopped = true;
-    if (timer) clearInterval(timer);
+    if (timer) clearTimeout(timer);
   };
 
   const dcApiOrigin = opts.dcApi && digitalCredentialsSupported() ? location.origin : undefined;
@@ -255,29 +268,41 @@ export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void }
           m.onlyApproved + " " + new Date(p.expires_at).toLocaleTimeString(lang === "en" ? "en-GB" : lang) + ".",
         ]),
       );
-      timer = setInterval(async () => {
+      const baseMs = opts.pollMs ?? 1500;
+      let waitMs = baseMs;
+      const poll = async () => {
+        if (stopped) return;
         try {
-          const s = (await (
-            await fetch(
-              opts.verifier +
-                "/presentations/" +
-                pid +
-                (p.status_token ? "?st=" + encodeURIComponent(p.status_token) : ""),
-            )
-          ).json()) as PresentationStatus;
-          if (s.state === "PENDING") return;
-          stop();
-          if (s.outcome === "ACCEPTED") {
-            status.textContent = m.accepted;
-            opts.onResult?.(p.presentation_id, s);
+          const res = await fetch(
+            opts.verifier +
+              "/presentations/" +
+              pid +
+              (p.status_token ? "?st=" + encodeURIComponent(p.status_token) : ""),
+          );
+          if (!res.ok) {
+            // 429 (hız sınırı; kampüs NAT'ı) ya da geçici hata: Retry-After'a uyarak geri çekil, yoklamayı bırakma
+            waitMs = nextPollDelayMs(waitMs, baseMs, res.headers.get("retry-after"));
           } else {
-            status.textContent = outcomeMessage(s, lang);
-            opts.onError?.(s);
+            waitMs = baseMs;
+            const s = (await res.json()) as PresentationStatus;
+            if (s.state !== "PENDING") {
+              stop();
+              if (s.outcome === "ACCEPTED") {
+                status.textContent = m.accepted;
+                opts.onResult?.(p.presentation_id, s);
+              } else {
+                status.textContent = outcomeMessage(s, lang);
+                opts.onError?.(s);
+              }
+              return;
+            }
           }
         } catch {
-          /* ağ hatası: yoklamaya devam */
+          waitMs = nextPollDelayMs(waitMs, baseMs, null); // ağ hatası: geri çekilerek yoklamaya devam
         }
-      }, opts.pollMs ?? 1500);
+        if (!stopped) timer = setTimeout(poll, waitMs);
+      };
+      timer = setTimeout(poll, baseMs);
     })
     .catch((e: Error) => {
       status.textContent = e.message;

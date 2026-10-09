@@ -63,6 +63,8 @@ import {
   issuedByTestCa,
   nameProblems,
   reservedNamesOf,
+  sb1Problem,
+  sharedWalletProviderFps,
   subjects,
   testInstitutionSource,
   validateRequest,
@@ -107,13 +109,16 @@ const plusDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400_000);
 /**
  * ADR-0042 uygulama notu (2026-10-07): ayrı cüzdan sandbox'ı yoktur — bir cüzdan sağlayıcı gerçek ve sandbox listesinde AYNI
  * kayıtla (aynı provider_id, aynı WUA sertifikası) yer alabilir. Bu yüzden sandbox listesinde gerçek sertifikaya (SB1 istisnası)
- * yalnız, gerçek kayıt defterinde de aynı provider_id ile kayıtlı bir cüzdan sağlayıcının WUA sertifikası için izin verilir.
+ * yalnız, gerçek kayıt defterinde de aynı provider_id ile kayıtlı bir cüzdan sağlayıcının, gerçek ağın yayınlanmış listesinde
+ * de bulunan WUA sertifikası (parmak izi eşleşmesi) için izin verilir; gerçek ağda anahtarı yoksa izin yok.
  */
-const SHARED_WALLET_PROVIDERS: ReadonlySet<string> = (() => {
-  const prod = resolve(app, "registry", "lotl.source.json");
-  if (!existsSync(prod)) return new Set<string>();
-  const wps = (JSON.parse(readFileSync(prod, "utf8")).wallet_providers ?? []) as Array<{ provider_id: string }>;
-  return new Set(wps.map((w) => w.provider_id));
+const SHARED_WALLET_PROVIDERS = (() => {
+  const reg = resolve(app, "registry", "lotl.source.json");
+  const pub = resolve(process.env.TAMGA_TP_PROD_DIST ?? resolve(app, "dist"), "lotl.json");
+  return sharedWalletProviderFps(
+    existsSync(reg) ? JSON.parse(readFileSync(reg, "utf8")) : undefined,
+    existsSync(pub) ? JSON.parse(readFileSync(pub, "utf8")) : undefined,
+  );
 })();
 function cert(name: string, opts: { sharedWalletProvider?: string } = {}) {
   // ADR-0041: `self:<ad>` = sandbox test kurumu sertifikası (TAMGA_SANDBOX_SELF_DIR/pki); yalnız test kurumları ara makamınca
@@ -128,18 +133,18 @@ function cert(name: string, opts: { sharedWalletProvider?: string } = {}) {
   if (self && !issuedByTestCa(pem, readFileSync(resolve(PKI, `${TEST_CA}.cert.pem`), "utf8")))
     throw new Error(`TI1: ${name} test kurumları ara makamınca imzalanmamış`);
   const der = pemToDer(pem);
-  // ADR-0038 SB1: test sertifikası gerçek listeye, gerçek sertifika sandbox listesine girmez
-  const isTest = /\(TEST\)/.test(new X509Certificate(der).subject);
-  const sharedReal =
-    !isTest &&
-    ENVIRONMENT === "sandbox" &&
-    opts.sharedWalletProvider !== undefined &&
-    SHARED_WALLET_PROVIDERS.has(opts.sharedWalletProvider);
-  if (!sharedReal && isTest !== (ENVIRONMENT === "sandbox"))
-    throw new Error(
-      `SB1: ${name} sertifikası ${isTest ? "test" : "gerçek"}, kayıt defteri ${ENVIRONMENT} — karıştırılamaz`,
-    );
-  return { pem, der, fp: certFingerprintSha256Hex(der) };
+  // ADR-0038 SB1: test sertifikası gerçek listeye, gerçek sertifika sandbox listesine girmez (ADR-0042 istisnası: sb1Problem)
+  const fp = certFingerprintSha256Hex(der);
+  const problem = sb1Problem({
+    name,
+    isTest: /\(TEST\)/.test(new X509Certificate(der).subject),
+    environment: ENVIRONMENT,
+    fingerprint: fp,
+    sharedWalletProvider: opts.sharedWalletProvider,
+    shared: SHARED_WALLET_PROVIDERS,
+  });
+  if (problem) throw new Error(problem);
+  return { pem, der, fp };
 }
 function keyEntry(name: string, opts: { sharedWalletProvider?: string } = {}) {
   const c = cert(name, opts);

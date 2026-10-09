@@ -447,7 +447,7 @@ export function pendingPage(lang: Lang, p: Presentation, id: string, qrDataUrl: 
 <section class="row" style="align-items:flex-start;gap:28px"><img class="qr" src="${qrDataUrl}" alt="QR" width="280" height="280">
 <div class="stack" style="flex:1;min-width:240px"><div class="result PENDING">${t.waiting}… <span class="mono small">${left} ${t.secondsLeft}</span></div>
 <pre>${esc(p.req.qrPayload)}</pre></div></section>${tracePanel(p, lang)}
-<script>setInterval(async()=>{const r=await fetch('/presentations/${esc(id)}?st=${esc(p.statusToken)}');if(!r.ok)return;const j=await r.json();if(j.state==='DONE')location.reload();},2000)</script>`,
+<script>(()=>{const base=2000;let wait=base;const poll=async()=>{try{const r=await fetch('/presentations/${esc(id)}?st=${esc(p.statusToken)}');if(r.ok){wait=base;const j=await r.json();if(j.state==='DONE')return location.reload();}else{const ra=Number(r.headers.get('retry-after'));wait=Math.min(30000,Math.max(ra>0?ra*1000:0,wait*2));}}catch{wait=Math.min(30000,wait*2);}setTimeout(poll,wait);};setTimeout(poll,base);})()</script>`,
   );
 }
 

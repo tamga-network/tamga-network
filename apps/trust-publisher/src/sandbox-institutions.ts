@@ -242,3 +242,48 @@ export const subjects = (name: string) => {
     status: `${TEST_INSTITUTIONS_SUBTREE}, O=${n} (TEST), CN=${n} - Status List (TEST)`,
   };
 };
+
+/**
+ * ADR-0042 uygulama notu (2026-10-07) — SB1 istisnası için ortak cüzdan sağlayıcıların izinli WUA sertifika parmak izleri:
+ * gerçek kayıt defterinde (`prodRegistry.wallet_providers`) kayıtlı her sağlayıcı için, gerçek ağın YAYINLANMIŞ listesindeki
+ * (`prodPublished.wallet_providers[].wua_signing_keys`) parmak izleri. Gerçek listede anahtarı yoksa küme boştur: sandbox o
+ * sağlayıcı için gerçek sertifika kabul etmez.
+ */
+export function sharedWalletProviderFps(
+  prodRegistry: { wallet_providers?: Array<{ provider_id: string }> } | undefined,
+  prodPublished:
+    | { wallet_providers?: Array<{ provider_id: string; wua_signing_keys?: Array<{ fingerprint_sha256: string }> }> }
+    | undefined,
+): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const w of prodRegistry?.wallet_providers ?? []) out.set(w.provider_id, new Set());
+  for (const w of prodPublished?.wallet_providers ?? []) {
+    const s = out.get(w.provider_id);
+    if (s) for (const k of w.wua_signing_keys ?? []) s.add(k.fingerprint_sha256.toLowerCase());
+  }
+  return out;
+}
+
+/**
+ * ADR-0038 SB1: test sertifikası gerçek listeye, gerçek sertifika sandbox listesine girmez. Tek istisna (ADR-0042): sandbox
+ * listesinde gerçek ağla AYNI cüzdan sağlayıcının AYNI WUA sertifikası (parmak izi gerçek ağın yayınlanmış listesinde).
+ * Sorun yoksa null, varsa hata metni.
+ */
+export function sb1Problem(i: {
+  name: string;
+  isTest: boolean;
+  environment: "production" | "sandbox";
+  fingerprint: string;
+  sharedWalletProvider?: string;
+  shared: ReadonlyMap<string, ReadonlySet<string>>;
+}): string | null {
+  const sandbox = i.environment === "sandbox";
+  if (i.isTest === sandbox) return null;
+  if (!i.isTest && sandbox && i.sharedWalletProvider !== undefined) {
+    const fps = i.shared.get(i.sharedWalletProvider);
+    if (fps?.has(i.fingerprint.toLowerCase())) return null;
+    if (fps)
+      return `SB1: ${i.name} gerçek sertifika; ${i.sharedWalletProvider} gerçek ağ listesinde bu sertifikayla yayınlanmamış${fps.size ? "" : " (gerçek ağda anahtarı yok)"} — sandbox'a girmez`;
+  }
+  return `SB1: ${i.name} sertifikası ${i.isTest ? "test" : "gerçek"}, kayıt defteri ${i.environment} — karıştırılamaz`;
+}

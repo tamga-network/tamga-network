@@ -19,22 +19,25 @@ if (!next || !/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(next)) {
   process.exit(1);
 }
 
+// Önce hepsini oku ve denetle, sonra yaz: bir dosya bozuksa hiçbir dosya yarım güncellenmez.
 const prev = new Set();
+const writes = [];
 for (const p of PKGS) {
   const f = join(ROOT, "packages", p, "package.json");
   const j = JSON.parse(readFileSync(f, "utf8"));
+  if (typeof j.version !== "string") throw new Error(`sürüm alanı yok: packages/${p}/package.json`);
   prev.add(j.version);
   j.version = next;
-  writeFileSync(f, JSON.stringify(j, null, 2) + "\n");
+  writes.push([f, JSON.stringify(j, null, 2) + "\n"]);
 }
-if (prev.size !== 1) console.warn(`⚠ paketler farklı sürümlerdeydi: ${[...prev].join(", ")} — hepsi ${next} yapıldı`);
-
 const vf = join(ROOT, "packages", "verifier", "src", "verify.ts");
 const vs = readFileSync(vf, "utf8");
-const vn = vs.replace(/(export const SDK_VERSION = "@tamga-network\/verifier@)[^"]+(")/, `$1${next}$2`);
 if (!/export const SDK_VERSION = "@tamga-network\/verifier@[^"]+"/.test(vs))
   throw new Error("SDK_VERSION sabiti bulunamadı (packages/verifier/src/verify.ts)");
-writeFileSync(vf, vn);
+writes.push([vf, vs.replace(/(export const SDK_VERSION = "@tamga-network\/verifier@)[^"]+(")/, `$1${next}$2`)]);
+
+for (const [f, data] of writes) writeFileSync(f, data);
+if (prev.size !== 1) console.warn(`⚠ paketler farklı sürümlerdeydi: ${[...prev].join(", ")} — hepsi ${next} yapıldı`);
 
 execSync("npm install --package-lock-only --no-audit --no-fund", { cwd: ROOT, stdio: "inherit" });
 console.log(`✓ ${[...prev].join(", ")} → ${next} (9 paket + SDK_VERSION + package-lock.json)`);
