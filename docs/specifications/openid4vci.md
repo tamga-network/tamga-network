@@ -324,7 +324,8 @@ yalnız kısa ömürlü ZK kopyası alır ([[ADR-0023]] AR4'ün tek istisnası).
 - **Belge isteği:** `credential_configuration_id` = `urn:tamga:id:ShortLivedIdentityAttestation:1`, en çok 3 proof (ya da anahtar
   kanıtı). Yanıtta kopya başına `credential` = base64url IssuerSigned: docType = yapılandırma, ad alanı `tamga.id.1`, yalnız
   belirteçteki öğeler, `validUntil − validFrom ≤ 24 saat` ve ≤ kimlik belgesinin bitişi, MSO'da `status` YOK (ZC1); imza kimlik
-  belgesininkiyle aynı sertifika. Erişim belirteci başka bir yapılandırma için kullanılamaz.
+  belgesininkiyle aynı sertifika. Saati geride kalan telefonda ispat üretilebilsin diye `signed` = `validFrom` 5 dakika geriye
+  alınır (pencere yine ≤ 24 saat). Erişim belirteci başka bir yapılandırma için kullanılamaz.
 - **Günlük:** yalnız sayı ve red nedeni; kişi verisi, belirteç ve kayıt kimliği yazılmaz. Kalıntı risk: servis yenileme
   sıklığından cüzdanın etkin olduğunu öğrenir, neyin kime gösterildiğini öğrenmez ([[ADR-0044]] Sonuçlar).
 

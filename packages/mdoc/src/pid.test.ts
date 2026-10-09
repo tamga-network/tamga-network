@@ -59,3 +59,31 @@ describe("toPidMdocElements / plainElementValue", () => {
     expect(els.nationality).toEqual(["TR", "AZ"]);
   });
 });
+
+describe("verifyIssuerSigned — saat farkı toleransı", () => {
+  it("az önce verilmiş belge, saati birkaç saniye geride olan cüzdanda clockSkewSec ile geçerli; tolerans yoksa değil", () => {
+    const issuerSk = p256.utils.randomSecretKey();
+    const now = Math.floor(Date.now() / 1000);
+    const issued = issueMdoc({
+      docType: "urn:tamga:id:IdentityAttestation:1",
+      namespaces: { "tamga.id.1": { age_over_18: true } },
+      deviceKeyRaw: p256.getPublicKey(p256.utils.randomSecretKey(), false),
+      issuerSk,
+      x5chain: [new Uint8Array([0x30, 1, 2, 3])],
+      signed: now,
+      validFrom: now,
+      validUntil: now + 60,
+      randomBytes: (n) => crypto.getRandomValues(new Uint8Array(n)),
+    });
+    const pub = p256.getPublicKey(issuerSk, false);
+    expect(verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: now - 2 }).reason).toBe(
+      "document not yet valid",
+    );
+    expect(verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: now - 2, clockSkewSec: 300 }).valid).toBe(
+      true,
+    );
+    expect(verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: now + 61 }).reason).toBe(
+      "document expired",
+    );
+  });
+});

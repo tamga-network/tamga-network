@@ -20,6 +20,10 @@ must update:
   verifier accepts it without `accept_unrevocable_zk`; `wallet-core` refreshes ZK copies (`refreshZkCopies`) and matches
   `mso_mdoc_zk` only with them. `Match.zk.copyKeyRef`, `matchDcql(…, { now })`, `StoredCredential.zk` are new;
   `matchClaimValue(match, name)` gives the value to show for a requested field in either format.
+- `@tamga-network/mdoc` `verifyIssuerSigned({ clockSkewSec })`: the validity window widens by the tolerance on both ends.
+  `wallet-core` accepts a freshly issued mdoc and ZK copy with a 5-minute tolerance (a phone clock a few seconds behind the
+  issuer no longer rejects the credential as "not yet valid"); the verifier uses the policy's `max_clock_skew_sec` (default
+  120 s) for mdoc validity.
 - New: `@tamga-network/core/pid` subpath; `@tamga-network/mdoc` depends on `@tamga-network/core`; `sd-jwt`
   `arrayElementSd`; `issuer` `issuerMetadata({ mdocConfigurations })`.
 - Details in the two entries below.

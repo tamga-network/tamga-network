@@ -160,7 +160,16 @@ export interface MdocVerifyResult {
  */
 export function verifyIssuerSigned(
   issuerSigned: Uint8Array,
-  opts: { issuerPubRaw: Uint8Array; now?: number; expectedDocType?: string },
+  opts: {
+    issuerPubRaw: Uint8Array;
+    now?: number;
+    expectedDocType?: string;
+    /**
+     * Saat farkı toleransı (sn, varsayılan 0): geçerlilik penceresi her iki uçta bu kadar genişler. Belgeyi alan cüzdanın saati
+     * belge verenin saatinden birkaç saniye gerideyse az önce verilen belge "henüz geçerli değil" görünmesin.
+     */
+    clockSkewSec?: number;
+  },
 ): MdocVerifyResult {
   const now = opts.now ?? Math.floor(Date.now() / 1000);
   let m: CborValue;
@@ -209,8 +218,9 @@ export function verifyIssuerSigned(
   // okunamayan tarih geçerli sayılmaz (fail-closed): NaN ile her karşılaştırma false olur ve kontrol sessizce geçerdi
   if (!Number.isFinite(vs) || !Number.isFinite(vf) || !Number.isFinite(vu))
     return { valid: false, reason: "validityInfo dates unreadable" };
-  if (now < vf) return { valid: false, reason: "document not yet valid" };
-  if (now > vu) return { valid: false, reason: "document expired" };
+  const skew = Math.max(0, opts.clockSkewSec ?? 0);
+  if (now + skew < vf) return { valid: false, reason: "document not yet valid" };
+  if (now - skew > vu) return { valid: false, reason: "document expired" };
 
   // digest bütünlüğü — açıklanan her alan MSO'daki digest ile eşleşmeli
   const valueDigests = mso.get("valueDigests");

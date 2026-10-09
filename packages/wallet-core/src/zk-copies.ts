@@ -14,7 +14,7 @@ import type { WuaRecord } from "./wua.js";
 import { wuaHeaders } from "./authcode.js";
 import { dpopRequest, type DpopSigner } from "./dpop.js";
 import { fetchIssuerMetadata, obtainCredential } from "./oid4vci.js";
-import { jwkToPoint } from "./mdoc.js";
+import { MDOC_RECEIVE_SKEW_SEC, jwkToPoint } from "./mdoc.js";
 import { certFingerprintHex, p256PointFromCertDer } from "./sdjwt.js";
 import { decode, encode, parseCoseSign1, verifyIssuerSigned, type CborValue } from "@tamga-network/mdoc";
 import type { StoredCredential, WalletState, ZkCopy } from "./store.js";
@@ -229,6 +229,7 @@ export function checkZkCopy(
     issuerPubRaw: p256PointFromCertDer(leaf),
     now: ctx.now,
     expectedDocType: ctx.docType,
+    clockSkewSec: MDOC_RECEIVE_SKEW_SEC, // telefonun saati kimlik servisinden birkaç saniye geride olabilir
   });
   if (!v.valid) throw new Error(`ZK copy rejected: ${v.reason}`);
   if (!v.deviceKeyRaw || toHex(v.deviceKeyRaw) !== toHex(jwkToPoint(ctx.cnf)))

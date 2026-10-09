@@ -74,6 +74,8 @@ export async function verifyMdocFormat(
     encJwkThumbprint?: Uint8Array;
     stateCode: string;
     now: number;
+    /** Geçerlilik penceresinde saat farkı toleransı (sn; politika `max_clock_skew_sec`). */
+    maxSkewSec?: number;
     rootCertsDer: Uint8Array[];
     expectedDocTypes: string[];
   },
@@ -138,7 +140,12 @@ export async function verifyMdocFormat(
   } catch (e) {
     return fail("A4", (e as Error).message);
   }
-  const v = verifyIssuerSigned(dr.issuerSigned, { issuerPubRaw: pub, now: opt.now, expectedDocType: dr.docType });
+  const v = verifyIssuerSigned(dr.issuerSigned, {
+    issuerPubRaw: pub,
+    now: opt.now,
+    expectedDocType: dr.docType,
+    clockSkewSec: opt.maxSkewSec ?? 0, // politika `max_clock_skew_sec` (A7: az önce verilen belge, geride kalan saat)
+  });
   if (!v.valid) {
     const r = v.reason ?? "invalid";
     const step: Step = /digest/.test(r)

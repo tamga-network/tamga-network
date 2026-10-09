@@ -318,8 +318,9 @@ identity service's metadata announces the ZK copy as a separate `mso_mdoc` confi
 - **Credential request:** `credential_configuration_id` = `urn:tamga:id:ShortLivedIdentityAttestation:1`, at most 3 proofs (or a
   key attestation). In the response each copy is a `credential` = base64url IssuerSigned: docType = the configuration,
   namespace `tamga.id.1`, only the elements from the token, `validUntil − validFrom ≤ 24 hours` and ≤ the identity credential's
-  expiry, NO `status` in the MSO (ZC1); signed with the same certificate as the identity credential. The access token cannot be
-  used for any other configuration.
+  expiry, NO `status` in the MSO (ZC1); signed with the same certificate as the identity credential. So that a phone whose clock
+  runs behind can still produce the proof, `signed` = `validFrom` is set 5 minutes back (the window stays ≤ 24 hours). The
+  access token cannot be used for any other configuration.
 - **Log:** only counts and rejection reasons; no personal data, no token and no record id. Residual risk: from the refresh
   frequency the service learns that the wallet is active, not what was shown to whom ([[ADR-0044]] Consequences).
 

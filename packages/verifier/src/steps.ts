@@ -453,6 +453,7 @@ async function formatStep(input: VerifyInput, now: number): Promise<FormatResult
       encJwkThumbprint: input.encJwkThumbprint,
       stateCode: input.policy.trust.state_code,
       now,
+      maxSkewSec: input.policy.freshness.max_clock_skew_sec ?? 120,
       rootCertsDer: input.rootCertsDer,
       expectedDocTypes: input.policy.credentials
         .filter((c) => c.id === input.policyCredentialId)

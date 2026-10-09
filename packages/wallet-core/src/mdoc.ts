@@ -24,6 +24,8 @@ import type { KeyProvider, PublicJwk } from "./keys.js";
 import { certFingerprintHex, p256PointFromCertDer, type LocalVerifyOk } from "./sdjwt.js";
 
 export const MDOC_FORMAT = "mso_mdoc";
+/** Alınan mdoc'un geçerlilik penceresinde saat farkı toleransı (sn) — KB-JWT `iat` penceresiyle aynı mertebe (C17). */
+export const MDOC_RECEIVE_SKEW_SEC = 300;
 
 /** JWK (P-256) → 65 baytlık uncompressed nokta. */
 export function jwkToPoint(jwk: PublicJwk): Uint8Array {
@@ -59,6 +61,7 @@ export function verifyReceivedMdoc(
     issuerPubRaw: p256PointFromCertDer(leaf),
     now: ctx.now,
     expectedDocType: ctx.sdjwt.vct,
+    clockSkewSec: MDOC_RECEIVE_SKEW_SEC, // telefonun saati belge verenden birkaç saniye geride olabilir
   });
   if (!res.valid) throw new Error(`mdoc reddedildi: ${res.reason}`);
   if (!res.deviceKeyRaw || toHex(res.deviceKeyRaw) !== toHex(jwkToPoint(ctx.cnf)))
