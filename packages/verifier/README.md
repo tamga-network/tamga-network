@@ -15,19 +15,12 @@ import { createPresentationRequest, decryptResponse, verifyPresentation } from "
 
 const req = await createPresentationRequest({ signer, dcql, responseUri, requestUriBase }); // req.qrPayload → QR
 const answer = await decryptResponse(jweFromWallet, req.encPrivateKey);
-const { result, claims } = await verifyPresentation({
-  presentation: answer.vp_token.diploma[0],
-  aud: signer.clientId,
-  nonce: req.nonce,
-  policy,
-  policyCredentialId: "diploma",
-  trust,
-  statusCache,
-  rootCertsDer,
-});
+const { result, claims } = await verifyPresentation({ presentation: answer.vp_token.diploma[0], aud: signer.clientId,
+  nonce: req.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer });
 ```
 
 A complete, tested version: [`examples/02-verify-own-server`](https://github.com/tamga-network/tamga-network/tree/main/examples/02-verify-own-server).
+
 
 ## Status
 

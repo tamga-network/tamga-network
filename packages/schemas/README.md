@@ -15,6 +15,7 @@ import { ALL, CATALOGUE_BASE } from "@tamga-network/schemas"; // definitions (ru
 import { build } from "@tamga-network/schemas/build"; // Node only: writes the static catalogue to dist/
 ```
 
+
 ## Status
 
 Published on npm as the `0.3.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API

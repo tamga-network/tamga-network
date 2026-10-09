@@ -14,10 +14,11 @@ npm install @tamga-network/core
 import { computeIssuerId, computeSchemaId, certFingerprintSha256Hex, pemToDer } from "@tamga-network/core";
 
 const der = pemToDer(institutionCertPem);
-const issuerId = computeIssuerId("TR", der); // keccak256(state ‖ SHA-256(certificate))
+const issuerId = computeIssuerId("TR", der);            // keccak256(state ‖ SHA-256(certificate))
 const schemaId = computeSchemaId("urn:tamga:edu:DiplomaCredential:1");
 const fingerprint = certFingerprintSha256Hex(der);
 ```
+
 
 ## Status
 

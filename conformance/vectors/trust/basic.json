@@ -1,7 +1,7 @@
 {
   "vector": "trust/basic",
   "version": 1,
-  "generated_at": "2026-10-09T16:47:11.504Z",
+  "generated_at": "2026-10-09T13:55:29.884Z",
   "now": "2026-09-24T14:00:00Z",
   "note": "Kişisel veri yok. anchors tazelik sınırı koşucuda 365 gün (vektör zamanı sabit).",
   "input": {

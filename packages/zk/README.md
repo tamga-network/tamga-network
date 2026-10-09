@@ -9,11 +9,11 @@ Any wallet on the network can use this package.
 
 ## Entry points
 
-| Import                           | Runs on                                 | What                                                                                                                               |
-| -------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `@tamga-network/zk`              | everywhere (pure TS, React Native safe) | DCQL `mso_mdoc_zk` query → claims, circuit selection and check against the trust list (ZK2), ZK DeviceResponse (TS13 `ZkDocument`) |
-| `@tamga-network/zk/react-native` | iOS, Android (Expo module `TamgaZk`)    | on-device prover: Rust → static library (iOS) / `.so` (Android)                                                                    |
-| `@tamga-network/zk/node`         | desktop, CI                             | prover as a child process (`tamga-zk-prove`): tests, conformance runs, development                                                 |
+| Import | Runs on | What |
+|---|---|---|
+| `@tamga-network/zk` | everywhere (pure TS, React Native safe) | DCQL `mso_mdoc_zk` query → claims, circuit selection and check against the trust list (ZK2), ZK DeviceResponse (TS13 `ZkDocument`) |
+| `@tamga-network/zk/react-native` | iOS, Android (Expo module `TamgaZk`) | on-device prover: Rust → static library (iOS) / `.so` (Android) |
+| `@tamga-network/zk/node` | desktop, CI | prover as a child process (`tamga-zk-prove`): tests, conformance runs, development |
 
 When no prover is available (Expo Go, unsupported phone, module missing) `available()` returns `false` and the wallet presents the
 usual way (ZK5).
@@ -45,11 +45,11 @@ Nothing leaves the device except the proof.
 
 ## Building the native parts
 
-| Target                                | Command                                   | Needs                                                                                            |
-| ------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Desktop prover (`bin/`)               | `npm run zk:build -w @tamga-network/zk`   | Rust (`rust/rust-toolchain.toml`); on Windows the patched upstream clone from `tools/zk-circuit` |
-| Android (`android/src/main/jniLibs/`) | `npm run zk:android -w @tamga-network/zk` | Android NDK, `cargo-ndk`                                                                         |
-| iOS (`ios/TamgaZkProver.xcframework`) | `npm run zk:ios -w @tamga-network/zk`     | macOS, Xcode                                                                                     |
+| Target | Command | Needs |
+|---|---|---|
+| Desktop prover (`bin/`) | `npm run zk:build -w @tamga-network/zk` | Rust (`rust/rust-toolchain.toml`); on Windows the patched upstream clone from `tools/zk-circuit` |
+| Android (`android/src/main/jniLibs/`) | `npm run zk:android -w @tamga-network/zk` | Android NDK, `cargo-ndk` |
+| iOS (`ios/TamgaZkProver.xcframework`) | `npm run zk:ios -w @tamga-network/zk` | macOS, Xcode |
 
 Build outputs are not committed; the published package includes them. Packing (`scripts/pack-packages.mjs`) fails if any of the
 three Android libraries is missing, and writes their SHA-256 checksums to `lib/native-checksums.json`.

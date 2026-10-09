@@ -20,6 +20,7 @@ const offer = await tamga.createOffer({ subjectId: "121200001", vct: "urn:tamga:
 
 A complete, tested version: [`examples/03-issue-hosted`](https://github.com/tamga-network/tamga-network/tree/main/examples/03-issue-hosted).
 
+
 ## Status
 
 Published on npm as the `0.3.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API

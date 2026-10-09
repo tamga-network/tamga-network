@@ -245,7 +245,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
     if (!existsSync(resolve(DIST, "lotl.jws"))) throw new Error("önce npm run setup");
     const t = await trustVectors();
     const s = await sdJwtVectors();
-    writeFileSync(resolve(OUT, "VERSION"), "2\n"); // 2: ADR-0034 — RP kaydında dns_name, client_id x509_hash
+    writeFileSync(resolve(OUT, "VERSION"), "3\n"); // 3: SPEC-CRED-0002 §3.5 disclosure serileştirme (2: ADR-0034 dns_name, x509_hash)
     console.log(JSON.stringify({ trust_cases: t, sd_jwt_cases: s, out: OUT }, null, 2));
   })().catch((e) => {
     console.error(e);
