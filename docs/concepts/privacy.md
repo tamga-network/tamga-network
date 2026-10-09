@@ -27,7 +27,9 @@ yeniden doğrulandığında aynı takma adlar geri gelir. Kişi başına sitede 
 
 "18 yaşından büyüğüm" ispatı, belgenin kendisini göstermeden üretilir ([[t:ZK]]): doğrulayıcı ne doğum tarihini ne de belgeyi
 görür, iki gösterim birbirine bağlanamaz. İspat sistemi [[t:Longfellow-ZK]]; doğrulayıcı tarafı `@tamga-network/verifier/zk`
-alt yolunda hazır, cüzdan tarafı mağaza sürümüyle gelir.
+alt yolunda hazır, cüzdan tarafı mağaza sürümüyle gelir. İspat iptal listesindeki yeri açmadığı için iptal sunumda denetlenemez;
+bunun için kısa ömürlü (en çok 24 saat) kopyalar kullanılacak ([[ADR-0044]], uygulama sırada). O zamana kadar doğrulayıcı bu
+sunumu yalnız politikasında `accept_unrevocable_zk` açıkça yazılıysa kabul eder.
 
 ## Doğrulayıcının yükümlülükleri
 
@@ -38,4 +40,4 @@ alt yolunda hazır, cüzdan tarafı mağaza sürümüyle gelir.
 ## Ayrıntı
 
 - Cüzdan kuralları: [[SPEC-WALLET-0001]]
-- Takma ad: [[ADR-0031]], sıfır bilgi ispatı: [[ADR-0032]]
+- Takma ad: [[ADR-0031]], sıfır bilgi ispatı: [[ADR-0032]], [[ADR-0044]]

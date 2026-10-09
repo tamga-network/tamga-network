@@ -427,7 +427,7 @@ Hangi bileşen hangi anahtarı tutar — [[ARCH-0004]] §4'ün mantıksal karş�
 | Validator | Üye devlet | Node HSM | Blok imzalama | Nadiren, planlı |
 | State delegate | Üye devlet | Devlet KMS | Ulusal kayıt yazma | Yıllık |
 | Belge veren (belge imzası) | Belge veren | HSM, **çevrimdışı** | Belge imzalama | Ağır — geçmişi etkiler |
-| Belge veren (iptal listesi) | Belge veren | KMS, **çevrimiçi** | Saatlik token imzalama | Yıllık, ucuz |
+| Belge veren (iptal listesi) | Belge veren | KMS, **çevrimiçi** | Her yayın aralığında (2 dakika) token imzalama | Yıllık, ucuz |
 | Belge veren delegate (EOA) | Belge veren | KMS | `publishList` işlemi | Yıllık |
 | Kök sertifika | Üye devlet | Çevrimdışı HSM, tören | Alt CA imzalama | Çok nadiren |
 | Cüzdan cihaz anahtarı | Kullanıcı | Secure Enclave | KB-JWT | Cihaz değişiminde |

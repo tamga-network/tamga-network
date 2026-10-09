@@ -339,7 +339,7 @@ whether a bit changed at all, is not visible.
 ## 5.2 Publication algorithm
 
 ```
-Every interval T (default 3600 s):
+Every interval T (default 120 s):
 
   1. Take pending status changes from the queue (if any; may be empty).
   2. Update the bitstring.

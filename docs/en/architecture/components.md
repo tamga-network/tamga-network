@@ -405,7 +405,7 @@ Which component holds which key — the logical counterpart of [[ARCH-0004]] §4
 | Validator | Member state | Node HSM | Block signing | Rarely, planned |
 | State delegate | Member state | State KMS | National registry writes | Yearly |
 | Issuer credential | Issuer | HSM, **offline** | Credential signing | Heavy — affects history |
-| Issuer status | Issuer | KMS, **online** | Hourly token signing | Yearly, cheap |
+| Issuer status | Issuer | KMS, **online** | Token signing every publication interval (2 minutes) | Yearly, cheap |
 | Issuer delegate (EOA) | Issuer | KMS | `publishList` transaction | Yearly |
 | Root CA | Member state | Offline HSM, ceremony | Signing subordinate CAs | Very rarely |
 | Wallet device key | User | Secure Enclave | KB-JWT | On device change |

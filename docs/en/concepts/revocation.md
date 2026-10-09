@@ -14,6 +14,11 @@ Every institution publishes the status of the credentials it has issued in the I
 neither the institution nor the year or cohort. Every publication of the list is recorded in the anchor log of the trust
 infrastructure, which is how the verifier checks that the list really comes from the institution.
 
+The list is republished **every 2 minutes**, even when nothing changed, so the moment of a revocation does not leak; while the
+status server is up, a revocation reaches verifiers within a few minutes (the publication interval plus your prefetch
+interval). Each list token is valid for 6 hours (`exp` = `iat` + 6 hours): if the status server goes down, a verifier can keep
+verifying with the last list for that long.
+
 ## Prefetching
 
 The verifier fetches the status lists **before verification**, at regular intervals, and keeps them in a cache; no request
@@ -33,7 +38,18 @@ If the status list or the [[t:trust-list]] is older than the maximum age in your
 credential may well be valid, but it cannot be proven right now. Tell the user "cannot be verified right now, please try again
 shortly" — do not reject.
 
+`@tamga-network/verifier` 0.3.1 and later uses a list token until its `exp` and the maximum age in your policy
+(`max_status_token_age_sec`).
+
+## Zero-knowledge proofs and revocation
+
+A presentation with a zero-knowledge proof ([[t:ZK]]) does not disclose the position in the status list, so revocation cannot be
+checked in the presentation. Decision ([[ADR-0044]]): such a presentation uses only short-lived copies, valid for at most 24
+hours and refreshed by the wallet on its own; the copies of a revoked credential are not refreshed. Implementation is pending;
+until then such a presentation returns `INDETERMINATE` unless the policy explicitly sets `accept_unrevocable_zk`.
+
 ## Details
 
 - Status list: [[SPEC-CRED-0003]]
 - Verification pipeline and freshness: [[SPEC-API-0001]]
+- Short-lived copies for zero-knowledge proofs: [[ADR-0044]]

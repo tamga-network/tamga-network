@@ -24,7 +24,11 @@ These are deliberate and recorded; there is no need to report them, but a findin
 - The trust list is published with a single signing key; a rolling second key is added before the pilot.
 - In this stage the trust anchor rests on a single operator's signature: the public anchor log makes a rollback visible but
   does not prevent it.
-- A revocation reaches every verifier within about 90 minutes.
+- While the status server is up, a revocation reaches verifiers within a few minutes (2-minute publication interval plus
+  the verifier's prefetch interval); a status list token is valid for 6 hours.
+- The revocation of an identity credential presented with a zero-knowledge proof cannot be checked in the presentation.
+  The decision is short-lived copies valid for at most 24 hours (ADR-0044); until that is implemented, verifiers accept such
+  a presentation only when their policy explicitly sets `accept_unrevocable_zk`.
 - Presentations of the same credential can be linked if verifiers collude; zero-knowledge age proofs are live on the
   verifier side and arrive on the wallet side with the phone builds.
 - No independent security audit has been performed yet.
