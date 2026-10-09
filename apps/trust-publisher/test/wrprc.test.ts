@@ -148,4 +148,28 @@ describe("kayıt sertifikası (ADR-0026)", () => {
     );
     expect(items[0].payload.intermediary).toEqual({ sub: "VATTR-9", sname: "Hub" });
   });
+
+  // 2026-10-09 sandbox gerilemesi: erişim sertifikasında organizationIdentifier yoktu → cüzdan bütün istekleri reddetti
+  it("K3: erişim sertifikasının organizationIdentifier'ı sub'la aynı değilse üretilmez", () => {
+    const run = (orgId: string | null) =>
+      buildWrprcPayloads(
+        { relying_parties: [rp], issuers: [] },
+        { now, registryUri: "u", orgIdOf: (dns) => (dns === "shop.example" ? orgId : undefined) },
+      );
+    expect(run("VATTR-1234567890").items).toHaveLength(1);
+    const none = run(null);
+    expect(none.items).toEqual([]);
+    expect(none.skipped[0]).toMatch(/organizationIdentifier yok, beklenen VATTR-1234567890/);
+    expect(run("VATTR-9999999999").items).toEqual([]);
+  });
+
+  it("K3 aracılı: bağ aracının erişim sertifikasıyla (intermediary.sub)", () => {
+    const hub = { ...rp, dns_name: "verify.example", identifiers: [{ scheme: "TR-VKN", value: "9" }], scopes: [] };
+    const tl = { relying_parties: [{ ...rp, uses_intermediaries: [hub.dns_name] }, hub], issuers: [] };
+    const ids: Record<string, string> = { "shop.example": "VATTR-1234567890", "verify.example": "VATTR-9" };
+    expect(buildWrprcPayloads(tl, { now, registryUri: "u", orgIdOf: (d) => ids[d] }).items).toHaveLength(1);
+    expect(
+      buildWrprcPayloads(tl, { now, registryUri: "u", orgIdOf: (d) => (d === "shop.example" ? ids[d] : null) }).items,
+    ).toEqual([]);
+  });
 });

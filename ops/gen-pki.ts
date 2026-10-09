@@ -24,7 +24,8 @@
  * hiçbir anahtar paylaşılmaz. Konu adları "… (TEST)"; örnek kurumlar `istanbul-bilgi`, `bubilet`, `paribu-cineverse` (gerçek
  * kurum adları gerçekçi bir deneme için; İstanbul Bilgi Üniversitesi pilot ortak, diğerleriyle ilişki ya da anlaşma yok; belgeler
  * test anahtarıyla imzalı ve geçersiz).
- * Kip: eksik olan sertifikalar üretilir, var olanlar KORUNUR (issuer_id değişmez); tamamını yenilemek için --force.
+ * Kip: eksik olan sertifikalar üretilir, var olanlar KORUNUR (issuer_id değişmez); tamamını yenilemek için --force; yalnız
+ * birkaç yaprağın sertifikasını aynı anahtarla yeniden imzalamak için --reissue=<ad,ad> (üretim kipinde yok).
  * Sapma S-1 (09-DEMO-KURGU §6): issuer özel anahtarı burada dosyada; pilotta üniversite KMS'inde.
  * Çıktı: <klasör>/*.cert.pem, *.pkcs8.pem, pki.json (parmak izleri, id'ler). `ops/pki/` tamamen gitignore (geliştirme anahtarları
  * makineye özeldir); `ops/pki-sandbox/` sertifikaları ve pki.json depoda izlenir (cüzdandaki sandbox pin'i).
@@ -55,6 +56,11 @@ const here = dirname(fileURLToPath(import.meta.url));
 const PROFILE = (process.argv.find((a) => a.startsWith("--profile="))?.slice(10) ?? "network") as "network" | "sandbox";
 if (PROFILE !== "network" && PROFILE !== "sandbox") throw new Error(`bilinmeyen profil: ${PROFILE}`);
 const FORCE = process.argv.includes("--force");
+// Yalnız adı verilen yaprakların sertifikası yeniden imzalanır; ANAHTAR AYNI kalır (sunucudaki anahtar paketi değişmez), seri
+// numarası yeni ve rastgele (RFC 5280 §4.1.2.2: aynı makamda tekrar yok). Ör. konu adına organizationIdentifier eklemek için.
+const REISSUE = new Set(
+  (process.argv.find((a) => a.startsWith("--reissue="))?.slice(10) ?? "").split(",").filter(Boolean),
+);
 const die = (m: string): never => {
   console.error(m);
   process.exit(2);
@@ -133,10 +139,25 @@ async function load(name: string): Promise<Item> {
     created: false,
   };
 }
+type Reuse = { keys: CryptoKeyPair; serialHex: string };
 async function ensure(
   name: string,
-  make: () => Promise<{ cert: X509Certificate; privateKey: CryptoKey }>,
+  make: (reuse?: Reuse) => Promise<{ cert: X509Certificate; privateKey: CryptoKey }>,
 ): Promise<Item> {
+  if (!FORCE && REISSUE.has(name) && exists(name)) {
+    if (PROD) die("Üretim kipinde --reissue yok (gerçek sertifikalar pki-issue.ts ile, CSR'dan)");
+    const old = await load(name);
+    const kp = {
+      privateKey: old.privateKey ?? die(`${name}: özel anahtar yok`),
+      publicKey: await old.cert.publicKey.export(ALG, ["verify"], crypto),
+    };
+    // pozitif tamsayı: ilk bayt 0x7f'i aşmasın
+    const rnd = crypto.getRandomValues(new Uint8Array(8));
+    rnd[0] = (rnd[0] & 0x7f) | 0x10;
+    const { cert } = await make({ keys: kp, serialHex: Buffer.from(rnd).toString("hex") });
+    writeFileSync(resolve(outDir, `${name}.cert.pem`), cert.toString("pem") + "\n");
+    return { name, cert, privateKey: kp.privateKey, created: true };
+  }
   if (!FORCE && exists(name)) return load(name);
   // Üretim kipi: sertifikası olup anahtarı olmayan kayıt üzerine yazılmaz (anahtar başka yerde ya da kayıt iptal edilmiş)
   if (PROD && existsSync(resolve(outDir, `${name}.cert.pem`)))
@@ -179,10 +200,10 @@ async function main() {
   });
   const rootKey = () => root.privateKey ?? die("kök CA özel anahtarı yok — yeni sertifika imzalanamaz");
   const signedByRoot =
-    (serialNo: number, subject: string, extra?: (pub: CryptoKey) => Promise<unknown[]>) => async () => {
-      const kp = await keys();
+    (serialNo: number, subject: string, extra?: (pub: CryptoKey) => Promise<unknown[]>) => async (reuse?: Reuse) => {
+      const kp = reuse?.keys ?? (await keys());
       const cert = await X509CertificateGenerator.create({
-        serialNumber: serial(serialNo),
+        serialNumber: reuse?.serialHex ?? serial(serialNo),
         subject,
         issuer: root.cert.subject,
         notBefore,
@@ -294,7 +315,7 @@ async function main() {
   await finish(root, items, notBefore);
 }
 
-type Make = () => Promise<{ cert: X509Certificate; privateKey: CryptoKey }>;
+type Make = (reuse?: Reuse) => Promise<{ cert: X509Certificate; privateKey: CryptoKey }>;
 type SignedByRoot = (serialNo: number, subject: string, extra?: (pub: CryptoKey) => Promise<unknown[]>) => Make;
 
 /** Sandbox (ADR-0038): gerçek ağla aynı dosya adları (servis ayarları değişmesin), test konu adları, sandbox SAN'ı. */
@@ -312,7 +333,9 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
       "rp-verify",
       signedByRoot(
         2001,
-        "CN=verify.sandbox.tamga.network, O=Tamga Sandbox Dogrulama (TEST), C=TR",
+        // ADR-0026 K3: kurum kimlik no (organizationIdentifier) = kayıt sertifikasının `sub`'ı (registry-sandbox TR-VKN
+        // TR0000000004). Yoksa cüzdan kayıt sertifikasını bu sertifikaya bağlayamaz ve isteği reddeder (2026-10-09, --reissue).
+        "CN=verify.sandbox.tamga.network, O=Tamga Sandbox Dogrulama (TEST), 2.5.4.97=VATTR-0000000004, C=TR",
         san("verify.sandbox.tamga.network"),
       ),
     ),
@@ -352,7 +375,8 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
       "rp-issuer-istanbul-bilgi",
       signedByRoot(
         2012,
-        "CN=issuer.sandbox.tamga.network, O=Istanbul Bilgi Universitesi - kimlik eslestirme (TEST), C=TR",
+        // ADR-0026 K3: organizationIdentifier = kayıt sertifikasının `sub`'ı (registry-sandbox TR-VKN TR0000000005)
+        "CN=issuer.sandbox.tamga.network, O=Istanbul Bilgi Universitesi - kimlik eslestirme (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
         san("issuer.sandbox.tamga.network"),
       ),
     ),

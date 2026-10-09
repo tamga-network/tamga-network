@@ -80,10 +80,15 @@ export interface WrprcItem {
 /**
  * İmzalı listeye giren kayıtlardan sertifika içerikleri. Kimlik numarası yok ya da kayıt/kullanım etkin değilse üretilmez;
  * nedenleri `skipped`'ta (yayıncı uyarı basar).
+ *
+ * `orgIdOf` (alan adı → erişim sertifikasındaki organizationIdentifier) verilirse ADR-0026 K3 bağı yayında denetlenir: isteği
+ * imzalayan sertifikanın (aracılıda aracının) kimlik numarası sertifikanın `sub`'ıyla (aracılıda `intermediary.sub`) aynı değilse
+ * sertifika üretilmez. Üretilseydi cüzdan bağı kuramaz ve isteği bütünüyle reddederdi (2026-10-09 sandbox: erişim sertifikasında
+ * organizationIdentifier yoktu, bütün doğrulama senaryoları düştü).
  */
 export function buildWrprcPayloads(
   tl: { relying_parties: Rec[]; issuers: Rec[] },
-  opts: { now: Date; registryUri: string },
+  opts: { now: Date; registryUri: string; orgIdOf?: (dnsName: string) => string | null | undefined },
 ): { items: WrprcItem[]; skipped: string[] } {
   const now = Math.floor(opts.now.getTime() / 1000);
   const items: WrprcItem[] = [];
@@ -121,6 +126,17 @@ export function buildWrprcPayloads(
       const via = (rp.uses_intermediaries as string[] | undefined)?.map((d) => byDns.get(d)).find(Boolean);
       const viaSub = via ? semanticIdentifier(via.identifiers) : null;
       if (via && viaSub) payload.intermediary = { sub: viaSub, sname: via.trade_name ?? via.legal_name };
+      if (opts.orgIdOf) {
+        const signer = via && viaSub ? via : rp;
+        const want = via && viaSub ? viaSub : sub;
+        const got = opts.orgIdOf(signer.dns_name) ?? null;
+        if (got !== want) {
+          skipped.push(
+            `relying_party ${rp.dns_name} / ${s.scope_id}: erişim sertifikasında (${signer.dns_name}) organizationIdentifier ${got ?? "yok"}, beklenen ${want} (ADR-0026 K3)`,
+          );
+          continue;
+        }
+      }
       items.push({
         path: `wrprc/rp/${rp.rp_id}/${s.scope_id}.jwt`,
         kind: "rp",

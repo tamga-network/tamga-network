@@ -9,6 +9,17 @@ everything is ready.
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-09 — sandbox registration certificates
+
+- Sandbox: the access certificates of `verify.sandbox.tamga.network` and `issuer.sandbox.tamga.network` now carry the
+  organisation identifier (`organizationIdentifier`, EN 319 412-1) that their registration certificates name as `sub`
+  (ADR-0026 K3). Without it a wallet cannot bind the registration certificate to the request and refuses it; every sandbox
+  verification scenario that sends a registration certificate was affected. Same keys, new certificates (new `x509_hash`
+  client identifiers); pseudonyms are unaffected (they follow the stable domain name, ADR-0034).
+- List publisher: a registration certificate is no longer issued when the signing access certificate's organisation
+  identifier does not match its `sub` (or `intermediary.sub`); the publisher warns instead.
+- `ops/gen-pki.ts --reissue=<name,…>` re-signs selected leaf certificates with their existing keys (not in production mode).
+
 ### 2026-10-09 — API reference and repository layout
 
 - docs.tamga.network/api is part of the docs site (same theme, navigation and search, English and Turkish): an overview of

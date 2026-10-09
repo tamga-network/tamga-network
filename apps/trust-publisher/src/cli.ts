@@ -304,6 +304,15 @@ async function writeLotes(
   }
 }
 
+/** alan adı → erişim sertifikasının organizationIdentifier'ı (2.5.4.97; EN 319 412-1); build() doldurur */
+const orgIdByDns = new Map<string, string | null>();
+function certOrgIdentifier(der: Uint8Array): string | null {
+  const line = new X509Certificate(der).subject
+    .split("\n")
+    .find((l) => /^(organizationIdentifier|2\.5\.4\.97)=/.test(l));
+  return line ? line.slice(line.indexOf("=") + 1) : null;
+}
+
 /**
  * ADR-0026: kayıt sertifikaları — imzalı listeye giren kayıtlardan (WRC1), kayıt kurumu anahtarıyla (WRC2). Her yayında
  * `dist/wrprc/` baştan üretilir (süresi dolan ya da kaldırılan kullanım kalmaz); dizin `wrprc/index.json`.
@@ -326,6 +335,7 @@ async function writeWrprcs(
   const regSigner = await signer(ref);
   const { items, skipped } = buildWrprcPayloads(tl, {
     now,
+    orgIdOf: (dns) => orgIdByDns.get(String(dns).toLowerCase()),
     registryUri: String(nl?.list_url ?? `https://trust.tamga.network/tl-${cc.toLowerCase()}.jws`),
   });
   for (const w of skipped) console.warn(`[uyarı] ADR-0026 kayıt sertifikası üretilmedi: ${w}`);
@@ -404,6 +414,7 @@ async function build() {
       })),
     };
   });
+  orgIdByDns.clear();
   const rps = tlSrc.relying_parties.map((r: Record<string, unknown>) => {
     const c = cert(r.access_cert as string);
     const { access_cert: _a, dns_name, ...rest } = r;
@@ -418,6 +429,8 @@ async function build() {
         .includes(`DNS:${dns}`)
     )
       throw new Error(`relying_party ${dns}: alan adı erişim sertifikasının SAN'ında yok`);
+    // ADR-0026 K3: kayıt sertifikası erişim sertifikasındaki kurum kimlik numarasına bağlanır (writeWrprcs denetler)
+    orgIdByDns.set(dns, certOrgIdentifier(c.der));
     return {
       rp_id: computeRpId(cc, c.der),
       client_id: x509HashClientId(c.der),
