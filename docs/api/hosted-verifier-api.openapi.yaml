@@ -283,6 +283,7 @@ paths:
                   claims: [age_over_18]
                   proximity: false
                   format: mso_mdoc_zk
+                  accept_unrevocable_zk: true
   /tamga-verifier.js:
     get:
       tags: [Page kit]
@@ -479,6 +480,17 @@ components:
           x-tr: |
             `mso_mdoc_zk` = mdoc üzerinde sıfır bilgi ispatı (ADR-0032). İspatı üretemeyen cüzdan klasik `mso_mdoc` politikasını
             kullanır (ör. `age-over-18-mdoc`).
+        accept_unrevocable_zk:
+          type: boolean
+          description: |
+            Only for `mso_mdoc_zk` policies (absent otherwise). `true`: the policy knowingly accepts a zero-knowledge
+            presentation whose revocation cannot be checked (`status.value = NOT_APPLICABLE`). In a policy definition the
+            field defaults to `false` (ADR-0044/ZC4): without an explicit `true` every ZK presentation is `INDETERMINATE`
+            (step `D1`).
+          x-tr: |
+            Yalnız `mso_mdoc_zk` politikalarında (diğerlerinde yok). `true`: politika iptali denetlenemeyen sıfır bilgi ispatlı
+            sunumu bilerek kabul eder (`status.value = NOT_APPLICABLE`). Politika tanımında alanın varsayılanı `false`'tur
+            (ADR-0044/ZC4): açıkça `true` yazılmadıkça her ZK sunumu `INDETERMINATE` olur (adım `D1`).
     Error:
       type: object
       properties:

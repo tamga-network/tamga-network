@@ -17,18 +17,17 @@ const { source } = await fetchListTrustSource("https://trust.tamga.network", htt
   rootFingerprints: PINNED_ROOTS, // from tamga.network/trust-anchor, fixed in your configuration
   verifyJws,
 });
-source.issuers();                                // registered institutions
-source.relyingPartyByDnsName("example.com");      // a verifier's registration (permanent domain) and allowed fields
-source.relyingParty("x509_hash:…");                // the same record, by the request's client_id (HAIP 1.0)
-source.isCredentialAcceptable(issuerId, iat);    // "YES" | "NO" | "UNKNOWN" — judged on the issue date
+source.issuers(); // registered institutions
+source.relyingPartyByDnsName("example.com"); // a verifier's registration (permanent domain) and allowed fields
+source.relyingParty("x509_hash:…"); // the same record, by the request's client_id (HAIP 1.0)
+source.isCredentialAcceptable(issuerId, iat); // "YES" | "NO" | "UNKNOWN" — judged on the issue date
 ```
 
 A complete, tested version: [`examples/04-check-institution`](https://github.com/tamga-network/tamga-network/tree/main/examples/04-check-institution).
 
-
 ## Status
 
-Published on npm as the `0.3.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.3.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

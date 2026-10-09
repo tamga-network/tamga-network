@@ -553,9 +553,9 @@ elindeki token son çapayla eşleşir ve `exp`'e kadar kullanılır. Sunucu çal
 token'dan yenidir ve sonuç DOĞRULANAMADI'dır (§7 Ş6; geri alma sayılmaz). Yani uzun `exp` yalnız gerçek kesintide işe yarar ve
 bir iptali güncel çapayı bilen doğrulayıcıdan gizlemez.
 
-> **Doğrulayıcı paketi:** `@tamga-network/sd-jwt` 0.3.0 token'ı `iat + 2 × ttl`'den sonra bayat sayar (D4, DOĞRULANAMADI).
-> Bu sürümü kullanan doğrulayıcılarda kesinti tamponu, sınırın `exp`'e ve politikaya bırakıldığı sonraki yama sürümüyle etkili
-> olur; o zamana kadar davranış öncekiyle aynıdır (kesintide birkaç dakika içinde DOĞRULANAMADI).
+> **Doğrulayıcı paketi:** kesinti tamponu yalnız `@tamga-network/sd-jwt` **0.3.1 ve sonrasını** kullanan doğrulayıcılarda
+> etkilidir: 0.3.1'de sınır `exp` ve politikanın `max_status_token_age_sec`'idir. 0.3.0 token'ı `iat + 2 × ttl`'den sonra
+> bayat sayar (D4, DOĞRULANAMADI); o sürümdeki doğrulayıcı kesintide birkaç dakika içinde DOĞRULANAMADI'ya düşer.
 
 **Belirleyici olan claim'lerdir.** Standart, doğrulayan tarafın HTTP önbellek
 başlıklarından önce token'ın `exp` ve `ttl` claim'lerine öncelik vermesini

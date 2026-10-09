@@ -1,6 +1,6 @@
 {
   "name": "@tamga-network/schemas",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "description": "Tamga şema kataloğu — Type Metadata + JSON Schema (SPEC-SCHEMA-0001/0002), vct URN (ADR-0010), content_hash üretimi.",

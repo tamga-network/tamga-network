@@ -124,8 +124,9 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
   `status.reason`). The identity credential presented with ZK is valid for 2 years today and its revocation is not
   visible; choose this path only where revocation does not change the outcome (for example an age check).
 - **`accept_unrevocable_zk`:** a policy that uses `mso_mdoc_zk` must state it explicitly. `true` accepts a presentation whose
-  revocation cannot be checked; with `false` every ZK presentation returns `INDETERMINATE` (step `D1`, `STATUS_UNREACHABLE`) —
-  if a revocation check is required, use the classic `mso_mdoc` policy.
+  revocation cannot be checked; with `false` — or when the field is omitted (the default since 0.3.1) — every ZK
+  presentation returns `INDETERMINATE` (step `D1`, `STATUS_UNREACHABLE`); if a revocation check is required, use the
+  classic `mso_mdoc` policy.
 - **Fallback:** if the wallet does not support ZK, your query will not match; ask the same question with the classic
   `mso_mdoc` policy (`age-over-18-mdoc`). Wallet side: `@tamga-network/zk` (Android native library ready, iOS pending); a
   wallet without a prover uses the classic path (ZK5).

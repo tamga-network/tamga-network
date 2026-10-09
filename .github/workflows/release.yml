@@ -1,5 +1,5 @@
 # @tamga-network/* npm release — started manually only (Actions → release → Run workflow), with project management approval.
-# Versions: the packages are published as 0.x test releases (today 0.3.0; stable 1.0.0 when ready) under npm's default `latest`
+# Versions: the packages are published as 0.x test releases (today 0.3.1; stable 1.0.0 when ready) under npm's default `latest`
 # tag. Versions must be committed beforehand.
 # Identity: npm Trusted Publishing (OIDC) — no long-lived token. Each package's Trusted Publisher on npmjs.com is GitHub
 # Actions, this repository, workflow `release.yml`, environment `npm`. Trusted Publishing needs npm CLI >= 11.5.1 (Node 22

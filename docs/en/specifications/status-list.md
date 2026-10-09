@@ -540,9 +540,9 @@ the verifier cannot fetch the list, the anchor is newer than the token and the r
 rollback). So the long `exp` helps only in a real outage and does not hide a revocation from a verifier that knows the
 current anchor.
 
-> **Verifier package:** `@tamga-network/sd-jwt` 0.3.0 treats a token as stale after `iat + 2 × ttl` (D4, COULD NOT VERIFY).
-> For verifiers on that version the outage buffer takes effect with the next patch release, which leaves the limit to `exp`
-> and the policy; until then the behaviour is unchanged (COULD NOT VERIFY within minutes during an outage).
+> **Verifier package:** the outage buffer takes effect only for verifiers on `@tamga-network/sd-jwt` **0.3.1 or later**: from
+> 0.3.1 the limit is `exp` and the policy's `max_status_token_age_sec`. 0.3.0 treats a token as stale after `iat + 2 × ttl`
+> (D4, COULD NOT VERIFY); a verifier on that version falls to COULD NOT VERIFY within minutes during an outage.
 
 **The claims decide.** The standard requires the verifying party to give precedence to the token's `exp` and `ttl` claims
 over HTTP cache headers. The CDN's `Cache-Control` header cannot override this.

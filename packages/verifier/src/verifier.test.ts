@@ -113,14 +113,20 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     });
     return { combined: r.combined, ref };
   }
-  async function statusToken(now: number, revoked: number[] = [], key = "issuer-bilgi-status") {
+  async function statusToken(
+    now: number,
+    revoked: number[] = [],
+    key = "issuer-bilgi-status",
+    ttlSec = 3600,
+    expSec?: number,
+  ) {
     const signer = await pemIssuerSigner(
       readFileSync(resolve(PKI, `${key}.pkcs8.pem`), "utf8"),
       readFileSync(resolve(PKI, `${key}.cert.pem`), "utf8"),
     );
     const bs = new StatusBitstring(MIN_CAPACITY);
     for (const i of revoked) bs.set(i, StatusValue.INVALID);
-    return signStatusListToken({ signer, iss: ISS, uri: STATUS_URI, bitstring: bs, iat: now, ttlSec: 3600 });
+    return signStatusListToken({ signer, iss: ISS, uri: STATUS_URI, bitstring: bs, iat: now, ttlSec, expSec });
   }
 
   it("D3: iptal listesini kurumun kayıtlı iptal anahtarı dışında bir anahtar imzalamışsa RED (S11)", async () => {
@@ -350,7 +356,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       now,
     });
     expect(r2.result.indeterminate_reason).toBe("STATUS_STALE");
-    // ttl×2 aşımı (verifyStatusListToken "D4:" fırlatır) da INDETERMINATE/D4 olmalı — REJECTED/D3 değil
+    // exp aşımı (verifyStatusListToken "D4:" fırlatır) da INDETERMINATE/D4 olmalı — REJECTED/D3 değil
     const veryStale = new MemoryStatusCache();
     veryStale.set(STATUS_URI, await statusToken(now - 3600 * 3), now - 3600 * 3);
     const r3 = await verifyPresentation({
@@ -368,6 +374,58 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     expect(r3.result.outcome).toBe("INDETERMINATE");
     expect(r3.result.failed_step).toBe("D4");
     expect(r3.result.indeterminate_reason).toBe("STATUS_STALE");
+  });
+
+  it("0.3.1 kesinti tamponu: iat + 2 × ttl geçmiş, exp ve politika yaşı içinde token → ACCEPTED (SPEC-CRED-0003 §8.1)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { combined, ref } = await issue(15, now);
+    const pres = await presentSdJwt({
+      combined,
+      discloseClaims: ["is_graduate", "eqf_level", "qualification_title", "awarding_body_name"],
+      keys,
+      keyRef: ref,
+      aud: AUD,
+      nonce: "n7",
+      iat: now,
+    });
+    const c = new MemoryStatusCache();
+    // yayın aralığı 2 dk, exp 6 sa; durum sunucusu 1 saattir kapalı (son token 1 sa önce çekildi, çapa da o sürümde)
+    c.set(STATUS_URI, await statusToken(now - 3600, [], "issuer-bilgi-status", 120, 6 * 3600), now - 3600);
+    const args = {
+      presentation: pres,
+      aud: AUD,
+      nonce: "n7",
+      policy,
+      policyCredentialId: "diploma",
+      trust,
+      statusCache: c,
+      rootCertsDer: rootDer,
+      rp: trust.relyingParty(AUD),
+      now,
+    };
+    const r = await verifyPresentation(args);
+    expect(r.result.outcome).toBe("ACCEPTED");
+    expect(r.result.status?.value).toBe("VALID");
+    // politika daha sıkıysa (azami yaş 30 dk) aynı token bayat → INDETERMINATE/D4
+    const strict = await verifyPresentation({
+      ...args,
+      policy: { ...policy, freshness: { max_status_token_age_sec: 1800, max_trust_age_sec: 86400 } },
+    });
+    expect(strict.result.outcome).toBe("INDETERMINATE");
+    expect(strict.result.failed_step).toBe("D4");
+    // D5 korunur: sunucu ayakta, yeni sürüm çapalandı (ör. iptal) ama doğrulayıcı çekemedi → eski token kullanılmaz
+    const newer: ListTrustSource = Object.create(trust);
+    newer.statusAnchor = () =>
+      ({
+        content_hash: "0x" + "cd".repeat(32),
+        published_at: new Date((now - 300) * 1000).toISOString(),
+        version: 9,
+        list_uri: STATUS_URI,
+      }) as ReturnType<ListTrustSource["statusAnchor"]>;
+    const unfetched = await verifyPresentation({ ...args, trust: newer });
+    expect(unfetched.result.outcome).toBe("INDETERMINATE");
+    expect(unfetched.result.failed_step).toBe("D5");
+    expect(unfetched.result.indeterminate_reason).toBe("STATUS_STALE");
   });
 
   it("D5: çapadan eski token — önbellek çapadan önce/tolerans içinde çekildiyse INDETERMINATE, açıkça sonra çekildiyse REJECTED; bozuk tarih INDETERMINATE; kayma toleransı (K3)", async () => {

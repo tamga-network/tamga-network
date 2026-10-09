@@ -106,14 +106,21 @@ export interface StatusListTokenInput {
   uri: string; // https://status.tamga.network/<opak>
   bitstring: StatusBitstring;
   iat: number;
-  ttlSec: number; // Tamga'da zorunlu (3600; yayın aralığı kısaltılırsa ona göre)
+  ttlSec: number; // Tamga'da zorunlu: yayın aralığı (SPEC-CRED-0003 §5.1, §8.1; draft-20 `ttl` = yenileme ipucu)
+  /**
+   * `exp − iat` (saniye; SPEC-CRED-0003 §8.1: mutlak sınır, kesinti tamponu — ağın servislerinde 6 saat). Verilmezse
+   * `2 × ttlSec` (0.3.0 davranışı). En az `2 × ttlSec` olmalı.
+   */
+  expSec?: number;
 }
 export async function signStatusListToken(i: StatusListTokenInput): Promise<string> {
+  const expSec = i.expSec ?? i.ttlSec * 2;
+  if (!Number.isInteger(expSec) || expSec < 2 * i.ttlSec) throw new Error("status token exp must be ≥ 2 × ttl");
   const payload = {
     iss: i.iss,
     sub: i.uri,
     iat: i.iat,
-    exp: i.iat + i.ttlSec * 2,
+    exp: i.iat + expSec,
     ttl: i.ttlSec,
     status_list: { bits: BITS, lst: i.bitstring.encodeLst() },
   };
@@ -137,15 +144,20 @@ export interface VerifiedStatusToken {
   bitstring: StatusBitstring;
 }
 /**
- * Verifier tarafı D3/D4/D6: imza (x5c yaprak), sub eşleşmesi, tazelik (ttl×2, `exp`), `iat` gelecekte değil, bits=2, boyut
- * sınırları, idx okuma. Çapa (D5) çağıran tarafta: contentHash ↔ TrustSource.statusAnchor. Hata iletileri adım koduyla başlar
+ * Verifier tarafı D3/D4/D6: imza (x5c yaprak), sub eşleşmesi, tazelik (`exp`), `iat` gelecekte değil, bits=2, boyut
+ * sınırları, idx okuma. Tazelik sınırı `exp`'tir (SPEC-CRED-0003 §8.1; draft-20: `ttl` yenileme ipucudur, geçerlilik sınırı
+ * değil — 0.3.1'de `iat + 2 × ttl` bayatlık kuralı kaldırıldı); azami token yaşı doğrulayıcı politikasında
+ * (`max_status_token_age_sec`) ya da `opts.maxAgeSec` ile. Çapa (D5) çağıran tarafta: contentHash ↔ TrustSource.statusAnchor. Hata iletileri adım koduyla başlar
  * ("D3:", "D4:", "D6:") — doğrulayıcı D4'ü INDETERMINATE (tazelik), ötekileri RED sayar.
  */
 export async function verifyStatusListToken(
   token: string,
   expectedUri: string,
   now: number,
-  opts: { maxSkewSec?: number } = {},
+  opts: {
+    maxSkewSec?: number;
+    /** verilirse `now − iat` bu süreyi aşan token bayattır (D4) */ maxAgeSec?: number;
+  } = {},
 ): Promise<VerifiedStatusToken> {
   if (typeof token !== "string" || token.length > MAX_STATUS_TOKEN_LENGTH)
     throw new Error("D3: status token too large");
@@ -162,8 +174,7 @@ export async function verifyStatusListToken(
     throw new Error("D3: status token iat in the future");
   if (payload.exp !== undefined && (typeof payload.exp !== "number" || !Number.isFinite(payload.exp)))
     throw new Error("D3: status token exp is not a number");
-  const ttl = payload.ttl ?? 3600;
-  if (now - payload.iat > ttl * 2) throw new Error("D4: status token stale");
+  if (opts.maxAgeSec !== undefined && now - payload.iat > opts.maxAgeSec) throw new Error("D4: status token stale");
   if (typeof payload.exp === "number" && payload.exp < now) throw new Error("D4: status token expired");
   return {
     payload,

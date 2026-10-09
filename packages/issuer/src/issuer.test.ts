@@ -106,7 +106,7 @@ describe("status list (SPEC-CRED-0003)", () => {
     expect(v.bitstring.get(8)).toBe(0);
     expect(v.payload.ttl).toBe(3600);
     await expect(verifyStatusListToken(tok, "https://status.tamga.network/other", NOW)).rejects.toThrow(/sub/);
-    await expect(verifyStatusListToken(tok, uri, NOW + 3600 * 3)).rejects.toThrow(/stale/);
+    await expect(verifyStatusListToken(tok, uri, NOW + 3600 * 3)).rejects.toThrow(/D4: status token expired/);
   });
 });
 

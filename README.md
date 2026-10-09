@@ -8,29 +8,29 @@ versioned trust lists (ETSI TS 119 612 model) and a public anchor log; no person
 This repository holds the open-source `@tamga-network/*` packages, the reference verifier, the trust list publisher and the
 sources of the documentation and framework sites.
 
-| | |
-|---|---|
-| Website | [tamga.network](https://tamga.network) |
-| Developer docs | [docs.tamga.network](https://docs.tamga.network) · API reference: [docs.tamga.network/api](https://docs.tamga.network/api/) |
-| Architecture and Reference Framework | [arf.tamga.network](https://arf.tamga.network) |
-| Sandbox test network | [sandbox.tamga.network](https://sandbox.tamga.network) |
-| Security | [SECURITY.md](SECURITY.md) · security@tamga.network |
+|                                      |                                                                                                                             |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Website                              | [tamga.network](https://tamga.network)                                                                                      |
+| Developer docs                       | [docs.tamga.network](https://docs.tamga.network) · API reference: [docs.tamga.network/api](https://docs.tamga.network/api/) |
+| Architecture and Reference Framework | [arf.tamga.network](https://arf.tamga.network)                                                                              |
+| Sandbox test network                 | [sandbox.tamga.network](https://sandbox.tamga.network)                                                                      |
+| Security                             | [SECURITY.md](SECURITY.md) · security@tamga.network                                                                         |
 
 ## Packages
 
-Published on npm as the **0.3.0 test release** — the API may change until the stable 1.0.0.
+Published on npm as the **0.3.1 test release** — the API may change until the stable 1.0.0.
 
-| Package | What it does |
-|---|---|
-| `@tamga-network/core` | Shared building blocks: digests, identifiers, certificate helpers |
-| `@tamga-network/trust` | Loads and verifies the signed trust lists; one read interface, `TrustSource` |
-| `@tamga-network/schemas` | Credential type catalogue: type metadata, JSON Schema, integrity digests |
-| `@tamga-network/sd-jwt` | SD-JWT VC: selective disclosure, key binding, status list |
-| `@tamga-network/mdoc` | ISO/IEC 18013-5 mdoc: CBOR, COSE, issuance and verification |
-| `@tamga-network/issuer` | Issuance (OpenID4VCI) and status list publishing; `/client` for the hosted issuer |
-| `@tamga-network/verifier` | Verification pipeline and OpenID4VP; `/web` page kit, `/zk` zero-knowledge proof verification |
-| `@tamga-network/wallet-core` | Wallet core for Node and React Native: keys, receiving, local checks, presentation |
-| `@tamga-network/zk` | Wallet-side zero-knowledge prover for mdoc (Longfellow ZK) |
+| Package                      | What it does                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `@tamga-network/core`        | Shared building blocks: digests, identifiers, certificate helpers                             |
+| `@tamga-network/trust`       | Loads and verifies the signed trust lists; one read interface, `TrustSource`                  |
+| `@tamga-network/schemas`     | Credential type catalogue: type metadata, JSON Schema, integrity digests                      |
+| `@tamga-network/sd-jwt`      | SD-JWT VC: selective disclosure, key binding, status list                                     |
+| `@tamga-network/mdoc`        | ISO/IEC 18013-5 mdoc: CBOR, COSE, issuance and verification                                   |
+| `@tamga-network/issuer`      | Issuance (OpenID4VCI) and status list publishing; `/client` for the hosted issuer             |
+| `@tamga-network/verifier`    | Verification pipeline and OpenID4VP; `/web` page kit, `/zk` zero-knowledge proof verification |
+| `@tamga-network/wallet-core` | Wallet core for Node and React Native: keys, receiving, local checks, presentation            |
+| `@tamga-network/zk`          | Wallet-side zero-knowledge prover for mdoc (Longfellow ZK)                                    |
 
 ```sh
 npm install @tamga-network/verifier @tamga-network/trust

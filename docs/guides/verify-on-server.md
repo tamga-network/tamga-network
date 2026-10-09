@@ -115,8 +115,8 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
   (`status.value: NOT_APPLICABLE`, nedeni `status.reason`'da). ZK ile sunulan kimlik belgesi bugün 2 yıl geçerlidir ve iptali
   görünmez; bu yolu iptalin sonucu değiştirmediği kullanımlarda (ör. yaş kontrolü) seçin.
 - **`accept_unrevocable_zk`:** `mso_mdoc_zk` kullanan politika bunu açıkça yazmalıdır. `true` iptali denetlenemeyen sunumu
-  kabul eder; `false` yazarsanız her ZK sunumu `INDETERMINATE` döner (adım `D1`, `STATUS_UNREACHABLE`) — iptal denetimi şartsa
-  klasik `mso_mdoc` politikasını kullanın.
+  kabul eder; `false` yazarsanız — ya da alanı hiç yazmazsanız (0.3.1'den beri varsayılan) — her ZK sunumu `INDETERMINATE`
+  döner (adım `D1`, `STATUS_UNREACHABLE`); iptal denetimi şartsa klasik `mso_mdoc` politikasını kullanın.
 - **Yedek yol:** cüzdan ZK desteklemiyorsa sorgunuz eşleşmez; aynı soruyu klasik `mso_mdoc` politikasıyla
   (`age-over-18-mdoc`) sorun. Cüzdan tarafı: `@tamga-network/zk` (Android yerel kütüphanesi hazır, iOS bekliyor); ispatçısı
   olmayan cüzdan klasik yolu kullanır (ZK5).

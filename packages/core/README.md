@@ -14,15 +14,14 @@ npm install @tamga-network/core
 import { computeIssuerId, computeSchemaId, certFingerprintSha256Hex, pemToDer } from "@tamga-network/core";
 
 const der = pemToDer(institutionCertPem);
-const issuerId = computeIssuerId("TR", der);            // keccak256(state ‖ SHA-256(certificate))
+const issuerId = computeIssuerId("TR", der); // keccak256(state ‖ SHA-256(certificate))
 const schemaId = computeSchemaId("urn:tamga:edu:DiplomaCredential:1");
 const fingerprint = certFingerprintSha256Hex(der);
 ```
 
-
 ## Status
 
-Published on npm as the `0.3.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.3.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

@@ -407,60 +407,71 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
   // nonce: yalnız nonce ucundan (OpenID4VCI 1.0 Final §7; token yanıtı c_nonce taşımaz). Tamga profilinde uç zorunlu
   // (SPEC-PROTO-0001 §2.1)
   if (!md.nonce_endpoint) throw new WalletError("issuer_error", "issuer metadata has no nonce_endpoint");
-  const nr = await p.http(md.nonce_endpoint, { method: "POST" });
-  const nonce = nr.status === 200 ? ((await readJson(nr, "issuer")) as { c_nonce?: unknown }).c_nonce : undefined;
-  if (typeof nonce !== "string" || !nonce) throw new WalletError("issuer_error", "c_nonce missing");
+  const nonceEndpoint = md.nonce_endpoint;
+  const fetchNonce = async () => {
+    const nr = await p.http(nonceEndpoint, { method: "POST" });
+    const n = nr.status === 200 ? ((await readJson(nr, "issuer")) as { c_nonce?: unknown }).c_nonce : undefined;
+    if (typeof n !== "string" || !n) throw new WalletError("issuer_error", "c_nonce missing");
+    return n;
+  };
+  const nonce = await fetchNonce();
 
   // anahtarlar + proof'lar (PR6: her kopya farklı anahtar)
   const prefix = p.keyRefPrefix ?? `c${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const copies: ReceivedCopy[] = [];
-  const proofs: string[] = [];
   let keepDpop = false;
   try {
     for (let i = 0; i < batch; i++) {
       const ref = `${prefix}.${i}`;
       const jwk = await p.keys.generate(ref);
-      if (!p.keyAttestor)
-        proofs.push(await signJwt({ typ: PROOF_TYP, jwk }, { aud: issuer, nonce, iat: now }, p.keys, ref));
       copies.push({ combined: "", keyRef: ref, cnf: jwk });
     }
-    // ADR-0025 / TS3: paket anahtarları tek anahtar kanıtında; tek proof, attested_keys[0] ile imzalı
-    if (p.keyAttestor) {
-      const ka = await p.keyAttestor(copies.map((c) => c.cnf));
-      proofs.push(
-        await signJwt(
-          { typ: "openid4vci-proof+jwt", key_attestation: ka },
-          { aud: issuer, nonce, iat: now },
-          p.keys,
-          copies[0].keyRef,
-        ),
-      );
-    }
-    const credBody = JSON.stringify({ credential_configuration_id: vct, proofs: { jwt: proofs } });
-    const cr = p.dpop
-      ? await dpopRequest(
-          p.http,
-          p.dpop,
-          md.credential_endpoint,
-          {
-            method: "POST",
-            headers: { authorization: `DPoP ${p.accessToken}`, "content-type": "application/json" },
-            body: credBody,
-          },
-          { now, accessToken: p.accessToken, randomBytes: p.randomBytes },
-        )
-      : await p.http(md.credential_endpoint, {
-          method: "POST",
-          headers: { authorization: `Bearer ${p.accessToken}`, "content-type": "application/json" },
-          body: credBody,
-        });
-    const body = (await readJson(cr, "issuer")) as {
-      credentials?: Array<{ credential: string; mso_mdoc?: string }>;
-      /** ADR-0031 (Tamga profili): kimlik belgesiyle gelen, sunulamayan takma ad tohumu belgesi */
-      pseudonym_seed?: string;
-      error?: string;
-      error_description?: string;
+    // ADR-0025 / TS3: paket anahtarları tek anahtar kanıtında (c_nonce içermez; yeniden denemede aynısı kullanılır)
+    const ka = p.keyAttestor ? await p.keyAttestor(copies.map((c) => c.cnf)) : undefined;
+    /** c_nonce'a bağlı proof'lar: KA yoksa kopya başına bir proof (PR6); KA varsa tek proof, attested_keys[0] ile imzalı */
+    const signProofs = async (n: string): Promise<string[]> => {
+      const claims = { aud: issuer, nonce: n, iat: now };
+      if (ka)
+        return [await signJwt({ typ: "openid4vci-proof+jwt", key_attestation: ka }, claims, p.keys, copies[0].keyRef)];
+      const out: string[] = []; // sırayla: donanım anahtar deposu eşzamanlı imzayı desteklemeyebilir
+      for (const c of copies) out.push(await signJwt({ typ: PROOF_TYP, jwk: c.cnf }, claims, p.keys, c.keyRef));
+      return out;
     };
+    const requestCredential = async (n: string) => {
+      const credBody = JSON.stringify({ credential_configuration_id: vct, proofs: { jwt: await signProofs(n) } });
+      const r = p.dpop
+        ? await dpopRequest(
+            p.http,
+            p.dpop,
+            md.credential_endpoint,
+            {
+              method: "POST",
+              headers: { authorization: `DPoP ${p.accessToken}`, "content-type": "application/json" },
+              body: credBody,
+            },
+            { now, accessToken: p.accessToken, randomBytes: p.randomBytes },
+          )
+        : await p.http(md.credential_endpoint, {
+            method: "POST",
+            headers: { authorization: `Bearer ${p.accessToken}`, "content-type": "application/json" },
+            body: credBody,
+          });
+      return {
+        cr: r,
+        body: (await readJson(r, "issuer")) as {
+          credentials?: Array<{ credential: string; mso_mdoc?: string }>;
+          /** ADR-0031 (Tamga profili): kimlik belgesiyle gelen, sunulamayan takma ad tohumu belgesi */
+          pseudonym_seed?: string;
+          error?: string;
+          error_description?: string;
+        },
+      };
+    };
+    let { cr, body } = await requestCredential(nonce);
+    // OpenID4VCI 1.0 §8.3.1.2: c_nonce süresi geçmiş / tüketilmiş → nonce ucundan yenisini al, proof'ları yeniden imzala,
+    // bir kez daha dene (sonsuz döngü yok)
+    if (cr.status !== 200 && body.error === "invalid_nonce")
+      ({ cr, body } = await requestCredential(await fetchNonce()));
     if (cr.status !== 200 || !body.credentials)
       throw new WalletError(
         "issuer_error",

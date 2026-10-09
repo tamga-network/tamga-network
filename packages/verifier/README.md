@@ -15,16 +15,23 @@ import { createPresentationRequest, decryptResponse, verifyPresentation } from "
 
 const req = await createPresentationRequest({ signer, dcql, responseUri, requestUriBase }); // req.qrPayload → QR
 const answer = await decryptResponse(jweFromWallet, req.encPrivateKey);
-const { result, claims } = await verifyPresentation({ presentation: answer.vp_token.diploma[0], aud: signer.clientId,
-  nonce: req.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer });
+const { result, claims } = await verifyPresentation({
+  presentation: answer.vp_token.diploma[0],
+  aud: signer.clientId,
+  nonce: req.nonce,
+  policy,
+  policyCredentialId: "diploma",
+  trust,
+  statusCache,
+  rootCertsDer,
+});
 ```
 
 A complete, tested version: [`examples/02-verify-own-server`](https://github.com/tamga-network/tamga-network/tree/main/examples/02-verify-own-server).
 
-
 ## Status
 
-Published on npm as the `0.3.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.3.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

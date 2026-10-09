@@ -85,6 +85,31 @@ describe("status list doğrulama sınırları", () => {
     await expect(verifyStatusListToken(ok, URI, NOW)).resolves.toBeTruthy();
   });
 
+  it("0.3.1: sınır exp — iat + 2 × ttl geçmiş ama exp dolmamış token geçerli; maxAgeSec verilirse D4", async () => {
+    const tok = await signStatusListToken({
+      signer,
+      iss: "x",
+      uri: URI,
+      bitstring: new StatusBitstring(),
+      iat: NOW - 3 * 3600,
+      ttlSec: 120,
+      expSec: 6 * 3600,
+    });
+    const v = await verifyStatusListToken(tok, URI, NOW);
+    expect(v.payload.exp! - v.payload.iat).toBe(6 * 3600);
+    expect(v.payload.ttl).toBe(120);
+    await expect(verifyStatusListToken(tok, URI, NOW, { maxAgeSec: 3600 })).rejects.toThrow(/^D4: status token stale/);
+    await expect(verifyStatusListToken(tok, URI, NOW + 3 * 3600 + 1)).rejects.toThrow(/^D4: status token expired/);
+  });
+
+  it("signStatusListToken: expSec verilmezse 2 × ttl; 2 × ttl'den kısa expSec HATA", async () => {
+    const base = { signer, iss: "x", uri: URI, bitstring: new StatusBitstring(), iat: NOW, ttlSec: 120 };
+    const v = await verifyStatusListToken(await signStatusListToken(base), URI, NOW);
+    expect(v.payload.exp).toBe(NOW + 240);
+    await expect(signStatusListToken({ ...base, expSec: 200 })).rejects.toThrow(/≥ 2 × ttl/);
+    await expect(signStatusListToken({ ...base, expSec: 1.5 })).rejects.toThrow(/≥ 2 × ttl/);
+  });
+
   it("set(): tamsayı olmayan indeks ve 2 bite sığmayan değer HATA", () => {
     const bs = new StatusBitstring(MIN_CAPACITY);
     expect(() => bs.set(1.5, StatusValue.INVALID)).toThrow(/idx/);

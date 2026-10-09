@@ -285,26 +285,37 @@ describe("mso_mdoc_zk — politika ve tam hat", () => {
     expect(result.disclosed_claims).toEqual(["age_over_18"]);
     expect(claims).toEqual({ age_over_18: true });
   }, 60_000);
-  it("accept_unrevocable_zk: false → INDETERMINATE (D1, iptal denetlenemez — ZK4)", async () => {
-    const strict: Policy = { ...policy, credentials: [{ ...policy.credentials[0], accept_unrevocable_zk: false }] };
-    const { result } = await verifyPresentation({
-      presentation: b64u(valid),
-      format: "mso_mdoc_zk",
-      responseUri: S.responseUri,
-      aud: S.clientId,
-      nonce: S.nonce,
-      policy: strict,
-      policyCredentialId: "age",
-      trust: trustWith(),
-      statusCache: new MemoryStatusCache(),
-      rootCertsDer: [rootDer],
-      now: S.now,
-      zk: backend,
-    });
-    expect(result.outcome).toBe("INDETERMINATE");
-    expect(result.failed_step).toBe("D1");
-    expect(result.indeterminate_reason).toBe("STATUS_UNREACHABLE");
-  }, 60_000);
+  it.each([
+    ["false", false],
+    ["verilmemiş (ADR-0044/ZC4 varsayılanı)", undefined],
+  ])(
+    "accept_unrevocable_zk: %s → INDETERMINATE (D1, iptal denetlenemez — ZK4)",
+    async (_l, flag) => {
+      const { accept_unrevocable_zk: _drop, ...pc } = policy.credentials[0];
+      const strict: Policy = {
+        ...policy,
+        credentials: [flag === undefined ? pc : { ...pc, accept_unrevocable_zk: flag }],
+      };
+      const { result } = await verifyPresentation({
+        presentation: b64u(valid),
+        format: "mso_mdoc_zk",
+        responseUri: S.responseUri,
+        aud: S.clientId,
+        nonce: S.nonce,
+        policy: strict,
+        policyCredentialId: "age",
+        trust: trustWith(),
+        statusCache: new MemoryStatusCache(),
+        rootCertsDer: [rootDer],
+        now: S.now,
+        zk: backend,
+      });
+      expect(result.outcome).toBe("INDETERMINATE");
+      expect(result.failed_step).toBe("D1");
+      expect(result.indeterminate_reason).toBe("STATUS_UNREACHABLE");
+    },
+    60_000,
+  );
   it("verifyPresentation: devre dosyası yok → INDETERMINATE (Z1), E4 denetim kaydı yine düşer", async () => {
     const audits: string[] = [];
     const { result } = await verifyPresentation({

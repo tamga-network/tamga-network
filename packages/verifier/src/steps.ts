@@ -267,8 +267,9 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   const issuerRec = ctx.issuerRec;
   if (!a.status) {
     if (a.format === "mso_mdoc_zk") {
-      // ADR-0032 ZK4: indeks gelmez → iptal denetlenemez; politika bunu kabul etmiyorsa DOĞRULANAMADI
-      if (ctx.pc?.accept_unrevocable_zk === false)
+      // ADR-0032 ZK4: indeks gelmez → iptal denetlenemez; politika bunu AÇIKÇA kabul etmiyorsa DOĞRULANAMADI (ADR-0044/ZC4:
+      // alan yoksa false)
+      if (ctx.pc?.accept_unrevocable_zk !== true)
         return indet(
           "D1",
           "STATUS_UNREACHABLE",
@@ -295,7 +296,7 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
     tok = await verifyStatusListToken(cached.token, a.status.status_list.uri, now);
   } catch (e) {
     const msg = (e as Error).message;
-    // önbellekteki token ttl×2 aşımı → tazelik sorunu, geçersizlik değil (AP2)
+    // önbellekteki token exp aşımı → tazelik sorunu, geçersizlik değil (AP2). Azami yaş politikada (aşağıda, D4)
     if (msg.startsWith("D4:")) return indet("D4", "STATUS_STALE", `status token: ${msg}`);
     if (msg.startsWith("D6:")) return reject("D6", `status token: ${msg}`);
     return reject("D3", `status token: ${msg}`);

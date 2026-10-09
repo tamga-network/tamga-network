@@ -2,12 +2,27 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The documents (docs, ARF) are 1.0.0 until the public
 announcement; changes before it are folded into this release. The `@tamga-network/*` packages are versioned separately: they
-are published on npm as the `0.3.0` test release (the API may change in test releases); the stable `1.0.0` comes when
+are published on npm as the `0.3.1` test release (the API may change in test releases); the stable `1.0.0` comes when
 everything is ready.
 
 ## [1.0.0] — 2026-10-04
 
 First release of the Tamga Network documentation set and reference implementation.
+
+### 2026-10-09 — packages: 0.3.1 test release (patch)
+
+- `@tamga-network/sd-jwt` `verifyStatusListToken`: the `iat + 2 × ttl` staleness rule is removed. The limit is the token's
+  `exp` plus the policy's `max_status_token_age_sec` (SPEC-CRED-0003 §8.1; draft-20 `ttl` is a refresh hint). The 6-hour
+  outage buffer of the network's status lists now reaches verifiers on 0.3.1. An optional `maxAgeSec` sets an age limit for
+  callers without a policy. A newer anchor that cannot be fetched still gives INDETERMINATE (D5).
+- `signStatusListToken` takes an optional `expSec` (`exp − iat`, at least `2 × ttl`; default `2 × ttl` as before).
+- `@tamga-network/verifier`: a missing `accept_unrevocable_zk` now means `false` (ADR-0044 ZC4) — a ZK presentation is
+  INDETERMINATE (D1) unless the policy explicitly sets `true`. Policies that accept ZK presentations must now say so.
+  Tamga Verify's `age-over-18-zk` sets it explicitly and `/policies` shows the flag for ZK policies.
+- `@tamga-network/wallet-core`: on `invalid_nonce` from the credential endpoint (OpenID4VCI 1.0 §8.3.1.2) the wallet fetches
+  a fresh `c_nonce` from the nonce endpoint, re-signs the proofs and retries once. The keys and the key attestation are reused.
+- The other packages (`core`, `mdoc`, `schemas`, `trust`, `issuer`, `zk`) only move to 0.3.1 with the set; their code is
+  unchanged. `sdk_version` is `@tamga-network/verifier@0.3.1`.
 
 ### 2026-10-09 — revocation lists: decisions on noise, `exp`, hosted service; ZK short-lived copies
 

@@ -184,7 +184,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.3.0",
+  "sdk_version": "@tamga-network/verifier@0.3.1",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",
@@ -245,8 +245,9 @@ Ayrıca şu durumlar `INDETERMINATE` verir, `REJECTED` vermez:
   `CHAIN_UNREACHABLE`, B → `SCHEMA_UNREACHABLE`, C/E/T0 → `INDEXER_STALE`, D → `STATUS_UNREACHABLE`); `failed_reason`'a
   istisna iletisi girmez (AP3), yalnız adım ve hata türü. Sonuç E4 denetim kaydına yine düşer.
 - **ZK sunumu ve `accept_unrevocable_zk: false`:** ZK sunumunda iptal indeksi gelmez (ZK4); politika iptal denetimini şart
-  koşuyorsa sonuç `D1` / `STATUS_UNREACHABLE`. `true` (ya da verilmemişse) kabul edilir: `status.value = NOT_APPLICABLE`,
-  `status.reason` dolu.
+  koşuyorsa sonuç `D1` / `STATUS_UNREACHABLE`. Yalnız açıkça `true` yazılmışsa kabul edilir: `status.value = NOT_APPLICABLE`,
+  `status.reason` dolu. **Alan verilmemişse `false` sayılır** (`ADR-0044/ZC4`; doğrulayıcı paketi 0.3.0'a kadar verilmeyen
+  alanı `true` sayıyordu).
 
 ## 2.4 `disclosed_claims` — yalnızca adlar
 

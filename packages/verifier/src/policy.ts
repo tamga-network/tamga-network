@@ -25,7 +25,8 @@ export interface PolicyCredential {
   /**
    * ADR-0032 ZK4: ZK sunumunda iptal listesi indeksi gelmez → iptal denetlenemez (K6; ADR-0032 uygulama notu). `true`: bu
    * bilinerek kabul edilir (sonuç `status.value = NOT_APPLICABLE`, `status.reason` ile). `false`: iptal denetlenemediği için
-   * DOĞRULANAMADI (D1). Verilmezse `true` sayılır; `mso_mdoc_zk` kullanan politikalar bunu AÇIKÇA yazmalıdır.
+   * DOĞRULANAMADI (D1). Verilmezse `false` sayılır (ADR-0044/ZC4: politika açıkça kabul etmedikçe DOĞRULANAMADI; 0.3.1'e
+   * kadar varsayılan `true` idi) — ZK sunumunu kabul edecek politika `true`'yu AÇIKÇA yazmalıdır.
    */
   accept_unrevocable_zk?: boolean;
 }

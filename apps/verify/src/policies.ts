@@ -164,7 +164,8 @@ export const POLICIES: Policy[] = [
         namespace: "tamga.id.1",
         required_claims: ["age_over_18"],
         constraints: { age_over_18: true },
-        // ADR-0032 ZK4: iptal indeksi gelmez; iptali denetlenemeyen sunum (K6) bilinerek kabul edilir (sonuç NOT_APPLICABLE + reason)
+        // ADR-0032 ZK4: iptal indeksi gelmez; iptali denetlenemeyen sunum (K6) bilinerek kabul edilir (sonuç NOT_APPLICABLE + reason).
+        // Varsayılan false (ADR-0044/ZC4) — until ADR-0044 short-lived ZK copies ship (0.4.0)
         accept_unrevocable_zk: true,
       },
     ],
@@ -293,4 +294,12 @@ export const policySummaries = (policies: Policy[] = POLICIES) =>
       claims: p.credentials.flatMap((c) => c.required_claims),
       proximity: !!p.proximity,
       format: p.credentials[0]?.format ?? "dc+sd-jwt",
+      // ADR-0044/ZC4: ZK politikası iptali denetlenemeyen sunumu açıkça kabul ediyor mu (yalnız mso_mdoc_zk'da)
+      ...(p.credentials.some((c) => c.format === "mso_mdoc_zk")
+        ? {
+            accept_unrevocable_zk: p.credentials.every(
+              (c) => c.format !== "mso_mdoc_zk" || c.accept_unrevocable_zk === true,
+            ),
+          }
+        : {}),
     }));

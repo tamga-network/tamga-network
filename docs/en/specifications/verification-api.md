@@ -178,7 +178,7 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.3.0",
+  "sdk_version": "@tamga-network/verifier@0.3.1",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",
@@ -239,8 +239,9 @@ The following also give `INDETERMINATE`, not `REJECTED`:
   `CHAIN_UNREACHABLE`, B → `SCHEMA_UNREACHABLE`, C/E/T0 → `INDEXER_STALE`, D → `STATUS_UNREACHABLE`); the exception message is
   not put in `failed_reason` (AP3), only the step and the error type. The result still goes to the E4 audit record.
 - **ZK presentation with `accept_unrevocable_zk: false`:** a ZK presentation carries no revocation index (ZK4); if the policy
-  requires a revocation check the outcome is `D1` / `STATUS_UNREACHABLE`. With `true` (or when omitted) it is accepted:
-  `status.value = NOT_APPLICABLE`, with `status.reason` set.
+  requires a revocation check the outcome is `D1` / `STATUS_UNREACHABLE`. Only with an explicit `true` is it accepted:
+  `status.value = NOT_APPLICABLE`, with `status.reason` set. **When omitted the field means `false`** (`ADR-0044/ZC4`; the
+  verifier package treated a missing field as `true` up to 0.3.0).
 
 ## 2.4 `disclosed_claims` — names only
 
