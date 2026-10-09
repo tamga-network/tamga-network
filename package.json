@@ -2,7 +2,7 @@
   "name": "tamga-network",
   "private": true,
   "version": "1.0.0",
-  "description": "Tamga Network — eIDAS 2.0 / ETSI / EUDI uyumlu dijital güven altyapısı (public monorepo). Faz B: imzalı güven listeleri; Faz 0: Besu.",
+  "description": "Tamga Network — digital trust network on the EU digital identity profiles (eIDAS 2.0 / EUDI): open-source packages, reference verifier, trust list publisher and documentation sources.",
   "license": "Apache-2.0",
   "type": "module",
   "workspaces": [
@@ -34,7 +34,6 @@
     "docs:build": "npm run docs:sync && node scripts/public-text-check.mjs && vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "docs:check": "node scripts/public-text-check.mjs && node scripts/docs-i18n-check.mjs",
-    "docs:index": "node scripts/master-index.mjs",
     "arf:sync": "node scripts/arf-sync.mjs",
     "arf:check": "node scripts/arf-sync.mjs --check",
     "arf:snapshot": "node scripts/arf-sync.mjs --snapshot",

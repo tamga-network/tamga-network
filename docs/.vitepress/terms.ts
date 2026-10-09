@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type MarkdownIt from "markdown-it";
+import { sourceRel } from "./doc-index";
 
 export type Term = { label: string; expansion?: string; en: string; tr: string; tr_label?: string };
 export const TERMS: Record<string, Term> = JSON.parse(
@@ -22,7 +23,7 @@ export function termTips(md: MarkdownIt, langOf: (relativePath: string) => "en" 
   // docLinks'ten SONRA çalışır (push): [[DOC-ID]] içeren düğüm html_inline olmuş olabilir; terimler orada da işlenir.
   md.core.ruler.push("tamga-terms", (state) => {
     const env = state.env as { relativePath?: string; tamgaTermsSeen?: Set<string> };
-    const lang = langOf(env.relativePath ?? "");
+    const lang = langOf(sourceRel(env));
     const seen = (env.tamgaTermsSeen ??= new Set());
     const esc = md.utils.escapeHtml;
     for (const tok of state.tokens) {

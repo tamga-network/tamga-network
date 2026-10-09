@@ -43,7 +43,7 @@ the general overview is at [tamga.network](https://tamga.network/en/learn).
 | Register your site as a verifier | [[GUIDE-0008]] | — |
 | Issue your institution's credentials to people's wallets | [[GUIDE-0003]] | `@tamga-network/issuer` (+ `/client`) |
 | Build a Tamga-compatible wallet | [[GUIDE-0005]], checklist [[GUIDE-0010]] | `@tamga-network/wallet-core` |
-| Read trust lists, and later run a network node | [[GUIDE-0006]] | `@tamga-network/trust`, `contracts/`, `network/` |
+| Read trust lists, and later run a network node | [[GUIDE-0006]] | `@tamga-network/trust` |
 | Connect your country's trust list to the network | [[GUIDE-0011]] | `apps/trust-publisher` |
 | Show that your application follows the rules | [[GUIDE-0009]] | `conformance/` |
 | Test end to end without touching the real network (test network) | [[GUIDE-0013]] | `sandbox.tamga.network` |

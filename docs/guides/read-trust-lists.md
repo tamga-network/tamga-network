@@ -103,7 +103,7 @@ Yapılandırmanıza yeni bir kaynak adresi ve kontrat adresleri eklenir.
 **Ağ.** Hyperledger Besu, QBFT uzlaşması, izinli ağ (yalnızca izinli düğümler bağlanır). Zincire kişisel veri, belge ya da belge
 özeti **yazılmaz**; zincir yalnızca güven kayıtlarını taşır. İptal listeleri zincir dışında kalır ([[ADR-0008]]).
 
-**Kontratlar** (`contracts/`, Solidity + Foundry):
+**Kontratlar** (Solidity + Foundry; kaynak kodu zincir aşaması açılınca yayımlanır):
 
 | Kontrat | Ne tutar |
 |---|---|
@@ -116,10 +116,6 @@ Yapılandırmanıza yeni bir kaynak adresi ve kontrat adresleri eklenir.
 | `CrossRecognition` | ülkeler arası tanıma |
 | `TrustQueries` | tek okuma yüzeyi (TrustSource'un zincir tarafı) |
 
-```sh
-cd contracts && forge build && forge test   # Foundry gerekir
-```
-
 **Düğüm ve validator operatörleri için:**
 
 | Rol | Ne yapar | Şart |
@@ -127,8 +123,8 @@ cd contracts && forge build && forge test   # Foundry gerekir
 | Validator | blok önerir ve imzalar | bağımsız kurum, yazılı kabul, anahtar HSM'de |
 | Tam düğüm | zinciri doğrular, okur; imzalamaz | izin listesinde kayıt |
 
-Kurulum adımları (genesis, QBFT ayarları, izin listesi, düğüm tanımları) [[ARCH-0002]]'de; ağ topolojisi ve faz modeli
-[[ARCH-0001]]'de. Geçişte liste arşivi kontrat çağrılarına yeniden oynatılır; iki uygulama aynı uyum vektörlerini geçmeden
+Kurulum adımları (genesis, QBFT ayarları, izin listesi, düğüm tanımları) ve ağ topolojisi zincir aşaması açılınca
+yayımlanır. Geçişte liste arşivi kontrat çağrılarına yeniden oynatılır; iki uygulama aynı uyum vektörlerini geçmeden
 geçiş tamamlanmış sayılmaz.
 
 ## Kurallar

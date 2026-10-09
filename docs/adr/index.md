@@ -24,5 +24,5 @@ değişir; eski kayıt silinmez, "yerini aldı" olarak işaretlenir.
 ## Süreç
 
 1. Öneri olarak yazılır (durum: Öneri).
-2. Proje yönetimi kabul eder; tarih kaydedilir ve karar, [karar dizinine](https://github.com/tamga-network/tamga-network/blob/main/DECISIONS.md) bir `D-*` koduyla eklenir.
+2. Proje yönetimi kabul eder; tarih kaydedilir ve karar bir `D-*` kodu alır.
 3. Etkilenen spesifikasyonlar ve [Tamga ARF](https://arf.tamga.network/tr/) belgeleri aynı çalışmada güncellenir.

@@ -53,5 +53,5 @@ bir kuralın tam metni gerektiğinde gelin. Her şartname kısa bir "Kısaca" b�
 Kimlikler (`SPEC-…`) kalıcıdır; dosya adı ya da başlık değişse de atıflar bozulmaz. Bütün bağlayıcı kuralların tek listesi:
 [Bağlayıcı kurallar](/rules).
 
-Zincir aşamasına ait şartnameler (güven katmanı kontratları, ajan yetkilendirme) bugün kullanılmaz; depoda `docs/ledger/`
-klasöründe durur.
+Zincir aşamasına ait şartnameler (güven katmanı kontratları, ajan yetkilendirme) bugün kullanılmaz; zincir aşaması açılınca
+yayımlanır.

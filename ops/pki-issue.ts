@@ -53,9 +53,7 @@ const PKI = PROD
   ? resolve(
       arg("pki-dir") ??
         process.env.TAMGA_PROD_PKI_DIR ??
-        fail(
-          "--prod: üretim PKI klasörü verilmedi (TAMGA_PROD_PKI_DIR=<klasör> ya da --pki-dir <klasör>; ops/README.md)",
-        ),
+        fail("--prod: üretim PKI klasörü verilmedi (TAMGA_PROD_PKI_DIR=<klasör> ya da --pki-dir <klasör>)"),
     )
   : DEV_PKI;
 if (PROD && resolve(PKI) === DEV_PKI) fail("--prod ile depodaki ops/pki kullanılmaz (orası geliştirme PKI'sı)");

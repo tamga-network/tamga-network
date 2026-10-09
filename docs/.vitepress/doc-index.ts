@@ -31,13 +31,13 @@ export const ARF_PAGES: Record<string, string> = {
   "FW-ONB-0001": "onboarding",
 };
 
-/** Sitede sayfası olmayan kök belgeler: GitHub'daki kaynağa bağlanır. INVARIANTS sitede /rules sayfasıdır. */
+/**
+ * Sitede sayfası olan kök belgeler. INVARIANTS sitede /rules sayfasıdır; iç karar kütüğüne (DECISIONS) verilen atıf karar
+ * kayıtları sayfasına (/adr/) gider. Diğer iç kök belgeler public depoda yoktur: atıfları bağlantısız kod olarak görünür.
+ */
 const ROOT_LINKS: Record<string, { title: string; path?: string; github?: string }> = {
   INVARIANTS: { title: "Binding rules · Bağlayıcı kurallar", path: "/rules" },
-  DECISIONS: { title: "DECISIONS", github: "DECISIONS.md" },
-  SCENARIOS: { title: "SCENARIOS", github: "SCENARIOS.md" },
-  MASTER_INDEX: { title: "MASTER_INDEX", github: "MASTER_INDEX.md" },
-  "DOCUMENTATION-STANDARD": { title: "DOCUMENTATION-STANDARD", github: "DOCUMENTATION-STANDARD.md" },
+  DECISIONS: { title: "Decision records · Karar kayıtları", path: "/adr/" },
 };
 
 /** `src`: docs/'a göre kaynak yolu (`specifications/wallet.md`, `en/specifications/wallet.md`); `path`: sitedeki adres. */
@@ -112,11 +112,23 @@ export function buildDocIndex(docsDir: string, lang: Lang = "tr"): Map<string, E
 
 export type Resolved = { href: string; title: string } | undefined;
 
+/**
+ * Sayfanın kaynak yoluna göre göreli yolu. VitePress `rewrites` sonrası `relativePath` yayın yoludur (`docs/en/adr/x.md` →
+ * `adr/x.md`); dil `docsLangOf` ile kaynaktan anlaşılsın diye İngilizce kaynaklara `en/` öneki geri eklenir.
+ */
+export function sourceRel(env: unknown): string {
+  // `path` de yayın yoludur; kaynak dosya `realPath`'tedir.
+  const e = (env ?? {}) as { relativePath?: string; realPath?: string };
+  const rel = e.relativePath ?? "";
+  const src = (e.realPath ?? "").split(sep).join("/");
+  return /\/docs\/en\//.test(src) && !rel.startsWith("en/") ? "en/" + rel : rel;
+}
+
 /** [[DOC-ID]] → bağlantı; [[DOC-ID]]/KOD → bağlantı + kod. `resolve` sayfanın göreli yolunu da alır (dil öneki için). */
 export function docLinks(md: MarkdownIt, resolve: (id: string, relativePath: string) => Resolved): void {
   const ID_RE = /\[\[([A-Z][A-Z0-9_-]+)\]\](\/[A-Za-z0-9.-]+)?/g;
   md.core.ruler.after("inline", "tamga-doc-links", (state) => {
-    const rel: string = (state.env as { relativePath?: string })?.relativePath ?? "";
+    const rel = sourceRel(state.env);
     for (const tok of state.tokens) {
       if (tok.type !== "inline" || !tok.children) continue;
       for (const child of tok.children) {
@@ -144,7 +156,7 @@ export function localeLinks(md: MarkdownIt, isTr: (relativePath: string) => bool
   const fix = (href: string) => (skip(href) ? href : "/tr" + href);
   const fixHtml = (html: string) => html.replace(/href="(\/[^"]*)"/g, (_m, h: string) => `href="${fix(h)}"`);
   md.core.ruler.push("tamga-locale-links", (state) => {
-    const rel: string = (state.env as { relativePath?: string })?.relativePath ?? "";
+    const rel = sourceRel(state.env);
     if (!isTr(rel)) return;
     for (const tok of state.tokens) {
       if (tok.type === "html_block") tok.content = fixHtml(tok.content);

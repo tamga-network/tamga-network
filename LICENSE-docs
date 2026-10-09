@@ -1,9 +1,8 @@
 Documentation License — CC BY 4.0
 
-All documentation in this repository (the `docs/` directory and the Markdown files at the
-repository root: guides, concepts, specifications, architecture decision records, architecture,
-framework documents, background research, glossary, decision register) is licensed under the Creative Commons Attribution 4.0
-International License (CC BY 4.0).
+All documentation in this repository (the `docs/` and `arf/` directories and the Markdown files at the repository root:
+guides, concepts, specifications, decision records, architecture, framework documents, glossary, binding rules) is licensed
+under the Creative Commons Attribution 4.0 International License (CC BY 4.0).
 
 You are free to share and adapt the material for any purpose, even commercially, provided you
 give appropriate credit ("Tamga Network — https://tamga.network"), provide a link to the
@@ -11,7 +10,7 @@ license, and indicate if changes were made.
 
 Full license text: https://creativecommons.org/licenses/by/4.0/legalcode
 
-Source code in this repository (packages/, apps/, contracts/, network/, ops/) is licensed
-separately under the Apache License 2.0 — see the LICENSE file.
+Source code in this repository is licensed separately under the Apache License 2.0 — see the
+LICENSE file.
 
 Copyright 2026 Tamga Network

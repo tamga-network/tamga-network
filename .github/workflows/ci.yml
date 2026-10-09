@@ -1,9 +1,9 @@
-# tamga-network CI — her push / PR'da. Uzak depo (github.com/tamga-network/tamga-network) açılınca etkinleşir.
-# Kurallar: CONTRIBUTING.md (ön koşul eksikse sessiz atlama yok: TAMGA_REQUIRE_FIXTURES=1).
+# tamga-network CI — on every push to main and every pull request.
+# Missing prerequisites fail instead of being skipped silently (TAMGA_REQUIRE_FIXTURES=1).
 name: ci
 on:
   push:
-    branches: [main] # geliştirme yansısı iş dalını main'e iter; konu dalları pull_request ile denetlenir
+    branches: [main]
   pull_request:
 permissions:
   contents: read
@@ -20,17 +20,19 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      # dev PKI + şema kataloğu + güven listeleri (geçici; CI anahtarları hiçbir yere yayınlanmaz)
-      # setup: güven listesi iki kez derlenir — geri sarma testi eski (imzası geçerli) bir sürüm ister
+      # development PKI + schema catalogue + trust lists (temporary; CI keys are never published).
+      # The trust list is built twice: the rollback test needs an older, validly signed version.
       - run: npm run setup
       - run: npm test
       - run: npm run typecheck
       - run: npm run format:check
       - run: node scripts/sync-invariants.mjs --check
-      # iç belge dizini ve karar kütüğünün public kısa sürümü yalnızca geliştirme deposunda bulunur
-      - run: if [ -f MASTER_INDEX.md ]; then node scripts/master-index.mjs --check; fi
-      - run: if [ -f scripts/decisions-public.mjs ]; then node scripts/decisions-public.mjs --check; fi
+      # internal document index: present only in the development repository
+      - run: if [ -f scripts/master-index.mjs ]; then node scripts/master-index.mjs --check; fi
       - run: npm run arf:check
       - run: npm run docs:check
-      - name: yayın hazırlığı + duman testi (npm'e yayın YOK)
+      # @tamga-network/zk is left out: its compiled Android libraries are not in the repository (see release.yml)
+      - name: release preparation + smoke test (no npm publish)
+        env:
+          TAMGA_PACK_PACKAGES: core mdoc schemas sd-jwt trust issuer verifier wallet-core
         run: npm run release:check

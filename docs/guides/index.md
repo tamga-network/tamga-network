@@ -41,7 +41,7 @@ genel anlatım [tamga.network](https://tamga.network/tr/learn)'tedir.
 | Sitenizi doğrulayıcı olarak kaydettirmek | [[GUIDE-0008]] | — |
 | Kurumunuzun belgelerini kişilerin cüzdanına vermek | [[GUIDE-0003]] | `@tamga-network/issuer` (+ `/client`) |
 | Tamga uyumlu bir cüzdan geliştirmek | [[GUIDE-0005]], kontrol listesi [[GUIDE-0010]] | `@tamga-network/wallet-core` |
-| Güven listelerini okumak, ileride ağ düğümü çalıştırmak | [[GUIDE-0006]] | `@tamga-network/trust`, `contracts/`, `network/` |
+| Güven listelerini okumak, ileride ağ düğümü çalıştırmak | [[GUIDE-0006]] | `@tamga-network/trust` |
 | Ülkenizin güven listesini ağa bağlamak | [[GUIDE-0011]] | `apps/trust-publisher` |
 | Uygulamanızın kurallara uyduğunu göstermek | [[GUIDE-0009]] | `conformance/` |
 | Gerçek ağa dokunmadan uçtan uca denemek (test ağı) | [[GUIDE-0013]] | `sandbox.tamga.network` |

@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-08
+last_updated: 2026-10-09
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 357 kodlanmış değişmez, 49 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 287 kodlanmış değişmez, 43 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -418,77 +418,6 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ARCH-0003/CMP9` | Doğrulama sonucu üç değerlidir: ACCEPTED / REJECTED / INDETERMINATE. |
 
 
-## ARCH-0004
-
-*"Sunucular ve işletim"*
-
-| Kod | Açıklama |
-|---|---|
-| `ARCH-0004/O1` | `8545` JSON-RPC hiçbir koşulda internete açılmaz (§3). |
-| `ARCH-0004/O2` | Yükseltmeler önce staging'de aynı adımlarla prova edilir (§1). |
-| `ARCH-0004/O3` | Credential imzalama anahtarı çevrimdışı HSM'de; status anahtarı ayrı ve çevrimiçi (§4). |
-| `ARCH-0004/O4` | Doğrulama logları claim değerlerini ve `idx`'i saklamaz (§5.2, §5.3). |
-| `ARCH-0004/O5` | CDN erişim logu tutulmaz veya IP'siz ve 7 günlüktür (§5.4). |
-| `ARCH-0004/O6` | Issuer DB yedeği zincir yedeğinden önceliklidir (§7.3). |
-| `ARCH-0004/O7` | İndeksleyici her zaman sıfırdan yeniden oynatılabilir olmalıdır (§8). |
-| `ARCH-0004/SEV1` | Zincir durdu; credential anahtarı sızdı | 15 dk müdahale, 7/24 |
-| `ARCH-0004/SEV2` | İndeksleyici bayat > 15 dk; status yayını 2 döngü kaçtı | 1 sa, mesai + nöbet |
-| `ARCH-0004/SEV3` | Şema CDN 5xx; tek issuer service down | 1 iş günü |
-
-
-## ARCH-0005
-
-*"Paket yayınlama"*
-
-| Kod | Açıklama |
-|---|---|
-| `ARCH-0005/P1` | Hiçbir Tamga paketi `postinstall` betiği içermez. |
-| `ARCH-0005/P2` | Yayın yalnızca CI'dan, OIDC ile; uzun ömürlü npm token'ı yoktur. |
-| `ARCH-0005/P3` | Her sürüm provenance ve imza taşır. |
-| `ARCH-0005/P4` | Spec MAJOR'u artarsa etkilenen SDK MAJOR'u da artar. |
-| `ARCH-0005/P5` | Doğrulama sonucu `checks_performed` / `checks_skipped` taşır. |
-| `ARCH-0005/P6` | SDK, tanımadığı kontrat sürümü görünce `INDETERMINATE` döner, kabul etmez. |
-| `ARCH-0005/P7` | Taahhüt testleri (T1–T8) yayın öncesi zorunludur. |
-| `ARCH-0005/P8` | `@tamga-network/schemas` her şema için `contentHash` taşır. |
-| `ARCH-0005/P9` | İş mantığı TypeScript'te kanoniktir; diğer diller aynı test vektörleriyle doğrulanır. |
-
-
-## PM-GOV-0001
-
-*Yönetişim ve İşletim Politikası — Kodla Sınırlanamayan Yetkiler*
-
-| Kod | Açıklama |
-|---|---|
-| `PM-GOV-0001/G1` | Barındırılan hizmetlerde imzalama anahtarı **asla** vakıfta olmaz. |
-| `PM-GOV-0001/G2` | Hiçbir Tamga altyapısı IP adresi loglamaz. |
-| `PM-GOV-0001/G3` | Vakıf barındırılmış indeksleyici hizmeti sunmaz. |
-| `PM-GOV-0001/G4` | Şema istatistikleri kova boyutu < 50 ise yayınlanmaz. |
-| `PM-GOV-0001/G5` | Alan adı gerçek kişi adına kayıtlı olamaz. |
-| `PM-GOV-0001/G6` | Her yumuşak yetkinin ölçülebilir bir tripwire eşiği vardır. |
-| `PM-GOV-0001/G7` | Faz 0 sınırları katılımcılara yazılı bildirilir. |
-| `PM-GOV-0001/G8` | Şeffaflık raporu üç ayda bir, gecikmesiz yayınlanır. |
-
-
-## SPEC-AGENT-0001
-
-*"Ajan yetkilendirme (zincir aşaması)"*
-
-| Kod | Açıklama |
-|---|---|
-| `SPEC-AGENT-0001/AG1` | Agent'ın kendi kimliği yoktur; yalnızca türetilmiş işlemsel yetkisi vardır. |
-| `SPEC-AGENT-0001/AG2` | Süresiz delegasyon yoktur; her delegasyon `validUntil` taşır. |
-| `SPEC-AGENT-0001/AG3` | Delegasyon koşulsuz ve anında iptal edilebilir (kill switch); iptal ileriye dönük kesindir, geçmiş işlemleri geri almaz. |
-| `SPEC-AGENT-0001/AG4` | Delegasyon sorumluluğu velide (principal) kalır. |
-| `SPEC-AGENT-0001/AG5` | Her agent işlemi delegasyon referansıyla loglanır. |
-| `SPEC-AGENT-0001/AG6` | Agent kimlik credential'ı sunamaz; yalnızca işlemsel yetki taşır. |
-| `SPEC-AGENT-0001/AG7` | `scope` genişletilebilir tasarlanır; `pay:*` Faz 0'da tanımlı değildir. |
-| `SPEC-AGENT-0001/AG8` | Faz 0'da zincir üstü credential-gating yoktur; hiçbir kontrat bir credential'ın geçerliliğini zincirde kontrol etmez. |
-| `SPEC-AGENT-0001/AG9` | Zincir bir credential'ın iptal durumunu göremez ([[ADR-0008]], [[SPEC-CRED-0003]]/S1); gating "credential doğrulama" olarak zincirde uygulanamaz. |
-| `SPEC-AGENT-0001/AG10` | Gelecekte gating açılırsa zincir credential'ı doğrulamaz; yalnızca kayıtlı bir verifier'ın imzalı beyanına güvenir (güven kayması dokümante edilir). |
-| `SPEC-AGENT-0001/AG11` | Beyanı üreten verifier RelyingPartyRegistry'de `ACTIVE` olmalıdır; beyan verifier'ın kayıtlı sertifikasıyla (`accessCertFingerprint`) doğrulanır. |
-| `SPEC-AGENT-0001/AG12` | Beyan taze olmalıdır (azami yaş, ör. ≤ 15 dk) ve tek kullanımlık nonce taşır; nonce tüketimi atomiktir. |
-
-
 ## SPEC-API-0001
 
 *"Doğrulama hattı ve API"*
@@ -508,53 +437,6 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. |
 | `SPEC-API-0001/AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır. |
 | `SPEC-API-0001/AP10` | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
-
-
-## SPEC-BC-0001
-
-*"Güven katmanı kontratları"*
-
-| Kod | Açıklama |
-|---|---|
-| `SPEC-BC-0001/N1` | Namespace sahibi olmayan çağıran yazamaz; tek istisna `Governance` yürütmesi. |
-| `SPEC-BC-0001/GV1` | Çıkarma/çıkış mevcut kayıtları ve credential'ları geçersiz kılmaz. |
-| `SPEC-BC-0001/GV2` | NETWORK şeması yalnızca `Governance` üzerinden kaydedilir. |
-| `SPEC-BC-0001/CA1` | `certFingerprint` bir kez yazılır; yeni sertifika = yeni `caId`. |
-| `SPEC-BC-0001/CA2` | `RETIRED` CA: operasyon ve eski credential'lar sürer; `REVOKED` CA: credential'lar düşer, operasyon sürer. |
-| `SPEC-BC-0001/CA3` | Yeni issuer yalnızca `ACTIVE` CA'ya bağlanabilir. |
-| `SPEC-BC-0001/I1` | Şema yetkisi allowlist'tir; varsayılan `false`. |
-| `SPEC-BC-0001/I2` | Doğrulama `isCredentialAcceptable(id, iat)` kullanır; `isValidIssuer` yalnızca ihraçtır. |
-| `SPEC-BC-0001/I3` | Şema yetkisi zaman penceresidir; doğrulama `iat`'a göre bakar. |
-| `SPEC-BC-0001/I4` | `REVOKED` issuer'ın listesini halefi yayınlayabilir. |
-| `SPEC-BC-0001/SC1` | Şemanın `vctURI` ve `contentHash`'i asla güncellenmez. |
-| `SPEC-BC-0001/SC3` | `DEPRECATED` şema doğrulanabilir kalır. |
-| `SPEC-BC-0001/L1` | Status list `version` monoton artar. |
-| `SPEC-BC-0001/L2` | `listSize >= 100.000`. |
-| `SPEC-BC-0001/L3` | `bitsPerEntry == 2`. |
-| `SPEC-BC-0001/R1` | Issuer delegate anahtarı ulusal kayıtlara yazamaz. |
-| `SPEC-BC-0001/R2` | Askıya alınmış issuer status list yayınlayamaz. |
-| `SPEC-BC-0001/GA1` | Ücretsiz gas, maliyet yokluğu değildir. |
-| `SPEC-BC-0001/GV3` | Asgari mutlak oy 2; iki üyeli ağda çıkarma imkânsızdır. |
-| `SPEC-BC-0001/GV4` | Çıkarılmış/çekilmiş devlet yeniden kabul edilebilir. |
-| `SPEC-BC-0001/DP1` | Hiçbir kontrat kişisel veri, credential içeriği veya credential hash'i saklamaz. |
-
-
-## SPEC-BC-0002
-
-*"Emanet ve hesap verebilir açıklama"*
-
-| Kod | Açıklama |
-|---|---|
-| `SPEC-BC-0002/GD1` | **Zincirde sır yok:** kişisel veri, eşleştirme, pay, ciphertext, düz-metin sonuç asla zincirde — yalnızca commitment/hash, kompozisyon, policy, denetim izi. |
-| `SPEC-BC-0002/GD2` | **Devlet-bazlı anahtar:** bir devletin seti yalnızca kendi vatandaşını çözer (kriptografik); başka devletin anahtarı çözemez. |
-| `SPEC-BC-0002/GD3` | **3-of-5 + yürütme-dışı:** `threshold ≥ 3`, `size = 5`, `executiveSeats ≤ threshold−1`, her `execute`'ta `nonExecutiveApprovals ≥ 1`. |
-| `SPEC-BC-0002/GD4` | **Egemenlik:** seti yalnızca home-state kurar/günceller (`onlyOwnerState`, [[ADR-0002]]); kompozisyon on-chain yayınlanır. |
-| `SPEC-BC-0002/GD5` | **DKG + threshold:** anahtar hiç yeniden kurulmaz; merkezî üretim yok. |
-| `SPEC-BC-0002/GD6` | **Escrow-geçerlilik:** escrow makbuzu olmayan pseudonym ağ-geçersiz; escrow verifiable-encryption ile doğrulanır. |
-| `SPEC-BC-0002/GD7` | **Yasal tetik zorunlu:** geçerli court token olmadan `execute` yok; hukuki + kriptografik kenetli. |
-| `SPEC-BC-0002/GD8` | **Mutlak ret / temyiz yok:** subjectState gerekçesiz reddedebilir; ağ seviyesinde üst merci yoktur. |
-| `SPEC-BC-0002/GD9` | **Dar kapsam:** yalnızca pseudonym↔kimlik; credential/geçmiş/canlı-izleme yok. |
-| `SPEC-BC-0002/GD10` | **Silinemez iz + bildirim:** her talep/onay/ret/açma append-only; bildirim tavanı kontratta sabit (2/3 ile değişir). |
 
 
 ## SPEC-CRED-0002
@@ -801,12 +683,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 357 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 287 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AG, AP, AR, AS, C, CA, CI, CMP, CT, D, DL, DP, DS, DY, E, FD, G, GA, GD, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LX, MD, N, NW, O, P, PN, PO, PR, PS, PV, R, RI, RPR, RV, S, SB, SC, SEV, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZK.
+AP, AR, AS, C, CI, CMP, CT, D, DL, DS, DY, E, FD, HA, HV, IC, IDC, IDP, K, KC, LX, MD, NW, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-08 (`scripts/sync-invariants.mjs`). Toplam 357 kodlanmış değişmez, 49 dokümanda.
+**Üretilen dosya** — 2026-10-09 (`scripts/sync-invariants.mjs`). Toplam 287 kodlanmış değişmez, 43 dokümanda.

@@ -11,7 +11,7 @@ import { defineConfig, type DefaultTheme } from "vitepress";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { brandHead, pageHead } from "./seo";
-import { ARF_BASE, ARF_PAGES, GITHUB, buildDocIndex, docLinks, docsLangOf, localeLinks, type Lang } from "./doc-index";
+import { ARF_BASE, ARF_PAGES, buildDocIndex, docLinks, docsLangOf, localeLinks, type Lang } from "./doc-index";
 import { termTips } from "./terms";
 
 const DOCS = __dirname.replace(/[\\/]\.vitepress$/, "");
@@ -19,7 +19,7 @@ const IDX = { en: buildDocIndex(DOCS, "en"), tr: buildDocIndex(DOCS, "tr") };
 
 /**
  * Yayın kapsamı: geliştiriciye bugün gereken belgeler yayında; arka plan, zincir aşaması, iç kayıtlar ve arşiv depoda kalır.
- * Yayında olmayan belgeye verilen [[DOC-ID]] atfı GitHub'daki kaynağına gider (atıf kopmaz).
+ * Bunlar public depoya da girmez (.publicignore); yayında olmayan belgeye verilen [[DOC-ID]] atfı bağlantısız kod olarak görünür.
  */
 const UNPUBLISHED = [
   "framework/**", // Tamga ARF sitesinde
@@ -414,7 +414,8 @@ export default defineConfig({
         const e = IDX[l].get(id);
         if (!e) return undefined;
         if (e.path.startsWith("http")) return { href: e.path, title: e.title };
-        return { href: isPublished(e.src) ? e.path : `${GITHUB}/docs/${e.src}`, title: e.title };
+        // Yayında olmayan belge public depoda da yoktur (.publicignore): bağlantı verilmez, kod olarak görünür.
+        return isPublished(e.src) ? { href: e.path, title: e.title } : undefined;
       });
       termTips(md, docsLangOf);
       localeLinks(md, (rel) => docsLangOf(rel) === "tr");

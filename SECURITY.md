@@ -1,32 +1,37 @@
 # Security Policy
 
-**Bildirim:** security@tamga.network — lütfen kamuya açık issue açmayın. 72 saat içinde yanıt, 90 gün koordineli ifşa.
+## Reporting
 
-**Kapsam:** bu depo (`@tamga-network/*` paketleri, `apps/`, güven listesi biçimi, kontratlar) ve çalışan servisler:
-`trust.tamga.network`, `schemas.tamga.network`, `status.tamga.network`, `issuer.tamga.network`, `verify.tamga.network`,
-`id.tamga.network`, `console.tamga.network` ve sandbox test ağı (`sandbox.tamga.network`, `*.sandbox.tamga.network`). Ağ cüzdan işletmez (ADR-0042): Tamga Wallet ve cüzdan sağlayıcısı
-(`provider.tamgawallet.com`) bu politikanın kapsamında değildir; onlarla ilgili bulguyu cüzdanın işletmecisine bildirin.
+Email **security@tamga.network**. Please do not open a public issue. We reply within 72 hours and follow coordinated
+disclosure with a 90-day window.
 
-## Pilottan önce kapanacak bilinen kısayollar
+## Scope
 
-Bunlar bilinçli ve kayıtlı kısayollardır; açık olarak bildirmeye gerek yok, ama etkilerini gösteren bir bulgu değerlidir.
+- This repository: the `@tamga-network/*` packages, `apps/` and the trust list format.
+- The running services: `trust.tamga.network`, `schemas.tamga.network`, `status.tamga.network`, `issuer.tamga.network`,
+  `verify.tamga.network`, `id.tamga.network`, `console.tamga.network` and the sandbox test network
+  (`sandbox.tamga.network`, `*.sandbox.tamga.network`).
 
-- **Kurum imza anahtarı Tamga'nın geliştirme ortamında.** Pilotta anahtar kurumun kendi anahtar kasasına (KMS / HSM) geçer;
-  eski sertifika iptal edilir.
-- **Cüzdan anahtarları yazılımda** (geliştirme uygulaması). Telefonun güvenli donanımı (Secure Enclave / StrongBox) ve
-  cihaz kanıtı (App Attest / Play Integrity) mağaza sürümüyle zorunlu olur (cüzdan sağlayıcısı kapsam dışıdır, yukarıya bakın).
-- **Güven listesi tek imza anahtarıyla** yayınlanıyor; kaydırmalı ikinci anahtar pilottan önce eklenir.
-- **Bağımsız güvenlik denetimi** henüz yapılmadı.
+Out of scope: wallets listed on the network (including Tamga Wallet and its provider service) — please report those to the
+wallet's operator.
 
-`ops/pki/` altındaki anahtarlar **yalnızca** geliştirme içindir; hiçbir üretim sisteminde kullanılmaz.
+## Known limitations before the pilot
 
-## Tasarım sınırları
+These are deliberate and recorded; there is no need to report them, but a finding that shows their impact is welcome.
 
-Bu aşamada güven çapası tek operatörün imzasına dayanır (herkese açık çapa günlüğü geri sarmayı gösterir, ama önlemez);
-iptal en geç yaklaşık 90 dakikada her doğrulayıcıya ulaşır; aynı kurumun belgeleri, doğrulayıcılar iş birliği yaparsa
-ilişkilendirilebilir (sıfır bilgi ispatı doğrulayıcıda yayında, cüzdan tarafı telefon derlemesiyle gelir). Ayrıntı: whitepaper "Bilinen sınırlar".
+- Institution signing keys are held in Tamga's development environment; in the pilot they move to the institution's own KMS
+  or HSM.
+- The trust list is published with a single signing key; a rolling second key is added before the pilot.
+- In this stage the trust anchor rests on a single operator's signature: the public anchor log makes a rollback visible but
+  does not prevent it.
+- A revocation reaches every verifier within about 90 minutes.
+- Presentations of the same credential can be linked if verifiers collude; zero-knowledge age proofs are live on the
+  verifier side and arrive on the wallet side with the phone builds.
+- No independent security audit has been performed yet.
 
-## Tedarik zinciri
+Keys under `ops/pki/` are for development only and are never used in production.
 
-Paketlerde `postinstall` yok; npm yayını yalnızca CI üzerinden, OIDC ve provenance ile yapılır. Bağımlılık uyarıları
-`npm audit` ile izlenir ve sürüm notlarında raporlanır.
+## Supply chain
+
+The packages have no `postinstall` scripts. npm releases are published only from CI, with OIDC trusted publishing and
+provenance. Dependency advisories are tracked with `npm audit`.

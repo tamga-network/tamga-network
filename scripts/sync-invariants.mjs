@@ -4,8 +4,10 @@
  * Kaynak: docs/{specifications,architecture,background,ledger}/**.md — başlığında "Değişmez" geçen bölümlerdeki `| **KOD** | metin |`
  * satırları + önceki INVARIANTS.md'de zaten indekslenmiş (doküman, kod) çiftleri (W1–W3, SEV1–3, SG1–7 gibi bölüm dışı tablolar) —
  * kaynak dokümanda hâlâ varsa korunur, yoksa düşer. Çıktı: INVARIANTS.md (aynı biçim) + stdout özeti. `--check` yalnızca karşılaştırır.
+ * Public kapsam: .publicignore varsa (geliştirme deposu) ayrıca .publicoverride/INVARIANTS.md yazılır — public depoya girmeyen
+ * belgeler (.publicignore) çıkarılmış hâli; yayın betiği onu public ağaçta INVARIANTS.md olarak koyar (docs sitesi /rules).
  */
-import { readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -97,9 +99,6 @@ for (const f of walk(DOCS)) {
     docs.push({ id: meta.document_id, title: meta.title ?? "", file: f.replace(ROOT, "").replace(/\\/g, "/"), codes });
 }
 docs.sort((a, b) => (a.id < b.id ? -1 : 1));
-const total = docs.reduce((n, d) => n + d.codes.size, 0);
-const prefixes = new Set();
-for (const d of docs) for (const c of d.codes.keys()) prefixes.add(c.replace(/[0-9]+[a-z]?$/, ""));
 // çakışma: aynı DOC/KOD iki kez olamaz (Map garantiler); rapor
 const added = [],
   removed = [];
@@ -111,7 +110,11 @@ for (const d of docs) {
 for (const [id, m] of prev) if (!docs.some((d) => d.id === id)) for (const c of m.keys()) removed.push(`${id}/${c}`);
 
 const today = new Date().toISOString().slice(0, 10);
-const body = `---
+function render(docs) {
+  const total = docs.reduce((n, d) => n + d.codes.size, 0);
+  const prefixes = new Set();
+  for (const d of docs) for (const c of d.codes.keys()) prefixes.add(c.replace(/[0-9]+[a-z]?$/, ""));
+  return `---
 document_id: INVARIANTS
 title: Bağlayıcı kurallar
 status: Active
@@ -176,10 +179,37 @@ ${[...prefixes].sort().join(", ")}.
 
 **Üretilen dosya** — ${today} (\`scripts/sync-invariants.mjs\`). Toplam ${total} kodlanmış değişmez, ${docs.length} dokümanda.
 `;
+}
+const total = docs.reduce((n, d) => n + d.codes.size, 0);
+const body = render(docs);
+
+// Public kapsam (.publicignore desenleri: "klasör/", "**/ad", tam yol)
+const IGNORE = join(ROOT, ".publicignore");
+let publicBody = null;
+if (existsSync(IGNORE)) {
+  const pats = readFileSync(IGNORE, "utf8")
+    .split(/\r?\n/)
+    .map((l) => l.replace(/#.*$/, "").trim())
+    .filter(Boolean);
+  const ignored = (rel) =>
+    pats.some((p) =>
+      p.endsWith("/")
+        ? rel.startsWith(p)
+        : p.startsWith("**/")
+          ? rel === p.slice(3) || rel.endsWith("/" + p.slice(3))
+          : rel === p,
+    );
+  publicBody = render(docs.filter((d) => !ignored(d.file.replace(/^\//, ""))));
+}
 console.log(`dokümanlar: ${docs.length} · kod: ${total} · eklenen: ${added.length} · düşen: ${removed.length}`);
 if (added.length) console.log("  + " + added.join(", "));
 if (removed.length) console.log("  - " + removed.join(", "));
 if (!CHECK) {
   writeFileSync(OUT, body);
   console.log("INVARIANTS.md yazıldı");
+  if (publicBody) {
+    mkdirSync(join(ROOT, ".publicoverride"), { recursive: true });
+    writeFileSync(join(ROOT, ".publicoverride", "INVARIANTS.md"), publicBody);
+    console.log(".publicoverride/INVARIANTS.md yazıldı (public kapsam)");
+  }
 }

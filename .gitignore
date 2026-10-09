@@ -4,7 +4,7 @@ dist/
 .env
 .env.*
 # Geliştirme PKI'sı (npm run pki; her bilgisayarda rastgele yerel anahtarlar) — klasörün tamamı izlenmez. Gerçek ağın PKI'sı
-# depoların dışında, operatörün gizli klasöründe (TAMGA_PROD_PKI_DIR; ops/README.md).
+# depoların dışında, operatörün gizli klasöründe (TAMGA_PROD_PKI_DIR).
 ops/pki/
 ops/pki-sandbox/*.pkcs8.pem
 ops/pki-sandbox/*.key.pem

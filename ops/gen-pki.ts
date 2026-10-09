@@ -76,7 +76,7 @@ function prodDir(): string {
     prodDirArg ??
     process.env.TAMGA_PROD_PKI_DIR ??
     die(
-      "Üretim PKI klasörü verilmedi: --prod-dir <klasör> ya da TAMGA_PROD_PKI_DIR=<klasör> (gerçek ağın PKI'sı depo dışında, operatörün gizli klasöründe; ops/README.md).",
+      "Üretim PKI klasörü verilmedi: --prod-dir <klasör> ya da TAMGA_PROD_PKI_DIR=<klasör> (gerçek ağın PKI'sı depo dışında, operatörün gizli klasöründe).",
     );
   const abs = resolve(d);
   if (PROFILE !== "network") die("--prod / --prod-dir yalnız gerçek ağ profiliyle (sandbox'ın kendi klasörü var)");

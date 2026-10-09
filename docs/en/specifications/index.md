@@ -54,5 +54,5 @@ follow.
 Identifiers (`SPEC-…`) are permanent: references do not break when a file name or title changes. The single list of all
 binding rules: [Binding rules](/rules).
 
-Specifications for the ledger stage (trust-layer contracts, agent delegation) are not used today; they are kept in the
-repository under `docs/ledger/`.
+Specifications for the ledger stage (trust-layer contracts, agent delegation) are not used today; they will be published
+when the ledger stage opens.

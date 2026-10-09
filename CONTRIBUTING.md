@@ -1,83 +1,52 @@
-# Katkı rehberi (Contributing)
+# Contributing
 
-Bu depo Tamga Network'ün açık kaynak kodunu ve kanonik belgelerini taşır. Kod ve belgeler birlikte evrilir: **kararlar önce
-belgelenir (ADR), sonra uygulanır.** Kapatılmış bir karar yalnızca yeni bir ADR ile değişir ([`DECISIONS.md`](DECISIONS.md),
-[`docs/adr/`](docs/adr/)). Güvenlik açığını issue olarak açmayın: [`SECURITY.md`](SECURITY.md).
+Issues and pull requests are welcome, in English or Turkish. Please do not report security issues as public issues — see
+[SECURITY.md](SECURITY.md).
 
-*English:* Issues and pull requests are welcome in English or Turkish. Closed decisions change only through a new ADR; binding
-rules are indexed in `INVARIANTS.md`. Run `npm run check` before opening a pull request.
+## Before you open a pull request
 
-## Başlarken
-
-```bash
+```sh
 npm install
-npm run setup     # geliştirme PKI'sı, şema kataloğu, güven listeleri (yalnızca yerel; anahtarlar hiçbir yere gitmez)
-npm run check     # testler + tip denetimi
+npm run setup          # development PKI, schema catalogue and trust lists (local only)
+npm test
+npm run typecheck
+npm run format:check   # fix with: npm run format
+npm run docs:check
+npm run arf:check
 ```
 
-Pull request açmadan önce: `npm test` · `npm run typecheck` · `npm run format:check` · `npm run docs:check` · `npm run arf:check`
-(CI aynılarını çalıştırır).
+CI runs the same checks.
 
-## Kod
+## Code
 
-- **Yer:** `packages/` (`@tamga-network/*` npm paketleri) ve `apps/` (`verify`, `trust-publisher`). Ağ cüzdan sağlayıcı işletmez
-  ([ADR-0042](docs/adr/0042-network-and-wallets.md)); bir cüzdanın kendi koduna yapılacak değişiklik o cüzdanın deposuna gider.
-- **Dil ve biçim:** TypeScript `strict`, ESM; göreli import'lar `.js` uzantılı. Prettier (120 sütun, çift tırnak, LF):
-  `npm run format`. Tanımlayıcılar İngilizce; yorumlar ve kullanıcıya görünen metin Türkçe olabilir.
-- **Dosya başı yorum:** dosyanın işi ve uyguladığı şartname / ADR / kural (`SPEC-API-0001 AP3`, `ADR-0012 K4`).
-- **Bağlayıcı kurallar** ([`INVARIANTS.md`](INVARIANTS.md), sitede [Binding rules](https://docs.tamga.network/rules)) her
-  değişiklikte geçerlidir. En sık dokunulanlar:
-  - Kişisel veri log'a, denetim kaydına, güven listesine, çapa günlüğüne ya da iptal listesi adresine yazılmaz.
-  - Güven sorusu yalnızca `TrustSource` üzerinden sorulur; liste dosyası iş mantığında doğrudan okunmaz.
-  - Doğrulama sonucu üç değerlidir: `ACCEPTED` / `REJECTED` / `INDETERMINATE`; altyapı sorunu `REJECTED` değildir.
-  - Kapalı kümeler (belge veren kategorisi, belge biçimi, protokol) yalnızca ADR ile genişler.
-- **Paket alt yolu eklemek:** `package.json` `exports` + kök `tsconfig.json` `paths` + `vitest.config.ts` alias (alt yol anahtarı
-  genel anahtardan önce gelir).
-- **Test:** Vitest; paketlerde `src/*.test.ts`, uygulamalarda `test/*.test.ts`. Her hata düzeltmesi onu yakalayan bir testle
-  gelir. Güven listesi gerektiren testler önce `npm run setup` ister.
-- **Commit:** `tür(kapsam): özet` — türler `feat fix docs refactor test chore build`. Değişiklik
-  [`CHANGELOG.md`](CHANGELOG.md)'ye yazılır (Keep a Changelog, en yeni üstte).
+- **Where:** `packages/` (the `@tamga-network/*` packages) and `apps/` (`verify`, `trust-publisher`). The network does not
+  operate a wallet; changes to a particular wallet belong in that wallet's own repository.
+- **Style:** TypeScript `strict`, ESM, relative imports with the `.js` extension. Prettier (120 columns, double quotes, LF).
+  Identifiers in English.
+- **Tests:** Vitest — `src/*.test.ts` in packages, `test/*.test.ts` in apps. Every bug fix comes with a test that catches it.
+- **New package subpath:** add it to the package's `exports`, the root `tsconfig.json` `paths` and the `vitest.config.ts`
+  aliases (the subpath key before the package key).
+- **Commits:** `type(scope): summary` with types `feat fix docs refactor test chore build`; user-visible changes go into
+  [CHANGELOG.md](CHANGELOG.md).
 
-## Belgeler
+Rules that always apply (the full list is on [docs.tamga.network/rules](https://docs.tamga.network/rules)):
 
-| Klasör | Ne için |
-|---|---|
-| `docs/guides/` | Başlarken: adım adım rehberler (GUIDE-*) |
-| `docs/concepts/` | Kavramlar: sade anlatım |
-| `docs/specifications/` | Şartnameler: kesin kurallar (SPEC-*) |
-| `docs/adr/` | Kararlar (ADR-*) |
-| `docs/architecture/` | Bileşen mimarisi (ARCH-*) |
-| `docs/framework/` | Tamga ARF ve ekleri (FW-*) — arf.tamga.network |
-| `docs/background/` | Gerekçe (PM-*) ve araştırma (RS-*) — sitede yayınlanmaz |
-| `docs/ledger/` | Zincir aşaması (bugün kullanılmıyor) — sitede yayınlanmaz |
-| `docs/en/` | İngilizce çeviriler (Türkçe kaynakla aynı yol) |
+- No personal data in logs, audit records, trust lists, the anchor log or status list addresses.
+- Trust questions are asked only through `TrustSource`; business logic never reads the list files directly.
+- A verification result has three values: `ACCEPTED`, `REJECTED`, `INDETERMINATE`; an infrastructure failure is not `REJECTED`.
+- Closed sets (issuer categories, credential formats, protocols) change only through a new decision record.
 
-- **Kimlik:** her belgenin kalıcı bir `document_id`'si vardır; belgeler birbirine kimlikle bağlanır: `[[SPEC-CRED-0003]]`,
-  bir kurala `[[SPEC-CRED-0003]]/S1`. Klasör ya da başlık değişse de atıf kopmaz.
-- **Ön bilgi (front matter):**
+## Documentation
 
-  ```yaml
-  ---
-  document_id: SPEC-ID-0003
-  title: "Kimlik ispatı"
-  status: Active # Draft · Active · Deprecated (ADR: Proposed · Active · Superseded)
-  version: 1.0.0
-  created: 2026-09-24
-  last_updated: 2026-10-02
-  summary: >
-    Bir-iki cümle: belge ne anlatır, kimin işine yarar.
-  ---
-  ```
+- Turkish is the source text (`docs/<path>`); the English translation lives at `docs/en/<same path>` and is updated in the
+  same change (`npm run docs:check` verifies this).
+- Every document has a permanent `document_id`; documents link to each other by id (`[[SPEC-CRED-0003]]`, a rule:
+  `[[SPEC-CRED-0003]]/S1`).
+- Glossary terms come from `docs/.vitepress/terms.json`; `INVARIANTS.md` is generated (`node scripts/sync-invariants.mjs`).
+- Decisions are recorded before they are implemented; the decision records are on
+  [docs.tamga.network/adr](https://docs.tamga.network/adr/).
 
-  İngilizce çeviride ayrıca `translation_of` ve `source_version` (Türkçe kaynağın sürümü) bulunur.
-- **Diller:** Türkçe metin kaynaktır (`docs/<yol>`), İngilizcesi `docs/en/<aynı yol>`; kaynak değişince çeviri aynı
-  değişiklikte güncellenir (`npm run docs:check` denetler). Adlar (dosya, klasör, adres) İngilizcedir.
-- **Terimler:** sözlük tek kaynaktan, `docs/.vitepress/terms.json`; terimin sayfadaki ilk kullanımı `[[t:trust-list]]` ile
-  ipucu alır.
-- **Bağlayıcı kurallar:** şartname ve ADR'lerde başlığında "Değişmez" geçen bölümlerde `| **KOD** | metin |` tablosuyla yazılır.
-  `INVARIANTS.md` üretilen dosyadır: `node scripts/sync-invariants.mjs` (elle düzenlenmez).
-- **Kamuya açık metin:** belgelerde kişi adı ve özel depo yolu bulunmaz; kararlar "proje yönetimi" onayıyla anılır.
+## License
 
-## Lisans
-
-Katkılar kodda Apache-2.0 ([`LICENSE`](LICENSE)), belgelerde CC BY 4.0 ([`LICENSE-docs`](LICENSE-docs)) altında kabul edilir.
+Contributions are accepted under Apache-2.0 for code ([LICENSE](LICENSE)) and CC BY 4.0 for documentation
+([LICENSE-docs](LICENSE-docs)).

@@ -1,27 +1,25 @@
-# @tamga-network/* npm yayını — YALNIZCA elle başlatılır (Actions → release → Run workflow). Proje yönetiminin onayı olmadan çalıştırılmaz.
-# Sürüm: paketler 0.x deneme sürümleriyle yayımlanır (bugün 0.2.0; kararlı 1.0.0 hazır olunca). Dağıtım etiketi npm'in varsayılanı
-# `latest` kalır: `npm install @tamga-network/core` en son deneme sürümünü kurar (0.x'te `next` etiketi gerekmez).
-# Kimlik: npm Trusted Publishing (OIDC) — her paketin npmjs.com ayarlarında Trusted Publisher = GitHub Actions, bu depo
-# (tamga-network/tamga-network), iş akışı `release.yml`, ortam `npm`. Uzun ömürlü token yok (ARCH-0005 P2). Trusted Publishing
-# npm CLI >= 11.5.1 ister (Node 22'nin npm'i 10.x) → aşağıda npm güncellenir. Trusted Publisher yalnız npm'de VAR OLAN pakete
-# tanımlanabilir: yeni bir paketin (bugün @tamga-network/zk) ilk yayını proje yönetimince elle, 2FA ile yapılır (adımlar iç
-# teslimat notunda); sonra Trusted Publisher tanımlanır ve sonraki sürümler bu iş akışından çıkar.
-# Sürümler önceden commit'lenmiş olmalı. Provenance: npm, paketin bu depodaki bu commit'ten GitHub Actions ile üretildiğini
-# imzalı olarak kaydeder (ARCH-0005 P2/P3).
-# @tamga-network/zk (ADR-0032): telefon ispatçısının derlenmiş Android kütüphaneleri (jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/
-# libtamga_zk_prover.so) depoda yoktur ve çalıştırıcıda NDK yoktur: sağlama adımı eklenene kadar zk bu iş akışından yayınlanamaz
-# — aşağıdaki denetim bunu açıkça söyler; diğer paketler `packages` girdisiyle zk olmadan yayınlanır:
-#   packages = "core mdoc schemas sd-jwt trust issuer verifier wallet-core". iOS xcframework yoksa zk paketi yalnız Android'dir.
+# @tamga-network/* npm release — started manually only (Actions → release → Run workflow), with project management approval.
+# Versions: the packages are published as 0.x test releases (today 0.2.0; stable 1.0.0 when ready) under npm's default `latest`
+# tag. Versions must be committed beforehand.
+# Identity: npm Trusted Publishing (OIDC) — no long-lived token. Each package's Trusted Publisher on npmjs.com is GitHub
+# Actions, this repository, workflow `release.yml`, environment `npm`. Trusted Publishing needs npm CLI >= 11.5.1 (Node 22
+# ships npm 10), so npm is upgraded below. A Trusted Publisher can only be set on a package that already exists on npm: a new
+# package's first release is made by hand with 2FA. Provenance records that each package was built from this commit by
+# GitHub Actions.
+# @tamga-network/zk: the phone prover's Android libraries (jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/libtamga_zk_prover.so) are
+# not in the repository and the runner has no NDK, so zk cannot be released from this workflow until a provisioning step is
+# added — the check below says so. Release the other packages without zk via the `packages` input:
+#   packages = "core mdoc schemas sd-jwt trust issuer verifier wallet-core". Without an iOS xcframework zk is Android-only.
 name: release
 on:
   workflow_dispatch:
     inputs:
       packages:
-        description: "Yayınlanacak paketler (boşluklu; boş = hepsi). Ör: core trust verifier"
+        description: "Packages to publish (space separated; empty = all). E.g.: core trust verifier"
         required: false
         default: ""
       dry_run:
-        description: "Yalnızca prova (npm publish --dry-run)"
+        description: "Dry run only (npm publish --dry-run)"
         type: boolean
         default: true
 permissions:
@@ -31,7 +29,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: npm # GitHub ortam koruması: onaylayıcı proje yönetimi
+    environment: npm # GitHub environment protection: approved by project management
     env:
       TAMGA_REQUIRE_FIXTURES: "1"
     steps:
@@ -40,29 +38,29 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - name: npm CLI (Trusted Publishing için >= 11.5.1)
+      - name: npm CLI (>= 11.5.1 for Trusted Publishing)
         run: npm install -g npm@11 --no-audit --no-fund && npm --version
       - run: npm ci --no-audit --no-fund
-      - run: npm run setup # ci.yml ile aynı hazırlık (sandbox PKI + sandbox listeleri dahil; testlerin ön koşulları)
+      - run: npm run setup # same preparation as ci.yml (including sandbox PKI and lists; test prerequisites)
       - run: npm test && npm run typecheck
-      - name: Paket seçimi + zk yerel kütüphaneleri
+      - name: Package selection + zk native libraries
         env:
-          PACKAGES: ${{ inputs.packages }} # girdi kabuğa doğrudan gömülmez (betik enjeksiyonu): ortamdan, tırnaklı
+          PACKAGES: ${{ inputs.packages }} # passed through the environment, quoted (no script injection)
         run: |
           set -euo pipefail
-          if ! [[ "$PACKAGES" =~ ^[a-z0-9\ -]*$ ]]; then echo "::error::packages yalnız paket adları içerebilir"; exit 1; fi
+          if ! [[ "$PACKAGES" =~ ^[a-z0-9\ -]*$ ]]; then echo "::error::packages may only contain package names"; exit 1; fi
           echo "TAMGA_PACK_PACKAGES=$PACKAGES" >> "$GITHUB_ENV"
           if [ -z "$PACKAGES" ] || echo " $PACKAGES " | grep -q " zk "; then
             for abi in arm64-v8a armeabi-v7a x86_64; do
               f="packages/zk/android/src/main/jniLibs/$abi/libtamga_zk_prover.so"
               if [ ! -f "$f" ]; then
-                echo "::error::$f yok — zk yayını için Android kütüphaneleri önceden derlenip (node packages/zk/scripts/build-android.mjs) sağlanmalı; ya da packages girdisinde zk'yı çıkarın"
+                echo "::error::$f is missing — build the Android libraries first (node packages/zk/scripts/build-android.mjs) or leave zk out of the packages input"
                 exit 1
               fi
             done
           fi
       - run: npm run release:check
-      - name: npm publish (.publish/<paket>)
+      - name: npm publish (.publish/<package>)
         env:
           PACKAGES: ${{ inputs.packages }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -74,6 +72,6 @@ jobs:
             p=$(basename "$dir"); [ "$p" = "tarballs" ] && continue
             if [ -n "$SEL" ] && ! echo " $SEL " | grep -q " $p "; then continue; fi
             name=$(node -p "require('./$dir/package.json').name"); ver=$(node -p "require('./$dir/package.json').version")
-            if npm view "$name@$ver" version >/dev/null 2>&1; then echo "↷ $name@$ver zaten yayında, atlanıyor"; continue; fi
+            if npm view "$name@$ver" version >/dev/null 2>&1; then echo "↷ $name@$ver already published, skipping"; continue; fi
             (cd "$dir" && npm publish --provenance --access public $DRY)
           done

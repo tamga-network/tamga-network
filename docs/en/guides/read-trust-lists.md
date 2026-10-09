@@ -109,7 +109,7 @@ credential types (`vct`) do not change. A new source address and the contract ad
 credential and no credential digest is **ever written** to the ledger; it carries only the trust entries. Status lists stay
 off the ledger ([[ADR-0008]]).
 
-**Contracts** (`contracts/`, Solidity + Foundry):
+**Contracts** (Solidity + Foundry; the source code is published when the ledger stage opens):
 
 | Contract | What it holds |
 |---|---|
@@ -122,10 +122,6 @@ off the ledger ([[ADR-0008]]).
 | `CrossRecognition` | recognition between countries |
 | `TrustQueries` | the single read surface (the ledger side of TrustSource) |
 
-```sh
-cd contracts && forge build && forge test   # requires Foundry
-```
-
 **For node and validator operators:**
 
 | Role | What it does | Requirement |
@@ -133,8 +129,8 @@ cd contracts && forge build && forge test   # requires Foundry
 | Validator | proposes and signs blocks | an independent institution, written acceptance, key in an HSM |
 | Full node | validates and reads the chain; does not sign | an entry in the permission list |
 
-The setup steps (genesis, QBFT settings, permission list, node definitions) are in [[ARCH-0002]]; the network topology and
-the phase model in [[ARCH-0001]]. During the switch, the list archive is replayed into contract calls; the switch is not
+The setup steps (genesis, QBFT settings, permission list, node definitions) and the network topology are published when
+the ledger stage opens. During the switch, the list archive is replayed into contract calls; the switch is not
 complete until both implementations pass the same conformance vectors.
 
 ## Rules
