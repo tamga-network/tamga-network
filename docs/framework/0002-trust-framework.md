@@ -359,7 +359,7 @@ kurumuna yapılır.
 | **Doğrulayıcı kullanım koşulları** | Doğrulayıcı ↔ şema sahibi | Kapsam, veri azaltma, aşırı talep yasağı, belge alanlarını ve iptal listesi konumunu kaydetmeme, tek kullanımlık değer, "doğrulanamadı" sonucunu doğru işleme, kayıt bilgilerinin güncel tutulması |
 | **Cüzdan sağlayıcısı sözleşmesi** | Cüzdan sağlayıcısı ↔ şema sahibi | Cüzdan örneği kanıtı ve anahtar kanıtı, güvenli donanım seviyesi, güncelleme ve iptal süreleri, kurtarma anahtarı tutmama |
 | **Veri işleme sözleşmesi** | Belge veren ↔ yetkili kaynak ya da işletmeci (veri işleyen) | KVKK madde 12; eşleme tablosu; saklama süreleri |
-| **Pilot katılımcı bildirimi** | Pilot katılımcıları | Pilotun sınırları sade dille: güven bugün imzalı listelere dayanır, çapa tek işletmecidedir, iptal en geç 90 dakikada etkili olur, katılım gönüllüdür, rıza her an geri alınır |
+| **Pilot katılımcı bildirimi** | Pilot katılımcıları | Pilotun sınırları sade dille: güven bugün imzalı listelere dayanır, çapa tek işletmecidedir, iptal birkaç dakikada etkili olur, katılım gönüllüdür, rıza her an geri alınır |
 | **Halefiyet sözleşmesi** | İşletmeci ↔ emanetçi ya da konsey | Alan adı, kök sertifikalar, liste arşivi, anahtarların devri |
 
 Her sözleşme bu çerçeveye ve Tamga Rulebook'a atıf yapar; bunlar değişirse sözleşmenin ilgili eki de güncellenir. Ana
@@ -372,7 +372,7 @@ yükümlülüğü değiştiren bir sürüm yeniden imza gerektirir (§8).
 | Güven listelerine erişim (`trust.`) | Aylık %99,9; bir sonraki güncelleme en geç 90 gün sonra; değişiklik en geç 24 saatte |
 | Çapa günlüğü | Saatlik; kaçan döngü en çok bir |
 | Belge türü kataloğu (`schemas.`) | %99,9; yayınlanan dosya değişmez |
-| Belge verenin iptal listesi yayını | Sabit aralık (pilotta 60 dakika; bugünkü deneme işletiminde 2 dakika); iki döngü kaçarsa yüksek önem |
+| Belge verenin iptal listesi yayını | Sabit aralık (2 dakika); iki döngü kaçarsa yüksek önem |
 | Olay bildirimi | Kritik en geç 4 saat; yüksek en geç 24 saat |
 | Kayıt değişikliği (kayıt kurumu) | En geç 5 iş günü |
 

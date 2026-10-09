@@ -94,7 +94,7 @@ Bu, AB modeliyle aynı dengedir. Proje yönetimi kabul etti.
 | AR1 | Sessiz yenileme yalnız yenileme belirteci olan belgeler için, kurumun ilan ettiği eşikte, uygulama önde ve kilit açıkken ve rastgele gecikmeyle yapılır. |
 | AR2 | Yenileme belirteci belgeye özel DPoP anahtarına bağlıdır, tek kullanımlıktır ve her kullanımda değişir; her yenilemede cüzdan onayı doğrulanır. |
 | AR3 | Kurum yenilemede öznitelikleri yetkili kaynaktan yeniden okur; kaynakta kayıt yoksa belge verilmez ve belirteç iptal edilir. |
-| AR4 | Kişi alanlarını saklamayan servisler (kimlik, iletişim) yenileme belirteci vermez. |
+| AR4 | Kişi alanlarını saklamayan servisler (kimlik, iletişim) yenileme belirteci vermez. Tek istisna ZK kopyası belirtecidir ([[ADR-0044]] ZC3: kişi alanları sunucuda saklanmaz). |
 
 # Sonuçlar
 
@@ -107,3 +107,5 @@ Bu, AB modeliyle aynı dengedir. Proje yönetimi kabul etti.
 # Durum
 
 **Accepted — 2026-09-29.** Proje yönetimi onayıyla. DECISIONS: D-WALLET-1. Uygulama sırada.
+
+2026-10-09: AR4'e ZK kopyası belirteci istisnası eklendi ([[ADR-0044]], D-ZK-2).

@@ -104,7 +104,7 @@ This is the same balance as the EU model. Project management accepted it.
 | AR1 | Silent renewal happens only for credentials that have a refresh token, at the threshold announced by the institution, while the app is in the foreground and unlocked, and after a random delay. |
 | AR2 | The refresh token is bound to the credential-specific DPoP key, is single-use and changes at each use; the wallet attestation is verified at each renewal. |
 | AR3 | On renewal the institution reads the attributes again from the authentic source; if there is no record in the source, no credential is issued and the token is revoked. |
-| AR4 | Services that do not store personal fields (identity, contact) issue no refresh token. |
+| AR4 | Services that do not store personal fields (identity, contact) issue no refresh token. The only exception is the ZK copy token ([[ADR-0044]] ZC3: person fields are not kept on the server). |
 
 # Consequences
 
@@ -118,3 +118,5 @@ This is the same balance as the EU model. Project management accepted it.
 # Status
 
 **Accepted — 2026-09-29.** With project management approval. DECISIONS: D-WALLET-1. Implementation queued.
+
+2026-10-09: the ZK copy token exception was added to AR4 ([[ADR-0044]], D-ZK-2).

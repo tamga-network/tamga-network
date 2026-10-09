@@ -131,8 +131,8 @@ Body:
   "iss": "https://issuer.tamga.network/example-university",
   "sub": "https://status.tamga.network/7f3a9c21",
   "iat": 1789000000,
-  "exp": 1789180000,
-  "ttl": 3600,
+  "exp": 1789021600,
+  "ttl": 120,
   "status_list": {
     "bits": 2,
     "lst": "eNrbuRgAAhcBXQ..."
@@ -145,8 +145,8 @@ Body:
 | `iss` | Mandatory | Issuer identifier; in the same trust chain as the Referenced Token's `iss` |
 | `sub` | Mandatory | List URI — **exactly the same** as `uri` in the Referenced Token |
 | `iat` | Mandatory | Publication time |
-| `exp` | **Mandatory in Tamga** | Target `iat + 50 hours`; today's implementation `iat + 2 × publication interval` (§8.1) |
-| `ttl` | **Mandatory in Tamga** | The publication interval (seconds): pilot target `3600`, `120` in today's trial operation (§5.1, §8.1) |
+| `exp` | **Mandatory in Tamga** | `iat + 6 hours` (§8.1) |
+| `ttl` | **Mandatory in Tamga** | The publication interval (seconds); `120` in the services run by the network (§5.1, §8.1) |
 | `status_list.bits` | Mandatory | **Always `2` in Tamga** — §3.3 |
 | `status_list.lst` | Mandatory | Compressed byte array, base64url |
 | `status_list.aggregation_uri` | Optional | **Recommended in Tamga** — §9.2 |
@@ -204,8 +204,8 @@ chain** ([[SPEC-ID-0002]]).
 
 Rationale:
 
-1. **Different frequency of use.** The credential key is used rarely and sits in an HSM. The status key signs once an hour;
-   it has to sit in an online system. Making them the same would mean exposing the HSM key to a permanently online
+1. **Different frequency of use.** The credential key is used rarely and sits in an HSM. The status key signs at every publication
+   interval (every 2 minutes today); it has to sit in an online system. Making them the same would mean exposing the HSM key to a permanently online
    service.
 2. **Damage isolation.** If the status key is compromised, the attacker can publish a fake *status* but cannot produce a
    fake *diploma*.
@@ -321,11 +321,10 @@ on-chain credential gating has to rely on fresh proof supplied by the caller →
 
 ## 5.1 Fixed interval and noise
 
-The Status Provider republishes the list at **fixed intervals**. Default interval: **1 hour.**
-
-> **Operation today (2026-10):** the issuance services run by the network publish the list **every 2 minutes** (trial
-> operation; a revocation shows within minutes) and `ttl` equals the interval. The fixed-interval rule (S5, S6) applies
-> unchanged. When to move to the pilot's 1-hour interval awaits a project management decision (open topic 6).
+The Status Provider republishes the list at **fixed intervals**. Default interval: **2 minutes** (the issuance services run
+by the network; shorter in the sandbox). `ttl` equals the interval; `exp` is in the order of hours, independent of the
+interval (§8.1). The short interval makes a revocation visible within minutes; the long `exp` keeps verification from falling
+to COULD NOT VERIFY at once during a status server outage (project management decision, 2026-10-09).
 
 **It is published even if nothing changed.** This is not optional.
 
@@ -346,7 +345,7 @@ Every interval T (default 3600 s):
   2. Update the bitstring.
   3. Compress → lst.
   4. Build the token body:
-       iat = now, exp = now + 50h, ttl = 3600, version = previous + 1
+       iat = now, exp = now + 6h, ttl = T, version = previous + 1
   5. Sign with the status key → JWS compact serialization.
   6. contentHash = SHA-256(ASCII bytes of the string)
   7. Write to the CDN / status server.          ← FIRST
@@ -358,11 +357,12 @@ reachable, and every verification would get stuck at §7 step 6.
 
 ## 5.3 Interval versus freshness
 
-In the worst case a revocation becomes visible with a delay of one publication interval. At the default of 1 hour this is
-acceptable.
+In the worst case a revocation becomes visible with a delay of one publication interval plus the verifier's prefetch interval
+(§9.1). At the default 2-minute interval this is a few minutes.
 
-Schemas that need a shorter interval can define one in the `tamga` block; but the shorter the interval, the more often the
-chain is written. **Going below 10 minutes is not recommended.**
+Today the anchor is the trust list publisher's anchor log and every publication is one line. In the chain stage
+([[ADR-0009]]) every publication becomes a transaction; the interval is re-evaluated for chain load at that stage (the
+calculation in open topic 1 is for an hourly interval).
 
 **Emergencies:** publishing outside the interval is **not done** — it destroys the privacy benefit of §5.1. If an urgent
 revocation is needed, the right tool is not the status list but suspending the [[t:issuer]] certificate ([[SPEC-ID-0002]])
@@ -397,13 +397,11 @@ information.
 |---|---|
 | Minimum list capacity | **100,000** indices |
 | Maximum fill | 80% — beyond that a new list is opened |
-| Minimum initial noise | When the list is created, **1%** of the capacity is marked as "allocated" at random indices; the bit value stays `0x00` (valid) and they are bound to no credential — indistinguishable from real entries from outside. **Not implemented today** (open topic 3) |
 
-The last row was written to prevent a single graduate from being the only filled index during the first days of a new list.
-But the bit of a valid credential and the bit of an index never used are the same (`0x00`): someone looking from outside
-cannot see which indices are allocated anyway. Because the noise has no observable effect it is not implemented today; a
-proposal to remove it awaits a decision (open topic 3). Random allocation (§6.1) and the minimum capacity provide the
-protection.
+A new list holding few credentials is not visible from outside: the bit of a valid credential and the bit of an index never
+used are the same (`0x00`), so someone looking from outside cannot see which indices are allocated. Marking unused indices as
+"allocated" (initial noise) therefore gives no observable protection and is not used (project management decision,
+2026-10-09). Random allocation (§6.1) and the minimum capacity provide the protection.
 
 ## 6.3 The list URI must be OPAQUE
 
@@ -518,16 +516,33 @@ Without the chain anchor the issuer could silently roll back the list on its own
 
 | Claim | Tamga value | Meaning |
 |---|---|---|
-| `ttl` | `3600` (target) | The verifier may use it for this long without refetching |
-| `exp` | `iat + 50 hours` (target) | After this moment the token must not be used at all |
+| `ttl` | the publication interval (`120`) | The verifier may use it for this long without refetching; then it should fetch a fresh one |
+| `exp` | `iat + 6 hours` | After this moment the token must not be used at all |
 
-**Today's implementation (2026-10):** `ttl` equals the publication interval (120 seconds in trial operation) and
-`exp = iat + 2 × ttl` (twice the interval; 4 minutes at a 2-minute interval). A short `exp` means that during a status server
-outage verification falls to CANNOT BE VERIFIED within minutes; moving to the 50-hour buffer below awaits a project
-management decision (open topic 6).
+The meaning of the two claims comes from the Token Status List draft (draft-20): `ttl` is the maximum time a consumer may keep
+the token cached **before it should fetch a fresh copy** (a refresh hint); `exp` is the moment the token stops being valid
+(the absolute limit). Tamga keeps them apart:
 
-Why `exp` is much longer than `ttl`: `ttl` is the "freshness target", `exp` the "absolute limit". If the status server is
-down for a few hours, verification must be able to continue with the token at hand. 50 hours covers a weekend outage.
+- `ttl` = the publication interval. The verifier fetches a fresh token every interval; a revocation shows within minutes
+  (§5.3).
+- `exp` = `iat + 6 hours`. If the status server goes down, the verifier can keep verifying with the last token for up to 6
+  hours; the result does not fall to COULD NOT VERIFY at once.
+
+**Why 6 hours:** it equals the maximum token age of verifier policies (`max_status_token_age_sec`, 21,600 s in the reference
+policies); a policy would not use a longer `exp` anyway. `exp` also bounds the window in which an old but signed token can be
+replayed: someone controlling the network path can hide a revocation for at most this long (the anchor check, §7 Ş6, narrows
+it further for a verifier that knows the current anchor). The earlier 50-hour target would have widened this window for no
+benefit.
+
+**Consistency with the anchor:** the anchor is updated at every publication. While the status server is down there is no new
+publication and no new anchor; the verifier's token matches the last anchor and is used until `exp`. If the server is up but
+the verifier cannot fetch the list, the anchor is newer than the token and the result is COULD NOT VERIFY (§7 Ş6; not a
+rollback). So the long `exp` helps only in a real outage and does not hide a revocation from a verifier that knows the
+current anchor.
+
+> **Verifier package:** `@tamga-network/sd-jwt` 0.3.0 treats a token as stale after `iat + 2 × ttl` (D4, COULD NOT VERIFY).
+> For verifiers on that version the outage buffer takes effect with the next patch release, which leaves the limit to `exp`
+> and the policy; until then the behaviour is unchanged (COULD NOT VERIFY within minutes during an outage).
 
 **The claims decide.** The standard requires the verifying party to give precedence to the token's `exp` and `ttl` claims
 over HTTP cache headers. The CDN's `Cache-Control` header cannot override this.
@@ -538,9 +553,9 @@ A verifier may be stricter depending on the risk level:
 
 | Risk | Maximum accepted token age |
 |---|---|
-| Low | `ttl` (1 hour) is enough |
-| Medium | 6 hours |
-| High (official transaction) | 1 hour, and `version` exactly matching the chain anchor |
+| Low | up to `exp` (6 hours) |
+| Medium | 1 hour |
+| High (official transaction) | a few publication intervals (≤ 10 minutes), and `version` exactly matching the chain anchor |
 
 ## 8.3 Offline verification
 
@@ -581,8 +596,7 @@ The standard defines an optional aggregation mechanism that lets the issuer publ
 
 ## 9.3 Herd privacy
 
-The fewer indices a list has, the more distinguishing `idx` is. That is the reason for the minimum capacity of 100,000 in §6.2
-(the 1% initial noise is not implemented today, §6.2).
+The fewer indices a list has, the more distinguishing `idx` is. That is the reason for the minimum capacity of 100,000 in §6.2.
 
 **The small-institution problem:** a vocational school with 300 graduates means 300 filled indices in a list of 100,000.
 The list is large but the herd is small. In that case the herd is bounded by the **institution**, not by the list, and there
@@ -610,9 +624,9 @@ different `idx` for each presentation ([[SPEC-CRED-0001]] §5, [[SPEC-SCHEMA-000
 |---|---|
 | Address | `status.<issuer-domain>` |
 | Content | Static file (signed token), behind a CDN |
-| Writing | Publication job (cron), at a fixed interval (pilot target once an hour; every 2 minutes today, §5.1) |
+| Writing | Publication job (cron), at a fixed interval (every 2 minutes, §5.1) |
 | Key | Status signing key, online, separate from the credential key (§3.4) |
-| Availability target | 99.5% — not on the critical path with the targeted `exp`=50h buffer (with today's short `exp` it is, §8.1) |
+| Availability target | 99.5% — with the `exp` = 6 h buffer not on the critical path during short outages (§8.1) |
 
 It is a separate component for every issuer and is part of the issuer onboarding checklist ([[ARCH-0004]]).
 
@@ -625,21 +639,24 @@ This is a real centralisation point and is governed by policy in [[PM-GOV-0001]]
 the institution (the foundation cannot publish a fake status), no access log is kept, the list of hosted issuers is public,
 and if they exceed 30% of active issuers the matter goes to the council agenda.
 
-**Today (2026-10) differs from the policy in two points:**
+**Operation today (as of 2026-10-09):**
 
-- **Key:** in the hosted service the status signing key, like the credential signing key, sits in the hosted service; moving
-  it to the institution's own key management (KMS) is a pilot precondition.
-- **Access log:** the server keeps a short access log without IP addresses or request bodies (time, host name, path, status
-  code, response size, duration). The path carries only the opaque list identifier (§6.3); the log does not show which
-  verifier asked about which credential, because the verifier fetches the whole list (§9.1).
-
-Closing the two gaps, or rewriting the policy, awaits a project management decision (open topic 7).
+- **Key separation:** every issuer's status key is separate from its credential signing key (S11); it is published in the
+  trusted list under `delegate_keys[]` with `purpose: "status_list"` and its own fingerprint. Even a compromised status key
+  cannot produce a fake credential (§3.4).
+- **Where the key sits:** the only active revocation list on the real network today is the network's provisional identity
+  service's own list; there the issuer is the network itself and the key sits with the issuer. No list hosted on behalf of
+  another institution is active on the real network. The test institutions' keys in the sandbox stay in the sandbox (test
+  keys). When a real institution joins the hosted service, its status key, like its credential signing key, moves to the
+  institution's own key management (KMS) (P1.a); this is a precondition of that institution's pilot.
+- **Access log:** no access log is kept for the revocation list endpoints (`status.<domain>/…` and the identity service's
+  `/status/…` path) (P1.b). The access log of the network's other services contains no IP addresses.
 
 ## 10.3 Disaster scenarios
 
 | Scenario | Effect | Recovery |
 |---|---|---|
-| Status server outage | Target: continues from cache for up to 50 hours (today for as long as `exp`, §8.1) | The server comes back |
+| Status server outage | Continues from cache for up to 6 hours (`exp`, §8.1) | The server comes back |
 | Loss of the status key | No new publication possible | New key + `kid` rotation; the same list continues |
 | Compromise of the status key | Fake status can be published | Certificate revocation → every token fails at Ş4 → republication with a new key |
 | Loss of the list file | Verification stops | The bitstring is regenerated from the issuer database; **the `contentHash` on the chain is kept to verify past versions** |
@@ -678,17 +695,16 @@ database.
    archive history, ~1.8 GB a year.
 2. How is a return from suspension (`0x02`) to valid represented in the verifier's audit log? Is a retrospective "was it
    suspended at that moment" query needed?
-3. The 1% initial noise of §6.2 is not implemented today: since a valid bit and an unused index are the same (`0x00`), it has
-   no observable effect from outside and only consumes capacity. **Proposal:** remove the rule (awaiting a decision).
+3. ~~The 1% initial noise of §6.2~~ — **CLOSED** (2026-10-09): the rule was removed; since a valid bit and an unused index
+   are the same (`0x00`), it had no observable effect (§6.2).
 4. Should Status List Aggregation be mandatory? Today it is "recommended"; if the verifier side takes prefetching seriously,
    making it mandatory may make sense.
 5. Are multiple Status Providers (several lists of one issuer on different servers) supported? Implicitly yes today; should
    it be written explicitly?
-6. **Publication interval and `exp` buffer (awaiting a decision):** target 1 hour / `iat + 50 hours`; today's trial operation
-   2 minutes / `iat + 2 × interval` (§5.1, §8.1). Options: move to the target, stay with today's values and write the
-   specification accordingly, or keep the short interval and lengthen `exp`.
-7. **Hosted status service (awaiting a decision):** move the key to the institution and drop the IP-free access log as the
-   policy says, or rewrite the policy as it is today (§10.2).
+6. ~~Publication interval and `exp` buffer~~ — **CLOSED** (2026-10-09): the interval stays short (2 minutes, `ttl` = the
+   interval), `exp` = `iat + 6 hours` (§5.1, §8.1).
+7. ~~Hosted status service~~ — **CLOSED** (2026-10-09): the policy (P1.a, P1.b) stands; the access log of the revocation list
+   endpoints was switched off and where the key sits is described in §10.2.
 
 ---
 

@@ -58,7 +58,7 @@ AS ([[t:authentic-source|yetkili kaynak]]) · WP ([[t:wallet-provider|cüzdan sa
 | RB-GEN-07 | Katılımcı, Tamga'nın resmî `@tamga-network/*` paketlerini kullanıyorsa yayın kaynağı kanıtını (provenance) doğrulamalı (**SHOULD**); paketlerde `postinstall` betiği **MUST NOT**. |
 | RB-GEN-08 | Dışa dönük güvence ifadeleri eIDAS adlarıyla (Low / Substantial / High; EAA, QEAA karşılığı, kamu belgesi) yapılır; kullanıcıya sayısal seviye gösterilmez (**SHOULD**). |
 | RB-GEN-09 | Her katılımcı, kendisini ilgilendiren kritik olayı **MUST** en geç 4 saatte, yüksek önemdeki olayı en geç 24 saatte şema sahibine bildirmek. |
-| RB-GEN-10 | Liste aşamasında her katılımcı kayıtların **tek işletmecinin imzasına** dayandığını ve iptalin en geç 90 dakikada etkili olduğunu bilir; kişilere bu sınırlar yazılı bildirilir. |
+| RB-GEN-10 | Liste aşamasında her katılımcı kayıtların **tek işletmecinin imzasına** dayandığını ve iptalin birkaç dakikada (yayın aralığı + doğrulayıcının ön çekim aralığı) etkili olduğunu bilir; kişilere bu sınırlar yazılı bildirilir. |
 
 ---
 

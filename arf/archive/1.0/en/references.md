@@ -47,7 +47,7 @@ framework are compiled from the documents below.
 | Registration                  | [[ADR-0024]] · [[ADR-0026]] · [[ADR-0034]]                                                                                               |
 | Credential formats and types  | [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] · [[ADR-0013]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]]                                     |
 | Issuance                      | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]]                                                          |
-| Presentation and verification | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]]                                                     |
+| Presentation and verification | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] · [[ADR-0044]]                                     |
 | Wallet                        | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]]                                                                        |
 | Identity                      | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]]                                                                            |
 | Names                         | [[ADR-0030]]                                                                                                                             |

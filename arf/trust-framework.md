@@ -380,7 +380,7 @@ The templates are kept by the operator and given to the institution during the a
 | **Verifier terms of use**            | Verifier ↔ scheme owner                           | Scope, data minimisation, the ban on over-asking, not recording credential fields or revocation list positions, the single-use value, handling "cannot be verified" correctly, keeping registration data up to date                                                    |
 | **Wallet provider agreement**        | Wallet provider ↔ scheme owner                    | Wallet instance attestation and key attestation, secure hardware level, update and revocation times, not holding recovery keys                                                                                                                                         |
 | **Data processing agreement**        | Issuer ↔ authentic source or operator (processor) | KVKK Article 12; mapping table; retention periods                                                                                                                                                                                                                      |
-| **Pilot participant notice**         | Pilot participants                                | The limits of the pilot in plain words: trust rests on signed lists today, the anchor is with a single operator, a revocation takes effect within 90 minutes, participation is voluntary, consent can be withdrawn at any time                                         |
+| **Pilot participant notice**         | Pilot participants                                | The limits of the pilot in plain words: trust rests on signed lists today, the anchor is with a single operator, a revocation takes effect within a few minutes, participation is voluntary, consent can be withdrawn at any time                                         |
 | **Succession agreement**             | Operator ↔ custodian or council                   | Domain name, root certificates, list archive, hand-over of keys                                                                                                                                                                                                        |
 
 Every agreement refers to this framework and to the Tamga Rulebook; if they change, the relevant annex of the agreement is
@@ -393,7 +393,7 @@ updated too. A version that changes a core obligation requires a new signature (
 | Access to the trusted lists (`trust.`)   | 99.9% monthly; next update at most 90 days ahead; a change within 24 hours at most |
 | Anchor log                               | Hourly; at most one missed cycle                                                   |
 | Credential type catalogue (`schemas.`)   | 99.9%; a published file never changes                                              |
-| The issuer's revocation list publication | Fixed interval (60 minutes in the pilot; 2 minutes in today's trial operation); two missed cycles are high severity      |
+| The issuer's revocation list publication | Fixed interval (2 minutes); two missed cycles are high severity                                                          |
 | Incident notification                    | Critical within 4 hours; high within 24 hours                                      |
 | Registration change (registrar)          | Within 5 working days                                                              |
 

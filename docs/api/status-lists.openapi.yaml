@@ -7,7 +7,7 @@ info:
     Every credential carries a `status` claim with a list address (`uri`) and an index (`idx`). The verifier downloads the
     list at that address and reads the two bits at the index: `0` valid, `1` revoked, `2` suspended. The list is a signed
     JWT (`typ: statuslist+jwt`, ES256, issuer's X.509 chain in `x5c`) with `bits: 2` and a compressed bitstring; it is
-    republished at a fixed interval (default 1 hour) even when nothing changed, so a download reveals nothing about any
+    republished at a fixed interval (default 2 minutes) even when nothing changed, so a download reveals nothing about any
     person. Each publication is recorded in the trust list anchor log (`kind: status_list`) with its content digest.
 
     The list address is opaque — it does not encode the institution or a cohort. Take it from the credential; the base
@@ -20,7 +20,7 @@ info:
       Her belge, bir liste adresi (`uri`) ve bir indeks (`idx`) içeren `status` alanı taşır. Doğrulayıcı listeyi bu adresten
       indirir ve indeksteki iki biti okur: `0` geçerli, `1` iptal, `2` askıda. Liste imzalı bir JWT'dir (`typ: statuslist+jwt`,
       ES256, `x5c` içinde kurumun X.509 zinciri); `bits: 2` ve sıkıştırılmış bit dizisi taşır. Hiçbir şey değişmese de sabit
-      aralıkla (varsayılan 1 saat) yeniden yayınlanır; böylece bir indirme hiçbir kişi hakkında bir şey açığa vurmaz. Her yayın
+      aralıkla (varsayılan 2 dakika) yeniden yayınlanır; böylece bir indirme hiçbir kişi hakkında bir şey açığa vurmaz. Her yayın
       içerik özetiyle birlikte güven listesi çapa günlüğüne yazılır (`kind: status_list`).
 
       Liste adresi opaktır — kurumu ya da bir grubu kodlamaz. Adresi belgeden alın; her kurumun temel adresi ulusal güven
@@ -57,12 +57,12 @@ paths:
       summary: Get a status list token
       description: |
         Returns the latest signed Status List Token for the list. Check the signature against the issuer's certificate chain,
-        that `sub` equals the address you requested, and `exp` (`iat` + 50 hours); then read the bits at the credential's index.
+        that `sub` equals the address you requested, and `exp` (`iat` + 6 hours); then read the bits at the credential's index.
       x-tr:
         summary: Durum listesi belirtecini al
         description: |
           Listenin son imzalı Status List Token'ını döndürür. İmzayı kurumun sertifika zincirine göre, `sub` alanının
-          istediğiniz adrese eşit olduğunu ve `exp` alanını (`iat` + 50 saat) denetleyin; sonra belgenin indeksindeki bitleri
+          istediğiniz adrese eşit olduğunu ve `exp` alanını (`iat` + 6 saat) denetleyin; sonra belgenin indeksindeki bitleri
           okuyun.
       parameters:
         - in: path
@@ -100,8 +100,8 @@ components:
           x-tr: Liste adresi — belgedeki `uri` ile birebir aynı.
         iss: { type: string, format: uri, description: The issuer., x-tr: Belge veren kurum. }
         iat: { type: integer }
-        exp: { type: integer, description: "`iat` + 50 hours.", x-tr: "`iat` + 50 saat." }
-        ttl: { type: integer, description: Seconds until the next publication., x-tr: Bir sonraki yayına kadar saniye. }
+        exp: { type: integer, description: "`iat` + 6 hours (the absolute limit; SPEC-CRED-0003 §8.1).", x-tr: "`iat` + 6 saat (mutlak sınır; SPEC-CRED-0003 §8.1)." }
+        ttl: { type: integer, description: The publication interval in seconds — fetch a fresh token after this long., x-tr: Yayın aralığı (saniye) — bu süreden sonra yenisini çekin. }
         status_list:
           type: object
           properties:
@@ -111,6 +111,6 @@ components:
         sub: https://status.tamga.network/7f3a9c21d4e5b6a7
         iss: https://issuer.tamga.network/your-institution
         iat: 1791500000
-        exp: 1791680000
-        ttl: 3600
+        exp: 1791521600
+        ttl: 120
         status_list: { bits: 2, lst: eNrbuRgAAhcBXQ }

@@ -234,7 +234,7 @@ lives for forty years.
 ## 3.3 Signing module
 
 - The credential signing key is **in an HSM/KMS** and never leaves it.
-- The [[t:status-list]] signing key is **separate** ([[SPEC-CRED-0003]] §3.4) — it signs every hour, so it has to stay online.
+- The [[t:status-list]] signing key is **separate** ([[SPEC-CRED-0003]] §3.4) — it signs at every publication interval, so it has to stay online.
 - Both chain to the same X.509 hierarchy ([[SPEC-ID-0002]]).
 
 ## 3.4 Status publisher
@@ -338,10 +338,10 @@ Both follow the same pattern: **static file + CDN + ledger anchor.**
 |---|---|---|
 | Operated by | Foundation (initial stage) | Each issuer separately |
 | Content | Type Metadata + JSON Schema | Signed Status List Token |
-| Change | New versions only (immutable URL) | A new version every hour |
+| Change | New versions only (immutable URL) | A new version every publication interval (2 minutes) |
 | Cache | `immutable`, indefinite | `ttl`/`exp` claims decide |
 | Application server | No | No (the publishing job is separate) |
-| Outage impact | New types cannot be learned | Continues from cache for up to 50 hours |
+| Outage impact | New types cannot be learned | Continues from cache for up to 6 hours (`exp`) |
 
 **Common principle:** neither is on the **critical path** of verification — thanks to the integrity hash they can be cached
 indefinitely. This makes their SLOs much cheaper ([[ARCH-0004]]).
@@ -411,7 +411,7 @@ Which component holds which key — the logical counterpart of [[ARCH-0004]] §4
 | Wallet device key | User | Secure Enclave | KB-JWT | On device change |
 | TLS | Every service | ACME/automation | HTTPS | 90 days |
 
-**Invariant K1:** the credential signing key and the status signing key **can never be the same.** If they were, signing every hour
+**Invariant K1:** the credential signing key and the status signing key **can never be the same.** If they were, signing at every publication interval
 would require exposing the diploma key in the HSM to a permanently online service.
 
 ---
@@ -426,7 +426,7 @@ This table summarises the design's resilience.
 | **Indexer** | ✓ | ⚠ `INDETERMINATE` or direct RPC | Medium |
 | **Ledger (all validators)** | ✗ | ⚠ limited, from cache | **Critical** |
 | **`schemas.tamga.network`** | ✓ (schema local) | ✓ known types; ✗ new types | Low |
-| **`status.<issuer>`** | ✓ | ✓ up to 50 hours (`exp`) | Low |
+| **`status.<issuer>`** | ✓ | ✓ up to 6 hours (`exp`) | Low |
 | **Issuer service** | ✗ that institution | ✓ credentials already issued | Medium (local) |
 | **Verifier service** | ✓ | ✗ that verifier | Low (local) |
 | **Issuer HSM** | ✗ that institution | ✓ | Medium |

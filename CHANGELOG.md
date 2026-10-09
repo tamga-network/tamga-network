@@ -9,6 +9,19 @@ everything is ready.
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-09 — revocation lists: decisions on noise, `exp`, hosted service; ZK short-lived copies
+
+- Status list (SPEC-CRED-0003): the 1% initial-noise rule is removed (it had no observable effect). The publication interval
+  stays short (2 minutes; `ttl` = the interval) and `exp` becomes `iat + 6 hours` — `ttl` is the draft-20 refresh hint, `exp`
+  the absolute limit, matching the 6-hour maximum token age of verifier policies. The network's services sign with the new
+  `exp`; `@tamga-network/sd-jwt` 0.3.0 still treats a token as stale after `2 × ttl`, so the outage buffer reaches verifiers
+  with the next patch release. Hosted status service (§10.2): key separation and key location described as they are; the
+  revocation list endpoints keep no access log. The ARF, trust framework and rulebooks say "a revocation takes effect within
+  a few minutes" instead of the 60/90-minute pilot values.
+- ADR-0044 (accepted): a ZK presentation uses only short-lived ZK copies (≤ 24 hours, no revocation list entry), refreshed
+  silently and not re-issued once the main credential is revoked or suspended — the EU ARF's short-lived attestation path.
+  ADR-0023 AR4 gets a narrow exception for the ZK copy token. Implementation pending (next minor package release).
+
 ### 2026-10-09 — standards alignment (OpenID4VCI 1.0 Final, OpenID4VP 1.0, HAIP 1.0); packages: 0.3.0 test release
 
 Wire format changes (breaking for test-release users; update issuer, wallet and wallet provider together):

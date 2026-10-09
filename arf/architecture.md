@@ -341,9 +341,10 @@ pseudonym seed (which stays in the wallet and is never shown to any verifier).
 
 Credential status is published with the IETF Token [[t:status-list|Status List]]. List addresses do not reveal the institution, year or
 student group; a credential's position in the list is random. Lists are published at fixed intervals, even without
-changes, so the moment of revocation does not leak. In the pilot the interval is 60 minutes (2 minutes in today's trial operation; moving to the pilot value awaits a project
-management decision); a revocation takes effect at
-verifiers within 90 minutes at most.
+changes, so the moment of revocation does not leak. The publication interval is 2 minutes; a revocation takes effect at
+verifiers within the publication interval plus the verifier's prefetch interval (a few minutes). Each list is valid for 6
+hours: if the status server goes down, a verifier can keep verifying with the last list for that long. A zero-knowledge
+presentation does not disclose the revocation list index; short-lived copies are used for it (§7.4 L5).
 
 ---
 
@@ -445,9 +446,10 @@ shown at EU interoperability events and with the OpenID conformance tests.
 | #   | Limit                                                                                                                              |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | L1  | The trust anchor today rests on a single operator's signature (§6.6).                                                              |
-| L2  | A revocation takes effect within about 90 minutes at most.                                                                         |
+| L2  | While the status server is up, a revocation takes effect within a few minutes (2-minute publication interval + the verifier's prefetch interval). |
 | L3  | If credentials from the same issuer are combined across verifiers, a person can be linked; zero-knowledge proofs remove this risk. |
 | L4  | When changing device, credentials are obtained again; an approved transfer design is open.                                         |
+| L5  | The revocation of an identity credential presented with a zero-knowledge proof cannot be checked in the presentation. Decision: such a presentation uses only short-lived copies, valid for at most 24 hours and refreshed silently; the copies of a revoked credential are not refreshed (the EU ARF's short-lived attestation path). Implementation is pending; until then such a presentation counts as COULD NOT VERIFY unless the verifier's policy explicitly accepts the risk. |
 
 ---
 

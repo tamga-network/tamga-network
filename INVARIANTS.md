@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 287 kodlanmış değişmez, 43 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 291 kodlanmış değişmez, 44 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -166,7 +166,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0023/AR1` | Sessiz yenileme yalnız yenileme belirteci olan belgeler için, kurumun ilan ettiği eşikte, uygulama önde ve kilit açıkken ve rastgele gecikmeyle yapılır. |
 | `ADR-0023/AR2` | Yenileme belirteci belgeye özel DPoP anahtarına bağlıdır, tek kullanımlıktır ve her kullanımda değişir; her yenilemede cüzdan onayı doğrulanır. |
 | `ADR-0023/AR3` | Kurum yenilemede öznitelikleri yetkili kaynaktan yeniden okur; kaynakta kayıt yoksa belge verilmez ve belirteç iptal edilir. |
-| `ADR-0023/AR4` | Kişi alanlarını saklamayan servisler (kimlik, iletişim) yenileme belirteci vermez. |
+| `ADR-0023/AR4` | Kişi alanlarını saklamayan servisler (kimlik, iletişim) yenileme belirteci vermez. Tek istisna ZK kopyası belirtecidir ([[ADR-0044]] ZC3: kişi alanları sunucuda saklanmaz). |
 
 
 ## ADR-0024
@@ -398,6 +398,18 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 |---|---|
 | `ADR-0043/YS1` | Ağ, cüzdanların güven listesine kaydı için ve kimlik servisinin kimlik belgesi vermesi için asgari yaş şartı koymaz. |
 | `ADR-0043/YS2` | Bir belgeyi kimin alabileceğini o belgenin belge vereni belirler; yaşa bağlı doğrulama, doğrulayıcının yalnız gereken bilgiyi istemesiyle yapılır. |
+
+
+## ADR-0044
+
+*"ZK sunumu için kısa ömürlü kopyalar"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0044/ZC1` | ZK sunumu yalnız ZK kopyasıyla yapılır; ZK kopyası en çok 24 saat geçerlidir ve iptal listesi taşımaz. |
+| `ADR-0044/ZC2` | Ana kimlik belgesi iptal edilmiş ya da askıdaysa kimlik servisi yeni ZK kopyası vermez. |
+| `ADR-0044/ZC3` | ZK kopyası yenilemesi kişi alanlarını sunucuda saklamaz; alanlar yalnız kimlik servisinin açabileceği biçimde belirteçte, cüzdanda durur. |
+| `ADR-0044/ZC4` | Doğrulayıcı kısa ömür işaretini taşımayan ZK sunumunu, politika açıkça kabul etmedikçe DOĞRULANAMADI sayar. |
 
 
 ## ARCH-0003
@@ -683,12 +695,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 287 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 291 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AP, AR, AS, C, CI, CMP, CT, D, DL, DS, DY, E, FD, HA, HV, IC, IDC, IDP, K, KC, LX, MD, NW, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZK.
+AP, AR, AS, C, CI, CMP, CT, D, DL, DS, DY, E, FD, HA, HV, IC, IDC, IDP, K, KC, LX, MD, NW, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-09 (`scripts/sync-invariants.mjs`). Toplam 287 kodlanmış değişmez, 43 dokümanda.
+**Üretilen dosya** — 2026-10-09 (`scripts/sync-invariants.mjs`). Toplam 291 kodlanmış değişmez, 44 dokümanda.

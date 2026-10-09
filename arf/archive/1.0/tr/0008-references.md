@@ -40,7 +40,7 @@ belgelerden derlenmiştir.
 | Kayıt | [[ADR-0024]] · [[ADR-0026]] · [[ADR-0034]] |
 | Belge biçimleri ve türleri | [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] · [[ADR-0013]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] |
 | Belge verme | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]] |
-| Gösterme ve doğrulama | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] |
+| Gösterme ve doğrulama | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] · [[ADR-0044]] |
 | Cüzdan | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]] |
 | Kimlik | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]] |
 | Adlar | [[ADR-0030]] |

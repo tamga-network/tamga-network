@@ -323,8 +323,10 @@ tohumu (yalnız cüzdanda kalır, hiçbir doğrulayıcıya gösterilmez).
 
 Belge durumu IETF Token Status List ile yayınlanır. Liste adresleri kurumu, yılı ya da öğrenci grubunu ele vermez; bir
 belgenin listedeki yeri rastgeledir. Listeler sabit aralıklarla, değişiklik olmasa da yayınlanır; böylece iptal anı dışarı
-sızmaz. Pilotta yayın aralığı 60 dakikadır; bir iptal en geç 90 dakika içinde doğrulayıcılarda etkili olur. Bugünkü deneme
-işletiminde aralık 2 dakikadır; pilot değerine geçiş proje yönetiminin kararını bekliyor.
+sızmaz. Yayın aralığı 2 dakikadır; bir iptal, yayın aralığı ile doğrulayıcının ön çekim aralığı toplamı kadar sürede (birkaç
+dakika) doğrulayıcılarda etkili olur. Her liste 6 saat geçerlidir: durum sunucusu kesintiye uğrarsa doğrulayıcı son listeyle bu
+süre boyunca doğrulamaya devam edebilir. Sıfır bilgi ispatıyla sunumda iptal listesi indeksi açılmaz; bu sunum için kısa ömürlü
+kopyalar kullanılır (§7.4 L5).
 
 ---
 
@@ -421,9 +423,10 @@ değerlendirme kuruluşları ve ulusal sertifikasyon gelir. Rol başına neyin t
 | # | Sınır |
 |---|---|
 | L1 | Güven çapası bugün tek işletmecinin imzasına dayanır (§6.6). |
-| L2 | Bir iptal en geç yaklaşık 90 dakikada etkili olur. |
+| L2 | Bir iptal, durum sunucusu çalışırken birkaç dakikada etkili olur (yayın aralığı 2 dakika + doğrulayıcının ön çekim aralığı). |
 | L3 | Aynı belge verenin belgeleri farklı doğrulayıcılarda birleştirilirse kişi eşleştirilebilir; sıfır bilgi ispatı bu riski kaldırır. |
 | L4 | Cihaz değişiminde belgeler yeniden alınır; onaylı devir tasarımı açıktır. |
+| L5 | Sıfır bilgi ispatıyla sunulan kimlik belgesinin iptali sunumda denetlenemez. Karar: bu sunum yalnız en çok 24 saat geçerli, sessizce yenilenen kısa ömürlü kopyalarla yapılır; iptal edilen belgenin kopyası yenilenmez (AB ARF'nin kısa ömürlü belge yolu). Uygulama sırada; o zamana kadar doğrulayıcı politikası bu riski açıkça kabul etmedikçe böyle bir sunum DOĞRULANAMADI sayılır. |
 
 ---
 

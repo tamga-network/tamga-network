@@ -121,7 +121,7 @@ Yalnızca e-posta ve SMS ile **diploma verilmez**.
 | İptal listesi | Yok — kısa ömür iptalin yerini tutar; süresi dolmamış ama artık doğru olmayan belge kabul edilmiş bir risktir | **Zorunlu**; `status.status_list {uri, idx}` |
 | İptal nedenleri | — (yeniden verilmez) | Diplomanın iptali (sahtecilik, mahkeme kararı), hatalı belge (yeniden verilerek), rızanın geri alınması, cihaz ihlali bildirimi |
 | Askıya alma | — | `SUSPENDED` (2 bitlik değer) — inceleme süresince |
-| Yayın aralığı | — | Sabit aralık (pilotta 60 dakika; bugünkü deneme işletiminde 2 dakika); acil yayın yoktur; iptal en geç 90 dakikada etkili olur |
+| Yayın aralığı | — | Sabit aralık (2 dakika); liste 6 saat geçerlidir; acil yayın yoktur; iptal birkaç dakikada etkili olur |
 | Kurum askıdaysa | Yeni belge verilmez; mevcut belgeler süreleri dolana kadar geçerlidir | Yeni belge verilmez; eski diplomalar verildikleri tarihe göre geçerlidir |
 | Sertifika yenileme | Eski belgeler eski `issuer_id` kaydıyla doğrulanır | aynı |
 

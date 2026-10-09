@@ -70,12 +70,10 @@ belgeler kısa ömürlüdür (sessiz yenileme, [[ADR-0023]]); gizli iptal kanıt
 Politika bunu açıkça seçer: `accept_unrevocable_zk: true` iptali denetlenemeyen ZK sunumunu bilerek kabul eder (sonuçta
 `status.value = NOT_APPLICABLE` ve `status.reason`); `false` ise sonuç DOĞRULANAMADI olur (adım D1, `STATUS_UNREACHABLE`).
 
-*Uygulama notu (2026-10-09, karar bekliyor):* "kısa ömür" önlemi bugün yürürlükte değildir. ZK ile sunulabilen tek belge kimlik
-belgesidir (mdoc); 2 yıl geçerlidir ve kimlik servisi kişi alanlarını saklamadığı için sessiz yenileme yapılmaz ([[ADR-0023]]
-AR4). İptal edilen bir kimlik belgesi ZK ile sunulduğunda doğrulayıcı bunu göremez; `accept_unrevocable_zk: true` bu bilinçle ve
-iptalin sonucu değiştirmediği kullanımlarda (ör. yaş kontrolü) seçilmelidir. Seçenekler: ZK için ayrı, kısa ömürlü mdoc kopyaları
-(kullanıcı eylemiyle yenilenir), kimlik belgesinin mdoc temsilinin süresini kısaltmak ya da gizli iptal kanıtını beklemek. Karar
-verilene kadar ZK4'ün ikinci yarısı karşılanmıyor.
+*Uygulama notu (2026-10-09):* "kısa ömür" [[ADR-0044]] ile tanımlandı: ZK sunumu yalnız en çok 24 saat geçerli, iptal listesi
+taşımayan ve sessizce yenilenen ZK kopyalarıyla yapılır; ana belge iptal ya da askıdaysa yeni kopya verilmez. Uygulama sırada.
+O zamana kadar ZK ile sunulabilen tek belge 2 yıl geçerli kimlik belgesidir (mdoc) ve iptali ZK sunumunda görünmez;
+`accept_unrevocable_zk: true` bu bilinçle ve iptalin sonucu değiştirmediği kullanımlarda (ör. yaş kontrolü) seçilmelidir.
 
 ## K7 — Cihaz bağlaması
 İspat, cihaz anahtarının SessionTranscript üzerindeki ES256 imzasını içerir ve cihaz açık anahtarını gizler; anahtar güvenli

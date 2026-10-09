@@ -247,7 +247,7 @@ düzeltilemez.
 
 - Belge imzalama anahtarı **HSM/KMS'te**, dışa çıkmaz.
 - [[t:status-list]] imzalama anahtarı **ayrıdır** ([[SPEC-CRED-0003]] §3.4) —
-  saatte bir imza attığı için çevrimiçi durmak zorunda.
+  her yayın aralığında imza attığı için çevrimiçi durmak zorunda.
 - İkisi aynı X.509 zincirine bağlıdır ([[SPEC-ID-0002]]).
 
 ## 3.4 Status yayıncı
@@ -357,10 +357,10 @@ ayrı gösterilmelidir.
 |---|---|---|
 | Kim işletir | Vakıf (ilk aşama) | Her belge veren ayrı |
 | İçerik | Type Metadata + JSON Schema | İmzalı İptal listesi Token |
-| Değişim | Yalnızca yeni sürüm (değişmez URL) | Saatte bir yeni sürüm |
+| Değişim | Yalnızca yeni sürüm (değişmez URL) | Her yayın aralığında yeni sürüm (2 dakika) |
 | Önbellek | `immutable`, süresiz | `ttl`/`exp` claim'leri belirleyici |
 | Uygulama sunucusu | Hayır | Hayır (yayın işi ayrı) |
-| Kesinti etkisi | Yeni tip öğrenilemez | 50 saate kadar önbellekten devam |
+| Kesinti etkisi | Yeni tip öğrenilemez | 6 saate kadar önbellekten devam (`exp`) |
 
 **Ortak ilke:** İkisi de doğrulamanın **kritik yolunda değildir** — çünkü
 bütünlük hash'i sayesinde süresiz önbelleklenebilirler. Bu, SLO'larını ciddi
@@ -434,7 +434,7 @@ Hangi bileşen hangi anahtarı tutar — [[ARCH-0004]] §4'ün mantıksal karş�
 | TLS | Her servis | ACME/otomasyon | HTTPS | 90 gün |
 
 **Değişmez K1:** Belge imzalama anahtarı ile status imzalama anahtarı
-**asla aynı olamaz.** Aynı olsaydı, saatte bir imza atmak için HSM'deki
+**asla aynı olamaz.** Aynı olsaydı, her yayın aralığında imza atmak için HSM'deki
 diploma anahtarını sürekli çevrimiçi bir servise açmak gerekirdi.
 
 ---
@@ -449,7 +449,7 @@ Bu tablo, tasarımın dayanıklılığının özetidir.
 | **İndeksleyici** | ✓ | ⚠ `INDETERMINATE` veya doğrudan RPC | Orta |
 | **Zincir (tüm validator)** | ✗ | ⚠ önbellekten sınırlı | **Kritik** |
 | **`schemas.tamga.network`** | ✓ (şema yerelde) | ✓ bilinen tipler; ✗ yeni tip | Düşük |
-| **`status.<issuer>`** | ✓ | ✓ 50 saate kadar (`exp`) | Düşük |
+| **`status.<issuer>`** | ✓ | ✓ 6 saate kadar (`exp`) | Düşük |
 | **Belge veren service** | ✗ o kurum | ✓ verilmiş belgeler | Orta (yerel) |
 | **Doğrulayıcı service** | ✓ | ✗ o doğrulayıcı | Düşük (yerel) |
 | **Belge veren HSM** | ✗ o kurum | ✓ | Orta |
