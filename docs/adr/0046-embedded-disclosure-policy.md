@@ -1,17 +1,18 @@
 ---
 document_id: ADR-0046
 title: "Gömülü açıklama politikası"
-status: Proposed
+status: Active
 version: 1.0.0
 created: 2026-10-09
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Belge veren kurum, bir belge türünün yalnız belirli doğrulayıcılara (ya da belirli bir yetkiye sahip olanlara, ya da belirli bir
   güven kökünden sertifika almış olanlara) gösterilmesini isteyebilir. Kurum bu kuralı imzalı Credential Issuer metadata'sında,
   belge yapılandırmasının içinde değer olarak yayımlar; belgenin biçimi değişmez. Cüzdan kuralı belge alırken saklar, gösterimde
   doğrulayıcının kayıt sertifikası (WRPRC) ve erişim sertifikasıyla karşılaştırır; tutmazsa onay ekranında uyarır, kararı kişiye
   bırakır (varsayılan "paylaşma"). Politika eklenir, değişir ya da kalkarsa kurum o türdeki belgeleri iptal eder. AB ARF 3.0
-  Konu 43'ün 10 maddesini karşılar. Yeni alan adları onay bekler. Paketler 0.5.0.
+  Konu 43'ün 10 maddesini karşılar. Kapsam yalnız kurum belgeleri; kayıt sertifikasına hizmet kimliği aynı turda eklenir.
+  Alan adları onaylandı. Paketler 0.5.0. Kabul: 2026-10-11.
 domain: Trust
 related: ["[[ADR-0026]]", "[[ADR-0024]]", "[[ADR-0028]]", "[[ADR-0023]]", "[[ADR-0029]]", "[[ADR-0042]]", "[[SPEC-PROTO-0001]]", "[[SPEC-WALLET-0001]]", "[[FW-RB-0001]]"]
 ---
@@ -21,7 +22,7 @@ related: ["[[ADR-0026]]", "[[ADR-0024]]", "[[ADR-0028]]", "[[ADR-0023]]", "[[ADR
 Bugün bir diploma ya da üyelik belgesi, kişi onaylarsa güven listesindeki her doğrulayıcıya gösterilebilir. Cüzdan yalnız
 doğrulayıcının kayıtlı olduğundan fazlasını isteyip istemediğine bakar ([[ADR-0026]] K5, fazla istek uyarısı). AB, belge verenin
 "bu belge yalnız şu doğrulayıcılara gösterilsin" diyebilmesini ve cüzdanın bunu denetlemesini ister. Bu karar o kuralın nerede
-taşınacağını, cüzdanın nasıl değerlendireceğini ve kişiye ne gösterileceğini önerir.
+taşınacağını, cüzdanın nasıl değerlendireceğini ve kişiye ne gösterileceğini belirler.
 
 # Bağlam
 
@@ -53,7 +54,7 @@ yetki (entitlement) URI'leri; güven kökü listesi (her öğe: verenin ayırt e
 yok sayabilir); sade dil sayfası bağlantısı. Politika doğrulayıcıya açılmaz. **ETSI JSON üye adlarını tanımlamaz.**
 
 **ARF ile ETSI arasındaki fark:** ARF yetkili doğrulayıcıyı kayıt sertifikasındaki (kimlik, hizmet) ikilisiyle ve güven kökünü kayıt
-sertifikası zinciriyle; ETSI ve Tüzük ise konu adıyla ya da yetkiyle ve erişim sertifikası köküyle tarif eder. Öneri ikisini de kabul
+sertifikası zinciriyle; ETSI ve Tüzük ise konu adıyla ya da yetkiyle ve erişim sertifikası köküyle tarif eder. Karar ikisini de kabul
 eder (K3).
 
 **Tamga'da bugün:**
@@ -64,7 +65,7 @@ eder (K3).
 - Belge yapılandırmasında `credential_metadata` altında `display` ve `credential_reuse_policy` var.
 - Kodda gömülü açıklama politikası yok. EDP_02 "kısmen" sayılıyor, çünkü fazla istek denetimi benzer bir koruma sağlıyor.
 - Yakın alanda (ISO 18013-5) ve cüzdandan cüzdana istekte kayıt sertifikası yoktur.
-- Önerilen [[ADR-0028]] K5, meslek icra belgesi için yetkiye dayalı bir politika örneği verir ("yalnız kayıt sertifikasında sağlık
+- [[ADR-0028]] K5, meslek icra belgesi için yetkiye dayalı bir politika örneği verir ("yalnız kayıt sertifikasında sağlık
   hizmeti sunucusu yetkisi olan doğrulayıcılara") ve JSON adlarını bu karara bırakır.
 
 # Değerlendirilen seçenekler
@@ -73,7 +74,7 @@ eder (K3).
 
 | Seçenek | Sonuç | Neden |
 |---|---|---|
-| **İmzalı Credential Issuer metadata'sında, belge yapılandırmasının `credential_metadata` nesnesinde, değer olarak** | **öneri** | EDP_09'un kendisi; belge biçimi değişmez; metadata zaten imzalı ve cüzdan belge alırken okuyor. |
+| **İmzalı Credential Issuer metadata'sında, belge yapılandırmasının `credential_metadata` nesnesinde, değer olarak** | **seçildi** | EDP_09'un kendisi; belge biçimi değişmez; metadata zaten imzalı ve cüzdan belge alırken okuyor. |
 | Belgenin içinde (SD-JWT claim'i ya da mdoc öğesi) | ret | Politika doğrulayıcıya açılmamalı (ETSI §4.2.5.1); belge biçimi değişir; ARF "belge biçiminde değişiklik gerekmez" der. |
 | URL ile bağlantı, cüzdan gösterimde indirir | ret | ARF "bağlantı değil değer" der (§6.6.2.8.3); yakın alanda ve çevrimdışı çalışmaz; belge verene gösterim zamanını sızdırır. |
 | Güven listesindeki kurum kaydında | ret | AB yolu değil; AB cüzdanları okumaz. |
@@ -82,7 +83,7 @@ eder (K3).
 
 | Seçenek | Sonuç | Neden |
 |---|---|---|
-| **Uyar, kararı kişiye bırak (varsayılan düğme "Paylaşma")** | **öneri** | EDP_07 kişiye "reddet ya da izin ver" seçimini verir; [[ADR-0026]]'nın fazla istek uyarısıyla aynı desen (WL8). |
+| **Uyar, kararı kişiye bırak (varsayılan düğme "Paylaşma")** | **seçildi** | EDP_07 kişiye "reddet ya da izin ver" seçimini verir; [[ADR-0026]]'nın fazla istek uyarısıyla aynı desen (WL8). |
 | Kesin engelle | ret (soru 3) | EDP_07 ile çelişir; Tamga'ya özgü daha sıkı bir kural olur; AB cüzdanları uyarıyla yetinir. |
 | Belge veren "uyar / engelle" seçsin | ret (soru 3) | Yeni ve AB'de karşılığı olmayan bir alan; aynı belge AB cüzdanında farklı davranır. |
 
@@ -90,17 +91,17 @@ eder (K3).
 
 | Seçenek | Sonuç | Neden |
 |---|---|---|
-| **ARF ikilisi + ETSI konu adı + ETSI yetki URI'si; listelenen herhangi biri tutarsa geçer** | **öneri** | ARF ve ETSI'nin ikisine de uyar; kurum kendi işine uygun olanı kullanır ("şu üç doğrulayıcı" ya da "şu yetkiye sahip herkes"). |
+| **ARF ikilisi + ETSI konu adı + ETSI yetki URI'si; listelenen herhangi biri tutarsa geçer** | **seçildi** | ARF ve ETSI'nin ikisine de uyar; kurum kendi işine uygun olanı kullanır ("şu üç doğrulayıcı" ya da "şu yetkiye sahip herkes"). |
 | Yalnız ARF ikilisi | ret | ETSI biçiminde yazılmış AB politikalarını okuyamaz; yetkiye dayalı "kategori" kuralı kurulamaz. |
 | Yalnız ETSI | ret | ARF'nin aracı notunu (kayıt sertifikasındaki kimlik esas) karşılamaz. |
 
-# Önerilen karar
+# Karar
 
 ## K1 — Politikanın yeri ve biçimi
 
 Belge veren, politikası olan her belge yapılandırması için imzalı Credential Issuer metadata'sında şu nesneyi yayımlar (ad ve
-üye adları **onay bekliyor**; ETSI JSON adı tanımlamadığı için Tamga'nın önerisidir; AB ya da ETSI bir JSON kodlaması yayımlarsa ona
-geçilir, [[ADR-0029]]):
+üye adları proje yönetimince **onaylandı**; ETSI JSON adı tanımlamadığı için Tamga'nın seçimidir ve ETSI veri modelini izler; AB ya
+da ETSI bir JSON kodlaması yayımlarsa ona geçilir, [[ADR-0029]]):
 
 ```json
 "credential_configurations_supported": {
@@ -127,7 +128,8 @@ geçilir, [[ADR-0029]]):
 - İsteğe bağlı: `info_uri` (EDP_05, ETSI -13), `authority` (ETSI -05), `description` (ETSI -04).
 - Bilinmeyen üyeler ve uzantılar yok sayılır (ETSI -10/-11). Alan düzeyinde politika uzantısı (ETSI -12) desteklenmez.
 - Politika belgeye girmez; doğrulayıcıya gitmez.
-- Kapsam: kurum belgeleri (EAA). Tamga kimlik belgesi ve iletişim belgeleri politika taşımaz.
+- Kapsam: **yalnız kurum belgeleri** (EAA). Tamga kimlik belgesi (ve ZK kopyası), sürücü belgesi bilgisi ve iletişim belgeleri
+  politika taşımaz; metadata üreticisi bu türlerde politikayı reddeder.
 
 ## K2 — Cüzdan: belge alırken saklama (EDP_10)
 
@@ -149,15 +151,15 @@ Gösterim isteği geldiğinde istenen her belge için, kayıt sertifikası [[ADR
 - Aracılı istekte kayıt sertifikasındaki aracılanan doğrulayıcı esas alınır (ARF EDP_02 notu).
 - Kayıt sertifikasının hizmet kimliği bugün yoktur (RPRC_17a kısmen). Hizmet kimliği eklenene kadar `service_id` içeren bir öğe
   eşleşmez; `service_id`'siz öğe doğrulayıcının bütün kullanımlarını kapsar. Hizmet kimliğinin WRPRC'ye eklenmesi bu kararın ön
-  koşuludur ve aynı turda yapılır.
+  koşuludur ve **aynı turda** (paketler 0.5.0) yapılır.
 
 ## K4 — Onay ekranı (EDP_05, EDP_07)
 
 - Değerlendirme başarılıysa ekran değişmez.
-- Başarısız ya da yapılamazsa: ayrı bir uyarı bloğu — "**<Belge veren>** bu belgenin yalnız izin verdiği kurumlara gösterilmesini
-  istiyor. **<Doğrulayıcı>** bu izinli kurumlar arasında değil." (yapılamadıysa: "...izinli olup olmadığı denetlenemedi.").
+- Başarısız ya da yapılamazsa: ayrı bir uyarı bloğu — "**[belge veren]** bu belgenin yalnız izin verdiği kurumlara gösterilmesini
+  istiyor. **[doğrulayıcı]** bu izinli kurumlar arasında değil." (yapılamadıysa: "...izinli olup olmadığı denetlenemedi.").
   `info_uri` varsa "Kuralı oku" bağlantısı. Varsayılan düğme **"Paylaşma"**; "Yine de paylaş" kısa bir gecikmeyle açılır
-  (WL8 deseni).
+  (WL8 deseni). Cüzdan kesin engel koymaz: son karar kişinindir (EDP_07).
 - Birden çok belge isteniyorsa uyarı ilgili belgenin satırında; kişi o belgeyi çıkarıp kalanını paylaşabilir.
 
 ## K5 — Belge veren: iptal (EDP_11)
@@ -165,13 +167,13 @@ Gösterim isteği geldiğinde istenen her belge için, kayıt sertifikası [[ADR
 - Bir yapılandırmanın politikası eklenir, değişir ya da kalkarsa belge veren o yapılandırmayla verilmiş, hâlâ geçerli bütün
   belgeleri iptal eder. Belge kaydı ihraç anındaki politika özetini tutar; iptal özete göre yapılır.
 - Kurum Konsolu, politikayı değiştirmeden önce kaç belgenin iptal edileceğini gösterir ve onay ister. Kişiler belgeyi yeniden alır;
-  otomatik yenileme koşulları ([[ADR-0023]]) izin veriyorsa yeni kopyalar yeni politikayla gelir.
+  otomatik yenileme koşulları ([[ADR-0023]]) izin veriyorsa yeni kopyalar yeni politikayla gelir. Bu bedel kabul edildi.
 
-# Önerilen kurallar (kabul edilirse bağlayıcı tabloya taşınır)
+# Değişmezler
 
 | Kod | Kural |
 |---|---|
-| EP1 | Gömülü açıklama politikası yalnız imzalı Credential Issuer metadata'sında, belge yapılandırmasında değer olarak taşınır; belgeye girmez ve doğrulayıcıya gönderilmez. |
+| EP1 | Gömülü açıklama politikası yalnız imzalı Credential Issuer metadata'sında, kurum belgesi yapılandırmasında değer olarak taşınır; belgeye girmez ve doğrulayıcıya gönderilmez. |
 | EP2 | Cüzdan politikayı belge alırken saklar ve gösterimde ağ isteği yapmadan, kayıt sertifikası ve erişim sertifikasıyla değerlendirir. |
 | EP3 | Değerlendirme başarısızsa ya da yapılamıyorsa cüzdan onay ekranında ayrı bir uyarı gösterir; varsayılan seçim paylaşmamaktır, son karar kişinindir. |
 | EP4 | Politika eklenen, değişen ya da kaldırılan yapılandırmanın geçerli belgeleri iptal edilir. |
@@ -209,9 +211,9 @@ ekranı uyarısı.
 
 # Sonuçlar
 
-- Şartnameler (kabulde): [[SPEC-PROTO-0001]] metadata alanı; [[SPEC-WALLET-0001]] değerlendirme ve onay ekranı kuralı;
-  [[FW-RB-0001]] rulebook'ta "erişim kısıtı" bölümü (ARF notu: kısıt rulebook'ta da doğrulayıcılara duyurulur); Tamga ARF'de güven
-  modeli ve gizlilik önlemleri satırları.
+- Şartnameler: [[SPEC-PROTO-0001]] metadata alanı; [[SPEC-WALLET-0001]] değerlendirme ve onay ekranı kuralı;
+  [[FW-RB-0001]] rulebook'ta "erişim kısıtı" kuralı (ARF notu: kısıt rulebook'ta da doğrulayıcılara duyurulur); Tamga ARF'de güven
+  modeli ve gizlilik önlemleri satırları (kabulde güncellendi; kod 0.5.0 ile).
 - Cüzdandan cüzdana ve yakın alan gösteriminde politika değerlendirilemez; politikası olan belge bu yollarda uyarıyla (yakın alan)
   gösterilir ya da hiç gösterilmez (cüzdandan cüzdana; cüzdanın kendi kararı).
 - Politikayı değiştiren kurum, belgelerinin yeniden verilmesini göze alır; Kurum Konsolu bunu açıkça gösterir.
@@ -233,14 +235,14 @@ ekranı uyarısı.
 
 Bütün işler kod ve belge işidir; cihaz ya da sertifika gerekmez.
 
-# Kararı bekleyen sorular (proje yönetimi)
+# Yanıtlanan sorular (2026-10-11)
 
-1. **Ad onayı:** metadata alanı `embedded_disclosure_policy`, türler `none` / `authorized_relying_parties` / `specific_roots_of_trust`, üye adları (`relying_parties`, `rp_id`, `service_id`, `subject_dns`, `entitlements`, `roots_of_trust`, `issuer_dn`, `serial_number`, `info_uri`, `authority`, `description`) uygun mu? Bunlar kamuya açık yeni adlardır.
-2. **Kapsam:** politika yalnız kurum belgelerinde olsun, Tamga kimlik ve iletişim belgelerinde olmasın (öneri) — uygun mu?
-3. **Uyarı mı engel mi:** politika tutmazsa cüzdan uyarıp kararı kişiye bıraksın mı (öneri, AB'nin yolu), yoksa kesin engellesin mi?
-4. **Toplu iptal:** kurum politikayı değiştirirse o türdeki bütün geçerli belgeler iptal edilir ve kişiler yeniden alır. Bu bedel kabul mü?
-5. **Hizmet kimliği:** kayıt sertifikasına ayrı bir "hizmet kimliği" eklenmesi (AB'nin istediği) bu işle aynı turda yapılsın mı (öneri)?
+1. **Ad onayı:** `embedded_disclosure_policy`, türler `none` / `authorized_relying_parties` / `specific_roots_of_trust` ve üye adları — **onaylandı** (K1).
+2. **Kapsam:** — **Yalnız kurum belgeleri**; Tamga kimlik ve iletişim belgeleri politika taşımaz (K1).
+3. **Uyarı mı engel mi:** — Cüzdan **uyarır, kararı kişi verir**; varsayılan "Paylaşma" (K4).
+4. **Toplu iptal:** — **Kabul**: politika değişince o türdeki geçerli belgeler iptal edilip yeniden verilir (K5).
+5. **Hizmet kimliği:** — Kayıt sertifikasına hizmet kimliği **aynı turda** eklenir (K3).
 
 # Durum
 
-**Proposed — 2026-10-09.** AB uyum boşluk sayımındaki (2026-10-09) "Konu 43" maddesi için tasarım önerisi; adlar ve sorular kararda.
+**Accepted — 2026-10-11.** Proje yönetimi onayıyla. DECISIONS: D-TRUST-5. Kod paketlerin 0.5.0 sürümüyle.

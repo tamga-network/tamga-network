@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -170,6 +170,7 @@ gösterme olağan yolla yapılır.
 | Tarayıcı üzerinden gösterme (Digital Credentials API) | Doğrulayıcı hazır; cüzdan bağlantısı yok |
 | Donanım anahtarları ve cihaz kanıtı | Kodlandı; cihaz testi mağaza sürümüyle |
 | Sandbox (herkese açık; kimlik doğrulaması günlük/aylık tavanlı) | Yayında |
+| Belge verenin paylaşım kuralı (gömülü açıklama politikası) | Kabul edildi; paketlerin 0.5.0 sürümüyle |
 
 ---
 
@@ -368,7 +369,10 @@ verilir. Kurallar Ek A'dadır.
 ## 6.4 Kayıt
 
 - **Belge verenler** katılım kapılarından geçer (Ek A): kayıtlı, sözleşmeli ve akredite seviyeleri. Her belge türü için
-  ayrı yetki verilir; yetki varsayılan olarak kapalıdır.
+  ayrı yetki verilir; yetki varsayılan olarak kapalıdır. Bir belge veren, kurum belgesi türünün yalnız belirli doğrulayıcılara
+  gösterilmesini isteyebilir (gömülü açıklama politikası, AB ARF Konu 43): kural imzalı tanıtım
+  bilgisinde (metadata) değer olarak yayımlanır, belgeye girmez; cüzdan gösterimde doğrulayıcının kayıt ve erişim sertifikasıyla
+  karşılaştırır, tutmazsa kişiyi uyarır, son karar kişinindir.
 - **Doğrulayıcılar** AB'nin ortak kayıt veri setiyle başvurur: unvan, kimlik numarası, adres, iletişim, her kullanım için
   amaç ve gizlilik politikası, veri koruma kurumu. Yalnız tüzel kişiler kaydolur. Kayıt kurumu her kullanım için en çok 12 ay
   geçerli bir [[t:registration-certificate]] üretir; cüzdan istenen alanları bu sertifikayla karşılaştırır.
@@ -408,7 +412,7 @@ bu kanıtları güven listesindeki sağlayıcıya karşı denetler. Anahtarlar c
 2. Belgeler kopyalar hâlinde verilir ve her doğrulayıcıya ayrı kopya gösterilir; siteler takma adla tanınır.
 3. Sıfır bilgi ispatı, aynı belgenin farklı gösterimlerinin birbirine bağlanmasını engeller.
 4. İptal listeleri sabit aralıkla yayınlanır; iptal anı sızmaz.
-5. Her gösterme PIN ya da biyometri ister; aşırı talep kişiye gösterilir.
+5. Her gösterme PIN ya da biyometri ister; aşırı talep ve belge verenin paylaşım kuralına uymayan istek kişiye gösterilir.
 6. Kimlik doğrulamada belge ve yüz görüntüleri Tamga'da saklanmaz.
 7. Kullanım istatistikleri yalnız toplu ve en az 50'lik gruplar hâlinde yayınlanır.
 

@@ -1,18 +1,19 @@
 ---
 document_id: ADR-0046
 title: "Embedded disclosure policy"
-status: Proposed
+status: Active
 version: 1.0.0
 created: 2026-10-09
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   An issuer can require that a credential type is shown only to specific verifiers (or to those holding a given entitlement, or
   to those certified under a given root of trust). The issuer publishes this rule by value in its signed Credential Issuer
   metadata, inside the credential configuration; the credential format does not change. The wallet stores the rule at issuance
   and, at presentation, evaluates it against the verifier's registration certificate (WRPRC) and access certificate; if it does
   not hold, the consent screen warns and leaves the decision to the person (default "don't share"). If a policy is added, changed
-  or removed, the issuer revokes the credentials of that type. Covers the 10 requirements of EU ARF 3.0 Topic 43. New field names
-  await approval. Packages 0.5.0.
+  or removed, the issuer revokes the credentials of that type. Covers the 10 requirements of EU ARF 3.0 Topic 43. Scope:
+  institution credentials only; a service identifier is added to the registration certificate in the same round. Field names
+  approved. Packages 0.5.0. Accepted 2026-10-11.
 domain: Trust
 related: ["[[ADR-0026]]", "[[ADR-0024]]", "[[ADR-0028]]", "[[ADR-0023]]", "[[ADR-0029]]", "[[ADR-0042]]", "[[SPEC-PROTO-0001]]", "[[SPEC-WALLET-0001]]", "[[FW-RB-0001]]"]
 translation_of: ADR-0046
@@ -23,7 +24,7 @@ source_version: 1.0.0
 
 Today a diploma or membership credential can be shown to any verifier on the trust list if the person approves. The wallet only
 checks whether the verifier asks for more than it is registered for ([[ADR-0026]] K5, over-asking warning). The EU wants the
-issuer to be able to say "show this credential only to these verifiers" and the wallet to check it. This record proposes where
+issuer to be able to say "show this credential only to these verifiers" and the wallet to check it. This record decides where
 that rule is carried, how the wallet evaluates it and what the person is shown.
 
 # Context
@@ -58,7 +59,7 @@ The policy is not revealed to the verifier. **ETSI does not define JSON member n
 
 **Difference between the ARF and ETSI:** the ARF describes the authorised verifier by the (identifier, service) duplet of the
 registration certificate and the root of trust by the registration certificate chain; ETSI and the Regulation describe it by
-subject name or entitlement and by the access certificate root. The proposal accepts both (K3).
+subject name or entitlement and by the access certificate root. The decision accepts both (K3).
 
 **In Tamga today:**
 - A verifier registration certificate (WRPRC, `rc-wrp+jwt`) is produced per usage and arrives in the OpenID4VP request via
@@ -70,7 +71,7 @@ subject name or entitlement and by the access certificate root. The proposal acc
 - There is no embedded disclosure policy in the code. EDP_02 counts as "partial" because the over-asking check gives a similar
   protection.
 - In proximity (ISO 18013-5) and in wallet-to-wallet requests there is no registration certificate.
-- The proposed [[ADR-0028]] K5 gives an entitlement-based policy example for the practice licence ("only to verifiers whose
+- [[ADR-0028]] K5 gives an entitlement-based policy example for the practice licence ("only to verifiers whose
   registration certificate carries a healthcare-provider entitlement") and leaves the JSON names to this record.
 
 # Options considered
@@ -79,7 +80,7 @@ subject name or entitlement and by the access certificate root. The proposal acc
 
 | Option | Result | Why |
 |---|---|---|
-| **In the signed Credential Issuer metadata, by value, in the `credential_metadata` object of the credential configuration** | **proposal** | Exactly EDP_09; the credential format does not change; the metadata is already signed and read by the wallet at issuance. |
+| **In the signed Credential Issuer metadata, by value, in the `credential_metadata` object of the credential configuration** | **chosen** | Exactly EDP_09; the credential format does not change; the metadata is already signed and read by the wallet at issuance. |
 | Inside the credential (SD-JWT claim or mdoc element) | rejected | The policy must not be revealed to the verifier (ETSI §4.2.5.1); the format changes; the ARF says no format change is needed. |
 | By URL, the wallet downloads it at presentation | rejected | The ARF says by value, not by link (§6.6.2.8.3); fails in proximity and offline; leaks presentation time to the issuer. |
 | In the institution's trust list entry | rejected | Not the EU route; EU wallets would not read it. |
@@ -88,7 +89,7 @@ subject name or entitlement and by the access certificate root. The proposal acc
 
 | Option | Result | Why |
 |---|---|---|
-| **Warn and leave the decision to the person (default button "Don't share")** | **proposal** | EDP_07 gives the person the choice to deny or allow; same pattern as the over-asking warning of [[ADR-0026]] (WL8). |
+| **Warn and leave the decision to the person (default button "Don't share")** | **chosen** | EDP_07 gives the person the choice to deny or allow; same pattern as the over-asking warning of [[ADR-0026]] (WL8). |
 | Hard block | rejected (question 3) | Conflicts with EDP_07; a stricter Tamga-only rule; EU wallets only warn. |
 | The issuer chooses "warn / block" | rejected (question 3) | A new field with no EU counterpart; the same credential would behave differently in an EU wallet. |
 
@@ -96,17 +97,17 @@ subject name or entitlement and by the access certificate root. The proposal acc
 
 | Option | Result | Why |
 |---|---|---|
-| **ARF duplet + ETSI subject name + ETSI entitlement URI; passes if any listed item matches** | **proposal** | Fits both the ARF and ETSI; the institution uses what fits its case ("these three verifiers" or "everyone with this entitlement"). |
+| **ARF duplet + ETSI subject name + ETSI entitlement URI; passes if any listed item matches** | **chosen** | Fits both the ARF and ETSI; the institution uses what fits its case ("these three verifiers" or "everyone with this entitlement"). |
 | ARF duplet only | rejected | Cannot read EU policies written the ETSI way; no entitlement-based "category" rule. |
 | ETSI only | rejected | Misses the ARF intermediary note (the identity in the registration certificate is decisive). |
 
-# Proposed decision
+# Decision
 
 ## K1 — Location and format
 
 For every credential configuration that has a policy, the issuer publishes the following object in its signed Credential Issuer
-metadata (the field and member names **await approval**; ETSI defines no JSON names, so this is Tamga's proposal; if the EU or
-ETSI publishes a JSON encoding, Tamga switches to it, [[ADR-0029]]):
+metadata (the field and member names were **approved** by project management; ETSI defines no JSON names, so this is Tamga's
+choice following the ETSI data model; if the EU or ETSI publishes a JSON encoding, Tamga switches to it, [[ADR-0029]]):
 
 ```json
 "credential_configurations_supported": {
@@ -133,7 +134,8 @@ ETSI publishes a JSON encoding, Tamga switches to it, [[ADR-0029]]):
 - Optional: `info_uri` (EDP_05, ETSI -13), `authority` (ETSI -05), `description` (ETSI -04).
 - Unknown members and extensions are ignored (ETSI -10/-11). The attribute-level policy extension (ETSI -12) is not supported.
 - The policy does not go into the credential and is not sent to the verifier.
-- Scope: institution credentials (EAA). The Tamga identity credential and contact credentials carry no policy.
+- Scope: **institution credentials only** (EAA). The Tamga identity credential (and its ZK copy), the driving licence information
+  and the contact credentials carry no policy; the metadata builder rejects a policy on these types.
 
 ## K2 — Wallet: storing at issuance (EDP_10)
 
@@ -157,14 +159,15 @@ When a presentation request arrives, for every requested credential, after the r
 - For an intermediated request, the intermediated verifier in the registration certificate is decisive (ARF EDP_02 note).
 - Today the registration certificate has no service identifier (RPRC_17a partial). Until it is added, an item with a `service_id`
   does not match; an item without `service_id` covers all usages of that verifier. Adding the service identifier to the WRPRC is a
-  prerequisite of this record and is done in the same round.
+  prerequisite of this record and is done in the **same round** (packages 0.5.0).
 
 ## K4 — Consent screen (EDP_05, EDP_07)
 
 - If the evaluation passes, the screen is unchanged.
-- If it fails or cannot be performed: a separate warning block — "**<Issuer>** wants this credential to be shown only to
-  institutions it allows. **<Verifier>** is not one of them." (if not evaluable: "...could not be checked."). With `info_uri`, a
+- If it fails or cannot be performed: a separate warning block — "**[issuer]** wants this credential to be shown only to
+  institutions it allows. **[verifier]** is not one of them." (if not evaluable: "...could not be checked."). With `info_uri`, a
   "Read the rule" link. The default button is **"Don't share"**; "Share anyway" becomes active after a short delay (WL8 pattern).
+  The wallet does not hard-block: the final decision is the person's (EDP_07).
 - When several credentials are requested, the warning sits on the row of the affected credential; the person can remove it and
   share the rest.
 
@@ -174,12 +177,13 @@ When a presentation request arrives, for every requested credential, after the r
   configuration. The credential record keeps the policy digest at issuance time; revocation is driven by the digest.
 - Before changing a policy, the Institution Console shows how many credentials will be revoked and asks for confirmation. People
   receive the credential again; if the automatic refresh conditions ([[ADR-0023]]) allow it, new copies come with the new policy.
+  This cost is accepted.
 
-# Proposed rules (moved to the binding table if accepted)
+# Invariants
 
 | Code | Rule |
 |---|---|
-| EP1 | An embedded disclosure policy is carried only by value in the signed Credential Issuer metadata, in the credential configuration; it does not go into the credential and is not sent to the verifier. |
+| EP1 | An embedded disclosure policy is carried only by value in the signed Credential Issuer metadata, in an institution credential configuration; it does not go into the credential and is not sent to the verifier. |
 | EP2 | The wallet stores the policy at issuance and evaluates it at presentation, without network requests, against the registration certificate and the access certificate. |
 | EP3 | If the evaluation fails or cannot be performed, the wallet shows a separate warning on the consent screen; the default choice is not to share, the final decision is the person's. |
 | EP4 | Valid credentials of a configuration whose policy is added, changed or removed are revoked. |
@@ -217,9 +221,9 @@ credential record and bulk revocation on change in the hosted issuance service, 
 
 # Consequences
 
-- Specifications (on acceptance): [[SPEC-PROTO-0001]] metadata field; [[SPEC-WALLET-0001]] evaluation and consent-screen rule;
-  [[FW-RB-0001]] an "access restriction" section in rulebooks (ARF note: the restriction is also announced to verifiers in the
-  rulebook); Tamga ARF rows on the trust model and privacy measures.
+- Specifications: [[SPEC-PROTO-0001]] metadata field; [[SPEC-WALLET-0001]] evaluation and consent-screen rule;
+  [[FW-RB-0001]] an "access restriction" rule (ARF note: the restriction is also announced to verifiers in the rulebook); Tamga
+  ARF rows on the trust model and privacy measures (updated on acceptance; code with 0.5.0).
 - In wallet-to-wallet and proximity presentation the policy cannot be evaluated; a credential with a policy is shown there with a
   warning (proximity) or not at all (wallet-to-wallet; the wallet's own decision).
 - An institution that changes a policy accepts that its credentials are re-issued; the Institution Console makes this explicit.
@@ -241,15 +245,14 @@ credential record and bulk revocation on change in the hosted issuance service, 
 
 All work is code and documents; no device or certificate is needed.
 
-# Open questions (project management)
+# Answered questions (2026-10-11)
 
-1. **Name approval:** are the metadata field `embedded_disclosure_policy`, the types `none` / `authorized_relying_parties` / `specific_roots_of_trust` and the member names (`relying_parties`, `rp_id`, `service_id`, `subject_dns`, `entitlements`, `roots_of_trust`, `issuer_dn`, `serial_number`, `info_uri`, `authority`, `description`) acceptable? They are new public names.
-2. **Scope:** policies only on institution credentials, not on the Tamga identity and contact credentials (proposal) — acceptable?
-3. **Warn or block:** when a policy does not hold, should the wallet warn and leave the decision to the person (proposal, the EU route) or block outright?
-4. **Bulk revocation:** if an institution changes a policy, all valid credentials of that type are revoked and people receive them again. Is that cost acceptable?
-5. **Service identifier:** should the separate "service identifier" in the registration certificate (required by the EU) be added in the same round (proposal)?
+1. **Name approval:** `embedded_disclosure_policy`, the types `none` / `authorized_relying_parties` / `specific_roots_of_trust` and the member names — **approved** (K1).
+2. **Scope:** — **institution credentials only**; the Tamga identity and contact credentials carry no policy (K1).
+3. **Warn or block:** — the wallet **warns and the person decides**; default "Don't share" (K4).
+4. **Bulk revocation:** — **accepted**: when a policy changes, valid credentials of that type are revoked and re-issued (K5).
+5. **Service identifier:** — added to the registration certificate in the **same round** (K3).
 
 # Status
 
-**Proposed — 2026-10-09.** Design proposal for the "Topic 43" item of the EU conformance gap recount (2026-10-09); names and
-questions are pending decision.
+**Accepted — 2026-10-11.** With project management approval. DECISIONS: D-TRUST-5. Code with the 0.5.0 packages.

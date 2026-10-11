@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
@@ -217,6 +217,11 @@ I2; belgede `category` claim'i yok — [[ADR-0022]]) verdiği nitelikli olmayan 
 | Yaş | Asgari yaş yok (2026-10-08, [[ADR-0043]]); şart geçerli bir kimlik belgesiyle kimlik doğrulamasıdır. Veli onayı akışı ve sağlayıcının küçükler için sınırı açık konudur |
 
 Uygulama: `apps/id` (operatör deposu) (config/didit/store/app), `IdvProvider` arayüzü §6 ile aynı (`DiditProvider`, `FakeIdvProvider`).
+
+> **`issuing_country` (2026-10-11, proje yönetimi kararı).** Alanın anlamı AB PID'deki anlamdır: belgeyi veren kimlik
+> sağlayıcısının ülkesi (Uygulama Tüzüğü (AB) 2026/1731). Bugün belgeyi Tamga'nın kimlik servisi, taranan bir kimlik belgesine
+> dayanarak kendisi verdiği için değer **taranan kimlik belgesini veren ülkeyi** yansıtır. Bir devletin PID sağlayıcısı PID verdiğinde
+> alan AB anlamını taşır ve belgeler alanı AB'nin tanımıyla anlatır. Kod ve şema bugün değişmez.
 
 ## 9.1 Kişinin silme isteği — `POST /erasure`
 

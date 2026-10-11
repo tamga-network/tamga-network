@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-09 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-11 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -184,6 +184,7 @@ release. Where proofs are not supported, the presentation is made in the usual w
 | Bluetooth proximity presentation                                          | Implemented; device testing pending                                                                       |
 | Browser presentation (Digital Credentials API)                            | Verifier ready; no wallet connection yet                                                                  |
 | Hardware-backed keys and device attestation                               | Implemented; device testing with the app-store release                                                    |
+| Issuer's sharing rule (embedded disclosure policy)                        | Accepted; with the 0.5.0 packages                                                                         |
 | Sandbox (open to everyone; identity verification with daily/monthly caps) | Live                                                                                                      |
 
 ---
@@ -388,7 +389,10 @@ Whether to trust a given external list is decided separately for each list. The 
 ### 6.4 Registration
 
 - **Issuers** pass the onboarding gates (Annex A): registered, contracted and accredited levels. Authority is granted
-  separately for each credential type and is off by default.
+  separately for each credential type and is off by default. An issuer can require that an institution credential type is
+  shown only to specific relying parties (embedded disclosure policy, EU ARF Topic 43): the rule is published by value in
+  the signed metadata and does not go into the credential; at presentation the wallet compares it with the relying party's
+  registration and access certificates and, if it does not hold, warns the person, who makes the final decision.
 - **Relying parties** apply with the EU common registration data set: legal name, identification number, address,
   contact, the purpose and privacy policy for each intended use, and the data protection authority. Only legal persons
   register. The registrar issues a registration certificate valid for at most 12 months for each intended use; the wallet
@@ -430,7 +434,8 @@ device attestation (Apple App Attest, Android key attestation). No credentials a
 2. Credentials are issued as copies and each verifier sees a separate copy; websites know the person by a pseudonym.
 3. Zero-knowledge proofs prevent different presentations of the same credential from being linked.
 4. Revocation lists are published at fixed intervals; the moment of revocation does not leak.
-5. Every presentation requires a PIN or biometrics; over-asking is shown to the person.
+5. Every presentation requires a PIN or biometrics; over-asking and requests that do not meet the issuer's sharing rule are
+   shown to the person.
 6. In identity verification, document and face images are not stored at Tamga.
 7. Usage statistics are published only in aggregate and in groups of at least 50.
 

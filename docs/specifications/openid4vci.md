@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -160,6 +160,7 @@ kanaldan (OBS oturumu içinde) verilir.
 | `deferred_credential_endpoint`, `notification_endpoint` | **İlan edilmez** — bugün iki uç da yoktur (§9, §10) |
 | `batch_credential_issuance.batch_size` | **10** (§8) |
 | `credential_metadata.credential_reuse_policy` | ETSI TS 119 472-3 §4.2.4.2 `arf_annex_ii`: `["per-relying-party", "once_only"]`, `batch_size` 10, `reissue_trigger_unused` 2, `reissue_trigger_lifetime_left` 7 gün (ARF ISSU_37–40) |
+| `credential_metadata.embedded_disclosure_policy` ([[ADR-0046]], 2026-10-11; kod 0.5.0) | İsteğe bağlı, **yalnız kurum belgesi** yapılandırmalarında: gömülü açıklama politikası, ETSI TS 119 472-3 §4.2.5.2 veri modeliyle, **değer olarak** (ARF EDP_09). `id` (URI) + `type` (`none` · `authorized_relying_parties` · `specific_roots_of_trust`); `relying_parties` (`rp_id`, isteğe bağlı `service_id`), `subject_dns`, `entitlements`, `roots_of_trust` (`issuer_dn`, `serial_number`), isteğe bağlı `info_uri`, `authority`, `description`. Belgeye girmez, doğrulayıcıya gitmez; kimlik, ZK kopyası, sürücü belgesi bilgisi ve iletişim belgelerinde yoktur. Politika eklenir, değişir ya da kalkarsa o yapılandırmanın geçerli belgeleri iptal edilir (EP4). Cüzdanın değerlendirmesi [[SPEC-WALLET-0001]] |
 | İmzalı metadata (2026-09-29) | OpenID4VCI §12.2.3, ARF ISSU_32: `Accept: application/jwt` → `typ` `openidvci-issuer-metadata+jwt`, `iss` = `sub` = Credential Issuer Identifier, `iat`, `exp` (+1 gün); imzacı kurumun güven listesindeki belge imza sertifikası (`x5c`). Cüzdan kurumdan belge isterken imzalı metadatayı ister; imzacının parmak izi listedeki kayıtla eşleşmezse metadata kullanılmaz. Düz istek JSON döner. |
 | `issuer_info` (2026-09-29) | ETSI TS 119 472-3 §4.2.3, ARF RPRC_22: `registrar_dataset` (`identifier`, `srvDescription`, `registryURI` = ulusal liste, `providesAttestations` = yetkili türler — imzalı listeden) + varsa `registration_cert` ([[ADR-0026]]). Cüzdan kurumdan belge istemeden önce istenen türün kayıtlı olduğunu ve sertifikanın kayıt kurumunca imzalı, geçerli olduğunu denetler (RPRC_22a/23). |
 

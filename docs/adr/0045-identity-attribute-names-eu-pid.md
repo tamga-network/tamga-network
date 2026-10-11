@@ -4,7 +4,7 @@ title: "Kimlik belgesinin alan adları: AB PID kodlaması"
 status: Active
 version: 1.0.0
 created: 2026-10-09
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`) alan adlarını ve kodlamasını AB kişi kimlik verisinin (PID)
   Komisyon Uygulama Tüzüğü (AB) 2026/1731 ile sabitlenen kodlamasına göre taşır: SD-JWT VC'de `birthdate` (eskiden
@@ -82,6 +82,10 @@ Geliştirme evresi ([[ADR-0029]]): şema yerinde düzeltilir, eski ad için geri
 2026/1731'de `issuing_country` PID sağlayıcısının ülkesidir; Tamga kimlik belgesinde ise doğrulanan kimlik belgesini veren
 ülkedir. Ad bugün korunur; anlam farkı rulebook'ta yazılıdır. Ayrı bir ada geçiş yeni kamuya açık ad gerektirir ve proje
 yönetiminin kararına bırakılmıştır.
+
+**Karar (2026-10-11):** ayrı ad yok; alan AB anlamını taşır (belgeyi veren sağlayıcının ülkesi). Bugün belgeyi Tamga
+kimlik servisi taranan kimlik belgesine dayanarak verdiği için değer taranan belgenin ülkesidir; kod değişmez. Devlet PID
+sağlayıcısı PID verdiğinde alan AB anlamıyla doldurulur ve anlatılır ([[FW-RB-0003]] §9, [[SPEC-ID-0003]] §9).
 
 # Değişmezler
 

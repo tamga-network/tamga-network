@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -333,6 +333,27 @@ When the identity is verified again on a new phone, the same seed arrives → th
 are recognised. The migration file (§7.5) carries neither the seed nor the key (LX2).
 
 ---
+
+## 5.5 The issuer's sharing rule — embedded disclosure policy ([[ADR-0046]], 2026-10-11; code 0.5.0)
+
+An institution can require that an institution credential type is shown only to specific verifiers (ARF Topic 43). The rule
+arrives in the signed Credential Issuer metadata as `credential_metadata.embedded_disclosure_policy` ([[SPEC-PROTO-0001]] §2.1).
+
+- **Storing (EDP_10):** at issuance the wallet reads the policy from the signature-verified metadata, checks its format and stores
+  it next to the credential. A malformed policy does not stop issuance; it is stored as "not evaluable".
+- **Evaluation (EDP_02/03/06):** at presentation, after the registration certificate is verified, without network requests:
+  `authorized_relying_parties` → passes if the registration certificate `sub` (and service identifier, if present) equals a
+  `relying_parties` item, the access certificate subject name (RFC 4514 normalised) equals a `subject_dns` item, or an
+  entitlement of the registration certificate equals an `entitlements` item; `specific_roots_of_trust` → passes if the (issuer
+  name, serial number) pair of a certificate in the registration or access certificate chain is listed. For intermediated
+  requests the intermediated verifier counts. Without a registration certificate (proximity, wallet-to-wallet) the evaluation
+  cannot be performed and counts as failed.
+- **Consent screen (EDP_05/07):** if it fails or cannot be performed, a separate warning block ("[institution] wants this
+  credential to be shown only to institutions it allows"), a "Read the rule" link when `info_uri` is present; the default button
+  is **"Don't share"**, "Share anyway" is delayed (§5.2 pattern). There is no hard block; the final decision is the person's.
+
+**Invariant EP2/EP3** ([[ADR-0046]]): the policy is stored at issuance and evaluated at presentation without network requests; if
+it does not hold, a separate warning, defaulting to not sharing.
 
 # 6. Schema cache
 

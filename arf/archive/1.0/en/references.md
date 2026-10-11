@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-REF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-09 · **Licence** CC BY 4.0
+**Document** FW-REF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-11 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -46,7 +46,7 @@ framework are compiled from the documents below.
 | Trust model and governance    | [[ADR-0009]] · [[ADR-0010]] · [[ADR-0035]] · [[ADR-0037]] · [[SPEC-TRUST-0001]] · [[SPEC-ID-0002]] · [[PM-GOV-0001]] · [[PM-ASSUR-0001]] |
 | Registration                  | [[ADR-0024]] · [[ADR-0026]] · [[ADR-0034]]                                                                                               |
 | Credential formats and types  | [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] · [[ADR-0013]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]]                                     |
-| Issuance                      | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]]                                                          |
+| Issuance                      | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]] · [[ADR-0046]]                                           |
 | Presentation and verification | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] · [[ADR-0044]]                                      |
 | Wallet                        | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]]                                                                        |
 | Identity                      | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]]                                                             |
@@ -131,6 +131,7 @@ and its source conflict, the source prevails.
 | RB-AP-23    | [[SPEC-ID-0003]] §5                                                      |
 | RB-AP-24    | [[SPEC-ID-0003]], [[SPEC-PROTO-0001]]/PR7                                |
 | RB-AP-25    | [[ADR-0016]]                                                             |
+| RB-AP-26    | [[ADR-0046]] EP1, EP4                                                    |
 | RB-AP-ID-01 | [[SPEC-ID-0003]]/IDP3                                                    |
 | RB-AP-ID-02 | [[SPEC-ID-0003]]/IDP11, KVKK m.10                                        |
 | RB-AP-ID-03 | [[SPEC-ID-0003]]/IDP9                                                    |
@@ -159,6 +160,7 @@ and its source conflict, the source prevails.
 | RB-WP-11    | [[FW-TF-0001]] §4.6                                                      |
 | RB-WP-12    | [[SPEC-CRED-0003]]/S14                                                   |
 | RB-WP-13    | [[ADR-0017]] HV6; [[SPEC-WALLET-0001]]/WL5                               |
+| RB-WP-14    | [[ADR-0046]] EP2, EP3                                                    |
 | RB-RP-01    | [[SPEC-API-0001]]/AP6, [[SPEC-PROTO-0002]]                               |
 | RB-RP-02    | [[SPEC-PROTO-0002]]/PV1, PV3, PV6, PV9, PV10                             |
 | RB-RP-03    | [[SPEC-API-0001]]/AP8, AP11                                              |

@@ -4,7 +4,7 @@ title: "Ek E — Kaynaklar"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Tamga ARF'nin dayandığı standartlar ve düzenlemeler, Tamga karar kayıtları ve şartnameleri ve eklerdeki her bağlayıcı
   kuralın kaynağı.
@@ -39,7 +39,7 @@ belgelerden derlenmiştir.
 | Güven modeli ve yönetişim | [[ADR-0009]] · [[ADR-0010]] · [[ADR-0035]] · [[ADR-0037]] · [[SPEC-TRUST-0001]] · [[SPEC-ID-0002]] · [[PM-GOV-0001]] · [[PM-ASSUR-0001]] |
 | Kayıt | [[ADR-0024]] · [[ADR-0026]] · [[ADR-0034]] |
 | Belge biçimleri ve türleri | [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] · [[ADR-0013]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] |
-| Belge verme | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]] |
+| Belge verme | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]] · [[ADR-0046]] |
 | Gösterme ve doğrulama | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] · [[ADR-0044]] |
 | Cüzdan | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]] |
 | Kimlik | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]] |
@@ -124,6 +124,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-AP-23 | [[SPEC-ID-0003]] §5 |
 | RB-AP-24 | [[SPEC-ID-0003]], [[SPEC-PROTO-0001]]/PR7 |
 | RB-AP-25 | [[ADR-0016]] |
+| RB-AP-26 | [[ADR-0046]] EP1, EP4 |
 | RB-AP-ID-01 | [[SPEC-ID-0003]]/IDP3 |
 | RB-AP-ID-02 | [[SPEC-ID-0003]]/IDP11, KVKK m.10 |
 | RB-AP-ID-03 | [[SPEC-ID-0003]]/IDP9 |
@@ -152,6 +153,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-WP-11 | [[FW-TF-0001]] §4.6 |
 | RB-WP-12 | [[SPEC-CRED-0003]]/S14 |
 | RB-WP-13 | [[ADR-0017]] HV6; [[SPEC-WALLET-0001]]/WL5 |
+| RB-WP-14 | [[ADR-0046]] EP2, EP3 |
 | RB-RP-01 | [[SPEC-API-0001]]/AP6, [[SPEC-PROTO-0002]] |
 | RB-RP-02 | [[SPEC-PROTO-0002]]/PV1, PV3, PV6, PV9, PV10 |
 | RB-RP-03 | [[SPEC-API-0001]]/AP8, AP11 |

@@ -4,7 +4,7 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-08
+last_updated: 2026-10-11
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
@@ -220,6 +220,12 @@ an issuer (`category: IDENTITY`, `class: EAA`, I2; no `category` claim in the cr
 
 Implementation: `apps/id` (operator repository) (config/didit/store/app); the `IdvProvider` interface is the same as in §6
 (`DiditProvider`, `FakeIdvProvider`).
+
+> **`issuing_country` (2026-10-11, project management decision).** The field has its EU PID meaning: the country of the
+> identity provider issuing the credential (Implementing Regulation (EU) 2026/1731). Today the Tamga identity service issues the
+> credential itself on the basis of a scanned identity document, so the value reflects **the country that issued the scanned
+> identity document**. When a state PID provider issues PID, the field carries the EU meaning and the documentation describes it
+> the EU way. Code and schema do not change today.
 
 ## 9.1 The person's erasure request — `POST /erasure`
 

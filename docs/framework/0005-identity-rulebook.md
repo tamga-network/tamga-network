@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Tamga'nın geçici kimlik belgesi sağlayıcısı olarak verdiği kimlik belgesinin (`urn:tamga:id:IdentityAttestation:1`)
   rulebook'u (Tamga Rulebook'tan dallanır): kim verir, hangi kimlik doğrulamayla, hangi alanlarla ve hangi seçici paylaşım kuralıyla; geçerlilik
@@ -39,7 +39,7 @@ nitelikli olmayan bir **[[t:EAA]]**'dır; [[t:trust-list|güven listesinde]] `pi
 | `personal_administrative_number` | string | `always` | Ulusal kimlik numarası; **yalnızca bu türde** |
 | `document_type` | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE` | `always` | Doğrulanan belge |
 | `document_number_hash` | `sha256-…` | `always` | Belge numarasının **anahtarlı** özeti (HMAC-SHA256; anahtar yalnızca kimlik servisinde) — numaranın kendisi yok ve özetten geri bulunamaz |
-| `issuing_country` | ISO 3166-1 alpha-2 | `always` | Doğrulanan kimlik belgesini veren ülke (AB PID'de aynı ad PID sağlayıcısının ülkesidir — §9) |
+| `issuing_country` | ISO 3166-1 alpha-2 | `always` | AB PID anlamıyla belgeyi veren sağlayıcının ülkesi; bugün değer taranan kimlik belgesini veren ülkedir — §9 |
 | `document_chip_verified` | boolean | `always` | NFC çip okundu mu (olgu; seviye değildir) |
 | `verification_method` | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `always` | `review-demo` yalnızca uygulama mağazası incelemesi için verilen deneme belgesinde |
 | `age_over_18` | boolean | `always` | Türetilmiş; yaş doğrulamasında yalnız bu alan açılır |
@@ -189,8 +189,10 @@ Tamga'nındır (belge PID değildir):
 | `age_over_18` | `age_over_18` | — (ayrı yaş doğrulama belgesi) | — |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | aynı | karşılığı yok (Tamga'ya özgü) | karşılığı yok |
 
-`issuing_country` adı aynıdır ama anlamı farklıdır: Tamga belgesinde doğrulanan kimlik belgesini veren ülke, AB PID'de PID
-sağlayıcısının ülkesidir.
+> **`issuing_country` (2026-10-11, proje yönetimi kararı).** Alanın anlamı AB PID'deki anlamdır: belgeyi veren kimlik
+> sağlayıcısının ülkesi (Uygulama Tüzüğü (AB) 2026/1731). Bugün belgeyi Tamga'nın kimlik servisi, taranan bir kimlik belgesine
+> dayanarak kendisi verdiği için değer **taranan kimlik belgesini veren ülkeyi** yansıtır. Bir devletin PID sağlayıcısı PID verdiğinde
+> alan AB anlamını taşır ve belgeler alanı AB'nin tanımıyla anlatır. Kod ve şema bugün değişmez.
 
 Devlet PID'i geldiğinde (§8) kurumlar, kişiyi eşleştirmek için Tamga kimlik belgesi yerine PID'i de kabul edebilir; bu ayrı bir
 kararla açılır.

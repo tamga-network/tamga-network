@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -132,6 +132,7 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-AP-14 | `category` alanı yalnızca kayıt sınıfı kamu ya da nitelikli ise ve kayıtla aynı değerle yazılır; I1–I2'de **MUST NOT**. Belge sahibinin kimlik doğrulama seviyesi hiçbir alanda **MUST NOT** yer almak. |
 | RB-AP-15 | Belge verildikten sonra kişiye "belgeniz bir cüzdana eklendi; siz değilseniz …" bildirimi **MUST** gönderilmek (kişisel veri asgari). |
 | RB-AP-16 | Hata yanıtları kişisel veri içermez; işlem kodu yanıt dışında saklanmaz. |
+| RB-AP-26 | Belge veren, bir kurum belgesi türünün yalnız belirli doğrulayıcılara gösterilmesini istiyorsa kuralı (gömülü açıklama politikası) **MUST** imzalı tanıtım bilgisinde (metadata), belge yapılandırmasında değer olarak yayımlamak; kural belgeye **MUST NOT** girmek. Kural eklenir, değişir ya da kalkarsa o yapılandırmayla verilmiş geçerli belgeleri **MUST** iptal etmek. Kimlik ve iletişim belgeleri kural taşımaz. Kural doğrulayıcılara bu rulebook'ta ve türün rulebook'unda duyurulur. |
 
 ## 4.3 İptal listesi
 
@@ -198,6 +199,7 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-WP-11 | Cüzdan çözümünde bir açık bulunursa cüzdan sağlayıcısı **MUST** sürüm bazında cüzdan kanıtlarını iptal edebilmek; tek bir cüzdan biriminin ihlalinde o birimi iptal eder. |
 | RB-WP-12 | Kullanıcıya "geçersiz" ile "doğrulanamadı / bayat" farklı gösterilir; kullanılmış bir teklif için açık bir metin gösterilir. |
 | RB-WP-13 | [[t:intermediary|Aracı]] doğrulayıcı üzerinden gelen istekte cüzdan **MUST** asıl doğrulayıcının kayıtlı adını göstermek, kapsamı onun kaydına göre denetlemek ve doğrulayıcı başına kopyayı asıl doğrulayıcıya göre ayırmak. |
+| RB-WP-14 | Cüzdan belge verenin paylaşım kuralını (gömülü açıklama politikası) belge alırken **MUST** saklamak ve gösterimde ağ isteği yapmadan doğrulayıcının kayıt ve erişim sertifikasıyla değerlendirmek; kural tutmazsa ya da değerlendirilemezse onay ekranında ayrı bir uyarı **MUST** göstermek, varsayılan seçim paylaşmamaktır; son karar kişinindir. |
 
 ---
 

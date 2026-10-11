@@ -9,6 +9,16 @@ everything is ready.
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-11 — documents: embedded disclosure policy, `issuing_country`
+
+- ADR-0046 accepted: an issuer may publish an embedded disclosure policy for an institution credential type by value in its
+  signed Credential Issuer metadata (`credential_metadata.embedded_disclosure_policy`); the wallet stores it at issuance,
+  evaluates it at presentation and warns (default "don't share"); a policy change revokes the credentials of that
+  configuration. OpenID4VCI profile §2.1, wallet rules §5.5, Tamga Rulebook RB-AP-26 and RB-WP-14, Tamga ARF. Code comes with
+  the `0.5.0` packages.
+- `issuing_country` in the identity credential: the field has its EU PID meaning; today the value reflects the country of the
+  scanned identity document (Identity Rulebook §9, identity proofing §9). No code change.
+
 ### 2026-10-09 — packages: 0.4.0 test release
 
 The nine packages move to `0.4.0` together (`sdk_version` = `@tamga-network/verifier@0.4.0`). Interface changes, so callers

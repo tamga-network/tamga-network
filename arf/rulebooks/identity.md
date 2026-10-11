@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-09 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-11 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -48,7 +48,7 @@ successor (§8).
 | `personal_administrative_number`                        | string                                                                                        | `always`                          | National identity number; **only in this type**                                                                                                    |
 | `document_type`                                         | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE`                            | `always`                          | The document that was verified                                                                                                                     |
 | `document_number_hash`                                  | `sha256-…`                                                                                    | `always`                          | **Keyed** digest of the document number (HMAC-SHA256; key held only by the identity service) — not the number, and not recoverable from the digest |
-| `issuing_country`                                       | ISO 3166-1 alpha-2                                                                            | `always`                          | The country that issued the inspected identity document (in the EU PID the same name is the PID provider's country — §9)                           |
+| `issuing_country`                                       | ISO 3166-1 alpha-2                                                                            | `always`                          | In its EU PID meaning, the country of the issuing provider; today the value is the country that issued the scanned identity document — §9          |
 | `document_chip_verified`                                | boolean                                                                                       | `always`                          | Whether the NFC chip was read (a fact, not a level)                                                                                                |
 | `verification_method`                                   | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `always`                          | `review-demo` only in the test credential issued for app store review                                                                              |
 | `age_over_18`                                           | boolean                                                                                       | `always`                          | Derived; for age checks only this attribute is disclosed                                                                                           |
@@ -185,8 +185,11 @@ type and namespace are Tamga's (the credential is not a PID):
 | `age_over_18`                                                                            | `age_over_18`                                  | — (separate age verification credential)        | —                                |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | the same                                       | no equivalent (Tamga-specific)                  | no equivalent                    |
 
-The name `issuing_country` is the same but its meaning differs: in the Tamga credential it is the country that issued the
-inspected identity document, in the EU PID the country of the PID provider.
+> **`issuing_country` (2026-10-11, project management decision).** The field has its EU PID meaning: the country of the
+> identity provider issuing the credential (Implementing Regulation (EU) 2026/1731). Today the Tamga identity service issues the
+> credential itself on the basis of a scanned identity document, so the value reflects **the country that issued the scanned
+> identity document**. When a state PID provider issues PID, the field carries the EU meaning and the documentation describes it
+> the EU way. Code and schema do not change today.
 
 When a state PID is available (§8), institutions may also accept the PID instead of the Tamga identity credential to match a
 person; this is enabled by a separate decision.

@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -349,6 +349,26 @@ Yeni telefonda kimlik yeniden doğrulanınca aynı tohum gelir → aynı takma a
 (§7.5) tohumu ve anahtarı taşımaz (LX2).
 
 ---
+
+## 5.5 Belge verenin paylaşım kuralı — gömülü açıklama politikası ([[ADR-0046]], 2026-10-11; kod 0.5.0)
+
+Kurum, bir kurum belgesi türünün yalnız belirli doğrulayıcılara gösterilmesini isteyebilir (ARF Konu 43). Kural imzalı Credential
+Issuer metadata'sında `credential_metadata.embedded_disclosure_policy` olarak gelir ([[SPEC-PROTO-0001]] §2.1).
+
+- **Saklama (EDP_10):** cüzdan belgeyi alırken politikayı imzası doğrulanmış metadata'dan okur, biçimini denetler ve belgenin
+  yanında saklar. Biçimi bozuk politika belgeyi almayı durdurmaz; "değerlendirilemez" diye saklanır.
+- **Değerlendirme (EDP_02/03/06):** gösterimde, kayıt sertifikası doğrulandıktan sonra, ağ isteği yapmadan:
+  `authorized_relying_parties` → kayıt sertifikasının `sub`'ı (ve varsa hizmet kimliği) bir `relying_parties` öğesine, erişim
+  sertifikasının konu adı (RFC 4514 normalleştirilmiş) bir `subject_dns` öğesine ya da kayıt sertifikasının bir yetkisi bir
+  `entitlements` öğesine eşitse geçer; `specific_roots_of_trust` → kayıt ya da erişim sertifikası zincirindeki bir sertifikanın
+  (veren adı, seri numarası) çifti listedeyse geçer. Aracılı istekte aracılanan doğrulayıcı esas alınır. Kayıt sertifikası yoksa
+  (yakın alan, cüzdandan cüzdana) değerlendirme yapılamaz ve başarısız sayılır.
+- **Onay ekranı (EDP_05/07):** başarısız ya da yapılamazsa ayrı bir uyarı bloğu ("[kurum] bu belgenin yalnız izin verdiği kurumlara
+  gösterilmesini istiyor"), `info_uri` varsa "Kuralı oku"; varsayılan düğme **"Paylaşma"**, "Yine de paylaş" gecikmeli (§5.2 deseni).
+  Kesin engel yoktur; son karar kişinindir.
+
+**Değişmez EP2/EP3** ([[ADR-0046]]): politika belge alırken saklanır ve gösterimde ağ isteği yapmadan değerlendirilir; tutmazsa ayrı
+uyarı, varsayılan paylaşmamak.
 
 # 6. Şema Önbelleği
 

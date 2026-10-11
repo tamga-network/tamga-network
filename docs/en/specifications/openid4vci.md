@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -156,6 +156,7 @@ read over the shoulder; the `tx_code` is delivered through a separate channel (i
 | `deferred_credential_endpoint`, `notification_endpoint` | **Not declared** — neither endpoint exists today (§9, §10) |
 | `batch_credential_issuance.batch_size` | **10** (§8) |
 | `credential_metadata.credential_reuse_policy` | ETSI TS 119 472-3 §4.2.4.2 `arf_annex_ii`: `["per-relying-party", "once_only"]`, `batch_size` 10, `reissue_trigger_unused` 2, `reissue_trigger_lifetime_left` 7 days (ARF ISSU_37–40) |
+| `credential_metadata.embedded_disclosure_policy` ([[ADR-0046]], 2026-10-11; code 0.5.0) | Optional, **institution credential** configurations only: embedded disclosure policy following the ETSI TS 119 472-3 §4.2.5.2 data model, **by value** (ARF EDP_09). `id` (URI) + `type` (`none` · `authorized_relying_parties` · `specific_roots_of_trust`); `relying_parties` (`rp_id`, optional `service_id`), `subject_dns`, `entitlements`, `roots_of_trust` (`issuer_dn`, `serial_number`), optional `info_uri`, `authority`, `description`. It does not go into the credential and is not sent to the verifier; absent on the identity credential, ZK copy, driving licence information and contact credentials. If the policy is added, changed or removed, the valid credentials of that configuration are revoked (EP4). Wallet evaluation: [[SPEC-WALLET-0001]] |
 | Signed metadata (2026-09-29) | OpenID4VCI §12.2.3, ARF ISSU_32: `Accept: application/jwt` → `typ` `openidvci-issuer-metadata+jwt`, `iss` = `sub` = Credential Issuer Identifier, `iat`, `exp` (+1 day); the signer is the institution's credential signing certificate in the trust list (`x5c`). When requesting a credential from an institution the wallet asks for the signed metadata; if the signer's fingerprint does not match the entry in the list, the metadata is not used. A plain request returns JSON. |
 | `issuer_info` (2026-09-29) | ETSI TS 119 472-3 §4.2.3, ARF RPRC_22: `registrar_dataset` (`identifier`, `srvDescription`, `registryURI` = national list, `providesAttestations` = authorised types — from the signed list) + `registration_cert` if present ([[ADR-0026]]). Before requesting a credential from an institution, the wallet checks that the requested type is registered and that the certificate is valid and signed by the registrar (RPRC_22a/23). |
 

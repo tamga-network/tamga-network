@@ -4,7 +4,7 @@ title: "Identity credential attribute names: the EU PID encoding"
 status: Active
 version: 1.0.0
 created: 2026-10-09
-last_updated: 2026-10-09
+last_updated: 2026-10-11
 summary: >
   The Tamga identity credential (`urn:tamga:id:IdentityAttestation:1`) carries its attribute names and encodings according to
   the encoding of EU person identification data (PID) fixed by Commission Implementing Regulation (EU) 2026/1731: in SD-JWT VC
@@ -91,6 +91,11 @@ credentials with the old names do not verify against the new schema; wallets obt
 In 2026/1731 `issuing_country` is the country of the PID provider; in the Tamga identity credential it is the country that
 issued the inspected identity document. The name is kept for now; the difference in meaning is written in the rulebook. Moving
 to a separate name needs a new public name and is left to project management.
+
+**Decision (2026-10-11):** no separate name; the field carries the EU meaning (the country of the issuing provider). Today
+the Tamga identity service issues the credential on the basis of a scanned identity document, so the value is the country of
+the scanned document; the code does not change. When a state PID provider issues PID, the field is filled and described with the
+EU meaning ([[FW-RB-0003]] §9, [[SPEC-ID-0003]] §9).
 
 # Invariants
 
