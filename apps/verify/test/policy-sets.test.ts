@@ -15,6 +15,7 @@ import { sandboxSampleSiteUrl, sandboxUrl, type VerifyConfig } from "../src/conf
 const ROOT = resolve(import.meta.dirname, "../../..");
 const SCENARIOS = [
   "job-application-degree",
+  "alumni-network",
   "student-discount",
   "campus-access",
   "event-tamga-id",

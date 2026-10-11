@@ -120,6 +120,8 @@ export function buildWrprcPayloads(
           },
         ],
         intended_use_id: s.scope_id,
+        // ADR-0046 / ARF RPRC_17a: hizmet kimliği (gömülü açıklama politikasının `(rp_id, service_id)` ikilisi; EDP_02)
+        service_id: s.service_id ?? s.scope_id,
         exp: expOf(now, until),
       };
       // ADR-0017: aracı doğrulayıcı (bu RP'nin kullandığı ilk aracı)

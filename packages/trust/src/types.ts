@@ -305,6 +305,11 @@ export const RpScope = z
     valid_until: IsoDate.nullable(),
     /** ADR-0024: bu kullanımın gizlilik politikası (cüzdan onay ekranında gösterilir — ARF RPA_10) */
     privacy_policy_uri: z.string().url().optional(),
+    /**
+     * ADR-0046 / ARF RPRC_17a: hizmet kimliği — kayıt sertifikasına (WRPRC) `service_id` olarak girer; yoksa `scope_id`. Bir
+     * doğrulayıcının birden çok kullanımı aynı hizmette toplanabilir (gömülü açıklama politikası `(rp_id, service_id)` eşler).
+     */
+    service_id: z.string().min(1).max(256).optional(),
   })
   .passthrough();
 

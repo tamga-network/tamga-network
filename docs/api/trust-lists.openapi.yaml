@@ -205,12 +205,16 @@ paths:
         Index of the registration certificates (ETSI TS 119 475 `rc-wrp+jwt`) issued for every valid relying party use and
         every issuer (ADR-0026). Each item's `path` is the certificate file under this host. Signed with the registrar key
         listed in `lotl.national_lists[].roles.registrar.signing_keys`.
+        A relying party certificate carries `intended_use_id` (the scope) and `service_id` (the service identifier, ARF RPRC_17a;
+        the scope's `service_id`, otherwise its `scope_id`) — the duplet that an issuer's embedded disclosure policy matches (ADR-0046).
       x-tr:
         summary: Kayıt sertifikalarını listele
         description: |
           Her geçerli doğrulayıcı kullanımı ve her belge veren kurum için üretilen kayıt sertifikalarının (ETSI TS 119 475
           `rc-wrp+jwt`) dizini (ADR-0026). Her öğenin `path` alanı bu sunucudaki sertifika dosyasıdır. Kayıt kurumu anahtarıyla
           imzalanır (`lotl.national_lists[].roles.registrar.signing_keys`).
+          Doğrulayıcı sertifikası `intended_use_id` (kullanım) ve `service_id` (hizmet kimliği, ARF RPRC_17a; kullanımın
+          `service_id`'si, yoksa `scope_id`'si) taşır — belge verenin gömülü açıklama politikasının eşlediği ikili (ADR-0046).
       responses:
         "200":
           description: Index.

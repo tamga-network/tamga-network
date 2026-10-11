@@ -387,7 +387,22 @@
       ],
       "scopes": [
         {
+          "scope_id": "alumni-network-1",
+          "service_id": "alumni-network",
+          "purpose": "Alumni network membership (graduates only)",
+          "purpose_localized": {
+            "tr-TR": "Mezunlar ağı üyeliği (yalnız mezunlar)",
+            "tk-TM": "Uçurymlar toruna agzalyk (diňe uçurymlar)"
+          },
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "claims": ["is_graduate", "awarding_body_name"],
+          "valid_from": "2026-10-11T00:00:00Z",
+          "valid_until": "2027-09-24T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
           "scope_id": "job-application-1",
+          "service_id": "hiring",
           "purpose": "Proof of graduation for a job application",
           "purpose_localized": {
             "tr-TR": "İş başvurusunda mezuniyet teyidi",

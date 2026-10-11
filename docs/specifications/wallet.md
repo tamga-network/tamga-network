@@ -361,8 +361,16 @@ Issuer metadata'sında `credential_metadata.embedded_disclosure_policy` olarak g
   `authorized_relying_parties` → kayıt sertifikasının `sub`'ı (ve varsa hizmet kimliği) bir `relying_parties` öğesine, erişim
   sertifikasının konu adı (RFC 4514 normalleştirilmiş) bir `subject_dns` öğesine ya da kayıt sertifikasının bir yetkisi bir
   `entitlements` öğesine eşitse geçer; `specific_roots_of_trust` → kayıt ya da erişim sertifikası zincirindeki bir sertifikanın
-  (veren adı, seri numarası) çifti listedeyse geçer. Aracılı istekte aracılanan doğrulayıcı esas alınır. Kayıt sertifikası yoksa
+  (veren adı, seri numarası) çifti listedeyse geçer. Aracılı istekte aracılanan doğrulayıcı esas alınır: `rp_id` kayıt
+  sertifikasının `sub`'ıdır ve erişim sertifikasının konu adı (aracının adı) eşleşme sayılmaz. Kayıt sertifikası yoksa
   (yakın alan, cüzdandan cüzdana) değerlendirme yapılamaz ve başarısız sayılır.
+- **Karşılaştırma ayrıntısı:** hizmet kimliği kayıt sertifikasının `service_id` üyesidir (ARF RPRC_17a; liste yayıncısı
+  kullanımın `service_id`'sini, yoksa `scope_id`'sini yazar); `service_id`'siz öğe doğrulayıcının bütün kullanımlarını kapsar. Ad
+  karşılaştırmasında öznitelik türleri OID'e çevrilir (ETSI TS 119 472-3: `ORGID` = organizationIdentifier, `SN` =
+  serialNumber), değerlerde büyük-küçük harf ve fazla boşluk gözetilmez, RDN sırası gözetilmez; bütün öznitelikler birebir aynı
+  olmalıdır. Güven kökü öğesi, seri numarası tutan ve `issuer_dn`'i sertifikanın veren adına (kendinden imzalı kökte konu adı
+  da aynıdır) ya da konu adına eşit olan sertifikayla eşleşir. Başvuru uygulaması: `@tamga-network/wallet-core`
+  `checkDisclosurePolicy` (sonuç `passed` / `failed` / `not_evaluable`, neden ve `info_uri`).
 - **Onay ekranı (EDP_05/07):** başarısız ya da yapılamazsa ayrı bir uyarı bloğu ("[kurum] bu belgenin yalnız izin verdiği kurumlara
   gösterilmesini istiyor"), `info_uri` varsa "Kuralı oku"; varsayılan düğme **"Paylaşma"**, "Yine de paylaş" gecikmeli (§5.2 deseni).
   Kesin engel yoktur; son karar kişinindir.

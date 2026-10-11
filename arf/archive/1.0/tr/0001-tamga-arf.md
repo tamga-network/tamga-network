@@ -170,7 +170,7 @@ gösterme olağan yolla yapılır.
 | Tarayıcı üzerinden gösterme (Digital Credentials API) | Doğrulayıcı hazır; cüzdan bağlantısı yok |
 | Donanım anahtarları ve cihaz kanıtı | Kodlandı; cihaz testi mağaza sürümüyle |
 | Sandbox (herkese açık; kimlik doğrulaması günlük/aylık tavanlı) | Yayında |
-| Belge verenin paylaşım kuralı (gömülü açıklama politikası) | Kabul edildi; paketlerin 0.5.0 sürümüyle |
+| Belge verenin paylaşım kuralı (gömülü açıklama politikası) | Kaynak kodda uygulandı; paketlerin 0.5.0 sürümüyle yayınlanır |
 
 ---
 

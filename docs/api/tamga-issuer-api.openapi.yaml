@@ -17,6 +17,11 @@ info:
     Credential data is not sent with the offer: the hosted issuer reads it from your source endpoint at issuance time
     (see the institution source endpoint).
 
+    **Sharing rules** (embedded disclosure policy, ADR-0046) are set per credential type in the Institution Console, not
+    through this API. The hosted issuer publishes the rule by value in the signed Credential Issuer metadata
+    (`credential_metadata.embedded_disclosure_policy`); adding, changing or removing it revokes the valid credentials of that
+    type (revocation reason `disclosure_policy_changed`).
+
     **Errors** use RFC 9457 problem details (`title`, `status`). Each key has a per-minute limit (`429` with `Retry-After`).
   x-tr:
     title: Barındırılan belge verme API'si
@@ -34,6 +39,11 @@ info:
 
       Belge verisi teklifle gönderilmez: barındırılan servis onu belge verme anında kurumunuzun sorgu ucundan okur (kurum
       sorgu ucu sayfasına bakın).
+
+      **Paylaşım kuralları** (gömülü açıklama politikası, ADR-0046) bu API ile değil, belge türü başına Kurum Konsolu'ndan
+      ayarlanır. Barındırılan servis kuralı imzalı Credential Issuer metadata'sında değer olarak yayınlar
+      (`credential_metadata.embedded_disclosure_policy`); eklemek, değiştirmek ya da kaldırmak o türün geçerli belgelerini iptal
+      eder (iptal nedeni `disclosure_policy_changed`).
 
       **Hatalar** RFC 9457 problem ayrıntısı biçimindedir (`title`, `status`). Her anahtarın dakikalık sınırı vardır
       (`Retry-After` ile `429`).

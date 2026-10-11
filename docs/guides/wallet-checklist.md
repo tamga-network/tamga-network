@@ -4,7 +4,7 @@ title: "Cüzdan yayın öncesi kontrol listesi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-07
+last_updated: 2026-10-11
 summary: >
   Tamga uyumlu bir cüzdanı mağazaya göndermeden önce geçilecek kontrol listesi: anahtarlar ve cihaz kanıtı, kayıt, belge alma,
   gösterme ve onay ekranı, gizlilik ve günlük, cihaz değiştirme ve silme, güven listesi, uyum testleri ve mağaza.
@@ -44,6 +44,8 @@ Bu sayfa, [[GUIDE-0005]]'te anlatılan cüzdanı yayına hazırlayan ekipler iç
 - Ekranda doğrulayıcının adı, amacı, istenen alanlar tek tek ve gizlilik politikası var; aracıda asıl site gösteriliyor
   ([[ADR-0017]]).
 - Kapsam dışı alan ayrı görsel blokta, gecikmeli düğmeyle gösteriliyor (WL8).
+- Belge verenin paylaşım kuralı belgeyle saklanıyor (`receiveCredentials`) ve gösterimde ağ isteği olmadan değerlendiriliyor
+  (`checkDisclosurePolicy`); tutmazsa ya da denetlenemezse ayrı uyarı, varsayılan "Paylaşma", varsa "Kuralı oku" ([[ADR-0046]] EP2/EP3).
 - Her gösterim PIN ya da biyometri istiyor (WL11).
 - Aynı doğrulayıcıya aynı kopya, farklı doğrulayıcıya farklı kopya gidiyor; kopyalar tükenince kişiye soruluyor (WL5, WL6).
 - Gösterim anında şema sunucusuna istek yok (WL9).

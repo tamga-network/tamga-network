@@ -5,6 +5,40 @@ announcement; changes before it are folded into this release. The `@tamga-networ
 are published on npm as the `0.4.0` test release (the API may change in test releases); the stable `1.0.0` comes when
 everything is ready.
 
+## Unreleased — 0.5.0
+
+Package changes in the source tree, released with the `0.5.0` packages (minor: new fields and functions; nothing removed).
+
+### Embedded disclosure policy (ADR-0046, EU ARF Topic 43)
+
+- `@tamga-network/core/disclosure-policy` (new subpath; dependency-free, React Native safe): the policy data model
+  (`EmbeddedDisclosurePolicy`; types `none`, `authorized_relying_parties`, `specific_roots_of_trust`), `validateDisclosurePolicy`
+  (unknown members are dropped), `disclosurePolicyDigest` (`sha256:<hex>` over the known members, order-independent),
+  `restrictsDisclosure`, and RFC 4514 name handling (`parseDn`, `dnEquals` with `ORGID`/`SN` per ETSI TS 119 472-3,
+  `serialEquals`).
+- `@tamga-network/schemas`: `EMBEDDED_DISCLOSURE_POLICY_SCHEMA` (JSON Schema 2020-12) and `acceptsDisclosurePolicy(vct)` —
+  institution credentials only; the `urn:tamga:id:*`, `urn:tamga:contact:*` and core types refuse a policy.
+- `@tamga-network/issuer`: `issuerMetadata({ authorizedVcts: [{ …, disclosurePolicy }] })` publishes the policy by value in
+  `credential_metadata.embedded_disclosure_policy`; a malformed policy or one on a non-institution type throws
+  (`checkedDisclosurePolicy`). The digest and validator are re-exported for the credential record (EP4).
+- `@tamga-network/trust` (`/core` too): `certNames(der)` (subject, issuer, serial), `certSubjectMatches`,
+  `certMatchesRootOfTrust`. The trust list relying party scope gets an optional `service_id`.
+- `@tamga-network/wallet-core`: `receiveCredentials` stores the policy from the issuer metadata on the credential record
+  (`StoredCredential.disclosurePolicy`: policy + digest, or `malformed`); `checkDisclosurePolicy(request, registrarKeys, match)`
+  evaluates it offline against the verified registration certificates and the access certificate chain — (a) registration
+  certificate `sub` + `service_id`, (b) access certificate subject name (not for intermediated requests), (c) entitlement,
+  or a listed root of trust in either chain — and returns `passed` / `failed` / `not_evaluable` with the reason and the
+  `info_uri`. Without a registration certificate (proximity, wallet-to-wallet: `offlineDisclosurePolicy`) a restricting policy
+  is not evaluable. Lower level: `disclosurePolicyFromMetadata`, `evaluateDisclosurePolicy`, `disclosurePolicyContext`,
+  `relevantRegistrationCerts`; `verifyWrprc` also returns the signing chain, `VpRequest.chainDer` carries the request's x5c.
+- `@tamga-network/verifier`: no change (the policy is never sent to the verifier).
+
+### Registration certificate service identifier (ARF RPRC_17a)
+
+- The list publisher writes `service_id` into every relying party registration certificate (the scope's `service_id`, or its
+  `scope_id`). The sandbox verifier gets a second diploma use (`alumni-network`) and the `alumni-network` scenario policy, so
+  an allowed and a not-allowed service of the same verifier can be tried against the sandbox's example policy.
+
 ## [1.0.0] — 2026-10-04
 
 First release of the Tamga Network documentation set and reference implementation.

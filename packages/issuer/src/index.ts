@@ -32,3 +32,14 @@ export {
 export * from "./authcode.js";
 export * from "./dpop.js";
 export * from "./key-attestation.js";
+// ADR-0046: gömülü açıklama politikası — biçim denetimi, özet (belge kaydı; EP4 iptali) ve kapsam
+export {
+  EMBEDDED_DISCLOSURE_POLICY_MEMBER,
+  DISCLOSURE_POLICY_TYPES,
+  validateDisclosurePolicy,
+  disclosurePolicyDigest,
+  acceptsDisclosurePolicy,
+  restrictsDisclosure,
+  type EmbeddedDisclosurePolicy,
+  type DisclosurePolicyType,
+} from "@tamga-network/schemas";

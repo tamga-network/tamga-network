@@ -28,3 +28,4 @@ export * from "./pseudonym.js";
 export * from "./shared-with.js";
 export * from "./driving.js";
 export * from "./zk-copies.js";
+export * from "./disclosure-policy.js";

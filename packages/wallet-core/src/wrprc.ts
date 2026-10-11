@@ -27,9 +27,13 @@ export interface RegistrationCertCheck {
   privacyPolicy?: string;
 }
 
-interface Wrprc {
+export interface Wrprc {
   name?: string;
   sub?: string;
+  /** ADR-0046 / ARF RPRC_17a: hizmet kimliği */
+  service_id?: string;
+  /** ETSI TS 119 475 Ek A yetki türü URI'leri */
+  entitlements?: string[];
   iat?: number;
   exp?: number;
   privacy_policy?: string;
@@ -70,18 +74,20 @@ export function verifyWrprc(
   data: unknown,
   registrarKeys: string[],
   now = Date.now(),
-): { ok: true; payload: Wrprc; signerDer: Uint8Array } | { ok: false; reason: string } {
+): { ok: true; payload: Wrprc; signerDer: Uint8Array; chainDer: Uint8Array[] } | { ok: false; reason: string } {
   if (typeof data !== "string") return { ok: false, reason: "registration certificate is not a JWT" };
   const nowSec = Math.floor(now / 1000);
   let payload: Wrprc;
   let der: Uint8Array;
+  let chain: Uint8Array[];
   try {
     const d = decodeJwt(data);
     if (String(d.header.typ ?? "").toLowerCase() !== WRPRC_TYP)
       return { ok: false, reason: "registration certificate typ" };
     const x5c = d.header.x5c as string[] | undefined;
     if (!x5c?.length) return { ok: false, reason: "registration certificate without x5c" };
-    der = b64Decode(x5c[0]);
+    chain = x5c.map((c) => b64Decode(c));
+    der = chain[0];
     if (!registrarKeys.includes(certFingerprintHex(der)))
       return { ok: false, reason: "registration certificate not signed by a registrar in the trusted list" };
     verifyJwt(data, p256PointFromCertDer(der));
@@ -93,7 +99,7 @@ export function verifyWrprc(
     return { ok: false, reason: "registration certificate not yet valid" };
   if (typeof payload.exp === "number" && payload.exp <= nowSec)
     return { ok: false, reason: "registration certificate expired" };
-  return { ok: true, payload, signerDer: der };
+  return { ok: true, payload, signerDer: der, chainDer: chain };
 }
 
 /**
@@ -128,27 +134,38 @@ export function checkIssuerRegistration(
   return { present: true, valid: true };
 }
 
-export function checkRegistrationCerts(
+/** Bu belge sorgusunu kapsayan, doğrulanmış kayıt sertifikası (yük + imza zinciri). */
+export interface RelevantRegistrationCert {
+  payload: Wrprc;
+  /** kayıt sertifikasını imzalayan zincir (x5c; yaprak ilk) */
+  chainDer: Uint8Array[];
+}
+
+/**
+ * K5 1–3 denetimi + bu sorguyu kapsayan sertifikalar (`credential_ids` yoksa hepsi). Bir sertifika bile 1–3'ü geçmezse
+ * `valid: false` (WRC4). Gömülü açıklama politikası (ADR-0046 K3) aynı sertifikalarla değerlendirilir.
+ */
+export function relevantRegistrationCerts(
   req: VpRequest,
   registrarKeys: string[],
-  match: Match,
+  match: Pick<Match, "queryId">,
   now = Date.now(),
-): RegistrationCertCheck {
+): { present: boolean; valid: boolean; reason?: string; certs: RelevantRegistrationCert[] } {
   const info = (req.payload as { verifier_info?: unknown }).verifier_info;
   const entries = Array.isArray(info)
     ? (info as Array<{ format?: string; data?: unknown; credential_ids?: string[] }>).filter(
         (e) => e?.format === "registration_cert",
       )
     : [];
-  if (!entries.length) return { present: false, valid: true };
-  const fail = (reason: string): RegistrationCertCheck => ({ present: true, valid: false, reason });
+  if (!entries.length) return { present: false, valid: true, certs: [] };
+  const fail = (reason: string) => ({ present: true, valid: false, reason, certs: [] });
   let orgId: string | null;
   try {
     orgId = certOrganizationIdentifier(req.leafDer);
   } catch {
     orgId = null;
   }
-  const relevant: Wrprc[] = [];
+  const certs: RelevantRegistrationCert[] = [];
   for (const e of entries) {
     const v = verifyWrprc(e.data, registrarKeys, now);
     if (!v.ok) return fail(v.reason);
@@ -156,8 +173,22 @@ export function checkRegistrationCerts(
     const expectedSub = payload.intermediary?.sub ?? payload.sub;
     if (!orgId || !expectedSub || orgId !== expectedSub)
       return fail("registration certificate does not belong to the certificate that signed the request");
-    if (!e.credential_ids?.length || e.credential_ids.includes(match.queryId)) relevant.push(payload);
+    if (!e.credential_ids?.length || e.credential_ids.includes(match.queryId))
+      certs.push({ payload, chainDer: v.chainDer });
   }
+  return { present: true, valid: true, certs };
+}
+
+export function checkRegistrationCerts(
+  req: VpRequest,
+  registrarKeys: string[],
+  match: Match,
+  now = Date.now(),
+): RegistrationCertCheck {
+  const r = relevantRegistrationCerts(req, registrarKeys, match, now);
+  if (!r.present) return { present: false, valid: true };
+  if (!r.valid) return { present: true, valid: false, reason: r.reason };
+  const relevant = r.certs.map((c) => c.payload);
   const allowed = new Set<string>();
   for (const p of relevant)
     for (const c of p.credentials ?? [])

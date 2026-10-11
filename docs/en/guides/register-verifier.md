@@ -4,7 +4,7 @@ title: "Register as a verifier"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-11
 summary: >
   Registering a site or service as a verifier in the Tamga trust list: domain name and access certificate, the EU common
   registration data, intended uses (purpose, fields, privacy policy), the registration certificate, intermediaries and
@@ -107,6 +107,11 @@ signed list; it is signed with a separate registrar key and is valid for at most
 You send this certificate in your presentation request inside `verifier_info` (`registration_cert`). The wallet checks the
 signature, the validity period, the identifier match and that the requested fields fit the scope in the certificate
 ([[ADR-0026]]).
+
+The certificate also carries the use's **service identifier** (`service_id`; ARF RPRC_17a). If you give a use a
+`"service_id"` in your application it is written (it groups several uses of the same service under one name); otherwise the
+`scope_id`. Issuers can limit a credential type to specific verifiers and services ([[GUIDE-0003]], sharing rules;
+[[ADR-0046]]): if you are not allowed, the wallet warns the person and "Don't share" is the default.
 
 ## 5. Intermediaries
 

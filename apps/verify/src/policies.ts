@@ -58,6 +58,27 @@ export const POLICIES: Policy[] = [
     trust: TRUST_EDU,
     freshness: FRESH,
   },
+  /**
+   * ADR-0046 sahnesi: aynı doğrulayıcının başka hizmeti (`alumni-network`). Sandbox'taki örnek kurumun diploması yalnız iş başvurusu
+   * hizmetine (`hiring`) gösterilmek üzere gömülü açıklama politikası taşır — cüzdan burada uyarır, varsayılan "Paylaşma".
+   */
+  {
+    policy_id: "alumni-network",
+    purpose: {
+      "en-US": "Alumni network membership (graduates only)",
+      "tr-TR": "Mezunlar ağı üyeliği (yalnız mezunlar)",
+    },
+    credentials: [
+      {
+        id: "diploma",
+        vct_values: ["urn:tamga:edu:DiplomaCredential:1"],
+        required_claims: ["is_graduate", "awarding_body_name"],
+        constraints: { is_graduate: true },
+      },
+    ],
+    trust: TRUST_EDU,
+    freshness: FRESH,
+  },
   {
     policy_id: "student-discount",
     purpose: {

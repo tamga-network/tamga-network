@@ -83,6 +83,8 @@ export interface VpRequest {
   enc: JweEnc;
   leafFingerprint: string;
   leafDer: Uint8Array;
+  /** ADR-0046 K3: isteği imzalayan erişim sertifikası zinciri (x5c; yaprak ilk) — güven kökü politikası için */
+  chainDer?: Uint8Array[];
   payload: Record<string, unknown>;
   /** ADR-0017 K7: aracı doğrulayıcı bir RP adına istiyorsa asıl RP'nin client_id'si (onay ekranında o gösterilir). */
   onBehalfOf?: string;
@@ -240,6 +242,7 @@ export function verifyRequestObject(
     enc,
     leafFingerprint,
     leafDer,
+    chainDer: x5c.map((c) => b64Decode(c)),
     payload: p,
     ...(onBehalfOf ? { onBehalfOf } : {}),
     rpKey: onBehalfOf ?? clientId,

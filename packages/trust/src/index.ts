@@ -8,3 +8,4 @@ export * from "./trust-source.js";
 export * from "./fs.js";
 export * from "./http-source.js";
 export * from "./wallet-attestation.js";
+export * from "./x509-names.js";

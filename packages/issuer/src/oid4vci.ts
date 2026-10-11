@@ -5,6 +5,12 @@
  */
 import { randomBytes, randomInt } from "node:crypto";
 import { decodeProtectedHeader, importJWK, jwtVerify, type JWK } from "jose";
+import {
+  EMBEDDED_DISCLOSURE_POLICY_MEMBER,
+  acceptsDisclosurePolicy,
+  validateDisclosurePolicy,
+  type EmbeddedDisclosurePolicy,
+} from "@tamga-network/schemas";
 
 /**
  * on-screen: masada QR + PIN (5 dk) · out-of-band: bağlantı + ayrı kanaldan PIN (72 sa) ·
@@ -162,6 +168,18 @@ export const REUSE_POLICY = {
   ],
 } as const;
 
+/**
+ * ADR-0046 K1: metadata'ya girecek politika — biçim denetiminden geçmiş hâli (bilinen üyeler). Kimlik ve iletişim türlerinde
+ * politika yasak; bozuk politika metadata'yı hiç üretmez (kurumun yanlış ayarı sessizce "politikasız" yayınlanmasın).
+ */
+export function checkedDisclosurePolicy(vct: string, policy: unknown): EmbeddedDisclosurePolicy {
+  if (!acceptsDisclosurePolicy(vct))
+    throw new Error(`embedded disclosure policy is not allowed for ${vct} (ADR-0046 K1: institution credentials only)`);
+  const v = validateDisclosurePolicy(policy);
+  if (!v.ok) throw new Error(`invalid embedded disclosure policy for ${vct}: ${v.errors.join("; ")}`);
+  return v.policy;
+}
+
 /** Tamga anahtar deposu alt sınırı → kabul edilen ISO 18045 seviyeleri (alt sınır ve üstü) */
 export function acceptedKeyStorageLevels(min: "software" | "tee" | "secure_enclave" | "strongbox" | "wscd"): string[] {
   const all = ["iso_18045_basic", "iso_18045_enhanced-basic", "iso_18045_moderate", "iso_18045_high"];
@@ -172,7 +190,11 @@ export function acceptedKeyStorageLevels(min: "software" | "tee" | "secure_encla
 /** Issuer metadata — /.well-known/openid-credential-issuer/{slug}. PR2: yalnız yetkili vct'ler. */
 export function issuerMetadata(p: {
   credentialIssuer: string;
-  authorizedVcts: Array<{ vct: string; name: string; display: unknown[] }>;
+  /**
+   * ADR-0046: `disclosurePolicy` verilirse yapılandırmanın `credential_metadata.embedded_disclosure_policy`'si olur (değer olarak,
+   * EP1). Biçimi bozuksa ya da tür politika kabul etmiyorsa (kimlik, iletişim — K1) hata.
+   */
+  authorizedVcts: Array<{ vct: string; name: string; display: unknown[]; disclosurePolicy?: unknown }>;
   /** ADR-0025 / ISSU_27d: kabul edilen anahtar deposu seviyeleri (ISO 18045); verilirse KA istenir */
   keyAttestationsRequired?: { key_storage: string[]; user_authentication: string[] };
   /** ETSI TS 119 472-3 §4.2.3 (ARF RPRC_22): kayıt kurumu veri seti + varsa kayıt sertifikası (`verifier_info` yapısında) */
@@ -217,7 +239,13 @@ export function issuerMetadata(p: {
           credential_signing_alg_values_supported: ["ES256"],
           proof_types_supported: proofTypes,
           // OpenID4VCI 1.0: görünüm ve kopya politikası credential_metadata altında (üst düzey display eski cüzdanlar için)
-          credential_metadata: { display: c.display, credential_reuse_policy: REUSE_POLICY },
+          credential_metadata: {
+            display: c.display,
+            credential_reuse_policy: REUSE_POLICY,
+            ...(c.disclosurePolicy !== undefined && c.disclosurePolicy !== null
+              ? { [EMBEDDED_DISCLOSURE_POLICY_MEMBER]: checkedDisclosurePolicy(c.vct, c.disclosurePolicy) }
+              : {}),
+          },
           display: c.display,
         },
       ]),

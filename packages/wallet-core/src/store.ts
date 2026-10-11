@@ -8,6 +8,7 @@ import type { RedeemOutput } from "./oid4vci.js";
 import type { WuaRecord } from "./wua.js";
 import { verifyReceivedMdoc } from "./mdoc.js";
 import type { TrustSource } from "@tamga-network/trust/core";
+import { disclosurePolicyFromMetadata, type StoredDisclosurePolicy } from "./disclosure-policy.js";
 
 export interface StoredCopy {
   keyRef: string;
@@ -67,6 +68,11 @@ export interface StoredCredential {
   network?: "production" | "sandbox";
   /** ADR-0044: kimlik belgesinin ZK kopyaları ve yenileme bağı (yalnız kimlik servisi ZK kopyası ilan ediyorsa) */
   zk?: ZkCopyBinding;
+  /**
+   * ADR-0046 K2 (EDP_10): kurumun gömülü açıklama politikası — belge alınırken imzalı metadata'dan; sunumda ağsız değerlendirilir
+   * (`checkDisclosurePolicy`). Yoksa belge kısıt taşımaz.
+   */
+  disclosurePolicy?: StoredDisclosurePolicy;
 }
 export interface PresentationLogEntry {
   ts: number;
@@ -241,6 +247,8 @@ export function receiveCredentials(
   const cfg = out.metadata.credential_configurations_supported[out.vct];
   const displays = cfg?.credential_metadata?.display ?? cfg?.display; // OpenID4VCI 1.0: credential_metadata.display
   const display = displays?.find((d) => d.locale?.startsWith("tr")) ?? displays?.[0];
+  // ADR-0046 K2 (EDP_10): politika belgeyle birlikte saklanır; sunumda kuruma ya da başka sunucuya sorulmaz
+  const disclosurePolicy = disclosurePolicyFromMetadata(out.metadata, out.vct);
   const credential: StoredCredential = {
     id: `${first.issuerId.slice(2, 10)}-${first.iat.toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     vct: out.vct,
@@ -258,6 +266,7 @@ export function receiveCredentials(
     receivedAt: opt.now ?? Math.floor(Date.now() / 1000),
     ...(out.refresh ? { refresh: out.refresh } : {}),
     ...(out.zk ? { zk: { ...out.zk, copies: [] } } : {}),
+    ...(disclosurePolicy ? { disclosurePolicy } : {}),
   };
   return { state: { ...state, credentials: [...state.credentials, credential] }, credential, verified: first };
 }

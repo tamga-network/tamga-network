@@ -346,8 +346,16 @@ arrives in the signed Credential Issuer metadata as `credential_metadata.embedde
   `relying_parties` item, the access certificate subject name (RFC 4514 normalised) equals a `subject_dns` item, or an
   entitlement of the registration certificate equals an `entitlements` item; `specific_roots_of_trust` → passes if the (issuer
   name, serial number) pair of a certificate in the registration or access certificate chain is listed. For intermediated
-  requests the intermediated verifier counts. Without a registration certificate (proximity, wallet-to-wallet) the evaluation
+  requests the intermediated verifier counts: `rp_id` is the registration certificate `sub`, and the access certificate subject
+  name (the intermediary's name) is not a match. Without a registration certificate (proximity, wallet-to-wallet) the evaluation
   cannot be performed and counts as failed.
+- **Comparison details:** the service identifier is the registration certificate's `service_id` member (ARF RPRC_17a; the list
+  publisher writes the use's `service_id`, or its `scope_id`); an item without `service_id` covers all uses of the verifier.
+  Name comparison maps attribute types to OIDs (ETSI TS 119 472-3: `ORGID` = organizationIdentifier, `SN` = serialNumber),
+  ignores case and extra spaces in values and ignores RDN order; all attributes must be identical. A root of trust item matches
+  the certificate whose serial number is equal and whose issuer name (for a self-signed root also its subject name) or subject
+  name equals `issuer_dn`. Reference implementation: `@tamga-network/wallet-core` `checkDisclosurePolicy` (result `passed` /
+  `failed` / `not_evaluable`, with the reason and `info_uri`).
 - **Consent screen (EDP_05/07):** if it fails or cannot be performed, a separate warning block ("[institution] wants this
   credential to be shown only to institutions it allows"), a "Read the rule" link when `info_uri` is present; the default button
   is **"Don't share"**, "Share anyway" is delayed (§5.2 pattern). There is no hard block; the final decision is the person's.

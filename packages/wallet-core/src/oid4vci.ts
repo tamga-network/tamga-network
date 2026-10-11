@@ -51,6 +51,8 @@ export interface IssuerMetadata {
       /** OpenID4VCI 1.0 + ETSI TS 119 472-3 §4.2.4 */
       credential_metadata?: {
         display?: Array<{ name?: string; locale?: string }>;
+        /** ADR-0046: gömülü açıklama politikası (değer olarak; cüzdan alırken saklar — EP2) */
+        embedded_disclosure_policy?: unknown;
         credential_reuse_policy?: {
           id: string;
           options?: Array<{

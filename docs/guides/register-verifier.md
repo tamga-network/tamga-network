@@ -4,7 +4,7 @@ title: "Doğrulayıcı olarak kayıt olmak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-11
 summary: >
   Bir sitenin ya da hizmetin doğrulayıcı olarak Tamga güven listesine kaydı: alan adı ve erişim sertifikası, AB ortak kayıt
   verileri, kullanım kapsamları (amaç, alanlar, gizlilik politikası), kayıt sertifikası, aracı doğrulayıcılar ve takma ad.
@@ -100,6 +100,11 @@ imzalı listedeki kaydınızdan gelir; ayrı bir kayıt kurumu anahtarıyla imza
 
 Sunum isteğinizde bu sertifikayı `verifier_info` içinde (`registration_cert`) gönderirsiniz. Cüzdan imzayı, süreyi, kimlik
 numarası eşleşmesini ve istenen alanların sertifikadaki kapsamla uyumunu denetler ([[ADR-0026]]).
+
+Sertifika kullanımın **hizmet kimliğini** de taşır (`service_id`; ARF RPRC_17a). Başvuruda bir kullanıma `"service_id"`
+verirseniz o yazılır (aynı hizmetin birden çok kullanımını tek adla toplar), vermezseniz `scope_id`. Belge verenler bir belge
+türünü yalnız belirli doğrulayıcı ve hizmetlere gösterilmek üzere sınırlayabilir ([[GUIDE-0003]], paylaşım kuralı;
+[[ADR-0046]]): izinli değilseniz cüzdan kişiyi uyarır ve varsayılan seçim "Paylaşma"dır.
 
 ## 5. Aracı doğrulayıcı
 

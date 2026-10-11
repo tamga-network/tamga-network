@@ -4,7 +4,7 @@ title: "Issue credentials as an institution"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-04
+last_updated: 2026-10-11
 summary: >
   Issuing credentials to people's wallets as a university, a public body or a ticket seller: calling the issuer service hosted
   by Tamga with `@tamga-network/issuer/client` (offers, ticket sales, revocation/suspension), or building your own issuer
@@ -117,6 +117,33 @@ The whole Tamga API: [Hosted issuer API](/api/issuer).
   **Tamga identity credential**: the wallet presents the identity credential, and Tamga matches it with the digest in the offer
   or with your source endpoint (`lookup`). You never talk to the identity provider (Didit) directly ([[ADR-0011]]).
 - For credentials that need no personal data, such as tickets, do not ask for identity.
+
+## Sharing rules: who may see the credential {#sharing-rules}
+
+You can limit a credential type so that it is shown only to verifiers you allow (embedded disclosure policy, [[ADR-0046]]).
+Example: a diploma only for hiring services; a professional licence only for healthcare providers.
+
+- **Where it lives:** the rule is published by value in your signed Credential Issuer metadata, in the credential type's
+  `credential_metadata.embedded_disclosure_policy`. It does not go into the credential and is not sent to verifiers.
+- **Three options:** `none` (no restriction) · `authorized_relying_parties` (only those listed) · `specific_roots_of_trust` (only
+  verifiers certified under the listed roots of trust). An allowed verifier can be written in three ways: its registration
+  identifier and optional service (`relying_parties: [{ "rp_id": "VATTR-…", "service_id": "hiring" }]`), its access certificate
+  subject name (`subject_dns`, RFC 4514) or an entitlement (`entitlements`). If you have a page explaining the rule in plain
+  language, give it as `info_uri`; the wallet shows a "Read the rule" link.
+- **What the wallet does:** it stores the rule when it receives the credential and checks it at presentation against the
+  verifier's registration certificate, without going online. If the verifier is not allowed or cannot be checked (for example in
+  proximity), it warns the person and "Don't share" is the default; the person makes the final decision.
+- **If the rule changes:** adding, changing or removing it revokes every valid credential of that type (EP4) — wallets receive
+  the rule together with the credential. People must receive the credential again; with silent refresh on, new copies come with
+  the new rule.
+- **On the hosted service:** Institution Console → **Sharing rules** (admins only). A rule can be set only on institution
+  credentials that can be revoked (diploma, ticket); never on identity or contact credentials. The console shows how many
+  credentials will be revoked and asks for confirmation before applying.
+- **On your own service:** `issuerMetadata({ authorizedVcts: [{ vct, name, display, disclosurePolicy }] })` checks and publishes
+  the rule; write `disclosurePolicyDigest(policy)` into the credential record and revoke the credentials when the digest changes.
+
+To try it: in the [[GUIDE-0013]] the example university's diploma is limited to the sample verifier's hiring
+service (`hiring`); the "Alumni network" scenario is another service of the same verifier, and the wallet warns there.
 
 ## In depth: your own service
 

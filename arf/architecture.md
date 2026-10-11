@@ -184,7 +184,7 @@ release. Where proofs are not supported, the presentation is made in the usual w
 | Bluetooth proximity presentation                                          | Implemented; device testing pending                                                                       |
 | Browser presentation (Digital Credentials API)                            | Verifier ready; no wallet connection yet                                                                  |
 | Hardware-backed keys and device attestation                               | Implemented; device testing with the app-store release                                                    |
-| Issuer's sharing rule (embedded disclosure policy)                        | Accepted; with the 0.5.0 packages                                                                         |
+| Issuer's sharing rule (embedded disclosure policy)                        | Implemented in the source; released with the 0.5.0 packages                                               |
 | Sandbox (open to everyone; identity verification with daily/monthly caps) | Live                                                                                                      |
 
 ---

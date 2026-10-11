@@ -4,7 +4,7 @@ title: "Kurum olarak belge vermek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-04
+last_updated: 2026-10-11
 summary: >
   Üniversite, kamu kurumu ya da bilet satıcısı olarak kişilerin cüzdanına belge vermek: Tamga'nın barındırdığı belge verme
   servisini `@tamga-network/issuer/client` ile çağırmak (teklif, bilet satışı, iptal/askı) ya da kendi belge verme servisinizi
@@ -107,6 +107,32 @@ Tamga API'sinin tamamı: [Belge verme API'si](/api/issuer).
   **Tamga kimlik belgesi** ile yapılır: cüzdan kimlik belgesini sunar, Tamga bunu teklifteki özetle ya da sorgu ucunuzla (`lookup`) eşler. Kimlik
   sağlayıcısıyla (Didit) doğrudan konuşmazsınız ([[ADR-0011]]).
 - Bilet gibi kişisel veri gerektirmeyen belgelerde kimlik istemeyin.
+
+## Paylaşım kuralı: belgeyi kimlere gösterilsin {#sharing-rules}
+
+Bir belge türünü yalnız izin verdiğiniz doğrulayıcılara gösterilmek üzere sınırlayabilirsiniz (gömülü açıklama politikası,
+[[ADR-0046]]). Örnek: diploma yalnız işe alım hizmetlerine; meslek belgesi yalnız sağlık kuruluşlarına.
+
+- **Nerede durur:** kural imzalı belge veren bilgilerinizde (Credential Issuer metadata) belge türünün
+  `credential_metadata.embedded_disclosure_policy` alanında, değer olarak yayınlanır. Belgeye girmez, doğrulayıcıya gönderilmez.
+- **Üç seçenek:** `none` (kısıt yok) · `authorized_relying_parties` (yalnız listedekiler) · `specific_roots_of_trust` (yalnız
+  listedeki güven köklerinden sertifika almış doğrulayıcılar). İzinli doğrulayıcı üç yoldan yazılabilir: kayıt kimliği ve
+  isteğe bağlı hizmet (`relying_parties: [{ "rp_id": "VATTR-…", "service_id": "hiring" }]`), erişim sertifikasının konu adı
+  (`subject_dns`, RFC 4514) ya da yetki türü (`entitlements`). Kuralı sade dille anlatan bir sayfanız varsa `info_uri` verin;
+  cüzdan "Kuralı oku" bağlantısı gösterir.
+- **Cüzdan ne yapar:** kuralı belgeyi alırken saklar; belge gösterilirken doğrulayıcının kayıt sertifikasıyla, internete
+  çıkmadan denetler. Doğrulayıcı izinli değilse ya da denetlenemezse (ör. yakın mesafede) kişiyi uyarır, varsayılan seçim
+  "Paylaşma"dır; son kararı kişi verir.
+- **Kural değişirse:** eklemek, değiştirmek ya da kaldırmak o türün geçerli bütün belgelerini iptal eder (EP4) — cüzdanlar
+  kuralı belgeyle birlikte alır. Kişiler belgeyi yeniden almalıdır; sessiz yenileme açıksa yeni kopyalar yeni kuralla gelir.
+- **Barındırılan serviste:** Kurum Konsolu → **Paylaşım kuralları** (yalnız yönetici). Kural yalnız iptal edilebilen kurum
+  belgelerine (diploma, bilet) konabilir; kimlik ve iletişim belgelerine konmaz. Konsol, uygulamadan önce kaç belgenin iptal
+  edileceğini gösterir ve onay ister.
+- **Kendi servisinizde:** `issuerMetadata({ authorizedVcts: [{ vct, name, display, disclosurePolicy }] })` kuralı denetleyip
+  yayınlar; `disclosurePolicyDigest(policy)` özetini belge kaydına yazın ve özet değişince belgeleri iptal edin.
+
+Denemek için: [[GUIDE-0013]]'taki örnek üniversitenin diploması yalnız örnek doğrulayıcının işe alım hizmetine
+(`hiring`) sınırlıdır; "Mezunlar ağı" senaryosu aynı doğrulayıcının başka hizmetidir ve cüzdan orada uyarır.
 
 ## Derinlik: kendi servisiniz
 

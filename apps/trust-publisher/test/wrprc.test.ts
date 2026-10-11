@@ -85,6 +85,7 @@ describe("kayıt sertifikası (ADR-0026)", () => {
       entitlements: [ENTITLEMENT_URI.service_provider],
       privacy_policy: "https://shop.example/privacy",
       intended_use_id: "discount-1",
+      service_id: "discount-1", // ADR-0046 / RPRC_17a: kayıtta hizmet kimliği yoksa kullanım kimliği
       public_body: false,
       supervisory_authority: { email: "dpa@example.org" },
       credentials: [
@@ -101,6 +102,13 @@ describe("kayıt sertifikası (ADR-0026)", () => {
       { lang: "en", value: "Student discount" },
       { lang: "tr-TR", value: "Öğrenci indirimi" },
     ]);
+  });
+
+  it("hizmet kimliği (ADR-0046, RPRC_17a): kullanımın service_id'si WRPRC'ye girer", () => {
+    const svc = { ...rp, scopes: [{ ...rp.scopes[0], service_id: "loyalty" }] };
+    const { items } = buildWrprcPayloads({ relying_parties: [svc], issuers: [] }, { now, registryUri: "u" });
+    expect(items[0].payload.service_id).toBe("loyalty");
+    expect(items[0].payload.intended_use_id).toBe("discount-1");
   });
 
   it("süre en çok 12 ay (WRC3)", () => {

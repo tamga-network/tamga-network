@@ -4,7 +4,7 @@ title: "Wallet pre-release checklist"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-07
+last_updated: 2026-10-11
 summary: >
   The checklist to go through before submitting a Tamga-compatible wallet to the app stores: keys and device attestation,
   registration, receiving credentials, presenting and the consent screen, privacy and the transaction log, changing devices and
@@ -47,6 +47,9 @@ codes are in [[SPEC-WALLET-0001]], the full list in [Tamga ARF — Tamga Ruleboo
 - The screen shows the verifier's name, the purpose, the requested fields one by one and the privacy policy; with an
   intermediary, the actual site is shown ([[ADR-0017]]).
 - Out-of-scope fields are shown in a separate visual block with a delayed button (WL8).
+- The issuer's sharing rule is stored with the credential (`receiveCredentials`) and evaluated at presentation without network
+  requests (`checkDisclosurePolicy`); if it fails or cannot be checked, a separate warning, "Don't share" as the default and
+  "Read the rule" when available ([[ADR-0046]] EP2/EP3).
 - Every presentation asks for a PIN or biometrics (WL11).
 - The same verifier always gets the same copy, a different verifier a different copy; the person is asked when copies run out (WL5, WL6).
 - No request is made to the schema server at presentation time (WL9).
