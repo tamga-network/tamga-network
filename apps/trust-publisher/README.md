@@ -53,3 +53,11 @@ güncellenip etkinleşir. Sandbox listesinde iki kayıt var: `TAMGA-SANDBOX-TEST
 anahtarı (`wallet-provider`, ADR-0042 K5; bir cüzdan hizmeti değildir) — ve Tamga Wallet işletmecisinin `RESERVED` kaydı. `RESERVED` kayıt
 WUA doğrulamasında kullanılmaz. Test listesindeki (`test/fixtures/registry/`) kayıt geneldir (`Test Wallet Provider`,
 `test-wallet`). `keys/` klasörüne yalnız listenin andığı sertifikalar yazılır.
+
+**Cüzdan sağlayıcı sertifikasının dosya adı:** `wua_signing_certs[]` öğesi, PKI klasöründeki `<ad>.cert.pem` dosyasının adıdır
+ve liste yayınlanınca herkese açık `keys/<ad>.cert.pem` olur (yalnız sertifika; özel anahtar ağa verilmez). Kural:
+`wallet-provider-<provider_id küçük harfle>`. `TAMGA-WP-1` için ad **`wallet-provider-tamga-wp-1`** (proje yönetimi onayı
+2026-10-13) → `https://trust.tamga.network/keys/wallet-provider-tamga-wp-1.cert.pem` (sandbox listesinde aynı ad, aynı
+sertifika). Yalın `wallet-provider` sandbox'taki test sağlayıcısına (`TAMGA-SANDBOX-TEST-WP`) ayrılmıştır, başka kayıtta
+kullanılmaz. Kayıt bugün `RESERVED` ve `wua_signing_certs: []`; ad, işletmeci sertifikasını verince iki kaynak dosyada
+(`registry/`, `registry-sandbox/`) `"wua_signing_certs": ["wallet-provider-tamga-wp-1"]` ve `ACTIVE` ile birlikte girer.

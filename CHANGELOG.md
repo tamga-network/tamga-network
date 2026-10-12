@@ -131,6 +131,13 @@ existing callers keep working.
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-13 — wallet provider certificate file name
+
+- `apps/trust-publisher/README.md`: naming rule for wallet provider certificates in `wua_signing_certs[]` —
+  `wallet-provider-<provider_id in lower case>`; for `TAMGA-WP-1` the name is `wallet-provider-tamga-wp-1` (published as
+  `keys/wallet-provider-tamga-wp-1.cert.pem` in both lists; approved by project management). Plain `wallet-provider` stays
+  reserved for the sandbox test provider. Nothing is activated: `TAMGA-WP-1` stays `RESERVED` with no certificate.
+
 ### 2026-10-12 — decisions on the rulebook template work (ADR-0047)
 
 - ADR-0047 accepted: wallet unit revocation does not revoke institution credentials (they are bound to a device key and cannot
