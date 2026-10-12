@@ -4,7 +4,7 @@ title: "Wallet and key attestations"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-06
+last_updated: 2026-10-12
 summary: >
   Instead of a single 30-day WUA, the EU TS3 model: a Wallet Instance Attestation (WIA) living less than 24 hours, with a fresh key
   and a fresh status list entry for every credential transaction, plus a key attestation (KA, `key_attestation`) describing where
@@ -79,7 +79,9 @@ No personal data is kept. Requests about the unit are signed with the unit key.
   registered in the [[t:trust-list]]. The WIA list has at least 10,000 entries.
 - The user can choose "Revoke this wallet" in the wallet (handing over or selling the device). The unit and all its WIA entries are
   revoked.
-- Revocation from a lost or stolen device requires a user account (WIAM_06); left to a later step.
+- Revocation from a lost or stolen device requires a user account (WIAM_06); left to a later step. **2026-10-12: changed by
+  [[ADR-0047]] K3** — no account; the wallet provider offers a revocation path without the phone (a revocation secret given at
+  set-up).
 
 ## K5 — Issuers
 

@@ -20,6 +20,10 @@ export interface DirectoryEntry {
   isIdentityProvider: boolean; // urn:tamga:id:IdentityAttestation:1 verebiliyor mu
   /** Kurumun güven listesindeki belge imza sertifikası parmak izi — imzalı metadata doğrulaması (ISSU_32) */
   certFingerprint?: string;
+  /** Kurumun bilgi sayfası (kayıt verisi, ADR-0024) */
+  infoUri?: string;
+  /** ADR-0047 K2: kurumun ağın ortak iptal politikasına eklediği koşulların sayfası — cüzdan kurum sayfasında gösterir */
+  revocationPolicyUri?: string;
 }
 export const IDENTITY_VCT = "urn:tamga:id:IdentityAttestation:1";
 /**
@@ -42,7 +46,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
-interface RawIssuer {
+export interface RawIssuer {
   slug: string;
   legal_name: string;
   category: string;
@@ -53,7 +57,12 @@ interface RawIssuer {
   status: string;
   schema_authorizations?: Array<{ vct: string; allowed: boolean; valid_from: string; valid_until: string | null }>;
   cert_fingerprint_sha256?: string;
+  info_uri?: string;
+  revocation_policy_uri?: string;
 }
+
+/** Yalnız https bağlantı gösterilir (liste imzalı olsa da cüzdan başka şemayı açmaz). */
+const httpsUri = (u: unknown): u is string => typeof u === "string" && /^https:\/\/\S+$/.test(u);
 
 /** Kurum dizini, İMZASI DOĞRULANMIŞ ulusal listeden (S-13). Doğrulanamazsa hata — sahte kurum listelenmez. */
 export async function fetchIssuerDirectory(
@@ -64,30 +73,35 @@ export async function fetchIssuerDirectory(
   now = Date.now(),
 ): Promise<DirectoryEntry[]> {
   const { source } = await fetchTrustSource(trustBase, http, { pins, stateCode, now });
-  return (source.issuers() as unknown as RawIssuer[]).map((i) => {
-    // TS1: TrustSource sorgusu
-    const vcts = (i.schema_authorizations ?? [])
-      .filter(
-        (a) =>
-          a.allowed &&
-          new Date(a.valid_from).getTime() <= now &&
-          (!a.valid_until || now < new Date(a.valid_until).getTime()),
-      )
-      .map((a) => a.vct);
-    return {
-      slug: i.slug,
-      legalName: i.legal_name,
-      category: i.category,
-      klass: i.class,
-      assurance: i.assurance,
-      issuerUrl: i.issuer_url,
-      issuerId: i.issuer_id,
-      status: i.status,
-      vcts,
-      isIdentityProvider: vcts.includes(IDENTITY_VCT),
-      ...(i.cert_fingerprint_sha256 ? { certFingerprint: i.cert_fingerprint_sha256 } : {}),
-    };
-  });
+  // TS1: TrustSource sorgusu
+  return (source.issuers() as unknown as RawIssuer[]).map((i) => toDirectoryEntry(i, now));
+}
+
+/** Güven listesindeki kurum kaydı → dizin girdisi (yetkili türler `now` anına göre). */
+export function toDirectoryEntry(i: RawIssuer, now = Date.now()): DirectoryEntry {
+  const vcts = (i.schema_authorizations ?? [])
+    .filter(
+      (a) =>
+        a.allowed &&
+        new Date(a.valid_from).getTime() <= now &&
+        (!a.valid_until || now < new Date(a.valid_until).getTime()),
+    )
+    .map((a) => a.vct);
+  return {
+    slug: i.slug,
+    legalName: i.legal_name,
+    category: i.category,
+    klass: i.class,
+    assurance: i.assurance,
+    issuerUrl: i.issuer_url,
+    issuerId: i.issuer_id,
+    status: i.status,
+    vcts,
+    isIdentityProvider: vcts.includes(IDENTITY_VCT),
+    ...(i.cert_fingerprint_sha256 ? { certFingerprint: i.cert_fingerprint_sha256 } : {}),
+    ...(httpsUri(i.info_uri) ? { infoUri: i.info_uri } : {}),
+    ...(httpsUri(i.revocation_policy_uri) ? { revocationPolicyUri: i.revocation_policy_uri } : {}),
+  };
 }
 
 /** Arama: ad/slug içinde geçen metin (Türkçe duyarsız) + kategori süzgeci; kimlik sağlayıcı kurum listesinde gösterilmez (ayrı akış). */

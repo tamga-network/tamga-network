@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -149,6 +149,7 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-AP-20 | Askıya alınmış belge veren **MUST NOT** iptal listesi yayınlamak; halef yayınlayabilir. |
 | RB-AP-21 | Kişi rızasını geri alırsa belge **MUST** iptal edilmek. |
 | RB-AP-22 | Belge veren, belge kayıtlarını ve iptal listesi eşlemesini **MUST** düzenli yedeklemek; bu yedek, ortak liste ya da defter yedeğinden önceliklidir, çünkü iptal ancak bu kayıtla yapılabilir. |
+| RB-AP-27 | Belge veren ağın ortak iptal politikasına ([[FW-POL-0001]]) ek koşullarını kendi sayfasında yayımlayabilir (**MAY**); bağlantı güven listesindeki kaydında `revocation_policy_uri` alanındadır. Ek koşullar ortak koşulları **MUST NOT** daraltmak. Cüzdan birimi iptali kurum belgelerini iptal etmez ([[ADR-0047]] K1). |
 
 ## 4.4 Uzaktan kimlik doğrulama sağlayıcıları
 
@@ -173,6 +174,7 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-AP-ID-09 | Sürücü belgesi bilgisi **MUST** yalnız cüzdandaki etkin Tamga kimlik belgesinin sunumu üzerine ve karttaki ad ile doğum tarihi o kimlikle eşleşirse verilmek; sınıflar okunamıyorsa ya da kart süresi geçmişse **MUST NOT** verilmek; süresi kartın bitişini ve kartın incelendiği günden itibaren bir yılı **MUST NOT** geçmek; biçimi yalnız SD-JWT VC'dir. |
 | RB-AP-ID-10 | Bağlı kimlik belgesi iptal edilince, yeniden verilince ya da silinince sürücü belgesi bilgisi **MUST** iptal edilmek ya da silinmek; bir ülkenin yetkili makamı dijital sürücü belgesi vermeye başlayınca o ülke için bu tür **MUST NOT** yeniden verilmek. |
 | RB-AP-ID-11 | Sıfır bilgi ispatlı sunum için ZK kopyası **MUST** ayrı türde (`urn:tamga:id:ShortLivedIdentityAttestation:1`), en çok 24 saat geçerli ve iptal listesi girdisi olmadan verilmek; yalnız ZK ile ispatlanabilen öğeleri taşımak; ana kimlik belgesi iptal ya da askıdaysa **MUST NOT** verilmek. Yenileme belirteci kişi alanlarını sunucuda **MUST NOT** bırakmak (yalnız servisin açabileceği biçimde belirteçte). |
+| RB-AP-ID-12 | Kimlik belgesi sağlayıcısı belge verirken gördüğü WIA'nın iptal listesi girişini belge kaydında tutar, cüzdan sağlayıcısının WIA listesini en az günde bir kez denetler ve birim iptal edilmişse o kayda bağlı bütün kopyaları **MUST** en geç 24 saat içinde iptal etmek (AB WURevocation_18). Giriş kayıt iptal edilince ya da süresi dolunca silinir. |
 
 ---
 
@@ -205,6 +207,9 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-WP-12 | Kullanıcıya "geçersiz" ile "doğrulanamadı / bayat" farklı gösterilir; kullanılmış bir teklif için açık bir metin gösterilir. |
 | RB-WP-13 | [[t:intermediary|Aracı]] doğrulayıcı üzerinden gelen istekte cüzdan **MUST** asıl doğrulayıcının kayıtlı adını göstermek, kapsamı onun kaydına göre denetlemek ve doğrulayıcı başına kopyayı asıl doğrulayıcıya göre ayırmak. |
 | RB-WP-14 | Cüzdan belge verenin paylaşım kuralını (gömülü açıklama politikası) belge alırken **MUST** saklamak ve gösterimde ağ isteği yapmadan doğrulayıcının kayıt ve erişim sertifikasıyla değerlendirmek; kural tutmazsa ya da değerlendirilemezse onay ekranında ayrı bir uyarı **MUST** göstermek, varsayılan seçim paylaşmamaktır; son karar kişinindir. |
+| RB-WP-15 | Cüzdan sağlayıcısı, kişinin telefonu elinde olmadan cüzdan birimini iptal edebileceği bir yol **MUST** sunmak; yol kullanıcı hesabı **MUST NOT** gerektirmek (ör. etkinleştirmede bir kez gösterilen, sağlayıcıda yalnız yavaş özeti tutulan bir iptal sırrı; [[ADR-0047]] K3). |
+| RB-WP-16 | Cüzdan sağlayıcısı, kişinin cüzdan biriminin iptal edildiğini cüzdan dışından öğrenebileceği en az bir yol **MUST** sunmak; birimi kendi kararıyla iptal ettiyse bu yol en geç 24 saat içinde iptalin nedenini, neyin çalışmaya devam ettiğini ve kişinin ne yapabileceğini gösterir (AB WURevocation_14/16; [[ADR-0047]] K4). |
+| RB-WP-17 | W3 seviyesinde cüzdan sağlayıcısı birimi etkinleştirirken ve W3 beyan eden her anahtar kanıtından önce platformun cihaz kanıtını (Apple App Attest, Android anahtar kanıtı, Play Integrity) **MUST** doğrulamak; W2'de cihaz kanıtı isteğe bağlıdır (**MAY**) ([[ADR-0047]] K5). |
 
 ---
 
@@ -284,8 +289,8 @@ doğrulama politikaları) Bölüm 4'tedir. ARF Annex 2 Topic 12'nin nitelikli ol
 | ARB_06, ARB_06a, ARB_06b | Bütün özniteliklerin biçimden bağımsız tanımı; mdoc ad alanı; claim adının IANA, genel ya da türe özgü ad olması | §2, §3 |
 | ARB_07, ARB_08 | Var olan öznitelikleri ve adlandırma geleneklerini kullanma | AB PID adları ([[ADR-0045]]), OpenID Connect, ISO/IEC 18013-5, ELM |
 | ARB_09 | Her özniteliğin zorunlu, isteğe bağlı ya da koşullu olması | §2.2–§2.7 |
-| ARB_12, ARB_25 | Hukuki kategori göstergesi (`category`; ARF metninde `attestation_legal_category`) | §2.1 — yalnız nitelikli ya da kamu sınıfında, Tamga değerleriyle (RB-AP-14) |
-| ARB_15, ARB_17, ARB_19, ARB_21 | eIDAS 2.0 Ek V b, c, e, h karşılıkları | §2.0 |
+| ARB_12, ARB_25 | Hukuki kategori göstergesi (`category`; ARF metninde `attestation_legal_category`) | §2.1 — yalnız nitelikli ya da kamu sınıfında, Tamga değerleriyle (RB-AP-14). Nitelikli olmayan EAA'da `category` yazılmaz; şablonun `eaa:eu:non-qualified` değeri kullanılmaz, çünkü ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 bu belgede `category` bulunmamasını ister ([[ADR-0047]] K6) |
+| ARB_15, ARB_17, ARB_19, ARB_21 | eIDAS 2.0 Ek V b, c, e, h karşılıkları | §2.0. Ek V h (güven çapasının konumu) için belgeye alan eklenmez: konum belge verenin `x5c` zinciri ve güven listeleridir; güven çapalarının tek kaynağı listelerdir ([[ADR-0047]] K7) |
 | ARB_22 | Birlikte çalışabilirlik, güvenlik ve mahremiyet için gereken teknik ayrıntı | Rulebook ve dayandığı şartnameler (Ek E) |
 | ARB_24, ARB_24a | Tür iptal edilebilir mi, mekanizma, liste adresi | §6 ve [[FW-POL-0001]] |
 | ARB_26 | Doğrulayıcının güven çapasını nasıl aldığı | §5 |
@@ -318,4 +323,4 @@ Bu belgenin dayandığı kararlar, şartnameler ve standartlar Ek E'de listeleni
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §11 ve politika belgeleri 2026-10-11).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §11 ve politika belgeleri 2026-10-11; RB-AP-27, RB-AP-ID-12, RB-WP-15–17 2026-10-12, [[ADR-0047]]).

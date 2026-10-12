@@ -4,7 +4,7 @@ title: "İptal Politikası"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Tamga ağındaki belge verenlerin (kimlik servisi ve kurumlar) verdiği belgelerin hangi koşullarda iptal edildiğini, kimin
   iptal isteyebileceğini, askıya almayı, iptal listesinin nasıl yayımlandığını ve iptalin ne kadar sürede etkili olduğunu tek
@@ -63,9 +63,31 @@ yazar (ARF ARB_24).
 
 **Kimlik servisinin belgeleri ve silme.** Kişi cüzdanını sıfırlayıp verilerini sildiğinde cüzdan kimlik servisinden aldığı her belge
 için silme isteği gönderir; servis kaydı siler ve bütün kopyaları iptal eder ([[SPEC-WALLET-0001]] §7.6). Cüzdan birimi cüzdan
-sağlayıcısınca iptal edilince kimlik servisi birimi en geç 24 saat içinde denetler ve o birimdeki kendi belgelerini iptal eder.
+sağlayıcısınca iptal edilince kimlik servisi birimi en geç 24 saat içinde denetler ve o birimdeki kendi belgelerini iptal eder
+(RB-AP-ID-12).
 
-## 3.3 İptal sebebi olmayanlar
+## 3.3 Cüzdan birimi iptal edilince kurum belgeleri
+
+Cüzdan birimi iptali **kurum belgelerini iptal etmez** ([[ADR-0047]] K1; AB WURevocation_19 isteğe bağlıdır, Tamga kullanmaz).
+Belgeler yine de kullanılamaz hâle gelir:
+
+- Her kopya cihazdaki bir belge sahibi anahtarına bağlıdır (`cnf`); anahtar güvenli donanımda üretilir, dışa aktarılamaz (RB-WP-01)
+  ve her gösterim o anahtarla imza ve PIN ya da biyometri ister (RB-WP-03). Belge başka bir cihazdan gösterilemez.
+- İptal edilmiş birime hiçbir belge veren yeni belge ya da yenileme vermez ([[ADR-0025]] WIA4, [[ADR-0023]]).
+- İptali gören cüzdan belgelerini ve anahtarlarını siler; kimlik servisinin belgesi iptal olur.
+- Kurum belgeleri süresi dolunca biter; kısa ömürlü türlerde (öğrenci belgesi en çok 90 gün) bu kısa bir süredir.
+
+Telefonu ve kilit açma bilgisini birlikte ele geçiren biri, telefon ağa bağlanmadıkça süresi dolmamış bir kurum belgesini
+gösterebilir. Kişi bunun için kurumdan iptal ister (§4). Zincirleme iptal yapılmadığı için kurum belgelerinin süresi WIA ve KA'nın
+iptal bakım süresine bağlı değildir (AB ISSU_12d uygulanmaz).
+
+## 3.4 Kurumun ek koşulları
+
+Bu politika bütün belge verenler için ortaktır. Kurum, kendi belgeleri için **ek** iptal koşullarını kendi sayfasında yayımlayabilir
+(**MAY**); bağlantı güven listesindeki kaydında `revocation_policy_uri` alanında durur ve cüzdan kurum sayfasında gösterir
+(RB-AP-27, [[ADR-0047]] K2). Ek koşullar bu politikanın koşullarını daraltamaz; çelişkide bu politika geçerlidir.
+
+## 3.5 İptal sebebi olmayanlar
 
 - **Belge verenin askıya alınması ya da çıkarılması** eski belgeleri geçersiz kılmaz; yalnız yeni belge verilmesi durur. Denetim
   belgenin verildiği ana (`iat`) göre yapılır (RB-REG-07, RB-ENF-02, RB-RP-03).
@@ -77,7 +99,7 @@ sağlayıcısınca iptal edilince kimlik servisi birimi en geç 24 saat içinde 
 | Kim | Nasıl |
 |---|---|
 | Kişi (belge sahibi) | Kimlik servisinin belgelerinde cüzdandaki "Cüzdanı sıfırla ve verilerimi sil" akışıyla ya da kimlik servisinin silme yoluyla; kurum belgelerinde kurumun kanalıyla (silme talebi, itiraz). Şikâyet yolu: belge veren → şema sahibi → KVKK Kurumu (RB-H-07) |
-| Belge veren | Kendi kaydına dayanarak; iptal listesi eşlemesi yalnız belge verende durur (RB-AP-09, RB-AP-22) |
+| Belge veren | Kendi kaydına dayanarak; iptal listesi eşlemesi yalnız belge verende durur (RB-AP-09, RB-AP-22). Kurumun ek koşulları `revocation_policy_uri` sayfasındadır (§3.4) |
 | Şema sahibi ve işletmeci | Belge iptal etmez; belge vereni askıya alır ya da sertifikasını iptal eder (Ek A §4.5–§4.6). Acil durumda doğru araç aralık dışı yayın değil, belge verenin askıya alınmasıdır ([[SPEC-CRED-0003]] §5.3) |
 
 # 5. Askıya alma
@@ -107,14 +129,14 @@ askıdaysa kimlik servisi yeni ZK kopyası vermez (RB-AP-ID-11).
 - Belge veren belge kayıtlarını ve iptal listesi eşlemesini düzenli yedekler; iptal ancak bu kayıtla yapılabilir (RB-AP-22).
 - Liste aşamasında her katılımcı iptalin birkaç dakikada etkili olduğunu bilir; kişilere bu sınır yazılı bildirilir (RB-GEN-10).
 
-# 8. Karar bekleyenler
+# 8. Kararlar ve açık konular
 
 | Konu | Durum |
 |---|---|
-| Kurum belgelerinin cüzdan birimi iptalinde zincirleme iptali | Bugün yalnız kimlik servisinin belgeleri cüzdan birimi iptalinde iptal edilir. Kurum belgeleri için ağ düzeyinde bir kural konması **karar bekliyor** |
-| Belge verenin kendi ek iptal politikası | Bu politika ağdaki bütün belge verenler için ortaktır. Kurumların ek koşullarını ayrıca yayımlamasının istenip istenmeyeceği **karar bekliyor** |
+| Kurum belgelerinin cüzdan birimi iptalinde zincirleme iptali | **Karar (2026-10-12, [[ADR-0047]] K1):** yapılmaz; belgeler cihaz anahtarına bağlıdır ve birim iptal edilince kullanılamaz (§3.3). Kimlik servisi kendi belgelerini iptal eder (RB-AP-ID-12) |
+| Belge verenin kendi ek iptal politikası | **Karar (2026-10-12, [[ADR-0047]] K2):** kurum isterse ek koşullarını `revocation_policy_uri` ile yayımlar; ortak koşulları daraltamaz (§3.4, RB-AP-27) |
 | Attestation Revocation List | AB iki mekanizmayı ister (VCR_10, VCR_12); bugün yalnız Status List yayımlanır. Revocation List desteği güven listesi biçimleri işiyle planlıdır |
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-11).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-11; §3.3, §3.4 ve §8 2026-10-12, [[ADR-0047]]).

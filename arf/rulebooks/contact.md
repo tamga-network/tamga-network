@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0005 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-11 · **Licence** CC BY 4.0
+**Document** FW-RB-0005 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -199,8 +199,8 @@ shows possession only at the time of issuance.
   Tamga Rulebook §11.
 - Both types inherit all rules of the Tamga Rulebook; the type-specific invariants are [[ADR-0021]] CT1–CT4.
 - **Known differences:** the identity of the subject (ARB_17, SHOULD) is deliberately absent; there is no trust anchor location
-  attribute in the credential, and the difference between the EU template and ETSI on the indication of a non-qualified EAA is
-  unresolved (same as Identity Rulebook §7.2; **open decision**).
+  attribute in the credential and none is added ([[ADR-0047]] K7); a non-qualified EAA carries no `category`, ETSI is followed
+  ([[ADR-0047]] K6).
 
 ## 8. References
 
@@ -209,4 +209,4 @@ IETF Token Status List. The Tamga decisions and specifications this document res
 
 ## Status
 
-**Active** — version 1.0.0 (11 October 2026).
+**Active** — version 1.0.0 (11 October 2026; §7 decisions on 12 October 2026, [[ADR-0047]]).

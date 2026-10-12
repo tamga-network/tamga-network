@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-11 · **Licence** CC BY 4.0
+**Document** FW-RB-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -65,11 +65,11 @@ Terms are in Annex D; EU terms have their meaning in ARF Annex 1.
 
 | Requirement | Where |
 | --- | --- |
-| Indication that it is an EAA (ARB_12) | §2.1 — `category` for issuers in the qualified or public class; no `category` in a non-qualified EAA (ETSI rule) |
+| Indication that it is an EAA (ARB_12) | §2.1 — `category` for issuers in the qualified or public class; no `category` in a non-qualified EAA, and the template's value `eaa:eu:non-qualified` is not used (ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01; [[ADR-0047]] K6) |
 | Identity of the issuer, Annex V b (ARB_15) | `iss` and the `x5c` leaf certificate in the signature header; also `awarding_body_name`, `awarding_body_id`, `awarding_body_country` |
 | Identity of the subject, Annex V c (ARB_17) | `family_name`, `given_name`, `birth_date`; deliberately no national identity number (RB-SCH-04) |
 | Start and end of validity, Annex V e (ARB_19) | `iat`, `exp`; the diploma has no `exp` (a credential without expiry) |
-| Location of the trust anchor, Annex V h (ARB_21) | No separate attribute; the location is the issuer's certificate chain and the Tamga trust lists (§5; open decision, §7.2) |
+| Location of the trust anchor, Annex V h (ARB_21) | No separate attribute, and none is added; the location is the issuer's certificate chain and the Tamga trust lists, the lists are the single source of trust anchors (§5; [[ADR-0047]] K7) |
 
 ### 2.1 Introduction and legal category
 
@@ -355,10 +355,10 @@ At issuance the wallet checks against the same entry that the institution is aut
 
 | Topic | Status |
 | --- | --- |
-| Making I3 accreditation mandatory for the diploma | **Open decision** after the pilot |
+| Making I3 accreditation mandatory for the diploma | **Deferred decision** ([[ADR-0047]] K9): today the minimum is I2, I3 **SHOULD**. Trigger (whichever comes first): the education pilot's final report, the first diploma application from an institution other than the pilot partner, or a state's education authority joining the network |
 | ELM JSON-LD export | Open topic for EU education interoperability |
-| Trust anchor location in the credential (ARB_21) | Carrying an optional trust anchor pointer (`trust_anchor`) in the credential is an **open decision** |
-| Indication of a non-qualified EAA (ARB_12) | The EU template's `eaa:eu:non-qualified` value conflicts with the ETSI rule; adopting it is an **open decision** |
+| Trust anchor location in the credential (ARB_21) | **Decision (2026-10-12, [[ADR-0047]] K7):** no field is added; a location in the credential would be the issuer's own claim, and a verifier takes the anchor only from a list it chose itself |
+| Indication of a non-qualified EAA (ARB_12) | **Decision (2026-10-12, [[ADR-0047]] K6):** not written; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires that a non-qualified EAA has no `category` |
 | `nbf` and `exp` in the diploma | ETSI TS 119 472-1 requires both; Tamga does not write `nbf` today and the diploma has no expiry |
 | Attestation Revocation List | Only the Status List is published today |
 
@@ -380,4 +380,4 @@ List, ELM v3. The Tamga decisions and specifications this document rests on are 
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026; moved to the EU template structure on 11 October 2026).
+**Active** — version 1.0.0 (2 October 2026; moved to the EU template structure on 11 October 2026; §2.0 and §7.2 decisions on 12 October 2026, [[ADR-0047]]).

@@ -43,7 +43,7 @@ const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 /**
  * Belge veren başvurusu. Zorunlu: slug, legal_name, category, class, assurance, cert, vcts[] + ADR-0024 kayıt verisi.
  * İsteğe bağlı: parent_ca (varsayılan ilk kök), status_cert, issuer_url (varsayılan barındırılan adres), valid_years (2),
- * assurance_basis, authentic_source.
+ * assurance_basis, authentic_source, revocation_policy_uri (ADR-0047 K2: ek iptal koşulları sayfası).
  */
 /** Doldurulmamış yer tutucu (`[DOLDURULACAK]`) taşıyan başvuru kayda girmez (ör. registry/pending/). */
 const placeholderProblems = (app: Rec) =>
@@ -71,6 +71,9 @@ export function addIssuer(src: Rec, app: Rec, env: RegistryEnv): Rec {
   if (!Array.isArray(vcts) || !vcts.length) p.push("vcts: en az bir belge türü");
   for (const v of vcts) if (!env.knownVcts.has(v)) p.push(`şema katalogda yok: ${v}`);
   for (const g of issuerGaps(app)) p.push(`kayıt verisi eksik (ADR-0024): ${g}`);
+  // ADR-0047 K2: kurumun ek iptal koşulları sayfası (isteğe bağlı) — yalnız https
+  if (app.revocation_policy_uri !== undefined && !/^https:\/\/[^\s]+$/.test(String(app.revocation_policy_uri)))
+    p.push("revocation_policy_uri: https adresi olmalı");
   if (p.length) throw new RegistryError(p);
 
   const now = iso(env.now);

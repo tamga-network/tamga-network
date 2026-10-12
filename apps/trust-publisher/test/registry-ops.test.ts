@@ -122,6 +122,15 @@ describe("operatör kayıt aracı", () => {
     expect(() => addRelyingParty(src(), { ...rpApp, trade_name: "[DOLDURULACAK]" }, env)).toThrow(RegistryError);
   });
 
+  it("ADR-0047 K2: isteğe bağlı revocation_policy_uri kayda girer; https değilse ret", () => {
+    const out = addIssuer(src(), { ...issuerApp, revocation_policy_uri: "https://ornek.edu.tr/iptal-kosullari" }, env);
+    const rec = (out.issuers as Array<Record<string, unknown>>).find((i) => i.slug === issuerApp.slug);
+    expect(rec?.revocation_policy_uri).toBe("https://ornek.edu.tr/iptal-kosullari");
+    expect(() => addIssuer(src(), { ...issuerApp, revocation_policy_uri: "http://ornek.edu.tr/x" }, env)).toThrow(
+      /revocation_policy_uri/,
+    );
+  });
+
   it("aynı sertifika iki kurumda kullanılamaz", () => {
     expect(() => addIssuer(src(), { ...issuerApp, cert: "issuer-bilgi" }, env)).toThrow(/başka bir kurumda/);
   });

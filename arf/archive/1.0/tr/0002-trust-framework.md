@@ -4,7 +4,7 @@ title: "Ek A — Trust Framework"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-02
+last_updated: 2026-10-12
 summary: >
   Tamga ekosisteminin yönetişim çerçevesi. World Bank "Digital Wallets: Trust Frameworks" beş katmanlı modeliyle
   yapılandırılmıştır: strateji (vizyon, ilkeler, hukuki bağlam, risk, yönetişim organları), teknoloji (ana belgeye işaret),
@@ -130,6 +130,11 @@ Teknik ayrıntılar geliştirici belgelerindedir (Ek E).
 
 Dışa dönük adlandırma eIDAS terimleriyle yapılır (Low / Substantial / High; [[t:EAA]], QEAA karşılığı, kamu belgesi).
 Kullanıcıya sayı gösterilmez.
+
+Cüzdan seviyeleri: **W1** yazılım anahtarı (belge verilmez, RB-WP-01), **W2** cihazın güvenli bölgesi, **W3** sertifikalı güvenli
+donanım. En yüksek seviyede (W3) cüzdan sağlayıcısı etkinleştirmede ve W3 beyan eden her anahtar kanıtından önce platformun cihaz
+kanıtını (Apple App Attest, Android anahtar kanıtı, Play Integrity) doğrular; W2'de cihaz kanıtı isteğe bağlıdır (RB-WP-17,
+[[ADR-0047]] K5).
 
 ## 2.3 Anahtar koruma şartları
 

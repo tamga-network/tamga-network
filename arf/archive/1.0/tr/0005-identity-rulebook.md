@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Tamga'nın kimlik servisinin verdiği kişi belgelerinin rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc),
@@ -72,11 +72,11 @@ ARF Topic 12'nin nitelikli olmayan EAA için koyduğu şartlar (eIDAS 2.0 Ek V'e
 
 | Şart | Karşılık |
 |---|---|
-| EAA olduğunun göstergesi (ARB_12) | §2.1 — `category` yazılmaz; ETSI kuralıyla nitelikli olmayan EAA'nın göstergesi bu yokluktur |
+| EAA olduğunun göstergesi (ARB_12) | §2.1 — `category` yazılmaz; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 kuralıyla nitelikli olmayan EAA'nın göstergesi bu yokluktur; şablonun `eaa:eu:non-qualified` değeri kullanılmaz ([[ADR-0047]] K6) |
 | Belge verenin kimliği, Ek V b (ARB_15) | `iss` (belge verenin adresi) ve imza başlığındaki `x5c` yaprak sertifikası (kurum adı, ülke); `issuer_id` sertifikanın parmak izidir (§2.5, §5) |
 | Öznenin kimliği, Ek V c (ARB_17) | Kimlik belgesi: `family_name`, `given_name`, `birthdate`, `personal_administrative_number`. Sürücü belgesi bilgisi: `family_name`, `given_name`, `birth_date`. ZK kopyası ve takma ad tohumu bilerek öznenin kimliğini taşımaz (§2.2) |
 | Geçerlilik başlangıcı ve sonu, Ek V e (ARB_19) | SD-JWT VC `iat`, `exp`; mdoc `validityInfo` (`validFrom`, `validUntil`) |
-| Güven çapasının konumu, Ek V h (ARB_21) | Belgede ayrı bir alan yoktur; konum belge verenin sertifika zinciri ve Tamga güven listeleridir (§5). Belgeye konum alanı eklenmesi karar bekliyor (§7.2) |
+| Güven çapasının konumu, Ek V h (ARB_21) | Belgede ayrı bir alan yoktur ve eklenmez; konum belge verenin sertifika zinciri ve Tamga güven listeleridir (§5); güven çapalarının tek kaynağı listelerdir ([[ADR-0047]] K7) |
 
 ## 2.1 Giriş ve hukuki kategori
 
@@ -503,8 +503,8 @@ yalnız dış listeden gelir.
 
 | Konu | Durum |
 |---|---|
-| Nitelikli olmayan EAA göstergesi (ARB_12) | AB şablonu `category` için `eaa:eu:non-qualified` değerini önerir; ETSI TS 119 472-1 ise nitelikli olmayan EAA'da `category` bulunmamasını ister ve Tamga ETSI'yi izler. Şablonun değerinin benimsenmesi **karar bekliyor** |
-| Güven çapası konumu belgede (ARB_21) | Belgede ayrı bir konum alanı yoktur; konum §5'teki listelerdir. Belgeye isteğe bağlı bir konum alanı eklenmesi **karar bekliyor** |
+| Nitelikli olmayan EAA göstergesi (ARB_12) | **Karar (2026-10-12, [[ADR-0047]] K6):** AB şablonu `category` için `eaa:eu:non-qualified` değerini önerir; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 ise nitelikli olmayan EAA'da `category` bulunmamasını ister. Tamga ETSI'yi izler; şablonun değeri kullanılmaz |
+| Güven çapası konumu belgede (ARB_21) | **Karar (2026-10-12, [[ADR-0047]] K7):** belgeye konum alanı eklenmez; konum §5'teki listelerdir. Belgedeki bir konum belge verenin kendi beyanı olurdu; doğrulayıcı çapayı yalnız kendi seçtiği, imzası sabitlenmiş listeden alır |
 | `nbf` (ETSI TS 119 472-1 teknik geçerlilik başlangıcı) | Bugün yazılmaz; geçerlilik başlangıcı `iat`'tır. Eklenmesi bir uygulama işidir |
 | Attestation Revocation List | AB iki mekanizmayı ister (VCR_10, VCR_12); Tamga bugün yalnız Status List yayımlar. Revocation List desteği güven listesi biçimleri işiyle planlıdır |
 
@@ -518,4 +518,4 @@ dayandığı Tamga kararları ve şartnameleri Ek E'de listelenir.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11; §2.0 ve §7.2 kararları 2026-10-12, [[ADR-0047]]).

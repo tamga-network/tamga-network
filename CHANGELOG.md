@@ -39,9 +39,28 @@ Package changes in the source tree, released with the `0.5.0` packages (minor: n
   `scope_id`). The sandbox verifier gets a second diploma use (`alumni-network`) and the `alumni-network` scenario policy, so
   an allowed and a not-allowed service of the same verifier can be tried against the sandbox's example policy.
 
+### Institution revocation conditions link (ADR-0047 K2)
+
+- `@tamga-network/trust`: the issuer entry gets an optional `revocation_policy_uri` (the page of conditions an institution adds
+  to the network's common revocation policy). The list publisher's registration tool accepts it (https only).
+- `@tamga-network/wallet-core`: the institution directory entry carries `infoUri` and `revocationPolicyUri` (https only);
+  `toDirectoryEntry` is exported.
+
 ## [1.0.0] — 2026-10-04
 
 First release of the Tamga Network documentation set and reference implementation.
+
+### 2026-10-12 — decisions on the rulebook template work (ADR-0047)
+
+- ADR-0047 accepted: wallet unit revocation does not revoke institution credentials (they are bound to a device key and cannot
+  be used once the unit is revoked; the identity service still revokes its own, RB-AP-ID-12); institutions may publish
+  additional revocation conditions with `revocation_policy_uri` (RB-AP-27); every wallet provider offers a revocation path
+  without the phone and without a user account (RB-WP-15) and at least one way outside the wallet to learn that the unit was
+  revoked (RB-WP-16); device attestation is mandatory at W3 only (RB-WP-17). No non-qualified EAA indicator is written (ETSI TS
+  119 472-1 EAA-5.2.2.1-01) and no trust anchor location field is added to credentials (ARB_12, ARB_21). The diploma I3
+  question is a deferred decision with a trigger.
+- Wallet Attestation Policy: line-by-line mapping to ETSI TS 119 471 clauses 6–7 (WURevocation_03), with the provider
+  obligations that had no counterpart. ADR-0025 K4 (lost or stolen device) points to ADR-0047. Documents stay at 1.0.0.
 
 ### 2026-10-12 — Tamga ARF: rulebooks in the EU template structure; revocation and wallet attestation policies
 

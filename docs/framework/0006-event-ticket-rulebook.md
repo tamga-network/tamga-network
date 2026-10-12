@@ -4,7 +4,7 @@ title: "Event Ticket Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Etkinlik biletinin (`urn:tamga:tkt:EventTicket:1`) rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: kişisel veri taşımayan, cihaza bağlı, kapıda tek kullanımlık bir belge. Öznitelikler ve üst
@@ -247,9 +247,8 @@ Bilet başkasına **aktarılmaz**; devir, satıcının eskisini iptal edip yeni 
 
 - Bu rulebook AB Attestation Rulebook şablonunun (1.5) bölüm yapısını izler (ARB_29); Topic 12 eşlemesi Tamga Rulebook §11'dedir.
 - Bilet Tamga Rulebook'un bütün kurallarını devralır.
-- **Bilinen farklar:** öznenin kimliği (ARB_17, SHOULD) bilerek yoktur; güven çapası konumu belgede alan olarak yoktur ve nitelikli
-  olmayan EAA göstergesinde AB şablonu ile ETSI arasındaki fark çözülmemiştir (Identity Rulebook §7.2 ile aynı; **karar
-  bekliyor**); ETSI'nin `oneTime` kısıtı yerine kapıdaki tek kullanım "kullanıldı" bitiyle sağlanır.
+- **Bilinen farklar:** öznenin kimliği (ARB_17, SHOULD) bilerek yoktur; güven çapası konumu belgede alan olarak yoktur ve eklenmez
+  ([[ADR-0047]] K7); nitelikli olmayan EAA'da `category` yazılmaz, ETSI izlenir ([[ADR-0047]] K6); ETSI'nin `oneTime` kısıtı yerine kapıdaki tek kullanım "kullanıldı" bitiyle sağlanır.
 
 ---
 
@@ -260,4 +259,4 @@ belgenin dayandığı Tamga kararları ve şartnameleri Ek E'de listelenir.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11; §7 kararları 2026-10-12, [[ADR-0047]]).

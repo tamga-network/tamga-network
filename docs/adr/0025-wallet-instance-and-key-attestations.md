@@ -4,7 +4,7 @@ title: "Cüzdan ve anahtar kanıtı"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-06
+last_updated: 2026-10-12
 summary: >
   Tek, 30 günlük WUA yerine AB TS3 modeli: 24 saatten kısa ömürlü, her belge işleminde yeni anahtarlı ve yeni iptal listesi
   girişli Wallet Instance Attestation (WIA) + belge anahtarlarının deposunu anlatan key attestation (KA, `key_attestation`).
@@ -76,7 +76,8 @@ Kişisel veri tutulmaz. Birimle ilgili istekler birim anahtarıyla imzalanır.
 - Sağlayıcı iki Token Status List yayınlar (WIA girişleri ve KA türleri). Listeleri kendi anahtarıyla imzalar; bu anahtar
   [[t:trust-list|güven listesinde]] kayıtlıdır. WIA listesi en az 10.000 girişlidir.
 - Kullanıcı cüzdandan "Bu cüzdanı iptal et" diyebilir (cihaz devri, satış). Birim ve bütün WIA girişleri iptal olur.
-- Kayıp veya çalıntı cihazdan iptal, kullanıcı hesabı gerektirir (WIAM_06); sonraki adıma bırakılır.
+- Kayıp veya çalıntı cihazdan iptal, kullanıcı hesabı gerektirir (WIAM_06); sonraki adıma bırakılır. **2026-10-12: [[ADR-0047]] K3
+  ile değişti** — hesap yok; cüzdan sağlayıcısı telefonsuz bir iptal yolu sunar (kurulumda verilen iptal sırrı).
 
 ## K5 — Belge verenler
 

@@ -288,6 +288,8 @@ export const Issuer = z
     authentic_source: z.any().optional(),
     /** ADR-0041 TI2: yalnız sandbox listesinde — kendi kendine açılmış test kurumu (gece sıfırlamasında silinir). */
     test_institution: z.boolean().optional(),
+    /** ADR-0047 K2: kurumun ağın ortak iptal politikasına eklediği koşulların sayfası (ortak koşulları daraltamaz — WR2). */
+    revocation_policy_uri: z.string().url().optional(),
     ...RegistrationData,
   })
   .passthrough();

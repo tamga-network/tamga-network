@@ -24,11 +24,13 @@
       "notes": {
         "en": [
           "First release: the main document, the Trust Framework, the Tamga Rulebook with its credential-type rulebooks (Education, Identity, Event Ticket), definitions and references, and the supporting pages Reading path, Roles and Onboarding.",
-          "2026-10-11 (same release): the credential-type rulebooks follow the section structure of the EU Attestation Rulebook template (legal category, encoding tables per format, trust anchors, revocation); new Contact Rulebook, Revocation Policy and Wallet Attestation Policy (WIA and KA)."
+          "2026-10-11 (same release): the credential-type rulebooks follow the section structure of the EU Attestation Rulebook template (legal category, encoding tables per format, trust anchors, revocation); new Contact Rulebook, Revocation Policy and Wallet Attestation Policy (WIA and KA).",
+          "2026-10-12 (same release): decisions on the open points (ADR-0047) — wallet unit revocation and institution credentials, the optional revocation_policy_uri, revocation without the phone and without an account, a way outside the wallet to learn about revocation, device attestation at W3, no non-qualified EAA indicator, no trust anchor field; the Wallet Attestation Policy mapped to ETSI TS 119 471 clauses 6–7."
         ],
         "tr": [
           "İlk yayın: ana belge, Trust Framework, Tamga Rulebook ve ondan dallanan belge türü rulebook'ları (Education, Identity, Event Ticket), tanımlar ve kaynaklar; ayrıca Okuma yolu, Roller ve Katılım süreci sayfaları.",
-          "2026-10-11 (aynı yayın): belge türü rulebook'ları AB Attestation Rulebook şablonunun bölüm yapısına taşındı (hukuki kategori, biçim başına kodlama tabloları, güven çapaları, iptal); yeni Contact Rulebook, İptal Politikası ve Cüzdan Kanıtı Politikası (WIA ve KA)."
+          "2026-10-11 (aynı yayın): belge türü rulebook'ları AB Attestation Rulebook şablonunun bölüm yapısına taşındı (hukuki kategori, biçim başına kodlama tabloları, güven çapaları, iptal); yeni Contact Rulebook, İptal Politikası ve Cüzdan Kanıtı Politikası (WIA ve KA).",
+          "2026-10-12 (aynı yayın): açık konuların kararları (ADR-0047) — cüzdan birimi iptali ve kurum belgeleri, isteğe bağlı revocation_policy_uri, telefonsuz ve hesapsız iptal, iptalin cüzdan dışından öğrenilmesi, W3'te cihaz kanıtı, nitelikli olmayan EAA göstergesi yok, güven çapası alanı yok; Cüzdan Kanıtı Politikası ETSI TS 119 471 madde 6–7 ile eşlendi."
         ]
       }
     }

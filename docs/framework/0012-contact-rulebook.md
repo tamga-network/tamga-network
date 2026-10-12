@@ -4,7 +4,7 @@ title: "Contact Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Kimlik servisinin verdiği iki iletişim belgesinin (doğrulanmış e-posta adresi `urn:tamga:contact:EmailAddress:1`, doğrulanmış
   telefon numarası `urn:tamga:contact:PhoneNumber:1`) rulebook'u, AB Attestation Rulebook şablonunun bölüm yapısıyla: öznitelikler
@@ -201,9 +201,8 @@ verildiği andaki sahipliği gösterir.
 
 - Bu rulebook AB Attestation Rulebook şablonunun (1.5) bölüm yapısını izler (ARB_29); Topic 12 eşlemesi Tamga Rulebook §11'dedir.
 - İki tür Tamga Rulebook'un bütün kurallarını devralır; türe özgü değişmezler [[ADR-0021]] CT1–CT4'tür.
-- **Bilinen farklar:** öznenin kimliği (ARB_17, SHOULD) bilerek yoktur; güven çapası konumu belgede alan olarak yoktur ve nitelikli
-  olmayan EAA göstergesinde AB şablonu ile ETSI arasındaki fark çözülmemiştir (Identity Rulebook §7.2 ile aynı; **karar
-  bekliyor**).
+- **Bilinen farklar:** öznenin kimliği (ARB_17, SHOULD) bilerek yoktur; güven çapası konumu belgede alan olarak yoktur ve eklenmez
+  ([[ADR-0047]] K7); nitelikli olmayan EAA'da `category` yazılmaz, ETSI izlenir ([[ADR-0047]] K6).
 
 ---
 
@@ -214,4 +213,4 @@ Token Status List. Bu belgenin dayandığı Tamga kararları ve şartnameleri Ek
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-11).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-11; §7 kararları 2026-10-12, [[ADR-0047]]).

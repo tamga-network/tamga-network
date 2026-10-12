@@ -4,7 +4,7 @@ title: "Education Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Eğitim alanındaki iki ortak belge türünün (öğrenci belgesi, diploma) rulebook'u, AB Attestation Rulebook şablonunun bölüm
   yapısıyla: öznitelikler ve üst veri, hukuki kategori, SD-JWT VC kodlaması ve seçici açıklama, kullanım ve belge verme
@@ -60,11 +60,11 @@ Terimler Ek D'dedir; AB terimleri ARF Annex 1 anlamındadır.
 
 | Şart | Karşılık |
 |---|---|
-| EAA olduğunun göstergesi (ARB_12) | §2.1 — nitelikli ya da kamu sınıfındaki belge verende `category`; nitelikli olmayan EAA'da `category` yazılmaz (ETSI kuralı) |
+| EAA olduğunun göstergesi (ARB_12) | §2.1 — nitelikli ya da kamu sınıfındaki belge verende `category`; nitelikli olmayan EAA'da `category` yazılmaz ve şablonun `eaa:eu:non-qualified` değeri kullanılmaz (ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01; [[ADR-0047]] K6) |
 | Belge verenin kimliği, Ek V b (ARB_15) | `iss` ve imza başlığındaki `x5c` yaprak sertifikası; ayrıca `awarding_body_name`, `awarding_body_id`, `awarding_body_country` |
 | Öznenin kimliği, Ek V c (ARB_17) | `family_name`, `given_name`, `birth_date`; ulusal kimlik numarası bilerek yoktur (RB-SCH-04) |
 | Geçerlilik başlangıcı ve sonu, Ek V e (ARB_19) | `iat`, `exp`; diplomada `exp` yoktur (süresiz belge) |
-| Güven çapasının konumu, Ek V h (ARB_21) | Belgede ayrı alan yoktur; konum belge verenin sertifika zinciri ve Tamga güven listeleridir (§5; karar bekliyor, §7.2) |
+| Güven çapasının konumu, Ek V h (ARB_21) | Belgede ayrı alan yoktur ve eklenmez; konum belge verenin sertifika zinciri ve Tamga güven listeleridir, güven çapalarının tek kaynağı listelerdir (§5; [[ADR-0047]] K7) |
 
 ## 2.1 Giriş ve hukuki kategori
 
@@ -350,10 +350,10 @@ Cüzdan belge alırken aynı kayıtla kurumun bu türü vermeye yetkili olduğun
 
 | Konu | Durum |
 |---|---|
-| Diploma için I3 akreditasyonunun zorunlu olması | Pilottan sonra **karar bekliyor** |
+| Diploma için I3 akreditasyonunun zorunlu olması | **Ertelenmiş karar** ([[ADR-0047]] K9): bugün asgari I2, I3 **SHOULD**. Tetikleyici (hangisi önce gelirse): eğitim pilotunun sonuç raporu, pilot ortağı dışındaki ilk kurumun diploma başvurusu ya da bir devletin eğitim makamının ağa katılması |
 | ELM JSON-LD dışa aktarımı | AB eğitim birlikte çalışabilirliği için açık konu |
-| Güven çapası konumu belgede (ARB_21) | Belgede isteğe bağlı bir güven çapası işaretçisi (`trust_anchor`) taşınması **karar bekliyor** |
-| Nitelikli olmayan EAA göstergesi (ARB_12) | AB şablonunun `eaa:eu:non-qualified` değeri ETSI kuralıyla çelişir; benimsenmesi **karar bekliyor** |
+| Güven çapası konumu belgede (ARB_21) | **Karar (2026-10-12, [[ADR-0047]] K7):** belgeye alan eklenmez; belgedeki bir konum belge verenin kendi beyanı olurdu ve doğrulayıcı çapayı yalnız kendi seçtiği listeden alır |
+| Nitelikli olmayan EAA göstergesi (ARB_12) | **Karar (2026-10-12, [[ADR-0047]] K6):** yazılmaz; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 nitelikli olmayan EAA'da `category` bulunmamasını ister |
 | `nbf` ve diplomada `exp` | ETSI TS 119 472-1 ikisini de ister; Tamga bugün `nbf` yazmaz ve diploma süresizdir |
 | Attestation Revocation List | Bugün yalnız Status List yayımlanır |
 
@@ -378,4 +378,4 @@ ELM v3. Bu belgenin dayandığı Tamga kararları ve şartnameleri Ek E'de liste
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11; §2.0 ve §7.2 kararları 2026-10-12, [[ADR-0047]]).

@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-02 · **Licence** CC BY 4.0
+**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -142,6 +142,11 @@ Technical detail is in the developer documentation (Annex E).
 
 External naming uses eIDAS terms (Low / Substantial / High; [[t:EAA]], QEAA equivalent, public-sector attestation). No number
 is shown to the user.
+
+Wallet levels: **W1** software key (no credential is issued, RB-WP-01), **W2** the device's secure area, **W3** certified secure
+hardware. At the highest level (W3) the wallet provider verifies the platform's device attestation (Apple App Attest, Android key
+attestation, Play Integrity) at activation and before every key attestation that declares W3; at W2 device attestation is optional
+(RB-WP-17, [[ADR-0047]] K5).
 
 ### 2.3 Key protection requirements
 

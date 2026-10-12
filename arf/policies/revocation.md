@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-POL-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-11 · **Licence** CC BY 4.0
+**Document** FW-POL-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -71,9 +71,33 @@ The rulebook of a new credential type adds to this table whether the type is rev
 **Credentials of the identity service and deletion.** When a person resets the wallet and deletes their data, the wallet sends a
 deletion request for every credential obtained from the identity service; the service deletes the record and revokes all copies
 ([[SPEC-WALLET-0001]] §7.6). When a wallet unit is revoked by the wallet provider, the identity service checks the unit within 24 hours
-at the latest and revokes its own credentials on that unit.
+at the latest and revokes its own credentials on that unit (RB-AP-ID-12).
 
-### 3.3 Not reasons for revocation
+### 3.3 Institution credentials when a wallet unit is revoked
+
+Wallet unit revocation **does not revoke institution credentials** ([[ADR-0047]] K1; EU WURevocation_19 is optional and Tamga does
+not use it). The credentials nevertheless become unusable:
+
+- Every copy is bound to a holder key on the device (`cnf`); the key is generated in secure hardware, cannot be exported (RB-WP-01),
+  and every presentation needs a signature with that key and a PIN or biometrics (RB-WP-03). The credential cannot be presented from
+  another device.
+- No issuer gives a revoked unit a new credential or a refresh ([[ADR-0025]] WIA4, [[ADR-0023]]).
+- The wallet that sees the revocation deletes its credentials and keys; the identity service's credential is revoked.
+- Institution credentials end when they expire; for short-lived types (a student credential lasts at most 90 days) this is a short
+  time.
+
+Someone who obtains the phone together with its unlock secret can, as long as the phone stays offline, show an unexpired institution
+credential. The person asks the institution for revocation (§4). Because there is no chain revocation, the validity of institution
+credentials is not tied to the revocation maintenance period of the WIA and KA (EU ISSU_12d does not apply).
+
+### 3.4 Additional conditions of an institution
+
+This policy is common to all issuers. An institution **MAY** publish **additional** revocation conditions for its own credentials on
+its own page; the link sits in the `revocation_policy_uri` field of its trust list entry and the wallet shows it on the institution
+page (RB-AP-27, [[ADR-0047]] K2). The additional conditions cannot narrow the conditions of this policy; in a conflict this policy
+prevails.
+
+### 3.5 Not reasons for revocation
 
 - **Suspension or removal of the issuer** does not invalidate earlier credentials; only new issuance stops. The check is made against
   the time the credential was issued (`iat`) (RB-REG-07, RB-ENF-02, RB-RP-03).
@@ -85,7 +109,7 @@ at the latest and revokes its own credentials on that unit.
 | Who | How |
 | --- | --- |
 | The person (holder) | For credentials of the identity service, through the "Reset the wallet and delete my data" flow in the wallet or the identity service's deletion route; for institutional credentials, through the institution's channel (deletion request, objection). Complaint route: issuer → scheme owner → the Turkish Personal Data Protection Authority (RB-H-07) |
-| The issuer | On the basis of its own records; the status list mapping is held only by the issuer (RB-AP-09, RB-AP-22) |
+| The issuer | On the basis of its own records; the status list mapping is held only by the issuer (RB-AP-09, RB-AP-22). An institution's additional conditions are on its `revocation_policy_uri` page (§3.4) |
 | The scheme owner and operator | Do not revoke credentials; they suspend the issuer or revoke its certificate (Annex A §4.5–§4.6). In an emergency the right tool is not an out-of-interval publication but suspension of the issuer ([[SPEC-CRED-0003]] §5.3) |
 
 ## 5. Suspension
@@ -117,14 +141,14 @@ investigates a claim; when the investigation ends it is either lifted or becomes
 - In the list phase every participant knows that a revocation takes effect within a few minutes; people are told about this limit in
   writing (RB-GEN-10).
 
-## 8. Open decisions
+## 8. Decisions and open topics
 
 | Topic | Status |
 | --- | --- |
-| Cascading revocation of institutional credentials when a wallet unit is revoked | Today only the identity service's credentials are revoked when a wallet unit is revoked. A network-level rule for institutional credentials is an **open decision** |
-| An issuer's own additional revocation policy | This policy is common to all issuers in the network. Whether institutions should be asked to publish their additional conditions separately is an **open decision** |
+| Cascading revocation of institutional credentials when a wallet unit is revoked | **Decision (2026-10-12, [[ADR-0047]] K1):** not done; the credentials are bound to a device key and cannot be used once the unit is revoked (§3.3). The identity service revokes its own credentials (RB-AP-ID-12) |
+| An issuer's own additional revocation policy | **Decision (2026-10-12, [[ADR-0047]] K2):** an institution may publish additional conditions with `revocation_policy_uri`; it cannot narrow the common conditions (§3.4, RB-AP-27) |
 | Attestation Revocation List | The EU requires both mechanisms (VCR_10, VCR_12); today only the Status List is published. Revocation List support is planned with the trust list formats work |
 
 ## Status
 
-**Active** — version 1.0.0 (11 October 2026).
+**Active** — version 1.0.0 (11 October 2026; §3.3, §3.4 and §8 on 12 October 2026, [[ADR-0047]]).

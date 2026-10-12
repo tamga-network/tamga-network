@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 297 kodlanmış değişmez, 46 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 302 kodlanmış değişmez, 47 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -434,6 +434,19 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0046/EP4` | Politika eklenen, değişen ya da kaldırılan yapılandırmanın geçerli belgeleri iptal edilir. |
 
 
+## ADR-0047
+
+*"Cüzdan birimi iptali, cüzdan dışı iptal yolu ve cihaz kanıtı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0047/WR1` | Cüzdan birimi iptali kurum belgelerini iptal etmez; kimlik servisi o birimdeki kendi belgelerini en geç 24 saat içinde iptal eder. |
+| `ADR-0047/WR2` | Kurumun `revocation_policy_uri` sayfası ağın ortak iptal politikasına yalnız koşul ekler; ortak koşulları daraltamaz. |
+| `ADR-0047/WR3` | Cüzdan sağlayıcısı telefon olmadan çalışan ve kullanıcı hesabı gerektirmeyen bir birim iptal yolu sunar. |
+| `ADR-0047/WR4` | Cüzdan sağlayıcısı, kişinin birimin iptal edildiğini cüzdan dışından öğrenebileceği en az bir yol sunar. |
+| `ADR-0047/WR5` | W3 seviyesi beyan eden KA yalnız platformun cihaz kanıtı doğrulanmış birime verilir. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -717,12 +730,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 297 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 302 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AP, AR, AS, C, CI, CMP, CT, D, DL, DS, DY, E, EP, FD, HA, HV, IC, IDC, IDP, K, KC, LX, MD, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, TI, TL, TS, W, WIA, WL, WRC, XC, YS, ZC, ZK.
+AP, AR, AS, C, CI, CMP, CT, D, DL, DS, DY, E, EP, FD, HA, HV, IC, IDC, IDP, K, KC, LX, MD, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-11 (`scripts/sync-invariants.mjs`). Toplam 297 kodlanmış değişmez, 46 dokümanda.
+**Üretilen dosya** — 2026-10-12 (`scripts/sync-invariants.mjs`). Toplam 302 kodlanmış değişmez, 47 dokümanda.

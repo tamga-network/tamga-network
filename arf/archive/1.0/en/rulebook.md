@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-11 · **Licence** CC BY 4.0
+**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -156,6 +156,7 @@ Today Tamga is the provisional operator; at hand-over the role passes to the nat
 | RB-AP-20 | A suspended issuer **MUST NOT** publish a revocation list; its successor may.                                                                                                                                                                  |
 | RB-AP-21 | If the person withdraws consent, the credential **MUST** be revoked.                                                                                                                                                                           |
 | RB-AP-22 | The issuer **MUST** back up its credential records and the revocation list mapping regularly; this backup takes priority over the shared list or ledger backup, because revocation is only possible with these records.                        |
+| RB-AP-27 | An issuer **MAY** publish conditions in addition to the network's common revocation policy ([[FW-POL-0001]]) on its own page; the link is in the `revocation_policy_uri` field of its trust list entry. The additional conditions **MUST NOT** narrow the common conditions. Wallet unit revocation does not revoke institution credentials ([[ADR-0047]] K1). |
 
 ### 4.4 Remote identity verification providers
 
@@ -180,6 +181,7 @@ Today Tamga is the provisional operator; at hand-over the role passes to the nat
 | RB-AP-ID-09 | Driving licence information **MUST** be issued only upon presentation of an active Tamga identity credential from the wallet and only if the name and date of birth on the card match that identity; it **MUST NOT** be issued if the categories cannot be read or the card has expired; its validity **MUST NOT** exceed the card's expiry or one year from the day the card was inspected; its format is SD-JWT VC only.                                                |
 | RB-AP-ID-10 | When the linked identity credential is revoked, re-issued or erased, the driving licence information **MUST** be revoked or erased; once a country's competent authority starts issuing digital driving licences, this type **MUST NOT** be re-issued for that country.                                                                                                                                                                                                   |
 | RB-AP-ID-11 | For zero-knowledge presentation the ZK copy **MUST** be issued as a separate type (`urn:tamga:id:ShortLivedIdentityAttestation:1`), valid for at most 24 hours and without a revocation list entry; it carries only elements that can be proven with ZK; it **MUST NOT** be issued while the main identity credential is revoked or suspended. The refresh token **MUST NOT** leave person fields on the server (only in the token, in a form only the service can open). |
+| RB-AP-ID-12 | The identity credential provider keeps the status list entry of the WIA it saw at issuance in the credential record, checks the wallet provider's WIA list at least once a day and, if the unit has been revoked, **MUST** revoke all copies tied to that record within 24 hours at most (EU WURevocation_18). The entry is deleted when the record is revoked or expires. |
 
 ---
 
@@ -212,6 +214,9 @@ Today Tamga is the provisional operator; at hand-over the role passes to the nat
 | RB-WP-12 | "Invalid" and "cannot be verified / stale" are shown differently to the user; a used offer gets a clear message.                                                                                                                                                                                                                                                                                                  |
 | RB-WP-13 | For a request coming through an [[t:intermediary]] verifier, the wallet **MUST** show the registered name of the actual verifier, check the scope against that verifier's registration and separate the per-verifier copy according to the actual verifier.                                                                                                                                                       |
 | RB-WP-14 | The wallet **MUST** store the issuer's sharing rule (embedded disclosure policy) at issuance and evaluate it at presentation, without network requests, against the relying party's registration and access certificates; if the rule does not hold or cannot be evaluated, it **MUST** show a separate warning on the consent screen, the default choice being not to share; the final decision is the person's. |
+| RB-WP-15 | The wallet provider **MUST** offer a way for the person to revoke the wallet unit without having the phone; the way **MUST NOT** require a user account (for example a revocation secret shown once at activation, of which the provider keeps only a slow hash; [[ADR-0047]] K3). |
+| RB-WP-16 | The wallet provider **MUST** offer at least one way, outside the wallet, for the person to learn that their wallet unit was revoked; if the provider revoked the unit on its own decision, this way shows within 24 hours at most the reason, what keeps working and what the person can do (EU WURevocation_14/16; [[ADR-0047]] K4). |
+| RB-WP-17 | At level W3 the wallet provider **MUST** verify the platform's device attestation (Apple App Attest, Android key attestation, Play Integrity) when activating the unit and before every key attestation that declares W3; at W2 device attestation is optional (**MAY**) ([[ADR-0047]] K5). |
 
 ---
 
@@ -292,8 +297,8 @@ that apply to a non-qualified EAA are met as follows:
 | ARB_06, ARB_06a, ARB_06b | Format-independent definition of all attributes; mdoc namespace; claim names that are IANA, common or type-specific names | §2, §3 |
 | ARB_07, ARB_08 | Using existing attributes and naming conventions | EU PID names ([[ADR-0045]]), OpenID Connect, ISO/IEC 18013-5, ELM |
 | ARB_09 | Each attribute mandatory, optional or conditional | §2.2–§2.7 |
-| ARB_12, ARB_25 | Legal category indicator (`category`; in the ARF text `attestation_legal_category`) | §2.1 — only in the qualified or public class, with Tamga values (RB-AP-14) |
-| ARB_15, ARB_17, ARB_19, ARB_21 | Counterparts of eIDAS 2.0 Annex V b, c, e, h | §2.0 |
+| ARB_12, ARB_25 | Legal category indicator (`category`; in the ARF text `attestation_legal_category`) | §2.1 — only in the qualified or public class, with Tamga values (RB-AP-14). A non-qualified EAA carries no `category`; the template's value `eaa:eu:non-qualified` is not used, because ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires that such a credential has no `category` ([[ADR-0047]] K6) |
+| ARB_15, ARB_17, ARB_19, ARB_21 | Counterparts of eIDAS 2.0 Annex V b, c, e, h | §2.0. For Annex V h (location of the trust anchor) no field is added to the credential: the location is the issuer's `x5c` chain and the trust lists; the lists are the single source of trust anchors ([[ADR-0047]] K7) |
 | ARB_22 | The technical detail needed for interoperability, security and privacy | The rulebook and the specifications it rests on (Annex E) |
 | ARB_24, ARB_24a | Whether the type is revocable, the mechanism, the list address | §6 and [[FW-POL-0001]] |
 | ARB_26 | How the verifier obtains the trust anchor | §5 |
@@ -326,4 +331,4 @@ The decisions, specifications and standards this document rests on are listed in
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026; §11 and the policy documents on 11 October 2026).
+**Active** — version 1.0.0 (2 October 2026; §11 and the policy documents on 11 October 2026; RB-AP-27, RB-AP-ID-12, RB-WP-15–17 on 12 October 2026, [[ADR-0047]]).

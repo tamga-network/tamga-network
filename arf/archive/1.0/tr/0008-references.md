@@ -4,7 +4,7 @@ title: "Ek E — Kaynaklar"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Tamga ARF'nin dayandığı standartlar ve düzenlemeler, Tamga karar kayıtları ve şartnameleri ve eklerdeki her bağlayıcı
   kuralın kaynağı.
@@ -43,7 +43,7 @@ belgelerden derlenmiştir.
 | Belge biçimleri ve türleri | [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] · [[ADR-0013]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] |
 | Belge verme | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]] · [[ADR-0046]] |
 | Gösterme ve doğrulama | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] · [[ADR-0044]] |
-| Cüzdan | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]] |
+| Cüzdan | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]] · [[ADR-0047]] |
 | Kimlik | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]] · [[ADR-0045]] |
 | Adlar | [[ADR-0030]] |
 
@@ -127,6 +127,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-AP-24 | [[SPEC-ID-0003]], [[SPEC-PROTO-0001]]/PR7 |
 | RB-AP-25 | [[ADR-0016]] |
 | RB-AP-26 | [[ADR-0046]] EP1, EP4 |
+| RB-AP-27 | [[ADR-0047]] K1, K2, WR1, WR2; AB ARF VCR_05, WURevocation_19 |
 | RB-AP-ID-01 | [[SPEC-ID-0003]]/IDP3 |
 | RB-AP-ID-02 | [[SPEC-ID-0003]]/IDP11, KVKK m.10 |
 | RB-AP-ID-03 | [[SPEC-ID-0003]]/IDP9 |
@@ -138,6 +139,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-AP-ID-09 | [[ADR-0039]] DL3, DL5 |
 | RB-AP-ID-10 | [[ADR-0039]] DL4, DL5 |
 | RB-AP-ID-11 | [[ADR-0044]] ZC1–ZC3 |
+| RB-AP-ID-12 | [[ADR-0047]] K1, WR1; AB ARF WURevocation_18 |
 | RB-AS-01 | [[FW-TF-0001]] §5.1 |
 | RB-AS-02 | [[SPEC-SCHEMA-0002]]/E11 |
 | RB-AS-03 | [[SPEC-SCHEMA-0002]]/E1, [[SPEC-SCHEMA-0003]]/SK6 |
@@ -156,6 +158,9 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-WP-12 | [[SPEC-CRED-0003]]/S14 |
 | RB-WP-13 | [[ADR-0017]] HV6; [[SPEC-WALLET-0001]]/WL5 |
 | RB-WP-14 | [[ADR-0046]] EP2, EP3 |
+| RB-WP-15 | [[ADR-0047]] K3, WR3; AB ARF WURevocation_10, WIAM_06 |
+| RB-WP-16 | [[ADR-0047]] K4, WR4; AB ARF WURevocation_14, WURevocation_16 |
+| RB-WP-17 | [[ADR-0047]] K5, WR5; AB ARF WIAM_04, WIAM_08 |
 | RB-RP-01 | [[SPEC-API-0001]]/AP6, [[SPEC-PROTO-0002]] |
 | RB-RP-02 | [[SPEC-PROTO-0002]]/PV1, PV3, PV6, PV9, PV10 |
 | RB-RP-03 | [[SPEC-API-0001]]/AP8, AP11 |

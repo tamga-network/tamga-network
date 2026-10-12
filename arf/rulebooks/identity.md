@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-11 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -75,11 +75,11 @@ Terms are in Annex D; EU terms have their meaning in ARF Annex 1.
 
 | Requirement | Where |
 | --- | --- |
-| Indication that it is an EAA (ARB_12) | §2.1 — no `category` is written; under the ETSI rule the absence is the indication of a non-qualified EAA |
+| Indication that it is an EAA (ARB_12) | §2.1 — no `category` is written; under ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 the absence is the indication of a non-qualified EAA; the template's value `eaa:eu:non-qualified` is not used ([[ADR-0047]] K6) |
 | Identity of the issuer, Annex V b (ARB_15) | `iss` (the issuer's address) and the `x5c` leaf certificate in the signature header (organisation name, country); `issuer_id` is the certificate fingerprint (§2.5, §5) |
 | Identity of the subject, Annex V c (ARB_17) | Identity credential: `family_name`, `given_name`, `birthdate`, `personal_administrative_number`. Driving licence information: `family_name`, `given_name`, `birth_date`. The ZK copy and the pseudonym seed deliberately carry no subject identity (§2.2) |
 | Start and end of validity, Annex V e (ARB_19) | SD-JWT VC `iat`, `exp`; mdoc `validityInfo` (`validFrom`, `validUntil`) |
-| Location of the trust anchor, Annex V h (ARB_21) | No separate attribute in the credential; the location is the issuer's certificate chain and the Tamga trust lists (§5). Adding a location attribute is an open decision (§7.2) |
+| Location of the trust anchor, Annex V h (ARB_21) | No separate attribute in the credential, and none is added; the location is the issuer's certificate chain and the Tamga trust lists (§5); the lists are the single source of trust anchors ([[ADR-0047]] K7) |
 
 ### 2.1 Introduction and legal category
 
@@ -510,8 +510,8 @@ types (§4.6) comes only from the external list.
 
 | Topic | Status |
 | --- | --- |
-| Indication of a non-qualified EAA (ARB_12) | The EU template suggests the `category` value `eaa:eu:non-qualified`; ETSI TS 119 472-1 requires `category` to be absent in a non-qualified EAA, and Tamga follows ETSI. Adopting the template's value is an **open decision** |
-| Trust anchor location in the credential (ARB_21) | There is no separate location attribute; the location is the lists in §5. Adding an optional location attribute is an **open decision** |
+| Indication of a non-qualified EAA (ARB_12) | **Decision (2026-10-12, [[ADR-0047]] K6):** the EU template suggests the `category` value `eaa:eu:non-qualified`; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires `category` to be absent in a non-qualified EAA. Tamga follows ETSI; the template's value is not used |
+| Trust anchor location in the credential (ARB_21) | **Decision (2026-10-12, [[ADR-0047]] K7):** no location attribute is added; the location is the lists in §5. A location in the credential would be the issuer's own claim; a verifier takes the anchor only from a list it chose itself, with a pinned signature |
 | `nbf` (ETSI TS 119 472-1 technical start of validity) | Not written today; validity starts at `iat`. Adding it is implementation work |
 | Attestation Revocation List | The EU requires both mechanisms (VCR_10, VCR_12); Tamga publishes only the Status List today. Revocation List support is planned with the trust list formats work |
 
@@ -523,4 +523,4 @@ The Tamga decisions and specifications this document rests on are listed in Anne
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026; moved to the EU template structure on 11 October 2026).
+**Active** — version 1.0.0 (2 October 2026; moved to the EU template structure on 11 October 2026; §2.0 and §7.2 decisions on 12 October 2026, [[ADR-0047]]).
