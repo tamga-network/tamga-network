@@ -9,6 +9,9 @@
  *  - KA'yı ve WIA'yı, kalan iptal bakım süresi (`*.exp − şimdi`) tercihe eşit ya da uzun olacak biçimde seçer; elindeki kısa
  *    kalırsa sağlayıcıdan yenisini ister (TS3 §2.4.2). Sağlayıcı daha uzununu veremezse tercih zorunluluk değildir: belge yine
  *    istenir, kurum belgenin süresini bakım süresiyle sınırlar (ISSU_12c).
+ *  - Karşılaştırma toleranslıdır (0.5.1, `STATUS_PERIOD_TOLERANCE_SEC`): kalan süre tercihin en çok 7 gün (ve tercihin %10'u)
+ *    altında kalırsa da karşılanmış sayılır. Kurum sağlayıcının azami süresini (ör. 730 gün) isterse, yeni alınan WIA'nın kalan
+ *    süresi saniyeler içinde tercihin altına düşer; toleranssız karşılaştırma her belge akışında yeni WIA isterdi.
  * Saf TS; ağ isteği yok.
  */
 import { decodeJwt } from "./jws.js";
@@ -38,6 +41,14 @@ const strings = (v: unknown): string[] | undefined =>
   Array.isArray(v) && v.length && v.every((x) => typeof x === "string") ? (v as string[]) : undefined;
 const seconds = (v: unknown): number | undefined =>
   typeof v === "number" && Number.isInteger(v) && v > 0 ? v : undefined;
+
+/** Bakım süresi karşılaştırmasında tolerans üst sınırı: 7 gün (tercihin %10'unu da aşmaz). */
+export const STATUS_PERIOD_TOLERANCE_SEC = 7 * 86_400;
+/** Kalan süre `want` tercihini karşılıyor mu (toleranslı; `remaining` yoksa hayır). */
+export function statusPeriodMet(remaining: number | undefined, want: number): boolean {
+  if (remaining === undefined) return false;
+  return remaining >= want - Math.min(STATUS_PERIOD_TOLERANCE_SEC, Math.floor(want / 10));
+}
 
 /** Belge yapılandırması için kurumun tercihleri (metadata'da yoksa alanlar boş). Bozuk değerler yok sayılır. */
 export function issuerAttestationPrefs(md: IssuerMetadata, configurationId: string): IssuerAttestationPrefs {
@@ -97,8 +108,7 @@ export function checkKeyAttestation(kaJwt: string, prefs: IssuerAttestationPrefs
   const exp = typeof c.key_storage_status?.exp === "number" ? c.key_storage_status.exp : undefined;
   const statusRemaining = exp === undefined ? undefined : exp - now;
   const periodMet =
-    !prefs.preferredKeyStorageStatusPeriod ||
-    (statusRemaining !== undefined && statusRemaining >= prefs.preferredKeyStorageStatusPeriod);
+    !prefs.preferredKeyStorageStatusPeriod || statusPeriodMet(statusRemaining, prefs.preferredKeyStorageStatusPeriod);
   return { ok: true, periodMet, ...(statusRemaining !== undefined ? { statusRemaining } : {}) };
 }
 const levels = (v: unknown) =>
@@ -110,9 +120,10 @@ export function wiaStatusRemaining(wua: WuaRecord, now: number): number | undefi
   return typeof c.client_status?.exp === "number" ? c.client_status.exp - now : undefined;
 }
 
-/** WIA kurumun `preferred_client_status_period` tercihini karşılıyor mu (tercih yoksa evet). */
+/** WIA kurumun `preferred_client_status_period` tercihini karşılıyor mu (tercih yoksa evet; toleranslı — `statusPeriodMet`). */
 export const wiaMeetsPreference = (wua: WuaRecord, prefs: IssuerAttestationPrefs, now: number): boolean =>
-  !prefs.preferredClientStatusPeriod || (wiaStatusRemaining(wua, now) ?? -1) >= prefs.preferredClientStatusPeriod;
+  !prefs.preferredClientStatusPeriod ||
+  statusPeriodMet(wiaStatusRemaining(wua, now), prefs.preferredClientStatusPeriod);
 
 /**
  * TS3 §2.4.2: elindeki WIA tercihi karşılamıyorsa ve çağıran yenileme yolu verdiyse (`renew`), sağlayıcıdan

@@ -23,7 +23,7 @@ import {
   verifyIdentifierListToken,
   verifyIssuerSigned,
 } from "@tamga-network/mdoc";
-import { b64u } from "./b64.js";
+import { b64Decode, b64u, b64uToUtf8 } from "./b64.js";
 import { mdocElementValues, mdocIssuerKeys } from "./mdoc.js";
 import { certFingerprintHex, computeIssuerId, computeSchemaId, p256PointFromCertDer } from "./sdjwt.js";
 import { parseStatusToken, statusBitAt } from "./status.js";
@@ -80,12 +80,21 @@ export type W2wInvalidReason =
   | "not_authorized"
   | "revoked"
   | "suspended"
-  | "nothing_disclosed";
+  | "nothing_disclosed"
+  /** iptal listesi kurumun kayıtlı iptal anahtarıyla imzalanmamış, imzası ya da adresi tutmuyor, indeks liste dışında (ağın D3/D6) */
+  | "status_invalid";
+
+/**
+ * Doğrulanamadı nedenleri: güven listesi yok / güncel değil; iptal listesi alınamadı, süresi geçmiş ya da okunamadı, kurumun iptal
+ * anahtarı listede kayıtlı değil (ağın doğrulayıcısında D2/D3/D4 `INDETERMINATE`). Belge hakkında bir şey söylemez — yeşil değil.
+ */
+export type W2wIndeterminateReason = "trust_unavailable" | "trust_unknown" | "status_unavailable";
 
 export type W2wVerdict =
-  | { kind: "valid"; issuerName: string; fields: W2wField[]; revocation: "checked" | "unchecked" }
+  /** `revocation`: `checked` = iptal listesi denetlendi; `not_applicable` = belge iptal listesi taşımıyor */
+  | { kind: "valid"; issuerName: string; fields: W2wField[]; revocation: "checked" | "not_applicable" }
   | { kind: "invalid"; reason: W2wInvalidReason }
-  | { kind: "indeterminate"; reason: "trust_unavailable" | "trust_unknown" };
+  | { kind: "indeterminate"; reason: W2wIndeterminateReason };
 
 export type W2wVerifierOutcome =
   | { outcome: "response"; deviceResponse: Uint8Array; transcript: Uint8Array }
@@ -193,11 +202,86 @@ const statusKeysOf = (issuer: ReturnType<W2wTrust["issuer"]>) =>
     .map((k) => k.fingerprint_sha256);
 const hex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 
+type RevocationOutcome = { kind: "ok"; checked: boolean } | { kind: "stop"; verdict: W2wVerdict };
+const unavailable: RevocationOutcome = {
+  kind: "stop",
+  verdict: { kind: "indeterminate", reason: "status_unavailable" },
+};
+const statusInvalid: RevocationOutcome = { kind: "stop", verdict: { kind: "invalid", reason: "status_invalid" } };
+/** Status List belirtecinin başlığındaki imzacı (yaprak) parmak izi; okunamazsa `null`. İmza burada denetlenmez. */
+function statusTokenSigner(token: string): string | null {
+  try {
+    const h = JSON.parse(b64uToUtf8(token.split(".")[0])) as { x5c?: unknown };
+    const x5c = Array.isArray(h.x5c) && typeof h.x5c[0] === "string" ? h.x5c[0] : null;
+    return x5c ? certFingerprintHex(b64Decode(x5c)) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * İptal denetimi — ağın doğrulayıcısının D adımlarıyla aynı üç değer: denetlendi / belge iptal listesi taşımıyor (`ok`);
+ * GEÇERSİZ (iptal, askı, yanlış imzacı, bozuk imza ya da adres, indeks dışı); DOĞRULANAMADI (liste yok, bayat, okunamıyor).
+ */
+async function w2wRevocation(
+  v: { status?: { uri: string; idx: number }; identifierList?: { uri: string; id: Uint8Array } },
+  keys: string[],
+  ctx: {
+    fetchStatus?: (uri: string) => Promise<string | null>;
+    fetchIdentifierList?: (uri: string) => Promise<Uint8Array | null>;
+  },
+  now: number,
+): Promise<RevocationOutcome> {
+  if (v.status) {
+    if (!ctx.fetchStatus || !keys.length) return unavailable;
+    const token = (await ctx.fetchStatus(v.status.uri).catch(() => null))?.trim();
+    if (!token) return unavailable;
+    const signer = statusTokenSigner(token);
+    if (!signer) return unavailable; // okunamayan gövde (ör. ağ geçidi sayfası): altyapı sorunu
+    if (!keys.includes(signer)) return statusInvalid; // S11: kurumun kayıtlı iptal anahtarı değil
+    let list: ReturnType<typeof parseStatusToken>;
+    try {
+      list = parseStatusToken(token, v.status.uri, now);
+    } catch (e) {
+      // süresi geçmiş / çok eski → tazelik (D4); imza, adres, biçim → geçersiz (D3)
+      return /expired|too old|too large/.test((e as Error).message) ? unavailable : statusInvalid;
+    }
+    let bit: number;
+    try {
+      bit = statusBitAt(list, v.status.idx);
+    } catch {
+      return statusInvalid; // D6: indeks liste dışında
+    }
+    if (bit === 1 || bit === 3) return { kind: "stop", verdict: { kind: "invalid", reason: "revoked" } };
+    if (bit === 2) return { kind: "stop", verdict: { kind: "invalid", reason: "suspended" } };
+    return { kind: "ok", checked: true };
+  }
+  if (v.identifierList) {
+    if (!ctx.fetchIdentifierList || !keys.length) return unavailable;
+    const bytes = await ctx.fetchIdentifierList(v.identifierList.uri).catch(() => null);
+    if (!bytes) return unavailable;
+    let list: ReturnType<typeof verifyIdentifierListToken>;
+    try {
+      list = verifyIdentifierListToken(bytes, { uri: v.identifierList.uri, now, publicKeyOf: p256PointFromCertDer });
+    } catch (e) {
+      // ağın kuralı: `D4:` (okunamıyor, süresi geçmiş) → doğrulanamadı; imza / adres → geçersiz
+      return (e as Error).message.startsWith("D4:") ? unavailable : statusInvalid;
+    }
+    if (!keys.includes(certFingerprintHex(list.leafDer))) return statusInvalid;
+    if (list.identifiers.has(hex(v.identifierList.id)))
+      return { kind: "stop", verdict: { kind: "invalid", reason: "revoked" } };
+    return { kind: "ok", checked: true };
+  }
+  return { kind: "ok", checked: false };
+}
+
 /**
  * Gelen DeviceResponse'u doğrular. `requested`: doğrulayanın istediği alanlar — yanıtta fazlası olsa da yalnız istenen ve
  * izinli alanlar gösterilir. `now` saniye. İptal: belge Status List taşıyorsa `fetchStatus` (application/statuslist+jwt),
- * Revocation List taşıyorsa `fetchIdentifierList` (application/identifierlist+cwt baytları); ağ yoksa "denetlenemedi". Girdi
- * baytları dönüşte sıfırlanır.
+ * Revocation List taşıyorsa `fetchIdentifierList` (application/identifierlist+cwt baytları). Ağın doğrulayıcısıyla aynı anlam
+ * (0.5.1): imzacı kurumun kayıtlı iptal anahtarı değil ya da imza / adres / indeks tutmuyor → GEÇERSİZ (`status_invalid`);
+ * liste alınamadı (ağ yok, çekici yok), süresi geçmiş, okunamadı ya da kurumun iptal anahtarı kayıtlı değil → DOĞRULANAMADI
+ * (`status_unavailable`), hiçbir zaman "geçerli". Girdi baytları dönüşte sıfırlanır.
  */
 export async function verifyW2wResponse(
   deviceResponse: Uint8Array,
@@ -239,7 +323,14 @@ export async function verifyW2wResponse(
       clockSkewSec: 120,
     });
     if (!v.valid || !v.deviceKeyRaw)
-      return { kind: "invalid", reason: /expired|not yet valid/.test(v.reason ?? "") ? "expired" : "issuer_signature" };
+      return {
+        kind: "invalid",
+        reason: /expired|not yet valid/.test(v.reason ?? "")
+          ? "expired"
+          : /^status entry malformed/.test(v.reason ?? "")
+            ? "status_invalid"
+            : "issuer_signature",
+      };
     if (!verifyDeviceAuth(parsed.deviceSignature, transcript, docType, v.deviceKeyRaw))
       return { kind: "invalid", reason: "device_signature" };
 
@@ -255,40 +346,9 @@ export async function verifyW2wResponse(
     const issuer = ctx.trust.issuer(issuerId);
     const keys = statusKeysOf(issuer);
 
-    let revocation: "checked" | "unchecked" = "unchecked";
-    if (v.status && ctx.fetchStatus) {
-      try {
-        const token = await ctx.fetchStatus(v.status.uri);
-        if (token) {
-          const list = parseStatusToken(token.trim(), v.status.uri, now);
-          if (keys.includes(list.signerFingerprint)) {
-            const bit = statusBitAt(list, v.status.idx);
-            if (bit === 1 || bit === 3) return { kind: "invalid", reason: "revoked" };
-            if (bit === 2) return { kind: "invalid", reason: "suspended" };
-            revocation = "checked";
-          }
-        }
-      } catch {
-        revocation = "unchecked";
-      }
-    } else if (!v.status && v.identifierList && ctx.fetchIdentifierList) {
-      try {
-        const bytes = await ctx.fetchIdentifierList(v.identifierList.uri);
-        if (bytes) {
-          const list = verifyIdentifierListToken(bytes, {
-            uri: v.identifierList.uri,
-            now,
-            publicKeyOf: p256PointFromCertDer,
-          });
-          if (keys.includes(certFingerprintHex(list.leafDer))) {
-            if (list.identifiers.has(hex(v.identifierList.id))) return { kind: "invalid", reason: "revoked" };
-            revocation = "checked";
-          }
-        }
-      } catch {
-        revocation = "unchecked";
-      }
-    }
+    const rev = await w2wRevocation(v, keys, ctx, now);
+    if (rev.kind !== "ok") return rev.verdict;
+    const revocation = rev.checked ? "checked" : "not_applicable";
 
     // yalnız doğrulanmış, istenen ve izinli alanlar; sıra izin listesinin sırası (W2W_20)
     const verified = v.claims?.[namespace] ?? {};

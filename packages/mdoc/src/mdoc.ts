@@ -188,8 +188,9 @@ export function verifyIssuerSigned(
     now?: number;
     expectedDocType?: string;
     /**
-     * Saat farkı toleransı (sn, varsayılan 0): geçerlilik penceresi her iki uçta bu kadar genişler. Belgeyi alan cüzdanın saati
-     * belge verenin saatinden birkaç saniye gerideyse az önce verilen belge "henüz geçerli değil" görünmesin.
+     * Saat farkı toleransı (sn, varsayılan 0): yalnız başlangıç (`validFrom`) bu kadar erkene çekilir — belgeyi alan cüzdanın
+     * saati belge verenin saatinden birkaç saniye gerideyse az önce verilen belge "henüz geçerli değil" görünmesin. Bitiş
+     * (`validUntil`) uzatılmaz (0.5.1; SD-JWT `exp` ile aynı: bitiş anından sonra geçersiz).
      */
     clockSkewSec?: number;
   },
@@ -243,7 +244,7 @@ export function verifyIssuerSigned(
     return { valid: false, reason: "validityInfo dates unreadable" };
   const skew = Math.max(0, opts.clockSkewSec ?? 0);
   if (now + skew < vf) return { valid: false, reason: "document not yet valid" };
-  if (now - skew > vu) return { valid: false, reason: "document expired" };
+  if (now > vu) return { valid: false, reason: "document expired" };
 
   // digest bütünlüğü — açıklanan her alan MSO'daki digest ile eşleşmeli
   const valueDigests = mso.get("valueDigests");
@@ -288,21 +289,34 @@ export function verifyIssuerSigned(
     return { valid: false, reason: "deviceKey unreadable" };
   }
 
+  // iptal bilgisi (ISO 18013-5 2. baskı §12.3.6; doğrulayıcının D1 adımı): `status` varsa okunabilir olmalı. Belge verenin imzası
+  // altındaki bozuk bir giriş iptal denetimini sessizce atlatamaz (0.5.1) — belge geçersizdir (`status entry malformed`).
   const st = mso.get("status");
-  const sl = st instanceof Map ? st.get("status_list") : undefined;
-  const status =
-    sl instanceof Map && typeof sl.get("idx") === "number" && typeof sl.get("uri") === "string"
-      ? { idx: sl.get("idx") as number, uri: sl.get("uri") as string }
-      : undefined;
-  const il = st instanceof Map ? st.get("identifier_list") : undefined;
-  const identifierList: IdentifierListRef | undefined =
-    il instanceof Map && il.get("id") instanceof Uint8Array && typeof il.get("uri") === "string"
-      ? {
-          id: il.get("id") as Uint8Array,
-          uri: il.get("uri") as string,
-          ...(il.get("certificate") instanceof Uint8Array ? { certificate: il.get("certificate") as Uint8Array } : {}),
-        }
-      : undefined;
+  let status: { idx: number; uri: string } | undefined;
+  let identifierList: IdentifierListRef | undefined;
+  if (st !== undefined) {
+    const bad = (why: string): MdocVerifyResult => ({ valid: false, reason: `status entry malformed: ${why}` });
+    if (!(st instanceof Map)) return bad("not a map");
+    const sl = st.get("status_list");
+    const il = st.get("identifier_list");
+    if (sl === undefined && il === undefined) return bad("no status_list or identifier_list");
+    if (sl !== undefined) {
+      const idx = sl instanceof Map ? sl.get("idx") : undefined;
+      const uri = sl instanceof Map ? sl.get("uri") : undefined;
+      if (typeof idx !== "number" || !Number.isSafeInteger(idx) || idx < 0) return bad("status_list.idx");
+      if (typeof uri !== "string" || !uri) return bad("status_list.uri");
+      status = { idx, uri };
+    }
+    if (il !== undefined) {
+      const id = il instanceof Map ? il.get("id") : undefined;
+      const uri = il instanceof Map ? il.get("uri") : undefined;
+      const certificate = il instanceof Map ? il.get("certificate") : undefined;
+      if (!(id instanceof Uint8Array) || !id.length) return bad("identifier_list.id");
+      if (typeof uri !== "string" || !uri) return bad("identifier_list.uri");
+      if (certificate !== undefined && !(certificate instanceof Uint8Array)) return bad("identifier_list.certificate");
+      identifierList = { id, uri, ...(certificate ? { certificate } : {}) };
+    }
+  }
   return {
     valid: true,
     docType,

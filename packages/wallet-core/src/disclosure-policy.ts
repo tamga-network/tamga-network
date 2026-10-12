@@ -8,6 +8,12 @@
  *      listelenen (veren adı, seri no) — yalnız imza zinciri doğrulanmış VE güvene bağlanmış sertifikalar sayılır
  *      (`anchoredChainCerts`); ad/seri yalnız doğrulanamayan bir sertifikada tutuyorsa değerlendirilemez, hiçbir zaman "geçti"
  *      değil. Kayıt sertifikası yoksa (istekte yok, yakın mesafe, cüzdandan cüzdana) değerlendirilemez.
+ *  Erişim sertifikası çapası (0.5.1): kayıt sertifikası isteğe yalnız `organizationIdentifier` ile bağlanır; kayıt sertifikası
+ *      herkese açıktır ve kopyalanabilir. Bu yüzden WRPRC'ye dayanan her karardan ÖNCE isteği imzalayan erişim sertifikası güvene
+ *      bağlanmış olmalıdır: (i) yaprağın parmak izi doğrulayıcının imzalı listedeki kaydında sabitlenmiş (`registeredFingerprints`;
+ *      `checkRp` aynı eşleşmeyi `x509_hash` ile denetler) YA DA (ii) zincir imzası yapraktan imzalı listedeki bir CA'ya
+ *      (`trustAnchors`, `root_cas`) kadar doğrulanıyor (`anchoredChainCerts`). İkisi de yoksa sonuç "değerlendirilemez"
+ *      (`untrusted_access_certificate`) — kendinden imzalı bir kopya hiçbir zaman "yetkili" sayılmaz.
  *  K4: sonuç onay ekranındadır — geçmezse ayrı uyarı, varsayılan "Paylaşma"; son karar kişinindir (cüzdan engellemez).
  */
 import {
@@ -22,6 +28,7 @@ import { anchoredChainCerts, certMatchesRootOfTrust, certSubjectMatches } from "
 import type { IssuerMetadata } from "./oid4vci.js";
 import type { Match, VpRequest } from "./oid4vp.js";
 import { relevantRegistrationCerts, type RelevantRegistrationCert } from "./wrprc.js";
+import { certFingerprintHex as sha256Hex } from "./sdjwt.js";
 
 export type { EmbeddedDisclosurePolicy, DisclosurePolicyType } from "@tamga-network/core/disclosure-policy";
 
@@ -63,6 +70,8 @@ export type DisclosurePolicyOutcome = "passed" | "failed" | "not_evaluable";
  *  - `malformed_policy`: saklanan politika okunamadı
  *  - `unverified_chain`: güven kökü öğesi zincirdeki bir sertifikayla tutuyor ama o sertifikanın imza zinciri doğrulanamadı ya da
  *    güvene bağlanamadı (kopyalanmış ad/seri, eklenmiş kök, desteklenmeyen algoritma) — değerlendirilemez
+ *  - `untrusted_access_certificate`: isteği imzalayan erişim sertifikası ne doğrulayıcının kayıtlı parmak iziyle eşleşiyor ne de
+ *    imzalı listedeki bir CA'ya bağlanıyor — kayıt sertifikası bu isteğe ait olduğu kanıtlanamadığı için değerlendirilemez
  */
 export type DisclosurePolicyReason =
   | "no_policy"
@@ -70,7 +79,8 @@ export type DisclosurePolicyReason =
   | "not_authorized"
   | "no_registration_certificate"
   | "malformed_policy"
-  | "unverified_chain";
+  | "unverified_chain"
+  | "untrusted_access_certificate";
 
 export interface DisclosurePolicyResult {
   outcome: DisclosurePolicyOutcome;
@@ -96,6 +106,27 @@ export interface DisclosurePolicyContext {
    * kurabilir. Kayıt sertifikası zincirinin yaprağı zaten kayıt kurumu anahtarıdır (imzalı listeden).
    */
   trustAnchors?: string[];
+  /**
+   * Doğrulayıcının imzalı listedeki kaydında sabitlenmiş erişim sertifikası parmak izleri (SHA-256, onaltılık; RP kaydının
+   * `access_cert_fingerprint_sha256`'sı). Yaprak bunlardan biriyse erişim sertifikası güvene bağlı sayılır (kayıt sertifikasının
+   * isteğe bağı için; güven kökü kuralında erişim zinciri yine yalnız `trustAnchors` ile sayılır).
+   */
+  registeredFingerprints?: string[];
+}
+
+/**
+ * Kayıt sertifikasının bu isteğe ait olduğunun ön koşulu: erişim sertifikası (yaprak) kayıtlı parmak iziyle eşleşiyor ya da zinciri
+ * imzalı listedeki bir CA'ya bağlanıyor. Kendinden imzalı, kurum kimliği kopyalanmış sertifika ikisini de sağlayamaz.
+ */
+export function accessCertAnchored(
+  ctx: Pick<DisclosurePolicyContext, "accessCertChain" | "trustAnchors" | "registeredFingerprints">,
+): boolean {
+  const leaf = ctx.accessCertChain[0];
+  if (!leaf) return false;
+  const pinned = (ctx.registeredFingerprints ?? []).map((f) => f.toLowerCase());
+  if (pinned.length && pinned.includes(sha256Hex(leaf))) return true;
+  const anchors = ctx.trustAnchors ?? [];
+  return anchors.length > 0 && anchoredChainCerts(ctx.accessCertChain, { anchorFingerprints: anchors }).length > 0;
 }
 
 /**
@@ -118,6 +149,8 @@ export function evaluateDisclosurePolicy(
   const base = { restricted: true, type: p.type, policyId: p.id, ...(p.info_uri ? { infoUri: p.info_uri } : {}) };
   const certs = ctx?.registrationCerts ?? [];
   if (!ctx || !certs.length) return { ...base, outcome: "not_evaluable", reason: "no_registration_certificate" };
+  // kayıt sertifikası isteğe yalnız kurum kimliğiyle bağlı: erişim sertifikası güvene bağlanmadan hiçbir öğe değerlendirilmez
+  if (!accessCertAnchored(ctx)) return { ...base, outcome: "not_evaluable", reason: "untrusted_access_certificate" };
   const pass = (matchedBy: DisclosurePolicyResult["matchedBy"]): DisclosurePolicyResult => ({
     ...base,
     outcome: "passed",
@@ -176,6 +209,7 @@ export function disclosurePolicyContext(
   match: Pick<Match, "queryId">,
   now = Date.now(),
   trustAnchors: string[] = [],
+  registeredFingerprints: string[] = [],
 ): DisclosurePolicyContext | null {
   const r = relevantRegistrationCerts(req, registrarKeys, match, now);
   if (!r.valid) return null;
@@ -183,12 +217,14 @@ export function disclosurePolicyContext(
     registrationCerts: r.certs,
     accessCertChain: req.chainDer?.length ? req.chainDer : [req.leafDer],
     ...(trustAnchors.length ? { trustAnchors } : {}),
+    ...(registeredFingerprints.length ? { registeredFingerprints } : {}),
   };
 }
 
 /**
  * Kısayol: eşleşen belgenin politikası bu istek için (onay ekranı). `trustAnchors`: erişim sertifikası zinciri için güvenilir CA
- * parmak izleri (isteğe bağlı; yoksa güven kökü yalnız kayıt sertifikası zincirinde aranır).
+ * parmak izleri (imzalı listenin `root_cas`'ı). `registeredFingerprints`: doğrulayıcının imzalı listedeki kaydının erişim
+ * sertifikası parmak izi (`checkRp` eşleşmeyi doğruladıysa; taklitte verilmez). İkisi de yoksa kısıtlı politika değerlendirilemez.
  */
 export function checkDisclosurePolicy(
   req: VpRequest,
@@ -196,10 +232,14 @@ export function checkDisclosurePolicy(
   match: Pick<Match, "queryId"> & { credential: { disclosurePolicy?: StoredDisclosurePolicy } },
   now = Date.now(),
   trustAnchors: string[] = [],
+  registeredFingerprints: string[] = [],
 ): DisclosurePolicyResult {
   const stored = match.credential.disclosurePolicy;
   if (!stored) return evaluateDisclosurePolicy(undefined, null);
-  return evaluateDisclosurePolicy(stored, disclosurePolicyContext(req, registrarKeys, match, now, trustAnchors));
+  return evaluateDisclosurePolicy(
+    stored,
+    disclosurePolicyContext(req, registrarKeys, match, now, trustAnchors, registeredFingerprints),
+  );
 }
 
 /**

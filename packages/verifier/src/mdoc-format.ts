@@ -153,13 +153,16 @@ export async function verifyMdocFormat(
   });
   if (!v.valid) {
     const r = v.reason ?? "invalid";
-    const step: Step = /digest/.test(r)
-      ? "A5"
-      : /expired|not yet valid/.test(r)
-        ? "A7"
-        : /docType/.test(r)
-          ? "A8"
-          : "A4";
+    // imzalı ama okunamayan iptal girişi: D1 (status oku) RED — iptal denetimi atlanmaz (0.5.1)
+    const step: Step = /^status entry malformed/.test(r)
+      ? "D1"
+      : /digest/.test(r)
+        ? "A5"
+        : /expired|not yet valid/.test(r)
+          ? "A7"
+          : /docType/.test(r)
+            ? "A8"
+            : "A4";
     return fail(step, `mdoc: ${r}`);
   }
   // Sertifika, belgenin imzalandığı anda (validityInfo.signed) geçerli olmalı — SD-JWT A3 ile aynı kural (D-BC-3)

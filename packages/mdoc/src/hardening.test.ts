@@ -102,3 +102,99 @@ describe("mdoc sertleştirme", () => {
     expect(() => parseEngagement(withVersion("2.0"))).toThrow(/version/);
   });
 });
+
+describe("0.5.1: geçerlilik penceresi ve iptal girişi", () => {
+  const issuerSk = p256.utils.randomSecretKey();
+  const pub = p256.getPublicKey(issuerSk, false);
+  const now = Math.floor(Date.now() / 1000);
+  const base = (o: { status?: { idx: number; uri: string }; validUntil?: number } = {}) =>
+    issueMdoc({
+      docType: "urn:test:doc:1",
+      namespaces: { "test.ns": { a: 1 } },
+      deviceKeyRaw: p256.getPublicKey(p256.utils.randomSecretKey(), false),
+      issuerSk,
+      x5chain: [new Uint8Array([0x30, 1])],
+      signed: now - 60,
+      validFrom: now - 60,
+      validUntil: o.validUntil ?? now + 3600,
+      randomBytes,
+      ...(o.status ? { status: o.status } : {}),
+    }).issuerSigned;
+  /** MSO'yu değiştirip belge veren anahtarıyla yeniden imzalar (imza geçerli, içerik bozuk). */
+  const withMso = (issuerSigned: Uint8Array, edit: (mso: Map<CborValue, CborValue>) => void) => {
+    const m = decode(issuerSigned) as Map<string, CborValue>;
+    const auth = m.get("issuerAuth") as CborValue[];
+    const tag = decode(auth[2] as Uint8Array) as CborTag;
+    const mso = decode(tag.value as Uint8Array) as Map<CborValue, CborValue>;
+    edit(mso);
+    const resigned = coseSign1(encode(new CborTag(24, encode(mso))), {
+      sk: issuerSk,
+      x5chain: [new Uint8Array([0x30, 1])],
+    });
+    m.set("issuerAuth", decode(resigned));
+    return encode(m);
+  };
+
+  it("saat farkı toleransı yalnız başlangıca uygulanır; bitiş uzamaz (SD-JWT exp ile aynı)", () => {
+    const doc = base({ validUntil: now + 60 });
+    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: now + 60, clockSkewSec: 300 }).valid).toBe(true);
+    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: now + 61, clockSkewSec: 300 }).reason).toBe(
+      "document expired",
+    );
+    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: now - 120, clockSkewSec: 300 }).valid).toBe(true);
+    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: now - 120 }).reason).toBe("document not yet valid");
+  });
+
+  it("okunamayan iptal girişi iptal denetimini atlatmaz: belge geçersiz (status entry malformed)", () => {
+    const ok = base({ status: { idx: 3, uri: "https://status.example/1" } });
+    expect(verifyIssuerSigned(ok, { issuerPubRaw: pub }).status).toEqual({ idx: 3, uri: "https://status.example/1" });
+    const sl = (v: Map<string, CborValue>) => (mso: Map<CborValue, CborValue>) =>
+      mso.set("status", new Map<string, CborValue>([["status_list", v]]));
+    const cases: Array<(mso: Map<CborValue, CborValue>) => void> = [
+      (mso) => mso.set("status", "revoked?"),
+      (mso) => mso.set("status", new Map()),
+      (mso) => mso.set("status", new Map<string, CborValue>([["future_mechanism", 1]])),
+      sl(new Map<string, CborValue>([["uri", "https://status.example/1"]])),
+      sl(
+        new Map<string, CborValue>([
+          ["idx", "3"],
+          ["uri", "https://status.example/1"],
+        ]),
+      ),
+      sl(
+        new Map<string, CborValue>([
+          ["idx", -1],
+          ["uri", "https://status.example/1"],
+        ]),
+      ),
+      sl(
+        new Map<string, CborValue>([
+          ["idx", 1.5],
+          ["uri", "https://status.example/1"],
+        ]),
+      ),
+      sl(new Map<string, CborValue>([["idx", 3]])),
+      (mso) =>
+        mso.set(
+          "status",
+          new Map<string, CborValue>([
+            [
+              "identifier_list",
+              new Map<string, CborValue>([
+                ["id", "x"],
+                ["uri", "u"],
+              ]),
+            ],
+          ]),
+        ),
+    ];
+    for (const [i, edit] of cases.entries()) {
+      const r = verifyIssuerSigned(withMso(ok, edit), { issuerPubRaw: pub });
+      expect(r.valid, String(i)).toBe(false);
+      expect(r.reason, String(i)).toMatch(/^status entry malformed/);
+    }
+    // status yoksa iptal denetimi yok (belge iptal listesi taşımıyor) — geçerli
+    const none = withMso(ok, (mso) => mso.delete("status"));
+    expect(verifyIssuerSigned(none, { issuerPubRaw: pub })).toMatchObject({ valid: true, status: undefined });
+  });
+});

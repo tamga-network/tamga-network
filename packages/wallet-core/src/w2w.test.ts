@@ -90,13 +90,28 @@ const trust: W2wTrust = {
       : null,
 };
 
-async function statusToken(bits: Record<number, number>): Promise<string> {
+const strangerKeys = new SoftwareKeyProvider(new MemoryKeyStore());
+const strangerCert = certFor(jwkToRaw(await strangerKeys.generate("status")), "Yabanci (test)");
+
+async function statusToken(
+  bits: Record<number, number>,
+  o: { exp?: number; signer?: "stranger"; sub?: string } = {},
+): Promise<string> {
   const bytes = new Uint8Array(16);
   for (const [i, v] of Object.entries(bits)) bytes[Number(i) >> 2] |= v << ((Number(i) & 3) * 2);
   return signJwt(
-    { typ: "statuslist+jwt", x5c: [Buffer.from(statusJwtCert).toString("base64")] },
-    { sub: STATUS_URI, iat: NOW, ttl: 3600, status_list: { bits: 2, lst: b64u(new Uint8Array(deflateSync(bytes))) } },
-    statusKeys,
+    {
+      typ: "statuslist+jwt",
+      x5c: [Buffer.from(o.signer ? strangerCert : statusJwtCert).toString("base64")],
+    },
+    {
+      sub: o.sub ?? STATUS_URI,
+      iat: NOW,
+      ttl: 3600,
+      ...(o.exp !== undefined ? { exp: o.exp } : {}),
+      status_list: { bits: 2, lst: b64u(new Uint8Array(deflateSync(bytes))) },
+    },
+    o.signer ? strangerKeys : statusKeys,
     "status",
   );
 }
@@ -220,7 +235,7 @@ describe("cüzdandan cüzdana — protokol çekirdeği", () => {
     expect(v).toEqual({ kind: "invalid", reason: "revoked" });
   });
 
-  it("VCR_10: Attestation Revocation List — listede değilse denetlendi, listedeyse iptal; kayıtsız imzacı denetlenmemiş sayılır", async () => {
+  it("VCR_10: Attestation Revocation List — listede değilse denetlendi, listedeyse iptal; kayıtsız imzacı GEÇERSİZ", async () => {
     const id = new Uint8Array(16).fill(9);
     const il = (ids: Uint8Array[], sk = statusSk, cert = statusCert) =>
       signIdentifierListToken({ uri: IL_URI, identifiers: ids, sk, x5chain: [cert], iat: NOW - 10, exp: NOW + 600 });
@@ -247,7 +262,68 @@ describe("cüzdandan cüzdana — protokol çekirdeği", () => {
       requested: ["age_over_18"],
       fetchIdentifierList: async () => il([id], other, certFor(p256.getPublicKey(other, false), "x")),
     });
-    expect(v).toMatchObject({ kind: "valid", revocation: "unchecked" });
+    expect(v).toEqual({ kind: "invalid", reason: "status_invalid" });
+  });
+
+  it("0.5.1 (ağın D adımlarıyla aynı): Status List yanlış imzacı / adres → GEÇERSİZ; bayat, alınamayan, okunamayan → DOĞRULANAMADI", async () => {
+    const run = async (fetchStatus?: (uri: string) => Promise<string | null>) => {
+      const { verifier } = await session(["given_name"], await wallet());
+      if (verifier.outcome !== "response") throw new Error(verifier.outcome);
+      return verifyW2wResponse(verifier.deviceResponse, verifier.transcript, {
+        profile: PROFILE,
+        trust,
+        requested: ["given_name"],
+        ...(fetchStatus ? { fetchStatus } : {}),
+      });
+    };
+    const invalid = { kind: "invalid", reason: "status_invalid" };
+    const indeterminate = { kind: "indeterminate", reason: "status_unavailable" };
+    expect(await run(async () => statusToken({}, { signer: "stranger" }))).toEqual(invalid);
+    expect(await run(async () => statusToken({}, { sub: "https://status.example/lists/2" }))).toEqual(invalid);
+    expect(await run(async () => statusToken({}, { exp: NOW - 10 }))).toEqual(indeterminate);
+    expect(await run(async () => null)).toEqual(indeterminate);
+    expect(await run(async () => Promise.reject(new Error("offline")))).toEqual(indeterminate);
+    expect(await run(async () => "<html>captive portal</html>")).toEqual(indeterminate);
+    expect(await run()).toEqual(indeterminate); // çekici yok (ağ yok)
+    // kurumun iptal anahtarı listede kayıtlı değil: doğrulanamadı (ağın D3 STATUS_UNREACHABLE)
+    const noKeys: W2wTrust = { ...trust, issuer: (id) => ({ ...trust.issuer(id)!, delegate_keys: [] }) };
+    const { verifier } = await session(["given_name"], await wallet());
+    if (verifier.outcome !== "response") throw new Error(verifier.outcome);
+    expect(
+      await verifyW2wResponse(verifier.deviceResponse, verifier.transcript, {
+        profile: PROFILE,
+        trust: noKeys,
+        requested: ["given_name"],
+        fetchStatus: async () => statusToken({}),
+      }),
+    ).toEqual(indeterminate);
+  });
+
+  it("0.5.1: Revocation List süresi geçmiş / alınamadı → DOĞRULANAMADI", async () => {
+    const id = new Uint8Array(16).fill(9);
+    for (const fetchIdentifierList of [
+      async () =>
+        signIdentifierListToken({
+          uri: IL_URI,
+          identifiers: [],
+          sk: statusSk,
+          x5chain: [statusCert],
+          iat: NOW - 900,
+          exp: NOW - 10,
+        }),
+      async () => null,
+      async () => new Uint8Array([1, 2, 3]),
+    ]) {
+      const { verifier } = await session(["age_over_18"], await wallet({ identifierId: id }));
+      if (verifier.outcome !== "response") throw new Error(verifier.outcome);
+      const v = await verifyW2wResponse(verifier.deviceResponse, verifier.transcript, {
+        profile: PROFILE,
+        trust,
+        requested: ["age_over_18"],
+        fetchIdentifierList,
+      });
+      expect(v).toEqual({ kind: "indeterminate", reason: "status_unavailable" });
+    }
   });
 
   it("ADR-0046: paylaşım kuralı kısıtlı belge gösterilmez (kişiye sorulmadan ret)", async () => {

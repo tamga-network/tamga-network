@@ -11,6 +11,8 @@ import {
   MemoryStatusCache,
   PrefetchStatusCache,
   isBinaryStatusContentType,
+  isNonPublicAddress,
+  statusHostsOf,
   statusBodyForCache,
   type StatusCache,
 } from "./status-cache.js";
@@ -114,7 +116,12 @@ describe("tanımlayıcı listesi: ikili gövde, bozuk önbellek, ön çekim küm
       done: [],
       skipped: [],
       a: { format: "mso_mdoc", identifierList: { id, uri: URI } },
-      issuerRec: { delegate_keys: [{ purpose: "status_list", fingerprint_sha256: key.fp, status: "ACTIVE" }] },
+      issuerRec: {
+        issuer_id: "0x" + "ab".repeat(32),
+        issuer_url: "https://issuer.example/acme",
+        status_list_base: "https://status.example/il",
+        delegate_keys: [{ purpose: "status_list", fingerprint_sha256: key.fp, status: "ACTIVE" }],
+      },
     }) as unknown as VerifyCtx;
 
   it("gövde türe göre saklanır: içerik türü ne olursa olsun tanımlayıcı listesi bayt kalır", async () => {
@@ -162,13 +169,16 @@ describe("tanımlayıcı listesi: ikili gövde, bozuk önbellek, ön çekim küm
   it("önbellekte olmayan liste ön çekim kümesine eklenir ve doğrulamanın dışında çekilir; sonraki doğrulama önbellekten", async () => {
     const calls: Array<[string, string | undefined]> = [];
     const bytes = cwt();
-    const cache = new PrefetchStatusCache(async (u, kind) => {
-      calls.push([u, kind]);
-      return u === URI ? statusBodyForCache(bytes, kind, "application/octet-stream") : null;
-    });
+    const cache = new PrefetchStatusCache(
+      async (u, kind) => {
+        calls.push([u, kind]);
+        return u === URI ? statusBodyForCache(bytes, kind, "application/octet-stream") : null;
+      },
+      { resolveHost: async () => ["93.184.216.34"] },
+    );
     const first = await stepD(ctxWith(cache));
     expect(first).toMatchObject({ kind: "indeterminate", step: "D2" });
-    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 5));
     expect(calls).toEqual([[URI, "identifier_list"]]);
     expect(cache.learnedRefs()).toEqual([{ uri: URI, kind: "identifier_list" }]);
     const second = ctxWith(cache);
@@ -184,8 +194,146 @@ describe("tanımlayıcı listesi: ikili gövde, bozuk önbellek, ön çekim küm
       ["https://status.example/sl/1", undefined],
       [URI, "identifier_list"],
     ]);
-    // yalnız http(s) adresleri öğrenilir
-    cache.want("file:///etc/passwd", "identifier_list");
+    // yalnız https adresleri öğrenilir
+    cache.want("file:///etc/passwd", "identifier_list", { issuer: "x", hosts: ["etc"] });
     expect(cache.learnedRefs()).toHaveLength(1);
+  });
+});
+
+describe("tanımlayıcı listesi öğrenme sınırları (0.5.1: SSRF, kurumun iptal sunucuları, kurum başına üst sınır)", () => {
+  const scope = { issuer: "0xa", hosts: ["status.example"] };
+  const fetched: string[] = [];
+  const make = (resolve: (h: string) => Promise<string[]> = async () => ["93.184.216.34"], maxPerIssuer?: number) => {
+    fetched.length = 0;
+    return new PrefetchStatusCache(
+      async (u) => {
+        fetched.push(u);
+        return "b64u:AA";
+      },
+      { resolveHost: resolve, ...(maxPerIssuer ? { maxPerIssuer } : {}) },
+    );
+  };
+  const tick = () => new Promise((r) => setTimeout(r, 5));
+
+  it("kurum kaydından iptal sunucuları: status_list_base + issuer_url alan adı", () => {
+    expect(
+      statusHostsOf({ status_list_base: "https://Status.Example/il", issuer_url: "https://issuer.example/acme" }),
+    ).toEqual(["status.example", "issuer.example"]);
+    expect(statusHostsOf({ status_list_base: "", issuer_url: "" })).toEqual([]); // dış kurum (ADR-0036): öğrenilmez
+    expect(statusHostsOf(null)).toEqual([]);
+  });
+
+  it("yalnız https ve yalnız kurumun bildirdiği sunucu; kapsam yoksa öğrenilmez", async () => {
+    const c = make();
+    c.want("http://status.example/il/1", "identifier_list", scope);
+    c.want("https://evil.example/il/1", "identifier_list", scope);
+    c.want("https://status.example.evil.example/il/1", "identifier_list", scope);
+    c.want("https://user:pw@status.example/il/1", "identifier_list", scope);
+    c.want("https://status.example/il/1", "identifier_list");
+    c.want("https://status.example/il/1", "identifier_list", { issuer: "0xa", hosts: [] });
+    await tick();
+    expect(c.learnedRefs()).toEqual([]);
+    expect(fetched).toEqual([]);
+    c.want("https://status.example/il/1", "identifier_list", scope);
+    await tick();
+    expect(fetched).toEqual(["https://status.example/il/1"]);
+  });
+
+  it("IP yazılmış özel / geri döngü / bağlantı-yerel adres öğrenilmez (kurum bildirmiş olsa bile)", async () => {
+    const c = make();
+    for (const host of [
+      "127.0.0.1",
+      "10.0.0.5",
+      "169.254.169.254",
+      "192.168.1.1",
+      "[::1]",
+      "[fd00::1]",
+      "[::ffff:127.0.0.1]",
+    ]) {
+      c.want(`https://${host}/il/1`, "identifier_list", { issuer: "0xa", hosts: [host] });
+    }
+    c.want("https://localhost/il/1", "identifier_list", { issuer: "0xa", hosts: ["localhost"] });
+    await tick();
+    expect(c.learnedRefs()).toEqual([]);
+    expect(fetched).toEqual([]);
+    // yerel geliştirme (allowLocal): yerel http kabul
+    c.want("http://localhost:4001/il/1", "identifier_list", { issuer: "0xa", hosts: ["localhost"], allowLocal: true });
+    await tick();
+    expect(fetched).toEqual(["http://localhost:4001/il/1"]);
+  });
+
+  it("alan adı özel adrese çözülüyorsa ya da çözülemiyorsa çekilmez (ilk görüşte ve ön çekim turunda)", async () => {
+    for (const resolve of [
+      async () => ["10.1.2.3"],
+      async () => ["93.184.216.34", "127.0.0.1"],
+      async () => [],
+      async () => Promise.reject(new Error("NXDOMAIN")),
+    ]) {
+      const c = make(resolve);
+      c.want("https://status.example/il/1", "identifier_list", scope);
+      await tick();
+      expect(fetched).toEqual([]);
+      await c.refresh([]);
+      expect(fetched).toEqual([]);
+    }
+  });
+
+  it("üst sınır kurum başına: bir kurumun belgeleri başka kurumun listesini dışarıda bırakmaz", async () => {
+    const c = make(undefined, 2);
+    for (let i = 0; i < 5; i++) c.want(`https://status.example/il/${i}`, "identifier_list", scope);
+    c.want("https://other.example/il/1", "identifier_list", { issuer: "0xb", hosts: ["other.example"] });
+    await tick();
+    expect(c.learnedRefs().map((r) => r.uri)).toEqual([
+      "https://status.example/il/0",
+      "https://status.example/il/1",
+      "https://other.example/il/1",
+    ]);
+  });
+
+  it("SSRF denetimi: özel / ayrılmış aralıklar", () => {
+    for (const ip of [
+      "0.0.0.0",
+      "10.0.0.1",
+      "100.64.0.1",
+      "127.0.0.1",
+      "169.254.1.1",
+      "172.16.0.1",
+      "172.31.255.255",
+      "192.168.0.1",
+      "224.0.0.1",
+      "::",
+      "::1",
+      "fc00::1",
+      "fe80::1",
+      "::ffff:10.0.0.1",
+      "::ffff:7f00:1",
+    ])
+      expect(isNonPublicAddress(ip), ip).toBe(true);
+    for (const ip of ["93.184.216.34", "8.8.8.8", "172.32.0.1", "2001:4860:4860::8888", "status.example"])
+      expect(isNonPublicAddress(ip), ip).toBe(false);
+  });
+
+  it("D adımı kurumun kaydıyla öğrenir; dış kurum (iptal sunucusu bildirilmemiş) öğrenilmez", async () => {
+    const wanted: unknown[] = [];
+    const cache = { get: () => null, want: (...a: unknown[]) => wanted.push(a) };
+    const base = {
+      input: { statusCache: cache, policy: { freshness: { max_status_token_age_sec: 3600 } } },
+      now: NOW,
+      done: [],
+      skipped: [],
+      a: { format: "mso_mdoc", identifierList: { id: "22".repeat(16), uri: URI } },
+    };
+    await stepD({
+      ...base,
+      issuerRec: {
+        issuer_id: "0xa",
+        issuer_url: "https://issuer.example",
+        status_list_base: "https://status.example/il",
+      },
+    } as unknown as VerifyCtx);
+    expect(wanted).toEqual([[URI, "identifier_list", { issuer: "0xa", hosts: ["status.example", "issuer.example"] }]]);
+    wanted.length = 0;
+    expect(await stepD({ ...base, issuerRec: null } as unknown as VerifyCtx)).toMatchObject({ step: "D2" });
+    expect(wanted).toEqual([]);
   });
 });

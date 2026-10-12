@@ -2,8 +2,47 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The documents (docs, ARF) are 1.0.0 until the public
 announcement; changes before it are folded into this release. The `@tamga-network/*` packages are versioned separately: they
-are published on npm as test releases — `0.4.0` published, `0.5.0` prepared (the API may change in test releases); the stable `1.0.0` comes when
-everything is ready.
+are published on npm as test releases — `0.5.0` published, `0.5.1` prepared (the API may change in test releases); the
+stable `1.0.0` comes when everything is ready.
+
+## 0.5.1 — 2026-10-12 (packages, test release)
+
+The nine packages move to `0.5.1` together (`sdk_version` = `@tamga-network/verifier@0.5.1`). Patch: security and correctness
+fixes from a code review; every fix has a test. Two result types gain values (listed below); callers that switch over them
+should handle the new values.
+
+### Security
+
+- `@tamga-network/wallet-core` — embedded disclosure policy (ADR-0046 K3): the registration certificate is bound to the
+  request only by the organisation identifier, and registration certificates are public. A restricted policy is now evaluated
+  only when the access certificate that signed the request is anchored: its fingerprint is the one pinned in the verifier's
+  record in the signed list, or its chain verifies up to a CA of the signed list (`root_cas`). Otherwise the result is
+  `not_evaluable` with the new reason `untrusted_access_certificate` — a self-signed certificate that copies a real
+  verifier's organisation identifier is never "authorized". `checkDisclosurePolicy` and `disclosurePolicyContext` take a new
+  optional last argument `registeredFingerprints`; new helper `accessCertAnchored`.
+- `@tamga-network/verifier` — identifier list addresses come from the credential: `PrefetchStatusCache.want` now learns an
+  address only over `https`, only on a host the issuer declares in the signed list (`statusHostsOf`: the `status_list_base`
+  and `issuer_url` hosts) and never on a private, loopback or link-local address (IP literals are refused, host names are
+  resolved before every fetch). The cap is per issuer (`maxPerIssuer`, default 64) instead of global. `StatusCache.want`
+  takes a third argument (`StatusListScope`); step D passes the issuer's record. Local development keeps working through
+  `allowLocalIssuerUrls`. New exports: `statusHostsOf`, `isNonPublicAddress`, `PrefetchStatusCacheOptions`.
+
+### Fixes
+
+- `@tamga-network/wallet-core` — wallet to wallet: the revocation check now has the network verifier's three outcomes. A
+  status list or identifier list signed by a key other than the issuer's registered status key, with a bad signature, a
+  wrong address or an index outside the list is `invalid` (new reason `status_invalid`); a list that cannot be fetched, has
+  expired, cannot be read, or an issuer without a registered status key is `indeterminate` (new reason
+  `status_unavailable`). It was `valid` with `revocation: "unchecked"`. A valid result now carries `revocation: "checked"` or
+  `"not_applicable"` (the credential has no revocation entry).
+- `@tamga-network/mdoc` — `verifyIssuerSigned`: the clock skew tolerance (`clockSkewSec`) applies only to `validFrom`;
+  `validUntil` is no longer extended (same rule as SD-JWT `exp`).
+- `@tamga-network/mdoc` — a `status` entry in the MSO that cannot be read (not a map, no known mechanism, bad `idx` / `uri`
+  / `id`) no longer skips the revocation check silently: the credential is invalid (`status entry malformed`). The verifier
+  reports it at step `D1` (`REJECTED`); the wallet refuses to store such a credential.
+- `@tamga-network/wallet-core` — revocation maintenance period preference: the remaining period is compared with a tolerance
+  (`statusPeriodMet`, `STATUS_PERIOD_TOLERANCE_SEC`: up to 7 days and at most 10 % of the preference). An issuer that asks
+  for the wallet provider's maximum period no longer makes the wallet fetch a new wallet instance attestation on every flow.
 
 ## 0.5.0 — 2026-10-12 (packages, test release)
 

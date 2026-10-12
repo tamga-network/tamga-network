@@ -17,6 +17,7 @@ import { pointOf, verifyMdocFormat, type FormatResult } from "./mdoc-format.js";
 import { verifyIdentifierListToken } from "@tamga-network/mdoc";
 import { b64uToBytes, certFingerprintSha256Hex } from "@tamga-network/core";
 import { verifyMdocZkFormat } from "./mdoc-zk-format.js";
+import { statusHostsOf } from "./status-cache.js";
 import type { IndeterminateReason, Step, VerificationResult, VerifyInput } from "./verify.js";
 
 type ValidateFn = ((data: unknown) => boolean) & { errors?: Array<{ instancePath: string; message?: string }> | null };
@@ -407,7 +408,13 @@ async function stepDIdentifierList(ctx: VerifyCtx, ref: { id: string; uri: strin
   if (!cached) {
     // çapa günlüğünde tanımlayıcı listesi yok: adres (imzası doğrulanmış MSO'dan) ön çekim kümesine eklenir, çekim doğrulamanın
     // dışında yapılır (S12); bu doğrulama DOĞRULANAMADI, sonrakiler önbellekten
-    input.statusCache.want?.(ref.uri, "identifier_list");
+    // yalnız kurumun imzalı listede bildirdiği iptal sunucusundaki adres öğrenilir (SSRF — status-cache.ts)
+    if (ctx.issuerRec)
+      input.statusCache.want?.(ref.uri, "identifier_list", {
+        issuer: ctx.issuerRec.issuer_id,
+        hosts: statusHostsOf(ctx.issuerRec),
+        ...(input.allowLocalIssuerUrls ? { allowLocal: true } : {}),
+      });
     return indet(
       "D2",
       "STATUS_UNREACHABLE",

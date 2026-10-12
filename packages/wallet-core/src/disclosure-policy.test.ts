@@ -79,11 +79,12 @@ const wrprc = (payload: Record<string, unknown>) =>
     .setProtectedHeader({ alg: "ES256", typ: "rc-wrp+jwt", x5c: [registrar.b64], iat: nowSec } as never)
     .sign(registrar.key);
 
-async function request(certs: string[] = []) {
+async function request(certs: string[] = [], signer?: Party) {
+  const by = signer ?? hr;
   const enc = await generateKeyPair("ECDH-ES", { crv: "P-256", extractable: true });
   const jwk = { ...(await exportJWK(enc.publicKey)), use: "enc" } as JWK;
   const jwt = await new SignJWT({
-    client_id: `x509_hash:${createHash("sha256").update(hr.der).digest("base64url")}`,
+    client_id: `x509_hash:${createHash("sha256").update(by.der).digest("base64url")}`,
     response_type: "vp_token",
     response_mode: "direct_post.jwt",
     response_uri: "https://hr.example/vp/response",
@@ -93,8 +94,8 @@ async function request(certs: string[] = []) {
     exp: Math.floor(Date.now() / 1000) + 300,
     ...(certs.length ? { verifier_info: certs.map((data) => ({ format: "registration_cert", data })) } : {}),
   })
-    .setProtectedHeader({ alg: "ES256", typ: "oauth-authz-req+jwt", x5c: [hr.b64] })
-    .sign(hr.key);
+    .setProtectedHeader({ alg: "ES256", typ: "oauth-authz-req+jwt", x5c: [by.b64] })
+    .sign(by.key);
   return verifyRequestObject(jwt);
 }
 
@@ -130,12 +131,15 @@ describe("saklama (K2, EDP_10)", () => {
 });
 
 describe("değerlendirme (K3, EDP_02/03/06)", () => {
+  // varsayılan: doğrulayıcı imzalı listede kayıtlı, kaydındaki erişim sertifikası parmak izi isteği imzalayanınki (checkRp eşleşmesi)
   const check = async (policy: Record<string, unknown> | null, certs: string[]) =>
     checkDisclosurePolicy(
       await request(certs),
       [registrar.fp],
       { queryId: "diploma", credential: cred(policy ? stored(policy) : undefined) },
       NOW,
+      [],
+      [hr.fp],
     );
 
   it("politika yok ya da none: geçer, kısıt yok", async () => {
@@ -265,9 +269,11 @@ describe("güven kökü: imza zinciri doğrulanmış olmalı (EDP_03 atlatma gir
       ).rawData,
     );
   const fp = (der: Uint8Array) => createHash("sha256").update(der).digest("hex");
+  // erişim yaprağı kayıtlı parmak iziyle eşleşir (isteğin kayıt sertifikasına bağı kurulu); güven kökü kararı ayrıca sınanır
   const ctx = (wrprcChain: Uint8Array[], accessChain: Uint8Array[], trustAnchors?: string[]) => ({
     registrationCerts: [{ payload: { sub: "VATTR-1234567890" }, chainDer: wrprcChain }],
     accessCertChain: accessChain,
+    registeredFingerprints: [fp(accessChain[0])],
     ...(trustAnchors ? { trustAnchors } : {}),
   });
 
@@ -367,6 +373,104 @@ describe("güven kökü: imza zinciri doğrulanmış olmalı (EDP_03 atlatma gir
     expect(evaluateDisclosurePolicy(bySubject, ctx([regSigner, root], [hr.der]))).toMatchObject({
       outcome: "failed",
       reason: "not_authorized",
+    });
+  });
+});
+
+describe("erişim sertifikası çapası: kopyalanmış kayıt sertifikası (0.5.1)", () => {
+  const p = ARP({ relying_parties: [{ rp_id: "VATTR-1234567890" }], entitlements: [SP] });
+  const ALL = [
+    p,
+    ARP({ subject_dns: ["C=TR, ORGID=VATTR-1234567890, O=HR Ltd, CN=hr.example"] }),
+    {
+      id: "urn:x:roots",
+      type: "specific_roots_of_trust",
+      roots_of_trust: [{ issuer_dn: "C=TR, CN=Registrar (test)", serial_number: "1001" }],
+    },
+  ];
+  const run = async (
+    policy: Record<string, unknown>,
+    signer: Party,
+    o: { registered?: string[]; anchors?: string[]; chain?: Uint8Array[] } = {},
+  ) => {
+    const req = await request([await wrprc({ sub: "VATTR-1234567890" })], signer);
+    return checkDisclosurePolicy(
+      o.chain ? { ...req, chainDer: o.chain } : req,
+      [registrar.fp],
+      { queryId: "diploma", credential: cred(stored(policy)) },
+      NOW,
+      o.anchors ?? [],
+      o.registered ?? [],
+    );
+  };
+
+  it("gerçek doğrulayıcının herkese açık WRPRC'si + aynı kurum kimliğiyle kendinden imzalı erişim sertifikası: yetkili DEĞİL", async () => {
+    // saldırgan: kurum kimliği (ORGID) ve ad kopyalanmış, kendi anahtarı; kayıt sertifikası gerçek (kayıt kurumu imzalı)
+    const copy = await party("CN=hr.example, O=HR Ltd, 2.5.4.97=VATTR-1234567890, C=TR", "2002", "hr.example");
+    for (const policy of ALL) {
+      // çapa yok, kayıt yok
+      expect(await run(policy, copy)).toMatchObject({
+        outcome: "not_evaluable",
+        reason: "untrusted_access_certificate",
+      });
+      // doğrulayıcının kaydı gerçek sertifikayı sabitliyor: kopya eşleşmez
+      expect(await run(policy, copy, { registered: [hr.fp] })).toMatchObject({
+        outcome: "not_evaluable",
+        reason: "untrusted_access_certificate",
+      });
+      // listedeki CA parmak izi verilse bile kendinden imzalı kopya o CA'ya bağlanmaz
+      expect((await run(policy, copy, { anchors: [hr.fp.replace(/^./, "0")] })).outcome).not.toBe("passed");
+    }
+  });
+
+  it("kayıtlı parmak izi eşleşirse ya da zincir listedeki CA'ya bağlanırsa değerlendirilir", async () => {
+    expect(await run(p, hr, { registered: [hr.fp.toUpperCase()] })).toMatchObject({
+      outcome: "passed",
+      matchedBy: "rp",
+    });
+    // erişim sertifikası listedeki bir CA'dan: yaprak + CA x5c'de, CA parmak izi çapa
+    const caKp = (await crypto.subtle.generateKey(ALG, true, ["sign", "verify"])) as CryptoKeyPair;
+    const leafKp = (await crypto.subtle.generateKey(ALG, true, ["sign", "verify"])) as CryptoKeyPair;
+    const CA = "CN=Access CA, O=Tamga, C=TR";
+    const ca = new Uint8Array(
+      (
+        await X509CertificateGenerator.createSelfSigned({
+          serialNumber: "0a",
+          name: CA,
+          notBefore: new Date(0),
+          notAfter: new Date("2099-01-01"),
+          signingAlgorithm: ALG,
+          keys: caKp,
+        })
+      ).rawData,
+    );
+    const leafCert = await X509CertificateGenerator.create({
+      serialNumber: "0b",
+      subject: "CN=hr.example, O=HR Ltd, 2.5.4.97=VATTR-1234567890, C=TR",
+      issuer: CA,
+      notBefore: new Date(0),
+      notAfter: new Date("2099-01-01"),
+      signingAlgorithm: ALG,
+      publicKey: leafKp.publicKey,
+      signingKey: caKp.privateKey,
+      extensions: [new SubjectAlternativeNameExtension([{ type: "dns", value: "hr.example" }])],
+    });
+    const leafDer = new Uint8Array(leafCert.rawData);
+    const issued: Party = {
+      key: leafKp.privateKey,
+      der: leafDer,
+      b64: Buffer.from(leafDer).toString("base64"),
+      fp: createHash("sha256").update(leafDer).digest("hex"),
+    };
+    const caFp = createHash("sha256").update(ca).digest("hex");
+    expect(await run(p, issued, { anchors: [caFp], chain: [leafDer, ca] })).toMatchObject({
+      outcome: "passed",
+      matchedBy: "rp",
+    });
+    // aynı zincir, çapa yok → değerlendirilemez
+    expect(await run(p, issued, { chain: [leafDer, ca] })).toMatchObject({
+      outcome: "not_evaluable",
+      reason: "untrusted_access_certificate",
     });
   });
 });

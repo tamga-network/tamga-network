@@ -6,6 +6,7 @@ import {
   wiaMeetsPreference,
   wiaStatusRemaining,
   wuaForIssuer,
+  statusPeriodMet,
 } from "./attestation-prefs.js";
 import type { IssuerMetadata } from "./oid4vci.js";
 import type { WuaRecord } from "./wua.js";
@@ -127,6 +128,31 @@ describe("kurumun cüzdan kanıtı tercihleri (WUA_05a, WUA_32; AB TS3 §2.4)", 
     expect(kept).toBe(short);
     const ok = wua(NOW + 120 * DAY);
     expect(await wuaForIssuer({ wua: ok, prefs, now: NOW, renew: async () => wua(NOW) })).toBe(ok);
+  });
+
+  it("0.5.1: kurum sağlayıcının azami süresini (730 gün) isterse yeni WIA her akışta yeniden istenmez (7 gün tolerans)", async () => {
+    const prefs = issuerAttestationPrefs(md({ preferred_client_status_period: 730 * DAY }), VCT);
+    let renewed = 0;
+    const renew = async () => {
+      renewed++;
+      return wua(NOW + 730 * DAY);
+    };
+    // sağlayıcıdan yeni alınmış (azami süre) ve birkaç gün önce alınmış WIA: karşılıyor, yenileme yok
+    for (const remaining of [730 * DAY, 730 * DAY - 60, 724 * DAY, 723 * DAY]) {
+      const w = wua(NOW + remaining);
+      expect(wiaMeetsPreference(w, prefs, NOW), String(remaining)).toBe(true);
+      expect(await wuaForIssuer({ wua: w, prefs, now: NOW, renew })).toBe(w);
+    }
+    expect(renewed).toBe(0);
+    // 7 günden fazla geride: yenilenir
+    expect(wiaMeetsPreference(wua(NOW + 722 * DAY), prefs, NOW)).toBe(false);
+    await wuaForIssuer({ wua: wua(NOW + 722 * DAY), prefs, now: NOW, renew });
+    expect(renewed).toBe(1);
+    // kısa tercihte tolerans tercihin %10'unu aşmaz: 10 günlük tercihte en çok 1 gün
+    const short = issuerAttestationPrefs(md({ preferred_client_status_period: 10 * DAY }), VCT);
+    expect(wiaMeetsPreference(wua(NOW + 9 * DAY), short, NOW)).toBe(true);
+    expect(wiaMeetsPreference(wua(NOW + 9 * DAY - 1), short, NOW)).toBe(false);
+    expect(statusPeriodMet(undefined, DAY)).toBe(false);
   });
 });
 
