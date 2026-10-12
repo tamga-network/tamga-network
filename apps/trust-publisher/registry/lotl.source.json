@@ -100,7 +100,7 @@
   "wallet_providers": [
     {
       "provider_id": "TAMGA-WP-1",
-      "legal_name": "Brosgrup",
+      "legal_name": "BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ",
       "wua_signing_certs": [],
       "lote_supply_point": "https://provider.tamgawallet.com",
       "solutions": [
@@ -113,7 +113,7 @@
         }
       ],
       "status": "RESERVED",
-      "note": "ADR-0042: Tamga Wallet's provider is operated by Brosgrup; reserved until it supplies its own signing certificate."
+      "note": "ADR-0042: Tamga Wallet's provider is operated by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; reserved until it supplies its own signing certificate."
     }
   ],
   "pid_providers": [],
