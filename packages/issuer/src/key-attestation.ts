@@ -43,6 +43,8 @@ export interface KeyAttestationOk {
   keys: JWK[];
   keyStorage: KeyStorage;
   status?: StatusRef;
+  /** AB TS3 §2.4.1: sağlayıcının KA iptal durumunu koruma taahhüdünün sonu (`key_storage_status.exp`, Unix saniye) */
+  statusExp?: number;
   providerFingerprint: string;
 }
 export type KeyAttestationResult = KeyAttestationOk | { ok: false; reason: string; indeterminate?: boolean };
@@ -90,7 +92,15 @@ export async function verifyKeyAttestation(
       if (v === "INVALID") return { ok: false, reason: "key storage revoked (KA status)" };
       if (v === "UNKNOWN") return { ok: false, reason: "KA status unavailable", indeterminate: true };
     }
-    return { ok: true, keys, keyStorage, status, providerFingerprint: fp };
+    const se = (payload.key_storage_status as { exp?: unknown } | undefined)?.exp;
+    return {
+      ok: true,
+      keys,
+      keyStorage,
+      status,
+      ...(typeof se === "number" && Number.isFinite(se) ? { statusExp: se } : {}),
+      providerFingerprint: fp,
+    };
   } catch (e) {
     return { ok: false, reason: `KA: ${(e as Error).message}` };
   }
@@ -240,3 +250,19 @@ export type ProofCheck =
   | { ok: false; reason: string; indeterminate?: boolean; invalidNonce?: boolean };
 /** Anahtar deposu kurum politikasının alt sınırını karşılıyor mu (WL3)? */
 export const meetsKeyStorage = (have: KeyStorage, min: KeyStorage) => KEY_STORAGE_RANK[have] >= KEY_STORAGE_RANK[min];
+
+/**
+ * AB ARF ISSU_12c / ISSU_12d (AB TS3 §2.4.1): zincirleme iptal yapan belge veren (Tamga'da kimlik servisi — ADR-0047 K1) belgenin
+ * bitişini, verirken gördüğü WIA'nın (`client_status.exp`) ve KA'nın (`key_storage_status.exp`) iptal bakım süresinin en erken
+ * sonuyla sınırlar; sağlayıcı o andan sonra birimin iptal durumunu korumayı taahhüt etmez. Bakım süresi bilinmiyorsa (eski WUA)
+ * istenen bitiş değişmez.
+ */
+export function capToRevocationMaintenance(
+  exp: number,
+  maintenance: { wiaStatusExp?: number; kaStatusExp?: number },
+): number {
+  const ends = [maintenance.wiaStatusExp, maintenance.kaStatusExp].filter(
+    (x): x is number => typeof x === "number" && Number.isFinite(x),
+  );
+  return ends.length ? Math.min(exp, ...ends) : exp;
+}

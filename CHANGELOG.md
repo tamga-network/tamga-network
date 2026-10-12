@@ -2,12 +2,67 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The documents (docs, ARF) are 1.0.0 until the public
 announcement; changes before it are folded into this release. The `@tamga-network/*` packages are versioned separately: they
-are published on npm as the `0.4.0` test release (the API may change in test releases); the stable `1.0.0` comes when
+are published on npm as test releases — `0.4.0` published, `0.5.0` prepared (the API may change in test releases); the stable `1.0.0` comes when
 everything is ready.
 
-## Unreleased — 0.5.0
+## 0.5.0 — 2026-10-12 (packages, test release)
 
-Package changes in the source tree, released with the `0.5.0` packages (minor: new fields and functions; nothing removed).
+The nine packages move to `0.5.0` together (`sdk_version` = `@tamga-network/verifier@0.5.0`). Minor: new fields, functions and
+subpath-free modules; nothing removed. One signature widens (the key attestation producer gets an optional second argument), so
+existing callers keep working.
+
+### Issuer preferences for wallet attestations (EU ARF WUA_05a, WUA_32, ISSU_12c; EU TS3 v1.5 §2.4)
+
+- `@tamga-network/wallet-core`: `issuerAttestationPrefs(metadata, configurationId)` reads `key_attestations_required`
+  (`key_storage`, `user_authentication`, `preferred_key_storage_status_period`) and the top-level
+  `preferred_client_status_period`. Issuance passes the requirement to the key attestation producer
+  (`KeyAttestor = (jwks, req?) => Promise<string>`, `req.minStatusPeriod`) and does not send a key attestation whose
+  `key_storage` / `user_authentication` misses the issuer's accepted levels (clear `unsupported` error; generated keys are
+  deleted). `redeem({ renewWua })` and `startAuthorized({ renewWua })` ask the wallet provider for a WIA with a longer
+  revocation maintenance period when the current one is shorter than the issuer's preference; the WIA used at PAR is reused at
+  the token endpoint (`AuthStart.wua`). A preference the provider cannot meet does not block issuance. Helpers:
+  `checkKeyAttestation`, `keyAttestationRequestOf`, `wiaStatusRemaining`, `wiaMeetsPreference`, `wuaForIssuer`.
+- `@tamga-network/issuer`: `issuerMetadata({ preferredClientStatusPeriod, keyAttestationsRequired: {
+  preferred_key_storage_status_period } })`; `verifyKeyAttestation` returns `statusExp`; `capToRevocationMaintenance(exp, {
+  wiaStatusExp, kaStatusExp })` for issuers that revoke in a chain (ISSU_12c; ADR-0047 K1).
+
+### EU trusted lists in the older XML format (ETSI TS 119 612; ARF OIA_15b, ISSU_10b, ISSU_28a; ADR-0036)
+
+- `@tamga-network/trust` (`/core` too): `readTrustedListXml(xml, pinnedFingerprints)` verifies the enveloped XML signature and
+  maps the list into the same model as the LoTE reader, so the federation rules apply unchanged (scope FD2, pinned signer FD1,
+  freshness, rollback). Service types `…/Svctype/EAA/Q`, `…/Svctype/EAA`, `…/Svctype/EAA/Pub-EAA` become `eaa_provider`; other
+  types are ignored; only `granted` / `recognisedatnationallevel` services are taken. `TSLVersionIdentifier` 5 or 6.
+- `verifyEnvelopedXmlSignature`: platform-independent XMLDSig (works in the wallet). One `ds:Signature` under the root, a
+  whole-document reference with the enveloped-signature transform (required), optional XAdES `SignedProperties` reference;
+  C14N 1.0 and Exclusive C14N 1.0; rsa-sha256/384/512 and ecdsa-sha256/384/512 (P-256/384/521); DTDs, SHA-1 and XPath
+  transforms are refused. New dependency: `@xmldom/xmldom` (DOM parser, no dependencies); canonicalisation and signature
+  checks are in the package (`@noble/curves`, `@noble/hashes`). Checked against the EU list of lists and eight published
+  national trusted lists (RSA and ECDSA); tests sign with an independent implementation (`xml-crypto`, dev only).
+- External list pointers with `format: "etsi-tl-xml"` are now loaded (`applyExternalListsWith`, `fetchListTrustSource({
+  externalLists })`; the publisher's copy is `external/<list_id>.xml`). The list publisher's `external-fetch` copies TL XML
+  lists too.
+- `@tamga-network/wallet-core`: `fetchTrustSource({ externalLists })` loads the external lists in the wallet.
+
+### Attestation Revocation List (CIR 2024/2979 Annex II as amended; ARF VCR_10, VCR_12)
+
+- `@tamga-network/mdoc`: `signIdentifierListToken`, `verifyIdentifierListToken`, `identifierRevoked` —
+  `application/identifierlist+cwt` (COSE_Sign1 ES256, `typ` and `x5chain` in the protected header, `IdentifierList` at claim
+  65530, `exp` required). `issueMdoc({ identifierList })` writes `status.identifier_list`; `verifyIssuerSigned` returns
+  `identifierList`.
+- `@tamga-network/verifier`: an mdoc that carries `identifier_list` (and no `status_list`) is checked in step D with the same
+  rules as the status list (prefetch cache, the issuer's registered status key S11, freshness; revoked → `REJECTED` at D6;
+  missing or stale → `INDETERMINATE`). The prefetch cache stores CWT bodies as base64url.
+- Tamga issuers keep using the status list (VCR_11 allows either); the identifier list is supported for verification so
+  that relying parties and wallets accept both mechanisms.
+
+### Wallet-to-wallet protocol in `wallet-core` (ARF Topic 30)
+
+- `@tamga-network/wallet-core`: `runW2wVerifier`, `verifyW2wResponse` (status list and identifier list), `presentToPerson`,
+  `mergeHolderResult`, `buildW2wRequest`, `isEngagementQr`, `fakeBleLink`, `CentralTransport`, with a wallet-chosen
+  `W2wProfile` (type, namespace, allowed fields). A credential whose issuer restricts disclosure (ADR-0046) is never shown
+  wallet to wallet (`reason: "restricted"`).
+- `presentProximity`: the request view carries `disclosurePolicy` (offline evaluation; a restricted credential is
+  `not_evaluable`), so the consent screen can warn in proximity presentation.
 
 ### Embedded disclosure policy (ADR-0046, EU ARF Topic 43)
 

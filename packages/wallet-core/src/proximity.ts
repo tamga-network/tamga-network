@@ -20,6 +20,7 @@ import {
 import { b64uDecode } from "./b64.js";
 import type { KeyProvider } from "./keys.js";
 import { markCopyUsed, selectCopy, type StoredCredential, type WalletState } from "./store.js";
+import { offlineDisclosurePolicy, type DisclosurePolicyResult } from "./disclosure-policy.js";
 
 export interface ProximityTransport {
   start(serviceUuid: string): Promise<void>;
@@ -41,6 +42,11 @@ export interface ProximityRequestView {
   /** belgede olmayan istenen öğeler */
   missing: string[];
   credential: StoredCredential | null;
+  /**
+   * Ağın ADR-0046'sı: yakın mesafede kayıt sertifikası yoktur, kısıtlı belgenin paylaşım kuralı değerlendirilemez. `restricted`
+   * ise onay ekranı uyarır (varsayılan "Paylaşma", son karar kişinin); belge yoksa alan yok.
+   */
+  disclosurePolicy?: DisclosurePolicyResult;
 }
 
 export interface ProximityResult {
@@ -122,6 +128,7 @@ export async function presentProximity(p: {
       requested,
       missing: cred ? requested.filter((r) => !has(r)) : requested,
       credential: cred,
+      ...(cred ? { disclosurePolicy: offlineDisclosurePolicy(cred) } : {}),
     };
     const chosen = cred ? await p.approve(view) : null;
     const rpKey = `proximity:${eng.bleServiceUuid}`;

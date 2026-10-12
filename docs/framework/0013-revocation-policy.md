@@ -112,7 +112,7 @@ askıdaysa kimlik servisi yeni ZK kopyası vermez (RB-AP-ID-11).
 
 | Konu | Kural | Kaynak |
 |---|---|---|
-| Mekanizma | IETF Token Status List (AB'nin Attestation Status List mekanizması; AB'nin sabitlediği taslak sürüm). mdoc ve SD-JWT VC kopyaları aynı biti taşır | [[SPEC-CRED-0003]] |
+| Mekanizma | IETF Token Status List (AB'nin Attestation Status List mekanizması; AB'nin sabitlediği taslak sürüm). mdoc ve SD-JWT VC kopyaları aynı biti taşır. Ağdaki doğrulayıcı ve cüzdan çekirdeği AB'nin ikinci mekanizmasını, Attestation Revocation List'i (tanımlayıcı listesi, `application/identifierlist+cwt`) de doğrular (AB VCR_10, VCR_12) | [[SPEC-CRED-0003]] |
 | Liste adresi | Belgede `status.status_list.uri`; ağın işlettiği servislerde `https://status.tamga.network/` altında, kendi servisini işleten kurumda kurumun durum sunucusunda | [[SPEC-CRED-0003]] §2 |
 | Anahtar | İptal listesi imza anahtarı belge imza anahtarından ayrıdır | RB-AP-03 |
 | Mahremiyet | Konum (`idx`) rastgeledir; adres opaktır (kurum, yıl, grup kodlamaz); kapasite en az 100.000, doluluk en çok %80; listeler tür dışında bir ölçüte göre bölünmez | RB-AP-18 |
@@ -135,7 +135,7 @@ askıdaysa kimlik servisi yeni ZK kopyası vermez (RB-AP-ID-11).
 |---|---|
 | Kurum belgelerinin cüzdan birimi iptalinde zincirleme iptali | **Karar (2026-10-12, [[ADR-0047]] K1):** yapılmaz; belgeler cihaz anahtarına bağlıdır ve birim iptal edilince kullanılamaz (§3.3). Kimlik servisi kendi belgelerini iptal eder (RB-AP-ID-12) |
 | Belge verenin kendi ek iptal politikası | **Karar (2026-10-12, [[ADR-0047]] K2):** kurum isterse ek koşullarını `revocation_policy_uri` ile yayımlar; ortak koşulları daraltamaz (§3.4, RB-AP-27) |
-| Attestation Revocation List | AB iki mekanizmayı ister (VCR_10, VCR_12); bugün yalnız Status List yayımlanır. Revocation List desteği güven listesi biçimleri işiyle planlıdır |
+| Attestation Revocation List | AB, doğrulayıcının ve cüzdanın iki mekanizmayı da desteklemesini ister (VCR_10, VCR_12); belge verene biri yeter (VCR_11). **Paketler 0.5.0:** doğrulayıcı ve cüzdan çekirdeği tanımlayıcı listesini doğrular; Tamga belge verenleri Status List yayımlamayı sürdürür (bit tabanlı liste konum bilgisini daha iyi gizler; tanımlayıcı listesi iptal edilen belge sayısını gösterir). mdoc için listenin CWT biçimi (CIR 2024/2979 Ek II EAA-6.2.10.1-07) açık konudur |
 
 # Durum
 

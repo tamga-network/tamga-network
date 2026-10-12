@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -655,6 +655,13 @@ KA'daki seviyeye göre uygular.
 
 Metadata `proof_types_supported.jwt.key_attestations_required` kabul edilen seviyeleri ilan eder (ARF ISSU_27d). Eski WUA ve anahtar
 başına proof biçimi pilot öncesine kadar kabul edilir.
+
+**İptal bakım süresi tercihi (AB TS3 §2.4; ARF WUA_32, ISSU_12c; kod 0.5.0).** Kurum, alacağı KA'nın kalan iptal bakım süresi
+için `key_attestations_required.preferred_key_storage_status_period`, WIA'nınki için metadata'nın üstünde
+`preferred_client_status_period` (saniye) ilan edebilir. Cüzdan metadata'yı belge isterken okur; kurumun seviye şartını
+karşılamayan KA'yı göndermez (WUA_05a), bakım süresi (`*.exp − şimdi`) tercihten kısa kalan WIA ve KA yerine sağlayıcıdan
+uzununu ister. Tercih bir zorunluluk değildir: sağlayıcı veremezse belge yine istenir; zincirleme iptal yapan belge veren
+belgenin süresini verirken gördüğü WIA ve KA bakım süresinin en erken sonuyla sınırlar ([[ADR-0047]] K1).
 
 **Değişmez PR7:** İhraç edilen belgenin hangi bağlama yöntemiyle
 verildiği belge veren denetim kaydına yazılır. Belgenin **içine yazılmaz** —

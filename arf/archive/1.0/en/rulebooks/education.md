@@ -360,7 +360,7 @@ At issuance the wallet checks against the same entry that the institution is aut
 | Trust anchor location in the credential (ARB_21) | **Decision (2026-10-12, [[ADR-0047]] K7):** no field is added; a location in the credential would be the issuer's own claim, and a verifier takes the anchor only from a list it chose itself |
 | Indication of a non-qualified EAA (ARB_12) | **Decision (2026-10-12, [[ADR-0047]] K6):** not written; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires that a non-qualified EAA has no `category` |
 | `nbf` and `exp` in the diploma | ETSI TS 119 472-1 requires both; Tamga does not write `nbf` today and the diploma has no expiry |
-| Attestation Revocation List | Only the Status List is published today |
+| Attestation Revocation List | Tamga issuers publish the Status List (one is enough under EU VCR_11); the verifier and the wallet core also verify the identifier list (packages 0.5.0; [[FW-POL-0001]] §8) |
 
 ## 8. Semantic basis and versioning
 

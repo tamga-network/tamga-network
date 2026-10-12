@@ -1,0 +1,518 @@
+/**
+ * Cüzdandan cüzdana gösterme ve doğrulama — protokol çekirdeği (AB ARF Konu 30; Tamga Wallet WA-ADR-0007'nin "kodun yeri"
+ * kararı: protokol ağın paketinde, kipler, sınırlar ve ekranlar cüzdanda). ISO/IEC 18013-5: QR tanışma + BLE; gösteren telefon
+ * mdoc peripheral server (`ProximityTransport`), doğrulayan telefon mdoc reader / central client (`CentralTransport`).
+ *
+ * Hangi türün ve alanların gösterilebileceği CÜZDANIN kararıdır (`W2wProfile`): çekirdek yalnız profilin izin listesindeki
+ * alanları ister, kabul eder ve gösterir (savunma derinliği). Doğrulayan taraf gelen belgeyi bir doğrulayıcı gibi denetler: belge
+ * verenin imzası, MSO bütünlüğü ve süresi, oturuma bağlı cihaz imzası, imzalı güven listesinde o tarihte etkinlik ve tür yetkisi,
+ * iptal durumu — Attestation Status List ya da Attestation Revocation List (AB ARF VCR_10: cüzdan iki mekanizmayı da destekler;
+ * liste bütün olarak indirilir, hangi girişe bakıldığı görünmez; imzacı kurumun kayıtlı iptal anahtarı olmalı — S11). Dönüş
+ * yalnız alan değerleri, belge verenin adı ve sonuçtur; girdi baytları iş bitince sıfırlanır (W2W_21, OIA_16).
+ *
+ * Gösteren tarafında gömülü açıklama politikası kısıtlı belge (ağın ADR-0046'sı) cüzdandan cüzdana gösterilmez: kayıt
+ * sertifikası olmadığı için kural değerlendirilemez ve karşı taraf bir doğrulayıcı değil, bir kişidir.
+ */
+import {
+  BleReassembler,
+  bleChunks,
+  parseDeviceResponse,
+  readerReceive,
+  readerStart,
+  verifyDeviceAuth,
+  verifyIdentifierListToken,
+  verifyIssuerSigned,
+} from "@tamga-network/mdoc";
+import { b64u } from "./b64.js";
+import { mdocElementValues, mdocIssuerKeys } from "./mdoc.js";
+import { certFingerprintHex, computeIssuerId, computeSchemaId, p256PointFromCertDer } from "./sdjwt.js";
+import { parseStatusToken, statusBitAt } from "./status.js";
+import { presentProximity, type ProximityTransport } from "./proximity.js";
+import { offlineDisclosurePolicy } from "./disclosure-policy.js";
+import type { KeyProvider } from "./keys.js";
+import type { WalletState } from "./store.js";
+
+/** Cüzdanın cüzdandan cüzdana kararı: tek mdoc türü, ad alanı ve gösterilebilecek alanlar (sıra = ekrandaki sıra). */
+export interface W2wProfile {
+  docType: string;
+  namespace: string;
+  allowed: readonly string[];
+  /** mdoc öğe adı → belgedeki (SD-JWT) claim adı; yoksa aynı ad */
+  claimNameOf?: (element: string) => string;
+}
+
+/** Doğrulayan (okuyucu) tarafı: gösterenin hizmet UUID'sini tarar, bağlanır, Client2Server'a yazar, Server2Client'ı dinler. */
+export interface CentralTransport {
+  /** Tarar ve bağlanır; bildirimler açılıp State karakteristiğine 0x01 (başla) yazılınca çözülür. */
+  connect(serviceUuid: string): Promise<void>;
+  /** Tek GATT parçası (başlık baytı dahil) → Client2Server. */
+  send(chunk: Uint8Array): Promise<void>;
+  /** State'e 0x02 (bitir) yazar ve bağlantıyı kapatır; taramayı durdurur. */
+  stop(): Promise<void>;
+  onChunk(cb: (chunk: Uint8Array) => void): () => void;
+  onMtu?(cb: (mtu: number) => void): () => void;
+  onClose?(cb: (reason: string) => void): () => void;
+}
+
+/** Güven kaynağından gereken sorgular (`ListTrustSource` bunları sağlar). */
+export interface W2wTrust {
+  isCredentialAcceptable(issuerId: string, iat: number): "YES" | "NO" | "UNKNOWN";
+  isCredentialSchemaAcceptable(issuerId: string, schemaId: string, iat: number): "YES" | "NO" | "UNKNOWN";
+  issuer(issuerId: string): {
+    legal_name: string;
+    delegate_keys?: Array<{ purpose: string; fingerprint_sha256: string; status?: string }>;
+  } | null;
+}
+
+export type W2wFieldValue = string | boolean | string[];
+export interface W2wField {
+  name: string;
+  value: W2wFieldValue;
+}
+
+export type W2wInvalidReason =
+  | "malformed"
+  | "doc_type"
+  | "issuer_signature"
+  | "expired"
+  | "device_signature"
+  | "untrusted_issuer"
+  | "not_authorized"
+  | "revoked"
+  | "suspended"
+  | "nothing_disclosed";
+
+export type W2wVerdict =
+  | { kind: "valid"; issuerName: string; fields: W2wField[]; revocation: "checked" | "unchecked" }
+  | { kind: "invalid"; reason: W2wInvalidReason }
+  | { kind: "indeterminate"; reason: "trust_unavailable" | "trust_unknown" };
+
+export type W2wVerifierOutcome =
+  | { outcome: "response"; deviceResponse: Uint8Array; transcript: Uint8Array }
+  | { outcome: "declined" }
+  | { outcome: "error"; reason: string };
+
+const allowedSet = (p: W2wProfile) => new Set<string>(p.allowed);
+/** Doğrulayanın seçimi izin listesinin dışına çıkamaz; boş seçim istek değildir; tekrar yok. */
+export const w2wValidSelection = (p: W2wProfile, elements: readonly string[]): boolean =>
+  elements.length > 0 && elements.every((e) => allowedSet(p).has(e)) && new Set(elements).size === elements.length;
+
+/** İstek → izinli / gönderilemez ayrımı (sıra korunur, tekrar atılır). */
+export function w2wSplitRequested(
+  p: W2wProfile,
+  requested: readonly string[],
+): { allowed: string[]; blocked: string[] } {
+  const ok = allowedSet(p);
+  const allowed: string[] = [];
+  const blocked: string[] = [];
+  for (const e of requested) {
+    if (ok.has(e)) {
+      if (!allowed.includes(e)) allowed.push(e);
+    } else if (!blocked.includes(e)) blocked.push(e);
+  }
+  return { allowed, blocked };
+}
+
+/** ISO 18013-5 istek öğesi: yalnız izinli alanlar, saklama niyeti hep `false` (W2W_21). */
+export function buildW2wRequest(p: W2wProfile, elements: readonly string[]) {
+  if (!w2wValidSelection(p, elements)) throw new Error("selection outside the allow-list");
+  return [{ docType: p.docType, nameSpaces: { [p.namespace]: Object.fromEntries(elements.map((e) => [e, false])) } }];
+}
+
+/** QR'ın bir ISO 18013-5 cihaz tanıtımı olup olmadığı (kamera ekranı yalnız bunları kabul eder). */
+export const isEngagementQr = (s: string) => /^mdoc:[A-Za-z0-9_-]+$/.test(s.trim());
+
+/** Doğrulayan cüzdan: QR → oturum (ECDH, oturum dökümü, AES-GCM) → istek → BLE parçaları → şifreli yanıt. */
+export async function runW2wVerifier(p: {
+  profile: W2wProfile;
+  transport: CentralTransport;
+  qr: string;
+  elements: readonly string[];
+  randomBytes?: (n: number) => Uint8Array;
+  /** bağlanma + yanıt için toplam süre (varsayılan 2 dk; kişi onay veriyor) */
+  timeoutMs?: number;
+  onConnected?: () => void;
+}): Promise<W2wVerifierOutcome> {
+  let started: ReturnType<typeof readerStart>;
+  try {
+    started = readerStart(p.qr.trim(), buildW2wRequest(p.profile, p.elements), { randomBytes: p.randomBytes });
+  } catch (e) {
+    return { outcome: "error", reason: `engagement: ${(e as Error).message}` };
+  }
+  const { session, establishment } = started;
+  if (!session.bleServiceUuid) return { outcome: "error", reason: "engagement has no BLE option" };
+  let mtu = 23;
+  const reasm = new BleReassembler();
+  let resolveMsg: (m: Uint8Array) => void = () => {};
+  let rejectMsg: (e: Error) => void = () => {};
+  const message = new Promise<Uint8Array>((res, rej) => {
+    resolveMsg = res;
+    rejectMsg = rej;
+  });
+  const offMtu = p.transport.onMtu?.((m) => (mtu = m));
+  const offChunk = p.transport.onChunk((c) => {
+    try {
+      const m = reasm.push(c);
+      if (m) resolveMsg(m);
+    } catch (e) {
+      rejectMsg(e as Error);
+    }
+  });
+  const offClose = p.transport.onClose?.((reason) => rejectMsg(new Error(reason)));
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>(
+    (_, rej) => (timer = setTimeout(() => rej(new Error("timeout")), p.timeoutMs ?? 120_000)),
+  );
+  try {
+    await Promise.race([p.transport.connect(session.bleServiceUuid), timeout]);
+    p.onConnected?.();
+    for (const c of bleChunks(establishment, Math.max(20, mtu - 3))) await p.transport.send(c);
+    const msg = await Promise.race([message, timeout]);
+    const r = readerReceive(session, msg);
+    msg.fill(0);
+    if (!r.deviceResponse) return { outcome: "declined" };
+    return { outcome: "response", deviceResponse: r.deviceResponse, transcript: session.transcript };
+  } catch (e) {
+    return { outcome: "error", reason: (e as Error).message };
+  } finally {
+    clearTimeout(timer);
+    offChunk();
+    offMtu?.();
+    offClose?.();
+    session.keys.skReader.fill(0);
+    session.keys.skDevice.fill(0);
+    await p.transport.stop().catch(() => undefined);
+  }
+}
+
+const display = (v: unknown): W2wFieldValue =>
+  typeof v === "boolean" ? v : Array.isArray(v) ? v.map((x) => String(x)) : String(v ?? "");
+const statusKeysOf = (issuer: ReturnType<W2wTrust["issuer"]>) =>
+  (issuer?.delegate_keys ?? [])
+    .filter((k) => k.purpose === "status_list" && (k.status ?? "ACTIVE") === "ACTIVE")
+    .map((k) => k.fingerprint_sha256);
+const hex = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+
+/**
+ * Gelen DeviceResponse'u doğrular. `requested`: doğrulayanın istediği alanlar — yanıtta fazlası olsa da yalnız istenen ve
+ * izinli alanlar gösterilir. `now` saniye. İptal: belge Status List taşıyorsa `fetchStatus` (application/statuslist+jwt),
+ * Revocation List taşıyorsa `fetchIdentifierList` (application/identifierlist+cwt baytları); ağ yoksa "denetlenemedi". Girdi
+ * baytları dönüşte sıfırlanır.
+ */
+export async function verifyW2wResponse(
+  deviceResponse: Uint8Array,
+  transcript: Uint8Array,
+  ctx: {
+    profile: W2wProfile;
+    trust: W2wTrust | null;
+    requested: readonly string[];
+    now?: number;
+    fetchStatus?: (uri: string) => Promise<string | null>;
+    fetchIdentifierList?: (uri: string) => Promise<Uint8Array | null>;
+    stateCode?: string;
+  },
+): Promise<W2wVerdict> {
+  const now = ctx.now ?? Math.floor(Date.now() / 1000);
+  const { docType, namespace } = ctx.profile;
+  try {
+    let parsed: ReturnType<typeof parseDeviceResponse>;
+    try {
+      parsed = parseDeviceResponse(deviceResponse);
+    } catch {
+      return { kind: "invalid", reason: "malformed" };
+    }
+    if (parsed.docType !== docType) return { kind: "invalid", reason: "doc_type" };
+    const issuerSignedB64 = b64u(parsed.issuerSigned);
+    let leaf: Uint8Array;
+    let issuerKey: Uint8Array;
+    try {
+      const k = mdocIssuerKeys(issuerSignedB64);
+      leaf = k.x5chain[0];
+      issuerKey = k.key;
+    } catch {
+      return { kind: "invalid", reason: "issuer_signature" };
+    }
+    const v = verifyIssuerSigned(parsed.issuerSigned, {
+      issuerPubRaw: issuerKey,
+      now,
+      expectedDocType: docType,
+      clockSkewSec: 120,
+    });
+    if (!v.valid || !v.deviceKeyRaw)
+      return { kind: "invalid", reason: /expired|not yet valid/.test(v.reason ?? "") ? "expired" : "issuer_signature" };
+    if (!verifyDeviceAuth(parsed.deviceSignature, transcript, docType, v.deviceKeyRaw))
+      return { kind: "invalid", reason: "device_signature" };
+
+    // belge veren: imzalı güven listesinde, belgenin verildiği anda (C1) ve bu tür için (C2)
+    if (!ctx.trust) return { kind: "indeterminate", reason: "trust_unavailable" };
+    const issuerId = computeIssuerId(ctx.stateCode ?? "TR", leaf);
+    const iat = v.signedEpoch ?? now;
+    const c1 = ctx.trust.isCredentialAcceptable(issuerId, iat);
+    const c2 = c1 === "YES" ? ctx.trust.isCredentialSchemaAcceptable(issuerId, computeSchemaId(docType), iat) : c1;
+    if (c1 === "NO") return { kind: "invalid", reason: "untrusted_issuer" };
+    if (c2 === "NO") return { kind: "invalid", reason: "not_authorized" };
+    if (c1 === "UNKNOWN" || c2 === "UNKNOWN") return { kind: "indeterminate", reason: "trust_unknown" };
+    const issuer = ctx.trust.issuer(issuerId);
+    const keys = statusKeysOf(issuer);
+
+    let revocation: "checked" | "unchecked" = "unchecked";
+    if (v.status && ctx.fetchStatus) {
+      try {
+        const token = await ctx.fetchStatus(v.status.uri);
+        if (token) {
+          const list = parseStatusToken(token.trim(), v.status.uri, now);
+          if (keys.includes(list.signerFingerprint)) {
+            const bit = statusBitAt(list, v.status.idx);
+            if (bit === 1 || bit === 3) return { kind: "invalid", reason: "revoked" };
+            if (bit === 2) return { kind: "invalid", reason: "suspended" };
+            revocation = "checked";
+          }
+        }
+      } catch {
+        revocation = "unchecked";
+      }
+    } else if (!v.status && v.identifierList && ctx.fetchIdentifierList) {
+      try {
+        const bytes = await ctx.fetchIdentifierList(v.identifierList.uri);
+        if (bytes) {
+          const list = verifyIdentifierListToken(bytes, {
+            uri: v.identifierList.uri,
+            now,
+            publicKeyOf: p256PointFromCertDer,
+          });
+          if (keys.includes(certFingerprintHex(list.leafDer))) {
+            if (list.identifiers.has(hex(v.identifierList.id))) return { kind: "invalid", reason: "revoked" };
+            revocation = "checked";
+          }
+        }
+      } catch {
+        revocation = "unchecked";
+      }
+    }
+
+    // yalnız doğrulanmış, istenen ve izinli alanlar; sıra izin listesinin sırası (W2W_20)
+    const verified = v.claims?.[namespace] ?? {};
+    const values = mdocElementValues(issuerSignedB64)[namespace] ?? {};
+    const fields: W2wField[] = ctx.profile.allowed
+      .filter((e) => ctx.requested.includes(e) && e in verified)
+      .map((name) => ({ name, value: display(values[name]) }));
+    if (!fields.length) return { kind: "invalid", reason: "nothing_disclosed" };
+    return { kind: "valid", issuerName: issuer?.legal_name ?? "", fields, revocation };
+  } finally {
+    deviceResponse.fill(0);
+    transcript.fill(0);
+  }
+}
+
+// --- Gösteren ------------------------------------------------------------------------------------------------------------
+
+export interface W2wHolderView {
+  docType: string;
+  supported: boolean;
+  /** gönderilebilecek, belgede bulunan alanlar */
+  allowed: string[];
+  /** istenen ama hiçbir zaman gönderilmeyen alanlar */
+  blocked: string[];
+  /** izinli ama belgede olmayan alanlar */
+  missing: string[];
+  /** doğrulayan cüzdanın gerçek bir cüzdan olduğunun kanıtı — bugün hep "none" (AB ortak yöntemi yok, W2W_23) */
+  verifierProof: "none";
+}
+
+export interface W2wHolderResult {
+  state: WalletState;
+  outcome: "sent" | "declined" | "error";
+  /** gönderilen alan adları (değerler yok) */
+  disclosed: string[];
+  /** `unsupported` (tür izinli değil) · `restricted` (belge verenin paylaşım kuralı — ADR-0046) · taşıyıcı nedeni */
+  reason?: string;
+}
+
+/** Gösterenin günlüğündeki karşı taraf anahtarı varsayılanı ("bir kişi"; doğrulanmış ad yok). */
+export const W2W_PERSON_KEY = "w2w:person";
+
+function relabel(before: WalletState, after: WalletState, key: string): WalletState {
+  if (after.presentationLog.length !== before.presentationLog.length + 1) return after;
+  const log = after.presentationLog.slice();
+  log[log.length - 1] = { ...log[log.length - 1], clientId: key };
+  return { ...after, presentationLog: log };
+}
+
+/**
+ * Gösteren cüzdan: ağın `presentProximity`'sini cüzdandan cüzdana kurallarıyla sarar — yalnız profildeki tür; başka tür ya da
+ * paylaşım kuralı kısıtlı belge istenirse kişiye sorulmadan ret; istenenler "gönderilebilir" / "gönderilemez" ayrılır ve kişinin
+ * seçimi ne olursa olsun yalnız izinli alanlar gider; günlük girişi "bir kişi" (`personKey`).
+ */
+export async function presentToPerson(p: {
+  profile: W2wProfile;
+  transport: ProximityTransport;
+  state: WalletState;
+  keys: KeyProvider;
+  onQr: (qr: string) => void;
+  /** kişiye sor: gönderilecek alanlar ya da ret için null */
+  approve: (view: W2wHolderView) => Promise<string[] | null>;
+  randomBytes?: (n: number) => Uint8Array;
+  timeoutMs?: number;
+  now?: number;
+  personKey?: string;
+}): Promise<W2wHolderResult> {
+  let refused: "unsupported" | "restricted" | undefined;
+  const nameOf = p.profile.claimNameOf ?? ((e: string) => e);
+  const r = await presentProximity({
+    transport: p.transport,
+    state: p.state,
+    keys: p.keys,
+    onQr: p.onQr,
+    randomBytes: p.randomBytes,
+    timeoutMs: p.timeoutMs,
+    now: p.now,
+    approve: async (pv) => {
+      const { allowed, blocked } = w2wSplitRequested(p.profile, pv.requested);
+      const supported = pv.docType === p.profile.docType && !!pv.credential;
+      if (!supported) {
+        refused = "unsupported";
+        return null;
+      }
+      // ADR-0046 Sonuçlar: kısıtlı belge cüzdandan cüzdana gösterilmez (kural değerlendirilemez, karşı taraf bir kişi)
+      if (pv.credential && offlineDisclosurePolicy(pv.credential).restricted) {
+        refused = "restricted";
+        return null;
+      }
+      const has = (e: string) => !!pv.credential && nameOf(e) in pv.credential.claims;
+      const view: W2wHolderView = {
+        docType: pv.docType,
+        supported,
+        allowed: allowed.filter(has),
+        blocked,
+        missing: allowed.filter((e) => !has(e)),
+        verifierProof: "none",
+      };
+      if (!view.allowed.length) {
+        await p.approve(view); // gönderilebilecek alan yok: ekran yalnız reddi sunar
+        return null;
+      }
+      const chosen = await p.approve(view);
+      return chosen ? chosen.filter((e) => allowedSet(p.profile).has(e) && view.allowed.includes(e)) : null;
+    },
+  });
+  const state = r.outcome === "error" ? r.state : relabel(p.state, r.state, p.personKey ?? W2W_PERSON_KEY);
+  const disclosed = r.outcome === "sent" ? (state.presentationLog.at(-1)?.disclosed ?? []) : [];
+  return { state, outcome: r.outcome, disclosed, reason: refused ?? r.reason };
+}
+
+/**
+ * Gösterim sonucunu EN GÜNCEL duruma işler: yalnız bu oturumun günlük girişleri eklenir ve kullanılan kopyanın belgesi değişir
+ * (oturum sürerken arka planda yazılan iptal durumu gibi değişiklikler ezilmez).
+ */
+export function mergeHolderResult(latest: WalletState, before: WalletState, after: WalletState): WalletState {
+  const added = after.presentationLog.slice(before.presentationLog.length);
+  const changed = new Map(
+    after.credentials.filter((c) => !before.credentials.includes(c)).map((c) => [c.id, c] as const),
+  );
+  return {
+    ...latest,
+    presentationLog: [...latest.presentationLog, ...added],
+    credentials: latest.credentials.map((c) => changed.get(c.id) ?? c),
+  };
+}
+
+// --- Sahte taşıyıcı (cihazsız testler ve geliştirme denemesi) ------------------------------------------------------------
+
+type Dir = "toReader" | "toHolder";
+export interface FakeBleLinkOptions {
+  /** ATT MTU (varsayılan 185); parçalama bunun − 3'üyle yapılır. */
+  mtu?: number;
+  /** Parçayı değiştir (null = düşür) — bozuk / sahte veri testleri. */
+  tamper?: (dir: Dir, chunk: Uint8Array) => Uint8Array | null;
+  /** Gösterenden okuyucuya giden n'inci parçadan sonra bağlantıyı kopar (kopma testi). */
+  dropAfterToReader?: number;
+}
+
+/**
+ * İki ucu bellekte birbirine bağlı sahte BLE taşıyıcı çifti. Gerçek BLE gibi: okuyucu yalnız yayın yapan hizmet UUID'sine bağlanır,
+ * bağlanınca iki uca ATT MTU bildirilir, bir uç durunca öbür uca "bağlantı koptu" gider.
+ */
+export function fakeBleLink(opts: FakeBleLinkOptions = {}): { holder: ProximityTransport; reader: CentralTransport } {
+  const mtu = opts.mtu ?? 185;
+  const L = {
+    holderChunk: new Set<(c: Uint8Array) => void>(),
+    holderMtu: new Set<(m: number) => void>(),
+    holderClose: new Set<(r: string) => void>(),
+    readerChunk: new Set<(c: Uint8Array) => void>(),
+    readerMtu: new Set<(m: number) => void>(),
+    readerClose: new Set<(r: string) => void>(),
+  };
+  let advertising: string | null = null;
+  let connected = false;
+  let toReaderCount = 0;
+  let waiting: { uuid: string; resolve: () => void } | null = null;
+  const sub = <T>(set: Set<T>, cb: T) => {
+    set.add(cb);
+    return () => void set.delete(cb);
+  };
+  const establish = () => {
+    connected = true;
+    L.holderMtu.forEach((f) => f(mtu));
+    L.readerMtu.forEach((f) => f(mtu));
+  };
+  const deliver = (dir: Dir, chunk: Uint8Array) => {
+    if (!connected) throw new Error("disconnected");
+    const c = opts.tamper ? opts.tamper(dir, chunk.slice()) : chunk.slice();
+    if (!c) return;
+    (dir === "toReader" ? L.readerChunk : L.holderChunk).forEach((f) => f(c));
+  };
+  const drop = (side: "holder" | "reader", reason: string) => {
+    if (!connected) return;
+    connected = false;
+    (side === "holder" ? L.holderClose : L.readerClose).forEach((f) => f(reason));
+  };
+  const holder: ProximityTransport = {
+    start: async (uuid) => {
+      advertising = uuid.toLowerCase();
+      if (waiting && waiting.uuid === advertising) {
+        const w = waiting;
+        waiting = null;
+        establish();
+        w.resolve();
+      }
+    },
+    send: async (chunk) => {
+      await Promise.resolve();
+      deliver("toReader", chunk);
+      toReaderCount++;
+      if (opts.dropAfterToReader !== undefined && toReaderCount >= opts.dropAfterToReader) {
+        drop("reader", "disconnected");
+        drop("holder", "disconnected");
+      }
+    },
+    stop: async () => {
+      advertising = null;
+      drop("reader", "disconnected");
+    },
+    onChunk: (cb) => sub(L.holderChunk, cb),
+    onMtu: (cb) => sub(L.holderMtu, cb),
+    onClose: (cb) => sub(L.holderClose, cb),
+  };
+  const reader: CentralTransport = {
+    connect: (uuid) =>
+      new Promise<void>((resolve) => {
+        const u = uuid.toLowerCase();
+        if (advertising === u) {
+          establish();
+          resolve();
+        } else waiting = { uuid: u, resolve };
+      }),
+    send: async (chunk) => {
+      await Promise.resolve();
+      deliver("toHolder", chunk);
+    },
+    stop: async () => {
+      waiting = null;
+      drop("holder", "reader ended");
+    },
+    onChunk: (cb) => sub(L.readerChunk, cb),
+    onMtu: (cb) => sub(L.readerMtu, cb),
+    onClose: (cb) => sub(L.readerClose, cb),
+  };
+  return { holder, reader };
+}

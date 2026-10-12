@@ -37,6 +37,11 @@ export interface FormatOk {
   claims: Record<string, unknown>;
   disclosedClaimNames: string[];
   status?: { status_list: { idx: number; uri: string } };
+  /**
+   * AB Attestation Revocation List (CIR 2024/2979 Ek II; MSO `status.identifier_list`) — yalnız mdoc'ta ve Status List yoksa
+   * (VCR_12: doğrulayıcı iki mekanizmayı da destekler). `id` onaltılık.
+   */
+  identifierList?: { id: string; uri: string };
   /** ADR-0036: zincirin bağlandığı kök/çapa sertifikasının SHA-256 parmak izi (onaltılık); dış kurum çözümü bununla. */
   anchorFingerprint?: string | null;
   aDone: Step[];
@@ -52,7 +57,7 @@ export interface FormatFail {
 export type FormatResult = FormatOk | FormatFail;
 
 /** Yaprak sertifikadan P-256 açık anahtar noktası (65 bayt). */
-function pointOf(leafDer: Uint8Array): Uint8Array {
+export function pointOf(leafDer: Uint8Array): Uint8Array {
   const jwk = new NodeX509(leafDer).publicKey.export({ format: "jwk" }) as { x?: string; y?: string; crv?: string };
   if (jwk.crv !== "P-256" || !jwk.x || !jwk.y) throw new Error("issuer key is not P-256");
   const out = new Uint8Array(65);
@@ -186,6 +191,9 @@ export async function verifyMdocFormat(
     claims,
     disclosedClaimNames: Object.keys(claims),
     ...(v.status ? { status: { status_list: { idx: v.status.idx, uri: v.status.uri } } } : {}),
+    ...(!v.status && v.identifierList
+      ? { identifierList: { id: Buffer.from(v.identifierList.id).toString("hex"), uri: v.identifierList.uri } }
+      : {}),
     aDone: ["A1", "A2", "A3", "A3b", "A3d", "A4", "A5", "A6", "A7", "A8"],
     aSkipped: ["A3c"], // CRL/OCSP: dev PKI'da yok (SD-JWT ile aynı)
   };

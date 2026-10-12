@@ -26,8 +26,15 @@ describe("trust/core taşınabilirlik (ADR-0015)", () => {
     expect(seen.size).toBeGreaterThan(3);
     const bad = [...external].filter((e) => FORBIDDEN.some((f) => f.test(e)));
     expect(bad).toEqual([]);
-    // ADR-0046: core'un taşınabilir alt yolu (yalnız @noble/hashes; node:crypto içeren kök giriş değil)
-    expect([...external].sort()).toEqual(["@noble/hashes/sha2.js", "@tamga-network/core/disclosure-policy", "zod"]);
+    // ADR-0046: core'un taşınabilir alt yolu (yalnız @noble/hashes; node:crypto içeren kök giriş değil). 0.5.0: ETSI TS 119 612
+    // XML imzası için @noble/curves ve bağımlılıksız DOM ayrıştırıcı @xmldom/xmldom (ikisi de saf JS)
+    expect([...external].sort()).toEqual([
+      "@noble/curves/nist.js",
+      "@noble/hashes/sha2.js",
+      "@tamga-network/core/disclosure-policy",
+      "@xmldom/xmldom",
+      "zod",
+    ]);
   });
 
   it("taşınabilir özet core ile birebir (çapa zinciri değişmez)", () => {

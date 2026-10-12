@@ -4,7 +4,7 @@ title: "Ulusal güven listesi yayınlamak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-12
 summary: >
   Bir devletin ya da yetkili kurumunun kendi güven listesini Tamga Network'e bağlaması: iki yol (Tamga biçiminde ulusal liste
   ya da ETSI biçiminde dış liste), LOTL'daki kayıt, roller, imza anahtarları, kapsam, tanıma, devir ve yayın kuralları.
@@ -128,7 +128,7 @@ adımında bunu sorar (`isRecognizedBy`). Ülkeler arası karşılıklı tanıma
   `access_ca`) ve `scope.vct` içindeki türlere kefil olabilir; kapsam dışı kayıtlar yok sayılır.
 - **İmzacı sabittir:** imzacısı LOTL'dakiyle eşleşmeyen liste yüklenmez.
 - **Bağımsızlık:** dış liste eksik ya da bayatsa Tamga listeleri etkilenmez; yalnız o listeye bağlı sorular "bilinmiyor" döner.
-- **Biçim:** bugün `etsi-lote-json` okunur; ETSI XML (`etsi-tl-xml`) tanımlıdır ama okuyucusu yoktur.
+- **Biçim:** `etsi-lote-json` (ETSI TS 119 602) ve `etsi-tl-xml` (ETSI TS 119 612, XAdES zarflanmış imza; paketler 0.5.0) okunur. Yayıncının kopyası `external/<list_id>.jws` ya da `.xml`.
 - **Kopya:** yayıncı listenin kopyasını `trust.tamga.network/external/<list_id>.jws` adresinde tutar (`npm run trust:external`);
   imza her durumda sabit imzacıya karşı denetlenir.
 - **Onay:** bir dış listenin eklenmesi, değişmesi ya da çıkması proje yönetimi onayıyla olur ve `approval` alanına yazılır;

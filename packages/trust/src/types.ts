@@ -132,7 +132,7 @@ export const ExternalListPointer = z
     list_id: z.string().regex(/^[a-z0-9-]{3,64}$/),
     /** ISO 3166-1 alfa-2 ya da "EU" */
     territory: z.string().regex(/^([A-Z]{2}|EU)$/),
-    /** Uygulanan: etsi-lote-json (ETSI TS 119 602 JSON, JAdES compact). etsi-tl-xml: okuyucu yok → yüklenmez (uyarı). */
+    /** etsi-lote-json (ETSI TS 119 602 JSON, JAdES compact) · etsi-tl-xml (ETSI TS 119 612 XML, XAdES zarflanmış imza) */
     format: z.enum(["etsi-lote-json", "etsi-tl-xml"]),
     /** Özgün yayın adresi; yayıncı kopyası trust.tamga.network/external/<list_id>.jws */
     list_url: z.string().url(),

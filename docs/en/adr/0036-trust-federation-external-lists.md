@@ -4,7 +4,7 @@ title: "Trust federation"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-12
 summary: >
   The Tamga LOTL can point to trust lists published by other operators (a state, an institution the state authorises, the EU):
   address + signer pinned in the LOTL + scope (which roles, which credential types) + approval record. The first format read is
@@ -53,7 +53,7 @@ Project management approved closing these gaps (2026-10-01; the verbatim quote i
 |---|---|
 | `list_id` | Permanent identifier |
 | `territory` | Country (ISO 3166-1) or `EU` |
-| `format` | `etsi-lote-json` (read); `etsi-tl-xml` (defined, no reader → not loaded) |
+| `format` | `etsi-lote-json` (read); `etsi-tl-xml` (read — note of 2026-10-12: ETSI TS 119 612 XML reader with XML signature verification, packages 0.5.0; the same FD rules) |
 | `list_url` | Original publication address |
 | `signing_keys` | SHA-256 fingerprints of the certificates that sign the list; **pinned in the Tamga-signed LOTL** |
 | `operator` | The list operator |

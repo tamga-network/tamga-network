@@ -10,7 +10,14 @@ import { b64u, utf8 } from "./b64.js";
 import { WalletError, type Http, readJson } from "./http.js";
 import type { KeyProvider } from "./keys.js";
 import { clientAttestationPop, type WuaRecord } from "./wua.js";
-import { fetchIssuerMetadata, obtainCredential, type IssuerMetadata, type RedeemOutput } from "./oid4vci.js";
+import { issuerAttestationPrefs, wuaForIssuer } from "./attestation-prefs.js";
+import {
+  fetchIssuerMetadata,
+  obtainCredential,
+  type IssuerMetadata,
+  type KeyAttestor,
+  type RedeemOutput,
+} from "./oid4vci.js";
 import { checkIssuerRegistration } from "./wrprc.js";
 import { dpopRequest, newDpopSigner } from "./dpop.js";
 
@@ -73,6 +80,8 @@ export interface AuthStart {
   authorizeUrl: string;
   metadata: IssuerMetadata;
   as: AuthServerMetadata;
+  /** PAR'da kullanılan WIA (AB TS3 §2.4.2: kurumun bakım süresi tercihine göre yenilenmiş olabilir) — token isteği de bunu kullanır */
+  wua?: WuaRecord;
 }
 export interface StartInput {
   issuer: string;
@@ -95,6 +104,8 @@ export interface StartInput {
    * sunumu, aud = belge veren, nonce = belge verenin /nonce ucundan). Standart alanların üzerine yazamaz.
    */
   parExtra?: Record<string, string>;
+  /** AB TS3 §2.4.2: `wua` kurumun `preferred_client_status_period` tercihini karşılamıyorsa daha uzun bakım süreli WIA isteyen yol */
+  renewWua?: (req: { minStatusPeriod: number }) => Promise<WuaRecord>;
 }
 
 export async function wuaHeaders(p: {
@@ -128,6 +139,12 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
   }
   const cfg = md.credential_configurations_supported[p.vct];
   if (!cfg || cfg.format !== "dc+sd-jwt") throw new WalletError("unsupported", `tip desteklenmiyor: ${p.vct}`);
+  const wua = await wuaForIssuer({
+    wua: p.wua,
+    prefs: issuerAttestationPrefs(md, p.vct),
+    now: Math.floor(nowMs / 1000),
+    renew: p.renewWua,
+  });
   const as = await fetchAuthServerMetadata(p.issuer, p.http);
   if (!as.pushed_authorization_request_endpoint || !as.authorization_endpoint)
     throw new WalletError("unsupported", "issuer does not support wallet-initiated issuance (PAR)");
@@ -135,14 +152,14 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
   const state = b64u(p.randomBytes(16));
   const headers = {
     "content-type": "application/x-www-form-urlencoded",
-    ...(await wuaHeaders({ keys: p.keys, wua: p.wua, aud: p.issuer, now: p.now, randomBytes: p.randomBytes })),
+    ...(await wuaHeaders({ keys: p.keys, wua, aud: p.issuer, now: p.now, randomBytes: p.randomBytes })),
   };
   const r = await p.http(as.pushed_authorization_request_endpoint, {
     method: "POST",
     headers,
     body: form({
       ...(p.parExtra ?? {}),
-      client_id: p.wua.sub,
+      client_id: wua.sub,
       response_type: "code",
       redirect_uri: p.redirectUri,
       code_challenge: pk.challenge,
@@ -167,7 +184,7 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
       body.error === "invalid_client" ? "unsupported" : "issuer_error",
       `PAR reddedildi: ${body.error_description ?? body.error ?? r.status}`,
     );
-  const authorizeUrl = `${as.authorization_endpoint}?client_id=${encodeURIComponent(p.wua.sub)}&request_uri=${encodeURIComponent(body.request_uri)}`;
+  const authorizeUrl = `${as.authorization_endpoint}?client_id=${encodeURIComponent(wua.sub)}&request_uri=${encodeURIComponent(body.request_uri)}`;
   return {
     issuer: p.issuer,
     vct: p.vct,
@@ -178,6 +195,7 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
     authorizeUrl,
     metadata: md,
     as,
+    ...(wua !== p.wua ? { wua } : {}),
   };
 }
 
@@ -229,8 +247,8 @@ export interface CompleteInput {
   randomBytes: (n: number) => Uint8Array;
   batch?: number;
   now?: number;
-  /** ADR-0025: anahtar kanıtı üretici */
-  keyAttestor?: (jwks: import("./keys.js").PublicJwk[]) => Promise<string>;
+  /** ADR-0025: anahtar kanıtı üretici (kurumun şartı ikinci değişkende — WUA_05a) */
+  keyAttestor?: KeyAttestor;
 }
 /** code → token (PKCE + WUA) → nonce → N proof → credential(lar). */
 export async function completeAuthorized(p: CompleteInput): Promise<RedeemOutput> {
@@ -249,6 +267,7 @@ export async function completeAuthorized(p: CompleteInput): Promise<RedeemOutput
   if (!cb.code) throw new WalletError("issuer_error", "no code in the callback");
   if (cb.state !== p.start.state) throw new WalletError("issuer_error", "state mismatch (CSRF)");
   const now = p.now ?? Math.floor(Date.now() / 1000);
+  const wua = p.start.wua ?? p.wua; // PAR'daki WIA (yenilendiyse o)
   // DPoP (RFC 9449): belirteç bu işlemin anahtarına bağlanır; sunucu nonce isterse bir kez yeniden denenir
   const dpop = await newDpopSigner(p.keys, `dpop.${now.toString(36)}${Math.random().toString(36).slice(2, 8)}`);
   const tr = await dpopRequest(
@@ -259,14 +278,14 @@ export async function completeAuthorized(p: CompleteInput): Promise<RedeemOutput
       method: "POST",
       headers: async () => ({
         "content-type": "application/x-www-form-urlencoded",
-        ...(await wuaHeaders({ keys: p.keys, wua: p.wua, aud: p.start.issuer, now, randomBytes: p.randomBytes })),
+        ...(await wuaHeaders({ keys: p.keys, wua, aud: p.start.issuer, now, randomBytes: p.randomBytes })),
       }),
       body: form({
         grant_type: AUTH_CODE_GRANT,
         code: cb.code,
         code_verifier: p.start.pkce.verifier,
         redirect_uri: p.start.redirectUri,
-        client_id: p.wua.sub,
+        client_id: wua.sub,
       }),
     },
     { now, randomBytes: p.randomBytes },

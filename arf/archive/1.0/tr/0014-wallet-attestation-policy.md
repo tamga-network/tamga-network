@@ -106,6 +106,7 @@ karşılar.
 | PAR ve token uçlarında WIA: imza, sağlayıcı anahtarının listede olması, süre, PoP (`cnf`), `client_status` iptal değil. Belge ucunda KA: imza, proof'un `attested_keys[0]` ile imzası ve nonce, `key_storage_status` iptal değil, `key_storage` seviyesi kurumun alt sınırını karşılıyor | [[ADR-0025]] K5 |
 | Belge veren iptal edilmiş bir WIA ya da KA ile **belge vermez** | [[ADR-0025]] WIA4 |
 | Kurumun anahtar deposu şartı tanıtım bilgisinde ilan edilir (`key_attestations_required {key_storage, user_authentication}`) | [[ADR-0025]] K5 |
+| Kurum asgari iptal bakım süresi istiyorsa ilan eder: KA için `key_attestations_required.preferred_key_storage_status_period`, WIA için üstte `preferred_client_status_period` (saniye). Cüzdan şartı karşılamayan KA göndermez, bakım süresi kısa kalan WIA ve KA yerine sağlayıcıdan uzununu ister; sağlayıcı veremezse kurum belgenin süresini bakım süresiyle sınırlar (zincirleme iptal yapan kurumda) | AB ARF WUA_05a, WUA_32, ISSU_12c; AB TS3 §2.4 |
 
 # 8. Olaylar ve bildirim
 

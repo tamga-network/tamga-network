@@ -122,7 +122,7 @@ investigates a claim; when the investigation ends it is either lifted or becomes
 
 | Topic | Rule | Source |
 | --- | --- | --- |
-| Mechanism | IETF Token Status List (the EU's Attestation Status List mechanism; the draft version fixed by the EU). The mdoc and SD-JWT VC copies carry the same bit | [[SPEC-CRED-0003]] |
+| Mechanism | IETF Token Status List (the EU's Attestation Status List mechanism; the draft version fixed by the EU). The mdoc and SD-JWT VC copies carry the same bit. The network's verifier and wallet core also verify the EU's second mechanism, the Attestation Revocation List (identifier list, `application/identifierlist+cwt`) (EU VCR_10, VCR_12) | [[SPEC-CRED-0003]] |
 | List address | `status.status_list.uri` in the credential; under `https://status.tamga.network/` for services the network runs, on the institution's status server for an institution that runs its own service | [[SPEC-CRED-0003]] §2 |
 | Key | The status list signing key is separate from the credential signing key | RB-AP-03 |
 | Privacy | The index (`idx`) is random; the address is opaque (does not encode institution, year or group); capacity at least 100,000, fill at most 80%; lists are not split by any criterion other than type | RB-AP-18 |
@@ -147,7 +147,7 @@ investigates a claim; when the investigation ends it is either lifted or becomes
 | --- | --- |
 | Cascading revocation of institutional credentials when a wallet unit is revoked | **Decision (2026-10-12, [[ADR-0047]] K1):** not done; the credentials are bound to a device key and cannot be used once the unit is revoked (§3.3). The identity service revokes its own credentials (RB-AP-ID-12) |
 | An issuer's own additional revocation policy | **Decision (2026-10-12, [[ADR-0047]] K2):** an institution may publish additional conditions with `revocation_policy_uri`; it cannot narrow the common conditions (§3.4, RB-AP-27) |
-| Attestation Revocation List | The EU requires both mechanisms (VCR_10, VCR_12); today only the Status List is published. Revocation List support is planned with the trust list formats work |
+| Attestation Revocation List | The EU requires verifiers and wallets to support both mechanisms (VCR_10, VCR_12); one is enough for an issuer (VCR_11). **Packages 0.5.0:** the verifier and the wallet core verify the identifier list; Tamga issuers keep publishing the Status List (a bit-based list hides the index better; an identifier list shows how many credentials were revoked). The CWT form of the list for mdoc (CIR 2024/2979 Annex II EAA-6.2.10.1-07) is an open topic |
 
 ## Status
 

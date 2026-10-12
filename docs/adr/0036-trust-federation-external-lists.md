@@ -4,7 +4,7 @@ title: "Güven federasyonu"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-12
 summary: >
   Tamga LOTL'u başka işletmecilerin (devlet, devletin yetkilendirdiği kurum, AB) yayınladığı güven listelerini gösterebilir:
   adres + LOTL'da sabitlenmiş imzacı + kapsam (hangi roller, hangi belge türleri) + onay kaydı. İlk okunan biçim ETSI TS 119 602
@@ -50,7 +50,7 @@ Proje yönetimi bu açıkların kapatılmasını onayladı (2026-10-01; birebir 
 |---|---|
 | `list_id` | Kalıcı kimlik |
 | `territory` | Ülke (ISO 3166-1) ya da `EU` |
-| `format` | `etsi-lote-json` (okunur); `etsi-tl-xml` (tanımlı, okuyucusu yok → yüklenmez) |
+| `format` | `etsi-lote-json` (okunur); `etsi-tl-xml` (okunur — 2026-10-12 notu: ETSI TS 119 612 XML okuyucusu ve XML imza doğrulaması, paketler 0.5.0; aynı FD kuralları) |
 | `list_url` | Özgün yayın adresi |
 | `signing_keys` | Listeyi imzalayan sertifikaların SHA-256 parmak izleri; **Tamga imzalı LOTL'da sabit** |
 | `operator` | Listeyi işleten |

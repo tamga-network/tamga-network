@@ -116,6 +116,7 @@ code.
 | WIA at the PAR and token endpoints: signature, provider key in the list, lifetime, PoP (`cnf`), `client_status` not revoked. KA at the credential endpoint: signature, the proof signed with `attested_keys[0]` and the nonce, `key_storage_status` not revoked, the `key_storage` level meets the institution's minimum | [[ADR-0025]] K5 |
 | The issuer **does not issue** with a revoked WIA or KA | [[ADR-0025]] WIA4 |
 | The institution's key storage requirement is announced in its issuer metadata (`key_attestations_required {key_storage, user_authentication}`) | [[ADR-0025]] K5 |
+| An institution that wants a minimum revocation maintenance period announces it: for the KA `key_attestations_required.preferred_key_storage_status_period`, for the WIA the top-level `preferred_client_status_period` (seconds). The wallet sends no KA that misses the requirement and asks the provider for a longer WIA or KA when the remaining maintenance period is short; if the provider cannot give one, the institution limits the credential's validity to the maintenance period (an institution that revokes in a chain) | EU ARF WUA_05a, WUA_32, ISSU_12c; EU TS3 §2.4 |
 
 ## 8. Incidents and notification
 

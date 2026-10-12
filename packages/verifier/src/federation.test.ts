@@ -430,3 +430,123 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     if (!r.ok) expect(r.failedStep).toBe("A5");
   });
 });
+
+/**
+ * ADR-0036 + AB ARF OIA_15b / ISSU_10b: eski AB biçimi ETSI TS 119 612 (XML) dış liste. İmza bağımsız bir uygulamayla (xml-crypto,
+ * geliştirme bağımlılığı) üretilir; okuyucu aynı federasyon kurallarını uygular (kapsam, sabit imzacı, geri sarma).
+ */
+describe.skipIf(!ready)("ADR-0036 federasyon — dış TS 119 612 (XML) güven listesi", () => {
+  const ECDSA = "http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256";
+  const EDU_VCT = "urn:example:edu:Diploma:1";
+  let tlSigner: KeyCert;
+  let eaaCa: KeyCert;
+
+  beforeAll(async () => {
+    tlSigner = await selfSigned("Test TL signer", false);
+    eaaCa = await selfSigned("Test QEAA CA", true);
+  });
+
+  async function signTl(xml: string, s: KeyCert) {
+    const { SignedXml } = await import("xml-crypto");
+    const { createPrivateKey, createSign } = await import("node:crypto");
+    const key = createPrivateKey({
+      key: Buffer.from(await webcrypto.subtle.exportKey("pkcs8", s.keys.privateKey)),
+      format: "der",
+      type: "pkcs8",
+    });
+    class Ecdsa {
+      getSignature(si: string, k: typeof key) {
+        return createSign("sha256").update(si).sign({ key: k, dsaEncoding: "ieee-p1363" }, "base64");
+      }
+      verifySignature() {
+        return false;
+      }
+      getAlgorithmName() {
+        return ECDSA;
+      }
+    }
+    const sx = new SignedXml({
+      privateKey: key,
+      publicCert: s.cert.toString("pem"),
+      signatureAlgorithm: ECDSA as never,
+      canonicalizationAlgorithm: "http://www.w3.org/2001/10/xml-exc-c14n#",
+    });
+    sx.SignatureAlgorithms[ECDSA as never] = Ecdsa as never;
+    sx.addReference({
+      xpath: "/*",
+      transforms: [
+        "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
+        "http://www.w3.org/2001/10/xml-exc-c14n#",
+      ] as never,
+      digestAlgorithm: "http://www.w3.org/2001/04/xmlenc#sha256",
+      isEmptyUri: true,
+    });
+    sx.computeSignature(xml, { prefix: "ds", location: { reference: "/*", action: "append" } });
+    return sx.getSignedXml();
+  }
+  const tlXml = (sequence: number) => `<TrustServiceStatusList xmlns="http://uri.etsi.org/02231/v2#">
+  <SchemeInformation><TSLVersionIdentifier>6</TSLVersionIdentifier><TSLSequenceNumber>${sequence}</TSLSequenceNumber>
+    <TSLType>http://uri.etsi.org/TrstSvc/TrustedList/TSLType/EUgeneric</TSLType>
+    <SchemeOperatorName><Name xml:lang="en">Test TLSO</Name></SchemeOperatorName><SchemeTerritory>TR</SchemeTerritory>
+    <ListIssueDateTime>${new Date(Date.now() - 3600_000).toISOString()}</ListIssueDateTime>
+    <NextUpdate><dateTime>${new Date(Date.now() + 7 * DAY).toISOString()}</dateTime></NextUpdate></SchemeInformation>
+  <TrustServiceProviderList><TrustServiceProvider>
+    <TSPInformation><TSPName><Name xml:lang="en">Test QEAA Provider</Name></TSPName></TSPInformation>
+    <TSPServices><TSPService><ServiceInformation>
+      <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/EAA/Q</ServiceTypeIdentifier>
+      <ServiceName><Name xml:lang="en">QEAA issuance</Name></ServiceName>
+      <ServiceDigitalIdentity><DigitalId><X509Certificate>${b64(eaaCa.der)}</X509Certificate></DigitalId></ServiceDigitalIdentity>
+      <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/granted</ServiceStatus>
+    </ServiceInformation></TSPService></TSPServices>
+  </TrustServiceProvider></TrustServiceProviderList>
+</TrustServiceStatusList>`;
+
+  async function withTl(xml: string, pinned: KeyCert) {
+    const { trust } = await loadTrustSourceFromDir(DIST);
+    const store = (trust as unknown as { store: TrustStore }).store;
+    const ptr = ExternalListPointer.parse({
+      list_id: "test-tl",
+      territory: "TR",
+      format: "etsi-tl-xml",
+      list_url: "https://example.test/tl.xml",
+      signing_keys: [{ fingerprint_sha256: fp(pinned.der), status: "ACTIVE" }],
+      operator: { name: "Test TLSO" },
+      status: "ACTIVE",
+      scope: {
+        entity_kinds: ["eaa_provider"],
+        vct: [EDU_VCT],
+        category: "EDUCATION",
+        class: "QUALIFIED",
+        assurance: "I3",
+      },
+      approval: { approved_at: "2026-10-12T00:00:00Z", ref: "test" },
+    });
+    store.lotl = { ...store.lotl, external_lists: [ptr] };
+    const warnings = await applyExternalListsWith(store, { "test-tl": xml }, verifyJws, new Date());
+    return { trust: trust as ListTrustSource, warnings };
+  }
+
+  it("imzalı TL yüklenir: EAA/Q hizmetinin sertifikası dış kurum çapası olur (kapsamdaki türde YES)", async () => {
+    const { trust, warnings } = await withTl(await signTl(tlXml(10), tlSigner), tlSigner);
+    expect(warnings.filter((w) => /not loaded/.test(w))).toEqual([]);
+    const ans = trust.externalIssuerByAnchor?.(fp(eaaCa.der), EDU_VCT, Math.floor(Date.now() / 1000));
+    expect(ans?.tri).toBe("YES");
+    expect(ans?.issuer?.category).toBe("EDUCATION");
+    expect(
+      trust.externalIssuerByAnchor?.(fp(eaaCa.der), "urn:other:Type:1", Math.floor(Date.now() / 1000))?.tri,
+    ).not.toBe("YES");
+  });
+
+  it("sabitlenmemiş imzacı, kurcalanmış içerik ve eski sıra numarası yüklenmez", async () => {
+    const other = await selfSigned("Other TL signer", false);
+    const a = await withTl(await signTl(tlXml(11), other), tlSigner);
+    expect(a.warnings.some((w) => /pinned signer/.test(w))).toBe(true);
+    const tampered = (await signTl(tlXml(12), tlSigner)).replace("Svcstatus/granted", "Svcstatus/granted ");
+    const b = await withTl(tampered, tlSigner);
+    expect(b.warnings.some((w) => /digest mismatch/.test(w))).toBe(true);
+    await withTl(await signTl(tlXml(13), tlSigner), tlSigner);
+    const c = await withTl(await signTl(tlXml(12), tlSigner), tlSigner);
+    expect(c.warnings.some((w) => /rollback/.test(w))).toBe(true);
+    expect(c.trust.externalAnchorCertsDer?.()).toEqual([]);
+  });
+});

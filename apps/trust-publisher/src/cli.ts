@@ -48,6 +48,7 @@ import {
   loadTrustSet,
   verifyJws,
   parseLote,
+  readTrustedListXml,
   ExternalListPointer,
   Anchor as AnchorSchema,
   type Anchor,
@@ -970,8 +971,9 @@ function externalListsFrom(src: unknown[]) {
 }
 
 /**
- * ADR-0036: dış listelerin kopyası — özgün adresten çeker, LOTL'daki sabit imzacıya karşı doğrular, okunabilir LoTE olduğunu
- * denetler ve dist/external/<list_id>.jws olarak yazar. Hata olursa eski kopya korunur (uyarı); Tamga listeleri etkilenmez.
+ * ADR-0036: dış listelerin kopyası — özgün adresten çeker, LOTL'daki sabit imzacıya karşı doğrular, okunabilir olduğunu
+ * denetler ve dist/external/<list_id>.jws (ETSI TS 119 602 LoTE) ya da .xml (ETSI TS 119 612 TL; özgün imzalı belge) olarak yazar.
+ * Hata olursa eski kopya korunur (uyarı); Tamga listeleri etkilenmez.
  */
 async function externalFetch() {
   const lotlSrc = readJson(resolve(REG, "lotl.source.json"));
@@ -979,18 +981,21 @@ async function externalFetch() {
   if (!lists.length) return console.log("external: kayıtlı dış liste yok");
   mkdirSync(resolve(DIST, "external"), { recursive: true });
   for (const p of lists) {
-    if (p.status !== "ACTIVE" || p.format !== "etsi-lote-json") {
+    if (p.status !== "ACTIVE" || (p.format !== "etsi-lote-json" && p.format !== "etsi-tl-xml")) {
       console.log(`external ${p.list_id}: atlandı (${p.status} / ${p.format})`);
       continue;
     }
     try {
       const r = await fetch(p.list_url, { signal: AbortSignal.timeout(15_000) });
       if (r.status !== 200) throw new Error(`HTTP ${r.status}`);
-      const jws = (await r.text()).trim();
+      const body = (await r.text()).trim();
       const fps = new Set(p.signing_keys.filter((k) => k.status === "ACTIVE").map((k) => k.fingerprint_sha256));
-      const v = await verifyJws(jws, fps, { typ: null });
-      const lote = parseLote(v.payload);
-      writeFileSync(resolve(DIST, "external", `${p.list_id}.jws`), jws + "\n");
+      const lote =
+        p.format === "etsi-tl-xml"
+          ? readTrustedListXml(body, fps).list
+          : parseLote((await verifyJws(body, fps, { typ: null })).payload);
+      const ext = p.format === "etsi-tl-xml" ? "xml" : "jws";
+      writeFileSync(resolve(DIST, "external", `${p.list_id}.${ext}`), body + "\n");
       console.log(
         `external ${p.list_id}: #${lote.sequence}, ${lote.entities.length} kurum, NextUpdate ${lote.nextUpdate.toISOString()}`,
       );

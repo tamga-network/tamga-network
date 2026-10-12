@@ -64,7 +64,16 @@ export const walletJwsVerifier: JwsVerifier = async <T = unknown>(
 export async function fetchTrustSource(
   trustBase: string,
   http: Http,
-  opts: { pins: TrustPins; stateCode?: string; now?: number },
+  opts: {
+    pins: TrustPins;
+    stateCode?: string;
+    now?: number;
+    /**
+     * ADR-0036: LOTL'daki dış listeleri de yükle (ETSI TS 119 602 LoTE ve ETSI TS 119 612 TL; AB ARF ISSU_10b). İmzacı LOTL'da
+     * sabitlenmiştir; yayıncının kopyası içeriği değiştiremez. Bir dış liste doğrulanamazsa yalnız o yüklenmez.
+     */
+    externalLists?: boolean;
+  },
 ): Promise<{ source: ListTrustSource; lists: VerifiedTrust }> {
   if (!opts.pins?.lotlSigners?.length) throw new WalletError("trust_error", "no trust anchor (pin) configured");
   const cc = (opts.stateCode ?? "tr").toUpperCase();
@@ -75,6 +84,7 @@ export async function fetchTrustSource(
       stateCode: cc,
       now: new Date(opts.now ?? Date.now()),
       environment: opts.pins.environment,
+      externalLists: opts.externalLists,
     });
     const tl = store.national.get(cc)!.list;
     return {
@@ -92,7 +102,7 @@ export async function fetchTrustSource(
 export async function fetchVerifiedTrust(
   trustBase: string,
   http: Http,
-  opts: { pins: TrustPins; stateCode?: string; now?: number },
+  opts: { pins: TrustPins; stateCode?: string; now?: number; externalLists?: boolean },
 ): Promise<VerifiedTrust> {
   return (await fetchTrustSource(trustBase, http, opts)).lists;
 }

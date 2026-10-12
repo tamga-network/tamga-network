@@ -8,6 +8,7 @@
  * Kapsam dışı: BLE/NFC radyosu (taşıyıcıyı uygulama sağlar).
  */
 import { sha256 } from "@noble/hashes/sha2.js";
+import type { IdentifierListRef } from "./identifier-list.js";
 import { p256 } from "@noble/curves/nist.js";
 import { encode, decode, CborTag, encodeEmbedded, type CborValue } from "./cbor.js";
 import { coseSign1, coseSign1Async, coseVerify1, parseCoseSign1, coseKeyFromPoint, pointFromCoseKey } from "./cose.js";
@@ -28,6 +29,11 @@ export interface IssueMdocInput {
   randomBytes: (n: number) => Uint8Array;
   /** IETF Token Status List — mdoc profili: MSO'da `status.status_list {idx, uri}` (SD-JWT kopyasıyla aynı bit). */
   status?: { idx: number; uri: string };
+  /**
+   * Attestation Revocation List — MSO'da `status.identifier_list {id, uri}` (CIR 2024/2979 Ek II, EAA-6.2.10.1-11). Tamga
+   * belge verenleri Status List kullanır; bu alan doğrulayıcı/cüzdan testleri ve bu mekanizmayı seçen belge verenler içindir.
+   */
+  identifierList?: { id: Uint8Array; uri: string };
 }
 
 /** tdate: RFC 8949 tag 0 (tstr, RFC 3339). */
@@ -92,17 +98,32 @@ export function issueMdoc(input: IssueMdocInput): IssuedMdoc {
       ]),
     ],
   ]);
-  if (input.status)
+  if (input.status || input.identifierList)
     mso.set(
       "status",
       new Map<string, CborValue>([
-        [
-          "status_list",
-          new Map<string, CborValue>([
-            ["idx", input.status.idx],
-            ["uri", input.status.uri],
-          ]),
-        ],
+        ...(input.status
+          ? ([
+              [
+                "status_list",
+                new Map<string, CborValue>([
+                  ["idx", input.status.idx],
+                  ["uri", input.status.uri],
+                ]),
+              ],
+            ] as Array<[string, CborValue]>)
+          : []),
+        ...(input.identifierList
+          ? ([
+              [
+                "identifier_list",
+                new Map<string, CborValue>([
+                  ["id", input.identifierList.id],
+                  ["uri", input.identifierList.uri],
+                ]),
+              ],
+            ] as Array<[string, CborValue]>)
+          : []),
       ]),
     );
   const issuerAuth = coseSign1(encode(encodeEmbedded(mso)), { sk: input.issuerSk, x5chain: input.x5chain });
@@ -151,6 +172,8 @@ export interface MdocVerifyResult {
   /** validityInfo.signed (epoch sn) — SD-JWT `iat` muadili; C1/C2 zaman-bağımlı güven sorgusu bununla yapılır. */
   signedEpoch?: number;
   status?: { idx: number; uri: string };
+  /** MSO `status.identifier_list` (Attestation Revocation List; EAA-6.2.10.1-11) */
+  identifierList?: IdentifierListRef;
   x5chain?: Uint8Array[];
 }
 
@@ -271,6 +294,15 @@ export function verifyIssuerSigned(
     sl instanceof Map && typeof sl.get("idx") === "number" && typeof sl.get("uri") === "string"
       ? { idx: sl.get("idx") as number, uri: sl.get("uri") as string }
       : undefined;
+  const il = st instanceof Map ? st.get("identifier_list") : undefined;
+  const identifierList: IdentifierListRef | undefined =
+    il instanceof Map && il.get("id") instanceof Uint8Array && typeof il.get("uri") === "string"
+      ? {
+          id: il.get("id") as Uint8Array,
+          uri: il.get("uri") as string,
+          ...(il.get("certificate") instanceof Uint8Array ? { certificate: il.get("certificate") as Uint8Array } : {}),
+        }
+      : undefined;
   return {
     valid: true,
     docType,
@@ -278,6 +310,7 @@ export function verifyIssuerSigned(
     claims,
     signedEpoch: Math.floor(vs),
     status,
+    ...(identifierList ? { identifierList } : {}),
     validity: {
       signed: String((vi.get("signed") as CborTag)?.value ?? ""),
       validFrom: String((vi.get("validFrom") as CborTag)?.value ?? ""),

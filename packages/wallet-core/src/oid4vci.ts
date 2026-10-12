@@ -8,6 +8,13 @@ import { decodeJwt, signJwt, verifyJwt } from "./jws.js";
 import { certFingerprintHex, p256PointFromCertDer } from "./sdjwt.js";
 import type { KeyProvider, PublicJwk } from "./keys.js";
 import { clientAttestationPop, type WuaRecord } from "./wua.js";
+import {
+  checkKeyAttestation,
+  issuerAttestationPrefs,
+  keyAttestationRequestOf,
+  wuaForIssuer,
+  type KeyAttestationRequest,
+} from "./attestation-prefs.js";
 import { dpopRequest, newDpopSigner, type DpopSigner } from "./dpop.js";
 import { IDENTITY_VCT, ZK_COPY_VCT } from "./directory.js";
 import type { ZkCopyBinding } from "./store.js";
@@ -47,6 +54,20 @@ export interface IssuerMetadata {
       doctype?: string;
       /** HAIP §4.1: yapılandırmanın OAuth kapsamı */
       scope?: string;
+      /**
+       * OpenID4VCI 1.0 §12.2.4 + Ek D.2: kanıt türleri; `jwt.key_attestations_required` kurumun anahtar deposu / kullanıcı
+       * doğrulaması şartı ve AB TS3 §2.4 `preferred_key_storage_status_period` (saniye). Cüzdan `issuerAttestationPrefs` ile okur.
+       */
+      proof_types_supported?: {
+        jwt?: {
+          proof_signing_alg_values_supported?: string[];
+          key_attestations_required?: {
+            key_storage?: string[];
+            user_authentication?: string[];
+            preferred_key_storage_status_period?: number;
+          };
+        };
+      };
       display?: Array<{ name?: string; locale?: string }>;
       /** OpenID4VCI 1.0 + ETSI TS 119 472-3 §4.2.4 */
       credential_metadata?: {
@@ -68,6 +89,8 @@ export interface IssuerMetadata {
   display?: Array<{ name?: string; locale?: string }>;
   /** OpenID4VCI 1.0 §12.2.4: yetkilendirme sunucuları (yoksa kurumun kendisi) */
   authorization_servers?: string[];
+  /** AB TS3 §2.4: WIA'nın kalan iptal bakım süresi tercihi (saniye; `client_status.exp − şimdi`) */
+  preferred_client_status_period?: number;
 }
 
 /**
@@ -249,10 +272,17 @@ export interface RedeemInput {
   now?: number;
   metadata?: IssuerMetadata;
   wua?: WuaRecord; // DB-16: token isteğine OAuth-Client-Attestation(+PoP) başlıkları
+  /**
+   * AB TS3 §2.4.2: `wua` kurumun `preferred_client_status_period` tercihini karşılamıyorsa sağlayıcıdan daha uzun bakım süreli
+   * WIA isteyen yol (yoksa elindeki kullanılır).
+   */
+  renewWua?: (req: { minStatusPeriod: number }) => Promise<WuaRecord>;
   randomBytes?: (n: number) => Uint8Array;
-  /** ADR-0025: anahtar kanıtı üretici (cüzdan sağlayıcı) */
-  keyAttestor?: (jwks: PublicJwk[]) => Promise<string>;
+  /** ADR-0025: anahtar kanıtı üretici (cüzdan sağlayıcı); ikinci değişken kurumun şartı ve bakım süresi tercihi (WUA_05a/32) */
+  keyAttestor?: KeyAttestor;
 }
+/** Belge anahtarları için KA üretici — `req` kurumun `key_attestations_required` şartı (eski üreticiler yok sayabilir). */
+export type KeyAttestor = (jwks: PublicJwk[], req?: KeyAttestationRequest) => Promise<string>;
 export interface ReceivedCopy {
   combined: string;
   keyRef: string;
@@ -306,16 +336,20 @@ export async function redeem(p: RedeemInput): Promise<RedeemOutput> {
   if (!cfg || cfg.format !== "dc+sd-jwt") throw new WalletError("unsupported", `tip desteklenmiyor: ${vct}`);
   const batch = batchOf(p.batch, md);
   const now = p.now ?? Math.floor(Date.now() / 1000);
+  // AB TS3 §2.4.2: WIA kurumun bakım süresi tercihini karşılamıyorsa yenisi (WUA_32)
+  const wua = p.wua
+    ? await wuaForIssuer({ wua: p.wua, prefs: issuerAttestationPrefs(md, vct), now, renew: p.renewWua })
+    : undefined;
 
   // token (PR1 tx_code)
   const tokenHeaders = async (): Promise<Record<string, string>> => ({
     "content-type": "application/x-www-form-urlencoded",
-    ...(p.wua
+    ...(wua
       ? {
-          "oauth-client-attestation": p.wua.jwt,
+          "oauth-client-attestation": wua.jwt,
           "oauth-client-attestation-pop": await clientAttestationPop({
             keys: p.keys,
-            wua: p.wua,
+            wua,
             aud: issuer,
             now,
             randomBytes: p.randomBytes,
@@ -395,7 +429,7 @@ export interface ObtainInput {
   dpop?: DpopSigner;
   randomBytes?: (n: number) => Uint8Array;
   /** ADR-0025: verilirse belge anahtarları sağlayıcı imzalı anahtar kanıtıyla (KA) istenir */
-  keyAttestor?: (jwks: PublicJwk[]) => Promise<string>;
+  keyAttestor?: KeyAttestor;
   /** ADR-0023: token yanıtındaki yenileme belirteci — varsa DPoP anahtarı silinmez, belgeyle saklanır */
   refreshToken?: string;
   tokenEndpoint?: string;
@@ -437,8 +471,20 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
       const jwk = await p.keys.generate(ref);
       copies.push({ combined: "", keyRef: ref, cnf: jwk });
     }
-    // ADR-0025 / TS3: paket anahtarları tek anahtar kanıtında (c_nonce içermez; yeniden denemede aynısı kullanılır)
-    const ka = p.keyAttestor ? await p.keyAttestor(copies.map((c) => c.cnf)) : undefined;
+    // ADR-0025 / TS3: paket anahtarları tek anahtar kanıtında (c_nonce içermez; yeniden denemede aynısı kullanılır). Kurumun
+    // şartı (key_attestations_required) ve bakım süresi tercihi KA üreticisine geçer; şartı karşılamayan KA gönderilmez (WUA_05a)
+    const prefs = issuerAttestationPrefs(md, vct);
+    const ka = p.keyAttestor
+      ? await p.keyAttestor(
+          copies.map((c) => c.cnf),
+          keyAttestationRequestOf(prefs),
+        )
+      : undefined;
+    if (ka && (prefs.keyStorage || prefs.userAuthentication)) {
+      const chk = checkKeyAttestation(ka, prefs, now);
+      if (!chk.ok)
+        throw new WalletError("unsupported", `Key attestation does not meet the issuer's requirement: ${chk.reason}`);
+    }
     /** c_nonce'a bağlı proof'lar: KA yoksa kopya başına bir proof (PR6); KA varsa tek proof, attested_keys[0] ile imzalı */
     const signProofs = async (n: string): Promise<string[]> => {
       const claims = { aud: issuer, nonce: n, iat: now };

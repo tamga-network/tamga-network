@@ -3,6 +3,8 @@ export * from "./types.js";
 export * from "./jws.js";
 export * from "./loader.js";
 export * from "./lote-reader.js";
+export * from "./tl-reader.js";
+export { verifyEnvelopedXmlSignature, XmlSignatureError, type XmlSignatureResult } from "./xmldsig.js";
 export * from "./store.js";
 export * from "./trust-source.js";
 export * from "./fs.js";

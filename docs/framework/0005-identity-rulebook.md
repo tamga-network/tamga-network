@@ -506,7 +506,7 @@ yalnız dış listeden gelir.
 | Nitelikli olmayan EAA göstergesi (ARB_12) | **Karar (2026-10-12, [[ADR-0047]] K6):** AB şablonu `category` için `eaa:eu:non-qualified` değerini önerir; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 ise nitelikli olmayan EAA'da `category` bulunmamasını ister. Tamga ETSI'yi izler; şablonun değeri kullanılmaz |
 | Güven çapası konumu belgede (ARB_21) | **Karar (2026-10-12, [[ADR-0047]] K7):** belgeye konum alanı eklenmez; konum §5'teki listelerdir. Belgedeki bir konum belge verenin kendi beyanı olurdu; doğrulayıcı çapayı yalnız kendi seçtiği, imzası sabitlenmiş listeden alır |
 | `nbf` (ETSI TS 119 472-1 teknik geçerlilik başlangıcı) | Bugün yazılmaz; geçerlilik başlangıcı `iat`'tır. Eklenmesi bir uygulama işidir |
-| Attestation Revocation List | AB iki mekanizmayı ister (VCR_10, VCR_12); Tamga bugün yalnız Status List yayımlar. Revocation List desteği güven listesi biçimleri işiyle planlıdır |
+| Attestation Revocation List | Tamga belge verenleri Status List yayımlar (AB VCR_11'e göre biri yeter); doğrulayıcı ve cüzdan çekirdeği tanımlayıcı listesini de doğrular (paketler 0.5.0; [[FW-POL-0001]] §8) |
 
 ---
 

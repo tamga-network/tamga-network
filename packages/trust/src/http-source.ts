@@ -41,7 +41,8 @@ export async function fetchListTrustSource(
     /** Çapa günlüğünü de yükle (doğrulayıcı sunucular: iptal listesi çapaları için gerekir). */
     anchors?: boolean;
     /**
-     * ADR-0036: LOTL'daki dış listeleri de yükle. Önce yayıncının kopyası (`<base>/external/<list_id>.jws`), yoksa özgün adres.
+     * ADR-0036: LOTL'daki dış listeleri de yükle. Önce yayıncının kopyası (`<base>/external/<list_id>.jws` ya da TL için `.xml`),
+     * yoksa özgün adres.
      * İmza her iki durumda LOTL'da sabitlenmiş imzacıya karşı doğrulanır; kopya içeriği değiştiremez.
      */
     externalLists?: boolean;
@@ -88,7 +89,9 @@ export async function fetchListTrustSource(
     const jwsMap: Record<string, string> = {};
     for (const ptr of store.lotl.external_lists) {
       if (ptr.status !== "ACTIVE") continue;
-      const mirror = await get(`external/${ptr.list_id}.jws`).catch(() => "");
+      // yayıncının kopyası: LoTE `.jws`, TL `.xml` (özgün imzalı belge; kopya içeriği değiştiremez)
+      const ext = ptr.format === "etsi-tl-xml" ? "xml" : "jws";
+      const mirror = await get(`external/${ptr.list_id}.${ext}`).catch(() => "");
       const body =
         mirror ||
         (await http(ptr.list_url)

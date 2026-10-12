@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -377,6 +377,19 @@ Issuer metadata'sında `credential_metadata.embedded_disclosure_policy` olarak g
 
 **Değişmez EP2/EP3** ([[ADR-0046]]): politika belge alırken saklanır ve gösterimde ağ isteği yapmadan değerlendirilir; tutmazsa ayrı
 uyarı, varsayılan paylaşmamak.
+
+## 5.6 Kurum tercihleri, dış listeler, cüzdandan cüzdana (kod 0.5.0)
+
+- **Kurumun cüzdan kanıtı tercihleri (AB ARF WUA_05a, WUA_32):** cüzdan belge isterken kurumun metadata'sındaki
+  `key_attestations_required` şartını ve `preferred_*` iptal bakım süresi tercihlerini okur; şartı karşılamayan KA'yı göndermez,
+  bakım süresi kısa kalan WIA ve KA yerine sağlayıcıdan uzununu ister ([[SPEC-PROTO-0001]]).
+- **Dış listeler (ADR-0036; ARF ISSU_10b):** cüzdan LOTL'daki dış listeleri (ETSI TS 119 602 LoTE ve ETSI TS 119 612 TL) imzacıları
+  LOTL'da sabitlenmiş olarak yükleyebilir; bir dış liste doğrulanamazsa yalnız o yüklenmez.
+- **İki iptal mekanizması (ARF VCR_10):** cüzdan, doğrulayan rolünde (cüzdandan cüzdana) Status List'i ve Attestation Revocation
+  List'i doğrular.
+- **Cüzdandan cüzdana (ARF Konu 30):** protokol çekirdekte (`wallet-core`); hangi türün ve alanların gösterilebileceği cüzdanın
+  kararıdır. Belge verenin paylaşım kuralıyla kısıtlı belge cüzdandan cüzdana gösterilmez; yakın mesafe sunumunda onay ekranı
+  kuralın değerlendirilemediğini söyler ([[ADR-0046]] Sonuçlar).
 
 # 6. Şema Önbelleği
 

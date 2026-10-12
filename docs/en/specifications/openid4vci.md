@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -641,6 +641,14 @@ the tenant's `min_key_storage` lower bound according to the level in the KA.
 
 The metadata `proof_types_supported.jwt.key_attestations_required` declares the accepted levels (ARF ISSU_27d). The earlier
 WUA and per-key proof format is accepted until the pilot.
+
+**Revocation maintenance period preference (EU TS3 §2.4; ARF WUA_32, ISSU_12c; code 0.5.0).** An issuer may announce
+`key_attestations_required.preferred_key_storage_status_period` for the remaining revocation maintenance period of the KA it
+receives, and the top-level `preferred_client_status_period` for the WIA (seconds). The wallet reads the metadata when
+requesting a credential; it sends no KA that misses the issuer's level requirement (WUA_05a) and asks the provider for a longer
+WIA or KA when the remaining maintenance period (`*.exp − now`) is shorter than the preference. The preference is not a
+requirement: if the provider cannot give one, the credential is still requested; an issuer that revokes in a chain limits the
+credential's validity to the earliest end of the WIA and KA maintenance periods it saw at issuance ([[ADR-0047]] K1).
 
 **Invariant PR7:** the binding method with which the credential was issued is written to the issuer's audit log. It is
 **not written into the credential** — holder assurance goes neither onto the chain nor into the credential

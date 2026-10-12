@@ -53,7 +53,7 @@ const MAX_STATUS_TOKEN_BYTES = 1024 * 1024;
 async function defaultFetch(url: string): Promise<string | null> {
   try {
     const r = await fetch(url, {
-      headers: { accept: "application/statuslist+jwt" },
+      headers: { accept: "application/statuslist+jwt, application/identifierlist+cwt" },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!r.ok || !r.body) return null;
@@ -71,7 +71,10 @@ async function defaultFetch(url: string): Promise<string | null> {
       }
       chunks.push(value);
     }
-    return new TextDecoder().decode(Buffer.concat(chunks)).trim();
+    const body = Buffer.concat(chunks);
+    // CIR 2024/2979 Ek II: tanımlayıcı listesi ikili CWT'dir — önbellekte base64url (`b64u:`) olarak tutulur
+    if (/cwt/i.test(r.headers.get("content-type") ?? "")) return `b64u:${body.toString("base64url")}`;
+    return new TextDecoder().decode(body).trim();
   } catch {
     return null;
   }

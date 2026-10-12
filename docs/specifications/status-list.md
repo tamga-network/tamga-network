@@ -4,7 +4,7 @@ title: "İptal ve durum listesi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-12
 summary: >
   [[ADR-0008]] kararının normatif uygulaması. Status List Token'ın Tamga profilini
   (bits=2, ES256, X.509 zinciri, asgari 100.000 indeks), sabit aralıklı ve
@@ -508,6 +508,12 @@ Normatif. `status` claim'i taşıyan her belge için çalıştırılır.
 Ş10. Sonucu, kullanılan token'ın version ve iat değerleriyle birlikte
      denetim kaydına yaz.
 ```
+
+**Attestation Revocation List (kod 0.5.0; AB VCR_10, VCR_12).** mdoc belgesinin MSO'su `status_list` yerine `identifier_list
+{id, uri}` taşıyorsa (Uygulama Tüzüğü (AB) 2024/2979 Ek II, 2026/1731 ile değişik) doğrulayıcı aynı adımlarla tanımlayıcı
+listesini denetler: `application/identifierlist+cwt` (COSE_Sign1 ES256; korunan başlıkta `typ` ve `x5chain`; 65530 talebinde
+`identifiers`; `exp` zorunlu); imzacı kurumun kayıtlı iptal anahtarı (S11); ön çekim önbelleği (S12); tazelik (Ş7); `id`
+listedeyse RED (askı yok). Çapa günlüğü bu listeler için yoktur. Tamga belge verenleri Status List yayımlar (biri yeter, VCR_11).
 
 ## 7.1 "Geçersiz" ile "doğrulanamadı" ayrımı
 

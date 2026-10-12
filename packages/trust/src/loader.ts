@@ -19,7 +19,8 @@
 import { Anchor, Lotl, NationalList, KNOWN_FORMAT_VERSIONS } from "./types.js";
 import { sha256Tag, utf8 } from "./portable-hash.js";
 import { TrustStore, activeFps } from "./store.js";
-import { parseLote } from "./lote-reader.js";
+import { parseLote, type ParsedLote } from "./lote-reader.js";
+import { readTrustedListXml } from "./tl-reader.js";
 
 /**
  * İmza doğrulayıcı: izinli parmak izleri (null = yalnızca kendi x5c'si) ile JWS'i doğrular, yükü döndürür.
@@ -274,20 +275,29 @@ export async function applyExternalListsWith(
   const warnings: string[] = [];
   for (const ptr of store.lotl.external_lists ?? []) {
     if (ptr.status !== "ACTIVE") continue;
-    if (ptr.format !== "etsi-lote-json") {
+    if (ptr.format !== "etsi-lote-json" && ptr.format !== "etsi-tl-xml") {
       warnings.push(`external ${ptr.list_id}: format ${ptr.format} not supported by this reader — not loaded`);
       continue;
     }
-    const jws = externalListJws[ptr.list_id];
-    if (!jws) {
+    const body = externalListJws[ptr.list_id];
+    if (!body) {
       warnings.push(`external ${ptr.list_id}: not provided`);
       continue;
     }
     try {
       const fps = activeFps(ptr.signing_keys, now);
       if (fps.size === 0) throw new Error("no active signing key");
-      const v = await verifyJws<unknown>(jws, fps, { typ: null });
-      const lote = parseLote(v.payload);
+      // LoTE: JAdES (JWS) imzası; TL (ETSI TS 119 612): zarflanmış XML imzası — ikisinde de imzacı sabitlenmiş parmak izi (FD1)
+      let lote: ParsedLote;
+      let raw: string;
+      if (ptr.format === "etsi-tl-xml") {
+        lote = readTrustedListXml(body, fps).list;
+        raw = body;
+      } else {
+        const v = await verifyJws<unknown>(body, fps, { typ: null });
+        lote = parseLote(v.payload);
+        raw = v.raw;
+      }
       if (lote.territory !== ptr.territory) throw new Error(`territory mismatch: ${lote.territory} ≠ ${ptr.territory}`);
       const key = `ext:${ptr.list_id}`;
       const prev = store.external_lists.get(ptr.list_id);
@@ -296,7 +306,7 @@ export async function applyExternalListsWith(
       if (lote.sequence < lastSeq)
         throw new Error(`sequence ${lote.sequence} older than the last seen list (${lastSeq}, rollback)`);
       warnings.push(...store.applyExternalList(ptr, lote));
-      memory.set(key, { version: lote.sequence, hash: sha256Tag(utf8(v.raw)) });
+      memory.set(key, { version: lote.sequence, hash: sha256Tag(utf8(raw)) });
       if (lote.nextUpdate < now)
         warnings.push(`external ${ptr.list_id}: NextUpdate passed — its entries answer UNKNOWN`);
     } catch (e) {

@@ -4,7 +4,7 @@ title: "Publish a national trust list"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-12
 summary: >
   How a state, or a body it authorises, connects its own trust list to Tamga Network: two ways (a national list in the Tamga
   format or an external list in the ETSI format), the LOTL entry, roles, signing keys, scope, recognition, hand-over and
@@ -133,7 +133,7 @@ If your country's or the EU's list is in the ETSI format, you do not need to mov
 - **The signer is pinned:** a list whose signer does not match the one in the LOTL is not loaded.
 - **Independence:** if an external list is missing or stale, the Tamga lists are not affected; only questions that depend on
   that list answer "unknown".
-- **Format:** `etsi-lote-json` is read today; ETSI XML (`etsi-tl-xml`) is defined but has no reader.
+- **Format:** `etsi-lote-json` (ETSI TS 119 602) and `etsi-tl-xml` (ETSI TS 119 612, XAdES enveloped signature; packages 0.5.0) are read. The publisher's copy is `external/<list_id>.jws` or `.xml`.
 - **Copy:** the publisher keeps a copy of the list at `trust.tamga.network/external/<list_id>.jws` (`npm run trust:external`);
   the signature is always checked against the pinned signer.
 - **Approval:** adding, changing or removing an external list takes project management approval and is recorded in the

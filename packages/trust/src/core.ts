@@ -14,5 +14,7 @@ export {
   type LoadReport,
 } from "./loader.js";
 export * from "./lote-reader.js";
+export * from "./tl-reader.js";
+export { verifyEnvelopedXmlSignature, XmlSignatureError, type XmlSignatureResult } from "./xmldsig.js";
 export * from "./http-source.js";
 export * from "./x509-names.js";

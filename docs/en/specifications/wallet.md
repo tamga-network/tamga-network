@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-11
+last_updated: 2026-10-12
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -362,6 +362,20 @@ arrives in the signed Credential Issuer metadata as `credential_metadata.embedde
 
 **Invariant EP2/EP3** ([[ADR-0046]]): the policy is stored at issuance and evaluated at presentation without network requests; if
 it does not hold, a separate warning, defaulting to not sharing.
+
+## 5.6 Issuer preferences, external lists, wallet to wallet (code 0.5.0)
+
+- **The issuer's wallet attestation preferences (EU ARF WUA_05a, WUA_32):** when requesting a credential the wallet reads the
+  `key_attestations_required` requirement and the `preferred_*` revocation maintenance period preferences in the issuer's
+  metadata; it sends no KA that misses the requirement and asks the provider for a longer WIA or KA when the remaining
+  maintenance period is short ([[SPEC-PROTO-0001]]).
+- **External lists (ADR-0036; ARF ISSU_10b):** the wallet can load the external lists in the LOTL (ETSI TS 119 602 LoTE and ETSI
+  TS 119 612 TL) with their signers pinned in the LOTL; if an external list cannot be verified only that list is not loaded.
+- **Both revocation mechanisms (ARF VCR_10):** in the verifying role (wallet to wallet) the wallet verifies the Status List and
+  the Attestation Revocation List.
+- **Wallet to wallet (ARF Topic 30):** the protocol is in the core (`wallet-core`); which type and fields may be shown is the
+  wallet's decision. A credential restricted by the issuer's sharing rule is not shown wallet to wallet; in proximity
+  presentation the consent screen says the rule cannot be evaluated ([[ADR-0046]] Consequences).
 
 # 6. Schema cache
 

@@ -195,8 +195,17 @@ export function issuerMetadata(p: {
    * EP1). Biçimi bozuksa ya da tür politika kabul etmiyorsa (kimlik, iletişim — K1) hata.
    */
   authorizedVcts: Array<{ vct: string; name: string; display: unknown[]; disclosurePolicy?: unknown }>;
-  /** ADR-0025 / ISSU_27d: kabul edilen anahtar deposu seviyeleri (ISO 18045); verilirse KA istenir */
-  keyAttestationsRequired?: { key_storage: string[]; user_authentication: string[] };
+  /**
+   * ADR-0025 / ISSU_27d: kabul edilen anahtar deposu seviyeleri (ISO 18045); verilirse KA istenir. AB TS3 §2.4 / ARF WUA_32:
+   * isteğe bağlı `preferred_key_storage_status_period` (saniye) — KA'nın kalan iptal bakım süresi tercihi.
+   */
+  keyAttestationsRequired?: {
+    key_storage: string[];
+    user_authentication: string[];
+    preferred_key_storage_status_period?: number;
+  };
+  /** AB TS3 §2.4 / ARF WUA_32: WIA'nın kalan iptal bakım süresi tercihi (saniye); zincirleme iptal yapan belge veren ilan eder */
+  preferredClientStatusPeriod?: number;
   /** ETSI TS 119 472-3 §4.2.3 (ARF RPRC_22): kayıt kurumu veri seti + varsa kayıt sertifikası (`verifier_info` yapısında) */
   issuerInfo?: Array<{ format: string; data: unknown }>;
   /**
@@ -224,6 +233,7 @@ export function issuerMetadata(p: {
   return {
     credential_issuer: base,
     authorization_servers: [base],
+    ...(p.preferredClientStatusPeriod ? { preferred_client_status_period: p.preferredClientStatusPeriod } : {}),
     credential_endpoint: `${base}/credential`,
     nonce_endpoint: `${base}/nonce`,
     batch_credential_issuance: { batch_size: BATCH_SIZE },

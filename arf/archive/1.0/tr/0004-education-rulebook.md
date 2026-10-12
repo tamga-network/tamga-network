@@ -355,7 +355,7 @@ Cüzdan belge alırken aynı kayıtla kurumun bu türü vermeye yetkili olduğun
 | Güven çapası konumu belgede (ARB_21) | **Karar (2026-10-12, [[ADR-0047]] K7):** belgeye alan eklenmez; belgedeki bir konum belge verenin kendi beyanı olurdu ve doğrulayıcı çapayı yalnız kendi seçtiği listeden alır |
 | Nitelikli olmayan EAA göstergesi (ARB_12) | **Karar (2026-10-12, [[ADR-0047]] K6):** yazılmaz; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 nitelikli olmayan EAA'da `category` bulunmamasını ister |
 | `nbf` ve diplomada `exp` | ETSI TS 119 472-1 ikisini de ister; Tamga bugün `nbf` yazmaz ve diploma süresizdir |
-| Attestation Revocation List | Bugün yalnız Status List yayımlanır |
+| Attestation Revocation List | Tamga belge verenleri Status List yayımlar (AB VCR_11'e göre biri yeter); doğrulayıcı ve cüzdan çekirdeği tanımlayıcı listesini de doğrular (paketler 0.5.0; [[FW-POL-0001]] §8) |
 
 ---
 

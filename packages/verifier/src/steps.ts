@@ -13,7 +13,9 @@ import { getClaimAtPath } from "@tamga-network/core/sd-structure";
 import { verifyStatusListToken } from "@tamga-network/sd-jwt";
 import type { ExternalIssuerAnswer, TrustSource } from "@tamga-network/trust";
 import { assuranceAtLeast, constraintOk, scopeClaimName, scopeCovers, type Policy } from "./policy.js";
-import { verifyMdocFormat, type FormatResult } from "./mdoc-format.js";
+import { pointOf, verifyMdocFormat, type FormatResult } from "./mdoc-format.js";
+import { verifyIdentifierListToken } from "@tamga-network/mdoc";
+import { b64uToBytes, certFingerprintSha256Hex } from "@tamga-network/core";
 import { verifyMdocZkFormat } from "./mdoc-zk-format.js";
 import type { IndeterminateReason, Step, VerificationResult, VerifyInput } from "./verify.js";
 
@@ -270,6 +272,7 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   const { input, now } = ctx;
   const a = ctx.a!;
   const issuerRec = ctx.issuerRec;
+  if (!a.status && a.identifierList) return stepDIdentifierList(ctx, a.identifierList);
   if (!a.status) {
     if (a.format === "mso_mdoc_zk" && isShortLivedType(a.vct)) {
       // ADR-0044 K5: kısa ömür işareti — ispatın bağladığı tür ZK kopyasıdır (tür kuralı: ≤ 24 sa, iptal listesi yok; AB ARF
@@ -377,6 +380,48 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
     token_age_sec: age,
   };
   if (bit !== 0) return reject("D6", bit === 2 ? "credential suspended" : "credential revoked");
+  ctx.done.push("D6");
+}
+
+/** Önbellekteki tanımlayıcı listesi: ikili CWT base64url olarak saklanır (`b64u:` öneki isteğe bağlı). */
+const cwtBytes = (token: string) => b64uToBytes(token.startsWith("b64u:") ? token.slice(5) : token);
+
+/**
+ * D — Attestation Revocation List (tanımlayıcı listesi; CIR 2024/2979 Ek II, EAA-6.2.10.1-02.3/-10.1; ARF VCR_12). Status List
+ * ile aynı ilkeler: ön çekim önbelleği (S12), imzacı kurumun güven listesinde kayıtlı iptal anahtarı (S11), tazelik (D4), bayat
+ * ya da erişilemez liste DOĞRULANAMADI. Çapa günlüğü bu listeler için yoktur (D5 atlanır). Askı yoktur: listede = iptal.
+ */
+async function stepDIdentifierList(ctx: VerifyCtx, ref: { id: string; uri: string }): Promise<StepFail | undefined> {
+  const { input, now } = ctx;
+  ctx.done.push("D1");
+  const cached = input.statusCache.get(ref.uri);
+  if (!cached)
+    return indet("D2", "STATUS_UNREACHABLE", "identifier list not in prefetch cache (S12: no fetch per verification)");
+  ctx.done.push("D2");
+  let list: ReturnType<typeof verifyIdentifierListToken>;
+  try {
+    list = verifyIdentifierListToken(cwtBytes(cached.token), { uri: ref.uri, now, publicKeyOf: pointOf });
+  } catch (e) {
+    const msg = (e as Error).message;
+    if (msg.startsWith("D4:")) return indet("D4", "STATUS_STALE", `identifier list: ${msg}`);
+    return reject("D3", `identifier list: ${msg}`);
+  }
+  const statusKeys = (ctx.issuerRec?.delegate_keys ?? [])
+    .filter((k) => k.purpose === "status_list" && (k.status ?? "ACTIVE") === "ACTIVE")
+    .map((k) => k.fingerprint_sha256);
+  if (!statusKeys.length)
+    return indet("D3", "STATUS_UNREACHABLE", "the institution's status list key is not registered in the trusted list");
+  if (!statusKeys.includes(certFingerprintSha256Hex(list.leafDer)))
+    return reject("D3", "identifier list signer is not the institution's registered status key");
+  ctx.done.push("D3");
+  const age = now - list.iat;
+  if (age > input.policy.freshness.max_status_token_age_sec)
+    return indet("D4", "STATUS_STALE", `identifier list age ${age}s`);
+  ctx.done.push("D4");
+  ctx.skipped.push("D5");
+  const revoked = list.identifiers.has(ref.id);
+  ctx.status = { value: revoked ? "INVALID" : "VALID", list_version: null, token_age_sec: age };
+  if (revoked) return reject("D6", "credential revoked (identifier list)");
   ctx.done.push("D6");
 }
 

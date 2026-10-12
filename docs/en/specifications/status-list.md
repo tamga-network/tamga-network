@@ -4,7 +4,7 @@ title: "Revocation and status list"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-12
 summary: >
   The normative implementation of the [[ADR-0008]] decision. Defines the Tamga profile of the Status List Token (bits=2,
   ES256, X.509 chain, at least 100,000 indices), the fixed-interval, noisy publication cycle, the rewritten
@@ -493,6 +493,13 @@ Normative. Run for every credential that carries a `status` claim.
 
 Ş10. Write the result to the audit log together with the version and iat of the token used.
 ```
+
+**Attestation Revocation List (code 0.5.0; EU VCR_10, VCR_12).** If the MSO of an mdoc carries `identifier_list {id, uri}`
+instead of `status_list` (Implementing Regulation (EU) 2024/2979 Annex II, as amended by 2026/1731), the verifier checks the
+identifier list with the same steps: `application/identifierlist+cwt` (COSE_Sign1 ES256; `typ` and `x5chain` in the protected
+header; `identifiers` in claim 65530; `exp` required); the signer is the institution's registered status key (S11); prefetch
+cache (S12); freshness (Ş7); if `id` is listed the result is REJECTED (no suspension). There is no anchor log for these lists.
+Tamga issuers publish the Status List (one is enough, VCR_11).
 
 ## 7.1 "Invalid" versus "could not verify"
 

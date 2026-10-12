@@ -127,6 +127,42 @@ describe("presentProximity", () => {
     });
   });
 
+  it("ADR-0046: yakın mesafede paylaşım kuralı değerlendirilemez — kısıtlı belgede görünüm uyarı bilgisini taşır", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const restricted = {
+      ...state,
+      credentials: state.credentials.map((c) => ({
+        ...c,
+        disclosurePolicy: {
+          policy: {
+            id: "https://issuer.example/p",
+            type: "authorized_relying_parties",
+            relying_parties: [{ rp_id: "x" }],
+          },
+          digest: "sha256:00",
+        },
+      })),
+    } as typeof state;
+    const views: Array<{ restricted?: boolean; outcome?: string }> = [];
+    for (const s of [state, restricted]) {
+      const link = bleLink({ age_over_18: false });
+      await presentProximity({
+        transport: link.transport,
+        state: s,
+        keys,
+        onQr: link.onQr,
+        approve: async (v) => (
+          views.push({ restricted: v.disclosurePolicy?.restricted, outcome: v.disclosurePolicy?.outcome }),
+          null
+        ),
+      });
+    }
+    expect(views).toEqual([
+      { restricted: false, outcome: "passed" },
+      { restricted: true, outcome: "not_evaluable" },
+    ]);
+  });
+
   it("ret: yanıt yok, oturum sonu; günlükte declined", async () => {
     const { state, keys } = await walletWithIdentity();
     const link = bleLink({ age_over_18: false });

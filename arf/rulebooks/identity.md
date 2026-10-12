@@ -513,7 +513,7 @@ types (§4.6) comes only from the external list.
 | Indication of a non-qualified EAA (ARB_12) | **Decision (2026-10-12, [[ADR-0047]] K6):** the EU template suggests the `category` value `eaa:eu:non-qualified`; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires `category` to be absent in a non-qualified EAA. Tamga follows ETSI; the template's value is not used |
 | Trust anchor location in the credential (ARB_21) | **Decision (2026-10-12, [[ADR-0047]] K7):** no location attribute is added; the location is the lists in §5. A location in the credential would be the issuer's own claim; a verifier takes the anchor only from a list it chose itself, with a pinned signature |
 | `nbf` (ETSI TS 119 472-1 technical start of validity) | Not written today; validity starts at `iat`. Adding it is implementation work |
-| Attestation Revocation List | The EU requires both mechanisms (VCR_10, VCR_12); Tamga publishes only the Status List today. Revocation List support is planned with the trust list formats work |
+| Attestation Revocation List | Tamga issuers publish the Status List (one is enough under EU VCR_11); the verifier and the wallet core also verify the identifier list (packages 0.5.0; [[FW-POL-0001]] §8) |
 
 ## 8. References
 

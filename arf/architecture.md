@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-11 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -186,6 +186,9 @@ release. Where proofs are not supported, the presentation is made in the usual w
 | Browser presentation (Digital Credentials API)                            | Verifier ready; no wallet connection yet                                                                  |
 | Hardware-backed keys and device attestation                               | Implemented; device testing with the app-store release                                                    |
 | Issuer's sharing rule (embedded disclosure policy)                        | Implemented in the source; released with the 0.5.0 packages                                               |
+| Issuer's wallet attestation preferences (key storage requirement, revocation maintenance period) | Implemented in the source; released with the 0.5.0 packages |
+| The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Implemented in the source; released with the 0.5.0 packages |
+| Attestation Revocation List (identifier list) — verifier and wallet side | Implemented in the source; released with the 0.5.0 packages; Tamga issuers use the Status List |
 | Sandbox (open to everyone; identity verification with daily/monthly caps) | Live                                                                                                      |
 
 ---
