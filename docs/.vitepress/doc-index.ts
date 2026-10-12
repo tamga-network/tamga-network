@@ -29,6 +29,9 @@ export const ARF_PAGES: Record<string, string> = {
   "FW-READ-0001": "reading-path",
   "FW-ROLE-0001": "roles",
   "FW-ONB-0001": "onboarding",
+  "FW-RB-0005": "rulebooks/contact",
+  "FW-POL-0001": "policies/revocation",
+  "FW-POL-0002": "policies/wallet-attestation",
 };
 
 /**

@@ -27,18 +27,22 @@ artınca aynı çalışmada İngilizcesi de güncellenir.
 | `FW-TF-0001` | `0002-trust-framework.md` | **Ek A — Trust Framework**: yönetişim, katılım kapıları, uyum, sözleşmeler, devir planı | Ulusal eID/EUDI güven şeması; CIR 2024/2977, 2979, 2980, 2981 ve 2982'nin karşılığı | 1.0.0 · Active |
 | `FW-RB-0001` | `0003-tamga-rulebook.md` | **Ek B — Tamga Rulebook** (ana rulebook): bütün katılımcılar ve belge türleri için ortak, numaralı kurallar (RB-*) | ARF Annex 2 HLR (rol bazlı) | 1.0.0 · Active |
 | `FW-RB-0002` | `0004-education-rulebook.md` | **Education Rulebook** (Ek C): `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` | ARF Annex 3 attestation rulebook | 1.0.0 · Active |
-| `FW-RB-0003` | `0005-identity-rulebook.md` | **Identity Rulebook** (Ek C): `urn:tamga:id:IdentityAttestation:1`, `urn:tamga:id:DrivingLicenceAttestation:1` | ARF PID Rulebook deseni (PID değil, EAA) | 1.0.0 · Active |
+| `FW-RB-0003` | `0005-identity-rulebook.md` | **Identity Rulebook** (Ek C): `urn:tamga:id:IdentityAttestation:1` (+ ZK kopyası, takma ad tohumu), `urn:tamga:id:DrivingLicenceAttestation:1` | ARF PID Rulebook deseni (PID değil, EAA) | 1.0.0 · Active |
 | `FW-RB-0004` | `0006-event-ticket-rulebook.md` | **Event Ticket Rulebook** (Ek C): `urn:tamga:tkt:EventTicket:1` | ARF Annex 3 attestation rulebook | 1.0.0 · Active |
+| `FW-RB-0005` | `0012-contact-rulebook.md` | **Contact Rulebook** (Ek C): `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` | ARF Annex 3 attestation rulebook | 1.0.0 · Active |
+| `FW-POL-0001` | `0013-revocation-policy.md` | **İptal Politikası**: belgelerin hangi koşullarda iptal edildiği, askı, yayın (ARF VCR_05) | Sağlayıcının iptal politikası (VCR_05) | 1.0.0 · Active |
+| `FW-POL-0002` | `0014-wallet-attestation-policy.md` | **Cüzdan Kanıtı Politikası**: WIA ve KA'nın verilmesi ve iptali (ARF WURevocation_03/09a) | Cüzdan sağlayıcısının WIA/KA politikası | 1.0.0 · Active |
 | `FW-DEF-0001` | `0007-definitions.md` | **Ek D — Tanımlar** | ARF Annex 1 | 1.0.0 · Active |
 | `FW-REF-0001` | `0008-references.md` | **Ek E — Kaynaklar**: standartlar, karar kayıtları, kural kaynakları | — | 1.0.0 · Active |
 | `FW-READ-0001` | `0009-reading-path.md` | **Okuma yolu**: rol başına okuma sırası (ARF, sonra geliştirici belgeleri) | — | 1.0.0 · Active |
 | `FW-ROLE-0001` | `0010-roles.md` | **Roller**: her rolün işi, bugün kimin üstlendiği, kuralları, ihtiyaçları | — | 1.0.0 · Active |
 | `FW-ONB-0001` | `0011-onboarding.md` | **Katılım süreci**: rol başına adımlar, belgeler, inceleme, listeye giriş, askı ve çıkış | — | 1.0.0 · Active |
 
-Belge türü rulebook'ları Tamga Rulebook'tan dallanır: ortak kuralların hepsini devralır, yalnızca türe özgü kuralları ekler.
+Belge türü rulebook'ları Tamga Rulebook'tan dallanır: ortak kuralların hepsini devralır, yalnızca türe özgü kuralları ekler. Yapıları AB Attestation Rulebook şablonunun (1.5) bölümlerini izler (Tamga Rulebook §11). Politika belgeleri (`FW-POL-*`)
+kuralları konu başına toplar (iptal; cüzdan kanıtları).
 
 Planlı: `FW-RISK-0001` Tamga Risk Register (ARF R1–R14 türevi);
-`FW-RB-0005+` diğer belge türü rulebook'ları (tüzel kişilik, oda üyeliği) — `SPEC-SCHEMA-0003`
+`FW-RB-0006+` diğer belge türü rulebook'ları (tüzel kişilik, oda üyeliği) — `SPEC-SCHEMA-0003`
 kontrol listesi (SG1–SG7) geçildikçe.
 
 ---
@@ -50,7 +54,7 @@ FW-<DOMAIN>-<NUMBER>
 ```
 
 Domainler: `ARF` (mimari çerçeve), `TF` (trust framework / yönetişim), `RB` (rulebook), `DEF` (tanımlar), `REF`
-(kaynaklar), `READ` (okuma yolu), `ROLE` (roller), `ONB` (katılım süreci), `RISK` (risk kütüğü). Bkz. `CONTRIBUTING.md` (Belgeler — kimlik).
+(kaynaklar), `READ` (okuma yolu), `ROLE` (roller), `ONB` (katılım süreci), `POL` (politika), `RISK` (risk kütüğü). Bkz. `CONTRIBUTING.md` (Belgeler — kimlik).
 
 ---
 

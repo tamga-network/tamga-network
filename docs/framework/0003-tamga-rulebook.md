@@ -22,10 +22,15 @@ belge türünün kendi rulebook'u vardır ve bu kitaptan dallanır:
 | Education Rulebook | öğrenci belgesi, diploma | [[FW-RB-0002]] |
 | Identity Rulebook | Tamga kimlik belgesi | [[FW-RB-0003]] |
 | Event Ticket Rulebook | etkinlik bileti | [[FW-RB-0004]] |
+| Contact Rulebook | doğrulanmış e-posta adresi, doğrulanmış telefon numarası | [[FW-RB-0005]] |
 
 Bir belge türü rulebook'u bu kitaptaki kuralların hepsini devralır ve yalnızca o türe özgü kuralları ekler: kim verir, hangi
-[[t:identity-proofing]] ile, hangi alanlarla, ne kadar süre geçerli, nasıl iptal edilir. Yeni bir belge alanı (örneğin sağlık),
-yedi koşullu kontrol listesi (SG1–SG7) tamamlandıktan sonra yeni bir rulebook olarak eklenir (RB-SCH-05).
+[[t:identity-proofing]] ile, hangi alanlarla, ne kadar süre geçerli, nasıl iptal edilir. Belge türü rulebook'ları AB Attestation
+Rulebook şablonunun bölüm yapısını izler (§11). Yeni bir belge alanı (örneğin sağlık), yedi koşullu kontrol listesi (SG1–SG7)
+tamamlandıktan sonra yeni bir rulebook olarak eklenir (RB-SCH-05).
+
+İki politika belgesi kuralları konu başına toplar: **İptal Politikası** ([[FW-POL-0001]]) belgelerin hangi koşullarda iptal edildiğini,
+**Cüzdan Kanıtı Politikası** ([[FW-POL-0002]]) cüzdan sağlayıcılarının WIA ve KA'yı nasıl verip iptal ettiğini anlatır.
 
 Her rolün ne yaptığı ve hangi kurallara bağlı olduğu [[FW-ROLE-0001]], katılımın adımları [[FW-ONB-0001]] sayfasındadır.
 
@@ -264,6 +269,36 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 
 ---
 
+# 11. AB Attestation Rulebook şablonu ve ARF Topic 12
+
+Belge türü rulebook'ları AB Attestation Rulebook şablonunun (sürüm 1.5, 2026-07-08) bölüm yapısını izler: 1 Giriş · 2 Öznitelikler
+ve üst veri (zorunlu, isteğe bağlı, koşullu) · 3 Kodlama (ISO/IEC 18013-5, SD-JWT VC, W3C VCDM) · 4 Kullanım · 5 Güven çapaları ·
+6 İptal (Tamga'da "Geçerlilik ve iptal") · 7 Uyum · 8 Kaynaklar. Tamga'ya özgü konular (kim verir, kimlik doğrulama, veri koruma,
+doğrulama politikaları) Bölüm 4'tedir. ARF Annex 2 Topic 12'nin nitelikli olmayan EAA'ya uygulanan şartları şöyle karşılanır:
+
+| ARF | Şart | Rulebook'ta |
+|---|---|---|
+| ARB_01a, ARB_01b | Ortak biçimlerden biri; SD-JWT VC'de HAIP profili | §3.2 (bütün türler SD-JWT VC), §3.1 (kimlik belgesi ayrıca mdoc) |
+| ARB_02 | Yakın alanda internetsiz gösterim gerekir mi, analiz | §3.1 |
+| ARB_05 | Türün ağda tek tanımlayıcısı | `vct` URN (RB-SCH-01); mdoc docType aynı değer |
+| ARB_06, ARB_06a, ARB_06b | Bütün özniteliklerin biçimden bağımsız tanımı; mdoc ad alanı; claim adının IANA, genel ya da türe özgü ad olması | §2, §3 |
+| ARB_07, ARB_08 | Var olan öznitelikleri ve adlandırma geleneklerini kullanma | AB PID adları ([[ADR-0045]]), OpenID Connect, ISO/IEC 18013-5, ELM |
+| ARB_09 | Her özniteliğin zorunlu, isteğe bağlı ya da koşullu olması | §2.2–§2.7 |
+| ARB_12, ARB_25 | Hukuki kategori göstergesi (`category`; ARF metninde `attestation_legal_category`) | §2.1 — yalnız nitelikli ya da kamu sınıfında, Tamga değerleriyle (RB-AP-14) |
+| ARB_15, ARB_17, ARB_19, ARB_21 | eIDAS 2.0 Ek V b, c, e, h karşılıkları | §2.0 |
+| ARB_22 | Birlikte çalışabilirlik, güvenlik ve mahremiyet için gereken teknik ayrıntı | Rulebook ve dayandığı şartnameler (Ek E) |
+| ARB_24, ARB_24a | Tür iptal edilebilir mi, mekanizma, liste adresi | §6 ve [[FW-POL-0001]] |
+| ARB_26 | Doğrulayıcının güven çapasını nasıl aldığı | §5 |
+| ARB_29 | Rulebook'un AB şablonunun yapısını izlemesi | Bütün belge türü rulebook'ları |
+| ARB_30, ARB_31 | Her claim için seçici açıklama kuralı; Type Metadata | §3.2; tür tanımı katalogda (RB-SCH-01) |
+| ARB_34 | Cihaza bağlı mı | §4 — bütün türler cihaza bağlıdır |
+
+Nitelikli ya da kamu EAA'ya ve AB kataloğuna özgü şartlar (ARB_01, ARB_11, ARB_13, ARB_14, ARB_16, ARB_18, ARB_20, ARB_23, ARB_33)
+Tamga belgelerine uygulanmaz. Seçimlik şartlardan ARB_10 (türe özgü mdoc ad alanı) kimlik belgesinde kullanılır (`tamga.id.1`);
+ARB_03 ve ARB_04 (W3C VCDM) ile ARB_28 (`cryptographically_bound_to`) kullanılmaz.
+
+---
+
 # Tablo — Kural ve rol özeti
 
 | Konu | OP | REG | AP | AS | WP | RP | H |
@@ -283,4 +318,4 @@ Bu belgenin dayandığı kararlar, şartnameler ve standartlar Ek E'de listeleni
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §11 ve politika belgeleri 2026-10-11).

@@ -61,7 +61,7 @@ yolunu **denetim kaydına** yazar ([[SPEC-PROTO-0001]]/PR7).
 | **T3** | High | High | NES / Mobil İmza ile nonce imzalama (ilk aşamadan itibaren); devlet aşamasında PID | Yalnızca authorization code veya yüz yüze; **pre-authorized ile yasak** (ETSI TS 119 472-3 GEN-REQ-4.1) |
 
 **Tip ↔ asgari seviye** [[t:rulebook]]'larda: Education Rulebook — öğrenci belgesi T1, diploma T2
-([[FW-RB-0002]] §4). Kurum, tipin seviyesini sağlayamıyorsa teklif **üretmez** (belge verme durur; tahmin/yükseltme yok).
+([[FW-RB-0002]] §4.4). Kurum, tipin seviyesini sağlayamıyorsa teklif **üretmez** (belge verme durur; tahmin/yükseltme yok).
 
 ---
 

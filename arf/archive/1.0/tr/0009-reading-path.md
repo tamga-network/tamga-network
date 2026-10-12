@@ -24,9 +24,9 @@ katılmaya hazırsanız **Katılım süreci** sayfasına ([[FW-ONB-0001]]) bakı
 
 | Rol | 1. Çerçeve (ARF) | 2. Uygulama (geliştirici belgeleri) |
 |---|---|---|
-| **Belge veren kurum** (üniversite, bilet satıcısı, meslek kuruluşu) | Ana belge §2–§6 → [[FW-ROLE-0001]] "Belge veren" → Ek A §3.2 (katılım kapıları) ve §5.1 (sözleşmeler) → Ek B §4 (RB-AP) → belge türünüzün rulebook'u (Ek C) | [[GUIDE-0007]] → [[GUIDE-0003]] → [[GUIDE-0009]] |
+| **Belge veren kurum** (üniversite, bilet satıcısı, meslek kuruluşu) | Ana belge §2–§6 → [[FW-ROLE-0001]] "Belge veren" → Ek A §3.2 (katılım kapıları) ve §5.1 (sözleşmeler) → Ek B §4 (RB-AP) → belge türünüzün rulebook'u (Ek C) → İptal Politikası ([[FW-POL-0001]]) | [[GUIDE-0007]] → [[GUIDE-0003]] → [[GUIDE-0009]] |
 | **Doğrulayıcı** (işveren, banka, web sitesi, kapı) | Ana belge §2 ve §6 → [[FW-ROLE-0001]] "Doğrulayıcı" → Ek A §3.2 (doğrulayıcı kaydı) → Ek B §7 (RB-RP) → belge türünün rulebook'unda doğrulama politikası | [[GUIDE-0008]] → [[GUIDE-0002]] ya da [[GUIDE-0001]] → [[GUIDE-0006]] |
-| **Cüzdan sağlayıcısı** | Ana belge §2, §5, §6 ve §7 → [[FW-ROLE-0001]] "Cüzdan sağlayıcısı" → Ek A §3.2 ve §4.3 (uyum testleri) → Ek B §6 (RB-WP) | [[GUIDE-0005]] → [[GUIDE-0010]] → [[GUIDE-0009]] → [[SPEC-WALLET-0001]] |
+| **Cüzdan sağlayıcısı** | Ana belge §2, §5, §6 ve §7 → [[FW-ROLE-0001]] "Cüzdan sağlayıcısı" → Ek A §3.2 ve §4.3 (uyum testleri) → Ek B §6 (RB-WP) → Cüzdan Kanıtı Politikası ([[FW-POL-0002]]) | [[GUIDE-0005]] → [[GUIDE-0010]] → [[GUIDE-0009]] → [[SPEC-WALLET-0001]] |
 | **Devlet ya da düzenleyici** | Ek A (bütünü; özellikle §1.6 yönetişim ve §7 devir planı) → ana belge §6 (güven modeli) ve §8 (yönetişim ve devir) → [[FW-ROLE-0001]] "Devlet" | [[GUIDE-0011]] → [[SPEC-TRUST-0001]] |
 | **Yetkili kaynak** (öğrenci bilgi sistemi, kamu kaydı) | [[FW-ROLE-0001]] "Yetkili kaynak" → Ek B §5 (RB-AS) → Ek A §3.6 (veri koruma) | Belge türünün şeması (ör. [[SPEC-SCHEMA-0002]]) |
 | **Denetçi** (uygunluk değerlendirmesi, iç denetim) | Ek A §4 (uyum: rejim, roller, testler, gözetim, yaptırım, olaylar) → Ek B (bütünü) → Ek E §3 (kural kaynakları) | [[GUIDE-0009]] → değişmezler ([[INVARIANTS]]) |
@@ -40,6 +40,7 @@ katılmaya hazırsanız **Katılım süreci** sayfasına ([[FW-ONB-0001]]) bakı
 | Ağda kim ne yapar? | [[FW-ROLE-0001]] |
 | Ağa nasıl katılırım, hangi belgeler gerekir? | [[FW-ONB-0001]], Ek A §3.2 |
 | Hangi kurala uymam gerekiyor? | Ek B (rol başına), Ek C (belge türü başına) |
+| Bir belge hangi koşullarda iptal edilir? Cüzdan kanıtı nasıl verilir? | [[FW-POL-0001]], [[FW-POL-0002]] |
 | Bir kural nereden geliyor? | Ek E §3 |
 | Bir terim ne demek? | Ek D |
 | Ağı kim yönetiyor, nasıl devredilecek? | Ana belge §8, Ek A §1.6 ve §7 |

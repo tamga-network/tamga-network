@@ -605,7 +605,7 @@ The protocol counterpart of [[SPEC-CRED-0001]] §3. The [[t:holder-binding]] met
 moment of issuance.
 
 **Remote [[t:identity-proofing]] (T2):** document + liveness + face matching with a licensed provider; profile and provider
-integration in [[SPEC-ID-0003]]. Type ↔ minimum level: [[FW-RB-0002]] §4 (student certificate T1, diploma T2).
+integration in [[SPEC-ID-0003]]. Type ↔ minimum level: [[FW-RB-0002]] §4.4 (student certificate T1, diploma T2).
 
 ## 11.1 Wallet unit verification (D-CRED-6 — ETSI TS 119 471 REQ-EAASP-4.2.1.2-02/03)
 

@@ -16,6 +16,8 @@ summary: >
 |---|---|
 | Regulation (EU) 2024/1183 (eIDAS 2.0) | <https://eur-lex.europa.eu/eli/reg/2024/1183/oj> |
 | EUDI Wallet Architecture and Reference Framework (ARF) | <https://eu-digital-identity-wallet.github.io/eudi-doc-architecture-and-reference-framework/> |
+| EUDI attestation rulebook kataloğu — Attestation Rulebook şablonu (1.5), PID Rulebook, mDL Rulebook | <https://github.com/eu-digital-identity-wallet/eudi-doc-attestation-rulebooks-catalog> |
+| Commission Implementing Regulation (EU) 2026/1731 (PID ve EAA kodlaması) | <https://eur-lex.europa.eu/> |
 | OpenID for Verifiable Credential Issuance 1.0 | <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html> |
 | OpenID for Verifiable Presentations 1.0 | <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html> |
 | OpenID4VC High Assurance Interoperability Profile (HAIP) 1.0 | <https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0.html> |
@@ -42,7 +44,7 @@ belgelerden derlenmiştir.
 | Belge verme | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]] · [[ADR-0046]] |
 | Gösterme ve doğrulama | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] · [[ADR-0044]] |
 | Cüzdan | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]] |
-| Kimlik | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]] |
+| Kimlik | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]] · [[ADR-0045]] |
 | Adlar | [[ADR-0030]] |
 
 # 3. Kural kaynakları
@@ -187,6 +189,11 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-ENF-03 | proje yönetimi kararı |
 | RB-ENF-04 | proje yönetimi kararı |
 | RB-ENF-05 | [[FW-RB-0001]] §0 |
+
+## Ek C ve politikalar
+
+Belge türü rulebook'ları ([[FW-RB-0002]]…[[FW-RB-0005]]) ile İptal Politikası ([[FW-POL-0001]]) ve Cüzdan Kanıtı Politikası
+([[FW-POL-0002]]) yeni kural koymaz; her kuralın kaynağı satırında yazılıdır (Ek B kuralı, karar kaydı ya da şartname).
 
 # Durum
 

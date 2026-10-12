@@ -62,7 +62,7 @@ information it needs (e.g. `age_over_18`).
 # Consequences and open items
 
 - No code change today: the identity service and the trust list entry rules did not check age. The identity rulebook
-  ([[FW-RB-0003]] §3) and the identity proofing specification ([[SPEC-ID-0003]] §9) refer to this decision.
+  ([[FW-RB-0003]] §4.3) and the identity proofing specification ([[SPEC-ID-0003]] §9) refer to this decision.
 - **Follow-up — guardian consent:** GDPR Art. 8 requires parental authorisation for consent-based information society services
   offered to a child below 16 (member states may lower this to 13). Under Turkish law KVKK sets no specific age; legal capacity is
   limited below 18. The identity service's notice and explicit-consent flow may need a guardian-consent flow; this is handled by a

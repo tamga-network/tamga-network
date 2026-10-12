@@ -42,9 +42,10 @@ Tamga [[t:ARF]], AB ARF'si gibi bir ana belge ve eklerden oluşur:
 | Ana belge (bu belge) | Kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik, yönetişim |
 | Ek A — Trust Framework | Yönetişim, katılım kapıları, uyum, sözleşmeler, devir planı |
 | Ek B — Tamga Rulebook | Bütün katılımcılar ve belge türleri için ortak, numaralı ve bağlayıcı kurallar |
-| Ek C — Rulebook'lar | Tamga Rulebook'tan dallanan belge türü kuralları: Education Rulebook (öğrenci belgesi, diploma), Identity Rulebook (kimlik belgesi), Event Ticket Rulebook (etkinlik bileti) |
+| Ek C — Rulebook'lar | Tamga Rulebook'tan dallanan belge türü kuralları: Education Rulebook (öğrenci belgesi, diploma), Identity Rulebook (kimlik belgesi, sürücü belgesi bilgisi), Event Ticket Rulebook (etkinlik bileti), Contact Rulebook (e-posta, telefon); AB Attestation Rulebook şablonunun yapısıyla |
 | Ek D — Tanımlar | Terimler ve kısaltmalar |
 | Ek E — Kaynaklar | Standartlar, karar kayıtları, spesifikasyonlar ve kural kaynakları |
+| Politikalar | İptal Politikası; Cüzdan Kanıtı Politikası (WIA ve KA) |
 | Okuma yolu · Roller · Katılım süreci | Yardımcı sayfalar: rol başına okuma sırası, rollerin ayrıntısı, katılımın adımları |
 
 Türkçe metin kaynaktır; İngilizce metin aynı sürümün resmî çevirisidir. İki dil her zaman aynı sürümdedir.

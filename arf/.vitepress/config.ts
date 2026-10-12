@@ -37,10 +37,14 @@ const T: Record<
       "Reading path",
       "Roles",
       "Onboarding",
+      "Contact Rulebook",
+      "Revocation Policy",
+      "Wallet Attestation Policy",
     ],
     nav: {
       framework: "Framework",
       annexes: "Annexes",
+      policies: "Policies",
       joining: "Taking part",
       changes: "What changed",
       general: "General docs",
@@ -64,10 +68,14 @@ const T: Record<
       "Okuma yolu",
       "Roller",
       "Katılım süreci",
+      "Contact Rulebook",
+      "İptal Politikası",
+      "Cüzdan Kanıtı Politikası",
     ],
     nav: {
       framework: "Çerçeve",
       annexes: "Ekler",
+      policies: "Politikalar",
       joining: "Katılım",
       changes: "Ne değişti",
       general: "Genel belgeler",
@@ -93,7 +101,11 @@ function theme(l: Loc): DefaultTheme.Config {
       { text: t.nav.framework, link: link(0) },
       {
         text: t.nav.annexes,
-        items: [1, 2, 3, 4, 5, 6, 7].map((i) => ({ text: t.doc[i], link: link(i) })),
+        items: [1, 2, 3, 4, 5, 11, 6, 7].map((i) => ({ text: t.doc[i], link: link(i) })),
+      },
+      {
+        text: t.nav.policies,
+        items: [12, 13].map((i) => ({ text: t.doc[i], link: link(i) })),
       },
       { text: t.nav.joining, items: [8, 9, 10].map((i) => ({ text: t.doc[i], link: link(i) })) },
       { text: t.nav.changes, link: `${t.prefix}changes` },
@@ -116,8 +128,11 @@ function theme(l: Loc): DefaultTheme.Config {
               {
                 text: l === "tr" ? "Ek C — Rulebook'lar" : "Annex C — Rulebooks",
                 collapsed: false,
-                items: docItems(r.docs, docRoot, [3, 4, 5]),
+                items: docItems(r.docs, docRoot, [3, 4, 5, 11]),
               },
+              ...(r.docs[IDS[12]]
+                ? [{ text: t.nav.policies, collapsed: false, items: docItems(r.docs, docRoot, [12, 13]) }]
+                : []),
               ...docItems(r.docs, docRoot, [6, 7]),
               ...(r.docs[IDS[9]]
                 ? [{ text: t.nav.joining, collapsed: false, items: docItems(r.docs, docRoot, [9, 10]) }]

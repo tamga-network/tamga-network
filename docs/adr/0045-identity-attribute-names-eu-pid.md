@@ -85,7 +85,7 @@ yönetiminin kararına bırakılmıştır.
 
 **Karar (2026-10-11):** ayrı ad yok; alan AB anlamını taşır (belgeyi veren sağlayıcının ülkesi). Bugün belgeyi Tamga
 kimlik servisi taranan kimlik belgesine dayanarak verdiği için değer taranan belgenin ülkesidir; kod değişmez. Devlet PID
-sağlayıcısı PID verdiğinde alan AB anlamıyla doldurulur ve anlatılır ([[FW-RB-0003]] §9, [[SPEC-ID-0003]] §9).
+sağlayıcısı PID verdiğinde alan AB anlamıyla doldurulur ve anlatılır ([[FW-RB-0003]] §4.6, [[SPEC-ID-0003]] §9).
 
 # Değişmezler
 
@@ -101,7 +101,7 @@ sağlayıcısı PID verdiğinde alan AB anlamıyla doldurulur ve anlatılır ([[
   (dizi öğesi disclosure'ı), `@tamga-network/issuer` (eşleştirme anahtarı `birthdate`), `@tamga-network/verifier` (mdoc
   adları → şema ve kapsam), `@tamga-network/wallet-core` (mdoc eşleşmesi, MD1, sürücü belgesi ön koşulu); kimlik servisi
   (operatör deposu); kurumların eşleştirme yapılandırması; güven listesindeki doğrulayıcı kapsamları.
-- [[ADR-0011]] alan tablosu ve [[ADR-0013]] K2 / MD1 metni bu ADR'ye göre okunur; [[SPEC-ID-0003]] §9, [[FW-RB-0003]] §1, §6, §9
+- [[ADR-0011]] alan tablosu ve [[ADR-0013]] K2 / MD1 metni bu ADR'ye göre okunur; [[SPEC-ID-0003]] §9, [[FW-RB-0003]] §2, §3, §4.6
   güncellendi.
 - Cüzdanlar kimlik belgesini yeniden alır (K5).
 

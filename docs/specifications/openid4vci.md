@@ -620,7 +620,7 @@ kriptografik olarak çözmez ([[SPEC-CRED-0001]] §3, kapsam sınırı). Yüz y�
 bağlama en güçlüsüdür çünkü **prosedürel** doğrulamayı belge verme anına taşır.
 
 **Uzaktan [[t:identity-proofing]] (T2):** lisanslı sağlayıcıyla belge + canlılık + yüz eşleştirme; profil ve sağlayıcı
-entegrasyonu [[SPEC-ID-0003]]. Tip ↔ asgari seviye [[FW-RB-0002]] §4 (öğrenci belgesi T1, diploma T2).
+entegrasyonu [[SPEC-ID-0003]]. Tip ↔ asgari seviye [[FW-RB-0002]] §4.4 (öğrenci belgesi T1, diploma T2).
 
 ## 11.1 Wallet unit doğrulaması (D-CRED-6 — ETSI TS 119 471 REQ-EAASP-4.2.1.2-02/03)
 

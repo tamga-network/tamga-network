@@ -12,25 +12,28 @@ compatible with [[t:eIDAS]] 2.0 and the European Digital Identity Wallet ecosyst
 which rules and on which architecture: use cases, roles, the architecture, the data model, the trust model, security and
 governance, and the binding rules for every participant.
 
-It follows the structure of the EU ARF: one main document and five annexes (Annex C holds three rulebooks). The binding rules live in one main [[t:rulebook]],
+It follows the structure of the EU ARF: one main document and five annexes (Annex C holds four rulebooks that follow the EU Attestation Rulebook template), plus two policies. The binding rules live in one main [[t:rulebook]],
 the **Tamga Rulebook**, and each [[t:credential]] type has its own rulebook that branches from it.
 
 ## Documents
 
-| Document                                              | Version | For                                                                                         |
-| ----------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------- |
-| [Architecture and Reference Framework](/architecture) | 1.0.0   | everyone — start here                                                                       |
-| [Annex A — Trust Framework](/trust-framework)         | 1.0.0   | regulators, states, institutions: governance, onboarding, compliance, agreements, hand-over |
-| [Annex B — Tamga Rulebook](/rulebook)                 | 1.0.0   | every participant: the common, numbered rules per role                                      |
-| Annex C — Rulebooks                                   |         | credential-type rules that branch from the Tamga Rulebook:                                  |
-| · [Education Rulebook](/rulebooks/education)          | 1.0.0   | universities and verifiers: student certificate and diploma                                 |
-| · [Identity Rulebook](/rulebooks/identity)            | 1.0.0   | institutions and verifiers: the provisional identity credential                             |
-| · [Event Ticket Rulebook](/rulebooks/event-ticket)    | 1.0.0   | ticket sellers and gates                                                                    |
-| [Annex D — Definitions](/definitions)                 | 1.0.0   | terms and abbreviations                                                                     |
-| [Annex E — References](/references)                   | 1.0.0   | standards, Tamga documents and the source of every rule                                     |
-| [Reading path](/reading-path)                         | 1.0.0   | what to read, in which order, for your role                                                 |
-| [Roles](/roles)                                       | 1.0.0   | each role in detail: what it does, its rules, what it needs                                 |
-| [Onboarding](/onboarding)                             | 1.0.0   | the steps of joining, suspension and exit                                                   |
+| Document                                                  | Version | For                                                                                         |
+| --------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------- |
+| [Architecture and Reference Framework](/architecture)     | 1.0.0   | everyone — start here                                                                       |
+| [Annex A — Trust Framework](/trust-framework)             | 1.0.0   | regulators, states, institutions: governance, onboarding, compliance, agreements, hand-over |
+| [Annex B — Tamga Rulebook](/rulebook)                     | 1.0.0   | every participant: the common, numbered rules per role                                      |
+| Annex C — Rulebooks                                       |         | credential-type rules that branch from the Tamga Rulebook:                                  |
+| · [Education Rulebook](/rulebooks/education)              | 1.0.0   | universities and verifiers: student certificate and diploma                                 |
+| · [Identity Rulebook](/rulebooks/identity)                | 1.0.0   | institutions and verifiers: the provisional identity credential                             |
+| · [Event Ticket Rulebook](/rulebooks/event-ticket)        | 1.0.0   | ticket sellers and gates                                                                    |
+| · [Contact Rulebook](/rulebooks/contact)                  | 1.0.0   | websites and institutions: verified email address and phone number                          |
+| [Annex D — Definitions](/definitions)                     | 1.0.0   | terms and abbreviations                                                                     |
+| [Annex E — References](/references)                       | 1.0.0   | standards, Tamga documents and the source of every rule                                     |
+| [Revocation Policy](/policies/revocation)                 | 1.0.0   | issuers, verifiers, people: when a credential is revoked                                    |
+| [Wallet Attestation Policy](/policies/wallet-attestation) | 1.0.0   | wallet providers and issuers: issuing and revoking WIA and KA                               |
+| [Reading path](/reading-path)                             | 1.0.0   | what to read, in which order, for your role                                                 |
+| [Roles](/roles)                                           | 1.0.0   | each role in detail: what it does, its rules, what it needs                                 |
+| [Onboarding](/onboarding)                                 | 1.0.0   | the steps of joining, suspension and exit                                                   |
 
 ## How to read
 

@@ -29,10 +29,15 @@ EUDI [[t:ARF]], each credential type has its own rulebook that branches from thi
 | Education Rulebook    | student certificate, diploma | [[FW-RB-0002]] |
 | Identity Rulebook     | Tamga identity credential    | [[FW-RB-0003]] |
 | Event Ticket Rulebook | event ticket                 | [[FW-RB-0004]] |
+| Contact Rulebook | verified email address, verified phone number | [[FW-RB-0005]] |
 
 A credential type rulebook inherits every rule in this book and adds only the rules specific to its type: who issues, with
-which [[t:identity-proofing]], with which attributes, for how long it is valid and how it is revoked. A new credential domain (for
-example health) is added as a new rulebook once the seven-condition checklist (SG1–SG7) is complete (RB-SCH-05).
+which [[t:identity-proofing]], with which attributes, for how long it is valid and how it is revoked. Credential type rulebooks follow the section structure of the
+EU Attestation Rulebook template (§11). A new credential domain (for example health) is added as a new rulebook once the
+seven-condition checklist (SG1–SG7) is complete (RB-SCH-05).
+
+Two policy documents bring the rules together by topic: the **Revocation Policy** ([[FW-POL-0001]]) describes under which conditions
+credentials are revoked, the **Wallet Attestation Policy** ([[FW-POL-0002]]) how wallet providers issue and revoke the WIA and KA.
 
 What each role does and which rules bind it is on [[FW-ROLE-0001]]; the steps of joining are on [[FW-ONB-0001]].
 
@@ -271,6 +276,37 @@ Today Tamga is the provisional operator; at hand-over the role passes to the nat
 
 ---
 
+## 11. The EU Attestation Rulebook template and ARF Topic 12
+
+Credential type rulebooks follow the section structure of the EU Attestation Rulebook template (version 1.5, 2026-07-08):
+1 Introduction · 2 Attributes and metadata (mandatory, optional, conditional) · 3 Encoding (ISO/IEC 18013-5, SD-JWT VC, W3C VCDM) ·
+4 Usage · 5 Trust anchors · 6 Revocation (in Tamga "Validity and revocation") · 7 Compliance · 8 References. Tamga-specific topics
+(who issues, identity proofing, data protection, verification policies) are in Chapter 4. The requirements of ARF Annex 2 Topic 12
+that apply to a non-qualified EAA are met as follows:
+
+| ARF | Requirement | In the rulebook |
+|---|---|---|
+| ARB_01a, ARB_01b | One of the common formats; the HAIP profile for SD-JWT VC | §3.2 (all types SD-JWT VC), §3.1 (identity credential also mdoc) |
+| ARB_02 | Analysis of whether offline proximity presentation is needed | §3.1 |
+| ARB_05 | A unique identifier of the type in the network | `vct` URN (RB-SCH-01); the mdoc docType is the same value |
+| ARB_06, ARB_06a, ARB_06b | Format-independent definition of all attributes; mdoc namespace; claim names that are IANA, common or type-specific names | §2, §3 |
+| ARB_07, ARB_08 | Using existing attributes and naming conventions | EU PID names ([[ADR-0045]]), OpenID Connect, ISO/IEC 18013-5, ELM |
+| ARB_09 | Each attribute mandatory, optional or conditional | §2.2–§2.7 |
+| ARB_12, ARB_25 | Legal category indicator (`category`; in the ARF text `attestation_legal_category`) | §2.1 — only in the qualified or public class, with Tamga values (RB-AP-14) |
+| ARB_15, ARB_17, ARB_19, ARB_21 | Counterparts of eIDAS 2.0 Annex V b, c, e, h | §2.0 |
+| ARB_22 | The technical detail needed for interoperability, security and privacy | The rulebook and the specifications it rests on (Annex E) |
+| ARB_24, ARB_24a | Whether the type is revocable, the mechanism, the list address | §6 and [[FW-POL-0001]] |
+| ARB_26 | How the verifier obtains the trust anchor | §5 |
+| ARB_29 | The rulebook follows the structure of the EU template | All credential type rulebooks |
+| ARB_30, ARB_31 | Selective disclosure rule for each claim; Type Metadata | §3.2; the type definition is in the catalogue (RB-SCH-01) |
+| ARB_34 | Whether it is device-bound | §4 — all types are device-bound |
+
+Requirements specific to a qualified or public EAA and to the EU catalogue (ARB_01, ARB_11, ARB_13, ARB_14, ARB_16, ARB_18, ARB_20,
+ARB_23, ARB_33) do not apply to Tamga credentials. Of the optional requirements, ARB_10 (a type-specific mdoc namespace) is used in the
+identity credential (`tamga.id.1`); ARB_03 and ARB_04 (W3C VCDM) and ARB_28 (`cryptographically_bound_to`) are not used.
+
+---
+
 ## Table — Rules by role (summary)
 
 | Topic                                                | OP  | REG | AP  | AS  | WP          | RP                 | H           |
@@ -290,4 +326,4 @@ The decisions, specifications and standards this document rests on are listed in
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026).
+**Active** — version 1.0.0 (2 October 2026; §11 and the policy documents on 11 October 2026).

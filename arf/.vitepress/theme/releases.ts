@@ -17,6 +17,9 @@ const PAGE_IDS: Record<string, string> = {
   "reading-path": "FW-READ-0001",
   roles: "FW-ROLE-0001",
   onboarding: "FW-ONB-0001",
+  "rulebooks/contact": "FW-RB-0005",
+  "policies/revocation": "FW-POL-0001",
+  "policies/wallet-attestation": "FW-POL-0002",
 };
 
 /** Adresten dil, yayın ve sayfa: /tr/v0.1/architecture → { tr: true, release: "0.1", page: "architecture" }. */

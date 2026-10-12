@@ -95,7 +95,7 @@ to a separate name needs a new public name and is left to project management.
 **Decision (2026-10-11):** no separate name; the field carries the EU meaning (the country of the issuing provider). Today
 the Tamga identity service issues the credential on the basis of a scanned identity document, so the value is the country of
 the scanned document; the code does not change. When a state PID provider issues PID, the field is filled and described with the
-EU meaning ([[FW-RB-0003]] §9, [[SPEC-ID-0003]] §9).
+EU meaning ([[FW-RB-0003]] §4.6, [[SPEC-ID-0003]] §9).
 
 # Invariants
 
@@ -112,7 +112,7 @@ EU meaning ([[FW-RB-0003]] §9, [[SPEC-ID-0003]] §9).
   schema and scope), `@tamga-network/wallet-core` (mdoc matching, MD1, driving licence prerequisite); the identity service
   (operator repository); institutions' matching configuration; verifier scopes in the trust list.
 - The attribute table of [[ADR-0011]] and the text of [[ADR-0013]] K2 / MD1 are read according to this ADR; [[SPEC-ID-0003]] §9 and
-  [[FW-RB-0003]] §1, §6, §9 were updated.
+  [[FW-RB-0003]] §2, §3, §4.6 were updated.
 - Wallets obtain the identity credential again (K5).
 
 # Status

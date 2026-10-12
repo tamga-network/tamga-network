@@ -61,7 +61,7 @@ the binding path into its **audit record** ([[SPEC-PROTO-0001]]/PR7).
 | **T3** | High | High | Signing a nonce with a qualified e-signature / mobile signature (from the initial stage on); PID in the state stage | Only authorization code or in person; **forbidden with pre-authorized** (ETSI TS 119 472-3 GEN-REQ-4.1) |
 
 **Type ↔ minimum level** is set in the [[t:rulebook|rulebooks]]: Education Rulebook — student certificate T1, diploma T2
-([[FW-RB-0002]] §4). If the institution cannot reach the level a type requires, it **does not produce** an offer (issuance
+([[FW-RB-0002]] §4.4). If the institution cannot reach the level a type requires, it **does not produce** an offer (issuance
 stops; no guessing or upgrading).
 
 ---

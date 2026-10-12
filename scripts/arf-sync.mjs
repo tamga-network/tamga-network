@@ -95,6 +95,27 @@ const DOCS = [
     tr: "Katılım süreci",
     en: "Onboarding",
   },
+  {
+    id: "FW-RB-0005",
+    file: "0012-contact-rulebook.md",
+    page: "rulebooks/contact",
+    tr: "Contact Rulebook",
+    en: "Contact Rulebook",
+  },
+  {
+    id: "FW-POL-0001",
+    file: "0013-revocation-policy.md",
+    page: "policies/revocation",
+    tr: "İptal Politikası",
+    en: "Revocation Policy",
+  },
+  {
+    id: "FW-POL-0002",
+    file: "0014-wallet-attestation-policy.md",
+    page: "policies/wallet-attestation",
+    tr: "Cüzdan Kanıtı Politikası",
+    en: "Wallet Attestation Policy",
+  },
 ];
 // Yayınlanan metinde özel depo yolu, kişi adı ya da araç adı olmaz (DY3; onay alıntıları operatörün onay kaydında).
 const PRIVATE_BASE = /tamga-platform\/|_reports\/|\.local\.json|\.env\b|TOPARLAMA/;

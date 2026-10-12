@@ -51,9 +51,10 @@ Like the EU ARF, Tamga ARF consists of a main document and annexes:
 | Main document (this document)     | Use cases, roles, architecture, data model, trust model, security, governance                                                                                                               |
 | Annex A — Trust Framework         | Governance, onboarding gates, compliance, agreements, hand-over plan                                                                                                                        |
 | Annex B — Tamga Rulebook          | Common, numbered and binding rules for all participants and credential types                                                                                                                |
-| Annex C — Rulebooks               | Credential-type rules that branch from the Tamga Rulebook: Education Rulebook (student certificate, diploma), Identity Rulebook (identity credential), Event Ticket Rulebook (event ticket) |
+| Annex C — Rulebooks               | Credential-type rules that branch from the Tamga Rulebook: Education Rulebook (student certificate, diploma), Identity Rulebook (identity credential, driving licence information), Event Ticket Rulebook (event ticket), Contact Rulebook (email, phone); in the structure of the EU Attestation Rulebook template |
 | Annex D — Definitions             | Terms and abbreviations                                                                                                                                                                     |
 | Annex E — References              | Standards, decision records, specifications and rule sources                                                                                                                                |
+| Policies | Revocation Policy; Wallet Attestation Policy (WIA and KA) |
 | Reading path · Roles · Onboarding | Supporting pages: reading order per role, the roles in detail, the steps of joining                                                                                                         |
 
 The Turkish text is the source; the English text is the official translation of the same version. The two languages are

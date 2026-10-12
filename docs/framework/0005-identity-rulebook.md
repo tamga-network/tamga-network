@@ -6,64 +6,335 @@ version: 1.0.0
 created: 2026-09-27
 last_updated: 2026-10-11
 summary: >
-  Tamga'nın geçici kimlik belgesi sağlayıcısı olarak verdiği kimlik belgesinin (`urn:tamga:id:IdentityAttestation:1`)
-  rulebook'u (Tamga Rulebook'tan dallanır): kim verir, hangi kimlik doğrulamayla, hangi alanlarla ve hangi seçici paylaşım kuralıyla; geçerlilik
-  ve iptal; iki biçim (SD-JWT VC + ISO 18013-5 mdoc); kurumların ve doğrulayıcıların kullanım kuralları; devlet PID
-  sağlayıcısına devir. EUDI ARF PID Rulebook deseniyle yazılmıştır; bu belge PID değildir, bir EAA'dır. §10: aynı servisin
-  verdiği sürücü belgesi bilgisi (`urn:tamga:id:DrivingLicenceAttestation:1`) — resmî sürücü belgesi değildir.
+  Tamga'nın kimlik servisinin verdiği kişi belgelerinin rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
+  şablonunun bölüm yapısıyla: Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc),
+  onun ZK kopyası (`urn:tamga:id:ShortLivedIdentityAttestation:1`), takma ad tohumu (`urn:tamga:id:PseudonymSeed:1`) ve
+  sürücü belgesi bilgisi (`urn:tamga:id:DrivingLicenceAttestation:1`; resmî sürücü belgesi değildir). Öznitelikler ve üst
+  veri, hukuki kategori, biçim başına kodlama, kullanım, güven çapaları, geçerlilik ve iptal, AB uyumu. Kimlik belgesi PID
+  değildir; nitelikli olmayan bir EAA'dır ve AB PID adlarını ve kodlamasını kullanır.
 ---
 
-# 0. Kapsam ve statü
-
-| Tür | `vct` | Katalog |
+| Sürüm | Tarih | Açıklama |
 |---|---|---|
-| Tamga Kimlik Belgesi | `urn:tamga:id:IdentityAttestation:1` | `schemas.tamga.network/v1/id/IdentityAttestation/1.0.0` |
-| Aynı belgenin mdoc biçimi | docType = `vct`, ad alanı `tamga.id.1` | [[ADR-0013]] |
-| ZK kopyası (yalnız sıfır bilgi ispatlı sunum) | `urn:tamga:id:ShortLivedIdentityAttestation:1` (mdoc, ad alanı `tamga.id.1`) | `schemas.tamga.network/v1/id/ShortLivedIdentityAttestation/1.0.0` · [[ADR-0044]] |
+| 1.0.0 | 2026-10-02 | İlk yayın (Tamga ARF 1.0). 2026-10-11: AB Attestation Rulebook şablonunun (sürüm 1.5) bölüm yapısına taşındı; hukuki kategori, biçim başına kodlama tabloları, güven çapaları ve iptal bölümleri eklendi. Kurallar değişmedi; sürüm aynı kaldı. |
 
-Teknik tanım [[SPEC-ID-0003]] §9 ve şema kataloğundadır; çelişkide onlar geçerlidir. Bu [[t:rulebook]] yeni kural koymaz; [[ADR-0011]],
-[[ADR-0013]], [[SPEC-ID-0003]] ve Tamga Rulebook (Ek B) RB-AP-ID kurallarını tek yerde, kurum ve [[t:verifier]] gözüyle toplar.
-
-**Statü:** bu belge **[[t:PID]] değildir**. Devlet tarafından atanmış bir PID sağlayıcısı yokken Tamga'nın geçici olarak verdiği,
-nitelikli olmayan bir **[[t:EAA]]**'dır; [[t:trust-list|güven listesinde]] `pid_providers[]` boş kalır. Devlet sağlayıcısı atanınca yeni belge verilmez ve kayıt halefe devredilir (§8).
+**Şema sahibi:** Tamga Network (bugün geçici işletmeci). **Geri bildirim:** <https://github.com/tamga-network/tamga-network/issues>
 
 ---
 
-# 1. Veri modeli
+# 1. Giriş
 
-| Alan | Tür | Seçici paylaşım | Not |
+## 1.1 Kapsam ve amaç
+
+Bu [[t:rulebook]], Tamga Network kimlik servisinin (`id.tamga.network`) verdiği dört kişi belgesi türünü tanımlar:
+
+| Tür | `vct` / docType | Biçim | Katalog |
 |---|---|---|---|
-| `given_name`, `family_name` | string | `always` | |
-| `birthdate` | tarih (YYYY-MM-DD) | `always` | AB PID adı; mdoc'ta `birth_date` (full-date) — [[ADR-0045]] |
-| `nationalities` | ISO 3166-1 alpha-2 dizisi | `always`, her öğe ayrı | AB PID adı; mdoc'ta `nationality` (dizi); bilinmiyorsa `QU`, uyruksuz `QS` |
-| `personal_administrative_number` | string | `always` | Ulusal kimlik numarası; **yalnızca bu türde** |
-| `document_type` | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE` | `always` | Doğrulanan belge |
-| `document_number_hash` | `sha256-…` | `always` | Belge numarasının **anahtarlı** özeti (HMAC-SHA256; anahtar yalnızca kimlik servisinde) — numaranın kendisi yok ve özetten geri bulunamaz |
-| `issuing_country` | ISO 3166-1 alpha-2 | `always` | AB PID anlamıyla belgeyi veren sağlayıcının ülkesi; bugün değer taranan kimlik belgesini veren ülkedir — §9 |
-| `document_chip_verified` | boolean | `always` | NFC çip okundu mu (olgu; seviye değildir) |
-| `verification_method` | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `always` | `review-demo` yalnızca uygulama mağazası incelemesi için verilen deneme belgesinde |
-| `age_over_18` | boolean | `always` | Türetilmiş; yaş doğrulamasında yalnız bu alan açılır |
-| `status`, `category`, `cnf`, `vct`, `iss`, `iat`, `exp` | — | `never` | Taşıma profili |
+| Tamga Kimlik Belgesi | `urn:tamga:id:IdentityAttestation:1` | [[t:SD-JWT-VC]] + [[t:mdoc]] (ad alanı `tamga.id.1`) | `schemas.tamga.network/v1/id/IdentityAttestation/1.0.0` |
+| ZK kopyası (yalnız sıfır bilgi ispatlı sunum) | `urn:tamga:id:ShortLivedIdentityAttestation:1` | yalnız mdoc (ad alanı `tamga.id.1`) | `schemas.tamga.network/v1/id/ShortLivedIdentityAttestation/1.0.0` · [[ADR-0044]] |
+| Takma ad tohumu (gösterilemez) | `urn:tamga:id:PseudonymSeed:1` | yalnız SD-JWT VC | `schemas.tamga.network/v1/id/PseudonymSeed/1.0.0` · [[ADR-0031]] |
+| Sürücü belgesi bilgisi | `urn:tamga:id:DrivingLicenceAttestation:1` | yalnız SD-JWT VC | `schemas.tamga.network/v1/id/DrivingLicenceAttestation/1.0.0` · [[ADR-0039]] |
 
-**Yok:** portre ya da fotoğraf, adres, belge görüntüsü, güven seviyesi ([[t:LoA]]) alanı. Tüm kişi alanları
-seçici paylaşımlıdır; bir doğrulayıcı yalnızca kayıtlı kapsamındaki alanları isteyebilir.
+**Amaç.** Devlet tarafından atanmış bir [[t:PID]] sağlayıcısı yokken kişinin kimliğini bir kez uzaktan doğrulayıp cüzdanında
+seçici paylaşımlı, cihaza bağlı bir belge olarak taşımasını sağlamak: kurumlar kişiyi kendi kayıtlarıyla eşleştirir, siteler
+yaş ya da "geçerli kimlik var mı" sorar, kişi yalnız gerekeni açar.
+
+**Statü.** Kimlik belgesi **PID değildir**: Tamga'nın geçici olarak verdiği, nitelikli olmayan bir **[[t:EAA]]**'dır
+([[ADR-0011]], [[ADR-0022]]); [[t:trust-list|güven listesinde]] `pid_providers[]` boş kalır. Devlet sağlayıcısı atanınca yeni belge
+verilmez ve kayıt halefe devredilir (§4.7). Sürücü belgesi bilgisi **resmî sürücü belgesi değildir, [[t:mDL]] değildir** (§4.8).
+
+Teknik tanım [[SPEC-ID-0003]] §9 ve şema kataloğundadır; çelişkide onlar geçerlidir. Bu rulebook yeni kural koymaz;
+[[ADR-0011]], [[ADR-0013]], [[ADR-0039]], [[ADR-0044]], [[ADR-0045]], [[SPEC-ID-0003]] ve Tamga Rulebook (Ek B) RB-AP-ID
+kurallarını AB şablonunun düzeninde toplar.
+
+## 1.2 Belge yapısı
+
+Bölüm 2 öznitelikleri ve üst veriyi biçimden bağımsız tanımlar; Bölüm 3 biçim başına kodlamayı (ISO/IEC 18013-5, SD-JWT VC,
+W3C VCDM); Bölüm 4 kullanımı, belge verme koşullarını ve doğrulayıcının yükümlülüklerini; Bölüm 5 güven çapalarını; Bölüm 6
+geçerliliği ve iptali; Bölüm 7 AB uyumunu ve karar bekleyen noktaları.
+
+## 1.3 Anahtar kelimeler
+
+**MUST**, **MUST NOT**, **SHOULD** ve **MAY** RFC 2119 anlamındadır (Tamga Rulebook §0). Küçük harfle "gerekir" dış bir
+belgenin koyduğu şartı anlatır.
+
+## 1.4 Terimler
+
+Terimler Ek D'dedir; AB terimleri ARF Annex 1 anlamındadır.
 
 ---
 
-# 2. Kim verir
+# 2. Öznitelikler ve üst veri
 
-| Şart | Değer |
+## 2.0 AB şartları ve bu belgedeki karşılıkları
+
+ARF Topic 12'nin nitelikli olmayan EAA için koyduğu şartlar (eIDAS 2.0 Ek V'e atıfla):
+
+| Şart | Karşılık |
 |---|---|
-| Belge veren | Tamga Network kimlik servisi (`id.tamga.network`) — tek belge veren; kurumlar bu türü veremez |
-| Kategori / sınıf | `IDENTITY` · `EAA` · I2 |
-| Belge türü yetkisi | Yalnızca kimlik servisinin kaydında (izin listesi) |
-| Anahtar | Kimlik servisinin belge imza anahtarı; iptal listesi anahtarı ayrı (RB-AP-03) |
-| Rol | Geçici kimlik belgesi sağlayıcısı — PID sağlayıcısı değil |
-| Uygulama mağazası incelemesi | Ayrı deneme imzacısı `tamga-id-review` (I1; `verification_method: review-demo`, en çok 7 gün); yalnızca tek kullanımlık inceleme koduyla verilir; I2 isteyen hiçbir politikada geçmez |
+| EAA olduğunun göstergesi (ARB_12) | §2.1 — `category` yazılmaz; ETSI kuralıyla nitelikli olmayan EAA'nın göstergesi bu yokluktur |
+| Belge verenin kimliği, Ek V b (ARB_15) | `iss` (belge verenin adresi) ve imza başlığındaki `x5c` yaprak sertifikası (kurum adı, ülke); `issuer_id` sertifikanın parmak izidir (§2.5, §5) |
+| Öznenin kimliği, Ek V c (ARB_17) | Kimlik belgesi: `family_name`, `given_name`, `birthdate`, `personal_administrative_number`. Sürücü belgesi bilgisi: `family_name`, `given_name`, `birth_date`. ZK kopyası ve takma ad tohumu bilerek öznenin kimliğini taşımaz (§2.2) |
+| Geçerlilik başlangıcı ve sonu, Ek V e (ARB_19) | SD-JWT VC `iat`, `exp`; mdoc `validityInfo` (`validFrom`, `validUntil`) |
+| Güven çapasının konumu, Ek V h (ARB_21) | Belgede ayrı bir alan yoktur; konum belge verenin sertifika zinciri ve Tamga güven listeleridir (§5). Belgeye konum alanı eklenmesi karar bekliyor (§7.2) |
+
+## 2.1 Giriş ve hukuki kategori
+
+Kimlik belgesi AB PID'inin öznitelik adlarını ve kodlamasını kullanır (Uygulama Tüzüğü (AB) 2026/1731; [[ADR-0045]]); tür ve ad
+alanı Tamga'nındır. Kişi alanlarının hepsi seçici paylaşımlıdır; portre, adres, belge görüntüsü ve güvence seviyesi
+([[t:LoA]]) alanı yoktur. Ulusal kimlik numarası yalnız bu türde bulunur (RB-AP-ID-04, RB-SCH-04).
+
+**Hukuki kategori (`category`).** AB Attestation Rulebook şablonu (1.5) ve ETSI TS 119 472-1, QEAA ve PuB-EAA için `category`
+özniteliğini tanımlar (`urn:etsi:esi:eaa:eu:qualified`, `urn:etsi:esi:eaa:eu:pub`; ARF metninde eski adı
+`attestation_legal_category`, ARB_25). Tamga bu adı kendi değerleriyle (`urn:tamga:eaa:qualified`, `urn:tamga:eaa:pub`) yalnız kayıt
+sınıfı nitelikli ya da kamu olan belge verende kullanır (RB-AP-14). Kimlik servisi nitelikli olmayan EAA / I2 sınıfındadır
+([[ADR-0022]]); bu rulebook'taki dört türün hiçbiri `category` **MUST NOT** taşımak (RB-AP-ID-04). ETSI TS 119 472-1
+(EAA-5.2.2.1-01) nitelikli olmayan, kamu kaynaklı olmayan EAA'da `category` bulunmamasını ister; belgenin nitelikli olmayan EAA
+olduğu bu yokluktan ve belge verenin güven listesindeki sınıfından anlaşılır.
+
+## 2.2 Zorunlu öznitelikler
+
+**Kimlik belgesi (`IdentityAttestation`)**
+
+| Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|
+| `family_name` | Soyadı | metin (1–200) | `Yılmaz` |
+| `given_name` | Adı | metin (1–200) | `Ayşe` |
+| `birthdate` | Doğum tarihi | tarih (YYYY-MM-DD) | `1990-04-12` |
+| `nationalities` | Uyruklar; bilinmiyorsa `QU`, uyruksuz `QS` | ISO 3166-1 alpha-2 dizisi (en az bir öğe) | `["TR"]` |
+| `personal_administrative_number` | Ulusal kimlik numarası; yalnız bu türde | metin (5–32) | `12345678901` |
+| `document_type` | Doğrulanan belgenin türü | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE` | `ID_CARD` |
+| `document_number_hash` | Belge numarasının anahtarlı özeti (HMAC-SHA256; anahtar yalnız kimlik servisinde); numaranın kendisi yok ve özetten geri bulunamaz | `sha256-…` | `sha256-q1…` |
+| `issuing_country` | AB PID anlamıyla belgeyi veren sağlayıcının ülkesi; bugün değer taranan kimlik belgesini veren ülkedir (§4.6) | ISO 3166-1 alpha-2 | `TR` |
+| `document_chip_verified` | NFC çip okundu mu (olgu; seviye değildir) | boolean | `true` |
+| `verification_method` | Kimlik doğrulama yolu; `review-demo` yalnız uygulama mağazası incelemesi için verilen deneme belgesinde | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `remote-document-liveness-face` |
+
+**ZK kopyası (`ShortLivedIdentityAttestation`)**
+
+| Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|
+| `age_over_18` | 18 yaşından büyük mü; yalnız ZK ile ispatlanabilen öğe | boolean | `true` |
+
+**Takma ad tohumu (`PseudonymSeed`)**
+
+| Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|
+| `pseudonym_seed` | Site başına takma ad türetmek için tohum; kişinin değişmeyen kimliğinden ayrı bir anahtarla türetilir, saklanmaz (RB-AP-ID-07) | base64url, 43 karakter | `Qm9…` |
+
+**Sürücü belgesi bilgisi (`DrivingLicenceAttestation`)**
+
+| Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|
+| `family_name` | Soyadı | metin (1–200) | `Yılmaz` |
+| `given_name` | Adı | metin (1–200) | `Ayşe` |
+| `issuing_country` | Kartı veren ülke | ISO 3166-1 alpha-2 | `TR` |
+| `document_number_hash` | Kart numarasının anahtarlı özeti | `sha256-…` | `sha256-Zx…` |
+| `driving_privileges` | Sınıflar: `[{ category, issue_date?, expiry_date? }]`; AB 2006/126 sınıf kodları, ulusal ekler aynen (1–32 öğe) | nesne dizisi | `[{"category":"B","issue_date":"2010-06-01"}]` |
+| `licence_expiry_date` | Kartın bitiş tarihi | tarih | `2034-06-01` |
+| `verified_at` | Kartın incelendiği gün | tarih | `2026-10-11` |
+| `verification_method` | İnceleme yolu | `remote-document-liveness-face` | `remote-document-liveness-face` |
+| `not_official_licence` | Resmî sürücü belgesi olmadığının açık göstergesi; her zaman `true` | sabit `true` | `true` |
+
+`driving_privileges[].category` sürücü belgesi sınıfıdır; §2.1'deki hukuki kategoriyle ilgisi yoktur.
+
+## 2.3 İsteğe bağlı öznitelikler
+
+| Tür | Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|---|
+| Kimlik belgesi | `age_over_18` | Doğum tarihinden türetilir; yaş doğrulamasında yalnız bu alan açılır. AB PID kümesinde yoktur; ISO/IEC 18013-5 adıyla Tamga alanıdır ([[ADR-0045]] K3) | boolean | `true` |
+| Sürücü belgesi bilgisi | `birth_date` | Kartta varsa doğum tarihi (ISO/IEC 18013-5 mDL adı) | tarih | `1990-04-12` |
+| Sürücü belgesi bilgisi | `licence_issue_date` | Kartın veriliş tarihi (varsa) | tarih | `2024-06-01` |
+| Sürücü belgesi bilgisi | `age_over_18` | Türetilmiş | boolean | `true` |
+
+## 2.4 Koşullu öznitelikler
+
+Yok.
+
+## 2.5 Zorunlu üst veri
+
+| Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|
+| `iss` | Belge verenin adresi (kimlik servisi) | URI | `https://id.tamga.network` |
+| `vct` | Tür (SD-JWT VC); mdoc'ta docType aynı değerdir | URN | `urn:tamga:id:IdentityAttestation:1` |
+| `vct#integrity` | Tür tanımının katalogdaki özeti (RB-SCH-01) | `sha256-…` | `sha256-…` |
+| `iat` | Verildiği an; mdoc'ta `validityInfo.signed` | NumericDate | `1791763200` |
+| `exp` | Geçerliliğin sonu; mdoc'ta `validityInfo.validUntil` (§6.1) | NumericDate | `1854835200` |
+| `cnf` | Cüzdanın cihaz anahtarı (holder bağı); mdoc'ta `deviceKeyInfo` | JWK | — |
+| `status` | İptal listesi atfı `status_list {idx, uri}`; ZK kopyası ve takma ad tohumunda yok (§6.2) | nesne | `{"status_list":{"idx":48213,"uri":"https://status.tamga.network/7f3a9c21"}}` |
+
+Belge verenin kimliği (Ek V b) imza başlığındadır: `x5c` (yaprak + ara sertifika, kök hariç).
+
+## 2.6 İsteğe bağlı üst veri
+
+Yok. `nbf` bugün yazılmaz (§7.2).
+
+## 2.7 Koşullu üst veri
+
+`category` bu türlerde yoktur (§2.1).
 
 ---
 
-# 3. Belge vermeden önce kimlik doğrulama
+# 3. Kodlama
+
+## 3.1 ISO/IEC 18013-5 (mdoc)
+
+**Yakın alan analizi (ARB_02).** Kimliğin yüz yüze, internetsiz gösterilmesi gerekebilir (kurumda kayıt masası, kapıda yaş
+denetimi); bu yüzden kimlik belgesi ISO/IEC 18013-5 mdoc olarak da verilir ([[ADR-0013]]). Sürücü belgesi bilgisi resmî
+denetimde kullanılmadığı için mdoc olarak verilmez ([[ADR-0039]]); takma ad tohumu hiç gösterilmez. ZK kopyası yalnız mdoc'tur.
+
+| Tür | docType | Ad alanı |
+|---|---|---|
+| Kimlik belgesi | `urn:tamga:id:IdentityAttestation:1` | `tamga.id.1` |
+| ZK kopyası | `urn:tamga:id:ShortLivedIdentityAttestation:1` | `tamga.id.1` |
+
+Kodlama kuralları: `tstr`, `uint`, `bool` ve `full-date` RFC 8610 / RFC 8943 anlamındadır; `full-date` = #6.1004(tstr). `tstr`
+UTF-8'dir. Öğe değerleri tarih dışında SD-JWT VC'dekiyle aynıdır. MSO'da `digestAlgorithm` SHA-256, `validityInfo`
+(`signed`, `validFrom`, `validUntil`; `tdate`, saniye kesri yok, saat dilimi `Z`), `deviceKeyInfo` ve iptal listesi atfı
+`status.status_list {idx, uri}` (SD-JWT kopyasıyla aynı bit) bulunur. İmza ES256 (COSE), `x5chain` aynı belge veren
+sertifikasıdır.
+
+| Veri tanımlayıcısı | Öğe tanımlayıcısı | Kodlama | Ad alanı |
+|---|---|---|---|
+| `family_name` | `family_name` | tstr | `tamga.id.1` |
+| `given_name` | `given_name` | tstr | `tamga.id.1` |
+| `birthdate` | `birth_date` | full-date | `tamga.id.1` |
+| `nationalities` | `nationality` | [+ tstr] (alpha-2 dizisi) | `tamga.id.1` |
+| `personal_administrative_number` | `personal_administrative_number` | tstr | `tamga.id.1` |
+| `document_type` | `document_type` | tstr | `tamga.id.1` |
+| `document_number_hash` | `document_number_hash` | tstr | `tamga.id.1` |
+| `issuing_country` | `issuing_country` | tstr | `tamga.id.1` |
+| `document_chip_verified` | `document_chip_verified` | bool | `tamga.id.1` |
+| `verification_method` | `verification_method` | tstr | `tamga.id.1` |
+| `age_over_18` | `age_over_18` | bool | `tamga.id.1` |
+
+Ad ve kodlama AB PID Tablo 6'ya göredir ([[ADR-0045]] K2); ad tablosu açık paketlerdedir (`@tamga-network/core/pid`). Ad alanı
+`tamga.id.1` Tamga'ya özgü bir ad alanıdır (ARB_10): belge PID olmadığı için `eu.europa.ec.eudi.pid.1` kullanılmaz.
+
+**Örnek (kimlik belgesi, yalnız yaş için açılan öğeler):**
+
+```text
+docType: "urn:tamga:id:IdentityAttestation:1"
+nameSpaces: { "tamga.id.1": [ { elementIdentifier: "age_over_18", elementValue: true } ] }
+MSO.validityInfo: { signed: 2026-10-11T08:00:00Z, validFrom: 2026-10-11T08:00:00Z, validUntil: 2028-10-10T08:00:00Z }
+MSO.status: { status_list: { idx: 48213, uri: "https://status.tamga.network/7f3a9c21" } }
+```
+
+## 3.2 SD-JWT VC
+
+Belgeler [[t:SD-JWT-VC]] olarak, HAIP 1.0'ın SD-JWT VC profiline uygun verilir (ARB_01b): başlıkta `alg` ES256, `typ`
+`dc+sd-jwt`, `x5c`; `_sd_alg` sha-256; sahte özet (decoy) yok. `vct` URN biçimindedir (`urn:tamga:<alan>:<Tür>:<ana sürüm>`) ve
+ağda tektir (ARB_05); tür tanımı (Type Metadata) katalogdan gelir ve `vct#integrity` zorunludur (ARB_31, RB-SCH-01).
+
+"Seçici açıklama" sütunu Type Metadata'daki `sd` değeridir: **MUST** = `always`, **MAY** = `allowed`, **MUST NOT** = `never`
+(ARB_30). Dizi öğeleri ayrı ayrı açıklanır (`nationalities` için `path: ["nationalities", null]`, RFC 9901 §4.2.2).
+
+**Kimlik belgesi — IANA kayıtlı adlar**
+
+| Veri tanımlayıcısı | Claim adı | Kodlama | Kaynak | Seçici açıklama |
+|---|---|---|---|---|
+| `family_name` | `family_name` | string | OpenID Connect Core §5.1 | MUST |
+| `given_name` | `given_name` | string | OpenID Connect Core §5.1 | MUST |
+| `birthdate` | `birthdate` | string, YYYY-MM-DD | OpenID Connect Core §5.1 | MUST |
+| `nationalities` | `nationalities` | string dizisi (alpha-2), her öğe ayrı | OpenID Connect for Identity Assurance §4.1 | MUST (her öğe) |
+
+**Kimlik belgesi — AB PID adları ve Tamga'ya özgü adlar**
+
+| Veri tanımlayıcısı | Claim adı | Kodlama | Not | Seçici açıklama |
+|---|---|---|---|---|
+| `personal_administrative_number` | `personal_administrative_number` | string | AB PID adı | MUST |
+| `issuing_country` | `issuing_country` | string (alpha-2) | AB PID adı (§4.6) | MUST |
+| `document_type` | `document_type` | string (küme) | Tamga'ya özgü | MUST |
+| `document_number_hash` | `document_number_hash` | string `sha256-…` | Tamga'ya özgü | MUST |
+| `document_chip_verified` | `document_chip_verified` | boolean | Tamga'ya özgü | MUST |
+| `verification_method` | `verification_method` | string (küme) | Tamga'ya özgü | MUST |
+| `age_over_18` | `age_over_18` | boolean | ISO/IEC 18013-5 adı | MUST |
+| `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status` | aynı | — | taşıma profili | MUST NOT |
+
+**Takma ad tohumu**
+
+| Veri tanımlayıcısı | Claim adı | Kodlama | Not | Seçici açıklama |
+|---|---|---|---|---|
+| `pseudonym_seed` | `pseudonym_seed` | string (base64url) | Tamga'ya özgü; hiçbir doğrulayıcı kapsamında yer almaz | MUST NOT (belge hiç gösterilmez) |
+
+**Sürücü belgesi bilgisi**
+
+| Veri tanımlayıcısı | Claim adı | Kodlama | Not | Seçici açıklama |
+|---|---|---|---|---|
+| `family_name`, `given_name` | aynı | string | OpenID Connect Core §5.1 | MUST |
+| `birth_date` | `birth_date` | string, YYYY-MM-DD | ISO/IEC 18013-5 mDL adı ([[ADR-0045]] K4) | MUST |
+| `issuing_country` | `issuing_country` | string (alpha-2) | ISO/IEC 18013-5 mDL adı | MUST |
+| `document_number_hash` | aynı | string `sha256-…` | Tamga'ya özgü | MUST |
+| `driving_privileges` | aynı | nesne dizisi | ISO/IEC 18013-5 mDL adı; resmî mDL ad alanı kullanılmaz (RB-AP-ID-08) | MUST |
+| `licence_issue_date`, `licence_expiry_date` | aynı | string, YYYY-MM-DD | Tamga'ya özgü | MUST |
+| `verification_method`, `age_over_18` | aynı | string / boolean | — | MUST |
+| `verified_at` | aynı | string, YYYY-MM-DD | Tamga'ya özgü | MUST NOT |
+| `not_official_licence` | aynı | sabit `true` | Tamga'ya özgü; her sunumda görünür | MUST NOT |
+
+**Örnek (kimlik belgesi; JWT claim kümesi, açıklamalar çözülmüş hâliyle):**
+
+```json
+{
+  "iss": "https://id.tamga.network",
+  "vct": "urn:tamga:id:IdentityAttestation:1",
+  "vct#integrity": "sha256-…",
+  "iat": 1791763200,
+  "exp": 1854835200,
+  "cnf": { "jwk": { "kty": "EC", "crv": "P-256", "x": "…", "y": "…" } },
+  "status": { "status_list": { "idx": 48213, "uri": "https://status.tamga.network/7f3a9c21" } },
+  "family_name": "Yılmaz",
+  "given_name": "Ayşe",
+  "birthdate": "1990-04-12",
+  "nationalities": ["TR"],
+  "personal_administrative_number": "12345678901",
+  "document_type": "ID_CARD",
+  "document_number_hash": "sha256-…",
+  "issuing_country": "TR",
+  "document_chip_verified": false,
+  "verification_method": "remote-document-liveness-face",
+  "age_over_18": true
+}
+```
+
+Verilen belgede kişi alanlarının her biri ayrı bir açıklamadır (disclosure); `nationalities` dizisinin her öğesi de ayrı
+açıklamadır. Kodlanmış belge ve açıklama örnekleri uyum vektörlerindedir (`conformance/vectors/sd-jwt`).
+
+## 3.3 W3C VCDM
+
+Kullanılmaz: Tamga JSON-LD taşıyıcısı kullanmaz.
+
+---
+
+# 4. Kullanım
+
+## 4.1 Kullanım durumları ve doğrulayıcının istediği alanlar
+
+| Kullanım | İstenen alanlar | Kural |
+|---|---|---|
+| Yaş doğrulaması | `age_over_18` | Başka alan istenmez; tarayıcıda mdoc ile, istenirse ZK kopyasıyla sıfır bilgi ispatı |
+| Kurumda kayıt eşleştirmesi (belge vermeden önce) | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | Kurumun belge verme servisi yalnız kayıtlı kapsamıyla ve tam doğrulama hattından geçirerek alır; eşleştirme anahtarlarını saklamaz ve loglamaz (RB-RP-ID-01) |
+| "Geçerli Tamga kimliği var mı" | hiçbiri | Referans politika `event-tamga-id` |
+| Web sitesine kayıt ve giriş ("Tamga ile giriş yap") | kayıtta `given_name`, `family_name`; girişte hiçbiri | Hesap anahtarı site başına takma addır; `document_number_hash` ve kimlik numarası istenmez (RB-RP-13) |
+| Yüksek riskli işlem | kapsamına göre | Yüz eşleştirmesi gerekiyorsa doğrulayıcının sorumluluğudur; belge portre taşımaz (RB-RP-11) |
+| Sürücü belgesi sınıfı bilgisi | `driving_privileges` ve gerekenler | Resmî denetim ve resmî işlemlerde kullanılmaz; ekran "resmî sürücü belgesi yerine geçmez" der (§4.8) |
+
+**PID istenmesi (ARB_27).** Bu türleri kabul eden doğrulayıcının ayrıca PID istemesi gerekmez. Devlet PID'i geldiğinde kurumların
+kişiyi eşleştirmek için PID'i de kabul etmesi ayrı bir kararla açılır.
+
+## 4.2 Belge verme politikası
+
+| Şart | Kimlik belgesi, ZK kopyası, takma ad tohumu | Sürücü belgesi bilgisi |
+|---|---|---|
+| Belge veren | Yalnız kimlik servisi (`id.tamga.network`); kurumlar bu türleri veremez | aynı |
+| Kategori · sınıf | `IDENTITY` · `EAA` · I2 ([[ADR-0022]]) | aynı |
+| Tür yetkisi | Yalnız kimlik servisinin kaydında (izin listesi) | aynı |
+| Anahtar | Kimlik servisinin belge imza anahtarı; iptal listesi anahtarı ayrı (RB-AP-03) | aynı |
+| Ön koşul | Kimlik doğrulaması (§4.3); ZK kopyası ve tohum yalnız kimlik belgesiyle birlikte ya da onun yenileme belirteciyle | Cüzdandaki **etkin Tamga kimlik belgesi** sunulur (ad, soyad, doğum tarihi); karttaki ad ve doğum tarihi onunla eşleşmeli (RB-AP-ID-09) |
+| Kopyalar | Kimlik belgesi 10 kopya, her biri ayrı cihaz anahtarına; doğrulayıcı başına ayrı kopya (ARF yöntem D). ZK kopyası küçük paketler hâlinde (en çok 3) | 10 kopya |
+| Cüzdan | Belge vermeden önce cüzdan örneği kanıtı (WIA) ve anahtar kanıtı (KA) `wallet_providers[]` listesine göre doğrulanır (RB-AP-10) | aynı |
+| Uygulama mağazası incelemesi | Ayrı deneme imzacısı `tamga-id-review` (I1; `verification_method: review-demo`, en çok 7 gün); yalnız tek kullanımlık inceleme koduyla; I2 isteyen hiçbir politikada geçmez | — |
+| Gömülü açıklama politikası | Taşımaz ([[ADR-0046]] K1) | Taşımaz |
+
+## 4.3 Belge vermeden önce kimlik doğrulama
 
 | Yol | Seviye | Not |
 |---|---|---|
@@ -71,93 +342,36 @@ seçici paylaşımlıdır; bir doğrulayıcı yalnızca kayıtlı kapsamındaki 
 | Uzaktan ve NFC çip | T2; `document_chip_verified: true` | Teknik olarak yüksek; hukuken T3 nitelikli elektronik imzadır |
 | Yüz yüze | T2 | `in-person` |
 
-Kurallar: kimlik doğrulama yalnızca kimlik servisinde yapılır; kurum [[t:issuer|belge verenleri]], cüzdan ve doğrulayıcılar sağlayıcıyla
-konuşmaz. Doğrulama başlamadan **aydınlatma metni gösterilir ve açık rıza alınır**. Sağlayıcının kararı her zaman
-sağlayıcının karar ucundan teyit edilir; bildirim (webhook) yalnızca tetikleyicidir. Sağlayıcı kesintisi seviyeyi düşürmez,
-belge verme durur.
+Kurallar: kimlik doğrulama yalnız kimlik servisinde yapılır; kurum [[t:issuer|belge verenleri]], cüzdan ve doğrulayıcılar uzaktan
+kimlik doğrulama sağlayıcısıyla konuşmaz (RB-AP-ID-01). Doğrulama başlamadan **aydınlatma metni gösterilir ve açık rıza alınır**
+(RB-AP-ID-02). Sağlayıcının kararı her zaman sağlayıcının karar ucundan teyit edilir; bildirim (webhook) yalnız tetikleyicidir.
+Sağlayıcı kesintisi seviyeyi düşürmez, belge verme durur. Seviye belgeye yazılmaz (RB-AP-14).
 
-**Yaş sınırı yoktur** (2026-10-08, [[ADR-0043]]): kimlik belgesi için asgari yaş aranmaz; şart geçerli bir kimlik belgesiyle
-kimlik doğrulamasıdır. Çocuklar için veli onayı akışı hukuki inceleme sonrası ayrı kararla ele alınır.
+**Yaş sınırı yoktur** ([[ADR-0043]]): kimlik belgesi için asgari yaş aranmaz; şart geçerli bir kimlik belgesiyle kimlik
+doğrulamasıdır. Çocuklar için veli onayı akışı hukuki inceleme sonrası ayrı kararla ele alınır.
 
----
-
-# 4. Veri koruma
+## 4.4 Veri koruma
 
 - Tamga bu veri için **veri sorumlusudur**.
-- Belge verildikten sonra kişi alanları tutulmaz; kalıcı kayıt yalnızca opak `subject_ref`, belge numarası özeti, süre ve iptal
-  listesi konumlarıdır. Belge görüntüsü, özçekim, video ve OCR ham verisi Tamga'da hiç saklanmaz.
+- Belge verildikten sonra kişi alanları tutulmaz; kalıcı kayıt yalnız opak `subject_ref`, belge numarası özeti, süre ve iptal
+  listesi konumlarıdır. Belge görüntüsü, özçekim, video ve OCR ham verisi Tamga'da hiç saklanmaz (RB-AP-ID-03).
 - Silme talebi belgeyi iptal eder.
-- Aynı belge numarası için ikinci etkin kimlik belgesi verilmez; yeniden doğrulama eskisini iptal eder.
+- Aynı belge numarası için ikinci etkin kimlik belgesi verilmez; yeniden doğrulama eskisini iptal eder (RB-AP-ID-05).
 
----
+## 4.5 Gösterim ve doğrulayıcının yükümlülükleri
 
-# 5. Geçerlilik ve iptal
-
-| Konu | Kural |
-|---|---|
-| Geçerlilik | `exp` = verildiği tarih + 730 gün (en çok 2 yıl); süresi dolunca yeniden doğrulama |
-| İptal listesi | **Zorunlu** (Token Status List) |
-| İptal nedenleri | kişinin silme talebi, aynı belgeyle yeniden doğrulama, belgenin kaybolduğu ya da çalındığı bildirimi, hatalı belge |
-| Kopyalar | 10 kopya, her biri ayrı cihaz anahtarı; doğrulayıcı başına ayrı kopya |
-
----
-
-# 6. İki biçim: SD-JWT VC ve mdoc
-
-Aynı belge [[t:SD-JWT-VC]] (birincil) ve ISO/IEC 18013-5 [[t:mdoc]] olarak birlikte verilir:
-
-- Veri, `iat/exp` ve [[t:holder]] anahtarı iki biçimde birebir aynıdır. Ad ve kodlama her biçimde AB PID tablosuna göredir
-  ([[ADR-0045]]): SD-JWT VC `birthdate`, `nationalities` ↔ mdoc `birth_date` (full-date, #6.1004), `nationality` (dizi); öteki
-  adlar aynı.
-- mdoc imzası ES256 ve aynı [[t:trust-anchor|güven çapasıyla]] eşlenir; sonuç üç değerlidir.
-- Doğrulayıcı biçimi [[t:DCQL]] ile seçer; örneğin tarayıcıda yaş doğrulaması mdoc üzerinden yalnız `age_over_18` ister.
-
-## 6.1 Sıfır bilgi ispatı: ZK kopyaları ([[ADR-0044]])
-
-[[t:ZK]] ile sunumda iptal listesindeki yer açılmaz. Bu yüzden ZK ile ana kimlik belgesi değil, kimlik servisinin ayrıca verdiği
-**kısa ömürlü ZK kopyası** gösterilir:
-
-| Konu | Kural |
-|---|---|
-| Tür | `urn:tamga:id:ShortLivedIdentityAttestation:1`; yalnız mdoc, yalnız ZK sunumunda |
-| İçerik | Yalnız ZK ile ispatlanabilen öğeler (bugün `age_over_18`) |
-| Geçerlilik | En çok 24 saat, ana belgenin bitişini geçmez; iptal listesi girdisi yok — kısa ömür iptalin yerini tutar (AB ARF VCR_01) |
-| Verme | Kimlik belgesiyle gelen yenileme belirteciyle küçük paketler hâlinde; cüzdan kullanıcıya sormadan yeniler. Belirteçte yalnız asgari öğeler, yalnız kimlik servisinin açabileceği biçimde; sunucuda kişi alanı yok |
-| İptal | Ana belge iptal ya da askıdaysa yeni kopya verilmez; iptal ZK sunumunda en geç 24 saatte etkili olur |
-| Doğrulayıcı | İspat türü bağladığı için doğrulayıcı kısa ömrü görür ve iptal denetimi beklemez (`status: NOT_APPLICABLE`, gerekçe kısa ömür). Bu türü istemeyen (işaretsiz) ZK sunumunu yalnız politikası açıkça kabul ediyorsa kabul eder |
-
-Kurallar Tamga Rulebook RB-AP-ID-11'dedir.
-
----
-
-# 7. Gösterim ve doğrulama kuralları
-
-| Kullanım | İstenen alanlar | Kural |
-|---|---|---|
-| Yaş doğrulaması | `age_over_18` | Başka alan istenmez |
-| Kurumda kayıt eşleştirmesi (belge vermeden önce) | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | Kurumun belge verme servisi yalnızca kayıtlı kapsamıyla ve tam doğrulama hattından geçirerek alır; eşleştirme anahtarlarını saklamaz ve loglamaz (RB-RP-ID-01) |
-| "Geçerli Tamga kimliği var mı" | hiçbiri | Referans politika `event-tamga-id` |
-| Web sitesine kayıt ve giriş ("Tamga ile giriş yap") | kayıtta `given_name`, `family_name`; girişte hiçbiri | Hesap anahtarı site başına takma addır; `document_number_hash` ve kimlik numarası istenmez (RB-RP-13) |
-| Yüksek riskli işlem | kapsamına göre | Yüz eşleştirmesi gerekiyorsa doğrulayıcının sorumluluğudur; belge portre taşımaz |
-
+- Gösterim yalnız [[t:OpenID4VP]] ve [[t:DCQL]] ile, imzalı istek ve şifreli yanıtla yapılır (RB-RP-02); doğrulayıcı biçimi DCQL ile
+  seçer (ör. tarayıcıda yaş doğrulaması mdoc üzerinden yalnız `age_over_18`). Yakın alanda ISO/IEC 18013-5 akışı kullanılır.
+- Doğrulama kanonik hattan geçer: güven kaynağının tazeliği, sonra imza, belge veren, tür yetkisi, iptal ve cüzdan bağı
+  (RB-RP-03). Belge veren güven listesinde `IDENTITY` kategorisinde ve bu türe yetkili görünmelidir.
 - Kimlik numarası isteyen doğrulayıcının kaydında bu alan açıkça bulunmalıdır; cüzdan kapsam dışı talebi uyarır.
-- Sonuç üç değerlidir; `INDETERMINATE` kabul değildir.
-- Doğrulayıcı güven listesinde belge vereni `IDENTITY` kategorisinde ve bu tipe yetkili görmelidir.
-- **[[t:pseudonym|Takma ad]] tohumu**: kimlik belgesiyle birlikte ayrı ve gösterilemeyen tür `urn:tamga:id:PseudonymSeed:1` verilir;
-  tohum kişinin değişmeyen kimliğinden (Türkiye'de T.C. kimlik numarası; yoksa ülke, belge türü ve belge numarası — belge yenilenince
-  takma adlar değişir) ayrı bir anahtarla türetilir, saklanmaz. Cüzdan bundan site başına takma ad türetir (RB-AP-ID-07).
+- Sonuç üç değerlidir; `INDETERMINATE` kabul değildir (RB-RP-05).
+- ZK kopyası: ispat türü bağladığı için doğrulayıcı kısa ömrü görür ve iptal denetimi beklemez (`status: NOT_APPLICABLE`, gerekçe
+  kısa ömür). Bu türü taşımayan (işaretsiz) ZK sunumu yalnız politika açıkça kabul ediyorsa kabul edilir (RB-AP-ID-11, [[ADR-0044]]).
+- **[[t:pseudonym|Takma ad]] tohumu** hiçbir doğrulayıcı kapsamında yer almaz; cüzdan bundan site başına takma ad türetir (RB-AP-ID-07).
+- İşlem verisi (ARF Topic 20, ödeme) bu türlerde tanımlı değildir.
 
----
-
-# 8. Devir — devlet PID sağlayıcısı
-
-Devlet bir PID sağlayıcısı atadığında: kimlik servisinin kaydı `successor_id` ile devredilir, yeni belge verilmez; verilmiş belgeler
-süresi dolana kadar geçerli kalır. Doğrulayıcı politikaları devlet PID'ini tercih
-edecek biçimde güncellenir; bu tür `DEPRECATED` olur ama doğrulanabilir kalır.
-
----
-
-# 9. AB kimlik belgesi (PID) ve ehliyet (mDL)
+## 4.6 AB PID ve mDL ile ilişki
 
 Tamga doğrulayıcıları AB'nin kişi kimlik belgesini (PID) ve ISO ehliyetini ([[t:mDL]]) **dış tür** olarak tanır:
 
@@ -169,14 +383,11 @@ Tamga doğrulayıcıları AB'nin kişi kimlik belgesini (PID) ve ISO ehliyetini 
 
 - **Tanınma koşulu.** Dış tür, yalnız belgeyi veren, bu türe kefil olan bir dış listenin (Ek A §6.1) kapsamındaysa kabul edilir.
   Bugün listelerin listesinde dış liste yoktur; her dış liste ayrı bir kararla eklenir.
-- **İç içe [[t:selective-disclosure]].** AB PID'de adres bir nesnedir ve vatandaşlıklar bir dizidir. Kişi yalnız gerekeni açabilir: örneğin
-  adresin yalnız şehri ya da vatandaşlıklardan biri. Doğrulayıcının kapsam denetimi alanın kendisine ya da üst alanına göre
+- **İç içe [[t:selective-disclosure]].** AB PID'de adres bir nesnedir ve vatandaşlıklar bir dizidir. Kişi yalnız gerekeni açabilir:
+  örneğin adresin yalnız şehri ya da vatandaşlıklardan biri. Doğrulayıcının kapsam denetimi alanın kendisine ya da üst alanına göre
   yapılır.
-- **Yaş.** AB PID'de yaş alanı yoktur; AB'de yaş için ayrı yaş doğrulama belgesi kullanılır. mDL'de `age_over_18` gibi yaş
-  öğeleri vardır.
-
-Tamga kimlik belgesi AB PID adlarını ve kodlamasını kullanır (Uygulama Tüzüğü (AB) 2026/1731; [[ADR-0045]]). Tür ve ad alanı
-Tamga'nındır (belge PID değildir):
+- **Yaş.** AB PID'de yaş alanı yoktur; AB'de yaş için ayrı yaş doğrulama belgesi kullanılır. mDL'de `age_over_18` gibi yaş öğeleri
+  vardır.
 
 | Tamga kimlik belgesi (SD-JWT VC) | Tamga kimlik belgesi (mdoc, `tamga.id.1`) | AB PID (SD-JWT VC) | AB PID (mdoc) |
 |---|---|---|---|
@@ -194,40 +405,117 @@ Tamga'nındır (belge PID değildir):
 > dayanarak kendisi verdiği için değer **taranan kimlik belgesini veren ülkeyi** yansıtır. Bir devletin PID sağlayıcısı PID verdiğinde
 > alan AB anlamını taşır ve belgeler alanı AB'nin tanımıyla anlatır. Kod ve şema bugün değişmez.
 
-Devlet PID'i geldiğinde (§8) kurumlar, kişiyi eşleştirmek için Tamga kimlik belgesi yerine PID'i de kabul edebilir; bu ayrı bir
-kararla açılır.
+## 4.7 Devir — devlet PID sağlayıcısı
 
----
+Devlet bir PID sağlayıcısı atadığında: kimlik servisinin kaydı `successor_id` ile devredilir, yeni belge verilmez; verilmiş belgeler
+süresi dolana kadar geçerli kalır (RB-AP-ID-06). Doğrulayıcı politikaları devlet PID'ini tercih edecek biçimde güncellenir; bu tür
+`DEPRECATED` olur ama doğrulanabilir kalır.
 
-# 10. Sürücü belgesi bilgisi (`urn:tamga:id:DrivingLicenceAttestation:1`)
+## 4.8 Sürücü belgesi bilgisi — ek kurallar
 
-Kimlik servisinin ikinci kişi belgesi ([[ADR-0039]]): kişinin fiziksel sürücü belgesi kartı uzaktan incelenir (belge + canlılık +
-yüz eşleştirme) ve karttaki sınıflar ile tarihler bir belge olarak verilir. **Resmî sürücü belgesi değildir, [[t:mDL]] değildir;**
-trafik denetiminde ve resmî işlemlerde kullanılmaz. Belge bunu her zaman açık `not_official_licence` alanıyla, görünen adıyla
-("Sürücü belgesi bilgisi — resmî sürücü belgesi yerine geçmez") ve kartıyla söyler; doğrulayıcı ekranları aynı ibareyi gösterir.
+Kişinin fiziksel sürücü belgesi kartı uzaktan incelenir (belge + canlılık + yüz eşleştirme) ve karttaki sınıflar ile tarihler bir
+belge olarak verilir ([[ADR-0039]]). **Resmî sürücü belgesi değildir, mDL değildir;** trafik denetiminde ve resmî işlemlerde
+kullanılmaz. Belge bunu her zaman açık `not_official_licence` alanıyla, görünen adıyla ("Sürücü belgesi bilgisi — resmî sürücü
+belgesi yerine geçmez") ve kartıyla söyler; doğrulayıcı ekranları aynı ibareyi gösterir (RB-AP-ID-08).
 
 | Konu | Kural |
 |---|---|
-| Katalog | `schemas.tamga.network/v1/id/DrivingLicenceAttestation/1.0.0`; yalnız SD-JWT VC (mdoc yok) |
-| Kim verir | Yalnız kimlik servisi (`IDENTITY` · `EAA` · I2); kurumlar veremez; `category` alanı yok |
-| Ön koşul | Cüzdandaki **etkin Tamga kimlik belgesi** sunulur (yalnız ad, soyad, doğum tarihi); karttaki ad ve doğum tarihi onunla eşleşmeli. Eşleşmezse, kart sürücü belgesi değilse, süresi geçmişse ya da sınıflar okunamıyorsa belge verilmez |
-| Alanlar | `given_name`, `family_name`, `birth_date` (varsa), `issuing_country`, `document_number_hash` (anahtarlı özet), `driving_privileges` (`[{ category, issue_date?, expiry_date? }]`; AB 2006/126 sınıf kodları, ulusal ekler aynen), `licence_issue_date` (varsa), `licence_expiry_date`, `verified_at` (gün), `verification_method`, `age_over_18`, `not_official_licence` (her zaman `true`, seçici paylaşımsız) |
+| Eşleşme | Karttaki ad ve doğum tarihi kimlik belgesiyle eşleşmezse, kart sürücü belgesi değilse, süresi geçmişse ya da sınıflar okunamıyorsa belge verilmez (RB-AP-ID-09) |
 | Yok | Ulusal kimlik numarası, kısıtlama ve sağlık kodları (12. alan; `has_restrictions` olgusu da yok), fotoğraf, imza, adres; sağlayıcının not alanları okunmaz |
-| Geçerlilik | `exp` = kartın bitişi ile incelemeden 1 yıl sonrasından erken olanı; otomatik yenileme süreyi uzatmaz |
-| İptal | İptal listesi zorunlu. Nedenler: kişinin isteği, silme isteği, aynı kartla yeniden doğrulama (eskisi), cüzdan birimi iptali, **bağlı kimlik belgesinin iptali, yeniden verilmesi ya da silinmesi** (zincirleme) |
-| Veri koruma | Tamga veri sorumlusudur; aydınlatma ve açık rıza sürücü belgesine özeldir; kişi alanları ihraçtan sonra tutulmaz; sağlayıcıya ad/doğum tarihi gönderilmez, eşleşme kimlik servisinde anahtarlı özetle yapılır |
-| Yetkili makam | Bir ülkenin yetkili makamı dijital sürücü belgesi vermeye başlayınca Tamga o ülke için bu türü yeniden vermez; kayıt `successor` ile resmî türe işaret eder (§9'daki `org.iso.18013.5.1.mDL` dış tür olarak zaten tanınır) |
+| Veri koruma | Tamga veri sorumlusudur; aydınlatma ve açık rıza sürücü belgesine özeldir; kişi alanları ihraçtan sonra tutulmaz; sağlayıcıya ad ve doğum tarihi gönderilmez, eşleşme kimlik servisinde anahtarlı özetle yapılır |
+| Yetkili makam | Bir ülkenin yetkili makamı dijital sürücü belgesi vermeye başlayınca Tamga o ülke için bu türü yeniden vermez; kayıt `successor` ile resmî türe işaret eder (RB-AP-ID-10) |
 | Hukuk | Gerçek kişilere ihraç açılmadan önce hukuki inceleme; sandbox bunu beklemez |
 
-Kurallar Tamga Rulebook RB-AP-ID-08…10'dadır; kaynak [[ADR-0039]] DL1–DL5.
+## 4.9 Cihaza bağlılık
+
+Dört tür de **cihaza bağlıdır** (ARB_34): her kopya cüzdanın güvenli donanımdaki ayrı bir anahtarına bağlanır (`cnf` /
+`deviceKeyInfo`; RB-AP-09, RB-WP-01). `cryptographically_bound_to` özniteliği kullanılmaz: sürücü belgesi bilgisinin kimlik belgesine
+bağı belge verme anındaki sunumla kurulur ve iptalle sürdürülür (§6.2), belgede kriptografik bağ yoktur.
 
 ---
 
-# Kaynaklar
+# 5. Güven çapaları
 
-Bu belgenin dayandığı kararlar, şartnameler ve standartlar Ek E'de listelenir.
+Bu türler nitelikli olmayan EAA'dır; güven çapası AB'nin güvenilir listesinden değil, Tamga'nın imzalı güven listelerinden alınır
+(ARB_26):
+
+1. Doğrulayıcı listelerin listesini (`https://trust.tamga.network/lotl.jws`) ve ulusal listeyi (`tl-tr.jws`) önceden çeker ve
+   imzalarını kök sertifikalara göre doğrular. Kök parmak izleri `tamga.network/trust-anchor` sayfasında, `keys/root-fingerprints.json`'da
+   ve Trust Framework'te aynı değerlerle yayımlanır (RB-OP-06).
+2. Belgenin `x5c` zinciri (mdoc'ta `x5chain`) ulusal köke zincirlenir; `issuer_id` yaprak sertifikanın parmak izinden türetilir,
+   `iss`'ten değil (RB-AP-01, RB-RP-04).
+3. `tl-tr › issuers[]` kaydı belge vereni, kategorisini (`IDENTITY`), sınıfını ve bu türe zaman pencereli yetkisini verir; denetim
+   belgenin verildiği ana (`iat`) göre yapılır (RB-RP-03).
+4. Tür `lotl › schemas[]` kaydı ve katalogdaki `content_hash` (= `vct#integrity`) ile doğrulanır.
+
+Cüzdan belge alırken aynı kayıtla belge verenin bu türü vermeye yetkili olduğunu denetler. Dış türlerin (§4.6) güven çapası
+yalnız dış listeden gelir.
+
+---
+
+# 6. Geçerlilik ve iptal
+
+## 6.1 Geçerlilik politikası
+
+| Tür | Geçerlilik |
+|---|---|
+| Kimlik belgesi | `exp` = verildiği an + 730 gün (en çok 2 yıl); süresi dolunca yeniden doğrulama |
+| ZK kopyası | En çok 24 saat ve ana belgenin bitişini geçmez (RB-AP-ID-11) |
+| Takma ad tohumu | 730 gün; kimlik belgesiyle birlikte yenilenir |
+| Sürücü belgesi bilgisi | `exp` = kartın bitişi ile incelemeden 1 yıl sonrasından erken olanı; otomatik yenileme süreyi uzatmaz (RB-AP-ID-09) |
+| Deneme belgesi (`review-demo`) | En çok 7 gün |
+
+## 6.2 İptal
+
+| Tür | İptal edilebilir mi | Mekanizma |
+|---|---|---|
+| Kimlik belgesi | **Evet, zorunlu** | Token Status List (AB'nin Attestation Status List'i); mdoc ve SD-JWT kopyaları aynı biti taşır |
+| ZK kopyası | Hayır — kısa ömür iptalin yerini tutar (ARF VCR_01); ana belge iptal ya da askıdaysa yeni kopya verilmez, iptal ZK sunumunda en geç 24 saatte etkili olur | — |
+| Takma ad tohumu | İptal listesi yok; gösterilmez | — |
+| Sürücü belgesi bilgisi | **Evet, zorunlu** | Token Status List |
+
+- **İptal listesi adresi (ARB_24a):** her belgede `status.status_list.uri`; kimlik servisinin listeleri `https://status.tamga.network/`
+  altındadır. Adres opaktır, kurum, yıl ya da grup kodlamaz (RB-AP-18).
+- **Yayın:** sabit aralıkla (bugün 2 dakika), değişiklik olmasa da; liste 6 saat geçerlidir; aralık dışı yayın yoktur (RB-AP-17,
+  [[SPEC-CRED-0003]] §5). İptal birkaç dakikada etkili olur (RB-GEN-10).
+- **Değerler:** `bits = 2` — geçerli, iptal, askıda.
+- **İptal koşulları:** İptal Politikası'ndadır ([[FW-POL-0001]] §3). Kimlik belgesi için: kişinin silme talebi, aynı belgeyle yeniden
+  doğrulama, belgenin kaybolduğu ya da çalındığı bildirimi, hatalı belge, rızanın geri alınması. Sürücü belgesi bilgisi için ayrıca:
+  aynı kartla yeniden doğrulama, cüzdan birimi iptali ve bağlı kimlik belgesinin iptali, yeniden verilmesi ya da silinmesi (zincirleme;
+  RB-AP-ID-10).
+- **Attestation Revocation List** (AB'nin ikinci mekanizması) bugün yayımlanmaz (§7.2).
+
+---
+
+# 7. Uyum
+
+## 7.1 AB çerçevesiyle ilişki
+
+- Bu rulebook AB Attestation Rulebook şablonunun (1.5) bölüm yapısını izler (ARB_29). Şablonun Topic 12 şartlarıyla eşlemesi Tamga
+  Rulebook §11'dedir.
+- Kimlik belgesi AB PID'inin öznitelik adlarını ve kodlamasını kullanır (Uygulama Tüzüğü (AB) 2026/1731; [[ADR-0045]]) ama PID değildir;
+  PID Rulebook'un PID sağlayıcısına özgü şartları (tür `eu.europa.ec.eudi.pid.1`, `urn:eudi:pid:` ad alanı, portre) uygulanmaz.
+- Sürücü belgesi bilgisi AB mDL Rulebook'unun kapsamında değildir: resmî mDL yalnız ISO/IEC 18013-5 ve resmî ad alanıyla verilir;
+  Tamga bu ad alanını kullanmaz (RB-AP-ID-08).
+- Bu türler Tamga Rulebook'un bütün kurallarını devralır; türe özgü kurallar RB-AP-ID-01…11 ve RB-RP-ID-01'dedir.
+
+## 7.2 Bilinen farklar ve karar bekleyenler
+
+| Konu | Durum |
+|---|---|
+| Nitelikli olmayan EAA göstergesi (ARB_12) | AB şablonu `category` için `eaa:eu:non-qualified` değerini önerir; ETSI TS 119 472-1 ise nitelikli olmayan EAA'da `category` bulunmamasını ister ve Tamga ETSI'yi izler. Şablonun değerinin benimsenmesi **karar bekliyor** |
+| Güven çapası konumu belgede (ARB_21) | Belgede ayrı bir konum alanı yoktur; konum §5'teki listelerdir. Belgeye isteğe bağlı bir konum alanı eklenmesi **karar bekliyor** |
+| `nbf` (ETSI TS 119 472-1 teknik geçerlilik başlangıcı) | Bugün yazılmaz; geçerlilik başlangıcı `iat`'tır. Eklenmesi bir uygulama işidir |
+| Attestation Revocation List | AB iki mekanizmayı ister (VCR_10, VCR_12); Tamga bugün yalnız Status List yayımlar. Revocation List desteği güven listesi biçimleri işiyle planlıdır |
+
+---
+
+# 8. Kaynaklar
+
+AB Attestation Rulebook şablonu ve PID / mDL rulebook'ları (AB attestation rulebook kataloğu), ARF Annex 2 Topic 7, 10 ve 12,
+Uygulama Tüzüğü (AB) 2026/1731, ETSI TS 119 472-1, ISO/IEC 18013-5, SD-JWT VC, HAIP 1.0, IETF Token Status List. Bu belgenin
+dayandığı Tamga kararları ve şartnameleri Ek E'de listelenir.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
-
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11).

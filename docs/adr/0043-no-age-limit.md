@@ -58,7 +58,7 @@ sınırı koymaz. Bir cüzdanın hukuku sınır gerektiriyorsa o sınır o cüzd
 # Sonuçlar ve açık konular
 
 - Bugün kod değişikliği yoktur: kimlik servisi ve güven listesi kayıt kuralları yaş denetlemiyordu. Kimlik rulebook'u
-  ([[FW-RB-0003]] §3) ve kimlik doğrulama şartnamesi ([[SPEC-ID-0003]] §9) bu kararı anar.
+  ([[FW-RB-0003]] §4.3) ve kimlik doğrulama şartnamesi ([[SPEC-ID-0003]] §9) bu kararı anar.
 - **Sonraki iş — veli onayı:** GDPR m. 8, rızaya dayalı bilgi toplumu hizmetinde 16 yaş altı çocuk için veli onayı ister (üye
   devletler bu yaşı 13'e kadar indirebilir). Türk hukukunda KVKK özel bir yaş koymaz; 18 yaş altında fiil ehliyeti sınırlıdır.
   Kimlik servisinin aydınlatma ve açık rıza akışı için veli onayı akışı gerekebilir; hukuki inceleme sonrası ayrı kararla ele

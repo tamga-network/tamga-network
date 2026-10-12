@@ -43,6 +43,16 @@ Package changes in the source tree, released with the `0.5.0` packages (minor: n
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-12 — Tamga ARF: rulebooks in the EU template structure; revocation and wallet attestation policies
+
+- The credential type rulebooks (Education, Identity, Event Ticket) follow the section structure of the EU Attestation Rulebook
+  template (1.5): attributes and metadata (mandatory, optional, conditional), legal category (`category`), encoding per format
+  (mdoc, SD-JWT VC with selective disclosure per claim), usage, trust anchors, validity and revocation, compliance. The rules did
+  not change. Tamga Rulebook §11 maps ARF Annex 2 Topic 12 to the rulebook sections.
+- New Contact Rulebook (verified email address and phone number, from ADR-0021), Revocation Policy (ARF VCR_05) and Wallet
+  Attestation Policy (WIA and KA; ARF WURevocation_03, 09a). They compile existing decisions; open points are listed in each
+  document. Documents stay at 1.0.0; no code change.
+
 ### 2026-10-11 — documents: embedded disclosure policy, `issuing_country`
 
 - ADR-0046 accepted: an issuer may publish an embedded disclosure policy for an institution credential type by value in its
