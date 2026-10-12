@@ -498,7 +498,10 @@ Normative. Run for every credential that carries a `status` claim.
 instead of `status_list` (Implementing Regulation (EU) 2024/2979 Annex II, as amended by 2026/1731), the verifier checks the
 identifier list with the same steps: `application/identifierlist+cwt` (COSE_Sign1 ES256; `typ` and `x5chain` in the protected
 header; `identifiers` in claim 65530; `exp` required); the signer is the institution's registered status key (S11); prefetch
-cache (S12); freshness (Ş7); if `id` is listed the result is REJECTED (no suspension). There is no anchor log for these lists.
+cache (S12); freshness (Ş7); if `id` is listed the result is REJECTED (no suspension). There is no anchor log for these lists: an address seen in a
+verified credential is added to the prefetch set and fetched outside the verification (that verification is INDETERMINATE,
+later ones read the cache; every prefetch round refreshes it). The list is a binary CWT and is stored as bytes whatever the
+content-type; an unreadable list is INDETERMINATE, not REJECTED.
 Tamga issuers publish the Status List (one is enough, VCR_11).
 
 ## 7.1 "Invalid" versus "could not verify"

@@ -5,7 +5,9 @@
  *  K3: sunumda, kayıt sertifikası (WRPRC) ADR-0026 K5'e göre doğrulandıktan sonra, ağ isteği olmadan değerlendirilir:
  *      (a) WRPRC `sub` = `rp_id` (+ öğede `service_id` varsa WRPRC `service_id` de) · (b) erişim sertifikasının konu adı = `subject_dns`
  *      öğesi · (c) WRPRC `entitlements` ∋ `entitlements` öğesi · güven kökü: WRPRC'yi ya da erişim sertifikasını imzalayan zincirde
- *      listelenen (veren adı, seri no). Kayıt sertifikası yoksa (istekte yok, yakın mesafe, cüzdandan cüzdana) değerlendirilemez.
+ *      listelenen (veren adı, seri no) — yalnız imza zinciri doğrulanmış VE güvene bağlanmış sertifikalar sayılır
+ *      (`anchoredChainCerts`); ad/seri yalnız doğrulanamayan bir sertifikada tutuyorsa değerlendirilemez, hiçbir zaman "geçti"
+ *      değil. Kayıt sertifikası yoksa (istekte yok, yakın mesafe, cüzdandan cüzdana) değerlendirilemez.
  *  K4: sonuç onay ekranındadır — geçmezse ayrı uyarı, varsayılan "Paylaşma"; son karar kişinindir (cüzdan engellemez).
  */
 import {
@@ -16,7 +18,7 @@ import {
   type DisclosurePolicyType,
   type EmbeddedDisclosurePolicy,
 } from "@tamga-network/core/disclosure-policy";
-import { certMatchesRootOfTrust, certSubjectMatches } from "@tamga-network/trust/core";
+import { anchoredChainCerts, certMatchesRootOfTrust, certSubjectMatches } from "@tamga-network/trust/core";
 import type { IssuerMetadata } from "./oid4vci.js";
 import type { Match, VpRequest } from "./oid4vp.js";
 import { relevantRegistrationCerts, type RelevantRegistrationCert } from "./wrprc.js";
@@ -59,9 +61,16 @@ export type DisclosurePolicyOutcome = "passed" | "failed" | "not_evaluable";
  *  - `not_authorized`: doğrulayıcı politikanın izin verdikleri arasında değil
  *  - `no_registration_certificate`: istekte kayıt sertifikası yok (yakın mesafe, cüzdandan cüzdana dahil)
  *  - `malformed_policy`: saklanan politika okunamadı
+ *  - `unverified_chain`: güven kökü öğesi zincirdeki bir sertifikayla tutuyor ama o sertifikanın imza zinciri doğrulanamadı ya da
+ *    güvene bağlanamadı (kopyalanmış ad/seri, eklenmiş kök, desteklenmeyen algoritma) — değerlendirilemez
  */
 export type DisclosurePolicyReason =
-  "no_policy" | "authorized" | "not_authorized" | "no_registration_certificate" | "malformed_policy";
+  | "no_policy"
+  | "authorized"
+  | "not_authorized"
+  | "no_registration_certificate"
+  | "malformed_policy"
+  | "unverified_chain";
 
 export interface DisclosurePolicyResult {
   outcome: DisclosurePolicyOutcome;
@@ -81,6 +90,12 @@ export interface DisclosurePolicyContext {
   registrationCerts: RelevantRegistrationCert[];
   /** erişim sertifikası zinciri (yaprak ilk); yoksa yalnız yaprak */
   accessCertChain: Uint8Array[];
+  /**
+   * İmzalı listeden gelen güvenilir CA sertifikalarının SHA-256 parmak izleri (onaltılık; ör. erişim sertifikası sağlayıcıları).
+   * Erişim sertifikası zinciri yalnız bunlardan birine bağlanırsa güven kökü kararına girer: isteği gönderen kendi zincirini
+   * kurabilir. Kayıt sertifikası zincirinin yaprağı zaten kayıt kurumu anahtarıdır (imzalı listeden).
+   */
+  trustAnchors?: string[];
 }
 
 /**
@@ -128,9 +143,26 @@ export function evaluateDisclosurePolicy(
     if (!intermediated && leaf && p.subject_dns?.some((dn) => certSubjectMatches(leaf, dn))) return pass("subject_dn");
     return { ...base, outcome: "failed", reason: "not_authorized" };
   }
-  // specific_roots_of_trust: WRPRC zinciri (ARF EDP_03) ya da erişim sertifikası zinciri (Tüzük Ek III, ETSI -08)
-  const chains = [...certs.flatMap((c) => c.chainDer), ...ctx.accessCertChain];
-  if (p.roots_of_trust?.some((r) => chains.some((der) => certMatchesRootOfTrust(der, r)))) return pass("root_of_trust");
+  // specific_roots_of_trust: WRPRC zinciri (ARF EDP_03) ya da erişim sertifikası zinciri (Tüzük Ek III, ETSI -08). Ad ve seri
+  // numarası kopyalanabilir, x5c'ye istenen sertifika eklenebilir: yalnız imza zinciri yapraktan o sertifikaya kadar doğrulanmış ve
+  // güvene bağlanmış sertifikalar sayılır. WRPRC yaprağı imzalı listedeki kayıt kurumu anahtarıdır (verifyWrprc); erişim
+  // sertifikası zinciri yalnız `trustAnchors`'tan birine bağlanırsa sayılır.
+  const anchors = ctx.trustAnchors ?? [];
+  const chains = [
+    ...certs.map((c) => ({
+      raw: c.chainDer,
+      trusted: anchoredChainCerts(c.chainDer, { leafTrusted: true, anchorFingerprints: anchors }),
+    })),
+    {
+      raw: ctx.accessCertChain,
+      trusted: anchoredChainCerts(ctx.accessCertChain, { leafTrusted: false, anchorFingerprints: anchors }),
+    },
+  ];
+  const roots = p.roots_of_trust ?? [];
+  if (roots.some((r) => chains.some((c) => c.trusted.some((der) => certMatchesRootOfTrust(der, r)))))
+    return pass("root_of_trust");
+  if (roots.some((r) => chains.some((c) => c.raw.some((der) => certMatchesRootOfTrust(der, r)))))
+    return { ...base, outcome: "not_evaluable", reason: "unverified_chain" };
   return { ...base, outcome: "failed", reason: "not_authorized" };
 }
 
@@ -143,22 +175,31 @@ export function disclosurePolicyContext(
   registrarKeys: string[],
   match: Pick<Match, "queryId">,
   now = Date.now(),
+  trustAnchors: string[] = [],
 ): DisclosurePolicyContext | null {
   const r = relevantRegistrationCerts(req, registrarKeys, match, now);
   if (!r.valid) return null;
-  return { registrationCerts: r.certs, accessCertChain: req.chainDer?.length ? req.chainDer : [req.leafDer] };
+  return {
+    registrationCerts: r.certs,
+    accessCertChain: req.chainDer?.length ? req.chainDer : [req.leafDer],
+    ...(trustAnchors.length ? { trustAnchors } : {}),
+  };
 }
 
-/** Kısayol: eşleşen belgenin politikası bu istek için (onay ekranı). */
+/**
+ * Kısayol: eşleşen belgenin politikası bu istek için (onay ekranı). `trustAnchors`: erişim sertifikası zinciri için güvenilir CA
+ * parmak izleri (isteğe bağlı; yoksa güven kökü yalnız kayıt sertifikası zincirinde aranır).
+ */
 export function checkDisclosurePolicy(
   req: VpRequest,
   registrarKeys: string[],
   match: Pick<Match, "queryId"> & { credential: { disclosurePolicy?: StoredDisclosurePolicy } },
   now = Date.now(),
+  trustAnchors: string[] = [],
 ): DisclosurePolicyResult {
   const stored = match.credential.disclosurePolicy;
   if (!stored) return evaluateDisclosurePolicy(undefined, null);
-  return evaluateDisclosurePolicy(stored, disclosurePolicyContext(req, registrarKeys, match, now));
+  return evaluateDisclosurePolicy(stored, disclosurePolicyContext(req, registrarKeys, match, now, trustAnchors));
 }
 
 /**

@@ -35,6 +35,13 @@ describe("base64 ve PEM", () => {
     expect(b64uToUtf8(b64u("Tamga ✓"))).toBe("Tamga ✓");
   });
 
+  it("base64url çözümü katı: alfabe dışı karakter ve geçersiz uzunluk hata verir, dolgu kabul edilir", () => {
+    expect([...b64uToBytes("AQI")]).toEqual([1, 2]);
+    expect([...b64uToBytes("AQI=")]).toEqual([1, 2]);
+    expect([...b64uToBytes("")]).toEqual([]);
+    for (const bad of ["+/8", "AQ I", "AQI.", "A", "AQI==", "AQ=I", "AQ\n"]) expect(() => b64uToBytes(bad)).toThrow();
+  });
+
   it("DER ↔ PEM ↔ base64", () => {
     expect([...pemToDer(derToPem(DER))]).toEqual([...DER]);
     expect([...b64ToDer(derToB64(DER))]).toEqual([...DER]);

@@ -9,7 +9,7 @@ import { createHash, createSign, generateKeyPairSync, webcrypto, type KeyObject 
 import { SignedXml } from "xml-crypto";
 import { X509CertificateGenerator, cryptoProvider } from "@peculiar/x509";
 import { readTrustedListXml, parseTrustedListDom, tlServiceKind } from "./tl-reader.js";
-import { verifyEnvelopedXmlSignature, XmlSignatureError } from "./xmldsig.js";
+import { certPublicKey, verifyEnvelopedXmlSignature, XmlSignatureError } from "./xmldsig.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 
@@ -37,10 +37,15 @@ interface Signer {
   fp: string;
   alg: string;
 }
-async function signer(kind: "rsa" | "ec"): Promise<Signer> {
+async function signer(kind: "rsa" | "ec", rsaBits = 2048): Promise<Signer> {
   const gen =
     kind === "rsa"
-      ? { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }
+      ? {
+          name: "RSASSA-PKCS1-v1_5",
+          modulusLength: rsaBits,
+          publicExponent: new Uint8Array([1, 0, 1]),
+          hash: "SHA-256",
+        }
       : { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" };
   const keys = (await webcrypto.subtle.generateKey(gen, true, ["sign", "verify"])) as CryptoKeyPair;
   const cert = await X509CertificateGenerator.createSelfSigned({
@@ -156,6 +161,75 @@ describe("ETSI TS 119 612 güven listesi okuyucusu (XMLDSig)", () => {
 
   it("imzacı sabitlenmiş parmak izi değilse yüklenmez", () => {
     expect(() => readTrustedListXml(sign(tl({ serviceCert }), rsa), new Set([ec.fp]))).toThrow(/pinned signer/);
+  });
+
+  it("pin denetimi imza doğrulamasından ÖNCE: sabitlenmemiş imzacının bozuk listesi özet/imza hesabına girmez", () => {
+    const signed = sign(tl({ serviceCert }), ec);
+    const tampered = signed.replace("<TSLSequenceNumber>7<", "<TSLSequenceNumber>8<");
+    // sabitlenmiş olsaydı özet hatası verirdi; sabitlenmemişken ilk ve tek hata pin hatasıdır
+    expect(() => readTrustedListXml(tampered, new Set([ec.fp]))).toThrow(/digest mismatch/);
+    expect(() => readTrustedListXml(tampered, new Set([rsa.fp]))).toThrow(/pinned signer/);
+    const sv = /<ds:SignatureValue>([^<]+)</.exec(signed)![1];
+    const badSig = signed.replace(sv, (sv[0] === "A" ? "B" : "A") + sv.slice(1));
+    expect(() => readTrustedListXml(badSig, new Set([rsa.fp]))).toThrow(/pinned signer/);
+    // geri çağrı imzacı sertifikası ve parmak iziyle, hesaplardan önce çağrılır
+    const seen: string[] = [];
+    expect(() =>
+      verifyEnvelopedXmlSignature(tampered, {
+        checkSigner: (der, fp) => {
+          seen.push(fp, createHash("sha256").update(der).digest("hex"));
+          throw new Error("stop");
+        },
+      }),
+    ).toThrow(/^stop$/);
+    expect(seen).toEqual([ec.fp, ec.fp]);
+  });
+
+  it("RSA anahtar sınırları: modül 2048–4096 bit, açık üs tek ve en çok 2^32+1", async () => {
+    const weak = await signer("rsa", 1024);
+    expect(() => readTrustedListXml(sign(tl({ serviceCert }), weak), new Set([weak.fp]))).toThrow(
+      /RSA modulus of 1024/,
+    );
+    expect(certPublicKey(rsa.der)).toMatchObject({ kind: "rsa", e: 65537n });
+    // el yapımı sertifika iskeleti: yalnız subjectPublicKeyInfo okunur
+    const t = (tag: number, ...parts: Uint8Array[]) => {
+      const body = Buffer.concat(parts);
+      const len =
+        body.length < 0x80
+          ? [body.length]
+          : body.length < 0x100
+            ? [0x81, body.length]
+            : [0x82, body.length >> 8, body.length & 0xff];
+      return new Uint8Array([tag, ...len, ...body]);
+    };
+    const int = (b: Uint8Array) => t(0x02, b[0] & 0x80 ? new Uint8Array([0, ...b]) : b);
+    const rsaCert = (nBytes: number, e: number[]) => {
+      const n = new Uint8Array(nBytes).fill(0xab);
+      n[0] = 0xc1;
+      const spki = t(
+        0x30,
+        t(0x30, t(0x06, Buffer.from("2a864886f70d010101", "hex")), new Uint8Array([0x05, 0])),
+        t(0x03, new Uint8Array([0]), t(0x30, int(n), int(new Uint8Array(e)))),
+      );
+      const empty = t(0x30);
+      const tbs = t(
+        0x30,
+        t(0xa0, t(0x02, new Uint8Array([2]))),
+        t(0x02, new Uint8Array([1])),
+        empty,
+        empty,
+        empty,
+        empty,
+        spki,
+      );
+      return t(0x30, tbs, empty, t(0x03, new Uint8Array([0])));
+    };
+    expect(certPublicKey(rsaCert(256, [1, 0, 1]))).toMatchObject({ kind: "rsa", e: 65537n });
+    expect(() => certPublicKey(rsaCert(520, [1, 0, 1]))).toThrow(/RSA modulus of 4160/);
+    expect(() => certPublicKey(rsaCert(256, [1, 0, 0, 0, 3]))).toThrow(/exponent/); // 2^32+3
+    expect(certPublicKey(rsaCert(256, [1, 0, 0, 0, 1]))).toMatchObject({ e: 2n ** 32n + 1n });
+    expect(() => certPublicKey(rsaCert(256, [1, 0, 2]))).toThrow(/exponent/); // çift
+    expect(() => certPublicKey(rsaCert(256, [1]))).toThrow(/exponent/);
   });
 
   it("imzalı içerik değişirse (sıra no, hizmet durumu) özet tutmaz", () => {

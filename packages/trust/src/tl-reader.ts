@@ -96,14 +96,18 @@ export function parseTrustedListDom(root: XNode): ParsedLote {
 
 /**
  * TL XML'ini doğrular ve çevirir. İmzacı sertifikasının SHA-256 parmak izi `pinnedFingerprints` içinde olmalıdır (LOTL'daki dış
- * liste kaydının `signing_keys`'i — ADR-0036 FD1); değilse liste yüklenmez.
+ * liste kaydının `signing_keys`'i — ADR-0036 FD1); değilse liste yüklenmez. Pin denetimi imza doğrulamasından ÖNCE yapılır:
+ * sabitlenmemiş bir imzacının listesi için özet ve imza hesabı yapılmaz.
  */
 export function readTrustedListXml(
   xml: string,
   pinnedFingerprints: Set<string>,
 ): { list: ParsedLote; signerFingerprint: string } {
-  const v = verifyEnvelopedXmlSignature(xml);
-  if (!pinnedFingerprints.has(v.signerFingerprint))
-    throw new LoteParseError("trusted list signer is not the pinned signer of this list");
+  const v = verifyEnvelopedXmlSignature(xml, {
+    checkSigner: (_der, fingerprint) => {
+      if (!pinnedFingerprints.has(fingerprint))
+        throw new LoteParseError("trusted list signer is not the pinned signer of this list");
+    },
+  });
   return { list: parseTrustedListDom(v.root), signerFingerprint: v.signerFingerprint };
 }

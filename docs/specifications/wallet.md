@@ -368,8 +368,13 @@ Issuer metadata'sında `credential_metadata.embedded_disclosure_policy` olarak g
   kullanımın `service_id`'sini, yoksa `scope_id`'sini yazar); `service_id`'siz öğe doğrulayıcının bütün kullanımlarını kapsar. Ad
   karşılaştırmasında öznitelik türleri OID'e çevrilir (ETSI TS 119 472-3: `ORGID` = organizationIdentifier, `SN` =
   serialNumber), değerlerde büyük-küçük harf ve fazla boşluk gözetilmez, RDN sırası gözetilmez; bütün öznitelikler birebir aynı
-  olmalıdır. Güven kökü öğesi, seri numarası tutan ve `issuer_dn`'i sertifikanın veren adına (kendinden imzalı kökte konu adı
-  da aynıdır) ya da konu adına eşit olan sertifikayla eşleşir. Başvuru uygulaması: `@tamga-network/wallet-core`
+  olmalıdır. Güven kökü öğesi, seri numarası tutan ve `issuer_dn`'i sertifikanın veren adına eşit olan sertifikayla eşleşir
+  (IssuerSerial; kendinden imzalı kökte veren adı konu adıyla aynıdır; konu adıyla eşleşme yoktur). Ad ve seri numarası
+  kopyalanabildiği için yalnız imza zinciri yapraktan o sertifikaya kadar doğrulanmış ve güvene bağlanmış sertifikalar sayılır:
+  kayıt sertifikası zinciri imzalı listedeki kayıt kurumu anahtarından başlar (onu doğrudan imzalayan kendinden imzalı kök de
+  sayılır); erişim sertifikası zinciri yalnız imzalı listeden gelen güvenilir bir CA parmak izine ulaşırsa sayılır. Öğe yalnız
+  doğrulanamayan bir sertifikayla tutuyorsa sonuç "değerlendirilemez"dir (uyarı, varsayılan "Paylaşma"), hiçbir zaman "geçti"
+  değil. Başvuru uygulaması: `@tamga-network/wallet-core`
   `checkDisclosurePolicy` (sonuç `passed` / `failed` / `not_evaluable`, neden ve `info_uri`).
 - **Onay ekranı (EDP_05/07):** başarısız ya da yapılamazsa ayrı bir uyarı bloğu ("[kurum] bu belgenin yalnız izin verdiği kurumlara
   gösterilmesini istiyor"), `info_uri` varsa "Kuralı oku"; varsayılan düğme **"Paylaşma"**, "Yine de paylaş" gecikmeli (§5.2 deseni).

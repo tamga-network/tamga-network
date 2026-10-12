@@ -353,8 +353,13 @@ arrives in the signed Credential Issuer metadata as `credential_metadata.embedde
   publisher writes the use's `service_id`, or its `scope_id`); an item without `service_id` covers all uses of the verifier.
   Name comparison maps attribute types to OIDs (ETSI TS 119 472-3: `ORGID` = organizationIdentifier, `SN` = serialNumber),
   ignores case and extra spaces in values and ignores RDN order; all attributes must be identical. A root of trust item matches
-  the certificate whose serial number is equal and whose issuer name (for a self-signed root also its subject name) or subject
-  name equals `issuer_dn`. Reference implementation: `@tamga-network/wallet-core` `checkDisclosurePolicy` (result `passed` /
+  the certificate whose serial number is equal and whose issuer name equals `issuer_dn` (IssuerSerial; for a self-signed root
+  the issuer name is the subject name; there is no match on the subject name). Because names and serial numbers can be copied,
+  only certificates whose signature chain is verified from the leaf up to that certificate and anchored in trust count: the
+  registration certificate chain starts at the registrar key from the signed list (the self-signed root that directly signed it
+  also counts); the access certificate chain counts only when it reaches a trusted CA fingerprint from the signed list. An item
+  that matches only an unverified certificate gives "not evaluable" (warning, default "Don't share"), never "passed".
+  Reference implementation: `@tamga-network/wallet-core` `checkDisclosurePolicy` (result `passed` /
   `failed` / `not_evaluable`, with the reason and `info_uri`).
 - **Consent screen (EDP_05/07):** if it fails or cannot be performed, a separate warning block ("[institution] wants this
   credential to be shown only to institutions it allows"), a "Read the rule" link when `info_uri` is present; the default button

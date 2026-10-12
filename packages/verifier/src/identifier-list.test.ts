@@ -7,7 +7,13 @@ import { createHash, webcrypto } from "node:crypto";
 import { X509CertificateGenerator, cryptoProvider } from "@peculiar/x509";
 import { signIdentifierListToken } from "@tamga-network/mdoc";
 import { stepD, type VerifyCtx } from "./steps.js";
-import { MemoryStatusCache } from "./status-cache.js";
+import {
+  MemoryStatusCache,
+  PrefetchStatusCache,
+  isBinaryStatusContentType,
+  statusBodyForCache,
+  type StatusCache,
+} from "./status-cache.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
@@ -84,5 +90,102 @@ describe("D — tanımlayıcı listesi (Attestation Revocation List)", () => {
       step: "D4",
     });
     expect(await stepD(ctx("22".repeat(16), token(stranger)))).toMatchObject({ kind: "reject", step: "D3" });
+  });
+});
+
+describe("tanımlayıcı listesi: ikili gövde, bozuk önbellek, ön çekim kümesine ekleme", () => {
+  let key: Awaited<ReturnType<typeof statusKey>>;
+  beforeAll(async () => {
+    key = await statusKey();
+  });
+  const cwt = () =>
+    signIdentifierListToken({
+      uri: URI,
+      identifiers: [Buffer.from("11".repeat(16), "hex")],
+      sk: key.sk,
+      x5chain: [key.der],
+      iat: NOW - 30,
+      exp: NOW + 3600,
+    });
+  const ctxWith = (cache: StatusCache, id = "22".repeat(16)) =>
+    ({
+      input: { statusCache: cache, policy: { freshness: { max_status_token_age_sec: 6 * 3600 } } },
+      now: NOW,
+      done: [],
+      skipped: [],
+      a: { format: "mso_mdoc", identifierList: { id, uri: URI } },
+      issuerRec: { delegate_keys: [{ purpose: "status_list", fingerprint_sha256: key.fp, status: "ACTIVE" }] },
+    }) as unknown as VerifyCtx;
+
+  it("gövde türe göre saklanır: içerik türü ne olursa olsun tanımlayıcı listesi bayt kalır", async () => {
+    const bytes = cwt();
+    for (const ct of ["application/cwt", "application/cbor", "application/octet-stream", "text/plain", null]) {
+      const stored = statusBodyForCache(bytes, "identifier_list", ct);
+      const cache = new MemoryStatusCache();
+      cache.set(URI, stored);
+      const c = ctxWith(cache);
+      expect(await stepD(c)).toBeUndefined();
+      expect(c.status.value).toBe("VALID");
+    }
+    // tür bilinmiyorsa: ikili içerik türleri ve +cwt/+cbor sonekleri bayt; geçersiz UTF-8 gövde de bayt
+    for (const ct of [
+      "application/cwt",
+      "application/cbor",
+      "application/octet-stream",
+      "application/identifierlist+cwt; charset=binary",
+      "application/x+cbor",
+    ])
+      expect(statusBodyForCache(bytes, undefined, ct)).toMatch(/^b64u:/);
+    expect(statusBodyForCache(bytes, undefined, "text/plain")).toMatch(/^b64u:/); // CBOR baytları geçerli UTF-8 değil
+    expect(statusBodyForCache(new TextEncoder().encode(" a.b.c \n"), "status_list", "application/cwt")).toBe("a.b.c");
+    expect(isBinaryStatusContentType("text/plain")).toBe(false);
+  });
+
+  it("bozuk önbellek değeri (UTF-8 diye çözülmüş CWT, geçersiz base64url, CBOR değil) DOĞRULANAMADI (D4), RED değil", async () => {
+    const bytes = cwt();
+    const mangled = new TextDecoder().decode(bytes); // eski davranış: ikili gövde metin diye saklanırdı
+    for (const bad of [
+      mangled,
+      "b64u:" + Buffer.from(new TextEncoder().encode(mangled)).toString("base64url"),
+      "b64u:not base64url!",
+      "b64u:" + Buffer.from(bytes).toString("base64"), // standart base64 (+ /) kabul edilmez
+      "b64u:" + Buffer.from("plain text, not CBOR").toString("base64url"),
+      "b64u:" + Buffer.from([0x83, 0x01, 0x02]).toString("base64url"), // CBOR ama COSE_Sign1 değil
+    ]) {
+      const cache = new MemoryStatusCache();
+      cache.set(URI, bad);
+      const r = await stepD(ctxWith(cache));
+      expect(r, bad.slice(0, 20)).toMatchObject({ kind: "indeterminate", step: "D4", why: "STATUS_UNREACHABLE" });
+    }
+  });
+
+  it("önbellekte olmayan liste ön çekim kümesine eklenir ve doğrulamanın dışında çekilir; sonraki doğrulama önbellekten", async () => {
+    const calls: Array<[string, string | undefined]> = [];
+    const bytes = cwt();
+    const cache = new PrefetchStatusCache(async (u, kind) => {
+      calls.push([u, kind]);
+      return u === URI ? statusBodyForCache(bytes, kind, "application/octet-stream") : null;
+    });
+    const first = await stepD(ctxWith(cache));
+    expect(first).toMatchObject({ kind: "indeterminate", step: "D2" });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(calls).toEqual([[URI, "identifier_list"]]);
+    expect(cache.learnedRefs()).toEqual([{ uri: URI, kind: "identifier_list" }]);
+    const second = ctxWith(cache);
+    expect(await stepD(second)).toBeUndefined();
+    expect(second.status.value).toBe("VALID");
+    // periyodik ön çekim öğrenilen adresi türüyle yeniden çeker; ikinci "want" yeni çekim başlatmaz
+    cache.want(URI, "identifier_list");
+    expect(await cache.refresh(["https://status.example/sl/1"])).toEqual({
+      ok: 1,
+      failed: ["https://status.example/sl/1"],
+    });
+    expect(calls.slice(1)).toEqual([
+      ["https://status.example/sl/1", undefined],
+      [URI, "identifier_list"],
+    ]);
+    // yalnız http(s) adresleri öğrenilir
+    cache.want("file:///etc/passwd", "identifier_list");
+    expect(cache.learnedRefs()).toHaveLength(1);
   });
 });

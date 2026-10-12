@@ -101,6 +101,32 @@ existing callers keep working.
 - `@tamga-network/wallet-core`: the institution directory entry carries `infoUri` and `revocationPolicyUri` (https only);
   `toDirectoryEntry` is exported.
 
+### Fixes from the pre-release review
+
+- **Root-of-trust policy could be bypassed** (`specific_roots_of_trust`, ADR-0046 K3). The wallet compared the policy's roots
+  against the raw `x5c` arrays, so a verifier could append the policy's root, or make its own certificate with the root's name
+  and serial number, and pass. Now only certificates whose signature chain is verified from the leaf up to that certificate
+  *and* anchored in trust count: the registration certificate chain starts at the registrar key from the signed list (its
+  self-signed direct issuer also counts); the access certificate chain counts only when it reaches a trusted CA fingerprint
+  (`checkDisclosurePolicy(…, now, trustAnchors)`, `DisclosurePolicyContext.trustAnchors`). A root that matches only an
+  unverified certificate gives `not_evaluable` (new reason `unverified_chain`: the warning is shown and the default is "do not
+  share"), never `passed`. `certMatchesRootOfTrust` no longer accepts a match on the subject name (IssuerSerial only).
+  `@tamga-network/trust` (`/core` too) gains `verifyCertSignature` (ES256/384/512, RS256/384/512, PS256/384/512),
+  `isSelfSigned`, `verifiedChainPrefix` and `anchoredChainCerts`.
+- **Trusted list pin checked first.** `readTrustedListXml` compares the signer certificate's fingerprint with the pinned
+  fingerprints before any digest, canonicalisation or signature work (`verifyEnvelopedXmlSignature(xml, { checkSigner })`).
+  RSA keys are bounded: modulus 2048–4096 bits, odd public exponent 3 … 2^32+1.
+- **Identifier lists kept as bytes and fetched.** The verifier's prefetch cache decides by the list type, not the
+  content-type, whether a body is binary: an identifier list (CWT) is always stored as bytes (`b64u:`); with an unknown type,
+  `application/cwt`, `application/cbor`, `application/octet-stream`, `+cwt` / `+cbor` or a body that is not UTF-8 is kept as
+  bytes (`statusBodyForCache`, `isBinaryStatusContentType`). An unreadable identifier list (bad base64url, not CBOR, not a
+  COSE_Sign1) is `INDETERMINATE` at D4, not `REJECTED` at D3 (`verifyIdentifierListToken` reports it with the `D4:` prefix).
+  `b64uToBytes` (`@tamga-network/core`) is strict: characters outside the base64url alphabet or an invalid length throw.
+  Identifier lists have no anchor log entry, so the reference verifier never fetched them: an identifier list address seen in a
+  verified credential is now added to the prefetch set (`StatusCache.want`, `PrefetchStatusCache.learnedRefs`) and fetched
+  outside the verification; that first verification is `INDETERMINATE` (D2), later ones read the cache, and every prefetch round
+  refreshes the list (no fetch per verification, S12).
+
 ## [1.0.0] — 2026-10-04
 
 First release of the Tamga Network documentation set and reference implementation.

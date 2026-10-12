@@ -88,21 +88,33 @@ export interface VerifiedIdentifierList {
 
 /**
  * Tanımlayıcı listesi CWT'sini doğrular: COSE_Sign1 (ES256), `typ`, korunan başlıkta `x5chain`, imza, `sub` = beklenen adres,
- * `exp` zorunlu. Hata iletisi önekleri doğrulayıcı adımlarıdır: `D3:` imza/biçim, `D4:` süresi geçmiş.
+ * `exp` zorunlu. Hata iletisi önekleri doğrulayıcı adımlarıdır: `D3:` imza, imzacı başlıkları ve içerik kuralları; `D4:` süresi
+ * geçmiş ya da OKUNAMAYAN liste (CBOR çözülemiyor, COSE_Sign1 yapısı yok — bozuk/eksik aktarım: altyapı sorunu, ret değil).
  */
 export function verifyIdentifierListToken(
   bytes: Uint8Array,
   p: { uri: string; now: number; publicKeyOf: (leafDer: Uint8Array) => Uint8Array },
 ): VerifiedIdentifierList {
-  let top: unknown = decode(bytes);
+  const unreadable = (why: string) => new Error(`D4: identifier list unreadable (${why})`);
+  let top: unknown;
+  try {
+    top = decode(bytes);
+  } catch (e) {
+    throw unreadable((e as Error).message);
+  }
   if (top instanceof CborTag && top.tag === TAG_CWT) top = top.value;
   if (top instanceof CborTag && top.tag === TAG_COSE_SIGN1) top = top.value;
-  if (!Array.isArray(top) || top.length !== 4) throw new Error("D3: identifier list is not a COSE_Sign1");
+  if (!Array.isArray(top) || top.length !== 4) throw unreadable("not a COSE_Sign1");
   const [prot, , payload, sig] = top;
   if (!(prot instanceof Uint8Array) || !(payload instanceof Uint8Array) || !(sig instanceof Uint8Array))
-    throw new Error("D3: identifier list COSE_Sign1 fields invalid");
-  const ph = decode(prot);
-  if (!(ph instanceof Map)) throw new Error("D3: protected header is not a map");
+    throw unreadable("COSE_Sign1 fields invalid");
+  let ph: unknown;
+  try {
+    ph = decode(prot);
+  } catch (e) {
+    throw unreadable((e as Error).message);
+  }
+  if (!(ph instanceof Map)) throw unreadable("protected header is not a map");
   if (ph.get(HDR_ALG) !== ALG_ES256) throw new Error("D3: identifier list alg must be ES256");
   if (ph.get(HDR_TYP) !== IDENTIFIER_LIST_TYP)
     throw new Error("D3: identifier list typ must be application/identifierlist+cwt");

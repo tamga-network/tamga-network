@@ -383,8 +383,17 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   ctx.done.push("D6");
 }
 
-/** Önbellekteki tanımlayıcı listesi: ikili CWT base64url olarak saklanır (`b64u:` öneki isteğe bağlı). */
-const cwtBytes = (token: string) => b64uToBytes(token.startsWith("b64u:") ? token.slice(5) : token);
+/**
+ * Önbellekteki tanımlayıcı listesi: ikili CWT base64url olarak saklanır (`b64u:` öneki isteğe bağlı). Kodlama katıdır
+ * (`b64uToBytes`); bozuk önbellek değeri `D4:` (okunamıyor) hatasıdır — altyapı sorunu, ret değil.
+ */
+const cwtBytes = (token: string) => {
+  try {
+    return b64uToBytes(token.startsWith("b64u:") ? token.slice(5) : token);
+  } catch {
+    throw new Error("D4: identifier list unreadable (cached value is not base64url)");
+  }
+};
 
 /**
  * D — Attestation Revocation List (tanımlayıcı listesi; CIR 2024/2979 Ek II, EAA-6.2.10.1-02.3/-10.1; ARF VCR_12). Status List
@@ -395,15 +404,25 @@ async function stepDIdentifierList(ctx: VerifyCtx, ref: { id: string; uri: strin
   const { input, now } = ctx;
   ctx.done.push("D1");
   const cached = input.statusCache.get(ref.uri);
-  if (!cached)
-    return indet("D2", "STATUS_UNREACHABLE", "identifier list not in prefetch cache (S12: no fetch per verification)");
+  if (!cached) {
+    // çapa günlüğünde tanımlayıcı listesi yok: adres (imzası doğrulanmış MSO'dan) ön çekim kümesine eklenir, çekim doğrulamanın
+    // dışında yapılır (S12); bu doğrulama DOĞRULANAMADI, sonrakiler önbellekten
+    input.statusCache.want?.(ref.uri, "identifier_list");
+    return indet(
+      "D2",
+      "STATUS_UNREACHABLE",
+      "identifier list not in prefetch cache yet (S12: no fetch per verification); queued for prefetch",
+    );
+  }
   ctx.done.push("D2");
   let list: ReturnType<typeof verifyIdentifierListToken>;
   try {
     list = verifyIdentifierListToken(cwtBytes(cached.token), { uri: ref.uri, now, publicKeyOf: pointOf });
   } catch (e) {
     const msg = (e as Error).message;
-    if (msg.startsWith("D4:")) return indet("D4", "STATUS_STALE", `identifier list: ${msg}`);
+    // okunamayan liste (bozuk bayt, çözülemeyen CBOR) ve süresi geçmiş liste: DOĞRULANAMADI — belge hakkında bir şey söylemez
+    if (msg.startsWith("D4:"))
+      return indet("D4", msg.includes("unreadable") ? "STATUS_UNREACHABLE" : "STATUS_STALE", `identifier list: ${msg}`);
     return reject("D3", `identifier list: ${msg}`);
   }
   const statusKeys = (ctx.issuerRec?.delegate_keys ?? [])

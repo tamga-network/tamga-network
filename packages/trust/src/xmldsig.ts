@@ -32,8 +32,8 @@ const DIGESTS: Record<string, (b: Uint8Array) => Uint8Array> = {
   "http://www.w3.org/2001/04/xmldsig-more#sha384": sha384,
   "http://www.w3.org/2001/04/xmlenc#sha512": sha512,
 };
-type HashName = "sha256" | "sha384" | "sha512";
-const HASH_FN: Record<HashName, (b: Uint8Array) => Uint8Array> = { sha256, sha384, sha512 };
+export type HashName = "sha256" | "sha384" | "sha512";
+export const HASH_FN: Record<HashName, (b: Uint8Array) => Uint8Array> = { sha256, sha384, sha512 };
 const SIG_ALGS: Record<string, { kind: "rsa" | "ecdsa"; hash: HashName }> = {
   "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256": { kind: "rsa", hash: "sha256" },
   "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384": { kind: "rsa", hash: "sha384" },
@@ -201,8 +201,12 @@ const CURVES: Record<string, typeof p256> = {
   "2b81040022": p384 as unknown as typeof p256,
   "2b81040023": p521 as unknown as typeof p256,
 };
-type PublicKey =
+export const RSA_MIN_BITS = 2048;
+export const RSA_MAX_BITS = 4096;
+export const RSA_MAX_EXPONENT = 2n ** 32n + 1n;
+export type CertPublicKey =
   { kind: "rsa"; n: bigint; e: bigint; k: number } | { kind: "ecdsa"; curve: typeof p256; point: Uint8Array };
+type PublicKey = CertPublicKey;
 
 export function certPublicKey(der: Uint8Array): PublicKey {
   const cert = tlv(der, 0);
@@ -217,8 +221,16 @@ export function certPublicKey(der: Uint8Array): PublicKey {
   if (oid === OID_RSA) {
     const seq = tlv(key, 0);
     const [nT, eT] = kids(key, seq);
-    const n = BigInt("0x" + hex(key.subarray(nT.start, nT.end)));
-    const e = BigInt("0x" + hex(key.subarray(eT.start, eT.end)));
+    if (!nT || !eT || nT.tag !== 0x02 || eT.tag !== 0x02) throw new XmlSignatureError("certificate: malformed RSA key");
+    const n = BigInt("0x" + (hex(key.subarray(nT.start, nT.end)) || "0"));
+    const e = BigInt("0x" + (hex(key.subarray(eT.start, eT.end)) || "0"));
+    // Sınırlar: modül 2048–4096 bit (daha küçüğü zayıf, daha büyüğü pahalı modüler üs alma — hizmet engelleme), açık üs tek ve
+    // 3 ≤ e ≤ 2^32+1 (pratikte 65537; büyük üs aynı nedenle reddedilir).
+    const bits = n.toString(2).length;
+    if (bits < RSA_MIN_BITS || bits > RSA_MAX_BITS)
+      throw new XmlSignatureError(`certificate: RSA modulus of ${bits} bits (allowed ${RSA_MIN_BITS}–${RSA_MAX_BITS})`);
+    if (e < 3n || e > RSA_MAX_EXPONENT || (e & 1n) === 0n)
+      throw new XmlSignatureError("certificate: RSA public exponent out of range");
     return { kind: "rsa", n, e, k: Math.ceil(n.toString(16).length / 2) };
   }
   if (oid === OID_EC) {
@@ -236,7 +248,7 @@ const DIGEST_INFO: Record<HashName, string[]> = {
   sha384: ["3041300d060960864801650304020205000430", "303f300b06096086480165030402020430"],
   sha512: ["3051300d060960864801650304020305000440", "304f300b06096086480165030402030440"],
 };
-function modPow(b: bigint, e: bigint, m: bigint): bigint {
+export function modPow(b: bigint, e: bigint, m: bigint): bigint {
   let r = 1n;
   b %= m;
   while (e > 0n) {
@@ -246,7 +258,8 @@ function modPow(b: bigint, e: bigint, m: bigint): bigint {
   }
   return r;
 }
-function rsaVerify(
+/** RSASSA-PKCS1-v1_5 doğrulaması (RFC 8017 §8.2.2). */
+export function rsaVerify(
   key: { n: bigint; e: bigint; k: number },
   hash: HashName,
   msg: Uint8Array,
@@ -320,13 +333,29 @@ function transformsOf(ref: XNode): Array<{ alg: string; prefixes?: string[] }> {
  * başvurusunu taşımalı (yoksa liste imzalı sayılmaz). Bütün başvuruların özeti ve imza değeri tutmalı. Dönen DOM yalnız
  * doğrulanmış içeriktir. Güven (imzacının kim olduğu) çağıranın denetimidir.
  */
-export function verifyEnvelopedXmlSignature(xml: string): XmlSignatureResult {
+export interface VerifyXmlSignatureOptions {
+  /**
+   * İmzacı sertifikası için erken güven denetimi: özetlerden, kanonikleştirmeden ve imza doğrulamasından ÖNCE çağrılır
+   * (sabitlenmiş parmak izi — ADR-0036 FD1). Güvenilmeyen imzacıda hata fırlatmalıdır; böylece tanınmayan bir imzacının
+   * belgesi pahalı denetimlere hiç girmez.
+   */
+  checkSigner?: (signerDer: Uint8Array, signerFingerprint: string) => void;
+}
+
+export function verifyEnvelopedXmlSignature(xml: string, opts: VerifyXmlSignatureOptions = {}): XmlSignatureResult {
   const doc = parseXml(xml);
   const root = doc.documentElement;
   const sigs = xmlChildren(root, DSIG_NS, "Signature");
   if (sigs.length !== 1)
     throw new XmlSignatureError(`expected exactly one ds:Signature under the root (found ${sigs.length})`);
   const sig = sigs[0];
+  // imzacı sertifikası (güven denetimi önce, pahalı işlemler sonra)
+  const keyInfo = xmlChild(sig, DSIG_NS, "KeyInfo");
+  const certEl = keyInfo && xmlChild(xmlChild(keyInfo, DSIG_NS, "X509Data") ?? keyInfo, DSIG_NS, "X509Certificate");
+  if (!certEl) throw new XmlSignatureError("KeyInfo/X509Data/X509Certificate missing");
+  const signerDer = b64ToBytes(xmlText(certEl));
+  const signerFingerprint = sha256HexPortable(signerDer);
+  opts.checkSigner?.(signerDer, signerFingerprint);
   const si = xmlChild(sig, DSIG_NS, "SignedInfo");
   if (!si) throw new XmlSignatureError("SignedInfo missing");
   const cm = String(xmlChild(si, DSIG_NS, "CanonicalizationMethod")?.getAttribute("Algorithm") ?? "");
@@ -371,10 +400,6 @@ export function verifyEnvelopedXmlSignature(xml: string): XmlSignatureResult {
   if (!coversDocument) throw new XmlSignatureError('no Reference covers the whole document (URI="")');
 
   // imza değeri
-  const keyInfo = xmlChild(sig, DSIG_NS, "KeyInfo");
-  const certEl = keyInfo && xmlChild(xmlChild(keyInfo, DSIG_NS, "X509Data") ?? keyInfo, DSIG_NS, "X509Certificate");
-  if (!certEl) throw new XmlSignatureError("KeyInfo/X509Data/X509Certificate missing");
-  const signerDer = b64ToBytes(xmlText(certEl));
   const key = certPublicKey(signerDer);
   const cmEl = xmlChild(si, DSIG_NS, "CanonicalizationMethod");
   const cmInc = childElements(cmEl).find((c) => c.localName === "InclusiveNamespaces" && c.namespaceURI === EXC_C14N);
@@ -398,6 +423,6 @@ export function verifyEnvelopedXmlSignature(xml: string): XmlSignatureResult {
     }
   }
   if (!ok) throw new XmlSignatureError("signature value does not verify");
-  return { signerDer, signerFingerprint: sha256HexPortable(signerDer), root, signature: sig };
+  return { signerDer, signerFingerprint, root, signature: sig };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

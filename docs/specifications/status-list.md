@@ -513,7 +513,9 @@ Normatif. `status` claim'i taşıyan her belge için çalıştırılır.
 {id, uri}` taşıyorsa (Uygulama Tüzüğü (AB) 2024/2979 Ek II, 2026/1731 ile değişik) doğrulayıcı aynı adımlarla tanımlayıcı
 listesini denetler: `application/identifierlist+cwt` (COSE_Sign1 ES256; korunan başlıkta `typ` ve `x5chain`; 65530 talebinde
 `identifiers`; `exp` zorunlu); imzacı kurumun kayıtlı iptal anahtarı (S11); ön çekim önbelleği (S12); tazelik (Ş7); `id`
-listedeyse RED (askı yok). Çapa günlüğü bu listeler için yoktur. Tamga belge verenleri Status List yayımlar (biri yeter, VCR_11).
+listedeyse RED (askı yok). Çapa günlüğü bu listeler için yoktur: adres, imzası doğrulanmış bir belgede ilk görüldüğünde ön çekim
+kümesine eklenir ve doğrulamanın dışında çekilir (o doğrulama DOĞRULANAMADI, sonrakiler önbellekten; her ön çekim turunda
+tazelenir). Liste ikili CWT'dir ve içerik türüne bakılmadan bayt olarak saklanır; okunamayan liste DOĞRULANAMADI'dır, RED değil. Tamga belge verenleri Status List yayımlar (biri yeter, VCR_11).
 
 ## 7.1 "Geçersiz" ile "doğrulanamadı" ayrımı
 

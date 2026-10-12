@@ -111,6 +111,8 @@ export async function buildVerifyApp(
     const s = (trust as unknown as { store?: { status_anchors: Map<string, { list_uri: string }> } }).store;
     return s ? [...s.status_anchors.values()].map((a) => a.list_uri) : [];
   };
+  // Çapa günlüğündeki Status List'ler + doğrulamada görülüp ön çekim kümesine eklenen tanımlayıcı listeleri (çapasız; mdoc
+  // `identifier_list` — PrefetchStatusCache.want). İkisi de her turda tazelenir (D4); doğrulama ağ isteğini beklemez (S12).
   const prefetchStatus = () => statusCache.refresh(anchoredUris());
   const signer =
     opts.signer ??

@@ -202,7 +202,7 @@ describe("değerlendirme (K3, EDP_02/03/06)", () => {
     expect(await check(q, [await wrprc({ sub: "VATTR-1234567890" })])).toMatchObject({ outcome: "failed" });
   });
 
-  it("güven kökü: kayıt sertifikası zinciri (EDP_03) ya da erişim sertifikası zinciri (Ek III)", async () => {
+  it("güven kökü: kayıt kurumunun kendi sertifikası (EDP_03); kendinden imzalı erişim yaprağı güvene bağlanmaz", async () => {
     const cert = await wrprc({ sub: "VATTR-1234567890" });
     const byRegistrar = {
       id: "urn:x:roots",
@@ -210,11 +210,12 @@ describe("değerlendirme (K3, EDP_02/03/06)", () => {
       roots_of_trust: [{ issuer_dn: "C=TR, CN=Registrar (test)", serial_number: "1001" }],
     };
     expect(await check(byRegistrar, [cert])).toMatchObject({ outcome: "passed", matchedBy: "root_of_trust" });
+    // isteği gönderenin kendi (kendinden imzalı) erişim sertifikası: ad/seri tutsa da güvene bağlanamaz
     const byAccess = {
       ...byRegistrar,
       roots_of_trust: [{ issuer_dn: "CN=hr.example,O=HR Ltd,ORGID=VATTR-1234567890,C=TR", serial_number: "2002" }],
     };
-    expect(await check(byAccess, [cert])).toMatchObject({ outcome: "passed" });
+    expect(await check(byAccess, [cert])).toMatchObject({ outcome: "not_evaluable", reason: "unverified_chain" });
     const wrongSerial = {
       ...byRegistrar,
       roots_of_trust: [{ issuer_dn: "C=TR, CN=Registrar (test)", serial_number: "1002" }],
@@ -237,5 +238,135 @@ describe("değerlendirme (K3, EDP_02/03/06)", () => {
       restricted: true,
     });
     expect(offlineDisclosurePolicy(cred())).toMatchObject({ outcome: "passed", restricted: false });
+  });
+});
+
+describe("güven kökü: imza zinciri doğrulanmış olmalı (EDP_03 atlatma girişimleri)", () => {
+  const ROOT = "CN=Policy Root CA, O=Root Org, C=TR";
+  const policy = stored({
+    id: "urn:x:roots",
+    type: "specific_roots_of_trust",
+    roots_of_trust: [{ issuer_dn: "C=TR,O=Root Org,CN=Policy Root CA", serial_number: "5a" }],
+  });
+  const kp = () => crypto.subtle.generateKey(ALG, true, ["sign", "verify"]) as Promise<CryptoKeyPair>;
+  const cert = async (o: { subject: string; issuer: string; serial: string; pub: CryptoKey; signer: CryptoKey }) =>
+    new Uint8Array(
+      (
+        await X509CertificateGenerator.create({
+          serialNumber: o.serial,
+          subject: o.subject,
+          issuer: o.issuer,
+          notBefore: new Date(0),
+          notAfter: new Date("2099-01-01"),
+          signingAlgorithm: ALG,
+          publicKey: o.pub,
+          signingKey: o.signer,
+        })
+      ).rawData,
+    );
+  const fp = (der: Uint8Array) => createHash("sha256").update(der).digest("hex");
+  const ctx = (wrprcChain: Uint8Array[], accessChain: Uint8Array[], trustAnchors?: string[]) => ({
+    registrationCerts: [{ payload: { sub: "VATTR-1234567890" }, chainDer: wrprcChain }],
+    accessCertChain: accessChain,
+    ...(trustAnchors ? { trustAnchors } : {}),
+  });
+
+  let rootKp: CryptoKeyPair, root: Uint8Array, regSigner: Uint8Array, accessLeaf: Uint8Array;
+  let attackerKp: CryptoKeyPair, leafKp: CryptoKeyPair;
+  beforeAll(async () => {
+    rootKp = await kp();
+    attackerKp = await kp();
+    leafKp = await kp();
+    root = await cert({ subject: ROOT, issuer: ROOT, serial: "5a", pub: rootKp.publicKey, signer: rootKp.privateKey });
+    regSigner = await cert({
+      subject: "CN=Registrar signer, C=TR",
+      issuer: ROOT,
+      serial: "71",
+      pub: leafKp.publicKey,
+      signer: rootKp.privateKey,
+    });
+    accessLeaf = await cert({
+      subject: "CN=hr.example, O=HR Ltd, 2.5.4.97=VATTR-1234567890, C=TR",
+      issuer: ROOT,
+      serial: "72",
+      pub: leafKp.publicKey,
+      signer: rootKp.privateKey,
+    });
+  });
+
+  it("gerçek zincir: kayıt kurumu sertifikası kökten → geçer; erişim zinciri çapaya bağlıysa geçer", () => {
+    expect(evaluateDisclosurePolicy(policy, ctx([regSigner, root], [hr.der]))).toMatchObject({
+      outcome: "passed",
+      matchedBy: "root_of_trust",
+    });
+    // erişim zinciri: çapasız değerlendirilemez, kök imzalı listeden çapaysa geçer
+    expect(evaluateDisclosurePolicy(policy, ctx([registrar.der], [accessLeaf, root]))).toMatchObject({
+      outcome: "not_evaluable",
+      reason: "unverified_chain",
+    });
+    expect(evaluateDisclosurePolicy(policy, ctx([registrar.der], [accessLeaf, root], [fp(root)]))).toMatchObject({
+      outcome: "passed",
+      matchedBy: "root_of_trust",
+    });
+  });
+
+  it("x5c'ye eklenmiş kök (yaprağı imzalamamış) geçmez", () => {
+    // kayıt kurumu sertifikası kendinden imzalı; kök yalnız sona eklenmiş
+    const r = evaluateDisclosurePolicy(policy, ctx([registrar.der, root], [hr.der, root]));
+    expect(r.outcome).not.toBe("passed");
+    expect(r).toMatchObject({ outcome: "not_evaluable", reason: "unverified_chain" });
+    // çapa verilse bile imza zinciri kökten geçmediği için geçmez
+    expect(evaluateDisclosurePolicy(policy, ctx([registrar.der, root], [hr.der, root], [fp(root)])).outcome).not.toBe(
+      "passed",
+    );
+  });
+
+  it("kökün adını ve seri numarasını kopyalayan sertifika geçmez", async () => {
+    // (1) kendi yaptığı yaprak: veren adı = kök adı, seri = kök serisi (IssuerSerial tutar), kendi anahtarıyla imzalı
+    const copiedLeaf = await cert({
+      subject: "CN=hr.example, O=HR Ltd, 2.5.4.97=VATTR-1234567890, C=TR",
+      issuer: ROOT,
+      serial: "5a",
+      pub: attackerKp.publicKey,
+      signer: attackerKp.privateKey,
+    });
+    // (2) sahte kök: aynı ad ve seri, saldırganın anahtarı, kendinden imzalı; sahte kökle imzalı yaprak
+    const fakeRoot = await cert({
+      subject: ROOT,
+      issuer: ROOT,
+      serial: "5a",
+      pub: attackerKp.publicKey,
+      signer: attackerKp.privateKey,
+    });
+    const fakeLeaf = await cert({
+      subject: "CN=hr.example, O=HR Ltd, 2.5.4.97=VATTR-1234567890, C=TR",
+      issuer: ROOT,
+      serial: "73",
+      pub: leafKp.publicKey,
+      signer: attackerKp.privateKey,
+    });
+    for (const c of [
+      ctx([registrar.der], [copiedLeaf]),
+      ctx([registrar.der], [copiedLeaf], [fp(root)]),
+      ctx([registrar.der], [fakeLeaf, fakeRoot]),
+      ctx([registrar.der], [fakeLeaf, fakeRoot], [fp(root)]),
+      ctx([registrar.der, fakeRoot], [hr.der]),
+    ]) {
+      const r = evaluateDisclosurePolicy(policy, c);
+      expect(r.outcome).not.toBe("passed");
+      expect(r).toMatchObject({ outcome: "not_evaluable", reason: "unverified_chain" });
+    }
+  });
+
+  it("konu adı yedeği yok: kayıt kurumu sertifikasının KONU adı + serisi kök öğesi sayılmaz", () => {
+    const bySubject = stored({
+      id: "urn:x:roots",
+      type: "specific_roots_of_trust",
+      roots_of_trust: [{ issuer_dn: "C=TR,CN=Registrar signer", serial_number: "71" }],
+    });
+    expect(evaluateDisclosurePolicy(bySubject, ctx([regSigner, root], [hr.der]))).toMatchObject({
+      outcome: "failed",
+      reason: "not_authorized",
+    });
   });
 });
