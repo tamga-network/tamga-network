@@ -4,7 +4,7 @@ title: "Kurum kimliği (X.509)"
 status: Active
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-02
+last_updated: 2026-10-13
 summary: >
   [[ADR-0004]] X.509 kararının kod/protokol seviyesindeki karşılığı. Kurumsal/entity
   kimlik, ulusal Root CA'lara dayanan X.509 sertifikalarıyla kurulur; kurumun zincir
@@ -73,6 +73,24 @@ struct RootCA {
 Bir devletin kökünü yalnızca **o devlet** kaydeder/günceller (`onlyOwnerState`).
 Kök **açık anahtarı** on-chain tutulur (kişisel veri değildir — [[PM-TRUST-0001]]
 sınırı korunur).
+
+## 1.1 Kurum sertifika profili ([[ADR-0050]])
+
+Belge veren kurumların (kimlik servisi dahil) belge imza ve iptal listesi imza sertifikaları ETSI TS 119 412-6 V1.2.1 ve EN 319
+412-3'e göre yazılır:
+
+| Alan | Kural |
+|---|---|
+| Konu | `organizationIdentifier` (2.5.4.97) zorunlu, kayıt sertifikasının `sub`'ıyla aynı (`VATTR-<VKN>`, `NTRTR-<MERSİS>`, `LEIXG-<LEI>`); `O` = kurumun resmî adı; `C` zorunlu; `CN` ve `OU` isteğe bağlı |
+| Anahtar kullanımı | Kritik; yalnız `digitalSignature` (tek tür; mdoc belge imza sertifikasıyla uyumlu) |
+| Temel kısıtlar | Kritik, `cA = false` |
+| SKI / AKI | İkisi de zorunlu; AKI = imzalayan makamın SKI'si |
+| AIA | Nitelikli olmayan EAA'da gerekmez; nitelikli ve kamu sınıfı ayrı kararla |
+| Algoritma, süre | P-256 / ECDSA SHA-256; en çok 3 yıl |
+
+Gerçek ağda kurum sertifikası `organizationIdentifier` ile verilir (operatör aracı `pki-issue --prod --org-id`); kimlik numarası
+olmayan eski sertifikalar numara kayda girince yenilenir (§4 yenileme deseni, XC2). Sandbox sertifikaları aynı anahtarla yeniden
+imzalandı (2026-10-13).
 
 ---
 
@@ -276,6 +294,7 @@ ve TL yayın kadansı (≤6 ay, gürültülü yeniden yayın — [[ADR-0008]] il
 | **XC3** | Zincir yalnızca kişisel-olmayan veri tutar (kök/kurum public anahtarı, durum). |
 | **XC4** | Vatandaşın küresel tanımlayıcısı yoktur (yalnızca pairwise takma ad). |
 | **XC5** | Entity↔kimlik bağı yalnızca accountable disclosure eşiğiyle çözülür. |
+| **XC6** | Belge veren kurumun belge ve iptal listesi imza sertifikası konu alanında kayıt sertifikasının `sub`'ıyla aynı `organizationIdentifier`'ı taşır; anahtar kullanımı kritik ve yalnız `digitalSignature`'dır; SKI ve AKI zorunludur ([[ADR-0050]]). |
 
 ---
 
@@ -307,6 +326,6 @@ ve TL yayın kadansı (≤6 ay, gürültülü yeniden yayın — [[ADR-0008]] il
 - [[RS-EIDAS-0001]] — §5.1 (ETSI 119 612 Trusted List analizi) = §8.1 projeksiyonunun temeli.
 - Implementasyon: `sdk/` (resolver + doğrulama + 119 612 TL projeksiyonu), `contracts/src/` (RootCARegistry).
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §1.1 ve XC6 2026-10-13, [[ADR-0050]]).
 
 ---

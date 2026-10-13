@@ -4,7 +4,7 @@ title: "Cüzdan Kanıtı Politikası (WIA ve KA)"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tamga güven listesindeki her cüzdan sağlayıcısının cüzdan örneği kanıtını (WIA) ve anahtar kanıtını (KA) nasıl verdiğini,
   hangi koşullarda iptal ettiğini ve iptali nasıl yayımladığını tek yerde toplayan politika (AB ARF VCR_05, WURevocation_03,
@@ -42,6 +42,7 @@ bu kurallara uyar; kendi işletim ayrıntılarını (ör. kurulum, destek, bildi
 |---|---|
 | Biçim: OpenID4VCI 1.0 Ek E (`oauth-client-attestation+jwt`); AB TS3 §2.3.1 alanları: `sub`, `wallet_name`, `wallet_version`, `wallet_link`, `wallet_solution_certification_information`, `client_status {status, exp}`, `cnf.jwk` | [[ADR-0025]] K2 |
 | WIA cüzdan sürümünü, anahtarın donanımda olduğunu ve PIN ya da biyometrinin etkin olduğunu beyan eder | RB-WP-02 |
+| WIA genel istemci kanıtı biçimindedir (OAuth attestation-based client authentication -07): sağlayıcı `iss` ve `iat`'ı gönderir; belge veren her istemci kanıtını tek yoldan WIA olarak doğrular (eski WUA yolu kaldırıldı), `iss`'i zorunlu tutmaz, kanıtta `iat` yoksa hoş görür, PoP'ta `iat` zorunludur; `client_status` yoksa belge verenin `clientStatus` ayarı geçerlidir (`optional` varsayılan, `required`: kimlik servisi) (paketler 0.5.2). WIA'nın `cnf` anahtarı, o belge için kullanılan DPoP anahtarıdır (AB TS3 1.5.2; paketler 0.6.0) | [[ADR-0025]] 2026-10-13 notu |
 | Ömür **24 saatten kısadır**; `client_status.exp` en az 31 gün ileridedir | [[ADR-0025]] K2, WIA1 |
 | **Her belge işleminde yeni WIA**: yeni bir sahiplik kanıtı (PoP) anahtarı ve yeni, birbirine bağlanamaz bir iptal listesi girişi. Belge veren başına yeniden kullanım yoktur; böylece sağlayıcı cüzdanın kaç kurumla görüştüğünü öğrenmez | [[ADR-0025]] K2, WIA1 |
 | WIA, sağlayıcının güven listesinde kayıtlı imza anahtarıyla imzalanır | RB-WP-02, [[SPEC-TRUST-0001]] |
@@ -95,7 +96,7 @@ karşılar.
 | Kural | Kaynak |
 |---|---|
 | Sağlayıcı iki Token Status List yayımlar: WIA girişleri ve KA türleri. Listeleri güven listesinde kayıtlı kendi anahtarıyla imzalar | [[ADR-0025]] K4 |
-| WIA listesi en az 10.000 girişlidir; girişler birime bağlanamaz biçimde dağıtılır | [[ADR-0025]] K2, K4 |
+| WIA ve KA iptal listelerinin her biri en az 10.000 girişlidir; girişler birime bağlanamaz biçimde dağıtılır. Belge veren bu sınırın altındaki listeye dayanan WIA ya da KA'yı kabul etmez | [[ADR-0025]] K2, K4 ve 2026-10-13 notu; Uygulama Tüzüğü (AB) 2024/2979 Ek Ib |
 | Liste adresleri her WIA'da (`client_status`) ve KA'da (`key_storage_status`) yer alır; sağlayıcının adresi güven listesindeki kaydındadır | [[ADR-0025]], [[SPEC-TRUST-0001]] |
 
 # 7. Belge verenlerin denetimi
@@ -142,7 +143,7 @@ sağlayıcının EN 319 401'e uyması demektir.
 | 7.5.4 | Anahtar kullanımı: ömür sonunda bırakma; yalnız kanıt verme ve iptal durumu için | Sağlayıcının imza anahtarı yalnız WIA, KA ve kendi iptal listelerini imzalar; anahtar yenilemesi güven listesindeki kayıtla yapılır ([[SPEC-TRUST-0001]]) |
 | 7.5.5 | Cüzdana özgü: belgenin cihazın güvenli donanımına bağlanması; anahtarın güvenli donanımda olduğunun doğrulanması; seçici açıklama; birlikte sunum; bağlanabilirliğin azaltılması; toplu verilen kopyaların birbirinden bağımsız olması | KA yalnız güvenli donanımda üretilmiş anahtarları taşır; seviye doğrulanmış duruma dayanır ([[ADR-0025]] WIA3; W3'te cihaz kanıtı, RB-WP-17). Her kopya ayrı anahtardır, bir anahtar tek KA'dadır (§4; RB-AP-09). Seçici açıklama ve birlikte sunum belge biçimlerinindir (SD-JWT VC, mdoc) |
 | 7.6 | Fiziksel ve çevresel güvenlik (EN 319 401) | Sağlayıcının sunucuları erişimi denetlenen bir veri merkezindedir |
-| 7.7 | İşletim güvenliği; kapasite izleme | Sağlayıcı WIA ve KA uçlarının ve iptal listelerinin kapasitesini izler; WIA iptal listesi en az 10.000 girişlidir ve dolmadan büyütülür (§6) |
+| 7.7 | İşletim güvenliği; kapasite izleme | Sağlayıcı WIA ve KA uçlarının ve iptal listelerinin kapasitesini izler; WIA ve KA iptal listeleri en az 10.000 girişlidir ve dolmadan büyütülür (§6) |
 | 7.8 | Ağ güvenliği: güvenli bölge; kullanılmayan hesap, hizmet ve portların kapatılması; şifreli kanallar | Bütün uçlar yalnız TLS ile; kullanılmayan hizmet ve portlar kapalı; imza anahtarına erişen bileşen ayrı bir bölgede |
 | 7.9 | Açık ve olay yönetimi (EN 319 401) | §8: kritik olay 4 saatte, yüksek önemdeki olay 24 saatte şema sahibine bildirilir; cüzdan çözümünün açığı sürüm bazında iptalle sonuçlanabilir (RB-WP-11) |
 | 7.10 | Kanıt toplama: kanıt verme olaylarının, güvenlik olaylarının, iptal isteklerinin ve sonuçlarının kaydı; kayıtlara erişimin ve saklama süresinin belgelenmesi | Sağlayıcı WIA ve KA verme, birim kaydı, iptal isteği ve iptal olaylarını kaydeder. Kayıt kişisel veri, iptal listesi konumu (`idx`) ve birim anahtarı parmak izi taşımaz (RB-GEN-06; REQ-EAASP-7.13-08: izlemeye izin vermeyen en az kayıt). Saklama süresi bildirgede yazılır |
@@ -167,4 +168,4 @@ KA'sına doğrudan uygulanmaz. Devlet katılımında ve nitelikli sınıfa geçi
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-11; §2, §5, §9 ve §10 2026-10-12, [[ADR-0047]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-11; §2, §5, §9 ve §10 2026-10-12, [[ADR-0047]]; §5–§7 2026-10-13, [[ADR-0025]] notu).

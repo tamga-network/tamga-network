@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -130,7 +130,7 @@ asking the user.
 A verifier (an employer, a website, an institution) requests a credential from the wallet. The request is signed and
 carries the verifier's registered identity. The wallet checks the verifier's entry in the trusted list and its
 [[t:registration-certificate]], shows the requested fields and the purpose to the person, and warns if more fields are requested
-than the registration allows. The person approves with a PIN or biometrics; the response is encrypted and contains only the
+than the registration allows or if the request carries no registration certificate (RB-WP-19). The person approves with a PIN or biometrics; the response is encrypted and contains only the
 approved fields.
 
 A verifier may run its own verification software or use Tamga Verify (the hosted verifier). Presentation happens through a
@@ -373,8 +373,13 @@ agreements.
 Tamga Network does not have to own a national list. Today Tamga publishes the Türkiye list provisionally, on behalf of the
 state. When a state, or a body it designates, publishes its own list, the list of lists shows that list's address and
 signer. For wallets and verifiers only the address and the signer change; institution identifiers, credential types and
-credentials stay the same. The same path applies to every Turkic state. Mutual recognition with the EU uses the same
-mechanism, limited in scope by credential type.
+credentials stay the same. The same path applies to every Turkic state. EU lists can be shown through the same mechanism,
+limited in scope by credential type; this is technical trust. **Legal recognition** in the EU, however, is not something the
+network can grant: for countries outside the EU the only open basis is eIDAS Article 14 (trust services only; an agreement between
+the Union and that country), and its parties are states; Article 5f is not third-country recognition ([[ADR-0035]] legal note).
+The network's role is technical preparation: lists in ETSI formats, certificates with ETSI profiles and state roles that can be
+handed over. In the short term an EU relying party can accept Tamga credentials only of its own accord, by adding our trusted list
+to its own trust source.
 
 A list operated by someone else appears in the list of lists with its address, its pinned signer, its scope and its approval
 record. It can vouch only for the roles and credential types in its scope, and a list whose signer does not match is not

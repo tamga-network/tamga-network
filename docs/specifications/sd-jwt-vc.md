@@ -4,7 +4,7 @@ title: "SD-JWT VC profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-13
 summary: >
   Bir Tamga belgesinin baytlarını tanımlar. Disclosure nasıl üretilir
   (salt, dizi yapısı, JSON serileştirme kuralı, base64url), _sd dizisi nasıl
@@ -329,16 +329,18 @@ yani geçiş dönemi standart tarafından sona ermiş sayılmaktadır.
 |---|---|
 | **İhraç** | Yalnızca `dc+sd-jwt`. `vc+sd-jwt` üretilmez. |
 | **Doğrulama — Tamga belge verenleri** | Yalnızca `dc+sd-jwt` kabul edilir. `vc+sd-jwt` **reddedilir.** |
-| **Doğrulama — dış ekosistem** | Yapılandırılabilir uyumluluk bayrağı, **varsayılan kapalı**; açıksa kabul edilir ama denetim kaydına uyarı yazılır. |
+| **Doğrulama — dış ekosistem** | **Varsayılan olarak kabul edilir** (SD-JWT VC -13 doğrulayıcıya izin verir; AB uyumu, paketler 0.5.2). Uyumluluk bayrağı kapatılırsa yalnız `dc+sd-jwt`. |
 
 Gerekçe: Tamga'nın hiçbir eski yükü (legacy) yoktur — tüm belge verenler yenidir.
 `vc+sd-jwt` üreten bir uygulama iki yıl geride demektir ve bu, başka
 uyumsuzlukların da habercisidir. Buna karşılık dış ekosistemden gelen bir
-belgeyi sırf `typ` yüzünden reddetmek, interop'u gereksiz kırabilir; bu
-yüzden bayrak vardır ama kapalıdır.
+belgeyi sırf `typ` yüzünden reddetmek, interop'u gereksiz kırabilir.
 
-`@tamga-network/verifier` bu bayrağı `acceptLegacyVcSdJwtTyp: false` olarak tanımlar
-([[ARCH-0005]]).
+**Değişiklik (2026-10-13, ilk AB uyum turu):** dış türlerde `vc+sd-jwt` artık **varsayılan olarak kabul edilir** (SD-JWT VC -13
+doğrulayıcıya eski değeri kabul etme izni verir; AB cüzdanları ve belge verenleri arasında hâlâ görülür). Tamga türlerinde
+(`urn:tamga:` kataloğundaki türler) `vc+sd-jwt` **reddedilmeye devam eder** (C13; doğrulama hattının B adımı). Bayrak
+`acceptLegacyVcSdJwtTyp` (`@tamga-network/sd-jwt`, varsayılan `true`); `false` verilirse dış türlerde de yalnız `dc+sd-jwt` kabul
+edilir ([[ARCH-0005]]).
 
 ## 5.2 Gövde — gizlenmemiş alanlar
 
@@ -515,8 +517,8 @@ sıralama [[SPEC-API-0001]]'de birleştirilir.
 Ş2.  JWT başlığını çöz.
      alg == "ES256" değilse → RED.
      typ != "dc+sd-jwt" → RED.
-       ("vc+sd-jwt" yalnızca uyumluluk bayrağı açıksa ve dış ekosistem
-        belgesi ise kabul; denetim kaydına uyarı — §5.1.1)
+       ("vc+sd-jwt" yalnızca dış (Tamga kataloğunda olmayan) türde kabul;
+        varsayılan açık, bayrakla kapatılabilir — §5.1.1; Tamga türünde RED, C13)
      x5c yoksa → RED.
 
 Ş3.  x5c zincirini doğrula (SPEC-ID-0002).
@@ -642,5 +644,5 @@ seti, decoy değil.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §5.1.1 dış türlerde `vc+sd-jwt` 2026-10-13).
 

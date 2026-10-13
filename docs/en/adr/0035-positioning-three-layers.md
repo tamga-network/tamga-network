@@ -4,7 +4,7 @@ title: "Positioning"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-04
+last_updated: 2026-10-13
 summary: >
   Tamga is positioned in three layers: (1) the base — all credentials, protocols and trust lists follow EU (eIDAS 2.0 / EUDI)
   standards; (2) Tamga Network — a light trust federation for the Turkic world: it collects country lists and introduces them to
@@ -97,8 +97,35 @@ separate. Public communication already shows this separation through names and d
 - **Public communication.** The site, whitepaper and presentations are organised around the three layers. The ARF and the developer
   docs are simplified according to this positioning.
 
+# Legal note — recognition in the EU (2026-10-13)
+
+This note does not change the decision; it records the position that became clear in EU law during the first EU alignment review
+(2026-10-13).
+
+- **Article 5f is not third-country recognition.** Article 5f of eIDAS 2.0 (Regulation (EU) 910/2014 as amended by Regulation (EU)
+  2024/1183) is the obligation of public bodies and the private sector inside the EU to accept **EU wallets**. It is not a way to
+  recognise a wallet or a trusted list from outside the EU.
+- **For countries outside the EU the only open basis is Article 14.** Article 14 makes the services of trust service providers
+  established in a third country equivalent in the EU through an agreement between the Union and that country (Article 218 TFEU)
+  or through implementing acts of the Commission; reciprocity and the other side's trusted list are required. Its scope is **trust
+  services** (for example qualified e-signatures, e-seals, qualified EAAs). The parties are **states**: Türkiye or another Turkic
+  state; Tamga Network cannot be a party to such an agreement.
+- **The regulation has no path for a non-EU wallet to count as an "EUDI Wallet".** This is why PO4 applies.
+- **The network's role is technical preparation:** trusted lists in ETSI formats ([[ADR-0036]]), certificates with ETSI profiles
+  ([[ADR-0050]]), state roles that can be handed over (PO3). When a state takes the agreement route, the technical ground is ready.
+- **In the short term** a relying party in the EU can accept Tamga credentials only **of its own accord** (by adding our trusted
+  list to its own trust source); this is not legal recognition and is not presented as such.
+
+Public material (site, ARF, presentations) follows this note: phrases such as "mutual recognition with the EU" or "valid in the
+EU" are not used; the correct wording is "built on EU standards, EU-compatible" and "legal recognition requires an agreement
+between states".
+
 # Status
 
 **Accepted — 2026-10-01** (project management approval; the verbatim quote is in the private approval record). The third layer
 ("products and services") was changed by [[ADR-0037]]: Tamga Network is only a network and sells no services; commercial
 services sit outside the network. PO1–PO4 remain in force.
+
+> **Legal note (2026-10-13):** Article 5f is not third-country recognition; for countries outside the EU the only open basis is
+> Article 14 (trust services only, an agreement between states). The decision does not change. Approved by project management
+> (first EU alignment review, decision 13).

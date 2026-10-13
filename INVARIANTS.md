@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 302 kodlanmış değişmez, 47 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 311 kodlanmış değişmez, 50 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -447,6 +447,38 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0047/WR5` | W3 seviyesi beyan eden KA yalnız platformun cihaz kanıtı doğrulanmış birime verilir. |
 
 
+## ADR-0048
+
+*"Kimlik servisinin belgelerinde askı yok; mdoc iptal listesi CWT"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0048/SU1` | Kimlik servisinin türlerinde belge askıya alınmaz; durum yalnız geçerli ya da iptaldir ve bu türlerin iptal listeleri `bits = 1` ile yayımlanır. |
+| `ADR-0048/SU2` | Askı (`0x02`) yalnız şeması `suspension_allowed: true` olan türlerde kullanılır; diğer türlerde belge veren askı değeri yazmaz. |
+| `ADR-0048/SU3` | mdoc olarak da verilen türün iptal listesi JWT ve CWT olarak ayrı, opak adreslerde aynı bitlerle yayımlanır; mdoc kopyası CWT adresine, SD-JWT kopyası JWT adresine işaret eder. |
+
+
+## ADR-0049
+
+*"\"Tamga Network'te listeli\" göstergesi"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0049/LI1` | Gösterge yalnız yazıdır ("Tamga Network'te listeli" / "Listed on Tamga Network"); logo, AB yıldızları ve renkleri, "güven işareti" ya da "trust mark" sözü kullanılmaz. |
+| `ADR-0049/LI2` | Göstergeye dokunulunca imzası doğrulanmış güven listesindeki `wallet_providers[]` kaydı gösterilir. |
+| `ADR-0049/LI3` | Cüzdan birimi iptal edilmişse, sağlayıcı ya da çözüm kaydı `ACTIVE` değilse, liste doğrulanamıyorsa ya da cüzdan yalnız sandbox'a bağlıysa gösterge gösterilmez. |
+
+
+## ADR-0050
+
+*"Kurum belge veren sertifika profili"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0050/CP1` | Belge veren kurumun belge ve iptal listesi imza sertifikası konu alanında, kayıt sertifikasının `sub`'ıyla aynı `organizationIdentifier`'ı, kurumun resmî adını (`O`) ve ülkesini (`C`) taşır. |
+| `ADR-0050/CP2` | Kurum sertifikasında anahtar kullanımı kritik ve yalnız `digitalSignature`'dır; SKI ve AKI zorunludur. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -519,7 +551,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | Kod | Açıklama |
 |---|---|
 | `SPEC-CRED-0003/S1` | Zincirde hiçbir iptal biti yoktur; yalnızca çapa. |
-| `SPEC-CRED-0003/S2` | `bits` her zaman `2`'dir. |
+| `SPEC-CRED-0003/S2` | Kurum listelerinde `bits` `2`'dir ve askı değeri yalnız `suspension_allowed: true` türlerde yazılır; kimlik servisinin listelerinde `bits` `1`'dir ([[ADR-0048]]). |
 | `SPEC-CRED-0003/S3` | `version` monoton artar; azalan sürüm reddedilir. |
 | `SPEC-CRED-0003/S4` | Yayın CDN'e yazıldıktan **sonra** zincire kaydedilir (§5.2). |
 | `SPEC-CRED-0003/S5` | Değişiklik olmasa da sabit aralıkta yayınlanır (§5.1). |
@@ -545,6 +577,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-ID-0002/XC3` | Zincir yalnızca kişisel-olmayan veri tutar (kök/kurum public anahtarı, durum). |
 | `SPEC-ID-0002/XC4` | Vatandaşın küresel tanımlayıcısı yoktur (yalnızca pairwise takma ad). |
 | `SPEC-ID-0002/XC5` | Entity↔kimlik bağı yalnızca accountable disclosure eşiğiyle çözülür. |
+| `SPEC-ID-0002/XC6` | Belge veren kurumun belge ve iptal listesi imza sertifikası konu alanında kayıt sertifikasının `sub`'ıyla aynı `organizationIdentifier`'ı taşır; anahtar kullanımı kritik ve yalnız `digitalSignature`'dır; SKI ve AKI zorunludur ([[ADR-0050]]). |
 
 
 ## SPEC-ID-0003
@@ -730,12 +763,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 302 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 311 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AP, AR, AS, C, CI, CMP, CT, D, DL, DS, DY, E, EP, FD, HA, HV, IC, IDC, IDP, K, KC, LX, MD, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
+AP, AR, AS, C, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, HA, HV, IC, IDC, IDP, K, KC, LI, LX, MD, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-12 (`scripts/sync-invariants.mjs`). Toplam 302 kodlanmış değişmez, 47 dokümanda.
+**Üretilen dosya** — 2026-10-13 (`scripts/sync-invariants.mjs`). Toplam 311 kodlanmış değişmez, 50 dokümanda.

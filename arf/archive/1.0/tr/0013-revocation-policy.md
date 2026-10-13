@@ -4,7 +4,7 @@ title: "İptal Politikası"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tamga ağındaki belge verenlerin (kimlik servisi ve kurumlar) verdiği belgelerin hangi koşullarda iptal edildiğini, kimin
   iptal isteyebileceğini, askıya almayı, iptal listesinin nasıl yayımlandığını ve iptalin ne kadar sürede etkili olduğunu tek
@@ -104,9 +104,11 @@ Bu politika bütün belge verenler için ortaktır. Kurum, kendi belgeleri için
 
 # 5. Askıya alma
 
-İptal listesi her belge için iki bit taşır (`bits = 2`): geçerli, iptal, askıda. Askı, belge veren bir iddiayı incelerken kullanılır
-ve inceleme bitince ya kaldırılır ya da iptale döner; bugün diploma için tanımlıdır ([[FW-RB-0002]] §6.2). Kimlik belgesi iptal ya da
-askıdaysa kimlik servisi yeni ZK kopyası vermez (RB-AP-ID-11).
+Askı yalnız şeması `suspension_allowed: true` olan türlerde kullanılır (RB-AP-28, [[ADR-0048]] K2); bugün diploma ([[FW-RB-0002]]
+§6.2). Bu türlerin iptal listesi her belge için iki bit taşır (`bits = 2`): geçerli, iptal, askıda. Askı, belge veren bir iddiayı
+incelerken kullanılır ve inceleme bitince ya kaldırılır ya da iptale döner. **Kimlik servisinin türlerinde askı yoktur:** durum yalnız
+geçerli ya da iptaldir, iptal kalıcıdır ve listeler `bits = 1` ile yayımlanır (AB PID kuralı; RB-AP-ID-13, [[ADR-0048]] K1). Kimlik
+belgesi iptal edilmişse kimlik servisi yeni ZK kopyası vermez (RB-AP-ID-11).
 
 # 6. Mekanizma ve yayın
 
@@ -139,4 +141,4 @@ askıdaysa kimlik servisi yeni ZK kopyası vermez (RB-AP-ID-11).
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-11; §3.3, §3.4 ve §8 2026-10-12, [[ADR-0047]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-11; §3.3, §3.4 ve §8 2026-10-12, [[ADR-0047]]; §5 2026-10-13, [[ADR-0048]]).

@@ -4,7 +4,7 @@ title: "Kayıt sertifikaları"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-10-13
 summary: >
   Tamga, geçici kayıt birimi olarak her doğrulayıcı kullanımı ve her belge veren için ETSI TS 119 475 kayıt sertifikası (WRPRC,
   `rc-wrp+jwt`) üretir; içerik yalnız imzalı güven listesindeki kayıttan gelir ve ayrı bir kayıt birimi anahtarıyla imzalanır. Doğrulayıcı
@@ -71,6 +71,9 @@ yenilenir.
 Doğrulayıcı, isteğin kullanımına ait kayıt sertifikası varsa istek nesnesine
 `verifier_info: [{"format": "registration_cert", "data": "<jwt>"}]` ekler. Yoksa istek sertifikasız gider.
 
+**2026-10-13 değişikliği** (aşağıda "Değişiklik"): istek başına tek kayıt sertifikası, `credential_ids` yok, `registrar_dataset`
+kullanılmaz.
+
 ## K5 — Cüzdan
 
 İstekte `registration_cert` varsa cüzdan sırayla denetler:
@@ -82,6 +85,9 @@ Doğrulayıcı, isteğin kullanımına ait kayıt sertifikası varsa istek nesne
 
 1–3'ten biri tutmazsa istek **reddedilir** ve kullanıcıya "kayıt sertifikası geçersiz" gösterilir. Kayıt sertifikası yoksa
 ya da geçerliyse cüzdan güven listesi denetimine devam eder. İki kaynak çelişirse daha kısıtlayıcı olan uygulanır.
+
+**2026-10-13 değişikliği** (aşağıda "Değişiklik"): kayıt sertifikası olmayan istekte uyarı ve varsayılan "Paylaşma"; 2028-08-11'den
+sonra ret. Yakın alanda kayıt sertifikası `euWrprc` ile gelir.
 
 # Değerlendirilen seçenekler
 
@@ -110,6 +116,36 @@ ya da geçerliyse cüzdan güven listesi denetimine devam eder. İki kaynak çel
 - Pilot öncesi: kayıtlara kimlik numaraları girilir, erişim sertifikaları `organizationIdentifier` ile yenilenir; kayıt birimi
   rolü ulusal makama devredildiğinde anahtar LOTL'de değişir.
 
+# Değişiklik — 2026-10-13 (ilk AB uyum turu)
+
+Uygulama Tüzüğü (AB) 2026/1731, ETSI TS 119 472-2'nin kayıt sertifikası kurallarını değiştirerek bağladı (RO-02…RO-16) ve cüzdanda
+kayıt sertifikası doğrulamasını 2028-08-11'den itibaren zorunlu kıldı. K4 ve K5 buna göre değişir; K1–K3 ve WRC1–WRC4 aynen geçerlidir.
+
+**K4 (doğrulayıcı) — yeni metin.**
+- Doğrulayıcı her istekte isteğin kullanımına (`scope_id`) ait **tek** kayıt sertifikasını `verifier_info` içinde
+  `{"format": "registration_cert", "data": "<jwt>"}` olarak gönderir (RO-13…RO-16). `data` kayıt sertifikasının kendisidir;
+  RO-16'daki "base64url" JWT'nin compact biçimi (base64url parçalardan oluşan JWS) olarak okunur, ayrıca kodlanmaz.
+- Öğe `credential_ids` **taşımaz**; bir istekte birden çok kayıt sertifikası gönderilmez. Sertifika bütün isteği kapsar; istenen
+  belgeler o kullanımın kaydındadır.
+- `registrar_dataset` biçimi (kayıt verisinin istekte açıkça gönderilmesi) **kullanılmaz**; tüzük bu yolu kaldırdı (RO-02…RO-12).
+- Kullanımın kayıt sertifikası yoksa (ör. kimlik numarası henüz kayda girmemiş doğrulayıcı) istek sertifikasız gider; cüzdan K5'e
+  göre davranır.
+- Uygulama: paketlerin 0.5.2 sürümü (`credential_ids` kaldırılır).
+
+**K5 (cüzdan) — eklenen kurallar.**
+- **Kayıt sertifikası olmayan istek:** cüzdan bugünden onay ekranında ayrı bir uyarı gösterir ("Bu doğrulayıcı kayıt sertifikası
+  göndermedi") ve varsayılan seçim **"Paylaşma"**dır; kişi yine de paylaşabilir. Güven listesi denetimi değişmez.
+- **2028-08-11'den sonra** kayıt sertifikası olmayan istek **reddedilir** (Uygulama Tüzüğü (AB) 2026/1731'in cüzdanda kayıt
+  sertifikası doğrulamasını zorunlu kıldığı tarih). Tarih kodda sabittir; ayarla değiştirilmez.
+- **Yakın alan (ISO/IEC 18013-5):** mdoc isteğinde kayıt sertifikası `requestInfo.euWrprc` ile gelir. Cüzdan onu uzaktan akıştaki
+  1–4. adımlarla doğrular; 3. adımdaki bağ, okuyucunun kimlik doğrulama sertifikasıyla kurulur. Yakın alanda da uyarı ve
+  2028-08-11 kuralı aynıdır. Doğrulayıcı tarafında `euWrprc` gönderimi ve cüzdanda okunması paketlerin 0.6.0 sürümünde.
+- Uyarı ve varsayılan "Paylaşma" paketlerin 0.6.0 sürümünde (`wallet-core`); ret tarihi aynı sürümde kodda.
+
 # Durum
 
 **Accepted — 2026-09-29.** Proje yönetimi onayıyla (H1 planı, P2). DECISIONS: D-REG-2.
+
+> **Değişiklik (2026-10-13):** K4 ve K5 yukarıdaki "Değişiklik" bölümüne göre değişti (istek başına tek kayıt sertifikası,
+> `credential_ids` ve `registrar_dataset` yok; sertifikasız istekte uyarı + "Paylaşma", 2028-08-11'den sonra ret; yakın alanda
+> `euWrprc`). Proje yönetimi onayıyla (ilk AB uyum turu, karar 14).

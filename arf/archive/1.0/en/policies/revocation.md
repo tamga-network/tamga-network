@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-POL-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
+**Document** FW-POL-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -114,9 +114,12 @@ prevails.
 
 ## 5. Suspension
 
-The status list carries two bits per credential (`bits = 2`): valid, revoked, suspended. Suspension is used while the issuer
-investigates a claim; when the investigation ends it is either lifted or becomes a revocation; today it is defined for the diploma
-([[FW-RB-0002]] §6.2). If the identity credential is revoked or suspended, the identity service issues no new ZK copy (RB-AP-ID-11).
+Suspension is used only for types whose schema has `suspension_allowed: true` (RB-AP-28, [[ADR-0048]] K2); today the diploma
+([[FW-RB-0002]] §6.2). The status list of these types carries two bits per credential (`bits = 2`): valid, revoked, suspended.
+Suspension is used while the issuer investigates a claim; when the investigation ends it is either lifted or becomes a revocation.
+**The identity service's types have no suspension:** the status is only valid or revoked, revocation is permanent and the lists are
+published with `bits = 1` (the EU PID rule; RB-AP-ID-13, [[ADR-0048]] K1). If the identity credential is revoked, the identity
+service issues no new ZK copy (RB-AP-ID-11).
 
 ## 6. Mechanism and publication
 
@@ -151,4 +154,4 @@ investigates a claim; when the investigation ends it is either lifted or becomes
 
 ## Status
 
-**Active** — version 1.0.0 (11 October 2026; §3.3, §3.4 and §8 on 12 October 2026, [[ADR-0047]]).
+**Active** — version 1.0.0 (11 October 2026; §3.3, §3.4 and §8 on 12 October 2026, [[ADR-0047]]; §5 on 13 October 2026, [[ADR-0048]]).

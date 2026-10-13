@@ -27,6 +27,11 @@
  * test anahtarıyla imzalı ve geçersiz).
  * Kip: eksik olan sertifikalar üretilir, var olanlar KORUNUR (issuer_id değişmez); tamamını yenilemek için --force; yalnız
  * birkaç yaprağın sertifikasını aynı anahtarla yeniden imzalamak için --reissue=<ad,ad> (üretim kipinde yok).
+ * Kurum sertifika profili (ADR-0050, ETSI TS 119 412-6 V1.2.1 / EN 319 412-3): belge veren yapraklarında (belge + iptal listesi
+ * imzası) konu alanında `organizationIdentifier` (2.5.4.97 = kayıt sertifikasının `sub`'ı, ör. VATTR-<VKN>), `O` = resmî ad, `C`;
+ * anahtar kullanımı kritik ve yalnız digitalSignature; SKI + AKI. Sandbox yaprakları bu profille (2026-10-13 --reissue ile aynı
+ * anahtar); geliştirme yaprakları kimlik numarası taşımaz (yerel, rastgele). Gerçek ağda kurum sertifikası `pki-issue.ts --prod
+ * --org-id` ile verilir; bu araç üretim kipinde kimlik numarasız bir kurum yaprağı üretirse uyarır.
  * Sapma S-1 (09-DEMO-KURGU §6): issuer özel anahtarı burada dosyada; pilotta üniversite KMS'inde.
  * Çıktı: <klasör>/*.cert.pem, *.pkcs8.pem, pki.json (parmak izleri, id'ler). `ops/pki/` tamamen gitignore (geliştirme anahtarları
  * makineye özeldir); `ops/pki-sandbox/` sertifikaları ve pki.json depoda izlenir (cüzdandaki sandbox pin'i).
@@ -337,18 +342,26 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
     ),
     await ensure(
       "issuer-id",
-      signedByRoot(1101, "CN=Tamga Sandbox Kimlik (TEST), OU=Identity, O=Tamga Network Sandbox, C=TR"),
+      // ADR-0050: organizationIdentifier = kayıt sertifikasının `sub`'ı (registry-sandbox tamga-id TR-VKN TR0000000002)
+      signedByRoot(
+        1101,
+        "CN=Tamga Sandbox Kimlik (TEST), OU=Identity, O=Tamga Network Sandbox, 2.5.4.97=VATTR-0000000002, C=TR",
+      ),
     ),
     await ensure(
       "issuer-id-status",
-      signedByRoot(1102, "CN=Tamga Sandbox Kimlik - Status List (TEST), OU=Status, O=Tamga Network Sandbox, C=TR"),
+      signedByRoot(
+        1102,
+        "CN=Tamga Sandbox Kimlik - Status List (TEST), OU=Status, O=Tamga Network Sandbox, 2.5.4.97=VATTR-0000000002, C=TR",
+      ),
     ),
     // ADR-0033: mağaza inceleme kodu provası sandbox'ta — DEMO imzacısı gerçek ağdakiyle aynı dosya adı, I1 kaydı registry-sandbox'ta
     await ensure(
       "issuer-id-review",
       signedByRoot(
         1103,
-        "CN=Tamga Sandbox Kimlik - Magaza Incelemesi DEMO (TEST), OU=Review, O=Tamga Network Sandbox, C=TR",
+        // ADR-0050: registry-sandbox tamga-id-review TR-VKN TR0000000007
+        "CN=Tamga Sandbox Kimlik - Magaza Incelemesi DEMO (TEST), OU=Review, O=Tamga Network Sandbox, 2.5.4.97=VATTR-0000000007, C=TR",
       ),
     ),
     // Örnek kurumlar: gerçek kurum adları yalnız gerçekçi deneme için (ilişki/anlaşma yok); seri numaraları ilk örnek
@@ -357,14 +370,15 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
       "issuer-istanbul-bilgi",
       signedByRoot(
         1011,
-        "CN=Istanbul Bilgi Universitesi (TEST), OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi (TEST), C=TR",
+        // ADR-0050: registry-sandbox istanbul-bilgi TR-VKN TR0000000001
+        "CN=Istanbul Bilgi Universitesi (TEST), OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
       ),
     ),
     await ensure(
       "issuer-istanbul-bilgi-status",
       signedByRoot(
         1012,
-        "CN=Istanbul Bilgi Universitesi - Status List (TEST), OU=Status, O=Istanbul Bilgi Universitesi (TEST), C=TR",
+        "CN=Istanbul Bilgi Universitesi - Status List (TEST), OU=Status, O=Istanbul Bilgi Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
       ),
     ),
     await ensure(
@@ -376,18 +390,32 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
         san("issuer.sandbox.tamga.network"),
       ),
     ),
-    await ensure("issuer-bubilet", signedByRoot(1211, "CN=Bubilet (TEST), OU=Bilet Satisi, O=Bubilet (TEST), C=TR")),
+    // ADR-0050: registry-sandbox bubilet TR-VKN TR0000000003
+    await ensure(
+      "issuer-bubilet",
+      signedByRoot(1211, "CN=Bubilet (TEST), OU=Bilet Satisi, O=Bubilet (TEST), 2.5.4.97=VATTR-0000000003, C=TR"),
+    ),
     await ensure(
       "issuer-bubilet-status",
-      signedByRoot(1212, "CN=Bubilet - Status List (TEST), OU=Status, O=Bubilet (TEST), C=TR"),
+      signedByRoot(
+        1212,
+        "CN=Bubilet - Status List (TEST), OU=Status, O=Bubilet (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
+      ),
     ),
     await ensure(
       "issuer-paribu-cineverse",
-      signedByRoot(1301, "CN=Paribu Cineverse (TEST), OU=Bilet Satisi, O=Paribu Cineverse (TEST), C=TR"),
+      // ADR-0050: registry-sandbox paribu-cineverse TR-VKN TR0000000006
+      signedByRoot(
+        1301,
+        "CN=Paribu Cineverse (TEST), OU=Bilet Satisi, O=Paribu Cineverse (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+      ),
     ),
     await ensure(
       "issuer-paribu-cineverse-status",
-      signedByRoot(1302, "CN=Paribu Cineverse - Status List (TEST), OU=Status, O=Paribu Cineverse (TEST), C=TR"),
+      signedByRoot(
+        1302,
+        "CN=Paribu Cineverse - Status List (TEST), OU=Status, O=Paribu Cineverse (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+      ),
     ),
     // ADR-0041 K4: test kurumları ara sertifika makamı — kökçe burada (kök anahtarının durduğu bilgisayarda) imzalanır; yol uzunluğu
     // 0 (yalnız yaprak verir), yalnız sertifika imzalar, ad kısıtı: yalnız `C=TR, OU=Tamga Sandbox Test Institutions` altındaki
@@ -487,6 +515,15 @@ async function finish(root: Item, items: Item[], notBefore: Date) {
           note: "issuer_id = keccak256(utf8(stateCode) || SHA-256(leafCertDER)); zincire geçişte abi.encodePacked ile aynı bayt dizisi doğrulanacak (05-MIGRATION).",
         };
   writeFileSync(resolve(outDir, "pki.json"), JSON.stringify(summary, null, 2) + "\n");
+  // ADR-0050 (CP1, CP2): kurum yapraklarının profili — sandbox'ta eksik alan hatadır, üretimde uyarı (kimlik numarası kayda girince
+  // `pki-issue.ts --prod --org-id` ile yenilenir), geliştirmede kimlik numarası beklenmez.
+  for (const it of items.filter((i) => i.name.startsWith("issuer-"))) {
+    const problems = institutionProfileProblems(it.cert, PROFILE === "sandbox" || PROD);
+    if (!problems.length) continue;
+    const msg = `ADR-0050: ${it.name} kurum sertifika profiline uymuyor — ${problems.join("; ")}`;
+    if (PROFILE === "sandbox") die(msg);
+    if (PROD || problems.some((p) => !p.startsWith("organizationIdentifier"))) console.warn(`[uyarı] ${msg}`);
+  }
   console.log(
     `PKI: ${
       items
@@ -497,6 +534,20 @@ async function finish(root: Item, items: Item[], notBefore: Date) {
   );
   console.log(JSON.stringify(summary.ids, null, 2));
 }
+/** ADR-0050 K2: kurum (belge veren) sertifika profili denetimi; sorun listesi döner (boşsa uyar). */
+function institutionProfileProblems(cert: X509Certificate, needOrgId: boolean): string[] {
+  const out: string[] = [];
+  if (needOrgId && !/(^|, )2\.5\.4\.97=(VAT|NTR|LEI)[A-Z]{2}-/.test(cert.subject))
+    out.push("organizationIdentifier (2.5.4.97) yok");
+  if (!/(^|, )O=/.test(cert.subject) || !/(^|, )C=/.test(cert.subject)) out.push("O ya da C yok");
+  const ku = cert.getExtension(KeyUsagesExtension);
+  if (!ku || !ku.critical || ku.usages !== KeyUsageFlags.digitalSignature)
+    out.push("anahtar kullanımı kritik ve yalnız digitalSignature değil");
+  if (!cert.getExtension(SubjectKeyIdentifierExtension)) out.push("SKI yok");
+  if (!cert.getExtension(AuthorityKeyIdentifierExtension)) out.push("AKI yok");
+  return out;
+}
+
 main().catch((e) => {
   console.error(e);
   process.exit(1);

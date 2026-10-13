@@ -56,13 +56,20 @@ function intermediateProblem(c: X509Certificate, below: number): string | null {
   return null;
 }
 
+/** SD-JWT VC'nin Kasım 2024 öncesi typ değeri (§5.1.1): doğrulamada kabul edilir, ihraçta üretilmez. */
+const LEGACY_SD_JWT_TYP = "vc+sd-jwt";
+
 export interface VerifyOptions {
   aud: string;
   nonce: string;
   stateCode: string;
   now?: number; // saniye
   rootCertsDer?: Uint8Array[]; // yaprak bu köklerden birince imzalanmış olmalı (Ş3; boşsa zincir kontrolü verifier'a bırakılır)
-  acceptLegacyVcSdJwtTyp?: boolean; // §5.1.1 — varsayılan false (T2)
+  /**
+   * §5.1.1: eski `vc+sd-jwt` typ değeri (SD-JWT VC -13 doğrulayıcıya izin verir). Varsayılan **true** (AB uyumu, 0.5.2); false
+   * yalnız `dc+sd-jwt`. Sonuçta `typ` döner: Tamga türleri için `vc+sd-jwt` kararı çağıranda (C13; @tamga-network/verifier B adımı).
+   */
+  acceptLegacyVcSdJwtTyp?: boolean;
   /**
    * ADR-0036: Tamga dışı belge türleri (AB PID) `vct#integrity` taşımayabilir (SD-JWT VC'de isteğe bağlı). Varsayılan false:
    * Tamga türleri için zorunlu (ADR-0010). true ise eksik `vct#integrity` → `vctIntegrity: null` (B4 doğrulayıcıda karar verir).
@@ -80,6 +87,8 @@ export interface VerifyOk {
   /** Zincirin bağlandığı kök sertifikanın SHA-256 parmak izi (onaltılık); kök verilmediyse null (ADR-0036 dış güven kaynağı). */
   anchorFingerprint: string | null;
   vct: string;
+  /** Başlıktaki typ: `dc+sd-jwt` ya da (kabul açıksa) eski `vc+sd-jwt` */
+  typ: typeof SD_JWT_TYP | typeof LEGACY_SD_JWT_TYP;
   /** `vct#integrity`; yalnız `allowMissingVctIntegrity` ile null olabilir */
   vctIntegrity: string | null;
   iat: number;
@@ -127,7 +136,8 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   }
   if (header.alg !== "ES256") return fail("A2", `alg=${header.alg} (C1)`);
   if (header.typ !== SD_JWT_TYP) {
-    if (!(header.typ === "vc+sd-jwt" && opt.acceptLegacyVcSdJwtTyp)) return fail("A2", `typ=${header.typ} (C13)`);
+    if (!(header.typ === LEGACY_SD_JWT_TYP && (opt.acceptLegacyVcSdJwtTyp ?? true)))
+      return fail("A2", `typ=${header.typ} (C13)`);
   }
   if (!header.x5c?.length) return fail("A2", "x5c missing (C7)");
   done.push("A2");
@@ -250,6 +260,7 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
     leafFingerprint,
     anchorFingerprint,
     vct: payload.vct as string,
+    typ: header.typ === LEGACY_SD_JWT_TYP ? LEGACY_SD_JWT_TYP : SD_JWT_TYP,
     vctIntegrity: typeof payload["vct#integrity"] === "string" ? (payload["vct#integrity"] as string) : null,
     iat: payload.iat as number,
     exp: payload.exp as number | undefined,

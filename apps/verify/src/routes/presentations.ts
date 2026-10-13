@@ -24,7 +24,7 @@ import {
 import type { VerifyContext } from "../app.js";
 import type { Presentation } from "../state.js";
 import { findPolicy } from "../policies.js";
-import { registrationCertsFor } from "../wrprc.js";
+import { registrationCertFor } from "../wrprc.js";
 import { rateLimitHook } from "../rate-limit.js";
 import { checkPage, expiredPage, langOf, notFoundPage, pendingPage, resultPage, statusOnlyPage } from "../html.js";
 
@@ -338,8 +338,8 @@ export async function createPresentation(
     purpose: policy.purpose["en-US"],
     onBehalfOf: owner,
     passGrantOffered: !!policy.proximity, // a3/WL13: cüzdan geçiş kartı için ayrı anahtar hazırlar
-    // ADR-0026 K4: kullanımın kayıt sertifikası (varsa) verifier_info ile
-    registrationCerts: registrationCertsFor(cfg.trustDist, owner ?? cfg.clientId, registrationScopesFor(policy, rpRec)),
+    // ADR-0026 K4: isteğin kullanımının kayıt sertifikası (varsa; istek başına tek — RPRC_19) verifier_info ile
+    registrationCert: registrationCertFor(cfg.trustDist, owner ?? cfg.clientId, registrationScopesFor(policy, rpRec)),
     ...(dcApiOrigin ? { dcApi: { expectedOrigins: [dcApiOrigin] } } : {}),
   });
   const p = ctx.presentations.create(

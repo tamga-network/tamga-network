@@ -4,7 +4,7 @@ title: "SD-JWT VC profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-13
 summary: >
   Defines the bytes of a Tamga credential: how a disclosure is produced (salt, array structure, JSON serialisation rule,
   base64url), how the _sd array is filled and why it is sorted, the decoy digest policy, the placement of _sd_alg, cnf and
@@ -313,13 +313,16 @@ period is considered over by the standard.
 |---|---|
 | **Issuance** | Only `dc+sd-jwt`. `vc+sd-jwt` is not produced. |
 | **Verification — Tamga issuers** | Only `dc+sd-jwt` is accepted. `vc+sd-jwt` is **rejected.** |
-| **Verification — external ecosystem** | Configurable compatibility flag, **off by default**; when on, it is accepted but a warning is written to the audit log. |
+| **Verification — external ecosystem** | **Accepted by default** (SD-JWT VC -13 allows verifiers to accept it; EU alignment, packages 0.5.2). If the compatibility flag is turned off, only `dc+sd-jwt`. |
 
 Rationale: Tamga carries no legacy — every issuer is new. An implementation producing `vc+sd-jwt` is two years behind,
 which signals other incompatibilities too. On the other hand, rejecting a credential from an external ecosystem merely
-because of `typ` could break interoperability needlessly; that is why the flag exists but is off.
+because of `typ` could break interoperability needlessly.
 
-`@tamga-network/verifier` defines this flag as `acceptLegacyVcSdJwtTyp: false` ([[ARCH-0005]]).
+**Change (2026-10-13, first EU alignment review):** for external types `vc+sd-jwt` is now **accepted by default** (SD-JWT VC -13
+allows a verifier to accept the old value; it is still seen among EU wallets and issuers). For Tamga types (types in the `urn:tamga:`
+catalogue) `vc+sd-jwt` **is still rejected** (C13; step B of the verification pipeline). The flag is `acceptLegacyVcSdJwtTyp`
+(`@tamga-network/sd-jwt`, default `true`); with `false`, only `dc+sd-jwt` is accepted for external types too ([[ARCH-0005]]).
 
 ## 5.2 Body — fields that are not hidden
 
@@ -489,8 +492,8 @@ layer in [[SPEC-CRED-0003]] §7. The full order is assembled in [[SPEC-API-0001]
 Ş2.  Decode the JWT header.
      alg != "ES256" → REJECT.
      typ != "dc+sd-jwt" → REJECT.
-       ("vc+sd-jwt" accepted only if the compatibility flag is on and the credential is
-        from an external ecosystem; warning in the audit log — §5.1.1)
+       ("vc+sd-jwt" accepted only for an external type (not in the Tamga catalogue);
+        on by default, can be turned off with the flag — §5.1.1; REJECT for a Tamga type, C13)
      No x5c → REJECT.
 
 Ş3.  Verify the x5c chain (SPEC-ID-0002).
@@ -607,4 +610,4 @@ presentation can be replayed. `aud` is the second line of defence.
 
 # Status
 
-**In force** — version 1.0.0 (2026-10-02).
+**In force** — version 1.0.0 (2026-10-02; §5.1.1 `vc+sd-jwt` for external types on 2026-10-13).

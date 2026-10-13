@@ -4,7 +4,7 @@ title: "Cüzdan ve anahtar kanıtı"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tek, 30 günlük WUA yerine AB TS3 modeli: 24 saatten kısa ömürlü, her belge işleminde yeni anahtarlı ve yeni iptal listesi
   girişli Wallet Instance Attestation (WIA) + belge anahtarlarının deposunu anlatan key attestation (KA, `key_attestation`).
@@ -153,6 +153,27 @@ Bu notlar kararı değiştirmez; referans cüzdanın (Tamga Wallet) ve sağlayı
    engellemez, servis hesabı yoksa doğrulama atlanır. Play Integrity'yi zorunlu kılmak (kaydı ya da seviyeyi ona bağlamak)
    bu kararın K1/K3'ünü değiştirir ve **ayrı bir ADR gerektirir**.
 
+# Uygulama notları (2026-10-13, ilk AB uyum turu)
+
+Bu notlar kararı değiştirmez; biçimi AB'nin sabitlediği metinlere (Uygulama Tüzüğü (AB) 2024/2979 Ek Ib, 2026/1731 ile; AB TS3 1.5.2)
+hizalar.
+
+1. **Genel istemci kanıtı (draft -07).** WIA, OpenID4VCI 1.0'ın atıf verdiği OAuth attestation-based client authentication
+   taslağının -07 sürümündeki biçimdir. Cüzdan sağlayıcısı `iss` ve `iat`'ı gönderir (-07'de `iss` zorunluydu, -08'de kalktı;
+   -12'de `iat` zorunlu oldu). Doğrulayan taraf `iss`'i kabul eder ama zorunlu tutmaz; kanıtta `iat` yoksa hoş görür, **PoP'ta
+   (`OAuth-Client-Attestation-PoP`) `iat` zorunludur**. Belge veren her `oauth-client-attestation+jwt` kanıtını **tek yoldan** WIA
+   olarak doğrular; eski Tamga WUA yolu **kaldırıldı**. Kanıtta `client_status` (iptal girişi) varsa denetlenir; yoksa davranış
+   belge verenin `clientStatus` ayarıdır: `optional` (varsayılan; AB'nin genel -07 kanıtı kabul edilir, iptal denetimi uygulanmaz
+   diye işaretlenir) ya da `required` (iptal girişi olmayan kanıt reddedilir). Zincirleme iptal yapan **kimlik servisi `required`
+   kullanır** ([[ADR-0047]] K1). Uygulama: paketlerin 0.5.2 sürümü.
+2. **WIA `cnf` = belgeye özel DPoP anahtarı (TS3 1.5.2).** Belge işleminde WIA'nın `cnf.jwk`'si, o belge için token ucunda
+   kullanılan DPoP anahtarıdır; ayrı bir WIA PoP anahtarı üretilmez. K6'daki yenileme belirteci bağı aynı anahtar üzerinden kurulur.
+   WIA1 (her işlemde yeni anahtar ve yeni iptal girişi) değişmez: DPoP anahtarı da belgeye ve işleme özeldir. Uygulama: 0.6.0.
+3. **İptal listelerinin boyu.** WIA ve KA iptal listelerinin **her biri** en az 10.000 girişlidir (Uygulama Tüzüğü (AB) 2024/2979
+   Ek Ib; izlenemezlik için; KA listesi tür başına az giriş kullansa da boyu aynı alt sınırı taşır). Belge veren, imzası geçerli ama
+   10.000'den az girişli listeye dayanan WIA ya da KA'yı profile uymayan liste olarak **reddeder** (geçici hata sayılmaz).
+   Uygulama: paketlerin 0.5.2 sürümü.
+
 # Durum
 
 **Accepted — 2026-09-29.** Proje yönetimi onayıyla (H1 planı, P3). DECISIONS: D-CRED-7.
@@ -162,3 +183,7 @@ Bu notlar kararı değiştirmez; referans cüzdanın (Tamga Wallet) ve sağlayı
 > Tamga Wallet'ın cüzdan sağlayıcısıdır: kodu cüzdanın deposuna taşındı, bu depodaki kopya ve `wallet.tamga.network`
 > 2026-10-06'da ağdan kaldırıldı; sağlayıcıyı cüzdanın işletmecisi `provider.tamgawallet.com`'da işletir. Karar (K1–K3, WIA1–WIA4) değişmez: WIA ve
 > KA biçimi ile doğrulaması (`@tamga-network/trust`) ağın kuralıdır ve her cüzdan sağlayıcısı için aynıdır.
+>
+> **Not (2026-10-13):** genel istemci kanıtı (-07; `iss` kabul edilir ama zorunlu değil, kanıtta `iat` yoksa hoş görülür, PoP'ta
+> zorunlu), eski WUA yolunun kaldırılması ve `clientStatus` ayarı (`optional` / `required`; kimlik servisi `required`), WIA `cnf` =
+> belgeye özel DPoP anahtarı (0.6.0), WIA/KA listeleri ≥ 10.000 — yukarıdaki "Uygulama notları (2026-10-13)". Proje yönetimi onayıyla (ilk AB uyum turu).

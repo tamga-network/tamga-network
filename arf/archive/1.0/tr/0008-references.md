@@ -4,7 +4,7 @@ title: "Ek E — Kaynaklar"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tamga ARF'nin dayandığı standartlar ve düzenlemeler, Tamga karar kayıtları ve şartnameleri ve eklerdeki her bağlayıcı
   kuralın kaynağı.
@@ -38,12 +38,12 @@ belgelerden derlenmiştir.
 
 | Alan | Belgeler |
 |---|---|
-| Güven modeli ve yönetişim | [[ADR-0009]] · [[ADR-0010]] · [[ADR-0035]] · [[ADR-0037]] · [[SPEC-TRUST-0001]] · [[SPEC-ID-0002]] · [[PM-GOV-0001]] · [[PM-ASSUR-0001]] |
+| Güven modeli ve yönetişim | [[ADR-0009]] · [[ADR-0010]] · [[ADR-0035]] · [[ADR-0036]] · [[ADR-0037]] · [[ADR-0050]] · [[SPEC-TRUST-0001]] · [[SPEC-ID-0002]] · [[PM-GOV-0001]] · [[PM-ASSUR-0001]] |
 | Kayıt | [[ADR-0024]] · [[ADR-0026]] · [[ADR-0034]] |
-| Belge biçimleri ve türleri | [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] · [[ADR-0013]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] |
+| Belge biçimleri ve türleri | [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] · [[ADR-0013]] · [[ADR-0048]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] |
 | Belge verme | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]] · [[ADR-0046]] |
 | Gösterme ve doğrulama | [[SPEC-PROTO-0002]] · [[SPEC-API-0001]] · [[ADR-0012]] · [[ADR-0017]] · [[ADR-0032]] · [[ADR-0044]] |
-| Cüzdan | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]] · [[ADR-0047]] |
+| Cüzdan | [[SPEC-WALLET-0001]] · [[ADR-0025]] · [[ADR-0027]] · [[ADR-0031]] · [[ADR-0047]] · [[ADR-0049]] |
 | Kimlik | [[SPEC-ID-0003]] · [[ADR-0011]] · [[ADR-0022]] · [[ADR-0033]] · [[ADR-0039]] · [[ADR-0045]] |
 | Adlar | [[ADR-0030]] |
 
@@ -118,7 +118,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-AP-15 | proje yönetimi kararı |
 | RB-AP-16 | [[SPEC-PROTO-0001]]/PR8, [[SPEC-API-0001]]/AP10 |
 | RB-AP-17 | [[SPEC-CRED-0003]]/S5, S6 |
-| RB-AP-18 | [[SPEC-CRED-0003]]/S2, S3, S7–S10 |
+| RB-AP-18 | [[SPEC-CRED-0003]]/S2, S3, S7–S10; [[ADR-0048]] SU1 |
 | RB-AP-19 | [[SPEC-CRED-0003]]/S1, S4 |
 | RB-AP-20 | [[SPEC-BC-0001]]/R2, I4 |
 | RB-AP-21 | proje yönetimi kararı |
@@ -128,6 +128,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-AP-25 | [[ADR-0016]] |
 | RB-AP-26 | [[ADR-0046]] EP1, EP4 |
 | RB-AP-27 | [[ADR-0047]] K1, K2, WR1, WR2; AB ARF VCR_05, WURevocation_19 |
+| RB-AP-28 | [[ADR-0048]] K2, K3, SU2, SU3 |
 | RB-AP-ID-01 | [[SPEC-ID-0003]]/IDP3 |
 | RB-AP-ID-02 | [[SPEC-ID-0003]]/IDP11, KVKK m.10 |
 | RB-AP-ID-03 | [[SPEC-ID-0003]]/IDP9 |
@@ -140,6 +141,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-AP-ID-10 | [[ADR-0039]] DL4, DL5 |
 | RB-AP-ID-11 | [[ADR-0044]] ZC1–ZC3 |
 | RB-AP-ID-12 | [[ADR-0047]] K1, WR1; AB ARF WURevocation_18 |
+| RB-AP-ID-13 | [[ADR-0048]] K1, SU1; Uygulama Tüzüğü (AB) 2024/2979 Ek II |
 | RB-AS-01 | [[FW-TF-0001]] §5.1 |
 | RB-AS-02 | [[SPEC-SCHEMA-0002]]/E11 |
 | RB-AS-03 | [[SPEC-SCHEMA-0002]]/E1, [[SPEC-SCHEMA-0003]]/SK6 |
@@ -153,7 +155,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-WP-07 | [[SPEC-WALLET-0001]]/WL2, WL10 |
 | RB-WP-08 | [[SPEC-WALLET-0001]]/WL7, WL9, [[ARCH-0003]]/CMP8 |
 | RB-WP-09 | [[SPEC-PROTO-0002]]/PV1–PV4 |
-| RB-WP-10 | proje yönetimi kararı |
+| RB-WP-10 | [[ADR-0049]] |
 | RB-WP-11 | [[FW-TF-0001]] §4.6 |
 | RB-WP-12 | [[SPEC-CRED-0003]]/S14 |
 | RB-WP-13 | [[ADR-0017]] HV6; [[SPEC-WALLET-0001]]/WL5 |
@@ -161,6 +163,8 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-WP-15 | [[ADR-0047]] K3, WR3; AB ARF WURevocation_10, WIAM_06 |
 | RB-WP-16 | [[ADR-0047]] K4, WR4; AB ARF WURevocation_14, WURevocation_16 |
 | RB-WP-17 | [[ADR-0047]] K5, WR5; AB ARF WIAM_04, WIAM_08 |
+| RB-WP-18 | [[ADR-0049]] K1–K3, LI1–LI3 |
+| RB-WP-19 | [[ADR-0026]] K5 (2026-10-13 değişikliği); Uygulama Tüzüğü (AB) 2026/1731 |
 | RB-RP-01 | [[SPEC-API-0001]]/AP6, [[SPEC-PROTO-0002]] |
 | RB-RP-02 | [[SPEC-PROTO-0002]]/PV1, PV3, PV6, PV9, PV10 |
 | RB-RP-03 | [[SPEC-API-0001]]/AP8, AP11 |
@@ -174,6 +178,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-RP-11 | proje yönetimi kararı |
 | RB-RP-12 | [[ADR-0017]] HV1, HV4 |
 | RB-RP-13 | [[ADR-0031]] PS4, PS5; [[SPEC-API-0001]] |
+| RB-RP-14 | [[ADR-0026]] K4 (2026-10-13 değişikliği); ETSI TS 119 472-2 RO-13…RO-16 (Uygulama Tüzüğü (AB) 2026/1731) |
 | RB-RP-ID-01 | [[SPEC-PROTO-0001]]/PR14 |
 | RB-H-01 | proje yönetimi kararı |
 | RB-H-02 | [[SPEC-WALLET-0001]]/WL8 |
@@ -202,4 +207,4 @@ Belge türü rulebook'ları ([[FW-RB-0002]]…[[FW-RB-0005]]) ile İptal Politik
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; kural kaynakları 2026-10-13, [[ADR-0048]], [[ADR-0049]], [[ADR-0050]]).

@@ -4,10 +4,11 @@ title: "Revocation and status list"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
-  The normative implementation of the [[ADR-0008]] decision. Defines the Tamga profile of the Status List Token (bits=2,
-  ES256, X.509 chain, at least 100,000 indices), the fixed-interval, noisy publication cycle, the rewritten
+  The normative implementation of the [[ADR-0008]] decision. Defines the Tamga profile of the Status List Token (bits=2
+  in institution lists, bits=1 for the identity service; ES256, X.509 chain, at least 100,000 indices; a CWT representation for
+  mdoc), the fixed-interval, noisy publication cycle, the rewritten
   StatusListRegistry anchor contract, the ten-step verification algorithm, and the caching and freshness policy. Two
   critical privacy rules: indices are allocated at RANDOM (sequential allocation leaks graduation order) and the list URI
   must be OPAQUE (a URI encoding year/faculty/cohort leaks undisclosed claims). Scheduled bulk prefetching is mandatory
@@ -147,7 +148,7 @@ Body:
 | `iat` | Mandatory | Publication time |
 | `exp` | **Mandatory in Tamga** | `iat + 6 hours` (§8.1) |
 | `ttl` | **Mandatory in Tamga** | The publication interval (seconds); `120` in the services run by the network (§5.1, §8.1) |
-| `status_list.bits` | Mandatory | **Always `2` in Tamga** — §3.3 |
+| `status_list.bits` | Mandatory | `2` in institution lists, `1` in the identity service's lists — §3.3 ([[ADR-0048]]) |
 | `status_list.lst` | Mandatory | Compressed byte array, base64url |
 | `status_list.aggregation_uri` | Optional | **Recommended in Tamga** — §9.2 |
 
@@ -168,12 +169,23 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNsLTIwMjYtYSIsInR5cCI6InN0YXR1c2xpc3Qr...
 - The response body is the **raw JWS compact serialization** — it is not wrapped in a JSON envelope.
 - `Content-Encoding: gzip` should be used (`lst` is already compressed, but the base64url form of the JWT benefits from
   gzip).
-- The CWT form (`application/statuslist+cwt`) is **not used** in Tamga’s initial stage; it will be considered in the state stage together
-  with the mdoc profile ([[ADR-0006]]).
+- **CWT representation ([[ADR-0048]] K3; packages 0.6.0).** The list of a type that is also issued as mdoc is additionally
+  published as CWT (`application/statuslist+cwt`) **at a separate, opaque address**: COSE_Sign1, ES256, `typ` =
+  `application/statuslist+cwt` and `x5chain` in the protected header; claims `sub` (2) = the CWT address, `iat` (6), `exp` (4),
+  `ttl` (65534), `status_list` (65533) `{bits, lst}`. The JWT and CWT representations carry the same bits, are signed in the same
+  cycle with the same key and are written to the anchor log as separate lines. The SD-JWT VC copy points to the JWT address, the
+  MSO of the mdoc copy to the CWT address; both copies use the same `idx`. A type not issued as mdoc has no CWT representation.
 
-## 3.3 The `bits = 2` decision
+## 3.3 The `bits` decision
 
-The standard allows the values 1, 2, 4 and 8 for `bits`. Tamga **always uses 2**.
+The standard allows the values 1, 2, 4 and 8 for `bits`. Tamga uses **2** in institution lists and **1** in the identity
+service's lists ([[ADR-0048]]). Lists are separate per type (S9), so the two rules never mix in one list.
+
+- **The identity service's types** (identity credential, driving licence information, contact credentials): there is no
+  suspension; the status is only valid or revoked (the EU PID rule: Implementing Regulation (EU) 2024/2979 Annex II, as amended by
+  2026/1731). `bits = 1`.
+- **Institution types:** `bits = 2`. Suspension (`0x02`) is written only in types whose schema has `suspension_allowed: true`
+  ([[SPEC-SCHEMA-0001]] §2.4; today the diploma). In other types the value `0x02` is not written.
 
 | Option | Meaning | Tamga assessment |
 |---|---|---|
@@ -190,7 +202,7 @@ Status values and their Tamga meaning:
 | `0x02` | SUSPENDED | **Temporary suspension** — reversible |
 | `0x03` | (reserved) | Not used in Tamga |
 
-**Why suspension is needed:** when a plagiarism investigation is opened about a diploma, the institution does not want to
+**Why suspension is needed (in types that allow it):** when a plagiarism investigation is opened about a diploma, the institution does not want to
 revoke it permanently — it wants to suspend it until the investigation ends. With `bits = 1` the institution would either
 revoke it permanently without cause or do nothing. Both are wrong.
 
@@ -483,12 +495,13 @@ Normative. Run for every credential that carries a `status` claim.
 
 Ş7.  Capacity: idx < anchor.listSize → otherwise REJECT
 
-Ş8.  Decompress lst and read the value at position idx with bits=2.
+Ş8.  Decompress lst and read the value at position idx with the token's bits value (institution 2, identity service 1).
+     For an mdoc credential the same steps run on the CWT representation (application/statuslist+cwt, COSE_Sign1).
 
 Ş9.  Interpret the value:
      0x00 → VALID
      0x01 → REVOKED      → REJECT
-     0x02 → SUSPENDED    → REJECT (shown to the user as "suspended")
+     0x02 → SUSPENDED    → REJECT (shown to the user as "suspended"; only in a bits=2 list)
      0x03 → unrecognised → REJECT
 
 Ş10. Write the result to the audit log together with the version and iat of the token used.
@@ -681,7 +694,7 @@ database.
 | # | Invariant |
 |---|---|
 | **S1** | There are no revocation bits on the chain; only the anchor. |
-| **S2** | `bits` is always `2`. |
+| **S2** | In institution lists `bits` is `2` and the suspension value is written only in types with `suspension_allowed: true`; in the identity service's lists `bits` is `1` ([[ADR-0048]]). |
 | **S3** | `version` increases monotonically; a decreasing version is rejected. |
 | **S4** | A publication is registered on the chain **after** it has been written to the CDN (§5.2). |
 | **S5** | Published at a fixed interval even if nothing changed (§5.1). |
@@ -727,4 +740,4 @@ database.
 
 # Status
 
-**In force** — version 1.0.0 (2026-10-02).
+**In force** — version 1.0.0 (2026-10-02; §3.2, §3.3, Ş8–Ş9 and S2 on 2026-10-13, [[ADR-0048]]; implemented in release 0.6.0 of the packages).

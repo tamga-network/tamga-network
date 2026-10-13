@@ -29,29 +29,34 @@
     "created_at": "2026-10-09T12:27:22.722Z"
   },
   "issuer-id": {
-    "subject": "CN=Tamga Sandbox Kimlik (TEST), OU=Identity, O=Tamga Network Sandbox, C=TR",
-    "fingerprint_sha256": "b35dd743161ea33a0bdcec718212f6444fd51e5a2e64d1998acdb1329c77511a",
-    "not_after": "2028-10-03T09:26:26.000Z"
+    "subject": "CN=Tamga Sandbox Kimlik (TEST), OU=Identity, O=Tamga Network Sandbox, 2.5.4.97=VATTR-0000000002, C=TR",
+    "fingerprint_sha256": "965a58d36bca495ec3b1f2ab50b212c93c0698285526ea9aa4242525c8f3b874",
+    "not_after": "2028-10-13T11:26:02.000Z",
+    "created_at": "2026-10-13T11:26:02.919Z"
   },
   "issuer-id-status": {
-    "subject": "CN=Tamga Sandbox Kimlik - Status List (TEST), OU=Status, O=Tamga Network Sandbox, C=TR",
-    "fingerprint_sha256": "04d39d410f71e9c3b3f0508fd714f13a0fd9630a25e15fae40a257eebf612f83",
-    "not_after": "2028-10-03T09:26:26.000Z"
+    "subject": "CN=Tamga Sandbox Kimlik - Status List (TEST), OU=Status, O=Tamga Network Sandbox, 2.5.4.97=VATTR-0000000002, C=TR",
+    "fingerprint_sha256": "c7864aa05a376890b11623ca58b9e3f31514fa62ffc5f0de04ddc54087a12d30",
+    "not_after": "2028-10-13T11:26:03.000Z",
+    "created_at": "2026-10-13T11:26:02.919Z"
   },
   "issuer-id-review": {
-    "subject": "CN=Tamga Sandbox Kimlik - Magaza Incelemesi DEMO (TEST), OU=Review, O=Tamga Network Sandbox, C=TR",
-    "fingerprint_sha256": "fa94adeca82c585e5c970f2935d7619062f49399df1e413872001380ef1d8198",
-    "not_after": "2028-10-04T11:20:52.000Z"
+    "subject": "CN=Tamga Sandbox Kimlik - Magaza Incelemesi DEMO (TEST), OU=Review, O=Tamga Network Sandbox, 2.5.4.97=VATTR-0000000007, C=TR",
+    "fingerprint_sha256": "5ab189eace7c6aa0bd671b3958d8392c0476f4eba04d7869df52e6b2cd899d05",
+    "not_after": "2028-10-13T11:26:03.000Z",
+    "created_at": "2026-10-13T11:26:02.919Z"
   },
   "issuer-istanbul-bilgi": {
-    "subject": "CN=Istanbul Bilgi Universitesi (TEST), OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi (TEST), C=TR",
-    "fingerprint_sha256": "fc19792b36b802a7d280f575f5037aa55aabdddfe8ee00347818bf1720538725",
-    "not_after": "2028-10-03T15:11:37.000Z"
+    "subject": "CN=Istanbul Bilgi Universitesi (TEST), OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
+    "fingerprint_sha256": "02da85c477342d4c861a834c9dea70c19e6826363e3fe57871995c9a28a5ee90",
+    "not_after": "2028-10-13T11:26:03.000Z",
+    "created_at": "2026-10-13T11:26:02.919Z"
   },
   "issuer-istanbul-bilgi-status": {
-    "subject": "CN=Istanbul Bilgi Universitesi - Status List (TEST), OU=Status, O=Istanbul Bilgi Universitesi (TEST), C=TR",
-    "fingerprint_sha256": "ffc04d70b9e7077cef8343b4230fe90712c30164abfb4c4345a89f36ecf38f1a",
-    "not_after": "2028-10-03T15:11:37.000Z"
+    "subject": "CN=Istanbul Bilgi Universitesi - Status List (TEST), OU=Status, O=Istanbul Bilgi Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
+    "fingerprint_sha256": "34aaf636b6c1c90d55b03f3bdb760a2d25fe51c02f4d19bea2444bac2005d6e0",
+    "not_after": "2028-10-13T11:26:03.000Z",
+    "created_at": "2026-10-13T11:26:02.919Z"
   },
   "rp-issuer-istanbul-bilgi": {
     "subject": "CN=issuer.sandbox.tamga.network, O=Istanbul Bilgi Universitesi - kimlik eslestirme (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
@@ -60,24 +65,28 @@
     "created_at": "2026-10-09T12:27:22.722Z"
   },
   "issuer-bubilet": {
-    "subject": "CN=Bubilet (TEST), OU=Bilet Satisi, O=Bubilet (TEST), C=TR",
-    "fingerprint_sha256": "430f991ffcf32c45c19eed000b5c0b3844396bb746bef8689422116bb514dbd2",
-    "not_after": "2028-10-03T15:11:37.000Z"
+    "subject": "CN=Bubilet (TEST), OU=Bilet Satisi, O=Bubilet (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
+    "fingerprint_sha256": "0df953c3c943a71b84086945a26eb2a63f68767407d1d53f818434098c5c68a6",
+    "not_after": "2028-10-13T11:26:03.000Z",
+    "created_at": "2026-10-13T11:26:02.919Z"
   },
   "issuer-bubilet-status": {
-    "subject": "CN=Bubilet - Status List (TEST), OU=Status, O=Bubilet (TEST), C=TR",
-    "fingerprint_sha256": "0734e0dc578f495e970e211797f26ddebc012cc32f13c0413646b43baf513bd5",
-    "not_after": "2028-10-03T15:11:37.000Z"
+    "subject": "CN=Bubilet - Status List (TEST), OU=Status, O=Bubilet (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
+    "fingerprint_sha256": "95869a4beac60db80bd57c4284215b08068dbba17ecc6cd691cc0c5b6c66d551",
+    "not_after": "2028-10-13T11:26:03.000Z",
+    "created_at": "2026-10-13T11:26:02.919Z"
   },
   "issuer-paribu-cineverse": {
-    "subject": "CN=Paribu Cineverse (TEST), OU=Bilet Satisi, O=Paribu Cineverse (TEST), C=TR",
-    "fingerprint_sha256": "eaf96112b67436513447c05381470213ffbff1ded2448395a8ebe7123fceb121",
-    "not_after": "2028-10-03T15:11:37.000Z"
+    "subject": "CN=Paribu Cineverse (TEST), OU=Bilet Satisi, O=Paribu Cineverse (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+    "fingerprint_sha256": "a405a318deacfc15594587a56f8a5af18ea3e3eb12d687c3a797e1147704c78a",
+    "not_after": "2028-10-13T11:26:03.000Z",
+    "created_at": "2026-10-13T11:26:02.919Z"
   },
   "issuer-paribu-cineverse-status": {
-    "subject": "CN=Paribu Cineverse - Status List (TEST), OU=Status, O=Paribu Cineverse (TEST), C=TR",
-    "fingerprint_sha256": "78adf5597182a319ad1fd637ee9c7b6d46e2ef366d2feac29b974e743b8927a9",
-    "not_after": "2028-10-03T15:11:37.000Z"
+    "subject": "CN=Paribu Cineverse - Status List (TEST), OU=Status, O=Paribu Cineverse (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+    "fingerprint_sha256": "6a9581b58116e8cb6505ded0ff5abd0d59f3338cb74f4671ef90ee6bd84303c1",
+    "not_after": "2028-10-13T11:26:03.000Z",
+    "created_at": "2026-10-13T11:26:02.919Z"
   },
   "test-institutions-ca": {
     "subject": "CN=Tamga Sandbox Test Institutions CA (TEST), O=Tamga Network Sandbox, C=TR",
@@ -91,16 +100,16 @@
     "wallet-provider": "0xb3a90464be7295eefd71c6e3dee0fe07692c434f48c55ae51e3f7207a04d90b9",
     "registrar-1": "0x0d7ff82bbf309ee9170650bebabde074525fc72afba9b177d1a8986b3196dbb2",
     "rp-verify": "0xceee175c3a132e54fc296dd6c560ee4e95e018d8c31d7ebc5df2a19c42a7d99f",
-    "issuer-id": "0x66d2f0be3ab12755dd6412445d496812a5658e82534d2064e60805d9ebd7579d",
-    "issuer-id-status": "0x426c1c9593477c452a1de65f279bdfbbe877299f4430c05cba8ad1fa1f50c192",
-    "issuer-id-review": "0xb301a7320529ccd7db705c695949ed39f46da572dccf64f8f41528916901ae1e",
-    "issuer-istanbul-bilgi": "0xb72da8c31077fd092cb7c437139b0a3ba0751a299b823a60fac2f12ee81cb24e",
-    "issuer-istanbul-bilgi-status": "0x1a23ea2f0f57f0deddd2cb0dab8dbe9c8a3dd08d7e2a96eacfd2b41c51f131c2",
+    "issuer-id": "0xf880116803bef8a4482b20354f11119ec4cbc79ced19c0ce2b0df0029b023b0a",
+    "issuer-id-status": "0x06cbc1c557a9de66ca63ab958cb928387ac0c86e8e404bc5521b951bdb6964d7",
+    "issuer-id-review": "0xa6f8595d2f12643b51c660a45b071f24dd819e1504765edd4d5a1fff2fde78f5",
+    "issuer-istanbul-bilgi": "0xd99f368c049b285b69c2c6ca25d547955a50deee7abd378189e3c4dc3f7b5a0e",
+    "issuer-istanbul-bilgi-status": "0x64da6e708ecc1c5c4e8c03542c497ddb3ee95f77d2d508c7d1262ee767a85832",
     "rp-issuer-istanbul-bilgi": "0x708e2ea997e7d2266b20556f50abd00fee6205dbf572364c705f1010990ae938",
-    "issuer-bubilet": "0xee705124fba254d9e95c46131a559b9ad4310d877fedf42057612faa02c188a1",
-    "issuer-bubilet-status": "0x751fe4b7cc737759f9145e841f9ee68b7335509e8c8b6ce0d2c5c128eb227e05",
-    "issuer-paribu-cineverse": "0xdc679435ff51cf30e1339fc8264cb15b01b77e8525887a3ab2cf2e7d2e795341",
-    "issuer-paribu-cineverse-status": "0x65e8d781cbae07a6316158e633519a6cf1b7706d8a950d733d3987c973118f1d",
+    "issuer-bubilet": "0x1aac79553e11a8ed91ef2c11f61ab9c84b8eb6071a76713e1221c5d323a70dc4",
+    "issuer-bubilet-status": "0x375c28dc7cf8cea870ee3102b82dbd4ccee2853c0dec3f09bfc90b62031b468d",
+    "issuer-paribu-cineverse": "0xde4e671f9f4d7bdbad5e9ef6dbe1648059679fc936c5eafcdde41f1b7538be07",
+    "issuer-paribu-cineverse-status": "0x4ee96145211a92aad5bf1e8b2cfdee2ce4a37af4c913288e844ab170a7a3c508",
     "test-institutions-ca": "0x746b935c11d2a9bba85643e12c91f2e0d1071ecf10d99b1465ad6718b4f3826a"
   }
 }

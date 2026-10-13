@@ -4,7 +4,7 @@ title: "Trust federation"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   The Tamga LOTL can point to trust lists published by other operators (a state, an institution the state authorises, the EU):
   address + signer pinned in the LOTL + scope (which roles, which credential types) + approval record. The first format read is
@@ -146,7 +146,24 @@ Implemented (2026-10-01):
 - Tamga Verify: external anchors in the root set.
 - Tests: federation conformance tests with a synthetic external LoTE; unit tests for nested disclosure.
 
+# Addendum — ETSI TS 119 612 XML list publication (deferred decision, 2026-10-13)
+
+- **Topic.** Today Tamga **reads** ETSI TS 119 612 XML trusted lists (K1, note of 2026-10-12) but does not **publish** its own lists
+  as XML; the lists are published as Tamga JSON + JWS and with an ETSI TS 119 602 (LoTE JSON) view. ARF 3.0 asks wallets,
+  relying parties and issuers to support both formats (ISSU_10b, OIA_15b). In the EU adaptation of ETSI TS 119 472-2
+  (Implementing Regulation (EU) 2026/1731, RO-17) the DCQL `trusted_authorities` type `etsi_tl` refers to a 119 612 XML list.
+- **Decision: deferred.** Publishing a 119 612 XML (XAdES-signed) view of Tamga Network's lists and using the `etsi_tl` type in
+  verifier requests is **not done today**. Verifier requests keep `aki` (HAIP).
+- **Trigger:** the first party from the EU (an EU relying party, wallet, member state or EU body) asking for the Tamga list in
+  119 612 XML or through `etsi_tl`. When the trigger happens the topic goes to project management; estimated work ~3 days
+  (generator, XAdES signature, signing key management; [[SPEC-ID-0002]] §8.1).
+- **Rule that applies today:** wallets and verifiers treat a `trusted_authorities` type they do not know as "no match", never as
+  "passed" (no false positive; release 0.5.2 of the packages).
+
 # Status
 
 **Accepted — 2026-10-01** (approved by project management). Particular external lists (TÜBİTAK, the EU LOTL, other states) are added
 **with separate approvals**.
+
+> **Addendum (2026-10-13):** 119 612 XML list publication and `etsi_tl` are deferred; the trigger is the first party from the EU
+> asking for them (see "Addendum" above). Approved by project management (first EU alignment review, decision 15).

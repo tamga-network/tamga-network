@@ -11,7 +11,9 @@
  *   --dev                  depodaki geliştirme PKI'sı (`ops/pki/`, rastgele yerel anahtarlar; gerçek listede geçmez)
  * Çıktı `<klasör>/<name>.cert.pem` (+ `--generate` ile `<name>.pkcs8.pem`). Var olan ad üzerine yazılmaz.
  * Sonra: `npm run trust:register -- issuer|rp <başvuru.json>` (başvurudaki `cert` / `access_cert` = bu ad).
- * Kurallar: yalnız P-256 / ES256; CSR imzası doğrulanır; 2 yıl (en çok 3); seri numarası rastgele.
+ * Kurallar: yalnız P-256 / ES256; CSR imzası doğrulanır; 2 yıl (en çok 3); seri numarası rastgele; SKI + AKI (kökün SKI'si).
+ * Kurum sertifikası (ADR-0050, ETSI TS 119 412-6): `--prod` ile `issuer-*` adında `--org-id` (ya da konu alanında 2.5.4.97) ZORUNLU —
+ *   kayıt sertifikasının `sub`'ıyla aynı değer (TR-VKN → VATTR-<VKN>, TR-MERSIS → NTRTR-<MERSİS>); konu alanında O ve C bulunmalı.
  */
 import {
   X509CertificateGenerator,
@@ -21,6 +23,7 @@ import {
   KeyUsagesExtension,
   BasicConstraintsExtension,
   SubjectKeyIdentifierExtension,
+  AuthorityKeyIdentifierExtension,
   SubjectAlternativeNameExtension,
   X509Certificate,
 } from "@peculiar/x509";
@@ -111,6 +114,13 @@ async function main() {
     if (/2\.5\.4\.97=/.test(subject)) fail("konu alanında zaten organizationIdentifier var");
     subject = `${subject}, 2.5.4.97=${orgId}`;
   }
+  // ADR-0050 (CP1): gerçek ağda kurum sertifikası kurum kimlik numarasıyla verilir
+  if (name.startsWith("issuer-")) {
+    if (PROD && !/2\.5\.4\.97=/.test(subject))
+      fail("--prod kurum sertifikası (issuer-*): --org-id VATTR-<VKN> ya da NTRTR-<MERSİS> zorunlu (ADR-0050)");
+    if (!/(^|,\s*)O=/.test(subject) || !/(^|,\s*)C=/.test(subject))
+      fail("kurum sertifikası konu alanında O (resmî ad) ve C (ülke) bulunmalı (ADR-0050)");
+  }
   const notBefore = new Date();
   const notAfter = new Date(notBefore);
   notAfter.setUTCFullYear(notAfter.getUTCFullYear() + yearsN);
@@ -128,6 +138,8 @@ async function main() {
       new BasicConstraintsExtension(false, undefined, true),
       new KeyUsagesExtension(KeyUsageFlags.digitalSignature, true),
       await SubjectKeyIdentifierExtension.create(publicKey),
+      // RFC 5280 §4.2.1.1 / ADR-0050: AKI = kökün SKI'si (HAIP trusted_authorities `aki` eşleşmesi)
+      await AuthorityKeyIdentifierExtension.create(root.publicKey),
       ...(dns ? [new SubjectAlternativeNameExtension([{ type: "dns", value: dns }])] : []),
     ],
   });

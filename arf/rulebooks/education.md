@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
+**Document** FW-RB-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -337,7 +337,7 @@ At issuance the wallet checks against the same entry that the institution is aut
 | --- | --- | --- |
 | Revocable | No — the short lifetime (≤ 90 days) replaces revocation; an unexpired credential that is no longer accurate is an accepted risk | **Yes, mandatory** — Token Status List (the EU Attestation Status List), `status.status_list {uri, idx}` |
 | Revocation conditions | — (not re-issued) | Revocation of the diploma (forgery, court decision), incorrect credential (by re-issuance), withdrawal of consent, report of a device breach, the person's objection to the "your credential was added to a wallet" notice, a change of the disclosure rule — details in [[FW-POL-0001]] §3 |
-| Suspension | — | `SUSPENDED` (2-bit value) — during a review |
+| Suspension | — | `SUSPENDED` (2-bit value) — during a review; the schema carries `suspension_allowed: true` ([[ADR-0048]] K2) |
 | Publication | — | Fixed interval (today 2 minutes), even without changes; a list is valid for 6 hours; no emergency publication; revocation takes effect within minutes |
 | List address (ARB_24a) | — | `status.status_list.uri` in the credential; under `https://status.tamga.network/` for the issuance service hosted by the network, on the institution's status server for an institution running its own service; the address is opaque (RB-AP-18) |
 
@@ -380,4 +380,4 @@ List, ELM v3. The Tamga decisions and specifications this document rests on are 
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026; moved to the EU template structure on 11 October 2026; §2.0 and §7.2 decisions on 12 October 2026, [[ADR-0047]]).
+**Active** — version 1.0.0 (2 October 2026; moved to the EU template structure on 11 October 2026; §2.0 and §7.2 decisions on 12 October 2026, [[ADR-0047]]; §6.2 suspension row on 13 October 2026, [[ADR-0048]]).

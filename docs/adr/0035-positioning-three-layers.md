@@ -4,7 +4,7 @@ title: "Konumlanma"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-04
+last_updated: 2026-10-13
 summary: >
   Tamga üç katmanda konumlanır: (1) taban — bütün belgeler, protokoller ve güven listeleri AB (eIDAS 2.0 / EUDI)
   standartlarında; (2) Tamga Network — Türk dünyası için hafif bir güven federasyonu: ülke listelerini toplar ve birbirine tanıtır,
@@ -91,7 +91,30 @@ yeterlidir, ama ileride ağ yönetişimi (konsey ya da vakıf) ile hizmet şirke
 - **Kamuya açık anlatım.** Site, whitepaper ve sunumlar üç katmana göre düzenlenir. ARF ve geliştirici belgeleri bu
   konumlanmaya göre sadeleştirilir.
 
+# Hukuki not — AB'de tanınma (2026-10-13)
+
+Bu not kararı değiştirmez; ilk AB uyum turunda (2026-10-13) AB hukuku açısından netleşen konumu kayda geçirir.
+
+- **Madde 5f üçüncü ülke tanıması değildir.** eIDAS 2.0 (Tüzük (AB) 2024/1183 ile değişik 910/2014) Md. 5f, AB içindeki kamu
+  kurumlarının ve özel sektörün **AB cüzdanlarını** kabul etme yükümlülüğüdür. AB dışındaki bir cüzdanı ya da güven listesini
+  tanıma yolu değildir.
+- **AB dışı için tek açık dayanak Madde 14'tür.** Md. 14, üçüncü ülkede kurulmuş güven hizmeti sağlayıcılarının hizmetlerinin AB'de
+  eşdeğer sayılmasını, Birlik ile o ülke arasındaki bir anlaşmaya (ABİHA Md. 218) ya da Komisyonun uygulama tüzüğüne bağlar;
+  karşılıklılık ve karşı tarafın güven listesi aranır. Kapsamı **güven hizmetleridir** (ör. nitelikli e-imza, e-mühür, nitelikli
+  EAA). Tarafları **devletlerdir**: Türkiye ya da başka bir Türk devleti; Tamga Network bu anlaşmanın tarafı olamaz.
+- **AB dışı bir cüzdanın "EUDI Wallet" sayılma yolu tüzükte yoktur.** PO4 bu yüzden geçerlidir.
+- **Ağın rolü teknik hazırlıktır:** ETSI biçiminde güven listeleri ([[ADR-0036]]), ETSI profilli sertifikalar ([[ADR-0050]]),
+  devredilebilir devlet rolleri (PO3). Bir devlet anlaşma yoluna girdiğinde teknik zemin hazır olur.
+- **Kısa vadede** AB'deki bir doğrulayıcı Tamga belgelerini ancak **kendi isteğiyle** kabul edebilir (güven listemizi kendi güven
+  kaynağına ekleyerek); bu hukuki tanınma değildir ve öyle anlatılmaz.
+
+Kamuya açık anlatım (site, ARF, sunumlar) bu nota göre yazılır: "AB ile karşılıklı tanınma" ya da "AB'de geçerli" gibi ifadeler
+kullanılmaz; doğru ifade "AB standartlarında, AB uyumlu" ve "hukuki tanınma devletler arası anlaşma gerektirir"dir.
+
 # Durum
 
 **Accepted — 2026-10-01** (proje yönetimi onayı; birebir alıntı özel onay kaydında). Üçüncü katman ("ürün ve hizmetler")
 [[ADR-0037]] ile değişti: Tamga Network yalnızca ağdır, hizmet satmaz; ticari hizmetler ağın dışındadır. PO1–PO4 geçerlidir.
+
+> **Hukuki not (2026-10-13):** Md. 5f üçüncü ülke tanıması değildir; AB dışı için tek açık dayanak Md. 14'tür (yalnız güven
+> hizmetleri, devletler arası anlaşma). Karar değişmez. Proje yönetimi onayıyla (ilk AB uyum turu, karar 13).

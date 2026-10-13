@@ -4,7 +4,7 @@ title: "Güven federasyonu"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tamga LOTL'u başka işletmecilerin (devlet, devletin yetkilendirdiği kurum, AB) yayınladığı güven listelerini gösterebilir:
   adres + LOTL'da sabitlenmiş imzacı + kapsam (hangi roller, hangi belge türleri) + onay kaydı. İlk okunan biçim ETSI TS 119 602
@@ -141,7 +141,24 @@ Uygulandı (2026-10-01):
 - Tamga Verify: dış çapalar kök kümesinde.
 - Testler: sentetik dış LoTE ile federasyon uyum testleri; iç içe açıklama birim testleri.
 
+# Ek — ETSI TS 119 612 XML liste yayını (ertelenmiş karar, 2026-10-13)
+
+- **Konu.** Tamga bugün ETSI TS 119 612 XML güven listelerini **okur** (K1, 2026-10-12 notu) ama kendi listelerini XML olarak
+  **yayımlamaz**; listeler Tamga JSON + JWS ve ETSI TS 119 602 (LoTE JSON) görünümüyle yayımlanır. ARF 3.0 cüzdan, doğrulayıcı ve
+  belge veren için iki biçimin de desteğini ister (ISSU_10b, OIA_15b). ETSI TS 119 472-2'nin AB uyarlamasında (Uygulama Tüzüğü (AB)
+  2026/1731, RO-17) DCQL `trusted_authorities` türü `etsi_tl`, 119 612 XML listesine atıf verir.
+- **Karar: ertelendi.** Tamga Network'ün listelerinin 119 612 XML (XAdES imzalı) görünümünü yayımlamak ve doğrulayıcı isteklerinde
+  `etsi_tl` türünü kullanmak **bugün yapılmaz**. Doğrulayıcı isteklerinde `aki` (HAIP) kalır.
+- **Tetikleyici:** AB'den ilk tarafın (bir AB doğrulayıcısı, cüzdanı, üye devlet ya da AB kurumu) Tamga listesini 119 612 XML
+  biçiminde ya da `etsi_tl` ile istemesi. Tetikleyici gerçekleşince konu proje yönetimine getirilir; tahmini iş ~3 gün (üreteç,
+  XAdES imzası, imza anahtarı yönetimi; [[SPEC-ID-0002]] §8.1).
+- **Bugün de geçerli kural:** cüzdan ve doğrulayıcı tanımadıkları bir `trusted_authorities` türünü "eşleşmez" sayar, "geçti" saymaz
+  (yanlış olumlu yok; paketlerin 0.5.2 sürümü).
+
 # Durum
 
 **Accepted — 2026-10-01** (proje yönetimi onayı). Belirli dış listeler (TÜBİTAK, AB LOTL, başka devletler) **ayrı onaylarla**
 eklenir.
+
+> **Ek (2026-10-13):** 119 612 XML liste yayını ve `etsi_tl` ertelendi; tetikleyici AB'den ilk tarafın istemesi (yukarıdaki "Ek").
+> Proje yönetimi onayıyla (ilk AB uyum turu, karar 15).

@@ -399,14 +399,14 @@ function chainAkis(c: StoredCredential): string[] {
 }
 /**
  * OpenID4VP §6.1.1: `trusted_authorities` verildiyse belge en az bir koşula uymalı. Cüzdan yalnız `aki` tipini değerlendirebilir;
- * değerlendiremediği bir tip (etsi_tl, openid_federation) varsa belge elenmez (doğrulayıcı güveni kendisi denetler).
+ * değerlendiremediği tip (etsi_tl, openid_federation ya da bilinmeyen) "eşleşmez" sayılır (güvenli taraf): o koşul belgeyi
+ * seçtirmez, başka bir `aki` koşulu eşleşirse belge yine seçilir.
  */
 function trustedAuthorityOk(q: DcqlCredential, c: StoredCredential): boolean {
   const ta = q.trusted_authorities;
   if (!ta?.length) return true;
-  if (ta.some((t) => t.type !== "aki")) return true;
   const have = new Set(chainAkis(c));
-  return ta.some((t) => t.values.some((v) => have.has(v)));
+  return ta.some((t) => t.type === "aki" && Array.isArray(t.values) && t.values.some((v) => have.has(v)));
 }
 const DCQL_ID = /^[A-Za-z0-9_-]+$/;
 const isIdList = (x: unknown): x is string[] =>

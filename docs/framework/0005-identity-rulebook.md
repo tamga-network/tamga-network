@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tamga'nın kimlik servisinin verdiği kişi belgelerinin rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc),
@@ -190,7 +190,8 @@ denetimde kullanılmadığı için mdoc olarak verilmez ([[ADR-0039]]); takma ad
 Kodlama kuralları: `tstr`, `uint`, `bool` ve `full-date` RFC 8610 / RFC 8943 anlamındadır; `full-date` = #6.1004(tstr). `tstr`
 UTF-8'dir. Öğe değerleri tarih dışında SD-JWT VC'dekiyle aynıdır. MSO'da `digestAlgorithm` SHA-256, `validityInfo`
 (`signed`, `validFrom`, `validUntil`; `tdate`, saniye kesri yok, saat dilimi `Z`), `deviceKeyInfo` ve iptal listesi atfı
-`status.status_list {idx, uri}` (SD-JWT kopyasıyla aynı bit) bulunur. İmza ES256 (COSE), `x5chain` aynı belge veren
+`status.status_list {idx, uri}` (SD-JWT kopyasıyla aynı bit; adres aynı listenin CWT gösterimidir — `application/statuslist+cwt`,
+[[ADR-0048]] K3, paketler 0.6.0) bulunur. İmza ES256 (COSE), `x5chain` aynı belge veren
 sertifikasıdır.
 
 | Veri tanımlayıcısı | Öğe tanımlayıcısı | Kodlama | Ad alanı |
@@ -469,8 +470,8 @@ yalnız dış listeden gelir.
 
 | Tür | İptal edilebilir mi | Mekanizma |
 |---|---|---|
-| Kimlik belgesi | **Evet, zorunlu** | Token Status List (AB'nin Attestation Status List'i); mdoc ve SD-JWT kopyaları aynı biti taşır |
-| ZK kopyası | Hayır — kısa ömür iptalin yerini tutar (ARF VCR_01); ana belge iptal ya da askıdaysa yeni kopya verilmez, iptal ZK sunumunda en geç 24 saatte etkili olur | — |
+| Kimlik belgesi | **Evet, zorunlu** | Token Status List (AB'nin Attestation Status List'i); mdoc ve SD-JWT kopyaları aynı biti taşır (mdoc kopyası listenin CWT gösterimini okur) |
+| ZK kopyası | Hayır — kısa ömür iptalin yerini tutar (ARF VCR_01); ana belge iptal edilmişse yeni kopya verilmez, iptal ZK sunumunda en geç 24 saatte etkili olur | — |
 | Takma ad tohumu | İptal listesi yok; gösterilmez | — |
 | Sürücü belgesi bilgisi | **Evet, zorunlu** | Token Status List |
 
@@ -478,7 +479,8 @@ yalnız dış listeden gelir.
   altındadır. Adres opaktır, kurum, yıl ya da grup kodlamaz (RB-AP-18).
 - **Yayın:** sabit aralıkla (bugün 2 dakika), değişiklik olmasa da; liste 6 saat geçerlidir; aralık dışı yayın yoktur (RB-AP-17,
   [[SPEC-CRED-0003]] §5). İptal birkaç dakikada etkili olur (RB-GEN-10).
-- **Değerler:** `bits = 2` — geçerli, iptal, askıda.
+- **Değerler:** `bits = 1` — geçerli ya da iptal. Kimlik servisinin türlerinde **askı yoktur**, iptal kalıcıdır (AB PID kuralı;
+  RB-AP-ID-13, [[ADR-0048]] K1). Paketlerin 0.6.0 sürümüne kadar listeler `bits = 2` biçiminde yayımlanır ama askı değeri yazılmaz.
 - **İptal koşulları:** İptal Politikası'ndadır ([[FW-POL-0001]] §3). Kimlik belgesi için: kişinin silme talebi, aynı belgeyle yeniden
   doğrulama, belgenin kaybolduğu ya da çalındığı bildirimi, hatalı belge, rızanın geri alınması. Sürücü belgesi bilgisi için ayrıca:
   aynı kartla yeniden doğrulama, cüzdan birimi iptali ve bağlı kimlik belgesinin iptali, yeniden verilmesi ya da silinmesi (zincirleme;
@@ -497,7 +499,7 @@ yalnız dış listeden gelir.
   PID Rulebook'un PID sağlayıcısına özgü şartları (tür `eu.europa.ec.eudi.pid.1`, `urn:eudi:pid:` ad alanı, portre) uygulanmaz.
 - Sürücü belgesi bilgisi AB mDL Rulebook'unun kapsamında değildir: resmî mDL yalnız ISO/IEC 18013-5 ve resmî ad alanıyla verilir;
   Tamga bu ad alanını kullanmaz (RB-AP-ID-08).
-- Bu türler Tamga Rulebook'un bütün kurallarını devralır; türe özgü kurallar RB-AP-ID-01…11 ve RB-RP-ID-01'dedir.
+- Bu türler Tamga Rulebook'un bütün kurallarını devralır; türe özgü kurallar RB-AP-ID-01…13 ve RB-RP-ID-01'dedir.
 
 ## 7.2 Bilinen farklar ve karar bekleyenler
 
@@ -518,4 +520,4 @@ dayandığı Tamga kararları ve şartnameleri Ek E'de listelenir.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11; §2.0 ve §7.2 kararları 2026-10-12, [[ADR-0047]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11; §2.0 ve §7.2 kararları 2026-10-12, [[ADR-0047]]; §3.1 ve §6.2 2026-10-13, [[ADR-0048]]).

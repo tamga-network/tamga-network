@@ -235,8 +235,16 @@ describe("HAIP-1 (e) DCQL trusted_authorities (aki)", () => {
     expect(matchDcql(query([bad]), [c]).unmatched).toEqual(["q"]);
     // sorguda trusted_authorities yoksa etkisiz
     expect(matchDcql(query(), [c]).matches).toHaveLength(1);
-    // değerlendiremediği bir tip de varsa belge elenmez
-    expect(matchDcql(query([bad, { type: "etsi_tl", values: ["https://lotl.example"] }]), [c]).matches).toHaveLength(1);
+    // değerlendiremediği tip "eşleşmez" sayılır (güvenli taraf): yalnız o tip varsa belge seçilmez
+    expect(matchDcql(query([bad, { type: "etsi_tl", values: ["https://lotl.example"] }]), [c]).unmatched).toEqual([
+      "q",
+    ]);
+    expect(matchDcql(query([{ type: "openid_federation", values: ["https://fed.example"] }]), [c]).unmatched).toEqual([
+      "q",
+    ]);
+    expect(matchDcql(query([{ type: "x-unknown", values: [ta.values[0]] }]), [c]).unmatched).toEqual(["q"]);
+    // bilinmeyen tip + eşleşen aki: aki koşulu belgeyi seçer
+    expect(matchDcql(query([{ type: "etsi_tl", values: ["https://lotl.example"] }, ta]), [c]).matches).toHaveLength(1);
   });
   it("AKI'siz sertifikalı belge aki sorgusuna uymaz (OpenID4VP §6.1.1.1)", async () => {
     const good = await ca("Good Root");

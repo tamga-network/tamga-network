@@ -157,6 +157,44 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     expect(r.result.outcome).toBe("REJECTED");
     expect(r.result.failed_step).toBe("D3");
   });
+  it("C13: Tamga türünde eski typ vc+sd-jwt RED (A2) — dış türlerde kabul edilir, Tamga belge verenlerinde değil", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { combined, ref } = await issue(13, now);
+    // aynı imzacıyla başlığı vc+sd-jwt olarak yeniden imzala (gövde ve disclosure'lar aynı)
+    const signer = await pemIssuerSigner(
+      readFileSync(resolve(PKI, "issuer-bilgi.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "issuer-bilgi.cert.pem"), "utf8"),
+    );
+    const [jwt, ...rest] = combined.split("~");
+    const header = JSON.parse(Buffer.from(jwt.split(".")[0], "base64url").toString("utf8"));
+    const body = Buffer.from(jwt.split(".")[1], "base64url");
+    const legacyJwt = await signer.sign({ ...header, typ: "vc+sd-jwt" }, new Uint8Array(body));
+    const cache = new MemoryStatusCache();
+    cache.set(STATUS_URI, await statusToken(now), now);
+    const pres = await presentSdJwt({
+      combined: [legacyJwt, ...rest].join("~"),
+      discloseClaims: ["is_graduate", "eqf_level", "qualification_title", "awarding_body_name"],
+      keys,
+      keyRef: ref,
+      aud: AUD,
+      nonce: "n-c13",
+      iat: now,
+    });
+    const r = await verifyPresentation({
+      presentation: pres,
+      aud: AUD,
+      nonce: "n-c13",
+      policy,
+      policyCredentialId: "diploma",
+      trust,
+      statusCache: cache,
+      rootCertsDer: rootDer,
+      now,
+    });
+    expect(r.result.outcome).toBe("REJECTED");
+    expect(r.result.failed_step).toBe("A2");
+    expect(r.result.failed_reason).toMatch(/Tamga credential types/);
+  });
   it("ACCEPTED: tüm adımlar; claim değerleri sonuç nesnesinde yok (AP3); idx yok (AP4)", async () => {
     const now = Math.floor(Date.now() / 1000);
     const { combined, ref } = await issue(11, now);
@@ -586,7 +624,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     expect(audits).toEqual(["INDETERMINATE", "INDETERMINATE"]);
   });
 
-  it("ADR-0026: kullanım seçimi + verifier_info (registration_cert, credential_ids)", async () => {
+  it("ADR-0026 / RPRC_19: kullanım seçimi + verifier_info (tek registration_cert, credential_ids yok); başlıkta iat", async () => {
     const rp = trust.relyingParty(AUD)!;
     const picks = registrationScopesFor(policy, rp);
     expect(picks).toHaveLength(policy.credentials.length);
@@ -603,11 +641,15 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       dcql: dcqlFromPolicy(policy),
       responseUri: "https://verify.tamga.network/vp/response",
       requestUriBase: "https://verify.tamga.network/vp/req",
-      registrationCerts: [{ jwt: "a.b.c", credentialIds: ["diploma"] }],
+      registrationCert: "a.b.c",
     });
     const payload = JSON.parse(Buffer.from(pr.requestJwt.split(".")[1], "base64url").toString("utf8"));
-    expect(payload.verifier_info).toEqual([
-      { format: "registration_cert", data: "a.b.c", credential_ids: ["diploma"] },
-    ]);
+    expect(payload.verifier_info).toEqual([{ format: "registration_cert", data: "a.b.c" }]);
+    // REDIRECTS_RO-03: iat korumalı başlıkta da (gövdedekiyle aynı); RO-02: kökçe doğrudan verilen yaprakta x5c = [yaprak]
+    const header = JSON.parse(Buffer.from(pr.requestJwt.split(".")[0], "base64url").toString("utf8"));
+    expect(typeof header.iat).toBe("number");
+    expect(header.iat).toBe(payload.iat);
+    expect(header.x5c).toHaveLength(1);
+    expect(signer.chainDer).toBeUndefined();
   });
 });

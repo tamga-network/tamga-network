@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
+**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -77,7 +77,7 @@ specific to governance:
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | Personal data                   | Law No. 6698 (KVKK); VERBİS; information notice, explicit consent, data protection impact assessment                          | Annexes to the participation agreement                                        |
 | Electronic signatures and seals | Electronic Signature Law No. 5070; the BTK list of electronic certificate service providers; qualified signatures and e-seals | The highest identity proofing path; e-seal option for accredited issuers      |
-| International recognition       | eIDAS 2.0 Article 14 (third-country agreements); non-EU list support in ETSI TS 119 612                                       | Technical compatibility and an ETSI-format view of the lists                  |
+| International recognition | eIDAS 2.0 Article 14 (third-country agreements; trust services only, the parties are states); Article 5f is not third-country recognition; non-EU list support in ETSI TS 119 612 | Technical preparation: lists in ETSI formats, certificates with ETSI profiles, state roles that can be handed over ([[ADR-0035]] legal note) |
 | Higher education                | Higher education legislation (authority to award diplomas)                                                                    | Authority outside the network; the scope within the network is separate (G-A) |
 | Jurisdiction and disputes       | The law of the state where the institution is established                                                                     | §5.8                                                                          |
 
@@ -418,7 +418,7 @@ These numbers are reviewed with pilot data; changes are published in a new versi
 ### 5.4 Confidentiality and intellectual property
 
 Code is licensed under Apache-2.0 and documents under CC BY 4.0; the credential type catalogue is open and can be mirrored. Use
-of the "Tamga" mark and the trust mark is subject to agreement; data belonging to institutions is confidential.
+of the "Tamga" mark and of the "Listed on Tamga Network" indicator is subject to the participation rules (RB-WP-18); data belonging to institutions is confidential.
 
 ### 5.5 Pricing (direction)
 
@@ -451,8 +451,8 @@ the law of the person's own state applies.
 | Level                | In Tamga                                                                                                       |
 | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | 1. Portability       | SD-JWT VC and OpenID4VC; an EU wallet can technically process a Tamga credential                               |
-| 2. Trust             | The trusted list (in the sense of ETSI TS 119 612); an XML view; root fingerprints; a mutual-recognition field |
-| 3. Legal recognition | Unilateral recognition between states; with the EU, an eIDAS Article 14 agreement (long term)                  |
+| 2. Trust | The trusted list (in the sense of ETSI TS 119 612); an ETSI TS 119 602 view (119 612 XML publication when the first EU party asks, [[ADR-0036]] addendum); root fingerprints; an external list field |
+| 3. Legal recognition | Unilateral recognition between states; with the EU only an eIDAS Article 14 agreement between states (trust services; long term). The network is not a party to such an agreement |
 
 ### 6.1 External lists (federation)
 

@@ -4,7 +4,7 @@ title: "Şema kataloğu"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-13
 summary: >
   [[ADR-0007]] kararlarının normatif uygulaması. schemas.tamga.network URL şemasını
   ve isim alanlarını, her vct adresinde yayınlanan SD-JWT VC Type Metadata
@@ -253,6 +253,7 @@ Standartta olmayan, Tamga'ya özgü meta veri:
 | `issuer_categories` | Bu şemayı hangi `IssuerCategory` kullanabilir |
 | `default_ttl_days` | **Azami** `exp` süresi (tavan, sabit değil); `null` = uzun ömürlü |
 | `uses_status_list` | `false` ise kısa ömürlü, iptal listesi yok ([[ADR-0008]] Alt. C) |
+| `suspension_allowed` | İsteğe bağlı, varsayılan `false`. `true` ise belge veren bu türde askıyı (iptal listesinde `0x02`) kullanabilir; değilse yalnız iptal ([[ADR-0048]] K2; bugün yalnız diploma). Kimlik servisinin türlerinde bulunmaz |
 | `min_issuer_assurance` | Asgari belge veren seviyesi ([[PM-ASSUR-0001]] I1–I3) |
 | `derived_claims` | `age_over_NN` deseni türevleri ([[RS-SCHEMA-0001]] §4) |
 | `elm_profile` | Hangi ELM sürümüne/profiline eşlenmiş |

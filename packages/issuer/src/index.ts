@@ -15,7 +15,7 @@ export {
 } from "@tamga-network/sd-jwt";
 export * from "./oid4vci.js";
 export * from "./factory.js";
-// Cüzdan birimi kanıtı (WUA/WIA) doğrulaması @tamga-network/trust'a taşındı; buradan da dışa aktarılır
+// Cüzdan kanıtı (WIA; -07 istemci kanıtı) doğrulaması @tamga-network/trust'a taşındı; buradan da dışa aktarılır
 export {
   WIA_MAX_TTL_SEC,
   WUA_TYP,
@@ -26,6 +26,7 @@ export {
   verifyWalletAttestation,
   stricterKeyStorage,
   type KeyStorage,
+  type ClientStatusPolicy,
   type WuaClaims,
   type WuaResult,
 } from "@tamga-network/trust";

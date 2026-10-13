@@ -139,6 +139,8 @@ export function stepB(ctx: VerifyCtx): StepFail | undefined {
     ctx.done.push("B6");
     return;
   }
+  // SPEC-CRED-0002/C13: Tamga türü (kataloğda) yalnız dc+sd-jwt; eski vc+sd-jwt yalnız dış türlerde kabul (SD-JWT VC -13)
+  if (a.sdJwtTyp === "vc+sd-jwt") return reject("A2", "typ=vc+sd-jwt is not accepted for Tamga credential types (C13)");
   ctx.schemaInfo.status = schemaRec.status;
   ctx.done.push("B2");
   const def = SCHEMA_DEFS.find((d) => d.vct === a.vct);
@@ -544,6 +546,7 @@ async function formatStep(input: VerifyInput, now: number): Promise<FormatResult
   return {
     ok: true,
     format: "dc+sd-jwt",
+    sdJwtTyp: r.typ,
     issuerId: r.issuerId,
     vct: r.vct,
     vctIntegrity: r.vctIntegrity,

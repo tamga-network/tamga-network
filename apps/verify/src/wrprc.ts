@@ -28,24 +28,30 @@ function indexOf(trustDist: string): IndexItem[] {
   return cache.items;
 }
 
-/** DCQL sorgusu → kullanım eşlemesinden (`registrationScopesFor`) sertifikalar; aynı kullanımın sorguları tek girdide. */
-export function registrationCertsFor(
+/**
+ * İsteğin kayıt sertifikası (ETSI TS 119 472-2 RO-13…16, ARF RPRC_19): istek başına TEK sertifika — DCQL sorgularının kullanım
+ * eşlemesinden (`registrationScopesFor`) en çok sorguyu kapsayan kullanımınki (eşitlikte ilk sorgunun kullanımı). Sertifika
+ * `credential_ids` olmadan isteğin bütününe aittir; kapsamadığı sorgu için cüzdan "kayıtlı kullanımdan fazla istek" uyarısı
+ * gösterir. Kullanımın sertifikası yoksa (ya da dosya yayın sırasında değiştiyse) istek sertifikasız gider.
+ */
+export function registrationCertFor(
   trustDist: string,
   clientId: string,
   picks: Array<{ queryId: string; scopeId: string }>,
-): Array<{ jwt: string; credentialIds: string[] }> {
+): string | undefined {
   const items = indexOf(trustDist).filter((i) => i.kind === "rp" && i.client_id === clientId);
-  const byScope = new Map<string, string[]>();
-  for (const p of picks) byScope.set(p.scopeId, [...(byScope.get(p.scopeId) ?? []), p.queryId]);
-  const out: Array<{ jwt: string; credentialIds: string[] }> = [];
-  for (const [scopeId, credentialIds] of byScope) {
+  const count = new Map<string, number>();
+  for (const p of picks) count.set(p.scopeId, (count.get(p.scopeId) ?? 0) + 1);
+  // Map ekleme sırasını korur: sıralama kararlı, eşitlikte ilk sorgunun kullanımı önde
+  const ranked = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([scopeId]) => scopeId);
+  for (const scopeId of ranked) {
     const it = items.find((i) => i.scope_id === scopeId);
     if (!it) continue;
     try {
-      out.push({ jwt: readFileSync(resolve(trustDist, it.path), "utf8").trim(), credentialIds });
+      return readFileSync(resolve(trustDist, it.path), "utf8").trim();
     } catch {
-      /* dosya yayın sırasında değişti: sertifikasız */
+      /* dosya yayın sırasında değişti: sıradaki kullanım */
     }
   }
-  return out;
+  return undefined;
 }

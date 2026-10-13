@@ -5,6 +5,50 @@ announcement; changes before it are folded into this release. The `@tamga-networ
 are published on npm as test releases — `0.5.0` published, `0.5.1` prepared (the API may change in test releases); the
 stable `1.0.0` comes when everything is ready.
 
+## Unreleased — 0.5.2 (packages, test release)
+
+Small EU format fixes from the first EU alignment review (2026-10-13). The code is in the source; the version stays `0.5.1`
+until `0.5.1` is published, then the packages move to `0.5.2` together. Two signatures change (marked **breaking**); there is
+no compatibility path (development phase, fixed in place).
+
+### EU format alignment
+
+- `@tamga-network/verifier` — request object (ETSI TS 119 472-2 REDIRECTS_RO-02/03): `iat` is now also in the JWS protected
+  header (and stays in the payload); `x5c` carries the leaf followed by the intermediate certificates when the access
+  certificate is not issued directly by the root (never the root). `RpSigner` gets an optional `chainDer`; `pemRpSigner`
+  accepts a chain file (first certificate = leaf) and an optional third argument `intermediatePems`; self-signed certificates
+  are dropped.
+- `@tamga-network/verifier` — **breaking:** registration certificate in `verifier_info` (TS 119 472-2 RO-13…16, ARF RPRC_19):
+  exactly one per request, `{ format: "registration_cert", data: <WRPRC JWT> }`, no `credential_ids`.
+  `createPresentationRequest({ registrationCerts: [...] })` becomes `registrationCert?: string`. RO-16's "base64url" is read
+  as the JWT compact serialisation (already base64url parts), as the EU reference implementation and the German guide do.
+  The reference verifier (`apps/verify`) picks the certificate of the intended use that covers the most queries
+  (`registrationCertFor`). The wallet side (`@tamga-network/wallet-core`) still reads requests with `credential_ids`.
+- `@tamga-network/trust` (re-exported by `@tamga-network/issuer`) — **breaking:** wallet attestation. Every OAuth client
+  attestation (draft -07) is read as a wallet instance attestation; the old Tamga "WUA" path (declared `key_storage`,
+  `solution_id`) is removed — the key storage level comes from the key attestation at the credential endpoint. A generic -07
+  attestation without `client_status` no longer falls into that path: the new `clientStatus` policy decides
+  (`"optional"`, the default, accepts it with result `clientStatus: "NOT_APPLICABLE"`; `"required"` rejects it). The result
+  replaces `kind` with `clientStatus` (`VALID` / `NOT_CHECKED` / `NOT_APPLICABLE`). `iss` is accepted when present (must be a
+  string) and not required; a missing `iat` in the attestation is tolerated, `iat` in the PoP stays required; the lifetime
+  limit (under 24 hours, TS3) applies to every attestation. `minKeyStorage` and `minKeyStorageFor` are removed from
+  `verifyWalletAttestation`.
+- `@tamga-network/sd-jwt` — verification accepts the legacy `typ` `vc+sd-jwt` by default (allowed by SD-JWT VC -13;
+  `acceptLegacyVcSdJwtTyp: false` turns it off); the result carries `typ`. Issuance stays `dc+sd-jwt`. The network verifier
+  (`@tamga-network/verifier`) still rejects `vc+sd-jwt` for Tamga credential types (rule C13, step A2) and accepts it for
+  external types.
+- `@tamga-network/wallet-core` — DCQL `trusted_authorities`: a type the wallet cannot evaluate (`etsi_tl`,
+  `openid_federation`, unknown) now counts as "does not match" (fail safe) instead of letting the credential through; `aki`
+  is evaluated as before.
+
+### Hardening
+
+- `@tamga-network/issuer` — `WalletStatusChecker`: a wallet instance or key attestation status list with fewer than 10,000
+  entries (CIR 2026/1731 Annex Ib; `WALLET_STATUS_MIN_ENTRIES`) is refused. On by default; the new fourth constructor
+  argument `{ minEntries }` sets the threshold (`0` turns it off, development only). `StatusValueOf` gains the value
+  `NONCOMPLIANT` (signed and readable but outside the profile): `verifyWalletAttestation` and `verifyKeyAttestation` reject
+  it (not indeterminate).
+
 ## 0.5.1 — 2026-10-12 (packages, test release)
 
 The nine packages move to `0.5.1` together (`sdk_version` = `@tamga-network/verifier@0.5.1`). Patch: security and correctness

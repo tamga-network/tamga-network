@@ -4,7 +4,7 @@ title: "Education Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Eğitim alanındaki iki ortak belge türünün (öğrenci belgesi, diploma) rulebook'u, AB Attestation Rulebook şablonunun bölüm
   yapısıyla: öznitelikler ve üst veri, hukuki kategori, SD-JWT VC kodlaması ve seçici açıklama, kullanım ve belge verme
@@ -332,7 +332,7 @@ Cüzdan belge alırken aynı kayıtla kurumun bu türü vermeye yetkili olduğun
 |---|---|---|
 | İptal edilebilir mi | Hayır — kısa ömür (≤ 90 gün) iptalin yerini tutar; süresi dolmamış ama artık doğru olmayan belge kabul edilmiş bir risktir | **Evet, zorunlu** — Token Status List (AB'nin Attestation Status List'i), `status.status_list {uri, idx}` |
 | İptal koşulları | — (yeniden verilmez) | Diplomanın iptali (sahtecilik, mahkeme kararı), hatalı belge (yeniden verilerek), rızanın geri alınması, cihaz ihlali bildirimi, kişinin "belgeniz bir cüzdana eklendi" bildirimine itirazı, paylaşım kuralının değişmesi — ayrıntı [[FW-POL-0001]] §3 |
-| Askıya alma | — | `SUSPENDED` (2 bitlik değer) — inceleme süresince |
+| Askıya alma | — | `SUSPENDED` (2 bitlik değer) — inceleme süresince; şema `suspension_allowed: true` taşır ([[ADR-0048]] K2) |
 | Yayın | — | Sabit aralık (bugün 2 dakika), değişiklik olmasa da; liste 6 saat geçerlidir; acil yayın yoktur; iptal birkaç dakikada etkili olur |
 | Liste adresi (ARB_24a) | — | Belgedeki `status.status_list.uri`; ağın barındırdığı belge verme servisinde `https://status.tamga.network/` altında, kendi servisini işleten kurumda kurumun durum sunucusunda; adres opaktır (RB-AP-18) |
 
@@ -378,4 +378,4 @@ ELM v3. Bu belgenin dayandığı Tamga kararları ve şartnameleri Ek E'de liste
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11; §2.0 ve §7.2 kararları 2026-10-12, [[ADR-0047]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11; §2.0 ve §7.2 kararları 2026-10-12, [[ADR-0047]]; §6.2 askı satırı 2026-10-13, [[ADR-0048]]).

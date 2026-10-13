@@ -59,7 +59,6 @@ export async function verifyPseudonym(p: {
       now,
       isProviderKey: (fp) => p.trust.isWalletProviderKey(fp),
       statusOf: p.walletStatusOf,
-      minKeyStorage: "software", // takma ad belge değildir; anahtar deposu seviyesi belge ihracında (KA) denetlenir
     });
     if (!w.ok) return { ok: false, reason: `wallet: ${w.reason}`, indeterminate: w.indeterminate };
     return { ok: true, pseudonym: await calculateJwkThumbprint(jwk, "sha256"), walletName: w.claims.wallet_name };

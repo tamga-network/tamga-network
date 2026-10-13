@@ -27,6 +27,8 @@ const toAB = (u8: Uint8Array): ArrayBuffer => new Uint8Array(u8).buffer as Array
 export interface FormatOk {
   ok: true;
   format: "dc+sd-jwt" | "mso_mdoc" | "mso_mdoc_zk";
+  /** SD-JWT VC başlığındaki typ; eski `vc+sd-jwt` yalnız dış (Tamga kataloğunda olmayan) türlerde kabul (C13, B adımı) */
+  sdJwtTyp?: "dc+sd-jwt" | "vc+sd-jwt";
   issuerId: string;
   vct: string;
   /** SD-JWT `vct#integrity`; mdoc'ta yok → B4 atlanır (tip bütünlüğü docType + C2 şema yetkisiyle). */

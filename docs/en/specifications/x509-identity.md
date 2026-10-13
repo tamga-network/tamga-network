@@ -4,7 +4,7 @@ title: "Institutional identity (X.509)"
 status: Active
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-02
+last_updated: 2026-10-13
 summary: >
   The code- and protocol-level counterpart of the X.509 decision ([[ADR-0004]]). Institutional (entity) identity is built on
   X.509 certificates rooted in national Root CAs; an institution's ledger identity is anchored as
@@ -71,6 +71,24 @@ struct RootCA {
 
 Only **that state** registers/updates its root (`onlyOwnerState`). The root's **public key** is kept on the chain (it is not
 personal data — the [[PM-TRUST-0001]] boundary holds).
+
+## 1.1 Institution certificate profile ([[ADR-0050]])
+
+The credential signing and status list signing certificates of issuing institutions (the identity service included) follow ETSI
+TS 119 412-6 V1.2.1 and EN 319 412-3:
+
+| Field | Rule |
+|---|---|
+| Subject | `organizationIdentifier` (2.5.4.97) mandatory, the same as the registration certificate's `sub` (`VATTR-<tax number>`, `NTRTR-<MERSİS>`, `LEIXG-<LEI>`); `O` = the institution's legal name; `C` mandatory; `CN` and `OU` optional |
+| Key usage | Critical; `digitalSignature` only (a single type; compatible with the mdoc document signer certificate) |
+| Basic constraints | Critical, `cA = false` |
+| SKI / AKI | Both mandatory; AKI = the SKI of the signing authority |
+| AIA | Not needed for non-qualified EAA; the qualified and public classes by a separate decision |
+| Algorithm, validity | P-256 / ECDSA SHA-256; at most 3 years |
+
+On the production network an institution certificate is issued with `organizationIdentifier` (operator tool `pki-issue --prod
+--org-id`); older certificates without an identifier are renewed when the identifier is entered into the registration (renewal
+pattern of §4, XC2). The sandbox certificates were re-signed with the same key (2026-10-13).
 
 ---
 
@@ -266,6 +284,7 @@ cadence (≤6 months, noisy republication — aligned with [[ADR-0008]]) → §1
 | **XC3** | The chain holds only non-personal data (root/institution public key, status). |
 | **XC4** | A citizen has no global identifier (only pairwise pseudonyms). |
 | **XC5** | The entity ↔ identity link is resolved only through the accountable-disclosure threshold. |
+| **XC6** | The credential and status list signing certificate of an issuing institution carries in its subject the same `organizationIdentifier` as the registration certificate's `sub`; key usage is critical and `digitalSignature` only; SKI and AKI are mandatory ([[ADR-0050]]). |
 
 ---
 
@@ -296,6 +315,6 @@ cadence (≤6 months, noisy republication — aligned with [[ADR-0008]]) → §1
 - [[RS-EIDAS-0001]] — §5.1 (ETSI 119 612 Trusted List analysis) = the basis of the §8.1 projection.
 - Implementation: `sdk/` (resolver + verification + 119 612 TL projection), `contracts/src/` (RootCARegistry).
 
-**In force** — version 1.0.0 (2026-10-02).
+**In force** — version 1.0.0 (2026-10-02; §1.1 and XC6 on 2026-10-13, [[ADR-0050]]).
 
 ---

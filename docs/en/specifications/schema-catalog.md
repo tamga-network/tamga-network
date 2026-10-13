@@ -4,7 +4,7 @@ title: "Schema catalogue"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-13
 summary: >
   The normative implementation of the [[ADR-0007]] decisions. Defines the schemas.tamga.network URL scheme and namespaces,
   the structure of the SD-JWT VC Type Metadata document published at every vct address, how the vct#integrity value is
@@ -254,6 +254,7 @@ Tamga-specific metadata that is not in the standard:
 | `issuer_categories` | Which `IssuerCategory` may use this schema |
 | `default_ttl_days` | **Maximum** `exp` period (a ceiling, not a fixed value); `null` = long-lived |
 | `uses_status_list` | If `false`, short-lived, no status list ([[ADR-0008]] Alt. C) |
+| `suspension_allowed` | Optional, default `false`. If `true` the issuer may use suspension (`0x02` in the status list) for this type; otherwise revocation only ([[ADR-0048]] K2; today only the diploma). Not present in the identity service's types |
 | `min_issuer_assurance` | Minimum issuer level ([[PM-ASSUR-0001]] I1–I3) |
 | `derived_claims` | Derivatives of the `age_over_NN` pattern ([[RS-SCHEMA-0001]] §4) |
 | `elm_profile` | Which ELM version/profile it is mapped to |

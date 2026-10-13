@@ -4,7 +4,7 @@ title: "Wallet and key attestations"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Instead of a single 30-day WUA, the EU TS3 model: a Wallet Instance Attestation (WIA) living less than 24 hours, with a fresh key
   and a fresh status list entry for every credential transaction, plus a key attestation (KA, `key_attestation`) describing where
@@ -157,6 +157,29 @@ These notes do not change the decision; they record how the reference wallet (Ta
    lower it, its absence does not block registration, and verification is skipped without a service account. Making Play
    Integrity mandatory (tying registration or the level to it) changes K1/K3 and **requires a separate ADR**.
 
+# Implementation notes (2026-10-13, first EU alignment review)
+
+These notes do not change the decision; they align the format with the texts the EU has fixed (Implementing Regulation (EU)
+2024/2979 Annex Ib, as amended by 2026/1731; EU TS3 1.5.2).
+
+1. **Generic client attestation (draft -07).** The WIA has the format of draft -07 of OAuth attestation-based client
+   authentication, which OpenID4VCI 1.0 references. The wallet provider sends `iss` and `iat` (`iss` was required in -07 and dropped
+   in -08; `iat` became required in -12). The verifying side accepts `iss` but does not require it; it tolerates a missing `iat` in
+   the attestation, while **`iat` is required in the PoP (`OAuth-Client-Attestation-PoP`)**. The issuer verifies every
+   `oauth-client-attestation+jwt` attestation **through one path** as a WIA; the legacy Tamga WUA path **has been removed**. If the
+   attestation carries `client_status` (a status entry) it is checked; if not, the behaviour is the issuer's `clientStatus` setting:
+   `optional` (the default; the EU's generic -07 attestation is accepted and marked as not subject to a status check) or `required`
+   (an attestation without a status entry is rejected). The **identity service**, which revokes in a chain, **uses `required`**
+   ([[ADR-0047]] K1). Implementation: release 0.5.2 of the packages.
+2. **WIA `cnf` = the credential's own DPoP key (TS3 1.5.2).** In a credential transaction the WIA's `cnf.jwk` is the DPoP key used
+   at the token endpoint for that credential; no separate WIA PoP key is generated. The refresh token binding in K6 is made through
+   the same key. WIA1 (a new key and a new status entry in every transaction) does not change: the DPoP key is also specific to the
+   credential and the transaction. Implementation: 0.6.0.
+3. **Size of the status lists.** The WIA and KA status lists **each** have at least 10,000 entries (Implementing Regulation (EU)
+   2024/2979 Annex Ib; for unlinkability; the KA list carries the same lower bound even though it uses few entries per type). An
+   issuer **rejects** a WIA or KA whose list has a valid signature but fewer than 10,000 entries, as a non-compliant list (not a
+   temporary failure). Implementation: release 0.5.2 of the packages.
+
 # Status
 
 **Accepted — 2026-09-29.** Approved by project management (H1 plan, P3). DECISIONS: D-CRED-7.
@@ -167,3 +190,8 @@ These notes do not change the decision; they record how the reference wallet (Ta
 > the copy in this repository and `wallet.tamga.network` were removed from the network on 2026-10-06; the provider is operated
 > by the wallet's operator at `provider.tamgawallet.com`. The decision (K1–K3, WIA1–WIA4) does not change: the WIA and KA format and their verification
 > (`@tamga-network/trust`) are network rules and are the same for every wallet provider.
+>
+> **Note (2026-10-13):** generic client attestation (-07; `iss` accepted but not required, a missing `iat` in the attestation
+> tolerated, required in the PoP), removal of the legacy WUA path and the `clientStatus` setting (`optional` / `required`; the
+> identity service uses `required`), WIA `cnf` = the credential's own DPoP key (0.6.0), WIA/KA lists ≥ 10,000 — see "Implementation notes (2026-10-13)" above. Approved by project
+> management (first EU alignment review).

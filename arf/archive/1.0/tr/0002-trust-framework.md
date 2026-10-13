@@ -4,7 +4,7 @@ title: "Ek A — Trust Framework"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tamga ekosisteminin yönetişim çerçevesi. World Bank "Digital Wallets: Trust Frameworks" beş katmanlı modeliyle
   yapılandırılmıştır: strateji (vizyon, ilkeler, hukuki bağlam, risk, yönetişim organları), teknoloji (ana belgeye işaret),
@@ -66,7 +66,7 @@ Ana belgedeki yedi ilke (§1.6, P1–P7) bu çerçevenin de ilkeleridir. Yöneti
 |---|---|---|
 | Kişisel veri | 6698 sayılı KVKK; VERBİS; aydınlatma, açık rıza, veri koruma etki değerlendirmesi | Katılım sözleşmesi ekleri |
 | Elektronik imza ve mühür | 5070 sayılı Elektronik İmza Kanunu; BTK elektronik sertifika hizmet sağlayıcıları listesi; nitelikli imza ve e-Mühür | En yüksek kimlik doğrulama yolu; akredite belge verenler için e-Mühür seçeneği |
-| Uluslararası tanıma | eIDAS 2.0 Madde 14 (üçüncü ülke anlaşmaları); ETSI TS 119 612'nin AB dışı liste desteği | Teknik uyum ve ETSI biçiminde liste görünümü |
+| Uluslararası tanıma | eIDAS 2.0 Madde 14 (üçüncü ülke anlaşmaları; yalnız güven hizmetleri, tarafları devletler); Madde 5f üçüncü ülke tanıması değildir; ETSI TS 119 612'nin AB dışı liste desteği | Teknik hazırlık: ETSI biçiminde listeler, ETSI profilli sertifikalar, devredilebilir devlet rolleri ([[ADR-0035]] hukuki notu) |
 | Yükseköğretim | YÖK mevzuatı (diploma verme yetkisi) | Ağın dışındaki yetki; ağdaki kapsam ayrıdır (G-A) |
 | Yargı ve uyuşmazlık | Kurumun bulunduğu devletin hukuku | §5.8 |
 
@@ -396,8 +396,8 @@ Bu sayılar pilot verisiyle gözden geçirilir; değişiklik yeni bir sürümle 
 
 ## 5.4 Gizlilik ve fikrî mülkiyet
 
-Kod Apache-2.0, belgeler CC BY 4.0 lisanslıdır; belge türü kataloğu açıktır ve aynalanabilir. "Tamga" markasının ve güven
-işaretinin kullanımı sözleşmeye bağlıdır; kurumlara ait veriler gizlidir.
+Kod Apache-2.0, belgeler CC BY 4.0 lisanslıdır; belge türü kataloğu açıktır ve aynalanabilir. "Tamga" markasının ve "Tamga Network'te listeli"
+göstergesinin kullanımı katılım kurallarına bağlıdır (RB-WP-18); kurumlara ait veriler gizlidir.
 
 ## 5.5 Ücretlendirme (yön kararı)
 
@@ -429,8 +429,8 @@ mahkemeleri yetkilidir. Devletler arasında konsey yetkilidir; kişinin hakları
 | Seviye | Tamga'da |
 |---|---|
 | 1. Taşınabilirlik | SD-JWT VC ve OpenID4VC; bir AB cüzdanı Tamga belgesini teknik olarak işleyebilir |
-| 2. Güven | Güven listesi (ETSI TS 119 612 anlamında); XML görünümü; kök parmak izleri; karşılıklı tanıma alanı |
-| 3. Hukuki tanıma | Devletler arasında tek taraflı tanıma; AB ile eIDAS Madde 14 anlaşması (uzun vadede) |
+| 2. Güven | Güven listesi (ETSI TS 119 612 anlamında); ETSI TS 119 602 görünümü (119 612 XML yayını ilk AB tarafı isteyince, [[ADR-0036]] eki); kök parmak izleri; dış liste alanı |
+| 3. Hukuki tanıma | Devletler arasında tek taraflı tanıma; AB ile yalnız devletler arası eIDAS Madde 14 anlaşması (güven hizmetleri; uzun vadede). Ağ bu anlaşmanın tarafı değildir |
 
 ## 6.1 Dış listeler (federasyon)
 

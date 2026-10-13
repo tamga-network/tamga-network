@@ -1,7 +1,8 @@
 /**
  * OpenID4VP istek nesnesi (JAR) üretimi ve şifreli yanıt çözme — verifier tarafı (SPEC-PROTO-0002 §3, §5.3).
- *  İmza ES256, typ oauth-authz-req+jwt, x5c = RP erişim sertifikası; client_id `x509_hash:` + base64url(SHA-256(yaprak DER))
- *  (OpenID4VP 1.0 §5.9.3, HAIP 1.0 §5; ADR-0034) — sertifikadan hesaplanır, elle verilmez.
+ *  İmza ES256, typ oauth-authz-req+jwt, x5c = RP erişim sertifikası + varsa ara sertifikalar (kök hariç; CIR 2025/848 ve ETSI
+ *  TS 119 472-2 REDIRECTS_RO-02), korumalı başlıkta `iat` (REDIRECTS_RO-03; gövdede de); client_id `x509_hash:` +
+ *  base64url(SHA-256(yaprak DER)) (OpenID4VP 1.0 §5.9.3, HAIP 1.0 §5; ADR-0034) — sertifikadan hesaplanır, elle verilmez.
  *  Yanıt: JWE ECDH-ES/A128GCM ya da A256GCM (HAIP §5: doğrulayıcı ikisini de ilan eder ve kabul eder) → { vp_token, state }.
  *  Şifreleme anahtarı sunum başına efemer (jose, P-256).
  */
@@ -16,7 +17,7 @@ import {
 } from "jose";
 import type { KeyObject } from "node:crypto";
 export type KeyLike = CryptoKey | KeyObject;
-import { randomBytes } from "node:crypto";
+import { randomBytes, X509Certificate } from "node:crypto";
 import { derToB64, pemToDer, x509HashClientId } from "@tamga-network/core";
 import type { DcqlQuery } from "./policy.js";
 
@@ -27,14 +28,41 @@ export const RESPONSE_ENC = ["A128GCM", "A256GCM"] as const;
 export interface RpSigner {
   clientId: string;
   leafDer: Uint8Array;
+  /** Yaprağı veren ara sertifikalar (yapraktan köke doğru; KÖK DAHİL DEĞİL) — istek nesnesinin x5c'sine yapraktan sonra girer. */
+  chainDer?: Uint8Array[];
   key: KeyLike;
 }
-/** ADR-0034: `clientId` erişim sertifikasından (`x509_hash`) hesaplanır; listedeki kaydın `client_id`'siyle aynıdır. */
-export async function pemRpSigner(privateKeyPem: string, certPem: string): Promise<RpSigner> {
-  const leafDer = pemToDer(certPem);
+
+const PEM_CERT = /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g;
+/** Kendinden imzalı (kök) sertifika mı — x5c'ye girmez (REDIRECTS_RO-02). */
+function selfSigned(der: Uint8Array): boolean {
+  try {
+    const c = new X509Certificate(der);
+    return c.issuer === c.subject && c.verify(c.publicKey);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * ADR-0034: `clientId` erişim sertifikasından (`x509_hash`) hesaplanır; listedeki kaydın `client_id`'siyle aynıdır.
+ * `certPem` tek sertifika ya da zincir dosyası olabilir (ilki yaprak, sonrakiler ara sertifikalar); `intermediatePems` ek ara
+ * sertifikalardır. Yaprak kökçe doğrudan verilmediyse ara sertifikalar x5c'ye girer (REDIRECTS_RO-02); kendinden imzalı kök atılır.
+ */
+export async function pemRpSigner(
+  privateKeyPem: string,
+  certPem: string,
+  intermediatePems: string[] = [],
+): Promise<RpSigner> {
+  const blocks = certPem.match(PEM_CERT) ?? [certPem];
+  const leafDer = pemToDer(blocks[0]);
+  const chainDer = [...blocks.slice(1), ...intermediatePems.flatMap((p) => p.match(PEM_CERT) ?? [p])]
+    .map(pemToDer)
+    .filter((d) => !selfSigned(d));
   return {
     clientId: x509HashClientId(leafDer),
     leafDer,
+    ...(chainDer.length ? { chainDer } : {}),
     key: (await importPKCS8(privateKeyPem, "ES256")) as KeyLike,
   };
 }
@@ -67,10 +95,12 @@ export async function createPresentationRequest(p: {
   /** ADR-0017 K7: aracı doğrulayıcı bir RP adına istiyorsa asıl RP'nin client_id'si (cüzdan onu gösterir). */
   onBehalfOf?: string;
   /**
-   * ADR-0026 K4: kullanımların kayıt sertifikaları (WRPRC, rc-wrp+jwt) → verifier_info (ETSI TS 119 472-2); `credentialIds`
-   * sertifikayı DCQL sorgularına bağlar (OpenID4VP 1.0 §5.1).
+   * ADR-0026 K4: isteğin kullanımının kayıt sertifikası (WRPRC, rc-wrp+jwt) → `verifier_info` (OpenID4VP 1.0 §5.1; ETSI TS 119
+   * 472-2 RO-13…16, ARF RPRC_19): istek başına TEK sertifika, `format: "registration_cert"`, `data` = WRPRC JWT'nin kendisi,
+   * `credential_ids` YOK (sertifika isteğin bütün sorgularını kapsar). RO-16'daki "base64url" JWT'nin kompakt serileştirmesi olarak
+   * okunur (JWT zaten base64url bölümlerden oluşur; AB referans uygulaması ve Alman rehberi JWT'yi olduğu gibi koyar).
    */
-  registrationCerts?: Array<{ jwt: string; credentialIds?: string[] }>;
+  registrationCert?: string;
   /**
    * Tarayıcı Digital Credentials API'si (OpenID4VP 1.0 Ek A): yanıt sayfaya döner (`dc_api.jwt`, response_uri yok);
    * `expected_origins` imzalı istekte — başka bir sitenin isteği yeniden kullanmasını engeller (Ek A.2).
@@ -114,19 +144,17 @@ export async function createPresentationRequest(p: {
       },
     },
     ...(p.purpose ? { purpose: p.purpose } : {}),
-    ...(p.registrationCerts?.length
-      ? {
-          verifier_info: p.registrationCerts.map((r) => ({
-            format: "registration_cert",
-            data: r.jwt,
-            ...(r.credentialIds?.length ? { credential_ids: r.credentialIds } : {}),
-          })),
-        }
-      : {}),
+    ...(p.registrationCert ? { verifier_info: [{ format: "registration_cert", data: p.registrationCert }] } : {}),
     ...(p.onBehalfOf && p.onBehalfOf !== p.signer.clientId ? { tamga_on_behalf_of: p.onBehalfOf } : {}),
     ...(p.passGrantOffered ? { pass_grant_offered: true } : {}),
   })
-    .setProtectedHeader({ alg: "ES256", typ: REQUEST_TYP, x5c: [derToB64(p.signer.leafDer)] })
+    // REDIRECTS_RO-02/03: x5c yaprak + ara sertifikalar (kök hariç); iat korumalı başlıkta da
+    .setProtectedHeader({
+      alg: "ES256",
+      typ: REQUEST_TYP,
+      x5c: [p.signer.leafDer, ...(p.signer.chainDer ?? [])].map(derToB64),
+      iat: now,
+    })
     .setIssuedAt(now)
     .setExpirationTime(expiresAt)
     .setAudience("https://self-issued.me/v2")

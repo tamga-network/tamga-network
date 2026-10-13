@@ -347,10 +347,11 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     expect(trust.externalAnchorCertsDer?.()).toEqual([]);
   });
 
-  it("dış cüzdan sağlayıcısı: kapsamdaysa tanınır; kapsam anahtar deposu kuralı kurumunkinden sıkıysa uygulanır", async () => {
+  it("dış cüzdan sağlayıcısı: kapsamdaysa tanınır ve kanıtı kabul edilir; kapsamın anahtar deposu kuralı listede (KA'da uygulanır)", async () => {
     const { trust } = await federated({});
     const wpFp = fp(walletProvider.der);
     expect(trust.isWalletProviderKey(wpFp)).toBe("YES");
+    // ADR-0036: kural credential ucundaki Anahtar Kanıtı denetiminde uygulanır (cüzdan kanıtı anahtar deposu beyanı taşımaz)
     expect(trust.walletProviderMinKeyStorage?.(wpFp)).toBe("secure_enclave");
     const holder = (await webcrypto.subtle.generateKey(ALG, true, ["sign", "verify"])) as CryptoKeyPair;
     const now = Math.floor(Date.now() / 1000);
@@ -360,9 +361,6 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
       cnf: { jwk: await exportJWK(holder.publicKey) },
       wallet_name: "Test Wallet",
       wallet_version: "1.0",
-      solution_id: "test-wallet",
-      key_storage: "tee",
-      user_auth: "system_biometry",
       iat: now,
       exp: now + 600,
     })
@@ -371,22 +369,14 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     const pop = await new SignJWT({ iss: "test-wallet", aud: "https://issuer.example.test", jti: "j1", iat: now })
       .setProtectedHeader({ alg: "ES256", typ: "oauth-client-attestation-pop+jwt" })
       .sign(holder.privateKey);
-    const base = {
+    const r = await verifyWalletAttestation({
       wua,
       pop,
       issuerUrl: "https://issuer.example.test",
       now,
       isProviderKey: (f: string) => trust.isWalletProviderKey(f),
-      minKeyStorage: "software" as const,
-    };
-    const strict = await verifyWalletAttestation({
-      ...base,
-      minKeyStorageFor: (f) => trust.walletProviderMinKeyStorage?.(f) ?? null,
     });
-    expect(strict.ok).toBe(false);
-    if (!strict.ok) expect(strict.reason).toMatch(/secure_enclave/);
-    const lax = await verifyWalletAttestation(base);
-    expect(lax.ok).toBe(true);
+    expect(r.ok).toBe(true);
     // kapsamda wallet_provider yoksa aynı sertifika tanınmaz (FD2)
     const { trust: t2 } = await federated({
       scope: { entity_kinds: ["pid_provider"], vct: [PID_VCT], category: "IDENTITY", assurance: "I3" },

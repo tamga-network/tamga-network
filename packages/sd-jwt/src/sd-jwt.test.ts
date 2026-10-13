@@ -190,7 +190,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.failedStep).toBe("A6");
   });
-  it("yanlış typ (vc+sd-jwt) varsayılan RED, bayrakla kabul (T2/§5.1.1); kök zinciri tutmuyorsa A3", async () => {
+  it("kök zinciri tutmuyorsa A3", async () => {
     const out = await issueDiploma();
     const pres = await presentSdJwtVc({
       combined: out.combined,
@@ -225,10 +225,11 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     payload: Record<string, unknown>,
     disclosed: Array<[string, unknown]>,
     s: IssuerSigner = signer,
+    typ = "dc+sd-jwt",
   ) {
     const ds = disclosed.map(([n, v]) => makeDisclosure(n, v));
     const body = { ...payload, _sd_alg: "sha-256", _sd: ds.map((d) => d.digest).sort() };
-    const header = { alg: "ES256", typ: "dc+sd-jwt", x5c: s.x5c.map((d) => Buffer.from(d).toString("base64")) };
+    const header = { alg: "ES256", typ, x5c: s.x5c.map((d) => Buffer.from(d).toString("base64")) };
     const jwt = await s.sign(header, new TextEncoder().encode(JSON.stringify(body)));
     return [jwt, ...ds.map((d) => d.disclosure), ""].join("~");
   }
@@ -243,6 +244,26 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     presentSdJwtVc({ combined, discloseClaims, holderKey: holder.priv, aud: AUD, nonce: NONCE, iat: NOW });
   const check = (pres: string) =>
     verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW, rootCertsDer: [rootDer] });
+
+  it("eski typ vc+sd-jwt varsayılan KABUL (SD-JWT VC -13; sonuçta typ), bayrak kapalıysa A2 RED; başka typ RED (§5.1.1)", async () => {
+    const legacy = await present(await craft(basePayload(), [], signer, "vc+sd-jwt"), []);
+    const r = await check(legacy);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.typ).toBe("vc+sd-jwt");
+    const strict = await verifySdJwtVc(legacy, {
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: NOW,
+      rootCertsDer: [rootDer],
+      acceptLegacyVcSdJwtTyp: false,
+    });
+    expect(!strict.ok && strict.failedStep).toBe("A2");
+    const current = await check(await present(await craft(basePayload(), []), []));
+    expect(current.ok && current.typ).toBe("dc+sd-jwt");
+    const other = await check(await present(await craft(basePayload(), [], signer, "jwt"), []));
+    expect(!other.ok && other.failedStep).toBe("A2");
+  });
 
   it("seçici açıklanamaz adlar disclosure olarak gelirse A5 RED (status, cnf, __proto__ …)", async () => {
     for (const name of ["status", "__proto__", "_sd", "iat", "category"]) {

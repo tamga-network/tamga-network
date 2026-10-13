@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -193,7 +193,8 @@ ZK copy is mdoc only.
 Encoding rules: `tstr`, `uint`, `bool` and `full-date` as in RFC 8610 / RFC 8943; `full-date` = #6.1004(tstr). `tstr` is UTF-8.
 Element values are the same as in the SD-JWT VC except for dates. The MSO carries `digestAlgorithm` SHA-256, `validityInfo`
 (`signed`, `validFrom`, `validUntil`; `tdate`, no fractional seconds, time zone `Z`), `deviceKeyInfo` and the status list reference
-`status.status_list {idx, uri}` (the same bit as the SD-JWT copy). The signature is ES256 (COSE); `x5chain` is the same issuer
+`status.status_list {idx, uri}` (the same bit as the SD-JWT copy; the address is the CWT representation of the same list —
+`application/statuslist+cwt`, [[ADR-0048]] K3, packages 0.6.0). The signature is ES256 (COSE); `x5chain` is the same issuer
 certificate.
 
 | Data identifier | Element identifier | Encoding | Namespace |
@@ -477,8 +478,8 @@ types (§4.6) comes only from the external list.
 
 | Type | Revocable | Mechanism |
 | --- | --- | --- |
-| Identity credential | **Yes, mandatory** | Token Status List (the EU Attestation Status List); the mdoc and SD-JWT copies carry the same bit |
-| ZK copy | No — the short lifetime replaces revocation (ARF VCR_01); if the main credential is revoked or suspended no new copy is issued, and revocation takes effect for ZK presentations within 24 hours at most | — |
+| Identity credential | **Yes, mandatory** | Token Status List (the EU Attestation Status List); the mdoc and SD-JWT copies carry the same bit (the mdoc copy reads the CWT representation of the list) |
+| ZK copy | No — the short lifetime replaces revocation (ARF VCR_01); if the main credential is revoked no new copy is issued, and revocation takes effect for ZK presentations within 24 hours at most | — |
 | Pseudonym seed | No status list; never presented | — |
 | Driving licence information | **Yes, mandatory** | Token Status List |
 
@@ -486,7 +487,9 @@ types (§4.6) comes only from the external list.
   `https://status.tamga.network/`. The address is opaque and encodes no institution, year or group (RB-AP-18).
 - **Publication:** at a fixed interval (today 2 minutes), even without changes; a list is valid for 6 hours; there is no
   out-of-cycle publication (RB-AP-17, [[SPEC-CRED-0003]] §5). Revocation takes effect within minutes (RB-GEN-10).
-- **Values:** `bits = 2` — valid, revoked, suspended.
+- **Values:** `bits = 1` — valid or revoked. The identity service's types have **no suspension**, and revocation is permanent (the
+  EU PID rule; RB-AP-ID-13, [[ADR-0048]] K1). Until release 0.6.0 of the packages the lists are published as `bits = 2`, but no
+  suspension value is written.
 - **Revocation conditions:** in the Revocation Policy ([[FW-POL-0001]] §3). For the identity credential: the person's erasure
   request, re-verification with the same document, a report that the document was lost or stolen, an incorrect credential,
   withdrawal of consent. For the driving licence information in addition: re-verification with the same card, revocation of the
@@ -504,7 +507,7 @@ types (§4.6) comes only from the external list.
   `urn:eudi:pid:` namespace, portrait) do not apply.
 - The driving licence information is outside the scope of the EU mDL Rulebook: an official mDL is issued only with ISO/IEC 18013-5
   and the official namespace; Tamga does not use that namespace (RB-AP-ID-08).
-- These types inherit all rules of the Tamga Rulebook; the type-specific rules are RB-AP-ID-01…11 and RB-RP-ID-01.
+- These types inherit all rules of the Tamga Rulebook; the type-specific rules are RB-AP-ID-01…13 and RB-RP-ID-01.
 
 ### 7.2 Known differences and open decisions
 
@@ -523,4 +526,4 @@ The Tamga decisions and specifications this document rests on are listed in Anne
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026; moved to the EU template structure on 11 October 2026; §2.0 and §7.2 decisions on 12 October 2026, [[ADR-0047]]).
+**Active** — version 1.0.0 (2 October 2026; moved to the EU template structure on 11 October 2026; §2.0 and §7.2 decisions on 12 October 2026, [[ADR-0047]]; §3.1 and §6.2 on 13 October 2026, [[ADR-0048]]).

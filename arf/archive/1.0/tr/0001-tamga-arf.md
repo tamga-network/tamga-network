@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -115,7 +115,7 @@ Kurumun ilan ettiği koşullarda cüzdan, kullanıcıya sormadan kopyaları yeni
 
 Bir doğrulayıcı (işveren, web sitesi, kurum) cüzdandan belge ister. İstek imzalıdır ve doğrulayıcının kayıtlı kimliğini taşır.
 Cüzdan doğrulayıcının güven listesindeki kaydını ve kayıt sertifikasını denetler, istenen alanları ve amacı kişiye gösterir,
-kaydın izin verdiğinden fazla alan isteniyorsa uyarır. Kişi PIN ya da biyometriyle onaylar; yanıt şifreli gönderilir ve
+kaydın izin verdiğinden fazla alan isteniyorsa ya da istek kayıt sertifikası taşımıyorsa uyarır (RB-WP-19). Kişi PIN ya da biyometriyle onaylar; yanıt şifreli gönderilir ve
 yalnız onaylanan alanları içerir.
 
 Doğrulayıcı kendi doğrulama yazılımını çalıştırabilir ya da Tamga Verify'ı (barındırılan doğrulayıcı) kullanabilir. Gösterme
@@ -354,8 +354,12 @@ Cüzdanlar ve doğrulayıcılar tek bir şeye güvenir: listelerin listesini imz
 Tamga Network bir ülke listesinin sahibi olmak zorunda değildir. Bugün Türkiye listesini Tamga devlet adına geçici olarak
 yayınlar. Bir devlet ya da devletin yetkilendirdiği kurum kendi listesini yayınladığında, listelerin listesi o listenin
 adresini ve imzacısını gösterir. Cüzdan ve doğrulayıcı için yalnız adres ve imzacı değişir; kurum kimlikleri, belge
-türleri ve belgeler aynı kalır. Aynı yol bütün Türk devletleri için geçerlidir. AB ile karşılıklı tanıma da aynı
-mekanizmayla, kapsamı belge türüne göre sınırlanarak yapılır.
+türleri ve belgeler aynı kalır. Aynı yol bütün Türk devletleri için geçerlidir. AB listeleri de aynı mekanizmayla, kapsamı belge
+türüne göre sınırlanarak gösterilebilir; bu teknik bir güvendir. AB'de **hukuki tanınma** ise ağın verebileceği bir şey değildir:
+AB dışı için tek açık dayanak eIDAS Madde 14'tür (yalnız güven hizmetleri; Birlik ile o ülke arasında anlaşma), tarafları
+devletlerdir; Madde 5f üçüncü ülke tanıması değildir ([[ADR-0035]] hukuki notu). Ağın rolü teknik hazırlıktır: ETSI biçiminde
+listeler, ETSI profilli sertifikalar ve devredilebilir devlet rolleri. Kısa vadede bir AB doğrulayıcısı Tamga belgelerini ancak
+kendi isteğiyle, güven listemizi kendi güven kaynağına ekleyerek kabul edebilir.
 
 Başkasının işlettiği bir liste listelerin listesinde adresi, sabitlenmiş imzacısı, kapsamı ve onay kaydıyla gösterilir. Liste
 yalnız kapsamındaki roller ve belge türleri için kefil olabilir; imzacısı eşleşmeyen liste yüklenmez. Her dış listenin tazeliği

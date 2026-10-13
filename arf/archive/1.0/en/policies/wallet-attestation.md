@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-POL-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
+**Document** FW-POL-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -52,6 +52,7 @@ notification channels) in its own policy.
 | --- | --- |
 | Format: OpenID4VCI 1.0 Appendix E (`oauth-client-attestation+jwt`); EU TS3 §2.3.1 attributes: `sub`, `wallet_name`, `wallet_version`, `wallet_link`, `wallet_solution_certification_information`, `client_status {status, exp}`, `cnf.jwk` | [[ADR-0025]] K2 |
 | The WIA declares the wallet version, that the key is in hardware and that a PIN or biometrics is enabled | RB-WP-02 |
+| The WIA has the generic client attestation format (OAuth attestation-based client authentication -07): the provider sends `iss` and `iat`; the issuer verifies every client attestation through one path as a WIA (the legacy WUA path is removed), does not require `iss`, tolerates a missing `iat` in the attestation and requires `iat` in the PoP; without `client_status` the issuer's `clientStatus` setting applies (`optional` by default, `required` for the identity service) (packages 0.5.2). The WIA's `cnf` key is the DPoP key used for that credential (EU TS3 1.5.2; packages 0.6.0) | [[ADR-0025]] note of 2026-10-13 |
 | Lifetime **shorter than 24 hours**; `client_status.exp` at least 31 days ahead | [[ADR-0025]] K2, WIA1 |
 | **A new WIA for every issuance**: a new proof-of-possession (PoP) key and a new, mutually unlinkable status list entry. No reuse per issuer; so the provider does not learn how many institutions the wallet talks to | [[ADR-0025]] K2, WIA1 |
 | The WIA is signed with the provider's signing key registered in the trust list | RB-WP-02, [[SPEC-TRUST-0001]] |
@@ -105,7 +106,7 @@ code.
 | Rule | Source |
 | --- | --- |
 | The provider publishes two Token Status Lists: WIA entries and KA types. It signs the lists with its own key registered in the trust list | [[ADR-0025]] K4 |
-| The WIA list has at least 10,000 entries; entries are distributed so that they cannot be linked to a unit | [[ADR-0025]] K2, K4 |
+| The WIA and KA status lists each have at least 10,000 entries; entries are distributed so that they cannot be linked to a unit. An issuer does not accept a WIA or KA whose list is below this bound | [[ADR-0025]] K2, K4 and the note of 2026-10-13; Implementing Regulation (EU) 2024/2979 Annex Ib |
 | The list addresses appear in every WIA (`client_status`) and KA (`key_storage_status`); the provider's address is in its trust list entry | [[ADR-0025]], [[SPEC-TRUST-0001]] |
 
 ## 7. Checks by issuers
@@ -152,7 +153,7 @@ the provider complies with EN 319 401.
 | 7.5.4 | Key usage: stop at the end of life; only for issuance and revocation status | The provider's signing key signs only WIAs, KAs and its own status lists; key rollover goes through the trust list entry ([[SPEC-TRUST-0001]]) |
 | 7.5.5 | Wallet-specific: binding the credential to the device's secure hardware; verifying that the key is in secure hardware; selective disclosure; combined presentation; reducing linkability; cryptographically independent copies in a batch | The KA carries only keys generated in secure hardware; the level rests on a verified state ([[ADR-0025]] WIA3; device attestation at W3, RB-WP-17). Each copy is a separate key and a key appears in one KA only (§4; RB-AP-09). Selective disclosure and combined presentation belong to the credential formats (SD-JWT VC, mdoc) |
 | 7.6 | Physical and environmental security (EN 319 401) | The provider's servers are in a data centre with controlled access |
-| 7.7 | Operation security; capacity monitoring | The provider monitors the capacity of the WIA and KA endpoints and the status lists; the WIA status list has at least 10,000 entries and is enlarged before it fills (§6) |
+| 7.7 | Operation security; capacity monitoring | The provider monitors the capacity of the WIA and KA endpoints and the status lists; the WIA and KA status lists have at least 10,000 entries and are enlarged before they fill (§6) |
 | 7.8 | Network security: secure zone; disabling unused accounts, services and ports; encrypted channels | All endpoints only over TLS; unused services and ports closed; the component that reaches the signing key in a separate zone |
 | 7.9 | Vulnerability and incident management (EN 319 401) | §8: a critical incident is reported to the scheme owner within 4 hours, a high-severity incident within 24 hours; a vulnerability in the wallet solution can lead to revocation by version (RB-WP-11) |
 | 7.10 | Collection of evidence: logging issuance events, security events, revocation requests and their results; documenting access to the records and the retention period | The provider logs WIA and KA issuance, unit registration, revocation requests and revocation events. The log carries no personal data, no status list index (`idx`) and no unit key fingerprint (RB-GEN-06; REQ-EAASP-7.13-08: minimal logging that does not allow tracking). The retention period is stated in the statement |

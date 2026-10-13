@@ -4,10 +4,11 @@ title: "İptal ve durum listesi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   [[ADR-0008]] kararının normatif uygulaması. Status List Token'ın Tamga profilini
-  (bits=2, ES256, X.509 zinciri, asgari 100.000 indeks), sabit aralıklı ve
+  (kurum listelerinde bits=2, kimlik servisinde bits=1; ES256, X.509 zinciri, asgari 100.000 indeks; mdoc için CWT
+  gösterimi), sabit aralıklı ve
   gürültülü yayın döngüsünü, yeniden yazılmış StatusListRegistry çapa kontratını,
   on adımlı doğrulama algoritmasını, önbellek ve tazelik politikasını tanımlar.
   İki kritik mahremiyet kuralı: indeksler RASTGELE tahsis edilir (sıralı tahsis
@@ -147,7 +148,7 @@ Gövde:
 | `iat` | Zorunlu | Yayın anı |
 | `exp` | **Tamga'da zorunlu** | `iat + 6 saat` (§8.1) |
 | `ttl` | **Tamga'da zorunlu** | Yayın aralığı (saniye); ağın işlettiği servislerde `120` (§5.1, §8.1) |
-| `status_list.bits` | Zorunlu | **Tamga'da her zaman `2`** — §3.3 |
+| `status_list.bits` | Zorunlu | Kurum listelerinde `2`, kimlik servisinin listelerinde `1` — §3.3 ([[ADR-0048]]) |
 | `status_list.lst` | Zorunlu | Sıkıştırılmış bayt dizisi, base64url |
 | `status_list.aggregation_uri` | Opsiyonel | **Tamga'da önerilir** — §9.2 |
 
@@ -169,13 +170,22 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNsLTIwMjYtYSIsInR5cCI6InN0YXR1c2xpc3Qr...
   sarılmaz.
 - `Content-Encoding: gzip` kullanılmalıdır (`lst` zaten sıkıştırılmıştır ama
   JWT'nin base64url gösterimi gzip'ten fayda görür).
-- CWT biçimi (`application/statuslist+cwt`) Tamga ilk aşamada **kullanılmaz**;
-  mdoc profiliyle birlikte devlet aşamasında değerlendirilir ([[ADR-0006]]).
+- **CWT gösterimi ([[ADR-0048]] K3; paketler 0.6.0).** mdoc olarak da verilen türün listesi ayrıca CWT olarak
+  (`application/statuslist+cwt`) **ayrı, opak bir adreste** yayımlanır: COSE_Sign1, ES256, korunan başlıkta `typ` =
+  `application/statuslist+cwt` ve `x5chain`; talepler `sub` (2) = CWT adresi, `iat` (6), `exp` (4), `ttl` (65534),
+  `status_list` (65533) `{bits, lst}`. JWT ve CWT gösterimleri aynı bitleri taşır, aynı döngüde aynı anahtarla imzalanır ve çapa
+  günlüğüne ayrı satırlar olarak yazılır. SD-JWT VC kopyası JWT adresine, mdoc kopyasının MSO'su CWT adresine işaret eder; iki
+  kopya aynı `idx`'i kullanır. mdoc olarak verilmeyen türde CWT gösterimi yoktur.
 
-## 3.3 `bits = 2` kararı
+## 3.3 `bits` kararı
 
-Standart `bits` için 1, 2, 4 ve 8 değerlerine izin verir. Tamga **her zaman 2**
-kullanır.
+Standart `bits` için 1, 2, 4 ve 8 değerlerine izin verir. Tamga kurum listelerinde **2**, kimlik servisinin listelerinde
+**1** kullanır ([[ADR-0048]]). Listeler tür başına ayrı olduğundan (S9) bir listede iki kural karışmaz.
+
+- **Kimlik servisinin türleri** (kimlik belgesi, sürücü belgesi bilgisi, iletişim belgeleri): askı yoktur, durum yalnız geçerli
+  ya da iptaldir (AB PID kuralı: Uygulama Tüzüğü (AB) 2024/2979 Ek II, 2026/1731 ile değişik). `bits = 1`.
+- **Kurum türleri:** `bits = 2`. Askı (`0x02`) yalnız şeması `suspension_allowed: true` olan türlerde yazılır
+  ([[SPEC-SCHEMA-0001]] §2.4; bugün diploma). Diğer türlerde değer `0x02` yazılmaz.
 
 | Seçenek | Anlam | Tamga değerlendirmesi |
 |---|---|---|
@@ -192,7 +202,7 @@ Durum değerleri ve Tamga karşılıkları:
 | `0x02` | SUSPENDED | **Geçici askı** — geri alınabilir |
 | `0x03` | (ayrılmış) | Tamga'da kullanılmaz |
 
-**Askı neden gerekli:** Bir diploma hakkında intihal soruşturması açıldığında
+**Askı neden gerekli (izin veren türlerde):** Bir diploma hakkında intihal soruşturması açıldığında
 kurum belgeyi kalıcı iptal etmek istemez — soruşturma sonuçlanana kadar askıya
 almak ister. `bits = 1` seçseydik kurum ya haksız yere kalıcı iptal edecek ya da
 hiçbir şey yapmayacaktı. İkisi de yanlış.
@@ -497,12 +507,13 @@ Normatif. `status` claim'i taşıyan her belge için çalıştırılır.
 
 Ş7.  Kapasite: idx < anchor.listSize → değilse RED
 
-Ş8.  lst'yi aç (dekompresyon), bits=2 ile idx konumundaki değeri oku.
+Ş8.  lst'yi aç (dekompresyon), belirtecin bits değeriyle (kurum 2, kimlik servisi 1) idx konumundaki değeri oku.
+     mdoc belgesinde aynı adımlar CWT gösterimiyle (application/statuslist+cwt, COSE_Sign1) yürür.
 
 Ş9.  Değeri yorumla:
      0x00 → GEÇERLİ
      0x01 → İPTAL EDİLMİŞ   → RED
-     0x02 → ASKIDA           → RED (kullanıcıya "askıda" olarak gösterilir)
+     0x02 → ASKIDA           → RED (kullanıcıya "askıda" olarak gösterilir; yalnız bits=2 listesinde)
      0x03 → tanınmayan       → RED
 
 Ş10. Sonucu, kullanılan token'ın version ve iat değerleriyle birlikte
@@ -703,7 +714,7 @@ Liste türetilmiş bir üründür; kaynak veritabanıdır.
 | # | Değişmez |
 |---|---|
 | **S1** | Zincirde hiçbir iptal biti yoktur; yalnızca çapa. |
-| **S2** | `bits` her zaman `2`'dir. |
+| **S2** | Kurum listelerinde `bits` `2`'dir ve askı değeri yalnız `suspension_allowed: true` türlerde yazılır; kimlik servisinin listelerinde `bits` `1`'dir ([[ADR-0048]]). |
 | **S3** | `version` monoton artar; azalan sürüm reddedilir. |
 | **S4** | Yayın CDN'e yazıldıktan **sonra** zincire kaydedilir (§5.2). |
 | **S5** | Değişiklik olmasa da sabit aralıkta yayınlanır (§5.1). |
@@ -751,5 +762,5 @@ Liste türetilmiş bir üründür; kaynak veritabanıdır.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §3.2, §3.3, Ş8–Ş9 ve S2 2026-10-13, [[ADR-0048]]; uygulama paketlerin 0.6.0 sürümünde).
 

@@ -4,7 +4,7 @@ title: "Registration certificates"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-10-13
 summary: >
   As provisional registrar, Tamga produces an ETSI TS 119 475 registration certificate (WRPRC, `rc-wrp+jwt`) for every verifier
   use and every issuer; the content comes only from the record in the signed trust list and is signed with a separate registrar
@@ -75,6 +75,9 @@ into the record.
 If a registration certificate exists for the request's intended use, the verifier adds
 `verifier_info: [{"format": "registration_cert", "data": "<jwt>"}]` to the request object. Otherwise the request is sent without it.
 
+**Change of 2026-10-13** (see "Change" below): one registration certificate per request, no `credential_ids`, `registrar_dataset`
+not used.
+
 ## K5 — Wallet
 
 If the request carries a `registration_cert`, the wallet checks in order:
@@ -90,6 +93,9 @@ If the request carries a `registration_cert`, the wallet checks in order:
 If any of 1–3 fails, the request is **rejected** and the user sees "registration certificate invalid". If there is no
 registration certificate, or it is valid, the wallet continues with the trust list check. If the two sources conflict, the more
 restrictive one applies.
+
+**Change of 2026-10-13** (see "Change" below): a request without a registration certificate gets a warning and the default
+"Don't share"; after 2028-08-11 it is rejected. In proximity the registration certificate comes in `euWrprc`.
 
 # Options considered
 
@@ -118,6 +124,42 @@ restrictive one applies.
 - Before the pilot: identifiers are entered into the records and access certificates are renewed with `organizationIdentifier`;
   when the registrar role passes to the national authority, the key changes in the LOTL.
 
+# Change — 2026-10-13 (first EU alignment review)
+
+Implementing Regulation (EU) 2026/1731 made the registration certificate rules of ETSI TS 119 472-2 binding with changes
+(RO-02…RO-16) and made registration certificate validation in the wallet mandatory from 2028-08-11. K4 and K5 change accordingly;
+K1–K3 and WRC1–WRC4 still apply unchanged.
+
+**K4 (verifier) — new text.**
+- In every request the verifier sends **one** registration certificate, the one for the request's intended use (`scope_id`), in
+  `verifier_info` as `{"format": "registration_cert", "data": "<jwt>"}` (RO-13…RO-16). `data` is the registration certificate
+  itself; the "base64url" of RO-16 is read as the JWT compact form (a JWS made of base64url parts), with no extra encoding.
+- The entry carries **no** `credential_ids`; a request does not carry more than one registration certificate. The certificate
+  covers the whole request; the requested credentials are in that use's registration.
+- The `registrar_dataset` form (sending the registration data openly in the request) is **not used**; the regulation removed it
+  (RO-02…RO-12).
+- If the use has no registration certificate (for example a verifier whose identifier is not yet in its registration), the request
+  is sent without one and the wallet behaves as in K5.
+- Implementation: release 0.5.2 of the packages (`credential_ids` removed).
+
+**K5 (wallet) — added rules.**
+- **Request without a registration certificate:** from today the wallet shows a separate warning on the consent screen ("This
+  verifier did not send a registration certificate") and the default choice is **"Don't share"**; the person can still share. The
+  trust list check does not change.
+- **After 2028-08-11** a request without a registration certificate is **rejected** (the date from which Implementing Regulation
+  (EU) 2026/1731 makes registration certificate validation in the wallet mandatory). The date is fixed in code and cannot be
+  changed by a setting.
+- **Proximity (ISO/IEC 18013-5):** in an mdoc request the registration certificate comes in `requestInfo.euWrprc`. The wallet
+  checks it with steps 1–4 of the remote flow; the binding in step 3 is made with the reader authentication certificate. The warning
+  and the 2028-08-11 rule are the same in proximity. Sending `euWrprc` on the verifier side and reading it in the wallet come with
+  release 0.6.0 of the packages.
+- The warning and the default "Don't share" come with release 0.6.0 of the packages (`wallet-core`); the rejection date is in the
+  code in the same release.
+
 # Status
 
 **Accepted — 2026-09-29.** Approved by project management (H1 plan, P2). DECISIONS: D-REG-2.
+
+> **Change (2026-10-13):** K4 and K5 changed as in the "Change" section above (one registration certificate per request, no
+> `credential_ids` and no `registrar_dataset`; warning + "Don't share" for a request without one, rejection after 2028-08-11;
+> `euWrprc` in proximity). Approved by project management (first EU alignment review, decision 14).

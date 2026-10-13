@@ -90,6 +90,7 @@ export async function verifyKeyAttestation(
     if (p.statusOf) {
       const v = await p.statusOf(status, p.now);
       if (v === "INVALID") return { ok: false, reason: "key storage revoked (KA status)" };
+      if (v === "NONCOMPLIANT") return { ok: false, reason: "KA status list does not meet the profile" };
       if (v === "UNKNOWN") return { ok: false, reason: "KA status unavailable", indeterminate: true };
     }
     const se = (payload.key_storage_status as { exp?: unknown } | undefined)?.exp;
@@ -203,17 +204,30 @@ export function readProofs(
   return { ok: false, reason: `proofs.jwt 1..${max}` };
 }
 
+/** CIR 2026/1731 Ek Ib: WIA ve KA iptal listelerinin en az giriş sayısı. */
+export const WALLET_STATUS_MIN_ENTRIES = 10_000;
+
 /**
  * Cüzdan sağlayıcı iptal listesi denetleyicisi (WIA `client_status`, KA `key_storage_status`). Liste imzacısı güven listesindeki
  * bir sağlayıcı anahtarı olmalı; token kısa süre önbellekte tutulur (sorgu başına indirme yok).
  */
 export class WalletStatusChecker {
   private cache = new Map<string, { at: number; token: string }>();
+  private minEntries: number;
   constructor(
     private fetchToken: (uri: string) => Promise<string | null>,
     private isProviderKey: (fp: string) => "YES" | "NO" | "UNKNOWN",
     private maxAgeSec = 300,
-  ) {}
+    opts: {
+      /**
+       * CIR 2026/1731 Ek Ib: WIA/KA iptal listesi en az bu kadar giriş taşımalı (bağlanamazlık için kalabalık); azsa
+       * `NONCOMPLIANT` (ret). Varsayılan `WALLET_STATUS_MIN_ENTRIES` (açık); 0 denetimi kapatır (yalnız geliştirme/test).
+       */
+      minEntries?: number;
+    } = {},
+  ) {
+    this.minEntries = opts.minEntries ?? WALLET_STATUS_MIN_ENTRIES;
+  }
   statusOf: StatusValueOf = async (ref, now) => {
     let c = this.cache.get(ref.uri);
     if (!c || now - c.at >= this.maxAgeSec) {
@@ -227,6 +241,8 @@ export class WalletStatusChecker {
     try {
       const v = await verifyStatusListToken(c.token, ref.uri, now);
       if (this.isProviderKey(v.leafFingerprintHex) !== "YES") return "UNKNOWN";
+      // 2 bit/giriş (D6): açılmış bayt sayısı × 4
+      if (v.bitstring.bytes.length * 4 < this.minEntries) return "NONCOMPLIANT";
       return v.bitstring.get(ref.idx) === 0 ? "VALID" : "INVALID";
     } catch {
       return "UNKNOWN";

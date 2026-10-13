@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-12
+last_updated: 2026-10-13
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -144,12 +144,13 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | # | Kural |
 |---|---|
 | RB-AP-17 | İptal listesi **MUST** sabit aralıkta ve değişiklik olmasa da yayınlanmak; aralık dışı "acil" yayın **MUST NOT**. |
-| RB-AP-18 | Konum (`idx`) rastgeledir; adres opaktır (kurum, yıl ya da grup kodlamaz); listeler tür dışında bir ölçüte göre bölünmez; kapasite en az 100.000, doluluk en çok %80; `bits = 2`; `version` monoton artar. |
+| RB-AP-18 | Konum (`idx`) rastgeledir; adres opaktır (kurum, yıl ya da grup kodlamaz); listeler tür dışında bir ölçüte göre bölünmez; kapasite en az 100.000, doluluk en çok %80; `bits = 2`, kimlik servisinin listelerinde `bits = 1` ([[ADR-0048]]); `version` monoton artar. |
 | RB-AP-19 | Yayın önce içerik dağıtım ağına, **sonra** çapa günlüğüne (defter aşamasında ortak deftere) yapılır; listede iptal biti yoktur, yalnızca çapa vardır. |
 | RB-AP-20 | Askıya alınmış belge veren **MUST NOT** iptal listesi yayınlamak; halef yayınlayabilir. |
 | RB-AP-21 | Kişi rızasını geri alırsa belge **MUST** iptal edilmek. |
 | RB-AP-22 | Belge veren, belge kayıtlarını ve iptal listesi eşlemesini **MUST** düzenli yedeklemek; bu yedek, ortak liste ya da defter yedeğinden önceliklidir, çünkü iptal ancak bu kayıtla yapılabilir. |
 | RB-AP-27 | Belge veren ağın ortak iptal politikasına ([[FW-POL-0001]]) ek koşullarını kendi sayfasında yayımlayabilir (**MAY**); bağlantı güven listesindeki kaydında `revocation_policy_uri` alanındadır. Ek koşullar ortak koşulları **MUST NOT** daraltmak. Cüzdan birimi iptali kurum belgelerini iptal etmez ([[ADR-0047]] K1). |
+| RB-AP-28 | Belge veren askıyı (iptal listesinde `0x02`) yalnız şeması `suspension_allowed: true` olan türlerde kullanır; diğer türlerde askı **MUST NOT** kullanmak. mdoc olarak da verilen türün iptal listesi ayrıca CWT gösterimiyle (`application/statuslist+cwt`) ayrı, opak bir adreste aynı bitlerle **MUST** yayımlanmak; mdoc kopyası CWT adresine, SD-JWT kopyası JWT adresine işaret eder ([[ADR-0048]] K2, K3; paketler 0.6.0). |
 
 ## 4.4 Uzaktan kimlik doğrulama sağlayıcıları
 
@@ -173,8 +174,9 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-AP-ID-08 | Sürücü belgesi bilgisi (`urn:tamga:id:DrivingLicenceAttestation:1`) **MUST NOT** resmî mDL docType'ını ya da namespace'ini kullanmak ve **MUST** metadata'sında, her zaman açık `not_official_licence` alanında, kartında ve doğrulama sonucunda resmî sürücü belgesi yerine geçmediğini yazmak; ulusal kimlik numarası, kısıtlama ya da sağlık kodu, fotoğraf ve adres **MUST NOT** taşınmak; belge numarası yalnız anahtarlı özettir. |
 | RB-AP-ID-09 | Sürücü belgesi bilgisi **MUST** yalnız cüzdandaki etkin Tamga kimlik belgesinin sunumu üzerine ve karttaki ad ile doğum tarihi o kimlikle eşleşirse verilmek; sınıflar okunamıyorsa ya da kart süresi geçmişse **MUST NOT** verilmek; süresi kartın bitişini ve kartın incelendiği günden itibaren bir yılı **MUST NOT** geçmek; biçimi yalnız SD-JWT VC'dir. |
 | RB-AP-ID-10 | Bağlı kimlik belgesi iptal edilince, yeniden verilince ya da silinince sürücü belgesi bilgisi **MUST** iptal edilmek ya da silinmek; bir ülkenin yetkili makamı dijital sürücü belgesi vermeye başlayınca o ülke için bu tür **MUST NOT** yeniden verilmek. |
-| RB-AP-ID-11 | Sıfır bilgi ispatlı sunum için ZK kopyası **MUST** ayrı türde (`urn:tamga:id:ShortLivedIdentityAttestation:1`), en çok 24 saat geçerli ve iptal listesi girdisi olmadan verilmek; yalnız ZK ile ispatlanabilen öğeleri taşımak; ana kimlik belgesi iptal ya da askıdaysa **MUST NOT** verilmek. Yenileme belirteci kişi alanlarını sunucuda **MUST NOT** bırakmak (yalnız servisin açabileceği biçimde belirteçte). |
+| RB-AP-ID-11 | Sıfır bilgi ispatlı sunum için ZK kopyası **MUST** ayrı türde (`urn:tamga:id:ShortLivedIdentityAttestation:1`), en çok 24 saat geçerli ve iptal listesi girdisi olmadan verilmek; yalnız ZK ile ispatlanabilen öğeleri taşımak; ana kimlik belgesi iptal edilmişse **MUST NOT** verilmek. Yenileme belirteci kişi alanlarını sunucuda **MUST NOT** bırakmak (yalnız servisin açabileceği biçimde belirteçte). |
 | RB-AP-ID-12 | Kimlik belgesi sağlayıcısı belge verirken gördüğü WIA'nın iptal listesi girişini belge kaydında tutar, cüzdan sağlayıcısının WIA listesini en az günde bir kez denetler ve birim iptal edilmişse o kayda bağlı bütün kopyaları **MUST** en geç 24 saat içinde iptal etmek (AB WURevocation_18). Giriş kayıt iptal edilince ya da süresi dolunca silinir. |
+| RB-AP-ID-13 | Kimlik servisi kendi türlerindeki belgeleri **MUST NOT** askıya almak: durum yalnız geçerli ya da iptaldir, iptal kalıcıdır ve bu türlerin iptal listeleri `bits = 1` ile yayımlanır (AB PID kuralı, Uygulama Tüzüğü (AB) 2024/2979 Ek II; [[ADR-0048]] K1; paketler 0.6.0). |
 
 ---
 
@@ -202,7 +204,7 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-WP-07 | Yedek yalnızca belgeleri ve listelerini taşır, anahtar taşımaz; cihaz değişiminde belgeler yeniden verilir. Cüzdan sağlayıcısı **MUST NOT** kullanıcı adına kurtarma anahtarı tutmak. |
 | RB-WP-08 | Şemalar toplu çekilir; gösterim anında şema sunucusuna istek **MUST NOT**. Kullanıcı eylemi olmadan belge yenileme yalnızca [[ADR-0023]] koşullarında yapılır. |
 | RB-WP-09 | Cüzdan, doğrulayıcının istemci kimliğini güven kaynağında çözmeyi dener; `presentation_definition` reddedilir; şifresiz yanıt modu kullanılmaz; `origin` öneki istemci kimliği olarak kabul edilmez. |
-| RB-WP-10 | Cüzdan **MUST** "bu cüzdan Tamga güven listesinde" görünümünü (güven işareti) ve "anahtarlarım nerede" açıklamasını sunmak. |
+| RB-WP-10 | Cüzdan **MUST** "anahtarlarım nerede" açıklamasını ve güven listesindeki kaydını gösteren "Tamga Network'te listeli" göstergesini (RB-WP-18) sunmak. |
 | RB-WP-11 | Cüzdan çözümünde bir açık bulunursa cüzdan sağlayıcısı **MUST** sürüm bazında cüzdan kanıtlarını iptal edebilmek; tek bir cüzdan biriminin ihlalinde o birimi iptal eder. |
 | RB-WP-12 | Kullanıcıya "geçersiz" ile "doğrulanamadı / bayat" farklı gösterilir; kullanılmış bir teklif için açık bir metin gösterilir. |
 | RB-WP-13 | [[t:intermediary|Aracı]] doğrulayıcı üzerinden gelen istekte cüzdan **MUST** asıl doğrulayıcının kayıtlı adını göstermek, kapsamı onun kaydına göre denetlemek ve doğrulayıcı başına kopyayı asıl doğrulayıcıya göre ayırmak. |
@@ -210,6 +212,8 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-WP-15 | Cüzdan sağlayıcısı, kişinin telefonu elinde olmadan cüzdan birimini iptal edebileceği bir yol **MUST** sunmak; yol kullanıcı hesabı **MUST NOT** gerektirmek (ör. etkinleştirmede bir kez gösterilen, sağlayıcıda yalnız yavaş özeti tutulan bir iptal sırrı; [[ADR-0047]] K3). |
 | RB-WP-16 | Cüzdan sağlayıcısı, kişinin cüzdan biriminin iptal edildiğini cüzdan dışından öğrenebileceği en az bir yol **MUST** sunmak; birimi kendi kararıyla iptal ettiyse bu yol en geç 24 saat içinde iptalin nedenini, neyin çalışmaya devam ettiğini ve kişinin ne yapabileceğini gösterir (AB WURevocation_14/16; [[ADR-0047]] K4). |
 | RB-WP-17 | W3 seviyesinde cüzdan sağlayıcısı birimi etkinleştirirken ve W3 beyan eden her anahtar kanıtından önce platformun cihaz kanıtını (Apple App Attest, Android anahtar kanıtı, Play Integrity) **MUST** doğrulamak; W2'de cihaz kanıtı isteğe bağlıdır (**MAY**) ([[ADR-0047]] K5). |
+| RB-WP-18 | Güven listesindeki cüzdan "Tamga Network'te listeli" / "Listed on Tamga Network" göstergesini yalnız yazı olarak gösterir; logo, AB yıldızları ve renkleri, "güven işareti" ya da "trust mark" sözü **MUST NOT** kullanılmak. Göstergeye dokunulunca imzası doğrulanmış listedeki `wallet_providers[]` kaydı gösterilir. Cüzdan birimi iptal edilmişse, sağlayıcı ya da çözüm kaydı `ACTIVE` değilse, liste doğrulanamıyorsa ya da cüzdan yalnız sandbox listesine bağlıysa gösterge **MUST** gizlenmek ([[ADR-0049]]). |
+| RB-WP-19 | Kayıt sertifikası taşımayan istekte cüzdan onay ekranında ayrı bir uyarı **MUST** göstermek; varsayılan seçim "Paylaşma"dır. 2028-08-11'den sonra böyle bir istek **MUST** reddedilmek (tarih kodda sabittir). Yakın alanda kayıt sertifikası `euWrprc` ile gelir ve aynı denetimlerden geçer ([[ADR-0026]] 2026-10-13 değişikliği; paketler 0.6.0). |
 
 ---
 
@@ -230,6 +234,7 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-RP-11 | Yüz eşleştirmesi gerekiyorsa doğrulayıcı bunu kimlik belgesi ya da PID ile yapar; diploma ve öğrenci belgesi fotoğraf taşımaz. |
 | RB-RP-12 | Barındırılan doğrulayıcıyı kullanan doğrulayıcı gösterimi **MUST** kendi sunucusundan, güven listesindeki anahtarıyla imzalı bir beyanla açmak ve değerleri kendi sunucusunda okumak; sayfa yalnızca durumu görür. |
 | RB-RP-13 | Web sitesine giriş ("Tamga ile giriş yap") hesap anahtarı olarak **MUST** site başına takma adı kullanmak; site politikaları belge özeti ya da kimlik numarası **MUST NOT** istemek; takma ad imza, `aud` ve `nonce`, site ve iptal edilmemiş cüzdan örneği (WIA) ile doğrulanır. Birden çok takma ad yalnızca kaydında `pseudonyms: "multiple"` bulunan sitede kullanılır. |
+| RB-RP-14 | Doğrulayıcı, kullanımın kayıt sertifikası varsa her istekte o kullanımın **tek** kayıt sertifikasını `verifier_info` içinde `{"format": "registration_cert", "data": "<jwt>"}` olarak **MUST** göndermek; `credential_ids` ve `registrar_dataset` kullanılmaz ([[ADR-0026]] 2026-10-13 değişikliği). |
 | RB-RP-ID-01 | Kimlik belgesini kendi kayıtlarıyla eşleştirmek için alan kurum (belge verme servisi dahil) belgeyi **MUST** yalnızca kayıtlı doğrulayıcı kapsamındaki alanlarla ve tam doğrulama hattından geçirerek almak; eşleştirme anahtarlarını **MUST NOT** saklamak ya da loglamak. |
 
 ---
@@ -323,4 +328,4 @@ Bu belgenin dayandığı kararlar, şartnameler ve standartlar Ek E'de listeleni
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §11 ve politika belgeleri 2026-10-11; RB-AP-27, RB-AP-ID-12, RB-WP-15–17 2026-10-12, [[ADR-0047]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §11 ve politika belgeleri 2026-10-11; RB-AP-27, RB-AP-ID-12, RB-WP-15–17 2026-10-12, [[ADR-0047]]; RB-AP-28, RB-AP-ID-13, RB-WP-18–19, RB-RP-14 ve RB-AP-18, RB-AP-ID-11, RB-WP-10 değişiklikleri 2026-10-13, [[ADR-0048]], [[ADR-0049]], [[ADR-0026]]).
