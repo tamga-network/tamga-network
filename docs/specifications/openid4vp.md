@@ -471,7 +471,7 @@ ikisi farklı problemlerdir.
 | Akış | Durum (2026-10) |
 |---|---|
 | `direct_post.jwt` (QR / derin bağlantı) | **Yürürlükte** |
-| `dc_api.jwt` (tarayıcı, OpenID4VP 1.0 Ek A) | **Uygulandı** — doğrulayıcı istek nesnesi ve sayfa kiti (`@tamga-network/verifier/web`), cüzdan tarafı (`@tamga-network/wallet-core`); tarayıcı ve işletim sistemi desteğine bağlıdır |
+| `dc_api.jwt` (tarayıcı, OpenID4VP 1.0 Ek A) | **Uygulandı** — doğrulayıcı istek nesnesi ve sayfa kiti (`@tamga-network/verifier/web`), cüzdan tarafı (`@tamga-network/wallet-core`); tarayıcı ve işletim sistemi desteğine bağlıdır. Sunum başına iki istek nesnesi (0.6.0): DC API'ninki (`dc_api.jwt` + `expected_origins`) ve QR / bağlantı için `request_uri`'deki cihazlar arası nesne (`direct_post.jwt` + `response_uri`). Her birinin şifreleme anahtarı ayrıdır (`kid` `enc-dc-<id>` / `enc-<id>`); yanıtı açan anahtar yolu belirler, mdoc `SessionTranscript`'i o yolun el sıkışmasıyla (köken ya da `response_uri`) denetlenir. Nonce, state ve tek kullanım ortaktır: ilk geçerli yanıt sunumu tamamlar, öteki yol reddedilir (PV10). Kullanılabilir DC API isteği olmayan tarayıcı (ör. Safari + yalnız SD-JWT politikası) yalnız çalışan QR / bağlantıyı gösterir |
 | ISO 18013-5 yakın alan (Bluetooth), mdoc | **Kodu hazır** (`@tamga-network/mdoc`, `@tamga-network/wallet-core`); gerçek cihazlarla birlikte çalışma denemesi sürüyor. NFC bu aşamada yok |
 | ISO/IEC 18013-7 Ek C (`org-iso-mdoc`, tarayıcı), mdoc | **Doğrulayıcıda uygulandı** (0.6.0; §7.4) — Safari / iOS 26 tarayıcısında mdoc'un tek yolu. Cüzdan tarafı (işletim sistemi kayıt modülü) sonraki cihaz turunda |
 
@@ -506,6 +506,11 @@ sunum için ikinci bir DC API isteği verir (politika tek `mso_mdoc` belgesi ist
   `requestInfo.euWrprc` alanında gönderir (ISO/IEC 18013-5-REQ-04…07) ve isteği okuyucu sertifikasıyla imzalar (`readerAuth`).
   Cüzdan uzaktan akıştaki 1–4'ü uygular; 3'teki bağ `readerAuth` sertifikasındaki `organizationIdentifier` ile kurulur
   (`checkProximityRegistration`). Geçersiz sertifikada kişiye sorulmadan ret; sertifikasız istekte aynı uyarı ve 2028-08-11 kuralı.
+  Kayıt sertifikası herkese açık olduğundan okuyucu sertifikasının kendisi de güvene bağlanmalıdır: zinciri imzalı listenin bir
+  `root_cas` sertifikasına kadar doğrulanır ya da yaprağı o tarafın kaydındaki parmak izidir (`readerTrust`, zorunlu). Bağlanmayan
+  okuyucu (ör. kurum kimliği kopyalanmış kendinden imzalı sertifika) `untrusted_reader_certificate` ile geçersizdir. Cüzdandan
+  cüzdana akışta okuyucu sertifikası yoktur; bu denetim uygulanmaz ("kayıt yok"). Doğrulayıcının Ek C okuyucu imzası x5chain'de
+  yaprak + ara sertifikaları taşır (kök hariç).
   Liste yayıncısı her kayıt sertifikasının CBOR biçimini de üretir (`wrprc/…/*.cwt`, dizinde `cwt_path`).
 
 ---

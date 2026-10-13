@@ -214,6 +214,35 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         "response=eyJhbGciOiJFQ0RILUVTIiwiZW5jIjoiQTEyOEdDTSIsImtpZCI6ImVuYy0" + created.presentation_id + "In0..a.b.c",
     });
     expect(again.statusCode).toBe(400);
+    // 0.6.0: kit DC API'yi varsayılan açtı (dc_api_origin) ama tarayıcı kullanamıyor (Safari + yalnız SD-JWT politikası →
+    // org-iso-mdoc yok, düğme çıkmaz): görünen tek yol QR — nesne cihazlar arası, telefondaki cüzdan tamamlar
+    const withDc = (
+      await app.inject({
+        method: "POST",
+        url: "/presentations",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        payload: { policy_id: "job-application-degree", dc_api_origin: "https://shop.example" },
+      })
+    ).json() as { presentation_id: string; qr_payload: string; dc_api_requests: Array<{ protocol: string }> };
+    expect(withDc.dc_api_requests.map((x) => x.protocol)).toEqual(["openid4vp-v1-signed"]);
+    const uri2 = parseVpUri(withDc.qr_payload);
+    const req2 = verifyRequestObject(await fetchRequestObject(uri2.requestUri, http), uri2.clientId);
+    expect(req2.responseUri).toBe(`${BASE}/vp/response`);
+    const m2 = matchDcql(req2.dcql, r.state.credentials).matches[0];
+    const out2 = await respond({
+      request: req2,
+      matches: [{ match: m2, keyRef: copy.keyRef, combined: copy.combined, disclose: m2.requested }],
+      keys,
+      http,
+      now,
+    });
+    expect(out2.status).toBe(200);
+    const res2 = (await app.inject({ method: "GET", url: `/presentations/${withDc.presentation_id}` })).json() as {
+      outcome: string;
+      failed_reason: string | null;
+    };
+    expect(res2.failed_reason).toBeNull();
+    expect(res2.outcome).toBe("ACCEPTED");
     // HTML ekranı
     const html = await app.inject({ method: "GET", url: `/p/${created.presentation_id}` });
     expect(html.body).toContain("ACCEPTED");
@@ -973,6 +1002,85 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(rd.failed_reason).toBeNull();
     expect(rd.outcome).toBe("ACCEPTED");
     expect(rd.disclosed_claims).toEqual(["age_over_18"]);
+
+    // 4b) DC API açıkken QR / "cüzdanda aç" yolu çalışır: request_uri'deki nesne cihazlar arası (direct_post.jwt + response_uri),
+    // DC API'nin nesnesi ayrı (dc_api.jwt + expected_origins); iki yolun anahtarı farklı, nonce/state ortak
+    const openBoth = async () => {
+      const c = (
+        await app3.inject({
+          method: "POST",
+          url: "/presentations",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          payload: { policy_id: "age-over-18-mdoc", dc_api_origin: SITE },
+        })
+      ).json() as {
+        presentation_id: string;
+        qr_payload: string;
+        dc_api_request: { protocol: string; data: { request: string } };
+      };
+      const uri = parseVpUri(c.qr_payload);
+      const qrJwt = await fetchRequestObject(uri.requestUri, http3);
+      expect(qrJwt).not.toBe(c.dc_api_request.data.request);
+      return {
+        id: c.presentation_id,
+        qr: verifyRequestObject(qrJwt, uri.clientId),
+        dc: parseDcApiRequest(c.dc_api_request, SITE),
+      };
+    };
+    const answer = (request: Parameters<typeof respond>[0]["request"], http: Http) =>
+      respond({
+        request,
+        matches: [{ match: dm, keyRef: "w.mdoc", combined: sd.combined, disclose: dm.requested }],
+        keys,
+        http,
+        now,
+      });
+    const postJwe = (jwe: string) =>
+      app3.inject({
+        method: "POST",
+        url: "/vp/response",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        payload: `response=${encodeURIComponent(jwe)}`,
+      });
+    const noPost: Http = async () => {
+      throw new Error("DC API response must not be POSTed by the wallet");
+    };
+    // yanıtı göndermeden yakalar (QR yolunun JWE'si test içinde başka anahtarla yeniden şifrelenecek)
+    const noPostCapture: Http = async () => ({ status: 200, text: async () => "{}" });
+    const b1 = await openBoth();
+    expect(b1.qr.responseUri).toBe(`${BASE}/vp/response`);
+    expect(b1.qr.origin).toBeUndefined();
+    expect(b1.dc.responseUri).toBe("");
+    expect(b1.qr.nonce).toBe(b1.dc.nonce);
+    expect(b1.qr.state).toBe(b1.dc.state);
+    expect(b1.qr.encJwk).not.toEqual(b1.dc.encJwk);
+    // DC yanıtı hazır ama gönderilmedi; telefon QR'dan tamamlar → ACCEPTED (cihazlar arası oturum özeti)
+    const b1Dc = await answer(b1.dc, noPost);
+    const b1Qr = await answer(b1.qr, http3);
+    expect(b1Qr.status).toBe(200);
+    const rb1 = await result(b1.id);
+    expect(rb1.failed_reason).toBeNull();
+    expect(rb1.outcome).toBe("ACCEPTED");
+    // öteki yolun yanıtı artık düşer (tek kullanım iki yol için bir)
+    const late = await postJwe(b1Dc.dcApiResponse!.response);
+    expect(late.statusCode).toBe(400);
+    expect(late.json().error_description).toMatch(/PV10/);
+    expect((await result(b1.id)).outcome).toBe("ACCEPTED");
+    // ters sıra: DC API tamamlar → QR yanıtı reddedilir
+    const b2 = await openBoth();
+    const b2Dc = await answer(b2.dc, noPost);
+    expect((await postJwe(b2Dc.dcApiResponse!.response)).statusCode).toBe(200);
+    expect((await result(b2.id)).outcome).toBe("ACCEPTED");
+    await expect(answer(b2.qr, http3)).rejects.toThrow(/verifier response 400/);
+    expect((await result(b2.id)).outcome).toBe("ACCEPTED");
+    // yol karıştırma: QR (OpenID4VPHandover) imzalı yanıt DC API anahtarıyla şifrelenirse DC kurallarıyla denetlenir → A6
+    const b3 = await openBoth();
+    const b3Qr = await answer(b3.qr, noPostCapture);
+    const mixed = encryptJwe(utf8(JSON.stringify({ vp_token: b3Qr.vpToken, state: b3.dc.state })), b3.dc.encJwk);
+    await postJwe(mixed);
+    const rb3 = await result(b3.id);
+    expect(rb3.outcome).toBe("REJECTED");
+    expect(rb3.failed_step).toBe("A6");
 
     // 5) DC API oturumuna QR akışının (OpenID4VPHandover) imzası → oturum özeti uyuşmaz → A6
     const d2 = await openDc();

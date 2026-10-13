@@ -80,8 +80,43 @@ export interface PresentationRequest {
   encJwkThumbprint: Uint8Array;
   expiresAt: number;
   dcql: DcqlQuery;
-  /** `dcApi` verildiyse: `navigator.credentials.get({ digital: { requests: [dcApiRequest] } })` girdisi. */
+  /**
+   * `dcApi` verildiyse: `navigator.credentials.get({ digital: { requests: [dcApiRequest] } })` girdisi. `requestJwt` (QR /
+   * "cüzdanda aç", `request_uri` ile alınan) HER ZAMAN cihazlar arası nesnedir (`direct_post.jwt` + `response_uri`); DC API'nin
+   * nesnesi ayrıdır (`dc_api.jwt` + `expected_origins`) ve kendi şifreleme anahtarını taşır (`dcApi`).
+   */
   dcApiRequest?: { protocol: "openid4vp-v1-signed"; data: { request: string } };
+  /**
+   * 0.6.0: aynı sunumun ikinci istek nesnesi (tarayıcı DC API yolu). Nonce ve state ortaktır (tek kullanım iki yol için
+   * birdir); şifreleme anahtarı ayrıdır — yanıtın hangi anahtarla açıldığı yolu belirler (`decryptPresentationResponse`).
+   */
+  dcApi?: {
+    requestJwt: string;
+    expectedOrigins: string[];
+    encPrivateKey: KeyLike;
+    encPublicJwk: JWK;
+    encJwkThumbprint: Uint8Array;
+  };
+}
+
+/** Yanıtın geldiği yol: cihazlar arası (QR / bağlantı, `direct_post.jwt`) ya da tarayıcı DC API'si (`dc_api.jwt`). */
+export type ResponsePath = "cross_device" | "dc_api";
+
+/** Şifreleme anahtarının `kid`'i: cihazlar arası `enc-<sunum>`, DC API `enc-dc-<sunum>` (sunum kimliği `prs_` ile başlar). */
+export const encKid = (presentationId: string, path: ResponsePath = "cross_device") =>
+  path === "dc_api" ? `enc-dc-${presentationId}` : `enc-${presentationId}`;
+
+/** JWE başlığındaki `kid`'den sunum kimliği ve yol (`kid` yoksa ya da biçim dışıysa `null`). */
+export function responseKidOf(jwe: string): { presentationId: string; path: ResponsePath } | null {
+  try {
+    const h = JSON.parse(Buffer.from(jwe.split(".")[0], "base64url").toString("utf8")) as { kid?: unknown };
+    const kid = typeof h.kid === "string" ? h.kid : "";
+    if (kid.startsWith("enc-dc-")) return { presentationId: kid.slice(7), path: "dc_api" };
+    if (kid.startsWith("enc-")) return { presentationId: kid.slice(4), path: "cross_device" };
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export async function createPresentationRequest(p: {
@@ -102,8 +137,9 @@ export async function createPresentationRequest(p: {
    */
   registrationCert?: string;
   /**
-   * Tarayıcı Digital Credentials API'si (OpenID4VP 1.0 Ek A): yanıt sayfaya döner (`dc_api.jwt`, response_uri yok);
-   * `expected_origins` imzalı istekte — başka bir sitenin isteği yeniden kullanmasını engeller (Ek A.2).
+   * Tarayıcı Digital Credentials API'si (OpenID4VP 1.0 Ek A): İKİNCİ bir istek nesnesi üretilir — yanıt sayfaya döner
+   * (`dc_api.jwt`, response_uri yok); `expected_origins` imzalı istekte, başka bir sitenin isteği yeniden kullanmasını engeller
+   * (Ek A.2). `requestJwt` (QR / bağlantı) cihazlar arası kalır: DC API açıkken de telefondaki cüzdan QR'dan tamamlayabilir.
    */
   dcApi?: { expectedOrigins: string[] };
   /**
@@ -116,49 +152,62 @@ export async function createPresentationRequest(p: {
   const presentationId = "prs_" + randomBytes(9).toString("base64url");
   const nonce = randomBytes(24).toString("base64url"); // ≥128 bit, tek kullanımlık (PV10)
   const state = randomBytes(12).toString("base64url");
-  const enc = await generateKeyPair("ECDH-ES", { crv: "P-256", extractable: true });
-  const encPublicJwk = {
-    ...(await exportJWK(enc.publicKey)),
-    use: "enc",
-    alg: "ECDH-ES",
-    kid: `enc-${presentationId}`,
-  } as JWK;
+  const newEncKey = async (path: ResponsePath) => {
+    const k = await generateKeyPair("ECDH-ES", { crv: "P-256", extractable: true });
+    const jwk = {
+      ...(await exportJWK(k.publicKey)),
+      use: "enc",
+      alg: "ECDH-ES",
+      kid: encKid(presentationId, path),
+    } as JWK;
+    const thumb = new Uint8Array(Buffer.from(await calculateJwkThumbprint(jwk, "sha256"), "base64url"));
+    return { privateKey: k.privateKey as KeyLike, jwk, thumb };
+  };
+  const enc = await newEncKey("cross_device");
+  const encPublicJwk = enc.jwk;
   const expiresAt = now + (p.ttlSec ?? 300);
-  const requestJwt = await new SignJWT({
-    client_id: p.signer.clientId,
-    response_type: "vp_token",
-    ...(p.dcApi
-      ? { response_mode: "dc_api.jwt", expected_origins: p.dcApi.expectedOrigins }
-      : { response_mode: "direct_post.jwt", response_uri: p.responseUri }),
-    nonce,
-    state,
-    dcql_query: p.dcql,
-    client_metadata: {
-      jwks: { keys: [encPublicJwk] },
-      encrypted_response_enc_values_supported: [...RESPONSE_ENC],
-      vp_formats_supported: {
-        "dc+sd-jwt": { "sd-jwt_alg_values": ["ES256"], "kb-jwt_alg_values": ["ES256"] },
-        mso_mdoc: { issuerauth_alg_values: [-7], deviceauth_alg_values: [-7] }, // COSE ES256
-        // ADR-0032: sıfır bilgi ispatlı mdoc (AB TS13); kabul edilen devreler DCQL `meta.zk_system_type`'ta
-        mso_mdoc_zk: { issuerauth_alg_values: [-7] },
+  // İki yol, iki nesne (0.6.0): QR / bağlantının nesnesi cihazlar arası (`direct_post.jwt` + response_uri) — telefondaki
+  // cüzdan yanıtı oraya gönderir; DC API'nin nesnesi tarayıcıya (`dc_api.jwt` + expected_origins, response_uri yok; Ek A)
+  const sign = (mode: Record<string, unknown>, jwk: JWK) =>
+    new SignJWT({
+      client_id: p.signer.clientId,
+      response_type: "vp_token",
+      ...mode,
+      nonce,
+      state,
+      dcql_query: p.dcql,
+      client_metadata: {
+        jwks: { keys: [jwk] },
+        encrypted_response_enc_values_supported: [...RESPONSE_ENC],
+        vp_formats_supported: {
+          "dc+sd-jwt": { "sd-jwt_alg_values": ["ES256"], "kb-jwt_alg_values": ["ES256"] },
+          mso_mdoc: { issuerauth_alg_values: [-7], deviceauth_alg_values: [-7] }, // COSE ES256
+          // ADR-0032: sıfır bilgi ispatlı mdoc (AB TS13); kabul edilen devreler DCQL `meta.zk_system_type`'ta
+          mso_mdoc_zk: { issuerauth_alg_values: [-7] },
+        },
       },
-    },
-    ...(p.purpose ? { purpose: p.purpose } : {}),
-    ...(p.registrationCert ? { verifier_info: [{ format: "registration_cert", data: p.registrationCert }] } : {}),
-    ...(p.onBehalfOf && p.onBehalfOf !== p.signer.clientId ? { tamga_on_behalf_of: p.onBehalfOf } : {}),
-    ...(p.passGrantOffered ? { pass_grant_offered: true } : {}),
-  })
-    // REDIRECTS_RO-02/03: x5c yaprak + ara sertifikalar (kök hariç); iat korumalı başlıkta da
-    .setProtectedHeader({
-      alg: "ES256",
-      typ: REQUEST_TYP,
-      x5c: [p.signer.leafDer, ...(p.signer.chainDer ?? [])].map(derToB64),
-      iat: now,
+      ...(p.purpose ? { purpose: p.purpose } : {}),
+      ...(p.registrationCert ? { verifier_info: [{ format: "registration_cert", data: p.registrationCert }] } : {}),
+      ...(p.onBehalfOf && p.onBehalfOf !== p.signer.clientId ? { tamga_on_behalf_of: p.onBehalfOf } : {}),
+      ...(p.passGrantOffered ? { pass_grant_offered: true } : {}),
     })
-    .setIssuedAt(now)
-    .setExpirationTime(expiresAt)
-    .setAudience("https://self-issued.me/v2")
-    .sign(p.signer.key);
+      // REDIRECTS_RO-02/03: x5c yaprak + ara sertifikalar (kök hariç); iat korumalı başlıkta da
+      .setProtectedHeader({
+        alg: "ES256",
+        typ: REQUEST_TYP,
+        x5c: [p.signer.leafDer, ...(p.signer.chainDer ?? [])].map(derToB64),
+        iat: now,
+      })
+      .setIssuedAt(now)
+      .setExpirationTime(expiresAt)
+      .setAudience("https://self-issued.me/v2")
+      .sign(p.signer.key);
+  const requestJwt = await sign({ response_mode: "direct_post.jwt", response_uri: p.responseUri }, encPublicJwk);
+  const dc = p.dcApi ? await newEncKey("dc_api") : undefined;
+  const dcRequestJwt =
+    p.dcApi && dc
+      ? await sign({ response_mode: "dc_api.jwt", expected_origins: p.dcApi.expectedOrigins }, dc.jwk)
+      : undefined;
   const requestUri = `${p.requestUriBase.replace(/\/$/, "")}/${presentationId}`;
   const qrPayload = `openid4vp://?client_id=${encodeURIComponent(p.signer.clientId)}&request_uri=${encodeURIComponent(requestUri)}`;
   return {
@@ -168,12 +217,23 @@ export async function createPresentationRequest(p: {
     requestJwt,
     requestUri,
     qrPayload,
-    encPrivateKey: enc.privateKey as KeyLike,
+    encPrivateKey: enc.privateKey,
     encPublicJwk,
-    encJwkThumbprint: new Uint8Array(Buffer.from(await calculateJwkThumbprint(encPublicJwk, "sha256"), "base64url")),
+    encJwkThumbprint: enc.thumb,
     expiresAt,
     dcql: p.dcql,
-    ...(p.dcApi ? { dcApiRequest: { protocol: "openid4vp-v1-signed" as const, data: { request: requestJwt } } } : {}),
+    ...(p.dcApi && dc && dcRequestJwt
+      ? {
+          dcApiRequest: { protocol: "openid4vp-v1-signed" as const, data: { request: dcRequestJwt } },
+          dcApi: {
+            requestJwt: dcRequestJwt,
+            expectedOrigins: [...p.dcApi.expectedOrigins],
+            encPrivateKey: dc.privateKey,
+            encPublicJwk: dc.jwk,
+            encJwkThumbprint: dc.thumb,
+          },
+        }
+      : {}),
   };
 }
 
@@ -206,4 +266,34 @@ export async function decryptResponse(jwe: string, encPrivateKey: KeyLike): Prom
   if (body.state !== undefined && typeof body.state !== "string") throw new Error("state must be a string");
   if (body.pass_key !== undefined && typeof body.pass_key !== "string") throw new Error("pass_key must be a string");
   return body;
+}
+
+/**
+ * 0.6.0: sunumun yanıtını YOLUNA göre açar. Yol `kid`'den seçilir ama belirleyen anahtardır: cihazlar arası yanıt yalnız
+ * cihazlar arası anahtarla, DC API yanıtı yalnız DC API anahtarıyla açılır — bir yolun anahtarıyla şifrelenmiş yanıt öteki
+ * yolun kurallarıyla (mdoc SessionTranscript: `responseUri` ya da `origin`) doğrulanamaz. Dönen `binding`, `verifyPresentation`'a
+ * olduğu gibi verilir (`responseUri` | `origin` + `encJwkThumbprint`).
+ */
+export async function decryptPresentationResponse(
+  jwe: string,
+  req: PresentationRequest,
+  responseUri: string,
+): Promise<{
+  response: DecryptedResponse;
+  path: ResponsePath;
+  binding: { responseUri: string; encJwkThumbprint: Uint8Array } | { origin: string; encJwkThumbprint: Uint8Array };
+}> {
+  const kid = responseKidOf(jwe);
+  if (kid && kid.presentationId !== req.presentationId) throw new Error("response is for another presentation");
+  if (kid?.path === "dc_api") {
+    if (!req.dcApi) throw new Error("this presentation has no Digital Credentials API request");
+    const response = await decryptResponse(jwe, req.dcApi.encPrivateKey);
+    return {
+      response,
+      path: "dc_api",
+      binding: { origin: req.dcApi.expectedOrigins[0], encJwkThumbprint: req.dcApi.encJwkThumbprint },
+    };
+  }
+  const response = await decryptResponse(jwe, req.encPrivateKey);
+  return { response, path: "cross_device", binding: { responseUri, encJwkThumbprint: req.encJwkThumbprint } };
 }

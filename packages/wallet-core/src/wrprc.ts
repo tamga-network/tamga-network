@@ -8,13 +8,16 @@
  * uyarı + varsayılan "Paylaşma" (`defaultChoice: "decline"`; kişi yine de paylaşabilir), `WRPRC_REQUIRED_FROM`'dan (2028-08-11,
  * Uygulama Tüzüğü (AB) 2026/1731) sonra ret (`valid: false`). Tarih kodda sabittir. Yakın alanda (ISO/IEC 18013-5) kayıt
  * sertifikası `requestInfo.euWrprc` ile CBOR biçiminde (`rc-wrp+cwt`) gelir; 1–4 aynı, 3'teki bağ okuyucunun kimlik doğrulama
- * sertifikasıyla (`readerAuth`) kurulur (`checkProximityRegistration`).
+ * sertifikasıyla (`readerAuth`) kurulur (`checkProximityRegistration`). 0.6.0 ön-yayın düzeltmesi: okuyucu sertifikası kendisi
+ * güvene bağlanmadan (imzalı listenin `root_cas`'ı ya da tarafın kaydındaki parmak izi) sonuç hiçbir zaman geçerli değildir —
+ * kayıt sertifikası herkese açıktır; kendinden imzalı, kurum kimliği kopyalanmış bir okuyucu sertifikası ona bağlanamaz.
  */
 import { parseWrprcCwt, verifyReaderAuth, type DecodedItemsRequest } from "@tamga-network/mdoc";
 import { b64Decode } from "./b64.js";
 import { decodeJwt, verifyJwt } from "./jws.js";
 import { certFingerprintHex, p256PointFromCertDer } from "./sdjwt.js";
 import { certOrganizationIdentifier } from "./asn1.js";
+import { chainAnchored, type TrustAnchor } from "./anchors.js";
 import { fetchTrustSource, type TrustPins } from "./trustlist.js";
 import type { Http } from "./http.js";
 import type { Match, VpRequest } from "./oid4vp.js";
@@ -282,6 +285,19 @@ export interface ProximityRegistrationCheck extends RegistrationCertCheck {
    */
   readerChainDer?: Uint8Array[];
   readerCertFingerprint?: string;
+  /** okuyucu sertifikası güvene bağlı mı (`ReaderTrust`); `readerAuth` yoksa alan yok */
+  readerTrusted?: boolean;
+}
+
+/**
+ * Okuyucu sertifikasının güven çapaları (ZORUNLU parametre). `trustAnchors`: imzalı listenin `root_cas` sertifikaları (kök x5c'de
+ * olmadığında son sertifikanın veren imzası çapa sertifikasıyla doğrulanır) ya da parmak izleri. `registeredFingerprints`: okuyucu
+ * tarafının imzalı listedeki kaydında sabitlenmiş yaprak sertifika parmak izleri (SHA-256 onaltılık; RP kaydının x509 parmak
+ * izleri). İkisi de boşsa kayıt sertifikalı istek `untrusted_reader_certificate` ile geçersizdir.
+ */
+export interface ReaderTrust {
+  trustAnchors: TrustAnchor[];
+  registeredFingerprints?: string[];
 }
 
 /**
@@ -290,18 +306,23 @@ export interface ProximityRegistrationCheck extends RegistrationCertCheck {
  * organizationIdentifier (okuyucu imzası bu oturumun dökümüyle doğrulanır; imzasız istekte bağ kurulamaz → geçersiz); (4) istenen
  * öğeler sertifikanın `credentials` listesinde (`allowedClaims`; fazlası onay ekranında uyarı). `euWrprc` yoksa
  * `missingRegistrationPolicy` (uyarı + "Paylaşma"; 2028-08-11'den sonra ret). `transcript` = oturumun SessionTranscript baytları.
+ * `readerTrust` (zorunlu): okuyucu sertifikası bunlardan birine bağlanmadan geçerli sonuç dönmez (`untrusted_reader_certificate`).
+ * Cüzdandan cüzdana (TS9) bu işlev çağrılmaz: karşı tarafın okuyucu sertifikası yoktur (STS9_30 bekliyor) — `presentProximity`
+ * `registrarKeys: false` ile denetimi atlar ("kayıt yok").
  */
 export function checkProximityRegistration(
   item: DecodedItemsRequest,
   transcript: Uint8Array,
   registrarKeys: string[],
+  readerTrust: ReaderTrust,
   now = Date.now(),
 ): ProximityRegistrationCheck {
   const reader = item.readerAuth
     ? verifyReaderAuth(item.readerAuth, transcript, item.itemsRequestBytes, p256PointFromCertDer)
     : null;
+  const readerTrusted = reader ? chainAnchored(reader.chainDer, readerTrust) : false;
   const readerInfo = reader
-    ? { readerChainDer: reader.chainDer, readerCertFingerprint: certFingerprintHex(reader.chainDer[0]) }
+    ? { readerChainDer: reader.chainDer, readerCertFingerprint: certFingerprintHex(reader.chainDer[0]), readerTrusted }
     : {};
   const cert = item.requestInfo?.euWrprc;
   if (cert === undefined) return { ...missingRegistrationPolicy(now), ...readerInfo };
@@ -318,6 +339,9 @@ export function checkProximityRegistration(
   const expectedSub = v.payload.intermediary?.sub ?? v.payload.sub;
   if (!orgId || !expectedSub || orgId !== expectedSub)
     return fail("registration certificate does not belong to the reader's certificate");
+  // okuyucu sertifikasının kendisi güvene bağlı olmalı: aksi hâlde kayıtlı bir kurumun kimliğini taşıyan kendinden imzalı sertifika
+  // + o kurumun herkese açık kayıt sertifikası "doğrulanmış ticari ad" gösterirdi
+  if (!readerTrusted) return fail("untrusted_reader_certificate");
   const allowed = new Set<string>();
   for (const c of v.payload.credentials ?? [])
     if (!c.meta?.vct_values && !(c as { meta?: { doctype_value?: string } }).meta?.doctype_value) {

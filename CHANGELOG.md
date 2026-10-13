@@ -12,6 +12,32 @@ v1.1, ISO/IEC 18013-7 Annex C). The nine packages move from `0.5.2` to `0.6.0` t
 values (listed below); there is no compatibility path (development phase, fixed in place). Identity credentials have to be
 issued again (new status lists, ADR-0029).
 
+### Security (pre-release review)
+
+- `@tamga-network/wallet-core` — `checkProximityRegistration` verified the reader signature with the certificate the reader
+  sent but never anchored that certificate: a self-signed reader certificate carrying a registered party's
+  `organizationIdentifier`, plus that party's public registration certificate, gave `valid: true` and a verified trade name.
+  The function now takes the reader's trust anchors as a required parameter (**breaking**, `readerTrust: { trustAnchors,
+  registeredFingerprints? }` before `now`): the reader chain must verify up to a `root_cas` certificate of the signed list, or
+  its leaf must be a fingerprint registered for that party. Otherwise `valid: false`, `reason: "untrusted_reader_certificate"`;
+  without anchors it is never valid. `ProximityRegistrationCheck.readerTrusted`; `presentProximity({ readerTrust })` (absent:
+  a request with a registration certificate is refused without asking). Wallet-to-wallet does not call it (no reader
+  certificate, `registrarKeys: false`). Shared helper `chainAnchored` (`anchors.ts`; `splitTrustAnchors` moved there).
+
+### Fixed (pre-release review)
+
+- `@tamga-network/verifier` / `apps/verify` — with the Digital Credentials API on (the widget default), the presentation had
+  only one request object, built for the browser (`dc_api.jwt`, no `response_uri`); the QR code and the "open in wallet" link
+  fetched that same object, so a phone wallet had nowhere to send its answer (and Safari with an SD-JWT-only policy showed
+  only that broken QR). `createPresentationRequest({ dcApi })` now builds two objects: the cross-device one at `request_uri`
+  (`direct_post.jwt` + `response_uri`) and the DC API one (`dc_api.jwt` + `expected_origins`, `PresentationRequest.dcApi`).
+  Each has its own encryption key (`kid` `enc-<id>` / `enc-dc-<id>`); `decryptPresentationResponse` opens a response with the
+  key of its path and returns the binding for that path (mdoc `SessionTranscript`: `response_uri` or origin), and
+  `responseKidOf` reads the presentation and path. Nonce, state and single use are shared: the first valid response on either
+  path (including Annex C) completes the presentation, the other path is refused (`nonce already used`).
+- `apps/verify` — the Annex C `readerAuth` x5chain carried only the leaf; it now carries the leaf and the intermediate
+  certificates, without the root (`annexCReaderAuth`).
+
 ### Added
 
 - `@tamga-network/sd-jwt` — status lists with 1 or 2 bits per entry: `StatusBitstring(capacity, bytes, bits)`, `STATUS_BITS`,

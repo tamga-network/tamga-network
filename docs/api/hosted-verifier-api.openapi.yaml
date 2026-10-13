@@ -103,10 +103,18 @@ paths:
                   format: uri
                   description: |
                     Optional. The page origin (`https://…`, no path) when the presentation is answered through the browser's
-                    Digital Credentials API. The request is then bound to this origin (`expected_origins`).
+                    Digital Credentials API. The DC API request is then bound to this origin (`expected_origins`). 0.6.0: the
+                    presentation gets two request objects — the DC API one (`dc_api.jwt`, in `dc_api_requests`) and the
+                    cross-device one behind `request_uri` / `qr_payload` (`direct_post.jwt` with `response_uri`), so the QR code and
+                    the "open in wallet" link keep working. They share one nonce, state and lifetime: the first valid response on
+                    either path completes the presentation, the other path is then refused (`nonce already used`).
                   x-tr: |
                     İsteğe bağlı. Sunum tarayıcının Digital Credentials API'siyle yanıtlanacaksa sayfanın kökeni (`https://…`,
-                    yol yok). İstek bu kökene bağlanır (`expected_origins`).
+                    yol yok). DC API isteği bu kökene bağlanır (`expected_origins`). 0.6.0: sunumun iki istek nesnesi olur — DC
+                    API'ninki (`dc_api.jwt`, `dc_api_requests` içinde) ve `request_uri` / `qr_payload` arkasındaki cihazlar arası
+                    nesne (`direct_post.jwt` + `response_uri`); QR ve "cüzdanda aç" bağlantısı çalışmaya devam eder. Nonce, state
+                    ve süre ortaktır: iki yoldan ilk geçerli yanıt sunumu tamamlar, öteki yol sonra reddedilir
+                    (`nonce already used`).
             example: { policy_id: site-signup }
       responses:
         "200":

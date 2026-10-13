@@ -10,7 +10,8 @@ import QRCode from "qrcode";
 import {
   createMdocDcApiRequest,
   createPresentationRequest,
-  decryptResponse,
+  decryptPresentationResponse,
+  responseKidOf,
   openMdocDcApiResponse,
   dcqlFromPolicy,
   policyScopeViolations,
@@ -129,7 +130,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
   app.post("/vp/response", { preHandler: rateLimitHook(ctx.limits.vpResponse) }, async (req, reply) => {
     const jwe = (req.body as { response?: string }).response;
     if (!jwe) return reply.code(400).send({ error: "invalid_request" });
-    const pid = presentationIdOf(jwe);
+    const pid = responseKidOf(jwe)?.presentationId ?? "";
     const p = presentations.get(pid);
     if (!p) return reply.code(400).send({ error: "invalid_request", error_description: "bilinmeyen sunum" });
     if (p.used)
@@ -138,19 +139,22 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
     // Çözülemeyen (bozuk/yabancı) yanıt sunumu TÜKETMEZ: sunum kimliği QR'da açık olduğundan, aksi hâlde yakındaki biri
     // anlamsız bir gövdeyle gerçek kullanıcının sunumunu "reddedildi"ye düşürebilirdi.
-    let dec: Awaited<ReturnType<typeof decryptResponse>>;
+    // 0.6.0: iki yol, iki anahtar — QR / bağlantının yanıtı cihazlar arası (response_uri), sayfanın ilettiği yanıt DC API
+    // (köken) kurallarıyla doğrulanır; hangisi önce gelirse sunumu tamamlar, öteki tek kullanım kuralıyla düşer (PV10)
+    let opened: Awaited<ReturnType<typeof decryptPresentationResponse>>;
     try {
-      dec = await decryptResponse(jwe, p.req.encPrivateKey);
+      opened = await decryptPresentationResponse(jwe, p.req, `${cfg.publicBase}/vp/response`);
     } catch {
       return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" });
     }
     if (p.used)
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
-    p.used = true; // çözümden sonra ve await olmadan: eşzamanlı iki yanıttan yalnızca biri işlenir
+    p.used = true; // çözümden sonra ve await olmadan: eşzamanlı iki yanıttan yalnızca biri işlenir (iki yol dahil)
+    const dec = opened.response;
     try {
       p.trace.push({
         t: Date.now(),
-        step: `Response decrypted (JWE ECDH-ES/${jweEnc(jwe)}${p.dcApiOrigin ? ", via browser Digital Credentials API" : ""})`,
+        step: `Response decrypted (JWE ECDH-ES/${jweEnc(jwe)}${opened.path === "dc_api" ? ", via browser Digital Credentials API" : ", cross-device"})`,
         detail: `state ${dec.state === p.req.state ? "matched" : "MISMATCH"}`,
       });
       if (dec.state !== p.req.state) throw new Error("state mismatch");
@@ -164,10 +168,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
             presentation: pres!,
             aud: cfg.clientId,
             nonce: p.req.nonce,
-            // D-CRED-5: format politikadan; mdoc SessionTranscript'i için bu isteğin response_uri'si
+            // D-CRED-5: format politikadan; mdoc SessionTranscript'i yanıtın geldiği yola göre (response_uri ya da köken)
             format: pc.format,
-            ...(p.dcApiOrigin ? { origin: p.dcApiOrigin } : { responseUri: `${cfg.publicBase}/vp/response` }),
-            encJwkThumbprint: p.req.encJwkThumbprint,
+            ...opened.binding,
             policy: p.policy,
             policyCredentialId: pc.id,
             trust: ctx.trust(),
@@ -469,16 +472,6 @@ function sameSecret(a: string, b: string) {
   const x = Buffer.from(a);
   const y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
-}
-
-/** JWE başlığındaki kid = enc-<presentationId>. */
-function presentationIdOf(jwe: string): string {
-  try {
-    const h = JSON.parse(Buffer.from(jwe.split(".")[0], "base64url").toString("utf8")) as { kid?: string };
-    return (h.kid ?? "").replace(/^enc-/, "");
-  } catch {
-    return "";
-  }
 }
 
 /** ADR-0031: belgesiz (yalnız takma adlı) sunumun sonuç iskeleti — takma ad denetimi P1 ile tamamlar; değer yok (AP3). */

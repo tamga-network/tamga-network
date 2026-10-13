@@ -7,7 +7,16 @@ import { join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import type { Policy, PresentationRequest } from "@tamga-network/verifier";
-import { buildVerifyApp } from "../src/app.js";
+import { webcrypto } from "node:crypto";
+import {
+  X509CertificateGenerator,
+  cryptoProvider,
+  BasicConstraintsExtension,
+  KeyUsagesExtension,
+  KeyUsageFlags,
+} from "@peculiar/x509";
+import { pemRpSigner } from "@tamga-network/verifier";
+import { annexCReaderAuth, buildVerifyApp } from "../src/app.js";
 import { TokenBucketLimiter } from "../src/rate-limit.js";
 import { PresentationStore } from "../src/state.js";
 import type { VerifyConfig } from "../src/config.js";
@@ -96,5 +105,63 @@ describe.skipIf(!ready)("apps/verify uç sertleştirmesi", () => {
       if (prev === undefined) delete process.env.TAMGA_VERIFY_SERVE_TRUST;
       else process.env.TAMGA_VERIFY_SERVE_TRUST = prev;
     }
+  });
+});
+
+describe("Ek C okuyucu imzası x5chain (0.6.0)", () => {
+  it("yaprak + ara sertifika, kök hariç — cüzdan zinciri çapaya bağlayabilir", async () => {
+    cryptoProvider.set(webcrypto as unknown as Crypto);
+    const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
+    const gen = async () => (await webcrypto.subtle.generateKey(ALG, true, ["sign", "verify"])) as CryptoKeyPair;
+    const [rk, ck, lk] = [await gen(), await gen(), await gen()];
+    const notBefore = new Date(Date.now() - 86400_000);
+    const notAfter = new Date(Date.now() + 86400_000);
+    const root = await X509CertificateGenerator.createSelfSigned({
+      serialNumber: "01",
+      name: "CN=Root (test), C=TR",
+      notBefore,
+      notAfter,
+      signingAlgorithm: ALG,
+      keys: rk,
+      extensions: [
+        new BasicConstraintsExtension(true, 1, true),
+        new KeyUsagesExtension(KeyUsageFlags.keyCertSign, true),
+      ],
+    });
+    const ca = await X509CertificateGenerator.create({
+      serialNumber: "02",
+      subject: "CN=Access CA (test), C=TR",
+      issuer: root.subject,
+      notBefore,
+      notAfter,
+      signingAlgorithm: ALG,
+      publicKey: ck.publicKey,
+      signingKey: rk.privateKey,
+      extensions: [
+        new BasicConstraintsExtension(true, 0, true),
+        new KeyUsagesExtension(KeyUsageFlags.keyCertSign, true),
+      ],
+    });
+    const leaf = await X509CertificateGenerator.create({
+      serialNumber: "03",
+      subject: "CN=Verifier (test), C=TR",
+      issuer: ca.subject,
+      notBefore,
+      notAfter,
+      signingAlgorithm: ALG,
+      publicKey: lk.publicKey,
+      signingKey: ck.privateKey,
+      extensions: [new KeyUsagesExtension(KeyUsageFlags.digitalSignature, true)],
+    });
+    const keyB64 = Buffer.from(await webcrypto.subtle.exportKey("pkcs8", lk.privateKey)).toString("base64");
+    const keyPem = `-----BEGIN PRIVATE KEY-----\n${keyB64.match(/.{1,64}/g)!.join("\n")}\n-----END PRIVATE KEY-----\n`;
+    const signer = await pemRpSigner(keyPem, [leaf, ca, root].map((c) => c.toString("pem")).join("\n"));
+    const ra = annexCReaderAuth(signer, keyPem)!;
+    const der = (c: { rawData: ArrayBuffer }) => Buffer.from(c.rawData).toString("hex");
+    expect(ra.x5chain.map((d) => Buffer.from(d).toString("hex"))).toEqual([der(leaf), der(ca)]);
+    expect(ra.sk).toHaveLength(32);
+    // ara sertifikasız (yaprak doğrudan kökten) imzacıda yalnız yaprak
+    const only = annexCReaderAuth({ leafDer: signer.leafDer }, keyPem)!;
+    expect(only.x5chain).toHaveLength(1);
   });
 });

@@ -80,6 +80,20 @@ export interface VerifyContext {
   readerAuth?: { sk: Uint8Array; x5chain: Uint8Array[] };
 }
 
+/**
+ * ISO/IEC 18013-7 Ek C okuyucu imzası (`readerAuth`): erişim sertifikasının anahtarı ve x5chain = yaprak + ara sertifikalar (kök
+ * HARİÇ; `pemRpSigner` kendinden imzalı kökü zaten ayıklar — istek nesnesinin x5c'siyle aynı kural, REDIRECTS_RO-02). Cüzdan
+ * okuyucu zincirini imzalı listedeki çapaya bu ara sertifikalar üzerinden bağlar.
+ */
+export function annexCReaderAuth(
+  signer: Pick<RpSigner, "leafDer" | "chainDer">,
+  privateKeyPem: string,
+): VerifyContext["readerAuth"] {
+  const d = (createPrivateKey(privateKeyPem).export({ format: "jwk" }) as { d?: string }).d;
+  if (!d) return undefined;
+  return { sk: new Uint8Array(Buffer.from(d, "base64url")), x5chain: [signer.leafDer, ...(signer.chainDer ?? [])] };
+}
+
 export interface VerifyApp extends FastifyInstance {
   reloadTrust: () => Promise<void>;
   prefetchStatus: () => Promise<{ ok: number; failed: string[] }>;
@@ -126,15 +140,9 @@ export async function buildVerifyApp(
       readFileSync(resolve(cfg.pkiDir, "rp-verify.cert.pem"), "utf8"),
     ));
   // Ek C okuyucu imzası aynı erişim sertifikasıyla (ham anahtar yalnız bu süreçte; dışarı verilmez)
-  let readerAuth: VerifyContext["readerAuth"];
-  if (!opts.signer) {
-    const d = (
-      createPrivateKey(readFileSync(resolve(cfg.pkiDir, "rp-verify.pkcs8.pem"), "utf8")).export({ format: "jwk" }) as {
-        d?: string;
-      }
-    ).d;
-    if (d) readerAuth = { sk: new Uint8Array(Buffer.from(d, "base64url")), x5chain: [signer.leafDer] };
-  }
+  const readerAuth = opts.signer
+    ? undefined
+    : annexCReaderAuth(signer, readFileSync(resolve(cfg.pkiDir, "rp-verify.pkcs8.pem"), "utf8"));
   cfg.clientId = signer.clientId; // ADR-0034: x509_hash, sertifikadan
   const audit: Record<string, unknown>[] = [];
   const rpJti = makeJtiCache();

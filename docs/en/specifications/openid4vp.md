@@ -449,7 +449,7 @@ they are different problems.
 | Flow | Status (2026-10) |
 |---|---|
 | `direct_post.jwt` (QR / deep link) | **In force** |
-| `dc_api.jwt` (browser, OpenID4VP 1.0 Annex A) | **Implemented** — verifier request object and page kit (`@tamga-network/verifier/web`), wallet side (`@tamga-network/wallet-core`); depends on browser and operating system support |
+| `dc_api.jwt` (browser, OpenID4VP 1.0 Annex A) | **Implemented** — verifier request object and page kit (`@tamga-network/verifier/web`), wallet side (`@tamga-network/wallet-core`); depends on browser and operating system support. Two request objects per presentation (0.6.0): the DC API one (`dc_api.jwt` + `expected_origins`) and the cross-device one at `request_uri` (`direct_post.jwt` + `response_uri`) for the QR code / link. Each has its own encryption key (`kid` `enc-dc-<id>` / `enc-<id>`); the key that decrypts the response decides the path, and the mdoc `SessionTranscript` is checked with that path's handover (origin or `response_uri`). Nonce, state and single use are shared: the first valid response completes the presentation and the other path is refused (PV10). A browser with no usable DC API request (e.g. Safari with an SD-JWT-only policy) shows only the working QR / link |
 | ISO 18013-5 proximity (Bluetooth), mdoc | **Code ready** (`@tamga-network/mdoc`, `@tamga-network/wallet-core`); interoperability trials with real devices are under way. No NFC at this stage |
 | ISO/IEC 18013-7 Annex C (`org-iso-mdoc`, browser), mdoc | **Implemented in the verifier** (0.6.0; §7.4) — the only way to get an mdoc in Safari / iOS 26. The wallet side (operating system registration module) comes with the next device round |
 
@@ -486,7 +486,12 @@ gives a second DC API request for the same presentation (when the policy asks fo
   ItemsRequest's `requestInfo.euWrprc` (ISO/IEC 18013-5-REQ-04…07) and signs the request with its reader certificate
   (`readerAuth`). The wallet applies steps 1–4 of the remote flow; the binding in step 3 is made with the `organizationIdentifier`
   in the `readerAuth` certificate (`checkProximityRegistration`). An invalid certificate is refused without asking the person; a
-  request without one gets the same warning and the 2028-08-11 rule. The list publisher also produces the CBOR form of every
+  request without one gets the same warning and the 2028-08-11 rule. Because registration certificates are public, the reader
+  certificate itself must be anchored: its chain verifies up to a `root_cas` certificate of the signed list, or its leaf is the
+  fingerprint in that party's record (`readerTrust`, required). A reader that is not anchored (e.g. a self-signed certificate
+  copying an organisation identifier) is invalid with `untrusted_reader_certificate`. Wallet-to-wallet has no reader
+  certificate; the check does not apply ("no registration"). The verifier's Annex C reader signature carries the leaf and the
+  intermediate certificates in x5chain (not the root). The list publisher also produces the CBOR form of every
   registration certificate (`wrprc/…/*.cwt`, `cwt_path` in the index).
 
 ---

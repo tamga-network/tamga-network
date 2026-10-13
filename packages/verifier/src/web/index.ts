@@ -16,7 +16,9 @@
  * ISO/IEC 18013-7 Ek C (`org-iso-mdoc`; politika tek mdoc belgesi istiyorsa). Kit tarayıcıya göre seçer (`chooseDcApiRequests`:
  * Apple WebKit — iPhone, iPad, Mac Safari — yalnız `org-iso-mdoc`; ötekiler ikisi, OpenID4VP önce) ve yanıtı yanıtın protokolüne
  * göre doğru uca iletir. Masaüstünde DC API varsa varsayılan yol odur, QR yedek olarak yanında kalır (ETSI TS 119 472-2
- * SUPPORT-03); telefonda düğmenin yanında "cüzdanda aç" bağlantısı kalır.
+ * SUPPORT-03); telefonda düğmenin yanında "cüzdanda aç" bağlantısı kalır. QR / bağlantının istek nesnesi her zaman cihazlar
+ * arasıdır (`direct_post.jwt` + `response_uri`; DC API'nin nesnesi ayrı), bu yüzden yedek yol DC API açıkken de çalışır;
+ * tarayıcıya uyan DC API isteği yoksa (ör. Safari + yalnız SD-JWT politikası) düğme çıkmaz, yalnız QR / bağlantı görünür.
  */
 
 export interface MountOptions {

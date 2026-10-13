@@ -13,7 +13,8 @@ import {
   type X509Certificate,
 } from "@peculiar/x509";
 import { x509HashClientId } from "@tamga-network/core";
-import { createPresentationRequest, pemRpSigner } from "./request.js";
+import { CompactEncrypt, importJWK } from "jose";
+import { createPresentationRequest, decryptPresentationResponse, pemRpSigner, responseKidOf } from "./request.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
@@ -110,5 +111,69 @@ describe("istek nesnesi x5c ve başlık iat (REDIRECTS_RO-02/03)", () => {
       requestUriBase: "https://rp.example.test/vp/req",
     });
     expect(headerOf(pr.requestJwt).x5c).toEqual([leafDerB64, caDerB64]);
+  });
+});
+
+describe("DC API açıkken iki istek nesnesi (0.6.0)", () => {
+  const seal = async (body: unknown, jwk: Record<string, unknown>) =>
+    new CompactEncrypt(new TextEncoder().encode(JSON.stringify(body)))
+      .setProtectedHeader({ alg: "ECDH-ES", enc: "A128GCM", kid: String(jwk.kid) })
+      .encrypt(await importJWK(jwk as never, "ECDH-ES"));
+
+  it("QR nesnesi direct_post.jwt + response_uri; DC nesnesi dc_api.jwt + expected_origins; anahtar ayrı, nonce/state ortak", async () => {
+    const signer = await pemRpSigner(leafKeyPem, leafPem);
+    const pr = await createPresentationRequest({
+      signer,
+      dcql,
+      responseUri: "https://rp.example.test/vp/response",
+      requestUriBase: "https://rp.example.test/vp/req",
+      dcApi: { expectedOrigins: ["https://shop.example"] },
+    });
+    const qr = payloadOf(pr.requestJwt);
+    expect(qr.response_mode).toBe("direct_post.jwt");
+    expect(qr.response_uri).toBe("https://rp.example.test/vp/response");
+    expect(qr.expected_origins).toBeUndefined();
+    const dc = payloadOf(pr.dcApiRequest!.data.request);
+    expect(pr.dcApi!.requestJwt).toBe(pr.dcApiRequest!.data.request);
+    expect(dc.response_mode).toBe("dc_api.jwt");
+    expect(dc.expected_origins).toEqual(["https://shop.example"]);
+    expect(dc.response_uri).toBeUndefined();
+    expect([dc.nonce, dc.state]).toEqual([qr.nonce, qr.state]);
+    expect(qr.client_metadata.jwks.keys[0].kid).toBe(`enc-${pr.presentationId}`);
+    expect(dc.client_metadata.jwks.keys[0].kid).toBe(`enc-dc-${pr.presentationId}`);
+    expect(dc.client_metadata.jwks.keys[0].x).not.toBe(qr.client_metadata.jwks.keys[0].x);
+
+    const body = { vp_token: { q: ["x"] }, state: pr.state };
+    const viaQr = await decryptPresentationResponse(
+      await seal(body, pr.encPublicJwk),
+      pr,
+      "https://rp.example.test/vp/response",
+    );
+    expect(viaQr.path).toBe("cross_device");
+    expect(viaQr.binding).toEqual({
+      responseUri: "https://rp.example.test/vp/response",
+      encJwkThumbprint: pr.encJwkThumbprint,
+    });
+    const viaDc = await decryptPresentationResponse(await seal(body, pr.dcApi!.encPublicJwk), pr, "unused");
+    expect(viaDc.path).toBe("dc_api");
+    expect(viaDc.binding).toEqual({ origin: "https://shop.example", encJwkThumbprint: pr.dcApi!.encJwkThumbprint });
+    // yolun kid'i öteki yolun anahtarıyla şifrelenmiş yanıtı açmaz
+    const forged = await seal(body, { ...pr.encPublicJwk, kid: `enc-dc-${pr.presentationId}` });
+    expect(responseKidOf(forged)).toEqual({ presentationId: pr.presentationId, path: "dc_api" });
+    await expect(decryptPresentationResponse(forged, pr, "x")).rejects.toThrow();
+  });
+
+  it("DC API olmadan tek nesne; DC kid'li yanıt reddedilir", async () => {
+    const signer = await pemRpSigner(leafKeyPem, leafPem);
+    const pr = await createPresentationRequest({
+      signer,
+      dcql,
+      responseUri: "https://rp.example.test/vp/response",
+      requestUriBase: "https://rp.example.test/vp/req",
+    });
+    expect(pr.dcApi).toBeUndefined();
+    expect(pr.dcApiRequest).toBeUndefined();
+    const forged = await seal({ vp_token: { q: ["x"] } }, { ...pr.encPublicJwk, kid: `enc-dc-${pr.presentationId}` });
+    await expect(decryptPresentationResponse(forged, pr, "x")).rejects.toThrow(/no Digital Credentials API/);
   });
 });

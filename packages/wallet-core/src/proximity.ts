@@ -25,7 +25,7 @@ import { b64uDecode } from "./b64.js";
 import type { KeyProvider } from "./keys.js";
 import { markCopyUsed, selectCopy, type StoredCredential, type WalletState } from "./store.js";
 import { offlineDisclosurePolicy, type DisclosurePolicyResult } from "./disclosure-policy.js";
-import { checkProximityRegistration, type ProximityRegistrationCheck } from "./wrprc.js";
+import { checkProximityRegistration, type ProximityRegistrationCheck, type ReaderTrust } from "./wrprc.js";
 
 export interface ProximityTransport {
   start(serviceUuid: string): Promise<void>;
@@ -85,6 +85,12 @@ export async function presentProximity(p: {
    * cüzdana: karşı taraf bir kişi). Verilmezse boş liste: sertifikasız istek uyarıyla, sertifikalı istek doğrulanamaz → ret.
    */
   registrarKeys?: string[] | false;
+  /**
+   * 0.6.0: okuyucu sertifikasının güven çapaları (`checkProximityRegistration`'ın `ReaderTrust`'ı): imzalı listenin `root_cas`
+   * sertifikaları ve/veya okuyucu tarafının kaydındaki yaprak parmak izleri. Verilmezse kayıt sertifikalı istek
+   * `untrusted_reader_certificate` ile kişiye sorulmadan reddedilir (güvenli varsayılan). `registrarKeys: false` iken kullanılmaz.
+   */
+  readerTrust?: ReaderTrust;
   /** 0.6.0 (TS9): DeviceEngagement'a eklenecek ek alanlar (cüzdandan cüzdana teklif); `createEngagement` seçeneği */
   engagementOffer?: import("@tamga-network/mdoc").PresentationOffer;
   /**
@@ -185,7 +191,13 @@ export async function presentProximity(p: {
     const registration =
       p.registrarKeys === false
         ? undefined
-        : checkProximityRegistration(item, hs.transcript, p.registrarKeys ?? [], p.now ?? Date.now());
+        : checkProximityRegistration(
+            item,
+            hs.transcript,
+            p.registrarKeys ?? [],
+            p.readerTrust ?? { trustAnchors: [] },
+            p.now ?? Date.now(),
+          );
     const view: ProximityRequestView = {
       docType: item.docType,
       namespace,
