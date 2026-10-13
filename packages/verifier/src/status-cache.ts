@@ -24,6 +24,7 @@ import { lookup } from "node:dns/promises";
 import { isIP, type LookupFunction } from "node:net";
 import http from "node:http";
 import https from "node:https";
+import { isPublicSuffix } from "./public-suffix.js";
 
 export interface CachedToken {
   token: string;
@@ -52,6 +53,11 @@ export interface StatusListScope {
    * hizmeti adresi bildirmediğinde belge imzacısı sertifikasının SAN alan adlarından (`externalStatusScope`).
    */
   domains?: string[];
+  /**
+   * Joker SAN tabanları (`*.<taban>`, 0.5.2): yalnız tabanın tam bir etiket altındaki adlar (`x.<taban>`); tabanın kendisi ve daha
+   * derin adlar değil. Yalnız dış kurumda (`externalStatusScope`).
+   */
+  wildcards?: string[];
   /** yalnız yerel geliştirme: `http` ve yerel / özel ağ adresleri kabul edilir */
   allowLocal?: boolean;
 }
@@ -182,10 +188,19 @@ export interface PrefetchStatusCacheOptions {
 /** Bir liste çekiminde izlenen en çok yönlendirme sayısı (her adımda adres yeniden denetlenir). */
 export const MAX_STATUS_REDIRECTS = 3;
 
-/** Adresin alan adı kapsamda mı: `hosts` birebir; `domains` (en az iki etiketli) kendisi ya da alt alan adı. */
+/**
+ * Adresin alan adı kapsamda mı: `hosts` birebir; `domains` (en az iki etiketli, kamu soneki değil) kendisi ya da alt alan adı;
+ * `wildcards` (kamu soneki değil) tabanın tam bir etiket altı.
+ */
 const hostInScope = (host: string, scope: StatusListScope) =>
   scope.hosts.map(bareHost).includes(host) ||
-  (scope.domains ?? []).map(bareHost).some((d) => d.includes(".") && (host === d || host.endsWith(`.${d}`)));
+  (scope.domains ?? [])
+    .map(bareHost)
+    .some((d) => d.includes(".") && !isPublicSuffix(d) && (host === d || host.endsWith(`.${d}`))) ||
+  (scope.wildcards ?? []).map(bareHost).some((w) => {
+    if (!w.includes(".") || isPublicSuffix(w) || !host.endsWith(`.${w}`)) return false;
+    return /^[a-z0-9-]+$/.test(host.slice(0, -(w.length + 1)));
+  });
 
 export class PrefetchStatusCache extends MemoryStatusCache {
   private learned = new Map<string, { kind: StatusListKind; scope: StatusListScope }>();
@@ -213,7 +228,7 @@ export class PrefetchStatusCache extends MemoryStatusCache {
   }
   /** Adres bu kurumdan öğrenilebilir mi: biçim, şema, kurumun bildirdiği sunucu, IP yazılmış yerel adres. Ağ isteği yok. */
   static acceptableUri(uri: string, scope: StatusListScope | undefined): boolean {
-    if (!scope || (!scope.hosts.length && !scope.domains?.length)) return false;
+    if (!scope || (!scope.hosts.length && !scope.domains?.length && !scope.wildcards?.length)) return false;
     let u: URL;
     try {
       u = new URL(uri);

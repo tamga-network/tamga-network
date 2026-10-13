@@ -193,6 +193,33 @@ describe("imza zinciri (ADR-0046 K3 güven kökü)", () => {
     expect(certMatchesRootOfTrust(fakeRoot, ROT)).toBe(true); // ad karşılaştırması tek başına yetmez
   });
 
+  it("anchoredChainCerts: kök x5c'de yok — son sertifikayı listedeki kök sertifikası imzalamışsa çapalanır", async () => {
+    const rk = await keys("ES256");
+    const ik = await keys("ES256");
+    const lk = await keys("ES256");
+    const root = await selfSigned(ROOT, "5a", rk);
+    const inter = await issued("CN=Inter CA, C=TR", "6b", ik.publicKey, ROOT, rk.privateKey);
+    const leaf = await issued("CN=svc", "10", lk.publicKey, "CN=Inter CA, C=TR", ik.privateKey);
+    // [yaprak, ara] — kök yok; çapa kök sertifikası: zincir + çapa
+    const out = anchoredChainCerts([leaf, inter], { anchorCertificates: [root] });
+    expect(out).toHaveLength(3);
+    expect(out[2]).toBe(root);
+    // yalnız parmak izi verilirse kökü x5c'de olmayan zincir bağlanamaz (anahtar yok)
+    expect(anchoredChainCerts([leaf, inter], { anchorFingerprints: [fp(root)] })).toHaveLength(0);
+    // doğrudan kökten verilmiş yaprak, x5c yalnız yaprak
+    const direct = await issued("CN=svc", "11", lk.publicKey, ROOT, rk.privateKey);
+    expect(anchoredChainCerts([direct], { anchorCertificates: [root] })).toHaveLength(2);
+    // listede olmayan kök (aynı ad, başka anahtar) çapalamaz
+    const ok = await keys("ES256");
+    const otherRoot = await selfSigned(ROOT, "5a", ok);
+    expect(anchoredChainCerts([leaf, inter], { anchorCertificates: [otherRoot] })).toHaveLength(0);
+    // listede olmayan kökün imzaladığı zincir, listedeki kökle bağlanamaz
+    const otherInter = await issued("CN=Inter CA, C=TR", "6c", ik.publicKey, ROOT, ok.privateKey);
+    expect(anchoredChainCerts([leaf, otherInter], { anchorCertificates: [root] })).toHaveLength(0);
+    // çapa sertifikası x5c'de de varsa parmak iziyle eşleşir
+    expect(anchoredChainCerts([leaf, inter, root], { anchorCertificates: [root] })).toHaveLength(3);
+  });
+
   it("güven kökü öğesi yalnız VEREN adı + seri numarasıyla eşleşir (konu adı yedeği yok)", async () => {
     const rk = await keys("ES256");
     const lk = await keys("ES256");

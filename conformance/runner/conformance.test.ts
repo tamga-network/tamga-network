@@ -56,6 +56,7 @@ describe.skipIf(!existsSync(sdPath))("conformance: sd-jwt/diploma-basic", () => 
       stateCode: vec.state_code,
       now: now(),
       rootCertsDer: [pemToDer(vec.root_cert_pem)],
+      acceptLegacyVcSdJwtTyp: false, // Tamga türü: yalnız dc+sd-jwt (C13)
     });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
@@ -73,6 +74,7 @@ describe.skipIf(!existsSync(sdPath))("conformance: sd-jwt/diploma-basic", () => 
         stateCode: vec.state_code,
         now: now() + (n.now_offset_sec ?? 0),
         rootCertsDer: [pemToDer(vec.root_cert_pem)],
+        acceptLegacyVcSdJwtTyp: false, // Tamga türü: yalnız dc+sd-jwt (C13)
       });
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.failedStep).toBe(n.expect_failed_step);
@@ -89,6 +91,7 @@ describe.skipIf(!existsSync(idPath))("conformance: sd-jwt/identity-pid-names (AD
       stateCode: vec.state_code,
       now: Math.floor(new Date(vec.now).getTime() / 1000),
       rootCertsDer: [pemToDer(vec.root_cert_pem)],
+      acceptLegacyVcSdJwtTyp: false, // Tamga türü: yalnız dc+sd-jwt (C13)
     });
     expect(r.ok).toBe(true);
     if (!r.ok) return;

@@ -18,6 +18,7 @@ import { verifyIdentifierListToken } from "@tamga-network/mdoc";
 import { b64uToBytes, certFingerprintSha256Hex } from "@tamga-network/core";
 import { verifyMdocZkFormat } from "./mdoc-zk-format.js";
 import { isNonPublicAddress, statusHostsOf, type StatusListScope } from "./status-cache.js";
+import { isPublicSuffix, registrableDomain } from "./public-suffix.js";
 import type { IndeterminateReason, Step, VerificationResult, VerifyInput } from "./verify.js";
 
 type ValidateFn = ((data: unknown) => boolean) & { errors?: Array<{ instancePath: string; message?: string }> | null };
@@ -391,30 +392,47 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
  *  1. Dış liste bu kurumun iptal ya da belge verme hizmeti için `https` erişim noktası (ServiceSupplyPoints) bildiriyorsa
  *     yalnız o alan adları (birebir) — imzalı listenin beyanı.
  *  2. Bildirmiyorsa belge imzacısı sertifikasının (mdoc x5chain yaprağı; zinciri dış listedeki çapaya doğrulanmış) SAN alan
- *     adları ve onların alt alan adları. Joker (`*.`) öneki atılır; IP, tek etiketli ad ve yerel ad alınmaz.
+ *     adları, kamu soneki denetimiyle (`public-suffix.ts`):
+ *     - joker `*.<taban>`: tabanın tam BİR etiket altı (joker anlamı) — tabanın kendisi ve daha derin alt adlar değil; taban bir
+ *       kamu sonekiyse (`*.com.tr`, `*.gov.tr`) alınmaz;
+ *     - joker olmayan ad: kamu sonekiyse (`gov.tr`) alınmaz; kayıt edilebilir alan adının en az bir etiket üstündeyse
+ *       (`pid.example.com.tr`) kendisi ve alt adları; kayıt edilebilir alan adının kendisiyse (`example.com.tr`) yalnız birebir.
+ *     IP, tek etiketli ad ve yerel ad alınmaz.
  * Her iki durumda önbellek ayrıca `https`, genel IP (bağlantı sabitlenir) ve kurum başına üst sınır uygular (status-cache.ts).
  */
 export function externalStatusScope(
   ext: Pick<ExternalIssuerAnswer, "status_hosts">,
   leafDnsNames: string[] | undefined,
-): Pick<StatusListScope, "hosts" | "domains"> {
+): Pick<StatusListScope, "hosts" | "domains" | "wildcards"> {
   const hosts = (ext.status_hosts ?? []).map((h) => h.toLowerCase());
   if (hosts.length) return { hosts };
-  const domains = [
-    ...new Set(
-      (leafDnsNames ?? [])
-        .map((d) => d.toLowerCase().replace(/^\*\./, "").replace(/\.$/, ""))
-        .filter(
-          (d) =>
-            /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d) &&
-            !/^[0-9.]+$/.test(d) &&
-            !isNonPublicAddress(d) &&
-            !d.endsWith(".local") &&
-            !d.endsWith(".localhost"),
-        ),
-    ),
-  ];
-  return { hosts: [], domains };
+  const exact = new Set<string>();
+  const domains = new Set<string>();
+  const wildcards = new Set<string>();
+  for (const raw of leafDnsNames ?? []) {
+    const lower = raw.toLowerCase().replace(/\.$/, "");
+    const wild = lower.startsWith("*.");
+    const d = wild ? lower.slice(2) : lower;
+    if (
+      !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d) ||
+      /^[0-9.]+$/.test(d) ||
+      isNonPublicAddress(d) ||
+      d.endsWith(".local") ||
+      d.endsWith(".localhost") ||
+      isPublicSuffix(d)
+    )
+      continue;
+    const reg = registrableDomain(d);
+    if (!reg) continue;
+    if (wild) wildcards.add(d);
+    else if (d.split(".").length > reg.split(".").length) domains.add(d);
+    else exact.add(d);
+  }
+  return {
+    hosts: [...exact],
+    domains: [...domains],
+    ...(wildcards.size ? { wildcards: [...wildcards] } : {}),
+  };
 }
 
 /**

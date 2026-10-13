@@ -22,6 +22,14 @@ values (listed below; callers that switch over them should handle the new values
   `not_evaluable` with the new reason `untrusted_access_certificate` — a self-signed certificate that copies a real
   verifier's organisation identifier is never "authorized". `checkDisclosurePolicy` and `disclosurePolicyContext` take a new
   optional last argument `registeredFingerprints`; new helper `accessCertAnchored`.
+- `@tamga-network/wallet-core`, `@tamga-network/trust` — trust anchors for the access certificate chain: an x5c never carries
+  the root (TS 119 472-2 RO-02), so a chain issued by a listed root CA never reached a listed fingerprint. An anchor may now be
+  a certificate (`TrustAnchor` = SHA-256 fingerprint, PEM, base64 DER or DER bytes; from the signed list's
+  `root_cas[].cert_pem`): the chain is anchored when its last verified certificate is signed by the anchor's key (issuer name
+  equals the anchor's subject and the signature verifies). A fingerprint alone still anchors only a chain that contains the
+  anchor. `trustAnchors` in `DisclosurePolicyContext`, `disclosurePolicyContext` and `checkDisclosurePolicy` accept
+  `TrustAnchor[]`; new helper `splitTrustAnchors`; `anchoredChainCerts` gets the option `anchorCertificates` (the anchor is
+  returned as the last trusted certificate, so a `roots_of_trust` entry naming the root CA matches).
 - `@tamga-network/verifier` — identifier list addresses come from the credential: `PrefetchStatusCache.want` now learns an
   address only over `https`, only on a host the issuer declares in the signed list (`statusHostsOf`: the `status_list_base`
   and `issuer_url` hosts) and never on a private, loopback or link-local address (IP literals are refused, host names are
@@ -42,9 +50,15 @@ values (listed below; callers that switch over them should handle the new values
   learned and every external mdoc stayed `INDETERMINATE`. The allowed hosts now come, in order, from the external list's
   service supply points (`ServiceSupplyPoints` of the entity's issuance and revocation services, `https` only; TS 119 602
   JSON and TS 119 612 XML), or, when the list declares none, from the DNS names in the SAN of the document signer certificate
-  (the mdoc x5chain leaf, whose chain was verified to the external anchor) and their subdomains (no IPs, no single-label or
-  local names). `https`, the public IP check, pinning and the per-issuer cap apply as for Tamga issuers. New:
-  `ExternalIssuerAnswer.status_hosts`, `LoteService.supplyPoints`, `StatusListScope.domains`, `externalStatusScope`.
+  (the mdoc x5chain leaf, whose chain was verified to the external anchor), with a public suffix check: a wildcard name
+  `*.<base>` allows exactly one label below the base (not the base itself, not deeper names); any other name allows itself and
+  its subdomains only when it is at least one label above the registrable domain (`pid.example.com.tr`), the registrable
+  domain itself only exactly (`example.com.tr`); a public suffix (`com.tr`, `gov.tr`, `*.edu.tr`, `co.uk`, a bare ccTLD) is
+  never taken. The check is a small embedded list (TR second-level domains of nic.tr and common second-level labels under any
+  two-letter ccTLD), not the `psl` package: the packages avoid dependencies, and a conservative list only narrows the scope.
+  No IPs, no single-label or local names. `https`, the public IP check, pinning and the per-issuer cap apply as for Tamga
+  issuers. New: `ExternalIssuerAnswer.status_hosts`, `LoteService.supplyPoints`, `StatusListScope.domains`,
+  `StatusListScope.wildcards`, `externalStatusScope`.
 
 ### EU format alignment
 
@@ -71,7 +85,8 @@ values (listed below; callers that switch over them should handle the new values
 - `@tamga-network/sd-jwt` — verification accepts the legacy `typ` `vc+sd-jwt` by default (allowed by SD-JWT VC -13;
   `acceptLegacyVcSdJwtTyp: false` turns it off); the result carries `typ`. Issuance stays `dc+sd-jwt`. The network verifier
   (`@tamga-network/verifier`) still rejects `vc+sd-jwt` for Tamga credential types (rule C13, step A2) and accepts it for
-  external types.
+  external types. Callers that call `verifySdJwtVc` directly for Tamga types only should pass
+  `acceptLegacyVcSdJwtTyp: false` (the conformance runner and the identity service do).
 - `@tamga-network/wallet-core` — DCQL `trusted_authorities` (OpenID4VP §6.1.1): `aki` is evaluated as before; `etsi_tl`
   is evaluated against the trusted lists the wallet has loaded (new `matchDcql` option `trustedLists`, type
   `LoadedTrustedList`; the issuer's CA must be in a loaded TL / LoTE whose address equals the value); `openid_federation`,
@@ -79,8 +94,10 @@ values (listed below; callers that switch over them should handle the new values
   filter the credential out — it is still offered and the verifier does its own trust check — but it is never a positive trust
   signal: the new `Match.trustedAuthority` is `"matched"` or `"not_evaluable"`, and only `"matched"` means the wallet
   checked it. A credential is left out only when every entry was evaluated and none matched. New export
-  `evaluateTrustedAuthorities`. `@tamga-network/trust`: `ListTrustSource.externalTrustedLists()` gives the loaded external
-  lists in that shape.
+  `evaluateTrustedAuthorities` (optional fourth argument: the query format). The issuer chain is read from the copy in the
+  query's format — for `mso_mdoc` the IssuerAuth `x5chain` (COSE header 33; for `mso_mdoc_zk` the ZK copy's), for `dc+sd-jwt`
+  the x5c, falling back to the other representation — so a credential with only an mdoc copy can match `aki` and `etsi_tl`.
+  `@tamga-network/trust`: `ListTrustSource.externalTrustedLists()` gives the loaded external lists in that shape.
 
 ### Hardening
 

@@ -172,6 +172,7 @@ async function sdJwtVectors() {
     stateCode: "TR",
     now: SD_NOW,
     rootCertsDer: [pemToDer(rootPem)],
+    acceptLegacyVcSdJwtTyp: false, // Tamga türü: yalnız dc+sd-jwt (C13)
   });
   if (!verify.ok) throw new Error("üretilen vektör doğrulanamadı: " + verify.reason);
   // Olumsuz A7: süresi geçmiş belge (exp < now); KB-JWT taze, yalnız süre başarısız olur
@@ -302,6 +303,7 @@ async function identityVectors() {
     stateCode: "TR",
     now: SD_NOW,
     rootCertsDer: [pemToDer(rootPem)],
+    acceptLegacyVcSdJwtTyp: false, // Tamga türü: yalnız dc+sd-jwt (C13)
   });
   if (!verify.ok) throw new Error("üretilen kimlik vektörü doğrulanamadı: " + verify.reason);
   const vec = {

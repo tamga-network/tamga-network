@@ -311,8 +311,8 @@ entry with one of three outcomes (packages 0.5.2):
 
 | Type | What the wallet does |
 |---|---|
-| `aki` | Is the AKI (base64url) of a certificate in the credential's x5c chain one of the values — **evaluated** |
-| `etsi_tl` | If the value is the address of a trusted list the wallet has loaded and whose signature it verified (ETSI TS 119 612 TL or TS 119 602 LoTE): does the credential's chain lead to an issuance service certificate in that list — **evaluated**. If the list in the value is not loaded in the wallet: **not evaluable** |
+| `aki` | Is the AKI (base64url) of a certificate in the credential's issuer chain one of the values — **evaluated** |
+| `etsi_tl` | If the value is the address of a trusted list the wallet has loaded and whose signature it verified (ETSI TS 119 612 TL or TS 119 602 LoTE): does the credential's chain lead to an issuance service certificate in that list (the certificate itself is in the chain, or an AKI in the chain equals that certificate's SKI) — **evaluated**. If the list in the value is not loaded in the wallet: **not evaluable** |
 | `openid_federation` and unknown types | **not evaluable** |
 
 - If an entry matches, the credential is **offered** (`matched`).
@@ -321,6 +321,15 @@ entry with one of three outcomes (packages 0.5.2):
   `etsi_tl`). **`not_evaluable` is never a positive trust signal:** the consent screen does not show it as "verified" or
   "trusted", and it is not recorded as "passed".
 - If every entry was evaluated and none matches, the credential is **not offered**.
+
+**The credential's chain** is read from the copy in the query's format: for `mso_mdoc` (and `mso_mdoc_zk`) the IssuerAuth
+`x5chain` (COSE header 33; for ZK, the ZK copy's), for `dc+sd-jwt` the x5c. If there is no copy in that format the other
+representation is used (same issuer key; D-CRED-5). A credential that has only an mdoc copy can therefore match `aki` / `etsi_tl`.
+
+**Loaded lists:** the wallet reads the external lists it verified with the signer pinned in the signed LOTL ([[ADR-0036]]) only
+when the query contains `etsi_tl`, and passes them to matching (`matchDcql(..., { trustedLists })`; source
+`TrustSource.externalTrustedLists()` — the list's original publication address and its PID / EAA provider certificates, fresh
+lists only). If the lists cannot be read (offline, no list), the `etsi_tl` entry is not evaluable. Tamga Wallet implements this.
 
 Note: the first draft of 0.5.2 treated a type the wallet cannot evaluate as "no match"; that meant no credential ever reached an
 EU verifier that asks only for `etsi_tl`. The corrected rule is above (no false positive, no false exclusion).

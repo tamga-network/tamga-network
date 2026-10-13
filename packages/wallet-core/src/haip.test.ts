@@ -24,6 +24,8 @@ import {
 import { akiTrustedAuthority, dcqlFromPolicy } from "@tamga-network/verifier";
 import { certAuthorityKeyId } from "./asn1.js";
 import { matchDcql, evaluateTrustedAuthorities } from "./oid4vp.js";
+import { issueMdoc, p256 } from "@tamga-network/mdoc";
+import { randomBytes } from "node:crypto";
 
 const now = 1_800_000_000;
 const URL_TOKEN = "https://id.tamga.network/token";
@@ -274,6 +276,63 @@ describe("HAIP-1 (e) DCQL trusted_authorities (aki)", () => {
     expect(nl.matches[0]?.trustedAuthority).toBe("not_evaluable");
     expect(evaluateTrustedAuthorities(et, c)).toBe("not_evaluable");
     expect(evaluateTrustedAuthorities(undefined, c)).toBe("none");
+  });
+
+  it("0.5.2 mdoc: yalnız mdoc kopyalı belgenin zinciri IssuerAuth x5chain'den (COSE 33) okunur — aki eşleşirse önerilir, eşleşmezse önerilmez", async () => {
+    const good = await ca("Good Root");
+    const other = await ca("Other Root");
+    const l = await leaf(good, true);
+    const DT = "urn:tamga:edu:Diploma:1";
+    const NS = "urn:tamga:edu:Diploma:1";
+    const t = 1_800_000_000;
+    const mdoc = b64u(
+      issueMdoc({
+        docType: DT,
+        namespaces: { [NS]: { degree: "BSc" } },
+        deviceKeyRaw: p256.getPublicKey(p256.utils.randomSecretKey(), false),
+        issuerSk: p256.utils.randomSecretKey(),
+        x5chain: [new Uint8Array(l.rawData)],
+        signed: t,
+        validFrom: t,
+        validUntil: t + 3600,
+        randomBytes: (n) => new Uint8Array(randomBytes(n)),
+      }).issuerSigned,
+    );
+    // SD-JWT kopyası yok (combined boş): eski davranışta zincir boştu, aki hiçbir zaman eşleşmezdi
+    const c = {
+      id: "m1",
+      vct: DT,
+      claims: { degree: "BSc" },
+      copies: [{ combined: "", keyRef: "k", usedBy: [], mdoc }],
+    } as never;
+    const mq = (ta: Array<{ type: string; values: string[] }>) => ({
+      credentials: [
+        {
+          id: "q",
+          format: "mso_mdoc",
+          meta: { doctype_value: DT },
+          claims: [{ path: [NS, "degree"] }],
+          trusted_authorities: ta,
+        },
+      ],
+    });
+    const ta = akiTrustedAuthority([new Uint8Array(good.cert.rawData)])!;
+    const r = matchDcql(mq([ta]) as never, [c]);
+    expect(r.matches).toHaveLength(1);
+    expect(r.matches[0].trustedAuthority).toBe("matched");
+    const bad = akiTrustedAuthority([new Uint8Array(other.cert.rawData)])!;
+    expect(matchDcql(mq([bad]) as never, [c]).unmatched).toEqual(["q"]);
+    // etsi_tl de mdoc zinciriyle değerlendirilir
+    const TL = "https://tl.example.eu/tl.xml";
+    const et = [{ type: "etsi_tl", values: [TL] }];
+    expect(
+      matchDcql(mq(et) as never, [c], { trustedLists: [{ uri: TL, certsDer: [new Uint8Array(good.cert.rawData)] }] })
+        .matches[0]?.trustedAuthority,
+    ).toBe("matched");
+    expect(
+      matchDcql(mq(et) as never, [c], { trustedLists: [{ uri: TL, certsDer: [new Uint8Array(other.cert.rawData)] }] })
+        .unmatched,
+    ).toEqual(["q"]);
   });
 
   it("AKI'siz sertifikalı belge aki sorgusuna uymaz (OpenID4VP §6.1.1.1)", async () => {

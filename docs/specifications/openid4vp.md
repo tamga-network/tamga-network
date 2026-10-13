@@ -324,8 +324,8 @@ biriyle değerlendirir (paketler 0.5.2):
 
 | Tür | Cüzdan ne yapar |
 |---|---|
-| `aki` | Belgenin x5c zincirindeki bir sertifikanın AKI'si (base64url) değerlerden biri mi — **değerlendirilir** |
-| `etsi_tl` | Değer, cüzdanın yüklediği ve imzasını doğruladığı bir güven listesinin (ETSI TS 119 612 TL ya da TS 119 602 LoTE) adresiyse: belgenin zinciri o listedeki bir belge verme hizmeti sertifikasına çıkıyor mu — **değerlendirilir**. Değerdeki liste cüzdanda yüklü değilse **değerlendirilemez** |
+| `aki` | Belgenin veren zincirindeki bir sertifikanın AKI'si (base64url) değerlerden biri mi — **değerlendirilir** |
+| `etsi_tl` | Değer, cüzdanın yüklediği ve imzasını doğruladığı bir güven listesinin (ETSI TS 119 612 TL ya da TS 119 602 LoTE) adresiyse: belgenin zinciri o listedeki bir belge verme hizmeti sertifikasına çıkıyor mu (sertifikanın kendisi zincirde ya da zincirdeki bir AKI = listedeki sertifikanın SKI'si) — **değerlendirilir**. Değerdeki liste cüzdanda yüklü değilse **değerlendirilemez** |
 | `openid_federation` ve bilinmeyen türler | **değerlendirilemez** |
 
 - Bir koşul eşleşirse belge **önerilir** (`matched`).
@@ -334,6 +334,15 @@ biriyle değerlendirir (paketler 0.5.2):
   **`not_evaluable` olumlu güven işareti değildir:** onay ekranı bunu "doğrulandı" ya da "güvenilir" diye göstermez, kayıtta
   "geçti" sayılmaz.
 - Bütün koşullar değerlendirilip hiçbiri eşleşmezse belge **önerilmez**.
+
+**Belgenin zinciri** sorgunun biçimindeki kopyadan okunur: `mso_mdoc` (ve `mso_mdoc_zk`) için IssuerAuth'un `x5chain`'i (COSE
+başlığı 33; ZK'da ZK kopyasınınki), `dc+sd-jwt` için x5c. O biçimde kopya yoksa öbür temsil kullanılır (aynı belge veren anahtarı;
+D-CRED-5). Yalnız mdoc kopyası olan belge de böylece `aki` / `etsi_tl` ile eşleşebilir.
+
+**Yüklü listeler:** cüzdan, imzalı LOTL'da sabitlenmiş imzacıyla doğruladığı dış listeleri ([[ADR-0036]]) yalnız sorguda `etsi_tl`
+varsa okur ve eşleştirmeye verir (`matchDcql(..., { trustedLists })`; kaynak `TrustSource.externalTrustedLists()` — listenin özgün
+yayın adresi ve PID / EAA sağlayıcı sertifikaları, yalnız taze listeler). Listeler okunamazsa (çevrimdışı, liste yok) `etsi_tl`
+koşulu değerlendirilemez. Tamga Wallet bu davranışı uygular.
 
 Not: 0.5.2'nin ilk taslağı değerlendirilemeyen türü "eşleşmez" sayıyordu; bu, yalnız `etsi_tl` isteyen AB doğrulayıcılarına hiçbir
 belgenin gitmemesi demekti. Düzeltilmiş kural yukarıdadır (yanlış olumlu yok, yanlış eleme de yok).

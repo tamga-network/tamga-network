@@ -7,6 +7,7 @@ import { createHash, webcrypto } from "node:crypto";
 import { X509CertificateGenerator, cryptoProvider } from "@peculiar/x509";
 import { signIdentifierListToken } from "@tamga-network/mdoc";
 import { externalStatusScope, stepD, type VerifyCtx } from "./steps.js";
+import { isPublicSuffix, registrableDomain } from "./public-suffix.js";
 import {
   MemoryStatusCache,
   PrefetchStatusCache,
@@ -357,14 +358,18 @@ describe("tanımlayıcı listesi öğrenme sınırları (0.5.2: SSRF, kurumun ip
     await stepD(ext(["status.pid.example.eu"]) as unknown as VerifyCtx);
     expect(wanted.pop()).toEqual([URI, "identifier_list", { issuer: "0xext", hosts: ["status.pid.example.eu"] }]);
     await stepD(ext([]) as unknown as VerifyCtx);
-    expect(wanted.pop()).toEqual([URI, "identifier_list", { issuer: "0xext", hosts: [], domains: ["pid.example.eu"] }]);
+    expect(wanted.pop()).toEqual([
+      URI,
+      "identifier_list",
+      { issuer: "0xext", hosts: [], domains: ["pid.example.eu"], wildcards: ["pid.example.eu"] },
+    ]);
   });
 
   it("externalStatusScope + acceptableUri: SAN alan adı ve alt alan adları; kardeş, sonek taklidi, tek etiket ve IP yok", () => {
     expect(externalStatusScope({ status_hosts: ["A.example"] }, ["pid.example"])).toEqual({ hosts: ["a.example"] });
     const s = {
       issuer: "0xext",
-      ...externalStatusScope({ status_hosts: [] }, ["*.Pid.Example.eu", "eu", "1.2.3.4", "x.local"]),
+      ...externalStatusScope({ status_hosts: [] }, ["Pid.Example.eu", "eu", "1.2.3.4", "x.local"]),
     };
     expect(s.domains).toEqual(["pid.example.eu"]);
     const ok = (u: string) => PrefetchStatusCache.acceptableUri(u, s);
@@ -378,5 +383,87 @@ describe("tanımlayıcı listesi öğrenme sınırları (0.5.2: SSRF, kurumun ip
     expect(
       PrefetchStatusCache.acceptableUri(URI, { issuer: "0xext", ...externalStatusScope({ status_hosts: [] }, []) }),
     ).toBe(false);
+  });
+
+  it("0.5.2 joker SAN: tabanın tam bir etiket altı — tabanın kendisi ve daha derin adlar değil", () => {
+    const s = { issuer: "0xext", ...externalStatusScope({ status_hosts: [] }, ["*.Pid.Example.eu"]) };
+    expect(s).toMatchObject({ hosts: [], domains: [], wildcards: ["pid.example.eu"] });
+    const ok = (u: string) => PrefetchStatusCache.acceptableUri(u, s);
+    expect(ok("https://status.pid.example.eu/il/1")).toBe(true);
+    expect(ok("https://pid.example.eu/il/1")).toBe(false); // joker tabanın kendisini kapsamaz
+    expect(ok("https://a.status.pid.example.eu/il/1")).toBe(false); // tek etiket
+    expect(ok("https://evilpid.example.eu/il/1")).toBe(false);
+  });
+
+  it("0.5.2 kamu soneki: *.com.tr, gov.tr, com.tr, *.gov.tr ve ccTLD tek başına kapsam açmaz; kayıt edilebilir ad yalnız birebir", () => {
+    for (const san of [
+      "*.com.tr",
+      "gov.tr",
+      "com.tr",
+      "*.gov.tr",
+      "*.edu.tr",
+      "k12.tr",
+      "*.bel.tr",
+      "gen.tr",
+      "av.tr",
+      "*.tr",
+      "*.co.uk",
+      "gov.az",
+      "*.gv.at",
+      "gov.nc.tr",
+    ]) {
+      const s = { issuer: "0xext", ...externalStatusScope({ status_hosts: [] }, [san]) };
+      expect(s, san).toMatchObject({ hosts: [], domains: [] });
+      expect((s as { wildcards?: string[] }).wildcards, san).toBeUndefined();
+      expect(PrefetchStatusCache.acceptableUri("https://anyone.com.tr/il/1", s), san).toBe(false);
+      expect(PrefetchStatusCache.acceptableUri("https://x.gov.tr/il/1", s), san).toBe(false);
+    }
+    // kayıt edilebilir alan adının kendisi: yalnız birebir (alt adlar değil)
+    const reg = { issuer: "0xext", ...externalStatusScope({ status_hosts: [] }, ["example.com.tr", "nvi.gov.tr"]) };
+    expect(reg).toMatchObject({ hosts: ["example.com.tr", "nvi.gov.tr"], domains: [] });
+    expect(PrefetchStatusCache.acceptableUri("https://example.com.tr/il/1", reg)).toBe(true);
+    expect(PrefetchStatusCache.acceptableUri("https://status.example.com.tr/il/1", reg)).toBe(false);
+    expect(PrefetchStatusCache.acceptableUri("https://other.com.tr/il/1", reg)).toBe(false);
+    // kayıt edilebilir adın en az bir etiket üstü: kendisi ve alt adları
+    const sub = {
+      issuer: "0xext",
+      ...externalStatusScope({ status_hosts: [] }, ["pid.nvi.gov.tr", "*.ebys.example.com.tr"]),
+    };
+    expect(sub).toMatchObject({ hosts: [], domains: ["pid.nvi.gov.tr"], wildcards: ["ebys.example.com.tr"] });
+    expect(PrefetchStatusCache.acceptableUri("https://status.pid.nvi.gov.tr/il/1", sub)).toBe(true);
+    expect(PrefetchStatusCache.acceptableUri("https://nvi.gov.tr/il/1", sub)).toBe(false);
+    expect(PrefetchStatusCache.acceptableUri("https://il.ebys.example.com.tr/x", sub)).toBe(true);
+    // elle verilmiş kapsamda da kamu soneki kabul edilmez (savunma)
+    expect(
+      PrefetchStatusCache.acceptableUri("https://x.com.tr/il", { issuer: "i", hosts: [], domains: ["com.tr"] }),
+    ).toBe(false);
+    expect(
+      PrefetchStatusCache.acceptableUri("https://x.com.tr/il", { issuer: "i", hosts: [], wildcards: ["com.tr"] }),
+    ).toBe(false);
+  });
+
+  it("isPublicSuffix / registrableDomain", () => {
+    for (const s of [
+      "tr",
+      "eu",
+      "com.tr",
+      "gov.tr",
+      "edu.tr",
+      "org.tr",
+      "k12.tr",
+      "bel.tr",
+      "gen.tr",
+      "av.tr",
+      "co.uk",
+      "gv.at",
+      "gov.nc.tr",
+    ])
+      expect(isPublicSuffix(s), s).toBe(true);
+    for (const s of ["example.eu", "example.com.tr", "nvi.gov.tr", "tamga.network", "example.de"])
+      expect(isPublicSuffix(s), s).toBe(false);
+    expect(registrableDomain("a.b.example.com.tr")).toBe("example.com.tr");
+    expect(registrableDomain("pid.example.eu")).toBe("example.eu");
+    expect(registrableDomain("x.gov.nc.tr")).toBe("x.gov.nc.tr");
+    expect(registrableDomain("com.tr")).toBeNull();
   });
 });

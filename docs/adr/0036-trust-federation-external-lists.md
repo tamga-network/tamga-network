@@ -166,4 +166,7 @@ eklenir.
 > **Not (2026-10-13, mühendislik düzeltmesi, paketler 0.5.2):** yukarıdaki "eşleşmez" kuralı daraltıldı — cüzdan
 > değerlendiremediği `trusted_authorities` koşulu yüzünden belgeyi elemez ("değerlendirilemedi"; belge önerilir, olumlu güven
 > işareti sayılmaz), `etsi_tl`'yi yüklü listelere karşı değerlendirir; ayrıntı [[SPEC-PROTO-0002]] §4.6. "Geçti" sayma yasağı
-> değişmedi.
+> değişmedi. Cüzdan, sorguda `etsi_tl` varsa LOTL'daki imzası doğrulanmış dış listeleri eşleştirmeye verir
+> (`TrustSource.externalTrustedLists()`); yalnız mdoc kopyalı belgenin zinciri mdoc IssuerAuth `x5chain`'inden okunur. Bu, Tamga
+> Network'ün 119 612 XML yayınını (yukarıda ertelendi) gerektirmez: değerlendirilen, AB'nin ve başka devletlerin yayımladığı
+> listelerdir.

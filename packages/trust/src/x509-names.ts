@@ -340,12 +340,20 @@ export interface AnchoredChainOptions {
   leafTrusted?: boolean;
   /** İmzalı bir listeden gelen güvenilir CA sertifikalarının SHA-256 parmak izleri (onaltılık). */
   anchorFingerprints?: Iterable<string>;
+  /**
+   * İmzalı bir listeden gelen güvenilir CA sertifikaları (DER; ör. ulusal listenin `root_cas[].cert_pem`'i). x5c kökü taşımaz
+   * (RFC 9126/HAIP, ARF RO-02): zincirin son sertifikasını imzalayan çapa bu sertifikalardan biridir. Parmak izleri de çapa sayılır.
+   */
+  anchorCertificates?: Iterable<Uint8Array>;
 }
 
 /**
  * Güvene bağlanmış zincir sertifikaları (ADR-0046 K3 `specific_roots_of_trust`): yalnız bunlar güven kökü öğesiyle karşılaştırılır.
  * İmza zinciri yapraktan başlayarak doğrulanır (`verifiedChainPrefix`); sonra:
- *  - doğrulanmış önekte bir sertifikanın parmak izi `anchorFingerprints` içindeyse, yapraktan o sertifikaya kadar hepsi;
+ *  - doğrulanmış önekte bir sertifikanın parmak izi `anchorFingerprints` (ya da `anchorCertificates`) içindeyse, yapraktan o
+ *    sertifikaya kadar hepsi;
+ *  - yoksa önekteki bir sertifikayı bir `anchorCertificates` sertifikası imzalamışsa (kök x5c'de taşınmaz), yapraktan o
+ *    sertifikaya kadar hepsi ve çapanın kendisi;
  *  - yoksa `leafTrusted` ise yaprak ve — yaprağı doğrudan imzalayan sertifika kendinden imzalıysa (o anahtarın sahibinden başkası
  *    üretemez) — o sertifika;
  *  - hiçbiri değilse boş: zincir isteği gönderen tarafından kurulabilir (ad ve seri numarası kopyalanabilir, araya kendi anahtarıyla
@@ -354,11 +362,28 @@ export interface AnchoredChainOptions {
 export function anchoredChainCerts(chain: Uint8Array[], opts: AnchoredChainOptions = {}): Uint8Array[] {
   const v = verifiedChainPrefix(chain);
   if (!v.length) return [];
-  const anchors = new Set([...(opts.anchorFingerprints ?? [])].map((f) => f.toLowerCase()));
+  const anchorCerts = [...(opts.anchorCertificates ?? [])];
+  const anchors = new Set([
+    ...[...(opts.anchorFingerprints ?? [])].map((f) => f.toLowerCase()),
+    ...anchorCerts.map((c) => sha256HexPortable(c)),
+  ]);
   if (anchors.size)
     for (let i = v.length - 1; i >= 0; i--) if (anchors.has(sha256HexPortable(v[i]))) return v.slice(0, i + 1);
+  // kök x5c'de yok: doğrulanmış önekteki bir sertifikayı (en uzak olandan başlayarak) bir çapa sertifikası imzalamış mı
+  for (let i = v.length - 1; i >= 0; i--)
+    for (const a of anchorCerts) if (issuedBy(v[i], a)) return [...v.slice(0, i + 1), a];
   if (!opts.leafTrusted) return [];
   return v.length >= 2 && isSelfSigned(v[1]) ? v.slice(0, 2) : v.slice(0, 1);
+}
+
+/** `child`'in veren adı `issuer`'ın konu adına eşit ve imzası `issuer`'ın anahtarıyla doğrulanıyor mu. */
+function issuedBy(child: Uint8Array, issuer: Uint8Array): boolean {
+  try {
+    if (!dnEquals(certNames(child).issuer, certNames(issuer).subject)) return false;
+  } catch {
+    return false;
+  }
+  return verifyCertSignature(child, issuer);
 }
 
 /** Sertifikanın konu adı verilen RFC 4514 dizesine eşit mi (ETSI -07a). */

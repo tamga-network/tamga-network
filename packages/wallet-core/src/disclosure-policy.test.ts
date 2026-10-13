@@ -270,7 +270,7 @@ describe("güven kökü: imza zinciri doğrulanmış olmalı (EDP_03 atlatma gir
     );
   const fp = (der: Uint8Array) => createHash("sha256").update(der).digest("hex");
   // erişim yaprağı kayıtlı parmak iziyle eşleşir (isteğin kayıt sertifikasına bağı kurulu); güven kökü kararı ayrıca sınanır
-  const ctx = (wrprcChain: Uint8Array[], accessChain: Uint8Array[], trustAnchors?: string[]) => ({
+  const ctx = (wrprcChain: Uint8Array[], accessChain: Uint8Array[], trustAnchors?: Array<string | Uint8Array>) => ({
     registrationCerts: [{ payload: { sub: "VATTR-1234567890" }, chainDer: wrprcChain }],
     accessCertChain: accessChain,
     registeredFingerprints: [fp(accessChain[0])],
@@ -314,6 +314,25 @@ describe("güven kökü: imza zinciri doğrulanmış olmalı (EDP_03 atlatma gir
       outcome: "passed",
       matchedBy: "root_of_trust",
     });
+  });
+
+  it("kök x5c'de yok (ARF RO-02): çapa kök sertifikasıysa erişim zinciri bağlanır; parmak izi tek başına yetmez", async () => {
+    expect(evaluateDisclosurePolicy(policy, ctx([registrar.der], [accessLeaf], [root]))).toMatchObject({
+      outcome: "passed",
+      matchedBy: "root_of_trust",
+    });
+    const pem = `-----BEGIN CERTIFICATE-----\n${Buffer.from(root).toString("base64")}\n-----END CERTIFICATE-----`;
+    expect(evaluateDisclosurePolicy(policy, ctx([registrar.der], [accessLeaf], [pem])).outcome).toBe("passed");
+    expect(evaluateDisclosurePolicy(policy, ctx([registrar.der], [accessLeaf], [fp(root)])).outcome).not.toBe("passed");
+    // aynı adlı başka kök (listede olmayan anahtar) bağlamaz
+    const other = await cert({
+      subject: ROOT,
+      issuer: ROOT,
+      serial: "5a",
+      pub: attackerKp.publicKey,
+      signer: attackerKp.privateKey,
+    });
+    expect(evaluateDisclosurePolicy(policy, ctx([registrar.der], [accessLeaf], [other])).outcome).not.toBe("passed");
   });
 
   it("x5c'ye eklenmiş kök (yaprağı imzalamamış) geçmez", () => {
@@ -391,7 +410,7 @@ describe("erişim sertifikası çapası: kopyalanmış kayıt sertifikası (0.5.
   const run = async (
     policy: Record<string, unknown>,
     signer: Party,
-    o: { registered?: string[]; anchors?: string[]; chain?: Uint8Array[] } = {},
+    o: { registered?: string[]; anchors?: Array<string | Uint8Array>; chain?: Uint8Array[] } = {},
   ) => {
     const req = await request([await wrprc({ sub: "VATTR-1234567890" })], signer);
     return checkDisclosurePolicy(
@@ -469,6 +488,37 @@ describe("erişim sertifikası çapası: kopyalanmış kayıt sertifikası (0.5.
     });
     // aynı zincir, çapa yok → değerlendirilemez
     expect(await run(p, issued, { chain: [leafDer, ca] })).toMatchObject({
+      outcome: "not_evaluable",
+      reason: "untrusted_access_certificate",
+    });
+    // x5c yalnız yaprak (kök düşürülmüş, ARF RO-02): çapa CA sertifikası (DER ya da PEM) → bağlanır; yalnız parmak izi → bağlanmaz
+    const caPem = `-----BEGIN CERTIFICATE-----\n${Buffer.from(ca)
+      .toString("base64")
+      .replace(/(.{64})/g, "$1\n")}\n-----END CERTIFICATE-----`;
+    expect(await run(p, issued, { anchors: [ca], chain: [leafDer] })).toMatchObject({
+      outcome: "passed",
+      matchedBy: "rp",
+    });
+    expect(await run(p, issued, { anchors: [caPem], chain: [leafDer] })).toMatchObject({ outcome: "passed" });
+    expect(await run(p, issued, { anchors: [caFp], chain: [leafDer] })).toMatchObject({
+      outcome: "not_evaluable",
+      reason: "untrusted_access_certificate",
+    });
+    // listede olmayan CA (aynı ad, başka anahtar) → bağlanmaz
+    const otherKp = (await crypto.subtle.generateKey(ALG, true, ["sign", "verify"])) as CryptoKeyPair;
+    const otherCa = new Uint8Array(
+      (
+        await X509CertificateGenerator.createSelfSigned({
+          serialNumber: "0a",
+          name: CA,
+          notBefore: new Date(0),
+          notAfter: new Date("2099-01-01"),
+          signingAlgorithm: ALG,
+          keys: otherKp,
+        })
+      ).rawData,
+    );
+    expect(await run(p, issued, { anchors: [otherCa], chain: [leafDer] })).toMatchObject({
       outcome: "not_evaluable",
       reason: "untrusted_access_certificate",
     });

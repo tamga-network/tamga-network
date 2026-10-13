@@ -171,4 +171,7 @@ Implemented (2026-10-01):
 > **Note (2026-10-13, engineering correction, packages 0.5.2):** the "no match" rule above was narrowed — the wallet does not
 > exclude a credential because of a `trusted_authorities` entry it cannot evaluate ("not evaluable"; the credential is offered
 > and it is not a positive trust signal), and it evaluates `etsi_tl` against the lists it has loaded; details in
-> [[SPEC-PROTO-0002]] §4.6. The ban on counting it as "passed" is unchanged.
+> [[SPEC-PROTO-0002]] §4.6. The ban on counting it as "passed" is unchanged. When the query contains `etsi_tl`, the wallet passes
+> the external lists whose signature it verified through the LOTL to matching (`TrustSource.externalTrustedLists()`); for a
+> credential with only an mdoc copy the chain is read from the mdoc IssuerAuth `x5chain`. This does not need Tamga Network's
+> own 119 612 XML publication (deferred above): what is evaluated are the lists published by the EU and other states.

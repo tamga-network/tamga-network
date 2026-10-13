@@ -398,8 +398,8 @@ export interface ZkClaimValue {
   element: string;
   value: boolean | string | number;
 }
-/** Belgenin (SD-JWT kopyası) x5c zincirindeki sertifikalar (DER); okunamazsa boş. */
-function chainCerts(c: StoredCredential): Uint8Array[] {
+/** SD-JWT kopyasının x5c zinciri (DER); yoksa ya da okunamazsa boş. */
+function sdJwtChain(c: StoredCredential): Uint8Array[] {
   const combined = c.copies.find((k) => k.combined)?.combined;
   if (!combined) return [];
   try {
@@ -411,6 +411,32 @@ function chainCerts(c: StoredCredential): Uint8Array[] {
     return [];
   }
 }
+/** mdoc kopyasının IssuerAuth x5chain'i (COSE başlığı 33, yaprak ilk); ZK sorgusunda ZK kopyasınınki. Yoksa boş. */
+function mdocChain(c: StoredCredential, zk = false): Uint8Array[] {
+  const mdocs = zk ? (c.zk?.copies ?? []).map((k) => k.mdoc) : c.copies.map((k) => k.mdoc);
+  for (const m of mdocs) {
+    if (!m) continue;
+    try {
+      return mdocIssuerKeys(m).x5chain;
+    } catch {
+      /* sonraki kopya */
+    }
+  }
+  return [];
+}
+/**
+ * Belgenin veren zinciri (DER, yaprak ilk): sorgu biçiminin kopyasından (mdoc → IssuerAuth x5chain, SD-JWT → x5c); o kopya yoksa
+ * öbür temsilden (aynı belge veren anahtarı; D-CRED-5 çapraz doğrulama).
+ */
+function chainCerts(c: StoredCredential, format?: string): Uint8Array[] {
+  if (format === MDOC_ZK_FORMAT) return mdocChain(c, true);
+  if (format === MDOC_FORMAT) {
+    const m = mdocChain(c);
+    return m.length ? m : sdJwtChain(c);
+  }
+  const s = sdJwtChain(c);
+  return s.length ? s : mdocChain(c);
+}
 const safe = <T>(f: () => T): T | null => {
   try {
     return f();
@@ -420,7 +446,8 @@ const safe = <T>(f: () => T): T | null => {
 };
 /**
  * OpenID4VP §6.1.1 `trusted_authorities` (0.5.2 mühendislik düzeltmesi; ADR-0036 notu). Belge en az bir koşula uymalı:
- *  - `aki`: zincirdeki bir sertifikanın AKI'si (base64url) değerlerden biri (HAIP §5) — değerlendirilir.
+ *  - `aki`: zincirdeki bir sertifikanın AKI'si (base64url) değerlerden biri (HAIP §5) — değerlendirilir. Zincir sorgu biçiminin
+ *    kopyasından okunur: mdoc'ta IssuerAuth x5chain (COSE başlığı 33), SD-JWT'de x5c.
  *  - `etsi_tl`: değer, cüzdanın yüklediği bir güven listesinin adresi ve belgenin zinciri o listedeki bir hizmet sertifikasına
  *    çıkıyor (sertifikanın kendisi zincirde ya da zincirdeki AKI = listedeki sertifikanın SKI'si). Değerdeki liste yüklü değilse
  *    o koşul değerlendirilemez.
@@ -432,9 +459,11 @@ export function evaluateTrustedAuthorities(
   ta: DcqlTrustedAuthority[] | undefined,
   c: StoredCredential,
   trustedLists: LoadedTrustedList[] = [],
+  /** DCQL sorgusunun biçimi (`mso_mdoc`, `mso_mdoc_zk`, `dc+sd-jwt`): zincir o biçimin kopyasından okunur */
+  format?: string,
 ): TrustedAuthorityOutcome | "no_match" | "none" {
   if (!ta?.length) return "none";
-  const chain = chainCerts(c);
+  const chain = chainCerts(c, format);
   const akis = new Set(
     chain.flatMap((d) => {
       const k = safe(() => certAuthorityKeyId(d));
@@ -655,7 +684,7 @@ export function matchDcql(
               : q.format === "dc+sd-jwt" && (vcts.length === 0 || vcts.includes(c.vct)),
       )
       .flatMap((c) => {
-        const t = evaluateTrustedAuthorities(q.trusted_authorities, c, opts.trustedLists);
+        const t = evaluateTrustedAuthorities(q.trusted_authorities, c, opts.trustedLists, q.format);
         return t === "no_match" ? [] : [{ c, t }];
       });
     const taOf = new Map(cands.map(({ c, t }) => [c, t] as const));
