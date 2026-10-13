@@ -20,6 +20,8 @@
  *      liste fixture'ları WIA/WUA doğrulamasını bununla dener; hiçbir gerçek cüzdanın sertifikası değildir (ADR-0042 K5: ağ
  *      cüzdan sağlayıcı işletmez; gerçek cüzdan sağlayıcının anahtarını cüzdan kendisi üretir, ağ yalnız sertifikasını listeler)
  *   5. Referans verifier erişim sertifikası (rp-verify)    — kökçe imzalı; SAN dns verify.tamga.network; istek nesnesini imzalar
+ *   6. Tamga Wallet sağlayıcı sertifikası (wallet-provider-tamga-wp-1) — üretilmez: depodaki `ops/pki-sandbox/` kopyasından
+ *      yalnız kamu sertifikası alınır (gerçek ve sandbox listesinde aynı sertifika; anahtarı ağda yok, ADR-0042)
  *
  * Sandbox (ADR-0038, SB1): `--profile=sandbox` ayrı bir test kökü ve yaprakları `ops/pki-sandbox/`'a üretir; gerçek PKI ile
  * hiçbir anahtar paylaşılmaz. Konu adları "… (TEST)"; örnek kurumlar `istanbul-bilgi`, `bubilet`, `paribu-cineverse` (gerçek
@@ -50,7 +52,7 @@ import {
   Name,
 } from "@peculiar/x509";
 import { webcrypto } from "node:crypto";
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import { resolve, dirname, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import { computeCaId, computeIssuerId, computeRpId, certFingerprintSha256Hex, pemToDer } from "@tamga-network/core";
@@ -268,13 +270,19 @@ async function main() {
       selfSigned(2, "CN=Tamga Trust List Signer 1 (provisional TLSO), O=Tamga Network, C=TR"),
     ),
     // ADR-0042 K5: YALNIZ GELİŞTİRME/TEST — genel "test cüzdan sağlayıcısı" (ağın testleri, liste fixture'ları ve platform
-    // testleri WIA/WUA doğrulamasını bununla dener). Gerçek ağ listesinde YOKTUR (TAMGA-WP-1 `wua_signing_certs: []`); üretim
+    // testleri WIA/WUA doğrulamasını bununla dener). Gerçek ağ listesinde YOKTUR (TAMGA-WP-1 kendi sertifikasını anar, aşağıda); üretim
     // kipinde hiç üretilmez. Dosya adı uyumluluk için `wallet-provider` kalır.
     ...(PROD
       ? []
       : [
           await ensure("wallet-provider", selfSigned(3, "CN=Test Wallet Provider (WUA), O=Test Wallet Provider, C=TR")),
         ]),
+    // ADR-0042: Tamga Wallet sağlayıcısının (TAMGA-WP-1) WUA imza sertifikası. Gerçek ağda ve sandbox'ta AYNI kamu sertifikası
+    // (özel anahtarı cüzdan sağlayıcıdadır, ağda hiç yoktur); depoda `ops/pki-sandbox/`'ta izlenir. Geliştirme kipi oradan
+    // yalnız sertifikayı kopyalar: kayıt defteri onu anar ve sandbox listesi (SB1 istisnası) gerçek ağ listesindeki parmak izinin
+    // aynısını ister — geliştirmede farklı bir sertifika `trust:build:sandbox`'ı durdururdu. Sandbox kopyası yoksa (ör. eski
+    // klon) "(DEV)" konu adlı, kendinden imzalı bir yer tutucu üretilir. Üretim kipinde dokunulmaz (sertifika operatör klasöründe).
+    ...(PROD ? [] : [await devWalletProviderCert("wallet-provider-tamga-wp-1", selfSigned)]),
     // ADR-0026 K1: kayıt kurumu anahtarı (WRPRC imzası) — liste imza anahtarından ayrı; LOTL roles.registrar.signing_keys
     await ensure(
       "registrar-1",
@@ -314,6 +322,23 @@ async function main() {
   ];
 
   await finish(root, items, notBefore);
+}
+
+/** Geliştirme kipi: gerçek cüzdan sağlayıcı sertifikasını (yalnız kamu sertifikası) depodaki sandbox kopyasından alır. */
+async function devWalletProviderCert(name: string, selfSigned: (n: number, name: string) => Make): Promise<Item> {
+  const tracked = resolve(here, "pki-sandbox", `${name}.cert.pem`);
+  const local = resolve(outDir, `${name}.cert.pem`);
+  if (existsSync(tracked)) {
+    const pem = readFileSync(tracked, "utf8");
+    const same = existsSync(local) && readFileSync(local, "utf8") === pem;
+    if (!same) {
+      writeFileSync(local, pem);
+      rmSync(resolve(outDir, `${name}.pkcs8.pem`), { force: true }); // eski yer tutucunun anahtarı kalmasın
+    }
+    return { ...(await load(name)), created: !same };
+  }
+  if (existsSync(local) && !existsSync(resolve(outDir, `${name}.pkcs8.pem`))) return load(name);
+  return ensure(name, selfSigned(5, "CN=Tamga Wallet Provider TAMGA-WP-1 (DEV stand-in), O=Development Only, C=TR"));
 }
 
 type Make = (reuse?: Reuse) => Promise<{ cert: X509Certificate; privateKey: CryptoKey }>;

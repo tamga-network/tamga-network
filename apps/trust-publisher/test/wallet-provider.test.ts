@@ -27,6 +27,7 @@ import {
   walletProviderCertName,
 } from "../src/wallet-provider-ops.js";
 import { RegistryError } from "../src/registry-ops.js";
+import * as prettier from "prettier";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const subtle = (webcrypto as unknown as Crypto).subtle;
@@ -203,6 +204,20 @@ describe.skipIf(!ready)("wallet-provider komutu (geçici klasörde)", () => {
   beforeAll(async () => {
     cpSync(resolve(ROOT, "apps/trust-publisher/registry"), PROD_REG, { recursive: true });
     cpSync(resolve(ROOT, "apps/trust-publisher/registry-sandbox"), SB_REG, { recursive: true });
+    // Kurulum günü düzeni: kopyalarda TAMGA-WP-1 RESERVED, sertifikasız ve geçmişsiz başlar — testler gerçek kayıt defterinin o
+    // anki durumundan (2026-10-13'ten beri ACTIVE) bağımsız. Prettier biçimi korunur (dosya yalnız bu kayıtta değişir).
+    for (const reg of [PROD_REG, SB_REG]) {
+      const f = join(reg, "lotl.source.json");
+      const j = JSON.parse(readFileSync(f, "utf8"));
+      const w = j.wallet_providers.find((x: { provider_id: string }) => x.provider_id === "TAMGA-WP-1");
+      w.wua_signing_certs = [];
+      w.status = "RESERVED";
+      for (const s of w.solutions) s.status = "RESERVED";
+      delete w.status_history;
+      const repoFile = resolve(ROOT, "apps/trust-publisher/registry/lotl.source.json"); // depodaki .prettierrc
+      const opts = (await prettier.resolveConfig(repoFile)) ?? {};
+      writeFileSync(f, await prettier.format(JSON.stringify(j), { ...opts, filepath: repoFile }));
+    }
     cpSync(resolve(ROOT, "ops/pki"), PROD_PKI, { recursive: true });
     cpSync(resolve(ROOT, "ops/pki-sandbox"), SB_PKI, { recursive: true });
     rmSync(join(PROD_PKI, `${NAME}.cert.pem`), { force: true });
