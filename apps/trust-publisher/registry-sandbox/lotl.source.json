@@ -87,6 +87,30 @@
       "status": "ACTIVE"
     },
     {
+      "provider_id": "OIDF-CONFORMANCE-TEST",
+      "legal_name": "OpenID Foundation Conformance Suite Test Client (TEST)",
+      "wua_signing_certs": ["wallet-provider-oidf-conformance-test"],
+      "lote_supply_point": "https://sandbox.tamga.network",
+      "note": "OpenID Foundation conformance self-test (2026-10-13): signer of the test tool's client attestation and key attestation; sandbox list only (ADR-0038 SB1); not a wallet service. Signing certificate wallet-provider-oidf-conformance-test registered 2026-10-13.",
+      "solutions": [
+        {
+          "solution_id": "oidf-conformance-suite",
+          "min_version": "1.0.0",
+          "status": "ACTIVE",
+          "security_level": "W1",
+          "lote_service_name": "OpenID conformance suite (oidf-conformance-suite)"
+        }
+      ],
+      "status": "ACTIVE",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-13T16:03:06.854Z",
+          "reason": "signing-certificate-registered"
+        }
+      ]
+    },
+    {
       "provider_id": "TAMGA-WP-1",
       "legal_name": "BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ",
       "wua_signing_certs": [],
