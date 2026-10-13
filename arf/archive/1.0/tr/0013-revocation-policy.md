@@ -4,7 +4,7 @@ title: "İptal Politikası"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-13
+last_updated: 2026-10-14
 summary: >
   Tamga ağındaki belge verenlerin (kimlik servisi ve kurumlar) verdiği belgelerin hangi koşullarda iptal edildiğini, kimin
   iptal isteyebileceğini, askıya almayı, iptal listesinin nasıl yayımlandığını ve iptalin ne kadar sürede etkili olduğunu tek
@@ -64,7 +64,9 @@ yazar (ARF ARB_24).
 **Kimlik servisinin belgeleri ve silme.** Kişi cüzdanını sıfırlayıp verilerini sildiğinde cüzdan kimlik servisinden aldığı her belge
 için silme isteği gönderir; servis kaydı siler ve bütün kopyaları iptal eder ([[SPEC-WALLET-0001]] §7.6). Cüzdan birimi cüzdan
 sağlayıcısınca iptal edilince kimlik servisi birimi en geç 24 saat içinde denetler ve o birimdeki kendi belgelerini iptal eder
-(RB-AP-ID-12).
+(RB-AP-ID-12). Bu zincirleme iptal yüzünden kimlik servisi belgenin süresini, verirken sunulan WIA ve KA'nın iptal bakım süresiyle
+sınırlar ve istediği bakım süresini (belgenin süresi, 730 gün) tanıtım bilgisinde ilan eder (AB ISSU_12c, WUA_32; [[ADR-0047]] K1).
+Bu süreyi veren cüzdan sağlayıcısında kimlik belgesi 2 yıl kalır; daha kısa süre veren sağlayıcıda belge o sürenin sonunda biter.
 
 ## 3.3 Cüzdan birimi iptal edilince kurum belgeleri
 

@@ -4,7 +4,7 @@ title: "Wallet unit revocation, out-of-wallet revocation path and device attesta
 status: Active
 version: 1.0.0
 created: 2026-10-12
-last_updated: 2026-10-12
+last_updated: 2026-10-14
 summary: >
   Decisions on the nine topics left open in the EU Attestation Rulebook template work. Wallet unit revocation does not revoke
   institution credentials (they are bound to a device key and cannot be used once the unit is revoked); institutions may publish
@@ -57,6 +57,13 @@ provider must deliver; the method is the provider's.
   its metadata (ISSU_12c, WUA_32; EU TS3 `preferred_client_status_period`, `preferred_key_storage_status_period`). The packages
   provide this in 0.5.0; in the identity service the limit is switched on once wallet providers issue WIAs and KAs that meet the
   announced period (with today's 60-day maintenance period a 2-year identity credential would drop to 60 days).
+- **Implementation note (2026-10-14):** the limit is switched on in the identity service; it is always on in the production
+  network and the sandbox (it can be turned off only in local development). The announced preference equals the identity
+  credential's validity: 730 days for the WIA and the KA. The Tamga Wallet provider (TAMGA-WP-1) gives the requested period up to
+  730 days and the wallet asks for it, so the identity credential keeps its 2 years. With a provider that gives 60 days the
+  credential lasts 60 days. The preference is deliberately not shortened (e.g. to 723 days): the provider gives what is asked, so
+  the credential would always be that much shorter. Because the wallet accepts a remaining period up to 7 days below the
+  preference, the credential ends between 723 and 730 days.
 - **Why this is enough:** every copy is bound to a holder key on the device (`cnf`); the key is generated in the device's secure
   hardware and cannot be exported (RB-WP-01), and every presentation needs a signature with that key and a PIN or biometrics
   (RB-WP-03). The credential cannot be presented from another device. Once the unit is revoked:

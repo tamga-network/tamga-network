@@ -71,7 +71,10 @@ The rulebook of a new credential type adds to this table whether the type is rev
 **Credentials of the identity service and deletion.** When a person resets the wallet and deletes their data, the wallet sends a
 deletion request for every credential obtained from the identity service; the service deletes the record and revokes all copies
 ([[SPEC-WALLET-0001]] §7.6). When a wallet unit is revoked by the wallet provider, the identity service checks the unit within 24 hours
-at the latest and revokes its own credentials on that unit (RB-AP-ID-12).
+at the latest and revokes its own credentials on that unit (RB-AP-ID-12). Because of this chain revocation the identity service
+limits a credential's validity to the revocation maintenance period of the WIA and KA presented at issuance and announces the period
+it wants (the credential's validity, 730 days) in its metadata (EU ISSU_12c, WUA_32; [[ADR-0047]] K1). With a wallet provider that
+gives this period the identity credential keeps its 2 years; with a provider that gives less it ends when that period ends.
 
 ### 3.3 Institution credentials when a wallet unit is revoked
 

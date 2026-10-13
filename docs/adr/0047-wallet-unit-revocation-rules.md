@@ -4,7 +4,7 @@ title: "Cüzdan birimi iptali, cüzdan dışı iptal yolu ve cihaz kanıtı"
 status: Active
 version: 1.0.0
 created: 2026-10-12
-last_updated: 2026-10-12
+last_updated: 2026-10-14
 summary: >
   AB Attestation Rulebook şablonu çalışmasında açık kalan dokuz konunun kararı. Cüzdan birimi iptali kurum belgelerini iptal
   etmez (belgeler cihaz anahtarına bağlıdır, birim iptal edilince kullanılamaz); kurumlar ek iptal koşullarını isteğe bağlı
@@ -55,6 +55,12 @@ olarak yazılır, yöntem sağlayıcınındır.
   `preferred_client_status_period`, `preferred_key_storage_status_period`). Paketler bunu 0.5.0'da sağlar; kimlik servisinde
   sınır, cüzdan sağlayıcıları ilan edilen süreyi karşılayan WIA ve KA verince açılır (bugünkü 60 günlük bakım süresiyle 2 yıllık
   kimlik belgesi 60 güne inerdi).
+- **Uygulama notu (2026-10-14):** sınır kimlik servisinde açıldı; gerçek ağda ve sandbox'ta her zaman açıktır (yalnız yerel
+  geliştirmede kapatılabilir). İlan edilen tercih kimlik belgesinin süresine eşittir: WIA ve KA için 730 gün. Tamga Wallet
+  sağlayıcısı (TAMGA-WP-1) istenen süreyi 730 güne kadar verir ve cüzdan bu süreyi ister; böylece kimlik belgesi 2 yıl kalır. 60 gün
+  veren bir sağlayıcıda belge 60 gün olur. Tercih bilerek kısaltılmaz (ör. 723 gün): sağlayıcı istenen süreyi verdiği için belge her
+  zaman o kadar kısalırdı. Cüzdan kalan süreyi tercihin en çok 7 gün altında da yeterli saydığından belge 723–730 gün arasında
+  biter.
 - **Neden yeterli:** her kopya cihazdaki bir belge sahibi anahtarına bağlıdır (`cnf`); anahtar cihazın güvenli donanımında üretilir,
   dışa aktarılamaz (RB-WP-01) ve her gösterim o anahtarla imza ve PIN ya da biyometri ister (RB-WP-03). Belge başka bir cihazdan
   gösterilemez. Birim iptal edilince:
