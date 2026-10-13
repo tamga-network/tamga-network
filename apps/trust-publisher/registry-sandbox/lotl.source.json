@@ -113,19 +113,26 @@
     {
       "provider_id": "TAMGA-WP-1",
       "legal_name": "BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ",
-      "wua_signing_certs": [],
+      "wua_signing_certs": ["wallet-provider-tamga-wp-1"],
       "lote_supply_point": "https://provider.tamgawallet.com",
       "solutions": [
         {
           "solution_id": "tamga-wallet-expo",
           "min_version": "1.0.0",
-          "status": "RESERVED",
+          "status": "ACTIVE",
           "security_level": "W2",
           "lote_service_name": "Tamga Wallet (tamga-wallet-expo)"
         }
       ],
-      "status": "RESERVED",
-      "note": "ADR-0042: Tamga Wallet's provider is operated by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; the same entry as in the production list (one provider, no separate wallet sandbox); reserved until it supplies its own signing certificate."
+      "status": "ACTIVE",
+      "note": "ADR-0042: operated by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; signing certificate wallet-provider-tamga-wp-1 registered 2026-10-13; the same entry and certificate as in the production list (one provider, no separate wallet sandbox).",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-10-13T22:26:51.663Z",
+          "reason": "signing-certificate-registered"
+        }
+      ]
     }
   ],
   "pid_providers": [],
@@ -140,7 +147,10 @@
       "format": "etsi-lote-json",
       "list_url": "https://trust.sandbox.tamga.network/external-src/oidf-test-pid.jws",
       "signing_keys": [
-        { "fingerprint_sha256": "c18c9212b2a1666752e0ec5e328d60633167954fd8ec2d7ff7f7a82a2bd7f9f6", "status": "ACTIVE" }
+        {
+          "fingerprint_sha256": "c18c9212b2a1666752e0ec5e328d60633167954fd8ec2d7ff7f7a82a2bd7f9f6",
+          "status": "ACTIVE"
+        }
       ],
       "operator": {
         "name": "Tamga Network Sandbox (TEST) — OpenID conformance self-test",
@@ -155,7 +165,10 @@
         "class": "EAA",
         "recognized_by": ["TR"]
       },
-      "approval": { "approved_at": "2026-10-13T00:00:00Z", "ref": "Project management approval 2026-10-13 (EU alignment review, decision 11: OpenID self-test)" }
+      "approval": {
+        "approved_at": "2026-10-13T00:00:00Z",
+        "ref": "Project management approval 2026-10-13 (EU alignment review, decision 11: OpenID self-test)"
+      }
     }
   ],
   "zk_circuits": [
