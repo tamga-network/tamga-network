@@ -175,6 +175,12 @@ These notes do not change the decision; they align the format with the texts the
    at the token endpoint for that credential; no separate WIA PoP key is generated. The refresh token binding in K6 is made through
    the same key. WIA1 (a new key and a new status entry in every transaction) does not change: the DPoP key is also specific to the
    credential and the transaction. Implementation: 0.6.0.
+   **Correction (2026-10-13, during implementation):** this rule was added in version 1.5.1 of TS3 and **rolled back in 1.5.2**
+   (TS3 1.5.2 version history: "rolled back the WIA `cnf`/DPoP requirements added in 1.5.1 (Section 2.2.1.1)"). Neither today's
+   EU text nor Implementing Regulation (EU) 2026/1731 Annex Ib requires a link between the WIA `cnf` key and the DPoP key
+   (TR-WIA-4.3 only requires the PoP to verify under the `cnf` key). The note is therefore **not implemented** in 0.6.0; if the EU
+   text asks for it again it is taken up separately. The current behaviour (separate WIA PoP and DPoP keys, both specific to the
+   transaction) does not change.
 3. **Size of the status lists.** The WIA and KA status lists **each** have at least 10,000 entries (Implementing Regulation (EU)
    2024/2979 Annex Ib; for unlinkability; the KA list carries the same lower bound even though it uses few entries per type). An
    issuer **rejects** a WIA or KA whose list has a valid signature but fewer than 10,000 entries, as a non-compliant list (not a
@@ -193,5 +199,5 @@ These notes do not change the decision; they align the format with the texts the
 >
 > **Note (2026-10-13):** generic client attestation (-07; `iss` accepted but not required, a missing `iat` in the attestation
 > tolerated, required in the PoP), removal of the legacy WUA path and the `clientStatus` setting (`optional` / `required`; the
-> identity service uses `required`), WIA `cnf` = the credential's own DPoP key (0.6.0), WIA/KA lists ≥ 10,000 — see "Implementation notes (2026-10-13)" above. Approved by project
+> identity service uses `required`), WIA `cnf` = the credential's own DPoP key (rolled back in TS3 1.5.2 — not implemented, see the correction above), WIA/KA lists ≥ 10,000 — see "Implementation notes (2026-10-13)" above. Approved by project
 > management (first EU alignment review).

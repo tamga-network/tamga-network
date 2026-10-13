@@ -33,7 +33,8 @@ import {
   renameSync,
 } from "node:fs";
 import { resolve, dirname } from "node:path";
-import { createHash, X509Certificate } from "node:crypto";
+import { createHash, createPrivateKey, sign as nodeSign, X509Certificate } from "node:crypto";
+import { signWrprcCwt } from "@tamga-network/mdoc";
 import { fileURLToPath } from "node:url";
 import {
   pemSigner,
@@ -349,6 +350,10 @@ async function writeWrprcs(
     return;
   }
   const regSigner = await signer(ref);
+  // ADR-0026 K5 (0.6.0): yakın alan için aynı yükün CBOR biçimi (`rc-wrp+cwt`, ETSI TS 119 475 §5.2.3) — okuyucu
+  // `requestInfo.euWrprc` ile gönderir
+  const regKey = createPrivateKey(readFileSync(resolve(PKI, `${ref}.pkcs8.pem`), "utf8"));
+  const regChain = [pemToDer(readFileSync(resolve(PKI, `${ref}.cert.pem`), "utf8"))];
   const { items, skipped } = buildWrprcPayloads(tl, {
     now,
     orgIdOf: (dns) => orgIdByDns.get(String(dns).toLowerCase()),
@@ -360,8 +365,15 @@ async function writeWrprcs(
     const jwt = await signJson(regSigner, it.payload, wrprcHeader(now));
     mkdirSync(dirname(resolve(DIST, it.path)), { recursive: true });
     writeAtomic(resolve(DIST, it.path), jwt);
+    const cwtPath = it.path.replace(/\.jwt$/, ".cwt");
+    const cwt = await signWrprcCwt({
+      payload: it.payload,
+      x5chain: regChain,
+      sign: (tbs) => new Uint8Array(nodeSign("sha256", tbs, { key: regKey, dsaEncoding: "ieee-p1363" })),
+    });
+    writeFileSync(resolve(DIST, cwtPath), cwt);
     const { payload, ...meta } = it;
-    index.push({ ...meta, exp: new Date(payload.exp * 1000).toISOString() });
+    index.push({ ...meta, cwt_path: cwtPath, exp: new Date(payload.exp * 1000).toISOString() });
   }
   mkdirSync(out, { recursive: true });
   writeAtomic(resolve(out, "index.json"), JSON.stringify({ generated_at: iso(now), items: index }, null, 2) + "\n");
@@ -478,6 +490,16 @@ async function build() {
   const s = await signer();
   writeVersioned(`tl-${cc.toLowerCase()}`, tl, await signJson(s, tl));
   await writeWrprcs(tl, lotlSrc, cc, now);
+  // ADR-0036 (yalnız sandbox kaynağında bulunur): kayıt defterinin kendi barındırdığı dış liste kaynakları (ör. OpenID uyum
+  // öz-testi için test PID sağlayıcısının imzalı LoTE'si) yayına kopyalanır; `external-fetch` onları yayın adresinden çekip
+  // LOTL'daki sabit imzacıya karşı doğrular (kopya doğrulanmadan kullanılmaz)
+  const extSrc = resolve(REG, "external-src");
+  if (existsSync(extSrc)) {
+    mkdirSync(resolve(DIST, "external-src"), { recursive: true });
+    for (const f of readdirSync(extSrc))
+      if (/^[a-z0-9-]+\.(jws|xml)$/.test(f))
+        writeAtomic(resolve(DIST, "external-src", f), readFileSync(resolve(extSrc, f), "utf8"));
+  }
 
   // ---- lotl
   const lotlPrev = prevInfo("lotl");

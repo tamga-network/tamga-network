@@ -473,6 +473,40 @@ ikisi farklı problemlerdir.
 | `direct_post.jwt` (QR / derin bağlantı) | **Yürürlükte** |
 | `dc_api.jwt` (tarayıcı, OpenID4VP 1.0 Ek A) | **Uygulandı** — doğrulayıcı istek nesnesi ve sayfa kiti (`@tamga-network/verifier/web`), cüzdan tarafı (`@tamga-network/wallet-core`); tarayıcı ve işletim sistemi desteğine bağlıdır |
 | ISO 18013-5 yakın alan (Bluetooth), mdoc | **Kodu hazır** (`@tamga-network/mdoc`, `@tamga-network/wallet-core`); gerçek cihazlarla birlikte çalışma denemesi sürüyor. NFC bu aşamada yok |
+| ISO/IEC 18013-7 Ek C (`org-iso-mdoc`, tarayıcı), mdoc | **Doğrulayıcıda uygulandı** (0.6.0; §7.4) — Safari / iOS 26 tarayıcısında mdoc'un tek yolu. Cüzdan tarafı (işletim sistemi kayıt modülü) sonraki cihaz turunda |
+
+## 7.4 ISO/IEC 18013-7 Ek C (`org-iso-mdoc`)
+
+OpenID4VP'yi DC API üzerinden taşımayan tarayıcılar (Safari / iOS 26) mdoc'u ISO/IEC 18013-7 Ek C ile ister. Doğrulayıcı aynı
+sunum için ikinci bir DC API isteği verir (politika tek `mso_mdoc` belgesi istiyorsa):
+
+- **İstek:** `{ protocol: "org-iso-mdoc", data: { deviceRequest, encryptionInfo } }` — ikisi de base64url CBOR. `DeviceRequest`
+  ISO 18013-5 biçimindedir (saklama niyeti `false`); istek doğrulayıcının erişim sertifikasıyla okuyucu imzası (`readerAuth`)
+  taşıyabilir. `EncryptionInfo = ["dcapi", {"nonce": bstr (≥ 16 bayt), "recipientPublicKey": COSE_Key}]`.
+- **Oturum dökümü:** `SessionTranscript = [null, null, ["dcapi", SHA-256(CBOR([Base64EncryptionInfo, köken]))]]` — köken, isteği
+  yapan sayfanın kökenidir (tarayıcı verir). Cihaz imzası bu dökümle kurulur: yanıt başka bir istekte ya da başka bir sitede
+  kullanılamaz.
+- **Yanıt:** `credential.data.response` = base64url(`["dcapi", {"enc": bstr, "cipherText": bstr}]`) — HPKE (RFC 9180) temel kip,
+  DHKEM(P-256, HKDF-SHA256) / HKDF-SHA256 / AES-128-GCM, `info` = döküm baytları, `aad` boş; açık metin `DeviceResponse`.
+- **Akış (barındırılan doğrulayıcı):** `POST /presentations` (`dc_api_origin` ile) `dc_api_requests` (OpenID4VP + Ek C) ve
+  `dc_mdoc_response_uri` döndürür; sayfa yanıtı bu adrese iletir (`POST /vp/dc-mdoc/{id}`, form alanı `response`). Açılamayan
+  yanıt sunumu tüketmez. Sayfa kiti protokolü tarayıcıya göre seçer (Apple WebKit'e yalnız `org-iso-mdoc`) ve yanıtı yanıtın
+  protokolüne göre doğru uca iletir. Masaüstünde DC API varsa varsayılan yol odur; QR yedek olarak yanında kalır (ETSI TS 119
+  472-2 SUPPORT-03).
+- **Kod:** `@tamga-network/mdoc` (`createAnnexCRequest`, `parseAnnexCRequest`, `sealAnnexCResponse`, `openAnnexCResponse`,
+  `hpkeSeal` / `hpkeOpen`), `@tamga-network/verifier` (`createMdocDcApiRequest`, `openMdocDcApiResponse`,
+  `verifyPresentation({ sessionTranscript })`), `@tamga-network/verifier/web` (`chooseDcApiRequests`, `dcResponseTarget`).
+
+## 7.5 Kayıt sertifikası: sertifikasız istek ve yakın alan ([[ADR-0026]] K5, 2026-10-13)
+
+- **Sertifikasız istek:** `checkRegistrationCerts` sonucunda `flags: ["registration_missing"]` ve `defaultChoice: "decline"` —
+  onay ekranı ayrı bir uyarı gösterir ve varsayılan seçim "Paylaşma"dır; kişi yine de paylaşabilir. `WRPRC_REQUIRED_FROM`
+  (2028-08-11, kodda sabit) sonrasında aynı istek `valid: false`, `reason: "registration_missing"`: reddedilir.
+- **Yakın alan:** okuyucu kayıt sertifikasını CBOR biçiminde (`rc-wrp+cwt`, ETSI TS 119 475 §5.2.3) ItemsRequest'in
+  `requestInfo.euWrprc` alanında gönderir (ISO/IEC 18013-5-REQ-04…07) ve isteği okuyucu sertifikasıyla imzalar (`readerAuth`).
+  Cüzdan uzaktan akıştaki 1–4'ü uygular; 3'teki bağ `readerAuth` sertifikasındaki `organizationIdentifier` ile kurulur
+  (`checkProximityRegistration`). Geçersiz sertifikada kişiye sorulmadan ret; sertifikasız istekte aynı uyarı ve 2028-08-11 kuralı.
+  Liste yayıncısı her kayıt sertifikasının CBOR biçimini de üretir (`wrprc/…/*.cwt`, dizinde `cwt_path`).
 
 ---
 

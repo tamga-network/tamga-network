@@ -5,8 +5,11 @@ info:
   summary: Revocation status lists of the issuers (IETF Token Status List) — public, no authentication, no personal data.
   description: |
     Every credential carries a `status` claim with a list address (`uri`) and an index (`idx`). The verifier downloads the
-    list at that address and reads the two bits at the index: `0` valid, `1` revoked, `2` suspended. The list is a signed
-    JWT (`typ: statuslist+jwt`, ES256, issuer's X.509 chain in `x5c`) with `bits: 2` and a compressed bitstring; it is
+    list at that address and reads the bits at the index: `0` valid, `1` revoked, `2` suspended. The list is a signed
+    JWT (`typ: statuslist+jwt`, ES256, issuer's X.509 chain in `x5c`) with a compressed bitstring — `bits: 2` for institution
+    lists (suspension only in types whose schema allows it, e.g. the diploma) and `bits: 1` for the identity service (valid or
+    revoked; no suspension — ADR-0048). The mdoc copy of a credential points to the CWT representation of the same list at its
+    own opaque address (`application/statuslist+cwt`, COSE_Sign1, same bits, same signer and times); it is
     republished at a fixed interval (default 2 minutes) even when nothing changed, so a download reveals nothing about any
     person. Each publication is recorded in the trust list anchor log (`kind: status_list`) with its content digest.
 
@@ -18,8 +21,11 @@ info:
     summary: Belge veren kurumların iptal durum listeleri (IETF Token Status List) — herkese açık, kimlik doğrulama yok, kişisel veri yok.
     description: |
       Her belge, bir liste adresi (`uri`) ve bir indeks (`idx`) içeren `status` alanı taşır. Doğrulayıcı listeyi bu adresten
-      indirir ve indeksteki iki biti okur: `0` geçerli, `1` iptal, `2` askıda. Liste imzalı bir JWT'dir (`typ: statuslist+jwt`,
-      ES256, `x5c` içinde kurumun X.509 zinciri); `bits: 2` ve sıkıştırılmış bit dizisi taşır. Hiçbir şey değişmese de sabit
+      indirir ve indeksteki bitleri okur: `0` geçerli, `1` iptal, `2` askıda. Liste imzalı bir JWT'dir (`typ: statuslist+jwt`,
+      ES256, `x5c` içinde kurumun X.509 zinciri) ve sıkıştırılmış bit dizisi taşır — kurum listelerinde `bits: 2` (askı yalnız şeması
+      izin veren türlerde, ör. diploma), kimlik servisinde `bits: 1` (geçerli ya da iptal; askı yok — ADR-0048). Belgenin mdoc
+      kopyası aynı listenin ayrı, opak adresteki CWT gösterimine işaret eder (`application/statuslist+cwt`, COSE_Sign1, aynı bitler,
+      aynı imzacı ve zamanlar). Hiçbir şey değişmese de sabit
       aralıkla (varsayılan 2 dakika) yeniden yayınlanır; böylece bir indirme hiçbir kişi hakkında bir şey açığa vurmaz. Her yayın
       içerik özetiyle birlikte güven listesi çapa günlüğüne yazılır (`kind: status_list`).
 
@@ -74,15 +80,25 @@ paths:
         - in: header
           name: Accept
           required: false
-          schema: { type: string, const: application/statuslist+jwt }
+          schema: { type: string, enum: [application/statuslist+jwt, application/statuslist+cwt] }
       responses:
         "200":
-          description: Signed Status List Token (JWT); the payload is `StatusListToken`.
-          x-tr: İmzalı Status List Token (JWT); içeriği `StatusListToken`.
+          description: |
+            Signed Status List Token. A JWT address returns the JWT (payload `StatusListToken`); a CWT address (the address in an
+            mdoc's MSO) returns the CWT: COSE_Sign1 (tag 18), protected header `alg` ES256, `typ` (16)
+            `application/statuslist+cwt` and `x5chain` (33); claims `sub` (2), `iat` (6), `exp` (4), `ttl` (65534) and
+            `status_list` (65533) = `{bits, lst}` with `lst` the compressed bitstring as a byte string.
+          x-tr: |
+            İmzalı Status List Token. JWT adresi JWT'yi (içerik `StatusListToken`), CWT adresi (mdoc MSO'sundaki adres) CWT'yi
+            döndürür: COSE_Sign1 (etiket 18), korunan başlıkta `alg` ES256, `typ` (16) `application/statuslist+cwt` ve `x5chain`
+            (33); talepler `sub` (2), `iat` (6), `exp` (4), `ttl` (65534) ve `status_list` (65533) = `{bits, lst}` (`lst`
+            sıkıştırılmış bit dizisi, bayt dizisi olarak).
           content:
             application/statuslist+jwt:
               schema: { type: string }
               example: eyJhbGciOiJFUzI1NiIsInR5cCI6InN0YXR1c2xpc3Qrand0IiwieDVjIjpbIuKApiJdfQ.eyJzdWIiOiLigKYifQ.…
+            application/statuslist+cwt:
+              schema: { type: string, format: binary }
         "404":
           description: "`not_found` — unknown list."
           x-tr: "`not_found` — bilinmeyen liste."
@@ -105,7 +121,11 @@ components:
         status_list:
           type: object
           properties:
-            bits: { type: integer, const: 2 }
+            bits:
+              type: integer
+              enum: [1, 2]
+              description: "2 for institution lists, 1 for the identity service (ADR-0048)."
+              x-tr: "Kurum listelerinde 2, kimlik servisinde 1 (ADR-0048)."
             lst: { type: string, description: Compressed bitstring (base64url)., x-tr: Sıkıştırılmış bit dizisi (base64url). }
       example:
         sub: https://status.tamga.network/7f3a9c21d4e5b6a7

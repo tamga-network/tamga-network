@@ -99,6 +99,11 @@ export interface VerifyInput {
   responseUri?: string;
   /** Digital Credentials API ile gelen sunum: sayfanın kökeni (mdoc SessionTranscript'i DC API biçiminde; responseUri gerekmez). */
   origin?: string;
+  /**
+   * mso_mdoc, ISO/IEC 18013-7 Ek C (`org-iso-mdoc`, `openMdocDcApiResponse`): bu isteğin SessionTranscript baytları
+   * (`createMdocDcApiRequest`). Verilirse `responseUri` / `origin` gerekmez; cihaz imzası bu dökümle denetlenir.
+   */
+  sessionTranscript?: Uint8Array;
   /** mso_mdoc: yanıt şifreliyse şifreleme anahtarının RFC 7638 parmak izi (SessionTranscript'e girer). */
   encJwkThumbprint?: Uint8Array;
   aud: string;
@@ -132,7 +137,7 @@ export interface VerifyOutput {
 } // claims: AP3 — ayrı kanal
 
 export const SPEC_VERSION = "SPEC-API-0001@1.0.0"; // spec sürüm notuyla birlikte güncellenir
-export const SDK_VERSION = "@tamga-network/verifier@0.5.2"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
+export const SDK_VERSION = "@tamga-network/verifier@0.6.0"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
 const ALL_STEPS: Step[] = [
   "T0",
   "A1",

@@ -3,7 +3,8 @@
  * Girdi: apps/trust-publisher/dist-test (test listesi; imzalı), ops/pki (dev sertifikalar + issuer anahtarı — S-1),
  *        packages/schemas/dist/index.json (vct, content_hash).
  * Çıktı: conformance/vectors/trust/basic.json, conformance/vectors/sd-jwt/diploma-basic.json,
- *        conformance/vectors/sd-jwt/identity-pid-names.json (ADR-0045)
+ *        conformance/vectors/sd-jwt/identity-pid-names.json (ADR-0045),
+ *        conformance/vectors/status-list/jwt-cwt.json (ADR-0048: bits 1/2, aynı listenin JWT ve CWT gösterimi)
  */
 import { mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { X509Certificate } from "node:crypto";
@@ -12,7 +13,19 @@ import { fileURLToPath } from "node:url";
 import { exportJWK, generateKeyPair } from "jose";
 import { computeSchemaId, pemToDer, certFingerprintSha256Hex, x509HashClientId } from "@tamga-network/core";
 import { loadTrustSet, ListTrustSource } from "@tamga-network/trust";
-import { issueSdJwtVc, presentSdJwtVc, pemIssuerSigner, verifySdJwtVc } from "@tamga-network/sd-jwt";
+import {
+  issueSdJwtVc,
+  presentSdJwtVc,
+  pemIssuerSigner,
+  verifySdJwtVc,
+  MIN_CAPACITY,
+  StatusBitstring,
+  StatusValue,
+  signStatusListCwt,
+  signStatusListToken,
+  verifyStatusListCwt,
+  verifyStatusListToken,
+} from "@tamga-network/sd-jwt";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, "..");
@@ -333,15 +346,85 @@ async function identityVectors() {
   return 1;
 }
 
+/**
+ * ADR-0048: iptal listesinin iki gösterimi. Kimlik servisinin listesi `bits = 1` (yalnız geçerli / iptal), kurum listesi `bits = 2`
+ * (diplomada askı). Her liste JWT (`statuslist+jwt`) ve CWT (`application/statuslist+cwt`) olarak ayrı adreslerde, aynı bitler,
+ * aynı imzacı ve aynı `iat`/`exp`/`ttl` ile. Taslağın bits = 1 örneği (`[0xb9, 0xa3]`) sıkıştırılmış hâliyle de verilir.
+ */
+async function statusListVectors() {
+  const certPem = readFileSync(resolve(PKI, "issuer-id-status.cert.pem"), "utf8");
+  const keyPem = readFileSync(resolve(PKI, "issuer-id-status.pkcs8.pem"), "utf8");
+  const signer = await pemIssuerSigner(keyPem, certPem);
+  const from = Math.floor(new Date(new X509Certificate(certPem).validFrom).getTime() / 1000);
+  const ST_NOW = Math.max(NOW, from + 2 * 86400);
+  const lists = [];
+  const plan: Array<[1 | 2, string, Record<number, StatusValue>]> = [
+    [1, "identity service (bits = 1)", { 3: StatusValue.INVALID, 1207: StatusValue.INVALID }],
+    [2, "institution (bits = 2)", { 3: StatusValue.INVALID, 4: StatusValue.SUSPENDED }],
+  ];
+  for (const [bits, name, set] of plan) {
+    const bs = new StatusBitstring(MIN_CAPACITY, undefined, bits);
+    for (const [i, v] of Object.entries(set)) bs.set(Number(i), v);
+    const base = { signer, bitstring: bs, iat: ST_NOW - 60, ttlSec: 120, expSec: 6 * 3600 };
+    const jwtUri = `https://status.tamga.network/conformance-jwt-${bits}`;
+    const cwtUri = `https://status.tamga.network/conformance-cwt-${bits}`;
+    const jwt = await signStatusListToken({ ...base, iss: "https://id.tamga.network", uri: jwtUri });
+    const cwt = await signStatusListCwt({ ...base, uri: cwtUri });
+    const a = await verifyStatusListToken(jwt, jwtUri, ST_NOW);
+    const b = await verifyStatusListCwt(cwt, cwtUri, ST_NOW);
+    if ([...a.bitstring.bytes].join() !== [...b.bitstring.bytes].join()) throw new Error("JWT ≠ CWT bitleri");
+    const probe = [0, 3, 4, 1207, 99_999];
+    lists.push({
+      name,
+      bits,
+      jwt: { uri: jwtUri, token: jwt, content_hash: a.contentHash },
+      cwt: { uri: cwtUri, hex: Buffer.from(cwt).toString("hex"), content_hash: b.contentHash },
+      expect: {
+        signer_fingerprint_sha256: a.leafFingerprintHex,
+        iat: a.payload.iat,
+        exp: a.payload.exp,
+        ttl: a.payload.ttl,
+        values: Object.fromEntries(probe.map((i) => [String(i), a.bitstring.get(i)])),
+      },
+      negative: [
+        {
+          name: "sub differs from the address",
+          uri: "https://status.tamga.network/other",
+          now_offset_sec: 0,
+          expect: "D3",
+        },
+        { name: "expired", uri: null, now_offset_sec: 7 * 3600, expect: "D4" },
+      ],
+    });
+  }
+  const vec = {
+    vector: "status-list/jwt-cwt",
+    version: 1,
+    generated_at: new Date().toISOString(),
+    now: new Date(ST_NOW * 1000).toISOString().replace(/\.\d{3}Z$/, "Z"),
+    note: "ADR-0048 / IETF draft-ietf-oauth-status-list-20. Kişisel veri yok; özel anahtar yok (yalnız imzacı sertifikası).",
+    signer_cert_pem: certPem,
+    draft_example: { bits: 1, lst_compressed_hex: "78dadbb918000217015d", bytes_hex: "b9a3" },
+    lists,
+  };
+  mkdirSync(resolve(OUT, "status-list"), { recursive: true });
+  writeFileSync(resolve(OUT, "status-list", "jwt-cwt.json"), JSON.stringify(vec, null, 2) + "\n");
+  return lists.length;
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   (async () => {
     if (!existsSync(resolve(DIST, "lotl.jws"))) throw new Error("önce npm run setup");
     const t = await trustVectors();
     const s = await sdJwtVectors();
     const i = await identityVectors();
-    // 4: ADR-0045 kimlik belgesi AB PID adları (3: SPEC-CRED-0002 §3.5 disclosure serileştirme; 2: ADR-0034 dns_name, x509_hash)
-    writeFileSync(resolve(OUT, "VERSION"), "4\n");
-    console.log(JSON.stringify({ trust_cases: t, sd_jwt_cases: s, identity_cases: i, out: OUT }, null, 2));
+    const l = await statusListVectors();
+    // 5: ADR-0048 iptal listesi bits 1/2 ve CWT gösterimi (4: ADR-0045 kimlik belgesi AB PID adları; 3: SPEC-CRED-0002 §3.5
+    // disclosure serileştirme; 2: ADR-0034 dns_name, x509_hash)
+    writeFileSync(resolve(OUT, "VERSION"), "5\n");
+    console.log(
+      JSON.stringify({ trust_cases: t, sd_jwt_cases: s, identity_cases: i, status_lists: l, out: OUT }, null, 2),
+    );
   })().catch((e) => {
     console.error(e);
     process.exit(1);

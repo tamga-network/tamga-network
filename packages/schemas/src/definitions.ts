@@ -360,6 +360,8 @@ export const DIPLOMA: SchemaDef = {
       issuer_categories: ["EDUCATION"],
       default_ttl_days: null,
       uses_status_list: true,
+      // ADR-0048 K2: intihal / sahtecilik incelemesi sürerken askı (0x02); diğer türler askı kullanmaz
+      suspension_allowed: true,
       min_issuer_assurance: "I2",
       min_binding_level: "T2",
       derived_claims: ["is_graduate", "graduated_before"],
@@ -1126,6 +1128,16 @@ export function isShortLivedType(vct: string): boolean {
     typeof t.max_validity_sec === "number" &&
     t.max_validity_sec <= ZK_COPY_MAX_VALIDITY_SEC
   );
+}
+
+/**
+ * ADR-0048 K2 (SU2): türde askı (`0x02`) kullanılabilir mi — şemanın `tamga.suspension_allowed` alanı (yoksa `false`). Katalogda
+ * olmayan tür için `undefined` (karar çağıranın: doğrulayıcı dış türlerde listenin söylediğini okur).
+ */
+export function suspensionAllowed(vct: string): boolean | undefined {
+  const d = ALL.find((x) => x.vct === vct);
+  if (!d) return undefined;
+  return (d.typeMetadata.tamga as { suspension_allowed?: boolean }).suspension_allowed === true;
 }
 
 /** ADR-0031 PS3: sunulamayan türler (cüzdan sunum ekranında listelemez, güven listesi kapsama yazdırmaz). */

@@ -13,7 +13,7 @@
  * dizini) cevap VERMEZ — null / boş döner. Bayat listeden okunan kayıt kararda kullanılmasın; doğrulayıcı tazeliği T0'da
  * `freshness()` ile ayrıca denetler ve bayat kaynakta INDETERMINATE döner.
  */
-import type { TrustStore, StatusAnchorRow, ExternalEntity } from "./store.js";
+import { activeFps, type TrustStore, type StatusAnchorRow, type ExternalEntity } from "./store.js";
 import type { Issuer, RelyingParty, SchemaEntry, StatusHistoryEntry, ZkCircuit } from "./types.js";
 
 export type Tri = "YES" | "NO" | "UNKNOWN";
@@ -46,6 +46,42 @@ export interface TrustSource {
   externalAnchorCertsDer?(): Uint8Array[];
   /** ADR-0036: dış cüzdan sağlayıcısının kapsamındaki en az anahtar deposu (yoksa null). */
   walletProviderMinKeyStorage?(fingerprintHex: string): string | null;
+  /** ADR-0049 (0.6.0): "Tamga Network'te listeli" göstergesi için imzalı listedeki cüzdan sağlayıcısı kaydı. */
+  walletProviderListing?(providerId: string, opts?: WalletProviderListingOptions): WalletProviderListing;
+}
+
+export interface WalletProviderListingOptions {
+  /** cüzdan çözümünün kimliği (`solutions[].solution_id`); verilirse çözüm kaydı da `ACTIVE` olmalı */
+  solutionId?: string;
+  /** cüzdan biriminin iptal edildiğini cüzdan biliyor (sağlayıcının iptali, kişinin isteği ya da WIA iptal listesi) */
+  unitRevoked?: boolean;
+}
+/** Göstergenin neden gizlendiği (ADR-0049 K3) — gösterilmiyorsa biri. */
+export type WalletProviderListingHidden =
+  | "list_unavailable"
+  | "sandbox"
+  | "not_listed"
+  | "provider_not_active"
+  | "solution_not_listed"
+  | "solution_not_active"
+  | "unit_revoked";
+export interface WalletProviderListing {
+  /** göstergeyi göster: kayıt (ve varsa çözüm) `ACTIVE`, liste doğrulanmış ve taze, gerçek ağ, birim iptal edilmemiş */
+  listed: boolean;
+  /** gizlenme nedeni (`listed` false iken) */
+  hidden?: WalletProviderListingHidden;
+  provider_id: string;
+  /** kaydın durumu (`ACTIVE`, `SUSPENDED`, `REVOKED`, `RESERVED` …); kayıt yoksa null */
+  status: string | null;
+  /** sağlayıcının resmî adı (imzalı listeden); kayıt yoksa null */
+  legal_name: string | null;
+  /** sağlayıcının etkin WIA/KA imza anahtarının SHA-256 parmak izi (ilk etkin anahtar); yoksa null */
+  fingerprint: string | null;
+  /** çözüm kaydı (verildiyse ve listede varsa) */
+  solution?: { solution_id: string; status: string; security_level?: string; min_version?: string };
+  /** listenin yayın zamanı ve sürümü (kayıt sayfası için) */
+  list_issued_at: string | null;
+  list_version: number | null;
 }
 
 export interface ExternalIssuerAnswer {
@@ -228,6 +264,70 @@ export class ListTrustSource implements TrustSource {
       out.get(uri)!.push(e.cert_der);
     }
     return [...out].map(([uri, certsDer]) => ({ uri, certsDer }));
+  }
+
+  /**
+   * ADR-0049 K2/K3: göstergeye dokununca gösterilecek imzalı kayıt ve göstergenin görünüp görünmeyeceği. Bilgi yüklü (imzası
+   * doğrulanmış) listeden okunur; ağ isteği yok. Gizlenir: liste bayat ya da yok, sandbox listesi, kayıt yok ya da `ACTIVE` değil,
+   * çözüm kaydı yok ya da `ACTIVE` değil, birim iptal edilmiş.
+   */
+  walletProviderListing(providerId: string, opts: WalletProviderListingOptions = {}): WalletProviderListing {
+    const lotl = this.store.lotl as unknown as
+      | {
+          version?: number;
+          environment?: string;
+          issued_at?: string;
+          wallet_providers: Array<{
+            provider_id: string;
+            legal_name: string;
+            status: string;
+            wua_signing_keys: Array<{
+              fingerprint_sha256: string;
+              status?: string;
+              valid_from?: string;
+              valid_to?: string;
+            }>;
+            solutions?: Array<{ solution_id: string; status: string; security_level?: string; min_version?: string }>;
+          }>;
+        }
+      | undefined;
+    const base = { provider_id: providerId, status: null, legal_name: null, fingerprint: null };
+    const listMeta = {
+      list_issued_at: lotl?.issued_at ?? null,
+      list_version: typeof lotl?.version === "number" ? lotl.version : null,
+    };
+    const hide = (
+      hidden: WalletProviderListingHidden,
+      extra: Partial<WalletProviderListing> = {},
+    ): WalletProviderListing => ({
+      listed: false,
+      hidden,
+      ...base,
+      ...listMeta,
+      ...extra,
+    });
+    if (!lotl || this.unhealthy()) return { ...hide("list_unavailable"), list_issued_at: null, list_version: null };
+    const wp = lotl.wallet_providers.find((w) => w.provider_id === providerId);
+    if (!wp) return hide("not_listed");
+    const fp = [...activeFps(wp.wua_signing_keys, this.now())][0] ?? null;
+    const rec = { status: wp.status, legal_name: wp.legal_name, fingerprint: fp };
+    const sol = opts.solutionId ? wp.solutions?.find((x) => x.solution_id === opts.solutionId) : undefined;
+    const solution = sol
+      ? {
+          solution: {
+            solution_id: sol.solution_id,
+            status: sol.status,
+            ...(sol.security_level ? { security_level: sol.security_level } : {}),
+            ...(sol.min_version ? { min_version: sol.min_version } : {}),
+          },
+        }
+      : {};
+    if ((lotl.environment ?? "production") !== "production") return hide("sandbox", { ...rec, ...solution });
+    if (wp.status !== "ACTIVE") return hide("provider_not_active", { ...rec, ...solution });
+    if (opts.solutionId && !sol) return hide("solution_not_listed", rec);
+    if (sol && sol.status !== "ACTIVE") return hide("solution_not_active", { ...rec, ...solution });
+    if (opts.unitRevoked) return hide("unit_revoked", { ...rec, ...solution });
+    return { listed: true, provider_id: providerId, ...rec, ...solution, ...listMeta };
   }
 
   walletProviderMinKeyStorage(fp: string): string | null {

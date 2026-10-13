@@ -12,6 +12,7 @@ import { SignJWT, exportJWK, generateKeyPair, type JWK } from "jose";
 import {
   checkIssuerRegistration,
   checkRegistrationCerts,
+  WRPRC_REQUIRED_FROM,
   verifyRequestObject,
   type Match,
   type StoredCredential,
@@ -110,10 +111,24 @@ const match = (requested: string[]): Match => ({
 });
 
 describe("kayıt sertifikası doğrulaması (ADR-0026)", () => {
-  it("yoksa: present=false, valid", async () => {
-    expect(checkRegistrationCerts(await request(), [registrar.fp], match(["is_enrolled"]), NOW)).toEqual({
+  it("yoksa (K5, 2026-10-13): present=false, uyarı `registration_missing` + varsayılan Paylaşma; 2028-08-11'den sonra ret", async () => {
+    const req = await request();
+    expect(checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), NOW)).toEqual({
       present: false,
       valid: true,
+      flags: ["registration_missing"],
+      defaultChoice: "decline",
+    });
+    expect(WRPRC_REQUIRED_FROM).toBe(Date.parse("2028-08-11T00:00:00Z"));
+    expect(checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), WRPRC_REQUIRED_FROM - 1).valid).toBe(
+      true,
+    );
+    expect(checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), WRPRC_REQUIRED_FROM)).toEqual({
+      present: false,
+      valid: false,
+      reason: "registration_missing",
+      flags: ["registration_missing"],
+      defaultChoice: "decline",
     });
   });
 

@@ -8,9 +8,15 @@ import _Ajv2020 from "ajv/dist/2020.js";
 import _addFormats from "ajv-formats";
 import { verifySdJwtVc } from "@tamga-network/sd-jwt";
 import { computeSchemaId, pidSdJwtName } from "@tamga-network/core";
-import { ALL as SCHEMA_DEFS, externalType, isShortLivedType, type SchemaDef } from "@tamga-network/schemas";
+import {
+  ALL as SCHEMA_DEFS,
+  externalType,
+  isShortLivedType,
+  suspensionAllowed,
+  type SchemaDef,
+} from "@tamga-network/schemas";
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
-import { verifyStatusListToken } from "@tamga-network/sd-jwt";
+import { verifyStatusListAny } from "@tamga-network/sd-jwt";
 import type { ExternalIssuerAnswer, TrustSource } from "@tamga-network/trust";
 import { assuranceAtLeast, constraintOk, scopeClaimName, scopeCovers, type Policy } from "./policy.js";
 import { pointOf, verifyMdocFormat, type FormatResult } from "./mdoc-format.js";
@@ -313,9 +319,11 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   if (!cached)
     return indet("D2", "STATUS_UNREACHABLE", "status token not in prefetch cache (S12: no fetch per verification)");
   ctx.done.push("D2");
-  let tok: Awaited<ReturnType<typeof verifyStatusListToken>>;
+  // ADR-0048 K3: mdoc kopyası CWT gösterimine (ikili; önbellekte `b64u:`), SD-JWT kopyası JWT gösterimine işaret eder — gövde
+  // hangisiyse o doğrulanır (eski mdoc kopyaları JWT adresini gösterebilir)
+  let tok: Awaited<ReturnType<typeof verifyStatusListAny>>;
   try {
-    tok = await verifyStatusListToken(cached.token, a.status.status_list.uri, now);
+    tok = await verifyStatusListAny(cached.token, a.status.status_list.uri, now);
   } catch (e) {
     const msg = (e as Error).message;
     // önbellekteki token exp aşımı → tazelik sorunu, geçersizlik değil (AP2). Azami yaş politikada (aşağıda, D4)
@@ -326,8 +334,9 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   if (
     issuerRec &&
     !ctx.ext && // ADR-0036: dış kurumda issuer_url yok — imzacı aşağıda kurumun iptal hizmeti sertifikasıyla denetlenir
+    tok.format === "jwt" && // CWT gösteriminde `iss` yok: bağ S11 (kurumun kayıtlı iptal anahtarı) ile kurulur
     tok.payload.iss !== issuerRec.issuer_url &&
-    !(ctx.input.allowLocalIssuerUrls && isLocalUrl(tok.payload.iss))
+    !(ctx.input.allowLocalIssuerUrls && isLocalUrl(tok.payload.iss ?? ""))
   )
     return reject("D3", "status token iss inconsistent with the issuer record");
   // S11: iptal listesini kurumun güven listesinde kayıtlı iptal anahtarı imzalamış olmalı
@@ -378,11 +387,14 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   } catch (e) {
     return reject("D6", (e as Error).message);
   }
+  // ADR-0048 SU2: askısı olmayan türde (şema `suspension_allowed` taşımıyor) 0x02 bozuk liste değeridir — askı sayılmaz, RED
+  const noSuspension = bit === 2 && suspensionAllowed(a.vct) === false;
   ctx.status = {
-    value: bit === 0 ? "VALID" : bit === 2 ? "SUSPENDED" : "INVALID",
+    value: bit === 0 ? "VALID" : bit === 2 && !noSuspension ? "SUSPENDED" : "INVALID",
     list_version: listVersion,
     token_age_sec: age,
   };
+  if (noSuspension) return reject("D6", "status value 0x02 on a type without suspension (ADR-0048 SU2)");
   if (bit !== 0) return reject("D6", bit === 2 ? "credential suspended" : "credential revoked");
   ctx.done.push("D6");
 }
@@ -566,13 +578,14 @@ async function formatStep(input: VerifyInput, now: number): Promise<FormatResult
     });
   }
   if (input.format === "mso_mdoc") {
-    if (!input.responseUri && !input.origin)
-      return { ok: false, failedStep: "A1", reason: "responseUri or origin required for mso_mdoc" };
+    if (!input.responseUri && !input.origin && !input.sessionTranscript)
+      return { ok: false, failedStep: "A1", reason: "responseUri, origin or sessionTranscript required for mso_mdoc" };
     return verifyMdocFormat(input.presentation, {
       clientId: input.aud,
       nonce: input.nonce,
       responseUri: input.responseUri ?? "",
       origin: input.origin,
+      sessionTranscript: input.sessionTranscript,
       encJwkThumbprint: input.encJwkThumbprint,
       stateCode: input.policy.trust.state_code,
       now,

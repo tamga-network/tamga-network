@@ -14,7 +14,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import formbody from "@fastify/formbody";
 import { readFileSync } from "node:fs";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, createPrivateKey, timingSafeEqual } from "node:crypto";
 import { resolve } from "node:path";
 import { pemToDer } from "@tamga-network/core";
 import { guardedReload, loadTrustSourceFromDir, type TrustSource } from "@tamga-network/trust";
@@ -73,6 +73,11 @@ export interface VerifyContext {
   policies: Policy[];
   /** Hız sınırları (bellekte; istemci adresi saklanmaz — rate-limit.ts). */
   limits: Record<keyof RateRules, TokenBucketLimiter>;
+  /**
+   * ISO/IEC 18013-7 Ek C isteğinin okuyucu imzası (ReaderAuth): doğrulayıcının erişim sertifikası ve ham anahtarı. Test imzacısı
+   * verildiyse yok (istek imzasız gider).
+   */
+  readerAuth?: { sk: Uint8Array; x5chain: Uint8Array[] };
 }
 
 export interface VerifyApp extends FastifyInstance {
@@ -120,6 +125,16 @@ export async function buildVerifyApp(
       readFileSync(resolve(cfg.pkiDir, "rp-verify.pkcs8.pem"), "utf8"),
       readFileSync(resolve(cfg.pkiDir, "rp-verify.cert.pem"), "utf8"),
     ));
+  // Ek C okuyucu imzası aynı erişim sertifikasıyla (ham anahtar yalnız bu süreçte; dışarı verilmez)
+  let readerAuth: VerifyContext["readerAuth"];
+  if (!opts.signer) {
+    const d = (
+      createPrivateKey(readFileSync(resolve(cfg.pkiDir, "rp-verify.pkcs8.pem"), "utf8")).export({ format: "jwk" }) as {
+        d?: string;
+      }
+    ).d;
+    if (d) readerAuth = { sk: new Uint8Array(Buffer.from(d, "base64url")), x5chain: [signer.leafDer] };
+  }
   cfg.clientId = signer.clientId; // ADR-0034: x509_hash, sertifikadan
   const audit: Record<string, unknown>[] = [];
   const rpJti = makeJtiCache();
@@ -132,6 +147,7 @@ export async function buildVerifyApp(
   const ctx: VerifyContext = {
     cfg,
     signer,
+    ...(readerAuth ? { readerAuth } : {}),
     zk,
     showcase,
     policies,

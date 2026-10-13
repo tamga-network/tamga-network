@@ -10,23 +10,34 @@
  * liste bütün olarak indirilir, hangi girişe bakıldığı görünmez; imzacı kurumun kayıtlı iptal anahtarı olmalı — S11). Dönüş
  * yalnız alan değerleri, belge verenin adı ve sonuçtur; girdi baytları iş bitince sıfırlanır (W2W_21, OIA_16).
  *
+ * Sunum teklifi (AB TS9 v1.1 STS9_12–18, 28, 29, 34; 0.6.0): gösteren, izin listesindeki ve belgesinde bulunan alanları QR'daki
+ * DeviceEngagement'a (`-1`) teklif olarak koyar. Doğrulayan yalnız teklifin alt kümesini isteyebilir; gösteren teklif dışı ya da
+ * saklama niyetli (`IntentToRetain = true`) isteği kişiye göstermeden, HİÇ alan göndermeden `DeviceResponse.status = 10` ile keser
+ * ve yanıtı isteğin alınışından sabit bir süre sonra gönderir (yanıt süresi belgenin içeriğine bağlı değildir).
+ *
  * Gösteren tarafında gömülü açıklama politikası kısıtlı belge (ağın ADR-0046'sı) cüzdandan cüzdana gösterilmez: kayıt
  * sertifikası olmadığı için kural değerlendirilemez ve karşı taraf bir doğrulayıcı değil, bir kişidir.
  */
 import {
   BleReassembler,
+  DEVICE_RESPONSE_STATUS,
   bleChunks,
+  deviceResponseStatus,
+  hasIntentToRetain,
+  isSubsetOfOffer,
   parseDeviceResponse,
+  parseEngagement,
   readerReceive,
   readerStart,
   verifyDeviceAuth,
   verifyIdentifierListToken,
   verifyIssuerSigned,
+  type PresentationOffer,
 } from "@tamga-network/mdoc";
 import { b64Decode, b64u, b64uToUtf8 } from "./b64.js";
 import { mdocElementValues, mdocIssuerKeys } from "./mdoc.js";
 import { certFingerprintHex, computeIssuerId, computeSchemaId, p256PointFromCertDer } from "./sdjwt.js";
-import { parseStatusToken, statusBitAt } from "./status.js";
+import { parseStatusBody, parseStatusToken, statusBitAt } from "./status.js";
 import { presentProximity, type ProximityTransport } from "./proximity.js";
 import { offlineDisclosurePolicy } from "./disclosure-policy.js";
 import type { KeyProvider } from "./keys.js";
@@ -99,7 +110,25 @@ export type W2wVerdict =
 export type W2wVerifierOutcome =
   | { outcome: "response"; deviceResponse: Uint8Array; transcript: Uint8Array }
   | { outcome: "declined" }
+  /** TS9 STS9_34: gösteren isteği belge göndermeden kesti (`status` 10: teklif dışı ya da saklama niyetli istek) */
+  | { outcome: "refused"; status: number }
   | { outcome: "error"; reason: string };
+
+/** TS9: QR'daki teklifte bu profilin türü için teklif edilen ve izin listesinde olan alanlar (sıra izin listesinin). */
+export function w2wOfferedElements(p: W2wProfile, offer: PresentationOffer | undefined): string[] | null {
+  if (!offer) return null;
+  const doc = offer.docs.find((d) => d.docType === p.docType);
+  const ids = new Set(doc?.nameSpaces[p.namespace] ?? []);
+  return p.allowed.filter((e) => ids.has(e));
+}
+/**
+ * Doğrulayan: QR'ı okuyup gösterenin teklifini verir (`offered` = teklif edilen izinli alanlar; teklif yoksa `null` → izin
+ * listesinden serbest seçim, STS9_28). QR bir cihaz tanıtımı değilse ya da teklif bozuksa hata.
+ */
+export function readW2wOffer(p: W2wProfile, qr: string): { offered: string[] | null } {
+  const e = parseEngagement(qr.trim());
+  return { offered: w2wOfferedElements(p, e.offer) };
+}
 
 const allowedSet = (p: W2wProfile) => new Set<string>(p.allowed);
 /** Doğrulayanın seçimi izin listesinin dışına çıkamaz; boş seçim istek değildir; tekrar yok. */
@@ -122,7 +151,7 @@ export function w2wSplitRequested(
   return { allowed, blocked };
 }
 
-/** ISO 18013-5 istek öğesi: yalnız izinli alanlar, saklama niyeti hep `false` (W2W_21). */
+/** ISO 18013-5 istek öğesi: yalnız izinli alanlar, saklama niyeti hep `false` (W2W_21, STS9_29). */
 export function buildW2wRequest(p: W2wProfile, elements: readonly string[]) {
   if (!w2wValidSelection(p, elements)) throw new Error("selection outside the allow-list");
   return [{ docType: p.docType, nameSpaces: { [p.namespace]: Object.fromEntries(elements.map((e) => [e, false])) } }];
@@ -144,7 +173,11 @@ export async function runW2wVerifier(p: {
 }): Promise<W2wVerifierOutcome> {
   let started: ReturnType<typeof readerStart>;
   try {
-    started = readerStart(p.qr.trim(), buildW2wRequest(p.profile, p.elements), { randomBytes: p.randomBytes });
+    // TS9 STS9_28: teklif varsa yalnız teklifteki alanlar istenir (teklif dışı seçim isteğe girmez)
+    const offered = w2wOfferedElements(p.profile, parseEngagement(p.qr.trim()).offer);
+    const elements = offered ? p.elements.filter((e) => offered.includes(e)) : [...p.elements];
+    if (!elements.length) return { outcome: "error", reason: "none of the selected fields is offered" };
+    started = readerStart(p.qr.trim(), buildW2wRequest(p.profile, elements), { randomBytes: p.randomBytes });
   } catch (e) {
     return { outcome: "error", reason: `engagement: ${(e as Error).message}` };
   }
@@ -180,6 +213,16 @@ export async function runW2wVerifier(p: {
     const r = readerReceive(session, msg);
     msg.fill(0);
     if (!r.deviceResponse) return { outcome: "declined" };
+    let st: { status: number; documents: number };
+    try {
+      st = deviceResponseStatus(r.deviceResponse);
+    } catch {
+      st = { status: 0, documents: 1 }; // çözülemeyen yanıt: doğrulamada "bozuk" çıkar
+    }
+    if (st.status !== 0 && st.documents === 0) {
+      r.deviceResponse.fill(0);
+      return { outcome: "refused", status: st.status };
+    }
     return { outcome: "response", deviceResponse: r.deviceResponse, transcript: session.transcript };
   } catch (e) {
     return { outcome: "error", reason: (e as Error).message };
@@ -219,6 +262,18 @@ function statusTokenSigner(token: string): string | null {
   }
 }
 
+function bitOutcome(list: ReturnType<typeof parseStatusToken>, idx: number): RevocationOutcome {
+  let bit: number;
+  try {
+    bit = statusBitAt(list, idx);
+  } catch {
+    return statusInvalid; // D6: indeks liste dışında
+  }
+  if (bit === 1 || bit === 3) return { kind: "stop", verdict: { kind: "invalid", reason: "revoked" } };
+  if (bit === 2) return { kind: "stop", verdict: { kind: "invalid", reason: "suspended" } };
+  return { kind: "ok", checked: true };
+}
+
 /**
  * İptal denetimi — ağın doğrulayıcısının D adımlarıyla aynı üç değer: denetlendi / belge iptal listesi taşımıyor (`ok`);
  * GEÇERSİZ (iptal, askı, yanlış imzacı, bozuk imza ya da adres, indeks dışı); DOĞRULANAMADI (liste yok, bayat, okunamıyor).
@@ -228,10 +283,28 @@ async function w2wRevocation(
   keys: string[],
   ctx: {
     fetchStatus?: (uri: string) => Promise<string | null>;
+    fetchStatusBytes?: (uri: string) => Promise<Uint8Array | null>;
     fetchIdentifierList?: (uri: string) => Promise<Uint8Array | null>;
   },
   now: number,
 ): Promise<RevocationOutcome> {
+  if (v.status && ctx.fetchStatusBytes) {
+    // ADR-0048 K3: mdoc kopyasının listesi CWT gösterimidir (ikili); eski kopyalar JWT adresini gösterebilir — gövde hangisiyse
+    if (!keys.length) return unavailable;
+    const body = await ctx.fetchStatusBytes(v.status.uri).catch(() => null);
+    if (!body?.length) return unavailable;
+    let list: ReturnType<typeof parseStatusBody>;
+    try {
+      list = parseStatusBody(body, v.status.uri, now);
+    } catch (e) {
+      // süresi geçmiş / okunamıyor / çok eski → tazelik (D4); imza, adres, biçim → geçersiz (D3)
+      return /^D4:|expired|too old|too large|unreadable|status token header/.test((e as Error).message)
+        ? unavailable
+        : statusInvalid;
+    }
+    if (!keys.includes(list.signerFingerprint)) return statusInvalid; // S11
+    return bitOutcome(list, v.status.idx);
+  }
   if (v.status) {
     if (!ctx.fetchStatus || !keys.length) return unavailable;
     const token = (await ctx.fetchStatus(v.status.uri).catch(() => null))?.trim();
@@ -246,15 +319,7 @@ async function w2wRevocation(
       // süresi geçmiş / çok eski → tazelik (D4); imza, adres, biçim → geçersiz (D3)
       return /expired|too old|too large/.test((e as Error).message) ? unavailable : statusInvalid;
     }
-    let bit: number;
-    try {
-      bit = statusBitAt(list, v.status.idx);
-    } catch {
-      return statusInvalid; // D6: indeks liste dışında
-    }
-    if (bit === 1 || bit === 3) return { kind: "stop", verdict: { kind: "invalid", reason: "revoked" } };
-    if (bit === 2) return { kind: "stop", verdict: { kind: "invalid", reason: "suspended" } };
-    return { kind: "ok", checked: true };
+    return bitOutcome(list, v.status.idx);
   }
   if (v.identifierList) {
     if (!ctx.fetchIdentifierList || !keys.length) return unavailable;
@@ -277,7 +342,8 @@ async function w2wRevocation(
 
 /**
  * Gelen DeviceResponse'u doğrular. `requested`: doğrulayanın istediği alanlar — yanıtta fazlası olsa da yalnız istenen ve
- * izinli alanlar gösterilir. `now` saniye. İptal: belge Status List taşıyorsa `fetchStatus` (application/statuslist+jwt),
+ * izinli alanlar gösterilir. `now` saniye. İptal: belge Status List taşıyorsa `fetchStatusBytes` (gövde baytları; CWT ya da
+ * JWT gösterimi — 0.6.0, ADR-0048 K3: mdoc kopyası CWT adresini gösterir) ya da yalnız JWT okuyan eski `fetchStatus` (metin),
  * Revocation List taşıyorsa `fetchIdentifierList` (application/identifierlist+cwt baytları). Ağın doğrulayıcısıyla aynı anlam
  * (0.5.2): imzacı kurumun kayıtlı iptal anahtarı değil ya da imza / adres / indeks tutmuyor → GEÇERSİZ (`status_invalid`);
  * liste alınamadı (ağ yok, çekici yok), süresi geçmiş, okunamadı ya da kurumun iptal anahtarı kayıtlı değil → DOĞRULANAMADI
@@ -292,6 +358,8 @@ export async function verifyW2wResponse(
     requested: readonly string[];
     now?: number;
     fetchStatus?: (uri: string) => Promise<string | null>;
+    /** 0.6.0: liste gövdesi bayt olarak (CWT ya da JWT); verilirse `fetchStatus` yerine kullanılır */
+    fetchStatusBytes?: (uri: string) => Promise<Uint8Array | null>;
     fetchIdentifierList?: (uri: string) => Promise<Uint8Array | null>;
     stateCode?: string;
   },
@@ -384,9 +452,17 @@ export interface W2wHolderResult {
   outcome: "sent" | "declined" | "error";
   /** gönderilen alan adları (değerler yok) */
   disclosed: string[];
-  /** `unsupported` (tür izinli değil) · `restricted` (belge verenin paylaşım kuralı — ADR-0046) · taşıyıcı nedeni */
+  /**
+   * `unsupported` (tür izinli değil) · `restricted` (belge verenin paylaşım kuralı — ADR-0046) · `not_offered` (istek teklifin
+   * alt kümesi değil; status 10) · `intent_to_retain` (saklama niyetli istek; status 10) · taşıyıcı nedeni
+   */
   reason?: string;
+  /** 0.6.0 (TS9): QR'a konan teklif (alan adları; teklif yoksa yok) */
+  offered?: string[];
 }
+
+/** TS9 STS9_34: kesme yanıtının, isteğin alınışından sonra gönderildiği sabit süre (ms). */
+export const W2W_REJECT_DELAY_MS = 1500;
 
 /** Gösterenin günlüğündeki karşı taraf anahtarı varsayılanı ("bir kişi"; doğrulanmış ad yok). */
 export const W2W_PERSON_KEY = "w2w:person";
@@ -415,9 +491,31 @@ export async function presentToPerson(p: {
   timeoutMs?: number;
   now?: number;
   personKey?: string;
+  /** TS9 teklifi QR'a konsun mu (varsayılan evet; STS9_12 SHOULD) */
+  offer?: boolean;
+  /** kesme yanıtının sabit süresi (ms; varsayılan `W2W_REJECT_DELAY_MS`) ve testler için bekleme / saat */
+  rejectDelayMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+  clock?: () => number;
 }): Promise<W2wHolderResult> {
   let refused: "unsupported" | "restricted" | undefined;
   const nameOf = p.profile.claimNameOf ?? ((e: string) => e);
+  // TS9 STS9_12: teklif = izin listesindeki ve belgede bulunan alanlar (gösterilebilecek belge yoksa teklif yok)
+  const cred =
+    p.state.credentials.find(
+      (c) =>
+        c.vct === p.profile.docType &&
+        !c.revokedLocally &&
+        c.status?.value !== "revoked" &&
+        c.copies.some((k) => !!k.mdoc),
+    ) ?? null;
+  const offeredElements =
+    p.offer === false || !cred || offlineDisclosurePolicy(cred).restricted
+      ? []
+      : p.profile.allowed.filter((e) => nameOf(e) in cred.claims);
+  const offer: PresentationOffer | undefined = offeredElements.length
+    ? { version: "1.0", docs: [{ docType: p.profile.docType, nameSpaces: { [p.profile.namespace]: offeredElements } }] }
+    : undefined;
   const r = await presentProximity({
     transport: p.transport,
     state: p.state,
@@ -426,6 +524,18 @@ export async function presentToPerson(p: {
     randomBytes: p.randomBytes,
     timeoutMs: p.timeoutMs,
     now: p.now,
+    registrarKeys: false, // karşı taraf bir kişi: kayıt sertifikası kuralı uygulanmaz
+    ...(offer ? { engagementOffer: offer } : {}),
+    screenRequest: (item) => {
+      const items = [item];
+      if (hasIntentToRetain(items)) return { status: DEVICE_RESPONSE_STATUS.GENERAL_ERROR, reason: "intent_to_retain" };
+      if (offer && !isSubsetOfOffer(items, offer))
+        return { status: DEVICE_RESPONSE_STATUS.GENERAL_ERROR, reason: "not_offered" };
+      return null;
+    },
+    rejectDelayMs: p.rejectDelayMs ?? W2W_REJECT_DELAY_MS,
+    ...(p.sleep ? { sleep: p.sleep } : {}),
+    ...(p.clock ? { clock: p.clock } : {}),
     approve: async (pv) => {
       const { allowed, blocked } = w2wSplitRequested(p.profile, pv.requested);
       const supported = pv.docType === p.profile.docType && !!pv.credential;
@@ -457,7 +567,13 @@ export async function presentToPerson(p: {
   });
   const state = r.outcome === "error" ? r.state : relabel(p.state, r.state, p.personKey ?? W2W_PERSON_KEY);
   const disclosed = r.outcome === "sent" ? (state.presentationLog.at(-1)?.disclosed ?? []) : [];
-  return { state, outcome: r.outcome, disclosed, reason: refused ?? r.reason };
+  return {
+    state,
+    outcome: r.outcome,
+    disclosed,
+    reason: refused ?? r.reason,
+    ...(offer ? { offered: offeredElements } : {}),
+  };
 }
 
 /**

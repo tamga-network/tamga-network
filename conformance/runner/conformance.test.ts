@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadTrustSet, ListTrustSource } from "@tamga-network/trust";
-import { verifySdJwtVc } from "@tamga-network/sd-jwt";
+import { StatusBitstring, verifySdJwtVc, verifyStatusListCwt, verifyStatusListToken } from "@tamga-network/sd-jwt";
 import { pemToDer } from "@tamga-network/core";
 import { run } from "../generate.js";
 
@@ -15,6 +15,7 @@ const V = resolve(dirname(fileURLToPath(import.meta.url)), "..", "vectors");
 const trustPath = resolve(V, "trust", "basic.json");
 const sdPath = resolve(V, "sd-jwt", "diploma-basic.json");
 const idPath = resolve(V, "sd-jwt", "identity-pid-names.json");
+const slPath = resolve(V, "status-list", "jwt-cwt.json");
 
 describe.skipIf(!existsSync(trustPath))("conformance: trust/basic", () => {
   const vec = existsSync(trustPath) ? JSON.parse(readFileSync(trustPath, "utf8")) : null;
@@ -101,4 +102,35 @@ describe.skipIf(!existsSync(idPath))("conformance: sd-jwt/identity-pid-names (AD
     for (const [k, v] of Object.entries(vec.expect.claims)) expect(r.claims[k]).toEqual(v);
     for (const h of vec.expect.hidden_claims) expect(r.claims[h]).toBeUndefined();
   });
+});
+
+describe.skipIf(!existsSync(slPath))("conformance: status-list/jwt-cwt (ADR-0048)", () => {
+  const vec = existsSync(slPath) ? JSON.parse(readFileSync(slPath, "utf8")) : null;
+  const now = () => Math.floor(new Date(vec.now).getTime() / 1000);
+  it("taslağın bits = 1 örneği: sıkıştırılmış lst açılır", () => {
+    const bs = StatusBitstring.fromCompressed(Buffer.from(vec.draft_example.lst_compressed_hex, "hex"), 100_000, 1);
+    expect(Buffer.from(bs.bytes).toString("hex")).toBe(vec.draft_example.bytes_hex);
+  });
+  for (const l of vec?.lists ?? []) {
+    it(`${l.name}: JWT ve CWT gösterimleri aynı bitleri, imzacıyı ve zamanları taşır`, async () => {
+      const a = await verifyStatusListToken(l.jwt.token, l.jwt.uri, now());
+      const b = await verifyStatusListCwt(Buffer.from(l.cwt.hex, "hex"), l.cwt.uri, now());
+      for (const t of [a, b]) {
+        expect(t.payload.status_list.bits).toBe(l.bits);
+        expect(t.leafFingerprintHex).toBe(l.expect.signer_fingerprint_sha256);
+        expect([t.payload.iat, t.payload.exp, t.payload.ttl]).toEqual([l.expect.iat, l.expect.exp, l.expect.ttl]);
+        for (const [i, v] of Object.entries(l.expect.values)) expect(t.bitstring.get(Number(i))).toBe(v);
+      }
+      expect(a.contentHash).toBe(l.jwt.content_hash);
+      expect(b.contentHash).toBe(l.cwt.content_hash);
+    });
+    for (const n of l.negative) {
+      it(`${l.name}: olumsuz — ${n.name} → ${n.expect}`, async () => {
+        const t = now() + n.now_offset_sec;
+        const re = new RegExp(`^${n.expect}:`);
+        await expect(verifyStatusListToken(l.jwt.token, n.uri ?? l.jwt.uri, t)).rejects.toThrow(re);
+        await expect(verifyStatusListCwt(Buffer.from(l.cwt.hex, "hex"), n.uri ?? l.cwt.uri, t)).rejects.toThrow(re);
+      });
+    }
+  }
 });

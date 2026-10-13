@@ -176,6 +176,13 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNsLTIwMjYtYSIsInR5cCI6InN0YXR1c2xpc3Qr...
   `status_list` (65533) `{bits, lst}`. JWT ve CWT gösterimleri aynı bitleri taşır, aynı döngüde aynı anahtarla imzalanır ve çapa
   günlüğüne ayrı satırlar olarak yazılır. SD-JWT VC kopyası JWT adresine, mdoc kopyasının MSO'su CWT adresine işaret eder; iki
   kopya aynı `idx`'i kullanır. mdoc olarak verilmeyen türde CWT gösterimi yoktur.
+- **Uygulama (paketler 0.6.0).** `@tamga-network/sd-jwt`: `StatusBitstring(capacity, bytes, bits)` (`bits` 1 ya da 2),
+  `signStatusListCwt` / `verifyStatusListCwt` (imzacı ham ES256 imzası verir: `IssuerSigner.signRaw`, `pemIssuerSigner` sağlar) ve
+  gövdeye göre seçen `verifyStatusListAny`; CBOR/COSE katmanı `@tamga-network/mdoc` (`signStatusListCwt`, `parseStatusListCwt`).
+  Doğrulayıcının ön çekim önbelleği CWT gövdesini bayt olarak saklar; D adımı mdoc kopyasında CWT'yi, eski kopyalarda JWT'yi
+  okur. Askısı olmayan türde (şema `suspension_allowed` taşımıyor) `0x02` bozuk liste değeridir: sonuç `INVALID`, RED (SU2).
+  `@tamga-network/wallet-core`: `parseStatusCwt`, `parseStatusBody`; cüzdandan cüzdana doğrulamada `fetchStatusBytes`. Uyum
+  vektörü `conformance/vectors/status-list/jwt-cwt.json` (sürüm 5).
 
 ## 3.3 `bits` kararı
 

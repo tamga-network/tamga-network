@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sha256Sri, computeSchemaId } from "@tamga-network/core";
-import { ALL, CATALOGUE_BASE } from "./definitions.js";
+import { ALL, CATALOGUE_BASE, suspensionAllowed } from "./definitions.js";
 
 const DIST = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 const VCT_URN = /^urn:tamga:[a-z]+:[A-Za-z]+:\d+$/;
@@ -69,5 +69,23 @@ describe.skipIf(!existsSync(resolve(DIST, "catalogue.json")))("derlenmiş katalo
       expect(meta["schema_uri#integrity"]).toBe(sha256Sri(schemaBytes));
       if (s.extends) expect(meta["extends#integrity"]).toMatch(/^sha256-/);
     }
+  });
+});
+
+describe("ADR-0048 K2: askı izni (suspension_allowed)", () => {
+  it("yalnız diploma askıya alınabilir; kimlik servisinin türleri ve öteki türler alamaz; katalog dışı tür bilinmez", () => {
+    expect(suspensionAllowed("urn:tamga:edu:DiplomaCredential:1")).toBe(true);
+    for (const vct of [
+      "urn:tamga:id:IdentityAttestation:1",
+      "urn:tamga:id:DrivingLicenceAttestation:1",
+      "urn:tamga:contact:EmailAddress:1",
+      "urn:tamga:contact:PhoneNumber:1",
+      "urn:tamga:edu:StudentCredential:1",
+      "urn:tamga:tkt:EventTicket:1",
+    ])
+      expect(suspensionAllowed(vct)).toBe(false);
+    expect(suspensionAllowed("urn:example:Other:1")).toBeUndefined();
+    const withFlag = ALL.filter((d) => (d.typeMetadata.tamga as { suspension_allowed?: boolean }).suspension_allowed);
+    expect(withFlag.map((d) => d.vct)).toEqual(["urn:tamga:edu:DiplomaCredential:1"]);
   });
 });

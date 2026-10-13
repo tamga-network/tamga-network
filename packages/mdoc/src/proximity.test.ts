@@ -58,7 +58,9 @@ describe("ISO 18013-5 yakın alan", () => {
     ]);
     // 3) cüzdan isteği çözer
     const hs = holderReceiveEstablishment(eng, establishment);
-    expect(hs.request).toEqual([{ docType: DOCTYPE, nameSpaces: { [NS]: { age_over_18: false } } }]);
+    expect(hs.request).toMatchObject([{ docType: DOCTYPE, nameSpaces: { [NS]: { age_over_18: false } } }]);
+    expect(hs.request[0].itemsRequestBytes).toBeInstanceOf(Uint8Array);
+    expect(hs.request[0].readerAuth).toBeUndefined();
     expect(hs.transcript).toEqual(rs.transcript); // iki taraf aynı SessionTranscript
     // 4) cüzdan: kişi onayladı → seçici açıklama + DeviceAuth (holder anahtarıyla) → şifreli yanıt
     const partial = discloseMdoc(doc.issuerSigned, { [NS]: ["age_over_18"] });

@@ -6,7 +6,7 @@
  *  ÇIKTI biçimi: "<jwt>~<d1>~…~" (sondaki ~ boş KB yeri; cüzdan sunumda doldurur).
  */
 import { CompactSign, importPKCS8, type JWK } from "jose";
-import type { KeyObject } from "node:crypto";
+import { createPrivateKey, sign as nodeSign, type KeyObject } from "node:crypto";
 export type SigningKey = CryptoKey | KeyObject;
 import { derToB64, pemToDer, utf8 } from "@tamga-network/core";
 import { makeArrayElementDisclosure, makeDisclosure, SD_ALG, SD_JWT_TYP, type Disclosure } from "./disclosure.js";
@@ -17,6 +17,11 @@ export interface IssuerSigner {
   /** Yaprak sertifika DER (x5c[0]) + varsa ara CA'lar; KÖK DAHİL DEĞİL (C7) */
   x5c: Uint8Array[];
   sign(protectedHeader: Record<string, unknown>, payload: Uint8Array): Promise<string>;
+  /**
+   * Ham ES256 imzası (SHA-256 ön özetli, 64 baytlık r‖s) — COSE yapıları için (ADR-0048: iptal listesinin CWT gösterimi).
+   * İsteğe bağlı: yalnız CWT yayımlayan imzacıda gerekir (KMS uyarlaması da sağlayabilir).
+   */
+  signRaw?(data: Uint8Array): Promise<Uint8Array>;
 }
 
 export async function pemIssuerSigner(
@@ -26,7 +31,12 @@ export async function pemIssuerSigner(
 ): Promise<IssuerSigner> {
   const key = await importPKCS8(privateKeyPem, "ES256");
   const x5c = [pemToDer(leafCertPem), ...intermediatePems.map(pemToDer)];
-  return { x5c, sign: (h, p) => new CompactSign(p).setProtectedHeader(h as never).sign(key as SigningKey) };
+  const raw = createPrivateKey(privateKeyPem);
+  return {
+    x5c,
+    sign: (h, p) => new CompactSign(p).setProtectedHeader(h as never).sign(key as SigningKey),
+    signRaw: async (data) => new Uint8Array(nodeSign("sha256", data, { key: raw, dsaEncoding: "ieee-p1363" })),
+  };
 }
 
 export interface IssueInput {

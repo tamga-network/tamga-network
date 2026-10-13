@@ -385,6 +385,33 @@ export function deviceSignAsync(
 }
 
 // ---------- DeviceResponse (ISO 18013-5 §8.3.2.1.2.2) — OpenID4VP `vp_token` içinde base64url olarak taşınır (18013-7)
+/** ISO 18013-5 §8.3.2.1.2.3 DeviceResponse durum kodları: 0 OK, 10 genel hata, 11 CBOR çözme hatası, 12 CBOR doğrulama hatası. */
+export const DEVICE_RESPONSE_STATUS = {
+  OK: 0,
+  GENERAL_ERROR: 10,
+  CBOR_DECODING_ERROR: 11,
+  CBOR_VALIDATION_ERROR: 12,
+} as const;
+/** Belgesiz DeviceResponse `{version, status}` — gösteren hiçbir alan göndermeden keser (AB TS9 STS9_34: status 10). */
+export function buildDeviceResponseStatus(status: number): Uint8Array {
+  if (!Number.isInteger(status) || status === 0) throw new Error("status-only DeviceResponse needs a non-zero status");
+  return encode(
+    new Map<string, CborValue>([
+      ["version", "1.0"],
+      ["status", status],
+    ]),
+  );
+}
+/** DeviceResponse'un durum kodu ve belge sayısı (çözülemezse hata). */
+export function deviceResponseStatus(bytes: Uint8Array): { status: number; documents: number } {
+  const r = decode(bytes);
+  if (!(r instanceof Map)) throw new Error("DeviceResponse: not a map");
+  const st = r.get("status");
+  if (typeof st !== "number") throw new Error("DeviceResponse: status");
+  const docs = r.get("documents");
+  return { status: st, documents: Array.isArray(docs) ? docs.length : 0 };
+}
+
 /**
  * DeviceResponse = { version: "1.0", documents: [ { docType, issuerSigned, deviceSigned: { nameSpaces: #6.24({}),
  * deviceAuth: { deviceSignature: COSE_Sign1 } } } ], status: 0 }. Tek belge (Tamga profili: sorgu başına bir belge).

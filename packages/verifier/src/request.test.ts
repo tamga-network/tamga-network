@@ -94,7 +94,10 @@ describe("istek nesnesi x5c ve başlık iat (REDIRECTS_RO-02/03)", () => {
     const h = headerOf(pr.requestJwt);
     expect(h.x5c).toEqual([leafDerB64, caDerB64]);
     expect(h.iat).toBe(now);
+    // OpenID uyum öz-testi (V4): gövdede `aud` (OpenID4VP 1.0 §5, statik yapılandırma) ve `iat`; başlıktaki `iat` de kalır
     expect(payloadOf(pr.requestJwt).iat).toBe(now);
+    expect(payloadOf(pr.requestJwt).aud).toBe("https://self-issued.me/v2");
+    expect(payloadOf(pr.requestJwt).exp).toBe(now + 300);
     expect(payloadOf(pr.requestJwt).verifier_info).toBeUndefined(); // kayıt sertifikası yoksa alan yok
   });
 

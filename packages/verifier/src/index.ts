@@ -7,3 +7,4 @@ export * from "./rp-assertion.js";
 export * from "./trusted-authorities.js";
 export * from "./pseudonym.js";
 export { x509HashClientId } from "@tamga-network/core";
+export * from "./dc-mdoc.js";

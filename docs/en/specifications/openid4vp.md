@@ -451,6 +451,43 @@ they are different problems.
 | `direct_post.jwt` (QR / deep link) | **In force** |
 | `dc_api.jwt` (browser, OpenID4VP 1.0 Annex A) | **Implemented** — verifier request object and page kit (`@tamga-network/verifier/web`), wallet side (`@tamga-network/wallet-core`); depends on browser and operating system support |
 | ISO 18013-5 proximity (Bluetooth), mdoc | **Code ready** (`@tamga-network/mdoc`, `@tamga-network/wallet-core`); interoperability trials with real devices are under way. No NFC at this stage |
+| ISO/IEC 18013-7 Annex C (`org-iso-mdoc`, browser), mdoc | **Implemented in the verifier** (0.6.0; §7.4) — the only way to get an mdoc in Safari / iOS 26. The wallet side (operating system registration module) comes with the next device round |
+
+## 7.4 ISO/IEC 18013-7 Annex C (`org-iso-mdoc`)
+
+Browsers that do not carry OpenID4VP over the DC API (Safari / iOS 26) ask for an mdoc with ISO/IEC 18013-7 Annex C. The verifier
+gives a second DC API request for the same presentation (when the policy asks for one `mso_mdoc` credential):
+
+- **Request:** `{ protocol: "org-iso-mdoc", data: { deviceRequest, encryptionInfo } }` — both base64url CBOR. The `DeviceRequest`
+  is in ISO 18013-5 form (intent to retain `false`); it may carry a reader signature (`readerAuth`) made with the verifier's
+  access certificate. `EncryptionInfo = ["dcapi", {"nonce": bstr (≥ 16 bytes), "recipientPublicKey": COSE_Key}]`.
+- **Session transcript:** `SessionTranscript = [null, null, ["dcapi", SHA-256(CBOR([Base64EncryptionInfo, origin]))]]` — the
+  origin is that of the page that made the request (given by the browser). The device signature is built on this transcript: the
+  response cannot be used in another request or on another site.
+- **Response:** `credential.data.response` = base64url(`["dcapi", {"enc": bstr, "cipherText": bstr}]`) — HPKE (RFC 9180) base
+  mode, DHKEM(P-256, HKDF-SHA256) / HKDF-SHA256 / AES-128-GCM, `info` = the transcript bytes, empty `aad`; the plaintext is the
+  `DeviceResponse`.
+- **Flow (hosted verifier):** `POST /presentations` (with `dc_api_origin`) returns `dc_api_requests` (OpenID4VP + Annex C) and
+  `dc_mdoc_response_uri`; the page forwards the response there (`POST /vp/dc-mdoc/{id}`, form field `response`). A response that
+  cannot be decrypted does not consume the presentation. The page kit chooses the protocol by browser (Apple WebKit gets only
+  `org-iso-mdoc`) and forwards the response to the endpoint of its protocol. On desktop the DC API is the default path when
+  available; the QR code stays next to it as a fallback (ETSI TS 119 472-2 SUPPORT-03).
+- **Code:** `@tamga-network/mdoc` (`createAnnexCRequest`, `parseAnnexCRequest`, `sealAnnexCResponse`, `openAnnexCResponse`,
+  `hpkeSeal` / `hpkeOpen`), `@tamga-network/verifier` (`createMdocDcApiRequest`, `openMdocDcApiResponse`,
+  `verifyPresentation({ sessionTranscript })`), `@tamga-network/verifier/web` (`chooseDcApiRequests`, `dcResponseTarget`).
+
+## 7.5 Registration certificate: requests without one, and proximity ([[ADR-0026]] K5, 2026-10-13)
+
+- **Request without a certificate:** `checkRegistrationCerts` returns `flags: ["registration_missing"]` and
+  `defaultChoice: "decline"` — the consent screen shows a separate warning and the default choice is "Don't share"; the person
+  may still share. After `WRPRC_REQUIRED_FROM` (2028-08-11, fixed in the code) the same request is `valid: false`,
+  `reason: "registration_missing"`: it is rejected.
+- **Proximity:** the reader sends the registration certificate in CBOR form (`rc-wrp+cwt`, ETSI TS 119 475 §5.2.3) in the
+  ItemsRequest's `requestInfo.euWrprc` (ISO/IEC 18013-5-REQ-04…07) and signs the request with its reader certificate
+  (`readerAuth`). The wallet applies steps 1–4 of the remote flow; the binding in step 3 is made with the `organizationIdentifier`
+  in the `readerAuth` certificate (`checkProximityRegistration`). An invalid certificate is refused without asking the person; a
+  request without one gets the same warning and the 2028-08-11 rule. The list publisher also produces the CBOR form of every
+  registration certificate (`wrprc/…/*.cwt`, `cwt_path` in the index).
 
 ---
 

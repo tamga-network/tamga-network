@@ -1,9 +1,11 @@
 /**
- * Cüzdanın kendi belgelerinin iptal durumu (ARF VCR_19). Token Status List (SPEC-CRED-0003) çekilir; imza, liste adresi, 2 bit ve
+ * Cüzdanın kendi belgelerinin iptal durumu (ARF VCR_19). Token Status List (SPEC-CRED-0003) çekilir; imza, liste adresi, bit sayısı
+ * (1 ya da 2; ADR-0048: kimlik servisinin türleri 1) ve
  * imzacının kurumun güven listesinde kayıtlı iptal anahtarı olması (S11) doğrulanır. Liste tüm kurum belgelerini taşıdığı için
  * çekmek hangi belgenin sorgulandığını açığa vurmaz (sürü mahremiyeti). Her kopyanın kendi indeksi okunur.
  */
 import { Unzlib } from "fflate";
+import { parseStatusListCwt, looksLikeStatusListCwt } from "@tamga-network/mdoc";
 import type { TrustSource } from "@tamga-network/trust/core";
 import { b64Decode, b64uDecode } from "./b64.js";
 import { verifyJwt } from "./jws.js";
@@ -67,22 +69,49 @@ export function parseStatusToken(token: string, expectedUri: string, now: number
     status_list?: { bits?: number; lst?: string };
   };
   if (p.sub !== expectedUri) throw new Error("status token sub ≠ list uri");
-  if (p.status_list?.bits !== 2 || !p.status_list.lst) throw new Error("status token bits ≠ 2");
+  const bits = p.status_list?.bits;
+  if ((bits !== 1 && bits !== 2) || !p.status_list?.lst) throw new Error("status token bits not 1 or 2");
   if (p.exp && p.exp < now) throw new Error("status token expired");
   if (p.iat && now - p.iat > (p.ttl ?? 3600) * 24) throw new Error("status token too old");
   return {
     uri: expectedUri,
-    bits: 2,
+    bits,
     bytes: unzlibCapped(b64uDecode(p.status_list.lst), MAX_STATUS_LIST_BYTES),
     signerFingerprint: certFingerprintHex(leaf),
     iss: String(p.iss ?? ""),
   };
 }
 
-/** 2 bit, LSB önce (draft §4.1). Liste dışı indeks "geçerli" okunmaz. */
+/**
+ * Status List'in CWT gösterimi (ADR-0048 K3; mdoc kopyasının MSO'su buna işaret eder): COSE_Sign1 imzası, `typ`, adres, süre ve
+ * bit sayısı `@tamga-network/mdoc` ile; sıkıştırma burada üst sınırla açılır. `iss` yoktur (imzacı bağı S11 ile kurulur).
+ * Hata iletileri ağın adım önekleriyle başlar (`D3:` imza/adres, `D4:` süresi geçmiş ya da okunamıyor, `D6:` bits).
+ */
+export function parseStatusCwt(bytes: Uint8Array, expectedUri: string, now: number): StatusList {
+  if (bytes.length > MAX_STATUS_TOKEN_CHARS) throw new Error("D3: status token too large");
+  const c = parseStatusListCwt(bytes, { uri: expectedUri, now, publicKeyOf: p256PointFromCertDer });
+  if (c.ttl !== undefined && now - c.iat > c.ttl * 24) throw new Error("D4: status token too old");
+  let out: Uint8Array;
+  try {
+    out = unzlibCapped(c.lst, MAX_STATUS_LIST_BYTES);
+  } catch (e) {
+    throw new Error(`D6: ${(e as Error).message}`);
+  }
+  return { uri: expectedUri, bits: c.bits, bytes: out, signerFingerprint: certFingerprintHex(c.leafDer), iss: "" };
+}
+
+/** Gövde hangi gösterimse (CWT baytları ya da JWT metni) onu doğrular. */
+export function parseStatusBody(body: Uint8Array, expectedUri: string, now: number): StatusList {
+  if (looksLikeStatusListCwt(body)) return parseStatusCwt(body, expectedUri, now);
+  return parseStatusToken(new TextDecoder().decode(body).trim(), expectedUri, now);
+}
+
+/** `bits` bitlik değer, LSB önce (draft §4.1). Liste dışı indeks "geçerli" okunmaz. */
 export function statusBitAt(list: StatusList, idx: number): 0 | 1 | 2 | 3 {
-  if (!Number.isInteger(idx) || idx < 0 || idx >= list.bytes.length * 4) throw new Error("idx outside the list");
-  return ((list.bytes[idx >> 2] >> ((idx & 3) * 2)) & 0b11) as 0 | 1 | 2 | 3;
+  const bits = list.bits === 1 ? 1 : 2;
+  const perByte = 8 / bits;
+  if (!Number.isInteger(idx) || idx < 0 || idx >= list.bytes.length * perByte) throw new Error("idx outside the list");
+  return ((list.bytes[Math.floor(idx / perByte)] >> ((idx % perByte) * bits)) & ((1 << bits) - 1)) as 0 | 1 | 2 | 3;
 }
 
 /** Belgenin durumu: kopyalardan biri iptalse belge iptal (aynı mantıksal belge), askıdaysa askıda. */

@@ -24,6 +24,7 @@ import { lookup } from "node:dns/promises";
 import { isIP, type LookupFunction } from "node:net";
 import http from "node:http";
 import https from "node:https";
+import { looksLikeStatusListCwt } from "@tamga-network/mdoc";
 import { isPublicSuffix } from "./public-suffix.js";
 
 export interface CachedToken {
@@ -383,13 +384,15 @@ export function isBinaryStatusContentType(contentType: string | null | undefined
   );
 }
 /**
- * Önbellekte saklanacak biçim: tanımlayıcı listesi her zaman bayt (`b64u:`); Status List her zaman metin; tür bilinmiyorsa ikili
- * içerik türü ya da geçerli UTF-8 olmayan gövde bayt olarak saklanır.
+ * Önbellekte saklanacak biçim: tanımlayıcı listesi her zaman bayt (`b64u:`); Status List JWT gösterimi metin, CWT gösterimi
+ * (ADR-0048 K3; gövde bir COSE_Sign1 — CBOR etiketi ya da dizisiyle başlar) bayt; tür bilinmiyorsa ikili içerik türü ya da geçerli
+ * UTF-8 olmayan gövde bayt olarak saklanır.
  */
 export function statusBodyForCache(body: Uint8Array, kind: StatusListKind | undefined, contentType?: string | null) {
   const asBytes = () => `b64u:${Buffer.from(body).toString("base64url")}`;
   if (kind === "identifier_list") return asBytes();
   if (kind === undefined && isBinaryStatusContentType(contentType)) return asBytes();
+  if (looksLikeStatusListCwt(body)) return asBytes();
   try {
     return new TextDecoder("utf-8", { fatal: true }).decode(body).trim();
   } catch {
@@ -401,8 +404,8 @@ const acceptFor = (kind: StatusListKind | undefined) =>
   kind === "identifier_list"
     ? "application/identifierlist+cwt, application/cwt;q=0.9, application/cbor;q=0.8, application/octet-stream;q=0.5"
     : kind === "status_list"
-      ? "application/statuslist+jwt"
-      : "application/statuslist+jwt, application/identifierlist+cwt";
+      ? "application/statuslist+jwt, application/statuslist+cwt"
+      : "application/statuslist+jwt, application/statuslist+cwt, application/identifierlist+cwt";
 
 /**
  * `lookup` yerine geçer: bağlantı önceden denetlenmiş IP'ye kurulur (Node `net.connect` ve `autoSelectFamily` iki çağrı

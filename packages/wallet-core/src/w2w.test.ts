@@ -5,7 +5,20 @@
  */
 import { describe, expect, it } from "vitest";
 import { deflateSync } from "node:zlib";
-import { issueMdoc, p256, signIdentifierListToken } from "@tamga-network/mdoc";
+import {
+  BleReassembler,
+  bleChunks,
+  deviceResponseStatus,
+  issueMdoc,
+  p256,
+  parseEngagement,
+  rawStatusListSigner,
+  readerReceive,
+  readerStart,
+  signIdentifierListToken,
+  signStatusListCwt,
+  type ItemsRequest,
+} from "@tamga-network/mdoc";
 import { MemoryKeyStore, SoftwareKeyProvider, jwkToRaw } from "./keys.js";
 import { b64u } from "./b64.js";
 import { certFingerprintHex, computeIssuerId } from "./sdjwt.js";
@@ -13,7 +26,9 @@ import { signJwt } from "./jws.js";
 import { newState, type StoredCredential, type WalletState } from "./store.js";
 import {
   W2W_PERSON_KEY,
+  W2W_REJECT_DELAY_MS,
   fakeBleLink,
+  readW2wOffer,
   presentToPerson,
   runW2wVerifier,
   verifyW2wResponse,
@@ -326,6 +341,45 @@ describe("cüzdandan cüzdana — protokol çekirdeği", () => {
     }
   });
 
+  it("0.6.0 (ADR-0048 K3): mdoc kopyasının CWT listesi (bits = 1) `fetchStatusBytes` ile okunur; JWT baytları da okunur", async () => {
+    const cwt = (revoked: boolean, sk = statusSk, cert = statusCert) => {
+      const bytes = new Uint8Array(16);
+      if (revoked) bytes[0] |= 1 << 5; // bits = 1: idx 5 → bayt 0, bit 5
+      return signStatusListCwt({
+        uri: STATUS_URI,
+        bits: 1,
+        lst: new Uint8Array(deflateSync(bytes)),
+        iat: NOW - 10,
+        exp: NOW + 600,
+        ttl: 60,
+        x5chain: [cert],
+        sign: rawStatusListSigner(sk),
+      });
+    };
+    const run = async (fetchStatusBytes: (uri: string) => Promise<Uint8Array | null>) => {
+      const { verifier } = await session(["given_name"], await wallet());
+      if (verifier.outcome !== "response") throw new Error(verifier.outcome);
+      return verifyW2wResponse(verifier.deviceResponse, verifier.transcript, {
+        profile: PROFILE,
+        trust,
+        requested: ["given_name"],
+        fetchStatusBytes,
+      });
+    };
+    expect(await run(async () => cwt(false))).toMatchObject({ kind: "valid", revocation: "checked" });
+    expect(await run(async () => cwt(true))).toEqual({ kind: "invalid", reason: "revoked" });
+    const other = p256.utils.randomSecretKey();
+    expect(await run(async () => cwt(false, other, certFor(p256.getPublicKey(other, false), "x")))).toEqual({
+      kind: "invalid",
+      reason: "status_invalid",
+    });
+    expect(await run(async () => new TextEncoder().encode(await statusToken({ 5: 1 })))).toEqual({
+      kind: "invalid",
+      reason: "revoked",
+    });
+    expect(await run(async () => null)).toEqual({ kind: "indeterminate", reason: "status_unavailable" });
+  });
+
   it("ADR-0046: paylaşım kuralı kısıtlı belge gösterilmez (kişiye sorulmadan ret)", async () => {
     let asked = 0;
     const { verifier, holder } = await session(["given_name"], await wallet({ restricted: true }), async (v) => {
@@ -341,5 +395,153 @@ describe("cüzdandan cüzdana — protokol çekirdeği", () => {
   it("izin listesi dışındaki alan istenemez ve gönderilmez", async () => {
     const { verifier } = await session(["personal_administrative_number"], await wallet());
     expect(verifier).toMatchObject({ outcome: "error" });
+  });
+});
+
+/** TS9 STS9_34 denetimini sınamak için kendi isteğini kuran okuyucu (runW2wVerifier teklif dışı istek kurmaz). */
+async function rawReader(
+  items: ItemsRequest[],
+  w: Awaited<ReturnType<typeof wallet>>,
+  opts: Record<string, unknown> = {},
+) {
+  const link = fakeBleLink();
+  let gotQr: (s: string) => void = () => {};
+  const qr = new Promise<string>((r) => (gotQr = r));
+  let asked = 0;
+  const holder = presentToPerson({
+    profile: PROFILE,
+    transport: link.holder,
+    state: w.state,
+    keys: w.keys,
+    onQr: gotQr,
+    timeoutMs: 5000,
+    approve: async (v) => {
+      asked++;
+      return v.allowed;
+    },
+    ...opts,
+  });
+  const { session, establishment } = readerStart(await qr, items);
+  const reasm = new BleReassembler();
+  const msg = new Promise<Uint8Array>((res) =>
+    link.reader.onChunk((c) => {
+      const m = reasm.push(c);
+      if (m) res(m);
+    }),
+  );
+  await link.reader.connect(session.bleServiceUuid!);
+  for (const c of bleChunks(establishment, 180)) await link.reader.send(c);
+  const got = readerReceive(session, await msg);
+  return { holder: await holder, deviceResponse: got.deviceResponse, asked, offer: session.offer };
+}
+
+describe("TS9 sunum teklifi (0.6.0)", () => {
+  it("gösteren QR'a teklif koyar: izin listesindeki ve belgede bulunan alanlar; doğrulayan okur", async () => {
+    const w = await wallet();
+    const link = fakeBleLink();
+    let gotQr: (s: string) => void = () => {};
+    const qr = new Promise<string>((r) => (gotQr = r));
+    const holder = presentToPerson({
+      profile: PROFILE,
+      transport: link.holder,
+      state: w.state,
+      keys: w.keys,
+      onQr: gotQr,
+      timeoutMs: 5000,
+      approve: async (v) => v.allowed,
+    });
+    const q = await qr;
+    expect(parseEngagement(q).offer).toEqual({
+      version: "1.0",
+      docs: [{ docType: PROFILE.docType, nameSpaces: { [PROFILE.namespace]: PROFILE.allowed.slice() } }],
+    });
+    expect(readW2wOffer(PROFILE, q)).toEqual({ offered: PROFILE.allowed.slice() });
+    const v = await runW2wVerifier({ profile: PROFILE, transport: link.reader, qr: q, elements: ["given_name"] });
+    expect(v.outcome).toBe("response");
+    const h = await holder;
+    expect(h.outcome).toBe("sent");
+    expect(h.offered).toEqual(PROFILE.allowed.slice());
+  });
+
+  it("doğrulayan yalnız teklifteki alanları ister; teklifte olmayan seçim isteğe girmez", async () => {
+    const w = await wallet();
+    // belgede `age_over_18` yokmuş gibi: teklif ondan yoksun
+    const cred = w.state.credentials[0];
+    const claims = { ...cred.claims } as Record<string, unknown>;
+    delete claims.age_over_18;
+    w.state = { ...w.state, credentials: [{ ...cred, claims }] };
+    const { verifier, holder } = await session(["given_name", "age_over_18"], w);
+    expect(holder.offered).toEqual(["given_name", "family_name", "birth_date"]);
+    expect(verifier.outcome).toBe("response");
+    expect(holder.disclosed).toEqual(["given_name"]);
+    const none = await session(["age_over_18"], w);
+    expect(none.verifier).toMatchObject({ outcome: "error", reason: /offered/ });
+  });
+
+  it("STS9_34: teklif dışı istek → kişiye sorulmadan, belgesiz DeviceResponse status 10; doğrulayan `refused` görür", async () => {
+    const w = await wallet();
+    const r = await rawReader(
+      [{ docType: PROFILE.docType, nameSpaces: { [PROFILE.namespace]: { personal_administrative_number: false } } }],
+      w,
+      { rejectDelayMs: 0 },
+    );
+    expect(r.asked).toBe(0);
+    expect(r.holder).toMatchObject({ outcome: "declined", reason: "not_offered", disclosed: [] });
+    expect(deviceResponseStatus(r.deviceResponse!)).toEqual({ status: 10, documents: 0 });
+    expect(r.holder.state.presentationLog.at(-1)).toMatchObject({ outcome: "declined", disclosed: [] });
+  });
+
+  it("STS9_34: saklama niyetli (IntentToRetain = true) istek → status 10", async () => {
+    const r = await rawReader(
+      [{ docType: PROFILE.docType, nameSpaces: { [PROFILE.namespace]: { given_name: true } } }],
+      await wallet(),
+      { rejectDelayMs: 0 },
+    );
+    expect(r.asked).toBe(0);
+    expect(r.holder.reason).toBe("intent_to_retain");
+    expect(deviceResponseStatus(r.deviceResponse!).status).toBe(10);
+  });
+
+  it("STS9_34 zamanlama: kesme yanıtı isteğin alınışından sabit süre sonra gider (geçen süre ne olursa olsun)", async () => {
+    let t = 1_000_000;
+    const waits: number[] = [];
+    const r = await rawReader(
+      [{ docType: PROFILE.docType, nameSpaces: { [PROFILE.namespace]: { given_name: true } } }],
+      await wallet(),
+      {
+        clock: () => (t += 7), // her okumada 7 ms geçmiş gibi
+        sleep: async (ms: number) => {
+          waits.push(ms);
+          t += ms;
+        },
+      },
+    );
+    expect(r.holder.reason).toBe("intent_to_retain");
+    expect(waits).toHaveLength(1);
+    expect(waits[0]).toBe(W2W_REJECT_DELAY_MS - 7);
+  });
+
+  it("teklifsiz gösteren (offer: false): QR'da teklif yok, doğrulayan izin listesinden seçer, akış olağan", async () => {
+    const w = await wallet();
+    const link = fakeBleLink();
+    let gotQr: (s: string) => void = () => {};
+    const qr = new Promise<string>((r) => (gotQr = r));
+    const holder = presentToPerson({
+      profile: PROFILE,
+      transport: link.holder,
+      state: w.state,
+      keys: w.keys,
+      onQr: gotQr,
+      timeoutMs: 5000,
+      offer: false,
+      approve: async (v) => v.allowed,
+    });
+    const q = await qr;
+    expect(readW2wOffer(PROFILE, q)).toEqual({ offered: null });
+    const v = await runW2wVerifier({ profile: PROFILE, transport: link.reader, qr: q, elements: ["family_name"] });
+    expect(v.outcome).toBe("response");
+    const h = await holder;
+    expect(h.offered).toBeUndefined();
+    expect(h.disclosed).toEqual(["family_name"]);
   });
 });

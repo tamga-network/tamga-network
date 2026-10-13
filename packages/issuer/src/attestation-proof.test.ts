@@ -34,13 +34,15 @@ async function holderKeys(n: number) {
 }
 async function ka(
   p: Awaited<ReturnType<typeof provider>>,
-  o: { nonce?: string; keys?: unknown[]; typ?: string } = {},
+  o: { nonce?: string; keys?: unknown[]; typ?: string; noStatus?: boolean } = {},
 ): Promise<string> {
   return new SignJWT({
     attested_keys: o.keys ?? (await holderKeys(2)),
     key_storage: ["iso_18045_moderate"],
     user_authentication: ["iso_18045_moderate"],
-    key_storage_status: { status: { status_list: { idx: 7, uri: "https://wp.tamga.network/status/1" } } },
+    ...(o.noStatus
+      ? {}
+      : { key_storage_status: { status: { status_list: { idx: 7, uri: "https://wp.tamga.network/status/1" } } } }),
     ...(o.nonce !== undefined ? { nonce: o.nonce } : {}),
   })
     .setProtectedHeader({ alg: "ES256", typ: o.typ ?? KA_TYP, x5c: [Buffer.from(p.der).toString("base64")] })
@@ -48,6 +50,30 @@ async function ka(
     .setExpirationTime(now + 3600)
     .sign(p.key);
 }
+
+describe("KA key_storage_status politikası (OpenID uyum öz-testi B2)", () => {
+  it("varsayılan required: girişsiz KA reddedilir; optional (yalnız sandbox): kabul, iptal denetimi yok; giriş varsa yine denetlenir", async () => {
+    const p = await provider();
+    const isProviderKey = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
+    const bare = await ka(p, { nonce: "n-1", noStatus: true });
+    expect(await verifyAttestationProof(bare, { nonce: "n-1", now, isProviderKey })).toMatchObject({
+      ok: false,
+      reason: expect.stringMatching(/key_storage_status missing/),
+    });
+    const opt = await verifyAttestationProof(bare, { nonce: "n-1", now, isProviderKey, keyStorageStatus: "optional" });
+    expect(opt.ok).toBe(true);
+    expect(opt.ok && opt.status).toBeUndefined();
+    // optional olsa da giriş varsa iptal denetlenir
+    const revoked = await verifyAttestationProof(await ka(p, { nonce: "n-1" }), {
+      nonce: "n-1",
+      now,
+      isProviderKey,
+      keyStorageStatus: "optional",
+      statusOf: async () => "INVALID",
+    });
+    expect(revoked).toMatchObject({ ok: false, reason: expect.stringMatching(/revoked/) });
+  });
+});
 
 describe("attestation proof türü", () => {
   it("sağlayıcı imzalı KA + doğru c_nonce → anahtarlar ve depo seviyesi", async () => {

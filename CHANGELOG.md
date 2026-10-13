@@ -2,8 +2,76 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The documents (docs, ARF) are 1.0.0 until the public
 announcement; changes before it are folded into this release. The `@tamga-network/*` packages are versioned separately: they
-are published on npm as test releases — `0.5.0` published, `0.5.2` prepared (the API may change in test releases); the
+are published on npm as test releases — `0.5.2` published, `0.6.0` prepared (the API may change in test releases); the
 stable `1.0.0` comes when everything is ready.
+
+## 0.6.0 — 2026-10-13 (packages, test release; prepared, not yet on npm)
+
+EU alignment (package 4 of the first EU alignment review, decisions of 2026-10-13: ADR-0048, ADR-0049, ADR-0026 K5, EU TS9
+v1.1, ISO/IEC 18013-7 Annex C). The nine packages move from `0.5.2` to `0.6.0` together. Some result types gain fields and
+values (listed below); there is no compatibility path (development phase, fixed in place). Identity credentials have to be
+issued again (new status lists, ADR-0029).
+
+### Added
+
+- `@tamga-network/sd-jwt` — status lists with 1 or 2 bits per entry: `StatusBitstring(capacity, bytes, bits)`, `STATUS_BITS`,
+  `StatusBits`; the JWT token carries the list's bits and the verifier accepts 1 or 2 (ADR-0048: the identity service publishes
+  `bits = 1`, institutions `bits = 2`). The CWT representation of the same list (`application/statuslist+cwt`, COSE_Sign1_Tagged,
+  `x5chain` in the protected header; IETF draft-ietf-oauth-status-list-20 §5.2): `signStatusListCwt`, `verifyStatusListCwt`,
+  `verifyStatusListAny` (picks JWT or CWT by the cached body). `IssuerSigner.signRaw` (optional raw ES256 signature;
+  `pemIssuerSigner` provides it). `VerifiedStatusToken.format` (`"jwt" | "cwt"`); `payload.iss` is optional (a CWT has none).
+  The package now depends on `@tamga-network/mdoc`.
+- `@tamga-network/mdoc` — `signStatusListCwt` / `parseStatusListCwt` (CBOR/COSE layer, RN-safe); `requestInfo` (`euWrprc`) in
+  the ItemsRequest and ReaderAuth (ISO 18013-5 §9.1.4: `signReaderAuth`, `verifyReaderAuth`, `readerStart(…, { readerAuth })`);
+  `decodeDeviceRequest` returns `DecodedItemsRequest` (with `itemsRequestBytes`, `readerAuth`, `requestInfo`); the CBOR
+  registration certificate (`rc-wrp+cwt`, ETSI TS 119 475 §5.2.3: `signWrprcCwt`, `parseWrprcCwt`); the EU TS9 presentation
+  offer at `DeviceEngagement[-1]` (`createEngagement({ offer })`, `parseEngagement(…).offer`, `encodePresentationOffer`,
+  `decodePresentationOffer`, `isSubsetOfOffer`, `hasIntentToRetain`); status-only `DeviceResponse`
+  (`buildDeviceResponseStatus`, `deviceResponseStatus`, `DEVICE_RESPONSE_STATUS`); HPKE (RFC 9180 base mode, DHKEM(P-256,
+  HKDF-SHA256) / HKDF-SHA256 / AES-128-GCM — `hpkeSeal`, `hpkeOpen`, tested with the RFC A.3.1 vector) and ISO/IEC 18013-7
+  Annex C (`ORG_ISO_MDOC`, `createAnnexCRequest`, `parseAnnexCRequest`, `sealAnnexCResponse`, `openAnnexCResponse`,
+  `annexCSessionTranscript`).
+- `@tamga-network/schemas` — `suspension_allowed` in the `tamga` block (diploma only) and `suspensionAllowed(vct)` (ADR-0048 K2;
+  the diploma's metadata and so its integrity hash change). `@tamga-network/issuer` re-exports it with the new status list API.
+- `@tamga-network/verifier` — Annex C: `createMdocDcApiRequest`, `openMdocDcApiResponse`, `mdocItemsFromPolicy`;
+  `VerifyInput.sessionTranscript` (mso_mdoc). `/web`: `chooseDcApiRequests` (Apple WebKit gets only `org-iso-mdoc`),
+  `dcResponseTarget`, `isAppleWebKit`, `StartedPresentation.dc_api_requests` and `dc_mdoc_response_uri`;
+  `presentViaDigitalCredentials` takes a request list and routes the response by its protocol.
+- `@tamga-network/wallet-core` — ADR-0026 K5: `WRPRC_REQUIRED_FROM` (2028-08-11), `missingRegistrationPolicy`,
+  `RegistrationCertCheck.flags` (`"registration_missing"`) and `defaultChoice` (`"decline"`); proximity: `verifyWrprcCwt`,
+  `checkProximityRegistration`, `ProximityRequestView.registration`, `presentProximity({ registrarKeys })`. TS9:
+  `presentToPerson` puts the offer in the QR (`offer`, default on) and answers a request outside the offer or with intent to
+  retain with status 10 and no documents at a fixed delay (`W2W_REJECT_DELAY_MS`); `runW2wVerifier` restricts the selection to
+  the offer and has the outcome `"refused"`; `readW2wOffer`, `w2wOfferedElements`; `W2wHolderResult.offered`. Status:
+  `parseStatusCwt`, `parseStatusBody`, lists with 1 bit; `verifyW2wResponse({ fetchStatusBytes })`. Log (`log.ts`):
+  `issuance_failed`, `reissued`, `w2w_verified` events (value-free), `settings.logRetentionDays`, `setLogRetention`,
+  `logRetentionDue`, `upcomingLogDeletions`, `applyLogRetention(…, beforeDelete)`.
+- `@tamga-network/trust` — `ListTrustSource.walletProviderListing(providerId, { solutionId, unitRevoked })` for the "Listed on
+  Tamga Network" indicator (ADR-0049): `{ listed, hidden?, status, legal_name, fingerprint, solution?, list_issued_at,
+  list_version }`; hidden when the list is stale, a sandbox list, the record or solution is not `ACTIVE`, or the unit is revoked.
+- `@tamga-network/issuer` — `keyStorageStatus` policy for key attestations (`"required"` default; `"optional"` only for the
+  sandbox / tests: a KA without `key_storage_status` is accepted without a revocation check).
+- `apps/verify` — `POST /presentations` with `dc_api_origin` returns `dc_api_requests` (OpenID4VP + Annex C for single-mdoc
+  policies) and `dc_mdoc_response_uri`; `POST /vp/dc-mdoc/{id}`; the Annex C request carries ReaderAuth (rp-verify access
+  certificate). Sandbox-only policy `oidf-selftest-eu-pid` (OpenID self-test).
+- `apps/trust-publisher` — the CBOR form of every registration certificate (`*.cwt`, `cwt_path` in the index); registry
+  `external-src/` lists are copied to the published dist so `external-fetch` can verify them (sandbox OpenID self-test list
+  `oidf-test-pid`, `ops/sandbox-oidf-lote.ts`).
+- Conformance vectors: `status-list/jwt-cwt.json` (bits 1 and 2, JWT and CWT of the same list); `VERSION` 5.
+
+### Changed
+
+- `@tamga-network/verifier` — step D reads the CWT body of an mdoc copy from the prefetch cache (cached as bytes); a status
+  value `0x02` in a type without suspension is a malformed value: `INVALID`, rejected (ADR-0048 SU2).
+- `@tamga-network/wallet-core` — `checkRegistrationCerts` without a certificate is no longer `{ present: false, valid: true }`
+  only: it carries the warning flag and default choice, and after 2028-08-11 it is `valid: false`. TS10 export: issuance events
+  map to `CredentialIssuance`; pseudonym and wallet-to-wallet events are no longer exported as empty DPA reports.
+- `@tamga-network/verifier/web` — the Digital Credentials API is on by default (`dcApi: false` turns it off); on desktop the QR
+  code stays as a fallback next to the DC API button (ETSI TS 119 472-2 SUPPORT-03).
+
+### Not done
+
+- WIA `cnf` = DPoP key (ADR-0025 note 2): EU TS3 1.5.2 rolled this 1.5.1 rule back; not implemented (ADR-0025 correction).
 
 ## 0.5.2 — 2026-10-13 (packages, test release)
 

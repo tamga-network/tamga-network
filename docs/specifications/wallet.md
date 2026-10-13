@@ -396,6 +396,25 @@ uyarı, varsayılan paylaşmamak.
   kararıdır. Belge verenin paylaşım kuralıyla kısıtlı belge cüzdandan cüzdana gösterilmez; yakın mesafe sunumunda onay ekranı
   kuralın değerlendirilemediğini söyler ([[ADR-0046]] Sonuçlar).
 
+## 5.7 AB hizalaması (kod 0.6.0)
+
+- **Kayıt sertifikası olmayan istek ([[ADR-0026]] K5):** onay ekranında ayrı uyarı, varsayılan "Paylaşma"; 2028-08-11'den sonra
+  ret (`registration_missing`; ayrıntı [[SPEC-PROTO-0002]] §7.5). Yakın alanda kayıt sertifikası `requestInfo.euWrprc` ile gelir
+  ve uzaktan akıştaki gibi doğrulanır; geçersizse cüzdan kişiye sormadan reddeder (`presentProximity` `registrarKeys`).
+- **Cüzdandan cüzdana sunum teklifi (AB TS9 v1.1):** gösteren, izin listesindeki ve belgesinde bulunan alanları QR'daki
+  DeviceEngagement'a (`-1`) teklif olarak koyar. Teklif dışı ya da saklama niyetli istekte hiçbir alan göndermeden
+  `DeviceResponse.status = 10` ile keser; yanıt isteğin alınışından sabit bir süre sonra gider (yanıt süresi belgeye bağlı
+  değildir). Doğrulayan yalnız teklifteki alanları isteyebilir. Alan listesini göstermeden önce kişinin doğrulanması (STS9_13)
+  cüzdanın işidir.
+- **Günlük olayları (DASH_02, DASH_03b):** `issuance_failed` (kurum, tür, neden kodu), `reissued`, `w2w_verified` (doğrulayan
+  kipinde yalnız zaman, belge türü ve sonuç — alan ve değer yok). **Saklama süresi (DASH_02a):** kişi 30 / 90 / 180 / 365 gün
+  seçebilir (varsayılan süresiz); süresi dolan kayıtlar silinmeden önce cüzdan uyarır (`upcomingLogDeletions`) ve kişi ertelerse
+  silinmez (`applyLogRetention` kancası).
+- **"Tamga Network'te listeli" göstergesi ([[ADR-0049]]):** cüzdan, doğrulanmış güven listesindeki kendi sağlayıcı kaydını
+  `walletProviderListing(providerId, { solutionId, unitRevoked })` ile okur; kayıt ve çözüm `ACTIVE`, liste taze ve gerçek ağın
+  listesi, birim iptal edilmemişse gösterge görünür ve dokununca resmî ad, durum, parmak izi ve liste zamanı gösterilir.
+- **İptal listesi:** kimlik belgelerinde askı yoktur (`bits = 1`); mdoc kopyasının listesi CWT gösterimidir ([[ADR-0048]]).
+
 # 6. Şema Önbelleği
 
 [[ARCH-0003]]/CMP8'in uygulaması.

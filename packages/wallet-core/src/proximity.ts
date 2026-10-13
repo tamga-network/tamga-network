@@ -3,24 +3,29 @@
  * `ProximityTransport`'u yerel BLE modülüyle (TamgaBle) sağlar; test sahte taşıyıcıyla gerçek okuyucu mantığına bağlanır.
  * Akış: tanıtım QR'ı → okuyucunun şifreli isteği → kişiye istenen alanlar (okuyucu kimliği doğrulanmamış) → onay → seçici
  * açıklama + holder anahtarıyla cihaz imzası (anahtar cihazdan çıkmaz) → şifreli yanıt → günlük. Ret: oturum sonu.
+ *
+ * 0.6.0 (ADR-0026 K5): istek kayıt sertifikası (`requestInfo.euWrprc`) ve okuyucu imzası (`readerAuth`) taşıyabilir; cüzdan onu
+ * uzaktan akıştaki kurallarla doğrular (`view.registration`). Sertifika geçersizse kişiye sorulmadan ret; sertifika yoksa uyarı +
+ * varsayılan "Paylaşma" (2028-08-11'den sonra ret). Cüzdandan cüzdana gösterimde (karşı taraf bir kişi) bu denetim yapılmaz.
  */
 import { pidSdJwtName } from "@tamga-network/core/pid";
 import {
   BleReassembler,
   bleChunks,
   buildDeviceResponse,
+  buildDeviceResponseStatus,
   createEngagement,
   deviceSignAsync,
   discloseMdoc,
   holderReceiveEstablishment,
   holderSendResponse,
   sessionEnd,
-  type ItemsRequest,
 } from "@tamga-network/mdoc";
 import { b64uDecode } from "./b64.js";
 import type { KeyProvider } from "./keys.js";
 import { markCopyUsed, selectCopy, type StoredCredential, type WalletState } from "./store.js";
 import { offlineDisclosurePolicy, type DisclosurePolicyResult } from "./disclosure-policy.js";
+import { checkProximityRegistration, type ProximityRegistrationCheck } from "./wrprc.js";
 
 export interface ProximityTransport {
   start(serviceUuid: string): Promise<void>;
@@ -47,6 +52,12 @@ export interface ProximityRequestView {
    * ise onay ekranı uyarır (varsayılan "Paylaşma", son karar kişinin); belge yoksa alan yok.
    */
   disclosurePolicy?: DisclosurePolicyResult;
+  /**
+   * 0.6.0 (ADR-0026 K5): okuyucunun kayıt sertifikası denetimi. `flags` `registration_missing` ise onay ekranı uyarır ve
+   * `defaultChoice` "decline"dır; `allowedClaims` dışındaki istenen öğeler fazla istektir (uyarı). `valid: false` istekte
+   * `approve` çağrılmaz (cüzdan reddeder). Cüzdandan cüzdana gösterimde yok.
+   */
+  registration?: ProximityRegistrationCheck;
 }
 
 export interface ProximityResult {
@@ -69,8 +80,32 @@ export async function presentProximity(p: {
   randomBytes?: (n: number) => Uint8Array;
   timeoutMs?: number;
   now?: number;
+  /**
+   * ADR-0026 K5: kayıt kurumu anahtarları (`fetchRegistrarKeys`). `false` = kayıt sertifikası denetimi yok (yalnız cüzdandan
+   * cüzdana: karşı taraf bir kişi). Verilmezse boş liste: sertifikasız istek uyarıyla, sertifikalı istek doğrulanamaz → ret.
+   */
+  registrarKeys?: string[] | false;
+  /** 0.6.0 (TS9): DeviceEngagement'a eklenecek ek alanlar (cüzdandan cüzdana teklif); `createEngagement` seçeneği */
+  engagementOffer?: import("@tamga-network/mdoc").PresentationOffer;
+  /**
+   * 0.6.0 (TS9 STS9_34): istek kişiye gösterilmeden önce denetim — `null` = devam; `{ status }` = belge göndermeden
+   * `DeviceResponse.status` ile kes (yanıt `rejectDelayMs` sabit süreye kadar bekletilir; zamanlama sızıntısı yok).
+   */
+  screenRequest?: (
+    item: import("@tamga-network/mdoc").DecodedItemsRequest,
+  ) => { status: number; reason: string } | null;
+  /** `screenRequest` reddinde isteğin alınışından yanıta kadar sabit süre (ms; varsayılan 1500) */
+  rejectDelayMs?: number;
+  /** test için: bekleme ve saat (ms) */
+  sleep?: (ms: number) => Promise<void>;
+  clock?: () => number;
 }): Promise<ProximityResult> {
-  const eng = createEngagement({ randomBytes: p.randomBytes });
+  const eng = createEngagement({
+    randomBytes: p.randomBytes,
+    ...(p.engagementOffer ? { offer: p.engagementOffer } : {}),
+  });
+  const clock = p.clock ?? (() => Date.now());
+  const sleep = p.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   let mtu = 23;
   const offMtu = p.transport.onMtu?.((m) => (mtu = m));
   const reasm = new BleReassembler();
@@ -107,9 +142,34 @@ export async function presentProximity(p: {
       (_, rej) => (timer = setTimeout(() => rej(new Error("no reader connected")), p.timeoutMs ?? 120_000)),
     );
     const est = await Promise.race([firstMessage, timeout]);
+    const receivedAt = clock();
     const hs = holderReceiveEstablishment(eng, est);
-    const item: ItemsRequest | undefined = hs.request[0];
+    const item = hs.request[0];
     if (!item) throw new Error("empty request");
+    const requestedAll = Object.values(item.nameSpaces).flatMap((els) => Object.keys(els));
+    // TS9 STS9_34: teklif dışı ya da saklama niyetli istek — kişiye gösterilmez, belge gitmez, yanıt sabit sürede
+    const screened = p.screenRequest?.(item) ?? null;
+    if (screened) {
+      const wait = (p.rejectDelayMs ?? 1500) - (clock() - receivedAt);
+      if (wait > 0) await sleep(wait);
+      await send(holderSendResponse(hs, buildDeviceResponseStatus(screened.status)));
+      await cleanup();
+      const state: WalletState = {
+        ...p.state,
+        presentationLog: [
+          ...p.state.presentationLog,
+          {
+            ts: p.now ?? Date.now(),
+            clientId: "proximity",
+            vct: item.docType,
+            requested: requestedAll,
+            disclosed: [],
+            outcome: "declined",
+          },
+        ],
+      };
+      return { state, outcome: "declined", reason: screened.reason };
+    }
     const [namespace, els] = Object.entries(item.nameSpaces)[0] ?? ["", {}];
     const requested = Object.keys(els);
     const cred =
@@ -122,6 +182,10 @@ export async function presentProximity(p: {
       ) ?? null;
     // istenen öğe mdoc tanımlayıcısı; belgenin claim'leri SD-JWT adıyla (AB PID tablosu, ADR-0045: `birth_date` ↔ `birthdate`)
     const has = (el: string) => !!cred && pidSdJwtName(el) in cred.claims;
+    const registration =
+      p.registrarKeys === false
+        ? undefined
+        : checkProximityRegistration(item, hs.transcript, p.registrarKeys ?? [], p.now ?? Date.now());
     const view: ProximityRequestView = {
       docType: item.docType,
       namespace,
@@ -129,8 +193,10 @@ export async function presentProximity(p: {
       missing: cred ? requested.filter((r) => !has(r)) : requested,
       credential: cred,
       ...(cred ? { disclosurePolicy: offlineDisclosurePolicy(cred) } : {}),
+      ...(registration ? { registration } : {}),
     };
-    const chosen = cred ? await p.approve(view) : null;
+    // ADR-0026 K5: geçersiz kayıt sertifikası (ya da 2028-08-11'den sonra sertifikasız istek) — kişiye sorulmadan ret
+    const chosen = cred && registration?.valid !== false ? await p.approve(view) : null;
     const rpKey = `proximity:${eng.bleServiceUuid}`;
     const log = (outcome: "sent" | "declined" | "error", disclosed: string[], state = p.state): WalletState => ({
       ...state,
@@ -142,7 +208,12 @@ export async function presentProximity(p: {
     if (!cred || !chosen) {
       await send(sessionEnd());
       await cleanup();
-      return { state: log("declined", []), outcome: "declined", view };
+      return {
+        state: log("declined", []),
+        outcome: "declined",
+        view,
+        ...(registration?.valid === false ? { reason: registration.reason ?? "registration_invalid" } : {}),
+      };
     }
     const disclose = chosen.filter((e) => requested.includes(e) && has(e));
     const copy = selectCopy(cred, rpKey);

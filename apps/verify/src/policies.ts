@@ -244,6 +244,19 @@ export const POLICIES: Policy[] = [
     trust: TRUST_ID,
     freshness: FRESH,
   },
+  // OpenID uyum öz-testi (yalnız sandbox; 2026-10-13 karar 11): OpenID Foundation aracı AB PID'ini (SD-JWT VC) kendi test
+  // anahtarıyla imzalar; imzacı sandbox dış listesinde (ADR-0036, `oidf-test-pid`). Tek `dc+sd-jwt` belgesi, ad ve soyad; takma ad
+  // yok (araç `tamga-pseudonym` biçimini tanımaz).
+  {
+    policy_id: "oidf-selftest-eu-pid",
+    purpose: {
+      "en-US": "OpenID conformance self-test — EU PID given and family name (test tool only)",
+      "tr-TR": "OpenID uyum öz-testi — AB PID adı ve soyadı (yalnız test aracı)",
+    },
+    credentials: [{ id: "pid", vct_values: ["urn:eudi:pid:1"], required_claims: ["given_name", "family_name"] }],
+    trust: TRUST_ID,
+    freshness: FRESH,
+  },
 ];
 
 POLICIES.push(

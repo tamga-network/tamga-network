@@ -133,6 +133,31 @@
     "enabled": false,
     "note": "ETSI TS 119 602 LoTE projection (lote/*.jws). Enable after the URI names and the operator postal address are approved."
   },
+  "external_lists": [
+    {
+      "list_id": "oidf-test-pid",
+      "territory": "EU",
+      "format": "etsi-lote-json",
+      "list_url": "https://trust.sandbox.tamga.network/external-src/oidf-test-pid.jws",
+      "signing_keys": [
+        { "fingerprint_sha256": "c18c9212b2a1666752e0ec5e328d60633167954fd8ec2d7ff7f7a82a2bd7f9f6", "status": "ACTIVE" }
+      ],
+      "operator": {
+        "name": "Tamga Network Sandbox (TEST) — OpenID conformance self-test",
+        "note": "Sandbox only (ADR-0038). Lists the OpenID Foundation conformance tool's test PID signer (test root 'Tamga Sandbox OIDF Conformance Test Root (TEST)'); never in the real network's list."
+      },
+      "status": "ACTIVE",
+      "scope": {
+        "entity_kinds": ["pid_provider"],
+        "vct": ["urn:eudi:pid:1"],
+        "category": "IDENTITY",
+        "assurance": "I2",
+        "class": "EAA",
+        "recognized_by": ["TR"]
+      },
+      "approval": { "approved_at": "2026-10-13T00:00:00Z", "ref": "Project management approval 2026-10-13 (EU alignment review, decision 11: OpenID self-test)" }
+    }
+  ],
   "zk_circuits": [
     {
       "circuit_id": "5a8938159603876eb537a117cfe9e2eaec5a01a042b316a8e57e52e4bb3c9291",

@@ -524,6 +524,19 @@
           "valid_from": "2026-10-04T00:00:00Z",
           "valid_until": "2027-10-04T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        },
+        {
+          "scope_id": "oidf-selftest-eu-pid-1",
+          "purpose": "OpenID conformance self-test — EU PID given and family name (test tool only)",
+          "purpose_localized": {
+            "tr-TR": "OpenID uyum öz-testi — AB PID adı ve soyadı (yalnız test aracı)",
+            "tk-TM": "OpenID laýyklyk öz-synagy — EU PID ady we familiýasy (diňe synag guraly)"
+          },
+          "vct": "urn:eudi:pid:1",
+          "claims": ["given_name", "family_name"],
+          "valid_from": "2026-10-13T00:00:00Z",
+          "valid_until": "2027-04-13T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
         }
       ],
       "terminal_groups": [

@@ -7,6 +7,13 @@
  *  - SessionData { data | status } — status 20 = oturum sonu.
  *  - BLE (§8.3.3.1.1): GATT karakteristikleri; ileti parçaları ilk bayt 0x01 (devamı var) / 0x00 (son).
  * Cihaz imzası (DeviceAuth) `deviceSignAsync(sessionTranscript(...))` ile, holder anahtarı cihazdan çıkmadan.
+ *  - Okuyucu kimliği (§9.1.4, 0.6.0): DocRequest `readerAuth` = ayrık yüklü COSE_Sign1, yük ReaderAuthenticationBytes =
+ *    #6.24(["ReaderAuthentication", SessionTranscript, ItemsRequestBytes]), okuyucu sertifika zinciri korumasız başlıkta (x5chain).
+ *  - Sunum teklifi (AB TS9 v1.1 STS9_12–18, 0.6.0): DeviceEngagement'ın `-1` anahtarında `PresentationOffer`
+ *    `{0: "1.0", 1: [{0: DocType, 1: {NameSpace: [DataElementIdentifier, …]}}, …]}` — cüzdandan cüzdana gösterende hangi alanların
+ *    istenebileceği. Teklifi bilmeyen okuyucu anahtarı yok sayar.
+ *  - `requestInfo` (§8.3.2.1.2.1, 0.6.0): ItemsRequest'in isteğe bağlı haritası; AB'de `euWrprc` = CBOR kayıt sertifikası
+ *    (Uygulama Tüzüğü (AB) 2024/2979 Ek, 2026/1731 ile: ISO/IEC 18013-5-REQ-04…07; ağın ADR-0026 K5'i).
  */
 import { gcm } from "@noble/ciphers/aes.js";
 import { hkdf } from "@noble/hashes/hkdf.js";
@@ -14,7 +21,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { randomBytes as nobleRandom } from "@noble/hashes/utils.js";
 import { p256 } from "@noble/curves/nist.js";
 import { CborTag, decode, encode, encodeEmbedded, type CborValue } from "./cbor.js";
-import { coseKeyFromPoint, pointFromCoseKey } from "./cose.js";
+import { coseKeyFromPoint, coseSign1, coseVerify1, parseCoseSign1, pointFromCoseKey } from "./cose.js";
 
 export const CIPHER_SUITE_1 = 1;
 /** Kabul edilen DeviceEngagement sürümleri (biz "1.0" üretiriz). */
@@ -77,6 +84,72 @@ const seal = (key: Uint8Array, id: 0 | 1, counter: number, plain: Uint8Array) =>
   gcm(key, iv(id, counter)).encrypt(plain);
 const open = (key: Uint8Array, id: 0 | 1, counter: number, ct: Uint8Array) => gcm(key, iv(id, counter)).decrypt(ct);
 
+// ------------------------------------------------------------------ sunum teklifi (AB TS9 v1.1, STS9_12–18)
+/** TS9 `PresentationOffer` — bu belgede sürüm "1.0". */
+export const PRESENTATION_OFFER_VERSION = "1.0";
+const DE_OFFER_KEY = -1;
+export interface OfferedDocument {
+  docType: string;
+  /** ad alanı → teklif edilen öğe tanımlayıcıları */
+  nameSpaces: Record<string, string[]>;
+}
+export interface PresentationOffer {
+  version: string;
+  docs: OfferedDocument[];
+}
+export function encodePresentationOffer(o: PresentationOffer): CborValue {
+  return new Map<number, CborValue>([
+    [0, o.version],
+    [
+      1,
+      o.docs.map(
+        (d) =>
+          new Map<number, CborValue>([
+            [0, d.docType],
+            [1, new Map<string, CborValue>(Object.entries(d.nameSpaces).map(([ns, ids]) => [ns, [...ids]]))],
+          ]),
+      ),
+    ],
+  ]);
+}
+/** Teklifi okur; biçimi bozuksa hata (okuyucu bozuk teklifi yok saymaz — gösteren kısıt koymak istedi). */
+export function decodePresentationOffer(v: unknown): PresentationOffer {
+  if (!(v instanceof Map)) throw new Error("PresentationOffer: not a map");
+  const version = v.get(0);
+  const docs = v.get(1);
+  if (typeof version !== "string" || !Array.isArray(docs)) throw new Error("PresentationOffer: version/docs");
+  return {
+    version,
+    docs: docs.map((d) => {
+      if (!(d instanceof Map) || typeof d.get(0) !== "string" || !(d.get(1) instanceof Map))
+        throw new Error("PresentationOffer: DocOffer");
+      const nameSpaces: Record<string, string[]> = {};
+      for (const [ns, ids] of d.get(1) as Map<unknown, unknown>) {
+        if (typeof ns !== "string" || !Array.isArray(ids) || !ids.every((x) => typeof x === "string"))
+          throw new Error("PresentationOffer: namespace entries");
+        nameSpaces[ns] = ids as string[];
+      }
+      return { docType: d.get(0) as string, nameSpaces };
+    }),
+  };
+}
+/**
+ * İstek teklifin alt kümesi mi (STS9_28/34): her istenen belge türü teklifte, her istenen öğe o türün o ad alanında teklif edilmiş.
+ * Saklama niyetine bakmaz (`hasIntentToRetain`).
+ */
+export function isSubsetOfOffer(items: ItemsRequest[], offer: PresentationOffer): boolean {
+  return items.every((it) => {
+    const doc = offer.docs.find((d) => d.docType === it.docType);
+    if (!doc) return false;
+    return Object.entries(it.nameSpaces).every(([ns, els]) =>
+      Object.keys(els).every((e) => (doc.nameSpaces[ns] ?? []).includes(e)),
+    );
+  });
+}
+/** İstekte saklama niyeti (IntentToRetain) `true` olan bir öğe var mı (STS9_29/34). */
+export const hasIntentToRetain = (items: ItemsRequest[]) =>
+  items.some((it) => Object.values(it.nameSpaces).some((els) => Object.values(els).some((v) => v === true)));
+
 // ------------------------------------------------------------------ cihaz tanıtımı (mdoc tarafı)
 export interface HolderEngagement {
   /** QR içeriği: "mdoc:" + base64url(DeviceEngagement) */
@@ -87,7 +160,9 @@ export interface HolderEngagement {
   bleServiceUuid: string;
   eDeviceSk: Uint8Array;
 }
-export function createEngagement(opts: { randomBytes?: (n: number) => Uint8Array } = {}): HolderEngagement {
+export function createEngagement(
+  opts: { randomBytes?: (n: number) => Uint8Array; offer?: PresentationOffer } = {},
+): HolderEngagement {
   const rnd = opts.randomBytes ?? nobleRandom;
   let eDeviceSk: Uint8Array;
   do eDeviceSk = rnd(32);
@@ -106,6 +181,7 @@ export function createEngagement(opts: { randomBytes?: (n: number) => Uint8Array
     [1, [CIPHER_SUITE_1, new CborTag(24, eDeviceKeyBytes)]],
     [2, [[2, 1, bleOptions]]], // DeviceRetrievalMethods: BLE (type 2, version 1)
   ]);
+  if (opts.offer) de.set(DE_OFFER_KEY, encodePresentationOffer(opts.offer)); // TS9 STS9_12
   const deviceEngagementBytes = encode(de);
   return {
     qr: `mdoc:${b64u(deviceEngagementBytes)}`,
@@ -120,6 +196,8 @@ export function parseEngagement(qr: string): {
   deviceEngagementBytes: Uint8Array;
   eDevicePoint: Uint8Array;
   bleServiceUuid?: string;
+  /** TS9 sunum teklifi (DeviceEngagement[-1]); yoksa yok */
+  offer?: PresentationOffer;
 } {
   if (!qr.startsWith("mdoc:")) throw new Error("engagement: not an mdoc QR");
   const deviceEngagementBytes = b64uDecode(qr.slice(5));
@@ -137,56 +215,128 @@ export function parseEngagement(qr: string): {
     for (const m of methods)
       if (Array.isArray(m) && m[0] === 2 && m[2] instanceof Map && m[2].get(10) instanceof Uint8Array)
         bleServiceUuid = uuidString(m[2].get(10) as Uint8Array);
-  return { deviceEngagementBytes, eDevicePoint, ...(bleServiceUuid ? { bleServiceUuid } : {}) };
+  const rawOffer = de.get(DE_OFFER_KEY);
+  const offer = rawOffer === undefined ? undefined : decodePresentationOffer(rawOffer);
+  return {
+    deviceEngagementBytes,
+    eDevicePoint,
+    ...(bleServiceUuid ? { bleServiceUuid } : {}),
+    ...(offer ? { offer } : {}),
+  };
 }
 
 // ------------------------------------------------------------------ istek (okuyucu) / yanıt (mdoc)
+/** ISO 18013-5 §8.3.2.1.2.1 `RequestInfo`; AB alanı `euWrprc` (CBOR kayıt sertifikası, `rc-wrp+cwt`). */
+export interface RequestInfo {
+  euWrprc?: Uint8Array;
+  [key: string]: CborValue | undefined;
+}
 export interface ItemsRequest {
   docType: string;
   /** ad alanı → öğe → saklama niyeti (intentToRetain) */
   nameSpaces: Record<string, Record<string, boolean>>;
+  requestInfo?: RequestInfo;
 }
-export function encodeDeviceRequest(items: ItemsRequest[]): Uint8Array {
+/** Çözülmüş istek öğesi: imzalı baytlar (okuyucu kimliği bunlar üzerinde doğrulanır) ve varsa `readerAuth`. */
+export interface DecodedItemsRequest extends ItemsRequest {
+  /** ItemsRequest CBOR baytları (#6.24 içindeki bstr) */
+  itemsRequestBytes: Uint8Array;
+  /** ReaderAuth (COSE_Sign1, ayrık yük); okuyucu kimliğini doğrulamadıysa yok */
+  readerAuth?: Uint8Array;
+}
+function itemsRequestCbor(it: ItemsRequest): Uint8Array {
+  const m = new Map<string, CborValue>([
+    ["docType", it.docType],
+    [
+      "nameSpaces",
+      new Map<string, CborValue>(
+        Object.entries(it.nameSpaces).map(([ns, els]) => [ns, new Map<string, CborValue>(Object.entries(els))]),
+      ),
+    ],
+  ]);
+  const info = Object.entries(it.requestInfo ?? {}).filter(([, v]) => v !== undefined) as Array<[string, CborValue]>;
+  if (info.length) m.set("requestInfo", new Map<string, CborValue>(info));
+  return encode(m);
+}
+/**
+ * DeviceRequest. `readerAuthFor` verilirse her istek öğesi okuyucu imzası taşır (imza ItemsRequestBytes üzerindedir; okuyucu
+ * oturumunda `readerStart` bunu oturum dökümüyle kurar).
+ */
+export function encodeDeviceRequest(
+  items: ItemsRequest[],
+  readerAuthFor?: (itemsRequestBytes: Uint8Array) => Uint8Array,
+): Uint8Array {
   return encode(
     new Map<string, CborValue>([
       ["version", "1.0"],
       [
         "docRequests",
-        items.map(
-          (it) =>
-            new Map<string, CborValue>([
-              [
-                "itemsRequest",
-                encodeEmbedded(
-                  new Map<string, CborValue>([
-                    ["docType", it.docType],
-                    [
-                      "nameSpaces",
-                      new Map<string, CborValue>(
-                        Object.entries(it.nameSpaces).map(([ns, els]) => [
-                          ns,
-                          new Map<string, CborValue>(Object.entries(els)),
-                        ]),
-                      ),
-                    ],
-                  ]),
-                ),
-              ],
-            ]),
-        ),
+        items.map((it) => {
+          const bytes = itemsRequestCbor(it);
+          const dr = new Map<string, CborValue>([["itemsRequest", new CborTag(24, bytes)]]);
+          if (readerAuthFor) dr.set("readerAuth", decode(readerAuthFor(bytes)));
+          return dr;
+        }),
       ],
     ]),
   );
 }
-export function decodeDeviceRequest(bytes: Uint8Array): ItemsRequest[] {
+
+// ------------------------------------------------------------------ okuyucu kimliği (ReaderAuth, §9.1.4)
+/** ReaderAuthenticationBytes = #6.24(bstr .cbor ["ReaderAuthentication", SessionTranscript, ItemsRequestBytes]). */
+export function readerAuthBytes(sessionTranscriptBytes: Uint8Array, itemsRequestBytes: Uint8Array): Uint8Array {
+  return encode(
+    encodeEmbedded(["ReaderAuthentication", decode(sessionTranscriptBytes), new CborTag(24, itemsRequestBytes)]),
+  );
+}
+/** Okuyucu: ReaderAuth (ayrık yüklü COSE_Sign1; okuyucu sertifika zinciri korumasız başlıkta `x5chain`). */
+export function signReaderAuth(
+  sessionTranscriptBytes: Uint8Array,
+  itemsRequestBytes: Uint8Array,
+  key: { sk: Uint8Array; x5chain: Uint8Array[] },
+): Uint8Array {
+  return coseSign1(readerAuthBytes(sessionTranscriptBytes, itemsRequestBytes), {
+    sk: key.sk,
+    x5chain: key.x5chain,
+    detached: true,
+  });
+}
+/**
+ * mdoc: okuyucu imzasını bu oturumun dökümüyle doğrular. Geçerse okuyucu zinciri (yaprak ilk) döner; güven kararı (zincir, kayıt)
+ * çağıranındır. İmza bozuk, yük ekli ya da zincir yoksa `null`.
+ */
+export function verifyReaderAuth(
+  readerAuth: Uint8Array,
+  sessionTranscriptBytes: Uint8Array,
+  itemsRequestBytes: Uint8Array,
+  publicKeyOf: (leafDer: Uint8Array) => Uint8Array,
+): { chainDer: Uint8Array[] } | null {
+  try {
+    const parsed = parseCoseSign1(readerAuth);
+    if (parsed.payload !== null || !parsed.x5chain.length) return null;
+    const ok = coseVerify1(
+      readerAuth,
+      publicKeyOf(parsed.x5chain[0]),
+      new Uint8Array(0),
+      readerAuthBytes(sessionTranscriptBytes, itemsRequestBytes),
+    );
+    return ok ? { chainDer: parsed.x5chain } : null;
+  } catch {
+    return null;
+  }
+}
+
+export function decodeDeviceRequest(bytes: Uint8Array): DecodedItemsRequest[] {
   const r = decode(bytes);
   if (!(r instanceof Map) || r.get("version") !== "1.0") throw new Error("DeviceRequest: version");
   const docs = r.get("docRequests");
   if (!Array.isArray(docs)) throw new Error("DeviceRequest: docRequests");
   return docs.map((d) => {
     const tag = d instanceof Map ? d.get("itemsRequest") : undefined;
-    if (!(tag instanceof CborTag) || tag.tag !== 24) throw new Error("DeviceRequest: itemsRequest");
-    const ir = decode(tag.value as Uint8Array);
+    if (!(tag instanceof CborTag) || tag.tag !== 24 || !(tag.value instanceof Uint8Array))
+      throw new Error("DeviceRequest: itemsRequest");
+    const itemsRequestBytes = tag.value;
+    const ir = decode(itemsRequestBytes);
     if (!(ir instanceof Map) || typeof ir.get("docType") !== "string") throw new Error("DeviceRequest: docType");
     const nsm = ir.get("nameSpaces");
     const nameSpaces: ItemsRequest["nameSpaces"] = {};
@@ -194,7 +344,22 @@ export function decodeDeviceRequest(bytes: Uint8Array): ItemsRequest[] {
       for (const [ns, els] of nsm)
         if (typeof ns === "string" && els instanceof Map)
           nameSpaces[ns] = Object.fromEntries([...els].map(([k, v]) => [String(k), v === true]));
-    return { docType: ir.get("docType") as string, nameSpaces };
+    const ri = ir.get("requestInfo");
+    let requestInfo: RequestInfo | undefined;
+    if (ri instanceof Map) {
+      requestInfo = {};
+      for (const [k, v] of ri) if (typeof k === "string") requestInfo[k] = v;
+      if (requestInfo.euWrprc !== undefined && !(requestInfo.euWrprc instanceof Uint8Array))
+        throw new Error("DeviceRequest: requestInfo.euWrprc is not a byte string");
+    }
+    const ra = (d as Map<string, CborValue>).get("readerAuth");
+    return {
+      docType: ir.get("docType") as string,
+      nameSpaces,
+      itemsRequestBytes,
+      ...(requestInfo ? { requestInfo } : {}),
+      ...(ra !== undefined && ra !== null ? { readerAuth: encode(ra) } : {}),
+    };
   });
 }
 
@@ -203,7 +368,7 @@ export interface HolderSession {
   keys: Keys;
   /** DeviceAuth için SessionTranscript (dizi CBOR) */
   transcript: Uint8Array;
-  request: ItemsRequest[];
+  request: DecodedItemsRequest[];
   sendCounter: number;
 }
 /** mdoc: okuyucunun ilk iletisi (SessionEstablishment) → oturum + çözülmüş istek. */
@@ -235,12 +400,17 @@ export interface ReaderSession {
   transcript: Uint8Array;
   receiveCounter: number;
   bleServiceUuid?: string;
+  /** TS9: gösterenin teklifi (QR'daki DeviceEngagement[-1]) */
+  offer?: PresentationOffer;
 }
-/** Okuyucu: QR + istek → SessionEstablishment baytları ve oturum. */
+/**
+ * Okuyucu: QR + istek → SessionEstablishment baytları ve oturum. `readerAuth` verilirse istek okuyucunun erişim sertifikasıyla
+ * imzalanır (§9.1.4; kayıt sertifikası `requestInfo.euWrprc` ile birlikte — ADR-0026 K5).
+ */
 export function readerStart(
   qr: string,
   items: ItemsRequest[],
-  opts: { randomBytes?: (n: number) => Uint8Array } = {},
+  opts: { randomBytes?: (n: number) => Uint8Array; readerAuth?: { sk: Uint8Array; x5chain: Uint8Array[] } } = {},
 ): { session: ReaderSession; establishment: Uint8Array } {
   const e = parseEngagement(qr);
   const rnd = opts.randomBytes ?? nobleRandom;
@@ -253,11 +423,28 @@ export function readerStart(
   const establishment = encode(
     new Map<string, CborValue>([
       ["eReaderKey", new CborTag(24, eReaderKeyBytes)],
-      ["data", seal(keys.skReader, 0, 1, encodeDeviceRequest(items))],
+      [
+        "data",
+        seal(
+          keys.skReader,
+          0,
+          1,
+          encodeDeviceRequest(
+            items,
+            opts.readerAuth ? (b) => signReaderAuth(transcript, b, opts.readerAuth!) : undefined,
+          ),
+        ),
+      ],
     ]),
   );
   return {
-    session: { keys, transcript, receiveCounter: 0, ...(e.bleServiceUuid ? { bleServiceUuid: e.bleServiceUuid } : {}) },
+    session: {
+      keys,
+      transcript,
+      receiveCounter: 0,
+      ...(e.bleServiceUuid ? { bleServiceUuid: e.bleServiceUuid } : {}),
+      ...(e.offer ? { offer: e.offer } : {}),
+    },
     establishment,
   };
 }

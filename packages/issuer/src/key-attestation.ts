@@ -49,6 +49,13 @@ export interface KeyAttestationOk {
 }
 export type KeyAttestationResult = KeyAttestationOk | { ok: false; reason: string; indeterminate?: boolean };
 
+/**
+ * KA'da `key_storage_status` (TS3 §2.4.2) politikası — WIA `clientStatus` ile aynı örüntü. `required` (varsayılan; gerçek ağ):
+ * girişi olmayan KA reddedilir. `optional` (yalnız sandbox / test; OpenID uyum aracının KA'sı iptal girişi taşımaz): girişi yoksa
+ * kabul edilir, iptal denetimi yapılamaz (`status` yok); giriş varsa yine denetlenir.
+ */
+export type KeyStorageStatusPolicy = "required" | "optional";
+
 const statusRefOf = (o: unknown): StatusRef | undefined => {
   const s = (o as { status?: { status_list?: { idx?: unknown; uri?: unknown } } } | undefined)?.status?.status_list;
   return s && typeof s.idx === "number" && typeof s.uri === "string" ? { idx: s.idx, uri: s.uri } : undefined;
@@ -61,6 +68,8 @@ export async function verifyKeyAttestation(
     now: number;
     isProviderKey: (fp: string) => "YES" | "NO" | "UNKNOWN";
     statusOf?: StatusValueOf;
+    /** varsayılan `required` (gerçek ağ) */
+    keyStorageStatus?: KeyStorageStatusPolicy;
   },
 ): Promise<KeyAttestationResult> {
   try {
@@ -86,8 +95,9 @@ export async function verifyKeyAttestation(
     // Birden çok seviye verildiyse en düşük olan esas alınır (iddia değil, garanti)
     const keyStorage = mapped.reduce((a, b) => (KEY_STORAGE_RANK[a] <= KEY_STORAGE_RANK[b] ? a : b));
     const status = statusRefOf(payload.key_storage_status);
-    if (!status) return { ok: false, reason: "KA key_storage_status missing (TS3 §2.4.2)" };
-    if (p.statusOf) {
+    if (!status && (p.keyStorageStatus ?? "required") === "required")
+      return { ok: false, reason: "KA key_storage_status missing (TS3 §2.4.2)" };
+    if (status && p.statusOf) {
       const v = await p.statusOf(status, p.now);
       if (v === "INVALID") return { ok: false, reason: "key storage revoked (KA status)" };
       if (v === "NONCOMPLIANT") return { ok: false, reason: "KA status list does not meet the profile" };
@@ -98,7 +108,7 @@ export async function verifyKeyAttestation(
       ok: true,
       keys,
       keyStorage,
-      status,
+      ...(status ? { status } : {}),
       ...(typeof se === "number" && Number.isFinite(se) ? { statusExp: se } : {}),
       providerFingerprint: fp,
     };
@@ -116,6 +126,7 @@ export async function verifyKaProof(
     now: number;
     isProviderKey: (fp: string) => "YES" | "NO" | "UNKNOWN";
     statusOf?: StatusValueOf;
+    keyStorageStatus?: KeyStorageStatusPolicy;
   },
 ): Promise<KeyAttestationResult> {
   let h: ReturnType<typeof decodeProtectedHeader> & { key_attestation?: string };
@@ -160,6 +171,7 @@ export async function verifyAttestationProof(
     now: number;
     isProviderKey: (fp: string) => "YES" | "NO" | "UNKNOWN";
     statusOf?: StatusValueOf;
+    keyStorageStatus?: KeyStorageStatusPolicy;
   },
 ): Promise<KeyAttestationResult> {
   const v = await verifyKeyAttestation(ka, p);

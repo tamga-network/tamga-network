@@ -21,6 +21,7 @@ const SCENARIOS = [
   "event-tamga-id",
   "event-ticket",
   "car-rental-driving",
+  "oidf-selftest-eu-pid",
 ];
 const GENERAL = ["age-over-18-mdoc", "age-over-18-zk", "site-signup", "site-signin"];
 const REVIEW = ["review-age-over-18", "review-site-signup"];
@@ -188,5 +189,18 @@ describe.skipIf(!sbReady)("sandbox kipi (uygulama)", () => {
     expect(home.body).toContain("SANDBOX · TEST");
     expect(term.body).toContain("SANDBOX · TEST");
     await app.close();
+  });
+});
+
+describe("OpenID uyum öz-testi politikası (V1)", () => {
+  it("yalnız sandbox; tek dc+sd-jwt AB PID belgesi, ad + soyad, takma ad yok", () => {
+    const p = policiesFor("sandbox").find((x) => x.policy_id === "oidf-selftest-eu-pid")!;
+    expect(p).toBeTruthy();
+    expect(policiesFor("production").some((x) => x.policy_id === "oidf-selftest-eu-pid")).toBe(false);
+    expect(p.credentials).toEqual([
+      { id: "pid", vct_values: ["urn:eudi:pid:1"], required_claims: ["given_name", "family_name"] },
+    ]);
+    expect(p.pseudonym).toBeUndefined();
+    expect(p.credentials[0].format ?? "dc+sd-jwt").toBe("dc+sd-jwt");
   });
 });

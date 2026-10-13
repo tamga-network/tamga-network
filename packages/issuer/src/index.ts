@@ -10,9 +10,19 @@ export {
   newListId,
   signStatusListToken,
   verifyStatusListToken,
+  // 0.6.0 (ADR-0048): tür başına bit sayısı ve mdoc kopyaları için CWT gösterimi
+  STATUS_BITS,
+  STATUS_LIST_CWT_TYP,
+  signStatusListCwt,
+  verifyStatusListCwt,
+  verifyStatusListAny,
+  type StatusBits,
+  type StatusListCwtInput,
   type StatusListTokenInput,
   type VerifiedStatusToken,
 } from "@tamga-network/sd-jwt";
+// ADR-0048 K2: türde askı izni (şemanın `suspension_allowed`'ı) — Kurum Konsolu ve kurumun kendi servisi buna uyar
+export { suspensionAllowed } from "@tamga-network/schemas";
 export * from "./oid4vci.js";
 export * from "./factory.js";
 // Cüzdan kanıtı (WIA; -07 istemci kanıtı) doğrulaması @tamga-network/trust'a taşındı; buradan da dışa aktarılır

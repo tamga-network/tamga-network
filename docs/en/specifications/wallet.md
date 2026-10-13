@@ -382,6 +382,28 @@ it does not hold, a separate warning, defaulting to not sharing.
   wallet's decision. A credential restricted by the issuer's sharing rule is not shown wallet to wallet; in proximity
   presentation the consent screen says the rule cannot be evaluated ([[ADR-0046]] Consequences).
 
+## 5.7 EU alignment (code 0.6.0)
+
+- **Request without a registration certificate ([[ADR-0026]] K5):** a separate warning on the consent screen, default "Don't
+  share"; rejected after 2028-08-11 (`registration_missing`; details [[SPEC-PROTO-0002]] §7.5). In proximity the registration
+  certificate comes in `requestInfo.euWrprc` and is verified as in the remote flow; if it is invalid, the wallet refuses without
+  asking the person (`presentProximity` `registrarKeys`).
+- **Wallet-to-wallet presentation offer (EU TS9 v1.1):** the holder puts the fields that are on the allow-list and present in its
+  credential into the QR's DeviceEngagement (`-1`) as an offer. For a request outside the offer, or one with intent to retain, it
+  sends no field and ends with `DeviceResponse.status = 10`; the answer goes out a fixed time after the request arrived (the
+  response time does not depend on the credential). The verifier can request only offered fields. Authenticating the person
+  before the field list is shown (STS9_13) is the wallet's job.
+- **Log events (DASH_02, DASH_03b):** `issuance_failed` (issuer, type, reason code), `reissued`, `w2w_verified` (in verifier
+  mode only the time, the credential type and the outcome — no fields or values). **Retention (DASH_02a):** the person can choose
+  30 / 90 / 180 / 365 days (no limit by default); before expired entries are deleted the wallet warns (`upcomingLogDeletions`), and
+  if the person postpones, nothing is deleted (the `applyLogRetention` hook).
+- **"Listed on Tamga Network" indicator ([[ADR-0049]]):** the wallet reads its own provider record in the verified trusted list
+  with `walletProviderListing(providerId, { solutionId, unitRevoked })`; when the record and the solution are `ACTIVE`, the list is
+  fresh and the real network's list and the unit is not revoked, the indicator shows and a tap shows the legal name, status,
+  fingerprint and list time.
+- **Status lists:** identity credentials have no suspension (`bits = 1`); the list of the mdoc copy is the CWT representation
+  ([[ADR-0048]]).
+
 # 6. Schema cache
 
 The implementation of [[ARCH-0003]]/CMP8.

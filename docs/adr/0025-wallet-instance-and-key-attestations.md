@@ -169,6 +169,11 @@ hizalar.
 2. **WIA `cnf` = belgeye özel DPoP anahtarı (TS3 1.5.2).** Belge işleminde WIA'nın `cnf.jwk`'si, o belge için token ucunda
    kullanılan DPoP anahtarıdır; ayrı bir WIA PoP anahtarı üretilmez. K6'daki yenileme belirteci bağı aynı anahtar üzerinden kurulur.
    WIA1 (her işlemde yeni anahtar ve yeni iptal girişi) değişmez: DPoP anahtarı da belgeye ve işleme özeldir. Uygulama: 0.6.0.
+   **Düzeltme (2026-10-13, uygulama sırasında):** bu kural TS3'ün 1.5.1 sürümünde eklendi, **1.5.2'de geri alındı** (TS3 1.5.2
+   sürüm geçmişi: "rolled back the WIA `cnf`/DPoP requirements added in 1.5.1 (Section 2.2.1.1)"). Bugünkü AB metninde ve
+   Uygulama Tüzüğü (AB) 2026/1731 Ek Ib'de WIA `cnf` anahtarıyla DPoP anahtarı arasında bir bağ şartı yoktur (TR-WIA-4.3 yalnız
+   PoP'un `cnf` anahtarıyla doğrulanmasını ister). Bu yüzden not 0.6.0'da **uygulanmadı**; AB metni yeniden isterse ayrı bir
+   işle ele alınır. Mevcut davranış (WIA PoP anahtarı ve DPoP anahtarı ayrı, ikisi de işleme özel) değişmez.
 3. **İptal listelerinin boyu.** WIA ve KA iptal listelerinin **her biri** en az 10.000 girişlidir (Uygulama Tüzüğü (AB) 2024/2979
    Ek Ib; izlenemezlik için; KA listesi tür başına az giriş kullansa da boyu aynı alt sınırı taşır). Belge veren, imzası geçerli ama
    10.000'den az girişli listeye dayanan WIA ya da KA'yı profile uymayan liste olarak **reddeder** (geçici hata sayılmaz).
@@ -186,4 +191,4 @@ hizalar.
 >
 > **Not (2026-10-13):** genel istemci kanıtı (-07; `iss` kabul edilir ama zorunlu değil, kanıtta `iat` yoksa hoş görülür, PoP'ta
 > zorunlu), eski WUA yolunun kaldırılması ve `clientStatus` ayarı (`optional` / `required`; kimlik servisi `required`), WIA `cnf` =
-> belgeye özel DPoP anahtarı (0.6.0), WIA/KA listeleri ≥ 10.000 — yukarıdaki "Uygulama notları (2026-10-13)". Proje yönetimi onayıyla (ilk AB uyum turu).
+> belgeye özel DPoP anahtarı (TS3 1.5.2'de geri alındı — uygulanmadı, yukarıdaki düzeltme), WIA/KA listeleri ≥ 10.000 — yukarıdaki "Uygulama notları (2026-10-13)". Proje yönetimi onayıyla (ilk AB uyum turu).

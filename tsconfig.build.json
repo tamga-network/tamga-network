@@ -12,10 +12,10 @@
       "path": "packages/schemas/tsconfig.build.json"
     },
     {
-      "path": "packages/sd-jwt/tsconfig.build.json"
+      "path": "packages/mdoc/tsconfig.build.json"
     },
     {
-      "path": "packages/mdoc/tsconfig.build.json"
+      "path": "packages/sd-jwt/tsconfig.build.json"
     },
     {
       "path": "packages/issuer/tsconfig.build.json"

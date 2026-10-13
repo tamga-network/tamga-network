@@ -175,6 +175,14 @@ eyJhbGciOiJFUzI1NiIsImtpZCI6InNsLTIwMjYtYSIsInR5cCI6InN0YXR1c2xpc3Qr...
   `ttl` (65534), `status_list` (65533) `{bits, lst}`. The JWT and CWT representations carry the same bits, are signed in the same
   cycle with the same key and are written to the anchor log as separate lines. The SD-JWT VC copy points to the JWT address, the
   MSO of the mdoc copy to the CWT address; both copies use the same `idx`. A type not issued as mdoc has no CWT representation.
+- **Implementation (packages 0.6.0).** `@tamga-network/sd-jwt`: `StatusBitstring(capacity, bytes, bits)` (`bits` 1 or 2),
+  `signStatusListCwt` / `verifyStatusListCwt` (the signer provides a raw ES256 signature: `IssuerSigner.signRaw`, provided by
+  `pemIssuerSigner`) and `verifyStatusListAny`, which picks by the body; the CBOR/COSE layer is in `@tamga-network/mdoc`
+  (`signStatusListCwt`, `parseStatusListCwt`). The verifier's prefetch cache stores a CWT body as bytes; step D reads the CWT for
+  an mdoc copy and the JWT for older copies. In a type without suspension (the schema has no `suspension_allowed`) `0x02` is a
+  malformed list value: the result is `INVALID`, REJECTED (SU2). `@tamga-network/wallet-core`: `parseStatusCwt`,
+  `parseStatusBody`; `fetchStatusBytes` in wallet-to-wallet verification. Conformance vector
+  `conformance/vectors/status-list/jwt-cwt.json` (version 5).
 
 ## 3.3 The `bits` decision
 

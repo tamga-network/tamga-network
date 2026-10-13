@@ -31,6 +31,11 @@ export interface Presentation {
   claimsReadAt?: number;
   /** Tarayıcı Digital Credentials API'si: isteği yapacak sayfanın kökeni (expected_origins; mdoc oturum özetine girer). */
   dcApiOrigin?: string;
+  /**
+   * ISO/IEC 18013-7 Ek C (`org-iso-mdoc`, 0.6.0): aynı sunumun ikinci DC API isteği — HPKE alıcı anahtarı ve oturum dökümü
+   * sunucuda kalır; tarayıcıya yalnız `dcApiRequest` gider.
+   */
+  mdocDc?: import("@tamga-network/verifier").MdocDcApiRequest;
 }
 
 export const SHOW_TTL_MS = 5 * 60 * 1000;

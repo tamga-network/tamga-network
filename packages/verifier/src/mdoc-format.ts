@@ -82,6 +82,8 @@ export async function verifyMdocFormat(
     responseUri: string;
     /** Tarayıcı Digital Credentials API'si: isteği yapan sayfanın kökeni → OpenID4VPDCAPIHandover (Ek B.2.6.2). */
     origin?: string;
+    /** ISO/IEC 18013-7 Ek C: bu isteğin SessionTranscript baytları (verilirse OpenID4VP dökümü kurulmaz). */
+    sessionTranscript?: Uint8Array;
     /** Yanıt şifreliyse şifreleme anahtarının RFC 7638 parmak izi (oturum özetine girer). */
     encJwkThumbprint?: Uint8Array;
     stateCode: string;
@@ -180,9 +182,11 @@ export async function verifyMdocFormat(
   if (!v.deviceKeyRaw) return fail("A3", "deviceKey missing (MD2)");
   // A6 — cihaz imzası (holder binding): SessionTranscript = OpenID4VPHandover (client_id, nonce, şifreleme anahtarı parmak izi,
   // response_uri) — bu isteğe özgü; tekrar oynatılamaz (OpenID4VP 1.0 Ek B.2.6.1)
-  const st = opt.origin
-    ? dcApiSessionTranscript(opt.origin, opt.nonce, opt.encJwkThumbprint ?? null)
-    : oid4vpSessionTranscript(opt.clientId, opt.nonce, opt.responseUri, opt.encJwkThumbprint ?? null);
+  const st = opt.sessionTranscript
+    ? opt.sessionTranscript
+    : opt.origin
+      ? dcApiSessionTranscript(opt.origin, opt.nonce, opt.encJwkThumbprint ?? null)
+      : oid4vpSessionTranscript(opt.clientId, opt.nonce, opt.responseUri, opt.encJwkThumbprint ?? null);
   if (!verifyDeviceAuth(dr.deviceSignature, st, dr.docType, v.deviceKeyRaw))
     return fail("A6", "device signature invalid (holder binding / SessionTranscript)");
   // açıklanan alanlar — tek namespace (Tamga profili); öğe adları mdoc tanımlayıcısıdır (AB PID kodlaması, ADR-0045: SD-JWT'deki

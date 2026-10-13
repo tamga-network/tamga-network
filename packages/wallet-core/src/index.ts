@@ -31,3 +31,4 @@ export * from "./driving.js";
 export * from "./zk-copies.js";
 export * from "./disclosure-policy.js";
 export * from "./w2w.js";
+export * from "./log.js";

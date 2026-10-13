@@ -232,6 +232,51 @@ paths:
         "410":
           description: "`claims_gone` — values already read or expired."
           x-tr: "`claims_gone` — değerler zaten okundu ya da süresi doldu."
+  /vp/dc-mdoc/{id}:
+    post:
+      tags: [Presentations]
+      operationId: postMdocDcApiResponse
+      summary: Forward an ISO/IEC 18013-7 Annex C response
+      description: |
+        0.6.0. The page forwards `credential.data.response` from `navigator.credentials.get` for the `org-iso-mdoc` request:
+        `EncryptedResponse = ["dcapi", {enc, cipherText}]` (HPKE, DHKEM(P-256, HKDF-SHA256) / HKDF-SHA256 / AES-128-GCM, `info` =
+        the Annex C SessionTranscript). The verifier decrypts and verifies it with the same pipeline; the device signature is
+        bound to this request and the page's origin. A response that cannot be decrypted does not consume the presentation;
+        the result is read with `getPresentation` as usual. Send it as a simple form POST (no preflight).
+      x-tr:
+        summary: ISO/IEC 18013-7 Ek C yanıtını ilet
+        description: |
+          0.6.0. Sayfa, `org-iso-mdoc` isteğine `navigator.credentials.get`'ten gelen `credential.data.response`'u iletir:
+          `EncryptedResponse = ["dcapi", {enc, cipherText}]` (HPKE, DHKEM(P-256, HKDF-SHA256) / HKDF-SHA256 / AES-128-GCM, `info` =
+          Ek C oturum dökümü). Doğrulayıcı açar ve aynı hatla doğrular; cihaz imzası bu isteğe ve sayfanın kökenine bağlıdır.
+          Açılamayan yanıt sunumu tüketmez; sonuç her zamanki gibi `getPresentation` ile okunur. Basit form POST olarak gönderin
+          (ön uçuş yok).
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/PresentationId"
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [response]
+              properties:
+                response: { type: string, description: base64url EncryptedResponse., x-tr: base64url EncryptedResponse. }
+      responses:
+        "200":
+          description: Verified (the outcome is in `getPresentation`); `redirect_uri` for the same device.
+          x-tr: Doğrulandı (sonuç `getPresentation`'da); aynı cihaz için `redirect_uri`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  redirect_uri: { type: string, format: uri }
+                  show_url: { type: string, format: uri }
+        "400":
+          description: Unknown or expired presentation, already answered, or the response could not be decrypted.
+          x-tr: Bilinmeyen ya da süresi geçmiş sunum, zaten yanıtlanmış ya da yanıt açılamadı.
   /presentations/{id}/qr.png:
     get:
       tags: [Presentations]
@@ -370,6 +415,31 @@ components:
                   type: string
                   description: Signed request object (JWS).
                   x-tr: İmzalı istek nesnesi (JWS).
+        dc_api_requests:
+          type: array
+          description: |
+            0.6.0 — present when `dc_api_origin` was sent: every Digital Credentials API request for this presentation. Always the
+            OpenID4VP request; for a policy that asks for one mdoc credential also an ISO/IEC 18013-7 Annex C request
+            (`org-iso-mdoc`: `deviceRequest` and `encryptionInfo`, base64url CBOR). Pass the ones the browser supports to
+            `navigator.credentials.get({ digital: { requests } })` (`@tamga-network/verifier/web` chooses: Apple WebKit gets only
+            `org-iso-mdoc`).
+          x-tr: |
+            0.6.0 — `dc_api_origin` gönderildiyse gelir: bu sunumun bütün Digital Credentials API istekleri. Her zaman OpenID4VP
+            isteği; tek mdoc belgesi isteyen politikada ayrıca ISO/IEC 18013-7 Ek C isteği (`org-iso-mdoc`: `deviceRequest` ve
+            `encryptionInfo`, base64url CBOR). Tarayıcının desteklediklerini `navigator.credentials.get({ digital: { requests } })`'e
+            verin (`@tamga-network/verifier/web` seçer: Apple WebKit'e yalnız `org-iso-mdoc`).
+          items:
+            type: object
+            required: [protocol, data]
+            properties:
+              protocol: { type: string, enum: [openid4vp-v1-signed, org-iso-mdoc] }
+              data: { type: object }
+        dc_mdoc_response_uri:
+          type: string
+          format: uri
+          description: 0.6.0 — where the page forwards the `org-iso-mdoc` response (`POST`, form field `response`).
+          x-tr: 0.6.0 — sayfanın `org-iso-mdoc` yanıtını ilettiği adres (`POST`, form alanı `response`).
+          example: https://verify.tamga.network/vp/dc-mdoc/prs_Q2x0dVJmNkp3
     Pending:
       type: object
       description: The wallet has not answered yet.

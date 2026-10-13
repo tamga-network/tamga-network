@@ -3,7 +3,14 @@
  * Sıra: (1) typ + imza + imzacı LOTL'deki kayıt kurumu anahtarı, (2) iat/exp, (3) `sub` (aracılıda `intermediary.sub`) isteği
  * imzalayan erişim sertifikasındaki organizationIdentifier, (4) istenen alanlar sertifikanın `credentials` listesinde.
  * 1–3 tutmazsa `valid: false` → cüzdan veri göndermez (WRC4). 4 tutmazsa fazla istek (onay ekranında uyarı).
+ *
+ * 2026-10-13 değişikliği (ADR-0026 K5; 0.6.0): kayıt sertifikası OLMAYAN istek `registration_missing` işaretini taşır — bugün
+ * uyarı + varsayılan "Paylaşma" (`defaultChoice: "decline"`; kişi yine de paylaşabilir), `WRPRC_REQUIRED_FROM`'dan (2028-08-11,
+ * Uygulama Tüzüğü (AB) 2026/1731) sonra ret (`valid: false`). Tarih kodda sabittir. Yakın alanda (ISO/IEC 18013-5) kayıt
+ * sertifikası `requestInfo.euWrprc` ile CBOR biçiminde (`rc-wrp+cwt`) gelir; 1–4 aynı, 3'teki bağ okuyucunun kimlik doğrulama
+ * sertifikasıyla (`readerAuth`) kurulur (`checkProximityRegistration`).
  */
+import { parseWrprcCwt, verifyReaderAuth, type DecodedItemsRequest } from "@tamga-network/mdoc";
 import { b64Decode } from "./b64.js";
 import { decodeJwt, verifyJwt } from "./jws.js";
 import { certFingerprintHex, p256PointFromCertDer } from "./sdjwt.js";
@@ -15,12 +22,43 @@ import type { Match, VpRequest } from "./oid4vp.js";
 export const WRPRC_TYP = "rc-wrp+jwt";
 const SKEW_SEC = 60;
 
+/**
+ * Bu andan (UTC, ms) sonra kayıt sertifikası olmayan istek REDDEDİLİR (ADR-0026 K5; Uygulama Tüzüğü (AB) 2026/1731'in cüzdanda kayıt
+ * sertifikası doğrulamasını zorunlu kıldığı tarih: 2028-08-11). Sabittir; ayarla değiştirilmez.
+ */
+export const WRPRC_REQUIRED_FROM = Date.UTC(2028, 7, 11);
+
+/** Onay ekranının uyarı işaretleri. `registration_missing`: istek kayıt sertifikası taşımıyor. */
+export type RegistrationFlag = "registration_missing";
+
+/**
+ * Kayıt sertifikası olmayan isteğin kuralı (ADR-0026 K5): `WRPRC_REQUIRED_FROM`'dan önce uyarı + varsayılan "Paylaşma",
+ * sonra ret. `now` ms.
+ */
+export function missingRegistrationPolicy(now = Date.now()): RegistrationCertCheck {
+  const reject = now >= WRPRC_REQUIRED_FROM;
+  return {
+    present: false,
+    valid: !reject,
+    flags: ["registration_missing"],
+    defaultChoice: "decline",
+    ...(reject ? { reason: "registration_missing" } : {}),
+  };
+}
+
 export interface RegistrationCertCheck {
   /** istekte en az bir `registration_cert` var mı */
   present: boolean;
-  /** hepsi 1–3'ü geçti mi (present=false ise true) */
+  /**
+   * hepsi 1–3'ü geçti mi. Sertifika yoksa (present=false) `WRPRC_REQUIRED_FROM`'dan önce true (uyarıyla), sonra false
+   * (`reason: "registration_missing"`).
+   */
   valid: boolean;
   reason?: string;
+  /** 0.6.0: onay ekranı uyarıları (sertifika yoksa `registration_missing`) */
+  flags?: RegistrationFlag[];
+  /** 0.6.0: onay ekranının varsayılan seçimi — sertifika yoksa "decline" ("Paylaşma"); kişi yine de paylaşabilir */
+  defaultChoice?: "share" | "decline";
   /** eşleşen belge için sertifikaların izin verdiği alanlar (yalnız valid ve ilgili sertifika varsa) */
   allowedClaims?: string[];
   tradeName?: string;
@@ -187,7 +225,7 @@ export function checkRegistrationCerts(
   now = Date.now(),
 ): RegistrationCertCheck {
   const r = relevantRegistrationCerts(req, registrarKeys, match, now);
-  if (!r.present) return { present: false, valid: true };
+  if (!r.present) return missingRegistrationPolicy(now);
   if (!r.valid) return { present: true, valid: false, reason: r.reason };
   const relevant = r.certs.map((c) => c.payload);
   const allowed = new Set<string>();
@@ -202,4 +240,105 @@ export function checkRegistrationCerts(
     tradeName: relevant[0]?.name,
     privacyPolicy: relevant[0]?.privacy_policy,
   };
+}
+
+// ------------------------------------------------------------------ yakın alan (ISO/IEC 18013-5) — ADR-0026 K5, 0.6.0
+
+/** CBOR biçimli kayıt sertifikası (`rc-wrp+cwt`): typ + imza + imzacı kayıt kurumu (1) ve süre (2); JWT biçimiyle aynı yük. */
+export function verifyWrprcCwt(
+  bytes: unknown,
+  registrarKeys: string[],
+  now = Date.now(),
+): { ok: true; payload: Wrprc; signerDer: Uint8Array; chainDer: Uint8Array[] } | { ok: false; reason: string } {
+  if (!(bytes instanceof Uint8Array))
+    return { ok: false, reason: "registration certificate is not a CBOR byte string" };
+  let payload: Wrprc;
+  let chain: Uint8Array[];
+  try {
+    const r = parseWrprcCwt(bytes, p256PointFromCertDer);
+    chain = r.chainDer;
+    payload = r.payload as Wrprc;
+  } catch (e) {
+    const m = (e as Error).message;
+    return {
+      ok: false,
+      reason: /typ/.test(m) ? "registration certificate typ" : "registration certificate signature invalid",
+    };
+  }
+  if (!registrarKeys.includes(certFingerprintHex(chain[0])))
+    return { ok: false, reason: "registration certificate not signed by a registrar in the trusted list" };
+  const nowSec = Math.floor(now / 1000);
+  if (typeof payload.iat !== "number" || payload.iat > nowSec + SKEW_SEC)
+    return { ok: false, reason: "registration certificate not yet valid" };
+  if (typeof payload.exp === "number" && payload.exp <= nowSec)
+    return { ok: false, reason: "registration certificate expired" };
+  return { ok: true, payload, signerDer: chain[0], chainDer: chain };
+}
+
+export interface ProximityRegistrationCheck extends RegistrationCertCheck {
+  /**
+   * Okuyucunun kimlik doğrulama sertifikası zinciri (`readerAuth` geçerliyse; yaprak ilk). Okuyucunun kim olduğu (güven listesindeki
+   * kayıt, `fetchRpRecord` / `checkRp`) yaprağın parmak izinden uygulamada çözülür.
+   */
+  readerChainDer?: Uint8Array[];
+  readerCertFingerprint?: string;
+}
+
+/**
+ * Yakın alan isteğinin kayıt sertifikası (ADR-0026 K5): `requestInfo.euWrprc` varsa uzaktan akıştaki 1–4 — (1) typ `rc-wrp+cwt`, imza,
+ * imzacı kayıt kurumu; (2) süre; (3) `sub` (aracılıda `intermediary.sub`) = okuyucunun `readerAuth` sertifikasındaki
+ * organizationIdentifier (okuyucu imzası bu oturumun dökümüyle doğrulanır; imzasız istekte bağ kurulamaz → geçersiz); (4) istenen
+ * öğeler sertifikanın `credentials` listesinde (`allowedClaims`; fazlası onay ekranında uyarı). `euWrprc` yoksa
+ * `missingRegistrationPolicy` (uyarı + "Paylaşma"; 2028-08-11'den sonra ret). `transcript` = oturumun SessionTranscript baytları.
+ */
+export function checkProximityRegistration(
+  item: DecodedItemsRequest,
+  transcript: Uint8Array,
+  registrarKeys: string[],
+  now = Date.now(),
+): ProximityRegistrationCheck {
+  const reader = item.readerAuth
+    ? verifyReaderAuth(item.readerAuth, transcript, item.itemsRequestBytes, p256PointFromCertDer)
+    : null;
+  const readerInfo = reader
+    ? { readerChainDer: reader.chainDer, readerCertFingerprint: certFingerprintHex(reader.chainDer[0]) }
+    : {};
+  const cert = item.requestInfo?.euWrprc;
+  if (cert === undefined) return { ...missingRegistrationPolicy(now), ...readerInfo };
+  const fail = (reason: string): ProximityRegistrationCheck => ({ present: true, valid: false, reason, ...readerInfo });
+  const v = verifyWrprcCwt(cert, registrarKeys, now);
+  if (!v.ok) return fail(v.reason);
+  if (!reader) return fail("registration certificate without a valid reader authentication");
+  let orgId: string | null;
+  try {
+    orgId = certOrganizationIdentifier(reader.chainDer[0]);
+  } catch {
+    orgId = null;
+  }
+  const expectedSub = v.payload.intermediary?.sub ?? v.payload.sub;
+  if (!orgId || !expectedSub || orgId !== expectedSub)
+    return fail("registration certificate does not belong to the reader's certificate");
+  const allowed = new Set<string>();
+  for (const c of v.payload.credentials ?? [])
+    if (!c.meta?.vct_values && !(c as { meta?: { doctype_value?: string } }).meta?.doctype_value) {
+      for (const cl of c.claim ?? c.claims ?? []) addClaimPath(allowed, cl.path);
+    } else if (
+      c.meta?.vct_values?.includes(item.docType) ||
+      (c as { meta?: { doctype_value?: string } }).meta?.doctype_value === item.docType
+    )
+      for (const cl of c.claim ?? c.claims ?? []) addClaimPath(allowed, cl.path);
+  return {
+    present: true,
+    valid: true,
+    allowedClaims: [...allowed],
+    tradeName: v.payload.name,
+    privacyPolicy: v.payload.privacy_policy,
+    ...readerInfo,
+  };
+}
+/** DCQL yolu: SD-JWT `[ad]`, mdoc `[ad alanı, öğe]` — öğe adı eklenir. */
+function addClaimPath(out: Set<string>, path: unknown[] | undefined) {
+  if (!path?.length) return;
+  const last = path.length >= 2 ? path[1] : path[0];
+  if (typeof last === "string") out.add(last);
 }

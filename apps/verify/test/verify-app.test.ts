@@ -38,7 +38,17 @@ import { SignJWT, importPKCS8 } from "jose";
 import { derToB64 } from "@tamga-network/core";
 import { createHash, createPrivateKey, generateKeyPairSync, randomBytes, sign as cryptoSign } from "node:crypto";
 import { pemToDer } from "@tamga-network/core";
-import { issueMdoc, encode as cborEncode, toPidMdocElements, type CborValue } from "@tamga-network/mdoc";
+import {
+  buildDeviceResponse,
+  deviceSignAsync,
+  discloseMdoc,
+  issueMdoc,
+  encode as cborEncode,
+  parseAnnexCRequest,
+  sealAnnexCResponse,
+  toPidMdocElements,
+  type CborValue,
+} from "@tamga-network/mdoc";
 import { createPresentationRequest, createRpAssertion, dcqlFromPolicy, pemRpSigner } from "@tamga-network/verifier";
 import { buildVerifyApp } from "../src/app.js";
 import { jsLit } from "../src/html.js";
@@ -988,6 +998,68 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         })
       ).statusCode,
     ).toBe(400);
+
+    // 6) ISO/IEC 18013-7 Ek C (`org-iso-mdoc`, Safari / iOS 26): ikinci DC API isteği; HPKE şifreli DeviceResponse; oturum
+    // dökümü dcapi handover (EncryptionInfo + köken)
+    const openMdocDc = async () =>
+      (
+        await app3.inject({
+          method: "POST",
+          url: "/presentations",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          payload: { policy_id: "age-over-18-mdoc", dc_api_origin: SITE },
+        })
+      ).json() as {
+        presentation_id: string;
+        dc_api_requests: Array<{ protocol: string; data: unknown }>;
+        dc_mdoc_response_uri: string;
+      };
+    const c1 = await openMdocDc();
+    expect(c1.dc_api_requests.map((r) => r.protocol)).toEqual(["openid4vp-v1-signed", "org-iso-mdoc"]);
+    expect(c1.dc_mdoc_response_uri).toBe(`${BASE}/vp/dc-mdoc/${c1.presentation_id}`);
+    const annexReq = c1.dc_api_requests[1];
+    const walletAnswer = async (origin: string, data: unknown) => {
+      const a = parseAnnexCRequest(data, origin);
+      expect(a.items[0]).toMatchObject({ docType: ID_VCT, nameSpaces: { "tamga.id.1": { age_over_18: false } } });
+      const copy = wallet.credentials[0].copies[0];
+      const partial = discloseMdoc(Buffer.from(copy.mdoc!, "base64url"), { "tamga.id.1": ["age_over_18"] });
+      const devSig = await deviceSignAsync(a.sessionTranscript, ID_VCT, (tbs) => keys.sign("w.mdoc", tbs));
+      const dr = buildDeviceResponse({ docType: ID_VCT, issuerSigned: partial, deviceSignature: devSig });
+      return sealAnnexCResponse(dr, a).response;
+    };
+    const postMdoc = (id: string, response: string) =>
+      app3.inject({
+        method: "POST",
+        url: `/vp/dc-mdoc/${id}`,
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        payload: `response=${encodeURIComponent(response)}`,
+      });
+    // başka kökenin dökümüyle şifrelenmiş yanıt açılmaz → 400, sunum tüketilmez
+    expect(
+      (await postMdoc(c1.presentation_id, await walletAnswer("https://evil.example", annexReq.data))).statusCode,
+    ).toBe(400);
+    expect((await postMdoc(c1.presentation_id, "bozuk")).statusCode).toBe(400);
+    const ok = await postMdoc(c1.presentation_id, await walletAnswer(SITE, annexReq.data));
+    expect(ok.statusCode).toBe(200);
+    const rc = await result(c1.presentation_id);
+    expect(rc.failed_reason).toBeNull();
+    expect(rc.outcome).toBe("ACCEPTED");
+    expect(rc.disclosed_claims).toEqual(["age_over_18"]);
+    // aynı sunuma ikinci yanıt: tek kullanım (PV10)
+    expect((await postMdoc(c1.presentation_id, await walletAnswer(SITE, annexReq.data))).statusCode).toBe(400);
+    // başka sunumun Ek C yanıtı bu sunuma: döküm (EncryptionInfo) farklı → açılmaz
+    const c2 = await openMdocDc();
+    expect((await postMdoc(c2.presentation_id, await walletAnswer(SITE, annexReq.data))).statusCode).toBe(400);
+    // OpenID4VP isteği olmayan (QR) sunumda Ek C yok
+    const plain = (
+      await app3.inject({
+        method: "POST",
+        url: "/presentations",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        payload: { policy_id: "age-over-18-mdoc" },
+      })
+    ).json() as Record<string, unknown>;
+    expect(plain.dc_api_requests).toBeUndefined();
   });
 
   it("ADR-0017: sıkı kip — RP beyanı, sahiplik, durum jetonu, değerler bir kez; sayfada değer yok; örnek site sunucudan başlatır", async () => {

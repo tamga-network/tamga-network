@@ -128,18 +128,41 @@ function eventTx(e: WalletEvent, i: number, state: WalletState, lookup: Ts10Look
       },
     };
   }
-  return {
-    ...base,
-    transactionType: "DPAReport",
-    dpaReport: { dpaName: e.authority ?? "", dpaCountry: "TR" },
-  };
+  if (e.kind === "dpa_report")
+    return {
+      ...base,
+      transactionType: "DPAReport",
+      dpaReport: { dpaName: e.authority ?? "", dpaCountry: "TR" },
+    };
+  if (e.kind === "issuance_failed" || e.kind === "reissued") {
+    const ip = state.credentials.find((c) => c.vct === e.vct);
+    const info = ip ? lookup.issuer?.(ip.issuerId) : undefined;
+    return {
+      ...base,
+      transactionType: "CredentialIssuance",
+      transactionResult: e.kind === "issuance_failed" ? "Failed" : "Completed",
+      credentialIssuance: {
+        ...(info?.identifier ? { interactingPartyIdentifier: info.identifier } : {}),
+        interactingPartyType: info?.issuerType ?? "NonQEAAProvider",
+        interactingPartyName: info?.name ?? e.issuer ?? e.typeName,
+        interactingPartyContact: info?.contact ?? [],
+        credentialIdentifier: [e.vct],
+        isUserTriggered: true,
+      },
+    };
+  }
+  // TS10'da karşılığı olmayan olaylar (takma ad, doğrulayan kipi) dışa aktarılmaz
+  return null;
 }
 
 /** TS10 §3.16 TransactionLog — sunumlar, silme/haklar olayları ve belge alımları, zamana göre. */
 export function ts10TransactionLog(state: WalletState, lookup: Ts10Lookup = {}) {
   const txs: Array<{ time: string } & Record<string, unknown>> = [];
   state.presentationLog.forEach((e, i) => txs.push(presentationTx(e, i, lookup)));
-  (state.events ?? []).forEach((e, i) => txs.push(eventTx(e, i, state, lookup)));
+  (state.events ?? []).forEach((e, i) => {
+    const t = eventTx(e, i, state, lookup);
+    if (t) txs.push(t);
+  });
   state.credentials.forEach((c, i) => {
     const ip = lookup.issuer?.(c.issuerId);
     txs.push({

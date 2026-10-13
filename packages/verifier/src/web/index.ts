@@ -12,8 +12,11 @@
  * izler, değer görmez. `start` verilmezse kit sunumu doğrudan açar (yalnızca demo kipinde ya da kendi doğrulayıcınızda).
  *
  * <script> ile: doğrulayıcı bu modülü paketleyip `/tamga-verifier.js` olarak sunar → `window.TamgaVerifier.mount(…)`.
- * Taşıma-bağımsız: tarayıcı Digital Credentials API'si yaygınlaşınca aynı arayüz `navigator.credentials.get` kullanır
- * (Chrome: OpenID4VP; Safari: mdoc — D-CRED-5).
+ * Tarayıcı Digital Credentials API'si (0.6.0): doğrulayıcı iki istek verir — OpenID4VP (`openid4vp-v1-signed`) ve
+ * ISO/IEC 18013-7 Ek C (`org-iso-mdoc`; politika tek mdoc belgesi istiyorsa). Kit tarayıcıya göre seçer (`chooseDcApiRequests`:
+ * Apple WebKit — iPhone, iPad, Mac Safari — yalnız `org-iso-mdoc`; ötekiler ikisi, OpenID4VP önce) ve yanıtı yanıtın protokolüne
+ * göre doğru uca iletir. Masaüstünde DC API varsa varsayılan yol odur, QR yedek olarak yanında kalır (ETSI TS 119 472-2
+ * SUPPORT-03); telefonda düğmenin yanında "cüzdanda aç" bağlantısı kalır.
  */
 
 export interface MountOptions {
@@ -31,9 +34,10 @@ export interface MountOptions {
   /** Metin dili: "en" | "tr" | "tk". Verilmezse sayfanın `<html lang>` değeri, desteklenmiyorsa "en". */
   lang?: string;
   /**
-   * Tarayıcı Digital Credentials API'si destekliyorsa (`navigator.credentials.get({ digital })`) QR'ın yanında "Bu cihazdan
-   * paylaş" düğmesi. Kit kendisi başlatıyorsa sayfa kökenini `dc_api_origin` olarak gönderir; `start` veriliyse kit
-   * `{ dcApiOrigin }` verir (yalnız tarayıcı destekliyorsa) ve sitenin sunucusu onu `dc_api_origin` olarak iletir. Yanıt şifrelidir (doğrulayıcıya), sayfa içeriği göremez.
+   * Tarayıcı Digital Credentials API'si destekliyorsa (`navigator.credentials.get({ digital })`) "Bu cihazdan paylaş" düğmesi
+   * (QR / "cüzdanda aç" yedek olarak kalır). Kit kendisi başlatıyorsa sayfa kökenini `dc_api_origin` olarak gönderir; `start`
+   * veriliyse kit `{ dcApiOrigin }` verir (yalnız tarayıcı destekliyorsa) ve sitenin sunucusu onu `dc_api_origin` olarak iletir.
+   * Yanıt şifrelidir (doğrulayıcıya), sayfa içeriği göremez. 0.6.0: varsayılan açık (`false` ile kapatılır).
    */
   dcApi?: boolean;
 }
@@ -55,6 +59,7 @@ export const MESSAGES: Record<WidgetLang, Record<string, string>> = {
     approveQr: "Scan the QR code with the wallet on your phone and approve the requested fields.",
     onlyApproved: "Only the fields you approve are shared with this site. The request expires at",
     dcApi: "Share from this device",
+    orQr: "or scan with your phone:",
   },
   tr: {
     accepted: "Doğrulandı.",
@@ -68,6 +73,7 @@ export const MESSAGES: Record<WidgetLang, Record<string, string>> = {
     approveQr: "Telefonunuzdaki cüzdanla QR'ı okutun ve alanları onaylayın.",
     onlyApproved: "Yalnızca onayladığınız alanlar bu siteye iletilir. İsteğin geçerlilik sonu:",
     dcApi: "Bu cihazdan paylaş",
+    orQr: "ya da telefonunla okut:",
   },
   tk: {
     accepted: "Tassyklandy.",
@@ -81,6 +87,7 @@ export const MESSAGES: Record<WidgetLang, Record<string, string>> = {
     approveQr: "Telefonyňyzdaky gapjyk bilen QR-y okadyň we meýdançalary tassyklaň.",
     onlyApproved: "Diňe tassyklan meýdançalaryňyz bu saýta iberilýär. Haýyşyň möhleti:",
     dcApi: "Bu enjamdan paýlaş",
+    orQr: "ýa-da telefonyňyz bilen okadyň:",
   },
 };
 
@@ -101,6 +108,54 @@ export interface StartedPresentation {
   status_token?: string;
   /** `dc_api_origin` ile başlatıldıysa: `navigator.credentials.get` girdisi (OpenID4VP 1.0 Ek A, imzalı). */
   dc_api_request?: { protocol: string; data: { request: string } };
+  /** 0.6.0: bütün DC API istekleri (OpenID4VP ve varsa ISO/IEC 18013-7 Ek C `org-iso-mdoc`) */
+  dc_api_requests?: DcApiRequest[];
+  /** 0.6.0: `org-iso-mdoc` yanıtının iletileceği adres */
+  dc_mdoc_response_uri?: string;
+}
+
+/** Digital Credentials API istek öğesi (`navigator.credentials.get({ digital: { requests } })`). */
+export interface DcApiRequest {
+  protocol: string;
+  data: unknown;
+}
+export const DC_PROTOCOL_OPENID4VP = "openid4vp-v1-signed";
+export const DC_PROTOCOL_MDOC = "org-iso-mdoc";
+
+/**
+ * Apple WebKit tarayıcısı mı: iPhone / iPad (bütün tarayıcılar WebKit) ya da Mac'te Safari. Bu tarayıcıların DC API'si mdoc'u
+ * yalnız ISO/IEC 18013-7 Ek C ile ister.
+ */
+export function isAppleWebKit(ua: string): boolean {
+  if (/iPhone|iPad|iPod/i.test(ua)) return true;
+  return /Macintosh/i.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|CriOS|Edg\/|Firefox|FxiOS|OPR\//.test(ua);
+}
+
+/** Tarayıcıya göre DC API istekleri: Apple WebKit → yalnız `org-iso-mdoc` (varsa); öteki → OpenID4VP önce, Ek C sonra. */
+export function chooseDcApiRequests(
+  p: Pick<StartedPresentation, "dc_api_request" | "dc_api_requests">,
+  ua: string = typeof navigator !== "undefined" ? navigator.userAgent : "",
+): DcApiRequest[] {
+  const all: DcApiRequest[] = p.dc_api_requests?.length
+    ? p.dc_api_requests
+    : p.dc_api_request
+      ? [p.dc_api_request]
+      : [];
+  const mdoc = all.filter((r) => r.protocol === DC_PROTOCOL_MDOC);
+  const oid = all.filter((r) => r.protocol !== DC_PROTOCOL_MDOC);
+  if (isAppleWebKit(ua)) return mdoc;
+  return [...oid, ...mdoc];
+}
+
+/** DC API yanıtının iletileceği adres (yanıtın protokolüne göre); bilinmeyen protokol `null`. */
+export function dcResponseTarget(
+  verifier: string,
+  protocol: string | undefined,
+  p: Pick<StartedPresentation, "dc_mdoc_response_uri">,
+): string | null {
+  if (protocol === DC_PROTOCOL_MDOC) return p.dc_mdoc_response_uri ?? null;
+  if (protocol === undefined || protocol.startsWith("openid4vp")) return verifier + "/vp/response";
+  return null;
 }
 
 export interface PresentationStatus {
@@ -134,16 +189,22 @@ export const digitalCredentialsSupported = (): boolean =>
  */
 export async function presentViaDigitalCredentials(
   verifier: string,
-  request: NonNullable<StartedPresentation["dc_api_request"]>,
+  request: NonNullable<StartedPresentation["dc_api_request"]> | DcApiRequest[],
+  p: Pick<StartedPresentation, "dc_mdoc_response_uri"> = {},
 ): Promise<void> {
+  const requests = Array.isArray(request) ? request : [request];
   const cred = (await navigator.credentials.get({
-    digital: { requests: [request] },
+    digital: { requests },
     mediation: "required",
-  } as CredentialRequestOptions)) as (Credential & { data?: unknown }) | null;
+  } as CredentialRequestOptions)) as (Credential & { data?: unknown; protocol?: string }) | null;
   const data = typeof cred?.data === "string" ? (JSON.parse(cred.data) as unknown) : cred?.data;
   const response = (data as { response?: unknown } | undefined)?.response;
   if (typeof response !== "string") throw new Error(MESSAGES.en.unexpected);
-  await fetch(verifier + "/vp/response", {
+  // tek istek verildiyse protokol odur; birden çoksa yanıt hangi protokolle geldiğini söyler
+  const protocol = cred?.protocol ?? (requests.length === 1 ? requests[0].protocol : undefined);
+  const target = dcResponseTarget(verifier, protocol, p);
+  if (!target) throw new Error(MESSAGES.en.unexpected);
+  await fetch(target, {
     method: "POST",
     mode: "no-cors",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -182,7 +243,7 @@ export function nextPollDelayMs(prevMs: number, baseMs: number, retryAfter: stri
 
 /** İmzalı OpenID4VP isteğini doğrulayıcıdan alır (kişisel veri yok; yalnızca istek bağlantısı). */
 export async function start(opts: Pick<MountOptions, "verifier" | "policy" | "dcApi">): Promise<StartedPresentation> {
-  const dc = opts.dcApi && digitalCredentialsSupported();
+  const dc = opts.dcApi !== false && digitalCredentialsSupported();
   const r = await fetch(opts.verifier + "/presentations", {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
@@ -207,17 +268,17 @@ export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void }
     if (timer) clearTimeout(timer);
   };
 
-  const dcApiOrigin = opts.dcApi && digitalCredentialsSupported() ? location.origin : undefined;
+  const dcApiOrigin = opts.dcApi !== false && digitalCredentialsSupported() ? location.origin : undefined;
   (opts.start ? opts.start(dcApiOrigin ? { dcApiOrigin } : {}) : start(opts))
     .then((p) => {
       if (stopped) return;
       // Bağlantı yalnızca cüzdan şeması olabilir (sunucu yanıtı bozulsa bile sayfada javascript:/http bağlantısı çizilmez)
       if (!/^openid4vp:\/\//i.test(p.qr_payload)) throw new Error(m.unexpected);
       const pid = encodeURIComponent(p.presentation_id);
-      const dcReq = p.dc_api_request;
-      // DC API isteği yalnız tarayıcı yolunda geçerli (response_uri yok); tarayıcı cihazlar arası QR'ı kendisi gösterir
-      const viaDc = !!(opts.dcApi && dcReq && digitalCredentialsSupported());
-      if (viaDc && dcReq) {
+      const dcReqs = chooseDcApiRequests(p);
+      // DC API yolu varsayılandır (SUPPORT-03); QR / "cüzdanda aç" yedek olarak kalır (tarayıcı protokolü desteklemeyebilir)
+      const viaDc = !!(opts.dcApi !== false && dcReqs.length && digitalCredentialsSupported());
+      if (viaDc) {
         box.appendChild(
           h(
             "button",
@@ -227,7 +288,7 @@ export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void }
               style:
                 "background:var(--tamga-accent,#1E5A78);color:var(--tamga-on-accent,#fff);padding:12px 18px;border:0;border-radius:8px;font-weight:700;cursor:pointer",
               onclick: () => {
-                presentViaDigitalCredentials(opts.verifier, dcReq).catch(() => {
+                presentViaDigitalCredentials(opts.verifier, dcReqs, p).catch(() => {
                   /* kişi vazgeçti ya da cüzdan yok: QR yolu açık kalır */
                 });
               },
@@ -236,8 +297,7 @@ export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void }
           ),
         );
       }
-      if (viaDc) status.textContent = m.approveMobile;
-      else if (isMobile()) {
+      if (isMobile()) {
         box.appendChild(
           h(
             "a",
@@ -252,6 +312,7 @@ export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void }
         );
         status.textContent = m.approveMobile;
       } else {
+        if (viaDc) box.appendChild(h("p", { style: "font-size:12px;color:#6B615B;margin:0" }, [m.orQr]));
         box.appendChild(
           h("img", {
             src: opts.verifier + "/presentations/" + pid + "/qr.png",
@@ -261,7 +322,7 @@ export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void }
             style: "border-radius:12px;background:#fff;padding:6px",
           }),
         );
-        status.textContent = m.approveQr;
+        status.textContent = viaDc ? m.approveMobile : m.approveQr;
       }
       box.appendChild(
         h("p", { style: "font-size:12px;color:#6B615B;margin:0" }, [

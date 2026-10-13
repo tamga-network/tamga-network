@@ -86,8 +86,20 @@ export interface PresentationLogEntry {
 /** ARF DASH_05a: sunum dışındaki günlük olayları (ör. kullanıcının belge silmesi). Değer içermez. */
 export interface WalletEvent {
   ts: number;
-  /** deleted: belge silindi · deletion_request: doğrulayıcıdan silme talebi (TS7) · dpa_report: veri koruma kurumuna bildirim (TS8) */
-  kind: "deleted" | "deletion_request" | "dpa_report" | "pseudonym_created" | "pseudonym_deleted";
+  /**
+   * deleted: belge silindi · deletion_request: doğrulayıcıdan silme talebi (TS7) · dpa_report: veri koruma kurumuna bildirim (TS8)
+   * · 0.6.0 (`log.ts`): issuance_failed: belge alma başarısız (DASH_02) · reissued: belge yeniden alındı (DASH_02) ·
+   * w2w_verified: doğrulayan kipinde bir kişinin belgesi denetlendi (STS9_35 / DASH_03b; değer yok)
+   */
+  kind:
+    | "deleted"
+    | "deletion_request"
+    | "dpa_report"
+    | "pseudonym_created"
+    | "pseudonym_deleted"
+    | "issuance_failed"
+    | "reissued"
+    | "w2w_verified";
   vct: string;
   typeName: string;
   /** deletion_request / dpa_report: ilgili doğrulayıcı ve kullanılan kanal (web/email/phone); değer yok */
@@ -95,6 +107,12 @@ export interface WalletEvent {
   channel?: "web" | "email" | "phone";
   /** dpa_report: kurum adı */
   authority?: string;
+  /** issuance_failed / reissued: kurumun adresi (credential_issuer) */
+  issuer?: string;
+  /** issuance_failed: neden kodu (`IssuanceFailureReason`; sunucu iletisi yok) */
+  reason?: string;
+  /** w2w_verified: sonuç (geçerli / geçersiz / doğrulanamadı) — alan ve değer yok */
+  outcome?: "valid" | "invalid" | "indeterminate";
 }
 export interface WalletState {
   version: 1;
@@ -120,6 +138,8 @@ export interface WalletState {
     network?: "production" | "sandbox";
     /** Tamga Wallet WA-ADR-0003 K2: telefonun yerel bildirimleri (yok = henüz sorulmadı; false = kapalı; true = açık) */
     localNotifications?: boolean;
+    /** DASH_02a (0.6.0): günlük saklama süresi (gün; `LOG_RETENTION_OPTIONS_DAYS`); yoksa süresiz */
+    logRetentionDays?: number;
   };
   wua?: WuaRecord;
   /** ADR-0025: cüzdan sağlayıcıda kayıtlı birim (birim anahtarı KeyProvider'da "wallet.unit") */

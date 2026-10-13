@@ -8,8 +8,10 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import { timingSafeEqual } from "node:crypto";
 import QRCode from "qrcode";
 import {
+  createMdocDcApiRequest,
   createPresentationRequest,
   decryptResponse,
+  openMdocDcApiResponse,
   dcqlFromPolicy,
   policyScopeViolations,
   registrationScopesFor,
@@ -103,6 +105,13 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         expires_at: new Date(p.req.expiresAt * 1000).toISOString(),
         status_token: p.statusToken,
         ...(p.req.dcApiRequest ? { dc_api_request: p.req.dcApiRequest } : {}),
+        // 0.6.0: tarayıcı protokolü seçer — OpenID4VP (Chrome/Edge) ya da ISO/IEC 18013-7 Ek C (Safari / iOS 26)
+        ...(p.req.dcApiRequest
+          ? {
+              dc_api_requests: [p.req.dcApiRequest, ...(p.mdocDc ? [p.mdocDc.dcApiRequest] : [])],
+              ...(p.mdocDc ? { dc_mdoc_response_uri: `${cfg.publicBase}/vp/dc-mdoc/${p.req.presentationId}` } : {}),
+            }
+          : {}),
       };
     // Sunumu açan sayfa durum jetonunu taşır: sıkı kipte /p/:id ayrıntıları yalnızca jetonla gösterir (HV1/HV2)
     return reply.redirect(`/p/${p.req.presentationId}?st=${encodeURIComponent(p.statusToken)}`);
@@ -264,6 +273,70 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     }
   });
 
+  // ISO/IEC 18013-7 Ek C (`org-iso-mdoc`): sayfanın ilettiği HPKE şifreli DeviceResponse → doğrulama (sunum kimliği adreste;
+  // şifreli yanıtta kimlik yok). Açılamayan yanıt sunumu tüketmez (/vp/response ile aynı kural).
+  app.post("/vp/dc-mdoc/:id", { preHandler: rateLimitHook(ctx.limits.vpResponse) }, async (req, reply) => {
+    const pid = (req.params as { id: string }).id;
+    const p = presentations.get(pid);
+    if (!p || !p.mdocDc)
+      return reply.code(400).send({ error: "invalid_request", error_description: "bilinmeyen sunum" });
+    if (p.used)
+      return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
+    if (p.req.expiresAt < nowSec())
+      return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
+    const response = (req.body as { response?: unknown } | undefined)?.response;
+    let opened: ReturnType<typeof openMdocDcApiResponse>;
+    try {
+      opened = openMdocDcApiResponse(response, p.mdocDc);
+    } catch {
+      return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" });
+    }
+    if (p.used)
+      return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
+    p.used = true;
+    p.trace.push({
+      t: Date.now(),
+      step: "Response decrypted (HPKE P-256/AES-128-GCM, ISO/IEC 18013-7 Annex C, via browser Digital Credentials API)",
+    });
+    if ("refused" in opened) {
+      p.result = rejectedResult(pid, `the wallet returned no document (DeviceResponse status ${opened.refused})`, ctx);
+      p.resultAt = Date.now();
+      p.trace.push({ t: Date.now(), step: "Wallet declined", detail: `status ${opened.refused}` });
+      return { redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}` };
+    }
+    const out = await verifyPresentation({
+      presentation: opened.presentation,
+      aud: cfg.clientId,
+      nonce: p.req.nonce,
+      format: "mso_mdoc",
+      sessionTranscript: p.mdocDc.sessionTranscript,
+      policy: p.policy,
+      policyCredentialId: p.mdocDc.policyCredentialId,
+      trust: ctx.trust(),
+      statusCache: ctx.statusCache,
+      rootCertsDer: ctx.rootDer(),
+      rp: ctx.trust().relyingParty(cfg.clientId),
+      allowLocalIssuerUrls: !cfg.publicBase.startsWith("https://"),
+      now: nowSec(),
+      verificationId: `vrf_${pid.slice(4)}`,
+      audit: (e) => ctx.audit(e),
+    });
+    p.result = out.result;
+    p.claims = out.claims;
+    p.resultAt = Date.now();
+    p.trace.push({
+      t: Date.now(),
+      step: `Verification: ${out.result.outcome}`,
+      detail: out.result.failed_step
+        ? `${out.result.failed_step}: ${out.result.failed_reason}`
+        : `${out.result.checks_performed.length} checks passed`,
+    });
+    return {
+      redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}`,
+      ...(out.result.outcome === "ACCEPTED" ? { show_url: `${cfg.publicBase}/p/${pid}?show=${p.showKey}` } : {}),
+    };
+  });
+
   // 4.2 / 4.3
   app.get("/presentations/:id", async (req, reply) => {
     const p = presentations.get((req.params as { id: string }).id);
@@ -352,7 +425,19 @@ export async function createPresentation(
     },
     owner,
   );
-  if (dcApiOrigin) p.dcApiOrigin = dcApiOrigin;
+  if (dcApiOrigin) {
+    p.dcApiOrigin = dcApiOrigin;
+    // ISO/IEC 18013-7 Ek C: tek mdoc belgesi isteyen, takma adsız ve geçiş kartsız politikada ikinci DC API isteği
+    if (
+      policy.credentials.length === 1 &&
+      policy.credentials[0].format === "mso_mdoc" &&
+      !policy.pseudonym &&
+      !policy.proximity
+    ) {
+      const mdocDc = createMdocDcApiRequest({ policy, origin: dcApiOrigin, readerAuth: ctx.readerAuth });
+      if (mdocDc) p.mdocDc = mdocDc;
+    }
+  }
   return { p };
 }
 

@@ -1,20 +1,31 @@
 /**
  * Token Status List — SPEC-CRED-0003 (IETF draft-ietf-oauth-status-list-20; AB CIR 2026/1731 ile aynı sürüm).
- *  S2 bits=2 (0 VALID, 1 INVALID/iptal, 2 SUSPENDED) · S7 idx rastgele · S10 kapasite ≥100.000, doluluk ≤%80
+ *  S2 (ADR-0048) bits tür başına: kimlik servisinin türleri 1 (0 VALID, 1 INVALID/iptal), kurum listeleri 2 (+ 2 SUSPENDED;
+ *     yalnız şeması `suspension_allowed: true` olan türlerde yazılır) · S7 idx rastgele · S10 kapasite ≥100.000, doluluk ≤%80
  *  S3 version monoton · S5 sabit aralık, değişiklik olmasa da yayın · S6 aralık dışı yayın yok
  *  S11 status anahtarı credential anahtarından ayrı (K1) · S8 liste URI'si opak
- *  Token: typ "statuslist+jwt", {iss, sub: uri, iat, exp, ttl, status_list:{bits:2, lst}} — lst = base64url(zlib(bytes))
+ *  JWT gösterimi: typ "statuslist+jwt", {iss, sub: uri, iat, exp, ttl, status_list:{bits, lst}} — lst = base64url(zlib(bytes))
+ *  CWT gösterimi (ADR-0048 K3, mdoc kopyaları için; ayrı opak adres, aynı bitler): COSE_Sign1, typ
+ *  "application/statuslist+cwt", {2: sub, 6: iat, 4: exp, 65534: ttl, 65533: {bits, lst: zlib(bytes)}} — `@tamga-network/mdoc`
+ *  CBOR/COSE katmanı + burada sıkıştırma.
  *  Doğrulayıcı güvenilmeyen girdiye karşı: token boyutu ve açılmış liste boyutu sınırlı (zlib bombası yok), `exp` geçmişse D4,
  *  `iat` saat kayması payından ileride ise D3.
  */
 import { deflateSync, inflateSync } from "node:zlib";
 import { randomBytes, randomInt } from "node:crypto";
 import { CompactSign, compactVerify, decodeProtectedHeader, importX509 } from "jose";
+import { X509Certificate } from "@peculiar/x509";
 import { b64u, b64uToBytes, derToB64, b64ToDer, derToPem, sha256Hex, sha256Tag, utf8 } from "@tamga-network/core";
+import { parseStatusListCwt, signStatusListCwt as signCwt, STATUS_LIST_CWT_TYP } from "@tamga-network/mdoc";
 import type { IssuerSigner } from "./issue.js";
 
 export const STATUS_TYP = "statuslist+jwt";
+export { STATUS_LIST_CWT_TYP };
+/** Kurum listelerinin bit sayısı (varsayılan). Kimlik servisi `bits = 1` kullanır (ADR-0048 K1). */
 export const BITS = 2;
+/** Yayımlanan ve okunan `bits` değerleri. */
+export type StatusBits = 1 | 2;
+export const STATUS_BITS: ReadonlySet<number> = new Set([1, 2]);
 export const MIN_CAPACITY = 100_000;
 export const MAX_FILL = 0.8;
 /** Kabul edilen en büyük liste (girdi sayısı): 10 milyon × 2 bit = 2,5 MB açılmış liste. */
@@ -34,39 +45,58 @@ export class StatusBitstring {
   constructor(
     public readonly capacity: number = MIN_CAPACITY,
     bytes?: Uint8Array,
+    /** girdi başına bit (ADR-0048: 1 = yalnız geçerli/iptal, 2 = askı da) */
+    public readonly bits: StatusBits = BITS,
   ) {
     if (!Number.isInteger(capacity) || capacity < MIN_CAPACITY) throw new Error(`S10: kapasite ≥ ${MIN_CAPACITY}`);
     if (capacity > MAX_CAPACITY) throw new Error(`status list capacity above ${MAX_CAPACITY}`);
-    this.bytes = bytes ?? new Uint8Array(Math.ceil((capacity * BITS) / 8));
+    if (!STATUS_BITS.has(bits)) throw new Error("status list bits must be 1 or 2");
+    this.bytes = bytes ?? new Uint8Array(Math.ceil((capacity * bits) / 8));
+  }
+  /** Bayt dizisinin taşıdığı girdi sayısı (liste dışı indeks denetimi). */
+  get entries(): number {
+    return (this.bytes.length * 8) / this.bits;
   }
   get(idx: number): StatusValue {
     // Liste dışı indeks "geçerli" (0) okunmaz: kesilmiş/bozuk listede iptal edilmiş belge geçerli görünmesin (fail-closed)
-    if (!Number.isInteger(idx) || idx < 0 || idx >= this.bytes.length * 4) throw new Error("D6: idx outside the list");
-    const byte = this.bytes[idx >> 2];
-    return ((byte >> ((idx & 3) * 2)) & 0b11) as StatusValue; // LSB-first (draft §4.1)
+    if (!Number.isInteger(idx) || idx < 0 || idx >= this.entries) throw new Error("D6: idx outside the list");
+    const perByte = 8 / this.bits;
+    const mask = (1 << this.bits) - 1;
+    // LSB önce (draft §4.1)
+    return ((this.bytes[Math.floor(idx / perByte)] >> ((idx % perByte) * this.bits)) & mask) as StatusValue;
   }
   set(idx: number, v: StatusValue) {
     if (!Number.isInteger(idx) || idx < 0 || idx >= this.capacity) throw new Error("idx out of range");
-    if (!Number.isInteger(v) || v < 0 || v > 0b11) throw new Error("status value out of range (2 bits)");
-    const shift = (idx & 3) * 2;
-    this.bytes[idx >> 2] = (this.bytes[idx >> 2] & ~(0b11 << shift)) | ((v & 0b11) << shift);
+    const mask = (1 << this.bits) - 1;
+    if (!Number.isInteger(v) || v < 0 || v > mask) throw new Error(`status value out of range (${this.bits} bits)`);
+    const perByte = 8 / this.bits;
+    const at = Math.floor(idx / perByte);
+    const shift = (idx % perByte) * this.bits;
+    this.bytes[at] = (this.bytes[at] & ~(mask << shift)) | ((v & mask) << shift);
   }
-  /** lst = base64url(zlib-deflate(bytes)) */
+  /** zlib-deflate(bytes) — CWT gösteriminin `lst`'i */
+  compressed(): Uint8Array {
+    return new Uint8Array(deflateSync(this.bytes, { level: 9 }));
+  }
+  /** lst = base64url(zlib-deflate(bytes)) — JWT gösterimi */
   encodeLst(): string {
-    return b64u(new Uint8Array(deflateSync(this.bytes, { level: 9 })));
+    return b64u(this.compressed());
   }
   /** Açılmış liste en çok `MAX_CAPACITY` girdilik olabilir (zlib bombası: sınır aşılırsa açma durur, D6). */
-  static fromLst(lst: string, capacity = MIN_CAPACITY): StatusBitstring {
+  static fromLst(lst: string, capacity = MIN_CAPACITY, bits: StatusBits = BITS): StatusBitstring {
+    return StatusBitstring.fromCompressed(b64uToBytes(lst), capacity, bits);
+  }
+  static fromCompressed(data: Uint8Array, capacity = MIN_CAPACITY, bits: StatusBits = BITS): StatusBitstring {
     const maxOutputLength = Math.ceil((MAX_CAPACITY * BITS) / 8);
     let bytes: Buffer;
     try {
-      bytes = inflateSync(b64uToBytes(lst), { maxOutputLength });
+      bytes = inflateSync(data, { maxOutputLength });
     } catch (e) {
       if ((e as { code?: string }).code === "ERR_BUFFER_TOO_LARGE" || e instanceof RangeError)
         throw new Error("D6: status list exceeds the maximum size");
       throw new Error(`D6: status list could not be decompressed: ${(e as Error).message}`);
     }
-    return new StatusBitstring(capacity, new Uint8Array(bytes));
+    return new StatusBitstring(capacity, new Uint8Array(bytes), bits);
   }
 }
 
@@ -122,7 +152,7 @@ export async function signStatusListToken(i: StatusListTokenInput): Promise<stri
     iat: i.iat,
     exp: i.iat + expSec,
     ttl: i.ttlSec,
-    status_list: { bits: BITS, lst: i.bitstring.encodeLst() },
+    status_list: { bits: i.bitstring.bits, lst: i.bitstring.encodeLst() },
   };
   return i.signer.sign(
     { alg: "ES256", typ: STATUS_TYP, x5c: i.signer.x5c.map(derToB64) },
@@ -131,8 +161,11 @@ export async function signStatusListToken(i: StatusListTokenInput): Promise<stri
 }
 
 export interface VerifiedStatusToken {
+  /** hangi gösterim doğrulandı (ADR-0048 K3) */
+  format: "jwt" | "cwt";
   payload: {
-    iss: string;
+    /** JWT gösteriminde zorunlu; CWT gösteriminde yok (imzacı bağı S11 ile kurulur) */
+    iss?: string;
     sub: string;
     iat: number;
     exp?: number;
@@ -144,7 +177,7 @@ export interface VerifiedStatusToken {
   bitstring: StatusBitstring;
 }
 /**
- * Verifier tarafı D3/D4/D6: imza (x5c yaprak), sub eşleşmesi, tazelik (`exp`), `iat` gelecekte değil, bits=2, boyut
+ * Verifier tarafı D3/D4/D6: imza (x5c yaprak), sub eşleşmesi, tazelik (`exp`), `iat` gelecekte değil, bits ∈ {1, 2}, boyut
  * sınırları, idx okuma. Tazelik sınırı `exp`'tir (SPEC-CRED-0003 §8.1; draft-20: `ttl` yenileme ipucudur, geçerlilik sınırı
  * değil — 0.3.1'de `iat + 2 × ttl` bayatlık kuralı kaldırıldı); azami token yaşı doğrulayıcı politikasında
  * (`max_status_token_age_sec`) ya da `opts.maxAgeSec` ile. Çapa (D5) çağıran tarafta: contentHash ↔ TrustSource.statusAnchor. Hata iletileri adım koduyla başlar
@@ -168,7 +201,9 @@ export async function verifyStatusListToken(
   const { payload: raw } = await compactVerify(token, pub);
   const payload = JSON.parse(new TextDecoder().decode(raw)) as VerifiedStatusToken["payload"];
   if (payload.sub !== expectedUri) throw new Error("D3: sub ≠ status uri");
-  if (payload.status_list?.bits !== BITS) throw new Error("D6: bits ≠ 2");
+  const bits = payload.status_list?.bits;
+  if (typeof bits !== "number" || !STATUS_BITS.has(bits)) throw new Error("D6: bits not 1 or 2");
+  if (typeof payload.status_list.lst !== "string") throw new Error("D3: status_list.lst missing");
   if (typeof payload.iat !== "number" || !Number.isFinite(payload.iat)) throw new Error("D3: status token iat missing");
   if (payload.iat > now + (opts.maxSkewSec ?? STATUS_IAT_SKEW_SEC))
     throw new Error("D3: status token iat in the future");
@@ -177,9 +212,101 @@ export async function verifyStatusListToken(
   if (opts.maxAgeSec !== undefined && now - payload.iat > opts.maxAgeSec) throw new Error("D4: status token stale");
   if (typeof payload.exp === "number" && payload.exp < now) throw new Error("D4: status token expired");
   return {
+    format: "jwt",
     payload,
     leafFingerprintHex: sha256Hex(leafDer),
     contentHash: sha256Tag(utf8(token)),
-    bitstring: StatusBitstring.fromLst(payload.status_list.lst),
+    bitstring: StatusBitstring.fromLst(payload.status_list.lst, MIN_CAPACITY, bits as StatusBits),
   };
+}
+
+// ------------------------------------------------------------------ CWT gösterimi (ADR-0048 K3)
+
+/** JWT gösterimiyle aynı girdiler; `uri` CWT gösteriminin kendi (ayrı, opak) adresidir. İmzacı `signRaw` sağlamalı. */
+export type StatusListCwtInput = Omit<StatusListTokenInput, "iss">;
+
+/**
+ * Aynı mantıksal listenin CWT gösterimi (`application/statuslist+cwt`). JWT gösterimiyle aynı yayın döngüsünde, aynı anahtar
+ * ve aynı `iat`/`exp`/`ttl` ile üretilir; yalnız `uri` (ve böylece `sub`) farklıdır.
+ */
+export async function signStatusListCwt(i: StatusListCwtInput): Promise<Uint8Array> {
+  const expSec = i.expSec ?? i.ttlSec * 2;
+  if (!Number.isInteger(expSec) || expSec < 2 * i.ttlSec) throw new Error("status token exp must be ≥ 2 × ttl");
+  const signRaw = i.signer.signRaw;
+  if (!signRaw) throw new Error("status list CWT: the signer has no raw ES256 signing (signRaw)");
+  return signCwt({
+    uri: i.uri,
+    bits: i.bitstring.bits,
+    lst: i.bitstring.compressed(),
+    iat: i.iat,
+    exp: i.iat + expSec,
+    ttl: i.ttlSec,
+    x5chain: i.signer.x5c,
+    sign: (tbs) => signRaw.call(i.signer, tbs),
+  });
+}
+
+/** Sertifikadaki P-256 açık anahtarı (sıkıştırılmamış nokta, 65 bayt). */
+function p256PointFromCertDer(der: Uint8Array): Uint8Array {
+  const spki = new Uint8Array(new X509Certificate(Uint8Array.from(der)).publicKey.rawData);
+  const point = spki.subarray(spki.length - 65);
+  if (point[0] !== 0x04) throw new Error("D3: status list signer key is not an uncompressed P-256 point");
+  return point;
+}
+
+/**
+ * CWT gösterimini doğrular (JWT doğrulamasıyla aynı adımlar ve hata önekleri: D3 imza/başlık/adres, D4 tazelik, D6 bits ve
+ * boyut). Dönen yapı JWT doğrulamasınınkiyle aynıdır (`format: "cwt"`, `payload.iss` yok).
+ */
+export async function verifyStatusListCwt(
+  bytes: Uint8Array,
+  expectedUri: string,
+  now: number,
+  opts: { maxSkewSec?: number; maxAgeSec?: number } = {},
+): Promise<VerifiedStatusToken> {
+  const p = parseStatusListCwt(bytes, {
+    uri: expectedUri,
+    now,
+    publicKeyOf: p256PointFromCertDer,
+    maxSkewSec: opts.maxSkewSec ?? STATUS_IAT_SKEW_SEC,
+  });
+  if (opts.maxAgeSec !== undefined && now - p.iat > opts.maxAgeSec) throw new Error("D4: status token stale");
+  return {
+    format: "cwt",
+    payload: {
+      sub: p.uri,
+      iat: p.iat,
+      ...(p.exp !== undefined ? { exp: p.exp } : {}),
+      ...(p.ttl !== undefined ? { ttl: p.ttl } : {}),
+      status_list: { bits: p.bits, lst: b64u(p.lst) },
+    },
+    leafFingerprintHex: sha256Hex(p.leafDer),
+    contentHash: p.contentHash,
+    bitstring: StatusBitstring.fromCompressed(p.lst, MIN_CAPACITY, p.bits as StatusBits),
+  };
+}
+
+/** Doğrulayıcının ön çekim önbelleğinde ikili gövdenin öneki (`b64u:` + base64url). */
+export const BINARY_CACHE_PREFIX = "b64u:";
+
+/**
+ * Önbellekteki gövde hangi gösterimse onu doğrular: `b64u:` önekli ikili gövde CWT, ötekiler JWT. Doğrulayıcı mdoc kopyasının
+ * CWT adresini de, eski kopyaların JWT adresini de okur.
+ */
+export async function verifyStatusListAny(
+  body: string,
+  expectedUri: string,
+  now: number,
+  opts: { maxSkewSec?: number; maxAgeSec?: number } = {},
+): Promise<VerifiedStatusToken> {
+  if (body.startsWith(BINARY_CACHE_PREFIX)) {
+    let bytes: Uint8Array;
+    try {
+      bytes = b64uToBytes(body.slice(BINARY_CACHE_PREFIX.length));
+    } catch {
+      throw new Error("D4: status list CWT unreadable (cache body)");
+    }
+    return verifyStatusListCwt(bytes, expectedUri, now, opts);
+  }
+  return verifyStatusListToken(body, expectedUri, now, opts);
 }

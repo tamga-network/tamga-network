@@ -1,6 +1,6 @@
 {
   "name": "@tamga-network/sd-jwt",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@tamga-network/core": "*",
+    "@tamga-network/mdoc": "*",
     "jose": "^6.0.0",
     "@peculiar/x509": "^1.12.0"
   },
