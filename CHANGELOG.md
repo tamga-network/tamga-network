@@ -170,6 +170,19 @@ existing callers keep working.
 
 First release of the Tamga Network documentation set and reference implementation.
 
+### 2026-10-13 — trust-publisher: wallet provider command
+
+- `npm run trust:wallet-provider -- list|show|activate|suspend|revoke` (`apps/trust-publisher`): manages
+  `wallet_providers[]` in the production and sandbox registries without hand-editing JSON. `activate --id <id> --cert <pem>`
+  checks the certificate against the wallet attestation policy (single PEM certificate, no private key; EC P-256 with
+  ecdsa-with-SHA256; `digitalSignature`, no `keyCertSign`/`cRLSign`; not a CA; within its validity; no `(TEST)` certificate in
+  the production list), prints the SHA-256 fingerprint, writes `wallet-provider-<id>.cert.pem` to each PKI folder and sets the
+  entry `ACTIVE` with the certificate and a `status_history` entry. Production comes first; a real certificate enters the
+  sandbox list only after the production entry carries it. `--dry-run` prints the diff; a second run changes nothing; all
+  targets are checked before anything is written. The command does not sign lists (production is signed on the network server
+  at deploy). The build changelog line now also lists wallet providers and their status. Nothing is activated:
+  `TAMGA-WP-1` stays `RESERVED`.
+
 ### 2026-10-13 — wallet provider certificate file name
 
 - `apps/trust-publisher/README.md`: naming rule for wallet provider certificates in `wua_signing_certs[]` —

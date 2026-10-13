@@ -46,6 +46,7 @@
     "trust:scope": "tsx apps/trust-publisher/src/cli.ts scope",
     "trust:authorize": "tsx apps/trust-publisher/src/cli.ts authorize",
     "trust:list": "tsx apps/trust-publisher/src/cli.ts list",
+    "trust:wallet-provider": "tsx apps/trust-publisher/src/cli.ts wallet-provider",
     "pki:issue": "tsx ops/pki-issue.ts",
     "format": "prettier --write \"apps/**/*.ts\" \"packages/**/*.ts\" \"conformance/**/*.ts\" \"scripts/**/*.mjs\" \"ops/**/*.ts\"",
     "format:check": "prettier --check \"apps/**/*.ts\" \"packages/**/*.ts\" \"conformance/**/*.ts\" \"scripts/**/*.mjs\" \"ops/**/*.ts\"",

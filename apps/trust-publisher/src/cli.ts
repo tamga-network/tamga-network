@@ -17,6 +17,8 @@
  *   list                                          kurumlar ve doğrulayıcılar; eksik kayıt verisi
  *   sandbox-institution add                       (yalnız sandbox; ADR-0041) stdin'den test kurumu isteği (JSON): ara makamla yaprak
  *                                                 sertifikalar, TAMGA_SANDBOX_SELF_DIR'e kayıt, liste imzalanır · sandbox-institution list
+ *   wallet-provider list|show|activate|suspend|revoke  cüzdan sağlayıcı kaydı (ADR-0042), gerçek + sandbox kayıt defteri; liste
+ *                                                 imzalanmaz (dağıtımda) — ayrıntı walletProviderCommand
  * Kurallar: version monoton, previous_version_hash = önceki .jws'in sha256'sı; dist/ değişmez arşivi.
  */
 import {
@@ -83,6 +85,16 @@ import {
   summarize,
   type RegistryEnv,
 } from "./registry-ops.js";
+import {
+  activateWalletProvider,
+  certSummary,
+  inspectWalletProviderCert,
+  lineDiff,
+  setWalletProviderStatus,
+  summarizeWalletProviders,
+  walletProviderCertName,
+  type WpEnvironment,
+} from "./wallet-provider-ops.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const app = resolve(here, "..");
 // Kaynak kayıt ve çıktı klasörü ortamla değiştirilebilir (testler geçici klasörde çalışır; varsayılan davranış aynı)
@@ -113,8 +125,11 @@ const plusDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400_000);
  * yalnız, gerçek kayıt defterinde de aynı provider_id ile kayıtlı bir cüzdan sağlayıcının, gerçek ağın yayınlanmış listesinde
  * de bulunan WUA sertifikası (parmak izi eşleşmesi) için izin verilir; gerçek ağda anahtarı yoksa izin yok.
  */
+/** Gerçek ağın ve sandbox'ın kayıt defteri (cüzdan sağlayıcı komutu iki listeyi birlikte yazar; testler geçici klasör verir). */
+const PROD_REG = resolve(process.env.TAMGA_TP_PROD_REGISTRY ?? resolve(app, "registry"));
+const SANDBOX_REG = resolve(process.env.TAMGA_TP_SANDBOX_REGISTRY ?? resolve(app, "registry-sandbox"));
 const SHARED_WALLET_PROVIDERS = (() => {
-  const reg = resolve(app, "registry", "lotl.source.json");
+  const reg = resolve(PROD_REG, "lotl.source.json");
   const pub = resolve(process.env.TAMGA_TP_PROD_DIST ?? resolve(app, "dist"), "lotl.json");
   return sharedWalletProviderFps(
     existsSync(reg) ? JSON.parse(readFileSync(reg, "utf8")) : undefined,
@@ -628,8 +643,11 @@ async function build() {
         if (!anchored.has(`${x.schema_id}|${h}`))
           await appendAnchor({ kind: "schema", schema_id: x.schema_id, vct: x.vct, content_hash: h });
   }
+  const wps = (lotlSrc.wallet_providers as Array<{ provider_id: string; status: string }>)
+    .map((w) => (w.status === "ACTIVE" ? w.provider_id : `${w.provider_id}(${w.status})`))
+    .join(",");
   changelog(
-    `build: lotl v${lotl.version}, tl-${cc.toLowerCase()} v${tl.version}; issuers=${issuers.map((i: { slug: string; status: string }) => (i.status === "ACTIVE" ? i.slug : `${i.slug}(${i.status})`)).join(",")}; schemas=${schemasIndex.length}`,
+    `build: lotl v${lotl.version}, tl-${cc.toLowerCase()} v${tl.version}; issuers=${issuers.map((i: { slug: string; status: string }) => (i.status === "ACTIVE" ? i.slug : `${i.slug}(${i.status})`)).join(",")}; wallet_providers=${wps}; schemas=${schemasIndex.length}`,
   );
   console.log(
     JSON.stringify(
@@ -929,6 +947,189 @@ async function registryCommand(cmd: string, args: string[]) {
   console.log(`tamam: ${line} — liste yeniden imzalandı`);
 }
 
+/** Kaynak JSON'u depodaki biçimle (prettier, .prettierrc) yazar; prettier yoksa düz JSON. */
+async function formatJson(obj: unknown, filepath: string): Promise<string> {
+  const raw = JSON.stringify(obj, null, 2) + "\n";
+  try {
+    const prettier = await import("prettier");
+    return await prettier.format(raw, { ...((await prettier.resolveConfig(filepath)) ?? {}), filepath });
+  } catch {
+    return raw;
+  }
+}
+
+/**
+ * Cüzdan sağlayıcı kaydı (ADR-0042) — gerçek ve sandbox kayıt defterinde `wallet_providers[]`. Liste İMZALANMAZ: gerçek liste
+ * ağ sunucusunda dağıtımda (`deploy.sh` → trust:build), sandbox listesi aynı dağıtımda `sandbox-setup.sh refresh` ile imzalanır.
+ *   wallet-provider list|show [--id <provider_id>] [--registry registry|registry-sandbox|both]
+ *   wallet-provider activate --id <provider_id> --cert <pem> [--registry …] [--prod-pki <dir>] [--sandbox-pki <dir>] [--dry-run]
+ *   wallet-provider suspend|revoke --id <provider_id> [--reason r] [--registry …] [--dry-run]
+ * Sertifika `<pki>/wallet-provider-<provider_id küçük harf>.cert.pem` olarak yazılır (yalnız sertifika). Gerçek ağın PKI klasörü
+ * depo dışındadır: `--prod-pki` ya da `TAMGA_PROD_PKI_DIR` (zorunlu); sandbox `ops/pki-sandbox` (depoda izlenir).
+ */
+async function walletProviderCommand(sub: string | undefined, args: string[]) {
+  const val = (n: string) => {
+    const i = args.indexOf(`--${n}`);
+    return i >= 0 ? args[i + 1] : undefined;
+  };
+  const dry = args.includes("--dry-run");
+  const which = val("registry") ?? "both";
+  const usage =
+    "kullanım: wallet-provider list|show [--id <provider_id>] | activate --id <provider_id> --cert <pem> | suspend|revoke --id <provider_id> [--reason r]; ortak: [--registry registry|registry-sandbox|both] [--dry-run]";
+  if (!["registry", "registry-sandbox", "both"].includes(which))
+    throw new RegistryError(["--registry: registry | registry-sandbox | both"]);
+  const envs: WpEnvironment[] =
+    which === "both" ? ["production", "sandbox"] : which === "registry" ? ["production"] : ["sandbox"];
+  const regDir = (e: WpEnvironment) => (e === "production" ? PROD_REG : SANDBOX_REG);
+  const srcFile = (e: WpEnvironment) => resolve(regDir(e), "lotl.source.json");
+  const load = (e: WpEnvironment) => {
+    const f = srcFile(e);
+    if (!existsSync(f)) throw new RegistryError([`kayıt defteri yok: ${f}`]);
+    const src = readJson(f);
+    // ADR-0038: dosya ile hedef ortam karışmasın (sandbox kaynağı `environment: "sandbox"` taşır)
+    if ((src.environment ?? "production") !== e)
+      throw new RegistryError([`${f}: ortam ${src.environment ?? "production"}, beklenen ${e}`]);
+    return src as Record<string, unknown>;
+  };
+  const label = (e: WpEnvironment) => (e === "production" ? "registry" : "registry-sandbox");
+  const id = val("id");
+
+  if (sub === "list" || sub === "show") {
+    for (const e of envs) {
+      const src = load(e);
+      const all = (src.wallet_providers ?? []) as Array<Record<string, unknown>>;
+      if (sub === "list") {
+        console.log(`[${label(e)}]`);
+        for (const l of summarizeWalletProviders(src)) console.log(`  ${l}`);
+        continue;
+      }
+      if (!id) throw new RegistryError([usage]);
+      const w = all.find((x) => x.provider_id === id);
+      if (!w) throw new RegistryError([`${label(e)}: cüzdan sağlayıcı yok: ${id}`]);
+      console.log(`[${label(e)}]\n${JSON.stringify(w, null, 2)}`);
+      const pki = e === "production" ? (val("prod-pki") ?? process.env.TAMGA_PROD_PKI_DIR) : sandboxPki();
+      for (const n of (w.wua_signing_certs ?? []) as string[]) {
+        const f = pki ? resolve(pki, `${n}.cert.pem`) : null;
+        if (!f || !existsSync(f)) {
+          console.log(`  ${n}: sertifika dosyası ${f ? "yok" : "aranmadı (PKI klasörü verilmedi)"}`);
+          continue;
+        }
+        const c = certSummary(readFileSync(f, "utf8"));
+        console.log(
+          `  ${n}: SHA-256 ${c.fingerprint} · ${c.subject} · geçerli ${c.notAfter.toISOString()} tarihine kadar`,
+        );
+      }
+    }
+    return;
+  }
+  if (!id || !["activate", "suspend", "revoke"].includes(sub ?? "")) throw new RegistryError([usage]);
+  function sandboxPki() {
+    return resolve(
+      val("sandbox-pki") ?? process.env.TAMGA_TP_SANDBOX_PKI ?? resolve(app, "..", "..", "ops", "pki-sandbox"),
+    );
+  }
+
+  const now = new Date();
+  const reason = val("reason");
+  // Önce her hedef için plan (hepsi denetlenir), sonra yazım — biri hatalıysa hiçbir dosya değişmez
+  const plans: Array<{
+    e: WpEnvironment;
+    file: string;
+    before: string;
+    after: string;
+    cert?: { path: string; pem: string };
+  }> = [];
+  const notes: string[] = [];
+  if (sub === "activate") {
+    const certPath = val("cert");
+    if (!certPath) throw new RegistryError([usage]);
+    const certName = walletProviderCertName(id);
+    const pemText = readFileSync(resolve(certPath), "utf8");
+    let production: Record<string, unknown> | undefined = existsSync(srcFile("production"))
+      ? load("production")
+      : undefined;
+    const prodPkiDir = val("prod-pki") ?? process.env.TAMGA_PROD_PKI_DIR;
+    for (const e of envs) {
+      const info = inspectWalletProviderCert(pemText, { now, environment: e });
+      notes.push(...info.warnings.map((w) => `[uyarı] ${w}`));
+      const pki = e === "production" ? prodPkiDir : sandboxPki();
+      if (!pki)
+        throw new RegistryError([
+          "gerçek ağın PKI klasörü verilmedi: --prod-pki <klasör> ya da TAMGA_PROD_PKI_DIR (depo dışındaki gizli klasör)",
+        ]);
+      if (!existsSync(pki)) throw new RegistryError([`PKI klasörü yok: ${pki}`]);
+      // ADR-0038 SB1: klasörün kökü hedef ortamla uyuşmalı (sandbox kökü "(TEST)" taşır, gerçek kök taşımaz)
+      const root = resolve(pki, "root-ca.cert.pem");
+      if (
+        existsSync(root) &&
+        /\(TEST\)/.test(new X509Certificate(readFileSync(root, "utf8")).subject) !== (e === "sandbox")
+      )
+        throw new RegistryError([
+          `${pki}: bu klasör ${e === "sandbox" ? "sandbox" : "gerçek ağın"} PKI'sı değil (SB1)`,
+        ]);
+      const target = resolve(pki, `${certName}.cert.pem`);
+      let writeCert = true;
+      if (existsSync(target)) {
+        const have = certSummary(readFileSync(target, "utf8")).fingerprint;
+        if (have !== info.fingerprint)
+          throw new RegistryError([
+            `${target} başka bir sertifika (SHA-256 ${have}) — üzerine yazılmaz; anahtar değişimi ayrı iştir`,
+          ]);
+        writeCert = false;
+      }
+      if (e === "sandbox" && prodPkiDir && existsSync(resolve(prodPkiDir, `${certName}.cert.pem`))) {
+        const prodFp = certSummary(readFileSync(resolve(prodPkiDir, `${certName}.cert.pem`), "utf8")).fingerprint;
+        if (prodFp !== info.fingerprint)
+          throw new RegistryError([`sandbox sertifikası gerçek ağdakiyle aynı olmalı (ADR-0042): gerçek ${prodFp}`]);
+      }
+      const src = load(e);
+      const { next, changed } = activateWalletProvider(src, id, { certName, now, environment: e, reason, production });
+      if (e === "production") production = next; // sandbox denetimi bu komutun yazacağı gerçek kayda bakar
+      const before = readFileSync(srcFile(e), "utf8");
+      const after = changed ? await formatJson(next, srcFile(e)) : before;
+      plans.push({
+        e,
+        file: srcFile(e),
+        before,
+        after,
+        ...(writeCert ? { cert: { path: target, pem: info.pem } } : {}),
+      });
+      notes.push(`${label(e)}: ${id} → ${certName} (SHA-256 ${info.fingerprint})`);
+    }
+  } else {
+    const st = sub === "suspend" ? "SUSPENDED" : "REVOKED";
+    for (const e of envs) {
+      const src = load(e);
+      const { next, changed } = setWalletProviderStatus(src, id, st, { now, reason });
+      const before = readFileSync(srcFile(e), "utf8");
+      plans.push({ e, file: srcFile(e), before, after: changed ? await formatJson(next, srcFile(e)) : before });
+    }
+  }
+
+  const todo = plans.filter((p) => p.before !== p.after || p.cert);
+  for (const n of notes) console.log(n);
+  if (!todo.length) {
+    console.log(`değişiklik yok: ${id} zaten istenen durumda (${plans.map((p) => label(p.e)).join(", ")})`);
+    return;
+  }
+  for (const p of todo) {
+    if (dry) {
+      console.log(`--- ${p.file}`);
+      if (p.before !== p.after) console.log(lineDiff(p.before, p.after));
+      if (p.cert) console.log(`+ sertifika yazılacak: ${p.cert.path}`);
+      continue;
+    }
+    if (p.cert) writeAtomic(p.cert.path, p.cert.pem);
+    if (p.before !== p.after) writeAtomic(p.file, p.after);
+    console.log(`yazıldı: ${p.file}${p.cert ? ` + ${p.cert.path}` : ""}`);
+  }
+  console.log(
+    dry
+      ? "deneme (--dry-run): hiçbir dosya yazılmadı"
+      : "liste imzalanmadı: kaynak commit + push, sonra ağ sunucusunda dağıtım (gerçek liste önce, sandbox sonra; upload.ps1 -WithPki -WithSandboxPki)",
+  );
+}
+
 async function verify() {
   const full = process.argv.includes("--full"); // TL10: arşivlerle birlikte seq 0'dan tam zincir
   const nationalListJws: Record<string, string> = {};
@@ -1080,6 +1281,12 @@ const cmd = process.argv[2];
   // build de kayıt kilidini alır: test kurumu kaydıyla (sandbox-institution) aynı anda liste imzalanmasın
   if (cmd === "build") await withDirLock("registry.lock", build);
   else if (cmd === "sandbox-institution") await sandboxInstitution(process.argv[3]);
+  else if (cmd === "wallet-provider")
+    await walletProviderCommand(process.argv[3], process.argv.slice(4)).catch((e) => {
+      if (!(e instanceof RegistryError)) throw e;
+      console.error(e.message);
+      process.exit(2);
+    });
   else if (cmd === "heartbeat") {
     const a = await appendAnchor({ kind: "heartbeat" });
     console.log(JSON.stringify(a));
