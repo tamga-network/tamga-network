@@ -130,7 +130,7 @@ describe("kurumun cüzdan kanıtı tercihleri (WUA_05a, WUA_32; AB TS3 §2.4)", 
     expect(await wuaForIssuer({ wua: ok, prefs, now: NOW, renew: async () => wua(NOW) })).toBe(ok);
   });
 
-  it("0.5.1: kurum sağlayıcının azami süresini (730 gün) isterse yeni WIA her akışta yeniden istenmez (7 gün tolerans)", async () => {
+  it("0.5.2: kurum sağlayıcının azami süresini (730 gün) isterse yeni WIA her akışta yeniden istenmez (7 gün tolerans)", async () => {
     const prefs = issuerAttestationPrefs(md({ preferred_client_status_period: 730 * DAY }), VCT);
     let renewed = 0;
     const renew = async () => {

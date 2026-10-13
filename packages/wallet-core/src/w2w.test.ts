@@ -265,7 +265,7 @@ describe("cüzdandan cüzdana — protokol çekirdeği", () => {
     expect(v).toEqual({ kind: "invalid", reason: "status_invalid" });
   });
 
-  it("0.5.1 (ağın D adımlarıyla aynı): Status List yanlış imzacı / adres → GEÇERSİZ; bayat, alınamayan, okunamayan → DOĞRULANAMADI", async () => {
+  it("0.5.2 (ağın D adımlarıyla aynı): Status List yanlış imzacı / adres → GEÇERSİZ; bayat, alınamayan, okunamayan → DOĞRULANAMADI", async () => {
     const run = async (fetchStatus?: (uri: string) => Promise<string | null>) => {
       const { verifier } = await session(["given_name"], await wallet());
       if (verifier.outcome !== "response") throw new Error(verifier.outcome);
@@ -299,7 +299,7 @@ describe("cüzdandan cüzdana — protokol çekirdeği", () => {
     ).toEqual(indeterminate);
   });
 
-  it("0.5.1: Revocation List süresi geçmiş / alınamadı → DOĞRULANAMADI", async () => {
+  it("0.5.2: Revocation List süresi geçmiş / alınamadı → DOĞRULANAMADI", async () => {
     const id = new Uint8Array(16).fill(9);
     for (const fetchIdentifierList of [
       async () =>

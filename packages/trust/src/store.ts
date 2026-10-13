@@ -48,6 +48,11 @@ export interface ExternalEntity {
   cert_der: Uint8Array;
   /** Aynı kurumun iptal (durum listesi) hizmeti sertifikaları; yoksa çapanın kendisi */
   status_signer_fps: string[];
+  /**
+   * Dış listenin bu kurum için bildirdiği iptal sunucuları (0.5.2): kurumun iptal ve belge verme hizmetlerinin `https` erişim
+   * noktalarının (ServiceSupplyPoints) alan adları, küçük harf. Boşsa doğrulayıcı belge imzacısı sertifikasına bakar.
+   */
+  status_hosts: string[];
 }
 export interface ExternalListState {
   pointer: ExternalListPointer;
@@ -137,6 +142,7 @@ export class TrustStore {
       const revocationFps = e.services
         .filter((s) => s.role === "revocation")
         .flatMap((s) => s.certsDer.map((d) => sha256Hex(d)));
+      const statusHosts = supplyPointHosts(e.services.filter((s) => s.role === "revocation" || s.role === "issuance"));
       for (const svc of e.services) {
         if (svc.role !== "issuance" || !svc.kind) continue;
         if (!ptr.scope.entity_kinds.includes(svc.kind)) {
@@ -159,6 +165,7 @@ export class TrustStore {
             cert_pem: derToPemPortable(der),
             cert_der: der,
             status_signer_fps: revocationFps.length ? revocationFps : [fp],
+            status_hosts: statusHosts,
           };
           if (svc.kind === "wallet_provider") {
             this.external_wallet_keys.set(fp, ent);
@@ -242,4 +249,19 @@ export class TrustStore {
       freshness: this.freshness,
     };
   }
+}
+
+/** Hizmet erişim noktalarından `https` alan adları (küçük harf, tekil); bozuk ya da `https` olmayan adres atlanır. */
+function supplyPointHosts(services: Array<{ supplyPoints?: string[] }>): string[] {
+  const out = new Set<string>();
+  for (const s of services)
+    for (const u of s.supplyPoints ?? []) {
+      try {
+        const url = new URL(u);
+        if (url.protocol === "https:" && url.hostname) out.add(url.hostname.toLowerCase().replace(/^\[|\]$/g, ""));
+      } catch {
+        /* bozuk adres: atlanır */
+      }
+    }
+  return [...out];
 }

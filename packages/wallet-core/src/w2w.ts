@@ -279,7 +279,7 @@ async function w2wRevocation(
  * Gelen DeviceResponse'u doğrular. `requested`: doğrulayanın istediği alanlar — yanıtta fazlası olsa da yalnız istenen ve
  * izinli alanlar gösterilir. `now` saniye. İptal: belge Status List taşıyorsa `fetchStatus` (application/statuslist+jwt),
  * Revocation List taşıyorsa `fetchIdentifierList` (application/identifierlist+cwt baytları). Ağın doğrulayıcısıyla aynı anlam
- * (0.5.1): imzacı kurumun kayıtlı iptal anahtarı değil ya da imza / adres / indeks tutmuyor → GEÇERSİZ (`status_invalid`);
+ * (0.5.2): imzacı kurumun kayıtlı iptal anahtarı değil ya da imza / adres / indeks tutmuyor → GEÇERSİZ (`status_invalid`);
  * liste alınamadı (ağ yok, çekici yok), süresi geçmiş, okunamadı ya da kurumun iptal anahtarı kayıtlı değil → DOĞRULANAMADI
  * (`status_unavailable`), hiçbir zaman "geçerli". Girdi baytları dönüşte sıfırlanır.
  */

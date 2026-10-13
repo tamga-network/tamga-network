@@ -82,7 +82,7 @@ async function issuedBy(cn: string, ca: KeyCert): Promise<KeyCert> {
 function lote(opts: {
   territory: string;
   nextUpdate: Date;
-  entities: Array<{ name: string; services: Array<{ type: string; certs: Uint8Array[] }> }>;
+  entities: Array<{ name: string; services: Array<{ type: string; certs: Uint8Array[]; supplyPoints?: string[] }> }>;
   version?: number;
   sequence?: number;
 }) {
@@ -105,6 +105,7 @@ function lote(opts: {
             ServiceTypeIdentifier: s.type,
             ServiceName: [{ lang: "en", value: e.name }],
             ServiceDigitalIdentity: { X509Certificates: s.certs.map((d) => ({ val: b64(d) })) },
+            ...(s.supplyPoints ? { ServiceSupplyPoints: s.supplyPoints.map((u) => ({ uriValue: u })) } : {}),
           },
         })),
       })),
@@ -200,6 +201,8 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     version?: number;
     sequence?: number;
     crit?: string[];
+    /** PID hizmetinin erişim noktaları (ServiceSupplyPoints) */
+    supplyPoints?: string[];
   }) {
     const { trust } = await loadTrustSourceFromDir(DIST);
     const store = (trust as unknown as { store: TrustStore }).store;
@@ -232,7 +235,13 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
         entities: [
           {
             name: "Test PID Provider",
-            services: [{ type: "http://uri.etsi.org/19602/SvcType/PID/Issuance", certs: [pidCa.der] }],
+            services: [
+              {
+                type: "http://uri.etsi.org/19602/SvcType/PID/Issuance",
+                certs: [pidCa.der],
+                ...(o.supplyPoints ? { supplyPoints: o.supplyPoints } : {}),
+              },
+            ],
           },
           {
             name: "Test Wallet Provider",
@@ -401,6 +410,24 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     expect((await federated({ sequence: 3 })).trust.externalAnchorCertsDer?.().length).toBe(1);
   });
 
+  it("0.5.2: dış listenin hizmet erişim noktaları kurumun iptal sunucuları olur (yalnız https; yoksa boş)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const withSp = await federated({
+      supplyPoints: [
+        "https://Status.PID.example/il",
+        "http://plain.example/x",
+        "not a url",
+        "https://pid.example/issue",
+      ],
+    });
+    expect(withSp.trust.externalIssuerByAnchor?.(fp(pidCa.der), PID_VCT, now)?.status_hosts).toEqual([
+      "status.pid.example",
+      "pid.example",
+    ]);
+    const without = await federated({});
+    expect(without.trust.externalIssuerByAnchor?.(fp(pidCa.der), PID_VCT, now)?.status_hosts).toEqual([]);
+  });
+
   it("kurcalanmış iç içe disclosure (eşleşmeyen) → A5 RED", async () => {
     const { trust } = await federated({});
     const now = Math.floor(Date.now() / 1000);
@@ -487,6 +514,7 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış TS 119 612 (XML) güven l
       <ServiceName><Name xml:lang="en">QEAA issuance</Name></ServiceName>
       <ServiceDigitalIdentity><DigitalId><X509Certificate>${b64(eaaCa.der)}</X509Certificate></DigitalId></ServiceDigitalIdentity>
       <ServiceStatus>http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/granted</ServiceStatus>
+      <ServiceSupplyPoints><ServiceSupplyPoint>https://status.qeaa.example/il</ServiceSupplyPoint></ServiceSupplyPoints>
     </ServiceInformation></TSPService></TSPServices>
   </TrustServiceProvider></TrustServiceProviderList>
 </TrustServiceStatusList>`;
@@ -522,6 +550,11 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış TS 119 612 (XML) güven l
     const ans = trust.externalIssuerByAnchor?.(fp(eaaCa.der), EDU_VCT, Math.floor(Date.now() / 1000));
     expect(ans?.tri).toBe("YES");
     expect(ans?.issuer?.category).toBe("EDUCATION");
+    expect(ans?.status_hosts).toEqual(["status.qeaa.example"]); // 0.5.2: TS 119 612 ServiceSupplyPoint
+    // 0.5.2: cüzdanın DCQL etsi_tl değerlendirmesi için yüklü liste (adres + belge verme hizmeti sertifikası)
+    expect(trust.externalTrustedLists().map((l) => [l.uri, l.certsDer.map((d) => fp(d))])).toEqual([
+      ["https://example.test/tl.xml", [fp(eaaCa.der)]],
+    ]);
     expect(
       trust.externalIssuerByAnchor?.(fp(eaaCa.der), "urn:other:Type:1", Math.floor(Date.now() / 1000))?.tri,
     ).not.toBe("YES");

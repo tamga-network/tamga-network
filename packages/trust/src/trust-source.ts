@@ -55,6 +55,8 @@ export interface ExternalIssuerAnswer {
   list_id: string;
   territory: string;
   recognized_by: string[];
+  /** Dış listenin bu kurum için bildirdiği iptal sunucularının alan adları (hizmet erişim noktaları; yoksa boş) */
+  status_hosts: string[];
 }
 
 const sec = (iso: string) => Math.floor(new Date(iso).getTime() / 1000);
@@ -199,6 +201,7 @@ export class ListTrustSource implements TrustSource {
       list_id: ent.list_id,
       territory: ent.territory,
       recognized_by: ent.scope.recognized_by ?? (ent.territory === "EU" ? [] : [ent.territory]),
+      status_hosts: ent.status_hosts ?? [],
     };
     if (!this.externalFresh(ent.list_id)) return { tri: "UNKNOWN", issuer: null, ...base };
     if (!(ent.scope.vct ?? []).includes(vct)) return { tri: "NO", issuer: null, ...base };
@@ -209,6 +212,22 @@ export class ListTrustSource implements TrustSource {
     return [...this.store.external_anchors.values()]
       .filter((e) => (e.kind === "pid_provider" || e.kind === "eaa_provider") && this.externalFresh(e.list_id))
       .map((e) => e.cert_der);
+  }
+
+  /**
+   * Yüklü ve taze dış listeler (0.5.2; DCQL `trusted_authorities` türü `etsi_tl` — cüzdan `matchDcql` `trustedLists`): listenin
+   * özgün yayın adresi (`list_url`) ve belge verme hizmeti sertifikaları (PID / EAA sağlayıcıları).
+   */
+  externalTrustedLists(): Array<{ uri: string; certsDer: Uint8Array[] }> {
+    const out = new Map<string, Uint8Array[]>();
+    for (const e of this.store.external_anchors.values()) {
+      if ((e.kind !== "pid_provider" && e.kind !== "eaa_provider") || !this.externalFresh(e.list_id)) continue;
+      const uri = this.store.external_lists.get(e.list_id)?.pointer.list_url;
+      if (!uri) continue;
+      if (!out.has(uri)) out.set(uri, []);
+      out.get(uri)!.push(e.cert_der);
+    }
+    return [...out].map(([uri, certsDer]) => ({ uri, certsDer }));
   }
 
   walletProviderMinKeyStorage(fp: string): string | null {

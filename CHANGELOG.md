@@ -2,14 +2,49 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The documents (docs, ARF) are 1.0.0 until the public
 announcement; changes before it are folded into this release. The `@tamga-network/*` packages are versioned separately: they
-are published on npm as test releases — `0.5.0` published, `0.5.1` prepared (the API may change in test releases); the
+are published on npm as test releases — `0.5.0` published, `0.5.2` prepared (the API may change in test releases); the
 stable `1.0.0` comes when everything is ready.
 
-## Unreleased — 0.5.2 (packages, test release)
+## 0.5.2 — 2026-10-13 (packages, test release)
 
-Small EU format fixes from the first EU alignment review (2026-10-13). The code is in the source; the version stays `0.5.1`
-until `0.5.1` is published, then the packages move to `0.5.2` together. Two signatures change (marked **breaking**); there is
-no compatibility path (development phase, fixed in place).
+0.5.1 was not published; its content is in 0.5.2. The nine packages move from `0.5.0` to `0.5.2` together (`sdk_version` =
+`@tamga-network/verifier@0.5.2`). Security and correctness fixes from two code reviews and small EU format fixes from the first
+EU alignment review (2026-10-13); every fix has a test. Two signatures change (marked **breaking**) and some result types gain
+values (listed below; callers that switch over them should handle the new values). There is no compatibility path
+(development phase, fixed in place).
+
+### Security
+
+- `@tamga-network/wallet-core` — embedded disclosure policy (ADR-0046 K3): the registration certificate is bound to the
+  request only by the organisation identifier, and registration certificates are public. A restricted policy is now evaluated
+  only when the access certificate that signed the request is anchored: its fingerprint is the one pinned in the verifier's
+  record in the signed list, or its chain verifies up to a CA of the signed list (`root_cas`). Otherwise the result is
+  `not_evaluable` with the new reason `untrusted_access_certificate` — a self-signed certificate that copies a real
+  verifier's organisation identifier is never "authorized". `checkDisclosurePolicy` and `disclosurePolicyContext` take a new
+  optional last argument `registeredFingerprints`; new helper `accessCertAnchored`.
+- `@tamga-network/verifier` — identifier list addresses come from the credential: `PrefetchStatusCache.want` now learns an
+  address only over `https`, only on a host the issuer declares in the signed list (`statusHostsOf`: the `status_list_base`
+  and `issuer_url` hosts) and never on a private, loopback or link-local address (IP literals are refused, host names are
+  resolved before every fetch). The cap is per issuer (`maxPerIssuer`, default 64) instead of global. `StatusCache.want`
+  takes a third argument (`StatusListScope`); step D passes the issuer's record. Local development keeps working through
+  `allowLocalIssuerUrls`. New exports: `statusHostsOf`, `isNonPublicAddress`, `PrefetchStatusCacheOptions`.
+- `@tamga-network/verifier` — status list fetching (SSRF): `PrefetchStatusCache` no longer lets the HTTP client follow
+  redirects. It follows at most `MAX_STATUS_REDIRECTS` (3) hops itself and re-checks every hop of a learned address (`https`,
+  a host the issuer declares, public IP); the connection is pinned to the checked IP (`pinnedLookup`; SNI, certificate check
+  and `Host` stay the host name), so a host name that resolves to a public address at check time and a private one at connect
+  time (DNS rebinding) cannot reach an internal address. An address from the anchor log follows redirects only within its
+  origin. Node only (the module already used `node:dns`; the browser `/web` subpath does not fetch status lists). New exports
+  `nodeStatusTransport`, `pinnedLookup`, `MAX_STATUS_REDIRECTS`, types `StatusTransport`, `StatusHttpRequest`,
+  `StatusHttpResponse`; new option `transport`. A custom `fetchText` passed to the constructor is only given the first
+  address after its check and must not follow redirects.
+- `@tamga-network/verifier`, `@tamga-network/trust` — identifier lists of external (federated, ADR-0036) issuers: the record
+  of an issuer from an external list has no `issuer_url` / `status_list_base`, so its identifier list address was never
+  learned and every external mdoc stayed `INDETERMINATE`. The allowed hosts now come, in order, from the external list's
+  service supply points (`ServiceSupplyPoints` of the entity's issuance and revocation services, `https` only; TS 119 602
+  JSON and TS 119 612 XML), or, when the list declares none, from the DNS names in the SAN of the document signer certificate
+  (the mdoc x5chain leaf, whose chain was verified to the external anchor) and their subdomains (no IPs, no single-label or
+  local names). `https`, the public IP check, pinning and the per-issuer cap apply as for Tamga issuers. New:
+  `ExternalIssuerAnswer.status_hosts`, `LoteService.supplyPoints`, `StatusListScope.domains`, `externalStatusScope`.
 
 ### EU format alignment
 
@@ -37,9 +72,15 @@ no compatibility path (development phase, fixed in place).
   `acceptLegacyVcSdJwtTyp: false` turns it off); the result carries `typ`. Issuance stays `dc+sd-jwt`. The network verifier
   (`@tamga-network/verifier`) still rejects `vc+sd-jwt` for Tamga credential types (rule C13, step A2) and accepts it for
   external types.
-- `@tamga-network/wallet-core` — DCQL `trusted_authorities`: a type the wallet cannot evaluate (`etsi_tl`,
-  `openid_federation`, unknown) now counts as "does not match" (fail safe) instead of letting the credential through; `aki`
-  is evaluated as before.
+- `@tamga-network/wallet-core` — DCQL `trusted_authorities` (OpenID4VP §6.1.1): `aki` is evaluated as before; `etsi_tl`
+  is evaluated against the trusted lists the wallet has loaded (new `matchDcql` option `trustedLists`, type
+  `LoadedTrustedList`; the issuer's CA must be in a loaded TL / LoTE whose address equals the value); `openid_federation`,
+  unknown types and an `etsi_tl` value whose list is not loaded are "not evaluable". An entry that is not evaluable does not
+  filter the credential out — it is still offered and the verifier does its own trust check — but it is never a positive trust
+  signal: the new `Match.trustedAuthority` is `"matched"` or `"not_evaluable"`, and only `"matched"` means the wallet
+  checked it. A credential is left out only when every entry was evaluated and none matched. New export
+  `evaluateTrustedAuthorities`. `@tamga-network/trust`: `ListTrustSource.externalTrustedLists()` gives the loaded external
+  lists in that shape.
 
 ### Hardening
 
@@ -47,29 +88,9 @@ no compatibility path (development phase, fixed in place).
   entries (CIR 2026/1731 Annex Ib; `WALLET_STATUS_MIN_ENTRIES`) is refused. On by default; the new fourth constructor
   argument `{ minEntries }` sets the threshold (`0` turns it off, development only). `StatusValueOf` gains the value
   `NONCOMPLIANT` (signed and readable but outside the profile): `verifyWalletAttestation` and `verifyKeyAttestation` reject
-  it (not indeterminate).
-
-## 0.5.1 — 2026-10-12 (packages, test release)
-
-The nine packages move to `0.5.1` together (`sdk_version` = `@tamga-network/verifier@0.5.1`). Patch: security and correctness
-fixes from a code review; every fix has a test. Two result types gain values (listed below); callers that switch over them
-should handle the new values.
-
-### Security
-
-- `@tamga-network/wallet-core` — embedded disclosure policy (ADR-0046 K3): the registration certificate is bound to the
-  request only by the organisation identifier, and registration certificates are public. A restricted policy is now evaluated
-  only when the access certificate that signed the request is anchored: its fingerprint is the one pinned in the verifier's
-  record in the signed list, or its chain verifies up to a CA of the signed list (`root_cas`). Otherwise the result is
-  `not_evaluable` with the new reason `untrusted_access_certificate` — a self-signed certificate that copies a real
-  verifier's organisation identifier is never "authorized". `checkDisclosurePolicy` and `disclosurePolicyContext` take a new
-  optional last argument `registeredFingerprints`; new helper `accessCertAnchored`.
-- `@tamga-network/verifier` — identifier list addresses come from the credential: `PrefetchStatusCache.want` now learns an
-  address only over `https`, only on a host the issuer declares in the signed list (`statusHostsOf`: the `status_list_base`
-  and `issuer_url` hosts) and never on a private, loopback or link-local address (IP literals are refused, host names are
-  resolved before every fetch). The cap is per issuer (`maxPerIssuer`, default 64) instead of global. `StatusCache.want`
-  takes a third argument (`StatusListScope`); step D passes the issuer's record. Local development keeps working through
-  `allowLocalIssuerUrls`. New exports: `statusHostsOf`, `isNonPublicAddress`, `PrefetchStatusCacheOptions`.
+  it (not indeterminate). The bit is read first: a set bit is `INVALID` (revoked) whatever the list size, so a
+  revoked unit on an undersized list is still seen as revoked (cascading revocation keeps working); `NONCOMPLIANT` only when the
+  bit is not set.
 
 ### Fixes
 

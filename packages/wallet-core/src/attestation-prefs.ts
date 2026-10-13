@@ -9,7 +9,7 @@
  *  - KA'yı ve WIA'yı, kalan iptal bakım süresi (`*.exp − şimdi`) tercihe eşit ya da uzun olacak biçimde seçer; elindeki kısa
  *    kalırsa sağlayıcıdan yenisini ister (TS3 §2.4.2). Sağlayıcı daha uzununu veremezse tercih zorunluluk değildir: belge yine
  *    istenir, kurum belgenin süresini bakım süresiyle sınırlar (ISSU_12c).
- *  - Karşılaştırma toleranslıdır (0.5.1, `STATUS_PERIOD_TOLERANCE_SEC`): kalan süre tercihin en çok 7 gün (ve tercihin %10'u)
+ *  - Karşılaştırma toleranslıdır (0.5.2, `STATUS_PERIOD_TOLERANCE_SEC`): kalan süre tercihin en çok 7 gün (ve tercihin %10'u)
  *    altında kalırsa da karşılanmış sayılır. Kurum sağlayıcının azami süresini (ör. 730 gün) isterse, yeni alınan WIA'nın kalan
  *    süresi saniyeler içinde tercihin altına düşer; toleranssız karşılaştırma her belge akışında yeni WIA isterdi.
  * Saf TS; ağ isteği yok.

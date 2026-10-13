@@ -220,8 +220,8 @@ export class WalletStatusChecker {
     private maxAgeSec = 300,
     opts: {
       /**
-       * CIR 2026/1731 Ek Ib: WIA/KA iptal listesi en az bu kadar giriş taşımalı (bağlanamazlık için kalabalık); azsa
-       * `NONCOMPLIANT` (ret). Varsayılan `WALLET_STATUS_MIN_ENTRIES` (açık); 0 denetimi kapatır (yalnız geliştirme/test).
+       * CIR 2026/1731 Ek Ib: WIA/KA iptal listesi en az bu kadar giriş taşımalı (bağlanamazlık için kalabalık); azsa ve giriş
+       * iptal değilse `NONCOMPLIANT` (ret). Bit açıksa liste boyu ne olursa olsun `INVALID` (0.5.2). Varsayılan `WALLET_STATUS_MIN_ENTRIES` (açık); 0 denetimi kapatır (yalnız geliştirme/test).
        */
       minEntries?: number;
     } = {},
@@ -241,9 +241,18 @@ export class WalletStatusChecker {
     try {
       const v = await verifyStatusListToken(c.token, ref.uri, now);
       if (this.isProviderKey(v.leafFingerprintHex) !== "YES") return "UNKNOWN";
+      // Bit önce okunur (0.5.2): sağlayıcının imzaladığı "iptal" beyanı liste küçük olsa da geçerlidir — iptal edilmiş birim
+      // profile uymayan bir listede de iptal görünür (zincirleme iptal sürer). Bit kapalıysa küçük liste "geçerli" demeye yetmez.
+      let bit: number | null;
+      try {
+        bit = v.bitstring.get(ref.idx);
+      } catch {
+        bit = null; // indeks listenin dışında
+      }
+      if (bit !== null && bit !== 0) return "INVALID";
       // 2 bit/giriş (D6): açılmış bayt sayısı × 4
       if (v.bitstring.bytes.length * 4 < this.minEntries) return "NONCOMPLIANT";
-      return v.bitstring.get(ref.idx) === 0 ? "VALID" : "INVALID";
+      return bit === 0 ? "VALID" : "UNKNOWN";
     } catch {
       return "UNKNOWN";
     }

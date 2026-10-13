@@ -31,9 +31,11 @@ async function provider() {
   return { key, der, fp: certFingerprintSha256Hex(der) };
 }
 
-/** `entries` girişli (2 bit) boş liste; Token Status List biçimi. */
-async function statusToken(p: Awaited<ReturnType<typeof provider>>, entries: number) {
-  const lst = Buffer.from(deflateSync(new Uint8Array(Math.ceil(entries / 4)))).toString("base64url");
+/** `entries` girişli (2 bit) liste; `revoked` indeksleri 1 (iptal). Token Status List biçimi (LSB önce). */
+async function statusToken(p: Awaited<ReturnType<typeof provider>>, entries: number, revoked: number[] = []) {
+  const raw = new Uint8Array(Math.ceil(entries / 4));
+  for (const i of revoked) raw[i >> 2] |= 1 << ((i & 3) * 2);
+  const lst = Buffer.from(deflateSync(raw)).toString("base64url");
   return new SignJWT({ sub: URI, status_list: { bits: 2, lst } })
     .setProtectedHeader({ alg: "ES256", typ: "statuslist+jwt", x5c: [Buffer.from(p.der).toString("base64")] })
     .setIssuedAt(now)
@@ -52,6 +54,21 @@ describe("WalletStatusChecker — en az giriş sayısı (CIR 2026/1731 Ek Ib)", 
     expect(await smallChecker.statusOf({ idx: 1, uri: URI }, now)).toBe("NONCOMPLIANT");
     const bigChecker = new WalletStatusChecker(async () => big, isKey);
     expect(await bigChecker.statusOf({ idx: 1, uri: URI }, now)).toBe("VALID");
+  });
+
+  it("0.5.2: bit önce okunur — küçük listede iptal edilmiş giriş INVALID, iptal edilmemiş giriş NONCOMPLIANT", async () => {
+    const p = await provider();
+    const isKey = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
+    const small = await statusToken(p, 4_000, [5]);
+    const c = new WalletStatusChecker(async () => small, isKey);
+    expect(await c.statusOf({ idx: 5, uri: URI }, now)).toBe("INVALID");
+    expect(await c.statusOf({ idx: 6, uri: URI }, now)).toBe("NONCOMPLIANT");
+    expect(await c.statusOf({ idx: 999_999, uri: URI }, now)).toBe("NONCOMPLIANT"); // listenin dışı, küçük liste
+    const big = await statusToken(p, 10_000, [5]);
+    const b = new WalletStatusChecker(async () => big, isKey);
+    expect(await b.statusOf({ idx: 5, uri: URI }, now)).toBe("INVALID");
+    expect(await b.statusOf({ idx: 6, uri: URI }, now)).toBe("VALID");
+    expect(await b.statusOf({ idx: 999_999, uri: URI }, now)).toBe("UNKNOWN"); // listenin dışı
   });
 
   it("minEntries: 0 denetimi kapatır (geliştirme/test)", async () => {

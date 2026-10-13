@@ -103,7 +103,7 @@ describe("mdoc sertleştirme", () => {
   });
 });
 
-describe("0.5.1: geçerlilik penceresi ve iptal girişi", () => {
+describe("0.5.2: geçerlilik penceresi ve iptal girişi", () => {
   const issuerSk = p256.utils.randomSecretKey();
   const pub = p256.getPublicKey(issuerSk, false);
   const now = Math.floor(Date.now() / 1000);

@@ -17,6 +17,8 @@ export interface LoteService {
   typeUri: string;
   name: string;
   certsDer: Uint8Array[];
+  /** Hizmet erişim noktaları (`ServiceSupplyPoints`, TS 119 602 / TS 119 612): yalnız okunabilen URI'ler */
+  supplyPoints: string[];
 }
 export interface LoteEntity {
   name: string;
@@ -135,12 +137,18 @@ export function parseLote(json: unknown): ParsedLote {
       const certs: Uint8Array[] = [];
       for (const c of arr(si.ServiceDigitalIdentity?.X509Certificates, "X509Certificates") as Array<{ val?: string }>)
         if (typeof c?.val === "string" && c.val) certs.push(b64ToBytes(c.val));
+      const supplyPoints: string[] = [];
+      for (const sp of Array.isArray(si.ServiceSupplyPoints) ? (si.ServiceSupplyPoints as unknown[]) : []) {
+        const v = typeof sp === "string" ? sp : (sp as { uriValue?: unknown } | null)?.uriValue;
+        if (typeof v === "string" && v) supplyPoints.push(v.trim());
+      }
       services.push({
         kind: serviceKind(typeUri),
         role: /\/Issuance$/i.test(typeUri) ? "issuance" : /\/Revocation$/i.test(typeUri) ? "revocation" : "other",
         typeUri,
         name: firstText(si.ServiceName),
         certsDer: certs,
+        supplyPoints,
       });
     }
     entities.push({ name: firstText(tei?.TEName), services });

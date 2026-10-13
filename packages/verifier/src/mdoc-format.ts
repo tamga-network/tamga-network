@@ -5,7 +5,7 @@
  *  A4 issuerAuth imzası · A5 digest bütünlüğü · A6 cihaz imzası (SessionTranscript; KB-JWT muadili) · A7 geçerlilik · A8 docType
  */
 import { X509Certificate as NodeX509, webcrypto } from "node:crypto";
-import { X509Certificate, cryptoProvider } from "@peculiar/x509";
+import { SubjectAlternativeNameExtension, X509Certificate, cryptoProvider } from "@peculiar/x509";
 import { b64uToBytes, computeIssuerId, certFingerprintSha256Hex } from "@tamga-network/core";
 import {
   dcApiSessionTranscript,
@@ -46,6 +46,11 @@ export interface FormatOk {
   identifierList?: { id: string; uri: string };
   /** ADR-0036: zincirin bağlandığı kök/çapa sertifikasının SHA-256 parmak izi (onaltılık); dış kurum çözümü bununla. */
   anchorFingerprint?: string | null;
+  /**
+   * mdoc belge imzacısı (x5chain yaprağı) sertifikasının SAN alan adları (dNSName ve URI adlarının alan adı; küçük harf). Dış
+   * kurumun iptal sunucusu dış listede bildirilmemişse tanımlayıcı listesi adresi bunlarla sınırlanır (`externalStatusScope`).
+   */
+  leafDnsNames?: string[];
   aDone: Step[];
   aSkipped: Step[];
 }
@@ -155,7 +160,7 @@ export async function verifyMdocFormat(
   });
   if (!v.valid) {
     const r = v.reason ?? "invalid";
-    // imzalı ama okunamayan iptal girişi: D1 (status oku) RED — iptal denetimi atlanmaz (0.5.1)
+    // imzalı ama okunamayan iptal girişi: D1 (status oku) RED — iptal denetimi atlanmaz (0.5.2)
     const step: Step = /^status entry malformed/.test(r)
       ? "D1"
       : /digest/.test(r)
@@ -192,6 +197,7 @@ export async function verifyMdocFormat(
     vct: dr.docType,
     vctIntegrity: null,
     anchorFingerprint,
+    leafDnsNames: sanDnsNames(leaf),
     iat: v.signedEpoch!, // yukarıda sayı olduğu denetlendi
     claims,
     disclosedClaimNames: Object.keys(claims),
@@ -202,4 +208,25 @@ export async function verifyMdocFormat(
     aDone: ["A1", "A2", "A3", "A3b", "A3d", "A4", "A5", "A6", "A7", "A8"],
     aSkipped: ["A3c"], // CRL/OCSP: dev PKI'da yok (SD-JWT ile aynı)
   };
+}
+
+/** Sertifikanın SAN'ındaki alan adları: dNSName ve URI adlarının alan adı (küçük harf, tekil); SAN yoksa ya da bozuksa boş. */
+function sanDnsNames(cert: X509Certificate): string[] {
+  const out = new Set<string>();
+  try {
+    const san = cert.getExtension(SubjectAlternativeNameExtension);
+    for (const n of san?.names.items ?? []) {
+      if (n.type === "dns") out.add(n.value.toLowerCase());
+      else if (n.type === "url")
+        try {
+          const h = new URL(n.value).hostname;
+          if (h) out.add(h.toLowerCase());
+        } catch {
+          /* bozuk URI: atlanır */
+        }
+    }
+  } catch {
+    /* SAN okunamadı: boş */
+  }
+  return [...out];
 }

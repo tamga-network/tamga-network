@@ -8,7 +8,7 @@
  *      listelenen (veren adı, seri no) — yalnız imza zinciri doğrulanmış VE güvene bağlanmış sertifikalar sayılır
  *      (`anchoredChainCerts`); ad/seri yalnız doğrulanamayan bir sertifikada tutuyorsa değerlendirilemez, hiçbir zaman "geçti"
  *      değil. Kayıt sertifikası yoksa (istekte yok, yakın mesafe, cüzdandan cüzdana) değerlendirilemez.
- *  Erişim sertifikası çapası (0.5.1): kayıt sertifikası isteğe yalnız `organizationIdentifier` ile bağlanır; kayıt sertifikası
+ *  Erişim sertifikası çapası (0.5.2): kayıt sertifikası isteğe yalnız `organizationIdentifier` ile bağlanır; kayıt sertifikası
  *      herkese açıktır ve kopyalanabilir. Bu yüzden WRPRC'ye dayanan her karardan ÖNCE isteği imzalayan erişim sertifikası güvene
  *      bağlanmış olmalıdır: (i) yaprağın parmak izi doğrulayıcının imzalı listedeki kaydında sabitlenmiş (`registeredFingerprints`;
  *      `checkRp` aynı eşleşmeyi `x509_hash` ile denetler) YA DA (ii) zincir imzası yapraktan imzalı listedeki bir CA'ya

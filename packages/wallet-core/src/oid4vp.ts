@@ -19,7 +19,7 @@ import { chooseEnc, encryptJwe, type EncJwk, type JweEnc } from "./jwe.js";
 import { certFingerprintHex, p256PointFromCertDer, presentSdJwt } from "./sdjwt.js";
 import { WalletError, type Http, readJson } from "./http.js";
 import type { StoredCredential } from "./store.js";
-import { certAuthorityKeyId, certSanDnsNames } from "./asn1.js";
+import { certAuthorityKeyId, certSanDnsNames, certSubjectKeyId } from "./asn1.js";
 import { fetchTrustSource, type TrustPins } from "./trustlist.js";
 import {
   MDOC_FORMAT,
@@ -374,6 +374,23 @@ export interface Match {
    * ispat yalnız ZK kopyasıyla — `copyKeyRef` belgenin `zk.copies`'inden seçilen kopya (ana belgenin kopyaları kullanılmaz).
    */
   zk?: { claims: ZkClaimValue[]; circuits?: string[]; copyKeyRef?: string };
+  /**
+   * Sorguda `trusted_authorities` varsa cüzdanın değerlendirmesi (OpenID4VP §6.1.1; 0.5.2): `matched` — bir koşul cüzdanda
+   * doğrulandı; `not_evaluable` — hiçbir koşul doğrulanamadı ama biri cüzdanca değerlendirilemedi (bilinmeyen tür, yüklü olmayan
+   * liste): belge yine önerilir, güven denetimini doğrulayıcı yapar. `not_evaluable` hiçbir zaman olumlu güven işareti DEĞİLDİR
+   * (onay ekranında "doğrulandı / güvenilir" gösterilmez, kayıtta "geçti" sayılmaz). Sorguda koşul yoksa alan yoktur.
+   */
+  trustedAuthority?: TrustedAuthorityOutcome;
+}
+/** `trusted_authorities` sonucu (eşleşmeyen belge önerilmez; bkz. `Match.trustedAuthority`). */
+export type TrustedAuthorityOutcome = "matched" | "not_evaluable";
+/**
+ * Cüzdanın yüklediği, imzası doğrulanmış bir güven listesi (ETSI TS 119 612 TL ya da TS 119 602 LoTE): yayın adresi (`etsi_tl`
+ * değeriyle birebir karşılaştırılır) ve listedeki belge verme hizmeti sertifikaları (CA ya da doğrudan imzacı).
+ */
+export interface LoadedTrustedList {
+  uri: string;
+  certsDer: Uint8Array[];
 }
 /** ZK ile ispatlanan öğe: "bu ad alanında bu öğe şu değerdir" (`@tamga-network/zk` ZkClaim ile aynı biçim). */
 export interface ZkClaimValue {
@@ -381,32 +398,76 @@ export interface ZkClaimValue {
   element: string;
   value: boolean | string | number;
 }
-/** Belgenin (SD-JWT kopyası) x5c zincirindeki sertifikaların AKI'leri, base64url. */
-function chainAkis(c: StoredCredential): string[] {
+/** Belgenin (SD-JWT kopyası) x5c zincirindeki sertifikalar (DER); okunamazsa boş. */
+function chainCerts(c: StoredCredential): Uint8Array[] {
   const combined = c.copies.find((k) => k.combined)?.combined;
   if (!combined) return [];
   try {
     const h = JSON.parse(new TextDecoder().decode(b64Decode(combined.split("~")[0].split(".")[0]))) as {
       x5c?: string[];
     };
-    return (h.x5c ?? []).flatMap((x) => {
-      const k = certAuthorityKeyId(b64Decode(x));
-      return k ? [b64u(k)] : [];
-    });
+    return (h.x5c ?? []).map((x) => b64Decode(x));
   } catch {
     return [];
   }
 }
+const safe = <T>(f: () => T): T | null => {
+  try {
+    return f();
+  } catch {
+    return null;
+  }
+};
 /**
- * OpenID4VP §6.1.1: `trusted_authorities` verildiyse belge en az bir koşula uymalı. Cüzdan yalnız `aki` tipini değerlendirebilir;
- * değerlendiremediği tip (etsi_tl, openid_federation ya da bilinmeyen) "eşleşmez" sayılır (güvenli taraf): o koşul belgeyi
- * seçtirmez, başka bir `aki` koşulu eşleşirse belge yine seçilir.
+ * OpenID4VP §6.1.1 `trusted_authorities` (0.5.2 mühendislik düzeltmesi; ADR-0036 notu). Belge en az bir koşula uymalı:
+ *  - `aki`: zincirdeki bir sertifikanın AKI'si (base64url) değerlerden biri (HAIP §5) — değerlendirilir.
+ *  - `etsi_tl`: değer, cüzdanın yüklediği bir güven listesinin adresi ve belgenin zinciri o listedeki bir hizmet sertifikasına
+ *    çıkıyor (sertifikanın kendisi zincirde ya da zincirdeki AKI = listedeki sertifikanın SKI'si). Değerdeki liste yüklü değilse
+ *    o koşul değerlendirilemez.
+ *  - `openid_federation` ve bilinmeyen türler: değerlendirilemez.
+ * Bir koşul eşleşirse `matched`; hiçbiri eşleşmez ama biri değerlendirilemezse `not_evaluable` (belge önerilir, doğrulayıcı
+ * kendi güven denetimini yapar; olumlu işaret değildir); hepsi değerlendirilip eşleşmezse `no_match` (belge önerilmez).
  */
-function trustedAuthorityOk(q: DcqlCredential, c: StoredCredential): boolean {
-  const ta = q.trusted_authorities;
-  if (!ta?.length) return true;
-  const have = new Set(chainAkis(c));
-  return ta.some((t) => t.type === "aki" && Array.isArray(t.values) && t.values.some((v) => have.has(v)));
+export function evaluateTrustedAuthorities(
+  ta: DcqlTrustedAuthority[] | undefined,
+  c: StoredCredential,
+  trustedLists: LoadedTrustedList[] = [],
+): TrustedAuthorityOutcome | "no_match" | "none" {
+  if (!ta?.length) return "none";
+  const chain = chainCerts(c);
+  const akis = new Set(
+    chain.flatMap((d) => {
+      const k = safe(() => certAuthorityKeyId(d));
+      return k ? [b64u(k)] : [];
+    }),
+  );
+  const fps = new Set(chain.map((d) => safe(() => certFingerprintHex(d))).filter((x): x is string => !!x));
+  let notEvaluable = false;
+  for (const t of ta) {
+    const values = Array.isArray(t?.values) ? t.values.filter((v): v is string => typeof v === "string") : [];
+    if (t?.type === "aki") {
+      if (values.some((v) => akis.has(v))) return "matched";
+      continue;
+    }
+    if (t?.type === "etsi_tl") {
+      const loaded = trustedLists.filter((l) => values.includes(l.uri));
+      if (!loaded.length) {
+        notEvaluable = true;
+        continue;
+      }
+      const hit = loaded.some((l) =>
+        l.certsDer.some((d) => {
+          const fp = safe(() => certFingerprintHex(d));
+          const ski = safe(() => certSubjectKeyId(d));
+          return (!!fp && fps.has(fp)) || (!!ski && akis.has(b64u(ski)));
+        }),
+      );
+      if (hit) return "matched";
+      continue;
+    }
+    notEvaluable = true;
+  }
+  return notEvaluable ? "not_evaluable" : "no_match";
 }
 const DCQL_ID = /^[A-Za-z0-9_-]+$/;
 const isIdList = (x: unknown): x is string[] =>
@@ -553,7 +614,8 @@ export interface DcqlMatchResult {
   gaps: DcqlGap[];
 }
 /**
- * DCQL → cüzdandaki belgeler: vct eşleşmesi, `trusted_authorities` (aki), `values` koşulları, istenen claim adları.
+ * DCQL → cüzdandaki belgeler: vct eşleşmesi, `trusted_authorities` (`evaluateTrustedAuthorities`), `values` koşulları, istenen
+ * claim adları.
  * OpenID4VP 1.0 §6.4.1: `claim_sets` yoksa istenen alanların HEPSİ belgede olmalı — biri eksikse belge sorguyu karşılamaz (eksik
  * alanla gönderilmez; isteğe bağlı alan isteyen doğrulayıcı `claim_sets` kullanır). `claim_sets` varsa karşılanabilen ilk kombinasyon.
  * `mso_mdoc_zk` (ADR-0032) mdoc gibi eşlenir; yalnız `opts.zk` (cüzdan bu cihazda ispat üretebilir) ise önerilir — değilse sorgu
@@ -562,7 +624,12 @@ export interface DcqlMatchResult {
 export function matchDcql(
   dcql: DcqlQuery,
   credentials: StoredCredential[],
-  opts: { zk?: boolean; now?: number } = {},
+  opts: {
+    zk?: boolean;
+    now?: number;
+    /** `trusted_authorities` `etsi_tl` için cüzdanın yüklediği, imzası doğrulanmış güven listeleri (verilmezse değerlendirilemez) */
+    trustedLists?: LoadedTrustedList[];
+  } = {},
 ): DcqlMatchResult {
   const now = opts.now ?? Math.floor(Date.now() / 1000);
   const matches: Match[] = [];
@@ -587,12 +654,16 @@ export function matchDcql(
               ? c.vct === docType && c.copies.some((k) => !!k.mdoc) // D-CRED-5: yalnızca mdoc'u olan belge
               : q.format === "dc+sd-jwt" && (vcts.length === 0 || vcts.includes(c.vct)),
       )
-      .filter((c) => trustedAuthorityOk(q, c));
+      .flatMap((c) => {
+        const t = evaluateTrustedAuthorities(q.trusted_authorities, c, opts.trustedLists);
+        return t === "no_match" ? [] : [{ c, t }];
+      });
+    const taOf = new Map(cands.map(({ c, t }) => [c, t] as const));
     const namespace = isMdoc ? (q.claims?.[0]?.path[0] as string | undefined) : undefined;
     const ok: Match[] = [];
     let closest: DcqlGap | undefined;
     let zkMissing: StoredCredential | undefined;
-    for (const c of cands) {
+    for (const { c } of cands) {
       // ADR-0044: ZK sorgusu belgenin geçerli bir ZK kopyasıyla karşılanır; öğe değerleri kopyanın kendisinden
       const zkCopy = isZk ? selectZkCopy(c, now) : null;
       if (isZk && !zkCopy) {
@@ -626,6 +697,7 @@ export function matchDcql(
           requested: option.map((e) => e.name),
           format: isZk ? MDOC_ZK_FORMAT : isMdoc ? MDOC_FORMAT : "dc+sd-jwt",
           ...(namespace ? { namespace } : {}),
+          ...(taOf.get(c) !== "none" ? { trustedAuthority: taOf.get(c) as TrustedAuthorityOutcome } : {}),
           ...(isZk
             ? {
                 zk: {

@@ -377,7 +377,7 @@ describe("güven kökü: imza zinciri doğrulanmış olmalı (EDP_03 atlatma gir
   });
 });
 
-describe("erişim sertifikası çapası: kopyalanmış kayıt sertifikası (0.5.1)", () => {
+describe("erişim sertifikası çapası: kopyalanmış kayıt sertifikası (0.5.2)", () => {
   const p = ARP({ relying_parties: [{ rp_id: "VATTR-1234567890" }], entitlements: [SP] });
   const ALL = [
     p,

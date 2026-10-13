@@ -17,7 +17,7 @@ import { pointOf, verifyMdocFormat, type FormatResult } from "./mdoc-format.js";
 import { verifyIdentifierListToken } from "@tamga-network/mdoc";
 import { b64uToBytes, certFingerprintSha256Hex } from "@tamga-network/core";
 import { verifyMdocZkFormat } from "./mdoc-zk-format.js";
-import { statusHostsOf } from "./status-cache.js";
+import { isNonPublicAddress, statusHostsOf, type StatusListScope } from "./status-cache.js";
 import type { IndeterminateReason, Step, VerificationResult, VerifyInput } from "./verify.js";
 
 type ValidateFn = ((data: unknown) => boolean) & { errors?: Array<{ instancePath: string; message?: string }> | null };
@@ -387,6 +387,37 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
 }
 
 /**
+ * Dış (federasyon, ADR-0036) kurumun tanımlayıcı listesi adresinin izinli sunucuları (0.5.2). Kural, sırayla:
+ *  1. Dış liste bu kurumun iptal ya da belge verme hizmeti için `https` erişim noktası (ServiceSupplyPoints) bildiriyorsa
+ *     yalnız o alan adları (birebir) — imzalı listenin beyanı.
+ *  2. Bildirmiyorsa belge imzacısı sertifikasının (mdoc x5chain yaprağı; zinciri dış listedeki çapaya doğrulanmış) SAN alan
+ *     adları ve onların alt alan adları. Joker (`*.`) öneki atılır; IP, tek etiketli ad ve yerel ad alınmaz.
+ * Her iki durumda önbellek ayrıca `https`, genel IP (bağlantı sabitlenir) ve kurum başına üst sınır uygular (status-cache.ts).
+ */
+export function externalStatusScope(
+  ext: Pick<ExternalIssuerAnswer, "status_hosts">,
+  leafDnsNames: string[] | undefined,
+): Pick<StatusListScope, "hosts" | "domains"> {
+  const hosts = (ext.status_hosts ?? []).map((h) => h.toLowerCase());
+  if (hosts.length) return { hosts };
+  const domains = [
+    ...new Set(
+      (leafDnsNames ?? [])
+        .map((d) => d.toLowerCase().replace(/^\*\./, "").replace(/\.$/, ""))
+        .filter(
+          (d) =>
+            /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d) &&
+            !/^[0-9.]+$/.test(d) &&
+            !isNonPublicAddress(d) &&
+            !d.endsWith(".local") &&
+            !d.endsWith(".localhost"),
+        ),
+    ),
+  ];
+  return { hosts: [], domains };
+}
+
+/**
  * Önbellekteki tanımlayıcı listesi: ikili CWT base64url olarak saklanır (`b64u:` öneki isteğe bağlı). Kodlama katıdır
  * (`b64uToBytes`); bozuk önbellek değeri `D4:` (okunamıyor) hatasıdır — altyapı sorunu, ret değil.
  */
@@ -411,10 +442,11 @@ async function stepDIdentifierList(ctx: VerifyCtx, ref: { id: string; uri: strin
     // çapa günlüğünde tanımlayıcı listesi yok: adres (imzası doğrulanmış MSO'dan) ön çekim kümesine eklenir, çekim doğrulamanın
     // dışında yapılır (S12); bu doğrulama DOĞRULANAMADI, sonrakiler önbellekten
     // yalnız kurumun imzalı listede bildirdiği iptal sunucusundaki adres öğrenilir (SSRF — status-cache.ts)
+    // dış kurum (ADR-0036; kaydında issuer_url / status_list_base yok): externalStatusScope
     if (ctx.issuerRec)
       input.statusCache.want?.(ref.uri, "identifier_list", {
         issuer: ctx.issuerRec.issuer_id,
-        hosts: statusHostsOf(ctx.issuerRec),
+        ...(ctx.ext ? externalStatusScope(ctx.ext, ctx.a?.leafDnsNames) : { hosts: statusHostsOf(ctx.issuerRec) }),
         ...(input.allowLocalIssuerUrls ? { allowLocal: true } : {}),
       });
     return indet(

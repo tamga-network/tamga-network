@@ -72,12 +72,17 @@ export function parseTrustedListDom(root: XNode): ParsedLote {
         if (c) certs.push(b64ToBytes(xmlText(c)));
       }
       const kind = tlServiceKind(typeUri);
+      const ssp = xmlChild(si, TSL_NS, "ServiceSupplyPoints");
+      const supplyPoints = (ssp ? xmlChildren(ssp, TSL_NS, "ServiceSupplyPoint") : [])
+        .map((p: XNode) => xmlText(p).trim())
+        .filter(Boolean);
       services.push({
         kind,
         role: kind ? "issuance" : "other",
         typeUri,
         name: firstName(xmlChild(si, TSL_NS, "ServiceName")),
         certsDer: certs,
+        supplyPoints,
       });
     }
     entities.push({ name: firstName(tspInfo && xmlChild(tspInfo, TSL_NS, "TSPName")), services });

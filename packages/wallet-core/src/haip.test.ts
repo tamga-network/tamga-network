@@ -23,7 +23,7 @@ import {
 } from "@peculiar/x509";
 import { akiTrustedAuthority, dcqlFromPolicy } from "@tamga-network/verifier";
 import { certAuthorityKeyId } from "./asn1.js";
-import { matchDcql } from "./oid4vp.js";
+import { matchDcql, evaluateTrustedAuthorities } from "./oid4vp.js";
 
 const now = 1_800_000_000;
 const URL_TOKEN = "https://id.tamga.network/token";
@@ -231,21 +231,51 @@ describe("HAIP-1 (e) DCQL trusted_authorities (aki)", () => {
     const c = cred(l.rawData);
     const ta = akiTrustedAuthority([new Uint8Array(good.cert.rawData)])!;
     expect(matchDcql(query([ta]), [c]).matches).toHaveLength(1);
+    expect(matchDcql(query([ta]), [c]).matches[0].trustedAuthority).toBe("matched");
     const bad = akiTrustedAuthority([new Uint8Array(other.cert.rawData)])!;
     expect(matchDcql(query([bad]), [c]).unmatched).toEqual(["q"]);
-    // sorguda trusted_authorities yoksa etkisiz
+    // sorguda trusted_authorities yoksa etkisiz (alan da yok)
     expect(matchDcql(query(), [c]).matches).toHaveLength(1);
-    // değerlendiremediği tip "eşleşmez" sayılır (güvenli taraf): yalnız o tip varsa belge seçilmez
-    expect(matchDcql(query([bad, { type: "etsi_tl", values: ["https://lotl.example"] }]), [c]).unmatched).toEqual([
-      "q",
-    ]);
-    expect(matchDcql(query([{ type: "openid_federation", values: ["https://fed.example"] }]), [c]).unmatched).toEqual([
-      "q",
-    ]);
-    expect(matchDcql(query([{ type: "x-unknown", values: [ta.values[0]] }]), [c]).unmatched).toEqual(["q"]);
-    // bilinmeyen tip + eşleşen aki: aki koşulu belgeyi seçer
-    expect(matchDcql(query([{ type: "etsi_tl", values: ["https://lotl.example"] }, ta]), [c]).matches).toHaveLength(1);
+    expect(matchDcql(query(), [c]).matches[0].trustedAuthority).toBeUndefined();
+    // 0.5.2: değerlendirilemeyen koşul (yüklü olmayan etsi_tl, openid_federation, bilinmeyen) belgeyi ELEMEZ — belge önerilir,
+    // ama sonuç "not_evaluable" (olumlu güven işareti değil); eşleşmeyen aki ile birlikte de aynı
+    for (const q of [
+      [bad, { type: "etsi_tl", values: ["https://lotl.example"] }],
+      [{ type: "openid_federation", values: ["https://fed.example"] }],
+      [{ type: "x-unknown", values: [ta.values[0]] }],
+    ]) {
+      const r = matchDcql(query(q), [c]);
+      expect(r.matches, JSON.stringify(q)).toHaveLength(1);
+      expect(r.matches[0].trustedAuthority).toBe("not_evaluable");
+    }
+    // yalnız değerlendirilebilen ve eşleşmeyen koşul: belge önerilmez
+    expect(matchDcql(query([bad]), [c]).unmatched).toEqual(["q"]);
+    // bilinmeyen tip + eşleşen aki: eşleşme
+    const both = matchDcql(query([{ type: "etsi_tl", values: ["https://lotl.example"] }, ta]), [c]);
+    expect(both.matches[0].trustedAuthority).toBe("matched");
   });
+  it("0.5.2 etsi_tl: yüklü listede belgenin CA'sı varsa eşleşir; liste yüklü ama CA yoksa eşleşmez; liste yüklü değilse değerlendirilemez", async () => {
+    const good = await ca("Good Root");
+    const other = await ca("Other Root");
+    const l = await leaf(good, true);
+    const c = cred(l.rawData);
+    const TL = "https://tl.example.eu/tl.xml";
+    const et = [{ type: "etsi_tl", values: [TL] }];
+    const lists = (der: ArrayBuffer) => [{ uri: TL, certsDer: [new Uint8Array(der)] }];
+    // listedeki CA'nın SKI'si = belgenin AKI'si
+    const m = matchDcql(query(et), [c], { trustedLists: lists(good.cert.rawData) });
+    expect(m.matches[0]?.trustedAuthority).toBe("matched");
+    // listedeki sertifika doğrudan imzacı (zincirdeki sertifikanın kendisi)
+    expect(evaluateTrustedAuthorities(et, c, lists(l.rawData))).toBe("matched");
+    // liste yüklü, belgenin CA'sı listede değil: belge önerilmez
+    expect(matchDcql(query(et), [c], { trustedLists: lists(other.cert.rawData) }).unmatched).toEqual(["q"]);
+    // başka bir adresli liste yüklü: bu koşul değerlendirilemez → önerilir, olumlu işaret değil
+    const nl = matchDcql(query(et), [c], { trustedLists: [{ uri: "https://other.example/tl", certsDer: [] }] });
+    expect(nl.matches[0]?.trustedAuthority).toBe("not_evaluable");
+    expect(evaluateTrustedAuthorities(et, c)).toBe("not_evaluable");
+    expect(evaluateTrustedAuthorities(undefined, c)).toBe("none");
+  });
+
   it("AKI'siz sertifikalı belge aki sorgusuna uymaz (OpenID4VP §6.1.1.1)", async () => {
     const good = await ca("Good Root");
     const l = await leaf(good, false);

@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-13
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -302,6 +302,28 @@ In [[t:mdoc]] the claim path is **`[namespace, element]`**; the Tamga identity n
 encodings follow the EU PID table ([[ADR-0045]]: SD-JWT `birthdate` / `nationalities` ↔ mdoc `birth_date` (full-date) /
 `nationality`; the other names are the same). The verifier sees only `age_over_18`; the name, date of birth and
 identity number are not disclosed. `docType` = the vct URN.
+
+## 4.6 `trusted_authorities` — how the wallet evaluates it
+
+A verifier can state, for a credential in the query, which trust sources it accepts with `trusted_authorities` (OpenID4VP 1.0
+§6.1.1); the credential must meet at least one entry. The Tamga verifier uses `aki` ([[t:HAIP]] §5). The wallet evaluates each
+entry with one of three outcomes (packages 0.5.2):
+
+| Type | What the wallet does |
+|---|---|
+| `aki` | Is the AKI (base64url) of a certificate in the credential's x5c chain one of the values — **evaluated** |
+| `etsi_tl` | If the value is the address of a trusted list the wallet has loaded and whose signature it verified (ETSI TS 119 612 TL or TS 119 602 LoTE): does the credential's chain lead to an issuance service certificate in that list — **evaluated**. If the list in the value is not loaded in the wallet: **not evaluable** |
+| `openid_federation` and unknown types | **not evaluable** |
+
+- If an entry matches, the credential is **offered** (`matched`).
+- If no entry matches but one is **not evaluable**, the credential is still **offered** (`not_evaluable`): the wallet does not
+  hide a credential because of an entry it cannot judge; the verifier does its own trust check (an EU verifier may ask only for
+  `etsi_tl`). **`not_evaluable` is never a positive trust signal:** the consent screen does not show it as "verified" or
+  "trusted", and it is not recorded as "passed".
+- If every entry was evaluated and none matches, the credential is **not offered**.
+
+Note: the first draft of 0.5.2 treated a type the wallet cannot evaluate as "no match"; that meant no credential ever reached an
+EU verifier that asks only for `etsi_tl`. The corrected rule is above (no false positive, no false exclusion).
 
 ---
 

@@ -22,7 +22,8 @@ export interface StatusRef {
 }
 /**
  * İptal listesi sorgusu (çağıran sağlar; liste indirme + doğrulama + önbellek). `NONCOMPLIANT`: liste indi ve imzası geçerli ama
- * profile uymuyor (ör. CIR 2026/1731 Ek Ib: 10.000'den az girişli WIA/KA listesi) — geçici hata değil, ret.
+ * profile uymuyor (ör. CIR 2026/1731 Ek Ib: 10.000'den az girişli WIA/KA listesi) — geçici hata değil, ret. Girişin biti açıksa
+ * liste küçük olsa da sonuç `INVALID`dir (sağlayıcının imzalı iptal beyanı; 0.5.2): `NONCOMPLIANT` yalnız bit kapalıyken.
  */
 export type StatusValueOf = (ref: StatusRef, now: number) => Promise<"VALID" | "INVALID" | "UNKNOWN" | "NONCOMPLIANT">;
 

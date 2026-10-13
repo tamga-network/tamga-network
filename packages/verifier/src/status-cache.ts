@@ -8,16 +8,22 @@
  * önbellekte liste olmadığı için DOĞRULANAMADI (D2) döner, sonraki doğrulamalar önbellekten okur ve liste her ön çekim turunda
  * tazelenir (D4). Doğrulama hiçbir zaman ağ isteğini beklemez (S12).
  *
- * Adres belgeden gelir (belge verenin imzası altında, ama doğrulayıcının seçmediği bir adres); öğrenme bu yüzden sınırlıdır (0.5.1):
+ * Adres belgeden gelir (belge verenin imzası altında, ama doğrulayıcının seçmediği bir adres); öğrenme bu yüzden sınırlıdır (0.5.2):
  *  - yalnız `https` (yerel geliştirmede `allowLocal` ile yerel `http`);
  *  - yalnız o kurumun imzalı listedeki kaydında bildirdiği iptal sunucuları (`statusHostsOf`: `status_list_base` ve `issuer_url`
  *    alan adı) — başka bir sunucudaki adres ilk görüşte de çekilmez;
  *  - özel, geri döngü, bağlantı-yerel ve benzeri adreslere istek yok (SSRF): IP yazılmış adres doğrudan, alan adı çözülerek
  *    denetlenir (`allowLocal` dışında);
  *  - üst sınır kurum başınadır (`maxPerIssuer`): bir kurumun belgeleri başka kurumların listelerini dışarıda bırakamaz.
+ * Çekim (0.5.2): yönlendirme otomatik izlenmez; en çok `MAX_STATUS_REDIRECTS` adım elle izlenir ve öğrenilen adreste her adımda
+ * şema, kurumun sunucusu ve genel IP yeniden denetlenir. Bağlantı denetlenen IP'ye sabitlenir (`pinnedLookup`; SNI ve Host alan
+ * adı kalır): denetimle bağlantı arasında ad yeniden çözülüp iç ağa yönelemez (DNS rebinding). Yalnız Node; tarayıcı yapısında
+ * bu modül yoktur. Dış (federasyon) kurumun iptal sunucuları: `externalStatusScope` (steps.ts).
  */
 import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { isIP, type LookupFunction } from "node:net";
+import http from "node:http";
+import https from "node:https";
 
 export interface CachedToken {
   token: string;
@@ -39,8 +45,13 @@ export interface StatusListRef {
 export interface StatusListScope {
   /** kurumun güven listesindeki kimliği (`issuer_id`) — üst sınır kurum başınadır */
   issuer: string;
-  /** kurumun bildirdiği iptal sunucularının alan adları (`statusHostsOf`) */
+  /** kurumun bildirdiği iptal sunucularının alan adları (`statusHostsOf`) — birebir eşleşme */
   hosts: string[];
+  /**
+   * Alan adı ve alt alan adları kabul edilen etki alanları (en az iki etiket; birebir değil). Yalnız dış kurumda, dış liste iptal
+   * hizmeti adresi bildirmediğinde belge imzacısı sertifikasının SAN alan adlarından (`externalStatusScope`).
+   */
+  domains?: string[];
   /** yalnız yerel geliştirme: `http` ve yerel / özel ağ adresleri kabul edilir */
   allowLocal?: boolean;
 }
@@ -138,25 +149,63 @@ const isLocalHostName = (h: string) =>
 export type HostResolver = (host: string) => Promise<string[]>;
 const defaultResolver: HostResolver = async (host) => (await lookup(host, { all: true })).map((a) => a.address);
 
+/**
+ * Tek HTTP isteği; yönlendirme İZLENMEZ (3xx `location` ile döner, izleme kararı önbellekte). `address` verilirse bağlantı o
+ * IP'ye kurulur (alan adı yeniden çözülmez — DNS rebinding); TLS SNI, sertifika denetimi ve Host başlığı alan adıyla kalır.
+ */
+export interface StatusHttpRequest {
+  url: URL;
+  address?: string;
+  family?: 4 | 6;
+  accept: string;
+  timeoutMs: number;
+  maxBytes: number;
+}
+export interface StatusHttpResponse {
+  status: number;
+  location: string | null;
+  contentType: string | null;
+  /** 2xx gövdesi; üst sınırı aşan gövde ve 2xx dışı yanıt `null` */
+  body: Uint8Array | null;
+}
+export type StatusTransport = (req: StatusHttpRequest) => Promise<StatusHttpResponse>;
+
 export interface PrefetchStatusCacheOptions {
   /** kurum başına öğrenilen adres üst sınırı (varsayılan 64) */
   maxPerIssuer?: number;
   /** alan adı çözücü; varsayılan `node:dns` */
   resolveHost?: HostResolver;
+  /** HTTP taşıyıcısı (yalnız `fetchText` verilmediğinde kullanılır); varsayılan `nodeStatusTransport` (IP sabitlemeli) */
+  transport?: StatusTransport;
 }
+
+/** Bir liste çekiminde izlenen en çok yönlendirme sayısı (her adımda adres yeniden denetlenir). */
+export const MAX_STATUS_REDIRECTS = 3;
+
+/** Adresin alan adı kapsamda mı: `hosts` birebir; `domains` (en az iki etiketli) kendisi ya da alt alan adı. */
+const hostInScope = (host: string, scope: StatusListScope) =>
+  scope.hosts.map(bareHost).includes(host) ||
+  (scope.domains ?? []).map(bareHost).some((d) => d.includes(".") && (host === d || host.endsWith(`.${d}`)));
 
 export class PrefetchStatusCache extends MemoryStatusCache {
   private learned = new Map<string, { kind: StatusListKind; scope: StatusListScope }>();
   private pending = new Set<string>();
   private readonly maxPerIssuer: number;
   private readonly resolveHost: HostResolver;
+  private readonly transport: StatusTransport;
+  /**
+   * `fetchText` verilmezse (üretim) çekim bu önbelleğin denetimli yoluyla yapılır: yönlendirme elle izlenir (en çok
+   * `MAX_STATUS_REDIRECTS`), öğrenilen adreste her adımda şema + kurumun sunucusu + genel IP denetlenir ve bağlantı denetlenen
+   * IP'ye sabitlenir. `fetchText` verilirse (testler, özel ortam) yalnız ilk adres denetlenir; çekici yönlendirme İZLEMEMELİDİR.
+   */
   constructor(
-    private fetchText: StatusFetcher = defaultFetch,
+    private fetchText?: StatusFetcher,
     opts: PrefetchStatusCacheOptions = {},
   ) {
     super();
     this.maxPerIssuer = opts.maxPerIssuer ?? MAX_LEARNED_PER_ISSUER;
     this.resolveHost = opts.resolveHost ?? defaultResolver;
+    this.transport = opts.transport ?? nodeStatusTransport;
   }
   /** Sonradan öğrenilen (çapa günlüğünde olmayan) adresler — her `refresh` turunda onlar da çekilir. */
   learnedRefs(): StatusListRef[] {
@@ -164,7 +213,7 @@ export class PrefetchStatusCache extends MemoryStatusCache {
   }
   /** Adres bu kurumdan öğrenilebilir mi: biçim, şema, kurumun bildirdiği sunucu, IP yazılmış yerel adres. Ağ isteği yok. */
   static acceptableUri(uri: string, scope: StatusListScope | undefined): boolean {
-    if (!scope?.hosts.length) return false;
+    if (!scope || (!scope.hosts.length && !scope.domains?.length)) return false;
     let u: URL;
     try {
       u = new URL(uri);
@@ -175,7 +224,7 @@ export class PrefetchStatusCache extends MemoryStatusCache {
     const host = bareHost(u.hostname);
     const local = isLocalHostName(host);
     if (u.protocol !== "https:" && !(u.protocol === "http:" && scope.allowLocal && local)) return false;
-    if (!scope.hosts.map(bareHost).includes(host)) return false;
+    if (!hostInScope(host, scope)) return false;
     return !local || !!scope.allowLocal;
   }
   want(uri: string, kind: StatusListKind, scope?: StatusListScope): void {
@@ -188,22 +237,90 @@ export class PrefetchStatusCache extends MemoryStatusCache {
     this.pending.add(uri);
     void this.refreshOne({ uri, kind }).finally(() => this.pending.delete(uri));
   }
-  /** Öğrenilen adresin alan adı yalnız genel adreslere çözülüyor mu (SSRF). Çapa günlüğündeki ve `allowLocal` adresler: evet. */
-  private async publicTarget(uri: string): Promise<boolean> {
-    const l = this.learned.get(uri);
-    if (!l || l.scope.allowLocal) return true;
-    const host = bareHost(new URL(uri).hostname);
-    if (isIP(host)) return !isNonPublicAddress(host);
+  /**
+   * Alan adı yalnız genel adreslere çözülüyorsa bağlanılacak adres (SSRF); özel / çözülemeyen adda `null`. Dönen IP'ye
+   * bağlanılır — denetimle bağlantı arasında ad yeniden çözülmez (DNS rebinding).
+   */
+  private async pinnedAddress(host: string): Promise<{ address: string; family: 4 | 6 } | null> {
+    const v = isIP(host);
+    if (v) return isNonPublicAddress(host) ? null : { address: host, family: v as 4 | 6 };
     try {
       const addrs = await this.resolveHost(host);
-      return addrs.length > 0 && addrs.every((a) => !isNonPublicAddress(a));
+      if (!addrs.length || addrs.some((a) => !isIP(a) || isNonPublicAddress(a))) return null;
+      return { address: addrs[0], family: isIP(addrs[0]) as 4 | 6 };
     } catch {
-      return false;
+      return null;
     }
   }
   private async fetchChecked(uri: string, kind: StatusListKind | undefined): Promise<string | null> {
-    if (!(await this.publicTarget(uri))) return null;
-    return this.fetchText(uri, kind).catch(() => null);
+    const scope = this.learned.get(uri)?.scope;
+    if (this.fetchText) {
+      if (scope && !scope.allowLocal) {
+        let host: string;
+        try {
+          host = bareHost(new URL(uri).hostname);
+        } catch {
+          return null;
+        }
+        if (!(await this.pinnedAddress(host))) return null;
+      }
+      return this.fetchText(uri, kind).catch(() => null);
+    }
+    return this.guardedFetch(uri, kind, scope);
+  }
+  /**
+   * Denetimli çekim: yönlendirmeler elle izlenir. Öğrenilen adreste (kurumun belgesinden) her adımda `acceptableUri` (https,
+   * kurumun iptal sunucusu) ve genel IP denetlenir, bağlantı o IP'ye sabitlenir. Çapa günlüğündeki adres (imzalı yayıncı
+   * kaydı) için yönlendirme yalnız aynı kökene izlenir.
+   */
+  private async guardedFetch(
+    uri: string,
+    kind: StatusListKind | undefined,
+    scope: StatusListScope | undefined,
+  ): Promise<string | null> {
+    let url: URL;
+    try {
+      url = new URL(uri);
+    } catch {
+      return null;
+    }
+    const origin = url.origin;
+    for (let hop = 0; hop <= MAX_STATUS_REDIRECTS; hop++) {
+      if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+      let pin: { address: string; family: 4 | 6 } | null = null;
+      if (scope) {
+        if (!PrefetchStatusCache.acceptableUri(url.href, scope)) return null;
+        if (!scope.allowLocal) {
+          pin = await this.pinnedAddress(bareHost(url.hostname));
+          if (!pin) return null;
+        }
+      } else if (hop > 0 && url.origin !== origin) return null;
+      let r: StatusHttpResponse;
+      try {
+        r = await this.transport({
+          url,
+          ...(pin ?? {}),
+          accept: acceptFor(kind),
+          timeoutMs: FETCH_TIMEOUT_MS,
+          maxBytes: MAX_STATUS_TOKEN_BYTES,
+        });
+      } catch {
+        return null;
+      }
+      if (r.status >= 300 && r.status < 400) {
+        if (!r.location) return null;
+        try {
+          url = new URL(r.location, url);
+        } catch {
+          return null;
+        }
+        continue;
+      }
+      if (r.status < 200 || r.status >= 300 || !r.body) return null;
+      // CIR 2024/2979 Ek II: tanımlayıcı listesi ikili CWT'dir — önbellekte base64url (`b64u:`) olarak tutulur
+      return statusBodyForCache(r.body, kind, r.contentType);
+    }
+    return null;
   }
   private async refreshOne(ref: StatusListRef): Promise<boolean> {
     const t = await this.fetchChecked(ref.uri, ref.kind);
@@ -265,37 +382,71 @@ export function statusBodyForCache(body: Uint8Array, kind: StatusListKind | unde
     return asBytes();
   }
 }
-async function defaultFetch(url: string, kind?: StatusListKind): Promise<string | null> {
-  try {
-    const r = await fetch(url, {
-      headers: {
-        accept:
-          kind === "identifier_list"
-            ? "application/identifierlist+cwt, application/cwt;q=0.9, application/cbor;q=0.8, application/octet-stream;q=0.5"
-            : kind === "status_list"
-              ? "application/statuslist+jwt"
-              : "application/statuslist+jwt, application/identifierlist+cwt",
-      },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-    if (!r.ok || !r.body) return null;
-    if (Number(r.headers.get("content-length") ?? 0) > MAX_STATUS_TOKEN_BYTES) return null;
-    const reader = r.body.getReader();
-    const chunks: Uint8Array[] = [];
-    let n = 0;
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      n += value.length;
-      if (n > MAX_STATUS_TOKEN_BYTES) {
-        await reader.cancel();
-        return null;
-      }
-      chunks.push(value);
-    }
-    // CIR 2024/2979 Ek II: tanımlayıcı listesi ikili CWT'dir — önbellekte base64url (`b64u:`) olarak tutulur
-    return statusBodyForCache(Buffer.concat(chunks), kind, r.headers.get("content-type"));
-  } catch {
-    return null;
-  }
+const acceptFor = (kind: StatusListKind | undefined) =>
+  kind === "identifier_list"
+    ? "application/identifierlist+cwt, application/cwt;q=0.9, application/cbor;q=0.8, application/octet-stream;q=0.5"
+    : kind === "status_list"
+      ? "application/statuslist+jwt"
+      : "application/statuslist+jwt, application/identifierlist+cwt";
+
+/**
+ * `lookup` yerine geçer: bağlantı önceden denetlenmiş IP'ye kurulur (Node `net.connect` ve `autoSelectFamily` iki çağrı
+ * biçimini de kullanır: tek adres ya da `all: true` ile dizi). Alan adı yeniden çözülmez.
+ */
+export function pinnedLookup(address: string, family: 4 | 6): LookupFunction {
+  return ((_host: string, opts: unknown, cb?: (...a: unknown[]) => void) => {
+    const callback = typeof opts === "function" ? (opts as (...a: unknown[]) => void) : cb!;
+    if (opts && typeof opts === "object" && (opts as { all?: boolean }).all) callback(null, [{ address, family }]);
+    else callback(null, address, family);
+  }) as unknown as LookupFunction;
 }
+
+/**
+ * Varsayılan taşıyıcı — yalnız Node (bu modül `node:dns` kullanır, tarayıcı yapısına girmez; tarayıcıdaki `/web` alt yolu liste
+ * çekmez): `node:https` / `node:http`, yönlendirme izlemez, `address` verilirse bağlantıyı o IP'ye sabitler (`pinnedLookup`); SNI,
+ * sertifika denetimi ve Host alan adıyla kalır. Her istek yeni bağlantı (`agent: false`): havuzdaki başka bir sokete binilmez.
+ */
+export const nodeStatusTransport: StatusTransport = (req) =>
+  new Promise<StatusHttpResponse>((resolve, reject) => {
+    const mod = req.url.protocol === "https:" ? https : req.url.protocol === "http:" ? http : null;
+    if (!mod) return reject(new Error("unsupported scheme"));
+    const family = req.family ?? ((isIP(req.address ?? "") || 4) as 4 | 6);
+    const r = mod.request(
+      req.url,
+      {
+        method: "GET",
+        headers: { accept: req.accept },
+        agent: false,
+        signal: AbortSignal.timeout(req.timeoutMs),
+        ...(req.address ? { lookup: pinnedLookup(req.address, family) } : {}),
+      },
+      (res) => {
+        const status = res.statusCode ?? 0;
+        const location = typeof res.headers.location === "string" ? res.headers.location : null;
+        const contentType = res.headers["content-type"] ?? null;
+        let settled = false;
+        const done = (body: Uint8Array | null) => {
+          if (settled) return;
+          settled = true;
+          resolve({ status, location, contentType, body });
+        };
+        if (status < 200 || status >= 300 || Number(res.headers["content-length"] ?? 0) > req.maxBytes) {
+          res.resume();
+          return done(null);
+        }
+        const chunks: Buffer[] = [];
+        let n = 0;
+        res.on("data", (c: Buffer) => {
+          n += c.length;
+          if (n > req.maxBytes) {
+            res.destroy();
+            done(null);
+          } else chunks.push(c);
+        });
+        res.on("end", () => done(new Uint8Array(Buffer.concat(chunks))));
+        res.on("error", (e) => (settled ? undefined : reject(e)));
+      },
+    );
+    r.on("error", reject);
+    r.end();
+  });

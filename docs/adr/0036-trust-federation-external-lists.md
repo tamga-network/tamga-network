@@ -162,3 +162,8 @@ eklenir.
 
 > **Ek (2026-10-13):** 119 612 XML liste yayını ve `etsi_tl` ertelendi; tetikleyici AB'den ilk tarafın istemesi (yukarıdaki "Ek").
 > Proje yönetimi onayıyla (ilk AB uyum turu, karar 15).
+
+> **Not (2026-10-13, mühendislik düzeltmesi, paketler 0.5.2):** yukarıdaki "eşleşmez" kuralı daraltıldı — cüzdan
+> değerlendiremediği `trusted_authorities` koşulu yüzünden belgeyi elemez ("değerlendirilemedi"; belge önerilir, olumlu güven
+> işareti sayılmaz), `etsi_tl`'yi yüklü listelere karşı değerlendirir; ayrıntı [[SPEC-PROTO-0002]] §4.6. "Geçti" sayma yasağı
+> değişmedi.

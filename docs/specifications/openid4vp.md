@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-13
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -315,6 +315,28 @@ isteyen seçeneği öne koyun.
 tablosuna göredir ([[ADR-0045]]: SD-JWT `birthdate` / `nationalities` ↔ mdoc `birth_date` (full-date) / `nationality`; öteki
 adlar aynı). Doğrulayıcı yalnızca `age_over_18` görür; ad, doğum tarihi, kimlik numarası
 açıklanmaz. `docType` = vct URN.
+
+## 4.6 `trusted_authorities` — cüzdan nasıl değerlendirir
+
+Doğrulayıcı, sorgudaki bir belge için kabul ettiği güven kaynaklarını `trusted_authorities` ile söyleyebilir (OpenID4VP 1.0
+§6.1.1); belge en az bir koşula uymalıdır. Tamga doğrulayıcısı `aki` kullanır ([[t:HAIP]] §5). Cüzdan her koşulu üç sonuçtan
+biriyle değerlendirir (paketler 0.5.2):
+
+| Tür | Cüzdan ne yapar |
+|---|---|
+| `aki` | Belgenin x5c zincirindeki bir sertifikanın AKI'si (base64url) değerlerden biri mi — **değerlendirilir** |
+| `etsi_tl` | Değer, cüzdanın yüklediği ve imzasını doğruladığı bir güven listesinin (ETSI TS 119 612 TL ya da TS 119 602 LoTE) adresiyse: belgenin zinciri o listedeki bir belge verme hizmeti sertifikasına çıkıyor mu — **değerlendirilir**. Değerdeki liste cüzdanda yüklü değilse **değerlendirilemez** |
+| `openid_federation` ve bilinmeyen türler | **değerlendirilemez** |
+
+- Bir koşul eşleşirse belge **önerilir** (`matched`).
+- Hiçbir koşul eşleşmez ama biri **değerlendirilemiyorsa** belge yine **önerilir** (`not_evaluable`): cüzdan bilemediği bir
+  koşul yüzünden belgeyi gizlemez, güven denetimini doğrulayıcı kendisi yapar (AB doğrulayıcısı yalnız `etsi_tl` isteyebilir).
+  **`not_evaluable` olumlu güven işareti değildir:** onay ekranı bunu "doğrulandı" ya da "güvenilir" diye göstermez, kayıtta
+  "geçti" sayılmaz.
+- Bütün koşullar değerlendirilip hiçbiri eşleşmezse belge **önerilmez**.
+
+Not: 0.5.2'nin ilk taslağı değerlendirilemeyen türü "eşleşmez" sayıyordu; bu, yalnız `etsi_tl` isteyen AB doğrulayıcılarına hiçbir
+belgenin gitmemesi demekti. Düzeltilmiş kural yukarıdadır (yanlış olumlu yok, yanlış eleme de yok).
 
 ---
 

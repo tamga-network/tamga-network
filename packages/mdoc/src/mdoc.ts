@@ -190,7 +190,7 @@ export function verifyIssuerSigned(
     /**
      * Saat farkı toleransı (sn, varsayılan 0): yalnız başlangıç (`validFrom`) bu kadar erkene çekilir — belgeyi alan cüzdanın
      * saati belge verenin saatinden birkaç saniye gerideyse az önce verilen belge "henüz geçerli değil" görünmesin. Bitiş
-     * (`validUntil`) uzatılmaz (0.5.1; SD-JWT `exp` ile aynı: bitiş anından sonra geçersiz).
+     * (`validUntil`) uzatılmaz (0.5.2; SD-JWT `exp` ile aynı: bitiş anından sonra geçersiz).
      */
     clockSkewSec?: number;
   },
@@ -290,7 +290,7 @@ export function verifyIssuerSigned(
   }
 
   // iptal bilgisi (ISO 18013-5 2. baskı §12.3.6; doğrulayıcının D1 adımı): `status` varsa okunabilir olmalı. Belge verenin imzası
-  // altındaki bozuk bir giriş iptal denetimini sessizce atlatamaz (0.5.1) — belge geçersizdir (`status entry malformed`).
+  // altındaki bozuk bir giriş iptal denetimini sessizce atlatamaz (0.5.2) — belge geçersizdir (`status entry malformed`).
   const st = mso.get("status");
   let status: { idx: number; uri: string } | undefined;
   let identifierList: IdentifierListRef | undefined;

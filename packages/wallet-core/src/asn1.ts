@@ -125,6 +125,28 @@ export function certAuthorityKeyId(der: Uint8Array): Uint8Array | null {
   return null;
 }
 
+const OID_SKI = [0x55, 0x1d, 0x0e]; // 2.5.29.14 subjectKeyIdentifier
+
+/** SubjectKeyIdentifier uzantısının değeri (OCTET STRING içinde OCTET STRING, RFC 5280 §4.2.1.2); yoksa null. */
+export function certSubjectKeyId(der: Uint8Array): Uint8Array | null {
+  const f = tbsFields(der);
+  const extWrap = f.find((t) => t.tag === 0xa3);
+  if (!extWrap) return null;
+  const exts = children(der, extWrap)[0];
+  if (!exts || exts.tag !== 0x30) throw new Error("X.509: extensions is not a SEQUENCE");
+  for (const ext of children(der, exts)) {
+    const parts = children(der, ext);
+    const oid = parts[0];
+    if (!oid || oid.tag !== 0x06 || !eq(der, oid, OID_SKI)) continue;
+    const val = parts[parts.length - 1];
+    if (val.tag !== 0x04) throw new Error("X.509: SKI extnValue is not an OCTET STRING");
+    const kid = readTlv(der, val.start);
+    if (kid.tag !== 0x04 || kid.end !== val.end) throw new Error("X.509: SKI malformed");
+    return der.slice(kid.start, kid.end);
+  }
+  return null;
+}
+
 const OID_ORG_IDENTIFIER = [0x55, 0x04, 0x61]; // 2.5.4.97 organizationIdentifier (ETSI EN 319 412-1)
 
 /**

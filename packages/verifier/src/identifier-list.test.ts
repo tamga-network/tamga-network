@@ -6,7 +6,7 @@ import { describe, expect, it, beforeAll } from "vitest";
 import { createHash, webcrypto } from "node:crypto";
 import { X509CertificateGenerator, cryptoProvider } from "@peculiar/x509";
 import { signIdentifierListToken } from "@tamga-network/mdoc";
-import { stepD, type VerifyCtx } from "./steps.js";
+import { externalStatusScope, stepD, type VerifyCtx } from "./steps.js";
 import {
   MemoryStatusCache,
   PrefetchStatusCache,
@@ -200,7 +200,7 @@ describe("tanımlayıcı listesi: ikili gövde, bozuk önbellek, ön çekim küm
   });
 });
 
-describe("tanımlayıcı listesi öğrenme sınırları (0.5.1: SSRF, kurumun iptal sunucuları, kurum başına üst sınır)", () => {
+describe("tanımlayıcı listesi öğrenme sınırları (0.5.2: SSRF, kurumun iptal sunucuları, kurum başına üst sınır)", () => {
   const scope = { issuer: "0xa", hosts: ["status.example"] };
   const fetched: string[] = [];
   const make = (resolve: (h: string) => Promise<string[]> = async () => ["93.184.216.34"], maxPerIssuer?: number) => {
@@ -335,5 +335,48 @@ describe("tanımlayıcı listesi öğrenme sınırları (0.5.1: SSRF, kurumun ip
     wanted.length = 0;
     expect(await stepD({ ...base, issuerRec: null } as unknown as VerifyCtx)).toMatchObject({ step: "D2" });
     expect(wanted).toEqual([]);
+  });
+
+  it("0.5.2: dış kurum — dış listenin iptal sunucuları; yoksa belge imzacısının SAN alan adları; ikisi de yoksa öğrenilmez", async () => {
+    const wanted: unknown[][] = [];
+    const cache = { get: () => null, want: (...a: unknown[]) => wanted.push(a) };
+    const ext = (status_hosts: string[]) => ({
+      input: { statusCache: cache, policy: { freshness: { max_status_token_age_sec: 3600 } } },
+      now: NOW,
+      done: [],
+      skipped: [],
+      a: {
+        format: "mso_mdoc",
+        identifierList: { id: "22".repeat(16), uri: URI },
+        leafDnsNames: ["*.pid.example.eu", "10.0.0.1", "localhost", "pid.example.eu"],
+      },
+      // dış kurum kaydı (trust-source externalIssuerRecord): issuer_url ve status_list_base boş
+      issuerRec: { issuer_id: "0xext", issuer_url: "", status_list_base: "" },
+      ext: { tri: "YES", status_hosts },
+    });
+    await stepD(ext(["status.pid.example.eu"]) as unknown as VerifyCtx);
+    expect(wanted.pop()).toEqual([URI, "identifier_list", { issuer: "0xext", hosts: ["status.pid.example.eu"] }]);
+    await stepD(ext([]) as unknown as VerifyCtx);
+    expect(wanted.pop()).toEqual([URI, "identifier_list", { issuer: "0xext", hosts: [], domains: ["pid.example.eu"] }]);
+  });
+
+  it("externalStatusScope + acceptableUri: SAN alan adı ve alt alan adları; kardeş, sonek taklidi, tek etiket ve IP yok", () => {
+    expect(externalStatusScope({ status_hosts: ["A.example"] }, ["pid.example"])).toEqual({ hosts: ["a.example"] });
+    const s = {
+      issuer: "0xext",
+      ...externalStatusScope({ status_hosts: [] }, ["*.Pid.Example.eu", "eu", "1.2.3.4", "x.local"]),
+    };
+    expect(s.domains).toEqual(["pid.example.eu"]);
+    const ok = (u: string) => PrefetchStatusCache.acceptableUri(u, s);
+    expect(ok("https://pid.example.eu/il/1")).toBe(true);
+    expect(ok("https://status.pid.example.eu/il/1")).toBe(true);
+    expect(ok("https://example.eu/il/1")).toBe(false); // üst alan adı değil
+    expect(ok("https://other.example.eu/il/1")).toBe(false); // kardeş
+    expect(ok("https://evilpid.example.eu/il/1")).toBe(false); // sonek taklidi
+    expect(ok("http://pid.example.eu/il/1")).toBe(false);
+    // SAN'ı da olmayan dış kurum: kapsam boş, adres öğrenilmez
+    expect(
+      PrefetchStatusCache.acceptableUri(URI, { issuer: "0xext", ...externalStatusScope({ status_hosts: [] }, []) }),
+    ).toBe(false);
   });
 });
