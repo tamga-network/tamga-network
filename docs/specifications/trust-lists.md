@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-12
+last_updated: 2026-10-14
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -100,7 +100,7 @@ CHANGELOG.md                  herkese açık değişiklik günlüğü
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], recognition{mode, recognizes[]}}` | `Governance` üye listesi + `CrossRecognition` |
 | `schemas[]` | `{schema_id, vct, metadata_url, content_hash, content_hashes[], layer: NETWORK, governance, status, registered_at, status_history[]}` | `SchemaRegistry` (NETWORK); `registered_at` **kalıcıdır** (ilk çapa zamanı); `content_hashes` = geçerli sürüm özetleri ([[ADR-0010]] K4; geliştirme evresinde yalnız güncel özet, [[ADR-0029]]), her biri bir kez çapalanır |
 | `eaa_categories` | `{urn → açıklama}` | Kategori namespace'i ([[ADR-0010]] K5) |
-| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA güven çapasını (R-7; zincirde henüz yok — ADR adayı). `status` (kayıt ve `solutions[].status`) `Status` kümesindendir: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA doğrulamasında yalnız `ACTIVE` kaydın `ACTIVE` anahtarları kullanılır. `RESERVED` kayıt yer ayırır (ör. işletmecisi kendi sertifikasını henüz vermemiş cüzdan sağlayıcı, [[ADR-0042]]): `wua_signing_keys` boş olabilir ve WUA doğrulamasında kullanılmaz. `security_level` cüzdan güvence seviyesidir ([[SPEC-WALLET-0001]] §2.2; W1 desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5)) |
+| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA güven çapasını (R-7; zincirde henüz yok — ADR adayı). `status` (kayıt ve `solutions[].status`) `Status` kümesindendir: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA doğrulamasında yalnız `ACTIVE` kaydın `ACTIVE` anahtarları kullanılır. `RESERVED` kayıt yer ayırır (ör. işletmecisi kendi sertifikasını henüz vermemiş cüzdan sağlayıcı, [[ADR-0042]]): `wua_signing_keys` boş olabilir ve WUA doğrulamasında kullanılmaz. `security_level` cüzdan güvence seviyesidir ([[SPEC-WALLET-0001]] §2.2; W1 desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5)). İsteğe bağlı `identifiers[]` ([[ADR-0024]] biçimi, `{scheme, value}`): sağlayıcının resmî kimlik numarası. Kayıt aracı (`wallet-provider activate`) imza sertifikasını ETSI TS 119 412-6 §5 profiline göre denetler: konu alanında `organizationIdentifier` (2.5.4.97) bu kimlik numarasından türetilen semantik tanımlayıcıyla (`VATTR-<VKN>` …) aynı olmalı ve qcStatements QcType `id-etsi-qct-wal` (0.4.0.194126.1.2) taşımalı; kimlik numarası olmayan kayıt etkinleşmez (istisna: sandbox'taki "(TEST)" sertifikalar) |
 | `zk_circuits[]` | `{circuit_id, system, version, attributes, sha256, status}` | Kabul edilen ZK devreleri ([[ADR-0032]] ZK2; zincirde henüz yok) |
 | `pid_providers[]` | boş, rezerve | BT8 → TL8 |
 

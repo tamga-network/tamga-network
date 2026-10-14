@@ -4,7 +4,7 @@ title: "Wallet and key attestations"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-13
+last_updated: 2026-10-14
 summary: >
   Instead of a single 30-day WUA, the EU TS3 model: a Wallet Instance Attestation (WIA) living less than 24 hours, with a fresh key
   and a fresh status list entry for every credential transaction, plus a key attestation (KA, `key_attestation`) describing where
@@ -201,3 +201,9 @@ These notes do not change the decision; they align the format with the texts the
 > tolerated, required in the PoP), removal of the legacy WUA path and the `clientStatus` setting (`optional` / `required`; the
 > identity service uses `required`), WIA `cnf` = the credential's own DPoP key (rolled back in TS3 1.5.2 — not implemented, see the correction above), WIA/KA lists ≥ 10,000 — see "Implementation notes (2026-10-13)" above. Approved by project
 > management (first EU alignment review).
+>
+> **Note (2026-10-14, K2 period wording):** "`client_status.exp` … (Tamga: 60 days)" in K2 is only the **default period** (when
+> the issuer states no preference). When the issuer states the preference of [[ADR-0047]] K1 (`preferred_client_status_period`,
+> for the KA `preferred_key_storage_status_period`), the provider sets `client_status.exp` (and `key_storage_status.exp` in the
+> KA) to that period, up to the provider's own maximum (Tamga Wallet: 730 days). The 31-day minimum and the rest of the decision
+> do not change.

@@ -171,10 +171,10 @@ gösterme olağan yolla yapılır.
 | Tarayıcı üzerinden gösterme (Digital Credentials API) | Doğrulayıcı hazır; cüzdan bağlantısı yok |
 | Donanım anahtarları ve cihaz kanıtı | Kodlandı; cihaz testi mağaza sürümüyle |
 | Sandbox (herkese açık; kimlik doğrulaması günlük/aylık tavanlı) | Yayında |
-| Belge verenin paylaşım kuralı (gömülü açıklama politikası) | Kaynak kodda uygulandı; paketlerin 0.5.0 sürümüyle yayınlanır |
-| Kurumun cüzdan kanıtı tercihleri (anahtar deposu şartı, iptal bakım süresi) | Kaynak kodda uygulandı; paketlerin 0.5.0 sürümüyle yayınlanır |
-| AB'nin eski güven listesi biçimi (ETSI TS 119 612, XML) ve cüzdanda dış listeler | Kaynak kodda uygulandı; paketlerin 0.5.0 sürümüyle yayınlanır |
-| Attestation Revocation List (tanımlayıcı listesi) — doğrulayıcı ve cüzdan tarafı | Kaynak kodda uygulandı; paketlerin 0.5.0 sürümüyle yayınlanır; Tamga belge verenleri Status List kullanır |
+| Belge verenin paylaşım kuralı (gömülü açıklama politikası) | Yayında (paketler npm'de 0.5.0'dan beri) |
+| Kurumun cüzdan kanıtı tercihleri (anahtar deposu şartı, iptal bakım süresi) | Yayında (paketler npm'de 0.5.0'dan beri) |
+| AB'nin eski güven listesi biçimi (ETSI TS 119 612, XML) ve cüzdanda dış listeler | Yayında (paketler npm'de 0.5.0'dan beri) |
+| Attestation Revocation List (tanımlayıcı listesi) — doğrulayıcı ve cüzdan tarafı | Yayında (paketler npm'de 0.5.0'dan beri); Tamga belge verenleri Status List kullanır |
 
 ---
 

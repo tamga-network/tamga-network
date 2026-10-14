@@ -4,7 +4,7 @@ title: "Eğitim şemaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-14
 summary: >
   Pilotun iki belge tipini normatif olarak tanımlar. TamgaStudentCredential:
   kısa ömürlü (90 gün), iptal listesi kullanmaz, öğrencilik durumunu kanıtlar.
@@ -227,6 +227,8 @@ cüzdan arka planda kendiliğinden yenileme yapmaz.
 | `isced_f_code` | string | ✓ | `allowed` | ISCED-F 2013, 2–4 hane — §6.4 |
 | `faculty_name` | LangString | — | `allowed` | Fakülte |
 | `expected_graduation_year` | integer | — | `allowed` | Tahmini |
+| `credit_points` | number | — | `allowed` | Programın iş yükü (AKTS, 0–1000); AB kayıt belgesi (EUHEPOE) |
+| `enrollment_date` | date | — | `allowed` | Kayıt tarihi (`YYYY-MM-DD`); AB kayıt belgesi (EUHEPOE). `enrollment_year` zorunlu kalır |
 | `is_enrolled` | boolean | ✓ | `allowed` | **Türetilmiş** — §2.3 |
 
 ### 2.2.1 `student_status` neden `GRADUATED` içermez
@@ -267,7 +269,7 @@ gösterilen şeydir.
   "title": "TamgaStudentCredential",
   "type": "object",
   "required": [
-    "iss", "vct", "iat", "exp", "cnf",
+    "iss", "vct", "vct#integrity", "iat", "exp", "cnf",
     "family_name", "given_name", "birth_date",
     "awarding_body_name", "awarding_body_id", "awarding_body_country",
     "student_status", "enrollment_year", "study_level",
@@ -276,9 +278,11 @@ gösterilen şeydir.
   "properties": {
     "iss":   { "type": "string", "format": "uri" },
     "vct":   { "const": "urn:tamga:edu:StudentCredential:1" },
+    "vct#integrity": { "type": "string", "pattern": "^sha256-" },
     "iat":   { "type": "integer" },
     "exp":   { "type": "integer" },
     "cnf":   { "type": "object" },
+    "category": { "enum": ["urn:tamga:eaa:pub", "urn:tamga:eaa:qualified"] },
 
     "family_name": { "type": "string", "minLength": 1, "maxLength": 200 },
     "given_name":  { "type": "string", "minLength": 1, "maxLength": 200 },
@@ -295,6 +299,8 @@ gösterilen şeydir.
     "isced_f_code": { "type": "string", "pattern": "^[0-9]{2,4}$" },
     "faculty_name": { "$ref": "../../../core/TamgaBaseCredential/1.0.0/schema.json#/$defs/LangString" },
     "expected_graduation_year": { "type": "integer", "minimum": 1900, "maximum": 2200 },
+    "credit_points": { "type": "number", "minimum": 0, "maximum": 1000 },
+    "enrollment_date": { "$ref": "../../../core/TamgaBaseCredential/1.0.0/schema.json#/$defs/DateOnly" },
 
     "is_enrolled": { "type": "boolean" }
   },
@@ -338,6 +344,8 @@ eklemesi engellenir; ihtiyaç varsa MINOR sürüm çıkarılır. Serbest bırakm
   "isced_f_code": "0613",
   "faculty_name": { "tr-TR": "Mühendislik ve Doğa Bilimleri Fakültesi" },
   "expected_graduation_year": 2026,
+  "credit_points": 240,
+  "enrollment_date": "2022-09-19",
 
   "is_enrolled": true
 }
@@ -367,6 +375,11 @@ kılar.
 **İptal listesi neden var:** Diploma iptali nadir ama gerçektir — intihal tespiti,
 sahte belge ile kayıt, disiplin kararı. Öğrenci belgesinden farkı, kısa ömrün
 iptalin yerine geçememesidir.
+
+> **Geliştirme evresi ([[ADR-0029]], [[ADR-0048]] K2):** paketlerin 0.6.0 sürümünde diplomanın Type Metadata'sına
+> `tamga.suspension_allowed: true` eklendi; metadata ve dolayısıyla `vct#integrity` özeti değişti. 0.6.0'dan önce verilmiş
+> (deneme) diplomalar yeni özeti tutmaz, doğrulamada reddedilir ve **yeniden verilmelidir**: kurum diplomayı yeniden verir, mezun
+> cüzdanına yeniden alır. Geçiş kodu yazılmaz (ADR-0029); beta'dan sonra yayımlanmış şema değişmez, yeni sürüm çıkar.
 
 ## 3.2 Alan tablosu
 

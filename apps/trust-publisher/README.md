@@ -31,6 +31,7 @@ Liste biçimi: [[SPEC-TRUST-0001]]. Dış listeler (federasyon, ETSI TS 119 602)
 | `npm run trust:build:sandbox`                                           | sandbox listesini üretir (`registry-sandbox` + `ops/pki-sandbox` → `dist-sandbox/`) |
 | `npm run trust:list`                                                    | kayıtlı kurumlar ve doğrulayıcılar                                                  |
 | `npm run trust:wallet-provider -- list\|show [--id <id>]`               | cüzdan sağlayıcılar (gerçek + sandbox kayıt defteri)                                |
+| `npm run trust:wallet-provider -- check --id <id> --cert <pem>`         | sertifikayı aynı kurallarla denetler, hiçbir şey yazmaz (anahtar yenilemesi)        |
 | `npm run trust:wallet-provider -- activate --id <id> --cert <pem>`      | sağlayıcıyı sertifikasıyla etkinleştirir (aşağıda; `--dry-run` farkı basar)         |
 | `npm run trust:wallet-provider -- suspend\|revoke --id <id>`            | sağlayıcıyı askıya alır / geri çeker (`--reason`; kayıt silinmez, TL2)              |
 | `npm run trust:external`                                                | dış güven listelerini çeker                                                         |
@@ -75,6 +76,10 @@ TAMGA_PROD_PKI_DIR=<gerçek ağın PKI klasörü> \
 - Sertifikayı denetler (cüzdan kanıt politikası FW-POL-0002, ADR-0025): tek PEM sertifikası, özel anahtar yok; EC P-256 ve
   ecdsa-with-SHA256 (ES256); `keyUsage` `digitalSignature` var, `keyCertSign`/`cRLSign` yok; CA değil; geçerlilik süresi içinde
   (90 günden az kaldıysa uyarı); gerçek listeye konu adında `(TEST)` olan sertifika girmez (ADR-0038 SB1).
+- Sağlayıcı sertifika profili (ETSI TS 119 412-6 §5): konu alanında `organizationIdentifier` (2.5.4.97; `VATTR-<VKN>`,
+  `NTRTR-<MERSİS>`, `LEIXG-<LEI>`) olmalı ve kaydın `identifiers[]`'ından türetilen değerle aynı olmalı (kayıtta kimlik numarası
+  yoksa etkinleştirme yapılmaz); qcStatements QcType `id-etsi-qct-wal` (0.4.0.194126.1.2) taşımalı. İstisna: sandbox listesindeki
+  `(TEST)` sertifikalar (ağın deneme sahneleri, uyum testi aracı). `check` aynı denetimi yazmadan yapar.
 - SHA-256 parmak izini basar, sertifikayı ad kuralıyla PKI klasörüne yazar (`<pki>/wallet-provider-<id küçük harf>.cert.pem`;
   gerçek ağ `--prod-pki` ya da `TAMGA_PROD_PKI_DIR`, zorunlu; sandbox `ops/pki-sandbox`, `--sandbox-pki` ile değişir). Aynı adda
   başka bir sertifika varsa üzerine yazmaz. PKI klasörünün kökü hedefle uyuşmalı (sandbox kökü `(TEST)`).

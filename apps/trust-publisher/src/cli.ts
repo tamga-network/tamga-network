@@ -90,6 +90,7 @@ import {
   activateWalletProvider,
   certSummary,
   inspectWalletProviderCert,
+  providerOrgIdProblems,
   lineDiff,
   setWalletProviderStatus,
   summarizeWalletProviders,
@@ -984,6 +985,8 @@ async function formatJson(obj: unknown, filepath: string): Promise<string> {
  * Cüzdan sağlayıcı kaydı (ADR-0042) — gerçek ve sandbox kayıt defterinde `wallet_providers[]`. Liste İMZALANMAZ: gerçek liste
  * ağ sunucusunda dağıtımda (`deploy.sh` → trust:build), sandbox listesi aynı dağıtımda `sandbox-setup.sh refresh` ile imzalanır.
  *   wallet-provider list|show [--id <provider_id>] [--registry registry|registry-sandbox|both]
+ *   wallet-provider check --id <provider_id> --cert <pem> [--registry …]   sertifikayı denetler, hiçbir şey yazmaz (anahtar
+ *                                                 yenilemede yeni sertifika için; ops/README.md "Cüzdan sağlayıcı imza sertifikasını yenileme")
  *   wallet-provider activate --id <provider_id> --cert <pem> [--registry …] [--prod-pki <dir>] [--sandbox-pki <dir>] [--dry-run]
  *   wallet-provider suspend|revoke --id <provider_id> [--reason r] [--registry …] [--dry-run]
  * Sertifika `<pki>/wallet-provider-<provider_id küçük harf>.cert.pem` olarak yazılır (yalnız sertifika). Gerçek ağın PKI klasörü
@@ -997,7 +1000,7 @@ async function walletProviderCommand(sub: string | undefined, args: string[]) {
   const dry = args.includes("--dry-run");
   const which = val("registry") ?? "both";
   const usage =
-    "kullanım: wallet-provider list|show [--id <provider_id>] | activate --id <provider_id> --cert <pem> | suspend|revoke --id <provider_id> [--reason r]; ortak: [--registry registry|registry-sandbox|both] [--dry-run]";
+    "kullanım: wallet-provider list|show [--id <provider_id>] | check|activate --id <provider_id> --cert <pem> | suspend|revoke --id <provider_id> [--reason r]; ortak: [--registry registry|registry-sandbox|both] [--dry-run]";
   if (!["registry", "registry-sandbox", "both"].includes(which))
     throw new RegistryError(["--registry: registry | registry-sandbox | both"]);
   const envs: WpEnvironment[] =
@@ -1042,6 +1045,45 @@ async function walletProviderCommand(sub: string | undefined, args: string[]) {
         );
       }
     }
+    return;
+  }
+  if (sub === "check") {
+    // Salt denetim: sertifika profili (ETSI TS 119 412-6 §5) + kayıttaki kimlik numarası; dosya yazmaz
+    const certPath = val("cert");
+    if (!id || !certPath) throw new RegistryError([usage]);
+    const pemText = readFileSync(resolve(certPath), "utf8");
+    const problems: string[] = [];
+    for (const e of envs) {
+      try {
+        const info = inspectWalletProviderCert(pemText, { now: new Date(), environment: e });
+        const w = ((load(e).wallet_providers ?? []) as Array<Record<string, unknown>>).find(
+          (x) => x.provider_id === id,
+        );
+        if (!w) throw new RegistryError([`cüzdan sağlayıcı yok: ${id}`]);
+        const orgProblems = info.profileRequired ? providerOrgIdProblems(w, info.organizationIdentifier) : [];
+        // ADR-0042: gerçek kayıt defterinde de olan sağlayıcı sandbox'ta gerçek sertifikasını taşır — test sertifikası olmaz
+        const inProd =
+          e === "sandbox" &&
+          existsSync(srcFile("production")) &&
+          ((load("production").wallet_providers ?? []) as Array<Record<string, unknown>>).some(
+            (x) => x.provider_id === id,
+          );
+        if (inProd && info.isTest)
+          orgProblems.push(
+            `${id} gerçek listede de kayıtlı: sandbox'ta da gerçek sertifikası olur, (TEST) sertifika olmaz (SB1)`,
+          );
+        if (orgProblems.length) throw new RegistryError(orgProblems);
+        const listed = ((w.wua_signing_certs ?? []) as string[]).join(", ") || "-";
+        console.log(
+          `${label(e)}: ${id} uygun — SHA-256 ${info.fingerprint} · ${info.subject} · geçerli ${info.notAfter.toISOString()} tarihine kadar · kayıttaki sertifikalar: ${listed}`,
+        );
+        for (const w2 of info.warnings) console.log(`  [uyarı] ${w2}`);
+      } catch (err) {
+        if (!(err instanceof RegistryError)) throw err;
+        problems.push(...err.problems.map((x) => `${label(e)}: ${x}`));
+      }
+    }
+    if (problems.length) throw new RegistryError(problems);
     return;
   }
   if (!id || !["activate", "suspend", "revoke"].includes(sub ?? "")) throw new RegistryError([usage]);
@@ -1105,7 +1147,15 @@ async function walletProviderCommand(sub: string | undefined, args: string[]) {
           throw new RegistryError([`sandbox sertifikası gerçek ağdakiyle aynı olmalı (ADR-0042): gerçek ${prodFp}`]);
       }
       const src = load(e);
-      const { next, changed } = activateWalletProvider(src, id, { certName, now, environment: e, reason, production });
+      const { next, changed } = activateWalletProvider(src, id, {
+        certName,
+        now,
+        environment: e,
+        reason,
+        production,
+        organizationIdentifier: info.organizationIdentifier,
+        profileRequired: info.profileRequired,
+      });
       if (e === "production") production = next; // sandbox denetimi bu komutun yazacağı gerçek kayda bakar
       const before = readFileSync(srcFile(e), "utf8");
       const after = changed ? await formatJson(next, srcFile(e)) : before;

@@ -18,7 +18,7 @@ sources of the documentation and framework sites.
 
 ## Packages
 
-Published on npm as the **0.5.1 test release** — the API may change until the stable 1.0.0.
+Published on npm as the **0.6.0 test release** — the API may change until the stable 1.0.0.
 
 | Package | What it does |
 |---|---|

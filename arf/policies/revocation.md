@@ -153,7 +153,7 @@ service issues no new ZK copy (RB-AP-ID-11).
 | --- | --- |
 | Cascading revocation of institutional credentials when a wallet unit is revoked | **Decision (2026-10-12, [[ADR-0047]] K1):** not done; the credentials are bound to a device key and cannot be used once the unit is revoked (§3.3). The identity service revokes its own credentials (RB-AP-ID-12) |
 | An issuer's own additional revocation policy | **Decision (2026-10-12, [[ADR-0047]] K2):** an institution may publish additional conditions with `revocation_policy_uri`; it cannot narrow the common conditions (§3.4, RB-AP-27) |
-| Attestation Revocation List | The EU requires verifiers and wallets to support both mechanisms (VCR_10, VCR_12); one is enough for an issuer (VCR_11). **Packages 0.5.0:** the verifier and the wallet core verify the identifier list; Tamga issuers keep publishing the Status List (a bit-based list hides the index better; an identifier list shows how many credentials were revoked). The CWT form of the list for mdoc (CIR 2024/2979 Annex II EAA-6.2.10.1-07) is an open topic |
+| Attestation Revocation List | The EU requires verifiers and wallets to support both mechanisms (VCR_10, VCR_12); one is enough for an issuer (VCR_11). **Packages 0.5.0:** the verifier and the wallet core verify the identifier list; Tamga issuers keep publishing the Status List (a bit-based list hides the index better; an identifier list shows how many credentials were revoked). The CWT form of the list for mdoc (CIR 2024/2979 Annex II EAA-6.2.10.1-07) is in the 0.6.0 packages: a type also issued as mdoc publishes its list in a CWT form as well, and the mdoc copy points to the CWT address ([[ADR-0048]] K2, K3; RB-AP-28) |
 
 ## Status
 

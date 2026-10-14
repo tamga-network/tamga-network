@@ -4,7 +4,7 @@ title: "Education schemas"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-14
 summary: >
   Normatively defines the pilot's two credential types. TamgaStudentCredential: short-lived (90 days), no status list,
   proves student status. TamgaDiplomaCredential: long-lived, uses a status list, proves graduation. For both it gives the
@@ -213,6 +213,8 @@ the background.
 | `isced_f_code` | string | ✓ | `allowed` | ISCED-F 2013, 2–4 digits — §6.4 |
 | `faculty_name` | LangString | — | `allowed` | Faculty |
 | `expected_graduation_year` | integer | — | `allowed` | Estimated |
+| `credit_points` | number | — | `allowed` | Programme workload (ECTS, 0–1000); EU proof of enrolment (EUHEPOE) |
+| `enrollment_date` | date | — | `allowed` | Date of enrolment (`YYYY-MM-DD`); EU proof of enrolment (EUHEPOE). `enrollment_year` stays required |
 | `is_enrolled` | boolean | ✓ | `allowed` | **Derived** — §2.3 |
 
 ### 2.2.1 Why `student_status` does not include `GRADUATED`
@@ -250,7 +252,7 @@ This is the most concrete gain of [[t:selective-disclosure]] and the easiest thi
   "title": "TamgaStudentCredential",
   "type": "object",
   "required": [
-    "iss", "vct", "iat", "exp", "cnf",
+    "iss", "vct", "vct#integrity", "iat", "exp", "cnf",
     "family_name", "given_name", "birth_date",
     "awarding_body_name", "awarding_body_id", "awarding_body_country",
     "student_status", "enrollment_year", "study_level",
@@ -259,9 +261,11 @@ This is the most concrete gain of [[t:selective-disclosure]] and the easiest thi
   "properties": {
     "iss":   { "type": "string", "format": "uri" },
     "vct":   { "const": "urn:tamga:edu:StudentCredential:1" },
+    "vct#integrity": { "type": "string", "pattern": "^sha256-" },
     "iat":   { "type": "integer" },
     "exp":   { "type": "integer" },
     "cnf":   { "type": "object" },
+    "category": { "enum": ["urn:tamga:eaa:pub", "urn:tamga:eaa:qualified"] },
 
     "family_name": { "type": "string", "minLength": 1, "maxLength": 200 },
     "given_name":  { "type": "string", "minLength": 1, "maxLength": 200 },
@@ -278,6 +282,8 @@ This is the most concrete gain of [[t:selective-disclosure]] and the easiest thi
     "isced_f_code": { "type": "string", "pattern": "^[0-9]{2,4}$" },
     "faculty_name": { "$ref": "../../../core/TamgaBaseCredential/1.0.0/schema.json#/$defs/LangString" },
     "expected_graduation_year": { "type": "integer", "minimum": 1900, "maximum": 2200 },
+    "credit_points": { "type": "number", "minimum": 0, "maximum": 1000 },
+    "enrollment_date": { "$ref": "../../../core/TamgaBaseCredential/1.0.0/schema.json#/$defs/DateOnly" },
 
     "is_enrolled": { "type": "boolean" }
   },
@@ -321,6 +327,8 @@ meaning) back through the back door.
   "isced_f_code": "0613",
   "faculty_name": { "tr-TR": "Mühendislik ve Doğa Bilimleri Fakültesi" },
   "expected_graduation_year": 2026,
+  "credit_points": 240,
+  "enrollment_date": "2022-09-19",
 
   "is_enrolled": true
 }
@@ -347,6 +355,12 @@ graduate dependent on the university for life.
 
 **Why there is a status list:** revoking a diploma is rare but real — plagiarism detected, enrolment with a forged document, a
 disciplinary decision. The difference from the student certificate is that a short lifetime cannot replace revocation.
+
+> **Development stage ([[ADR-0029]], [[ADR-0048]] K2):** in the 0.6.0 packages the diploma's Type Metadata gained
+> `tamga.suspension_allowed: true`; the metadata and so the `vct#integrity` hash changed. (Trial) diplomas issued before 0.6.0
+> do not match the new hash, are rejected at verification and **have to be issued again**: the institution issues the diploma
+> again and the graduate adds it to the wallet again. No migration code is written (ADR-0029); after the beta a published schema
+> does not change, a new version is released.
 
 ## 3.2 Field table
 

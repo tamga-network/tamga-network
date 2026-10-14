@@ -2,10 +2,26 @@
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The documents (docs, ARF) are 1.0.0 until the public
 announcement; changes before it are folded into this release. The `@tamga-network/*` packages are versioned separately: they
-are published on npm as test releases — `0.5.2` published, `0.6.0` prepared (the API may change in test releases); the
-stable `1.0.0` comes when everything is ready.
+are published on npm as test releases — `0.6.0` is the current one (the API may change in test releases); the stable `1.0.0`
+comes when everything is ready.
 
-## 0.6.0 — 2026-10-13 (packages, test release; prepared, not yet on npm)
+## Unreleased
+
+### Changed
+
+- `apps/trust-publisher` — `wallet-provider activate` also checks the provider's signing certificate against the ETSI TS 119
+  412-6 §5 profile: the subject must carry an `organizationIdentifier` (2.5.4.97, EN 319 412-1 semantic identifier) equal to
+  the one derived from the registry entry's new `identifiers[]` (e.g. `TR-VKN` → `VATTR-…`), and the qcStatements must carry the
+  QcType `id-etsi-qct-wal` (0.4.0.194126.1.2). Otherwise the command refuses and writes nothing. `(TEST)` certificates in the
+  sandbox list are exempt. The `TAMGA-WP-1` entries carry `identifiers[]`; its live certificate passes. New read-only
+  `wallet-provider check --id <provider_id> --cert <pem>` runs the same checks without writing (for a signing key rollover).
+
+### Notes
+
+- Diplomas issued before 0.6.0 have to be issued again: `suspension_allowed` changed the diploma's Type Metadata and so its
+  `vct#integrity` hash (ADR-0048 K2, ADR-0029). The same holds for identity credentials (new status lists).
+
+## 0.6.0 — 2026-10-13 (packages, test release)
 
 EU alignment (package 4 of the first EU alignment review, decisions of 2026-10-13: ADR-0048, ADR-0049, ADR-0026 K5, EU TS9
 v1.1, ISO/IEC 18013-7 Annex C). The nine packages move from `0.5.2` to `0.6.0` together. Some result types gain fields and

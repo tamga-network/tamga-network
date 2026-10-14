@@ -6,11 +6,17 @@
  * Sertifika denetimi FW-POL-0002 (cüzdan kanıt politikası) ve ADR-0025'e göre: WIA, KA ve iptal listesi imza anahtarı ES256
  * (P-256, RB-AP-04); anahtar yalnız imza içindir (digitalSignature; sertifika ya da CRL imzalamaz, CA değildir); sertifika
  * geçerlilik süresi içindedir. Gerçek ağa "(TEST)" konu adlı sertifika girmez (ADR-0038 SB1).
+ *
+ * Sağlayıcı sertifika profili (ETSI TS 119 412-6 V1.2.1 §5, AB uyum turu 2026-10-13 KA-412-6-2): konu alanında
+ * `organizationIdentifier` (2.5.4.97, EN 319 412-1 semantik tanımlayıcı: `VATTR-<VKN>`, `NTRTR-<MERSİS>`, `LEIXG-<LEI>`) ve
+ * kayıttaki `identifiers[]`'dan türetilen değerle aynı; qcStatements'ta QcType `id-etsi-qct-wal` (0.4.0.194126.1.2, WAL-5.2-01).
+ * İstisna yalnız sandbox'taki "(TEST)" sertifikalar (ağın deneme sahneleri ve uyum testi araçları; ADR-0042 K5, ADR-0038 SB1).
  */
 import { X509Certificate as PX509, KeyUsageFlags, KeyUsagesExtension, BasicConstraintsExtension } from "@peculiar/x509";
 import { X509Certificate } from "node:crypto";
 import { certFingerprintSha256Hex, pemToDer } from "@tamga-network/trust";
 import { RegistryError } from "./registry-ops.js";
+import { semanticIdentifier } from "./wrprc.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Rec = Record<string, any>;
@@ -20,6 +26,72 @@ export const WP_STATUSES = ["ACTIVE", "SUSPENDED", "REVOKED"] as const;
 /** Sertifikanın bundan az kalan ömrü uyarı verir (anahtar değişimi zamanı). */
 export const WP_CERT_WARN_DAYS = 90;
 const PROVIDER_ID = /^[A-Z0-9][A-Z0-9-]{2,63}$/;
+/** id-pe-qcStatements (RFC 3739), id-etsi-qcs-QcType (EN 319 412-5 §4.2.3), id-etsi-qct-wal (TS 119 412-6 WAL-5.2-01). */
+export const OID_QC_STATEMENTS = "1.3.6.1.5.5.7.1.3";
+export const OID_QCS_QCTYPE = "0.4.0.1862.1.6";
+export const OID_QCT_WAL = "0.4.0.194126.1.2";
+
+// En küçük DER okuyucu (qcStatements için): etiket, içerik aralığı, alt öğeler, OID metni.
+interface Tlv {
+  tag: number;
+  start: number;
+  end: number;
+}
+function tlv(b: Uint8Array, off: number, limit = b.length): Tlv {
+  if (off + 2 > limit) throw new Error("DER: kısa");
+  const tag = b[off];
+  let len = b[off + 1];
+  let p = off + 2;
+  if (len & 0x80) {
+    const n = len & 0x7f;
+    if (n < 1 || n > 3 || p + n > limit) throw new Error("DER: uzunluk");
+    len = 0;
+    for (let i = 0; i < n; i++) len = (len << 8) | b[p++];
+  }
+  if (p + len > limit) throw new Error("DER: taşma");
+  return { tag, start: p, end: p + len };
+}
+function kids(b: Uint8Array, t: Tlv): Tlv[] {
+  const out: Tlv[] = [];
+  for (let p = t.start; p < t.end;) {
+    const c = tlv(b, p, t.end);
+    out.push(c);
+    p = c.end;
+  }
+  return out;
+}
+function oidText(b: Uint8Array, t: Tlv): string {
+  const v = b.subarray(t.start, t.end);
+  if (!v.length) throw new Error("DER: boş OID");
+  const parts: number[] = [];
+  let n = 0;
+  for (const x of v) {
+    n = n * 128 + (x & 0x7f);
+    if (!(x & 0x80)) {
+      parts.push(n);
+      n = 0;
+    }
+  }
+  const first = parts.shift()!;
+  const head = first < 40 ? [0, first] : first < 80 ? [1, first - 40] : [2, first - 80];
+  return [...head, ...parts].join(".");
+}
+
+/** qcStatements uzantısındaki QcType OID'leri (EN 319 412-5 §4.2.3). Uzantı yoksa boş; bozuksa hata. */
+export function qcTypesOf(extValue: Uint8Array): string[] {
+  const root = tlv(extValue, 0);
+  if (root.tag !== 0x30) throw new Error("qcStatements SEQUENCE değil");
+  const out: string[] = [];
+  for (const st of kids(extValue, root)) {
+    if (st.tag !== 0x30) throw new Error("QCStatement SEQUENCE değil");
+    const [id, info] = kids(extValue, st);
+    if (id?.tag !== 0x06) throw new Error("QCStatement statementId yok");
+    if (oidText(extValue, id) !== OID_QCS_QCTYPE || !info) continue;
+    if (info.tag !== 0x30) throw new Error("QcType statementInfo SEQUENCE değil");
+    for (const o of kids(extValue, info)) if (o.tag === 0x06) out.push(oidText(extValue, o));
+  }
+  return out;
+}
 
 /** Ad kuralı (proje yönetimi onayı 2026-10-13): `wallet-provider-<provider_id küçük harfle>` → `keys/<ad>.cert.pem`. */
 export function walletProviderCertName(providerId: string): string {
@@ -35,6 +107,12 @@ export interface WpCertInfo {
   notAfter: Date;
   selfSigned: boolean;
   isTest: boolean;
+  /** konu alanındaki organizationIdentifier (2.5.4.97); yoksa null */
+  organizationIdentifier: string | null;
+  /** qcStatements'taki QcType OID'leri */
+  qcTypes: string[];
+  /** sağlayıcı profili (organizationIdentifier + QcType wal) bu ortamda zorunlu mu (sandbox "(TEST)" sertifikada değil) */
+  profileRequired: boolean;
   warnings: string[];
 }
 
@@ -86,6 +164,37 @@ export function inspectWalletProviderCert(
   const isTest = /\(TEST\)/.test(x.subject);
   if (isTest && opts.environment === "production")
     p.push("SB1: konu adında (TEST) — test sertifikası gerçek listeye girmez");
+  // ETSI TS 119 412-6 §5 sağlayıcı profili — sandbox'taki test sertifikaları hariç her yerde zorunlu
+  const profileRequired = !(isTest && opts.environment === "sandbox");
+  const orgLine = x.subject.split("\n").find((l) => /^(organizationIdentifier|2\.5\.4\.97)=/.test(l));
+  const organizationIdentifier = orgLine ? orgLine.slice(orgLine.indexOf("=") + 1).trim() || null : null;
+  let qcTypes: string[] = [];
+  const qcExt = px.getExtension(OID_QC_STATEMENTS);
+  if (qcExt) {
+    try {
+      qcTypes = qcTypesOf(new Uint8Array(qcExt.value));
+    } catch (e) {
+      p.push(`qcStatements uzantısı okunamadı: ${(e as Error).message}`);
+    }
+  }
+  if (profileRequired) {
+    if (!organizationIdentifier)
+      p.push(
+        "konu alanında organizationIdentifier (2.5.4.97) yok — sağlayıcının kimlik numarası gerekli (ETSI TS 119 412-6 §5, EN 319 412-3 §4.2.1; ör. VATTR-<VKN>)",
+      );
+    else if (!/^(VAT|NTR|LEI)[A-Z]{2}-[A-Z0-9]+$/.test(organizationIdentifier))
+      p.push(
+        `organizationIdentifier EN 319 412-1 semantik tanımlayıcı olmalı (VATTR-…, NTRTR-…, LEIXG-…); bulunan: ${organizationIdentifier}`,
+      );
+    if (!qcExt)
+      p.push(
+        "qcStatements uzantısı yok — QcType id-etsi-qct-wal (0.4.0.194126.1.2) gerekli (ETSI TS 119 412-6 WAL-5.2-01)",
+      );
+    else if (!qcTypes.includes(OID_QCT_WAL))
+      p.push(
+        `qcStatements QcType id-etsi-qct-wal (0.4.0.194126.1.2) içermeli (ETSI TS 119 412-6 WAL-5.2-01); bulunan: ${qcTypes.join(", ") || "-"}`,
+      );
+  }
   // checkIssued() olmaz: kendinden imzalı yaprakta keyCertSign yok (OpenSSL veren denetimi düşer); ad + imza yeter
   const selfSigned = x.issuer === x.subject;
   if (selfSigned && !x.verify(x.publicKey)) p.push("kendinden imzalı sertifikanın imzası tutmuyor");
@@ -102,6 +211,9 @@ export function inspectWalletProviderCert(
     notAfter,
     selfSigned,
     isTest,
+    organizationIdentifier,
+    qcTypes,
+    profileRequired,
     warnings,
   };
 }
@@ -116,6 +228,24 @@ export function certSummary(pemText: string): { fingerprint: string; subject: st
   };
 }
 
+/**
+ * Sertifikanın organizationIdentifier'ı ile kaydın `identifiers[]`'ından türetilen semantik tanımlayıcı (`VATTR-<VKN>` …) aynı mı
+ * (ETSI TS 119 412-6 §5; büyük/küçük harf duyarsız). Sorun listesi döner; boşsa uyumlu.
+ */
+export function providerOrgIdProblems(entry: Rec, organizationIdentifier: string | null): string[] {
+  const id = entry.provider_id as string;
+  const want = semanticIdentifier(entry.identifiers as Rec[] | undefined);
+  if (!want)
+    return [
+      `${id}: kayıtta kimlik numarası yok (identifiers[], ör. {"scheme": "TR-VKN", "value": "TR<VKN>"}) — sertifikanın organizationIdentifier'ı neyle karşılaştırılacak?`,
+    ];
+  if (!organizationIdentifier || organizationIdentifier.toUpperCase() !== want.toUpperCase())
+    return [
+      `${id}: sertifikanın organizationIdentifier'ı (${organizationIdentifier ?? "yok"}) kayıttaki kimlik numarasıyla (${want}) aynı değil`,
+    ];
+  return [];
+}
+
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 const findWp = (src: Rec, id: string): Rec | undefined =>
   ((src.wallet_providers ?? []) as Rec[]).find((w) => w.provider_id === id);
@@ -125,6 +255,13 @@ export interface ActivateOpts {
   now: Date;
   environment: WpEnvironment;
   reason?: string;
+  /**
+   * Sertifikanın konu alanındaki organizationIdentifier (`inspectWalletProviderCert`). `profileRequired` (varsayılan true) ise
+   * kayıttaki `identifiers[]`'dan türetilen semantik tanımlayıcıyla (`VATTR-<VKN>` …) aynı olmalı; kayıtta kimlik numarası
+   * yoksa etkinleştirme yapılmaz.
+   */
+  organizationIdentifier: string | null;
+  profileRequired?: boolean;
   /**
    * Yalnız sandbox (ADR-0042 uygulama notu, SB1 istisnası): aynı provider_id gerçek kayıt defterinde de varsa gerçek kayıt
    * ÖNCE bu sertifikayla ACTIVE olmalı. Gerçek kayıt defterinin (gerekirse aynı komutta yazılacak hâli) kaynak nesnesi.
@@ -151,6 +288,7 @@ export function activateWalletProvider(src: Rec, id: string, o: ActivateOpts): {
   }
   if (cur.status === "REVOKED" || cur.status === "RETIRED")
     p.push(`${id} ${cur.status} — geri çekilmiş kayıt yeniden etkinleşmez (yeni kayıt gerekir)`);
+  if (o.profileRequired !== false) p.push(...providerOrgIdProblems(cur, o.organizationIdentifier));
   const other = certs.filter((c) => c !== o.certName);
   if (other.length)
     p.push(

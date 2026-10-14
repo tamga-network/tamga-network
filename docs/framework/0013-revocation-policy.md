@@ -139,7 +139,7 @@ belgesi iptal edilmişse kimlik servisi yeni ZK kopyası vermez (RB-AP-ID-11).
 |---|---|
 | Kurum belgelerinin cüzdan birimi iptalinde zincirleme iptali | **Karar (2026-10-12, [[ADR-0047]] K1):** yapılmaz; belgeler cihaz anahtarına bağlıdır ve birim iptal edilince kullanılamaz (§3.3). Kimlik servisi kendi belgelerini iptal eder (RB-AP-ID-12) |
 | Belge verenin kendi ek iptal politikası | **Karar (2026-10-12, [[ADR-0047]] K2):** kurum isterse ek koşullarını `revocation_policy_uri` ile yayımlar; ortak koşulları daraltamaz (§3.4, RB-AP-27) |
-| Attestation Revocation List | AB, doğrulayıcının ve cüzdanın iki mekanizmayı da desteklemesini ister (VCR_10, VCR_12); belge verene biri yeter (VCR_11). **Paketler 0.5.0:** doğrulayıcı ve cüzdan çekirdeği tanımlayıcı listesini doğrular; Tamga belge verenleri Status List yayımlamayı sürdürür (bit tabanlı liste konum bilgisini daha iyi gizler; tanımlayıcı listesi iptal edilen belge sayısını gösterir). mdoc için listenin CWT biçimi (CIR 2024/2979 Ek II EAA-6.2.10.1-07) açık konudur |
+| Attestation Revocation List | AB, doğrulayıcının ve cüzdanın iki mekanizmayı da desteklemesini ister (VCR_10, VCR_12); belge verene biri yeter (VCR_11). **Paketler 0.5.0:** doğrulayıcı ve cüzdan çekirdeği tanımlayıcı listesini doğrular; Tamga belge verenleri Status List yayımlamayı sürdürür (bit tabanlı liste konum bilgisini daha iyi gizler; tanımlayıcı listesi iptal edilen belge sayısını gösterir). mdoc için listenin CWT biçimi (CIR 2024/2979 Ek II EAA-6.2.10.1-07) paketlerin 0.6.0 sürümünde: mdoc olarak da verilen türün listesi ayrıca CWT gösterimiyle yayımlanır, mdoc kopyası CWT adresine işaret eder ([[ADR-0048]] K2, K3; RB-AP-28) |
 
 # Durum
 

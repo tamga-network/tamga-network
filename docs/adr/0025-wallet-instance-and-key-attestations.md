@@ -4,7 +4,7 @@ title: "Cüzdan ve anahtar kanıtı"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-13
+last_updated: 2026-10-14
 summary: >
   Tek, 30 günlük WUA yerine AB TS3 modeli: 24 saatten kısa ömürlü, her belge işleminde yeni anahtarlı ve yeni iptal listesi
   girişli Wallet Instance Attestation (WIA) + belge anahtarlarının deposunu anlatan key attestation (KA, `key_attestation`).
@@ -192,3 +192,8 @@ hizalar.
 > **Not (2026-10-13):** genel istemci kanıtı (-07; `iss` kabul edilir ama zorunlu değil, kanıtta `iat` yoksa hoş görülür, PoP'ta
 > zorunlu), eski WUA yolunun kaldırılması ve `clientStatus` ayarı (`optional` / `required`; kimlik servisi `required`), WIA `cnf` =
 > belgeye özel DPoP anahtarı (TS3 1.5.2'de geri alındı — uygulanmadı, yukarıdaki düzeltme), WIA/KA listeleri ≥ 10.000 — yukarıdaki "Uygulama notları (2026-10-13)". Proje yönetimi onayıyla (ilk AB uyum turu).
+>
+> **Not (2026-10-14, K2 süre ifadesi):** K2'deki "`client_status.exp` … (Tamga: 60 gün)" yalnız **olağan süredir** (belge veren
+> tercih bildirmezse). Belge veren [[ADR-0047]] K1'deki tercihi (`preferred_client_status_period`, KA için
+> `preferred_key_storage_status_period`) bildirirse sağlayıcı `client_status.exp`'i (ve KA'da `key_storage_status.exp`'i) o süreye,
+> sağlayıcının üst sınırına kadar verir (Tamga Wallet: 730 gün). 31 günlük alt sınır ve kararın geri kalanı değişmez.

@@ -3,7 +3,9 @@
  * olarak geçici klasörde çalışır (gerçek registry/, ops/pki*, dist/ değişmez). Sertifikalar testte üretilir (geliştirme).
  * Kanıtlananlar: sertifika denetimi (P-256, ES256, digitalSignature, CA değil, süre, SB1 "(TEST)", özel anahtar yok), sandbox'a
  * gerçek sertifika ancak gerçek kayıttan sonra, --dry-run yazmaz, iki listede aynı sertifika ve ACTIVE, ikinci çalıştırma
- * değişiklik yapmaz, iki liste derlenince aynı parmak izi, askı/geri dönüş/geri çekme geçmişi (TL2).
+ * değişiklik yapmaz, iki liste derlenince aynı parmak izi, askı/geri dönüş/geri çekme geçmişi (TL2). Sağlayıcı profili
+ * (ETSI TS 119 412-6 §5): organizationIdentifier var ve kayıttaki kimlik numarasıyla aynı, QcType id-etsi-qct-wal var; canlı
+ * TAMGA-WP-1 sertifikası (ops/pki-sandbox) geçer.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { spawnSync } from "node:child_process";
@@ -12,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { webcrypto, X509Certificate } from "node:crypto";
 import {
+  Extension,
   X509CertificateGenerator,
   cryptoProvider,
   KeyUsageFlags,
@@ -23,6 +26,8 @@ import {
   activateWalletProvider,
   inspectWalletProviderCert,
   lineDiff,
+  OID_QCT_WAL,
+  qcTypesOf,
   setWalletProviderStatus,
   walletProviderCertName,
 } from "../src/wallet-provider-ops.js";
@@ -32,6 +37,24 @@ import * as prettier from "prettier";
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const subtle = (webcrypto as unknown as Crypto).subtle;
 
+// DER yardımcıları (qcStatements uzantısı, EN 319 412-5 §4.2.3)
+const derLen = (n: number) => (n < 0x80 ? [n] : n < 0x100 ? [0x81, n] : [0x82, n >> 8, n & 0xff]);
+const der = (tag: number, body: number[]) => [tag, ...derLen(body.length), ...body];
+const derOid = (oid: string) => {
+  const [a, b, ...rest] = oid.split(".").map(Number);
+  const body = [a * 40 + b];
+  for (const n of rest) {
+    const chunk = [n & 0x7f];
+    for (let v = Math.floor(n / 128); v > 0; v = Math.floor(v / 128)) chunk.unshift((v & 0x7f) | 0x80);
+    body.push(...chunk);
+  }
+  return der(0x06, body);
+};
+/** QCStatements { QcType { qcTypes… } } */
+const qcStatementsDer = (qcTypes: string[]) =>
+  new Uint8Array(der(0x30, der(0x30, [...derOid("0.4.0.1862.1.6"), ...der(0x30, qcTypes.flatMap(derOid))])));
+const WP_SUBJECT = "C=TR, O=BROS Example Ltd, 2.5.4.97=VATTR-1870632151, CN=Tamga Wallet Provider (TAMGA-WP-1)";
+
 async function makeCert(
   o: {
     curve?: "P-256" | "P-384";
@@ -40,6 +63,8 @@ async function makeCert(
     startDaysAgo?: number;
     ca?: boolean;
     usages?: number;
+    /** QcType listesi; null = qcStatements uzantısı yok. Varsayılan [id-etsi-qct-wal] */
+    qcTypes?: string[] | null;
   } = {},
 ): Promise<{ pem: string; keyPem: string }> {
   const curve = o.curve ?? "P-256";
@@ -49,7 +74,7 @@ async function makeCert(
   const start = now - (o.startDaysAgo ?? 0) * 86400_000 - 60_000;
   const cert = await X509CertificateGenerator.createSelfSigned({
     serialNumber: "01" + Math.floor(Math.random() * 1e9).toString(16),
-    name: o.subject ?? "C=TR, O=Example Operator, CN=Tamga Wallet Provider (TAMGA-WP-1)",
+    name: o.subject ?? WP_SUBJECT,
     notBefore: new Date(start),
     notAfter: new Date(start + (o.days ?? 1095) * 86400_000),
     signingAlgorithm: alg,
@@ -57,6 +82,9 @@ async function makeCert(
     extensions: [
       new BasicConstraintsExtension(o.ca ?? false, undefined, true),
       new KeyUsagesExtension(o.usages ?? KeyUsageFlags.digitalSignature, true),
+      ...(o.qcTypes === null
+        ? []
+        : [new Extension("1.3.6.1.5.5.7.1.3", false, qcStatementsDer(o.qcTypes ?? [OID_QCT_WAL]))]),
     ] as never,
   });
   const pk = Buffer.from(await subtle.exportKey("pkcs8", kp.privateKey)).toString("base64");
@@ -110,6 +138,75 @@ describe("cüzdan sağlayıcı kayıt işlemleri (saf)", () => {
     // sandbox'ta test sertifikası SB1'e takılmaz
     expect(() => inspectWalletProviderCert(c.pem, { now, environment: "sandbox" })).not.toThrow();
   });
+  it("ETSI TS 119 412-6 profili: organizationIdentifier ve QcType wal yoksa red; sandbox test sertifikasında istenmez", async () => {
+    const problems = async (o: Parameters<typeof makeCert>[0], env?: "production" | "sandbox") => {
+      const { pem } = await makeCert(o);
+      try {
+        inspectWalletProviderCert(pem, { now, environment: env });
+        return "";
+      } catch (e) {
+        expect(e).toBeInstanceOf(RegistryError);
+        return (e as RegistryError).problems.join("\n");
+      }
+    };
+    const ok = inspectWalletProviderCert((await makeCert()).pem, { now, environment: "production" });
+    expect(ok).toMatchObject({
+      organizationIdentifier: "VATTR-1870632151",
+      qcTypes: [OID_QCT_WAL],
+      profileRequired: true,
+    });
+    expect(await problems({ subject: "C=TR, O=X Ltd, CN=Tamga Wallet Provider (TAMGA-WP-1)" }, "production")).toMatch(
+      /organizationIdentifier \(2\.5\.4\.97\) yok/,
+    );
+    expect(await problems({ subject: "C=TR, O=X Ltd, 2.5.4.97=1870632151, CN=WP" }, "production")).toMatch(
+      /semantik tanımlayıcı/,
+    );
+    expect(await problems({ qcTypes: null }, "production")).toMatch(/qcStatements uzantısı yok/);
+    // id-etsi-qct-esign (0.4.0.1862.1.6.1) cüzdan sağlayıcı türü değildir
+    expect(await problems({ qcTypes: ["0.4.0.1862.1.6.1"] }, "production")).toMatch(
+      /id-etsi-qct-wal[\s\S]*bulunan: 0\.4\.0\.1862\.1\.6\.1/,
+    );
+    // ortam verilmezse de zorunlu
+    expect(await problems({ qcTypes: null })).toMatch(/qcStatements uzantısı yok/);
+    // sandbox'taki "(TEST)" sertifika (deneme sahneleri, uyum testi aracı) profilden muaf; gerçek ağda SB1 zaten reddeder
+    expect(await problems({ subject: "CN=Test Wallet Provider (TEST)", qcTypes: null }, "sandbox")).toBe("");
+    expect(await problems({ subject: "C=TR, O=X, CN=Real WP", qcTypes: null }, "sandbox")).toMatch(
+      /organizationIdentifier/,
+    );
+  });
+  it("qcTypesOf: birden çok QCStatement içinden QcType'lar; bozuk DER hata", () => {
+    const two = new Uint8Array(
+      der(0x30, [
+        ...der(0x30, derOid("0.4.0.1862.1.1")), // QcCompliance (bilgisiz)
+        ...der(0x30, [
+          ...derOid("0.4.0.1862.1.6"),
+          ...der(0x30, [...derOid(OID_QCT_WAL), ...derOid("0.4.0.1862.1.6.2")]),
+        ]),
+      ]),
+    );
+    expect(qcTypesOf(two)).toEqual([OID_QCT_WAL, "0.4.0.1862.1.6.2"]);
+    expect(() => qcTypesOf(new Uint8Array([0x30, 0x05, 0x30]))).toThrow();
+  });
+  it("canlı TAMGA-WP-1 sertifikası (ops/pki-sandbox) profil denetiminden ve kayıt eşleşmesinden geçer", () => {
+    const root = resolve(import.meta.dirname, "../../..");
+    const pem = readFileSync(resolve(root, "ops/pki-sandbox/wallet-provider-tamga-wp-1.cert.pem"), "utf8");
+    const at = new Date("2027-01-01T00:00:00Z"); // sertifika 2026-10-13 – 2029-10-12
+    for (const environment of ["production", "sandbox"] as const) {
+      const info = inspectWalletProviderCert(pem, { now: at, environment });
+      expect(info).toMatchObject({ organizationIdentifier: "VATTR-1870632151", profileRequired: true });
+      expect(info.qcTypes).toContain(OID_QCT_WAL);
+      for (const reg of ["registry", "registry-sandbox"]) {
+        const src = JSON.parse(readFileSync(resolve(root, `apps/trust-publisher/${reg}/lotl.source.json`), "utf8"));
+        const r = activateWalletProvider(src, "TAMGA-WP-1", {
+          certName: "wallet-provider-tamga-wp-1",
+          now: at,
+          environment,
+          organizationIdentifier: info.organizationIdentifier,
+        });
+        expect(r.changed).toBe(false); // zaten bu sertifikayla ACTIVE
+      }
+    }
+  });
   it("kısa ömürlü sertifika uyarı verir", async () => {
     const c = await makeCert({ days: 30 });
     expect(inspectWalletProviderCert(c.pem, { now }).warnings[0]).toMatch(/günü kaldı/);
@@ -120,13 +217,39 @@ describe("cüzdan sağlayıcı kayıt işlemleri (saf)", () => {
         {
           provider_id: "WP-X",
           legal_name: "X Ltd",
+          identifiers: [{ scheme: "TR-VKN", value: "TR1870632151" }] as
+            Array<{ scheme: string; value: string }> | undefined,
           wua_signing_certs: [],
           solutions: [{ solution_id: "x", status: "RESERVED" }],
           status: "RESERVED",
         },
       ],
     };
-    const o = { certName: "wallet-provider-wp-x", now, environment: "production" as const };
+    const o = {
+      certName: "wallet-provider-wp-x",
+      now,
+      environment: "production" as const,
+      organizationIdentifier: "VATTR-1870632151" as string | null,
+    };
+    // organizationIdentifier kayıttaki kimlik numarasıyla aynı olmalı; kayıtta kimlik numarası yoksa etkinleşmez
+    expect(() => activateWalletProvider(src, "WP-X", { ...o, organizationIdentifier: "VATTR-9999999999" })).toThrow(
+      /VATTR-9999999999\) kayıttaki kimlik numarasıyla \(VATTR-1870632151\) aynı değil/,
+    );
+    expect(() => activateWalletProvider(src, "WP-X", { ...o, organizationIdentifier: null })).toThrow(/\(yok\)/);
+    expect(activateWalletProvider(src, "WP-X", { ...o, organizationIdentifier: "vattr-1870632151" }).changed).toBe(
+      true,
+    );
+    const noIds = { wallet_providers: [{ ...src.wallet_providers[0], identifiers: undefined }] };
+    expect(() => activateWalletProvider(noIds, "WP-X", o)).toThrow(/kayıtta kimlik numarası yok/);
+    // sandbox test sertifikası (profil istenmez) kimlik numarasız kayda girer
+    expect(
+      activateWalletProvider(noIds, "WP-X", {
+        ...o,
+        environment: "sandbox",
+        organizationIdentifier: null,
+        profileRequired: false,
+      }).changed,
+    ).toBe(true);
     const a = activateWalletProvider(src, "WP-X", o);
     expect(a.changed).toBe(true);
     const w = a.next.wallet_providers[0];
@@ -242,6 +365,20 @@ describe.skipIf(!ready)("wallet-provider komutu (geçici klasörde)", () => {
     expect(r.err).toMatch(/P-256/);
     writeFileSync(bad, (await makeCert({ subject: "CN=Wallet Provider (TEST)" })).pem);
     expect(wp(["activate", "--id", "TAMGA-WP-1", "--cert", bad]).err).toMatch(/SB1/);
+    // ETSI TS 119 412-6: QcType wal yok / organizationIdentifier kayıttakinden farklı
+    writeFileSync(bad, (await makeCert({ qcTypes: null })).pem);
+    expect(wp(["activate", "--id", "TAMGA-WP-1", "--cert", bad]).err).toMatch(/id-etsi-qct-wal/);
+    writeFileSync(
+      bad,
+      (
+        await makeCert({
+          subject: "C=TR, O=Other Ltd, 2.5.4.97=VATTR-9999999999, CN=Tamga Wallet Provider (TAMGA-WP-1)",
+        })
+      ).pem,
+    );
+    const mismatch = wp(["activate", "--id", "TAMGA-WP-1", "--cert", bad]);
+    expect(mismatch.code).toBe(2);
+    expect(mismatch.err).toMatch(/VATTR-9999999999\) kayıttaki kimlik numarasıyla \(VATTR-1870632151\) aynı değil/);
     expect(snapshot()).toEqual(before);
   });
 
@@ -353,6 +490,25 @@ describe.skipIf(!ready)("wallet-provider komutu (geçici klasörde)", () => {
     const r = wp(["activate", "--id", "TAMGA-WP-1", "--cert", CERT, "--registry", "registry-sandbox"]);
     expect(r.code).toBe(2);
     expect(r.err).toMatch(/REVOKED/);
+  });
+
+  it("check: anahtar yenilemede yeni sertifikayı denetler, hiçbir dosya yazmaz", async () => {
+    const before = snapshot();
+    const next = join(tmp, "next.cert.pem");
+    writeFileSync(next, (await makeCert()).pem);
+    const ok = wp(["check", "--id", "TAMGA-WP-1", "--cert", next]);
+    expect(ok.code, ok.err).toBe(0);
+    expect(ok.out).toMatch(/registry: TAMGA-WP-1 uygun/);
+    expect(ok.out).toMatch(/registry-sandbox: TAMGA-WP-1 uygun/);
+    writeFileSync(next, (await makeCert({ qcTypes: ["0.4.0.1862.1.6.1"] })).pem);
+    const bad = wp(["check", "--id", "TAMGA-WP-1", "--cert", next]);
+    expect(bad.code).toBe(2);
+    expect(bad.err).toMatch(/registry: qcStatements QcType id-etsi-qct-wal/);
+    writeFileSync(next, (await makeCert({ subject: "CN=Wallet Provider (TEST)", qcTypes: null })).pem);
+    expect(wp(["check", "--id", "TAMGA-WP-1", "--cert", next, "--registry", "registry-sandbox"]).err).toMatch(
+      /gerçek listede de kayıtlı/,
+    );
+    expect(snapshot()).toEqual(before);
   });
 
   it("show: kayıt ve sertifika özeti", () => {

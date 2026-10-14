@@ -185,10 +185,10 @@ release. Where proofs are not supported, the presentation is made in the usual w
 | Bluetooth proximity presentation                                          | Implemented; device testing pending                                                                       |
 | Browser presentation (Digital Credentials API)                            | Verifier ready; no wallet connection yet                                                                  |
 | Hardware-backed keys and device attestation                               | Implemented; device testing with the app-store release                                                    |
-| Issuer's sharing rule (embedded disclosure policy)                        | Implemented in the source; released with the 0.5.0 packages                                               |
-| Issuer's wallet attestation preferences (key storage requirement, revocation maintenance period) | Implemented in the source; released with the 0.5.0 packages |
-| The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Implemented in the source; released with the 0.5.0 packages |
-| Attestation Revocation List (identifier list) — verifier and wallet side | Implemented in the source; released with the 0.5.0 packages; Tamga issuers use the Status List |
+| Issuer's sharing rule (embedded disclosure policy)                        | Released (packages on npm since 0.5.0)                                                                    |
+| Issuer's wallet attestation preferences (key storage requirement, revocation maintenance period) | Released (packages on npm since 0.5.0) |
+| The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Released (packages on npm since 0.5.0) |
+| Attestation Revocation List (identifier list) — verifier and wallet side | Released (packages on npm since 0.5.0); Tamga issuers use the Status List |
 | Sandbox (open to everyone; identity verification with daily/monthly caps) | Live                                                                                                      |
 
 ---

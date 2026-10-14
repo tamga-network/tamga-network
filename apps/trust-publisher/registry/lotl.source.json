@@ -101,6 +101,12 @@
     {
       "provider_id": "TAMGA-WP-1",
       "legal_name": "BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR1870632151"
+        }
+      ],
       "wua_signing_certs": ["wallet-provider-tamga-wp-1"],
       "lote_supply_point": "https://provider.tamgawallet.com",
       "solutions": [
