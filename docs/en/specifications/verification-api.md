@@ -101,7 +101,7 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 | `D1` | Read `status.status_list` (`idx`, `uri`). A ZK presentation (`mso_mdoc_zk`) carries no index: if the type bound by the proof is the short-lived ZK copy (`urn:tamga:id:ShortLivedIdentityAttestation:1`, type rule ≤ 24 hours, no revocation list — [[ADR-0044]] K5) the D steps do not apply and `status.value = NOT_APPLICABLE` (reason: short validity); an unmarked ZK presentation follows the rule below |
 | `D2` | Take the Status List Token **from the prefetch cache** |
 | `D3` | Token signature; `sub == uri`; `iss` in the same chain of trust |
-| `D4` | Freshness: `exp` not passed, `iat + ttl` within policy |
+| `D4` | Freshness: `exp` not passed, token age (`now − iat`) within the policy's `max_status_token_age_sec` |
 | `D5` | Registry anchor: `contentHash` matches, `version` has not gone back (if the cache was fetched before the anchor, `INDETERMINATE`/`STATUS_STALE`; if after, `REJECTED`) |
 | `D6` | Read `idx` with `bits=2`; anything other than `0x00` → REJECT |
 

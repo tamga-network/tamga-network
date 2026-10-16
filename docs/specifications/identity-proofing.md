@@ -230,7 +230,7 @@ Kişi hesabı yoktur; istek servisin verdiği belgelerin gösterilmesiyle kanıt
 | Öğe | Değer |
 |---|---|
 | İstek | `{ "presentations": [ SD-JWT VC + KB-JWT, … ] }` (1–20); hiçbir alan açılmaz; KB-JWT `aud` = servis adresi, `nonce` = `POST /nonce` (tek kullanımlık) |
-| Doğrulama | imza bu servisin (`issuerId`), sahiplik KB-JWT `cnf` anahtarıyla; kayıt iptal listesi indeksinden bulunur |
+| Doğrulama | imza bu servisin (`issuerId`), sahiplik KB-JWT `cnf` anahtarıyla; kayıt iptal listesi indeksinden bulunur; süresi geçmiş ya da iptal edilmiş belge de kabul edilir (kaydı tutulduğu sürece kişinin verisidir) |
 | Etki | kaydın bütün kopyaları INVALID; kayıt ve ona bağlı olay günlüğü satırları silinir; sağlayıcı oturumu `privacy_erasure` ile silinir (`IdvProvider.deleteSession`) |
 | Yanıt | `{ erased, rejected, provider: "deleted" | "partial" }`; tutulan bir şey yoksa 404 |
 | Günlük | yalnız sayılar (`erasure`: kayıt sayısı, sağlayıcı sonucu); kayıt kimliği ve `subject_ref` yazılmaz |

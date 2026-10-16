@@ -113,7 +113,8 @@ export interface VerifyInput {
   trust: TrustSource;
   statusCache: StatusCache;
   rootCertsDer: Uint8Array[];
-  rp?: RelyingParty | null; // E3 (kendi kaydımız)
+  /** E3: sunumu açan RP'nin kaydı (aracı doğrulayıcıda asıl RP'ninki — ADR-0017 K7/HV6); `undefined` → E3 atlanır */
+  rp?: RelyingParty | null;
   /**
    * Yalnız yerel geliştirme: `iss` yerel/IP adresiyse kayıtlı `issuer_url` ile tutarlılık denetimi atlanır (LAN'da adresler farklı).
    * Varsayılan kapalı; canlı (https) doğrulayıcı açmaz.

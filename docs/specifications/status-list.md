@@ -501,8 +501,9 @@ Normatif. `status` claim'i taşıyan her belge için çalıştırılır.
 
 Ş5.  Tazelik:
      - exp geçmişse → "DOĞRULANAMADI"
-     - iat + ttl < şimdi ise token bayat; politikaya göre yenile veya
-       "DOĞRULANAMADI"
+     - iat + ttl < şimdi ise yenisini çekme zamanı (yenileme ipucu, §8.1);
+       token exp'e kadar kullanılabilir
+     - şimdi − iat > politikanın max_status_token_age_sec'i → "DOĞRULANAMADI"
      (HTTP önbellek başlıkları değil, exp/ttl claim'leri belirleyicidir)
 
 Ş6.  ZİNCİR ÇAPASI:

@@ -76,6 +76,12 @@ export interface VerifyOptions {
    */
   allowMissingVctIntegrity?: boolean;
   requireKb?: boolean; // varsayılan true (C8); ihraç biçimini doğrulamak için false
+  /**
+   * A7 (`exp`/`nbf`) atlanır — yalnız belgenin GEÇERLİ olması değil, bu belge verene ait olup kişide bulunduğunun kanıtlanması
+   * gereken işler için (ör. belge verene silme isteği: süresi geçmiş belgenin kaydı da kişinin verisidir). İmza, zincir, KB-JWT
+   * ve öteki adımlar aynen denetlenir; sonuçta `checksPerformed` A7 içermez. Doğrulamada (kabul kararı) KULLANILMAZ.
+   */
+  skipValidityPeriod?: boolean;
 }
 
 export interface VerifyOk {
@@ -247,10 +253,12 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   }
   done.push("A6");
 
-  // A7 (Ş9) — exp / nbf
-  if (typeof payload.exp === "number" && payload.exp < now) return fail("A7", "expired (Ş9)");
-  if (typeof payload.nbf === "number" && payload.nbf > now) return fail("A7", "not yet valid (nbf)");
-  done.push("A7");
+  // A7 (Ş9) — exp / nbf (yalnız sahiplik kanıtı istenen işlerde atlanır: `skipValidityPeriod`)
+  if (!opt.skipValidityPeriod) {
+    if (typeof payload.exp === "number" && payload.exp < now) return fail("A7", "expired (Ş9)");
+    if (typeof payload.nbf === "number" && payload.nbf > now) return fail("A7", "not yet valid (nbf)");
+    done.push("A7");
+  }
 
   return {
     ok: true,

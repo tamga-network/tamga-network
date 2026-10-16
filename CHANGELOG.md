@@ -16,6 +16,23 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 - Tamga Wallet's provider `TAMGA-WP-1` is `ACTIVE` in the production and the sandbox trust lists (certificate
   `wallet-provider-tamga-wp-1`).
 
+### Packages
+
+- `sd-jwt`: `verifySdJwtVc` option `skipValidityPeriod` — skips A7 (`exp`/`nbf`) for proofs of possession that are not
+  acceptance decisions (the identity service's erasure request accepts an expired credential, whose record is still held).
+
+### Reference verifier (`apps/verify`)
+
+- Fixed: the scope check E3 now uses the registration of the relying party that opened the presentation. Before, a presentation
+  opened on behalf of another relying party was checked against the verifier's own (wider) registration, so a wallet that
+  disclosed more than asked could pass that party an attribute outside its registered scope (ADR-0017 K7/HV6, AP6).
+
+### Documents
+
+- Status list verification step Ş5 and verification step D4: `ttl` is a refresh hint; the token stays usable until `exp` and the
+  policy's `max_status_token_age_sec` (as in §8.1 and in the code). PR13: a redirect address outside the allowlist is rejected
+  with `invalid_request` (RFC 9126 §2.1), as the services answer.
+
 ## 0.6.0 — 2026-10-13
 
 EU alignment (ADR-0048, ADR-0049, ADR-0026 K5, EU TS9, ISO/IEC 18013-7 Annex C). Credentials issued with earlier packages —

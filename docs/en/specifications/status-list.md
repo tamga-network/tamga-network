@@ -490,8 +490,9 @@ Normative. Run for every credential that carries a `status` claim.
 
 Ş5.  Freshness:
      - exp has passed → "COULD NOT VERIFY"
-     - iat + ttl < now → the token is stale; refresh or "COULD NOT VERIFY"
-       depending on policy
+     - iat + ttl < now → time to fetch a new token (refresh hint, §8.1); the
+       token stays usable until exp
+     - now − iat > the policy's max_status_token_age_sec → "COULD NOT VERIFY"
      (the exp/ttl claims decide, not the HTTP cache headers)
 
 Ş6.  CHAIN ANCHOR:

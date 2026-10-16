@@ -176,7 +176,8 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
             trust: ctx.trust(),
             statusCache: ctx.statusCache,
             rootCertsDer: ctx.rootDer(),
-            rp: ctx.trust().relyingParty(cfg.clientId),
+            // E3 (AP6, ADR-0017 K7/HV6): açıklanan alanlar sunumu açan (asıl) RP'nin kayıtlı kapsamıyla sınırlı — aracının değil
+            rp: ctx.trust().relyingParty(p.owner ?? cfg.clientId),
             allowLocalIssuerUrls: !cfg.publicBase.startsWith("https://"), // yalnız yerel geliştirme
             now: nowSec(),
             verificationId: `vrf_${pid.slice(4)}`,
@@ -318,7 +319,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       trust: ctx.trust(),
       statusCache: ctx.statusCache,
       rootCertsDer: ctx.rootDer(),
-      rp: ctx.trust().relyingParty(cfg.clientId),
+      rp: ctx.trust().relyingParty(p.owner ?? cfg.clientId), // E3: asıl RP'nin kapsamı (ADR-0017 K7/HV6)
       allowLocalIssuerUrls: !cfg.publicBase.startsWith("https://"),
       now: nowSec(),
       verificationId: `vrf_${pid.slice(4)}`,

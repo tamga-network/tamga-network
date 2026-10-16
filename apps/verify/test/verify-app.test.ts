@@ -1394,6 +1394,112 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(stableRpKey(req, inter, site)).toBe("site.example");
   });
 
+  it("ADR-0017 K7/HV6: E3 sunumu açan RP'nin kapsamıyla — aracının kapsamında olup asıl RP'ninkinde olmayan alan RED", async () => {
+    const ID_ISS = "https://id.tamga.network";
+    const ID_VCT = "urn:tamga:id:IdentityAttestation:1";
+    const ID_STATUS = "https://id.tamga.network/status/feedfacefeedface";
+    const now = Math.floor(Date.now() / 1000);
+    const st = await pemIssuerSigner(
+      readFileSync(resolve(PKI, "issuer-id-status.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "issuer-id-status.cert.pem"), "utf8"),
+    );
+    const idStatusTok = await signStatusListToken({
+      signer: st,
+      iss: ID_ISS,
+      uri: ID_STATUS,
+      bitstring: new StatusBitstring(MIN_CAPACITY),
+      iat: now,
+      ttlSec: 3600,
+    });
+    const app3 = await buildVerifyApp(cfg, {
+      showcase: true,
+      fetchText: async (u) => (u === ID_STATUS ? idStatusTok : null),
+    });
+    await app3.statusCache.refresh([ID_STATUS]);
+    const http3: Http = async (url, init) => {
+      const r = await app3.inject({
+        method: init?.method ?? "GET",
+        url: url.slice(BASE.length),
+        headers: init?.headers,
+        payload: init?.body,
+      });
+      return { status: r.statusCode, text: async () => r.body };
+    };
+    const catalogue = JSON.parse(readFileSync(resolve(ROOT, "packages/schemas/dist/index.json"), "utf8")) as Array<{
+      vct: string;
+      content_hash: string;
+    }>;
+    const cnf = await keys.generate("w.e3");
+    const issued = await issueSdJwtVc({
+      signer: await pemIssuerSigner(
+        readFileSync(resolve(PKI, "issuer-id.pkcs8.pem"), "utf8"),
+        readFileSync(resolve(PKI, "issuer-id.cert.pem"), "utf8"),
+      ),
+      iss: ID_ISS,
+      vct: ID_VCT,
+      vctIntegrity: catalogue.find((c) => c.vct === ID_VCT)!.content_hash,
+      iat: now,
+      exp: now + 365 * 86400,
+      cnfJwk: cnf as never,
+      status: { status_list: { idx: 9, uri: ID_STATUS } },
+      claims: { family_name: "Yılmaz", given_name: "Ayşe", age_over_18: true },
+      sdPolicy: { family_name: "always", given_name: "always", age_over_18: "always" },
+    });
+    const wallet = receiveCredentials(
+      newState("w3"),
+      {
+        credentialIssuer: ID_ISS,
+        vct: ID_VCT,
+        issuedAt: now,
+        copies: [{ combined: issued.combined, keyRef: "w.e3", cnf }],
+        metadata: {
+          credential_issuer: ID_ISS,
+          credential_endpoint: ID_ISS + "/credential",
+          credential_configurations_supported: { [ID_VCT]: { format: "dc+sd-jwt" } },
+        },
+      },
+      { now },
+    ).state;
+    // Asıl RP: test listesindeki ikinci kayıt (kimlik kapsamı: kimlik no, doğum tarihi, ad, soyad — `age_over_18` YOK);
+    // doğrulayıcının kendi kaydında `age_over_18` var
+    const owner = await pemRpSigner(
+      readFileSync(resolve(PKI, "rp-issuer-bilgi.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "rp-issuer-bilgi.cert.pem"), "utf8"),
+    );
+    const ownerAuth = async () => `Bearer ${await createRpAssertion(owner, BASE)}`;
+    const run = async (disclose: string[]) => {
+      const made = await app3.inject({
+        method: "POST",
+        url: "/presentations",
+        headers: { accept: "application/json", "content-type": "application/json", authorization: await ownerAuth() },
+        payload: { policy_id: "event-tamga-id" }, // alan istemez: politika her iki kapsamda
+      });
+      expect(made.statusCode).toBe(200);
+      const { presentation_id, qr_payload } = made.json() as { presentation_id: string; qr_payload: string };
+      const uri = parseVpUri(qr_payload);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http3), uri.clientId);
+      expect(req.onBehalfOf).toBe(owner.clientId);
+      const { matches } = matchDcql(req.dcql, wallet.credentials);
+      const copy = matches[0].credential.copies[0];
+      await respond({
+        request: req,
+        matches: [{ match: matches[0], keyRef: copy.keyRef, combined: copy.combined, disclose }],
+        keys,
+        http: http3,
+        now,
+      });
+      const res = await app3.inject({
+        method: "GET",
+        url: `/presentations/${presentation_id}`,
+        headers: { authorization: await ownerAuth() },
+      });
+      return res.json() as { outcome: string; failed_step: string | null };
+    };
+    expect((await run([])).outcome).toBe("ACCEPTED");
+    // aracının (doğrulayıcının) kapsamında ama asıl RP'nin kapsamında değil → asıl RP'ye gitmez
+    expect(await run(["age_over_18"])).toMatchObject({ outcome: "REJECTED", failed_step: "E3" });
+  });
+
   it("AP6: scope'u aşan politika 400", async () => {
     const r = await app.inject({
       method: "POST",

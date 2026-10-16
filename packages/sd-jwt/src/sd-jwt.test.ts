@@ -306,6 +306,27 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     expect(r.checksPerformed).toEqual(["A1", "A2", "A3", "A4", "A5", "A6"]);
   });
 
+  it("skipValidityPeriod: süresi dolmuş belge sahiplik kanıtı için geçer (A7 yapılmaz); imza ve KB-JWT yine denetlenir", async () => {
+    const expired = await present(await craft({ ...basePayload(), exp: NOW - 1 }, [["is_graduate", true]]), [
+      "is_graduate",
+    ]);
+    const opts = {
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: NOW,
+      rootCertsDer: [rootDer],
+      skipValidityPeriod: true,
+    };
+    const r = await verifySdJwtVc(expired, opts);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.checksPerformed).toEqual(["A1", "A2", "A3", "A4", "A5", "A6"]);
+    // başka bir nonce'a yazılmış KB-JWT yine RED (A6)
+    const wrong = await verifySdJwtVc(expired, { ...opts, nonce: "baska-nonce-0000000" });
+    expect(wrong.ok).toBe(false);
+    if (!wrong.ok) expect(wrong.failedStep).toBe("A6");
+  });
+
   it("A3: gelecekteki iat (saat kayması payından fazla) ve nesne olmayan yük RED", async () => {
     const future = await check(
       await present(await craft({ ...basePayload(), iat: NOW + 3600 }, [["is_graduate", true]]), ["is_graduate"]),

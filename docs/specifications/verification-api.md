@@ -102,7 +102,7 @@ Z1. A4–A7 Z1 kapsamındadır.
 | `D1` | `status.status_list` oku (`idx`, `uri`). ZK sunumunda (`mso_mdoc_zk`) indeks gelmez: ispatın bağladığı tür kısa ömürlü ZK kopyasıysa (`urn:tamga:id:ShortLivedIdentityAttestation:1`, tür kuralı ≤ 24 saat, iptal listesi yok — [[ADR-0044]] K5) D adımları uygulanmaz ve `status.value = NOT_APPLICABLE` (gerekçe kısa ömür); işaretsiz ZK sunumu aşağıdaki kurala tabidir |
 | `D2` | Status List Token'ı **ön çekim önbelleğinden** al |
 | `D3` | Token imzası; `sub == uri`; `iss` aynı güven zincirinde |
-| `D4` | Tazelik: `exp` geçmemiş, `iat + ttl` politikaya uygun |
+| `D4` | Tazelik: `exp` geçmemiş, token yaşı (`şimdi − iat`) politikanın `max_status_token_age_sec` sınırında |
 | `D5` | Zincir çapası: `contentHash` eşleşiyor, `version` geri gitmemiş (önbellek çapadan önce çekildiyse `INDETERMINATE`/`STATUS_STALE`, sonra çekildiyse `REJECTED`) |
 | `D6` | `bits=2` ile `idx` oku; `0x00` dışı → RED |
 

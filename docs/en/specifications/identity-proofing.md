@@ -234,7 +234,7 @@ There is no user account; the request is proven by presenting the credentials th
 | Item | Value |
 |---|---|
 | Request | `{ "presentations": [ SD-JWT VC + KB-JWT, … ] }` (1–20); no claim is disclosed; KB-JWT `aud` = the service address, `nonce` = `POST /nonce` (single use) |
-| Verification | The signature is this service's (`issuerId`); possession through the KB-JWT `cnf` key; the record is found from the status list index |
+| Verification | The signature is this service's (`issuerId`); possession through the KB-JWT `cnf` key; the record is found from the status list index; an expired or revoked credential is accepted too (while its record is held it is the person's data) |
 | Effect | All copies of the record become INVALID; the record and the event log rows tied to it are deleted; the provider session is deleted with `privacy_erasure` (`IdvProvider.deleteSession`) |
 | Response | `{ erased, rejected, provider: "deleted" | "partial" }`; 404 if nothing is held |
 | Log | Only counts (`erasure`: number of records, provider result); the record identifier and `subject_ref` are not written |
