@@ -2,7 +2,7 @@
  * Sunum durumu (bellekte; demo). Kişisel veri: yalnızca `claims` (ayrı uçtan, AP3) — süresi dolunca silinir.
  * `showKey`: kontrol görünümü bağlantısı için rastgele anahtar (ADR-0012 C); sonuçtan sonra 5 dk geçerli.
  */
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { Policy, PresentationRequest, VerificationResult } from "@tamga-network/verifier";
 
 export interface TraceEntry {
@@ -45,6 +45,17 @@ const RETAIN_MS = 30 * 60 * 1000; // sonuçtan 30 dk sonra kayıt (ve claim değ
 /** Bellekteki sunum üst sınırı: dolunca önce en eski yanıtsız (bekleyen) sunum, yoksa en eski kayıt atılır (taşma koruması). */
 export const MAX_PRESENTATIONS = 10_000;
 
+/** Sabit süreli karşılaştırma: uzunluk farklıysa eşit uzunlukta sahte karşılaştırma yapılır ve sonuç yanlış döner. */
+export function sameKey(given: string, expected: string): boolean {
+  const a = Buffer.from(given, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) {
+    timingSafeEqual(b, b);
+    return false;
+  }
+  return timingSafeEqual(a, b);
+}
+
 export class PresentationStore {
   private map = new Map<string, Presentation>();
   constructor(private max = MAX_PRESENTATIONS) {}
@@ -80,9 +91,9 @@ export class PresentationStore {
     return c;
   }
 
-  /** Kontrol görünümü: anahtar doğru ve sonuç 5 dk'dan taze ise. */
+  /** Kontrol görünümü: anahtar doğru (sabit süreli karşılaştırma) ve sonuç 5 dk'dan taze ise. */
   showAllowed(p: Presentation, key: string | undefined, now = Date.now()) {
-    return !!key && key === p.showKey && !!p.resultAt && now - p.resultAt <= SHOW_TTL_MS;
+    return !!key && sameKey(key, p.showKey) && !!p.resultAt && now - p.resultAt <= SHOW_TTL_MS;
   }
 
   size() {

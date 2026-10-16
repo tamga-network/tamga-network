@@ -20,12 +20,14 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 
 - `sd-jwt`: `verifySdJwtVc` option `skipValidityPeriod` — skips A7 (`exp`/`nbf`) for proofs of possession that are not
   acceptance decisions (the identity service's erasure request accepts an expired credential, whose record is still held).
+- `issuer`: `redeemCode` rejects a request without a code, or a PAR that has no code yet, as an unknown code (`invalid_grant`).
 
 ### Reference verifier (`apps/verify`)
 
 - Fixed: the scope check E3 now uses the registration of the relying party that opened the presentation. Before, a presentation
   opened on behalf of another relying party was checked against the verifier's own (wider) registration, so a wallet that
   disclosed more than asked could pass that party an attribute outside its registered scope (ADR-0017 K7/HV6, AP6).
+- The control view key (`?show=`) is compared in constant time.
 
 ### Documents
 

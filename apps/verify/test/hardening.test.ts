@@ -18,7 +18,7 @@ import {
 import { pemRpSigner } from "@tamga-network/verifier";
 import { annexCReaderAuth, buildVerifyApp } from "../src/app.js";
 import { TokenBucketLimiter } from "../src/rate-limit.js";
-import { PresentationStore } from "../src/state.js";
+import { PresentationStore, SHOW_TTL_MS, sameKey } from "../src/state.js";
 import type { VerifyConfig } from "../src/config.js";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
@@ -70,6 +70,33 @@ describe("PresentationStore üst sınırı", () => {
     expect(s.get("a")).toBeDefined();
     expect(s.get("b")).toBeUndefined();
     expect(s.get("d")).toBeDefined();
+  });
+});
+
+describe("kontrol görünümü anahtarı (?show=)", () => {
+  it("sabit süreli karşılaştırma: yalnız aynı anahtar eşleşir, uzunluk farkı hata atmaz", () => {
+    expect(sameKey("abc", "abc")).toBe(true);
+    expect(sameKey("abd", "abc")).toBe(false);
+    expect(sameKey("ab", "abc")).toBe(false);
+    expect(sameKey("abcd", "abc")).toBe(false);
+    expect(sameKey("", "abc")).toBe(false);
+    expect(sameKey("çç", "abcd")).toBe(false); // bayt uzunluğu eşit, karakter sayısı değil
+  });
+  it("showAllowed: doğru anahtar + taze sonuç; yanlış/eksik anahtar ya da süresi geçmiş sonuç reddedilir", () => {
+    const s = new PresentationStore(3);
+    const far = Math.floor(Date.now() / 1000) + 600;
+    const p = s.create({ presentationId: "x", expiresAt: far } as PresentationRequest, {} as Policy, {
+      t: 0,
+      step: "x",
+    });
+    expect(s.showAllowed(p, p.showKey)).toBe(false); // sonuç yok
+    p.result = {} as never;
+    p.resultAt = 1_000_000;
+    expect(s.showAllowed(p, p.showKey, 1_000_000 + 1000)).toBe(true);
+    expect(s.showAllowed(p, p.showKey + "x", 1_000_000 + 1000)).toBe(false);
+    expect(s.showAllowed(p, p.showKey.slice(1), 1_000_000 + 1000)).toBe(false);
+    expect(s.showAllowed(p, undefined, 1_000_000 + 1000)).toBe(false);
+    expect(s.showAllowed(p, p.showKey, 1_000_000 + SHOW_TTL_MS + 1)).toBe(false);
   });
 });
 

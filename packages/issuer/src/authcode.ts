@@ -150,7 +150,9 @@ export function redeemCode(
   p: { code: string; codeVerifier?: string; redirectUri?: string; clientId: string; now?: number },
 ): { ok: true; accessToken: string; expiresIn: number } | { ok: false; error: CodeError; description: string } {
   const now = p.now ?? Math.floor(Date.now() / 1000);
-  if (!par || par.code !== p.code) return { ok: false, error: "invalid_grant", description: "code bilinmiyor" };
+  // yalnız verilmiş bir kod eşleşir: kodu henüz basılmamış PAR, boş/eksik kodlu istekle bulunamaz
+  if (!par || !par.code || !p.code || par.code !== p.code)
+    return { ok: false, error: "invalid_grant", description: "code bilinmiyor" };
   if (par.codeUsed) return { ok: false, error: "invalid_grant", description: "code already used" };
   if (!par.codeExpiresAt || now > par.codeExpiresAt)
     return { ok: false, error: "invalid_grant", description: "code expired" };

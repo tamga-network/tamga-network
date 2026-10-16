@@ -23,6 +23,20 @@ describe("authcode", () => {
     }
     expect(createPar(base).ok).toBe(true);
   });
+  it("kodu henüz basılmamış PAR, boş ya da eksik kodla kullanılamaz", () => {
+    const r = createPar(base);
+    if (!r.ok) throw new Error("par");
+    for (const code of ["", undefined as unknown as string])
+      expect(
+        redeemCode(r.par, {
+          code,
+          codeVerifier: verifier,
+          clientId: "wua-sub",
+          redirectUri: base.redirectUri,
+          now: 1001,
+        }),
+      ).toMatchObject({ ok: false, error: "invalid_grant", description: "code bilinmiyor" });
+  });
   it("code tek kullanımlık; yanlış PKCE code'u yakar; farklı istemci reddedilir", () => {
     const r = createPar(base);
     if (!r.ok) throw new Error("par");
