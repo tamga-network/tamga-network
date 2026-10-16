@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -330,9 +330,6 @@ representation is used (same issuer key; D-CRED-5). A credential that has only a
 when the query contains `etsi_tl`, and passes them to matching (`matchDcql(..., { trustedLists })`; source
 `TrustSource.externalTrustedLists()` — the list's original publication address and its PID / EAA provider certificates, fresh
 lists only). If the lists cannot be read (offline, no list), the `etsi_tl` entry is not evaluable. Tamga Wallet implements this.
-
-Note: the first draft of 0.5.2 treated a type the wallet cannot evaluate as "no match"; that meant no credential ever reached an
-EU verifier that asks only for `etsi_tl`. The corrected rule is above (no false positive, no false exclusion).
 
 ---
 

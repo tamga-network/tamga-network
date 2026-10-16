@@ -4,7 +4,7 @@ title: "Uyum testleri"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Bir uygulamanın Tamga kurallarına uyduğunu göstermek: açık uyum test vektörleri (güven listesi soruları, SD-JWT doğrulaması,
   olumlu ve olumsuz durumlar), koşucuyu çalıştırmak, başka bir dilde yazılmış kütüphaneyi vektörlerle sınamak ve katılımda

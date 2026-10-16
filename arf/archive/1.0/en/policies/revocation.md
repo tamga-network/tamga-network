@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-POL-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
+**Document** FW-POL-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -157,4 +157,4 @@ service issues no new ZK copy (RB-AP-ID-11).
 
 ## Status
 
-**Active** — version 1.0.0 (11 October 2026; §3.3, §3.4 and §8 on 12 October 2026, [[ADR-0047]]; §5 on 13 October 2026, [[ADR-0048]]).
+**Active** — version 1.0.0 (16 October 2026).

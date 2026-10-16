@@ -4,7 +4,7 @@ title: "Cüzdan Kanıtı Politikası (WIA ve KA)"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Tamga güven listesindeki her cüzdan sağlayıcısının cüzdan örneği kanıtını (WIA) ve anahtar kanıtını (KA) nasıl verdiğini,
   hangi koşullarda iptal ettiğini ve iptali nasıl yayımladığını tek yerde toplayan politika (AB ARF VCR_05, WURevocation_03,
@@ -168,4 +168,4 @@ KA'sına doğrudan uygulanmaz. Devlet katılımında ve nitelikli sınıfa geçi
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-11; §2, §5, §9 ve §10 2026-10-12, [[ADR-0047]]; §5–§7 2026-10-13, [[ADR-0025]] notu).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

@@ -3,7 +3,7 @@
   "releases": [
     {
       "id": "1.0",
-      "date": "2026-10-02",
+      "date": "2026-10-16",
       "languages": ["en", "tr"],
       "docs": {
         "FW-ARF-0001": "1.0.0",
@@ -23,16 +23,10 @@
       },
       "notes": {
         "en": [
-          "First release: the main document, the Trust Framework, the Tamga Rulebook with its credential-type rulebooks (Education, Identity, Event Ticket), definitions and references, and the supporting pages Reading path, Roles and Onboarding.",
-          "2026-10-11 (same release): the credential-type rulebooks follow the section structure of the EU Attestation Rulebook template (legal category, encoding tables per format, trust anchors, revocation); new Contact Rulebook, Revocation Policy and Wallet Attestation Policy (WIA and KA).",
-          "2026-10-12 (same release): decisions on the open points (ADR-0047) — wallet unit revocation and institution credentials, the optional revocation_policy_uri, revocation without the phone and without an account, a way outside the wallet to learn about revocation, device attestation at W3, no non-qualified EAA indicator, no trust anchor field; the Wallet Attestation Policy mapped to ETSI TS 119 471 clauses 6–7.",
-          "2026-10-13 (same release): first EU alignment review (ADR-0048, ADR-0049, ADR-0050; ADR-0025, ADR-0026, ADR-0035 and ADR-0036 notes) — no suspension for the identity service's credentials (bits = 1) and suspension only in types whose schema allows it; a CWT status list for mdoc; the written \"Listed on Tamga Network\" indicator in place of a trust mark; one registration certificate per request, a warning for requests without one and rejection after 2028-08-11; WIA and KA lists of at least 10,000 entries; the institution certificate profile; Article 14 / Article 5f note on recognition in the EU."
+          "Current release: the main document, the Trust Framework, the Tamga Rulebook with the credential-type rulebooks in the EU Attestation Rulebook template (Education, Identity, Event Ticket, Contact), the Revocation Policy and the Wallet Attestation Policy, definitions and references, and the supporting pages Reading path, Roles and Onboarding. It includes the decisions up to ADR-0050 and the first EU alignment review. Until the public announcement, changes are made in this release."
         ],
         "tr": [
-          "İlk yayın: ana belge, Trust Framework, Tamga Rulebook ve ondan dallanan belge türü rulebook'ları (Education, Identity, Event Ticket), tanımlar ve kaynaklar; ayrıca Okuma yolu, Roller ve Katılım süreci sayfaları.",
-          "2026-10-11 (aynı yayın): belge türü rulebook'ları AB Attestation Rulebook şablonunun bölüm yapısına taşındı (hukuki kategori, biçim başına kodlama tabloları, güven çapaları, iptal); yeni Contact Rulebook, İptal Politikası ve Cüzdan Kanıtı Politikası (WIA ve KA).",
-          "2026-10-12 (aynı yayın): açık konuların kararları (ADR-0047) — cüzdan birimi iptali ve kurum belgeleri, isteğe bağlı revocation_policy_uri, telefonsuz ve hesapsız iptal, iptalin cüzdan dışından öğrenilmesi, W3'te cihaz kanıtı, nitelikli olmayan EAA göstergesi yok, güven çapası alanı yok; Cüzdan Kanıtı Politikası ETSI TS 119 471 madde 6–7 ile eşlendi.",
-          "2026-10-13 (aynı yayın): ilk AB uyum turu (ADR-0048, ADR-0049, ADR-0050; ADR-0025, ADR-0026, ADR-0035 ve ADR-0036 notları) — kimlik servisinin belgelerinde askı yok (bits = 1), askı yalnız şeması izin veren türlerde; mdoc için CWT iptal listesi; güven işareti yerine yazılı \"Tamga Network'te listeli\" göstergesi; istek başına tek kayıt sertifikası, sertifikasız istekte uyarı ve 2028-08-11'den sonra ret; WIA ve KA listeleri en az 10.000 girişli; kurum sertifika profili; AB'de tanınma için Madde 14 / Madde 5f notu."
+          "Güncel yayın: ana belge, Trust Framework, Tamga Rulebook ve AB Attestation Rulebook şablonundaki belge türü rulebook'ları (Education, Identity, Event Ticket, Contact), İptal Politikası ve Cüzdan Kanıtı Politikası, tanımlar ve kaynaklar; ayrıca Okuma yolu, Roller ve Katılım süreci sayfaları. ADR-0050'ye kadarki kararları ve ilk AB uyum turunu içerir. Kamuya duyuruya kadar değişiklikler bu yayının içinde yapılır."
         ]
       }
     }

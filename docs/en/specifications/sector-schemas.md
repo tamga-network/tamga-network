@@ -4,7 +4,7 @@ title: "Sector schemas"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-16
 summary: >
   Defines the schema skeletons of the verticals beyond education and the CONDITIONS FOR OPENING a sector. The central thesis:
   the approach that works in education cannot be copied to other sectors as it is — in health a wrong selective disclosure

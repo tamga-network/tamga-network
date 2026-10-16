@@ -4,7 +4,7 @@ title: "SD-JWT VC profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Defines the bytes of a Tamga credential: how a disclosure is produced (salt, array structure, JSON serialisation rule,
   base64url), how the _sd array is filled and why it is sorted, the decoy digest policy, the placement of _sd_alg, cnf and

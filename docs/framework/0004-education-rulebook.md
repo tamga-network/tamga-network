@@ -4,7 +4,7 @@ title: "Education Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Eğitim alanındaki iki ortak belge türünün (öğrenci belgesi, diploma) rulebook'u, AB Attestation Rulebook şablonunun bölüm
   yapısıyla: öznitelikler ve üst veri, hukuki kategori, SD-JWT VC kodlaması ve seçici açıklama, kullanım ve belge verme
@@ -14,7 +14,7 @@ summary: >
 
 | Sürüm | Tarih | Açıklama |
 |---|---|---|
-| 1.0.0 | 2026-10-02 | İlk yayın (Tamga ARF 1.0). 2026-10-11: AB Attestation Rulebook şablonunun (sürüm 1.5) bölüm yapısına taşındı; hukuki kategori, kodlama tablosu, güven çapaları ve iptal bölümleri eklendi. Kurallar değişmedi; sürüm aynı kaldı. |
+| 1.0.0 | 2026-10-16 | Tamga ARF 1.0'ın güncel metni; AB Attestation Rulebook şablonunun (sürüm 1.5) bölüm yapısında. |
 
 **Şema sahibi:** Tamga Network (bugün geçici işletmeci). **Geri bildirim:** <https://github.com/tamga-network/tamga-network/issues>
 
@@ -378,4 +378,4 @@ ELM v3. Bu belgenin dayandığı Tamga kararları ve şartnameleri Ek E'de liste
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11; §2.0 ve §7.2 kararları 2026-10-12, [[ADR-0047]]; §6.2 askı satırı 2026-10-13, [[ADR-0048]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

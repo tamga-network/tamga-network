@@ -4,7 +4,7 @@ title: "Şema kataloğu"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   [[ADR-0007]] kararlarının normatif uygulaması. schemas.tamga.network URL şemasını
   ve isim alanlarını, her vct adresinde yayınlanan SD-JWT VC Type Metadata

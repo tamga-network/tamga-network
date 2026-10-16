@@ -4,7 +4,7 @@ title: "Güven listelerini okumak"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-03
+last_updated: 2026-10-16
 summary: >
   Tamga'nın güven çapasını kullanmak: imzalı güven listelerini TrustSource ile okumak, kök parmak izini sabitlemek, tazelik
   ve üç değerli cevaplar; kaydın nerede anlatıldığı; zincir aşaması (Besu/QBFT) açıldığında düğüm ve validator operatörleri için

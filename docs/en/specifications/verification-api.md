@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-16
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -242,7 +242,7 @@ The following also give `INDETERMINATE`, not `REJECTED`:
   presentation carrying the short-validity marker (the type bound by the proof is the ZK copy, [[ADR-0044]] K5) is accepted
   without this flag. For an unmarked ZK presentation, if the policy requires a revocation check the outcome is `D1` /
   `STATUS_UNREACHABLE`; only with an explicit `true` is it accepted: `status.value = NOT_APPLICABLE`, with `status.reason` set.
-  **When omitted the field means `false`** (`ADR-0044/ZC4`; the verifier package treated a missing field as `true` up to 0.3.0).
+  **When omitted the field means `false`** (`ADR-0044/ZC4`).
 
 ## 2.4 `disclosed_claims` — names only
 

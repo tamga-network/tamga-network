@@ -4,7 +4,7 @@ title: "Code examples"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Four working examples: sign-in with Tamga on a website, verifying credentials on your own server, issuing credentials as
   an institution and checking an institution's authorisation. The code is pulled into this page from the real files in the

@@ -4,7 +4,7 @@ title: "Conformance tests"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Showing that an application follows the Tamga rules: the open conformance test vectors (trust list questions, SD-JWT
   verification, positive and negative cases), running the runner, testing a library written in another language against the

@@ -4,7 +4,7 @@ title: "Education schemas"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-14
+last_updated: 2026-10-16
 summary: >
   Normatively defines the pilot's two credential types. TamgaStudentCredential: short-lived (90 days), no status list,
   proves student status. TamgaDiplomaCredential: long-lived, uses a status list, proves graduation. For both it gives the

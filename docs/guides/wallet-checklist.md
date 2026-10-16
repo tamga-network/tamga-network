@@ -4,7 +4,7 @@ title: "Cüzdan yayın öncesi kontrol listesi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-11
+last_updated: 2026-10-16
 summary: >
   Tamga uyumlu bir cüzdanı mağazaya göndermeden önce geçilecek kontrol listesi: anahtarlar ve cihaz kanıtı, kayıt, belge alma,
   gösterme ve onay ekranı, gizlilik ve günlük, cihaz değiştirme ve silme, güven listesi, uyum testleri ve mağaza.

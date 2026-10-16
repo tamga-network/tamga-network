@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
+**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -336,4 +336,4 @@ The decisions, specifications and standards this document rests on are listed in
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026; §11 and the policy documents on 11 October 2026; RB-AP-27, RB-AP-ID-12, RB-WP-15–17 on 12 October 2026, [[ADR-0047]]; RB-AP-28, RB-AP-ID-13, RB-WP-18–19, RB-RP-14 and the changes to RB-AP-18, RB-AP-ID-11 and RB-WP-10 on 13 October 2026, [[ADR-0048]], [[ADR-0049]], [[ADR-0026]]).
+**Active** — version 1.0.0 (16 October 2026).

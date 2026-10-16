@@ -35,7 +35,7 @@ await statusCache.refresh(listUris); // birkaç dakikada bir
 İptal listesi ya da [[t:trust-list|güven listesi]] politikanızdaki en eski yaştan bayatsa sonuç `INDETERMINATE` olur: belge
 belki geçerlidir ama şu an kanıtlanamaz. Kullanıcıya "şu an doğrulanamadı, biraz sonra tekrar deneyin" deyin; reddetmeyin.
 
-`@tamga-network/verifier` 0.3.1 ve sonrası bir liste belirtecini `exp`'e ve politikanızdaki azami yaşa
+`@tamga-network/verifier` bir liste belirtecini `exp`'e ve politikanızdaki azami yaşa
 (`max_status_token_age_sec`) kadar kullanır.
 
 ## Sıfır bilgi ispatı ve iptal

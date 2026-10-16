@@ -4,7 +4,7 @@ title: "Okuma yolu"
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-02
+last_updated: 2026-10-16
 summary: >
   Tamga ARF'yi rolünüze göre hangi sırayla okuyacağınızı gösteren tek tablo: belge veren kurum, doğrulayıcı, cüzdan
   sağlayıcısı, devlet ve düzenleyici, denetçi, yazılım geliştirici ve kişi için önce ARF'nin hangi bölümleri, sonra hangi
@@ -47,4 +47,4 @@ katılmaya hazırsanız **Katılım süreci** sayfasına ([[FW-ONB-0001]]) bakı
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

@@ -4,7 +4,7 @@ title: "Cüzdan geliştirmek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Tamga belgelerini alan, saklayan ve gösteren bir cüzdan geliştirmek: cüzdan sağlayıcısı olarak kayıt, cihaz anahtarları,
   cihaz kanıtı (App Attest, Android anahtar kanıtı), Wallet Unit Attestation (WUA), OpenID4VCI ile belge alma, OpenID4VP ile

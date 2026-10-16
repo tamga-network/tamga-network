@@ -4,7 +4,7 @@ title: "İptal Politikası"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-14
+last_updated: 2026-10-16
 summary: >
   Tamga ağındaki belge verenlerin (kimlik servisi ve kurumlar) verdiği belgelerin hangi koşullarda iptal edildiğini, kimin
   iptal isteyebileceğini, askıya almayı, iptal listesinin nasıl yayımlandığını ve iptalin ne kadar sürede etkili olduğunu tek
@@ -143,4 +143,4 @@ belgesi iptal edilmişse kimlik servisi yeni ZK kopyası vermez (RB-AP-ID-11).
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-11; §3.3, §3.4 ve §8 2026-10-12, [[ADR-0047]]; §5 2026-10-13, [[ADR-0048]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

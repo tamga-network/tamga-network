@@ -38,7 +38,7 @@ If the status list or the [[t:trust-list]] is older than the maximum age in your
 credential may well be valid, but it cannot be proven right now. Tell the user "cannot be verified right now, please try again
 shortly" — do not reject.
 
-`@tamga-network/verifier` 0.3.1 and later uses a list token until its `exp` and the maximum age in your policy
+`@tamga-network/verifier` uses a list token until its `exp` and the maximum age in your policy
 (`max_status_token_age_sec`).
 
 ## Zero-knowledge proofs and revocation

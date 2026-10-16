@@ -4,7 +4,7 @@ title: "Read trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-03
+last_updated: 2026-10-16
 summary: >
   Using Tamga's trust anchor: reading the signed trust lists with TrustSource, pinning the root fingerprint, freshness and
   three-valued answers; where registration is covered; and, once the ledger stage (Besu/QBFT) opens, configuration for node and

@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Tamga'nın kimlik servisinin verdiği kişi belgelerinin rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc),
@@ -16,7 +16,7 @@ summary: >
 
 | Sürüm | Tarih | Açıklama |
 |---|---|---|
-| 1.0.0 | 2026-10-02 | İlk yayın (Tamga ARF 1.0). 2026-10-11: AB Attestation Rulebook şablonunun (sürüm 1.5) bölüm yapısına taşındı; hukuki kategori, biçim başına kodlama tabloları, güven çapaları ve iptal bölümleri eklendi. Kurallar değişmedi; sürüm aynı kaldı. |
+| 1.0.0 | 2026-10-16 | Tamga ARF 1.0'ın güncel metni; AB Attestation Rulebook şablonunun (sürüm 1.5) bölüm yapısında. |
 
 **Şema sahibi:** Tamga Network (bugün geçici işletmeci). **Geri bildirim:** <https://github.com/tamga-network/tamga-network/issues>
 
@@ -520,4 +520,4 @@ dayandığı Tamga kararları ve şartnameleri Ek E'de listelenir.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; AB şablonu yapısına taşındı 2026-10-11; §2.0 ve §7.2 kararları 2026-10-12, [[ADR-0047]]; §3.1 ve §6.2 2026-10-13, [[ADR-0048]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

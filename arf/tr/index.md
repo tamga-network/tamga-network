@@ -5,7 +5,7 @@ aside: false
 
 # Tamga ARF
 
-<span class="arf-release">Yayın 1.0 · 2 Ekim 2026</span>
+<span class="arf-release">Yayın 1.0 · 16 Ekim 2026</span>
 
 **Tamga Network'ün Mimari ve Referans Çerçevesi** — Türk dünyası için, [[t:eIDAS]] 2.0 ve Avrupa Dijital Kimlik Cüzdanı
 ekosistemiyle uyumlu dijital güven altyapısı. Tamga [[t:ARF]] kimin, hangi kurallarla ve hangi mimariyle katıldığını anlatır:
@@ -57,6 +57,6 @@ her zaman aynı sürümdedir.
 
 ## Yayınlar
 
-- **1.0 (2 Ekim 2026)** — ilk yayın.
+- **1.0 (16 Ekim 2026)** — güncel yayın. Kamuya duyuruya kadar değişiklikler bu yayının içinde yapılır.
 
 Belgeler CC BY 4.0 · Kod Apache-2.0.

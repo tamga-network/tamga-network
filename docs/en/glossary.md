@@ -3,7 +3,7 @@ document_id: GLOSSARY
 title: "Glossary"
 status: Active
 version: 1.0.0
-last_updated: 2026-10-02
+last_updated: 2026-10-16
 created: 2026-10-02
 summary: >
   Plain explanations of the terms used in the Tamga Network documentation. The binding definitions are in Tamga ARF Annex D.

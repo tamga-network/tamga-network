@@ -4,7 +4,7 @@ title: "Roller"
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-06
+last_updated: 2026-10-16
 summary: >
   Tamga Network'teki rollerin ayrıntısı: işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak,
   doğrulayıcı, cüzdan sağlayıcısı, kişi, devlet ve denetçi. Her rol için ne yaptığı, bugün kimin üstlendiği, bağlı olduğu
@@ -124,7 +124,7 @@ kurallara uyan ve uyum testlerini geçen her cüzdan ağda çalışır. Cüzdan 
 hiçbir cüzdan sağlayıcısını işletmez, yalnızca güven listesinde listeler.
 
 **Bugün kim.** Tamga Wallet: ağın ilk cüzdanı; ayrı bir ürün ve açık kaynaktır. Sağlayıcı servisini cüzdanın
-işletmecisi `provider.tamgawallet.com`'da işletir (henüz canlı değil); ağ yalnız listeler. Tamga Wallet ağın kurallarına her cüzdan gibi uyar.
+işletmecisi `provider.tamgawallet.com`'da işletir (canlı; güven listesinde `TAMGA-WP-1`, `ACTIVE`); ağ yalnız listeler. Tamga Wallet ağın kurallarına her cüzdan gibi uyar.
 
 **Sandbox.** Cüzdan geliştiricisi cüzdanını ağın tek test ağı olan sandbox'ta dener: kendi cüzdan sağlayıcısını sandbox
 listesine kaydettirir, cüzdanını sandbox'taki örnek kurumlar, kimlik servisi ve doğrulayıcıyla sınar. Ayrı bir cüzdan
@@ -177,4 +177,4 @@ Ek B §10 (RB-ENF).
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

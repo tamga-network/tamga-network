@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
+**Document** FW-RB-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -22,7 +22,7 @@ schema is in SPEC-SCHEMA-0002.
 
 | Version | Date | Description |
 | --- | --- | --- |
-| 1.0.0 | 2026-10-02 | First release (Tamga ARF 1.0). 2026-10-11: moved to the section structure of the EU Attestation Rulebook template (version 1.5); legal category, encoding table, trust anchors and revocation sections added. The rules did not change; the version stayed the same. |
+| 1.0.0 | 2026-10-16 | Current text of Tamga ARF 1.0, in the section structure of the EU Attestation Rulebook template (version 1.5). |
 
 **Scheme owner:** Tamga Network (today the provisional operator). **Feedback:** <https://github.com/tamga-network/tamga-network/issues>
 
@@ -380,4 +380,4 @@ List, ELM v3. The Tamga decisions and specifications this document rests on are 
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026; moved to the EU template structure on 11 October 2026; §2.0 and §7.2 decisions on 12 October 2026, [[ADR-0047]]; §6.2 suspension row on 13 October 2026, [[ADR-0048]]).
+**Active** — version 1.0.0 (16 October 2026).

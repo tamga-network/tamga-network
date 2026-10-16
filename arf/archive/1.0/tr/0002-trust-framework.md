@@ -4,7 +4,7 @@ title: "Ek A — Trust Framework"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Tamga ekosisteminin yönetişim çerçevesi. World Bank "Digital Wallets: Trust Frameworks" beş katmanlı modeliyle
   yapılandırılmıştır: strateji (vizyon, ilkeler, hukuki bağlam, risk, yönetişim organları), teknoloji (ana belgeye işaret),
@@ -509,4 +509,4 @@ Bu belgenin dayandığı kararlar, şartnameler ve standartlar Ek E'de listeleni
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

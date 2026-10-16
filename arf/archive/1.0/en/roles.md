@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ROLE-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-06 · **Licence** CC BY 4.0
+**Document** FW-ROLE-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -136,7 +136,7 @@ conformance tests works in the network. The wallet provider is run by the organi
 network runs no wallet provider and only lists them in the trusted list.
 
 **Who today.** Tamga Wallet: the network's first wallet; a separate, open-source product. Its provider service is
-run by the wallet's operator at `provider.tamgawallet.com` (not live yet); the network only lists it. Tamga Wallet follows the network's rules
+run by the wallet's operator at `provider.tamgawallet.com` (live; listed as `TAMGA-WP-1`, `ACTIVE`); the network only lists it. Tamga Wallet follows the network's rules
 like any other wallet.
 
 **Sandbox.** A wallet developer tries the wallet in the sandbox, the network's single test network: they have their own
@@ -192,4 +192,4 @@ response); Annex B §10 (RB-ENF).
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026).
+**Active** — version 1.0.0 (16 October 2026).

@@ -4,7 +4,7 @@ title: "Join the network as an institution"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-16
 summary: >
   How an institution joins Tamga Network as an issuer: the application file and the EU common registration data, keys and the
   certificate signing request (CSR), entry into the trust list, credential type authorisation, the first credential and later

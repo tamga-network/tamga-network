@@ -4,7 +4,7 @@ title: "Kurum olarak belge vermek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-11
+last_updated: 2026-10-16
 summary: >
   Üniversite, kamu kurumu ya da bilet satıcısı olarak kişilerin cüzdanına belge vermek: Tamga'nın barındırdığı belge verme
   servisini `@tamga-network/issuer/client` ile çağırmak (teklif, bilet satışı, iptal/askı) ya da kendi belge verme servisinizi

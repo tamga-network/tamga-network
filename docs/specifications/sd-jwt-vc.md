@@ -4,7 +4,7 @@ title: "SD-JWT VC profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Bir Tamga belgesinin baytlarını tanımlar. Disclosure nasıl üretilir
   (salt, dizi yapısı, JSON serileştirme kuralı, base64url), _sd dizisi nasıl

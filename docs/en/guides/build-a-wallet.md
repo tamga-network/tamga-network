@@ -4,7 +4,7 @@ title: "Build a wallet"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Building a wallet that receives, stores and presents Tamga credentials: registering as a wallet provider, device keys,
   device attestation (App Attest, Android key attestation), the Wallet Unit Attestation (WUA), receiving credentials with

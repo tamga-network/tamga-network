@@ -4,7 +4,7 @@ title: "“Tamga ile giriş yap” eklemek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-06
+last_updated: 2026-10-16
 summary: >
   Bir web sitesine Tamga ile kayıt ve giriş eklemek: sayfada `@tamga-network/verifier/web` kiti (QR / telefonda cüzdanı aç),
   sunucuda sonucun doğrulayıcıdan alınıp oturum açılması, kayıttan sonra passkey ile telefonsuz giriş. Çalışan örnek

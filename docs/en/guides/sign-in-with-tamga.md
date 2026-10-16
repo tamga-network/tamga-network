@@ -4,7 +4,7 @@ title: "Add “Sign in with Tamga”"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-06
+last_updated: 2026-10-16
 summary: >
   Adding sign-up and sign-in with Tamga to a website: the `@tamga-network/verifier/web` kit on the page (QR code / open the
   wallet on the phone), fetching the result from the verifier on the server and opening a session, and passkey sign-in without

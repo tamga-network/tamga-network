@@ -4,7 +4,7 @@ title: "Troubleshooting"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Common problems and how to fix them: reasons for "could not be verified", rejected steps, trust list loading errors, wallet
   errors when receiving and presenting credentials, device attestation, registration applications and the service error format.

@@ -4,7 +4,7 @@ title: "Sektör şemaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-16
 summary: >
   Eğitim dışındaki dikeylerin şema iskeletlerini ve bir sektörün AÇILMA
   KOŞULLARINI tanımlar. Merkezî tez: eğitimde işe yarayan yaklaşım diğer

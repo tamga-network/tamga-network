@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -343,9 +343,6 @@ D-CRED-5). Yalnız mdoc kopyası olan belge de böylece `aki` / `etsi_tl` ile e�
 varsa okur ve eşleştirmeye verir (`matchDcql(..., { trustedLists })`; kaynak `TrustSource.externalTrustedLists()` — listenin özgün
 yayın adresi ve PID / EAA sağlayıcı sertifikaları, yalnız taze listeler). Listeler okunamazsa (çevrimdışı, liste yok) `etsi_tl`
 koşulu değerlendirilemez. Tamga Wallet bu davranışı uygular.
-
-Not: 0.5.2'nin ilk taslağı değerlendirilemeyen türü "eşleşmez" sayıyordu; bu, yalnız `etsi_tl` isteyen AB doğrulayıcılarına hiçbir
-belgenin gitmemesi demekti. Düzeltilmiş kural yukarıdadır (yanlış olumlu yok, yanlış eleme de yok).
 
 ---
 

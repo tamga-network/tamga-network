@@ -4,7 +4,7 @@ title: "Ulusal güven listesi yayınlamak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-12
+last_updated: 2026-10-16
 summary: >
   Bir devletin ya da yetkili kurumunun kendi güven listesini Tamga Network'e bağlaması: iki yol (Tamga biçiminde ulusal liste
   ya da ETSI biçiminde dış liste), LOTL'daki kayıt, roller, imza anahtarları, kapsam, tanıma, devir ve yayın kuralları.

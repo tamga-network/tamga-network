@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-09
+last_updated: 2026-10-16
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -247,8 +247,7 @@ Ayrıca şu durumlar `INDETERMINATE` verir, `REJECTED` vermez:
 - **İşaretsiz ZK sunumu ve `accept_unrevocable_zk: false`:** ZK sunumunda iptal indeksi gelmez (ZK4). Kısa ömür işaretini
   taşıyan sunum (ispatın bağladığı tür ZK kopyası, [[ADR-0044]] K5) bu bayrak olmadan kabul edilir. İşaretsiz ZK sunumunda
   politika iptal denetimini şart koşuyorsa sonuç `D1` / `STATUS_UNREACHABLE`; yalnız açıkça `true` yazılmışsa kabul edilir:
-  `status.value = NOT_APPLICABLE`, `status.reason` dolu. **Alan verilmemişse `false` sayılır** (`ADR-0044/ZC4`; doğrulayıcı
-  paketi 0.3.0'a kadar verilmeyen alanı `true` sayıyordu).
+  `status.value = NOT_APPLICABLE`, `status.reason` dolu. **Alan verilmemişse `false` sayılır** (`ADR-0044/ZC4`).
 
 ## 2.4 `disclosed_claims` — yalnızca adlar
 

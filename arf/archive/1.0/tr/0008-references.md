@@ -4,7 +4,7 @@ title: "Ek E — Kaynaklar"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Tamga ARF'nin dayandığı standartlar ve düzenlemeler, Tamga karar kayıtları ve şartnameleri ve eklerdeki her bağlayıcı
   kuralın kaynağı.
@@ -207,4 +207,4 @@ Belge türü rulebook'ları ([[FW-RB-0002]]…[[FW-RB-0005]]) ile İptal Politik
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; kural kaynakları 2026-10-13, [[ADR-0048]], [[ADR-0049]], [[ADR-0050]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

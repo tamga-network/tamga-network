@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ONB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-06 · **Licence** CC BY 4.0
+**Document** FW-ONB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -131,4 +131,4 @@ No exit deletes history or invalidates existing credentials (RB-REG-07). Verifie
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026).
+**Active** — version 1.0.0 (16 October 2026).

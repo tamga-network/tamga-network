@@ -4,7 +4,7 @@ title: "Register as a verifier"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-11
+last_updated: 2026-10-16
 summary: >
   Registering a site or service as a verifier in the Tamga trust list: domain name and access certificate, the EU common
   registration data, intended uses (purpose, fields, privacy policy), the registration certificate, intermediaries and

@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -175,6 +175,8 @@ gösterme olağan yolla yapılır.
 | Kurumun cüzdan kanıtı tercihleri (anahtar deposu şartı, iptal bakım süresi) | Yayında (paketler npm'de 0.5.0'dan beri) |
 | AB'nin eski güven listesi biçimi (ETSI TS 119 612, XML) ve cüzdanda dış listeler | Yayında (paketler npm'de 0.5.0'dan beri) |
 | Attestation Revocation List (tanımlayıcı listesi) — doğrulayıcı ve cüzdan tarafı | Yayında (paketler npm'de 0.5.0'dan beri); Tamga belge verenleri Status List kullanır |
+| Kimlik belgesinde askı yok, mdoc için CWT iptal listesi; kayıt sertifikası olmayan istekte uyarı; yakın alanda okuyucu doğrulaması | Yayında (paketler npm'de 0.6.0'dan beri) |
+| Cüzdan sağlayıcısı kaydı | Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) gerçek ve sandbox güven listelerinde `ACTIVE` |
 
 ---
 
@@ -488,5 +490,5 @@ Kaynakların tam listesi Ek E'dedir.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).
 

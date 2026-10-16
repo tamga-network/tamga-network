@@ -4,7 +4,7 @@ title: "Verify on your server"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Verifying Tamga credentials on your own server: loading the trust source, prefetching status lists, policy → signed
   OpenID4VP request, decrypting the encrypted response and the canonical verification pipeline (T0 + A–E). Reference
@@ -126,7 +126,7 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
   verifier sees that it is short-lived and expects no revocation check. Revocation takes effect for ZK within 24 hours at
   most; if you need to see revocation immediately, use the classic `mso_mdoc` policy.
 - **`accept_unrevocable_zk`:** only for a ZK presentation that is NOT a short-lived copy (unmarked). `true` knowingly accepts
-  such a presentation whose revocation cannot be checked; with `false` or when the field is omitted (the default since 0.3.1)
+  such a presentation whose revocation cannot be checked; with `false` or when the field is omitted (the default)
   an unmarked ZK presentation returns `INDETERMINATE` (step `D1`, `STATUS_UNREACHABLE`).
 - **Fallback:** if the wallet does not support ZK, your query will not match; ask the same question with the classic
   `mso_mdoc` policy (`age-over-18-mdoc`). Wallet side: `@tamga-network/zk` (Android native library ready, iOS pending); a

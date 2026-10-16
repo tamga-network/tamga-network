@@ -4,7 +4,7 @@ title: "Katılım süreci"
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-06
+last_updated: 2026-10-16
 summary: >
   Tamga Network'e katılımın adımları: belge veren, doğrulayıcı, cüzdan sağlayıcısı ve devlet için başvuru, gereken belgeler,
   inceleme, uyum testleri, listeye giriş; ardından kayıt değişikliği, askıya alma ve çıkış. Kurallar Ek A §3.2–§3.3 ve Ek B'de,
@@ -122,4 +122,4 @@ yollarla çıkar.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

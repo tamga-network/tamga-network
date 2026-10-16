@@ -18,12 +18,14 @@ import { issueMdoc, discloseMdoc, verifyIssuerSigned } from "@tamga-network/mdoc
 
 `cbor.ts` deterministic CBOR · `cose.ts` COSE_Sign1 (ES256, x5chain), COSE_Key · `mdoc.ts` issue, disclose, verify, device
 signing, OpenID4VP session transcripts (OpenID4VPHandover and the Digital Credentials API handover) · `proximity.ts` ISO 18013-5
-in-person presentation: device engagement (QR), session encryption, BLE message framing.
+in-person presentation: device engagement (QR) with the EU presentation offer, session encryption, BLE message framing, reader
+authentication (`signReaderAuth`, `verifyReaderAuth`) and the CBOR registration certificate in `requestInfo` · ISO/IEC 18013-7
+Annex C (HPKE) for browser presentation · status list and identifier list tokens in CWT form.
 
 ## Not included (by design)
 
 - The BLE radio itself — the transport is supplied by the wallet app (typically through a native module).
-- NFC engagement and reader authentication — planned.
+- NFC engagement.
 
 ## Status
 

@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-POL-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
+**Document** FW-POL-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -178,4 +178,4 @@ apply directly to Tamga's non-qualified WIA and KA. They are read separately whe
 
 ## Status
 
-**Active** — version 1.0.0 (11 October 2026; §2, §5, §9 and §10 on 12 October 2026, [[ADR-0047]]).
+**Active** — version 1.0.0 (16 October 2026).

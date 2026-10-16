@@ -4,7 +4,7 @@ title: "Ek D — Tanımlar"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-02
+last_updated: 2026-10-16
 summary: >
   Tamga ARF'de kullanılan terimlerin ve kısaltmaların tanımları. AB ARF'sinin tanımlar ekinin karşılığıdır; AB adı ile
   Tamga'daki karşılığı birlikte verilir.
@@ -77,4 +77,4 @@ summary: >
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

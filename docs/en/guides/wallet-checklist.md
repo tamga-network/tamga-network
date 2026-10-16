@@ -4,7 +4,7 @@ title: "Wallet pre-release checklist"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-11
+last_updated: 2026-10-16
 summary: >
   The checklist to go through before submitting a Tamga-compatible wallet to the app stores: keys and device attestation,
   registration, receiving credentials, presenting and the consent screen, privacy and the transaction log, changing devices and

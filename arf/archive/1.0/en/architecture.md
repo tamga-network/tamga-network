@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-13 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -189,6 +189,8 @@ release. Where proofs are not supported, the presentation is made in the usual w
 | Issuer's wallet attestation preferences (key storage requirement, revocation maintenance period) | Released (packages on npm since 0.5.0) |
 | The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Released (packages on npm since 0.5.0) |
 | Attestation Revocation List (identifier list) — verifier and wallet side | Released (packages on npm since 0.5.0); Tamga issuers use the Status List |
+| No suspension for the identity credential, CWT revocation list for mdoc; warning for requests without a registration certificate; reader verification in proximity | Released (packages on npm since 0.6.0) |
+| Wallet provider registration | Tamga Wallet's provider (`TAMGA-WP-1`) is `ACTIVE` in the production and sandbox trust lists |
 | Sandbox (open to everyone; identity verification with daily/monthly caps) | Live                                                                                                      |
 
 ---
@@ -513,4 +515,4 @@ The full list of references is in Annex E.
 
 ## Status
 
-**Active** — version 1.0.0 (2 October 2026).
+**Active** — version 1.0.0 (16 October 2026).

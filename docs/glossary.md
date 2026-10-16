@@ -3,7 +3,7 @@ document_id: GLOSSARY
 title: "Sözlük"
 status: Active
 version: 1.0.0
-last_updated: 2026-10-02
+last_updated: 2026-10-16
 created: 2026-10-02
 summary: >
   Tamga Network belgelerinde geçen terimlerin sade Türkçe açıklamaları. Bağlayıcı tanımlar Tamga ARF Ek D'dedir.

@@ -4,7 +4,7 @@ title: "Institutional identity (X.509)"
 status: Active
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   The code- and protocol-level counterpart of the X.509 decision ([[ADR-0004]]). Institutional (entity) identity is built on
   X.509 certificates rooted in national Root CAs; an institution's ledger identity is anchored as

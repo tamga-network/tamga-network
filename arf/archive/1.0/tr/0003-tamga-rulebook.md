@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -328,4 +328,4 @@ Bu belgenin dayandığı kararlar, şartnameler ve standartlar Ek E'de listeleni
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §11 ve politika belgeleri 2026-10-11; RB-AP-27, RB-AP-ID-12, RB-WP-15–17 2026-10-12, [[ADR-0047]]; RB-AP-28, RB-AP-ID-13, RB-WP-18–19, RB-RP-14 ve RB-AP-18, RB-AP-ID-11, RB-WP-10 değişiklikleri 2026-10-13, [[ADR-0048]], [[ADR-0049]], [[ADR-0026]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).

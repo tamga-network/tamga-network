@@ -4,7 +4,7 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   End-to-end testing on sandbox.tamga.network, the test network kept apart from the real network: addresses, pinning the
   trust anchor, connecting a wallet to the sandbox, registering your own wallet provider in the sandbox list as a wallet
@@ -60,9 +60,9 @@ only the addresses and the trust anchor.
 
 The sandbox has no wallet provider of its own: the network runs no wallet provider, and wallet developers register their own
 provider in the sandbox list (§2, [[ADR-0042]]). The list has two special entries: `TAMGA-SANDBOX-TEST-WP` is a generic test
-key for the network's own trial scenes (not a real wallet; [[ADR-0042]] K5); Tamga Wallet's provider (`TAMGA-WP-1`)
-appears with the same entry in both the production and the sandbox list; there is no separate wallet sandbox. The entry stays
-`RESERVED` until the operator supplies its own certificate and is not used in validation.
+key for the network's own trial scenes (not a real wallet; [[ADR-0042]] K5); `OIDF-CONFORMANCE-TEST` is the test provider of
+the OpenID conformance tool (sandbox only). Tamga Wallet's provider (`TAMGA-WP-1`) is `ACTIVE` with the same entry and the
+same certificate in both the production and the sandbox list; there is no separate wallet sandbox.
 
 Example institutions, people and permissions come from seed data and return to their initial state at every reset; the
 example institutions have no console. The Institution Console serves only the test institutions you open (§9, [[ADR-0041]]).

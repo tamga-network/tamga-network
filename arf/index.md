@@ -5,7 +5,7 @@ aside: false
 
 # Tamga ARF
 
-<span class="arf-release">Release 1.0 · 2 October 2026</span>
+<span class="arf-release">Release 1.0 · 16 October 2026</span>
 
 **The Architecture and Reference Framework of Tamga Network** — a digital trust infrastructure for the Turkic world,
 compatible with [[t:eIDAS]] 2.0 and the European Digital Identity Wallet ecosystem. Tamga [[t:ARF]] describes who takes part, under
@@ -58,6 +58,6 @@ translation, and the two are always at the same version.
 
 ## Releases
 
-- **1.0 (2 October 2026)** — first release.
+- **1.0 (16 October 2026)** — current release. Until the public announcement, changes are made in this release.
 
 Documentation CC BY 4.0 · Code Apache-2.0.

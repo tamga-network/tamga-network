@@ -4,7 +4,7 @@ title: "Revocation and status list"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   The normative implementation of the [[ADR-0008]] decision. Defines the Tamga profile of the Status List Token (bits=2
   in institution lists, bits=1 for the identity service; ES256, X.509 chain, at least 100,000 indices; a CWT representation for
@@ -570,10 +570,6 @@ publication and no new anchor; the verifier's token matches the last anchor and 
 the verifier cannot fetch the list, the anchor is newer than the token and the result is COULD NOT VERIFY (§7 Ş6; not a
 rollback). So the long `exp` helps only in a real outage and does not hide a revocation from a verifier that knows the
 current anchor.
-
-> **Verifier package:** the outage buffer takes effect only for verifiers on `@tamga-network/sd-jwt` **0.3.1 or later**: from
-> 0.3.1 the limit is `exp` and the policy's `max_status_token_age_sec`. 0.3.0 treats a token as stale after `iat + 2 × ttl`
-> (D4, COULD NOT VERIFY); a verifier on that version falls to COULD NOT VERIFY within minutes during an outage.
 
 **The claims decide.** The standard requires the verifying party to give precedence to the token's `exp` and `ttl` claims
 over HTTP cache headers. The CDN's `Cache-Control` header cannot override this.

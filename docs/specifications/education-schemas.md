@@ -4,7 +4,7 @@ title: "Eğitim şemaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-14
+last_updated: 2026-10-16
 summary: >
   Pilotun iki belge tipini normatif olarak tanımlar. TamgaStudentCredential:
   kısa ömürlü (90 gün), iptal listesi kullanmaz, öğrencilik durumunu kanıtlar.

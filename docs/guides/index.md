@@ -4,7 +4,7 @@ title: "Başlarken"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Geliştiriciler için giriş: Tamga'da dört yol (doğrulayıcı, belge veren, cüzdan geliştiricisi, ağ/düğüm operatörü),
   hangi paketi kuracağınız, hangi adresleri kullanacağınız, yerel geliştirme ortamının kurulumu ve bugün neyin hazır olduğu.
@@ -100,6 +100,7 @@ hazır olunca gelir. Deneme sürümünde arayüz değişebilir. Her sürüm bu d
 | Barındırılan doğrulayıcı | çalışıyor: sunumu sitenin sunucusu imzalı beyanla açar, değerler yalnızca ona ve bir kez verilir ([[ADR-0017]]); politikalar bugün sabit |
 | Barındırılan belge verme | çalışıyor: kurum başına kapsamlı API anahtarı ([[ADR-0016]]) |
 | Güven çapası | imzalı güven listeleri ([[ADR-0009]]); belge veren ve doğrulayıcı kaydını Tamga operatörü yapar |
+| Cüzdanlar | ağ cüzdan işletmez, kurallara uyan cüzdan sağlayıcılarını listeler ([[ADR-0042]]); ilk cüzdan Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) gerçek ve sandbox listelerinde `ACTIVE` |
 | Gizlilik | site başına takma ad ([[ADR-0031]]); sıfır bilgi ispatıyla (ZK) yaş doğrulama — doğrulayıcı tarafı yayında; cüzdan tarafı `@tamga-network/zk` ile bağlandı, Android yerel kütüphanesi hazır, iOS bekliyor ([[ADR-0032]]) |
 | Sandbox | yayında: gerçek ağla aynı kurallarla tek test ağı, herkese açık; gerçek kimlik doğrulaması günlük/aylık tavanlı ([[GUIDE-0013]]) |
 | Zincir (Besu/QBFT) | tasarlandı, kontratlar yazıldı; en az iki bağımsız validator operatörüyle açılır ([[GUIDE-0006]]) |

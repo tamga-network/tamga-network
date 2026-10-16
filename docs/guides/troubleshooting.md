@@ -4,7 +4,7 @@ title: "Sorun giderme"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Sık karşılaşılan sorunlar ve çözümleri: doğrulamada "doğrulanamadı" sebepleri, reddedilen adımlar, güven listesi yükleme
   hataları, cüzdanda belge alma ve gösterme hataları, cihaz kanıtı, kayıt başvurusu ve servis hata biçimi.

@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0005 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-12 · **Licence** CC BY 4.0
+**Document** FW-RB-0005 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -21,7 +21,7 @@ validity and [[t:revocation]]. It branches from the Tamga [[t:rulebook|Rulebook]
 
 | Version | Date | Description |
 | --- | --- | --- |
-| 1.0.0 | 2026-10-11 | First release (within Tamga ARF 1.0). The rules for contact credentials compiled from [[ADR-0021]] in the structure of the EU Attestation Rulebook template (version 1.5); no new rules. |
+| 1.0.0 | 2026-10-16 | Current text of Tamga ARF 1.0, in the section structure of the EU Attestation Rulebook template (version 1.5). |
 
 **Scheme owner:** Tamga Network (today the provisional operator). **Feedback:** <https://github.com/tamga-network/tamga-network/issues>
 
@@ -209,4 +209,4 @@ IETF Token Status List. The Tamga decisions and specifications this document res
 
 ## Status
 
-**Active** — version 1.0.0 (11 October 2026; §7 decisions on 12 October 2026, [[ADR-0047]]).
+**Active** — version 1.0.0 (16 October 2026).

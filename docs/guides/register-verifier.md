@@ -4,7 +4,7 @@ title: "Doğrulayıcı olarak kayıt olmak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-11
+last_updated: 2026-10-16
 summary: >
   Bir sitenin ya da hizmetin doğrulayıcı olarak Tamga güven listesine kaydı: alan adı ve erişim sertifikası, AB ortak kayıt
   verileri, kullanım kapsamları (amaç, alanlar, gizlilik politikası), kayıt sertifikası, aracı doğrulayıcılar ve takma ad.

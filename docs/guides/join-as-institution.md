@@ -4,7 +4,7 @@ title: "Kurum olarak ağa katılmak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-03
+last_updated: 2026-10-16
 summary: >
   Bir kurumun belge veren olarak Tamga Network'e katılması: başvuru dosyası ve AB ortak kayıt verileri, anahtar ve sertifika
   isteği (CSR), güven listesine giriş, belge türü yetkisi, ilk belge ve kayıt değişiklikleri.

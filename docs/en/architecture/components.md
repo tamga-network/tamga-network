@@ -4,7 +4,7 @@ title: "Component architecture"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Describes the application components that run on top of the ledger. Central finding: because the verification read set grew
   from 3 to 5, the indexer is no longer an optional optimisation but a MANDATORY component; QBFT's instant finality means no reorg

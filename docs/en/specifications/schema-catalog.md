@@ -4,7 +4,7 @@ title: "Schema catalogue"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   The normative implementation of the [[ADR-0007]] decisions. Defines the schemas.tamga.network URL scheme and namespaces,
   the structure of the SD-JWT VC Type Metadata document published at every vct address, how the vct#integrity value is

@@ -4,7 +4,7 @@ title: "Kod örnekleri"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Dört çalışan örnek: web sitesine Tamga ile giriş, kendi sunucusunda belge doğrulama, kurum olarak belge verme ve kurum
   yetkisini sorgulama. Kodlar `examples/` klasöründeki gerçek dosyalardan bu sayfaya alınır ve her testte çalıştırılır; bu

@@ -4,7 +4,7 @@ title: "Publish a national trust list"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-12
+last_updated: 2026-10-16
 summary: >
   How a state, or a body it authorises, connects its own trust list to Tamga Network: two ways (a national list in the Tamga
   format or an external list in the ETSI format), the LOTL entry, roles, signing keys, scope, recognition, hand-over and

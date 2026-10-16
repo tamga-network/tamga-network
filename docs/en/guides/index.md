@@ -4,7 +4,7 @@ title: "Get started"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   An introduction for developers: the four paths in Tamga (verifier, issuer, wallet developer, network/node operator),
   which package to install, which addresses to use, how to set up a local development environment and what is ready today.
@@ -103,6 +103,7 @@ the stable 1.0.0 comes when everything is ready. In test releases the API may ch
 | Hosted verifier | running: the website's server opens the presentation with a signed statement, and the values are given only to it, only once ([[ADR-0017]]); policies are fixed for now |
 | Hosted issuer | running: a scoped API key per institution ([[ADR-0016]]) |
 | Trust anchor | signed trust lists ([[ADR-0009]]); the Tamga operator registers issuers and verifiers |
+| Wallets | the network runs no wallet; it lists the wallet providers that follow its rules ([[ADR-0042]]); the first wallet's provider, Tamga Wallet's `TAMGA-WP-1`, is `ACTIVE` in the production and sandbox lists |
 | Privacy | a pseudonym per site ([[ADR-0031]]); age verification with a zero-knowledge proof (ZK) — the verifier side is live; the wallet side is wired through `@tamga-network/zk`, the Android native library is ready, iOS is pending ([[ADR-0032]]) |
 | Sandbox | live: a single test network with the same rules as the real network, open to everyone; real identity verification with daily/monthly caps ([[GUIDE-0013]]) |
 | Ledger (Besu/QBFT) | designed, contracts written; opens once there are at least two independent validator operators ([[GUIDE-0006]]) |

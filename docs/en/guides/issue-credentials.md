@@ -4,7 +4,7 @@ title: "Issue credentials as an institution"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-11
+last_updated: 2026-10-16
 summary: >
   Issuing credentials to people's wallets as a university, a public body or a ticket seller: calling the issuer service hosted
   by Tamga with `@tamga-network/issuer/client` (offers, ticket sales, revocation/suspension), or building your own issuer

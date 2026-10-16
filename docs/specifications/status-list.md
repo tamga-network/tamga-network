@@ -4,7 +4,7 @@ title: "İptal ve durum listesi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-13
+last_updated: 2026-10-16
 summary: >
   [[ADR-0008]] kararının normatif uygulaması. Status List Token'ın Tamga profilini
   (kurum listelerinde bits=2, kimlik servisinde bits=1; ES256, X.509 zinciri, asgari 100.000 indeks; mdoc için CWT
@@ -578,10 +578,6 @@ doğrulayıcıda bunu daha da daraltır). Önceki 50 saatlik hedef bu pencereyi 
 elindeki token son çapayla eşleşir ve `exp`'e kadar kullanılır. Sunucu çalışırken doğrulayıcı listeyi çekemiyorsa çapa
 token'dan yenidir ve sonuç DOĞRULANAMADI'dır (§7 Ş6; geri alma sayılmaz). Yani uzun `exp` yalnız gerçek kesintide işe yarar ve
 bir iptali güncel çapayı bilen doğrulayıcıdan gizlemez.
-
-> **Doğrulayıcı paketi:** kesinti tamponu yalnız `@tamga-network/sd-jwt` **0.3.1 ve sonrasını** kullanan doğrulayıcılarda
-> etkilidir: 0.3.1'de sınır `exp` ve politikanın `max_status_token_age_sec`'idir. 0.3.0 token'ı `iat + 2 × ttl`'den sonra
-> bayat sayar (D4, DOĞRULANAMADI); o sürümdeki doğrulayıcı kesintide birkaç dakika içinde DOĞRULANAMADI'ya düşer.
 
 **Belirleyici olan claim'lerdir.** Standart, doğrulayan tarafın HTTP önbellek
 başlıklarından önce token'ın `exp` ve `ttl` claim'lerine öncelik vermesini

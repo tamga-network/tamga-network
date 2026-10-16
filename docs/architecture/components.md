@@ -4,7 +4,7 @@ title: "Bileşen mimarisi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Zincirin üstünde çalışan uygulama bileşenlerini tanımlar. Merkezî bulgu:
   doğrulama okuma seti 3'ten 5'e çıktığı için indeksleyici artık opsiyonel bir

@@ -4,7 +4,7 @@ title: "Sunucuda doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-07
+last_updated: 2026-10-16
 summary: >
   Kendi sunucunuzda Tamga belgesi doğrulamak: güven kaynağını yükleme, iptal listesi ön çekimi, politika → imzalı OpenID4VP isteği,
   şifreli yanıtı çözme ve kanonik doğrulama hattı (T0 + A–E). Referans uygulama: apps/verify.
@@ -117,7 +117,7 @@ const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk
   doğrulayıcı kısa ömrü görür ve iptal denetimi beklemez. İptal ZK'da en geç 24 saatte etkili olur; anında iptal görmeniz
   gerekiyorsa klasik `mso_mdoc` politikasını kullanın.
 - **`accept_unrevocable_zk`:** yalnız kısa ömürlü kopya OLMAYAN (işaretsiz) ZK sunumu içindir. `true` iptali denetlenemeyen
-  böyle bir sunumu bilerek kabul eder; `false` ya da alan yoksa (0.3.1'den beri varsayılan) işaretsiz ZK sunumu
+  böyle bir sunumu bilerek kabul eder; `false` ya da alan yoksa (varsayılan) işaretsiz ZK sunumu
   `INDETERMINATE` döner (adım `D1`, `STATUS_UNREACHABLE`).
 - **Yedek yol:** cüzdan ZK desteklemiyorsa sorgunuz eşleşmez; aynı soruyu klasik `mso_mdoc` politikasıyla
   (`age-over-18-mdoc`) sorun. Cüzdan tarafı: `@tamga-network/zk` (Android yerel kütüphanesi hazır, iOS bekliyor); ispatçısı

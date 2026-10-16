@@ -4,7 +4,7 @@ title: "Contact Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-12
+last_updated: 2026-10-16
 summary: >
   Kimlik servisinin verdiği iki iletişim belgesinin (doğrulanmış e-posta adresi `urn:tamga:contact:EmailAddress:1`, doğrulanmış
   telefon numarası `urn:tamga:contact:PhoneNumber:1`) rulebook'u, AB Attestation Rulebook şablonunun bölüm yapısıyla: öznitelikler
@@ -14,7 +14,7 @@ summary: >
 
 | Sürüm | Tarih | Açıklama |
 |---|---|---|
-| 1.0.0 | 2026-10-11 | İlk yayın (Tamga ARF 1.0 içinde). İletişim belgelerinin kuralları [[ADR-0021]]'den AB Attestation Rulebook şablonunun (sürüm 1.5) yapısıyla derlendi; yeni kural yok. |
+| 1.0.0 | 2026-10-16 | Tamga ARF 1.0'ın güncel metni; AB Attestation Rulebook şablonunun (sürüm 1.5) bölüm yapısında. |
 
 **Şema sahibi:** Tamga Network (bugün geçici işletmeci). **Geri bildirim:** <https://github.com/tamga-network/tamga-network/issues>
 
@@ -213,4 +213,4 @@ Token Status List. Bu belgenin dayandığı Tamga kararları ve şartnameleri Ek
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-11; §7 kararları 2026-10-12, [[ADR-0047]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-16).
