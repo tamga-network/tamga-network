@@ -59,7 +59,7 @@ Verification proceeds in five layers. This table is **canonical**; [[ARCH-0003]]
 |---|---|
 | `A1` | Split the combined string on `~`; is there a KB-JWT |
 | `A2` | Header: `alg=ES256`, `typ=dc+sd-jwt`, is `x5c` present |
-| `A3` | `x5c` chain + JWT signature; root in `RootCARegistry` **`isChainAcceptable`** (ACTIVE or RETIRED); intermediates must be CAs (`basicConstraints cA=true`), carry `keyCertSign` and stay within `pathLenConstraint`; an `iat` more than 300 s in the future is REJECTED |
+| `A3` | `x5c` chain + JWT signature; root in `RootCARegistry` **`isChainAcceptable`** (ACTIVE or RETIRED); intermediates must be CAs (`basicConstraints cA=true`), carry `keyCertSign` and stay within `pathLenConstraint`; an `iat` more than 300 s in the future is REJECTED. **mdoc:** the `x5chain` leaf is either itself one of the listed anchors (a root CA or a service certificate from an external list) or is signed directly by one — intermediates are not accepted (ISO/IEC 18013-5 Annex B: the document signer certificate is issued directly by the IACA, path length 0; the EU PID/EAA mdoc profiles use the same chain) |
 | `A3b` | **`issuerId` is derived from the fingerprint of the `x5c` leaf certificate** — NOT from the `iss` claim (§1.2) |
 | `A3c` | Is the leaf certificate revoked in CRL/OCSP ([[SPEC-ID-0002]]) |
 | `A3d` | Is the `cnf` claim **present** — if not, REJECT (in Tamga KB is mandatory without exception) |

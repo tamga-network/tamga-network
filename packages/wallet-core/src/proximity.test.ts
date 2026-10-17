@@ -178,6 +178,27 @@ describe("presentProximity", () => {
     expect(r.state.presentationLog.at(-1)?.outcome).toBe("declined");
   });
 
+  it("askıdaki ya da iptal edilmiş belge önerilmez (uzaktan sunumla aynı kural)", async () => {
+    for (const value of ["suspended", "revoked"] as const) {
+      const { state, keys } = await walletWithIdentity();
+      const s = {
+        ...state,
+        credentials: state.credentials.map((c) => ({ ...c, status: { value, checkedAt: Date.now() } })),
+      };
+      const link = bleLink({ age_over_18: false });
+      let seen: StoredCredential | null | undefined;
+      const r = await presentProximity({
+        transport: link.transport,
+        state: s,
+        keys,
+        onQr: link.onQr,
+        approve: async (v) => ((seen = v.credential), ["age_over_18"]),
+      });
+      expect(seen ?? null).toBeNull();
+      expect(r.outcome).toBe("declined");
+    }
+  });
+
   it("belge yoksa sorulmadan ret", async () => {
     const keys = new SoftwareKeyProvider(new MemoryKeyStore());
     const link = bleLink({ age_over_18: false });

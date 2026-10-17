@@ -501,12 +501,14 @@ export async function presentToPerson(p: {
   let refused: "unsupported" | "restricted" | undefined;
   const nameOf = p.profile.claimNameOf ?? ((e: string) => e);
   // TS9 STS9_12: teklif = izin listesindeki ve belgede bulunan alanlar (gösterilebilecek belge yoksa teklif yok)
+  // presentProximity ile aynı kural: iptal edilmiş VE askıdaki belge teklif edilmez, gösterilmez
   const cred =
     p.state.credentials.find(
       (c) =>
         c.vct === p.profile.docType &&
         !c.revokedLocally &&
         c.status?.value !== "revoked" &&
+        c.status?.value !== "suspended" &&
         c.copies.some((k) => !!k.mdoc),
     ) ?? null;
   const offeredElements =

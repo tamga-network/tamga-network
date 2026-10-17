@@ -13,7 +13,7 @@ import { b64u } from "./b64.js";
 import { decodeJwt, signJwt } from "./jws.js";
 import type { KeyProvider, KeyStorage } from "./keys.js";
 import { WalletError, type Http } from "./http.js";
-import { parseStatusToken, statusBitAt } from "./status.js";
+import { parseStatusToken, statusBitAt, type StatusList } from "./status.js";
 import type { TrustSource } from "@tamga-network/trust/core";
 
 export const WUA_TYP = "oauth-client-attestation+jwt";
@@ -80,8 +80,17 @@ export async function wiaRevokedByList(p: {
   const list = parseStatusToken((await r.text()).trim(), ref.uri, p.now ?? Math.floor(Date.now() / 1000));
   if (p.trust.isWalletProviderKey(list.signerFingerprint) !== "YES")
     throw new WalletError("trust_error", "wallet status list: signer is not a registered wallet provider");
-  // İmzalı liste girişten kısaysa giriş yok (sağlayıcının listesi yeniden kuruldu): iptal değil. Bunu ancak listenin kayıtlı
-  // imzacısı söyleyebilir; o imzacı zaten biti 0 da yazabilir — güvence azalmaz.
-  if (ref.idx >= list.bytes.length * 4) return false;
-  return statusBitAt(list, ref.idx) === 1;
+  return wiaRevokedInList(list, ref.idx);
+}
+
+/**
+ * WIA girişi imzası doğrulanmış listede INVALID mi. İmzalı liste girişten kısaysa giriş yok (sağlayıcının listesi yeniden
+ * kuruldu): iptal değil — bunu ancak listenin kayıtlı imzacısı söyleyebilir; o imzacı zaten biti 0 da yazabilir, güvence
+ * azalmaz. Sınır listenin bit genişliğine göre hesaplanır (1 bit → bayt başına 8 giriş, 2 bit → 4): sabit "×4" 1 bitlik
+ * listede son yarıdaki iptal edilmiş girişleri "iptal değil" okurdu.
+ */
+export function wiaRevokedInList(list: Pick<StatusList, "bits" | "bytes">, idx: number): boolean {
+  const perByte = 8 / (list.bits === 1 ? 1 : 2);
+  if (idx >= list.bytes.length * perByte) return false;
+  return statusBitAt(list as StatusList, idx) === 1;
 }

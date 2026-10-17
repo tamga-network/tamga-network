@@ -178,12 +178,14 @@ export async function presentProximity(p: {
     }
     const [namespace, els] = Object.entries(item.nameSpaces)[0] ?? ["", {}];
     const requested = Object.keys(els);
+    // uzaktan sunumla aynı kural (matchDcql): iptal edilmiş VE askıdaki belge önerilmez
     const cred =
       p.state.credentials.find(
         (c) =>
           c.vct === item.docType &&
           !c.revokedLocally &&
           c.status?.value !== "revoked" &&
+          c.status?.value !== "suspended" &&
           c.copies.some((k) => !!k.mdoc),
       ) ?? null;
     // istenen öğe mdoc tanımlayıcısı; belgenin claim'leri SD-JWT adıyla (AB PID tablosu, ADR-0045: `birth_date` ↔ `birthdate`)

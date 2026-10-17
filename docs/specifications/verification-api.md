@@ -60,7 +60,7 @@ onun özet görünümüdür.
 |---|---|
 | `A1` | Birleşik dizeyi `~` ile böl; KB-JWT var mı |
 | `A2` | Başlık: `alg=ES256`, `typ=dc+sd-jwt`, `x5c` var mı |
-| `A3` | `x5c` zinciri + JWT imzası; kök `RootCARegistry`'de **`isChainAcceptable`** (ACTIVE veya RETIRED); ara sertifikalar CA olmalı (`basicConstraints cA=true`), `keyCertSign` taşımalı ve `pathLenConstraint`'i aşmamalı; `iat` 300 sn'den fazla ileri tarihliyse RED |
+| `A3` | `x5c` zinciri + JWT imzası; kök `RootCARegistry`'de **`isChainAcceptable`** (ACTIVE veya RETIRED); ara sertifikalar CA olmalı (`basicConstraints cA=true`), `keyCertSign` taşımalı ve `pathLenConstraint`'i aşmamalı; `iat` 300 sn'den fazla ileri tarihliyse RED. **mdoc:** `x5chain` yaprağı ya listedeki bir çapanın (kök CA ya da dış listedeki hizmet sertifikası) kendisidir ya da doğrudan onunla imzalanmıştır — ara sertifika kabul edilmez (ISO/IEC 18013-5 Ek B: belge imzacısı sertifikası doğrudan IACA'dan verilir, yol uzunluğu 0; AB PID/EAA mdoc profilleri de bu zinciri kullanır) |
 | `A3b` | **`issuerId`, `x5c` yaprak sertifikasının parmak izinden türetilir** — `iss` claim'inden DEĞİL (§1.2) |
 | `A3c` | Yaprak sertifika CRL/OCSP'de iptal edilmiş mi ([[SPEC-ID-0002]]) |
 | `A3d` | `cnf` claim'i **mevcut** mu — yoksa RED (Tamga'da KB istisnasız zorunlu) |

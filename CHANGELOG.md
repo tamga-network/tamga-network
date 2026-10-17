@@ -21,6 +21,13 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 - `sd-jwt`: `verifySdJwtVc` option `skipValidityPeriod` — skips A7 (`exp`/`nbf`) for proofs of possession that are not
   acceptance decisions (the identity service's erasure request accepts an expired credential, whose record is still held).
 - `issuer`: `redeemCode` rejects a request without a code, or a PAR that has no code yet, as an unknown code (`invalid_grant`).
+- `wallet-core`: fixed `wiaRevokedByList` — the "entry beyond the list" bound assumed 2-bit status lists; on a 1-bit list a
+  revoked WIA entry in the upper half of the last bytes read as "not revoked". The bound now follows the list's `bits`
+  (new `wiaRevokedInList`).
+- `wallet-core`: proximity presentation (`presentProximity`) and the wallet-to-wallet holder (`presentToPerson`) no longer offer
+  a suspended credential — the same rule as the remote presentation (`matchDcql`).
+- `verifier`: documented that the mdoc A3 step anchors the `x5chain` leaf directly (anchor itself or signed by the anchor; no
+  intermediates) — conformant with ISO/IEC 18013-5 Annex B (document signer issued directly by the IACA). SPEC-API-0001 A3 row.
 
 ### Reference verifier (`apps/verify`)
 

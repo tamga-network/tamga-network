@@ -116,7 +116,9 @@ export async function verifyMdocFormat(
   } catch (e) {
     return fail("A2", `issuerAuth unreadable: ${(e as Error).message}`);
   }
-  // A3 — yaprak, verilen köklerden birine zincirlenmeli (SD-JWT A3 ile aynı kural)
+  // A3 — yaprak, verilen köklerden birine zincirlenmeli (SD-JWT A3 ile aynı kural). Ara sertifika YOK (bilinçli): ISO/IEC
+  // 18013-5 Ek B belge imzacısı sertifikasını doğrudan IACA'dan verir (yol uzunluğu 0); AB PID/EAA mdoc profilleri de aynı zinciri
+  // kullanır, dış listelerde (ADR-0036) çapa IACA ya da doğrudan imzacıdır. SPEC-API-0001 §1.A A3 (mdoc notu).
   let leaf: X509Certificate;
   try {
     leaf = new X509Certificate(toAB(leafDer));
