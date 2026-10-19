@@ -27,6 +27,7 @@ import {
   MemoryListVersionMemory,
   loadTrustSetWith,
   resetDefaultListVersionMemory,
+  resetListMonotonicity,
   type JwsVerifier,
   type TrustSetInput,
 } from "./index.js";
@@ -421,7 +422,7 @@ describe("TrustSource(list) taahhüt testleri", () => {
     await expect(loadTrustSetWith(input(v1), readOnly)).rejects.toThrow(/TL2: lotl.*rollback/);
     await expect(loadTrustSetWith({ ...input(v1), versionMemory: "none" }, readOnly)).resolves.toBeTruthy();
     // süreç belleği sıfırlanınca (yeniden başlatma) koruma da sıfırlanır: oturumlar arası koruma için kalıcı bellek verilir
-    resetDefaultListVersionMemory();
+    resetListMonotonicity(); // istemcinin oturum sıfırlaması varsayılan belleği de sıfırlar
     await expect(loadTrustSetWith(input(v1), readOnly)).resolves.toBeTruthy();
   });
   it("tazelik: bayat kaynakta kayıt okuyucuları da cevap vermez (null/boş)", async () => {

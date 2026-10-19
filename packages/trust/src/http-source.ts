@@ -7,6 +7,7 @@
 import {
   applyExternalListsWith,
   loadTrustSetWith,
+  resetDefaultListVersionMemory,
   type JwsVerifier,
   type ListVersionMemory,
   type LoadReport,
@@ -25,9 +26,10 @@ export class TrustListError extends Error {
 
 const seen = new Map<string, { lotl: number; tl: number }>(); // taban|devlet → görülen en yüksek sürümler
 
-/** Test/yeniden kurulum için oturum içi sürüm belleğini sıfırlar. */
+/** Test/yeniden kurulum için oturum içi sürüm belleğini sıfırlar (yükleyicinin varsayılan TL2 belleği dahil — ADR-0056). */
 export function resetListMonotonicity() {
   seen.clear();
+  resetDefaultListVersionMemory();
 }
 
 export async function fetchListTrustSource(
