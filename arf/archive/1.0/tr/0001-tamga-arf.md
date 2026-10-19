@@ -458,8 +458,10 @@ değerlendirme kuruluşları ve ulusal sertifikasyon gelir. Rol başına neyin t
 **Defter aşamasının durumu:** öncül — kod hazır, üretimde kapalı. Ortak defterin sözleşmeleri derlenir ve test edilir; liste
 yayıncısı imzalı listelerin yalnız özetlerini deftere yazabilecek hâldedir, ama bu özellik kapalıdır ve çalışan bir defter yoktur.
 Defter açıldığında da imzalı listelerin projeksiyonu olur: bir özet ancak en az iki bağımsız işletmeci aynı değeri yazınca
-sayılır, çelişkide imzalı liste geçerlidir ve defterin cevabı doğrulama için hiçbir zaman gerekli değildir (karar önerisi,
-onay bekler).
+sayılır, çelişkide imzalı liste geçerlidir ve defterin cevabı doğrulama için hiçbir zaman gerekli değildir (karar, 2026-10-19).
+Defter izinli kalır: hangi düğümün bağlanabileceği ve hangi hesabın yazabileceği, defterin kendi yönetişim kaydından üretilen ve
+her düğümde aynı tutulan bir izin listesiyle belirlenir; yazma yetkisinin asıl denetimi sözleşmelerdedir ve düğümlerin arayüzü
+internete açılmaz (karar, 2026-10-19).
 
 ## 8.2 Ortak deftere geçiş
 

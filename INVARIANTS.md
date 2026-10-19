@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 311 kodlanmış değişmez, 50 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 321 kodlanmış değişmez, 52 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -479,6 +479,32 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0050/CP2` | Kurum sertifikasında anahtar kullanımı kritik ve yalnız `digitalSignature`'dır; SKI ve AKI zorunludur. |
 
 
+## ADR-0051
+
+*"Zincir, imzalı listelerin projeksiyonudur"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0051/CH1` | Zincir imzalı listelerin ve çapa günlüğünün projeksiyonudur; çelişkide imzalı liste geçerlidir; zincir cevabı doğrulama için gerekli değildir ve `UNKNOWN` sonucu kötüleştirmez. |
+| `ADR-0051/CH2` | Liste çapası kaydına yalnız liste sürümünün ve çapa günlüğü satırının özeti (hash, sürüm/sıra, zaman) yazılır; liste içeriği, kayıt, belge, belge özeti ya da kişisel veri yazılmaz. |
+| `ADR-0051/CH3` | Bir çapa ancak onay eşiği kadar farklı yetkili yazıcı birebir aynı veriyi gönderince onaylıdır; üretimde eşik en az 2'dir. |
+| `ADR-0051/CH4` | Liste başına sürüm monoton artar; açılmış sürüm için farklı özet reddedilir ve çift-konuşma işareti olarak izlenir; onaylı kayıt silinmez ve değiştirilmez. |
+| `ADR-0051/CH5` | `TAMGA_CHAIN_ENABLED` kapalıyken zincire bağlanılmaz ve yazılmaz; üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz. |
+
+
+## ADR-0052
+
+*"Besu yerel izinlendirme"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0052/LP1` | Zincir düğümlerinde izinlendirme yereldir (`permissions_config.toml`, düğüm ve hesap izin listesi açık); zincir üstü izin kontratı ve Tessera gizlilik grupları kullanılmaz. |
+| `ADR-0052/LP2` | İzin listeleri zincirdeki kontrat durumundan türetilir; Governance'ta aktif olmayan validator ya da hiçbir kontratta yetkisi olmayan hesap listeye girmez; elle ekleme yoktur. |
+| `ADR-0052/LP3` | Bütün validator'lar aynı hesap listesini ve aynı validator düğüm listesini taşır; fark işletme olayıdır ve giderilene kadar raporlanır. |
+| `ADR-0052/LP4` | Yazma yetkisi kontratlarda denetlenir; izin listesi bu yetkiyi genişletmez ve onun yerine geçmez. |
+| `ADR-0052/LP5` | Düğümün JSON-RPC ucu internete açılmaz; dış erişim yalnız mTLS'li ters vekil arkasından ve okuma/işlem ad alanlarıyla; `PERM`, `ADMIN`, `QBFT` yalnız yerelden. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -763,12 +789,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 311 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 321 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AP, AR, AS, C, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, HA, HV, IC, IDC, IDP, K, KC, LI, LX, MD, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
+AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-16 (`scripts/sync-invariants.mjs`). Toplam 311 kodlanmış değişmez, 50 dokümanda.
+**Üretilen dosya** — 2026-10-19 (`scripts/sync-invariants.mjs`). Toplam 321 kodlanmış değişmez, 52 dokümanda.

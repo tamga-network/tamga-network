@@ -91,7 +91,7 @@ TAMGA_PROD_PKI_DIR=<gerçek ağın PKI klasörü> \
   `suspend`/`revoke` aynı kurallarla durum değiştirir; geri çekilmiş kayıt yeniden etkinleşmez. Testler:
   `test/wallet-provider.test.ts`.
 
-## Zincir projeksiyonu (`chain-anchor`, `chain-check`) — ADR-0051 (öneri), üretimde kapalı
+## Zincir projeksiyonu (`chain-submit`, `chain-check`) — ADR-0051, üretimde kapalı
 
 Zincir bugün yok ve bu araç onu **kurmaz**: zincir ≥ 2 bağımsız işletmeci yazılı kabul verdiğinde kurulur (ADR-0009 K4). Kod
 hazır olsun ve zincirsiz tasarıma bağlı kalsın diye yayıncı, imzalı listelerin **özetlerini** bir liste çapası kaydına
@@ -102,8 +102,8 @@ zincir cevabı doğrulama için gerekli değildir.
 
 | Komut | İş |
 | --- | --- |
-| `npm run trust:chain-anchor -- --dry-run` | planı basar (bayrak kapalıyken bellek içi boş zincire göre; açıkken zinciri okur), **yazmaz** |
-| `npm run trust:chain-anchor` | bayrak açıksa `dist/` setini yükleyiciyle doğrular (sağlıksız set çapalanmaz) ve yalnız özetleri yazar; aynı sürüm aynı özet → `SKIP`, onaylı farklı özet → `CONFLICT` (yazılmaz, çıkış 3, işletmeci bakar) |
+| `npm run trust:chain-submit -- --dry-run` | planı basar (bayrak kapalıyken bellek içi boş zincire göre; açıkken zinciri okur), **yazmaz** |
+| `npm run trust:chain-submit` | bayrak açıksa `dist/` setini yükleyiciyle doğrular (sağlıksız set çapalanmaz) ve yalnız özetleri yazar; aynı sürüm aynı özet → `SKIP`, onaylı farklı özet → `CONFLICT` (yazılmaz, çıkış 3, işletmeci bakar) |
 | `npm run trust:chain-check -- dist/lotl.jws` | doğrulayıcı tarafı: listenin özeti zincirde **onaylı** mı? `YES` / `NO` (farklı özet — çift konuşma işareti) / `UNKNOWN` (kapalı, erişilemez, çapa yok ya da eşik dolmadı) |
 
 Ortam (`.env`; depoda yer tutucu, gerçek değerler sunucuda): `TAMGA_CHAIN_ENABLED` (varsayılan **0** — kapalıyken hiçbir zincir
@@ -113,6 +113,6 @@ gönderince onaylıdır; **üretimde eşik ≥ 2** — tek işletmeci onaylı ç
 olmadan açılmaz.
 
 Yerel deneme: `npm run contracts:node` → `npm run contracts:deploy:dev` (adresler `contracts/deployments/localhost.json`,
-yazıcı = Hardhat hesabı #0, eşik 1) → yukarıdaki ortam değişkenleriyle `trust:chain-anchor`. Kod `src/chain/` (plan: `projection.ts`,
+yazıcı = Hardhat hesabı #0, eşik 1) → yukarıdaki ortam değişkenleriyle `trust:chain-submit`. Kod `src/chain/` (plan: `projection.ts`,
 istemci: `client.ts`, koşu: `anchor.ts`, doğrulayıcı: `verify.ts`); ABI kopyası `src/chain/abi/` kontrat derlemesinden üretilir
 (`npm run contracts:check` farkı yakalar). Testler `test/chain.test.ts` (ağsız).

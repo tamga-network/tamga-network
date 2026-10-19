@@ -55,7 +55,7 @@
     "smoke:packages": "node scripts/smoke-packages.mjs",
     "release:check": "npm run -s pack:packages && npm run -s smoke:packages",
     "trust:external": "tsx apps/trust-publisher/src/cli.ts external-fetch",
-    "trust:chain-anchor": "tsx apps/trust-publisher/src/cli.ts chain-anchor",
+    "trust:chain-submit": "tsx apps/trust-publisher/src/cli.ts chain-submit",
     "trust:chain-check": "tsx apps/trust-publisher/src/cli.ts chain-check",
     "release:version": "node scripts/set-version.mjs",
     "contracts:install": "npm --prefix contracts ci --no-audit --no-fund",

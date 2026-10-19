@@ -8,13 +8,15 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 
 ### Trust list publisher (`apps/trust-publisher`)
 
-- Chain projection (proposed decision ADR-0051; **off by default**, no production chain exists): `chain-anchor` writes only the
+- Chain projection (ADR-0051, accepted 2026-10-19; **off by default**, no production chain exists): `npm run trust:chain-submit` writes only the
   digests of the signed trust lists (`sha256(<file>.jws)`, version, previous digest, issue time) and of the anchor log's latest
   line to a trust list anchor registry contract; `chain-check` tells a verifier whether a list digest is anchored
   (`YES` / `NO` / `UNKNOWN`). The signed lists remain the source of truth: on conflict the list prevails and the chain answer
   is never required for verification. Feature flag `TAMGA_CHAIN_ENABLED` (default `0`): while off nothing connects to a chain;
   `--dry-run` prints the plan. An anchor counts only once the registry's confirmation threshold of distinct writers has
   submitted identical data (production threshold ≥ 2). New dependency `ethers` (app only, not in the published packages).
+  The command is `chain-submit`, not `chain-anchor`: one writer's submission is a vote, and the name stays clear of the hourly
+  anchor log command `trust:anchor`.
 
 - `npm run trust:wallet-provider -- list|show|check|activate|suspend|revoke` manages `wallet_providers[]` in the production
   and sandbox registries. `activate` checks the provider's signing certificate against the wallet attestation policy (EC
@@ -46,6 +48,10 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 
 ### Documents
 
+- ADR-0052 (accepted 2026-10-19): Besu 25.6.0 removed onchain permissioning and Tessera privacy, so the chain stage uses Besu
+  local permissioning — a `permissions_config.toml` (node and account allowlists) on every node, derived from the on-chain
+  contract state, identical on all validators and checked for drift; a node's JSON-RPC endpoint is never exposed to the internet
+  (reverse proxy with mTLS). The onchain permissioning contract assumption is removed from the chain-stage documents.
 - Status list verification step Ş5 and verification step D4: `ttl` is a refresh hint; the token stays usable until `exp` and the
   policy's `max_status_token_age_sec` (as in §8.1 and in the code). PR13: a redirect address outside the allowlist is rejected
   with `invalid_request` (RFC 9126 §2.1), as the services answer.

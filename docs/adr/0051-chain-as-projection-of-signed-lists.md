@@ -1,20 +1,21 @@
 ---
 document_id: ADR-0051
 title: "Zincir, imzalı listelerin projeksiyonudur"
-status: Proposed
-review_status: Draft
-version: 0.1.0
+status: Active
+review_status: Completed
+version: 1.0.0
 created: 2026-10-17
-last_updated: 2026-10-17
+last_updated: 2026-10-19
 summary: >
   Zincir kodu üretim zinciri kurulmadan önce yazılır ve zincirsiz tasarıma bağlanır: imzalı güven listeleri (lotl, tl-<cc>) ve
   çapa günlüğü kaynak kalır; zincir onların projeksiyonudur. Zincire yalnız liste sürümünün özeti (sürüm, içerik hash'i, önceki
   hash, yayın zamanı) ve çapa günlüğünün son satırının özeti yazılır — içerik, kayıt, belge ya da kişisel veri yazılmaz. Bir çapa
   ancak eşik kadar bağımsız yazıcı aynı veriyi gönderince onaylı sayılır; üretimde eşik en az 2'dir (ikinci işletmeci kapısı,
   ADR-0009 K4). Zincir cevabı doğrulama için hiçbir zaman gerekli değildir; çelişkide imzalı liste geçerlidir. Özellik bayrağı
-  varsayılan kapalıdır. Kontratlar Hardhat ile derlenir ve test edilir; üretim zinciri yoktur.
+  varsayılan kapalıdır. Kontratlar Hardhat ile derlenir ve test edilir; üretim zinciri yoktur. Adlar: kontrat
+  `TrustListAnchorRegistry`, komutlar `trust:chain-submit` ve `trust:chain-check`. Kabul: 2026-10-19.
 domain: Trust
-related: ["[[ADR-0001]]", "[[ADR-0002]]", "[[ADR-0007]]", "[[ADR-0008]]", "[[ADR-0009]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]", "[[PM-TRUST-0001]]", "[[ARCH-0003]]", "[[FW-ARF-0001]]"]
+related: ["[[ADR-0001]]", "[[ADR-0002]]", "[[ADR-0007]]", "[[ADR-0008]]", "[[ADR-0009]]", "[[ADR-0052]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]", "[[PM-TRUST-0001]]", "[[ARCH-0003]]", "[[FW-ARF-0001]]"]
 ---
 
 # Kısaca
@@ -33,7 +34,7 @@ sayılır.
   ertelenir; zincir kodu **şimdi** yazılır, derlenir, test edilir ve zincirsiz tasarımla **entegre** edilir; üretimde kapalı kalır.
 - Entegrasyonun biçimi açık bir karardı: (a) listelerin içeriğini kontratlara şimdi oynatmak, (b) yalnız listelerin özetlerini
   zincire yazmak, (c) hiçbir şey yazmayıp yalnız derlemek. (a) Faz 0'ın işidir — devlet delege anahtarları, validator'lar ve
-  yönetişim oyu gerektirir ([[ADR-0009]] K7). (c) kodu tasarımla bağlamaz. Bu ADR (b)'yi önerir: en küçük ve en az riskli
+  yönetişim oyu gerektirir ([[ADR-0009]] K7). (c) kodu tasarımla bağlamaz. Bu ADR (b)'yi seçer: en küçük ve en az riskli
   projeksiyon, ileride (a) için de zemin.
 - "Çift konuşma" zayıflığı ([[ADR-0009]] K3, pilot sınırlar bildirimi madde 6): tek operatör iki doğrulayıcıya iki farklı liste
   verebilir; herkese açık günlük bunu caydırır, imkânsız kılmaz. Liste özetinin birden çok bağımsız yazıcı tarafından aynı
@@ -41,7 +42,7 @@ sayılır.
 - Kişisel veri sınırı değişmez: zincire belge, belge özeti ya da kişi yazılmaz ([[PM-TRUST-0001]], [[SPEC-BC-0001]]/DP1,
   [[SPEC-TRUST-0001]]/TL11).
 
-# Önerilen karar
+# Karar
 
 ## K1 — Projeksiyon ilkesi
 
@@ -56,7 +57,7 @@ Zincir, imzalı güven listelerinin ve çapa günlüğünün **projeksiyonudur**
 
 ## K2 — Zincire ne yazılır
 
-Yeni bir kontrat, **liste çapası kaydı** (önerilen ad `TrustListAnchorRegistry`; ad proje yönetiminin onayına bağlıdır), iki tür kayıt
+Yeni bir kontrat, **liste çapası kaydı** (`TrustListAnchorRegistry`), iki tür kayıt
 tutar; başka hiçbir şey tutmaz:
 
 | Kayıt | Alanlar | Kaynak |
@@ -80,13 +81,16 @@ yazım Faz 0 replay'idir.
 
 ## K4 — Ne zaman yazılır; bayrak
 
-- Liste yayıncısı (`apps/trust-publisher`) `chain-anchor` komutuyla kendi `dist/` çıktısını okur, önce yükleyiciyle doğrular
+- Liste yayıncısı (`apps/trust-publisher`) `chain-submit` komutuyla (`npm run trust:chain-submit`) kendi `dist/` çıktısını okur, önce yükleyiciyle doğrular
   (imza, hash zinciri, tazelik — sağlıksız set çapalanmaz), sonra yalnız özetleri gönderir: her liste yayınından ve her saatlik
   çapa satırından sonra (heartbeat kadansı). Zincirde aynı sürüm aynı özetle varsa atlar; farklı özet varsa yazmaz ve `CONFLICT`
   raporlar (K1.3).
 - Özellik bayrağı `TAMGA_CHAIN_ENABLED` varsayılan `0`: kapalıyken hiçbir zincir bağlantısı kurulmaz ve hiçbir şey yazılmaz.
   `--dry-run` ne yazılacağını basar, bağlanmaz. Yazıcı anahtarı ve RPC adresi ortamdan/.env'den gelir; depoda yer tutucu.
 - Üretimde bayrak, ikinci işletmeci ve eşik ≥ 2 **olmadan açılmaz**.
+- Ad: komut `chain-submit`'tir ("gönder"), `chain-anchor` değil. Saatlik çapa günlüğü komutu `trust:anchor` ile karışmaz ve
+  yaptığı işi doğru söyler: bir yazıcının gönderdiği özet bir **oydur**; çapa ancak eşik kadar işletmeci aynı özeti gönderince
+  onaylanır (K3).
 
 ## K5 — Doğrulayıcı nasıl kullanır
 
@@ -113,7 +117,7 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
 | Tek yazıcı, eşik yok | ret | Tek işletmecinin zinciri imzalı listeden fazla güven üretmez (ADR-0009 F1); eşik ≥ 2 kapıyı koda taşır |
 | Status List ve şema çapalarını da ayrı yazmak | ret (şimdilik) | Mevcut `StatusListRegistry`/`SchemaRegistry` bu işi Faz 0'da yapar; çapa günlüğü başı bugün hepsini bağlar |
 
-# Önerilen kurallar (kabul edilirse bağlayıcı tabloya taşınır)
+# Değişmezler
 
 | Kod | Kural |
 |---|---|
@@ -126,15 +130,17 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
 # Sonuçlar
 
 - `contracts/src/anchor/TrustListAnchorRegistry.sol` + testleri; `contracts/` Hardhat projesi; dev dağıtımı kaydı da kurar.
-- `apps/trust-publisher`: `chain-anchor` (projeksiyon, bayrak, dry-run) ve `chain-check` (doğrulayıcı tarafı); ABI kopyası
+- `apps/trust-publisher`: `chain-submit` (projeksiyon, bayrak, dry-run) ve `chain-check` (doğrulayıcı tarafı); ABI kopyası
   `src/chain/abi/` (kontrat derlemesinden dışa aktarılır, `contracts:check` farkı yakalar).
-- [[SPEC-BC-0001]] §15 (öneri olarak işaretli) ve [[SPEC-TRUST-0001]] §7 satırı; [[FW-ARF-0001]] §8.1 durum notu
-  ("kod hazır, üretimde kapalı"). Kabulde DECISIONS'a **D-BC-7**; sürüm notları.
+- [[SPEC-BC-0001]] §15 ve [[SPEC-TRUST-0001]] §7 satırı; [[FW-ARF-0001]] §8.1 durum notu ("kod hazır, üretimde kapalı").
+  DECISIONS: **D-BC-7**; sürüm notları.
+- Zincir açıldığında hangi hesabın işlem gönderebileceği ve hangi düğümün bağlanabileceği: [[ADR-0052]] (Besu yerel
+  izinlendirme; yazıcı adresleri hesap izin listesine bu kontratın durumundan girer).
 - Değişmeyen kararlar: D-BC-0 (Besu/QBFT), D-BC-6 (zincir eşiği), D-TRUST-0, D-REV-1/2, D-SCHEMA-1, [[ADR-0009]] K7 geçiş.
 
-# Açık konular (karar bekler)
+# Açık konular
 
-1. Kontrat ve komut adları (`TrustListAnchorRegistry`, `chain-anchor`, `chain-check`).
+1. ~~Kontrat ve komut adları~~ — **kapandı (2026-10-19):** `TrustListAnchorRegistry`, `trust:chain-submit`, `trust:chain-check`.
 2. Üretim eşiği tam değeri (öneri 2) ve ikinci yazıcının kim olacağı — ikinci işletmeci adayıyla birlikte.
 3. `Governance`'ta genel "çağrı yürüt" önerisi: yazıcı kümesi/eşiği ve `CrossRecognition.bootstrapFounders` Governance üzerinden
    yönetilebilsin (bugün ikisi de yalnız doğrudan `governance` adresinden çağrılabilir; Governance kontratı bunu yapamaz).
@@ -143,5 +149,6 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
 
 # Durum
 
-**Proposed — 2026-10-17.** Proje yönetiminin 2026-10-17 yönü ("zincir kodu şimdi yazılır, zincirsiz tasarımla entegre olur,
-üretimde kapalı") üzerine hazırlandı; kabul proje yönetiminindir. Kabul edilirse DECISIONS: D-BC-7.
+**Accepted — 2026-10-19.** Proje yönetimi onayıyla (adlar: kontrat `TrustListAnchorRegistry`, komutlar `trust:chain-submit` ve
+`trust:chain-check`). DECISIONS: D-BC-7. Öneri 2026-10-17'de, proje yönetiminin aynı günkü yönü ("zincir kodu şimdi yazılır,
+zincirsiz tasarımla entegre olur, üretimde kapalı") üzerine yazıldı. CH1–CH5 bağlayıcıdır.

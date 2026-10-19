@@ -1,5 +1,5 @@
 {
-  "_note": "contracts/scripts/export-abi.mjs üretir — elle düzenlenmez. Kaynak: contracts/src/anchor/TrustListAnchorRegistry.sol (ADR-0051 öneri, SPEC-BC-0001 §15).",
+  "_note": "contracts/scripts/export-abi.mjs üretir — elle düzenlenmez. Kaynak: contracts/src/anchor/TrustListAnchorRegistry.sol (ADR-0051, SPEC-BC-0001 §15).",
   "contractName": "TrustListAnchorRegistry",
   "solidity": "0.8.24",
   "evmVersion": "shanghai",

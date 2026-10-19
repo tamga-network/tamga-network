@@ -1,6 +1,6 @@
 /**
- * chain-anchor / chain-check komutları (ADR-0051 öneri; CH5 bayrak).
- *   chain-anchor [--dry-run] [--skip-verify]   dist/ özetlerini zincire yaz (bayrak kapalıysa yalnız --dry-run çalışır)
+ * chain-submit / chain-check komutları (ADR-0051; CH5 bayrak).
+ *   chain-submit [--dry-run] [--skip-verify]   dist/ özetlerini zincire yaz (bayrak kapalıysa yalnız --dry-run çalışır)
  *   chain-check <dosya.jws>                     listenin özeti zincirde onaylı mı? (YES / NO / UNKNOWN)
  * Ortam: TAMGA_CHAIN_ENABLED (0/1, varsayılan 0) · TAMGA_CHAIN_RPC_URL · TAMGA_CHAIN_ANCHOR_REGISTRY · TAMGA_CHAIN_ANCHORER_KEY
  * (yalnız yazma; .env'de, depoda yer tutucu). Üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz (K4).
@@ -31,7 +31,7 @@ export async function chainCommand(
   ctx: { dist: string; environment: Environment; env?: NodeJS.ProcessEnv },
 ): Promise<number> {
   const env = ctx.env ?? process.env;
-  if (cmd === "chain-anchor") {
+  if (cmd === "chain-submit") {
     const dryRun = args.includes("--dry-run");
     const skipVerify = args.includes("--skip-verify");
     if (!chainEnabled(env) && !dryRun) {

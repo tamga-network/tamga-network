@@ -484,7 +484,9 @@ shown at EU interoperability events and with the OpenID conformance tests.
 tested; the list publisher is able to write only the digests of the signed lists to the ledger, but this feature is switched off
 and no ledger is running. Once the ledger is opened it is still a projection of the signed lists: a digest counts only when at
 least two independent operators have written the same value, on conflict the signed list prevails, and the ledger's answer is
-never required for verification (proposed decision, awaiting approval).
+never required for verification (decision, 2026-10-19). The ledger stays permissioned: which nodes may connect and which accounts
+may write is set by an allowlist rendered from the ledger's own governance record and kept identical on every node; the actual
+write authorization is in the contracts, and the nodes' interface is never exposed to the internet (decision, 2026-10-19).
 
 ### 8.2 Moving to the shared ledger
 

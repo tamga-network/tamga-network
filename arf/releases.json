@@ -23,10 +23,10 @@
       },
       "notes": {
         "en": [
-          "Current release: the main document, the Trust Framework, the Tamga Rulebook with the credential-type rulebooks in the EU Attestation Rulebook template (Education, Identity, Event Ticket, Contact), the Revocation Policy and the Wallet Attestation Policy, definitions and references, and the supporting pages Reading path, Roles and Onboarding. It includes the decisions up to ADR-0050 and the first EU alignment review. Until the public announcement, changes are made in this release."
+          "Current release: the main document, the Trust Framework, the Tamga Rulebook with the credential-type rulebooks in the EU Attestation Rulebook template (Education, Identity, Event Ticket, Contact), the Revocation Policy and the Wallet Attestation Policy, definitions and references, and the supporting pages Reading path, Roles and Onboarding. It includes the decisions up to ADR-0052 and the first EU alignment review. Until the public announcement, changes are made in this release."
         ],
         "tr": [
-          "Güncel yayın: ana belge, Trust Framework, Tamga Rulebook ve AB Attestation Rulebook şablonundaki belge türü rulebook'ları (Education, Identity, Event Ticket, Contact), İptal Politikası ve Cüzdan Kanıtı Politikası, tanımlar ve kaynaklar; ayrıca Okuma yolu, Roller ve Katılım süreci sayfaları. ADR-0050'ye kadarki kararları ve ilk AB uyum turunu içerir. Kamuya duyuruya kadar değişiklikler bu yayının içinde yapılır."
+          "Güncel yayın: ana belge, Trust Framework, Tamga Rulebook ve AB Attestation Rulebook şablonundaki belge türü rulebook'ları (Education, Identity, Event Ticket, Contact), İptal Politikası ve Cüzdan Kanıtı Politikası, tanımlar ve kaynaklar; ayrıca Okuma yolu, Roller ve Katılım süreci sayfaları. ADR-0052'ye kadarki kararları ve ilk AB uyum turunu içerir. Kamuya duyuruya kadar değişiklikler bu yayının içinde yapılır."
         ]
       }
     }

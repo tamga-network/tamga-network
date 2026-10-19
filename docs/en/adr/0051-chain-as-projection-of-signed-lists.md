@@ -1,11 +1,11 @@
 ---
 document_id: ADR-0051
 title: "The chain is a projection of the signed lists"
-status: Proposed
-review_status: Draft
-version: 0.1.0
+status: Active
+review_status: Completed
+version: 1.0.0
 created: 2026-10-17
-last_updated: 2026-10-17
+last_updated: 2026-10-19
 summary: >
   The chain code is written before a production chain exists and is wired to the chainless design: the signed trust lists
   (lotl, tl-<cc>) and the anchor log remain the source; the chain is their projection. Only the digest of a list version
@@ -13,11 +13,12 @@ summary: >
   no content, no records, no credentials, no personal data. An anchor counts as confirmed only once a threshold of independent
   writers has submitted identical data; in production the threshold is at least 2 (the second-operator gate, ADR-0009 K4). The
   chain's answer is never required for verification; on conflict the signed list prevails. The feature flag is off by default.
-  The contracts compile and are tested with Hardhat; there is no production chain.
+  The contracts compile and are tested with Hardhat; there is no production chain. Names: contract `TrustListAnchorRegistry`,
+  commands `trust:chain-submit` and `trust:chain-check`. Accepted: 2026-10-19.
 domain: Trust
-related: ["[[ADR-0001]]", "[[ADR-0002]]", "[[ADR-0007]]", "[[ADR-0008]]", "[[ADR-0009]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]", "[[PM-TRUST-0001]]", "[[ARCH-0003]]", "[[FW-ARF-0001]]"]
+related: ["[[ADR-0001]]", "[[ADR-0002]]", "[[ADR-0007]]", "[[ADR-0008]]", "[[ADR-0009]]", "[[ADR-0052]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]", "[[PM-TRUST-0001]]", "[[ARCH-0003]]", "[[FW-ARF-0001]]"]
 translation_of: ADR-0051
-source_version: 0.1.0
+source_version: 1.0.0
 ---
 
 # In short
@@ -37,7 +38,7 @@ when several independent operators say the same thing.
   design; it stays off in production.
 - The form of the integration was an open decision: (a) replay the lists' content into the contracts now, (b) write only the
   lists' digests to the chain, (c) write nothing and only compile. (a) is the work of phase 0 — it needs the states' delegate
-  keys, validators and a governance vote ([[ADR-0009]] K7). (c) does not tie the code to the design. This ADR proposes (b): the
+  keys, validators and a governance vote ([[ADR-0009]] K7). (c) does not tie the code to the design. This ADR chooses (b): the
   smallest and least risky projection, and groundwork for (a) later.
 - The "double-speak" weakness ([[ADR-0009]] K3; pilot limitations notice item 6): a single operator could hand two verifiers two
   different lists; the public log deters this but cannot make it impossible. Having several independent writers put the same
@@ -46,7 +47,7 @@ when several independent operators say the same thing.
 - The personal-data boundary does not change: no credential, credential digest or person is written to the chain
   ([[PM-TRUST-0001]], [[SPEC-BC-0001]]/DP1, [[SPEC-TRUST-0001]]/TL11).
 
-# Proposed decision
+# Decision
 
 ## K1 — Projection principle
 
@@ -62,8 +63,7 @@ The chain is a **projection** of the signed trust lists and the anchor log; it i
 
 ## K2 — What is written to the chain
 
-A new contract, the **trust list anchor registry** (proposed name `TrustListAnchorRegistry`; the name is subject to project
-management approval), holds two kinds of record and nothing else:
+A new contract, the **trust list anchor registry** (`TrustListAnchorRegistry`), holds two kinds of record and nothing else:
 
 | Record | Fields | Source |
 |---|---|---|
@@ -88,7 +88,7 @@ credentials, credential digests or personal data are **not written** (DP1, TL11)
 
 ## K4 — When it is written; the flag
 
-- The list publisher (`apps/trust-publisher`) reads its own `dist/` output with the `chain-anchor` command, first verifies it with
+- The list publisher (`apps/trust-publisher`) reads its own `dist/` output with the `chain-submit` command (`npm run trust:chain-submit`), first verifies it with
   the loader (signature, hash chain, freshness — an unhealthy set is not anchored), then submits only the digests: after every
   list publication and every hourly anchor line (heartbeat cadence). If the chain already has the same version with the same
   digest it skips; if a different digest exists it does not write and reports `CONFLICT` (K1.3).
@@ -96,6 +96,9 @@ credentials, credential digests or personal data are **not written** (DP1, TL11)
   `--dry-run` prints what would be anchored without connecting. The writer key and the RPC address come from the environment /
   `.env`; the repository holds placeholders.
 - In production the flag is **not switched on** without the second operator and a threshold ≥ 2.
+- Name: the command is `chain-submit` ("submit"), not `chain-anchor`. It cannot be confused with the hourly anchor log command
+  `trust:anchor`, and it says what it does: the digest one writer sends is a **vote**; the anchor is confirmed only once the
+  threshold of operators has sent the same digest (K3).
 
 ## K5 — How a verifier uses it
 
@@ -123,7 +126,7 @@ verifier application (a line on the health page) is separate work once the flag 
 | Single writer, no threshold | rejected | A single operator's chain yields no more trust than a signed list (ADR-0009 F1); a threshold ≥ 2 carries the gate into code |
 | Also anchor status list and schema digests separately | rejected (for now) | The existing `StatusListRegistry`/`SchemaRegistry` do that in phase 0; today the anchor log head binds all of them |
 
-# Proposed rules (moved to the binding table if accepted)
+# Invariants
 
 | Code | Rule |
 |---|---|
@@ -137,16 +140,18 @@ verifier application (a line on the health page) is separate work once the flag 
 
 - `contracts/src/anchor/TrustListAnchorRegistry.sol` + tests; `contracts/` Hardhat project; the dev deployment also sets up the
   registry.
-- `apps/trust-publisher`: `chain-anchor` (projection, flag, dry run) and `chain-check` (verifier side); ABI copy in
+- `apps/trust-publisher`: `chain-submit` (projection, flag, dry run) and `chain-check` (verifier side); ABI copy in
   `src/chain/abi/` (exported from the contract build; `contracts:check` catches drift).
-- [[SPEC-BC-0001]] §15 (marked as proposed) and the [[SPEC-TRUST-0001]] §7 row; [[FW-ARF-0001]] §8.1 status note ("code ready,
-  off in production"). On acceptance, DECISIONS **D-BC-7**; version notes.
+- [[SPEC-BC-0001]] §15 and the [[SPEC-TRUST-0001]] §7 row; [[FW-ARF-0001]] §8.1 status note ("code ready, off in
+  production"). DECISIONS **D-BC-7**; version notes.
+- Once the chain is switched on, which accounts may send transactions and which nodes may connect: [[ADR-0052]] (Besu local
+  permissioning; writer addresses enter the account allowlist from this contract's state).
 - Unchanged decisions: D-BC-0 (Besu/QBFT), D-BC-6 (chain threshold), D-TRUST-0, D-REV-1/2, D-SCHEMA-1, the [[ADR-0009]] K7
   transition.
 
-# Open points (awaiting decision)
+# Open points
 
-1. Contract and command names (`TrustListAnchorRegistry`, `chain-anchor`, `chain-check`).
+1. ~~Contract and command names~~ — **closed (2026-10-19):** `TrustListAnchorRegistry`, `trust:chain-submit`, `trust:chain-check`.
 2. The exact production threshold (proposal 2) and who the second writer will be — together with the second-operator candidate.
 3. A generic "execute call" proposal in `Governance`, so that the writer set/threshold and `CrossRecognition.bootstrapFounders`
    can be managed through Governance (today both can only be called directly from the `governance` address; the Governance
@@ -156,5 +161,6 @@ verifier application (a line on the health page) is separate work once the flag 
 
 # Status
 
-**Proposed — 2026-10-17.** Prepared on project management's direction of 2026-10-17 ("the chain code is written now, integrated
-with the chainless design, off in production"); acceptance rests with project management. If accepted, DECISIONS: D-BC-7.
+**Accepted — 2026-10-19.** With project management approval (names: contract `TrustListAnchorRegistry`, commands
+`trust:chain-submit` and `trust:chain-check`). DECISIONS: D-BC-7. Proposed on 2026-10-17, on project management's direction of the
+same day ("the chain code is written now, integrated with the chainless design, off in production"). CH1–CH5 are binding.

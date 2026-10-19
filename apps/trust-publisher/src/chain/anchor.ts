@@ -1,5 +1,5 @@
 /**
- * chain-anchor — projeksiyon koşusu (ADR-0051 K1, K4): yayıncının dist/ çıktısındaki imzalı listelerin ve çapa günlüğü başının
+ * chain-submit — projeksiyon koşusu (ADR-0051 K1, K4): yayıncının dist/ çıktısındaki imzalı listelerin ve çapa günlüğü başının
  * ÖZETLERİNİ zincirdeki liste çapası kaydına yazar. Kurallar:
  *   - Set önce yükleyiciyle doğrulanır (imza, hash zinciri, tazelik); sağlıksız set çapalanmaz.
  *   - Zincirde aynı sürüm aynı özetle onaylıysa SKIP; onaylı FARKLI özet varsa CONFLICT — yazılmaz, imzalı liste geçerlidir (CH1),

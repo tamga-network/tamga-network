@@ -1,5 +1,5 @@
 /**
- * Zincir projeksiyonu (ADR-0051 öneri) — ağsız testler: plan özetleri imzalı dosyadan türetilir (CH2), zincir yalnız özet
+ * Zincir projeksiyonu (ADR-0051) — ağsız testler: plan özetleri imzalı dosyadan türetilir (CH2), zincir yalnız özet
  * (ABI'de string/bytes yok), aynı sürüm aynı özet → SKIP, farklı özet → CONFLICT ve yazma yok (CH1), eski sürüm yazılmaz (CH4),
  * dry-run yazmaz, bayrak kapalıyken hiçbir şey yapılmaz (CH5), doğrulayıcı cevabı üç değerli (K5). Gerçek dist-test seti
  * varsa yükleyici doğrulamasıyla uçtan uca.
@@ -211,19 +211,19 @@ describe("chain-check — doğrulayıcı tarafı (K5)", () => {
 });
 
 describe("CH5 — bayrak ve ABI", () => {
-  it("TAMGA_CHAIN_ENABLED yokken chain-anchor hiçbir şey yapmaz (çıkış 0, 'disabled'); açıkken eksik ayar hata", async () => {
+  it("TAMGA_CHAIN_ENABLED yokken chain-submit hiçbir şey yapmaz (çıkış 0, 'disabled'); açıkken eksik ayar hata", async () => {
     const logs: string[] = [];
     const orig = console.log;
     console.log = (s: string) => void logs.push(String(s));
     try {
-      const code = await chainCommand("chain-anchor", [], { dist: DIST_TEST, environment: "production", env: {} });
+      const code = await chainCommand("chain-submit", [], { dist: DIST_TEST, environment: "production", env: {} });
       expect(code).toBe(0);
       expect(logs.join("\n")).toMatch(/"disabled"/);
     } finally {
       console.log = orig;
     }
     await expect(
-      chainCommand("chain-anchor", [], {
+      chainCommand("chain-submit", [], {
         dist: DIST_TEST,
         environment: "production",
         env: { TAMGA_CHAIN_ENABLED: "1" },
