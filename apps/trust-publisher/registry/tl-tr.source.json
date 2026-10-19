@@ -154,7 +154,26 @@
       "supervisory_authority": {
         "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
         "country": "TR",
-        "info_uri": "https://www.kvkk.gov.tr"
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR1870632151",
+          "note": "provisional operator (geçici işletmeci) — BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; replaced when the foundation is established"
+        }
+      ],
+      "operator": {
+        "name": "BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ",
+        "status": "provisional",
+        "on_behalf_of": "Tamga Network (foundation to be established)",
+        "note": "Provisional operator (geçici işletmeci): until the Tamga foundation is established, the network's own services are operated by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ and registered with its tax number; this identifier is replaced when the foundation is established."
+      },
+      "postal_address": {
+        "street_address": "Harbiye Mah. Bostan Sk. No: 15 İç Kapı No: 5",
+        "locality": "Şişli / İstanbul",
+        "country": "TR"
       }
     },
     {
@@ -361,9 +380,28 @@
       "supervisory_authority": {
         "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
         "country": "TR",
-        "info_uri": "https://www.kvkk.gov.tr"
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
       },
-      "pseudonyms": "single"
+      "pseudonyms": "single",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR1870632151",
+          "note": "provisional operator (geçici işletmeci) — BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; replaced when the foundation is established"
+        }
+      ],
+      "operator": {
+        "name": "BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ",
+        "status": "provisional",
+        "on_behalf_of": "Tamga Network (foundation to be established)",
+        "note": "Provisional operator (geçici işletmeci): until the Tamga foundation is established, the network's own services are operated by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ and registered with its tax number; this identifier is replaced when the foundation is established."
+      },
+      "postal_address": {
+        "street_address": "Harbiye Mah. Bostan Sk. No: 15 İç Kapı No: 5",
+        "locality": "Şişli / İstanbul",
+        "country": "TR"
+      }
     },
     {
       "access_cert": "rp-issuer-bilgi",

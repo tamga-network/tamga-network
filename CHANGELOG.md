@@ -6,7 +6,17 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 
 ## Unreleased
 
-To be released as `0.7.0` of the `@tamga-network/*` packages (the release itself is done by project management).
+- Production trusted list: the network's own verifier (`verify.tamga.network`) and identity service (`tamga-id`) now carry their
+  registration data (the tax number of the provisional operator, marked `provisional` until the foundation is established;
+  postal address; data protection authority complaint route), so registration certificates are published for them
+  (`trust.tamga.network/wrprc/`). The verifier's access certificate was reissued with the same key and carries
+  `organizationIdentifier` (ADR-0026 K3); its `client_id` changed, its registration (`dns_name`) did not. Revoked records no
+  longer produce registration-data warnings.
+
+## 0.7.0 — 2026-10-19
+
+Misuse-resistant package defaults (ADR-0056). Code written against 0.6.0 has to pass the new required security inputs
+(or an explicit `"none"`); see the breaking changes below.
 
 ### Breaking changes — misuse-resistant defaults (ADR-0056)
 

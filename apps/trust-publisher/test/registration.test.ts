@@ -34,6 +34,12 @@ describe("katılımcı kayıt verisi (ADR-0024)", () => {
     expect(r.errors).toEqual([]);
     expect(r.warnings).toHaveLength(1);
   });
+  it("geri çekilmiş (REVOKED) kayıtta eksik kayıt verisi uyarılmaz", () => {
+    const revoked = { dns_name: "old.example", registered_at: "2026-09-24T00:00:00Z", status: "REVOKED", scopes: [] };
+    const revokedIssuer = { slug: "old-issuer", valid_from: "2026-09-24T00:00:00Z", status: "REVOKED" };
+    expect(checkRegistrations([revoked], [revokedIssuer])).toEqual({ errors: [], warnings: [] });
+    expect(checkRegistrations([{ ...revoked, status: "ACTIVE" }], []).warnings).toHaveLength(1);
+  });
   it("ADR-0031 PS3: takma ad tohumu hiçbir kapsamda olamaz (eski kayıtta da yayın durur); pseudonyms değeri denetlenir", () => {
     const leak = {
       ...fullRp,

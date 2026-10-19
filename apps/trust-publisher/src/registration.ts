@@ -61,9 +61,12 @@ export function checkRegistrations(rps: Rec[], issuers: Rec[]): { errors: string
     const line = `${who}: ${gaps.join(", ")}`;
     (since && since >= REGISTRATION_ENFORCED_FROM ? errors : warnings).push(line);
   };
-  for (const r of rps) put(r.registered_at, `relying_party ${r.dns_name}`, rpGaps(r));
+  // Geri çekilmiş (REVOKED) kayıt bir daha listede etkin olmaz; eksik kayıt verisi tamamlanmaz (dağıtım uyarısı gürültüsü olmasın).
+  // PS3 denetimi (aşağıda) yine bütün kayıtlarda yapılır.
+  const live = (r: Rec) => r.status !== "REVOKED";
+  for (const r of rps.filter(live)) put(r.registered_at, `relying_party ${r.dns_name}`, rpGaps(r));
   // ADR-0031 PS3: sunulamayan tür (takma ad tohumu) hiçbir kapsamda yer alamaz — tarihe bakılmaz, yayın durur
   for (const r of rps) errors.push(...pseudonymErrors(r).map((e) => `relying_party ${r.dns_name}: ${e}`));
-  for (const i of issuers) put(i.valid_from, `issuer ${i.slug}`, issuerGaps(i));
+  for (const i of issuers.filter(live)) put(i.valid_from, `issuer ${i.slug}`, issuerGaps(i));
   return { errors, warnings };
 }

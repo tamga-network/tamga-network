@@ -280,7 +280,8 @@ const ready =
   existsSync(resolve(ROOT, "ops/pki-sandbox/tl-signer-1.pkcs8.pem")) &&
   existsSync(resolve(ROOT, "packages/schemas/dist/index.json"));
 
-describe.skipIf(!ready)("wallet-provider komutu (geçici klasörde)", () => {
+// Her test birkaç CLI süreci açar (tsx); tam koşuda yük altında 20 sn yetmiyordu (titrek zaman aşımı) — blok süresi 120 sn.
+describe.skipIf(!ready)("wallet-provider komutu (geçici klasörde)", { timeout: 120_000 }, () => {
   const tmp = mkdtempSync(join(tmpdir(), "tamga-wp-"));
   const PROD_REG = join(tmp, "registry");
   const SB_REG = join(tmp, "registry-sandbox");
