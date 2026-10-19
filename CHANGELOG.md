@@ -38,6 +38,21 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
   a suspended credential — the same rule as the remote presentation (`matchDcql`).
 - `verifier`: documented that the mdoc A3 step anchors the `x5chain` leaf directly (anchor itself or signed by the anchor; no
   intermediates) — conformant with ISO/IEC 18013-5 Annex B (document signer issued directly by the IACA). SPEC-API-0001 A3 row.
+- Misuse guards (security review 2026-10-19). Checks that compared against an expected value now fail when the expected value
+  is empty or missing instead of comparing against it: `sd-jwt` `verifySdJwtVc` with a KB-JWT (expected `aud`/`nonce`),
+  `issuer` `verifyProofJwt` (`credential_issuer`/`c_nonce`), `verifyKaProof` and `verifyAttestationProof` (`nonce`),
+  `verifyDpop` with `jkt: ""` (a token record without its bound key), `verifier` pass-key proof and `verifyPseudonym`.
+  `verifier` `verifyPresentation` returns INDETERMINATE at T0 when the policy's freshness limits are missing or not finite
+  non-negative numbers (or `max_clock_skew_sec` > 600) — before, a missing limit silently disabled the trust-list and status
+  token age checks. `allowLocalIssuerUrls` compares the host name exactly (`http://localhost.example.org` is not local).
+  `wallet-core` `missingRegistrationPolicy` throws when given seconds instead of milliseconds (with seconds the 2028 rejection
+  date was never reached). Reported steps match what ran: `verifySdJwtVc` lists A6 only when a KB-JWT was verified, and
+  `verifyIssuedSdJwt` lists B4 only when the catalogue knows the type.
+- Documented the low-level helpers whose checks are opt-in: `verifySdJwtVc` without `rootCertsDer` does no chain/trust check,
+  `verifyStatusListToken` checks the signature against the token's own `x5c` only, `verifyIssuerSigned` covers neither the
+  chain nor device binding, `verifyWalletAttestation` / `verifyKeyAttestation` / `verifyPseudonym` check revocation only when
+  given a status callback, `createPar` should always get `allowedRedirectUris`, and `verifyPresentation` skips E3 when `rp`
+  is `undefined`. Acceptance decisions should use `verifyPresentation`.
 
 ### Reference verifier (`apps/verify`)
 
@@ -45,6 +60,10 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
   opened on behalf of another relying party was checked against the verifier's own (wider) registration, so a wallet that
   disclosed more than asked could pass that party an attribute outside its registered scope (ADR-0017 K7/HV6, AP6).
 - The control view key (`?show=`) is compared in constant time.
+- Rate limits no longer share one bucket behind the reverse proxy (which does not pass client addresses): opening a
+  presentation counts against the authenticated relying party's own bucket (unauthenticated requests share one), and the
+  wallet response endpoints (`/vp/response`, `/vp/dc-mdoc/:id`) count per presentation after the cheap lookups. Before, one
+  client within the proxy's per-address allowance could exhaust the shared bucket and block every relying party.
 
 ### Documents
 

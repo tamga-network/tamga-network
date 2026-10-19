@@ -101,6 +101,12 @@ describe("attestation proof türü", () => {
       isProviderKey: yes,
     });
     expect(dup).toMatchObject({ ok: false, reason: expect.stringMatching(/duplicate/) });
+    // güvenlik turu 2026-10-19: beklenen nonce boş/undefined ise (nonce yok KA'sı dahil) ret
+    for (const nonce of ["", undefined as unknown as string])
+      expect(await verifyAttestationProof(await ka(p), { nonce, now, isProviderKey: yes })).toMatchObject({
+        ok: false,
+        reason: expect.stringMatching(/expected nonce missing/),
+      });
   });
   it("KA typ OpenID4VCI 1.0 Final Ek D.1: key-attestation+jwt; eski taslak adı reddedilir", async () => {
     expect(KA_TYP).toBe("key-attestation+jwt");

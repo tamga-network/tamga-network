@@ -56,6 +56,8 @@ export interface ParInput {
   /**
    * İzinli dönüş adresleri (RFC 9126 §2.4 / RFC 9700 §4.1: tam dize eşleşmesi). Dizi ya da istemciye göre (`clientId` → liste)
    * işlev; verilirse ve liste dönerse `redirectUri` listede olmalıdır. Verilmezse yalnız biçim/şema denetimi yapılır.
+   * **Canlıda verin:** `clientId` bir cüzdan çözümünün bütün örneklerinde ortaktır (WIA `sub`); liste yoksa elinde gerçek bir
+   * cüzdan olan saldırgan kendi dönüş adresiyle PAR açıp kurbanı kimlik adımına yönlendirebilir (kod ona döner).
    */
   allowedRedirectUris?: readonly string[] | ((clientId: string) => readonly string[] | null | undefined);
 }

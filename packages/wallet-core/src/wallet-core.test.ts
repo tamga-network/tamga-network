@@ -140,6 +140,9 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
     const bad = verifyIssuedSdJwt(issued.combined, { catalogueHash: () => "sha256-zzz", now });
     expect(bad.ok).toBe(false);
     if (!bad.ok) expect(bad.failedStep).toBe("B4");
+    // güvenlik turu 2026-10-19: katalog türü tanımıyorsa (undefined) B4 yapılmış sayılmaz
+    const unknownType = verifyIssuedSdJwt(issued.combined, { expectedCnf: cnf, catalogueHash: () => undefined, now });
+    expect(unknownType.ok && unknownType.checks).toEqual(["A1", "A2", "A3", "A4", "A5"]);
     const tampered = issued.combined.replace(
       /^([^~.]+\.[^.]+\.)([A-Za-z0-9_-]{4})/,
       (_m, a, s) => a + (s[0] === "A" ? "B" : "A") + s.slice(1),

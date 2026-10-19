@@ -106,12 +106,38 @@ describe.skipIf(!ready)("apps/verify uç sertleştirmesi", () => {
     const app = await buildVerifyApp(cfg(), { rateRules: { presentations: one, vpResponse: one, terminal: one } });
     const post = (url: string, payload: Record<string, unknown>) =>
       app.inject({ method: "POST", url, headers: { "content-type": "application/json" }, payload });
+    // bilinmeyen politika jeton harcamaz; beyansız istekler ortak kovadan
     expect((await post("/presentations", { policy_id: "yok" })).statusCode).toBe(400);
-    const lim = await post("/presentations", { policy_id: "yok" });
+    const policy = ((await app.inject({ url: "/policies" })).json() as Array<{ policy_id: string }>)[0].policy_id;
+    expect((await post("/presentations", { policy_id: policy })).statusCode).toBeLessThan(400);
+    const lim = await post("/presentations", { policy_id: policy });
     expect(lim.statusCode).toBe(429);
     expect(lim.headers["retry-after"]).toBeDefined();
+    // yanıt ucu: bilinmeyen sunum jeton harcamaz (sel başkasının yanıtını durdurmaz); sınır sunum başına
     expect((await post("/vp/response", {})).statusCode).toBe(400);
-    expect((await post("/vp/response", {})).statusCode).toBe(429);
+    expect((await post("/vp/response", {})).statusCode).toBe(400);
+    const app2 = await buildVerifyApp(cfg(), { rateRules: { vpResponse: one } });
+    const made = await app2.inject({
+      method: "POST",
+      url: "/presentations",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      payload: { policy_id: policy },
+    });
+    const pid = (made.json() as { presentation_id: string }).presentation_id;
+    const junk = (id: string) =>
+      Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid: `enc-${id}` })).toString("base64url") +
+      ".x.y.z.w";
+    const respond = (id: string) =>
+      app2.inject({
+        method: "POST",
+        url: "/vp/response",
+        headers: { "content-type": "application/json" },
+        payload: { response: junk(id) },
+      });
+    expect((await respond(pid)).statusCode).toBe(400); // çözülemedi (sunum tüketilmez)
+    expect((await respond(pid)).statusCode).toBe(429); // aynı sunuma ikinci deneme: sınır
+    expect((await respond("baska-sunum")).statusCode).toBe(400); // bilinmeyen sunum: sınırdan etkilenmez
+    await app2.close();
     expect((await post("/terminal/verify", { token: "x" })).statusCode).toBe(404); // gerçek ağ biçimli liste: kapı yok
     expect((await post("/terminal/verify", { token: "x" })).statusCode).toBe(429);
     await app.close();

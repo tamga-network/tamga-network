@@ -77,13 +77,19 @@ export async function verifyDpop(
     replay: DpopReplayCache;
     /** credential ucu: belirteç verilirse `ath` zorunlu */
     accessToken?: string;
-    /** belirtece bağlı anahtar parmak izi (credential ucu) */
+    /**
+     * Belirtece bağlı anahtar parmak izi (credential ucu). **Kaynak ucunda zorunlu tutun**: verilmezse kanıtın belirtecin
+     * anahtarıyla yapıldığı denetlenmez (çalınan belirteç başka anahtarla kullanılabilir). Boş dize reddedilir.
+     */
     jkt?: string;
     /** verilirse kanıtta geçerli sunucu nonce'u zorunludur */
     nonces?: DpopNonces;
   },
 ): Promise<DpopResult> {
   if (typeof proof !== "string" || !proof) return { ok: false, reason: "DPoP proof missing" };
+  // Belirteç kaydında bağlı anahtar boş kaldıysa (`jkt: ""`) bağ denetimi sessizce atlanmasın
+  if (o.jkt !== undefined && (typeof o.jkt !== "string" || !o.jkt))
+    return { ok: false, reason: "token has no bound DPoP key" };
   let header: ReturnType<typeof decodeProtectedHeader>;
   try {
     header = decodeProtectedHeader(proof);

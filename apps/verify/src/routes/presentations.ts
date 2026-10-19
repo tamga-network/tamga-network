@@ -28,7 +28,7 @@ import type { VerifyContext } from "../app.js";
 import type { Presentation } from "../state.js";
 import { findPolicy } from "../policies.js";
 import { registrationCertFor } from "../wrprc.js";
-import { rateLimitHook } from "../rate-limit.js";
+import { rateLimited } from "../rate-limit.js";
 import { checkPage, expiredPage, langOf, notFoundPage, pendingPage, resultPage, statusOnlyPage } from "../html.js";
 
 export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyContext) {
@@ -75,7 +75,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
   };
 
   // 4.1 Sunum isteği başlat
-  app.post("/presentations", { preHandler: rateLimitHook(ctx.limits.presentations) }, async (req, reply) => {
+  app.post("/presentations", async (req, reply) => {
     const body = req.body as { policy_id?: string; dc_api_origin?: unknown };
     const policy = findPolicy(body.policy_id, ctx.policies);
     if (!policy) return reply.code(400).send({ error: "unknown_policy" });
@@ -87,6 +87,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     }
     const who = await callerOf(req.headers.authorization, reply);
     if (who === false) return reply;
+    // Hız sınırı kovası: doğrulanmış RP'nin kendi kovası; beyansız istekler ortak kova (vekil arkasında adres yok). Tek bir
+    // istemcinin beyansız seli RP'lerin sunum açmasını durduramaz (güvenlik turu 2026-10-19).
+    if (rateLimited(ctx.limits.presentations, who ? `rp:${who}` : (req.ip ?? ""), reply)) return reply;
     // Beyansız istek: sıkı kipte sunum doğrulayıcının KENDİ RP kaydına bağlanır (K5 örüntüsü, /sample-site/start gibi) — ana
     // sayfadaki "QR üret" ve cüzdanın başlattığı kontrol / geçiş kartı akışları (ADR-0012 B/C). Sonuç ve değerler hiçbir dış
     // çağırana verilmez (sahibi doğrulayıcının kendisi; HV1/HV2 değişmez); kişi yalnızca kendi kontrol bağlantısını gösterir.
@@ -127,7 +130,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
   });
 
   // Şifreli yanıt → doğrulama
-  app.post("/vp/response", { preHandler: rateLimitHook(ctx.limits.vpResponse) }, async (req, reply) => {
+  app.post("/vp/response", async (req, reply) => {
     const jwe = (req.body as { response?: string }).response;
     if (!jwe) return reply.code(400).send({ error: "invalid_request" });
     const pid = responseKidOf(jwe)?.presentationId ?? "";
@@ -137,6 +140,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     if (p.req.expiresAt < nowSec())
       return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
+    // Hız sınırı sunum başına (çözme işinden önce): bilinmeyen kimlikler jeton harcamaz, bir sunuma yönelik sel başka
+    // kişilerin yanıtını durdurmaz (güvenlik turu 2026-10-19)
+    if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
     // Çözülemeyen (bozuk/yabancı) yanıt sunumu TÜKETMEZ: sunum kimliği QR'da açık olduğundan, aksi hâlde yakındaki biri
     // anlamsız bir gövdeyle gerçek kullanıcının sunumunu "reddedildi"ye düşürebilirdi.
     // 0.6.0: iki yol, iki anahtar — QR / bağlantının yanıtı cihazlar arası (response_uri), sayfanın ilettiği yanıt DC API
@@ -279,7 +285,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
 
   // ISO/IEC 18013-7 Ek C (`org-iso-mdoc`): sayfanın ilettiği HPKE şifreli DeviceResponse → doğrulama (sunum kimliği adreste;
   // şifreli yanıtta kimlik yok). Açılamayan yanıt sunumu tüketmez (/vp/response ile aynı kural).
-  app.post("/vp/dc-mdoc/:id", { preHandler: rateLimitHook(ctx.limits.vpResponse) }, async (req, reply) => {
+  app.post("/vp/dc-mdoc/:id", async (req, reply) => {
     const pid = (req.params as { id: string }).id;
     const p = presentations.get(pid);
     if (!p || !p.mdocDc)
@@ -288,6 +294,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     if (p.req.expiresAt < nowSec())
       return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
+    if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
     const response = (req.body as { response?: unknown } | undefined)?.response;
     let opened: ReturnType<typeof openMdocDcApiResponse>;
     try {

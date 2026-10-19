@@ -113,7 +113,11 @@ export interface VerifyInput {
   trust: TrustSource;
   statusCache: StatusCache;
   rootCertsDer: Uint8Array[];
-  /** E3: sunumu açan RP'nin kaydı (aracı doğrulayıcıda asıl RP'ninki — ADR-0017 K7/HV6); `undefined` → E3 atlanır */
+  /**
+   * E3: sunumu açan RP'nin kaydı (aracı doğrulayıcıda asıl RP'ninki — ADR-0017 K7/HV6). **`undefined` → E3 (kapsam denetimi)
+   * atlanır** ve sonuç yine `ACCEPTED` olabilir (E3 yalnız `checks_skipped`'te görünür); `null` → kayıtsız RP, ret. Barındırılan
+   * doğrulayıcıda her zaman verin.
+   */
   rp?: RelyingParty | null;
   /**
    * Yalnız yerel geliştirme: `iss` yerel/IP adresiyse kayıtlı `issuer_url` ile tutarlılık denetimi atlanır (LAN'da adresler farklı).

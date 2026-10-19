@@ -41,7 +41,10 @@ export interface PassCheck {
   consumed?: boolean;
 }
 
-/** Sunumdaki SD-JWT'nin cnf.jwk'sı (holder anahtarı) ve JWK thumbprint (RFC 7638) — kişisel veri okunmaz. */
+/**
+ * Sunumdaki SD-JWT'nin cnf.jwk'sı (holder anahtarı) ve JWK thumbprint (RFC 7638) — kişisel veri okunmaz. **İmza denetlemez**
+ * (yalnız gövdeyi okur): yalnız `verifyPresentation` sonucu `ACCEPTED` olan sunum için çağırın.
+ */
 export function holderCnfOf(presentation: string): { jwk: JWK; kid: string } {
   const jwt = presentation.split("~")[0];
   const payload = JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString("utf8")) as { cnf?: { jwk?: JWK } };
@@ -73,6 +76,8 @@ export async function verifyPassKeyProof(
   if (!j || j.kty !== "EC" || j.crv !== "P-256" || typeof j.x !== "string" || typeof j.y !== "string" || "d" in j)
     throw new Error("pass_key: header key");
   const jwk: JWK = { kty: "EC", crv: "P-256", x: j.x, y: j.y };
+  if (typeof p.clientId !== "string" || !p.clientId || typeof p.nonce !== "string" || !p.nonce)
+    throw new Error("pass_key: expected aud/nonce missing");
   const { payload } = await compactVerify(jws, await importJWK(jwk, "ES256"));
   const body = JSON.parse(Buffer.from(payload).toString("utf8")) as { aud?: string; nonce?: string; iat?: number };
   if (body.aud !== p.clientId) throw new Error("pass_key: aud mismatch");

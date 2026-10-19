@@ -171,7 +171,7 @@ export function verifyIssuedSdJwt(combined: string, opt: LocalVerifyOptions = {}
     const valid = want === undefined ? undefined : Array.isArray(want) ? want : [want];
     if (valid && !valid.includes(p["vct#integrity"] as string))
       return fail("B4", "vct#integrity does not match the catalogue");
-    checks.push("B4");
+    if (valid) checks.push("B4"); // katalogda tür yoksa B4 yapılmış sayılmaz
   }
   return {
     ok: true,

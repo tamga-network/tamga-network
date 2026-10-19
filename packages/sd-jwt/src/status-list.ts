@@ -182,6 +182,10 @@ export interface VerifiedStatusToken {
  * değil — 0.3.1'de `iat + 2 × ttl` bayatlık kuralı kaldırıldı); azami token yaşı doğrulayıcı politikasında
  * (`max_status_token_age_sec`) ya da `opts.maxAgeSec` ile. Çapa (D5) çağıran tarafta: contentHash ↔ TrustSource.statusAnchor. Hata iletileri adım koduyla başlar
  * ("D3:", "D4:", "D6:") — doğrulayıcı D4'ü INDETERMINATE (tazelik), ötekileri RED sayar.
+ *
+ * **Yalnız imza denetimi:** imza token'ın KENDİ `x5c[0]`'ına karşı denetlenir; imzacının güvenilir olduğu burada denetlenmez.
+ * Çağıran imzacıyı (`leafFingerprintHex`) güven kaynağıyla eşlemeli (ör. `TrustSource` durum çapası, sağlayıcı anahtarı) ve azami
+ * yaşı (`maxAgeSec`) vermelidir; aksi hâlde dağıtım yolunu ele geçiren "hepsi geçerli" listesi sunabilir.
  */
 export async function verifyStatusListToken(
   token: string,

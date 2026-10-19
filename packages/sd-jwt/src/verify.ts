@@ -64,7 +64,12 @@ export interface VerifyOptions {
   nonce: string;
   stateCode: string;
   now?: number; // saniye
-  rootCertsDer?: Uint8Array[]; // yaprak bu köklerden birince imzalanmış olmalı (Ş3; boşsa zincir kontrolü verifier'a bırakılır)
+  /**
+   * Yaprak bu köklerden birince imzalanmış olmalı (Ş3). **Boş ya da verilmezse zincir/güven denetimi YAPILMAZ**: imza yalnız
+   * belgenin kendi `x5c[0]`'ına karşı denetlenir (kendinden imzalı belge de `ok: true` döner; `anchorFingerprint: null`).
+   * Kabul kararı için `@tamga-network/verifier` `verifyPresentation` kullanın (kök yoksa DOĞRULANAMADI) ya da kök verin.
+   */
+  rootCertsDer?: Uint8Array[];
   /**
    * §5.1.1: eski `vc+sd-jwt` typ değeri (SD-JWT VC -13 doğrulayıcıya izin verir). Varsayılan **true** (AB uyumu, 0.5.2); false
    * yalnız `dc+sd-jwt`. Sonuçta `typ` döner: Tamga türleri için `vc+sd-jwt` kararı çağıranda (C13; @tamga-network/verifier B adımı).
@@ -236,6 +241,9 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   // A6 — KB-JWT
   let kb: VerifyOk["kb"];
   if (parts.kb) {
+    // Beklenen değerler boşsa (ör. nonce deposu undefined döndü) karşılaştırma anlamsızdır: KB-JWT kabul edilmez
+    if (typeof opt.aud !== "string" || !opt.aud || typeof opt.nonce !== "string" || !opt.nonce)
+      return fail("A6", "expected aud/nonce missing (caller must pass non-empty values)");
     try {
       const kbHeader = decodeProtectedHeader(parts.kb);
       if (kbHeader.typ !== KB_JWT_TYP || kbHeader.alg !== "ES256") return fail("A6", "KB-JWT typ/alg");
@@ -250,8 +258,8 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
     } catch (e) {
       return fail("A6", `KB-JWT: ${(e as Error).message}`);
     }
+    done.push("A6"); // yalnız KB-JWT gerçekten doğrulandıysa (requireKb: false ve KB yoksa A6 yapılmış sayılmaz)
   }
-  done.push("A6");
 
   // A7 (Ş9) — exp / nbf (yalnız sahiplik kanıtı istenen işlerde atlanır: `skipValidityPeriod`)
   if (!opt.skipValidityPeriod) {

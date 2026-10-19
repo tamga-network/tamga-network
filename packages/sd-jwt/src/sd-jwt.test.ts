@@ -159,6 +159,37 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     expect(late.ok).toBe(false);
     if (!late.ok) expect(late.failedStep).toBe("A6");
   });
+  it("güvenlik turu 2026-10-19: boş beklenen nonce/aud KB-JWT'yi geçirmez; KB yokken A6 yapılmış sayılmaz", async () => {
+    const out = await issueDiploma();
+    const pres = await presentSdJwtVc({
+      combined: out.combined,
+      discloseClaims: ["is_graduate"],
+      holderKey: holder.priv,
+      aud: AUD,
+      nonce: NONCE,
+      iat: NOW,
+    });
+    for (const bad of [
+      { aud: AUD, nonce: "" },
+      { aud: "", nonce: NONCE },
+      { aud: AUD, nonce: undefined as unknown as string },
+    ]) {
+      const r = await verifySdJwtVc(pres, { ...bad, stateCode: "TR", now: NOW });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.failedStep).toBe("A6");
+    }
+    const issued = await verifySdJwtVc(out.combined, {
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: NOW,
+      requireKb: false,
+    });
+    expect(issued.ok).toBe(true);
+    expect(issued.checksPerformed).not.toContain("A6");
+    const full = await verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW });
+    expect(full.checksPerformed).toContain("A6");
+  });
   it("kurcalanmış disclosure (değer değişti) → A5 RED (C10); ekran görüntüsü/kopya KB üretemez", async () => {
     const out = await issueDiploma();
     const pres = await presentSdJwtVc({

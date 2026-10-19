@@ -31,12 +31,14 @@ export async function verifyPseudonym(p: {
    */
   rpKey: string;
   trust: TrustSource;
-  /** WIA iptal durumu (verilmezse denetlenmez) */
+  /** WIA iptal durumu. **Verilmezse denetlenmez** (iptal edilmiş cüzdanın takma adı da kabul edilir) — canlıda verin. */
   walletStatusOf?: StatusValueOf;
   now?: number;
 }): Promise<PseudonymResult> {
   const now = p.now ?? Math.floor(Date.now() / 1000);
   try {
+    if (![p.aud, p.nonce, p.rpKey].every((v) => typeof v === "string" && v.length > 0))
+      return { ok: false, reason: "expected aud/nonce/rp missing" };
     const h = decodeProtectedHeader(p.token);
     const jwk = h.jwk as JWK | undefined;
     if (h.typ !== PSEUDONYM_TYP || h.alg !== "ES256") return { ok: false, reason: "pseudonym header (typ/alg)" };

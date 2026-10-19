@@ -66,3 +66,13 @@ export function rateLimitHook(limiter: TokenBucketLimiter) {
     return reply.code(429).header("retry-after", String(limiter.retryAfterSec())).send({ error: "rate_limited" });
   };
 }
+
+/**
+ * İşleyici içinden sınır: `key` (ör. doğrulanmış RP, sunum kimliği) kovasından bir jeton; yoksa 429 gönderir ve `true` döner.
+ * Anahtar saldırganın çoğaltamayacağı bir değer olmalı (doğrulanmış kimlik ya da var olan kayıt) — yoksa sınır delinir.
+ */
+export function rateLimited(limiter: TokenBucketLimiter, key: string, reply: FastifyReply): boolean {
+  if (limiter.take(key)) return false;
+  reply.code(429).header("retry-after", String(limiter.retryAfterSec())).send({ error: "rate_limited" });
+  return true;
+}

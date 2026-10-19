@@ -61,7 +61,8 @@
     "contracts:install": "npm --prefix contracts ci --no-audit --no-fund",
     "contracts:compile": "npm --prefix contracts run -s compile",
     "contracts:test": "npm --prefix contracts run -s test",
-    "contracts:check": "npm --prefix contracts run -s check:uups && npm --prefix contracts run -s abi:export -- --check",
+    "contracts:check": "npm --prefix contracts run -s check:uups && npm --prefix contracts run -s check:storage && npm --prefix contracts run -s abi:export -- --check",
+    "contracts:storage-check": "npm --prefix contracts run -s check:storage",
     "contracts:node": "npm --prefix contracts run -s node",
     "contracts:deploy:dev": "npm --prefix contracts run -s deploy:dev"
   },

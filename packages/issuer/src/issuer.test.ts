@@ -139,6 +139,14 @@ describe("OpenID4VCI yardımcıları (SPEC-PROTO-0001)", () => {
     expect((await verifyProofJwt(proof, ISS, "c1", NOW)).ok).toBe(true);
     expect((await verifyProofJwt(proof, ISS, "c2", NOW)).ok).toBe(false);
     expect((await verifyProofJwt(proof, "https://evil", "c1", NOW)).ok).toBe(false);
+    // güvenlik turu 2026-10-19: boş/undefined beklenti (nonce deposu boş döndü) kabul edilmez
+    const noNonce = await new SignJWT({ iat: NOW })
+      .setProtectedHeader({ alg: "ES256", typ: PROOF_TYP, jwk: h.jwk })
+      .setAudience(ISS)
+      .sign(h.priv);
+    expect((await verifyProofJwt(noNonce, ISS, undefined as unknown as string, NOW)).ok).toBe(false);
+    expect((await verifyProofJwt(proof, ISS, "", NOW)).ok).toBe(false);
+    expect((await verifyProofJwt(proof, "", "c1", NOW)).ok).toBe(false);
     const meta = issuerMetadata({
       credentialIssuer: ISS,
       authorizedVcts: [{ vct: DIPLOMA.vct, name: "Diploma", display: [] }],

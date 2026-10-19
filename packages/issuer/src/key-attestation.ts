@@ -61,7 +61,14 @@ const statusRefOf = (o: unknown): StatusRef | undefined => {
   return s && typeof s.idx === "number" && typeof s.uri === "string" ? { idx: s.idx, uri: s.uri } : undefined;
 };
 
-/** KA JWT'sini doğrular (imza, sağlayıcı anahtarı, süre, alanlar, iptal). */
+/** Beklenen değer (aud, nonce) boş olamaz: boş/undefined beklenti karşılaştırmayı anlamsızlaştırır (tekrar oynatma). */
+const nonEmpty = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+
+/**
+ * KA JWT'sini doğrular (imza, sağlayıcı anahtarı, süre, alanlar, iptal). **İptal denetimi yalnız `statusOf` verilince yapılır**:
+ * `keyStorageStatus: "required"` (varsayılan) iptal GİRİŞİNİN varlığını zorunlu kılar, denetimi değil — `statusOf` vermeyen
+ * çağıran iptal edilmiş anahtar deposunu da `ok: true` görür. Kabul kararında `statusOf` verin (ör. `WalletStatusChecker`).
+ */
 export async function verifyKeyAttestation(
   ka: string,
   p: {
@@ -129,6 +136,7 @@ export async function verifyKaProof(
     keyStorageStatus?: KeyStorageStatusPolicy;
   },
 ): Promise<KeyAttestationResult> {
+  if (!nonEmpty(p.aud) || !nonEmpty(p.nonce)) return { ok: false, reason: "expected aud/nonce missing" };
   let h: ReturnType<typeof decodeProtectedHeader> & { key_attestation?: string };
   try {
     h = decodeProtectedHeader(proof) as typeof h;
@@ -174,6 +182,7 @@ export async function verifyAttestationProof(
     keyStorageStatus?: KeyStorageStatusPolicy;
   },
 ): Promise<KeyAttestationResult> {
+  if (!nonEmpty(p.nonce)) return { ok: false, reason: "expected nonce missing" };
   const v = await verifyKeyAttestation(ka, p);
   if (!v.ok) return v;
   let nonce: unknown;

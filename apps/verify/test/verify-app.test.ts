@@ -1170,6 +1170,33 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(plain.dc_api_requests).toBeUndefined();
   });
 
+  it("hız sınırı: beyansız sel ortak kovayı tüketse de doğrulanmış RP kendi kovasından sunum açar", async () => {
+    const one = { burst: 1, perMin: 1 };
+    const app = await buildVerifyApp(
+      { ...cfg, requireRpAuth: true, dataDir: join(tmpdir(), "tamga-verify-rl-" + process.pid) },
+      { showcase: true, rateRules: { presentations: one } },
+    );
+    const rpSigner = await pemRpSigner(
+      readFileSync(resolve(PKI, "rp-verify.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"),
+    );
+    const open = (headers: Record<string, string>) =>
+      app.inject({
+        method: "POST",
+        url: "/presentations",
+        headers: { accept: "application/json", "content-type": "application/json", ...headers },
+        payload: { policy_id: "job-application-degree" },
+      });
+    const first = await open({});
+    expect(first.statusCode, first.body).toBe(200);
+    expect((await open({})).statusCode).toBe(429); // beyansız ortak kova doldu
+    const rp = () => createRpAssertion(rpSigner, BASE).then((a) => ({ authorization: `Bearer ${a}` }));
+    expect((await open(await rp())).statusCode).toBe(200); // RP'nin kendi kovası
+    expect((await open(await rp())).statusCode).toBe(429); // RP'nin kovası da sınırlı
+    expect((await open({ authorization: "Bearer bozuk" })).statusCode).toBe(401); // geçersiz beyan jeton harcamaz
+    await app.close();
+  });
+
   it("ADR-0017: sıkı kip — RP beyanı, sahiplik, durum jetonu, değerler bir kez; sayfada değer yok; örnek site sunucudan başlatır", async () => {
     const strict = await buildVerifyApp(
       { ...cfg, requireRpAuth: true, dataDir: join(tmpdir(), "tamga-verify-strict-" + process.pid) },

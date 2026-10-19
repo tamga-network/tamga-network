@@ -133,6 +133,9 @@ export async function verifyProofJwt(
   cNonce: string,
   now = Math.floor(Date.now() / 1000),
 ): Promise<ProofResult> {
+  // Beklenen değerler boşsa (ör. nonce deposu undefined döndü) kanıt kabul edilmez — tekrar oynatmaya kapı açmasın
+  if (typeof credentialIssuer !== "string" || !credentialIssuer || typeof cNonce !== "string" || !cNonce)
+    return { ok: false, reason: "expected credential_issuer / c_nonce missing" };
   try {
     const h = decodeProtectedHeader(proof);
     if (h.typ !== PROOF_TYP) return { ok: false, reason: "typ" };

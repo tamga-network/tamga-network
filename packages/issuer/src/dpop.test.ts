@@ -28,6 +28,11 @@ async function proof(
 const ath = (t: string) => createHash("sha256").update(t).digest("base64url");
 
 describe("DPoP (RFC 9449)", () => {
+  it('güvenlik turu 2026-10-19: belirtece bağlı anahtar boşsa (jkt: "") kanıt kabul edilmez', async () => {
+    const k = await key();
+    const r = await verifyDpop(await proof(k), { htm: "POST", htu: HTU, now, replay: new DpopReplayCache(), jkt: "" });
+    expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/no bound DPoP key/) });
+  });
   it("geçerli kanıt kabul edilir, aynı kanıt ikinci kez reddedilir", async () => {
     const k = await key();
     const replay = new DpopReplayCache();

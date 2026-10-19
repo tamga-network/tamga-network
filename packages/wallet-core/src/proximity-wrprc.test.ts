@@ -23,7 +23,7 @@ import { b64u } from "./b64.js";
 import { newState, type StoredCredential, type WalletState } from "./store.js";
 import { presentProximity, type ProximityRequestView } from "./proximity.js";
 import { fakeBleLink } from "./w2w.js";
-import { WRPRC_REQUIRED_FROM, checkProximityRegistration } from "./wrprc.js";
+import { WRPRC_REQUIRED_FROM, checkProximityRegistration, missingRegistrationPolicy } from "./wrprc.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
@@ -120,6 +120,15 @@ const req = (euWrprc?: Uint8Array): ItemsRequest[] => [
 
 /** okuyucu tarafının imzalı listedeki kaydında sabitlenmiş yaprak parmak izi (RP kaydı) */
 const pinned = () => ({ trustAnchors: [] as Uint8Array[], registeredFingerprints: [gate.fp] });
+
+describe("missingRegistrationPolicy zaman birimi (güvenlik turu 2026-10-19)", () => {
+  it("milisaniye ister: saniye verilirse 2028 sınırına hiç ulaşılmaz — hata atar", () => {
+    expect(() => missingRegistrationPolicy(Math.floor(Date.now() / 1000))).toThrow(/milliseconds/);
+    expect(() => missingRegistrationPolicy(Number.NaN)).toThrow(/milliseconds/);
+    expect(missingRegistrationPolicy(WRPRC_REQUIRED_FROM + 1).valid).toBe(false);
+    expect(missingRegistrationPolicy(WRPRC_REQUIRED_FROM - 1).valid).toBe(true);
+  });
+});
 
 describe("checkProximityRegistration (ADR-0026 K5 yakın alan)", () => {
   it("geçerli: kayıt kurumu imzası, süre, sub = okuyucu sertifikası; izinli öğeler; okuyucu parmak izi", async () => {

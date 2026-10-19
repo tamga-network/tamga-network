@@ -87,13 +87,17 @@ export async function verifyWalletAttestation(p: {
   issuerUrl: string;
   now?: number;
   isProviderKey: (fingerprintHex: string) => "YES" | "NO" | "UNKNOWN";
-  /** ADR-0025: WIA `client_status` iptal denetimi (yoksa denetlenmez) */
+  /**
+   * ADR-0025: WIA `client_status` iptal denetimi. **Verilmezse denetlenmez** ve sonuç `ok: true`, `clientStatus: "NOT_CHECKED"`
+   * olur — kabul kararında verin (ör. `WalletStatusChecker.statusOf`) ya da `NOT_CHECKED`'i ret sayın.
+   */
   statusOf?: StatusValueOf;
   /** İptal girişi olmayan kanıt (varsayılan `"optional"`: AB uyumu için genel -07 kanıtı kabul edilir). */
   clientStatus?: ClientStatusPolicy;
   /**
    * PoP tekrar oynatma denetimi: bu `jti` (aynı cüzdan anahtarı için) daha önce görüldüyse true döndürür; görülmediyse kaydeder ve
-   * false döndürür. Verilmezse denetlenmez (çağıran sonuçtaki `pop.jti` ile kendisi yapar).
+   * false döndürür. Verilmezse denetlenmez (çağıran sonuçtaki `pop.jti` ile kendisi yapar) — PoP pencere içinde yeniden
+   * kullanılabilir; canlıda verin.
    */
   jtiSeen?: (jti: string, iat: number) => boolean | Promise<boolean>;
 }): Promise<WuaResult> {

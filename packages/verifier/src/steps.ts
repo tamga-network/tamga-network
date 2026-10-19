@@ -83,9 +83,22 @@ export interface VerifyCtx {
   extSchema?: Record<string, unknown>;
 }
 
+/** Politika `max_clock_skew_sec` üst sınırı (sn): daha geniş pencere geçerlilik/zaman denetimlerini anlamsızlaştırır. */
+const MAX_CLOCK_SKEW_SEC = 600;
+
 /** T0 — güven kaynağı tazeliği (CMP4/BT5). */
 export function stepT0(ctx: VerifyCtx): StepFail | undefined {
   const { fr, input } = ctx;
+  // Politika dosyadan/JSON'dan geliyorsa tazelik sınırları eksik ya da bozuk olabilir: `x > undefined` her zaman false olduğundan
+  // yaş denetimleri sessizce kapanırdı. Eksik/bozuk sınır → DOĞRULANAMADI (güvenlik turu 2026-10-19).
+  const f = input.policy?.freshness as Partial<Policy["freshness"]> | undefined;
+  const limit = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0;
+  if (
+    !limit(f?.max_trust_age_sec) ||
+    !limit(f?.max_status_token_age_sec) ||
+    (f?.max_clock_skew_sec !== undefined && (!limit(f.max_clock_skew_sec) || f.max_clock_skew_sec > MAX_CLOCK_SKEW_SEC))
+  )
+    return indet("T0", "INDEXER_STALE", "policy freshness limits missing or invalid");
   if (!fr.healthy) return indet("T0", "INDEXER_STALE", "trusted list stale or unreachable (CMP4)");
   if (fr.ageSec > input.policy.freshness.max_trust_age_sec)
     return indet(
@@ -197,7 +210,16 @@ export function stepB(ctx: VerifyCtx): StepFail | undefined {
 }
 
 /** Yerel geliştirme adresleri (localhost / IP) kayıtlı issuer_url ile birebir eşleşmek zorunda değil. */
-const isLocalUrl = (u: string) => u.startsWith("http://localhost") || /^https?:\/\/(\d{1,3}\.){3}\d{1,3}/.test(u);
+export const isLocalUrl = (u: string) => {
+  // Ana makine adı tam karşılaştırılır: `http://localhost.evil.example` ya da `http://10.0.0.1.evil.example` yerel sayılmaz
+  try {
+    const { protocol, hostname } = new URL(u);
+    if (hostname === "localhost") return protocol === "http:";
+    return (protocol === "http:" || protocol === "https:") && /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+  } catch {
+    return false;
+  }
+};
 
 /** C — güven (C1/C2 belgenin iat'ına göre — D-BC-3; C3 tanıma; C4 kategori ↔ kayıt sınıfı — ADR-0010) + iss tutarlılığı. */
 export function stepC(ctx: VerifyCtx): StepFail | undefined {

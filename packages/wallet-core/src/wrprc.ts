@@ -39,6 +39,9 @@ export type RegistrationFlag = "registration_missing";
  * sonra ret. `now` ms.
  */
 export function missingRegistrationPolicy(now = Date.now()): RegistrationCertCheck {
+  // Saniye verilirse (ör. Math.floor(Date.now()/1000)) 2028 sınırına hiç ulaşılmaz ve ret hiç başlamazdı: açıkça reddet
+  if (!Number.isFinite(now) || now < 1e11)
+    throw new RangeError("missingRegistrationPolicy: now must be epoch milliseconds");
   const reject = now >= WRPRC_REQUIRED_FROM;
   return {
     present: false,

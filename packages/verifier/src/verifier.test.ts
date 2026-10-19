@@ -605,11 +605,11 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       rootCertsDer: [new Uint8Array([1])],
       audit: (e: { outcome: string }) => audits.push(e.outcome),
     };
-    // adım içinde istisna (bozuk politika nesnesi)
+    // bozuk politika nesnesi (tazelik sınırları yok): T0 DOĞRULANAMADI (2026-10-19: istisna yerine açık neden)
     const out = await verifyPresentation({ ...base, trust, policy: { ...policy, freshness: undefined as never } });
     expect(out.result.outcome).toBe("INDETERMINATE");
     expect(out.result.failed_step).toBe("T0");
-    expect(out.result.failed_reason).toMatch(/internal error/);
+    expect(out.result.failed_reason).toMatch(/policy freshness limits missing or invalid/);
     // güven kaynağının tazelik sorgusu istisna atarsa: T0 DOĞRULANAMADI; iletideki ayrıntı sonuca girmez
     const thrower = {
       ...trust,

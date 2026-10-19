@@ -19,7 +19,7 @@ import {
   signJwt,
 } from "@tamga-network/wallet-core";
 import { pemRpSigner } from "./request.js";
-import { PassRegistry, filePassStore, holderCnfOf } from "./pass.js";
+import { PassRegistry, filePassStore, holderCnfOf, verifyPassKeyProof } from "./pass.js";
 
 const PKI = resolve(__dirname, "../../../ops/pki");
 const CLIENT = existsSync(resolve(PKI, "rp-verify.cert.pem"))
@@ -167,6 +167,8 @@ describe("PassRegistry (ADR-0012 B)", () => {
         passKey: { jws: proof, nonce: "other" },
       }),
     ).rejects.toThrow(/nonce/);
+    // güvenlik turu 2026-10-19: boş beklenen nonce kabul edilmez
+    await expect(verifyPassKeyProof(proof, { clientId: signer.clientId, nonce: "" })).rejects.toThrow(/expected/);
     const foreign = await makePassKeyProof({ keys, ref: passRef, clientId: "x509_hash:other", nonce });
     await expect(
       reg.issue({

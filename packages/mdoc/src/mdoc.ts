@@ -180,6 +180,10 @@ export interface MdocVerifyResult {
 /**
  * IssuerSigned doğrulaması: issuerAuth imzası (issuer açık anahtarıyla), açıklanan her alanın digest'i MSO ile eşleşir,
  * docType tutar, geçerlilik penceresi. `issuerPubRaw`: doğrulayıcı x5chain'den (güven listesiyle eşleyerek) çıkarır.
+ *
+ * **Düşük düzey:** `valid: true` güven zincirini (x5chain ↔ IACA kökleri) ve kişiye bağlılığı (DeviceAuth, `verifyDeviceAuth`)
+ * İÇERMEZ; sonuçtaki `x5chain[0]`'ın anahtarını doğrudan `issuerPubRaw` yapmak kendinden imzalı belgeyi kabul eder. Kabul kararı
+ * için `@tamga-network/verifier` `verifyPresentation` kullanın. `expectedDocType` verin.
  */
 export function verifyIssuerSigned(
   issuerSigned: Uint8Array,
