@@ -136,6 +136,16 @@ deliberately is written explicitly as `"none"`. No compatibility layer (developm
   policy's `max_status_token_age_sec` (as in §8.1 and in the code). PR13: a redirect address outside the allowlist is rejected
   with `invalid_request` (RFC 9126 §2.1), as the services answer.
 
+### Fixed before release (code review 2026-10-20)
+
+- `verifier`: `verifyPresentation` with `rp: null` (unregistered relying party) is now always rejected at E3, as SPEC-API-0001
+  specifies. Before, a presentation that disclosed no claims passed E3 with an unregistered party (an empty scope has no
+  overrun).
+- `wallet-core` / `trust`: `TrustPins.versionMemory` carries a persistent "last seen" list version memory (TL2) to every helper
+  that loads the trusted list (`fetchTrustSource`, `fetchRpRecord`, `fetchRegistrarKeys`, the issuer directory). Without it the
+  rollback protection is in-process only and resets when the app restarts. `@tamga-network/trust/core` now exports
+  `ListVersionMemory`, `ListMark` and `MemoryListVersionMemory`.
+
 ## 0.6.0 — 2026-10-13
 
 EU alignment (ADR-0048, ADR-0049, ADR-0026 K5, EU TS9, ISO/IEC 18013-7 Annex C). Credentials issued with earlier packages —

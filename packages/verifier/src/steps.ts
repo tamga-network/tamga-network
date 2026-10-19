@@ -569,6 +569,8 @@ export function stepE(ctx: VerifyCtx): StepFail | undefined {
   // ADR-0056 K4: `rp` zorunlu — verilmemesi kapsam denetimini sessizce atlamaz
   if (input.rp === undefined)
     return reject("E3", 'relying party registration not given (pass rp, null for an unregistered party, or "none")');
+  // SPEC-API-0001 E3: kayıtsız RP (`null`) her zaman ret — açıklanan alan olmasa da (boş kapsamla "aşım yok" sayılmasın)
+  if (input.rp === null) return reject("E3", "relying party not registered");
   if (input.rp !== "none") {
     const nowMs = now * 1000;
     const allowed = new Set(

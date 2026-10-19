@@ -226,6 +226,38 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     expect(out.result).toMatchObject({ outcome: "REJECTED", failed_step: "D1" });
     expect(out.result.failed_reason).toMatch(/no status entry/);
   });
+  it("E3: kayıtsız RP (null) hiç alan açıklanmasa da RED (boş kapsam 'aşım yok' sayılmaz)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { combined, ref } = await issue(22, now);
+    const cache = new MemoryStatusCache();
+    cache.set(STATUS_URI, await statusToken(now), now);
+    const pres = await presentSdJwt({
+      combined,
+      discloseClaims: [],
+      keys,
+      keyRef: ref,
+      aud: AUD,
+      nonce: "n-e3",
+      iat: now,
+    });
+    const bare = { ...policy, credentials: [{ ...policy.credentials[0], required_claims: [], constraints: {} }] };
+    const base = {
+      presentation: pres,
+      aud: AUD,
+      nonce: "n-e3",
+      policy: bare,
+      policyCredentialId: "diploma",
+      trust,
+      statusCache: cache,
+      rootCertsDer: rootDer,
+      now: epochSeconds(now),
+    };
+    // kayıtlı RP ile aynı sunum kabul (adımlar geçiyor) — fark yalnız RP kaydı
+    expect((await verifyPresentation({ ...base, rp: trust.relyingParty(AUD) })).result.outcome).toBe("ACCEPTED");
+    const out = await verifyPresentation({ ...base, rp: null });
+    expect(out.result).toMatchObject({ outcome: "REJECTED", failed_step: "E3" });
+    expect(out.result.failed_reason).toMatch(/not registered/);
+  });
   it("ACCEPTED: tüm adımlar; claim değerleri sonuç nesnesinde yok (AP3); idx yok (AP4)", async () => {
     const now = Math.floor(Date.now() / 1000);
     const { combined, ref } = await issue(11, now);
@@ -269,6 +301,9 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     // ADR-0056 K4: rp verilmezse (JavaScript çağıran) E3'te ret; "none" ile E3 atlanır
     const noRp = await verifyPresentation({ ...input, rp: undefined as never });
     expect(noRp.result).toMatchObject({ outcome: "REJECTED", failed_step: "E3" });
+    // SPEC-API-0001 E3: kayıtsız RP (null) ret — kapsamı boş diye "aşım yok" sayılmaz
+    const unregistered = await verifyPresentation({ ...input, rp: null });
+    expect(unregistered.result).toMatchObject({ outcome: "REJECTED", failed_step: "E3" });
     const optOut = await verifyPresentation({ ...input, rp: "none" });
     expect(optOut.result.outcome).toBe("ACCEPTED");
     expect(optOut.result.checks_skipped).toContain("E3");

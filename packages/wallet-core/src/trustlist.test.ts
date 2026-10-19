@@ -7,7 +7,13 @@ import { resolve } from "node:path";
 import { X509Certificate, createHash } from "node:crypto";
 import { certSanDnsNames, certP256Point } from "./asn1.js";
 import { certHasDnsName, fetchRpRecord } from "./oid4vp.js";
-import { fetchVerifiedTrust, resetTrustSeen, type TrustPins } from "./trustlist.js";
+import {
+  fetchVerifiedTrust,
+  resetTrustSeen,
+  type ListMark,
+  type ListVersionMemory,
+  type TrustPins,
+} from "./trustlist.js";
 import { fetchIssuerDirectory } from "./directory.js";
 import type { Http } from "./http.js";
 
@@ -121,5 +127,22 @@ describe.skipIf(!ready)("S-13: imzalı güven listesi (cüzdan)", () => {
     await expect(fetchVerifiedTrust(BASE, httpFor({ "tl-tr.jws": oldJws }), { pins: pins() })).rejects.toThrow(
       /rollback|stale|older than/,
     );
+  });
+
+  it("geri sarma, uygulama yeniden açıldıktan sonra: kalıcı bellek (pins.versionMemory) eski sürümü yine reddeder", async () => {
+    const saved = new Map<string, ListMark>(); // cüzdan deposu taklidi — süreç belleğinden bağımsız
+    const memory: ListVersionMemory = { get: (k) => saved.get(k) ?? null, set: (k, m) => void saved.set(k, m) };
+    await fetchVerifiedTrust(BASE, httpFor(), { pins: { ...pins(), versionMemory: memory } });
+    expect(saved.get("tl-TR")?.version).toBeGreaterThan(0);
+    resetTrustSeen(); // uygulama yeniden açıldı: süreç içi bellek boş
+    const current = JSON.parse(readFileSync(resolve(DIST, "tl-tr.json"), "utf8")).version as number;
+    const older = readdirSync(resolve(DIST, "archive"))
+      .filter((f) => /^tl-tr\.v\d+\.jws$/.test(f) && Number(f.match(/v(\d+)/)![1]) < current)
+      .sort((a, b) => Number(b.match(/v(\d+)/)![1]) - Number(a.match(/v(\d+)/)![1]))[0];
+    expect(older).toBeTruthy();
+    const oldJws = readFileSync(resolve(DIST, "archive", older!), "utf8");
+    await expect(
+      fetchVerifiedTrust(BASE, httpFor({ "tl-tr.jws": oldJws }), { pins: { ...pins(), versionMemory: memory } }),
+    ).rejects.toThrow(/rollback|older than/);
   });
 });

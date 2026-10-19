@@ -9,9 +9,12 @@ export * from "./trust-source.js";
 export {
   loadTrustSetWith,
   applyExternalListsWith,
+  MemoryListVersionMemory,
   type JwsVerifier,
   type TrustSetInput,
   type LoadReport,
+  type ListMark,
+  type ListVersionMemory,
 } from "./loader.js";
 export * from "./lote-reader.js";
 export * from "./tl-reader.js";

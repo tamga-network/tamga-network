@@ -13,6 +13,7 @@ import {
   TrustListError,
   type JwsVerifier,
   type ListTrustSource,
+  type ListVersionMemory,
 } from "@tamga-network/trust/core";
 import { b64Decode } from "./b64.js";
 import { decodeJwt, verifyJwt } from "./jws.js";
@@ -24,6 +25,12 @@ export interface TrustPins {
   lotlSigners: string[];
   /** ADR-0038: sabitlenen kökün ağı (varsayılan "production"); sandbox listesi gerçek ağ pinleriyle yüklenmez (SB2). */
   environment?: "production" | "sandbox";
+  /**
+   * TL2 (geri sarma): kalıcı "son görülen" sürüm belleği (cüzdan deposu). Verilmezse süreç içi bellek — uygulama yeniden
+   * açılınca sıfırlanır ve imzası geçerli ama ESKİ bir liste (ör. bir doğrulayıcının iptalinden önceki) yeniden kabul edilebilir.
+   * Pinlerle birlikte taşınır: listeyi yükleyen her yardımcı (RP kaydı, kayıt kurumu anahtarları, dizin) aynı belleği kullanır.
+   */
+  versionMemory?: ListVersionMemory;
 }
 
 export interface VerifiedTrust {
@@ -85,6 +92,7 @@ export async function fetchTrustSource(
       now: new Date(opts.now ?? Date.now()),
       environment: opts.pins.environment,
       externalLists: opts.externalLists,
+      ...(opts.pins.versionMemory ? { versionMemory: opts.pins.versionMemory } : {}),
     });
     const tl = store.national.get(cc)!.list;
     return {
@@ -111,3 +119,5 @@ export async function fetchVerifiedTrust(
 export function resetTrustSeen() {
   resetListMonotonicity();
 }
+
+export type { ListMark, ListVersionMemory } from "@tamga-network/trust/core";
