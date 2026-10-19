@@ -4,16 +4,16 @@ title: "Kod örnekleri"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-10-20
 summary: >
-  Dört çalışan örnek: web sitesine Tamga ile giriş, kendi sunucusunda belge doğrulama, kurum olarak belge verme ve kurum
-  yetkisini sorgulama. Kodlar `examples/` klasöründeki gerçek dosyalardan bu sayfaya alınır ve her testte çalıştırılır; bu
+  Beş çalışan örnek: web sitesine Tamga ile giriş, kendi sunucusunda belge doğrulama, kurum olarak belge verme, kurum
+  yetkisini sorgulama ve kurumun sorgu ucu. Kodlar `examples/` klasöründeki gerçek dosyalardan bu sayfaya alınır ve her testte çalıştırılır; bu
   sayfadaki kod paketle uyumsuz hâle gelemez.
 ---
 
 # Kod örnekleri
 
-Bu sayfa, Tamga'nın dört temel kullanımını kopyalayıp çalıştırabileceğiniz kodla gösterir.
+Bu sayfa, Tamga'nın beş temel kullanımını kopyalayıp çalıştırabileceğiniz kodla gösterir.
 
 **Ne zaman okunur:** bir rehberi okuduktan sonra çalışan kodu görmek istediğinizde ya da doğrudan koddan başlamayı
 sevdiğinizde. Her örnek, ayrıntısını anlatan rehbere bağlanır.
@@ -87,10 +87,19 @@ Bir [[t:issuer|belge veren]] kurum güven listesinde kayıtlı mı, etkin mi, bu
 
 <<< @/../examples/04-check-institution/check.ts
 
+## 5. Kurumun sorgu ucu (yetkili kaynak)
+
+Barındırılan belge verme servisi belge bilgisini verme anında kurumun sisteminden okur ve saklamaz ([[ADR-0020]]). Bu örnek,
+öğrenci bilgi sisteminizin (ya da düzenli dışa aktarımının) önüne koyacağınız ucun tamamıdır: imzalı isteği güven listesine
+karşı denetler (kararlaştırılan doğrulayıcı kaydı, `aud`, süre, tek kullanım) ve belge türünün gerektirdiği alanları döndürür;
+T.C. kimlik numarasını hiçbir zaman döndürmez. Sözleşme: [Kurum sorgu ucu](/api/institution-source).
+
+<<< @/../examples/05-institution-source/source.ts
+
 ## Örnekleri çalıştırmak
 
 ```sh
 git clone https://github.com/tamga-network/tamga-network && cd tamga-network
 npm install && npm run setup           # geliştirme PKI'si + güven listeleri
-npx vitest run examples             # dört örnek, gerçek paketlerle
+npx vitest run examples             # beş örnek, gerçek paketlerle
 ```

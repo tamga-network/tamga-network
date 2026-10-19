@@ -4,7 +4,7 @@ title: "Sunucuda doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-19
+last_updated: 2026-10-20
 summary: >
   Kendi sunucunuzda Tamga belgesi doğrulamak: güven kaynağını yükleme, iptal listesi ön çekimi, politika → imzalı OpenID4VP isteği,
   şifreli yanıtı çözme ve kanonik doğrulama hattı (T0 + A–E). Referans uygulama: apps/verify.
@@ -40,6 +40,10 @@ yönetmek istediğinizde. Daha hızlı bir başlangıç için barındırılan do
 2. **Güven kaynağı.** `@tamga-network/trust` ile güven listelerini yükleyin: `loadTrustSourceFromDir(dist)` ya da düzenli
    indirme + yeniden yükleme (`guardedReload`). Güvenle ilgili her soruyu yalnızca `TrustSource`'a sorun.
 3. **İptal listelerini önceden çekin.** `new PrefetchStatusCache()` + düzenli `refresh(uriler)`. Doğrulama anında ağa çıkılmaz.
+4. **Kayıt sertifikanız.** Kayıt kurumu her kayıtlı kullanımınız için bir [[t:registration-certificate|kayıt sertifikası]]
+   yayınlar (`trust.tamga.network/wrprc/index.json` → `client_id` ve `scope_id`'si sizinki olan öğe). Her isteğe ekleyin
+   (`registrationCert`): 0.7.0 paketlerinden itibaren Tamga Wallet kayıt sertifikası taşımayan isteği reddeder ([[ADR-0026]],
+   [[ADR-0056]]). Çalışan kod: [[GUIDE-0004]] §2.
 
 ## Akış
 
@@ -51,7 +55,8 @@ const policy: Policy = { policy_id: "ise-alim", /* credentials, trust, freshness
 const signer = await pemRpSigner(RP_KEY_PEM, RP_CERT_PEM); // client_id = x509_hash (sertifikadan)
 // 1) istek: QR / derin bağlantı olarak gösterilir (kişisel veri yok; yalnızca request_uri)
 const req = await createPresentationRequest({ signer, dcql: dcqlFromPolicy(policy),
-  responseUri: "https://ornek.com.tr/vp/response", requestUriBase: "https://ornek.com.tr/vp/req" });
+  responseUri: "https://ornek.com.tr/vp/response", requestUriBase: "https://ornek.com.tr/vp/req",
+  registrationCert: WRPRC_JWT }); // kullanımınızın kayıt sertifikası (yukarıda 4. adım)
 // 2) cüzdan şifreli yanıtı response_uri'ye POST eder → çöz
 const resp = await decryptResponse(jweBody, req.encPrivateKey); // istekle üretilen anahtar; req.state ile eşleştirin
 // 3) doğrula (SD-JWT; mdoc için format: "mso_mdoc" + responseUri)

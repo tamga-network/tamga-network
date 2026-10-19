@@ -6,6 +6,19 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 
 ## Unreleased
 
+- Institution onboarding: a new working example, `examples/05-institution-source` — the institution's lookup endpoint for the
+  hosted issuing service (it checks the signed request against the trust list: an agreed, ACTIVE relying-party record, `aud`,
+  lifetime, single use; it returns only the fields the document type needs and never the national ID number). Tested against the
+  hosted service end to end.
+- Example 02 (verify on your own server) now attaches the verifier's registration certificate to every request
+  (`registrationScope`, read from `trust.tamga.network/wrprc/index.json`); since 0.7.0 Tamga Wallet refuses requests without one.
+  The "Verify on your server" guide has the same step.
+- Registry tool: a `REVOKED` entry is final and a `RETIRED` one can only become `REVOKED` (same rule as the registry
+  contracts); `ACTIVE` is reached again only from `SUSPENDED`. `pki-issue --prod` requires `--dns` and `--org-id` for access
+  certificates.
+- Institution source contract: `isced_f_code` is required (null means no mapping: no credential is issued, E11).
+- Proposed ADR-0057: in hosted issuance the institution's signing key stays with the institution; signatures are requested
+  through the Cloud Signature Consortium API v2 with the digest only.
 - Production trusted list: the network's own verifier (`verify.tamga.network`) and identity service (`tamga-id`) now carry their
   registration data (the tax number of the provisional operator, marked `provisional` until the foundation is established;
   postal address; data protection authority complaint route), so registration certificates are published for them

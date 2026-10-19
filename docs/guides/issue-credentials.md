@@ -4,7 +4,7 @@ title: "Kurum olarak belge vermek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-10-20
 summary: >
   Üniversite, kamu kurumu ya da bilet satıcısı olarak kişilerin cüzdanına belge vermek: Tamga'nın barındırdığı belge verme
   servisini `@tamga-network/issuer/client` ile çağırmak (teklif, bilet satışı, iptal/askı) ya da kendi belge verme servisinizi
@@ -34,7 +34,7 @@ içindir: üniversite (diploma, öğrenci belgesi), kamu kurumu ya da bilet sat�
 |---|---|---|
 | Kim çalıştırır | Tamga (`issuer.tamga.network/<kurum>`) | siz |
 | Kuracağınız | `@tamga-network/issuer/client` (bağımlılıksız, `fetch`) | `@tamga-network/issuer` (+ trust, schemas, sd-jwt) |
-| İmza anahtarı | pilotta sizin KMS'iniz (demo: geliştirme PKI'si, sapma S-1) | sizin |
+| İmza anahtarı | sizde: kurumunuzun HSM'i ya da uzaktan imza hizmetiniz (CSC API v2, [[ADR-0057]] öneri); sandbox'ta test anahtarı | sizin |
 | Güven listesi kaydı | Tamga operatörü: kurum kaydı, kategori (ör. `EDUCATION`, `EVENTS` — [[ADR-0014]]), şema yetkileri | aynı |
 
 ## Barındırılan servis: istemci
@@ -95,8 +95,12 @@ ve güvenli kanaldan bir kez iletir; sunucuda yalnızca özeti tutulur ([[ADR-00
 - `fetch`: kimliğe bağlı teklifte, belge verilirken ve kopya yenilemede — sizin opak kişi kimliğinizle okuma.
 - İstek, Tamga'nın [[t:trust-list|güven listesindeki]] kaydında yer alan [[t:access-certificate|erişim sertifikasıyla]]
   imzalı 60 saniyelik bir JWT'dir; `aud`, `exp` ve `jti`'yi denetleyin.
-- Sorgu ucu bağlanana kadar belge vermeyi sandbox'taki örnek kurumlarla deneyin ([[GUIDE-0013]]). Kurum Konsolu'nun **örnek
-  kaynağı** yalnız sandbox ortamında açılır; gerçek ağda kapalıdır ve oraya gerçek kişi verisi girilmez.
+- Hazır başlangıç: açık kaynak örnek uç ([[GUIDE-0004]] §5) bu denetimlerin tamamını yapar ve yalnız gereken alanları döndürür.
+- Her kayıtta programın 4 haneli ISCED-F kodu olmalıdır (yoksa belge verilmez, tahmini kod üretilmez — E11); diploma yalnız
+  mezuniyet bilgisi olan kayda verilir. İkisi de eksikse teklif açılırken reddedilir.
+- Sorgu ucu bağlanınca Kurum Konsolu'nda **Belge ver** sekmesi açılır: personel kişinin referansıyla masada teklif açar
+  (kimliğe bağlı ya da PIN'li). Ucu bağlamadan önce belge vermeyi sandbox'taki örnek kurumlarla deneyin ([[GUIDE-0013]]). Kurum
+  Konsolu'nun **örnek kaynağı** yalnız sandbox ortamında açılır; gerçek ağda kapalıdır ve oraya gerçek kişi verisi girilmez.
 
 Tamga API'sinin tamamı: [Belge verme API'si](/api/issuer).
 

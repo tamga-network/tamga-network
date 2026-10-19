@@ -4,10 +4,10 @@ title: "Code examples"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-10-20
 summary: >
-  Four working examples: sign-in with Tamga on a website, verifying credentials on your own server, issuing credentials as
-  an institution and checking an institution's authorisation. The code is pulled into this page from the real files in the
+  Five working examples: sign-in with Tamga on a website, verifying credentials on your own server, issuing credentials as
+  an institution, checking an institution's authorisation and the institution's lookup endpoint. The code is pulled into this page from the real files in the
   `examples/` folder and runs in every test, so the code on this page cannot drift from the packages.
 translation_of: GUIDE-0004
 source_version: 1.0.0
@@ -15,7 +15,7 @@ source_version: 1.0.0
 
 # Code examples
 
-This page shows Tamga's four basic uses with code you can copy and run.
+This page shows Tamga's five basic uses with code you can copy and run.
 
 **When to read:** after a guide, when you want to see working code — or if you simply prefer to start from code. Each example
 links to the guide that explains it.
@@ -92,10 +92,20 @@ data involved. Details: [[GUIDE-0006]].
 
 <<< @/../examples/04-check-institution/check.ts
 
+## 5. The institution's lookup endpoint (authentic source)
+
+The hosted issuing service reads the credential data from the institution's own system at the moment of issuance and keeps
+nothing ([[ADR-0020]]). This example is the whole endpoint you put in front of your student information system (or a regular
+export of it): it checks the signed request against the trust list (the agreed relying-party record, `aud`, lifetime, single
+use) and returns only the fields the document type needs, never the national ID number. Contract:
+[Institution source endpoint](/en/api/institution-source).
+
+<<< @/../examples/05-institution-source/source.ts
+
 ## Running the examples
 
 ```sh
 git clone https://github.com/tamga-network/tamga-network && cd tamga-network
 npm install && npm run setup           # development PKI + trust lists
-npx vitest run examples             # four examples, with the real packages
+npx vitest run examples             # five examples, with the real packages
 ```

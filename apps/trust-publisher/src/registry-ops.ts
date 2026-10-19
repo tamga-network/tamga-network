@@ -215,6 +215,26 @@ function withScopeDates(s: Rec, now: Date): Rec {
 export const STATUSES = ["ACTIVE", "SUSPENDED", "REVOKED", "RETIRED"];
 
 /**
+ * Durum geçişleri zincirdeki kayıtlarla aynı kuralda (beta ↔ zincir eşdeğerliği; IssuerRegistry / RelyingPartyRegistry):
+ *  - `REVOKED` son durumdur: geri çekilmiş kayıt yeniden etkinleşmez, askıya alınmaz, emekliye ayrılmaz (zincirde
+ *    `AlreadyRevoked`). Yerine yeni kayıt (gerekirse halef, `successor_id`) açılır. Tek istisna kurumda: sonradan anlaşılan
+ *    anahtar ele geçirilmesi için `REVOKED` + `--invalidates-from` (belgeleri geçersiz kılan tarih) eklenebilir.
+ *  - `RETIRED` (gönüllü çıkış) da geri dönmez; yalnız `REVOKED`'a geçebilir. Geri dönen kurum yeni kayıtla katılır.
+ *  - `ACTIVE`'e yalnız `SUSPENDED`'dan dönülür (zincirde `reinstateIssuer`); `SUSPENDED` yalnız `ACTIVE`'ten (F-18).
+ */
+export function transitionProblems(id: string, from: string, to: string, opts: { escalate: boolean }): string[] {
+  if (from === "REVOKED")
+    return to === "REVOKED" && opts.escalate
+      ? []
+      : [`${id} geri çekilmiş (REVOKED): kayıt yeniden etkinleşmez ve durumu değişmez — yeni kayıt açın`];
+  if (from === "RETIRED" && to !== "REVOKED")
+    return [`${id} çıkmış (RETIRED): yalnız REVOKED'a geçebilir — geri dönüş yeni kayıtla`];
+  if (to === "SUSPENDED" && from !== "ACTIVE") return [`${id}: yalnız ACTIVE kayıt askıya alınır (şu an ${from})`];
+  if (to === "ACTIVE" && from !== "SUSPENDED") return [`${id}: ACTIVE'e yalnız SUSPENDED'dan dönülür (şu an ${from})`];
+  return [];
+}
+
+/**
  * Kurum durumunu değiştirir (SPEC-TRUST-0001 TL2: kayıt silinmez, değişiklik `status_history`'ye eklenir). `invalidatesFrom`
  * yalnız REVOKED ile: o andan sonra verilmiş belgeler düşer (ele geçirilme ya da hiç geçerli olmaması gereken kayıt; tarih
  * `valid_from` verilirse kurumun bütün belgeleri). REVOKED/RETIRED'da açık şema yetkileri de kapanır (bitiş tarihi).
@@ -237,6 +257,7 @@ export function setIssuerStatus(
       p.push(`invalidates_from tarih değil: ${opts.invalidatesFrom}`);
   }
   if (i && i.status === status && opts.invalidatesFrom === undefined) p.push(`${slug} zaten ${status}`);
+  else if (i) p.push(...transitionProblems(slug, i.status, status, { escalate: opts.invalidatesFrom !== undefined }));
   if (p.length) throw new RegistryError(p);
   const now = iso(env.now);
   i!.status = status;
@@ -265,6 +286,7 @@ export function setRpStatus(
   if (!rp) p.push(`doğrulayıcı yok: ${dnsName}`);
   if (!STATUSES.includes(status)) p.push(`durum: ${STATUSES.join(" | ")}`);
   if (rp && rp.status === status) p.push(`${dnsName} zaten ${status}`);
+  else if (rp) p.push(...transitionProblems(dnsName, rp.status, status, { escalate: false }));
   if (p.length) throw new RegistryError(p);
   const now = iso(env.now);
   rp!.status = status;

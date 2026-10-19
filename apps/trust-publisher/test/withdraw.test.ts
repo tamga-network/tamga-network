@@ -68,6 +68,31 @@ describe("kayıt geri çekme (TL2)", () => {
     expect(rp.scopes.map((x: { valid_until: string }) => x.valid_until)).toEqual([NOW, NOW]);
   });
 
+  it("REVOKED son durumdur (zincirdeki AlreadyRevoked ile aynı): geri dönüş yok; yalnız kurumda ele geçirilme tarihi eklenir", () => {
+    const rev = setIssuerStatus(src(), "ornek", "REVOKED", { reason: "r" }, env);
+    for (const to of ["ACTIVE", "SUSPENDED", "RETIRED"])
+      expect(() => setIssuerStatus(rev, "ornek", to, {}, env)).toThrow(/geri çekilmiş/);
+    const esc = setIssuerStatus(rev, "ornek", "REVOKED", { invalidatesFrom: "2026-09-30T00:00:00Z" }, env);
+    expect(esc.issuers[0].status_history.at(-1)).toMatchObject({
+      status: "REVOKED",
+      invalidates_from: "2026-09-30T00:00:00Z",
+    });
+    const rrev = setRpStatus(src(), "rp.example", "REVOKED", {}, env);
+    for (const to of ["ACTIVE", "SUSPENDED", "RETIRED"])
+      expect(() => setRpStatus(rrev, "rp.example", to, {}, env)).toThrow(/geri çekilmiş/);
+  });
+
+  it("RETIRED yalnız REVOKED'a; ACTIVE'e yalnız SUSPENDED'dan; askı yalnız ACTIVE'ten", () => {
+    const ret = setIssuerStatus(src(), "ornek", "RETIRED", {}, env);
+    expect(() => setIssuerStatus(ret, "ornek", "ACTIVE", {}, env)).toThrow(/RETIRED/);
+    expect(() => setIssuerStatus(ret, "ornek", "SUSPENDED", {}, env)).toThrow(/RETIRED/);
+    expect(setIssuerStatus(ret, "ornek", "REVOKED", {}, env).issuers[0].status).toBe("REVOKED");
+    const sus = setIssuerStatus(src(), "ornek", "SUSPENDED", {}, env);
+    expect(setIssuerStatus(sus, "ornek", "ACTIVE", {}, env).issuers[0].status).toBe("ACTIVE");
+    const rsus = setRpStatus(src(), "rp.example", "SUSPENDED", {}, env);
+    expect(setRpStatus(rsus, "rp.example", "ACTIVE", {}, env).relying_parties[0].status).toBe("ACTIVE");
+  });
+
   it("tek kullanım / kapı grubu sona erer; diğerleri ve kayıt aynen kalır", () => {
     let s = endRpUse(src(), "rp.example", "a-1", env);
     s = endRpUse(s, "rp.example", "kapi", env);

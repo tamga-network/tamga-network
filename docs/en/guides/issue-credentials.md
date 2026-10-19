@@ -4,7 +4,7 @@ title: "Issue credentials as an institution"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-10-20
 summary: >
   Issuing credentials to people's wallets as a university, a public body or a ticket seller: calling the issuer service hosted
   by Tamga with `@tamga-network/issuer/client` (offers, ticket sales, revocation/suspension), or building your own issuer
@@ -38,7 +38,7 @@ There are two ways:
 |---|---|---|
 | Who runs it | Tamga (`issuer.tamga.network/<institution>`) | you |
 | What you install | `@tamga-network/issuer/client` (no dependencies, `fetch`) | `@tamga-network/issuer` (+ trust, schemas, sd-jwt) |
-| Signing key | your KMS in the pilot (demo: development PKI, deviation S-1) | yours |
+| Signing key | with you: your institution's HSM or your remote signing service (CSC API v2, [[ADR-0057]] proposed); test key in the sandbox | yours |
 | Trust list entry | the Tamga operator: institution entry, category (e.g. `EDUCATION`, `EVENTS` — [[ADR-0014]]), schema authorisations | the same |
 
 ## Hosted service: the client
@@ -104,9 +104,14 @@ moment of issuance it asks your system's **source endpoint** with a signed reque
 - `fetch`: for identity-bound offers, at issuance and when copies are renewed — a read with your opaque person identifier.
 - The request is a 60-second JWT signed with the [[t:access-certificate]] in Tamga's [[t:trust-list]] entry; check `aud`,
   `exp` and `jti`.
-- Until the source endpoint is connected, try issuance with the sample institutions in the sandbox ([[GUIDE-0013]]). The
-  Institution Console's **sample source** opens only in the sandbox environment; it is closed on the real network and real
-  personal data is never entered there.
+- A ready start: the open-source example endpoint ([[GUIDE-0004]] §5) performs all of these checks and returns only the fields
+  needed.
+- Every record must carry the programme's 4-digit ISCED-F code (otherwise no credential is issued and no code is guessed — E11); a
+  diploma is issued only for a record with graduation data. If either is missing, the offer is refused when it is created.
+- Once the endpoint is connected, the Institution Console shows an **Issue** tab: staff create an offer at the desk with the
+  person's reference (identity-bound or with a PIN). Before connecting the endpoint, try issuance with the sample institutions in
+  the sandbox ([[GUIDE-0013]]). The Institution Console's **sample source** opens only in the sandbox environment; it is closed on
+  the real network and real personal data is never entered there.
 
 The whole Tamga API: [Hosted issuer API](/api/issuer).
 

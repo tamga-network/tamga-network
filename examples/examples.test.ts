@@ -81,15 +81,45 @@ describe.skipIf(!ready)("examples", () => {
 
   it("02 — own server: request → wallet answers → ACCEPTED with only the requested fields; a replay is refused", async () => {
     const PUB = "http://own.test";
+    const signer = await rpSigner();
+    // the registrar's published registration certificate for this verifier's use (the test list itself carries none)
+    const WRPRC = "eyJ0eXAiOiJyYy13cnArand0In0.e30.registration";
+    const withWrprc = (async (url: string | URL) => {
+      if (String(url) === `${TRUST}/wrprc/index.json`)
+        return Response.json({
+          items: [
+            {
+              kind: "rp",
+              client_id: signer.clientId,
+              scope_id: "job-application-1",
+              path: "wrprc/rp/x/job-application-1.jwt",
+            },
+          ],
+        });
+      if (String(url) === `${TRUST}/wrprc/rp/x/job-application-1.jwt`) return new Response(WRPRC);
+      return trustFetch(url as string);
+    }) as typeof fetch;
     const v = await createOwnVerifier({
       trustBase: TRUST,
       rootFingerprints: pins(),
-      signer: await rpSigner(),
+      signer,
       publicBase: PUB,
-      fetch: trustFetch,
+      registrationScope: "job-application-1",
+      fetch: withWrprc,
       fetchStatus: async (u) => (u === STATUS_URI ? statusTok : null),
       anchorMaxAgeMs: YEAR,
     });
+    // a use without a published registration certificate fails loudly (Tamga Wallet would refuse the request)
+    const unregistered = await createOwnVerifier({
+      trustBase: TRUST,
+      rootFingerprints: pins(),
+      signer,
+      publicBase: PUB,
+      registrationScope: "campus-access-1",
+      fetch: withWrprc,
+      anchorMaxAgeMs: YEAR,
+    });
+    await expect(unregistered.start()).rejects.toThrow(/no registration certificate/);
     // the test list below is not anchored in the published lists, so load it explicitly
     await v.statusCache.refresh([STATUS_URI]);
     // a diploma in a wallet
@@ -162,7 +192,10 @@ describe.skipIf(!ready)("examples", () => {
 
     const { qrPayload } = await v.start();
     const uri = parseVpUri(qrPayload);
-    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId);
+    const reqJwt = await fetchRequestObject(uri.requestUri, http);
+    const reqClaims = JSON.parse(Buffer.from(reqJwt.split(".")[1], "base64url").toString("utf8"));
+    expect(reqClaims.verifier_info).toEqual([{ format: "registration_cert", data: WRPRC }]);
+    const req = verifyRequestObject(reqJwt, uri.clientId);
     const { matches } = matchDcql(req.dcql, wallet.credentials);
     const copy = matches[0].credential.copies[0];
     await respond({
@@ -256,3 +289,118 @@ describe.skipIf(!ready)("examples", () => {
     ).toBe(false);
   });
 });
+
+describe.skipIf(!ready || !existsSync(resolve(PKI, "rp-issuer-bilgi.pkcs8.pem")))(
+  "05 — institution lookup endpoint",
+  () => {
+    const URL_ = "https://sis.example.edu/tamga";
+    const graduate = {
+      id: "p-1",
+      student_no: "2019001",
+      family_name: "Örnek",
+      given_name: "Ayla",
+      birth_date: "2001-02-03",
+      personal_administrative_number: "10000000147",
+      programme_title_tr: "Bilgisayar Mühendisliği",
+      study_level: 6,
+      enrollment_year: 2019,
+      student_status: "ACTIVE" as const,
+      graduate: { qualification_tr: "Lisans", eqf_level: 6, awarding_date: "2023-06-30" },
+    };
+    const student = {
+      ...graduate,
+      id: "p-2",
+      student_no: "2024001",
+      personal_administrative_number: "10000000257",
+      graduate: undefined,
+    };
+    /** Signs a request exactly as the hosted service does (apps/issuer source.ts): ES256, x5c = access certificate. */
+    const sign = async (name: string, claims: Record<string, unknown>, over: Record<string, unknown> = {}) => {
+      const { SignJWT, importPKCS8 } = await import("jose");
+      const { derToB64, pemToDer, x509HashClientId } = await import("@tamga-network/core");
+      const der = pemToDer(readFileSync(resolve(PKI, `${name}.cert.pem`), "utf8"));
+      const key = await importPKCS8(readFileSync(resolve(PKI, `${name}.pkcs8.pem`), "utf8"), "ES256");
+      const now = Math.floor(Date.now() / 1000);
+      return new SignJWT({ ...claims })
+        .setProtectedHeader({ alg: "ES256", typ: "tamga-source-request+jwt", x5c: [derToB64(der)] })
+        .setIssuer(String(over.iss ?? x509HashClientId(der)))
+        .setAudience(String(over.aud ?? URL_))
+        .setIssuedAt(now)
+        .setExpirationTime(now + 60)
+        .setJti(String(over.jti ?? Math.random().toString(36).slice(2)))
+        .sign(key);
+    };
+
+    it("answers the hosted service with one minimal record; refuses other callers, other audiences and replays", async () => {
+      const { fetchListTrustSource, verifyJws } = await import("@tamga-network/trust");
+      const { institutionSource, memoryStore } = await import("./05-institution-source/source.js");
+      const { source } = await fetchListTrustSource(
+        TRUST,
+        async (url) => {
+          const r = await trustFetch(url);
+          return { status: r.status, text: () => r.text() };
+        },
+        { rootFingerprints: pins(), verifyJws },
+      );
+      const answer = institutionSource({
+        url: URL_,
+        trust: () => source,
+        callers: ["issuer.tamga.network"], // the hosted service's record for this institution in the test list
+        store: memoryStore([graduate, student]),
+      });
+      const ask = async (claims: Record<string, unknown>, name = "rp-issuer-bilgi", over = {}) =>
+        answer({ request: await sign(name, claims, over) });
+
+      // lookup by the matching keys → the record, without the national ID number
+      const found = await ask({
+        op: "lookup",
+        vct: "urn:tamga:edu:DiplomaCredential:1",
+        match: { personal_administrative_number: "10000000147", birth_date: "2001-02-03" },
+      });
+      expect(found.status).toBe(200);
+      const subj = (found.body as { subject: Record<string, unknown> }).subject;
+      expect(subj).toMatchObject({ id: "p-1", graduate: { eqf_level: 6 } });
+      expect(JSON.stringify(found.body)).not.toContain("10000000147");
+      // fetch by your own opaque reference; a student certificate carries no graduation block
+      const st = await ask({ op: "fetch", vct: "urn:tamga:edu:StudentCredential:1", subject_ref: "p-2" });
+      expect(st.status).toBe(200);
+      expect((st.body as { subject: Record<string, unknown> }).subject.graduate).toBeUndefined();
+      // no diploma for a current student; unknown person → 404
+      expect((await ask({ op: "fetch", vct: "urn:tamga:edu:DiplomaCredential:1", subject_ref: "p-2" })).status).toBe(
+        404,
+      );
+      expect((await ask({ op: "fetch", vct: "urn:tamga:edu:StudentCredential:1", subject_ref: "nobody" })).status).toBe(
+        404,
+      );
+      // a different relying party of the list (the reference verifier) is not an agreed caller
+      expect(
+        (await ask({ op: "fetch", vct: "urn:tamga:edu:StudentCredential:1", subject_ref: "p-2" }, "rp-verify")).status,
+      ).toBe(401);
+      // a request meant for another endpoint, a wrong issuer claim, a replay
+      expect(
+        (
+          await ask({ op: "fetch", vct: "urn:tamga:edu:StudentCredential:1", subject_ref: "p-2" }, undefined, {
+            aud: "https://other.example",
+          })
+        ).status,
+      ).toBe(401);
+      expect(
+        (
+          await ask({ op: "fetch", vct: "urn:tamga:edu:StudentCredential:1", subject_ref: "p-2" }, undefined, {
+            iss: "x509_hash:AAAA",
+          })
+        ).status,
+      ).toBe(401);
+      const once = await sign("rp-issuer-bilgi", {
+        op: "fetch",
+        vct: "urn:tamga:edu:StudentCredential:1",
+        subject_ref: "p-2",
+      });
+      expect((await answer({ request: once })).status).toBe(200);
+      expect((await answer({ request: once })).status).toBe(401);
+      // garbage
+      expect((await answer({ request: "x.y" })).status).toBe(400);
+      expect((await answer(null)).status).toBe(400);
+    });
+  },
+);

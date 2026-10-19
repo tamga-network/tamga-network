@@ -4,7 +4,7 @@ title: "Verify on your server"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-19
+last_updated: 2026-10-20
 summary: >
   Verifying Tamga credentials on your own server: loading the trust source, prefetching status lists, policy → signed
   OpenID4VP request, decrypting the encrypted response and the canonical verification pipeline (T0 + A–E). Reference
@@ -43,6 +43,10 @@ your own infrastructure. For a faster start, use the hosted verifier: [[GUIDE-00
    reload (`guardedReload`). Ask every trust question of `TrustSource` only.
 3. **Prefetch the status lists.** `new PrefetchStatusCache()` + a regular `refresh(uris)`. Nothing goes over the network at the
    moment of verification.
+4. **Your registration certificate.** For each registered use the registrar publishes a [[t:registration-certificate]]
+   (`trust.tamga.network/wrprc/index.json` → the item with your `client_id` and `scope_id`). Put it into every request
+   (`registrationCert`): from packages 0.7.0 Tamga Wallet refuses a request without one ([[ADR-0026]], [[ADR-0056]]). Working
+   code: [[GUIDE-0004]] §2.
 
 ## Flow
 
@@ -54,7 +58,8 @@ const policy: Policy = { policy_id: "ise-alim", /* credentials, trust, freshness
 const signer = await pemRpSigner(RP_KEY_PEM, RP_CERT_PEM); // client_id = x509_hash (from the certificate)
 // 1) request: shown as a QR code / deep link (no personal data; request_uri only)
 const req = await createPresentationRequest({ signer, dcql: dcqlFromPolicy(policy),
-  responseUri: "https://ornek.com.tr/vp/response", requestUriBase: "https://ornek.com.tr/vp/req" });
+  responseUri: "https://ornek.com.tr/vp/response", requestUriBase: "https://ornek.com.tr/vp/req",
+  registrationCert: WRPRC_JWT }); // your use's registration certificate (step 4 above)
 // 2) the wallet POSTs the encrypted response to response_uri → decrypt
 const resp = await decryptResponse(jweBody, req.encPrivateKey); // key created with the request; match it with req.state
 // 3) verify (SD-JWT; for mdoc use format: "mso_mdoc" + responseUri)

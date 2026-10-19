@@ -2,7 +2,8 @@
  * Example 02 — verify documents on your own server (hiring, campus, age checks), without the hosted verifier.
  *
  * 1. Load the signed trust lists (who may issue what) and pre-fetch the revocation lists.
- * 2. Create a signed OpenID4VP request → show it as a QR code.
+ * 2. Create a signed OpenID4VP request with your registration certificate → show it as a QR code. Tamga Wallet refuses a
+ *    request that carries no registration certificate (from packages 0.7.0), so fetch yours from the trust lists.
  * 3. The wallet posts an encrypted answer → decrypt it → run the canonical checks (T0 + A–E).
  * Three outcomes: ACCEPTED, REJECTED (with the failing step) or INDETERMINATE ("could not check right now").
  *
@@ -46,6 +47,12 @@ export interface OwnVerifierConfig {
   signer: RpSigner;
   /** Your public base URL; the wallet fetches /vp/req/:id and posts to /vp/response here. */
   publicBase: string;
+  /**
+   * The registered use (`scope_id` of your trust-list record) this verifier asks for, e.g. "job-application-1". Its
+   * registration certificate (`<trustBase>/wrprc/…`) goes into every request (`verifier_info`). "none" only for wallets and
+   * tests that do not check registration certificates.
+   */
+  registrationScope: string | "none";
   fetch?: typeof fetch;
   /** Revocation-list fetcher (defaults to fetch with a timeout). */
   fetchStatus?: (url: string) => Promise<string | null>;
@@ -90,6 +97,25 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
     return e;
   };
 
+  // Your registration certificate: published with the trust lists, renewed by the registrar (at most 12 months); re-read hourly.
+  let registration: { jwt: string; at: number } | null = null;
+  async function registrationCert(): Promise<string | undefined> {
+    if (cfg.registrationScope === "none") return undefined;
+    if (registration && Date.now() - registration.at < 3600_000) return registration.jwt;
+    const index = JSON.parse(await (await http(`${cfg.trustBase}/wrprc/index.json`)).text()) as {
+      items: Array<{ kind: string; client_id?: string; scope_id?: string; path: string }>;
+    };
+    const item = index.items.find(
+      (i) => i.kind === "rp" && i.client_id === cfg.signer.clientId && i.scope_id === cfg.registrationScope,
+    );
+    if (!item)
+      throw new Error(
+        `no registration certificate for ${cfg.signer.clientId} / ${cfg.registrationScope}: wallets will refuse the request — check your registration (identity number in the access certificate, scope still valid)`,
+      );
+    registration = { jwt: (await (await http(`${cfg.trustBase}/${item.path}`)).text()).trim(), at: Date.now() };
+    return registration.jwt;
+  }
+
   /** 2) Start: returns the QR payload. Serve `requestObject(id)` at GET /vp/req/:id. */
   async function start(policy: Policy = DIPLOMA_POLICY) {
     const req = await createPresentationRequest({
@@ -98,6 +124,7 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
       responseUri: `${cfg.publicBase}/vp/response`,
       requestUriBase: `${cfg.publicBase}/vp/req`,
       purpose: Object.values(policy.purpose)[0],
+      registrationCert: await registrationCert(),
     });
     sweep();
     pending.set(req.presentationId, { req, policy });

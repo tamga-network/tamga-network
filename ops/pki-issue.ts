@@ -121,6 +121,13 @@ async function main() {
     if (!/(^|,\s*)O=/.test(subject) || !/(^|,\s*)C=/.test(subject))
       fail("kurum sertifikası konu alanında O (resmî ad) ve C (ülke) bulunmalı (ADR-0050)");
   }
+  // ADR-0026 K3 + ADR-0034 CI3: gerçek ağda erişim sertifikası (rp-*) kurum kimlik numarasını ve kaydın alan adını (SAN) taşır —
+  // yoksa kayıt sertifikası (WRPRC) üretilmez ve yayıncı SAN denetiminde durur; sorun kayıt anında değil burada yakalansın
+  if (PROD && name.startsWith("rp-")) {
+    if (!dns) fail("--prod erişim sertifikası (rp-*): --dns <kayıttaki dns_name> zorunlu (ADR-0034 CI3)");
+    if (!/2\.5\.4\.97=/.test(subject))
+      fail("--prod erişim sertifikası (rp-*): --org-id VATTR-<VKN> ya da NTRTR-<MERSİS> zorunlu (ADR-0026 K3)");
+  }
   const notBefore = new Date();
   const notAfter = new Date(notBefore);
   notAfter.setUTCFullYear(notAfter.getUTCFullYear() + yearsN);
