@@ -9,6 +9,14 @@ npm install @tamga-network/wallet-core
 ```
 
 
+## Secure defaults (0.7.0)
+
+- `respond` requires the `approval` that `checkRp` returns for the same request (no approval for impersonation, an inactive
+  registration or an unverified intermediary); it cannot be built by hand.
+- A request without a registration certificate is rejected (`registration_missing`), remote and in proximity; wallet-to-wallet
+  is unchanged.
+- `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
+
 ## Status
 
 Published on npm as the `0.6.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API

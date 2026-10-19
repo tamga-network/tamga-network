@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -271,7 +271,9 @@ grant_type=urn:ietf:params:oauth:grant-type:pre-authorized_code
 **[[t:DPoP]] zorunludur (RFC 9449; [[t:HAIP]]; 2026-09-29).** Cüzdanın belge alma akışı başına geçici bir P-256 anahtarı üretir ve `/token`
 isteğine `DPoP` kanıtı (`typ: dpop+jwt`, `jwk`, `jti`, `htm`, `htu`, `iat`) ekler. Belge veren kanıtı doğrular, belirteci
 anahtarın parmak izine (`jkt`) bağlar ve `token_type: DPoP` döner. Kanıt tek kullanımlıktır (`jti`), ±5 dakika penceresi
-vardır. AS metadata `dpop_signing_alg_values_supported: ["ES256"]` ilan eder.
+vardır. AS metadata `dpop_signing_alg_values_supported: ["ES256"]` ilan eder. Paketlerde iki uç iki işlevdir ([[ADR-0056]] K5):
+token ucu `verifyTokenDpop` (bağlanacak `jkt`'yi döndürür), kaynak ucu `verifyResourceDpop` (erişim belirteci ve ona bağlı `jkt`
+zorunlu; `ath` ve anahtar eşleşmesi her zaman denetlenir).
 
 **`c_nonce` burada YOKTUR** — 1.0 Final'de Nonce Endpoint'e taşındı (§5).
 
@@ -768,7 +770,7 @@ kendi denetim kaydındadır.
 | **PR10** | Kopya↔indeks eşlemesi belge verende kalır, asla dışarı çıkmaz. |
 | **PR11** | İhraçtan önce Wallet Unit Attestation + PoP doğrulanır; WUA imzacısı güven listesindeki cüzdan sağlayıcısı anahtarlarından biridir; `key_storage` kiracı politikasını karşılamıyorsa belge verilmez (§11.1). |
 | **PR12** | `out-of-band` offer'da `tx_code` offer ile **farklı kanaldan** iletilir; üç yanlış deneme offer'ı geçersiz kılar; kanal adresi yalnızca kurumun kayıtlı verisinden gelir (§3.3). |
-| **PR13** | Authorization code akışında PAR ve PKCE (S256) zorunludur; istemci kimliği Wallet Unit Attestation'dır (`client_secret` yok); `redirect_uri` PAR'da bağlanır ve `/authorize`'da değiştirilemez; `redirect_uri` istemcinin kayıtlı adresleriyle birebir eşleşmelidir (izin listesi; aksi hâlde PAR `invalid_request` ile reddedilir — RFC 9126 §2.1); token isteği PAR'daki `redirect_uri`'yi ve aynı `client_id`'yi (WUA `sub`) taşımalıdır (aksi hâlde `invalid_grant`); cüzdan token ucunu yetkilendirme sunucusunun meta verisinden (`token_endpoint`, RFC 8414) alır; code tek kullanımlık ve ≤ 60 s (§11.2). |
+| **PR13** | Authorization code akışında PAR ve PKCE (S256) zorunludur; istemci kimliği Wallet Unit Attestation'dır (`client_secret` yok); `redirect_uri` PAR'da bağlanır ve `/authorize`'da değiştirilemez; `redirect_uri` istemcinin kayıtlı adresleriyle birebir eşleşmelidir (izin listesi; aksi hâlde PAR `invalid_request` ile reddedilir — RFC 9126 §2.1); token isteği PAR'daki `redirect_uri`'yi ve aynı `client_id`'yi (WUA `sub`) taşımalıdır (aksi hâlde `invalid_grant`); cüzdan token ucunu yetkilendirme sunucusunun meta verisinden (`token_endpoint`, RFC 8414) alır; code tek kullanımlık ve ≤ 60 s (§11.2). Paketlerde `createPar` izin listesini (`allowedRedirectUris`) zorunlu alır; istemcinin kayıtlı adresi yoksa PAR reddedilir ([[ADR-0056]] K2). |
 | **PR14** | Kurumun belge verme servisi cüzdanın başlattığı belge vermede kimliği yalnızca **kimlik attestation'ının sunumu** ile ve tam doğrulama hattından (T0 + A–E) geçerek eşler; eşleştirme anahtarları (TCKN, doğum tarihi) saklanmaz ve loglanmaz; eşleşmezse belge verilmez (§11.2, [[ADR-0011]] K3/K6). |
 | **PR15** | Cüzdan kurum dizinini yalnızca güven listesinden alır; listede olmayan belge verene PAR göndermez (§11.2). |
 | **PR17** | Erişim belirteci DPoP'a bağlıdır (RFC 9449): `/token` geçerli bir DPoP kanıtı olmadan belirteç vermez; `/credential` yalnızca `Authorization: DPoP` ve aynı anahtarla, bu uç ve bu belirteç (`ath`) için üretilmiş, daha önce görülmemiş kanıtla çalışır (§4, §7.1). |

@@ -7,6 +7,7 @@
 import { X509Certificate as NodeX509, webcrypto } from "node:crypto";
 import { SubjectAlternativeNameExtension, X509Certificate, cryptoProvider } from "@peculiar/x509";
 import { b64uToBytes, computeIssuerId, certFingerprintSha256Hex } from "@tamga-network/core";
+import type { EpochSeconds } from "@tamga-network/core/time";
 import {
   dcApiSessionTranscript,
   oid4vpSessionTranscript,
@@ -87,7 +88,7 @@ export async function verifyMdocFormat(
     /** Yanıt şifreliyse şifreleme anahtarının RFC 7638 parmak izi (oturum özetine girer). */
     encJwkThumbprint?: Uint8Array;
     stateCode: string;
-    now: number;
+    now: EpochSeconds;
     /** Geçerlilik penceresinde saat farkı toleransı (sn; politika `max_clock_skew_sec`). */
     maxSkewSec?: number;
     rootCertsDer: Uint8Array[];
@@ -173,7 +174,9 @@ export async function verifyMdocFormat(
           ? "A7"
           : /docType/.test(r)
             ? "A8"
-            : "A4";
+            : /deviceKey/.test(r)
+              ? "A3"
+              : "A4";
     return fail(step, `mdoc: ${r}`);
   }
   // Sertifika, belgenin imzalandığı anda (validityInfo.signed) geçerli olmalı — SD-JWT A3 ile aynı kural (D-BC-3)

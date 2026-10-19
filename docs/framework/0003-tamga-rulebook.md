@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -213,7 +213,7 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | RB-WP-16 | Cüzdan sağlayıcısı, kişinin cüzdan biriminin iptal edildiğini cüzdan dışından öğrenebileceği en az bir yol **MUST** sunmak; birimi kendi kararıyla iptal ettiyse bu yol en geç 24 saat içinde iptalin nedenini, neyin çalışmaya devam ettiğini ve kişinin ne yapabileceğini gösterir (AB WURevocation_14/16; [[ADR-0047]] K4). |
 | RB-WP-17 | W3 seviyesinde cüzdan sağlayıcısı birimi etkinleştirirken ve W3 beyan eden her anahtar kanıtından önce platformun cihaz kanıtını (Apple App Attest, Android anahtar kanıtı, Play Integrity) **MUST** doğrulamak; W2'de cihaz kanıtı isteğe bağlıdır (**MAY**) ([[ADR-0047]] K5). |
 | RB-WP-18 | Güven listesindeki cüzdan "Tamga Network'te listeli" / "Listed on Tamga Network" göstergesini yalnız yazı olarak gösterir; logo, AB yıldızları ve renkleri, "güven işareti" ya da "trust mark" sözü **MUST NOT** kullanılmak. Göstergeye dokunulunca imzası doğrulanmış listedeki `wallet_providers[]` kaydı gösterilir. Cüzdan birimi iptal edilmişse, sağlayıcı ya da çözüm kaydı `ACTIVE` değilse, liste doğrulanamıyorsa ya da cüzdan yalnız sandbox listesine bağlıysa gösterge **MUST** gizlenmek ([[ADR-0049]]). |
-| RB-WP-19 | Kayıt sertifikası taşımayan istekte cüzdan onay ekranında ayrı bir uyarı **MUST** göstermek; varsayılan seçim "Paylaşma"dır. 2028-08-11'den sonra böyle bir istek **MUST** reddedilmek (tarih kodda sabittir). Yakın alanda kayıt sertifikası `euWrprc` ile gelir ve aynı denetimlerden geçer ([[ADR-0026]] 2026-10-13 değişikliği; paketler 0.6.0). |
+| RB-WP-19 | Kayıt sertifikası taşımayan istek **MUST** reddedilmek; cüzdan kişiye sormadan durur (cüzdandan cüzdana yakın alan hariç). Yakın alanda kayıt sertifikası `euWrprc` ile gelir ve aynı denetimlerden geçer ([[ADR-0026]] K5; [[ADR-0056]] K10, 2026-10-19; paketler 0.7.0). |
 
 ---
 

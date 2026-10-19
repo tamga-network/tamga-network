@@ -1,11 +1,13 @@
 /**
- * DPoP (RFC 9449) doğrulaması — HAIP; ARF ISSU_01. Token ucunda kanıtın anahtarı belirtece bağlanır (`jkt`), credential ucunda
- * aynı anahtar + belirteç özeti (`ath`) aranır. Kanıt tek kullanımlıktır (`jti` tekrar önbelleği), yöntem ve adres bağlıdır.
+ * DPoP (RFC 9449) doğrulaması — HAIP; ARF ISSU_01. İki uç, iki işlev (ADR-0056 K5): token ucunda `verifyTokenDpop` (kanıtın
+ * anahtarı belirtece bağlanacak — dönen `jkt`), kaynak (credential, nonce…) ucunda `verifyResourceDpop` (belirteç ve ona bağlı
+ * anahtar ZORUNLU: aynı anahtar + belirteç özeti `ath`). Kanıt tek kullanımlıktır (`jti` tekrar önbelleği), yöntem ve adres bağlıdır.
  * İsteğe bağlı sunucu nonce'u (RFC 9449 §8–9): `nonces` verilirse kanıtta geçerli bir `nonce` aranır; yoksa sonuç
  * `useNonce: true` döner ve uç `use_dpop_nonce` hatasıyla birlikte `DPoP-Nonce` başlığını gönderir (HAIP §4).
  */
 import { createHash, randomBytes } from "node:crypto";
 import { calculateJwkThumbprint, compactVerify, decodeProtectedHeader, importJWK, type JWK } from "jose";
+import { epochSeconds, type EpochSeconds } from "@tamga-network/core/time";
 
 export const DPOP_TYP = "dpop+jwt";
 /** Kanıtın kabul edildiği saat penceresi (sn). */
@@ -68,28 +70,45 @@ export type DpopResult = { ok: true; jkt: string } | { ok: false; reason: string
 
 const stripUrl = (u: string) => u.split(/[?#]/)[0];
 
-export async function verifyDpop(
+/** İki ucun ortak seçenekleri. */
+export interface DpopCommonOptions {
+  /** HTTP yöntemi (`POST`) */
+  htm: string;
+  /** isteğin tam adresi (sorgu ve parça yok sayılır) */
+  htu: string;
+  /** Unix saniyesi (ADR-0056 K12) */
+  now: EpochSeconds;
+  replay: DpopReplayCache;
+  /** verilirse kanıtta geçerli sunucu nonce'u zorunludur */
+  nonces?: DpopNonces;
+}
+
+/** Token ucu (RFC 9449 §5): kanıt doğrulanır; dönen `jkt` verilecek belirtece bağlanır. Belirteç yok, `ath` aranmaz. */
+export function verifyTokenDpop(proof: unknown, o: DpopCommonOptions): Promise<DpopResult> {
+  return verifyDpopProof(proof, o, null);
+}
+
+/**
+ * Kaynak ucu (RFC 9449 §7): `accessToken` ve ona bağlı anahtarın parmak izi `jkt` ZORUNLU — kanıt o anahtarla imzalı ve
+ * `ath` = sha256(belirteç) olmalı. Boş/eksik değer ret (çalınan belirteç başka anahtarla kullanılamaz).
+ */
+export function verifyResourceDpop(
   proof: unknown,
-  o: {
-    htm: string;
-    htu: string;
-    now: number;
-    replay: DpopReplayCache;
-    /** credential ucu: belirteç verilirse `ath` zorunlu */
-    accessToken?: string;
-    /**
-     * Belirtece bağlı anahtar parmak izi (credential ucu). **Kaynak ucunda zorunlu tutun**: verilmezse kanıtın belirtecin
-     * anahtarıyla yapıldığı denetlenmez (çalınan belirteç başka anahtarla kullanılabilir). Boş dize reddedilir.
-     */
-    jkt?: string;
-    /** verilirse kanıtta geçerli sunucu nonce'u zorunludur */
-    nonces?: DpopNonces;
-  },
+  o: DpopCommonOptions & { accessToken: string; jkt: string },
+): Promise<DpopResult> {
+  if (typeof o.accessToken !== "string" || !o.accessToken)
+    return Promise.resolve({ ok: false, reason: "access token missing" });
+  if (typeof o.jkt !== "string" || !o.jkt) return Promise.resolve({ ok: false, reason: "token has no bound DPoP key" });
+  return verifyDpopProof(proof, o, { accessToken: o.accessToken, jkt: o.jkt });
+}
+
+async function verifyDpopProof(
+  proof: unknown,
+  o: DpopCommonOptions,
+  bound: { accessToken: string; jkt: string } | null,
 ): Promise<DpopResult> {
   if (typeof proof !== "string" || !proof) return { ok: false, reason: "DPoP proof missing" };
-  // Belirteç kaydında bağlı anahtar boş kaldıysa (`jkt: ""`) bağ denetimi sessizce atlanmasın
-  if (o.jkt !== undefined && (typeof o.jkt !== "string" || !o.jkt))
-    return { ok: false, reason: "token has no bound DPoP key" };
+  epochSeconds(o.now);
   let header: ReturnType<typeof decodeProtectedHeader>;
   try {
     header = decodeProtectedHeader(proof);
@@ -116,9 +135,9 @@ export async function verifyDpop(
   if (typeof payload.jti !== "string" || payload.jti.length < 8 || payload.jti.length > 128)
     return { ok: false, reason: "DPoP jti" };
   const jkt = await calculateJwkThumbprint(jwk, "sha256");
-  if (o.jkt && jkt !== o.jkt) return { ok: false, reason: "DPoP key is not the key bound to the token" };
-  if (o.accessToken !== undefined) {
-    const ath = createHash("sha256").update(o.accessToken).digest("base64url");
+  if (bound) {
+    if (jkt !== bound.jkt) return { ok: false, reason: "DPoP key is not the key bound to the token" };
+    const ath = createHash("sha256").update(bound.accessToken).digest("base64url");
     if (payload.ath !== ath) return { ok: false, reason: "DPoP ath mismatch" };
   }
   if (o.nonces && !o.nonces.valid(payload.nonce, o.now))

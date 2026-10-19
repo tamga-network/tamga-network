@@ -14,6 +14,7 @@
  */
 import { decodeProtectedHeader, importJWK, importX509, jwtVerify, type JWK } from "jose";
 import { b64ToDer, derToPem, certFingerprintSha256Hex } from "@tamga-network/core";
+import { secondsOrNow, type EpochSeconds } from "@tamga-network/core/time";
 
 /** Belgenin iptal listesi başvurusu (status_list: idx + uri). */
 export interface StatusRef {
@@ -24,8 +25,17 @@ export interface StatusRef {
  * İptal listesi sorgusu (çağıran sağlar; liste indirme + doğrulama + önbellek). `NONCOMPLIANT`: liste indi ve imzası geçerli ama
  * profile uymuyor (ör. CIR 2026/1731 Ek Ib: 10.000'den az girişli WIA/KA listesi) — geçici hata değil, ret. Girişin biti açıksa
  * liste küçük olsa da sonuç `INVALID`dir (sağlayıcının imzalı iptal beyanı; 0.5.2): `NONCOMPLIANT` yalnız bit kapalıyken.
+ * `now` Unix saniyesi.
  */
-export type StatusValueOf = (ref: StatusRef, now: number) => Promise<"VALID" | "INVALID" | "UNKNOWN" | "NONCOMPLIANT">;
+export type StatusValueOf = (
+  ref: StatusRef,
+  now: EpochSeconds,
+) => Promise<"VALID" | "INVALID" | "UNKNOWN" | "NONCOMPLIANT">;
+/**
+ * İptal denetimi seçimi (ADR-0056 K3): sorgu işlevi ya da `"none"` — iptal bilerek denetlenmez (yalnız iptal girişi olmayan
+ * ortamlar: test, OpenID uyum aracı). `"none"` ile sonuç `statusChecked: false` taşır; kabul kararında işlev verin.
+ */
+export type StatusCheck = StatusValueOf | "none";
 
 /** TS3 §2.2.1.1: WIA ömrü 24 saatten kısa */
 export const WIA_MAX_TTL_SEC = 24 * 3600;
@@ -72,10 +82,12 @@ export type WuaResult =
       claims: WuaClaims;
       providerFingerprint: string;
       /**
-       * İptal durumu: `VALID` (girişi var, listede geçerli), `NOT_CHECKED` (girişi var, `statusOf` verilmedi),
+       * İptal durumu: `VALID` (girişi var, listede geçerli), `NOT_CHECKED` (girişi var, `statusOf: "none"`),
        * `NOT_APPLICABLE` (girişi yok; `clientStatus: "optional"` politikasıyla kabul edildi).
        */
       clientStatus: "VALID" | "NOT_CHECKED" | "NOT_APPLICABLE";
+      /** İptal durumu bu doğrulamada gerçekten denetlendi mi (yalnız `clientStatus: "VALID"` iken true; ADR-0056). */
+      statusChecked: boolean;
       /** PoP kimliği ve zamanı — çağıran tekrar oynatma kaydı için (`jti` en az `iat + POP_MAX_AGE_SEC`'e kadar saklanmalı). */
       pop: { jti: string; iat: number };
     }
@@ -85,13 +97,14 @@ export async function verifyWalletAttestation(p: {
   wua: string;
   pop: string;
   issuerUrl: string;
-  now?: number;
+  /** Unix saniyesi (ADR-0056 K12) */
+  now?: EpochSeconds;
   isProviderKey: (fingerprintHex: string) => "YES" | "NO" | "UNKNOWN";
   /**
-   * ADR-0025: WIA `client_status` iptal denetimi. **Verilmezse denetlenmez** ve sonuç `ok: true`, `clientStatus: "NOT_CHECKED"`
-   * olur — kabul kararında verin (ör. `WalletStatusChecker.statusOf`) ya da `NOT_CHECKED`'i ret sayın.
+   * ZORUNLU (ADR-0056 K3) — ADR-0025: WIA `client_status` iptal denetimi (ör. `WalletStatusChecker.statusOf`). `"none"`: bilerek
+   * denetlenmez; sonuç `clientStatus: "NOT_CHECKED"`, `statusChecked: false` (verilmemesi ret).
    */
-  statusOf?: StatusValueOf;
+  statusOf: StatusCheck;
   /** İptal girişi olmayan kanıt (varsayılan `"optional"`: AB uyumu için genel -07 kanıtı kabul edilir). */
   clientStatus?: ClientStatusPolicy;
   /**
@@ -101,7 +114,9 @@ export async function verifyWalletAttestation(p: {
    */
   jtiSeen?: (jti: string, iat: number) => boolean | Promise<boolean>;
 }): Promise<WuaResult> {
-  const now = p.now ?? Math.floor(Date.now() / 1000);
+  const now = secondsOrNow(p.now);
+  if (p.statusOf !== "none" && typeof p.statusOf !== "function")
+    return { ok: false, reason: 'statusOf missing: pass a status check (or "none" to skip it deliberately)' };
   try {
     const h = decodeProtectedHeader(p.wua);
     if (h.typ !== WUA_TYP || h.alg !== "ES256" || !h.x5c?.length)
@@ -136,7 +151,7 @@ export async function verifyWalletAttestation(p: {
       const ref = c.client_status?.status?.status_list;
       if (!ref || typeof ref.idx !== "number" || typeof ref.uri !== "string")
         return { ok: false, reason: "WIA client_status malformed" };
-      if (p.statusOf) {
+      if (p.statusOf !== "none") {
         const v = await p.statusOf(ref, now);
         if (v === "INVALID") return { ok: false, reason: "wallet instance revoked (WIA client_status)" };
         if (v === "NONCOMPLIANT") return { ok: false, reason: "WIA status list does not meet the profile" };
@@ -162,7 +177,14 @@ export async function verifyWalletAttestation(p: {
       return { ok: false, reason: "PoP iat missing or outside the allowed window" };
     if (typeof pp.jti !== "string" || !pp.jti) return { ok: false, reason: "PoP jti missing" };
     if (p.jtiSeen && (await p.jtiSeen(pp.jti, pp.iat))) return { ok: false, reason: "PoP jti replayed" };
-    return { ok: true, claims: c, providerFingerprint: fp, clientStatus, pop: { jti: pp.jti, iat: pp.iat } };
+    return {
+      ok: true,
+      claims: c,
+      providerFingerprint: fp,
+      clientStatus,
+      statusChecked: clientStatus === "VALID",
+      pop: { jti: pp.jti, iat: pp.iat },
+    };
   } catch (e) {
     return { ok: false, reason: `wallet attestation/PoP: ${(e as Error).message}` };
   }

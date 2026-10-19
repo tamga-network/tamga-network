@@ -13,6 +13,7 @@ export default defineConfig({
       "@tamga-network/core/sd-structure": r("./packages/core/src/sd-structure.ts"),
       "@tamga-network/core/pid": r("./packages/core/src/pid.ts"),
       "@tamga-network/core/disclosure-policy": r("./packages/core/src/disclosure-policy.ts"),
+      "@tamga-network/core/time": r("./packages/core/src/time.ts"),
       "@tamga-network/core": r("./packages/core/src/index.ts"),
       "@tamga-network/trust/core": r("./packages/trust/src/core.ts"),
       "@tamga-network/trust": r("./packages/trust/src/index.ts"),

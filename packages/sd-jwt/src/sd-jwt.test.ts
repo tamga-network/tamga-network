@@ -9,7 +9,7 @@ import {
 } from "@peculiar/x509";
 import { exportJWK, generateKeyPair, type JWK } from "jose";
 import type { SigningKey } from "./issue.js";
-import { computeIssuerId, b64u, b64uToUtf8 } from "@tamga-network/core";
+import { certFingerprintSha256Hex, computeIssuerId, b64u, b64uToUtf8 } from "@tamga-network/core";
 import { decodeDisclosures } from "@tamga-network/core/sd-structure";
 import {
   issueSdJwtVc,
@@ -21,6 +21,7 @@ import {
   type IssuerSigner,
 } from "./index.js";
 import { CompactSign } from "jose";
+import { epochSeconds } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
@@ -127,7 +128,13 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       nonce: NONCE,
       iat: NOW,
     });
-    const r = await verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW, rootCertsDer: [rootDer] });
+    const r = await verifySdJwtVc(pres, {
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+      rootCertsDer: [rootDer],
+    });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.disclosedClaimNames.sort()).toEqual(["eqf_level", "family_name", "given_name", "is_graduate"]);
@@ -135,10 +142,41 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     expect(r.claims.birth_date).toBeUndefined();
     expect(r.issuerId).toBe(computeIssuerId("TR", leafDer));
     expect(r.checksPerformed).toEqual(["A1", "A2", "A3", "A4", "A5", "A6", "A7"]);
+    expect(r.anchorFingerprint).toBe(certFingerprintSha256Hex(rootDer));
+  });
+  it('ADR-0056 K1: güven çapası zorunlu — eksik ya da boş kök A3\'te RED; "none" bilerek zincirsiz', async () => {
+    const out = await issueDiploma();
+    const pres = await presentSdJwtVc({
+      combined: out.combined,
+      discloseClaims: ["is_graduate"],
+      holderKey: holder.priv,
+      aud: AUD,
+      nonce: NONCE,
+      iat: NOW,
+    });
+    const base = { aud: AUD, nonce: NONCE, stateCode: "TR", now: epochSeconds(NOW) };
+    for (const roots of [undefined, [], null])
+      expect(await verifySdJwtVc(pres, { ...base, rootCertsDer: roots as never }), String(roots)).toMatchObject({
+        ok: false,
+        failedStep: "A3",
+        reason: expect.stringMatching(/rootCertsDer missing/),
+      });
+    const none = await verifySdJwtVc(pres, { ...base, rootCertsDer: "none" });
+    expect(none.ok && none.anchorFingerprint).toBeNull();
+    // ADR-0056 K12: milisaniye verilirse hata (sessizce yanlış zaman değil)
+    await expect(verifySdJwtVc(pres, { ...base, rootCertsDer: [rootDer], now: (NOW * 1000) as never })).rejects.toThrow(
+      /seconds/,
+    );
   });
   it("KB-JWT yoksa A1 RED (C8); yanlış nonce A6; aud uyuşmazlığı A6; iat penceresi A6 (C17)", async () => {
     const out = await issueDiploma();
-    const noKb = await verifySdJwtVc(out.combined, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW });
+    const noKb = await verifySdJwtVc(out.combined, {
+      rootCertsDer: "none",
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+    });
     expect(noKb.ok).toBe(false);
     if (!noKb.ok) expect(noKb.failedStep).toBe("A1");
     const pres = await presentSdJwtVc({
@@ -149,13 +187,31 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       nonce: NONCE,
       iat: NOW,
     });
-    const wn = await verifySdJwtVc(pres, { aud: AUD, nonce: "other", stateCode: "TR", now: NOW });
+    const wn = await verifySdJwtVc(pres, {
+      rootCertsDer: "none",
+      aud: AUD,
+      nonce: "other",
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+    });
     expect(wn.ok).toBe(false);
     if (!wn.ok) expect(wn.failedStep).toBe("A6");
-    const wa = await verifySdJwtVc(pres, { aud: "x509_san_dns:evil", nonce: NONCE, stateCode: "TR", now: NOW });
+    const wa = await verifySdJwtVc(pres, {
+      rootCertsDer: "none",
+      aud: "x509_san_dns:evil",
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+    });
     expect(wa.ok).toBe(false);
     if (!wa.ok) expect(wa.failedStep).toBe("A6");
-    const late = await verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW + 301 });
+    const late = await verifySdJwtVc(pres, {
+      rootCertsDer: "none",
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW + 301),
+    });
     expect(late.ok).toBe(false);
     if (!late.ok) expect(late.failedStep).toBe("A6");
   });
@@ -174,20 +230,27 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       { aud: "", nonce: NONCE },
       { aud: AUD, nonce: undefined as unknown as string },
     ]) {
-      const r = await verifySdJwtVc(pres, { ...bad, stateCode: "TR", now: NOW });
+      const r = await verifySdJwtVc(pres, { rootCertsDer: "none", ...bad, stateCode: "TR", now: epochSeconds(NOW) });
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.failedStep).toBe("A6");
     }
     const issued = await verifySdJwtVc(out.combined, {
+      rootCertsDer: "none",
       aud: AUD,
       nonce: NONCE,
       stateCode: "TR",
-      now: NOW,
+      now: epochSeconds(NOW),
       requireKb: false,
     });
     expect(issued.ok).toBe(true);
     expect(issued.checksPerformed).not.toContain("A6");
-    const full = await verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW });
+    const full = await verifySdJwtVc(pres, {
+      rootCertsDer: "none",
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+    });
     expect(full.checksPerformed).toContain("A6");
   });
   it("kurcalanmış disclosure (değer değişti) → A5 RED (C10); ekran görüntüsü/kopya KB üretemez", async () => {
@@ -204,7 +267,13 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     const [dec] = decodeDisclosures([disclosures[0]], digestOf, (d) => JSON.parse(b64uToUtf8(d)));
     const forged = b64u(JSON.stringify([dec.salt, dec.name, 8]));
     const tampered = [jwt, forged, ""].join("~") + kb;
-    const r = await verifySdJwtVc(tampered, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW });
+    const r = await verifySdJwtVc(tampered, {
+      rootCertsDer: "none",
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+    });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.failedStep).toBe("A5");
     // başka anahtarla KB üret → A6
@@ -217,7 +286,13 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       nonce: NONCE,
       iat: NOW,
     });
-    const r2 = await verifySdJwtVc(pres2, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW });
+    const r2 = await verifySdJwtVc(pres2, {
+      rootCertsDer: "none",
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+    });
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.failedStep).toBe("A6");
   });
@@ -244,7 +319,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       aud: AUD,
       nonce: NONCE,
       stateCode: "TR",
-      now: NOW,
+      now: epochSeconds(NOW),
       rootCertsDer: [new Uint8Array(otherRoot.rawData)],
     });
     expect(r.ok).toBe(false);
@@ -274,7 +349,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
   const present = (combined: string, discloseClaims: string[]) =>
     presentSdJwtVc({ combined, discloseClaims, holderKey: holder.priv, aud: AUD, nonce: NONCE, iat: NOW });
   const check = (pres: string) =>
-    verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW, rootCertsDer: [rootDer] });
+    verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: epochSeconds(NOW), rootCertsDer: [rootDer] });
 
   it("eski typ vc+sd-jwt varsayılan KABUL (SD-JWT VC -13; sonuçta typ), bayrak kapalıysa A2 RED; başka typ RED (§5.1.1)", async () => {
     const legacy = await present(await craft(basePayload(), [], signer, "vc+sd-jwt"), []);
@@ -285,7 +360,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       aud: AUD,
       nonce: NONCE,
       stateCode: "TR",
-      now: NOW,
+      now: epochSeconds(NOW),
       rootCertsDer: [rootDer],
       acceptLegacyVcSdJwtTyp: false,
     });
@@ -345,7 +420,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       aud: AUD,
       nonce: NONCE,
       stateCode: "TR",
-      now: NOW,
+      now: epochSeconds(NOW),
       rootCertsDer: [rootDer],
       skipValidityPeriod: true,
     };
@@ -368,7 +443,14 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     // imzalı yük JSON dizisi: ayrıştırılır ama nesne değil
     const header = { alg: "ES256", typ: "dc+sd-jwt", x5c: signer.x5c.map((d) => Buffer.from(d).toString("base64")) };
     const jwt = await signer.sign(header, new TextEncoder().encode(JSON.stringify([1, 2])));
-    const arr = await verifySdJwtVc(`${jwt}~`, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW, requireKb: false });
+    const arr = await verifySdJwtVc(`${jwt}~`, {
+      rootCertsDer: "none",
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+      requireKb: false,
+    });
     expect(arr.ok).toBe(false);
     if (!arr.ok) expect(arr.failedStep).toBe("A3");
     if (!arr.ok) expect(arr.reason).toMatch(/not a JSON object/);
@@ -379,10 +461,11 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     const { jwt, disclosures } = splitCombined(out.combined);
     expect(() => splitCombined(`${jwt}~${disclosures[0]}~~`)).toThrow(/empty disclosure/);
     const r = await verifySdJwtVc(`${jwt}~~${disclosures[0]}~`, {
+      rootCertsDer: "none",
       aud: AUD,
       nonce: NONCE,
       stateCode: "TR",
-      now: NOW,
+      now: epochSeconds(NOW),
       requireKb: false,
     });
     expect(r.ok).toBe(false);
@@ -444,7 +527,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
         aud: AUD,
         nonce: NONCE,
         stateCode: "TR",
-        now: NOW,
+        now: epochSeconds(NOW),
         rootCertsDer: [new Uint8Array(root.cert.rawData)],
       });
     };
@@ -537,7 +620,13 @@ describe("ADR-0045 — dizi öğeleri ayrı ayrı açıklanır (RFC 9901 §4.2.2
       nonce: NONCE,
       iat: NOW,
     });
-    const r = await verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW, rootCertsDer: [rootDer] });
+    const r = await verifySdJwtVc(pres, {
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+      rootCertsDer: [rootDer],
+    });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.claims.nationalities).toEqual(["TR", "AZ"]);
@@ -554,7 +643,13 @@ describe("ADR-0045 — dizi öğeleri ayrı ayrı açıklanır (RFC 9901 §4.2.2
       nonce: NONCE,
       iat: NOW,
     });
-    const r = await verifySdJwtVc(pres, { aud: AUD, nonce: NONCE, stateCode: "TR", now: NOW, rootCertsDer: [rootDer] });
+    const r = await verifySdJwtVc(pres, {
+      aud: AUD,
+      nonce: NONCE,
+      stateCode: "TR",
+      now: epochSeconds(NOW),
+      rootCertsDer: [rootDer],
+    });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.claims.nationalities).toEqual(["AZ"]);

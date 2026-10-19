@@ -10,7 +10,8 @@
     ".": "./src/index.ts",
     "./sd-structure": "./src/sd-structure.ts",
     "./pid": "./src/pid.ts",
-    "./disclosure-policy": "./src/disclosure-policy.ts"
+    "./disclosure-policy": "./src/disclosure-policy.ts",
+    "./time": "./src/time.ts"
   },
   "publishConfig": {
     "access": "public",

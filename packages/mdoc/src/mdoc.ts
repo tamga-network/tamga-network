@@ -10,6 +10,7 @@
 import { sha256 } from "@noble/hashes/sha2.js";
 import type { IdentifierListRef } from "./identifier-list.js";
 import { p256 } from "@noble/curves/nist.js";
+import { clockSkewOption, secondsOrNow, type EpochSeconds } from "@tamga-network/core/time";
 import { encode, decode, CborTag, encodeEmbedded, type CborValue } from "./cbor.js";
 import { coseSign1, coseSign1Async, coseVerify1, parseCoseSign1, coseKeyFromPoint, pointFromCoseKey } from "./cose.js";
 
@@ -166,6 +167,7 @@ export interface MdocVerifyResult {
   valid: boolean;
   reason?: string;
   docType?: string;
+  /** cihaz (holder) anahtarı; `valid: true` ise her zaman var (ADR-0056 K7: cihaz anahtarı olmayan belge geçersiz) */
   deviceKeyRaw?: Uint8Array;
   claims?: Record<string, Record<string, CborValue>>;
   validity?: { signed: string; validFrom: string; validUntil: string };
@@ -179,27 +181,30 @@ export interface MdocVerifyResult {
 
 /**
  * IssuerSigned doğrulaması: issuerAuth imzası (issuer açık anahtarıyla), açıklanan her alanın digest'i MSO ile eşleşir,
- * docType tutar, geçerlilik penceresi. `issuerPubRaw`: doğrulayıcı x5chain'den (güven listesiyle eşleyerek) çıkarır.
+ * docType tutar, geçerlilik penceresi, MSO cihaz anahtarı taşır (yoksa `valid: false` — ADR-0056 K7). `issuerPubRaw`: doğrulayıcı
+ * x5chain'den (güven listesiyle eşleyerek) çıkarır.
  *
- * **Düşük düzey:** `valid: true` güven zincirini (x5chain ↔ IACA kökleri) ve kişiye bağlılığı (DeviceAuth, `verifyDeviceAuth`)
- * İÇERMEZ; sonuçtaki `x5chain[0]`'ın anahtarını doğrudan `issuerPubRaw` yapmak kendinden imzalı belgeyi kabul eder. Kabul kararı
- * için `@tamga-network/verifier` `verifyPresentation` kullanın. `expectedDocType` verin.
+ * **Düşük düzey:** `valid: true` güven zincirini (x5chain ↔ IACA kökleri) ve bu oturumdaki kişiye bağlılığı (DeviceAuth,
+ * `verifyDeviceAuth`) İÇERMEZ; sonuçtaki `x5chain[0]`'ın anahtarını doğrudan `issuerPubRaw` yapmak kendinden imzalı belgeyi kabul
+ * eder. Kabul kararı için `@tamga-network/verifier` `verifyPresentation` kullanın. `expectedDocType` verin.
  */
 export function verifyIssuerSigned(
   issuerSigned: Uint8Array,
   opts: {
     issuerPubRaw: Uint8Array;
-    now?: number;
+    /** Unix saniyesi (ADR-0056 K12) */
+    now?: EpochSeconds;
     expectedDocType?: string;
     /**
      * Saat farkı toleransı (sn, varsayılan 0): yalnız başlangıç (`validFrom`) bu kadar erkene çekilir — belgeyi alan cüzdanın
      * saati belge verenin saatinden birkaç saniye gerideyse az önce verilen belge "henüz geçerli değil" görünmesin. Bitiş
-     * (`validUntil`) uzatılmaz (0.5.2; SD-JWT `exp` ile aynı: bitiş anından sonra geçersiz).
+     * (`validUntil`) uzatılmaz (0.5.2; SD-JWT `exp` ile aynı: bitiş anından sonra geçersiz). En çok `MAX_CLOCK_SKEW_SEC` (600).
      */
     clockSkewSec?: number;
   },
 ): MdocVerifyResult {
-  const now = opts.now ?? Math.floor(Date.now() / 1000);
+  const now = secondsOrNow(opts.now);
+  const skew = clockSkewOption("clockSkewSec", opts.clockSkewSec, 0);
   let m: CborValue;
   try {
     m = decode(issuerSigned);
@@ -246,7 +251,6 @@ export function verifyIssuerSigned(
   // okunamayan tarih geçerli sayılmaz (fail-closed): NaN ile her karşılaştırma false olur ve kontrol sessizce geçerdi
   if (!Number.isFinite(vs) || !Number.isFinite(vf) || !Number.isFinite(vu))
     return { valid: false, reason: "validityInfo dates unreadable" };
-  const skew = Math.max(0, opts.clockSkewSec ?? 0);
   if (now + skew < vf) return { valid: false, reason: "document not yet valid" };
   if (now > vu) return { valid: false, reason: "document expired" };
 
@@ -292,6 +296,8 @@ export function verifyIssuerSigned(
   } catch {
     return { valid: false, reason: "deviceKey unreadable" };
   }
+  // ADR-0056 K7: cihaz anahtarı olmayan belge kişiye bağlanamaz (DeviceAuth denetlenemez) — geçerli sayılmaz
+  if (!deviceKeyRaw) return { valid: false, reason: "deviceKey missing (MSO deviceKeyInfo)" };
 
   // iptal bilgisi (ISO 18013-5 2. baskı §12.3.6; doğrulayıcının D1 adımı): `status` varsa okunabilir olmalı. Belge verenin imzası
   // altındaki bozuk bir giriş iptal denetimini sessizce atlatamaz (0.5.2) — belge geçersizdir (`status entry malformed`).

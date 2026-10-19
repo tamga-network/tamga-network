@@ -24,6 +24,7 @@ import {
   PSEUDONYM_FORMAT,
   type DcqlQuery,
 } from "./index.js";
+import { epochMillis } from "@tamga-network/core";
 
 const PKI = resolve(import.meta.dirname, "../../../ops/pki");
 const havePki = existsSync(resolve(PKI, "rp-verify.pkcs8.pem"));
@@ -389,7 +390,7 @@ describe("parseVpUri / DCQL / RP", () => {
     };
     const req = { leafFingerprint: "ab", onBehalfOf: SITE, clientId: inter.client_id } as never;
     const match = { queryId: "d", credential: cred(VCT, { is_graduate: true }), requested: ["is_graduate"] };
-    const ok = checkRp(inter, req, match, Date.now(), site);
+    const ok = checkRp(inter, req, match, epochMillis(Date.now()), site);
     expect(ok.registered && ok.legalName === "Örnek Site" && ok.via === "Aracı").toBe(true);
     expect(stableRpKey(req, inter, site)).toBe("site.example");
     // tek taraflı: site aracıyı listelemiyor / aracı siteyi listelemiyor / kayıt başka client_id'nin
@@ -398,7 +399,7 @@ describe("parseVpUri / DCQL / RP", () => {
       [{ ...inter, served_relying_parties: undefined }, site],
       [inter, { ...site, client_id: `x509_hash:${"Z".repeat(43)}` }],
     ] as Array<[RpRecord, RpRecord]>) {
-      const c = checkRp(i, req, match, Date.now(), s);
+      const c = checkRp(i, req, match, epochMillis(Date.now()), s);
       expect(c.registered).toBe(false);
       expect(c.legalName).toBeUndefined();
       expect(stableRpKey(req, i, s)).toBe(inter.client_id); // asıl RP'nin kimliği kullanılmaz

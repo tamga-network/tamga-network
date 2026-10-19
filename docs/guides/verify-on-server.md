@@ -4,7 +4,7 @@ title: "Sunucuda doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Kendi sunucunuzda Tamga belgesi doğrulamak: güven kaynağını yükleme, iptal listesi ön çekimi, politika → imzalı OpenID4VP isteği,
   şifreli yanıtı çözme ve kanonik doğrulama hattı (T0 + A–E). Referans uygulama: apps/verify.
@@ -102,10 +102,12 @@ const policy: Policy = {
 // İstek: kabul edilen devreler imzalı listeden (ZK2)
 const dcql = dcqlFromPolicy(policy, { zkCircuits: trust.zkCircuits?.() ?? [] });
 // Yanıt: vp_token.identity[0] = base64url(DeviceResponse{ zkDocuments })
-const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk", responseUri, aud, nonce,
-  policy, policyCredentialId: "identity", trust, statusCache, rootCertsDer });
+const out = await verifyPresentation({ presentation, format: "mso_mdoc_zk", responseUri, aud, nonce,
+  policy, policyCredentialId: "identity", trust, statusCache, rootCertsDer, rp: trust.relyingParty(aud) });
 ```
 
+- **Sonucu `isYes` ile okuyun:** `isYes(out, "age_over_18")` yalnız kabul edilen sonuçta ve değer tam `true` ise evet döner;
+  red ya da doğrulanamadı sonucu hiçbir zaman "evet" okunmaz.
 - **Doğrulama paketle gelen WebAssembly ile çalışır;** Rust ya da yerel derleme gerekmez. Bir doğrulama masaüstünde ~3 sn sürer.
 - **Çok yüksek hacim için yerel arka uç:** `packages/verifier/zk` kaynağından `cargo build --release --locked --features native
   --bin tamga-zk-verify` (Rust 1.98.1, Linux/macOS), sonra `new NativeZkBackend({ binPath })` ya da ortamdan

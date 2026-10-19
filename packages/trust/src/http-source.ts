@@ -53,7 +53,7 @@ export async function fetchListTrustSource(
      * TL2: kalıcı "son görülen" sürüm belleği (cüzdan deposu vb.) — oturumlar arası geri sarmayı da yakalar; yoksa yalnız
      * oturum içi denetim.
      */
-    versionMemory?: ListVersionMemory;
+    versionMemory?: ListVersionMemory | "none";
   },
 ): Promise<{ source: ListTrustSource; store: TrustStore; report: LoadReport }> {
   if (!opts.rootFingerprints.length) throw new TrustListError("no trust anchor (pin) configured");
@@ -99,7 +99,15 @@ export async function fetchListTrustSource(
           .catch(() => ""));
       if (body) jwsMap[ptr.list_id] = body;
     }
-    report.warnings.push(...(await applyExternalListsWith(store, jwsMap, opts.verifyJws, now, opts.versionMemory)));
+    report.warnings.push(
+      ...(await applyExternalListsWith(
+        store,
+        jwsMap,
+        opts.verifyJws,
+        now,
+        opts.versionMemory === "none" ? undefined : opts.versionMemory,
+      )),
+    );
   }
   const tl = store.national.get(cc)?.list;
   if (!tl) throw new TrustListError(`no active ${cc} list in the lotl`);

@@ -13,6 +13,7 @@
 import { b64Decode, b64u, utf8 } from "./b64.js";
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
 import { pidSdJwtName } from "@tamga-network/core/pid";
+import { millisOrNow, type EpochMillis } from "@tamga-network/core/time";
 import { decodeJwt, verifyJwt } from "./jws.js";
 import type { KeyProvider } from "./keys.js";
 import { chooseEnc, encryptJwe, type EncJwk, type JweEnc } from "./jwe.js";
@@ -813,6 +814,38 @@ export interface RpCheck {
   registrationCert?: boolean;
   /** ADR-0026: kayıt sertifikasının bu belge için izin verdiği alanlar (varsa fazla istek bunlara göre de hesaplanır) */
   certClaims?: string[];
+  /**
+   * ADR-0056 K8: `respond`'un istediği onay belgesi — yalnız `checkRp` engelleyici bir durum bulmadığında üretir (taklit yok;
+   * kayıtlıysa ACTIVE; aracı istekte iki kayıt ve K7 ilişkisi var). Kayıtsız (aracısız) doğrulayıcıda da üretilir: kişi uyarıyla
+   * yine paylaşabilir (PV2). Elle kurulamaz.
+   */
+  approval?: ApprovedRequest;
+}
+
+declare const approvedBrand: unique symbol;
+/**
+ * `checkRp`'nin ürettiği, bir isteğe (client_id, nonce, yanıt adresi/köken, imzalayan sertifika) bağlı onay belgesi (ADR-0056 K8).
+ * Yapısal olarak taklit edilemez: `respond` yalnız bu süreçte `checkRp`'nin verdiği nesneyi kabul eder.
+ */
+export type ApprovedRequest = { readonly [approvedBrand]: true };
+type ApprovalBinding = Pick<
+  VpRequest,
+  "clientId" | "nonce" | "responseUri" | "origin" | "leafFingerprint" | "onBehalfOf"
+>;
+const approvals = new WeakMap<object, ApprovalBinding>();
+const bindingOf = (req: VpRequest): ApprovalBinding => ({
+  clientId: req.clientId,
+  nonce: req.nonce,
+  responseUri: req.responseUri,
+  origin: req.origin,
+  leafFingerprint: req.leafFingerprint,
+  onBehalfOf: req.onBehalfOf,
+});
+function approvedFor(approval: unknown, req: VpRequest): boolean {
+  const b = approval && typeof approval === "object" ? approvals.get(approval) : undefined;
+  if (!b) return false;
+  const now = bindingOf(req);
+  return (Object.keys(b) as Array<keyof ApprovalBinding>).every((k) => b[k] === now[k]);
 }
 /**
  * `rp`: isteği imzalayanın (client_id) kaydı. Aracı istekte (`req.onBehalfOf`) `onBehalf` asıl RP'nin kaydıdır: ad ve kapsam ondan,
@@ -824,10 +857,26 @@ export function checkRp(
   rp: RpRecord | null,
   req: VpRequest,
   match: Match,
-  now = Date.now(),
+  nowMs?: EpochMillis,
   onBehalf?: RpRecord | null,
-  /** iç kullanım: aracı istekte asıl RP'nin kaydına sertifika karşılaştırması uygulanmaz (imzalayan aracıdır) */
-  skipCert = false,
+): RpCheck {
+  const r = checkRpRecord(rp, req, match, millisOrNow(nowMs), onBehalf, false);
+  // engelleyici durum: taklit, kayıtlı ama ACTIVE değil, aracı istekte doğrulanmamış ilişki (kayıtsız)
+  const blocked = r.impersonation || (r.registered && !r.active) || (!!req.onBehalfOf && !r.registered);
+  if (blocked) return r;
+  const approval = Object.freeze({}) as ApprovedRequest;
+  approvals.set(approval, bindingOf(req));
+  return { ...r, approval };
+}
+
+function checkRpRecord(
+  rp: RpRecord | null,
+  req: VpRequest,
+  match: Match,
+  now: number,
+  onBehalf: RpRecord | null | undefined,
+  /** aracı istekte asıl RP'nin kaydına sertifika karşılaştırması uygulanmaz (imzalayan aracıdır) */
+  skipCert: boolean,
 ): RpCheck {
   const impostor = (): RpCheck => ({
     registered: false,
@@ -843,7 +892,7 @@ export function checkRp(
     // K7: kayıtlarda karşılıklı yazılı olmayan aracı ilişkisi → kayıtsız (asıl RP'nin adı gösterilmez, paylaşım yok)
     if (!intermediaryAllowed(req, rp, onBehalf))
       return { registered: false, active: false, scopeClaims: [], overAsk: match.requested, certMatches: true };
-    const inner = checkRp(onBehalf, { ...req, onBehalfOf: undefined }, match, now, undefined, true);
+    const inner = checkRpRecord(onBehalf, { ...req, onBehalfOf: undefined }, match, now, undefined, true);
     return {
       ...inner,
       active: inner.active && rp.status === "ACTIVE",
@@ -902,6 +951,8 @@ export interface ZkFailureDetail {
 
 export interface RespondInput {
   request: VpRequest;
+  /** ADR-0056 K8: bu isteğin `checkRp` onayı (`RpCheck.approval`); yoksa ya da başka isteğe aitse sunum yapılmaz */
+  approval: ApprovedRequest;
   matches: Array<{ match: Match; keyRef: string; combined: string; disclose: string[] }>;
   /** ADR-0031: takma ad sunumu (`presentPseudonym` çıktısı) — istekteki takma ad sorgusunun id'siyle */
   pseudonym?: { queryId: string; jwt: string };
@@ -928,6 +979,8 @@ export interface RespondOutput {
 }
 /** Sunumları üretir (KB-JWT aud = client_id, PV7), vp_token'ı JWE ile şifreler (PV3) ve response_uri'ye POST eder. */
 export async function respond(p: RespondInput): Promise<RespondOutput> {
+  if (!approvedFor(p.approval, p.request))
+    throw new WalletError("trust_error", "the request was not approved by checkRp (ADR-0056)");
   const vpToken: Record<string, string[]> = {};
   for (const m of p.matches) {
     if (m.match.format === MDOC_ZK_FORMAT) {

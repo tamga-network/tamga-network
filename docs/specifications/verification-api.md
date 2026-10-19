@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -99,9 +99,9 @@ Z1. A4–A7 Z1 kapsamındadır.
 
 | Kod | Adım |
 |---|---|
-| `D1` | `status.status_list` oku (`idx`, `uri`). ZK sunumunda (`mso_mdoc_zk`) indeks gelmez: ispatın bağladığı tür kısa ömürlü ZK kopyasıysa (`urn:tamga:id:ShortLivedIdentityAttestation:1`, tür kuralı ≤ 24 saat, iptal listesi yok — [[ADR-0044]] K5) D adımları uygulanmaz ve `status.value = NOT_APPLICABLE` (gerekçe kısa ömür); işaretsiz ZK sunumu aşağıdaki kurala tabidir |
+| `D1` | `status.status_list` oku (`idx`, `uri`). ZK sunumunda (`mso_mdoc_zk`) indeks gelmez: ispatın bağladığı tür kısa ömürlü ZK kopyasıysa (`urn:tamga:id:ShortLivedIdentityAttestation:1`, tür kuralı ≤ 24 saat, iptal listesi yok — [[ADR-0044]] K5) D adımları uygulanmaz ve `status.value = NOT_APPLICABLE` (gerekçe kısa ömür); işaretsiz ZK sunumu aşağıdaki kurala tabidir. ZK dışı belgede `status` yoksa: tür şemasında `uses_status_list: true` ise RED (iptal denetimi sessizce atlanmaz — [[ADR-0056]] K13), değilse `NOT_APPLICABLE` |
 | `D2` | Status List Token'ı **ön çekim önbelleğinden** al |
-| `D3` | Token imzası; `sub == uri`; `iss` aynı güven zincirinde |
+| `D3` | Token imzası; `sub == uri`; `iss` aynı güven zincirinde. İmzacı, imza denetiminden önce kurumun güven listesindeki ACTIVE iptal anahtarlarına sabitlenir (`expectedSignerFingerprints` — [[ADR-0056]] K6); kayıtlı anahtar yoksa `INDETERMINATE` |
 | `D4` | Tazelik: `exp` geçmemiş, token yaşı (`şimdi − iat`) politikanın `max_status_token_age_sec` sınırında |
 | `D5` | Zincir çapası: `contentHash` eşleşiyor, `version` geri gitmemiş (önbellek çapadan önce çekildiyse `INDETERMINATE`/`STATUS_STALE`, sonra çekildiyse `REJECTED`) |
 | `D6` | `bits=2` ile `idx` oku; `0x00` dışı → RED |
@@ -112,8 +112,12 @@ Z1. A4–A7 Z1 kapsamındadır.
 |---|---|
 | `E1` | Assurance eşiği (ör. `category=EDUCATION && assurance>=I2`) |
 | `E2` | İstenen claim'lerin hepsi açıklanmış mı |
-| `E3` | RP scope aşımı yok mu ([[SPEC-PROTO-0002]] §6) |
-| `E4` | Denetim kaydı yazıldı |
+| `E3` | RP scope aşımı yok mu ([[SPEC-PROTO-0002]] §6). RP kaydı zorunlu girdidir: verilmemesi RED, `null` (kayıtsız RP) RED; `"none"` adımı bilerek atlar ve E3 `checks_skipped`'te görünür ([[ADR-0056]] K4) |
+| `E4` | Denetim kaydı yazıldı — yalnız denetim kaydı yeri (`audit`) verildiyse ve kayıt yazıldıysa `checks_performed`'te; yoksa `checks_skipped`'te ([[ADR-0056]] K11) |
+
+**Evet/hayır alanının okunuşu:** `isYes(çıktı, alan)` yalnız sonuç `ACCEPTED` ve açıklanan değer tam olarak `true` ise `true`
+döner (ör. `age_over_18`, düz ya da ZK sunumda); red, doğrulanamadı, değer yok ya da `"true"`/`1` gibi başka değerler `false`'tur
+([[ADR-0056]]). Geçiş kartı yalnız bu sürecin `ACCEPTED` çıktısından verilir (`PassRegistry.issue({ verified })` — K9).
 
 ## 1.1 C1/C2 zamana bağlıdır
 
@@ -148,7 +152,8 @@ belge verenin `metadataURI`'siyle eşleşmeli; eşleşmiyorsa RED.
 Adımlar **sırayla** çalıştırılır. İlk başarısızlıkta durulur ve o kod
 `failed_step` olarak döner.
 
-**İstisna:** `E4` her durumda çalışır — reddedilen doğrulama da kayda geçer.
+**İstisna:** `E4` her durumda çalışır — reddedilen doğrulama da kayda geçer (denetim kaydı yeri olan doğrulayıcıda; yoksa E4
+atlandı olarak raporlanır — [[ADR-0056]] K11).
 
 ## 1.4 Kod kararlılığı
 
@@ -550,7 +555,7 @@ paralel yaşar ([[ARCH-0005]] §5.3 ile aynı politika).
 | **AP11** | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
 | **AP12** | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
 | **AP13** | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. |
-| **AP9** | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır. |
+| **AP9** | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). |
 | **AP10** | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
 
 ---

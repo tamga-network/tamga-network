@@ -27,6 +27,11 @@ Annex C (HPKE) for browser presentation · status list and identifier list token
 - The BLE radio itself — the transport is supplied by the wallet app (typically through a native module).
 - NFC engagement.
 
+## Secure defaults (0.7.0)
+
+`verifyIssuerSigned` returns `valid: false` for a document without a device key; `clockSkewSec` is capped at 600 s; `now` is
+`EpochSeconds`.
+
 ## Status
 
 Published on npm as the `0.6.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API

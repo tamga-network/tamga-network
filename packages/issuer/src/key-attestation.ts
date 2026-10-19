@@ -15,7 +15,14 @@ import {
   type JWK,
 } from "jose";
 import { b64ToDer, derToPem, certFingerprintSha256Hex } from "@tamga-network/core";
-import { KEY_STORAGE_RANK, type KeyStorage, type StatusRef, type StatusValueOf } from "@tamga-network/trust";
+import {
+  KEY_STORAGE_RANK,
+  type KeyStorage,
+  type StatusCheck,
+  type StatusRef,
+  type StatusValueOf,
+} from "@tamga-network/trust";
+import { epochSeconds, type EpochSeconds } from "@tamga-network/core/time";
 import { verifyStatusListToken } from "@tamga-network/sd-jwt";
 
 export const KA_TYP = "key-attestation+jwt"; // OpenID4VCI 1.0 Final Ek D.1
@@ -36,7 +43,7 @@ export const STORAGE_TO_ISO18045: Record<KeyStorage, string> = {
   wscd: "iso_18045_high",
 };
 
-export type { StatusRef, StatusValueOf };
+export type { StatusCheck, StatusRef, StatusValueOf };
 
 export interface KeyAttestationOk {
   ok: true;
@@ -46,6 +53,8 @@ export interface KeyAttestationOk {
   /** AB TS3 §2.4.1: sağlayıcının KA iptal durumunu koruma taahhüdünün sonu (`key_storage_status.exp`, Unix saniye) */
   statusExp?: number;
   providerFingerprint: string;
+  /** İptal durumu bu doğrulamada gerçekten denetlendi mi (girişi var ve `statusOf` bir işlevdi; ADR-0056) */
+  statusChecked: boolean;
 }
 export type KeyAttestationResult = KeyAttestationOk | { ok: false; reason: string; indeterminate?: boolean };
 
@@ -65,21 +74,24 @@ const statusRefOf = (o: unknown): StatusRef | undefined => {
 const nonEmpty = (v: unknown): v is string => typeof v === "string" && v.length > 0;
 
 /**
- * KA JWT'sini doğrular (imza, sağlayıcı anahtarı, süre, alanlar, iptal). **İptal denetimi yalnız `statusOf` verilince yapılır**:
- * `keyStorageStatus: "required"` (varsayılan) iptal GİRİŞİNİN varlığını zorunlu kılar, denetimi değil — `statusOf` vermeyen
- * çağıran iptal edilmiş anahtar deposunu da `ok: true` görür. Kabul kararında `statusOf` verin (ör. `WalletStatusChecker`).
+ * KA JWT'sini doğrular (imza, sağlayıcı anahtarı, süre, alanlar, iptal). `statusOf` ZORUNLUDUR (ADR-0056 K3; ör.
+ * `WalletStatusChecker.statusOf`); `"none"` iptali bilerek denetlemez (sonuç `statusChecked: false`). `keyStorageStatus:
+ * "required"` (varsayılan) iptal GİRİŞİNİN varlığını zorunlu kılar.
  */
 export async function verifyKeyAttestation(
   ka: string,
   p: {
-    now: number;
+    now: EpochSeconds;
     isProviderKey: (fp: string) => "YES" | "NO" | "UNKNOWN";
-    statusOf?: StatusValueOf;
+    statusOf: StatusCheck;
     /** varsayılan `required` (gerçek ağ) */
     keyStorageStatus?: KeyStorageStatusPolicy;
   },
 ): Promise<KeyAttestationResult> {
   try {
+    epochSeconds(p.now);
+    if (p.statusOf !== "none" && typeof p.statusOf !== "function")
+      return { ok: false, reason: 'statusOf missing: pass a status check (or "none" to skip it deliberately)' };
     const h = decodeProtectedHeader(ka);
     if (h.typ !== KA_TYP || h.alg !== "ES256" || !h.x5c?.length)
       return { ok: false, reason: "KA header (typ/alg/x5c)" };
@@ -104,7 +116,8 @@ export async function verifyKeyAttestation(
     const status = statusRefOf(payload.key_storage_status);
     if (!status && (p.keyStorageStatus ?? "required") === "required")
       return { ok: false, reason: "KA key_storage_status missing (TS3 §2.4.2)" };
-    if (status && p.statusOf) {
+    const statusChecked = !!status && p.statusOf !== "none";
+    if (status && p.statusOf !== "none") {
       const v = await p.statusOf(status, p.now);
       if (v === "INVALID") return { ok: false, reason: "key storage revoked (KA status)" };
       if (v === "NONCOMPLIANT") return { ok: false, reason: "KA status list does not meet the profile" };
@@ -118,6 +131,7 @@ export async function verifyKeyAttestation(
       ...(status ? { status } : {}),
       ...(typeof se === "number" && Number.isFinite(se) ? { statusExp: se } : {}),
       providerFingerprint: fp,
+      statusChecked,
     };
   } catch (e) {
     return { ok: false, reason: `KA: ${(e as Error).message}` };
@@ -130,9 +144,9 @@ export async function verifyKaProof(
   p: {
     aud: string;
     nonce: string;
-    now: number;
+    now: EpochSeconds;
     isProviderKey: (fp: string) => "YES" | "NO" | "UNKNOWN";
-    statusOf?: StatusValueOf;
+    statusOf: StatusCheck;
     keyStorageStatus?: KeyStorageStatusPolicy;
   },
 ): Promise<KeyAttestationResult> {
@@ -176,9 +190,9 @@ export async function verifyAttestationProof(
   ka: string,
   p: {
     nonce: string;
-    now: number;
+    now: EpochSeconds;
     isProviderKey: (fp: string) => "YES" | "NO" | "UNKNOWN";
-    statusOf?: StatusValueOf;
+    statusOf: StatusCheck;
     keyStorageStatus?: KeyStorageStatusPolicy;
   },
 ): Promise<KeyAttestationResult> {
@@ -260,8 +274,10 @@ export class WalletStatusChecker {
     }
     if (!c) return "UNKNOWN";
     try {
-      const v = await verifyStatusListToken(c.token, ref.uri, now);
-      if (this.isProviderKey(v.leafFingerprintHex) !== "YES") return "UNKNOWN";
+      // ADR-0056 K6: imzacı güven listesindeki bir sağlayıcı anahtarı olmalı (doğrulama içinde sabitlenir; değilse UNKNOWN)
+      const v = await verifyStatusListToken(c.token, ref.uri, now, {
+        expectedSignerFingerprints: (fp) => this.isProviderKey(fp) === "YES",
+      });
       // Bit önce okunur (0.5.2): sağlayıcının imzaladığı "iptal" beyanı liste küçük olsa da geçerlidir — iptal edilmiş birim
       // profile uymayan bir listede de iptal görünür (zincirleme iptal sürer). Bit kapalıysa küçük liste "geçerli" demeye yetmez.
       let bit: number | null;

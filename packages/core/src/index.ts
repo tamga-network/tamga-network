@@ -4,3 +4,4 @@ export * from "./b64.js";
 export * from "./sd-structure.js";
 export * from "./pid.js";
 export * from "./disclosure-policy.js";
+export * from "./time.js";

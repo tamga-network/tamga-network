@@ -22,6 +22,7 @@ import {
   type IssuerMetadata,
   type StoredCredential,
 } from "./index.js";
+import { epochMillis } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
@@ -137,7 +138,7 @@ describe("değerlendirme (K3, EDP_02/03/06)", () => {
       await request(certs),
       [registrar.fp],
       { queryId: "diploma", credential: cred(policy ? stored(policy) : undefined) },
-      NOW,
+      epochMillis(NOW),
       [],
       [hr.fp],
     );
@@ -417,7 +418,7 @@ describe("erişim sertifikası çapası: kopyalanmış kayıt sertifikası (0.5.
       o.chain ? { ...req, chainDer: o.chain } : req,
       [registrar.fp],
       { queryId: "diploma", credential: cred(stored(policy)) },
-      NOW,
+      epochMillis(NOW),
       o.anchors ?? [],
       o.registered ?? [],
     );

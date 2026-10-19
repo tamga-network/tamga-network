@@ -7,6 +7,7 @@ import { SignJWT, exportJWK, generateKeyPair, importPKCS8 } from "jose";
 import { X509CertificateGenerator, cryptoProvider } from "@peculiar/x509";
 import { certFingerprintSha256Hex } from "@tamga-network/core";
 import { KA_TYP, readProofs, verifyAttestationProof } from "./key-attestation.js";
+import { epochSeconds } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const now = 1_800_000_000;
@@ -56,17 +57,25 @@ describe("KA key_storage_status politikası (OpenID uyum öz-testi B2)", () => {
     const p = await provider();
     const isProviderKey = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
     const bare = await ka(p, { nonce: "n-1", noStatus: true });
-    expect(await verifyAttestationProof(bare, { nonce: "n-1", now, isProviderKey })).toMatchObject({
+    expect(
+      await verifyAttestationProof(bare, { nonce: "n-1", now: epochSeconds(now), isProviderKey, statusOf: "none" }),
+    ).toMatchObject({
       ok: false,
       reason: expect.stringMatching(/key_storage_status missing/),
     });
-    const opt = await verifyAttestationProof(bare, { nonce: "n-1", now, isProviderKey, keyStorageStatus: "optional" });
+    const opt = await verifyAttestationProof(bare, {
+      nonce: "n-1",
+      now: epochSeconds(now),
+      isProviderKey,
+      keyStorageStatus: "optional",
+      statusOf: "none",
+    });
     expect(opt.ok).toBe(true);
     expect(opt.ok && opt.status).toBeUndefined();
     // optional olsa da giriş varsa iptal denetlenir
     const revoked = await verifyAttestationProof(await ka(p, { nonce: "n-1" }), {
       nonce: "n-1",
-      now,
+      now: epochSeconds(now),
       isProviderKey,
       keyStorageStatus: "optional",
       statusOf: async () => "INVALID",
@@ -79,31 +88,81 @@ describe("attestation proof türü", () => {
   it("sağlayıcı imzalı KA + doğru c_nonce → anahtarlar ve depo seviyesi", async () => {
     const p = await provider();
     const isProviderKey = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
-    const v = await verifyAttestationProof(await ka(p, { nonce: "n-1" }), { nonce: "n-1", now, isProviderKey });
+    const v = await verifyAttestationProof(await ka(p, { nonce: "n-1" }), {
+      nonce: "n-1",
+      now: epochSeconds(now),
+      isProviderKey,
+      statusOf: "none",
+    });
     expect(v.ok && v.keys.length).toBe(2);
     expect(v.ok && v.keyStorage).toBe("secure_enclave");
+    expect(v.ok && v.statusChecked).toBe(false); // ADR-0056: "none" → denetlenmedi
+    const checked = await verifyAttestationProof(await ka(p, { nonce: "n-1" }), {
+      nonce: "n-1",
+      now: epochSeconds(now),
+      isProviderKey,
+      statusOf: async () => "VALID",
+    });
+    expect(checked.ok && checked.statusChecked).toBe(true);
+    // ADR-0056 K3: statusOf verilmemesi (JavaScript çağıran) ret
+    const missing = await verifyAttestationProof(await ka(p, { nonce: "n-1" }), {
+      nonce: "n-1",
+      now: epochSeconds(now),
+      isProviderKey,
+    } as unknown as Parameters<typeof verifyAttestationProof>[1]);
+    expect(missing).toMatchObject({ ok: false, reason: expect.stringMatching(/statusOf missing/) });
   });
   it("nonce yok ya da farklı, sağlayıcı listede değil, yinelenen anahtar → ret", async () => {
     const p = await provider();
     const yes = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
-    expect((await verifyAttestationProof(await ka(p), { nonce: "n-1", now, isProviderKey: yes })).ok).toBe(false);
     expect(
-      (await verifyAttestationProof(await ka(p, { nonce: "x" }), { nonce: "n-1", now, isProviderKey: yes })).ok,
+      (
+        await verifyAttestationProof(await ka(p), {
+          nonce: "n-1",
+          now: epochSeconds(now),
+          isProviderKey: yes,
+          statusOf: "none",
+        })
+      ).ok,
     ).toBe(false);
     expect(
-      (await verifyAttestationProof(await ka(p, { nonce: "n-1" }), { nonce: "n-1", now, isProviderKey: () => "NO" }))
-        .ok,
+      (
+        await verifyAttestationProof(await ka(p, { nonce: "x" }), {
+          nonce: "n-1",
+          now: epochSeconds(now),
+          isProviderKey: yes,
+          statusOf: "none",
+        })
+      ).ok,
+    ).toBe(false);
+    expect(
+      (
+        await verifyAttestationProof(await ka(p, { nonce: "n-1" }), {
+          nonce: "n-1",
+          now: epochSeconds(now),
+          isProviderKey: () => "NO",
+          statusOf: "none",
+        })
+      ).ok,
     ).toBe(false);
     const [k] = await holderKeys(1);
     const dup = await verifyAttestationProof(await ka(p, { nonce: "n-1", keys: [k, k] }), {
       nonce: "n-1",
-      now,
+      now: epochSeconds(now),
       isProviderKey: yes,
+      statusOf: "none",
     });
     expect(dup).toMatchObject({ ok: false, reason: expect.stringMatching(/duplicate/) });
     // güvenlik turu 2026-10-19: beklenen nonce boş/undefined ise (nonce yok KA'sı dahil) ret
     for (const nonce of ["", undefined as unknown as string])
-      expect(await verifyAttestationProof(await ka(p), { nonce, now, isProviderKey: yes })).toMatchObject({
+      expect(
+        await verifyAttestationProof(await ka(p), {
+          nonce,
+          now: epochSeconds(now),
+          isProviderKey: yes,
+          statusOf: "none",
+        }),
+      ).toMatchObject({
         ok: false,
         reason: expect.stringMatching(/expected nonce missing/),
       });
@@ -113,7 +172,9 @@ describe("attestation proof türü", () => {
     const p = await provider();
     const yes = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
     const old = await ka(p, { nonce: "n-1", typ: "keyattestation+jwt" });
-    expect(await verifyAttestationProof(old, { nonce: "n-1", now, isProviderKey: yes })).toMatchObject({ ok: false });
+    expect(
+      await verifyAttestationProof(old, { nonce: "n-1", now: epochSeconds(now), isProviderKey: yes, statusOf: "none" }),
+    ).toMatchObject({ ok: false });
   });
   it("readProofs: tam olarak bir proof türü; attestation tek öğe; jwt 1..max", async () => {
     const p = await provider();

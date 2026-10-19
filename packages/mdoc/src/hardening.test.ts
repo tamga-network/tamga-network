@@ -9,6 +9,7 @@ import { CborTag, decode, encode, type CborValue } from "./cbor.js";
 import { coseKeyFromPoint, coseSign1, coseVerify1, parseCoseSign1, pointFromCoseKey } from "./cose.js";
 import { issueMdoc, verifyIssuerSigned } from "./mdoc.js";
 import { createEngagement, parseEngagement } from "./proximity.js";
+import { epochSeconds } from "@tamga-network/core";
 
 const issue = (namespaces: Record<string, Record<string, CborValue>>) => {
   const issuerSk = p256.utils.randomSecretKey();
@@ -137,12 +138,18 @@ describe("0.5.2: geçerlilik penceresi ve iptal girişi", () => {
 
   it("saat farkı toleransı yalnız başlangıca uygulanır; bitiş uzamaz (SD-JWT exp ile aynı)", () => {
     const doc = base({ validUntil: now + 60 });
-    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: now + 60, clockSkewSec: 300 }).valid).toBe(true);
-    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: now + 61, clockSkewSec: 300 }).reason).toBe(
+    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: epochSeconds(now + 60), clockSkewSec: 300 }).valid).toBe(
+      true,
+    );
+    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: epochSeconds(now + 61), clockSkewSec: 300 }).reason).toBe(
       "document expired",
     );
-    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: now - 120, clockSkewSec: 300 }).valid).toBe(true);
-    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: now - 120 }).reason).toBe("document not yet valid");
+    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: epochSeconds(now - 120), clockSkewSec: 300 }).valid).toBe(
+      true,
+    );
+    expect(verifyIssuerSigned(doc, { issuerPubRaw: pub, now: epochSeconds(now - 120) }).reason).toBe(
+      "document not yet valid",
+    );
   });
 
   it("okunamayan iptal girişi iptal denetimini atlatmaz: belge geçersiz (status entry malformed)", () => {
@@ -196,5 +203,18 @@ describe("0.5.2: geçerlilik penceresi ve iptal girişi", () => {
     // status yoksa iptal denetimi yok (belge iptal listesi taşımıyor) — geçerli
     const none = withMso(ok, (mso) => mso.delete("status"));
     expect(verifyIssuerSigned(none, { issuerPubRaw: pub })).toMatchObject({ valid: true, status: undefined });
+  });
+  it("ADR-0056 K7: cihaz anahtarı olmayan belge geçersiz; saat kayması seçeneği en çok 600 sn", () => {
+    const ok = base({ status: { idx: 3, uri: "https://status.example/1" } });
+    expect(verifyIssuerSigned(ok, { issuerPubRaw: pub }).deviceKeyRaw?.length).toBe(65);
+    const noKeyInfo = withMso(ok, (mso) => mso.delete("deviceKeyInfo"));
+    expect(verifyIssuerSigned(noKeyInfo, { issuerPubRaw: pub })).toEqual({
+      valid: false,
+      reason: "deviceKey missing (MSO deviceKeyInfo)",
+    });
+    const emptyKeyInfo = withMso(ok, (mso) => mso.set("deviceKeyInfo", new Map()));
+    expect(verifyIssuerSigned(emptyKeyInfo, { issuerPubRaw: pub }).valid).toBe(false);
+    expect(() => verifyIssuerSigned(ok, { issuerPubRaw: pub, clockSkewSec: 3600 })).toThrow(RangeError);
+    expect(() => verifyIssuerSigned(ok, { issuerPubRaw: pub, now: Date.now() as never })).toThrow(/seconds/);
   });
 });

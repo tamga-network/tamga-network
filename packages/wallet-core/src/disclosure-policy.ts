@@ -25,6 +25,7 @@ import {
   type DisclosurePolicyType,
   type EmbeddedDisclosurePolicy,
 } from "@tamga-network/core/disclosure-policy";
+import type { EpochMillis } from "@tamga-network/core/time";
 import { anchoredChainCerts, certMatchesRootOfTrust, certSubjectMatches } from "@tamga-network/trust/core";
 import type { IssuerMetadata } from "./oid4vci.js";
 import type { Match, VpRequest } from "./oid4vp.js";
@@ -206,7 +207,7 @@ export function disclosurePolicyContext(
   req: VpRequest,
   registrarKeys: string[],
   match: Pick<Match, "queryId">,
-  now = Date.now(),
+  now?: EpochMillis,
   trustAnchors: TrustAnchor[] = [],
   registeredFingerprints: string[] = [],
 ): DisclosurePolicyContext | null {
@@ -229,7 +230,7 @@ export function checkDisclosurePolicy(
   req: VpRequest,
   registrarKeys: string[],
   match: Pick<Match, "queryId"> & { credential: { disclosurePolicy?: StoredDisclosurePolicy } },
-  now = Date.now(),
+  now?: EpochMillis,
   trustAnchors: TrustAnchor[] = [],
   registeredFingerprints: string[] = [],
 ): DisclosurePolicyResult {

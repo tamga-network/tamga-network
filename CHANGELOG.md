@@ -6,6 +6,50 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 
 ## Unreleased
 
+To be released as `0.7.0` of the `@tamga-network/*` packages (the release itself is done by project management).
+
+### Breaking changes — misuse-resistant defaults (ADR-0056)
+
+A security input that affects the acceptance decision is now required; forgetting it is a rejection, and skipping a check
+deliberately is written explicitly as `"none"`. No compatibility layer (development stage, ADR-0029).
+
+- `sd-jwt`: `verifySdJwtVc` requires `rootCertsDer` (trust anchors, or `"none"` to skip the chain check deliberately); an empty
+  or missing value fails at A3.
+- `issuer`: `createPar` requires `allowedRedirectUris`; a client without registered redirect addresses is rejected
+  (`invalid_redirect_uri`).
+- `trust` / `issuer` / `verifier`: `verifyWalletAttestation`, `verifyKeyAttestation` (`verifyKaProof`,
+  `verifyAttestationProof`) require `statusOf` and `verifyPseudonym` requires `walletStatusOf` (a status check, or `"none"`).
+  New result field `statusChecked`; a successful `PseudonymResult` carries `clientStatus`.
+- `verifier`: `verifyPresentation` requires `rp` (the relying party's registration, `null` for an unregistered party, or
+  `"none"` to skip E3 deliberately); omission is rejected at E3.
+- `issuer`: `verifyDpop` is replaced by `verifyTokenDpop` (token endpoint) and `verifyResourceDpop` (resource endpoints; access
+  token and bound key required).
+- `sd-jwt`: `verifyStatusListToken`, `verifyStatusListCwt` and `verifyStatusListAny` require a fourth argument
+  `{ expectedSignerFingerprints }`; an unexpected signer fails with `D3` before the signature check. The verifier pins the
+  institution's registered status keys; `WalletStatusChecker` pins the wallet provider keys of the trusted list.
+- `mdoc`: `verifyIssuerSigned` returns `valid: false` when the MSO has no device key.
+- `wallet-core`: `respond` requires the `approval` that `checkRp` returns for the same request (`ApprovedRequest`; bound to
+  `client_id`, nonce, response address/origin, signing certificate and intermediary). No approval for impersonation, an inactive
+  registration or an unverified intermediary.
+- `verifier`: `PassRegistry.issue({ verified, … })` takes the ACCEPTED output of `verifyPresentation` (in-process registry); the
+  `presentation` input is removed.
+- `wallet-core`: a request without a registration certificate is rejected (`registration_missing`), remote and in proximity —
+  the warning-until-2028 transition of ADR-0026 K5 is removed; `WRPRC_REQUIRED_FROM` and the time argument of
+  `missingRegistrationPolicy` are removed. Wallet-to-wallet proximity is unchanged.
+- `verifier`: E4 is in `checks_performed` only when an `audit` function was given; otherwise it is in `checks_skipped`.
+- `core`: `EpochSeconds` / `EpochMillis` with `epochSeconds`, `epochMillis`, `nowSeconds`, `nowMillis`, `secondsToMillis`,
+  `millisToSeconds`, `secondsOrNow`, `millisOrNow` (subpath `@tamga-network/core/time` for React Native). Acceptance functions take
+  `now` in seconds; the wallet's registration certificate checks, `checkRp`, the disclosure policy and the verifier's scope helpers
+  in milliseconds. The wrong unit is a compile error and a `RangeError` at run time.
+- `verifier` / `schemas`: a credential without a status entry is rejected at D1 when its type uses a status list
+  (`usesStatusList`).
+- `trust`: rollback protection (TL2) is on by default — loads without `versionMemory` use an in-process memory per network and root
+  fingerprints (`versionMemory: "none"` turns it off; `resetDefaultListVersionMemory` for tests).
+- Clock skew options (`maxSkewSec`, `clockSkewSec`, `maxClockSkewSec`) are capped at `MAX_CLOCK_SKEW_SEC` = 600 s.
+- New: `isYes(output, claim)` — reads a yes/no attribute safely (true only for an ACCEPTED result with the value exactly `true`).
+- Conformance vectors version 6: the status list vectors add an "unexpected signer" negative case; the runner pins the signer.
+
+
 ### Trust list publisher (`apps/trust-publisher`)
 
 - Chain projection (ADR-0051, accepted 2026-10-19; **off by default**, no production chain exists): `npm run trust:chain-submit` writes only the
@@ -52,11 +96,6 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
   `wallet-core` `missingRegistrationPolicy` throws when given seconds instead of milliseconds (with seconds the 2028 rejection
   date was never reached). Reported steps match what ran: `verifySdJwtVc` lists A6 only when a KB-JWT was verified, and
   `verifyIssuedSdJwt` lists B4 only when the catalogue knows the type.
-- Documented the low-level helpers whose checks are opt-in: `verifySdJwtVc` without `rootCertsDer` does no chain/trust check,
-  `verifyStatusListToken` checks the signature against the token's own `x5c` only, `verifyIssuerSigned` covers neither the
-  chain nor device binding, `verifyWalletAttestation` / `verifyKeyAttestation` / `verifyPseudonym` check revocation only when
-  given a status callback, `createPar` should always get `allowedRedirectUris`, and `verifyPresentation` skips E3 when `rp`
-  is `undefined`. Acceptance decisions should use `verifyPresentation`.
 
 ### Reference verifier (`apps/verify`)
 
@@ -74,6 +113,11 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 
 ### Documents
 
+- ADR-0056 (accepted 2026-10-19): misuse-resistant package defaults (above). ADR-0026 K5: a request without a registration
+  certificate is rejected from today (the transition until 2028-08-11 is removed). SPEC-API-0001: E3 needs the RP registration
+  (`"none"` skips), E4 only with an audit sink, D1 rejects a missing status entry for status-list types, D3 pins the signer;
+  SPEC-CRED-0003 signer pinning; SPEC-PROTO-0001 PAR allowlist and the two DPoP functions; SPEC-PROTO-0002 / SPEC-WALLET-0001
+  wallet approval and registration rule. Tamga ARF RB-WP-19 updated.
 - ADR-0052 (accepted 2026-10-19): Besu 25.6.0 removed onchain permissioning and Tessera privacy, so the chain stage uses Besu
   local permissioning — a `permissions_config.toml` (node and account allowlists) on every node, derived from the on-chain
   contract state, identical on all validators and checked for drift; a node's JSON-RPC endpoint is never exposed to the internet

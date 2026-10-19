@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -263,7 +263,9 @@ grant_type=urn:ietf:params:oauth:grant-type:pre-authorized_code
 **[[t:DPoP]] is mandatory (RFC 9449; [[t:HAIP]]; 2026-09-29).** For each issuance flow the wallet generates an ephemeral
 P-256 key and adds a `DPoP` proof (`typ: dpop+jwt`, `jwk`, `jti`, `htm`, `htu`, `iat`) to the `/token` request. The issuer
 verifies the proof, binds the token to the key's thumbprint (`jkt`) and returns `token_type: DPoP`. The proof is single-use
-(`jti`) with a ±5 minute window. The AS metadata declares `dpop_signing_alg_values_supported: ["ES256"]`.
+(`jti`) with a ±5 minute window. The AS metadata declares `dpop_signing_alg_values_supported: ["ES256"]`. In the packages
+the two endpoints have two functions ([[ADR-0056]] K5): the token endpoint `verifyTokenDpop` (returns the `jkt` to bind), the
+resource endpoint `verifyResourceDpop` (the access token and its bound `jkt` are required; `ath` and the key match are always checked).
 
 **There is NO `c_nonce` here** — in 1.0 Final it moved to the Nonce Endpoint (§5).
 
@@ -755,7 +757,7 @@ The codes come from OpenID4VCI 1.0 Final §8.3.1.2; the last two rows are Tamga 
 | **PR10** | The copy↔index mapping stays with the issuer and never leaves. |
 | **PR11** | Before issuance the Wallet Unit Attestation + PoP is verified; the WUA signer is one of the wallet provider keys in the trust list; if `key_storage` does not meet the tenant policy, no credential is issued (§11.1). |
 | **PR12** | In an `out-of-band` offer the `tx_code` is delivered through a **different channel** from the offer; three wrong attempts void the offer; the channel address comes only from the institution's registered data (§3.3). |
-| **PR13** | In the authorization code flow PAR and PKCE (S256) are mandatory; the client identity is the Wallet Unit Attestation (no `client_secret`); `redirect_uri` is bound in the PAR and cannot be changed at `/authorize`; `redirect_uri` must exactly match one of the client's registered addresses (allowlist; otherwise the PAR is rejected with `invalid_request` — RFC 9126 §2.1); the token request must carry the PAR's `redirect_uri` and the same `client_id` (WUA `sub`) (otherwise `invalid_grant`); the wallet takes the token endpoint from the authorization server metadata (`token_endpoint`, RFC 8414); the code is single-use and ≤ 60 s (§11.2). |
+| **PR13** | In the authorization code flow PAR and PKCE (S256) are mandatory; the client identity is the Wallet Unit Attestation (no `client_secret`); `redirect_uri` is bound in the PAR and cannot be changed at `/authorize`; `redirect_uri` must exactly match one of the client's registered addresses (allowlist; otherwise the PAR is rejected with `invalid_request` — RFC 9126 §2.1); the token request must carry the PAR's `redirect_uri` and the same `client_id` (WUA `sub`) (otherwise `invalid_grant`); the wallet takes the token endpoint from the authorization server metadata (`token_endpoint`, RFC 8414); the code is single-use and ≤ 60 s (§11.2). In the packages `createPar` requires the allowlist (`allowedRedirectUris`); a client without a registered address is rejected ([[ADR-0056]] K2). |
 | **PR14** | In wallet-initiated issuance the institution's issuer matches identity only through **presentation of the identity attestation**, passing the full verification pipeline (T0 + A–E); the matching keys (national ID, birth date) are neither stored nor logged; if they do not match, no credential is issued (§11.2, [[ADR-0011]] K3/K6). |
 | **PR15** | The wallet takes the institution directory only from the trust list; it sends no PAR to an issuer that is not in the list (§11.2). |
 | **PR17** | The access token is bound to DPoP (RFC 9449): `/token` issues no token without a valid DPoP proof; `/credential` works only with `Authorization: DPoP` and a previously unseen proof made with the same key for this endpoint and this token (`ath`) (§4, §7.1). |

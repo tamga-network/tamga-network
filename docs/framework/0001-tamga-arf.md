@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -115,7 +115,7 @@ Kurumun ilan ettiği koşullarda cüzdan, kullanıcıya sormadan kopyaları yeni
 
 Bir doğrulayıcı (işveren, web sitesi, kurum) cüzdandan belge ister. İstek imzalıdır ve doğrulayıcının kayıtlı kimliğini taşır.
 Cüzdan doğrulayıcının güven listesindeki kaydını ve kayıt sertifikasını denetler, istenen alanları ve amacı kişiye gösterir,
-kaydın izin verdiğinden fazla alan isteniyorsa ya da istek kayıt sertifikası taşımıyorsa uyarır (RB-WP-19). Kişi PIN ya da biyometriyle onaylar; yanıt şifreli gönderilir ve
+kaydın izin verdiğinden fazla alan isteniyorsa uyarır; istek kayıt sertifikası taşımıyorsa reddeder (RB-WP-19). Kişi PIN ya da biyometriyle onaylar; yanıt şifreli gönderilir ve
 yalnız onaylanan alanları içerir.
 
 Doğrulayıcı kendi doğrulama yazılımını çalıştırabilir ya da Tamga Verify'ı (barındırılan doğrulayıcı) kullanabilir. Gösterme
@@ -176,6 +176,7 @@ gösterme olağan yolla yapılır.
 | AB'nin eski güven listesi biçimi (ETSI TS 119 612, XML) ve cüzdanda dış listeler | Yayında (paketler npm'de 0.5.0'dan beri) |
 | Attestation Revocation List (tanımlayıcı listesi) — doğrulayıcı ve cüzdan tarafı | Yayında (paketler npm'de 0.5.0'dan beri); Tamga belge verenleri Status List kullanır |
 | Kimlik belgesinde askı yok, mdoc için CWT iptal listesi; kayıt sertifikası olmayan istekte uyarı; yakın alanda okuyucu doğrulaması | Yayında (paketler npm'de 0.6.0'dan beri) |
+| Paket API'lerinde güvenli varsayılanlar; kayıt sertifikası olmayan istekte ret ([[ADR-0056]]) | Kodda; paketler 0.7.0 ile npm'e |
 | Cüzdan sağlayıcısı kaydı | Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) gerçek ve sandbox güven listelerinde `ACTIVE` |
 
 ---

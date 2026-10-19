@@ -25,6 +25,9 @@ import {
   TL_TYP,
   certFingerprintSha256Hex,
   MemoryListVersionMemory,
+  loadTrustSetWith,
+  resetDefaultListVersionMemory,
+  type JwsVerifier,
   type TrustSetInput,
 } from "./index.js";
 
@@ -392,8 +395,34 @@ describe("TrustSource(list) taahhüt testleri", () => {
     const oldTl = await makeSet({ lotlVersion: 5, tlVersion: 1 }); // lotl sürüm boşluğu (zincir doğrulanamaz) kabul; tl eski
     await expect(oldTl.load(undefined, { versionMemory: mem })).rejects.toThrow(/TL2: tl-TR.*rollback/);
     expect(mem.get("lotl")?.version).toBe(3); // başarısız yükleme belleği ilerletmez
-    // bellek verilmezse denetim yok (önceki davranış)
+    // başka kökle imzalı set (farklı imzacı) varsayılan bellekte ayrı tutulur
     await expect((await makeSet()).load()).resolves.toBeTruthy();
+  });
+  it('TL2 varsayılan olarak açık (ADR-0056): bellek verilmeyen yüklemede aynı köke eski sürüm DURUR; "none" kapatır', async () => {
+    resetDefaultListVersionMemory();
+    // imza bu testin konusu değil: yükü okuyan doğrulayıcı; kök parmak izi iki sette aynı (aynı yayıncı)
+    const readOnly: JwsVerifier = async <T>(jws: string) => ({
+      payload: JSON.parse(Buffer.from(jws.split(".")[1], "base64url").toString("utf8")) as T,
+      signerFingerprint: "stub",
+      raw: jws,
+    });
+    const input = (s: Awaited<ReturnType<typeof makeSet>>) => ({
+      lotlJws: s.lotlJws,
+      nationalListJws: { TR: s.tlJws },
+      anchorsJsonl: "",
+      skipAnchors: true,
+      states: ["TR"],
+      rootFingerprints: ["adr-0056-default-memory"],
+      now: s.now,
+    });
+    const v2 = await makeSet({ lotlVersion: 2, tlVersion: 2 });
+    const v1 = await makeSet();
+    await loadTrustSetWith(input(v2), readOnly);
+    await expect(loadTrustSetWith(input(v1), readOnly)).rejects.toThrow(/TL2: lotl.*rollback/);
+    await expect(loadTrustSetWith({ ...input(v1), versionMemory: "none" }, readOnly)).resolves.toBeTruthy();
+    // süreç belleği sıfırlanınca (yeniden başlatma) koruma da sıfırlanır: oturumlar arası koruma için kalıcı bellek verilir
+    resetDefaultListVersionMemory();
+    await expect(loadTrustSetWith(input(v1), readOnly)).resolves.toBeTruthy();
   });
   it("tazelik: bayat kaynakta kayıt okuyucuları da cevap vermez (null/boş)", async () => {
     const c = await makeSet({ staleLotl: true });

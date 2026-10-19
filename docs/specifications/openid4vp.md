@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -494,15 +494,17 @@ sunum için ikinci bir DC API isteği verir (politika tek `mso_mdoc` belgesi ist
   `hpkeSeal` / `hpkeOpen`), `@tamga-network/verifier` (`createMdocDcApiRequest`, `openMdocDcApiResponse`,
   `verifyPresentation({ sessionTranscript })`), `@tamga-network/verifier/web` (`chooseDcApiRequests`, `dcResponseTarget`).
 
-## 7.5 Kayıt sertifikası: sertifikasız istek ve yakın alan ([[ADR-0026]] K5, 2026-10-13)
+## 7.5 Kayıt sertifikası: sertifikasız istek ve yakın alan ([[ADR-0026]] K5; [[ADR-0056]] K10)
 
-- **Sertifikasız istek:** `checkRegistrationCerts` sonucunda `flags: ["registration_missing"]` ve `defaultChoice: "decline"` —
-  onay ekranı ayrı bir uyarı gösterir ve varsayılan seçim "Paylaşma"dır; kişi yine de paylaşabilir. `WRPRC_REQUIRED_FROM`
-  (2028-08-11, kodda sabit) sonrasında aynı istek `valid: false`, `reason: "registration_missing"`: reddedilir.
+- **Sertifikasız istek ([[ADR-0056]] K10, 2026-10-19):** `checkRegistrationCerts` sonucu `valid: false`,
+  `reason: "registration_missing"` — cüzdan kişiye sormadan reddeder. 2026-10-13'teki "uyarı + Paylaşma, 2028-08-11'den
+  sonra ret" geçişi kaldırıldı.
+- **Onay ([[ADR-0056]] K8):** cüzdan çekirdeğinin `respond`'u yalnız `checkRp`'nin bu isteğe bağlı onayıyla (`approval`) çalışır;
+  taklit, ACTIVE olmayan kayıt ya da doğrulanmamış aracı istekte onay çıkmaz.
 - **Yakın alan:** okuyucu kayıt sertifikasını CBOR biçiminde (`rc-wrp+cwt`, ETSI TS 119 475 §5.2.3) ItemsRequest'in
   `requestInfo.euWrprc` alanında gönderir (ISO/IEC 18013-5-REQ-04…07) ve isteği okuyucu sertifikasıyla imzalar (`readerAuth`).
   Cüzdan uzaktan akıştaki 1–4'ü uygular; 3'teki bağ `readerAuth` sertifikasındaki `organizationIdentifier` ile kurulur
-  (`checkProximityRegistration`). Geçersiz sertifikada kişiye sorulmadan ret; sertifikasız istekte aynı uyarı ve 2028-08-11 kuralı.
+  (`checkProximityRegistration`). Geçersiz sertifikada ve sertifikasız istekte kişiye sorulmadan ret.
   Kayıt sertifikası herkese açık olduğundan okuyucu sertifikasının kendisi de güvene bağlanmalıdır: zinciri imzalı listenin bir
   `root_cas` sertifikasına kadar doğrulanır ya da yaprağı o tarafın kaydındaki parmak izidir (`readerTrust`, zorunlu). Bağlanmayan
   okuyucu (ör. kurum kimliği kopyalanmış kendinden imzalı sertifika) `untrusted_reader_certificate` ile geçersizdir. Cüzdandan

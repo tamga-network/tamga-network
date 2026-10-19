@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -473,17 +473,18 @@ gives a second DC API request for the same presentation (when the policy asks fo
   `hpkeSeal` / `hpkeOpen`), `@tamga-network/verifier` (`createMdocDcApiRequest`, `openMdocDcApiResponse`,
   `verifyPresentation({ sessionTranscript })`), `@tamga-network/verifier/web` (`chooseDcApiRequests`, `dcResponseTarget`).
 
-## 7.5 Registration certificate: requests without one, and proximity ([[ADR-0026]] K5, 2026-10-13)
+## 7.5 Registration certificate: requests without one, and proximity ([[ADR-0026]] K5; [[ADR-0056]] K10)
 
-- **Request without a certificate:** `checkRegistrationCerts` returns `flags: ["registration_missing"]` and
-  `defaultChoice: "decline"` — the consent screen shows a separate warning and the default choice is "Don't share"; the person
-  may still share. After `WRPRC_REQUIRED_FROM` (2028-08-11, fixed in the code) the same request is `valid: false`,
-  `reason: "registration_missing"`: it is rejected.
+- **Request without a certificate ([[ADR-0056]] K10, 2026-10-19):** `checkRegistrationCerts` returns `valid: false`,
+  `reason: "registration_missing"` — the wallet rejects without asking the person. The "warning + Don't share, rejection after
+  2028-08-11" transition of 2026-10-13 is removed.
+- **Approval ([[ADR-0056]] K8):** the wallet core's `respond` works only with `checkRp`'s approval bound to this request
+  (`approval`); impersonation, an inactive registration or an unverified intermediary produce no approval.
 - **Proximity:** the reader sends the registration certificate in CBOR form (`rc-wrp+cwt`, ETSI TS 119 475 §5.2.3) in the
   ItemsRequest's `requestInfo.euWrprc` (ISO/IEC 18013-5-REQ-04…07) and signs the request with its reader certificate
   (`readerAuth`). The wallet applies steps 1–4 of the remote flow; the binding in step 3 is made with the `organizationIdentifier`
-  in the `readerAuth` certificate (`checkProximityRegistration`). An invalid certificate is refused without asking the person; a
-  request without one gets the same warning and the 2028-08-11 rule. Because registration certificates are public, the reader
+  in the `readerAuth` certificate (`checkProximityRegistration`). An invalid certificate and a request without one are refused
+  without asking the person. Because registration certificates are public, the reader
   certificate itself must be anchored: its chain verifies up to a `root_cas` certificate of the signed list, or its leaf is the
   fingerprint in that party's record (`readerTrust`, required). A reader that is not anchored (e.g. a self-signed certificate
   copying an organisation identifier) is invalid with `untrusted_reader_certificate`. Wallet-to-wallet has no reader

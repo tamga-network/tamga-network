@@ -26,6 +26,13 @@ source.isCredentialAcceptable(issuerId, iat);    // "YES" | "NO" | "UNKNOWN" —
 A complete, tested version: [`examples/04-check-institution`](https://github.com/tamga-network/tamga-network/tree/main/examples/04-check-institution).
 
 
+## Secure defaults (0.7.0)
+
+- `verifyWalletAttestation` requires `statusOf` (or `"none"` to skip the revocation check deliberately); results carry
+  `statusChecked`.
+- Rollback protection is on by default: a load without `versionMemory` uses an in-process memory per network and root fingerprints;
+  pass a persistent memory to keep it across restarts, or `"none"` to turn it off.
+
 ## Status
 
 Published on npm as the `0.6.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API

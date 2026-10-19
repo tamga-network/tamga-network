@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -398,8 +398,8 @@ uyarı, varsayılan paylaşmamak.
 
 ## 5.7 AB hizalaması (kod 0.6.0)
 
-- **Kayıt sertifikası olmayan istek ([[ADR-0026]] K5):** onay ekranında ayrı uyarı, varsayılan "Paylaşma"; 2028-08-11'den sonra
-  ret (`registration_missing`; ayrıntı [[SPEC-PROTO-0002]] §7.5). Yakın alanda kayıt sertifikası `requestInfo.euWrprc` ile gelir
+- **Kayıt sertifikası olmayan istek ([[ADR-0026]] K5; [[ADR-0056]] K10):** kişiye sorulmadan ret (`registration_missing`;
+  ayrıntı [[SPEC-PROTO-0002]] §7.5); cüzdandan cüzdana yakın alan hariç. Yakın alanda kayıt sertifikası `requestInfo.euWrprc` ile gelir
   ve uzaktan akıştaki gibi doğrulanır; geçersizse cüzdan kişiye sormadan reddeder (`presentProximity` `registrarKeys`).
 - **Cüzdandan cüzdana sunum teklifi (AB TS9 v1.1):** gösteren, izin listesindeki ve belgesinde bulunan alanları QR'daki
   DeviceEngagement'a (`-1`) teklif olarak koyar. Teklif dışı ya da saklama niyetli istekte hiçbir alan göndermeden

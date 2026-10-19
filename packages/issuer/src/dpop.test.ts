@@ -2,10 +2,11 @@
 import { describe, it, expect } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { SignJWT, exportJWK, generateKeyPair } from "jose";
-import { DpopReplayCache, parseAuthorization, verifyDpop } from "./dpop.js";
+import { DpopReplayCache, parseAuthorization, verifyResourceDpop, verifyTokenDpop } from "./dpop.js";
+import { epochSeconds } from "@tamga-network/core";
 
 const HTU = "https://id.tamga.network/credential";
-const now = 1_800_000_000;
+const now = epochSeconds(1_800_000_000);
 
 async function key() {
   const { privateKey, publicKey } = await generateKeyPair("ES256");
@@ -28,45 +29,65 @@ async function proof(
 const ath = (t: string) => createHash("sha256").update(t).digest("base64url");
 
 describe("DPoP (RFC 9449)", () => {
-  it('güvenlik turu 2026-10-19: belirtece bağlı anahtar boşsa (jkt: "") kanıt kabul edilmez', async () => {
+  it("ADR-0056 K5: kaynak ucunda belirteç ve bağlı anahtar zorunlu (boş/eksik → ret)", async () => {
     const k = await key();
-    const r = await verifyDpop(await proof(k), { htm: "POST", htu: HTU, now, replay: new DpopReplayCache(), jkt: "" });
+    const replay = new DpopReplayCache();
+    const p = await proof(k, { ath: ath("t") });
+    const r = await verifyResourceDpop(p, { htm: "POST", htu: HTU, now, replay, accessToken: "t", jkt: "" });
     expect(r).toMatchObject({ ok: false, reason: expect.stringMatching(/no bound DPoP key/) });
+    const noTok = await verifyResourceDpop(p, { htm: "POST", htu: HTU, now, replay, accessToken: "", jkt: "x" });
+    expect(noTok).toMatchObject({ ok: false, reason: expect.stringMatching(/access token missing/) });
+    // JavaScript çağıran: alanları hiç vermemek de ret
+    const none = await verifyResourceDpop(p, { htm: "POST", htu: HTU, now, replay } as unknown as Parameters<
+      typeof verifyResourceDpop
+    >[1]);
+    expect(none.ok).toBe(false);
+  });
+  it("ADR-0056 K12: saniye yerine milisaniye verilirse hata", async () => {
+    const k = await key();
+    await expect(
+      verifyTokenDpop(await proof(k), {
+        htm: "POST",
+        htu: HTU,
+        now: Date.now() as never,
+        replay: new DpopReplayCache(),
+      }),
+    ).rejects.toThrow(/seconds/);
   });
   it("geçerli kanıt kabul edilir, aynı kanıt ikinci kez reddedilir", async () => {
     const k = await key();
     const replay = new DpopReplayCache();
     const p = await proof(k);
-    const a = await verifyDpop(p, { htm: "POST", htu: HTU, now, replay });
+    const a = await verifyTokenDpop(p, { htm: "POST", htu: HTU, now, replay });
     expect(a.ok).toBe(true);
-    const b = await verifyDpop(p, { htm: "POST", htu: HTU, now, replay });
+    const b = await verifyTokenDpop(p, { htm: "POST", htu: HTU, now, replay });
     expect(b).toMatchObject({ ok: false, reason: expect.stringMatching(/replayed/) });
   });
   it("yöntem, adres, zaman ve tür bağlıdır", async () => {
     const k = await key();
     const r = new DpopReplayCache();
     const base = { htm: "POST", htu: HTU, now, replay: r };
-    expect((await verifyDpop(await proof(k, { htm: "GET" }), base)).ok).toBe(false);
-    expect((await verifyDpop(await proof(k, { htu: "https://evil.example/credential" }), base)).ok).toBe(false);
-    expect((await verifyDpop(await proof(k, { iat: now - 3600 }), base)).ok).toBe(false);
-    expect((await verifyDpop(await proof(k, { typ: "JWT" }), base)).ok).toBe(false);
-    expect((await verifyDpop(undefined, base)).ok).toBe(false);
+    expect((await verifyTokenDpop(await proof(k, { htm: "GET" }), base)).ok).toBe(false);
+    expect((await verifyTokenDpop(await proof(k, { htu: "https://evil.example/credential" }), base)).ok).toBe(false);
+    expect((await verifyTokenDpop(await proof(k, { iat: now - 3600 }), base)).ok).toBe(false);
+    expect((await verifyTokenDpop(await proof(k, { typ: "JWT" }), base)).ok).toBe(false);
+    expect((await verifyTokenDpop(undefined, base)).ok).toBe(false);
     // sorgu dizesi adres karşılaştırmasına girmez
-    expect((await verifyDpop(await proof(k, { htu: HTU + "?x=1" }), base)).ok).toBe(true);
+    expect((await verifyTokenDpop(await proof(k, { htu: HTU + "?x=1" }), base)).ok).toBe(true);
   });
   it("credential ucu: belirteç özeti (ath) ve belirtece bağlı anahtar aranır", async () => {
     const k = await key();
     const other = await key();
     const r = new DpopReplayCache();
     const tok = "access-token-123";
-    const bound = await verifyDpop(await proof(k), { htm: "POST", htu: HTU, now, replay: r });
+    const bound = await verifyTokenDpop(await proof(k), { htm: "POST", htu: HTU, now, replay: r });
     if (!bound.ok) throw new Error("setup");
     const o = { htm: "POST", htu: HTU, now, replay: r, accessToken: tok, jkt: bound.jkt };
-    expect((await verifyDpop(await proof(k, { ath: ath(tok) }), o)).ok).toBe(true);
-    expect((await verifyDpop(await proof(k), o)).ok).toBe(false); // ath yok
-    expect((await verifyDpop(await proof(k, { ath: ath("başka") }), o)).ok).toBe(false);
+    expect((await verifyResourceDpop(await proof(k, { ath: ath(tok) }), o)).ok).toBe(true);
+    expect((await verifyResourceDpop(await proof(k), o)).ok).toBe(false); // ath yok
+    expect((await verifyResourceDpop(await proof(k, { ath: ath("başka") }), o)).ok).toBe(false);
     // çalınan belirteç başka anahtarla kullanılamaz
-    expect(await verifyDpop(await proof(other, { ath: ath(tok) }), o)).toMatchObject({
+    expect(await verifyResourceDpop(await proof(other, { ath: ath(tok) }), o)).toMatchObject({
       ok: false,
       reason: expect.stringMatching(/not the key bound/),
     });

@@ -11,6 +11,7 @@ import { loadTrustSourceFromDir, pemToDer, x509HashClientId, type ListTrustSourc
 import { SoftwareKeyProvider, MemoryKeyStore, presentSdJwt } from "@tamga-network/wallet-core";
 import {
   verifyPresentation,
+  isYes,
   dcqlFromPolicy,
   policyScopeViolations,
   registrationScopesFor,
@@ -22,6 +23,7 @@ import {
   type Policy,
 } from "./index.js";
 import { encryptJwe, utf8 } from "@tamga-network/wallet-core";
+import { epochSeconds } from "@tamga-network/core";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
@@ -93,7 +95,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     rootDer = [pemToDer(r.rootCertPem!)];
   });
 
-  async function issue(idx: number, now: number) {
+  async function issue(idx: number, now: number, noStatus = false) {
     const signer = await pemIssuerSigner(
       readFileSync(resolve(PKI, "issuer-bilgi.pkcs8.pem"), "utf8"),
       readFileSync(resolve(PKI, "issuer-bilgi.cert.pem"), "utf8"),
@@ -107,7 +109,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       vctIntegrity: integ,
       iat: now,
       cnfJwk: cnf as never,
-      status: { status_list: { idx, uri: STATUS_URI } },
+      ...(noStatus ? {} : { status: { status_list: { idx, uri: STATUS_URI } } }),
       claims,
       sdPolicy: { grade: "always", thesis_title: "always" },
     });
@@ -144,6 +146,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       iat: now,
     });
     const r = await verifyPresentation({
+      rp: "none",
       presentation: pres,
       aud: AUD,
       nonce: "n-d3",
@@ -152,7 +155,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       trust,
       statusCache: cache,
       rootCertsDer: rootDer,
-      now,
+      now: epochSeconds(now),
     });
     expect(r.result.outcome).toBe("REJECTED");
     expect(r.result.failed_step).toBe("D3");
@@ -181,6 +184,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       iat: now,
     });
     const r = await verifyPresentation({
+      rp: "none",
       presentation: pres,
       aud: AUD,
       nonce: "n-c13",
@@ -189,11 +193,38 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       trust,
       statusCache: cache,
       rootCertsDer: rootDer,
-      now,
+      now: epochSeconds(now),
     });
     expect(r.result.outcome).toBe("REJECTED");
     expect(r.result.failed_step).toBe("A2");
     expect(r.result.failed_reason).toMatch(/Tamga credential types/);
+  });
+  it("ADR-0056: türü iptal listesi kullanan belgede iptal girişi yoksa D1 RED (iptal denetimi sessizce atlanmaz)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { combined, ref } = await issue(21, now, true);
+    const pres = await presentSdJwt({
+      combined,
+      discloseClaims: ["is_graduate", "eqf_level", "qualification_title", "awarding_body_name"],
+      keys,
+      keyRef: ref,
+      aud: AUD,
+      nonce: "n-nostatus",
+      iat: now,
+    });
+    const out = await verifyPresentation({
+      presentation: pres,
+      aud: AUD,
+      nonce: "n-nostatus",
+      policy,
+      policyCredentialId: "diploma",
+      trust,
+      statusCache: new MemoryStatusCache(),
+      rootCertsDer: rootDer,
+      rp: trust.relyingParty(AUD),
+      now: epochSeconds(now),
+    });
+    expect(out.result).toMatchObject({ outcome: "REJECTED", failed_step: "D1" });
+    expect(out.result.failed_reason).toMatch(/no status entry/);
   });
   it("ACCEPTED: tüm adımlar; claim değerleri sonuç nesnesinde yok (AP3); idx yok (AP4)", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -209,7 +240,8 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       nonce: "n1",
       iat: now,
     });
-    const out = await verifyPresentation({
+    const audited: string[] = [];
+    const input = {
       presentation: pres,
       aud: AUD,
       nonce: "n1",
@@ -219,9 +251,27 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: cache,
       rootCertsDer: rootDer,
       rp: trust.relyingParty(AUD),
-      now,
-    });
+      now: epochSeconds(now),
+    };
+    const out = await verifyPresentation({ ...input, audit: (e) => audited.push(e.outcome) });
     expect(out.result.outcome).toBe("ACCEPTED");
+    expect(audited).toEqual(["ACCEPTED"]);
+    // ADR-0056 K11: denetim kaydı yeri yoksa E4 yapılmış sayılmaz (atlandı)
+    const noAudit = await verifyPresentation(input);
+    expect(noAudit.result.outcome).toBe("ACCEPTED");
+    expect(noAudit.result.checks_performed).not.toContain("E4");
+    expect(noAudit.result.checks_skipped).toContain("E4");
+    // ADR-0056: evet/hayır alanının güvenli okunuşu — yalnız kabulde ve tam `true`
+    expect(isYes(out, "is_graduate")).toBe(true);
+    expect(isYes(out, "eqf_level")).toBe(false); // 6, true değil
+    expect(isYes(out, "grade")).toBe(false); // açıklanmadı
+    expect(isYes({ ...out, result: { ...out.result, outcome: "REJECTED" } }, "is_graduate")).toBe(false);
+    // ADR-0056 K4: rp verilmezse (JavaScript çağıran) E3'te ret; "none" ile E3 atlanır
+    const noRp = await verifyPresentation({ ...input, rp: undefined as never });
+    expect(noRp.result).toMatchObject({ outcome: "REJECTED", failed_step: "E3" });
+    const optOut = await verifyPresentation({ ...input, rp: "none" });
+    expect(optOut.result.outcome).toBe("ACCEPTED");
+    expect(optOut.result.checks_skipped).toContain("E3");
     expect(out.result.failed_step).toBeNull();
     expect(out.result.checks_performed).toEqual(
       expect.arrayContaining([
@@ -278,7 +328,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: cacheRevoked,
       rootCertsDer: rootDer,
       rp,
-      now,
+      now: epochSeconds(now),
     });
     expect(r1.result.outcome).toBe("REJECTED");
     expect(r1.result.failed_step).toBe("D6");
@@ -295,7 +345,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: cacheRevoked,
       rootCertsDer: [],
       rp,
-      now,
+      now: epochSeconds(now),
     });
     expect(r0.result.outcome).toBe("INDETERMINATE");
     expect(r0.result.failed_step).toBe("A3");
@@ -320,7 +370,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: cache,
       rootCertsDer: rootDer,
       rp,
-      now,
+      now: epochSeconds(now),
     });
     expect(r2.result.failed_step).toBe("E3");
     const strict = { ...policy, credentials: [{ ...policy.credentials[0], constraints: { eqf_level: { min: 7 } } }] };
@@ -334,7 +384,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: cache,
       rootCertsDer: rootDer,
       rp,
-      now,
+      now: epochSeconds(now),
     });
     expect(r3.result.failed_step).toBe("E2");
     const r4 = await verifyPresentation({
@@ -347,7 +397,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: cache,
       rootCertsDer: rootDer,
       rp,
-      now,
+      now: epochSeconds(now),
     });
     expect(r4.result.failed_step).toBe("A6");
   });
@@ -374,7 +424,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: new MemoryStatusCache(),
       rootCertsDer: rootDer,
       rp: trust.relyingParty(AUD),
-      now,
+      now: epochSeconds(now),
     });
     expect(r1.result.outcome).toBe("INDETERMINATE");
     expect(r1.result.indeterminate_reason).toBe("STATUS_UNREACHABLE");
@@ -391,7 +441,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: stale,
       rootCertsDer: rootDer,
       rp: trust.relyingParty(AUD),
-      now,
+      now: epochSeconds(now),
     });
     expect(r2.result.indeterminate_reason).toBe("STATUS_STALE");
     // exp aşımı (verifyStatusListToken "D4:" fırlatır) da INDETERMINATE/D4 olmalı — REJECTED/D3 değil
@@ -407,7 +457,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: veryStale,
       rootCertsDer: rootDer,
       rp: trust.relyingParty(AUD),
-      now,
+      now: epochSeconds(now),
     });
     expect(r3.result.outcome).toBe("INDETERMINATE");
     expect(r3.result.failed_step).toBe("D4");
@@ -439,7 +489,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: c,
       rootCertsDer: rootDer,
       rp: trust.relyingParty(AUD),
-      now,
+      now: epochSeconds(now),
     };
     const r = await verifyPresentation(args);
     expect(r.result.outcome).toBe("ACCEPTED");
@@ -501,7 +551,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
         statusCache: c,
         rootCertsDer: rootDer,
         rp: trust.relyingParty(AUD),
-        now,
+        now: epochSeconds(now),
       });
     };
     // token çapadan çok eski (900 sn önce):
@@ -538,7 +588,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       statusCache: c2,
       rootCertsDer: rootDer,
       rp: trust.relyingParty(AUD),
-      now,
+      now: epochSeconds(now),
     });
     expect(cross.result.outcome).not.toBe("REJECTED");
     // bozuk çapa tarihi → kontrol atlanmaz, INDETERMINATE (fail-closed)
@@ -606,7 +656,12 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       audit: (e: { outcome: string }) => audits.push(e.outcome),
     };
     // bozuk politika nesnesi (tazelik sınırları yok): T0 DOĞRULANAMADI (2026-10-19: istisna yerine açık neden)
-    const out = await verifyPresentation({ ...base, trust, policy: { ...policy, freshness: undefined as never } });
+    const out = await verifyPresentation({
+      rp: "none",
+      ...base,
+      trust,
+      policy: { ...policy, freshness: undefined as never },
+    });
     expect(out.result.outcome).toBe("INDETERMINATE");
     expect(out.result.failed_step).toBe("T0");
     expect(out.result.failed_reason).toMatch(/policy freshness limits missing or invalid/);
@@ -617,7 +672,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
         throw new Error("gizli-12345");
       },
     } as unknown as typeof trust;
-    const out2 = await verifyPresentation({ ...base, trust: thrower, policy });
+    const out2 = await verifyPresentation({ rp: "none", ...base, trust: thrower, policy });
     expect(out2.result.outcome).toBe("INDETERMINATE");
     expect(out2.result.failed_step).toBe("T0");
     expect(JSON.stringify(out2.result)).not.toContain("gizli-12345");

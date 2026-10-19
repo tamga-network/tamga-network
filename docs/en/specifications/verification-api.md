@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -98,9 +98,9 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 
 | Code | Step |
 |---|---|
-| `D1` | Read `status.status_list` (`idx`, `uri`). A ZK presentation (`mso_mdoc_zk`) carries no index: if the type bound by the proof is the short-lived ZK copy (`urn:tamga:id:ShortLivedIdentityAttestation:1`, type rule ≤ 24 hours, no revocation list — [[ADR-0044]] K5) the D steps do not apply and `status.value = NOT_APPLICABLE` (reason: short validity); an unmarked ZK presentation follows the rule below |
+| `D1` | Read `status.status_list` (`idx`, `uri`). A ZK presentation (`mso_mdoc_zk`) carries no index: if the type bound by the proof is the short-lived ZK copy (`urn:tamga:id:ShortLivedIdentityAttestation:1`, type rule ≤ 24 hours, no revocation list — [[ADR-0044]] K5) the D steps do not apply and `status.value = NOT_APPLICABLE` (reason: short validity); an unmarked ZK presentation follows the rule below. A non-ZK credential without `status`: if the type schema says `uses_status_list: true` it is REJECTED (the revocation check is never skipped silently — [[ADR-0056]] K13), otherwise `NOT_APPLICABLE` |
 | `D2` | Take the Status List Token **from the prefetch cache** |
-| `D3` | Token signature; `sub == uri`; `iss` in the same chain of trust |
+| `D3` | Token signature; `sub == uri`; `iss` in the same chain of trust. Before the signature check the signer is pinned to the institution's ACTIVE status keys in the trusted list (`expectedSignerFingerprints` — [[ADR-0056]] K6); without a registered key `INDETERMINATE` |
 | `D4` | Freshness: `exp` not passed, token age (`now − iat`) within the policy's `max_status_token_age_sec` |
 | `D5` | Registry anchor: `contentHash` matches, `version` has not gone back (if the cache was fetched before the anchor, `INDETERMINATE`/`STATUS_STALE`; if after, `REJECTED`) |
 | `D6` | Read `idx` with `bits=2`; anything other than `0x00` → REJECT |
@@ -111,8 +111,13 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 |---|---|
 | `E1` | Assurance threshold (e.g. `category=EDUCATION && assurance>=I2`) |
 | `E2` | Have all requested claims been disclosed |
-| `E3` | No RP scope overrun ([[SPEC-PROTO-0002]] §6) |
-| `E4` | Audit record written |
+| `E3` | No RP scope overrun ([[SPEC-PROTO-0002]] §6). The RP registration is a required input: omission is REJECTED, `null` (unregistered RP) is REJECTED; `"none"` skips the step deliberately and E3 appears in `checks_skipped` ([[ADR-0056]] K4) |
+| `E4` | Audit record written — in `checks_performed` only when an audit sink (`audit`) was given and the record was written; otherwise in `checks_skipped` ([[ADR-0056]] K11) |
+
+**Reading a yes/no attribute:** `isYes(output, claim)` returns `true` only when the outcome is `ACCEPTED` and the disclosed value
+is exactly `true` (e.g. `age_over_18`, plain or ZK presentation); a rejection, an indeterminate result, a missing value or another
+value such as `"true"`/`1` is `false` ([[ADR-0056]]). An access pass is issued only from an `ACCEPTED` output of this process
+(`PassRegistry.issue({ verified })` — K9).
 
 ## 1.1 C1/C2 are time-bound
 
@@ -143,7 +148,8 @@ Rule: `issuerId = keccak256(stateCode, SHA-256(x5c[0] DER))` — [[SPEC-ID-0002]
 
 The steps are run **in order**. Execution stops at the first failure and that code is returned as `failed_step`.
 
-**Exception:** `E4` always runs — a rejected verification is logged as well.
+**Exception:** `E4` always runs — a rejected verification is logged as well (in a verifier with an audit sink; without one E4 is
+reported as skipped — [[ADR-0056]] K11).
 
 ## 1.4 Code stability
 
@@ -535,7 +541,7 @@ gate verification (`/terminal/verify`); the client address is not stored or logg
 | **AP11** | `C1` and `C2` take the credential's `iat`; issuance-time queries are not used in verification. |
 | **AP12** | `issuerId` is derived from the `x5c` leaf fingerprint, not from the `iss` claim. |
 | **AP13** | Pass token verification ([[ADR-0012]] B): signature with the copy key in `pass_grant`, `aud` = the terminal's RP client_id, lifetime (`exp` − `iat`) ≤ 60 s, `iat` ≤ now + 30 s, `exp` ≤ now + 60 s + 30 s (clock-skew tolerance), a `jti` replay list (shared online within the terminal group); no personal data is extracted from the token or logged. |
-| **AP9** | `E4` (audit record) also runs for rejected verifications. |
+| **AP9** | `E4` (audit record) also runs for rejected verifications (in a verifier with an audit sink; always in the hosted verifier). |
 | **AP10** | `tx_code` is stored nowhere outside the response. |
 
 ---

@@ -34,6 +34,7 @@ import {
   verifyIssuerSigned,
   type PresentationOffer,
 } from "@tamga-network/mdoc";
+import { epochSeconds } from "@tamga-network/core/time";
 import { b64Decode, b64u, b64uToUtf8 } from "./b64.js";
 import { mdocElementValues, mdocIssuerKeys } from "./mdoc.js";
 import { certFingerprintHex, computeIssuerId, computeSchemaId, p256PointFromCertDer } from "./sdjwt.js";
@@ -386,7 +387,7 @@ export async function verifyW2wResponse(
     }
     const v = verifyIssuerSigned(parsed.issuerSigned, {
       issuerPubRaw: issuerKey,
-      now,
+      now: epochSeconds(now),
       expectedDocType: docType,
       clockSkewSec: 120,
     });

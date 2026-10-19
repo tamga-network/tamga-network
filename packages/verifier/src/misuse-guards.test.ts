@@ -49,7 +49,7 @@ describe("yanlış kullanım korumaları", () => {
       { aud: "x509_hash:a", nonce: "", rpKey: "site.example" },
       { aud: "x509_hash:a", nonce: "n", rpKey: "" },
     ])
-      expect(await verifyPseudonym({ ...p, token: "x.y.z", trust })).toMatchObject({
+      expect(await verifyPseudonym({ walletStatusOf: "none", ...p, token: "x.y.z", trust })).toMatchObject({
         ok: false,
         reason: expect.stringMatching(/expected/),
       });

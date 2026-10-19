@@ -12,11 +12,11 @@ import { SignJWT, exportJWK, generateKeyPair, type JWK } from "jose";
 import {
   checkIssuerRegistration,
   checkRegistrationCerts,
-  WRPRC_REQUIRED_FROM,
   verifyRequestObject,
   type Match,
   type StoredCredential,
 } from "./index.js";
+import { epochMillis } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
@@ -111,19 +111,9 @@ const match = (requested: string[]): Match => ({
 });
 
 describe("kayıt sertifikası doğrulaması (ADR-0026)", () => {
-  it("yoksa (K5, 2026-10-13): present=false, uyarı `registration_missing` + varsayılan Paylaşma; 2028-08-11'den sonra ret", async () => {
+  it("yoksa (ADR-0056 K10): bugünden ret — present=false, valid=false, reason registration_missing", async () => {
     const req = await request();
-    expect(checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), NOW)).toEqual({
-      present: false,
-      valid: true,
-      flags: ["registration_missing"],
-      defaultChoice: "decline",
-    });
-    expect(WRPRC_REQUIRED_FROM).toBe(Date.parse("2028-08-11T00:00:00Z"));
-    expect(checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), WRPRC_REQUIRED_FROM - 1).valid).toBe(
-      true,
-    );
-    expect(checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), WRPRC_REQUIRED_FROM)).toEqual({
+    expect(checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW))).toEqual({
       present: false,
       valid: false,
       reason: "registration_missing",
@@ -136,28 +126,28 @@ describe("kayıt sertifikası doğrulaması (ADR-0026)", () => {
     const req = await request([
       { format: "registration_cert", data: await wrprc(registrar, basePayload), credential_ids: ["student"] },
     ]);
-    const r = checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), NOW);
+    const r = checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW));
     expect(r).toMatchObject({ present: true, valid: true, allowedClaims: ["is_enrolled"], tradeName: "Shop" });
     expect(r.privacyPolicy).toBe("https://shop.example/privacy");
   });
 
   it("kayıt kurumu listede değil → geçersiz (WRC4)", async () => {
     const req = await request([{ format: "registration_cert", data: await wrprc(other, basePayload) }]);
-    expect(checkRegistrationCerts(req, [registrar.fp], match([]), NOW)).toMatchObject({ valid: false });
+    expect(checkRegistrationCerts(req, [registrar.fp], match([]), epochMillis(NOW))).toMatchObject({ valid: false });
   });
 
   it("süresi dolmuş → geçersiz", async () => {
     const req = await request([
       { format: "registration_cert", data: await wrprc(registrar, { ...basePayload, exp: nowSec - 1 }) },
     ]);
-    expect(checkRegistrationCerts(req, [registrar.fp], match([]), NOW).reason).toMatch(/expired/);
+    expect(checkRegistrationCerts(req, [registrar.fp], match([]), epochMillis(NOW)).reason).toMatch(/expired/);
   });
 
   it("başka kurumun sertifikası (sub ≠ organizationIdentifier) → geçersiz", async () => {
     const req = await request([
       { format: "registration_cert", data: await wrprc(registrar, { ...basePayload, sub: "VATTR-9999999999" }) },
     ]);
-    expect(checkRegistrationCerts(req, [registrar.fp], match([]), NOW).reason).toMatch(/does not belong/);
+    expect(checkRegistrationCerts(req, [registrar.fp], match([]), epochMillis(NOW)).reason).toMatch(/does not belong/);
   });
 
   it("imza bozuk → geçersiz", async () => {
@@ -165,14 +155,14 @@ describe("kayıt sertifikası doğrulaması (ADR-0026)", () => {
     const [h, , s] = good.split(".");
     const forged = `${h}.${Buffer.from(JSON.stringify({ ...basePayload, name: "Evil" })).toString("base64url")}.${s}`;
     const req = await request([{ format: "registration_cert", data: forged }]);
-    expect(checkRegistrationCerts(req, [registrar.fp], match([]), NOW)).toMatchObject({ valid: false });
+    expect(checkRegistrationCerts(req, [registrar.fp], match([]), epochMillis(NOW))).toMatchObject({ valid: false });
   });
 
   it("başka sorguya bağlı sertifika bu belge için alan izni vermez", async () => {
     const req = await request([
       { format: "registration_cert", data: await wrprc(registrar, basePayload), credential_ids: ["diploma"] },
     ]);
-    const r = checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), NOW);
+    const r = checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW));
     expect(r.valid).toBe(true);
     expect(r.allowedClaims).toBeUndefined();
   });
@@ -199,7 +189,7 @@ describe("belge verenin kayıt bilgisi (RPRC_22a/23, ETSI 472-3 §4.2.3)", () =>
     },
   });
   it("issuer_info yok → present=false", () => {
-    expect(checkIssuerRegistration({}, "x", [registrar.fp], NOW)).toEqual({ present: false, valid: true });
+    expect(checkIssuerRegistration({}, "x", [registrar.fp], epochMillis(NOW))).toEqual({ present: false, valid: true });
   });
   it("kayıtlı tür + geçerli sertifika → geçerli", async () => {
     const md = {
@@ -208,25 +198,25 @@ describe("belge verenin kayıt bilgisi (RPRC_22a/23, ETSI 472-3 §4.2.3)", () =>
         { format: "registration_cert", data: await wrprc(registrar, issuerPayload) },
       ],
     };
-    expect(checkIssuerRegistration(md, "urn:tamga:edu:DiplomaCredential:1", [registrar.fp], NOW)).toEqual({
+    expect(checkIssuerRegistration(md, "urn:tamga:edu:DiplomaCredential:1", [registrar.fp], epochMillis(NOW))).toEqual({
       present: true,
       valid: true,
     });
   });
   it("kayıtlı olmadığı tür → geçersiz (RPRC_23)", () => {
     const md = { issuer_info: [dataset("urn:tamga:edu:DiplomaCredential:1")] };
-    expect(checkIssuerRegistration(md, "urn:tamga:edu:StudentCredential:1", [registrar.fp], NOW).reason).toMatch(
-      /not registered/,
-    );
+    expect(
+      checkIssuerRegistration(md, "urn:tamga:edu:StudentCredential:1", [registrar.fp], epochMillis(NOW)).reason,
+    ).toMatch(/not registered/);
   });
   it("sertifika kayıt kurumu dışından ya da türü kapsamıyor → geçersiz", async () => {
     const other1 = {
       issuer_info: [dataset("v"), { format: "registration_cert", data: await wrprc(other, issuerPayload) }],
     };
-    expect(checkIssuerRegistration(other1, "v", [registrar.fp], NOW).valid).toBe(false);
+    expect(checkIssuerRegistration(other1, "v", [registrar.fp], epochMillis(NOW)).valid).toBe(false);
     const narrow = {
       issuer_info: [dataset("v"), { format: "registration_cert", data: await wrprc(registrar, issuerPayload) }],
     };
-    expect(checkIssuerRegistration(narrow, "v", [registrar.fp], NOW).reason).toMatch(/does not cover/);
+    expect(checkIssuerRegistration(narrow, "v", [registrar.fp], epochMillis(NOW)).reason).toMatch(/does not cover/);
   });
 });

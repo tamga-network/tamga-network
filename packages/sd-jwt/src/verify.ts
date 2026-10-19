@@ -12,7 +12,15 @@ import {
   cryptoProvider,
 } from "@peculiar/x509";
 import { webcrypto } from "node:crypto";
-import { b64ToDer, b64uToUtf8, certFingerprintSha256Hex, computeIssuerId, derToPem } from "@tamga-network/core";
+import {
+  b64ToDer,
+  b64uToUtf8,
+  certFingerprintSha256Hex,
+  computeIssuerId,
+  derToPem,
+  secondsOrNow,
+  type EpochSeconds,
+} from "@tamga-network/core";
 import { decodeDisclosures, resolveSdPayload, SdStructureError } from "@tamga-network/core/sd-structure";
 import { digestOf, KB_IAT_WINDOW_SEC, KB_JWT_TYP, SD_ALG, SD_JWT_TYP, sdHashOf, splitCombined } from "./disclosure.js";
 
@@ -63,13 +71,15 @@ export interface VerifyOptions {
   aud: string;
   nonce: string;
   stateCode: string;
-  now?: number; // saniye
+  /** Unix saniyesi (ADR-0056 K12: `epochSeconds` / `nowSeconds`) */
+  now?: EpochSeconds;
   /**
-   * Yaprak bu köklerden birince imzalanmış olmalı (Ş3). **Boş ya da verilmezse zincir/güven denetimi YAPILMAZ**: imza yalnız
-   * belgenin kendi `x5c[0]`'ına karşı denetlenir (kendinden imzalı belge de `ok: true` döner; `anchorFingerprint: null`).
-   * Kabul kararı için `@tamga-network/verifier` `verifyPresentation` kullanın (kök yoksa DOĞRULANAMADI) ya da kök verin.
+   * ZORUNLU (ADR-0056 K1). Yaprak bu köklerden birince imzalanmış olmalı (Ş3); boş dizi A3'te ret. `"none"`: zincir/güven
+   * denetimi bilerek YAPILMAZ — imza yalnız belgenin kendi `x5c[0]`'ına karşı denetlenir (kendinden imzalı belge de `ok: true`;
+   * `anchorFingerprint: null`). Yalnız imzacıyı çağıran ayrıca denetliyorsa (ör. kendi verdiği belgenin `issuerId`'si).
+   * Kabul kararı için `@tamga-network/verifier` `verifyPresentation`.
    */
-  rootCertsDer?: Uint8Array[];
+  rootCertsDer: Uint8Array[] | "none";
   /**
    * §5.1.1: eski `vc+sd-jwt` typ değeri (SD-JWT VC -13 doğrulayıcıya izin verir). Varsayılan **true** (AB uyumu, 0.5.2); false
    * yalnız `dc+sd-jwt`. Sonuçta `typ` döner: Tamga türleri için `vc+sd-jwt` kararı çağıranda (C13; @tamga-network/verifier B adımı).
@@ -95,7 +105,7 @@ export interface VerifyOk {
   disclosedClaimNames: string[]; // AP3: yalnızca adlar loglanır
   issuerId: string; // C15: x5c[0] parmak izinden
   leafFingerprint: string;
-  /** Zincirin bağlandığı kök sertifikanın SHA-256 parmak izi (onaltılık); kök verilmediyse null (ADR-0036 dış güven kaynağı). */
+  /** Zincirin bağlandığı kök sertifikanın SHA-256 parmak izi (onaltılık); `rootCertsDer: "none"` ise null. */
   anchorFingerprint: string | null;
   vct: string;
   /** Başlıktaki typ: `dc+sd-jwt` ya da (kabul açıksa) eski `vc+sd-jwt` */
@@ -125,8 +135,12 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
     reason,
     checksPerformed: done,
   });
-  const now = opt.now ?? Math.floor(Date.now() / 1000);
+  const now = secondsOrNow(opt.now);
   const requireKb = opt.requireKb ?? true;
+  // ADR-0056 K1: güven çapası zorunlu; verilmemesi (JavaScript çağıran) ya da boş dizi zincirsiz kabul değildir
+  const roots = opt.rootCertsDer;
+  if (roots !== "none" && (!Array.isArray(roots) || !roots.length))
+    return fail("A3", 'rootCertsDer missing: pass the trust anchors (or "none" to skip the chain check deliberately)');
 
   // A1 — ayrıştırma, KB var mı
   let parts: ReturnType<typeof splitCombined>;
@@ -162,7 +176,7 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   try {
     leafDer = b64ToDer(header.x5c[0]);
     leaf = new X509Certificate(toAB(leafDer));
-    if (opt.rootCertsDer?.length) {
+    if (roots !== "none") {
       // x5c: yaprak + (varsa) ara CA'lar, kök hariç (C7). Her halka bir sonrakince imzalanmış olmalı; son halka bir köke bağlanır.
       chain = header.x5c.map((c) => new X509Certificate(toAB(b64ToDer(c))));
       for (let i = 0; i + 1 < chain.length; i++) {
@@ -174,7 +188,7 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
       }
       const top = chain[chain.length - 1];
       const topFp = certFingerprintSha256Hex(b64ToDer(header.x5c[header.x5c.length - 1]));
-      for (const rootDer of opt.rootCertsDer) {
+      for (const rootDer of roots) {
         // ADR-0036: dış listede imzacının kendisi çapa olabilir (ETSI LoTE hizmet sertifikası)
         if (certFingerprintSha256Hex(rootDer) === topFp) {
           anchorFingerprint = topFp;

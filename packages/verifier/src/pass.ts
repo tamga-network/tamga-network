@@ -7,6 +7,9 @@ import { createHash, randomBytes } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { RpSigner } from "./request.js";
+import type { VerifyOutput } from "./verify.js";
+import { acceptedPresentationOf } from "./accepted.js";
+import { clockSkewOption, secondsOrNow, type EpochSeconds } from "@tamga-network/core/time";
 
 export const PASS_TOKEN_TYP = "tamga-pass+jwt";
 export const PASS_GRANT_TYP = "tamga-pass-grant+jwt";
@@ -67,9 +70,9 @@ const PASS_KEY_MAX_AGE_SEC = 600;
  */
 export async function verifyPassKeyProof(
   jws: string,
-  p: { clientId: string; nonce: string; now?: number },
+  p: { clientId: string; nonce: string; now?: EpochSeconds },
 ): Promise<{ jwk: JWK; kid: string }> {
-  const now = p.now ?? Math.floor(Date.now() / 1000);
+  const now = secondsOrNow(p.now);
   const h = decodeProtectedHeader(jws) as { typ?: string; alg?: string; jwk?: JWK };
   if (h.typ !== PASS_KEY_TYP || h.alg !== "ES256") throw new Error("pass_key: unexpected type");
   const j = h.jwk;
@@ -140,18 +143,26 @@ export class PassRegistry {
     });
   }
 
+  /**
+   * Kabul edilen sunumdan geçiş kartı verir. `verified` bu süreçte `verifyPresentation`'ın döndürdüğü, sonucu `ACCEPTED` olan
+   * çıktı olmalıdır (ADR-0056 K9): başka her değer (red, doğrulanamadı, elle kurulmuş nesne) hata. Kart anahtarı `passKey`
+   * kanıtından, yoksa doğrulanan SD-JWT sunumunun `cnf`'sinden.
+   */
   async issue(input: {
-    presentation: string;
+    verified: VerifyOutput;
     presentationId: string;
     policy: PassPolicy;
-    now?: number;
+    /** Unix saniyesi (ADR-0056 K12) */
+    now?: EpochSeconds;
     /** a3/WL13: cüzdanın ayrı kart anahtarı kanıtı (yanıt yükü `pass_key`) — varsa kart bu anahtara bağlanır */
     passKey?: { jws: string; nonce: string };
   }): Promise<{ record: PassRecord; jws: string }> {
-    const now = input.now ?? Math.floor(Date.now() / 1000);
+    const accepted = acceptedPresentationOf(input.verified);
+    if (!accepted) throw new Error("pass: only an ACCEPTED result of verifyPresentation can be turned into a pass");
+    const now = secondsOrNow(input.now);
     const { jwk, kid } = input.passKey
       ? await verifyPassKeyProof(input.passKey.jws, { clientId: this.signer.clientId, nonce: input.passKey.nonce, now })
-      : holderCnfOf(input.presentation);
+      : holderCnfOf(accepted.presentation);
     const passId = "pass_" + randomBytes(9).toString("base64url");
     const validUntil = now + input.policy.valid_days * 86400;
     const jws = await new SignJWT({
@@ -197,10 +208,10 @@ export class PassRegistry {
   /** AP13: terminal doğrulaması. Hata nedenleri kişisel veri içermez. */
   async verifyToken(
     token: string,
-    opts: { terminalGroup: string; now?: number; maxClockSkewSec?: number },
+    opts: { terminalGroup: string; now?: EpochSeconds; maxClockSkewSec?: number },
   ): Promise<PassCheck> {
-    const now = opts.now ?? Math.floor(Date.now() / 1000);
-    const skew = opts.maxClockSkewSec ?? PASS_TOKEN_CLOCK_SKEW_SEC;
+    const now = secondsOrNow(opts.now);
+    const skew = clockSkewOption("maxClockSkewSec", opts.maxClockSkewSec, PASS_TOKEN_CLOCK_SKEW_SEC);
     let header: { typ?: string; alg?: string; kid?: string };
     try {
       header = decodeProtectedHeader(token) as typeof header;

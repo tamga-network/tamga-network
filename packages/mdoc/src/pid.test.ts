@@ -5,6 +5,7 @@ import { pidMdocName, pidSdJwtName, PID_MDOC_TO_SDJWT } from "@tamga-network/cor
 import { CborTag, decode, encode } from "./cbor.js";
 import { issueMdoc, verifyIssuerSigned } from "./mdoc.js";
 import { plainElementValue, toPidMdocElements } from "./pid.js";
+import { epochSeconds } from "@tamga-network/core";
 
 describe("AB PID ad tablosu (core/pid)", () => {
   it("SD-JWT ↔ mdoc: birthdate ↔ birth_date, nationalities ↔ nationality; tabloda olmayan ad aynı", () => {
@@ -52,7 +53,10 @@ describe("toPidMdocElements / plainElementValue", () => {
       validUntil: now + 60,
       randomBytes: (n) => crypto.getRandomValues(new Uint8Array(n)),
     });
-    const v = verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: p256.getPublicKey(issuerSk, false), now });
+    const v = verifyIssuerSigned(issued.issuerSigned, {
+      issuerPubRaw: p256.getPublicKey(issuerSk, false),
+      now: epochSeconds(now),
+    });
     expect(v.valid).toBe(true);
     const els = v.claims!["tamga.id.1"];
     expect(plainElementValue(els.birth_date)).toBe("2002-05-14");
@@ -76,13 +80,14 @@ describe("verifyIssuerSigned — saat farkı toleransı", () => {
       randomBytes: (n) => crypto.getRandomValues(new Uint8Array(n)),
     });
     const pub = p256.getPublicKey(issuerSk, false);
-    expect(verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: now - 2 }).reason).toBe(
+    expect(verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: epochSeconds(now - 2) }).reason).toBe(
       "document not yet valid",
     );
-    expect(verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: now - 2, clockSkewSec: 300 }).valid).toBe(
-      true,
-    );
-    expect(verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: now + 61 }).reason).toBe(
+    expect(
+      verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: epochSeconds(now - 2), clockSkewSec: 300 })
+        .valid,
+    ).toBe(true);
+    expect(verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: epochSeconds(now + 61) }).reason).toBe(
       "document expired",
     );
   });

@@ -15,7 +15,19 @@ import { deflateSync, inflateSync } from "node:zlib";
 import { randomBytes, randomInt } from "node:crypto";
 import { CompactSign, compactVerify, decodeProtectedHeader, importX509 } from "jose";
 import { X509Certificate } from "@peculiar/x509";
-import { b64u, b64uToBytes, derToB64, b64ToDer, derToPem, sha256Hex, sha256Tag, utf8 } from "@tamga-network/core";
+import {
+  b64u,
+  b64uToBytes,
+  derToB64,
+  b64ToDer,
+  derToPem,
+  sha256Hex,
+  sha256Tag,
+  utf8,
+  clockSkewOption,
+  epochSeconds,
+  type EpochSeconds,
+} from "@tamga-network/core";
 import { parseStatusListCwt, signStatusListCwt as signCwt, STATUS_LIST_CWT_TYP } from "@tamga-network/mdoc";
 import type { IssuerSigner } from "./issue.js";
 
@@ -183,24 +195,25 @@ export interface VerifiedStatusToken {
  * (`max_status_token_age_sec`) ya da `opts.maxAgeSec` ile. Çapa (D5) çağıran tarafta: contentHash ↔ TrustSource.statusAnchor. Hata iletileri adım koduyla başlar
  * ("D3:", "D4:", "D6:") — doğrulayıcı D4'ü INDETERMINATE (tazelik), ötekileri RED sayar.
  *
- * **Yalnız imza denetimi:** imza token'ın KENDİ `x5c[0]`'ına karşı denetlenir; imzacının güvenilir olduğu burada denetlenmez.
- * Çağıran imzacıyı (`leafFingerprintHex`) güven kaynağıyla eşlemeli (ör. `TrustSource` durum çapası, sağlayıcı anahtarı) ve azami
- * yaşı (`maxAgeSec`) vermelidir; aksi hâlde dağıtım yolunu ele geçiren "hepsi geçerli" listesi sunabilir.
+ * **İmzacı sabitlenir (ADR-0056 K6):** `expectedSignerFingerprints` ZORUNLUDUR — token'ın `x5c[0]` yaprağının SHA-256 parmak izi
+ * (onaltılık) bu listede olmalı (ya da işlev `true` dönmeli); değilse `D3: status token signer is not an expected signer`. Kurum
+ * listesinde kurumun güven listesindeki iptal anahtarı (`delegate_keys[purpose=status_list]`), cüzdan listesinde sağlayıcı anahtarı.
+ * Azami yaşı (`maxAgeSec`) da verin.
  */
 export async function verifyStatusListToken(
   token: string,
   expectedUri: string,
-  now: number,
-  opts: {
-    maxSkewSec?: number;
-    /** verilirse `now − iat` bu süreyi aşan token bayattır (D4) */ maxAgeSec?: number;
-  } = {},
+  now: EpochSeconds,
+  opts: StatusTokenVerifyOptions,
 ): Promise<VerifiedStatusToken> {
+  checkVerifyOptions(now, opts);
   if (typeof token !== "string" || token.length > MAX_STATUS_TOKEN_LENGTH)
     throw new Error("D3: status token too large");
   const h = decodeProtectedHeader(token);
   if (h.typ !== STATUS_TYP || h.alg !== "ES256" || !h.x5c?.length) throw new Error("D3: status token header");
   const leafDer = b64ToDer(h.x5c[0]);
+  if (!signerExpected(opts.expectedSignerFingerprints, sha256Hex(leafDer)))
+    throw new Error("D3: status token signer is not an expected signer");
   const pub = await importX509(derToPem(leafDer), "ES256");
   const { payload: raw } = await compactVerify(token, pub);
   const payload = JSON.parse(new TextDecoder().decode(raw)) as VerifiedStatusToken["payload"];
@@ -209,7 +222,7 @@ export async function verifyStatusListToken(
   if (typeof bits !== "number" || !STATUS_BITS.has(bits)) throw new Error("D6: bits not 1 or 2");
   if (typeof payload.status_list.lst !== "string") throw new Error("D3: status_list.lst missing");
   if (typeof payload.iat !== "number" || !Number.isFinite(payload.iat)) throw new Error("D3: status token iat missing");
-  if (payload.iat > now + (opts.maxSkewSec ?? STATUS_IAT_SKEW_SEC))
+  if (payload.iat > now + clockSkewOption("maxSkewSec", opts.maxSkewSec, STATUS_IAT_SKEW_SEC))
     throw new Error("D3: status token iat in the future");
   if (payload.exp !== undefined && (typeof payload.exp !== "number" || !Number.isFinite(payload.exp)))
     throw new Error("D3: status token exp is not a number");
@@ -265,14 +278,20 @@ function p256PointFromCertDer(der: Uint8Array): Uint8Array {
 export async function verifyStatusListCwt(
   bytes: Uint8Array,
   expectedUri: string,
-  now: number,
-  opts: { maxSkewSec?: number; maxAgeSec?: number } = {},
+  now: EpochSeconds,
+  opts: StatusTokenVerifyOptions,
 ): Promise<VerifiedStatusToken> {
+  checkVerifyOptions(now, opts);
   const p = parseStatusListCwt(bytes, {
     uri: expectedUri,
     now,
-    publicKeyOf: p256PointFromCertDer,
-    maxSkewSec: opts.maxSkewSec ?? STATUS_IAT_SKEW_SEC,
+    // ADR-0056 K6: imzacı, imza denetiminden önce sabitlenmiş parmak izleriyle karşılaştırılır
+    publicKeyOf: (der) => {
+      if (!signerExpected(opts.expectedSignerFingerprints, sha256Hex(der)))
+        throw new Error("D3: status token signer is not an expected signer");
+      return p256PointFromCertDer(der);
+    },
+    maxSkewSec: clockSkewOption("maxSkewSec", opts.maxSkewSec, STATUS_IAT_SKEW_SEC),
   });
   if (opts.maxAgeSec !== undefined && now - p.iat > opts.maxAgeSec) throw new Error("D4: status token stale");
   return {
@@ -300,8 +319,8 @@ export const BINARY_CACHE_PREFIX = "b64u:";
 export async function verifyStatusListAny(
   body: string,
   expectedUri: string,
-  now: number,
-  opts: { maxSkewSec?: number; maxAgeSec?: number } = {},
+  now: EpochSeconds,
+  opts: StatusTokenVerifyOptions,
 ): Promise<VerifiedStatusToken> {
   if (body.startsWith(BINARY_CACHE_PREFIX)) {
     let bytes: Uint8Array;
@@ -313,4 +332,30 @@ export async function verifyStatusListAny(
     return verifyStatusListCwt(bytes, expectedUri, now, opts);
   }
   return verifyStatusListToken(body, expectedUri, now, opts);
+}
+
+/** İptal listesi doğrulama seçenekleri (JWT ve CWT gösterimi ortak). */
+export interface StatusTokenVerifyOptions {
+  /**
+   * ZORUNLU (ADR-0056 K6): beklenen imzacıların sertifika SHA-256 parmak izleri (onaltılık, küçük harf) ya da parmak izini
+   * değerlendiren işlev (ör. cüzdan sağlayıcı anahtarı sorgusu). Boş liste hiçbir imzacıyı kabul etmez.
+   */
+  expectedSignerFingerprints: readonly string[] | ((fingerprintHex: string) => boolean);
+  /** `iat` için saat kayması payı (sn; varsayılan `STATUS_IAT_SKEW_SEC`, en çok `MAX_CLOCK_SKEW_SEC`) */
+  maxSkewSec?: number;
+  /** verilirse `now − iat` bu süreyi aşan token bayattır (D4) */
+  maxAgeSec?: number;
+}
+
+function signerExpected(expected: StatusTokenVerifyOptions["expectedSignerFingerprints"], fp: string): boolean {
+  if (typeof expected === "function") return expected(fp) === true;
+  if (!Array.isArray(expected)) return false;
+  return expected.some((e) => typeof e === "string" && e.toLowerCase() === fp);
+}
+
+function checkVerifyOptions(now: EpochSeconds, opts: StatusTokenVerifyOptions) {
+  epochSeconds(now);
+  const e = opts?.expectedSignerFingerprints;
+  if (typeof e !== "function" && !Array.isArray(e))
+    throw new Error("D3: expectedSignerFingerprints missing (the status list signer must be pinned)");
 }

@@ -9,8 +9,9 @@
  * Sınır (ADR-0031 K4): türetmenin doğruluğu gerçek cüzdan varsayımına dayanır; kesin kanıt sıfır bilgi ispatıyla (Z5).
  */
 import { calculateJwkThumbprint, decodeProtectedHeader, importJWK, jwtVerify, type JWK } from "jose";
-import { verifyWalletAttestation, type StatusValueOf } from "@tamga-network/trust";
+import { verifyWalletAttestation, type StatusCheck, type WuaResult } from "@tamga-network/trust";
 import type { TrustSource } from "@tamga-network/trust";
+import { secondsOrNow, type EpochSeconds } from "@tamga-network/core/time";
 
 export const PSEUDONYM_FORMAT = "tamga-pseudonym";
 export const PSEUDONYM_TYP = "tamga-pseudonym+jwt";
@@ -18,7 +19,17 @@ export const PSEUDONYM_TYP = "tamga-pseudonym+jwt";
 export const PSEUDONYM_MAX_AGE_SEC = 300;
 
 export type PseudonymResult =
-  { ok: true; pseudonym: string; walletName?: string } | { ok: false; reason: string; indeterminate?: boolean };
+  | {
+      ok: true;
+      pseudonym: string;
+      walletName?: string;
+      /**
+       * Cüzdan biriminin (WIA `client_status`) iptal durumu (ADR-0056): `VALID` denetlendi ve geçerli, `NOT_CHECKED`
+       * (`walletStatusOf: "none"`), `NOT_APPLICABLE` (WIA iptal girişi taşımıyor).
+       */
+      clientStatus: Extract<WuaResult, { ok: true }>["clientStatus"];
+    }
+  | { ok: false; reason: string; indeterminate?: boolean };
 
 export async function verifyPseudonym(p: {
   token: string;
@@ -31,11 +42,15 @@ export async function verifyPseudonym(p: {
    */
   rpKey: string;
   trust: TrustSource;
-  /** WIA iptal durumu. **Verilmezse denetlenmez** (iptal edilmiş cüzdanın takma adı da kabul edilir) — canlıda verin. */
-  walletStatusOf?: StatusValueOf;
-  now?: number;
+  /**
+   * ZORUNLU (ADR-0056 K3): WIA iptal durumu sorgusu (ör. `WalletStatusChecker.statusOf`). `"none"`: bilerek denetlenmez — iptal
+   * edilmiş cüzdanın takma adı da kabul edilir; sonuç `clientStatus: "NOT_CHECKED"`.
+   */
+  walletStatusOf: StatusCheck;
+  /** Unix saniyesi (ADR-0056 K12) */
+  now?: EpochSeconds;
 }): Promise<PseudonymResult> {
-  const now = p.now ?? Math.floor(Date.now() / 1000);
+  const now = secondsOrNow(p.now);
   try {
     if (![p.aud, p.nonce, p.rpKey].every((v) => typeof v === "string" && v.length > 0))
       return { ok: false, reason: "expected aud/nonce/rp missing" };
@@ -63,7 +78,12 @@ export async function verifyPseudonym(p: {
       statusOf: p.walletStatusOf,
     });
     if (!w.ok) return { ok: false, reason: `wallet: ${w.reason}`, indeterminate: w.indeterminate };
-    return { ok: true, pseudonym: await calculateJwkThumbprint(jwk, "sha256"), walletName: w.claims.wallet_name };
+    return {
+      ok: true,
+      pseudonym: await calculateJwkThumbprint(jwk, "sha256"),
+      walletName: w.claims.wallet_name,
+      clientStatus: w.clientStatus,
+    };
   } catch (e) {
     return { ok: false, reason: `pseudonym: ${(e as Error).message}` };
   }

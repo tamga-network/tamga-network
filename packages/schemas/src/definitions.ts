@@ -1131,6 +1131,15 @@ export function isShortLivedType(vct: string): boolean {
 }
 
 /**
+ * Tür iptal listesi kullanıyor mu — şemanın `tamga.uses_status_list` alanı (ADR-0056: doğrulayıcı, bu türde iptal girişi
+ * taşımayan belgeyi reddeder). Katalogda yoksa ya da alan yoksa `undefined`.
+ */
+export function usesStatusList(vct: string): boolean | undefined {
+  const t = ALL.find((d) => d.vct === vct)?.typeMetadata.tamga as { uses_status_list?: boolean } | undefined;
+  return typeof t?.uses_status_list === "boolean" ? t.uses_status_list : undefined;
+}
+
+/**
  * ADR-0048 K2 (SU2): türde askı (`0x02`) kullanılabilir mi — şemanın `tamga.suspension_allowed` alanı (yoksa `false`). Katalogda
  * olmayan tür için `undefined` (karar çağıranın: doğrulayıcı dış türlerde listenin söylediğini okur).
  */

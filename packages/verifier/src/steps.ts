@@ -13,8 +13,10 @@ import {
   externalType,
   isShortLivedType,
   suspensionAllowed,
+  usesStatusList,
   type SchemaDef,
 } from "@tamga-network/schemas";
+import type { EpochSeconds } from "@tamga-network/core/time";
 import { getClaimAtPath } from "@tamga-network/core/sd-structure";
 import { verifyStatusListAny } from "@tamga-network/sd-jwt";
 import type { ExternalIssuerAnswer, TrustSource } from "@tamga-network/trust";
@@ -62,7 +64,7 @@ type IssuerRecord = NonNullable<ReturnType<TrustSource["issuer"]>>;
 /** Adımlar arası paylaşılan durum. */
 export interface VerifyCtx {
   input: VerifyInput;
-  now: number;
+  now: EpochSeconds;
   fr: ReturnType<TrustSource["freshness"]>;
   done: Step[];
   skipped: Step[];
@@ -332,7 +334,13 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
         reason:
           "ZK4: revocation index is not disclosed in a zero-knowledge presentation; revocation cannot be checked (K6)",
       };
-    } else ctx.status = { value: "NOT_APPLICABLE", list_version: null, token_age_sec: null };
+    } else {
+      // ADR-0056: türü iptal listesi kullanan (şemada `uses_status_list: true`) belgede iptal girişi olmaması bozuk belgedir —
+      // iptal denetimi sessizce atlanmaz
+      if (usesStatusList(a.vct) === true)
+        return reject("D1", "credential has no status entry but its type uses a status list");
+      ctx.status = { value: "NOT_APPLICABLE", list_version: null, token_age_sec: null };
+    }
     ctx.skipped.push("D1", "D2", "D3", "D4", "D5", "D6");
     return;
   }
@@ -341,11 +349,20 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   if (!cached)
     return indet("D2", "STATUS_UNREACHABLE", "status token not in prefetch cache (S12: no fetch per verification)");
   ctx.done.push("D2");
+  // S11: iptal listesini kurumun güven listesinde kayıtlı iptal anahtarı imzalamış olmalı — imzacı doğrulamada sabitlenir
+  // (ADR-0056 K6); anahtar kayıtlı değilse liste doğrulanamaz
+  const statusKeys = (issuerRec?.delegate_keys ?? [])
+    .filter((k) => k.purpose === "status_list" && (k.status ?? "ACTIVE") === "ACTIVE")
+    .map((k) => k.fingerprint_sha256);
+  if (!statusKeys.length)
+    return indet("D3", "STATUS_UNREACHABLE", "the institution's status list key is not registered in the trusted list");
   // ADR-0048 K3: mdoc kopyası CWT gösterimine (ikili; önbellekte `b64u:`), SD-JWT kopyası JWT gösterimine işaret eder — gövde
   // hangisiyse o doğrulanır (eski mdoc kopyaları JWT adresini gösterebilir)
   let tok: Awaited<ReturnType<typeof verifyStatusListAny>>;
   try {
-    tok = await verifyStatusListAny(cached.token, a.status.status_list.uri, now);
+    tok = await verifyStatusListAny(cached.token, a.status.status_list.uri, now, {
+      expectedSignerFingerprints: statusKeys,
+    });
   } catch (e) {
     const msg = (e as Error).message;
     // önbellekteki token exp aşımı → tazelik sorunu, geçersizlik değil (AP2). Azami yaş politikada (aşağıda, D4)
@@ -361,14 +378,6 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
     !(ctx.input.allowLocalIssuerUrls && isLocalUrl(tok.payload.iss ?? ""))
   )
     return reject("D3", "status token iss inconsistent with the issuer record");
-  // S11: iptal listesini kurumun güven listesinde kayıtlı iptal anahtarı imzalamış olmalı
-  const statusKeys = (issuerRec?.delegate_keys ?? [])
-    .filter((k) => k.purpose === "status_list" && (k.status ?? "ACTIVE") === "ACTIVE")
-    .map((k) => k.fingerprint_sha256);
-  if (!statusKeys.length)
-    return indet("D3", "STATUS_UNREACHABLE", "the institution's status list key is not registered in the trusted list");
-  if (!statusKeys.includes(tok.leafFingerprintHex))
-    return reject("D3", "status token signer is not the institution's registered status key");
   ctx.done.push("D3");
   const age = now - tok.payload.iat;
   if (tok.payload.exp && tok.payload.exp < now) return indet("D4", "STATUS_STALE", "status token expired");
@@ -557,7 +566,10 @@ export function stepE(ctx: VerifyCtx): StepFail | undefined {
     if (cons !== undefined && !constraintOk(val, cons)) return reject("E2", `constraint not satisfied: ${rc}`);
   }
   ctx.done.push("E2");
-  if (input.rp !== undefined) {
+  // ADR-0056 K4: `rp` zorunlu — verilmemesi kapsam denetimini sessizce atlamaz
+  if (input.rp === undefined)
+    return reject("E3", 'relying party registration not given (pass rp, null for an unregistered party, or "none")');
+  if (input.rp !== "none") {
     const nowMs = now * 1000;
     const allowed = new Set(
       (input.rp?.scopes ?? [])
@@ -577,7 +589,7 @@ export function stepE(ctx: VerifyCtx): StepFail | undefined {
 }
 
 /** A adımının format seçimi: sonucu ortak biçime indirir (B–E iki format için aynı). */
-async function formatStep(input: VerifyInput, now: number): Promise<FormatResult> {
+async function formatStep(input: VerifyInput, now: EpochSeconds): Promise<FormatResult> {
   if (input.format === "mso_mdoc_zk") {
     if (!input.responseUri && !input.origin)
       return { ok: false, failedStep: "A1", reason: "responseUri or origin required for mso_mdoc_zk" };

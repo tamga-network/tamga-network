@@ -9,6 +9,7 @@
 import { X509Certificate as NodeX509, webcrypto } from "node:crypto";
 import { X509Certificate, cryptoProvider } from "@peculiar/x509";
 import { b64uToBytes, computeIssuerId } from "@tamga-network/core";
+import type { EpochSeconds } from "@tamga-network/core/time";
 import {
   dcApiSessionTranscript,
   oid4vpSessionTranscript,
@@ -43,7 +44,7 @@ export async function verifyMdocZkFormat(
     origin?: string;
     encJwkThumbprint?: Uint8Array;
     stateCode: string;
-    now: number;
+    now: EpochSeconds;
     rootCertsDer: Uint8Array[];
     expectedDocTypes: string[];
     /** Politikanın istediği öğe adları (ZK3: ispat yalnız bunları açıklar). */

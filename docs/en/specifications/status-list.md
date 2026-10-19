@@ -4,7 +4,7 @@ title: "Revocation and status list"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   The normative implementation of the [[ADR-0008]] decision. Defines the Tamga profile of the Status List Token (bits=2
   in institution lists, bits=1 for the identity service; ES256, X.509 chain, at least 100,000 indices; a CWT representation for
@@ -483,6 +483,8 @@ Normative. Run for every credential that carries a `status` claim.
 
 Ş4.  Verify the token:
      - typ == "statuslist+jwt"
+     - the signer is pinned: the x5c leaf fingerprint is one of the institution's ACTIVE status keys in
+       the trust list (S11), before the signature check → otherwise REJECT ([[ADR-0056]] K6)
      - signature valid, the x5c chain links to the issuer's X.509 chain
        (SPEC-ID-0002); root anchored in RootCARegistry
      - sub == the uri in the credential  → otherwise REJECT
@@ -708,7 +710,7 @@ database.
 | **S8** | The list URI is opaque; it encodes no year, department or cohort (§6.3). |
 | **S9** | Lists are split by no criterion other than type (§6.4). |
 | **S10** | List capacity ≥ 100,000; fill ≤ 80%. |
-| **S11** | The status key is separate from the credential signing key (§3.4). The certificate fingerprint of the status key is published in the trust list in the institution entry's `delegate_keys[]` field with `purpose: "status_list"`; at D3 the verifier matches the token signer against this entry (no entry → INDETERMINATE, mismatch → REJECTED). An `idx` outside the list is not read as valid (D6 REJECT). |
+| **S11** | The status key is separate from the credential signing key (§3.4). The certificate fingerprint of the status key is published in the trust list in the institution entry's `delegate_keys[]` field with `purpose: "status_list"`; at D3 the verifier matches the token signer against this entry (no entry → INDETERMINATE, mismatch → REJECTED); in the packages the signer is a verification input (`expectedSignerFingerprints`, required — [[ADR-0056]] K6). An `idx` outside the list is not read as valid (D6 REJECT). |
 | **S12** | The verifier does not fetch per verification; it uses bulk prefetching (§9.1). |
 | **S13** | The `exp`/`ttl` claims override HTTP cache headers. |
 | **S14** | "Invalid" and "could not verify" are shown to the user differently (§7.1). |

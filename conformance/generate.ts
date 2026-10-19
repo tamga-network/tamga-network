@@ -11,7 +11,13 @@ import { X509Certificate } from "node:crypto";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { exportJWK, generateKeyPair } from "jose";
-import { computeSchemaId, pemToDer, certFingerprintSha256Hex, x509HashClientId } from "@tamga-network/core";
+import {
+  computeSchemaId,
+  pemToDer,
+  certFingerprintSha256Hex,
+  x509HashClientId,
+  epochSeconds,
+} from "@tamga-network/core";
 import { loadTrustSet, ListTrustSource } from "@tamga-network/trust";
 import {
   issueSdJwtVc,
@@ -135,7 +141,7 @@ async function sdJwtVectors() {
   const signer = await pemIssuerSigner(keyPem, leafPem);
   // Belge, imza sertifikası geçerliyken verilmiş olmalı (A3): vektör zamanı sabit tarihten, sertifika daha yeniyse ondan 2 gün sonrası
   const leafFrom = Math.floor(new Date(new X509Certificate(leafPem).validFrom).getTime() / 1000);
-  const SD_NOW = Math.max(NOW, leafFrom + 2 * 86400);
+  const SD_NOW = epochSeconds(Math.max(NOW, leafFrom + 2 * 86400));
   const SD_NOW_ISO = new Date(SD_NOW * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
   const schemas = rj(resolve(ROOT, "packages", "schemas", "dist", "index.json")) as Array<{
     vct: string;
@@ -265,7 +271,7 @@ async function identityVectors() {
   const rootPem = readFileSync(resolve(PKI, "root-ca.cert.pem"), "utf8");
   const signer = await pemIssuerSigner(keyPem, leafPem);
   const leafFrom = Math.floor(new Date(new X509Certificate(leafPem).validFrom).getTime() / 1000);
-  const SD_NOW = Math.max(NOW, leafFrom + 2 * 86400);
+  const SD_NOW = epochSeconds(Math.max(NOW, leafFrom + 2 * 86400));
   const SD_NOW_ISO = new Date(SD_NOW * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
   const schemas = rj(resolve(ROOT, "packages", "schemas", "dist", "index.json")) as Array<{
     vct: string;
@@ -356,7 +362,9 @@ async function statusListVectors() {
   const keyPem = readFileSync(resolve(PKI, "issuer-id-status.pkcs8.pem"), "utf8");
   const signer = await pemIssuerSigner(keyPem, certPem);
   const from = Math.floor(new Date(new X509Certificate(certPem).validFrom).getTime() / 1000);
-  const ST_NOW = Math.max(NOW, from + 2 * 86400);
+  const ST_NOW = epochSeconds(Math.max(NOW, from + 2 * 86400));
+  // ADR-0056 K6: iptal listesi doğrulaması imzacıyı sabitler — vektörün imzacısı kimlik servisinin iptal sertifikası
+  const signerFp = certFingerprintSha256Hex(pemToDer(certPem));
   const lists = [];
   const plan: Array<[1 | 2, string, Record<number, StatusValue>]> = [
     [1, "identity service (bits = 1)", { 3: StatusValue.INVALID, 1207: StatusValue.INVALID }],
@@ -370,8 +378,8 @@ async function statusListVectors() {
     const cwtUri = `https://status.tamga.network/conformance-cwt-${bits}`;
     const jwt = await signStatusListToken({ ...base, iss: "https://id.tamga.network", uri: jwtUri });
     const cwt = await signStatusListCwt({ ...base, uri: cwtUri });
-    const a = await verifyStatusListToken(jwt, jwtUri, ST_NOW);
-    const b = await verifyStatusListCwt(cwt, cwtUri, ST_NOW);
+    const a = await verifyStatusListToken(jwt, jwtUri, ST_NOW, { expectedSignerFingerprints: [signerFp] });
+    const b = await verifyStatusListCwt(cwt, cwtUri, ST_NOW, { expectedSignerFingerprints: [signerFp] });
     if ([...a.bitstring.bytes].join() !== [...b.bitstring.bytes].join()) throw new Error("JWT ≠ CWT bitleri");
     const probe = [0, 3, 4, 1207, 99_999];
     lists.push({
@@ -394,6 +402,14 @@ async function statusListVectors() {
           expect: "D3",
         },
         { name: "expired", uri: null, now_offset_sec: 7 * 3600, expect: "D4" },
+        // ADR-0056 K6: beklenen imzacı başka bir anahtar → imza geçerli olsa da ret
+        {
+          name: "signer is not the expected signer",
+          uri: null,
+          now_offset_sec: 0,
+          expected_signer_fingerprint_sha256: "00".repeat(32),
+          expect: "D3",
+        },
       ],
     });
   }

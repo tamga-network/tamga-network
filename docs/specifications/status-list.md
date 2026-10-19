@@ -4,7 +4,7 @@ title: "İptal ve durum listesi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   [[ADR-0008]] kararının normatif uygulaması. Status List Token'ın Tamga profilini
   (kurum listelerinde bits=2, kimlik servisinde bits=1; ES256, X.509 zinciri, asgari 100.000 indeks; mdoc için CWT
@@ -494,6 +494,8 @@ Normatif. `status` claim'i taşıyan her belge için çalıştırılır.
 
 Ş4.  Token'ı doğrula:
      - typ == "statuslist+jwt"
+     - imzacı sabitlenir: x5c yaprağının parmak izi kurumun güven listesindeki ACTIVE iptal anahtarlarından
+       biri (S11), imza denetiminden önce → değilse RED ([[ADR-0056]] K6)
      - imza geçerli, x5c zinciri belge verenin X.509 zincirine bağlanıyor
        (SPEC-ID-0002); kök RootCARegistry'de çapalı
      - sub == belgedeki uri  → değilse RED
@@ -727,7 +729,7 @@ Liste türetilmiş bir üründür; kaynak veritabanıdır.
 | **S8** | Liste URI'si opaktır; yıl, bölüm, kohort kodlamaz (§6.3). |
 | **S9** | Listeler tip dışında hiçbir ölçütle bölünmez (§6.4). |
 | **S10** | Liste kapasitesi ≥ 100.000; doluluk ≤ %80. |
-| **S11** | Status anahtarı, belge imzalama anahtarından ayrıdır (§3.4). Status anahtarının sertifika parmak izi güven listesinde kurum kaydının `delegate_keys[]` alanında `purpose: "status_list"` ile yayınlanır; doğrulayıcı D3'te token imzacısını bu kayıtla eşler (kayıt yoksa INDETERMINATE, eşleşmezse REJECTED). Liste dışı `idx` geçerli okunmaz (D6 RED). |
+| **S11** | Status anahtarı, belge imzalama anahtarından ayrıdır (§3.4). Status anahtarının sertifika parmak izi güven listesinde kurum kaydının `delegate_keys[]` alanında `purpose: "status_list"` ile yayınlanır; doğrulayıcı D3'te token imzacısını bu kayıtla eşler (kayıt yoksa INDETERMINATE, eşleşmezse REJECTED); paketlerde imzacı doğrulama girdisidir (`expectedSignerFingerprints`, zorunlu — [[ADR-0056]] K6). Liste dışı `idx` geçerli okunmaz (D6 RED). |
 | **S12** | Doğrulayıcı doğrulama başına çekim yapmaz; toplu ön çekim kullanır (§9.1). |
 | **S13** | `exp`/`ttl` claim'leri HTTP önbellek başlıklarını geçersiz kılar. |
 | **S14** | "Geçersiz" ile "doğrulanamadı" kullanıcıya farklı gösterilir (§7.1). |

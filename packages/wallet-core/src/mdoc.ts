@@ -17,6 +17,7 @@ import {
   CborTag,
   type CborValue,
 } from "@tamga-network/mdoc";
+import { epochSeconds } from "@tamga-network/core/time";
 import { pidSdJwtName } from "@tamga-network/core/pid";
 import { b64u, b64uDecode, toHex } from "./b64.js";
 import { jwkThumbprint } from "./jwe.js";
@@ -59,7 +60,7 @@ export function verifyReceivedMdoc(
     throw new Error("mdoc: issuer certificate differs from the SD-JWT copy (MD3)");
   const res = verifyIssuerSigned(bytes, {
     issuerPubRaw: p256PointFromCertDer(leaf),
-    now: ctx.now,
+    now: ctx.now === undefined ? undefined : epochSeconds(ctx.now),
     expectedDocType: ctx.sdjwt.vct,
     clockSkewSec: MDOC_RECEIVE_SKEW_SEC, // telefonun saati belge verenden birkaç saniye geride olabilir
   });

@@ -8,7 +8,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadTrustSet, ListTrustSource } from "@tamga-network/trust";
 import { StatusBitstring, verifySdJwtVc, verifyStatusListCwt, verifyStatusListToken } from "@tamga-network/sd-jwt";
-import { pemToDer } from "@tamga-network/core";
+import { epochSeconds, pemToDer } from "@tamga-network/core";
 import { run } from "../generate.js";
 
 const V = resolve(dirname(fileURLToPath(import.meta.url)), "..", "vectors");
@@ -49,7 +49,7 @@ describe.skipIf(!existsSync(trustPath))("conformance: trust/basic", () => {
 
 describe.skipIf(!existsSync(sdPath))("conformance: sd-jwt/diploma-basic", () => {
   const vec = existsSync(sdPath) ? JSON.parse(readFileSync(sdPath, "utf8")) : null;
-  const now = () => Math.floor(new Date(vec.now).getTime() / 1000);
+  const now = () => epochSeconds(Math.floor(new Date(vec.now).getTime() / 1000));
   it("olumlu: sunum doğrulanır, açılan/gizli alanlar beklentiyle aynı", async () => {
     const r = await verifySdJwtVc(vec.presentation, {
       aud: vec.aud,
@@ -73,7 +73,7 @@ describe.skipIf(!existsSync(sdPath))("conformance: sd-jwt/diploma-basic", () => 
         aud: vec.aud,
         nonce: n.nonce ?? vec.nonce,
         stateCode: vec.state_code,
-        now: now() + (n.now_offset_sec ?? 0),
+        now: epochSeconds(now() + (n.now_offset_sec ?? 0)),
         rootCertsDer: [pemToDer(vec.root_cert_pem)],
         acceptLegacyVcSdJwtTyp: false, // Tamga türü: yalnız dc+sd-jwt (C13)
       });
@@ -90,7 +90,7 @@ describe.skipIf(!existsSync(idPath))("conformance: sd-jwt/identity-pid-names (AD
       aud: vec.aud,
       nonce: vec.nonce,
       stateCode: vec.state_code,
-      now: Math.floor(new Date(vec.now).getTime() / 1000),
+      now: epochSeconds(Math.floor(new Date(vec.now).getTime() / 1000)),
       rootCertsDer: [pemToDer(vec.root_cert_pem)],
       acceptLegacyVcSdJwtTyp: false, // Tamga türü: yalnız dc+sd-jwt (C13)
     });
@@ -106,15 +106,17 @@ describe.skipIf(!existsSync(idPath))("conformance: sd-jwt/identity-pid-names (AD
 
 describe.skipIf(!existsSync(slPath))("conformance: status-list/jwt-cwt (ADR-0048)", () => {
   const vec = existsSync(slPath) ? JSON.parse(readFileSync(slPath, "utf8")) : null;
-  const now = () => Math.floor(new Date(vec.now).getTime() / 1000);
+  const now = () => epochSeconds(Math.floor(new Date(vec.now).getTime() / 1000));
   it("taslağın bits = 1 örneği: sıkıştırılmış lst açılır", () => {
     const bs = StatusBitstring.fromCompressed(Buffer.from(vec.draft_example.lst_compressed_hex, "hex"), 100_000, 1);
     expect(Buffer.from(bs.bytes).toString("hex")).toBe(vec.draft_example.bytes_hex);
   });
   for (const l of vec?.lists ?? []) {
     it(`${l.name}: JWT ve CWT gösterimleri aynı bitleri, imzacıyı ve zamanları taşır`, async () => {
-      const a = await verifyStatusListToken(l.jwt.token, l.jwt.uri, now());
-      const b = await verifyStatusListCwt(Buffer.from(l.cwt.hex, "hex"), l.cwt.uri, now());
+      // ADR-0056 K6: imzacı vektörün beklenen parmak iziyle sabitlenir
+      const pin = { expectedSignerFingerprints: [l.expect.signer_fingerprint_sha256] };
+      const a = await verifyStatusListToken(l.jwt.token, l.jwt.uri, now(), pin);
+      const b = await verifyStatusListCwt(Buffer.from(l.cwt.hex, "hex"), l.cwt.uri, now(), pin);
       for (const t of [a, b]) {
         expect(t.payload.status_list.bits).toBe(l.bits);
         expect(t.leafFingerprintHex).toBe(l.expect.signer_fingerprint_sha256);
@@ -126,10 +128,15 @@ describe.skipIf(!existsSync(slPath))("conformance: status-list/jwt-cwt (ADR-0048
     });
     for (const n of l.negative) {
       it(`${l.name}: olumsuz — ${n.name} → ${n.expect}`, async () => {
-        const t = now() + n.now_offset_sec;
+        const t = epochSeconds(now() + n.now_offset_sec);
         const re = new RegExp(`^${n.expect}:`);
-        await expect(verifyStatusListToken(l.jwt.token, n.uri ?? l.jwt.uri, t)).rejects.toThrow(re);
-        await expect(verifyStatusListCwt(Buffer.from(l.cwt.hex, "hex"), n.uri ?? l.cwt.uri, t)).rejects.toThrow(re);
+        const pin = {
+          expectedSignerFingerprints: [n.expected_signer_fingerprint_sha256 ?? l.expect.signer_fingerprint_sha256],
+        };
+        await expect(verifyStatusListToken(l.jwt.token, n.uri ?? l.jwt.uri, t, pin)).rejects.toThrow(re);
+        await expect(verifyStatusListCwt(Buffer.from(l.cwt.hex, "hex"), n.uri ?? l.cwt.uri, t, pin)).rejects.toThrow(
+          re,
+        );
       });
     }
   }

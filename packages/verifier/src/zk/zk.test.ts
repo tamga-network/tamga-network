@@ -10,6 +10,7 @@ import { buildZkDeviceResponse, parseZkDeviceResponse, decode, encode, CborTag }
 import type { TrustSource, ZkCircuit } from "@tamga-network/trust";
 import { dcqlFromPolicy, verifyPresentation, MemoryStatusCache, type Policy } from "../index.js";
 import { verifyMdocZkFormat, WasmZkBackend, NativeZkBackend, zkBackendFromEnv, type ZkBackend } from "./index.js";
+import { epochSeconds } from "@tamga-network/core";
 
 const FX = resolve(import.meta.dirname, "fixtures");
 const rootDer = new Uint8Array(readFileSync(resolve(FX, "root.der")));
@@ -83,7 +84,7 @@ const base = {
   nonce: S.nonce,
   responseUri: S.responseUri,
   stateCode: "TR",
-  now: S.now,
+  now: epochSeconds(S.now),
   rootCertsDer: [rootDer],
   expectedDocTypes: [S.docType],
   requestedElements: ["age_over_18"],
@@ -213,7 +214,7 @@ describe("mso_mdoc_zk — doğrulama (WASM)", () => {
     if (!r.ok) expect(r.reason).toMatch(/ZK3/);
   });
   it("zaman damgası pencere dışı → Z1 RED", async () => {
-    expect(await run(valid, { now: S.now + 3600 })).toMatchObject({ ok: false, failedStep: "Z1" });
+    expect(await run(valid, { now: epochSeconds(S.now + 3600) })).toMatchObject({ ok: false, failedStep: "Z1" });
   });
   it("kök yok / zincir kurulmuyor → A3 RED", async () => {
     expect(await run(valid, { rootCertsDer: [] })).toMatchObject({ ok: false, failedStep: "A3" });
@@ -270,6 +271,7 @@ describe("mso_mdoc_zk — politika ve tam hat", () => {
   });
   it("verifyPresentation: ACCEPTED; Z1 yapıldı, D uygulanmaz (ZK4), değer ayrı kanalda", async () => {
     const { result, claims } = await verifyPresentation({
+      rp: "none",
       presentation: b64u(valid),
       format: "mso_mdoc_zk",
       responseUri: S.responseUri,
@@ -280,7 +282,7 @@ describe("mso_mdoc_zk — politika ve tam hat", () => {
       trust: trustWith(),
       statusCache: new MemoryStatusCache(),
       rootCertsDer: [rootDer],
-      now: S.now,
+      now: epochSeconds(S.now),
       zk: backend,
     });
     expect(result.outcome, `${result.failed_step}: ${result.failed_reason}`).toBe("ACCEPTED");
@@ -303,6 +305,7 @@ describe("mso_mdoc_zk — politika ve tam hat", () => {
         credentials: [flag === undefined ? pc : { ...pc, accept_unrevocable_zk: flag }],
       };
       const { result } = await verifyPresentation({
+        rp: "none",
         presentation: b64u(valid),
         format: "mso_mdoc_zk",
         responseUri: S.responseUri,
@@ -313,7 +316,7 @@ describe("mso_mdoc_zk — politika ve tam hat", () => {
         trust: trustWith(),
         statusCache: new MemoryStatusCache(),
         rootCertsDer: [rootDer],
-        now: S.now,
+        now: epochSeconds(S.now),
         zk: backend,
       });
       expect(result.outcome).toBe("INDETERMINATE");
@@ -325,6 +328,7 @@ describe("mso_mdoc_zk — politika ve tam hat", () => {
   it("verifyPresentation: devre dosyası yok → INDETERMINATE (Z1), E4 denetim kaydı yine düşer", async () => {
     const audits: string[] = [];
     const { result } = await verifyPresentation({
+      rp: "none",
       presentation: b64u(valid),
       format: "mso_mdoc_zk",
       responseUri: S.responseUri,
@@ -335,7 +339,7 @@ describe("mso_mdoc_zk — politika ve tam hat", () => {
       trust: trustWith(),
       statusCache: new MemoryStatusCache(),
       rootCertsDer: [rootDer],
-      now: S.now,
+      now: epochSeconds(S.now),
       zk: new WasmZkBackend({ circuitDir: FX }),
       audit: (e) => audits.push(e.outcome),
     });
@@ -430,6 +434,7 @@ describe("ADR-0044 — ZK kopyası (kısa ömür işareti)", () => {
   };
   const run = (p: Policy, presentation = zkCopy, trust = trustWith()) =>
     verifyPresentation({
+      rp: "none",
       presentation: b64u(presentation),
       format: "mso_mdoc_zk",
       responseUri: SC.responseUri,
@@ -440,7 +445,7 @@ describe("ADR-0044 — ZK kopyası (kısa ömür işareti)", () => {
       trust,
       statusCache: new MemoryStatusCache(),
       rootCertsDer: [rootDer],
-      now: SC.now,
+      now: epochSeconds(SC.now),
       zk: backend,
     });
   it("işaretli ZK sunumu bayraksız ACCEPTED; status NOT_APPLICABLE, gerekçe kısa ömür; DCQL türü ZK kopyası", async () => {
@@ -460,6 +465,7 @@ describe("ADR-0044 — ZK kopyası (kısa ömür işareti)", () => {
       credentials: [{ ...copyPolicy.credentials[0], vct_values: [S.docType] }],
     };
     const { result } = await verifyPresentation({
+      rp: "none",
       presentation: b64u(valid),
       format: "mso_mdoc_zk",
       responseUri: S.responseUri,
@@ -470,7 +476,7 @@ describe("ADR-0044 — ZK kopyası (kısa ömür işareti)", () => {
       trust: trustWith(),
       statusCache: new MemoryStatusCache(),
       rootCertsDer: [rootDer],
-      now: S.now,
+      now: epochSeconds(S.now),
       zk: backend,
     });
     expect(result.outcome).toBe("INDETERMINATE");

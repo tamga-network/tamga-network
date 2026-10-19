@@ -4,7 +4,7 @@ title: "Kayıt sertifikaları"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-13
+last_updated: 2026-10-19
 summary: >
   Tamga, geçici kayıt birimi olarak her doğrulayıcı kullanımı ve her belge veren için ETSI TS 119 475 kayıt sertifikası (WRPRC,
   `rc-wrp+jwt`) üretir; içerik yalnız imzalı güven listesindeki kayıttan gelir ve ayrı bir kayıt birimi anahtarıyla imzalanır. Doğrulayıcı
@@ -142,6 +142,12 @@ kayıt sertifikası doğrulamasını 2028-08-11'den itibaren zorunlu kıldı. K4
   2028-08-11 kuralı aynıdır. Doğrulayıcı tarafında `euWrprc` gönderimi ve cüzdanda okunması paketlerin 0.6.0 sürümünde.
 - Uyarı ve varsayılan "Paylaşma" paketlerin 0.6.0 sürümünde (`wallet-core`); ret tarihi aynı sürümde kodda.
 
+# Değişiklik — 2026-10-19 ([[ADR-0056]])
+
+K5'in 2026-10-13 değişikliğindeki geçiş kaldırıldı: kayıt sertifikası olmayan istek (uzaktan ve yakın alanda) **bugünden reddedilir**;
+cüzdan kişiye sormadan durur. 2028-08-11 tarihi ve uyarı + "Paylaşma" yolu yoktur. Cüzdandan cüzdana yakın alan değişmez. Önkoşul:
+canlı doğrulayıcıların kayıtlarına kimlik numarası girilir ve yayıncı her kullanım için kayıt sertifikası üretir (K4).
+
 # Durum
 
 **Accepted — 2026-09-29.** Proje yönetimi onayıyla (H1 planı, P2). DECISIONS: D-REG-2.
@@ -149,3 +155,6 @@ kayıt sertifikası doğrulamasını 2028-08-11'den itibaren zorunlu kıldı. K4
 > **Değişiklik (2026-10-13):** K4 ve K5 yukarıdaki "Değişiklik" bölümüne göre değişti (istek başına tek kayıt sertifikası,
 > `credential_ids` ve `registrar_dataset` yok; sertifikasız istekte uyarı + "Paylaşma", 2028-08-11'den sonra ret; yakın alanda
 > `euWrprc`). Proje yönetimi onayıyla (ilk AB uyum turu, karar 14).
+
+> **Değişiklik (2026-10-19):** K5'in 2028-08-11'e kadarki uyarı geçişi kaldırıldı; sertifikasız istek bugünden reddedilir
+> ([[ADR-0056]] K10, D-API-3). Proje yönetimi onayıyla (güvenlik turu 2026-10-19).

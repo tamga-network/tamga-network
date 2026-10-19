@@ -6,6 +6,7 @@
  *  Kimlik ispatı yetkilendirme sunucusunda: Tamga kimlik servisinde IDV (Didit), kurum issuer'ında IdentityAttestation SUNUMU.
  */
 import { createHash, randomBytes } from "node:crypto";
+import { secondsOrNow, type EpochSeconds } from "@tamga-network/core/time";
 
 export const AUTH_CODE_GRANT = "authorization_code";
 export const PAR_TTL_SEC = 600; // cüzdan → tarayıcı/sunum → dönüş: 10 dk
@@ -49,17 +50,19 @@ export interface ParInput {
   state?: string;
   /** RFC 9207: AS kimliği; verilirse yetki yanıtlarına `iss` eklenir */
   issuer?: string;
-  now?: number;
+  /** Unix saniyesi (ADR-0056 K12) */
+  now?: EpochSeconds;
   walletAttestation?: ParRequest["walletAttestation"];
   /** ADR-0020: teklifteki issuer_state (kimliğe bağlı teklif) */
   issuerState?: string;
   /**
-   * İzinli dönüş adresleri (RFC 9126 §2.4 / RFC 9700 §4.1: tam dize eşleşmesi). Dizi ya da istemciye göre (`clientId` → liste)
-   * işlev; verilirse ve liste dönerse `redirectUri` listede olmalıdır. Verilmezse yalnız biçim/şema denetimi yapılır.
-   * **Canlıda verin:** `clientId` bir cüzdan çözümünün bütün örneklerinde ortaktır (WIA `sub`); liste yoksa elinde gerçek bir
-   * cüzdan olan saldırgan kendi dönüş adresiyle PAR açıp kurbanı kimlik adımına yönlendirebilir (kod ona döner).
+   * ZORUNLU (ADR-0056 K2): izinli dönüş adresleri (RFC 9126 §2.4 / RFC 9700 §4.1: tam dize eşleşmesi). Dizi ya da istemciye göre
+   * (`clientId` → liste) işlev; `redirectUri` listede olmalıdır. İşlev `null`/`undefined` dönerse (istemcinin kaydı yok) ya da
+   * liste boşsa istek `invalid_redirect_uri` ile reddedilir. Neden: `clientId` bir cüzdan çözümünün bütün örneklerinde ortaktır
+   * (WIA `sub`); liste olmadan elinde gerçek bir cüzdan olan saldırgan kendi dönüş adresiyle PAR açıp kurbanı kimlik adımına
+   * yönlendirebilirdi (kod ona dönerdi).
    */
-  allowedRedirectUris?: readonly string[] | ((clientId: string) => readonly string[] | null | undefined);
+  allowedRedirectUris: readonly string[] | ((clientId: string) => readonly string[] | null | undefined);
 }
 export type ParError = "invalid_request" | "invalid_redirect_uri" | "unsupported_code_challenge";
 
@@ -67,7 +70,7 @@ export type ParError = "invalid_request" | "invalid_redirect_uri" | "unsupported
 export function createPar(
   i: ParInput,
 ): { ok: true; par: ParRequest } | { ok: false; error: ParError; description: string } {
-  const now = i.now ?? Math.floor(Date.now() / 1000);
+  const now = secondsOrNow(i.now);
   if (!i.codeChallenge || !/^[A-Za-z0-9_-]{43,128}$/.test(i.codeChallenge))
     return { ok: false, error: "invalid_request", description: "code_challenge missing or malformed" };
   if ((i.codeChallengeMethod ?? "S256") !== "S256")
@@ -78,7 +81,9 @@ export function createPar(
   if (/^(javascript|data|vbscript|file|blob):/i.test(i.redirectUri.trim()))
     return { ok: false, error: "invalid_redirect_uri", description: "this redirect_uri scheme is not accepted" };
   const allow = typeof i.allowedRedirectUris === "function" ? i.allowedRedirectUris(i.clientId) : i.allowedRedirectUris;
-  if (allow && !allow.includes(i.redirectUri))
+  if (!Array.isArray(allow) || !allow.length)
+    return { ok: false, error: "invalid_redirect_uri", description: "no redirect_uri is registered for this client" };
+  if (!allow.includes(i.redirectUri))
     return { ok: false, error: "invalid_redirect_uri", description: "redirect_uri is not registered for this client" };
   const ad = Array.isArray(i.authorizationDetails)
     ? (i.authorizationDetails as Array<{ type?: string; credential_configuration_id?: string }>)
@@ -149,9 +154,9 @@ export type CodeError = "invalid_grant" | "invalid_request";
  */
 export function redeemCode(
   par: ParRequest | undefined,
-  p: { code: string; codeVerifier?: string; redirectUri?: string; clientId: string; now?: number },
+  p: { code: string; codeVerifier?: string; redirectUri?: string; clientId: string; now?: EpochSeconds },
 ): { ok: true; accessToken: string; expiresIn: number } | { ok: false; error: CodeError; description: string } {
-  const now = p.now ?? Math.floor(Date.now() / 1000);
+  const now = secondsOrNow(p.now);
   // yalnız verilmiş bir kod eşleşir: kodu henüz basılmamış PAR, boş/eksik kodlu istekle bulunamaz
   if (!par || !par.code || !p.code || par.code !== p.code)
     return { ok: false, error: "invalid_grant", description: "code bilinmiyor" };

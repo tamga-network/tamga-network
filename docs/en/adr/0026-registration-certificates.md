@@ -4,7 +4,7 @@ title: "Registration certificates"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-13
+last_updated: 2026-10-19
 summary: >
   As provisional registrar, Tamga produces an ETSI TS 119 475 registration certificate (WRPRC, `rc-wrp+jwt`) for every verifier
   use and every issuer; the content comes only from the record in the signed trust list and is signed with a separate registrar
@@ -156,6 +156,13 @@ K1–K3 and WRC1–WRC4 still apply unchanged.
 - The warning and the default "Don't share" come with release 0.6.0 of the packages (`wallet-core`); the rejection date is in the
   code in the same release.
 
+# Change — 2026-10-19 ([[ADR-0056]])
+
+The transition in the 2026-10-13 change to K5 is removed: a request without a registration certificate (remote and proximity) is
+**rejected from today**; the wallet stops without asking the person. There is no 2028-08-11 date and no warning + "Don't share" path.
+Wallet-to-wallet proximity does not change. Precondition: the registrations of the live verifiers carry their identification numbers
+and the publisher issues a registration certificate for every intended use (K4).
+
 # Status
 
 **Accepted — 2026-09-29.** Approved by project management (H1 plan, P2). DECISIONS: D-REG-2.
@@ -163,3 +170,6 @@ K1–K3 and WRC1–WRC4 still apply unchanged.
 > **Change (2026-10-13):** K4 and K5 changed as in the "Change" section above (one registration certificate per request, no
 > `credential_ids` and no `registrar_dataset`; warning + "Don't share" for a request without one, rejection after 2028-08-11;
 > `euWrprc` in proximity). Approved by project management (first EU alignment review, decision 14).
+
+> **Change (2026-10-19):** the warning transition of K5 until 2028-08-11 is removed; a request without a registration certificate is
+> rejected from today ([[ADR-0056]] K10, D-API-3). Approved by project management (security review of 2026-10-19).

@@ -28,6 +28,10 @@ import {
   type VpRequest,
   type ZkProveRequest,
 } from "./index.js";
+import { checkRp as checkRpForTest, type Match as MatchForTest, type VpRequest as VpRequestForTest } from "./oid4vp.js";
+/** ADR-0056 K8: testte `respond` için `checkRp` onayı (kayıtsız doğrulayıcı: engelleyici durum yok). */
+const testApproval = (req: VpRequestForTest) =>
+  checkRpForTest(null, req, { requested: [] } as unknown as MatchForTest).approval!;
 
 const DOC_TYPE = "urn:tamga:id:IdentityAttestation:1";
 const NS = "tamga.id.1";
@@ -241,6 +245,7 @@ describe("ADR-0032 + ADR-0044: ZK sunumu (respond)", async () => {
     const seen: ZkProveRequest[] = [];
     const proof = new Uint8Array([0xa3, 1, 2, 3]);
     const out = await respond({
+      approval: testApproval(request),
       request,
       matches: [input],
       keys,
@@ -275,10 +280,11 @@ describe("ADR-0032 + ADR-0044: ZK sunumu (respond)", async () => {
   });
 
   it("ispatçı yoksa ya da hata verirse belge gönderilmez: unsupported + detail.zk (ZK5); kopya yoksa no_zk_copy", async () => {
-    const noHook = respond({ request, matches: [input], keys, http });
+    const noHook = respond({ approval: testApproval(request), request, matches: [input], keys, http });
     await expect(noHook).rejects.toBeInstanceOf(WalletError);
     await expect(noHook).rejects.toMatchObject({ code: "unsupported", detail: { zk: "unavailable" } });
     const noCircuit = respond({
+      approval: testApproval(request),
       request,
       matches: [input],
       keys,
@@ -289,6 +295,7 @@ describe("ADR-0032 + ADR-0044: ZK sunumu (respond)", async () => {
     });
     await expect(noCircuit).rejects.toMatchObject({ code: "unsupported", detail: { zk: "no_circuit" } });
     const crash = respond({
+      approval: testApproval(request),
       request,
       matches: [input],
       keys,
@@ -298,14 +305,28 @@ describe("ADR-0032 + ADR-0044: ZK sunumu (respond)", async () => {
       },
     });
     await expect(crash).rejects.toMatchObject({ code: "unsupported", detail: { zk: "prove_failed" } });
-    const empty = respond({ request, matches: [input], keys, http, zk: async () => new Uint8Array() });
+    const empty = respond({
+      approval: testApproval(request),
+      request,
+      matches: [input],
+      keys,
+      http,
+      zk: async () => new Uint8Array(),
+    });
     await expect(empty).rejects.toMatchObject({ detail: { zk: "prove_failed" } });
     const gone = {
       ...input,
       match: { ...match, credential: { ...credential, zk: { ...credential.zk!, copies: [] } } },
     };
     await expect(
-      respond({ request, matches: [gone], keys, http, zk: async () => new Uint8Array([1]) }),
+      respond({
+        approval: testApproval(request),
+        request,
+        matches: [gone],
+        keys,
+        http,
+        zk: async () => new Uint8Array([1]),
+      }),
     ).rejects.toMatchObject({ code: "unsupported", detail: { zk: "no_zk_copy" } });
   });
 });

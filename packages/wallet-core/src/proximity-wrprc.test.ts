@@ -23,7 +23,8 @@ import { b64u } from "./b64.js";
 import { newState, type StoredCredential, type WalletState } from "./store.js";
 import { presentProximity, type ProximityRequestView } from "./proximity.js";
 import { fakeBleLink } from "./w2w.js";
-import { WRPRC_REQUIRED_FROM, checkProximityRegistration, missingRegistrationPolicy } from "./wrprc.js";
+import { checkProximityRegistration, missingRegistrationPolicy } from "./wrprc.js";
+import { epochMillis } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
@@ -121,19 +122,28 @@ const req = (euWrprc?: Uint8Array): ItemsRequest[] => [
 /** okuyucu tarafının imzalı listedeki kaydında sabitlenmiş yaprak parmak izi (RP kaydı) */
 const pinned = () => ({ trustAnchors: [] as Uint8Array[], registeredFingerprints: [gate.fp] });
 
-describe("missingRegistrationPolicy zaman birimi (güvenlik turu 2026-10-19)", () => {
-  it("milisaniye ister: saniye verilirse 2028 sınırına hiç ulaşılmaz — hata atar", () => {
-    expect(() => missingRegistrationPolicy(Math.floor(Date.now() / 1000))).toThrow(/milliseconds/);
-    expect(() => missingRegistrationPolicy(Number.NaN)).toThrow(/milliseconds/);
-    expect(missingRegistrationPolicy(WRPRC_REQUIRED_FROM + 1).valid).toBe(false);
-    expect(missingRegistrationPolicy(WRPRC_REQUIRED_FROM - 1).valid).toBe(true);
+describe("missingRegistrationPolicy (ADR-0056 K10)", () => {
+  it("tarihe bağlı geçiş yok: sertifikasız istek her zaman geçersiz", () => {
+    expect(missingRegistrationPolicy()).toEqual({
+      present: false,
+      valid: false,
+      reason: "registration_missing",
+      flags: ["registration_missing"],
+      defaultChoice: "decline",
+    });
+  });
+  it("zaman birimi türle ve çalışma zamanında denetlenir (saniye verilirse hata)", async () => {
+    const { item, transcript } = await decoded(req(), gate);
+    expect(() =>
+      checkProximityRegistration(item, transcript, [registrar.fp], pinned(), Math.floor(NOW / 1000) as never),
+    ).toThrow(/milliseconds/);
   });
 });
 
 describe("checkProximityRegistration (ADR-0026 K5 yakın alan)", () => {
   it("geçerli: kayıt kurumu imzası, süre, sub = okuyucu sertifikası; izinli öğeler; okuyucu parmak izi", async () => {
     const { item, transcript } = await decoded(req(await wrprc()), gate);
-    const r = checkProximityRegistration(item, transcript, [registrar.fp], pinned(), NOW);
+    const r = checkProximityRegistration(item, transcript, [registrar.fp], pinned(), epochMillis(NOW));
     expect(r).toMatchObject({
       present: true,
       valid: true,
@@ -153,7 +163,7 @@ describe("checkProximityRegistration (ADR-0026 K5 yakın alan)", () => {
       { trustAnchors: [readerCa.der] }, // çapa var ama okuyucu ona bağlı değil
       { trustAnchors: [], registeredFingerprints: [gate.fp] }, // başka bir sertifikanın parmak izi
     ]) {
-      const r = checkProximityRegistration(s.item, s.transcript, [registrar.fp], trust, NOW);
+      const r = checkProximityRegistration(s.item, s.transcript, [registrar.fp], trust, epochMillis(NOW));
       expect(r).toMatchObject({
         present: true,
         valid: false,
@@ -163,22 +173,36 @@ describe("checkProximityRegistration (ADR-0026 K5 yakın alan)", () => {
       expect(r.tradeName).toBeUndefined();
     }
     // çapa parametresi hiç verilmezse (JS çağıranı) de geçersiz — hiçbir zaman geçerli değil
-    expect(checkProximityRegistration(s.item, s.transcript, [registrar.fp], undefined as never, NOW)).toMatchObject({
+    expect(
+      checkProximityRegistration(s.item, s.transcript, [registrar.fp], undefined as never, epochMillis(NOW)),
+    ).toMatchObject({
       valid: false,
       reason: "untrusted_reader_certificate",
     });
     // CA'ya bağlı okuyucu: x5chain yalnız yaprak, kök x5chain'de yok — çapa sertifikası veren imzasını doğrular
     const a = await decoded(req(await wrprc()), caGate);
     expect(
-      checkProximityRegistration(a.item, a.transcript, [registrar.fp], { trustAnchors: [readerCa.der] }, NOW),
+      checkProximityRegistration(
+        a.item,
+        a.transcript,
+        [registrar.fp],
+        { trustAnchors: [readerCa.der] },
+        epochMillis(NOW),
+      ),
     ).toMatchObject({ valid: true, tradeName: "Kapı", readerTrusted: true });
     // çapa yalnız parmak iziyle (kök x5chain'de değilken) bağlanmaz: sertifika gerekir
     expect(
-      checkProximityRegistration(a.item, a.transcript, [registrar.fp], { trustAnchors: [readerCa.fp] }, NOW),
+      checkProximityRegistration(
+        a.item,
+        a.transcript,
+        [registrar.fp],
+        { trustAnchors: [readerCa.fp] },
+        epochMillis(NOW),
+      ),
     ).toMatchObject({ valid: false, reason: "untrusted_reader_certificate" });
     // kayıtlı yaprak parmak izi
     const g = await decoded(req(await wrprc()), gate);
-    expect(checkProximityRegistration(g.item, g.transcript, [registrar.fp], pinned(), NOW)).toMatchObject({
+    expect(checkProximityRegistration(g.item, g.transcript, [registrar.fp], pinned(), epochMillis(NOW))).toMatchObject({
       valid: true,
       readerTrusted: true,
     });
@@ -187,7 +211,7 @@ describe("checkProximityRegistration (ADR-0026 K5 yakın alan)", () => {
   it("1–3 tutmazsa geçersiz: kayıt kurumu değil, süresi geçmiş, okuyucu imzası yok, başka kurumun sertifikası", async () => {
     const run = async (cert: Uint8Array, reader?: Party) => {
       const { item, transcript } = await decoded(req(cert), reader);
-      return checkProximityRegistration(item, transcript, [registrar.fp], pinned(), NOW);
+      return checkProximityRegistration(item, transcript, [registrar.fp], pinned(), epochMillis(NOW));
     };
     expect(await run(await wrprc(stranger), gate)).toMatchObject({ valid: false, reason: /registrar/ });
     expect(await run(await wrprc(registrar, { exp: nowSec - 1 }), gate)).toMatchObject({
@@ -198,19 +222,13 @@ describe("checkProximityRegistration (ADR-0026 K5 yakın alan)", () => {
     expect(await run(await wrprc(), impostor)).toMatchObject({ valid: false, reason: /does not belong/ });
   });
 
-  it("sertifikasız istek: uyarı + varsayılan Paylaşma; 2028-08-11'den sonra ret", async () => {
+  it("sertifikasız istek (ADR-0056 K10): ret; okuyucu bilgisi yine döner", async () => {
     const { item, transcript } = await decoded(req(), gate);
-    expect(checkProximityRegistration(item, transcript, [registrar.fp], pinned(), NOW)).toMatchObject({
-      present: false,
-      valid: true,
-      flags: ["registration_missing"],
-      defaultChoice: "decline",
-      readerCertFingerprint: gate.fp,
-    });
-    expect(checkProximityRegistration(item, transcript, [registrar.fp], pinned(), WRPRC_REQUIRED_FROM)).toMatchObject({
+    expect(checkProximityRegistration(item, transcript, [registrar.fp], pinned(), epochMillis(NOW))).toMatchObject({
       present: false,
       valid: false,
       reason: "registration_missing",
+      readerCertFingerprint: gate.fp,
     });
   });
 });
@@ -321,11 +339,9 @@ describe("presentProximity — kayıt sertifikası (ADR-0026 K5)", () => {
     expect(r.deviceResponse).toBeNull();
   });
 
-  it("sertifikasız: bugün uyarıyla sorulur (varsayılan Paylaşma); 2028-08-11'den sonra sorulmadan ret", async () => {
+  it("sertifikasız (ADR-0056 K10): kişiye sorulmadan ret", async () => {
     const today = await run(req(), gate, NOW);
-    expect(today.seen[0].registration).toMatchObject({ flags: ["registration_missing"], defaultChoice: "decline" });
-    const later = await run(req(), gate, WRPRC_REQUIRED_FROM + 1);
-    expect(later.seen).toHaveLength(0);
-    expect(later.result).toMatchObject({ outcome: "declined", reason: "registration_missing" });
+    expect(today.seen).toHaveLength(0);
+    expect(today.result).toMatchObject({ outcome: "declined", reason: "registration_missing" });
   });
 });

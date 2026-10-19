@@ -30,6 +30,7 @@ import {
 import { SoftwareKeyProvider, MemoryKeyStore, presentSdJwt } from "@tamga-network/wallet-core";
 import { verifyWalletAttestation } from "@tamga-network/trust";
 import { verifyPresentation, MemoryStatusCache, dcqlFromPolicy, type Policy } from "./index.js";
+import { epochSeconds } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ROOT = resolve(import.meta.dirname, "../../..");
@@ -273,6 +274,7 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
       nonce,
     });
     return verifyPresentation({
+      rp: "none",
       presentation,
       aud: AUD,
       nonce,
@@ -379,10 +381,11 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
       .setProtectedHeader({ alg: "ES256", typ: "oauth-client-attestation-pop+jwt" })
       .sign(holder.privateKey);
     const r = await verifyWalletAttestation({
+      statusOf: "none",
       wua,
       pop,
       issuerUrl: "https://issuer.example.test",
-      now,
+      now: epochSeconds(now),
       isProviderKey: (f: string) => trust.isWalletProviderKey(f),
     });
     expect(r.ok).toBe(true);

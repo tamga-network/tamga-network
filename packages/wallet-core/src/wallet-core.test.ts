@@ -32,6 +32,7 @@ import {
   type DirectoryEntry,
   type ReceiveOptions,
 } from "./index.js";
+import { epochSeconds } from "@tamga-network/core";
 
 const PKI = resolve(import.meta.dirname, "../../../ops/pki");
 const havePki = existsSync(resolve(PKI, "issuer-bilgi.pkcs8.pem"));
@@ -164,7 +165,7 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
       nonce: "n1",
       stateCode: "TR",
       rootCertsDer: [pemToDer(rootPem)],
-      now,
+      now: epochSeconds(now),
     });
     expect(ref.ok).toBe(true);
     if (!ref.ok) return;
@@ -172,7 +173,17 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
     expect(ref.claims.family_name).toBe("Yılmaz");
     expect(ref.issuerId).toBe(v.issuerId);
     // yanlış nonce → RED (A6)
-    expect((await verifySdJwtVc(pres, { aud: AUD, nonce: "n2", stateCode: "TR", now })).ok).toBe(false);
+    expect(
+      (
+        await verifySdJwtVc(pres, {
+          rootCertsDer: "none",
+          aud: AUD,
+          nonce: "n2",
+          stateCode: "TR",
+          now: epochSeconds(now),
+        })
+      ).ok,
+    ).toBe(false);
     expect(decodeJwt(pres.split("~").pop()!).header.typ).toBe("kb+jwt");
   });
 

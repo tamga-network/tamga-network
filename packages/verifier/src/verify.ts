@@ -12,9 +12,12 @@
  * Sonuç nesnesi claim DEĞERİ taşımaz (AP3), idx taşımaz (AP4); değerler ayrı alanda çağırana verilir.
  */
 import type { TrustSource, RelyingParty } from "@tamga-network/trust";
+import { getClaimAtPath } from "@tamga-network/core/sd-structure";
+import { nowSeconds, epochSeconds, type EpochSeconds } from "@tamga-network/core/time";
 import type { Policy } from "./policy.js";
 import type { StatusCache } from "./status-cache.js";
 import { stepA, stepB, stepC, stepD, stepE, stepT0, type StepFail, type VerifyCtx } from "./steps.js";
+import { registerAccepted } from "./accepted.js";
 
 export type Step =
   | "T0"
@@ -114,18 +117,23 @@ export interface VerifyInput {
   statusCache: StatusCache;
   rootCertsDer: Uint8Array[];
   /**
-   * E3: sunumu açan RP'nin kaydı (aracı doğrulayıcıda asıl RP'ninki — ADR-0017 K7/HV6). **`undefined` → E3 (kapsam denetimi)
-   * atlanır** ve sonuç yine `ACCEPTED` olabilir (E3 yalnız `checks_skipped`'te görünür); `null` → kayıtsız RP, ret. Barındırılan
-   * doğrulayıcıda her zaman verin.
+   * ZORUNLU (ADR-0056 K4) — E3: sunumu açan RP'nin kaydı (aracı doğrulayıcıda asıl RP'ninki — ADR-0017 K7/HV6); `null` → kayıtsız
+   * RP, ret. `"none"`: kapsam denetimi bilerek yapılmaz (kayıtlı RP'si olmayan kendi sunucusunda doğrulayan; E3
+   * `checks_skipped`'te görünür). Verilmemesi E3'te ret.
    */
-  rp?: RelyingParty | null;
+  rp: RelyingParty | null | "none";
   /**
    * Yalnız yerel geliştirme: `iss` yerel/IP adresiyse kayıtlı `issuer_url` ile tutarlılık denetimi atlanır (LAN'da adresler farklı).
    * Varsayılan kapalı; canlı (https) doğrulayıcı açmaz.
    */
   allowLocalIssuerUrls?: boolean;
-  now?: number;
+  /** Unix saniyesi (ADR-0056 K12: `epochSeconds` / `nowSeconds`) */
+  now?: EpochSeconds;
   verificationId?: string;
+  /**
+   * E4 denetim kaydı (AP9; değer/idx yok — AP3/AP4). Verilmezse kayıt yazılmaz ve E4 `checks_skipped`'te görünür (ADR-0056 K11);
+   * barındırılan doğrulayıcıda her zaman verin.
+   */
   audit?: (entry: {
     verification_id: string;
     outcome: Outcome;
@@ -143,6 +151,19 @@ export interface VerifyOutput {
 
 export const SPEC_VERSION = "SPEC-API-0001@1.0.0"; // spec sürüm notuyla birlikte güncellenir
 export const SDK_VERSION = "@tamga-network/verifier@0.6.0"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
+
+/**
+ * Evet/hayır sonucunun güvenli okunuşu (ADR-0056): doğrulama KABUL edildiyse ve açıklanan değer tam olarak `true` ise `true`
+ * (ör. ZK ya da düz sunumda `age_over_18`). Red, doğrulanamadı, değer yok, `"true"`/`1` gibi başka değerler `false`. `claim` iç
+ * içe yol olabilir (ör. `age_equal_or_over.18`).
+ */
+export function isYes(out: VerifyOutput | null | undefined, claim: string): boolean {
+  if (!out || out.result?.outcome !== "ACCEPTED" || !out.claims) return false;
+  const v = Object.prototype.hasOwnProperty.call(out.claims, claim)
+    ? out.claims[claim]
+    : getClaimAtPath(out.claims, claim);
+  return v === true;
+}
 const ALL_STEPS: Step[] = [
   "T0",
   "A1",
@@ -193,7 +214,7 @@ function freshnessOf(trust: TrustSource): ReturnType<TrustSource["freshness"]> {
  * E4 denetim kaydına düşer (AP9; değer/idx yok — AP3/AP4). Onaylanan claim değerleri yalnızca ACCEPTED'da, ayrı alanda (AP3).
  */
 export async function verifyPresentation(input: VerifyInput): Promise<VerifyOutput> {
-  const now = input.now ?? Math.floor(Date.now() / 1000);
+  const now = input.now === undefined ? nowSeconds() : epochSeconds(input.now);
   const ctx: VerifyCtx = {
     input,
     now,
@@ -244,23 +265,26 @@ function finish(
   ind: IndeterminateReason | null,
 ): VerifyOutput {
   const { input, now, done, skipped, fr } = ctx;
-  done.push("E4");
-  input.audit?.({
-    verification_id: vid,
-    outcome,
-    failed_step: failed,
-    issuer_id: ctx.issuerInfo?.issuer_id,
-    vct: ctx.schemaInfo?.vct,
-    disclosed: ctx.disclosed,
-    ts: now,
-  }); // AP9: red için de; AP3/AP4: değer/idx yok
-  return {
+  // ADR-0056 K11: E4 yalnız denetim kaydı gerçekten yazıldıysa "yapıldı"; kayıt yeri yoksa atlandı
+  if (typeof input.audit === "function") {
+    input.audit({
+      verification_id: vid,
+      outcome,
+      failed_step: failed,
+      issuer_id: ctx.issuerInfo?.issuer_id,
+      vct: ctx.schemaInfo?.vct,
+      disclosed: ctx.disclosed,
+      ts: now,
+    }); // AP9: red için de; AP3/AP4: değer/idx yok
+    done.push("E4");
+  } else skipped.push("E4");
+  const out: VerifyOutput = {
     result: {
       verification_id: vid,
       spec_version: SPEC_VERSION,
       sdk_version: SDK_VERSION,
       checks_performed: [...done],
-      checks_skipped: [...skipped, ...ALL_STEPS.filter((s) => !done.includes(s) && !skipped.includes(s) && s !== "E4")],
+      checks_skipped: [...skipped, ...ALL_STEPS.filter((s) => !done.includes(s) && !skipped.includes(s))],
       issuer: ctx.issuerInfo,
       schema: ctx.schemaInfo,
       disclosed_claims: ctx.disclosed,
@@ -274,4 +298,7 @@ function finish(
     },
     claims: outcome === "ACCEPTED" ? ctx.claims : null,
   };
+  // ADR-0056 K9: yalnız bu kabul çıktısı geçiş kartına dönüşebilir (iç kayıt; accepted.ts)
+  if (outcome === "ACCEPTED") registerAccepted(out, { presentation: input.presentation, format: input.format });
+  return out;
 }

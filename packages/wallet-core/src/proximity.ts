@@ -9,6 +9,7 @@
  * varsayılan "Paylaşma" (2028-08-11'den sonra ret). Cüzdandan cüzdana gösterimde (karşı taraf bir kişi) bu denetim yapılmaz.
  */
 import { pidSdJwtName } from "@tamga-network/core/pid";
+import { epochMillis } from "@tamga-network/core/time";
 import {
   BleReassembler,
   bleChunks,
@@ -198,7 +199,7 @@ export async function presentProximity(p: {
             hs.transcript,
             p.registrarKeys ?? [],
             p.readerTrust ?? { trustAnchors: [] },
-            p.now ?? Date.now(),
+            epochMillis(p.now ?? Date.now()),
           );
     const view: ProximityRequestView = {
       docType: item.docType,

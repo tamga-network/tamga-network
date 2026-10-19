@@ -4,9 +4,8 @@
  * imzalayan erişim sertifikasındaki organizationIdentifier, (4) istenen alanlar sertifikanın `credentials` listesinde.
  * 1–3 tutmazsa `valid: false` → cüzdan veri göndermez (WRC4). 4 tutmazsa fazla istek (onay ekranında uyarı).
  *
- * 2026-10-13 değişikliği (ADR-0026 K5; 0.6.0): kayıt sertifikası OLMAYAN istek `registration_missing` işaretini taşır — bugün
- * uyarı + varsayılan "Paylaşma" (`defaultChoice: "decline"`; kişi yine de paylaşabilir), `WRPRC_REQUIRED_FROM`'dan (2028-08-11,
- * Uygulama Tüzüğü (AB) 2026/1731) sonra ret (`valid: false`). Tarih kodda sabittir. Yakın alanda (ISO/IEC 18013-5) kayıt
+ * ADR-0056 K10 (0.7.0; ADR-0026 K5'in 2026-10-13 geçiş kuralının yerine): kayıt sertifikası OLMAYAN istek bugünden REDDEDİLİR
+ * (`valid: false`, `reason: "registration_missing"`) — 2028-08-11'e kadarki "uyarı + Paylaşma" geçişi kaldırıldı. Yakın alanda (ISO/IEC 18013-5) kayıt
  * sertifikası `requestInfo.euWrprc` ile CBOR biçiminde (`rc-wrp+cwt`) gelir; 1–4 aynı, 3'teki bağ okuyucunun kimlik doğrulama
  * sertifikasıyla (`readerAuth`) kurulur (`checkProximityRegistration`). 0.6.0 ön-yayın düzeltmesi: okuyucu sertifikası kendisi
  * güvene bağlanmadan (imzalı listenin `root_cas`'ı ya da tarafın kaydındaki parmak izi) sonuç hiçbir zaman geçerli değildir —
@@ -21,49 +20,37 @@ import { chainAnchored, type TrustAnchor } from "./anchors.js";
 import { fetchTrustSource, type TrustPins } from "./trustlist.js";
 import type { Http } from "./http.js";
 import type { Match, VpRequest } from "./oid4vp.js";
+import { millisOrNow, type EpochMillis } from "@tamga-network/core/time";
 
 export const WRPRC_TYP = "rc-wrp+jwt";
 const SKEW_SEC = 60;
 
-/**
- * Bu andan (UTC, ms) sonra kayıt sertifikası olmayan istek REDDEDİLİR (ADR-0026 K5; Uygulama Tüzüğü (AB) 2026/1731'in cüzdanda kayıt
- * sertifikası doğrulamasını zorunlu kıldığı tarih: 2028-08-11). Sabittir; ayarla değiştirilmez.
- */
-export const WRPRC_REQUIRED_FROM = Date.UTC(2028, 7, 11);
-
-/** Onay ekranının uyarı işaretleri. `registration_missing`: istek kayıt sertifikası taşımıyor. */
+/** Onay ekranının işaretleri. `registration_missing`: istek kayıt sertifikası taşımıyor (ret nedeni). */
 export type RegistrationFlag = "registration_missing";
 
 /**
- * Kayıt sertifikası olmayan isteğin kuralı (ADR-0026 K5): `WRPRC_REQUIRED_FROM`'dan önce uyarı + varsayılan "Paylaşma",
- * sonra ret. `now` ms.
+ * Kayıt sertifikası olmayan isteğin kuralı (ADR-0056 K10): ret (`valid: false`, `reason: "registration_missing"`); cüzdan veri
+ * göndermez. Tarihe bağlı geçiş yoktur.
  */
-export function missingRegistrationPolicy(now = Date.now()): RegistrationCertCheck {
-  // Saniye verilirse (ör. Math.floor(Date.now()/1000)) 2028 sınırına hiç ulaşılmaz ve ret hiç başlamazdı: açıkça reddet
-  if (!Number.isFinite(now) || now < 1e11)
-    throw new RangeError("missingRegistrationPolicy: now must be epoch milliseconds");
-  const reject = now >= WRPRC_REQUIRED_FROM;
+export function missingRegistrationPolicy(): RegistrationCertCheck {
   return {
     present: false,
-    valid: !reject,
+    valid: false,
+    reason: "registration_missing",
     flags: ["registration_missing"],
     defaultChoice: "decline",
-    ...(reject ? { reason: "registration_missing" } : {}),
   };
 }
 
 export interface RegistrationCertCheck {
   /** istekte en az bir `registration_cert` var mı */
   present: boolean;
-  /**
-   * hepsi 1–3'ü geçti mi. Sertifika yoksa (present=false) `WRPRC_REQUIRED_FROM`'dan önce true (uyarıyla), sonra false
-   * (`reason: "registration_missing"`).
-   */
+  /** hepsi 1–3'ü geçti mi. Sertifika yoksa (present=false) false (`reason: "registration_missing"`; ADR-0056 K10). */
   valid: boolean;
   reason?: string;
   /** 0.6.0: onay ekranı uyarıları (sertifika yoksa `registration_missing`) */
   flags?: RegistrationFlag[];
-  /** 0.6.0: onay ekranının varsayılan seçimi — sertifika yoksa "decline" ("Paylaşma"); kişi yine de paylaşabilir */
+  /** onay ekranının varsayılan seçimi — sertifika yoksa "decline" (istek zaten geçersiz) */
   defaultChoice?: "share" | "decline";
   /** eşleşen belge için sertifikaların izin verdiği alanlar (yalnız valid ve ilgili sertifika varsa) */
   allowedClaims?: string[];
@@ -117,8 +104,9 @@ export async function fetchRegistrarKeys(
 export function verifyWrprc(
   data: unknown,
   registrarKeys: string[],
-  now = Date.now(),
+  nowMs?: EpochMillis,
 ): { ok: true; payload: Wrprc; signerDer: Uint8Array; chainDer: Uint8Array[] } | { ok: false; reason: string } {
+  const now = millisOrNow(nowMs);
   if (typeof data !== "string") return { ok: false, reason: "registration certificate is not a JWT" };
   const nowSec = Math.floor(now / 1000);
   let payload: Wrprc;
@@ -155,8 +143,9 @@ export function checkIssuerRegistration(
   metadata: { issuer_info?: unknown },
   vct: string,
   registrarKeys: string[],
-  now = Date.now(),
+  nowMs?: EpochMillis,
 ): { present: boolean; valid: boolean; reason?: string } {
+  const now = millisOrNow(nowMs);
   const info = Array.isArray(metadata.issuer_info)
     ? (metadata.issuer_info as Array<{ format?: string; data?: unknown }>)
     : [];
@@ -194,8 +183,9 @@ export function relevantRegistrationCerts(
   req: VpRequest,
   registrarKeys: string[],
   match: Pick<Match, "queryId">,
-  now = Date.now(),
+  nowMs?: EpochMillis,
 ): { present: boolean; valid: boolean; reason?: string; certs: RelevantRegistrationCert[] } {
+  const now = millisOrNow(nowMs);
   const info = (req.payload as { verifier_info?: unknown }).verifier_info;
   const entries = Array.isArray(info)
     ? (info as Array<{ format?: string; data?: unknown; credential_ids?: string[] }>).filter(
@@ -228,10 +218,11 @@ export function checkRegistrationCerts(
   req: VpRequest,
   registrarKeys: string[],
   match: Match,
-  now = Date.now(),
+  nowMs?: EpochMillis,
 ): RegistrationCertCheck {
+  const now = millisOrNow(nowMs);
   const r = relevantRegistrationCerts(req, registrarKeys, match, now);
-  if (!r.present) return missingRegistrationPolicy(now);
+  if (!r.present) return missingRegistrationPolicy();
   if (!r.valid) return { present: true, valid: false, reason: r.reason };
   const relevant = r.certs.map((c) => c.payload);
   const allowed = new Set<string>();
@@ -254,8 +245,9 @@ export function checkRegistrationCerts(
 export function verifyWrprcCwt(
   bytes: unknown,
   registrarKeys: string[],
-  now = Date.now(),
+  nowMs?: EpochMillis,
 ): { ok: true; payload: Wrprc; signerDer: Uint8Array; chainDer: Uint8Array[] } | { ok: false; reason: string } {
+  const now = millisOrNow(nowMs);
   if (!(bytes instanceof Uint8Array))
     return { ok: false, reason: "registration certificate is not a CBOR byte string" };
   let payload: Wrprc;
@@ -308,7 +300,7 @@ export interface ReaderTrust {
  * imzacı kayıt kurumu; (2) süre; (3) `sub` (aracılıda `intermediary.sub`) = okuyucunun `readerAuth` sertifikasındaki
  * organizationIdentifier (okuyucu imzası bu oturumun dökümüyle doğrulanır; imzasız istekte bağ kurulamaz → geçersiz); (4) istenen
  * öğeler sertifikanın `credentials` listesinde (`allowedClaims`; fazlası onay ekranında uyarı). `euWrprc` yoksa
- * `missingRegistrationPolicy` (uyarı + "Paylaşma"; 2028-08-11'den sonra ret). `transcript` = oturumun SessionTranscript baytları.
+ * `missingRegistrationPolicy` (ret; ADR-0056 K10). `transcript` = oturumun SessionTranscript baytları.
  * `readerTrust` (zorunlu): okuyucu sertifikası bunlardan birine bağlanmadan geçerli sonuç dönmez (`untrusted_reader_certificate`).
  * Cüzdandan cüzdana (TS9) bu işlev çağrılmaz: karşı tarafın okuyucu sertifikası yoktur (STS9_30 bekliyor) — `presentProximity`
  * `registrarKeys: false` ile denetimi atlar ("kayıt yok").
@@ -318,8 +310,9 @@ export function checkProximityRegistration(
   transcript: Uint8Array,
   registrarKeys: string[],
   readerTrust: ReaderTrust,
-  now = Date.now(),
+  nowMs?: EpochMillis,
 ): ProximityRegistrationCheck {
+  const now = millisOrNow(nowMs);
   const reader = item.readerAuth
     ? verifyReaderAuth(item.readerAuth, transcript, item.itemsRequestBytes, p256PointFromCertDer)
     : null;
@@ -328,7 +321,7 @@ export function checkProximityRegistration(
     ? { readerChainDer: reader.chainDer, readerCertFingerprint: certFingerprintHex(reader.chainDer[0]), readerTrusted }
     : {};
   const cert = item.requestInfo?.euWrprc;
-  if (cert === undefined) return { ...missingRegistrationPolicy(now), ...readerInfo };
+  if (cert === undefined) return { ...missingRegistrationPolicy(), ...readerInfo };
   const fail = (reason: string): ProximityRegistrationCheck => ({ present: true, valid: false, reason, ...readerInfo });
   const v = verifyWrprcCwt(cert, registrarKeys, now);
   if (!v.ok) return fail(v.reason);

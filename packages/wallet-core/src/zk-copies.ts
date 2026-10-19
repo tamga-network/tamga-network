@@ -8,6 +8,7 @@
  * (`oid4vp.ts` matchDcql); kopya yoksa ZK sorgusu karşılanamaz ve klasik seçenek seçilir (ZK5).
  */
 import { b64u, b64uDecode, toHex } from "./b64.js";
+import { epochSeconds } from "@tamga-network/core/time";
 import { readJson, type Http } from "./http.js";
 import { isAuthRequired, type KeyProvider, type PublicJwk } from "./keys.js";
 import type { WuaRecord } from "./wua.js";
@@ -227,7 +228,7 @@ export function checkZkCopy(
     throw new Error("ZK copy: issuer certificate differs from the identity credential (MD3)");
   const v = verifyIssuerSigned(bytes, {
     issuerPubRaw: p256PointFromCertDer(leaf),
-    now: ctx.now,
+    now: epochSeconds(ctx.now),
     expectedDocType: ctx.docType,
     clockSkewSec: MDOC_RECEIVE_SKEW_SEC, // telefonun saati kimlik servisinden birkaç saniye geride olabilir
   });

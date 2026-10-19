@@ -26,6 +26,14 @@ import { tamgaSignIn } from "./01-web-login/server.js";
 import { createOwnVerifier } from "./02-verify-own-server/verifier.js";
 import { institution } from "./03-issue-hosted/issuer.js";
 import { institutionStatus } from "./04-check-institution/check.js";
+import {
+  checkRp as checkRpForTest,
+  type Match as MatchForTest,
+  type VpRequest as VpRequestForTest,
+} from "@tamga-network/wallet-core";
+/** ADR-0056 K8: testte `respond` için `checkRp` onayı (kayıtsız doğrulayıcı: engelleyici durum yok). */
+const testApproval = (req: VpRequestForTest) =>
+  checkRpForTest(null, req, { requested: [] } as unknown as MatchForTest).approval!;
 
 const ROOT = resolve(import.meta.dirname, "..");
 const PKI = resolve(ROOT, "ops/pki");
@@ -158,6 +166,7 @@ describe.skipIf(!ready)("examples", () => {
     const { matches } = matchDcql(req.dcql, wallet.credentials);
     const copy = matches[0].credential.copies[0];
     await respond({
+      approval: testApproval(req),
       request: req,
       matches: [{ match: matches[0], keyRef: copy.keyRef, combined: copy.combined, disclose: matches[0].requested }],
       keys,

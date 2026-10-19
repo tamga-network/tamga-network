@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-REF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
+**Document** FW-REF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-19 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -171,7 +171,7 @@ and its source conflict, the source prevails.
 | RB-WP-16    | [[ADR-0047]] K4, WR4; EU ARF WURevocation_14, WURevocation_16            |
 | RB-WP-17    | [[ADR-0047]] K5, WR5; EU ARF WIAM_04, WIAM_08                            |
 | RB-WP-18    | [[ADR-0049]] K1–K3, LI1–LI3 |
-| RB-WP-19    | [[ADR-0026]] K5 (change of 2026-10-13); Implementing Regulation (EU) 2026/1731 |
+| RB-WP-19    | [[ADR-0026]] K5 (change of 2026-10-13); [[ADR-0056]] K10; Implementing Regulation (EU) 2026/1731 |
 | RB-RP-01    | [[SPEC-API-0001]]/AP6, [[SPEC-PROTO-0002]]                               |
 | RB-RP-02    | [[SPEC-PROTO-0002]]/PV1, PV3, PV6, PV9, PV10                             |
 | RB-RP-03    | [[SPEC-API-0001]]/AP8, AP11                                              |

@@ -20,6 +20,15 @@ import {
 } from "@tamga-network/wallet-core";
 import { pemRpSigner } from "./request.js";
 import { PassRegistry, filePassStore, holderCnfOf, verifyPassKeyProof } from "./pass.js";
+import { registerAccepted } from "./accepted.js";
+import type { VerifyOutput } from "./verify.js";
+
+/** Testte doğrulama hattının kabul çıktısı yerine: iç kayda işlenmiş ACCEPTED çıktısı (ADR-0056 K9). */
+function acceptedOutput(presentation: string): VerifyOutput {
+  const out = { result: { outcome: "ACCEPTED" }, claims: {} } as unknown as VerifyOutput;
+  registerAccepted(out, { presentation, format: "dc+sd-jwt" });
+  return out;
+}
 
 const PKI = resolve(__dirname, "../../../ops/pki");
 const CLIENT = existsSync(resolve(PKI, "rp-verify.cert.pem"))
@@ -48,7 +57,7 @@ describe("PassRegistry (ADR-0012 B)", () => {
     const keys = new SoftwareKeyProvider(new MemoryKeyStore());
     const pres = await fakePresentation(keys, "k1");
     const { record, jws } = await reg.issue({
-      presentation: pres,
+      verified: acceptedOutput(pres),
       presentationId: "prs_test",
       policy: { terminal_group: "g1", valid_days: 30 },
     });
@@ -88,7 +97,7 @@ describe("PassRegistry (ADR-0012 B)", () => {
     const keys = new SoftwareKeyProvider(new MemoryKeyStore());
     const pres = await fakePresentation(keys, "kt");
     const { record, jws } = await reg.issue({
-      presentation: pres,
+      verified: acceptedOutput(pres),
       presentationId: "prs_ticket",
       policy: { terminal_group: "gate", valid_days: 400, single_use: true },
     });
@@ -117,7 +126,7 @@ describe("PassRegistry (ADR-0012 B)", () => {
     const keys = new SoftwareKeyProvider(new MemoryKeyStore());
     const pres = await fakePresentation(keys, "kr");
     const { jws } = await reg.issue({
-      presentation: pres,
+      verified: acceptedOutput(pres),
       presentationId: "prs_race",
       policy: { terminal_group: "gate", valid_days: 400, single_use: true },
     });
@@ -145,7 +154,7 @@ describe("PassRegistry (ADR-0012 B)", () => {
     const nonce = "n-123";
     const proof = await makePassKeyProof({ keys, ref: passRef, clientId: signer.clientId, nonce });
     const { record, jws } = await reg.issue({
-      presentation: pres,
+      verified: acceptedOutput(pres),
       presentationId: "prs_pk",
       policy: { terminal_group: "g1", valid_days: 30 },
       passKey: { jws: proof, nonce },
@@ -161,7 +170,7 @@ describe("PassRegistry (ADR-0012 B)", () => {
     // yanlış nonce / aud → kanıt reddedilir (sunum kabulü ayrı; kart verilmez)
     await expect(
       reg.issue({
-        presentation: pres,
+        verified: acceptedOutput(pres),
         presentationId: "prs_pk2",
         policy: { terminal_group: "g1", valid_days: 30 },
         passKey: { jws: proof, nonce: "other" },
@@ -172,7 +181,7 @@ describe("PassRegistry (ADR-0012 B)", () => {
     const foreign = await makePassKeyProof({ keys, ref: passRef, clientId: "x509_hash:other", nonce });
     await expect(
       reg.issue({
-        presentation: pres,
+        verified: acceptedOutput(pres),
         presentationId: "prs_pk3",
         policy: { terminal_group: "g1", valid_days: 30 },
         passKey: { jws: foreign, nonce },
@@ -190,7 +199,7 @@ describe("PassRegistry (ADR-0012 B)", () => {
     const pres = await fakePresentation(keys, "k2");
     const reg1 = new PassRegistry(signer, filePassStore(file), "verify.tamga.network");
     const { jws } = await reg1.issue({
-      presentation: pres,
+      verified: acceptedOutput(pres),
       presentationId: "prs_p",
       policy: { terminal_group: "g1", valid_days: 1 },
     });
@@ -203,5 +212,40 @@ describe("PassRegistry (ADR-0012 B)", () => {
     expect((await reg2.verifyToken(t.token, { terminalGroup: "g1" })).reason).toMatch(/replay/); // K3: liste korunur
     const t2 = await mintPassToken(grant, keys, nodeRandom);
     expect((await reg2.verifyToken(t2.token, { terminalGroup: "g1" })).ok).toBe(true);
+  });
+});
+
+describe("ADR-0056 K9: geçiş kartı yalnız doğrulama hattının KABUL çıktısından", () => {
+  it("elle kurulmuş ya da kopyalanmış ACCEPTED, RED ve DOĞRULANAMADI çıktıları kart vermez", async () => {
+    const signer = await pemRpSigner(
+      readFileSync(resolve(PKI, "rp-verify.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"),
+    );
+    const reg = new PassRegistry(signer);
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    const pres = await fakePresentation(keys, "k-adr56");
+    const policy = { terminal_group: "g1", valid_days: 1 };
+    const forged = { result: { outcome: "ACCEPTED" }, claims: {} } as unknown as VerifyOutput;
+    const genuine = acceptedOutput(pres);
+    for (const verified of [
+      forged,
+      { ...genuine }, // kopya: kayıtta değil
+      { ...genuine, result: { ...genuine.result, outcome: "REJECTED" } } as VerifyOutput,
+      undefined as unknown as VerifyOutput,
+    ])
+      await expect(reg.issue({ verified, presentationId: "prs_x", policy })).rejects.toThrow(/only an ACCEPTED result/);
+    // kayıtlı çıktının sonucu sonradan değiştirilirse de kart yok
+    const mutated = acceptedOutput(pres);
+    (mutated.result as { outcome: string }).outcome = "REJECTED";
+    await expect(reg.issue({ verified: mutated, presentationId: "prs_y", policy })).rejects.toThrow(/only an ACCEPTED/);
+    await expect(reg.issue({ verified: genuine, presentationId: "prs_z", policy })).resolves.toBeTruthy();
+  });
+  it("terminal saat kayması seçeneği en çok 600 sn", async () => {
+    const signer = await pemRpSigner(
+      readFileSync(resolve(PKI, "rp-verify.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"),
+    );
+    const reg = new PassRegistry(signer);
+    await expect(reg.verifyToken("x.y.z", { terminalGroup: "g", maxClockSkewSec: 3600 })).rejects.toThrow(RangeError);
   });
 });

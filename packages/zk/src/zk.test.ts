@@ -32,6 +32,7 @@ import {
   type ZkCircuitEntry,
 } from "./index.js";
 import { NodeProcessProver, defaultProverBin, fileCircuitSource } from "./node.js";
+import { epochSeconds } from "@tamga-network/core";
 
 const CIRCUIT_ID = "5a8938159603876eb537a117cfe9e2eaec5a01a042b316a8e57e52e4bb3c9291";
 const CIRCUIT: ZkCircuitEntry = {
@@ -298,7 +299,7 @@ describe.skipIf(!existsSync(BIN))("zk — uçtan uca: masaüstü ispatçı → a
     const r = await verifyMdocZkFormat(Buffer.from(zk).toString("base64url"), {
       ...session,
       stateCode: "TR",
-      now: nowSec,
+      now: epochSeconds(nowSec),
       rootCertsDer: [new Uint8Array(root.rawData)],
       expectedDocTypes: [DOC_TYPE],
       requestedElements: ["age_over_18"],

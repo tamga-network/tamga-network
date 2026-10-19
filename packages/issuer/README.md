@@ -21,6 +21,15 @@ const offer = await tamga.createOffer({ subjectId: "121200001", vct: "urn:tamga:
 A complete, tested version: [`examples/03-issue-hosted`](https://github.com/tamga-network/tamga-network/tree/main/examples/03-issue-hosted).
 
 
+## Secure defaults (0.7.0)
+
+- `createPar` requires `allowedRedirectUris` (array or `clientId → list` function); a client without registered addresses is
+  rejected with `invalid_redirect_uri`.
+- DPoP has one function per endpoint: `verifyTokenDpop` at the token endpoint, `verifyResourceDpop` (access token and bound key
+  required) at resource endpoints.
+- `verifyKeyAttestation`, `verifyKaProof` and `verifyAttestationProof` require `statusOf` (or `"none"`); results carry
+  `statusChecked`. `WalletStatusChecker` pins the status list signer to a wallet provider key in the trusted list.
+
 ## Status
 
 Published on npm as the `0.6.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API

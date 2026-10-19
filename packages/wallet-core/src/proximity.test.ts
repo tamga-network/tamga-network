@@ -102,6 +102,7 @@ describe("presentProximity", () => {
     const { state, keys } = await walletWithIdentity();
     const link = bleLink({ age_over_18: false, given_name: false });
     const r = await presentProximity({
+      registrarKeys: false /* ADR-0056 K10: bu testler kayıt sertifikasını değil alan seçimini sınar */,
       transport: link.transport,
       state,
       keys,
@@ -147,6 +148,7 @@ describe("presentProximity", () => {
     for (const s of [state, restricted]) {
       const link = bleLink({ age_over_18: false });
       await presentProximity({
+        registrarKeys: false /* ADR-0056 K10: bu testler kayıt sertifikasını değil alan seçimini sınar */,
         transport: link.transport,
         state: s,
         keys,
@@ -167,6 +169,7 @@ describe("presentProximity", () => {
     const { state, keys } = await walletWithIdentity();
     const link = bleLink({ age_over_18: false });
     const r = await presentProximity({
+      registrarKeys: false /* ADR-0056 K10: bu testler kayıt sertifikasını değil alan seçimini sınar */,
       transport: link.transport,
       state,
       keys,
@@ -188,6 +191,7 @@ describe("presentProximity", () => {
       const link = bleLink({ age_over_18: false });
       let seen: StoredCredential | null | undefined;
       const r = await presentProximity({
+        registrarKeys: false /* ADR-0056 K10: bu testler kayıt sertifikasını değil alan seçimini sınar */,
         transport: link.transport,
         state: s,
         keys,
@@ -204,6 +208,7 @@ describe("presentProximity", () => {
     const link = bleLink({ age_over_18: false });
     let asked = false;
     const r = await presentProximity({
+      registrarKeys: false /* ADR-0056 K10: bu testler kayıt sertifikasını değil alan seçimini sınar */,
       transport: link.transport,
       state: newState("i"),
       keys,
@@ -223,6 +228,7 @@ describe("presentProximity", () => {
       onChunk: () => () => {},
     };
     const r = await presentProximity({
+      registrarKeys: false /* ADR-0056 K10: bu testler kayıt sertifikasını değil alan seçimini sınar */,
       transport: t,
       state,
       keys,
@@ -243,7 +249,14 @@ describe("presentProximity", () => {
       onChunk: () => () => {},
       onClose: (cb) => ((close = cb), () => {}),
     };
-    const r = await presentProximity({ transport: t, state, keys, onQr: () => {}, approve: async () => null });
+    const r = await presentProximity({
+      registrarKeys: false /* ADR-0056 K10: bu testler kayıt sertifikasını değil alan seçimini sınar */,
+      transport: t,
+      state,
+      keys,
+      onQr: () => {},
+      approve: async () => null,
+    });
     expect(r).toMatchObject({ outcome: "error", reason: "disconnected" });
   });
 });

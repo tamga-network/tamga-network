@@ -8,9 +8,11 @@
  *  - tl-<cc> imzacısı: lotl.national_lists[cc].signing_keys (ACTIVE olanlar).
  *  - anchors satırları: lotl.anchor_signing_keys; her satır önceki satırın sha256'sını taşır.
  *  - TL1: liste aşamasında operatör "provisional" ise `on_behalf_of` boş olamaz.
- *  - TL2 (geri sarma): `versionMemory` verilirse (kalıcı "son görülen" kaydı) lotl ve tl-<cc> için daha eski sürüm reddedilir;
- *    aynı sürüm farklı içerikle gelirse reddedilir; bir sonraki sürümde `previous_version_hash` son görülen JWS'in özetiyle
- *    (`sha256Tag(jws)`) eşleşmelidir. Verilmezse bu denetim yapılmaz (önceki davranış). Dış listelerde (`LoTESequenceNumber`)
+ *  - TL2 (geri sarma): lotl ve tl-<cc> için daha eski sürüm reddedilir; aynı sürüm farklı içerikle gelirse reddedilir; bir
+ *    sonraki sürümde `previous_version_hash` son görülen JWS'in özetiyle (`sha256Tag(jws)`) eşleşmelidir. Bellek `versionMemory`
+ *    (kalıcı "son görülen" kaydı); verilmezse VARSAYILAN olarak süreç içi bellek (ağ ve kök parmak izleri başına; ADR-0056) —
+ *    süreç yeniden başlayınca sıfırlanır, oturumlar arası koruma için kalıcı bellek verin. `"none"` denetimi kapatır (yalnız
+ *    test ve tek seferlik araçlar). Dış listelerde (`LoTESequenceNumber`)
  *    sıra belleği depodan BAĞIMSIZDIR: verilen `versionMemory`, yoksa süreç içi varsayılan bellek — her yeniden yüklemede yeni
  *    depo kurulsa da eski sıra numaralı liste reddedilir.
  * ADR-0015 (D-TRUST-1): kurallar TEK gerçeklemede ve platformdan bağımsızdır; imza doğrulama `JwsVerifier` olarak verilir
@@ -58,6 +60,21 @@ export class MemoryListVersionMemory implements ListVersionMemory {
 }
 /** Dış listelerin varsayılan sıra belleği (süreç içi; `versionMemory` verilmezse). */
 const defaultExternalMemory = new MemoryListVersionMemory();
+/** ADR-0056: `versionMemory` verilmeyen yüklemelerin süreç içi sürüm belleği — ağ (environment) ve LOTL kök parmak izleri başına. */
+const defaultMemories = new Map<string, MemoryListVersionMemory>();
+function defaultMemoryFor(environment: string, rootFingerprints: string[]): MemoryListVersionMemory {
+  const key = `${environment}|${[...rootFingerprints]
+    .map((f) => f.toLowerCase())
+    .sort()
+    .join(",")}`;
+  let m = defaultMemories.get(key);
+  if (!m) defaultMemories.set(key, (m = new MemoryListVersionMemory()));
+  return m;
+}
+/** Süreç içi varsayılan sürüm belleklerini sıfırlar (testler; kalıcı belleğe dokunmaz). */
+export function resetDefaultListVersionMemory() {
+  defaultMemories.clear();
+}
 
 /** TL2: yeni sürümü son görülenle karşılaştırır; sorun varsa hata iletisi döner. */
 function rollbackProblem(
@@ -100,8 +117,11 @@ export interface TrustSetInput {
   externalListJws?: Record<string, string>;
   /** ADR-0038 SB2: beklenen ağ (varsayılan "production"); listedeki `environment` farklıysa yükleme DURUR. */
   environment?: "production" | "sandbox";
-  /** TL2: kalıcı "son görülen" sürüm belleği (bkz. `ListVersionMemory`); verilmezse lotl/tl için geri sarma denetimi yok. */
-  versionMemory?: ListVersionMemory;
+  /**
+   * TL2: kalıcı "son görülen" sürüm belleği (bkz. `ListVersionMemory`). Verilmezse süreç içi varsayılan bellek (ADR-0056);
+   * `"none"` geri sarma denetimini kapatır.
+   */
+  versionMemory?: ListVersionMemory | "none";
 }
 
 export interface LoadReport {
@@ -134,7 +154,10 @@ export async function loadTrustSetWith(
   if ((lotl.environment ?? "production") !== expectedEnv)
     throw new Error(`SB2: lotl environment=${lotl.environment ?? "production"}, beklenen ${expectedEnv} — DURDU`);
   checkOperator("lotl", lotl.operator);
-  const mem = input.versionMemory;
+  const mem =
+    input.versionMemory === "none"
+      ? undefined
+      : (input.versionMemory ?? defaultMemoryFor(expectedEnv, input.rootFingerprints));
   const marks: Array<[string, ListMark]> = [];
   const lotlMark = { version: lotl.version, hash: sha256Tag(utf8(lotlV.raw)) };
   const lotlProblem = rollbackProblem("lotl", mem?.get("lotl"), {

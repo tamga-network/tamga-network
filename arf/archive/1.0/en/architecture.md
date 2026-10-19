@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-19 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -130,7 +130,7 @@ asking the user.
 A verifier (an employer, a website, an institution) requests a credential from the wallet. The request is signed and
 carries the verifier's registered identity. The wallet checks the verifier's entry in the trusted list and its
 [[t:registration-certificate]], shows the requested fields and the purpose to the person, and warns if more fields are requested
-than the registration allows or if the request carries no registration certificate (RB-WP-19). The person approves with a PIN or biometrics; the response is encrypted and contains only the
+than the registration allows, and rejects the request if it carries no registration certificate (RB-WP-19). The person approves with a PIN or biometrics; the response is encrypted and contains only the
 approved fields.
 
 A verifier may run its own verification software or use Tamga Verify (the hosted verifier). Presentation happens through a
@@ -190,6 +190,7 @@ release. Where proofs are not supported, the presentation is made in the usual w
 | The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Released (packages on npm since 0.5.0) |
 | Attestation Revocation List (identifier list) — verifier and wallet side | Released (packages on npm since 0.5.0); Tamga issuers use the Status List |
 | No suspension for the identity credential, CWT revocation list for mdoc; warning for requests without a registration certificate; reader verification in proximity | Released (packages on npm since 0.6.0) |
+| Misuse-resistant defaults in the package APIs; rejection of requests without a registration certificate ([[ADR-0056]]) | In code; on npm with packages 0.7.0 |
 | Wallet provider registration | Tamga Wallet's provider (`TAMGA-WP-1`) is `ACTIVE` in the production and sandbox trust lists |
 | Sandbox (open to everyone; identity verification with daily/monthly caps) | Live                                                                                                      |
 

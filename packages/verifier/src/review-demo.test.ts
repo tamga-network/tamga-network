@@ -17,6 +17,7 @@ import {
 } from "@tamga-network/trust";
 import { SoftwareKeyProvider, MemoryKeyStore, presentSdJwt } from "@tamga-network/wallet-core";
 import { verifyPresentation, MemoryStatusCache, type Policy } from "./index.js";
+import { epochSeconds } from "@tamga-network/core";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
@@ -137,6 +138,7 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
     const now = Math.floor(Date.now() / 1000);
     const { pres, cache } = await present(now);
     const out = await verifyPresentation({
+      rp: "none",
       presentation: pres,
       aud: AUD,
       nonce: "n-review",
@@ -145,7 +147,7 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
       trust,
       statusCache: cache,
       rootCertsDer: rootDer,
-      now,
+      now: epochSeconds(now),
     });
     expect(out.result.outcome).toBe("REJECTED");
     expect(out.result.failed_step).toBe("E1");
@@ -155,6 +157,7 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
     const now = Math.floor(Date.now() / 1000);
     const { pres, cache } = await present(now);
     const out = await verifyPresentation({
+      rp: "none",
       presentation: pres,
       aud: AUD,
       nonce: "n-review",
@@ -163,7 +166,7 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
       trust,
       statusCache: cache,
       rootCertsDer: rootDer,
-      now,
+      now: epochSeconds(now),
     });
     expect(out.result.outcome).toBe("ACCEPTED");
     expect(out.result.issuer?.assurance).toBe("I1");

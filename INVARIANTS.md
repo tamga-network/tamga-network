@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 331 kodlanmış değişmez, 55 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 339 kodlanmış değişmez, 56 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -539,6 +539,22 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0055/GE3` | Governance'ın kayıt yönetimi işlemleri yalnız türü belli önerilerle ve 2/3 oyla yapılır; genel çağrı önerisi yoktur. |
 
 
+## ADR-0056
+
+*"Paket API'lerinde güvenli varsayılanlar"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0056/MR1` | Kabul kararını etkileyen bir güvenlik girdisi (güven çapası, dönüş adresi listesi, iptal sorgusu, RP kaydı, iptal listesi imzacısı) verilmezse işlev reddeder; atlamak yalnız açık `"none"` değeriyle mümkündür. |
+| `ADR-0056/MR2` | İptal durumunu denetlemeyen başarılı sonuç bunu açıkça taşır (`statusChecked: false`, `clientStatus: "NOT_CHECKED"`). |
+| `ADR-0056/MR3` | Cüzdan, `checkRp`'nin bu isteğe bağlı onayı olmadan sunum yanıtı göndermez. |
+| `ADR-0056/MR4` | Geçiş kartı yalnız doğrulama hattının kabul çıktısından ve doğrulanan sunumun anahtarına verilir. |
+| `ADR-0056/MR5` | Kayıt sertifikası olmayan istek (cüzdandan cüzdana yakın alan dışında) reddedilir. |
+| `ADR-0056/MR6` | E4 yalnız denetim kaydı yazıldıysa `checks_performed`'tadır. |
+| `ADR-0056/MR7` | Zaman girdileri birimiyle işaretlidir; yanlış birim hata verir, sessizce yorumlanmaz. |
+| `ADR-0056/MR8` | Türü iptal listesi kullanan belgede iptal girişi yoksa doğrulama reddeder. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -574,7 +590,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-API-0001/AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
 | `SPEC-API-0001/AP12` | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
 | `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. |
-| `SPEC-API-0001/AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır. |
+| `SPEC-API-0001/AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). |
 | `SPEC-API-0001/AP10` | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
 
 
@@ -620,7 +636,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-CRED-0003/S8` | Liste URI'si opaktır; yıl, bölüm, kohort kodlamaz (§6.3). |
 | `SPEC-CRED-0003/S9` | Listeler tip dışında hiçbir ölçütle bölünmez (§6.4). |
 | `SPEC-CRED-0003/S10` | Liste kapasitesi ≥ 100.000; doluluk ≤ %80. |
-| `SPEC-CRED-0003/S11` | Status anahtarı, belge imzalama anahtarından ayrıdır (§3.4). Status anahtarının sertifika parmak izi güven listesinde kurum kaydının `delegate_keys[]` alanında `purpose: "status_list"` ile yayınlanır; doğrulayıcı D3'te token imzacısını bu kayıtla eşler (kayıt yoksa INDETERMINATE, eşleşmezse REJECTED). Liste dışı `idx` geçerli okunmaz (D6 RED). |
+| `SPEC-CRED-0003/S11` | Status anahtarı, belge imzalama anahtarından ayrıdır (§3.4). Status anahtarının sertifika parmak izi güven listesinde kurum kaydının `delegate_keys[]` alanında `purpose: "status_list"` ile yayınlanır; doğrulayıcı D3'te token imzacısını bu kayıtla eşler (kayıt yoksa INDETERMINATE, eşleşmezse REJECTED); paketlerde imzacı doğrulama girdisidir (`expectedSignerFingerprints`, zorunlu — [[ADR-0056]] K6). Liste dışı `idx` geçerli okunmaz (D6 RED). |
 | `SPEC-CRED-0003/S12` | Doğrulayıcı doğrulama başına çekim yapmaz; toplu ön çekim kullanır (§9.1). |
 | `SPEC-CRED-0003/S13` | `exp`/`ttl` claim'leri HTTP önbellek başlıklarını geçersiz kılar. |
 | `SPEC-CRED-0003/S14` | "Geçersiz" ile "doğrulanamadı" kullanıcıya farklı gösterilir (§7.1). |
@@ -677,7 +693,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-PROTO-0001/PR10` | Kopya↔indeks eşlemesi belge verende kalır, asla dışarı çıkmaz. |
 | `SPEC-PROTO-0001/PR11` | İhraçtan önce Wallet Unit Attestation + PoP doğrulanır; WUA imzacısı güven listesindeki cüzdan sağlayıcısı anahtarlarından biridir; `key_storage` kiracı politikasını karşılamıyorsa belge verilmez (§11.1). |
 | `SPEC-PROTO-0001/PR12` | `out-of-band` offer'da `tx_code` offer ile **farklı kanaldan** iletilir; üç yanlış deneme offer'ı geçersiz kılar; kanal adresi yalnızca kurumun kayıtlı verisinden gelir (§3.3). |
-| `SPEC-PROTO-0001/PR13` | Authorization code akışında PAR ve PKCE (S256) zorunludur; istemci kimliği Wallet Unit Attestation'dır (`client_secret` yok); `redirect_uri` PAR'da bağlanır ve `/authorize`'da değiştirilemez; `redirect_uri` istemcinin kayıtlı adresleriyle birebir eşleşmelidir (izin listesi; aksi hâlde PAR `invalid_request` ile reddedilir — RFC 9126 §2.1); token isteği PAR'daki `redirect_uri`'yi ve aynı `client_id`'yi (WUA `sub`) taşımalıdır (aksi hâlde `invalid_grant`); cüzdan token ucunu yetkilendirme sunucusunun meta verisinden (`token_endpoint`, RFC 8414) alır; code tek kullanımlık ve ≤ 60 s (§11.2). |
+| `SPEC-PROTO-0001/PR13` | Authorization code akışında PAR ve PKCE (S256) zorunludur; istemci kimliği Wallet Unit Attestation'dır (`client_secret` yok); `redirect_uri` PAR'da bağlanır ve `/authorize`'da değiştirilemez; `redirect_uri` istemcinin kayıtlı adresleriyle birebir eşleşmelidir (izin listesi; aksi hâlde PAR `invalid_request` ile reddedilir — RFC 9126 §2.1); token isteği PAR'daki `redirect_uri`'yi ve aynı `client_id`'yi (WUA `sub`) taşımalıdır (aksi hâlde `invalid_grant`); cüzdan token ucunu yetkilendirme sunucusunun meta verisinden (`token_endpoint`, RFC 8414) alır; code tek kullanımlık ve ≤ 60 s (§11.2). Paketlerde `createPar` izin listesini (`allowedRedirectUris`) zorunlu alır; istemcinin kayıtlı adresi yoksa PAR reddedilir ([[ADR-0056]] K2). |
 | `SPEC-PROTO-0001/PR14` | Kurumun belge verme servisi cüzdanın başlattığı belge vermede kimliği yalnızca **kimlik attestation'ının sunumu** ile ve tam doğrulama hattından (T0 + A–E) geçerek eşler; eşleştirme anahtarları (TCKN, doğum tarihi) saklanmaz ve loglanmaz; eşleşmezse belge verilmez (§11.2, [[ADR-0011]] K3/K6). |
 | `SPEC-PROTO-0001/PR15` | Cüzdan kurum dizinini yalnızca güven listesinden alır; listede olmayan belge verene PAR göndermez (§11.2). |
 | `SPEC-PROTO-0001/PR17` | Erişim belirteci DPoP'a bağlıdır (RFC 9449): `/token` geçerli bir DPoP kanıtı olmadan belirteç vermez; `/credential` yalnızca `Authorization: DPoP` ve aynı anahtarla, bu uç ve bu belirteç (`ath`) için üretilmiş, daha önce görülmemiş kanıtla çalışır (§4, §7.1). |
@@ -823,12 +839,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 331 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 339 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
+AC, AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-19 (`scripts/sync-invariants.mjs`). Toplam 331 kodlanmış değişmez, 55 dokümanda.
+**Üretilen dosya** — 2026-10-19 (`scripts/sync-invariants.mjs`). Toplam 339 kodlanmış değişmez, 56 dokümanda.

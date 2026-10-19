@@ -20,6 +20,13 @@ const fingerprint = certFingerprintSha256Hex(der);
 ```
 
 
+## Time units (0.7.0)
+
+`EpochSeconds` and `EpochMillis` keep Unix seconds and milliseconds apart: verification functions take `now` with its unit, so
+`Date.now()` cannot reach a function that expects seconds (compile error, and a `RangeError` at run time). Create values with
+`epochSeconds(n)`, `epochMillis(n)`, `nowSeconds()`, `nowMillis()`; for React Native import from `@tamga-network/core/time`.
+Clock skew options are capped at `MAX_CLOCK_SKEW_SEC` (600 s).
+
 ## Status
 
 Published on npm as the `0.6.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API

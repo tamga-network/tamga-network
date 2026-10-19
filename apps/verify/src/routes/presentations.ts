@@ -29,11 +29,12 @@ import type { Presentation } from "../state.js";
 import { findPolicy } from "../policies.js";
 import { registrationCertFor } from "../wrprc.js";
 import { rateLimited } from "../rate-limit.js";
+import { nowSeconds } from "@tamga-network/core/time";
 import { checkPage, expiredPage, langOf, notFoundPage, pendingPage, resultPage, statusOnlyPage } from "../html.js";
 
 export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyContext) {
   const { cfg, presentations } = ctx;
-  const nowSec = () => Math.floor(Date.now() / 1000);
+  const nowSec = nowSeconds;
 
   /** Beyan varsa doğrular: RP client_id · beyan yoksa null · beyan geçersizse false (401 gönderilmiştir). */
   const callerOf = async (authorization: string | undefined, reply: FastifyReply): Promise<string | null | false> => {
@@ -190,6 +191,8 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
             audit: (e) => ctx.audit(e),
             zk: ctx.zk, // ADR-0032: mso_mdoc_zk için arka uç (yerel varsa o, yoksa WASM)
           });
+      // ADR-0056 K9: geçiş kartı yalnız verifyPresentation'ın kendi kabul çıktısından (aşağıda `out` yeniden kurulabilir)
+      const verified = out;
       // ADR-0031 PS5: takma ad — imza, aud, nonce, site, iptal edilmemiş cüzdan örneği (WIA). Değer yalnız claims'e (HV3).
       if (p.policy.pseudonym && out.result.outcome === "ACCEPTED") {
         const tok = dec.vp_token[PSEUDONYM_QUERY_ID]?.[0];
@@ -253,7 +256,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
           let g: Awaited<ReturnType<typeof ctx.passes.issue>> | null = null;
           try {
             g = await ctx.passes.issue({
-              presentation: pres,
+              verified,
               presentationId: pid,
               policy: p.policy.proximity,
               ...(typeof dec.pass_key === "string" ? { passKey: { jws: dec.pass_key, nonce: p.req.nonce } } : {}),

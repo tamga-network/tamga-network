@@ -18,6 +18,7 @@
       "@tamga-network/core/sd-structure": ["packages/core/src/sd-structure.ts"],
       "@tamga-network/core/pid": ["packages/core/src/pid.ts"],
       "@tamga-network/core/disclosure-policy": ["packages/core/src/disclosure-policy.ts"],
+      "@tamga-network/core/time": ["packages/core/src/time.ts"],
       "@tamga-network/core": ["packages/core/src/index.ts"],
       "@tamga-network/trust/core": ["packages/trust/src/core.ts"],
       "@tamga-network/trust": ["packages/trust/src/index.ts"],

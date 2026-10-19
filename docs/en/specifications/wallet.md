@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -384,8 +384,8 @@ it does not hold, a separate warning, defaulting to not sharing.
 
 ## 5.7 EU alignment (code 0.6.0)
 
-- **Request without a registration certificate ([[ADR-0026]] K5):** a separate warning on the consent screen, default "Don't
-  share"; rejected after 2028-08-11 (`registration_missing`; details [[SPEC-PROTO-0002]] §7.5). In proximity the registration
+- **Request without a registration certificate ([[ADR-0026]] K5; [[ADR-0056]] K10):** rejected without asking the person
+  (`registration_missing`; details [[SPEC-PROTO-0002]] §7.5); wallet-to-wallet proximity excepted. In proximity the registration
   certificate comes in `requestInfo.euWrprc` and is verified as in the remote flow; if it is invalid, the wallet refuses without
   asking the person (`presentProximity` `registrarKeys`).
 - **Wallet-to-wallet presentation offer (EU TS9 v1.1):** the holder puts the fields that are on the allow-list and present in its

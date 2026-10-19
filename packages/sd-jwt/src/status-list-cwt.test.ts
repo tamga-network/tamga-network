@@ -20,10 +20,13 @@ import {
   verifyStatusListToken,
   type IssuerSigner,
 } from "./index.js";
+import { epochSeconds, sha256Hex } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
-const NOW = 1790000000;
+const NOW = epochSeconds(1790000000);
+/** ADR-0056 K6: iptal listesi imzacısı sabitlenir (testin imzacı sertifikası) */
+let PIN: { expectedSignerFingerprints: string[] };
 const JWT_URI = "https://status.tamga.network/ab12cd34ef567890";
 const CWT_URI = "https://status.tamga.network/0f1e2d3c4b5a6978";
 let signer: IssuerSigner;
@@ -39,6 +42,7 @@ beforeAll(async () => {
     keys,
     extensions: [new KeyUsagesExtension(KeyUsageFlags.digitalSignature, true)],
   });
+  PIN = { expectedSignerFingerprints: [sha256Hex(new Uint8Array(cert.rawData))] };
   signer = {
     x5c: [new Uint8Array(cert.rawData)],
     sign: (h, p) => new CompactSign(p).setProtectedHeader(h as never).sign(keys.privateKey),
@@ -71,7 +75,7 @@ describe("bits = 1 (ADR-0048 K1)", () => {
     const bs = new StatusBitstring(MIN_CAPACITY, undefined, 1);
     bs.set(42, StatusValue.INVALID);
     const tok = await signStatusListToken({ signer, iss: "x", uri: JWT_URI, bitstring: bs, iat: NOW, ttlSec: 120 });
-    const v = await verifyStatusListToken(tok, JWT_URI, NOW);
+    const v = await verifyStatusListToken(tok, JWT_URI, NOW, { ...PIN });
     expect(v.format).toBe("jwt");
     expect(v.payload.status_list.bits).toBe(1);
     expect(v.bitstring.get(42)).toBe(StatusValue.INVALID);
@@ -115,8 +119,8 @@ describe("CWT gösterimi (ADR-0048 K3)", () => {
   it("aynı mantıksal liste: CWT ve JWT gösterimleri aynı bitleri, aynı iat/exp/ttl'yi ve aynı imzacıyı taşır", async () => {
     for (const bits of [1, 2] as const) {
       const { jwt, cwt } = await sign(bits);
-      const a = await verifyStatusListToken(jwt, JWT_URI, NOW);
-      const b = await verifyStatusListCwt(cwt, CWT_URI, NOW);
+      const a = await verifyStatusListToken(jwt, JWT_URI, NOW, { ...PIN });
+      const b = await verifyStatusListCwt(cwt, CWT_URI, NOW, { ...PIN });
       expect(b.format).toBe("cwt");
       expect(b.payload.iss).toBeUndefined();
       expect([...b.bitstring.bytes]).toEqual([...a.bitstring.bytes]);
@@ -131,19 +135,29 @@ describe("CWT gösterimi (ADR-0048 K3)", () => {
 
   it("adres (sub) farklı → D3; süresi geçmiş → D4; iat gelecekte → D3; maxAgeSec → D4", async () => {
     const { cwt } = await sign(1);
-    await expect(verifyStatusListCwt(cwt, JWT_URI, NOW)).rejects.toThrow(/^D3: sub/);
-    await expect(verifyStatusListCwt(cwt, CWT_URI, NOW + 7 * 3600)).rejects.toThrow(/^D4: status token expired/);
+    await expect(verifyStatusListCwt(cwt, JWT_URI, NOW, { ...PIN })).rejects.toThrow(/^D3: sub/);
+    await expect(verifyStatusListCwt(cwt, CWT_URI, epochSeconds(NOW + 7 * 3600), { ...PIN })).rejects.toThrow(
+      /^D4: status token expired/,
+    );
     const future = (await sign(1, { iat: NOW + 3600 })).cwt;
-    await expect(verifyStatusListCwt(future, CWT_URI, NOW)).rejects.toThrow(/^D3: status token iat in the future/);
-    await expect(verifyStatusListCwt(cwt, CWT_URI, NOW + 3601, { maxAgeSec: 3600 })).rejects.toThrow(/^D4: .*stale/);
+    await expect(verifyStatusListCwt(future, CWT_URI, NOW, { ...PIN })).rejects.toThrow(
+      /^D3: status token iat in the future/,
+    );
+    await expect(
+      verifyStatusListCwt(cwt, CWT_URI, epochSeconds(NOW + 3601), { ...PIN, maxAgeSec: 3600 }),
+    ).rejects.toThrow(/^D4: .*stale/);
   });
 
   it("bozuk imza → D3; çözülemeyen baytlar → D4 (okunamıyor, altyapı sorunu); bits 4 → D6", async () => {
     const { cwt } = await sign(2);
     const bad = cwt.slice();
     bad[bad.length - 1] ^= 0xff;
-    await expect(verifyStatusListCwt(bad, CWT_URI, NOW)).rejects.toThrow(/^D3: status list CWT signature invalid/);
-    await expect(verifyStatusListCwt(new Uint8Array([0xd2, 0x84, 0xff]), CWT_URI, NOW)).rejects.toThrow(/^D4:/);
+    await expect(verifyStatusListCwt(bad, CWT_URI, NOW, { ...PIN })).rejects.toThrow(
+      /^D3: status list CWT signature invalid/,
+    );
+    await expect(verifyStatusListCwt(new Uint8Array([0xd2, 0x84, 0xff]), CWT_URI, NOW, { ...PIN })).rejects.toThrow(
+      /^D4:/,
+    );
     // bits = 4: imzalı ama Tamga'nın okumadığı değer
     const top = decode(cwt) as CborTag;
     const [prot, unp, payload] = top.value as [Uint8Array, unknown, Uint8Array, Uint8Array];
@@ -153,14 +167,14 @@ describe("CWT gösterimi (ADR-0048 K3)", () => {
     const tbs = encode(["Signature1", prot, new Uint8Array(0), p2]);
     const sig = await signer.signRaw!(tbs);
     const four = encode(new CborTag(18, [prot, unp, p2, sig]) as never);
-    await expect(verifyStatusListCwt(four, CWT_URI, NOW)).rejects.toThrow(/^D6: bits/);
+    await expect(verifyStatusListCwt(four, CWT_URI, NOW, { ...PIN })).rejects.toThrow(/^D6: bits/);
   });
 
   it("verifyStatusListAny: önbellekteki `b64u:` gövde CWT, metin gövde JWT olarak doğrulanır", async () => {
     const { jwt, cwt } = await sign(1);
     const cached = BINARY_CACHE_PREFIX + Buffer.from(cwt).toString("base64url");
-    expect((await verifyStatusListAny(cached, CWT_URI, NOW)).format).toBe("cwt");
-    expect((await verifyStatusListAny(jwt, JWT_URI, NOW)).format).toBe("jwt");
+    expect((await verifyStatusListAny(cached, CWT_URI, NOW, { ...PIN })).format).toBe("cwt");
+    expect((await verifyStatusListAny(jwt, JWT_URI, NOW, { ...PIN })).format).toBe("jwt");
   });
 
   it("signRaw olmayan imzacı CWT üretemez (açık hata)", async () => {
@@ -168,5 +182,16 @@ describe("CWT gösterimi (ADR-0048 K3)", () => {
     await expect(
       signStatusListCwt({ signer: plain, uri: CWT_URI, bitstring: new StatusBitstring(), iat: NOW, ttlSec: 120 }),
     ).rejects.toThrow(/signRaw/);
+  });
+});
+
+describe("ADR-0056 K6: CWT gösteriminde de imzacı sabitlenir", () => {
+  it("beklenmeyen imzacı → D3 (imza denetiminden önce)", async () => {
+    const bs = new StatusBitstring(MIN_CAPACITY, undefined, 1);
+    const cwt = await signStatusListCwt({ signer, uri: CWT_URI, bitstring: bs, iat: NOW - 10, ttlSec: 3600 });
+    await expect(
+      verifyStatusListCwt(cwt, CWT_URI, NOW, { expectedSignerFingerprints: ["00".repeat(32)] }),
+    ).rejects.toThrow(/^D3: status token signer is not an expected signer/);
+    await expect(verifyStatusListCwt(cwt, CWT_URI, NOW, PIN)).resolves.toBeTruthy();
   });
 });

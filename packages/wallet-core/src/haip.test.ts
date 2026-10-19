@@ -4,7 +4,8 @@
  *  (d) yanıt şifrelemesi A128GCM + A256GCM · (e) DCQL trusted_authorities (aki).
  */
 import { describe, it, expect } from "vitest";
-import { DpopNonces, DpopReplayCache, verifyDpop } from "@tamga-network/issuer";
+import { DpopNonces, DpopReplayCache, verifyTokenDpop } from "@tamga-network/issuer";
+import { epochSeconds } from "@tamga-network/core";
 import { MemoryKeyStore, SoftwareKeyProvider } from "./keys.js";
 import { dpopRequest, newDpopSigner } from "./dpop.js";
 import { completeAuthorized, parseCallback, type AuthStart } from "./authcode.js";
@@ -39,7 +40,7 @@ function nonceServer(status: 400 | 401) {
     const proof = init?.headers?.dpop;
     const payload = JSON.parse(Buffer.from(String(proof).split(".")[1], "base64url").toString()) as { nonce?: string };
     seen.push({ nonceSent: !!payload.nonce, pop: init?.headers?.["oauth-client-attestation-pop"] });
-    const d = await verifyDpop(proof, { htm: "POST", htu: url, now, replay, nonces });
+    const d = await verifyTokenDpop(proof, { htm: "POST", htu: url, now: epochSeconds(now), replay, nonces });
     const headers = { "dpop-nonce": nonces.current(now) };
     if (!d.ok && d.useNonce)
       return status === 400

@@ -8,6 +8,7 @@ import {
 } from "./identifier-list.js";
 import { issueMdoc, verifyIssuerSigned } from "./mdoc.js";
 import { decode, encode, type CborValue } from "./cbor.js";
+import { epochSeconds } from "@tamga-network/core";
 
 const URI = "https://status.example/il/1";
 const NOW = 1_800_000_000;
@@ -71,7 +72,7 @@ describe("Attestation Revocation List (CIR 2024/2979 Ek II tanımlayıcı listes
       randomBytes: (n) => p256.utils.randomSecretKey().slice(0, n),
       identifierList: { id: id(7), uri: URI },
     });
-    const v = verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: NOW });
+    const v = verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: pub, now: epochSeconds(NOW) });
     expect(v.valid).toBe(true);
     expect(v.status).toBeUndefined();
     expect(v.identifierList?.uri).toBe(URI);

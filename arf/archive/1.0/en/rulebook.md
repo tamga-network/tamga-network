@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
+**Document** FW-RB-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-19 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -220,7 +220,7 @@ Today Tamga is the provisional operator; at hand-over the role passes to the nat
 | RB-WP-16 | The wallet provider **MUST** offer at least one way, outside the wallet, for the person to learn that their wallet unit was revoked; if the provider revoked the unit on its own decision, this way shows within 24 hours at most the reason, what keeps working and what the person can do (EU WURevocation_14/16; [[ADR-0047]] K4). |
 | RB-WP-17 | At level W3 the wallet provider **MUST** verify the platform's device attestation (Apple App Attest, Android key attestation, Play Integrity) when activating the unit and before every key attestation that declares W3; at W2 device attestation is optional (**MAY**) ([[ADR-0047]] K5). |
 | RB-WP-18 | A wallet in the trusted list shows the "Tamga Network'te listeli" / "Listed on Tamga Network" indicator as text only; a logo, the EU stars and colours, and the words "trust mark" **MUST NOT** be used. Tapping the indicator shows the `wallet_providers[]` entry in the list whose signature has been verified. The indicator **MUST** be hidden if the wallet unit is revoked, if the provider or solution entry is not `ACTIVE`, if the list cannot be verified, or if the wallet is attached only to the sandbox list ([[ADR-0049]]). |
-| RB-WP-19 | For a request without a registration certificate the wallet **MUST** show a separate warning on the consent screen; the default choice is "Don't share". After 2028-08-11 such a request **MUST** be rejected (the date is fixed in code). In proximity the registration certificate comes in `euWrprc` and goes through the same checks ([[ADR-0026]] change of 2026-10-13; packages 0.6.0). |
+| RB-WP-19 | A request without a registration certificate **MUST** be rejected; the wallet stops without asking the person (wallet-to-wallet proximity excepted). In proximity the registration certificate comes in `euWrprc` and goes through the same checks ([[ADR-0026]] K5; [[ADR-0056]] K10, 2026-10-19; packages 0.7.0). |
 
 ---
 

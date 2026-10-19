@@ -4,7 +4,7 @@ title: "Verify on your server"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Verifying Tamga credentials on your own server: loading the trust source, prefetching status lists, policy → signed
   OpenID4VP request, decrypting the encrypted response and the canonical verification pipeline (T0 + A–E). Reference
@@ -108,10 +108,12 @@ const policy: Policy = {
 // Request: the accepted circuits come from the signed list (ZK2)
 const dcql = dcqlFromPolicy(policy, { zkCircuits: trust.zkCircuits?.() ?? [] });
 // Response: vp_token.identity[0] = base64url(DeviceResponse{ zkDocuments })
-const { result } = await verifyPresentation({ presentation, format: "mso_mdoc_zk", responseUri, aud, nonce,
-  policy, policyCredentialId: "identity", trust, statusCache, rootCertsDer });
+const out = await verifyPresentation({ presentation, format: "mso_mdoc_zk", responseUri, aud, nonce,
+  policy, policyCredentialId: "identity", trust, statusCache, rootCertsDer, rp: trust.relyingParty(aud) });
 ```
 
+- **Read the answer with `isYes`:** `isYes(out, "age_over_18")` is true only for an accepted result whose value is exactly
+  `true`; a rejected or indeterminate result never reads as "yes".
 - **Verification runs on the bundled WebAssembly;** no Rust or native build is needed. One verification takes about 3 s on a
   desktop.
 - **A native backend for very high volume:** from the `packages/verifier/zk` source, `cargo build --release --locked

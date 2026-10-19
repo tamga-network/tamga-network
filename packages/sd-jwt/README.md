@@ -27,9 +27,17 @@ const { combined } = await issueSdJwtVc({
 });
 
 // verifier side: format checks A1–A7 (structure, signature and chain, disclosures, key binding, validity)
-const result = await verifySdJwtVc(presentation, { aud, nonce, stateCode: "TR", rootCertsDer });
+const result = await verifySdJwtVc(presentation, { aud, nonce, stateCode: "TR", rootCertsDer }); // rootCertsDer required
 ```
 
+
+## Secure defaults (0.7.0)
+
+- `verifySdJwtVc` requires `rootCertsDer`: the trust anchors, or `"none"` to skip the chain check deliberately (only when you
+  check the signer some other way). An empty or missing value fails at A3.
+- `verifyStatusListToken` / `verifyStatusListCwt` / `verifyStatusListAny` require `{ expectedSignerFingerprints }`: the SHA-256
+  fingerprints of the expected signer certificates (or a function). Another signer fails with `D3` before the signature is checked.
+- `now` is `EpochSeconds` (`@tamga-network/core`).
 
 ## Status
 

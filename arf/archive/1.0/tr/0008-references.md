@@ -4,7 +4,7 @@ title: "Ek E — Kaynaklar"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-16
+last_updated: 2026-10-19
 summary: >
   Tamga ARF'nin dayandığı standartlar ve düzenlemeler, Tamga karar kayıtları ve şartnameleri ve eklerdeki her bağlayıcı
   kuralın kaynağı.
@@ -164,7 +164,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-WP-16 | [[ADR-0047]] K4, WR4; AB ARF WURevocation_14, WURevocation_16 |
 | RB-WP-17 | [[ADR-0047]] K5, WR5; AB ARF WIAM_04, WIAM_08 |
 | RB-WP-18 | [[ADR-0049]] K1–K3, LI1–LI3 |
-| RB-WP-19 | [[ADR-0026]] K5 (2026-10-13 değişikliği); Uygulama Tüzüğü (AB) 2026/1731 |
+| RB-WP-19 | [[ADR-0026]] K5 (2026-10-13 değişikliği); [[ADR-0056]] K10; Uygulama Tüzüğü (AB) 2026/1731 |
 | RB-RP-01 | [[SPEC-API-0001]]/AP6, [[SPEC-PROTO-0002]] |
 | RB-RP-02 | [[SPEC-PROTO-0002]]/PV1, PV3, PV6, PV9, PV10 |
 | RB-RP-03 | [[SPEC-API-0001]]/AP8, AP11 |

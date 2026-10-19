@@ -6,6 +6,7 @@
  *      response'daki redirect_uri code taşır. Her iki durumda son adım exchangeCode → obtainCredential.
  */
 import { sha256 } from "@noble/hashes/sha2.js";
+import { epochMillis } from "@tamga-network/core/time";
 import { b64u, utf8 } from "./b64.js";
 import { WalletError, type Http, readJson } from "./http.js";
 import type { KeyProvider } from "./keys.js";
@@ -134,7 +135,7 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
     p.metadata ??
     (await fetchIssuerMetadata(p.issuer, p.http, { signerFingerprints: p.signerFingerprints, now: nowMs }));
   if (p.registrarKeys) {
-    const reg = checkIssuerRegistration(md as { issuer_info?: unknown }, p.vct, p.registrarKeys, nowMs);
+    const reg = checkIssuerRegistration(md as { issuer_info?: unknown }, p.vct, p.registrarKeys, epochMillis(nowMs));
     if (!reg.valid) throw new WalletError("unsupported", `issuer registration: ${reg.reason}`);
   }
   const cfg = md.credential_configurations_supported[p.vct];

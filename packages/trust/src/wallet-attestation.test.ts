@@ -7,13 +7,13 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { webcrypto } from "node:crypto";
 import { X509CertificateGenerator, cryptoProvider, KeyUsageFlags, KeyUsagesExtension } from "@peculiar/x509";
 import { SignJWT, exportJWK, type JWK } from "jose";
-import { certFingerprintSha256Hex } from "@tamga-network/core";
+import { certFingerprintSha256Hex, nowSeconds } from "@tamga-network/core";
 import { verifyWalletAttestation, WUA_POP_TYP, WUA_TYP } from "./wallet-attestation.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
 const ISSUER = "https://issuer.example.test";
-const NOW = Math.floor(Date.now() / 1000);
+const NOW = nowSeconds();
 
 let provider: { keys: CryptoKeyPair; der: Uint8Array; fp: string };
 let holder: CryptoKeyPair;
@@ -62,7 +62,7 @@ const base = () => ({
 
 describe("verifyWalletAttestation", () => {
   it("geçerli kanıt + PoP: sonuçta PoP jti ve iat döner", async () => {
-    const r = await verifyWalletAttestation({ ...base(), wua: await wua(), pop: await pop("abc") });
+    const r = await verifyWalletAttestation({ statusOf: "none", ...base(), wua: await wua(), pop: await pop("abc") });
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.pop).toEqual({ jti: "abc", iat: NOW });
   });
@@ -70,6 +70,7 @@ describe("verifyWalletAttestation", () => {
   it("client_status'suz genel -07 kanıtı eski WUA yoluna düşmez: varsayılan politika kabul eder (NOT_APPLICABLE)", async () => {
     // eski Tamga WUA alanları (solution_id, key_storage) artık anlam taşımaz; beyan edilen "software" altı seviye de reddedilmez
     const r = await verifyWalletAttestation({
+      statusOf: "none",
       ...base(),
       wua: await wua({ key_storage: "nonsense", solution_id: undefined, user_auth: undefined }),
       pop: await pop(),
@@ -84,6 +85,7 @@ describe("verifyWalletAttestation", () => {
 
   it("clientStatus: required → iptal girişi olmayan kanıt RED (kimlik servisi politikası)", async () => {
     const r = await verifyWalletAttestation({
+      statusOf: "none",
       ...base(),
       clientStatus: "required",
       wua: await wua(),
@@ -105,15 +107,23 @@ describe("verifyWalletAttestation", () => {
       });
     const ok = await run("VALID");
     expect(ok.ok && ok.clientStatus).toBe("VALID");
+    expect(ok.ok && ok.statusChecked).toBe(true); // ADR-0056
     const revoked = await run("INVALID");
     expect(!revoked.ok && revoked.reason).toMatch(/revoked/);
     const small = await run("NONCOMPLIANT");
     expect(!small.ok && !small.indeterminate && small.reason).toMatch(/profile/);
     const unknown = await run("UNKNOWN");
     expect(!unknown.ok && unknown.indeterminate).toBe(true);
-    const unchecked = await verifyWalletAttestation({ ...base(), wua: w, pop: await pop() });
+    const unchecked = await verifyWalletAttestation({ statusOf: "none", ...base(), wua: w, pop: await pop() });
     expect(unchecked.ok && unchecked.clientStatus).toBe("NOT_CHECKED");
+    expect(unchecked.ok && unchecked.statusChecked).toBe(false);
+    // ADR-0056 K3: statusOf hiç verilmezse (JavaScript çağıran) ret — sessizce NOT_CHECKED değil
+    const missing = await verifyWalletAttestation({ ...base(), wua: w, pop: await pop() } as unknown as Parameters<
+      typeof verifyWalletAttestation
+    >[0]);
+    expect(missing).toMatchObject({ ok: false, reason: expect.stringMatching(/statusOf missing/) });
     const bad = await verifyWalletAttestation({
+      statusOf: "none",
       ...base(),
       wua: await wua({ client_status: { status: {} } }),
       pop: await pop(),
@@ -122,25 +132,47 @@ describe("verifyWalletAttestation", () => {
   });
 
   it("iss isteğe bağlı (varsa dize); kanıtta iat yoksa tolere edilir; PoP'ta iat zorunlu", async () => {
-    const noIss = await verifyWalletAttestation({ ...base(), wua: await wua({ iss: undefined }), pop: await pop() });
+    const noIss = await verifyWalletAttestation({
+      statusOf: "none",
+      ...base(),
+      wua: await wua({ iss: undefined }),
+      pop: await pop(),
+    });
     expect(noIss.ok).toBe(true);
     if (noIss.ok) expect(noIss.claims.iss).toBeUndefined();
-    const badIss = await verifyWalletAttestation({ ...base(), wua: await wua({ iss: 7 }), pop: await pop() });
+    const badIss = await verifyWalletAttestation({
+      statusOf: "none",
+      ...base(),
+      wua: await wua({ iss: 7 }),
+      pop: await pop(),
+    });
     expect(!badIss.ok && badIss.reason).toMatch(/iss/);
-    const noIat = await verifyWalletAttestation({ ...base(), wua: await wua({ iat: undefined }), pop: await pop() });
+    const noIat = await verifyWalletAttestation({
+      statusOf: "none",
+      ...base(),
+      wua: await wua({ iat: undefined }),
+      pop: await pop(),
+    });
     expect(noIat.ok).toBe(true);
-    const popNoIat = await verifyWalletAttestation({ ...base(), wua: await wua(), pop: await pop("j", null) });
+    const popNoIat = await verifyWalletAttestation({
+      statusOf: "none",
+      ...base(),
+      wua: await wua(),
+      pop: await pop("j", null),
+    });
     expect(!popNoIat.ok && popNoIat.reason).toMatch(/PoP iat/);
   });
 
   it("ömür 24 saatten uzun kanıt RED (TS3 §2.2.1.1; iat yoksa şimdiden sayılır)", async () => {
     const long = await verifyWalletAttestation({
+      statusOf: "none",
       ...base(),
       wua: await wua({ exp: NOW + 30 * 86400 }),
       pop: await pop(),
     });
     expect(!long.ok && long.reason).toMatch(/24 hours/);
     const longNoIat = await verifyWalletAttestation({
+      statusOf: "none",
       ...base(),
       wua: await wua({ iat: undefined, exp: NOW + 25 * 3600 }),
       pop: await pop(),
@@ -149,11 +181,16 @@ describe("verifyWalletAttestation", () => {
   });
 
   it("exp taşımayan kanıt RED (süresiz kanıt yok)", async () => {
-    const noExp = await verifyWalletAttestation({ ...base(), wua: await wua({}, false), pop: await pop() });
+    const noExp = await verifyWalletAttestation({
+      statusOf: "none",
+      ...base(),
+      wua: await wua({}, false),
+      pop: await pop(),
+    });
     expect(noExp.ok).toBe(false);
     if (!noExp.ok) expect(noExp.reason).toMatch(/exp missing/);
     const wia = await wua({ client_status: { status: { status_list: { idx: 1, uri: "https://wp.test/s" } } } }, false);
-    const r = await verifyWalletAttestation({ ...base(), wua: wia, pop: await pop() });
+    const r = await verifyWalletAttestation({ statusOf: "none", ...base(), wua: wia, pop: await pop() });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/exp missing/);
   });
@@ -167,9 +204,9 @@ describe("verifyWalletAttestation", () => {
     };
     const w = await wua();
     const p = await pop("once");
-    const first = await verifyWalletAttestation({ ...base(), wua: w, pop: p, jtiSeen });
+    const first = await verifyWalletAttestation({ statusOf: "none", ...base(), wua: w, pop: p, jtiSeen });
     expect(first.ok).toBe(true);
-    const again = await verifyWalletAttestation({ ...base(), wua: w, pop: p, jtiSeen });
+    const again = await verifyWalletAttestation({ statusOf: "none", ...base(), wua: w, pop: p, jtiSeen });
     expect(again.ok).toBe(false);
     if (!again.ok) expect(again.reason).toMatch(/replayed/);
   });

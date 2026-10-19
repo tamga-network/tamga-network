@@ -23,6 +23,7 @@ import {
   BATCH_SIZE,
   MIN_CAPACITY,
 } from "./index.js";
+import { epochSeconds, sha256Hex } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
@@ -102,12 +103,18 @@ describe("status list (SPEC-CRED-0003)", () => {
       iat: NOW,
       ttlSec: 3600,
     });
-    const v = await verifyStatusListToken(tok, uri, NOW + 100);
+    // ADR-0056 K6: imzacı (kurumun iptal anahtarı) sabitlenir
+    const PIN = { expectedSignerFingerprints: [sha256Hex(statusSigner.x5c[0])] };
+    const v = await verifyStatusListToken(tok, uri, epochSeconds(NOW + 100), PIN);
     expect(v.bitstring.get(7)).toBe(1);
     expect(v.bitstring.get(8)).toBe(0);
     expect(v.payload.ttl).toBe(3600);
-    await expect(verifyStatusListToken(tok, "https://status.tamga.network/other", NOW)).rejects.toThrow(/sub/);
-    await expect(verifyStatusListToken(tok, uri, NOW + 3600 * 3)).rejects.toThrow(/D4: status token expired/);
+    await expect(
+      verifyStatusListToken(tok, "https://status.tamga.network/other", epochSeconds(NOW), PIN),
+    ).rejects.toThrow(/sub/);
+    await expect(verifyStatusListToken(tok, uri, epochSeconds(NOW + 3600 * 3), PIN)).rejects.toThrow(
+      /D4: status token expired/,
+    );
   });
 });
 
@@ -206,10 +213,11 @@ describe("credential fabrikası", () => {
       iat: NOW,
     });
     const r = await verifySdJwtVc(pres, {
+      rootCertsDer: "none",
       aud: "x509_san_dns:verify.tamga.network",
       nonce: "n",
       stateCode: "TR",
-      now: NOW,
+      now: epochSeconds(NOW),
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -254,10 +262,11 @@ describe("credential fabrikası", () => {
       iat: NOW,
     });
     const r = await verifySdJwtVc(pres, {
+      rootCertsDer: "none",
       aud: "x509_san_dns:verify.tamga.network",
       nonce: "n",
       stateCode: "TR",
-      now: NOW,
+      now: epochSeconds(NOW),
     });
     expect(r.ok).toBe(true);
     if (r.ok) {

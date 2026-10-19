@@ -53,6 +53,15 @@ import { createPresentationRequest, createRpAssertion, dcqlFromPolicy, pemRpSign
 import { buildVerifyApp } from "../src/app.js";
 import { jsLit } from "../src/html.js";
 import type { VerifyConfig } from "../src/config.js";
+import { epochMillis } from "@tamga-network/core";
+import {
+  checkRp as checkRpForTest,
+  type Match as MatchForTest,
+  type VpRequest as VpRequestForTest,
+} from "@tamga-network/wallet-core";
+/** ADR-0056 K8: testte `respond` için `checkRp` onayı (kayıtsız doğrulayıcı: engelleyici durum yok). */
+const testApproval = (req: VpRequestForTest) =>
+  checkRpForTest(null, req, { requested: [] } as unknown as MatchForTest).approval!;
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
@@ -183,6 +192,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     // sunum → JWE → POST
     const copy = matches[0].credential.copies[0];
     const out = await respond({
+      approval: testApproval(req),
       request: req,
       matches: [{ match: matches[0], keyRef: copy.keyRef, combined: copy.combined, disclose: matches[0].requested }],
       keys,
@@ -230,6 +240,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(req2.responseUri).toBe(`${BASE}/vp/response`);
     const m2 = matchDcql(req2.dcql, r.state.credentials).matches[0];
     const out2 = await respond({
+      approval: testApproval(req2),
       request: req2,
       matches: [{ match: m2, keyRef: copy.keyRef, combined: copy.combined, disclose: m2.requested }],
       keys,
@@ -315,6 +326,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       const { matches } = matchDcql(req.dcql, st.state.credentials);
       const copy = matches[0].credential.copies[0];
       const out = await respond({
+        approval: testApproval(req),
         request: req,
         matches: [{ match: matches[0], keyRef: copy.keyRef, combined: copy.combined, disclose: matches[0].requested }],
         passKey: await passKey(req.nonce, req.clientId),
@@ -524,6 +536,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       seen.push(ps.pseudonym);
       const copy = matches[0]?.credential.copies[0];
       const out = await respond({
+        approval: testApproval(req),
         request: req,
         matches: matches[0]
           ? [{ match: matches[0], keyRef: copy!.keyRef, combined: copy!.combined, disclose: matches[0].requested }]
@@ -906,6 +919,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const rpRec = app3.trust().relyingParty(s1.req.clientId) as unknown as RpRecord;
     expect(checkRp(rpRec, s1.req, matches[0]).overAsk).toEqual([]);
     const out = await respond({
+      approval: testApproval(s1.req),
       request: s1.req,
       matches: [{ match: matches[0], keyRef: "w.mdoc", combined: sd.combined, disclose: matches[0].requested }],
       keys,
@@ -943,6 +957,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const s3 = await open();
     const m3 = matchDcql(s3.req.dcql, wallet.credentials).matches[0];
     await respond({
+      approval: testApproval(s3.req),
       request: s3.req,
       matches: [{ match: m3, keyRef: "w.mdoc", combined: sd.combined, disclose: m3.requested }],
       keys: thief,
@@ -1010,6 +1025,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(dreq.responseUri).toBe("");
     const dm = matchDcql(dreq.dcql, wallet.credentials).matches[0];
     const dout = await respond({
+      approval: testApproval(dreq),
       request: dreq,
       matches: [{ match: dm, keyRef: "w.mdoc", combined: sd.combined, disclose: dm.requested }],
       keys,
@@ -1056,6 +1072,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     };
     const answer = (request: Parameters<typeof respond>[0]["request"], http: Http) =>
       respond({
+        approval: testApproval(request),
         request,
         matches: [{ match: dm, keyRef: "w.mdoc", combined: sd.combined, disclose: dm.requested }],
         keys,
@@ -1113,6 +1130,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const d2 = await openDc();
     const d2req = parseDcApiRequest(d2.dc_api_request, SITE);
     const wrong = await respond({
+      approval: testApproval({ ...d2req, origin: undefined, responseUri: `${BASE}/vp/response` }),
       request: { ...d2req, origin: undefined, responseUri: `${BASE}/vp/response` },
       matches: [{ match: dm, keyRef: "w.mdoc", combined: sd.combined, disclose: dm.requested }],
       keys,
@@ -1354,6 +1372,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const { matches } = matchDcql(req.dcql, w.state.credentials);
     const copy = matches[0].credential.copies[0];
     await respond({
+      approval: testApproval(req),
       request: req,
       matches: [{ match: matches[0], keyRef: copy.keyRef, combined: copy.combined, disclose: matches[0].requested }],
       keys,
@@ -1438,12 +1457,12 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       uses_intermediaries: [listed.dns_name],
       scopes: [{ ...inter.scopes[0], vct: VCT, claims: ["is_graduate"] }],
     } as RpRecord;
-    const ok = checkRp(inter, req, match, Date.now(), site);
+    const ok = checkRp(inter, req, match, epochMillis(Date.now()), site);
     expect(ok.legalName).toBe("Örnek Site A.Ş.");
     expect(ok.via).toBe(inter.legal_name);
     expect(ok.certMatches).toBe(true);
     expect(ok.overAsk).toEqual([]);
-    expect(checkRp(inter, req, match, Date.now(), null).registered).toBe(false); // asıl RP kayıtsız → reddedilir (HV6)
+    expect(checkRp(inter, req, match, epochMillis(Date.now()), null).registered).toBe(false); // asıl RP kayıtsız → reddedilir (HV6)
     // WL5 + ADR-0034: kopya ve takma ad aracıya değil asıl sitenin kalıcı alan adına göre
     expect(stableRpKey(req, inter, site)).toBe("site.example");
   });
@@ -1535,8 +1554,12 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       expect(req.onBehalfOf).toBe(owner.clientId);
       const { matches } = matchDcql(req.dcql, wallet.credentials);
       const copy = matches[0].credential.copies[0];
+      // Bu test doğrulayıcı tarafını sınar (fazla açıklayan bir cüzdan): Tamga cüzdanı K7 ilişkisi iki kayıtta yazılı değilse
+      // aracı isteği reddeder (ADR-0056 K8 onayı çıkmaz) — burada aracı bilgisini yok sayan bir cüzdan gibi yanıtlanır
+      const direct = { ...req, onBehalfOf: undefined };
       await respond({
-        request: req,
+        approval: testApproval(direct),
+        request: direct,
         matches: [{ match: matches[0], keyRef: copy.keyRef, combined: copy.combined, disclose }],
         keys,
         http: http3,

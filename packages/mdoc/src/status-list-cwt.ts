@@ -147,9 +147,11 @@ export function parseStatusListCwt(
         ? (x5.filter((c) => c instanceof Uint8Array) as Uint8Array[])
         : [];
   if (!chain.length) throw new Error("D3: status list CWT has no x5chain in the protected header");
+  // imzacı anahtarı (ve çağıranın imzacı sabitlemesi — ADR-0056 K6) imza denetiminden önce; hatası olduğu gibi yükselir
+  const pub = p.publicKeyOf(chain[0]);
   let ok = false;
   try {
-    ok = p256.verify(sig, sigStructure(prot, payload), p.publicKeyOf(chain[0]), {
+    ok = p256.verify(sig, sigStructure(prot, payload), pub, {
       prehash: true,
       lowS: false,
       format: "compact",

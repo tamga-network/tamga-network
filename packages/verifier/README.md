@@ -16,11 +16,23 @@ import { createPresentationRequest, decryptResponse, verifyPresentation } from "
 const req = await createPresentationRequest({ signer, dcql, responseUri, requestUriBase }); // req.qrPayload → QR
 const answer = await decryptResponse(jweFromWallet, req.encPrivateKey);
 const { result, claims } = await verifyPresentation({ presentation: answer.vp_token.diploma[0], aud: signer.clientId,
-  nonce: req.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer });
+  nonce: req.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer,
+  rp: trust.relyingParty(signer.clientId), audit: (entry) => log(entry) });
 ```
 
 A complete, tested version: [`examples/02-verify-own-server`](https://github.com/tamga-network/tamga-network/tree/main/examples/02-verify-own-server).
 
+
+## Secure defaults (0.7.0)
+
+- `verifyPresentation` requires `rp`: the relying party's registration, `null` for an unregistered party (rejected), or `"none"`
+  to skip the scope check (E3) deliberately. E4 is reported as performed only when you pass an `audit` function.
+- `isYes(output, "age_over_18")` reads a yes/no attribute safely: `true` only for an ACCEPTED result whose value is exactly `true`.
+- `PassRegistry.issue({ verified, presentationId, policy })` takes the ACCEPTED output of `verifyPresentation` itself; anything
+  else (rejected, hand-made or modified) throws.
+- `verifyPseudonym` requires `walletStatusOf` (or `"none"`); the result carries `clientStatus`.
+- A credential without a status entry is rejected at D1 when its type uses a status list; the status list signer is pinned to the
+  institution's registered status keys.
 
 ## Status
 

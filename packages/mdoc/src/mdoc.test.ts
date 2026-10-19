@@ -13,6 +13,7 @@ import {
 } from "./mdoc.js";
 import { encode, decode, encodeEmbedded, CborTag, type CborValue } from "./cbor.js";
 import { coseSign1 } from "./cose.js";
+import { epochSeconds } from "@tamga-network/core";
 
 const rnd = (n: number) => {
   const b = new Uint8Array(n);
@@ -83,9 +84,9 @@ describe("mdoc (ISO 18013-5 minimal)", () => {
 
   it("süresi dolmuş belge → REJECTED", () => {
     const { issued, issuerPub, now } = makeIssued();
-    expect(verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: issuerPub, now: now + 400 * 86400 }).valid).toBe(
-      false,
-    );
+    expect(
+      verifyIssuerSigned(issued.issuerSigned, { issuerPubRaw: issuerPub, now: epochSeconds(now + 400 * 86400) }).valid,
+    ).toBe(false);
   });
 
   it("cihaz kimlik doğrulaması: holder anahtarıyla imza geçer; başka anahtar ya da farklı transcript geçmez", () => {

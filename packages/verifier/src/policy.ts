@@ -4,6 +4,7 @@
  */
 import type { RelyingParty, ZkCircuit } from "@tamga-network/trust";
 import { pidSdJwtName } from "@tamga-network/core/pid";
+import { millisOrNow, type EpochMillis } from "@tamga-network/core/time";
 import { ALL as SCHEMA_DEFS } from "@tamga-network/schemas";
 
 export type Assurance = "I1" | "I2" | "I3";
@@ -166,8 +167,9 @@ export function scopeCovers(allowed: Set<string>, claim: string): boolean {
   return false;
 }
 
-/** AP6 — politika RP'nin kayıtlı scope'unu aşıyorsa hata listesi döner (boş = uygun). */
-export function policyScopeViolations(p: Policy, rp: RelyingParty | null, now = Date.now()): string[] {
+/** AP6 — politika RP'nin kayıtlı scope'unu aşıyorsa hata listesi döner (boş = uygun). `nowMs` Unix milisaniyesi (ADR-0056 K12). */
+export function policyScopeViolations(p: Policy, rp: RelyingParty | null, nowMs?: EpochMillis): string[] {
+  const now = millisOrNow(nowMs);
   if (!rp) return ["relying party not registered"];
   const out: string[] = [];
   // ADR-0031 K4: birden çok takma ad yalnız kaydında izin olan sitede
@@ -198,8 +200,9 @@ export function policyScopeViolations(p: Policy, rp: RelyingParty | null, now = 
 export function registrationScopesFor(
   p: Policy,
   rp: RelyingParty | null,
-  now = Date.now(),
+  nowMs?: EpochMillis,
 ): Array<{ queryId: string; scopeId: string }> {
+  const now = millisOrNow(nowMs);
   if (!rp) return [];
   const out: Array<{ queryId: string; scopeId: string }> = [];
   for (const c of p.credentials) {

@@ -11,7 +11,7 @@ export interface DistLoadOptions {
   environment?: "production" | "sandbox";
   now?: Date;
   /** TL2: kalıcı "son görülen" sürüm belleği (bkz. `ListVersionMemory`). */
-  versionMemory?: ListVersionMemory;
+  versionMemory?: ListVersionMemory | "none";
 }
 
 /** `dist/` düzeni: lotl.jws, tl-<cc>.jws, anchors.jsonl, keys/root-fingerprints.json ({ lotl_signing_keys: [{fingerprint_sha256}] }). */

@@ -9,6 +9,7 @@ import { SignJWT, importPKCS8 } from "jose";
 import { X509CertificateGenerator, cryptoProvider } from "@peculiar/x509";
 import { certFingerprintSha256Hex } from "@tamga-network/core";
 import { WALLET_STATUS_MIN_ENTRIES, WalletStatusChecker, verifyKeyAttestation, KA_TYP } from "./key-attestation.js";
+import { epochSeconds } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const now = 1_800_000_000;
@@ -51,9 +52,9 @@ describe("WalletStatusChecker — en az giriş sayısı (CIR 2026/1731 Ek Ib)", 
     const small = await statusToken(p, 4_000);
     const big = await statusToken(p, 10_000);
     const smallChecker = new WalletStatusChecker(async () => small, isKey);
-    expect(await smallChecker.statusOf({ idx: 1, uri: URI }, now)).toBe("NONCOMPLIANT");
+    expect(await smallChecker.statusOf({ idx: 1, uri: URI }, epochSeconds(now))).toBe("NONCOMPLIANT");
     const bigChecker = new WalletStatusChecker(async () => big, isKey);
-    expect(await bigChecker.statusOf({ idx: 1, uri: URI }, now)).toBe("VALID");
+    expect(await bigChecker.statusOf({ idx: 1, uri: URI }, epochSeconds(now))).toBe("VALID");
   });
 
   it("0.5.2: bit önce okunur — küçük listede iptal edilmiş giriş INVALID, iptal edilmemiş giriş NONCOMPLIANT", async () => {
@@ -61,14 +62,14 @@ describe("WalletStatusChecker — en az giriş sayısı (CIR 2026/1731 Ek Ib)", 
     const isKey = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
     const small = await statusToken(p, 4_000, [5]);
     const c = new WalletStatusChecker(async () => small, isKey);
-    expect(await c.statusOf({ idx: 5, uri: URI }, now)).toBe("INVALID");
-    expect(await c.statusOf({ idx: 6, uri: URI }, now)).toBe("NONCOMPLIANT");
-    expect(await c.statusOf({ idx: 999_999, uri: URI }, now)).toBe("NONCOMPLIANT"); // listenin dışı, küçük liste
+    expect(await c.statusOf({ idx: 5, uri: URI }, epochSeconds(now))).toBe("INVALID");
+    expect(await c.statusOf({ idx: 6, uri: URI }, epochSeconds(now))).toBe("NONCOMPLIANT");
+    expect(await c.statusOf({ idx: 999_999, uri: URI }, epochSeconds(now))).toBe("NONCOMPLIANT"); // listenin dışı, küçük liste
     const big = await statusToken(p, 10_000, [5]);
     const b = new WalletStatusChecker(async () => big, isKey);
-    expect(await b.statusOf({ idx: 5, uri: URI }, now)).toBe("INVALID");
-    expect(await b.statusOf({ idx: 6, uri: URI }, now)).toBe("VALID");
-    expect(await b.statusOf({ idx: 999_999, uri: URI }, now)).toBe("UNKNOWN"); // listenin dışı
+    expect(await b.statusOf({ idx: 5, uri: URI }, epochSeconds(now))).toBe("INVALID");
+    expect(await b.statusOf({ idx: 6, uri: URI }, epochSeconds(now))).toBe("VALID");
+    expect(await b.statusOf({ idx: 999_999, uri: URI }, epochSeconds(now))).toBe("UNKNOWN"); // listenin dışı
   });
 
   it("minEntries: 0 denetimi kapatır (geliştirme/test)", async () => {
@@ -76,7 +77,7 @@ describe("WalletStatusChecker — en az giriş sayısı (CIR 2026/1731 Ek Ib)", 
     const isKey = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
     const small = await statusToken(p, 400);
     const c = new WalletStatusChecker(async () => small, isKey, 300, { minEntries: 0 });
-    expect(await c.statusOf({ idx: 1, uri: URI }, now)).toBe("VALID");
+    expect(await c.statusOf({ idx: 1, uri: URI }, epochSeconds(now))).toBe("VALID");
   });
 
   it("KA'nın listesi küçükse KA reddedilir (geçici hata değil)", async () => {
@@ -96,7 +97,7 @@ describe("WalletStatusChecker — en az giriş sayısı (CIR 2026/1731 Ek Ib)", 
       .setIssuedAt(now)
       .setExpirationTime(now + 3600)
       .sign(p.key);
-    const r = await verifyKeyAttestation(ka, { now, isProviderKey, statusOf: checker.statusOf });
+    const r = await verifyKeyAttestation(ka, { now: epochSeconds(now), isProviderKey, statusOf: checker.statusOf });
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.reason).toMatch(/profile/);
