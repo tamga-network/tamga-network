@@ -201,6 +201,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
               // ADR-0034: takma ad sitenin kalıcı kimliğine (alan adı) bağlı; client_id sertifika yenilenince değişir
               rpKey: ctx.trust().relyingParty(p.owner ?? cfg.clientId)?.dns_name ?? p.owner ?? cfg.clientId,
               trust: ctx.trust(),
+              walletStatusOf: ctx.walletStatusOf, // ADR-0031 PS5: iptal edilmemiş cüzdan
               now: nowSec(),
             })
           : { ok: false as const, reason: "pseudonym missing in vp_token", indeterminate: false };

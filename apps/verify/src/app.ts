@@ -18,6 +18,7 @@ import { createHash, createPrivateKey, timingSafeEqual } from "node:crypto";
 import { resolve } from "node:path";
 import { pemToDer } from "@tamga-network/core";
 import { guardedReload, loadTrustSourceFromDir, type TrustSource } from "@tamga-network/trust";
+import { WalletStatusChecker } from "@tamga-network/issuer";
 import {
   pemRpSigner,
   PrefetchStatusCache,
@@ -54,6 +55,11 @@ export interface VerifyContext {
   trust: () => TrustSource;
   rootDer: () => Uint8Array[];
   statusCache: PrefetchStatusCache;
+  /**
+   * ADR-0031 PS5: takma ad sunumundaki WIA'nın iptal durumu (`client_status`; ADR-0025). Liste imzacısı güven listesindeki bir
+   * cüzdan sağlayıcı anahtarı olmalı; liste 5 dk önbellekte.
+   */
+  walletStatusOf: WalletStatusChecker["statusOf"];
   presentations: PresentationStore;
   passes: PassRegistry;
   audit: (e: Record<string, unknown>) => void;
@@ -118,6 +124,16 @@ export async function buildVerifyApp(
   let trust: TrustSource;
   let rootDer: Uint8Array[] = [];
   const statusCache = new PrefetchStatusCache(opts.fetchText);
+  // ADR-0031 PS5 (güvenlik turu 2026-10-19): takma adla giriş iptal edilmiş cüzdandan gelemez — WIA iptal listesi denetlenir.
+  // Liste adresi sağlayıcı imzalı WIA'dan gelir (imza önce doğrulanır); imzacı güven listesindeki sağlayıcı anahtarı olmalı.
+  const walletStatus = new WalletStatusChecker(
+    opts.fetchText ??
+      (async (uri) => {
+        const r = await fetch(uri, { signal: AbortSignal.timeout(5000) });
+        return r.ok ? await r.text() : null;
+      }),
+    (fp) => trust.isWalletProviderKey(fp),
+  );
   const loadTrust = async () => {
     const { trust: t, rootCertPem } = await loadTrustSourceFromDir(cfg.trustDist, { environment: cfg.network });
     trust = t;
@@ -172,6 +188,7 @@ export async function buildVerifyApp(
     // ADR-0036: Tamga kökü + tazelik içindeki dış listelerin (federasyon) çapa sertifikaları
     rootDer: () => [...rootDer, ...(trust.externalAnchorCertsDer?.() ?? [])],
     statusCache,
+    walletStatusOf: walletStatus.statusOf,
     presentations: new PresentationStore(),
     // ADR-0012 B: geçiş kartı kayıtları + jti tekrar listesi (dosya; tüm kapılar bu servisi çağırdığı için liste ortaktır)
     // ADR-0034: kart jetonunun aud'u kalıcı alan adı (sertifika yenilemesi kartları geçersiz kılmaz)

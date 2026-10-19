@@ -357,9 +357,26 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       iat: now,
       ttlSec: 3600,
     });
-    const app2 = await buildVerifyApp(cfg, {
+    // ADR-0031 PS5: WIA iptal listesi (test cüzdan sağlayıcısının imzası; giriş 3 geçerli) — doğrulayıcı takma adla girişte denetler
+    const WIA_STATUS = "https://wallet-provider.test/status/wia";
+    const wps = await pemIssuerSigner(
+      readFileSync(resolve(PKI, "wallet-provider.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "wallet-provider.cert.pem"), "utf8"),
+    );
+    const wiaList = (bits: StatusBitstring) =>
+      signStatusListToken({
+        signer: wps,
+        iss: "https://wallet-provider.test",
+        uri: WIA_STATUS,
+        bitstring: bits,
+        iat: now,
+        ttlSec: 3600,
+      });
+    const wiaStatusTok = await wiaList(new StatusBitstring(MIN_CAPACITY));
+    let app2 = await buildVerifyApp(cfg, {
       showcase: true,
-      fetchText: async (u) => (u === ID_STATUS ? idStatusTok : u === STATUS_URI ? statusTok : null),
+      fetchText: async (u) =>
+        u === ID_STATUS ? idStatusTok : u === STATUS_URI ? statusTok : u === WIA_STATUS ? wiaStatusTok : null,
     });
     await app2.statusCache.refresh([ID_STATUS]);
     const http2: Http = async (url, init) => {
@@ -727,6 +744,16 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const audit2 = (await app2.inject({ method: "GET", url: "/audit", headers: { "x-admin-token": "t" } })).body;
     expect(audit2).toContain("site.passkey.register");
     expect(audit2).not.toContain(b64u(credId)); // kimlik bilgisi kimliği loglanmaz
+    // ADR-0031 PS5 (güvenlik turu 2026-10-19): cüzdan birimi iptal edildiyse (kayıp telefon) takma adla giriş kabul edilmez
+    const revokedBits = new StatusBitstring(MIN_CAPACITY);
+    revokedBits.set(3, 1);
+    const revokedTok = await wiaList(revokedBits);
+    app2 = await buildVerifyApp(cfg, {
+      showcase: true,
+      fetchText: async (u) => (u === WIA_STATUS ? revokedTok : u === STATUS_URI ? statusTok : null),
+    });
+    const revoked = await present("site-signin", { expect: "REJECTED" });
+    expect(revoked.res.failed_reason).toMatch(/revoked|status/i);
   });
 
   it("K1: turnike sayfası yansıyan XSS — geçersiz grup 400, betiğe gömülen değer </script> kapatamaz", async () => {

@@ -64,6 +64,9 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
   presentation counts against the authenticated relying party's own bucket (unauthenticated requests share one), and the
   wallet response endpoints (`/vp/response`, `/vp/dc-mdoc/:id`) count per presentation after the cheap lookups. Before, one
   client within the proxy's per-address allowance could exhaust the shared bucket and block every relying party.
+- Fixed: sign-in with a site pseudonym now checks that the wallet unit is not revoked (the WIA's `client_status` list,
+  signed by a wallet provider in the trusted list), as ADR-0031 PS5 requires. Before, the hosted verifier checked the WIA's
+  signature but not its revocation, so a wallet unit closed after a lost phone could still sign in to sites.
 
 ### Documents
 

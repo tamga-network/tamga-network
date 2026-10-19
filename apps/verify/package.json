@@ -10,6 +10,7 @@
     "@fastify/formbody": "^8.0.0",
     "@simplewebauthn/server": "^13.3.3",
     "@tamga-network/core": "*",
+    "@tamga-network/issuer": "*",
     "@tamga-network/trust": "*",
     "@tamga-network/verifier": "*",
     "esbuild": "^0.28.2",
