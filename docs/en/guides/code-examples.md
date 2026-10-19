@@ -98,7 +98,7 @@ The hosted issuing service reads the credential data from the institution's own 
 nothing ([[ADR-0020]]). This example is the whole endpoint you put in front of your student information system (or a regular
 export of it): it checks the signed request against the trust list (the agreed relying-party record, `aud`, lifetime, single
 use) and returns only the fields the document type needs, never the national ID number. Contract:
-[Institution source endpoint](/en/api/institution-source).
+[Institution source endpoint](/api/institution-source).
 
 <<< @/../examples/05-institution-source/source.ts
 

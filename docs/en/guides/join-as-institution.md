@@ -157,7 +157,7 @@ Where the key lives depends on how you issue:
 
 The [[t:authentic-source]] is your system. Tamga keeps no register of people; at the moment of issuance it asks your system's
 **lookup endpoint** with a signed request, takes one record and keeps nothing ([[ADR-0020]]). Contract:
-[Institution source endpoint](/en/api/institution-source).
+[Institution source endpoint](/api/institution-source).
 
 - The shortest way to start is the open-source example endpoint ([[GUIDE-0004]] §5): it goes in front of your student information
   system, or in front of a regularly refreshed export; it checks the request against the trust list and returns only the fields
