@@ -34,7 +34,7 @@
  * anahtar kullanımı kritik ve yalnız digitalSignature; SKI + AKI. Sandbox yaprakları bu profille (2026-10-13 --reissue ile aynı
  * anahtar); geliştirme yaprakları kimlik numarası taşımaz (yerel, rastgele). Gerçek ağda kurum sertifikası `pki-issue.ts --prod
  * --org-id` ile verilir; bu araç üretim kipinde kimlik numarasız bir kurum yaprağı üretirse uyarır.
- * Sapma S-1 (09-DEMO-KURGU §6): issuer özel anahtarı burada dosyada; pilotta üniversite KMS'inde.
+ * Sapma S-1 (09-DEMO-KURGU §2): issuer özel anahtarı burada dosyada; pilotta üniversite KMS'inde.
  * Çıktı: <klasör>/*.cert.pem, *.pkcs8.pem, pki.json (parmak izleri, id'ler). `ops/pki/` tamamen gitignore (geliştirme anahtarları
  * makineye özeldir); `ops/pki-sandbox/` sertifikaları ve pki.json depoda izlenir (cüzdandaki sandbox pin'i).
  */
