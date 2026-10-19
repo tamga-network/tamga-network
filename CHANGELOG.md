@@ -8,6 +8,14 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
 
 ### Trust list publisher (`apps/trust-publisher`)
 
+- Chain projection (proposed decision ADR-0051; **off by default**, no production chain exists): `chain-anchor` writes only the
+  digests of the signed trust lists (`sha256(<file>.jws)`, version, previous digest, issue time) and of the anchor log's latest
+  line to a trust list anchor registry contract; `chain-check` tells a verifier whether a list digest is anchored
+  (`YES` / `NO` / `UNKNOWN`). The signed lists remain the source of truth: on conflict the list prevails and the chain answer
+  is never required for verification. Feature flag `TAMGA_CHAIN_ENABLED` (default `0`): while off nothing connects to a chain;
+  `--dry-run` prints the plan. An anchor counts only once the registry's confirmation threshold of distinct writers has
+  submitted identical data (production threshold ≥ 2). New dependency `ethers` (app only, not in the published packages).
+
 - `npm run trust:wallet-provider -- list|show|check|activate|suspend|revoke` manages `wallet_providers[]` in the production
   and sandbox registries. `activate` checks the provider's signing certificate against the wallet attestation policy (EC
   P-256, ecdsa-with-SHA256, `digitalSignature`, not a CA, within its validity) and the ETSI TS 119 412-6 §5 profile: the

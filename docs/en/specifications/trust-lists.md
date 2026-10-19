@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-10-18
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -177,6 +177,7 @@ Three-valued answer: `YES | NO | UNKNOWN`; `UNKNOWN` → INDETERMINATE (CMP4). S
 | `relying_parties[]` | `RelyingPartyRegistry.register / setScope` |
 | `anchors kind=status_list` | `StatusListRegistry.publishList(listId, uri, hash, version)` |
 | `anchors kind=schema` | `SchemaRegistry` contentHash |
+| `lotl` / `tl-<cc>` version (whole file) · last line of `anchors.jsonl` | Trust list anchor registry — `anchorList(listKey, version, sha256(jws), previousHash, issuedAt)` · `anchorLogHead(logKey, seq, sha256(line), ts)`; digest only, no content ([[ADR-0051]] **proposed**; [[SPEC-BC-0001]] §15). The chain is a projection: on conflict the signed list prevails and the chain's answer is never required for verification. Flag `TAMGA_CHAIN_ENABLED`, off in production |
 | `wallet_providers[]` | not yet on the chain — ADR candidate |
 | `zk_circuits[]` | not yet on the chain — a `Governance` record in the chain stage (ADR candidate) |
 

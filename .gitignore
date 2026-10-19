@@ -50,3 +50,10 @@ packages/*/lib/
 *.tgz
 apps/trust-publisher/dist-sandbox/
 apps/trust-publisher/dist-test/
+
+# kontratlar (Hardhat): bağımlılıklar, derleme çıktısı, yerel geliştirme zincirinin adresleri, depolama düzeni anlık görüntüsü
+contracts/node_modules/
+contracts/artifacts/
+contracts/cache/
+contracts/deployments/
+contracts/.storage/

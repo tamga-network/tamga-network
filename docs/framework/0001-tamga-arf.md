@@ -455,6 +455,12 @@ değerlendirme kuruluşları ve ulusal sertifikasyon gelir. Rol başına neyin t
 | Devlet katılımı | Ortak defter | Üye devletlerin konseyi (üçte iki) | İlk devlet işletmecisinin üretime geçmesi |
 | Kurumsal genişleme | Ortak defter | Konsey | Konseyin belirlediği eşikler |
 
+**Defter aşamasının durumu:** öncül — kod hazır, üretimde kapalı. Ortak defterin sözleşmeleri derlenir ve test edilir; liste
+yayıncısı imzalı listelerin yalnız özetlerini deftere yazabilecek hâldedir, ama bu özellik kapalıdır ve çalışan bir defter yoktur.
+Defter açıldığında da imzalı listelerin projeksiyonu olur: bir özet ancak en az iki bağımsız işletmeci aynı değeri yazınca
+sayılır, çelişkide imzalı liste geçerlidir ve defterin cevabı doğrulama için hiçbir zaman gerekli değildir (karar önerisi,
+onay bekler).
+
 ## 8.2 Ortak deftere geçiş
 
 Liste arşivi ortak deftere aynen aktarılır. Liste ve defter aynı uyum testlerine aynı cevabı verir. Kurum kimlikleri, belge

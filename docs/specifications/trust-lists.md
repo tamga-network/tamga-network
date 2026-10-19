@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-10-18
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -174,6 +174,7 @@ bellek-içi yansıma ([[ARCH-0003]] §2.4 tabloları). İmza ve biçimden sonra 
 | `relying_parties[]` | `RelyingPartyRegistry.register / setScope` |
 | `anchors kind=status_list` | `StatusListRegistry.publishList(listId, uri, hash, version)` |
 | `anchors kind=schema` | `SchemaRegistry` contentHash |
+| `lotl` / `tl-<cc>` sürümü (bütün dosya) · `anchors.jsonl` son satırı | Liste çapası kaydı — `anchorList(listKey, version, sha256(jws), previousHash, issuedAt)` · `anchorLogHead(logKey, seq, sha256(satır), ts)`; yalnız özet, içerik yok ([[ADR-0051]] **öneri**; [[SPEC-BC-0001]] §15). Zincir projeksiyondur: çelişkide imzalı liste geçerlidir, zincir cevabı doğrulama için gerekli değildir. Bayrak `TAMGA_CHAIN_ENABLED`, üretimde kapalı |
 | `wallet_providers[]` | zincirde henüz yok — ADR adayı |
 | `zk_circuits[]` | zincirde henüz yok — ilk aşamada `Governance` kaydı (ADR adayı) |
 

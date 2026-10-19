@@ -480,6 +480,12 @@ shown at EU interoperability events and with the OpenID conformance tests.
 | States join          | Shared ledger                   | The council of member states (two-thirds) | The first state operator in production                                      |
 | Institutional growth | Shared ledger                   | The council                               | Thresholds set by the council                                               |
 
+**Status of the ledger stage:** precursor — code ready, off in production. The shared ledger's contracts compile and are
+tested; the list publisher is able to write only the digests of the signed lists to the ledger, but this feature is switched off
+and no ledger is running. Once the ledger is opened it is still a projection of the signed lists: a digest counts only when at
+least two independent operators have written the same value, on conflict the signed list prevails, and the ledger's answer is
+never required for verification (proposed decision, awaiting approval).
+
 ### 8.2 Moving to the shared ledger
 
 The list archive is carried over to the shared ledger as it is. The list and the ledger give the same answers to the same

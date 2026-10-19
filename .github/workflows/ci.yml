@@ -36,3 +36,24 @@ jobs:
         env:
           TAMGA_PACK_PACKAGES: core mdoc schemas sd-jwt trust issuer verifier wallet-core
         run: npm run release:check
+  # Trust-layer contracts (SPEC-BC-0001): compile + unit tests on an in-process chain. The contracts folder exists only in the
+  # development repository (no production chain yet, ADR-0009 K4); the job is skipped where it is absent.
+  contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: contracts present?
+        id: present
+        run: if [ -f contracts/package.json ]; then echo "yes=1" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.present.outputs.yes == '1'
+        run: npm run contracts:install
+      - if: steps.present.outputs.yes == '1'
+        run: npm run contracts:compile
+      - if: steps.present.outputs.yes == '1'
+        run: npm run contracts:test
+      - if: steps.present.outputs.yes == '1'
+        run: npm run contracts:check

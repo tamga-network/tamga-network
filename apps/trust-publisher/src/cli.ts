@@ -19,6 +19,8 @@
  *                                                 sertifikalar, TAMGA_SANDBOX_SELF_DIR'e kayıt, liste imzalanır · sandbox-institution list
  *   wallet-provider list|show|activate|suspend|revoke  cüzdan sağlayıcı kaydı (ADR-0042), gerçek + sandbox kayıt defteri; liste
  *                                                 imzalanmaz (dağıtımda) — ayrıntı walletProviderCommand
+ *   chain-anchor [--dry-run] · chain-check <jws>  zincir projeksiyonu (ADR-0051 öneri): liste sürümü + çapa günlüğü başı ÖZETLERİ
+ *                                                 zincire; bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok — src/chain/
  * Kurallar: version monoton, previous_version_hash = önceki .jws'in sha256'sı; dist/ değişmez arşivi.
  */
 import {
@@ -58,6 +60,7 @@ import {
 } from "@tamga-network/trust";
 
 import { buildLote, contactFromRegistration, jadesHeader, type LoteContact, type LoteInput } from "./lote.js";
+import { chainCommand } from "./chain/cli.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
 import { buildWrprcPayloads, wrprcHeader } from "./wrprc.js";
 import {
@@ -1381,9 +1384,12 @@ const cmd = process.argv[2];
     console.log(cp ? JSON.stringify(cp) : "anchors: arşivlenecek satır yok");
   } else if (["register", "scope", "authorize", "list", "status", "rp-status", "end-use"].includes(cmd ?? "")) {
     await registryCommand(cmd!, process.argv.slice(3));
+  } else if (cmd === "chain-anchor" || cmd === "chain-check") {
+    // ADR-0051 (öneri): zincir projeksiyonu — bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok (CH5)
+    process.exitCode = await chainCommand(cmd, process.argv.slice(3), { dist: DIST, environment: ENVIRONMENT });
   } else {
     console.error(
-      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list",
+      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | chain-anchor [--dry-run] | chain-check <dosya.jws>",
     );
     process.exit(1);
   }
