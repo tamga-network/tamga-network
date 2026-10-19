@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 321 kodlanmış değişmez, 52 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 331 kodlanmış değişmez, 55 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -488,7 +488,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0051/CH1` | Zincir imzalı listelerin ve çapa günlüğünün projeksiyonudur; çelişkide imzalı liste geçerlidir; zincir cevabı doğrulama için gerekli değildir ve `UNKNOWN` sonucu kötüleştirmez. |
 | `ADR-0051/CH2` | Liste çapası kaydına yalnız liste sürümünün ve çapa günlüğü satırının özeti (hash, sürüm/sıra, zaman) yazılır; liste içeriği, kayıt, belge, belge özeti ya da kişisel veri yazılmaz. |
 | `ADR-0051/CH3` | Bir çapa ancak onay eşiği kadar farklı yetkili yazıcı birebir aynı veriyi gönderince onaylıdır; üretimde eşik en az 2'dir. |
-| `ADR-0051/CH4` | Liste başına sürüm monoton artar; açılmış sürüm için farklı özet reddedilir ve çift-konuşma işareti olarak izlenir; onaylı kayıt silinmez ve değiştirilmez. |
+| `ADR-0051/CH4` | Liste başına sürüm monoton artar; açılmış sürüm için farklı özet ayrı aday olarak kaydedilir ve çift-konuşma işareti olarak olay yayar ([[ADR-0053]]/AC1–AC3); onaylı kayıt silinmez ve değiştirilmez. |
 | `ADR-0051/CH5` | `TAMGA_CHAIN_ENABLED` kapalıyken zincire bağlanılmaz ve yazılmaz; üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz. |
 
 
@@ -503,6 +503,40 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0052/LP3` | Bütün validator'lar aynı hesap listesini ve aynı validator düğüm listesini taşır; fark işletme olayıdır ve giderilene kadar raporlanır. |
 | `ADR-0052/LP4` | Yazma yetkisi kontratlarda denetlenir; izin listesi bu yetkiyi genişletmez ve onun yerine geçmez. |
 | `ADR-0052/LP5` | Düğümün JSON-RPC ucu internete açılmaz; dış erişim yalnız mTLS'li ters vekil arkasından ve okuma/işlem ad alanlarıyla; `PERM`, `ADMIN`, `QBFT` yalnız yerelden. |
+
+
+## ADR-0053
+
+*"Liste çapasında rakip adaylar"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0053/AC1` | Açılmış bir çapa sürümü için farklı veri reddedilmez, ayrı aday olarak kaydedilir; her yazıcı bir sürüm için yalnız bir adayı destekler. |
+| `ADR-0053/AC2` | Bir sürüm, eşik kadar farklı ve hâlâ yetkili yazıcının desteklediği ilk aday olunca onaylanır; onaydan sonra kapanır, onaylı kayıt değişmez ve silinmez. |
+| `ADR-0053/AC3` | Bir sürüm için ikinci ve sonraki her farklı aday zincirde çelişki olayı (`AnchorConflict`) yayar. |
+| `ADR-0053/AC4` | Kümeden çıkarılan yazıcının desteği sayılmaz; eşik yazıcı sayısını aşacak biçimde ayarlanamaz. |
+
+
+## ADR-0054
+
+*"Zincirde şema ad alanı, devletler arası bağ ve kota kapsamı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0054/NS1` | Ulusal şemanın `vct`'si `urn:tamga:<cc>:<alan>:<Tür>:<ana sürüm>` biçimindedir ve `<cc>` kaydı yapan devletin kodudur; ağ şemasının `vct`'si bu biçimde olamaz. |
+| `ADR-0054/NS2` | Kurumun kök sertifikası ve halefi kurumla aynı devlete aittir. |
+| `ADR-0054/NS3` | Devlet başına günlük yazma tavanı her kayıt kontratında ayrı sayılır; durum listesi yayın tavanı liste başınadır; kurum başına günlük yeni liste kaydı sınırlıdır. |
+
+
+## ADR-0055
+
+*"Yönetişim: yükseltme bekleme süresi ve kayıt yönetimi önerileri"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0055/GE1` | Protokol yükseltmesi eşik dolunca kuyruğa alınır ve en erken 7 gün sonra, eşik o anki ACTIVE üyelerden yeniden sayılarak uygulanır. |
+| `ADR-0055/GE2` | Yükseltmeyle yapılan başlangıç çağrısı yalnız parametresiz bir fonksiyon seçicisidir; Governance önerileri serbest veri (`bytes`) taşımaz. |
+| `ADR-0055/GE3` | Governance'ın kayıt yönetimi işlemleri yalnız türü belli önerilerle ve 2/3 oyla yapılır; genel çağrı önerisi yoktur. |
 
 
 ## ARCH-0003
@@ -789,12 +823,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 321 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 331 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
+AC, AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-19 (`scripts/sync-invariants.mjs`). Toplam 321 kodlanmış değişmez, 52 dokümanda.
+**Üretilen dosya** — 2026-10-19 (`scripts/sync-invariants.mjs`). Toplam 331 kodlanmış değişmez, 55 dokümanda.

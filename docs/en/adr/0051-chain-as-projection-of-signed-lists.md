@@ -16,7 +16,7 @@ summary: >
   The contracts compile and are tested with Hardhat; there is no production chain. Names: contract `TrustListAnchorRegistry`,
   commands `trust:chain-submit` and `trust:chain-check`. Accepted: 2026-10-19.
 domain: Trust
-related: ["[[ADR-0001]]", "[[ADR-0002]]", "[[ADR-0007]]", "[[ADR-0008]]", "[[ADR-0009]]", "[[ADR-0052]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]", "[[PM-TRUST-0001]]", "[[ARCH-0003]]", "[[FW-ARF-0001]]"]
+related: ["[[ADR-0001]]", "[[ADR-0002]]", "[[ADR-0007]]", "[[ADR-0008]]", "[[ADR-0009]]", "[[ADR-0052]]", "[[ADR-0053]]", "[[ADR-0055]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]", "[[PM-TRUST-0001]]", "[[ARCH-0003]]", "[[FW-ARF-0001]]"]
 translation_of: ADR-0051
 source_version: 1.0.0
 ---
@@ -82,16 +82,18 @@ credentials, credential digests or personal data are **not written** (DP1, TL11)
   exactly the same data. An unconfirmed anchor never yields `YES`. In production the threshold is **≥ 2**: a single operator
   cannot produce a confirmed anchor — the contract counterpart of [[ADR-0009]] K4 ("second independent operator"). On the
   development network the threshold is 1.
-- A writer submitting a **different digest** for an already opened version is rejected (`AnchorMismatch`); the event is a
-  double-speak signal and is tracked from the events. The version per list increases monotonically; a confirmed record is never
-  changed (append only, no deletion).
+- ~~A writer submitting a different digest for an already opened version is rejected (`AnchorMismatch`).~~ **Changed by
+  [[ADR-0053]] (2026-10-19):** a different digest for an opened version is recorded as a separate candidate and emits a conflict
+  event (`AnchorConflict`); the first candidate to reach the threshold is confirmed. The version per list increases monotonically;
+  a confirmed record is never changed (append only, no deletion).
 
 ## K4 — When it is written; the flag
 
 - The list publisher (`apps/trust-publisher`) reads its own `dist/` output with the `chain-submit` command (`npm run trust:chain-submit`), first verifies it with
   the loader (signature, hash chain, freshness — an unhealthy set is not anchored), then submits only the digests: after every
   list publication and every hourly anchor line (heartbeat cadence). If the chain already has the same version with the same
-  digest it skips; if a different digest exists it does not write and reports `CONFLICT` (K1.3).
+  digest it skips; if a confirmed different digest exists it does not write and reports `CONFLICT` (K1.3); if a different
+  candidate is pending it submits its own digest as a competing candidate and warns (`CONTEST`, [[ADR-0053]]).
 - The feature flag `TAMGA_CHAIN_ENABLED` defaults to `0`: while off, no chain connection is opened and nothing is written.
   `--dry-run` prints what would be anchored without connecting. The writer key and the RPC address come from the environment /
   `.env`; the repository holds placeholders.
@@ -133,7 +135,7 @@ verifier application (a line on the health page) is separate work once the flag 
 | CH1 | The chain is a projection of the signed lists and the anchor log; on conflict the signed list prevails; the chain's answer is not required for verification and `UNKNOWN` never worsens a result. |
 | CH2 | Only the digest of a list version and of an anchor log line (hash, version/sequence, time) is written to the trust list anchor registry; no list content, record, credential, credential digest or personal data. |
 | CH3 | An anchor is confirmed only once threshold-many distinct authorised writers have submitted exactly the same data; in production the threshold is at least 2. |
-| CH4 | The version per list increases monotonically; a different digest for an opened version is rejected and tracked as a double-speak signal; a confirmed record is neither deleted nor changed. |
+| CH4 | The version per list increases monotonically; a different digest for an opened version is recorded as a separate candidate and emits an event as a double-speak signal ([[ADR-0053]]/AC1–AC3); a confirmed record is neither deleted nor changed. |
 | CH5 | While `TAMGA_CHAIN_ENABLED` is off, nothing connects to or writes to the chain; in production the flag is not switched on without a second independent operator and a threshold ≥ 2. |
 
 # Consequences
@@ -153,9 +155,8 @@ verifier application (a line on the health page) is separate work once the flag 
 
 1. ~~Contract and command names~~ — **closed (2026-10-19):** `TrustListAnchorRegistry`, `trust:chain-submit`, `trust:chain-check`.
 2. The exact production threshold (proposal 2) and who the second writer will be — together with the second-operator candidate.
-3. A generic "execute call" proposal in `Governance`, so that the writer set/threshold and `CrossRecognition.bootstrapFounders`
-   can be managed through Governance (today both can only be called directly from the `governance` address; the Governance
-   contract cannot do that).
+3. ~~A generic "execute call" proposal in `Governance`~~ — **closed (2026-10-19, [[ADR-0055]]):** the writer set/threshold and
+   `CrossRecognition.bootstrapFounders` are managed through typed Governance proposals; no generic call proposal was created.
 4. A Besu/QBFT single-validator development network (Docker) and `ChainTrustSource` + indexer (the phase 0 read path).
 5. Moving `contracts/` into the public repository (today in `.publicignore`).
 
@@ -164,3 +165,4 @@ verifier application (a line on the health page) is separate work once the flag 
 **Accepted — 2026-10-19.** With project management approval (names: contract `TrustListAnchorRegistry`, commands
 `trust:chain-submit` and `trust:chain-check`). DECISIONS: D-BC-7. Proposed on 2026-10-17, on project management's direction of the
 same day ("the chain code is written now, integrated with the chainless design, off in production"). CH1–CH5 are binding.
+2026-10-19: the last item of K3 and CH4 were changed by [[ADR-0053]] (competing candidates); open item 3 was closed by [[ADR-0055]].

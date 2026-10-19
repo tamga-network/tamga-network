@@ -127,8 +127,8 @@ WebAuthn **IP adresinde çalışmaz**: `localhost` ya da HTTPS alan adı gerekir
 ## 5. Üretime geçmeden önce
 
 - Siteniz Tamga güven listesinde bir **doğrulayıcı kaydı** ister; istediğiniz alanlar kaydın kapsamını aşamaz.
-- Barındırılan doğrulayıcı üretimde beyansız isteği reddeder (`TAMGA_VERIFY_REQUIRE_RP_AUTH=1`). Demo/LAN kipinde beyansız eski
-  yol `Deprecation` başlığıyla çalışır. İsterseniz doğrulamayı tamamen kendi sunucunuzda yapın: [[GUIDE-0002]].
+- Barındırılan doğrulayıcı gerçek ağda ve sandbox'ta beyansız isteği reddeder (`TAMGA_VERIFY_REQUIRE_RP_AUTH=1`). Yalnız yerel
+  geliştirme (demo/LAN) kipinde beyansız eski yol `Deprecation` başlığıyla çalışır. İsterseniz doğrulamayı tamamen kendi sunucunuzda yapın: [[GUIDE-0002]].
 - Politika adları ve alan setleri Tamga ile birlikte belirlenir (ör. yalnızca "18 yaşından büyük" → `age-over-18-mdoc`).
 
 ## Kurallar

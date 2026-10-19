@@ -47,6 +47,11 @@ export async function chainCommand(
     const client = chainEnabled(env) ? chainClientFromEnv(env, !dryRun)! : new MemoryChainClient(1);
     const report = await anchorDist(client, ctx.dist, ctx.environment, { dryRun, skipVerify });
     console.log(JSON.stringify(report, null, 2));
+    if (report.contested > 0) {
+      console.error(
+        `chain: ${report.contested} RAKİP ADAY — zincirde bekleyen farklı özet var; kendi özetimiz gönderildi (ADR-0053), işletmeci incelesin`,
+      );
+    }
     if (report.conflicts > 0) {
       console.error(
         `chain: ${report.conflicts} ÇELİŞKİ — zincirde farklı özet; imzalı liste geçerli, işletmeci incelesin`,

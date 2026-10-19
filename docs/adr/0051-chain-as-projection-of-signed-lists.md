@@ -15,7 +15,7 @@ summary: >
   varsayılan kapalıdır. Kontratlar Hardhat ile derlenir ve test edilir; üretim zinciri yoktur. Adlar: kontrat
   `TrustListAnchorRegistry`, komutlar `trust:chain-submit` ve `trust:chain-check`. Kabul: 2026-10-19.
 domain: Trust
-related: ["[[ADR-0001]]", "[[ADR-0002]]", "[[ADR-0007]]", "[[ADR-0008]]", "[[ADR-0009]]", "[[ADR-0052]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]", "[[PM-TRUST-0001]]", "[[ARCH-0003]]", "[[FW-ARF-0001]]"]
+related: ["[[ADR-0001]]", "[[ADR-0002]]", "[[ADR-0007]]", "[[ADR-0008]]", "[[ADR-0009]]", "[[ADR-0052]]", "[[ADR-0053]]", "[[ADR-0055]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]", "[[PM-TRUST-0001]]", "[[ARCH-0003]]", "[[FW-ARF-0001]]"]
 ---
 
 # Kısaca
@@ -76,15 +76,16 @@ yazım Faz 0 replay'idir.
 - Bir `(listKey, version)` ya da `(logKey, seq)` çapası, **eşik kadar farklı yazıcı** birebir aynı veriyi gönderince **onaylı**
   olur. Onaylı olmayan çapa `YES` üretmez. Üretimde eşik **≥ 2**: tek işletmeci onaylı çapa üretemez — [[ADR-0009]] K4'ün
   ("ikinci bağımsız işletmeci") kontrat karşılığı. Geliştirme ağında eşik 1'dir.
-- Açılmış bir sürüm için **farklı özet** gönderen yazıcı reddedilir (`AnchorMismatch`); bu olay çift-konuşma işaretidir ve
-  olaylardan izlenir. Sürüm liste başına monoton artar; onaylı kayıt değişmez (eklenir, silinmez).
+- ~~Açılmış bir sürüm için farklı özet gönderen yazıcı reddedilir (`AnchorMismatch`).~~ **[[ADR-0053]] ile değişti
+  (2026-10-19):** açılmış bir sürüm için farklı özet ayrı bir aday olarak kaydedilir ve çelişki olayı (`AnchorConflict`) yayar;
+  eşiği ilk dolduran aday onaylanır. Sürüm liste başına monoton artar; onaylı kayıt değişmez (eklenir, silinmez).
 
 ## K4 — Ne zaman yazılır; bayrak
 
 - Liste yayıncısı (`apps/trust-publisher`) `chain-submit` komutuyla (`npm run trust:chain-submit`) kendi `dist/` çıktısını okur, önce yükleyiciyle doğrular
   (imza, hash zinciri, tazelik — sağlıksız set çapalanmaz), sonra yalnız özetleri gönderir: her liste yayınından ve her saatlik
-  çapa satırından sonra (heartbeat kadansı). Zincirde aynı sürüm aynı özetle varsa atlar; farklı özet varsa yazmaz ve `CONFLICT`
-  raporlar (K1.3).
+  çapa satırından sonra (heartbeat kadansı). Zincirde aynı sürüm aynı özetle varsa atlar; onaylı farklı özet varsa yazmaz ve
+  `CONFLICT` raporlar (K1.3); bekleyen farklı aday varsa kendi özetini rakip aday olarak gönderir ve uyarır (`CONTEST`, [[ADR-0053]]).
 - Özellik bayrağı `TAMGA_CHAIN_ENABLED` varsayılan `0`: kapalıyken hiçbir zincir bağlantısı kurulmaz ve hiçbir şey yazılmaz.
   `--dry-run` ne yazılacağını basar, bağlanmaz. Yazıcı anahtarı ve RPC adresi ortamdan/.env'den gelir; depoda yer tutucu.
 - Üretimde bayrak, ikinci işletmeci ve eşik ≥ 2 **olmadan açılmaz**.
@@ -124,7 +125,7 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
 | CH1 | Zincir imzalı listelerin ve çapa günlüğünün projeksiyonudur; çelişkide imzalı liste geçerlidir; zincir cevabı doğrulama için gerekli değildir ve `UNKNOWN` sonucu kötüleştirmez. |
 | CH2 | Liste çapası kaydına yalnız liste sürümünün ve çapa günlüğü satırının özeti (hash, sürüm/sıra, zaman) yazılır; liste içeriği, kayıt, belge, belge özeti ya da kişisel veri yazılmaz. |
 | CH3 | Bir çapa ancak onay eşiği kadar farklı yetkili yazıcı birebir aynı veriyi gönderince onaylıdır; üretimde eşik en az 2'dir. |
-| CH4 | Liste başına sürüm monoton artar; açılmış sürüm için farklı özet reddedilir ve çift-konuşma işareti olarak izlenir; onaylı kayıt silinmez ve değiştirilmez. |
+| CH4 | Liste başına sürüm monoton artar; açılmış sürüm için farklı özet ayrı aday olarak kaydedilir ve çift-konuşma işareti olarak olay yayar ([[ADR-0053]]/AC1–AC3); onaylı kayıt silinmez ve değiştirilmez. |
 | CH5 | `TAMGA_CHAIN_ENABLED` kapalıyken zincire bağlanılmaz ve yazılmaz; üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz. |
 
 # Sonuçlar
@@ -142,8 +143,8 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
 
 1. ~~Kontrat ve komut adları~~ — **kapandı (2026-10-19):** `TrustListAnchorRegistry`, `trust:chain-submit`, `trust:chain-check`.
 2. Üretim eşiği tam değeri (öneri 2) ve ikinci yazıcının kim olacağı — ikinci işletmeci adayıyla birlikte.
-3. `Governance`'ta genel "çağrı yürüt" önerisi: yazıcı kümesi/eşiği ve `CrossRecognition.bootstrapFounders` Governance üzerinden
-   yönetilebilsin (bugün ikisi de yalnız doğrudan `governance` adresinden çağrılabilir; Governance kontratı bunu yapamaz).
+3. ~~`Governance`'ta genel "çağrı yürüt" önerisi~~ — **kapandı (2026-10-19, [[ADR-0055]]):** yazıcı kümesi/eşiği ve
+   `CrossRecognition.bootstrapFounders` türü belli Governance önerileriyle yönetilir; genel çağrı önerisi kurulmadı.
 4. Besu/QBFT tek-validator geliştirme ağı (Docker) ve `ChainTrustSource` + indeksleyici (Faz 0 okuma yolu).
 5. `contracts/` klasörünün public depoya alınması (bugün `.publicignore`'da).
 
@@ -151,4 +152,5 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
 
 **Accepted — 2026-10-19.** Proje yönetimi onayıyla (adlar: kontrat `TrustListAnchorRegistry`, komutlar `trust:chain-submit` ve
 `trust:chain-check`). DECISIONS: D-BC-7. Öneri 2026-10-17'de, proje yönetiminin aynı günkü yönü ("zincir kodu şimdi yazılır,
-zincirsiz tasarımla entegre olur, üretimde kapalı") üzerine yazıldı. CH1–CH5 bağlayıcıdır.
+zincirsiz tasarımla entegre olur, üretimde kapalı") üzerine yazıldı. CH1–CH5 bağlayıcıdır. 2026-10-19: K3'ün son maddesi ve CH4
+[[ADR-0053]] ile değişti (rakip adaylar); açık konu 3 [[ADR-0055]] ile kapandı.

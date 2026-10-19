@@ -4,6 +4,8 @@
  *   - Set önce yükleyiciyle doğrulanır (imza, hash zinciri, tazelik); sağlıksız set çapalanmaz.
  *   - Zincirde aynı sürüm aynı özetle onaylıysa SKIP; onaylı FARKLI özet varsa CONFLICT — yazılmaz, imzalı liste geçerlidir (CH1),
  *     işletmeciye alarm. Zincirdeki en yüksek onaylı sürümden küçük sürüm yazılmaz (CH4).
+ *   - Zincirde onaylanmamış FARKLI bir aday bekliyorsa CONTEST (ADR-0053): kendi doğruladığımız özet rakip aday olarak gönderilir
+ *     (eşiği ilk dolduran aday kazanır); kontrat `AnchorConflict` yayar, rapor çift konuşma uyarısı verir.
  *   - dryRun: hiçbir yazma yok; plan ve kararlar raporlanır.
  * Bayrak (TAMGA_CHAIN_ENABLED) bu modülün DIŞINDA denetlenir (cli.ts): kapalıyken bu fonksiyon gerçek istemciyle çağrılmaz (CH5).
  */
@@ -20,7 +22,7 @@ import {
   type ProjectionPlan,
 } from "./projection.js";
 
-export type Decision = "ANCHOR" | "SKIP" | "CONFLICT" | "STALE";
+export type Decision = "ANCHOR" | "SKIP" | "CONFLICT" | "STALE" | "CONTEST";
 
 export interface ListDecision {
   kind: "list";
@@ -47,6 +49,8 @@ export interface AnchorReport {
   verified: boolean;
   decisions: Array<ListDecision | LogDecision>;
   conflicts: number;
+  /** ADR-0053: bekleyen farklı adaya karşı kendi özetimizi gönderdiğimiz kararlar (çift konuşma uyarısı) */
+  contested: number;
   written: number;
 }
 
@@ -110,7 +114,11 @@ async function decideList(client: ChainClient, a: ListVersionAnchor): Promise<Li
     };
   }
   if (existing && existing.contentHash !== a.contentHash)
-    return { ...base, decision: "CONFLICT", reason: `zincirde bekleyen FARKLI özet: ${existing.contentHash}` };
+    return {
+      ...base,
+      decision: "CONTEST",
+      reason: `zincirde bekleyen FARKLI aday: ${existing.contentHash} — kendi özetimiz rakip aday olarak gönderilir (ADR-0053)`,
+    };
   const latest = await client.latestListVersion(a.listKey);
   if (a.version < latest) return { ...base, decision: "STALE", reason: `zincirde onaylı sürüm ${latest} daha yeni` };
   if (a.version === latest) return { ...base, decision: "SKIP", reason: "zincirde aynı sürüm onaylı" };
@@ -121,8 +129,19 @@ async function decideLog(client: ChainClient, h: LogHeadAnchor): Promise<LogDeci
   const base = { kind: "log" as const, seq: h.seq, lineHash: h.lineHash };
   const existing = await client.logHead(h.logKey, h.seq);
   if (existing) {
-    if (existing.lineHash !== h.lineHash)
-      return { ...base, decision: "CONFLICT", reason: `zincirde seq ${h.seq} için FARKLI özet: ${existing.lineHash}` };
+    if (existing.lineHash !== h.lineHash) {
+      if (existing.confirmed)
+        return {
+          ...base,
+          decision: "CONFLICT",
+          reason: `zincirde seq ${h.seq} için onaylı FARKLI özet: ${existing.lineHash}`,
+        };
+      return {
+        ...base,
+        decision: "CONTEST",
+        reason: `zincirde seq ${h.seq} için bekleyen FARKLI aday: ${existing.lineHash} — kendi özetimiz rakip aday (ADR-0053)`,
+      };
+    }
     if (existing.confirmed) return { ...base, decision: "SKIP", reason: "zincirde aynı özetle onaylı" };
     return { ...base, decision: "ANCHOR", reason: "bekleyen çapaya onay" };
   }
@@ -132,7 +151,9 @@ async function decideLog(client: ChainClient, h: LogHeadAnchor): Promise<LogDeci
   return { ...base, decision: "ANCHOR", reason: "yeni günlük başı" };
 }
 
-/** Planı zincirle karşılaştırır, dryRun değilse ANCHOR kararlarını yazar. */
+const writes = (d: Decision) => d === "ANCHOR" || d === "CONTEST";
+
+/** Planı zincirle karşılaştırır, dryRun değilse ANCHOR ve CONTEST kararlarını yazar. */
 export async function runProjection(
   client: ChainClient,
   plan: ProjectionPlan,
@@ -142,12 +163,12 @@ export async function runProjection(
   const decisions: Array<ListDecision | LogDecision> = [];
   for (const a of plan.lists) {
     const d = await decideList(client, a);
-    if (d.decision === "ANCHOR" && !opts.dryRun) d.tx = await client.anchorList(a);
+    if (writes(d.decision) && !opts.dryRun) d.tx = await client.anchorList(a);
     decisions.push(d);
   }
   if (plan.logHead) {
     const d = await decideLog(client, plan.logHead);
-    if (d.decision === "ANCHOR" && !opts.dryRun) d.tx = await client.anchorLogHead(plan.logHead);
+    if (writes(d.decision) && !opts.dryRun) d.tx = await client.anchorLogHead(plan.logHead);
     decisions.push(d);
   }
   return {
@@ -157,6 +178,7 @@ export async function runProjection(
     verified: opts.verified,
     decisions,
     conflicts: decisions.filter((d) => d.decision === "CONFLICT").length,
+    contested: decisions.filter((d) => d.decision === "CONTEST").length,
     written: decisions.filter((d) => d.tx).length,
   };
 }

@@ -135,8 +135,9 @@ WebAuthn **does not work on an IP address**: you need `localhost` or an HTTPS do
 ## 5. Before going to production
 
 - Your site needs a **verifier entry** in the Tamga trust list; the fields you ask for cannot exceed its scope.
-- In production the hosted verifier rejects requests without a statement (`TAMGA_VERIFY_REQUIRE_RP_AUTH=1`). In demo/LAN mode
-  the old path without a statement still works, with a `Deprecation` header. If you prefer, do the whole verification on your
+- On the real network and in the sandbox the hosted verifier rejects requests without a statement
+  (`TAMGA_VERIFY_REQUIRE_RP_AUTH=1`). Only in local development (demo/LAN) mode does the old path without a statement still work,
+  with a `Deprecation` header. If you prefer, do the whole verification on your
   own server: [[GUIDE-0002]].
 - Policy names and field sets are agreed with Tamga (e.g. only "over 18" → `age-over-18-mdoc`).
 

@@ -17,6 +17,10 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
   submitted identical data (production threshold ≥ 2). New dependency `ethers` (app only, not in the published packages).
   The command is `chain-submit`, not `chain-anchor`: one writer's submission is a vote, and the name stays clear of the hourly
   anchor log command `trust:anchor`.
+- Competing anchor candidates (ADR-0053): the first writer to open a list version can no longer lock it. When the registry holds
+  a different, not yet confirmed digest for a version, `chain-submit` now submits its own verified digest as a competing candidate
+  (decision `CONTEST`, reported as `contested` with a warning on stderr) instead of skipping it; the first candidate to reach the
+  threshold wins and every conflict is an on-chain event. A confirmed different digest is still `CONFLICT` (exit code 3).
 
 - `npm run trust:wallet-provider -- list|show|check|activate|suspend|revoke` manages `wallet_providers[]` in the production
   and sandbox registries. `activate` checks the provider's signing certificate against the wallet attestation policy (EC

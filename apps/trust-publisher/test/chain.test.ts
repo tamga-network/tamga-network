@@ -1,6 +1,7 @@
 /**
  * Zincir projeksiyonu (ADR-0051) — ağsız testler: plan özetleri imzalı dosyadan türetilir (CH2), zincir yalnız özet
- * (ABI'de string/bytes yok), aynı sürüm aynı özet → SKIP, farklı özet → CONFLICT ve yazma yok (CH1), eski sürüm yazılmaz (CH4),
+ * (ABI'de string/bytes yok), aynı sürüm aynı özet → SKIP, onaylı farklı özet → CONFLICT ve yazma yok (CH1), bekleyen farklı aday →
+ * CONTEST ve kendi özetimiz rakip aday (ADR-0053), eski sürüm yazılmaz (CH4),
  * dry-run yazmaz, bayrak kapalıyken hiçbir şey yapılmaz (CH5), doğrulayıcı cevabı üç değerli (K5). Gerçek dist-test seti
  * varsa yükleyici doğrulamasıyla uçtan uca.
  */
@@ -164,7 +165,31 @@ describe("chain projeksiyonu — kararlar (CH1, CH4) ve dry-run", () => {
     expect(await c.isListAnchored(listKeyOf("production", "lotl"), 2, jwsHash(lotl2))).toBe(true);
   });
 
-  it("günlük başı: farklı özet CONFLICT; ileri seq zincirdeyse STALE", async () => {
+  it("ADR-0053: zincirde bekleyen FARKLI aday → CONTEST; kendi özetimiz rakip aday olarak gönderilir ve eşiği doldurunca kazanır", async () => {
+    const plan = planProjection(set());
+    const c = new MemoryChainClient(2);
+    const key = listKeyOf("production", "lotl");
+    // başka (hatalı ya da kötü niyetli) bir yazıcı sürüm 2'yi yanlış özetle açmış
+    await c.anchorList({ listKey: key, version: 2, contentHash: jwsHash(lotl1), previousHash: ZERO32, issuedAt: 1 });
+    const r = await runProjection(c, plan, { dryRun: false, verified: false });
+    const lotl = r.decisions.find((d) => d.kind === "list" && d.file === "lotl")!;
+    expect(lotl.decision).toBe("CONTEST");
+    expect(lotl.tx).toBeDefined();
+    expect(r.contested).toBe(1);
+    expect(r.conflicts).toBe(0);
+    expect(c.candidateCount(key, 2)).toBe(2);
+    expect(await c.isListAnchored(key, 2, jwsHash(lotl2))).toBe(false); // eşik 2, tek destek
+    // ikinci bağımsız yazıcı aynı doğru özeti gönderir → doğru aday onaylanır
+    const r2 = await runProjection(c, plan, { dryRun: false, verified: false });
+    expect(r2.decisions.find((d) => d.kind === "list" && d.file === "lotl")!.decision).toBe("CONTEST");
+    expect(await c.isListAnchored(key, 2, jwsHash(lotl2))).toBe(true);
+    expect(await c.isListAnchored(key, 2, jwsHash(lotl1))).toBe(false);
+    // onaydan sonra: aynı özet SKIP
+    const r3 = await runProjection(c, plan, { dryRun: true, verified: false });
+    expect(r3.decisions.find((d) => d.kind === "list" && d.file === "lotl")!.decision).toBe("SKIP");
+  });
+
+  it("günlük başı: onaylı farklı özet CONFLICT; ileri seq zincirdeyse STALE", async () => {
     const c = new MemoryChainClient(1);
     c.seedLog(logKeyOf("production"), 1, jwsHash(line0), 5); // seq 1 için yanlış özet
     const r = await runProjection(c, planProjection(set()), { dryRun: false, verified: false });

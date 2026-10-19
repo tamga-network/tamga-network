@@ -57,3 +57,27 @@ jobs:
         run: npm run contracts:test
       - if: steps.present.outputs.yes == '1'
         run: npm run contracts:check
+  # Static analysis of the trust-layer contracts (Slither). Excluded detectors and their reasons: contracts/slither.config.json.
+  # Like the job above, it is skipped where the contracts folder is absent.
+  contracts-slither:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: contracts present?
+        id: present
+        run: if [ -f contracts/package.json ]; then echo "yes=1" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.present.outputs.yes == '1'
+        name: install slither + solc 0.8.24
+        run: |
+          pipx install slither-analyzer==0.11.6
+          pipx install solc-select==1.2.0
+          solc-select install 0.8.24
+          solc-select use 0.8.24
+      - if: steps.present.outputs.yes == '1'
+        run: npm run contracts:install
+      - if: steps.present.outputs.yes == '1'
+        run: npm run contracts:slither

@@ -1,6 +1,6 @@
 /**
  * Zincir istemcisi — liste çapası kaydına (TrustListAnchorRegistry, ADR-0051) okuma/yazma. İki uygulama:
- *   - MemoryChainClient: ağ yok; dry-run ve testler (kontratın onay/eşik kuralını basitçe taklit eder).
+ *   - MemoryChainClient: ağ yok; dry-run ve testler (kontratın onay/eşik ve rakip aday kuralını basitçe taklit eder, ADR-0053).
  *   - EthersChainClient: JSON-RPC (ethers v6); yalnız TAMGA_CHAIN_ENABLED=1 iken kurulur (CH5).
  * ABI kopyası abi/trust-list-anchor-registry.json — contracts/scripts/export-abi.mjs üretir; `contracts:check` farkı yakalar.
  */
@@ -51,6 +51,8 @@ export class MemoryChainClient implements ChainClient {
   readonly writes: Array<{ kind: "list" | "log"; [k: string]: unknown }> = [];
   private lists = new Map<string, Map<number, ChainListAnchor>>();
   private logs = new Map<string, Map<number, { lineHash: string; ts: number; confirmed: boolean }>>();
+  /** ADR-0053: "<anahtar>:<sürüm>" → aday verisi → destek sayısı */
+  private candidates = new Map<string, Map<string, number>>();
   constructor(
     readonly required = 1,
     readonly chainId = 0,
@@ -101,18 +103,37 @@ export class MemoryChainClient implements ChainClient {
     this.writes.push({ kind: "list", ...a });
     const m = this.lists.get(a.listKey) ?? new Map<number, ChainListAnchor>();
     const cur = m.get(a.version);
-    if (cur && cur.contentHash !== a.contentHash) throw new Error("AnchorMismatch");
-    const confirmations = (cur?.confirmations ?? 0) + 1;
-    m.set(a.version, { ...a, confirmations, confirmed: confirmations >= this.required });
+    if (cur?.confirmed) throw new Error("AlreadyConfirmed");
+    const n = this.support(`${a.listKey}:${a.version}`, `${a.contentHash}|${a.previousHash}|${a.issuedAt}`);
+    const data = { version: a.version, contentHash: a.contentHash, previousHash: a.previousHash, issuedAt: a.issuedAt };
+    const same =
+      cur && cur.contentHash === a.contentHash && cur.previousHash === a.previousHash && cur.issuedAt === a.issuedAt;
+    // görünüm ilk adayı gösterir; eşiği ilk dolduran aday kazanır
+    if (!cur || n >= this.required) m.set(a.version, { ...data, confirmations: n, confirmed: n >= this.required });
+    else if (same) cur.confirmations = n;
     this.lists.set(a.listKey, m);
     return `memory:list:${a.version}`;
   }
   async anchorLogHead(h: { logKey: string; seq: number; lineHash: string; ts: number }) {
     this.writes.push({ kind: "log", ...h });
-    const m = this.logs.get(h.logKey) ?? new Map();
-    m.set(h.seq, { lineHash: h.lineHash, ts: h.ts, confirmed: this.required <= 1 });
+    const m = this.logs.get(h.logKey) ?? new Map<number, { lineHash: string; ts: number; confirmed: boolean }>();
+    const cur = m.get(h.seq);
+    if (cur?.confirmed) throw new Error("AlreadyConfirmed");
+    const n = this.support(`${h.logKey}:${h.seq}`, `${h.lineHash}|${h.ts}`);
+    if (!cur || n >= this.required) m.set(h.seq, { lineHash: h.lineHash, ts: h.ts, confirmed: n >= this.required });
     this.logs.set(h.logKey, m);
     return `memory:log:${h.seq}`;
+  }
+  /** Rakip aday sayısı (> 1 → çelişki, ADR-0053). */
+  candidateCount(key: string, versionOrSeq: number) {
+    return this.candidates.get(`${key}:${versionOrSeq}`)?.size ?? 0;
+  }
+  private support(id: string, data: string) {
+    const c = this.candidates.get(id) ?? new Map<string, number>();
+    const n = (c.get(data) ?? 0) + 1;
+    c.set(data, n);
+    this.candidates.set(id, c);
+    return n;
   }
 }
 

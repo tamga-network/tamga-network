@@ -71,32 +71,6 @@
     {
       "inputs": [
         {
-          "internalType": "bytes32",
-          "name": "key",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "uint64",
-          "name": "versionOrSeq",
-          "type": "uint64"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "expected",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "submitted",
-          "type": "bytes32"
-        }
-      ],
-      "name": "AnchorMismatch",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "address",
           "name": "implementation",
           "type": "address"
@@ -155,6 +129,11 @@
     {
       "inputs": [],
       "name": "MustRegisterAsActive",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NetworkVctInNationalNamespace",
       "type": "error"
     },
     {
@@ -246,6 +225,22 @@
     {
       "inputs": [
         {
+          "internalType": "bytes32",
+          "name": "key",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "versionOrSeq",
+          "type": "uint64"
+        }
+      ],
+      "name": "TooManyConfirmers",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "uint256",
           "name": "count",
           "type": "uint256"
@@ -295,6 +290,43 @@
       "inputs": [],
       "name": "ZeroAddress",
       "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "key",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "uint64",
+          "name": "versionOrSeq",
+          "type": "uint64"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "firstHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "submittedHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "anchorer",
+          "type": "address"
+        }
+      ],
+      "name": "AnchorConflict",
+      "type": "event"
     },
     {
       "anonymous": false,
@@ -468,6 +500,19 @@
     },
     {
       "inputs": [],
+      "name": "MAX_CANDIDATE_CONFIRMERS",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "MAX_REQUIRED_CONFIRMATIONS",
       "outputs": [
         {
@@ -556,6 +601,30 @@
     {
       "inputs": [],
       "name": "anchorerCount",
+      "outputs": [
+        {
+          "internalType": "uint32",
+          "name": "",
+          "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "key",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "versionOrSeq",
+          "type": "uint64"
+        }
+      ],
+      "name": "candidateCount",
       "outputs": [
         {
           "internalType": "uint32",
@@ -802,6 +871,79 @@
           "internalType": "struct ITrustListAnchorRegistry.ListAnchor",
           "name": "",
           "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "listKey",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "version",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "contentHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "previousHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "issuedAt",
+          "type": "uint64"
+        }
+      ],
+      "name": "listCandidateConfirmations",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "logKey",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "seq",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "lineHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "ts",
+          "type": "uint64"
+        }
+      ],
+      "name": "logCandidateConfirmations",
+      "outputs": [
+        {
+          "internalType": "uint8",
+          "name": "",
+          "type": "uint8"
         }
       ],
       "stateMutability": "view",
