@@ -1,7 +1,7 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.6.0` is the current one (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.7.0` is the current one (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## Unreleased
@@ -26,7 +26,7 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
   `organizationIdentifier` (ADR-0026 K3); its `client_id` changed, its registration (`dns_name`) did not. Revoked records no
   longer produce registration-data warnings.
 
-## 0.7.0 — 2026-10-19
+## 0.7.0 — 2026-10-20
 
 Misuse-resistant package defaults (ADR-0056). Code written against 0.6.0 has to pass the new required security inputs
 (or an explicit `"none"`); see the breaking changes below.

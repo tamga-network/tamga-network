@@ -190,7 +190,7 @@ release. Where proofs are not supported, the presentation is made in the usual w
 | The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Released (packages on npm since 0.5.0) |
 | Attestation Revocation List (identifier list) — verifier and wallet side | Released (packages on npm since 0.5.0); Tamga issuers use the Status List |
 | No suspension for the identity credential, CWT revocation list for mdoc; warning for requests without a registration certificate; reader verification in proximity | Released (packages on npm since 0.6.0) |
-| Misuse-resistant defaults in the package APIs; rejection of requests without a registration certificate ([[ADR-0056]]) | In code; on npm with packages 0.7.0 |
+| Misuse-resistant defaults in the package APIs; rejection of requests without a registration certificate ([[ADR-0056]]) | Released (packages on npm since 0.7.0) |
 | Wallet provider registration | Tamga Wallet's provider (`TAMGA-WP-1`) is `ACTIVE` in the production and sandbox trust lists |
 | Sandbox (open to everyone; identity verification with daily/monthly caps) | Live                                                                                                      |
 

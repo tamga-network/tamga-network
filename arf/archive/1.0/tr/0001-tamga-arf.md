@@ -176,7 +176,7 @@ gösterme olağan yolla yapılır.
 | AB'nin eski güven listesi biçimi (ETSI TS 119 612, XML) ve cüzdanda dış listeler | Yayında (paketler npm'de 0.5.0'dan beri) |
 | Attestation Revocation List (tanımlayıcı listesi) — doğrulayıcı ve cüzdan tarafı | Yayında (paketler npm'de 0.5.0'dan beri); Tamga belge verenleri Status List kullanır |
 | Kimlik belgesinde askı yok, mdoc için CWT iptal listesi; kayıt sertifikası olmayan istekte uyarı; yakın alanda okuyucu doğrulaması | Yayında (paketler npm'de 0.6.0'dan beri) |
-| Paket API'lerinde güvenli varsayılanlar; kayıt sertifikası olmayan istekte ret ([[ADR-0056]]) | Kodda; paketler 0.7.0 ile npm'e |
+| Paket API'lerinde güvenli varsayılanlar; kayıt sertifikası olmayan istekte ret ([[ADR-0056]]) | Yayında (paketler npm'de 0.7.0'dan beri) |
 | Cüzdan sağlayıcısı kaydı | Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) gerçek ve sandbox güven listelerinde `ACTIVE` |
 
 ---
