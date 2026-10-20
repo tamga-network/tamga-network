@@ -10,7 +10,9 @@ const here = computed(() => parsePath(route.path));
 const T = computed(() =>
   here.value.tr
     ? { latest: "güncel", label: "Yayın", changes: "Ne değişti", only: "yalnızca Türkçe", fmt: "tr-TR" }
-    : { latest: "latest", label: "Release", changes: "What changed", only: "Turkish only", fmt: "en-GB" },
+    : here.value.az
+      ? { latest: "cari", label: "Buraxılış", changes: "Nə dəyişdi", only: "yalnız türkcə", fmt: "az" }
+      : { latest: "latest", label: "Release", changes: "What changed", only: "Turkish only", fmt: "en-GB" },
 );
 const date = (d: string) =>
   new Date(d + "T00:00:00Z").toLocaleDateString(T.value.fmt, {
@@ -46,7 +48,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDoc));
         v-for="r in RELEASES"
         :key="r.id"
         role="menuitem"
-        :href="hrefFor(r.id, here.tr, here.page)"
+        :href="hrefFor(r.id, here.tr, here.page, here.az)"
         :class="['arf-vs-item', { active: r.id === here.release }]"
         @click="open = false"
       >

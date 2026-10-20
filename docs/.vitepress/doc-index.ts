@@ -12,9 +12,11 @@ export const DOCS_BASE = "https://docs.tamga.network";
 export const ARF_BASE = "https://arf.tamga.network";
 export const GITHUB = "https://github.com/tamga-network/tamga-network/blob/main";
 
-export type Lang = "en" | "tr";
-/** Kaynak yolundan sayfanın dili: `en/…` İngilizce, gerisi Türkçe (docs); ARF'de `tr/…` Türkçe. */
-export const docsLangOf = (rel: string): Lang => (rel.startsWith("en/") ? "en" : "tr");
+export type Lang = "en" | "tr" | "az";
+/** Kaynak yolundan sayfanın dili: `en/…` İngilizce, `az/…` Azerbaycanca, gerisi Türkçe (docs); ARF'de `tr/…` Türkçe. */
+export const docsLangOf = (rel: string): Lang => (rel.startsWith("en/") ? "en" : rel.startsWith("az/") ? "az" : "tr");
+/** Türkçe kaynağın yanında duran çeviri klasörleri (Türkçe indeksine girmez). */
+export const TRANSLATION_DIRS = ["en", "az"];
 
 /** Tamga ARF sayfaları: document_id → yayın yolu (her iki dilde aynı; Türkçe `/tr/` önekli). */
 export const ARF_PAGES: Record<string, string> = {
@@ -82,8 +84,8 @@ export function toUrl(file: string, base: string): string {
 }
 
 /**
- * Bir dilin belge indeksi. Türkçe: docs/ (en/ hariç), yollar `/tr/…`. İngilizce: docs/en/; çevirisi olmayan belge Türkçe
- * sayfasına düşer (atıf kopmaz).
+ * Bir dilin belge indeksi. Türkçe: docs/ (en/, az/ hariç), yollar `/tr/…`. İngilizce: docs/en/; Azerbaycanca: docs/az/
+ * (yollar `/az/…`), yoksa İngilizce. Çevirisi olmayan belge Türkçe sayfasına düşer (atıf kopmaz).
  */
 export function buildDocIndex(docsDir: string, lang: Lang = "tr"): Map<string, Entry> {
   const entries = new Map<string, Entry>();
@@ -100,14 +102,18 @@ export function buildDocIndex(docsDir: string, lang: Lang = "tr"): Map<string, E
       status: fm.status,
     });
   };
-  if (lang === "en") for (const f of walk(join(docsDir, "en"))) add(f, join(docsDir, "en"), "", "en/");
-  for (const f of walk(docsDir, [], ["en"])) add(f, docsDir, "/tr", "");
+  if (lang === "az") for (const f of walk(join(docsDir, "az"))) add(f, join(docsDir, "az"), "/az", "az/");
+  if (lang !== "tr") for (const f of walk(join(docsDir, "en"))) add(f, join(docsDir, "en"), "", "en/");
+  for (const f of walk(docsDir, [], TRANSLATION_DIRS)) add(f, docsDir, "/tr", "");
   for (const [id, r] of Object.entries(ROOT_LINKS))
     if (!entries.has(id))
       entries.set(id, {
         id,
         title: r.title,
-        path: r.path ? (lang === "tr" ? "/tr" : "") + r.path : `${GITHUB}/${r.github}`,
+        // /rules ve /adr/: az'da karar kayıtları çevrildi (/az/adr/), bağlayıcı kurallar yalnız en/tr üretilir
+        path: r.path
+          ? (lang === "tr" ? "/tr" : lang === "az" && r.path === "/adr/" ? "/az" : "") + r.path
+          : `${GITHUB}/${r.github}`,
         src: r.github ?? "",
       });
   return entries;
@@ -152,15 +158,23 @@ export function docLinks(md: MarkdownIt, resolve: (id: string, relativePath: str
 
 /**
  * Türkçe sayfalarda (kaynağı `en/` olmayan) site içi mutlak bağlantılara `/tr` öneki: markdown bağlantıları ve ham HTML
- * (`href="/…"`). `/tr/`, dosya bağlantıları (`.json`, `.yaml`, `.pdf`) ve dış adresler dokunulmaz.
+ * (`href="/…"`). `/tr/`, `/az/`, dosya bağlantıları (`.json`, `.yaml`, `.pdf`) ve dış adresler dokunulmaz.
+ * `prefixOf` sayfanın önekini verir (`/tr`, `/az` ya da önek yok: undefined); `/az` öneki yalnız hedefin Azerbaycancası
+ * varsa eklenir (`has`), yoksa bağlantı İngilizce sayfada kalır.
  */
-export function localeLinks(md: MarkdownIt, isTr: (relativePath: string) => boolean): void {
-  const skip = (href: string) => !href.startsWith("/") || href.startsWith("//") || /^\/tr(\/|$)/.test(href) || /\.(json|ya?ml|pdf|svg|png|ico)$/.test(href);
-  const fix = (href: string) => (skip(href) ? href : "/tr" + href);
-  const fixHtml = (html: string) => html.replace(/href="(\/[^"]*)"/g, (_m, h: string) => `href="${fix(h)}"`);
+export function localeLinks(
+  md: MarkdownIt,
+  prefixOf: (relativePath: string) => "/tr" | "/az" | undefined,
+  has: (prefix: string, href: string) => boolean = () => true,
+): void {
+  const skip = (href: string) =>
+    !href.startsWith("/") || href.startsWith("//") || /^\/(tr|az)(\/|$)/.test(href) || /\.(json|ya?ml|pdf|svg|png|ico)$/.test(href);
   md.core.ruler.push("tamga-locale-links", (state) => {
     const rel = sourceRel(state.env);
-    if (!isTr(rel)) return;
+    const prefix = prefixOf(rel);
+    if (!prefix) return;
+    const fix = (href: string) => (skip(href) || !has(prefix, href) ? href : prefix + href);
+    const fixHtml = (html: string) => html.replace(/href="(\/[^"]*)"/g, (_m, h: string) => `href="${fix(h)}"`);
     for (const tok of state.tokens) {
       if (tok.type === "html_block") tok.content = fixHtml(tok.content);
       for (const child of tok.children ?? []) {

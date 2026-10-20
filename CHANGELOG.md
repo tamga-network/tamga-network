@@ -6,6 +6,9 @@ published on npm as test releases; `0.7.0` is the current one (the API may chang
 
 ## Unreleased
 
+- Documentation in Azerbaijani: docs.tamga.network/az/ and arf.tamga.network/az/ (machine translation, awaiting a native
+  speaker's review; every translated page carries a short notice). Generated pages (release notes, binding rules, packages,
+  API reference) and the ARF change page are English only; their `/az/` addresses link to the English page.
 - Institution onboarding: a new working example, `examples/05-institution-source` — the institution's lookup endpoint for the
   hosted issuing service (it checks the signed request against the trust list: an agreed, ACTIVE relying-party record, `aud`,
   lifetime, single use; it returns only the fields the document type needs and never the national ID number). Tested against the

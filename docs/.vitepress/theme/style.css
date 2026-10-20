@@ -534,3 +534,10 @@
 .api-page .vp-doc td:last-child code {
   white-space: normal;
 }
+
+/* Otomatik çeviri notu, ana sayfada (TranslationNote.vue) */
+.translation-note-home {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 16px 24px 0;
+}

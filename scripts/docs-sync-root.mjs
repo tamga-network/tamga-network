@@ -351,3 +351,43 @@ console.log("docs/public: marka simgeleri + robots.txt");
   }
   console.log(`docs: sözlük terms.json'dan (${Object.keys(TERMS).length} terim, en + tr)`);
 }
+
+// Azerbaycanca yedek sayfalar (docs/az, gitignore): üretilen sayfalar (sürüm notları, bağlayıcı kurallar, paketler, API
+// başvurusu) yalnız en/tr'de var. Dil seçici /az/<aynı yol>'a gittiği için o adreste kısa bir sayfa İngilizcesine yönlendirir
+// (`az_fallback: true`: arama motoruna kapalı, çeviri notu ve dil eşi yok, metin içi bağlantılar İngilizceye gider).
+{
+  const en = join(docs, "en");
+  const generated = [
+    "changelog.md",
+    "rules.md",
+    ...readdirSync(join(en, "packages"))
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => `packages/${f}`),
+    ...readdirSync(join(en, "api"))
+      .filter((f) => f.endsWith(".md") && f !== "index.md")
+      .map((f) => `api/${f}`),
+  ];
+  for (const rel of generated) {
+    const src = readFileSync(join(en, rel), "utf8");
+    const title = /^title:\s*"?(.+?)"?\s*$/m.exec(src)?.[1] ?? rel;
+    const href = "/" + rel.replace(/\.md$/, "").replace(/(^|\/)index$/, "$1");
+    write(
+      join(docs, "az", rel),
+      [
+        "---",
+        `title: ${JSON.stringify(title)}`,
+        "az_fallback: true",
+        'head: [["meta", { name: "robots", content: "noindex" }]]',
+        "---",
+        "",
+        "<!-- ÜRETİLDİ (npm run docs:sync) — Azerbaycanca yedek sayfa -->",
+        "",
+        `# ${title}`,
+        "",
+        `Bu səhifə hələlik yalnız ingilis dilindədir: [${title}](${href}).`,
+        "",
+      ].join("\n"),
+    );
+  }
+  console.log(`docs: az yedek sayfaları (${generated.length}, İngilizceye bağlanır)`);
+}

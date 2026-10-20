@@ -23,16 +23,19 @@ const PAGE_IDS: Record<string, string> = {
 };
 
 /** Adresten dil, yayın ve sayfa: /tr/v0.1/architecture → { tr: true, release: "0.1", page: "architecture" }. */
-export function parsePath(path: string): { tr: boolean; release: string; page: string } {
+export function parsePath(path: string): { tr: boolean; az: boolean; release: string; page: string } {
+  // Azerbaycanca yalnız güncel yayında var (/az/<sayfa>)
   const clean = path.replace(/\.html$/, "").replace(/^\//, "");
-  const m = /^(tr\/)?(?:v(\d+\.\d+)\/)?(.*)$/.exec(clean);
+  const az = /^az(\/|$)/.test(clean);
+  const m = /^(tr\/)?(?:v(\d+\.\d+)\/)?(.*)$/.exec(az ? clean.replace(/^az\/?/, "") : clean);
   const page = (m?.[3] ?? "").replace(/^index$/, "").replace(/\/$/, "");
-  return { tr: !!m?.[1], release: m?.[2] ?? LATEST, page };
+  return { tr: !!m?.[1], az, release: m?.[2] ?? LATEST, page };
 }
 
 /** Bir yayındaki aynı sayfanın adresi; o yayında o dil yoksa Türkçesine düşer. */
-export function hrefFor(release: string, tr: boolean, page: string): string {
+export function hrefFor(release: string, tr: boolean, page: string, az = false): string {
   const r = RELEASES.find((x) => x.id === release);
+  if (az && release === LATEST) return `/az/${page && PAGE_IDS[page] ? page : ""}`;
   const useTr = tr || !r?.languages.includes("en");
   const root = (useTr ? "/tr/" : "/") + (release === LATEST ? "" : `v${release}/`);
   // Sayfa o yayında yoksa (ör. sonradan eklenen belge) yayının özet sayfasına gidilir.

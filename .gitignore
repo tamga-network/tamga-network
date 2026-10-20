@@ -26,6 +26,12 @@ docs/api/*.md
 !docs/api/index.md
 docs/en/api/*.md
 !docs/en/api/index.md
+# Azerbaycanca yedek sayfalar (üretilen sayfaların İngilizcesine bağlanır; docs:sync)
+docs/az/changelog.md
+docs/az/rules.md
+docs/az/packages/
+docs/az/api/*.md
+!docs/az/api/index.md
 # marka simgeleri ops/brand/icons/ kaynağından kopyalanır (docs:sync, arf:sync)
 docs/public/*.ico
 docs/public/*.svg
@@ -37,6 +43,9 @@ arf/.vitepress/dist/
 arf/.vitepress/cache/
 arf/tr/*
 !arf/tr/index.md
+# Azerbaycanca sayfalar docs/az/framework'ten üretilir (az/index.md elle yazılır)
+arf/az/*
+!arf/az/index.md
 arf/v*/
 arf/changes.md
 .DS_Store

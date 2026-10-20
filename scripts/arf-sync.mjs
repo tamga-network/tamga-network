@@ -117,6 +117,27 @@ const DOCS = [
     en: "Wallet Attestation Policy",
   },
 ];
+/**
+ * Azerbaycanca (2026-10-20, makine çevirisi; yalnız güncel yayın, resmî değil): kaynak docs/az/framework/<dosya>
+ * (`translation_of` + `source_version`), sayfa arf/az/<sayfa>.md (gitignore; az/index.md elle yazılır).
+ */
+const AZ = join(repo, "docs", "az", "framework");
+const AZ_TITLE = {
+  "FW-ARF-0001": "Arxitektura və İstinad Çərçivəsi",
+  "FW-TF-0001": "Əlavə A — Trust Framework",
+  "FW-RB-0001": "Əlavə B — Tamga Rulebook",
+  "FW-RB-0002": "Education Rulebook",
+  "FW-RB-0003": "Identity Rulebook",
+  "FW-RB-0004": "Event Ticket Rulebook",
+  "FW-DEF-0001": "Əlavə D — Təriflər",
+  "FW-REF-0001": "Əlavə E — Mənbələr",
+  "FW-READ-0001": "Oxu yolu",
+  "FW-ROLE-0001": "Rollar",
+  "FW-ONB-0001": "Qoşulma prosesi",
+  "FW-RB-0005": "Contact Rulebook",
+  "FW-POL-0001": "Ləğv Siyasəti",
+  "FW-POL-0002": "Cüzdan Attestasiyası Siyasəti",
+};
 // Yayınlanan metinde özel depo yolu, kişi adı ya da araç adı olmaz (DY3; onay alıntıları operatörün onay kaydında).
 const PRIVATE_BASE = /tamga-platform\/|_reports\/|\.local\.json|\.env\b|TOPARLAMA/;
 const PRIVATE = {
@@ -230,6 +251,35 @@ function renderTr(src, d, rid) {
     "",
     `**Belge** ${d.id} · **Sürüm** ${fm.version} · **Durum** ${fm.status} · **Güncelleme** ${fm.last_updated} · **Lisans** CC BY 4.0  `,
     line2,
+    "",
+    "</div>",
+    "",
+    summary(raw),
+    "",
+    demote(body).trimEnd(),
+    "",
+  ].join("\n");
+}
+
+// ---------------------------------------------------------------- Azerbaycanca sayfa (güncel yayın)
+function renderAz(src, d) {
+  const { fm, raw, body } = split(sanitize(src));
+  const title = AZ_TITLE[d.id];
+  return [
+    "---",
+    `title: ${JSON.stringify(title)}`,
+    `source: ${d.id}`,
+    "outline: [2, 3]",
+    "---",
+    "",
+    `<!-- ÜRETİLDİ — elle düzenlemeyin. Kaynak: docs/az/framework/${d.file} (npm run arf:sync) -->`,
+    "",
+    `# ${title}`,
+    "",
+    '<div class="arf-meta">',
+    "",
+    `**Sənəd** ${d.id} · **Versiya** ${fm.version} · **Status** ${fm.status} · **Yenilənmə** ${fm.last_updated} · **Lisenziya** CC BY 4.0  `,
+    `**Buraxılış ${LATEST}** — türkcə mənbə mətnin avtomatik tərcüməsi (rəsmi deyil; ziddiyyət olduqda [türkcə mətn](/tr/${d.page}) əsas götürülür).`,
     "",
     "</div>",
     "",
@@ -437,6 +487,17 @@ for (const d of DOCS) {
       problems.push(`arşiv ${LATEST}/en/${d.page}.md güncel metinden farklı — npm run arf:snapshot`);
   }
   if (PRIVATE.test(src)) problems.push(`${d.file}: özel depo yolu içeriyor (DY3) — ARF'de yayınlanır`);
+  const az = read(join(AZ, d.file));
+  if (az) {
+    const a = split(az);
+    if (a.fm.translation_of !== d.id)
+      problems.push(`az/framework/${d.file}: translation_of ${a.fm.translation_of} ≠ ${d.id}`);
+    if (a.fm.source_version !== fm.version)
+      problems.push(
+        `az/framework/${d.file}: source_version ${a.fm.source_version} ≠ kaynak ${fm.version} — Azerbaycancayı güncelleyin`,
+      );
+    if (PRIVATE.test(a.body)) problems.push(`az/framework/${d.file}: özel depo yolu ya da araç adı içeriyor (DY3)`);
+  }
   const arcTr = read(join(ARCHIVE, LATEST, "tr", d.file));
   if (arcTr === null) problems.push(`arşiv ${LATEST}/tr/${d.file} yok — npm run arf:snapshot`);
   else if (arcTr !== sanitize(src))
@@ -474,8 +535,30 @@ if (mode === "sync") {
       write(join(ARF, "tr", `v${r.id}`, "index.md"), releaseIndex(r.id, "tr"));
     }
   }
+  for (const d of DOCS) {
+    const az = read(join(AZ, d.file));
+    const out = join(ARF, "az", `${d.page}.md`);
+    if (az) write(out, renderAz(az, d));
+    else if (existsSync(out)) rmSync(out);
+  }
   write(join(ARF, "changes.md"), changesPage("en"));
   write(join(ARF, "tr", "changes.md"), changesPage("tr"));
+  // az'da "ne değişti" sayfası yok: dil seçicinin gittiği /az/changes İngilizcesine bağlanır (`az_fallback`: not ve dil eşi yok).
+  write(
+    join(ARF, "az", "changes.md"),
+    [
+      "---",
+      'title: "Nə dəyişdi"',
+      "az_fallback: true",
+      'head: [["meta", { name: "robots", content: "noindex" }]]',
+      "---",
+      "",
+      "# Nə dəyişdi",
+      "",
+      "Bu səhifə hələlik yalnız ingilis dilindədir: [What changed between releases](/changes).",
+      "",
+    ].join("\n"),
+  );
 }
 
 if (problems.length) {

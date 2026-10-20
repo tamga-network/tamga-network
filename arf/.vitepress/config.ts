@@ -1,5 +1,6 @@
 /**
- * arf.tamga.network — Tamga ARF (ADR-0018). İngilizce kök, Türkçe /tr/.
+ * arf.tamga.network — Tamga ARF (ADR-0018). İngilizce kök, Türkçe /tr/, Azerbaycanca /az/ (2026-10-20; yalnız güncel yayın,
+ * docs/az/framework'teki makine çevirisinden arf-sync üretir, resmî değil; her sayfada not bandı).
  * İngilizce sayfalar arf/*.md (elle çevrilir, `source_version` taşır); Türkçe sayfalar docs/framework'ten üretilir
  * (scripts/arf-sync.mjs → arf/tr/, gitignore — index.md hariç). [[FW-*]] atıfları bu sitenin sayfalarına, diğer
  * [[DOC-ID]] atıfları geliştirici belgelerine (docs.tamga.network) bağlanır.
@@ -13,12 +14,16 @@ import { brandHead, pageHead } from "../../docs/.vitepress/seo";
 
 const REPO = join(__dirname, "..", "..");
 // Geliştirici belgelerine bağlantı sayfanın diline göre: İngilizce ARF → docs kökü, Türkçe ARF → docs /tr/.
-const IDX = { en: buildDocIndex(join(REPO, "docs"), "en"), tr: buildDocIndex(join(REPO, "docs"), "tr") };
+const IDX = {
+  en: buildDocIndex(join(REPO, "docs"), "en"),
+  tr: buildDocIndex(join(REPO, "docs"), "tr"),
+  az: buildDocIndex(join(REPO, "docs"), "az"),
+};
 const REL: { latest: string; releases: { id: string; languages: string[]; docs: Record<string, string> }[] } =
   JSON.parse(readFileSync(join(__dirname, "..", "releases.json"), "utf8"));
 const RELEASE = REL.latest;
 
-type Loc = "en" | "tr";
+type Loc = "en" | "tr" | "az";
 const T: Record<
   Loc,
   { prefix: string; doc: string[]; nav: Record<string, string>; outline: string; prev: string; next: string }
@@ -85,6 +90,38 @@ const T: Record<
     prev: "Önceki",
     next: "Sonraki",
   },
+  // Azerbaycanca: yalnız güncel yayın, makine çevirisi (sayfalar scripts/arf-sync.mjs → arf/az/)
+  az: {
+    prefix: "/az/",
+    doc: [
+      "Arxitektura və İstinad Çərçivəsi",
+      "Əlavə A — Trust Framework",
+      "Əlavə B — Tamga Rulebook",
+      "Education Rulebook",
+      "Identity Rulebook",
+      "Event Ticket Rulebook",
+      "Əlavə D — Təriflər",
+      "Əlavə E — Mənbələr",
+      "Oxu yolu",
+      "Rollar",
+      "Qoşulma prosesi",
+      "Contact Rulebook",
+      "Ləğv Siyasəti",
+      "Cüzdan Attestasiyası Siyasəti",
+    ],
+    nav: {
+      framework: "Çərçivə",
+      annexes: "Əlavələr",
+      policies: "Siyasətlər",
+      joining: "İştirak",
+      changes: "Nə dəyişdi (ingiliscə)",
+      general: "Ümumi sənədlər",
+      developers: "Tərtibatçı sənədləri",
+    },
+    outline: "Bu səhifədə",
+    prev: "Əvvəlki",
+    next: "Növbəti",
+  },
 };
 const IDS = Object.keys(ARF_PAGES);
 const PAGES = Object.values(ARF_PAGES);
@@ -95,7 +132,15 @@ function theme(l: Loc): DefaultTheme.Config {
   const docItems = (docs: Record<string, string>, root: string, idx: number[]): DefaultTheme.SidebarItem[] =>
     idx.filter((i) => docs[IDS[i]]).map((i) => ({ text: t.doc[i], link: `${root}${PAGES[i]}` }));
   const link = (i: number) => `${t.prefix}${PAGES[i]}`;
-  const general = l === "tr" ? "https://tamga.network/tr/docs" : "https://tamga.network/en/docs";
+  const general = `https://tamga.network/${l}/learn`;
+  // az'da yalnız güncel yayın ve "ne değişti" sayfası İngilizce
+  const changes = l === "az" ? "/changes" : `${t.prefix}changes`;
+  const releases = l === "az" ? REL.releases.filter((r) => r.id === RELEASE) : REL.releases;
+  const L = {
+    latest: { en: " · latest", tr: " · güncel", az: " · cari" }[l],
+    overview: { en: "Overview", tr: "Genel bakış", az: "Ümumi baxış" }[l],
+    annexC: { en: "Annex C — Rulebooks", tr: "Ek C — Rulebook'lar", az: "Əlavə C — Rulebook-lar" }[l],
+  };
   return {
     nav: [
       { text: t.nav.framework, link: link(0) },
@@ -108,25 +153,25 @@ function theme(l: Loc): DefaultTheme.Config {
         items: [12, 13].map((i) => ({ text: t.doc[i], link: link(i) })),
       },
       { text: t.nav.joining, items: [8, 9, 10].map((i) => ({ text: t.doc[i], link: link(i) })) },
-      { text: t.nav.changes, link: `${t.prefix}changes` },
-      { text: t.nav.developers, link: DOCS_BASE },
+      { text: t.nav.changes, link: changes },
+      { text: t.nav.developers, link: l === "en" ? DOCS_BASE : `${DOCS_BASE}/${l}/` },
       { text: t.nav.general, link: general },
     ],
     // Her yayının kendi kenar çubuğu: güncel yayın kökte, eskiler /v<yayın>/ altında (İngilizcesi olmayan yayın Türkçeye bağlanır).
     sidebar: Object.fromEntries(
-      REL.releases.map((r) => {
+      releases.map((r) => {
         const cur = r.id === RELEASE;
         const root = `${t.prefix}${cur ? "" : `v${r.id}/`}`;
         const docRoot = l === "en" && !r.languages.includes("en") ? `/tr/v${r.id}/` : root;
         const items: DefaultTheme.SidebarItem[] = [
           {
-            text: `Tamga ARF ${r.id}${cur ? (l === "tr" ? " · güncel" : " · latest") : ""}`,
+            text: `Tamga ARF ${r.id}${cur ? L.latest : ""}`,
             items: [
-              { text: l === "tr" ? "Genel bakış" : "Overview", link: root },
+              { text: L.overview, link: root },
               ...docItems(r.docs, docRoot, [8]),
               ...docItems(r.docs, docRoot, [0, 1, 2]),
               {
-                text: l === "tr" ? "Ek C — Rulebook'lar" : "Annex C — Rulebooks",
+                text: L.annexC,
                 collapsed: false,
                 items: docItems(r.docs, docRoot, [3, 4, 5, 11]),
               },
@@ -137,7 +182,7 @@ function theme(l: Loc): DefaultTheme.Config {
               ...(r.docs[IDS[9]]
                 ? [{ text: t.nav.joining, collapsed: false, items: docItems(r.docs, docRoot, [9, 10]) }]
                 : []),
-              { text: t.nav.changes, link: `${t.prefix}changes` },
+              { text: t.nav.changes, link: changes },
             ],
           },
         ];
@@ -147,10 +192,11 @@ function theme(l: Loc): DefaultTheme.Config {
     outline: { level: [2, 3], label: t.outline },
     docFooter: { prev: t.prev, next: t.next },
     footer: {
-      message:
-        l === "tr"
-          ? `Tamga ARF ${RELEASE} · CC BY 4.0 · Türkçe metin kaynaktır`
-          : `Tamga ARF ${RELEASE} · CC BY 4.0 · The Turkish text is the source; this is its official translation`,
+      message: {
+        tr: `Tamga ARF ${RELEASE} · CC BY 4.0 · Türkçe metin kaynaktır`,
+        en: `Tamga ARF ${RELEASE} · CC BY 4.0 · The Turkish text is the source; this is its official translation`,
+        az: `Tamga ARF ${RELEASE} · CC BY 4.0 · Mənbə türkcə mətndir; bu, onun avtomatik (rəsmi olmayan) tərcüməsidir`,
+      }[l],
       copyright: "Tamga Network",
     },
   };
@@ -170,10 +216,11 @@ export default defineConfig({
   // Dil eşleri: İngilizce kök ↔ /tr/ — yalnız iki dilde de sayfa varsa (eski yayınlar yalnız Türkçe olabilir: v0.1).
   transformHead: (ctx) =>
     pageHead("arf.tamga.network", ctx, (rel) => {
-      const en = rel.replace(/^tr\//, "");
+      const en = rel.replace(/^(tr|az)\//, "");
       const md = (p: string) => join(__dirname, "..", `${p === "" || p.endsWith("/") ? `${p}index` : p}.md`);
       if (!existsSync(md(en)) || !existsSync(md(`tr/${en}`))) return undefined;
-      return { en, tr: `tr/${en}`, "x-default": en };
+      const az = existsSync(md(`az/${en}`)) && !/^az_fallback:\s*true/m.test(readFileSync(md(`az/${en}`), "utf8"));
+      return { en, tr: `tr/${en}`, ...(az ? { az: `az/${en}` } : {}), "x-default": en };
     }),
   head: [
     ["meta", { name: "robots", content: "index,follow" }],
@@ -191,6 +238,7 @@ export default defineConfig({
   locales: {
     root: { label: "English", lang: "en", themeConfig: theme("en") },
     tr: { label: "Türkçe", lang: "tr-TR", link: "/tr/", themeConfig: theme("tr") },
+    az: { label: "Azərbaycan", lang: "az", link: "/az/", themeConfig: theme("az") },
   },
   themeConfig: {
     logo: "/mark.svg",
@@ -201,14 +249,15 @@ export default defineConfig({
     config(md) {
       docLinks(md, (id, rel) => {
         // Sayfanın dili ve yayını: tr/v0.1/… → /tr/v0.1/; çerçeve atıfları aynı yayının sayfalarına gider.
-        const prefix = "/" + (/^(tr\/)?(v\d+\.\d+\/)?/.exec(rel)?.[0] ?? "");
+        const prefix = "/" + (/^((tr|az)\/)?(v\d+\.\d+\/)?/.exec(rel)?.[0] ?? "");
         const page = ARF_PAGES[id];
-        const e = IDX[rel.startsWith("tr/") ? "tr" : "en"].get(id);
+        const lang = rel.startsWith("tr/") ? "tr" : rel.startsWith("az/") ? "az" : "en";
+        const e = IDX[lang].get(id);
         if (page) return { href: `${prefix}${page}`, title: e?.title ?? id };
         if (!e) return undefined;
         return { href: e.path.startsWith("http") ? e.path : `${DOCS_BASE}${e.path}`, title: e.title };
       });
-      termTips(md, (rel) => (rel.startsWith("tr/") ? "tr" : "en"));
+      termTips(md, (rel) => (rel.startsWith("tr/") ? "tr" : rel.startsWith("az/") ? "az" : "en"));
     },
   },
 });

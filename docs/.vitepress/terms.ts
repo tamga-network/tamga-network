@@ -12,14 +12,24 @@ import { fileURLToPath } from "node:url";
 import type MarkdownIt from "markdown-it";
 import { sourceRel } from "./doc-index";
 
-export type Term = { label: string; expansion?: string; en: string; tr: string; tr_label?: string };
+export type Term = {
+  label: string;
+  expansion?: string;
+  en: string;
+  tr: string;
+  tr_label?: string;
+  /** Azerbaycanca açıklama ve (tr_label'ı olan terimlerde) etiket; makine çevirisi, anadil okuması bekliyor. */
+  az?: string;
+  az_label?: string;
+};
+export type TermLang = "en" | "tr" | "az";
 export const TERMS: Record<string, Term> = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "terms.json"), "utf8"),
 );
 
 const TERM_RE = /\[\[t:([A-Za-z0-9_.-]+)(?:\|([^\]]+))?\]\]/g;
 
-export function termTips(md: MarkdownIt, langOf: (relativePath: string) => "en" | "tr"): void {
+export function termTips(md: MarkdownIt, langOf: (relativePath: string) => TermLang): void {
   // docLinks'ten SONRA çalışır (push): [[DOC-ID]] içeren düğüm html_inline olmuş olabilir; terimler orada da işlenir.
   md.core.ruler.push("tamga-terms", (state) => {
     const env = state.env as { relativePath?: string; tamgaTermsSeen?: Set<string> };
@@ -38,8 +48,9 @@ export function termTips(md: MarkdownIt, langOf: (relativePath: string) => "en" 
           const first = !seen.has(id);
           seen.add(id);
           // Türkçe sayfada Türkçe karşılığı olan terim (karma kural): metinde Türkçe, ilk kullanımda İngilizce terim parantezde.
-          const trWord = lang === "tr" && t.tr_label;
-          const label = esc(alt ?? (trWord ? t.tr_label! : t.label));
+          const localLabel = lang === "tr" ? t.tr_label : lang === "az" ? t.az_label : undefined;
+          const trWord = !!localLabel;
+          const label = esc(alt ?? localLabel ?? t.label);
           // Etiket zaten İngilizce terimse ("Status List") parantezde tekrar yazılmaz.
           const englishAlt = !!alt && alt.toLocaleLowerCase("en").startsWith(t.label.toLocaleLowerCase("en"));
           const exp = !first
@@ -51,7 +62,7 @@ export function termTips(md: MarkdownIt, langOf: (relativePath: string) => "en" 
               : t.expansion && !alt
                 ? ` (${esc(t.expansion)})`
                 : "";
-          const tip = esc(lang === "tr" ? t.tr : t.en);
+          const tip = esc(lang === "tr" ? t.tr : lang === "az" ? (t.az ?? t.en) : t.en);
           return (
             `<span class="term">${label}${exp}<button type="button" class="term-i" aria-label="${esc(t.label)}: ${tip}">i</button>` +
             `<span class="term-tip" role="tooltip">${tip}</span></span>`

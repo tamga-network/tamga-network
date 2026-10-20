@@ -155,3 +155,10 @@
 .term-i:focus + .term-tip {
   display: block;
 }
+
+/* Otomatik çeviri notu, ana sayfada (docs TranslationNote.vue) */
+.translation-note-home {
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 16px 24px 0;
+}

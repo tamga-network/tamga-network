@@ -30,7 +30,7 @@ export function brandHead(siteName: string): HeadConfig[] {
   ];
 }
 
-const ogLocale = (lang: string) => (lang.startsWith("tr") ? "tr_TR" : "en_US");
+const ogLocale = (lang: string) => (lang.startsWith("tr") ? "tr_TR" : lang.startsWith("az") ? "az_AZ" : "en_US");
 
 /** Sayfa başına etiketler. `alternates` verilirse dil eşleri (hreflang) de yazılır. */
 export function pageHead(
@@ -42,7 +42,7 @@ export function pageHead(
   if (ctx.pageData.isNotFound || rel === "404") return [["meta", { name: "robots", content: "noindex" }]];
   const url = `https://${host}/${rel}`;
   // Paylaşım başlığı sayfanın kendi başlığı (site adı og:site_name'de); ana sayfada site adı.
-  const title = rel === "" || rel === "tr/" ? ctx.siteData.title : ctx.pageData.title || ctx.title;
+  const title = rel === "" || rel === "tr/" || rel === "az/" ? ctx.siteData.title : ctx.pageData.title || ctx.title;
   const description = ctx.description;
   const image = `https://${host}/og.png`;
   const head: HeadConfig[] = [
