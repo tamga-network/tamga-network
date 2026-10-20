@@ -28,7 +28,13 @@ export default defineConfig({
     },
   },
   test: {
-    include: ["packages/**/*.test.ts", "apps/**/*.test.ts", "conformance/**/*.test.ts", "examples/**/*.test.ts"],
+    include: [
+      "packages/**/*.test.ts",
+      "apps/**/*.test.ts",
+      "conformance/**/*.test.ts",
+      "examples/**/*.test.ts",
+      "scripts/**/*.test.ts",
+    ],
     globalSetup: ["./scripts/require-fixtures.ts"], // O1: CI'da TAMGA_REQUIRE_FIXTURES=1 → eksik PKI/liste sessiz atlama değil hata
     exclude: ["**/node_modules/**"],
     testTimeout: 20_000,

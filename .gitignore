@@ -67,6 +67,5 @@ x-ray/
 *-entry-points*.md
 DIFFERENTIAL_REVIEW*.md
 
-# Anthropic API anahtarları depoya girmez (yerel araçlar anahtarı Documents/Tamga-gizli/anthropic/ altından okur; 2026-10-20)
+# API anahtarları depoya girmez (anahtarlar depo dışında tutulur)
 *.key
-**/anthropic/*.key
