@@ -150,7 +150,7 @@ Where the key lives depends on how you issue:
 - **Hosted service:** the key still stays with you — in your institution's HSM or with the trust service provider you contract.
   The service requests every signature through the remote signing interface (Cloud Signature Consortium API v2) and sends only the
   digest of the data to be signed; no credential content and no personal data. You give the registrar the address of your remote
-  signing service and the client identity you grant the service ([[ADR-0057]], proposed). On the production network the
+  signing service and the client identity you grant the service ([[ADR-0057]]). On the production network the
   institution's key is never kept as a file on the hosted service's host.
 
 ## 4. Lookup endpoint: the data comes from your system

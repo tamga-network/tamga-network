@@ -145,7 +145,7 @@ Anahtarın nerede durduğu belge verme yolunuza göre değişir:
 - **Barındırılan servis:** anahtar yine sizdedir — kurumunuzun HSM'inde ya da sözleşme yaptığınız güven hizmeti sağlayıcısında.
   Servis her imzayı uzaktan imza arayüzüyle (Cloud Signature Consortium API v2) ister ve yalnız imzalanacak verinin özetini
   gönderir; belge içeriği ve kişisel veri gitmez. Uzaktan imza hizmetinizin adresini ve servise verdiğiniz istemci kimliğini
-  kayıt kurumuna bildirirsiniz ([[ADR-0057]], öneri). Gerçek ağda kurum anahtarı barındırılan servisin sunucusunda dosya olarak
+  kayıt kurumuna bildirirsiniz ([[ADR-0057]]). Gerçek ağda kurum anahtarı barındırılan servisin sunucusunda dosya olarak
   tutulmaz.
 
 ## 4. Sorgu ucu: belge bilgisi sizin sisteminizden

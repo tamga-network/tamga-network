@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-19
+last_updated: 2026-10-20
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 339 kodlanmış değişmez, 56 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 343 kodlanmış değişmez, 57 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -555,6 +555,18 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0056/MR8` | Türü iptal listesi kullanan belgede iptal girişi yoksa doğrulama reddeder. |
 
 
+## ADR-0057
+
+*"Barındırılan belge vermede kurumun imza anahtarı: uzaktan imza (CSC API)"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0057/RS1` | Barındırılan serviste kurumun belge ve iptal listesi imza anahtarı kurumda ya da kurumun güven hizmeti sağlayıcısında kalır; servis imzayı CSC API v2 ile ister. |
+| `ADR-0057/RS2` | Uzaktan imza hizmetine yalnız imzalanacak verinin SHA-256 özeti gider; belge içeriği ve kişisel veri gitmez. |
+| `ADR-0057/RS3` | Servis her uzaktan imzayı kurumun güven listesindeki sertifikasıyla doğrular; doğrulanmayan imzayla belge verilmez. |
+| `ADR-0057/RS4` | Gerçek ağda kurum anahtarı servis sunucusunda dosyadan okunmaz. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -839,12 +851,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 339 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 343 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
+AC, AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-19 (`scripts/sync-invariants.mjs`). Toplam 339 kodlanmış değişmez, 56 dokümanda.
+**Üretilen dosya** — 2026-10-20 (`scripts/sync-invariants.mjs`). Toplam 343 kodlanmış değişmez, 57 dokümanda.

@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-19
+last_updated: 2026-10-20
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -117,7 +117,7 @@ Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
 | # | Kural |
 |---|---|
 | RB-AP-01 | Belge veren kimliği **MUST** ulusal kök sertifikaya zincirlenen bir X.509 sertifikası olmak; `issuer_id` yaprak sertifikanın parmak izinden türetilir. |
-| RB-AP-02 | Belge imzalama anahtarı **MUST** kurumun denetiminde olmak (I3'te HSM'de); **MUST NOT** Tamga'da tutulmak. |
+| RB-AP-02 | Belge imzalama anahtarı **MUST** kurumun denetiminde olmak (I3'te HSM'de); **MUST NOT** Tamga'da tutulmak. Barındırılan belge verme servisinde imza kurumun uzaktan imza hizmetinden (CSC API v2) istenir; hizmete **MUST** yalnızca imzalanacak verinin özeti gitmek ve servis gelen imzayı kurumun güven listesindeki sertifikasıyla doğrulamak. |
 | RB-AP-03 | İptal listesi imzalama anahtarı **MUST** belge anahtarından ayrı olmak. |
 | RB-AP-04 | İmza ve anahtar kanıtında yalnızca ES256 (P-256) kullanılır. |
 

@@ -124,7 +124,7 @@ Today Tamga is the provisional operator; at hand-over the role passes to the nat
 | #        | Rule                                                                                                                                                                   |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | RB-AP-01 | The issuer's identity **MUST** be an X.509 certificate chaining to the national root certificate; `issuer_id` is derived from the fingerprint of the leaf certificate. |
-| RB-AP-02 | The credential signing key **MUST** be under the institution's control (in an HSM at I3); it **MUST NOT** be held at Tamga.                                            |
+| RB-AP-02 | The credential signing key **MUST** be under the institution's control (in an HSM at I3); it **MUST NOT** be held at Tamga. In the hosted issuing service, signatures are requested from the institution's remote signing service (CSC API v2); only the digest of the data to be signed **MUST** be sent, and the service **MUST** verify the returned signature against the institution's certificate in the trust list. |
 | RB-AP-03 | The revocation list signing key **MUST** be separate from the credential key.                                                                                          |
 | RB-AP-04 | Signatures and key attestations use only ES256 (P-256).                                                                                                                |
 

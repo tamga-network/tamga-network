@@ -1,7 +1,8 @@
 ---
 document_id: ADR-0057
 title: "Barındırılan belge vermede kurumun imza anahtarı: uzaktan imza (CSC API)"
-status: Proposed
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-10-20
 last_updated: 2026-10-20
@@ -10,7 +11,7 @@ summary: >
   HSM'inde ya da kurumun seçtiği güven hizmeti sağlayıcısında durur ve servis imzayı Cloud Signature Consortium API v2
   (`signatures/signHash`) ile ister. Servise yalnız imzalanacak verinin SHA-256 özeti gider; belge içeriği ve kişisel veri
   gitmez. Gelen imza kurumun güven listesindeki sertifikasıyla yerelde doğrulanır. Gerçek ağda kurum anahtarı dosyadan
-  okunmaz (PM-GOV G1, sapma S-1). Öneri — proje yönetimi onayı bekler.
+  okunmaz (PM-GOV G1, sapma S-1). Kabul: 2026-10-20.
 domain: Identity
 related: ["[[ADR-0016]]", "[[ADR-0020]]", "[[ADR-0050]]", "[[SPEC-ID-0002]]", "[[SPEC-PROTO-0001]]"]
 ---
@@ -28,7 +29,7 @@ related: ["[[ADR-0016]]", "[[ADR-0020]]", "[[ADR-0050]]", "[[SPEC-ID-0002]]", "[
 - AB'de uzaktan imza ve mühür için yerleşik arayüz Cloud Signature Consortium API'dir (CSC API v2; ETSI TS 119 432 ile
   hizalı). Nitelikli güven hizmeti sağlayıcıları ve HSM ürünleri bu arayüzü sunar.
 
-# Önerilen karar
+# Karar
 
 ## K1 — Kurumun anahtarı kurumda, imza uzaktan
 
@@ -72,10 +73,10 @@ istemci kimliğini kapatarak); bu, servisin o kurum adına belge vermesini hemen
 | Kurumun anahtarını servis sunucusunda dosya olarak tutmak | ret | PM-GOV G1 |
 | Bulut sağlayıcısına özgü anahtar hizmeti (tek sağlayıcı) | ret (tek başına) | Kurumu bir sağlayıcıya bağlar; CSC arayüzü sağlayıcıdan bağımsız |
 | Kurumun işlettiği, Tamga'ya özgü bir imza ucu | ret | Yeni, standart dışı bir sözleşme olurdu; CSC zaten var |
-| **CSC API v2 ile uzaktan imza (yalnız özet)** | **öneri** | AB'deki yerleşik arayüz; nitelikli sınıfa geçişte de aynı yol |
+| **CSC API v2 ile uzaktan imza (yalnız özet)** | **seçildi** | AB'deki yerleşik arayüz; nitelikli sınıfa geçişte de aynı yol |
 | Kurum kendi belge verme servisini işletir | korunur | İkinci yol olarak kalır ([[ADR-0016]]) |
 
-# Önerilen kurallar (kabul edilirse bağlayıcı tabloya taşınır)
+# Değişmezler
 
 | Kod | Kural |
 |---|---|
@@ -84,13 +85,15 @@ istemci kimliğini kapatarak); bu, servisin o kurum adına belge vermesini hemen
 | RS3 | Servis her uzaktan imzayı kurumun güven listesindeki sertifikasıyla doğrular; doğrulanmayan imzayla belge verilmez. |
 | RS4 | Gerçek ağda kurum anahtarı servis sunucusunda dosyadan okunmaz. |
 
-# Kararı bekleyen sorular (proje yönetimi)
+# Açık konular
 
-1. CSC API v2'nin barındırılan servis için tek uzaktan imza arayüzü olarak kabulü.
-2. İlk kurum için hangi uzaktan imza hizmeti (kurumun kendi HSM'i ya da bir güven hizmeti sağlayıcısı) — kurumla birlikte.
-3. İmza başına bir istek yerine bir belgenin kopyalarını tek istekte imzalamak (CSC çoklu özet) — hız gerekirse.
+1. CSC API v2, barındırılan servisin tek uzaktan imza arayüzüdür (bu kararla kapandı).
+2. İlk kurum için hangi uzaktan imza hizmeti (kurumun kendi HSM'i ya da bir güven hizmeti sağlayıcısı) — kurumla birlikte
+   seçilir.
+3. İmza başına bir istek yerine bir belgenin kopyalarını tek istekte imzalamak (CSC çoklu özet) — hız gerekirse ayrıca ele
+   alınır.
 
 # Durum
 
-**Öneri — 2026-10-20.** Proje yönetimi onayını bekler. Uygulama hazırdır ve testlidir (barındırılan serviste `csc:` anahtar
-referansı); gerçek ağda dosya anahtarı reddi PM-GOV G1'in kendisidir ve bu karardan bağımsız olarak uygulanır.
+**Accepted — 2026-10-20.** Proje yönetimi onayıyla. DECISIONS: D-ID-13. Uygulama barındırılan serviste `csc:` anahtar
+referansıyla (testli); gerçek ağda dosya anahtarı reddi PM-GOV G1'in kendisidir.

@@ -38,7 +38,7 @@ There are two ways:
 |---|---|---|
 | Who runs it | Tamga (`issuer.tamga.network/<institution>`) | you |
 | What you install | `@tamga-network/issuer/client` (no dependencies, `fetch`) | `@tamga-network/issuer` (+ trust, schemas, sd-jwt) |
-| Signing key | with you: your institution's HSM or your remote signing service (CSC API v2, [[ADR-0057]] proposed); test key in the sandbox | yours |
+| Signing key | with you: your institution's HSM or your remote signing service (CSC API v2, [[ADR-0057]]); test key in the sandbox | yours |
 | Trust list entry | the Tamga operator: institution entry, category (e.g. `EDUCATION`, `EVENTS` — [[ADR-0014]]), schema authorisations | the same |
 
 ## Hosted service: the client

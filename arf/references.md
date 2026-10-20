@@ -109,7 +109,7 @@ and its source conflict, the source prevails.
 | RB-REG-08   | [[SPEC-API-0001]]/AP6                                                    |
 | RB-REG-09   | [[FW-TF-0001]] §5.2                                                      |
 | RB-AP-01    | [[SPEC-ID-0002]]/XC1, [[SPEC-CRED-0002]]/C15                             |
-| RB-AP-02    | [[PM-GOV-0001]]/G1, [[ARCH-0004]]/O3                                     |
+| RB-AP-02    | [[PM-GOV-0001]]/G1, [[ARCH-0004]]/O3, [[ADR-0057]]/RS1–RS3               |
 | RB-AP-03    | [[ARCH-0003]]/K1, [[SPEC-CRED-0003]]/S11                                 |
 | RB-AP-04    | [[SPEC-PROTO-0001]]/PR5, [[SPEC-CRED-0002]]/C1                           |
 | RB-AP-05    | [[SPEC-PROTO-0001]]/PR2                                                  |

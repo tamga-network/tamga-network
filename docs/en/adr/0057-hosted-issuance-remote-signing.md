@@ -1,7 +1,8 @@
 ---
 document_id: ADR-0057
 title: "The institution's signing key in hosted issuance: remote signing (CSC API)"
-status: Proposed
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-10-20
 last_updated: 2026-10-20
@@ -10,8 +11,8 @@ summary: >
   institution's HSM or with a trust service provider of its choice, and the service requests each signature through the Cloud
   Signature Consortium API v2 (`signatures/signHash`). Only the SHA-256 digest of the data to be signed is sent; no credential
   content and no personal data. The returned signature is verified locally against the institution's certificate in the trust
-  list. On the production network the institution's key is never read from a file (PM-GOV G1, deviation S-1). Proposed —
-  awaiting project management approval.
+  list. On the production network the institution's key is never read from a file (PM-GOV G1, deviation S-1). Accepted:
+  2026-10-20.
 domain: Identity
 related: ["[[ADR-0016]]", "[[ADR-0020]]", "[[ADR-0050]]", "[[SPEC-ID-0002]]", "[[SPEC-PROTO-0001]]"]
 translation_of: ADR-0057
@@ -32,7 +33,7 @@ source_version: 1.0.0
 - In the EU the established interface for remote signatures and seals is the Cloud Signature Consortium API (CSC API v2,
   aligned with ETSI TS 119 432). Qualified trust service providers and HSM products offer it.
 
-# Proposed decision
+# Decision
 
 ## K1 — The institution's key stays with the institution; signing is remote
 
@@ -80,10 +81,10 @@ the service from issuing on its behalf.
 | Keep the institution's key as a file on the service host | rejected | PM-GOV G1 |
 | A cloud provider's own key service (single provider) | rejected (on its own) | Ties the institution to one provider; the CSC interface is provider-neutral |
 | A Tamga-specific signing endpoint run by the institution | rejected | Would be a new, non-standard contract; CSC already exists |
-| **Remote signing with CSC API v2 (digest only)** | **proposed** | The established EU interface; the same path when moving to the qualified class |
+| **Remote signing with CSC API v2 (digest only)** | **chosen** | The established EU interface; the same path when moving to the qualified class |
 | The institution runs its own issuing service | kept | Remains the second path ([[ADR-0016]]) |
 
-# Proposed rules (moved to the binding table if accepted)
+# Invariants
 
 | Code | Rule |
 |---|---|
@@ -92,15 +93,15 @@ the service from issuing on its behalf.
 | RS3 | The service verifies every remote signature with the institution's certificate in the trust list; no credential is issued with a signature that does not verify. |
 | RS4 | On the production network the institution's key is never read from a file on the service host. |
 
-# Open questions (project management)
+# Open topics
 
-1. Accepting CSC API v2 as the single remote signing interface of the hosted service.
-2. Which remote signing service for the first institution (its own HSM or a trust service provider) — together with the
+1. CSC API v2 is the single remote signing interface of the hosted service (closed by this decision).
+2. Which remote signing service for the first institution (its own HSM or a trust service provider) — chosen together with the
    institution.
-3. Signing all copies of a credential in one request (CSC multi-hash) instead of one request per signature — if speed requires.
+3. Signing all copies of a credential in one request (CSC multi-hash) instead of one request per signature — handled separately
+   if speed requires.
 
 # Status
 
-**Proposed — 2026-10-20.** Awaiting project management approval. The implementation is ready and tested (the `csc:` key
-reference in the hosted service); refusing file keys on the production network is PM-GOV G1 itself and applies independently of
-this decision.
+**Accepted — 2026-10-20.** With project management approval. DECISIONS: D-ID-13. Implemented in the hosted service through the
+`csc:` key reference (tested); refusing file keys on the production network is PM-GOV G1 itself.

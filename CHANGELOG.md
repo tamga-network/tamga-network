@@ -17,7 +17,7 @@ published on npm as test releases; `0.6.0` is the current one (the API may chang
   contracts); `ACTIVE` is reached again only from `SUSPENDED`. `pki-issue --prod` requires `--dns` and `--org-id` for access
   certificates.
 - Institution source contract: `isced_f_code` is required (null means no mapping: no credential is issued, E11).
-- Proposed ADR-0057: in hosted issuance the institution's signing key stays with the institution; signatures are requested
+- ADR-0057 (accepted 2026-10-20): in hosted issuance the institution's signing key stays with the institution; signatures are requested
   through the Cloud Signature Consortium API v2 with the digest only.
 - Production trusted list: the network's own verifier (`verify.tamga.network`) and identity service (`tamga-id`) now carry their
   registration data (the tax number of the provisional operator, marked `provisional` until the foundation is established;

@@ -34,7 +34,7 @@ içindir: üniversite (diploma, öğrenci belgesi), kamu kurumu ya da bilet sat�
 |---|---|---|
 | Kim çalıştırır | Tamga (`issuer.tamga.network/<kurum>`) | siz |
 | Kuracağınız | `@tamga-network/issuer/client` (bağımlılıksız, `fetch`) | `@tamga-network/issuer` (+ trust, schemas, sd-jwt) |
-| İmza anahtarı | sizde: kurumunuzun HSM'i ya da uzaktan imza hizmetiniz (CSC API v2, [[ADR-0057]] öneri); sandbox'ta test anahtarı | sizin |
+| İmza anahtarı | sizde: kurumunuzun HSM'i ya da uzaktan imza hizmetiniz (CSC API v2, [[ADR-0057]]); sandbox'ta test anahtarı | sizin |
 | Güven listesi kaydı | Tamga operatörü: kurum kaydı, kategori (ör. `EDUCATION`, `EVENTS` — [[ADR-0014]]), şema yetkileri | aynı |
 
 ## Barındırılan servis: istemci
