@@ -341,12 +341,46 @@ Topic 11).
 | Tohum | Kimlik belgesiyle birlikte gelen `urn:tamga:id:PseudonymSeed:1` belgesini doğrular (kimlik belgesiyle aynı imzacı, kopya 0'ın anahtarı) ve tohumu güvenli depoya koyar (Keychain / Keystore; mağaza derlemesinde donanım korumalı). Tohum belge listesinde görünmez, hiçbir DCQL sorgusuna önerilmez (PS3). |
 | İstek | DCQL'de `format: "tamga-pseudonym"` sorgusu (`meta.mode`: `single` / `multiple`). Belge sorgusu yoksa istek yalnız takma adla girişe (belgesiz) karşılık gelir. |
 | Onay ekranı | "Bu siteye özel takma adın" kartı: yeni mi, daha önce kullanılan mı (değer gösterilmez). `multiple` sitede kullanıcı mevcut takma adlarından birini ya da yenisini seçer. Takma ad yalnız güven listesinde kayıtlı siteye verilir. |
-| Türetme | PIN/biyometri onayından sonra: `k = HKDF-SHA256(tohum, "tamga-pseudonym-v1\|" + site + "\|" + sıra)` → P-256 anahtar; takma ad = açık anahtarın RFC 7638 parmak izi. Site = asıl RP'nin kayıtlı `client_id`'si (aracıda asıl RP; ADR-0017 K7). Anahtar yalnız bellekte, imzadan sonra silinir. |
+| Türetme | PIN/biyometri onayından sonra: `k = HKDF-SHA256(tohum, "tamga-pseudonym-v1\|" + site + "\|" + sıra)` → P-256 anahtar; takma ad = açık anahtarın RFC 7638 parmak izi. Site = asıl RP'nin kayıtlı kalıcı kimliği (`dns_name`; aracıda asıl RP; ADR-0017 K7) — bugünkü kodda `client_id`, §5.4.1 sapma notu. Anahtar yalnız bellekte, imzadan sonra silinir. |
 | Sunum | vp_token'da takma ad sorgusunun id'siyle `tamga-pseudonym+jwt`: başlıkta açık anahtar, gövdede `aud` = client_id, `nonce`, `rp`, bu işlem için yeni WIA ve PoP. |
 | Takma adlarım | Ayarlar: site adı, oluşturulma / son kullanım, kullanıcının verdiği ad (siteye gitmez), sil. Silinen sıra o sitede bir daha türetilmez; yeniden kayıt yeni sıra açar. Günlüğe yalnız site adı ve olay yazılır, takma ad değeri yazılmaz. |
 
 Yeni telefonda kimlik yeniden doğrulanınca aynı tohum gelir → aynı takma adlar → sitelerdeki hesaplar tanınır. Taşıma dosyası
 (§7.5) tohumu ve anahtarı taşımaz (LX2).
+
+### 5.4.1 AB takma ad kurallarıyla eşleme (ARF Konu 11, PA_01–PA_31; Topic E iyileştirme turu)
+
+AB'nin güncel takma ad kuralları (ARF 2.8 / 3.0 Konu 11 ve "Topic E — Pseudonyms, including User authentication mechanism"
+iyileştirme turu) WebAuthn tabanlı bir yöntem varsayar ama yöntemi zorunlu kılmaz (PA_22 "MAY"; PA_21'deki AB teknik şartnamesi
+henüz yok). Tamga aynı kuralları OpenID4VP içinde imzalı takma ad belirteciyle karşılar. Eşleme (2026-10-21):
+
+| AB kuralı | Tamga | Durum |
+|---|---|---|
+| PA_01, PA_02 takma ad oluşturma, kaydetme, onunla giriş | Kayıt ve giriş akışı (§5.4, [[ADR-0031]] K3) | ✅ |
+| PA_03 aynı cihaz ve başka cihaz | Bağlantı ve QR ile aynı akış | ✅ |
+| PA_04 bir sitede birden çok takma ad | RP kaydında `pseudonyms: multiple` (K4); varsayılan tek | ✅ |
+| PA_05, PA_06, PA_19 kullanıcının verdiği ad, seçim, adın siteye gitmemesi | "Takma adlarım" (K5, PS6) | ✅ |
+| PA_07–PA_09 silme, yönetim, liste | "Takma adlarım" (K5) | ✅ |
+| PA_10, PA_11 iptal edilmemiş cüzdan birimi | Her işlemde yeni WIA ve PoP (PS5); her WIA'nın iptal girişi ayrıdır, siteler arası bağ kurmaz | ✅ |
+| PA_12 aynı kişinin hem belge hem takma ad sunması | Aynı `vp_token`, aynı `nonce` | 🟡 kriptografik bağ (ACP_01) yok |
+| PA_13 takma adın sunana ait olduğu | Takma ad anahtarıyla imza, `aud` + `nonce` | ✅ |
+| PA_14, PA_30 gerekli bilginin güvenli depoda tutulması | Tohum Keychain / Keystore'da; anahtar her işlemde bellekte türetilir | ✅ |
+| PA_15, PA_16, PA_17 kimliğin türetilememesi, sitelere farklı takma ad, bağlanamazlık | HKDF ile site başına anahtar (PS1); aynı takma ad başka siteye hiç gitmez | ✅ |
+| PA_18 çakışma olasılığı | P-256 anahtar, RFC 7638 parmak izi | ✅ |
+| PA_20 cüzdanın siteyi doğrulaması | Erişim sertifikası + güven listesi kaydı (WebAuthn'deki tarayıcı doğrulamasından güçlü) | ✅ |
+| PA_21, PA_22 WebAuthn profili | WebAuthn yerine OpenID4VP içinde `tamga-pseudonym+jwt`; günlük giriş için sitenin passkey'i ayrı kalır | ⚠️ yöntem farkı — AB şartnamesi yayımlanınca uyarlanır |
+| PA_23 algoritmalar AB ECCG listesinde | HMAC-SHA256, HKDF-SHA256, P-256 ECDSA | ✅ |
+| PA_24–PA_26, PA_28 kapsam ve oran sınırlı takma ad | Site başına tek takma ad (oran 1) ya da serbest (`multiple`); site oranı sayıyla seçemez; sınır cihaz kanıtına dayanır, ispatlı değil | 🟡 |
+| PA_27 farklı sitelerde aynı kapsamda bağlanamazlık | Site kimliği HKDF girdisinde | ✅ |
+| PA_29 kullanıcı dışında kimsenin takma adla giriş yapamaması | Kimlik servisi (`pseudonymKey` + kimlik numarası) takma ad anahtarını teorik olarak türetebilir; giriş ayrıca geçerli bir cüzdan birimi kanıtı (WIA) ister | 🟡 bilinen zayıflama ([[ADR-0031]]); kalıcı çözüm sıfır bilgi ispatıyla türetme (ZKP_04, Z5) |
+| PA_31 yeni cüzdanda aynı takma adlar | Tohum kişinin değişmeyen kimliğinden türer | ✅ |
+| DASH_03c günlük | Kayıt (`pseudonym_created`) ve silme günlükte; tamamlanmayan takma ad işleminin nedeni yazılmıyor; TS10 dışa aktarmada takma ad olayı yok | 🟡 |
+
+**Bilinen sapma (2026-10-21, düzeltilecek):** [[ADR-0031]] K2'ye göre site kimliği RP kaydının kalıcı kimliği `dns_name`'dir.
+wallet-core 0.7.0 takma adı bugün isteğin `client_id`'sinden (`x509_hash`, erişim sertifikasının özeti) türetir. Doğrulayıcının erişim
+sertifikası yenilenirse o sitedeki takma adlar değişir. Düzeltme: takma ad ve kopya seçiminde site anahtarı güven listesindeki
+`dns_name` (aracıda asıl RP'ninki); geliştirme evresinde geçiş kodu yazılmaz ([[ADR-0029]]). Erişim sertifikaları yenilenmeden önce
+yapılır ([[ADR-0058]]).
 
 ---
 

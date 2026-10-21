@@ -325,12 +325,46 @@ Topic 11).
 | Seed | It verifies the `urn:tamga:id:PseudonymSeed:1` credential that comes with the identity credential (same signer as the identity credential, the key of copy 0) and puts the seed into secure storage (Keychain / Keystore; hardware-protected in the store build). The seed does not appear in the credential list and is never offered to a DCQL query (PS3). |
 | Request | A `format: "tamga-pseudonym"` query in DCQL (`meta.mode`: `single` / `multiple`). If there is no credential query, the request corresponds to a pseudonym-only sign-in (no credential). |
 | Consent screen | A "Your pseudonym for this site" card: new, or used before (the value is not shown). On a `multiple` site the user picks one of their existing pseudonyms or a new one. A pseudonym is given only to a site registered in the trust list. |
-| Derivation | After PIN/biometric approval: `k = HKDF-SHA256(seed, "tamga-pseudonym-v1\|" + site + "\|" + index)` → a P-256 key; pseudonym = the RFC 7638 thumbprint of the public key. Site = the registered `client_id` of the actual RP (with an intermediary, the actual RP; ADR-0017 K7). The key exists only in memory and is wiped after signing. |
+| Derivation | After PIN/biometric approval: `k = HKDF-SHA256(seed, "tamga-pseudonym-v1\|" + site + "\|" + index)` → a P-256 key; pseudonym = the RFC 7638 thumbprint of the public key. Site = the permanent identity of the actual RP's registration (`dns_name`; with an intermediary, the actual RP; ADR-0017 K7) — `client_id` in today's code, see the §5.4.1 deviation note. The key exists only in memory and is wiped after signing. |
 | Presentation | In the vp_token, under the id of the pseudonym query, a `tamga-pseudonym+jwt`: the public key in the header, in the body `aud` = client_id, `nonce`, `rp`, plus a fresh WIA and PoP for this transaction. |
 | My pseudonyms | Settings: site name, created / last used, a label the user gives (not sent to the site), delete. A deleted index is never derived again for that site; registering again opens a new index. Only the site name and the event are written to the log, never the pseudonym value. |
 
 When the identity is verified again on a new phone, the same seed arrives → the same pseudonyms → the accounts on the sites
 are recognised. The migration file (§7.5) carries neither the seed nor the key (LX2).
+
+### 5.4.1 Mapping to the EU pseudonym rules (ARF Topic 11, PA_01–PA_31; Topic E refinement round)
+
+The EU's current pseudonym rules (ARF 2.8 / 3.0 Topic 11 and the "Topic E — Pseudonyms, including User authentication mechanism"
+refinement round) assume a WebAuthn-based method but do not mandate it (PA_22 "MAY"; the EU technical specification in PA_21 does
+not exist yet). Tamga meets the same rules with a signed pseudonym token inside OpenID4VP. Mapping (2026-10-21):
+
+| EU rule | Tamga | Status |
+|---|---|---|
+| PA_01, PA_02 create and register a pseudonym, sign in with it | Sign-up and sign-in flow (§5.4, [[ADR-0031]] K3) | ✅ |
+| PA_03 same device and other device | The same flow by link and QR | ✅ |
+| PA_04 several pseudonyms at one site | `pseudonyms: multiple` in the RP registration (K4); single by default | ✅ |
+| PA_05, PA_06, PA_19 user alias, choice, alias never sent to the site | "My pseudonyms" (K5, PS6) | ✅ |
+| PA_07–PA_09 delete, manage, list | "My pseudonyms" (K5) | ✅ |
+| PA_10, PA_11 non-revoked wallet unit | A new WIA and PoP for every transaction (PS5); each WIA has its own revocation entry, so it links nothing across sites | ✅ |
+| PA_12 the same person presents both a credential and the pseudonym | Same `vp_token`, same `nonce` | 🟡 no cryptographic binding (ACP_01) |
+| PA_13 the pseudonym belongs to the presenter | Signature with the pseudonym key, `aud` + `nonce` | ✅ |
+| PA_14, PA_30 the necessary material in secure storage | Seed in Keychain / Keystore; the key is derived in memory for each transaction | ✅ |
+| PA_15, PA_16, PA_17 identity not derivable, different pseudonym per site, unlinkability | Per-site key via HKDF (PS1); the same pseudonym never goes to another site | ✅ |
+| PA_18 collision probability | P-256 key, RFC 7638 thumbprint | ✅ |
+| PA_20 the wallet verifies the site | Access certificate + trusted list registration (stronger than the browser check in WebAuthn) | ✅ |
+| PA_21, PA_22 WebAuthn profile | `tamga-pseudonym+jwt` inside OpenID4VP instead of WebAuthn; the site's own passkey stays for daily sign-in | ⚠️ different method — adapted when the EU specification is published |
+| PA_23 algorithms in the EU ECCG list | HMAC-SHA256, HKDF-SHA256, P-256 ECDSA | ✅ |
+| PA_24–PA_26, PA_28 scope and rate limited pseudonyms | One pseudonym per site (rate 1) or free (`multiple`); a site cannot pick a numeric rate; the limit rests on device evidence, not on a proof | 🟡 |
+| PA_27 unlinkability across sites for the same scope | The site identity is an HKDF input | ✅ |
+| PA_29 nobody but the user can sign in with the pseudonym | The identity service (`pseudonymKey` + identity number) could in theory derive the pseudonym key; sign-in also requires a valid wallet unit attestation (WIA) | 🟡 known weakening ([[ADR-0031]]); lasting fix is derivation with a zero-knowledge proof (ZKP_04, Z5) |
+| PA_31 the same pseudonyms in a new wallet | The seed is derived from the person's unchanging identity | ✅ |
+| DASH_03c log | Registration (`pseudonym_created`) and deletion are logged; the reason for a non-completed pseudonym transaction is not; pseudonym events are not in the TS10 export | 🟡 |
+
+**Known deviation (2026-10-21, to be fixed):** under [[ADR-0031]] K2 the site identity is the permanent identity of the RP
+registration, `dns_name`. wallet-core 0.7.0 today derives the pseudonym from the request's `client_id` (`x509_hash`, the digest of the
+access certificate). If a verifier's access certificate is renewed, the pseudonyms at that site change. Fix: the site key for
+pseudonyms and copy selection is the `dns_name` from the trusted list (for an intermediary, the actual RP's); no migration code in
+the development phase ([[ADR-0029]]). It is done before access certificates are renewed ([[ADR-0058]]).
 
 ---
 

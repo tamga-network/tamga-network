@@ -6,6 +6,15 @@ published on npm as test releases; `0.7.0` is the current one (the API may chang
 
 ## Unreleased
 
+- wallet-core: `ts8ReportAttachment(state, entry, lookup)` — the machine-readable attachment for a report to a data protection
+  authority (EU TS8, RPT_DPA_04): the reported request's single record in the TS10 transaction log format (claim names, never
+  values), with the same `transactionIdentifier` as in `ts10TransactionLog`.
+- `pki-issue`: `--contact-uri` writes the relying party's support address into the access certificate's SAN and `--service-id`
+  writes a service identifier into `OU` (ETSI TS 119 411-8 §6.6.1; ADR-0058, proposed). Both optional; a production access
+  certificate without `--contact-uri` gets a warning.
+- Wallet specification §5.4.1: item-by-item mapping of per-site pseudonyms to the EU pseudonym rules (ARF Topic 11, PA_01–PA_31),
+  with the open points and one known deviation (the pseudonym site key should be the registered `dns_name`, today it is
+  `client_id`). ADR-0058 (proposed): access certificate profile and the timing of the identity service certificate change.
 - Documentation in Azerbaijani: docs.tamga.network/az/ and arf.tamga.network/az/ (machine translation, awaiting a native
   speaker's review; every translated page carries a short notice). Generated pages (release notes, binding rules, packages,
   API reference) and the ARF change page are English only; their `/az/` addresses link to the English page.

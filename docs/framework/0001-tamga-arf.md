@@ -133,7 +133,10 @@ geçiş kartları kullanılır.
 "Tamga ile giriş yap" ile bir site, kayıt sırasında yalnız izin verilen alanları (örneğin ad ve soyad) alır. Hesap anahtarı
 siteye özgü bir takma addır: iki farklı site aynı kişiyi eşleştiremez. [[t:pseudonym|Takma ad]] kimlikten türetildiği için kişi telefonunu
 değiştirip kimliğini yeniden doğruladığında aynı takma adlar geri gelir. Günlük giriş passkey ile yapılır ve hiçbir belge
-alanı paylaşılmaz.
+alanı paylaşılmaz. AB takma ad kurallarıyla (ARF Konu 11, PA_01–PA_31) madde madde eşleme cüzdan şartnamesindedir
+([[SPEC-WALLET-0001]] §5.4.1): AB WebAuthn tabanlı bir yöntem öngörür ama zorunlu kılmaz; Tamga aynı kuralları OpenID4VP
+içinde imzalı takma ad belirteciyle karşılar. Açık kalanlar: kapsam ve oran sınırının ispatlı olmaması ve kimlik servisinin
+takma adı teorik olarak türetebilmesi (kalıcı çözüm sıfır bilgi ispatıyla türetme).
 
 ## 2.5 Bilet ve kapı
 

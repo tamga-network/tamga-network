@@ -22,7 +22,11 @@ function walk(d, out = []) {
     const p = join(d, n);
     if (statSync(p).isDirectory()) {
       // _internal, gtm: public depoya girmez (.publicignore) — bağlayıcı kural dizinine (docs sitesi /rules) de girmez
-      if (n !== "en" && !/_archive|_internal|gtm|beta|delivery|framework|rfc|academy|research|guides/.test(n))
+      if (
+        n !== "en" &&
+        n !== "az" &&
+        !/_archive|_internal|gtm|beta|delivery|framework|rfc|academy|research|guides/.test(n)
+      )
         walk(p, out);
     } else if (n.endsWith(".md")) out.push(p);
   }

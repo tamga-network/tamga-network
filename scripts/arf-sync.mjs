@@ -157,8 +157,26 @@ const sanitize = (t) => SANITIZE.reduce((s, [re, to]) => s.replace(re, to), t.re
 
 // Ön bilgideki durum değerinin sayfa dilindeki karşılığı (docs sitesindeki theme/status.ts ile aynı sözcükler).
 const STATUS = {
-  tr: { active: "Yürürlükte", accepted: "Yürürlükte", final: "Yürürlükte", draft: "Taslak", proposed: "Taslak", superseded: "Yerini aldı", deprecated: "Yerini aldı", archived: "Arşivlendi" },
-  az: { active: "Qüvvədədir", accepted: "Qüvvədədir", final: "Qüvvədədir", draft: "Qaralama", proposed: "Qaralama", superseded: "Əvəz edilib", deprecated: "Əvəz edilib", archived: "Arxivləşdirilib" },
+  tr: {
+    active: "Yürürlükte",
+    accepted: "Yürürlükte",
+    final: "Yürürlükte",
+    draft: "Taslak",
+    proposed: "Taslak",
+    superseded: "Yerini aldı",
+    deprecated: "Yerini aldı",
+    archived: "Arşivlendi",
+  },
+  az: {
+    active: "Qüvvədədir",
+    accepted: "Qüvvədədir",
+    final: "Qüvvədədir",
+    draft: "Qaralama",
+    proposed: "Qaralama",
+    superseded: "Əvəz edilib",
+    deprecated: "Əvəz edilib",
+    archived: "Arxivləşdirilib",
+  },
 };
 const statusText = (lang, v) => STATUS[lang][String(v ?? "").toLowerCase()] ?? v;
 

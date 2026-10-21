@@ -215,6 +215,15 @@ const log = ts10TransactionLog(state, lookup); // lookup: doğrulayıcı ve kuru
 const file = await encryptTs10Async(log, password); // PBES2-HS256+A128KW + A128GCM; parola en az 8 karakter
 ```
 
+Kişi bir doğrulayıcıyı veri koruma kurumuna bildirirken (AB TS8) bildirime makine okunur ek konur: bildirilen isteğin aynı
+biçimdeki tek günlük kaydı. Kurumun iletişim bilgisi doğrulayıcının kayıt sertifikasındaki `supervisory_authority`'dir.
+
+```ts
+import { ts8ReportAttachment } from "@tamga-network/wallet-core";
+
+const attachment = ts8ReportAttachment(state, entry, lookup); // { transactionLog: [kayıt] } — alan adları, değer yok
+```
+
 ## 10. Cihaz değiştirme ve silme
 
 Belge anahtarları cihazdan çıkmadığı için **belgeler taşınmaz** (WL2, WL10). Yeni cihaza taşınan şey belge listesi, ayarlar ve

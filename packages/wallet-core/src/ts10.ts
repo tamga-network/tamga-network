@@ -185,6 +185,19 @@ export function ts10TransactionLog(state: WalletState, lookup: Ts10Lookup = {}) 
   return txs.sort((a, b) => a.time.localeCompare(b.time));
 }
 
+/**
+ * AB TS8 (veri koruma kurumuna bildirim; RPT_DPA_04, arayüz I1) — bildirime eklenecek makine okunur ek: bildirilen isteğin TS10
+ * normalleştirilmiş günlük kaydı (doğrulayıcının kimliği ve adı, kayıt verisi, istenen ve gönderilen alan ADLARI; değer yok — WL4).
+ * `transactionIdentifier` aynı kaydın `ts10TransactionLog`'daki tanımlayıcısıdır. Kayıt cüzdanın günlüğünde değilse hata.
+ * Cüzdan eki bildirim e-postasına dosya olarak ekler (TS8 §3.4); kurumun iletişim bilgisi kayıt sertifikasının
+ * `supervisory_authority` alanından gelir (RPT_DPA_01/06).
+ */
+export function ts8ReportAttachment(state: WalletState, entry: PresentationLogEntry, lookup: Ts10Lookup = {}) {
+  const i = state.presentationLog.indexOf(entry);
+  if (i < 0) throw new Error("ts8: presentation entry is not in the wallet log");
+  return { transactionLog: [presentationTx(entry, i, lookup)] }; // TS10 §3.18'deki `transactionLog` ile aynı biçim
+}
+
 /** TS10 §3.18 MigrationData. Belgelerin değerleri ve anahtarları girmez; yalnız yeniden alınacak belgelerin listesi. */
 /**
  * `includeLog`: işlem günlüğü dosyaya girsin mi (varsayılan evet — ADR-0027 / D-WALLET-2: kişinin başlattığı şifreli

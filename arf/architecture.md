@@ -148,7 +148,11 @@ short-lived access passes with a limited scope are used.
 With "Sign in with Tamga", a website receives at sign-up only the fields it is allowed (for example the given and family
 name). The account key is a site-specific [[t:pseudonym]]: two different sites cannot link the same person. Because the
 pseudonym is derived from the identity, the same pseudonyms return when the person changes phone and verifies their identity
-again. Daily sign-in uses a passkey and shares no credential fields.
+again. Daily sign-in uses a passkey and shares no credential fields. The item-by-item mapping to the EU pseudonym rules (ARF
+Topic 11, PA_01–PA_31) is in the wallet specification ([[SPEC-WALLET-0001]] §5.4.1): the EU foresees a WebAuthn-based method
+but does not mandate it; Tamga meets the same rules with a signed pseudonym token inside OpenID4VP. Still open: the scope and
+rate limit is not proven, and the identity service could in theory derive the pseudonym (the lasting fix is derivation with a
+zero-knowledge proof).
 
 ### 2.5 Tickets and gates
 

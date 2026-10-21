@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-20
+last_updated: 2026-10-21
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 343 kodlanmış değişmez, 57 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 346 kodlanmış değişmez, 58 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -567,6 +567,17 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0057/RS4` | Gerçek ağda kurum anahtarı servis sunucusunda dosyadan okunmaz. |
 
 
+## ADR-0058
+
+*"Erişim sertifikası profili (ETSI TS 119 411-8) ve kimlik servisi sertifikasının geçiş zamanı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0058/AC1` | Gerçek ağda erişim sertifikasının SAN'ı kayıttaki alan adını ve en az bir iletişim bilgisini (destek adresi) taşır. |
+| `ADR-0058/AC2` | Hizmete bağlı erişim sertifikasında hizmet kimliği `OU` alanındadır ve kayıttaki hizmet kimliğiyle aynıdır. |
+| `ADR-0058/AC3` | Erişim sertifikası, Tamga'nın beyan edemeyeceği bir AB sertifika politikası tanımlayıcısı taşımaz. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -851,7 +862,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 343 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 346 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
 AC, AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
 
@@ -859,4 +870,4 @@ AC, AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC
 
 # Durum
 
-**Üretilen dosya** — 2026-10-20 (`scripts/sync-invariants.mjs`). Toplam 343 kodlanmış değişmez, 57 dokümanda.
+**Üretilen dosya** — 2026-10-21 (`scripts/sync-invariants.mjs`). Toplam 346 kodlanmış değişmez, 58 dokümanda.

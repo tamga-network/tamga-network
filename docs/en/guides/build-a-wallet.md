@@ -227,6 +227,16 @@ const log = ts10TransactionLog(state, lookup); // lookup: verifier and instituti
 const file = await encryptTs10Async(log, password); // PBES2-HS256+A128KW + A128GCM; password of at least 8 characters
 ```
 
+When the person reports a verifier to a data protection authority (EU TS8), the report gets a machine-readable attachment: the
+single log record of the reported request, in the same format. The authority's contact details are the `supervisory_authority`
+in the verifier's registration certificate.
+
+```ts
+import { ts8ReportAttachment } from "@tamga-network/wallet-core";
+
+const attachment = ts8ReportAttachment(state, entry, lookup); // { transactionLog: [record] } — claim names, no values
+```
+
 ## 10. Changing devices and deletion
 
 Credential keys never leave the device, so **credentials are not moved** (WL2, WL10). What moves to the new device is the list

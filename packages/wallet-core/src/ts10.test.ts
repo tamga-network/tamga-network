@@ -204,3 +204,24 @@ describe("Mig_07b: günlüğü geri yükleme kişinin seçimi", () => {
     expect(r.toReissue).toHaveLength(1);
   });
 });
+
+describe("TS8 bildirim eki", () => {
+  it("bildirilen sunumun TS10 kaydı: aynı tanımlayıcı, alan adları, değer yok; günlükte olmayan kayıt reddedilir", async () => {
+    const { ts8ReportAttachment } = await import("./index.js");
+    const s = state();
+    const a = ts8ReportAttachment(s, s.presentationLog[0], lookup);
+    const full = ts10TransactionLog(s, lookup).find((t) => t.transactionType === "Presentation");
+    expect(a.transactionLog).toHaveLength(1);
+    expect(a.transactionLog[0].transactionIdentifier).toBe(full!.transactionIdentifier);
+    expect(a.transactionLog[0].presentation).toMatchObject({
+      interactingPartyName: "Shop",
+      dpaName: "KVKK",
+      listOfClaimsRequested: [
+        { credentialIdentifier: "urn:tamga:edu:StudentCredential:1", claims: ["is_enrolled", "given_name"] },
+      ],
+      listOfClaimsPresented: [{ credentialIdentifier: "urn:tamga:edu:StudentCredential:1", claims: ["is_enrolled"] }],
+    });
+    expect(JSON.stringify(a)).not.toContain("SHOULD-NOT-LEAK");
+    expect(() => ts8ReportAttachment(s, { ...s.presentationLog[0] }, lookup)).toThrow(/not in the wallet log/);
+  });
+});

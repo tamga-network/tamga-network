@@ -14,6 +14,10 @@
  * Kurallar: yalnız P-256 / ES256; CSR imzası doğrulanır; 2 yıl (en çok 3); seri numarası rastgele; SKI + AKI (kökün SKI'si).
  * Kurum sertifikası (ADR-0050, ETSI TS 119 412-6): `--prod` ile `issuer-*` adında `--org-id` (ya da konu alanında 2.5.4.97) ZORUNLU —
  *   kayıt sertifikasının `sub`'ıyla aynı değer (TR-VKN → VATTR-<VKN>, TR-MERSIS → NTRTR-<MERSİS>); konu alanında O ve C bulunmalı.
+ * Erişim sertifikası (ADR-0058 öneri, ETSI TS 119 411-8 §6.6.1): `--contact-uri <https://…>` kayıttaki destek adresini SAN'a
+ *   `uniformResourceIdentifier` olarak yazar (GEN-6.6.1-07 iletişim bilgisi); `--service-id <kimlik>` hizmete bağlı sertifikada
+ *   hizmet kimliğini `OU`'ya yazar (GEN-6.6.1-08, AB TS5 `serviceIdentifier`). İkisi de isteğe bağlı; `--prod` erişim
+ *   sertifikasında `--contact-uri` yoksa uyarı (karar kabul edilince zorunlu).
  */
 import {
   X509CertificateGenerator,
@@ -78,6 +82,22 @@ async function main() {
   if (!(yearsN >= 1 && yearsN <= 3)) fail("--years 1–3");
   const dns = arg("dns");
   if (dns && !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(dns)) fail("--dns geçerli bir alan adı olmalı");
+  // ADR-0058 (öneri): erişim sertifikasında iletişim bilgisi (SAN URI) ve hizmete bağlı sertifikada hizmet kimliği (OU)
+  const contactUri = arg("contact-uri");
+  if (contactUri !== undefined) {
+    let u: URL | undefined;
+    try {
+      u = new URL(contactUri);
+    } catch {
+      /* aşağıda */
+    }
+    if (!u || u.protocol !== "https:") fail("--contact-uri: https:// ile başlayan destek adresi olmalı");
+  }
+  const serviceId = arg("service-id");
+  if (serviceId !== undefined && !/^[A-Za-z0-9._:-]{1,64}$/.test(serviceId))
+    fail("--service-id: harf, rakam, nokta, alt çizgi, iki nokta ya da tire (en çok 64)");
+  if ((contactUri !== undefined || serviceId !== undefined) && !name.startsWith("rp-"))
+    fail("--contact-uri / --service-id yalnız erişim sertifikasında (rp-*)");
 
   const root = new X509Certificate(readFileSync(resolve(PKI, "root-ca.cert.pem"), "utf8"));
   const rootKey = await crypto.subtle.importKey(
@@ -114,6 +134,10 @@ async function main() {
     if (/2\.5\.4\.97=/.test(subject)) fail("konu alanında zaten organizationIdentifier var");
     subject = `${subject}, 2.5.4.97=${orgId}`;
   }
+  if (serviceId !== undefined) {
+    if (/(^|,\s*)OU=/.test(subject)) fail("konu alanında zaten OU var (--service-id ile birlikte kullanılmaz)");
+    subject = `${subject}, OU=${serviceId}`;
+  }
   // ADR-0050 (CP1): gerçek ağda kurum sertifikası kurum kimlik numarasıyla verilir
   if (name.startsWith("issuer-")) {
     if (PROD && !/2\.5\.4\.97=/.test(subject))
@@ -127,7 +151,15 @@ async function main() {
     if (!dns) fail("--prod erişim sertifikası (rp-*): --dns <kayıttaki dns_name> zorunlu (ADR-0034 CI3)");
     if (!/2\.5\.4\.97=/.test(subject))
       fail("--prod erişim sertifikası (rp-*): --org-id VATTR-<VKN> ya da NTRTR-<MERSİS> zorunlu (ADR-0026 K3)");
+    if (contactUri === undefined)
+      console.warn(
+        "[uyarı] erişim sertifikasında iletişim bilgisi yok: --contact-uri <kayıttaki support_uri> (ETSI TS 119 411-8 GEN-6.6.1-07; ADR-0058 öneri)",
+      );
   }
+  const san = [
+    ...(dns ? [{ type: "dns" as const, value: dns }] : []),
+    ...(contactUri !== undefined ? [{ type: "url" as const, value: contactUri }] : []),
+  ];
   const notBefore = new Date();
   const notAfter = new Date(notBefore);
   notAfter.setUTCFullYear(notAfter.getUTCFullYear() + yearsN);
@@ -147,7 +179,7 @@ async function main() {
       await SubjectKeyIdentifierExtension.create(publicKey),
       // RFC 5280 §4.2.1.1 / ADR-0050: AKI = kökün SKI'si (HAIP trusted_authorities `aki` eşleşmesi)
       await AuthorityKeyIdentifierExtension.create(root.publicKey),
-      ...(dns ? [new SubjectAlternativeNameExtension([{ type: "dns", value: dns }])] : []),
+      ...(san.length ? [new SubjectAlternativeNameExtension(san)] : []),
     ],
   });
   writeFileSync(resolve(PKI, `${name}.cert.pem`), cert.toString("pem") + "\n");
