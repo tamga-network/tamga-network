@@ -1,7 +1,8 @@
 ---
 document_id: ADR-0058
 title: "Access certificate profile (ETSI TS 119 411-8) and timing of the identity service certificate change"
-status: Proposed
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-10-21
 last_updated: 2026-10-21
@@ -12,8 +13,8 @@ summary: >
   the service identifier (`serviceIdentifier`, EU TS5) is in `OU` (GEN-6.6.1-08). The policy identifier and CPS address
   (GEN-6.6.1-03/06) are added when the network's certification practice statement is published. The identity service's
   credential signing certificate gets its `organizationIdentifier` (ADR-0050 K3) not now but with a new key when operation of
-  the network is handed over to the foundation, so identity credentials are re-obtained once. Proposal — awaiting project
-  management approval.
+  the network is handed over to the foundation, so identity credentials are re-obtained once; the handover is prepared now as
+  one scripted step. Accepted: 2026-10-21.
 domain: Identity
 related: ["[[ADR-0024]]", "[[ADR-0026]]", "[[ADR-0034]]", "[[ADR-0050]]", "[[SPEC-ID-0002]]"]
 translation_of: ADR-0058
@@ -77,6 +78,12 @@ source_version: 1.0.0
   `issuer_id`; the old certificate stays in the list during the overlap only to verify old credentials ([[ADR-0050]] K3,
   [[SPEC-ID-0002]] §4).
 - Until then the publisher warning (ADR-0050 K4) remains; registration certificate (WRPRC) generation is not affected.
+- **Prepared from today:** a certificate can only name a legal person that exists, so the identity service certificate changes when
+  the foundation acquires legal personality; but every step of the handover (each record and certificate that carries the
+  provisional operator's identity, new keys and certificates, republishing the list, wallet pins, the re-issuance notice) is kept
+  written and scripted from today: the operator's handover procedure and a dry-run tool that prints the plan and checks the inputs
+  without changing anything. As there are no real users before the pilot, re-obtaining credentials at the handover is an
+  acceptable cost.
 - If an earlier change becomes necessary (key compromise, certificate expiry, a formal request from the EU side), it is done that
   day with the same procedure and the provisional operator's number.
 
@@ -99,24 +106,19 @@ source_version: 1.0.0
 
 # Implementation
 
-- `ops/pki-issue.ts`: `--contact-uri <address>` (SAN `uniformResourceIdentifier`) and `--service-id <id>` (`OU`). While this
-  decision is a proposal, a `--prod` access certificate without `--contact-uri` produces a warning; after acceptance it becomes
-  required (AC1).
-- After acceptance: the access certificates of the production and sandbox verifiers are re-issued **with the same key** (`CN` trade
-  name, SAN support address). Because the certificate changes, `client_id` (`x509_hash`) changes; the registry is updated, the list
-  is published and deployed. First, the wallet's pseudonym site key must be `dns_name` as [[ADR-0031]] K2 says (today
-  `client_id`; [[SPEC-WALLET-0001]] §5.4.1 deviation note) — otherwise the pseudonyms at those sites change.
-- Trust list publisher (next release): check for SAN contact information in access certificates (AC1) and `OU` ↔ registered service
-  identifier (AC2).
-- K5: added to the foundation handover work list (operator procedure in `ops/README.md`).
-
-# Questions for project management
-
-1. K1–K3 (access certificate profile) and, after acceptance, re-issuing the network's verifier certificates with the same key.
-2. K4: not writing the EU policy identifier; the network's own identifier comes with the foundation.
-3. K5: changing the identity service certificate at the foundation handover.
+- `ops/pki-issue.ts`: `--contact-uri <address>` (SAN `uniformResourceIdentifier`), `--contact-email <address>` (SAN
+  `rfc822Name`; an organisational address) and `--service-id <id>` (`OU`). A `--prod` access certificate requires `--contact-uri`
+  (AC1). Re-issue with the same key: `--key <private key file>` and `--replace` (the old certificate is moved to a backup folder).
+- 2026-10-21: the access certificates of the production and sandbox verifiers were re-issued **with the same key** (`CN` trade name,
+  SAN domain name + support address + organisational email). Because the certificate changed, `client_id` (`x509_hash`) changed
+  and the permanent registration (`dns_name`) did not; the list was published. The pseudonym site key is `dns_name` as
+  [[ADR-0031]] K2 says ([[SPEC-WALLET-0001]] §5.4.1; wallet-core 0.7.1 refuses derivation from a client identifier) — pseudonyms
+  at those sites were not affected by the re-issue (checked live).
+- Trust list publisher: a warning when an ACTIVE verifier's access certificate on the production network has no SAN contact
+  information (AC1); the `OU` ↔ registered service identifier check (AC2) is added with the first service-bound certificate.
+- K5: on the foundation handover work list; the operator's handover procedure and the dry-run tool are ready.
 
 # Status
 
-**Proposal — 2026-10-21.** Awaiting project management approval. Tool support (`--contact-uri`, `--service-id`) is ready and
-optional; existing certificates are unchanged.
+**Accepted — 2026-10-21.** With project management approval (K1–K5 as proposed; for K5 the handover is prepared from today).
+DECISIONS: D-REG-3.

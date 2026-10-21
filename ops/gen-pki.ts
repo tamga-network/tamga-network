@@ -291,8 +291,13 @@ async function main() {
     // 5) Referans verifier erişim sertifikası — SAN verify.tamga.network (kayıt dns_name); client_id = x509_hash(bu sertifika) (ADR-0034)
     await ensure(
       "rp-verify",
-      signedByRoot(2001, "CN=verify.tamga.network, O=Tamga Dogrulama Servisi, C=TR", async () => [
-        new SubjectAlternativeNameExtension([{ type: "dns", value: "verify.tamga.network" }]),
+      // ADR-0058 K1/K2: CN ticari ad; SAN alan adı + iletişim (kayıttaki destek adresi ve kurumsal e-posta)
+      signedByRoot(2001, "CN=Tamga Verify, O=Tamga Dogrulama Servisi, C=TR", async () => [
+        new SubjectAlternativeNameExtension([
+          { type: "dns", value: "verify.tamga.network" },
+          { type: "url", value: "https://tamga.network" },
+          { type: "email", value: "info@tamga.network" },
+        ]),
       ]),
     ),
     // 6) ADR-0011: Tamga geçici kimlik attestation servisi (id.tamga.network) — credential + status imza sertifikaları (K1 ayrımı)
@@ -361,8 +366,15 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
         2001,
         // ADR-0026 K3: kurum kimlik no (organizationIdentifier) = kayıt sertifikasının `sub`'ı (registry-sandbox TR-VKN
         // TR0000000004). Yoksa cüzdan kayıt sertifikasını bu sertifikaya bağlayamaz ve isteği reddeder (2026-10-09, --reissue).
-        "CN=verify.sandbox.tamga.network, O=Tamga Sandbox Dogrulama (TEST), 2.5.4.97=VATTR-0000000004, C=TR",
-        san("verify.sandbox.tamga.network"),
+        // ADR-0058 K1/K2 (2026-10-21, --reissue): CN ticari ad; SAN alan adı + kayıttaki destek adresi + kurumsal e-posta
+        "CN=Tamga Sandbox Verify (TEST), O=Tamga Sandbox Dogrulama (TEST), 2.5.4.97=VATTR-0000000004, C=TR",
+        async () => [
+          new SubjectAlternativeNameExtension([
+            { type: "dns", value: "verify.sandbox.tamga.network" },
+            { type: "url", value: "https://sandbox.tamga.network" },
+            { type: "email", value: "info@tamga.network" },
+          ]),
+        ],
       ),
     ),
     await ensure(

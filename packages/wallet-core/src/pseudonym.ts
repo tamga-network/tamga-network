@@ -88,9 +88,21 @@ export function readPseudonymSeed(
   return s;
 }
 
+/**
+ * K2: site kimliği güven listesindeki RP kaydının kalıcı alan adıdır (`dns_name`; uygulama `stableRpKey` ile alır). İstemci
+ * kimliği (`x509_hash:…` — erişim sertifikasının özeti; sertifika yenilenince değişir) ya da önekli başka bir kimlik takma ad
+ * türetmez: aynı kişi aynı sitede, doğrulayıcının sertifikası yenilense de aynı takma adı kullanır.
+ */
+const CLIENT_ID_LIKE = /^[a-z0-9_.-]+:/i;
+function assertSite(rpKey: string): void {
+  if (typeof rpKey !== "string" || !rpKey || rpKey.length > 253 || CLIENT_ID_LIKE.test(rpKey) || /[\s/|]/.test(rpKey))
+    throw new Error("pseudonym site must be the registered domain of the relying party (dns_name), not a client_id");
+}
+
 /** K2: site + sıra için takma ad anahtarı. Aynı tohum + site + sıra → her cihazda aynı anahtar; farklı site → ilişkisiz anahtar. */
 export function derivePseudonym(seed: string, rpKey: string, index: number) {
   if (!SEED_RE.test(seed)) throw new Error("pseudonym seed malformed");
+  assertSite(rpKey);
   if (!Number.isInteger(index) || index < 0) throw new Error("pseudonym index");
   const okm = hkdf(sha256, b64uDecode(seed), utf8(DOMAIN), utf8(`${DOMAIN}|${rpKey}|${index}`), 48);
   const sk = mapHashToField(okm, p256.Point.Fn.ORDER); // [1, n-1], eşit dağılımlı (RFC 9380 hash_to_field)
@@ -178,7 +190,9 @@ export function recordPseudonymUse(
   const i = list.findIndex((p) => p.rpKey === e.rpKey && p.index === e.index);
   const isNew = i < 0;
   if (isNew) list.push({ ...e, createdAt: now, lastUsedAt: now });
-  else list[i] = { ...list[i], lastUsedAt: now, ...(e.siteName ? { siteName: e.siteName } : {}) };
+  // değer her kullanımda güncel türetmeyle eşitlenir (yeniden anahtarlanmış eski bir kayıtta saklı değer eskimiş olabilir)
+  else
+    list[i] = { ...list[i], pseudonym: e.pseudonym, lastUsedAt: now, ...(e.siteName ? { siteName: e.siteName } : {}) };
   return {
     ...st,
     pseudonyms: list,

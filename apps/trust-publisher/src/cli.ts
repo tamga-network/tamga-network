@@ -461,6 +461,11 @@ async function build() {
         .includes(`DNS:${dns}`)
     )
       throw new Error(`relying_party ${dns}: alan adı erişim sertifikasının SAN'ında yok`);
+    // ADR-0058 AC1 (ETSI TS 119 411-8 GEN-6.6.1-07): etkin doğrulayıcının erişim sertifikası SAN'da iletişim bilgisi taşır
+    if (ENVIRONMENT !== "sandbox" && r.status === "ACTIVE" && !/(^|,\s*)(URI|email):/.test(san))
+      console.warn(
+        `[uyarı] ADR-0058 AC1: ${dns} erişim sertifikasının SAN'ında iletişim bilgisi yok (pki-issue --contact-uri ile yeniden verin)`,
+      );
     // ADR-0026 K3: kayıt sertifikası erişim sertifikasındaki kurum kimlik numarasına bağlanır (writeWrprcs denetler)
     orgIdByDns.set(dns, certOrgIdentifier(c.der));
     return {

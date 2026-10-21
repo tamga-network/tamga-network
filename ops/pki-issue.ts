@@ -14,10 +14,15 @@
  * Kurallar: yalnız P-256 / ES256; CSR imzası doğrulanır; 2 yıl (en çok 3); seri numarası rastgele; SKI + AKI (kökün SKI'si).
  * Kurum sertifikası (ADR-0050, ETSI TS 119 412-6): `--prod` ile `issuer-*` adında `--org-id` (ya da konu alanında 2.5.4.97) ZORUNLU —
  *   kayıt sertifikasının `sub`'ıyla aynı değer (TR-VKN → VATTR-<VKN>, TR-MERSIS → NTRTR-<MERSİS>); konu alanında O ve C bulunmalı.
- * Erişim sertifikası (ADR-0058 öneri, ETSI TS 119 411-8 §6.6.1): `--contact-uri <https://…>` kayıttaki destek adresini SAN'a
- *   `uniformResourceIdentifier` olarak yazar (GEN-6.6.1-07 iletişim bilgisi); `--service-id <kimlik>` hizmete bağlı sertifikada
- *   hizmet kimliğini `OU`'ya yazar (GEN-6.6.1-08, AB TS5 `serviceIdentifier`). İkisi de isteğe bağlı; `--prod` erişim
- *   sertifikasında `--contact-uri` yoksa uyarı (karar kabul edilince zorunlu).
+ * Erişim sertifikası (ADR-0058, ETSI TS 119 411-8 §6.6.1): `--contact-uri <https://…>` kayıttaki destek adresini SAN'a
+ *   `uniformResourceIdentifier` olarak yazar (GEN-6.6.1-07 iletişim bilgisi; `--prod` erişim sertifikasında ZORUNLU, AC1);
+ *   `--contact-email <adres>` kayıttaki kurumsal e-postayı `rfc822Name` olarak ekler (kişisel adres yazılmaz); `--service-id
+ *   <kimlik>` hizmete bağlı sertifikada hizmet kimliğini `OU`'ya yazar (GEN-6.6.1-08, AB TS5 `serviceIdentifier`).
+ * Aynı anahtarla yenileme (ADR-0034 yenileme sırası, ADR-0058): `--key <name.pkcs8.pem>` CSR yerine var olan özel anahtarı kullanır
+ *   (açık anahtar ondan; anahtar dosyası değişmez) ve `--replace` var olan `<name>.cert.pem`'i `_yedek-<tarih>/` altına taşıyıp
+ *   yenisini yazar; klasörde `pki.json` varsa o adın satırı (konu, parmak izi, bitiş) ve kimliği (`ids`) güncellenir.
+ *   ör. `--prod --name rp-verify --key <klasör>/rp-verify.pkcs8.pem --replace --subject "CN=Tamga Verify, O=…, C=TR" --dns
+ *   verify.tamga.network --org-id VATTR-… --contact-uri https://tamga.network --contact-email info@tamga.network`
  */
 import {
   X509CertificateGenerator,
@@ -32,10 +37,10 @@ import {
   X509Certificate,
 } from "@peculiar/x509";
 import { webcrypto, randomBytes } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { certFingerprintSha256Hex, pemToDer } from "@tamga-network/core";
+import { certFingerprintSha256Hex, computeIssuerId, computeRpId, pemToDer } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
@@ -76,8 +81,12 @@ const toPem = (label: string, der: Uint8Array) =>
 async function main() {
   const name = arg("name") ?? fail("--name gerekli (ör. issuer-yeni, rp-shop)");
   if (!/^(issuer|rp)-[a-z0-9-]{2,40}$/.test(name)) fail("--name: issuer-<ad> ya da rp-<ad> (küçük harf, rakam, tire)");
-  if (existsSync(resolve(PKI, `${name}.cert.pem`)))
-    fail(`zaten var: ${resolve(PKI, `${name}.cert.pem`)} (üzerine yazılmaz)`);
+  const REPLACE = process.argv.includes("--replace");
+  if (existsSync(resolve(PKI, `${name}.cert.pem`)) && !REPLACE)
+    fail(
+      `zaten var: ${resolve(PKI, `${name}.cert.pem`)} (üzerine yazılmaz; aynı anahtarla yenileme için --key + --replace)`,
+    );
+  if (REPLACE && !existsSync(resolve(PKI, `${name}.cert.pem`))) fail(`--replace: ${name}.cert.pem yok`);
   const yearsN = Number(arg("years") ?? 2);
   if (!(yearsN >= 1 && yearsN <= 3)) fail("--years 1–3");
   const dns = arg("dns");
@@ -93,11 +102,14 @@ async function main() {
     }
     if (!u || u.protocol !== "https:") fail("--contact-uri: https:// ile başlayan destek adresi olmalı");
   }
+  const contactEmail = arg("contact-email");
+  if (contactEmail !== undefined && !/^[A-Za-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(contactEmail))
+    fail("--contact-email: geçerli bir e-posta adresi olmalı (kurumsal; kişisel adres yazılmaz)");
   const serviceId = arg("service-id");
   if (serviceId !== undefined && !/^[A-Za-z0-9._:-]{1,64}$/.test(serviceId))
     fail("--service-id: harf, rakam, nokta, alt çizgi, iki nokta ya da tire (en çok 64)");
-  if ((contactUri !== undefined || serviceId !== undefined) && !name.startsWith("rp-"))
-    fail("--contact-uri / --service-id yalnız erişim sertifikasında (rp-*)");
+  if ((contactUri !== undefined || contactEmail !== undefined || serviceId !== undefined) && !name.startsWith("rp-"))
+    fail("--contact-uri / --contact-email / --service-id yalnız erişim sertifikasında (rp-*)");
 
   const root = new X509Certificate(readFileSync(resolve(PKI, "root-ca.cert.pem"), "utf8"));
   const rootKey = await crypto.subtle.importKey(
@@ -119,12 +131,21 @@ async function main() {
     if (alg.name !== "ECDSA" || alg.namedCurve !== "P-256") fail("yalnız P-256 (ES256) anahtar kabul edilir");
     publicKey = await csr.publicKey.export(ALG, ["verify"], crypto);
     subject = arg("subject") ?? csr.subject;
+  } else if (arg("key")) {
+    // aynı anahtarla yenileme: açık anahtar özel anahtardan (JWK x/y); özel anahtar dosyası okunur, değiştirilmez
+    subject = arg("subject") ?? fail('--key ile --subject gerekli (ör. "CN=Tamga Verify, O=…, C=TR")');
+    const sk = await crypto.subtle.importKey("pkcs8", pemBody(readFileSync(resolve(arg("key")!), "utf8")), ALG, true, [
+      "sign",
+    ]);
+    const { kty, crv, x, y } = await crypto.subtle.exportKey("jwk", sk);
+    publicKey = await crypto.subtle.importKey("jwk", { kty, crv, x, y }, ALG, true, ["verify"]);
   } else if (process.argv.includes("--generate")) {
     subject = arg("subject") ?? fail('--generate ile --subject gerekli (ör. "CN=Yeni, O=Yeni, C=TR")');
     const kp = (await crypto.subtle.generateKey(ALG, true, ["sign", "verify"])) as CryptoKeyPair;
     publicKey = kp.publicKey;
     privateKey = kp.privateKey;
-  } else return fail("--csr <dosya> ya da --generate gerekli");
+  } else return fail("--csr <dosya>, --key <özel anahtar> ya da --generate gerekli");
+  if (REPLACE && privateKey) fail("--replace yalnız aynı anahtarla (--key ya da --csr); yeni anahtar yeni ad ister");
 
   // ADR-0026 K3: kurum kimlik numarası (organizationIdentifier, EN 319 412-1) — kayıt sertifikasının `sub`'ıyla aynı
   const orgId = arg("org-id");
@@ -152,13 +173,14 @@ async function main() {
     if (!/2\.5\.4\.97=/.test(subject))
       fail("--prod erişim sertifikası (rp-*): --org-id VATTR-<VKN> ya da NTRTR-<MERSİS> zorunlu (ADR-0026 K3)");
     if (contactUri === undefined)
-      console.warn(
-        "[uyarı] erişim sertifikasında iletişim bilgisi yok: --contact-uri <kayıttaki support_uri> (ETSI TS 119 411-8 GEN-6.6.1-07; ADR-0058 öneri)",
+      fail(
+        "--prod erişim sertifikası (rp-*): --contact-uri <kayıttaki support_uri> zorunlu (ETSI TS 119 411-8 GEN-6.6.1-07; ADR-0058 AC1)",
       );
   }
   const san = [
     ...(dns ? [{ type: "dns" as const, value: dns }] : []),
     ...(contactUri !== undefined ? [{ type: "url" as const, value: contactUri }] : []),
+    ...(contactEmail !== undefined ? [{ type: "email" as const, value: contactEmail }] : []),
   ];
   const notBefore = new Date();
   const notAfter = new Date(notBefore);
@@ -182,7 +204,40 @@ async function main() {
       ...(san.length ? [new SubjectAlternativeNameExtension(san)] : []),
     ],
   });
-  writeFileSync(resolve(PKI, `${name}.cert.pem`), cert.toString("pem") + "\n");
+  const certFile = resolve(PKI, `${name}.cert.pem`);
+  if (REPLACE) {
+    // eski sertifika silinmez: tarihli yedek klasörüne (aynı gün ikinci yenilemede sıra numarası)
+    const day = new Date().toISOString().slice(0, 10);
+    let dir = resolve(PKI, `_yedek-${day}`);
+    for (let n = 2; existsSync(resolve(dir, `${name}.cert.pem`)); n++) dir = resolve(PKI, `_yedek-${day}-${n}`);
+    mkdirSync(dir, { recursive: true });
+    renameSync(certFile, resolve(dir, `${name}.cert.pem`));
+    if (existsSync(resolve(PKI, "pki.json")) && !existsSync(resolve(dir, "pki.json")))
+      copyFileSync(resolve(PKI, "pki.json"), resolve(dir, "pki.json"));
+    console.log(`eski sertifika yedekte: ${resolve(dir, `${name}.cert.pem`)}`);
+  }
+  writeFileSync(certFile, cert.toString("pem") + "\n");
+  // pki.json (varsa): bu adın satırı ve zincir formülüyle kimliği (gen-pki ile aynı adlandırma)
+  const pkiJson = resolve(PKI, "pki.json");
+  if (existsSync(pkiJson)) {
+    const j = JSON.parse(readFileSync(pkiJson, "utf8")) as Record<string, unknown> & { ids?: Record<string, string> };
+    const der = pemToDer(cert.toString("pem"));
+    j[name] = {
+      subject: new X509Certificate(cert.rawData).subject,
+      fingerprint_sha256: certFingerprintSha256Hex(der),
+      not_after: notAfter.toISOString(),
+      created_at: notBefore.toISOString(),
+    };
+    const state = String(arg("state") ?? "TR");
+    const id = name.startsWith("rp-") ? computeRpId(state, der) : computeIssuerId(state, der);
+    const sandboxIds = j.profile === "sandbox";
+    const key = sandboxIds
+      ? name
+      : `${name.startsWith("rp-") ? "rp" : "issuer"}_id_${name.replace(/^(rp|issuer)-/, "").replace(/-/g, "_")}`;
+    j.ids = { ...(j.ids ?? {}), [key]: id };
+    writeFileSync(pkiJson, JSON.stringify(j, null, 2) + "\n");
+    console.log(`pki.json güncellendi: ${name} · ids.${key} = ${id}`);
+  }
   if (privateKey)
     writeFileSync(
       resolve(PKI, `${name}.pkcs8.pem`),

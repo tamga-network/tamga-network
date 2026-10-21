@@ -42,12 +42,14 @@ describe("yanlış kullanım korumaları", () => {
       expect(isLocalUrl(u), u).toBe(false);
   });
 
-  it("takma ad: boş beklenen aud/nonce/rp kabul edilmez", async () => {
+  it("takma ad: boş beklenen aud/nonce/rp ve istemci kimliği biçimli site kabul edilmez", async () => {
     const trust = {} as TrustSource;
     for (const p of [
       { aud: "", nonce: "n", rpKey: "site.example" },
       { aud: "x509_hash:a", nonce: "", rpKey: "site.example" },
       { aud: "x509_hash:a", nonce: "n", rpKey: "" },
+      // ADR-0031 K2: beklenen site istemci kimliği olamaz (sertifika yenilenince değişir)
+      { aud: "x509_hash:a", nonce: "n", rpKey: "x509_hash:a" },
     ])
       expect(await verifyPseudonym({ walletStatusOf: "none", ...p, token: "x.y.z", trust })).toMatchObject({
         ok: false,

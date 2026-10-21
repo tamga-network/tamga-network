@@ -1,11 +1,23 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.7.0` is the current one (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.7.0` is the current one on npm, `0.7.1` is prepared (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
-## Unreleased
+## 0.7.1 — prepared 2026-10-21 (npm publication pending)
 
+- **Per-site pseudonym bound to the registered domain (ADR-0031 K2).** wallet-core `derivePseudonym` / `presentPseudonym` now
+  refuse a site key that is a client identifier (`x509_hash:…`, `x509_san_dns:…` or any other prefixed value): the site is the
+  relying party's registered `dns_name` from the trusted list, which wallets obtain with `stableRpKey` after `checkRp`. A
+  verifier's access certificate can be reissued (new `client_id`) without changing anyone's pseudonym on that site; a test covers
+  the whole path (signed request → registration → pseudonym) across a reissue with the same registration. `recordPseudonymUse`
+  refreshes the stored value on every use. verifier `verifyPseudonym` rejects an expected site in client-identifier form.
+- **ADR-0058 accepted (2026-10-21): access certificate profile (ETSI TS 119 411-8).** The network's verifier access certificates
+  (production and sandbox) were reissued with the same key: `CN` is the trade name, the SAN carries the registered domain name, the
+  support address and an organisational email. Their `client_id` changed, their registration (`dns_name`) and the pseudonyms at
+  those sites did not. `pki-issue`: `--contact-uri` is required for production access certificates, new `--contact-email`, and
+  `--key` + `--replace` for a same-key reissue. The publisher warns when an ACTIVE production verifier's certificate has no SAN
+  contact. The identity service certificate gets `organizationIdentifier` at the foundation handover (prepared, not done).
 - wallet-core: `ts8ReportAttachment(state, entry, lookup)` — the machine-readable attachment for a report to a data protection
   authority (EU TS8, RPT_DPA_04): the reported request's single record in the TS10 transaction log format (claim names, never
   values), with the same `transactionIdentifier` as in `ts10TransactionLog`.
@@ -13,8 +25,7 @@ published on npm as test releases; `0.7.0` is the current one (the API may chang
   writes a service identifier into `OU` (ETSI TS 119 411-8 §6.6.1; ADR-0058, proposed). Both optional; a production access
   certificate without `--contact-uri` gets a warning.
 - Wallet specification §5.4.1: item-by-item mapping of per-site pseudonyms to the EU pseudonym rules (ARF Topic 11, PA_01–PA_31),
-  with the open points and one known deviation (the pseudonym site key should be the registered `dns_name`, today it is
-  `client_id`). ADR-0058 (proposed): access certificate profile and the timing of the identity service certificate change.
+  with the open points. ADR-0058 (proposed): access certificate profile and the timing of the identity service certificate change.
 - Documentation in Azerbaijani: docs.tamga.network/az/ and arf.tamga.network/az/ (machine translation, awaiting a native
   speaker's review; every translated page carries a short notice). Generated pages (release notes, binding rules, packages,
   API reference) and the ARF change page are English only; their `/az/` addresses link to the English page.

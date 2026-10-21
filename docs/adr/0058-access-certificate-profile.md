@@ -1,7 +1,8 @@
 ---
 document_id: ADR-0058
 title: "Erişim sertifikası profili (ETSI TS 119 411-8) ve kimlik servisi sertifikasının geçiş zamanı"
-status: Proposed
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-10-21
 last_updated: 2026-10-21
@@ -12,7 +13,7 @@ summary: >
   (`serviceIdentifier`, AB TS5) `OU` alanındadır (GEN-6.6.1-08). Politika tanımlayıcısı ve CPS adresi (GEN-6.6.1-03/06)
   ağın sertifika uygulama beyanı yayımlanınca eklenir. Kimlik servisinin belge imza sertifikasına `organizationIdentifier`
   (ADR-0050 K3) bugün değil, ağın işletmesi vakfa devredilirken yeni anahtarla verilir; böylece kimlik belgeleri bir kez
-  yeniden alınır. Öneri — proje yönetimi onayı bekler.
+  yeniden alınır; devir bugünden betikli tek adım olarak hazırlanır. Kabul: 2026-10-21.
 domain: Identity
 related: ["[[ADR-0024]]", "[[ADR-0026]]", "[[ADR-0034]]", "[[ADR-0050]]", "[[SPEC-ID-0002]]"]
 ---
@@ -69,6 +70,11 @@ related: ["[[ADR-0024]]", "[[ADR-0026]]", "[[ADR-0034]]", "[[ADR-0050]]", "[[SPE
   verilir: yeni anahtar (`issuer-id-2` ve `-status`), vakfın kimlik numarası, yeni `issuer_id`; eski sertifika örtüşme süresince
   yalnız eski belgeleri doğrulamak için listede kalır ([[ADR-0050]] K3, [[SPEC-ID-0002]] §4).
 - O zamana kadar yayıncı uyarısı (ADR-0050 K4) sürer; kayıt sertifikası (WRPRC) üretimi etkilenmez.
+- **Hazırlık bugünden:** sertifika yalnız hukuken var olan bir tüzel kişiyi adlandırabildiği için kimlik servisi sertifikası vakıf
+  tüzel kişilik kazanınca değişir; ama devrin bütün adımları (geçici işletmecinin kimliğini taşıyan her kayıt ve sertifika, yeni
+  anahtar ve sertifikalar, listenin yeniden yayımı, cüzdan pinleri, yeniden alma duyurusu) bugünden yazılı ve betikli tutulur:
+  operatörün devir prosedürü ve hiçbir şeyi değiştirmeden planı yazdırıp girdileri denetleyen kuru prova aracı. Pilot öncesinde
+  gerçek kullanıcı olmadığından devirde belgelerin yeniden alınması kabul edilebilir bir maliyettir.
 - Daha önce yapılması gereken bir durum çıkarsa (anahtar sızıntısı, sertifika süresi, AB tarafının resmî isteği) geçiş aynı
   prosedürle o gün yapılır ve geçici işletmecinin numarası yazılır.
 
@@ -91,23 +97,17 @@ related: ["[[ADR-0024]]", "[[ADR-0026]]", "[[ADR-0034]]", "[[ADR-0050]]", "[[SPE
 
 # Uygulama
 
-- `ops/pki-issue.ts`: `--contact-uri <adres>` (SAN `uniformResourceIdentifier`) ve `--service-id <kimlik>` (`OU`). Bu karar
-  öneri iken `--prod` erişim sertifikasında `--contact-uri` yoksa uyarı verilir; kabulden sonra zorunlu olur (AC1).
-- Kabulden sonra: gerçek ve sandbox doğrulayıcılarının erişim sertifikaları **aynı anahtarla** yeniden verilir (`CN` ticari ad, SAN
-  destek adresi). Sertifika değiştiği için `client_id` (`x509_hash`) değişir; kayıt güncellenir, liste yayımlanır, dağıtılır.
-  Önce cüzdanın takma ad site anahtarı [[ADR-0031]] K2'ye göre `dns_name` olmalıdır (bugün `client_id`; [[SPEC-WALLET-0001]]
-  §5.4.1 sapma notu) — yoksa o sitelerdeki takma adlar değişir.
-- Liste yayıncısı (sonraki sürüm): erişim sertifikasında SAN iletişim bilgisi denetimi (AC1) ve `OU` ↔ kayıttaki hizmet kimliği
-  (AC2).
-- K5: vakıf devri iş listesine eklenir (operatörün prosedürü `ops/README.md`).
-
-# Kararı bekleyen sorular (proje yönetimi)
-
-1. K1–K3 (erişim sertifikası profili) ve kabulden sonra ağın doğrulayıcı sertifikalarının aynı anahtarla yeniden verilmesi.
-2. K4: AB politika tanımlayıcısının yazılmaması, ağın kendi tanımlayıcısının vakıfla gelmesi.
-3. K5: kimlik servisi sertifikasının vakıf devrinde değiştirilmesi.
+- `ops/pki-issue.ts`: `--contact-uri <adres>` (SAN `uniformResourceIdentifier`), `--contact-email <adres>` (SAN `rfc822Name`;
+  kurumsal adres) ve `--service-id <kimlik>` (`OU`). `--prod` erişim sertifikasında `--contact-uri` zorunludur (AC1). Aynı
+  anahtarla yenileme: `--key <özel anahtar dosyası>` ve `--replace` (eski sertifika yedek klasörüne alınır).
+- 2026-10-21: gerçek ve sandbox doğrulayıcılarının erişim sertifikaları **aynı anahtarla** yeniden verildi (`CN` ticari ad, SAN alan
+  adı + destek adresi + kurumsal e-posta). Sertifika değiştiği için `client_id` (`x509_hash`) değişti, kalıcı kayıt (`dns_name`)
+  değişmedi; liste yayımlandı. Takma ad site anahtarı [[ADR-0031]] K2'ye göre `dns_name`'dir ([[SPEC-WALLET-0001]] §5.4.1;
+  wallet-core 0.7.1 istemci kimliğiyle türetmeyi reddeder) — sitelerdeki takma adlar yenilemeden etkilenmedi (canlı denetimle).
+- Liste yayıncısı: gerçek ağda etkin (ACTIVE) doğrulayıcının erişim sertifikasında SAN iletişim bilgisi yoksa uyarı (AC1); `OU` ↔
+  kayıttaki hizmet kimliği denetimi (AC2) ilk hizmete bağlı sertifikayla eklenir.
+- K5: vakıf devri iş listesinde; operatörün devir prosedürü ve kuru prova aracı hazır.
 
 # Durum
 
-**Öneri — 2026-10-21.** Proje yönetimi onayını bekler. Araç desteği (`--contact-uri`, `--service-id`) hazırdır ve isteğe bağlıdır;
-mevcut sertifikalar değişmedi.
+**Accepted — 2026-10-21.** Proje yönetimi onayıyla (K1–K5 önerildiği gibi; K5'te devir bugünden hazırlanır). DECISIONS: D-REG-3.

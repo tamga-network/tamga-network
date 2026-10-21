@@ -23,10 +23,10 @@
     "not_after": "2028-10-03T09:26:26.000Z"
   },
   "rp-verify": {
-    "subject": "CN=verify.sandbox.tamga.network, O=Tamga Sandbox Dogrulama (TEST), 2.5.4.97=VATTR-0000000004, C=TR",
-    "fingerprint_sha256": "a4f2de55e2cb4e2ebe3dd1a3a9216b692450ea0f5ed3706d3e8cb1eebe541fa1",
-    "not_after": "2028-10-09T12:27:22.000Z",
-    "created_at": "2026-10-09T12:27:22.722Z"
+    "subject": "CN=Tamga Sandbox Verify (TEST), O=Tamga Sandbox Dogrulama (TEST), 2.5.4.97=VATTR-0000000004, C=TR",
+    "fingerprint_sha256": "ad3ed977e92976025af5d7ba4c094a63d21e4500660b0fa7e6abd1859cacbc64",
+    "not_after": "2028-10-21T14:50:10.000Z",
+    "created_at": "2026-10-21T14:50:10.572Z"
   },
   "issuer-id": {
     "subject": "CN=Tamga Sandbox Kimlik (TEST), OU=Identity, O=Tamga Network Sandbox, 2.5.4.97=VATTR-0000000002, C=TR",
@@ -99,7 +99,7 @@
     "tl-signer-1": "0xb02cf6392def2df946f246b8bb6bdfb6ab9f8aeb59e9b4c532736ed622ff7977",
     "wallet-provider": "0xb3a90464be7295eefd71c6e3dee0fe07692c434f48c55ae51e3f7207a04d90b9",
     "registrar-1": "0x0d7ff82bbf309ee9170650bebabde074525fc72afba9b177d1a8986b3196dbb2",
-    "rp-verify": "0xceee175c3a132e54fc296dd6c560ee4e95e018d8c31d7ebc5df2a19c42a7d99f",
+    "rp-verify": "0xf47e99105565b687dd100aad8c4f3aaab1831b12b37c92e3a0d41ba2aa764e1f",
     "issuer-id": "0xf880116803bef8a4482b20354f11119ec4cbc79ced19c0ce2b0df0029b023b0a",
     "issuer-id-status": "0x06cbc1c557a9de66ca63ab958cb928387ac0c86e8e404bc5521b951bdb6964d7",
     "issuer-id-review": "0xa6f8595d2f12643b51c660a45b071f24dd819e1504765edd4d5a1fff2fde78f5",

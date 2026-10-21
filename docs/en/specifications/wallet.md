@@ -325,7 +325,7 @@ Topic 11).
 | Seed | It verifies the `urn:tamga:id:PseudonymSeed:1` credential that comes with the identity credential (same signer as the identity credential, the key of copy 0) and puts the seed into secure storage (Keychain / Keystore; hardware-protected in the store build). The seed does not appear in the credential list and is never offered to a DCQL query (PS3). |
 | Request | A `format: "tamga-pseudonym"` query in DCQL (`meta.mode`: `single` / `multiple`). If there is no credential query, the request corresponds to a pseudonym-only sign-in (no credential). |
 | Consent screen | A "Your pseudonym for this site" card: new, or used before (the value is not shown). On a `multiple` site the user picks one of their existing pseudonyms or a new one. A pseudonym is given only to a site registered in the trust list. |
-| Derivation | After PIN/biometric approval: `k = HKDF-SHA256(seed, "tamga-pseudonym-v1\|" + site + "\|" + index)` → a P-256 key; pseudonym = the RFC 7638 thumbprint of the public key. Site = the permanent identity of the actual RP's registration (`dns_name`; with an intermediary, the actual RP; ADR-0017 K7) — `client_id` in today's code, see the §5.4.1 deviation note. The key exists only in memory and is wiped after signing. |
+| Derivation | After PIN/biometric approval: `k = HKDF-SHA256(seed, "tamga-pseudonym-v1\|" + site + "\|" + index)` → a P-256 key; pseudonym = the RFC 7638 thumbprint of the public key. Site = the permanent identity of the actual RP's registration (`dns_name`; with an intermediary, the actual RP; ADR-0017 K7); derivation from a client identifier (`x509_hash`) is refused (wallet-core 0.7.1). The key exists only in memory and is wiped after signing. |
 | Presentation | In the vp_token, under the id of the pseudonym query, a `tamga-pseudonym+jwt`: the public key in the header, in the body `aud` = client_id, `nonce`, `rp`, plus a fresh WIA and PoP for this transaction. |
 | My pseudonyms | Settings: site name, created / last used, a label the user gives (not sent to the site), delete. A deleted index is never derived again for that site; registering again opens a new index. Only the site name and the event are written to the log, never the pseudonym value. |
 
@@ -360,11 +360,14 @@ not exist yet). Tamga meets the same rules with a signed pseudonym token inside 
 | PA_31 the same pseudonyms in a new wallet | The seed is derived from the person's unchanging identity | ✅ |
 | DASH_03c log | Registration (`pseudonym_created`) and deletion are logged; the reason for a non-completed pseudonym transaction is not; pseudonym events are not in the TS10 export | 🟡 |
 
-**Known deviation (2026-10-21, to be fixed):** under [[ADR-0031]] K2 the site identity is the permanent identity of the RP
-registration, `dns_name`. wallet-core 0.7.0 today derives the pseudonym from the request's `client_id` (`x509_hash`, the digest of the
-access certificate). If a verifier's access certificate is renewed, the pseudonyms at that site change. Fix: the site key for
-pseudonyms and copy selection is the `dns_name` from the trusted list (for an intermediary, the actual RP's); no migration code in
-the development phase ([[ADR-0029]]). It is done before access certificates are renewed ([[ADR-0058]]).
+**Site key (2026-10-21 review, wallet-core 0.7.1):** under [[ADR-0031]] K2 the site identity is the permanent identity of the RP
+registration, `dns_name`. The wallet obtains it with `stableRpKey` after the `checkRp` approval (registration found, access
+certificate equal to the registered one; with an intermediary, the actual RP's, when both registrations state the relationship).
+When a verifier's access certificate is reissued for the same registration, `client_id` changes and the pseudonym does not — an
+end-to-end test proves it. Since 0.7.1, derivation from a client identifier (`x509_hash:…` or any other prefixed value) is refused
+(by the wallet and by the verifier). Local records keyed the old way on a device are moved once to the domain, or dropped, by the
+app; no migration code ([[ADR-0029]]). A site "not recognising" an account is the site's own record, not a pseudonym change: the
+sample site keeps accounts in memory and the sandbox is reset every night.
 
 ---
 

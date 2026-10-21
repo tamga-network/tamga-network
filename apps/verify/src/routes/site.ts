@@ -232,7 +232,11 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     const isNew = !acc;
     if (!acc) {
       if (!SIGNUP_POLICIES.has(p.policy.policy_id))
-        return reply.code(404).send({ ok: false, reason: "hesap yok — önce kaydolun" });
+        return reply.code(404).send({
+          ok: false,
+          reason:
+            "hesap yok — önce kaydolun (örnek sitenin hesapları bellekte tutulur; servis yeniden başlayınca ve sandbox her gece sıfırlanınca silinir — takma adınız aynıdır)",
+        });
       acc = {
         key,
         userId: randomBytes(16).toString("base64url"),

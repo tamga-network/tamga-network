@@ -341,7 +341,7 @@ Topic 11).
 | Tohum | Kimlik belgesiyle birlikte gelen `urn:tamga:id:PseudonymSeed:1` belgesini doğrular (kimlik belgesiyle aynı imzacı, kopya 0'ın anahtarı) ve tohumu güvenli depoya koyar (Keychain / Keystore; mağaza derlemesinde donanım korumalı). Tohum belge listesinde görünmez, hiçbir DCQL sorgusuna önerilmez (PS3). |
 | İstek | DCQL'de `format: "tamga-pseudonym"` sorgusu (`meta.mode`: `single` / `multiple`). Belge sorgusu yoksa istek yalnız takma adla girişe (belgesiz) karşılık gelir. |
 | Onay ekranı | "Bu siteye özel takma adın" kartı: yeni mi, daha önce kullanılan mı (değer gösterilmez). `multiple` sitede kullanıcı mevcut takma adlarından birini ya da yenisini seçer. Takma ad yalnız güven listesinde kayıtlı siteye verilir. |
-| Türetme | PIN/biyometri onayından sonra: `k = HKDF-SHA256(tohum, "tamga-pseudonym-v1\|" + site + "\|" + sıra)` → P-256 anahtar; takma ad = açık anahtarın RFC 7638 parmak izi. Site = asıl RP'nin kayıtlı kalıcı kimliği (`dns_name`; aracıda asıl RP; ADR-0017 K7) — bugünkü kodda `client_id`, §5.4.1 sapma notu. Anahtar yalnız bellekte, imzadan sonra silinir. |
+| Türetme | PIN/biyometri onayından sonra: `k = HKDF-SHA256(tohum, "tamga-pseudonym-v1\|" + site + "\|" + sıra)` → P-256 anahtar; takma ad = açık anahtarın RFC 7638 parmak izi. Site = asıl RP'nin kayıtlı kalıcı kimliği (`dns_name`; aracıda asıl RP; ADR-0017 K7); istemci kimliğiyle (`x509_hash`) türetme reddedilir (wallet-core 0.7.1). Anahtar yalnız bellekte, imzadan sonra silinir. |
 | Sunum | vp_token'da takma ad sorgusunun id'siyle `tamga-pseudonym+jwt`: başlıkta açık anahtar, gövdede `aud` = client_id, `nonce`, `rp`, bu işlem için yeni WIA ve PoP. |
 | Takma adlarım | Ayarlar: site adı, oluşturulma / son kullanım, kullanıcının verdiği ad (siteye gitmez), sil. Silinen sıra o sitede bir daha türetilmez; yeniden kayıt yeni sıra açar. Günlüğe yalnız site adı ve olay yazılır, takma ad değeri yazılmaz. |
 
@@ -376,11 +376,13 @@ henüz yok). Tamga aynı kuralları OpenID4VP içinde imzalı takma ad belirteci
 | PA_31 yeni cüzdanda aynı takma adlar | Tohum kişinin değişmeyen kimliğinden türer | ✅ |
 | DASH_03c günlük | Kayıt (`pseudonym_created`) ve silme günlükte; tamamlanmayan takma ad işleminin nedeni yazılmıyor; TS10 dışa aktarmada takma ad olayı yok | 🟡 |
 
-**Bilinen sapma (2026-10-21, düzeltilecek):** [[ADR-0031]] K2'ye göre site kimliği RP kaydının kalıcı kimliği `dns_name`'dir.
-wallet-core 0.7.0 takma adı bugün isteğin `client_id`'sinden (`x509_hash`, erişim sertifikasının özeti) türetir. Doğrulayıcının erişim
-sertifikası yenilenirse o sitedeki takma adlar değişir. Düzeltme: takma ad ve kopya seçiminde site anahtarı güven listesindeki
-`dns_name` (aracıda asıl RP'ninki); geliştirme evresinde geçiş kodu yazılmaz ([[ADR-0029]]). Erişim sertifikaları yenilenmeden önce
-yapılır ([[ADR-0058]]).
+**Site anahtarı (2026-10-21 denetimi, wallet-core 0.7.1):** [[ADR-0031]] K2'ye göre site kimliği RP kaydının kalıcı kimliği
+`dns_name`'dir. Cüzdan onu `checkRp` onayından sonra `stableRpKey` ile alır (kayıt bulunmuş, erişim sertifikası kayıttakiyle aynı;
+aracıda iki kayıtta yazılı ilişkiyle asıl RP'ninki). Doğrulayıcının erişim sertifikası aynı kayıtla yenilenince `client_id` değişir,
+takma ad değişmez — bunu uçtan uca bir test kanıtlar. 0.7.1'den beri istemci kimliğiyle (`x509_hash:…` ya da önekli başka bir
+değer) türetme reddedilir (cüzdan da doğrulayıcı da). Cihazda eski biçimde anahtarlanmış yerel kayıtlar uygulama tarafında bir kez
+alan adına taşınır ya da silinir; geçiş kodu yazılmaz ([[ADR-0029]]). Bir sitenin hesabı "tanımaması" takma ad değişimi değil,
+sitenin kendi kaydıdır: örnek sitenin hesapları bellekte tutulur ve sandbox her gece sıfırlanır.
 
 ---
 

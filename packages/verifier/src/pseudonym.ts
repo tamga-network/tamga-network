@@ -38,7 +38,7 @@ export async function verifyPseudonym(p: {
   nonce: string;
   /**
    * beklenen site: asıl RP kaydının kalıcı alan adı (`dns_name`, ADR-0034; aracıda `tamga_on_behalf_of` ile gösterilen RP'nin);
-   * kayıt çözülemezse cüzdan `client_id`'yi kullanır (wallet-core `stableRpKey`).
+   * istemci kimliği (`x509_hash:…`) kabul edilmez — cüzdan da onunla takma ad türetmez (ADR-0031 K2; wallet-core `stableRpKey`).
    */
   rpKey: string;
   trust: TrustSource;
@@ -54,6 +54,9 @@ export async function verifyPseudonym(p: {
   try {
     if (![p.aud, p.nonce, p.rpKey].every((v) => typeof v === "string" && v.length > 0))
       return { ok: false, reason: "expected aud/nonce/rp missing" };
+    // ADR-0031 K2: site kimliği kayıttaki alan adıdır; istemci kimliği (`x509_hash:…`) sertifika yenilenince değişir
+    if (/^[a-z0-9_.-]+:/i.test(p.rpKey))
+      return { ok: false, reason: "expected site must be the registered domain (dns_name), not a client_id" };
     const h = decodeProtectedHeader(p.token);
     const jwk = h.jwk as JWK | undefined;
     if (h.typ !== PSEUDONYM_TYP || h.alg !== "ES256") return { ok: false, reason: "pseudonym header (typ/alg)" };

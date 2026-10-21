@@ -150,7 +150,7 @@ export interface VerifyOutput {
 } // claims: AP3 — ayrı kanal
 
 export const SPEC_VERSION = "SPEC-API-0001@1.0.0"; // spec sürüm notuyla birlikte güncellenir
-export const SDK_VERSION = "@tamga-network/verifier@0.7.0"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
+export const SDK_VERSION = "@tamga-network/verifier@0.7.1"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
 
 /**
  * Evet/hayır sonucunun güvenli okunuşu (ADR-0056): doğrulama KABUL edildiyse ve açıklanan değer tam olarak `true` ise `true`

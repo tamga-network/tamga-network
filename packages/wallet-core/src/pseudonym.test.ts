@@ -32,8 +32,8 @@ import {
 } from "./index.js";
 
 const SEED = b64u(new Uint8Array(32).fill(7));
-const SITE_A = "x509_san_dns:a.example";
-const SITE_B = "x509_san_dns:b.example";
+const SITE_A = "a.example";
+const SITE_B = "b.example";
 
 describe("ADR-0031 türetme", () => {
   it("aynı tohum + site + sıra → aynı takma ad; başka site ya da sıra → farklı; takma ad = RFC 7638 parmak izi", () => {
