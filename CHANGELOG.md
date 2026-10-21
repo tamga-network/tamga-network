@@ -10,6 +10,16 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
   `client_attestation_pop_signing_alg_values_supported` (`["ES256"]`), which draft-ietf-oauth-attestation-based-client-auth-07
   §10.1 requires whenever `token_endpoint_auth_methods_supported` includes `attest_jwt_client_auth` (OpenID conformance
   self-test, issuer metadata check).
+- issuer: **DPoP binding at PAR (RFC 9449 §10).** `createPar` takes `dpopJkt` (the `dpop_jkt` form parameter) and
+  `dpopProofJkt` (the key of a verified DPoP proof on the PAR request); if both are present they must match
+  (`invalid_dpop_proof`). The bound key is kept on the PAR record (`ParRequest.dpopJkt`) and `redeemCode({ dpopJkt })` refuses a
+  token request signed with another DPoP key (`invalid_grant`).
+- issuer: new `checkParParams` — a PAR body with a repeated parameter or a `request_uri` is refused (`invalid_request`, RFC 9126
+  §2.1), and only `response_type=code` is accepted (`unsupported_response_type`, FAPI 2.0). A `plain` PKCE method now answers
+  `invalid_request` (RFC 7636 §4.4.1) instead of the non-standard `unsupported_code_challenge`.
+- issuer: new `unlinkableTimeClaims(now, exp, { acceptableAt })` and `certsValidAt` — credential `iat`/`exp` (and mdoc validity)
+  rounded down to the hour so copies and verifiers cannot correlate them by the issuance instant (RFC 9901 §10.1); `iat` stays
+  exact only when the rounded instant would precede the signing certificate or the issuer's listing.
 
 ## 0.7.1 — 2026-10-21
 

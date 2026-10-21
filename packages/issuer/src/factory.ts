@@ -19,7 +19,7 @@ const addFormats =
   (_addFormats as unknown as { default?: (a: AjvLike) => void }).default ??
   (_addFormats as unknown as (a: AjvLike) => void);
 import type { JWK } from "jose";
-import { createHash } from "node:crypto";
+import { createHash, X509Certificate } from "node:crypto";
 import { issueSdJwtVc, type IssuerSigner, type SdPolicy } from "@tamga-network/sd-jwt";
 import { ALL as SCHEMA_DEFS, type SchemaDef } from "@tamga-network/schemas";
 
@@ -48,6 +48,35 @@ export function arrayElementSdOf(def: SchemaDef): string[] {
   return claimsOf(def)
     .filter((c) => c.path.length === 2 && typeof c.path[0] === "string" && c.path[1] === null && c.sd !== "never")
     .map((c) => c.path[0] as string);
+}
+
+/**
+ * Bağlanamaz zaman alanları (RFC 9901 §10.1; AB ARF bağlanamazlık): belgenin `iat`/`exp`'i (mdoc `signed`/`validFrom`/
+ * `validUntil`) verme anını saniyesiyle taşımaz — saat başına AŞAĞI yuvarlanır. `iat` geleceğe kaymaz; `exp` istenen/sınırlanan
+ * bitişi geçmez (ISSU_12c bakım süresi sınırı korunur). Yuvarlanmış bitiş `now`'u geçmiyorsa (bir saatten kısa ömür) `exp`
+ * olduğu gibi kalır. Aynı paketteki bütün kopyalar aynı değerleri alır.
+ * `acceptableAt` verilirse ve yuvarlanmış `iat` anında belge doğrulanamayacaksa (imza sertifikası ya da kurumun listedeki
+ * yetkisi o saatten sonra başladıysa — A3 / C1) `iat = now` kalır: doğrulanabilirlik bağlanamazlıktan önce gelir.
+ */
+export const TIME_CLAIM_GRANULARITY_SEC = 3600;
+export function unlinkableTimeClaims(
+  now: number,
+  exp?: number,
+  opts: { acceptableAt?: (t: number) => boolean } = {},
+): { iat: number; exp?: number } {
+  const g = TIME_CLAIM_GRANULARITY_SEC;
+  const rounded = now - (now % g);
+  const iat = !opts.acceptableAt || opts.acceptableAt(rounded) ? rounded : now;
+  if (exp === undefined) return { iat };
+  const e = exp - (exp % g);
+  return { iat, exp: e > now ? e : exp };
+}
+/** Sertifika zincirinin (DER; yaprak + ara) her öğesi `t` anında (Unix saniyesi) geçerli mi — `unlinkableTimeClaims` için. */
+export function certsValidAt(ders: readonly Uint8Array[], t: number): boolean {
+  return ders.every((d) => {
+    const c = new X509Certificate(Buffer.from(d));
+    return Date.parse(c.validFrom) / 1000 <= t && t <= Date.parse(c.validTo) / 1000;
+  });
 }
 
 export interface BuildInput {

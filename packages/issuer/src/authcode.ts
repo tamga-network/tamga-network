@@ -36,6 +36,11 @@ export interface ParRequest {
   walletAttestation?: { solution_id: string; key_storage: string };
   /** ADR-0020: kimliğe bağlı teklifin kimliği (OpenID4VCI issuer_state) */
   issuerState?: string;
+  /**
+   * RFC 9449 §10: yetki kodunun bağlandığı DPoP anahtarının parmak izi (RFC 7638) — PAR'daki `dpop_jkt` ya da PAR'ın DPoP
+   * kanıtının anahtarı. Varsa token isteğinin DPoP anahtarı bununla aynı olmalıdır.
+   */
+  dpopJkt?: string;
   ext?: Record<string, string>; // sunucuya özel (ör. IDV oturum kimliği, VP presentation id) — kişisel veri yok
 }
 
@@ -55,6 +60,10 @@ export interface ParInput {
   walletAttestation?: ParRequest["walletAttestation"];
   /** ADR-0020: teklifteki issuer_state (kimliğe bağlı teklif) */
   issuerState?: string;
+  /** RFC 9449 §10: PAR gövdesindeki `dpop_jkt` parametresi (doğrulanmamış dize) */
+  dpopJkt?: string;
+  /** RFC 9449 §10: PAR isteğinin DPoP başlığı doğrulandıysa kanıtın anahtar parmak izi (çağıran doğrular) */
+  dpopProofJkt?: string;
   /**
    * ZORUNLU (ADR-0056 K2): izinli dönüş adresleri (RFC 9126 §2.4 / RFC 9700 §4.1: tam dize eşleşmesi). Dizi ya da istemciye göre
    * (`clientId` → liste) işlev; `redirectUri` listede olmalıdır. İşlev `null`/`undefined` dönerse (istemcinin kaydı yok) ya da
@@ -64,7 +73,28 @@ export interface ParInput {
    */
   allowedRedirectUris: readonly string[] | ((clientId: string) => readonly string[] | null | undefined);
 }
-export type ParError = "invalid_request" | "invalid_redirect_uri" | "unsupported_code_challenge";
+export type ParError = "invalid_request" | "invalid_redirect_uri" | "invalid_dpop_proof";
+
+/**
+ * PAR gövdesinin biçim denetimi (`createPar`'dan önce; ham form alanlarıyla): aynı parametre iki kez (RFC 9126 §2.1, RFC 6749
+ * §3.1) → `invalid_request`; gövdede `request_uri` (RFC 9126 §2.1: PAR isteği request_uri taşıyamaz) → `invalid_request`;
+ * `response_type` yalnız `code` (FAPI 2.0 SP §5.3.2.2; OpenID4VCI yetki kodu akışı) → `unsupported_response_type`.
+ */
+export function checkParParams(
+  body: Record<string, unknown> | undefined,
+): { error: "invalid_request" | "unsupported_response_type"; description: string } | null {
+  const b = body ?? {};
+  const dup = Object.keys(b).find((k) => Array.isArray(b[k]));
+  if (dup) return { error: "invalid_request", description: `parameter ${dup} is included more than once` };
+  if (b.request_uri !== undefined)
+    return {
+      error: "invalid_request",
+      description: "request_uri must not be sent to the PAR endpoint (RFC 9126 §2.1)",
+    };
+  if (b.response_type !== "code")
+    return { error: "unsupported_response_type", description: "only response_type=code is supported" };
+  return null;
+}
 
 /** PAR isteğini doğrular ve kaydı üretir (çağıran saklar). */
 export function createPar(
@@ -74,7 +104,7 @@ export function createPar(
   if (!i.codeChallenge || !/^[A-Za-z0-9_-]{43,128}$/.test(i.codeChallenge))
     return { ok: false, error: "invalid_request", description: "code_challenge missing or malformed" };
   if ((i.codeChallengeMethod ?? "S256") !== "S256")
-    return { ok: false, error: "unsupported_code_challenge", description: "only S256 is supported" };
+    return { ok: false, error: "invalid_request", description: "only S256 is supported" }; // RFC 7636 §4.4.1
   if (!i.redirectUri || !/^[a-z][a-z0-9+.-]*:\/\//i.test(i.redirectUri))
     return { ok: false, error: "invalid_redirect_uri", description: "redirect_uri must be of the form scheme://…" };
   // Tarayıcıda kod çalıştırabilen şemalar dönüş adresi olamaz (bağlantı olarak gösterilirse XSS)
@@ -85,6 +115,16 @@ export function createPar(
     return { ok: false, error: "invalid_redirect_uri", description: "no redirect_uri is registered for this client" };
   if (!allow.includes(i.redirectUri))
     return { ok: false, error: "invalid_redirect_uri", description: "redirect_uri is not registered for this client" };
+  // RFC 9449 §10: dpop_jkt ile PAR'ın DPoP kanıtı birlikte gelirse aynı anahtarı göstermeli
+  if (i.dpopJkt !== undefined && (typeof i.dpopJkt !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(i.dpopJkt)))
+    return { ok: false, error: "invalid_request", description: "dpop_jkt is malformed (RFC 7638 SHA-256 thumbprint)" };
+  if (i.dpopJkt && i.dpopProofJkt && i.dpopJkt !== i.dpopProofJkt)
+    return {
+      ok: false,
+      error: "invalid_dpop_proof",
+      description: "dpop_jkt does not match the DPoP proof key (RFC 9449 §10)",
+    };
+  const dpopJkt = i.dpopJkt ?? i.dpopProofJkt;
   const ad = Array.isArray(i.authorizationDetails)
     ? (i.authorizationDetails as Array<{ type?: string; credential_configuration_id?: string }>)
     : undefined;
@@ -118,6 +158,7 @@ export function createPar(
       ...(typeof i.issuerState === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(i.issuerState)
         ? { issuerState: i.issuerState }
         : {}),
+      ...(dpopJkt ? { dpopJkt } : {}),
     },
   };
 }
@@ -154,7 +195,15 @@ export type CodeError = "invalid_grant" | "invalid_request";
  */
 export function redeemCode(
   par: ParRequest | undefined,
-  p: { code: string; codeVerifier?: string; redirectUri?: string; clientId: string; now?: EpochSeconds },
+  p: {
+    code: string;
+    codeVerifier?: string;
+    redirectUri?: string;
+    clientId: string;
+    now?: EpochSeconds;
+    /** token isteğinin doğrulanmış DPoP anahtar parmak izi (RFC 9449 §10: PAR'da bağlandıysa aynı olmalı) */
+    dpopJkt?: string;
+  },
 ): { ok: true; accessToken: string; expiresIn: number } | { ok: false; error: CodeError; description: string } {
   const now = secondsOrNow(p.now);
   // yalnız verilmiş bir kod eşleşir: kodu henüz basılmamış PAR, boş/eksik kodlu istekle bulunamaz
@@ -167,6 +216,12 @@ export function redeemCode(
     return { ok: false, error: "invalid_grant", description: "redirect_uri missing or does not match the PAR" };
   if (!p.clientId || p.clientId !== par.clientId)
     return { ok: false, error: "invalid_grant", description: "client (WUA) does not match the PAR" };
+  if (par.dpopJkt && p.dpopJkt !== par.dpopJkt)
+    return {
+      ok: false,
+      error: "invalid_grant",
+      description: "DPoP key does not match the key bound at PAR (RFC 9449 §10)",
+    };
   if (!p.codeVerifier) return { ok: false, error: "invalid_request", description: "code_verifier required (PKCE)" };
   const challenge = createHash("sha256").update(p.codeVerifier, "ascii").digest("base64url");
   if (challenge !== par.codeChallenge) {

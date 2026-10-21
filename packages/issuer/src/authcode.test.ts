@@ -1,7 +1,7 @@
 /** SPEC-PROTO-0001 §12 — PAR + PKCE + tek kullanımlık code (cüzdan-başlatmalı ihraç). */
 import { describe, it, expect } from "vitest";
 import { createHash } from "node:crypto";
-import { callbackUrl, createPar, errorCallbackUrl, mintCode, redeemCode } from "./authcode.js";
+import { callbackUrl, checkParParams, createPar, errorCallbackUrl, mintCode, redeemCode } from "./authcode.js";
 import { epochSeconds } from "@tamga-network/core";
 
 const verifier = "v".repeat(43);
@@ -18,6 +18,45 @@ const base = {
 };
 
 describe("authcode", () => {
+  it("checkParParams: yinelenen parametre, gövdede request_uri, code dışı response_type reddedilir (FAPI 2.0 / RFC 9126)", () => {
+    expect(checkParParams({ response_type: "code", state: "s" })).toBeNull();
+    expect(checkParParams({ response_type: "code", state: ["a", "b"] })).toMatchObject({ error: "invalid_request" });
+    expect(checkParParams({ response_type: "code", request_uri: "urn:x" })).toMatchObject({ error: "invalid_request" });
+    for (const rt of ["code id_token", "token", undefined])
+      expect(checkParParams({ response_type: rt })).toMatchObject({ error: "unsupported_response_type" });
+  });
+  it("plain PKCE → invalid_request (RFC 7636 §4.4.1)", () => {
+    expect(createPar({ ...base, codeChallengeMethod: "plain" })).toMatchObject({ ok: false, error: "invalid_request" });
+  });
+  it("RFC 9449 §10: dpop_jkt ile PAR DPoP kanıtı farklıysa ret; bağlanan anahtar token isteğinde zorunlu", () => {
+    const A = "A".repeat(43);
+    const B = "B".repeat(43);
+    expect(createPar({ ...base, dpopJkt: A, dpopProofJkt: B })).toMatchObject({
+      ok: false,
+      error: "invalid_dpop_proof",
+    });
+    expect(createPar({ ...base, dpopJkt: "kısa" })).toMatchObject({ ok: false, error: "invalid_request" });
+    for (const inp of [{ dpopJkt: A }, { dpopProofJkt: A }, { dpopJkt: A, dpopProofJkt: A }]) {
+      const r = createPar({ ...base, ...inp });
+      if (!r.ok) throw new Error("par");
+      expect(r.par.dpopJkt).toBe(A);
+      const code = mintCode(r.par, "subj", "T2", 1000);
+      const req = {
+        code,
+        codeVerifier: verifier,
+        clientId: "wua-sub",
+        redirectUri: base.redirectUri,
+        now: epochSeconds(1001),
+      };
+      expect(redeemCode(r.par, { ...req, dpopJkt: B })).toMatchObject({ ok: false, error: "invalid_grant" });
+      expect(redeemCode(r.par, { ...req })).toMatchObject({ ok: false, error: "invalid_grant" });
+      expect(redeemCode(r.par, { ...req, dpopJkt: A }).ok).toBe(true);
+    }
+    // PAR'da DPoP yoksa token anahtarı serbest (ilk bağlama token ucunda)
+    const r = createPar(base);
+    if (!r.ok) throw new Error("par");
+    expect(r.par.dpopJkt).toBeUndefined();
+  });
   it("tehlikeli redirect_uri şemaları reddedilir (XSS)", () => {
     for (const u of ["javascript://x/%0aalert(1)", "data://text/html,x", "vbscript://x", "file:///etc"]) {
       const r = createPar({ ...base, redirectUri: u });
