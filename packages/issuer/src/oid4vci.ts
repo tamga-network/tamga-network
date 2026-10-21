@@ -292,6 +292,10 @@ export function authServerMetadata(
     grant_types_supported: [PRE_AUTH_GRANT, ...(opts.refreshToken ? ["refresh_token"] : [])],
     "pre-authorized_grant_anonymous_access_supported": true,
     token_endpoint_auth_methods_supported: ["none", "attest_jwt_client_auth"],
+    // draft-ietf-oauth-attestation-based-client-auth-07 §10.1: attest_jwt_client_auth ilan edilince ikisi de ZORUNLU
+    // (istemci kanıtı = WIA/WUA ve PoP'u yalnız ES256 ile doğrulanır)
+    client_attestation_signing_alg_values_supported: ["ES256"],
+    client_attestation_pop_signing_alg_values_supported: ["ES256"],
     dpop_signing_alg_values_supported: ["ES256"], // RFC 9449; belirteç DPoP'a bağlı (HAIP)
   };
   if (!opts.authorizationCode) return base;

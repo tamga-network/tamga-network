@@ -4,6 +4,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.7.1` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
+## 0.7.2 — unreleased
+
+- issuer: `authServerMetadata` now publishes `client_attestation_signing_alg_values_supported` and
+  `client_attestation_pop_signing_alg_values_supported` (`["ES256"]`), which draft-ietf-oauth-attestation-based-client-auth-07
+  §10.1 requires whenever `token_endpoint_auth_methods_supported` includes `attest_jwt_client_auth` (OpenID conformance
+  self-test, issuer metadata check).
+
 ## 0.7.1 — 2026-10-21
 
 - **Wallet side of ISO/IEC 18013-7 Annex C (`org-iso-mdoc`) in wallet-core.** `parseDcApiRequest` now also accepts the
