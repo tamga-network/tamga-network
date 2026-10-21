@@ -6,6 +6,25 @@ published on npm as test releases; `0.7.0` is the current one on npm, `0.7.1` is
 
 ## 0.7.1 — prepared 2026-10-21 (npm publication pending)
 
+- **Wallet side of ISO/IEC 18013-7 Annex C (`org-iso-mdoc`) in wallet-core.** `parseDcApiRequest` now also accepts the
+  browser's `org-iso-mdoc` request (`parseDcApiMdocRequest`): it parses `DeviceRequest` + `EncryptionInfo`, builds the
+  SessionTranscript with the `dcapi` handover for the calling origin, and requires reader authentication (`readerAuth`) valid for
+  that transcript — an unsigned request, or one signed for another origin, is refused (PV6). The reader certificate becomes the
+  request's `x509_hash` client identifier, so the request goes through the same `matchDcql` → `checkRp` (approval, ADR-0056 K8)
+  → registration certificate → disclosure policy path as OpenID4VP. The registration certificate travels in
+  `requestInfo.euWrprc` (CBOR, `rc-wrp+cwt`) and is bound to the reader certificate (`checkRegistrationCerts`; new
+  `hasRegistrationCert`; ADR-0056 K10 still refuses a request without one). `respond` answers with the selectively disclosed,
+  device-signed `DeviceResponse`, HPKE-encrypted to the verifier (`dcApiResponse`, no POST). One document and one namespace per
+  request (Tamga profile). mdoc: `DeviceRequest` version `1.1` is read as well.
+- verifier: the Annex C request carries the relying party's registration certificate (`createMdocDcApiRequest({ registrationCwt })`;
+  the reference verifier reads the publisher's `.cwt` next to the JWT). Interop tests: wallet-core ↔ verifier for both browser
+  protocols, origin binding and single use.
+- Reference verifier: **Digital Credentials API test page** `/dc-api-test` (sandbox only; the real network redirects to
+  verify.sandbox.tamga.network/dc-api-test). It calls `navigator.credentials.get` with `openid4vp-v1-signed`, `org-iso-mdoc` or
+  both, forwards the encrypted answer to the verifier and shows the outcome, the checks, the trace and (sandbox sample data only)
+  the disclosed values; the page's server opens the request with an RP assertion like any relying party. A browser without the API
+  gets a "not supported in this browser" message. `/sample-site/start` accepts `dc_api_origin` (only the site's own origin) and
+  returns the DC API requests, so the sample site's "Share from this device" button works.
 - **Per-site pseudonym bound to the registered domain (ADR-0031 K2).** wallet-core `derivePseudonym` / `presentPseudonym` now
   refuse a site key that is a client identifier (`x509_hash:…`, `x509_san_dns:…` or any other prefixed value): the site is the
   relying party's registered `dns_name` from the trusted list, which wallets obtain with `stableRpKey` after `checkRp`. A

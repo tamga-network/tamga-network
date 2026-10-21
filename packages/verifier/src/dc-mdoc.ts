@@ -56,10 +56,18 @@ export function createMdocDcApiRequest(p: {
   policy: Policy;
   origin: string;
   readerAuth?: { sk: Uint8Array; x5chain: Uint8Array[] };
+  /**
+   * ADR-0026 K5 / ADR-0056 K10: kayıt sertifikasının CBOR biçimi (`rc-wrp+cwt`) → `requestInfo.euWrprc`. Cüzdanlar sertifikasız
+   * isteği reddeder; sertifika okuyucu imzasının sertifikasına (organizationIdentifier) bağlıdır.
+   */
+  registrationCwt?: Uint8Array;
 }): MdocDcApiRequest | null {
   const it = mdocItemsFromPolicy(p.policy);
   if (!it) return null;
-  const r = createAnnexCRequest({ items: it.items, origin: p.origin, readerAuth: p.readerAuth });
+  const items = p.registrationCwt
+    ? it.items.map((x) => ({ ...x, requestInfo: { ...x.requestInfo, euWrprc: p.registrationCwt } }))
+    : it.items;
+  const r = createAnnexCRequest({ items, origin: p.origin, readerAuth: p.readerAuth });
   return {
     dcApiRequest: { protocol: ORG_ISO_MDOC, data: r.data },
     recipientPrivateKey: r.recipientPrivateKey,

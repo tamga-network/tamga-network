@@ -4,7 +4,7 @@ title: "Sandbox: test şəbəkəsi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-10-21
 summary: >
   Real şəbəkədən ayrı olan test şəbəkəsi sandbox.tamga.network ilə başdan-sona sınaq: ünvanlar, etibar lövbərinin sabitlənməsi, rəqəmsal cüzdanın sandbox-a qoşulması, cüzdan tərtibatçısı kimi öz cüzdan provayderinizin sandbox siyahısında qeydiyyata alınması, nümunə şəxslərlə rəqəmsal sənəd alınması, nümunə yoxlayan tərəflərdə təqdim edilməsi, ləğv və dayandırma vəziyyətlərinin sınanması, qurumunuzun test qurumu kimi sınanması, real şəxsiyyətinizlə şəxsiyyətin təsdiqi addımları, qaydalar və sıfırlama.
 translation_of: GUIDE-0013
@@ -185,6 +185,15 @@ səhifədə görünür.
 Öz yoxlayan tərəfinizi sınamaq üçün: yoxlayan tərəfinizi sandbox siyahısına və sandbox pinlərinə bağlayın, sandbox-da alınmış
 rəqəmsal sənədləri təqdim edin. Qurumunuzu sandbox-da özünüz aça bilərsiniz (§9); cüzdan provayderinizi isə bu gün layihə rəhbərliyinə müraciət edərək qeydiyyatdan keçirirsiniz
 (§2). Yoxlayan tərəfin və cüzdan provayderinin özünü sandbox siyahısına əlavə etməsi növbəti mərhələdir.
+
+### Brauzerdən (Digital Credentials API)
+
+`https://verify.sandbox.tamga.network/dc-api-test` **eyni cihazdakı** cüzdandan brauzerin Digital Credentials API-si ilə
+(`navigator.credentials.get({ digital: { requests } })`) sənəd istəyir — QR yoxdur. Protokollar: `openid4vp-v1-signed`
+(imzalı [[t:OpenID4VP]] sorğusu, OpenID4VP 1.0 Əlavə A; `expected_origins` = səhifənin mənşəyi) və `org-iso-mdoc`
+(ISO/IEC 18013-7 Əlavə C; oxuyucu imzalı `DeviceRequest`, HPKE ilə şifrələnmiş `DeviceResponse`). Səhifə nəticəni göstərir:
+ACCEPTED ya da REJECTED, yoxlamalar və — yalnız sandbox nümunə məlumatında — açıqlanan dəyərlər. API-si olmayan brauzer
+"bu brauzerdə dəstəklənmir" mesajını görür; nümunə saytdakı (`/sample-site`) QR axını hər yerdə işləyir.
 
 ## 7. Ləğvi və dayandırmanı sınayın
 

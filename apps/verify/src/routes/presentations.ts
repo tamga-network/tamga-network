@@ -27,7 +27,7 @@ import {
 import type { VerifyContext } from "../app.js";
 import type { Presentation } from "../state.js";
 import { findPolicy } from "../policies.js";
-import { registrationCertFor } from "../wrprc.js";
+import { registrationCertFor, registrationCwtFor } from "../wrprc.js";
 import { rateLimited } from "../rate-limit.js";
 import { nowSeconds } from "@tamga-network/core/time";
 import { checkPage, expiredPage, langOf, notFoundPage, pendingPage, resultPage, statusOnlyPage } from "../html.js";
@@ -102,22 +102,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     const made = await createPresentation(ctx, policy, owner, dcApiOrigin);
     if ("error" in made) return reply.code(400).send(made);
     const p = made.p;
-    if (String(req.headers.accept ?? "").includes("application/json"))
-      return {
-        presentation_id: p.req.presentationId,
-        request_uri: p.req.requestUri,
-        qr_payload: p.req.qrPayload,
-        expires_at: new Date(p.req.expiresAt * 1000).toISOString(),
-        status_token: p.statusToken,
-        ...(p.req.dcApiRequest ? { dc_api_request: p.req.dcApiRequest } : {}),
-        // 0.6.0: tarayıcı protokolü seçer — OpenID4VP (Chrome/Edge) ya da ISO/IEC 18013-7 Ek C (Safari / iOS 26)
-        ...(p.req.dcApiRequest
-          ? {
-              dc_api_requests: [p.req.dcApiRequest, ...(p.mdocDc ? [p.mdocDc.dcApiRequest] : [])],
-              ...(p.mdocDc ? { dc_mdoc_response_uri: `${cfg.publicBase}/vp/dc-mdoc/${p.req.presentationId}` } : {}),
-            }
-          : {}),
-      };
+    if (String(req.headers.accept ?? "").includes("application/json")) return startedJson(p, cfg.publicBase);
     // Sunumu açan sayfa durum jetonunu taşır: sıkı kipte /p/:id ayrıntıları yalnızca jetonla gösterir (HV1/HV2)
     return reply.redirect(`/p/${p.req.presentationId}?st=${encodeURIComponent(p.statusToken)}`);
   });
@@ -449,15 +434,42 @@ export async function createPresentation(
       !policy.pseudonym &&
       !policy.proximity
     ) {
-      const mdocDc = createMdocDcApiRequest({ policy, origin: dcApiOrigin, readerAuth: ctx.readerAuth });
+      const mdocDc = createMdocDcApiRequest({
+        policy,
+        origin: dcApiOrigin,
+        readerAuth: ctx.readerAuth,
+        registrationCwt: registrationCwtFor(cfg.trustDist, owner ?? cfg.clientId, registrationScopesFor(policy, rpRec)),
+      });
       if (mdocDc) p.mdocDc = mdocDc;
     }
   }
   return { p };
 }
 
+/**
+ * Açılan sunumun JSON yanıtı (`POST /presentations` ve örnek site `/sample-site/start` ortak). Sayfa kökeniyle açıldıysa DC API
+ * istekleri: OpenID4VP (`openid4vp-v1-signed`) ve politika tek mdoc belgesi istiyorsa ISO/IEC 18013-7 Ek C (`org-iso-mdoc`).
+ */
+export function startedJson(p: Presentation, publicBase: string) {
+  return {
+    presentation_id: p.req.presentationId,
+    request_uri: p.req.requestUri,
+    qr_payload: p.req.qrPayload,
+    expires_at: new Date(p.req.expiresAt * 1000).toISOString(),
+    status_token: p.statusToken,
+    ...(p.req.dcApiRequest ? { dc_api_request: p.req.dcApiRequest } : {}),
+    // 0.6.0: tarayıcı protokolü seçer — OpenID4VP (Chrome/Edge) ya da ISO/IEC 18013-7 Ek C (Safari / iOS 26)
+    ...(p.req.dcApiRequest
+      ? {
+          dc_api_requests: [p.req.dcApiRequest, ...(p.mdocDc ? [p.mdocDc.dcApiRequest] : [])],
+          ...(p.mdocDc ? { dc_mdoc_response_uri: `${publicBase}/vp/dc-mdoc/${p.req.presentationId}` } : {}),
+        }
+      : {}),
+  };
+}
+
 /** Sayfa kökeni: yalnız https (yerel geliştirmede http://localhost); yol/sorgu yok. */
-function webOrigin(v: unknown): string | undefined {
+export function webOrigin(v: unknown): string | undefined {
   if (typeof v !== "string") return undefined;
   try {
     const u = new URL(v);

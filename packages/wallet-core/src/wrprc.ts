@@ -186,6 +186,29 @@ export function relevantRegistrationCerts(
   nowMs?: EpochMillis,
 ): { present: boolean; valid: boolean; reason?: string; certs: RelevantRegistrationCert[] } {
   const now = millisOrNow(nowMs);
+  // ISO/IEC 18013-7 Ek C: kayıt sertifikası DeviceRequest'te (`requestInfo.euWrprc`, CBOR); bağ okuyucu imzasının yaprağıyla
+  // (`req.leafDer` — `parseDcApiMdocRequest` bu oturumun dökümüyle doğruladı). İstek başına tek sertifika, isteğin bütününe ait.
+  if (req.annexC) {
+    const cwt = req.annexC.registrationCwt;
+    if (!cwt) return { present: false, valid: true, certs: [] };
+    const v = verifyWrprcCwt(cwt, registrarKeys, now);
+    if (!v.ok) return { present: true, valid: false, reason: v.reason, certs: [] };
+    let org: string | null;
+    try {
+      org = certOrganizationIdentifier(req.leafDer);
+    } catch {
+      org = null;
+    }
+    const sub = v.payload.intermediary?.sub ?? v.payload.sub;
+    if (!org || !sub || org !== sub)
+      return {
+        present: true,
+        valid: false,
+        reason: "registration certificate does not belong to the reader's certificate",
+        certs: [],
+      };
+    return { present: true, valid: true, certs: [{ payload: v.payload, chainDer: v.chainDer }] };
+  }
   const info = (req.payload as { verifier_info?: unknown }).verifier_info;
   const entries = Array.isArray(info)
     ? (info as Array<{ format?: string; data?: unknown; credential_ids?: string[] }>).filter(
@@ -214,6 +237,16 @@ export function relevantRegistrationCerts(
   return { present: true, valid: true, certs };
 }
 
+/**
+ * İstek bir kayıt sertifikası taşıyor mu (OpenID4VP `verifier_info.registration_cert` ya da Ek C `requestInfo.euWrprc`). Taşımıyorsa
+ * ADR-0056 K10 gereği istek reddedilir (`missingRegistrationPolicy`).
+ */
+export function hasRegistrationCert(req: VpRequest): boolean {
+  if (req.annexC) return !!req.annexC.registrationCwt;
+  const info = (req.payload as { verifier_info?: unknown }).verifier_info;
+  return Array.isArray(info) && info.some((e) => (e as { format?: unknown } | null)?.format === "registration_cert");
+}
+
 export function checkRegistrationCerts(
   req: VpRequest,
   registrarKeys: string[],
@@ -227,9 +260,19 @@ export function checkRegistrationCerts(
   const relevant = r.certs.map((c) => c.payload);
   const allowed = new Set<string>();
   for (const p of relevant)
-    for (const c of p.credentials ?? [])
-      if (!c.meta?.vct_values || c.meta.vct_values.includes(match.credential.vct))
-        for (const cl of c.claim ?? c.claims ?? []) if (typeof cl.path?.[0] === "string") allowed.add(cl.path[0]);
+    for (const c of p.credentials ?? []) {
+      // mdoc kaydı (`doctype_value`, yol [ad alanı, öğe]) ya da SD-JWT kaydı (`vct_values`, yol [ad, …])
+      const docType = (c.meta as { doctype_value?: string } | undefined)?.doctype_value;
+      const mdoc = c.format === "mso_mdoc" || docType !== undefined;
+      const applies = mdoc
+        ? docType === undefined || docType === match.credential.vct
+        : !c.meta?.vct_values || c.meta.vct_values.includes(match.credential.vct);
+      if (!applies) continue;
+      for (const cl of c.claim ?? c.claims ?? []) {
+        const name = mdoc && (cl.path?.length ?? 0) >= 2 ? cl.path[1] : cl.path?.[0];
+        if (typeof name === "string") allowed.add(name);
+      }
+    }
   return {
     present: true,
     valid: true,

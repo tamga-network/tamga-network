@@ -32,6 +32,7 @@ import {
 } from "./mdoc.js";
 import { selectZkCopy } from "./zk-copies.js";
 import { NON_PRESENTABLE_VCTS, PSEUDONYM_FORMAT } from "./pseudonym.js";
+import { DC_API_MDOC_PROTOCOL, parseDcApiMdocRequest, sealDcApiMdocResponse, type AnnexCSession } from "./dc-mdoc.js";
 
 export const REQUEST_TYP = "oauth-authz-req+jwt";
 
@@ -98,6 +99,11 @@ export interface VpRequest {
   origin?: string;
   /** ADR-0012 B: RP kabulde geçiş kartı verecek (`pass_grant_offered`); cüzdan kart anahtarını üretip `pass_key` ekler (a3/WL13). */
   passGrantOffered?: boolean;
+  /**
+   * ISO/IEC 18013-7 Ek C (`org-iso-mdoc`) ile geldiyse oturum (`parseDcApiMdocRequest`): yanıt JWE değil, HPKE şifreli
+   * DeviceResponse'tur ve cihaz imzası Ek C dökümüyle atılır. `encJwk`/`enc` bu istekte kullanılmaz.
+   */
+  annexC?: AnnexCSession;
 }
 
 /** QR: openid4vp://?client_id=…&request_uri=…  (veya doğrudan request_uri URL'i) */
@@ -253,12 +259,14 @@ export function verifyRequestObject(
 }
 
 /**
- * Tarayıcının Digital Credentials API isteği (işletim sistemi cüzdana `{protocol, data}` ve çağıran kökeni verir). Yalnız
- * imzalı OpenID4VP kabul edilir (PV6: kim olduğu bilinmeyen doğrulayıcıya sunum yok); `org-iso-mdoc` (ISO 18013-7 Ek C)
- * henüz desteklenmez.
+ * Tarayıcının Digital Credentials API isteği (işletim sistemi cüzdana `{protocol, data}` ve çağıran kökeni verir). İmzalı
+ * OpenID4VP (`openid4vp-v1-signed`, Ek A: `expected_origins`) ya da okuyucu imzalı ISO/IEC 18013-7 Ek C (`org-iso-mdoc`,
+ * `parseDcApiMdocRequest`) kabul edilir — PV6: kim olduğu bilinmeyen doğrulayıcıya sunum yok; imzasız protokoller reddedilir.
  */
 export const DC_API_PROTOCOL = "openid4vp-v1-signed";
+export { DC_API_MDOC_PROTOCOL };
 export function parseDcApiRequest(req: { protocol?: unknown; data?: unknown }, origin: string): VpRequest {
+  if (req.protocol === DC_API_MDOC_PROTOCOL) return parseDcApiMdocRequest(req.data, origin);
   if (req.protocol !== DC_API_PROTOCOL)
     throw new WalletError("unsupported", `unsupported protocol: ${String(req.protocol)}`);
   let data = req.data;
@@ -981,6 +989,7 @@ export interface RespondOutput {
 export async function respond(p: RespondInput): Promise<RespondOutput> {
   if (!approvedFor(p.approval, p.request))
     throw new WalletError("trust_error", "the request was not approved by checkRp (ADR-0056)");
+  if (p.request.annexC) return respondAnnexC(p, p.request.annexC);
   const vpToken: Record<string, string[]> = {};
   for (const m of p.matches) {
     if (m.match.format === MDOC_ZK_FORMAT) {
@@ -1046,6 +1055,37 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
     /* boş gövde olabilir */
   }
   return { status: r.status, redirectUri, vpToken, passGrant, showUrl }; // passGrant: ADR-0012 B (geçiş kartı) · showUrl: ADR-0012 C (kontrol görünümü, 5 dk)
+}
+
+/**
+ * ISO/IEC 18013-7 Ek C yanıtı: tek mdoc belgesi, seçici açıklama + Ek C dökümüyle cihaz imzası → HPKE şifreli DeviceResponse.
+ * Takma ad, geçiş kartı ve ZK bu protokolde yok (istek bunları soramaz); POST yok — yanıt tarayıcıya döner.
+ */
+async function respondAnnexC(p: RespondInput, s: AnnexCSession): Promise<RespondOutput> {
+  if (p.pseudonym || p.passKey)
+    throw new WalletError("unsupported", "org-iso-mdoc carries no pseudonym or access pass");
+  if (p.matches.length !== 1) throw new WalletError("unsupported", "org-iso-mdoc answers exactly one document");
+  const m = p.matches[0];
+  if (m.match.format !== MDOC_FORMAT || m.match.credential.vct !== s.docType)
+    throw new WalletError("unsupported", "org-iso-mdoc answers only with the requested mdoc");
+  const copy = m.match.credential.copies.find((k) => k.keyRef === m.keyRef);
+  if (!copy?.mdoc) throw new WalletError("issuer_error", "this copy has no mdoc representation");
+  // yalnız istenen öğeler (çağıran fazlasını verse de)
+  const requested = new Set(p.request.dcql.credentials[0]?.claims?.map((c) => String(c.path[1])) ?? []);
+  const { deviceResponse } = await buildMdocPresentation({
+    mdocB64u: copy.mdoc,
+    docType: s.docType,
+    namespace: s.namespace,
+    disclose: m.disclose.filter((d) => requested.has(d)),
+    clientId: p.request.clientId,
+    nonce: p.request.nonce,
+    responseUri: "",
+    sessionTranscript: s.sessionTranscript,
+    keys: p.keys,
+    keyRef: m.keyRef,
+  });
+  const dcApiResponse = sealDcApiMdocResponse(deviceResponse, s, p.randomBytes);
+  return { status: 200, vpToken: { [m.match.queryId]: [b64u(deviceResponse)] }, dcApiResponse };
 }
 
 /**

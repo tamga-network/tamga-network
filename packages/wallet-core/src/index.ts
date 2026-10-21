@@ -18,6 +18,7 @@ export * from "./authcode.js";
 export * from "./directory.js";
 export * from "./pass.js";
 export * from "./mdoc.js";
+export * from "./dc-mdoc.js";
 export * from "./asn1.js";
 export * from "./trustlist.js";
 export * from "./schemas.js";

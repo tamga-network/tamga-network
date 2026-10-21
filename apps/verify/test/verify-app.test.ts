@@ -1203,6 +1203,156 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     // başka sunumun Ek C yanıtı bu sunuma: döküm (EncryptionInfo) farklı → açılmaz
     const c2 = await openMdocDc();
     expect((await postMdoc(c2.presentation_id, await walletAnswer(SITE, annexReq.data))).statusCode).toBe(400);
+    // 7) wallet-core Ek C (0.7.1): aynı onay yolu — parseDcApiRequest (okuyucu imzası bu dökümle) → matchDcql → checkRp → respond
+    // (HPKE şifreli DeviceResponse; POST yok) → sayfa yanıtı doğrulayıcıya iletir → ACCEPTED
+    const c3 = await openMdocDc();
+    const mdocReq = c3.dc_api_requests.find((r) => r.protocol === "org-iso-mdoc")!;
+    expect(() => parseDcApiRequest(mdocReq, "https://evil.example")).toThrow(/invalid for this session/);
+    const areq = parseDcApiRequest(mdocReq, SITE);
+    expect(areq.annexC?.docType).toBe(ID_VCT);
+    // okuyucu imzası doğrulayıcının erişim sertifikasıyla: client_id OpenID4VP isteğindekiyle aynı (aynı RP kaydı)
+    expect(areq.clientId).toBe(parseDcApiRequest(c3.dc_api_requests[0], SITE).clientId);
+    const am = matchDcql(areq.dcql, wallet.credentials).matches[0];
+    expect(am.requested).toEqual(["age_over_18"]);
+    const aout = await respond({
+      approval: testApproval(areq),
+      request: areq,
+      matches: [{ match: am, keyRef: "w.mdoc", combined: sd.combined, disclose: am.requested }],
+      keys,
+      http: noPost,
+      now,
+    });
+    expect(aout.dcApiResponse?.response).toMatch(/^[A-Za-z0-9_-]+$/);
+    // onay başka isteğe aitse sunum yok (ADR-0056 K8)
+    await expect(
+      respond({
+        approval: testApproval(parseDcApiRequest(mdocReq, SITE)),
+        request: parseDcApiRequest((await openMdocDc()).dc_api_requests[1], SITE),
+        matches: [{ match: am, keyRef: "w.mdoc", combined: sd.combined, disclose: am.requested }],
+        keys,
+        http: noPost,
+        now,
+      }),
+    ).rejects.toThrow(/ADR-0056/);
+    const posted = await postMdoc(c3.presentation_id, aout.dcApiResponse!.response);
+    expect(posted.statusCode).toBe(200);
+    const rc3 = await result(c3.presentation_id);
+    expect(rc3.failed_reason).toBeNull();
+    expect(rc3.outcome).toBe("ACCEPTED");
+    expect(rc3.disclosed_claims).toEqual(["age_over_18"]);
+    // aynı yanıt OpenID4VP ucuna gönderilirse açılmaz (yol karışmaz)
+    const c4 = await openMdocDc();
+    const a4 = parseDcApiRequest(c4.dc_api_requests[1], SITE);
+    const o4 = await respond({
+      approval: testApproval(a4),
+      request: a4,
+      matches: [{ match: am, keyRef: "w.mdoc", combined: sd.combined, disclose: am.requested }],
+      keys,
+      http: noPost,
+      now,
+    });
+    expect((await postJwe(o4.dcApiResponse!.response)).statusCode).toBe(400);
+
+    // 8) /dc-api-test (sandbox deneme sayfası): sayfanın sunucusu RP beyanıyla sunum açar; istekler sayfanın kökenine bağlı;
+    // iki protokolün yanıtı da doğrulayıcıya iletilir, sonuç (ve sandbox'ta örnek değerler) sayfa jetonuyla okunur
+    const LOCAL = "http://localhost:4004";
+    const appL = await buildVerifyApp(
+      { ...cfg, publicBase: LOCAL, dataDir: join(tmpdir(), "tamga-verify-dctest-" + process.pid) },
+      { showcase: true, fetchText: async (u) => (u === ID_STATUS ? idStatusTok : null) },
+    );
+    await appL.statusCache.refresh([ID_STATUS]);
+    const pageRes = await appL.inject({ method: "GET", url: "/dc-api-test" });
+    expect(pageRes.statusCode).toBe(200);
+    expect(pageRes.body).toContain("navigator.credentials.get");
+    expect(pageRes.headers["x-robots-tag"]).toContain("noindex");
+    const startT = (body: Record<string, unknown>, headers: Record<string, string> = {}) =>
+      appL.inject({
+        method: "POST",
+        url: "/dc-api-test/start",
+        headers: { "content-type": "application/json", ...headers },
+        payload: body,
+      });
+    expect((await startT({ policy: "age-over-18-mdoc", origin: "https://evil.example" })).statusCode).toBe(400);
+    expect(
+      (await startT({ policy: "age-over-18-mdoc", origin: LOCAL }, { origin: "https://evil.example" })).statusCode,
+    ).toBe(400);
+    expect((await startT({ policy: "job-application-degree", origin: LOCAL })).statusCode).toBe(400);
+    expect((await startT({ policy: "event-tamga-id", protocol: "mdoc", origin: LOCAL })).statusCode).toBe(400);
+    expect(
+      (
+        await appL.inject({
+          method: "POST",
+          url: "/dc-api-test/start",
+          headers: { "content-type": "text/plain" },
+          payload: "x",
+        })
+      ).statusCode,
+    ).toBe(415);
+    type Started = {
+      t: string;
+      requests: Array<{ protocol: string; data: unknown }>;
+      response_uris: Record<string, string>;
+    };
+    const both = (await startT({ policy: "age-over-18-mdoc", protocol: "both", origin: LOCAL })).json() as Started;
+    expect(both.requests.map((r) => r.protocol)).toEqual(["openid4vp-v1-signed", "org-iso-mdoc"]);
+    expect(both).not.toHaveProperty("presentation_id"); // tarayıcıya yalnız sayfa jetonu
+    expect((await appL.inject({ method: "GET", url: `/dc-api-test/result/${both.t}` })).json()).toEqual({
+      state: "PENDING",
+    });
+    const pageResult = async (t: string) =>
+      (await appL.inject({ method: "GET", url: `/dc-api-test/result/${t}` })).json() as {
+        state: string;
+        outcome: string;
+        failed_reason: string | null;
+        claims?: Record<string, unknown> | null;
+        disclosed: string[];
+        trace: string[];
+      };
+    const answerVia = async (st: Started, protocol: string) => {
+      const dreq = parseDcApiRequest(
+        st.requests.find((r) => r.protocol === protocol)!,
+        LOCAL,
+      );
+      const m = matchDcql(dreq.dcql, wallet.credentials).matches[0];
+      const o = await respond({
+        approval: testApproval(dreq),
+        request: dreq,
+        matches: [{ match: m, keyRef: "w.mdoc", combined: sd.combined, disclose: m.requested }],
+        keys,
+        http: noPost,
+        now,
+      });
+      return appL.inject({
+        method: "POST",
+        url: st.response_uris[protocol].slice(LOCAL.length),
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        payload: `response=${encodeURIComponent(o.dcApiResponse!.response)}`,
+      });
+    };
+    expect((await answerVia(both, "org-iso-mdoc")).statusCode).toBe(200);
+    const pr1 = await pageResult(both.t);
+    expect(pr1.failed_reason).toBeNull();
+    expect(pr1).toMatchObject({ state: "DONE", outcome: "ACCEPTED", disclosed: ["age_over_18"] });
+    expect(pr1.claims).toMatchObject({ age_over_18: true }); // yerel/sandbox: örnek değerler gösterilir
+    expect(pr1.trace.some((x) => /Annex C/.test(x))).toBe(true);
+    expect(await pageResult(both.t)).toEqual(pr1); // değerler doğrulayıcıdan bir kez alındı, sayfa kaydında kalır
+    const oid = (await startT({ policy: "age-over-18-mdoc", protocol: "openid4vp", origin: LOCAL })).json() as Started;
+    expect(oid.requests.map((r) => r.protocol)).toEqual(["openid4vp-v1-signed"]);
+    expect((await answerVia(oid, "openid4vp-v1-signed")).statusCode).toBe(200);
+    expect((await pageResult(oid.t)).outcome).toBe("ACCEPTED");
+    expect((await appL.inject({ method: "GET", url: "/dc-api-test/result/yok" })).statusCode).toBe(404);
+    // örnek site: kit sayfa kökenini verir → DC API istekleri; başka köken 400
+    const siteStart = (origin: string) =>
+      appL.inject({
+        method: "POST",
+        url: "/sample-site/start",
+        headers: { "content-type": "application/json" },
+        payload: { policy: "site-signin", dc_api_origin: origin },
+      });
+    const ss = (await siteStart(LOCAL)).json() as { dc_api_requests?: Array<{ protocol: string }> };
+    expect(ss.dc_api_requests?.map((r) => r.protocol)).toEqual(["openid4vp-v1-signed"]);
+    expect((await siteStart("https://evil.example")).statusCode).toBe(400);
+
     // OpenID4VP isteği olmayan (QR) sunumda Ek C yok
     const plain = (
       await app3.inject({

@@ -4,7 +4,7 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-10-21
 summary: >
   End-to-end testing on sandbox.tamga.network, the test network kept apart from the real network: addresses, pinning the
   trust anchor, connecting a wallet to the sandbox, registering your own wallet provider in the sandbox list as a wallet
@@ -191,6 +191,25 @@ same page.
 To try your own verifier: connect it to the sandbox list and the sandbox pins, then present credentials received in the
 sandbox. You can open your institution in the sandbox yourself (§9); today you register your wallet provider by request to project
 management (§2). Verifiers and wallet providers adding themselves to the sandbox list is a later stage.
+
+### From the browser (Digital Credentials API)
+
+`https://verify.sandbox.tamga.network/dc-api-test` asks a wallet **on the same device** for a credential through the browser's
+Digital Credentials API (`navigator.credentials.get({ digital: { requests } })`) — no QR code. Choose what to ask for (over 18 as
+an mdoc, or a valid Tamga identity as an SD-JWT VC) and the protocol:
+
+- `openid4vp-v1-signed` — a signed [[t:OpenID4VP]] request (OpenID4VP 1.0 Annex A): `response_mode` `dc_api.jwt` and
+  `expected_origins` = the page's origin; the encrypted answer goes to `/vp/response`.
+- `org-iso-mdoc` — ISO/IEC 18013-7 Annex C: a `DeviceRequest` with reader authentication (the verifier's access certificate)
+  and, when the verifier has one, its registration certificate in `requestInfo.euWrprc`, plus `EncryptionInfo`; the wallet
+  returns an HPKE-encrypted `DeviceResponse` bound to the page's origin (SessionTranscript with the `dcapi` handover), which goes
+  to `/vp/dc-mdoc/<id>`. Only for a request for a single mdoc.
+- both — the browser and the wallet pick one.
+
+The page's server opens the request at the verifier the way any relying party does (RP assertion), forwards nothing but the
+encrypted answer and shows the result: ACCEPTED or REJECTED, the checks performed, the verifier's trace and — sandbox sample data
+only — the disclosed values. A browser without the API gets a plain "not supported in this browser" message; the QR flow on the
+sample site (`/sample-site`) works everywhere. On a desktop, Chrome hands the request over to the phone.
 
 ## 7. Try revocation and suspension
 

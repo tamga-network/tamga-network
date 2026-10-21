@@ -4,7 +4,7 @@ title: "Sandbox: test ağı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-10-21
 summary: >
   Gerçek ağdan ayrı test ağı sandbox.tamga.network ile uçtan uca deneme: adresler, güven çapasını sabitlemek, cüzdanı
   sandbox'a bağlamak, cüzdan geliştiricisi olarak kendi cüzdan sağlayıcını sandbox listesine kaydettirmek, örnek kişilerle belge almak, örnek doğrulayıcılarda göstermek, iptal ve askı durumlarını denemek,
@@ -185,6 +185,24 @@ sayfada görünür.
 Kendi doğrulayıcınızı denemek için: doğrulayıcınızı sandbox listesine ve sandbox pinlerine bağlayın, sandbox'ta alınmış
 belgeleri gösterin. Kurumunuzu sandbox'ta kendiniz açabilirsiniz (§9); cüzdan sağlayıcınızı bugün proje yönetimine başvurarak kaydettirirsiniz
 (§2). Doğrulayıcının ve cüzdan sağlayıcısının kendini sandbox listesine eklemesi sonraki bir aşamadır.
+
+### Tarayıcıdan (Digital Credentials API)
+
+`https://verify.sandbox.tamga.network/dc-api-test`, **aynı cihazdaki** cüzdandan tarayıcının Digital Credentials API'siyle
+(`navigator.credentials.get({ digital: { requests } })`) belge ister — QR yok. Ne isteneceğini (mdoc olarak 18 yaş üstü ya da
+SD-JWT VC olarak geçerli Tamga kimliği) ve protokolü seçin:
+
+- `openid4vp-v1-signed` — imzalı [[t:OpenID4VP]] isteği (OpenID4VP 1.0 Ek A): `response_mode` `dc_api.jwt`,
+  `expected_origins` = sayfanın kökeni; şifreli yanıt `/vp/response`'a gider.
+- `org-iso-mdoc` — ISO/IEC 18013-7 Ek C: okuyucu imzalı (doğrulayıcının erişim sertifikası) ve doğrulayıcının kayıt sertifikası
+  varsa onu `requestInfo.euWrprc`'de taşıyan `DeviceRequest` + `EncryptionInfo`; cüzdan sayfanın kökenine bağlı (SessionTranscript,
+  `dcapi` handover) HPKE şifreli `DeviceResponse` döndürür, yanıt `/vp/dc-mdoc/<id>`'ye gider. Yalnız tek mdoc isteyen istekte.
+- ikisi — tarayıcı ve cüzdan birini seçer.
+
+Sayfanın sunucusu isteği doğrulayıcıda her RP gibi açar (RP beyanı), yalnız şifreli yanıtı iletir ve sonucu gösterir: ACCEPTED
+ya da REJECTED, yapılan denetimler, doğrulayıcının izi ve — yalnız sandbox örnek verisinde — açıklanan değerler. API'si olmayan
+tarayıcı sade bir "bu tarayıcıda desteklenmiyor" iletisi görür; örnek sitedeki (`/sample-site`) QR akışı her yerde çalışır.
+Masaüstünde Chrome isteği telefona devreder.
 
 ## 7. İptal ve askıyı deneyin
 

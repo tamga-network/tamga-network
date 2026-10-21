@@ -142,6 +142,8 @@ export interface PresentMdocArgs {
   origin?: string;
   /** Yanıtın şifrelendiği doğrulayıcı anahtarı (direct_post.jwt): parmak izi oturum özetine girer. */
   encJwk?: PublicJwk;
+  /** Hazır SessionTranscript (ISO/IEC 18013-7 Ek C dcapi handover); verilirse OpenID4VP dökümü kurulmaz. */
+  sessionTranscript?: Uint8Array;
   keys: KeyProvider;
   keyRef: string;
 }
@@ -155,9 +157,11 @@ export async function buildMdocPresentation(
 ): Promise<{ deviceResponse: Uint8Array; transcript: Uint8Array }> {
   const partial = discloseMdoc(b64uDecode(p.mdocB64u), { [p.namespace]: p.disclose });
   const thumb = p.encJwk ? jwkThumbprint(p.encJwk) : null;
-  const transcript = p.origin
-    ? dcApiSessionTranscript(p.origin, p.nonce, thumb)
-    : oid4vpSessionTranscript(p.clientId, p.nonce, p.responseUri, thumb);
+  const transcript = p.sessionTranscript
+    ? p.sessionTranscript
+    : p.origin
+      ? dcApiSessionTranscript(p.origin, p.nonce, thumb)
+      : oid4vpSessionTranscript(p.clientId, p.nonce, p.responseUri, thumb);
   const devSig = await deviceSignAsync(transcript, p.docType, (tbs) => p.keys.sign(p.keyRef, tbs));
   const deviceResponse = buildDeviceResponse({ docType: p.docType, issuerSigned: partial, deviceSignature: devSig });
   return { deviceResponse, transcript };

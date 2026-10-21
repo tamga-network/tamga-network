@@ -328,7 +328,10 @@ export function verifyReaderAuth(
 
 export function decodeDeviceRequest(bytes: Uint8Array): DecodedItemsRequest[] {
   const r = decode(bytes);
-  if (!(r instanceof Map) || r.get("version") !== "1.0") throw new Error("DeviceRequest: version");
+  // 18013-5 ikinci baskı "1.1" (DeviceRequestInfo, readerAuthAll) de okunur; ek alanlar yok sayılır — öğe başına `readerAuth`
+  // yoksa okuyucu kimliği doğrulanmamış sayılır (çağıranın kuralı)
+  const v = r instanceof Map ? r.get("version") : undefined;
+  if (!(r instanceof Map) || (v !== "1.0" && v !== "1.1")) throw new Error("DeviceRequest: version");
   const docs = r.get("docRequests");
   if (!Array.isArray(docs)) throw new Error("DeviceRequest: docRequests");
   return docs.map((d) => {

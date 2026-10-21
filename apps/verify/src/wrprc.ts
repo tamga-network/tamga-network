@@ -8,6 +8,8 @@ import { resolve } from "node:path";
 interface IndexItem {
   kind: "rp" | "issuer";
   path: string;
+  /** aynı yükün CBOR biçimi (`rc-wrp+cwt`; ADR-0026 K5) */
+  cwt_path?: string;
   client_id?: string;
   scope_id?: string;
 }
@@ -39,6 +41,27 @@ export function registrationCertFor(
   clientId: string,
   picks: Array<{ queryId: string; scopeId: string }>,
 ): string | undefined {
+  const b = pickCert(trustDist, clientId, picks, "path");
+  return b ? new TextDecoder().decode(b).trim() : undefined;
+}
+
+/**
+ * Aynı seçimin CBOR biçimi (`rc-wrp+cwt`) — ISO/IEC 18013-7 Ek C isteğinin `requestInfo.euWrprc`'si (ADR-0026 K5). Yoksa `undefined`.
+ */
+export function registrationCwtFor(
+  trustDist: string,
+  clientId: string,
+  picks: Array<{ queryId: string; scopeId: string }>,
+): Uint8Array | undefined {
+  return pickCert(trustDist, clientId, picks, "cwt_path");
+}
+
+function pickCert(
+  trustDist: string,
+  clientId: string,
+  picks: Array<{ queryId: string; scopeId: string }>,
+  field: "path" | "cwt_path",
+): Uint8Array | undefined {
   const items = indexOf(trustDist).filter((i) => i.kind === "rp" && i.client_id === clientId);
   const count = new Map<string, number>();
   for (const p of picks) count.set(p.scopeId, (count.get(p.scopeId) ?? 0) + 1);
@@ -46,9 +69,10 @@ export function registrationCertFor(
   const ranked = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([scopeId]) => scopeId);
   for (const scopeId of ranked) {
     const it = items.find((i) => i.scope_id === scopeId);
-    if (!it) continue;
+    const rel = it?.[field];
+    if (!rel) continue;
     try {
-      return readFileSync(resolve(trustDist, it.path), "utf8").trim();
+      return new Uint8Array(readFileSync(resolve(trustDist, rel)));
     } catch {
       /* dosya yayın sırasında değişti: sıradaki kullanım */
     }

@@ -36,6 +36,7 @@ import { NativeZkBackend, defaultZkBackend, type ZkBackend } from "@tamga-networ
 import { registerTerminalRoutes } from "./routes/terminal.js";
 import { registerMiscRoutes } from "./routes/misc.js";
 import { registerSiteRoutes } from "./routes/site.js";
+import { registerDcTestRoutes } from "./routes/dc-test.js";
 import { policiesFor } from "./policies.js";
 import { DEFAULT_RATE_RULES, TokenBucketLimiter, type RateRules } from "./rate-limit.js";
 import { sandboxBar } from "./brand.js";
@@ -239,5 +240,6 @@ export async function buildVerifyApp(
   registerPresentationRoutes(app, ctx);
   registerTerminalRoutes(app, ctx);
   registerSiteRoutes(app, ctx);
+  registerDcTestRoutes(app, ctx);
   return app;
 }

@@ -33,7 +33,7 @@ import QRCode from "qrcode";
 import type { VerifyContext } from "../app.js";
 import { demoSitePage, langOf } from "../html.js";
 import { findPolicy } from "../policies.js";
-import { createPresentation } from "./presentations.js";
+import { createPresentation, startedJson, webOrigin } from "./presentations.js";
 import { sandboxSampleSiteUrl } from "../config.js";
 
 interface Account {
@@ -97,6 +97,12 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     } catch {
       return false;
     }
+  };
+  /** Bu sitenin kökeni: tarayıcının Origin başlığı (aynı ana makine — `sameSiteJson`) ya da yayın adresi. */
+  const siteOrigin = (req: { headers: Record<string, unknown> }) => {
+    const o = req.headers.origin;
+    if (typeof o === "string" && o) return o;
+    return new URL(ctx.cfg.publicBase).origin;
   };
   const takeChallenge = (id: string) => {
     const c = challenges.get(id);
@@ -196,16 +202,18 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     const policyId = (req.body as { policy?: string }).policy ?? "";
     const policy = SITE_POLICIES.has(policyId) ? findPolicy(policyId, ctx.policies) : undefined;
     if (!policy) return reply.code(400).send({ ok: false, reason: "bu politika site girişi için değil" });
-    const made = await createPresentation(ctx, policy, ctx.cfg.clientId);
+    // Digital Credentials API: kit tarayıcı destekliyorsa sayfa kökenini verir; yalnız bu sitenin kendi kökeni kabul edilir
+    // (imzalı istekte expected_origins — başka bir site bu sitenin isteğini kendi sayfasında kullanamaz)
+    const rawOrigin = (req.body as { dc_api_origin?: unknown }).dc_api_origin;
+    let dcApiOrigin: string | undefined;
+    if (rawOrigin !== undefined) {
+      dcApiOrigin = webOrigin(rawOrigin);
+      if (!dcApiOrigin || dcApiOrigin !== siteOrigin(req as never))
+        return reply.code(400).send({ ok: false, reason: "dc_api_origin bu sitenin kökeni olmalı" });
+    }
+    const made = await createPresentation(ctx, policy, ctx.cfg.clientId, dcApiOrigin);
     if ("error" in made) return reply.code(400).send(made);
-    const p = made.p;
-    return {
-      presentation_id: p.req.presentationId,
-      request_uri: p.req.requestUri,
-      qr_payload: p.req.qrPayload,
-      expires_at: new Date(p.req.expiresAt * 1000).toISOString(),
-      status_token: p.statusToken,
-    };
+    return startedJson(made.p, ctx.cfg.publicBase);
   });
 
   app.post("/sample-site/session", async (req, reply) => {
