@@ -155,6 +155,13 @@ const SANITIZE = [
 ];
 const sanitize = (t) => SANITIZE.reduce((s, [re, to]) => s.replace(re, to), t.replace(/\r\n/g, "\n"));
 
+// Ön bilgideki durum değerinin sayfa dilindeki karşılığı (docs sitesindeki theme/status.ts ile aynı sözcükler).
+const STATUS = {
+  tr: { active: "Yürürlükte", accepted: "Yürürlükte", final: "Yürürlükte", draft: "Taslak", proposed: "Taslak", superseded: "Yerini aldı", deprecated: "Yerini aldı", archived: "Arşivlendi" },
+  az: { active: "Qüvvədədir", accepted: "Qüvvədədir", final: "Qüvvədədir", draft: "Qaralama", proposed: "Qaralama", superseded: "Əvəz edilib", deprecated: "Əvəz edilib", archived: "Arxivləşdirilib" },
+};
+const statusText = (lang, v) => STATUS[lang][String(v ?? "").toLowerCase()] ?? v;
+
 const DATE = {
   en: (d) =>
     new Date(d + "T00:00:00Z").toLocaleDateString("en-GB", {
@@ -249,7 +256,7 @@ function renderTr(src, d, rid) {
     "",
     '<div class="arf-meta">',
     "",
-    `**Belge** ${d.id} · **Sürüm** ${fm.version} · **Durum** ${fm.status} · **Güncelleme** ${fm.last_updated} · **Lisans** CC BY 4.0  `,
+    `**Belge** ${d.id} · **Sürüm** ${fm.version} · **Durum** ${statusText("tr", fm.status)} · **Güncelleme** ${fm.last_updated} · **Lisans** CC BY 4.0  `,
     line2,
     "",
     "</div>",
@@ -278,7 +285,7 @@ function renderAz(src, d) {
     "",
     '<div class="arf-meta">',
     "",
-    `**Sənəd** ${d.id} · **Versiya** ${fm.version} · **Status** ${fm.status} · **Yenilənmə** ${fm.last_updated} · **Lisenziya** CC BY 4.0  `,
+    `**Sənəd** ${d.id} · **Versiya** ${fm.version} · **Status** ${statusText("az", fm.status)} · **Yenilənmə** ${fm.last_updated} · **Lisenziya** CC BY 4.0  `,
     `**Buraxılış ${LATEST}** — türkcə mənbə mətnin avtomatik tərcüməsi (rəsmi deyil; ziddiyyət olduqda [türkcə mətn](/tr/${d.page}) əsas götürülür).`,
     "",
     "</div>",
