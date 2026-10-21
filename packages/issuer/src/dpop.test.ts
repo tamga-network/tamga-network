@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { SignJWT, exportJWK, generateKeyPair } from "jose";
-import { DpopReplayCache, parseAuthorization, verifyResourceDpop, verifyTokenDpop } from "./dpop.js";
+import { DpopReplayCache, normalizeHtu, parseAuthorization, verifyResourceDpop, verifyTokenDpop } from "./dpop.js";
 import { epochSeconds } from "@tamga-network/core";
 
 const HTU = "https://id.tamga.network/credential";
@@ -29,6 +29,18 @@ async function proof(
 const ath = (t: string) => createHash("sha256").update(t).digest("base64url");
 
 describe("DPoP (RFC 9449)", () => {
+  it("htu RFC 3986 §6.2.2–6.2.3 ile normalleşir (büyük harf ana makine, :443, sorgu/parça) — farklı yol eşleşmez", () => {
+    const t = "https://id.sandbox.tamga.network/credential";
+    for (const v of [
+      "HTTPS://ID.SANDBOX.TAMGA.NETWORK/credential",
+      "https://id.sandbox.tamga.network:443/credential",
+      "https://id.sandbox.tamga.network/credential?x=1#y",
+    ])
+      expect(normalizeHtu(v)).toBe(normalizeHtu(t));
+    expect(normalizeHtu("https://id.sandbox.tamga.network/CREDENTIAL")).not.toBe(normalizeHtu(t));
+    expect(normalizeHtu("https://id.sandbox.tamga.network:8443/credential")).not.toBe(normalizeHtu(t));
+    expect(normalizeHtu("http://id.sandbox.tamga.network/credential")).not.toBe(normalizeHtu(t));
+  });
   it("ADR-0056 K5: kaynak ucunda belirteç ve bağlı anahtar zorunlu (boş/eksik → ret)", async () => {
     const k = await key();
     const replay = new DpopReplayCache();

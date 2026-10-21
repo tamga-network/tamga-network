@@ -25,6 +25,18 @@ describe("authcode", () => {
     for (const rt of ["code id_token", "token", undefined])
       expect(checkParParams({ response_type: rt })).toMatchObject({ error: "unsupported_response_type" });
   });
+  it("code_verifier yoksa invalid_grant ve kod yanar (OAuth 2.1 §4.1.3; FAPI2 ensure-pkce-code-verifier-required)", () => {
+    const r = createPar(base);
+    if (!r.ok) throw new Error("par");
+    const code = mintCode(r.par, "subj", "T2", 1000);
+    const req = { code, clientId: "wua-sub", redirectUri: base.redirectUri, now: epochSeconds(1001) };
+    expect(redeemCode(r.par, req)).toMatchObject({ ok: false, error: "invalid_grant" });
+    expect(redeemCode(r.par, { ...req, codeVerifier: verifier })).toMatchObject({
+      ok: false,
+      error: "invalid_grant",
+      reused: true, // RFC 6749 §4.1.2: çağıran o koddan verilenleri geri alır
+    });
+  });
   it("plain PKCE → invalid_request (RFC 7636 §4.4.1)", () => {
     expect(createPar({ ...base, codeChallengeMethod: "plain" })).toMatchObject({ ok: false, error: "invalid_request" });
   });

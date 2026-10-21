@@ -22,6 +22,10 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 - issuer: new `checkParParams` — a PAR body with a repeated parameter or a `request_uri` is refused (`invalid_request`, RFC 9126
   §2.1), and only `response_type=code` is accepted (`unsupported_response_type`, FAPI 2.0). A `plain` PKCE method now answers
   `invalid_request` (RFC 7636 §4.4.1) instead of the non-standard `unsupported_code_challenge`.
+- issuer: DPoP `htu` is compared after RFC 3986 §6.2.2–6.2.3 normalisation (`normalizeHtu`: case of scheme and host, default
+  port, query and fragment ignored; RFC 9449 §4.3). `redeemCode` answers a missing `code_verifier` with `invalid_grant` and burns
+  the code (OAuth 2.1 §4.1.3), and flags a reused code (`reused: true`) so the caller revokes tokens issued from it (RFC 6749
+  §4.1.2).
 - issuer: new `unlinkableTimeClaims(now, exp, { acceptableAt })` and `certsValidAt` — credential `iat`/`exp` (and mdoc validity)
   rounded down to the hour so copies and verifiers cannot correlate them by the issuance instant (RFC 9901 §10.1); `iat` stays
   exact only when the rounded instant would precede the signing certificate or the issuer's listing.

@@ -68,7 +68,21 @@ export class DpopNonces {
 
 export type DpopResult = { ok: true; jkt: string } | { ok: false; reason: string; useNonce?: boolean };
 
-const stripUrl = (u: string) => u.split(/[?#]/)[0];
+/**
+ * `htu` karşılaştırması (RFC 9449 §4.3): sorgu ve parça yok sayılır; RFC 3986 §6.2.2–6.2.3 normalleştirmesi — şema ve ana
+ * makine küçük harf, varsayılan bağlantı noktası (`:443` / `:80`) düşer, yüzde kodlaması ve nokta bölümleri URL ayrıştırıcısıyla
+ * normalleşir. Ayrıştırılamayan dize olduğu gibi karşılaştırılır.
+ */
+export function normalizeHtu(u: string): string {
+  const base = u.split(/[?#]/)[0];
+  try {
+    const x = new URL(base);
+    return `${x.protocol}//${x.host}${x.pathname}`;
+  } catch {
+    return base;
+  }
+}
+const stripUrl = normalizeHtu;
 
 /** İki ucun ortak seçenekleri. */
 export interface DpopCommonOptions {

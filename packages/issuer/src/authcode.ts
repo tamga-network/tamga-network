@@ -204,12 +204,20 @@ export function redeemCode(
     /** token isteğinin doğrulanmış DPoP anahtar parmak izi (RFC 9449 §10: PAR'da bağlandıysa aynı olmalı) */
     dpopJkt?: string;
   },
-): { ok: true; accessToken: string; expiresIn: number } | { ok: false; error: CodeError; description: string } {
+):
+  | { ok: true; accessToken: string; expiresIn: number }
+  | {
+      ok: false;
+      error: CodeError;
+      description: string;
+      /** kod daha önce kullanılmış: çağıran o koddan verilmiş belirteçleri geri almalı (RFC 6749 §4.1.2, RFC 9700 §4.5) */
+      reused?: true;
+    } {
   const now = secondsOrNow(p.now);
   // yalnız verilmiş bir kod eşleşir: kodu henüz basılmamış PAR, boş/eksik kodlu istekle bulunamaz
   if (!par || !par.code || !p.code || par.code !== p.code)
     return { ok: false, error: "invalid_grant", description: "code bilinmiyor" };
-  if (par.codeUsed) return { ok: false, error: "invalid_grant", description: "code already used" };
+  if (par.codeUsed) return { ok: false, error: "invalid_grant", description: "code already used", reused: true };
   if (!par.codeExpiresAt || now > par.codeExpiresAt)
     return { ok: false, error: "invalid_grant", description: "code expired" };
   if (par.redirectUri && p.redirectUri !== par.redirectUri)
@@ -222,7 +230,11 @@ export function redeemCode(
       error: "invalid_grant",
       description: "DPoP key does not match the key bound at PAR (RFC 9449 §10)",
     };
-  if (!p.codeVerifier) return { ok: false, error: "invalid_request", description: "code_verifier required (PKCE)" };
+  // PKCE'li kodda doğrulayıcı yoksa invalid_grant (OAuth 2.1 §4.1.3; FAPI 2.0 — kod bağı doğrulanamadı); kod yakılır
+  if (!p.codeVerifier) {
+    par.codeUsed = true;
+    return { ok: false, error: "invalid_grant", description: "code_verifier required (PKCE)" };
+  }
   const challenge = createHash("sha256").update(p.codeVerifier, "ascii").digest("base64url");
   if (challenge !== par.codeChallenge) {
     par.codeUsed = true;
