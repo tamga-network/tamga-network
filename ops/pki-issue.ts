@@ -146,6 +146,14 @@ async function main() {
     privateKey = kp.privateKey;
   } else return fail("--csr <dosya>, --key <özel anahtar> ya da --generate gerekli");
   if (REPLACE && privateKey) fail("--replace yalnız aynı anahtarla (--key ya da --csr); yeni anahtar yeni ad ister");
+  if (REPLACE) {
+    // aynı anahtar gerçekten aynı mı: var olan sertifikanın açık anahtarı ile verilen anahtar (yanlış dosya → ad ile anahtar ayrışır)
+    const old = new X509Certificate(readFileSync(resolve(PKI, `${name}.cert.pem`), "utf8"));
+    const a = Buffer.from(await crypto.subtle.exportKey("spki", await old.publicKey.export(ALG, ["verify"], crypto)));
+    const b = Buffer.from(await crypto.subtle.exportKey("spki", publicKey!));
+    if (!a.equals(b))
+      fail(`--replace: verilen anahtar ${name}.cert.pem'deki anahtarla aynı değil (yeni anahtar yeni ad ister)`);
+  }
 
   // ADR-0026 K3: kurum kimlik numarası (organizationIdentifier, EN 319 412-1) — kayıt sertifikasının `sub`'ıyla aynı
   const orgId = arg("org-id");
@@ -242,6 +250,7 @@ async function main() {
     writeFileSync(
       resolve(PKI, `${name}.pkcs8.pem`),
       toPem("PRIVATE KEY", new Uint8Array(await crypto.subtle.exportKey("pkcs8", privateKey))),
+      { mode: 0o600 }, // özel anahtar yalnız sahibine okunur (POSIX; Windows'ta etkisiz)
     );
   console.log(`${PROD ? "ÜRETİM" : "geliştirme"} PKI: ${resolve(PKI, `${name}.cert.pem`)} — ${subject}`);
   console.log(

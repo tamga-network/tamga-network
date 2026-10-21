@@ -98,12 +98,8 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
       return false;
     }
   };
-  /** Bu sitenin kökeni: tarayıcının Origin başlığı (aynı ana makine — `sameSiteJson`) ya da yayın adresi. */
-  const siteOrigin = (req: { headers: Record<string, unknown> }) => {
-    const o = req.headers.origin;
-    if (typeof o === "string" && o) return o;
-    return new URL(ctx.cfg.publicBase).origin;
-  };
+  /** Bu sitenin kökeni: yayın adresi (istemcinin gönderdiği Origin/Host başlıklarına dayanmaz). */
+  const siteOrigin = () => new URL(ctx.cfg.publicBase).origin;
   const takeChallenge = (id: string) => {
     const c = challenges.get(id);
     challenges.delete(id);
@@ -208,7 +204,7 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     let dcApiOrigin: string | undefined;
     if (rawOrigin !== undefined) {
       dcApiOrigin = webOrigin(rawOrigin);
-      if (!dcApiOrigin || dcApiOrigin !== siteOrigin(req as never))
+      if (!dcApiOrigin || dcApiOrigin !== siteOrigin())
         return reply.code(400).send({ ok: false, reason: "dc_api_origin bu sitenin kökeni olmalı" });
     }
     const made = await createPresentation(ctx, policy, ctx.cfg.clientId, dcApiOrigin);

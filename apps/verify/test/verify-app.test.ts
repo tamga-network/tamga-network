@@ -1427,6 +1427,16 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const selfId = (none.json() as { presentation_id: string }).presentation_id;
     expect((await strict.inject({ method: "GET", url: `/presentations/${selfId}` })).statusCode).toBe(404);
     expect((await strict.inject({ method: "GET", url: `/presentations/${selfId}/claims` })).statusCode).toBe(404);
+    // beyansız istek yalnız doğrulayıcının kendi kökenine DC API isteği alır (başka site doğrulayıcı adına imzalı istek alamaz)
+    const dcOpen = (origin: string, headers: Record<string, string> = json) =>
+      strict.inject({
+        method: "POST",
+        url: "/presentations",
+        headers,
+        payload: { policy_id: "age-over-18-mdoc", dc_api_origin: origin },
+      });
+    expect((await dcOpen("https://evil.example")).statusCode).toBe(400);
+    expect((await dcOpen("https://shop.example", { ...json, authorization: await bearer() })).statusCode).toBe(200);
     // beyanla 200 + status_token; aynı beyan tekrar 401 (jti)
     const auth = await bearer();
     const made = await open({ ...json, authorization: auth });

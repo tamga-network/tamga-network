@@ -99,6 +99,14 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       if (cfg.requireRpAuth) owner = cfg.clientId;
       else reply.header("deprecation", "true"); // K6: beyansız eski yol yalnızca demo kipinde
     }
+    // Beyansız sunum doğrulayıcının kendi kaydıyla imzalanır: DC API kökeni (expected_origins / Ek C dökümü) yalnız
+    // doğrulayıcının kendi sayfasının kökeni olabilir — yoksa herhangi bir site, doğrulayıcının adıyla imzalı bir isteği kendi
+    // sayfasında kullanır (cüzdan isteği doğrulayıcıya ait sanar; güvenlik incelemesi 2026-10-21)
+    if (dcApiOrigin && cfg.requireRpAuth && who === null && dcApiOrigin !== new URL(cfg.publicBase).origin)
+      return reply.code(400).send({
+        error: "invalid_request",
+        error_description: "dc_api_origin requires an RP assertion unless it is this verifier's own origin",
+      });
     const made = await createPresentation(ctx, policy, owner, dcApiOrigin);
     if ("error" in made) return reply.code(400).send(made);
     const p = made.p;

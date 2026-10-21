@@ -20,6 +20,7 @@ import type { VerifyContext } from "../app.js";
 import { langOf } from "../html.js";
 import { dcTestPage, DC_TEST_POLICIES } from "../dc-test-page.js";
 import { webOrigin } from "./presentations.js";
+import { rateLimited } from "../rate-limit.js";
 
 export const DC_TEST_PATH = "/dc-api-test";
 const SANDBOX_DC_TEST = "https://verify.sandbox.tamga.network/dc-api-test";
@@ -61,6 +62,8 @@ export function registerDcTestRoutes(app: FastifyInstance, ctx: VerifyContext) {
   );
 
   app.post(`${DC_TEST_PATH}/start`, async (req, reply) => {
+    // adres başına sınır: sunumlar doğrulayıcının kendi beyanıyla açılır (tek ortak RP kovası) — tek istemci tüketemesin
+    if (rateLimited(ctx.limits.presentations, `dc-test:${req.ip ?? ""}`, reply)) return reply;
     if (!String(req.headers["content-type"] ?? "").startsWith("application/json"))
       return reply.code(415).send({ error: "invalid_request", reason: "JSON expected" });
     const b = (req.body ?? {}) as { policy?: unknown; protocol?: unknown; origin?: unknown };
