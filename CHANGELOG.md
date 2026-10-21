@@ -6,6 +6,11 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 
 ## 0.7.2 — unreleased
 
+- **ADR-0059 accepted (2026-10-21): several credential requests per access token.** The access token can be used for more than
+  one credential request within its lifetime (≤ 5 minutes), as OpenID4VCI 1.0 §8 allows and the EU reference issuer does: only
+  the configuration the token covers, at most 10 copies per token in total (`MAX_COPIES_PER_ACCESS_TOKEN`,
+  `withinAccessTokenAllowance` in issuer), every request with the token's DPoP key. The ZK copy token and tickets stay one
+  package.
 - issuer: `authServerMetadata` now publishes `client_attestation_signing_alg_values_supported` and
   `client_attestation_pop_signing_alg_values_supported` (`["ES256"]`), which draft-ietf-oauth-attestation-based-client-auth-07
   §10.1 requires whenever `token_endpoint_auth_methods_supported` includes `attest_jwt_client_auth` (OpenID conformance

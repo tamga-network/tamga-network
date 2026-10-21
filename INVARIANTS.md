@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 346 kodlanmış değişmez, 58 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 351 kodlanmış değişmez, 59 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -578,6 +578,19 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0058/AC3` | Erişim sertifikası, Tamga'nın beyan edemeyeceği bir AB sertifika politikası tanımlayıcısı taşımaz. |
 
 
+## ADR-0059
+
+*"Erişim belirteci ömrü içinde birden çok belge isteği"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0059/AT1` | Erişim belirteciyle yalnız belirtecin kapsadığı belge yapılandırması istenebilir. |
+| `ADR-0059/AT2` | Bir erişim belirteciyle verilen toplam kopya sayısı toplu ihraç büyüklüğünü (10) geçmez; sayaç eşzamanlı isteklerde de aşılamaz. |
+| `ADR-0059/AT3` | Her belge isteği belirtecin bağlı olduğu DPoP anahtarıyla yapılır; belirteç ömrü (≤ 5 dk) yeniden kullanımla uzamaz. |
+| `ADR-0059/AT4` | Kimlik servisinde aynı belirteçle sonraki istek ilk isteğin kaydına kopya ekler; önceki paketi iptal etmez; iptal edilmiş ya da silinmiş kayda kopya eklenmez. |
+| `ADR-0059/AT5` | Kimlik servisi yetkilendirme kaydındaki kişi alanlarını belirtecin ömrü bitince ya da kopya hakkı dolunca siler. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -862,12 +875,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 346 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 351 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
+AC, AP, AR, AS, AT, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-21 (`scripts/sync-invariants.mjs`). Toplam 346 kodlanmış değişmez, 58 dokümanda.
+**Üretilen dosya** — 2026-10-21 (`scripts/sync-invariants.mjs`). Toplam 351 kodlanmış değişmez, 59 dokümanda.

@@ -28,6 +28,22 @@ export const ACCESS_TOKEN_TTL_SEC = 300; // PR9
  *  bildirilmez: OpenID4VCI 1.0 Final nonce yanıtı yalnız `c_nonce` taşır (`c_nonce_expires_in` yok). */
 export const C_NONCE_TTL_SEC = 300;
 export const BATCH_SIZE = 10; // §8
+/**
+ * ADR-0059 AT2: bir erişim belirteciyle ömrü (≤ 5 dk, PR9) boyunca alınabilecek toplam kopya sayısı — bir toplu ihracın
+ * büyüklüğü. Belirteç birden çok belge isteğinde kullanılabilir (OpenID4VCI 1.0 §8; AB referans belge vereni gibi); her istek
+ * aynı DPoP anahtarıyla (AT3) ve yalnız belirtecin kapsadığı yapılandırma için (AT1).
+ */
+export const MAX_COPIES_PER_ACCESS_TOKEN = BATCH_SIZE;
+/** ADR-0059 AT2: `used` kopya verilmiş bir belirteçle `requested` kopya daha istenebilir mi. */
+export function withinAccessTokenAllowance(
+  used: number,
+  requested: number,
+  max: number = MAX_COPIES_PER_ACCESS_TOKEN,
+): boolean {
+  return (
+    Number.isInteger(used) && Number.isInteger(requested) && used >= 0 && requested >= 1 && used + requested <= max
+  );
+}
 export const PROOF_TYP = "openid4vci-proof+jwt";
 export const PRE_AUTH_GRANT = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
 

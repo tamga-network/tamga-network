@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-21
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -447,6 +447,15 @@ The returned string is the combined format of [[SPEC-CRED-0002]] §2: issuer-sig
 
 Step 5 may look redundant — it was checked when the metadata was generated (PR2). But the authorisation may have been
 withdrawn after the metadata was cached. It is a cheap check, and producing a wrong credential is costly.
+
+## 7.4 Several requests with the same access token ([[ADR-0059]], 2026-10-21)
+
+The access token can be used for several credential requests during its lifetime (≤ 5 minutes, PR9) (OpenID4VCI 1.0 §8; like
+the EU reference issuer). Limits: only the configuration the token covers (AT1); total copies per token ≤ the batch size, 10
+(AT2; a request beyond it gets `invalid_token`); every request with the DPoP key the token is bound to, and the lifetime is not
+extended (AT3). In the identity service a later request adds copies to the first request's record and does not revoke the
+earlier package (AT4); personal fields are deleted when the token expires or the copy allowance is used up (AT5). The ZK copy
+token (§4.2) and tickets stay one package.
 
 ---
 

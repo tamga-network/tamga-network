@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-21
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdana necə daxil olduğunu müəyyən edir. OpenID4VCI 1.0 Final üzərində Tamga profili: issuer metadata, credential offer (QR + tx_code), pre-authorized və authorization code axını seçimi, Nonce Endpoint-dən c_nonce, openid4vci-proof+jwt açar sübutu, credential endpoint, təxirə salınmış sənəd verilməsi və bildiriş ucunun bugünkü vəziyyəti (hər ikisi təqdim edilmir). İki açıq məsələ bağlanır: batch partiyasının ölçüsü 10 olaraq sabitlənir və batch nüsxələrinin HƏR BİRİ FƏRQLİ cihaz açarından istifadə edir — eyni `cnf` istifadə edilsəydi, nüsxələr bir-biri ilə əlaqələndirilə bilərdi və batch-in bütün mənası itərdi. Bundan əlavə, sənəd verilməsi anındakı holder binding üsulunun holder assurance səviyyəsinə (T1/T2/T3) uyğunluğu verilir.
 translation_of: SPEC-PROTO-0001
@@ -447,6 +447,14 @@ disclosure-lar + sondakı boş `~` (KB-JWT hələ yoxdur). Bildiriş ucu təqdim
 5-ci addım lazımsız görünə bilər — metadata yaradılarkən yoxlanılmışdı (PR2).
 Lakin səlahiyyət metadata keşə yazıldıqdan sonra geri alınmış ola bilər. Bu, ucuz bir
 yoxlamadır, səhv rəqəmsal sənəd yaratmağın bədəli isə yüksəkdir.
+
+## 7.4 Eyni giriş tokeni ilə bir neçə sorğu ([[ADR-0059]], 2026-10-21)
+
+Giriş tokeni ömrü (≤ 5 dəqiqə, PR9) ərzində bir neçə sənəd sorğusunda istifadə oluna bilər (OpenID4VCI 1.0 §8; Aİ istinad
+sənəd verəni kimi). Hədlər: yalnız tokenin əhatə etdiyi konfiqurasiya (AT1); token başına cəmi nüsxə ≤ toplu verilmə ölçüsü, 10
+(AT2; həddi aşan sorğu `invalid_token` alır); hər sorğu tokenin bağlı olduğu DPoP açarı ilə, ömür uzanmır (AT3). Şəxsiyyət
+xidmətində sonrakı sorğu ilk sorğunun qeydinə nüsxə əlavə edir, əvvəlki paketi ləğv etmir (AT4); şəxsi sahələr tokenin ömrü
+bitəndə və ya nüsxə haqqı dolanda silinir (AT5). ZK nüsxəsi tokeni (§4.2) və bilet bir paket olaraq qalır.
 
 ---
 

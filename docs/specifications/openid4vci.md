@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-21
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -453,6 +453,14 @@ disclosure'lar + sondaki boş `~` (KB-JWT henüz yok). Bildirim ucu sunulmadığ
 Adım 5 gereksiz görünebilir — metadata üretilirken kontrol edilmişti (PR2).
 Ama yetki metadata önbelleklendikten sonra geri alınmış olabilir. Ucuz bir
 kontroldür ve yanlış belge üretmenin bedeli yüksektir.
+
+## 7.4 Aynı erişim belirteciyle birden çok istek ([[ADR-0059]], 2026-10-21)
+
+Erişim belirteci ömrü (≤ 5 dakika, PR9) boyunca birden çok belge isteğinde kullanılabilir (OpenID4VCI 1.0 §8; AB referans belge
+vereni gibi). Sınırlar: yalnız belirtecin kapsadığı yapılandırma (AT1); belirteç başına toplam kopya ≤ toplu ihraç büyüklüğü, 10
+(AT2; aşan istek `invalid_token`); her istek belirtecin bağlı olduğu DPoP anahtarıyla, ömür uzamaz (AT3). Kimlik servisinde
+sonraki istek ilk isteğin kaydına kopya ekler, önceki paketi iptal etmez (AT4); kişi alanları belirtecin ömrü bitince ya da kopya
+hakkı dolunca silinir (AT5). ZK kopyası belirteci (§4.2) ve bilet tek paket kalır.
 
 ---
 

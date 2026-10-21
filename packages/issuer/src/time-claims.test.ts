@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { certsValidAt, unlinkableTimeClaims } from "./factory.js";
+import { MAX_COPIES_PER_ACCESS_TOKEN, withinAccessTokenAllowance } from "./oid4vci.js";
 
 // RFC 9901 §10.1 (OpenID uyum öz-testi VCIEnsureBatchTimeClaimsNotLinkable / VCIEnsureCredentialTimeClaimsNotLinkable)
 describe("unlinkableTimeClaims", () => {
@@ -30,5 +31,19 @@ describe("unlinkableTimeClaims", () => {
   it("certsValidAt: boş zincir geçerli; bozuk DER hata", () => {
     expect(certsValidAt([], now)).toBe(true);
     expect(() => certsValidAt([new Uint8Array([1, 2, 3])], now)).toThrow();
+  });
+});
+
+// ADR-0059 AT2: bir belirteçle toplam kopya ≤ toplu ihraç büyüklüğü
+describe("withinAccessTokenAllowance", () => {
+  it("toplam kopya sınırı; geçersiz sayılar reddedilir", () => {
+    expect(MAX_COPIES_PER_ACCESS_TOKEN).toBe(10);
+    expect(withinAccessTokenAllowance(0, 10)).toBe(true);
+    expect(withinAccessTokenAllowance(8, 2)).toBe(true);
+    expect(withinAccessTokenAllowance(8, 3)).toBe(false);
+    expect(withinAccessTokenAllowance(0, 0)).toBe(false);
+    expect(withinAccessTokenAllowance(-1, 1)).toBe(false);
+    expect(withinAccessTokenAllowance(0, 1, 1)).toBe(true);
+    expect(withinAccessTokenAllowance(1, 1, 1)).toBe(false);
   });
 });
