@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-21
+last_updated: 2026-10-22
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 351 kodlanmış değişmez, 59 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 356 kodlanmış değişmez, 61 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -591,6 +591,27 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0059/AT5` | Kimlik servisi yetkilendirme kaydındaki kişi alanlarını belirtecin ömrü bitince ya da kopya hakkı dolunca siler. |
 
 
+## ADR-0060
+
+*"Yenileme belirteci istemci örneği anahtarına bağlı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0060/RT1` | Yenileme belirteci istemci örneği anahtarına (ihraçtaki WIA `cnf` parmak izi) bağlıdır; yenilemede aynı anahtarlı WIA zorunludur. |
+| `ADR-0060/RT2` | Yenilemede DPoP kanıtı zorunludur; yeni erişim belirteci o istekteki DPoP anahtarına bağlanır. |
+| `ADR-0060/RT3` | Cüzdan yenileme bağının örnek anahtarını yalnız o belgeyi veren kurumla kullanır; başka işlemlerde yeni WIA anahtarı kullanır. |
+
+
+## ADR-0061
+
+*"Takma ad tohumu ayrı belge yapılandırması olarak, standart belge isteğiyle"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0061/SD1` | Takma ad tohumu belgesi yalnız kimlik belgesini veren erişim belirteciyle, kimlik belgesinden sonra ve bir kez verilir. |
+| `ADR-0061/SD2` | Belge yanıtı OpenID4VCI 1.0 §8.3'te tanımlı olmayan üst düzey alan taşımaz. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -733,7 +754,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-PROTO-0001/PR14` | Kurumun belge verme servisi cüzdanın başlattığı belge vermede kimliği yalnızca **kimlik attestation'ının sunumu** ile ve tam doğrulama hattından (T0 + A–E) geçerek eşler; eşleştirme anahtarları (TCKN, doğum tarihi) saklanmaz ve loglanmaz; eşleşmezse belge verilmez (§11.2, [[ADR-0011]] K3/K6). |
 | `SPEC-PROTO-0001/PR15` | Cüzdan kurum dizinini yalnızca güven listesinden alır; listede olmayan belge verene PAR göndermez (§11.2). |
 | `SPEC-PROTO-0001/PR17` | Erişim belirteci DPoP'a bağlıdır (RFC 9449): `/token` geçerli bir DPoP kanıtı olmadan belirteç vermez; `/credential` yalnızca `Authorization: DPoP` ve aynı anahtarla, bu uç ve bu belirteç (`ath`) için üretilmiş, daha önce görülmemiş kanıtla çalışır (§4, §7.1). |
-| `SPEC-PROTO-0001/PR18` | Yenileme belirteci tek kullanımlıktır, her kullanımda yenilenir, belge verme işlemindeki DPoP anahtarına ve cüzdan örneğine bağlıdır; belge veren yenilemede kaydı yetkili kaynaktan yeniden okur ve kayıt yoksa belge vermez ([[ADR-0023]] AR2–AR3, §4.1). |
+| `SPEC-PROTO-0001/PR18` | Yenileme belirteci tek kullanımlıktır, her kullanımda yenilenir, belge verme işlemindeki istemci örneği anahtarına (WIA `cnf`) bağlıdır, DPoP anahtarı değişebilir ([[ADR-0060]]); belge veren yenilemede kaydı yetkili kaynaktan yeniden okur ve kayıt yoksa belge vermez ([[ADR-0023]] AR2–AR3, §4.1). |
 | `SPEC-PROTO-0001/PR19` | WIA ile gelen istekte `client_status` iptal edilmişse belge verilmez; KA'lı proof'ta KA sağlayıcı imzalı, iptal edilmemiş, proof `attested_keys[0]` ile imzalı ve nonce geçerli olmalıdır; anahtar deposu alt sınırı KA seviyesine göre uygulanır ([[ADR-0025]], §11.1.1). |
 | `SPEC-PROTO-0001/PR16` | Kimlik attestation'ı yanıtında her `credentials[]` nesnesi, `credential` (SD-JWT VC) ile **aynı proof anahtarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) taşır; iki temsil aynı istekte üretilir, aynı status bitini paylaşır; cüzdan mdoc'u SD-JWT kopyasıyla çapraz doğrulamadan (aynı belge veren sertifikası, aynı alanlar, `deviceKey` = `cnf`) saklamaz ([[ADR-0013]] MD1–MD3). |
 
@@ -875,12 +896,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 351 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 356 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, AT, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RV, S, SB, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
+AC, AP, AR, AS, AT, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-21 (`scripts/sync-invariants.mjs`). Toplam 351 kodlanmış değişmez, 59 dokümanda.
+**Üretilen dosya** — 2026-10-22 (`scripts/sync-invariants.mjs`). Toplam 356 kodlanmış değişmez, 61 dokümanda.

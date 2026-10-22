@@ -4,7 +4,7 @@ title: "Rəqəmsal cüzdan qaydaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-22
 summary: >
   Rəqəmsal cüzdanın açar, yerli yaddaş, ehtiyat nüsxə və təsdiq dizaynını müəyyən edir. Mərkəzi nəticə bir ZİDDİYYƏTİN həllidir: [[SPEC-CRED-0001]] §3 sənəd sahibi açarının təhlükəsiz zonadan çıxa bilməyəcəyini bildirir, lakin layihə qeydlərindəki "24 sözlük seed ilə ehtiyat nüsxə" dizaynı açarın bərpa oluna biləcəyini nəzərdə tuturdu. İkisi eyni anda doğru ola bilməz — seed-dən törədilə bilən sənəd sahibi açarı isə rəqəmsal sənədi ÖTÜRÜLƏ BİLƏN edərək holder binding boşluğunu arxa qapıdan geri qaytarır. Qərar: açarlar seed-dən törədilmir; ehtiyat nüsxə sənədləri və manifesti daşıyır, cihaz dəyişdikdə sənədlərin YENİDƏN VERİLMƏSİ tələb olunur. Bundan əlavə, toplu verilən nüsxələrin hər yoxlayan tərəf üçün sabit ("yapışqan") istifadəsi iki açıq məsələni birdən bağlayır.
 translation_of: SPEC-WALLET-0001
@@ -332,7 +332,7 @@ Topic 11).
 
 | Addım | Rəqəmsal cüzdan nə edir |
 |---|---|
-| Toxum (seed) | Şəxsiyyət sənədi ilə birlikdə gələn `urn:tamga:id:PseudonymSeed:1` sənədini yoxlayır (şəxsiyyət sənədi ilə eyni imzalayan, 0 nömrəli nüsxənin açarı) və toxumu təhlükəsiz anbara yerləşdirir (Keychain / Keystore; mağaza versiyasında aparat səviyyəsində qorunan). Toxum sənəd siyahısında görünmür, heç bir DCQL sorğusuna təklif edilmir (PS3). |
+| Toxum (seed) | Şəxsiyyət sənədindən sonra eyni giriş tokeni ilə ayrıca konfiqurasiya kimi istənən ([[ADR-0061]]) `urn:tamga:id:PseudonymSeed:1` sənədini yoxlayır (şəxsiyyət sənədi ilə eyni imzalayan, 0 nömrəli nüsxənin açarı) və toxumu təhlükəsiz anbara yerləşdirir (Keychain / Keystore; mağaza versiyasında aparat səviyyəsində qorunan). Toxum sənəd siyahısında görünmür, heç bir DCQL sorğusuna təklif edilmir (PS3). |
 | Sorğu | DCQL-də `format: "tamga-pseudonym"` sorğusu (`meta.mode`: `single` / `multiple`). Sənəd sorğusu yoxdursa, sorğu yalnız psevdonimlə girişə (sənədsiz) uyğun gəlir. |
 | Təsdiq ekranı | "Bu sayta məxsus psevdoniminiz" kartı: yenidir, yoxsa əvvəl istifadə olunub (dəyər göstərilmir). `multiple` saytda istifadəçi mövcud psevdonimlərindən birini və ya yenisini seçir. Psevdonim yalnız etibar siyahısında qeydiyyatda olan sayta verilir. |
 | Törətmə | PIN/biometrik təsdiqdən sonra: `k = HKDF-SHA256(tohum, "tamga-pseudonym-v1\|" + site + "\|" + sıra)` → P-256 açarı; psevdonim = açıq açarın RFC 7638 barmaq izi. Sayt = əsas RP-nin qeydiyyatdakı daimi kimliyi (`dns_name`; vasitəçi olduqda əsas RP; ADR-0017 K7); müştəri identifikatoru (`x509_hash`) ilə törətmə rədd edilir (wallet-core 0.7.1). Açar yalnız yaddaşda saxlanılır, imzadan sonra silinir. |

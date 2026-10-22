@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-21
+last_updated: 2026-10-22
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -276,20 +276,23 @@ The access token lifetime is **5 minutes**. The issuance flow takes seconds; a l
 ## 4.1 Refresh token — silent copy renewal ([[ADR-0023]], 2026-09-29)
 
 For institution credentials (student certificate, diploma; not tickets) the token response carries a `refresh_token`. The
-token is bound to the DPoP key of that issuance and to the wallet instance ([[t:WUA]] `sub`); the issuer stores only its
+token is bound to the client instance key of that issuance (WIA `cnf`; [[ADR-0060]]); the issuer stores only its
 SHA-256 hash (operator database, 180 days). At the threshold (`credential_reuse_policy`) and with a random delay, the wallet
 sends:
 
 ```http
 POST /token
-DPoP: <new proof with the same key>
-OAuth-Client-Attestation: <WUA>
+DPoP: <proof — the key may change (ADR-0060)>
+OAuth-Client-Attestation: <fresh WIA for the same instance key>
 OAuth-Client-Attestation-PoP: <PoP>
 
 grant_type=refresh_token&refresh_token=…
 ```
 
-The issuer takes the token as single-use (deletes it). The DPoP key and the WUA `sub` must match. It rereads the record from
+The issuer takes the token as single-use (deletes it). The WIA's `cnf` key must be the one of the issuance (OAuth 2.0
+Attestation-Based Client Authentication §10.3); a DPoP proof is required, its key may change (RFC 9449 §5) and the new access
+token is bound to the new DPoP key. The wallet uses a new WIA key for every operation; it keeps the binding's key with the
+credential and, on refresh, asks the provider for a fresh WIA for that key ([[ADR-0060]] K2). It rereads the record from
 the authentic source; if there is no record it returns `invalid_grant` and the token is dropped. When a person is deleted
 from the register, all of that person's tokens are deleted. The response carries a new access token and a **new**
 `refresh_token` (rotation). The credential request is the same as in §7. The contact credentials issue no refresh token (no
@@ -310,12 +313,12 @@ identity service's metadata announces the ZK copy as a separate `mso_mdoc` confi
 ```
 
 - **Token:** opaque to the wallet; its content is protected by authenticated encryption that only the identity service's key
-  opens (JWE `dir` + A256GCM): the linked identity record, a generation counter, the thumbprint of the DPoP key from the first
-  issuance, the expiry (≤ the identity credential's expiry) and the **minimum** elements for the ZK copy (today
+  opens (JWE `dir` + A256GCM): the linked identity record, a generation counter, the thumbprint of the client instance key (WIA `cnf`) from
+  the first issuance ([[ADR-0060]]), the expiry (≤ the identity credential's expiry) and the **minimum** elements for the ZK copy (today
   `age_over_18`). Neither the token nor person fields are kept on the server; for single use only the generation counter is
   kept in the identity record (ZC3).
-- **Refresh:** the request of §4.1 (`grant_type=refresh_token`, the same DPoP key, a valid and unrevoked WIA). The service
-  checks the generation and the DPoP binding and reads from its own list that **all revocation list bits of the identity
+- **Refresh:** the request of §4.1 (`grant_type=refresh_token`, a valid and unrevoked WIA for the same instance key; the DPoP key
+  may change). The service checks the generation and the instance-key binding and reads from its own list that **all revocation list bits of the identity
   record are 0**; if the record is gone, expired, revoked or suspended it returns `invalid_grant` (ZC2). Response: an access
   token for ZK copies only + a new `refresh_token` (generation + 1).
 - **Credential request:** `credential_configuration_id` = `urn:tamga:id:ShortLivedIdentityAttestation:1`, at most 3 proofs (or a
@@ -456,6 +459,14 @@ the EU reference issuer). Limits: only the configuration the token covers (AT1);
 extended (AT3). In the identity service a later request adds copies to the first request's record and does not revoke the
 earlier package (AT4); personal fields are deleted when the token expires or the copy allowance is used up (AT5). The ZK copy
 token (§4.2) and tickets stay one package.
+
+## 7.5 Pseudonym seed: a separate configuration ([[ADR-0061]], 2026-10-22)
+
+The identity service's metadata declares the `urn:tamga:id:PseudonymSeed:1` type as a separate `dc+sd-jwt` configuration. After
+receiving the identity credential the wallet requests it **with the same access token** and a single key proof (the key of the
+identity credential's first copy); the seed is issued once and only if the identity credential was issued with that token (SD1).
+The type cannot be requested on its own with PAR. The credential response carries no top-level parameter outside OpenID4VCI 1.0
+§8.3 (SD2). The seed's privacy rules: [[ADR-0031]] PS1–PS6.
 
 ---
 
@@ -770,7 +781,7 @@ The codes come from OpenID4VCI 1.0 Final §8.3.1.2; the last two rows are Tamga 
 | **PR14** | In wallet-initiated issuance the institution's issuer matches identity only through **presentation of the identity attestation**, passing the full verification pipeline (T0 + A–E); the matching keys (national ID, birth date) are neither stored nor logged; if they do not match, no credential is issued (§11.2, [[ADR-0011]] K3/K6). |
 | **PR15** | The wallet takes the institution directory only from the trust list; it sends no PAR to an issuer that is not in the list (§11.2). |
 | **PR17** | The access token is bound to DPoP (RFC 9449): `/token` issues no token without a valid DPoP proof; `/credential` works only with `Authorization: DPoP` and a previously unseen proof made with the same key for this endpoint and this token (`ath`) (§4, §7.1). |
-| **PR18** | The refresh token is single-use, renewed on every use, and bound to the DPoP key and the wallet instance of the issuance; on renewal the issuer rereads the record from the authentic source and issues nothing if there is no record ([[ADR-0023]] AR2–AR3, §4.1). |
+| **PR18** | The refresh token is single-use, renewed on every use, and bound to the client instance key (WIA `cnf`) of the issuance, the DPoP key may change ([[ADR-0060]]); on renewal the issuer rereads the record from the authentic source and issues nothing if there is no record ([[ADR-0023]] AR2–AR3, §4.1). |
 | **PR19** | In a request with a WIA, no credential is issued if `client_status` is revoked; in a proof with a KA, the KA must be signed by the provider and not revoked, the proof signed with `attested_keys[0]` and the nonce valid; the key storage lower bound is applied according to the KA level ([[ADR-0025]], §11.1.1). |
 | **PR16** | In the identity attestation response every `credentials[]` object carries, alongside `credential` (SD-JWT VC), an `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) **bound to the same proof key**; both representations are produced in the same request and share the same status bit; the wallet does not store the mdoc without cross-checking it against the SD-JWT copy (same issuer certificate, same fields, `deviceKey` = `cnf`) ([[ADR-0013]] MD1–MD3). |
 

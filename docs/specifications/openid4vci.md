@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-21
+last_updated: 2026-10-22
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -284,20 +284,23 @@ gereksiz risktir.
 
 ## 4.1 Yenileme belirteci — sessiz kopya yenileme ([[ADR-0023]], 2026-09-29)
 
-Kurum belgelerinde (öğrenci, diploma; biletler hariç) token yanıtı bir `refresh_token` taşır. Belirteç o belge verme işlemindeki DPoP
-anahtarına ve cüzdan örneğine ([[t:WUA]] `sub`) bağlıdır; belge veren yalnız SHA-256 özetini saklar (operatör veritabanı, 180 gün).
+Kurum belgelerinde (öğrenci, diploma; biletler hariç) token yanıtı bir `refresh_token` taşır. Belirteç o belge verme işlemindeki istemci
+örneği anahtarına (WIA `cnf`; [[ADR-0060]]) bağlıdır; belge veren yalnız SHA-256 özetini saklar (operatör veritabanı, 180 gün).
 Cüzdan eşikte (`credential_reuse_policy`) ve rastgele gecikmeyle şunu gönderir:
 
 ```http
 POST /token
-DPoP: <aynı anahtarla yeni kanıt>
-OAuth-Client-Attestation: <WUA>
+DPoP: <kanıt — anahtar değişebilir (ADR-0060)>
+OAuth-Client-Attestation: <aynı örnek anahtarına verilmiş taze WIA>
 OAuth-Client-Attestation-PoP: <PoP>
 
 grant_type=refresh_token&refresh_token=…
 ```
 
-Belge veren belirteci tek kullanımlık olarak alır (siler). DPoP anahtarı ve WUA `sub` eşleşmeli. Kaydı yetkili kaynaktan yeniden okur;
+Belge veren belirteci tek kullanımlık olarak alır (siler). WIA'nın `cnf` anahtarı ilk ihraçtakiyle aynı olmalı (OAuth 2.0
+Attestation-Based Client Authentication §10.3); DPoP kanıtı zorunlu, anahtarı değişebilir (RFC 9449 §5) ve yeni erişim belirteci
+yeni DPoP anahtarına bağlanır. Cüzdan her işlemde yeni WIA anahtarı kullanır; yenileme bağının anahtarını belgeyle saklar ve
+yenilemede sağlayıcıdan bu anahtara taze WIA ister ([[ADR-0060]] K2). Kaydı yetkili kaynaktan yeniden okur;
 kayıt yoksa `invalid_grant` döner ve belirteç düşer. Kişi kayıt defterinden silinince o kişinin bütün belirteçleri silinir.
 Yanıt yeni erişim belirteci ve **yeni** `refresh_token` taşır (rotation). Belge isteği §7 ile aynıdır. İletişim belgeleri
 belirteç vermez (kişi alanı saklanmaz); kimlik servisi yalnız ZK kopyası belirteci verir (§4.2). AS metadata
@@ -317,11 +320,11 @@ yalnız kısa ömürlü ZK kopyası alır ([[ADR-0023]] AR4'ün tek istisnası).
 ```
 
 - **Belirteç:** cüzdana opaktır; içeriği yalnız kimlik servisinin anahtarıyla açılan doğrulanmış şifrelemeyle (JWE `dir` +
-  A256GCM) korunur: bağlı kimlik kaydı, kuşak sayacı, ilk ihraçtaki DPoP anahtarının parmak izi, bitiş (≤ kimlik belgesinin
+  A256GCM) korunur: bağlı kimlik kaydı, kuşak sayacı, ilk ihraçtaki istemci örneği anahtarının (WIA `cnf`) parmak izi ([[ADR-0060]]), bitiş (≤ kimlik belgesinin
   bitişi) ve ZK kopyasına girecek **asgari** öğeler (bugün `age_over_18`). Sunucuda belirteç ve kişi alanı tutulmaz; tek kullanım
   için kimlik kaydında yalnız kuşak sayacı durur (ZC3).
-- **Yenileme:** §4.1'deki istek (`grant_type=refresh_token`, aynı DPoP anahtarı, geçerli ve iptal edilmemiş WIA). Servis kuşağı
-  ve DPoP bağını denetler, kimlik kaydının **bütün iptal listesi bitlerinin 0** olduğunu kendi listesinden okur; kayıt yoksa,
+- **Yenileme:** §4.1'deki istek (`grant_type=refresh_token`, aynı örnek anahtarlı geçerli ve iptal edilmemiş WIA; DPoP anahtarı
+  değişebilir). Servis kuşağı ve örnek anahtarı bağını denetler, kimlik kaydının **bütün iptal listesi bitlerinin 0** olduğunu kendi listesinden okur; kayıt yoksa,
   süresi dolmuşsa, iptal ya da askıdaysa `invalid_grant` (ZC2). Yanıt: yalnız ZK kopyası için erişim belirteci + yeni
   `refresh_token` (kuşak +1).
 - **Belge isteği:** `credential_configuration_id` = `urn:tamga:id:ShortLivedIdentityAttestation:1`, en çok 3 proof (ya da anahtar
@@ -461,6 +464,14 @@ vereni gibi). Sınırlar: yalnız belirtecin kapsadığı yapılandırma (AT1); 
 (AT2; aşan istek `invalid_token`); her istek belirtecin bağlı olduğu DPoP anahtarıyla, ömür uzamaz (AT3). Kimlik servisinde
 sonraki istek ilk isteğin kaydına kopya ekler, önceki paketi iptal etmez (AT4); kişi alanları belirtecin ömrü bitince ya da kopya
 hakkı dolunca silinir (AT5). ZK kopyası belirteci (§4.2) ve bilet tek paket kalır.
+
+## 7.5 Takma ad tohumu: ayrı yapılandırma ([[ADR-0061]], 2026-10-22)
+
+Kimlik servisinin metadata'sı `urn:tamga:id:PseudonymSeed:1` türünü ayrı bir `dc+sd-jwt` yapılandırması olarak ilan eder. Cüzdan
+kimlik belgesini aldıktan sonra **aynı erişim belirteciyle** bu yapılandırmayı tek anahtar kanıtıyla (kimlik belgesinin ilk
+kopyasının anahtarı) ister; tohum bir kez ve yalnız o belirteçle kimlik belgesi verildiyse verilir (SD1). Tür PAR ile tek başına
+istenemez. Belge yanıtı OpenID4VCI 1.0 §8.3 dışında üst düzey alan taşımaz (SD2). Tohumun gizlilik kuralları [[ADR-0031]]
+PS1–PS6.
 
 ---
 
@@ -782,7 +793,7 @@ kendi denetim kaydındadır.
 | **PR14** | Kurumun belge verme servisi cüzdanın başlattığı belge vermede kimliği yalnızca **kimlik attestation'ının sunumu** ile ve tam doğrulama hattından (T0 + A–E) geçerek eşler; eşleştirme anahtarları (TCKN, doğum tarihi) saklanmaz ve loglanmaz; eşleşmezse belge verilmez (§11.2, [[ADR-0011]] K3/K6). |
 | **PR15** | Cüzdan kurum dizinini yalnızca güven listesinden alır; listede olmayan belge verene PAR göndermez (§11.2). |
 | **PR17** | Erişim belirteci DPoP'a bağlıdır (RFC 9449): `/token` geçerli bir DPoP kanıtı olmadan belirteç vermez; `/credential` yalnızca `Authorization: DPoP` ve aynı anahtarla, bu uç ve bu belirteç (`ath`) için üretilmiş, daha önce görülmemiş kanıtla çalışır (§4, §7.1). |
-| **PR18** | Yenileme belirteci tek kullanımlıktır, her kullanımda yenilenir, belge verme işlemindeki DPoP anahtarına ve cüzdan örneğine bağlıdır; belge veren yenilemede kaydı yetkili kaynaktan yeniden okur ve kayıt yoksa belge vermez ([[ADR-0023]] AR2–AR3, §4.1). |
+| **PR18** | Yenileme belirteci tek kullanımlıktır, her kullanımda yenilenir, belge verme işlemindeki istemci örneği anahtarına (WIA `cnf`) bağlıdır, DPoP anahtarı değişebilir ([[ADR-0060]]); belge veren yenilemede kaydı yetkili kaynaktan yeniden okur ve kayıt yoksa belge vermez ([[ADR-0023]] AR2–AR3, §4.1). |
 | **PR19** | WIA ile gelen istekte `client_status` iptal edilmişse belge verilmez; KA'lı proof'ta KA sağlayıcı imzalı, iptal edilmemiş, proof `attested_keys[0]` ile imzalı ve nonce geçerli olmalıdır; anahtar deposu alt sınırı KA seviyesine göre uygulanır ([[ADR-0025]], §11.1.1). |
 | **PR16** | Kimlik attestation'ı yanıtında her `credentials[]` nesnesi, `credential` (SD-JWT VC) ile **aynı proof anahtarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) taşır; iki temsil aynı istekte üretilir, aynı status bitini paylaşır; cüzdan mdoc'u SD-JWT kopyasıyla çapraz doğrulamadan (aynı belge veren sertifikası, aynı alanlar, `deviceKey` = `cnf`) saklamaz ([[ADR-0013]] MD1–MD3). |
 

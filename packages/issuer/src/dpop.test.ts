@@ -2,7 +2,14 @@
 import { describe, it, expect } from "vitest";
 import { createHash, randomUUID } from "node:crypto";
 import { SignJWT, exportJWK, generateKeyPair } from "jose";
-import { DpopReplayCache, normalizeHtu, parseAuthorization, verifyResourceDpop, verifyTokenDpop } from "./dpop.js";
+import {
+  DpopReplayCache,
+  clientInstanceJkt,
+  normalizeHtu,
+  parseAuthorization,
+  verifyResourceDpop,
+  verifyTokenDpop,
+} from "./dpop.js";
 import { epochSeconds } from "@tamga-network/core";
 
 const HTU = "https://id.tamga.network/credential";
@@ -29,6 +36,15 @@ async function proof(
 const ath = (t: string) => createHash("sha256").update(t).digest("base64url");
 
 describe("DPoP (RFC 9449)", () => {
+  it("ADR-0060: istemci örneği anahtarının parmak izi (RFC 7638); P-256 dışı / eksik → null", async () => {
+    const { publicKey } = await generateKeyPair("ES256");
+    const jwk = await exportJWK(publicKey);
+    const a = await clientInstanceJkt({ ...jwk, kid: "x", alg: "ES256" });
+    expect(a).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(await clientInstanceJkt(jwk)).toBe(a); // ek alanlar parmak izini değiştirmez
+    expect(await clientInstanceJkt({ kty: "RSA" })).toBeNull();
+    expect(await clientInstanceJkt(undefined)).toBeNull();
+  });
   it("htu RFC 3986 §6.2.2–6.2.3 ile normalleşir (büyük harf ana makine, :443, sorgu/parça) — farklı yol eşleşmez", () => {
     const t = "https://id.sandbox.tamga.network/credential";
     for (const v of [

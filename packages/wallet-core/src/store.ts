@@ -40,6 +40,8 @@ export interface ZkCopyBinding {
   tokenEndpoint: string;
   dpopRef: string;
   dpopJwk: PublicJwk;
+  /** ADR-0060: yenileme belirtecinin bağlı olduğu istemci örneği anahtarı (ilk ihraçtaki WIA anahtarı) */
+  instanceKeyRef?: string;
   copies: ZkCopy[];
   /** sessiz yenileme zamanı (rastgele gecikmeyle; ADR-0023 K1 koşulları) */
   dueAt?: number;
@@ -393,6 +395,17 @@ export function deleteLogEntries(state: WalletState, ts: number[]): WalletState 
  * Silme: belge kaydı + ona bağlı geçiş kartları (anahtarları silineceği için artık imzalanamaz) + anahtar referansları
  * (kopyalar, geçiş kartı anahtarları, yenileme DPoP anahtarı; çağıran KeyProvider.delete ile anahtarları siler).
  */
+/** ADR-0060: silinmemesi gereken istemci örneği anahtarları — cüzdanın WIA'sı ve (`exceptCredId` dışındaki) belgelerin yenileme bağları. */
+export function instanceKeysInUse(state: WalletState, exceptCredId?: string): Set<string> {
+  const s = new Set<string>();
+  if (state.wua?.keyRef) s.add(state.wua.keyRef);
+  for (const c of state.credentials) {
+    if (c.id === exceptCredId) continue;
+    if (c.refresh?.instanceKeyRef) s.add(c.refresh.instanceKeyRef);
+    if (c.zk?.instanceKeyRef) s.add(c.zk.instanceKeyRef);
+  }
+  return s;
+}
 export function removeCredential(state: WalletState, credId: string): { state: WalletState; keyRefs: string[] } {
   const c = state.credentials.find((x) => x.id === credId);
   return {
@@ -406,10 +419,12 @@ export function removeCredential(state: WalletState, credId: string): { state: W
           ...new Set([
             ...c.copies.map((k) => k.keyRef),
             ...(state.passes ?? []).filter((p) => p.credentialId === credId).map((p) => p.keyRef),
-            ...(c.refresh ? [c.refresh.dpopRef] : []),
-            ...(c.zk ? [c.zk.dpopRef, ...c.zk.copies.map((k) => k.keyRef)] : []),
+            ...(c.refresh ? [c.refresh.dpopRef, c.refresh.instanceKeyRef ?? ""] : []),
+            ...(c.zk ? [c.zk.dpopRef, c.zk.instanceKeyRef ?? "", ...c.zk.copies.map((k) => k.keyRef)] : []),
           ]),
-        ].filter(Boolean)
+        ]
+          // ADR-0060: cüzdanın şu anki WIA'sının ve başka belgelerin yenileme bağlarının anahtarları silinmez
+          .filter((k) => !!k && !instanceKeysInUse(state, credId).has(k))
       : [],
   };
 }

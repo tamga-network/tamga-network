@@ -6,7 +6,7 @@
 import { b64u } from "./b64.js";
 import { readJson, type Http } from "./http.js";
 import { isAuthRequired, type KeyProvider } from "./keys.js";
-import type { WuaRecord } from "./wua.js";
+import { wuaForBinding, type WuaRecord } from "./wua.js";
 import { wuaHeaders } from "./authcode.js";
 import { dpopRequest, type DpopSigner } from "./dpop.js";
 import { fetchIssuerMetadata, obtainCredential } from "./oid4vci.js";
@@ -70,6 +70,8 @@ export interface AutoRefreshInput {
   keys: KeyProvider;
   http: Http;
   wua: WuaRecord;
+  /** ADR-0060: bağın istemci örneği anahtarına sağlayıcıdan taze WIA (elindeki WIA başka anahtarlıysa) */
+  wuaForInstance?: (keyRef: string) => Promise<WuaRecord>;
   randomBytes: (n: number) => Uint8Array;
   now?: number;
   receive?: ReceiveOptions;
@@ -107,6 +109,9 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
   } finally {
     await p.keys.delete(probeRef).catch(() => {});
   }
+  // ADR-0060: belirtecin bağlı olduğu istemci örneği anahtarının WIA'sı (ağa çıkmadan önce; alınamazsa belirteç harcanmaz)
+  const wua = await wuaForBinding({ wua: p.wua, instanceKeyRef: r.instanceKeyRef, wuaForInstance: p.wuaForInstance });
+  if (!wua) return skip("wallet attestation for the credential's instance key is unavailable");
   let tr;
   try {
     tr = await dpopRequest(
@@ -117,7 +122,7 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
         method: "POST",
         headers: async () => ({
           "content-type": "application/x-www-form-urlencoded",
-          ...(await wuaHeaders({ keys: p.keys, wua: p.wua, aud: old.issuer, now, randomBytes: p.randomBytes })),
+          ...(await wuaHeaders({ keys: p.keys, wua, aud: old.issuer, now, randomBytes: p.randomBytes })),
         }),
         body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(r.token)}`,
       },
@@ -180,6 +185,7 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
       tokenEndpoint: r.tokenEndpoint,
       keyAttestor: p.keyAttestor,
       retainDpop: true, // belgeye bağlı kalıcı DPoP anahtarı: hata olsa da silinmez
+      wua, // ADR-0060: yeni bağ aynı istemci örneği anahtarına
     });
   } catch (e) {
     // `auth_required` (ön denemeden sonra pencere kapandı), kurum ya da ağ hatası: iptal değil; yeni belirteç korunur

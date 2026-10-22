@@ -94,3 +94,23 @@ export function wiaRevokedInList(list: Pick<StatusList, "bits" | "bytes">, idx: 
   if (idx >= list.bytes.length * perByte) return false;
   return statusBitAt(list as StatusList, idx) === 1;
 }
+
+/**
+ * ADR-0060 (ATCA §10.3): yenileme belirteci istemci örneği anahtarına bağlıdır. Yenilemede o anahtarın WIA'sı gerekir: cüzdanın
+ * elindeki WIA aynı anahtarlıysa o; değilse `wuaForInstance` ile sağlayıcıdan bu anahtara taze WIA istenir. Bağda anahtar yoksa
+ * (eski bağ) elindeki WIA. Alınamazsa `null` (tur atlanır, belirteç harcanmaz).
+ */
+export async function wuaForBinding(p: {
+  wua: WuaRecord;
+  instanceKeyRef?: string;
+  wuaForInstance?: (keyRef: string) => Promise<WuaRecord>;
+}): Promise<WuaRecord | null> {
+  if (!p.instanceKeyRef || p.wua.keyRef === p.instanceKeyRef) return p.wua;
+  if (!p.wuaForInstance) return null;
+  try {
+    const w = await p.wuaForInstance(p.instanceKeyRef);
+    return w.keyRef === p.instanceKeyRef ? w : null;
+  } catch {
+    return null;
+  }
+}

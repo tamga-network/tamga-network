@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-21
+last_updated: 2026-10-22
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdana necə daxil olduğunu müəyyən edir. OpenID4VCI 1.0 Final üzərində Tamga profili: issuer metadata, credential offer (QR + tx_code), pre-authorized və authorization code axını seçimi, Nonce Endpoint-dən c_nonce, openid4vci-proof+jwt açar sübutu, credential endpoint, təxirə salınmış sənəd verilməsi və bildiriş ucunun bugünkü vəziyyəti (hər ikisi təqdim edilmir). İki açıq məsələ bağlanır: batch partiyasının ölçüsü 10 olaraq sabitlənir və batch nüsxələrinin HƏR BİRİ FƏRQLİ cihaz açarından istifadə edir — eyni `cnf` istifadə edilsəydi, nüsxələr bir-biri ilə əlaqələndirilə bilərdi və batch-in bütün mənası itərdi. Bundan əlavə, sənəd verilməsi anındakı holder binding üsulunun holder assurance səviyyəsinə (T1/T2/T3) uyğunluğu verilir.
 translation_of: SPEC-PROTO-0001
@@ -278,20 +278,23 @@ lazımsız riskdir.
 
 ## 4.1 Yeniləmə tokeni — nüsxələrin səssiz yenilənməsi ([[ADR-0023]], 2026-09-29)
 
-Qurum sənədlərində (tələbə, diplom; biletlər istisna olmaqla) token cavabı `refresh_token` daşıyır. Token həmin sənəd vermə əməliyyatındakı DPoP
-açarına və rəqəmsal cüzdan nümunəsinə ([[t:WUA]] `sub`) bağlıdır; sənədi verən qurum yalnız SHA-256 heşini saxlayır (operator verilənlər bazası, 180 gün).
+Qurum sənədlərində (tələbə, diplom; biletlər istisna olmaqla) token cavabı `refresh_token` daşıyır. Token həmin sənəd vermə əməliyyatındakı müştəri
+nümunəsi açarına (WIA `cnf`; [[ADR-0060]]) bağlıdır; sənədi verən qurum yalnız SHA-256 heşini saxlayır (operator verilənlər bazası, 180 gün).
 Cüzdan həddə çatdıqda (`credential_reuse_policy`) və təsadüfi gecikmə ilə aşağıdakını göndərir:
 
 ```http
 POST /token
-DPoP: <new proof with the same key>
-OAuth-Client-Attestation: <WUA>
+DPoP: <proof — the key may change (ADR-0060)>
+OAuth-Client-Attestation: <fresh WIA for the same instance key>
 OAuth-Client-Attestation-PoP: <PoP>
 
 grant_type=refresh_token&refresh_token=…
 ```
 
-Sənədi verən qurum tokeni birdəfəlik qəbul edir (silir). DPoP açarı və WUA `sub` uyğun gəlməlidir. Qeydi səlahiyyətli mənbədən yenidən oxuyur;
+Sənədi verən qurum tokeni birdəfəlik qəbul edir (silir). WIA-nın `cnf` açarı ilk buraxılışdakı ilə eyni olmalıdır (OAuth 2.0
+Attestation-Based Client Authentication §10.3); DPoP sübutu məcburidir, açarı dəyişə bilər (RFC 9449 §5) və yeni giriş tokeni yeni
+DPoP açarına bağlanır. Cüzdan hər əməliyyatda yeni WIA açarı istifadə edir; yeniləmə bağının açarını sənədlə saxlayır və yeniləmədə
+təminatçıdan bu açara təzə WIA istəyir ([[ADR-0060]] K2). Qeydi səlahiyyətli mənbədən yenidən oxuyur;
 qeyd yoxdursa, `invalid_grant` qaytarır və token qüvvədən düşür. Şəxs reyestrdən silindikdə həmin şəxsin bütün tokenləri silinir.
 Cavab yeni giriş tokeni və **yeni** `refresh_token` daşıyır (rotation). Sənəd sorğusu §7 ilə eynidir. Əlaqə sənədləri
 token vermir (şəxs sahəsi saxlanmır); şəxsiyyət xidməti yalnız ZK nüsxəsi tokeni verir (§4.2). AS metadata-sı
@@ -311,11 +314,11 @@ yalnız qısa ömürlü ZK nüsxəsi alır ([[ADR-0023]] AR4-ün yeganə istisna
 ```
 
 - **Token:** cüzdan üçün qeyri-şəffafdır (opaque); məzmunu yalnız şəxsiyyət xidmətinin açarı ilə açılan autentifikasiyalı şifrələmə (JWE `dir` +
-  A256GCM) ilə qorunur: bağlı şəxsiyyət qeydi, nəsil sayğacı, ilk buraxılışdakı DPoP açarının barmaq izi, bitmə tarixi (≤ şəxsiyyət sənədinin
+  A256GCM) ilə qorunur: bağlı şəxsiyyət qeydi, nəsil sayğacı, ilk buraxılışdakı müştəri nümunəsi açarının (WIA `cnf`) barmaq izi ([[ADR-0060]]), bitmə tarixi (≤ şəxsiyyət sənədinin
   bitmə tarixi) və ZK nüsxəsinə daxil ediləcək **minimal** elementlər (bu gün `age_over_18`). Serverdə token və şəxs sahəsi saxlanmır; birdəfəlik istifadə
   üçün şəxsiyyət qeydində yalnız nəsil sayğacı qalır (ZC3).
-- **Yeniləmə:** §4.1-dəki sorğu (`grant_type=refresh_token`, eyni DPoP açarı, etibarlı və ləğv edilməmiş WIA). Xidmət nəsli
-  və DPoP bağlılığını yoxlayır, şəxsiyyət qeydinin **bütün ləğv siyahısı bitlərinin 0** olduğunu öz siyahısından oxuyur; qeyd yoxdursa,
+- **Yeniləmə:** §4.1-dəki sorğu (`grant_type=refresh_token`, eyni nümunə açarlı etibarlı və ləğv edilməmiş WIA; DPoP açarı
+  dəyişə bilər). Xidmət nəsli və nümunə açarı bağlılığını yoxlayır, şəxsiyyət qeydinin **bütün ləğv siyahısı bitlərinin 0** olduğunu öz siyahısından oxuyur; qeyd yoxdursa,
   müddəti bitibsə, ləğv edilibsə və ya dayandırılıbsa `invalid_grant` (ZC2). Cavab: yalnız ZK nüsxəsi üçün giriş tokeni + yeni
   `refresh_token` (nəsil +1).
 - **Sənəd sorğusu:** `credential_configuration_id` = `urn:tamga:id:ShortLivedIdentityAttestation:1`, ən çoxu 3 proof (və ya açar
@@ -455,6 +458,13 @@ sənəd verəni kimi). Hədlər: yalnız tokenin əhatə etdiyi konfiqurasiya (A
 (AT2; həddi aşan sorğu `invalid_token` alır); hər sorğu tokenin bağlı olduğu DPoP açarı ilə, ömür uzanmır (AT3). Şəxsiyyət
 xidmətində sonrakı sorğu ilk sorğunun qeydinə nüsxə əlavə edir, əvvəlki paketi ləğv etmir (AT4); şəxsi sahələr tokenin ömrü
 bitəndə və ya nüsxə haqqı dolanda silinir (AT5). ZK nüsxəsi tokeni (§4.2) və bilet bir paket olaraq qalır.
+
+## 7.5 Psevdonim toxumu: ayrıca konfiqurasiya ([[ADR-0061]], 2026-10-22)
+
+Şəxsiyyət xidmətinin metadata-sı `urn:tamga:id:PseudonymSeed:1` növünü ayrıca `dc+sd-jwt` konfiqurasiyası kimi elan edir. Cüzdan
+şəxsiyyət sənədini aldıqdan sonra onu **eyni giriş tokeni ilə** tək açar sübutu ilə (şəxsiyyət sənədinin ilk nüsxəsinin açarı)
+istəyir; toxum bir dəfə və yalnız həmin tokenlə şəxsiyyət sənədi verilibsə verilir (SD1). Növ PAR ilə tək istənə bilməz. Sənəd
+cavabı OpenID4VCI 1.0 §8.3 xaricində yuxarı səviyyəli sahə daşımır (SD2). Toxumun məxfilik qaydaları: [[ADR-0031]] PS1–PS6.
 
 ---
 
@@ -776,7 +786,7 @@ tapılmadı" əvəzinə `credential_request_denied` qaytarılır; təfərrüat y
 | **PR14** | Qurumun sənəd vermə xidməti rəqəmsal cüzdanın başlatdığı sənəd vermədə şəxsiyyəti yalnız **kimlik attestation-ının təqdimatı** ilə və tam yoxlama xəttindən (T0 + A–E) keçərək uyğunlaşdırır; uyğunlaşdırma açarları (TCKN, doğum tarixi) saxlanılmır və loglanmır; uyğunluq tapılmazsa, sənəd verilmir (§11.2, [[ADR-0011]] K3/K6). |
 | **PR15** | Rəqəmsal cüzdan qurum kataloqunu yalnız etibar siyahısından götürür; siyahıda olmayan sənədi verən quruma PAR göndərmir (§11.2). |
 | **PR17** | Giriş tokeni DPoP-a bağlıdır (RFC 9449): `/token` etibarlı DPoP sübutu olmadan token vermir; `/credential` yalnız `Authorization: DPoP` ilə və eyni açarla, bu son nöqtə və bu token (`ath`) üçün yaradılmış, əvvəllər görülməmiş sübutla işləyir (§4, §7.1). |
-| **PR18** | Yeniləmə tokeni birdəfəlikdir, hər istifadədə yenilənir, sənəd vermə əməliyyatındakı DPoP açarına və cüzdan nümunəsinə bağlıdır; sənədi verən qurum yeniləmə zamanı qeydi səlahiyyətli mənbədən yenidən oxuyur və qeyd yoxdursa, sənəd vermir ([[ADR-0023]] AR2–AR3, §4.1). |
+| **PR18** | Yeniləmə tokeni birdəfəlikdir, hər istifadədə yenilənir, sənəd vermə əməliyyatındakı müştəri nümunəsi açarına (WIA `cnf`) bağlıdır, DPoP açarı dəyişə bilər ([[ADR-0060]]); sənədi verən qurum yeniləmə zamanı qeydi səlahiyyətli mənbədən yenidən oxuyur və qeyd yoxdursa, sənəd vermir ([[ADR-0023]] AR2–AR3, §4.1). |
 | **PR19** | WIA ilə gələn sorğuda `client_status` ləğv edilibsə, sənəd verilmir; KA-lı proof-da KA provayder tərəfindən imzalanmış, ləğv edilməmiş, proof `attested_keys[0]` ilə imzalanmış olmalı və nonce etibarlı olmalıdır; açar anbarının minimum həddi KA səviyyəsinə görə tətbiq edilir ([[ADR-0025]], §11.1.1). |
 | **PR16** | Kimlik attestation-ı cavabında hər `credentials[]` obyekti `credential` (SD-JWT VC) ilə **eyni proof açarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) daşıyır; iki təqdimat forması eyni sorğuda yaradılır və eyni status bitini paylaşır; rəqəmsal cüzdan mdoc-u SD-JWT nüsxəsi ilə çarpaz yoxlamadan (eyni sənədi verən qurum sertifikatı, eyni sahələr, `deviceKey` = `cnf`) saxlamır ([[ADR-0013]] MD1–MD3). |
 

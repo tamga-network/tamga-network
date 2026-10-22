@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-22
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -322,7 +322,7 @@ Topic 11).
 
 | Step | What the wallet does |
 |---|---|
-| Seed | It verifies the `urn:tamga:id:PseudonymSeed:1` credential that comes with the identity credential (same signer as the identity credential, the key of copy 0) and puts the seed into secure storage (Keychain / Keystore; hardware-protected in the store build). The seed does not appear in the credential list and is never offered to a DCQL query (PS3). |
+| Seed | It verifies the `urn:tamga:id:PseudonymSeed:1` credential, requested after the identity credential with the same access token as a separate configuration ([[ADR-0061]]) (same signer as the identity credential, the key of copy 0) and puts the seed into secure storage (Keychain / Keystore; hardware-protected in the store build). The seed does not appear in the credential list and is never offered to a DCQL query (PS3). |
 | Request | A `format: "tamga-pseudonym"` query in DCQL (`meta.mode`: `single` / `multiple`). If there is no credential query, the request corresponds to a pseudonym-only sign-in (no credential). |
 | Consent screen | A "Your pseudonym for this site" card: new, or used before (the value is not shown). On a `multiple` site the user picks one of their existing pseudonyms or a new one. A pseudonym is given only to a site registered in the trust list. |
 | Derivation | After PIN/biometric approval: `k = HKDF-SHA256(seed, "tamga-pseudonym-v1\|" + site + "\|" + index)` → a P-256 key; pseudonym = the RFC 7638 thumbprint of the public key. Site = the permanent identity of the actual RP's registration (`dns_name`; with an intermediary, the actual RP; ADR-0017 K7); derivation from a client identifier (`x509_hash`) is refused (wallet-core 0.7.1). The key exists only in memory and is wiped after signing. |

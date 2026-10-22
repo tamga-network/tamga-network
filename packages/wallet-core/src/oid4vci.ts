@@ -17,6 +17,7 @@ import {
 } from "./attestation-prefs.js";
 import { dpopRequest, newDpopSigner, type DpopSigner } from "./dpop.js";
 import { IDENTITY_VCT, ZK_COPY_VCT } from "./directory.js";
+import { PSEUDONYM_SEED_VCT } from "./pseudonym.js";
 import type { ZkCopyBinding } from "./store.js";
 
 export const PRE_AUTH_GRANT = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
@@ -299,6 +300,11 @@ export interface RefreshBinding {
   tokenEndpoint: string;
   dpopRef: string;
   dpopJwk: PublicJwk;
+  /**
+   * ADR-0060: belirtecin bağlı olduğu istemci örneği anahtarı — ilk ihraçtaki WIA'nın anahtarı (`WuaRecord.keyRef`). Cüzdan bu
+   * anahtarı belgeyle saklar; yenilemede bu anahtara verilmiş taze WIA sunar (`wuaForInstance`).
+   */
+  instanceKeyRef?: string;
   /** credential_reuse_policy: kalan kopya bu sayıya inince */
   unusedTrigger?: number;
   /** credential_reuse_policy: bitişe bu kadar saniye kala */
@@ -412,6 +418,7 @@ export async function redeem(p: RedeemInput): Promise<RedeemOutput> {
     randomBytes: p.randomBytes,
     refreshToken: tokenBody.refresh_token,
     tokenEndpoint,
+    ...(wua ? { wua } : {}),
   });
 }
 
@@ -433,6 +440,8 @@ export interface ObtainInput {
   /** ADR-0023: token yanıtındaki yenileme belirteci — varsa DPoP anahtarı silinmez, belgeyle saklanır */
   refreshToken?: string;
   tokenEndpoint?: string;
+  /** ADR-0060: token isteğindeki WIA — anahtarı yenileme bağına istemci örneği anahtarı olarak yazılır */
+  wua?: WuaRecord;
   /** ADR-0023 sessiz yenileme: `dpop` belgeye bağlı kalıcı anahtardır — hata olsa da silinmez (yenileme bağı kopmasın) */
   retainDpop?: boolean;
 }
@@ -494,8 +503,11 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
       for (const c of copies) out.push(await signJwt({ typ: PROOF_TYP, jwk: c.cnf }, claims, p.keys, c.keyRef));
       return out;
     };
-    const requestCredential = async (n: string) => {
-      const credBody = JSON.stringify({ credential_configuration_id: vct, proofs: { jwt: await signProofs(n) } });
+    const requestCredential = async (n: string, cfgId = vct, proofs?: (n: string) => Promise<string[]>) => {
+      const credBody = JSON.stringify({
+        credential_configuration_id: cfgId,
+        proofs: { jwt: await (proofs ?? signProofs)(n) },
+      });
       const r = p.dpop
         ? await dpopRequest(
             p.http,
@@ -517,8 +529,6 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
         cr: r,
         body: (await readJson(r, "issuer")) as {
           credentials?: Array<{ credential: string; mso_mdoc?: string }>;
-          /** ADR-0031 (Tamga profili): kimlik belgesiyle gelen, sunulamayan takma ad tohumu belgesi */
-          pseudonym_seed?: string;
           error?: string;
           error_description?: string;
         },
@@ -541,6 +551,34 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
       copies[i].combined = c.credential;
       if (c.mso_mdoc) copies[i].mdoc = c.mso_mdoc; // Tamga profili PR16: kopya başına ikinci temsil
     });
+    // ADR-0061 (ADR-0031 K1'in teslim biçimi): kimlik servisi takma ad tohumunu ayrı yapılandırma olarak ilan ediyorsa, aynı
+    // belirteçle ikinci standart belge isteği — tek kanıt, kimlik belgesinin ilk kopyasının anahtarıyla (tohum ona bağlanır).
+    // Tohum alınamazsa kimlik belgesi yine alınmış sayılır (tohum isteğe bağlı; takma ad sonra yeniden doğrulamayla gelir).
+    let pseudonymSeed: string | undefined;
+    if (vct === IDENTITY_VCT && md.credential_configurations_supported[PSEUDONYM_SEED_VCT]) {
+      const seedProof = async (n: string) => [
+        ka
+          ? await signJwt(
+              { typ: "openid4vci-proof+jwt", key_attestation: ka },
+              { aud: issuer, nonce: n, iat: now },
+              p.keys,
+              copies[0].keyRef,
+            )
+          : await signJwt(
+              { typ: PROOF_TYP, jwk: copies[0].cnf },
+              { aud: issuer, nonce: n, iat: now },
+              p.keys,
+              copies[0].keyRef,
+            ),
+      ];
+      try {
+        const s = await requestCredential(await fetchNonce(), PSEUDONYM_SEED_VCT, seedProof);
+        const c = s.cr.status === 200 ? s.body.credentials?.[0]?.credential : undefined;
+        if (typeof c === "string") pseudonymSeed = c;
+      } catch {
+        /* tohum isteğe bağlı */
+      }
+    }
     // ADR-0044: kimlik servisi ZK kopyası ilan ediyorsa (mso_mdoc, docType ZK_COPY_VCT) kimlik belgesinin yenileme belirteci ZK
     // kopyaları içindir; belge kendisi sessiz yenilenmez (ADR-0023 AR4)
     const zkCfgId =
@@ -558,6 +596,7 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
             tokenEndpoint: p.tokenEndpoint,
             dpopRef: p.dpop.ref,
             dpopJwk: p.dpop.jwk,
+            ...(p.wua ? { instanceKeyRef: p.wua.keyRef } : {}),
           }
         : undefined;
     const refresh: RefreshBinding | undefined =
@@ -567,6 +606,7 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
             tokenEndpoint: p.tokenEndpoint,
             dpopRef: p.dpop.ref,
             dpopJwk: p.dpop.jwk,
+            ...(p.wua ? { instanceKeyRef: p.wua.keyRef } : {}),
             ...reuseTriggers(md, vct),
           }
         : undefined;
@@ -579,7 +619,7 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
       issuedAt: now,
       ...(refresh ? { refresh } : {}),
       ...(zk ? { zk } : {}),
-      ...(typeof body.pseudonym_seed === "string" ? { pseudonymSeed: body.pseudonym_seed } : {}),
+      ...(pseudonymSeed ? { pseudonymSeed } : {}),
     };
   } catch (e) {
     for (const c of copies) await p.keys.delete(c.keyRef).catch(() => {});

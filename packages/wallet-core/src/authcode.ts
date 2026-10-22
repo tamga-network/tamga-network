@@ -315,5 +315,6 @@ export async function completeAuthorized(p: CompleteInput): Promise<RedeemOutput
     randomBytes: p.randomBytes,
     refreshToken: tok.refresh_token,
     tokenEndpoint: p.start.as.token_endpoint,
+    wua, // ADR-0060: yenileme bağının istemci örneği anahtarı
   });
 }

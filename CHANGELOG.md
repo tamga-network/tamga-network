@@ -6,6 +6,14 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 
 ## 0.7.2 — unreleased
 
+- **ADR-0060 accepted (2026-10-22): refresh token bound to the client instance key.** issuer `clientInstanceJkt` (RFC 7638
+  thumbprint of the client attestation's `cnf`). wallet-core: refresh and ZK copy bindings keep `instanceKeyRef` (the WIA key of
+  the issuance); `autoRefreshCredential` / `refreshZkCopies` take `wuaForInstance` to get a fresh WIA for that key
+  (`wuaForBinding`); the DPoP key may change on refresh (RFC 9449 §5, attestation-based client authentication §10.3).
+  `removeCredential` also deletes the binding's key unless it is in use (`instanceKeysInUse`).
+- **ADR-0061 accepted (2026-10-22): pseudonym seed as a separate credential configuration.** wallet-core `obtainCredential`
+  requests `urn:tamga:id:PseudonymSeed:1` with the same access token after the identity credential (single proof with the first
+  copy's key) when the issuer declares it; the credential response no longer carries a non-standard `pseudonym_seed` field.
 - **ADR-0059 accepted (2026-10-21): several credential requests per access token.** The access token can be used for more than
   one credential request within its lifetime (≤ 5 minutes), as OpenID4VCI 1.0 §8 allows and the EU reference issuer does: only
   the configuration the token covers, at most 10 copies per token in total (`MAX_COPIES_PER_ACCESS_TOKEN`,

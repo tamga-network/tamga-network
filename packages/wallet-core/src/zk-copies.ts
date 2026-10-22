@@ -11,7 +11,7 @@ import { b64u, b64uDecode, toHex } from "./b64.js";
 import { epochSeconds } from "@tamga-network/core/time";
 import { readJson, type Http } from "./http.js";
 import { isAuthRequired, type KeyProvider, type PublicJwk } from "./keys.js";
-import type { WuaRecord } from "./wua.js";
+import { wuaForBinding, type WuaRecord } from "./wua.js";
 import { wuaHeaders } from "./authcode.js";
 import { dpopRequest, type DpopSigner } from "./dpop.js";
 import { fetchIssuerMetadata, obtainCredential } from "./oid4vci.js";
@@ -84,6 +84,8 @@ export interface ZkRefreshInput {
   keys: KeyProvider;
   http: Http;
   wua: WuaRecord;
+  /** ADR-0060: bağın istemci örneği anahtarına sağlayıcıdan taze WIA (elindeki WIA başka anahtarlıysa) */
+  wuaForInstance?: (keyRef: string) => Promise<WuaRecord>;
   randomBytes: (n: number) => Uint8Array;
   now?: number;
   /** ADR-0025: kopya anahtarları için anahtar kanıtı (sağlayıcı) */
@@ -123,6 +125,9 @@ export async function refreshZkCopies(p: ZkRefreshInput): Promise<ZkRefreshResul
   } finally {
     await p.keys.delete(probeRef).catch(() => {});
   }
+  // ADR-0060: belirtecin bağlı olduğu istemci örneği anahtarının WIA'sı
+  const wua = await wuaForBinding({ wua: p.wua, instanceKeyRef: b.instanceKeyRef, wuaForInstance: p.wuaForInstance });
+  if (!wua) return skip("wallet attestation for the credential's instance key is unavailable");
   let tr;
   try {
     tr = await dpopRequest(
@@ -133,7 +138,7 @@ export async function refreshZkCopies(p: ZkRefreshInput): Promise<ZkRefreshResul
         method: "POST",
         headers: async () => ({
           "content-type": "application/x-www-form-urlencoded",
-          ...(await wuaHeaders({ keys: p.keys, wua: p.wua, aud: cred.issuer, now, randomBytes: p.randomBytes })),
+          ...(await wuaHeaders({ keys: p.keys, wua, aud: cred.issuer, now, randomBytes: p.randomBytes })),
         }),
         body: `grant_type=refresh_token&refresh_token=${encodeURIComponent(b.token)}`,
       },

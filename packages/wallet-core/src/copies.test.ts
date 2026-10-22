@@ -119,6 +119,59 @@ describe("silme", () => {
   });
 });
 
+describe("ADR-0060 istemci örneği anahtarı", () => {
+  it("belge silinince bağın örnek anahtarı silinir — ama cüzdanın WIA'sı ya da başka belgenin bağıysa kalır", () => {
+    const withRefresh = (id: string, inst: string) =>
+      ({
+        ...cred(id, [[]]),
+        refresh: { token: "t", tokenEndpoint: "u", dpopRef: "d-" + id, dpopJwk: {}, instanceKeyRef: inst },
+      }) as never;
+    const base = {
+      version: 1,
+      createdAt: 0,
+      instanceId: "i",
+      presentationLog: [],
+      settings: { biometrics: false },
+    };
+    const s1 = {
+      ...base,
+      credentials: [withRefresh("a", "wia.1"), withRefresh("b", "wia.2")],
+    } as unknown as WalletState;
+    expect(removeCredential(s1, "a").keyRefs).toEqual(["a.0", "d-a", "wia.1"]);
+    const s2 = {
+      ...base,
+      wua: { keyRef: "wia.1" },
+      credentials: [withRefresh("a", "wia.1")],
+    } as unknown as WalletState;
+    expect(removeCredential(s2, "a").keyRefs).toEqual(["a.0", "d-a"]); // cüzdanın şu anki WIA'sı
+    const s3 = {
+      ...base,
+      credentials: [withRefresh("a", "wia.1"), withRefresh("b", "wia.1")],
+    } as unknown as WalletState;
+    expect(removeCredential(s3, "a").keyRefs).toEqual(["a.0", "d-a"]); // başka belgenin bağı
+  });
+  it("wuaForBinding: aynı anahtarlı WIA → o; değilse taze WIA; alınamazsa null; bağsız → elindeki", async () => {
+    const { wuaForBinding } = await import("./wua.js");
+    const w = (k: string) => ({ keyRef: k }) as never as import("./wua.js").WuaRecord;
+    expect((await wuaForBinding({ wua: w("x"), instanceKeyRef: "x" }))?.keyRef).toBe("x");
+    expect((await wuaForBinding({ wua: w("y") }))?.keyRef).toBe("y");
+    expect(await wuaForBinding({ wua: w("y"), instanceKeyRef: "x" })).toBeNull();
+    expect((await wuaForBinding({ wua: w("y"), instanceKeyRef: "x", wuaForInstance: async (k) => w(k) }))?.keyRef).toBe(
+      "x",
+    );
+    expect(await wuaForBinding({ wua: w("y"), instanceKeyRef: "x", wuaForInstance: async () => w("z") })).toBeNull();
+    expect(
+      await wuaForBinding({
+        wua: w("y"),
+        instanceKeyRef: "x",
+        wuaForInstance: async () => {
+          throw new Error("ağ");
+        },
+      }),
+    ).toBeNull();
+  });
+});
+
 describe("depo şifrelemesi", () => {
   it("gidiş-dönüş; yanlış anahtar ve bozulmuş içerik reddedilir", async () => {
     const { sealText, openText } = await import("./seal.js");

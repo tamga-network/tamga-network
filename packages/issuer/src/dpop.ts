@@ -168,3 +168,14 @@ export function parseAuthorization(h: unknown): { scheme: "DPoP" | "Bearer" | nu
   if (!m) return { scheme: null, token: "" };
   return { scheme: m[1].toLowerCase() === "dpop" ? "DPoP" : "Bearer", token: m[2] };
 }
+
+/**
+ * ADR-0060 (OAuth 2.0 Attestation-Based Client Authentication §10.3; RFC 9449 §5): istemci örneği anahtarının parmak izi — istemci
+ * kanıtındaki (WIA) `cnf.jwk`'nın RFC 7638 SHA-256 parmak izi. Yenileme belirteci buna bağlanır; DPoP anahtarı yenilemede
+ * değişebilir. Geçersiz anahtarda `null`.
+ */
+export async function clientInstanceJkt(cnfJwk: unknown): Promise<string | null> {
+  const j = cnfJwk as JWK | undefined;
+  if (!j || j.kty !== "EC" || j.crv !== "P-256" || typeof j.x !== "string" || typeof j.y !== "string") return null;
+  return calculateJwkThumbprint({ kty: "EC", crv: "P-256", x: j.x, y: j.y }, "sha256");
+}

@@ -135,7 +135,7 @@ bağlar (`BELGE/KOD` biçimi). "Proje yönetimi kararı", ağın geçici işletm
 | RB-AP-ID-04 | [[SPEC-ID-0003]] §9, IDP10 |
 | RB-AP-ID-05 | [[ADR-0011]] K6 |
 | RB-AP-ID-06 | [[SPEC-TRUST-0001]]/TL8 |
-| RB-AP-ID-07 | [[ADR-0031]] PS2, PS3 |
+| RB-AP-ID-07 | [[ADR-0031]] PS2, PS3; [[ADR-0061]] SD1 |
 | RB-AP-ID-08 | [[ADR-0039]] DL1, DL2 |
 | RB-AP-ID-09 | [[ADR-0039]] DL3, DL5 |
 | RB-AP-ID-10 | [[ADR-0039]] DL4, DL5 |
