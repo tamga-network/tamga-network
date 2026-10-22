@@ -9,6 +9,8 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 - issuer: `issuerMetadata` follows OpenID4VCI 1.0 (Final) §12.2.4 — credential configurations carry their display only in
   `credential_metadata.display` (the legacy top-level `display` is gone) and display entries use `locale` (the type metadata's
   `lang` is translated by the new `credentialDisplay`). Wallet-core already read `credential_metadata.display` and `locale`.
+  Only the OpenID4VCI issuer metadata changes: SD-JWT VC Type Metadata (vct documents, `display[].lang`, `claims[].display[].lang`)
+  and the credentials themselves keep `lang`, as SD-JWT VC defines.
 - **ADR-0060 accepted (2026-10-22): refresh token bound to the client instance key.** issuer `clientInstanceJkt` (RFC 7638
   thumbprint of the client attestation's `cnf`). wallet-core: refresh and ZK copy bindings keep `instanceKeyRef` (the WIA key of
   the issuance); `autoRefreshCredential` / `refreshZkCopies` take `wuaForInstance` to get a fresh WIA for that key
