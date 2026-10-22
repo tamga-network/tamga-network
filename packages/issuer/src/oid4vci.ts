@@ -267,15 +267,15 @@ export function issuerMetadata(p: {
           cryptographic_binding_methods_supported: ["jwk"],
           credential_signing_alg_values_supported: ["ES256"],
           proof_types_supported: proofTypes,
-          // OpenID4VCI 1.0: görünüm ve kopya politikası credential_metadata altında (üst düzey display eski cüzdanlar için)
+          // OpenID4VCI 1.0 (Final) §12.2.4: görünüm ve kopya politikası yalnız credential_metadata altında; `locale` (tür
+          // metadata'sının `lang`'ı çevrilir)
           credential_metadata: {
-            display: c.display,
+            display: credentialDisplay(c.display),
             credential_reuse_policy: REUSE_POLICY,
             ...(c.disclosurePolicy !== undefined && c.disclosurePolicy !== null
               ? { [EMBEDDED_DISCLOSURE_POLICY_MEMBER]: checkedDisclosurePolicy(c.vct, c.disclosurePolicy) }
               : {}),
           },
-          display: c.display,
         },
       ]),
       // OpenID4VCI 1.0 Ek A.2: mso_mdoc yapılandırması (`doctype`; anahtar bağlaması `cose_key`, imza ES256 = COSE -7)
@@ -288,14 +288,42 @@ export function issuerMetadata(p: {
           cryptographic_binding_methods_supported: ["cose_key"],
           credential_signing_alg_values_supported: [-7],
           proof_types_supported: proofTypes,
-          credential_metadata: { display: c.display },
-          display: c.display,
+          credential_metadata: { display: credentialDisplay(c.display) },
         },
       ]),
     ]),
     display: [{ name: p.authorizedVcts[0]?.name ?? "Tamga Issuer", locale: "tr-TR" }],
     ...(p.issuerInfo?.length ? { issuer_info: p.issuerInfo } : {}),
   };
+}
+/**
+ * SD-JWT VC tür metadata'sının görünümü (`lang`, `name`, `description`, `rendering.simple`) → OpenID4VCI 1.0 §12.2.4 belge görünümü
+ * (`name`, `locale`, `description`, `logo`, `background_color`, `background_image`, `text_color`). Tanımsız alan yazılmaz.
+ */
+export function credentialDisplay(display: unknown): Array<Record<string, unknown>> | undefined {
+  if (!Array.isArray(display)) return undefined;
+  return display
+    .filter((d): d is Record<string, unknown> => !!d && typeof d === "object")
+    .map((d) => {
+      const simple = ((d.rendering as Record<string, unknown> | undefined)?.simple ?? {}) as Record<string, unknown>;
+      const logo = (d.logo ?? simple.logo) as Record<string, unknown> | undefined;
+      const locale = d.locale ?? d.lang;
+      const bg = d.background_color ?? simple.background_color;
+      const tc = d.text_color ?? simple.text_color;
+      return {
+        name: d.name,
+        ...(typeof locale === "string" ? { locale } : {}),
+        ...(typeof d.description === "string" ? { description: d.description } : {}),
+        ...(logo && typeof logo.uri === "string"
+          ? { logo: { uri: logo.uri, ...(typeof logo.alt_text === "string" ? { alt_text: logo.alt_text } : {}) } }
+          : {}),
+        ...(typeof bg === "string" ? { background_color: bg } : {}),
+        ...(d.background_image && typeof d.background_image === "object"
+          ? { background_image: d.background_image }
+          : {}),
+        ...(typeof tc === "string" ? { text_color: tc } : {}),
+      };
+    });
 }
 /** OAuth AS metadata (aynı sunucu) — /.well-known/oauth-authorization-server/{slug} */
 export function authServerMetadata(
