@@ -6,6 +6,11 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 
 ## 0.7.2 — unreleased
 
+- Fixes after a code review of ADR-0059…0062. wallet-core: `startAuthorized` adds the ZK copy companion scope only when the
+  authorization server lists it in `scopes_supported` (a server without it would reject the PAR); when a refresh or ZK copy
+  binding ends with `invalid_grant`, `removedKeyRefs` also carries the binding's instance key unless the wallet's WIA or
+  another binding still uses it (no orphaned keys); `removeCredential` computes the keys in use once. issuer: `createPar`
+  accepts a companion scope when the credential type comes from `authorization_details` (RFC 9396 §3.1).
 - **ADR-0064 accepted (2026-10-23): `age_over_15` in the identity credential.** schemas: the identity credential and its ZK copy
   carry `age_over_15` next to `age_over_18` (ISO/IEC 18013-5 `age_over_NN` pattern; the threshold set is closed, {15, 18}, and
   changes only by ADR); selectively disclosable, derived at issuance, not required. The Longfellow circuit proves equality, so the

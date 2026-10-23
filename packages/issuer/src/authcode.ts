@@ -143,8 +143,13 @@ export function createPar(
   const companionSet = new Set(i.allowedCompanionScopes ?? []);
   const companions = all.filter((x) => companionSet.has(x));
   const scopes = all.filter((x) => !companionSet.has(x));
-  if (companions.length && !scopes.length)
-    return { ok: false, error: "invalid_request", description: "a companion scope needs its credential type (scope)" };
+  // birincil tür scope'ta ya da authorization_details'te (RFC 9396 §3.1: ikisi birlikte kullanılabilir)
+  if (companions.length && !scopes.length && !adVct)
+    return {
+      ok: false,
+      error: "invalid_request",
+      description: "a companion scope needs its credential type (scope or authorization_details)",
+    };
   if (scopes.length > 1)
     return { ok: false, error: "invalid_request", description: "one credential type per request (scope)" };
   const vct = scopes[0] ?? adVct;

@@ -182,3 +182,39 @@ describe("sessiz yenileme zamanlaması", () => {
     ).toEqual(["programme_title"]);
   });
 });
+
+describe("ADR-0060 K2: invalid_grant ile bağ kalkınca örnek anahtarı", () => {
+  const invalidGrant = async () => ({
+    status: 400,
+    text: async () => JSON.stringify({ error: "invalid_grant", error_description: "x" }),
+  });
+  async function run(state: WalletState) {
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    await keys.generate("d");
+    await keys.generate("inst.1");
+    return autoRefreshCredential({
+      state,
+      credentialId: "c",
+      keys,
+      http: invalidGrant,
+      wua: { jwt: "w", keyRef: "inst.1" } as never,
+      randomBytes: (n) => crypto.getRandomValues(new Uint8Array(n)),
+      now,
+    });
+  }
+  const bound = (id: string) =>
+    cred(9, now + 86400, { id, refresh: { ...cred(0, 0).refresh!, instanceKeyRef: "inst.1" } });
+
+  it("başka yerde kullanılmıyorsa silinecekler listesine girer (yetim anahtar kalmaz)", async () => {
+    const r = await run(st(bound("c")));
+    expect(r).toMatchObject({ ok: false, revoked: true });
+    expect(r.removedKeyRefs).toEqual(["d", "inst.1"]);
+    expect(r.state.credentials[0].refresh).toBeUndefined();
+  });
+  it("başka belgenin bağında ya da cüzdanın WIA'sında kullanılıyorsa silinmez", async () => {
+    const other = { credentials: [bound("c"), bound("c2")] } as unknown as WalletState;
+    expect((await run(other)).removedKeyRefs).toEqual(["d"]);
+    const withWia = { credentials: [bound("c")], wua: { keyRef: "inst.1" } } as unknown as WalletState;
+    expect((await run(withWia)).removedKeyRefs).toEqual(["d"]);
+  });
+});

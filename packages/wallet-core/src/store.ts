@@ -408,6 +408,7 @@ export function instanceKeysInUse(state: WalletState, exceptCredId?: string): Se
 }
 export function removeCredential(state: WalletState, credId: string): { state: WalletState; keyRefs: string[] } {
   const c = state.credentials.find((x) => x.id === credId);
+  const inUse = c ? instanceKeysInUse(state, credId) : undefined;
   return {
     state: {
       ...state,
@@ -424,7 +425,7 @@ export function removeCredential(state: WalletState, credId: string): { state: W
           ]),
         ]
           // ADR-0060: cüzdanın şu anki WIA'sının ve başka belgelerin yenileme bağlarının anahtarları silinmez
-          .filter((k) => !!k && !instanceKeysInUse(state, credId).has(k))
+          .filter((k) => !!k && !inUse!.has(k))
       : [],
   };
 }

@@ -150,3 +150,29 @@ describe("ADR-0044 — alınan ZK kopyasının denetimi (checkZkCopy)", async ()
     expect(() => checkZkCopy(make({ validity: 25 * 3600 }), ctx)).toThrow(/24 hours/);
   });
 });
+
+describe("ADR-0060 K2: ZK bağı invalid_grant ile kalkınca örnek anahtarı", () => {
+  it("başka yerde kullanılmıyorsa silinir; başka bağda kullanılıyorsa silinmez", async () => {
+    const { refreshZkCopies, SoftwareKeyProvider, MemoryKeyStore } = await import("./index.js");
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    await keys.generate("d");
+    await keys.generate("inst.1");
+    const c = cred([copy("z1", NOW + 3600)]);
+    const bound = { ...c, zk: { ...c.zk!, instanceKeyRef: "inst.1" } };
+    const run = (credentials: StoredCredential[]) =>
+      refreshZkCopies({
+        state: { ...newState("w"), credentials },
+        credentialId: "id1",
+        keys,
+        http: async () => ({ status: 400, text: async () => JSON.stringify({ error: "invalid_grant" }) }),
+        wua: { jwt: "w", keyRef: "inst.1" } as never,
+        randomBytes: (n) => new Uint8Array(randomBytes(n)),
+        now: NOW,
+      });
+    const r = await run([bound]);
+    expect(r).toMatchObject({ ok: false, revoked: true });
+    expect(r.removedKeyRefs).toEqual(["d", "z1", "inst.1"]);
+    const other = { ...bound, id: "id2", zk: { ...bound.zk, copies: [] } };
+    expect((await run([bound, other])).removedKeyRefs).toEqual(["d", "z1"]);
+  });
+});

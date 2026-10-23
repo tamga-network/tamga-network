@@ -10,7 +10,17 @@ import { wuaForBinding, type WuaRecord } from "./wua.js";
 import { wuaHeaders } from "./authcode.js";
 import { dpopRequest, type DpopSigner } from "./dpop.js";
 import { fetchIssuerMetadata, obtainCredential } from "./oid4vci.js";
-import { receiveCredentials, type ReceiveOptions, type StoredCredential, type WalletState } from "./store.js";
+import {
+  instanceKeysInUse,
+  receiveCredentials,
+  type ReceiveOptions,
+  type StoredCredential,
+  type WalletState,
+} from "./store.js";
+
+/** ADR-0060 K2: bağı kalkan örnek anahtarı, cüzdanın WIA'sında ya da başka bir bağda kullanılmıyorsa silinir. */
+const unusedKey = (state: WalletState, keyRef: string | undefined): string[] =>
+  keyRef && !instanceKeysInUse(state).has(keyRef) ? [keyRef] : [];
 
 /** Rastgele gecikme üst sınırı (sn): yenileme anı bir sunumun anına bağlanmasın (ADR-0023 K1). */
 export const REFRESH_JITTER_MAX_SEC = 6 * 3600;
@@ -141,12 +151,14 @@ export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRe
     // invalid_grant: belirteç geçersiz ya da kurum kaynağında kayıt yok → sessiz yenileme durur (AR3); kullanıcı uyarı akışını görür
     if (tok.error === "invalid_grant") {
       const { refresh: _r, ...rest } = old;
+      const state = { ...p.state, credentials: p.state.credentials.map((c) => (c.id === old.id ? rest : c)) };
       return {
         ok: false,
-        state: { ...p.state, credentials: p.state.credentials.map((c) => (c.id === old.id ? rest : c)) },
+        state,
         revoked: true,
         reason: tok.error_description ?? "invalid_grant",
-        removedKeyRefs: [r.dpopRef],
+        // ADR-0060 K2: bağın örnek anahtarı da silinir (cüzdanın WIA'sında ya da başka bağda kullanılmıyorsa)
+        removedKeyRefs: [r.dpopRef, ...unusedKey(state, r.instanceKeyRef)],
       };
     }
     return {

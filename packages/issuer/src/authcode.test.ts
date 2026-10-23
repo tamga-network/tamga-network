@@ -45,6 +45,12 @@ describe("authcode", () => {
     expect(createPar({ ...b, scope: "urn:zk:1", allowedCompanionScopes: ["urn:zk:1"] })).toMatchObject({ ok: false });
     const single = createPar({ ...b, scope: "urn:id:1", allowedCompanionScopes: ["urn:zk:1"] });
     expect(single.ok && single.par.companionScopes).toBeUndefined();
+    // birincil tür authorization_details'ten (RFC 9396 §3.1), eşlik kapsamı scope'ta
+    const viaAd = createPar({ ...base, scope: "urn:zk:1", allowedCompanionScopes: ["urn:zk:1"] });
+    expect(viaAd).toMatchObject({
+      ok: true,
+      par: { vct: "urn:tamga:id:IdentityAttestation:1", companionScopes: ["urn:zk:1"] },
+    });
   });
   it("plain PKCE → invalid_request (RFC 7636 §4.4.1)", () => {
     expect(createPar({ ...base, codeChallengeMethod: "plain" })).toMatchObject({ ok: false, error: "invalid_request" });

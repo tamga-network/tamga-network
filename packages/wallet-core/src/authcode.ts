@@ -57,6 +57,8 @@ export interface AuthServerMetadata {
   authorization_endpoint?: string;
   pushed_authorization_request_endpoint?: string;
   grant_types_supported?: string[];
+  /** RFC 8414 §2 */
+  scopes_supported?: string[];
   /** RFC 9207: true ise yetki yanıtında `iss` zorunlu */
   authorization_response_iss_parameter_supported?: boolean;
 }
@@ -177,9 +179,12 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
       code_challenge_method: "S256",
       state,
       // HAIP §4.3: tür `scope` ile istenir; kapsam ilan etmeyen issuer'da authorization_details. ADR-0062: kimlik belgesinde
-      // servis ZK kopyası ilan ediyorsa onun kapsamı da istenir (yenileme belirteci yalnız o zaman verilir)
+      // servis ZK kopyası ilan ediyorsa onun kapsamı da istenir (yenileme belirteci yalnız o zaman verilir) — yalnız
+      // yetkilendirme sunucusu kapsamı `scopes_supported`'da ilan ediyorsa (ilan etmeyen sunucu PAR'ı invalid_scope ile reddeder)
       ...(cfg.scope
-        ? { scope: [cfg.scope, ...companionScopes(md, p.vct)].join(" ") }
+        ? {
+            scope: [cfg.scope, ...companionScopes(md, p.vct).filter((s) => as.scopes_supported?.includes(s))].join(" "),
+          }
         : {
             authorization_details: JSON.stringify([{ type: "openid_credential", credential_configuration_id: p.vct }]),
           }),

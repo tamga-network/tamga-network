@@ -18,7 +18,11 @@ import { fetchIssuerMetadata, obtainCredential } from "./oid4vci.js";
 import { MDOC_RECEIVE_SKEW_SEC, jwkToPoint } from "./mdoc.js";
 import { certFingerprintHex, p256PointFromCertDer } from "./sdjwt.js";
 import { decode, encode, parseCoseSign1, verifyIssuerSigned, type CborValue } from "@tamga-network/mdoc";
-import type { StoredCredential, WalletState, ZkCopy } from "./store.js";
+import { instanceKeysInUse, type StoredCredential, type WalletState, type ZkCopy } from "./store.js";
+
+/** ADR-0060 K2: bağı kalkan örnek anahtarı, cüzdanın WIA'sında ya da başka bir bağda kullanılmıyorsa silinir. */
+const unusedKey = (state: WalletState, keyRef: string | undefined): string[] =>
+  keyRef && !instanceKeysInUse(state).has(keyRef) ? [keyRef] : [];
 
 /** Paket büyüklüğü (ADR-0044 K2 "küçük paket"): ZK ispatı bağlanamaz — kopya sayısı yalnız yedek içindir. */
 export const ZK_COPY_BATCH = 3;
@@ -157,12 +161,14 @@ export async function refreshZkCopies(p: ZkRefreshInput): Promise<ZkRefreshResul
     if (tok.error === "invalid_grant") {
       // ZC2: ana belge iptal/askıda (ya da belirteç geçersiz) — bağ ve kopyalar kalkar; klasik sunum belgeyle sürer
       const { zk: _z, ...rest } = cred;
+      const state = { ...p.state, credentials: p.state.credentials.map((c) => (c.id === cred.id ? rest : c)) };
       return {
         ok: false,
-        state: { ...p.state, credentials: p.state.credentials.map((c) => (c.id === cred.id ? rest : c)) },
+        state,
         revoked: true,
         reason: tok.error_description ?? "invalid_grant",
-        removedKeyRefs: [b.dpopRef, ...b.copies.map((k) => k.keyRef)],
+        // ADR-0060 K2: bağın örnek anahtarı da silinir (cüzdanın WIA'sında ya da başka bağda kullanılmıyorsa)
+        removedKeyRefs: [b.dpopRef, ...b.copies.map((k) => k.keyRef), ...unusedKey(state, b.instanceKeyRef)],
       };
     }
     return skip(tok.error_description ?? `HTTP ${tr.status}`);
