@@ -27,7 +27,8 @@ yeniden doğrulandığında aynı takma adlar geri gelir. Kişi başına sitede 
 
 "18 yaşından büyüğüm" ispatı, belgenin kendisini göstermeden üretilir ([[t:ZK]]): doğrulayıcı ne doğum tarihini ne de belgeyi
 görür, iki gösterim birbirine bağlanamaz. İspat sistemi [[t:Longfellow-ZK]]; doğrulayıcı tarafı `@tamga-network/verifier/zk`
-alt yolunda hazır, cüzdan tarafı mağaza sürümüyle gelir. İspat iptal listesindeki yeri açmadığı için iptal sunumda denetlenemez;
+alt yolunda, cüzdan tarafı (cihazda ispatçı) `@tamga-network/zk` paketinde hazır; ispatçı bugün Android'de çalışır, iOS kitaplığı
+henüz derlenmedi (orada ZK yerine olağan sunum yapılır). İspat iptal listesindeki yeri açmadığı için iptal sunumda denetlenemez;
 bunun yerine ZK sunumu yalnız kimlik belgesinin kısa ömürlü kopyalarıyla (en çok 24 saat geçerli, cüzdanın kendiliğinden
 yenilediği) yapılır ([[ADR-0044]]). İptal edilen belgenin kopyası yenilenmez; ispat kopyanın türünü bağladığı için doğrulayıcı
 kısa ömrü görür. Kopya kullanılmayan (işaretsiz) bir ZK sunumunu doğrulayıcı yalnız politikasında `accept_unrevocable_zk` açıkça

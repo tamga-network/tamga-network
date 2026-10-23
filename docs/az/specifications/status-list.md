@@ -4,7 +4,7 @@ title: "Ləğv və status siyahısı"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-23
 summary: >
   [[ADR-0008]] qərarının normativ tətbiqi. Status List Token-in Tamga profilini (qurum siyahılarında bits=2, şəxsiyyət xidmətində bits=1; ES256, X.509 zənciri, minimum 100.000 indeks; mdoc üçün CWT təqdimatı), sabit intervallı və küylü dərc dövrünü, yenidən yazılmış StatusListRegistry lövbər müqaviləsini, on addımlı yoxlama alqoritmini, keş və aktuallıq siyasətini müəyyən edir. İki kritik məxfilik qaydası: indekslər TƏSADÜFİ ayrılır (ardıcıl ayırma məzun olma ardıcıllığını sızdırır) və siyahı URI-si QEYRİ-ŞƏFFAF olmalıdır (il/fakültə/kohortanı kodlayan URI açıqlanmamış claim-ləri sızdırır). Hər yoxlamada ayrıca sorğu əvəzinə toplu ilkin yükləmə məcburidir.
 translation_of: SPEC-CRED-0003
@@ -190,8 +190,8 @@ Standart `bits` üçün 1, 2, 4 və 8 dəyərlərinə icazə verir. Tamga qurum 
 
 | Seçim | Məna | Tamga qiymətləndirməsi |
 |---|---|---|
-| `bits = 1` | Yalnız etibarlı/etibarsız | Müvəqqəti dayandırma təmsil edilə bilməz |
-| **`bits = 2`** | 4 status | **Seçildi** |
+| `bits = 1` | Yalnız etibarlı/etibarsız | **Şəxsiyyət xidmətinin növləri** (müvəqqəti dayandırma yoxdur) |
+| **`bits = 2`** | 4 status | **Qurum növləri** (müvəqqəti dayandırma yalnız sxem icazə verərsə) |
 | `bits = 4` / `8` | 16 / 256 status | Ölçü 2–4 dəfə artır, qarşılığında fayda yoxdur |
 
 Status dəyərləri və onların Tamga-dakı qarşılıqları:
@@ -262,7 +262,7 @@ interface IStatusListRegistry {
         string     listURI;       // the sub claim of the Status List Token
         bytes32    contentHash;   // §4.1
         uint32     listSize;      // toplam indeks kapasitesi
-        uint8      bitsPerEntry;  // Tamga'da her zaman 2
+        uint8      bitsPerEntry;  // siyahının öz bits dəyəri (1, 2, 4, 8); şəxsiyyət xidməti 1, qurum 2 — ADR-0063
         uint64     version;       // monoton artan
         uint64     publishedAt;   // time of the latest publication
         ListStatus status;
@@ -271,7 +271,10 @@ interface IStatusListRegistry {
     /// @notice Tamga profile: the list must have at least this index capacity.
     function MIN_LIST_SIZE() external pure returns (uint32); // 100_000
 
-    event ListRegistered(bytes32 indexed listId, bytes32 indexed issuerId, string listURI, uint32 listSize);
+    /// @notice Siyahının öz bits dəyəri qəbul edilir: 1, 2, 4, 8 (IETF Token Status List; ADR-0063).
+    function isAllowedBits(uint8 bits) external pure returns (bool);
+
+    event ListRegistered(bytes32 indexed listId, bytes32 indexed issuerId, string listURI, uint32 listSize, uint8 bitsPerEntry);
     event ListPublished(bytes32 indexed listId, uint64 version, bytes32 contentHash, uint64 publishedAt);
     event ListRetired(bytes32 indexed listId, string reason);
 

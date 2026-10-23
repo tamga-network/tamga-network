@@ -4,7 +4,7 @@ title: "Revocation and status list"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-23
 summary: >
   The normative implementation of the [[ADR-0008]] decision. Defines the Tamga profile of the Status List Token (bits=2
   in institution lists, bits=1 for the identity service; ES256, X.509 chain, at least 100,000 indices; a CWT representation for
@@ -197,8 +197,8 @@ service's lists ([[ADR-0048]]). Lists are separate per type (S9), so the two rul
 
 | Option | Meaning | Tamga assessment |
 |---|---|---|
-| `bits = 1` | Only valid/invalid | Suspension cannot be represented |
-| **`bits = 2`** | 4 states | **Chosen** |
+| `bits = 1` | Only valid/invalid | **Identity service types** (no suspension) |
+| **`bits = 2`** | 4 states | **Institution types** (suspension only if the schema allows it) |
 | `bits = 4` / `8` | 16 / 256 states | Size grows 2–4 times, for no benefit |
 
 Status values and their Tamga meaning:
@@ -266,7 +266,7 @@ interface IStatusListRegistry {
         string     listURI;       // the sub claim of the Status List Token
         bytes32    contentHash;   // §4.1
         uint32     listSize;      // toplam indeks kapasitesi
-        uint8      bitsPerEntry;  // Tamga'da her zaman 2
+        uint8      bitsPerEntry;  // the list's own bits value (1, 2, 4, 8); identity service 1, institutions 2 — ADR-0063
         uint64     version;       // monoton artan
         uint64     publishedAt;   // time of the latest publication
         ListStatus status;
@@ -275,7 +275,10 @@ interface IStatusListRegistry {
     /// @notice Tamga profile: the list must have at least this index capacity.
     function MIN_LIST_SIZE() external pure returns (uint32); // 100_000
 
-    event ListRegistered(bytes32 indexed listId, bytes32 indexed issuerId, string listURI, uint32 listSize);
+    /// @notice The list's own bits value is accepted: 1, 2, 4, 8 (IETF Token Status List; ADR-0063).
+    function isAllowedBits(uint8 bits) external pure returns (bool);
+
+    event ListRegistered(bytes32 indexed listId, bytes32 indexed issuerId, string listURI, uint32 listSize, uint8 bitsPerEntry);
     event ListPublished(bytes32 indexed listId, uint64 version, bytes32 contentHash, uint64 publishedAt);
     event ListRetired(bytes32 indexed listId, string reason);
 

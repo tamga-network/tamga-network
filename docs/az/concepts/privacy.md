@@ -27,7 +27,8 @@ yenidən təsdiqləndikdə eyni psevdonimlər geri qayıdır. Standart olaraq h�
 
 "18 yaşdan böyüyəm" sübutu rəqəmsal sənədin özü göstərilmədən yaradılır ([[t:ZK]]): yoxlayan tərəf nə doğum tarixini, nə də rəqəmsal sənədi
 görür, iki təqdimat bir-biri ilə əlaqələndirilə bilməz. Sübut sistemi [[t:Longfellow-ZK]]; yoxlayan tərəf hissəsi `@tamga-network/verifier/zk`
-alt yolunda hazırdır, rəqəmsal cüzdan hissəsi mağaza versiyası ilə gəlir. Sübut ləğv siyahısındakı yeri açıqlamadığı üçün ləğv təqdimat zamanı yoxlanıla bilmir;
+alt yolunda, rəqəmsal cüzdan hissəsi (cihazda sübut yaradan) isə `@tamga-network/zk` paketində hazırdır; sübut yaradan bu gün
+Android-də işləyir, iOS kitabxanası hələ yığılmayıb (orada ZK əvəzinə adi təqdimat edilir). Sübut ləğv siyahısındakı yeri açıqlamadığı üçün ləğv təqdimat zamanı yoxlanıla bilmir;
 bunun əvəzinə ZK təqdimatı yalnız şəxsiyyət sənədinin qısamüddətli nüsxələri ilə (ən çox 24 saat etibarlı, rəqəmsal cüzdanın avtomatik
 yenilədiyi) aparılır ([[ADR-0044]]). Ləğv edilmiş rəqəmsal sənədin nüsxəsi yenilənmir; sübut nüsxənin növünü bağladığı üçün yoxlayan tərəf
 qısa ömrü görür. Nüsxədən istifadə edilməyən (işarəsiz) ZK təqdimatını yoxlayan tərəf yalnız siyasətində `accept_unrevocable_zk` açıq şəkildə

@@ -8,6 +8,7 @@
 import { describe, it, expect } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { deflateSync } from "node:zlib";
 import { Interface } from "ethers";
 import { sha256Hex, utf8 } from "@tamga-network/trust";
 
@@ -15,12 +16,14 @@ import { anchorDist, runProjection } from "../src/chain/anchor.js";
 import { MemoryChainClient, loadAbi } from "../src/chain/client.js";
 import { chainCommand } from "../src/chain/cli.js";
 import {
+  STATUS_LIST_BITS,
   ZERO32,
   jwsHash,
   listAnchorOf,
   listKeyOf,
   logKeyOf,
   planProjection,
+  statusListRegistrationOf,
   tagToBytes32,
 } from "../src/chain/projection.js";
 import { checkListAnchored } from "../src/chain/verify.js";
@@ -296,5 +299,24 @@ describe.skipIf(!ready)("chain projeksiyonu — gerçek test seti (dist-test) il
     expect((await checkListAnchored(c, "production", "lotl", lotlJws)).anchored).toBe("YES");
     const again = await anchorDist(c, DIST_TEST, "production", { dryRun: false, clock });
     expect(again.written).toBe(0);
+  });
+});
+
+describe("iptal listesi kaydı parametreleri (ADR-0063 SB1)", () => {
+  const token = (bits: unknown, bytes = 12_500) =>
+    fakeJws({
+      sub: "https://status.example/v1/sl/7f3a9c21",
+      iat: 1,
+      status_list: { bits, lst: deflateSync(new Uint8Array(bytes)).toString("base64url") },
+    });
+  it("listenin kendi bits değeri: kimlik 1, kurum 2; kapasite bits'e göre", () => {
+    const one = statusListRegistrationOf(token(1));
+    expect(one).toMatchObject({ listURI: "https://status.example/v1/sl/7f3a9c21", bitsPerEntry: 1, listSize: 100_000 });
+    expect(statusListRegistrationOf(token(2, 25_000))).toMatchObject({ bitsPerEntry: 2, listSize: 100_000 });
+    expect(one.contentHash).toBe(jwsHash(token(1)));
+  });
+  it("Token Status List dışı bits reddedilir", () => {
+    for (const b of [0, 3, 16, "2", null]) expect(() => statusListRegistrationOf(token(b))).toThrow(/bits/);
+    expect(STATUS_LIST_BITS).toEqual(new Set([1, 2, 4, 8]));
   });
 });

@@ -9,6 +9,7 @@
  * Özetler: contentHash = sha256(<dosya>.jws) (= sonraki sürümün previous_version_hash'i, SPEC-TRUST-0001 §1.3);
  *          lineHash = sha256(satır JWS) (çapa günlüğü zinciri aynı değeri kullanır, §5).
  */
+import { inflateSync } from "node:zlib";
 import { keccak256Hex, sha256Hex, utf8 } from "@tamga-network/trust";
 
 export type Environment = "production" | "sandbox";
@@ -107,4 +108,32 @@ export function planProjection(input: PlanInput): ProjectionPlan {
     lists.push(listAnchorOf(input.environment, file, input.nationalListJws[file]));
   }
   return { environment: input.environment, lists, logHead: logHeadOf(input.environment, input.anchorsJsonl) };
+}
+
+/**
+ * İptal listesi kaydı (`StatusListRegistry.registerList`, SPEC-BC-0001 §7) için parametreler — Faz 0 geçişinde liste geçmişinin
+ * kontratlara aktarımı (ADR-0009 K7) bunları kullanır. Zincire listenin KENDİ `bits` değeri yazılır (ADR-0063 SB1): kimlik
+ * servisinin türleri 1, kurum listeleri 2 (ADR-0048 SU1); kontratın kabul ettiği küme IETF Token Status List'inki (1, 2, 4, 8).
+ * Belge türü, şema ya da bit içeriği zincire gitmez (SB2, DP1). İMZA DOĞRULAMAZ (belirteç önce `verifyStatusListToken` ile).
+ */
+export const STATUS_LIST_BITS: ReadonlySet<number> = new Set([1, 2, 4, 8]);
+
+export interface StatusListRegistration {
+  /** belirtecin `sub`'ı = liste adresi (opak, S8) */
+  listURI: string;
+  bitsPerEntry: number;
+  /** indeks kapasitesi: açılmış bayt × 8 / bits */
+  listSize: number;
+  contentHash: string; // 0x… bytes32 — sha256(jws)
+}
+
+export function statusListRegistrationOf(jws: string): StatusListRegistration {
+  const p = jwsPayload<{ sub?: unknown; status_list?: { bits?: unknown; lst?: unknown } }>(jws);
+  const bits = p.status_list?.bits;
+  if (typeof bits !== "number" || !STATUS_LIST_BITS.has(bits))
+    throw new Error(`chain: iptal listesi bits geçersiz: ${String(p.status_list?.bits)}`);
+  if (typeof p.sub !== "string" || p.sub.length === 0) throw new Error("chain: iptal listesi sub yok");
+  if (typeof p.status_list?.lst !== "string") throw new Error("chain: iptal listesi lst yok");
+  const bytes = inflateSync(Buffer.from(p.status_list.lst, "base64url"), { maxOutputLength: 10 * 1024 * 1024 });
+  return { listURI: p.sub, bitsPerEntry: bits, listSize: (bytes.length * 8) / bits, contentHash: jwsHash(jws.trim()) };
 }

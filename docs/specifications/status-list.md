@@ -4,7 +4,7 @@ title: "İptal ve durum listesi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-23
 summary: >
   [[ADR-0008]] kararının normatif uygulaması. Status List Token'ın Tamga profilini
   (kurum listelerinde bits=2, kimlik servisinde bits=1; ES256, X.509 zinciri, asgari 100.000 indeks; mdoc için CWT
@@ -196,8 +196,8 @@ Standart `bits` için 1, 2, 4 ve 8 değerlerine izin verir. Tamga kurum listeler
 
 | Seçenek | Anlam | Tamga değerlendirmesi |
 |---|---|---|
-| `bits = 1` | Yalnızca geçerli/geçersiz | Askıya alma temsil edilemez |
-| **`bits = 2`** | 4 durum | **Seçildi** |
+| `bits = 1` | Yalnızca geçerli/geçersiz | **Kimlik servisinin türleri** (askı yok) |
+| **`bits = 2`** | 4 durum | **Kurum türleri** (askı yalnız şema izin verirse) |
 | `bits = 4` / `8` | 16 / 256 durum | Boyut 2–4 katına çıkar, karşılığı yok |
 
 Durum değerleri ve Tamga karşılıkları:
@@ -268,7 +268,7 @@ interface IStatusListRegistry {
         string     listURI;       // Status List Token'ın sub claim'i
         bytes32    contentHash;   // §4.1
         uint32     listSize;      // toplam indeks kapasitesi
-        uint8      bitsPerEntry;  // Tamga'da her zaman 2
+        uint8      bitsPerEntry;  // listenin kendi bits değeri (1, 2, 4, 8); kimlik servisi 1, kurum 2 — ADR-0063
         uint64     version;       // monoton artan
         uint64     publishedAt;   // son yayın zamanı
         ListStatus status;
@@ -277,7 +277,10 @@ interface IStatusListRegistry {
     /// @notice Tamga profili: liste en az bu kadar indeks kapasitesine sahip olmalı.
     function MIN_LIST_SIZE() external pure returns (uint32); // 100_000
 
-    event ListRegistered(bytes32 indexed listId, bytes32 indexed issuerId, string listURI, uint32 listSize);
+    /// @notice Listenin kendi bits değeri kabul edilir: 1, 2, 4, 8 (IETF Token Status List; ADR-0063).
+    function isAllowedBits(uint8 bits) external pure returns (bool);
+
+    event ListRegistered(bytes32 indexed listId, bytes32 indexed issuerId, string listURI, uint32 listSize, uint8 bitsPerEntry);
     event ListPublished(bytes32 indexed listId, uint64 version, bytes32 contentHash, uint64 publishedAt);
     event ListRetired(bytes32 indexed listId, string reason);
 

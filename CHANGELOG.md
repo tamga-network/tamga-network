@@ -6,6 +6,10 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 
 ## 0.7.2 — unreleased
 
+- **ADR-0063 accepted (2026-10-23): the on-chain status list registry accepts the list's own bit size.** `StatusListRegistry`
+  takes `bitsPerEntry` 1, 2, 4 or 8 (IETF Token Status List) instead of always 2, so identity service lists (`bits = 1`, ADR-0048)
+  can be anchored; the value is written once and emitted in `ListRegistered`. trust-publisher: `statusListRegistrationOf` derives
+  the registration parameters from a signed status list token. No production chain (local development and test only).
 - **ADR-0062 accepted (2026-10-23): the ZK copy refresh token only when the ZK copy scope is requested.** issuer
   `createPar({ allowedCompanionScopes })` accepts a companion scope next to one credential type (`ParRequest.companionScopes`);
   wallet-core `startAuthorized` requests the ZK copy scope with the identity credential when the issuer declares ZK copies
