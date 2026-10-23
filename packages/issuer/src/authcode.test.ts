@@ -37,6 +37,15 @@ describe("authcode", () => {
       reused: true, // RFC 6749 §4.1.2: çağıran o koddan verilenleri geri alır
     });
   });
+  it("ADR-0062: eşlik kapsamı yalnız izin listesindeyse ve birincil türle birlikte", () => {
+    const b = { ...base, authorizationDetails: undefined };
+    const ok = createPar({ ...b, scope: "urn:id:1 urn:zk:1", allowedCompanionScopes: ["urn:zk:1"] });
+    expect(ok).toMatchObject({ ok: true, par: { vct: "urn:id:1", companionScopes: ["urn:zk:1"] } });
+    expect(createPar({ ...b, scope: "urn:id:1 urn:zk:1" })).toMatchObject({ ok: false, error: "invalid_request" });
+    expect(createPar({ ...b, scope: "urn:zk:1", allowedCompanionScopes: ["urn:zk:1"] })).toMatchObject({ ok: false });
+    const single = createPar({ ...b, scope: "urn:id:1", allowedCompanionScopes: ["urn:zk:1"] });
+    expect(single.ok && single.par.companionScopes).toBeUndefined();
+  });
   it("plain PKCE → invalid_request (RFC 7636 §4.4.1)", () => {
     expect(createPar({ ...base, codeChallengeMethod: "plain" })).toMatchObject({ ok: false, error: "invalid_request" });
   });

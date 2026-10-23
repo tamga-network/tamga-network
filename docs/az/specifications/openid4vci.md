@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-22
+last_updated: 2026-10-23
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdana necə daxil olduğunu müəyyən edir. OpenID4VCI 1.0 Final üzərində Tamga profili: issuer metadata, credential offer (QR + tx_code), pre-authorized və authorization code axını seçimi, Nonce Endpoint-dən c_nonce, openid4vci-proof+jwt açar sübutu, credential endpoint, təxirə salınmış sənəd verilməsi və bildiriş ucunun bugünkü vəziyyəti (hər ikisi təqdim edilmir). İki açıq məsələ bağlanır: batch partiyasının ölçüsü 10 olaraq sabitlənir və batch nüsxələrinin HƏR BİRİ FƏRQLİ cihaz açarından istifadə edir — eyni `cnf` istifadə edilsəydi, nüsxələr bir-biri ilə əlaqələndirilə bilərdi və batch-in bütün mənası itərdi. Bundan əlavə, sənəd verilməsi anındakı holder binding üsulunun holder assurance səviyyəsinə (T1/T2/T3) uyğunluğu verilir.
 translation_of: SPEC-PROTO-0001
@@ -313,6 +313,8 @@ yalnız qısa ömürlü ZK nüsxəsi alır ([[ADR-0023]] AR4-ün yeganə istisna
 }
 ```
 
+- **Nə vaxt ([[ADR-0062]]):** yalnız cüzdan PAR `scope`-unda şəxsiyyət sənədi əhatəsinin yanında ZK nüsxəsi əhatəsini
+  (`urn:tamga:id:ShortLivedIdentityAttestation:1`) də istəyərsə; əhatə yalnız şəxsiyyət sənədi ilə istənə bilər (ZS1).
 - **Token:** cüzdan üçün qeyri-şəffafdır (opaque); məzmunu yalnız şəxsiyyət xidmətinin açarı ilə açılan autentifikasiyalı şifrələmə (JWE `dir` +
   A256GCM) ilə qorunur: bağlı şəxsiyyət qeydi, nəsil sayğacı, ilk buraxılışdakı müştəri nümunəsi açarının (WIA `cnf`) barmaq izi ([[ADR-0060]]), bitmə tarixi (≤ şəxsiyyət sənədinin
   bitmə tarixi) və ZK nüsxəsinə daxil ediləcək **minimal** elementlər (bu gün `age_over_18`). Serverdə token və şəxs sahəsi saxlanmır; birdəfəlik istifadə

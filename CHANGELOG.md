@@ -6,6 +6,10 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 
 ## 0.7.2 — unreleased
 
+- **ADR-0062 accepted (2026-10-23): the ZK copy refresh token only when the ZK copy scope is requested.** issuer
+  `createPar({ allowedCompanionScopes })` accepts a companion scope next to one credential type (`ParRequest.companionScopes`);
+  wallet-core `startAuthorized` requests the ZK copy scope with the identity credential when the issuer declares ZK copies
+  (`companionScopes`). A refresh token is then for the scope it was granted for (RFC 6749 §6).
 - issuer: `issuerMetadata` follows OpenID4VCI 1.0 (Final) §12.2.4 — credential configurations carry their display only in
   `credential_metadata.display` (the legacy top-level `display` is gone) and display entries use `locale` (the type metadata's
   `lang` is translated by the new `credentialDisplay`). Wallet-core already read `credential_metadata.display` and `locale`.

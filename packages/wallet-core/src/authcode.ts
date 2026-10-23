@@ -5,6 +5,7 @@
  *  (b) satır içi sunum — kurum issuer'ı `Accept: application/json` ile OpenID4VP isteği döner, cüzdan mevcut sunum akışını çalıştırır,
  *      response'daki redirect_uri code taşır. Her iki durumda son adım exchangeCode → obtainCredential.
  */
+import { IDENTITY_VCT, ZK_COPY_VCT } from "./directory.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { epochMillis } from "@tamga-network/core/time";
 import { b64u, utf8 } from "./b64.js";
@@ -128,6 +129,15 @@ export async function wuaHeaders(p: {
   };
 }
 
+/** ADR-0062: kimlik belgesiyle birlikte istenecek eşlik kapsamları — servisin ilan ettiği ZK kopyası yapılandırmasının `scope`'u. */
+export function companionScopes(md: IssuerMetadata, vct: string): string[] {
+  if (vct !== IDENTITY_VCT) return [];
+  const zk = Object.values(md.credential_configurations_supported).find(
+    (c) => c.format === "mso_mdoc" && (c as { doctype?: string }).doctype === ZK_COPY_VCT,
+  ) as { scope?: string } | undefined;
+  return typeof zk?.scope === "string" ? [zk.scope] : [];
+}
+
 /** PAR: cüzdan istediği tipi, redirect_uri'sini ve PKCE meydan okumasını issuer'a iletir; authorize URL'i döner. */
 export async function startAuthorized(p: StartInput): Promise<AuthStart> {
   const nowMs = p.now !== undefined ? p.now * 1000 : Date.now(); // p.now saniye; metadata/kayıt denetimi milisaniye
@@ -166,9 +176,10 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
       code_challenge: pk.challenge,
       code_challenge_method: "S256",
       state,
-      // HAIP §4.3: tür `scope` ile istenir; kapsam ilan etmeyen issuer'da authorization_details
+      // HAIP §4.3: tür `scope` ile istenir; kapsam ilan etmeyen issuer'da authorization_details. ADR-0062: kimlik belgesinde
+      // servis ZK kopyası ilan ediyorsa onun kapsamı da istenir (yenileme belirteci yalnız o zaman verilir)
       ...(cfg.scope
-        ? { scope: cfg.scope }
+        ? { scope: [cfg.scope, ...companionScopes(md, p.vct)].join(" ") }
         : {
             authorization_details: JSON.stringify([{ type: "openid_credential", credential_configuration_id: p.vct }]),
           }),

@@ -20,6 +20,11 @@ export interface ParRequest {
   redirectUri: string;
   codeChallenge: string; // S256
   vct: string; // scope ya da authorization_details[0].credential_configuration_id
+  /**
+   * ADR-0062: birincil türün yanında izin verilen eşlik kapsamları (ör. kimlik belgesinin ZK kopyası) — yetki bunları da kapsar;
+   * yalnız çağıranın `allowedCompanionScopes` listesindekiler.
+   */
+  companionScopes?: string[];
   state?: string;
   /** RFC 9207: yetki yanıtına eklenen yetkilendirme sunucusu kimliği (AS metadata `issuer`) */
   issuer?: string;
@@ -52,6 +57,11 @@ export interface ParInput {
   authorizationDetails?: unknown;
   /** HAIP §4.3: kapsam; Tamga'da kapsam değeri belge türünün vct'sidir (metadata `scope`) */
   scope?: string;
+  /**
+   * ADR-0062: tek birincil türün yanında istenebilecek eşlik kapsamları (boşlukla ayrılmış `scope` içinde). Verilmezse ya da
+   * listede olmayan ikinci kapsam gelirse "bir istekte bir tür" kuralı geçerli (`invalid_request`).
+   */
+  allowedCompanionScopes?: readonly string[];
   state?: string;
   /** RFC 9207: AS kimliği; verilirse yetki yanıtlarına `iss` eklenir */
   issuer?: string;
@@ -129,7 +139,12 @@ export function createPar(
     ? (i.authorizationDetails as Array<{ type?: string; credential_configuration_id?: string }>)
     : undefined;
   const adVct = ad?.find((a) => a.type === "openid_credential")?.credential_configuration_id;
-  const scopes = typeof i.scope === "string" ? i.scope.split(" ").filter(Boolean) : [];
+  const all = typeof i.scope === "string" ? [...new Set(i.scope.split(" ").filter(Boolean))] : [];
+  const companionSet = new Set(i.allowedCompanionScopes ?? []);
+  const companions = all.filter((x) => companionSet.has(x));
+  const scopes = all.filter((x) => !companionSet.has(x));
+  if (companions.length && !scopes.length)
+    return { ok: false, error: "invalid_request", description: "a companion scope needs its credential type (scope)" };
   if (scopes.length > 1)
     return { ok: false, error: "invalid_request", description: "one credential type per request (scope)" };
   const vct = scopes[0] ?? adVct;
@@ -149,6 +164,7 @@ export function createPar(
       redirectUri: i.redirectUri,
       codeChallenge: i.codeChallenge,
       vct,
+      ...(companions.length ? { companionScopes: companions } : {}),
       state: i.state,
       ...(i.issuer ? { issuer: i.issuer } : {}),
       createdAt: now,

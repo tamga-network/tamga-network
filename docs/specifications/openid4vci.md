@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-22
+last_updated: 2026-10-23
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -319,6 +319,8 @@ yalnız kısa ömürlü ZK kopyası alır ([[ADR-0023]] AR4'ün tek istisnası).
 }
 ```
 
+- **Ne zaman ([[ADR-0062]]):** yalnız cüzdan PAR `scope`'unda kimlik belgesi kapsamının yanında ZK kopyası kapsamını
+  (`urn:tamga:id:ShortLivedIdentityAttestation:1`) da isterse; kapsam yalnız kimlik belgesiyle istenebilir (ZS1).
 - **Belirteç:** cüzdana opaktır; içeriği yalnız kimlik servisinin anahtarıyla açılan doğrulanmış şifrelemeyle (JWE `dir` +
   A256GCM) korunur: bağlı kimlik kaydı, kuşak sayacı, ilk ihraçtaki istemci örneği anahtarının (WIA `cnf`) parmak izi ([[ADR-0060]]), bitiş (≤ kimlik belgesinin
   bitişi) ve ZK kopyasına girecek **asgari** öğeler (bugün `age_over_18`). Sunucuda belirteç ve kişi alanı tutulmaz; tek kullanım

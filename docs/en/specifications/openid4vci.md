@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-22
+last_updated: 2026-10-23
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -312,6 +312,8 @@ identity service's metadata announces the ZK copy as a separate `mso_mdoc` confi
 }
 ```
 
+- **When ([[ADR-0062]]):** only if the wallet requests the ZK copy scope (`urn:tamga:id:ShortLivedIdentityAttestation:1`)
+  next to the identity credential scope in the PAR `scope`; the scope can only be requested with the identity credential (ZS1).
 - **Token:** opaque to the wallet; its content is protected by authenticated encryption that only the identity service's key
   opens (JWE `dir` + A256GCM): the linked identity record, a generation counter, the thumbprint of the client instance key (WIA `cnf`) from
   the first issuance ([[ADR-0060]]), the expiry (≤ the identity credential's expiry) and the **minimum** elements for the ZK copy (today
