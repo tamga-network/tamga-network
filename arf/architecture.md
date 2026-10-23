@@ -135,12 +135,12 @@ approved fields.
 
 A verifier may run its own verification software or use Tamga Verify (the hosted verifier). Presentation happens through a
 wallet link (same device) or across devices through a QR code. For presentation through the browser (Digital Credentials API)
-the verifier is ready; in the first listed wallet it is implemented for Android, with device testing under way.
+the verifier is ready; in the first listed wallet the Android code is written but not yet built into the app or device-tested; no iOS yet.
 
 ### 2.3 In-person presentation
 
 At gates, campus entrances or service counters, the credential is shown at close range. The long-term solution is the
-Bluetooth proximity flow of ISO/IEC 18013-5. This flow is implemented and device testing is under way; until it goes live,
+Bluetooth proximity flow of ISO/IEC 18013-5. This flow is implemented and device testing is pending; until it goes live,
 short-lived access passes with a limited scope are used.
 
 ### 2.4 Website sign-in
@@ -164,7 +164,7 @@ it and a second use of the same ticket is refused.
 A person can prove "I am over 18" without showing the date of birth or the identity number. The wallet produces a
 zero-knowledge proof about the credential the institution signed, without changing that credential. The verifier accepts
 only proof circuits published in the trusted list. The verifier side is live. The wallet side is wired to the network's open
-prover package; the Android native library is ready, the iOS library is pending; device testing is under way. Where proofs are not supported, the presentation is made in the usual way.
+prover package; the Android native library is ready, the iOS library is pending; device testing has not started yet. Where proofs are not supported, the presentation is made in the usual way.
 
 ### 2.7 The person's control
 
@@ -184,10 +184,10 @@ prover package; the Android native library is ready, the iOS library is pending;
 | Tickets and single-use gate entry                                         | Live                                                                                                      |
 | Data deletion, history, export                                            | Live                                                                                                      |
 | Zero-knowledge proof — verifier side                                      | Live                                                                                                      |
-| Zero-knowledge proof — wallet side                                        | Wired to the wallet; Android native library ready, iOS pending; device testing under way                  |
-| Bluetooth proximity presentation                                          | Implemented; device testing under way                                                                     |
-| Browser presentation (Digital Credentials API)                            | Verifier ready; first listed wallet: implemented for Android, device testing under way                    |
-| Hardware-backed keys and device attestation                               | Implemented; device testing under way                                                                     |
+| Zero-knowledge proof — wallet side                                        | Wired to the wallet; Android native library ready, iOS pending; device testing not started yet            |
+| Bluetooth proximity presentation                                          | Implemented; device testing pending                                                                       |
+| Browser presentation (Digital Credentials API)                            | Verifier ready; first listed wallet: Android code written, not yet built or device-tested; no iOS yet     |
+| Hardware-backed keys and device attestation                               | Implemented; device testing pending                                                                       |
 | Issuer's sharing rule (embedded disclosure policy)                        | Released (packages on npm since 0.5.0)                                                                    |
 | Issuer's wallet attestation preferences (key storage requirement, revocation maintenance period) | Released (packages on npm since 0.5.0) |
 | The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Released (packages on npm since 0.5.0) |

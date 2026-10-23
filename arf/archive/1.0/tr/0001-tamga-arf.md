@@ -120,12 +120,12 @@ yalnız onaylanan alanları içerir.
 
 Doğrulayıcı kendi doğrulama yazılımını çalıştırabilir ya da Tamga Verify'ı (barındırılan doğrulayıcı) kullanabilir. Gösterme
 cüzdan bağlantısıyla (aynı cihazda) ya da farklı cihazda karekodla yapılır. Tarayıcı üzerinden gösterme (Digital Credentials
-API) için doğrulayıcı hazırdır; ağdaki ilk cüzdanda Android için kodlandı, cihaz testi sürüyor.
+API) için doğrulayıcı hazırdır; ağdaki ilk cüzdanda Android kodu yazıldı, henüz uygulamaya derlenmedi ve cihazda denenmedi; iOS henüz yok.
 
 ## 2.3 Yüz yüze gösterme
 
 Kapı, kampüs girişi ya da gişe gibi yerlerde belge yakın alanda gösterilir. Kalıcı çözüm ISO/IEC 18013-5 standardının
-Bluetooth yakın alan akışıdır. Bu akış kodlandı, cihaz testi sürüyor; devreye girene kadar kısa ömürlü, kapsamı sınırlı
+Bluetooth yakın alan akışıdır. Bu akış kodlandı, cihaz testi bekliyor; devreye girene kadar kısa ömürlü, kapsamı sınırlı
 geçiş kartları kullanılır.
 
 ## 2.4 Web sitelerine giriş
@@ -148,7 +148,7 @@ biletin ikinci kez kullanılması reddedilir.
 Kişi "18 yaşından büyüğüm" bilgisini doğum tarihini ya da kimlik numarasını göstermeden kanıtlayabilir. Cüzdan, kurumun
 imzaladığı belgeyi değiştirmeden bu belge hakkında bir sıfır bilgi ispatı üretir. Doğrulayıcı yalnız güven listesinde
 yayınlanan ispat devrelerini kabul eder. Doğrulayıcı tarafı yayındadır. Cüzdan tarafı ağın açık ispatçı paketine bağlandı;
-Android yerel kütüphanesi hazır, iOS kütüphanesi bekliyor; cihaz testi sürüyor. İspat desteklenmediğinde
+Android yerel kütüphanesi hazır, iOS kütüphanesi bekliyor; cihaz testi henüz yapılmadı. İspat desteklenmediğinde
 gösterme olağan yolla yapılır.
 
 ## 2.7 Kişinin denetimi
@@ -169,10 +169,10 @@ gösterme olağan yolla yapılır.
 | Bilet ve tek kullanımlık kapı geçişi | Yayında |
 | Veri silme, geçmiş, dışa aktarım | Yayında |
 | Sıfır bilgi ispatı — doğrulayıcı tarafı | Yayında |
-| Sıfır bilgi ispatı — cüzdan tarafı | Cüzdana bağlandı; Android yerel kütüphanesi hazır, iOS bekliyor; cihaz testi sürüyor |
-| Bluetooth yakın alan gösterme | Kodlandı; cihaz testi sürüyor |
-| Tarayıcı üzerinden gösterme (Digital Credentials API) | Doğrulayıcı hazır; ilk listeli cüzdanda Android için kodlandı, cihaz testi sürüyor |
-| Donanım anahtarları ve cihaz kanıtı | Kodlandı; cihaz testi sürüyor |
+| Sıfır bilgi ispatı — cüzdan tarafı | Cüzdana bağlandı; Android yerel kütüphanesi hazır, iOS bekliyor; cihaz testi henüz yapılmadı |
+| Bluetooth yakın alan gösterme | Kodlandı; cihaz testi bekliyor |
+| Tarayıcı üzerinden gösterme (Digital Credentials API) | Doğrulayıcı hazır; ilk listeli cüzdanda Android kodu yazıldı, henüz derlenmedi ve cihazda denenmedi; iOS yok |
+| Donanım anahtarları ve cihaz kanıtı | Kodlandı; cihaz testi bekliyor |
 | Sandbox (herkese açık; kimlik doğrulaması günlük/aylık tavanlı) | Yayında |
 | Belge verenin paylaşım kuralı (gömülü açıklama politikası) | Yayında (paketler npm'de 0.5.0'dan beri) |
 | Kurumun cüzdan kanıtı tercihleri (anahtar deposu şartı, iptal bakım süresi) | Yayında (paketler npm'de 0.5.0'dan beri) |

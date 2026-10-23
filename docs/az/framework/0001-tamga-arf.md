@@ -120,12 +120,12 @@ yalnız təsdiqlənmiş sahələri ehtiva edir.
 
 Yoxlayan tərəf öz yoxlama proqram təminatını işlədə və ya Tamga Verify-dan (host edilən yoxlayan tərəf xidməti) istifadə edə bilər. Təqdimat
 cüzdan keçidi ilə (eyni cihazda) və ya başqa cihazda QR kodla həyata keçirilir. Brauzer vasitəsilə təqdimat (Digital Credentials
-API) üçün yoxlayan tərəf hazırdır; şəbəkədəki ilk cüzdanda Android üçün kodlaşdırılıb, cihaz testi davam edir.
+API) üçün yoxlayan tərəf hazırdır; şəbəkədəki ilk cüzdanda Android kodu yazılıb, hələ tətbiqə daxil edilməyib və cihazda sınaqdan keçirilməyib; iOS hələ yoxdur.
 
 ## 2.3 Üzbəüz təqdimat
 
 Qapı, kampus girişi və ya kassa kimi yerlərdə rəqəmsal sənəd yaxın məsafədə təqdim olunur. Daimi həll ISO/IEC 18013-5 standartının
-Bluetooth yaxın məsafə axınıdır. Bu axın kodlaşdırılıb, cihaz testi davam edir; istifadəyə verilənədək qısamüddətli, əhatəsi məhdud
+Bluetooth yaxın məsafə axınıdır. Bu axın kodlaşdırılıb, cihaz testi gözlənilir; istifadəyə verilənədək qısamüddətli, əhatəsi məhdud
 keçid kartlarından istifadə olunur.
 
 ## 2.4 Veb-saytlara giriş
@@ -145,7 +145,7 @@ biletin ikinci dəfə istifadəsi rədd edilir.
 Şəxs doğum tarixini və ya şəxsiyyət nömrəsini göstərmədən "18 yaşdan böyüyəm" məlumatını sübut edə bilər. Rəqəmsal cüzdan qurumun
 imzaladığı rəqəmsal sənədi dəyişmədən bu sənəd haqqında sıfır bilik sübutu yaradır. Yoxlayan tərəf yalnız etibar siyahısında
 dərc olunan sübut sxemlərini qəbul edir. Yoxlayan tərəf hissəsi istifadəyə verilib. Cüzdan tərəfi şəbəkənin açıq sübut paketinə qoşulub;
-Android yerli kitabxanası hazırdır, iOS kitabxanası gözlənilir; cihaz testi davam edir. Sübut dəstəklənmədikdə
+Android yerli kitabxanası hazırdır, iOS kitabxanası gözlənilir; cihaz testi hələ aparılmayıb. Sübut dəstəklənmədikdə
 təqdimat adi qaydada aparılır.
 
 ## 2.7 Şəxsin nəzarəti
@@ -166,10 +166,10 @@ təqdimat adi qaydada aparılır.
 | Bilet və birdəfəlik giriş keçidi | İstifadəyə verilib |
 | Məlumatların silinməsi, tarixçə, ixrac | İstifadəyə verilib |
 | Sıfır bilik sübutu — yoxlayan tərəf hissəsi | İstifadəyə verilib |
-| Sıfır bilik sübutu — cüzdan tərəfi | Cüzdana qoşulub; Android yerli kitabxanası hazırdır, iOS gözlənilir; cihaz testi davam edir |
-| Bluetooth ilə yaxın məsafədən təqdimat | Kodlaşdırılıb; cihaz testi davam edir |
-| Brauzer vasitəsilə təqdimat (Digital Credentials API) | Yoxlayan tərəf hazırdır; ilk siyahıdakı cüzdanda Android üçün kodlaşdırılıb, cihaz testi davam edir |
-| Aparat açarları və cihaz sübutu | Kodlaşdırılıb; cihaz testi davam edir |
+| Sıfır bilik sübutu — cüzdan tərəfi | Cüzdana qoşulub; Android yerli kitabxanası hazırdır, iOS gözlənilir; cihaz testi hələ aparılmayıb |
+| Bluetooth ilə yaxın məsafədən təqdimat | Kodlaşdırılıb; cihaz testi gözlənilir |
+| Brauzer vasitəsilə təqdimat (Digital Credentials API) | Yoxlayan tərəf hazırdır; ilk siyahıdakı cüzdanda Android kodu yazılıb, hələ tətbiqə daxil edilməyib və cihazda sınaqdan keçirilməyib; iOS yoxdur |
+| Aparat açarları və cihaz sübutu | Kodlaşdırılıb; cihaz testi gözlənilir |
 | Sandbox (hamı üçün açıq; şəxsiyyətin təsdiqi gündəlik/aylıq limitlə) | İstifadəyə verilib |
 | Sənədi verən qurumun paylaşım qaydası (daxil edilmiş açıqlama siyasəti) | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri) |
 | Qurumun cüzdan sübutu üstünlükləri (açar anbarı tələbi, ləğv üçün yeniləmə müddəti) | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri) |

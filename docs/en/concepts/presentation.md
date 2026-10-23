@@ -21,7 +21,7 @@ computes the result locally, without asking the source. The protocol is **[[t:Op
 | Channel | When | Status |
 |---|---|---|
 | QR code / link (`openid4vp://`) | a website or kiosk on another device | live |
-| Digital Credentials API | a website in the browser on the same phone (the browser opens the wallet) | verifier ready; first listed wallet: implemented for Android, device testing under way |
+| Digital Credentials API | a website in the browser on the same phone (the browser opens the wallet) | verifier ready; first listed wallet: Android code written, not yet built into the app or device-tested; no iOS yet |
 | ISO 18013-5 proximity (BLE) | a gate, turnstile or counter — in person | implemented; device testing pending (until then a short-lived pass) |
 
 ## Verification and three outcomes
