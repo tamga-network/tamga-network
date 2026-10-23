@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-19 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-23 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -135,12 +135,12 @@ approved fields.
 
 A verifier may run its own verification software or use Tamga Verify (the hosted verifier). Presentation happens through a
 wallet link (same device) or across devices through a QR code. For presentation through the browser (Digital Credentials API)
-the verifier is ready; the wallet connection does not exist yet.
+the verifier is ready; in the first listed wallet it is implemented for Android, with device testing under way.
 
 ### 2.3 In-person presentation
 
 At gates, campus entrances or service counters, the credential is shown at close range. The long-term solution is the
-Bluetooth proximity flow of ISO/IEC 18013-5. This flow is implemented and awaits device testing; until it goes live,
+Bluetooth proximity flow of ISO/IEC 18013-5. This flow is implemented and device testing is under way; until it goes live,
 short-lived access passes with a limited scope are used.
 
 ### 2.4 Website sign-in
@@ -164,8 +164,7 @@ it and a second use of the same ticket is refused.
 A person can prove "I am over 18" without showing the date of birth or the identity number. The wallet produces a
 zero-knowledge proof about the credential the institution signed, without changing that credential. The verifier accepts
 only proof circuits published in the trusted list. The verifier side is live. The wallet side is wired to the network's open
-prover package; the Android native library is ready, the iOS library is pending; device testing comes with the app-store
-release. Where proofs are not supported, the presentation is made in the usual way.
+prover package; the Android native library is ready, the iOS library is pending; device testing is under way. Where proofs are not supported, the presentation is made in the usual way.
 
 ### 2.7 The person's control
 
@@ -185,16 +184,17 @@ release. Where proofs are not supported, the presentation is made in the usual w
 | Tickets and single-use gate entry                                         | Live                                                                                                      |
 | Data deletion, history, export                                            | Live                                                                                                      |
 | Zero-knowledge proof — verifier side                                      | Live                                                                                                      |
-| Zero-knowledge proof — wallet side                                        | Wired to the wallet; Android native library ready, iOS pending; device testing with the app-store release |
-| Bluetooth proximity presentation                                          | Implemented; device testing pending                                                                       |
-| Browser presentation (Digital Credentials API)                            | Verifier ready; no wallet connection yet                                                                  |
-| Hardware-backed keys and device attestation                               | Implemented; device testing with the app-store release                                                    |
+| Zero-knowledge proof — wallet side                                        | Wired to the wallet; Android native library ready, iOS pending; device testing under way                  |
+| Bluetooth proximity presentation                                          | Implemented; device testing under way                                                                     |
+| Browser presentation (Digital Credentials API)                            | Verifier ready; first listed wallet: implemented for Android, device testing under way                    |
+| Hardware-backed keys and device attestation                               | Implemented; device testing under way                                                                     |
 | Issuer's sharing rule (embedded disclosure policy)                        | Released (packages on npm since 0.5.0)                                                                    |
 | Issuer's wallet attestation preferences (key storage requirement, revocation maintenance period) | Released (packages on npm since 0.5.0) |
 | The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Released (packages on npm since 0.5.0) |
 | Attestation Revocation List (identifier list) — verifier and wallet side | Released (packages on npm since 0.5.0); Tamga issuers use the Status List |
 | No suspension for the identity credential, CWT revocation list for mdoc; warning for requests without a registration certificate; reader verification in proximity | Released (packages on npm since 0.6.0) |
 | Misuse-resistant defaults in the package APIs; rejection of requests without a registration certificate ([[ADR-0056]]) | Released (packages on npm since 0.7.0) |
+| Several credential requests per access token, refresh token bound to the wallet instance key, pseudonym seed as its own credential configuration ([[ADR-0059]], [[ADR-0060]], [[ADR-0061]]) | Implemented; in the next package release (0.7.2, not yet on npm) |
 | Wallet provider registration | Tamga Wallet's provider (`TAMGA-WP-1`) is `ACTIVE` in the production and sandbox trust lists |
 | Sandbox (open to everyone; identity verification with daily/monthly caps) | Live                                                                                                      |
 

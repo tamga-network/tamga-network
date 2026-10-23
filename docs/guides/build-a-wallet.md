@@ -123,9 +123,10 @@ const unit = await myProvider.registerUnit({
 Kanıt reddedilirse birim yazılım seviyesinde kaydolur; sağlayıcınız bunu kanıtlarda açıkça belirtir.
 Kişiye bu cihazda yüksek güvenlikli belge alınamayacağını söyleyin; sessizce devam etmeyin.
 
-::: info Mağaza sürümü
-Cihaz kanıtı mağaza sürümüyle zorunlu olur. Android'de uygulamanın mağazadan geldiğini ayrıca gösteren Play Integrity kanıtı da
-o adımda eklenir; bugün Android'de donanım anahtar kanıtı, iOS'ta App Attest doğrulanır.
+::: info Seviyeye göre cihaz kanıtı
+W3 seviyesinde sağlayıcınız birimi etkinleştirirken ve W3 beyan eden her anahtar kanıtından önce platformun cihaz kanıtını
+doğrulamak zorundadır; W2'de isteğe bağlıdır (RB-WP-17). Android'de uygulamanın mağazadan geldiğini ayrıca gösteren Play Integrity
+kanıtı eklenebilir; bugün Android'de donanım anahtar kanıtı, iOS'ta App Attest doğrulanır.
 :::
 
 ## 5. Wallet Unit Attestation (WUA)

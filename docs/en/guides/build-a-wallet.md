@@ -133,9 +133,10 @@ const unit = await myProvider.registerUnit({
 If the evidence is rejected, the unit registers at software level; your provider states this clearly in the attestations.
 Tell the person that high-assurance credentials cannot be received on this device; do not carry on silently.
 
-::: info Store release
-Device attestation becomes mandatory with the store release. On Android, Play Integrity evidence, which also shows that the app
-came from the store, is added at that step; today the hardware key attestation is verified on Android and App Attest on iOS.
+::: info Device attestation by level
+At W3 your provider must verify the platform's device attestation before activating a unit and before every key attestation
+that claims W3; at W2 it is optional (RB-WP-17). On Android, Play Integrity evidence, which also shows that the app came from the
+store, can be added; today the hardware key attestation is verified on Android and App Attest on iOS.
 :::
 
 ## 5. Wallet Unit Attestation (WUA)

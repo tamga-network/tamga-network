@@ -124,9 +124,10 @@ const unit = await myProvider.registerUnit({
 Sübut rədd edilərsə, vahid proqram səviyyəsində qeydiyyata alınır; provayderiniz bunu sübutlarda açıq şəkildə qeyd edir.
 Şəxsə bu cihazda yüksək təhlükəsizlikli sənəd almağın mümkün olmadığını bildirin; səssizcə davam etməyin.
 
-::: info Mağaza versiyası
-Cihaz sübutu mağaza versiyası ilə məcburi olur. Android-də tətbiqin mağazadan gəldiyini əlavə olaraq göstərən Play Integrity sübutu da
-həmin mərhələdə əlavə edilir; bu gün Android-də aparat açar sübutu, iOS-da isə App Attest yoxlanılır.
+::: info Səviyyəyə görə cihaz sübutu
+W3 səviyyəsində provayderiniz vahidi aktivləşdirərkən və W3 bəyan edən hər açar sübutundan əvvəl platformanın cihaz sübutunu
+yoxlamalıdır; W2-də bu, məcburi deyil (RB-WP-17). Android-də tətbiqin mağazadan gəldiyini əlavə olaraq göstərən Play Integrity
+sübutu əlavə edilə bilər; bu gün Android-də aparat açar sübutu, iOS-da isə App Attest yoxlanılır.
 :::
 
 ## 5. Wallet Unit Attestation (WUA)

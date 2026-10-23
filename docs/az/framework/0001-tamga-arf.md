@@ -4,7 +4,7 @@ title: "Arxitektura və İstinad Çərçivəsi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-19
+last_updated: 2026-10-23
 summary: >
   Tamga Network-un arxitektura və istinad çərçivəsinin əsas sənədi. Avropa İttifaqının (Aİ) EUDI ARF-i ilə eyni strukturu izləyir: istifadə ssenariləri, rollar, arxitektura, məlumat modeli, etibar modeli, təhlükəsizlik və idarəetmə. Məcburi qaydalar əlavələrdədir (A Trust Framework, B Tamga Rulebook, C rəqəmsal sənəd növü rulebook-ları); terminlər Əlavə D-də, mənbələr Əlavə E-dədir.
 translation_of: FW-ARF-0001
@@ -120,12 +120,12 @@ yalnız təsdiqlənmiş sahələri ehtiva edir.
 
 Yoxlayan tərəf öz yoxlama proqram təminatını işlədə və ya Tamga Verify-dan (host edilən yoxlayan tərəf xidməti) istifadə edə bilər. Təqdimat
 cüzdan keçidi ilə (eyni cihazda) və ya başqa cihazda QR kodla həyata keçirilir. Brauzer vasitəsilə təqdimat (Digital Credentials
-API) üçün yoxlayan tərəf hazırdır; cüzdan tərəfində bağlantı hələ yoxdur.
+API) üçün yoxlayan tərəf hazırdır; şəbəkədəki ilk cüzdanda Android üçün kodlaşdırılıb, cihaz testi davam edir.
 
 ## 2.3 Üzbəüz təqdimat
 
 Qapı, kampus girişi və ya kassa kimi yerlərdə rəqəmsal sənəd yaxın məsafədə təqdim olunur. Daimi həll ISO/IEC 18013-5 standartının
-Bluetooth yaxın məsafə axınıdır. Bu axın kodlaşdırılıb, cihaz testini gözləyir; istifadəyə verilənədək qısamüddətli, əhatəsi məhdud
+Bluetooth yaxın məsafə axınıdır. Bu axın kodlaşdırılıb, cihaz testi davam edir; istifadəyə verilənədək qısamüddətli, əhatəsi məhdud
 keçid kartlarından istifadə olunur.
 
 ## 2.4 Veb-saytlara giriş
@@ -145,7 +145,7 @@ biletin ikinci dəfə istifadəsi rədd edilir.
 Şəxs doğum tarixini və ya şəxsiyyət nömrəsini göstərmədən "18 yaşdan böyüyəm" məlumatını sübut edə bilər. Rəqəmsal cüzdan qurumun
 imzaladığı rəqəmsal sənədi dəyişmədən bu sənəd haqqında sıfır bilik sübutu yaradır. Yoxlayan tərəf yalnız etibar siyahısında
 dərc olunan sübut sxemlərini qəbul edir. Yoxlayan tərəf hissəsi istifadəyə verilib. Cüzdan tərəfi şəbəkənin açıq sübut paketinə qoşulub;
-Android yerli kitabxanası hazırdır, iOS kitabxanası gözlənilir; cihaz testi mağaza versiyası ilə aparılır. Sübut dəstəklənmədikdə
+Android yerli kitabxanası hazırdır, iOS kitabxanası gözlənilir; cihaz testi davam edir. Sübut dəstəklənmədikdə
 təqdimat adi qaydada aparılır.
 
 ## 2.7 Şəxsin nəzarəti
@@ -166,10 +166,10 @@ təqdimat adi qaydada aparılır.
 | Bilet və birdəfəlik giriş keçidi | İstifadəyə verilib |
 | Məlumatların silinməsi, tarixçə, ixrac | İstifadəyə verilib |
 | Sıfır bilik sübutu — yoxlayan tərəf hissəsi | İstifadəyə verilib |
-| Sıfır bilik sübutu — cüzdan tərəfi | Cüzdana qoşulub; Android yerli kitabxanası hazırdır, iOS gözlənilir; cihaz testi mağaza versiyası ilə |
-| Bluetooth ilə yaxın məsafədən təqdimat | Kodlaşdırılıb; cihaz testi gözlənilir |
-| Brauzer vasitəsilə təqdimat (Digital Credentials API) | Yoxlayan tərəf hazırdır; cüzdan qoşulmayıb |
-| Aparat açarları və cihaz sübutu | Kodlaşdırılıb; cihaz testi mağaza versiyası ilə |
+| Sıfır bilik sübutu — cüzdan tərəfi | Cüzdana qoşulub; Android yerli kitabxanası hazırdır, iOS gözlənilir; cihaz testi davam edir |
+| Bluetooth ilə yaxın məsafədən təqdimat | Kodlaşdırılıb; cihaz testi davam edir |
+| Brauzer vasitəsilə təqdimat (Digital Credentials API) | Yoxlayan tərəf hazırdır; ilk siyahıdakı cüzdanda Android üçün kodlaşdırılıb, cihaz testi davam edir |
+| Aparat açarları və cihaz sübutu | Kodlaşdırılıb; cihaz testi davam edir |
 | Sandbox (hamı üçün açıq; şəxsiyyətin təsdiqi gündəlik/aylıq limitlə) | İstifadəyə verilib |
 | Sənədi verən qurumun paylaşım qaydası (daxil edilmiş açıqlama siyasəti) | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri) |
 | Qurumun cüzdan sübutu üstünlükləri (açar anbarı tələbi, ləğv üçün yeniləmə müddəti) | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri) |
@@ -177,6 +177,7 @@ təqdimat adi qaydada aparılır.
 | Attestation Revocation List (identifikatorlar siyahısı) — yoxlayan tərəf və cüzdan tərəfi | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri); Tamga-da sənədi verən qurumlar Status List istifadə edir |
 | Şəxsiyyət sənədində dayandırma yoxdur, mdoc üçün CWT ləğv siyahısı; qeydiyyat sertifikatı olmayan sorğuda xəbərdarlıq; yaxın məsafədə oxuyucunun yoxlanılması | İstifadəyə verilib (paketlər npm-də 0.6.0-dan bəri) |
 | Paket API-lərində təhlükəsiz standart parametrlər; qeydiyyat sertifikatı olmayan sorğunun rədd edilməsi ([[ADR-0056]]) | İstifadəyə verilib (paketlər npm-də 0.7.0-dan bəri) |
+| Bir giriş tokeni ilə bir neçə sənəd sorğusu, cüzdan nümunəsinin açarına bağlı yeniləmə tokeni, ayrıca konfiqurasiya ilə təxəllüs toxumu ([[ADR-0059]], [[ADR-0060]], [[ADR-0061]]) | Kodlaşdırılıb; paketlərin növbəti versiyasında (0.7.2, hələ npm-də deyil) |
 | Cüzdan provayderinin qeydiyyatı | Tamga Wallet-ın provayderi (`TAMGA-WP-1`) real və sandbox etibar siyahılarında `ACTIVE` |
 
 ---

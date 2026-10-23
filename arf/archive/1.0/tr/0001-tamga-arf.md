@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-19
+last_updated: 2026-10-23
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -120,12 +120,12 @@ yalnız onaylanan alanları içerir.
 
 Doğrulayıcı kendi doğrulama yazılımını çalıştırabilir ya da Tamga Verify'ı (barındırılan doğrulayıcı) kullanabilir. Gösterme
 cüzdan bağlantısıyla (aynı cihazda) ya da farklı cihazda karekodla yapılır. Tarayıcı üzerinden gösterme (Digital Credentials
-API) için doğrulayıcı hazırdır; cüzdan bağlantısı henüz yoktur.
+API) için doğrulayıcı hazırdır; ağdaki ilk cüzdanda Android için kodlandı, cihaz testi sürüyor.
 
 ## 2.3 Yüz yüze gösterme
 
 Kapı, kampüs girişi ya da gişe gibi yerlerde belge yakın alanda gösterilir. Kalıcı çözüm ISO/IEC 18013-5 standardının
-Bluetooth yakın alan akışıdır. Bu akış kodlandı, cihaz testi bekliyor; devreye girene kadar kısa ömürlü, kapsamı sınırlı
+Bluetooth yakın alan akışıdır. Bu akış kodlandı, cihaz testi sürüyor; devreye girene kadar kısa ömürlü, kapsamı sınırlı
 geçiş kartları kullanılır.
 
 ## 2.4 Web sitelerine giriş
@@ -148,7 +148,7 @@ biletin ikinci kez kullanılması reddedilir.
 Kişi "18 yaşından büyüğüm" bilgisini doğum tarihini ya da kimlik numarasını göstermeden kanıtlayabilir. Cüzdan, kurumun
 imzaladığı belgeyi değiştirmeden bu belge hakkında bir sıfır bilgi ispatı üretir. Doğrulayıcı yalnız güven listesinde
 yayınlanan ispat devrelerini kabul eder. Doğrulayıcı tarafı yayındadır. Cüzdan tarafı ağın açık ispatçı paketine bağlandı;
-Android yerel kütüphanesi hazır, iOS kütüphanesi bekliyor; cihaz testi mağaza sürümüyle yapılır. İspat desteklenmediğinde
+Android yerel kütüphanesi hazır, iOS kütüphanesi bekliyor; cihaz testi sürüyor. İspat desteklenmediğinde
 gösterme olağan yolla yapılır.
 
 ## 2.7 Kişinin denetimi
@@ -169,10 +169,10 @@ gösterme olağan yolla yapılır.
 | Bilet ve tek kullanımlık kapı geçişi | Yayında |
 | Veri silme, geçmiş, dışa aktarım | Yayında |
 | Sıfır bilgi ispatı — doğrulayıcı tarafı | Yayında |
-| Sıfır bilgi ispatı — cüzdan tarafı | Cüzdana bağlandı; Android yerel kütüphanesi hazır, iOS bekliyor; cihaz testi mağaza sürümüyle |
-| Bluetooth yakın alan gösterme | Kodlandı; cihaz testi bekliyor |
-| Tarayıcı üzerinden gösterme (Digital Credentials API) | Doğrulayıcı hazır; cüzdan bağlantısı yok |
-| Donanım anahtarları ve cihaz kanıtı | Kodlandı; cihaz testi mağaza sürümüyle |
+| Sıfır bilgi ispatı — cüzdan tarafı | Cüzdana bağlandı; Android yerel kütüphanesi hazır, iOS bekliyor; cihaz testi sürüyor |
+| Bluetooth yakın alan gösterme | Kodlandı; cihaz testi sürüyor |
+| Tarayıcı üzerinden gösterme (Digital Credentials API) | Doğrulayıcı hazır; ilk listeli cüzdanda Android için kodlandı, cihaz testi sürüyor |
+| Donanım anahtarları ve cihaz kanıtı | Kodlandı; cihaz testi sürüyor |
 | Sandbox (herkese açık; kimlik doğrulaması günlük/aylık tavanlı) | Yayında |
 | Belge verenin paylaşım kuralı (gömülü açıklama politikası) | Yayında (paketler npm'de 0.5.0'dan beri) |
 | Kurumun cüzdan kanıtı tercihleri (anahtar deposu şartı, iptal bakım süresi) | Yayında (paketler npm'de 0.5.0'dan beri) |
@@ -180,6 +180,7 @@ gösterme olağan yolla yapılır.
 | Attestation Revocation List (tanımlayıcı listesi) — doğrulayıcı ve cüzdan tarafı | Yayında (paketler npm'de 0.5.0'dan beri); Tamga belge verenleri Status List kullanır |
 | Kimlik belgesinde askı yok, mdoc için CWT iptal listesi; kayıt sertifikası olmayan istekte uyarı; yakın alanda okuyucu doğrulaması | Yayında (paketler npm'de 0.6.0'dan beri) |
 | Paket API'lerinde güvenli varsayılanlar; kayıt sertifikası olmayan istekte ret ([[ADR-0056]]) | Yayında (paketler npm'de 0.7.0'dan beri) |
+| Bir erişim belirteciyle birden çok belge isteği, cüzdan örneği anahtarına bağlı yenileme belirteci, ayrı yapılandırmayla takma ad tohumu ([[ADR-0059]], [[ADR-0060]], [[ADR-0061]]) | Kodlandı; paketlerin sonraki sürümünde (0.7.2, npm'de henüz yok) |
 | Cüzdan sağlayıcısı kaydı | Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) gerçek ve sandbox güven listelerinde `ACTIVE` |
 
 ---

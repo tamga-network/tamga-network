@@ -20,7 +20,7 @@ müraciət etmədən hesablayır. Protokol **[[t:OpenID4VP]] 1.0** (Avropa İtti
 | Kanal | Nə vaxt | Status |
 |---|---|---|
 | QR / keçid (`openid4vp://`) | başqa cihazdakı sayt və ya kiosk | istifadədədir |
-| Digital Credentials API | eyni telefonun brauzerində açılan sayt (brauzer rəqəmsal cüzdanı açır) | yoxlayan tərəf hazırdır; rəqəmsal cüzdanla bağlantı hələ yoxdur |
+| Digital Credentials API | eyni telefonun brauzerində açılan sayt (brauzer rəqəmsal cüzdanı açır) | yoxlayan tərəf hazırdır; ilk siyahıdakı cüzdanda Android üçün kodlaşdırılıb, cihaz testi davam edir |
 | ISO 18013-5 yaxın məsafə (BLE) | qapı, turniket, kassa — üz-üzə | kodlaşdırılıb; cihaz testini gözləyir (o vaxta qədər qısamüddətli keçid kartı) |
 
 ## Yoxlama və üç nəticə
