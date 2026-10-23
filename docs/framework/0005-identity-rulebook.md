@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-10-23
 summary: >
   Tamga'nın kimlik servisinin verdiği kişi belgelerinin rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc),
@@ -114,6 +114,7 @@ olduğu bu yokluktan ve belge verenin güven listesindeki sınıfından anlaşı
 | Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
 |---|---|---|---|
 | `age_over_18` | 18 yaşından büyük mü; yalnız ZK ile ispatlanabilen öğe | boolean | `true` |
+| `age_over_15` | 15 yaşından büyük mü; yalnız ZK ile ispatlanabilen öğe ([[ADR-0064]]) | boolean | `true` |
 
 **Takma ad tohumu (`PseudonymSeed`)**
 
@@ -142,6 +143,7 @@ olduğu bu yokluktan ve belge verenin güven listesindeki sınıfından anlaşı
 | Tür | Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
 |---|---|---|---|---|
 | Kimlik belgesi | `age_over_18` | Doğum tarihinden türetilir; yaş doğrulamasında yalnız bu alan açılır. AB PID kümesinde yoktur; ISO/IEC 18013-5 adıyla Tamga alanıdır ([[ADR-0045]] K3) | boolean | `true` |
+| Kimlik belgesi | `age_over_15` | Doğum tarihinden aynı kuralla türetilir; ISO/IEC 18013-5 `age_over_NN` deseni. Kimlik belgesinin yaş eşikleri kapalı kümedir (15, 18); yeni eşik yalnız ADR ile eklenir ([[ADR-0064]] K2) | boolean | `true` |
 | Sürücü belgesi bilgisi | `birth_date` | Kartta varsa doğum tarihi (ISO/IEC 18013-5 mDL adı) | tarih | `1990-04-12` |
 | Sürücü belgesi bilgisi | `licence_issue_date` | Kartın veriliş tarihi (varsa) | tarih | `2024-06-01` |
 | Sürücü belgesi bilgisi | `age_over_18` | Türetilmiş | boolean | `true` |
@@ -207,6 +209,7 @@ sertifikasıdır.
 | `document_chip_verified` | `document_chip_verified` | bool | `tamga.id.1` |
 | `verification_method` | `verification_method` | tstr | `tamga.id.1` |
 | `age_over_18` | `age_over_18` | bool | `tamga.id.1` |
+| `age_over_15` | `age_over_15` | bool | `tamga.id.1` |
 
 Ad ve kodlama AB PID Tablo 6'ya göredir ([[ADR-0045]] K2); ad tablosu açık paketlerdedir (`@tamga-network/core/pid`). Ad alanı
 `tamga.id.1` Tamga'ya özgü bir ad alanıdır (ARB_10): belge PID olmadığı için `eu.europa.ec.eudi.pid.1` kullanılmaz.
@@ -249,6 +252,7 @@ ağda tektir (ARB_05); tür tanımı (Type Metadata) katalogdan gelir ve `vct#in
 | `document_chip_verified` | `document_chip_verified` | boolean | Tamga'ya özgü | MUST |
 | `verification_method` | `verification_method` | string (küme) | Tamga'ya özgü | MUST |
 | `age_over_18` | `age_over_18` | boolean | ISO/IEC 18013-5 adı | MUST |
+| `age_over_15` | `age_over_15` | boolean | ISO/IEC 18013-5 adı ([[ADR-0064]]) | MUST |
 | `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status` | aynı | — | taşıma profili | MUST NOT |
 
 **Takma ad tohumu**
@@ -292,7 +296,8 @@ ağda tektir (ARB_05); tür tanımı (Type Metadata) katalogdan gelir ve `vct#in
   "issuing_country": "TR",
   "document_chip_verified": false,
   "verification_method": "remote-document-liveness-face",
-  "age_over_18": true
+  "age_over_18": true,
+  "age_over_15": true
 }
 ```
 
@@ -311,7 +316,7 @@ Kullanılmaz: Tamga JSON-LD taşıyıcısı kullanmaz.
 
 | Kullanım | İstenen alanlar | Kural |
 |---|---|---|
-| Yaş doğrulaması | `age_over_18` | Başka alan istenmez; tarayıcıda mdoc ile, istenirse ZK kopyasıyla sıfır bilgi ispatı |
+| Yaş doğrulaması | `age_over_18` ya da `age_over_15` (tek eşik) | Başka alan istenmez; iki eşik birlikte istenmez, yaş aralığını ele verir ([[ADR-0064]] K3); tarayıcıda mdoc ile, istenirse ZK kopyasıyla sıfır bilgi ispatı |
 | Kurumda kayıt eşleştirmesi (belge vermeden önce) | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | Kurumun belge verme servisi yalnız kayıtlı kapsamıyla ve tam doğrulama hattından geçirerek alır; eşleştirme anahtarlarını saklamaz ve loglamaz (RB-RP-ID-01) |
 | "Geçerli Tamga kimliği var mı" | hiçbiri | Referans politika `event-tamga-id` |
 | Web sitesine kayıt ve giriş ("Tamga ile giriş yap") | kayıtta `given_name`, `family_name`; girişte hiçbiri | Hesap anahtarı site başına takma addır; `document_number_hash` ve kimlik numarası istenmez (RB-RP-13) |
@@ -388,7 +393,7 @@ Tamga doğrulayıcıları AB'nin kişi kimlik belgesini (PID) ve ISO ehliyetini 
   örneğin adresin yalnız şehri ya da vatandaşlıklardan biri. Doğrulayıcının kapsam denetimi alanın kendisine ya da üst alanına göre
   yapılır.
 - **Yaş.** AB PID'de yaş alanı yoktur; AB'de yaş için ayrı yaş doğrulama belgesi kullanılır. mDL'de `age_over_18` gibi yaş öğeleri
-  vardır.
+  vardır. Tamga kimlik belgesi aynı `age_over_NN` desenini izler; eşik kümesi kapalıdır: bugün 15 ve 18 ([[ADR-0064]]).
 
 | Tamga kimlik belgesi (SD-JWT VC) | Tamga kimlik belgesi (mdoc, `tamga.id.1`) | AB PID (SD-JWT VC) | AB PID (mdoc) |
 |---|---|---|---|
@@ -399,6 +404,7 @@ Tamga doğrulayıcıları AB'nin kişi kimlik belgesini (PID) ve ISO ehliyetini 
 | `personal_administrative_number` | `personal_administrative_number` | `personal_administrative_number` | `personal_administrative_number` |
 | `issuing_country` (belgeyi veren ülke) | `issuing_country` | `issuing_country` (PID sağlayıcısının ülkesi) | `issuing_country` |
 | `age_over_18` | `age_over_18` | — (ayrı yaş doğrulama belgesi) | — |
+| `age_over_15` | `age_over_15` | — (ayrı yaş doğrulama belgesi) | — |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | aynı | karşılığı yok (Tamga'ya özgü) | karşılığı yok |
 
 > **`issuing_country` (2026-10-11, proje yönetimi kararı).** Alanın anlamı AB PID'deki anlamdır: belgeyi veren kimlik

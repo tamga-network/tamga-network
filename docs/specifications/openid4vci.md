@@ -323,7 +323,7 @@ yalnız kısa ömürlü ZK kopyası alır ([[ADR-0023]] AR4'ün tek istisnası).
   (`urn:tamga:id:ShortLivedIdentityAttestation:1`) da isterse; kapsam yalnız kimlik belgesiyle istenebilir (ZS1).
 - **Belirteç:** cüzdana opaktır; içeriği yalnız kimlik servisinin anahtarıyla açılan doğrulanmış şifrelemeyle (JWE `dir` +
   A256GCM) korunur: bağlı kimlik kaydı, kuşak sayacı, ilk ihraçtaki istemci örneği anahtarının (WIA `cnf`) parmak izi ([[ADR-0060]]), bitiş (≤ kimlik belgesinin
-  bitişi) ve ZK kopyasına girecek **asgari** öğeler (bugün `age_over_18`). Sunucuda belirteç ve kişi alanı tutulmaz; tek kullanım
+  bitişi) ve ZK kopyasına girecek **asgari** öğeler (kimlik belgesinin yaş alanları `age_over_18`, `age_over_15`; [[ADR-0064]]). Sunucuda belirteç ve kişi alanı tutulmaz; tek kullanım
   için kimlik kaydında yalnız kuşak sayacı durur (ZC3).
 - **Yenileme:** §4.1'deki istek (`grant_type=refresh_token`, aynı örnek anahtarlı geçerli ve iptal edilmemiş WIA; DPoP anahtarı
   değişebilir). Servis kuşağı ve örnek anahtarı bağını denetler, kimlik kaydının **bütün iptal listesi bitlerinin 0** olduğunu kendi listesinden okur; kayıt yoksa,

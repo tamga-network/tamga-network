@@ -4,7 +4,7 @@ title: "Doğrulayıcı olarak kayıt olmak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-10-23
 summary: >
   Bir sitenin ya da hizmetin doğrulayıcı olarak Tamga güven listesine kaydı: alan adı ve erişim sertifikası, AB ortak kayıt
   verileri, kullanım kapsamları (amaç, alanlar, gizlilik politikası), kayıt sertifikası, aracı doğrulayıcılar ve takma ad.
@@ -89,7 +89,8 @@ olup olmadığını (`is_enrolled`) sorar; adı, okulu, numarayı sormaz.
 - Gereken her ayrı amaç için ayrı kapsam açın; amacı kişinin anlayacağı dilde yazın (`purpose_localized`).
 - Bazı türler hiç gösterilmez (örneğin takma ad tohumu, `urn:tamga:id:PseudonymSeed:1`); bunlar kapsama yazılamaz.
 - Sıfır bilgi ispatıyla yaş doğrulaması kimlik belgesinin kısa ömürlü ZK kopyasıyla yapılır; kapsamın türü
-  `urn:tamga:id:ShortLivedIdentityAttestation:1`, alanı `age_over_18`'dir ([[ADR-0044]]).
+  `urn:tamga:id:ShortLivedIdentityAttestation:1`, alanı `age_over_18` ya da `age_over_15`'tir ([[ADR-0044]], [[ADR-0064]]). Yaş kapsamı tek
+  eşik ister; iki eşiği birden isteyen kapsam yaş aralığını ele verir ve ayrıca gerekçelendirilir.
 - Kapsam süreli olabilir (`valid_from`, `valid_until`); süresi biten kullanım için kayıt sertifikası üretilmez.
 
 ## 4. Kayıt sertifikası

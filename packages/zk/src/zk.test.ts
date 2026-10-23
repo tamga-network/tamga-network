@@ -198,117 +198,123 @@ describe("zk — devre kaynakları ve doğrulayıcının kabul ettiği devreler"
 
 const BIN = defaultProverBin();
 describe.skipIf(!existsSync(BIN))("zk — uçtan uca: masaüstü ispatçı → ağın doğrulayıcısı", () => {
-  it("18 yaş üstü ispatı üretilir ve doğrulanır; doğrulayıcı yalnız age_over_18 = true görür", async () => {
-    cryptoProvider.set(webcrypto as unknown as Crypto);
-    const subtle = webcrypto.subtle;
-    const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
-    const nowSec = Math.floor(Date.now() / 1000);
-    const notBefore = new Date((nowSec - 86400) * 1000);
-    const notAfter = new Date((nowSec + 365 * 86400) * 1000);
-    const rootKeys = (await subtle.generateKey(ALG, false, ["sign", "verify"])) as CryptoKeyPair;
-    const rootName = "CN=Tamga ZK Prover Test Root,O=Tamga Network Test,C=TR";
-    const root = await X509CertificateGenerator.createSelfSigned({
-      serialNumber: "01",
-      name: rootName,
-      notBefore,
-      notAfter,
-      keys: rootKeys,
-      signingAlgorithm: ALG,
-    });
-    const issuerSk = p256.utils.randomSecretKey();
-    const issuerKey = p256.getPublicKey(issuerSk, false);
-    const issuer = await X509CertificateGenerator.create({
-      serialNumber: "02",
-      subject: "CN=Tamga ZK Prover Test Issuer,O=Tamga Network Test,C=TR",
-      issuer: rootName,
-      notBefore,
-      notAfter,
-      publicKey: await subtle.importKey("raw", issuerKey, ALG, true, ["verify"]),
-      signingKey: rootKeys.privateKey,
-      signingAlgorithm: ALG,
-    });
-    const issuerDer = new Uint8Array(issuer.rawData);
+  // ADR-0064 K4: devre eşitlik ispatıdır, eşik devrede sabit değil — aynı devre iki yaş eşiğini de ispatlar
+  it.each(["age_over_18", "age_over_15"])(
+    "%s = true ispatı üretilir ve doğrulanır; doğrulayıcı yalnız o öğeyi görür",
+    async (attr) => {
+      cryptoProvider.set(webcrypto as unknown as Crypto);
+      const subtle = webcrypto.subtle;
+      const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const notBefore = new Date((nowSec - 86400) * 1000);
+      const notAfter = new Date((nowSec + 365 * 86400) * 1000);
+      const rootKeys = (await subtle.generateKey(ALG, false, ["sign", "verify"])) as CryptoKeyPair;
+      const rootName = "CN=Tamga ZK Prover Test Root,O=Tamga Network Test,C=TR";
+      const root = await X509CertificateGenerator.createSelfSigned({
+        serialNumber: "01",
+        name: rootName,
+        notBefore,
+        notAfter,
+        keys: rootKeys,
+        signingAlgorithm: ALG,
+      });
+      const issuerSk = p256.utils.randomSecretKey();
+      const issuerKey = p256.getPublicKey(issuerSk, false);
+      const issuer = await X509CertificateGenerator.create({
+        serialNumber: "02",
+        subject: "CN=Tamga ZK Prover Test Issuer,O=Tamga Network Test,C=TR",
+        issuer: rootName,
+        notBefore,
+        notAfter,
+        publicKey: await subtle.importKey("raw", issuerKey, ALG, true, ["verify"]),
+        signingKey: rootKeys.privateKey,
+        signingAlgorithm: ALG,
+      });
+      const issuerDer = new Uint8Array(issuer.rawData);
 
-    // Kurumun verdiği belge (sahte kişi) ve cüzdanın bu oturum için olağan, cihaz imzalı yanıtı
-    const deviceSk = p256.utils.randomSecretKey();
-    const issued = issueMdoc({
-      docType: DOC_TYPE,
-      namespaces: {
-        [NS]: {
-          given_name: "Ayşe",
-          family_name: "Deneme",
-          birth_date: "2000-01-01",
-          nationality: "TR",
-          age_over_18: true,
+      // Kurumun verdiği belge (sahte kişi) ve cüzdanın bu oturum için olağan, cihaz imzalı yanıtı
+      const deviceSk = p256.utils.randomSecretKey();
+      const issued = issueMdoc({
+        docType: DOC_TYPE,
+        namespaces: {
+          [NS]: {
+            given_name: "Ayşe",
+            family_name: "Deneme",
+            birth_date: "2000-01-01",
+            nationality: "TR",
+            age_over_18: true,
+            age_over_15: true,
+          },
         },
-      },
-      deviceKeyRaw: p256.getPublicKey(deviceSk, false),
-      issuerSk,
-      x5chain: [issuerDer],
-      signed: nowSec - 120,
-      validFrom: nowSec - 120,
-      validUntil: nowSec + 30 * 86400,
-      randomBytes: (n) => new Uint8Array(randomBytes(n)),
-      status: { idx: 4711, uri: "https://status.tamga.network/0123456789abcdef" },
-    });
-    const session = {
-      clientId: "x509_san_dns:verify.tamga.network",
-      nonce: "n-" + randomBytes(8).toString("hex"),
-      responseUri: "https://verify.tamga.network/vp/response",
-    };
-    const transcript = oid4vpSessionTranscript(session.clientId, session.nonce, session.responseUri);
-    const deviceResponse = buildDeviceResponse({
-      docType: DOC_TYPE,
-      issuerSigned: issued.issuerSigned,
-      deviceSignature: deviceSign(transcript, DOC_TYPE, deviceSk),
-    });
+        deviceKeyRaw: p256.getPublicKey(deviceSk, false),
+        issuerSk,
+        x5chain: [issuerDer],
+        signed: nowSec - 120,
+        validFrom: nowSec - 120,
+        validUntil: nowSec + 30 * 86400,
+        randomBytes: (n) => new Uint8Array(randomBytes(n)),
+        status: { idx: 4711, uri: "https://status.tamga.network/0123456789abcdef" },
+      });
+      const session = {
+        clientId: "x509_san_dns:verify.tamga.network",
+        nonce: "n-" + randomBytes(8).toString("hex"),
+        responseUri: "https://verify.tamga.network/vp/response",
+      };
+      const transcript = oid4vpSessionTranscript(session.clientId, session.nonce, session.responseUri);
+      const deviceResponse = buildDeviceResponse({
+        docType: DOC_TYPE,
+        issuerSigned: issued.issuerSigned,
+        deviceSignature: deviceSign(transcript, DOC_TYPE, deviceSk),
+      });
 
-    // Bu paket: ispat + ZK DeviceResponse
-    const zk = await presentZk({
-      prover: new NodeProcessProver(BIN),
-      circuits: fileCircuitSource(CIRCUIT_DIR),
-      trustedCircuits: [CIRCUIT],
-      query: zkQueryFromDcql(AGE_QUERY),
-      deviceResponse,
-      transcript,
-      issuerX5chain: [issuerDer],
-      issuerKey,
-      now: new Date(nowSec * 1000),
-    });
-    const parsed = parseZkDeviceResponse(zk);
-    expect(parsed.disclosed).toEqual({ namespace: NS, elements: { age_over_18: true } });
-    expect(JSON.stringify(parsed.disclosed)).not.toContain("2000-01-01");
+      // Bu paket: ispat + ZK DeviceResponse
+      const zk = await presentZk({
+        prover: new NodeProcessProver(BIN),
+        circuits: fileCircuitSource(CIRCUIT_DIR),
+        trustedCircuits: [CIRCUIT],
+        query: zkQueryFromDcql({ ...AGE_QUERY, claims: [{ path: [NS, attr], values: [true] }] }),
+        deviceResponse,
+        transcript,
+        issuerX5chain: [issuerDer],
+        issuerKey,
+        now: new Date(nowSec * 1000),
+      });
+      const parsed = parseZkDeviceResponse(zk);
+      expect(parsed.disclosed).toEqual({ namespace: NS, elements: { [attr]: true } });
+      expect(JSON.stringify(parsed.disclosed)).not.toContain("2000-01-01");
 
-    // Ağın doğrulayıcısı
-    const issuerId = computeIssuerId("TR", issuerDer);
-    const schemaId = computeSchemaId(DOC_TYPE);
-    const trust = {
-      isCredentialAcceptable: (id: string) => (id === issuerId ? "YES" : "NO"),
-      isCredentialSchemaAcceptable: (id: string, sid: string) => (id === issuerId && sid === schemaId ? "YES" : "NO"),
-      isRecognizedBy: () => "YES",
-      issuer: (id: string) =>
-        id === issuerId
-          ? { issuer_id: issuerId, legal_name: "Test", category: "IDENTITY", assurance: "I2", class: "EAA" }
-          : null,
-      schema: (sid: string) => (sid === schemaId ? { schema_id: schemaId, vct: DOC_TYPE, status: "ACTIVE" } : null),
-      zkCircuit: (id: string) => (id === CIRCUIT_ID ? (CIRCUIT as ZkCircuit) : null),
-      zkCircuits: () => [CIRCUIT as ZkCircuit],
-      isWalletProviderKey: () => "NO",
-      freshness: () => ({ source: "list", version: 1, ageSec: 0, healthy: true }),
-    } as unknown as TrustSource;
-    const r = await verifyMdocZkFormat(Buffer.from(zk).toString("base64url"), {
-      ...session,
-      stateCode: "TR",
-      now: epochSeconds(nowSec),
-      rootCertsDer: [new Uint8Array(root.rawData)],
-      expectedDocTypes: [DOC_TYPE],
-      requestedElements: ["age_over_18"],
-      namespace: NS,
-      trust,
-      maxSkewSec: 120,
-      backend: new WasmZkBackend(),
-    });
-    expect(r.ok, r.ok ? "" : `${r.failedStep}: ${r.reason}`).toBe(true);
-    if (r.ok) expect(r.claims).toEqual({ age_over_18: true });
-  }, 120_000);
+      // Ağın doğrulayıcısı
+      const issuerId = computeIssuerId("TR", issuerDer);
+      const schemaId = computeSchemaId(DOC_TYPE);
+      const trust = {
+        isCredentialAcceptable: (id: string) => (id === issuerId ? "YES" : "NO"),
+        isCredentialSchemaAcceptable: (id: string, sid: string) => (id === issuerId && sid === schemaId ? "YES" : "NO"),
+        isRecognizedBy: () => "YES",
+        issuer: (id: string) =>
+          id === issuerId
+            ? { issuer_id: issuerId, legal_name: "Test", category: "IDENTITY", assurance: "I2", class: "EAA" }
+            : null,
+        schema: (sid: string) => (sid === schemaId ? { schema_id: schemaId, vct: DOC_TYPE, status: "ACTIVE" } : null),
+        zkCircuit: (id: string) => (id === CIRCUIT_ID ? (CIRCUIT as ZkCircuit) : null),
+        zkCircuits: () => [CIRCUIT as ZkCircuit],
+        isWalletProviderKey: () => "NO",
+        freshness: () => ({ source: "list", version: 1, ageSec: 0, healthy: true }),
+      } as unknown as TrustSource;
+      const r = await verifyMdocZkFormat(Buffer.from(zk).toString("base64url"), {
+        ...session,
+        stateCode: "TR",
+        now: epochSeconds(nowSec),
+        rootCertsDer: [new Uint8Array(root.rawData)],
+        expectedDocTypes: [DOC_TYPE],
+        requestedElements: [attr],
+        namespace: NS,
+        trust,
+        maxSkewSec: 120,
+        backend: new WasmZkBackend(),
+      });
+      expect(r.ok, r.ok ? "" : `${r.failedStep}: ${r.reason}`).toBe(true);
+      if (r.ok) expect(r.claims).toEqual({ [attr]: true });
+    },
+    120_000,
+  );
 });

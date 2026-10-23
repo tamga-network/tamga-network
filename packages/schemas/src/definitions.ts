@@ -460,7 +460,9 @@ export const IDENTITY: SchemaDef = {
       verification_method: {
         enum: ["remote-document-liveness-face", "remote-nfc-liveness-face", "in-person", "review-demo"],
       },
+      // ADR-0064: yaş eşikleri ISO/IEC 18013-5 `age_over_NN` deseni, kapalı küme {15, 18} (yeni eşik yalnız ADR ile)
       age_over_18: { type: "boolean" },
+      age_over_15: { type: "boolean" },
     },
     additionalProperties: false,
   },
@@ -533,6 +535,14 @@ export const IDENTITY: SchemaDef = {
       },
       { path: ["verification_method"], sd: "always", display: [{ lang: "tr-TR", label: "Doğrulama yöntemi" }] },
       { path: ["age_over_18"], sd: "always", display: [{ lang: "tr-TR", label: "18 yaş üstü" }] },
+      {
+        path: ["age_over_15"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "15 yaş üstü" },
+          { lang: "en-US", label: "Over 15" },
+        ],
+      },
       { path: ["status"], sd: "never" },
     ],
     tamga: {
@@ -542,9 +552,9 @@ export const IDENTITY: SchemaDef = {
       uses_status_list: true,
       min_issuer_assurance: "I2", // ADR-0022: nitelikli olmayan EAA
       min_binding_level: "T2",
-      derived_claims: ["age_over_18", "document_number_hash"],
+      derived_claims: ["age_over_18", "age_over_15", "document_number_hash"],
       status: "ACTIVE",
-      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact). ADR-0045: attribute names and encodings follow the EU PID encoding of Implementing Regulation (EU) 2026/1731 (SD-JWT VC: birthdate, nationalities[]; mdoc namespace tamga.id.1: birth_date as full-date, nationality as an array); age_over_18 is a Tamga attribute (not in the EU PID set) with the ISO/IEC 18013-5 name in both formats.",
+      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact). ADR-0045: attribute names and encodings follow the EU PID encoding of Implementing Regulation (EU) 2026/1731 (SD-JWT VC: birthdate, nationalities[]; mdoc namespace tamga.id.1: birth_date as full-date, nationality as an array); age_over_18 is a Tamga attribute (not in the EU PID set) with the ISO/IEC 18013-5 name in both formats. ADR-0064: age attributes follow the ISO/IEC 18013-5 age_over_NN pattern; the threshold set is closed ({15, 18}) and changes only by ADR; each is derived from the date of birth at issuance and selectively disclosable.",
     },
   },
 };
@@ -1033,7 +1043,7 @@ export const DRIVING_LICENCE: SchemaDef = {
  * ADR-0044 — ZK kopyası: kimlik belgesinin yalnız sıfır bilgi ispatlı sunumda (`mso_mdoc_zk`) kullanılan kısa ömürlü mdoc kopyası.
  * Ayırt edici işaret (K1) bu türdür: Longfellow ispatı docType'ı bağlar, doğrulayıcı ispattan türü görür. Tür kuralı (ZC1):
  * geçerlilik en çok 24 saat, iptal listesi yok (AB ARF VCR_01) — doğrulayıcı iptal denetimi beklemez (K5). Yalnız ZK ile sunulur;
- * öğeler yalnız ZK ile ispatlanabilenler (bugün `age_over_18`). Tür adı kamuya açık yeni addır — proje yönetiminin onayını bekler.
+ * öğeler yalnız ZK ile ispatlanabilenler: kimlik belgesinin yaş alanları (`age_over_18`, `age_over_15`; ADR-0064). Tür adı kamuya açık yeni addır — proje yönetiminin onayını bekler.
  */
 export const ZK_COPY_VCT = "urn:tamga:id:ShortLivedIdentityAttestation:1";
 /** ADR-0044 ZC1: ZK kopyasının azami geçerliliği (sn) — AB ARF VCR_01 eşiği. */
@@ -1053,6 +1063,8 @@ export const ZK_COPY: SchemaDef = {
     required: ["age_over_18"],
     properties: {
       age_over_18: { type: "boolean" },
+      // ADR-0064 K4: aynı eşitlik devresiyle ispatlanır; devre kaydı değişmez
+      age_over_15: { type: "boolean" },
       // cihaz bağlaması (mdoc deviceKey; doğrulayıcının B6 örneğinde `cnf` olarak durur)
       cnf: { type: "object" },
     },
@@ -1081,6 +1093,14 @@ export const ZK_COPY: SchemaDef = {
         display: [
           { lang: "tr-TR", label: "18 yaş üstü" },
           { lang: "en-US", label: "Over 18" },
+        ],
+      },
+      {
+        path: ["age_over_15"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "15 yaş üstü" },
+          { lang: "en-US", label: "Over 15" },
         ],
       },
     ],

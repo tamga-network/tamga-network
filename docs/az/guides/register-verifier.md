@@ -4,7 +4,7 @@ title: "Yoxlayan tərəf kimi qeydiyyatdan keçmək"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-10-23
 summary: >
   Saytın və ya xidmətin yoxlayan tərəf kimi Tamga etibar siyahısında qeydiyyatı: domen adı və giriş sertifikatı, Aİ-nin ümumi qeydiyyat məlumatları, istifadə əhatələri (məqsəd, sahələr, məxfilik siyasəti), qeydiyyat sertifikatı, vasitəçi yoxlayan tərəflər və psevdonim.
 translation_of: GUIDE-0008
@@ -90,7 +90,8 @@ olub-olmadığını (`is_enrolled`) soruşur; adı, məktəbi, nömrəni soruşm
 - Lazım olan hər ayrı məqsəd üçün ayrıca əhatə açın; məqsədi şəxsin anlayacağı dildə yazın (`purpose_localized`).
 - Bəzi növlər ümumiyyətlə göstərilmir (məsələn, psevdonim toxumu, `urn:tamga:id:PseudonymSeed:1`); bunlar əhatəyə yazıla bilməz.
 - Sıfır bilik sübutu ilə yaş yoxlaması şəxsiyyət sənədinin qısamüddətli ZK nüsxəsi ilə aparılır; əhatənin növü
-  `urn:tamga:id:ShortLivedIdentityAttestation:1`, sahəsi `age_over_18`-dir ([[ADR-0044]]).
+  `urn:tamga:id:ShortLivedIdentityAttestation:1`, sahəsi `age_over_18` və ya `age_over_15`-dir ([[ADR-0044]], [[ADR-0064]]). Yaş
+  əhatəsi tək hədd istəyir; hər iki həddi istəyən əhatə yaş aralığını üzə çıxarır və ayrıca əsaslandırılır.
 - Əhatə müddətli ola bilər (`valid_from`, `valid_until`); müddəti bitmiş istifadə üçün qeydiyyat sertifikatı yaradılmır.
 
 ## 4. Qeydiyyat sertifikatı

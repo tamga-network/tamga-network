@@ -835,6 +835,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       document_chip_verified: false,
       verification_method: "remote-document-liveness-face",
       age_over_18: true,
+      age_over_15: true, // ADR-0064: ikinci eşik; 18 politikası yalnız age_over_18'i açar
     };
     const cnf = await keys.generate("w.mdoc");
     const exp = now + 365 * 86400;
@@ -887,13 +888,13 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     ).state; // çapraz doğrulama (MD1–MD3) burada geçti
     expect(wallet.credentials[0].copies[0].mdoc).toBeTruthy();
 
-    const open = async () => {
+    const open = async (policy_id = "age-over-18-mdoc") => {
       const created = (
         await app3.inject({
           method: "POST",
           url: "/presentations",
           headers: { accept: "application/json", "content-type": "application/json" },
-          payload: { policy_id: "age-over-18-mdoc" },
+          payload: { policy_id },
         })
       ).json() as { presentation_id: string; qr_payload: string };
       const uri = parseVpUri(created.qr_payload);
@@ -937,6 +938,31 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     };
     expect(cl.claims).toEqual({ age_over_18: true });
     expect(JSON.stringify(r1)).not.toContain("Yılmaz"); // AP3 / MD4
+
+    // 1b) ADR-0064: age-over-15-mdoc → yalnız age_over_15 istenir ve açılır (tek eşik, YE2); 18 ve doğum tarihi açılmaz
+    const s15 = await open("age-over-15-mdoc");
+    const m15 = matchDcql(s15.req.dcql, wallet.credentials).matches;
+    expect(m15.length).toBe(1);
+    expect(m15[0].requested).toEqual(["age_over_15"]);
+    expect(
+      checkRp(app3.trust().relyingParty(s15.req.clientId) as unknown as RpRecord, s15.req, m15[0]).overAsk,
+    ).toEqual([]);
+    const o15 = await respond({
+      approval: testApproval(s15.req),
+      request: s15.req,
+      matches: [{ match: m15[0], keyRef: "w.mdoc", combined: sd.combined, disclose: m15[0].requested }],
+      keys,
+      http: http3,
+      now,
+    });
+    expect(o15.status).toBe(200);
+    const r15 = await result(s15.id);
+    expect(r15.outcome, r15.failed_reason ?? "").toBe("ACCEPTED");
+    expect(r15.disclosed_claims).toEqual(["age_over_15"]);
+    const cl15 = (await app3.inject({ method: "GET", url: `/presentations/${s15.id}/claims` })).json() as {
+      claims: Record<string, unknown>;
+    };
+    expect(cl15.claims).toEqual({ age_over_15: true });
 
     // 2) aynı DeviceResponse başka oturuma (farklı nonce) → SessionTranscript uyuşmaz → A6
     const s2 = await open();

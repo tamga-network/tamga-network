@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-10-23
 summary: >
   Tamga-nın şəxsiyyət xidmətinin verdiyi şəxsi rəqəmsal sənədlərin rulebook-u (Tamga Rulebook-dan törəyir), Aİ Attestation Rulebook şablonunun bölmə strukturu ilə: Tamga şəxsiyyət sənədi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc), onun ZK nüsxəsi (`urn:tamga:id:ShortLivedIdentityAttestation:1`), psevdonim toxumu (`urn:tamga:id:PseudonymSeed:1`) və sürücülük vəsiqəsi məlumatı (`urn:tamga:id:DrivingLicenceAttestation:1`; rəsmi sürücülük vəsiqəsi deyil). Atributlar və metaməlumatlar, hüquqi kateqoriya, format üzrə kodlaşdırma, istifadə, etibar lövbərləri, etibarlılıq və ləğv, Aİ ilə uyğunluq. Şəxsiyyət sənədi PID deyil; kvalifikasiyalı olmayan EAA-dır və Aİ PID adlarından və kodlaşdırmasından istifadə edir.
 translation_of: FW-RB-0003
@@ -111,6 +111,7 @@ olduğu bu yoxluqdan və sənədi verənin etibar siyahısındakı sinfindən an
 | Məlumat identifikatoru | Tərif | Məlumat növü | Nümunə dəyər |
 |---|---|---|---|
 | `age_over_18` | 18 yaşdan böyükdürmü; yalnız ZK ilə sübut edilə bilən element | boolean | `true` |
+| `age_over_15` | 15 yaşdan böyükdürmü; yalnız ZK ilə sübut edilə bilən element ([[ADR-0064]]) | boolean | `true` |
 
 **Psevdonim toxumu (`PseudonymSeed`)**
 
@@ -139,6 +140,7 @@ olduğu bu yoxluqdan və sənədi verənin etibar siyahısındakı sinfindən an
 | Növ | Məlumat identifikatoru | Tərif | Məlumat növü | Nümunə dəyər |
 |---|---|---|---|---|
 | Şəxsiyyət sənədi | `age_over_18` | Doğum tarixindən törədilir; yaşın yoxlanılmasında yalnız bu sahə açılır. Aİ PID toplusunda yoxdur; ISO/IEC 18013-5 adı ilə Tamga sahəsidir ([[ADR-0045]] K3) | boolean | `true` |
+| Şəxsiyyət sənədi | `age_over_15` | Doğum tarixindən eyni qayda ilə törədilir; ISO/IEC 18013-5 `age_over_NN` nümunəsi. Şəxsiyyət sənədinin yaş həddləri qapalı çoxluqdur (15, 18); yeni hədd yalnız ADR ilə əlavə edilir ([[ADR-0064]] K2) | boolean | `true` |
 | Sürücülük vəsiqəsi məlumatı | `birth_date` | Kartda varsa doğum tarixi (ISO/IEC 18013-5 mDL adı) | tarix | `1990-04-12` |
 | Sürücülük vəsiqəsi məlumatı | `licence_issue_date` | Kartın verilmə tarixi (varsa) | tarix | `2024-06-01` |
 | Sürücülük vəsiqəsi məlumatı | `age_over_18` | Törədilmiş | boolean | `true` |
@@ -204,6 +206,7 @@ sertifikatıdır.
 | `document_chip_verified` | `document_chip_verified` | bool | `tamga.id.1` |
 | `verification_method` | `verification_method` | tstr | `tamga.id.1` |
 | `age_over_18` | `age_over_18` | bool | `tamga.id.1` |
+| `age_over_15` | `age_over_15` | bool | `tamga.id.1` |
 
 Ad və kodlaşdırma Aİ PID Cədvəl 6-ya əsaslanır ([[ADR-0045]] K2); ad cədvəli açıq paketlərdədir (`@tamga-network/core/pid`). Ad sahəsi
 `tamga.id.1` Tamga-ya məxsus ad sahəsidir (ARB_10): sənəd PID olmadığı üçün `eu.europa.ec.eudi.pid.1` istifadə olunmur.
@@ -246,6 +249,7 @@ Sənədlər [[t:SD-JWT-VC]] kimi, HAIP 1.0-ın SD-JWT VC profilinə uyğun veril
 | `document_chip_verified` | `document_chip_verified` | boolean | Tamga-ya məxsus | MUST |
 | `verification_method` | `verification_method` | string (çoxluq) | Tamga-ya məxsus | MUST |
 | `age_over_18` | `age_over_18` | boolean | ISO/IEC 18013-5 adı | MUST |
+| `age_over_15` | `age_over_15` | boolean | ISO/IEC 18013-5 adı ([[ADR-0064]]) | MUST |
 | `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status` | eyni | — | daşıma profili | MUST NOT |
 
 **Psevdonim toxumu**
@@ -289,7 +293,8 @@ Sənədlər [[t:SD-JWT-VC]] kimi, HAIP 1.0-ın SD-JWT VC profilinə uyğun veril
   "issuing_country": "TR",
   "document_chip_verified": false,
   "verification_method": "remote-document-liveness-face",
-  "age_over_18": true
+  "age_over_18": true,
+  "age_over_15": true
 }
 ```
 
@@ -308,7 +313,7 @@ açıqlamadır. Kodlaşdırılmış sənəd və açıqlama nümunələri uyğunl
 
 | İstifadə | Tələb olunan sahələr | Qayda |
 |---|---|---|
-| Yaşın yoxlanılması | `age_over_18` | Başqa sahə tələb olunmur; brauzerdə mdoc ilə, istənilərsə ZK nüsxəsi ilə sıfır bilikli sübut |
+| Yaşın yoxlanılması | `age_over_18` və ya `age_over_15` (tək hədd) | Başqa sahə tələb olunmur; iki hədd birlikdə istənilmir, yaş aralığını üzə çıxarır ([[ADR-0064]] K3); brauzerdə mdoc ilə, istənilərsə ZK nüsxəsi ilə sıfır bilikli sübut |
 | Qurumda qeydin uyğunlaşdırılması (sənəd verilməzdən əvvəl) | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | Qurumun sənəd vermə xidməti yalnız qeydiyyatdakı əhatə dairəsi ilə və tam yoxlama xəttindən keçirərək qəbul edir; uyğunlaşdırma açarlarını saxlamır və loglamır (RB-RP-ID-01) |
 | "Etibarlı Tamga şəxsiyyəti varmı" | heç biri | İstinad siyasəti `event-tamga-id` |
 | Veb sayta qeydiyyat və giriş ("Tamga ilə daxil ol") | qeydiyyatda `given_name`, `family_name`; girişdə heç biri | Hesab açarı hər sayt üçün ayrıca psevdonimdir; `document_number_hash` və şəxsiyyət nömrəsi tələb olunmur (RB-RP-13) |
@@ -385,7 +390,7 @@ Tamga yoxlayan tərəfləri Aİ-nin şəxsiyyət sənədini (PID) və ISO sürü
   məsələn, ünvanın yalnız şəhərini və ya vətəndaşlıqlardan birini. Yoxlayan tərəfin əhatə yoxlaması sahənin özünə və ya üst sahəsinə görə
   aparılır.
 - **Yaş.** Aİ PID-də yaş sahəsi yoxdur; Aİ-də yaş üçün ayrıca yaş təsdiqi sənədi istifadə olunur. mDL-də `age_over_18` kimi yaş elementləri
-  var.
+  var. Tamga şəxsiyyət sənədi eyni `age_over_NN` nümunəsini izləyir; hədd çoxluğu qapalıdır: bu gün 15 və 18 ([[ADR-0064]]).
 
 | Tamga şəxsiyyət rəqəmsal sənədi (SD-JWT VC) | Tamga şəxsiyyət rəqəmsal sənədi (mdoc, `tamga.id.1`) | Aİ PID (SD-JWT VC) | Aİ PID (mdoc) |
 |---|---|---|---|
@@ -396,6 +401,7 @@ Tamga yoxlayan tərəfləri Aİ-nin şəxsiyyət sənədini (PID) və ISO sürü
 | `personal_administrative_number` | `personal_administrative_number` | `personal_administrative_number` | `personal_administrative_number` |
 | `issuing_country` (rəqəmsal sənədi verən ölkə) | `issuing_country` | `issuing_country` (PID provayderinin ölkəsi) | `issuing_country` |
 | `age_over_18` | `age_over_18` | — (yoxlayan tərəf üçün ayrıca yaş təsdiqi rəqəmsal sənədi) | — |
+| `age_over_15` | `age_over_15` | — (yoxlayan tərəf üçün ayrıca yaş təsdiqi rəqəmsal sənədi) | — |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | eyni | qarşılığı yoxdur (Tamga-ya xasdır) | qarşılığı yoxdur |
 
 > **`issuing_country` (2026-10-11, layihə rəhbərliyinin qərarı).** Sahənin mənası Aİ PID-dəki mənadır: sənədi verən şəxsiyyət

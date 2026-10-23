@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-22
+last_updated: 2026-10-23
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -275,7 +275,7 @@ kendisi değil, kimlik servisinin ayrıca verdiği **kısa ömürlü ZK kopyası
 | Konu | Kural |
 |---|---|
 | Tür | `urn:tamga:id:ShortLivedIdentityAttestation:1` (yalnız ISO 18013-5 mdoc; ad alanı `tamga.id.1`). İspat türü bağladığı için doğrulayıcı kısa ömrü görür |
-| İçerik | Yalnız ZK ile ispatlanabilen öğeler (bugün `age_over_18`); ad, doğum tarihi, kimlik numarası yok |
+| İçerik | Yalnız ZK ile ispatlanabilen öğeler (kimlik belgesinin yaş alanları `age_over_18`, `age_over_15`; [[ADR-0064]]); ad, doğum tarihi, kimlik numarası yok |
 | Geçerlilik | En çok 24 saat (ve ana belgenin bitişinden sonra değil); iptal listesi girdisi yok (ARF VCR_01) |
 | Paket | Küçük paket (3 kopya); her kopya kendi cihaz anahtarına bağlı |
 | Alma | Kimlik belgesiyle birlikte gelen yenileme belirteciyle (OpenID4VCI `grant_type=refresh_token`, DPoP + WIA); belirteç tek kullanımlıktır, her kullanımda değişir; içi cüzdana kapalıdır |

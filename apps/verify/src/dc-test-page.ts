@@ -5,7 +5,7 @@
 import { esc, jsLit, page, type Lang } from "./html.js";
 
 /** Denemede seçilebilen politikalar: mdoc (iki protokol) ve SD-JWT (yalnız OpenID4VP). */
-export const DC_TEST_POLICIES = ["age-over-18-mdoc", "event-tamga-id"];
+export const DC_TEST_POLICIES = ["age-over-18-mdoc", "age-over-15-mdoc", "event-tamga-id"];
 
 const T = {
   en: {
@@ -20,6 +20,7 @@ const T = {
     protoUnknown: "browser does not say",
     policy: "What to ask for",
     pMdoc: "Over 18 — mdoc (ISO/IEC 18013-5); both protocols",
+    pMdoc15: "Over 15 — mdoc (ISO/IEC 18013-5); both protocols",
     pSd: "Tamga identity is valid — SD-JWT VC; OpenID4VP only",
     protocol: "Protocol",
     both: "Both — browser and wallet choose",
@@ -52,6 +53,7 @@ const T = {
     protoUnknown: "tarayıcı bildirmiyor",
     policy: "Ne istensin",
     pMdoc: "18 yaş üstü — mdoc (ISO/IEC 18013-5); iki protokol",
+    pMdoc15: "15 yaş üstü — mdoc (ISO/IEC 18013-5); iki protokol",
     pSd: "Tamga kimliği geçerli — SD-JWT VC; yalnız OpenID4VP",
     protocol: "Protokol",
     both: "İkisi — tarayıcı ve cüzdan seçer",
@@ -81,6 +83,7 @@ export function dcTestPage(lang: Lang, o: { showValues: boolean }) {
 <section id="form"><div class="panel">
 <p><strong>${esc(t.policy)}</strong></p>
 <p><label><input type="radio" name="policy" value="age-over-18-mdoc" checked> ${esc(t.pMdoc)}</label><br>
+<label><input type="radio" name="policy" value="age-over-15-mdoc"> ${esc(t.pMdoc15)}</label><br>
 <label><input type="radio" name="policy" value="event-tamga-id"> ${esc(t.pSd)}</label></p>
 <p><strong>${esc(t.protocol)}</strong></p>
 <p><label><input type="radio" name="protocol" value="both" checked> ${esc(t.both)}</label><br>

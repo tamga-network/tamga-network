@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-10-23
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
@@ -207,7 +207,7 @@ I2; belgede `category` claim'i yok — [[ADR-0022]]) verdiği nitelikli olmayan 
 | Öğe | Değer |
 |---|---|
 | `vct` | `urn:tamga:id:IdentityAttestation:1` (katalog: `id/IdentityAttestation/1.0.0`) |
-| Claim'ler | `given_name`, `family_name`, `birthdate`, `nationalities` (dizi; her öğe ayrı açıklanır), `personal_administrative_number` (TCKN), `document_type`, `document_number_hash` (anahtarlı SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18` — tümü selective disclosure ile; portre yok; LoA claim'i yok (PR7) |
+| Claim'ler | `given_name`, `family_name`, `birthdate`, `nationalities` (dizi; her öğe ayrı açıklanır), `personal_administrative_number` (TCKN), `document_type`, `document_number_hash` (anahtarlı SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18`, `age_over_15` ([[ADR-0064]]: ISO/IEC 18013-5 `age_over_NN`, kapalı küme) — tümü selective disclosure ile; portre yok; LoA claim'i yok (PR7) |
 | Süre / status | `exp` = belge verme + 730 gün; Token Status List (`id.tamga.network/status/{listId}`); aynı belge yeniden doğrulanınca eskisi iptal (K6) |
 | Akış | Cüzdan: PAR (WUA) → tarayıcı `/authorize` (**KVKK aydınlatma + açık rıza**) → sağlayıcı (Didit v3; demo: FAKE, sapma S-15) → `/idv/return` karar sorgulama (webhook yalnızca tetik, IDP5) → `code` → token (PKCE + WUA) → 10 kopya |
 | Kurumda kullanım | Kurumun belge veren servisi belge verilirken kimlik belgesinin **gösterilmesini** ister (DCQL: TCKN, doğum tarihi, ad, soyad), T0 + A–E doğrular, kayıtla eşler (TCKN + doğum tarihi; ad normalize uyarı) — [[SPEC-PROTO-0001]] §11.2 |

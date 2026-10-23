@@ -316,8 +316,8 @@ identity service's metadata announces the ZK copy as a separate `mso_mdoc` confi
   next to the identity credential scope in the PAR `scope`; the scope can only be requested with the identity credential (ZS1).
 - **Token:** opaque to the wallet; its content is protected by authenticated encryption that only the identity service's key
   opens (JWE `dir` + A256GCM): the linked identity record, a generation counter, the thumbprint of the client instance key (WIA `cnf`) from
-  the first issuance ([[ADR-0060]]), the expiry (≤ the identity credential's expiry) and the **minimum** elements for the ZK copy (today
-  `age_over_18`). Neither the token nor person fields are kept on the server; for single use only the generation counter is
+  the first issuance ([[ADR-0060]]), the expiry (≤ the identity credential's expiry) and the **minimum** elements for the ZK copy (the
+  identity credential's age attributes `age_over_18`, `age_over_15`; [[ADR-0064]]). Neither the token nor person fields are kept on the server; for single use only the generation counter is
   kept in the identity record (ZC3).
 - **Refresh:** the request of §4.1 (`grant_type=refresh_token`, a valid and unrevoked WIA for the same instance key; the DPoP key
   may change). The service checks the generation and the instance-key binding and reads from its own list that **all revocation list bits of the identity

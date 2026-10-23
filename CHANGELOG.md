@@ -6,6 +6,12 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 
 ## 0.7.2 — unreleased
 
+- **ADR-0064 accepted (2026-10-23): `age_over_15` in the identity credential.** schemas: the identity credential and its ZK copy
+  carry `age_over_15` next to `age_over_18` (ISO/IEC 18013-5 `age_over_NN` pattern; the threshold set is closed, {15, 18}, and
+  changes only by ADR); selectively disclosable, derived at issuance, not required. The Longfellow circuit proves equality, so the
+  same circuit proves `age_over_15 = true` (end-to-end test with the desktop prover). Tamga Verify: `age-over-15-mdoc` and
+  `age-over-15-zk` policies, trust list scopes `age-over-15-1` and `age-over-15-zk-1`, a 15+ option on the browser test page.
+  Credentials issued earlier get the attribute when they are issued again (no migration).
 - **ADR-0063 accepted (2026-10-23): the on-chain status list registry accepts the list's own bit size.** `StatusListRegistry`
   takes `bitsPerEntry` 1, 2, 4 or 8 (IETF Token Status List) instead of always 2, so identity service lists (`bits = 1`, ADR-0048)
   can be anchored; the value is written once and emitted in `ListRegistered`. trust-publisher: `statusListRegistrationOf` derives
@@ -160,7 +166,6 @@ deliberately is written explicitly as `"none"`. No compatibility layer (developm
 - Clock skew options (`maxSkewSec`, `clockSkewSec`, `maxClockSkewSec`) are capped at `MAX_CLOCK_SKEW_SEC` = 600 s.
 - New: `isYes(output, claim)` — reads a yes/no attribute safely (true only for an ACCEPTED result with the value exactly `true`).
 - Conformance vectors version 6: the status list vectors add an "unexpected signer" negative case; the runner pins the signer.
-
 
 ### Trust list publisher (`apps/trust-publisher`)
 

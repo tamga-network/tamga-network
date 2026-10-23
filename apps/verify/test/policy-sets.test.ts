@@ -23,7 +23,14 @@ const SCENARIOS = [
   "car-rental-driving",
   "oidf-selftest-eu-pid",
 ];
-const GENERAL = ["age-over-18-mdoc", "age-over-18-zk", "site-signup", "site-signin"];
+const GENERAL = [
+  "age-over-18-mdoc",
+  "age-over-18-zk",
+  "age-over-15-mdoc",
+  "age-over-15-zk",
+  "site-signup",
+  "site-signin",
+];
 const REVIEW = ["review-age-over-18", "review-site-signup"];
 
 describe("policiesFor", () => {
@@ -59,6 +66,23 @@ describe("policiesFor", () => {
       vct_values: [ZK_COPY_VCT],
     });
     expect(s.find((p) => p.policy_id === "age-over-18-mdoc")).not.toHaveProperty("accept_unrevocable_zk");
+  });
+  it("ADR-0064 YE2: yaş politikaları tek eşik ister (age_over_NN, kapalı küme {15, 18}); 15 yaş ZK'sı ZK kopyasıyla", () => {
+    const ages = POLICIES.flatMap((p) =>
+      p.credentials.map((c) => ({ id: p.policy_id, ages: c.required_claims.filter((k) => k.startsWith("age_over_")) })),
+    ).filter((x) => x.ages.length > 0);
+    for (const a of ages) {
+      expect(a.ages, a.id).toHaveLength(1);
+      expect(["age_over_15", "age_over_18"], a.id).toContain(a.ages[0]);
+    }
+    const p15 = POLICIES.find((p) => p.policy_id === "age-over-15-mdoc")!.credentials[0];
+    expect(p15).toMatchObject({
+      format: "mso_mdoc",
+      required_claims: ["age_over_15"],
+      constraints: { age_over_15: true },
+    });
+    const z15 = POLICIES.find((p) => p.policy_id === "age-over-15-zk")!.credentials[0];
+    expect(z15).toMatchObject({ format: "mso_mdoc_zk", vct_values: [ZK_COPY_VCT], constraints: { age_over_15: true } });
   });
   it("sandbox bağlantısı: yayındaysa portal / sandbox örnek sitesi, değilse rehber (TR/EN)", () => {
     expect(sandboxUrl(true, "tr")).toBe("https://sandbox.tamga.network");
@@ -118,6 +142,8 @@ describe.skipIf(!prodReady)("gerçek ağ kipi (uygulama)", () => {
       });
     expect((await post("campus-access")).statusCode).toBe(400); // senaryo yüklü değil
     expect((await post("age-over-18-mdoc")).statusCode).toBe(200);
+    expect((await post("age-over-15-mdoc")).statusCode).toBe(200); // ADR-0064: kapsam age-over-15-1
+    expect((await post("age-over-15-zk")).statusCode).toBe(200); // ADR-0064: kapsam age-over-15-zk-1
     expect((await post("review-age-over-18")).statusCode).toBe(200);
 
     // ADR-0033: inceleyicinin doğrudan bağlantısı — yalnız inceleme politikaları, noindex, ana sayfadan bağlanmaz

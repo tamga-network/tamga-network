@@ -89,3 +89,32 @@ describe("ADR-0048 K2: askı izni (suspension_allowed)", () => {
     expect(withFlag.map((d) => d.vct)).toEqual(["urn:tamga:edu:DiplomaCredential:1"]);
   });
 });
+
+describe("ADR-0064: yaş eşikleri (`age_over_NN`, kapalı küme)", () => {
+  const ageClaims = (vct: string) => {
+    const d = ALL.find((s) => s.vct === vct)!;
+    const props = Object.keys((d.jsonSchema as { properties: Record<string, unknown> }).properties);
+    return props.filter((k) => k.startsWith("age_over_")).sort();
+  };
+  it("kimlik belgesi ve ZK kopyası tam olarak {15, 18} taşır; adlar ISO/IEC 18013-5 deseninde", () => {
+    for (const vct of ["urn:tamga:id:IdentityAttestation:1", "urn:tamga:id:ShortLivedIdentityAttestation:1"]) {
+      const ages = ageClaims(vct);
+      expect(ages).toEqual(["age_over_15", "age_over_18"]);
+      for (const a of ages) expect(a).toMatch(/^age_over_\d{2}$/);
+    }
+  });
+  it("her yaş alanı seçici açıklanır, boolean, türetilmiş ve şemada zorunlu değil (kimlik belgesi)", () => {
+    const d = ALL.find((s) => s.vct === "urn:tamga:id:IdentityAttestation:1")!;
+    const js = d.jsonSchema as { properties: Record<string, { type?: string }>; required: string[] };
+    const tm = d.typeMetadata as { claims: { path: string[]; sd?: string }[]; tamga: { derived_claims: string[] } };
+    for (const a of ["age_over_15", "age_over_18"]) {
+      expect(js.properties[a]).toEqual({ type: "boolean" });
+      expect(js.required).not.toContain(a);
+      expect(tm.claims.find((c) => c.path.length === 1 && c.path[0] === a)?.sd).toBe("always");
+      expect(tm.tamga.derived_claims).toContain(a);
+    }
+  });
+  it("sürücü belgesi bilgisi yalnız age_over_18 taşır (K2)", () => {
+    expect(ageClaims("urn:tamga:id:DrivingLicenceAttestation:1")).toEqual(["age_over_18"]);
+  });
+});

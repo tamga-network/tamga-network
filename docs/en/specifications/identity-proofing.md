@@ -4,7 +4,7 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-10-23
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
@@ -209,7 +209,7 @@ an issuer (`category: IDENTITY`, `class: EAA`, I2; no `category` claim in the cr
 | Item | Value |
 |---|---|
 | `vct` | `urn:tamga:id:IdentityAttestation:1` (catalogue: `id/IdentityAttestation/1.0.0`) |
-| Claims | `given_name`, `family_name`, `birthdate`, `nationalities` (array; each element disclosed separately), `personal_administrative_number` (Turkish ID number), `document_type`, `document_number_hash` (keyed SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18` — all selectively disclosable; no portrait; no LoA claim (PR7) |
+| Claims | `given_name`, `family_name`, `birthdate`, `nationalities` (array; each element disclosed separately), `personal_administrative_number` (Turkish ID number), `document_type`, `document_number_hash` (keyed SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18`, `age_over_15` ([[ADR-0064]]: ISO/IEC 18013-5 `age_over_NN`, closed set) — all selectively disclosable; no portrait; no LoA claim (PR7) |
 | Validity / status | `exp` = issuance + 730 days; Token Status List (`id.tamga.network/status/{listId}`); when the same document is verified again, the previous one is revoked (K6) |
 | Flow | Wallet: PAR (WUA) → browser `/authorize` (**KVKK privacy notice + explicit consent**) → provider (Didit v3; demo: FAKE, deviation S-15) → `/idv/return` decision query (the webhook is only a trigger, IDP5) → `code` → token (PKCE + WUA) → 10 copies |
 | Use at an institution | The institution's issuing service requests a **presentation** of the identity credential when issuing (DCQL: Turkish ID number, date of birth, given name, family name), verifies T0 + A–E and matches it with its records (Turkish ID number + date of birth; a warning on normalised names) — [[SPEC-PROTO-0001]] §11.2 |

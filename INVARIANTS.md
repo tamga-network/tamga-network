@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 359 kodlanmış değişmez, 63 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 362 kodlanmış değişmez, 64 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -631,6 +631,17 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0063/BL2` | İptal listesi kaydına belge türü, şema, iptal biti ya da kişisel veri yazılmaz; türe göre bit kuralı yayıncıda ve doğrulayıcıda uygulanır. |
 
 
+## ADR-0064
+
+*"Kimlik belgesinde yaş eşikleri: `age_over_15` ve `age_over_NN` deseni"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0064/YE1` | Kimlik belgesinin yaş alanları ISO/IEC 18013-5 `age_over_NN` adıyla ve boolean değerle, SD-JWT VC'de ve mdoc'ta aynı adla taşınır. Eşik kümesi kapalıdır (bugün 15 ve 18); yeni eşik yalnız ADR ile eklenir. |
+| `ADR-0064/YE2` | Yaş alanı ihraç anında kimlik servisinde doğum tarihinden türetilir ve seçici açıklanır; yaş doğrulaması doğum tarihini açmaz; ağın doğrulayıcı politikaları tek eşik ister. |
+| `ADR-0064/YE3` | ZK kopyası kimlik belgesinin yaş alanlarından başka kişi alanı taşımaz; yeni bir yaş eşiği eşitlik devresiyle ispatlanır, devre kaydı değişmez. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -915,12 +926,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 359 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 362 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YS, ZC, ZK, ZS.
+AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-23 (`scripts/sync-invariants.mjs`). Toplam 359 kodlanmış değişmez, 63 dokümanda.
+**Üretilen dosya** — 2026-10-23 (`scripts/sync-invariants.mjs`). Toplam 362 kodlanmış değişmez, 64 dokümanda.

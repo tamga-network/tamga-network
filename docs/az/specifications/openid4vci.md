@@ -317,7 +317,7 @@ yalnız qısa ömürlü ZK nüsxəsi alır ([[ADR-0023]] AR4-ün yeganə istisna
   (`urn:tamga:id:ShortLivedIdentityAttestation:1`) də istəyərsə; əhatə yalnız şəxsiyyət sənədi ilə istənə bilər (ZS1).
 - **Token:** cüzdan üçün qeyri-şəffafdır (opaque); məzmunu yalnız şəxsiyyət xidmətinin açarı ilə açılan autentifikasiyalı şifrələmə (JWE `dir` +
   A256GCM) ilə qorunur: bağlı şəxsiyyət qeydi, nəsil sayğacı, ilk buraxılışdakı müştəri nümunəsi açarının (WIA `cnf`) barmaq izi ([[ADR-0060]]), bitmə tarixi (≤ şəxsiyyət sənədinin
-  bitmə tarixi) və ZK nüsxəsinə daxil ediləcək **minimal** elementlər (bu gün `age_over_18`). Serverdə token və şəxs sahəsi saxlanmır; birdəfəlik istifadə
+  bitmə tarixi) və ZK nüsxəsinə daxil ediləcək **minimal** elementlər (şəxsiyyət sənədinin yaş sahələri `age_over_18`, `age_over_15`; [[ADR-0064]]). Serverdə token və şəxs sahəsi saxlanmır; birdəfəlik istifadə
   üçün şəxsiyyət qeydində yalnız nəsil sayğacı qalır (ZC3).
 - **Yeniləmə:** §4.1-dəki sorğu (`grant_type=refresh_token`, eyni nümunə açarlı etibarlı və ləğv edilməmiş WIA; DPoP açarı
   dəyişə bilər). Xidmət nəsli və nümunə açarı bağlılığını yoxlayır, şəxsiyyət qeydinin **bütün ləğv siyahısı bitlərinin 0** olduğunu öz siyahısından oxuyur; qeyd yoxdursa,

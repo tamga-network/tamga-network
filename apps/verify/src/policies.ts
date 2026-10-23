@@ -193,6 +193,46 @@ export const POLICIES: Policy[] = [
     trust: TRUST_ID,
     freshness: FRESH,
   },
+  // ADR-0064 — 15 yaş üstü (ISO/IEC 18013-5 `age_over_NN`, kapalı küme {15, 18}): 18 yaş politikalarının eşi, tek eşik (YE2).
+  // Doğum tarihi açılmaz; ZK aynı eşitlik devresiyle (YE3), ZK kopyası iki eşiği taşır. Belge eskiyse (ADR-0064 öncesi) alan yoktur.
+  {
+    policy_id: "age-over-15-mdoc",
+    purpose: {
+      "en-US": "Over-15 check (ISO 18013-5 mdoc) — yes/no only",
+      "tr-TR": "15 yaş üstü doğrulaması (ISO 18013-5 mdoc) — yalnızca evet/hayır",
+    },
+    credentials: [
+      {
+        id: "identity",
+        vct_values: ["urn:tamga:id:IdentityAttestation:1"],
+        format: "mso_mdoc",
+        namespace: "tamga.id.1",
+        required_claims: ["age_over_15"],
+        constraints: { age_over_15: true },
+      },
+    ],
+    trust: TRUST_ID,
+    freshness: FRESH,
+  },
+  {
+    policy_id: "age-over-15-zk",
+    purpose: {
+      "en-US": "Over-15 check with a zero-knowledge proof — yes/no only, nothing else",
+      "tr-TR": "Sıfır bilgi ispatıyla 15 yaş üstü doğrulaması — yalnızca evet/hayır, başka hiçbir şey",
+    },
+    credentials: [
+      {
+        id: "identity",
+        vct_values: [ZK_COPY_VCT],
+        format: "mso_mdoc_zk",
+        namespace: "tamga.id.1",
+        required_claims: ["age_over_15"],
+        constraints: { age_over_15: true },
+      },
+    ],
+    trust: TRUST_ID,
+    freshness: FRESH,
+  },
   // D11 — web sitesine "Tamga ile kayıt ol / giriş yap". ADR-0031: hesap anahtarı site başına takma ad (siteler eşleştiremez);
   // kimlik belgesinin özeti ya da kimlik numarası siteye gitmez (PS4).
   {
@@ -303,7 +343,14 @@ POLICIES.push(
  *  - İNCELEME (her iki ağ): ADR-0033 mağaza incelemesi; gerçek ağda kalır ama ana sayfada vitrin olarak gösterilmez.
  *  - SENARYO (yalnız sandbox): kurgusal doğrulayıcı senaryoları (kampüs, bilet, indirim, işe alım, araç kiralama …).
  */
-export const GENERAL_POLICY_IDS = ["age-over-18-mdoc", "age-over-18-zk", "site-signup", "site-signin"] as const;
+export const GENERAL_POLICY_IDS = [
+  "age-over-18-mdoc",
+  "age-over-18-zk",
+  "age-over-15-mdoc",
+  "age-over-15-zk",
+  "site-signup",
+  "site-signin",
+] as const;
 export const REVIEW_POLICY_IDS = ["review-age-over-18", "review-site-signup"] as const;
 const PRODUCTION_IDS = new Set<string>([...GENERAL_POLICY_IDS, ...REVIEW_POLICY_IDS]);
 export const isScenarioPolicy = (p: Policy) => !PRODUCTION_IDS.has(p.policy_id);

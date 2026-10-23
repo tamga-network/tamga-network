@@ -4,7 +4,7 @@ title: "Rəqəmsal cüzdan qaydaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-22
+last_updated: 2026-10-23
 summary: >
   Rəqəmsal cüzdanın açar, yerli yaddaş, ehtiyat nüsxə və təsdiq dizaynını müəyyən edir. Mərkəzi nəticə bir ZİDDİYYƏTİN həllidir: [[SPEC-CRED-0001]] §3 sənəd sahibi açarının təhlükəsiz zonadan çıxa bilməyəcəyini bildirir, lakin layihə qeydlərindəki "24 sözlük seed ilə ehtiyat nüsxə" dizaynı açarın bərpa oluna biləcəyini nəzərdə tuturdu. İkisi eyni anda doğru ola bilməz — seed-dən törədilə bilən sənəd sahibi açarı isə rəqəmsal sənədi ÖTÜRÜLƏ BİLƏN edərək holder binding boşluğunu arxa qapıdan geri qaytarır. Qərar: açarlar seed-dən törədilmir; ehtiyat nüsxə sənədləri və manifesti daşıyır, cihaz dəyişdikdə sənədlərin YENİDƏN VERİLMƏSİ tələb olunur. Bundan əlavə, toplu verilən nüsxələrin hər yoxlayan tərəf üçün sabit ("yapışqan") istifadəsi iki açıq məsələni birdən bağlayır.
 translation_of: SPEC-WALLET-0001
@@ -269,7 +269,7 @@ Sıfır bilikli sübutla təqdimat (`mso_mdoc_zk`, [[ADR-0032]]) ləğv siyahıs
 | Mövzu | Qayda |
 |---|---|
 | Növ | `urn:tamga:id:ShortLivedIdentityAttestation:1` (yalnız ISO 18013-5 mdoc; ad sahəsi `tamga.id.1`). Sübut növü bağladığı üçün yoxlayan tərəf qısa ömrü görür |
-| Məzmun | Yalnız ZK ilə sübut edilə bilən elementlər (bu gün `age_over_18`); ad, doğum tarixi, şəxsiyyət nömrəsi yoxdur |
+| Məzmun | Yalnız ZK ilə sübut edilə bilən elementlər (şəxsiyyət sənədinin yaş sahələri `age_over_18`, `age_over_15`; [[ADR-0064]]); ad, doğum tarixi, şəxsiyyət nömrəsi yoxdur |
 | Etibarlılıq | Ən çox 24 saat (və əsas sənədin bitmə tarixindən sonra deyil); ləğv siyahısında qeyd yoxdur (ARF VCR_01) |
 | Paket | Kiçik paket (3 nüsxə); hər nüsxə öz cihaz açarına bağlıdır |
 | Alınma | Şəxsiyyət sənədi ilə birlikdə gələn yeniləmə tokeni ilə (OpenID4VCI `grant_type=refresh_token`, DPoP + WIA); token birdəfəlikdir, hər istifadədə dəyişir; məzmunu rəqəmsal cüzdan üçün qapalıdır |

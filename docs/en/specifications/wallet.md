@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-22
+last_updated: 2026-10-23
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -262,7 +262,7 @@ service:
 | Topic | Rule |
 |---|---|
 | Type | `urn:tamga:id:ShortLivedIdentityAttestation:1` (ISO 18013-5 mdoc only; namespace `tamga.id.1`). Because the proof binds the type, the verifier sees that it is short-lived |
-| Content | Only elements that can be proven with ZK (today `age_over_18`); no name, date of birth or national ID number |
+| Content | Only elements that can be proven with ZK (the identity credential's age attributes `age_over_18`, `age_over_15`; [[ADR-0064]]); no name, date of birth or national ID number |
 | Validity | At most 24 hours (and never after the main credential expires); no revocation list entry (ARF VCR_01) |
 | Batch | A small batch (3 copies); each copy bound to its own device key |
 | Obtaining | With the refresh token that comes with the identity credential (OpenID4VCI `grant_type=refresh_token`, DPoP + WIA); the token is single-use, changes on every use and is opaque to the wallet |

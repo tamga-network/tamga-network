@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
+**Document** FW-RB-0003 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-23 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -118,6 +118,7 @@ follows from this absence and from the issuer's class in the trust list.
 | Data identifier | Definition | Data type | Example value |
 | --- | --- | --- | --- |
 | `age_over_18` | Whether the person is over 18; the only element that can be proven with ZK | boolean | `true` |
+| `age_over_15` | Whether the person is over 15; an element that can only be proven with ZK ([[ADR-0064]]) | boolean | `true` |
 
 **Pseudonym seed (`PseudonymSeed`)**
 
@@ -146,6 +147,7 @@ follows from this absence and from the issuer's class in the trust list.
 | Type | Data identifier | Definition | Data type | Example value |
 | --- | --- | --- | --- | --- |
 | Identity credential | `age_over_18` | Derived from the date of birth; in age verification only this attribute is disclosed. Not in the EU PID set; a Tamga attribute with the ISO/IEC 18013-5 name ([[ADR-0045]] K3) | boolean | `true` |
+| Identity credential | `age_over_15` | Derived from the date of birth with the same rule; ISO/IEC 18013-5 `age_over_NN` pattern. The identity credential's age thresholds are a closed set (15, 18); a new threshold is added only by ADR ([[ADR-0064]] K2) | boolean | `true` |
 | Driving licence information | `birth_date` | Date of birth if on the card (ISO/IEC 18013-5 mDL name) | date | `1990-04-12` |
 | Driving licence information | `licence_issue_date` | Issue date of the card (if present) | date | `2024-06-01` |
 | Driving licence information | `age_over_18` | Derived | boolean | `true` |
@@ -210,6 +212,7 @@ certificate.
 | `document_chip_verified` | `document_chip_verified` | bool | `tamga.id.1` |
 | `verification_method` | `verification_method` | tstr | `tamga.id.1` |
 | `age_over_18` | `age_over_18` | bool | `tamga.id.1` |
+| `age_over_15` | `age_over_15` | bool | `tamga.id.1` |
 
 Names and encoding follow EU PID Table 6 ([[ADR-0045]] K2); the name table is in the open packages (`@tamga-network/core/pid`).
 The namespace `tamga.id.1` is a Tamga-specific namespace (ARB_10): the credential is not a PID, so `eu.europa.ec.eudi.pid.1` is not
@@ -254,6 +257,7 @@ The "Disclosable" column is the `sd` value in the Type Metadata: **MUST** = `alw
 | `document_chip_verified` | `document_chip_verified` | boolean | Tamga-specific | MUST |
 | `verification_method` | `verification_method` | string (set) | Tamga-specific | MUST |
 | `age_over_18` | `age_over_18` | boolean | ISO/IEC 18013-5 name | MUST |
+| `age_over_15` | `age_over_15` | boolean | ISO/IEC 18013-5 name ([[ADR-0064]]) | MUST |
 | `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status` | same | — | transport profile | MUST NOT |
 
 **Pseudonym seed**
@@ -297,7 +301,8 @@ The "Disclosable" column is the `sd` value in the Type Metadata: **MUST** = `alw
   "issuing_country": "TR",
   "document_chip_verified": false,
   "verification_method": "remote-document-liveness-face",
-  "age_over_18": true
+  "age_over_18": true,
+  "age_over_15": true
 }
 ```
 
@@ -314,7 +319,7 @@ Not used: Tamga does not use a JSON-LD carrier.
 
 | Use | Attributes requested | Rule |
 | --- | --- | --- |
-| Age verification | `age_over_18` | No other attribute is requested; in the browser via mdoc, optionally a zero-knowledge proof with the ZK copy |
+| Age verification | `age_over_18` or `age_over_15` (one threshold) | No other attribute is requested; the two thresholds are not requested together, as that reveals an age range ([[ADR-0064]] K3); in the browser via mdoc, optionally a zero-knowledge proof with the ZK copy |
 | Matching at an institution (before issuance) | `personal_administrative_number`, `birthdate`, `given_name`, `family_name` | The institution's issuance service receives them only within its registered scope and through the full verification pipeline; it does not store or log the matching keys (RB-RP-ID-01) |
 | "Is there a valid Tamga identity" | none | Reference policy `event-tamga-id` |
 | Sign-up and sign-in on a website ("Sign in with Tamga") | at sign-up `given_name`, `family_name`; at sign-in none | The account key is a per-site pseudonym; `document_number_hash` and the identity number are not requested (RB-RP-13) |
@@ -398,7 +403,8 @@ Tamga verifiers recognise the EU person identification data (PID) and the ISO dr
   disclose only what is needed: for example only the city of the address, or one of the nationalities. The verifier's scope check
   applies to the attribute itself or to its parent.
 - **Age.** The EU PID has no age attribute; in the EU a separate age verification credential is used for age. The mDL has age
-  elements such as `age_over_18`.
+  elements such as `age_over_18`. The Tamga identity credential follows the same `age_over_NN` pattern; the threshold set is closed:
+  15 and 18 today ([[ADR-0064]]).
 
 | Tamga identity credential (SD-JWT VC) | Tamga identity credential (mdoc, `tamga.id.1`) | EU PID (SD-JWT VC) | EU PID (mdoc) |
 | --- | --- | --- | --- |
@@ -409,6 +415,7 @@ Tamga verifiers recognise the EU person identification data (PID) and the ISO dr
 | `personal_administrative_number` | `personal_administrative_number` | `personal_administrative_number` | `personal_administrative_number` |
 | `issuing_country` (country that issued the document) | `issuing_country` | `issuing_country` (country of the PID provider) | `issuing_country` |
 | `age_over_18` | `age_over_18` | — (separate age verification credential) | — |
+| `age_over_15` | `age_over_15` | — (separate age verification credential) | — |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | same | no equivalent (Tamga-specific) | no equivalent |
 
 > **`issuing_country` (2026-10-11, project management decision).** The attribute has its EU PID meaning: the country of the
