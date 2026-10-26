@@ -67,8 +67,9 @@ geçerlidir: ağ var, rastgele gecikme; kullanıcı ayarı ("kopyaları otomatik
 sunumu kullanılamaz (klasik sunum sürer).
 
 ## K3 — Yenileme yolu ve kişi verisi
-- Yenileme, OpenID4VCI yenileme belirteciyle yapılır; belirteç ilk ihraçtaki [[t:DPoP]] anahtarına ve cüzdan onayına
-  ([[t:WUA]]) bağlıdır, tek kullanımlıktır ve her kullanımda değişir ([[ADR-0023]] K2, AR2).
+- Yenileme, OpenID4VCI yenileme belirteciyle yapılır; belirteç ~~ilk ihraçtaki [[t:DPoP]] anahtarına~~ **([[ADR-0060]] ile değişti,
+  2026-10-22) ilk ihraçtaki istemci örneği anahtarına (WIA `cnf`)** ve cüzdan onayına ([[t:WUA]]) bağlıdır, tek kullanımlıktır ve
+  her kullanımda değişir ([[ADR-0023]] K2, AR2); DPoP anahtarı yenilemede değişebilir.
 - Kimlik servisi kişi alanlarını **saklamaz** ([[ADR-0011]] K4). ZK kopyasına girecek asgari alanlar belirtecin içinde, yalnız
   kimlik servisinin açabileceği biçimde şifreli ve imzalı taşınır; belirteç cüzdanda durur, sunucuda kayıt tutulmaz.
 - Belirteç, ana kimlik belgesinin iptal listesi girdisine bağlıdır. Kimlik servisi her yenilemede bu girdinin durumunu kendi
@@ -114,6 +115,9 @@ değerlendirilir (seçenek B).
 # Durum
 
 **Accepted — 2026-10-09.** Proje yönetimi onayıyla, AB'nin önerdiği yol olması koşuluyla (K6). DECISIONS: D-ZK-2.
+
+2026-10-22: **K3 [[ADR-0060]] ile değişti** — belirtecin bağı DPoP anahtarından istemci örneği anahtarına (WIA `cnf`, belirteçte
+`ijk`) taşındı (D-PROTO-4). 2026-10-23: belirteç yalnız ZK kopyası kapsamı da istenince verilir ([[ADR-0062]], D-ZK-3).
 
 *Uygulama (2026-10-09, paketler 0.4.0):* K1 işareti ayrı belge türüdür — `urn:tamga:id:ShortLivedIdentityAttestation:1`
 (katalogda; tür kuralı ≤ 24 saat, iptal listesi yok; kamuya açık ad proje yönetiminin onayını bekliyor, kodda tek sabitte).

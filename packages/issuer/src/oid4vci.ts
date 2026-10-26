@@ -116,6 +116,17 @@ export const offerDeepLink = (offerUri: string) =>
 
 export type TokenError =
   "invalid_grant" | "invalid_request" | "offer_expired" | "offer_used" | "tx_code_mismatch" | "too_many_attempts";
+/**
+ * Token ucunun OAuth hata gövdesi (RFC 6749 §5.2): `redeemOffer`'ın iç nedenleri standart koda iner — bilinmeyen, kullanılmış ya
+ * da süresi dolmuş teklif, yanlış ya da çok denenmiş PIN hepsi `invalid_grant`; eksik `tx_code` `invalid_request` (PR1). Neden
+ * `error_description`'da kalır (cüzdan oradan okur; kişisel veri yok — PR8).
+ */
+export function tokenErrorResponse(e: TokenError): {
+  error: "invalid_grant" | "invalid_request";
+  error_description: string;
+} {
+  return { error: e === "invalid_request" ? "invalid_request" : "invalid_grant", error_description: e };
+}
 /** Token isteği: pre-authorized_code + tx_code → başarı/hata; offer durumunu döndürür (çağıran kaydeder). */
 export function redeemOffer(
   o: Offer,
@@ -232,6 +243,12 @@ export function issuerMetadata(p: {
    * belirteciyle alınır (PAR ile başlatılamaz).
    */
   mdocConfigurations?: Array<{ id: string; doctype: string; display: unknown[] }>;
+  /**
+   * OpenID4VCI 1.0 §12.2.4 belge verenin görünümü (`display`): kurumun imzalı güven listesindeki kayıtlı adı ve varsa dildeki
+   * karşılıkları, her girdi kendi `locale`'iyle (`issuerDisplayFrom`). Verilmezse adsız, yerelsiz tek girdi yazılır — belge
+   * türünün adı ya da sabit bir dil kullanılmaz.
+   */
+  issuerDisplay?: Array<{ name: string; locale?: string }>;
 }) {
   const base = p.credentialIssuer;
   const proofTypes = {
@@ -292,9 +309,33 @@ export function issuerMetadata(p: {
         },
       ]),
     ]),
-    display: [{ name: p.authorizedVcts[0]?.name ?? "Tamga Issuer", locale: "tr-TR" }],
+    display: p.issuerDisplay?.length ? p.issuerDisplay : [{ name: "Credential Issuer" }],
     ...(p.issuerInfo?.length ? { issuer_info: p.issuerInfo } : {}),
   };
+}
+/**
+ * Belge verenin görünümü, güven listesindeki kayıttan: `legal_name` yerelsiz (resmî ad, her dilde aynı); `service_description`
+ * BCP 47 dil → metin eşlemesiyse her dil için `name` = kayıtlı ad, `locale` = o dil ve `description` = metin. `names` verilirse
+ * (dil → yerel ad; ör. kurumun İngilizce adı) `legal_name` yerine o dilin adı yazılır. `locale` değerleri BCP 47'dir (`tr`,
+ * `en-US`); kayıttaki anahtar olduğu gibi aktarılır, dil uydurulmaz.
+ */
+export function issuerDisplayFrom(p: {
+  legalName: string;
+  serviceDescription?: Record<string, string>;
+  names?: Record<string, string>;
+}): Array<{ name: string; locale?: string; description?: string }> {
+  const langs = new Set([...Object.keys(p.serviceDescription ?? {}), ...Object.keys(p.names ?? {})]);
+  const out: Array<{ name: string; locale?: string; description?: string }> = [{ name: p.legalName }];
+  for (const lang of langs) {
+    if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(lang)) continue; // BCP 47 biçiminde olmayan anahtar yazılmaz
+    const desc = p.serviceDescription?.[lang];
+    out.push({
+      name: p.names?.[lang] ?? p.legalName,
+      locale: lang,
+      ...(typeof desc === "string" && desc ? { description: desc } : {}),
+    });
+  }
+  return out;
 }
 /**
  * SD-JWT VC tür metadata'sının görünümü (`lang`, `name`, `description`, `rendering.simple`) → OpenID4VCI 1.0 §12.2.4 belge görünümü
@@ -328,14 +369,25 @@ export function credentialDisplay(display: unknown): Array<Record<string, unknow
 /** OAuth AS metadata (aynı sunucu) — /.well-known/oauth-authorization-server/{slug} */
 export function authServerMetadata(
   credentialIssuer: string,
-  opts: { authorizationCode?: boolean; refreshToken?: boolean; scopes?: string[] } = {},
+  opts: {
+    authorizationCode?: boolean;
+    refreshToken?: boolean;
+    scopes?: string[];
+    /**
+     * Ön yetkili kod akışı sunuluyor mu (varsayılan evet — kurum issuer'ı). Sunulmuyorsa (kimlik servisi: yalnız authorization
+     * code, IDP7) grant ilan edilmez, `pre-authorized_grant_anonymous_access_supported` yazılmaz ve `none` kimlik doğrulama
+     * yöntemi yoktur (istemci her zaman WIA ile tanınır) — metadata token ucunun davranışıyla aynı şeyi söyler.
+     */
+    preAuthorized?: boolean;
+  } = {},
 ) {
+  const preAuth = opts.preAuthorized !== false;
   const base = {
     issuer: credentialIssuer,
     token_endpoint: `${credentialIssuer}/token`,
-    grant_types_supported: [PRE_AUTH_GRANT, ...(opts.refreshToken ? ["refresh_token"] : [])],
-    "pre-authorized_grant_anonymous_access_supported": true,
-    token_endpoint_auth_methods_supported: ["none", "attest_jwt_client_auth"],
+    grant_types_supported: [...(preAuth ? [PRE_AUTH_GRANT] : []), ...(opts.refreshToken ? ["refresh_token"] : [])],
+    ...(preAuth ? { "pre-authorized_grant_anonymous_access_supported": true } : {}),
+    token_endpoint_auth_methods_supported: [...(preAuth ? ["none"] : []), "attest_jwt_client_auth"],
     // draft-ietf-oauth-attestation-based-client-auth-07 §10.1: attest_jwt_client_auth ilan edilince ikisi de ZORUNLU
     // (istemci kanıtı = WIA/WUA ve PoP'u yalnız ES256 ile doğrulanır)
     client_attestation_signing_alg_values_supported: ["ES256"],
@@ -347,7 +399,11 @@ export function authServerMetadata(
   return {
     ...base,
     // ADR-0023: kurum belgelerinde sessiz yenileme (DPoP + WUA bağlı yenileme belirteci)
-    grant_types_supported: [PRE_AUTH_GRANT, "authorization_code", ...(opts.refreshToken ? ["refresh_token"] : [])],
+    grant_types_supported: [
+      ...(preAuth ? [PRE_AUTH_GRANT] : []),
+      "authorization_code",
+      ...(opts.refreshToken ? ["refresh_token"] : []),
+    ],
     authorization_endpoint: `${credentialIssuer}/authorize`,
     pushed_authorization_request_endpoint: `${credentialIssuer}/par`,
     require_pushed_authorization_requests: true,

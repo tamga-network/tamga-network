@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-24
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdandan yoxlayan tərəfə necə təqdim edildiyini müəyyən edir. OpenID4VP 1.0 Final üzərində Tamga profili: DCQL sorğuları (Presentation Exchange İSTİFADƏ EDİLMİR), imzalı sorğu obyekti, cavabın şifrələnməsi, brauzerdə Digital Credentials API. Əsas tapıntı: HAIP-in məcburi etdiyi `x509_hash` client identifier prefiksi base64url(SHA-256(DER)) dəyəridir — bu, zəncirdəki `RelyingParty.accessCertFingerprint` ilə TAM EYNİ BAYTLARDIR. Buna görə rəqəmsal cüzdan sorğudakı client identifier-dən birbaşa zəncir qeydini tapa və həddindən artıq tələb nəzarətini ([[SPEC-BC-0001]] §6) protokol səviyyəsində tətbiq edə bilər. Bundan əlavə, istənilməyən sahələrin aşkarlanması, təqdimatdan sonra istifadəçi jurnalı və cavabın şifrələnməsi qaydaları.
 translation_of: SPEC-PROTO-0002
@@ -121,7 +121,7 @@ client identifier-dən zəncir qeydini tapmağa **cəhd etməlidir.**
 | Prefiks | Tamga |
 |---|---|
 | `x509_hash` | **Qəbul edilən yeganə prefiks** (imzalı sorğu) — HAIP 1.0 §5; dəyər = base64url(SHA-256(yarpaq sertifikatın DER-i)), OpenID4VP 1.0 §5.9.3; etibar siyahısı qeydinin `client_id`-i ilə üst-üstə düşür |
-| `x509_san_dns` | **Rədd edilir** ([[ADR-0034]]) — cavab ünvanının domeni yenə də imzalayan sertifikatın SAN-ında olmalıdır |
+| `x509_san_dns` | **Rədd edilir** ([[ADR-0034]]) — cavab ünvanının domeni yenə də imzalayan sertifikatın SAN-ında olmalıdır. **Tamga profili qeydi (2026-10-24):** cüzdan (`@tamga-network/wallet-core`) yalnız `x509_hash` qəbul edir və `response_uri`-nin domeninin imzalayan sertifikatın SAN-ında olmasını ayrıca yoxlayır (köhnə `x509_san_dns` qaydasının davamı; yerli inkişaf istisnası yalnız çağıran açıq şəkildə açarsa); istinad yoxlayıcı (`@tamga-network/verifier`) `x509_san_dns` identifikatoru yaratmır və emal etmir. Bu şüurlu məhdudiyyətdir: HAIP 1.0 §5 yalnız `x509_hash`-i məcburi edir; `x509_san_dns` dəstəyi lazım olarsa ADR ilə açılır |
 | `origin` | Yalnız DC API axınında, izləyicidə (§7) |
 | `redirect_uri` | **Rədd edilir** — imzasızdır, zəncirə bağlana bilmir |
 | `decentralized_identifier`, `openid_federation`, `verifier_attestation` | Genişlənmə mərhələsi |
@@ -571,6 +571,22 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
 | `vp_formats_not_supported` | `dc+sd-jwt` dəstəklənmir |
 | `invalid_request_uri_method` | — |
 | `wallet_unavailable` | DC API-də rəqəmsal cüzdan yoxdur |
+
+## 10.1 Cüzdanın xəta cavabı və təqdimatın istifadə edilməsi (2026-10-24)
+
+- **Rədd `response_uri`-yə gedir.** Şəxs rədd etdikdə cüzdan `response_uri`-ni bilirsə (cihazlar arası axın) cavab ünvanına
+  OpenID4VP 1.0 §8.4 xəta cavabını forma olaraq göndərir: yalnız `error=access_denied` və `state` (şifrəsiz; fərdi məlumat yoxdur;
+  `error_description` yoxdur — PV5). Yoxlayan tərəf təqdimatı **bağlayır**, nəticəni REJECTED yazır və səbəb saxlamır; eyni sorğuya
+  bir daha cavab verilə bilməz. Brauzer (DC API) axınında cavab ünvanı yoxdur; rədd DC API-nin öz xəta yolu ilə səhifəyə qayıdır.
+  İstinad: `@tamga-network/wallet-core` `declineRequest`.
+- **Təqdimat yalnız sahiblik sübutu keçdikdə istifadə edilir.** Yoxlayan tərəf şifrəli cavabı yalnız KB-JWT / cihaz imzası (A6;
+  ZK-da Z1) keçdikdən sonra təqdimatı tamamlayan cavab sayır — B–E nəticəsi nə olursa olsun (ləğv, əhatə aşımı). Ondan əvvəl
+  uğursuz olan cavab (açıla bilməyən gövdə, `state` uyğunsuzluğu, boş `vp_token`, A1–A6 rəddi) təqdimatı **bağlamır**: təqdimat
+  identifikatoru QR-da açıq olduğundan, əks halda yaxınlıqdakı biri mənasız gövdə ilə həqiqi şəxsin təqdimatını "rədd edildi"yə
+  düşürə bilərdi. Belə cavablar 400 `invalid_request` alır və cəhd sayılır; təqdimat başına **5** uğursuz cəhddən sonra təqdimat
+  REJECTED ilə bağlanır (sürət həddi ayrıca). Gözləyən təqdimatın vəziyyətində cəhd sayı və son uğursuzluğun addımı görünür
+  (`attempts`, `last_attempt`); dəyər yoxdur. Qurumun sənəd verən xidmətindəki sətirdaxili şəxsiyyət təqdimatı (SPEC-PROTO-0001
+  §11.2) eyni qaydanı tətbiq edir.
 
 **Dəyişməz PV5:** İstifadəçi rədd etdikdə `access_denied` qaytarılır və **səbəb
 göstərilmir.** "İstifadəçinin bu rəqəmsal sənədi yoxdur" ilə "istifadəçi vermək

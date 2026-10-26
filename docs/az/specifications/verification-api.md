@@ -238,6 +238,7 @@ arasındakı fərq bir insanın işə götürülüb-götürülməməsidir.
 | `CHAIN_UNREACHABLE` | Zəncir və indeksləyici əlçatan deyil |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
 | `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; həmçinin `Z1`-də yoxlayan tərəfin ZK komponenti istifadə edilə bilmirsə (dövrə faylı yoxdur, WASM yüklənə bilmir) — təqdimatın deyil, yoxlayan tərəfin çatışmazlığı |
+| `STATUS_VALUE_UNKNOWN` | `D6`: ləğv siyahısındakı dəyərin müəyyən mənası yoxdur — IETF Token Status List 0x03 və 0x0B–0x0F tətbiqə xasdır, qalanları müəyyən edilməyib; 4 və ya 8 bitlik (xarici) siyahılarda gələ bilər (2026-10-24). Sənəd ləğv edilib deyilə bilməz, etibarlı da deyilə bilməz; `status.value = UNKNOWN`. Tamga növlərinin siyahıları 1 və ya 2 bitlə yayımlanır ([[ADR-0048]], [[ADR-0063]]) |
 
 Həmçinin aşağıdakı hallar `INDETERMINATE` verir, `REJECTED` vermir:
 

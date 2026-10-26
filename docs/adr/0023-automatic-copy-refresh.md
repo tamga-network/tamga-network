@@ -44,8 +44,10 @@ Yenileme yalnız şu koşullar birlikteyken yapılır: uygulama önde, kilit aç
 ## K2 — Nasıl: yenileme belirteci
 
 - Kurum, ilk ihraçta token yanıtında bir `refresh_token` verir (OpenID4VCI 1.0, RFC 6749 §6).
-- Belirteç o belge için üretilen **[[t:DPoP]] anahtarına bağlıdır** (RFC 9449 §5). Cüzdan bu anahtarı belge ömrü boyunca saklar; her
-  mantıksal belgenin anahtarı ayrıdır.
+- ~~Belirteç o belge için üretilen **[[t:DPoP]] anahtarına bağlıdır** (RFC 9449 §5).~~ **[[ADR-0060]] ile değişti (2026-10-22):**
+  belirteç, belge verme işlemindeki **istemci örneği anahtarına** (WIA `cnf`; ATCA §10.3) bağlıdır; yenilemede aynı anahtarlı taze
+  WIA zorunludur, DPoP anahtarı değişebilir. Cüzdan bu örnek anahtarını belgeyle saklar ve yalnız o kurumla kullanır; her mantıksal
+  belgenin anahtarı ayrıdır.
 - Her yenilemede cüzdan onayı ([[t:WUA]]) yeniden sunulur.
 - Belirteç tek kullanımlıktır ve her kullanımda yenisiyle değişir (rotation). Ömrü belgenin azami geçerliliğini aşmaz.
 - Yenileme sonunda yeni bir paket (10 kopya, yeni anahtarlar) alınır; eski kullanılmamış kopyalar silinir.
@@ -92,7 +94,7 @@ Bu, AB modeliyle aynı dengedir. Proje yönetimi kabul etti.
 | Kod | Kural |
 |---|---|
 | AR1 | Sessiz yenileme yalnız yenileme belirteci olan belgeler için, kurumun ilan ettiği eşikte, uygulama önde ve kilit açıkken ve rastgele gecikmeyle yapılır. |
-| AR2 | Yenileme belirteci belgeye özel DPoP anahtarına bağlıdır, tek kullanımlıktır ve her kullanımda değişir; her yenilemede cüzdan onayı doğrulanır. |
+| AR2 | Yenileme belirteci belge verme işlemindeki istemci örneği anahtarına (WIA `cnf`; [[ADR-0060]] RT1) bağlıdır, tek kullanımlıktır ve her kullanımda değişir; her yenilemede aynı örnek anahtarlı cüzdan onayı doğrulanır, DPoP anahtarı değişebilir (RT2). |
 | AR3 | Kurum yenilemede öznitelikleri yetkili kaynaktan yeniden okur; kaynakta kayıt yoksa belge verilmez ve belirteç iptal edilir. |
 | AR4 | Kişi alanlarını saklamayan servisler (kimlik, iletişim) yenileme belirteci vermez. Tek istisna ZK kopyası belirtecidir ([[ADR-0044]] ZC3: kişi alanları sunucuda saklanmaz). |
 
@@ -109,3 +111,6 @@ Bu, AB modeliyle aynı dengedir. Proje yönetimi kabul etti.
 **Accepted — 2026-09-29.** Proje yönetimi onayıyla. DECISIONS: D-WALLET-1. Uygulama sırada.
 
 2026-10-09: AR4'e ZK kopyası belirteci istisnası eklendi ([[ADR-0044]], D-ZK-2).
+
+2026-10-22: **K2 ve AR2 [[ADR-0060]] ile değişti** — bağ DPoP anahtarından istemci örneği anahtarına (WIA `cnf`) taşındı; DPoP
+anahtarı yenilemede değişebilir (D-PROTO-4). Değerlendirilen seçenekler tablosundaki "DPoP + WUA bağlı" satırı tarihseldir.

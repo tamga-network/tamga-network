@@ -19,6 +19,7 @@ import {
   createPresentationRequest,
   decryptResponse,
   pemRpSigner,
+  vpFormatsFor,
   SDK_VERSION,
   type Policy,
 } from "./index.js";
@@ -59,8 +60,17 @@ describe("sdk_version", () => {
 describe("policy", () => {
   it("DCQL: kısıt eşitlik → values; aralık → yalnız path", () => {
     const q = dcqlFromPolicy(policy);
-    expect(q.credentials[0].claims.find((c) => c.path[0] === "is_graduate")?.values).toEqual([true]);
-    expect(q.credentials[0].claims.find((c) => c.path[0] === "eqf_level")?.values).toBeUndefined();
+    expect(q.credentials[0].claims!.find((c) => c.path[0] === "is_graduate")?.values).toEqual([true]);
+    expect(q.credentials[0].claims!.find((c) => c.path[0] === "eqf_level")?.values).toBeUndefined();
+  });
+  it("DCQL: alan istenmeyen belgede ve takma ad sorgusunda `claims` hiç yazılmaz (boş dizi yok)", () => {
+    const q = dcqlFromPolicy({
+      ...policy,
+      credentials: [{ ...policy.credentials[0], required_claims: [] }],
+      pseudonym: { mode: "single" },
+    });
+    expect(q.credentials).toHaveLength(2);
+    for (const c of q.credentials) expect("claims" in c).toBe(false);
   });
 });
 
@@ -336,6 +346,68 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     expect(JSON.stringify(out.result)).not.toMatch(/"idx"/);
     expect(out.claims?.eqf_level).toBe(6);
     expect(out.claims?.grade).toBeUndefined();
+  });
+
+  it("D6: 8 bitlik listede tanımsız değer (0x0B) → DOĞRULANAMADI (STATUS_VALUE_UNKNOWN), RED değil; 0x01 yine RED", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { combined, ref } = await issue(13, now);
+    const st = await pemIssuerSigner(
+      readFileSync(resolve(PKI, "issuer-bilgi-status.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "issuer-bilgi-status.cert.pem"), "utf8"),
+    );
+    // Tamga yayıncısı 8 bit üretmez (signStatusListToken reddeder); dış bir listeyi elle kurarız — aynı imzacı, IETF biçimi
+    const wide = async (value: number) => {
+      const bs = new StatusBitstring(MIN_CAPACITY, undefined, 8);
+      bs.set(13, value as StatusValue);
+      const payload = {
+        iss: ISS,
+        sub: STATUS_URI,
+        iat: now,
+        exp: now + 7200,
+        ttl: 3600,
+        status_list: { bits: 8, lst: bs.encodeLst() },
+      };
+      return st.sign(
+        { alg: "ES256", typ: "statuslist+jwt", x5c: st.x5c.map((d) => Buffer.from(d).toString("base64")) },
+        new TextEncoder().encode(JSON.stringify(payload)),
+      );
+    };
+    const pres = await presentSdJwt({
+      combined,
+      discloseClaims: ["is_graduate", "eqf_level", "qualification_title", "awarding_body_name"],
+      keys,
+      keyRef: ref,
+      aud: AUD,
+      nonce: "n-wide",
+      iat: now,
+    });
+    const run = async (token: string) => {
+      const cache = new MemoryStatusCache();
+      cache.set(STATUS_URI, token, now);
+      return verifyPresentation({
+        presentation: pres,
+        aud: AUD,
+        nonce: "n-wide",
+        policy,
+        policyCredentialId: "diploma",
+        trust,
+        statusCache: cache,
+        rootCertsDer: rootDer,
+        rp: trust.relyingParty(AUD),
+        now: epochSeconds(now),
+      });
+    };
+    const unknown = await run(await wide(0x0b));
+    expect(unknown.result.outcome).toBe("INDETERMINATE");
+    expect(unknown.result.failed_step).toBe("D6");
+    expect(unknown.result.indeterminate_reason).toBe("STATUS_VALUE_UNKNOWN");
+    expect(unknown.result.status.value).toBe("UNKNOWN");
+    expect(unknown.claims).toBeNull();
+    const revoked = await run(await wide(0x01));
+    expect(revoked.result.outcome).toBe("REJECTED");
+    expect(revoked.result.failed_step).toBe("D6");
+    const valid = await run(await wide(0x00));
+    expect(valid.result.outcome, valid.result.failed_reason ?? "").toBe("ACCEPTED");
   });
 
   it("REJECTED: iptal edilmiş (D6); scope aşımı (E3); kısıt (E2); yanlış nonce (A6)", async () => {
@@ -667,11 +739,23 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     await expect(bad({ vp_token: { diploma: [1] } })).rejects.toThrow(/non-empty array/);
     await expect(bad({ vp_token: ["x~"] })).rejects.toThrow(/vp_token missing/);
     await expect(bad({ vp_token: { diploma: ["x~"] }, state: 5 })).rejects.toThrow(/state/);
-    // istek nesnesi mso_mdoc_zk biçimini de ilan eder (ADR-0032)
+    // istek nesnesi yalnız DCQL'de geçen biçimleri ilan eder (OpenID4VP §5.1): bu politika yalnız dc+sd-jwt
     const reqPayload = JSON.parse(Buffer.from(pr.requestJwt.split(".")[1], "base64url").toString("utf8"));
-    expect(Object.keys(reqPayload.client_metadata.vp_formats_supported)).toEqual(
-      expect.arrayContaining(["dc+sd-jwt", "mso_mdoc", "mso_mdoc_zk"]),
-    );
+    expect(Object.keys(reqPayload.client_metadata.vp_formats_supported)).toEqual(["dc+sd-jwt"]);
+    // mdoc / ZK sorgusu varsa yalnız onlar (ADR-0032); hiç sunum biçimi yoksa (yalnız takma ad) zorunlu alan dc+sd-jwt ile dolar
+    expect(
+      Object.keys(
+        vpFormatsFor({
+          credentials: [
+            { id: "a", format: "mso_mdoc", meta: { doctype_value: "x" } },
+            { id: "z", format: "mso_mdoc_zk", meta: { doctype_value: "x", zk_system_type: [] } },
+          ],
+        }),
+      ),
+    ).toEqual(["mso_mdoc", "mso_mdoc_zk"]);
+    expect(
+      Object.keys(vpFormatsFor({ credentials: [{ id: "p", format: "tamga-pseudonym", meta: { mode: "single" } }] })),
+    ).toEqual(["dc+sd-jwt"]);
   });
   it("AP6 ile E3 aynı kapsam kuralı: atası kapsamdaysa iç içe alan kapsamda", () => {
     const rp = trust.relyingParty(AUD)!;

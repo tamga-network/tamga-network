@@ -20,6 +20,7 @@ import {
   selectDcql,
   chooseDcqlOption,
   checkDcqlShape,
+  declineRequest,
   stableRpKey,
   PSEUDONYM_FORMAT,
   type DcqlQuery,
@@ -509,14 +510,18 @@ describe.skipIf(!havePki)("İstek nesnesi (jose imzalı, rp-verify x5c) → cüz
     await expect(
       sign({ client_id: CID, ...base, response_uri: "https://evil.example/r" }).then(verifyRequestObject),
     ).rejects.toThrow(/response address/);
-    const lan = verifyRequestObject(
-      await sign({
-        client_id: CID,
-        ...base,
-        response_uri: "http://192.168.1.100:4004/r",
-      }),
-    );
+    // S11: yerel ağ istisnası varsayılan KAPALI — yalnız çağıran (geliştirme derlemesi / sandbox) açarsa
+    const lanJwt = await sign({ client_id: CID, ...base, response_uri: "http://192.168.1.100:4004/r" });
+    expect(() => verifyRequestObject(lanJwt)).toThrow(/response address/);
+    expect(() => verifyRequestObject(lanJwt, undefined, { allowLocalDevHost: false })).toThrow(/response address/);
+    const lan = verifyRequestObject(lanJwt, undefined, { allowLocalDevHost: true });
     expect(lan.responseUri).toContain("192.168.1.100");
+    // istisna yalnız yerel adlar için: bayrak açıkken bile genel alan adı SAN'da olmalı
+    await expect(
+      sign({ client_id: CID, ...base, response_uri: "https://evil.example/r" }).then((j) =>
+        verifyRequestObject(j, undefined, { allowLocalDevHost: true }),
+      ),
+    ).rejects.toThrow(/response address/);
   });
   it("istek nesnesi zamanı ve hedefi: exp zorunlu, süresi geçmiş / ileri tarihli / başka aud reddedilir", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -532,5 +537,32 @@ describe.skipIf(!havePki)("İstek nesnesi (jose imzalı, rp-verify x5c) → cüz
       sign({ client_id: CID, ...base, aud: "https://evil.example" }).then((j) => verifyRequestObject(j)),
     ).rejects.toThrow(/aud/);
     expect(verifyRequestObject(await sign({ client_id: CID, ...base, iat: now })).nonce.length).toBe(24);
+  });
+});
+
+describe("declineRequest (SPEC-PROTO-0002 §10, PV5)", () => {
+  const req = { responseUri: "https://verify.example/vp/response", state: "st-1" };
+  it("response_uri'ye yalnız error=access_denied + state gider (form, şifresiz); doğrulayıcının redirect_uri'si döner", async () => {
+    const calls: Array<{ url: string; body?: string; headers?: Record<string, string> }> = [];
+    const r = await declineRequest(req, async (url, init) => {
+      calls.push({ url, body: init?.body, headers: init?.headers });
+      return { status: 200, text: async () => JSON.stringify({ redirect_uri: "https://verify.example/p/x" }) };
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(req.responseUri);
+    expect(calls[0].headers?.["content-type"]).toBe("application/x-www-form-urlencoded");
+    expect(calls[0].body).toBe("error=access_denied&state=st-1"); // neden yok, belge adı yok
+    expect(r).toEqual({ status: 200, redirectUri: "https://verify.example/p/x" });
+  });
+  it("DC API (origin) ya da yanıt adresi yoksa POST yok; ağ hatası fırlatılmaz", async () => {
+    let n = 0;
+    const http = async () => {
+      n++;
+      throw new Error("down");
+    };
+    expect(await declineRequest({ ...req, origin: "https://site.example" }, http)).toEqual({ status: 0 });
+    expect(await declineRequest({ responseUri: "", state: "s" }, http)).toEqual({ status: 0 });
+    expect(n).toBe(0);
+    expect(await declineRequest(req, http)).toEqual({ status: 0 });
   });
 });

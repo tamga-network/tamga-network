@@ -40,6 +40,7 @@ qərarlardır (AP2).
 | `SCHEMA_UNREACHABLE` | Rəqəmsal sənəd növünün təsviri əldə edilə bilmədi | Sxem kataloqunu əvvəlcədən keşə yükləyin |
 | `CHAIN_UNREACHABLE` / `INDEXER_STALE` | Etibar mənbəyi oxuna bilmədi və ya köhnəlib | Etibar siyahılarını müntəzəm endirin; `next_update` keçibsə, yeni siyahını alın |
 | `SDK_VERSION_MISMATCH` | Kitabxana versiyası qayda versiyası ilə uyğun deyil | `@tamga-network/*` paketlərini yeniləyin |
+| `STATUS_VALUE_UNKNOWN` | Ləğv siyahısındakı dəyərin müəyyən mənası yoxdur (4/8 bitlik xarici siyahı, tətbiqə xas dəyər) | Sənədi verən qurumun siyahı profilini soruşun; Tamga növlərində görünmür |
 
 Etibar siyahısı köhnəlibsə və ya endirilə bilmirsə, etibar sorğuları `UNKNOWN` qaytarır və nəticə həmişə `INDETERMINATE` olur; heç vaxt
 `ACCEPTED`, heç vaxt `REJECTED` olmur.

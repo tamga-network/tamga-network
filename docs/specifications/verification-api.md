@@ -243,6 +243,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
 | `CHAIN_UNREACHABLE` | Zincir ve indeksleyici erişilemez |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
 | `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; ayrıca `Z1`'de doğrulayıcı tarafının ZK bileşeni kullanılamıyorsa (devre dosyası yok, WASM yüklenemiyor) — sunumun değil doğrulayıcının eksiği |
+| `STATUS_VALUE_UNKNOWN` | `D6`: iptal listesindeki değerin tanımlı anlamı yok — IETF Token Status List 0x03 ve 0x0B–0x0F uygulamaya özel, ötekiler tanımsız; 4 ya da 8 bitlik (dış) listelerde gelebilir (2026-10-24). Belge iptal edildi denemez, geçerli de denemez; `status.value = UNKNOWN`. Tamga türlerinin listeleri 1 ya da 2 bitle yayımlanır ([[ADR-0048]], [[ADR-0063]]) |
 
 Ayrıca şu durumlar `INDETERMINATE` verir, `REJECTED` vermez:
 

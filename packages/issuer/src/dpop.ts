@@ -162,6 +162,17 @@ async function verifyDpopProof(
   return { ok: true, jkt };
 }
 
+/**
+ * RFC 9449 §7.1 / RFC 6750 §3: korunan kaynağın (credential ucu) 401 yanıtındaki `WWW-Authenticate` başlığı — belirteç geçersiz,
+ * süresi dolmuş, kopya hakkı tükenmiş ya da bu uca bağlı değilse `invalid_token`; DPoP kanıtı eksik, geçersiz, başka anahtarla ya
+ * da tekrar oynatılmışsa `invalid_dpop_proof`. `algs` kabul edilen kanıt algoritması (PR5). Açıklama kişisel veri içermez (PR8).
+ */
+export type DpopChallengeError = "invalid_token" | "invalid_dpop_proof";
+export function dpopChallenge(error: DpopChallengeError, description?: string): string {
+  const desc = description ? `, error_description="${description.replace(/["\\\r\n]/g, " ")}"` : "";
+  return `DPoP error="${error}"${desc}, algs="ES256"`;
+}
+
 /** `Authorization: DPoP <tok>` ya da `Bearer <tok>` → şema + belirteç. */
 export function parseAuthorization(h: unknown): { scheme: "DPoP" | "Bearer" | null; token: string } {
   const m = /^(DPoP|Bearer)\s+(\S+)$/i.exec(typeof h === "string" ? h.trim() : "");

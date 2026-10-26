@@ -256,6 +256,11 @@ export function redeemCode(
     par.codeUsed = true;
     return { ok: false, error: "invalid_grant", description: "code_verifier required (PKCE)" };
   }
+  // RFC 7636 §4.1: code_verifier 43–128 karakter, yalnız [A-Za-z0-9-._~] — biçimi bozuk doğrulayıcı özetlenmez, kod yakılır
+  if (!/^[A-Za-z0-9\-._~]{43,128}$/.test(p.codeVerifier)) {
+    par.codeUsed = true;
+    return { ok: false, error: "invalid_grant", description: "code_verifier malformed (RFC 7636 §4.1: 43–128 chars)" };
+  }
   const challenge = createHash("sha256").update(p.codeVerifier, "ascii").digest("base64url");
   if (challenge !== par.codeChallenge) {
     par.codeUsed = true;

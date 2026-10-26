@@ -15,7 +15,18 @@ export interface Presentation {
   req: PresentationRequest;
   policy: Policy;
   createdAt: number;
+  /**
+   * Sunum tüketildi: ya cüzdanın yanıtı sahiplik kanıtına (A6 / Z1) kadar geçti ve sonuç yazıldı, ya kişi reddetti (PV5), ya da
+   * deneme sınırı doldu. Öncesindeki başarısız yanıtlar (çözülemeyen gövde, state uyuşmazlığı, boş vp_token, A1–A6) sunumu
+   * KAPATMAZ — sunum kimliği QR'da açık olduğundan yakındaki biri anlamsız bir gövdeyle gerçek kullanıcının sunumunu düşüremesin.
+   */
   used: boolean;
+  /** Sahiplik kanıtına ulaşmadan başarısız olan yanıt sayısı; `MAX_RESPONSE_ATTEMPTS` dolunca sunum kapanır. */
+  attempts: number;
+  /** Son başarısız (tüketmeyen) yanıtın adımı ve nedeni — bekleyen sunumun durumunda RP'ye gösterilir; kişisel veri yok. */
+  lastAttempt?: { failed_step: string | null; failed_reason: string; at: number };
+  /** Bir yanıt şu anda doğrulanıyor (await sırasında ikinci yanıt işlenmez; tek kullanım kuralı — PV10). */
+  busy?: boolean;
   trace: TraceEntry[];
   result?: VerificationResult;
   resultAt?: number;
@@ -38,6 +49,8 @@ export interface Presentation {
   mdocDc?: import("@tamga-network/verifier").MdocDcApiRequest;
 }
 
+/** Sahiplik kanıtına ulaşmayan yanıt denemesi sınırı; dolunca sunum REJECTED ile kapanır (sunum başına; hız sınırı ayrıca). */
+export const MAX_RESPONSE_ATTEMPTS = 5;
 export const SHOW_TTL_MS = 5 * 60 * 1000;
 /** ADR-0017 K3 / HV3: okunmayan değerler sonuçtan en geç 5 dk sonra silinir. */
 export const CLAIMS_TTL_MS = 5 * 60 * 1000;
@@ -66,6 +79,7 @@ export class PresentationStore {
       policy,
       createdAt: Date.now(),
       used: false,
+      attempts: 0,
       trace: [firstTrace],
       showKey: randomBytes(12).toString("base64url"),
       statusToken: randomBytes(16).toString("base64url"),
@@ -80,6 +94,13 @@ export class PresentationStore {
   get(id: string) {
     this.sweep();
     return this.map.get(id);
+  }
+
+  /** OpenID4VP hata yanıtı (`error` + `state`) şifreli değildir ve `kid` taşımaz: sunum `state` ile bulunur (yalnız bekleyenler). */
+  byState(state: string) {
+    this.sweep();
+    for (const p of this.map.values()) if (!p.used && sameKey(state, p.req.state)) return p;
+    return undefined;
   }
 
   /** ADR-0017 K3: değerleri BİR KEZ verir ve bellekten siler; okunmuşsa ya da süresi geçtiyse "gone". */

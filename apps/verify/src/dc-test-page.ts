@@ -2,7 +2,7 @@
  * Digital Credentials API deneme sayfası (routes/dc-test.ts). Mantık sayfa betiğinde yalnız tarayıcı çağrısı ve iletimdir;
  * karar doğrulayıcıda. Sayfa verileri yalnız `textContent` ile yazar (yanıttan gelen hiçbir değer HTML olarak işlenmez).
  */
-import { esc, jsLit, page, type Lang } from "./html.js";
+import { esc, jsLit, nonceAttr, page, type Lang } from "./html.js";
 
 /** Denemede seçilebilen politikalar: mdoc (iki protokol) ve SD-JWT (yalnız OpenID4VP). */
 export const DC_TEST_POLICIES = ["age-over-18-mdoc", "age-over-15-mdoc", "event-tamga-id"];
@@ -98,7 +98,7 @@ export function dcTestPage(lang: Lang, o: { showValues: boolean }) {
 ${o.showValues ? `<div class="panel"><h2>${esc(t.claims)}</h2><table id="claims"></table></div>` : ""}
 <details><summary>${esc(t.trace)}</summary><ol id="trace" class="small"></ol></details></section>
 <section><details><summary>${esc(t.requests)}</summary><pre id="reqs"></pre></details><p class="muted small">${esc(t.note)}</p></section>
-<script>
+<script${nonceAttr()}>
 (function(){
 const M=${jsLit(t)};const $=(i)=>document.getElementById(i);
 const setText=(i,v)=>{$(i).textContent=v;};

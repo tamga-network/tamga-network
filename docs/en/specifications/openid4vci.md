@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-23
+last_updated: 2026-10-24
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -100,8 +100,9 @@ read over the shoulder; the `tx_code` is delivered through a separate channel (i
   "batch_credential_issuance": { "batch_size": 10 },
 
   "display": [
-    { "name": "Örnek Üniversitesi", "locale": "tr-TR" },
-    { "name": "Example University", "locale": "en-US" }
+    { "name": "Örnek Üniversitesi" },
+    { "name": "Örnek Üniversitesi", "locale": "tr", "description": "Diploma ve öğrenci belgesi" },
+    { "name": "Örnek Üniversitesi", "locale": "en", "description": "Diplomas and student certificates" }
   ],
 
   "credential_configurations_supported": {
@@ -118,13 +119,6 @@ read over the shoulder; the `tx_code` is delivered through a separate channel (i
         "display": [
           { "name": "Diploma", "locale": "tr-TR" },
           { "name": "Diploma", "locale": "en-US" }
-        ],
-        "claims": [
-          { "path": ["qualification_title"] },
-          { "path": ["eqf_level"] },
-          { "path": ["isced_f_code"] },
-          { "path": ["awarding_date"] },
-          { "path": ["is_graduate"] }
         ]
       }
     },
@@ -152,6 +146,7 @@ read over the shoulder; the `tx_code` is delivered through a separate channel (i
 | `proof_signing_alg_values_supported` | Only `ES256` |
 | `vct` | Must be a registered schema ([[SPEC-SCHEMA-0001]]) |
 | Configuration identifier and `scope` | Both are the credential type's `vct` URN (`urn:tamga:edu:DiplomaCredential:1`); there is no separate configuration name or short scope name. The wallet asks for the type with `scope` in the [[t:PAR]] ([[t:HAIP]] §4.3) |
+| `display` (issuer) | The institution's **registered name** in the signed trust list (`legal_name`; entry without locale) and, if present, its service descriptions per language (`service_description`, BCP 47 key → `locale` + `description`). Neither the credential type's name nor a fixed language is written; `credential_metadata.display` comes from the type catalogue (this example has no `claims`: the claim list lives in the type metadata and is not repeated here) |
 | `nonce_endpoint` | **Mandatory** — Tamga always requires `c_nonce` |
 | `deferred_credential_endpoint`, `notification_endpoint` | **Not declared** — neither endpoint exists today (§9, §10) |
 | `batch_credential_issuance.batch_size` | **10** (§8) |
@@ -200,7 +195,8 @@ openid-credential-offer://?credential_offer_uri=
   https%3A%2F%2Fissuer.tamga.network%2Fexample-university%2Foffers%2F8a3f9c21
 ```
 
-**Invariant PR3:** the offer URI is **single-use** and expires after 5 minutes. Once fetched it returns 404.
+**Invariant PR3:** the offer URI is **single-use**; its lifetime follows the offer class (§3.3: `on-screen` 5 minutes,
+`out-of-band` ≤ 72 hours, `identity-bound` 7 days). Once fetched or expired it returns 404.
 
 QR on desktop, deep link on mobile (the same portal page chooses by device type).
 
@@ -457,7 +453,7 @@ withdrawn after the metadata was cached. It is a cheap check, and producing a wr
 
 The access token can be used for several credential requests during its lifetime (≤ 5 minutes, PR9) (OpenID4VCI 1.0 §8; like
 the EU reference issuer). Limits: only the configuration the token covers (AT1); total copies per token ≤ the batch size, 10
-(AT2; a request beyond it gets `invalid_token`); every request with the DPoP key the token is bound to, and the lifetime is not
+(AT2; a request beyond it gets HTTP 401 `invalid_token` + `WWW-Authenticate: DPoP`, §13); every request with the DPoP key the token is bound to, and the lifetime is not
 extended (AT3). In the identity service a later request adds copies to the first request's record and does not revoke the
 earlier package (AT4); personal fields are deleted when the token expires or the copy allowance is used up (AT5). The ZK copy
 token (§4.2) and tickets stay one package.
@@ -467,8 +463,8 @@ token (§4.2) and tickets stay one package.
 The identity service's metadata declares the `urn:tamga:id:PseudonymSeed:1` type as a separate `dc+sd-jwt` configuration. After
 receiving the identity credential the wallet requests it **with the same access token** and a single key proof (the key of the
 identity credential's first copy); the seed is issued once and only if the identity credential was issued with that token (SD1).
-The type cannot be requested on its own with PAR. The credential response carries no top-level parameter outside OpenID4VCI 1.0
-§8.3 (SD2). The seed's privacy rules: [[ADR-0031]] PS1–PS6.
+The type cannot be requested on its own with PAR: the scope is advertised but not granted, the PAR is refused with
+`invalid_scope` (RFC 6749 §4.1.2.1). The credential response carries no top-level parameter outside OpenID4VCI 1.0 §8.3 (SD2). The seed's privacy rules: [[ADR-0031]] PS1–PS6.
 
 ---
 
@@ -553,7 +549,7 @@ verifier therefore gets its own copy and presentations cannot be linked through 
 
 **Not offered today.** Tamga issuers declare no deferred credential endpoint (no `deferred_credential_endpoint`). If the
 record is not yet ready for issuance (for example the graduation decision has not been approved), `/credential` returns an
-error right away (`issuance_halted`, §13); when the record is ready the institution creates a new offer. What follows is the
+error right away (`credential_request_denied`, §13); when the record is ready the institution creates a new offer. What follows is the
 profile that applies once the endpoint is added (OpenID4VCI 1.0 Final §9).
 
 If the credential cannot be issued right away, the credential response uses **HTTP 202**; `interval` (seconds) is
@@ -697,8 +693,16 @@ attestation**; no student login/portal is needed. The pre-authorized path (§3) 
 The Tamga identity service (`id.tamga.network`) runs the same flow **in the browser**: `/authorize` privacy notice +
 explicit consent → remote verification provider → `/idv/return` (decision query) → `redirect_uri?code`. Under ETSI 472-3,
 T3 can be issued only on this path (never with pre-authorized, IDP7). Metadata: `pushed_authorization_request_endpoint`,
-`authorization_endpoint`, `require_pushed_authorization_requests: true`, `code_challenge_methods_supported: ["S256"]`,
-`grant_types_supported` both grants.
+`authorization_endpoint`, `require_pushed_authorization_requests: true`, `code_challenge_methods_supported: ["S256"]`;
+`grant_types_supported` lists both grants at the institution issuer but **only `authorization_code`** (plus `refresh_token` for ZK
+copies) at the identity service: the identity service does not write `pre-authorized_grant_anonymous_access_supported` and its
+`token_endpoint_auth_methods_supported` contains only `attest_jwt_client_auth` (the client is always identified by its WIA) — the
+metadata says the same thing the token endpoint does.
+
+At both issuers the `/authorize` request **must** carry `client_id`, equal to the PAR's client (RFC 9126 §4); `code_verifier`
+follows RFC 7636 §4.1 (43–128 characters), otherwise `invalid_grant` and the code is burnt. The token response carries `scope`
+when the granted scope differs from the requested one (for example a requested ZK-copy companion scope that this authorisation did
+not grant; RFC 6749 §5.1); when they are equal the field is omitted.
 
 # 12. End to end — Ayşe's diploma
 
@@ -744,19 +748,27 @@ step 7).
 
 # 13. Error responses
 
-The codes come from OpenID4VCI 1.0 Final §8.3.1.2; the last two rows are Tamga additions.
+The credential endpoint's codes come from OpenID4VCI 1.0 Final §8.3.1.2; there is **no Tamga-specific top-level code**
+(2026-10-24: the former `issuance_halted`, `subject_not_found` and `issuer_not_active` were removed). Tamga-specific detail lives
+only in `error_description` and carries no personal data (PR8). The HTTP status is read together with the code: token / DPoP
+failures are **401** with a `WWW-Authenticate: DPoP error="invalid_token"|"invalid_dpop_proof", algs="ES256"` header
+(RFC 6750 §3, RFC 9449 §7.1); temporary conditions are **503**; everything else 400.
 
-| Code | When | Wallet behaviour |
-|---|---|---|
-| `invalid_proof` | The proof is invalid (signature, `typ`, `aud`, `iat`, key attestation) | **Do not retry with the same proof** — report the error |
-| `invalid_nonce` | The `c_nonce` in the proof is unknown, expired or already consumed | Get a new `c_nonce` and sign the proofs again |
-| `invalid_credential_request` | Malformed request, or the requested configuration is not covered by this token | **Do not retry** — report the error |
-| `unknown_credential_configuration` | The issuer does not offer this configuration at all | Refresh the metadata |
-| `credential_request_denied` | No authorisation / schema authorisation dropped in the trust list | **Do not retry** |
-| `invalid_token` | The token has expired | Restart the flow |
-| `invalid_transaction_id` | At the deferred endpoint, the transaction is unknown or expired (once the endpoint exists, §9) | Restart the flow |
-| `issuance_halted` (Tamga) | The record is not ready for issuance (for example no graduation record) | Contact the institution |
-| `temporarily_unavailable` (HTTP 503) | The trust list or the institution's source is temporarily unreachable | Retry later |
+| Code | HTTP | When | Wallet behaviour |
+|---|---|---|---|
+| `invalid_proof` | 400 | The proof is invalid (signature, `typ`, `aud`, `iat`, key attestation); key storage below the minimum; **two proofs with the same key in one request** (PR6, per request); the provider's revocation-maintenance period has ended (ISSU_12c) | **Do not retry with the same proof** — report the error |
+| `invalid_nonce` | 400 | The `c_nonce` in the proof is unknown, expired or **already consumed** — the nonce is consumed atomically before the first `await` (PR4) and is not restored when the proof is then rejected | Get a new `c_nonce` and sign the proofs again |
+| `invalid_credential_request` | 400 | Malformed request; the requested configuration is not covered by this token; a precondition dropped (invitation code revoked, bound identity credential no longer active, seed requested before the identity credential) | **Do not retry** — report the error |
+| `unknown_credential_configuration` | 400 | The issuer does not offer this configuration at all | Refresh the metadata |
+| `unknown_credential_identifier` | 400 | A `credential_identifier` was sent — Tamga issues no identifiers in the token response | Use `credential_configuration_id` |
+| `credential_request_denied` | 400 | No authorisation / schema authorisation dropped in the trust list; **the record is not ready for issuance** (no graduation record, ticket already issued, no record found, main credential revoked for a ZK copy) | **Do not retry**; contact the institution |
+| `invalid_token` | **401** + `WWW-Authenticate` | Token unknown / expired; not `Authorization: DPoP`; **copy allowance used up** (AT2, 10 copies); a concurrent request with the same token; the credential issued with this token is no longer active | Restart the flow (new authorisation) |
+| `invalid_dpop_proof` | **401** + `WWW-Authenticate` | DPoP proof missing, invalid, from another key, `ath` mismatch or replayed | Make a new proof with the same key; if the key changed, restart the flow |
+| `invalid_transaction_id` | 400 | At the deferred endpoint, the transaction is unknown or expired (once the endpoint exists, §9) | Restart the flow |
+| `temporarily_unavailable` | **503** | Trust list stale or the institution's source unreachable; the wallet provider's status list cannot be fetched; **the issuer is not active in the trust list**; the institution's disclosure policy is invalid | Retry later |
+
+The token endpoint's codes are in §4 (`invalid_grant`, `invalid_request`, `invalid_client`, `unsupported_grant_type`,
+`invalid_dpop_proof`, all 400). Requesting the pseudonym seed on its own at PAR is `invalid_scope` (§7.5).
 
 **Invariant PR8:** error messages contain no personal data. Instead of "No record found for Ayşe Yılmaz",
 `credential_request_denied` is returned; details live only in the issuer's own audit log.
@@ -769,7 +781,7 @@ The codes come from OpenID4VCI 1.0 Final §8.3.1.2; the last two rows are Tamga 
 |---|---|
 | **PR1** | In the pre-authorized flow `tx_code` cannot be skipped. |
 | **PR2** | Every `vct` in the metadata is a schema the issuer is authorised for on the chain. |
-| **PR3** | The credential offer URI is single-use with a 5-minute lifetime. |
+| **PR3** | The credential offer URI is single-use; its lifetime follows the offer class (§3.3: 5 min / ≤ 72 h / 7 days). |
 | **PR4** | Consuming a `c_nonce` is atomic. |
 | **PR5** | Proof and credential signatures only `ES256`. |
 | **PR6** | Each copy in a batch is bound to a **different device key**. |
@@ -785,7 +797,7 @@ The codes come from OpenID4VCI 1.0 Final §8.3.1.2; the last two rows are Tamga 
 | **PR17** | The access token is bound to DPoP (RFC 9449): `/token` issues no token without a valid DPoP proof; `/credential` works only with `Authorization: DPoP` and a previously unseen proof made with the same key for this endpoint and this token (`ath`) (§4, §7.1). |
 | **PR18** | The refresh token is single-use, renewed on every use, and bound to the client instance key (WIA `cnf`) of the issuance, the DPoP key may change ([[ADR-0060]]); on renewal the issuer rereads the record from the authentic source and issues nothing if there is no record ([[ADR-0023]] AR2–AR3, §4.1). |
 | **PR19** | In a request with a WIA, no credential is issued if `client_status` is revoked; in a proof with a KA, the KA must be signed by the provider and not revoked, the proof signed with `attested_keys[0]` and the nonce valid; the key storage lower bound is applied according to the KA level ([[ADR-0025]], §11.1.1). |
-| **PR16** | In the identity attestation response every `credentials[]` object carries, alongside `credential` (SD-JWT VC), an `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) **bound to the same proof key**; both representations are produced in the same request and share the same status bit; the wallet does not store the mdoc without cross-checking it against the SD-JWT copy (same issuer certificate, same fields, `deviceKey` = `cnf`) ([[ADR-0013]] MD1–MD3). |
+| **PR16** | In the identity attestation response every `credentials[]` object carries, alongside `credential` (SD-JWT VC), an `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) **bound to the same proof key**; both representations are produced in the same request and share the same status bit; the wallet does not store the mdoc without cross-checking it against the SD-JWT copy (same issuer certificate, same fields, `deviceKey` = `cnf`) ([[ADR-0013]] MD1–MD3). **Deliberate deviation:** OpenID4VCI 1.0 §8.3 defines only `credential` in a `credentials[]` object; `mso_mdoc` is a Tamga-profile extension (ADR-0013 — both representations in one request because person fields are deleted right after issuance). A standard wallet ignores the unknown member and keeps only the SD-JWT copy; the Tamga wallet stores both. |
 
 ---
 

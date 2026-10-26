@@ -6,6 +6,33 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 
 ## 0.7.2 — unreleased
 
+- Protocol review fixes (2026-10-24; SPEC-PROTO-0001 §2, §13, SPEC-PROTO-0002 §2, §10.1; ADR-0059 note). issuer:
+  `authServerMetadata({ preAuthorized: false })` — an authorization server without the pre-authorized grant advertises neither
+  the grant, nor `pre-authorized_grant_anonymous_access_supported`, nor the `none` auth method (the identity service uses it);
+  `issuerMetadata({ issuerDisplay })` + `issuerDisplayFrom` — the issuer's `display` comes from the trust-list record
+  (`legal_name`, `service_description` per BCP 47 locale) instead of the first credential type's name with a hard-coded `tr-TR`;
+  `tokenErrorResponse` maps `offer_used` / `offer_expired` / PIN failures to the standard `invalid_grant` (reason in
+  `error_description`); `dpopChallenge` builds the `WWW-Authenticate: DPoP error=…, algs="ES256"` header for 401 credential
+  responses; `distinctCnfKeys` checks PR6 per request (`invalid_proof`); `redeemCode` rejects a malformed `code_verifier`
+  (RFC 7636 §4.1, 43–128 chars) with `invalid_grant`. sd-jwt / mdoc: status lists with `bits` 4 or 8 are parsed on the read
+  side (`READ_STATUS_BITS`, `STATUS_LIST_CWT_READ_BITS`); Tamga publishers still write only 1 or 2 (`signStatusListToken`
+  refuses others); `verifySdJwtVc({ allowMissingSdAlg })` accepts a missing `_sd_alg` as sha-256 and reports `sdAlgPresent`.
+  verifier: a Tamga type without `_sd_alg` is rejected at A4, external types may omit it; a status value outside 0/1/2 is
+  INDETERMINATE `STATUS_VALUE_UNKNOWN` (not REJECTED); `vp_formats_supported` lists only the formats used in the DCQL
+  (`vpFormatsFor`); DCQL never carries an empty `claims` array (`claims` is optional in `DcqlQuery`). wallet-core:
+  `declineRequest` posts `error=access_denied` + `state` to the `response_uri` when the person declines (PV5; no reason).
+  Tamga Verify: `/vp/response` accepts the OpenID4VP §8.4 error response (`error` + `state`) and closes the presentation
+  without storing a reason; a presentation is consumed only after holder binding passes (A6 / Z1 / P1) — undecryptable
+  bodies, `state` mismatch, empty `vp_token` and A1–A6 failures leave it open, count as attempts (`attempts`,
+  `last_attempt` in the pending status) and close it as REJECTED after 5; concurrent responses to one presentation are
+  serialised. Conformance vectors: VERSION 7.
+- Security round (2026-10-24). wallet-core: the local-network exception for a presentation request's `response_uri` (localhost /
+  private IP without a matching SAN) is now **off by default** — `verifyRequestObject` / `parseDcApiRequest` take
+  `allowLocalDevHost: true`, which a wallet passes only in a development build or on the sandbox network. Tamga Verify: every HTML
+  page carries a Content-Security-Policy with a per-request nonce for its inline scripts (`default-src 'self'`,
+  `frame-ancestors 'none'`, `form-action 'self'`, `base-uri 'self'`, `object-src 'none'`), `X-Frame-Options: DENY` and
+  `nosniff`; styles keep `'unsafe-inline'` (inline `style=""` attributes). Dependencies: fastify 5.12.7, fast-uri, zod 4.6.7,
+  vitest 4.1.12 (`npm audit` clean).
 - Fixes after a code review of ADR-0059…0062. wallet-core: `startAuthorized` adds the ZK copy companion scope only when the
   authorization server lists it in `scopes_supported` (a server without it would reject the PAR); when a refresh or ZK copy
   binding ends with `invalid_grant`, `removedKeyRefs` also carries the binding's instance key unless the wallet's WIA or

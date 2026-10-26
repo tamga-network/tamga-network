@@ -5,7 +5,8 @@
 import type { RelyingParty } from "@tamga-network/trust";
 import type { Policy, Step, VerificationResult } from "@tamga-network/verifier";
 import type { Presentation } from "./state.js";
-import { brandPage, type Lang } from "./brand.js";
+import { brandPage, nonceAttr, type Lang } from "./brand.js";
+export { nonceAttr };
 import { isDrivingPolicy } from "./policies.js";
 
 export { langOf, type Lang } from "./brand.js";
@@ -447,7 +448,7 @@ export function pendingPage(lang: Lang, p: Presentation, id: string, qrDataUrl: 
 <section class="row" style="align-items:flex-start;gap:28px"><img class="qr" src="${qrDataUrl}" alt="QR" width="280" height="280">
 <div class="stack" style="flex:1;min-width:240px"><div class="result PENDING">${t.waiting}… <span class="mono small">${left} ${t.secondsLeft}</span></div>
 <pre>${esc(p.req.qrPayload)}</pre></div></section>${tracePanel(p, lang)}
-<script>(()=>{const base=2000;let wait=base;const poll=async()=>{try{const r=await fetch('/presentations/${esc(id)}?st=${esc(p.statusToken)}');if(r.ok){wait=base;const j=await r.json();if(j.state==='DONE')return location.reload();}else{const ra=Number(r.headers.get('retry-after'));wait=Math.min(30000,Math.max(ra>0?ra*1000:0,wait*2));}}catch{wait=Math.min(30000,wait*2);}setTimeout(poll,wait);};setTimeout(poll,base);})()</script>`,
+<script${nonceAttr()}>(()=>{const base=2000;let wait=base;const poll=async()=>{try{const r=await fetch('/presentations/${esc(id)}?st=${esc(p.statusToken)}');if(r.ok){wait=base;const j=await r.json();if(j.state==='DONE')return location.reload();}else{const ra=Number(r.headers.get('retry-after'));wait=Math.min(30000,Math.max(ra>0?ra*1000:0,wait*2));}}catch{wait=Math.min(30000,wait*2);}setTimeout(poll,wait);};setTimeout(poll,base);})()</script>`,
   );
 }
 
@@ -536,7 +537,7 @@ export function demoSitePage(
 <div class="row"><button class="btn" id="addpk" type="button">${user.passkeys ? t.addAnother : t.addHere}</button>
 <form method="post" action="/sample-site/logout"><button class="btn secondary">${t.signOut}</button></form></div><p id="msg" class="muted"></p></div></section>
 <script src="/tamga-verifier.js"></script>
-<script>${passkeyJs(lang)}
+<script${nonceAttr()}>${passkeyJs(lang)}
 document.getElementById("addpk").onclick=pkRegister;</script>`
     : `<p class="eyebrow">Sample relying party</p><h1>${t.sampleTitle}</h1><p class="lede">${t.sampleText}</p>
 <section><div class="row"><button class="btn" id="signup" type="button">${t.signUp}</button><button class="btn secondary" id="pklogin" type="button">${t.passkeyLogin}</button><button class="btn secondary" id="login" type="button">${t.signIn}</button></div>
@@ -551,7 +552,7 @@ TamgaVerifier.mount(document.getElementById("tamga"), {
 });
 &lt;/script&gt;</pre><p class="muted small">${t.howToAddNote}</p></details></section>
 <script src="/tamga-verifier.js"></script>
-<script>
+<script${nonceAttr()}>
 const go=(policy)=>{document.getElementById("msg").textContent="";TamgaVerifier.mount(document.getElementById("tamga"),{verifier:${jsLit(verifierBase)},policy,lang:${jsLit(lang)},start:(o)=>fetch("/sample-site/start",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({policy,...(o&&o.dcApiOrigin?{dc_api_origin:o.dcApiOrigin}:{})})}).then((r)=>{if(!r.ok)throw new Error(${jsLit(t.openFailed)}+" ("+r.status+")");return r.json();}),onResult:async(id)=>{const r=await fetch("/sample-site/session",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({presentation_id:id})});const j=await r.json();if(j.ok)location.reload();else document.getElementById("msg").textContent=j.reason||${jsLit(t.sessionFailed)};}});};
 document.getElementById("signup").onclick=()=>go("site-signup");document.getElementById("login").onclick=()=>go("site-signin");document.getElementById("reviewsignup").onclick=()=>go("review-site-signup");
 ${passkeyJs(lang)}
@@ -605,7 +606,7 @@ export function terminalPage(lang: Lang, group: string) {
 <textarea id="tok" rows="4" placeholder="tamga-pass+jwt …"></textarea>
 <div id="res" class="result PENDING">${t.waitingShort}</div><div id="det" class="muted"></div></section>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" integrity="sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx" crossorigin="anonymous"></script>
-<script>
+<script${nonceAttr()}>
 const $=(i)=>document.getElementById(i);let last="";
 async function check(tk){const r=await fetch("/terminal/verify",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:tk,terminal_group:${jsLit(group)}})});const j=await r.json();$("res").className="result "+(j.ok?"ACCEPTED":"REJECTED");$("res").textContent=j.ok?${jsLit(t.pass)}:${jsLit(t.stop)};$("det").textContent=j.ok?("pass "+j.passId+" · "+j.expiresIn+" "+${jsLit(t.left)}):(j.reason||"");}
 $("chk").onclick=()=>check($("tok").value.trim());

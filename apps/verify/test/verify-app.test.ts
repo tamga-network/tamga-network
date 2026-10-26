@@ -20,6 +20,7 @@ import {
   parseDcApiRequest,
   checkRp,
   respond,
+  declineRequest,
   newState,
   receiveCredentials,
   encryptJwe,
@@ -34,6 +35,8 @@ import {
   type Http,
   type RpRecord,
 } from "@tamga-network/wallet-core";
+/** Test cüzdanı yerel adrese (verify.local) karşı koşar: wallet-core S11 yerel ağ istisnası açıkça açılır. */
+const LAN = { allowLocalDevHost: true } as const;
 import { SignJWT, importPKCS8 } from "jose";
 import { derToB64 } from "@tamga-network/core";
 import { createHash, createPrivateKey, generateKeyPairSync, randomBytes, sign as cryptoSign } from "node:crypto";
@@ -181,7 +184,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(created.qr_payload).toContain("request_uri=");
     // cüzdan: istek nesnesi
     const uri = parseVpUri(created.qr_payload);
-    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId);
+    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId, LAN);
     expect(req.responseUri).toBe(`${BASE}/vp/response`);
     const { matches } = matchDcql(req.dcql, r.state.credentials);
     expect(matches.length).toBe(1);
@@ -236,7 +239,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     ).json() as { presentation_id: string; qr_payload: string; dc_api_requests: Array<{ protocol: string }> };
     expect(withDc.dc_api_requests.map((x) => x.protocol)).toEqual(["openid4vp-v1-signed"]);
     const uri2 = parseVpUri(withDc.qr_payload);
-    const req2 = verifyRequestObject(await fetchRequestObject(uri2.requestUri, http), uri2.clientId);
+    const req2 = verifyRequestObject(await fetchRequestObject(uri2.requestUri, http), uri2.clientId, LAN);
     expect(req2.responseUri).toBe(`${BASE}/vp/response`);
     const m2 = matchDcql(req2.dcql, r.state.credentials).matches[0];
     const out2 = await respond({
@@ -321,7 +324,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         })
       ).json() as { presentation_id: string; qr_payload: string };
       const uri = parseVpUri(created.qr_payload);
-      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId, LAN);
       expect(req.passGrantOffered).toBe(true);
       const { matches } = matchDcql(req.dcql, st.state.credentials);
       const copy = matches[0].credential.copies[0];
@@ -512,7 +515,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       const png = await app2.inject({ method: "GET", url: `/presentations/${created.presentation_id}/qr.png` });
       expect(png.headers["content-type"]).toContain("image/png");
       const uri = parseVpUri(created.qr_payload);
-      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http2), uri.clientId);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http2), uri.clientId, LAN);
       const { matches, unmatched } = matchDcql(req.dcql, wallet.credentials);
       expect(unmatched).toEqual([]); // takma ad sorgusu belge sorgusu sayılmaz
       expect(matches.length).toBe(policy === "site-signin" ? 0 : 1);
@@ -769,6 +772,88 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(revoked.res.failed_reason).toMatch(/revoked|status/i);
   });
 
+  it("SPEC-PROTO-0002 §10: cüzdan reddi (error+state) sunumu kapatır, neden saklanmaz; başarısız denemeler sunumu açık bırakır, 5'te kapanır", async () => {
+    const open = async () => {
+      const created = (
+        await app.inject({
+          method: "POST",
+          url: "/presentations",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          payload: { policy_id: "job-application-degree" },
+        })
+      ).json() as { presentation_id: string; qr_payload: string };
+      const uri = parseVpUri(created.qr_payload);
+      return {
+        id: created.presentation_id,
+        req: verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId, LAN),
+      };
+    };
+    const status = async (id: string) =>
+      (await app.inject({ method: "GET", url: `/presentations/${id}` })).json() as Record<string, unknown>;
+    // 1) wallet-core declineRequest → doğrulayıcı sunumu kapatır; sonuç REJECTED, adım yok, cüzdanın açıklaması yok
+    const d = await open();
+    const dec = await declineRequest(d.req, http);
+    expect(dec.status).toBe(200);
+    expect(dec.redirectUri).toContain(`/p/${d.id}`);
+    const rd = await status(d.id);
+    expect(rd.outcome).toBe("REJECTED");
+    expect(rd.failed_step).toBeNull();
+    expect(rd.failed_reason).toBe("the wallet declined");
+    // kapandı: ikinci red ve şifreli yanıt 400 (PV10); bilinmeyen state 400
+    expect((await declineRequest(d.req, http)).status).toBe(400);
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/vp/response",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          payload: "error=access_denied&state=yok",
+        })
+      ).statusCode,
+    ).toBe(400);
+    // 2) çözülemeyen yanıtlar: sunum açık kalır (PENDING, attempts artar), beşincide REJECTED ile kapanır
+    const a = await open();
+    const junk =
+      Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid: `enc-${a.id}` })).toString("base64url") +
+      ".x.y.z.w";
+    for (let i = 1; i <= 4; i++) {
+      const r = await app.inject({
+        method: "POST",
+        url: "/vp/response",
+        headers: { "content-type": "application/json" },
+        payload: { response: junk },
+      });
+      expect(r.statusCode).toBe(400);
+      const s = await status(a.id);
+      expect(s.state).toBe("PENDING");
+      expect(s.attempts).toBe(i);
+    }
+    await app.inject({
+      method: "POST",
+      url: "/vp/response",
+      headers: { "content-type": "application/json" },
+      payload: { response: junk },
+    });
+    const closed = await status(a.id);
+    expect(closed.outcome).toBe("REJECTED");
+    expect(String(closed.failed_reason)).toMatch(/too many failed responses/);
+    // state uyuşmazlığı da sunumu kapatmaz
+    const b = await open();
+    const wrongState = encryptJwe(
+      utf8(JSON.stringify({ vp_token: { diploma: ["x~"] }, state: "baska" })),
+      b.req.encJwk,
+    );
+    const ws = await app.inject({
+      method: "POST",
+      url: "/vp/response",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      payload: `response=${encodeURIComponent(wrongState)}`,
+    });
+    expect(ws.statusCode).toBe(400);
+    expect((await status(b.id)).state).toBe("PENDING");
+    expect(((await status(b.id)).last_attempt as { failed_reason: string }).failed_reason).toBe("state mismatch");
+  });
+
   it("K1: turnike sayfası yansıyan XSS — geçersiz grup 400, betiğe gömülen değer </script> kapatamaz", async () => {
     const bad = await app.inject({
       method: "GET",
@@ -898,7 +983,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         })
       ).json() as { presentation_id: string; qr_payload: string };
       const uri = parseVpUri(created.qr_payload);
-      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http3), uri.clientId);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http3), uri.clientId, LAN);
       return { id: created.presentation_id, req };
     };
     const result = async (id: string) =>
@@ -973,26 +1058,45 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       headers: { "content-type": "application/x-www-form-urlencoded" },
       payload: `response=${encodeURIComponent(replay)}`,
     });
-    const r2 = await result(s2.id);
-    expect(r2.outcome).toBe("REJECTED");
-    expect(r2.failed_step).toBe("A6");
+    // sahiplik kanıtına ulaşmayan yanıt sunumu TÜKETMEZ: durum PENDING, son deneme A6; gerçek cüzdan hâlâ yanıtlayabilir
+    const r2 = (await result(s2.id)) as unknown as {
+      state: string;
+      attempts: number;
+      last_attempt: { failed_step: string | null };
+    };
+    expect(r2.state).toBe("PENDING");
+    expect(r2.attempts).toBe(1);
+    expect(r2.last_attempt.failed_step).toBe("A6");
+    const m2 = matchDcql(s2.req.dcql, wallet.credentials).matches[0];
+    await respond({
+      approval: testApproval(s2.req),
+      request: s2.req,
+      matches: [{ match: m2, keyRef: "w.mdoc", combined: sd.combined, disclose: m2.requested }],
+      keys,
+      http: http3,
+      now,
+    });
+    expect((await result(s2.id)).outcome).toBe("ACCEPTED");
 
     // 3) belgeyi kopyalayan, cihaz anahtarı olmayan kişi: kendi anahtarıyla imzalar → A6
     const thief = new SoftwareKeyProvider(new MemoryKeyStore());
     await thief.generate("w.mdoc");
     const s3 = await open();
     const m3 = matchDcql(s3.req.dcql, wallet.credentials).matches[0];
-    await respond({
-      approval: testApproval(s3.req),
-      request: s3.req,
-      matches: [{ match: m3, keyRef: "w.mdoc", combined: sd.combined, disclose: m3.requested }],
-      keys: thief,
-      http: http3,
-      now,
-    });
-    const r3 = await result(s3.id);
-    expect(r3.outcome).toBe("REJECTED");
-    expect(r3.failed_step).toBe("A6");
+    // doğrulayıcı A6 reddine 400 döner (sunum tüketilmedi); cüzdan çekirdeği bunu hata olarak görür
+    await expect(
+      respond({
+        approval: testApproval(s3.req),
+        request: s3.req,
+        matches: [{ match: m3, keyRef: "w.mdoc", combined: sd.combined, disclose: m3.requested }],
+        keys: thief,
+        http: http3,
+        now,
+      }),
+    ).rejects.toThrow(/verifier response 400/);
+    const r3 = (await result(s3.id)) as unknown as { state: string; last_attempt: { failed_step: string | null } };
+    expect(r3.state).toBe("PENDING"); // A6 reddi sunumu kapatmaz
+    expect(r3.last_attempt.failed_step).toBe("A6");
 
     // 3b) ADR-0032: sıfır bilgi ispatı isteği — DCQL mso_mdoc_zk + imzalı listedeki devre; bugünkü cüzdan ZK üretemez → eşleşmez
     // (ZK5: doğrulayıcı age-over-18-mdoc'a döner); ZkDocument olmayan yanıt A1'de reddedilir. Gerçek ispatla doğrulama:
@@ -1006,7 +1110,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       })
     ).json() as { presentation_id: string; qr_payload: string };
     const zkUri = parseVpUri(zkCreated.qr_payload);
-    const zkReq = verifyRequestObject(await fetchRequestObject(zkUri.requestUri, http3), zkUri.clientId);
+    const zkReq = verifyRequestObject(await fetchRequestObject(zkUri.requestUri, http3), zkUri.clientId, LAN);
     const zq = zkReq.dcql.credentials[0] as unknown as {
       format: string;
       meta: { doctype_value: string; zk_system_type: Array<{ system: string; params: { circuit_hash: string } }> };
@@ -1025,9 +1129,12 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       headers: { "content-type": "application/x-www-form-urlencoded" },
       payload: `response=${encodeURIComponent(notZk)}`,
     });
-    const rz = await result(zkCreated.presentation_id);
-    expect(rz.outcome).toBe("REJECTED");
-    expect(rz.failed_step).toBe("A1");
+    const rz = (await result(zkCreated.presentation_id)) as unknown as {
+      state: string;
+      last_attempt: { failed_step: string | null };
+    };
+    expect(rz.state).toBe("PENDING"); // A1 reddi sunumu kapatmaz
+    expect(rz.last_attempt.failed_step).toBe("A1");
 
     // 4) tarayıcı Digital Credentials API'si (OpenID4VP 1.0 Ek A): istek sayfaya, yanıt sayfadan doğrulayıcıya
     const SITE = "https://shop.example";
@@ -1092,7 +1199,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       expect(qrJwt).not.toBe(c.dc_api_request.data.request);
       return {
         id: c.presentation_id,
-        qr: verifyRequestObject(qrJwt, uri.clientId),
+        qr: verifyRequestObject(qrJwt, uri.clientId, LAN),
         dc: parseDcApiRequest(c.dc_api_request, SITE),
       };
     };
@@ -1476,7 +1583,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect((await strict.inject({ method: "GET", url: `/presentations/${id}?st=yanlis` })).statusCode).toBe(404);
     expect(
       (await strict.inject({ method: "GET", url: `/presentations/${id}?st=${created.status_token}` })).json(),
-    ).toEqual({ state: "PENDING" });
+    ).toMatchObject({ state: "PENDING" });
     // HV1/HV2: /p/:id — kimliği bilen ama jetonu olmayan yalnız nötr durumu görür (QR, durum jetonu, iz yok); jetonla tam sayfa
     const anon = await strict.inject({ method: "GET", url: `/p/${id}` });
     expect(anon.statusCode).toBe(200);
@@ -1499,7 +1606,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(junk.statusCode).toBe(400);
     expect(
       (await strict.inject({ method: "GET", url: `/presentations/${id}?st=${created.status_token}` })).json(),
-    ).toEqual({ state: "PENDING" });
+    ).toMatchObject({ state: "PENDING" });
 
     // cüzdan: diploma sun
     const now = Math.floor(Date.now() / 1000);
@@ -1553,7 +1660,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       { now },
     );
     const uri = parseVpUri(created.qr_payload);
-    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, httpS), uri.clientId);
+    const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, httpS), uri.clientId, LAN);
     expect(req.onBehalfOf).toBeUndefined(); // sahibi doğrulayıcının kendisi → aracı değil
     const { matches } = matchDcql(req.dcql, w.state.credentials);
     const copy = matches[0].credential.copies[0];
@@ -1628,7 +1735,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       requestUriBase: `${BASE}/vp/req`,
       onBehalfOf: SITE,
     });
-    const req = verifyRequestObject(pr.requestJwt, cfg.clientId);
+    const req = verifyRequestObject(pr.requestJwt, cfg.clientId, LAN);
     expect(req.onBehalfOf).toBe(SITE);
     expect(req.rpKey).toBe(SITE); // kayıt çözülmeden önce asıl sitenin client_id'si
     // K7: aracı ilişkisi iki kayıtta da yazılı (aracı asıl siteyi, site aracıyı listeler)
@@ -1736,7 +1843,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       expect(made.statusCode).toBe(200);
       const { presentation_id, qr_payload } = made.json() as { presentation_id: string; qr_payload: string };
       const uri = parseVpUri(qr_payload);
-      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http3), uri.clientId);
+      const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http3), uri.clientId, LAN);
       expect(req.onBehalfOf).toBe(owner.clientId);
       const { matches } = matchDcql(req.dcql, wallet.credentials);
       const copy = matches[0].credential.copies[0];

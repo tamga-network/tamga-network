@@ -64,7 +64,7 @@ ZK kopyası erişim belirteci ([[ADR-0044]]) ve bilet (etkinlik başına tek bel
 | Kod | Kural |
 |---|---|
 | AT1 | Erişim belirteciyle yalnız belirtecin kapsadığı belge yapılandırması istenebilir. |
-| AT2 | Bir erişim belirteciyle verilen toplam kopya sayısı toplu ihraç büyüklüğünü (10) geçmez; sayaç eşzamanlı isteklerde de aşılamaz. |
+| AT2 | Bir erişim belirteciyle verilen toplam kopya sayısı toplu ihraç büyüklüğünü (10) geçmez; sayaç eşzamanlı isteklerde de aşılamaz. Aşan istek HTTP 401 `invalid_token` + `WWW-Authenticate: DPoP` alır (RFC 6750 §3). |
 | AT3 | Her belge isteği belirtecin bağlı olduğu DPoP anahtarıyla yapılır; belirteç ömrü (≤ 5 dk) yeniden kullanımla uzamaz. |
 | AT4 | Kimlik servisinde aynı belirteçle sonraki istek ilk isteğin kaydına kopya ekler; önceki paketi iptal etmez; iptal edilmiş ya da silinmiş kayda kopya eklenmez. |
 | AT5 | Kimlik servisi yetkilendirme kaydındaki kişi alanlarını belirtecin ömrü bitince ya da kopya hakkı dolunca siler. |
@@ -77,6 +77,16 @@ ZK kopyası erişim belirteci ([[ADR-0044]]) ve bilet (etkinlik başına tek bel
 - Şartname: [[SPEC-PROTO-0001]] §7.4.
 - Testler: aynı belirteçle sıralı istekler sınıra kadar kabul, sınır aşımı ve süre sonu ret, başka DPoP anahtarı ret, eşzamanlı
   istekler sınırı aşamaz; kimlik servisinde aynı kayıt, önceki paket iptal edilmez, hak dolunca kişi alanları silinir.
+
+## Not (2026-10-24, küçük değişiklik — yeni ADR yok)
+
+- **AT2'nin HTTP durumu:** kopya hakkını aşan istek **401** `invalid_token` ve `WWW-Authenticate: DPoP error="invalid_token",
+  algs="ES256"` başlığı döner (RFC 6750 §3, RFC 9449 §7.1); K2'deki `invalid_token` bu statüyle okunur (önceki uygulama 400'dü).
+  Öteki belirteç/DPoP hataları da 401 + aynı başlıktır ([[SPEC-PROTO-0001]] §13).
+- **PR6 kapsamı istek başınadır:** "bir batch'teki kopyaların her biri farklı anahtar" kuralı ([[SPEC-PROTO-0001]] §8.2) belge
+  verende **tek istek içinde** denetlenir (`invalid_proof`). Aynı belirteçle sonraki istekte önceki isteğin bir anahtarı yeniden
+  gelirse belge veren bunu görmez ve engellemez (anahtar parmak izi saklanmaz — ISSU_35b, bağlanamazlık); kopyaların farklı anahtar
+  taşıması cüzdanın sorumluluğudur.
 
 # Durum
 

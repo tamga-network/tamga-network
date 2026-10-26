@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-23
+last_updated: 2026-10-24
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdana necə daxil olduğunu müəyyən edir. OpenID4VCI 1.0 Final üzərində Tamga profili: issuer metadata, credential offer (QR + tx_code), pre-authorized və authorization code axını seçimi, Nonce Endpoint-dən c_nonce, openid4vci-proof+jwt açar sübutu, credential endpoint, təxirə salınmış sənəd verilməsi və bildiriş ucunun bugünkü vəziyyəti (hər ikisi təqdim edilmir). İki açıq məsələ bağlanır: batch partiyasının ölçüsü 10 olaraq sabitlənir və batch nüsxələrinin HƏR BİRİ FƏRQLİ cihaz açarından istifadə edir — eyni `cnf` istifadə edilsəydi, nüsxələr bir-biri ilə əlaqələndirilə bilərdi və batch-in bütün mənası itərdi. Bundan əlavə, sənəd verilməsi anındakı holder binding üsulunun holder assurance səviyyəsinə (T1/T2/T3) uyğunluğu verilir.
 translation_of: SPEC-PROTO-0001
@@ -98,8 +98,9 @@ kanaldan (OBS sessiyası daxilində) verilir.
   "batch_credential_issuance": { "batch_size": 10 },
 
   "display": [
-    { "name": "Örnek Üniversitesi", "locale": "tr-TR" },
-    { "name": "Example University", "locale": "en-US" }
+    { "name": "Örnek Üniversitesi" },
+    { "name": "Örnek Üniversitesi", "locale": "tr", "description": "Diploma ve öğrenci belgesi" },
+    { "name": "Örnek Üniversitesi", "locale": "en", "description": "Diplomas and student certificates" }
   ],
 
   "credential_configurations_supported": {
@@ -116,13 +117,6 @@ kanaldan (OBS sessiyası daxilində) verilir.
         "display": [
           { "name": "Diploma", "locale": "tr-TR" },
           { "name": "Diploma", "locale": "en-US" }
-        ],
-        "claims": [
-          { "path": ["qualification_title"] },
-          { "path": ["eqf_level"] },
-          { "path": ["isced_f_code"] },
-          { "path": ["awarding_date"] },
-          { "path": ["is_graduate"] }
         ]
       }
     },
@@ -150,6 +144,7 @@ kanaldan (OBS sessiyası daxilində) verilir.
 | `proof_signing_alg_values_supported` | Yalnız `ES256` |
 | `vct` | Qeydiyyatdan keçmiş sxem olmalıdır ([[SPEC-SCHEMA-0001]]) |
 | Konfiqurasiya identifikatoru və `scope` | Hər ikisi sənəd növünün `vct` URN-idir (`urn:tamga:edu:DiplomaCredential:1`); ayrıca konfiqurasiya adı və ya qısa scope adı yoxdur. Rəqəmsal cüzdan [[t:PAR]]-da növü `scope` ilə tələb edir ([[t:HAIP]] §4.3) |
+| `display` (sənəd verən) | Qurumun imzalı etibar siyahısındakı **qeydiyyatlı adı** (`legal_name`; lokalsız giriş) və varsa dillər üzrə xidmət təsvirləri (`service_description`, BCP 47 açarı → `locale` + `description`). Sənəd növünün adı və ya sabit bir dil yazılmır; `credential_metadata.display` növ kataloqundan gəlir (bu nümunədə `claims` yoxdur: sahə siyahısı növ metadata-sındadır, burada təkrarlanmır) |
 | `nonce_endpoint` | **Məcburi** — Tamga həmişə `c_nonce` tələb edir |
 | `deferred_credential_endpoint`, `notification_endpoint` | **Elan edilmir** — bu gün hər iki uc yoxdur (§9, §10) |
 | `batch_credential_issuance.batch_size` | **10** (§8) |
@@ -200,7 +195,8 @@ openid-credential-offer://?credential_offer_uri=
   https%3A%2F%2Fissuer.tamga.network%2Fexample-university%2Foffers%2F8a3f9c21
 ```
 
-**İnvariant PR3:** Offer URI **birdəfəlikdir** və 5 dəqiqədən sonra etibarsız olur.
+**İnvariant PR3:** Offer URI **birdəfəlikdir**; ömrü təklif sinfinə görədir (§3.3: `on-screen` 5 dəqiqə, `out-of-band` ≤ 72 saat,
+`identity-bound` 7 gün). Çəkildikdən ya da müddəti bitdikdən sonra 404 qaytarır.
 Çəkildikdən sonra 404 qaytarır.
 
 Masaüstü kompüterdə QR, mobil cihazda dərin keçid (eyni OBS səhifəsi cihaz tipinə görə
@@ -457,7 +453,7 @@ yoxlamadır, səhv rəqəmsal sənəd yaratmağın bədəli isə yüksəkdir.
 
 Giriş tokeni ömrü (≤ 5 dəqiqə, PR9) ərzində bir neçə sənəd sorğusunda istifadə oluna bilər (OpenID4VCI 1.0 §8; Aİ istinad
 sənəd verəni kimi). Hədlər: yalnız tokenin əhatə etdiyi konfiqurasiya (AT1); token başına cəmi nüsxə ≤ toplu verilmə ölçüsü, 10
-(AT2; həddi aşan sorğu `invalid_token` alır); hər sorğu tokenin bağlı olduğu DPoP açarı ilə, ömür uzanmır (AT3). Şəxsiyyət
+(AT2; həddi aşan sorğu HTTP 401 `invalid_token` + `WWW-Authenticate: DPoP` alır, §13); hər sorğu tokenin bağlı olduğu DPoP açarı ilə, ömür uzanmır (AT3). Şəxsiyyət
 xidmətində sonrakı sorğu ilk sorğunun qeydinə nüsxə əlavə edir, əvvəlki paketi ləğv etmir (AT4); şəxsi sahələr tokenin ömrü
 bitəndə və ya nüsxə haqqı dolanda silinir (AT5). ZK nüsxəsi tokeni (§4.2) və bilet bir paket olaraq qalır.
 
@@ -465,8 +461,9 @@ bitəndə və ya nüsxə haqqı dolanda silinir (AT5). ZK nüsxəsi tokeni (§4.
 
 Şəxsiyyət xidmətinin metadata-sı `urn:tamga:id:PseudonymSeed:1` növünü ayrıca `dc+sd-jwt` konfiqurasiyası kimi elan edir. Cüzdan
 şəxsiyyət sənədini aldıqdan sonra onu **eyni giriş tokeni ilə** tək açar sübutu ilə (şəxsiyyət sənədinin ilk nüsxəsinin açarı)
-istəyir; toxum bir dəfə və yalnız həmin tokenlə şəxsiyyət sənədi verilibsə verilir (SD1). Növ PAR ilə tək istənə bilməz. Sənəd
-cavabı OpenID4VCI 1.0 §8.3 xaricində yuxarı səviyyəli sahə daşımır (SD2). Toxumun məxfilik qaydaları: [[ADR-0031]] PS1–PS6.
+istəyir; toxum bir dəfə və yalnız həmin tokenlə şəxsiyyət sənədi verilibsə verilir (SD1). Növ PAR ilə tək istənə bilməz: əhatə
+elan edilir, amma səlahiyyət verilmir, PAR `invalid_scope` ilə rədd edilir (RFC 6749 §4.1.2.1). Sənəd cavabı OpenID4VCI 1.0 §8.3
+xaricində yuxarı səviyyəli sahə daşımır (SD2). Toxumun məxfilik qaydaları: [[ADR-0031]] PS1–PS6.
 
 ---
 
@@ -558,7 +555,7 @@ hamısı birlikdə işarələnir (§8.4) və bu uyğunluq kənara çıxmır. Bel
 # 9. Təxirə salınmış sənəd verilməsi (deferred)
 
 **Hazırda təqdim edilmir.** Tamga-nın sənədi verən qurumları təxirə salınmış sənəd verilməsi ucunu elan etmir (`deferred_credential_endpoint` yoxdur). Qeyd
-hələ sənəd verilməsinə uyğun deyilsə (məs., məzuniyyət qərarı təsdiqlənməyibsə), `/credential` dərhal xəta qaytarır (`issuance_halted`, §13);
+hələ sənəd verilməsinə uyğun deyilsə (məs., məzuniyyət qərarı təsdiqlənməyibsə), `/credential` dərhal xəta qaytarır (`credential_request_denied`, §13);
 qeyd hazır olduqda qurum yeni təklif yaradır. Aşağıdakılar uc əlavə edildikdə tətbiq olunacaq profildir (OpenID4VCI 1.0 Final
 §9).
 
@@ -702,7 +699,15 @@ Bu yolda qurum şəxsiyyəti yoxlayan tərəf kimi çıxış edir və bunu **ş�
 Tamga şəxsiyyət xidməti (`id.tamga.network`) eyni axını **brauzer** ilə işə salır: `/authorize` KVKK üzrə məlumatlandırma + açıq razılıq →
 uzaqdan yoxlama provayderi → `/idv/return` (qərar sorğusu) → `redirect_uri?code`. ETSI 472-3-ə əsasən T3 yalnız bu yolla
 verilə bilər (pre-authorized ilə heç vaxt, IDP7). Metadata: `pushed_authorization_request_endpoint`, `authorization_endpoint`,
-`require_pushed_authorization_requests: true`, `code_challenge_methods_supported: ["S256"]`, `grant_types_supported` hər iki grant.
+`require_pushed_authorization_requests: true`, `code_challenge_methods_supported: ["S256"]`; `grant_types_supported` qurum sənəd
+verənində hər iki grant, **şəxsiyyət xidmətində yalnız `authorization_code`** (və ZK nüsxəsi üçün `refresh_token`): şəxsiyyət xidməti
+`pre-authorized_grant_anonymous_access_supported` yazmır və `token_endpoint_auth_methods_supported` yalnız `attest_jwt_client_auth`
+ehtiva edir (müştəri hər zaman WIA ilə tanınır) — metadata token endpoint-inin davranışı ilə eyni şeyi deyir.
+
+Hər iki sənəd verəndə `/authorize` sorğusu `client_id` daşımalıdır və PAR-dakı müştəri ilə eyni olmalıdır (RFC 9126 §4);
+`code_verifier` RFC 7636 §4.1 formatındadır (43–128 simvol), əks halda `invalid_grant` və kod yanır. Token cavabı, verilən əhatə
+istəniləndən fərqlidirsə (məs. ZK nüsxəsi müşayiət əhatəsi istənib, amma bu səlahiyyətdə verilməyibsə) `scope` daşıyır
+(RFC 6749 §5.1); eynidirsə sahə yazılmır.
 
 # 12. Başdan-sona — Ayşenin diplomu
 
@@ -746,21 +751,27 @@ verilənlər bazasındadır ([[SPEC-BC-0001]] §11.1 addım 7).
 
 # 13. Xəta cavabları
 
-| Kod | Nə vaxt | Rəqəmsal cüzdanın davranışı |
-|---|---|---|
-Kodlar OpenID4VCI 1.0 Final §8.3.1.2-dən götürülüb; son iki sətir Tamga əlavəsidir.
+Sənəd endpoint-inin kodları OpenID4VCI 1.0 Final §8.3.1.2-dən götürülüb; Tamga-ya xas **yuxarı səviyyəli kod yoxdur** (2026-10-24:
+köhnə `issuance_halted`, `subject_not_found`, `issuer_not_active` silindi). Tamga-ya xas təfərrüat yalnız `error_description`-da
+olur və fərdi məlumat daşımır (PR8). HTTP statusu kodla birlikdə oxunur: token / DPoP xətaları **401** və `WWW-Authenticate: DPoP
+error="invalid_token"|"invalid_dpop_proof", algs="ES256"` başlığı (RFC 6750 §3, RFC 9449 §7.1); müvəqqəti hallar **503**;
+qalanları 400.
 
-| Kod | Nə vaxt | Rəqəmsal cüzdanın davranışı |
-|---|---|---|
-| `invalid_proof` | Sübut etibarsızdır (imza, `typ`, `aud`, `iat`, açar sübutu) | **Eyni sübutla təkrar cəhd edilmir** — xəta bildirilir |
-| `invalid_nonce` | Sübutdakı `c_nonce` naməlumdur, müddəti bitib və ya artıq istifadə olunub | Yeni `c_nonce` alınır, sübutlar yenidən imzalanır |
-| `invalid_credential_request` | Struktur səhvdir və ya istənilən konfiqurasiya bu tokenin əhatəsində deyil | **Təkrar cəhd edilmir** — xəta bildirilir |
-| `unknown_credential_configuration` | Sənədi verən qurum bu konfiqurasiyanı ümumiyyətlə təqdim etmir | Metadata yenilənir |
-| `credential_request_denied` | Səlahiyyət yoxdur / sxem səlahiyyəti etibar siyahısından çıxarılıb | **Təkrar cəhd edilmir** |
-| `invalid_token` | Tokenin müddəti bitib | Axın yenidən başladılır |
-| `invalid_transaction_id` | Təxirə salınmış endpoint-də əməliyyat naməlumdur və ya müddəti bitib (endpoint əlavə edildikdə, §9) | Axın yenidən başladılır |
-| `issuance_halted` (Tamga) | Qeyd rəqəmsal sənəd verilməsi üçün uyğun deyil (məs. məzun qeydi yoxdur) | Quruma müraciət edilir |
-| `temporarily_unavailable` (HTTP 503) | Etibar siyahısı və ya qurumun mənbəyi müvəqqəti olaraq əlçatan deyil | Sonra yenidən cəhd edilir |
+| Kod | HTTP | Nə vaxt | Rəqəmsal cüzdanın davranışı |
+|---|---|---|---|
+| `invalid_proof` | 400 | Sübut etibarsızdır (imza, `typ`, `aud`, `iat`, açar sübutu); açar saxlanması minimumdan aşağıdır; bir sorğuda **eyni açarla iki sübut** (PR6, sorğu başına); provayderin ləğv xidməti müddəti bitib (ISSU_12c) | **Eyni sübutla təkrar cəhd edilmir** — xəta bildirilir |
+| `invalid_nonce` | 400 | Sübutdakı `c_nonce` naməlumdur, müddəti bitib və ya **artıq istifadə olunub** — nonce ilk `await`-dən əvvəl atomik istifadə olunur (PR4) və sübut sonra rədd edilsə də geri qaytarılmır | Yeni `c_nonce` alınır, sübutlar yenidən imzalanır |
+| `invalid_credential_request` | 400 | Struktur səhvdir; istənilən konfiqurasiya bu tokenin əhatəsində deyil; ön şərt düşüb (dəvət kodu ləğv edilib, bağlı şəxsiyyət sənədi aktiv deyil, toxum şəxsiyyət sənədindən əvvəl istənib) | **Təkrar cəhd edilmir** — xəta bildirilir |
+| `unknown_credential_configuration` | 400 | Sənədi verən qurum bu konfiqurasiyanı ümumiyyətlə təqdim etmir | Metadata yenilənir |
+| `unknown_credential_identifier` | 400 | `credential_identifier` göndərilib — Tamga token cavabında identifikator vermir | `credential_configuration_id` istifadə edilir |
+| `credential_request_denied` | 400 | Səlahiyyət yoxdur / sxem səlahiyyəti etibar siyahısından çıxarılıb; **qeyd sənəd verilməsinə uyğun deyil** (məzun qeydi yoxdur, bilet artıq verilib, qeyd tapılmadı, ZK nüsxəsi üçün əsas sənəd ləğvdədir) | **Təkrar cəhd edilmir**; quruma müraciət edilir |
+| `invalid_token` | **401** + `WWW-Authenticate` | Token naməlumdur / müddəti bitib; `Authorization: DPoP` deyil; **nüsxə haqqı bitib** (AT2, 10 nüsxə); eyni tokenlə eyni vaxtda sorğu; bu tokenlə verilən sənəd artıq aktiv deyil | Axın yenidən başladılır (yeni səlahiyyət) |
+| `invalid_dpop_proof` | **401** + `WWW-Authenticate` | DPoP sübutu yoxdur, etibarsızdır, başqa açarladır, `ath` uyğun gəlmir və ya təkrar oynadılıb | Eyni açarla yeni sübut yaradılır; açar dəyişibsə axın yenidən başladılır |
+| `invalid_transaction_id` | 400 | Təxirə salınmış endpoint-də əməliyyat naməlumdur və ya müddəti bitib (endpoint əlavə edildikdə, §9) | Axın yenidən başladılır |
+| `temporarily_unavailable` | **503** | Etibar siyahısı köhnəlib və ya qurumun mənbəyi əlçatan deyil; cüzdan provayderinin ləğv siyahısı alına bilmir; **sənəd verən siyahıda aktiv deyil**; qurumun açıqlama siyasəti zədəlidir | Sonra yenidən cəhd edilir |
+
+Token endpoint-inin kodları §4-dədir (`invalid_grant`, `invalid_request`, `invalid_client`, `unsupported_grant_type`,
+`invalid_dpop_proof`, hamısı 400). PAR-da psevdonim toxumunun tək istənməsi `invalid_scope`-dur (§7.5).
 
 **Dəyişməz PR8:** Xəta mesajları fərdi məlumatlar ehtiva etmir. "Ayşe Yılmaz üçün qeyd
 tapılmadı" əvəzinə `credential_request_denied` qaytarılır; təfərrüat yalnız sənədi verən qurumun
@@ -774,7 +785,7 @@ tapılmadı" əvəzinə `credential_request_denied` qaytarılır; təfərrüat y
 |---|---|
 | **PR1** | Pre-authorized axında `tx_code` buraxıla bilməz. |
 | **PR2** | Metadata-dakı hər `vct` sənədi verən qurumun zəncirdə səlahiyyətləndirildiyi sxemdir. |
-| **PR3** | Sənəd təklifi URI-si birdəfəlikdir, ömrü 5 dəqiqədir. |
+| **PR3** | Sənəd təklifi URI-si birdəfəlikdir; ömrü təklif sinfinə görədir (§3.3: 5 dəq / ≤ 72 saat / 7 gün). |
 | **PR4** | `c_nonce` istehlakı atomardır. |
 | **PR5** | Sübut və sənəd imzası yalnız `ES256`. |
 | **PR6** | Batch-dəki hər nüsxə **fərqli cihaz açarına** bağlanır. |
@@ -790,7 +801,7 @@ tapılmadı" əvəzinə `credential_request_denied` qaytarılır; təfərrüat y
 | **PR17** | Giriş tokeni DPoP-a bağlıdır (RFC 9449): `/token` etibarlı DPoP sübutu olmadan token vermir; `/credential` yalnız `Authorization: DPoP` ilə və eyni açarla, bu son nöqtə və bu token (`ath`) üçün yaradılmış, əvvəllər görülməmiş sübutla işləyir (§4, §7.1). |
 | **PR18** | Yeniləmə tokeni birdəfəlikdir, hər istifadədə yenilənir, sənəd vermə əməliyyatındakı müştəri nümunəsi açarına (WIA `cnf`) bağlıdır, DPoP açarı dəyişə bilər ([[ADR-0060]]); sənədi verən qurum yeniləmə zamanı qeydi səlahiyyətli mənbədən yenidən oxuyur və qeyd yoxdursa, sənəd vermir ([[ADR-0023]] AR2–AR3, §4.1). |
 | **PR19** | WIA ilə gələn sorğuda `client_status` ləğv edilibsə, sənəd verilmir; KA-lı proof-da KA provayder tərəfindən imzalanmış, ləğv edilməmiş, proof `attested_keys[0]` ilə imzalanmış olmalı və nonce etibarlı olmalıdır; açar anbarının minimum həddi KA səviyyəsinə görə tətbiq edilir ([[ADR-0025]], §11.1.1). |
-| **PR16** | Kimlik attestation-ı cavabında hər `credentials[]` obyekti `credential` (SD-JWT VC) ilə **eyni proof açarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) daşıyır; iki təqdimat forması eyni sorğuda yaradılır və eyni status bitini paylaşır; rəqəmsal cüzdan mdoc-u SD-JWT nüsxəsi ilə çarpaz yoxlamadan (eyni sənədi verən qurum sertifikatı, eyni sahələr, `deviceKey` = `cnf`) saxlamır ([[ADR-0013]] MD1–MD3). |
+| **PR16** | Kimlik attestation-ı cavabında hər `credentials[]` obyekti `credential` (SD-JWT VC) ilə **eyni proof açarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) daşıyır; iki təqdimat forması eyni sorğuda yaradılır və eyni status bitini paylaşır; rəqəmsal cüzdan mdoc-u SD-JWT nüsxəsi ilə çarpaz yoxlamadan (eyni sənədi verən qurum sertifikatı, eyni sahələr, `deviceKey` = `cnf`) saxlamır ([[ADR-0013]] MD1–MD3). **Şüurlu sapma:** OpenID4VCI 1.0 §8.3 `credentials[]` obyektində yalnız `credential` təyin edir; `mso_mdoc` Tamga profilinin əlavəsidir (ADR-0013 — iki təqdimat forması tək sorğuda, çünki şəxsi sahələr verilmədən dərhal sonra silinir). Standart cüzdan naməlum sahəni nəzərə almır və yalnız SD-JWT nüsxəsini alır; Tamga cüzdanı hər ikisini saxlayır. |
 
 ---
 

@@ -97,6 +97,21 @@ export interface BuiltCredential {
   cnfThumb: string;
 }
 
+/**
+ * PR6 (SPEC-PROTO-0001 §8.2): bir isteğin kanıtlarındaki anahtarlar birbirinden farklı mı. Kural İSTEK başınadır (ADR-0059 notu):
+ * aynı erişim belirteciyle sonraki istekte daha önce kullanılmış bir anahtar gelirse bu kural onu görmez; kopyaların bağlanamazlığı
+ * cüzdanın sorumluluğudur. Belge veren farklı değilse `invalid_proof` döner (standart kod; §13).
+ */
+export function distinctCnfKeys(jwks: ReadonlyArray<Pick<JWK, "x" | "y">>): boolean {
+  const seen = new Set<string>();
+  for (const k of jwks) {
+    const thumb = `${k.x}.${k.y}`;
+    if (seen.has(thumb)) return false;
+    seen.add(thumb);
+  }
+  return true;
+}
+
 export async function buildCredentials(input: BuildInput): Promise<BuiltCredential[]> {
   const def = schemaDef(input.vct);
   const tamga = def.typeMetadata.tamga as { uses_status_list?: boolean; default_ttl_days?: number | null };

@@ -481,7 +481,7 @@ components:
         failed_reason: { type: [string, "null"] }
         indeterminate_reason:
           type: [string, "null"]
-          enum: [SCHEMA_UNREACHABLE, STATUS_UNREACHABLE, STATUS_STALE, CHAIN_UNREACHABLE, INDEXER_STALE, SDK_VERSION_MISMATCH, null]
+          enum: [SCHEMA_UNREACHABLE, STATUS_UNREACHABLE, STATUS_STALE, CHAIN_UNREACHABLE, INDEXER_STALE, SDK_VERSION_MISMATCH, STATUS_VALUE_UNKNOWN, null]
         spec_version: { type: string, description: Verification specification version., x-tr: Doğrulama şartnamesi sürümü. }
         sdk_version: { type: string, description: Verifier package version., x-tr: Doğrulayıcı paket sürümü. }
         checks_performed: { type: array, items: { type: string }, example: [T0, A1, A2, B1, C1, D1, E1] }

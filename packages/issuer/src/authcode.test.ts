@@ -37,6 +37,34 @@ describe("authcode", () => {
       reused: true, // RFC 6749 §4.1.2: çağıran o koddan verilenleri geri alır
     });
   });
+  it("RFC 7636 §4.1: biçimi bozuk code_verifier (kısa / yasak karakter) → invalid_grant ve kod yanar; 43–128 geçer", () => {
+    for (const bad of ["v".repeat(42), "v".repeat(129), "v".repeat(42) + "!"]) {
+      const r = createPar(base);
+      if (!r.ok) throw new Error("par");
+      const code = mintCode(r.par, "subj", "T2", 1000);
+      const req = { code, clientId: "wua-sub", redirectUri: base.redirectUri, now: epochSeconds(1001) };
+      expect(redeemCode(r.par, { ...req, codeVerifier: bad })).toMatchObject({
+        ok: false,
+        error: "invalid_grant",
+        description: expect.stringMatching(/malformed/),
+      });
+      expect(redeemCode(r.par, { ...req, codeVerifier: verifier })).toMatchObject({ ok: false, reused: true });
+    }
+    const long = "a-._~" + "Z".repeat(123); // 128 karakter, bütün izinli sınıflar
+    const challenge = createHash("sha256").update(long, "ascii").digest("base64url");
+    const r = createPar({ ...base, codeChallenge: challenge });
+    if (!r.ok) throw new Error("par");
+    const code = mintCode(r.par, "subj", "T2", 1000);
+    expect(
+      redeemCode(r.par, {
+        code,
+        codeVerifier: long,
+        clientId: "wua-sub",
+        redirectUri: base.redirectUri,
+        now: epochSeconds(1001),
+      }),
+    ).toMatchObject({ ok: true });
+  });
   it("ADR-0062: eşlik kapsamı yalnız izin listesindeyse ve birincil türle birlikte", () => {
     const b = { ...base, authorizationDetails: undefined };
     const ok = createPar({ ...b, scope: "urn:id:1 urn:zk:1", allowedCompanionScopes: ["urn:zk:1"] });

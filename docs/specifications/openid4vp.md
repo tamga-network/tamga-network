@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-24
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -128,7 +128,7 @@ client identifier'ı zincir kaydına çözmeyi **denemek zorundadır.**
 | Prefix | Tamga |
 |---|---|
 | `x509_hash` | **Tek kabul edilen** (imzalı istek) — HAIP 1.0 §5; değer = base64url(SHA-256(yaprak sertifika DER)), OpenID4VP 1.0 §5.9.3; güven listesi kaydının `client_id`'siyle eşleşir |
-| `x509_san_dns` | **Reddedilir** ([[ADR-0034]]) — yanıt adresinin alanı yine imzalayan sertifikanın SAN'ında olmalıdır |
+| `x509_san_dns` | **Reddedilir** ([[ADR-0034]]) — yanıt adresinin alanı yine imzalayan sertifikanın SAN'ında olmalıdır. **Tamga profili notu (2026-10-24):** cüzdan (`@tamga-network/wallet-core`) yalnız `x509_hash` kabul eder ve `response_uri`'nin alan adının imzalayan sertifikanın SAN'ında olmasını ayrıca denetler (eski `x509_san_dns` kuralının devamı; yerel geliştirme istisnası yalnız çağıran açıkça açarsa); referans doğrulayıcı (`@tamga-network/verifier`) `x509_san_dns` kimliği üretmez ve işlemez. Bu bilinçli bir kısıttır: HAIP 1.0 §5 yalnız `x509_hash`'i zorunlu kılar; `x509_san_dns` desteği gerekirse ADR ile açılır |
 | `origin` | Yalnızca DC API akışında, izleyicide (§7) |
 | `redirect_uri` | **Reddedilir** — imzasız, zincire bağlanamaz |
 | `decentralized_identifier`, `openid_federation`, `verifier_attestation` | Genişleme aşaması |
@@ -578,6 +578,21 @@ Ayşe (cüzdan)                        İşveren (verifier)          İndeksleyi
 | `vp_formats_not_supported` | `dc+sd-jwt` desteklenmiyor |
 | `invalid_request_uri_method` | — |
 | `wallet_unavailable` | DC API'de cüzdan yok |
+
+## 10.1 Cüzdanın hata yanıtı ve sunumun tüketilmesi (2026-10-24)
+
+- **Ret `response_uri`'ye gider.** Kişi reddettiğinde cüzdan, `response_uri` biliyorsa (cihazlar arası akış) yanıt adresine
+  OpenID4VP 1.0 §8.4 hata yanıtını form olarak gönderir: yalnız `error=access_denied` ve `state` (şifresiz; kişisel veri yok;
+  `error_description` yok — PV5). Doğrulayıcı sunumu **kapatır**, sonucu REJECTED yazar ve neden saklamaz; aynı isteğe bir daha yanıt
+  verilemez. Tarayıcı (DC API) akışında yanıt adresi yoktur; ret DC API'nin kendi hata yoluyla sayfaya döner. Referans:
+  `@tamga-network/wallet-core` `declineRequest`.
+- **Sunum yalnız sahiplik kanıtı geçince tüketilir.** Doğrulayıcı bir şifreli yanıtı ancak KB-JWT / cihaz imzası (A6; ZK'da Z1)
+  geçtikten sonra sunumu tamamlayan yanıt sayar — B–E sonucu ne olursa olsun (iptal, kapsam aşımı). Öncesinde başarısız olan yanıt
+  (çözülemeyen gövde, `state` uyuşmazlığı, boş `vp_token`, A1–A6 reddi) sunumu **kapatmaz**: sunum kimliği QR'da açık olduğundan,
+  aksi hâlde yakındaki biri anlamsız bir gövdeyle gerçek kişinin sunumunu "reddedildi"ye düşürebilirdi. Böyle yanıtlar 400
+  `invalid_request` alır ve deneme sayılır; sunum başına **5** başarısız denemeden sonra sunum REJECTED ile kapanır (hız sınırı
+  ayrıca). Bekleyen sunumun durumunda deneme sayısı ve son başarısızlığın adımı görünür (`attempts`, `last_attempt`); değer yok.
+  Kurumun belge verme servisindeki satır içi kimlik sunumu (SPEC-PROTO-0001 §11.2) aynı kuralı uygular.
 
 **Değişmez PV5:** Kullanıcı reddettiğinde `access_denied` döner ve **sebep
 belirtilmez.** "Kullanıcının bu belgesi yok" ile "kullanıcı vermek

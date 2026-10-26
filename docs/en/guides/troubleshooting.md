@@ -41,6 +41,7 @@ lead to different decisions (AP2).
 | `SCHEMA_UNREACHABLE` | The credential type definition could not be fetched | Cache the schema catalogue in advance |
 | `CHAIN_UNREACHABLE` / `INDEXER_STALE` | The trust source could not be read, or is stale | Download the trust lists regularly; fetch the new list once `next_update` has passed |
 | `SDK_VERSION_MISMATCH` | The library version does not match the rule version | Update the `@tamga-network/*` packages |
+| `STATUS_VALUE_UNKNOWN` | The status-list value has no defined meaning (4/8-bit external list, application-specific value) | Ask the issuer about its list profile; does not occur for Tamga types |
 
 If the trust list is stale or cannot be downloaded, trust questions answer `UNKNOWN` and the result is always `INDETERMINATE`;
 never `ACCEPTED`, never `REJECTED`.

@@ -91,7 +91,7 @@ Bu, Aİ modeli ilə eyni balansdır. Layihə rəhbərliyi bunu qəbul etdi.
 | Kod | Qayda |
 |---|---|
 | AR1 | Səssiz yeniləmə yalnız yeniləmə tokeni olan sənədlər üçün, qurumun elan etdiyi həddə, tətbiq ön planda və kilid açıq olduqda və təsadüfi gecikmə ilə aparılır. |
-| AR2 | Yeniləmə tokeni sənədə xas DPoP açarına bağlıdır, birdəfəlikdir və hər istifadədə dəyişir; hər yeniləmədə cüzdan attestasiyası yoxlanılır. |
+| AR2 | Yeniləmə tokeni sənəd verilmə əməliyyatındakı müştəri nümunəsi açarına (WIA `cnf`; [[ADR-0060]] RT1) bağlıdır, birdəfəlikdir və hər istifadədə dəyişir; hər yeniləmədə eyni nümunə açarlı cüzdan attestasiyası yoxlanılır, DPoP açarı dəyişə bilər (RT2). |
 | AR3 | Qurum yeniləmə zamanı atributları səlahiyyətli mənbədən yenidən oxuyur; mənbədə qeyd yoxdursa, sənəd verilmir və token ləğv olunur. |
 | AR4 | Şəxsi sahələri saxlamayan xidmətlər (şəxsiyyət, əlaqə) yeniləmə tokeni vermir. Yeganə istisna ZK nüsxəsi tokenidir ([[ADR-0044]] ZC3: şəxsi sahələr serverdə saxlanmır). |
 
@@ -108,3 +108,6 @@ Bu, Aİ modeli ilə eyni balansdır. Layihə rəhbərliyi bunu qəbul etdi.
 **Accepted — 2026-09-29.** Layihə rəhbərliyinin təsdiqi ilə. DECISIONS: D-WALLET-1. İcra növbədədir.
 
 2026-10-09: AR4-ə ZK nüsxəsi tokeni istisnası əlavə edildi ([[ADR-0044]], D-ZK-2).
+
+2026-10-22: **K2 və AR2 [[ADR-0060]] ilə dəyişdi** — bağ DPoP açarından müştəri nümunəsi açarına (WIA `cnf`) keçdi; DPoP açarı
+yeniləmədə dəyişə bilər (D-PROTO-4). Seçimlər cədvəlindəki "DPoP + WUA bağlı" sətri tarixidir.

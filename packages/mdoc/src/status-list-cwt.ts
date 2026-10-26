@@ -15,8 +15,10 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { encode, decode, CborTag, type CborValue } from "./cbor.js";
 
 export const STATUS_LIST_CWT_TYP = "application/statuslist+cwt";
-/** Tamga'nın yayımladığı ve okuduğu `bits` değerleri (ADR-0048: kimlik servisi 1, kurumlar 2). */
+/** Tamga'nın YAYIMLADIĞI `bits` değerleri (ADR-0048: kimlik servisi 1, kurumlar 2). */
 export const STATUS_LIST_CWT_BITS: ReadonlySet<number> = new Set([1, 2]);
+/** Okunan `bits` değerleri (IETF Token Status List): dış kurumun listesi 4 ya da 8 bit olabilir; değer yorumu doğrulayıcıda. */
+export const STATUS_LIST_CWT_READ_BITS: ReadonlySet<number> = new Set([1, 2, 4, 8]);
 const HDR_ALG = 1;
 const HDR_TYP = 16;
 const HDR_X5CHAIN = 33;
@@ -178,7 +180,7 @@ export function parseStatusListCwt(
   const sl = c.get(CWT_STATUS_LIST);
   if (!(sl instanceof Map)) throw new Error("D3: status_list claim missing");
   const bits = sl.get("bits");
-  if (typeof bits !== "number" || !STATUS_LIST_CWT_BITS.has(bits)) throw new Error("D6: bits not 1 or 2");
+  if (typeof bits !== "number" || !STATUS_LIST_CWT_READ_BITS.has(bits)) throw new Error("D6: bits not 1, 2, 4 or 8");
   const lst = sl.get("lst");
   if (!(lst instanceof Uint8Array)) throw new Error("D3: status_list.lst is not a byte string");
   const ttl = c.get(CWT_TTL);

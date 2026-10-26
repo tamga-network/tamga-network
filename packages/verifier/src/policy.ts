@@ -68,7 +68,8 @@ export interface DcqlQuery {
       | { doctype_value: string }
       | { doctype_value: string; zk_system_type: ZkSystemType[] }
       | { mode: "single" | "multiple" };
-    claims: Array<{ path: Array<string | number | null>; values?: unknown[] }>;
+    /** İsteğe bağlı (OpenID4VP 1.0 §6.1); yoksa belgenin yalnız varlığı istenir. Boş dizi üretilmez. */
+    claims?: Array<{ path: Array<string | number | null>; values?: unknown[] }>;
     trusted_authorities?: Array<{ type: string; values: string[] }>;
   }>;
 }
@@ -90,7 +91,7 @@ export function dcqlFromPolicy(p: Policy, opts: { zkCircuits?: ZkCircuit[] } = {
           id: PSEUDONYM_QUERY_ID,
           format: "tamga-pseudonym" as const,
           meta: { mode: p.pseudonym.mode === "multiple" ? ("multiple" as const) : ("single" as const) },
-          claims: [],
+          // OpenID4VP 1.0 §6.1: `claims` isteğe bağlıdır; boş dizi yazılmaz (takma ad sorgusunun alanı yoktur)
         },
       ]
     : [];
@@ -121,6 +122,11 @@ export function dcqlFromPolicy(p: Policy, opts: { zkCircuits?: ZkCircuit[] } = {
         const sdPath = (name: string): Array<string | number> =>
           (name.match(/[^.[\]]+|\[\d+\]/g) ?? [name]).map((t) => (t.startsWith("[") ? Number(t.slice(1, -1)) : t));
         const path = (name: string) => (mdoc ? [c.namespace!, name] : sdPath(name));
+        const claims = c.required_claims.map((name) => {
+          const cons = c.constraints?.[name];
+          const isEq = cons !== undefined && (typeof cons !== "object" || cons === null);
+          return isEq ? { path: path(name), values: [cons] } : { path: path(name) };
+        });
         return {
           id: c.id,
           format: zk ? ("mso_mdoc_zk" as const) : mdoc ? ("mso_mdoc" as const) : ("dc+sd-jwt" as const),
@@ -129,11 +135,8 @@ export function dcqlFromPolicy(p: Policy, opts: { zkCircuits?: ZkCircuit[] } = {
             : mdoc
               ? { doctype_value: c.vct_values[0] }
               : { vct_values: c.vct_values },
-          claims: c.required_claims.map((name) => {
-            const cons = c.constraints?.[name];
-            const isEq = cons !== undefined && (typeof cons !== "object" || cons === null);
-            return isEq ? { path: path(name), values: [cons] } : { path: path(name) };
-          }),
+          // OpenID4VP 1.0 §6.1: alan istenmiyorsa (yalnız belgenin varlığı) `claims` yazılmaz — boş dizi hiçbir zaman gitmez
+          ...(claims.length ? { claims } : {}),
           ...(c.trusted_authorities?.length ? { trusted_authorities: c.trusted_authorities } : {}),
         };
       }),

@@ -5,6 +5,24 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { randomBytes } from "node:crypto";
+
+/**
+ * CSP nonce'u (güvenlik turu S9): her istek için `app.ts` onRequest kancası yeni bir nonce üretir ve isteğin bütün işlenişini bu
+ * bağlamda koşturur; sayfa iskeleti ve sayfalar satır içi `<script>` etiketlerine `nonceAttr()` ile aynı değeri yazar, onSend
+ * kancası başlığa `'nonce-…'` koyar. Nonce şablonlara dışarıdan gelmez (yer tutucu değiştirme yok): sayfaya ham HTML sokabilen
+ * biri nonce'u bilemez.
+ */
+const nonceStore = new AsyncLocalStorage<string>();
+export const runWithCspNonce = <T>(fn: () => T): T => nonceStore.run(randomBytes(16).toString("base64"), fn);
+/** İstek bağlamındaki nonce (bağlam dışında — ör. testte doğrudan sayfa üretimi — undefined). */
+export const cspNonce = (): string | undefined => nonceStore.getStore();
+/** Satır içi `<script…>` için öznitelik: ` nonce="…"` ya da boş. */
+export const nonceAttr = (): string => {
+  const n = cspNonce();
+  return n ? ` nonce="${n}"` : "";
+};
 
 const BRAND_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../ops/brand");
 const read = (f: string) => {
@@ -59,7 +77,7 @@ export function brandPage(o: { lang: Lang; title: string; host: string; body: st
   const [ts, tl, td] = tr ? ["Sistem", "Açık", "Koyu"] : ["System", "Light", "Dark"];
   return `<!doctype html><html lang="${o.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escHtml(o.title)}</title><meta name="description" content="${tr ? "Tamga'nın barındırılan doğrulayıcısı: ağın kurallarına uyan cüzdanlardan belge ister ve doğrular (OpenID4VP)." : "Tamga's hosted verifier: requests and verifies credentials from wallets that follow the network's rules (OpenID4VP)."}"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1E5A78" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#101820" media="(prefers-color-scheme: dark)">${o.headExtra ?? ""}
-<script>try{const t=localStorage.getItem("tamga.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch{}</script>
+<script${nonceAttr()}>try{const t=localStorage.getItem("tamga.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch{}</script>
 <style>${CSS}</style></head><body>
 <header class="bar"><div class="shell">
 <a class="brand" href="https://tamga.network" aria-label="Tamga Network"><svg width="30" height="30" viewBox="${MARK_HEADER.vb}" aria-hidden="true">${MARK_HEADER.body}</svg><span class="words"><b>Tamga</b><small>Network</small></span></a>
@@ -71,5 +89,5 @@ export function brandPage(o: { lang: Lang; title: string; host: string; body: st
 </div></div></div></header>
 <main class="shell" style="padding-block:40px 0">${o.body}</main>
 <footer><div class="shell"><span>© Tamga Network</span><a href="https://tamga.network">tamga.network</a><a href="https://docs.tamga.network">${tr ? "Geliştirici belgeleri" : "Developer docs"}</a><a href="https://trust.tamga.network">${tr ? "Güven listeleri" : "Trusted lists"}</a></div></footer>
-<script>${JS}</script></body></html>`;
+<script${nonceAttr()}>${JS}</script></body></html>`;
 }

@@ -305,7 +305,7 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
 
   it("DCQL: iç içe yol diziye çevrilir (address.locality → [address, locality])", () => {
     const q = dcqlFromPolicy(policy);
-    expect(q.credentials[0].claims.map((c) => c.path)).toEqual([
+    expect(q.credentials[0].claims!.map((c) => c.path)).toEqual([
       ["given_name"],
       ["address", "locality"],
       ["nationalities"],

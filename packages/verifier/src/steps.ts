@@ -163,6 +163,8 @@ export function stepB(ctx: VerifyCtx): StepFail | undefined {
   }
   // SPEC-CRED-0002/C13: Tamga türü (kataloğda) yalnız dc+sd-jwt; eski vc+sd-jwt yalnız dış türlerde kabul (SD-JWT VC -13)
   if (a.sdJwtTyp === "vc+sd-jwt") return reject("A2", "typ=vc+sd-jwt is not accepted for Tamga credential types (C13)");
+  // SPEC-CRED-0002/C2: Tamga türü `_sd_alg`'ı açıkça taşır; RFC 9901 varsayılanı (alan yok) yalnız dış türlerde kabul
+  if (a.sdAlgPresent === false) return reject("A4", "_sd_alg missing (required for Tamga credential types, C2)");
   ctx.schemaInfo.status = schemaRec.status;
   ctx.done.push("B2");
   const def = SCHEMA_DEFS.find((d) => d.vct === a.vct);
@@ -418,6 +420,17 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   } catch (e) {
     return reject("D6", (e as Error).message);
   }
+  // IETF Token Status List: 0x00 VALID, 0x01 INVALID, 0x02 SUSPENDED; 0x03 ve 0x0B–0x0F uygulamaya özel, ötekiler tanımsız — 4/8
+  // bitlik (dış) listelerde gelebilir. Anlamı bilinmeyen değer RED değil DOĞRULANAMADI'dır (AP2): belgenin iptal edildiği
+  // söylenemez, geçerli olduğu da.
+  if (bit > 2) {
+    ctx.status = { value: "UNKNOWN", list_version: listVersion, token_age_sec: age };
+    return indet(
+      "D6",
+      "STATUS_VALUE_UNKNOWN",
+      `status value 0x${bit.toString(16).padStart(2, "0")} has no defined meaning`,
+    );
+  }
   // ADR-0048 SU2: askısı olmayan türde (şema `suspension_allowed` taşımıyor) 0x02 bozuk liste değeridir — askı sayılmaz, RED
   const noSuspension = bit === 2 && suspensionAllowed(a.vct) === false;
   ctx.status = {
@@ -640,12 +653,14 @@ async function formatStep(input: VerifyInput, now: EpochSeconds): Promise<Format
     rootCertsDer: input.rootCertsDer,
     requireKb: true,
     allowMissingVctIntegrity: true, // B4 karar verir: Tamga türünde zorunlu, dış türde (AB PID) isteğe bağlı
+    allowMissingSdAlg: true, // RFC 9901 §4.1.1 varsayılanı sha-256; B adımı karar verir: Tamga türünde zorunlu (C2), dış türde isteğe bağlı
   });
   if (!r.ok) return { ok: false, failedStep: r.failedStep, reason: r.reason };
   return {
     ok: true,
     format: "dc+sd-jwt",
     sdJwtTyp: r.typ,
+    sdAlgPresent: r.sdAlgPresent,
     issuerId: r.issuerId,
     vct: r.vct,
     vctIntegrity: r.vctIntegrity,

@@ -435,10 +435,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
     const s = await sdJwtVectors();
     const i = await identityVectors();
     const l = await statusListVectors();
-    // 6: ADR-0056 güvenli varsayılanlar (zorunlu güvenlik girdileri, iptal listesi imzacısı sabit); 5: ADR-0048 iptal listesi
-    // bits 1/2 ve CWT gösterimi (4: ADR-0045 kimlik belgesi AB PID adları; 3: SPEC-CRED-0002 §3.5 disclosure serileştirme;
-    // 2: ADR-0034 dns_name, x509_hash)
-    writeFileSync(resolve(OUT, "VERSION"), "6\n");
+    // 7: protokol incelemesi 2026-10-24 — doğrulayıcı iptal listesi bits 4/8'i okur (0/1/2 dışı değer DOĞRULANAMADI), `_sd_alg`
+    // dış türde isteğe bağlı, DCQL'de boş `claims` yok, `vp_formats_supported` yalnız sorgudaki biçimler; 6: ADR-0056 güvenli
+    // varsayılanlar (zorunlu güvenlik girdileri, iptal listesi imzacısı sabit); 5: ADR-0048 iptal listesi bits 1/2 ve CWT gösterimi
+    // (4: ADR-0045 kimlik belgesi AB PID adları; 3: SPEC-CRED-0002 §3.5 disclosure serileştirme; 2: ADR-0034 dns_name, x509_hash)
+    writeFileSync(resolve(OUT, "VERSION"), "7\n");
     console.log(
       JSON.stringify({ trust_cases: t, sd_jwt_cases: s, identity_cases: i, status_lists: l, out: OUT }, null, 2),
     );

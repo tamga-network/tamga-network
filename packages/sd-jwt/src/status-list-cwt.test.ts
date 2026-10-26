@@ -61,14 +61,23 @@ describe("bits = 1 (ADR-0048 K1)", () => {
     expect(() => bs.get(16)).toThrow(/^D6: idx outside/);
   });
 
-  it("set/get; 1 bite sığmayan değer (askı) yazılamaz; bayt dizisi kapasite/8", () => {
+  it("set/get; 1 bite sığmayan değer (askı) yazılamaz; bayt dizisi kapasite/8", async () => {
     const bs = new StatusBitstring(MIN_CAPACITY, undefined, 1);
     expect(bs.bytes.length).toBe(MIN_CAPACITY / 8);
     bs.set(9, StatusValue.INVALID);
     expect(bs.get(9)).toBe(StatusValue.INVALID);
     expect(bs.get(8)).toBe(StatusValue.VALID);
     expect(() => bs.set(1, StatusValue.SUSPENDED)).toThrow(/1 bits/);
-    expect(() => new StatusBitstring(MIN_CAPACITY, undefined, 4 as 1)).toThrow(/bits must be 1 or 2/);
+    // okuma tarafı IETF'nin bütün değerlerini ayrıştırır (dış listeler 4/8 bit olabilir); 3 geçersiz
+    expect(() => new StatusBitstring(MIN_CAPACITY, undefined, 3 as 1)).toThrow(/bits must be 1, 2, 4 or 8/);
+    const wide = new StatusBitstring(MIN_CAPACITY, undefined, 8);
+    wide.set(7, 0x0b as StatusValue); // uygulamaya özel değer (0x0B–0x0F) yazılıp okunur; yorumu doğrulayıcıda (DOĞRULANAMADI)
+    expect(wide.get(7)).toBe(0x0b);
+    expect(wide.bytes.length).toBe(MIN_CAPACITY);
+    // Tamga türleri yalnız 1 ya da 2 bitle YAYIMLAR (ADR-0048 / ADR-0063 BL2)
+    await expect(
+      signStatusListToken({ signer, iss: "x", uri: JWT_URI, bitstring: wide, iat: NOW, ttlSec: 120 }),
+    ).rejects.toThrow(/bits must be 1 or 2/);
   });
 
   it("JWT gösterimi bits = 1 taşır ve doğrulanır", async () => {
@@ -158,16 +167,21 @@ describe("CWT gösterimi (ADR-0048 K3)", () => {
     await expect(verifyStatusListCwt(new Uint8Array([0xd2, 0x84, 0xff]), CWT_URI, NOW, { ...PIN })).rejects.toThrow(
       /^D4:/,
     );
-    // bits = 4: imzalı ama Tamga'nın okumadığı değer
+    // bits = 4 ve 8: IETF değerleri; Tamga yayımlamaz ama (dış listeler için) okur — bits = 3 geçersiz (D6)
     const top = decode(cwt) as CborTag;
     const [prot, unp, payload] = top.value as [Uint8Array, unknown, Uint8Array, Uint8Array];
-    const c = decode(payload) as Map<number, unknown>;
-    (c.get(65533) as Map<string, unknown>).set("bits", 4);
-    const p2 = encode(c as never);
-    const tbs = encode(["Signature1", prot, new Uint8Array(0), p2]);
-    const sig = await signer.signRaw!(tbs);
-    const four = encode(new CborTag(18, [prot, unp, p2, sig]) as never);
-    await expect(verifyStatusListCwt(four, CWT_URI, NOW, { ...PIN })).rejects.toThrow(/^D6: bits/);
+    const rebits = async (bits: number) => {
+      const c = decode(payload) as Map<number, unknown>;
+      (c.get(65533) as Map<string, unknown>).set("bits", bits);
+      const p2 = encode(c as never);
+      const tbs = encode(["Signature1", prot, new Uint8Array(0), p2]);
+      const sig = await signer.signRaw!(tbs);
+      return encode(new CborTag(18, [prot, unp, p2, sig]) as never);
+    };
+    const four = await verifyStatusListCwt(await rebits(4), CWT_URI, NOW, { ...PIN });
+    expect(four.bitstring.bits).toBe(4);
+    expect((await verifyStatusListCwt(await rebits(8), CWT_URI, NOW, { ...PIN })).bitstring.bits).toBe(8);
+    await expect(verifyStatusListCwt(await rebits(3), CWT_URI, NOW, { ...PIN })).rejects.toThrow(/^D6: bits/);
   });
 
   it("verifyStatusListAny: önbellekteki `b64u:` gövde CWT, metin gövde JWT olarak doğrulanır", async () => {

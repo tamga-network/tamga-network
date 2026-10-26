@@ -64,8 +64,9 @@ qüvvədədir: şəbəkə mövcuddur, təsadüfi gecikmə; istifadəçi ayarı (
 təqdimatından istifadə etmək mümkün olmur (klassik təqdimat davam edir).
 
 ## K3 — Yeniləmə yolu və şəxsi məlumatlar
-- Yeniləmə OpenID4VCI yeniləmə tokeni ilə aparılır; token ilk verilmədəki [[t:DPoP]] açarına və rəqəmsal cüzdanın təsdiqinə
-  ([[t:WUA]]) bağlıdır, birdəfəlikdir və hər istifadədə dəyişir ([[ADR-0023]] K2, AR2).
+- Yeniləmə OpenID4VCI yeniləmə tokeni ilə aparılır; token ~~ilk verilmədəki [[t:DPoP]] açarına~~ **([[ADR-0060]] ilə dəyişdi,
+  2026-10-22) ilk verilmədəki müştəri nümunəsi açarına (WIA `cnf`)** və rəqəmsal cüzdanın təsdiqinə ([[t:WUA]]) bağlıdır,
+  birdəfəlikdir və hər istifadədə dəyişir ([[ADR-0023]] K2, AR2); DPoP açarı yeniləmədə dəyişə bilər.
 - Şəxsiyyət xidməti şəxsi sahələri **saxlamır** ([[ADR-0011]] K4). ZK nüsxəsinə daxil ediləcək minimum sahələr tokenin içində, yalnız
   şəxsiyyət xidmətinin aça biləcəyi şəkildə şifrələnmiş və imzalanmış halda ötürülür; token rəqəmsal cüzdanda qalır, serverdə qeyd aparılmır.
 - Token əsas şəxsiyyət sənədinin ləğv siyahısındakı qeydinə bağlıdır. Şəxsiyyət xidməti hər yeniləmədə bu qeydin statusunu öz
@@ -111,6 +112,9 @@ qiymətləndirilir (seçim B).
 # Status
 
 **Accepted — 2026-10-09.** Layihə rəhbərliyinin təsdiqi ilə, Aİ-nin təklif etdiyi yol olması şərtilə (K6). DECISIONS: D-ZK-2.
+
+2026-10-22: **K3 [[ADR-0060]] ilə dəyişdi** — tokenin bağı DPoP açarından müştəri nümunəsi açarına (WIA `cnf`, tokendə `ijk`) keçdi
+(D-PROTO-4). 2026-10-23: token yalnız ZK nüsxəsi əhatəsi də istənildikdə verilir ([[ADR-0062]], D-ZK-3).
 
 *Tətbiq (2026-10-09, paketlər 0.4.0):* K1 işarəsi ayrıca sənəd növüdür — `urn:tamga:id:ShortLivedIdentityAttestation:1`
 (kataloqda; növ qaydası ≤ 24 saat, ləğv siyahısı yoxdur; ictimai ad layihə rəhbərliyinin təsdiqini gözləyir, kodda tək sabitdədir).

@@ -90,6 +90,12 @@ export interface VerifyOptions {
    * Tamga türleri için zorunlu (ADR-0010). true ise eksik `vct#integrity` → `vctIntegrity: null` (B4 doğrulayıcıda karar verir).
    */
   allowMissingVctIntegrity?: boolean;
+  /**
+   * RFC 9901 §4.1.1: `_sd_alg` isteğe bağlıdır, yoksa `sha-256` sayılır. Varsayılan false: Tamga türleri alanı açıkça taşır (C2;
+   * SPEC-CRED-0002). true ise eksik `_sd_alg` sha-256 varsayılır ve sonuçta `sdAlgPresent: false` döner — doğrulayıcı B adımında
+   * türe göre karar verir (Tamga türünde zorunlu, dış türde — AB PID — isteğe bağlı). Değer varsa yine yalnız `sha-256`.
+   */
+  allowMissingSdAlg?: boolean;
   requireKb?: boolean; // varsayılan true (C8); ihraç biçimini doğrulamak için false
   /**
    * A7 (`exp`/`nbf`) atlanır — yalnız belgenin GEÇERLİ olması değil, bu belge verene ait olup kişide bulunduğunun kanıtlanması
@@ -112,6 +118,8 @@ export interface VerifyOk {
   typ: typeof SD_JWT_TYP | typeof LEGACY_SD_JWT_TYP;
   /** `vct#integrity`; yalnız `allowMissingVctIntegrity` ile null olabilir */
   vctIntegrity: string | null;
+  /** `_sd_alg` gövdede açıkça var mıydı (yalnız `allowMissingSdAlg` ile false olabilir; o zaman sha-256 varsayıldı) */
+  sdAlgPresent: boolean;
   iat: number;
   exp?: number;
   status?: { status_list: { idx: number; uri: string } };
@@ -231,8 +239,10 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
       return fail("A3", "x5c intermediate not valid at the time of issuance");
   done.push("A3");
 
-  // A4 — _sd_alg
-  if (payload._sd_alg !== SD_ALG) return fail("A4", `_sd_alg=${String(payload._sd_alg)} (C2)`);
+  // A4 — _sd_alg: yalnız sha-256; eksikse (RFC 9901 §4.1.1 varsayılanı) ancak çağıran izin verdiyse kabul (dış türler, B adımı)
+  const sdAlgPresent = payload._sd_alg !== undefined;
+  if (!sdAlgPresent && !opt.allowMissingSdAlg) return fail("A4", "_sd_alg missing (C2)");
+  if (sdAlgPresent && payload._sd_alg !== SD_ALG) return fail("A4", `_sd_alg=${String(payload._sd_alg)} (C2)`);
   done.push("A4");
 
   // A5 — disclosure'lar: önce hash, sonra çöz (C4/C14); iç içe nesne ve dizi öğeleri (RFC 9901 §7.1); her disclosure tam bir
@@ -292,6 +302,7 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
     vct: payload.vct as string,
     typ: header.typ === LEGACY_SD_JWT_TYP ? LEGACY_SD_JWT_TYP : SD_JWT_TYP,
     vctIntegrity: typeof payload["vct#integrity"] === "string" ? (payload["vct#integrity"] as string) : null,
+    sdAlgPresent,
     iat: payload.iat as number,
     exp: payload.exp as number | undefined,
     status: payload.status as VerifyOk["status"],

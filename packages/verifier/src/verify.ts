@@ -61,7 +61,9 @@ export type IndeterminateReason =
   | "STATUS_STALE"
   | "CHAIN_UNREACHABLE"
   | "INDEXER_STALE"
-  | "SDK_VERSION_MISMATCH";
+  | "SDK_VERSION_MISMATCH"
+  /** D6: iptal listesindeki değerin tanımlı anlamı yok (IETF 0x03 / 0x0B–0x0F uygulamaya özel; 4/8 bitlik dış listeler) */
+  | "STATUS_VALUE_UNKNOWN";
 
 export interface VerificationResult {
   verification_id: string;

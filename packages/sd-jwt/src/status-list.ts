@@ -35,9 +35,14 @@ export const STATUS_TYP = "statuslist+jwt";
 export { STATUS_LIST_CWT_TYP };
 /** Kurum listelerinin bit sayısı (varsayılan). Kimlik servisi `bits = 1` kullanır (ADR-0048 K1). */
 export const BITS = 2;
-/** Yayımlanan ve okunan `bits` değerleri. */
-export type StatusBits = 1 | 2;
+/**
+ * Tamga türlerinin YAYIMLADIĞI `bits` değerleri (ADR-0048: kimlik servisi 1, kurumlar 2). Okuma tarafı (doğrulayıcı) IETF Token
+ * Status List'in bütün değerlerini (1, 2, 4, 8) ayrıştırır: dış kurumun (AB PID / EAA, ADR-0036) listesi 4 ya da 8 bit olabilir;
+ * 0, 1, 2 dışındaki değerler doğrulayıcıda DOĞRULANAMADI'dır (uygulamaya özel durum; RED değil).
+ */
+export type StatusBits = 1 | 2 | 4 | 8;
 export const STATUS_BITS: ReadonlySet<number> = new Set([1, 2]);
+export const READ_STATUS_BITS: ReadonlySet<number> = new Set([1, 2, 4, 8]);
 export const MIN_CAPACITY = 100_000;
 export const MAX_FILL = 0.8;
 /** Kabul edilen en büyük liste (girdi sayısı): 10 milyon × 2 bit = 2,5 MB açılmış liste. */
@@ -62,7 +67,7 @@ export class StatusBitstring {
   ) {
     if (!Number.isInteger(capacity) || capacity < MIN_CAPACITY) throw new Error(`S10: kapasite ≥ ${MIN_CAPACITY}`);
     if (capacity > MAX_CAPACITY) throw new Error(`status list capacity above ${MAX_CAPACITY}`);
-    if (!STATUS_BITS.has(bits)) throw new Error("status list bits must be 1 or 2");
+    if (!READ_STATUS_BITS.has(bits)) throw new Error("status list bits must be 1, 2, 4 or 8");
     this.bytes = bytes ?? new Uint8Array(Math.ceil((capacity * bits) / 8));
   }
   /** Bayt dizisinin taşıdığı girdi sayısı (liste dışı indeks denetimi). */
@@ -156,6 +161,8 @@ export interface StatusListTokenInput {
   expSec?: number;
 }
 export async function signStatusListToken(i: StatusListTokenInput): Promise<string> {
+  // ADR-0048 / ADR-0063 BL2: Tamga türlerinin listesi yalnız 1 ya da 2 bitle yayımlanır (4/8 yalnız okunur)
+  if (!STATUS_BITS.has(i.bitstring.bits)) throw new Error("status list bits must be 1 or 2 (Tamga types)");
   const expSec = i.expSec ?? i.ttlSec * 2;
   if (!Number.isInteger(expSec) || expSec < 2 * i.ttlSec) throw new Error("status token exp must be ≥ 2 × ttl");
   const payload = {
@@ -219,7 +226,7 @@ export async function verifyStatusListToken(
   const payload = JSON.parse(new TextDecoder().decode(raw)) as VerifiedStatusToken["payload"];
   if (payload.sub !== expectedUri) throw new Error("D3: sub ≠ status uri");
   const bits = payload.status_list?.bits;
-  if (typeof bits !== "number" || !STATUS_BITS.has(bits)) throw new Error("D6: bits not 1 or 2");
+  if (typeof bits !== "number" || !READ_STATUS_BITS.has(bits)) throw new Error("D6: bits not 1, 2, 4 or 8");
   if (typeof payload.status_list.lst !== "string") throw new Error("D3: status_list.lst missing");
   if (typeof payload.iat !== "number" || !Number.isFinite(payload.iat)) throw new Error("D3: status token iat missing");
   if (payload.iat > now + clockSkewOption("maxSkewSec", opts.maxSkewSec, STATUS_IAT_SKEW_SEC))

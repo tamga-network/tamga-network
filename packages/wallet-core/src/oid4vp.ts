@@ -154,10 +154,21 @@ const REQUEST_AUD = "https://self-issued.me/v2";
 /** İstek nesnesi zaman denetimlerinde saat kayması toleransı (sn). */
 const REQUEST_CLOCK_SKEW_SEC = 60;
 
+export interface VerifyRequestOptions {
+  /** Digital Credentials API: çağıran sayfanın kökeni (verilirse istek tarayıcıdan gelmiş sayılır — Ek A denetimleri). */
+  origin?: string;
+  now?: number;
+  /**
+   * Yerel geliştirme istisnası (güvenlik turu S11): `response_uri` localhost / özel ağ IP'si ise SAN eşleşmesi aranmaz. Varsayılan
+   * KAPALI — uygulama yalnız geliştirme derlemesinde ya da sandbox ağında açar; mağaza derlemesi gerçek ağda açamaz.
+   */
+  allowLocalDevHost?: boolean;
+}
+
 export function verifyRequestObject(
   jwt: string,
   expectedClientId?: string,
-  opts: { origin?: string; now?: number } = {},
+  opts: VerifyRequestOptions = {},
 ): VpRequest {
   const d = decodeJwt(jwt);
   if (d.header.typ !== REQUEST_TYP) throw new WalletError("unsupported", `request typ=${String(d.header.typ)}`);
@@ -222,7 +233,7 @@ export function verifyRequestObject(
   if (!dcApi && typeof p.response_uri !== "string") throw new WalletError("unsupported", "response_uri missing");
   // Tamga profili (ADR-0034, eski x509_san_dns kuralının devamı): yanıt adresi, isteği imzalayan sertifikanın SAN'ındaki bir alan
   // adına ait olmalı — kayıtlı bir sertifikayla imzalanmış istek verileri başka bir sunucuya yönlendiremez. Yerel geliştirme
-  // (localhost / özel ağ IP'si) istisnadır.
+  // (localhost / özel ağ IP'si) istisnası yalnız çağıran açıkça isterse (`allowLocalDevHost`; S11).
   if (!dcApi) {
     let host: string;
     try {
@@ -230,7 +241,7 @@ export function verifyRequestObject(
     } catch {
       throw new WalletError("unsupported", "invalid response_uri");
     }
-    if (!certHasDnsName(leafDer, host) && !isLocalDevHost(host))
+    if (!certHasDnsName(leafDer, host) && !(opts.allowLocalDevHost === true && isLocalDevHost(host)))
       throw new WalletError("unsupported", "response address does not belong to the domain that signed the request");
   }
   const obo = p.tamga_on_behalf_of;
@@ -265,7 +276,11 @@ export function verifyRequestObject(
  */
 export const DC_API_PROTOCOL = "openid4vp-v1-signed";
 export { DC_API_MDOC_PROTOCOL };
-export function parseDcApiRequest(req: { protocol?: unknown; data?: unknown }, origin: string): VpRequest {
+export function parseDcApiRequest(
+  req: { protocol?: unknown; data?: unknown },
+  origin: string,
+  opts: Pick<VerifyRequestOptions, "allowLocalDevHost" | "now"> = {},
+): VpRequest {
   if (req.protocol === DC_API_MDOC_PROTOCOL) return parseDcApiMdocRequest(req.data, origin);
   if (req.protocol !== DC_API_PROTOCOL)
     throw new WalletError("unsupported", `unsupported protocol: ${String(req.protocol)}`);
@@ -281,7 +296,7 @@ export function parseDcApiRequest(req: { protocol?: unknown; data?: unknown }, o
   if (typeof jwt !== "string") throw new WalletError("unsupported", "signed request missing");
   if (!/^https:\/\/[^/]+$/.test(origin) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
     throw new WalletError("unsupported", "invalid calling origin");
-  return verifyRequestObject(jwt, undefined, { origin });
+  return verifyRequestObject(jwt, undefined, { ...opts, origin });
 }
 
 // ---- Kayıt çözümü (PV2) — imzası doğrulanmış ulusal listeden (`fetchRpRecord` → `fetchTrustSource`, S-13; LOTL imzacı pinleri)
@@ -1055,6 +1070,37 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
     /* boş gövde olabilir */
   }
   return { status: r.status, redirectUri, vpToken, passGrant, showUrl }; // passGrant: ADR-0012 B (geçiş kartı) · showUrl: ADR-0012 C (kontrol görünümü, 5 dk)
+}
+
+/**
+ * Kişi isteği reddetti (SPEC-PROTO-0002 §10, PV5): doğrulayıcıya yalnız `error=access_denied` ve `state` gider (OpenID4VP 1.0
+ * §8.4 hata yanıtı; `response_uri`'ye form olarak — şifresiz, çünkü kişisel veri yok). Neden, hangi belgenin olmadığı ya da
+ * eşleşmediği SÖYLENMEZ. Doğrulayıcı sunumu kapatır; aynı isteğe bir daha yanıt verilemez. Tarayıcı (DC API) akışında yanıt adresi
+ * yoktur: çağıran reddi DC API'nin kendi yoluyla bildirir (burada POST yok, `status: 0`). Ağ hatası fırlatılmaz: red zaten yerel
+ * karardır, doğrulayıcıya ulaşmaması kişiyi etkilemez.
+ */
+export async function declineRequest(
+  request: Pick<VpRequest, "responseUri" | "state" | "origin">,
+  http: Http,
+): Promise<{ status: number; redirectUri?: string }> {
+  if (request.origin || !request.responseUri) return { status: 0 };
+  const body = `error=access_denied${request.state ? `&state=${encodeURIComponent(request.state)}` : ""}`;
+  try {
+    const r = await http(request.responseUri, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    let redirectUri: string | undefined;
+    try {
+      redirectUri = ((await readJson(r, "verifier")) as { redirect_uri?: string }).redirect_uri;
+    } catch {
+      /* boş gövde olabilir */
+    }
+    return { status: r.status, redirectUri };
+  } catch {
+    return { status: 0 };
+  }
 }
 
 /**

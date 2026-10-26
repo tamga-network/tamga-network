@@ -119,6 +119,22 @@ export function responseKidOf(jwe: string): { presentationId: string; path: Resp
   }
 }
 
+/**
+ * OpenID4VP 1.0 §5.1 `vp_formats_supported`: yalnız bu isteğin DCQL sorgusunda geçen biçimler ilan edilir (cüzdan ilan edilen ama
+ * istenmeyen bir biçime göre karar vermesin; sorgu ile metadata aynı şeyi söyler). Takma ad sorgusu (`tamga-pseudonym`) bir sunum
+ * biçimi değildir. Sorguda hiçbir sunum biçimi yoksa (yalnız takma ad) alan zorunlu olduğu için `dc+sd-jwt` yazılır.
+ */
+export function vpFormatsFor(dcql: DcqlQuery): Record<string, Record<string, unknown>> {
+  const used = new Set(dcql.credentials.map((c) => c.format));
+  const out: Record<string, Record<string, unknown>> = {};
+  if (used.has("dc+sd-jwt") || ![...used].some((f) => f === "mso_mdoc" || f === "mso_mdoc_zk"))
+    out["dc+sd-jwt"] = { "sd-jwt_alg_values": ["ES256"], "kb-jwt_alg_values": ["ES256"] };
+  if (used.has("mso_mdoc")) out.mso_mdoc = { issuerauth_alg_values: [-7], deviceauth_alg_values: [-7] }; // COSE ES256
+  // ADR-0032: sıfır bilgi ispatlı mdoc (AB TS13); kabul edilen devreler DCQL `meta.zk_system_type`'ta
+  if (used.has("mso_mdoc_zk")) out.mso_mdoc_zk = { issuerauth_alg_values: [-7] };
+  return out;
+}
+
 export async function createPresentationRequest(p: {
   signer: RpSigner;
   dcql: DcqlQuery;
@@ -179,12 +195,7 @@ export async function createPresentationRequest(p: {
       client_metadata: {
         jwks: { keys: [jwk] },
         encrypted_response_enc_values_supported: [...RESPONSE_ENC],
-        vp_formats_supported: {
-          "dc+sd-jwt": { "sd-jwt_alg_values": ["ES256"], "kb-jwt_alg_values": ["ES256"] },
-          mso_mdoc: { issuerauth_alg_values: [-7], deviceauth_alg_values: [-7] }, // COSE ES256
-          // ADR-0032: sıfır bilgi ispatlı mdoc (AB TS13); kabul edilen devreler DCQL `meta.zk_system_type`'ta
-          mso_mdoc_zk: { issuerauth_alg_values: [-7] },
-        },
+        vp_formats_supported: vpFormatsFor(p.dcql),
       },
       ...(p.purpose ? { purpose: p.purpose } : {}),
       ...(p.registrationCert ? { verifier_info: [{ format: "registration_cert", data: p.registrationCert }] } : {}),

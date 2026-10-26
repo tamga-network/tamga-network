@@ -238,6 +238,7 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
 | `CHAIN_UNREACHABLE` | Chain and indexer unreachable |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
 | `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; also at `Z1` when the verifier's own ZK component is unavailable (circuit file missing, WASM cannot be loaded) — the verifier's shortcoming, not the presentation's |
+| `STATUS_VALUE_UNKNOWN` | `D6`: the value in the status list has no defined meaning — IETF Token Status List 0x03 and 0x0B–0x0F are application-specific, the rest undefined; can occur in 4- or 8-bit (external) lists (2026-10-24). The credential can be called neither revoked nor valid; `status.value = UNKNOWN`. Tamga types publish their lists with 1 or 2 bits ([[ADR-0048]], [[ADR-0063]]) |
 
 The following also give `INDETERMINATE`, not `REJECTED`:
 

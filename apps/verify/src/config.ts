@@ -46,9 +46,18 @@ export const sandboxSampleSiteUrl = (live: boolean | undefined, lang: "en" | "tr
 export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")): VerifyConfig {
   loadServiceEnv([resolve(root, "apps/verify/.env"), resolve(root, ".env"), resolve(root, "../tamga-platform/.env")]);
   const e = process.env;
+  const network = networkOf(e);
+  const publicBase = (e.TAMGA_VERIFY_BASE ?? "http://localhost:4004").replace(/\/$/, "");
+  // Güvenlik turu S3 / ADR-0017 K6: gerçek ağda (HTTPS yayın adresi, sandbox değil) RP beyanı her zaman zorunlu — ayar
+  // unutulsa ya da 0 yazılsa da sıkı kip; eski beyansız yol yalnız yerelde (http) ve sandbox'ta açılabilir
+  const production = publicBase.startsWith("https://") && network !== "sandbox";
+  if (production && e.TAMGA_VERIFY_REQUIRE_RP_AUTH === "0")
+    console.warn(
+      "[verify] TAMGA_VERIFY_REQUIRE_RP_AUTH=0 is ignored on the production network (ADR-0017 K6) — strict mode on",
+    );
   return {
-    network: networkOf(e),
-    publicBase: (e.TAMGA_VERIFY_BASE ?? "http://localhost:4004").replace(/\/$/, ""),
+    network,
+    publicBase,
     port: Number(e.TAMGA_VERIFY_PORT ?? 4004),
     clientId: "", // app.ts: imzacının sertifikasından (x509_hash)
     pkiDir: resolve(root, e.TAMGA_PKI_DIR ?? "ops/pki"),
@@ -57,7 +66,7 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
     trustReloadSec: Number(e.TAMGA_VERIFY_TRUST_RELOAD_SEC ?? 60),
     statusPrefetchSec: Number(e.TAMGA_VERIFY_STATUS_PREFETCH_SEC ?? 60),
     dataDir: e.TAMGA_VERIFY_DATA_DIR ?? resolve(root, "apps/verify/data"),
-    requireRpAuth: e.TAMGA_VERIFY_REQUIRE_RP_AUTH === "1",
+    requireRpAuth: production || e.TAMGA_VERIFY_REQUIRE_RP_AUTH === "1",
     zkNativeBin: e.TAMGA_ZK_NATIVE_BIN?.trim() || undefined,
     sandboxLive: e.TAMGA_SANDBOX_LIVE !== "0", // 2026-10-04 sandbox yayında: varsayılan açık
   };

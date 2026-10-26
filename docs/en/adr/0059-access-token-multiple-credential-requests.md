@@ -71,7 +71,7 @@ The ZK copy access token ([[ADR-0044]]) and tickets (one credential per ticket) 
 | Code | Rule |
 |---|---|
 | AT1 | An access token can request only the credential configuration it covers. |
-| AT2 | The total number of copies issued with one access token does not exceed the batch size (10); concurrent requests cannot exceed the counter either. |
+| AT2 | The total number of copies issued with one access token does not exceed the batch size (10); concurrent requests cannot exceed the counter either. A request beyond it gets HTTP 401 `invalid_token` + `WWW-Authenticate: DPoP` (RFC 6750 §3). |
 | AT3 | Every credential request uses the DPoP key the token is bound to; reuse does not extend the token lifetime (≤ 5 min). |
 | AT4 | In the identity service a later request with the same token adds copies to the first request's record; it does not revoke the earlier package; no copies are added to a revoked or erased record. |
 | AT5 | The identity service deletes the personal fields in the authorisation record when the token expires or the copy allowance is used up. |
@@ -86,6 +86,16 @@ The ZK copy access token ([[ADR-0044]]) and tickets (one credential per ticket) 
 - Tests: sequential requests with the same token accepted up to the limit, beyond the limit and after expiry refused, another
   DPoP key refused, concurrent requests cannot exceed the limit; in the identity service the same record, the earlier package not
   revoked, personal fields deleted once the allowance is used up.
+
+## Note (2026-10-24, minor amendment — no new ADR)
+
+- **HTTP status for AT2:** a request beyond the copy allowance returns **401** `invalid_token` with a `WWW-Authenticate: DPoP
+  error="invalid_token", algs="ES256"` header (RFC 6750 §3, RFC 9449 §7.1); the `invalid_token` in K2 is read with this status
+  (the earlier implementation used 400). Other token/DPoP failures are 401 with the same header too ([[SPEC-PROTO-0001]] §13).
+- **PR6 is scoped per request:** the "every copy in a batch has a different key" rule ([[SPEC-PROTO-0001]] §8.2) is enforced by
+  the issuer **within one request** (`invalid_proof`). If a later request with the same token re-uses a key from an earlier request,
+  the issuer does not see or block it (key thumbprints are not stored — ISSU_35b, unlinkability); keeping copies on distinct keys
+  is the wallet's responsibility.
 
 # Status
 

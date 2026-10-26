@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-23
+last_updated: 2026-10-24
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -164,7 +164,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | Kod | Açıklama |
 |---|---|
 | `ADR-0023/AR1` | Sessiz yenileme yalnız yenileme belirteci olan belgeler için, kurumun ilan ettiği eşikte, uygulama önde ve kilit açıkken ve rastgele gecikmeyle yapılır. |
-| `ADR-0023/AR2` | Yenileme belirteci belgeye özel DPoP anahtarına bağlıdır, tek kullanımlıktır ve her kullanımda değişir; her yenilemede cüzdan onayı doğrulanır. |
+| `ADR-0023/AR2` | Yenileme belirteci belge verme işlemindeki istemci örneği anahtarına (WIA `cnf`; [[ADR-0060]] RT1) bağlıdır, tek kullanımlıktır ve her kullanımda değişir; her yenilemede aynı örnek anahtarlı cüzdan onayı doğrulanır, DPoP anahtarı değişebilir (RT2). |
 | `ADR-0023/AR3` | Kurum yenilemede öznitelikleri yetkili kaynaktan yeniden okur; kaynakta kayıt yoksa belge verilmez ve belirteç iptal edilir. |
 | `ADR-0023/AR4` | Kişi alanlarını saklamayan servisler (kimlik, iletişim) yenileme belirteci vermez. Tek istisna ZK kopyası belirtecidir ([[ADR-0044]] ZC3: kişi alanları sunucuda saklanmaz). |
 
@@ -585,7 +585,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | Kod | Açıklama |
 |---|---|
 | `ADR-0059/AT1` | Erişim belirteciyle yalnız belirtecin kapsadığı belge yapılandırması istenebilir. |
-| `ADR-0059/AT2` | Bir erişim belirteciyle verilen toplam kopya sayısı toplu ihraç büyüklüğünü (10) geçmez; sayaç eşzamanlı isteklerde de aşılamaz. |
+| `ADR-0059/AT2` | Bir erişim belirteciyle verilen toplam kopya sayısı toplu ihraç büyüklüğünü (10) geçmez; sayaç eşzamanlı isteklerde de aşılamaz. Aşan istek HTTP 401 `invalid_token` + `WWW-Authenticate: DPoP` alır (RFC 6750 §3). |
 | `ADR-0059/AT3` | Her belge isteği belirtecin bağlı olduğu DPoP anahtarıyla yapılır; belirteç ömrü (≤ 5 dk) yeniden kullanımla uzamaz. |
 | `ADR-0059/AT4` | Kimlik servisinde aynı belirteçle sonraki istek ilk isteğin kaydına kopya ekler; önceki paketi iptal etmez; iptal edilmiş ya da silinmiş kayda kopya eklenmez. |
 | `ADR-0059/AT5` | Kimlik servisi yetkilendirme kaydındaki kişi alanlarını belirtecin ömrü bitince ya da kopya hakkı dolunca siler. |
@@ -770,7 +770,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 |---|---|
 | `SPEC-PROTO-0001/PR1` | Pre-authorized akışta `tx_code` atlanamaz. |
 | `SPEC-PROTO-0001/PR2` | Metadata'daki her `vct`, belge verenin zincirde yetkilendirildiği bir şemadır. |
-| `SPEC-PROTO-0001/PR3` | Belge teklifi URI tek kullanımlık, 5 dakika ömürlü. |
+| `SPEC-PROTO-0001/PR3` | Belge teklifi URI tek kullanımlık; ömrü teklif sınıfına göre (§3.3: 5 dk / ≤ 72 saat / 7 gün). |
 | `SPEC-PROTO-0001/PR4` | `c_nonce` tüketimi atomiktir. |
 | `SPEC-PROTO-0001/PR5` | Kanıt ve belge imzası yalnızca `ES256`. |
 | `SPEC-PROTO-0001/PR6` | Batch'teki her kopya **farklı cihaz anahtarına** bağlanır. |
@@ -786,7 +786,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-PROTO-0001/PR17` | Erişim belirteci DPoP'a bağlıdır (RFC 9449): `/token` geçerli bir DPoP kanıtı olmadan belirteç vermez; `/credential` yalnızca `Authorization: DPoP` ve aynı anahtarla, bu uç ve bu belirteç (`ath`) için üretilmiş, daha önce görülmemiş kanıtla çalışır (§4, §7.1). |
 | `SPEC-PROTO-0001/PR18` | Yenileme belirteci tek kullanımlıktır, her kullanımda yenilenir, belge verme işlemindeki istemci örneği anahtarına (WIA `cnf`) bağlıdır, DPoP anahtarı değişebilir ([[ADR-0060]]); belge veren yenilemede kaydı yetkili kaynaktan yeniden okur ve kayıt yoksa belge vermez ([[ADR-0023]] AR2–AR3, §4.1). |
 | `SPEC-PROTO-0001/PR19` | WIA ile gelen istekte `client_status` iptal edilmişse belge verilmez; KA'lı proof'ta KA sağlayıcı imzalı, iptal edilmemiş, proof `attested_keys[0]` ile imzalı ve nonce geçerli olmalıdır; anahtar deposu alt sınırı KA seviyesine göre uygulanır ([[ADR-0025]], §11.1.1). |
-| `SPEC-PROTO-0001/PR16` | Kimlik attestation'ı yanıtında her `credentials[]` nesnesi, `credential` (SD-JWT VC) ile **aynı proof anahtarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) taşır; iki temsil aynı istekte üretilir, aynı status bitini paylaşır; cüzdan mdoc'u SD-JWT kopyasıyla çapraz doğrulamadan (aynı belge veren sertifikası, aynı alanlar, `deviceKey` = `cnf`) saklamaz ([[ADR-0013]] MD1–MD3). |
+| `SPEC-PROTO-0001/PR16` | Kimlik attestation'ı yanıtında her `credentials[]` nesnesi, `credential` (SD-JWT VC) ile **aynı proof anahtarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) taşır; iki temsil aynı istekte üretilir, aynı status bitini paylaşır; cüzdan mdoc'u SD-JWT kopyasıyla çapraz doğrulamadan (aynı belge veren sertifikası, aynı alanlar, `deviceKey` = `cnf`) saklamaz ([[ADR-0013]] MD1–MD3). **Bilinçli sapma:** OpenID4VCI 1.0 §8.3 `credentials[]` nesnesinde yalnız `credential` tanımlar; `mso_mdoc` Tamga profilinin ekidir (ADR-0013 — iki temsil tek istekte, çünkü kişi alanları ihraçtan hemen sonra silinir). Standart bir cüzdan bilinmeyen alanı yok sayar ve yalnız SD-JWT kopyasını alır; Tamga cüzdanı ikisini de saklar. |
 
 
 ## SPEC-PROTO-0002
@@ -934,4 +934,4 @@ AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA
 
 # Durum
 
-**Üretilen dosya** — 2026-10-23 (`scripts/sync-invariants.mjs`). Toplam 362 kodlanmış değişmez, 64 dokümanda.
+**Üretilen dosya** — 2026-10-24 (`scripts/sync-invariants.mjs`). Toplam 362 kodlanmış değişmez, 64 dokümanda.

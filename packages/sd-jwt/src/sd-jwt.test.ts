@@ -412,6 +412,43 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     expect(r.checksPerformed).toEqual(["A1", "A2", "A3", "A4", "A5", "A6"]);
   });
 
+  it("A4: `_sd_alg` yoksa varsayılan RED (C2); allowMissingSdAlg ile sha-256 varsayılır ve sdAlgPresent=false; başka değer her zaman RED", async () => {
+    const ds = [makeDisclosure("is_graduate", true)];
+    const noAlg = { ...basePayload(), _sd: ds.map((d) => d.digest).sort() }; // RFC 9901 §4.1.1: alan yok → sha-256
+    const header = { alg: "ES256", typ: "dc+sd-jwt", x5c: signer.x5c.map((d) => Buffer.from(d).toString("base64")) };
+    const jwt = await signer.sign(header, new TextEncoder().encode(JSON.stringify(noAlg)));
+    const pres = await present([jwt, ...ds.map((d) => d.disclosure), ""].join("~"), ["is_graduate"]);
+    const strict = await check(pres);
+    expect(strict.ok).toBe(false);
+    if (!strict.ok) expect(strict.failedStep).toBe("A4");
+    const opts = { aud: AUD, nonce: NONCE, stateCode: "TR", now: epochSeconds(NOW), rootCertsDer: [rootDer] };
+    const lax = await verifySdJwtVc(pres, { ...opts, allowMissingSdAlg: true });
+    expect(lax.ok).toBe(true);
+    if (lax.ok) {
+      expect(lax.sdAlgPresent).toBe(false);
+      expect(lax.claims.is_graduate).toBe(true); // sha-256 varsayımıyla disclosure çözüldü
+    }
+    const explicit = await verifySdJwtVc(
+      await present(await craft(basePayload(), [["is_graduate", true]]), ["is_graduate"]),
+      {
+        ...opts,
+        allowMissingSdAlg: true,
+      },
+    );
+    if (explicit.ok) expect(explicit.sdAlgPresent).toBe(true);
+    const otherAlg = { ...basePayload(), _sd_alg: "sha-512", _sd: ds.map((d) => d.digest).sort() };
+    const jwt512 = await signer.sign(header, new TextEncoder().encode(JSON.stringify(otherAlg)));
+    const other = await verifySdJwtVc(
+      await present([jwt512, ...ds.map((d) => d.disclosure), ""].join("~"), ["is_graduate"]),
+      {
+        ...opts,
+        allowMissingSdAlg: true,
+      },
+    );
+    expect(other.ok).toBe(false);
+    if (!other.ok) expect(other.failedStep).toBe("A4");
+  });
+
   it("skipValidityPeriod: süresi dolmuş belge sahiplik kanıtı için geçer (A7 yapılmaz); imza ve KB-JWT yine denetlenir", async () => {
     const expired = await present(await craft({ ...basePayload(), exp: NOW - 1 }, [["is_graduate", true]]), [
       "is_graduate",

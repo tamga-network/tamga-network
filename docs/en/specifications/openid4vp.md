@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-24
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -123,7 +123,7 @@ showing the DCQL query.
 | Prefix | Tamga |
 |---|---|
 | `x509_hash` | **The only one accepted** (signed request) — HAIP 1.0 §5; value = base64url(SHA-256(leaf certificate DER)), OpenID4VP 1.0 §5.9.3; matches the `client_id` of the trust list record |
-| `x509_san_dns` | **Rejected** ([[ADR-0034]]) — the domain of the response address must still be in the SAN of the signing certificate |
+| `x509_san_dns` | **Rejected** ([[ADR-0034]]) — the domain of the response address must still be in the SAN of the signing certificate. **Tamga profile note (2026-10-24):** the wallet (`@tamga-network/wallet-core`) accepts only `x509_hash` and additionally checks that the `response_uri` host is in the SAN of the signing certificate (the continuation of the old `x509_san_dns` rule; the local-development exception only when the caller enables it explicitly); the reference verifier (`@tamga-network/verifier`) neither produces nor processes `x509_san_dns` identifiers. This is a deliberate restriction: HAIP 1.0 §5 mandates `x509_hash` only; `x509_san_dns` support would be opened by an ADR |
 | `origin` | Only in the DC API flow, in the browser (§7) |
 | `redirect_uri` | **Rejected** — unsigned, cannot be bound to the registry |
 | `decentralized_identifier`, `openid_federation`, `verifier_attestation` | The expansion stage |
@@ -556,6 +556,22 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
 | `vp_formats_not_supported` | `dc+sd-jwt` is not supported |
 | `invalid_request_uri_method` | — |
 | `wallet_unavailable` | No wallet in the DC API |
+
+## 10.1 The wallet's error response and when a presentation is consumed (2026-10-24)
+
+- **A refusal goes to the `response_uri`.** When the person declines, a wallet that knows the `response_uri` (cross-device flow)
+  posts the OpenID4VP 1.0 §8.4 error response to it as a form: only `error=access_denied` and `state` (unencrypted; no personal
+  data; no `error_description` — PV5). The verifier **closes** the presentation, records REJECTED and stores no reason; the request
+  cannot be answered again. In the browser (DC API) flow there is no response address; the refusal returns to the page through the
+  DC API's own error path. Reference: `@tamga-network/wallet-core` `declineRequest`.
+- **A presentation is consumed only once holder binding passes.** The verifier treats an encrypted response as the one that
+  completes the presentation only after the KB-JWT / device signature (A6; Z1 for ZK) has passed — whatever B–E then decide
+  (revocation, scope). A response that fails before that (undecryptable body, `state` mismatch, empty `vp_token`, A1–A6 rejection)
+  does **not** close the presentation: the presentation id is visible in the QR code, so otherwise someone nearby could push the real
+  person's presentation to "rejected" with a meaningless body. Such responses get 400 `invalid_request` and count as attempts;
+  after **5** failed attempts per presentation it closes as REJECTED (rate limiting applies on top). The pending presentation's
+  status shows the attempt count and the last failure's step (`attempts`, `last_attempt`); no values. The inline identity
+  presentation at the institution issuer (SPEC-PROTO-0001 §11.2) applies the same rule.
 
 **Invariant PV5:** when the user declines, `access_denied` is returned and **no reason is given.** The difference between
 "the user does not have this credential" and "the user chose not to share it" must not leak to the verifier — if it did, the

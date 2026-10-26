@@ -39,6 +39,7 @@ kararlardır (AP2).
 | `SCHEMA_UNREACHABLE` | Belge türünün tanımı alınamadı | Şema kataloğunu önceden önbelleğe alın |
 | `CHAIN_UNREACHABLE` / `INDEXER_STALE` | Güven kaynağı okunamadı ya da bayat | Güven listelerini düzenli indirin; `next_update` geçmişse yeni listeyi alın |
 | `SDK_VERSION_MISMATCH` | Kütüphane sürümü kural sürümüyle uyumsuz | `@tamga-network/*` paketlerini güncelleyin |
+| `STATUS_VALUE_UNKNOWN` | İptal listesindeki değerin tanımlı anlamı yok (4/8 bitlik dış liste, uygulamaya özel değer) | Belgeyi veren kurumun liste profilini sorun; Tamga türlerinde görülmez |
 
 Güven listesi bayatsa ya da indirilemiyorsa güven soruları `UNKNOWN` döner ve sonuç her zaman `INDETERMINATE` olur; asla
 `ACCEPTED`, asla `REJECTED`.

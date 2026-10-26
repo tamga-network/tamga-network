@@ -30,6 +30,8 @@ export interface FormatOk {
   format: "dc+sd-jwt" | "mso_mdoc" | "mso_mdoc_zk";
   /** SD-JWT VC başlığındaki typ; eski `vc+sd-jwt` yalnız dış (Tamga kataloğunda olmayan) türlerde kabul (C13, B adımı) */
   sdJwtTyp?: "dc+sd-jwt" | "vc+sd-jwt";
+  /** SD-JWT `_sd_alg` gövdede açıkça var mıydı; yoksa sha-256 varsayıldı — Tamga türünde zorunlu (C2), dış türde isteğe bağlı (B adımı) */
+  sdAlgPresent?: boolean;
   issuerId: string;
   vct: string;
   /** SD-JWT `vct#integrity`; mdoc'ta yok → B4 atlanır (tip bütünlüğü docType + C2 şema yetkisiyle). */

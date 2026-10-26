@@ -21,6 +21,8 @@ import {
   receiveCredentials,
   type Http,
 } from "@tamga-network/wallet-core";
+/** Test cüzdanı yerel adrese (verify.local) karşı koşar: wallet-core S11 yerel ağ istisnası açıkça açılır. */
+const LAN = { allowLocalDevHost: true } as const;
 import { buildVerifyApp } from "../apps/verify/src/app.js";
 import { tamgaSignIn } from "./01-web-login/server.js";
 import { createOwnVerifier } from "./02-verify-own-server/verifier.js";
@@ -195,7 +197,7 @@ describe.skipIf(!ready)("examples", () => {
     const reqJwt = await fetchRequestObject(uri.requestUri, http);
     const reqClaims = JSON.parse(Buffer.from(reqJwt.split(".")[1], "base64url").toString("utf8"));
     expect(reqClaims.verifier_info).toEqual([{ format: "registration_cert", data: WRPRC }]);
-    const req = verifyRequestObject(reqJwt, uri.clientId);
+    const req = verifyRequestObject(reqJwt, uri.clientId, LAN);
     const { matches } = matchDcql(req.dcql, wallet.credentials);
     const copy = matches[0].credential.copies[0];
     await respond({

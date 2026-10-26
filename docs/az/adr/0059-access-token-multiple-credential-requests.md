@@ -62,7 +62,7 @@ ZK nüsxəsi giriş tokeni ([[ADR-0044]]) və bilet (tədbir başına tək sən�
 | Kod | Qayda |
 |---|---|
 | AT1 | Giriş tokeni ilə yalnız tokenin əhatə etdiyi sənəd konfiqurasiyası istənə bilər. |
-| AT2 | Bir giriş tokeni ilə verilən cəmi nüsxə sayı toplu verilmə ölçüsünü (10) keçmir; sayğac eyni vaxtda gələn sorğularda da aşıla bilməz. |
+| AT2 | Bir giriş tokeni ilə verilən cəmi nüsxə sayı toplu verilmə ölçüsünü (10) keçmir; sayğac eyni vaxtda gələn sorğularda da aşıla bilməz. Həddi aşan sorğu HTTP 401 `invalid_token` + `WWW-Authenticate: DPoP` alır (RFC 6750 §3). |
 | AT3 | Hər sənəd sorğusu tokenin bağlı olduğu DPoP açarı ilə edilir; tokenin ömrü (≤ 5 dəq) təkrar istifadə ilə uzanmır. |
 | AT4 | Şəxsiyyət xidmətində eyni tokenlə sonrakı sorğu ilk sorğunun qeydinə nüsxə əlavə edir; əvvəlki paketi ləğv etmir; ləğv edilmiş və ya silinmiş qeydə nüsxə əlavə edilmir. |
 | AT5 | Şəxsiyyət xidməti avtorizasiya qeydindəki şəxsi sahələri tokenin ömrü bitəndə və ya nüsxə haqqı dolanda silir. |
@@ -76,6 +76,16 @@ ZK nüsxəsi giriş tokeni ([[ADR-0044]]) və bilet (tədbir başına tək sən�
 - Testlər: eyni tokenlə ardıcıl sorğular həddə qədər qəbul, həddin aşılması və müddət sonunda rədd, başqa DPoP açarı rədd, eyni
   vaxtda gələn sorğular həddi aşa bilmir; şəxsiyyət xidmətində eyni qeyd, əvvəlki paket ləğv edilmir, haqq dolanda şəxsi sahələr
   silinir.
+
+## Qeyd (2026-10-24, kiçik dəyişiklik — yeni ADR yoxdur)
+
+- **AT2-nin HTTP statusu:** nüsxə haqqını aşan sorğu **401** `invalid_token` və `WWW-Authenticate: DPoP error="invalid_token",
+  algs="ES256"` başlığı qaytarır (RFC 6750 §3, RFC 9449 §7.1); K2-dəki `invalid_token` bu statusla oxunur (əvvəlki tətbiq 400
+  idi). Digər token/DPoP xətaları da 401 + eyni başlıqdır ([[SPEC-PROTO-0001]] §13).
+- **PR6-nın əhatəsi sorğu başınadır:** "paketdəki hər nüsxə fərqli açarla" qaydası ([[SPEC-PROTO-0001]] §8.2) sənəd verəndə **tək
+  sorğu içində** yoxlanılır (`invalid_proof`). Eyni tokenlə sonrakı sorğuda əvvəlki sorğunun açarı yenidən gələrsə sənəd verən bunu
+  görmür və əngəlləmir (açar barmaq izi saxlanmır — ISSU_35b, bağlana bilməzlik); nüsxələrin fərqli açar daşıması cüzdanın
+  məsuliyyətidir.
 
 # Status
 

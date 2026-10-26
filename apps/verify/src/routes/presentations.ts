@@ -25,7 +25,7 @@ import {
   type VerificationResult,
 } from "@tamga-network/verifier";
 import type { VerifyContext } from "../app.js";
-import type { Presentation } from "../state.js";
+import { MAX_RESPONSE_ATTEMPTS, type Presentation } from "../state.js";
 import { findPolicy } from "../policies.js";
 import { registrationCertFor, registrationCwtFor } from "../wrprc.js";
 import { rateLimited } from "../rate-limit.js";
@@ -123,9 +123,54 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     return reply.type("application/oauth-authz-req+jwt").send(p.req.requestJwt);
   });
 
-  // Şifreli yanıt → doğrulama
+  /**
+   * Sahiplik kanıtına (A6 / Z1; yalnız takma adlı sunumda P1) ULAŞMADAN başarısız olan yanıt: sunum tüketilmez, deneme sayılır;
+   * sınır dolunca sunum REJECTED ile kapanır. Yanıt 400 `invalid_request` (AP5: doğrulama sonucu değil, istek hatası).
+   */
+  const failedAttempt = (p: Presentation, pid: string, reply: FastifyReply, step: string | null, reason: string) => {
+    p.attempts += 1;
+    p.lastAttempt = { failed_step: step, failed_reason: reason, at: Date.now() };
+    p.trace.push({
+      t: Date.now(),
+      step: `Response not accepted (attempt ${p.attempts}/${MAX_RESPONSE_ATTEMPTS}; presentation stays open)`,
+      detail: step ? `${step}: ${reason}` : reason,
+    });
+    if (p.attempts >= MAX_RESPONSE_ATTEMPTS) {
+      p.used = true;
+      p.result = rejectedResult(pid, `too many failed responses (${p.attempts}); last: ${reason}`, ctx, step);
+      p.resultAt = Date.now();
+      p.trace.push({ t: Date.now(), step: "Presentation closed: response attempt limit reached" });
+    }
+    return reply.code(400).send({ error: "invalid_request", error_description: reason });
+  };
+  /** Sonuç sahiplik kanıtından geçti mi: SD-JWT KB-JWT / mdoc cihaz imzası (A6), ZK ispatı (Z1), yalnız takma ad (P1). */
+  const holderBound = (r: VerificationResult) => r.checks_performed.some((s) => s === "A6" || s === "Z1" || s === "P1");
+
+  // Şifreli yanıt → doğrulama · ya da OpenID4VP 1.0 §8.4 hata yanıtı (`error` + `state`: kişi reddetti, PV5)
   app.post("/vp/response", async (req, reply) => {
-    const jwe = (req.body as { response?: string }).response;
+    const body = req.body as { response?: string; error?: string; state?: string };
+    if (!body.response && typeof body.error === "string") {
+      // Şifresiz hata yanıtı `kid` taşımaz; sunum `state` ile bulunur. Neden SAKLANMAZ (PV5): doğrulayıcı yalnız "vermedi"yi öğrenir;
+      // `error_description` okunmaz. Sunum kapanır — aynı isteğe bir daha yanıt verilemez.
+      if (typeof body.state !== "string" || !body.state)
+        return reply.code(400).send({ error: "invalid_request", error_description: "state missing" });
+      const p = presentations.byState(body.state);
+      if (!p || p.req.expiresAt < nowSec())
+        return reply.code(400).send({ error: "invalid_request", error_description: "bilinmeyen sunum" });
+      const pid = p.req.presentationId;
+      if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
+      p.used = true;
+      p.result = rejectedResult(
+        pid,
+        body.error === "access_denied" ? "the wallet declined" : `wallet error: ${body.error.slice(0, 64)}`,
+        ctx,
+        null,
+      );
+      p.resultAt = Date.now();
+      p.trace.push({ t: Date.now(), step: "Wallet returned an error response; no reason is stored (PV5)" });
+      return { redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}` };
+    }
+    const jwe = body.response;
     if (!jwe) return reply.code(400).send({ error: "invalid_request" });
     const pid = responseKidOf(jwe)?.presentationId ?? "";
     const p = presentations.get(pid);
@@ -137,19 +182,30 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     // Hız sınırı sunum başına (çözme işinden önce): bilinmeyen kimlikler jeton harcamaz, bir sunuma yönelik sel başka
     // kişilerin yanıtını durdurmaz (güvenlik turu 2026-10-19)
     if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
-    // Çözülemeyen (bozuk/yabancı) yanıt sunumu TÜKETMEZ: sunum kimliği QR'da açık olduğundan, aksi hâlde yakındaki biri
-    // anlamsız bir gövdeyle gerçek kullanıcının sunumunu "reddedildi"ye düşürebilirdi.
+    // Aynı sunuma eşzamanlı ikinci yanıt doğrulama bitmeden işlenmez (tek kullanım, PV10; iki yol dahil)
+    if (p.busy)
+      return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
+    p.busy = true;
+    try {
+      return await handleEncryptedResponse(p, pid, jwe, reply);
+    } finally {
+      p.busy = false;
+    }
+  });
+  async function handleEncryptedResponse(p: Presentation, pid: string, jwe: string, reply: FastifyReply) {
+    // Sunum yalnız sahiplik kanıtı geçince TÜKETİLİR (SPEC-PROTO-0002 §10): çözülemeyen gövde, state uyuşmazlığı, boş vp_token ve
+    // A1–A6 başarısızlığı sunumu kapatmaz (deneme sayılır, `failedAttempt`); sunum kimliği QR'da açık olduğundan aksi hâlde
+    // yakındaki biri anlamsız bir gövdeyle gerçek kullanıcının sunumunu "reddedildi"ye düşürebilirdi.
     // 0.6.0: iki yol, iki anahtar — QR / bağlantının yanıtı cihazlar arası (response_uri), sayfanın ilettiği yanıt DC API
     // (köken) kurallarıyla doğrulanır; hangisi önce gelirse sunumu tamamlar, öteki tek kullanım kuralıyla düşer (PV10)
     let opened: Awaited<ReturnType<typeof decryptPresentationResponse>>;
     try {
       opened = await decryptPresentationResponse(jwe, p.req, `${cfg.publicBase}/vp/response`);
     } catch {
-      return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" });
+      return failedAttempt(p, pid, reply, null, "response could not be decrypted");
     }
     if (p.used)
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
-    p.used = true; // çözümden sonra ve await olmadan: eşzamanlı iki yanıttan yalnızca biri işlenir (iki yol dahil)
     const dec = opened.response;
     try {
       p.trace.push({
@@ -157,10 +213,10 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         step: `Response decrypted (JWE ECDH-ES/${jweEnc(jwe)}${opened.path === "dc_api" ? ", via browser Digital Credentials API" : ", cross-device"})`,
         detail: `state ${dec.state === p.req.state ? "matched" : "MISMATCH"}`,
       });
-      if (dec.state !== p.req.state) throw new Error("state mismatch");
+      if (dec.state !== p.req.state) return failedAttempt(p, pid, reply, null, "state mismatch");
       const pc = p.policy.credentials[0];
       const pres = pc ? dec.vp_token[pc.id]?.[0] : undefined;
-      if (pc && !pres) throw new Error(`${pc.id} missing in vp_token`);
+      if (pc && !pres) return failedAttempt(p, pid, reply, null, `${pc.id} missing in vp_token`);
       // ADR-0031: yalnız takma adla giriş (belge yok) — sonuç takma ad denetiminden
       let out = !pc
         ? { result: pseudonymOnlyResult(pid, ctx), claims: {} as Record<string, unknown> | null }
@@ -184,6 +240,10 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
             audit: (e) => ctx.audit(e),
             zk: ctx.zk, // ADR-0032: mso_mdoc_zk için arka uç (yerel varsa o, yoksa WASM)
           });
+      // Sahiplik kanıtına ulaşmayan sonuç (A1–A6 / Z1 reddi ya da doğrulayıcı tarafı ZK eksiği) sunumu tüketmez
+      if (!holderBound(out.result))
+        return failedAttempt(p, pid, reply, out.result.failed_step, out.result.failed_reason ?? out.result.outcome);
+      p.used = true; // sahiplik kanıtı geçti: sunum bu yanıtla tamamlanır (B–E sonucu ne olursa olsun; PV10)
       // ADR-0056 K9: geçiş kartı yalnız verifyPresentation'ın kendi kabul çıktısından (aşağıda `out` yeniden kurulabilir)
       const verified = out;
       // ADR-0031 PS5: takma ad — imza, aud, nonce, site, iptal edilmemiş cüzdan örneği (WIA). Değer yalnız claims'e (HV3).
@@ -273,12 +333,14 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       // Aynı cihaz akışı: cüzdan bu adresi tarayıcıda açar; durum jetonu yalnızca bu yanıtla (şifreli yanıtı gönderen cüzdana) gider
       return { redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}`, ...extra };
     } catch (e) {
+      // beklenmeyen hata (bozuk gövde vb.): sahiplik kanıtına ulaşmadıysa deneme; ulaştıysa sunum kapanır
+      if (!p.used) return failedAttempt(p, pid, reply, null, (e as Error).message);
       p.trace.push({ t: Date.now(), step: "Response could not be processed", detail: (e as Error).message });
       p.result = rejectedResult(pid, (e as Error).message, ctx);
       p.resultAt = Date.now();
       return reply.code(400).send({ error: "invalid_request" }); // AP5: doğrulama SONUCU değil, istek biçimi hatası
     }
-  });
+  }
 
   // ISO/IEC 18013-7 Ek C (`org-iso-mdoc`): sayfanın ilettiği HPKE şifreli DeviceResponse → doğrulama (sunum kimliği adreste;
   // şifreli yanıtta kimlik yok). Açılamayan yanıt sunumu tüketmez (/vp/response ile aynı kural).
@@ -293,42 +355,55 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
     if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
     const response = (req.body as { response?: unknown } | undefined)?.response;
+    if (p.busy)
+      return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
     let opened: ReturnType<typeof openMdocDcApiResponse>;
     try {
       opened = openMdocDcApiResponse(response, p.mdocDc);
     } catch {
-      return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" });
+      return failedAttempt(p, pid, reply, null, "response could not be decrypted");
     }
-    if (p.used)
-      return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
-    p.used = true;
     p.trace.push({
       t: Date.now(),
       step: "Response decrypted (HPKE P-256/AES-128-GCM, ISO/IEC 18013-7 Annex C, via browser Digital Credentials API)",
     });
     if ("refused" in opened) {
-      p.result = rejectedResult(pid, `the wallet returned no document (DeviceResponse status ${opened.refused})`, ctx);
+      // cüzdan belge vermedi (ISO 18013-5 DeviceResponse status): kişinin reddi — sunum kapanır, neden saklanmaz (PV5)
+      p.used = true;
+      p.result = rejectedResult(pid, "the wallet returned no document", ctx, null);
       p.resultAt = Date.now();
-      p.trace.push({ t: Date.now(), step: "Wallet declined", detail: `status ${opened.refused}` });
+      p.trace.push({ t: Date.now(), step: "Wallet declined" });
       return { redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}` };
     }
-    const out = await verifyPresentation({
-      presentation: opened.presentation,
-      aud: cfg.clientId,
-      nonce: p.req.nonce,
-      format: "mso_mdoc",
-      sessionTranscript: p.mdocDc.sessionTranscript,
-      policy: p.policy,
-      policyCredentialId: p.mdocDc.policyCredentialId,
-      trust: ctx.trust(),
-      statusCache: ctx.statusCache,
-      rootCertsDer: ctx.rootDer(),
-      rp: ctx.trust().relyingParty(p.owner ?? cfg.clientId), // E3: asıl RP'nin kapsamı (ADR-0017 K7/HV6)
-      allowLocalIssuerUrls: !cfg.publicBase.startsWith("https://"),
-      now: nowSec(),
-      verificationId: `vrf_${pid.slice(4)}`,
-      audit: (e) => ctx.audit(e),
-    });
+    p.busy = true;
+    let out: Awaited<ReturnType<typeof verifyPresentation>>;
+    try {
+      out = await verifyPresentation({
+        presentation: opened.presentation,
+        aud: cfg.clientId,
+        nonce: p.req.nonce,
+        format: "mso_mdoc",
+        sessionTranscript: p.mdocDc.sessionTranscript,
+        policy: p.policy,
+        policyCredentialId: p.mdocDc.policyCredentialId,
+        trust: ctx.trust(),
+        statusCache: ctx.statusCache,
+        rootCertsDer: ctx.rootDer(),
+        rp: ctx.trust().relyingParty(p.owner ?? cfg.clientId), // E3: asıl RP'nin kapsamı (ADR-0017 K7/HV6)
+        allowLocalIssuerUrls: !cfg.publicBase.startsWith("https://"),
+        now: nowSec(),
+        verificationId: `vrf_${pid.slice(4)}`,
+        audit: (e) => ctx.audit(e),
+      });
+    } finally {
+      p.busy = false;
+    }
+    if (p.used)
+      return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
+    // sahiplik kanıtına (cihaz imzası, A6) ulaşmayan yanıt sunumu tüketmez (/vp/response ile aynı kural)
+    if (!holderBound(out.result))
+      return failedAttempt(p, pid, reply, out.result.failed_step, out.result.failed_reason ?? out.result.outcome);
+    p.used = true;
     p.result = out.result;
     p.claims = out.claims;
     p.resultAt = Date.now();
@@ -355,7 +430,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       return statusView(p); // K4: tarayıcı yalnızca durumu görür
     }
     if (!(await mayRead(p, req.headers.authorization, reply))) return reply;
-    return p.result ?? { state: "PENDING" };
+    return p.result ?? pendingView(p);
   });
   app.get("/presentations/:id/claims", async (req, reply) => {
     const p = presentations.get((req.params as { id: string }).id);
@@ -489,9 +564,23 @@ export function webOrigin(v: unknown): string | undefined {
   }
 }
 
+/**
+ * Bekleyen sunumun durumu: sunum açık; sahiplik kanıtına ulaşmadan başarısız olan yanıtlar sayılır ve sonuncusu gösterilir (RP
+ * "cüzdan yanlış/eski bir yanıt gönderdi"yi görür; sunum yine de tamamlanabilir). Değer yok, kişisel veri yok.
+ */
+function pendingView(p: Presentation) {
+  return {
+    state: "PENDING",
+    attempts: p.attempts,
+    ...(p.lastAttempt
+      ? { last_attempt: { failed_step: p.lastAttempt.failed_step, failed_reason: p.lastAttempt.failed_reason } }
+      : {}),
+  };
+}
+
 /** K4: tarayıcıya giden durum — değer yok, alan adı yok. */
 function statusView(p: Presentation) {
-  if (!p.result) return { state: "PENDING" };
+  if (!p.result) return { state: "PENDING", attempts: p.attempts };
   return {
     state: "DONE",
     outcome: p.result.outcome,
@@ -528,12 +617,18 @@ function pseudonymOnlyResult(pid: string, ctx: VerifyContext): VerificationResul
   };
 }
 
-function rejectedResult(pid: string, reason: string, ctx: VerifyContext): VerificationResult {
+/** Doğrulama hattına girmeyen ret (istek biçimi, kişinin reddi, deneme sınırı). `step` null: adım yok (cüzdan reddetti). */
+function rejectedResult(
+  pid: string,
+  reason: string,
+  ctx: VerifyContext,
+  step: VerificationResult["failed_step"] | string | null = "A1",
+): VerificationResult {
   const f = ctx.trust().freshness();
   return {
     verification_id: `vrf_${pid.slice(4)}`,
     outcome: "REJECTED",
-    failed_step: "A1",
+    failed_step: step as VerificationResult["failed_step"],
     failed_reason: reason,
     indeterminate_reason: null,
     spec_version: SPEC_VERSION,

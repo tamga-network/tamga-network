@@ -71,8 +71,9 @@ conditions of [[ADR-0023]] K1 apply: network available, random delay; if the use
 automatically"), ZK copies are not refreshed and ZK presentation is unavailable (classic presentation continues).
 
 ## K3 — Refresh path and personal data
-- The refresh uses an OpenID4VCI refresh token; the token is bound to the [[t:DPoP]] key from first issuance and to the wallet
-  attestation ([[t:WUA]]), is single-use and is rotated on every use ([[ADR-0023]] K2, AR2).
+- The refresh uses an OpenID4VCI refresh token; the token is bound to ~~the [[t:DPoP]] key from first issuance~~ **(changed by
+  [[ADR-0060]], 2026-10-22) the client-instance key from first issuance (WIA `cnf`)** and to the wallet attestation ([[t:WUA]]),
+  is single-use and is rotated on every use ([[ADR-0023]] K2, AR2); the DPoP key may change at renewal.
 - The identity service **does not keep** person fields ([[ADR-0011]] K4). The minimum fields the ZK copy needs travel inside
   the token, encrypted and signed so that only the identity service can open them; the token stays in the wallet and no record
   is kept on the server.
@@ -122,6 +123,9 @@ threshold, this decision is re-evaluated (option B).
   K6).
 
 # Status
+
+2026-10-22: **K3 was changed by [[ADR-0060]]** — the token's binding moved from the DPoP key to the client-instance key (WIA `cnf`,
+`ijk` in the token) (D-PROTO-4). 2026-10-23: the token is issued only when the ZK-copy scope is requested too ([[ADR-0062]], D-ZK-3).
 
 **Accepted — 2026-10-09.** Approved by project management, on the condition that this is the path the EU recommends (K6).
 DECISIONS: D-ZK-2.
