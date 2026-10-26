@@ -6,6 +6,11 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 
 ## 0.7.2 — unreleased
 
+- Tamga Verify (2026-10-26; ADR-0065, security review): gate terminals authenticate to `POST /terminal/verify` with an
+  operator-issued terminal key bound to a terminal group (`Authorization: Bearer tk_…`); without a key the request gets 401 and the
+  pass token is neither read nor consumed (a photographed single-use ticket QR can no longer be spent by a bystander). Admin
+  endpoints `/terminal/keys` (issue once, list without hashes, revoke; `terminal-keys.json` stores SHA-256 only);
+  `TAMGA_VERIFY_TERMINAL_KEYS` for local/sandbox demo gates; the `/terminal` page gets a key field (browser tab only).
 - Protocol review fixes (2026-10-24; SPEC-PROTO-0001 §2, §13, SPEC-PROTO-0002 §2, §10.1; ADR-0059 note). issuer:
   `authServerMetadata({ preAuthorized: false })` — an authorization server without the pre-authorized grant advertises neither
   the grant, nor `pre-authorized_grant_anonymous_access_supported`, nor the `none` auth method (the identity service uses it);

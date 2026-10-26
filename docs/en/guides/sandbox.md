@@ -4,7 +4,7 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-21
+last_updated: 2026-10-26
 summary: >
   End-to-end testing on sandbox.tamga.network, the test network kept apart from the real network: addresses, pinning the
   trust anchor, connecting a wallet to the sandbox, registering your own wallet provider in the sandbox list as a wallet
@@ -187,6 +187,11 @@ same page.
 | `student` | student discount: student credential |
 | `ticket` | event gate: ticket (concert or cinema) |
 | `identity` | event entry with the identity credential |
+
+**Gate (turnstile / ticket gate):** `https://verify.sandbox.tamga.network/terminal?group=<group>` is the demo gate; it reads the
+pass QR from the wallet's “Show” screen with the camera. The gate identifies itself with a terminal key ([[ADR-0065]]); the
+sandbox's demo keys are public and go into the field on the page: `istanbul-bilgi-campus` → `sandbox-gate-campus`, `bubilet-gate`
+→ `sandbox-gate-ticket`. On the production network the gate's operator issues the key.
 
 To try your own verifier: connect it to the sandbox list and the sandbox pins, then present credentials received in the
 sandbox. You can open your institution in the sandbox yourself (§9); today you register your wallet provider by request to project

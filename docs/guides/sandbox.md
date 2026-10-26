@@ -4,7 +4,7 @@ title: "Sandbox: test ağı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-21
+last_updated: 2026-10-26
 summary: >
   Gerçek ağdan ayrı test ağı sandbox.tamga.network ile uçtan uca deneme: adresler, güven çapasını sabitlemek, cüzdanı
   sandbox'a bağlamak, cüzdan geliştiricisi olarak kendi cüzdan sağlayıcını sandbox listesine kaydettirmek, örnek kişilerle belge almak, örnek doğrulayıcılarda göstermek, iptal ve askı durumlarını denemek,
@@ -181,6 +181,11 @@ sayfada görünür.
 | `student` | öğrenci indirimi: öğrenci belgesi |
 | `ticket` | etkinlik kapısı: bilet (konser ya da sinema) |
 | `identity` | kimlik belgesiyle etkinlik girişi |
+
+**Kapı (turnike / bilet kapısı):** `https://verify.sandbox.tamga.network/terminal?group=<grup>` deneme kapısıdır; cüzdanın “Göster”
+ekranındaki geçiş kartı QR'ını kameraya tutar. Kapı kendini terminal anahtarıyla tanıtır ([[ADR-0065]]); sandbox'ın deneme
+anahtarları herkese açıktır ve sayfadaki alana yazılır: `istanbul-bilgi-campus` → `sandbox-gate-campus`, `bubilet-gate` →
+`sandbox-gate-ticket`. Gerçek ağda anahtarı kapının işletmecisi verir.
 
 Kendi doğrulayıcınızı denemek için: doğrulayıcınızı sandbox listesine ve sandbox pinlerine bağlayın, sandbox'ta alınmış
 belgeleri gösterin. Kurumunuzu sandbox'ta kendiniz açabilirsiniz (§9); cüzdan sağlayıcınızı bugün proje yönetimine başvurarak kaydettirirsiniz

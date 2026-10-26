@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-26
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -531,6 +531,7 @@ paralel yaşar ([[ARCH-0005]] §5.3 ile aynı politika).
 | Operatör paneli → belge veren API | OIDC + rol tabanlı yetki |
 | OBS → belge veren API | mTLS veya istemci kimlik bilgisi |
 | Doğrulayıcı uygulaması → doğrulayıcı API | API anahtarı veya mTLS |
+| Kapı terminali → doğrulayıcı `/terminal/verify` | Terminal anahtarı: terminal grubuna bağlı, işletmecinin verdiği taşıyıcı anahtar (`Authorization: Bearer`); anahtarsız istek 401, jeton okunmaz ([[ADR-0065]] TK1–TK3). Anahtarlar yönetici uçlarından (`/terminal/keys`, iç adres) verilir ve iptal edilir. |
 | OID4VCI / OID4VP uçları | Protokolün kendi mekanizması |
 
 ## 6.5 Hız sınırı
@@ -555,7 +556,7 @@ paralel yaşar ([[ARCH-0005]] §5.3 ile aynı politika).
 | **AP8** | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. |
 | **AP11** | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
 | **AP12** | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
-| **AP13** | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. |
+| **AP13** | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. Kapı isteği terminal anahtarıyla gelir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). |
 | **AP9** | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). |
 | **AP10** | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
 

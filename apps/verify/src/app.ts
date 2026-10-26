@@ -31,6 +31,7 @@ import {
 import type { VerifyConfig } from "./config.js";
 import { PresentationStore } from "./state.js";
 import { GateStats } from "./stats.js";
+import { TerminalKeyRegistry } from "./terminal-keys.js";
 import { registerPresentationRoutes } from "./routes/presentations.js";
 import { NativeZkBackend, defaultZkBackend, type ZkBackend } from "@tamga-network/verifier/zk";
 import { registerTerminalRoutes } from "./routes/terminal.js";
@@ -69,6 +70,8 @@ export interface VerifyContext {
   isAdmin: (header: string | string[] | undefined) => boolean;
   /** Kapı sayaçları (yalnız sayı; kişi/kart kimliği yok). */
   gateStats: GateStats;
+  /** ADR-0065: terminal anahtarları — kapı `/terminal/verify`'ı yalnız grubuna bağlı anahtarla çağırır. */
+  terminalKeys: TerminalKeyRegistry;
   /** ADR-0032: ZK doğrulama arka ucu — yerel ikili varsa o, yoksa WASM (`cfg.zkNativeBin`). */
   zk: ZkBackend;
   /**
@@ -204,6 +207,7 @@ export async function buildVerifyApp(
     },
     auditTail: (n) => audit.slice(-n),
     gateStats: new GateStats(resolve(cfg.dataDir, "gate-stats.json")),
+    terminalKeys: new TerminalKeyRegistry(resolve(cfg.dataDir, "terminal-keys.json"), cfg.terminalKeys),
     isAdmin: (header) => {
       const tok = process.env.TAMGA_ADMIN_TOKEN;
       if (!tok || typeof header !== "string") return false;

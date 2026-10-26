@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-24
+last_updated: 2026-10-26
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 362 kodlanmış değişmez, 64 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 365 kodlanmış değişmez, 65 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -642,6 +642,17 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0064/YE3` | ZK kopyası kimlik belgesinin yaş alanlarından başka kişi alanı taşımaz; yeni bir yaş eşiği eşitlik devresiyle ispatlanır, devre kaydı değişmez. |
 
 
+## ADR-0065
+
+*"Kapı terminalleri doğrulama servisine kimlik gösterir: terminal anahtarı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0065/TK1` | `POST /terminal/verify` yalnız bir terminal grubuna bağlı terminal anahtarıyla (`Authorization: Bearer`) çalışır; anahtarsız ya da geçersiz anahtarlı istek 401 alır ve jeton okunmaz, tekrar listesine ve sayaçlara dokunulmaz. Gövdedeki `terminal_group` anahtarın grubundan farklıysa 403. |
+| `ADR-0065/TK2` | Terminal anahtarlarını işletmeci doğrulayıcının yönetici uçlarından verir ve iptal eder; anahtar yalnız verildiği yanıtta görünür; grup yüklü bir politikanın terminal grubu olmalıdır. |
+| `ADR-0065/TK3` | Doğrulayıcı anahtarın yalnız özetini saklar (kişisel veri yok) ve sabit zamanlı karşılaştırır; ortamdan yüklenen anahtar yalnız yerel geliştirme ve sandbox içindir. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -676,7 +687,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-API-0001/AP8` | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. |
 | `SPEC-API-0001/AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
 | `SPEC-API-0001/AP12` | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
-| `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. |
+| `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. Kapı isteği terminal anahtarıyla gelir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). |
 | `SPEC-API-0001/AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). |
 | `SPEC-API-0001/AP10` | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
 
@@ -926,12 +937,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 362 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 365 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TL, TS, W, WIA, WL, WR, WRC, XC, YE, YS, ZC, ZK, ZS.
+AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TK, TL, TS, W, WIA, WL, WR, WRC, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-24 (`scripts/sync-invariants.mjs`). Toplam 362 kodlanmış değişmez, 64 dokümanda.
+**Üretilen dosya** — 2026-10-26 (`scripts/sync-invariants.mjs`). Toplam 365 kodlanmış değişmez, 65 dokümanda.

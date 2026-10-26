@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-24
+last_updated: 2026-10-26
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdana necə daxil olduğunu müəyyən edir. OpenID4VCI 1.0 Final üzərində Tamga profili: issuer metadata, credential offer (QR + tx_code), pre-authorized və authorization code axını seçimi, Nonce Endpoint-dən c_nonce, openid4vci-proof+jwt açar sübutu, credential endpoint, təxirə salınmış sənəd verilməsi və bildiriş ucunun bugünkü vəziyyəti (hər ikisi təqdim edilmir). İki açıq məsələ bağlanır: batch partiyasının ölçüsü 10 olaraq sabitlənir və batch nüsxələrinin HƏR BİRİ FƏRQLİ cihaz açarından istifadə edir — eyni `cnf` istifadə edilsəydi, nüsxələr bir-biri ilə əlaqələndirilə bilərdi və batch-in bütün mənası itərdi. Bundan əlavə, sənəd verilməsi anındakı holder binding üsulunun holder assurance səviyyəsinə (T1/T2/T3) uyğunluğu verilir.
 translation_of: SPEC-PROTO-0001
@@ -666,8 +666,11 @@ Sənəd sorğusunda paket **tək proof** ilə istənilir:
 Sənədi verən qurum KA-nı, ləğv statusunu və nonce-u yoxlayır, rəqəmsal sənədləri `attested_keys`-a bağlayır. Kirayəçinin `min_key_storage` alt həddini
 KA-dakı səviyyəyə əsasən tətbiq edir.
 
-Metadata `proof_types_supported.jwt.key_attestations_required` qəbul edilən səviyyələri elan edir (ARF ISSU_27d). Köhnə WUA və hər açar
-üçün ayrıca proof formatı pilotdan əvvələdək qəbul edilir.
+Metadata `proof_types_supported.jwt.key_attestations_required` qəbul edilən səviyyələri elan edir (ARF ISSU_27d). **Real şəbəkədə
+şəxsiyyət xidməti yalnız KA-lı tək proof-u qəbul edir və açar yaddaşının aşağı həddi `tee`-dir** (təhlükəsizlik turu 2026-10-24):
+KA-sız hər açar üçün proof və `software` səviyyəsi `invalid_proof` ilə rədd edilir; elan edilən səviyyələr buna uyğun daralır.
+Sandbox və yerli inkişaf `software`-i qəbul etməyə davam edir (kənarlaşma S-9). Qurum sənəd verənlərində aşağı hədd icarəçinin
+`min_key_storage` siyasətidir (standart `software`; qurumun siyasəti ilə yüksəldilir).
 
 **Ləğv dəstəyi müddəti üzrə üstünlük (Aİ TS3 §2.4; ARF WUA_32, ISSU_12c; kod 0.5.0).** Qurum alacağı KA-nın qalan ləğv dəstəyi müddəti
 üçün `key_attestations_required.preferred_key_storage_status_period`, WIA-nınkı üçün isə metadata-nın üst səviyyəsində
@@ -695,6 +698,13 @@ Bu yolda qurum şəxsiyyəti yoxlayan tərəf kimi çıxış edir və bunu **ş�
 | 3 | Rəqəmsal cüzdan **standart təqdimat axınını** işə salır (SPEC-PROTO-0002: RP qeydi, təsdiq ekranı, KB-JWT, JWE) → `POST /{slug}/vp/response` | Sənədi verən qurum T0 + A–E ilə yoxlayır (status-un ilkin çəkilməsi S12), **TCKN + doğum tarixi** ilə uyğunlaşdırır: `issuer_state` varsa, təklifdəki həşlə (§3.4), yoxdursa, qurumun mənbəyinə `lookup` ([[ADR-0020]]; `docs/api/institution-source.openapi.yaml`); mənbə əlçatan deyilsə, `temporarily_unavailable`; cavab `{redirect_uri}` = `redirect_uri?code=…&state=…` və ya `error=access_denied` |
 | 4 | `POST /{slug}/token` — `grant_type=authorization_code`, `code`, `code_verifier`, `redirect_uri`, WUA başlıqları | code birdəfəlikdir, ≤ 60 s; PKCE; müştəri PAR-dakı WUA `sub` ilə eynidir |
 | 5 | `/nonce` → proof-lar → `/credential` | §5–§8 olduğu kimi (10 nüsxə, PR6) |
+
+**Şüurlu davranış — avtorizasiya kodunun təkrar istifadəsi (RFC 9700 §4.5; təhlükəsizlik turu 2026-10-24).** İstifadə olunmuş
+`code` ikinci dəfə gələndə sənədi verən qurum o koddan verilmiş tokenləri (giriş və yeniləmə tokeni; şəxsiyyət xidmətində ZK nüsxəsi
+zənciri) **əvvəlcə** geri alır, təkrar oynayan tərəfin müştəri/DPoP bağını sonra yoxlayır (`redeemCode`). Kodu müşahidə edən üçüncü
+tərəf beləliklə qurbanın tokenlərini bağlaya bilər (xidmətdən imtina; məlumat açılmır — token və ya sənəd ala bilmir). Bu, RFC
+9700-ün "təkrar istifadədə geri al" qaydasının şüurlu tətbiqidir: kodun sızdığı şübhəsində qurbanın sessiyasını bağlamaq, hücumçunun
+kodu istifadə etməsinin qarşısını almaqdan əvvəl gəlir; rəqəmsal cüzdan yeni PAR ilə axını yenidən başladır.
 
 Tamga şəxsiyyət xidməti (`id.tamga.network`) eyni axını **brauzer** ilə işə salır: `/authorize` KVKK üzrə məlumatlandırma + açıq razılıq →
 uzaqdan yoxlama provayderi → `/idv/return` (qərar sorğusu) → `redirect_uri?code`. ETSI 472-3-ə əsasən T3 yalnız bu yolla

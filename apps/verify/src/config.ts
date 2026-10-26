@@ -29,6 +29,11 @@ export interface VerifyConfig {
    * bağlantıları ve /sample-site yönlendirmesi: açıksa sandbox.tamga.network, değilse geliştirici belgelerindeki sandbox rehberi.
    */
   sandboxLive?: boolean;
+  /**
+   * ADR-0065: ortamdan yüklenen terminal anahtarları (`grup:anahtar,…`) — yalnız yerel geliştirme ve sandbox (deneme kapısı).
+   * Gerçek ağda anahtarlar yönetici ucundan verilir (`POST /terminal/keys`, `terminal-keys.json`).
+   */
+  terminalKeys?: string;
 }
 
 const SANDBOX_PORTAL = "https://sandbox.tamga.network";
@@ -69,5 +74,6 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
     requireRpAuth: production || e.TAMGA_VERIFY_REQUIRE_RP_AUTH === "1",
     zkNativeBin: e.TAMGA_ZK_NATIVE_BIN?.trim() || undefined,
     sandboxLive: e.TAMGA_SANDBOX_LIVE !== "0", // 2026-10-04 sandbox yayında: varsayılan açık
+    terminalKeys: e.TAMGA_VERIFY_TERMINAL_KEYS?.trim() || undefined,
   };
 }

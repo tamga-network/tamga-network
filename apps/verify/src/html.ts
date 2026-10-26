@@ -104,7 +104,9 @@ const T = {
     // terminal
     terminal: "Turnstile / terminal",
     terminalText:
-      "Hold the QR code from the wallet's Show screen to the camera or paste the token. The terminal does not identify the person: it checks only the signature, the time (≤ 60 s) and the replay list (AP13), shared by all gates through this service.",
+      "Hold the QR code from the wallet's Show screen to the camera or paste the token. The terminal does not identify the person: it checks only the signature, the time (≤ 60 s) and the replay list (AP13), shared by all gates through this service. The gate identifies itself with a terminal key issued by the operator for this terminal group; without it nothing is checked or consumed.",
+    keyLabel: "Terminal key (from the operator; kept only in this browser tab)",
+    keyNeeded: "Terminal key missing or not valid for this group",
     camNote:
       "The camera opens only in a secure context (localhost or HTTPS). Fallback: use “Share token” in the wallet and paste the text below.",
     openCam: "Open camera",
@@ -189,7 +191,9 @@ const T = {
     sessionFailed: "oturum açılamadı",
     terminal: "Turnike / terminal",
     terminalText:
-      "Cüzdanın “Göster” ekranındaki QR'ı kameraya tut ya da jetonu yapıştır. Terminal kişiyi tanımaz: yalnızca imza, süre (≤ 60 sn) ve tekrar listesi denetlenir (AP13); tekrar listesi bu servis üzerinden tüm kapılar arasında ortaktır.",
+      "Cüzdanın “Göster” ekranındaki QR'ı kameraya tut ya da jetonu yapıştır. Terminal kişiyi tanımaz: yalnızca imza, süre (≤ 60 sn) ve tekrar listesi denetlenir (AP13); tekrar listesi bu servis üzerinden tüm kapılar arasında ortaktır. Kapı kendini işletmecinin bu terminal grubu için verdiği terminal anahtarıyla tanıtır; anahtarsız hiçbir şey denetlenmez ve tüketilmez.",
+    keyLabel: "Terminal anahtarı (işletmeciden; yalnız bu tarayıcı sekmesinde tutulur)",
+    keyNeeded: "Terminal anahtarı yok ya da bu grup için geçerli değil",
     camNote:
       "Kamera yalnızca güvenli bağlamda açılır (localhost ya da HTTPS). Yedek: cüzdanda “Jetonu paylaş” ile metni kendine gönder, aşağıya yapıştır.",
     openCam: "Kamerayı aç",
@@ -602,13 +606,17 @@ export function terminalPage(lang: Lang, group: string) {
     `<p class="eyebrow">${esc(group)}</p><h1>${t.terminal}</h1><p class="lede">${t.terminalText}</p>
 <section class="stack"><p class="muted small" id="camnote">${t.camNote}</p>
 <video id="v" playsinline style="width:100%;max-width:420px;border-radius:10px;background:#000;display:none"></video>
+<label class="muted small" for="key">${t.keyLabel}</label>
+<input id="key" type="password" autocomplete="off" placeholder="tk_…">
 <div class="row"><button class="btn" id="cam" type="button">${t.openCam}</button><button class="btn secondary" id="chk" type="button">${t.check}</button></div>
 <textarea id="tok" rows="4" placeholder="tamga-pass+jwt …"></textarea>
 <div id="res" class="result PENDING">${t.waitingShort}</div><div id="det" class="muted"></div></section>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" integrity="sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx" crossorigin="anonymous"></script>
 <script${nonceAttr()}>
 const $=(i)=>document.getElementById(i);let last="";
-async function check(tk){const r=await fetch("/terminal/verify",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:tk,terminal_group:${jsLit(group)}})});const j=await r.json();$("res").className="result "+(j.ok?"ACCEPTED":"REJECTED");$("res").textContent=j.ok?${jsLit(t.pass)}:${jsLit(t.stop)};$("det").textContent=j.ok?("pass "+j.passId+" · "+j.expiresIn+" "+${jsLit(t.left)}):(j.reason||"");}
+try{$("key").value=sessionStorage.getItem("tamga-terminal-key")||"";}catch{}
+$("key").oninput=()=>{try{sessionStorage.setItem("tamga-terminal-key",$("key").value.trim());}catch{}};
+async function check(tk){const r=await fetch("/terminal/verify",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+$("key").value.trim()},body:JSON.stringify({token:tk,terminal_group:${jsLit(group)}})});const j=await r.json();$("res").className="result "+(j.ok?"ACCEPTED":"REJECTED");$("res").textContent=j.ok?${jsLit(t.pass)}:${jsLit(t.stop)};$("det").textContent=j.ok?("pass "+j.passId+" · "+j.expiresIn+" "+${jsLit(t.left)}):((r.status===401||r.status===403)?${jsLit(t.keyNeeded)}:(j.reason||""));}
 $("chk").onclick=()=>check($("tok").value.trim());
 $("cam").onclick=async()=>{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("camnote").textContent=${jsLit(t.camInsecure)};return;}
 const v=$("v");v.style.display="block";let s;try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});}catch{try{s=await navigator.mediaDevices.getUserMedia({video:true});}catch(e){$("camnote").textContent=${jsLit(t.camFailed)}+e.message;return;}}

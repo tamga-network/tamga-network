@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-24
+last_updated: 2026-10-26
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -675,8 +675,11 @@ Belge isteğinde paket **tek proof** ile istenir:
 Belge veren KA'yı, iptal durumunu ve nonce'u doğrular, belgeleri `attested_keys`'e bağlar. Kiracının `min_key_storage` alt sınırını
 KA'daki seviyeye göre uygular.
 
-Metadata `proof_types_supported.jwt.key_attestations_required` kabul edilen seviyeleri ilan eder (ARF ISSU_27d). Eski WUA ve anahtar
-başına proof biçimi pilot öncesine kadar kabul edilir.
+Metadata `proof_types_supported.jwt.key_attestations_required` kabul edilen seviyeleri ilan eder (ARF ISSU_27d). **Gerçek ağda
+kimlik servisi yalnız KA'lı tek proof'u kabul eder ve anahtar deposu alt sınırı `tee`dir** (güvenlik turu 2026-10-24): KA'sız anahtar
+başına proof ve `software` seviyesi `invalid_proof` ile reddedilir; ilan edilen seviyeler buna göre daralır. Sandbox ve yerel
+geliştirme `software`ı kabul etmeyi sürdürür (sapma S-9). Kurum belge verenlerinde alt sınır kiracının `min_key_storage`
+politikasıdır (varsayılan `software`; kurum politikasıyla yükseltilir).
 
 **İptal bakım süresi tercihi (AB TS3 §2.4; ARF WUA_32, ISSU_12c; kod 0.5.0).** Kurum, alacağı KA'nın kalan iptal bakım süresi
 için `key_attestations_required.preferred_key_storage_status_period`, WIA'nınki için metadata'nın üstünde
@@ -704,6 +707,13 @@ Kimlik doğrulama bu yolda **kimlik attestation'ının sunumu** ile yapılır; �
 | 3 | Cüzdan **standart sunum akışını** çalıştırır (SPEC-PROTO-0002: RP kaydı, onay ekranı, KB-JWT, JWE) → `POST /{slug}/vp/response` | Belge veren T0 + A–E ile doğrular (status ön çekimi S12), **TCKN + doğum tarihi** ile eşler: `issuer_state` varsa teklifteki özetle (§3.4), yoksa kurumun kaynağına `lookup` ([[ADR-0020]]; `docs/api/institution-source.openapi.yaml`); kaynak erişilemezse `temporarily_unavailable`; yanıt `{redirect_uri}` = `redirect_uri?code=…&state=…` veya `error=access_denied` |
 | 4 | `POST /{slug}/token` — `grant_type=authorization_code`, `code`, `code_verifier`, `redirect_uri`, WUA başlıkları | code tek kullanımlık, ≤ 60 s; PKCE; istemci PAR'daki WUA `sub` ile aynı |
 | 5 | `/nonce` → proof'lar → `/credential` | §5–§8 aynen (10 kopya, PR6) |
+
+**Bilinçli davranış — yetki kodunun yeniden kullanımı (RFC 9700 §4.5; güvenlik turu 2026-10-24).** Kullanılmış bir `code`
+ikinci kez gelince belge veren o koddan verilen belirteçleri (erişim ve yenileme belirteci; kimlik servisinde ZK kopyası zinciri)
+**önce** geri alır, yeniden oynayan tarafın istemci/DPoP bağını sonra denetler (`redeemCode`). Kodu gözlemleyen üçüncü bir taraf
+böylece kurbanın belirteçlerini düşürebilir (hizmet reddi; veri açığa çıkmaz — belirteç ya da belge alamaz). Bu, RFC 9700'ün
+"yeniden kullanımda geri al" kuralının bilinçli uygulamasıdır: kodun sızdığı şüphesinde kurbanın oturumunu kapatmak, saldırganın
+kodu kullanmasını engellemekten önce gelir; cüzdan yeni bir PAR ile akışı yeniden başlatır.
 
 Tamga kimlik servisi (`id.tamga.network`) aynı akışı **tarayıcı** ile çalıştırır: `/authorize` KVKK aydınlatma + açık rıza →
 uzaktan doğrulama sağlayıcısı → `/idv/return` (karar sorgulama) → `redirect_uri?code`. ETSI 472-3 uyarınca T3 yalnızca bu yolla

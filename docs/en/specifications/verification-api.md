@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-10-26
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -517,6 +517,7 @@ Path-based: `/api/v1`. A breaking change opens `/v2`; `/v1` lives in parallel fo
 | Operator panel → issuer API | OIDC + role-based authorisation |
 | Student information system → issuer API | mTLS or client credentials |
 | Verifier application → verifier API | API key or mTLS |
+| Gate terminal → verifier `/terminal/verify` | Terminal key: an operator-issued bearer key bound to a terminal group (`Authorization: Bearer`); a request without a key gets 401 and the token is not read ([[ADR-0065]] TK1–TK3). Keys are issued and revoked through the admin endpoints (`/terminal/keys`, internal address). |
 | OID4VCI / OID4VP endpoints | The protocol's own mechanism |
 
 ## 6.5 Rate limit
@@ -541,7 +542,7 @@ gate verification (`/terminal/verify`); the client address is not stored or logg
 | **AP8** | `C2` (schema authorisation) cannot be skipped by any configuration. |
 | **AP11** | `C1` and `C2` take the credential's `iat`; issuance-time queries are not used in verification. |
 | **AP12** | `issuerId` is derived from the `x5c` leaf fingerprint, not from the `iss` claim. |
-| **AP13** | Pass token verification ([[ADR-0012]] B): signature with the copy key in `pass_grant`, `aud` = the terminal's RP client_id, lifetime (`exp` − `iat`) ≤ 60 s, `iat` ≤ now + 30 s, `exp` ≤ now + 60 s + 30 s (clock-skew tolerance), a `jti` replay list (shared online within the terminal group); no personal data is extracted from the token or logged. |
+| **AP13** | Pass token verification ([[ADR-0012]] B): signature with the copy key in `pass_grant`, `aud` = the terminal's RP client_id, lifetime (`exp` − `iat`) ≤ 60 s, `iat` ≤ now + 30 s, `exp` ≤ now + 60 s + 30 s (clock-skew tolerance), a `jti` replay list (shared online within the terminal group); no personal data is extracted from the token or logged. The gate's request carries a terminal key; a request without one does not touch the token ([[ADR-0065]] TK1). |
 | **AP9** | `E4` (audit record) also runs for rejected verifications (in a verifier with an audit sink; always in the hosted verifier). |
 | **AP10** | `tx_code` is stored nowhere outside the response. |
 

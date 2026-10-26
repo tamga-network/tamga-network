@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-24
+last_updated: 2026-10-26
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -659,8 +659,11 @@ In the credential request the batch is requested with **a single proof**:
 The issuer verifies the KA, its revocation status and the nonce, and binds the credentials to `attested_keys`. It applies
 the tenant's `min_key_storage` lower bound according to the level in the KA.
 
-The metadata `proof_types_supported.jwt.key_attestations_required` declares the accepted levels (ARF ISSU_27d). The earlier
-WUA and per-key proof format is accepted until the pilot.
+The metadata `proof_types_supported.jwt.key_attestations_required` declares the accepted levels (ARF ISSU_27d). **On the
+production network the identity service accepts only the single proof with a KA and requires key storage `tee` or better**
+(security round 2026-10-24): per-key proofs without a KA and the `software` level are rejected with `invalid_proof`; the declared
+levels narrow accordingly. The sandbox and local development keep accepting `software` (deviation S-9). At institution issuers the
+lower bound is the tenant's `min_key_storage` policy (default `software`; raised by the institution's policy).
 
 **Revocation maintenance period preference (EU TS3 §2.4; ARF WUA_32, ISSU_12c; code 0.5.0).** An issuer may announce
 `key_attestations_required.preferred_key_storage_status_period` for the remaining revocation maintenance period of the KA it
@@ -689,6 +692,13 @@ attestation**; no student login/portal is needed. The pre-authorized path (§3) 
 | 3 | The wallet runs the **standard presentation flow** (SPEC-PROTO-0002: RP registration, consent screen, KB-JWT, JWE) → `POST /{slug}/vp/response` | The issuer verifies with T0 + A–E (status prefetch S12) and matches by **national ID + birth date**: against the hash in the offer if `issuer_state` is present (§3.4), otherwise via `lookup` at the institution's source ([[ADR-0020]]; `docs/api/institution-source.openapi.yaml`); source unreachable → `temporarily_unavailable`; response `{redirect_uri}` = `redirect_uri?code=…&state=…` or `error=access_denied` |
 | 4 | `POST /{slug}/token` — `grant_type=authorization_code`, `code`, `code_verifier`, `redirect_uri`, WUA headers | code single-use, ≤ 60 s; PKCE; the client is the same WUA `sub` as in the PAR |
 | 5 | `/nonce` → proofs → `/credential` | §5–§8 as is (10 copies, PR6) |
+
+**Deliberate behaviour — authorization code reuse (RFC 9700 §4.5; security round 2026-10-24).** When a used `code` arrives a
+second time, the issuer **first** revokes the tokens issued from it (access and refresh token; at the identity service the ZK copy
+chain) and only then checks the replaying party's client/DPoP binding (`redeemCode`). A third party that observes a used code can
+therefore close the victim's tokens (denial of service; no data is exposed — it obtains neither a token nor a credential). This is a
+deliberate application of RFC 9700's "revoke on reuse" rule: when a code may have leaked, closing the victim's session comes before
+preventing the attacker's use of the code; the wallet restarts the flow with a new PAR.
 
 The Tamga identity service (`id.tamga.network`) runs the same flow **in the browser**: `/authorize` privacy notice +
 explicit consent → remote verification provider → `/idv/return` (decision query) → `redirect_uri?code`. Under ETSI 472-3,

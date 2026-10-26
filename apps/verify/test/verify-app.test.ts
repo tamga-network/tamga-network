@@ -84,6 +84,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     statusPrefetchSec: 60,
     dataDir: join(tmpdir(), "tamga-verify-test-" + process.pid),
     requireRpAuth: false,
+    // ADR-0065: kapılar terminal anahtarıyla gelir (ortamdan yüklenen deneme anahtarları — sandbox/yerel yolu)
+    terminalKeys: "bilgi-campus:test-campus-key-0001,bubilet-gate:test-gate-key-0001",
   };
   const ISS = "https://issuer.tamga.network/bilgi";
   const VCT = "urn:tamga:edu:DiplomaCredential:1";
@@ -1254,26 +1256,32 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const b3 = await openBoth();
     const b3Qr = await answer(b3.qr, noPostCapture);
     const mixed = encryptJwe(utf8(JSON.stringify({ vp_token: b3Qr.vpToken, state: b3.dc.state })), b3.dc.encJwk);
-    await postJwe(mixed);
-    const rb3 = await result(b3.id);
-    expect(rb3.outcome).toBe("REJECTED");
-    expect(rb3.failed_step).toBe("A6");
+    expect((await postJwe(mixed)).statusCode).toBe(400);
+    // sahiplik kanıtına ulaşmayan yanıt sunumu TÜKETMEZ (5c1c301): durum PENDING, son deneme A6
+    const rb3 = (await result(b3.id)) as unknown as { state: string; last_attempt: { failed_step: string | null } };
+    expect(rb3.state).toBe("PENDING");
+    expect(rb3.last_attempt.failed_step).toBe("A6");
 
     // 5) DC API oturumuna QR akışının (OpenID4VPHandover) imzası → oturum özeti uyuşmaz → A6
     const d2 = await openDc();
     const d2req = parseDcApiRequest(d2.dc_api_request, SITE);
-    const wrong = await respond({
-      approval: testApproval({ ...d2req, origin: undefined, responseUri: `${BASE}/vp/response` }),
-      request: { ...d2req, origin: undefined, responseUri: `${BASE}/vp/response` },
-      matches: [{ match: dm, keyRef: "w.mdoc", combined: sd.combined, disclose: dm.requested }],
-      keys,
-      http: http3,
-      now,
-    });
-    expect(wrong.status).toBe(200);
-    const rw = await result(d2.presentation_id);
-    expect(rw.outcome).toBe("REJECTED");
-    expect(rw.failed_step).toBe("A6");
+    // doğrulayıcı A6 reddine 400 döner ve sunumu tüketmez (5c1c301); cüzdan çekirdeği bunu hata olarak görür
+    await expect(
+      respond({
+        approval: testApproval({ ...d2req, origin: undefined, responseUri: `${BASE}/vp/response` }),
+        request: { ...d2req, origin: undefined, responseUri: `${BASE}/vp/response` },
+        matches: [{ match: dm, keyRef: "w.mdoc", combined: sd.combined, disclose: dm.requested }],
+        keys,
+        http: http3,
+        now,
+      }),
+    ).rejects.toThrow(/verifier response 400/);
+    const rw = (await result(d2.presentation_id)) as unknown as {
+      state: string;
+      last_attempt: { failed_step: string | null };
+    };
+    expect(rw.state).toBe("PENDING");
+    expect(rw.last_attempt.failed_step).toBe("A6");
     expect(
       (
         await app3.inject({
@@ -1887,6 +1895,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       const v = await app.inject({
         method: "POST",
         url: "/terminal/verify",
+        headers: { authorization: "Bearer test-campus-key-0001" },
         payload: { token: "bozuk", terminal_group: "bilgi-campus" },
       });
       expect(v.json().ok).toBe(false);
@@ -1905,6 +1914,112 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       expect(row.rejected).toBeGreaterThanOrEqual(1);
       expect(row.reasons["token unreadable"]).toBeGreaterThanOrEqual(1);
       expect(JSON.stringify(j)).not.toMatch(/pass_id|passId/);
+    } finally {
+      if (before === undefined) delete process.env.TAMGA_ADMIN_TOKEN;
+      else process.env.TAMGA_ADMIN_TOKEN = before;
+    }
+  });
+
+  it("ADR-0065 TK1: anahtarsız kapı isteği 401 — jeton okunmaz, sayaçlara girmez; başka grubun anahtarı 403; grup anahtardan", async () => {
+    const before = process.env.TAMGA_ADMIN_TOKEN;
+    process.env.TAMGA_ADMIN_TOKEN = "stats-token";
+    try {
+      const stats = async () =>
+        (
+          await app.inject({
+            method: "GET",
+            url: "/stats/gates?group=bubilet-gate&days=0",
+            headers: { "x-admin-token": "stats-token" },
+          })
+        ).json() as { rows: Array<{ group: string; rejected: number; accepted: number }> };
+      const row = (r: Awaited<ReturnType<typeof stats>>) => r.rows.find((x) => x.group === "bubilet-gate");
+      const b0 = row(await stats());
+      const post = (headers: Record<string, string>, payload: Record<string, unknown>) =>
+        app.inject({ method: "POST", url: "/terminal/verify", headers, payload });
+      // anahtarsız → 401 + WWW-Authenticate; jetona dokunulmadı (sayaç değişmedi)
+      const noKey = await post({}, { token: "bozuk", terminal_group: "bubilet-gate" });
+      expect(noKey.statusCode).toBe(401);
+      expect(noKey.headers["www-authenticate"]).toMatch(/^Bearer/);
+      expect(noKey.json()).toEqual({ ok: false, reason: "terminal key required" });
+      const bad = await post({ authorization: "Bearer yanlis-anahtar-000000" }, { token: "bozuk" });
+      expect(bad.statusCode).toBe(401);
+      expect(row(await stats())?.rejected ?? 0).toBe(b0?.rejected ?? 0);
+      // kampüs anahtarıyla bilet kapısı gibi davranılamaz
+      const wrong = await post(
+        { authorization: "Bearer test-campus-key-0001" },
+        { token: "bozuk", terminal_group: "bubilet-gate" },
+      );
+      expect(wrong.statusCode).toBe(403);
+      expect(row(await stats())?.rejected ?? 0).toBe(b0?.rejected ?? 0);
+      // doğru anahtar: grup anahtardan gelir (gövdede grup yazmak gerekmez), jeton denetlenir ve sayaca girer
+      const ok = await post({ authorization: "Bearer test-gate-key-0001" }, { token: "bozuk" });
+      expect(ok.statusCode).toBe(200);
+      expect(ok.json()).toMatchObject({ ok: false, reason: "token unreadable" });
+      expect(row(await stats())?.rejected).toBe((b0?.rejected ?? 0) + 1);
+      // denetim kaydında adres ve jeton yok; yetkisiz deneme olay olarak var
+      const audit = (await app.inject({ url: "/audit?n=50", headers: { "x-admin-token": "stats-token" } })).body;
+      expect(audit).toContain("terminal.unauthorized");
+      expect(audit).not.toContain("yanlis-anahtar");
+    } finally {
+      if (before === undefined) delete process.env.TAMGA_ADMIN_TOKEN;
+      else process.env.TAMGA_ADMIN_TOKEN = before;
+    }
+  });
+
+  it("ADR-0065 TK2/TK3: işletmeci anahtar verir (bir kez görünür), listeler (özet yok), iptal eder; bilinmeyen grup 400; yönetici belirteci yoksa 404", async () => {
+    const before = process.env.TAMGA_ADMIN_TOKEN;
+    process.env.TAMGA_ADMIN_TOKEN = "stats-token";
+    const admin = { "x-admin-token": "stats-token" };
+    try {
+      expect((await app.inject({ method: "GET", url: "/terminal/keys" })).statusCode).toBe(404);
+      expect(
+        (await app.inject({ method: "POST", url: "/terminal/keys", payload: { terminal_group: "bubilet-gate" } }))
+          .statusCode,
+      ).toBe(404);
+      const unknown = await app.inject({
+        method: "POST",
+        url: "/terminal/keys",
+        headers: admin,
+        payload: { terminal_group: "yok-boyle-grup" },
+      });
+      expect(unknown.statusCode).toBe(400);
+      const made = await app.inject({
+        method: "POST",
+        url: "/terminal/keys",
+        headers: admin,
+        payload: { terminal_group: "bubilet-gate", label: "kapı 1" },
+      });
+      expect(made.statusCode).toBe(201);
+      const k = made.json() as { id: string; key: string; terminal_group: string };
+      expect(k.key).toMatch(/^tk_/);
+      expect(k.terminal_group).toBe("bubilet-gate");
+      const list = (await app.inject({ method: "GET", url: "/terminal/keys", headers: admin })).json() as {
+        keys: Array<Record<string, unknown>>;
+      };
+      const mine = list.keys.find((x) => x.id === k.id)!;
+      expect(mine).toMatchObject({ terminalGroup: "bubilet-gate", label: "kapı 1", source: "issued" });
+      expect(JSON.stringify(list)).not.toContain(k.key);
+      expect(list.keys.some((x) => x.source === "env")).toBe(true);
+      // verilen anahtar çalışır; iptalden sonra 401
+      const use = () =>
+        app.inject({
+          method: "POST",
+          url: "/terminal/verify",
+          headers: { authorization: `Bearer ${k.key}` },
+          payload: { token: "bozuk" },
+        });
+      expect((await use()).statusCode).toBe(200);
+      expect((await app.inject({ method: "DELETE", url: `/terminal/keys/${k.id}`, headers: admin })).json()).toEqual({
+        ok: true,
+      });
+      expect((await use()).statusCode).toBe(401);
+      expect((await app.inject({ method: "DELETE", url: "/terminal/keys/env-1", headers: admin })).statusCode).toBe(
+        404,
+      );
+      // dosyada yalnız özet (anahtar yok)
+      const file = readFileSync(join(cfg.dataDir, "terminal-keys.json"), "utf8");
+      expect(file).toContain(k.id);
+      expect(file).not.toContain(k.key);
     } finally {
       if (before === undefined) delete process.env.TAMGA_ADMIN_TOKEN;
       else process.env.TAMGA_ADMIN_TOKEN = before;
