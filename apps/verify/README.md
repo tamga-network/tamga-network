@@ -21,7 +21,7 @@ npm run verify            # :4004; env: TAMGA_VERIFY_BASE, TAMGA_TRUST_DIST, TAM
 | `GET /p/:id`                    | HTML: ACCEPTED / REJECTED / INDETERMINATE ayrı, adım şeridi, arka plan paneli. Sahibi olan sunumda ayrıntı yalnız `?st=<durum jetonu>` ya da sahibin RP beyanıyla; aksi hâlde nötr durum |
 | `GET /audit`                    | Son denetim kayıtları (yalnızca `x-admin-token`)                                                                                                     |
 | `GET /policies`                 | Cüzdanın "Kontrol ettir" ekranı için senaryo özeti (ADR-0012 C)                                                                                      |
-| `GET /p/:id?show=<key>`         | Kontrol görünümü: büyük sonuç + yalnızca açıklanan alanlar; anahtar yanıtla gelir (`show_url`), 5 dk geçerli, aksi 410                               |
+| `GET /p/:id?st=…&show=<key>`   | Kontrol görünümü: büyük sonuç + yalnızca açıklanan alanlar; anahtar kabulde cüzdanın `redirect_uri`sinde, 5 dk geçerli (sonra durum sayfası; jetonsuz 410) |
 | `POST /terminal/verify`         | Geçiş kartı jetonu doğrulama (ADR-0012 B, AP13): `Authorization: Bearer <terminal anahtarı>` (ADR-0065; grup anahtardan) + `{token}` → `{ok, reason}`; anahtarsız 401; jti tekrar listesi bu serviste ortak |
 | `GET /terminal`                 | Turnike demo sayfası (kamera / yapıştır + terminal anahtarı alanı); `?group=`                                                                        |
 | `/terminal/keys`                | Terminal anahtarları (ADR-0065; yalnız `x-admin-token`, nginx'te dışa kapalı): `POST {terminal_group, label}` → anahtar bir kez; `GET` liste (özet yok); `DELETE /:id` iptal. Yerel/sandbox: `TAMGA_VERIFY_TERMINAL_KEYS=grup:anahtar,…` |

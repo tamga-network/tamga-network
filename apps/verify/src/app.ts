@@ -2,7 +2,7 @@
  * Referans verifier — verify.tamga.network (SPEC-API-0001 §4 servis yüzeyi + SPEC-PROTO-0002 uçları).
  *  POST /presentations {policy_id} → imzalı istek nesnesi + QR (openid4vp://…&request_uri=…)
  *  GET  /vp/req/:id            → istek nesnesi (application/oauth-authz-req+jwt)
- *  POST /vp/response           → direct_post.jwt (form: response=<JWE>) → çöz → doğrula (T0 + A–E) → sonuç (+ pass_grant, show_url)
+ *  POST /vp/response           → direct_post.jwt (form: response=<JWE>) → çöz → doğrula (T0 + A–E) → yalnız `redirect_uri` (kabulde kontrol görünümü anahtarıyla; + ADR-0012 B pass_grant)
  *  GET  /presentations/:id     → PENDING | sonuç nesnesi (claim DEĞERİ yok — AP3, idx yok — AP4)
  *  GET  /presentations/:id/claims → değerler (ayrı uç, ayrıca yetkilendirilir — demo: aynı oturum)
  *  GET  /p/:id                 → HTML sonuç ekranı (AP2); `?show=<key>` kontrol görünümü (ADR-0012 C, 5 dk)

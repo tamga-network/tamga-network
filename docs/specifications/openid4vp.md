@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-24
+last_updated: 2026-10-27
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -177,6 +177,7 @@ kanıtlamaz ve aşırı talep denetimi imkânsız hâle gelir.
 | İstek imzası | **Zorunlu** — imzasız istek reddedilir |
 | `client_metadata.jwks` | Yanıt şifreleme anahtarı; **zorunlu** |
 | `verifier_info` | İsteğe bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — kullanımın kayıt sertifikasını (ETSI TS 119 475 / 119 472-2). Varsa cüzdan kayıt birimi imzasını (LOTL `roles.registrar`), süreyi ve `sub`'ın erişim sertifikasındaki `organizationIdentifier` ile aynı olduğunu doğrular; tutmazsa veri gönderilmez (WRC4). Sertifikada olmayan alan fazla istek sayılır (§6). |
+| Amaç (`purpose`) | İstek nesnesinde ayrı bir amaç parametresi **yoktur** (OpenID4VP 1.0 §5.1'de tanımlı değil; 2026-10-27). Onay ekranındaki "ne için" metnini cüzdan `verifier_info`'daki kayıt sertifikasının `purpose`'undan (ETSI TS 119 475 kullanım amacı, dil başına) okur; sertifikada yoksa güven listesindeki kayıtlı kullanımın `purpose`'undan. |
 
 **Değişmez PV3:** Şifresiz yanıt modu (`direct_post`, `query`, `fragment`)
 kullanılmaz. Sunum, kişisel veri taşır ve taşıyıcı katman şifrelemesine
@@ -398,6 +399,14 @@ anahtarıyla **JWE** olarak şifrelenir.
 | `alg` | `ECDH-ES` |
 | `enc` | `A128GCM` ya da `A256GCM` ([[t:HAIP]] §5) — doğrulayıcı ikisini de `encrypted_response_enc_values_supported` içinde ilan eder ve kabul eder; cüzdan ilan edilenler arasından `A256GCM`'i seçer, ilan yoksa OpenID4VP varsayılanı `A128GCM` |
 | Alıcı anahtarı | İstekteki `jwks`'ten, `use: "enc"` |
+
+## 5.4 Yanıt ucunun cevabı (2026-10-27)
+
+Doğrulayıcı `response_uri`'ye gelen geçerli yanıta 200 ve gövdede **yalnız `redirect_uri`** döner (OpenID4VP 1.0 §8.2; [[t:HAIP]]
+§5.1 bunu ister). Başka anahtar eklenmez. Tamga Verify kabulde yüz yüze kontrol görünümünün anahtarını ([[ADR-0012]] C) bu adresin
+içine koyar: `/p/{id}?st=<durum jetonu>&show=<anahtar>`. Anahtar sonuçtan sonra 5 dakika geçerlidir; sonra aynı adres olağan durum
+sayfasını gösterir. Adres yalnız şifreli yanıtı gönderen cüzdana gider; cüzdan "Kontrol ettir"de onu QR olarak gösterir. Tek
+istisna geçiş kartı veren politikalardır ([[ADR-0012]] B): kabulde `pass_grant` ve `pass` da döner (Tamga uzantısı).
 
 ---
 

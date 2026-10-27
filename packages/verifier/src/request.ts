@@ -142,7 +142,6 @@ export async function createPresentationRequest(p: {
   requestUriBase: string;
   ttlSec?: number;
   now?: number;
-  purpose?: string;
   /** ADR-0017 K7: aracı doğrulayıcı bir RP adına istiyorsa asıl RP'nin client_id'si (cüzdan onu gösterir). */
   onBehalfOf?: string;
   /**
@@ -150,6 +149,8 @@ export async function createPresentationRequest(p: {
    * 472-2 RO-13…16, ARF RPRC_19): istek başına TEK sertifika, `format: "registration_cert"`, `data` = WRPRC JWT'nin kendisi,
    * `credential_ids` YOK (sertifika isteğin bütün sorgularını kapsar). RO-16'daki "base64url" JWT'nin kompakt serileştirmesi olarak
    * okunur (JWT zaten base64url bölümlerden oluşur; AB referans uygulaması ve Alman rehberi JWT'yi olduğu gibi koyar).
+   * İsteğin amacı (kullanıcıya gösterilen "ne için") bu sertifikanın `purpose` alanıdır (ETSI TS 119 475 intended use); istek
+   * nesnesinde ayrı bir `purpose` parametresi YOKTUR — OpenID4VP 1.0 §5.1'de tanımlı değildir (2026-10-27, OpenID öz-testi U1).
    */
   registrationCert?: string;
   /**
@@ -197,7 +198,6 @@ export async function createPresentationRequest(p: {
         encrypted_response_enc_values_supported: [...RESPONSE_ENC],
         vp_formats_supported: vpFormatsFor(p.dcql),
       },
-      ...(p.purpose ? { purpose: p.purpose } : {}),
       ...(p.registrationCert ? { verifier_info: [{ format: "registration_cert", data: p.registrationCert }] } : {}),
       ...(p.onBehalfOf && p.onBehalfOf !== p.signer.clientId ? { tamga_on_behalf_of: p.onBehalfOf } : {}),
       ...(p.passGrantOffered ? { pass_grant_offered: true } : {}),

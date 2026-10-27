@@ -188,6 +188,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const uri = parseVpUri(created.qr_payload);
     const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http), uri.clientId, LAN);
     expect(req.responseUri).toBe(`${BASE}/vp/response`);
+    // OpenID4VP 1.0 §5.1 (öz-test U1, 2026-10-27): istek nesnesinde standart dışı `purpose` yok; amaç kayıt sertifikasında
+    expect(req.payload).not.toHaveProperty("purpose");
     const { matches } = matchDcql(req.dcql, r.state.credentials);
     expect(matches.length).toBe(1);
     const rpRec = app.trust().relyingParty(req.clientId) as unknown as RpRecord;
@@ -196,16 +198,38 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(chk.overAsk).toEqual([]);
     // sunum → JWE → POST
     const copy = matches[0].credential.copies[0];
+    let responseBody = "";
     const out = await respond({
       approval: testApproval(req),
       request: req,
       matches: [{ match: matches[0], keyRef: copy.keyRef, combined: copy.combined, disclose: matches[0].requested }],
       keys,
-      http,
+      http: async (url, init) => {
+        const x = await http(url, init);
+        if (url.endsWith("/vp/response")) responseBody = await x.text();
+        return { status: x.status, text: async () => responseBody };
+      },
       now,
     });
     expect(out.status).toBe(200);
     expect(out.redirectUri).toContain(`/p/${created.presentation_id}`);
+    // OpenID4VP 1.0 §8.2 (öz-test U2, 2026-10-27): yanıtta yalnız `redirect_uri`; kontrol görünümü anahtarı adresin içinde
+    expect(Object.keys(JSON.parse(responseBody) as object)).toEqual(["redirect_uri"]);
+    expect(out.redirectUri).toMatch(/\?st=[^&]+&show=[^&]+$/);
+    const check = await app.inject({ method: "GET", url: out.redirectUri!.slice(BASE.length) });
+    expect(check.statusCode).toBe(200);
+    expect(check.body).toContain('class="result big ACCEPTED"'); // ADR-0012 C kontrol görünümü
+    // jetonsuz yanlış anahtar 410; durum jetonuyla yanlış anahtar olağan sonuç sayfasına düşer
+    const showOnly = out.redirectUri!.slice(BASE.length).replace(/\?st=[^&]+&/, "?");
+    expect((await app.inject({ method: "GET", url: showOnly.replace(/show=.*$/, "show=yanlis") })).statusCode).toBe(
+      410,
+    );
+    const stWrong = await app.inject({
+      method: "GET",
+      url: out.redirectUri!.slice(BASE.length).replace(/show=.*$/, "show=yanlis"),
+    });
+    expect(stWrong.statusCode).toBe(200);
+    expect(stWrong.body).not.toContain('class="result big');
     const res = (await app.inject({ method: "GET", url: `/presentations/${created.presentation_id}` })).json() as {
       outcome: string;
       failed_step: string | null;

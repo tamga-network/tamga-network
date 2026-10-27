@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-24
+last_updated: 2026-10-27
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -171,6 +171,7 @@ Signed request object (JAR), `typ: oauth-authz-req+jwt`, `alg: ES256`, `x5c` cha
 | Request signature | **Mandatory** — an unsigned request is rejected |
 | `client_metadata.jwks` | Response encryption key; **mandatory** |
 | `verifier_info` | Optional ([[ADR-0026]]): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — the registration certificate of the use (ETSI TS 119 475 / 119 472-2). If present, the wallet verifies the registrar signature (LOTL `roles.registrar`), the validity period and that `sub` equals the `organizationIdentifier` in the access certificate; if they do not match, no data is sent (WRC4). A field not in the certificate counts as over-asking (§6). |
+| Purpose (`purpose`) | The request object has **no** separate purpose parameter (it is not defined in OpenID4VP 1.0 §5.1; 2026-10-27). The wallet reads the "what for" text of the consent screen from the `purpose` of the registration certificate in `verifier_info` (ETSI TS 119 475 intended use, per language); if the certificate has none, from the `purpose` of the registered use in the trust list. |
 
 **Invariant PV3:** unencrypted response modes (`direct_post`, `query`, `fragment`) are not used. A presentation carries personal
 data and relying on transport-layer encryption is not enough — intermediate layers on the way to `response_uri` (reverse
@@ -383,6 +384,15 @@ RFC 7638 SHA-256 thumbprint of the verifier key the response is encrypted to (PV
 | `alg` | `ECDH-ES` |
 | `enc` | `A128GCM` or `A256GCM` ([[t:HAIP]] §5) — the verifier declares both in `encrypted_response_enc_values_supported` and accepts both; the wallet picks `A256GCM` among the declared values, and the OpenID4VP default `A128GCM` if nothing is declared |
 | Recipient key | From the request's `jwks`, `use: "enc"` |
+
+## 5.4 The response endpoint's answer (2026-10-27)
+
+To a valid response at the `response_uri` the verifier answers 200 with **only `redirect_uri`** in the body (OpenID4VP 1.0 §8.2;
+[[t:HAIP]] §5.1 requires it). No other key is added. On ACCEPTED, Tamga Verify puts the key of the face-to-face check view
+([[ADR-0012]] C) inside that address: `/p/{id}?st=<status token>&show=<key>`. The key is valid for 5 minutes after the result;
+after that the same address shows the ordinary status page. The address goes only to the wallet that sent the encrypted
+response; under "Have it checked" the wallet shows it as a QR code. The one exception is access-pass policies ([[ADR-0012]] B):
+on ACCEPTED they also return `pass_grant` and `pass` (a Tamga extension).
 
 ---
 

@@ -273,15 +273,19 @@ paths:
                 response: { type: string, description: base64url EncryptedResponse., x-tr: base64url EncryptedResponse. }
       responses:
         "200":
-          description: Verified (the outcome is in `getPresentation`); `redirect_uri` for the same device.
-          x-tr: Doğrulandı (sonuç `getPresentation`'da); aynı cihaz için `redirect_uri`.
+          description: >-
+            Verified (the outcome is in `getPresentation`); only `redirect_uri` for the same device (OpenID4VP 1.0 §8.2). On
+            ACCEPTED it also carries the face-to-face check view key (`&show=…`, valid 5 minutes after the result).
+          x-tr: >-
+            Doğrulandı (sonuç `getPresentation`'da); aynı cihaz için yalnız `redirect_uri` (OpenID4VP 1.0 §8.2). Kabulde yüz yüze
+            kontrol görünümünün anahtarını da taşır (`&show=…`, sonuçtan sonra 5 dk).
           content:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
                 properties:
                   redirect_uri: { type: string, format: uri }
-                  show_url: { type: string, format: uri }
         "400":
           description: Unknown or expired presentation, already answered, or the response could not be decrypted.
           x-tr: Bilinmeyen ya da süresi geçmiş sunum, zaten yanıtlanmış ya da yanıt açılamadı.

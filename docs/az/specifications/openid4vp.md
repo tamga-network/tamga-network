@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-24
+last_updated: 2026-10-27
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdandan yoxlayan tərəfə necə təqdim edildiyini müəyyən edir. OpenID4VP 1.0 Final üzərində Tamga profili: DCQL sorğuları (Presentation Exchange İSTİFADƏ EDİLMİR), imzalı sorğu obyekti, cavabın şifrələnməsi, brauzerdə Digital Credentials API. Əsas tapıntı: HAIP-in məcburi etdiyi `x509_hash` client identifier prefiksi base64url(SHA-256(DER)) dəyəridir — bu, zəncirdəki `RelyingParty.accessCertFingerprint` ilə TAM EYNİ BAYTLARDIR. Buna görə rəqəmsal cüzdan sorğudakı client identifier-dən birbaşa zəncir qeydini tapa və həddindən artıq tələb nəzarətini ([[SPEC-BC-0001]] §6) protokol səviyyəsində tətbiq edə bilər. Bundan əlavə, istənilməyən sahələrin aşkarlanması, təqdimatdan sonra istifadəçi jurnalı və cavabın şifrələnməsi qaydaları.
 translation_of: SPEC-PROTO-0002
@@ -170,6 +170,7 @@ sübut etmir və həddindən artıq tələb nəzarəti mümkünsüz olur.
 | Sorğu imzası | **Məcburi** — imzasız sorğu rədd edilir |
 | `client_metadata.jwks` | Cavab şifrələmə açarı; **məcburi** |
 | `verifier_info` | İstəyə bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — istifadənin qeydiyyat sertifikatı (ETSI TS 119 475 / 119 472-2). Varsa, rəqəmsal cüzdan qeydiyyat orqanının imzasını (LOTL `roles.registrar`), müddəti və `sub`-ın giriş sertifikatındakı `organizationIdentifier` ilə eyni olduğunu yoxlayır; uyğun gəlmirsə, məlumat göndərilmir (WRC4). Sertifikatda olmayan sahə artıq tələb sayılır (§6). |
+| Məqsəd (`purpose`) | Sorğu obyektində ayrıca məqsəd parametri **yoxdur** (OpenID4VP 1.0 §5.1-də müəyyən edilməyib; 2026-10-27). Rəqəmsal cüzdan razılıq ekranındakı "nə üçün" mətnini `verifier_info`-dakı qeydiyyat sertifikatının `purpose`-undan (ETSI TS 119 475 istifadə məqsədi, dil üzrə) oxuyur; sertifikatda yoxdursa, etibar siyahısındakı qeydiyyatlı istifadənin `purpose`-undan. |
 
 **İnvariant PV3:** Şifrəsiz cavab rejimi (`direct_post`, `query`, `fragment`)
 istifadə edilmir. Təqdimat fərdi məlumatlar daşıyır və nəqliyyat qatının şifrələməsinə
@@ -391,6 +392,15 @@ açarı ilə **JWE** kimi şifrələnir.
 | `alg` | `ECDH-ES` |
 | `enc` | `A128GCM` və ya `A256GCM` ([[t:HAIP]] §5) — yoxlayan tərəf hər ikisini `encrypted_response_enc_values_supported` daxilində elan edir və qəbul edir; cüzdan elan olunanlar arasından `A256GCM`-nı seçir, elan yoxdursa, OpenID4VP-nin defolt dəyəri `A128GCM` |
 | Alıcı açarı | Sorğudakı `jwks`-dən, `use: "enc"` |
+
+## 5.4 Cavab ucunun cavabı (2026-10-27)
+
+Yoxlayan tərəf `response_uri`-yə gələn etibarlı cavaba 200 və gövdədə **yalnız `redirect_uri`** qaytarır (OpenID4VP 1.0 §8.2;
+[[t:HAIP]] §5.1 bunu tələb edir). Başqa açar əlavə edilmir. Qəbul olunduqda Tamga Verify üzbəüz yoxlama görünüşünün açarını
+([[ADR-0012]] C) bu ünvanın içinə qoyur: `/p/{id}?st=<status tokeni>&show=<açar>`. Açar nəticədən sonra 5 dəqiqə etibarlıdır;
+sonra eyni ünvan adi status səhifəsini göstərir. Ünvan yalnız şifrəli cavabı göndərən rəqəmsal cüzdana gedir; cüzdan "Yoxlat"
+bölməsində onu QR kimi göstərir. Yeganə istisna keçid kartı verən siyasətlərdir ([[ADR-0012]] B): qəbulda `pass_grant` və `pass`
+da qaytarılır (Tamga genişlənməsi).
 
 ---
 

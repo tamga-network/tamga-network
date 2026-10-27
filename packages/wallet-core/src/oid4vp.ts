@@ -993,10 +993,13 @@ export interface RespondInput {
 }
 export interface RespondOutput {
   status: number;
+  /**
+   * OpenID4VP 1.0 §8.2: doğrulayıcının yanıtındaki tek standart alan. Tamga Verify kabulde yüz yüze kontrol görünümünün
+   * anahtarını da bu adrese koyar (ADR-0012 C, `?show=`, sonuçtan sonra 5 dk); "Kontrol ettir"de cüzdan bu adresi QR olarak gösterir.
+   */
   redirectUri?: string;
   vpToken: Record<string, string[]>;
   passGrant?: string;
-  showUrl?: string;
   /** Digital Credentials API: sayfaya dönecek yanıt (cüzdan bunu işletim sistemine verir; POST yok). */
   dcApiResponse?: { response: string };
 }
@@ -1060,16 +1063,14 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
   if (r.status !== 200) throw new WalletError("issuer_error", `verifier response ${r.status}`);
   let redirectUri: string | undefined;
   let passGrant: string | undefined;
-  let showUrl: string | undefined;
   try {
-    const j = (await readJson(r, "verifier")) as { redirect_uri?: string; pass_grant?: string; show_url?: string };
+    const j = (await readJson(r, "verifier")) as { redirect_uri?: string; pass_grant?: string };
     redirectUri = j.redirect_uri;
     passGrant = j.pass_grant;
-    showUrl = j.show_url;
   } catch {
     /* boş gövde olabilir */
   }
-  return { status: r.status, redirectUri, vpToken, passGrant, showUrl }; // passGrant: ADR-0012 B (geçiş kartı) · showUrl: ADR-0012 C (kontrol görünümü, 5 dk)
+  return { status: r.status, redirectUri, vpToken, passGrant }; // passGrant: ADR-0012 B (geçiş kartı)
 }
 
 /**

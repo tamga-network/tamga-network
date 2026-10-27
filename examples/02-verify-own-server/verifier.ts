@@ -123,7 +123,6 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
       dcql: dcqlFromPolicy(policy),
       responseUri: `${cfg.publicBase}/vp/response`,
       requestUriBase: `${cfg.publicBase}/vp/req`,
-      purpose: Object.values(policy.purpose)[0],
       registrationCert: await registrationCert(),
     });
     sweep();

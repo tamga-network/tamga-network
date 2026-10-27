@@ -56,6 +56,12 @@ export interface RegistrationCertCheck {
   allowedClaims?: string[];
   tradeName?: string;
   privacyPolicy?: string;
+  /**
+   * Kullanımın amacı (ETSI TS 119 475 `purpose`, ARF intended use): onay ekranındaki "ne için" metninin imzalı kaynağı —
+   * İngilizce (yoksa ilk dil) metin ve BCP 47 dil → metin çevirileri. OpenID4VP istek nesnesinde ayrı `purpose` yoktur (§5.1).
+   */
+  purpose?: string;
+  purposeLocalized?: Record<string, string>;
 }
 
 export interface Wrprc {
@@ -68,6 +74,8 @@ export interface Wrprc {
   iat?: number;
   exp?: number;
   privacy_policy?: string;
+  /** ETSI TS 119 475: kullanımın amacı, dil başına (`value`; ETSI TS 119 602 biçimindeki `content` da okunur) */
+  purpose?: Array<{ lang?: string; value?: string; content?: string }>;
   intermediary?: { sub?: string };
   credentials?: Array<{
     format?: string;
@@ -279,6 +287,7 @@ export function checkRegistrationCerts(
     ...(relevant.length ? { allowedClaims: [...allowed] } : {}),
     tradeName: relevant[0]?.name,
     privacyPolicy: relevant[0]?.privacy_policy,
+    ...purposeOf(relevant[0]),
   };
 }
 
@@ -396,9 +405,21 @@ export function checkProximityRegistration(
     allowedClaims: [...allowed],
     tradeName: v.payload.name,
     privacyPolicy: v.payload.privacy_policy,
+    ...purposeOf(v.payload),
     ...readerInfo,
   };
 }
+/** Sertifikanın `purpose` dizisi → `{ purpose, purposeLocalized }` (İngilizce ya da ilk metin kanonik). Yoksa boş. */
+function purposeOf(c: Wrprc | undefined): Pick<RegistrationCertCheck, "purpose" | "purposeLocalized"> {
+  const items = (Array.isArray(c?.purpose) ? c.purpose : [])
+    .map((x) => ({ lang: typeof x?.lang === "string" ? x.lang : "", text: x?.value ?? x?.content }))
+    .filter((x): x is { lang: string; text: string } => typeof x.text === "string" && x.text.length > 0);
+  if (!items.length) return {};
+  const canonical = items.find((x) => x.lang.toLowerCase().startsWith("en")) ?? items[0];
+  const localized = Object.fromEntries(items.filter((x) => x.lang).map((x) => [x.lang, x.text]));
+  return { purpose: canonical.text, ...(Object.keys(localized).length ? { purposeLocalized: localized } : {}) };
+}
+
 /** DCQL yolu: SD-JWT `[ad]`, mdoc `[ad alanı, öğe]` — öğe adı eklenir. */
 function addClaimPath(out: Set<string>, path: unknown[] | undefined) {
   if (!path?.length) return;

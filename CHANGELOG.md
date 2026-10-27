@@ -1,10 +1,23 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.7.1` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.7.2` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
-## 0.7.2 — unreleased
+## 0.7.3 — unreleased
+
+- OpenID conformance self-test, verifier plan round 1 (2026-10-27; OpenID4VP 1.0 §5.1, §8.2; SPEC-PROTO-0002 §3, §8.1). Two
+  warnings in every module are fixed. verifier: `createPresentationRequest` no longer writes a `purpose` parameter into the
+  signed request object (not an OpenID4VP parameter; the `purpose` option is removed) — the purpose shown to the person is the
+  `purpose` of the registration certificate in `verifier_info` (ETSI TS 119 475 intended use) and the registered use in the
+  trust list. wallet-core: `checkRegistrationCerts` / `checkProximityRegistration` return the certificate's `purpose`
+  (English or first text) and `purposeLocalized` (BCP 47 → text); `respond` no longer reads `show_url` (`RespondOutput.showUrl`
+  removed). Tamga Verify: the direct_post response carries only `redirect_uri` (plus `pass_grant` / `pass` for access-pass
+  policies, ADR-0012 B); on ACCEPTED the face-to-face check view key is part of that address (`/p/{id}?st=…&show=…`, valid 5
+  minutes after the result, then the address falls back to the status page; without the status token an old key gets 410).
+  Tamga Wallet shows that address as the "Have it checked" QR.
+
+## 0.7.2 — 2026-10-27
 
 - verifier (2026-10-27; SPEC-CRED-0003 §9.1 / publishing rule T1, ADR-0036 K5 D): an external (federated) issuer's Status List
   has no anchor, so its address is now learned on first sight like an identifier list (`StatusCache.want`; that verification is

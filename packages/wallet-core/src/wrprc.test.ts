@@ -129,6 +129,25 @@ describe("kayıt sertifikası doğrulaması (ADR-0026)", () => {
     const r = checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW));
     expect(r).toMatchObject({ present: true, valid: true, allowedClaims: ["is_enrolled"], tradeName: "Shop" });
     expect(r.privacyPolicy).toBe("https://shop.example/privacy");
+    expect(r.purpose).toBeUndefined(); // sertifikada amaç yoksa alan da yok
+  });
+
+  it("amaç (ETSI TS 119 475 `purpose`) sertifikadan okunur: İngilizce kanonik + dil çevirileri (OpenID4VP'de istek `purpose`'u yok)", async () => {
+    const req = await request([
+      {
+        format: "registration_cert",
+        data: await wrprc(registrar, {
+          ...basePayload,
+          purpose: [
+            { lang: "tr-TR", value: "Öğrencilik doğrulaması" },
+            { lang: "en", value: "Student check" },
+          ],
+        }),
+      },
+    ]);
+    const r = checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW));
+    expect(r.purpose).toBe("Student check");
+    expect(r.purposeLocalized).toEqual({ "tr-TR": "Öğrencilik doğrulaması", en: "Student check" });
   });
 
   it("kayıt kurumu listede değil → geçersiz (WRC4)", async () => {

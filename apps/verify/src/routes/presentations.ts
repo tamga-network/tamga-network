@@ -37,6 +37,14 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
   const nowSec = nowSeconds;
 
   /** Beyan varsa doğrular: RP client_id · beyan yoksa null · beyan geçersizse false (401 gönderilmiştir). */
+  /**
+   * OpenID4VP 1.0 §8.2: yanıt ucunun cüzdana döndürdüğü TEK alan `redirect_uri`'dir (ek alan yok; OpenID öz-testi 2026-10-27, U2).
+   * Kabulde yüz yüze kontrol görünümünün anahtarı (ADR-0012 C, sonuçtan sonra 5 dk) da bu adrese girer: "Kontrol ettir"de cüzdan
+   * adresi QR olarak gösterir. Adres yalnızca şifreli yanıtı gönderen cüzdana gider — eski `show_url` alanıyla aynı alıcı.
+   */
+  const walletRedirectUri = (p: Presentation, pid: string, outcome: string) =>
+    `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}` +
+    (outcome === "ACCEPTED" ? `&show=${encodeURIComponent(p.showKey)}` : "");
   const callerOf = async (authorization: string | undefined, reply: FastifyReply): Promise<string | null | false> => {
     if (!authorization) return null;
     try {
@@ -303,7 +311,6 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       });
       const extra: Record<string, unknown> = {};
       if (out.result.outcome === "ACCEPTED") {
-        extra.show_url = `${cfg.publicBase}/p/${pid}?show=${p.showKey}`; // ADR-0012 C: kontrol görünümü, 5 dk
         if (p.policy.proximity && pres) {
           // ADR-0012 B: politika geçiş kartı istiyorsa kabulde pass_grant ver (kişisel veri yok). a3/WL13: cüzdan ayrı kart
           // anahtarı kanıtı (`pass_key`) gönderdiyse kart ona bağlanır; yoksa holder anahtarına. Kanıt geçersizse kart
@@ -332,8 +339,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
           }
         }
       }
-      // Aynı cihaz akışı: cüzdan bu adresi tarayıcıda açar; durum jetonu yalnızca bu yanıtla (şifreli yanıtı gönderen cüzdana) gider
-      return { redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}`, ...extra };
+      // Aynı cihaz akışı: cüzdan bu adresi tarayıcıda açar; durum jetonu (ve kabulde kontrol görünümü anahtarı) yalnızca bu
+      // yanıtla (şifreli yanıtı gönderen cüzdana) gider
+      return { redirect_uri: walletRedirectUri(p, pid, out.result.outcome), ...extra };
     } catch (e) {
       // beklenmeyen hata (bozuk gövde vb.): sahiplik kanıtına ulaşmadıysa deneme; ulaştıysa sunum kapanır
       if (!p.used) return failedAttempt(p, pid, reply, null, (e as Error).message);
@@ -416,10 +424,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         ? `${out.result.failed_step}: ${out.result.failed_reason}`
         : `${out.result.checks_performed.length} checks passed`,
     });
-    return {
-      redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}`,
-      ...(out.result.outcome === "ACCEPTED" ? { show_url: `${cfg.publicBase}/p/${pid}?show=${p.showKey}` } : {}),
-    };
+    return { redirect_uri: walletRedirectUri(p, pid, out.result.outcome) };
   });
 
   // 4.2 / 4.3
@@ -456,10 +461,12 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     reply.type("text/html");
     const lang = langOf(req.headers["accept-language"]);
     const q = req.query as { show?: string; st?: string };
-    // ADR-0012 C: kontrol görünümü kendi anahtarıyla (5 dk)
+    // ADR-0012 C: kontrol görünümü kendi anahtarıyla (5 dk). Anahtar cüzdanın `redirect_uri`'sinde durum jetonuyla birlikte gelir:
+    // süresi geçince adres durum jetonuyla olağan sonuç sayfasına düşer; jetonsuz eski anahtar 410
     if (q.show !== undefined && p.result) {
-      if (!presentations.showAllowed(p, q.show)) return reply.code(410).send(expiredPage(lang));
-      return checkPage(lang, p, p.result, id, ctx.trust().relyingParty(cfg.clientId)?.dns_name ?? cfg.clientId);
+      if (presentations.showAllowed(p, q.show))
+        return checkPage(lang, p, p.result, id, ctx.trust().relyingParty(cfg.clientId)?.dns_name ?? cfg.clientId);
+      if (q.st === undefined || !sameSecret(q.st, p.statusToken)) return reply.code(410).send(expiredPage(lang));
     }
     // ADR-0017 HV1/HV2: sahibi olan sunumda ayrıntı (QR + durum jetonlu bekleme, sonuç, iz) yalnızca durum jetonuyla ya da
     // sahibin beyanıyla; sunum kimliği QR'da açık olduğundan kimliği bilen herkes yalnızca nötr durumu görür
@@ -493,7 +500,6 @@ export async function createPresentation(
     dcql: dcqlFromPolicy(policy, { zkCircuits: ctx.trust().zkCircuits?.() ?? [] }),
     responseUri: `${cfg.publicBase}/vp/response`,
     requestUriBase: `${cfg.publicBase}/vp/req`,
-    purpose: policy.purpose["en-US"],
     onBehalfOf: owner,
     passGrantOffered: !!policy.proximity, // a3/WL13: cüzdan geçiş kartı için ayrı anahtar hazırlar
     // ADR-0026 K4: isteğin kullanımının kayıt sertifikası (varsa; istek başına tek — RPRC_19) verifier_info ile
