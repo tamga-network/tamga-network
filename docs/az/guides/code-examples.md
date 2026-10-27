@@ -40,7 +40,7 @@ yarn add @tamga-network/verifier @tamga-network/trust @tamga-network/issuer
 :::
 
 ::: tip Versiya
-Paketlər npm-də 0.7.2 sınaq versiyası ilə dərc olunur; sabit 1.0.0 versiyası hazır olduqda təqdim ediləcək. Sınaq versiyasında interfeys
+Paketlər npm-də 0.7.3 sınaq versiyası ilə dərc olunur; sabit 1.0.0 versiyası hazır olduqda təqdim ediləcək. Sınaq versiyasında interfeys
 dəyişə bilər. Paketlərdən mənbə repozitoriyasından da istifadə etmək olar
 (`npm run release:check` dərcə hazır paketləri `.publish/` qovluğunda yaradır).
 :::

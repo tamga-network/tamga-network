@@ -34,7 +34,7 @@ Annex C (HPKE) for browser presentation · status list and identifier list token
 
 ## Status
 
-Published on npm as the `0.7.2` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.7.3` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

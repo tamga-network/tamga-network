@@ -180,7 +180,7 @@ gösterme olağan yolla yapılır.
 | Attestation Revocation List (tanımlayıcı listesi) — doğrulayıcı ve cüzdan tarafı | Yayında (paketler npm'de 0.5.0'dan beri); Tamga belge verenleri Status List kullanır |
 | Kimlik belgesinde askı yok, mdoc için CWT iptal listesi; kayıt sertifikası olmayan istekte uyarı; yakın alanda okuyucu doğrulaması | Yayında (paketler npm'de 0.6.0'dan beri) |
 | Paket API'lerinde güvenli varsayılanlar; kayıt sertifikası olmayan istekte ret ([[ADR-0056]]) | Yayında (paketler npm'de 0.7.0'dan beri) |
-| Bir erişim belirteciyle birden çok belge isteği, cüzdan örneği anahtarına bağlı yenileme belirteci, ayrı yapılandırmayla takma ad tohumu ([[ADR-0059]], [[ADR-0060]], [[ADR-0061]]) | Kodlandı; paketlerin sonraki sürümünde (0.7.2, npm'de henüz yok) |
+| Bir erişim belirteciyle birden çok belge isteği, cüzdan örneği anahtarına bağlı yenileme belirteci, ayrı yapılandırmayla takma ad tohumu ([[ADR-0059]], [[ADR-0060]], [[ADR-0061]]) | Yayında (paketler npm'de 0.7.2'den beri) |
 | Cüzdan sağlayıcısı kaydı | Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) gerçek ve sandbox güven listelerinde `ACTIVE` |
 
 ---

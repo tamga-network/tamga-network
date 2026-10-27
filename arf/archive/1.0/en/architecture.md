@@ -194,7 +194,7 @@ prover package; the Android native library is ready, the iOS library is pending;
 | Attestation Revocation List (identifier list) — verifier and wallet side | Released (packages on npm since 0.5.0); Tamga issuers use the Status List |
 | No suspension for the identity credential, CWT revocation list for mdoc; warning for requests without a registration certificate; reader verification in proximity | Released (packages on npm since 0.6.0) |
 | Misuse-resistant defaults in the package APIs; rejection of requests without a registration certificate ([[ADR-0056]]) | Released (packages on npm since 0.7.0) |
-| Several credential requests per access token, refresh token bound to the wallet instance key, pseudonym seed as its own credential configuration ([[ADR-0059]], [[ADR-0060]], [[ADR-0061]]) | Implemented; in the next package release (0.7.2, not yet on npm) |
+| Several credential requests per access token, refresh token bound to the wallet instance key, pseudonym seed as its own credential configuration ([[ADR-0059]], [[ADR-0060]], [[ADR-0061]]) | Released (packages on npm since 0.7.2) |
 | Wallet provider registration | Tamga Wallet's provider (`TAMGA-WP-1`) is `ACTIVE` in the production and sandbox trust lists |
 | Sandbox (open to everyone; identity verification with daily/monthly caps) | Live                                                                                                      |
 

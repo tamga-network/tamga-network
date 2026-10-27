@@ -177,7 +177,7 @@ təqdimat adi qaydada aparılır.
 | Attestation Revocation List (identifikatorlar siyahısı) — yoxlayan tərəf və cüzdan tərəfi | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri); Tamga-da sənədi verən qurumlar Status List istifadə edir |
 | Şəxsiyyət sənədində dayandırma yoxdur, mdoc üçün CWT ləğv siyahısı; qeydiyyat sertifikatı olmayan sorğuda xəbərdarlıq; yaxın məsafədə oxuyucunun yoxlanılması | İstifadəyə verilib (paketlər npm-də 0.6.0-dan bəri) |
 | Paket API-lərində təhlükəsiz standart parametrlər; qeydiyyat sertifikatı olmayan sorğunun rədd edilməsi ([[ADR-0056]]) | İstifadəyə verilib (paketlər npm-də 0.7.0-dan bəri) |
-| Bir giriş tokeni ilə bir neçə sənəd sorğusu, cüzdan nümunəsinin açarına bağlı yeniləmə tokeni, ayrıca konfiqurasiya ilə təxəllüs toxumu ([[ADR-0059]], [[ADR-0060]], [[ADR-0061]]) | Kodlaşdırılıb; paketlərin növbəti versiyasında (0.7.2, hələ npm-də deyil) |
+| Bir giriş tokeni ilə bir neçə sənəd sorğusu, cüzdan nümunəsinin açarına bağlı yeniləmə tokeni, ayrıca konfiqurasiya ilə təxəllüs toxumu ([[ADR-0059]], [[ADR-0060]], [[ADR-0061]]) | İstifadəyə verilib (paketlər npm-də 0.7.2-dən bəri) |
 | Cüzdan provayderinin qeydiyyatı | Tamga Wallet-ın provayderi (`TAMGA-WP-1`) real və sandbox etibar siyahılarında `ACTIVE` |
 
 ---
