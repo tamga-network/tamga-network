@@ -6,6 +6,15 @@ published on npm as test releases; `0.7.2` is the current one on npm (the API ma
 
 ## 0.7.3 — unreleased
 
+- issuer (2026-10-27; OpenID4VCI 1.0 §12.2.4, OpenID conformance checks `VCIValidateDisplayLocales` /
+  `VCIWarnOnNonCanonicalDisplayLocales`): display `locale` values in the Credential Issuer metadata are strict BCP 47.
+  `credentialDisplay`, `issuerDisplayFrom` and the top-level `display` of `issuerMetadata` write the canonical form (`en-us` →
+  `en-US`, `TR` → `tr`), drop an entry whose tag is malformed or has an unregistered language or region subtag, and keep one
+  display object per language (the first; also only one entry without a locale). Two registry keys that canonicalize to the
+  same tag become one entry. The values served today (`tr-TR`, `en-US`) do not change. Regression tests also pin two
+  properties the newer conformance checks look at: every presentation request carries a new response-encryption key with a
+  `kid` (`VP1FinalCheckEncryptionKeyNotReused`), and batch copies get distinct, non-sequential status indices on one shared
+  list (`VCIEnsureBatchStatusReferencesAreDistinct`, `VCIEnsureBatchStatusListIndicesAreUnpredictable`).
 - OpenID conformance self-test, verifier plan round 1 (2026-10-27; OpenID4VP 1.0 §5.1, §8.2; SPEC-PROTO-0002 §3, §8.1). Two
   warnings in every module are fixed. verifier: `createPresentationRequest` no longer writes a `purpose` parameter into the
   signed request object (not an OpenID4VP parameter; the `purpose` option is removed) — the purpose shown to the person is the

@@ -309,62 +309,107 @@ export function issuerMetadata(p: {
         },
       ]),
     ]),
-    display: p.issuerDisplay?.length ? p.issuerDisplay : [{ name: "Credential Issuer" }],
+    display: p.issuerDisplay?.length ? oneDisplayPerLocale(p.issuerDisplay) : [{ name: "Credential Issuer" }],
     ...(p.issuerInfo?.length ? { issuer_info: p.issuerInfo } : {}),
   };
+}
+const LANGUAGE_NAMES = new Intl.DisplayNames(["en"], { type: "language", fallback: "none" });
+const REGION_NAMES = new Intl.DisplayNames(["en"], { type: "region", fallback: "none" });
+/**
+ * OpenID4VCI 1.0 §12.2.4 `locale`: BCP 47 (RFC 5646) etiketi kanonik biçimde (`en-us` → `en-US`, `TR` → `tr`). Biçimi bozuk
+ * (`en_US`), dil alt etiketi kayıtsız (`xx`, `und`) ya da bölge alt etiketi bilinmeyen etiket için `undefined` — çağıran o
+ * girdiyi yazmaz (OpenID uyum testi `VCIValidateDisplayLocales` FAILURE, `VCIWarnOnNonCanonicalDisplayLocales` WARNING).
+ */
+function canonicalLocale(tag: unknown): string | undefined {
+  if (typeof tag !== "string" || !tag) return undefined;
+  try {
+    const [canonical] = Intl.getCanonicalLocales(tag);
+    if (!canonical) return undefined;
+    // `und` (belirsiz dil) Intl.Locale'da dil alt etiketi vermez; .of() geçersiz kodda RangeError atar
+    const { language, region } = new Intl.Locale(canonical);
+    if (!language || language === "und" || LANGUAGE_NAMES.of(language) === undefined) return undefined;
+    if (region && REGION_NAMES.of(region) === undefined) return undefined;
+    return canonical;
+  } catch {
+    return undefined; // RangeError: biçim BCP 47 değil
+  }
+}
+/**
+ * §12.2.4: dil başına tek görünüm nesnesi — `locale` kanonikleştirilir, geçersiz `locale`'li girdi düşer, aynı dilin (ve yerelsiz
+ * girdinin) yalnız ilki kalır.
+ */
+function oneDisplayPerLocale<T extends { locale?: unknown }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const d of items) {
+    const has = d.locale !== undefined;
+    const locale = has ? canonicalLocale(d.locale) : undefined;
+    if (has && !locale) continue;
+    const key = locale ?? "";
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(has ? { ...d, locale } : d);
+  }
+  return out;
 }
 /**
  * Belge verenin görünümü, güven listesindeki kayıttan: `legal_name` yerelsiz (resmî ad, her dilde aynı); `service_description`
  * BCP 47 dil → metin eşlemesiyse her dil için `name` = kayıtlı ad, `locale` = o dil ve `description` = metin. `names` verilirse
- * (dil → yerel ad; ör. kurumun İngilizce adı) `legal_name` yerine o dilin adı yazılır. `locale` değerleri BCP 47'dir (`tr`,
- * `en-US`); kayıttaki anahtar olduğu gibi aktarılır, dil uydurulmaz.
+ * (dil → yerel ad; ör. kurumun İngilizce adı) `legal_name` yerine o dilin adı yazılır. `locale` değerleri kanonik BCP 47'dir
+ * (`tr`, `en-US`; `canonicalLocale`): kayıttaki anahtar kanonik biçime çevrilir, geçersiz anahtar yazılmaz, dil uydurulmaz;
+ * aynı dile çıkan iki anahtar tek girdidir.
  */
 export function issuerDisplayFrom(p: {
   legalName: string;
   serviceDescription?: Record<string, string>;
   names?: Record<string, string>;
 }): Array<{ name: string; locale?: string; description?: string }> {
-  const langs = new Set([...Object.keys(p.serviceDescription ?? {}), ...Object.keys(p.names ?? {})]);
+  const byLocale = new Map<string, { name?: string; description?: string }>();
+  const add = (src: Record<string, string> | undefined, field: "name" | "description") => {
+    for (const [tag, v] of Object.entries(src ?? {})) {
+      const locale = canonicalLocale(tag);
+      if (!locale) continue;
+      const e = byLocale.get(locale) ?? {};
+      if (typeof v === "string" && v && e[field] === undefined) e[field] = v;
+      byLocale.set(locale, e);
+    }
+  };
+  add(p.serviceDescription, "description");
+  add(p.names, "name");
   const out: Array<{ name: string; locale?: string; description?: string }> = [{ name: p.legalName }];
-  for (const lang of langs) {
-    if (!/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(lang)) continue; // BCP 47 biçiminde olmayan anahtar yazılmaz
-    const desc = p.serviceDescription?.[lang];
-    out.push({
-      name: p.names?.[lang] ?? p.legalName,
-      locale: lang,
-      ...(typeof desc === "string" && desc ? { description: desc } : {}),
-    });
-  }
+  for (const [locale, e] of byLocale)
+    out.push({ name: e.name ?? p.legalName, locale, ...(e.description ? { description: e.description } : {}) });
   return out;
 }
 /**
  * SD-JWT VC tür metadata'sının görünümü (`lang`, `name`, `description`, `rendering.simple`) → OpenID4VCI 1.0 §12.2.4 belge görünümü
  * (`name`, `locale`, `description`, `logo`, `background_color`, `background_image`, `text_color`). Tanımsız alan yazılmaz.
+ * `locale` kanonik BCP 47; geçersiz dilli girdi düşer, dil başına tek girdi (`oneDisplayPerLocale`).
  */
 export function credentialDisplay(display: unknown): Array<Record<string, unknown>> | undefined {
   if (!Array.isArray(display)) return undefined;
-  return display
-    .filter((d): d is Record<string, unknown> => !!d && typeof d === "object")
-    .map((d) => {
-      const simple = ((d.rendering as Record<string, unknown> | undefined)?.simple ?? {}) as Record<string, unknown>;
-      const logo = (d.logo ?? simple.logo) as Record<string, unknown> | undefined;
-      const locale = d.locale ?? d.lang;
-      const bg = d.background_color ?? simple.background_color;
-      const tc = d.text_color ?? simple.text_color;
-      return {
-        name: d.name,
-        ...(typeof locale === "string" ? { locale } : {}),
-        ...(typeof d.description === "string" ? { description: d.description } : {}),
-        ...(logo && typeof logo.uri === "string"
-          ? { logo: { uri: logo.uri, ...(typeof logo.alt_text === "string" ? { alt_text: logo.alt_text } : {}) } }
-          : {}),
-        ...(typeof bg === "string" ? { background_color: bg } : {}),
-        ...(d.background_image && typeof d.background_image === "object"
-          ? { background_image: d.background_image }
-          : {}),
-        ...(typeof tc === "string" ? { text_color: tc } : {}),
-      };
-    });
+  return oneDisplayPerLocale(
+    display
+      .filter((d): d is Record<string, unknown> => !!d && typeof d === "object")
+      .map((d): Record<string, unknown> => ({ ...d, locale: d.locale ?? d.lang })),
+  ).map((d) => {
+    const simple = ((d.rendering as Record<string, unknown> | undefined)?.simple ?? {}) as Record<string, unknown>;
+    const logo = (d.logo ?? simple.logo) as Record<string, unknown> | undefined;
+    const locale = d.locale; // kanonik (oneDisplayPerLocale)
+    const bg = d.background_color ?? simple.background_color;
+    const tc = d.text_color ?? simple.text_color;
+    return {
+      name: d.name,
+      ...(typeof locale === "string" ? { locale } : {}),
+      ...(typeof d.description === "string" ? { description: d.description } : {}),
+      ...(logo && typeof logo.uri === "string"
+        ? { logo: { uri: logo.uri, ...(typeof logo.alt_text === "string" ? { alt_text: logo.alt_text } : {}) } }
+        : {}),
+      ...(typeof bg === "string" ? { background_color: bg } : {}),
+      ...(d.background_image && typeof d.background_image === "object" ? { background_image: d.background_image } : {}),
+      ...(typeof tc === "string" ? { text_color: tc } : {}),
+    };
+  });
 }
 /** OAuth AS metadata (aynı sunucu) — /.well-known/oauth-authorization-server/{slug} */
 export function authServerMetadata(

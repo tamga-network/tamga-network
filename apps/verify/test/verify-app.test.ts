@@ -289,6 +289,32 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(html.body).toContain("What happened in the background");
   });
 
+  it("OpenID öz-testi VP1FinalCheckEncryptionKeyNotReused: her sunumun istek nesnesi yeni şifreleme anahtarı taşır", async () => {
+    const jwksOf = async () => {
+      const created = (
+        await app.inject({
+          method: "POST",
+          url: "/presentations",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          payload: { policy_id: "job-application-degree" },
+        })
+      ).json() as { presentation_id: string };
+      const ro = await app.inject({ method: "GET", url: `/vp/req/${created.presentation_id}` });
+      expect(ro.headers["content-type"]).toContain("application/oauth-authz-req+jwt");
+      // request_uri iki kez alınabilir; aynı istek aynı anahtarı taşır (yeni anahtar yeni istekte)
+      const again = await app.inject({ method: "GET", url: `/vp/req/${created.presentation_id}` });
+      expect(again.body).toBe(ro.body);
+      const payload = JSON.parse(Buffer.from(ro.body.split(".")[1], "base64url").toString("utf8"));
+      return payload.client_metadata.jwks.keys as Array<{ x: string; y: string; kid: string }>;
+    };
+    const [a, b] = [await jwksOf(), await jwksOf()];
+    expect(a).toHaveLength(1);
+    expect(b).toHaveLength(1);
+    expect(a[0].kid).toBeTruthy();
+    expect(`${a[0].x}.${a[0].y}`).not.toBe(`${b[0].x}.${b[0].y}`);
+    expect(a[0].kid).not.toBe(b[0].kid);
+  });
+
   it("a3/WL13: geçersiz pass_key → sunum yine ACCEPTED, geçiş kartı verilmez; geçerli kanıtla kart verilir", async () => {
     const now = Math.floor(Date.now() / 1000);
     const SVCT = "urn:tamga:edu:StudentCredential:1";

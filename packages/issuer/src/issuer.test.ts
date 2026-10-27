@@ -204,6 +204,16 @@ describe("credential fabrikası", () => {
     });
     expect(creds.length).toBe(10);
     expect(new Set(creds.map((c) => c.idx)).size).toBe(10);
+    // HAIP §6.1 / OpenID öz-testi VCIEnsureBatchStatusListIndicesAreUnpredictable: kopyaların idx'i sabit adımla ilerlemez
+    // (sıralı ayırma yok); VCIWarnBatchStatusListUrisProvideHerdPrivacy: hepsi aynı ortak listede, yalnız idx farklı
+    const idx = creds.map((c) => c.idx!);
+    const steps = new Set(idx.slice(1).map((v, i) => v - idx[i]));
+    expect(steps.size).toBeGreaterThan(1);
+    const uris = creds.map((c) => {
+      const payload = JSON.parse(Buffer.from(c.combined.split("~")[0].split(".")[1], "base64url").toString("utf8"));
+      return payload.status.status_list.uri as string;
+    });
+    expect(new Set(uris)).toEqual(new Set(["https://status.tamga.network/ab12"]));
     const pres = await presentSdJwtVc({
       combined: creds[3].combined,
       discloseClaims: ["is_graduate", "eqf_level"],

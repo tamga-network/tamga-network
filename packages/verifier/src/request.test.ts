@@ -177,3 +177,34 @@ describe("DC API açıkken iki istek nesnesi (0.6.0)", () => {
     await expect(decryptPresentationResponse(forged, pr, "x")).rejects.toThrow(/no Digital Credentials API/);
   });
 });
+
+// OpenID uyum testi VP1FinalCheckEncryptionKeyNotReused (HAIP altında FAILURE; HAIP §5, OpenID4VP 1.0 §5.1): her yetkilendirme
+// isteğinde yeni efemer ECDH-ES anahtarı, `kid`'li (VP1FinalCheckForKeyIdInClientMetadataJWKs)
+describe("yanıt şifreleme anahtarı istek başına yeni", () => {
+  it("aynı imzacı ve sorguyla art arda istekler aynı client_metadata.jwks anahtarını taşımaz", async () => {
+    const signer = await pemRpSigner(leafKeyPem, leafPem);
+    const reqs = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        createPresentationRequest({
+          signer,
+          dcql,
+          responseUri: "https://rp.example.test/vp/response",
+          requestUriBase: "https://rp.example.test/vp/req",
+          dcApi: { expectedOrigins: ["https://shop.example"] },
+        }),
+      ),
+    );
+    const keys = reqs.flatMap((pr) => [
+      payloadOf(pr.requestJwt).client_metadata.jwks.keys,
+      payloadOf(pr.dcApiRequest!.data.request).client_metadata.jwks.keys,
+    ]);
+    for (const k of keys) {
+      expect(k).toHaveLength(1);
+      expect(k[0]).toMatchObject({ kty: "EC", crv: "P-256", use: "enc", alg: "ECDH-ES" });
+      expect(typeof k[0].kid).toBe("string");
+      expect(k[0].d).toBeUndefined(); // özel kısım istekte yok
+    }
+    expect(new Set(keys.map((k) => `${k[0].x}.${k[0].y}`)).size).toBe(keys.length);
+    expect(new Set(keys.map((k) => k[0].kid)).size).toBe(keys.length);
+  });
+});
