@@ -356,6 +356,16 @@ const PRODUCTION_IDS = new Set<string>([...GENERAL_POLICY_IDS, ...REVIEW_POLICY_
 export const isScenarioPolicy = (p: Policy) => !PRODUCTION_IDS.has(p.policy_id);
 export const isReviewPolicy = (p: Policy) => (REVIEW_POLICY_IDS as readonly string[]).includes(p.policy_id);
 
+/**
+ * Doğrulama başına iptal listesi çekimini açan politikalar (SPEC-CRED-0003 §9.1, T1: açıkça etkinleştirilmeli). Yalnız sandbox'taki
+ * OpenID uyum öz-testi: test aracı her test için yeni bir Status List adresi üretir ve listenin çekildiğini denetler; ön çekim
+ * (S12) bu adresi bilemez. Liste yalnız dış listenin bildirdiği iptal sunucusundan çekilir (test aracının alan adı). Gerçek ağda hiçbir
+ * politika açmaz (`statusFetchOnDemandFor`).
+ */
+export const ON_DEMAND_STATUS_POLICY_IDS = ["oidf-selftest-eu-pid"] as const;
+export const statusFetchOnDemandFor = (network: "production" | "sandbox" | undefined, p: Policy) =>
+  network === "sandbox" && (ON_DEMAND_STATUS_POLICY_IDS as readonly string[]).includes(p.policy_id);
+
 /** Sürecin politika kümesi: gerçek ağda genel + inceleme; sandbox'ta hepsi (senaryolar dahil). */
 export const policiesFor = (network: "production" | "sandbox" | undefined): Policy[] =>
   network === "sandbox" ? POLICIES : POLICIES.filter((p) => !isScenarioPolicy(p));

@@ -18,7 +18,12 @@
  * Çekim (0.5.2): yönlendirme otomatik izlenmez; en çok `MAX_STATUS_REDIRECTS` adım elle izlenir ve öğrenilen adreste her adımda
  * şema, kurumun sunucusu ve genel IP yeniden denetlenir. Bağlantı denetlenen IP'ye sabitlenir (`pinnedLookup`; SNI ve Host alan
  * adı kalır): denetimle bağlantı arasında ad yeniden çözülüp iç ağa yönelemez (DNS rebinding). Yalnız Node; tarayıcı yapısında
- * bu modül yoktur. Dış (federasyon) kurumun iptal sunucuları: `externalStatusScope` (steps.ts).
+ * bu modül yoktur. Dış (federasyon) kurumun iptal sunucuları: `externalStatusScope` (steps.ts). Dış kurumun Status List'i de
+ * (çapa günlüğü yok, ADR-0036) tanımlayıcı listesi gibi ilk görüşte öğrenilir (0.7.3).
+ *
+ * Doğrulama başına çekim (`fetchNow`) yalnız çağıran açıkça etkinleştirirse (SPEC-CRED-0003 §9.1, T1): aynı adres denetimleri, süre
+ * sınırı, ön çekim kümesine eklenmez. Tamga doğrulama servisinde yalnız sandbox'taki OpenID uyum öz-testi politikası açar (test
+ * aracı her test için yeni bir liste adresi üretir; ön çekimle bilinemez).
  */
 import { lookup } from "node:dns/promises";
 import { isIP, type LookupFunction } from "node:net";
@@ -86,6 +91,13 @@ export interface StatusCache {
    * verilmezse ya da adres kurumun bildirdiği iptal sunucularından birinde değilse öğrenilmez.
    */
   want?(uri: string, kind: StatusListKind, scope?: StatusListScope): void;
+  /**
+   * Doğrulama başına çekim — YALNIZ çağıran açıkça etkinleştirdiğinde (SPEC-CRED-0003 §9.1 son paragraf, yayın kuralı T1;
+   * `VerifyInput.statusFetchOnDemand`). Adres `want` ile aynı denetimlerden geçer (https, kurumun bildirdiği iptal sunucusu, genel
+   * IP ve bağlantı sabitleme); süre sınırlıdır. Çekilen liste önbelleğe yazılır ama ön çekim kümesine EKLENMEZ (tek seferlik).
+   * Dönüş: liste önbellekte mi.
+   */
+  fetchNow?(uri: string, kind: StatusListKind, scope: StatusListScope, timeoutMs?: number): Promise<boolean>;
 }
 
 export class MemoryStatusCache implements StatusCache {
@@ -268,8 +280,30 @@ export class PrefetchStatusCache extends MemoryStatusCache {
       return null;
     }
   }
-  private async fetchChecked(uri: string, kind: StatusListKind | undefined): Promise<string | null> {
-    const scope = this.learned.get(uri)?.scope;
+  async fetchNow(
+    uri: string,
+    kind: StatusListKind,
+    scope: StatusListScope,
+    timeoutMs = FETCH_TIMEOUT_MS,
+  ): Promise<boolean> {
+    if (!PrefetchStatusCache.acceptableUri(uri, scope)) return false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const late = new Promise<null>((r) => {
+      timer = setTimeout(() => r(null), timeoutMs);
+    });
+    try {
+      const t = await Promise.race([this.fetchChecked(uri, kind, scope), late]);
+      if (t) this.set(uri, t);
+      return !!t;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  private async fetchChecked(
+    uri: string,
+    kind: StatusListKind | undefined,
+    scope: StatusListScope | undefined = this.learned.get(uri)?.scope,
+  ): Promise<string | null> {
     if (this.fetchText) {
       if (scope && !scope.allowLocal) {
         let host: string;

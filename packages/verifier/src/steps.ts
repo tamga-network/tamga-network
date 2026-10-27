@@ -347,7 +347,29 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
     return;
   }
   ctx.done.push("D1");
-  const cached = input.statusCache.get(a.status.status_list.uri);
+  let cached = input.statusCache.get(a.status.status_list.uri);
+  if (!cached && issuerRec) {
+    // Kurumun imzalı listede bildirdiği iptal sunucuları (SSRF — status-cache.ts); dış kurumda (ADR-0036) externalStatusScope
+    const scope: StatusListScope = {
+      issuer: issuerRec.issuer_id,
+      ...(ctx.ext ? externalStatusScope(ctx.ext, a.leafDnsNames) : { hosts: statusHostsOf(issuerRec) }),
+      ...(input.allowLocalIssuerUrls ? { allowLocal: true } : {}),
+    };
+    if (input.statusFetchOnDemand && input.statusCache.fetchNow) {
+      // SPEC-CRED-0003 §9.1 / T1: yalnız çağıran açıkça etkinleştirdiyse doğrulama sırasında çekilir (süre sınırlı)
+      await input.statusCache.fetchNow(
+        a.status.status_list.uri,
+        "status_list",
+        scope,
+        input.statusFetchOnDemand.timeoutMs,
+      );
+      cached = input.statusCache.get(a.status.status_list.uri);
+    } else if (ctx.ext) {
+      // Dış kurumun Status List'i için çapa günlüğü yok (ADR-0036): adres tanımlayıcı listesi gibi ön çekim kümesine eklenir,
+      // çekim doğrulamanın dışında (S12); bu doğrulama DOĞRULANAMADI, sonrakiler önbellekten
+      input.statusCache.want?.(a.status.status_list.uri, "status_list", scope);
+    }
+  }
   if (!cached)
     return indet("D2", "STATUS_UNREACHABLE", "status token not in prefetch cache (S12: no fetch per verification)");
   ctx.done.push("D2");

@@ -26,7 +26,7 @@ import {
 } from "@tamga-network/verifier";
 import type { VerifyContext } from "../app.js";
 import { MAX_RESPONSE_ATTEMPTS, type Presentation } from "../state.js";
-import { findPolicy } from "../policies.js";
+import { findPolicy, statusFetchOnDemandFor } from "../policies.js";
 import { registrationCertFor, registrationCwtFor } from "../wrprc.js";
 import { rateLimited } from "../rate-limit.js";
 import { nowSeconds } from "@tamga-network/core/time";
@@ -235,6 +235,8 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
             // E3 (AP6, ADR-0017 K7/HV6): açıklanan alanlar sunumu açan (asıl) RP'nin kayıtlı kapsamıyla sınırlı — aracının değil
             rp: ctx.trust().relyingParty(p.owner ?? cfg.clientId),
             allowLocalIssuerUrls: !cfg.publicBase.startsWith("https://"), // yalnız yerel geliştirme
+            // SPEC-CRED-0003 §9.1 / T1: yalnız sandbox'taki OpenID uyum öz-testi politikası (test aracının liste adresi her testte yeni)
+            ...(statusFetchOnDemandFor(cfg.network, p.policy) ? { statusFetchOnDemand: { timeoutMs: 4000 } } : {}),
             now: nowSec(),
             verificationId: `vrf_${pid.slice(4)}`,
             audit: (e) => ctx.audit(e),

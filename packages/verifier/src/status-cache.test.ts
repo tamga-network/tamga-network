@@ -177,3 +177,46 @@ describe("nodeStatusTransport — bağlantı denetlenen IP'ye sabitlenir", () =>
     expect(all).toEqual([null, [{ address: "93.184.216.34", family: 4 }]]);
   });
 });
+
+describe("doğrulama başına çekim (fetchNow) — yalnız açıkça etkinleştirilince (SPEC-CRED-0003 §9.1, T1)", () => {
+  const jwtBody = (): StatusHttpResponse => ({
+    status: 200,
+    location: null,
+    contentType: "application/statuslist+jwt",
+    body: body("eyJ.list.sig"),
+  });
+
+  it("kapsam içi adres beklenerek çekilir ve önbelleğe yazılır; ön çekim kümesine eklenmez", async () => {
+    const t = transport({ [URI]: jwtBody() });
+    const c = new PrefetchStatusCache(undefined, { transport: t.fn, resolveHost: async () => [PUBLIC] });
+    expect(await c.fetchNow(URI, "status_list", scope)).toBe(true);
+    expect(c.get(URI)?.token).toBe("eyJ.list.sig");
+    expect(t.calls[0].address).toBe(PUBLIC);
+    expect(c.learnedRefs()).toEqual([]);
+  });
+
+  it("kapsam dışı sunucu, http ve özel adrese çözülen ad çekilmez", async () => {
+    for (const [uri, resolve] of [
+      ["https://evil.example/il/1", async () => [PUBLIC]],
+      ["http://status.example/il/1", async () => [PUBLIC]],
+      [URI, async () => ["10.0.0.7"]],
+    ] as const) {
+      const t = transport({ [uri]: jwtBody() });
+      const c = new PrefetchStatusCache(undefined, { transport: t.fn, resolveHost: resolve });
+      expect(await c.fetchNow(uri, "status_list", scope), uri).toBe(false);
+      expect(t.calls.length, uri).toBe(0);
+      expect(c.get(uri), uri).toBeNull();
+    }
+  });
+
+  it("süre sınırı: yanıt gecikirse beklemez (false), doğrulama DOĞRULANAMADI'ya düşer", async () => {
+    const slow = async (): Promise<StatusHttpResponse> => {
+      await new Promise((r) => setTimeout(r, 200));
+      return jwtBody();
+    };
+    const c = new PrefetchStatusCache(undefined, { transport: slow, resolveHost: async () => [PUBLIC] });
+    const started = Date.now();
+    expect(await c.fetchNow(URI, "status_list", scope, 20)).toBe(false);
+    expect(Date.now() - started).toBeLessThan(150);
+  });
+});

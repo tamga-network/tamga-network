@@ -9,7 +9,7 @@ import { join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { describe, it, expect } from "vitest";
 import { buildVerifyApp } from "../src/app.js";
-import { policiesFor, policySummaries, POLICIES } from "../src/policies.js";
+import { policiesFor, policySummaries, POLICIES, statusFetchOnDemandFor } from "../src/policies.js";
 import { sandboxSampleSiteUrl, sandboxUrl, type VerifyConfig } from "../src/config.js";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
@@ -228,5 +228,16 @@ describe("OpenID uyum öz-testi politikası (V1)", () => {
     ]);
     expect(p.pseudonym).toBeUndefined();
     expect(p.credentials[0].format ?? "dc+sd-jwt").toBe("dc+sd-jwt");
+  });
+  it("doğrulama başına iptal listesi çekimi (SPEC-CRED-0003 §9.1, T1) yalnız sandbox'ta ve yalnız bu politikada", () => {
+    const p = policiesFor("sandbox").find((x) => x.policy_id === "oidf-selftest-eu-pid")!;
+    expect(statusFetchOnDemandFor("sandbox", p)).toBe(true);
+    expect(statusFetchOnDemandFor("production", p)).toBe(false);
+    expect(statusFetchOnDemandFor(undefined, p)).toBe(false);
+    expect(
+      policiesFor("sandbox")
+        .filter((x) => statusFetchOnDemandFor("sandbox", x))
+        .map((x) => x.policy_id),
+    ).toEqual(["oidf-selftest-eu-pid"]);
   });
 });

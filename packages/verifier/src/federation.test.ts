@@ -10,6 +10,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createHash, webcrypto } from "node:crypto";
+import { deflateSync } from "node:zlib";
 import { CompactSign, SignJWT, exportJWK } from "jose";
 import {
   X509CertificateGenerator,
@@ -130,7 +131,13 @@ async function signLote(obj: unknown, signer: KeyCert, crit: string[] = ["sigT"]
 }
 
 /** AB PID kural kitabı biçiminde (iç içe address, dizi nationalities) seçici açıklamalı SD-JWT VC — ihraç biçimi. */
-async function issuePid(issuer: KeyCert, cnfJwk: Record<string, unknown>, now: number, tamper = false) {
+async function issuePid(
+  issuer: KeyCert,
+  cnfJwk: Record<string, unknown>,
+  now: number,
+  tamper = false,
+  status?: { uri: string; idx: number },
+) {
   const disc = (arr: unknown[]) => {
     const d = b64u(JSON.stringify(arr));
     return { d, h: b64u(createHash("sha256").update(d, "ascii").digest()) };
@@ -152,12 +159,30 @@ async function issuePid(issuer: KeyCert, cnfJwk: Record<string, unknown>, now: n
     _sd: [given.h, family.h, birth.h].sort(),
     address: { _sd: [locality.h, country.h].sort() },
     nationalities: [{ "...": nat.h }],
+    ...(status ? { status: { status_list: status } } : {}),
   };
   const jwt = await new CompactSign(new TextEncoder().encode(JSON.stringify(payload)))
     .setProtectedHeader({ alg: "ES256", typ: "dc+sd-jwt", x5c: [b64(issuer.der)] })
     .sign(issuer.keys.privateKey);
   const extra = tamper ? [disc([salt(), "locality", "Ankara"]).d] : [];
   return [jwt, given.d, family.d, birth.d, locality.d, country.d, nat.d, ...extra, ""].join("~");
+}
+
+/** Status List Token (JWT; draft-ietf-oauth-status-list §5.1) — OpenID uyum aracı gibi: belge imzacısının anahtarı + x5c. */
+async function statusListJwt(signer: KeyCert, uri: string, revokedIdx: number[]) {
+  const bytes = new Uint8Array(16);
+  for (const i of revokedIdx) bytes[i >> 3] |= 1 << (i & 7);
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    sub: uri,
+    iat: now,
+    exp: now + 86400,
+    ttl: 300,
+    status_list: { bits: 1, lst: b64u(deflateSync(bytes)) },
+  };
+  return new CompactSign(new TextEncoder().encode(JSON.stringify(payload)))
+    .setProtectedHeader({ alg: "ES256", typ: "statuslist+jwt", x5c: [b64(signer.der)] })
+    .sign(signer.keys.privateKey);
 }
 
 const policy: Policy = {
@@ -204,6 +229,8 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     crit?: string[];
     /** PID hizmetinin erişim noktaları (ServiceSupplyPoints) */
     supplyPoints?: string[];
+    /** PID iptal hizmeti (…/PID/Revocation) sertifikaları — iptal listesi imzacısı (ADR-0036 K5 D) */
+    revocationCerts?: Uint8Array[];
   }) {
     const { trust } = await loadTrustSourceFromDir(DIST);
     const store = (trust as unknown as { store: TrustStore }).store;
@@ -242,6 +269,15 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
                 certs: [pidCa.der],
                 ...(o.supplyPoints ? { supplyPoints: o.supplyPoints } : {}),
               },
+              ...(o.revocationCerts
+                ? [
+                    {
+                      type: "http://uri.etsi.org/19602/SvcType/PID/Revocation",
+                      certs: o.revocationCerts,
+                      ...(o.supplyPoints ? { supplyPoints: o.supplyPoints } : {}),
+                    },
+                  ]
+                : []),
             ],
           },
           {
@@ -259,11 +295,19 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     return { trust: trust as ListTrustSource, warnings };
   }
 
-  async function presentPid(trust: ListTrustSource, tamper = false) {
+  async function presentPid(
+    trust: ListTrustSource,
+    tamper = false,
+    o: {
+      status?: { uri: string; idx: number };
+      statusCache?: MemoryStatusCache;
+      statusFetchOnDemand?: { timeoutMs?: number };
+    } = {},
+  ) {
     const now = Math.floor(Date.now() / 1000);
     const ref = `pid-${Math.random().toString(36).slice(2, 8)}`;
     const cnf = await keys.generate(ref);
-    const combined = await issuePid(pidIssuer, cnf as unknown as Record<string, unknown>, now, tamper);
+    const combined = await issuePid(pidIssuer, cnf as unknown as Record<string, unknown>, now, tamper, o.status);
     const nonce = `n-${ref}`;
     const presentation = await presentSdJwt({
       combined,
@@ -281,10 +325,77 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
       policy,
       policyCredentialId: "pid",
       trust,
-      statusCache: new MemoryStatusCache(),
+      statusCache: o.statusCache ?? new MemoryStatusCache(),
       rootCertsDer: [...ownRoot, ...(trust.externalAnchorCertsDer?.() ?? [])],
+      ...(o.statusFetchOnDemand ? { statusFetchOnDemand: o.statusFetchOnDemand } : {}),
     });
   }
+
+  /** Sahte önbellek: `want` ve `fetchNow` çağrılarını kaydeder; `fetchNow` verilen listeyi "çeker". */
+  function recordingCache(serve?: Record<string, string>) {
+    const c = new MemoryStatusCache();
+    const calls = { want: [] as unknown[][], now: [] as unknown[][] };
+    return Object.assign(c, {
+      calls,
+      want: (...a: unknown[]) => void calls.want.push(a),
+      fetchNow: async (uri: string, ...rest: unknown[]) => {
+        calls.now.push([uri, ...rest]);
+        if (serve?.[uri]) c.set(uri, serve[uri]);
+        return !!serve?.[uri];
+      },
+    });
+  }
+
+  it("dış PID'in iptal listesi: varsayılan ön çekim — ilk görüşte öğrenilir, bu doğrulama DOĞRULANAMADI (S12)", async () => {
+    const SL = "https://status.pid.example/sl/1";
+    const { trust } = await federated({ supplyPoints: [SL], revocationCerts: [pidIssuer.der] });
+    const cache = recordingCache({ [SL]: await statusListJwt(pidIssuer, SL, []) });
+    const { result } = await presentPid(trust, false, { status: { uri: SL, idx: 3 }, statusCache: cache });
+    expect(result.outcome).toBe("INDETERMINATE");
+    expect(cache.calls.now).toEqual([]);
+    expect(cache.calls.want).toEqual([
+      [SL, "status_list", expect.objectContaining({ issuer: `0x${fp(pidCa.der)}`, hosts: ["status.pid.example"] })],
+    ]);
+  });
+
+  it("dış PID'in iptal listesi: açıkça etkinleştirilen doğrulama başına çekim (T1) — iptal hizmeti sertifikası imzalar; geçerli → ACCEPTED, iptal → RED", async () => {
+    const SL = "https://status.pid.example/sl/2";
+    const { trust } = await federated({ supplyPoints: [SL], revocationCerts: [pidIssuer.der] });
+    const list = await statusListJwt(pidIssuer, SL, [5]);
+    const ok = await presentPid(trust, false, {
+      status: { uri: SL, idx: 4 },
+      statusCache: recordingCache({ [SL]: list }),
+      statusFetchOnDemand: { timeoutMs: 500 },
+    });
+    expect(ok.result.outcome, `${ok.result.failed_step} ${ok.result.failed_reason}`).toBe("ACCEPTED");
+    expect(ok.result.status?.value).toBe("VALID");
+    const revoked = await presentPid(trust, false, {
+      status: { uri: SL, idx: 5 },
+      statusCache: recordingCache({ [SL]: list }),
+      statusFetchOnDemand: {},
+    });
+    expect(revoked.result.outcome).toBe("REJECTED");
+    expect(revoked.result.failed_step).toBe("D6");
+    // liste çekilemezse DOĞRULANAMADI
+    const missing = await presentPid(trust, false, {
+      status: { uri: SL, idx: 4 },
+      statusCache: recordingCache(),
+      statusFetchOnDemand: {},
+    });
+    expect(missing.result.outcome).toBe("INDETERMINATE");
+  });
+
+  it("dış listede iptal hizmeti yoksa iptal listesi imzacısı çapanın kendisidir: yaprakla imzalı liste D3 RED", async () => {
+    const SL = "https://status.pid.example/sl/3";
+    const { trust } = await federated({ supplyPoints: [SL] });
+    const { result } = await presentPid(trust, false, {
+      status: { uri: SL, idx: 1 },
+      statusCache: recordingCache({ [SL]: await statusListJwt(pidIssuer, SL, []) }),
+      statusFetchOnDemand: {},
+    });
+    expect(result.outcome).toBe("REJECTED");
+    expect(result.failed_step).toBe("D3");
+  });
 
   it("dış PID sağlayıcısının iç içe alanlı AB PID'i: ACCEPTED; yalnız istenen alt alanlar açılır; kayıt dış liste kapsamından", async () => {
     const { trust, warnings } = await federated({});

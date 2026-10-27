@@ -129,6 +129,13 @@ export interface VerifyInput {
    * Varsayılan kapalı; canlı (https) doğrulayıcı açmaz.
    */
   allowLocalIssuerUrls?: boolean;
+  /**
+   * Doğrulama başına iptal listesi çekimi — varsayılan KAPALI (SPEC-CRED-0003 §9.1, S12; yayın kuralı T1: "açıkça
+   * etkinleştirilmeli"). Açıkken önbellekte olmayan Status List, kurumun imzalı listede bildirdiği iptal sunucusundaysa bu doğrulama
+   * sırasında çekilir (`StatusCache.fetchNow`, en çok `timeoutMs`; varsayılan 3 sn). Çekim, liste sağlayıcısına doğrulama anını
+   * gösterir — gerçek doğrulayıcıda açılmaz; Tamga doğrulama servisi yalnız sandbox'taki OpenID uyum öz-testi politikasında açar.
+   */
+  statusFetchOnDemand?: { timeoutMs?: number };
   /** Unix saniyesi (ADR-0056 K12: `epochSeconds` / `nowSeconds`) */
   now?: EpochSeconds;
   verificationId?: string;

@@ -6,6 +6,15 @@ published on npm as test releases; `0.7.1` is the current one on npm (the API ma
 
 ## 0.7.2 — unreleased
 
+- verifier (2026-10-27; SPEC-CRED-0003 §9.1 / publishing rule T1, ADR-0036 K5 D): an external (federated) issuer's Status List
+  has no anchor, so its address is now learned on first sight like an identifier list (`StatusCache.want`; that verification is
+  INDETERMINATE, later ones read the prefetched list) — previously it was never fetched. New explicit opt-in
+  `VerifyInput.statusFetchOnDemand` (default off): a missing Status List on the issuer's declared status host is fetched during
+  that verification (`PrefetchStatusCache.fetchNow`: same https / declared-host / public-IP / pinned-connection checks, time-boxed,
+  not added to the prefetch set). Tamga Verify enables it only for the sandbox OpenID conformance self-test policy
+  (`oidf-selftest-eu-pid`; the test tool serves a new list URL in every test and checks that it was fetched). Sandbox registry:
+  the self-test LoTE (`oidf-test-pid`, sequence 2) lists the tool's PID signing certificate as the PID revocation service and the
+  tool's host as the service supply point.
 - Tamga Verify (2026-10-26; ADR-0065, security review): gate terminals authenticate to `POST /terminal/verify` with an
   operator-issued terminal key bound to a terminal group (`Authorization: Bearer tk_…`); without a key the request gets 401 and the
   pass token is neither read nor consumed (a photographed single-use ticket QR can no longer be spent by a bystander). Admin
