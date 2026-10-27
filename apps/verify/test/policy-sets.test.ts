@@ -125,8 +125,9 @@ describe.skipIf(!prodReady)("gerçek ağ kipi (uygulama)", () => {
     expect(en.body).not.toContain("SANDBOX · TEST"); // gerçek ağda şerit yok
     expect(en.headers["x-robots-tag"]).toBeUndefined(); // ana sayfa dizine girebilir
     const tr = await app.inject({ method: "GET", url: "/", headers: { "accept-language": "tr-TR" } });
-    expect(tr.body).toContain("https://docs.tamga.network/guides/sandbox");
-    expect(tr.body).toContain("Gerçek ağda deneme yoktur");
+    // Sayfalar tek dilde İngilizce (2026-10-27): Türkçe tarayıcı da İngilizce görür.
+    expect(tr.body).toContain("https://docs.tamga.network/en/guides/sandbox");
+    expect(tr.body).not.toContain("Gerçek ağda deneme yoktur");
 
     const health = (await app.inject({ method: "GET", url: "/healthz" })).json() as { policies: string[] };
     expect(health.policies.sort()).toEqual([...GENERAL, ...REVIEW].sort());

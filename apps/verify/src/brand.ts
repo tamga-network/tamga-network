@@ -63,10 +63,11 @@ export const sandboxBar = (lang: "en" | "tr"): string =>
       : "SANDBOX · TEST — Institutions, people and credentials here are examples; they are not valid in real transactions."
   }</div>`;
 
-export const langOf = (acceptLanguage?: string | string[]): Lang => {
-  const h = Array.isArray(acceptLanguage) ? acceptLanguage[0] : (acceptLanguage ?? "");
-  return h.split(",")[0]?.trim().toLowerCase().startsWith("tr") ? "tr" : "en";
-};
+/**
+ * Tamga Verify sayfaları tek dilde, İngilizce (proje yönetimi 2026-10-27: "her şeyi İngilizce yapsak … multi language gerek yok").
+ * Türkçe metinler kodda duruyor; çok dilliliğe dönülürse yalnız bu işlev değişir (eski hâli: Accept-Language "tr" → "tr").
+ */
+export const langOf = (_acceptLanguage?: string | string[]): Lang => "en";
 
 const escHtml = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
