@@ -355,7 +355,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 | Kod | Açıklama |
 |---|---|
-| `ADR-0040/RI1` | Sandbox'ta kimlik akışı iki seçenek sunar (gerçek kimlikle sağlayıcı ya da hızlı deneme); seçim yapılmayan akış sahte sağlayıcıyla yapılır. Gerçek yol herkese açıktır; yalnız isteğe bağlı davet kipinde geçerli bir davet kodu gerekir. |
+| `ADR-0040/RI1` | Sandbox'ta kimlik akışı iki seçenek sunar (gerçek kimlikle sağlayıcı ya da hızlı deneme); seçim yapılmayan akış sahte sağlayıcıyla yapılır. Hızlı deneme herkese açıktır. Gerçek yol varsayılan olarak yalnız geçerli bir davet koduyla açılır (2026-10-28 notu: hukuki inceleme bitene kadar); açık kip (`open`) yalnız açıkça ayarlanırsa geçerlidir. |
 | `ADR-0040/RI2` | Sandbox'ın gerçek yolu gerçek ağın sağlayıcı hesabını yalnız ayrı adlı sandbox değişkenleriyle kullanır; bu değerler yalnız sandbox kullanıcısına okunur, gerçek ağın ayarları, imza anahtarları ve verisi sandbox'a kapalıdır; gerçek ağ sandbox adlarını kabul etmez. Sandbox sağlayıcı bildirimine (webhook) güvenmez, kararı sağlayıcının API'sinden çeker; gerçek ağ kendi açmadığı oturumun bildirimini yok sayar. |
 | `ADR-0040/RI3` | Gerçek yolda kişi, sağlayıcıya yönlendirilmeden önce test ortamı uyarısını açıkça onaylar. |
 | `ADR-0040/RI4` | Sandbox belgesine gerçek kimlik numarası ve belge numarası yazılmaz; kişiden yalnız ad, soyad ve doğum tarihi (ve türetilen yaş bilgisi) geçer. |

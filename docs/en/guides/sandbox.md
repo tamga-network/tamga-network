@@ -228,13 +228,15 @@ carries no status list entry.
 
 In the sandbox the identity flow offers two options ([[ADR-0040]]): **Verify with your real identity (Didit)** — the provider's
 real steps (document scan, liveness, face match) — or **Quick trial (made-up person)** — you pick a made-up person and approve.
-The real path is open to everyone; no invitation is needed (`ADR-0040/RI1`).
+The quick trial is open to everyone. Until the data-protection legal review is complete, the real path opens **by default with an
+invitation code** (`ADR-0040/RI1`, note of 2026-10-28); ask the sandbox team for one (`support@tamga.network`). Without a code use
+the quick trial.
 
 1. Connect the wallet to the sandbox and start adding an identity credential.
-2. On the identity service's page, accept the privacy notice and choose "Verify with your real identity (Didit)".
+2. On the identity service's page, accept the privacy notice, enter the invitation code and choose "Verify with your real identity (Didit)".
 3. Read and confirm the warning: "This is a test environment; you are trying it with your real identity; your data is deleted
-   every night; the verification session at Didit is deleted as soon as the credential is issued." Without confirmation the
-   provider is not opened (`ADR-0040/RI3`).
+   every night; deletion of the verification session at Didit is requested as soon as the credential is issued." Without
+   confirmation the provider is not opened (`ADR-0040/RI3`).
 4. Complete the steps at Didit; the test credential arrives in the wallet. The sandbox uses the real network's provider
    account; the keys that sign the credential and the records are separate (`ADR-0040/RI2`).
 
@@ -243,12 +245,12 @@ When a cap is reached only the quick trial is shown ("Today's quota is full — 
 one real session (`ADR-0040/RI7`).
 
 Only given name, family name and date of birth (and the derived age flag) go into the credential; instead of the real identity
-number and document number a random `SANDBOX-…` value is written (`ADR-0040/RI4`). The verification session at the provider is
-deleted as soon as the credential is issued or at once if verification fails; an abandoned session within about an hour, at the
-latest at the nightly reset (`ADR-0040/RI5`). If needed, the sandbox
-administrator can switch the real path to a mode that opens only with an invitation code; in that mode codes are personal
-(single use, at most 7 days) or timed (at most 72 hours, at most 25 uses), cannot exceed the caps and are deleted at the nightly
-reset.
+number and document number a random `SANDBOX-…` value is written (`ADR-0040/RI4`). Deletion of the verification session at the
+provider is requested as soon as the credential is issued or at once if verification fails, and for an abandoned session within
+about an hour, at the latest at the nightly reset (`ADR-0040/RI5`); the provider deletes within its own retention setting.
+Invitation codes are personal (single use, at most 7 days) or timed (at most 72 hours, at most 25 uses), cannot exceed the caps
+and are deleted at the nightly reset. After the legal review the sandbox administrator can switch the real path to the open mode
+(`TAMGA_IDV_DIDIT_SANDBOX_MODE=open`).
 
 ## 9. Try your institution
 

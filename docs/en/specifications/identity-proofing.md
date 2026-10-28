@@ -4,7 +4,7 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-23
+last_updated: 2026-10-28
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
@@ -214,7 +214,7 @@ an issuer (`category: IDENTITY`, `class: EAA`, I2; no `category` claim in the cr
 | Flow | Wallet: PAR (WUA) → browser `/authorize` (**KVKK privacy notice + explicit consent**) → provider (Didit v3; demo: FAKE, deviation S-15) → `/idv/return` decision query (the webhook is only a trigger, IDP5) → `code` → token (PKCE + WUA) → 10 copies |
 | Use at an institution | The institution's issuing service requests a **presentation** of the identity credential when issuing (DCQL: Turkish ID number, date of birth, given name, family name), verifies T0 + A–E and matches it with its records (Turkish ID number + date of birth; a warning on normalised names) — [[SPEC-PROTO-0001]] §11.2 |
 | Level | Remote document + liveness + face = **T2** (ETSI 119 461 Substantial); NFC chip = `document_chip_verified: true` (technically High; legally T3 = qualified e-signature/mobile signature, IDP7) |
-| Data controller | Tamga Network (K4): it keeps the record + hash; erasure request = §9.1 (the record is deleted, copies are revoked, images are deleted at the provider); the provider contract allows ≤ 30 days of image retention |
+| Data controller | Tamga Network (K4): it keeps the record + hash; erasure request = §9.1 (the record is deleted, copies are revoked, deletion of the session at the provider is requested); the provider contract targets ≤ 30 days of image retention. **Time-based purge (2026-10-28):** an expired or revoked record is deleted automatically at the latest 30 days later together with its provider session, event-log rows after 365 days (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; the periods are a policy choice pending legal confirmation) |
 | Webhook | A single target `https://id.tamga.network/idv/webhook`, event `status.updated`; there is no per-institution webhook |
 | Age | No minimum age (2026-10-08, [[ADR-0043]]); the condition is identity verification with a valid identity document. A guardian-consent flow and the provider's limit for minors are open items |
 
@@ -235,7 +235,7 @@ There is no user account; the request is proven by presenting the credentials th
 |---|---|
 | Request | `{ "presentations": [ SD-JWT VC + KB-JWT, … ] }` (1–20); no claim is disclosed; KB-JWT `aud` = the service address, `nonce` = `POST /nonce` (single use) |
 | Verification | The signature is this service's (`issuerId`); possession through the KB-JWT `cnf` key; the record is found from the status list index; an expired or revoked credential is accepted too (while its record is held it is the person's data) |
-| Effect | All copies of the record become INVALID; the record and the event log rows tied to it are deleted; the provider session is deleted with `privacy_erasure` (`IdvProvider.deleteSession`) |
+| Effect | All copies of the record become INVALID; the record and the event log rows tied to it are deleted; deletion of the provider session is requested with `privacy_erasure` (`IdvProvider.deleteSession`; without the delete permission on the provider account the response is `provider: "partial"`) |
 | Response | `{ erased, rejected, provider: "deleted" | "partial" }`; 404 if nothing is held |
 | Log | Only counts (`erasure`: number of records, provider result); the record identifier and `subject_ref` are not written |
 

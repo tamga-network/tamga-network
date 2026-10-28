@@ -6,6 +6,11 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.3 — 2026-10-27
 
+- docs (2026-10-28; data-protection pre-review, no package change): ADR-0040 note — the sandbox's real identity path defaults to
+  the invitation mode (`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`) until the legal review is complete, the quick trial stays open to
+  everyone; RI1 rewritten (tr/en/az, INVARIANTS). Sandbox guide §8 and the warning text now say deletion of the provider session is
+  *requested* at issuance. SPEC-ID-0003: time-based purge of expired/revoked identity records (30 days, with the provider session)
+  and event-log rows (365 days), erasure response `provider: "partial"` without the delete permission (tr/en/az).
 - issuer (2026-10-27; OpenID4VCI 1.0 §12.2.4, OpenID conformance checks `VCIValidateDisplayLocales` /
   `VCIWarnOnNonCanonicalDisplayLocales`): display `locale` values in the Credential Issuer metadata are strict BCP 47.
   `credentialDisplay`, `issuerDisplayFrom` and the top-level `display` of `issuerMetadata` write the canonical form (`en-us` →

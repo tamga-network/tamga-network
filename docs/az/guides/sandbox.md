@@ -206,12 +206,14 @@ təqdim edin: ləğv edilmiş və ya dayandırılmış sənəd qəbul edilməmə
 
 Sandbox-da şəxsiyyət axını iki seçim təqdim edir ([[ADR-0040]]): **Real şəxsiyyətinlə doğrula (Didit)** — provayderin real addımları
 (sənədin skan edilməsi, canlılıq yoxlaması, üz uyğunlaşdırması) — və ya **Sürətli sınaq (saxta şəxs)** — uydurma bir şəxs seçib təsdiqləyirsiniz.
-Real yol hamıya açıqdır; dəvət tələb olunmur (`ADR-0040/RI1`).
+Sürətli sınaq hamıya açıqdır. Fərdi məlumatların qorunması üzrə hüquqi baxış bitənə qədər real yol **standart olaraq dəvət kodu
+ilə** açılır (`ADR-0040/RI1`, 2026-10-28 qeydi); kodu sandbox komandasından istəyin (`support@tamga.network`). Kodunuz yoxdursa
+sürətli sınaqdan istifadə edin.
 
 1. Rəqəmsal cüzdanı sandbox-a qoşun və şəxsiyyət rəqəmsal sənədinin əlavə edilməsini başladın.
-2. Şəxsiyyət xidmətinin səhifəsində məlumatlandırmanı təsdiqləyin və "Real şəxsiyyətinlə yoxla (Didit)" seçimini edin.
+2. Şəxsiyyət xidmətinin səhifəsində məlumatlandırmanı təsdiqləyin, dəvət kodunu yazın və "Real şəxsiyyətinlə yoxla (Didit)" seçimini edin.
 3. Açılan xəbərdarlığı oxuyub təsdiqləyin: "Bu test mühitidir; real şəxsiyyətinlə sınayırsan; məlumatların hər gecə silinir;
-   Didit sessiyası rəqəmsal sənəd verilən kimi silinir." Təsdiq olmadan provayderə keçid edilmir (`ADR-0040/RI3`).
+   Didit sessiyasının silinməsi rəqəmsal sənəd verilən kimi tələb olunur." Təsdiq olmadan provayderə keçid edilmir (`ADR-0040/RI3`).
 4. Şəxsiyyəti yoxlayan tərəf olan Didit-də addımları tamamlayın; test rəqəmsal sənədi rəqəmsal cüzdana gəlir. Sandbox real şəbəkənin provayder hesabından istifadə edir; rəqəmsal sənədi imzalayan
    açarlar və qeydlər isə ayrıdır (`ADR-0040/RI2`).
 
@@ -220,10 +222,11 @@ yalnız sürətli sınaq görünür ("Bugünkü kvota doldu, sürətli sınaqdan
 (`ADR-0040/RI7`).
 
 Rəqəmsal sənədə yalnız ad, soyad və doğum tarixi (və ondan törədilən yaş məlumatı) keçir; real şəxsiyyət nömrəsi və sənəd nömrəsi əvəzinə
-təsadüfi `SANDBOX-…` dəyəri yazılır (`ADR-0040/RI4`). Provayderdəki (şəxsiyyəti yoxlayan tərəfdəki) yoxlama sessiyası rəqəmsal sənəd verilən kimi və ya yoxlama
-uğursuz olduqda dərhal, yarımçıq qaldıqda təxminən bir saat ərzində, ən gec isə gecə sıfırlanmasında silinir (`ADR-0040/RI5`). Sandbox administratoru zərurət olduqda real yolu
-yalnız dəvət kodu ilə açılan rejimə keçirə bilər; bu rejimdə dəvət kodları fərdi (birdəfəlik, ən çox 7 gün) və ya müddətli (ən
-çox 72 saat, ən çox 25 istifadə) olur, həddi aşa bilməz və gecə sıfırlanmasında silinir.
+təsadüfi `SANDBOX-…` dəyəri yazılır (`ADR-0040/RI4`). Provayderdəki (şəxsiyyəti yoxlayan tərəfdəki) yoxlama sessiyasının silinməsi
+rəqəmsal sənəd verilən kimi və ya yoxlama uğursuz olduqda dərhal, yarımçıq qaldıqda təxminən bir saat ərzində, ən gec isə gecə
+sıfırlanmasında tələb olunur (`ADR-0040/RI5`); provayder öz saxlama parametri daxilində silir. Dəvət kodları fərdi (birdəfəlik, ən
+çox 7 gün) və ya müddətli (ən çox 72 saat, ən çox 25 istifadə) olur, həddi aşa bilməz və gecə sıfırlanmasında silinir. Hüquqi
+baxışdan sonra sandbox administratoru real yolu açıq rejimə (`TAMGA_IDV_DIDIT_SANDBOX_MODE=open`) keçirə bilər.
 
 ## 9. Qurumunu sına
 

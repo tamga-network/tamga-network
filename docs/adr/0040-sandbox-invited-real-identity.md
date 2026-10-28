@@ -4,7 +4,7 @@ title: "Sandbox'ta gerçek kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-10-05
+last_updated: 2026-10-28
 summary: >
   Sandbox'ta kimlik akışı iki seçenek sunar: "Gerçek kimliğinle doğrula (Didit)" ve "Hızlı deneme (sahte kişi)". Gerçek yol
   herkese açıktır (davet kodu isteğe bağlı bir kip olarak kalır) ve gerçek ağın Didit hesabını ve kimlik akışını paylaşır; ayrı
@@ -46,7 +46,7 @@ ya da tavan dolmuşsa (K3) yalnız hızlı deneme gösterilir ve sade bir ileti 
 kullan").
 
 **K2 — Davet kodu isteğe bağlı bir kiptir.** Davet kodu altyapısı kalır ve yalnız sandbox yöneticisi açarsa kullanılır
-(`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`; varsayılan `open`). Bu kipte gerçek yol yalnız geçerli bir davet koduyla açılır.
+(`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`; ilk metinde varsayılan `open` — **2026-10-28 notu: varsayılan `invite`**). Bu kipte gerçek yol yalnız geçerli bir davet koduyla açılır.
 Kodu yalnız sandbox yöneticisi üretir (sandbox sayfasının yönetici bölümü, yönetici belirteciyle; bölüm dışarıya kapalıdır,
 yalnız sunucunun kendisinden açılır). İki tür kod vardır: **kişiye özel** (tek kullanımlık; en çok 7 gün geçerli) ve
 **süreli** (bir etkinlik ya da atölye için; en çok 72 saat ve en çok 25 kullanım). Kullanım hakkı sağlayıcı oturumu
@@ -106,7 +106,7 @@ Gerçek ağın sağlayıcı hesabını paylaşmak üç riski bilerek kabul eder;
 
 | Kod | Kural |
 |---|---|
-| RI1 | Sandbox'ta kimlik akışı iki seçenek sunar (gerçek kimlikle sağlayıcı ya da hızlı deneme); seçim yapılmayan akış sahte sağlayıcıyla yapılır. Gerçek yol herkese açıktır; yalnız isteğe bağlı davet kipinde geçerli bir davet kodu gerekir. |
+| RI1 | Sandbox'ta kimlik akışı iki seçenek sunar (gerçek kimlikle sağlayıcı ya da hızlı deneme); seçim yapılmayan akış sahte sağlayıcıyla yapılır. Hızlı deneme herkese açıktır. Gerçek yol varsayılan olarak yalnız geçerli bir davet koduyla açılır (2026-10-28 notu: hukuki inceleme bitene kadar); açık kip (`open`) yalnız açıkça ayarlanırsa geçerlidir. |
 | RI2 | Sandbox'ın gerçek yolu gerçek ağın sağlayıcı hesabını yalnız ayrı adlı sandbox değişkenleriyle kullanır; bu değerler yalnız sandbox kullanıcısına okunur, gerçek ağın ayarları, imza anahtarları ve verisi sandbox'a kapalıdır; gerçek ağ sandbox adlarını kabul etmez. Sandbox sağlayıcı bildirimine (webhook) güvenmez, kararı sağlayıcının API'sinden çeker; gerçek ağ kendi açmadığı oturumun bildirimini yok sayar. |
 | RI3 | Gerçek yolda kişi, sağlayıcıya yönlendirilmeden önce test ortamı uyarısını açıkça onaylar. |
 | RI4 | Sandbox belgesine gerçek kimlik numarası ve belge numarası yazılmaz; kişiden yalnız ad, soyad ve doğum tarihi (ve türetilen yaş bilgisi) geçer. |
@@ -135,6 +135,18 @@ Gerçek ağın sağlayıcı hesabını paylaşmak üç riski bilerek kabul eder;
   ağın anahtarlarının aynı olmasını engelleyen eski denetim kaldırılır.
 - Sandbox sayfası ve cüzdanın sandbox metinleri iki seçeneği anlatır; davet kodu üretme bölümü isteğe bağlı kip için kalır.
   Sandbox rehberi ve KVKK aydınlatma taslağı herkese açık kullanıma göre güncellenir.
+
+## Not (2026-10-28, küçük değişiklik — yeni ADR yok)
+
+- **Varsayılan kip `invite`.** KVKK/GDPR ön incelemesi (proje yönetimi, 2026-10-28) gerçek yolun herkese açık kalmasını hukuki
+  inceleme bitmeden bir risk olarak işaretledi. Gerçek yol (sağlayıcıda gerçek kimlikle doğrulama) artık **varsayılan olarak yalnız
+  geçerli bir davet koduyla** açılır; `TAMGA_IDV_DIDIT_SANDBOX_MODE=open` yalnız açıkça yazılırsa herkese açılır. Hızlı deneme (sahte
+  kişi) her kipte herkese açıktır; OpenID uyum testleri ve sahneler bu yolu kullanır. K1/K2'deki "varsayılan `open`" bu notla okunur;
+  RI1 buna göre yeniden yazıldı. İnceleme bitince kip proje yönetimi kararıyla yeniden açılabilir (tek ortam değişkeni).
+- **Sağlayıcıda silme ifadesi.** Uyarı ve aydınlatma metinlerinde "Didit oturumu belge verilir verilmez silinir" yerine "oturumun
+  silinmesi belge verilir verilmez **istenir**" yazılır: sağlayıcı hesabında silme yetkisi (`delete:sessions`) ve veri işleme
+  sözleşmesi tamamlanana kadar silme isteği sağlayıcının kendi saklama ayarına tabidir. K4/K6'nın kuralı (hemen silme isteği) değişmez;
+  yalnız kişiye verilen söz bugünkü duruma uyar.
 
 # Durum
 

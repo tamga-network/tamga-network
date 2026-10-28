@@ -4,7 +4,7 @@ title: "Sandbox-da real şəxsiyyətin yoxlanılması"
 status: Active
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-10-05
+last_updated: 2026-10-28
 summary: >
   Sandbox-da şəxsiyyət axını iki seçim təqdim edir: "Real şəxsiyyətinizi yoxlayan tərəf ilə təsdiqləyin (Didit)" və "Sürətli sınaq (saxta şəxs)". Real yol hamı üçün açıqdır (dəvət kodu istəyə bağlı rejim kimi qalır) və real şəbəkənin Didit hesabını və şəxsiyyət axınını paylaşır; ayrıca provayder tətbiqi yoxdur. Pulsuz aylıq kvota real şəbəkə ilə ortaq olduğu üçün sandbox-un gündəlik və aylıq limiti var; limit dolduqda yalnız sürətli sınaq açıq olur. Şəxs skan etməzdən əvvəl açıq xəbərdarlığı təsdiqləyir; rəqəmsal sənədə yalnız ad, soyad və doğum tarixi keçir, provayderdəki sessiya dərhal silinir və hər şey gecə sıfırlanmasında silinir. Qəbul edilmiş risklər (ortaq kvota, sandbox-un provayder açarını oxuya bilməsi, webhook-un real şəbəkəyə getməsi) və onların azaldılması yazılı şəkildə qeyd olunub. ADR-0038-in K4 bəndini və SB3 qaydasını dəyişir.
 domain: Identity
@@ -42,7 +42,7 @@ və ya limit dolubsa (K3), yalnız sürətli sınaq göstərilir və sadə bir m
 istifadə edin").
 
 **K2 — Dəvət kodu isteğe bağlı rejimdir.** Dəvət kodu infrastrukturu qalır və yalnız sandbox inzibatçısı aktivləşdirdikdə istifadə olunur
-(`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`; standart dəyər `open`). Bu rejimdə real yol yalnız etibarlı dəvət kodu ilə açılır.
+(`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`; ilk mətndə standart dəyər `open` — **2026-10-28 qeydi: standart `invite`**). Bu rejimdə real yol yalnız etibarlı dəvət kodu ilə açılır.
 Kodu yalnız sandbox inzibatçısı yaradır (sandbox səhifəsinin inzibatçı bölməsi, inzibatçı tokeni ilə; bölmə xaricə bağlıdır,
 yalnız serverin özündən açılır). İki növ kod var: **fərdi** (birdəfəlik; ən çox 7 gün etibarlı) və
 **müddətli** (tədbir və ya seminar üçün; ən çox 72 saat və ən çox 25 istifadə). İstifadə hüququ provayder sessiyası
@@ -102,7 +102,7 @@ Real şəbəkənin provayder hesabını paylaşmaq üç riski şüurlu şəkild�
 
 | Kod | Qayda |
 |---|---|
-| RI1 | Sandbox-da şəxsiyyət axını iki seçim təklif edir (real şəxsiyyətlə provayder və ya sürətli sınaq); seçim edilməyən axın saxta provayderlə həyata keçirilir. Real yol hamı üçün açıqdır; yalnız isteğe bağlı dəvət rejimində etibarlı dəvət kodu tələb olunur. |
+| RI1 | Sandbox-da şəxsiyyət axını iki seçim təklif edir (real şəxsiyyətlə provayder və ya sürətli sınaq); seçim edilməyən axın saxta provayderlə həyata keçirilir. Sürətli sınaq hamı üçün açıqdır. Real yol standart olaraq yalnız etibarlı dəvət kodu ilə açılır (2026-10-28 qeydi: hüquqi baxış bitənə qədər); açıq rejim (`open`) yalnız açıq şəkildə təyin edildikdə keçərlidir. |
 | RI2 | Sandbox-un real yolu real şəbəkənin provayder hesabından yalnız ayrıca adlandırılmış sandbox dəyişənləri ilə istifadə edir; bu dəyərləri yalnız sandbox istifadəçisi oxuya bilir, real şəbəkənin parametrləri, imza açarları və məlumatları sandbox üçün bağlıdır; real şəbəkə sandbox adlarını qəbul etmir. Sandbox provayder bildirişinə (webhook) etibar etmir, qərarı provayderin API-sindən çəkir; real şəbəkə özünün açmadığı sessiyanın bildirişinə məhəl qoymur. |
 | RI3 | Real yolda şəxs provayderə yönləndirilməzdən əvvəl test mühiti xəbərdarlığını açıq şəkildə təsdiqləyir. |
 | RI4 | Sandbox rəqəmsal sənədinə real şəxsiyyət nömrəsi və sənəd nömrəsi yazılmır; şəxsdən yalnız ad, soyad və doğum tarixi (və ondan törənən yaş məlumatı) ötürülür. |
@@ -131,6 +131,19 @@ Real şəbəkənin provayder hesabını paylaşmaq üç riski şüurlu şəkild�
   şəbəkənin açarlarının eyni olmasının qarşısını alan köhnə yoxlama ləğv edilir.
 - Sandbox səhifəsi və rəqəmsal cüzdanın sandbox mətnləri iki seçimi izah edir; dəvət kodu yaratma bölməsi isteğe bağlı rejim üçün qalır.
   Sandbox bələdçisi və KVKK məlumatlandırma layihəsi hamı üçün açıq istifadəyə uyğun yenilənir.
+
+## Qeyd (2026-10-28, kiçik dəyişiklik — yeni ADR yoxdur)
+
+- **Standart rejim `invite`.** Fərdi məlumatların qorunması üzrə ilkin baxış (layihə rəhbərliyi, 2026-10-28) hüquqi baxış bitməmiş real
+  yolun hamıya açıq qalmasını risk kimi qeyd etdi. Real yol (provayderdə real şəxsiyyətlə yoxlama) indi **standart olaraq yalnız
+  etibarlı dəvət kodu ilə** açılır; `TAMGA_IDV_DIDIT_SANDBOX_MODE=open` yalnız açıq yazıldıqda hamıya açılır. Sürətli sınaq (uydurma
+  şəxs) hər rejimdə hamıya açıqdır; OpenID uyğunluq testləri və səhnələr bu yolu istifadə edir. K1/K2-dəki "standart `open`" bu qeydlə
+  oxunur; RI1 buna uyğun yenidən yazıldı. Baxış bitdikdən sonra rejim layihə rəhbərliyinin qərarı ilə yenidən açıla bilər (bir mühit
+  dəyişəni).
+- **Provayderdə silinmə ifadəsi.** Xəbərdarlıq və məlumatlandırma mətnlərində "Didit sessiyası sənəd verilən kimi silinir" əvəzinə
+  "sessiyanın silinməsi sənəd verilən kimi **tələb olunur**" yazılır: provayder hesabında silmə icazəsi (`delete:sessions`) və məlumat
+  emalı müqaviləsi tamamlanana qədər tələb provayderin öz saxlama parametrinə tabedir. K4/K6 qaydası (dərhal silmə tələbi) dəyişmir;
+  yalnız şəxsə verilən vəd bugünkü vəziyyətə uyğun gəlir.
 
 # Status
 

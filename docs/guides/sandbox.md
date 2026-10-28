@@ -220,12 +220,13 @@ gösterin: iptal edilmiş ya da askıdaki belge kabul edilmemelidir. Öğrenci b
 
 Sandbox'ta kimlik akışı iki seçenek sunar ([[ADR-0040]]): **Gerçek kimliğinle doğrula (Didit)** — sağlayıcının gerçek adımları
 (belgenin taranması, canlılık, yüz eşleştirme) — ya da **Hızlı deneme (sahte kişi)** — uydurma bir kişi seçip onaylarsınız.
-Gerçek yol herkese açıktır; davet gerekmez (`ADR-0040/RI1`).
+Hızlı deneme herkese açıktır. Gerçek yol, veri koruma hukuki incelemesi bitene kadar **varsayılan olarak davet koduyla** açılır
+(`ADR-0040/RI1`, 2026-10-28 notu); kodu sandbox ekibinden isteyin (`support@tamga.network`). Kodunuz yoksa hızlı denemeyi kullanın.
 
 1. Cüzdanı sandbox'a bağlayın ve kimlik belgesi eklemeyi başlatın.
-2. Kimlik servisinin sayfasında aydınlatmayı onaylayın ve "Gerçek kimliğinle doğrula (Didit)" seçin.
+2. Kimlik servisinin sayfasında aydınlatmayı onaylayın, davet kodunu yazın ve "Gerçek kimliğinle doğrula (Didit)" seçin.
 3. Açılan uyarıyı okuyup onaylayın: "Bu bir test ortamıdır; gerçek kimliğinle deniyorsun; verilerin her gece silinir;
-   Didit oturumu belge verilir verilmez silinir." Onay olmadan sağlayıcıya gidilmez (`ADR-0040/RI3`).
+   Didit oturumunun silinmesi belge verilir verilmez istenir." Onay olmadan sağlayıcıya gidilmez (`ADR-0040/RI3`).
 4. Didit'te adımları tamamlayın; test belgesi cüzdana gelir. Sandbox, gerçek ağın sağlayıcı hesabını kullanır; belgeyi imzalayan
    anahtarlar ve kayıtlar ise ayrıdır (`ADR-0040/RI2`).
 
@@ -234,10 +235,11 @@ yalnız hızlı deneme görünür ("Bugünlük kota doldu, hızlı denemeyi kull
 (`ADR-0040/RI7`).
 
 Belgeye yalnız ad, soyad ve doğum tarihi (ve türetilen yaş bilgisi) geçer; gerçek kimlik numarası ve belge numarası yerine
-rastgele bir `SANDBOX-…` değeri yazılır (`ADR-0040/RI4`). Sağlayıcıdaki doğrulama oturumu belge verilir verilmez ya da doğrulama
-başarısız olursa hemen, yarım bırakılırsa yaklaşık bir saat içinde, en geç gece sıfırlamasında silinir (`ADR-0040/RI5`). Sandbox yöneticisi gerekirse gerçek yolu
-yalnız davet koduyla açılan bir kipe alabilir; o kipte davet kodları kişiye özel (tek kullanım, en çok 7 gün) ya da süreli (en
-çok 72 saat, en çok 25 kullanım) olur, tavanı aşamaz ve gece sıfırlamasında silinir.
+rastgele bir `SANDBOX-…` değeri yazılır (`ADR-0040/RI4`). Sağlayıcıdaki doğrulama oturumunun silinmesi belge verilir verilmez ya da
+doğrulama başarısız olursa hemen, yarım bırakılırsa yaklaşık bir saat içinde, en geç gece sıfırlamasında istenir (`ADR-0040/RI5`);
+sağlayıcı kendi saklama ayarı içinde siler. Davet kodları kişiye özel (tek kullanım, en çok 7 gün) ya da süreli (en çok 72 saat, en
+çok 25 kullanım) olur, tavanı aşamaz ve gece sıfırlamasında silinir. Sandbox yöneticisi, hukuki inceleme bittikten sonra gerçek yolu
+herkese açık kipe (`TAMGA_IDV_DIDIT_SANDBOX_MODE=open`) alabilir.
 
 ## 9. Kurumunu dene
 

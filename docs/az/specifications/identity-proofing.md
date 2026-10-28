@@ -4,7 +4,7 @@ title: "Şəxsiyyətin yoxlanılması"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-23
+last_updated: 2026-10-28
 summary: >
   Sənədi verən qurumun rəqəmsal sənədi verməzdən əvvəl tətbiq etdiyi şəxsiyyətin yoxlanılması (identity proofing) yollarını müəyyən edir: hər yolun təmin etdiyi sənəd sahibi səviyyəsi (T1–T3), onun ETSI TS 119 461 ilə uyğunlaşdırılması, hansı sənəd növünün hansı səviyyəni tələb etdiyi, nəticənin harada saxlanılacağı (sənədi verən qurumun audit qeydi; heç vaxt rəqəmsal sənədin özündə deyil) və uzaqdan şəxsiyyət yoxlama provayderi (istinad: Didit, v3 API) inteqrasiyasının protokol səviyyəsində qaydaları: sessiyanın yaradılması, nəticənin alınması, webhook-un yoxlanılması, məlumatların minimallaşdırılması, xəta və vaxt aşımı davranışı. D-ID-2-nin tətbiqidir. Səviyyə cədvəli və ETSI 119 461 uyğunlaşdırması D-ASSUR-2 ilə qərara alınıb (2026-09-26).
 translation_of: SPEC-ID-0003
@@ -207,7 +207,7 @@ I2; rəqəmsal sənəddə `category` claim-i yoxdur — [[ADR-0022]]) verdiyi kv
 | Axın | Rəqəmsal cüzdan: PAR (WUA) → brauzer `/authorize` (**KVKK üzrə məlumatlandırma + açıq razılıq**) → provayder (Didit v3; demo: FAKE, kənarlaşma S-15) → `/idv/return` qərar sorğusu (webhook yalnız tətikdir, IDP5) → `code` → token (PKCE + WUA) → 10 nüsxə |
 | Qurumda istifadə | Sənədi verən qurumun xidməti rəqəmsal sənədi verərkən şəxsiyyət sənədinin **təqdim edilməsini** tələb edir (DCQL: TCKN, doğum tarixi, ad, soyad), T0 + A–E yoxlayır, qeydlə uyğunlaşdırır (TCKN + doğum tarixi; adın normallaşdırılması ilə bağlı xəbərdarlıq) — [[SPEC-PROTO-0001]] §11.2 |
 | Səviyyə | Məsafədən sənəd + canlılıq + üz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` (texniki baxımdan High; hüquqi baxımdan T3 = NES/Mobil İmza, IDP7) |
-| Məlumat nəzarətçisi | Tamga Network (K4): saxlanılan qeyd + hash; silinmə tələbi = §9.1 (qeyd silinir, nüsxələr ləğv edilir, provayderdəki təsvirlər silinir); provayder müqaviləsində təsvirlərin saxlanması ≤ 30 gün |
+| Məlumat nəzarətçisi | Tamga Network (K4): saxlanılan qeyd + hash; silinmə tələbi = §9.1 (qeyd silinir, nüsxələr ləğv edilir, provayderdəki sessiyanın silinməsi tələb olunur); provayder müqaviləsində təsvirlərin saxlanması hədəfi ≤ 30 gün. **Vaxta əsaslanan silinmə (2026-10-28):** müddəti bitmiş və ya ləğv edilmiş qeyd ən gec 30 gün sonra provayder sessiyası ilə birlikdə, hadisə jurnalı sətirləri 365 gün sonra avtomatik silinir (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; müddətlər siyasət seçimidir, hüquqi təsdiq gözləyir) |
 | Webhook | Yeganə hədəf `https://id.tamga.network/idv/webhook`, hadisə `status.updated`; qurum üzrə ayrıca webhook yoxdur |
 | Yaş | Minimum yaş yoxdur (2026-10-08, [[ADR-0043]]); şərt etibarlı şəxsiyyət sənədi ilə şəxsiyyətin yoxlanılmasıdır. Valideyn razılığı axını və provayderin azyaşlılar üçün həddi açıq məsələdir |
 
@@ -226,7 +226,7 @@ Tətbiq: `apps/id` (operator repozitoriyası) (config/didit/store/app), `IdvProv
 |---|---|
 | Sorğu | `{ "presentations": [ SD-JWT VC + KB-JWT, … ] }` (1–20); heç bir sahə açılmır; KB-JWT `aud` = xidmət ünvanı, `nonce` = `POST /nonce` (birdəfəlik) |
 | Yoxlama | imza bu xidmətə məxsusdur (`issuerId`), sahiblik KB-JWT `cnf` açarı ilə; qeyd ləğv siyahısı indeksindən tapılır; müddəti bitmiş və ya ləğv edilmiş sənəd də qəbul edilir (qeyd saxlandığı müddətcə şəxsin məlumatıdır) |
-| Təsir | qeydin bütün nüsxələri INVALID olur; qeyd və ona bağlı hadisə jurnalı sətirləri silinir; provayder sessiyası `privacy_erasure` ilə silinir (`IdvProvider.deleteSession`) |
+| Təsir | qeydin bütün nüsxələri INVALID olur; qeyd və ona bağlı hadisə jurnalı sətirləri silinir; provayder sessiyasının silinməsi `privacy_erasure` ilə tələb olunur (`IdvProvider.deleteSession`; provayder hesabında silmə icazəsi yoxdursa cavab `provider: "partial"`) |
 | Cavab | `{ erased, rejected, provider: "deleted" | "partial" }`; saxlanılan heç nə yoxdursa 404 |
 | Jurnal | yalnız saylar (`erasure`: qeydlərin sayı, provayderin nəticəsi); qeydin identifikatoru və `subject_ref` yazılmır |
 

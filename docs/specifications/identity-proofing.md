@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-23
+last_updated: 2026-10-28
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
@@ -212,7 +212,7 @@ I2; belgede `category` claim'i yok — [[ADR-0022]]) verdiği nitelikli olmayan 
 | Akış | Cüzdan: PAR (WUA) → tarayıcı `/authorize` (**KVKK aydınlatma + açık rıza**) → sağlayıcı (Didit v3; demo: FAKE, sapma S-15) → `/idv/return` karar sorgulama (webhook yalnızca tetik, IDP5) → `code` → token (PKCE + WUA) → 10 kopya |
 | Kurumda kullanım | Kurumun belge veren servisi belge verilirken kimlik belgesinin **gösterilmesini** ister (DCQL: TCKN, doğum tarihi, ad, soyad), T0 + A–E doğrular, kayıtla eşler (TCKN + doğum tarihi; ad normalize uyarı) — [[SPEC-PROTO-0001]] §11.2 |
 | Seviye | Uzaktan belge + canlılık + yüz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` (High teknik; hukuken T3 = NES/Mobil İmza, IDP7) |
-| Veri sorumlusu | Tamga Network (K4): saklama kayıt + hash; silme talebi = §9.1 (kayıt silinir, kopyalar iptal, sağlayıcıda görüntüler silinir); sağlayıcı sözleşmesinde ≤ 30 gün görüntü saklama |
+| Veri sorumlusu | Tamga Network (K4): saklama kayıt + hash; silme talebi = §9.1 (kayıt silinir, kopyalar iptal, sağlayıcıda oturumun silinmesi istenir); sağlayıcı sözleşmesinde ≤ 30 gün görüntü saklama hedefi. **Zaman temelli imha (2026-10-28):** süresi dolan ya da iptal edilen kayıt en geç 30 gün sonra sağlayıcı oturumuyla, olay günlüğü satırları 365 gün sonra kendiliğinden silinir (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; süreler politika seçimi, hukuki teyit bekliyor) |
 | Webhook | Tek hedef `https://id.tamga.network/idv/webhook`, olay `status.updated`; kurum başına webhook yoktur |
 | Yaş | Asgari yaş yok (2026-10-08, [[ADR-0043]]); şart geçerli bir kimlik belgesiyle kimlik doğrulamasıdır. Veli onayı akışı ve sağlayıcının küçükler için sınırı açık konudur |
 
@@ -231,7 +231,7 @@ Kişi hesabı yoktur; istek servisin verdiği belgelerin gösterilmesiyle kanıt
 |---|---|
 | İstek | `{ "presentations": [ SD-JWT VC + KB-JWT, … ] }` (1–20); hiçbir alan açılmaz; KB-JWT `aud` = servis adresi, `nonce` = `POST /nonce` (tek kullanımlık) |
 | Doğrulama | imza bu servisin (`issuerId`), sahiplik KB-JWT `cnf` anahtarıyla; kayıt iptal listesi indeksinden bulunur; süresi geçmiş ya da iptal edilmiş belge de kabul edilir (kaydı tutulduğu sürece kişinin verisidir) |
-| Etki | kaydın bütün kopyaları INVALID; kayıt ve ona bağlı olay günlüğü satırları silinir; sağlayıcı oturumu `privacy_erasure` ile silinir (`IdvProvider.deleteSession`) |
+| Etki | kaydın bütün kopyaları INVALID; kayıt ve ona bağlı olay günlüğü satırları silinir; sağlayıcı oturumunun silinmesi `privacy_erasure` ile istenir (`IdvProvider.deleteSession`; sağlayıcı hesabında silme yetkisi yoksa yanıt `provider: "partial"`) |
 | Yanıt | `{ erased, rejected, provider: "deleted" | "partial" }`; tutulan bir şey yoksa 404 |
 | Günlük | yalnız sayılar (`erasure`: kayıt sayısı, sağlayıcı sonucu); kayıt kimliği ve `subject_ref` yazılmaz |
 

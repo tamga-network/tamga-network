@@ -4,7 +4,7 @@ title: "Real identity checks in sandbox"
 status: Active
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-10-05
+last_updated: 2026-10-28
 summary: >
   In the sandbox the identity flow offers two options: "Verify with your real identity (Didit)" and "Quick trial (made-up
   person)". The real path is open to everyone (the invitation code remains as an optional mode) and shares the real network's
@@ -51,7 +51,7 @@ real path is not configured (no provider key) or a cap is reached (K3), only the
 ("Today's quota is full — use the quick trial").
 
 **K2 — The invitation code is an optional mode.** The invitation code infrastructure stays and is used only if the sandbox
-administrator turns it on (`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`; default `open`). In that mode the real path opens only with a
+administrator turns it on (`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`; default `open` in the first text — **note of 2026-10-28: default `invite`**). In that mode the real path opens only with a
 valid invitation code. Only the sandbox administrator creates codes (the administration section of the sandbox page, with the
 admin token; the section is closed to the outside and reachable only from the server itself). There are two kinds of code:
 **personal** (single use; valid for at most 7 days) and **time-limited** (for an event or workshop; at most 72 hours and at
@@ -115,7 +115,7 @@ Sharing the real network's provider account knowingly accepts three risks; each 
 
 | Code | Rule |
 |---|---|
-| RI1 | In the sandbox the identity flow offers two options (real identity with the provider, or quick trial); a flow without a choice uses the fake provider. The real path is open to everyone; only in the optional invitation mode is a valid invitation code required. |
+| RI1 | In the sandbox the identity flow offers two options (real identity with the provider, or quick trial); a flow without a choice uses the fake provider. The quick trial is open to everyone. By default the real path opens only with a valid invitation code (note of 2026-10-28: until the legal review is complete); the open mode (`open`) applies only when set explicitly. |
 | RI2 | The sandbox's real path uses the real network's provider account only through separately named sandbox variables; these values are readable only by the sandbox user, and the real network's settings, signing keys and data are closed to the sandbox; the real network does not accept the sandbox names. The sandbox does not trust provider notifications (webhooks) and fetches the decision from the provider's API; the real network ignores notifications for sessions it did not open. |
 | RI3 | On the real path, the person explicitly confirms the test-environment warning before being sent to the provider. |
 | RI4 | The real identity number and document number are never written into a sandbox credential; only given name, family name and date of birth (and the derived age information) are taken from the person. |
@@ -144,6 +144,20 @@ Sharing the real network's provider account knowingly accepts three risks; each 
   check that prevented the sandbox and real network keys from being the same is removed.
 - The sandbox page and the wallet's sandbox texts describe the two options; the invitation code section stays for the
   optional mode. The Sandbox guide and the draft privacy notice are updated for open use.
+
+## Note (2026-10-28, minor change — no new ADR)
+
+- **Default mode `invite`.** The data-protection pre-review (project management, 2026-10-28) flagged keeping the real path open to
+  everyone before the legal review is complete as a risk. The real path (verification with a real identity at the provider) now opens
+  **by default only with a valid invitation code**; `TAMGA_IDV_DIDIT_SANDBOX_MODE=open` opens it to everyone only when set explicitly.
+  The quick trial (made-up person) stays open to everyone in every mode; the OpenID conformance tests and the scenes use that path.
+  "default `open`" in K1/K2 is read with this note; RI1 was rewritten accordingly. Once the review is complete the mode can be
+  reopened by a project management decision (one environment variable).
+- **Wording of deletion at the provider.** The warning and notice texts say "deletion of the Didit session is **requested** as soon as
+  the credential is issued" instead of "the Didit session is deleted as soon as the credential is issued": until the delete permission
+  (`delete:sessions`) and the data processing agreement with the provider are in place, the request is subject to the provider's own
+  retention setting. The rule of K4/K6 (immediate deletion request) does not change; only the promise to the person matches today's
+  state.
 
 # Status
 
