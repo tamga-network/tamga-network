@@ -1,6 +1,6 @@
 /**
  * ETSI TS 119 602 LoTE izdüşümü (ARF OIA_15b / ISSU_10b / ISSU_28a): kaynakta açıkken `build` üç LoTE üretir; her biri ETSI'nin
- * resmî JSON şemasına uyar (Ek A.1), compact JAdES B ile imzalıdır (x5t#S256 + sigT, §6.8 / Ek E.4), imza sertifikasının C/O
+ * resmî JSON şemasına uyar (Ek A.1), compact JAdES B ile imzalıdır (x5t#S256 + iat, §6.8 / Ek E.4; TS 119 182-1 V1.2.1), imza sertifikasının C/O
  * alanları SchemeTerritory / SchemeOperatorName ile aynıdır (§6.8.0) ve AB "bildirim" URI'leri kullanılmaz.
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
@@ -63,17 +63,19 @@ describe.skipIf(!ready)("LoTE izdüşümü (ETSI TS 119 602)", () => {
     }
   });
 
-  it("compact JAdES B: imza geçerli, x5t#S256 imza sertifikasına eşit, sigT kritik; yük .json ile aynı", async () => {
+  it("compact JAdES B (TS 119 182-1 V1.2.1): imza geçerli, x5t#S256 imza sertifikasına eşit, imza zamanı iat (sigT yok); yük .json ile aynı", async () => {
     for (const k of KINDS) {
       const jws = read(`${k}.jws`);
       const h = decodeProtectedHeader(jws) as Record<string, unknown> & { x5c: string[] };
       expect(h.alg).toBe("ES256");
-      expect(h.crit).toEqual(["sigT"]);
-      expect(typeof h.sigT).toBe("string");
+      // §5.1.11 / §5.2.1: 2025-07-15'ten beri yeni imzada iat (tam sayı), sigT ve crit yok — kritik başlıksız JWS her JOSE kitaplığında
+      expect(h.crit).toBeUndefined();
+      expect(h.sigT).toBeUndefined();
+      expect(Number.isInteger(h.iat)).toBe(true);
       const der = Buffer.from(h.x5c[0], "base64");
       expect(h["x5t#S256"]).toBe(createHash("sha256").update(der).digest("base64url"));
       const pem = `-----BEGIN CERTIFICATE-----\n${h.x5c[0]}\n-----END CERTIFICATE-----`;
-      const { payload } = await compactVerify(jws, await importX509(pem, "ES256"), { crit: { sigT: true } });
+      const { payload } = await compactVerify(jws, await importX509(pem, "ES256"));
       const lote = JSON.parse(new TextDecoder().decode(payload));
       expect(lote).toEqual(JSON.parse(read(`${k}.json`)));
       // §6.8.0: sertifika C = SchemeTerritory, O = SchemeOperatorName

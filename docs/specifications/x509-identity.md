@@ -265,7 +265,7 @@ RootCARegistry'ye çıpalar.
 [[t:ARF]] 3.0, cüzdan ve doğrulayıcıların [[t:trust-anchor|güven çapalarını]] hem 119 612 TL'lerinden hem 119 602 [[t:LoTE|LoTE'lerinden]] almasını ister
 (OIA_15b, ISSU_10b, ISSU_28a). `apps/trust-publisher` `build`, [[SPEC-TRUST-0001]] listelerinden üç LoTE üretir
 (`trust.tamga.network/lote/{wallet-providers,wrpac-providers,eaa-providers}.jws`): Ek A.1 JSON şeması, compact JAdES
-Baseline B (`x5c`, `x5t#S256`, kritik `sigT`), aynı liste imzacısı (sertifika C/O = SchemeTerritory / SchemeOperatorName,
+Baseline B (`x5c`, `x5t#S256`, imza zamanı `iat` — ETSI TS 119 182-1 V1.2.1 §5.1.11; `sigT` 2025-07-15'ten beri yeni imzada yok, okuyucu eski listede tanır), aynı liste imzacısı (sertifika C/O = SchemeTerritory / SchemeOperatorName,
 §6.8.0).
 
 - Profil: AB Ek E / Ek F kuralları ve Ek H yapısı. Ancak "üye devletçe bildirilmiş" anlamı taşıyan URI'ler (LoTEType,

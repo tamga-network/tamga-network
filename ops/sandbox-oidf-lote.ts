@@ -85,10 +85,10 @@ const jws = await new CompactSign(new TextEncoder().encode(JSON.stringify(lote))
     cty: "application/json",
     x5c: [b64(rootDer)],
     "x5t#S256": createHash("sha256").update(rootDer).digest("base64url"),
-    sigT: iso(now),
-    crit: ["sigT"],
+    // ETSI TS 119 182-1 V1.2.1 §5.1.11: imza zamanı iat (sigT 2025-07-15'ten beri yeni imzada yok)
+    iat: Math.floor(now.getTime() / 1000),
   })
-  .sign(key, { crit: { sigT: true } });
+  .sign(key);
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, jws + "\n");
 console.log(JSON.stringify({ out, signer_fingerprint_sha256: createHash("sha256").update(rootDer).digest("hex") }));

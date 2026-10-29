@@ -114,17 +114,23 @@ function lote(opts: {
     },
   };
 }
-/** JAdES (ETSI TS 119 182-1) compact başlığı — liste yayıncısının `jadesHeader`'ı gibi: `sigT` korunan ve kritik. */
+/**
+ * JAdES (ETSI TS 119 182-1) compact başlığı. `crit` `sigT` içeriyorsa eski biçim (V1.1.1: `sigT` korunan ve kritik — 2025-07-15
+ * öncesi imzalar, doğrulayıcı yine tanır); içermiyorsa V1.2.1 §5.1.11 biçimi: imza zamanı `iat` (liste yayıncısının `jadesHeader`'ı).
+ */
 async function signLote(obj: unknown, signer: KeyCert, crit: string[] = ["sigT"]) {
   const extra = Object.fromEntries(crit.filter((k) => k !== "sigT").map((k) => [k, "x"]));
+  const time = crit.includes("sigT")
+    ? { sigT: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") }
+    : { iat: Math.floor(Date.now() / 1000) };
   return new CompactSign(new TextEncoder().encode(JSON.stringify(obj)))
     .setProtectedHeader({
       alg: "ES256",
       cty: "application/json",
       x5c: [b64(signer.der)],
       "x5t#S256": b64u(createHash("sha256").update(signer.der).digest()),
-      sigT: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
-      crit,
+      ...time,
+      ...(crit.length ? { crit } : {}),
       ...extra,
     })
     .sign(signer.keys.privateKey, { crit: Object.fromEntries(crit.map((k) => [k, true])) });
@@ -510,6 +516,9 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
   it("JAdES: crit [sigT] tanınır ve liste yüklenir; bilinmeyen kritik başlık taşıyan dış liste yüklenmez (RFC 7515 §4.1.11)", async () => {
     const ok = await federated({});
     expect(ok.trust.externalAnchorCertsDer?.().length).toBe(1);
+    // TS 119 182-1 V1.2.1 §5.1.11: 2025-07-15'ten beri imza zamanı `iat`, kritik başlık yok — liste yüklenir (eudi-dev, K2)
+    const v121 = await federated({ crit: [] });
+    expect(v121.trust.externalAnchorCertsDer?.().length).toBe(1);
     const { trust, warnings } = await federated({ crit: ["sigT", "x-unknown"] });
     expect(warnings.some((w) => /not loaded/.test(w))).toBe(true);
     expect(trust.externalAnchorCertsDer?.()).toEqual([]);

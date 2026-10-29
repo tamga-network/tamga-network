@@ -33,6 +33,10 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
   Verify — both used the client identifier, so an EU wallet's DC API presentation was rejected. Cross-device keeps the client
   identifier (PV7); a proof bound to the other path is rejected. Wallets on wallet-core 0.7.3 need 0.7.4 for SD-JWT over the DC
   API (mdoc and ISO 18013-7 Annex C are unchanged).
+  (5) ETSI TS 119 602 lists (the trust-publisher LoTE projection and the sandbox test LoTE script) carry the JAdES signing time
+  in `iat` (ETSI TS 119 182-1 V1.2.1 §5.1.11) instead of a critical `sigT`, which new signatures must not use since 2025-07-15
+  (§5.2.1); a JOSE library without JAdES support rejected the old header. Readers still accept `sigT` in older lists. The
+  sandbox test LoTE `oidf-test-pid` was re-signed (sequence 3, same signer).
 
 ## 0.7.3 — 2026-10-27
 

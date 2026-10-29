@@ -255,7 +255,7 @@ Tamga anchors it in RootCARegistry.
 [[t:ARF]] 3.0 requires wallets and verifiers to take their [[t:trust-anchor|trust anchors]] both from 119 612 TLs and from
 119 602 [[t:LoTE|LoTEs]] (OIA_15b, ISSU_10b, ISSU_28a). `apps/trust-publisher` `build` produces three LoTEs from the
 [[SPEC-TRUST-0001]] lists (`trust.tamga.network/lote/{wallet-providers,wrpac-providers,eaa-providers}.jws`): Annex A.1 JSON
-schema, compact JAdES Baseline B (`x5c`, `x5t#S256`, critical `sigT`), the same list signer (certificate C/O =
+schema, compact JAdES Baseline B (`x5c`, `x5t#S256`, signing time in `iat` — ETSI TS 119 182-1 V1.2.1 §5.1.11; `sigT` is not used in new signatures since 2025-07-15, the reader still accepts it in older lists), the same list signer (certificate C/O =
 SchemeTerritory / SchemeOperatorName, §6.8.0).
 
 - Profile: the EU Annex E / Annex F rules and the Annex H structure. However, instead of URIs that mean "notified by a member

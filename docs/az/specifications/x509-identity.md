@@ -260,7 +260,7 @@ RootCARegistry-də lövbərləyir.
 [[t:ARF]] 3.0 rəqəmsal cüzdanların və yoxlayan tərəflərin [[t:trust-anchor|etibar lövbərlərini]] həm 119 612 TL-lərindən, həm də 119 602 [[t:LoTE|LoTE-lərindən]] almasını tələb edir
 (OIA_15b, ISSU_10b, ISSU_28a). `apps/trust-publisher` `build`, [[SPEC-TRUST-0001]] siyahılarından üç LoTE yaradır
 (`trust.tamga.network/lote/{wallet-providers,wrpac-providers,eaa-providers}.jws`): Əlavə A.1 JSON sxemi, compact JAdES
-Baseline B (`x5c`, `x5t#S256`, kritik `sigT`), eyni siyahı imzalayanı (sertifikat C/O = SchemeTerritory / SchemeOperatorName,
+Baseline B (`x5c`, `x5t#S256`, imza vaxtı `iat` — ETSI TS 119 182-1 V1.2.1 §5.1.11; `sigT` 2025-07-15-dən bəri yeni imzalarda yoxdur, oxuyucu köhnə siyahılarda tanıyır), eyni siyahı imzalayanı (sertifikat C/O = SchemeTerritory / SchemeOperatorName,
 §6.8.0).
 
 - Profil: Aİ Əlavə E / Əlavə F qaydaları və Əlavə H strukturu. Lakin "üzv dövlət tərəfindən bildirilmiş" mənasını daşıyan URI-lər (LoTEType,

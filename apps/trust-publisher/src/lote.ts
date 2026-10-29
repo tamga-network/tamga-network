@@ -173,13 +173,17 @@ export function buildLote(i: LoteInput) {
   };
 }
 
-/** Compact JAdES Baseline B başlığı (ETSI TS 119 182-1): imza sertifikası özeti + iddia edilen imza zamanı. */
+/**
+ * Compact JAdES Baseline B başlığı (ETSI TS 119 182-1 V1.2.1 — TS 119 602'nin normatif atfı): imza sertifikası özeti + iddia
+ * edilen imza zamanı `iat` (§5.1.11, tam sayı saniye). `sigT` (§5.2.1) 2025-07-15'ten beri yeni imzalara KONMAZ; okuyucu eski
+ * listeler için yine tanır (`JADES_CRIT_PARAMS`). eudi-dev denemesi 2026-10-29 (K2): `crit: ["sigT"]` taşıyan liste AB aracında
+ * imza denetiminden geçmedi.
+ */
 export function jadesHeader(certDer: Uint8Array, signingTime: Date) {
   return {
     typ: undefined, // pemSigner'ın liste türü (tamga-tl+jwt) LoTE'de kullanılmaz
     cty: "application/json",
     "x5t#S256": createHash("sha256").update(certDer).digest("base64url"),
-    sigT: iso(signingTime),
-    crit: ["sigT"],
+    iat: Math.floor(signingTime.getTime() / 1000),
   };
 }
