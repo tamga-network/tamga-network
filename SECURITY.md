@@ -39,5 +39,6 @@ Keys under `ops/pki/` are for development only and are never used in production.
 
 ## Supply chain
 
-The packages have no `postinstall` scripts. npm releases are published only from CI, with OIDC trusted publishing and
-provenance. Dependency advisories are tracked with `npm audit`.
+The packages have no `postinstall` scripts. npm releases of eight packages are published only from CI, with OIDC trusted
+publishing and provenance; `@tamga-network/zk` is published manually without provenance, because its Android native
+libraries cannot yet be built in CI. Dependency advisories are tracked with `npm audit`.

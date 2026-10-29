@@ -40,7 +40,8 @@ Tamga Wallet, its provider service and app — separate project and operator), t
 
 **Version under review.** Packages at version `0.7.4` (published on npm 2026-10-29). The commit to review is fixed
 with the reviewer and tagged `audit-1` in the repository when the engagement starts; until then use the head of `main`.
-Releases are published only from CI with npm provenance (`.github/workflows/release.yml`).
+Eight packages are published only from CI with npm provenance (`.github/workflows/release.yml`); `@tamga-network/zk` is
+published manually from a maintainer machine without provenance, because its Android native libraries cannot yet be built in CI.
 
 ## 2. What we would like you to look at (ranked)
 

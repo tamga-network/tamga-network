@@ -78,7 +78,7 @@ depoya girmez). Kodunuzu bu yerel listelere karşı deneyebilirsiniz. Uyum vekt�
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | cüzdan tarafı sıfır bilgi ispatçısı (mdoc, Longfellow); `/react-native` telefonda yerel ispatçı, `/node` masaüstünde | cüzdan geliştiricisi |
 
 Her paketin kendi sayfası **SDK'lar** bölümündedir. Paketler npm'de **0.7.4** deneme sürümüyle yayımlanır; kararlı 1.0.0
-hazır olunca gelir. Deneme sürümünde arayüz değişebilir. Her sürüm bu depodan GitHub Actions ile üretilir ve kaynak kanıtı (provenance) taşır.
+hazır olunca gelir. Deneme sürümünde arayüz değişebilir. Her sürüm bu depodan üretilir; sekiz paket GitHub Actions ile yayımlanır ve kaynak kanıtı (provenance) taşır, `@tamga-network/zk` ise Android yerel kütüphaneleri henüz CI'da derlenemediği için elle ve kaynak kanıtı olmadan yayımlanır.
 
 ## Adresler
 

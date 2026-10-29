@@ -81,7 +81,7 @@ keys never enter the repository). You can test your code against these local lis
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | wallet-side zero-knowledge prover (mdoc, Longfellow); `/react-native` native prover on the phone, `/node` on the desktop | wallet developer |
 
 Every package has its own page in the **SDKs** section. The packages are published on npm as the **0.7.4** test release;
-the stable 1.0.0 comes when everything is ready. In test releases the API may change. Each release is built from this repository by GitHub Actions and carries provenance.
+the stable 1.0.0 comes when everything is ready. In test releases the API may change. Each release is built from this repository; eight packages are published by GitHub Actions and carry provenance, while `@tamga-network/zk` is published manually without provenance (its Android native libraries cannot yet be built in CI).
 
 ## Addresses
 

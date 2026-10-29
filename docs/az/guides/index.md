@@ -79,7 +79,7 @@ depoya düşmür). Kodunuzu bu lokal siyahılara qarşı sınaya bilərsiniz. Uy
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | rəqəmsal cüzdan tərəfində sıfır biliyə əsaslanan sübut generatoru (mdoc, Longfellow); `/react-native` telefonda lokal sübut generatoru, `/node` masaüstündə | rəqəmsal cüzdan tərtibatçısı |
 
 Hər paketin öz səhifəsi **SDK-lar** bölməsindədir. Paketlər npm-də **0.7.4** sınaq versiyası ilə dərc olunur; sabit 1.0.0
-hazır olduqda gələcək. Sınaq versiyasında interfeys dəyişə bilər. Hər versiya bu depodan GitHub Actions ilə yaradılır və mənşə sübutu (provenance) daşıyır.
+hazır olduqda gələcək. Sınaq versiyasında interfeys dəyişə bilər. Hər versiya bu depodan yaradılır; səkkiz paket GitHub Actions ilə nəşr olunur və mənşə sübutu (provenance) daşıyır, `@tamga-network/zk` isə Android yerli kitabxanaları hələ CI-da yığıla bilmədiyi üçün əl ilə və mənşə sübutu olmadan nəşr olunur.
 
 ## Ünvanlar
 
