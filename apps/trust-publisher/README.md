@@ -54,7 +54,7 @@ varsayılan `tl-signer-1`) TS 119 612 §5.7.1 profiline uymalıdır (C/O = slot 
 digitalSignature, basicConstraints CA=false, SKI, EKU `id-tsl-kp-tslSigning`); gerçek ağda uymayan imzacı ya da eksik yayın
 verisi (posta adresleri) yayını durdurur, sandbox'ta uyarıdır. Bugünkü `tl-signer-1` profile uymaz; XML'i ayrı imza sertifikası
 `tl-xml-signer-1` imzalar (`ops/gen-pki.ts` üretir: kökçe verilen yaprak, keyUsage digitalSignature + nonRepudiation, EKU
-0.4.0.2231.3.0) ve parmak izi LOTL'da slotun `signing_certs` listesine eklenir. Sandbox'ta açık (sunucunun sandbox ayarında
+0.4.0.2231.3.0) ve parmak izi LOTL'da slotun ayrı `xml_signing_keys` alanında yayımlanır (kayıt defterinde `xml_signing_certs`; tslSigning EKU'lu sertifika `signing_certs`'e konursa yayıncı durur). Sandbox'ta açık (sunucunun sandbox ayarında
 `TAMGA_TL119612=1`, `TAMGA_TL119612_SIGNER=tl-xml-signer-1`; kayıtlarda "Sandbox (TEST)" yer tutucu adresler). Gerçek ağda bayrak,
 gerçek posta adresleri ve üretim imza sertifikası gelmeden açılmaz (`ops/README.md` "XML liste imzacısı"). URI'lerin açıklaması:
 `docs/concepts/etsi-trusted-list.md`.

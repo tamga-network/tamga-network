@@ -41,8 +41,8 @@ Rulebook-dadır (Əlavə B); burada hər rolun hansı qaydalar qrupuna tabe oldu
 anker jurnalını saatlıq imzalayır; sənəd növləri kataloqunu dəyişməz fayllar kimi dərc edir; şəffaflıq hesabatını hazırlayır; açıq
 mənbəli paketləri dərc edir. Aİ-dəki qarşılığı etibar siyahısı operatorudur ([[t:TLSO]]).
 
-**Bu gün kim.** Tamga, müvəqqəti operator kimi və hər milli siyahı üçün həmin dövlət adından (`status = "provisional"`,
-`on_behalf_of`). Fond yaradıldıqda operatorluq ona, milli siyahılar isə dövlətlərə ötürülür (Əlavə A §7).
+**Bu gün kim.** Tamga Network, müvəqqəti operator kimi və hər milli siyahı üçün həmin dövlət adından (`status = "provisional"`,
+`on_behalf_of`). Tamga Network (yaradılacaq fond) adından müvəqqəti operator: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. Fond yaradıldıqda operatorluq ona, milli siyahılar isə dövlətlərə ötürülür (Əlavə A §7).
 
 **Öhdəliklər.** Əlavə B §2 (RB-OP-01…18): siyahıların versiya zənciri və dərc intervalı, ən azı iki növbəli imza sertifikatı,
 kök barmaq izlərinin dərci, hamıya açıq dəyişikliklər jurnalı, imza açarlarını saxlamamaq, hostinq payı həddi, ümumiləşdirilmiş və

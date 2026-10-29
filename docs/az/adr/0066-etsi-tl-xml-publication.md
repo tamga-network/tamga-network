@@ -94,8 +94,9 @@ dərc etməyi gətirir. Əvvəlcə sınaq şəbəkəsində (sandbox) açıldı; 
   şəbəkənin kök CA-sı tərəfindən verilən, yalnız XML siyahısını imzalayan yarpaq sertifikat; JSON siyahılarını `tl-signer-1`
   imzalamağa davam edir. Sandbox-da 2026-10-29-da verildi; real şəbəkədə depodan kənar istehsal PKI-sında, layihə rəhbərliyinin
   təsdiqi ilə verilir. Real şəbəkədə profilə uyğun olmayan imzalayanla XML dərc olunmur.
-- XML imzalayanının barmaq izi LOTL-da müvafiq ölkə slotunun imza açarları arasında (`national_lists[].signing_keys`, yeni sahə
-  yoxdur) dərc olunur, sertifikatı `keys/`-ə qoyulur.
+- XML imzalayanının barmaq izi LOTL-da müvafiq ölkə slotunun **ayrı** XML imza açarları sahəsində (`national_lists[].xml_signing_keys`;
+  0.7.4 tətbiq qeydi, aşağıda) dərc olunur, sertifikatı `keys/`-ə qoyulur. JSON siyahılarının imzalayanları
+  `national_lists[].signing_keys`-də qalır.
 
 ## K5 — Dərc: defolt bağlı, əvvəlcə sandbox
 
@@ -140,6 +141,13 @@ Qəbulla (2026-10-29): [[SPEC-ID-0002]] §8.1 cədvəli yenidən yazıldı (köh
 profili), "TEST" işarəli yer tutucu ünvanlar, `trust.sandbox.tamga.network/tl-tr.xml` + `.sha2`, URI izah səhifəsi (tr/en/az);
 canlı siyahı ETSI XSD-yə və AB DSS yoxlayıcısına qarşı yoxlanıldı. Real şəbəkə üçün qalanlar: istehsal XML imza sertifikatı (depodan
 kənar; əmr `ops/README.md`) və LOTL-da barmaq izi; operatorun poçt ünvanı; qurum və pul kisəsi təminatçısı ünvanları; sonra bayraq.
+
+**Tətbiq qeydi (0.7.4, 2026-10-29):** XML imzalayanı LOTL-da slotun yeni `xml_signing_keys` sahəsinə köçürüldü (ad layihə
+rəhbərliyinin təsdiqi ilə; ilk buraxılışda `signing_keys`-də idi). JSON yükləyicisi ölkə siyahısını yalnız `signing_keys` ilə
+yoxlayır; əlavə müdafiə olaraq tslSigning EKU-lu imzalayanla imzalanmış JSON siyahısı yenə rədd edilir. Dərc edən tslSigning EKU-lu
+sertifikatı `signing_keys`-ə qoymur, XML-i yazmazdan əvvəl imzalayanın slotun `xml_signing_keys`-ində aktiv olduğunu yoxlayır (real
+şəbəkədə dərci dayandırır, sandbox-da xəbərdarlıq). XML oxuyucuları imzalayanı `xml_signing_keys`-də axtarır. Qərar dəyişmədi; TX3-ün
+imzalayan əhatəsi daraldı.
 
 **Açıq məsələlər:** URI adları təsdiqləndi, sertifikat adı (`tl-xml-signer-1`) təsdiq gözləyir; `TSLSequenceNumber`-ın JSON versiyasını izləməsi; dövlət slotu TC AdES LOTL-a
 müraciət etdikdə AB LOTL-a göstərici və "MRA" elementi; ETSI TR 103 684 özünüqiymətləndirməsinin qaydalar kitabı ilə uyğunlaşdırılması.

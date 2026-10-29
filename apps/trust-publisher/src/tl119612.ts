@@ -409,6 +409,37 @@ export function tlSignerProblems(
   return { errors, warnings };
 }
 
+/**
+ * ADR-0066 (uygulama notu 0.7.4): XML imzacısının LOTL'daki yeri. İmzacı slotun `xml_signing_keys`'inde ETKİN olmalı ve JSON
+ * imzacıları kümesinde (`signing_keys`) bulunmamalı — XML anahtarı JSON listesini imzalayamaz (yükleyici de reddeder).
+ * Yayıncı bunu XML'i yazmadan önce denetler: gerçek ağda hata yayını durdurur, sandbox ve testte uyarıdır.
+ */
+export function hasTslSigningEku(der: Uint8Array): boolean {
+  const eku = new PX509(new Uint8Array(der)).getExtension(ExtendedKeyUsageExtension);
+  return !!eku && eku.usages.map(String).includes(OID_TSL_SIGNING);
+}
+
+export function xmlSignerSlotProblems(
+  slot:
+    | {
+        signing_keys?: Array<{ fingerprint_sha256: string; status?: string }>;
+        xml_signing_keys?: Array<{ fingerprint_sha256: string; status?: string }>;
+      }
+    | undefined,
+  signerFingerprint: string,
+): string[] {
+  const fp = signerFingerprint.toLowerCase();
+  const errors: string[] = [];
+  const xml = (slot?.xml_signing_keys ?? []).filter((k) => (k.status ?? "ACTIVE") === "ACTIVE");
+  if (!xml.some((k) => k.fingerprint_sha256.toLowerCase() === fp))
+    errors.push(`imzacı ${fp.slice(0, 16)}… LOTL slotunun xml_signing_keys'inde etkin değil`);
+  if ((slot?.signing_keys ?? []).some((k) => k.fingerprint_sha256.toLowerCase() === fp))
+    errors.push(
+      `imzacı ${fp.slice(0, 16)}… slotun signing_keys'inde (JSON imzacısı) — XML imzacısı yalnız xml_signing_keys'te durur`,
+    );
+  return errors;
+}
+
 // ---- Tamga listesinden model ------------------------------------------------------------------------------------------
 
 export interface TamgaUris {

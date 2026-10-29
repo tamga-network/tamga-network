@@ -44,9 +44,9 @@ only the forger's own copy; the real person's wallet can still complete the tran
   turning the real person's presentation into REJECTED (denial of service; no personal data leaks). The same pattern existed in the
   inline identity presentation of the institution's issuance service ([[SPEC-PROTO-0001]] §11.2). In addition, because the
   presentation id is visible in the QR, five meaningless undecryptable responses could close the presentation via the attempt limit.
-- **State of play in the EU (2026-10).** The EU reference verifier, Credo and walt.id accept the first (possibly forged) decline
-  and close the session for good. There is no EU solution for this; but the standard defines ephemeral keys per authorization
-  request (HAIP §5) and the `request_uri` POST method (`wallet_nonce`, OpenID4VP 1.0 §5.10).
+- **State of play in the EU (2026-10).** Several widely used open-source verifier implementations accept the first (possibly forged)
+  decline and close the session for good. There is no EU solution for this; but the standard defines ephemeral keys per
+  authorization request (HAIP §5) and the `request_uri` POST method (`wallet_nonce`, OpenID4VP 1.0 §5.10).
 - **Direction from project management.** Look at how European implementations do it and at what the standard says it should be;
   if the proposed design is the right way, implement it.
 
@@ -103,7 +103,7 @@ internal (the trace shows "fetch n"; no `state`, no `nonce`).
 
 | Option | Result | Why |
 |---|---|---|
-| The first decline closes the presentation (EU reference verifier, Credo, walt.id) | rejected | Anyone who sees the QR can break the real person's transaction |
+| The first decline closes the presentation (widely used verifier implementations) | rejected | Anyone who sees the QR can break the real person's transaction |
 | Signed decline (the wallet signs the decline with a device key) | rejected | Non-standard; ties the decline to the person's device in the verifier's eyes — conflicts with ARF RPA_11 (the verifier should learn nothing when the person declines) and PV5; which credential's key would sign is unanswered |
 | A decline never closes the presentation | rejected | In the usual single-wallet flow the relying party would wait until expiry after the person said "no"; poor experience |
 | **Each fetch a separate branch + soft decline (+ branch and rate limits)** | **chosen** | Within the standard; a forged decline closes only the forger's own branch; in the usual flow (one fetch) a decline shows immediately; the OpenID conformance scenario "request fetched twice" completes on the second branch |

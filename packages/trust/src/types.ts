@@ -153,7 +153,13 @@ export const NationalListPointer = z
     membership: z.string().optional(),
     list_url: z.string().optional(),
     operator: Operator.optional(),
+    /** JSON ülke listesinin (`tl-<cc>.jws`, `tamga-tl+jwt`) imzacıları — yalnız JSON listeleri için. */
     signing_keys: z.array(SigningKey).optional(),
+    /**
+     * ADR-0066 (uygulama notu 0.7.4): ETSI TS 119 612 XML listesinin (`tl-<cc>.xml`) imzacıları (EKU id-tsl-kp-tslSigning,
+     * §5.7.1). JSON listesini imzalayamazlar; XML okuyucusu yalnız bu kümeye bakar.
+     */
+    xml_signing_keys: z.array(SigningKey).optional(),
     recognition: z.object({ mode: z.string(), recognizes: z.array(z.string()) }).optional(),
     roles: z.record(z.string(), z.any()).optional(),
   })

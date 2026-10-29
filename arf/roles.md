@@ -49,8 +49,8 @@ Two basic distinctions apply to every role:
 trusted lists; signs the anchor log every hour; publishes the credential type catalogue as immutable files; issues the
 transparency report; publishes the open-source packages. Its EU counterpart is the trusted list scheme operator ([[t:TLSO]]).
 
-**Who today.** Tamga, as provisional operator and, for each national list, on behalf of that state (`status = "provisional"`,
-`on_behalf_of`). Once the foundation is formed, operation passes to it and the national lists pass to the states (Annex A §7).
+**Who today.** Tamga Network, as provisional operator and, for each national list, on behalf of that state (`status = "provisional"`,
+`on_behalf_of`). Operated provisionally by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ on behalf of Tamga Network (foundation to be established). Once the foundation is formed, operation passes to it and the national lists pass to the states (Annex A §7).
 
 **Obligations.** Annex B §2 (RB-OP-01…18): the version chain and publication interval of the lists, at least two rolling
 signing certificates, publication of root fingerprints, a public change log, holding no signing keys, the hosting share

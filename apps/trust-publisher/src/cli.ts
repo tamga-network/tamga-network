@@ -69,9 +69,11 @@ import {
   buildTrustedListXml,
   sanitizeTrustedListInput,
   signTrustedListXml,
+  hasTslSigningEku,
   tl119612Enabled,
   tlSignerProblems,
   trustedListFromTamga,
+  xmlSignerSlotProblems,
 } from "./tl119612.js";
 import { chainCommand } from "./chain/cli.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
@@ -388,9 +390,14 @@ function writeTl119612(
   }
   for (const w of lotlSrc.wallet_providers as Array<{ provider_id: string; wua_signing_certs?: string[] }>)
     for (const n of w.wua_signing_certs ?? []) add(n, { sharedWalletProvider: w.provider_id });
-  const slot = (lotl.national_lists as Array<{ state_code: string; list_url?: string }>).find(
-    (n) => n.state_code === cc,
-  );
+  const slot = (
+    lotl.national_lists as Array<{
+      state_code: string;
+      list_url?: string;
+      signing_keys?: Array<{ fingerprint_sha256: string; status?: string }>;
+      xml_signing_keys?: Array<{ fingerprint_sha256: string; status?: string }>;
+    }>
+  ).find((n) => n.state_code === cc);
   const url = slot?.list_url
     ? slot.list_url.replace(/\.jws$/, ".xml")
     : `https://trust.tamga.network/tl-${cc.toLowerCase()}.xml`;
@@ -405,7 +412,12 @@ function writeTl119612(
   const signerName = process.env.TAMGA_TL119612_SIGNER ?? "tl-signer-1";
   const signerCert = cert(signerName);
   const prof = tlSignerProblems(signerCert.der, { territory: cc, operatorName: input.operatorName });
-  const errors = [...problems, ...prof.errors.map((e) => `TS 119 612 §5.7.1 imzacı ${signerName}: ${e}`)];
+  const errors = [
+    ...problems,
+    ...prof.errors.map((e) => `TS 119 612 §5.7.1 imzacı ${signerName}: ${e}`),
+    // ADR-0066 (uygulama notu 0.7.4): imzacı LOTL slotunun xml_signing_keys'inde, JSON imzacılarından ayrı
+    ...xmlSignerSlotProblems(slot, signerCert.fp).map((e) => `LOTL ${cc}: ${e}`),
+  ];
   for (const w of prof.warnings) console.warn(`[uyarı] TS 119 612 imzacı ${signerName}: ${w}`);
   if (errors.length && ENVIRONMENT === "production")
     throw new Error(`TS 119 612 XML yayınlanmadı (ADR-0066): ${errors.join("; ")}`);
@@ -874,12 +886,31 @@ async function build() {
     return { registered_at: at, status_history: prev?.status_history ?? [{ status: "ACTIVE", since: at }] };
   };
   const national = lotlSrc.national_lists.map((n: Record<string, unknown>) => {
-    const { signing_certs, roles, ...rest } = n as Record<string, unknown> & {
+    const { signing_certs, xml_signing_certs, roles, ...rest } = n as Record<string, unknown> & {
       signing_certs?: string[];
+      xml_signing_certs?: string[];
       roles?: Record<string, Record<string, unknown>>;
     };
     const out: Record<string, unknown> = { ...rest };
+    // ADR-0066 (uygulama notu 0.7.4): JSON imzacıları `signing_keys`, ETSI XML imzacıları `xml_signing_keys` — kümeler ayrı.
+    // tslSigning EKU'lu sertifika JSON imzacısı olamaz (yükleyici reddeder); XML imzacısı o EKU'yu taşır (§5.7.1, gerçek ağda zorunlu).
+    for (const n of signing_certs ?? [])
+      if (hasTslSigningEku(cert(n).der))
+        throw new Error(
+          `ADR-0066: ${n} ETSI XML liste imzacısı (EKU tslSigning) — signing_certs'e değil xml_signing_certs'e konur`,
+        );
     if (signing_certs) out.signing_keys = signing_certs.map((n) => keyEntry(n));
+    if (xml_signing_certs?.length) {
+      for (const n of xml_signing_certs) {
+        if (signing_certs?.includes(n)) throw new Error(`ADR-0066: ${n} hem signing_certs hem xml_signing_certs'te`);
+        if (!hasTslSigningEku(cert(n).der)) {
+          const m = `ADR-0066: xml_signing_certs ${n} EKU id-tsl-kp-tslSigning taşımıyor (TS 119 612 §5.7.1)`;
+          if (ENVIRONMENT === "production") throw new Error(m);
+          console.warn(`[uyarı] ${m}`);
+        }
+      }
+      out.xml_signing_keys = xml_signing_certs.map((n) => keyEntry(n));
+    }
     if (roles) {
       out.roles = Object.fromEntries(
         Object.entries(roles).map(([k, v]) => {

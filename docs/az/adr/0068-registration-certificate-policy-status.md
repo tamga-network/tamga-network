@@ -136,8 +136,13 @@ qəbul etmir.
 - `@tamga-network/wallet-core`: `fetchRegistrationStatuses`, `registrationStatusRefs`, `MemoryRegistrationStatusCache`; yoxlama
   funksiyaları statusları isteğe bağlı son parametr kimi qəbul edir. Paketlərin 0.7.4 buraxılışında.
 - Sənədlər: [[FW-POL-0003]] (yeni), [[FW-TF-0001]], [[SPEC-TRUST-0001]].
+- **Tətbiq qeydi (real şəbəkə, 2026-10-29):** layihə rəhbərliyi real şəbəkə üçün UUID əsaslı OID-i təsdiqlədi (PEN gözlənilmir):
+  `policy_id` = `2.25.338612186327611064481769354006034529929` (UUID `febe55bd-3449-434d-ab41-7097b21a3e89`, bir dəfə yaradıldı), `certificate_policy` =
+  `https://arf.tamga.network/policies/registration-certificate`, status siyahısı `https://trust.tamga.network/status/wrprc/1`.
+  Real reyestrə `roles.registrar.wrprc` əlavə olundu; qeydiyyat sertifikatları üç sahə ilə yenidən verildi, status siyahısı
+  dərcdədir (K6). Bu OID dəyişmir; PEN altında OID gələcəkdə yalnız yeni siyasət versiyası ilə əlavə oluna bilər.
 
 # Status
 
 **Qəbul edildi — 2026-10-29** (layihə rəhbərliyinin təsdiqi; hərfi sitat xüsusi təsdiq qeydindədir). DECISIONS: D-REG-4.
-WRS1–WRS4 məcburidir. Real şəbəkənin siyasət identifikatoru və ünvanları ayrıca təsdiqlənir (K1, K6).
+WRS1–WRS4 məcburidir. Real şəbəkənin siyasət identifikatoru və ünvanları 2026-10-29-da təsdiqləndi və qüvvədədir (yuxarıda tətbiq qeydi).

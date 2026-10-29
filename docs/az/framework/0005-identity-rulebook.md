@@ -15,7 +15,7 @@ source_version: "1.0.0"
 |---|---|---|
 | 1.0.0 | 2026-10-16 | Tamga ARF 1.0-ın aktual mətni; Aİ Attestation Rulebook şablonunun (versiya 1.5) bölmə strukturunda. |
 
-**Sxem sahibi:** Tamga Network (hazırda müvəqqəti operator). **Rəy və təkliflər:** <https://github.com/tamga-network/tamga-network/issues>
+**Sxem sahibi:** Tamga Network. Tamga Network (yaradılacaq fond) adından müvəqqəti operator: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. **Rəy və təkliflər:** <https://github.com/tamga-network/tamga-network/issues>
 
 ---
 

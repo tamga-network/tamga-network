@@ -1,6 +1,7 @@
 /**
  * K5 (ADR-0066): ETSI XML güven listesi imzacısı (EKU id-tsl-kp-tslSigning, TS 119 612 §5.7.1) JSON listelerini (`tamga-tl+jwt`)
- * imzalayamaz — slotun `signing_keys`'inde dursa da JSON yükleyicisi bu sertifikayla imzalı LOTL'ü ve ülke listesini reddeder.
+ * imzalayamaz. XML imzacısı LOTL slotunun ayrı `xml_signing_keys` alanındadır (0.7.4); yanlışlıkla `signing_keys`'e konsa da
+ * JSON yükleyicisi bu sertifikayla imzalı LOTL'ü ve ülke listesini reddeder (derinlemesine savunma).
  */
 import { describe, expect, it } from "vitest";
 import { createHash, webcrypto } from "node:crypto";

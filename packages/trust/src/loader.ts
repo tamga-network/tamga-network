@@ -27,11 +27,11 @@ import { b64ToBytes } from "./lote-reader.js";
 import { certExtendedKeyUsages, OID_TSL_SIGNING_EKU } from "./x509-names.js";
 
 /**
- * K5 (ADR-0066 TX): ETSI XML listesinin imzacısı (EKU id-tsl-kp-tslSigning, TS 119 612 §5.7.1) bugün slotun `signing_keys`'inde
- * JSON imzacılarıyla birlikte durur; JSON (`tamga-tl+jwt`) listesi o anahtarla imzalanmışsa kabul edilmez — XML imza anahtarının
- * ele geçirilmesi JSON listesini de açmasın. Sertifika okunamazsa da kabul edilmez.
- * TODO(owner decision): ayrı bir `xml_signing_keys` alanı (yeni kamuya açık ad) kapsamı daha dar tutardı — proje yönetimi onayı
- * bekliyor; o zamana kadar ayrım bu EKU denetimiyle.
+ * ADR-0066 (uygulama notu 0.7.4): ETSI XML listesinin imzacısı (EKU id-tsl-kp-tslSigning, TS 119 612 §5.7.1) LOTL'da slotun
+ * ayrı `xml_signing_keys` alanındadır; JSON (`tamga-tl+jwt`) listesi yalnız `signing_keys`'teki anahtarla doğrulanır. Derinlemesine
+ * savunma: imzacı sertifikası tslSigning EKU'su taşıyorsa JSON listesi yine kabul edilmez (XML imzacısı yanlışlıkla
+ * `signing_keys`'e konmuş olsa bile) — XML imza anahtarının ele geçirilmesi JSON listesini açmasın. Sertifika okunamazsa da
+ * kabul edilmez.
  */
 function rejectXmlListSigner(jws: string, what: string) {
   let eku: string[];

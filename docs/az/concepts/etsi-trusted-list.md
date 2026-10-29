@@ -97,7 +97,7 @@ Tamga statusu ilə birbaşa:
 - İmzalayan: şəbəkənin kök sertifikatı tərəfindən verilən ayrıca XML imza sertifikatı `tl-xml-signer-1`; TS 119 612 §5.7.1 profili —
   subyekt `C` = ölkə kodu, `O` = operatorun adı (`SchemeOperatorName`), basicConstraints CA=false, keyUsage digitalSignature +
   nonRepudiation, extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0).
-- İmzalayanı Tamga yolu ilə yoxlamaq: barmaq izi LOTL-da (`lotl.jws`) ölkə slotunun `signing_keys` siyahısındadır; LOTL-un özü
+- İmzalayanı Tamga yolu ilə yoxlamaq: barmaq izi LOTL-da (`lotl.jws`) ölkə slotunun `xml_signing_keys` siyahısındadır (JSON siyahılarının imzalayanları ayrıdır, `signing_keys`-də); LOTL-un özü
   [etibar lövbəri](/concepts/trust-lists) ilə yoxlanılır.
 
 Sandbox XML imzalayanı (2026-10-29): `CN=Tamga Sandbox Trusted List Signer (TEST), O=Tamga Network Sandbox (TEST), C=TR`, SHA-256

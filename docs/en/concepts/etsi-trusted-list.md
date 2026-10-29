@@ -100,7 +100,7 @@ Earlier statuses are in `ServiceHistory`, newest first, with the key identifier 
 - Signer: a separate XML signing certificate `tl-xml-signer-1`, issued by the network's root certificate; TS 119 612 §5.7.1
   profile — subject `C` = country code, `O` = operator name (`SchemeOperatorName`), basicConstraints CA=false, keyUsage
   digitalSignature + nonRepudiation, extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0).
-- Validating the signer the Tamga way: its fingerprint is in the `signing_keys` of the country slot in the LOTL (`lotl.jws`); the
+- Validating the signer the Tamga way: its fingerprint is in the `xml_signing_keys` of the country slot (the JSON list signers are separate, in `signing_keys`) in the LOTL (`lotl.jws`); the
   LOTL itself is validated with the [trust anchor](/concepts/trust-lists).
 
 Sandbox XML signer (2026-10-29): `CN=Tamga Sandbox Trusted List Signer (TEST), O=Tamga Network Sandbox (TEST), C=TR`, SHA-256

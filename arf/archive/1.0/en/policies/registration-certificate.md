@@ -68,7 +68,7 @@ status list is the same key (ARF RPACANot_03b).
 | Environment | `policy_id` | `certificate_policy` |
 | --- | --- | --- |
 | Sandbox (test network) | `2.25.220506472418443381081254370400837050484` | this page |
-| Real network | PROPOSAL: under the organisation's IANA Private Enterprise Number (PEN); published after approval | this page |
+| Real network | `2.25.338612186327611064481769354006034529929` (UUID-based, ITU-T X.667: `febe55bd-3449-434d-ab41-7097b21a3e89`; 2026-10-29) | this page |
 
 ETSI's EU policy OID `0.4.0.19475.3.1` is not used: it means "issued by an EU registrar under the revised eIDAS Regulation"
 ([[ADR-0068]] WRS1). The OID does not change when the version of this page changes; if the meaning of the policy changes, a new
@@ -103,7 +103,7 @@ in the public changelog.
 | --- | --- |
 | Format | IETF Token Status List, `statuslist+jwt` (same format: [[SPEC-CRED-0003]]); `bits` = 1: 0 valid, 1 revoked (REV-6.2.6.2-04) |
 | Entry in the certificate | `status.status_list` = `{idx, uri}` (GEN-6.2.6.1-04) |
-| Address | `/status/wrprc/<n>` under the publication root; sandbox `https://trust.sandbox.tamga.network/status/wrprc/1` |
+| Address | `/status/wrprc/<n>` under the publication root; real network `https://trust.tamga.network/status/wrprc/1`; sandbox `https://trust.sandbox.tamga.network/status/wrprc/1` |
 | Signature | the registrar key (§3) |
 | Freshness | `ttl` 1 hour, `exp` 24 hours; re-signed every hour |
 | Index | random; a revoked index is never reused |
@@ -119,8 +119,8 @@ issuer with a revoked certificate. If the status cannot be checked (no network a
 
 | Topic | Status |
 | --- | --- |
-| Policy identifier, document and status list (TS 119 475 Table 7, §6) | **Decision (2026-10-29, [[ADR-0068]]):** in force in the sandbox |
-| The real network's policy OID and addresses | Open: name approval and PEN application ([[ADR-0068]] K1) |
+| Policy identifier, document and status list (TS 119 475 Table 7, §6) | **Decision (2026-10-29, [[ADR-0068]]):** in force in the sandbox and on the real network |
+| The real network's policy OID and addresses | **Decision (2026-10-29, project-management approval):** UUID-based OID (§5), policy address this page, status list `https://trust.tamga.network/status/wrprc/1`. An OID under an IANA PEN could only be added later with a new policy version; the OID in force does not change ([[ADR-0068]] K1) |
 | Handing the registrar role to a national authority | Open: on handover the key changes in the LOTL and this policy is replaced by the policy of the receiving authority ([[ADR-0026]] "Consequences") |
 
 ## Status

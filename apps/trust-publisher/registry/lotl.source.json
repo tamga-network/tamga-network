@@ -38,7 +38,12 @@
         "registrar": {
           "status": "PROVISIONAL",
           "operated_by": "Tamga Network",
-          "signing_certs": ["registrar-1"]
+          "signing_certs": ["registrar-1"],
+          "wrprc": {
+            "policy_id": ["2.25.338612186327611064481769354006034529929"],
+            "certificate_policy": "https://arf.tamga.network/policies/registration-certificate",
+            "status_list_uri": "https://trust.tamga.network/status/wrprc/1"
+          }
         },
         "tlso": {
           "status": "PROVISIONAL",

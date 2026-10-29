@@ -38,9 +38,9 @@ oturum kodunu alır. Sahte bir ret yalnız sahtecinin kendi kopyasını kapatır
   düşürebiliyordu (hizmet engelleme; kişisel veri sızıntısı yok). Aynı örüntü kurumun belge verme servisindeki satır içi kimlik
   sunumunda da vardı ([[SPEC-PROTO-0001]] §11.2). Ek olarak, sunum kimliği QR'da açık olduğundan çözülemeyen beş anlamsız yanıt da
   sunumu deneme sınırıyla kapatabiliyordu.
-- **AB'de durum (2026-10).** AB referans doğrulayıcısı, Credo ve walt.id ilk gelen (sahte olabilecek) reddi kabul edip oturumu
-  kalıcı kapatır. Bunun bir AB çözümü yoktur; ama standart, her yetkilendirme isteği için efemer anahtar (HAIP §5) ve `request_uri`
-  POST yöntemi (`wallet_nonce`, OpenID4VP 1.0 §5.10) tanımlar.
+- **AB'de durum (2026-10).** Yaygın kullanılan birkaç açık kaynak doğrulayıcı uygulaması ilk gelen (sahte olabilecek) reddi kabul
+  edip oturumu kalıcı kapatır. Bunun bir AB çözümü yoktur; ama standart, her yetkilendirme isteği için efemer anahtar (HAIP §5) ve
+  `request_uri` POST yöntemi (`wallet_nonce`, OpenID4VP 1.0 §5.10) tanımlar.
 - **Proje yönetiminin yönü.** Avrupa'daki uygulamalara ve standardın olması gerektiğini söylediği yola bakılır; önerilen tasarım
   doğru yolsa o uygulanır.
 
@@ -90,7 +90,7 @@ kaydında "kaçıncı çekim" görünür; `state`, `nonce` yok).
 
 | Seçenek | Sonuç | Neden |
 |---|---|---|
-| İlk ret sunumu kapatır (AB referans doğrulayıcısı, Credo, walt.id) | ret | QR'ı gören herkes gerçek kişinin işlemini bozabilir |
+| İlk ret sunumu kapatır (yaygın doğrulayıcı uygulamaları) | ret | QR'ı gören herkes gerçek kişinin işlemini bozabilir |
 | İmzalı ret (cüzdan reddi cihaz anahtarıyla imzalar) | ret | Standart dışı; reddin kimin cihazından geldiğini doğrulayıcıya bağlar — ARF RPA_11 (kişi reddettiğinde doğrulayıcı bir şey öğrenmemeli) ve PV5 ile çelişir; ret anahtarı hangi belgeye ait olsun sorusu yanıtsız |
 | Ret hiç sunumu kapatmaz | ret | Tek cüzdanlı olağan akışta kişi "vermedim" dediğinde RP süre bitene dek bekler; kötü deneyim |
 | **Her çekim ayrı dal + yumuşak ret (+ dal ve hız sınırları)** | **seçildi** | Standart içinde; sahte ret yalnız sahtecinin kendi dalını kapatır; olağan akışta (tek çekim) ret hemen görünür; OpenID uyum testindeki "istek iki kez çekilir" senaryosu ikinci dalla tamamlanır |

@@ -273,7 +273,7 @@ the SKI instead of the certificate (§5.5.10, §5.6.3). A reader that does not k
 SigningCertificateV2, DataObjectFormat), only the signer certificate in KeyInfo; ECDSA P-256 / SHA-256. The signer is a separate XML
 signing certificate (`tl-xml-signer-1`, a leaf issued by the root) and follows the §5.7.1 profile: subject `C` = slot country
 code, `O` = `SchemeOperatorName`; basicConstraints CA=false; keyUsage only digitalSignature + nonRepudiation; SKI and AKI;
-extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0). Its fingerprint is among the slot's signing keys in the LOTL. On the real
+extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0). Its fingerprint is in the slot's separate `xml_signing_keys` field in the LOTL (JSON signers stay in `signing_keys`; an XML signer never validates a JSON list — [[ADR-0066]] 0.7.4 implementation note); XML readers look the signer up there. On the real
 network no XML is published with a non-conforming signer or with missing publication data (operator, institution and wallet
 provider postal addresses) (TX3).
 

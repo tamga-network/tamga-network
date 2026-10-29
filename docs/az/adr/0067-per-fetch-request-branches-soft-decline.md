@@ -32,9 +32,9 @@ alır. Saxta imtina yalnız saxtakarın öz nüsxəsini bağlayır; real şəxsi
   şəxsin təqdimatını REJECTED-ə sala bilirdi (xidmətdən məhrumetmə; şəxsi məlumat sızmır). Eyni nümunə qurumun sənəd vermə
   xidmətindəki daxili şəxsiyyət təqdimatında da var idi ([[SPEC-PROTO-0001]] §11.2). Bundan başqa, təqdimat identifikatoru QR-da
   açıq olduğundan açıla bilməyən beş mənasız cavab da cəhd limiti ilə təqdimatı bağlaya bilirdi.
-- **AB-də vəziyyət (2026-10).** AB istinad yoxlayıcısı, Credo və walt.id ilk gələn (saxta ola biləcək) imtinanı qəbul edib
-  sessiyanı həmişəlik bağlayır. Bunun AB həlli yoxdur; lakin standart hər avtorizasiya sorğusu üçün efemer açarı (HAIP §5) və
-  `request_uri` POST üsulunu (`wallet_nonce`, OpenID4VP 1.0 §5.10) müəyyən edir.
+- **AB-də vəziyyət (2026-10).** Geniş istifadə olunan bir neçə açıq mənbəli yoxlayıcı tətbiqi ilk gələn (saxta ola biləcək) imtinanı
+  qəbul edib sessiyanı həmişəlik bağlayır. Bunun AB həlli yoxdur; lakin standart hər avtorizasiya sorğusu üçün efemer açarı (HAIP
+  §5) və `request_uri` POST üsulunu (`wallet_nonce`, OpenID4VP 1.0 §5.10) müəyyən edir.
 - **Layihə rəhbərliyinin istiqaməti.** Avropadakı tətbiqlərə və standartın olmalı olduğunu dediyi yola baxılır; təklif olunan
   dizayn düzgün yoldursa, o tətbiq edilir.
 
@@ -86,7 +86,7 @@ yolu ilə qayıdır), bu yolda cəhd limiti təqdimat başınadır. Bu yolun ba�
 
 | Variant | Nəticə | Səbəb |
 |---|---|---|
-| İlk imtina təqdimatı bağlayır (AB istinad yoxlayıcısı, Credo, walt.id) | rədd | QR-ı görən hər kəs real şəxsin əməliyyatını poza bilər |
+| İlk imtina təqdimatı bağlayır (geniş istifadə olunan yoxlayıcı tətbiqləri) | rədd | QR-ı görən hər kəs real şəxsin əməliyyatını poza bilər |
 | İmzalı imtina (cüzdan imtinanı cihaz açarı ilə imzalayır) | rədd | Standartdan kənar; imtinanı yoxlayıcının gözündə şəxsin cihazına bağlayır — ARF RPA_11 (şəxs imtina edəndə yoxlayıcı heç nə öyrənməməlidir) və PV5 ilə ziddiyyət təşkil edir; hansı sənədin açarı ilə imzalanacağı sualı cavabsızdır |
 | İmtina heç vaxt təqdimatı bağlamır | rədd | Adi tək cüzdanlı axında şəxs "vermirəm" deyəndə etibar edən tərəf müddət bitənədək gözləyər; pis təcrübə |
 | **Hər çəkiliş ayrıca qol + yumşaq imtina (+ qol və sürət limitləri)** | **seçildi** | Standart daxilində; saxta imtina yalnız saxtakarın öz qolunu bağlayır; adi axında (bir çəkiliş) imtina dərhal görünür; OpenID uyğunluq testindəki "sorğu iki dəfə çəkilir" ssenarisi ikinci qolla tamamlanır |

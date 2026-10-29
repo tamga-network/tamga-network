@@ -76,7 +76,7 @@ WP ([[t:wallet-provider]]) · RP ([[t:verifier]], relying party) · H ([[t:holde
 
 ## 2. RB-OP — Operator and list operator (TLSO)
 
-Today Tamga is the provisional operator; at hand-over the role passes to the national authority.
+Today: Operated provisionally by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ on behalf of Tamga Network (foundation to be established); the lists name the operator "Tamga Network" (RB-OP-01). At hand-over the role passes to the national authority.
 
 | #        | Rule                                                                                                                                                                                                                                                                                                                                                                                                             |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

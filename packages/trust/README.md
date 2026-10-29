@@ -39,8 +39,9 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
   (`group.institution_id`, `allowed_policies`, validity) or `null`. `null` also means "list stale" — check
   `source.freshness().healthy` to tell the two apart and keep the gate closed when the list cannot confirm a group.
   `terminalGroupByCertFingerprint` prepares certificate-based gates.
-- JSON lists signed by an ETSI XML list signer (EKU `id-tsl-kp-tslSigning`) are refused; `certExtendedKeyUsages(der)` reads a
-  certificate's EKU. `canonicalizeXml` and `parseXml` are exported for the TS 119 612 XML view.
+- The LOTL country slot lists ETSI XML list signers separately in `xml_signing_keys`; JSON lists are validated only against
+  `signing_keys`, and a JSON list signed by an XML list signer (EKU `id-tsl-kp-tslSigning`) is refused anyway;
+  `certExtendedKeyUsages(der)` reads a certificate's EKU. `canonicalizeXml` and `parseXml` are exported for the TS 119 612 XML view.
 
 ## Status
 

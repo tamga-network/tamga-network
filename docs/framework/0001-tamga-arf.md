@@ -481,7 +481,7 @@ uygulamasını değiştirir.
 ## 8.3 Yönetişim kurumu
 
 Yönetişim kurumu ilk günden kurulmaz. Bir ya da iki devlet katılmaya istekli olduğunda konsey ya da vakıf kurulur ve
-listeler devredilir. O zamana kadar Tamga geçici işletmecidir; vakıf kurulduğunda işletmecilik ona devredilir. Tamga Network
+listeler devredilir. O zamana kadar Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; vakıf kurulduğunda işletmecilik ona devredilir. Tamga Network
 kâr amacı gütmez; işletmecilik ileride bir vakfa devredilir. Ağ hiçbir
 ürün satmaz ve ticari hizmet sunmaz; Tamga Wallet ağın ilk cüzdanıdır; bir şirketin ayrı ürünüdür; hizmet sağlayıcılar ağın dışındadır ve kayıt sürecine
 herkes gibi aynı koşullarla katılır ([[ADR-0037]]).

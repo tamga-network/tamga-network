@@ -35,7 +35,8 @@
         "status": "provisional",
         "on_behalf_of": "Test network — not part of the Tamga Network trust framework (ADR-0038)"
       },
-      "signing_certs": ["tl-signer-1", "tl-xml-signer-1"],
+      "signing_certs": ["tl-signer-1"],
+      "xml_signing_certs": ["tl-xml-signer-1"],
       "roles": {
         "registrar": {
           "status": "PROVISIONAL",

@@ -280,7 +280,7 @@ Kayıt silinmez: etkin olmayan hizmet durumuyla kalır; önceki durumlar `Servic
 SigningCertificateV2, DataObjectFormat), KeyInfo'da yalnız imzacı sertifikası; ECDSA P-256 / SHA-256. İmzacı ayrı bir XML imza
 sertifikasıdır (`tl-xml-signer-1`, kökçe verilen yaprak) ve §5.7.1 profiline uyar: konu `C` = slot ülke kodu, `O` =
 `SchemeOperatorName`; basicConstraints CA=false; keyUsage yalnız digitalSignature + nonRepudiation; SKI ve AKI; extendedKeyUsage
-`id-tsl-kp-tslSigning` (0.4.0.2231.3.0). Parmak izi LOTL'da slotun imza anahtarları arasındadır. Gerçek ağda profile uymayan
+`id-tsl-kp-tslSigning` (0.4.0.2231.3.0). Parmak izi LOTL'da slotun ayrı `xml_signing_keys` alanındadır (JSON imzacıları `signing_keys`'te; XML imzacısı JSON listesini doğrulamaz — [[ADR-0066]] 0.7.4 uygulama notu); XML okuyucusu imzacıyı orada arar. Gerçek ağda profile uymayan
 imzacıyla ya da eksik yayın verisiyle (işletmeci, kurum, cüzdan sağlayıcı posta adresi) XML yayınlanmaz (TX3).
 
 **Yayın:** bayrak `TAMGA_TL119612` (varsayılan kapalı, TX5). Sandbox'ta açık (`trust.sandbox.tamga.network/tl-tr.xml`, "TEST"

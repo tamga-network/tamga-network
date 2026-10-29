@@ -102,7 +102,7 @@ from the same [[t:issuer]] are combined.
 |                                         | Governance body (foundation or council secretariat) | Operation, until handed over                                                                                                                          |
 
 The governance body is not set up on day one: it is formed when one or two states are willing to join, and the lists are
-handed over. Until then Tamga is the provisional operator; once the foundation is formed, operation is handed over to it.
+handed over. Until then the network is operated provisionally by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ on behalf of Tamga Network (foundation to be established); once the foundation is formed, operation is handed over to it.
 
 **Measurable hand-over thresholds:** if the share of hosted issuers exceeds 30%, the matter goes on the council's agenda; when
 there are at least four state operators, the first operator's ledger nodes are handed over; when the first state operator is

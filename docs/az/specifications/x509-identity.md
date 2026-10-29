@@ -275,7 +275,7 @@ SKI ilə (§5.5.10, §5.6.3). Bu URI-ləri tanımayan oxuyucu xidməti aktiv say
 SigningCertificateV2, DataObjectFormat), KeyInfo-da yalnız imzalayanın sertifikatı; ECDSA P-256 / SHA-256. İmzalayan ayrıca XML
 imza sertifikatıdır (`tl-xml-signer-1`, kök tərəfindən verilən yarpaq) və §5.7.1 profilinə uyğundur: subyekt `C` = slotun ölkə
 kodu, `O` = `SchemeOperatorName`; basicConstraints CA=false; keyUsage yalnız digitalSignature + nonRepudiation; SKI və AKI;
-extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0). Barmaq izi LOTL-da slotun imza açarları arasındadır. Real şəbəkədə
+extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0). Barmaq izi LOTL-da slotun ayrı `xml_signing_keys` sahəsindədir (JSON imzalayanları `signing_keys`-də; XML imzalayanı JSON siyahısını yoxlamır — [[ADR-0066]] 0.7.4 tətbiq qeydi); XML oxuyucusu imzalayanı orada axtarır. Real şəbəkədə
 uyğun olmayan imzalayanla və ya çatışmayan dərc məlumatı ilə (operator, qurum, pul kisəsi təminatçısı poçt ünvanları) XML dərc
 olunmur (TX3).
 

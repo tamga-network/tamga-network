@@ -85,6 +85,11 @@ async function makeSet(
     prevTlHash?: string;
     /** TL1: tl operatörünün on_behalf_of'u boş */
     noOnBehalf?: boolean;
+    /**
+     * ADR-0066 (uygulama notu 0.7.4): "extra" → slotta ayrıca xml_signing_keys (başka anahtar); "only" → JSON imzacısı yalnız
+     * xml_signing_keys'te, signing_keys'te başka bir anahtar var.
+     */
+    xmlKeys?: "extra" | "only";
   } = {},
 ) {
   const tlSigner = await mkCert("TL Signer");
@@ -162,7 +167,14 @@ async function makeSet(
         state_code: "TR",
         status: "ACTIVE",
         list_url: "https://trust.tamga.network/tl-tr.jws",
-        signing_keys: [{ fingerprint_sha256: tlSigner.fp, status: "ACTIVE" }],
+        signing_keys: [{ fingerprint_sha256: (opts.xmlKeys === "only" ? other : tlSigner).fp, status: "ACTIVE" }],
+        ...(opts.xmlKeys
+          ? {
+              xml_signing_keys: [
+                { fingerprint_sha256: (opts.xmlKeys === "only" ? tlSigner : other).fp, status: "ACTIVE" },
+              ],
+            }
+          : {}),
         recognition: { mode: "unilateral", recognizes: ["TR"] },
       },
       { state_code: "AZ", status: "RESERVED" },
@@ -342,6 +354,13 @@ describe("TrustSource(list) taahhüt testleri", () => {
   it("T4: kurcalanmış payload → imza doğrulaması başarısız", async () => {
     const c = await makeSet({ tamper: true });
     await expect(c.load()).rejects.toThrow();
+  });
+  it("ADR-0066: xml_signing_keys yalnız XML içindir — JSON ülke listesi o kümedeki anahtarla doğrulanmaz", async () => {
+    const ok = await makeSet({ xmlKeys: "extra" });
+    const { report } = await ok.load();
+    expect(report.healthy).toBe(true);
+    const bad = await makeSet({ xmlKeys: "only" });
+    await expect(bad.load()).rejects.toThrow(/signer fingerprint not registered/);
   });
   it("T5: kayıtlı olmayan imzacı → red", async () => {
     const c = await makeSet({ wrongSigner: true });

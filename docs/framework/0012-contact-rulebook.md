@@ -16,7 +16,7 @@ summary: >
 |---|---|---|
 | 1.0.0 | 2026-10-16 | Tamga ARF 1.0'ın güncel metni; AB Attestation Rulebook şablonunun (sürüm 1.5) bölüm yapısında. |
 
-**Şema sahibi:** Tamga Network (bugün geçici işletmeci). **Geri bildirim:** <https://github.com/tamga-network/tamga-network/issues>
+**Şema sahibi:** Tamga Network. Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. **Geri bildirim:** <https://github.com/tamga-network/tamga-network/issues>
 
 ---
 

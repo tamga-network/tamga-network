@@ -33,7 +33,7 @@ source_version: "1.0.0"
 | Yoxlayan tərəf (Relying Party) | Rəqəmsal cüzdandan rəqəmsal sənəd tələb edən və onu yoxlayan, qeydiyyatdan keçmiş təşkilat: işəgötürən, veb-sayt, qurum. |
 | Giriş sertifikatı | Yoxlayan tərəfin sorğularını imzaladığı X.509 sertifikatı; müştəri identifikatoru bu sertifikatın heş dəyəridir. |
 | Federasiya | Ölkə etibar siyahılarının öz sahibləri tərəfindən idarə olunduğu və siyahıların siyahısında bir araya gətirildiyi model. |
-| Müvəqqəti operator | İdarəetmə qurumu yaradılana qədər şəbəkəni idarə edən təşkilat: bu gün Tamga. Fond yaradıldıqda operatorluq ona ötürülür. |
+| Müvəqqəti operator | İdarəetmə qurumu yaradılana qədər şəbəkəni və şəbəkənin öz xidmətlərini idarə edən hüquqi şəxs. Bu gün: Tamga Network (yaradılacaq fond) adından müvəqqəti operator: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. Siyahılarda operatorun adı "Tamga Network" yazılır (`status = "provisional"`). Fond yaradıldıqda operatorluq ona ötürülür. |
 | Keçid kartı | Yaxın məsafədə təqdimatın daimi həlli tətbiq olunana qədər istifadə edilən, qısamüddətli və əhatəsi məhdud rəqəmsal sənəd təqdimatı. |
 | Etibar siyahısı | Bir ölkənin kök sertifikatlarını, sənədi verən qurumlarını və qeydiyyatdan keçmiş yoxlayan tərəflərini əhatə edən imzalı siyahı. |
 | Etibar siyahısı operatoru (Trusted List Scheme Operator) | Milli etibar siyahısını tərtib edən, imzalayan və dərc edən təşkilat. Bu gün Türkiyə üçün dövlət adından müvəqqəti olaraq Tamga. |

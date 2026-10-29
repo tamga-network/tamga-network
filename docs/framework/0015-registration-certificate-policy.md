@@ -57,7 +57,7 @@ aynı anahtardır (ARF RPACANot_03b).
 | Ortam | `policy_id` | `certificate_policy` |
 |---|---|---|
 | Sandbox (test ağı) | `2.25.220506472418443381081254370400837050484` | bu sayfa |
-| Gerçek ağ | ÖNERİ: kuruluşun IANA özel kuruluş numarası (PEN) altında; onaydan sonra yayımlanır | bu sayfa |
+| Gerçek ağ | `2.25.338612186327611064481769354006034529929` (UUID tabanlı, ITU-T X.667: `febe55bd-3449-434d-ab41-7097b21a3e89`; 2026-10-29) | bu sayfa |
 
 ETSI'nin AB politika OID'i `0.4.0.19475.3.1` kullanılmaz: o kimlik "AB kayıt kurumunca, revize eIDAS'a göre verildi" anlamı
 taşır ([[ADR-0068]] WRS1). Bu sayfanın sürümü değişse de OID değişmez; politikanın anlamı değişirse yeni OID verilir.
@@ -89,7 +89,7 @@ kaydına kişi adı yazılmaz.
 |---|---|
 | Biçim | IETF Token Status List, `statuslist+jwt` (aynı biçim: [[SPEC-CRED-0003]]); `bits` = 1: 0 geçerli, 1 iptal (REV-6.2.6.2-04) |
 | Sertifikadaki girdi | `status.status_list` = `{idx, uri}` (GEN-6.2.6.1-04) |
-| Adres | yayın kökünde `/status/wrprc/<n>`; sandbox `https://trust.sandbox.tamga.network/status/wrprc/1` |
+| Adres | yayın kökünde `/status/wrprc/<n>`; gerçek ağ `https://trust.tamga.network/status/wrprc/1`; sandbox `https://trust.sandbox.tamga.network/status/wrprc/1` |
 | İmza | kayıt kurumu anahtarı (§3) |
 | Tazelik | `ttl` 1 saat, `exp` 24 saat; her saat yeniden imzalanır |
 | İndeks | rastgele; iptal edilen indeks yeniden kullanılmaz |
@@ -105,8 +105,8 @@ denetlenemezse (ağ yok ve geçerli kopya yok) kişi uyarılır.
 
 | Konu | Durum |
 |---|---|
-| Politika kimliği, belge ve durum listesi (TS 119 475 Tablo 7, §6) | **Karar (2026-10-29, [[ADR-0068]]):** sandbox'ta yürürlükte |
-| Gerçek ağın politika OID'i ve adresleri | Açık: ad onayı ve PEN başvurusu ([[ADR-0068]] K1) |
+| Politika kimliği, belge ve durum listesi (TS 119 475 Tablo 7, §6) | **Karar (2026-10-29, [[ADR-0068]]):** sandbox'ta ve gerçek ağda yürürlükte |
+| Gerçek ağın politika OID'i ve adresleri | **Karar (2026-10-29, proje yönetimi onayı):** UUID tabanlı OID (§5), politika adresi bu sayfa, durum listesi `https://trust.tamga.network/status/wrprc/1`. IANA PEN altında bir OID ileride ancak yeni politika sürümüyle eklenebilir; yürürlükteki OID değişmez ([[ADR-0068]] K1) |
 | Kayıt kurumu rolünün ulusal makama devri | Açık: devirde anahtar LOTL'de değişir, bu politika devralan makamın politikasıyla değiştirilir ([[ADR-0026]] "Sonuçlar") |
 
 # Durum

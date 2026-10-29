@@ -32,7 +32,7 @@ summary: >
 | Doğrulayıcı (Relying Party) | Cüzdandan belge isteyen ve doğrulayan kayıtlı kuruluş: işveren, web sitesi, kurum. |
 | Erişim sertifikası | Doğrulayıcının isteklerini imzaladığı X.509 sertifikası; istemci kimliği bu sertifikanın özetidir. |
 | Federasyon | Ülke güven listelerinin kendi sahipleri tarafından işletildiği ve listelerin listesinde bir araya getirildiği model. |
-| Geçici işletmeci | Yönetişim kurumu kurulana kadar ağı işleten kuruluş: bugün Tamga. Vakıf kurulduğunda işletmecilik ona devredilir. |
+| Geçici işletmeci | Yönetişim kurumu kurulana kadar ağı ve ağın kendi hizmetlerini işleten tüzel kişi. Bugün: Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. Listelerde işletmeci adı "Tamga Network" yazılır (`status = "provisional"`). Vakıf kurulduğunda işletmecilik ona devredilir. |
 | Geçiş kartı | Yakın alanda gösterimin kalıcı çözümü devreye girene kadar kullanılan, kısa ömürlü ve kapsamı sınırlı belge gösterimi. |
 | Güven listesi | Bir ülkenin kök sertifikalarını, belge verenlerini ve kayıtlı doğrulayıcılarını taşıyan imzalı liste. |
 | Güven listesi işletmecisi (Trusted List Scheme Operator) | Ulusal güven listesini derleyen, imzalayan ve yayınlayan kuruluş. Bugün Türkiye için Tamga, devlet adına geçici olarak. |

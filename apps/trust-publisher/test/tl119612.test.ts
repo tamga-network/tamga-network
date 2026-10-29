@@ -36,6 +36,8 @@ import {
   tl119612Enabled,
   tlSignerProblems,
   trustedListFromTamga,
+  hasTslSigningEku,
+  xmlSignerSlotProblems,
   type TrustedListInput,
 } from "../src/tl119612.js";
 
@@ -399,6 +401,21 @@ describe("ETSI TS 119 612 XML — üreteç ve XAdES-B-B imzası", () => {
     );
   });
 
+  it("ADR-0066 (0.7.4): XML imzacısı slotun xml_signing_keys'inde etkin, signing_keys'te değil", () => {
+    expect(hasTslSigningEku(signer.der)).toBe(true);
+    expect(hasTslSigningEku(weakSigner.der)).toBe(false);
+    const k = (fp: string, status = "ACTIVE") => ({ fingerprint_sha256: fp, status });
+    expect(xmlSignerSlotProblems({ signing_keys: [k("aa")], xml_signing_keys: [k(signer.fp)] }, signer.fp)).toEqual([]);
+    expect(xmlSignerSlotProblems({ signing_keys: [k("aa")] }, signer.fp).join(" ")).toMatch(/etkin değil/);
+    expect(xmlSignerSlotProblems({ xml_signing_keys: [k(signer.fp, "REVOKED")] }, signer.fp).join(" ")).toMatch(
+      /etkin değil/,
+    );
+    expect(
+      xmlSignerSlotProblems({ signing_keys: [k(signer.fp)], xml_signing_keys: [k(signer.fp)] }, signer.fp).join(" "),
+    ).toMatch(/JSON imzacısı/);
+    expect(xmlSignerSlotProblems(undefined, signer.fp)).toHaveLength(1);
+  });
+
   it("eksik yayın verisi raporlanır (işletmeci adresi, sertifikası bulunmayan kayıt)", () => {
     const r = trustedListFromTamga(
       {
@@ -619,6 +636,10 @@ describe.skipIf(!ready)("trust-publisher build: TS 119 612 XML (bayrak)", () => 
       w.postal_address = { street_address: "Test Street 2", locality: "Ankara", country: "TR" };
       w.contact = { support_uri: "https://wallet-provider.test" };
     }
+    // ADR-0066 (uygulama notu 0.7.4): XML imzacısı slotun ayrı xml_signing_certs alanında
+    l.national_lists.find((n: { state_code: string }) => n.state_code === "TR").xml_signing_certs = [
+      "tl-xml-signer-test",
+    ];
     writeFileSync(join(REG, "lotl.source.json"), JSON.stringify(l, null, 2));
     const t = JSON.parse(readFileSync(join(REG, "tl-tr.source.json"), "utf8"));
     for (const i of t.issuers) {
@@ -671,11 +692,49 @@ describe.skipIf(!ready)("trust-publisher build: TS 119 612 XML (bayrak)", () => 
     for (const i of tl.issuers.filter((x: { status: string }) => x.status !== "RESERVED"))
       expect(names).toContain(typeof i.legal_name === "string" ? i.legal_name : Object.values(i.legal_name)[0]);
     expect(xml).toContain("https://trust.tamga.network/tl-tr.xml");
+    // ADR-0066 (uygulama notu 0.7.4): LOTL'da XML imzacısı yalnız xml_signing_keys'te; JSON imzacıları ayrı
+    const slot = JSON.parse(readFileSync(join(dist, "lotl.json"), "utf8")).national_lists.find(
+      (n: { state_code: string }) => n.state_code === "TR",
+    );
+    expect(slot.xml_signing_keys.map((k: { fingerprint_sha256: string }) => k.fingerprint_sha256)).toEqual([signerFp]);
+    expect(slot.signing_keys.map((k: { fingerprint_sha256: string }) => k.fingerprint_sha256)).not.toContain(signerFp);
     // TSP sayısı: işletmeci + listelenebilir belge verenler + cüzdan sağlayıcı — doğrulayıcılar güven hizmeti sağlayıcısı değildir
     const lotl = JSON.parse(readFileSync(join(dist, "lotl.json"), "utf8"));
     const listable = (x: { status: string }) => !["RESERVED", "PROVISIONAL"].includes(x.status);
     expect(list.entities.length).toBe(
       1 + tl.issuers.filter(listable).length + lotl.wallet_providers.filter(listable).length,
     );
+  });
+  const regVariant = (name: string, edit: (slot: Record<string, unknown>) => void) => {
+    const dir = join(tmp, `registry-${name}`);
+    cpSync(REG, dir, { recursive: true });
+    const l = JSON.parse(readFileSync(join(dir, "lotl.source.json"), "utf8"));
+    edit(l.national_lists.find((n: { state_code: string }) => n.state_code === "TR"));
+    writeFileSync(join(dir, "lotl.source.json"), JSON.stringify(l, null, 2));
+    return dir;
+  };
+
+  it("ADR-0066: gerçek ağda imzacı slotun xml_signing_keys'inde değilse XML yayınlanmaz", () => {
+    const dist = join(tmp, "noslot");
+    const r = run(dist, {
+      TAMGA_TP_REGISTRY: regVariant("noslot", (s) => delete s.xml_signing_certs),
+      TAMGA_TL119612: "1",
+      TAMGA_TL119612_SIGNER: "tl-xml-signer-test",
+    });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/xml_signing_keys'inde etkin değil/);
+    expect(existsSync(join(dist, "tl-tr.xml"))).toBe(false);
+  });
+
+  it("ADR-0066: tslSigning EKU'lu sertifika signing_certs'e (JSON imzacısı) konamaz", () => {
+    const dist = join(tmp, "mixed");
+    const r = run(dist, {
+      TAMGA_TP_REGISTRY: regVariant("mixed", (s) => {
+        s.signing_certs = [...(s.signing_certs as string[]), "tl-xml-signer-test"];
+        delete s.xml_signing_certs;
+      }),
+    });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/xml_signing_certs'e konur/);
   });
 });

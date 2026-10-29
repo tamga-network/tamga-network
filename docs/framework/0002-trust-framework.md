@@ -90,7 +90,7 @@ edilen artık riskler ana belgededir (§6.6 ve §7.4): tek işletmecinin imzası
 |  | Yönetişim kurumu (vakıf ya da konsey sekretaryası) | İşletmecilik, devredilene kadar |
 
 Yönetişim kurumu ilk günden kurulmaz: bir ya da iki devlet katılmaya istekli olduğunda kurulur ve listeler devredilir. O
-zamana kadar Tamga geçici işletmecidir; vakıf kurulduğunda işletmecilik ona devredilir.
+zamana kadar Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; vakıf kurulduğunda işletmecilik ona devredilir.
 
 **Ölçülebilir devir eşikleri:** barındırılan belge verenlerin oranı %30'u aşarsa konu konsey gündemine gelir; devlet
 işletmecilerinin sayısı en az dört olduğunda ilk işletmecinin defter düğümleri devredilir; ilk devlet işletmecisi üretime

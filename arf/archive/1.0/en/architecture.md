@@ -506,8 +506,8 @@ changes. Wallets and verifiers only change the implementation of the trust sourc
 ### 8.3 Governance body
 
 The governance body is not set up on day one. When one or two states are willing to join, a council or foundation is formed
-and the lists are handed over. Until then Tamga is the provisional operator; once the foundation is formed, operation is handed
-over to it. Tamga Network is not-for-profit; its operation will later be handed over to a foundation. The network sells no
+and the lists are handed over. Until then the network is operated provisionally by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ on behalf of Tamga Network (foundation to be
+established); once the foundation is formed, operation is handed over to it. Tamga Network is not-for-profit; its operation will later be handed over to a foundation. The network sells no
 product and offers no commercial services; Tamga Wallet is the network's first wallet, a company's separate product; service providers sit outside the network and join the
 registration process on the same terms as everyone else ([[ADR-0037]]).
 

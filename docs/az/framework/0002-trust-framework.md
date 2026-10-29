@@ -88,7 +88,7 @@ edilən qalıq risklər əsas sənəddədir (§6.6 və §7.4): yeganə operatoru
 |  | İdarəetmə qurumu (fond və ya şura katibliyi) | Operatorluq, ötürülənədək |
 
 İdarəetmə qurumu ilk gündən yaradılmır: bir və ya iki dövlət qoşulmağa maraq göstərdikdə yaradılır və siyahılar ona ötürülür. O
-vaxtadək Tamga müvəqqəti operatordur; fond yaradıldıqda operatorluq ona ötürülür.
+vaxtadək Tamga Network (yaradılacaq fond) adından müvəqqəti operator: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; fond yaradıldıqda operatorluq ona ötürülür.
 
 **Ölçülə bilən təhvil hədləri:** host edilən sənəd verən qurumların payı 30%-i keçərsə, məsələ Şuranın gündəminə çıxarılır; dövlət
 operatorlarının sayı ən azı dördə çatdıqda ilk operatorun dəftər qovşaqları təhvil verilir; ilk dövlət operatoru istismara

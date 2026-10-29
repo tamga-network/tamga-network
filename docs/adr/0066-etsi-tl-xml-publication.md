@@ -101,8 +101,9 @@ numarasıyla da yayımlamayı getirir. Önce test ağında (sandbox) açıldı; 
   (`tl-xml-signer-1`) kullanılır: ağın kök CA'sınca verilen yaprak, yalnız XML listesini imzalar; JSON listeleri `tl-signer-1`
   imzalamaya devam eder. Sandbox'ta 2026-10-29'da verildi; gerçek ağda sertifika depo dışındaki üretim PKI'sında, proje yönetimi
   onayıyla verilir. Gerçek ağda profile uymayan imzacıyla XML yayınlanmaz; yayıncı durur.
-- XML imzacısının parmak izi LOTL'da ilgili ülke slotunun imza anahtarları arasında (`national_lists[].signing_keys`, yeni alan
-  yok) yayımlanır ve sertifikası `keys/`'e konur (imzacıyı doğrulamanın Tamga yolu LOTL'dur).
+- XML imzacısının parmak izi LOTL'da ilgili ülke slotunun **ayrı** XML imza anahtarları alanında
+  (`national_lists[].xml_signing_keys`; 0.7.4 uygulama notu, aşağıda) yayımlanır ve sertifikası `keys/`'e konur (imzacıyı
+  doğrulamanın Tamga yolu LOTL'dur). JSON listelerinin imzacıları `national_lists[].signing_keys`'te kalır.
 
 ## K5 — Yayın: varsayılan kapalı, sandbox önce
 
@@ -161,6 +162,11 @@ Kabulle (2026-10-29):
   tr/en/az). Canlı liste ETSI XSD'sine ve AB DSS doğrulayıcısına karşı doğrulandı.
 - Gerçek ağ için kalanlar: üretim XML imza sertifikası (gerçek ağ PKI'sı, depo dışında; komut `ops/README.md`) ve LOTL'da
   parmak izi; işletmeci posta adresi; kurum ve cüzdan sağlayıcı adres verisi; sonra bayrak (proje yönetimi onayıyla).
+- **Uygulama notu (0.7.4, 2026-10-29):** XML imzacısı LOTL'da slotun yeni `xml_signing_keys` alanına taşındı (ad proje yönetimi
+  onayıyla; ilk sürümde `signing_keys`'teydi). JSON yükleyicisi ülke listesini yalnız `signing_keys` ile doğrular; ek savunma
+  olarak tslSigning EKU'lu imzacıyla imzalı JSON listesi yine reddedilir. Yayıncı tslSigning EKU'lu sertifikayı `signing_keys`'e
+  koymaz, XML'i yazmadan önce imzacının slotun `xml_signing_keys`'inde etkin olduğunu denetler (gerçek ağda yayını durdurur,
+  sandbox'ta uyarı). XML okuyucuları imzacıyı `xml_signing_keys`'te arar. Karar değişmedi; TX3'ün imzacı kapsamı daraldı.
 - Okuyucu tarafı (ayrı iş): `@tamga-network/trust` 119 612 okuyucusu bugün yalnız ETSI etkin durumlarını tanır; Tamga kökündeki
   durumları tanıması, LOTL'da sabitlenmiş bir Tamga XML listesi okunacağı zaman ayrı kararla.
 

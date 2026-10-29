@@ -366,7 +366,20 @@ components:
               state_code: { type: string, example: TR }
               status: { type: string, enum: [ACTIVE, RESERVED] }
               list_url: { type: string, format: uri }
-              signing_keys: { type: array, items: { $ref: "#/components/schemas/KeyRef" } }
+              signing_keys:
+                type: array
+                items: { $ref: "#/components/schemas/KeyRef" }
+                description: Signers of the JSON national list (`tl-{cc}.jws`) only.
+                x-tr: Yalnız JSON ülke listesinin (`tl-{cc}.jws`) imzacıları.
+              xml_signing_keys:
+                type: array
+                items: { $ref: "#/components/schemas/KeyRef" }
+                description: |
+                  Signers of the ETSI TS 119 612 XML view (`tl-{cc}.xml`; EKU id-tsl-kp-tslSigning). Present only when the slot
+                  publishes the XML view. These keys never validate a JSON list.
+                x-tr: |
+                  ETSI TS 119 612 XML görünümünün (`tl-{cc}.xml`; EKU id-tsl-kp-tslSigning) imzacıları. Yalnız slot XML görünümünü
+                  yayımlıyorsa bulunur. Bu anahtarlar hiçbir JSON listesini doğrulamaz.
         schemas: { type: array, items: { type: object }, description: Network-level credential types., x-tr: Ağ düzeyindeki belge türleri. }
         wallet_providers: { type: array, items: { type: object } }
         zk_circuits:

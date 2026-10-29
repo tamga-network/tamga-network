@@ -478,7 +478,7 @@ tətbiqini dəyişir.
 ## 8.3 İdarəetmə qurumu
 
 İdarəetmə qurumu ilk gündən yaradılmır. Bir və ya iki dövlət qoşulmağa maraq göstərdikdə şura və ya fond yaradılır və
-siyahılar ona təhvil verilir. O vaxta qədər Tamga müvəqqəti operatordur; fond yaradıldıqda operatorluq ona təhvil verilir. Tamga Network
+siyahılar ona təhvil verilir. O vaxta qədər Tamga Network (yaradılacaq fond) adından müvəqqəti operator: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; fond yaradıldıqda operatorluq ona təhvil verilir. Tamga Network
 mənfəət güdmür; operatorluq gələcəkdə fonda təhvil veriləcək. Şəbəkə heç bir
 məhsul satmır və kommersiya xidməti göstərmir; Tamga Wallet şəbəkənin ilk rəqəmsal cüzdanıdır; o, bir şirkətin ayrıca məhsuludur; xidmət təminatçıları şəbəkədən kənardadır və qeydiyyat prosesinə
 hamı kimi eyni şərtlərlə qoşulur ([[ADR-0037]]).

@@ -98,7 +98,7 @@ Tamga durumu ile birebir:
 - İmzacı: ayrı XML imza sertifikası `tl-xml-signer-1`, ağın kök sertifikasınca verilmiş; TS 119 612 §5.7.1 profili — konu `C` =
   ülke kodu, `O` = işletmeci adı (`SchemeOperatorName`), basicConstraints CA=false, keyUsage digitalSignature + nonRepudiation,
   extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0).
-- İmzacıyı Tamga yolundan doğrulamak: parmak izi LOTL'da (`lotl.jws`) ülke slotunun `signing_keys` listesindedir; LOTL'un kendisi
+- İmzacıyı Tamga yolundan doğrulamak: parmak izi LOTL'da (`lotl.jws`) ülke slotunun `xml_signing_keys` listesindedir (JSON listelerinin imzacıları ayrı, `signing_keys`'te); LOTL'un kendisi
   [güven çapasıyla](/concepts/trust-lists) doğrulanır.
 
 Sandbox XML imzacısı (2026-10-29): `CN=Tamga Sandbox Trusted List Signer (TEST), O=Tamga Network Sandbox (TEST), C=TR`, SHA-256

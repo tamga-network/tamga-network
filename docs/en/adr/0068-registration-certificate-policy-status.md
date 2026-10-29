@@ -161,8 +161,13 @@ certificate.
 - Documents: [[FW-POL-0003]] (new), [[FW-TF-0001]] (registration certificate paragraph), [[SPEC-TRUST-0001]] (published files).
 - Operator: the response type of `/status/` in the sandbox nginx.
 - Next: the registry configuration once the real network names (K1) are approved; the PEN application.
+- **Implementation note (real network, 2026-10-29):** project management approved a UUID-based OID for the real network (no PEN
+  wait): `policy_id` = `2.25.338612186327611064481769354006034529929` (UUID `febe55bd-3449-434d-ab41-7097b21a3e89`, generated once), `certificate_policy` =
+  `https://arf.tamga.network/policies/registration-certificate`, status list `https://trust.tamga.network/status/wrprc/1`.
+  `roles.registrar.wrprc` was added to the real registry; the registration certificates were re-issued with the three fields and
+  the status list is live (K6). This OID does not change; an OID under a PEN could only be added later with a new policy version.
 
 # Status
 
 **Accepted — 2026-10-29** (approval by project management; the verbatim quotation is in the private approval record).
-DECISIONS: D-REG-4. WRS1–WRS4 are binding. The real network's policy identifier and addresses are approved separately (K1, K6).
+DECISIONS: D-REG-4. WRS1–WRS4 are binding. The real network's policy identifier and addresses were approved on 2026-10-29 and are in force (implementation note above).

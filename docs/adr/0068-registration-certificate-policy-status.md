@@ -154,8 +154,13 @@ kimliğini ve adresini taşır, kayıt kurumu da bir iptal listesi yayımlar. C�
 - Belgeler: [[FW-POL-0003]] (yeni), [[FW-TF-0001]] (kayıt sertifikası paragrafı), [[SPEC-TRUST-0001]] (yayın dosyaları).
 - Operatör: sandbox nginx'inde `/status/` yanıt türü.
 - Sonraki iş: gerçek ağ adları (K1) onaylanınca kayıt defteri ayarı; PEN başvurusu.
+- **Uygulama notu (gerçek ağ, 2026-10-29):** proje yönetimi gerçek ağ için UUID tabanlı OID'i onayladı (PEN beklenmez):
+  `policy_id` = `2.25.338612186327611064481769354006034529929` (UUID `febe55bd-3449-434d-ab41-7097b21a3e89`, bir kez üretildi), `certificate_policy` =
+  `https://arf.tamga.network/policies/registration-certificate`, durum listesi `https://trust.tamga.network/status/wrprc/1`.
+  Gerçek kayıt defterine `roles.registrar.wrprc` eklendi; kayıt sertifikaları üç alanla yeniden verildi, durum listesi yayında
+  (K6). Bu OID değişmez; ileride PEN altında bir OID ancak yeni politika sürümüyle eklenebilir.
 
 # Durum
 
 **Accepted — 2026-10-29** (proje yönetimi onayı; birebir alıntı özel onay kaydında). DECISIONS: D-REG-4. WRS1–WRS4 bağlayıcıdır.
-Gerçek ağın politika kimliği ve adresleri ayrıca onaylanır (K1, K6).
+Gerçek ağın politika kimliği ve adresleri 2026-10-29'da onaylandı ve yürürlükte (yukarıda uygulama notu).

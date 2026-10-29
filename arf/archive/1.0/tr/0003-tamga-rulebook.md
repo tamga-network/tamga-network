@@ -69,7 +69,7 @@ AS ([[t:authentic-source|yetkili kaynak]]) · WP ([[t:wallet-provider|cüzdan sa
 
 # 2. RB-OP — İşletmeci ve liste işletmecisi (TLSO)
 
-Bugün Tamga geçici işletmecidir; devirde ulusal otoriteye geçer.
+Bugün: Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; listelerde işletmeci adı "Tamga Network" yazılır (RB-OP-01). Devirde rol ulusal otoriteye geçer.
 
 | # | Kural |
 |---|---|

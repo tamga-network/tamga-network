@@ -10,8 +10,11 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 - **wallet-core — Digital Credentials API KB-JWT `aud`.** SD-JWT VC presented over the DC API binds the Key Binding JWT to
   `aud = "origin:<origin>"` (OpenID4VP 1.0 Appendix A.4), no longer to the client identifier; Tamga Verify expects the same and
-  rejects a proof bound to the other path. *Migration:* wallets update to 0.7.4 for SD-JWT over the DC API; a verifier that
-  checks DC API presentations itself must expect `origin:<origin>`. Cross-device (QR) keeps the client identifier.
+  rejects a proof bound to the other path. **Not backward-compatible:** there is no transition code — a 0.7.3 wallet's SD-JWT
+  presentation over the DC API is rejected by a 0.7.4 verifier, and the other way round (by decision: development phase, no
+  compatibility shims before the beta, ADR-0029). *Migration:* wallets and verifiers update to 0.7.4 together for SD-JWT over the
+  DC API; a verifier that checks DC API presentations itself must expect `origin:<origin>`. Cross-device (QR) keeps the client
+  identifier and is unaffected.
 - **verifier — `registrationScopesFor` matches the presentation format.** A registered use only matches a request of the same
   format (`dc+sd-jwt` default, `mso_mdoc`, `mso_mdoc_zk`). *Migration:* registry scopes for mdoc / ZK requests set `format` (and
   `mdoc_namespace` for mdoc); otherwise the request finds no registration certificate.
@@ -27,8 +30,13 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
   conforming issuers; never use `__proto__` as a claim name.
 - **wallet-core — `statusBitAt` reads 4- and 8-bit lists.** Values above 3 read as 3 (invalid). *Migration:* none; treat 3 as
   invalid as before.
-- **trust — JSON lists signed with an XML list signer are refused.** A LOTL or `tl-<cc>` JSON list whose signer certificate has
-  EKU `id-tsl-kp-tslSigning` (0.4.0.2231.3.0) is not loaded. *Migration:* sign JSON lists with the JSON list signer only.
+- **trust — XML list signers in their own LOTL field (`xml_signing_keys`).** The ETSI TS 119 612 XML list signer is published in
+  the country slot's new `national_lists[].xml_signing_keys` instead of `signing_keys`; JSON lists are validated only against
+  `signing_keys`. As defence in depth, a LOTL or `tl-<cc>` JSON list whose signer certificate has EKU `id-tsl-kp-tslSigning`
+  (0.4.0.2231.3.0) is still not loaded. The publisher refuses a tslSigning-EKU certificate in `signing_certs` and checks the XML
+  signer against `xml_signing_keys` before writing the XML (stops on the real network). *Migration:* registries move the XML
+  signer from `signing_certs` to `xml_signing_certs`; XML readers look the signer up in `xml_signing_keys`; sign JSON lists with
+  the JSON list signer only.
 - **verify — gates fail closed.** A terminal key with an owner, or a key of a group once seen in the list, gets 403 when the list
   is stale or the group is gone; a pass from a policy not in the group's `allowed_policies` gets 403 without being consumed.
   *Migration:* keep the trust list fresh; passes issued before 0.7.4 (no policy id) still pass when every policy of the group is
@@ -68,6 +76,19 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
   rewritten to the branch API (lock before decrypting, used up only after A6, the pending entry is never deleted before
   decryption); the SDK page copy on tamga.network regenerated. Code comments use the RQ codes of ADR-0067 (were FB1–FB6);
   ADR-0067 tr RQ3 wording fixed.
+
+- trust + trust-publisher (2026-10-29; ADR-0066 implementation note): **`xml_signing_keys`.** The country slot in the LOTL carries
+  the ETSI TS 119 612 XML list signers in their own field (`national_lists[].xml_signing_keys`; registry `xml_signing_certs`),
+  separate from the JSON list signers. The sandbox LOTL moved `tl-xml-signer-1` there. Publisher checks: no tslSigning-EKU
+  certificate in `signing_certs`; the XML signer must be active in `xml_signing_keys` (stops on the real network, warning in the
+  sandbox). OpenAPI `Lotl` schema, SPEC-TRUST-0001 and SPEC-ID-0002 updated.
+- trust-publisher (2026-10-29; ADR-0068 on the real network): registration certificates of the real network carry `policy_id`
+  `2.25.338612186327611064481769354006034529929` (UUID-based OID), `certificate_policy`
+  `https://arf.tamga.network/policies/registration-certificate` and `status` →
+  `https://trust.tamga.network/status/wrprc/1` (1-bit Token Status List, re-signed hourly). FW-POL-0003 records the OID.
+- docs (2026-10-29): the legal operator of the network's own services is stated with one sentence everywhere it appears —
+  "Operated provisionally by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ on behalf of Tamga Network (foundation to be
+  established)" (ARF definitions, roles, trust framework, rulebooks). The lists keep naming the operator "Tamga Network".
 
 - verify + verifier + trust (2026-10-29; ADR-0069 TG3 follow-up): **gates fail closed.** "List stale" and "group not in the list"
   are told apart (`freshness().healthy`); a key with an owner or a group once seen in the list (`listed_groups` in

@@ -41,8 +41,8 @@ Rulebook'tadır (Ek B); burada her rolün hangi kural grubuna bağlı olduğu g�
 çapa günlüğünü saatlik imzalar; belge türü kataloğunu değişmez dosyalar olarak yayınlar; şeffaflık raporunu çıkarır; açık
 kaynak paketleri yayınlar. AB'deki karşılığı güven listesi işletmecisidir ([[t:TLSO]]).
 
-**Bugün kim.** Tamga, geçici işletmeci olarak ve her ulusal liste için o devlet adına (`status = "provisional"`,
-`on_behalf_of`). Vakıf kurulduğunda işletmecilik ona, ulusal listeler devletlere devredilir (Ek A §7).
+**Bugün kim.** Tamga Network, geçici işletmeci olarak ve her ulusal liste için o devlet adına (`status = "provisional"`,
+`on_behalf_of`). Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. Vakıf kurulduğunda işletmecilik ona, ulusal listeler devletlere devredilir (Ek A §7).
 
 **Yükümlülükler.** Ek B §2 (RB-OP-01…18): listelerin sürüm zinciri ve yayın aralığı, en az iki kaydırmalı imza sertifikası,
 kök parmak izlerinin yayını, herkese açık değişiklik günlüğü, imza anahtarı tutmama, barındırma oranı eşiği, toplu ve

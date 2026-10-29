@@ -50,7 +50,7 @@ mənbə üstündür.
 | Mühit | `policy_id` | `certificate_policy` |
 |---|---|---|
 | Sandbox (test şəbəkəsi) | `2.25.220506472418443381081254370400837050484` | bu səhifə |
-| Real şəbəkə | TƏKLİF: təşkilatın IANA xüsusi müəssisə nömrəsi (PEN) altında; təsdiqdən sonra dərc olunur | bu səhifə |
+| Real şəbəkə | `2.25.338612186327611064481769354006034529929` (UUID əsaslı, ITU-T X.667: `febe55bd-3449-434d-ab41-7097b21a3e89`; 2026-10-29) | bu səhifə |
 
 ETSI-nin Aİ siyasət OID-i `0.4.0.19475.3.1` istifadə edilmir ([[ADR-0068]] WRS1).
 
@@ -79,7 +79,7 @@ qeydlərində saxlanılır; açıq dəyişiklik qeydinə şəxs adı yazılmır.
 |---|---|
 | Format | IETF Token Status List, `statuslist+jwt` ([[SPEC-CRED-0003]]); `bits` = 1: 0 etibarlı, 1 ləğv edilib |
 | Sertifikatdakı qeyd | `status.status_list` = `{idx, uri}` |
-| Ünvan | dərc kökündə `/status/wrprc/<n>`; sandbox `https://trust.sandbox.tamga.network/status/wrprc/1` |
+| Ünvan | dərc kökündə `/status/wrprc/<n>`; real şəbəkə `https://trust.tamga.network/status/wrprc/1`; sandbox `https://trust.sandbox.tamga.network/status/wrprc/1` |
 | İmza | qeydiyyat orqanı açarı (§3) |
 | Təzəlik | `ttl` 1 saat, `exp` 24 saat |
 | İndeks | təsadüfi; ləğv edilmiş indeks yenidən istifadə olunmur |
@@ -93,8 +93,8 @@ edilmiş sertifikatlı sorğuya məlumat göndərilmir; status yoxlana bilmirsə
 
 | Mövzu | Status |
 |---|---|
-| Siyasət identifikatoru, sənəd və status siyahısı | **Qərar (2026-10-29, [[ADR-0068]]):** sandbox-da qüvvədədir |
-| Real şəbəkənin siyasət OID-i və ünvanları | Açıq: adın təsdiqi və PEN müraciəti ([[ADR-0068]] K1) |
+| Siyasət identifikatoru, sənəd və status siyahısı | **Qərar (2026-10-29, [[ADR-0068]]):** sandbox-da və real şəbəkədə qüvvədədir |
+| Real şəbəkənin siyasət OID-i və ünvanları | **Qərar (2026-10-29, layihə rəhbərliyinin təsdiqi):** UUID əsaslı OID (§5), siyasət ünvanı bu səhifə, status siyahısı `https://trust.tamga.network/status/wrprc/1`. IANA PEN altında OID gələcəkdə yalnız yeni siyasət versiyası ilə əlavə oluna bilər; qüvvədə olan OID dəyişmir ([[ADR-0068]] K1) |
 
 # Status
 

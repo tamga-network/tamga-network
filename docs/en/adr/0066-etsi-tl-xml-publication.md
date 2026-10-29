@@ -110,8 +110,9 @@ on completing the postal addresses.
   JSON lists. Issued in the sandbox on 2026-10-29; on the real network the certificate is issued in the production PKI outside the
   repository, with project-management approval. On the real network no XML is published with a signer that does not follow the
   profile; the publisher stops.
-- The XML signer's fingerprint is published in the LOTL among the signing keys of the country slot (`national_lists[].signing_keys`,
-  no new field) and its certificate is placed in `keys/` (Tamga's way of validating the signer is the LOTL).
+- The XML signer's fingerprint is published in the LOTL in a **separate** XML signing-key field of the country slot
+  (`national_lists[].xml_signing_keys`; 0.7.4 implementation note, below) and its certificate is placed in `keys/` (Tamga's way of
+  validating the signer is the LOTL). The signers of the JSON lists stay in `national_lists[].signing_keys`.
 
 ## K5 — Publication: off by default, sandbox first
 
@@ -175,6 +176,12 @@ On acceptance (2026-10-29):
 - Remaining for the real network: the production XML signing certificate (real network PKI, outside the repository; command in
   `ops/README.md`) and its fingerprint in the LOTL; the operator's postal address; institution and wallet provider address data;
   then the flag (with project-management approval).
+- **Implementation note (0.7.4, 2026-10-29):** the XML signer moved to the slot's new `xml_signing_keys` field in the LOTL (name
+  approved by project management; the first release had it in `signing_keys`). The JSON loader validates the national list only
+  against `signing_keys`; as defence in depth, a JSON list signed by a certificate with the tslSigning EKU is still rejected. The
+  publisher never puts a tslSigning-EKU certificate in `signing_keys` and, before writing the XML, checks that the signer is active
+  in the slot's `xml_signing_keys` (stops publication on the real network, a warning in the sandbox). XML readers look the signer
+  up in `xml_signing_keys`. The decision is unchanged; TX3's signer scope is narrower.
 - Reader side (separate work): the `@tamga-network/trust` 119 612 reader recognises only ETSI active statuses today; recognising the
   Tamga-root statuses is a separate decision, when a Tamga XML list pinned in a LOTL is to be read.
 
