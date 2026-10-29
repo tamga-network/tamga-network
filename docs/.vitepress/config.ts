@@ -430,15 +430,6 @@ export default defineConfig({
   head: [
     ["meta", { name: "robots", content: "index,follow" }],
     ...brandHead("Tamga Docs"),
-    ["link", { rel: "preconnect", href: "https://fonts.googleapis.com" }],
-    ["link", { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" }],
-    [
-      "link",
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Onest:wght@500;600;700&display=swap",
-      },
-    ],
   ],
   sitemap: { hostname: "https://docs.tamga.network" },
   // Dil eşleri: kök (en) ↔ /tr/ (↔ /az/ varsa) — yalnız en ve tr'de sayfa varsa.

@@ -32,7 +32,7 @@ const cfg = (): VerifyConfig => ({
 });
 
 const EXPECTED_CSP =
-  "default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; " +
+  "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; " +
   "img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; " +
   "require-trusted-types-for 'script'; trusted-types 'none'";
 
@@ -135,7 +135,7 @@ describe.skipIf(!ready)("CSP (K10)", () => {
       expect(a.statusCode, path).toBe(200);
       expect(a.body.length, path).toBeGreaterThan(0);
       expect(String(a.headers["content-type"]), path).toMatch(
-        path.endsWith(".css") ? /^text\/css/ : /^application\/javascript/,
+        path.endsWith(".css") ? /^text\/css/ : path.endsWith(".woff2") ? /^font\/woff2/ : /^application\/javascript/,
       );
       expect(a.headers["content-security-policy"]).toBeUndefined();
       expect(a.headers["x-content-type-options"]).toBe("nosniff");
@@ -147,6 +147,20 @@ describe.skipIf(!ready)("CSP (K10)", () => {
     expect(kit.headers["content-security-policy"]).toBeUndefined();
     // site kiti biçimi CSSOM ile yazar (style özniteliği değil) ve HTML dizgisi kullanmaz
     expect(kit.body).not.toMatch(/innerHTML|setAttribute\(\s*["']style/);
+  });
+
+  it("yazı tipleri kendi kopyamız: Google Fonts yok, her @font-face dosyası sunuluyor (K14)", async () => {
+    const css = await app.inject({ url: "/assets/tamga-ui.css" });
+    expect(css.body).not.toMatch(/fonts\.(googleapis|gstatic)\.com|https?:\/\//);
+    expect(css.body).toContain('@import url("fonts/fonts.css")');
+    const fonts = await app.inject({ url: "/assets/fonts/fonts.css" });
+    const urls = [...fonts.body.matchAll(/url\("\.\/([^"]+)"\)/g)].map((m) => m[1]);
+    expect(urls.length).toBeGreaterThanOrEqual(5);
+    for (const u of urls) {
+      const f = await app.inject({ url: `/assets/fonts/${u}` });
+      expect(f.statusCode, u).toBe(200);
+      expect(f.rawPayload.subarray(0, 4).toString("latin1"), u).toBe("wOF2");
+    }
   });
 
   it("kendi QR okuyucu kopyamız: kayıtlı sürümün özetiyle aynı (CDN dosyasıyla birebir)", () => {

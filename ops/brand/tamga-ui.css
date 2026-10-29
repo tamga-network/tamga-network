@@ -1,10 +1,11 @@
 /*
  * Tamga UI — service pages (trust., schemas., status., issuer., wallet., id., verify., console.) share one look with tamga.network.
  * Brand (2026-10-02, tamga.network/brand): Gök #1E5A78 (primary; ramp gok-50…900) · ink #14120F · paper #F8F6F1 · rule #E2DCCF ·
- * deep band #101820 · gold #C8A24C (small accents only). Type: Onest (display) · IBM Plex Sans · IBM Plex Mono — latin-ext + cyrillic.
+ * deep band #101820 · gold #C8A24C (small accents only). Type: Onest (display) · IBM Plex Sans · IBM Plex Mono — latin-ext + cyrillic, self-hosted (fonts/).
  * Theme: no stamp = follows the OS; <html data-theme="light|dark"> = explicit choice (tamga-ui.js).
  */
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Onest:wght@500;600;700&display=swap&subset=latin,latin-ext,cyrillic");
+/* Fonts: our own copies (fonts/fonts.css, OFL 1.1) — no third-party font CDN. */
+@import url("fonts/fonts.css");
 
 :root {
   --gok-50: #eef5f8;

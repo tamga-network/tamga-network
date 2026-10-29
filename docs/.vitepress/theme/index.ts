@@ -4,6 +4,8 @@ import { h } from "vue";
 import DocMeta from "./DocMeta.vue";
 import AdrTable from "./AdrTable.vue";
 import TranslationNote from "./TranslationNote.vue";
+// Yazı tipleri kendi kopyamız (ops/brand/fonts, OFL 1.1); Vite paketler — üçüncü taraf yazı tipi sunucusu yok.
+import "../../../ops/brand/fonts/fonts.css";
 import "./style.css";
 
 export default {

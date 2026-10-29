@@ -47,12 +47,12 @@ export { POLICIES, policiesFor } from "./policies.js";
 
 /**
  * HTML sayfalarının CSP'si (güvenlik turu K10): satır içi betik ve biçim yok — sayfa betikleri, marka CSS'i ve QR okuyucu
- * kütüphanesi bu servisten `/assets/*` (brand.ts; nonce gerekmez, CDN yok). Yazı tipleri Google Fonts (tamga-ui.css @import —
- * dış CSS dosyası, satır içi değil). QR görseli `data:`. Trusted Types zorunlu: sayfa betikleri DOM'a HTML dizgisi yazmaz.
+ * kütüphanesi bu servisten `/assets/*` (brand.ts; nonce gerekmez, CDN yok). Yazı tipleri de kendi kopyamız (`/assets/fonts/`, K14: üçüncü
+ * taraf yazı tipi sunucusu yok). QR görseli `data:`. Trusted Types zorunlu: sayfa betikleri DOM'a HTML dizgisi yazmaz.
  * `upgrade-insecure-requests` yok: bütün kaynaklar aynı köken (göreli yol) ya da https, yerel http geliştirmesi bozulmasın.
  */
 export const VERIFY_CSP =
-  "default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; " +
+  "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; " +
   "img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; " +
   "require-trusted-types-for 'script'; trusted-types 'none'";
 

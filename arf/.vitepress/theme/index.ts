@@ -4,6 +4,8 @@ import { h } from "vue";
 import VersionSwitcher from "./VersionSwitcher.vue";
 import ReleaseBanner from "./ReleaseBanner.vue";
 import TranslationNote from "../../../docs/.vitepress/theme/TranslationNote.vue";
+// Yazı tipleri kendi kopyamız (ops/brand/fonts, OFL 1.1); Vite paketler — üçüncü taraf yazı tipi sunucusu yok.
+import "../../../ops/brand/fonts/fonts.css";
 import "./style.css";
 
 export default {

@@ -6,6 +6,13 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.4 — unreleased (source only, not on npm)
 
+- verify + docs/ARF sites + brand (2026-10-29; K14): **fonts are self-hosted — no Google Fonts.** Onest, IBM Plex Sans (upright +
+  italic) and IBM Plex Mono are served from our own origin: `ops/brand/fonts/` (woff2 built from the google/fonts sources with
+  fontTools — Latin, Latin Extended, Cyrillic, Cyrillic Extended; variable weight; OFL 1.1 licence files alongside, `fonts.css`).
+  `tamga-ui.css` imports `fonts/fonts.css` instead of `fonts.googleapis.com`; Tamga Verify serves `/assets/fonts/*`; the docs and
+  ARF sites bundle the same files through Vite. The visitor's IP address no longer reaches a third-party font host. Tamga Verify's
+  CSP tightens to `style-src 'self'; font-src 'self'`. No package code changed (`packages/*` untouched).
+
 - verify + verifier/web (2026-10-29; security round K10): **strict Content-Security-Policy on every Tamga Verify page.** No inline
   script or style any more: page scripts (waiting page, sample site, gate terminal, Digital Credentials API test), the brand
   stylesheet and the early theme stamp are separate files under `/assets/*`, values reach them through `data-*` attributes; the

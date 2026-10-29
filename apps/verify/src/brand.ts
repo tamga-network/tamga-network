@@ -30,8 +30,30 @@ const readAsset = (f: string) => {
 };
 const CSS_TYPE = "text/css; charset=utf-8";
 const JS_TYPE = "application/javascript; charset=utf-8";
-export const ASSETS: Record<string, { type: string; body: string }> = {
+/**
+ * Yazı tipleri kendi kopyamız (`ops/brand/fonts`, OFL 1.1): `tamga-ui.css` → `@import "fonts/fonts.css"` → `/assets/fonts/*.woff2`.
+ * Üçüncü taraf yazı tipi sunucusu yok (ziyaretçinin IP'si başkasına gitmez; CSP `font-src 'self'`).
+ */
+export const FONT_FILES = [
+  "onest-var.woff2",
+  "ibm-plex-sans-var.woff2",
+  "ibm-plex-sans-italic-var.woff2",
+  "ibm-plex-mono-400.woff2",
+  "ibm-plex-mono-500.woff2",
+] as const;
+const readFont = (f: string) => {
+  try {
+    return readFileSync(resolve(BRAND_DIR, "fonts", f));
+  } catch {
+    return Buffer.alloc(0);
+  }
+};
+export const ASSETS: Record<string, { type: string; body: string | Buffer; maxAge?: number }> = {
   "/assets/tamga-ui.css": { type: CSS_TYPE, body: read("tamga-ui.css") },
+  "/assets/fonts/fonts.css": { type: CSS_TYPE, body: read("fonts/fonts.css") },
+  ...Object.fromEntries(
+    FONT_FILES.map((f) => [`/assets/fonts/${f}`, { type: "font/woff2", body: readFont(f), maxAge: 604800 }]),
+  ),
   "/assets/tamga-ui.js": { type: JS_TYPE, body: read("tamga-ui.js") },
   "/assets/tamga-theme.js": { type: JS_TYPE, body: read("tamga-theme.js") },
   "/assets/pending.js": { type: JS_TYPE, body: readAsset("pending.js") },
@@ -44,7 +66,10 @@ export const ASSETS: Record<string, { type: string; body: string }> = {
 export function registerAssetRoutes(app: FastifyInstance) {
   for (const [path, a] of Object.entries(ASSETS))
     app.get(path, async (_req, reply) =>
-      reply.type(a.type).header("cache-control", "public, max-age=3600").send(a.body),
+      reply
+        .type(a.type)
+        .header("cache-control", `public, max-age=${a.maxAge ?? 3600}`)
+        .send(a.body),
     );
 }
 
