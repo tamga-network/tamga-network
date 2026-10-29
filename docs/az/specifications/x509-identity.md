@@ -4,7 +4,7 @@ title: "Qurum şəxsiyyəti (X.509)"
 status: Active
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-16
+last_updated: 2026-10-29
 summary: >
   [[ADR-0004]] X.509 qərarının kod/protokol səviyyəsində qarşılığı. Korporativ/entity şəxsiyyəti milli Root CA-lara əsaslanan X.509 sertifikatları ilə qurulur; qurumun zəncirdəki identifikatoru issuerId = keccak256(stateCode, certFingerprint) ilə lövbərlənir. Əhatə olunan mövzular: etibar zənciri (milli Root CA-ların zəncirə lövbərlənməsi), sertifikat iyerarxiyası, issuerId-nin törədilməsi, credential yoxlama alqoritmi (zəncir + registry + ləğv), Root CA-nın yenilənməsi (rollover), sertifikatın ləğvi (CRL/OCSP + on-chain), guardian/court-token X.509 bağlanması, qorunan pseudonym profili + multicodec və eIDAS/did:web körpüsü. did:tamga entity profilini əvəz edir; pseudonym profili (SPEC-ID-0001) saxlanılır.
 translation_of: SPEC-ID-0002
@@ -214,46 +214,75 @@ Avropa İttifaqı (Aİ) ilə qarşılıqlı fəaliyyət üçün qurum mövcud id
 
 Bu körpü **birtərəfli tanınmadır**; Tamga-nın əsas etibar zənciri milli kök CA-lardır.
 
-## 8.1 eIDAS etibar siyahısı proyeksiyası (ETSI TS 119 612)
+## 8.1 ETSI TS 119 612 XML siyahı görünüşü ([[ADR-0066]])
 
-> Qərarın əsası: [[RS-EIDAS-0001]] §5.1 (ETSI TS 119 612 V2.4.1 təhlili). ETSI 119 612
-> Aİ-dən kənar ölkələrin/beynəlxalq təşkilatların Trusted List (TL) dərc edib Aİ LOTL ilə
-> **qarşılıqlı tanınmasını** açıq şəkildə nəzərdə tutur ([[ADR-0002]] cross-recognition). Bu, korporativ
-> tərəf üçün did:web körpüsü ilə müqayisədə tənzimləyicilər baxımından daha oxunaqlı interop yoludur.
+> Qərarın əsası: [[ADR-0066]] (2026-10-29; [[RS-EIDAS-0001]] §5.1, ETSI TS 119 612 V2.4.1). AB-nin imza yoxlama alətləri və
+> Komissiyanın üçüncü ölkələr üçün açdığı aralıq yol (TC AdES LOTL) milli siyahını bu XML formatında tələb edir. Tamga-nın öz XML
+> siyahısı həmin siyahıya **daxil olmur** (o, dövlətin nəzarət etdiyi imza və möhür sertifikatı təminatçıları üçündür); qazanc
+> dövlətə hazır alət və şablon, AB alətlərinin isə Tamga siyahısını XML kimi də oxuya bilməsidir.
 
-**Prinsip:** On-chain qeyd (RootCARegistry + Issuer Registry) **yeganə həqiqət mənbəyidir**;
-119 612-yə uyğun TL bu zəncir vəziyyətinin **yalnız oxunan off-chain proyeksiyasıdır**
-(XML/XAdES). Proyeksiya `sdk/` çərçivəsində yaradılır, **smart-kontrakt dəyişikliyi tələb etmir** və
-zəncir vəziyyətini dəyişmir. Tamga bu TL üçün **Trusted List Scheme Operator (TLSO)**
-rolunu öhdəsinə götürür (ilk mərhələdə Tamga; dövlət mərhələsində milli kök orqanı — [[PM-ASSUR-0001]]).
+**Prinsip:** Səlahiyyətli mənbə imzalı Tamga ölkə siyahısıdır ([[SPEC-TRUST-0001]]). Siyahı dərc edən (`apps/trust-publisher`,
+`build`) eyni imzalı `tl-<cc>` obyektindən və LOTL-dan, **eyni versiya ilə** (`TSLSequenceNumber` = `version`) XAdES-B-B imzalı
+görünüş yaradır: `tl-<cc>.xml`, `tl-<cc>.sha2` və `archive/tl-<cc>.vNNNN.xml`. JSON-da olmayan qeyd XML-də ola bilməz; ziddiyyətdə
+JSON keçərlidir. Tamga bu siyahının müvəqqəti operatorudur (TLSO); dövlət slotu təhvil aldıqda URI çoxluğu slot üzrə dəyişə bilər,
+qeydlər və identifikatorlar dəyişmir.
 
-**Xidmət növünün uyğunlaşdırılması (Tamga qeydi → ETSI Service type identifier):**
+**URI profili (iddia daşımayan Tamga kökü, `https://trust.tamga.network/tl/`):**
 
-| Tamga | ETSI 119 612 Service type URI |
+| Sahə | URI |
 |---|---|
-| Milli kök CA (RootCARegistry) | `…/Svctype/NationalRootCA-QC` |
-| Issuer (CA/sertifikat verən qurum) | `…/Svctype/CA/QC` (və ya `CA/PKC` non-qualified) |
-| Qeydiyyat orqanı / şəxsiyyətin sübutu ([[DECISIONS]] D-ID-2) | `…/Svctype/RA`, `…/Svctype/IdV` |
-| X509-AC EAA verən qurum ([[RS-EIDAS-0001]] §4.4) | `…/Svctype/ACA`, `…/Svctype/EAA/Q` |
-| TL dərc edən xidmət (Tamga TLSO) | `…/Svctype/TLIssuer` |
+| `TSLType` | `…/tl/TSLType/<CC>list` |
+| `StatusDeterminationApproach` | `…/tl/StatusDetn/<CC>determination` |
+| `SchemeTypeCommunityRules` | `https://arf.tamga.network/trust-framework` + `…/tl/schemerules/<CC>` |
+| `SchemeInformationURI` | `…/tl/` + dərc yerinin `archive/` ünvanı |
 
-**Status lüğətinin 1:1 uyğunlaşdırılması (Tamga statusu → ETSI Service current status):**
+AB mənasında "üzv dövlət tərəfindən bildirilmiş" və ya "ixtisaslı" iddiası daşıyan ETSI URI-ləri (`EUgeneric`, `EUappropriate`,
+`granted`, `recognisedatnationallevel`, `…/QC`, `…/NationalRootCA-QC`) **istifadə olunmur** (TX2). URI-lərin mənası
+[ETSI XML etibar siyahısı](/az/concepts/etsi-trusted-list) səhifəsində müəyyən edilir.
 
-| Tamga statusu | ETSI Svcstatus | Qeyd |
+**Xidmət növünün uyğunlaşdırılması (Tamga qeydi → `ServiceTypeIdentifier`):**
+
+| Tamga | URI | Qeyd |
 |---|---|---|
-| `ACTIVE` (Root/Issuer) | `…/Svcstatus/granted` | Kvalifikasiyalı xidmət təsdiqlənib |
-| `ACTIVE` (milli tanınma konteksti) | `…/Svcstatus/recognisedatnationallevel` | 5.5.1.3 tipli xidmətlər üçün |
-| `ROLLING_OVER` (Root) | `granted` + `TakenOverBy` (§5.5.9.3) | Varis kökə ötürmə; üst-üstə düşmə dövrü |
-| `SUSPENDED` (Issuer) | `granted` → müvəqqəti `withdrawn` | Dayandırma; tarixçə saxlanılır |
-| `RETIRED` (Root, rollover sonu) | `withdrawn` + tam status tarixçəsi | Silinmə deyil; tarixçə heç vaxt silinmir (§5.3.12) |
-| `REVOKED` (Root/Issuer) | `withdrawn` | Ələ keçirilmə; alt sertifikatlar etibarsız olur |
-| `successorId` bağı (varis sənədi verən qurum) | `TakenOverBy` extension | D-BC-5 / XC2 ilə birbaşa qarşılıq |
+| Milli kök CA (`root_cas`) | `http://uri.etsi.org/TrstSvc/Svctype/CA/PKC` | İxtisaslı olmayan sertifikat verən xidmət (§5.5.1.2) |
+| Sənəd verən — sinfi yoxdur və ya ümumi | `http://uri.etsi.org/TrstSvc/Svctype/EAA` | İxtisaslı olmayan EAA verilməsi |
+| Sənəd verən — dövlət mənbəyi (PuB-EAA qarşılığı) | `…/tl/Svctype/EAA/Pub-EAA` | Tamga kökü: ETSI URI-si iddia daşıyardı |
+| Sənəd verən — Tamga-da akkreditə olunmuş (QEAA qarşılığı) | `…/tl/Svctype/EAA/Q` | Tamga kökü; AB mənasında ixtisaslı deyil |
+| Sənəd verənin status siyahısı imzası (`delegate_keys`, məqsəd `status_list`) | `…/tl/Svctype/EAA/StatusList` | Ayrıca xidmət, ayrıca sertifikat |
+| Pul kisəsi təminatçısının həlli (LOTL `wallet_providers`) | `http://uri.etsi.org/19602/SvcType/WalletSolution/Issuance` | TS 119 602 növü (LoTE ilə eyni) |
 
-**Dəyişməz qorumalar:** Proyeksiya yalnız **qeyri-fərdi** etibar məlumatlarını (kök/qurum
-public açarı, status, tarixçə) xaricə ötürür (`XC3`). **Vətəndaşın pairwise psevdonimi heç vaxt
-TL-ə yazılmır** (`XC4`); TL yalnız institusional təbəqəni (B) əhatə edir. Bu, ETSI Trusted List
-modelinin "blockchain etibar lövbəri" variantıdır: ETSI digest-i OJEU-da dərc edir, Tamga isə onu
-RootCARegistry-də lövbərləyir.
+**Siyahıda olmayanlar:** yoxlayan tərəflər (etibarlı xidmət təminatçısı deyillər; qeydləri JSON siyahısında və qeydiyyat
+sertifikatlarındadır — [[ADR-0026]]), `RESERVED` / `PROVISIONAL` qeydlər, şəxsi məlumat (XC3, XC4).
+
+**Status uyğunlaşdırılması (Tamga statusu → `ServiceStatus`, birbaşa):**
+
+| Tamga statusu | `ServiceStatus` |
+|---|---|
+| `ACTIVE` | `…/tl/Svcstatus/active` |
+| `SUSPENDED` | `…/tl/Svcstatus/suspended` |
+| `REVOKED` | `…/tl/Svcstatus/revoked` |
+| `RETIRED` | `…/tl/Svcstatus/retired` |
+| `ROLLING_OVER` | `…/tl/Svcstatus/rollingover` |
+| `DEPRECATED` | `…/tl/Svcstatus/deprecated` |
+
+Qeydlər silinmir: aktiv olmayan xidmət statusu ilə qalır; əvvəlki statuslar `ServiceHistory`-də yenidən köhnəyə, sertifikat əvəzinə
+SKI ilə (§5.5.10, §5.6.3). Bu URI-ləri tanımayan oxuyucu xidməti aktiv saymır (təhlükəsiz tərəf).
+
+**İmza və imzalayan:** XAdES-B-B, zərflənmiş (`URI=""`, enveloped-signature + Exclusive C14N), SignedProperties (SigningTime,
+SigningCertificateV2, DataObjectFormat), KeyInfo-da yalnız imzalayanın sertifikatı; ECDSA P-256 / SHA-256. İmzalayan ayrıca XML
+imza sertifikatıdır (`tl-xml-signer-1`, kök tərəfindən verilən yarpaq) və §5.7.1 profilinə uyğundur: subyekt `C` = slotun ölkə
+kodu, `O` = `SchemeOperatorName`; basicConstraints CA=false; keyUsage yalnız digitalSignature + nonRepudiation; SKI və AKI;
+extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0). Barmaq izi LOTL-da slotun imza açarları arasındadır. Real şəbəkədə
+uyğun olmayan imzalayanla və ya çatışmayan dərc məlumatı ilə (operator, qurum, pul kisəsi təminatçısı poçt ünvanları) XML dərc
+olunmur (TX3).
+
+**Dərc:** bayraq `TAMGA_TL119612` (defolt bağlı, TX5). Sandbox-da açıqdır (`trust.sandbox.tamga.network/tl-tr.xml`, "TEST" işarəli
+yer tutucu ünvanlarla); real şəbəkədə (`trust.tamga.network/tl-<cc>.xml`) poçt ünvanları tamamlandıqdan sonra. Server `.xml`-i
+`application/vnd.etsi.tsl+xml`, `.sha2`-ni `text/plain` kimi, ən çox 4 saatlıq keşlə təqdim edir (§6.1, §6.2).
+
+**Köhnə uyğunlaşdırma çıxarıldı (2026-10-29):** bu bölmənin əvvəlki versiyasındakı cədvəl (sənəd verən → `CA/QC`, `ACTIVE` →
+`granted` / `recognisedatnationallevel`, `NationalRootCA-QC`) AB mənasında ixtisaslı xidmət iddiası daşıdığı üçün [[ADR-0066]] ilə
+çıxarıldı; Tamga-nın sənəd verənləri ixtisaslı deyil ([[ADR-0022]]).
 
 ### 8.1.1 LoTE proyeksiyası (ETSI TS 119 602, JSON) — tətbiq edilib (2026-09-29)
 
@@ -301,9 +330,8 @@ və TL dərc tezliyi (≤6 ay, küylü təkrar dərc — [[ADR-0008]] ilə uzla�
 3. **Court-token formatı** (JWS vs EIP-712 + precompile) → [[DECISIONS]] D-GRD-1.
 4. **OCSP stapling vs on-chain status** üstünlüyü — performans/uyğunluq balansı.
 5. **CAIP-2 şəbəkə identifikatoru** (`tamga:<chainId>`) sertifikat/issuerId təqdimatında necə yer alır.
-6. **119 612 TL proyeksiya formatı** (§8.1): `sdk/` generatoru XML/XAdES-B-B yaradacaqmı, imza
-   açarlarının idarə edilməsi (≥2 növbəli sertifikat, ETSI Annex A.2) necə qurulacaq → SPEC-CRED /
-   PM-GOV-0001.
+6. ~~**119 612 TL proyeksiya formatı**~~ ✅ [[ADR-0066]] (2026-10-29): siyahı dərc edən ayrıca §5.7.1 imzalayanı ilə
+   XML/XAdES-B-B yaradır (§8.1). İmza açarının yenilənmə ardıcıllığı (≥2 növbəli sertifikat, ETSI Annex A.2) açıqdır → PM-GOV-0001.
 7. **Türk dünyası üçün çoxdövlətli ölkə kodu** (ETSI §5.1.5) müəyyən ediləcəkmi → [[ADR-0002]].
 8. **TL dərc tezliyi** (≤6 ay, küylü təkrar dərc) ləğv siyahısının dərci ilə ([[ADR-0008]])
    necə uzlaşdırılır.
@@ -319,8 +347,9 @@ və TL dərc tezliyi (≤6 ay, küylü təkrar dərc — [[ADR-0008]] ilə uzla�
 - [[ADR-0002]] — onlyOwnerState / cross-recognition (kök CA sahibliyi, eIDAS körpüsü).
 - [[PM-AUTH-0001]] — üç təbəqə + tənzimləyici oxunaqlılıq əsaslandırması.
 - [[RS-EIDAS-0001]] — §5.1 (ETSI 119 612 Trusted List təhlili) = §8.1 proyeksiyasının əsası.
-- İmplementasiya: `sdk/` (resolver + yoxlama + 119 612 TL proyeksiyası), `contracts/src/` (RootCARegistry).
+- İmplementasiya: `sdk/` (resolver + yoxlama), `apps/trust-publisher/src/tl119612.ts` (119 612 XML görünüşü, [[ADR-0066]]),
+  `contracts/src/` (RootCARegistry).
 
-**Qüvvədədir** — versiya 1.0.0 (2026-10-02; §1.1 və XC6 2026-10-13, [[ADR-0050]]).
+**Qüvvədədir** — versiya 1.0.0 (2026-10-02; §1.1 və XC6 2026-10-13, [[ADR-0050]]; §8.1 2026-10-29, [[ADR-0066]]).
 
 ---

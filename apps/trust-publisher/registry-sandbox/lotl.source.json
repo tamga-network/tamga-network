@@ -11,7 +11,8 @@
     "trust_framework": "https://arf.tamga.network/trust-framework",
     "lote_contact": {
       "postal": {
-        "StreetAddress": "(to be published)",
+        "StreetAddress": "Sandbox (TEST) — placeholder, no real postal address",
+        "Locality": "Istanbul",
         "Country": "TR"
       },
       "electronic": ["mailto:info@tamga.network", "https://tamga.network"],
@@ -34,7 +35,7 @@
         "status": "provisional",
         "on_behalf_of": "Test network — not part of the Tamga Network trust framework (ADR-0038)"
       },
-      "signing_certs": ["tl-signer-1"],
+      "signing_certs": ["tl-signer-1", "tl-xml-signer-1"],
       "roles": {
         "registrar": {
           "status": "PROVISIONAL",
@@ -74,6 +75,14 @@
       "legal_name": "Tamga Network Sandbox Test Wallet Provider (TEST)",
       "wua_signing_certs": ["wallet-provider"],
       "lote_supply_point": "https://sandbox.tamga.network",
+      "postal_address": {
+        "street_address": "Sandbox (TEST) — placeholder, no real postal address",
+        "locality": "Istanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network"
+      },
       "note": "ADR-0042 K5: test key for the network's own demo scenes; not a wallet service.",
       "solutions": [
         {
@@ -91,6 +100,14 @@
       "legal_name": "OpenID Foundation Conformance Suite Test Client (TEST)",
       "wua_signing_certs": ["wallet-provider-oidf-conformance-test"],
       "lote_supply_point": "https://sandbox.tamga.network",
+      "postal_address": {
+        "street_address": "Sandbox (TEST) — placeholder, no real postal address",
+        "locality": "Istanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network"
+      },
       "note": "OpenID Foundation conformance self-test (2026-10-13): signer of the test tool's client attestation and key attestation; sandbox list only (ADR-0038 SB1); not a wallet service. Signing certificate wallet-provider-oidf-conformance-test registered 2026-10-13.",
       "solutions": [
         {
@@ -121,6 +138,14 @@
       ],
       "wua_signing_certs": ["wallet-provider-tamga-wp-1"],
       "lote_supply_point": "https://provider.tamgawallet.com",
+      "postal_address": {
+        "street_address": "Sandbox (TEST) — placeholder, no real postal address",
+        "locality": "Istanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://tamgawallet.com"
+      },
       "solutions": [
         {
           "solution_id": "tamga-wallet-expo",

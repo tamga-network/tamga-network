@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-18
+last_updated: 2026-10-29
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -55,8 +55,8 @@ replay edilir (§7); belgeler, cüzdan ve doğrulama hattı değişmez. Kanonik 
 4. **İmza** — her liste JWS compact (`.jws`; `alg: ES256`, `x5c` operatör sertifikası); `.json` yalnızca insan için.
    Doğrulayıcı yalnızca `.jws` kullanır; `x5c[0]` parmak izini `keys/root-fingerprints.json` (lotl) veya
    `lotl.national_lists[].signing_keys` (tl) ile eşler.
-5. **ETSI eşlemesi** — statüler Tamga enum'uyla; ETSI TS 119 612 XML projeksiyonu [[SPEC-ID-0002]] §8.1 tablosuyla
-   üretilir (`granted`/`withdrawn`/`TakenOverBy`).
+5. **ETSI eşlemesi** — statüler Tamga enum'uyla; ETSI TS 119 612 XML görünümü (`tl-<cc>.xml`) [[SPEC-ID-0002]] §8.1 profiliyle,
+   aynı imzalı listeden ve aynı sürümle üretilir; durum URI'leri Tamga kökünden, nitelikli hizmet iddiası yok ([[ADR-0066]]).
 6. **Kadans** — `lotl`/`tl-<cc>`: `next_update` ≤ 90 gün, değişiklik olmasa da yeniden imza; değişiklik ≤ 24 saatte
    yayın; `anchors.jsonl` saatlik (heartbeat dahil).
 7. **Tip kimliği** — `vct` URN ([[ADR-0010]]); `lotl.schemas[]` katalog girdisi `metadata_url + content_hash` verir.
@@ -80,7 +80,9 @@ wrprc/index.json · wrprc/…    kayıt sertifikaları (ETSI TS 119 475 rc-wrp+j
 zk/<circuit_id>.zst           listedeki ZK devre dosyaları (ADR-0032); cüzdan indirir, `zk_circuits[].sha256` ile denetler
 lote/<tür>.json · .jws        ETSI TS 119 602 LoTE görünümleri (wallet-providers, wrpac-providers, eaa-providers);
                               yalnız LoTE yayını açıksa (lote.enabled)
-archive/<dosya>.v<NNNN>.jws   değişmez sürüm arşivi (replay girdisi)
+tl-<cc>.xml · tl-<cc>.sha2    ETSI TS 119 612 XML görünümü (XAdES-B-B, imzacı keys/tl-xml-signer-1.cert.pem) ve SHA-256 özeti;
+                              yalnız TAMGA_TL119612=1 iken (ADR-0066; bugün sandbox'ta)
+archive/<dosya>.v<NNNN>.jws   değişmez sürüm arşivi (replay girdisi; XML'in arşivi archive/tl-<cc>.v<NNNN>.xml)
 CHANGELOG.md                  herkese açık değişiklik günlüğü
 ```
 
@@ -121,7 +123,8 @@ Statü sözlüğü: `ACTIVE | SUSPENDED | REVOKED | RETIRED` (+ kök: `ROLLING_O
 (`successor_id`) yayınlayabilir (I4). Operatör aracı: `trust-publisher status <slug> <STATUS> --reason r`
 (`REVOKED --invalidates-from <tarih>`: o andan sonra verilmiş belgeler düşer; `valid_from` = kurumun bütün belgeleri),
 doğrulayıcı için `rp-status <dns_name> <STATUS>`, tek kullanım ya da kapı grubu için `end-use <dns_name> <id>` (bitiş tarihi).
-Kayıt listeden çıkarılmaz (TL2); geri çekilen kurum ETSI izdüşümünde `withdrawn` olur ve LoTE'ye girmez.
+Kayıt listeden çıkarılmaz (TL2); geri çekilen kurum ETSI XML görünümünde kendi Tamga durum URI'siyle (`…/tl/Svcstatus/revoked`
+vb., [[SPEC-ID-0002]] §8.1) kalır ve LoTE'ye girmez.
 
 ---
 

@@ -427,7 +427,7 @@ məhkəmələri səlahiyyətlidir. Dövlətlər arasında şura səlahiyyətlidi
 | Səviyyə | Tamga-da |
 |---|---|
 | 1. Daşınma qabiliyyəti | SD-JWT VC və OpenID4VC; Aİ rəqəmsal cüzdanı Tamga rəqəmsal sənədini texniki cəhətdən emal edə bilər |
-| 2. Etibar | Etibar siyahısı (ETSI TS 119 612 mənasında); ETSI TS 119 602 görünüşü (119 612 XML nəşri ilk Aİ tərəfi tələb etdikdə, [[ADR-0036]] əlavəsi); kök barmaq izləri; xarici siyahı sahəsi |
+| 2. Etibar | Etibar siyahısı (ETSI TS 119 612 mənasında); ETSI TS 119 602 görünüşü; ETSI TS 119 612 XML görünüşü ([[ADR-0066]]; sandbox-da dərc olunur, real şəbəkədə poçt ünvanları tamamlandıqdan sonra); kök barmaq izləri; xarici siyahı sahəsi |
 | 3. Hüquqi tanınma | Dövlətlər arasında birtərəfli tanınma; Aİ ilə yalnız dövlətlərarası eIDAS Maddə 14 sazişi (etibar xidmətləri; uzunmüddətli perspektivdə). Şəbəkə bu sazişin tərəfi deyil |
 
 ## 6.1 Xarici siyahılar (federasiya)

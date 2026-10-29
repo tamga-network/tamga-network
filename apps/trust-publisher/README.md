@@ -47,13 +47,17 @@ Yerel geliştirme için hepsini birden: `npm run setup`.
 - `etsi/` — ETSI TS 119 602 (`19602/`) ve TS 119 612 (`19612/`) şema dosyaları (yalnız testte)
 - `dist/` — üretilen listeler (git dışında)
 
-**ETSI TS 119 612 XML görünümü (taslak, [[ADR-0066]] — Proposed; varsayılan kapalı).** `TAMGA_TL119612=1` iken `build`, imzaladığı
+**ETSI TS 119 612 XML görünümü ([[ADR-0066]] — Accepted 2026-10-29; varsayılan kapalı, sandbox'ta açık).** `TAMGA_TL119612=1` iken `build`, imzaladığı
 `tl-<cc>` listesinden ve LOTL'dan aynı sürümle (`TSLSequenceNumber` = `version`) XAdES-B-B imzalı `tl-<cc>.xml`, `tl-<cc>.sha2`
 (SHA-256 özeti, TS 119 612 §6.1) ve `archive/tl-<cc>.vNNNN.xml` yazar. İmzacı `TAMGA_TL119612_SIGNER` (PKI'daki sertifika adı;
 varsayılan `tl-signer-1`) TS 119 612 §5.7.1 profiline uymalıdır (C/O = slot ülke kodu / işletmeci adı, keyUsage yalnız
 digitalSignature, basicConstraints CA=false, SKI, EKU `id-tsl-kp-tslSigning`); gerçek ağda uymayan imzacı ya da eksik yayın
-verisi (posta adresleri) yayını durdurur, sandbox'ta uyarıdır. Bugünkü `tl-signer-1` profile uymaz; gerçek ağ için ayrı XML imza
-sertifikası gerekir. Bayrak, ADR kabul edilmeden ve sandbox doğrulaması bitmeden açılmaz.
+verisi (posta adresleri) yayını durdurur, sandbox'ta uyarıdır. Bugünkü `tl-signer-1` profile uymaz; XML'i ayrı imza sertifikası
+`tl-xml-signer-1` imzalar (`ops/gen-pki.ts` üretir: kökçe verilen yaprak, keyUsage digitalSignature + nonRepudiation, EKU
+0.4.0.2231.3.0) ve parmak izi LOTL'da slotun `signing_certs` listesine eklenir. Sandbox'ta açık (sunucunun sandbox ayarında
+`TAMGA_TL119612=1`, `TAMGA_TL119612_SIGNER=tl-xml-signer-1`; kayıtlarda "Sandbox (TEST)" yer tutucu adresler). Gerçek ağda bayrak,
+gerçek posta adresleri ve üretim imza sertifikası gelmeden açılmaz (`ops/README.md` "XML liste imzacısı"). URI'lerin açıklaması:
+`docs/concepts/etsi-trusted-list.md`.
 
 Bir kayıt listeden **silinmez** (SPEC-TRUST-0001 TL2): kurum ya da doğrulayıcı geri çekilirken durumu değişir ve
 `status_history`'ye eklenir. Hiç geçerli olmaması gereken kayıt (ör. gerçek ağdaki örnek kurum) `REVOKED` +

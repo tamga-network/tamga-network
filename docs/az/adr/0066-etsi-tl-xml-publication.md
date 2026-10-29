@@ -1,9 +1,9 @@
 ---
 document_id: ADR-0066
 title: "ETSI TS 119 612 XML siyahı görünüşü"
-status: Proposed
-review_status: Draft
-version: 0.1.0
+status: Active
+review_status: Completed
+version: 1.0.0
 created: 2026-10-29
 last_updated: 2026-10-29
 summary: >
@@ -11,21 +11,23 @@ summary: >
   (XAdES imzalı etibarlı siyahı) dərci 2026-10-13-də təxirə salınmışdı (ADR-0036 əlavəsi). Komissiyanın üçüncü ölkələr üçün açdığı
   aralıq yol (üçüncü ölkə etibarlı siyahılarının siyahısı, TC AdES LOTL) və AB-nin etibarlı siyahı ekosistemi milli siyahını 119 612
   XML formatında tələb edir; siyahının sahibi dövlətdir, şəbəkə aləti və şablonu təqdim edə bilər. Təklif: hər ölkə slotu üçün eyni
-  imzalı mənbədən, eyni ardıcıllıq nömrəsi ilə, XAdES-B-B imzalı 119 612 XML görünüşü yaradılır; kod hazırdır, lakin defolt olaraq
-  bağlıdır. Bu gün yalnız Türkiyə slotu aktivdir; dərc ayrıca XML imza sertifikatı və dərc məlumatları tamamlandıqdan sonra layihə
-  rəhbərliyinin təsdiqi ilə açılır. AB mənasında ixtisaslı və ya bildirilmiş olma iddiası daşıyan ETSI URI-ləri istifadə olunmur.
+  imzalı mənbədən, eyni ardıcıllıq nömrəsi ilə, XAdES-B-B imzalı 119 612 XML görünüşü yaradılır; yaradılma bayraqla açılır (defolt
+  bağlı). Bu gün yalnız Türkiyə slotu aktivdir; əvvəlcə sandbox-da açıldı (§5.7.1-ə uyğun ayrıca XML imza sertifikatı ilə), real
+  şəbəkə operator və qurum poçt ünvanları tamamlandıqdan sonra layihə rəhbərliyinin təsdiqi ilə açılır. AB mənasında ixtisaslı və ya
+  bildirilmiş olma iddiası daşıyan ETSI URI-ləri istifadə olunmur; URI kökü `https://trust.tamga.network/tl/…`. Qəbul: 2026-10-29
+  (layihə rəhbərliyinin təsdiqi).
 domain: Trust
 related: ["[[ADR-0009]]", "[[ADR-0024]]", "[[ADR-0035]]", "[[ADR-0036]]", "[[ADR-0042]]", "[[SPEC-TRUST-0001]]", "[[SPEC-ID-0002]]", "[[FW-TF-0001]]"]
 translation_of: ADR-0066
-source_version: "0.1.0"
+source_version: "1.0.0"
 ---
 
 # Qısaca
 
 Avropada etibarlı siyahılar illərdir bir XML formatında (ETSI TS 119 612) dərc olunur; AB-nin imza yoxlama alətləri bu formatı
 oxuyur. AB üzvü olmayan ölkənin siyahısının Avropada tanınmasının bugünkü aralıq yolu da bu formatdan keçir. Tamga-nın siyahıları
-bu gün bu formatda dərc olunmur. Bu təklif eyni siyahını ikinci formatda da, eyni imzalı mənbədən və eyni ardıcıllıq nömrəsi ilə
-dərc etməyi gətirir. Kod yazılıb və sınaqdan keçib; dərc bağlıdır, açılması bu qərarın qəbuluna və bir neçə hazırlığa bağlıdır.
+bu gün bu formatda dərc olunmur. Bu qərar eyni siyahını ikinci formatda da, eyni imzalı mənbədən və eyni ardıcıllıq nömrəsi ilə
+dərc etməyi gətirir. Əvvəlcə sınaq şəbəkəsində (sandbox) açıldı; real şəbəkədə açılması poçt ünvanlarının tamamlanmasına bağlıdır.
 
 # Kontekst
 
@@ -53,7 +55,7 @@ dərc etməyi gətirir. Kod yazılıb və sınaqdan keçib; dərc bağlıdır, a
 - **Köhnə cədvəl.** [[SPEC-ID-0002]] §8.1-dəki 119 612 uyğunlaşdırması (sənəd verən → `CA/QC`, `granted`) bugünkü qərarlarla
   uyğun gəlmir: `granted` və `…/QC` AB mənasında ixtisaslı xidmət iddiasıdır; Tamga-nın sənəd verənləri ixtisaslı deyil ([[ADR-0022]]).
 
-# Təklif olunan qərar
+# Qərar
 
 ## K1 — Eyni imzalı mənbədən, eyni versiya ilə XML görünüşü
 
@@ -67,7 +69,9 @@ dərc etməyi gətirir. Kod yazılıb və sınaqdan keçib; dərc bağlıdır, a
 
 - Siyahı növü `https://trust.tamga.network/tl/TSLType/<CC>list`, status müəyyənetmə `…/StatusDetn/<CC>determination`, qaydalar
   `https://arf.tamga.network/trust-framework` + `…/schemerules/<CC>`, xidmət statusu `…/Svcstatus/{active, suspended, revoked,
-  retired, rollingover, deprecated}`. URI adları təklifdir; adlandırma təsdiqi ilə dəqiqləşir.
+  retired, rollingover, deprecated}`. URI adları və kökü layihə rəhbərliyi tərəfindən təsdiqləndi
+  (2026-10-29); mənaları `docs.tamga.network/az/concepts/etsi-trusted-list` səhifəsində müəyyən edilir və `trust.tamga.network/tl/`
+  altındakı hər URI həmin səhifəyə yönləndirilir.
 - AB-də "üzv dövlət tərəfindən bildirilmiş" və ya "ixtisaslı" mənası daşıyan ETSI URI-ləri (`EUgeneric`, `EUappropriate`,
   `granted`, `recognisedatnationallevel`, `…/QC`) istifadə olunmur.
 - Xidmət növü funksiyanı birbaşa ifadə edən ETSI növü varsa ETSI-nindir (`Svctype/CA/PKC`, `Svctype/EAA`, TS 119 602
@@ -86,16 +90,21 @@ dərc etməyi gətirir. Kod yazılıb və sınaqdan keçib; dərc bağlıdır, a
 
 - İmza TS 119 612 Əlavə B və EN 319 132-1 XAdES-B-B; ECDSA P-256 / SHA-256.
 - İmzalayanın sertifikatı §5.7.1 profilinə uyğundur (C/O, keyUsage, basicConstraints CA=false, SKI, EKU `id-tsl-kp-tslSigning`).
-  Bugünkü siyahı imzalayanı bu profilə uyğun gəlmədiyi üçün **ayrıca XML imza sertifikatı** lazımdır. Real şəbəkədə profilə uyğun
-  olmayan imzalayanla XML dərc olunmur.
-- XML imzalayanının barmaq izi LOTL-da müvafiq ölkə slotunun imza açarları arasında dərc olunur.
+  Bugünkü siyahı imzalayanı bu profilə uyğun gəlmədiyi üçün **ayrıca XML imza sertifikatı** (`tl-xml-signer-1`) istifadə olunur:
+  şəbəkənin kök CA-sı tərəfindən verilən, yalnız XML siyahısını imzalayan yarpaq sertifikat; JSON siyahılarını `tl-signer-1`
+  imzalamağa davam edir. Sandbox-da 2026-10-29-da verildi; real şəbəkədə depodan kənar istehsal PKI-sında, layihə rəhbərliyinin
+  təsdiqi ilə verilir. Real şəbəkədə profilə uyğun olmayan imzalayanla XML dərc olunmur.
+- XML imzalayanının barmaq izi LOTL-da müvafiq ölkə slotunun imza açarları arasında (`national_lists[].signing_keys`, yeni sahə
+  yoxdur) dərc olunur, sertifikatı `keys/`-ə qoyulur.
 
 ## K5 — Dərc: defolt bağlı, əvvəlcə sandbox
 
 - `TAMGA_TL119612` bayrağı defolt bağlıdır. Açılış ardıcıllığı: sandbox, müstəqil yoxlama (AB DSS, ETSI XSD), sonra real şəbəkə —
-  hər addım layihə rəhbərliyinin təsdiqi ilə.
+  hər addım layihə rəhbərliyinin təsdiqi ilə. Sandbox 2026-10-29-da açıldı.
+- Server `.xml`-i `application/vnd.etsi.tsl+xml`, `.sha2`-ni `text/plain` kimi, ən çox 4 saatlıq keşlə təqdim edir (§6.1, §6.2).
 - Real şəbəkədə çatışmayan dərc məlumatı (operatorun poçt ünvanı, qurum və pul kisəsi təminatçısı ünvanları — [[ADR-0024]]) dərci
-  dayandırır; sandbox-da xəbərdarlıqdır.
+  dayandırır; sandbox-da xəbərdarlıqdır. Sandbox qeydləri "Sandbox (TEST)" işarəli yer tutucu ünvan daşıyır; real şəbəkədə yer
+  tutucu qəbul edilmir.
 
 # Nəzərdən keçirilən variantlar
 
@@ -108,7 +117,7 @@ dərc etməyi gətirir. Kod yazılıb və sınaqdan keçib; dərc bağlıdır, a
 | Yoxlayan tərəfləri də TSP kimi siyahıya salmaq | rədd | Etibarlı xidmət təminatçısı deyillər |
 | Mövcud siyahı imzalayanı ilə imzalamaq | rədd (real şəbəkədə) | §5.7.1 profilinə uyğun deyil |
 
-# Təklif olunan qaydalar (qəbul edilərsə bağlayıcı cədvələ köçürülür)
+# Dəyişməzlər
 
 | Kod | Qayda |
 |---|---|
@@ -126,13 +135,16 @@ iki müstəqil imza yoxlayıcısı, XAdES xassələri, bayraq, imzalayan profili
 "XAdES-BASELINE-B, imza və istinadlar bütöv" nəticəsini verdi (imzalayan AB-də etibar lövbəri olmadığından nəticə INDETERMINATE —
 gözlənilən).
 
-Qəbul edilərsə: [[SPEC-ID-0002]] §8.1 cədvəli yenidən yazılır; [[SPEC-TRUST-0001]]-ə XML görünüşü; [[ADR-0036]] əlavəsinə qeyd. Dərcdən
-əvvəl: XML imza sertifikatı və LOTL-da barmaq izi; operatorun poçt ünvanı; qurum və pul kisəsi təminatçısı ünvanları; URI izah
-səhifəsi; server ayarları; sandbox dərci və AB DSS yoxlaması; sonra real şəbəkə.
+Qəbulla (2026-10-29): [[SPEC-ID-0002]] §8.1 cədvəli yenidən yazıldı (köhnə `CA/QC` + `granted` uyğunlaşdırması çıxarıldı);
+[[SPEC-TRUST-0001]]-ə XML görünüşü; [[ADR-0036]] əlavəsinə qeyd. Sandbox-da açıldı: `tl-xml-signer-1` (sandbox kökü ilə, §5.7.1
+profili), "TEST" işarəli yer tutucu ünvanlar, `trust.sandbox.tamga.network/tl-tr.xml` + `.sha2`, URI izah səhifəsi (tr/en/az);
+canlı siyahı ETSI XSD-yə və AB DSS yoxlayıcısına qarşı yoxlanıldı. Real şəbəkə üçün qalanlar: istehsal XML imza sertifikatı (depodan
+kənar; əmr `ops/README.md`) və LOTL-da barmaq izi; operatorun poçt ünvanı; qurum və pul kisəsi təminatçısı ünvanları; sonra bayraq.
 
-**Açıq məsələlər:** URI adları və sertifikat adı; `TSLSequenceNumber`-ın JSON versiyasını izləməsi; dövlət slotu TC AdES LOTL-a
+**Açıq məsələlər:** URI adları təsdiqləndi, sertifikat adı (`tl-xml-signer-1`) təsdiq gözləyir; `TSLSequenceNumber`-ın JSON versiyasını izləməsi; dövlət slotu TC AdES LOTL-a
 müraciət etdikdə AB LOTL-a göstərici və "MRA" elementi; ETSI TR 103 684 özünüqiymətləndirməsinin qaydalar kitabı ilə uyğunlaşdırılması.
 
 # Status
 
-**Proposed — 2026-10-29.** Layihə rəhbərliyinin təsdiqini gözləyir. Kod hazırdır, bayraq bağlıdır; istehsal ünvanlarında dərc yoxdur.
+**Accepted — 2026-10-29** (layihə rəhbərliyinin təsdiqi). DECISIONS: D-TRUST-6. Sandbox-da açıqdır; real şəbəkədə poçt ünvanları və
+istehsal XML imza sertifikatı hazır olduqda layihə rəhbərliyinin təsdiqi ilə açılır.

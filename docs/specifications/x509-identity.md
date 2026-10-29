@@ -4,7 +4,7 @@ title: "Kurum kimliği (X.509)"
 status: Active
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-16
+last_updated: 2026-10-29
 summary: >
   [[ADR-0004]] X.509 kararının kod/protokol seviyesindeki karşılığı. Kurumsal/entity
   kimlik, ulusal Root CA'lara dayanan X.509 sertifikalarıyla kurulur; kurumun zincir
@@ -219,46 +219,74 @@ AB ile birlikte-çalışabilirlik için bir kurum, mevcut kimliğini Tamga `issu
 
 Bu köprü **tek yönlü tanımadır**; Tamga'nın çekirdek güven zinciri ulusal kök CA'lardır.
 
-## 8.1 eIDAS Güven Listesi Projeksiyonu (ETSI TS 119 612)
+## 8.1 ETSI TS 119 612 XML liste görünümü ([[ADR-0066]])
 
-> Karar temeli: [[RS-EIDAS-0001]] §5.1 (ETSI TS 119 612 V2.4.1 analizi). ETSI 119 612,
-> AB-dışı ülke/uluslararası kuruluşların Trusted List (TL) yayımlayıp AB LOTL ile
-> **karşılıklı tanınmasını** açıkça öngörür ([[ADR-0002]] cross-recognition). Bu, kurumsal
-> tarafın did:web köprüsüne göre daha düzenleyici-okunabilir interop yoludur.
+> Karar temeli: [[ADR-0066]] (2026-10-29; [[RS-EIDAS-0001]] §5.1, ETSI TS 119 612 V2.4.1). AB'nin imza doğrulama araçları ve
+> Komisyon'un üçüncü ülkeler için açtığı ara yol (TC AdES LOTL) ulusal listeyi bu XML biçiminde ister. Tamga'nın kendi XML listesi
+> o listeye **girmez** (orası devletin denetlediği imza ve mühür sertifikası sağlayıcıları içindir); kazanç, devlete hazır araç ve
+> şablon ile AB araçlarının Tamga listesini XML olarak da okuyabilmesidir.
 
-**İlke:** On-chain kayıt (RootCARegistry + Issuer Registry) **tek doğruluk kaynağıdır**;
-119 612-uyumlu TL, bu zincir durumunun **salt-okunur bir off-chain projeksiyonudur**
-(XML/XAdES). Projeksiyon `sdk/` altında üretilir, **kontrat değişikliği gerektirmez** ve
-zincir durumunu değiştirmez. Tamga bu TL için bir **Trusted List Scheme Operator (TLSO)**
-rolü üstlenir (ilk aşamada Tamga; devlet aşamasında ulusal kök otorite — [[PM-ASSUR-0001]]).
+**İlke:** Yetkili kaynak imzalı Tamga ülke listesidir ([[SPEC-TRUST-0001]]). Liste yayıncısı (`apps/trust-publisher`, `build`)
+aynı imzalı `tl-<cc>` nesnesinden ve LOTL'dan, **aynı sürümle** (`TSLSequenceNumber` = `version`) XAdES-B-B imzalı bir görünüm
+üretir: `tl-<cc>.xml`, `tl-<cc>.sha2` ve `archive/tl-<cc>.vNNNN.xml`. XML'de JSON'da olmayan kayıt bulunamaz; çelişkide JSON
+geçerlidir. Tamga bu liste için geçici liste işletmecisidir (TLSO); bir devlet slotu devraldığında URI kümesi slot başına
+değişebilir, kayıtlar ve kimlikler değişmez.
 
-**Servis tipi eşlemesi (Tamga kaydı → ETSI Service type identifier):**
+**URI profili (iddia taşımayan Tamga kökü, `https://trust.tamga.network/tl/`):**
 
-| Tamga | ETSI 119 612 Service type URI |
+| Alan | URI |
 |---|---|
-| Ulusal kök CA (RootCARegistry) | `…/Svctype/NationalRootCA-QC` |
-| Issuer (CA/sertifika veren kurum) | `…/Svctype/CA/QC` (veya `CA/PKC` non-qualified) |
-| Kayıt otoritesi / kimlik ispatı ([[DECISIONS]] D-ID-2) | `…/Svctype/RA`, `…/Svctype/IdV` |
-| X509-AC EAA veren kurum ([[RS-EIDAS-0001]] §4.4) | `…/Svctype/ACA`, `…/Svctype/EAA/Q` |
-| TL yayımlayan servis (Tamga TLSO) | `…/Svctype/TLIssuer` |
+| `TSLType` | `…/tl/TSLType/<CC>list` |
+| `StatusDeterminationApproach` | `…/tl/StatusDetn/<CC>determination` |
+| `SchemeTypeCommunityRules` | `https://arf.tamga.network/trust-framework` + `…/tl/schemerules/<CC>` |
+| `SchemeInformationURI` | `…/tl/` + yayın yerinin `archive/` adresi |
 
-**Statü sözlüğü 1:1 eşlemesi (Tamga durum → ETSI Service current status):**
+AB anlamında "üye devletçe bildirilmiş" ya da "nitelikli" iddiası taşıyan ETSI URI'leri (`EUgeneric`, `EUappropriate`, `granted`,
+`recognisedatnationallevel`, `…/QC`, `…/NationalRootCA-QC`) **kullanılmaz** (TX2). URI'lerin anlamı
+[ETSI XML güven listesi](/concepts/etsi-trusted-list) sayfasında tanımlıdır.
 
-| Tamga durum | ETSI Svcstatus | Not |
+**Hizmet türü eşlemesi (Tamga kaydı → `ServiceTypeIdentifier`):**
+
+| Tamga | URI | Not |
 |---|---|---|
-| `ACTIVE` (Root/Issuer) | `…/Svcstatus/granted` | Nitelikli hizmet onaylı |
-| `ACTIVE` (ulusal tanıma bağlamı) | `…/Svcstatus/recognisedatnationallevel` | 5.5.1.3 tipi hizmetler için |
-| `ROLLING_OVER` (Root) | `granted` + `TakenOverBy` (§5.5.9.3) | Halef köke devir; örtüşme dönemi |
-| `SUSPENDED` (Issuer) | `granted` → geçici `withdrawn` | Askı; geçmiş korunur |
-| `RETIRED` (Root, rollover sonu) | `withdrawn` + tam statü geçmişi | Silme değil; geçmiş asla düşmez (§5.3.12) |
-| `REVOKED` (Root/Issuer) | `withdrawn` | Ele geçirilme; alt sertifikalar düşer |
-| `successorId` bağı (halef belge veren) | `TakenOverBy` extension | D-BC-5 / XC2 birebir karşılık |
+| Ulusal kök CA (`root_cas`) | `http://uri.etsi.org/TrstSvc/Svctype/CA/PKC` | Nitelikli olmayan sertifika veren hizmet (§5.5.1.2) |
+| Belge veren — sınıfı yok ya da genel | `http://uri.etsi.org/TrstSvc/Svctype/EAA` | Nitelikli olmayan EAA verme |
+| Belge veren — kamu kaynağı (PuB-EAA karşılığı) | `…/tl/Svctype/EAA/Pub-EAA` | Tamga kökü: ETSI URI'si iddia taşırdı |
+| Belge veren — Tamga'da akredite (QEAA karşılığı) | `…/tl/Svctype/EAA/Q` | Tamga kökü; AB anlamında nitelikli değil |
+| Belge verenin iptal listesi imzası (`delegate_keys`, amaç `status_list`) | `…/tl/Svctype/EAA/StatusList` | Ayrı hizmet, ayrı sertifika |
+| Cüzdan sağlayıcı çözümü (LOTL `wallet_providers`) | `http://uri.etsi.org/19602/SvcType/WalletSolution/Issuance` | TS 119 602 türü (LoTE ile aynı) |
 
-**Değişmez korumaları:** Projeksiyon yalnızca **kişisel-olmayan** güven verisini (kök/kurum
-public anahtarı, statü, geçmiş) dışa verir (`XC3`). **Vatandaş pairwise takma adı asla
-TL'e yazılmaz** (`XC4`); TL yalnızca kurumsal katmanı (B) kapsar. Bu, ETSI Trusted List
-modelinin "blockchain güven çapası" varyantıdır: ETSI digest'i OJEU'ya koyar, Tamga
-RootCARegistry'ye çıpalar.
+Listede **olmayanlar:** doğrulayıcılar (güven hizmeti sağlayıcısı değildir; kayıtları JSON listesinde ve kayıt sertifikalarında —
+[[ADR-0026]]), `RESERVED` / `PROVISIONAL` kayıtlar, kişisel veri (XC3, XC4).
+
+**Durum eşlemesi (Tamga durumu → `ServiceStatus`, birebir):**
+
+| Tamga durumu | `ServiceStatus` |
+|---|---|
+| `ACTIVE` | `…/tl/Svcstatus/active` |
+| `SUSPENDED` | `…/tl/Svcstatus/suspended` |
+| `REVOKED` | `…/tl/Svcstatus/revoked` |
+| `RETIRED` | `…/tl/Svcstatus/retired` |
+| `ROLLING_OVER` | `…/tl/Svcstatus/rollingover` |
+| `DEPRECATED` | `…/tl/Svcstatus/deprecated` |
+
+Kayıt silinmez: etkin olmayan hizmet durumuyla kalır; önceki durumlar `ServiceHistory`'de yeniden eskiye, sertifika yerine SKI ile
+(§5.5.10, §5.6.3). Bu URI'leri tanımayan bir okuyucu hizmeti etkin saymaz (güvenli taraf).
+
+**İmza ve imzacı:** XAdES-B-B, zarflanmış (`URI=""`, enveloped-signature + Exclusive C14N), SignedProperties (SigningTime,
+SigningCertificateV2, DataObjectFormat), KeyInfo'da yalnız imzacı sertifikası; ECDSA P-256 / SHA-256. İmzacı ayrı bir XML imza
+sertifikasıdır (`tl-xml-signer-1`, kökçe verilen yaprak) ve §5.7.1 profiline uyar: konu `C` = slot ülke kodu, `O` =
+`SchemeOperatorName`; basicConstraints CA=false; keyUsage yalnız digitalSignature + nonRepudiation; SKI ve AKI; extendedKeyUsage
+`id-tsl-kp-tslSigning` (0.4.0.2231.3.0). Parmak izi LOTL'da slotun imza anahtarları arasındadır. Gerçek ağda profile uymayan
+imzacıyla ya da eksik yayın verisiyle (işletmeci, kurum, cüzdan sağlayıcı posta adresi) XML yayınlanmaz (TX3).
+
+**Yayın:** bayrak `TAMGA_TL119612` (varsayılan kapalı, TX5). Sandbox'ta açık (`trust.sandbox.tamga.network/tl-tr.xml`, "TEST"
+işaretli yer tutucu adreslerle); gerçek ağda (`trust.tamga.network/tl-<cc>.xml`) posta adresleri tamamlanınca. Sunucu `.xml`'i
+`application/vnd.etsi.tsl+xml`, `.sha2`'yi `text/plain` olarak ve en çok 4 saatlik önbellekle sunar (§6.1, §6.2).
+
+**Eski eşleme kalktı (2026-10-29):** bu bölümün önceki sürümündeki tablo (belge veren → `CA/QC`, `ACTIVE` → `granted` /
+`recognisedatnationallevel`, `NationalRootCA-QC`) AB anlamında nitelikli hizmet iddiası taşıdığı için [[ADR-0066]] ile kaldırıldı;
+Tamga'nın belge verenleri nitelikli değildir ([[ADR-0022]]).
 
 ### 8.1.1 LoTE izdüşümü (ETSI TS 119 602, JSON) — uygulandı (2026-09-29)
 
@@ -306,9 +334,8 @@ ve TL yayın kadansı (≤6 ay, gürültülü yeniden yayın — [[ADR-0008]] il
 3. **Court-token formatı** (JWS vs EIP-712 + precompile) → [[DECISIONS]] D-GRD-1.
 4. **OCSP stapling vs on-chain durum** birincilliği — performans/uyum dengesi.
 5. **CAIP-2 ağ kimliği** (`tamga:<chainId>`) sertifika/issuerId gösteriminde nasıl yer alır.
-6. **119 612 TL projeksiyon formatı** (§8.1): `sdk/` üreteci XML/XAdES-B-B mı üretir, imza
-   anahtarı yönetimi (≥2 kaydırmalı sertifika, ETSI Annex A.2) nasıl kurgulanır → SPEC-CRED /
-   PM-GOV-0001.
+6. ~~**119 612 TL projeksiyon formatı**~~ ✅ [[ADR-0066]] (2026-10-29): liste yayıncısı XML/XAdES-B-B üretir, ayrı §5.7.1
+   imzacısıyla (§8.1). İmza anahtarı yenileme sırası (≥2 kaydırmalı sertifika, ETSI Annex A.2) açık → PM-GOV-0001.
 7. **Türk dünyası çok-devletli ülke kodu** (ETSI §5.1.5) tanımlanacak mı → [[ADR-0002]].
 8. **TL yayın kadansı** (≤6 ay, gürültülü yeniden yayın) iptal listesi yayınıyla ([[ADR-0008]])
    nasıl birleştirilir.
@@ -324,8 +351,9 @@ ve TL yayın kadansı (≤6 ay, gürültülü yeniden yayın — [[ADR-0008]] il
 - [[ADR-0002]] — onlyOwnerState / cross-recognition (kök CA sahipliği, eIDAS köprüsü).
 - [[PM-AUTH-0001]] — üç katman + düzenleyici okunabilirlik gerekçesi.
 - [[RS-EIDAS-0001]] — §5.1 (ETSI 119 612 Trusted List analizi) = §8.1 projeksiyonunun temeli.
-- Implementasyon: `sdk/` (resolver + doğrulama + 119 612 TL projeksiyonu), `contracts/src/` (RootCARegistry).
+- Implementasyon: `sdk/` (resolver + doğrulama), `apps/trust-publisher/src/tl119612.ts` (119 612 XML görünümü, [[ADR-0066]]),
+  `contracts/src/` (RootCARegistry).
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §1.1 ve XC6 2026-10-13, [[ADR-0050]]).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §1.1 ve XC6 2026-10-13, [[ADR-0050]]; §8.1 2026-10-29, [[ADR-0066]]).
 
 ---

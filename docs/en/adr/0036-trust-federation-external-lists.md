@@ -168,6 +168,9 @@ Implemented (2026-10-01):
 > **Addendum (2026-10-13):** 119 612 XML list publication and `etsi_tl` are deferred; the trigger is the first party from the EU
 > asking for them (see "Addendum" above). Approved by project management (first EU alignment review, decision 15).
 
+> **Lifted (2026-10-29) — [[ADR-0066]]:** the deferral of 119 612 XML list publication is lifted; the XML view of the Tamga list
+> is generated under [[ADR-0066]] (sandbox first). Using `etsi_tl` in verifier requests is a separate topic; `aki` stays today.
+
 > **Note (2026-10-13, engineering correction, packages 0.5.2):** the "no match" rule above was narrowed — the wallet does not
 > exclude a credential because of a `trusted_authorities` entry it cannot evaluate ("not evaluable"; the credential is offered
 > and it is not a positive trust signal), and it evaluates `etsi_tl` against the lists it has loaded; details in

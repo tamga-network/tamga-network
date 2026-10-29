@@ -4,7 +4,7 @@ title: "Etibar siyahıları"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-18
+last_updated: 2026-10-29
 summary: >
   Bugünkü (zəncirsiz) mərhələnin etibar lövbəri olan imzalı, versiyalı və hash zəncirli etibar siyahılarının (lotl.jws, tl-{cc}.jws) və saatlıq lövbər jurnalının (anchors.jsonl) normativ formatı, dərc tezliyi, açar intizamı, TDT-first slotları, qeydin həyat dövrü və zəncirlə ekvivalentlik qaydaları. Hər sahə bir SPEC-BC-0001 kontrakt qeydinə uyğunlaşdırılır; oxuma yalnız TrustSource interfeysi vasitəsilə aparılır.
 translation_of: SPEC-TRUST-0001
@@ -53,8 +53,9 @@ replay edilir (§7); rəqəmsal sənədlər, rəqəmsal cüzdan və yoxlama xət
 4. **İmza** — hər siyahı JWS compact formatındadır (`.jws`; `alg: ES256`, `x5c` operator sertifikatı); `.json` yalnız insan üçündür.
    Yoxlayan tərəf yalnız `.jws` istifadə edir; `x5c[0]` barmaq izini `keys/root-fingerprints.json` (lotl) və ya
    `lotl.national_lists[].signing_keys` (tl) ilə tutuşdurur.
-5. **ETSI uyğunlaşdırması** — statuslar Tamga enum-u ilə; ETSI TS 119 612 XML proyeksiyası [[SPEC-ID-0002]] §8.1 cədvəli ilə
-   yaradılır (`granted`/`withdrawn`/`TakenOverBy`).
+5. **ETSI uyğunlaşdırması** — statuslar Tamga enum-u ilə; ETSI TS 119 612 XML görünüşü (`tl-<cc>.xml`) [[SPEC-ID-0002]] §8.1
+   profili ilə, eyni imzalı siyahıdan və eyni versiya ilə yaradılır; status URI-ləri Tamga kökündəndir, ixtisaslı xidmət iddiası
+   yoxdur ([[ADR-0066]]).
 6. **Tezlik** — `lotl`/`tl-<cc>`: `next_update` ≤ 90 gün, dəyişiklik olmasa belə yenidən imzalanır; dəyişiklik ≤ 24 saat ərzində
    dərc olunur; `anchors.jsonl` saatlıq (heartbeat daxil).
 7. **Tip identifikatoru** — `vct` URN ([[ADR-0010]]); `lotl.schemas[]` kataloq girişi `metadata_url + content_hash` verir.
@@ -78,6 +79,8 @@ wrprc/index.json · wrprc/…    registration certificates (ETSI TS 119 475 rc-w
 zk/<circuit_id>.zst           ZK circuit files listed in `zk_circuits` (ADR-0032); wallets download them and check `zk_circuits[].sha256`
 lote/<type>.json · .jws       ETSI TS 119 602 LoTE views (wallet-providers, wrpac-providers, eaa-providers);
                               only when LoTE publication is enabled (lote.enabled)
+tl-<cc>.xml · tl-<cc>.sha2    ETSI TS 119 612 XML view (XAdES-B-B, signer keys/tl-xml-signer-1.cert.pem) and SHA-256 digest;
+                              only with TAMGA_TL119612=1 (ADR-0066; in the sandbox today)
 archive/<file>.v<NNNN>.jws    immutable version archive (replay input)
 CHANGELOG.md                  public change log
 ```
@@ -119,7 +122,8 @@ Status lüğəti: `ACTIVE | SUSPENDED | REVOKED | RETIRED` (+ kök: `ROLLING_OVE
 (`successor_id`) dərc edə bilər (I4). Operator aləti: `trust-publisher status <slug> <STATUS> --reason r`
 (`REVOKED --invalidates-from <tarih>`: həmin andan sonra verilmiş rəqəmsal sənədlər etibarsız olur; `valid_from` = qurumun bütün rəqəmsal sənədləri),
 yoxlayan tərəf üçün `rp-status <dns_name> <STATUS>`, tək istifadə və ya qapı qrupu üçün `end-use <dns_name> <id>` (bitmə tarixi).
-Qeyd siyahıdan çıxarılmır (TL2); geri çəkilən qurum ETSI proyeksiyasında `withdrawn` olur və LoTE-yə daxil edilmir.
+Qeyd siyahıdan çıxarılmır (TL2); geri çəkilən qurum ETSI XML görünüşündə öz Tamga status URI-si ilə (`…/tl/Svcstatus/revoked`
+və s., [[SPEC-ID-0002]] §8.1) qalır və LoTE-yə daxil edilmir.
 
 ---
 

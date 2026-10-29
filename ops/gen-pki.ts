@@ -20,6 +20,11 @@
  *      liste fixture'ları WIA/WUA doğrulamasını bununla dener; hiçbir gerçek cüzdanın sertifikası değildir (ADR-0042 K5: ağ
  *      cüzdan sağlayıcı işletmez; gerçek cüzdan sağlayıcının anahtarını cüzdan kendisi üretir, ağ yalnız sertifikasını listeler)
  *   5. Referans verifier erişim sertifikası (rp-verify)    — kökçe imzalı; SAN dns verify.tamga.network; istek nesnesini imzalar
+ *   5b. TS 119 612 XML liste imzacısı (tl-xml-signer-1, ADR-0066 K4) — kökçe imzalı yaprak, ETSI TS 119 612 §5.7.1 profili:
+ *      konu C + O (= SchemeOperatorName), basicConstraints CA=false, keyUsage digitalSignature + nonRepudiation (kritik), SKI + AKI,
+ *      extendedKeyUsage id-tsl-kp-tslSigning (0.4.0.2231.3.0). Yalnız XML listesini imzalar; JSON listeleri `tl-signer-1` imzalar.
+ *      Gerçek ağda: `TAMGA_PROD_PKI_DIR=<gizli klasör> npx tsx ops/gen-pki.ts --prod` eksik olan bu yaprağı üretir (proje yönetimi
+ *      onayıyla; ops/README.md "XML liste imzacısı").
  *   6. Tamga Wallet sağlayıcı sertifikası (wallet-provider-tamga-wp-1) — üretilmez: depodaki `ops/pki-sandbox/` kopyasından
  *      yalnız kamu sertifikası alınır (gerçek ve sandbox listesinde aynı sertifika; anahtarı ağda yok, ADR-0042)
  *
@@ -47,6 +52,7 @@ import {
   SubjectKeyIdentifierExtension,
   AuthorityKeyIdentifierExtension,
   SubjectAlternativeNameExtension,
+  ExtendedKeyUsageExtension,
   X509Certificate,
   Extension,
   Name,
@@ -288,6 +294,11 @@ async function main() {
       "registrar-1",
       selfSigned(4, "CN=Tamga Registrar 1 (provisional TR registrar), O=Tamga Network, C=TR"),
     ),
+    // ADR-0066 K4: TS 119 612 XML liste imzacısı (§5.7.1) — O = gerçek ağın SchemeOperatorName'i ("Tamga Network")
+    await ensure(
+      "tl-xml-signer-1",
+      tlXmlSigner(root, 4001, "CN=Tamga Network Trusted List Signer 1, O=Tamga Network, C=TR"),
+    ),
     // 5) Referans verifier erişim sertifikası — SAN verify.tamga.network (kayıt dns_name); client_id = x509_hash(bu sertifika) (ADR-0034)
     await ensure(
       "rp-verify",
@@ -360,6 +371,11 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
     ),
     await ensure("wallet-provider", selfSigned(3, "CN=Test Wallet Provider (TEST), O=Tamga Network Sandbox, C=TR")),
     await ensure("registrar-1", selfSigned(4, "CN=Tamga Sandbox Registrar (TEST), O=Tamga Network Sandbox, C=TR")),
+    // ADR-0066 K4: TS 119 612 XML liste imzacısı (§5.7.1) — O = sandbox listesinin SchemeOperatorName'i
+    await ensure(
+      "tl-xml-signer-1",
+      tlXmlSigner(root, 4001, "CN=Tamga Sandbox Trusted List Signer (TEST), O=Tamga Network Sandbox (TEST), C=TR"),
+    ),
     await ensure(
       "rp-verify",
       signedByRoot(
@@ -483,6 +499,35 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
       return { cert, privateKey: kp.privateKey };
     }),
   ];
+}
+
+/**
+ * ADR-0066 K4 — ETSI TS 119 612 V2.4.1 §5.7.1 liste imzacısı: kökçe imzalı yaprak; konu C + O; basicConstraints CA=false (kritik);
+ * keyUsage digitalSignature + nonRepudiation (kritik, başka bit yok); SKI; AKI = kökün SKI'si; extendedKeyUsage id-tsl-kp-tslSigning
+ * (0.4.0.2231.3.0). Süre 2 yıl. Liste yayıncısı (`tlSignerProblems`) aynı profili denetler.
+ */
+function tlXmlSigner(root: Item, serialNo: number, subject: string): Make {
+  return async (reuse?: Reuse) => {
+    const kp = reuse?.keys ?? (await keys());
+    const cert = await X509CertificateGenerator.create({
+      serialNumber: reuse?.serialHex ?? serial(serialNo),
+      subject,
+      issuer: root.cert.subject,
+      notBefore: new Date(),
+      notAfter: years(2),
+      signingAlgorithm: ALG,
+      publicKey: kp.publicKey,
+      signingKey: root.privateKey ?? die("kök CA özel anahtarı yok — XML liste imzacısı imzalanamaz"),
+      extensions: [
+        new BasicConstraintsExtension(false, undefined, true),
+        new KeyUsagesExtension(KeyUsageFlags.digitalSignature | KeyUsageFlags.nonRepudiation, true),
+        await SubjectKeyIdentifierExtension.create(kp.publicKey),
+        await AuthorityKeyIdentifierExtension.create(root.cert.publicKey),
+        new ExtendedKeyUsageExtension(["0.4.0.2231.3.0"], false),
+      ] as never,
+    });
+    return { cert, privateKey: kp.privateKey };
+  };
 }
 
 /** ADR-0041: test kurumu yapraklarının konu adı bu ön ekle başlar (liste yayıncısı `sandbox-institutions.ts` ile aynı). */

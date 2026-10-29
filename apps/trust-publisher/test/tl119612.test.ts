@@ -417,14 +417,17 @@ describe("ETSI TS 119 612 XML — üreteç ve XAdES-B-B imzası", () => {
 });
 
 describe("depodaki sandbox örneği (test/fixtures/tl119612)", () => {
-  it("şemaya uyar, imzası iki doğrulayıcıda tutar, sandbox imzacısıyla imzalı", async () => {
+  it("şemaya uyar, imzası iki doğrulayıcıda tutar, sandbox XML imzacısıyla (§5.7.1) imzalı", async () => {
     const sample = readFileSync(SAMPLE, "utf8");
     expect(await schemaErrors(sample)).toEqual([]);
     expect(xmlCryptoVerify(sample)).toBe(true);
-    const sandboxSigner = readFileSync(resolve(ROOT, "ops/pki-sandbox/tl-signer-1.cert.pem"), "utf8");
-    const fp = createHash("sha256")
-      .update(Buffer.from(sandboxSigner.replace(/-----[^-]+-----|\s+/g, ""), "base64"))
-      .digest("hex");
+    // ADR-0066 K4: ayrı XML imzacısı `tl-xml-signer-1` (sandbox kökünce verilmiş, §5.7.1 profili — hata da uyarı da yok)
+    const sandboxSigner = readFileSync(resolve(ROOT, "ops/pki-sandbox/tl-xml-signer-1.cert.pem"), "utf8");
+    const signerDer = Buffer.from(sandboxSigner.replace(/-----[^-]+-----|\s+/g, ""), "base64");
+    expect(
+      tlSignerProblems(new Uint8Array(signerDer), { territory: "TR", operatorName: "Tamga Network Sandbox (TEST)" }),
+    ).toEqual({ errors: [], warnings: [] });
+    const fp = createHash("sha256").update(signerDer).digest("hex");
     const { list } = readTrustedListXml(sample, new Set([fp]));
     expect(list.territory).toBe("TR");
     expect(sample).toContain("SANDBOX — test network");

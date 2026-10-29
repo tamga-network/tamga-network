@@ -161,6 +161,10 @@ Tətbiq edildi (2026-10-01):
 > **Əlavə (2026-10-13):** 119 612 XML siyahısının dərci və `etsi_tl` təxirə salındı; tətikləyici Aİ-dən ilk tərəfin bunu tələb etməsidir (yuxarıdakı "Əlavə").
 > Layihə rəhbərliyinin təsdiqi ilə (Aİ ilə ilk uyğunluq mərhələsi, qərar 15).
 
+> **Ləğv edildi (2026-10-29) — [[ADR-0066]]:** 119 612 XML siyahı dərcinin təxirə salınması ləğv olundu; Tamga siyahısının XML
+> görünüşü [[ADR-0066]] ilə yaradılır (əvvəlcə sandbox). Yoxlayan sorğularında `etsi_tl` istifadəsi ayrıca məsələdir, bu gün `aki`
+> qalır.
+
 > **Qeyd (2026-10-13, mühəndislik düzəlişi, paketlər 0.5.2):** yuxarıdakı "uyğun gəlmir" qaydası daraldıldı — rəqəmsal cüzdan
 > qiymətləndirə bilmədiyi `trusted_authorities` şərtinə görə rəqəmsal sənədi kənarlaşdırmır ("qiymətləndirilə bilmədi"; sənəd təklif olunur, müsbət etibar
 > göstəricisi sayılmır), `etsi_tl`-i yüklənmiş siyahılara qarşı qiymətləndirir; təfərrüat: [[SPEC-PROTO-0002]] §4.6. "Keçdi" kimi saymaq qadağası

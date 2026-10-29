@@ -1,11 +1,12 @@
 /**
- * ETSI TS 119 612 (Trusted Lists, XML) görünümü — ADR-0066 TASLAĞI (Proposed; proje yönetimi onayı bekler).
+ * ETSI TS 119 612 (Trusted Lists, XML) görünümü — ADR-0066 (Accepted 2026-10-29; D-TRUST-6).
  *
  * Tamga'nın imzalı ülke listesi (`tl-<cc>.json` / `.jws`) ve LOTL'u, AYNI sürümden (TSLSequenceNumber = liste `version`)
  * TS 119 612 V2.4.1 XML'ine çevrilir ve XAdES-B-B zarflanmış imzayla (EN 319 132-1; TS 119 612 §5.7, Ek B) imzalanır.
  * Yetkili kaynak her zaman Tamga JSON listesidir (BT4); XML yalnız bir görünümdür (LoTE ile aynı ilke, `lote.ts`).
  *
- * Varsayılan KAPALI: yalnız `TAMGA_TL119612=1` iken `build` üretir. Üretim yayını ve bayrağın açılması ADR kabulüne bağlıdır.
+ * Varsayılan KAPALI: yalnız `TAMGA_TL119612=1` iken `build` üretir (TX5). Sandbox'ta açık (2026-10-29, imzacı `tl-xml-signer-1`);
+ * gerçek ağda posta adresleri ve üretim XML imza sertifikası tamamlanınca proje yönetimi onayıyla.
  *
  * Profil (AB dışı işletmeci, TS 119 612 §5.3.3/5.3.8/5.3.9/5.5.4: "a URI defined on purpose"): liste türü, durum belirleme
  * yaklaşımı, kural ve hizmet durumu URI'leri Tamga URI kökündendir (`TAMGA_TL_ROOT`); "üye devletçe bildirilmiş / nitelikli"
@@ -28,7 +29,8 @@ export const TL119612_FLAG = "TAMGA_TL119612";
 /** Bayrak: yalnız "1" açar (varsayılan kapalı). */
 export const tl119612Enabled = (env: NodeJS.ProcessEnv = process.env) => env[TL119612_FLAG] === "1";
 
-/** Tamga URI kökü (öneri — ad onayı bekler; LoTE kökü `https://trust.tamga.network/lote` ile aynı düzen). */
+/** Tamga URI kökü (adlar onaylandı 2026-10-29; LoTE kökü `https://trust.tamga.network/lote` ile aynı düzen). Açıklama sayfası:
+ * docs.tamga.network/concepts/etsi-trusted-list (nginx `/tl/` → o sayfa). */
 export const TAMGA_TL_ROOT = "https://trust.tamga.network/tl";
 export const TSL_NS = "http://uri.etsi.org/02231/v2#";
 const TSLX_NS = "http://uri.etsi.org/02231/v2/additionaltypes#";
@@ -376,7 +378,7 @@ export interface TamgaUris {
   svc: { root_ca: string; EAA: string; PUB: string; QUALIFIED: string; status_list: string; wallet_solution: string };
 }
 
-/** Tamga URI kökünden slot URI'leri (öneri; ad onayı bekler). Devlet slotu devralınca bu küme slot başına değiştirilir. */
+/** Tamga URI kökünden slot URI'leri (ADR-0066 K2). Devlet slotu devralınca bu küme slot başına değiştirilir. */
 export function tamgaUris(cc: string, root = TAMGA_TL_ROOT): TamgaUris {
   return {
     tslType: `${root}/TSLType/${cc}list`,

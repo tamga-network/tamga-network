@@ -4,7 +4,7 @@ title: "Institutional identity (X.509)"
 status: Active
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-16
+last_updated: 2026-10-29
 summary: >
   The code- and protocol-level counterpart of the X.509 decision ([[ADR-0004]]). Institutional (entity) identity is built on
   X.509 certificates rooted in national Root CAs; an institution's ledger identity is anchored as
@@ -211,44 +211,77 @@ For interoperability with the EU, an institution can **alias** its existing iden
 
 This bridge is **one-way recognition**; Tamga's core chain of trust is the national Root CAs.
 
-## 8.1 eIDAS trusted list projection (ETSI TS 119 612)
+## 8.1 ETSI TS 119 612 XML list view ([[ADR-0066]])
 
-> Basis: [[RS-EIDAS-0001]] §5.1 (analysis of ETSI TS 119 612 V2.4.1). ETSI 119 612 explicitly provides for non-EU countries
-> and international organisations to publish Trusted Lists (TL) and to be **mutually recognised** with the EU LOTL
-> ([[ADR-0002]] cross-recognition). For the institutional side this is a more regulator-readable interoperability path than
-> the did:web bridge.
+> Basis: [[ADR-0066]] (2026-10-29; [[RS-EIDAS-0001]] §5.1, ETSI TS 119 612 V2.4.1). The EU's signature validation tools and the
+> Commission's interim path for third countries (TC AdES LOTL) expect the national list in this XML format. Tamga's own XML list
+> does **not** enter that list (it is for the signature and seal certificate providers supervised by a state); the gain is a ready
+> tool and template for a state, and EU tools being able to read the Tamga list as XML too.
 
-**Principle:** the registry record (RootCARegistry + Issuer Registry) is the **single source of truth**; the 119 612-compliant
-TL is a **read-only off-chain projection** of that state (XML/XAdES). The projection is produced under `sdk/`, **needs no
-contract change** and does not change the registry state. Tamga takes the role of **Trusted List Scheme Operator
-([[t:TLSO]])** for this TL (initial stage: Tamga; state stage: national root authority — [[PM-ASSUR-0001]]).
+**Principle:** the authoritative source is the signed Tamga country list ([[SPEC-TRUST-0001]]). The list publisher
+(`apps/trust-publisher`, `build`) generates a XAdES-B-B signed view from the same signed `tl-<cc>` object and the LOTL, **with the
+same version** (`TSLSequenceNumber` = `version`): `tl-<cc>.xml`, `tl-<cc>.sha2` and `archive/tl-<cc>.vNNNN.xml`. The XML cannot
+contain a record that is not in the JSON; in a conflict the JSON prevails. Tamga is the provisional scheme operator (TLSO) of this
+list; when a state takes over a slot the URI set can change per slot, the records and identifiers do not.
 
-**Service type mapping (Tamga record → ETSI Service type identifier):**
+**URI profile (a Tamga root that claims nothing, `https://trust.tamga.network/tl/`):**
 
-| Tamga | ETSI 119 612 Service type URI |
+| Field | URI |
 |---|---|
-| National Root CA (RootCARegistry) | `…/Svctype/NationalRootCA-QC` |
-| Issuer (CA / certificate-issuing institution) | `…/Svctype/CA/QC` (or `CA/PKC` non-qualified) |
-| Registration authority / identity proofing ([[DECISIONS]] D-ID-2) | `…/Svctype/RA`, `…/Svctype/IdV` |
-| Institution issuing X509-AC EAA ([[RS-EIDAS-0001]] §4.4) | `…/Svctype/ACA`, `…/Svctype/EAA/Q` |
-| TL publishing service (Tamga TLSO) | `…/Svctype/TLIssuer` |
+| `TSLType` | `…/tl/TSLType/<CC>list` |
+| `StatusDeterminationApproach` | `…/tl/StatusDetn/<CC>determination` |
+| `SchemeTypeCommunityRules` | `https://arf.tamga.network/trust-framework` + `…/tl/schemerules/<CC>` |
+| `SchemeInformationURI` | `…/tl/` + the `archive/` address of the publication point |
 
-**One-to-one status vocabulary mapping (Tamga status → ETSI Service current status):**
+ETSI URIs that claim "notified by a Member State" or "qualified" status in the EU sense (`EUgeneric`, `EUappropriate`, `granted`,
+`recognisedatnationallevel`, `…/QC`, `…/NationalRootCA-QC`) are **not used** (TX2). The meaning of the URIs is defined on the
+[ETSI XML trusted list](/en/concepts/etsi-trusted-list) page.
 
-| Tamga status | ETSI Svcstatus | Note |
+**Service type mapping (Tamga record → `ServiceTypeIdentifier`):**
+
+| Tamga | URI | Note |
 |---|---|---|
-| `ACTIVE` (Root/Issuer) | `…/Svcstatus/granted` | Qualified service approved |
-| `ACTIVE` (national recognition context) | `…/Svcstatus/recognisedatnationallevel` | For 5.5.1.3-type services |
-| `ROLLING_OVER` (Root) | `granted` + `TakenOverBy` (§5.5.9.3) | Hand-over to the successor root; overlap period |
-| `SUSPENDED` (Issuer) | `granted` → temporary `withdrawn` | Suspension; history preserved |
-| `RETIRED` (Root, end of rollover) | `withdrawn` + full status history | Not a deletion; history never drops (§5.3.12) |
-| `REVOKED` (Root/Issuer) | `withdrawn` | Compromise; subordinate certificates fall |
-| `successorId` link (successor issuer) | `TakenOverBy` extension | One-to-one counterpart of D-BC-5 / XC2 |
+| National root CA (`root_cas`) | `http://uri.etsi.org/TrstSvc/Svctype/CA/PKC` | Non-qualified certificate-issuing service (§5.5.1.2) |
+| Issuer — no class or general | `http://uri.etsi.org/TrstSvc/Svctype/EAA` | Non-qualified EAA issuance |
+| Issuer — public source (PuB-EAA equivalent) | `…/tl/Svctype/EAA/Pub-EAA` | Tamga root: an ETSI URI would carry a claim |
+| Issuer — accredited in Tamga (QEAA equivalent) | `…/tl/Svctype/EAA/Q` | Tamga root; not qualified in the EU sense |
+| Issuer's status list signature (`delegate_keys`, purpose `status_list`) | `…/tl/Svctype/EAA/StatusList` | Separate service, separate certificate |
+| Wallet provider solution (LOTL `wallet_providers`) | `http://uri.etsi.org/19602/SvcType/WalletSolution/Issuance` | TS 119 602 type (same as the LoTE) |
 
-**Invariant safeguards:** the projection exports only **non-personal** trust data (root/institution public key, status,
-history) (`XC3`). **A citizen's pairwise pseudonym is never written to the TL** (`XC4`); the TL covers only the institutional
-layer (B). This is the "blockchain trust anchor" variant of the ETSI Trusted List model: ETSI puts the digest in the OJEU,
-Tamga anchors it in RootCARegistry.
+**Not in the list:** verifiers (they are not trust service providers; their records are in the JSON list and in registration
+certificates — [[ADR-0026]]), `RESERVED` / `PROVISIONAL` records, personal data (XC3, XC4).
+
+**Status mapping (Tamga status → `ServiceStatus`, one to one):**
+
+| Tamga status | `ServiceStatus` |
+|---|---|
+| `ACTIVE` | `…/tl/Svcstatus/active` |
+| `SUSPENDED` | `…/tl/Svcstatus/suspended` |
+| `REVOKED` | `…/tl/Svcstatus/revoked` |
+| `RETIRED` | `…/tl/Svcstatus/retired` |
+| `ROLLING_OVER` | `…/tl/Svcstatus/rollingover` |
+| `DEPRECATED` | `…/tl/Svcstatus/deprecated` |
+
+Records are not deleted: an inactive service stays with its status; earlier statuses are in `ServiceHistory`, newest first, with
+the SKI instead of the certificate (§5.5.10, §5.6.3). A reader that does not know these URIs does not treat the service as active
+(safe side).
+
+**Signature and signer:** XAdES-B-B, enveloped (`URI=""`, enveloped-signature + Exclusive C14N), SignedProperties (SigningTime,
+SigningCertificateV2, DataObjectFormat), only the signer certificate in KeyInfo; ECDSA P-256 / SHA-256. The signer is a separate XML
+signing certificate (`tl-xml-signer-1`, a leaf issued by the root) and follows the §5.7.1 profile: subject `C` = slot country
+code, `O` = `SchemeOperatorName`; basicConstraints CA=false; keyUsage only digitalSignature + nonRepudiation; SKI and AKI;
+extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0). Its fingerprint is among the slot's signing keys in the LOTL. On the real
+network no XML is published with a non-conforming signer or with missing publication data (operator, institution and wallet
+provider postal addresses) (TX3).
+
+**Publication:** flag `TAMGA_TL119612` (off by default, TX5). On in the sandbox (`trust.sandbox.tamga.network/tl-tr.xml`, with
+placeholder addresses marked "TEST"); on the real network (`trust.tamga.network/tl-<cc>.xml`) once the postal addresses are in place.
+The server serves `.xml` as `application/vnd.etsi.tsl+xml` and `.sha2` as `text/plain`, with a cache of at most 4 hours (§6.1,
+§6.2).
+
+**Old mapping removed (2026-10-29):** the table in the previous version of this section (issuer → `CA/QC`, `ACTIVE` → `granted` /
+`recognisedatnationallevel`, `NationalRootCA-QC`) claimed qualified service status in the EU sense and was removed by
+[[ADR-0066]]; Tamga's issuers are not qualified ([[ADR-0022]]).
 
 ### 8.1.1 LoTE projection (ETSI TS 119 602, JSON)
 
@@ -296,8 +329,8 @@ cadence (≤6 months, noisy republication — aligned with [[ADR-0008]]) → §1
 3. **Court-token format** (JWS vs EIP-712 + precompile) → [[DECISIONS]] D-GRD-1.
 4. **OCSP stapling vs on-chain status** — which is primary; performance/compliance balance.
 5. How the **CAIP-2 network identifier** (`tamga:<chainId>`) appears in the certificate/issuerId representation.
-6. **119 612 TL projection format** (§8.1): does the `sdk/` generator produce XML/XAdES-B-B, and how is signing key
-   management (≥2 rolling certificates, ETSI Annex A.2) set up → SPEC-CRED / PM-GOV-0001.
+6. ~~**119 612 TL projection format**~~ ✅ [[ADR-0066]] (2026-10-29): the list publisher produces XML/XAdES-B-B with a separate
+   §5.7.1 signer (§8.1). The signing key rollover order (≥2 rolling certificates, ETSI Annex A.2) is open → PM-GOV-0001.
 7. Will a **multi-state country code for the Turkic world** (ETSI §5.1.5) be defined → [[ADR-0002]].
 8. How is the **TL publication cadence** (≤6 months, noisy republication) combined with status list publication
    ([[ADR-0008]]).
@@ -313,8 +346,9 @@ cadence (≤6 months, noisy republication — aligned with [[ADR-0008]]) → §1
 - [[ADR-0002]] — onlyOwnerState / cross-recognition (Root CA ownership, eIDAS bridge).
 - [[PM-AUTH-0001]] — rationale for the three layers + regulator readability.
 - [[RS-EIDAS-0001]] — §5.1 (ETSI 119 612 Trusted List analysis) = the basis of the §8.1 projection.
-- Implementation: `sdk/` (resolver + verification + 119 612 TL projection), `contracts/src/` (RootCARegistry).
+- Implementation: `sdk/` (resolver + verification), `apps/trust-publisher/src/tl119612.ts` (119 612 XML view, [[ADR-0066]]),
+  `contracts/src/` (RootCARegistry).
 
-**In force** — version 1.0.0 (2026-10-02; §1.1 and XC6 on 2026-10-13, [[ADR-0050]]).
+**In force** — version 1.0.0 (2026-10-02; §1.1 and XC6 on 2026-10-13, [[ADR-0050]]; §8.1 on 2026-10-29, [[ADR-0066]]).
 
 ---

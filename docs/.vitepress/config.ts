@@ -270,7 +270,16 @@ function sidebars(l: Lang): DefaultTheme.Sidebar {
       text: t.concepts,
       items: [
         { text: t.overview, link: `${p}/concepts/` },
-        ...["trust-lists", "federation", "credential-formats", "issuance", "presentation", "privacy", "revocation"].map((s) => ({
+        ...[
+          "trust-lists",
+          "federation",
+          "etsi-trusted-list",
+          "credential-formats",
+          "issuance",
+          "presentation",
+          "privacy",
+          "revocation",
+        ].map((s) => ({
           text: conceptTitle(l, s),
           link: `${p}/concepts/${s}`,
         })),

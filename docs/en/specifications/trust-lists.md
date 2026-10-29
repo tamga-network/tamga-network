@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-18
+last_updated: 2026-10-29
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -56,8 +56,9 @@ from [[SPEC-BC-0001]] and the SQL projection in [[ARCH-0003]] §2.4. No list con
 4. **Signature** — every list is a compact JWS (`.jws`; `alg: ES256`, `x5c` operator certificate); the `.json` is for humans
    only. Verifiers use only the `.jws`; they match the `x5c[0]` fingerprint against `keys/root-fingerprints.json` (lotl) or
    `lotl.national_lists[].signing_keys` (tl).
-5. **ETSI mapping** — statuses use the Tamga enum; the ETSI TS 119 612 XML projection is produced with the table in
-   [[SPEC-ID-0002]] §8.1 (`granted`/`withdrawn`/`TakenOverBy`).
+5. **ETSI mapping** — statuses use the Tamga enum; the ETSI TS 119 612 XML view (`tl-<cc>.xml`) is produced with the
+   [[SPEC-ID-0002]] §8.1 profile, from the same signed list and with the same version; status URIs from the Tamga root, no
+   qualified-service claim ([[ADR-0066]]).
 6. **Cadence** — `lotl`/`tl-<cc>`: `next_update` ≤ 90 days, re-signed even without changes; a change is published within
    24 hours; `anchors.jsonl` hourly (heartbeat included).
 7. **Type identifier** — [[t:vct]] URN ([[ADR-0010]]); the `lotl.schemas[]` catalogue entry gives `metadata_url + content_hash`.
@@ -81,7 +82,9 @@ wrprc/index.json · wrprc/…    registration certificates (ETSI TS 119 475 rc-w
 zk/<circuit_id>.zst           ZK circuit files listed in `zk_circuits` (ADR-0032); wallets download them and check `zk_circuits[].sha256`
 lote/<type>.json · .jws       ETSI TS 119 602 LoTE views (wallet-providers, wrpac-providers, eaa-providers);
                               only when LoTE publication is enabled (lote.enabled)
-archive/<file>.v<NNNN>.jws    immutable version archive (replay input)
+tl-<cc>.xml · tl-<cc>.sha2    ETSI TS 119 612 XML view (XAdES-B-B, signer keys/tl-xml-signer-1.cert.pem) and SHA-256 digest;
+                              only with TAMGA_TL119612=1 (ADR-0066; in the sandbox today)
+archive/<file>.v<NNNN>.jws    immutable version archive (replay input; the XML archive is archive/tl-<cc>.v<NNNN>.xml)
 CHANGELOG.md                  public change log
 ```
 
@@ -122,7 +125,8 @@ looks at `status_history` with the credential's `iat` (D-BC-3, [[SPEC-BC-0001]]/
 may be published by its successor (`successor_id`) (I4). Operator tool: `trust-publisher status <slug> <STATUS> --reason r`
 (`REVOKED --invalidates-from <date>`: credentials issued from that moment fail; `valid_from` = all of the institution's credentials),
 `rp-status <dns_name> <STATUS>` for a relying party, `end-use <dns_name> <id>` for a single use or gate group (end date).
-A record is never removed from the list (TL2); a withdrawn institution becomes `withdrawn` in the ETSI projection and leaves the LoTE.
+A record is never removed from the list (TL2); a withdrawn institution stays in the ETSI XML view with its Tamga status URI
+(`…/tl/Svcstatus/revoked` etc., [[SPEC-ID-0002]] §8.1) and leaves the LoTE.
 
 ---
 

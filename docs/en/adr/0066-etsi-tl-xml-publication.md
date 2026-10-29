@@ -1,22 +1,24 @@
 ---
 document_id: ADR-0066
 title: "ETSI TS 119 612 XML list view"
-status: Proposed
-review_status: Draft
-version: 0.1.0
+status: Active
+review_status: Completed
+version: 1.0.0
 created: 2026-10-29
 last_updated: 2026-10-29
 translation_of: ADR-0066
-source_version: 0.1.0
+source_version: 1.0.0
 summary: >
   Tamga's country lists are published today as Tamga JSON + JWS and as an ETSI TS 119 602 (LoTE) JSON view; publishing ETSI
   TS 119 612 XML (XAdES-signed trusted lists) was deferred on 2026-10-13 (ADR-0036 annex). The Commission's interim path for third
   countries (the list of third-country trusted lists, TC AdES LOTL) and the EU trusted-list ecosystem expect the national list in
   119 612 XML; the list owner is the state, the network can provide the tool and the template. Proposal: for each country slot a
-  119 612 XML view is generated from the same signed source with the same sequence number and a XAdES-B-B signature; the code is
-  ready but off by default. Only the Türkiye slot is active today; publication is switched on with project-management approval once
-  a separate XML signing certificate and the publication data are in place. ETSI URIs that claim qualified or notified status in
-  the EU sense are not used; list type, status and rules URIs come from the Tamga root.
+  119 612 XML view is generated from the same signed source with the same sequence number and a XAdES-B-B signature; generation is
+  switched on with a flag (off by default). Only the Türkiye slot is active today; it was switched on first in the sandbox (with a
+  separate XML signing certificate conforming to §5.7.1); the real network follows with project-management approval once the
+  operator and institution postal addresses are in place. ETSI URIs that claim qualified or notified status in the EU sense are not
+  used; list type, status and rules URIs come from the Tamga root (`https://trust.tamga.network/tl/…`). Accepted 2026-10-29
+  (project-management approval).
 domain: Trust
 related: ["[[ADR-0009]]", "[[ADR-0024]]", "[[ADR-0035]]", "[[ADR-0036]]", "[[ADR-0042]]", "[[SPEC-TRUST-0001]]", "[[SPEC-ID-0002]]", "[[FW-TF-0001]]"]
 ---
@@ -25,9 +27,9 @@ related: ["[[ADR-0009]]", "[[ADR-0024]]", "[[ADR-0035]]", "[[ADR-0036]]", "[[ADR
 
 In Europe trusted lists have been published for years in one XML format (ETSI TS 119 612); the EU's signature validation tools
 read it. Today's interim path for recognising the list of a non-EU country in Europe also goes through this format. Tamga's lists
-are not published in it today. This proposal publishes the same list in a second format as well, from the same signed source and
-with the same sequence number. The code is written and tested; publication is off, and switching it on depends on accepting this
-decision and a few preparations.
+are not published in it today. This decision publishes the same list in a second format as well, from the same signed source and
+with the same sequence number. It was switched on first in the test network (sandbox); switching it on in the real network depends
+on completing the postal addresses.
 
 # Context
 
@@ -57,7 +59,7 @@ decision and a few preparations.
 - **Old table.** The 119 612 mapping in [[SPEC-ID-0002]] §8.1 (issuer → `CA/QC`, `granted`) does not match today's decisions:
   `granted` and `…/QC` claim a qualified service in the EU sense; Tamga's issuers are not qualified ([[ADR-0022]]).
 
-# Proposed decision
+# Decision
 
 ## K1 — XML view from the same signed source, same version
 
@@ -72,8 +74,9 @@ decision and a few preparations.
 
 - List type `https://trust.tamga.network/tl/TSLType/<CC>list`, status determination `…/StatusDetn/<CC>determination`, rules
   `https://arf.tamga.network/trust-framework` + `…/schemerules/<CC>`, service status `…/Svcstatus/{active, suspended, revoked,
-  retired, rollingover, deprecated}` (one to one with the Tamga status set). The URI names are proposals and are fixed with the
-  naming approval.
+  retired, rollingover, deprecated}` (one to one with the Tamga status set). The URI names and root were approved by project
+  management (2026-10-29); their meaning is defined on `docs.tamga.network/en/concepts/etsi-trusted-list` and every URI under
+  `trust.tamga.network/tl/` redirects to that page (§5.3.7, §5.5.4).
 - ETSI URIs that mean "notified by a Member State" or "qualified" in the EU (`EUgeneric`, `EUappropriate`, `granted`,
   `recognisedatnationallevel`, `…/QC`) are not used. A reader that does not know these URIs does not treat the service as active
   (safe side).
@@ -103,18 +106,23 @@ decision and a few preparations.
 - The signer certificate follows the §5.7.1 profile: subject `C` = slot country code, `O` = `SchemeOperatorName`; keyUsage only
   digitalSignature (and/or nonRepudiation); basicConstraints CA=false; SKI; extendedKeyUsage `id-tsl-kp-tslSigning`
   (0.4.0.2231.3.0). Today's list signer (`tl-signer-1`) has no basicConstraints and no EKU, so a **separate XML signing certificate**
-  is needed (the real network's PKI is outside the repository). On the real network no XML is published with a signer that does not
-  follow the profile; the publisher stops.
-- The XML signer's fingerprint is published in the LOTL among the signing keys of the country slot and placed in `keys/` (Tamga's
-  way of validating the signer is the LOTL; certificate name and LOTL field with the naming approval).
+  (`tl-xml-signer-1`) is used: a leaf issued by the network's root CA that signs only the XML list; `tl-signer-1` keeps signing the
+  JSON lists. Issued in the sandbox on 2026-10-29; on the real network the certificate is issued in the production PKI outside the
+  repository, with project-management approval. On the real network no XML is published with a signer that does not follow the
+  profile; the publisher stops.
+- The XML signer's fingerprint is published in the LOTL among the signing keys of the country slot (`national_lists[].signing_keys`,
+  no new field) and its certificate is placed in `keys/` (Tamga's way of validating the signer is the LOTL).
 
 ## K5 — Publication: off by default, sandbox first
 
 - The generation flag `TAMGA_TL119612` is off by default. Order of switching on: sandbox (`trust.sandbox.tamga.network/tl-tr.xml`),
   independent validation (the EU DSS validator, the ETSI XSD), then the real network (`trust.tamga.network/tl-<cc>.xml`) — each step
-  with project-management approval.
+  with project-management approval. The sandbox was switched on on 2026-10-29.
+- The server serves `.xml` as `application/vnd.etsi.tsl+xml` and `.sha2` as `text/plain`, with a cache of at most 4 hours (§6.1,
+  §6.2).
 - On the real network missing publication data (the operator's postal address, institution and wallet provider addresses —
-  [[ADR-0024]]) stops publication; in the sandbox it is a warning.
+  [[ADR-0024]]) stops publication; in the sandbox it is a warning. Sandbox records carry placeholder addresses marked
+  "Sandbox (TEST)"; on the real network placeholders are not accepted.
 - Even with the flag on, 119 612 XML is generated only for `active` country slots (TR today); for reserved slots (AZ, KZ, KG, UZ, …)
   generation starts together with that slot's first list.
 
@@ -131,7 +139,7 @@ decision and a few preparations.
 | Sign with the current list signer | rejected (real network) | Does not follow the §5.7.1 profile (basicConstraints, EKU); accepted with a warning in sandbox and tests |
 | A separate sequence number for the XML (from 1) | rejected (today) | §5.3.2 says "first release 1", but a separate counter makes mapping JSON and XML harder; open point |
 
-# Proposed rules (moved to the binding table if accepted)
+# Invariants
 
 | Code | Rule |
 |---|---|
@@ -156,23 +164,27 @@ Prepared (2026-10-29, off by default; nothing published):
   "XAdES-BASELINE-B, signature and references intact" (the result is INDETERMINATE because the signer is not an EU trust anchor —
   expected).
 
-If accepted:
+On acceptance (2026-10-29):
 
-- The [[SPEC-ID-0002]] §8.1 table is rewritten for this profile (the old `CA/QC` + `granted` mapping goes); the XML view is added to
-  the publication section of [[SPEC-TRUST-0001]]; a "lifted — ADR-0066" note in the [[ADR-0036]] annex; publication formats in the
-  Tamga ARF trust framework.
-- Before publication: the XML signing certificate (real network PKI, outside the repository) and its fingerprint in the LOTL; the
-  operator's postal address; institution and wallet provider address data; a page explaining the URIs under
-  `trust.tamga.network/tl/` (§5.3.7, §5.5.4: status values are defined there); server settings for `.xml` and `.sha2` (cache
-  ≤ 4 hours, §6.1); sandbox publication and EU DSS validation; then the real network.
+- The [[SPEC-ID-0002]] §8.1 table was rewritten for this profile (the old `CA/QC` + `granted` mapping is gone); the XML view was added
+  to the publication section of [[SPEC-TRUST-0001]]; a "lifted — ADR-0066" note in the [[ADR-0036]] annex.
+- Switched on in the sandbox: `tl-xml-signer-1` (issued by the sandbox root, §5.7.1 profile), placeholder addresses marked "TEST" in
+  the sandbox records, `trust.sandbox.tamga.network/tl-tr.xml` + `.sha2`, the URI explanation page
+  (`docs.tamga.network/en/concepts/etsi-trusted-list`, tr/en/az). The live list was validated against the ETSI XSD and the EU DSS
+  validator.
+- Remaining for the real network: the production XML signing certificate (real network PKI, outside the repository; command in
+  `ops/README.md`) and its fingerprint in the LOTL; the operator's postal address; institution and wallet provider address data;
+  then the flag (with project-management approval).
 - Reader side (separate work): the `@tamga-network/trust` 119 612 reader recognises only ETSI active statuses today; recognising the
   Tamga-root statuses is a separate decision, when a Tamga XML list pinned in a LOTL is to be read.
 
-**Open points:** (1) URI names and the XML signing certificate's name (naming approval); (2) whether `TSLSequenceNumber` follows the
+**Open points:** (1) the URI names are approved; the XML signing certificate's name (`tl-xml-signer-1`, subject "Tamga Sandbox
+Trusted List Signer (TEST)" / on the real network "Tamga Network Trusted List Signer 1") awaits confirmation; (2) whether `TSLSequenceNumber` follows the
 JSON version or starts at 1 with a separate counter; (3) when a state slot applies to the TC AdES LOTL, the pointer to the EU LOTL
 and the Commission's third-country mapping ("MRA") element in that list — the publisher supports the pointer, the content is the
 state's; (4) mapping the ETSI TR 103 684 self-assessment to the network's rulebook (separate research).
 
 # Status
 
-**Proposed — 2026-10-29.** Awaiting project-management approval. Code ready, flag off; nothing published on production addresses.
+**Accepted — 2026-10-29.** With project-management approval. DECISIONS: D-TRUST-6. On in the sandbox; on the real network it is
+switched on with project-management approval once the postal addresses and the production XML signing certificate are in place.
