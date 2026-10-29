@@ -576,18 +576,24 @@
       "terminal_groups": [
         {
           "group_id": "istanbul-bilgi-campus",
+          "institution_id": "istanbul-bilgi",
+          "allowed_policies": ["campus-access"],
           "label": "İstanbul Bilgi Üniversitesi campus turnstiles (TEST)",
           "offline_allowed": true,
           "valid_from": "2026-10-03T00:00:00Z"
         },
         {
           "group_id": "bubilet-gate",
+          "institution_id": "bubilet",
+          "allowed_policies": ["event-ticket"],
           "label": "Bubilet event gates (TEST)",
           "offline_allowed": false,
           "valid_from": "2026-10-03T00:00:00Z"
         },
         {
           "group_id": "paribu-cineverse-gate",
+          "institution_id": "paribu-cineverse",
+          "allowed_policies": ["event-ticket"],
           "label": "Paribu Cineverse cinema gates (TEST)",
           "offline_allowed": false,
           "valid_from": "2026-10-03T00:00:00Z"

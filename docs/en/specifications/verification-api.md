@@ -518,6 +518,7 @@ Path-based: `/api/v1`. A breaking change opens `/v2`; `/v1` lives in parallel fo
 | Student information system → issuer API | mTLS or client credentials |
 | Verifier application → verifier API | API key or mTLS |
 | Gate terminal → verifier `/terminal/verify` | Terminal key: an operator-issued bearer key bound to a terminal group (`Authorization: Bearer`); a request without a key gets 401 and the token is not read ([[ADR-0065]] TK1–TK3). Keys are issued and revoked through the admin endpoints (`/terminal/keys`, internal address). |
+| Institution Console → verifier `/terminal/keys` (on behalf of an institution) | Institution-scoped token: `x-tamga-institution` + `x-institution-token` = base64url(HMAC-SHA256(admin token, `tamga-terminal-keys/v1:` + institution)); the institution gets, sees and revokes keys only for the groups bound to it in the signed list (`terminal_groups[].institution_id`); a key of a group withdrawn from the list gets 403 at the gate ([[ADR-0069]] TG1–TG3). |
 | OID4VCI / OID4VP endpoints | The protocol's own mechanism |
 
 ## 6.5 Rate limit

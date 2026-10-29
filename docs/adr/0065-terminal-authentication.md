@@ -97,3 +97,5 @@ gösterilebilir; bu ADR o zaman güncellenir.
 # Durum
 
 **Accepted — 2026-10-26.** Proje yönetimi onayıyla (güvenlik turu düzeltmeleri, genel onay). DECISIONS: D-PROX-2.
+
+**Not (2026-10-29):** K2 (Kurum Konsolu ekranı) ve K5 (`terminal_groups[]` liste şemasında) [[ADR-0069]] ile tamamlandı; anahtar kurum adına verilir (TG1–TG3).

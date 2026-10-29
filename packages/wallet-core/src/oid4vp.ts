@@ -525,6 +525,13 @@ export function evaluateTrustedAuthorities(
 const DCQL_ID = /^[A-Za-z0-9_-]+$/;
 const isIdList = (x: unknown): x is string[] =>
   Array.isArray(x) && x.length > 0 && x.every((v) => typeof v === "string" && DCQL_ID.test(v));
+/** OpenID4VP 1.0 §7: claim yolu boş olmayan dizi; öğeler dize, `null` (dizinin bütün öğeleri) ya da negatif olmayan tamsayı. */
+const isClaimPath = (x: unknown): x is Array<string | number | null> =>
+  Array.isArray(x) &&
+  x.length > 0 &&
+  x.every((v) => v === null || typeof v === "string" || (typeof v === "number" && Number.isSafeInteger(v) && v >= 0));
+const isPlainObject = (x: unknown): x is Record<string, unknown> =>
+  typeof x === "object" && x !== null && !Array.isArray(x);
 /**
  * DCQL'in yapısal kuralları (OpenID4VP 1.0 §6): sorgu id'leri tekil; `claim_sets` yalnız `claims` ile ve her alanın `id`'si
  * varken; `credential_sets` seçenekleri var olan sorgu id'lerine işaret eder. Bozuk istek reddedilir, seçenek tahmin edilmez.
@@ -534,8 +541,21 @@ export function checkDcqlShape(dcql: DcqlQuery): void {
     throw new WalletError("unsupported", `invalid dcql_query: ${why}`);
   };
   const ids = new Set<string>();
+  // Güvenilmeyen istek: önce biçim (K11 özellik testi — bozuk öğe TypeError değil, sade ret olsun; eşleştirici yalnız geçerli yol görür)
+  if (!Array.isArray(dcql?.credentials)) bad("credentials is not an array");
   for (const q of dcql.credentials) {
+    if (!isPlainObject(q)) bad("credential query is not an object");
     if (typeof q.id !== "string" || !DCQL_ID.test(q.id)) bad("credential query id");
+    if (q.meta !== undefined && !isPlainObject(q.meta)) bad(`meta is not an object (${q.id})`);
+    if (q.claims !== undefined) {
+      if (!Array.isArray(q.claims)) bad(`claims is not an array (${q.id})`);
+      for (const c of q.claims) {
+        if (!isPlainObject(c) || !isClaimPath(c.path)) bad(`claim path (${q.id})`);
+        // ZK sorgusunun değer kuralı aşağıda daha dar (tek sabit değer) ve kendi iletisiyle
+        if (q.format !== MDOC_ZK_FORMAT && c.values !== undefined && (!Array.isArray(c.values) || !c.values.length))
+          bad(`claim values (${q.id})`);
+      }
+    }
     if (ids.has(q.id)) bad(`duplicate credential query id ${q.id}`);
     ids.add(q.id);
     // OpenID4VP 1.0 §6.4.1 / Ek B.3.5: dc+sd-jwt sorgusu türü (`meta.vct_values`) belirtmeli — türsüz sorgu her belgeyle eşleşirdi

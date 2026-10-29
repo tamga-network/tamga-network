@@ -182,6 +182,13 @@ səhifədə görünür.
 | `ticket` | tədbir girişi: bilet (konsert və ya kino) |
 | `identity` | şəxsiyyət sənədi ilə tədbirə giriş |
 
+**Giriş (turniket / bilet girişi):** `https://verify.sandbox.tamga.network/terminal?group=<qrup>` sınaq girişidir; cüzdanın
+“Göstər” ekranındakı keçid kartı QR kodunu kamerayla oxuyur. Giriş özünü terminal açarı ilə təqdim edir; sandbox-un sınaq
+açarları hamıya açıqdır: `istanbul-bilgi-campus` → `sandbox-gate-campus`, `bubilet-gate` → `sandbox-gate-ticket`. Sandbox
+siyahısında hər giriş qrupu öz qurumuna bağlıdır ([[ADR-0069]]): `istanbul-bilgi-campus` → `istanbul-bilgi`, `bubilet-gate` →
+`bubilet`, `paribu-cineverse-gate` → `paribu-cineverse`. Real şəbəkədə açarı qurumun inzibatçısı Qurum Konsolunun **Giriş
+terminalları** ekranında yaradır.
+
 Öz yoxlayan tərəfinizi sınamaq üçün: yoxlayan tərəfinizi sandbox siyahısına və sandbox pinlərinə bağlayın, sandbox-da alınmış
 rəqəmsal sənədləri təqdim edin. Qurumunuzu sandbox-da özünüz aça bilərsiniz (§9); cüzdan provayderinizi isə bu gün layihə rəhbərliyinə müraciət edərək qeydiyyatdan keçirirsiniz
 (§2). Yoxlayan tərəfin və cüzdan provayderinin özünü sandbox siyahısına əlavə etməsi növbəti mərhələdir.

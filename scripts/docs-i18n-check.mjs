@@ -20,6 +20,7 @@ const SKIP_DIRS = new Set([
   "_internal",
   "ledger",
   "background",
+  "audit", // dış denetçi paketi (yalnız İngilizce, sitede yayınlanmaz)
   "packages",
   "public",
   ".vitepress",

@@ -328,6 +328,31 @@ export const RpScope = z
     path: ["mdoc_namespace"],
   });
 
+/**
+ * ADR-0012 K5 / ADR-0069: kapı (terminal) grubu — kayıtlı bir doğrulayıcının altında tanımlanır. `institution_id` grubun kapılarını
+ * işleten kurum (aynı listedeki belge verenin `slug`'ı ya da doğrulayıcının `dns_name`'i): Tamga Verify terminal anahtarını yalnız
+ * o kurum adına verir ve iptal eder (TG2). `allowed_policies` grubun kapı politikaları (`policy_id`). `cert_fingerprints`
+ * sertifikalı kapı kimliği içindir (hazırlık; bugün kapı terminal anahtarıyla gelir — ADR-0065). Geri çekilmiş grup (`valid_until`
+ * geçmiş) kaydı tarih için kalır; eski listelerde `institution_id` / `allowed_policies` olmayabilir (yayıncı etkin grupta ister).
+ */
+export const TERMINAL_GROUP_ID_RE = /^[a-z0-9-]{1,40}$/;
+export const TerminalGroup = z
+  .object({
+    group_id: z.string().regex(TERMINAL_GROUP_ID_RE),
+    institution_id: z
+      .string()
+      .regex(/^[a-z0-9.-]{3,253}$/)
+      .optional(),
+    label: z.string().max(160).optional(),
+    allowed_policies: z.array(z.string().regex(/^[a-z0-9-]{1,64}$/)).optional(),
+    cert_fingerprints: z.array(z.string().regex(/^[0-9a-f]{64}$/)).optional(),
+    offline_allowed: z.boolean().optional(),
+    valid_from: IsoDate,
+    valid_until: IsoDate.nullable().optional(),
+  })
+  .passthrough();
+export type TerminalGroup = z.infer<typeof TerminalGroup>;
+
 export const RelyingParty = z
   .object({
     rp_id: z.string(),
@@ -353,6 +378,8 @@ export const RelyingParty = z
     served_relying_parties: z.array(z.string()).optional(),
     /** ADR-0031 K4: site başına takma ad — `single` (varsayılan; kişi başına bir hesap) ya da `multiple` */
     pseudonyms: z.enum(["single", "multiple"]).optional(),
+    /** ADR-0012 K5 / ADR-0069: bu doğrulayıcının altındaki kapı grupları (geçiş kartı, ADR-0012 B). */
+    terminal_groups: z.array(TerminalGroup).optional(),
   })
   .passthrough();
 export type RelyingParty = z.infer<typeof RelyingParty>;

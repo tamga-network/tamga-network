@@ -526,6 +526,8 @@ paralel işləyir ([[ARCH-0005]] §5.3 ilə eyni siyasət).
 | Operator paneli → sənədi verən API | OIDC + rol əsaslı səlahiyyət |
 | OBS → sənədi verən API | mTLS və ya müştəri etimadnaməsi |
 | Yoxlayan tərəf tətbiqi → yoxlayan tərəf API-si | API açarı və ya mTLS |
+| Giriş terminalı → yoxlayıcı `/terminal/verify` | Terminal açarı: terminal qrupuna bağlı, operatorun verdiyi daşıyıcı açar (`Authorization: Bearer`); açarsız sorğu 401 alır, token oxunmur (ADR-0065). |
+| Qurum Konsolu → yoxlayıcı `/terminal/keys` (qurum adından) | Quruma məhdudlaşdırılmış token: `x-tamga-institution` + `x-institution-token` = base64url(HMAC-SHA256(inzibatçı tokeni, `tamga-terminal-keys/v1:` + qurum)); qurum yalnız imzalı siyahıda (`terminal_groups[].institution_id`) özünə bağlı qrupların açarlarını alır, görür və ləğv edir ([[ADR-0069]] TG1–TG3). |
 | OID4VCI / OID4VP uc nöqtələri | Protokolun öz mexanizmi |
 
 ## 6.5 Sürət limiti

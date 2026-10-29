@@ -40,6 +40,7 @@ const UNPUBLISHED = [
   "_internal/**",
   "ledger/**",
   "background/**",
+  "audit/**", // dış denetçi paketi: GitHub'da okunur (İngilizce, Mermaid GitHub'da çizilir), sitede değil
   "architecture/servers.md", // işletim içi
   "architecture/package-publishing.md",
   "architecture/index.md",

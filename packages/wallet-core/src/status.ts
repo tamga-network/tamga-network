@@ -106,12 +106,18 @@ export function parseStatusBody(body: Uint8Array, expectedUri: string, now: numb
   return parseStatusToken(new TextDecoder().decode(body).trim(), expectedUri, now);
 }
 
-/** `bits` bitlik değer, LSB önce (draft §4.1). Liste dışı indeks "geçerli" okunmaz. */
+/**
+ * `bits` bitlik değer, LSB önce (draft §4.1). Liste dışı indeks "geçerli" okunmaz. CWT gösterimi 4 ve 8 bitlik listeyi de taşır
+ * (`parseStatusListCwt`); eskiden 1 dışındaki her değer 2 bit okunuyordu — 8 bitlik listede başka belgenin bitleri okunurdu (K11
+ * özellik testi). Şimdi bit sayısı kadar okunur; 3'ten büyük değer (uygulamaya özel) 3 döner: çağıranlar 3'ü geçersiz sayar.
+ */
 export function statusBitAt(list: StatusList, idx: number): 0 | 1 | 2 | 3 {
-  const bits = list.bits === 1 ? 1 : 2;
+  const bits = list.bits;
+  if (bits !== 1 && bits !== 2 && bits !== 4 && bits !== 8) throw new Error("status list bits not 1, 2, 4 or 8");
   const perByte = 8 / bits;
   if (!Number.isInteger(idx) || idx < 0 || idx >= list.bytes.length * perByte) throw new Error("idx outside the list");
-  return ((list.bytes[Math.floor(idx / perByte)] >> ((idx % perByte) * bits)) & ((1 << bits) - 1)) as 0 | 1 | 2 | 3;
+  const v = (list.bytes[Math.floor(idx / perByte)] >> ((idx % perByte) * bits)) & ((1 << bits) - 1);
+  return (v > 3 ? 3 : v) as 0 | 1 | 2 | 3;
 }
 
 /** Belgenin durumu: kopyalardan biri iptalse belge iptal (aynı mantıksal belge), askıdaysa askıda. */

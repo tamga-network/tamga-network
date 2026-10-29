@@ -14,7 +14,7 @@
  * `freshness()` ile ayrıca denetler ve bayat kaynakta INDETERMINATE döner.
  */
 import { activeFps, type TrustStore, type StatusAnchorRow, type ExternalEntity } from "./store.js";
-import type { Issuer, RelyingParty, SchemaEntry, StatusHistoryEntry, ZkCircuit } from "./types.js";
+import type { Issuer, RelyingParty, SchemaEntry, StatusHistoryEntry, TerminalGroup, ZkCircuit } from "./types.js";
 
 export type Tri = "YES" | "NO" | "UNKNOWN";
 
@@ -48,6 +48,20 @@ export interface TrustSource {
   walletProviderMinKeyStorage?(fingerprintHex: string): string | null;
   /** ADR-0049 (0.6.0): "Tamga Network'te listeli" göstergesi için imzalı listedeki cüzdan sağlayıcısı kaydı. */
   walletProviderListing?(providerId: string, opts?: WalletProviderListingOptions): WalletProviderListing;
+  /**
+   * ADR-0012 K5 / ADR-0069: imzalı listedeki kapı grubu (doğrulayıcı kaydının `terminal_groups[]`'i). Listede yoksa ya da liste
+   * bayatsa null. `active` = doğrulayıcı ACTIVE ve grup şu an geçerlilik aralığında (geri çekilmiş grup `active: false`).
+   */
+  terminalGroup?(groupId: string): TerminalGroupAnswer | null;
+  /** ADR-0069 (hazırlık): sertifikalı kapı — sertifika parmak izinin (SHA-256, onaltılık) bağlı olduğu ETKİN kapı grubu. */
+  terminalGroupByCertFingerprint?(fingerprintHex: string): TerminalGroupAnswer | null;
+}
+
+/** ADR-0069: kapı grubu cevabı — grup kaydı, bağlı olduğu doğrulayıcının kalıcı kimliği ve şu an etkin mi. */
+export interface TerminalGroupAnswer {
+  group: TerminalGroup;
+  rp_dns_name: string;
+  active: boolean;
 }
 
 export interface WalletProviderListingOptions {
@@ -328,6 +342,30 @@ export class ListTrustSource implements TrustSource {
     if (sol && sol.status !== "ACTIVE") return hide("solution_not_active", { ...rec, ...solution });
     if (opts.unitRevoked) return hide("unit_revoked", { ...rec, ...solution });
     return { listed: true, provider_id: providerId, ...rec, ...solution, ...listMeta };
+  }
+
+  terminalGroup(groupId: string): TerminalGroupAnswer | null {
+    if (this.unhealthy()) return null;
+    for (const a of this.terminalGroupsAll()) if (a.group.group_id === groupId) return a;
+    return null;
+  }
+  terminalGroupByCertFingerprint(fp: string): TerminalGroupAnswer | null {
+    if (this.unhealthy()) return null;
+    const f = fp.toLowerCase();
+    for (const a of this.terminalGroupsAll()) if (a.active && (a.group.cert_fingerprints ?? []).includes(f)) return a;
+    return null;
+  }
+  /** Bütün kapı grupları (doğrulayıcı kayıtları üzerinden; aynı grup kimliği iki kez yayımlanmaz — yayıncı denetler). */
+  private terminalGroupsAll(): TerminalGroupAnswer[] {
+    const now = this.now().getTime();
+    const out: TerminalGroupAnswer[] = [];
+    for (const rp of this.store.relying_parties_by_dns.values())
+      for (const g of rp.terminal_groups ?? []) {
+        const from = Date.parse(g.valid_from);
+        const until = g.valid_until ? Date.parse(g.valid_until) : Number.POSITIVE_INFINITY;
+        out.push({ group: g, rp_dns_name: rp.dns_name, active: rp.status === "ACTIVE" && from <= now && now < until });
+      }
+    return out;
   }
 
   walletProviderMinKeyStorage(fp: string): string | null {

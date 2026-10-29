@@ -101,3 +101,5 @@ and this ADR is updated.
 # Status
 
 **Accepted — 2026-10-26.** With project management's approval (security review fixes, general approval). DECISIONS: D-PROX-2.
+
+**Note (2026-10-29):** K2 (Institution Console screen) and K5 (`terminal_groups[]` in the list schema) are completed by [[ADR-0069]]; keys are issued on behalf of the institution (TG1–TG3).

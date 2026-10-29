@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 381 kodlanmış değişmez, 68 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 384 kodlanmış değişmez, 69 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -692,6 +692,17 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0068/WRS4` | Cüzdan iptal edilmiş kayıt sertifikası taşıyan isteğe veri göndermez ve iptal edilmiş sertifikalı belge verenden belge istemez; durum denetlenemezse kişiyi uyarır. |
 
 
+## ADR-0069
+
+*"Kapı grupları güven listesinde: kurum, politika, sertifika; terminal anahtarı kurum adına"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0069/TG1` | Kapı grubu doğrulayıcı kaydının `terminal_groups[]` öğesidir; `group_id` bütün listede tektir; etkin grup listede bulunan bir kuruma (`institution_id`) ve en az bir kapı politikasına bağlıdır; yayıncı bu koşulu sağlamayan grupla yayın yapmaz. |
+| `ADR-0069/TG2` | Kurum adına terminal anahtarı yönetimi kuruma daraltılmış belirteçle yapılır: kurum yalnız imzalı listede kendisine bağlı etkin grubun anahtarını alır, yalnız kendi anahtarlarını görür ve iptal eder; anahtar kaydı grubun kurumunu taşır; anahtarın kendisi yalnız verildiği yanıtta görünür. |
+| `ADR-0069/TG3` | Listede geri çekilmiş grubun ya da kurumu değişmiş grubun anahtarı kapıda geçmez (403, jetona dokunulmaz) ve bu gruba anahtar verilmez; grup listede yoksa [[ADR-0065]] TK1–TK3 geçerlidir. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -977,12 +988,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 381 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 384 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RQ, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TK, TL, TS, TX, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RQ, RS, RT, RV, S, SB, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-29 (`scripts/sync-invariants.mjs`). Toplam 381 kodlanmış değişmez, 68 dokümanda.
+**Üretilen dosya** — 2026-10-29 (`scripts/sync-invariants.mjs`). Toplam 384 kodlanmış değişmez, 69 dokümanda.

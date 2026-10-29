@@ -129,6 +129,12 @@ Kaydınızda `pseudonyms` alanı `single` (kişi başına bir takma ad) ya da `m
 Kapsam eklemek ya da değiştirmek yeni bir başvurudur; değişiklikler en geç 24 saatte yayındadır. Kaydınızı kendi kodunuzla
 okuyabilirsiniz: `source.relyingPartyByDnsName("shop.example.com")` ([[GUIDE-0006]]).
 
+**Kapılar (turnike, bilet kapısı).** Geçiş kartı kullanıyorsanız kapı gruplarınız kaydınızın `terminal_groups[]` alanında
+yayımlanır: grup kimliği, kapıları işleten kurum (`institution_id`), grubun kapı politikaları ve isteğe bağlı cihaz sertifikası
+parmak izleri ([[ADR-0069]]). Kapı cihazları Tamga Verify'a terminal anahtarıyla kimlik gösterir ([[ADR-0065]]); kurumunuzun
+yöneticisi anahtarları Kurum Konsolu'nun **Kapı terminalleri** ekranından oluşturur (anahtar bir kez gösterilir) ve iptal eder.
+Liste bir grubu geri çekerse o grubun kapıları hemen durur. Okuma: `source.terminalGroup("grup-kimligi")`.
+
 ## Kurallar
 
 | Kod | Ne der |

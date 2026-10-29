@@ -532,6 +532,7 @@ paralel yaşar ([[ARCH-0005]] §5.3 ile aynı politika).
 | OBS → belge veren API | mTLS veya istemci kimlik bilgisi |
 | Doğrulayıcı uygulaması → doğrulayıcı API | API anahtarı veya mTLS |
 | Kapı terminali → doğrulayıcı `/terminal/verify` | Terminal anahtarı: terminal grubuna bağlı, işletmecinin verdiği taşıyıcı anahtar (`Authorization: Bearer`); anahtarsız istek 401, jeton okunmaz ([[ADR-0065]] TK1–TK3). Anahtarlar yönetici uçlarından (`/terminal/keys`, iç adres) verilir ve iptal edilir. |
+| Kurum Konsolu → doğrulayıcı `/terminal/keys` (kurum adına) | Kuruma daraltılmış belirteç: `x-tamga-institution` + `x-institution-token` = base64url(HMAC-SHA256(yönetici belirteci, `tamga-terminal-keys/v1:` + kurum)); kurum yalnız imzalı listede (`terminal_groups[].institution_id`) kendisine bağlı grupların anahtarlarını alır, görür ve iptal eder; listede geri çekilen grubun anahtarı kapıda 403 ([[ADR-0069]] TG1–TG3). |
 | OID4VCI / OID4VP uçları | Protokolün kendi mekanizması |
 
 ## 6.5 Hız sınırı

@@ -3,16 +3,37 @@
  * ADR-0065: kapı kimliğini gösterir — `POST /terminal/verify` yalnız grubuna bağlı terminal anahtarıyla (`Authorization: Bearer`);
  * anahtarsız istek jetona dokunmaz (tek kullanımlık bilet QR'ı fotoğraflayan onu tüketemez — TK1). Anahtarlar yönetici ucundan
  * verilir/iptal edilir (TK2); sunucuda yalnız özet (TK3).
+ * ADR-0069: kapı grubu imzalı listede (`terminal_groups[]`) bir kuruma bağlıysa anahtar o kurum adına verilir; Kurum Konsolu
+ * uçları kuruma daraltılmış belirteçle çağırır ve yalnız kendi gruplarını yönetir (TG2). Listede geri çekilmiş grubun anahtarı
+ * geçmez (TG3). Grup listede yoksa ADR-0065 yolu aynen (yalnız işletmeci).
  */
-import type { FastifyInstance } from "fastify";
+import { createHash, timingSafeEqual } from "node:crypto";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { VerifyContext } from "../app.js";
 import { langOf, noTerminalPage, terminalPage } from "../html.js";
 import { CAMPUS_GROUP } from "../policies.js";
 import { rateLimitHook } from "../rate-limit.js";
+import { institutionToken, type TerminalKeyInfo } from "../terminal-keys.js";
 
 const DEFAULT_GROUP = CAMPUS_GROUP;
 
 const GROUP_RE = /^[a-z0-9-]{1,40}$/;
+const INST_RE = /^[a-z0-9.-]{3,253}$/;
+
+/** Yönetici ucunu çağıran: işletmeci (tam yetki) ya da kuruma daraltılmış belirteçle bir kurum (ADR-0069 TG2). */
+type AdminScope = { kind: "operator" } | { kind: "institution"; id: string };
+const sameSecret = (a: string, b: string) => {
+  const h = (v: string) => createHash("sha256").update(v).digest();
+  return timingSafeEqual(h(a), h(b));
+};
+function adminScope(ctx: VerifyContext, req: FastifyRequest): AdminScope | null {
+  if (ctx.isAdmin(req.headers["x-admin-token"])) return { kind: "operator" };
+  const admin = process.env.TAMGA_ADMIN_TOKEN;
+  const inst = req.headers["x-tamga-institution"];
+  const tok = req.headers["x-institution-token"];
+  if (!admin || typeof inst !== "string" || typeof tok !== "string" || !INST_RE.test(inst)) return null;
+  return sameSecret(tok, institutionToken(admin, inst)) ? { kind: "institution", id: inst } : null;
+}
 
 export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext) {
   // Kapı politikası (proximity) olmayan ağda (bugün gerçek ağ) kapı yüzü kapalıdır; sayaç ve yönetici uçları kalır.
@@ -36,6 +57,16 @@ export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext)
     const group = term.terminalGroup;
     if (b.terminal_group !== undefined && b.terminal_group !== group)
       return reply.code(403).send({ ok: false, reason: "terminal key is not for this terminal group" });
+    // ADR-0069 TG3: imzalı listede grup geri çekildiyse ya da başka kuruma geçtiyse anahtar geçmez (grup listede yoksa ADR-0065)
+    const listed = ctx.trust().terminalGroup?.(group) ?? null;
+    if (listed && !listed.active) {
+      ctx.audit({ event: "terminal.group_inactive", terminal_group: group });
+      return reply.code(403).send({ ok: false, reason: "terminal group is not active in the trust list" });
+    }
+    if (listed && term.owner && listed.group.institution_id && term.owner !== listed.group.institution_id) {
+      ctx.audit({ event: "terminal.owner_mismatch", terminal_group: group, key_id: term.id });
+      return reply.code(403).send({ ok: false, reason: "terminal key belongs to another institution" });
+    }
     const r = await ctx.passes.verifyToken(String(b.token).trim(), { terminalGroup: group });
     ctx.gateStats.record(group, r.ok, r.reason);
     ctx.audit({
@@ -47,27 +78,78 @@ export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext)
     return r;
   });
 
-  // ADR-0065 TK2: terminal anahtarları — işletmeci (Kurum Konsolu, iç adres) verir ve iptal eder; yalnız yönetici belirteciyle.
-  // Liste özet taşımaz; anahtar yalnız verme yanıtında bir kez görünür.
+  // ADR-0065 TK2: terminal anahtarları — işletmeci verir ve iptal eder; yalnız yönetici belirteciyle. Liste özet taşımaz; anahtar
+  // yalnız verme yanıtında bir kez görünür. ADR-0069 TG2: kuruma daraltılmış belirteç yalnız o kurumun gruplarını görür ve yönetir.
+  const listedGroup = (g: string) => ctx.trust().terminalGroup?.(g) ?? null;
+  const ownerOf = (k: Pick<TerminalKeyInfo, "owner" | "terminalGroup">) =>
+    k.owner ?? listedGroup(k.terminalGroup)?.group.institution_id;
+  const visible = (scope: AdminScope, owner: string | undefined) => scope.kind === "operator" || owner === scope.id;
+  const by = (scope: AdminScope) => (scope.kind === "operator" ? "operator" : `institution:${scope.id}`);
+  /** Bu ağın kapı grupları (politikalardan) ve imzalı listedeki kayıtları — konsol verme seçeneklerini buradan kurar. */
+  const groupsView = (scope: AdminScope) =>
+    [...knownGroups()]
+      .map((g) => {
+        const l = listedGroup(g);
+        return {
+          group_id: g,
+          listed: !!l,
+          active: l ? l.active : true,
+          ...(l?.group.institution_id ? { institution_id: l.group.institution_id } : {}),
+          ...(l?.group.label ? { label: l.group.label } : {}),
+          ...(l?.group.allowed_policies ? { allowed_policies: l.group.allowed_policies } : {}),
+        };
+      })
+      .filter((g) => visible(scope, g.institution_id));
   app.get("/terminal/keys", async (req, reply) => {
-    if (!ctx.isAdmin(req.headers["x-admin-token"])) return reply.code(404).send("not found");
-    return { keys: ctx.terminalKeys.list() };
+    const scope = adminScope(ctx, req);
+    if (!scope) return reply.code(404).send("not found");
+    const keys = ctx.terminalKeys
+      .list()
+      .map((k) => {
+        const owner = ownerOf(k);
+        return { ...k, ...(owner ? { owner } : {}) };
+      })
+      .filter((k) => visible(scope, k.owner));
+    return { keys, groups: groupsView(scope) };
   });
   app.post("/terminal/keys", async (req, reply) => {
-    if (!ctx.isAdmin(req.headers["x-admin-token"])) return reply.code(404).send("not found");
+    const scope = adminScope(ctx, req);
+    if (!scope) return reply.code(404).send("not found");
     const b = (req.body ?? {}) as { terminal_group?: unknown; label?: unknown };
     const group = typeof b.terminal_group === "string" ? b.terminal_group : "";
     if (!GROUP_RE.test(group) || !knownGroups().has(group))
       return reply.code(400).send({ error: "invalid_request", error_description: "unknown terminal group" });
-    const label = typeof b.label === "string" ? b.label : undefined;
-    const k = ctx.terminalKeys.issue(group, label);
-    ctx.audit({ event: "terminal.key_issued", terminal_group: group, key_id: k.id });
-    return reply.code(201).send({ id: k.id, terminal_group: group, key: k.key });
+    const listed = listedGroup(group);
+    const owner = listed?.group.institution_id;
+    // kurum yalnız imzalı listede kendisine bağlı grup için anahtar alır (TG2); işletmeci listede olmayan grup için de (ADR-0065)
+    if (scope.kind === "institution" && owner !== scope.id)
+      return reply
+        .code(403)
+        .send({ error: "forbidden", error_description: "terminal group is not registered to this institution" });
+    if (listed && !listed.active)
+      return reply
+        .code(409)
+        .send({ error: "conflict", error_description: "terminal group is not active in the trust list" });
+    if (listed?.group.allowed_policies) {
+      const allowed = new Set(listed.group.allowed_policies);
+      if (!ctx.policies.some((p) => p.proximity?.terminal_group === group && allowed.has(p.policy_id)))
+        return reply
+          .code(409)
+          .send({ error: "conflict", error_description: "no gate policy of this group is allowed by the trust list" });
+    }
+    const label = typeof b.label === "string" ? b.label.trim() || undefined : undefined;
+    const k = ctx.terminalKeys.issue(group, label, undefined, owner);
+    ctx.audit({ event: "terminal.key_issued", terminal_group: group, key_id: k.id, by: by(scope) });
+    return reply.code(201).send({ id: k.id, terminal_group: group, ...(owner ? { owner } : {}), key: k.key });
   });
   app.delete<{ Params: { id: string } }>("/terminal/keys/:id", async (req, reply) => {
-    if (!ctx.isAdmin(req.headers["x-admin-token"])) return reply.code(404).send("not found");
+    const scope = adminScope(ctx, req);
+    if (!scope) return reply.code(404).send("not found");
+    const k = ctx.terminalKeys.get(req.params.id);
+    // başka kurumun anahtarı yokmuş gibi (varlığı da açığa çıkmaz)
+    if (!k || !visible(scope, ownerOf(k))) return reply.code(404).send({ error: "not_found" });
     const ok = ctx.terminalKeys.revoke(req.params.id);
-    if (ok) ctx.audit({ event: "terminal.key_revoked", key_id: req.params.id });
+    if (ok) ctx.audit({ event: "terminal.key_revoked", key_id: req.params.id, by: by(scope) });
     return ok ? { ok: true } : reply.code(404).send({ error: "not_found" });
   });
 

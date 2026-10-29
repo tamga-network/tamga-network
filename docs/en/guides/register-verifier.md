@@ -137,6 +137,12 @@ the person wants) ([[ADR-0031]]).
 Adding or changing a scope is a new application; changes are live within 24 hours. You can read your own entry in code:
 `source.relyingPartyByDnsName("shop.example.com")` ([[GUIDE-0006]]).
 
+**Gates (turnstiles, ticket gates).** If you use access passes, your gate groups are published in your entry's
+`terminal_groups[]`: group ID, the institution operating the gates (`institution_id`), the group's gate policies and optional
+device certificate fingerprints ([[ADR-0069]]). Gate devices identify themselves to Tamga Verify with a terminal key
+([[ADR-0065]]); your institution's admin creates keys (shown once) and revokes them on the **Gate terminals** screen of the
+Institution Console. If the list withdraws a group, that group's gates stop at once. Reading: `source.terminalGroup("group-id")`.
+
 ## Rules
 
 | Code | What it says |

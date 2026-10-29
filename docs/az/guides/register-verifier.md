@@ -130,6 +130,12 @@ Qeydinizdə `pseudonyms` sahəsi `single` (hər şəxsə bir psevdonim) və ya `
 Əhatə əlavə etmək və ya dəyişmək yeni müraciətdir; dəyişikliklər ən geci 24 saat ərzində dərc olunur. Qeydinizi öz kodunuzla
 oxuya bilərsiniz: `source.relyingPartyByDnsName("shop.example.com")` ([[GUIDE-0006]]).
 
+**Girişlər (turniket, bilet girişi).** Keçid kartı istifadə edirsinizsə, giriş qruplarınız qeydinizin `terminal_groups[]`
+sahəsində dərc olunur: qrup identifikatoru, girişləri idarə edən qurum (`institution_id`), qrupun giriş siyasətləri və istəyə
+bağlı cihaz sertifikatı barmaq izləri ([[ADR-0069]]). Giriş cihazları Tamga Verify-a terminal açarı ilə özünü təqdim edir;
+qurumunuzun inzibatçısı açarları Qurum Konsolunun **Giriş terminalları** ekranında yaradır (açar bir dəfə göstərilir) və ləğv
+edir. Siyahı qrupu geri çəkərsə, həmin qrupun girişləri dərhal dayanır. Oxuma: `source.terminalGroup("qrup-id")`.
+
 ## Qaydalar
 
 | Kod | Nə deyir |

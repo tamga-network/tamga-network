@@ -72,6 +72,7 @@ import {
 } from "./tl119612.js";
 import { chainCommand } from "./chain/cli.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
+import { checkTerminalGroups } from "./terminal-groups.js";
 import { buildWrprcPayloads, wrprcHeader } from "./wrprc.js";
 import {
   assignWrprcStatus,
@@ -668,6 +669,9 @@ async function build() {
   const reg = checkRegistrations(rps, issuers);
   if (reg.errors.length) throw new Error(`ADR-0024: eksik kayıt verisi — ${reg.errors.join("; ")}`);
   for (const w of reg.warnings) console.warn(`[uyarı] ADR-0024 kayıt verisi eksik (pilot öncesi tamamlanmalı): ${w}`);
+  // ADR-0069: kapı grupları — tek kimlik, etkin grupta kurum + politika (Tamga Verify anahtarı kurum adına buna göre verir)
+  const tg = checkTerminalGroups(rps, issuers, now);
+  if (tg.length) throw new Error(`ADR-0069: terminal_groups — ${tg.join("; ")}`);
   const tlPrev = prevInfo(`tl-${cc.toLowerCase()}`);
   const tl = {
     list_format_version: tlSrc.list_format_version,

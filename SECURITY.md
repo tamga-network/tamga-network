@@ -32,6 +32,8 @@ These are deliberate and recorded; there is no need to report them, but a findin
 - Presentations of the same credential can be linked if verifiers collude; zero-knowledge age proofs are live on the
   verifier side and arrive on the wallet side with the phone builds.
 - No independent security audit has been performed yet.
+  A review package for external auditors (scope, threat model, data flows, invariant catalogue, test results) is in
+  [`docs/audit/`](docs/audit/README.md).
 
 Keys under `ops/pki/` are for development only and are never used in production.
 

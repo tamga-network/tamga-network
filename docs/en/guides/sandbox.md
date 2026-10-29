@@ -191,7 +191,10 @@ same page.
 **Gate (turnstile / ticket gate):** `https://verify.sandbox.tamga.network/terminal?group=<group>` is the demo gate; it reads the
 pass QR from the wallet's “Show” screen with the camera. The gate identifies itself with a terminal key ([[ADR-0065]]); the
 sandbox's demo keys are public and go into the field on the page: `istanbul-bilgi-campus` → `sandbox-gate-campus`, `bubilet-gate`
-→ `sandbox-gate-ticket`. On the production network the gate's operator issues the key.
+→ `sandbox-gate-ticket`. On the production network the gate's operator issues the key. In the sandbox list each gate group is
+bound to its institution ([[ADR-0069]]): `istanbul-bilgi-campus` → `istanbul-bilgi`, `bubilet-gate` → `bubilet`,
+`paribu-cineverse-gate` → `paribu-cineverse`; the admin of an institution with its own gates creates and revokes keys on the
+**Gate terminals** screen of the Institution Console (a key is shown once).
 
 To try your own verifier: connect it to the sandbox list and the sandbox pins, then present credentials received in the
 sandbox. You can open your institution in the sandbox yourself (§9); today you register your wallet provider by request to project

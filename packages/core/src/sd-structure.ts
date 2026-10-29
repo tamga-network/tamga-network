@@ -128,6 +128,9 @@ export function resolveSdPayload(
     for (const [k, v] of Object.entries(node)) {
       if (k === "_sd" || (root && k === "_sd_alg")) continue;
       if (k === "...") throw new SdStructureError(`"..." is only allowed inside array elements`);
+      // JSON.parse "__proto__"yu kendi anahtarı olarak bırakır; `out[k] = …` ise sonucun PROTOTİPİNİ değiştirirdi (hiçbir anahtarda
+      // görünmeyen, kalıtımla okunan alanlar). Açıklanan `__proto__` gibi reddedilir (FORBIDDEN_NAMES; K11 özellik testi).
+      if (k === "__proto__") throw new SdStructureError("claim name not allowed: __proto__");
       out[k] = walk(v, path ? `${path}.${k}` : k, false, level, depth + 1);
     }
     const sd = node._sd;

@@ -413,7 +413,39 @@ components:
               legal_name: { type: string }
               status: { type: string }
               scopes: { type: array, items: { type: object } }
+              terminal_groups:
+                type: array
+                description: >
+                  Gate groups under this verifier (ADR-0012 K5, ADR-0069). `group_id` is unique in the list; an active group
+                  names the institution operating its gates and at least one gate policy.
+                x-tr: >
+                  Bu doğrulayıcının altındaki kapı grupları (ADR-0012 K5, ADR-0069). `group_id` listede tektir; etkin grup
+                  kapılarını işleten kurumu ve en az bir kapı politikasını belirtir.
+                items: { $ref: "#/components/schemas/TerminalGroup" }
         national_schemas: { type: array, items: { type: object } }
+    TerminalGroup:
+      type: object
+      required: [group_id, valid_from]
+      properties:
+        group_id: { type: string, pattern: "^[a-z0-9-]{1,40}$", example: bubilet-gate }
+        institution_id:
+          type: string
+          pattern: "^[a-z0-9.-]{3,253}$"
+          description: Issuer `slug` or verifier `dns_name` in the same list; required for an active group.
+          example: bubilet
+        label: { type: string, maxLength: 160 }
+        allowed_policies:
+          type: array
+          items: { type: string, pattern: "^[a-z0-9-]{1,64}$" }
+          description: Gate policy IDs; at least one for an active group.
+          example: [event-ticket]
+        cert_fingerprints:
+          type: array
+          items: { type: string, pattern: "^[0-9a-f]{64}$" }
+          description: SHA-256 fingerprints of gate device certificates (preparation; gates use terminal keys today).
+        offline_allowed: { type: boolean }
+        valid_from: { type: string, format: date-time }
+        valid_until: { type: string, format: date-time, nullable: true }
     RootFingerprints:
       type: object
       properties:

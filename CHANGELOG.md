@@ -6,6 +6,29 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.4 — unreleased (source only, not on npm)
 
+- trust + trust-publisher + verify (2026-10-29; ADR-0069, completes ADR-0065 K2/K5): **gate groups in the trust list.** The
+  verifier record's `terminal_groups[]` (ADR-0012 K5) gets a schema: `group_id` (unique in the list), `institution_id` (issuer
+  `slug` or verifier `dns_name` operating the gates), `label`, `allowed_policies[]`, optional `cert_fingerprints[]` and
+  `offline_allowed`, `valid_from` / `valid_until`. The publisher refuses to publish an active group without a known institution
+  and a policy (TG1). `TrustSource.terminalGroup()` / `terminalGroupByCertFingerprint()` read it (the latter prepares
+  certificate-based gates; gates still use terminal keys). Tamga Verify records the group's institution on every terminal key
+  and accepts an institution-scoped admin token (`x-tamga-institution` + `x-institution-token` =
+  base64url(HMAC-SHA256(admin token, "tamga-terminal-keys/v1:" + institution))): an institution gets, lists and revokes keys
+  only for its own listed groups (TG2); `GET /terminal/keys` also returns `groups` and each key's `owner` and `lastUsedAt`. A
+  key of a group withdrawn from the list, or whose institution changed, gets 403 at `/terminal/verify` (TG3). Groups not in the
+  list keep the ADR-0065 path (operator only).
+
+- core + wallet-core (2026-10-29; external-audit preparation, property/fuzz tests with `fast-check`): three hardening fixes the
+  new property tests found. `resolveSdPayload` (`@tamga-network/core/sd-structure`, used by the verifier and the wallet) rejects a
+  plain `__proto__` key anywhere in the payload — JSON keeps it as an own key and the assignment changed the result object's
+  prototype, so a claim could be read through inheritance without appearing in any key (issuer-signed content only).
+  `statusBitAt` (wallet-core) reads 4- and 8-bit lists correctly — the CWT path accepts them and the old reader took every
+  non-1-bit list as 2-bit, so in an 8-bit list it read a neighbour's bits (a revoked entry could read as valid); values above 3
+  now read as 3 (invalid). `checkDcqlShape` rejects malformed queries with a `WalletError` instead of a `TypeError`: credential
+  queries must be objects, `claims` an array, each claim path a non-empty array of strings, `null` or non-negative integers
+  (OpenID4VP 1.0 §7), `values` a non-empty array. Property tests: `packages/*/src/property.test.ts`; contract invariant/fuzz
+  sequences: `contracts/test/invariants-fuzz.test.ts`.
+
 - verifier + verify (2026-10-29; ADR-0067, OpenID4VP 1.0 §5.10 / §8.2 / §8.3.1, HAIP §5): **request branches and soft decline**
   (protection against forged declines). OpenID4VP does not authenticate error responses, and `state` sat in a request object that
   anyone who saw the QR code could fetch, so a bystander could close the real person's presentation with

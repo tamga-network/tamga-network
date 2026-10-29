@@ -185,7 +185,10 @@ sayfada görünür.
 **Kapı (turnike / bilet kapısı):** `https://verify.sandbox.tamga.network/terminal?group=<grup>` deneme kapısıdır; cüzdanın “Göster”
 ekranındaki geçiş kartı QR'ını kameraya tutar. Kapı kendini terminal anahtarıyla tanıtır ([[ADR-0065]]); sandbox'ın deneme
 anahtarları herkese açıktır ve sayfadaki alana yazılır: `istanbul-bilgi-campus` → `sandbox-gate-campus`, `bubilet-gate` →
-`sandbox-gate-ticket`. Gerçek ağda anahtarı kapının işletmecisi verir.
+`sandbox-gate-ticket`. Gerçek ağda anahtarı kapının işletmecisi verir. Sandbox listesinde her kapı grubu kurumuna bağlıdır
+([[ADR-0069]]): `istanbul-bilgi-campus` → `istanbul-bilgi`, `bubilet-gate` → `bubilet`, `paribu-cineverse-gate` →
+`paribu-cineverse`; kendi kapıları olan bir kurumun yöneticisi anahtarları Kurum Konsolu'nun **Kapı terminalleri** ekranından
+oluşturur ve iptal eder (anahtar bir kez gösterilir).
 
 Kendi doğrulayıcınızı denemek için: doğrulayıcınızı sandbox listesine ve sandbox pinlerine bağlayın, sandbox'ta alınmış
 belgeleri gösterin. Kurumunuzu sandbox'ta kendiniz açabilirsiniz (§9); cüzdan sağlayıcınızı bugün proje yönetimine başvurarak kaydettirirsiniz

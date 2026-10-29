@@ -4,8 +4,12 @@
  * grubuna göre denetlenir. Sunucuda anahtarın yalnız SHA-256 özeti durur (`terminal-keys.json`; kişisel veri yok); anahtar yalnız
  * verildiği anda bir kez gösterilir. İşletmeci anahtarı yönetici ucundan verir ve iptal eder; yerel geliştirme ve sandbox için
  * ortamdan önceden yüklenen anahtarlar (`TAMGA_VERIFY_TERMINAL_KEYS="grup:anahtar,grup:anahtar"`, iptal edilemez, dosyaya yazılmaz).
+ *
+ * ADR-0069: anahtar kaydı grubun kurumunu (`owner`, imzalı listedeki `terminal_groups[].institution_id`) ve son kullanım anını
+ * taşır; Kurum Konsolu yönetici uçlarını kuruma daraltılmış belirteçle çağırır (`institutionToken`) — kurum yalnız kendi
+ * gruplarının anahtarlarını görür, verir ve iptal eder (TG2).
  */
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
@@ -15,14 +19,29 @@ export interface TerminalKeyRecord {
   /** anahtarın SHA-256 özeti (base64url) — anahtarın kendisi tutulmaz */
   hash: string;
   label?: string;
+  /** ADR-0069: grubun kurumu (listedeki `institution_id`); grup listede kurumsuzsa yok */
+  owner?: string;
   createdAt: number;
   revokedAt?: number;
+  /** son başarılı kapı isteği (saniye; en çok dakikada bir diske yazılır) */
+  lastUsedAt?: number;
 }
 /** Dışa gösterilen kayıt (özet yok). */
 export type TerminalKeyInfo = Omit<TerminalKeyRecord, "hash"> & { source: "issued" | "env" };
 
 const GROUP_RE = /^[a-z0-9-]{1,40}$/;
 const hashOf = (key: string) => createHash("sha256").update(key).digest("base64url");
+/** Son kullanım anı en çok bu sıklıkta diske yazılır (her kapı okumasında dosya yazılmasın). */
+const LAST_USED_SAVE_SEC = 60;
+
+/**
+ * ADR-0069 TG2: kuruma daraltılmış yönetici belirteci = base64url(HMAC-SHA256(yönetici belirteci, "tamga-terminal-keys/v1:" +
+ * kurum)). Kurum Konsolu sunucu tarafında üretir ve `x-tamga-institution` + `x-institution-token` başlıklarıyla gönderir;
+ * doğrulayıcı aynı formülle denetler. Belirteç yalnız o kurumun terminal anahtarı uçlarını açar.
+ */
+export function institutionToken(adminToken: string, institutionId: string): string {
+  return createHmac("sha256", adminToken).update(`tamga-terminal-keys/v1:${institutionId}`).digest("base64url");
+}
 
 /** `grup:anahtar,grup:anahtar` → kayıtlar (biçimsiz parça atlanır; boş dize → hiç). */
 export function parseEnvTerminalKeys(spec: string | undefined): Array<{ terminalGroup: string; key: string }> {
@@ -69,7 +88,12 @@ export class TerminalKeyRegistry {
     writeFileSync(this.file, JSON.stringify({ keys: this.issued }, null, 2));
   }
   /** Yeni anahtar (bir kez gösterilir); grup biçimi K1 (politikalardaki `terminal_group`). */
-  issue(terminalGroup: string, label?: string, now = Math.floor(Date.now() / 1000)): { id: string; key: string } {
+  issue(
+    terminalGroup: string,
+    label?: string,
+    now = Math.floor(Date.now() / 1000),
+    owner?: string,
+  ): { id: string; key: string } {
     if (!GROUP_RE.test(terminalGroup)) throw new Error("invalid terminal group");
     const key = `tk_${randomBytes(24).toString("base64url")}`;
     const id = randomBytes(6).toString("hex");
@@ -78,6 +102,7 @@ export class TerminalKeyRegistry {
       terminalGroup,
       hash: hashOf(key),
       ...(label ? { label: label.slice(0, 60) } : {}),
+      ...(owner ? { owner } : {}),
       createdAt: now,
     });
     this.save();
@@ -98,6 +123,10 @@ export class TerminalKeyRegistry {
     };
     return [...this.env.map((r) => strip(r, "env")), ...this.issued.map((r) => strip(r, "issued"))];
   }
+  /** Tek kayıt (özet yok); yoksa null. */
+  get(id: string): TerminalKeyInfo | null {
+    return this.list().find((k) => k.id === id) ?? null;
+  }
   /** Hiç anahtar var mı (etkin)? */
   get size() {
     return this.env.length + this.issued.filter((k) => !k.revokedAt).length;
@@ -106,16 +135,23 @@ export class TerminalKeyRegistry {
    * `Authorization: Bearer <anahtar>` → anahtarın grubu; yoksa/iptalse null. Karşılaştırma özet üzerinden ve sabit zamanlı;
    * bütün kayıtlar her seferinde dolaşılır (hangi anahtarın tutmadığı zamanlamadan okunmaz).
    */
-  authenticate(header: string | string[] | undefined): { id: string; terminalGroup: string } | null {
+  authenticate(
+    header: string | string[] | undefined,
+    now = Math.floor(Date.now() / 1000),
+  ): { id: string; terminalGroup: string; owner?: string } | null {
     if (typeof header !== "string") return null;
     const m = /^Bearer\s+(\S+)$/i.exec(header.trim());
     if (!m || m[1].length > 256) return null;
     const h = Buffer.from(hashOf(m[1]));
-    let hit: { id: string; terminalGroup: string } | null = null;
+    let rec: TerminalKeyRecord | null = null;
     for (const r of [...this.env, ...this.issued]) {
       const ok = timingSafeEqual(h, Buffer.from(r.hash));
-      if (ok && !r.revokedAt && !hit) hit = { id: r.id, terminalGroup: r.terminalGroup };
+      if (ok && !r.revokedAt && !rec) rec = r;
     }
-    return hit;
+    if (!rec) return null;
+    const prev = rec.lastUsedAt ?? 0;
+    rec.lastUsedAt = now;
+    if (now - prev >= LAST_USED_SAVE_SEC && this.issued.includes(rec)) this.save();
+    return { id: rec.id, terminalGroup: rec.terminalGroup, ...(rec.owner ? { owner: rec.owner } : {}) };
   }
 }
