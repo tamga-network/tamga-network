@@ -167,6 +167,10 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         return reply.code(400).send({ error: "invalid_request", error_description: "bilinmeyen sunum" });
       const pid = p.req.presentationId;
       if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
+      // Bir yanıt doğrulanırken gelen ret sonucu çeviremez: kabul tek yönlü durum değişikliğidir (PV10, §10.1). `state` istek
+      // nesnesinde açık olduğundan ret yalnız cüzdandan gelmeyebilir; doğrulama bitince sunum ya tamamlanır ya açık kalır.
+      if (p.busy)
+        return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
       p.used = true;
       p.result = rejectedResult(
         pid,
@@ -250,6 +254,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
             audit: (e) => ctx.audit(e),
             zk: ctx.zk, // ADR-0032: mso_mdoc_zk için arka uç (yerel varsa o, yoksa WASM)
           });
+      // doğrulama sürerken sunum başka yoldan kapandıysa (ör. Ek C yanıtı) bu yanıt sonucu ezmez (tek yönlü durum, PV10)
+      if (p.used)
+        return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
       // Sahiplik kanıtına ulaşmayan sonuç (A1–A6 / Z1 reddi ya da doğrulayıcı tarafı ZK eksiği) sunumu tüketmez
       if (!holderBound(out.result))
         return failedAttempt(p, pid, reply, out.result.failed_step, out.result.failed_reason ?? out.result.outcome);

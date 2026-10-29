@@ -4,7 +4,7 @@ title: "Sunucuda doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-23
+last_updated: 2026-10-29
 summary: >
   Kendi sunucunuzda Tamga belgesi doğrulamak: güven kaynağını yükleme, iptal listesi ön çekimi, politika → imzalı OpenID4VP isteği,
   şifreli yanıtı çözme ve kanonik doğrulama hattı (T0 + A–E). Referans uygulama: apps/verify.
@@ -83,6 +83,11 @@ Alan adları ve imzalar paket tiplerinde tanımlıdır; tam çalışan örnek `a
 ## Kontrol listesi
 
 - [[t:nonce|Nonce]] tek kullanımlıktır; aynı yanıt ikinci kez işlenmez.
+- **Başarı sayfası kanıt değildir.** Tarayıcının `redirect_uri`'ye ulaşması hiçbir şey kanıtlamaz; hesabı ya da oturumu yalnızca
+  sunucunuzun kaydettiği sonuca göre ve o sunumu açan oturuma bağlı olarak güncelleyin. Kabul tek koşullu bir durum değişikliği
+  olmalı (bekliyor → kabul / ret): aynı sunuma eşzamanlı iki yanıt ya da yanıtla birlikte gelen bir ret varsa yalnız biri sonucu
+  yazar. Birden çok sunucu örneği çalıştırıyorsanız bu durumu paylaşılan depoda koşullu yazmayla tutun. Sahiplik kanıtına (A6)
+  ulaşmayan yanıt sunumu kapatmamalı ([[SPEC-PROTO-0002]] §10.1).
 - Politika yalnızca gereken alanı ister; yaş için [[t:mdoc]] `age_over_18` ya da `age_over_15` gibi tek bir alan
   yeterlidir (eşikler kapalı küme: 15 ve 18; [[ADR-0064]]). Tamga Verify'da `age-over-15-mdoc` ve `age-over-15-zk` politikaları da var.
 - [[t:status-list|İptal listesi]] ön çekimi ve güven listesi yenilemesi çalışıyor olmalı. Çalışmıyorsa sonuçlar `INDETERMINATE` olur — bu doğru davranıştır.

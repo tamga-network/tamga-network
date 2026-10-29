@@ -4,7 +4,7 @@ title: "Serverdə yoxlama"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-23
+last_updated: 2026-10-29
 summary: >
   Tamga rəqəmsal sənədini öz serverinizdə yoxlamaq: etibar mənbəyinin yüklənməsi, ləğv siyahısının əvvəlcədən alınması, siyasət → imzalı OpenID4VP sorğusu, şifrələnmiş cavabın deşifrəsi və kanonik yoxlama xətti (T0 + A–E). İstinad tətbiqi: apps/verify.
 translation_of: GUIDE-0002
@@ -84,6 +84,11 @@ Müştəri identifikatoru `x509_hash` formatındadır (HAIP 1.0 §5); `pemRpSign
 ## Yoxlama siyahısı
 
 - [[t:nonce|Nonce]] birdəfəlikdir; eyni cavab ikinci dəfə emal edilmir.
+- **Uğur səhifəsi sübut deyil.** Brauzerin `redirect_uri`-yə çatması heç nəyi sübut etmir; hesabı və ya sessiyanı yalnız
+  serverinizin qeyd etdiyi nəticəyə görə və yalnız həmin təqdimatı açan sessiya üçün yeniləyin. Qəbul tək şərtli vəziyyət
+  dəyişikliyi olmalıdır (gözləyir → qəbul / rədd): eyni təqdimata eyni anda iki cavab və ya cavabla birlikdə imtina gəlirsə,
+  nəticəni yalnız biri yazır. Bir neçə server nüsxəsi işlədirsinizsə, bu vəziyyəti paylaşılan anbarda şərtli yazma ilə saxlayın.
+  Sahiblik sübutuna (A6) çatmayan cavab təqdimatı bağlamamalıdır ([[SPEC-PROTO-0002]] §10.1).
 - Siyasət yalnız lazım olan sahəni tələb edir; yaş üçün [[t:mdoc]] `age_over_18` və ya `age_over_15` kimi tək bir sahə
   kifayətdir (həddlər qapalı çoxluqdur: 15 və 18; [[ADR-0064]]). Tamga Verify-da `age-over-15-mdoc` və `age-over-15-zk` siyasətləri də var.
 - [[t:status-list|Ləğv siyahısının]] əvvəlcədən alınması və etibar siyahısının yenilənməsi işləməlidir. İşləmirsə, nəticələr `INDETERMINATE` olur — bu, düzgün davranışdır.

@@ -6,6 +6,16 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.3 — 2026-10-27
 
+- verify (2026-10-29; OpenID4VP session and replay acceptance tests, SPEC-PROTO-0002 §10.1, PV10; no package change): a
+  wallet error response (`error` + `state`) that arrives while a response to the same presentation is being verified is now
+  refused with 400 (`a response is being processed`) instead of closing the presentation — before, the decline wrote REJECTED
+  and the in-flight verification then overwrote it with its own result, so the outcome could change after it was written. The
+  response path also re-checks that the presentation is still open after verification before writing a result. New
+  `apps/verify/test/session-replay.test.ts` covers eight cases: an old response sent to a new attempt, a proof made for another
+  verifier (KB-JWT `aud`), the same valid response sent concurrently, a result requested by another session or RP, an expired
+  attempt, malformed input first (and state / nonce swapped between two sessions), re-reading the result after acceptance,
+  and a credential with a missing field; plus a Digital Credentials API origin mismatch and a response after a decline. The
+  server-side verification guide has a "a success page is not proof" checklist item.
 - docs (2026-10-28; data-protection pre-review, no package change): ADR-0040 note — the sandbox's real identity path defaults to
   the invitation mode (`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`) until the legal review is complete, the quick trial stays open to
   everyone; RI1 rewritten (tr/en/az, INVARIANTS). Sandbox guide §8 and the warning text now say deletion of the provider session is

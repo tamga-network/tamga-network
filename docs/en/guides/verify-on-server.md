@@ -4,7 +4,7 @@ title: "Verify on your server"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-23
+last_updated: 2026-10-29
 summary: >
   Verifying Tamga credentials on your own server: loading the trust source, prefetching status lists, policy → signed
   OpenID4VP request, decrypting the encrypted response and the canonical verification pipeline (T0 + A–E). Reference
@@ -88,6 +88,12 @@ with `policy.freshness.max_clock_skew_sec` (default 120 s).
 ## Checklist
 
 - The [[t:nonce]] is single-use; the same response is never processed twice.
+- **A success page is not proof.** A browser that reached the `redirect_uri` has proven nothing; update the account or session
+  only from the result your server recorded, and only for the session that opened that presentation. Acceptance must be a
+  single conditional state change (pending → accepted / rejected): when two responses, or a response and a decline, arrive at the
+  same presentation at once, only one of them writes the result. If you run several server instances, keep this state in shared
+  storage with a conditional write. A response that does not reach the proof of possession (A6) must not close the presentation
+  ([[SPEC-PROTO-0002]] §10.1).
 - The policy asks only for the fields it needs; for age a single [[t:mdoc]] field such as `age_over_18` or `age_over_15` is
   enough (the thresholds are a closed set: 15 and 18; [[ADR-0064]]). Tamga Verify also has the `age-over-15-mdoc` and
   `age-over-15-zk` policies.
