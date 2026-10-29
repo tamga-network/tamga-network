@@ -238,7 +238,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         ? { result: pseudonymOnlyResult(pid, ctx), claims: {} as Record<string, unknown> | null }
         : await verifyPresentation({
             presentation: pres!,
-            aud: cfg.clientId,
+            // OpenID4VP 1.0 Ek A.4: DC API'de sunumun hedefi `origin:` + köken — imzalı istekte de (SPEC-PROTO-0002 §7.1);
+            // cihazlar arası yolda client identifier (PV7)
+            aud: opened.path === "dc_api" && p.dcApiOrigin ? `origin:${p.dcApiOrigin}` : cfg.clientId,
             nonce: p.req.nonce,
             // D-CRED-5: format politikadan; mdoc SessionTranscript'i yanıtın geldiği yola göre (response_uri ya da köken)
             format: pc.format,

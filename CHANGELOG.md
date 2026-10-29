@@ -28,7 +28,11 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
   (2) Tamga Verify accepts a Digital Credentials API response without `state` (OpenID4VP 1.0 Appendix A.2: `state` is not
   defined for the DC API); a `state` that is present must still match, and the cross-device path still requires it.
   (3) The wallet-provider certificate check accepts any EN 319 412-1 semantic identifier (e.g. `NTRNL-NLTEST.00000000`), not
-  only letters and digits after the hyphen.
+  only letters and digits after the hyphen. (4) SD-JWT VC over the Digital Credentials API: the Key Binding JWT `aud` is
+  `origin:<origin>` (OpenID4VP 1.0 Appendix A.4, also for signed requests; SPEC-PROTO-0002 §7.1) in wallet-core and in Tamga
+  Verify — both used the client identifier, so an EU wallet's DC API presentation was rejected. Cross-device keeps the client
+  identifier (PV7); a proof bound to the other path is rejected. Wallets on wallet-core 0.7.3 need 0.7.4 for SD-JWT over the DC
+  API (mdoc and ISO 18013-7 Annex C are unchanged).
 
 ## 0.7.3 — 2026-10-27
 

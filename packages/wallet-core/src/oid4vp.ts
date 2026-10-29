@@ -1,7 +1,7 @@
 /**
  * OpenID4VP 1.0 — cüzdan tarafı, Tamga profili (SPEC-PROTO-0002):
  *  PV1 yalnızca DCQL · PV2 client_id kayıtla çözülür (aşırı talep denetimi) · PV3 şifreli yanıt (direct_post.jwt, ECDH-ES/A128GCM)
- *  PV4 origin prefix'i istekte kabul edilmez · PV6 istek nesnesi imzalı, redirect_uri prefix'i reddedilir · PV7 KB-JWT aud = client_id (tam)
+ *  PV4 origin prefix'i istekte kabul edilmez · PV6 istek nesnesi imzalı, redirect_uri prefix'i reddedilir · PV7 KB-JWT aud = client_id (tam; DC API'de `origin:` + köken, §7.1)
  *  PV8 sunum kaydı cihazda · PV9 ≤3 credential, ≤2 credential_sets · PV10 nonce tek kullanımlık (verifier)
  *  DCQL seçenekleri (OpenID4VP 1.0 §6): `claim_sets` (alan seçenekleri) ve `credential_sets` (belge seçenekleri, zorunlu /
  *  isteğe bağlı) — `matchDcql` + `selectDcql`; yalnız seçilen seçenek gönderilir (en az veri). §6.4.1: istenen alanı olmayan belge
@@ -1040,7 +1040,9 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
       discloseClaims: m.disclose,
       keys: p.keys,
       keyRef: m.keyRef,
-      aud: p.request.clientId,
+      // OpenID4VP 1.0 Ek A.4: DC API'de KB-JWT hedefi tarayıcının verdiği köken (`origin:` önekli), imzalı istekte de
+      // (SPEC-PROTO-0002 §7.1); cihazlar arası yolda client identifier (PV7)
+      aud: p.request.origin ? `origin:${p.request.origin}` : p.request.clientId,
       nonce: p.request.nonce,
       iat: p.now,
     });

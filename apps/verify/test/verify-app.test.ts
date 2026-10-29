@@ -283,6 +283,81 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     };
     expect(res2.failed_reason).toBeNull();
     expect(res2.outcome).toBe("ACCEPTED");
+    // SD-JWT VC tarayıcı Digital Credentials API'siyle (OpenID4VP 1.0 Ek A.4, SPEC-PROTO-0002 §7.1): KB-JWT `aud` imzalı istekte de
+    // `origin:` + köken; cihazlar arası yolda client identifier. Yollar karışırsa RED (AB cüzdanı eudi-dev, K2 2026-10-29).
+    const SHOP = "https://shop.example";
+    const openSdBoth = async () => {
+      const c = (
+        await app.inject({
+          method: "POST",
+          url: "/presentations",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          payload: { policy_id: "job-application-degree", dc_api_origin: SHOP },
+        })
+      ).json() as { presentation_id: string; qr_payload: string; dc_api_request: { protocol: string; data: unknown } };
+      const u = parseVpUri(c.qr_payload);
+      return {
+        id: c.presentation_id,
+        qr: verifyRequestObject(await fetchRequestObject(u.requestUri, http), u.clientId, LAN),
+        dc: parseDcApiRequest(c.dc_api_request as never, SHOP),
+      };
+    };
+    const kbAud = (sdJwt: string) => {
+      const kb = sdJwt.split("~").pop()!;
+      return (JSON.parse(Buffer.from(kb.split(".")[1], "base64url").toString("utf8")) as { aud: string }).aud;
+    };
+    const answerSd = (
+      request: Parameters<typeof respond>[0]["request"],
+      httpFn: Parameters<typeof respond>[0]["http"],
+    ) =>
+      respond({
+        approval: testApproval(request),
+        request,
+        matches: [
+          {
+            match: matchDcql(request.dcql, r.state.credentials).matches[0],
+            keyRef: copy.keyRef,
+            combined: copy.combined,
+            disclose: matchDcql(request.dcql, r.state.credentials).matches[0].requested,
+          },
+        ],
+        keys,
+        http: httpFn,
+        now,
+      });
+    const capture: Parameters<typeof respond>[0]["http"] = async () => ({ status: 200, text: async () => "{}" });
+    const postResp = (jwe: string) =>
+      app.inject({
+        method: "POST",
+        url: "/vp/response",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        payload: `response=${encodeURIComponent(jwe)}`,
+      });
+    const s1 = await openSdBoth();
+    const s1Dc = await answerSd(s1.dc, capture);
+    const s1Qr = await answerSd(s1.qr, capture);
+    expect(kbAud(s1Dc.vpToken.diploma[0] as string)).toBe(`origin:${SHOP}`);
+    expect(kbAud(s1Qr.vpToken.diploma[0] as string)).toBe(s1.qr.clientId);
+    // DC yoluna client identifier'a bağlı KB-JWT → RED (sunum açık kalır)
+    const dcWithClientAud = encryptJwe(
+      utf8(JSON.stringify({ vp_token: s1Qr.vpToken, state: s1.dc.state })),
+      s1.dc.encJwk,
+    );
+    expect((await postResp(dcWithClientAud)).statusCode).toBe(400);
+    // QR yoluna köken hedefli KB-JWT → RED
+    const qrWithOriginAud = encryptJwe(
+      utf8(JSON.stringify({ vp_token: s1Dc.vpToken, state: s1.qr.state })),
+      s1.qr.encJwk,
+    );
+    expect((await postResp(qrWithOriginAud)).statusCode).toBe(400);
+    // doğru yol: sayfanın ilettiği DC API yanıtı → ACCEPTED
+    expect((await postResp(s1Dc.dcApiResponse!.response)).statusCode).toBe(200);
+    const rs1 = (await app.inject({ method: "GET", url: `/presentations/${s1.id}` })).json() as {
+      outcome: string;
+      failed_reason: string | null;
+    };
+    expect(rs1.failed_reason).toBeNull();
+    expect(rs1.outcome).toBe("ACCEPTED");
     // HTML ekranı
     const html = await app.inject({ method: "GET", url: `/p/${created.presentation_id}` });
     expect(html.body).toContain("ACCEPTED");
