@@ -580,8 +580,10 @@ describe("depodaki sandbox örneği (test/fixtures/tl119612)", () => {
     const sample = readFileSync(SAMPLE, "utf8");
     expect(await schemaErrors(sample)).toEqual([]);
     expect(xmlCryptoVerify(sample)).toBe(true);
-    // ADR-0066 K4: ayrı XML imzacısı `tl-xml-signer-1` (sandbox kökünce verilmiş, §5.7.1 profili — hata da uyarı da yok)
-    const sandboxSigner = readFileSync(resolve(ROOT, "ops/pki-sandbox/tl-xml-signer-1.cert.pem"), "utf8");
+    // ADR-0066 K4: ayrı XML imzacısı `tl-xml-signer-1` (sandbox kökünce verilmiş, §5.7.1 profili — hata da uyarı da yok).
+    // Sertifika örnekle birlikte sabit kopyadan okunur: CI `npm run setup` sandbox PKI'sını özel anahtarsız klonda yeniden
+    // ürettiği için `ops/pki-sandbox/tl-xml-signer-1.cert.pem` orada yeni anahtarla değişir (örnek eski anahtarla imzalı kalır).
+    const sandboxSigner = readFileSync(resolve(SAMPLE, "../tl-xml-signer-1.cert.pem"), "utf8");
     const signerDer = Buffer.from(sandboxSigner.replace(/-----[^-]+-----|\s+/g, ""), "base64");
     expect(
       tlSignerProblems(new Uint8Array(signerDer), { territory: "TR", operatorName: "Tamga Network Sandbox (TEST)" }),
