@@ -37,6 +37,9 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
   in `iat` (ETSI TS 119 182-1 V1.2.1 §5.1.11) instead of a critical `sigT`, which new signatures must not use since 2025-07-15
   (§5.2.1); a JOSE library without JAdES support rejected the old header. Readers still accept `sigT` in older lists. The
   sandbox test LoTE `oidf-test-pid` was re-signed (sequence 3, same signer).
+  (6) wallet-core reads a `verifier_info` registration certificate whose `data` is the base64url encoding of the JWT (ETSI TS
+  119 472-2 V1.3.1 RO-16 as eudi-dev applies it) as well as the plain JWT that Tamga Verify and the EU reference implementation
+  send; checked against registration certificates from the eudi-dev registrar.
 
 ## 0.7.3 — 2026-10-27
 

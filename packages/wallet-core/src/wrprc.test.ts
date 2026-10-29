@@ -132,6 +132,20 @@ describe("kayıt sertifikası doğrulaması (ADR-0026)", () => {
     expect(r.purpose).toBeUndefined(); // sertifikada amaç yoksa alan da yok
   });
 
+  it("TS 119 472-2 RO-16: `data` JWT'nin base64url kodlamasıysa da okunur (eudi-dev 3.5.0, K2); bozuk kodlama RED", async () => {
+    const jwt = await wrprc(registrar, basePayload);
+    const wrapped = Buffer.from(jwt, "utf8").toString("base64url");
+    const req = await request([{ format: "registration_cert", data: wrapped }]);
+    expect(checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW))).toMatchObject({
+      present: true,
+      valid: true,
+      allowedClaims: ["is_enrolled"],
+      tradeName: "Shop",
+    });
+    const junk = await request([{ format: "registration_cert", data: Buffer.from("not a jwt").toString("base64url") }]);
+    expect(checkRegistrationCerts(junk, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW)).valid).toBe(false);
+  });
+
   it("amaç (ETSI TS 119 475 `purpose`) sertifikadan okunur: İngilizce kanonik + dil çevirileri (OpenID4VP'de istek `purpose`'u yok)", async () => {
     const req = await request([
       {

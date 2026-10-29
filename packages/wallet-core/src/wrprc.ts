@@ -108,6 +108,16 @@ export async function fetchRegistrarKeys(
   }
 }
 
+/** base64url → UTF-8 metin; geçersizse null. */
+function base64urlText(v: string): string | null {
+  if (!/^[A-Za-z0-9_-]+$/.test(v)) return null;
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(b64Decode(v));
+  } catch {
+    return null;
+  }
+}
+
 /** WRPRC ortak denetimi (K5 1–2): typ, imza, imzacı LOTL'deki kayıt kurumu anahtarı, iat/exp. */
 export function verifyWrprc(
   data: unknown,
@@ -116,12 +126,20 @@ export function verifyWrprc(
 ): { ok: true; payload: Wrprc; signerDer: Uint8Array; chainDer: Uint8Array[] } | { ok: false; reason: string } {
   const now = millisOrNow(nowMs);
   if (typeof data !== "string") return { ok: false, reason: "registration certificate is not a JWT" };
+  // ETSI TS 119 472-2 V1.3.1 RO-16 "base64url encoding of the serialized registration certificate": kimi doğrulayıcı JWT'yi olduğu
+  // gibi koyar (AB referans uygulaması, Tamga Verify), kimi JWT'nin base64url kodlamasını (eudi-dev 3.5.0; K2 2026-10-29). İkisi
+  // de okunur: noktasız değer base64url çözülür ve çözülen JWT ise o kullanılır.
+  let jwt: string = data;
+  if (!jwt.includes(".")) {
+    const inner = base64urlText(jwt);
+    if (inner && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(inner)) jwt = inner;
+  }
   const nowSec = Math.floor(now / 1000);
   let payload: Wrprc;
   let der: Uint8Array;
   let chain: Uint8Array[];
   try {
-    const d = decodeJwt(data);
+    const d = decodeJwt(jwt);
     if (String(d.header.typ ?? "").toLowerCase() !== WRPRC_TYP)
       return { ok: false, reason: "registration certificate typ" };
     const x5c = d.header.x5c as string[] | undefined;
@@ -130,7 +148,7 @@ export function verifyWrprc(
     der = chain[0];
     if (!registrarKeys.includes(certFingerprintHex(der)))
       return { ok: false, reason: "registration certificate not signed by a registrar in the trusted list" };
-    verifyJwt(data, p256PointFromCertDer(der));
+    verifyJwt(jwt, p256PointFromCertDer(der));
     payload = d.payload as Wrprc;
   } catch {
     return { ok: false, reason: "registration certificate signature invalid" };
