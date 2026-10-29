@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 374 kodlanmış değişmez, 67 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 381 kodlanmış değişmez, 68 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -666,6 +666,20 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0066/TX5` | Üretim bayrakla açılır (varsayılan kapalı); gerçek ağda açılış proje yönetimi onayıyla, sandbox ve bağımsız doğrulamadan sonra. |
 
 
+## ADR-0067
+
+*"İstek nesnesinin her çekimi ayrı dal, ret yalnız kendi dalını kapatır"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0067/RQ1` | `request_uri`'nin her çekimi (GET ya da POST) yeni bir çekim dalı açar: taze `state` (≥ 128 bit; QR'da, `request_uri` ve `response_uri` yolunda yok), taze `nonce` ve taze efemer şifreleme anahtarıyla yeni imzalı istek nesnesi; sunum açılırken üretilen ilk nesne verilmez. POST çekimde `wallet_nonce` geri yazılır; GET desteklenir. |
+| `ADR-0067/RQ2` | Cüzdanın hata yanıtı (şifresiz ya da şifreli) yalnız `state`'inin ait olduğu dalı kapatır; sunum yalnız tek dalı varsa ve o dal kapandıysa REJECTED olur, yoksa süresi bitene dek açık kalır ve ilk geçerli sunum kazanır. Kapanmış dala gelen sunum kabul edilmez. |
+| `ADR-0067/RQ3` | Rete yanıt 200'dür (OpenID4VP 1.0 §8.2); retin `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı, yetki kodu ya da veriye erişim veren başka bir değer taşımaz. |
+| `ADR-0067/RQ4` | Hiçbir dalın anahtarıyla çözülemeyen yanıt sunuma dokunmaz ve deneme sayılmaz; çözülmüş ama sahiplik kanıtına ulaşmayan yanıt yalnız kendi dalının denemesidir (5'te dal kapanır). |
+| `ADR-0067/RQ5` | Sunum başına en çok 10 çekim dalı; sonrası 429 ve var olan dallar etkilenmez; kapanmış ya da süresi geçmiş sunumda dal açılmaz. |
+| `ADR-0067/RQ6` | Digital Credentials API yolunun istek nesnesi bir dal değildir: `state`'iyle ret kabul edilmez, deneme sınırı bu yolda sunum başınadır. |
+
+
 ## ADR-0068
 
 *"Kayıt sertifikası politikası ve durum listesi"*
@@ -845,6 +859,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-PROTO-0002/PV12` | Cüzdan, istenen alanlardan birini taşımayan belgeyi göndermez (`claim_sets` yoksa bütün alanlar, varsa seçilen kombinasyonun bütün alanları belgede olmalıdır); isteğe bağlı alan `claim_sets` ile istenir. |
 | `SPEC-PROTO-0002/PV13` | Cüzdan imzalı istek nesnesini zamanla ve hedefle denetler: `exp` zorunludur ve geçmiş olamaz, `iat` 60 sn'den fazla ileri tarihli olamaz (saat kayması toleransı 60 sn), `aud` verilmişse `https://self-issued.me/v2` olmalıdır; aksi hâlde istek reddedilir. `dc+sd-jwt` sorgusu türü `meta.vct_values` ile belirtmelidir (türsüz sorgu reddedilir). |
 | `SPEC-PROTO-0002/PV14` | Aracı doğrulayıcı ([[ADR-0017]] K7) bir RP adına ancak ilişki iki kayıtta da yazılıysa istek gönderebilir: asıl RP aracıyı `uses_intermediaries`'te, aracı asıl RP'yi `served_relying_parties`'te listeler; tek taraflı beyanda cüzdan isteği reddeder. |
+| `SPEC-PROTO-0002/PV15` | `request_uri`'nin her çekimi taze `state` (≥ 128 bit, gizli), taze `nonce` ve taze efemer şifreleme anahtarıyla ayrı bir çekim dalıdır; cüzdanın hata yanıtı yalnız kendi dalını kapatır ve sunum ancak tek dalı varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
 
 
 ## SPEC-SCHEMA-0001
@@ -962,12 +977,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 374 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 381 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TK, TL, TS, TX, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RQ, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TK, TL, TS, TX, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-29 (`scripts/sync-invariants.mjs`). Toplam 374 kodlanmış değişmez, 67 dokümanda.
+**Üretilen dosya** — 2026-10-29 (`scripts/sync-invariants.mjs`). Toplam 381 kodlanmış değişmez, 68 dokümanda.

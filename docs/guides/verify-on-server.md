@@ -88,6 +88,9 @@ Alan adları ve imzalar paket tiplerinde tanımlıdır; tam çalışan örnek `a
   olmalı (bekliyor → kabul / ret): aynı sunuma eşzamanlı iki yanıt ya da yanıtla birlikte gelen bir ret varsa yalnız biri sonucu
   yazar. Birden çok sunucu örneği çalıştırıyorsanız bu durumu paylaşılan depoda koşullu yazmayla tutun. Sahiplik kanıtına (A6)
   ulaşmayan yanıt sunumu kapatmamalı ([[SPEC-PROTO-0002]] §10.1).
+- **Her `request_uri` çekimi ayrı bir dal olmalı** ([[ADR-0067]]): `createRequestBranch` ile her çekimde taze `state`, `nonce` ve
+  şifreleme anahtarı üretin; cüzdanın reddi yalnız kendi dalını kapatsın, sunumu ancak tek dalı varsa reddedilmiş sayın. Yoksa QR'ı
+  gören biri istek nesnesini çekip sahte bir retle gerçek kişinin işlemini bozabilir. Yanıtı `openPresentationResponse` ile açın.
 - Politika yalnızca gereken alanı ister; yaş için [[t:mdoc]] `age_over_18` ya da `age_over_15` gibi tek bir alan
   yeterlidir (eşikler kapalı küme: 15 ve 18; [[ADR-0064]]). Tamga Verify'da `age-over-15-mdoc` ve `age-over-15-zk` politikaları da var.
 - [[t:status-list|İptal listesi]] ön çekimi ve güven listesi yenilemesi çalışıyor olmalı. Çalışmıyorsa sonuçlar `INDETERMINATE` olur — bu doğru davranıştır.

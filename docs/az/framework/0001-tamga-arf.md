@@ -4,7 +4,7 @@ title: "Arxitektura və İstinad Çərçivəsi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-23
+last_updated: 2026-10-29
 summary: >
   Tamga Network-un arxitektura və istinad çərçivəsinin əsas sənədi. Avropa İttifaqının (Aİ) EUDI ARF-i ilə eyni strukturu izləyir: istifadə ssenariləri, rollar, arxitektura, məlumat modeli, etibar modeli, təhlükəsizlik və idarəetmə. Məcburi qaydalar əlavələrdədir (A Trust Framework, B Tamga Rulebook, C rəqəmsal sənəd növü rulebook-ları); terminlər Əlavə D-də, mənbələr Əlavə E-dədir.
 translation_of: FW-ARF-0001
@@ -284,6 +284,10 @@ identifikatoru və verdiyi sənədlər dəyişmir.
 
 "Hazırda yoxlanıla bilmədi" nəticəsi heç vaxt "etibarsız" ilə eyni göstərilmir. Qurumun rəqəmsal sənəd vermə səlahiyyəti rəqəmsal sənədin verildiyi
 tarixə görə qiymətləndirilir: fəaliyyətini dayandırmış qurumun əvvəllər verdiyi rəqəmsal sənədlər etibarlı qalır.
+
+Şəxs verməməyi seçərsə, rəqəmsal cüzdan yoxlayan tərəfə yalnız "vermədi" deyir; səbəb bildirilmir. QR-dakı sorğu ünvanı hər
+açılanda ayrıca sorğu yaradır: şəxsin imtinası yalnız öz sorğusunu bağlayır, QR-ı görən başqa birinin saxta imtinası real şəxsin
+əməliyyatını poza bilməz ([[ADR-0067]]).
 
 ## 4.5 İstiqamət qaydaları
 

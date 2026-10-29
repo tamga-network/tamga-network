@@ -376,11 +376,17 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       ).json() as { presentation_id: string };
       const ro = await app.inject({ method: "GET", url: `/vp/req/${created.presentation_id}` });
       expect(ro.headers["content-type"]).toContain("application/oauth-authz-req+jwt");
-      // request_uri iki kez alınabilir; aynı istek aynı anahtarı taşır (yeni anahtar yeni istekte)
+      // ADR-0067 K1: request_uri iki kez alınabilir; her çekim YENİ bir istek nesnesidir (taze state, nonce ve anahtar —
+      // HAIP §5 "ephemeral keys per Authorization Request"'in daha sıkı karşılığı)
       const again = await app.inject({ method: "GET", url: `/vp/req/${created.presentation_id}` });
-      expect(again.body).toBe(ro.body);
-      const payload = JSON.parse(Buffer.from(ro.body.split(".")[1], "base64url").toString("utf8"));
-      return payload.client_metadata.jwks.keys as Array<{ x: string; y: string; kid: string }>;
+      expect(again.statusCode).toBe(200);
+      expect(again.body).not.toBe(ro.body);
+      const claims = (jwt: string) => JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString("utf8"));
+      const [p1, p2] = [claims(ro.body), claims(again.body)];
+      expect(p1.state).not.toBe(p2.state);
+      expect(p1.nonce).not.toBe(p2.nonce);
+      expect(p1.client_metadata.jwks.keys[0].x).not.toBe(p2.client_metadata.jwks.keys[0].x);
+      return p1.client_metadata.jwks.keys as Array<{ x: string; y: string; kid: string }>;
     };
     const [a, b] = [await jwksOf(), await jwksOf()];
     expect(a).toHaveLength(1);
@@ -938,12 +944,13 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         })
       ).statusCode,
     ).toBe(400);
-    // 2) çözülemeyen yanıtlar: sunum açık kalır (PENDING, attempts artar), beşincide REJECTED ile kapanır
+    // 2) çözülemeyen yanıtlar sunuma hiç dokunmaz (ADR-0067 FB4: deneme bile sayılmaz — dalsız `kid`, bilinmeyen dal ya da
+    // bozuk gövde); çözülen ama sahiplik kanıtına ulaşmayan yanıtlar sunumu açık bırakır (attempts artar), tek dallı sunumda
+    // beşincide REJECTED ile kapanır
     const a = await open();
-    const junk =
-      Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid: `enc-${a.id}` })).toString("base64url") +
-      ".x.y.z.w";
-    for (let i = 1; i <= 4; i++) {
+    for (const kid of [`enc-${a.id}`, `enc-${a.id}.yok`, `enc-${a.id}.${a.req.encJwk.kid?.split(".")[1]}`]) {
+      const junk =
+        Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid })).toString("base64url") + ".x.y.z.w";
       const r = await app.inject({
         method: "POST",
         url: "/vp/response",
@@ -951,16 +958,24 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         payload: { response: junk },
       });
       expect(r.statusCode).toBe(400);
+      expect((await status(a.id)).attempts).toBe(0);
+    }
+    const wrong = () =>
+      app.inject({
+        method: "POST",
+        url: "/vp/response",
+        headers: { "content-type": "application/json" },
+        payload: {
+          response: encryptJwe(utf8(JSON.stringify({ vp_token: { diploma: ["x~"] }, state: "baska" })), a.req.encJwk),
+        },
+      });
+    for (let i = 1; i <= 4; i++) {
+      expect((await wrong()).statusCode).toBe(400);
       const s = await status(a.id);
       expect(s.state).toBe("PENDING");
       expect(s.attempts).toBe(i);
     }
-    await app.inject({
-      method: "POST",
-      url: "/vp/response",
-      headers: { "content-type": "application/json" },
-      payload: { response: junk },
-    });
+    await wrong();
     const closed = await status(a.id);
     expect(closed.outcome).toBe("REJECTED");
     expect(String(closed.failed_reason)).toMatch(/too many failed responses/);
@@ -1355,8 +1370,9 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(b1.qr.responseUri).toBe(`${BASE}/vp/response`);
     expect(b1.qr.origin).toBeUndefined();
     expect(b1.dc.responseUri).toBe("");
-    expect(b1.qr.nonce).toBe(b1.dc.nonce);
-    expect(b1.qr.state).toBe(b1.dc.state);
+    // ADR-0067: QR'dan çekilen nesne kendi dalıdır (taze nonce ve state); DC API nesnesi sunumun kendi nonce/state'ini taşır
+    expect(b1.qr.nonce).not.toBe(b1.dc.nonce);
+    expect(b1.qr.state).not.toBe(b1.dc.state);
     expect(b1.qr.encJwk).not.toEqual(b1.dc.encJwk);
     // DC yanıtı hazır ama gönderilmedi; telefon QR'dan tamamlar → ACCEPTED (cihazlar arası oturum özeti)
     const b1Dc = await answer(b1.dc, noPost);

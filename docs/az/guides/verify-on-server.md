@@ -89,6 +89,10 @@ Müştəri identifikatoru `x509_hash` formatındadır (HAIP 1.0 §5); `pemRpSign
   dəyişikliyi olmalıdır (gözləyir → qəbul / rədd): eyni təqdimata eyni anda iki cavab və ya cavabla birlikdə imtina gəlirsə,
   nəticəni yalnız biri yazır. Bir neçə server nüsxəsi işlədirsinizsə, bu vəziyyəti paylaşılan anbarda şərtli yazma ilə saxlayın.
   Sahiblik sübutuna (A6) çatmayan cavab təqdimatı bağlamamalıdır ([[SPEC-PROTO-0002]] §10.1).
+- **Hər `request_uri` çəkilişi ayrıca qol olmalıdır** ([[ADR-0067]]): `createRequestBranch` ilə hər çəkilişdə təzə `state`, `nonce`
+  və şifrələmə açarı yaradın; cüzdanın imtinası yalnız öz qolunu bağlasın, təqdimatı yalnız bir qolu varsa imtina edilmiş sayın.
+  Əks halda QR-ı görən hər kəs sorğu obyektini çəkib saxta imtina ilə real şəxsin əməliyyatını poza bilər. Cavabı
+  `openPresentationResponse` ilə açın.
 - Siyasət yalnız lazım olan sahəni tələb edir; yaş üçün [[t:mdoc]] `age_over_18` və ya `age_over_15` kimi tək bir sahə
   kifayətdir (həddlər qapalı çoxluqdur: 15 və 18; [[ADR-0064]]). Tamga Verify-da `age-over-15-mdoc` və `age-over-15-zk` siyasətləri də var.
 - [[t:status-list|Ləğv siyahısının]] əvvəlcədən alınması və etibar siyahısının yenilənməsi işləməlidir. İşləmirsə, nəticələr `INDETERMINATE` olur — bu, düzgün davranışdır.

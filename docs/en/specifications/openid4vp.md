@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -167,7 +167,9 @@ Signed request object (JAR), `typ: oauth-authz-req+jwt`, `alg: ES256`, `x5c` cha
 |---|---|
 | `response_type` | `vp_token` |
 | `response_mode` | `direct_post.jwt` (default) or `dc_api.jwt` (§7) — **no unencrypted mode** |
-| `nonce` | ≥ 128 bits of entropy, single use |
+| `nonce` | ≥ 128 bits of entropy, single use; a new one on every fetch of the `request_uri` ([[ADR-0067]]) |
+| `state` | ≥ 128 random bits, secret; a new one on every fetch of the `request_uri` — not in the QR code, nor in the `request_uri` or `response_uri` paths ([[ADR-0067]]) |
+| `request_uri` fetch | Every fetch (GET, or POST with `request_uri_method=post`, OpenID4VP 1.0 §5.10) opens a new **request branch**: a newly signed request object with the same content; fresh `state`, `nonce` and ephemeral encryption key (HAIP §5). With POST, `wallet_nonce` is echoed in the object. At most 10 branches per presentation (2026-10-29) |
 | Request signature | **Mandatory** — an unsigned request is rejected |
 | `client_metadata.jwks` | Response encryption key; **mandatory** |
 | `verifier_info` | Optional ([[ADR-0026]]): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — the registration certificate of the use (ETSI TS 119 475 / 119 472-2). If present, the wallet verifies the registrar signature (LOTL `roles.registrar`), the validity period and that `sub` equals the `organizationIdentifier` in the access certificate; if they do not match, no data is sent (WRC4). A field not in the certificate counts as over-asking (§6). |
@@ -456,7 +458,7 @@ they are different problems.
 | Flow | Status (2026-10) |
 |---|---|
 | `direct_post.jwt` (QR / deep link) | **In force** |
-| `dc_api.jwt` (browser, OpenID4VP 1.0 Annex A) | **Implemented** — verifier request object and page kit (`@tamga-network/verifier/web`), wallet side (`@tamga-network/wallet-core`); depends on browser and operating system support. Two request objects per presentation (0.6.0): the DC API one (`dc_api.jwt` + `expected_origins`) and the cross-device one at `request_uri` (`direct_post.jwt` + `response_uri`) for the QR code / link. Each has its own encryption key (`kid` `enc-dc-<id>` / `enc-<id>`); the key that decrypts the response decides the path, and the mdoc `SessionTranscript` is checked with that path's handover (origin or `response_uri`). Nonce, state and single use are shared: the first valid response completes the presentation and the other path is refused (PV10). A browser with no usable DC API request (e.g. Safari with an SD-JWT-only policy) shows only the working QR / link |
+| `dc_api.jwt` (browser, OpenID4VP 1.0 Annex A) | **Implemented** — verifier request object and page kit (`@tamga-network/verifier/web`), wallet side (`@tamga-network/wallet-core`); depends on browser and operating system support. Two request objects per presentation (0.6.0): the DC API one (`dc_api.jwt` + `expected_origins`) and the cross-device one at `request_uri` (`direct_post.jwt` + `response_uri`) for the QR code / link. Each has its own encryption key (`kid` `enc-dc-<id>` / `enc-<id>.<branch>`); the key that decrypts the response decides the path, and the mdoc `SessionTranscript` is checked with that path's handover (origin or `response_uri`). Every fetch of the `request_uri` is a separate branch with its own nonce and state ([[ADR-0067]]); single use is shared across all paths and branches: the first valid response completes the presentation and the other path is refused (PV10). A browser with no usable DC API request (e.g. Safari with an SD-JWT-only policy) shows only the working QR / link |
 | ISO 18013-5 proximity (Bluetooth), mdoc | **Code ready** (`@tamga-network/mdoc`, `@tamga-network/wallet-core`); interoperability trials with real devices are under way. No NFC at this stage |
 | ISO/IEC 18013-7 Annex C (`org-iso-mdoc`, browser), mdoc | **Implemented in the verifier** (0.6.0; §7.4) — the only way to get an mdoc in Safari / iOS 26. The wallet side (operating system registration module) comes with the next device round |
 
@@ -567,21 +569,36 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
 | `invalid_request_uri_method` | — |
 | `wallet_unavailable` | No wallet in the DC API |
 
-## 10.1 The wallet's error response and when a presentation is consumed (2026-10-24)
+## 10.1 The wallet's error response and when a presentation is consumed (2026-10-24; request branches and soft decline 2026-10-29, [[ADR-0067]])
 
-- **A refusal goes to the `response_uri`.** When the person declines, a wallet that knows the `response_uri` (cross-device flow)
-  posts the OpenID4VP 1.0 §8.4 error response to it as a form: only `error=access_denied` and `state` (unencrypted; no personal
-  data; no `error_description` — PV5). The verifier **closes** the presentation, records REJECTED and stores no reason; the request
-  cannot be answered again. In the browser (DC API) flow there is no response address; the refusal returns to the page through the
-  DC API's own error path. Reference: `@tamga-network/wallet-core` `declineRequest`.
+- **Each fetch is a branch.** Every fetch of the `request_uri` (GET or POST) returns a new request object with its own `state`,
+  `nonce` and encryption key (§3). OpenID4VP 1.0 does not authenticate error responses (§8.2, §8.3.1); only `state` binds one to a
+  presentation. Because `state` is per branch and secret, someone who sees the QR code and fetches the request object learns only
+  the `state` of **their own branch**.
+- **A refusal goes to the `response_uri` and closes only its own branch.** When the person declines, a wallet that knows the
+  `response_uri` (cross-device flow) posts the OpenID4VP 1.0 §8.4 error response to it: only `error=access_denied` and `state` (no
+  personal data; no `error_description` — PV5). An unencrypted form and an encrypted JWE (§8.3.1) are handled the same. The refusal
+  closes only the branch its `state` belongs to; the presentation as a whole becomes REJECTED **only if it has exactly one branch and
+  that branch is closed** (no reason stored). With several fetches the presentation stays open until it expires and the first valid
+  presentation wins; a presentation sent to a closed branch is not accepted. The response endpoint answers a refusal with 200 (§8.2);
+  the refusal's `redirect_uri` carries no status token, check-view key or authorization code. In the browser (DC API) flow there is no
+  response address; the refusal returns to the page through the DC API's own error path, and a refusal carrying the DC API object's
+  `state` is not accepted. Reference: `@tamga-network/wallet-core` `declineRequest`; verifier side `@tamga-network/verifier`
+  `createRequestBranch`, `openPresentationResponse`.
 - **A presentation is consumed only once holder binding passes.** The verifier treats an encrypted response as the one that
   completes the presentation only after the KB-JWT / device signature (A6; Z1 for ZK) has passed — whatever B–E then decide
-  (revocation, scope). A response that fails before that (undecryptable body, `state` mismatch, empty `vp_token`, A1–A6 rejection)
-  does **not** close the presentation: the presentation id is visible in the QR code, so otherwise someone nearby could push the real
-  person's presentation to "rejected" with a meaningless body. Such responses get 400 `invalid_request` and count as attempts;
-  after **5** failed attempts per presentation it closes as REJECTED (rate limiting applies on top). The pending presentation's
-  status shows the attempt count and the last failure's step (`attempts`, `last_attempt`); no values. The inline identity
-  presentation at the institution issuer (SPEC-PROTO-0001 §11.2) applies the same rule.
+  (revocation, scope). A response that fails before that does **not** close the presentation. A response that cannot be decrypted with
+  any branch key (garbage body, no or unknown branch in `kid`) does not touch the presentation and is not counted; a decrypted but
+  failing response (`state` mismatch, empty `vp_token`, A1–A6 rejection) gets 400 `invalid_request` and is an attempt on **its own
+  branch**: at **5** attempts per branch only that branch closes (in a single-branch presentation the presentation becomes REJECTED;
+  on the DC API path the limit is per presentation). At most 10 branches per presentation; beyond that 429 (rate limiting applies on
+  top). The pending presentation's status shows the total attempt count and the last failure's step (`attempts`, `last_attempt`); no
+  values, no branch information.
+- **Residual risk.** Someone who fetches the QR before the real wallet and declines at once can close a single-branch presentation —
+  a known limit of the cross-device flow, like the fact that whoever sees the QR can answer with their own credential (OpenID4VP 1.0
+  §14); the RP opens a new presentation. The inline identity presentation at the institution issuer (SPEC-PROTO-0001 §11.2) applies
+  the same rule; in a multi-branch presentation a refusal gets 200 with an empty body, in a single-branch one the wallet receives the
+  `access_denied` redirect.
 
 **Invariant PV5:** when the user declines, `access_denied` is returned and **no reason is given.** The difference between
 "the user does not have this credential" and "the user chose not to share it" must not leak to the verifier — if it did, the
@@ -607,6 +624,7 @@ verifier could map which credentials the user holds by sending queries.
 | **PV12** | The wallet does not send a credential that lacks any requested claim (without `claim_sets` every claim, with `claim_sets` every claim of the chosen combination must be in the credential); an optional claim is requested with `claim_sets`. |
 | **PV13** | The wallet checks the signed request object's time and audience: `exp` is required and must not have passed, `iat` must not be more than 60 s in the future (clock-skew tolerance 60 s), and `aud`, if present, must be `https://self-issued.me/v2`; otherwise the request is refused. A `dc+sd-jwt` query must name the type with `meta.vct_values` (an untyped query is refused). |
 | **PV14** | An intermediary verifier ([[ADR-0017]] K7) may send a request on behalf of an RP only when the relationship is written in both records: the RP lists the intermediary in `uses_intermediaries` and the intermediary lists the RP in `served_relying_parties`; on a one-sided claim the wallet refuses the request. |
+| **PV15** | Every fetch of the `request_uri` is a separate request branch with a fresh `state` (≥ 128 bits, secret), a fresh `nonce` and a fresh ephemeral encryption key; a wallet error response closes only its own branch, and the presentation becomes REJECTED only if it has a single branch ([[ADR-0067]] RQ1–RQ6). |
 
 ---
 

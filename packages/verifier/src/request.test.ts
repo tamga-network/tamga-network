@@ -14,7 +14,14 @@ import {
 } from "@peculiar/x509";
 import { x509HashClientId } from "@tamga-network/core";
 import { CompactEncrypt, importJWK } from "jose";
-import { createPresentationRequest, decryptPresentationResponse, pemRpSigner, responseKidOf } from "./request.js";
+import {
+  createPresentationRequest,
+  createRequestBranch,
+  decryptPresentationResponse,
+  openPresentationResponse,
+  pemRpSigner,
+  responseKidOf,
+} from "./request.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
@@ -206,5 +213,83 @@ describe("yanıt şifreleme anahtarı istek başına yeni", () => {
     }
     expect(new Set(keys.map((k) => `${k[0].x}.${k[0].y}`)).size).toBe(keys.length);
     expect(new Set(keys.map((k) => k[0].kid)).size).toBe(keys.length);
+  });
+});
+
+// ADR-0067: request_uri'nin her çekimi yeni dal — taze state (128 bit), nonce ve efemer anahtar; kid dalı adlandırır;
+// şifreli hata yanıtı (OpenID4VP 1.0 §8.3.1) sunumdan ayrı döner
+describe("çekim dalları (ADR-0067)", () => {
+  const seal = async (body: unknown, jwk: Record<string, unknown>) =>
+    new CompactEncrypt(new TextEncoder().encode(JSON.stringify(body)))
+      .setProtectedHeader({ alg: "ECDH-ES", enc: "A256GCM", kid: String(jwk.kid) })
+      .encrypt(await importJWK(jwk as never, "ECDH-ES"));
+
+  it("her dal taze state/nonce/anahtar taşır; wallet_nonce geri yazılır; yanıt yalnız kendi dalının anahtarıyla açılır", async () => {
+    const signer = await pemRpSigner(leafKeyPem, leafPem);
+    const responseUri = "https://rp.example.test/vp/response";
+    const pr = await createPresentationRequest({
+      signer,
+      dcql,
+      responseUri,
+      requestUriBase: "https://rp.example.test/vp/req",
+    });
+    const mk = (walletNonce?: string) =>
+      createRequestBranch({
+        signer,
+        dcql,
+        responseUri,
+        presentationId: pr.presentationId,
+        expiresAt: pr.expiresAt,
+        walletNonce,
+      });
+    const [b1, b2] = [await mk(), await mk("wn-123")];
+    const [p1, p2] = [payloadOf(b1.requestJwt), payloadOf(b2.requestJwt)];
+    expect(p1.state).not.toBe(p2.state);
+    expect(p1.nonce).not.toBe(p2.nonce);
+    expect(Buffer.from(b1.state, "base64url").length).toBe(16);
+    expect(p1.client_metadata.jwks.keys[0].kid).toBe(`enc-${pr.presentationId}.${b1.branchId}`);
+    expect(p1.client_metadata.jwks.keys[0].x).not.toBe(p2.client_metadata.jwks.keys[0].x);
+    expect(p1.exp).toBe(pr.expiresAt);
+    expect(p1.response_mode).toBe("direct_post.jwt");
+    expect(p1.wallet_nonce).toBeUndefined();
+    expect(p2.wallet_nonce).toBe("wn-123");
+    expect(payloadOf((await mk("boşluk var")).requestJwt).wallet_nonce).toBeUndefined();
+    const find = (id: string) => [b1, b2].find((b) => b.branchId === id);
+    const body = { vp_token: { q: ["x"] }, state: b2.state };
+    const jwe = await seal(body, b2.encPublicJwk as never);
+    expect(responseKidOf(jwe)).toEqual({
+      presentationId: pr.presentationId,
+      path: "cross_device",
+      branchId: b2.branchId,
+    });
+    const opened = await decryptPresentationResponse(jwe, pr, responseUri, find);
+    expect(opened.branch?.branchId).toBe(b2.branchId);
+    expect(opened.binding).toEqual({ responseUri, encJwkThumbprint: b2.encJwkThumbprint });
+    // dal 1'in kid'i ama dal 2'nin anahtarı → açılmaz; bilinmeyen dal → hata
+    await expect(
+      decryptPresentationResponse(
+        await seal(body, { ...b2.encPublicJwk, kid: String(b1.encPublicJwk.kid) }),
+        pr,
+        responseUri,
+        find,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      decryptPresentationResponse(
+        await seal(body, { ...b2.encPublicJwk, kid: `enc-${pr.presentationId}.yok` }),
+        pr,
+        responseUri,
+        find,
+      ),
+    ).rejects.toThrow(/unknown request branch/);
+    // şifreli ret: openPresentationResponse ayrı döner; decryptPresentationResponse sunum beklerken hata verir
+    const dec = await seal(
+      { error: "access_denied", state: b1.state, error_description: "okunmaz" },
+      b1.encPublicJwk as never,
+    );
+    const err = await openPresentationResponse(dec, pr, responseUri, find);
+    expect(err).toMatchObject({ kind: "error", error: "access_denied", state: b1.state, path: "cross_device" });
+    expect(JSON.stringify({ ...err, branch: undefined, binding: undefined })).not.toContain("okunmaz");
+    await expect(decryptPresentationResponse(dec, pr, responseUri, find)).rejects.toThrow(/error response/);
   });
 });

@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdandan yoxlayan tərəfə necə təqdim edildiyini müəyyən edir. OpenID4VP 1.0 Final üzərində Tamga profili: DCQL sorğuları (Presentation Exchange İSTİFADƏ EDİLMİR), imzalı sorğu obyekti, cavabın şifrələnməsi, brauzerdə Digital Credentials API. Əsas tapıntı: HAIP-in məcburi etdiyi `x509_hash` client identifier prefiksi base64url(SHA-256(DER)) dəyəridir — bu, zəncirdəki `RelyingParty.accessCertFingerprint` ilə TAM EYNİ BAYTLARDIR. Buna görə rəqəmsal cüzdan sorğudakı client identifier-dən birbaşa zəncir qeydini tapa və həddindən artıq tələb nəzarətini ([[SPEC-BC-0001]] §6) protokol səviyyəsində tətbiq edə bilər. Bundan əlavə, istənilməyən sahələrin aşkarlanması, təqdimatdan sonra istifadəçi jurnalı və cavabın şifrələnməsi qaydaları.
 translation_of: SPEC-PROTO-0002
@@ -166,7 +166,9 @@ sübut etmir və həddindən artıq tələb nəzarəti mümkünsüz olur.
 |---|---|
 | `response_type` | `vp_token` |
 | `response_mode` | `direct_post.jwt` (defolt) və ya `dc_api.jwt` (§7) — **şifrəsiz rejim yoxdur** |
-| `nonce` | ≥ 128 bit entropiya, birdəfəlik |
+| `nonce` | ≥ 128 bit entropiya, birdəfəlik; `request_uri`-nin hər çəkilişində yenisi ([[ADR-0067]]) |
+| `state` | ≥ 128 bit təsadüfi, gizli; `request_uri`-nin hər çəkilişində yenisi — QR-da, `request_uri` və `response_uri` yolunda yoxdur ([[ADR-0067]]) |
+| `request_uri` çəkilişi | Hər çəkiliş (GET və ya `request_uri_method=post` ilə POST, OpenID4VP 1.0 §5.10) yeni **çəkiliş qolu** açır: eyni məzmunla yeni imzalanmış sorğu obyekti; təzə `state`, `nonce` və efemer şifrələmə açarı (HAIP §5). POST-da `wallet_nonce` obyektə geri yazılır. Təqdimat başına ən çox 10 qol (2026-10-29) |
 | Sorğu imzası | **Məcburi** — imzasız sorğu rədd edilir |
 | `client_metadata.jwks` | Cavab şifrələmə açarı; **məcburi** |
 | `verifier_info` | İstəyə bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — istifadənin qeydiyyat sertifikatı (ETSI TS 119 475 / 119 472-2). Varsa, rəqəmsal cüzdan qeydiyyat orqanının imzasını (LOTL `roles.registrar`), müddəti və `sub`-ın giriş sertifikatındakı `organizationIdentifier` ilə eyni olduğunu yoxlayır; uyğun gəlmirsə, məlumat göndərilmir (WRC4). Sertifikatda olmayan sahə artıq tələb sayılır (§6). |
@@ -471,7 +473,7 @@ bunlar iki fərqli problemdir.
 | Axın | Status (2026-10) |
 |---|---|
 | `direct_post.jwt` (QR / dərin keçid) | **Qüvvədədir** |
-| `dc_api.jwt` (brauzer, OpenID4VP 1.0 Əlavə A) | **Tətbiq olunub** — yoxlayan tərəfin sorğu obyekti və səhifə dəsti (`@tamga-network/verifier/web`), cüzdan tərəfi (`@tamga-network/wallet-core`); brauzer və əməliyyat sistemi dəstəyindən asılıdır. Hər təqdimata iki sorğu obyekti (0.6.0): DC API-nin obyekti (`dc_api.jwt` + `expected_origins`) və QR / keçid üçün `request_uri`-dakı cihazlararası obyekt (`direct_post.jwt` + `response_uri`). Hər birinin şifrələmə açarı ayrıdır (`kid` `enc-dc-<id>` / `enc-<id>`); cavabı açan açar yolu müəyyən edir, mdoc `SessionTranscript`-i həmin yolun əl sıxışması ilə (origin və ya `response_uri`) yoxlanılır. Nonce, state və birdəfəlik istifadə ortaqdır: ilk etibarlı cavab təqdimatı tamamlayır, digər yol rədd edilir (PV10). İstifadəyə yararlı DC API sorğusu olmayan brauzer (məs. Safari + yalnız SD-JWT siyasəti) yalnız işləyən QR / keçidi göstərir |
+| `dc_api.jwt` (brauzer, OpenID4VP 1.0 Əlavə A) | **Tətbiq olunub** — yoxlayan tərəfin sorğu obyekti və səhifə dəsti (`@tamga-network/verifier/web`), cüzdan tərəfi (`@tamga-network/wallet-core`); brauzer və əməliyyat sistemi dəstəyindən asılıdır. Hər təqdimata iki sorğu obyekti (0.6.0): DC API-nin obyekti (`dc_api.jwt` + `expected_origins`) və QR / keçid üçün `request_uri`-dakı cihazlararası obyekt (`direct_post.jwt` + `response_uri`). Hər birinin şifrələmə açarı ayrıdır (`kid` `enc-dc-<id>` / `enc-<id>.<qol>`); cavabı açan açar yolu müəyyən edir, mdoc `SessionTranscript`-i həmin yolun əl sıxışması ilə (origin və ya `response_uri`) yoxlanılır. `request_uri`-nin hər çəkilişi öz nonce və state-i ilə ayrıca qoldur ([[ADR-0067]]); birdəfəlik istifadə bütün yollar və qollar üçün ortaqdır: ilk etibarlı cavab təqdimatı tamamlayır, digər yol rədd edilir (PV10). İstifadəyə yararlı DC API sorğusu olmayan brauzer (məs. Safari + yalnız SD-JWT siyasəti) yalnız işləyən QR / keçidi göstərir |
 | ISO 18013-5 yaxın sahə (Bluetooth), mdoc | **Kodu hazırdır** (`@tamga-network/mdoc`, `@tamga-network/wallet-core`); real cihazlarla qarşılıqlı işləmə sınağı davam edir. NFC bu mərhələdə yoxdur |
 | ISO/IEC 18013-7 Əlavə C (`org-iso-mdoc`, brauzer), mdoc | **Yoxlayan tərəfdə tətbiq olunub** (0.6.0; §7.4) — Safari / iOS 26 brauzerində mdoc-un yeganə yolu. Cüzdan tərəfi (əməliyyat sisteminin qeydiyyat modulu) növbəti cihaz mərhələsində |
 
@@ -582,21 +584,32 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
 | `invalid_request_uri_method` | — |
 | `wallet_unavailable` | DC API-də rəqəmsal cüzdan yoxdur |
 
-## 10.1 Cüzdanın xəta cavabı və təqdimatın istifadə edilməsi (2026-10-24)
+## 10.1 Cüzdanın xəta cavabı və təqdimatın istifadə edilməsi (2026-10-24; çəkiliş qolları və yumşaq imtina 2026-10-29, [[ADR-0067]])
 
-- **Rədd `response_uri`-yə gedir.** Şəxs rədd etdikdə cüzdan `response_uri`-ni bilirsə (cihazlar arası axın) cavab ünvanına
-  OpenID4VP 1.0 §8.4 xəta cavabını forma olaraq göndərir: yalnız `error=access_denied` və `state` (şifrəsiz; fərdi məlumat yoxdur;
-  `error_description` yoxdur — PV5). Yoxlayan tərəf təqdimatı **bağlayır**, nəticəni REJECTED yazır və səbəb saxlamır; eyni sorğuya
-  bir daha cavab verilə bilməz. Brauzer (DC API) axınında cavab ünvanı yoxdur; rədd DC API-nin öz xəta yolu ilə səhifəyə qayıdır.
-  İstinad: `@tamga-network/wallet-core` `declineRequest`.
+- **Hər çəkiliş bir qoldur.** `request_uri`-nin hər çəkilişi (GET və ya POST) öz `state`-i, `nonce`-u və şifrələmə açarı olan yeni
+  sorğu obyekti verir (§3). OpenID4VP 1.0 xəta cavabının həqiqiliyini yoxlamır (§8.2, §8.3.1); onu təqdimata yalnız `state` bağlayır.
+  `state` qol başına və gizli olduğundan, QR-ı görüb sorğu obyektini özü çəkən biri yalnız **öz qolunun** `state`-ini öyrənir.
+- **Rədd `response_uri`-yə gedir və yalnız öz qolunu bağlayır.** Şəxs rədd etdikdə cüzdan `response_uri`-ni bilirsə (cihazlar arası
+  axın) cavab ünvanına OpenID4VP 1.0 §8.4 xəta cavabını göndərir: yalnız `error=access_denied` və `state` (fərdi məlumat yoxdur;
+  `error_description` yoxdur — PV5). Şifrəsiz forma və şifrəli JWE (§8.3.1) eyni işlənir. Rədd yalnız `state`-inin aid olduğu qolu
+  bağlayır; təqdimat bütövlükdə **yalnız bir qolu varsa və o qol bağlanıbsa** REJECTED olur (səbəb saxlanmır). Bir neçə çəkiliş varsa,
+  təqdimat müddəti bitənədək açıq qalır və ilk etibarlı təqdimat qalib gəlir; bağlanmış qola gələn təqdimat qəbul edilmir. Cavab ucu
+  rəddə 200 qaytarır (§8.2); rəddin `redirect_uri`-si status jetonu, yoxlama görünüşü açarı və ya avtorizasiya kodu daşımır. Brauzer
+  (DC API) axınında cavab ünvanı yoxdur; rədd DC API-nin öz xəta yolu ilə səhifəyə qayıdır və DC API obyektinin `state`-i ilə gələn
+  rədd qəbul edilmir. İstinad: `@tamga-network/wallet-core` `declineRequest`; yoxlayan tərəf `@tamga-network/verifier`
+  `createRequestBranch`, `openPresentationResponse`.
 - **Təqdimat yalnız sahiblik sübutu keçdikdə istifadə edilir.** Yoxlayan tərəf şifrəli cavabı yalnız KB-JWT / cihaz imzası (A6;
-  ZK-da Z1) keçdikdən sonra təqdimatı tamamlayan cavab sayır — B–E nəticəsi nə olursa olsun (ləğv, əhatə aşımı). Ondan əvvəl
-  uğursuz olan cavab (açıla bilməyən gövdə, `state` uyğunsuzluğu, boş `vp_token`, A1–A6 rəddi) təqdimatı **bağlamır**: təqdimat
-  identifikatoru QR-da açıq olduğundan, əks halda yaxınlıqdakı biri mənasız gövdə ilə həqiqi şəxsin təqdimatını "rədd edildi"yə
-  düşürə bilərdi. Belə cavablar 400 `invalid_request` alır və cəhd sayılır; təqdimat başına **5** uğursuz cəhddən sonra təqdimat
-  REJECTED ilə bağlanır (sürət həddi ayrıca). Gözləyən təqdimatın vəziyyətində cəhd sayı və son uğursuzluğun addımı görünür
-  (`attempts`, `last_attempt`); dəyər yoxdur. Qurumun sənəd verən xidmətindəki sətirdaxili şəxsiyyət təqdimatı (SPEC-PROTO-0001
-  §11.2) eyni qaydanı tətbiq edir.
+  ZK-da Z1) keçdikdən sonra təqdimatı tamamlayan cavab sayır — B–E nəticəsi nə olursa olsun (ləğv, əhatə aşımı). Ondan əvvəl uğursuz
+  olan cavab təqdimatı **bağlamır**. Heç bir qolun açarı ilə açıla bilməyən cavab (pozulmuş gövdə, `kid`-də qol yoxdur və ya naməlumdur)
+  təqdimata toxunmur və cəhd sayılmır; açılmış, amma uğursuz cavab (`state` uyğunsuzluğu, boş `vp_token`, A1–A6 rəddi) 400
+  `invalid_request` alır və **öz qolunun** cəhdidir: qol başına **5** cəhddə yalnız o qol bağlanır (tək qollu təqdimatda təqdimat
+  REJECTED olur; DC API yolunda hədd təqdimat başınadır). Təqdimat başına ən çox 10 qol; ondan sonra 429 (sürət həddi ayrıca).
+  Gözləyən təqdimatın vəziyyətində ümumi cəhd sayı və son uğursuzluğun addımı görünür (`attempts`, `last_attempt`); dəyər yoxdur,
+  qol məlumatı yoxdur.
+- **Qalan risk.** QR-ı real cüzdandan əvvəl çəkib dərhal rədd edən biri tək qollu təqdimatı bağlaya bilər — QR-ı görənin öz sənədi ilə
+  cavab verə bilməsi kimi, cihazlar arası axının məlum hüdududur (OpenID4VP 1.0 §14); RP yeni təqdimat açır. Qurumun sənəd verən
+  xidmətindəki sətirdaxili şəxsiyyət təqdimatı (SPEC-PROTO-0001 §11.2) eyni qaydanı tətbiq edir; çox qollu təqdimatda rədd boş gövdə
+  ilə 200 alır, tək qolluda cüzdana `access_denied` yönləndirməsi qayıdır.
 
 **Dəyişməz PV5:** İstifadəçi rədd etdikdə `access_denied` qaytarılır və **səbəb
 göstərilmir.** "İstifadəçinin bu rəqəmsal sənədi yoxdur" ilə "istifadəçi vermək
@@ -623,6 +636,7 @@ sorğular göndərməklə istifadəçinin hansı rəqəmsal sənədlərə malik 
 | **PV12** | Rəqəmsal cüzdan tələb olunan sahələrdən birini daşımayan rəqəmsal sənədi göndərmir (`claim_sets` yoxdursa bütün sahələr, varsa seçilmiş kombinasiyanın bütün sahələri rəqəmsal sənəddə olmalıdır); ixtiyari sahə `claim_sets` ilə tələb edilir. |
 | **PV13** | Rəqəmsal cüzdan imzalı sorğu obyektini zaman və hədəf baxımından yoxlayır: `exp` məcburidir və keçmiş ola bilməz, `iat` 60 saniyədən çox irəli tarixli ola bilməz (saat sürüşməsi tolerantlığı 60 san), `aud` verilibsə `https://self-issued.me/v2` olmalıdır; əks halda sorğu rədd edilir. `dc+sd-jwt` sorğusu növü `meta.vct_values` ilə göstərməlidir (növsüz sorğu rədd edilir). |
 | **PV14** | Vasitəçi yoxlayan tərəf ([[ADR-0017]] K7) bir RP adından yalnız əlaqə hər iki qeyddə yazılıbsa sorğu göndərə bilər: əsas RP vasitəçini `uses_intermediaries`-də, vasitəçi əsas RP-ni `served_relying_parties`-də sadalayır; birtərəfli bəyanda rəqəmsal cüzdan sorğunu rədd edir. |
+| **PV15** | `request_uri`-nin hər çəkilişi təzə `state` (≥ 128 bit, gizli), təzə `nonce` və təzə efemer şifrələmə açarı ilə ayrıca çəkiliş qoludur; cüzdanın xəta cavabı yalnız öz qolunu bağlayır və təqdimat yalnız bir qolu varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
 
 ---
 

@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -173,7 +173,9 @@ kanıtlamaz ve aşırı talep denetimi imkânsız hâle gelir.
 |---|---|
 | `response_type` | `vp_token` |
 | `response_mode` | `direct_post.jwt` (varsayılan) veya `dc_api.jwt` (§7) — **şifresiz mod yok** |
-| `nonce` | ≥ 128 bit entropi, tek kullanımlık |
+| `nonce` | ≥ 128 bit entropi, tek kullanımlık; `request_uri`'nin her çekiminde yenisi ([[ADR-0067]]) |
+| `state` | ≥ 128 bit rastgele, gizli; `request_uri`'nin her çekiminde yenisi — QR'da, `request_uri` ve `response_uri` yolunda yer almaz ([[ADR-0067]]) |
+| `request_uri` çekimi | Her çekim (GET ya da `request_uri_method=post` ile POST, OpenID4VP 1.0 §5.10) yeni bir **çekim dalı** açar: aynı içerikle yeni imzalı istek nesnesi; taze `state`, `nonce` ve efemer şifreleme anahtarı (HAIP §5). POST'ta `wallet_nonce` nesneye geri yazılır. Sunum başına en çok 10 dal (2026-10-29) |
 | İstek imzası | **Zorunlu** — imzasız istek reddedilir |
 | `client_metadata.jwks` | Yanıt şifreleme anahtarı; **zorunlu** |
 | `verifier_info` | İsteğe bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — kullanımın kayıt sertifikasını (ETSI TS 119 475 / 119 472-2). Varsa cüzdan kayıt birimi imzasını (LOTL `roles.registrar`), süreyi ve `sub`'ın erişim sertifikasındaki `organizationIdentifier` ile aynı olduğunu doğrular; tutmazsa veri gönderilmez (WRC4). Sertifikada olmayan alan fazla istek sayılır (§6). |
@@ -477,7 +479,7 @@ ikisi farklı problemlerdir.
 | Akış | Durum (2026-10) |
 |---|---|
 | `direct_post.jwt` (QR / derin bağlantı) | **Yürürlükte** |
-| `dc_api.jwt` (tarayıcı, OpenID4VP 1.0 Ek A) | **Uygulandı** — doğrulayıcı istek nesnesi ve sayfa kiti (`@tamga-network/verifier/web`), cüzdan tarafı (`@tamga-network/wallet-core`); tarayıcı ve işletim sistemi desteğine bağlıdır. Sunum başına iki istek nesnesi (0.6.0): DC API'ninki (`dc_api.jwt` + `expected_origins`) ve QR / bağlantı için `request_uri`'deki cihazlar arası nesne (`direct_post.jwt` + `response_uri`). Her birinin şifreleme anahtarı ayrıdır (`kid` `enc-dc-<id>` / `enc-<id>`); yanıtı açan anahtar yolu belirler, mdoc `SessionTranscript`'i o yolun el sıkışmasıyla (köken ya da `response_uri`) denetlenir. Nonce, state ve tek kullanım ortaktır: ilk geçerli yanıt sunumu tamamlar, öteki yol reddedilir (PV10). Kullanılabilir DC API isteği olmayan tarayıcı (ör. Safari + yalnız SD-JWT politikası) yalnız çalışan QR / bağlantıyı gösterir |
+| `dc_api.jwt` (tarayıcı, OpenID4VP 1.0 Ek A) | **Uygulandı** — doğrulayıcı istek nesnesi ve sayfa kiti (`@tamga-network/verifier/web`), cüzdan tarafı (`@tamga-network/wallet-core`); tarayıcı ve işletim sistemi desteğine bağlıdır. Sunum başına iki istek nesnesi (0.6.0): DC API'ninki (`dc_api.jwt` + `expected_origins`) ve QR / bağlantı için `request_uri`'deki cihazlar arası nesne (`direct_post.jwt` + `response_uri`). Her birinin şifreleme anahtarı ayrıdır (`kid` `enc-dc-<id>` / `enc-<id>.<dal>`); yanıtı açan anahtar yolu belirler, mdoc `SessionTranscript`'i o yolun el sıkışmasıyla (köken ya da `response_uri`) denetlenir. `request_uri`'nin her çekimi kendi nonce ve state'iyle ayrı bir daldır ([[ADR-0067]]); tek kullanım bütün yollar ve dallar için ortaktır: ilk geçerli yanıt sunumu tamamlar, öteki yol reddedilir (PV10). Kullanılabilir DC API isteği olmayan tarayıcı (ör. Safari + yalnız SD-JWT politikası) yalnız çalışan QR / bağlantıyı gösterir |
 | ISO 18013-5 yakın alan (Bluetooth), mdoc | **Kodu hazır** (`@tamga-network/mdoc`, `@tamga-network/wallet-core`); gerçek cihazlarla birlikte çalışma denemesi sürüyor. NFC bu aşamada yok |
 | ISO/IEC 18013-7 Ek C (`org-iso-mdoc`, tarayıcı), mdoc | **Doğrulayıcıda uygulandı** (0.6.0; §7.4) — Safari / iOS 26 tarayıcısında mdoc'un tek yolu. Cüzdan tarafı (işletim sistemi kayıt modülü) sonraki cihaz turunda |
 
@@ -588,20 +590,31 @@ Ayşe (cüzdan)                        İşveren (verifier)          İndeksleyi
 | `invalid_request_uri_method` | — |
 | `wallet_unavailable` | DC API'de cüzdan yok |
 
-## 10.1 Cüzdanın hata yanıtı ve sunumun tüketilmesi (2026-10-24)
+## 10.1 Cüzdanın hata yanıtı ve sunumun tüketilmesi (2026-10-24; çekim dalları ve yumuşak ret 2026-10-29, [[ADR-0067]])
 
-- **Ret `response_uri`'ye gider.** Kişi reddettiğinde cüzdan, `response_uri` biliyorsa (cihazlar arası akış) yanıt adresine
-  OpenID4VP 1.0 §8.4 hata yanıtını form olarak gönderir: yalnız `error=access_denied` ve `state` (şifresiz; kişisel veri yok;
-  `error_description` yok — PV5). Doğrulayıcı sunumu **kapatır**, sonucu REJECTED yazar ve neden saklamaz; aynı isteğe bir daha yanıt
-  verilemez. Tarayıcı (DC API) akışında yanıt adresi yoktur; ret DC API'nin kendi hata yoluyla sayfaya döner. Referans:
-  `@tamga-network/wallet-core` `declineRequest`.
+- **Her çekim bir dal.** `request_uri`'nin her çekimi (GET ya da POST) kendi `state`'i, `nonce`'u ve şifreleme anahtarı olan yeni bir
+  istek nesnesi verir (§3). OpenID4VP 1.0 hata yanıtını kimlik doğrulamaz (§8.2, §8.3.1); onu sunuma bağlayan yalnız `state`'tir.
+  `state` dal başına ve gizli olduğundan, QR'ı görüp istek nesnesini kendisi çeken biri yalnız **kendi dalının** `state`'ini öğrenir.
+- **Ret `response_uri`'ye gider ve yalnız kendi dalını kapatır.** Kişi reddettiğinde cüzdan, `response_uri` biliyorsa (cihazlar arası
+  akış) yanıt adresine OpenID4VP 1.0 §8.4 hata yanıtını gönderir: yalnız `error=access_denied` ve `state` (kişisel veri yok;
+  `error_description` yok — PV5). Şifresiz form ya da şifreli JWE (§8.3.1) aynı işlenir. Ret yalnız `state`'inin ait olduğu dalı kapatır;
+  sunum bütünüyle **yalnız tek dalı varsa ve o dal kapandıysa** REJECTED olur (neden saklanmaz). Birden çok çekim varsa sunum süresi
+  bitene dek açık kalır ve ilk geçerli sunum kazanır; kapanmış dala gelen sunum kabul edilmez. Yanıt ucu rete 200 döner (§8.2); retin
+  `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı ya da yetki kodu taşımaz. Tarayıcı (DC API) akışında yanıt adresi yoktur;
+  ret DC API'nin kendi hata yoluyla sayfaya döner ve DC API nesnesinin `state`'iyle gelen ret kabul edilmez. Referans:
+  `@tamga-network/wallet-core` `declineRequest`; doğrulayıcı tarafı `@tamga-network/verifier` `createRequestBranch`,
+  `openPresentationResponse`.
 - **Sunum yalnız sahiplik kanıtı geçince tüketilir.** Doğrulayıcı bir şifreli yanıtı ancak KB-JWT / cihaz imzası (A6; ZK'da Z1)
   geçtikten sonra sunumu tamamlayan yanıt sayar — B–E sonucu ne olursa olsun (iptal, kapsam aşımı). Öncesinde başarısız olan yanıt
-  (çözülemeyen gövde, `state` uyuşmazlığı, boş `vp_token`, A1–A6 reddi) sunumu **kapatmaz**: sunum kimliği QR'da açık olduğundan,
-  aksi hâlde yakındaki biri anlamsız bir gövdeyle gerçek kişinin sunumunu "reddedildi"ye düşürebilirdi. Böyle yanıtlar 400
-  `invalid_request` alır ve deneme sayılır; sunum başına **5** başarısız denemeden sonra sunum REJECTED ile kapanır (hız sınırı
-  ayrıca). Bekleyen sunumun durumunda deneme sayısı ve son başarısızlığın adımı görünür (`attempts`, `last_attempt`); değer yok.
-  Kurumun belge verme servisindeki satır içi kimlik sunumu (SPEC-PROTO-0001 §11.2) aynı kuralı uygular.
+  sunumu **kapatmaz**. Hiçbir dalın anahtarıyla çözülemeyen yanıt (bozuk gövde, dalsız ya da bilinmeyen `kid`) sunuma dokunmaz ve
+  deneme sayılmaz; çözülmüş ama başarısız yanıt (`state` uyuşmazlığı, boş `vp_token`, A1–A6 reddi) 400 `invalid_request` alır ve
+  **kendi dalının** denemesidir: dal başına **5** denemede yalnız o dal kapanır (tek dallı sunumda sunum REJECTED; DC API yolunda
+  sınır sunum başına). Sunum başına en çok 10 dal; sonrası 429 (hız sınırı ayrıca). Bekleyen sunumun durumunda toplam deneme sayısı
+  ve son başarısızlığın adımı görünür (`attempts`, `last_attempt`); değer yok, dal bilgisi yok.
+- **Kalan risk.** QR'ı gerçek cüzdandan önce çekip hemen reddeden biri tek dallı sunumu kapatabilir — QR'ı görenin kendi belgesiyle
+  yanıt verebilmesi gibi cihazlar arası akışın bilinen sınırı (OpenID4VP 1.0 §14); RP yeni sunum açar.
+  Kurumun belge verme servisindeki satır içi kimlik sunumu (SPEC-PROTO-0001 §11.2) aynı kuralı uygular; çok dallı sunumda ret boş
+  gövdeyle 200 alır, tek dallıda cüzdana `access_denied` yönlendirmesi döner.
 
 **Değişmez PV5:** Kullanıcı reddettiğinde `access_denied` döner ve **sebep
 belirtilmez.** "Kullanıcının bu belgesi yok" ile "kullanıcı vermek
@@ -628,6 +641,7 @@ kullanıcının hangi belgelere sahip olduğunu sorgu yaparak haritalayabilir.
 | **PV12** | Cüzdan, istenen alanlardan birini taşımayan belgeyi göndermez (`claim_sets` yoksa bütün alanlar, varsa seçilen kombinasyonun bütün alanları belgede olmalıdır); isteğe bağlı alan `claim_sets` ile istenir. |
 | **PV13** | Cüzdan imzalı istek nesnesini zamanla ve hedefle denetler: `exp` zorunludur ve geçmiş olamaz, `iat` 60 sn'den fazla ileri tarihli olamaz (saat kayması toleransı 60 sn), `aud` verilmişse `https://self-issued.me/v2` olmalıdır; aksi hâlde istek reddedilir. `dc+sd-jwt` sorgusu türü `meta.vct_values` ile belirtmelidir (türsüz sorgu reddedilir). |
 | **PV14** | Aracı doğrulayıcı ([[ADR-0017]] K7) bir RP adına ancak ilişki iki kayıtta da yazılıysa istek gönderebilir: asıl RP aracıyı `uses_intermediaries`'te, aracı asıl RP'yi `served_relying_parties`'te listeler; tek taraflı beyanda cüzdan isteği reddeder. |
+| **PV15** | `request_uri`'nin her çekimi taze `state` (≥ 128 bit, gizli), taze `nonce` ve taze efemer şifreleme anahtarıyla ayrı bir çekim dalıdır; cüzdanın hata yanıtı yalnız kendi dalını kapatır ve sunum ancak tek dalı varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
 
 ---
 

@@ -6,6 +6,20 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.4 — unreleased (source only, not on npm)
 
+- verifier + verify (2026-10-29; ADR-0067, OpenID4VP 1.0 §5.10 / §8.2 / §8.3.1, HAIP §5): **request branches and soft decline**
+  (protection against forged declines). OpenID4VP does not authenticate error responses, and `state` sat in a request object that
+  anyone who saw the QR code could fetch, so a bystander could close the real person's presentation with
+  `error=access_denied&state=…`. Now every fetch of the `request_uri` (GET, or POST with `wallet_nonce` echoed) mints a new request
+  object with a fresh 128-bit `state`, a fresh `nonce` and a fresh ephemeral encryption key (`kid` `enc-<presentation>.<branch>`).
+  A decline — unencrypted or encrypted — closes only its own branch; the presentation becomes REJECTED only if it has exactly one
+  branch and that branch is closed, otherwise it stays open until expiry and the first valid presentation wins. Decline answers are
+  200 and their `redirect_uri` no longer carries the status token. Responses that no branch key can decrypt no longer count as
+  attempts; attempts are per branch (5); at most 10 branches per presentation (then 429). The Digital Credentials API path is
+  unchanged (its object is not a branch). New in `@tamga-network/verifier`: `createRequestBranch`, `openPresentationResponse`
+  (separates an encrypted error response), `acceptableWalletNonce`, `RequestBranch`, `RequestContent`, `ResponseBinding`;
+  `responseKidOf` returns `branchId`, `decryptPresentationResponse` takes an optional branch lookup; `state` is now 128 bits. The
+  `GET /presentations/{id}` contract is unchanged. Same rule in the operator's inline identity presentation.
+
 - trust-publisher + wallet-core (2026-10-29; ADR-0068 **Accepted**, ETSI TS 119 475 V1.2.1 Table 7 and §6): registration
   certificates carry `policy_id` (Tamga's own OID; ETSI's EU OID `0.4.0.19475.3.1` is refused by the publisher),
   `certificate_policy` (the new Tamga ARF page "Registration Certificate Policy", FW-POL-0003) and `status`

@@ -3,7 +3,7 @@
  * `showKey`: kontrol görünümü bağlantısı için rastgele anahtar (ADR-0012 C); sonuçtan sonra 5 dk geçerli.
  */
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import type { Policy, PresentationRequest, VerificationResult } from "@tamga-network/verifier";
+import type { Policy, PresentationRequest, RequestBranch, VerificationResult } from "@tamga-network/verifier";
 
 export interface TraceEntry {
   t: number;
@@ -11,18 +11,41 @@ export interface TraceEntry {
   detail?: string;
 }
 
+/**
+ * ADR-0067: `request_uri`'nin bir çekimi (çekim dalı). Ret ya da deneme sınırı yalnız bu dalı kapatır; sunumun bütünü ancak tek
+ * dalı varsa ve o dal kapandıysa REJECTED olur (FB3). Dal bilgisi iç durumdur; durum API'sinde görünmez.
+ */
+export interface Branch extends RequestBranch {
+  /** Bu dalda sahiplik kanıtına ulaşmadan başarısız olan (çözülmüş) yanıt sayısı. */
+  attempts: number;
+  /** Dal kapandı: kişi reddetti (`declined`) ya da deneme sınırı doldu (`attempts`); kapalı dala yanıt kabul edilmez. */
+  closed?: "declined" | "attempts";
+}
+
 export interface Presentation {
   req: PresentationRequest;
   policy: Policy;
   createdAt: number;
   /**
-   * Sunum tüketildi: ya cüzdanın yanıtı sahiplik kanıtına (A6 / Z1) kadar geçti ve sonuç yazıldı, ya kişi reddetti (PV5), ya da
-   * deneme sınırı doldu. Öncesindeki başarısız yanıtlar (çözülemeyen gövde, state uyuşmazlığı, boş vp_token, A1–A6) sunumu
-   * KAPATMAZ — sunum kimliği QR'da açık olduğundan yakındaki biri anlamsız bir gövdeyle gerçek kullanıcının sunumunu düşüremesin.
+   * Sunum tüketildi: ya cüzdanın yanıtı sahiplik kanıtına (A6 / Z1) kadar geçti ve sonuç yazıldı, ya tek çekim dalı olan sunumda
+   * kişi reddetti (PV5) ya da o dalın deneme sınırı doldu (ADR-0067 FB3). Öncesindeki başarısız yanıtlar (state uyuşmazlığı, boş
+   * vp_token, A1–A6) sunumu KAPATMAZ; çözülemeyen gövde deneme bile sayılmaz (FB4) — sunum kimliği QR'da açık olduğundan
+   * yakındaki biri gerçek kullanıcının sunumunu düşüremesin.
    */
   used: boolean;
-  /** Sahiplik kanıtına ulaşmadan başarısız olan yanıt sayısı; `MAX_RESPONSE_ATTEMPTS` dolunca sunum kapanır. */
+  /**
+   * Sahiplik kanıtına ulaşmadan başarısız olan (çözülmüş) yanıtların toplamı (bütün dallar + DC API yolu) — durum API'sindeki
+   * `attempts`. Kapanma dal başına (`Branch.attempts`) ve DC API yolu için `dcAttempts` ile sayılır.
+   */
   attempts: number;
+  /** DC API yollarında (dc_api.jwt, Ek C) başarısız denemeler; `MAX_RESPONSE_ATTEMPTS` dolunca sunum kapanır. */
+  dcAttempts: number;
+  /** ADR-0067 K1: `request_uri`'nin çekimleri (en çok `MAX_BRANCHES`). */
+  branches: Branch[];
+  /** Yeni çekim dalı üretir (sunumun imzacısı, DCQL'i ve kayıt sertifikasıyla); `walletNonce` §5.10. */
+  mintBranch?: (walletNonce?: string) => Promise<RequestBranch>;
+  /** Şu anda imzalanmakta olan çekim sayısı (eşzamanlı çekimler dal sınırını aşmasın). */
+  minting?: number;
   /** Son başarısız (tüketmeyen) yanıtın adımı ve nedeni — bekleyen sunumun durumunda RP'ye gösterilir; kişisel veri yok. */
   lastAttempt?: { failed_step: string | null; failed_reason: string; at: number };
   /** Bir yanıt şu anda doğrulanıyor (await sırasında ikinci yanıt işlenmez; tek kullanım kuralı — PV10). */
@@ -49,8 +72,13 @@ export interface Presentation {
   mdocDc?: import("@tamga-network/verifier").MdocDcApiRequest;
 }
 
-/** Sahiplik kanıtına ulaşmayan yanıt denemesi sınırı; dolunca sunum REJECTED ile kapanır (sunum başına; hız sınırı ayrıca). */
+/**
+ * Sahiplik kanıtına ulaşmayan (çözülmüş) yanıt denemesi sınırı — çekim dalı başına (dolunca dal kapanır; sunum yalnız tek dallıysa
+ * REJECTED olur, ADR-0067 FB3) ve DC API yolu için sunum başına. Hız sınırı ayrıca.
+ */
 export const MAX_RESPONSE_ATTEMPTS = 5;
+/** ADR-0067 FB5: sunum başına en çok çekim dalı; sonrası 429 (var olan dallar etkilenmez). */
+export const MAX_BRANCHES = 10;
 export const SHOW_TTL_MS = 5 * 60 * 1000;
 /** ADR-0017 K3 / HV3: okunmayan değerler sonuçtan en geç 5 dk sonra silinir. */
 export const CLAIMS_TTL_MS = 5 * 60 * 1000;
@@ -80,6 +108,8 @@ export class PresentationStore {
       createdAt: Date.now(),
       used: false,
       attempts: 0,
+      dcAttempts: 0,
+      branches: [],
       trace: [firstTrace],
       showKey: randomBytes(12).toString("base64url"),
       statusToken: randomBytes(16).toString("base64url"),
@@ -96,10 +126,14 @@ export class PresentationStore {
     return this.map.get(id);
   }
 
-  /** OpenID4VP hata yanıtı (`error` + `state`) şifreli değildir ve `kid` taşımaz: sunum `state` ile bulunur (yalnız bekleyenler). */
-  byState(state: string) {
+  /**
+   * OpenID4VP şifresiz hata yanıtı (`error` + `state`) `kid` taşımaz: sunum ve çekim dalı `state` ile bulunur (yalnız bekleyen
+   * sunumlar; ADR-0067 — `state` dal başınadır ve yalnız o dalın istek nesnesinde geçer). DC API nesnesinin `state`'i dal değildir.
+   */
+  byState(state: string): { p: Presentation; branch: Branch } | undefined {
     this.sweep();
-    for (const p of this.map.values()) if (!p.used && sameKey(state, p.req.state)) return p;
+    for (const p of this.map.values())
+      if (!p.used) for (const b of p.branches) if (sameKey(state, b.state)) return { p, branch: b };
     return undefined;
   }
 

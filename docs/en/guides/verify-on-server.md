@@ -94,6 +94,10 @@ with `policy.freshness.max_clock_skew_sec` (default 120 s).
   same presentation at once, only one of them writes the result. If you run several server instances, keep this state in shared
   storage with a conditional write. A response that does not reach the proof of possession (A6) must not close the presentation
   ([[SPEC-PROTO-0002]] §10.1).
+- **Every `request_uri` fetch should be its own branch** ([[ADR-0067]]): with `createRequestBranch`, mint a fresh `state`, `nonce`
+  and encryption key on each fetch; let a wallet decline close only its own branch and treat the presentation as declined only if
+  it has a single branch. Otherwise anyone who sees the QR code can fetch the request object and break the real person's
+  transaction with a forged decline. Open responses with `openPresentationResponse`.
 - The policy asks only for the fields it needs; for age a single [[t:mdoc]] field such as `age_over_18` or `age_over_15` is
   enough (the thresholds are a closed set: 15 and 18; [[ADR-0064]]). Tamga Verify also has the `age-over-15-mdoc` and
   `age-over-15-zk` policies.

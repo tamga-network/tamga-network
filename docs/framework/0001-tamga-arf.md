@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-23
+last_updated: 2026-10-29
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -287,6 +287,10 @@ kimliği ve verdiği belgeler değişmez.
 
 "Şu an doğrulanamadı" sonucu hiçbir zaman "geçersiz" ile aynı gösterilmez. Kurumun belge verme yetkisi, belgenin verildiği
 tarihe göre değerlendirilir: kapanan bir kurumun daha önce verdiği belgeler geçerli kalır.
+
+Kişi vermemeyi seçerse cüzdan doğrulayıcıya yalnız "vermedi" der; neden söylenmez. QR'daki istek adresi her açıldığında ayrı
+bir istek üretir: kişinin reddi yalnız kendi isteğini kapatır, QR'ı gören başka birinin sahte reddi gerçek kişinin işlemini bozamaz
+([[ADR-0067]]).
 
 ## 4.5 Yön kuralları
 

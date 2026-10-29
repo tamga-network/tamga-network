@@ -38,6 +38,7 @@ import {
   type WalletState,
 } from "@tamga-network/wallet-core";
 import { buildVerifyApp } from "../src/app.js";
+import { MAX_BRANCHES } from "../src/state.js";
 import type { VerifyConfig } from "../src/config.js";
 
 const LAN = { allowLocalDevHost: true } as const;
@@ -468,14 +469,16 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     expect((await result(app, b.id)).outcome).toBe("ACCEPTED");
   });
 
-  it("(6) önce bozuk girdi → deneme sayılır, sunum açık; state/nonce iki oturum arasında takas edilirse RED; sonra geçerli yanıt kabul", async () => {
+  it("(6) önce bozuk girdi → sunum açık (çözülemeyen deneme bile sayılmaz, ADR-0067 FB4); state/nonce iki oturum arasında takas edilirse RED; sonra geçerli yanıt kabul", async () => {
     const a = await open(app);
     const b = await open(app);
-    // bozuk gövde (çözülemez)
-    const junk =
-      Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid: `enc-${a.id}` })).toString("base64url") +
-      ".x.y.z.w";
-    expect((await postJwe(app, junk)).statusCode).toBe(400);
+    // bozuk gövde (çözülemez): dalsız `kid` ve gerçek dalın `kid`'iyle — ikisi de sunuma dokunmaz
+    for (const kid of [`enc-${a.id}`, a.req.encJwk.kid]) {
+      const junk =
+        Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid })).toString("base64url") + ".x.y.z.w";
+      expect((await postJwe(app, junk)).statusCode).toBe(400);
+    }
+    expect((await result(app, a.id)).attempts).toBe(0);
     // gövdesiz / anlamsız istek: sunuma dokunmaz
     expect(
       (
@@ -497,7 +500,7 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     expect((await postJwe(app, swapState)).statusCode).toBe(400);
     const ra = await result(app, a.id);
     expect(ra.state).toBe("PENDING");
-    expect(ra.attempts).toBe(3);
+    expect(ra.attempts).toBe(2);
     expect(ra.last_attempt?.failed_reason).toBe("state mismatch");
     // b bunlardan etkilenmedi
     expect((await result(app, b.id)).attempts).toBe(0);
@@ -576,5 +579,167 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     const late = await postJwe(app, jwe);
     expect(late.statusCode).toBe(400);
     expect((await result(app, a.id)).outcome).toBe("REJECTED");
+  });
+
+  // ADR-0067 — çekim dalları ve yumuşak ret (sahte ret koruması)
+  /** `request_uri`'yi bir kez daha çeker (yeni dal): QR'ı gören herkes bunu yapabilir. */
+  const fetchAgain = async (a: typeof app, id: string, clientId: string) =>
+    verifyRequestObject(await fetchRequestObject(`${BASE}/vp/req/${id}`, http(a)), clientId, LAN);
+  const encryptedDecline = (req: VpRequest, state = req.state) =>
+    encryptJwe(utf8(JSON.stringify({ error: "access_denied", state })), req.encJwk);
+
+  it("ADR-0067: üçüncü bir çekimden gelen sahte ret (şifresiz ya da şifreli) gerçek cüzdanın dalını kapatmaz; ilk geçerli sunum kazanır", async () => {
+    const created = (
+      await app.inject({
+        method: "POST",
+        url: "/presentations",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        payload: { policy_id: "job-application-degree" },
+      })
+    ).json() as { presentation_id: string; qr_payload: string; request_uri: string };
+    const uri = parseVpUri(created.qr_payload);
+    const id = created.presentation_id;
+    // gerçek cüzdan çeker (dal 1); QR'ı gören saldırgan iki kez çeker (dal 2, 3)
+    const real = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(app)), uri.clientId, LAN);
+    const atk2 = await fetchAgain(app, id, uri.clientId!);
+    const atk3 = await fetchAgain(app, id, uri.clientId!);
+    // state gizlidir: QR'da, request_uri'de ve response_uri'de yok; her dalın state/nonce/anahtarı ayrı
+    for (const r of [real, atk2, atk3]) {
+      expect(created.qr_payload).not.toContain(encodeURIComponent(r.state!));
+      expect(created.request_uri).not.toContain(r.state!);
+      expect(r.responseUri).not.toContain(r.state!);
+      expect(Buffer.from(r.state!, "base64url").length).toBeGreaterThanOrEqual(16);
+    }
+    expect(new Set([real.state, atk2.state, atk3.state]).size).toBe(3);
+    expect(new Set([real.nonce, atk2.nonce, atk3.nonce]).size).toBe(3);
+    expect(new Set([real.encJwk.x, atk2.encJwk.x, atk3.encJwk.x]).size).toBe(3);
+    // saldırgan kendi dalında şifresiz ret gönderir → 200 (§8.2), ama yalnız kendi dalı kapanır; redirect_uri durum jetonu taşımaz
+    const forged = await declineRequest(atk3, http(app));
+    expect(forged.status).toBe(200);
+    expect(forged.redirectUri).toBe(`${BASE}/p/${id}`);
+    // ve öteki dalında şifreli ret
+    expect((await postJwe(app, encryptedDecline(atk2))).statusCode).toBe(200);
+    // gerçek dalın state'ini bilmeden ret gönderemez; uydurma state → 400
+    expect((await postDecline(app, "uydurma-state")).statusCode).toBe(400);
+    const pending = await result(app, id);
+    expect(pending.state).toBe("PENDING");
+    expect(pending.outcome).toBeUndefined();
+    expect(app.presentations.get(id)!.branches.map((b) => b.closed ?? "open")).toEqual([
+      "open",
+      "declined",
+      "declined",
+    ]);
+    // gerçek cüzdan kendi dalından yanıtlar → kabul
+    expect((await postJwe(app, (await answer(real)).jwe)).statusCode).toBe(200);
+    expect((await result(app, id)).outcome).toBe("ACCEPTED");
+    // reddedilen dala geç gelen sunum sonucu değiştirmez
+    expect((await postJwe(app, (await answer(atk2)).jwe)).statusCode).toBe(400);
+    expect((await result(app, id)).outcome).toBe("ACCEPTED");
+  });
+
+  it("ADR-0067: tek çekimli sunumda ret (şifreli) → REJECTED; kapanan sunum için yeni dal açılmaz", async () => {
+    const a = await open(app);
+    // yanlış state'li şifreli ret: dalın denemesi (sunum açık)
+    expect((await postJwe(app, encryptedDecline(a.req, "baska"))).statusCode).toBe(400);
+    expect((await result(app, a.id)).state).toBe("PENDING");
+    const r = await postJwe(app, encryptedDecline(a.req));
+    expect(r.statusCode).toBe(200);
+    expect(r.json().redirect_uri).toBe(`${BASE}/p/${a.id}`); // durum jetonu yok (FB6)
+    const res = await result(app, a.id);
+    expect(res.outcome).toBe("REJECTED");
+    expect(res.failed_reason).toBe("the wallet declined");
+    expect((await app.inject({ method: "GET", url: `/vp/req/${a.id}` })).statusCode).toBe(404);
+  });
+
+  it("OpenID öz-testi request-uri-fetched-twice: istek iki kez çekilir, ikinci dalla yanıt kabul; ilk dalın geç yanıtı PV10", async () => {
+    const a = await open(app);
+    const second = await fetchAgain(app, a.id, a.req.clientId);
+    expect(second.state).not.toBe(a.req.state);
+    expect(second.nonce).not.toBe(a.req.nonce);
+    const first = await answer(a.req);
+    expect((await postJwe(app, (await answer(second)).jwe)).statusCode).toBe(200);
+    expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
+    const late = await postJwe(app, first.jwe);
+    expect(late.statusCode).toBe(400);
+    expect(late.json().error_description).toMatch(/PV10/);
+    // ikinci dalın sunumu birinci dalın anahtarına taşınırsa: KB-JWT nonce o dalın değil → kabul edilmezdi (A6)
+    const b = await open(app);
+    const b2 = await fetchAgain(app, b.id, b.req.clientId);
+    const crossed = encryptJwe(
+      utf8(JSON.stringify({ vp_token: (await answer(b2)).vpToken, state: b.req.state })),
+      b.req.encJwk,
+    );
+    expect((await postJwe(app, crossed)).statusCode).toBe(400);
+    expect((await result(app, b.id)).last_attempt?.failed_step).toBe("A6");
+  });
+
+  it("ADR-0067: reddedilen dala sunum kabul edilmez; aynı sunumun öteki dalı tamamlar; dalın deneme sınırı yalnız o dalı kapatır", async () => {
+    const a = await open(app);
+    const other = await fetchAgain(app, a.id, a.req.clientId);
+    // iki dal var: ret yalnız kendi dalını kapatır
+    expect((await declineRequest(a.req, http(app))).status).toBe(200);
+    expect((await result(app, a.id)).state).toBe("PENDING");
+    const onDeclined = await postJwe(app, (await answer(a.req)).jwe);
+    expect(onDeclined.statusCode).toBe(400);
+    expect(onDeclined.json().error_description).toMatch(/declined/);
+    expect((await postJwe(app, (await answer(other)).jwe)).statusCode).toBe(200);
+    expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
+    // deneme sınırı: çok dallı sunumda 5 başarısız yanıt yalnız o dalı kapatır
+    const b = await open(app);
+    const noisy = await fetchAgain(app, b.id, b.req.clientId);
+    const wrong = encryptJwe(utf8(JSON.stringify({ vp_token: { diploma: ["x~"] }, state: "baska" })), noisy.encJwk);
+    for (let i = 0; i < 5; i++) expect((await postJwe(app, wrong)).statusCode).toBe(400);
+    expect((await postJwe(app, wrong)).json().error_description).toMatch(/closed/);
+    const rb = await result(app, b.id);
+    expect(rb.state).toBe("PENDING");
+    expect(rb.attempts).toBe(5);
+    expect((await postJwe(app, (await answer(b.req)).jwe)).statusCode).toBe(200);
+    expect((await result(app, b.id)).outcome).toBe("ACCEPTED");
+  });
+
+  it("ADR-0067 FB5: sunum başına en çok MAX_BRANCHES çekim, sonrası 429; var olan dallar çalışmaya devam eder", async () => {
+    const a = await open(app);
+    for (let i = 1; i < MAX_BRANCHES; i++)
+      expect((await app.inject({ method: "GET", url: `/vp/req/${a.id}` })).statusCode).toBe(200);
+    const over = await app.inject({ method: "GET", url: `/vp/req/${a.id}` });
+    expect(over.statusCode).toBe(429);
+    expect(app.presentations.get(a.id)!.branches).toHaveLength(MAX_BRANCHES);
+    expect((await postJwe(app, (await answer(a.req)).jwe)).statusCode).toBe(200);
+    expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
+  });
+
+  it("OpenID4VP 1.0 §5.10: request_uri POST ile çekilince wallet_nonce istek nesnesine yazılır; GET de çalışır", async () => {
+    const a = await open(app);
+    const post = (body: string) =>
+      app.inject({
+        method: "POST",
+        url: `/vp/req/${a.id}`,
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        payload: body,
+      });
+    const claims = (jwt: string) => JSON.parse(Buffer.from(jwt.split(".")[1], "base64url").toString("utf8"));
+    const r = await post(`wallet_nonce=qPmxiNFCR3QTm19POc8u&wallet_metadata=${encodeURIComponent("{}")}`);
+    expect(r.statusCode).toBe(200);
+    expect(r.headers["content-type"]).toContain("application/oauth-authz-req+jwt");
+    const posted = verifyRequestObject(r.body, a.req.clientId, LAN);
+    expect(claims(r.body).wallet_nonce).toBe("qPmxiNFCR3QTm19POc8u");
+    expect(posted.state).not.toBe(a.req.state);
+    // biçim dışı wallet_nonce geri yazılmaz; POST gövdesiz de yeni dal açar
+    expect(claims((await post("wallet_nonce=bo%C5%9Fluk%20var")).body).wallet_nonce).toBeUndefined();
+    expect(claims((await post("")).body).wallet_nonce).toBeUndefined();
+    // POST ile çekilen dalla yanıt kabul
+    expect((await postJwe(app, (await answer(posted)).jwe)).statusCode).toBe(200);
+    expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
+  });
+
+  it("ADR-0067: DC API yolu etkilenmez — DC nesnesinin state'i bir dal değildir (ret 400), DC yanıtı dal gerektirmez", async () => {
+    const a = await open(app, "age-over-18-mdoc", { dc_api_origin: SITE });
+    const dreq = parseDcApiRequest(a.dc!, SITE);
+    expect(dreq.state).not.toBe(a.req.state); // QR dalının state'i ayrı
+    expect((await postDecline(app, dreq.state)).statusCode).toBe(400);
+    expect((await result(app, a.id)).state).toBe("PENDING");
+    const good = await answer(dreq, { w: mdocWallet, c: mdocCombined });
+    expect((await postJwe(app, good.jwe)).statusCode).toBe(200);
+    expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
   });
 });

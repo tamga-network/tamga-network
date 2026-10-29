@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-23 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-29 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -304,6 +304,10 @@ its entry changes; the institution's identifier and the credentials it issued do
 
 "Cannot be verified right now" is never shown as "invalid". An institution's authority to issue is assessed at the date the
 credential was issued: credentials issued earlier by an institution that has since closed remain valid.
+
+If the person chooses not to share, the wallet tells the verifier only "not shared"; no reason is given. The request address in the
+QR code produces a separate request each time it is opened: the person's decline closes only their own request, and a forged
+decline from someone else who saw the QR code cannot break the real person's transaction ([[ADR-0067]]).
 
 ### 4.5 Direction rules
 
