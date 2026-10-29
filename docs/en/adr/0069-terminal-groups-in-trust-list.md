@@ -124,6 +124,11 @@ In the sandbox list the groups of the three example institutions are published w
 - Documents: [[SPEC-TRUST-0001]] §4 (verifier record), [[SPEC-API-0001]] §6.4, the trust list API definition, the verifier
   registration guide and the sandbox guide §6, [[FW-RB-0006]] §4.3; [[ADR-0065]] K2 and K5 are completed by this decision.
 - Packages: source 0.7.4 (the new reader is optional; older lists keep loading).
+- **Implementation note (0.7.4, 2026-10-29):** TG3 is implemented fail-closed. "List stale" and "group not in the list" are
+  told apart (`freshness().healthy`): a key bound to an institution, or a group once seen in the list, that the list cannot
+  confirm gets 403 at the gate and no new key. An unowned key the operator issued while the group was unlisted is bound to the
+  group's institution when the group appears. `allowed_policies` is also checked at the gate: a pass carries its policy ID; a
+  pass from a policy that is not allowed is refused without being consumed.
 
 # Status
 

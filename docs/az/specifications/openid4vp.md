@@ -168,7 +168,7 @@ sübut etmir və həddindən artıq tələb nəzarəti mümkünsüz olur.
 | `response_mode` | `direct_post.jwt` (defolt) və ya `dc_api.jwt` (§7) — **şifrəsiz rejim yoxdur** |
 | `nonce` | ≥ 128 bit entropiya, birdəfəlik; `request_uri`-nin hər çəkilişində yenisi ([[ADR-0067]]) |
 | `state` | ≥ 128 bit təsadüfi, gizli; `request_uri`-nin hər çəkilişində yenisi — QR-da, `request_uri` və `response_uri` yolunda yoxdur ([[ADR-0067]]) |
-| `request_uri` çəkilişi | Hər çəkiliş (GET və ya `request_uri_method=post` ilə POST, OpenID4VP 1.0 §5.10) yeni **çəkiliş qolu** açır: eyni məzmunla yeni imzalanmış sorğu obyekti; təzə `state`, `nonce` və efemer şifrələmə açarı (HAIP §5). POST-da `wallet_nonce` obyektə geri yazılır. Təqdimat başına ən çox 10 qol (2026-10-29) |
+| `request_uri` çəkilişi | Hər çəkiliş (GET və ya `request_uri_method=post` ilə POST, OpenID4VP 1.0 §5.10) yeni **çəkiliş qolu** açır: eyni məzmunla yeni imzalanmış sorğu obyekti; təzə `state`, `nonce` və efemer şifrələmə açarı (HAIP §5). POST-da `wallet_nonce` obyektə geri yazılır. Sabit qol limiti və qanuni çəkilişə 429 yoxdur; yaddaş məhduddur (yumşaq limitdə cavabsız yaşlı qol atılır, ortaq qol büdcəsi; [[ADR-0067]] dəyişiklik qeydi 2026-10-29); sürət limiti müştəri ünvanı başına |
 | Sorğu imzası | **Məcburi** — imzasız sorğu rədd edilir |
 | `client_metadata.jwks` | Cavab şifrələmə açarı; **məcburi** |
 | `verifier_info` | İstəyə bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — istifadənin qeydiyyat sertifikatı (ETSI TS 119 475 / 119 472-2). Varsa, rəqəmsal cüzdan qeydiyyat orqanının imzasını (LOTL `roles.registrar`), müddəti və `sub`-ın giriş sertifikatındakı `organizationIdentifier` ilə eyni olduğunu yoxlayır; uyğun gəlmirsə, məlumat göndərilmir (WRC4). Sertifikatda olmayan sahə artıq tələb sayılır (§6). |
@@ -603,7 +603,10 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
   olan cavab təqdimatı **bağlamır**. Heç bir qolun açarı ilə açıla bilməyən cavab (pozulmuş gövdə, `kid`-də qol yoxdur və ya naməlumdur)
   təqdimata toxunmur və cəhd sayılmır; açılmış, amma uğursuz cavab (`state` uyğunsuzluğu, boş `vp_token`, A1–A6 rəddi) 400
   `invalid_request` alır və **öz qolunun** cəhdidir: qol başına **5** cəhddə yalnız o qol bağlanır (tək qollu təqdimatda təqdimat
-  REJECTED olur; DC API yolunda hədd təqdimat başınadır). Təqdimat başına ən çox 10 qol; ondan sonra 429 (sürət həddi ayrıca).
+  REJECTED olur; DC API yolunda hədd təqdimat başınadır). Qol sayında sabit limit yoxdur: yumşaq limitdə (10) heç cavab almamış və
+  yaşlı (≥ 120 san) ən köhnə qol, sərt tavanda (32) yaşa baxılmadan atılır; cavabı emal olunan qol atılmır; ortaq qol büdcəsi bütün
+  təqdimatları əhatə edir; çəkiliş sürət limiti müştəri ünvanı başınadır ([[ADR-0067]] RQ5, dəyişiklik qeydi 2026-10-29). Tək
+  istifadə kilidi cavab açılmazdan əvvəl alınır və açıldıqdan sonra qol yenidən yoxlanılır.
   Gözləyən təqdimatın vəziyyətində ümumi cəhd sayı və son uğursuzluğun addımı görünür (`attempts`, `last_attempt`); dəyər yoxdur,
   qol məlumatı yoxdur.
 - **Qalan risk.** QR-ı real cüzdandan əvvəl çəkib dərhal rədd edən biri tək qollu təqdimatı bağlaya bilər — QR-ı görənin öz sənədi ilə

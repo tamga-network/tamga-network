@@ -131,6 +131,33 @@ export function certNames(der: Uint8Array): CertNames {
   };
 }
 
+/** id-tsl-kp-tslSigning (ETSI TS 119 612 §5.7.1): yalnız ETSI XML güven listesi imzası için. */
+export const OID_TSL_SIGNING_EKU = "0.4.0.2231.3.0";
+
+/** Sertifikanın extendedKeyUsage (2.5.29.37) amaçları (noktalı OID); uzantı yoksa boş dizi. Bozuk sertifika → hata. */
+export function certExtendedKeyUsages(der: Uint8Array): string[] {
+  const cert = readTlv(der, 0);
+  if (cert.tag !== 0x30) throw new Error("X.509: Certificate is not a SEQUENCE");
+  const tbs = children(der, cert)[0];
+  if (!tbs || tbs.tag !== 0x30) throw new Error("X.509: tbsCertificate missing");
+  const exts = children(der, tbs).find((t) => t.tag === 0xa3); // [3] extensions
+  if (!exts) return [];
+  const seq = children(der, exts)[0];
+  if (!seq || seq.tag !== 0x30) throw new Error("X.509: extensions malformed");
+  for (const ext of children(der, seq)) {
+    const parts = children(der, ext);
+    if (parts[0]?.tag !== 0x06 || oidString(der, parts[0]) !== "2.5.29.37") continue;
+    const value = parts[parts.length - 1];
+    if (value?.tag !== 0x04) throw new Error("X.509: extKeyUsage malformed");
+    const inner = readTlv(der, value.start);
+    if (inner.tag !== 0x30) throw new Error("X.509: extKeyUsage malformed");
+    return children(der, inner)
+      .filter((t) => t.tag === 0x06)
+      .map((t) => oidString(der, t));
+  }
+  return [];
+}
+
 /**
  * ETSI -09 güven kökü öğesi bu sertifikayı mı gösteriyor (IssuerSerial): seri numarası aynı ve öğenin `issuer_dn`'i sertifikanın
  * VEREN adına eşit (kendinden imzalı kökte veren adı konu adıyla aynıdır). Konu adıyla eşleşme kabul edilmez.

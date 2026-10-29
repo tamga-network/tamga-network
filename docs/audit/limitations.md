@@ -47,14 +47,18 @@ normalisation, refresh-token binding (ADR-0060), PKCE verifier required.
 
 **OpenID Foundation conformance suite — verifier** (plan `oid4vp-1final-verifier-haip-test-plan`, `sd_jwt_vc` +
 `direct_post.jwt`, 14 modules, 2026-10-27): first round **no failures**; two warnings (an extra `purpose` parameter in the
-request object, an extra `show_url` key in the response-endpoint answer) fixed the same day; second round expected to be clean.
+request object, an extra `show_url` key in the response-endpoint answer) fixed the same day. A second round has **not been run
+yet** (as of 2026-10-29); its result is unknown until it runs. Request branches (ADR-0067) changed the request object since the
+first round.
 
 **eudi-dev 3.5.0** (independent open-source EU test wallet, strict ARF mode, 2026-10-29): five real defects found and fixed the
 same day — registration-certificate use entries lacked `format` (mdoc / ZK requests counted as over-asking), `state` required on
 the DC API path, wrong `aud` for SD-JWT over the DC API (`origin:` + page origin, Annex A.4), JAdES `sigT` instead of `iat` in
 LoTE signatures, base64url-wrapped registration certificate not read; one small EN 319 412-1 identifier syntax fix. One gap
 found that blocked strict EU wallets: registration certificates without `policy_id` / `certificate_policy` / `status` — since
-resolved by ADR-0068 (sandbox). A weekly CI job re-runs the suite against the sandbox.
+resolved by ADR-0068 (sandbox): in strict mode 12 of the 13 sandbox requests now pass; the 13th (`site-signup`) uses Tamga's
+pseudonym extension, which the EU wallet does not know. Sandbox only; the real network has no registration-certificate policy or
+status list yet. A weekly CI job re-runs the suite against the sandbox.
 
 ## 4. Previous internal reviews (summary)
 
@@ -70,7 +74,8 @@ resolved by ADR-0068 (sandbox). A weekly CI job re-runs the suite against the sa
 ## 5. Open questions for the reviewer
 
 1. Is the per-fetch branch model (ADR-0067) a sound answer to unauthenticated OpenID4VP error responses, or is there a cheaper
-   attack on branch exhaustion (limit: 10 branches, 5 attempts per branch)?
+   attack on branch eviction (soft cap 10 / hard ceiling 32 branches, eviction of unanswered branches, per-IP fetch limit;
+   residual risk in ADR-0067 "Eviction")?
 2. XMLDSig: is our profile (and reading data only from the verified DOM) sufficient against signature-wrapping and
    canonicalisation-confusion attacks?
 3. Trust-list rollback: is version memory + anchor log adequate for clients that run for a long time without persistent storage?

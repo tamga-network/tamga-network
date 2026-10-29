@@ -181,7 +181,7 @@ describe.skipIf(!ready)("examples", () => {
     let lastJwe = "";
     const http: Http = async (url, init) => {
       if (url.startsWith(`${PUB}/vp/req/`)) {
-        const jwt = v.requestObject(url.slice(`${PUB}/vp/req/`.length));
+        const jwt = await v.requestObject(url.slice(`${PUB}/vp/req/`.length));
         return { status: jwt ? 200 : 404, text: async () => jwt ?? "" };
       }
       if (url === `${PUB}/vp/response`) {
@@ -198,6 +198,16 @@ describe.skipIf(!ready)("examples", () => {
     const reqClaims = JSON.parse(Buffer.from(reqJwt.split(".")[1], "base64url").toString("utf8"));
     expect(reqClaims.verifier_info).toEqual([{ format: "registration_cert", data: WRPRC }]);
     const req = verifyRequestObject(reqJwt, uri.clientId, LAN);
+    // someone who photographed the QR fetches it too: own branch (other state), and their forged "declined" closes only that
+    const atkJwt = await fetchRequestObject(uri.requestUri, http);
+    const atkState = JSON.parse(Buffer.from(atkJwt.split(".")[1], "base64url").toString("utf8")).state as string;
+    expect(atkState).not.toBe(req.state);
+    expect(v.handleDecline(atkState)).toEqual({ presentationRejected: false });
+    // an answer that cannot be decrypted changes nothing
+    const junk =
+      Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid: req.encJwk.kid })).toString("base64url") +
+      ".x.y.z.w";
+    await expect(v.handleResponse(junk)).rejects.toThrow();
     const { matches } = matchDcql(req.dcql, wallet.credentials);
     const copy = matches[0].credential.copies[0];
     await respond({
@@ -208,7 +218,8 @@ describe.skipIf(!ready)("examples", () => {
       http,
       now,
     });
-    const out = outcome as unknown as Awaited<ReturnType<typeof v.handleResponse>>;
+    const out = outcome as unknown as Extract<Awaited<ReturnType<typeof v.handleResponse>>, { declined: false }>;
+    expect(out.declined).toBe(false);
     expect(out.result.failed_reason).toBeNull();
     expect(out.result.outcome).toBe("ACCEPTED");
     expect([...out.result.disclosed_claims].sort()).toEqual(

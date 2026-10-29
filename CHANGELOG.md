@@ -6,6 +6,108 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.4 — unreleased (source only, not on npm)
 
+### Breaking / behaviour changes in 0.7.4 (with migration)
+
+- **wallet-core — Digital Credentials API KB-JWT `aud`.** SD-JWT VC presented over the DC API binds the Key Binding JWT to
+  `aud = "origin:<origin>"` (OpenID4VP 1.0 Appendix A.4), no longer to the client identifier; Tamga Verify expects the same and
+  rejects a proof bound to the other path. *Migration:* wallets update to 0.7.4 for SD-JWT over the DC API; a verifier that
+  checks DC API presentations itself must expect `origin:<origin>`. Cross-device (QR) keeps the client identifier.
+- **verifier — `registrationScopesFor` matches the presentation format.** A registered use only matches a request of the same
+  format (`dc+sd-jwt` default, `mso_mdoc`, `mso_mdoc_zk`). *Migration:* registry scopes for mdoc / ZK requests set `format` (and
+  `mdoc_namespace` for mdoc); otherwise the request finds no registration certificate.
+- **wallet-core — `checkDcqlShape` is stricter.** Malformed DCQL (non-object credential query, `claims` not an array, invalid
+  claim path, empty `values`) throws a `WalletError` instead of a `TypeError` or passing. *Migration:* catch `WalletError`; fix
+  queries that relied on the lenient shape.
+- **wallet-core — registration status.** New flag `registration_status_unknown` when a registration certificate's status could
+  not be checked (also when no statuses are passed); a revoked certificate makes the request invalid. `startAuthorized` (auth
+  code issuance) now fetches the registrar's status list when `registrarKeys` is given; a registration-certificate status list
+  without `exp` is not accepted (reads as unknown). *Migration:* pass `fetchRegistrationStatuses(...)` results to the
+  registration checks (or accept the flag as a warning); allow the wallet to reach the registrar's `/status/...` address.
+- **core — `resolveSdPayload` rejects `__proto__`.** A payload with a plain `__proto__` key is rejected. *Migration:* none for
+  conforming issuers; never use `__proto__` as a claim name.
+- **wallet-core — `statusBitAt` reads 4- and 8-bit lists.** Values above 3 read as 3 (invalid). *Migration:* none; treat 3 as
+  invalid as before.
+- **trust — JSON lists signed with an XML list signer are refused.** A LOTL or `tl-<cc>` JSON list whose signer certificate has
+  EKU `id-tsl-kp-tslSigning` (0.4.0.2231.3.0) is not loaded. *Migration:* sign JSON lists with the JSON list signer only.
+- **verify — gates fail closed.** A terminal key with an owner, or a key of a group once seen in the list, gets 403 when the list
+  is stale or the group is gone; a pass from a policy not in the group's `allowed_policies` gets 403 without being consumed.
+  *Migration:* keep the trust list fresh; passes issued before 0.7.4 (no policy id) still pass when every policy of the group is
+  allowed.
+- **trust-publisher — `wrprc-revoke` reason codes.** `--reason` takes `compromised | superseded | ceased | policy_violation |
+  other`, optional `--note` (short, no personal data). A lost `wrprc-status.json` stops the build. *Migration:* use a code; after
+  state loss run `wrprc-status --reset --reason "<why>"`.
+- `purpose` removal in `createPresentationRequest` happened in 0.7.3 (now flagged there).
+- **verify / operator issuer — no 429 for a request-object fetch past 10 branches (ADR-0067 amendment 2026-10-29).** The fixed
+  "10 branches, then 429" rule let a bystander lock the real wallet out with 10 fetches. Now a new fetch past the soft limit (10)
+  replaces a closed branch or the oldest never-answered branch at least 120 s old; at the hard ceiling (32) the age condition is
+  dropped; a branch whose response is being processed is never evicted. A response to an evicted branch gets 400 `unknown request
+  object` (not counted; the person scans again). A shared budget caps branches across presentations (20,000; when every branch
+  is in flight a fetch gets 503). The per-presentation fetch bucket is gone; fetches are limited per client address (nginx zone
+  `tamga_vpreq`, 2 r/s, burst 20; application-wide ceiling `vpRequest`). *Migration:* none for wallets; operators reload nginx.
+- **verifier — `createPresentationRequest({ initialRequestObject: false })`.** Without the shared cross-device request object the
+  result is a `PresentationSession` (no `requestJwt`, `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`) and a response whose
+  `kid` names no branch is rejected. The default (`true`, old shape) stays for 0.7.x and is deprecated: one object served to
+  every fetch exposes `state` to anyone who sees the QR. `openPresentationResponse` / `decryptPresentationResponse` now type `req`
+  as `ResponseKeys` and branches as `BranchKeys` (generic) — `PresentationRequest` and `RequestBranch` still fit. *Migration:*
+  `packages/verifier/README.md` "Migrating from one shared request object"; `examples/02-verify-own-server` shows the full flow
+  (its `requestObject(id, walletNonce)` is now async; new `handleDecline(state)`).
+
+### Changes
+
+- verifier + verify + operator issuer (2026-10-29; ADR-0067 amendment, K16): **one branch state machine.** New
+  `BranchSet` / `BranchRegistry` in `@tamga-network/verifier` (`branches.ts`): fetch (fresh branch; signed object returned, not
+  stored; the branch keeps the SHA-256 of `state`, `nonce`, private key, `kid`, timestamps), lookup by `kid` and by `state` (hash
+  map, no linear scan; `timingSafeEqual`), soft decline (`decline`, REJECTED only after a single fetch — fetches still being
+  signed count), attempts per branch (`failedAttempt`), single-use lock (`begin` before decrypting, `isOpen` after, `end`),
+  `consume`, `dispose`, eviction (`BRANCH_LIMITS`: soft 10, hard 32, 120 s, 5 attempts). Tamga Verify and the operator's inline
+  identity presentation both use it; their duplicated logic is deleted. This fixes drift in the operator service: it took the
+  single-use lock only after decrypting, so a decline arriving during decryption could close the branch and the response was
+  still accepted; it compared `state` with `===` and scanned every pending branch for a decline; its `/{slug}/vp/req/{id}` had no
+  rate limit (now per address at the proxy plus an application ceiling). Tamga Verify and the operator no longer create the
+  unused first request object (one signature and one key generation less per presentation). `examples/02-verify-own-server`
+  rewritten to the branch API (lock before decrypting, used up only after A6, the pending entry is never deleted before
+  decryption); the SDK page copy on tamga.network regenerated. Code comments use the RQ codes of ADR-0067 (were FB1–FB6);
+  ADR-0067 tr RQ3 wording fixed.
+
+- verify + verifier + trust (2026-10-29; ADR-0069 TG3 follow-up): **gates fail closed.** "List stale" and "group not in the list"
+  are told apart (`freshness().healthy`); a key with an owner or a group once seen in the list (`listed_groups` in
+  `terminal-keys.json`) that cannot be confirmed gets 403 at `/terminal/verify` and no new key (409). Unowned keys issued while a
+  group was unlisted are bound to the group's institution when the group appears. `allowed_policies` is enforced at the gate:
+  passes carry their policy (`PassPolicy.policy_id` → `PassRecord.policyId`; `verifyToken` option `policyAllowed`), a pass from
+  a policy that is not allowed is refused before it is consumed.
+- trust-publisher + wallet-core (2026-10-29; ADR-0068 follow-up): the registration-certificate status state is never silently
+  restarted — without `wrprc-status.json` but with a published list (or an archived state) the build stops;
+  `wrprc-status --reset --reason "<why>"` rebuilds it from the published list (revoked bits) and certificates. Every state change
+  is also written to `archive/wrprc-status.<time>.json`. When `status_list_uri` changes, revoked entries and blocks move to the
+  new list as revoked and the old list keeps being re-signed until its last certificate expires. Manual revocation reasons are a
+  code list plus an optional short note checked for e-mail addresses, numbers, links and names. wallet-core requires `exp` on
+  registration-certificate status lists (`parseStatusToken` option `requireExp`).
+- trust-publisher (2026-10-29; ADR-0066 follow-up): in the ETSI XML view a wallet solution's status timeline is the solution's
+  own history (the provider's current status is added only when the provider is not active); repeated entries of the same status
+  collapse and no history instance repeats the current status. Characters not allowed in XML 1.0 (C0 controls except tab, CR,
+  LF; U+FFFE/U+FFFF; lone surrogates) stop the real-network build and are stripped with a warning in the sandbox
+  (`sanitizeTrustedListInput`); the generator never writes them. Root CA `service_type` in the JSON registries is the ETSI
+  `Svctype/CA/PKC` URI (was `NationalRootCA-QC`, a qualified claim — SPEC-ID-0002 §8.1, TX2); the publisher rejects QC values.
+- trust (2026-10-29; K5 finding): the JSON list loader refuses LOTL / `tl-<cc>` signed by a certificate with EKU
+  `id-tsl-kp-tslSigning` (`certExtendedKeyUsages`, pure DER reader). A separate `xml_signing_keys` field would be narrower; it is a
+  new public name and waits for a decision.
+
+- verify (2026-10-29; OpenID4VP session and replay acceptance tests, SPEC-PROTO-0002 §10.1, PV10; no package change): a
+  wallet error response (`error` + `state`) that arrives while a response to the same presentation is being verified is now
+  refused with 400 (`a response is being processed`) instead of closing the presentation — before, the decline wrote REJECTED
+  and the in-flight verification then overwrote it with its own result, so the outcome could change after it was written. The
+  response path also re-checks that the presentation is still open after verification before writing a result. New
+  `apps/verify/test/session-replay.test.ts` covers eight cases: an old response sent to a new attempt, a proof made for another
+  verifier (KB-JWT `aud`), the same valid response sent concurrently, a result requested by another session or RP, an expired
+  attempt, malformed input first (and state / nonce swapped between two sessions), re-reading the result after acceptance,
+  and a credential with a missing field; plus a Digital Credentials API origin mismatch and a response after a decline. The
+  server-side verification guide has a "a success page is not proof" checklist item.
+- docs (2026-10-28; data-protection pre-review, no package change): ADR-0040 note — the sandbox's real identity path defaults to
+  the invitation mode (`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`) until the legal review is complete, the quick trial stays open to
+  everyone; RI1 rewritten (tr/en/az, INVARIANTS). Sandbox guide §8 and the warning text now say deletion of the provider session is
+  *requested* at issuance. SPEC-ID-0003: time-based purge of expired/revoked identity records (30 days, with the provider session)
+  and event-log rows (365 days), erasure response `provider: "partial"` without the delete permission (tr/en/az).
+
 - verify + docs/ARF sites + brand (2026-10-29; K14): **fonts are self-hosted — no Google Fonts.** Onest, IBM Plex Sans (upright +
   italic) and IBM Plex Mono are served from our own origin: `ops/brand/fonts/` (woff2 built from the google/fonts sources with
   fontTools — Latin, Latin Extended, Cyrillic, Cyrillic Extended; variable weight; OFL 1.1 licence files alongside, `fonts.css`).
@@ -17,8 +119,8 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
   script or style any more: page scripts (waiting page, sample site, gate terminal, Digital Credentials API test), the brand
   stylesheet and the early theme stamp are separate files under `/assets/*`, values reach them through `data-*` attributes; the
   gate's QR reader (jsQR 1.4.0, unchanged file, hash pinned in the test) is served by the verifier itself — no CDN. Policy:
-  `default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; … base-uri 'none'; object-src 'none';
-  require-trusted-types-for 'script'; trusted-types 'none'` (no nonce, no `'unsafe-inline'`, no `'unsafe-eval'`). The site kit
+  `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; … base-uri 'none'; object-src 'none';
+  require-trusted-types-for 'script'; trusted-types 'none'` (no nonce, no `'unsafe-inline'`, no `'unsafe-eval'`; since K14 no font or style host other than `'self'`). The site kit
   (`@tamga-network/verifier/web`) sets its styles through CSSOM instead of `style` attributes and clears the mount point without
   `innerHTML`, so it also works on integrator sites whose CSP has no `'unsafe-inline'` and enforces Trusted Types. Shared
   `ops/brand/tamga-ui.css` gains small utility classes; `tamga-ui.js` builds fingerprint groups with DOM nodes.
@@ -54,7 +156,8 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
   A decline — unencrypted or encrypted — closes only its own branch; the presentation becomes REJECTED only if it has exactly one
   branch and that branch is closed, otherwise it stays open until expiry and the first valid presentation wins. Decline answers are
   200 and their `redirect_uri` no longer carries the status token. Responses that no branch key can decrypt no longer count as
-  attempts; attempts are per branch (5); at most 10 branches per presentation (then 429). The Digital Credentials API path is
+  attempts; attempts are per branch (5); at most 10 branches per presentation (then 429 — replaced the same day, see the
+  amendment entry above). The Digital Credentials API path is
   unchanged (its object is not a branch). New in `@tamga-network/verifier`: `createRequestBranch`, `openPresentationResponse`
   (separates an encrypted error response), `acceptableWalletNonce`, `RequestBranch`, `RequestContent`, `ResponseBinding`;
   `responseKidOf` returns `branchId`, `decryptPresentationResponse` takes an optional branch lookup; `state` is now 128 bits. The
@@ -120,21 +223,6 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.3 — 2026-10-27
 
-- verify (2026-10-29; OpenID4VP session and replay acceptance tests, SPEC-PROTO-0002 §10.1, PV10; no package change): a
-  wallet error response (`error` + `state`) that arrives while a response to the same presentation is being verified is now
-  refused with 400 (`a response is being processed`) instead of closing the presentation — before, the decline wrote REJECTED
-  and the in-flight verification then overwrote it with its own result, so the outcome could change after it was written. The
-  response path also re-checks that the presentation is still open after verification before writing a result. New
-  `apps/verify/test/session-replay.test.ts` covers eight cases: an old response sent to a new attempt, a proof made for another
-  verifier (KB-JWT `aud`), the same valid response sent concurrently, a result requested by another session or RP, an expired
-  attempt, malformed input first (and state / nonce swapped between two sessions), re-reading the result after acceptance,
-  and a credential with a missing field; plus a Digital Credentials API origin mismatch and a response after a decline. The
-  server-side verification guide has a "a success page is not proof" checklist item.
-- docs (2026-10-28; data-protection pre-review, no package change): ADR-0040 note — the sandbox's real identity path defaults to
-  the invitation mode (`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`) until the legal review is complete, the quick trial stays open to
-  everyone; RI1 rewritten (tr/en/az, INVARIANTS). Sandbox guide §8 and the warning text now say deletion of the provider session is
-  *requested* at issuance. SPEC-ID-0003: time-based purge of expired/revoked identity records (30 days, with the provider session)
-  and event-log rows (365 days), erasure response `provider: "partial"` without the delete permission (tr/en/az).
 - issuer (2026-10-27; OpenID4VCI 1.0 §12.2.4, OpenID conformance checks `VCIValidateDisplayLocales` /
   `VCIWarnOnNonCanonicalDisplayLocales`): display `locale` values in the Credential Issuer metadata are strict BCP 47.
   `credentialDisplay`, `issuerDisplayFrom` and the top-level `display` of `issuerMetadata` write the canonical form (`en-us` →
@@ -144,6 +232,9 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
   properties the newer conformance checks look at: every presentation request carries a new response-encryption key with a
   `kid` (`VP1FinalCheckEncryptionKeyNotReused`), and batch copies get distinct, non-sequential status indices on one shared
   list (`VCIEnsureBatchStatusReferencesAreDistinct`, `VCIEnsureBatchStatusListIndicesAreUnpredictable`).
+- **Breaking (flagged retroactively on 2026-10-29):** `createPresentationRequest` no longer accepts the `purpose` option and
+  `RespondOutput.showUrl` is gone (details in the next entry). Migration: drop the option; show the registration certificate's
+  `purpose` / `purposeLocalized` that `checkRegistrationCerts` returns.
 - OpenID conformance self-test, verifier plan round 1 (2026-10-27; OpenID4VP 1.0 §5.1, §8.2; SPEC-PROTO-0002 §3, §8.1). Two
   warnings in every module are fixed. verifier: `createPresentationRequest` no longer writes a `purpose` parameter into the
   signed request object (not an OpenID4VP parameter; the `purpose` option is removed) — the purpose shown to the person is the

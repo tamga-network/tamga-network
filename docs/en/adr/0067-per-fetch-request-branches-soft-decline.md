@@ -15,7 +15,8 @@ summary: >
   "ephemeral keys per Authorization Request"); with a POST fetch, `wallet_nonce` is echoed. A decline (encrypted or not) closes only
   its own branch; the presentation as a whole becomes REJECTED only if it has exactly one branch and that branch is closed,
   otherwise it stays open until it expires and the first valid presentation wins. An undecryptable response does not count as an
-  attempt; at most 10 branches per presentation. Signed declines were rejected (non-standard, against the ARF RPA_11 privacy
+  attempt; there is no fixed branch limit — memory is bounded by evicting old unanswered branches past a soft limit and by a shared
+  branch budget (amendment 2026-10-29). Signed declines were rejected (non-standard, against the ARF RPA_11 privacy
   principle). Accepted: 2026-10-29 (project management approval).
 domain: Protocol
 related: ["[[ADR-0017]]", "[[ADR-0034]]", "[[ADR-0012]]", "[[SPEC-PROTO-0002]]", "[[SPEC-PROTO-0001]]", "[[SPEC-API-0001]]"]
@@ -77,9 +78,16 @@ response that cannot be decrypted with any branch key (no or unknown branch in `
 and is not counted: only whoever received the request object can encrypt to it.
 
 ## K4 — Limits
-At most 10 branches per presentation; the next fetch gets 429 and existing branches are unaffected. No branch is opened for a closed
-or expired presentation (404). Endpoint and per-presentation rate limits stay as they are. The number of declines is bounded by the
-number of branches.
+*(Changed by the amendment of 2026-10-29; original text: "at most 10 branches per presentation; the next fetch gets 429".)* There is
+no fixed branch limit and no 429 for a legitimate fetch. Memory is bounded in three ways: a branch is stored compactly (the signed
+object goes to the fetcher and is not kept; the branch holds the hash of its `state`, the `nonce`, the private key, the `kid` and
+timestamps); once the branch count passes the soft limit (10), a new fetch replaces first a closed branch, then **the oldest branch
+that has never been answered and is at least 120 s old**; at the hard ceiling (32) the age condition is dropped. **A branch whose
+response is being processed is never evicted.** A shared branch budget (20,000) covers all presentations. The fetch rate limit is
+per client address (at the proxy; a global ceiling in the application), not per presentation. No branch is opened for a closed or
+expired presentation (404). A response to an evicted branch is treated as an unknown branch (not counted). A decline carries no
+`kid`, so it is found by the hash of its `state` (no linear scan) and compared in constant time. The number of declines is bounded by
+the number of branches.
 
 ## K5 — The browser path (DC API) is separate
 The Digital Credentials API path (`dc_api.jwt`, ISO/IEC 18013-7 Annex C) has no `request_uri`; the request object goes to the page
@@ -108,6 +116,15 @@ REJECTED. Like the fact that someone who sees the QR can also answer with their 
 cross-device flow (OpenID4VP 1.0 §14); the relying party opens a new presentation. The QR should be shown only to the person and the
 presentation lifetime kept short (5 min).
 
+**Eviction (amendment 2026-10-29).** Because memory is bounded and fetching is unauthenticated, eviction cannot be fully prevented:
+someone who sees the QR and, after the real wallet, fetches enough times to pass the soft limit and waits 120 s, or fetches fast
+enough to fill the hard ceiling (32), can get the real wallet's not-yet-answered branch evicted. The result is not a REJECTED
+presentation: the real wallet's response gets "unknown request" (400, not counted), the presentation stays open and the person scans
+the QR again. Under the previous fixed limit the same attacker needed 10 fetches to push the real wallet's fetch into 429. The
+per-address rate limit (at the proxy) raises the attacker's cost but does not stop a distributed attacker. If the shared budget fills
+(a flood across many presentations), the oldest evictable branch may belong to another presentation; if every branch is being
+processed, the fetch gets 503. The in-memory state is per process; a multi-instance deployment needs a shared store.
+
 # Invariants
 
 | Code | Rule |
@@ -116,13 +133,14 @@ presentation lifetime kept short (5 min).
 | RQ2 | A wallet error response (unencrypted or encrypted) closes only the branch its `state` belongs to; the presentation becomes REJECTED only if it has exactly one branch and that branch is closed, otherwise it stays open until it expires and the first valid presentation wins. A presentation sent to a closed branch is not accepted. |
 | RQ3 | The answer to a decline is 200 (OpenID4VP 1.0 §8.2); the decline's `redirect_uri` carries no status token, check-view key, authorization code or any other value that grants access to data. |
 | RQ4 | A response that cannot be decrypted with any branch key does not touch the presentation and does not count as an attempt; a decrypted response that does not reach proof of possession is an attempt on its own branch only (the branch closes at 5). |
-| RQ5 | At most 10 request branches per presentation; beyond that 429 and existing branches are unaffected; no branch is opened for a closed or expired presentation. |
+| RQ5 | A legitimate fetch is not refused with 429 by a fixed branch limit; memory is bounded: a branch does not keep the signed object, past the soft limit (10) first a closed branch, then the oldest never-answered branch at least 120 s old is evicted, at the hard ceiling (32) the age condition is dropped, a shared branch budget covers all presentations; a branch whose response is being processed is never evicted. The fetch rate limit is per client address, not per presentation. No branch is opened for a closed or expired presentation. (Amendment 2026-10-29) |
 | RQ6 | The request object of the Digital Credentials API path is not a branch: a decline with its `state` is not accepted, and the attempt limit on this path is per presentation. |
 
 # Consequences
 
 - Code: `@tamga-network/verifier` (`createRequestBranch`, `openPresentationResponse`; `responseKidOf` reads the branch; `state` 128
-  bits; packages at 0.7.4 in source, not published to npm); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, branches, soft
+  bits; the branch state machine `BranchSet` / `BranchRegistry`, shared by both services — amendment 2026-10-29; packages at 0.7.4 in
+  source, not published to npm); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, branches, soft
   decline); the institution's issuance service (inline identity presentation, `/{slug}/vp/req/{id}` GET|POST). The wallet core does
   not change (it fetches with GET and sends declines unencrypted).
 - Documents: [[SPEC-PROTO-0002]] §3, §10.1, PV15; the server-side verification guide (checklist).
@@ -131,3 +149,16 @@ presentation lifetime kept short (5 min).
 # Status
 
 **Accepted — 2026-10-29.** With project management approval. DECISIONS: D-PROTO-5.
+
+# Amendment
+
+- **2026-10-29 (same day, second review; with project management approval to apply "the right thing"):** K4 and RQ5 changed. The
+  fixed rule "10 branches per presentation, then 429" was itself a denial-of-service path: someone who saw the QR could fetch 10 times
+  and push the real wallet's fetch into 429. Instead, bounded memory: compact branches (the signed object is not kept), past the soft
+  limit (10) the oldest never-answered branch at least 120 s old is evicted, at the hard ceiling (32) the age condition is dropped, a
+  branch being processed is never evicted, a shared branch budget (20,000); the fetch rate limit is per client address (proxy +
+  global ceiling in the application), not per presentation. The residual risk is under "Eviction". Also: the branch state machine is
+  no longer written twice, `@tamga-network/verifier` `BranchSet` is the shared unit; the decline lookup uses the hash of `state`
+  (no linear scan, constant-time comparison); the single-use lock is taken BEFORE the response is decrypted and the branch is checked
+  again after decryption (the institution's service took the lock after decryption); the first request object is no longer created
+  with the presentation (`initialRequestObject: false`). RQ1–RQ4 and RQ6 do not change.

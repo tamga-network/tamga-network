@@ -22,6 +22,7 @@ import {
   pemRpSigner,
   responseKidOf,
 } from "./request.js";
+import { BranchRegistry, BranchSet } from "./branches.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
@@ -291,5 +292,33 @@ describe("çekim dalları (ADR-0067)", () => {
     expect(err).toMatchObject({ kind: "error", error: "access_denied", state: b1.state, path: "cross_device" });
     expect(JSON.stringify({ ...err, branch: undefined, binding: undefined })).not.toContain("okunmaz");
     await expect(decryptPresentationResponse(dec, pr, responseUri, find)).rejects.toThrow(/error response/);
+  });
+
+  it("0.7.4 initialRequestObject: false → ilk nesne ve anahtarı üretilmez; dalsız kid'li yanıt açılmaz; BranchSet'in sıkıştırılmış dalıyla açılır", async () => {
+    const signer = await pemRpSigner(leafKeyPem, leafPem);
+    const responseUri = "https://rp.example.test/vp/response";
+    const content = { signer, dcql, responseUri };
+    const pr = await createPresentationRequest({
+      ...content,
+      requestUriBase: "https://rp.example.test/vp/req",
+      initialRequestObject: false,
+    });
+    const r = pr as unknown as Record<string, unknown>;
+    for (const k of ["requestJwt", "encPrivateKey", "encPublicJwk", "encJwkThumbprint"]) expect(r[k]).toBeUndefined();
+    expect(pr.qrPayload).toContain(encodeURIComponent(pr.requestUri));
+    const registry = new BranchRegistry();
+    const set = new BranchSet({ registry, presentationId: pr.presentationId, expiresAt: pr.expiresAt, content });
+    const f = await set.fetch();
+    if (!f.ok) throw new Error(f.reason);
+    const p = payloadOf(f.requestJwt);
+    const jwk = p.client_metadata.jwks.keys[0];
+    const body = { vp_token: { q: ["x"] }, state: p.state };
+    const opened = await openPresentationResponse(await seal(body, jwk), pr, responseUri, (id) => set.get(id));
+    expect(opened.kind).toBe("response");
+    expect(opened.branch).toBe(f.branch);
+    expect(set.stateMatches(f.branch, p.state)).toBe(true);
+    await expect(
+      openPresentationResponse(await seal(body, { ...jwk, kid: `enc-${pr.presentationId}` }), pr, responseUri),
+    ).rejects.toThrow(/not for a request branch/);
   });
 });

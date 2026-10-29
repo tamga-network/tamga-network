@@ -256,6 +256,9 @@ AB anlamında "üye devletçe bildirilmiş" ya da "nitelikli" iddiası taşıyan
 | Belge verenin iptal listesi imzası (`delegate_keys`, amaç `status_list`) | `…/tl/Svctype/EAA/StatusList` | Ayrı hizmet, ayrı sertifika |
 | Cüzdan sağlayıcı çözümü (LOTL `wallet_providers`) | `http://uri.etsi.org/19602/SvcType/WalletSolution/Issuance` | TS 119 602 türü (LoTE ile aynı) |
 
+JSON ülke listesindeki `root_cas[].service_type` aynı ETSI URI'sini (`http://uri.etsi.org/TrstSvc/Svctype/CA/PKC`) taşır; liste
+yayıncısı nitelikli iddia taşıyan bir değeri (ör. eski `NationalRootCA-QC`) reddeder (0.7.4).
+
 Listede **olmayanlar:** doğrulayıcılar (güven hizmeti sağlayıcısı değildir; kayıtları JSON listesinde ve kayıt sertifikalarında —
 [[ADR-0026]]), `RESERVED` / `PROVISIONAL` kayıtlar, kişisel veri (XC3, XC4).
 

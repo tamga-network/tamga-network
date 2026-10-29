@@ -8,6 +8,10 @@
  * ADR-0069: anahtar kaydı grubun kurumunu (`owner`, imzalı listedeki `terminal_groups[].institution_id`) ve son kullanım anını
  * taşır; Kurum Konsolu yönetici uçlarını kuruma daraltılmış belirteçle çağırır (`institutionToken`) — kurum yalnız kendi
  * gruplarının anahtarlarını görür, verir ve iptal eder (TG2).
+ *
+ * Kapalı kalma (fail closed, 0.7.4): imzalı listede bir kez görülen grup kimlikleri dosyada tutulur (`listed_groups`). Böyle bir
+ * grup ya da sahibi olan anahtar listede doğrulanamazsa (liste bayat ya da grup listeden çıkmış) kapı geçmez; grup listede
+ * görünmeden önce işletmecinin verdiği sahipsiz anahtar, grup listeye girince grubun kurumuna bağlanır (`adoptOwner`).
  */
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -60,6 +64,8 @@ export function parseEnvTerminalKeys(spec: string | undefined): Array<{ terminal
 export class TerminalKeyRegistry {
   private issued: TerminalKeyRecord[] = [];
   private env: TerminalKeyRecord[] = [];
+  /** imzalı listede en az bir kez görülen grup kimlikleri (kalıcı) */
+  private listed = new Set<string>();
 
   /** `file` null → yalnız bellekte (test). `envSpec`: ortamdan yüklenen anahtarlar (sandbox / yerel). */
   constructor(
@@ -68,8 +74,10 @@ export class TerminalKeyRegistry {
   ) {
     if (file) {
       try {
-        const j = JSON.parse(readFileSync(file, "utf8")) as { keys?: TerminalKeyRecord[] };
+        const j = JSON.parse(readFileSync(file, "utf8")) as { keys?: TerminalKeyRecord[]; listed_groups?: unknown };
         this.issued = Array.isArray(j.keys) ? j.keys : [];
+        if (Array.isArray(j.listed_groups))
+          for (const g of j.listed_groups) if (typeof g === "string" && GROUP_RE.test(g)) this.listed.add(g);
       } catch {
         this.issued = [];
       }
@@ -85,7 +93,32 @@ export class TerminalKeyRegistry {
   private save() {
     if (!this.file) return;
     mkdirSync(dirname(this.file), { recursive: true });
-    writeFileSync(this.file, JSON.stringify({ keys: this.issued }, null, 2));
+    writeFileSync(this.file, JSON.stringify({ keys: this.issued, listed_groups: [...this.listed].sort() }, null, 2));
+  }
+  /** Grup imzalı listede görüldü (kalıcı iz; bir daha listede doğrulanamazsa kapı kapalı kalır). */
+  markListed(terminalGroup: string): void {
+    if (!GROUP_RE.test(terminalGroup) || this.listed.has(terminalGroup)) return;
+    this.listed.add(terminalGroup);
+    this.save();
+  }
+  /** Grup hiç imzalı listede görüldü mü? */
+  wasListed(terminalGroup: string): boolean {
+    return this.listed.has(terminalGroup);
+  }
+  /**
+   * Grup listeye kurumla girince, o gruba önceden (listesizken) verilmiş sahipsiz anahtarlar grubun kurumuna bağlanır: kurum
+   * onları görür ve iptal eder, sonraki kurum değişikliğinde kapıda geçmezler (TG3). Ortam anahtarları dosyaya yazılmaz (değişmez).
+   * Bağlanan kayıt sayısını döndürür.
+   */
+  adoptOwner(terminalGroup: string, owner: string): number {
+    let n = 0;
+    for (const r of this.issued)
+      if (r.terminalGroup === terminalGroup && !r.owner && !r.revokedAt) {
+        r.owner = owner;
+        n++;
+      }
+    if (n) this.save();
+    return n;
   }
   /** Yeni anahtar (bir kez gösterilir); grup biçimi K1 (politikalardaki `terminal_group`). */
   issue(

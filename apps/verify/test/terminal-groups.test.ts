@@ -11,6 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildVerifyApp } from "../src/app.js";
 import type { VerifyConfig } from "../src/config.js";
 import { institutionToken, TerminalKeyRegistry } from "../src/terminal-keys.js";
+import { passPolicyGate } from "../src/routes/terminal.js";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
@@ -38,6 +39,35 @@ describe("ADR-0069 kurum belirteci (birim)", () => {
     expect(info).toMatchObject({ owner: "bubilet", lastUsedAt: 200, createdAt: 100, source: "issued" });
     expect(JSON.stringify(info)).not.toContain("hash");
     expect(reg.get("yok")).toBeNull();
+  });
+  it("kapalı kalma: listede görülen grup iz bırakır (dosyada kalır); listesizken verilen sahipsiz anahtar kuruma bağlanır", () => {
+    const file = join(tmpdir(), `tamga-tk-${process.pid}-${Date.now()}.json`);
+    const reg = new TerminalKeyRegistry(file, "g-env:env-key-00001");
+    const a = reg.issue("g1", "önce", 100);
+    const b = reg.issue("g1", "iptal", 100);
+    reg.revoke(b.id, 101);
+    expect(reg.wasListed("g1")).toBe(false);
+    reg.markListed("g1");
+    expect(reg.adoptOwner("g1", "kurum-a")).toBe(1); // iptal edilmiş kayıt bağlanmaz
+    expect(reg.adoptOwner("g1", "kurum-b")).toBe(0); // sahibi olan değişmez
+    expect(reg.adoptOwner("g-env", "kurum-a")).toBe(0); // ortam anahtarı dosyada değil, değişmez
+    const again = new TerminalKeyRegistry(file);
+    expect(again.wasListed("g1")).toBe(true);
+    expect(again.get(a.id)?.owner).toBe("kurum-a");
+    expect(again.get(b.id)?.owner).toBeUndefined();
+  });
+  it("TG3 kapıda politika: izinli politika denetimi; kimliksiz eski kart yalnız gruba bağlı bütün politikalar izinliyse", () => {
+    const pols = [
+      { policy_id: "p1", proximity: { terminal_group: "g" } },
+      { policy_id: "p2", proximity: { terminal_group: "g" } },
+      { policy_id: "p3" },
+    ];
+    expect(passPolicyGate(pols, "g", undefined)).toBeUndefined();
+    const only1 = passPolicyGate(pols, "g", ["p1"])!;
+    expect([only1("p1"), only1("p2"), only1(undefined)]).toEqual([true, false, false]);
+    const both = passPolicyGate(pols, "g", ["p1", "p2"])!;
+    expect([both("p2"), both("p3"), both(undefined)]).toEqual([true, false, true]);
+    expect(passPolicyGate(pols, "baska", ["p1"])!(undefined)).toBe(false);
   });
 });
 
@@ -181,5 +211,65 @@ describe.skipIf(!ready)("ADR-0069 kapı grupları — Tamga Verify", () => {
       ts.terminalGroup = orig;
     }
     expect((await gate(k.key)).statusCode).toBe(200);
+  });
+  it("kapalı kalma: liste bayatken sahibi olan anahtar ve listede görülmüş grubun anahtarı 403; hiç listelenmemiş grup ADR-0065", async () => {
+    const k = (await issue(inst("bubilet"), "bubilet-gate", "bayat")).json() as { key: string };
+    const op = (await issue(operator, "istanbul-bilgi-campus", "listesiz")).json() as { id: string; key: string };
+    const ts = app.trust() as unknown as { freshness: () => { healthy: boolean } };
+    const orig = ts.freshness.bind(ts);
+    ts.freshness = () => ({ ...orig(), healthy: false });
+    try {
+      const w = await gate(k.key);
+      expect(w.statusCode).toBe(403);
+      expect(w.json().reason).toMatch(/cannot be confirmed/);
+      expect((await gate("test-gate-key-0001")).statusCode).toBe(403); // sahipsiz ortam anahtarı, ama grup listede görülmüştü
+      expect((await gate(op.key)).statusCode).toBe(200); // hiç listelenmemiş grup, sahipsiz anahtar: ADR-0065 yolu
+      expect((await issue(operator, "bubilet-gate")).statusCode).toBe(409);
+      expect((await issue(inst("bubilet"), "bubilet-gate")).statusCode).toBe(409);
+    } finally {
+      ts.freshness = orig;
+    }
+    expect((await gate(k.key)).statusCode).toBe(200);
+  });
+
+  it("kapalı kalma: sağlıklı listede grup yoksa (listeden çıkmış) 403; listesizken verilen anahtar grup listeye girince kuruma bağlanır", async () => {
+    const op = (await issue(operator, "istanbul-bilgi-campus", "sonra listelenecek")).json() as {
+      id: string;
+      key: string;
+    };
+    type Ans = { group: Record<string, unknown>; rp_dns_name: string; active: boolean } | null;
+    const ts = app.trust() as unknown as { terminalGroup: (g: string) => Ans };
+    const orig = ts.terminalGroup.bind(ts);
+    const campus = (institution_id: string): Ans => ({
+      group: {
+        group_id: "istanbul-bilgi-campus",
+        institution_id,
+        allowed_policies: ["campus-access"],
+        valid_from: "2026-01-01T00:00:00Z",
+      },
+      rp_dns_name: "verify.tamga.network",
+      active: true,
+    });
+    try {
+      // grup listeden çıktı (liste sağlıklı)
+      ts.terminalGroup = (g) => (g === "bubilet-gate" ? null : orig(g));
+      const gone = await gate("test-gate-key-0001");
+      expect(gone.statusCode).toBe(403);
+      expect(gone.json().reason).toMatch(/not in the trust list/);
+      expect((await issue(operator, "bubilet-gate")).statusCode).toBe(409);
+      // kampüs grubu listeye kurumla girdi → işletmecinin verdiği sahipsiz anahtar kuruma bağlanır
+      ts.terminalGroup = (g) => (g === "istanbul-bilgi-campus" ? campus("bilgi") : orig(g));
+      expect((await gate(op.key)).statusCode).toBe(200);
+      const seen = (await keys(inst("bilgi"))).json() as { keys: Array<Record<string, unknown>> };
+      expect(seen.keys.find((x) => x.id === op.id)).toMatchObject({ owner: "bilgi" });
+      // grup başka kuruma geçerse bağlanan anahtar geçmez
+      ts.terminalGroup = (g) => (g === "istanbul-bilgi-campus" ? campus("baska-kurum") : orig(g));
+      expect((await gate(op.key)).statusCode).toBe(403);
+      // ve listeden tamamen çıkarsa da geçmez (sahibi var + grup listede görüldü)
+      ts.terminalGroup = (g) => (g === "istanbul-bilgi-campus" ? null : orig(g));
+      expect((await gate(op.key)).statusCode).toBe(403);
+    } finally {
+      ts.terminalGroup = orig;
+    }
   });
 });

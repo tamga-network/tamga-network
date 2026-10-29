@@ -240,6 +240,34 @@ describe("ADR-0056 K9: geçiş kartı yalnız doğrulama hattının KABUL çıkt
     await expect(reg.issue({ verified: mutated, presentationId: "prs_y", policy })).rejects.toThrow(/only an ACCEPTED/);
     await expect(reg.issue({ verified: genuine, presentationId: "prs_z", policy })).resolves.toBeTruthy();
   });
+  it("ADR-0069 TG3: kartın politikası kapı grubunun izinli politikalarında değilse jeton TÜKETİLMEDEN reddedilir", async () => {
+    const signer = await pemRpSigner(
+      readFileSync(resolve(PKI, "rp-verify.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"),
+    );
+    const reg = new PassRegistry(signer, undefined, "verify.tamga.network");
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    const pres = await fakePresentation(keys, "kp");
+    const { record, jws } = await reg.issue({
+      verified: acceptedOutput(pres),
+      presentationId: "prs_pol",
+      policy: { terminal_group: "gate", valid_days: 30, single_use: true, policy_id: "event-ticket" },
+    });
+    expect(record.policyId).toBe("event-ticket");
+    const grant = parsePassGrant(jws, { rpClientId: CLIENT, rpName: "Kapı", credentialId: "tp", keyRef: "kp" });
+    const t = await mintPassToken(grant, keys, nodeRandom);
+    const seen: Array<string | undefined> = [];
+    const denied = await reg.verifyToken(t.token, {
+      terminalGroup: "gate",
+      policyAllowed: (p) => (seen.push(p), p === "campus-access"),
+    });
+    expect(denied).toEqual({ ok: false, reason: "pass policy not allowed for this terminal group" });
+    expect(seen).toEqual(["event-ticket"]);
+    // reddedilen okuma bileti tüketmedi, jti de harcanmadı: aynı jeton izinli politikayla geçer
+    const ok = await reg.verifyToken(t.token, { terminalGroup: "gate", policyAllowed: (p) => p === "event-ticket" });
+    expect(ok.ok).toBe(true);
+    expect(ok.consumed).toBe(true);
+  });
   it("terminal saat kayması seçeneği en çok 600 sn", async () => {
     const signer = await pemRpSigner(
       readFileSync(resolve(PKI, "rp-verify.pkcs8.pem"), "utf8"),

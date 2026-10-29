@@ -7,7 +7,7 @@ version: 1.0.0
 created: 2026-10-29
 last_updated: 2026-10-29
 summary: >
-  OpenID4VP 1.0-da rəqəmsal cüzdanın xəta cavabı (imtina) imzalanmır və şifrəsiz göndərilə bilər; onu təqdimata bağlayan yeganə şey `state`-dir. Tamga-da `state` sorğu obyektində idi və sorğu obyektini QR-dakı ünvandan hər kəs çəkə bilirdi: QR-ı görən biri saxta imtina göndərib real şəxsin təqdimatını "imtina edildi"yə sala bilirdi. Qərar: `request_uri`-nin hər çəkilişi (GET və ya POST) ayrıca çəkiliş qolu açır — təzə 128 bitlik `state`, təzə `nonce` və təzə efemer şifrələmə açarı ilə yeni imzalanmış sorğu obyekti (HAIP §5 "hər avtorizasiya sorğusunda efemer açar" qaydasının daha sərt yerinə yetirilməsi); POST çəkilişdə `wallet_nonce` geri yazılır. İmtina (şifrəli və ya şifrəsiz) yalnız öz qolunu bağlayır; təqdimat bütövlükdə yalnız bir qolu varsa və o qol bağlanıbsa REJECTED olur, əks halda müddəti bitənədək açıq qalır və ilk etibarlı təqdimat qalib gəlir. Açıla bilməyən cavab cəhd sayılmır; təqdimat başına ən çox 10 qol. İmzalı imtina rədd edildi (standartdan kənar, ARF RPA_11 məxfilik prinsipinə zidd). Qəbul: 2026-10-29 (layihə rəhbərliyinin təsdiqi).
+  OpenID4VP 1.0-da rəqəmsal cüzdanın xəta cavabı (imtina) imzalanmır və şifrəsiz göndərilə bilər; onu təqdimata bağlayan yeganə şey `state`-dir. Tamga-da `state` sorğu obyektində idi və sorğu obyektini QR-dakı ünvandan hər kəs çəkə bilirdi: QR-ı görən biri saxta imtina göndərib real şəxsin təqdimatını "imtina edildi"yə sala bilirdi. Qərar: `request_uri`-nin hər çəkilişi (GET və ya POST) ayrıca çəkiliş qolu açır — təzə 128 bitlik `state`, təzə `nonce` və təzə efemer şifrələmə açarı ilə yeni imzalanmış sorğu obyekti (HAIP §5 "hər avtorizasiya sorğusunda efemer açar" qaydasının daha sərt yerinə yetirilməsi); POST çəkilişdə `wallet_nonce` geri yazılır. İmtina (şifrəli və ya şifrəsiz) yalnız öz qolunu bağlayır; təqdimat bütövlükdə yalnız bir qolu varsa və o qol bağlanıbsa REJECTED olur, əks halda müddəti bitənədək açıq qalır və ilk etibarlı təqdimat qalib gəlir. Açıla bilməyən cavab cəhd sayılmır; qol sayında sabit limit yoxdur — yaddaş yumşaq limitdən sonra köhnə cavabsız qolu ataraq və ortaq qol büdcəsi ilə məhduddur (Dəyişiklik qeydi 2026-10-29). İmzalı imtina rədd edildi (standartdan kənar, ARF RPA_11 məxfilik prinsipinə zidd). Qəbul: 2026-10-29 (layihə rəhbərliyinin təsdiqi).
 domain: Protocol
 related: ["[[ADR-0017]]", "[[ADR-0034]]", "[[ADR-0012]]", "[[SPEC-PROTO-0002]]", "[[SPEC-PROTO-0001]]", "[[SPEC-API-0001]]"]
 translation_of: ADR-0067
@@ -63,8 +63,14 @@ qolun cəhdidir; 5-də yalnız o qol bağlanır (tək qollu təqdimatda təqdima
 (`kid`-də qol yoxdur və ya naməlumdur, pozulmuş gövdə) təqdimata toxunmur və cəhd sayılmır: yalnız sorğu obyektini alan şifrələyə bilər.
 
 ## K4 — Limitlər
-Təqdimat başına ən çox 10 qol; növbəti çəkiliş 429 alır, mövcud qollar təsirlənmir. Bağlanmış və ya müddəti keçmiş təqdimat üçün qol
-açılmır (404). Uc və təqdimat başına sürət limitləri olduğu kimi qalır. İmtinaların sayı qolların sayı ilə məhduddur.
+*(2026-10-29 tarixli dəyişiklik qeydi ilə dəyişdi; ilkin mətn: "təqdimat başına ən çox 10 qol; növbəti çəkiliş 429".)* Qol sayında
+sabit limit və qanuni çəkilişə 429 yoxdur. Yaddaş üç yolla məhduddur: qol sıxılmış saxlanır (imzalı obyekt çəkənə verilir və
+saxlanmır; qolda `state`-in həşi, `nonce`, şəxsi açar, `kid` və vaxtlar); qol sayı yumşaq limiti (10) keçəndə yeni çəkiliş əvvəlcə
+bağlanmış, sonra **heç cavab almamış və ən azı 120 san yaşı olan ən köhnə** qolun yerini tutur; sərt tavanda (32) yaş şərti düşür.
+**Cavabı emal olunan qol heç vaxt atılmır.** Bütün təqdimatlar üçün ortaq qol büdcəsi (20 000) var. Çəkiliş sürət limiti müştəri
+ünvanı başınadır (proksidə; tətbiqdə ümumi tavan), təqdimat başına deyil. Bağlanmış və ya müddəti keçmiş təqdimat üçün qol açılmır
+(404). Atılmış qola gələn cavab naməlum qol kimi emal olunur (cəhd sayılmır). İmtina `kid` daşımadığı üçün `state`-in həşi ilə
+tapılır (xətti axtarış yoxdur), bərabərlik sabit vaxtlıdır. İmtinaların sayı qolların sayı ilə məhduddur.
 
 ## K5 — Brauzer yolu (DC API) ayrıdır
 Digital Credentials API yolunda (`dc_api.jwt`, ISO/IEC 18013-7 Əlavə C) `request_uri` yoxdur; sorğu obyekti təqdimatı açan səhifəyə
@@ -92,6 +98,14 @@ Hücumçu QR-ı real cüzdandan **əvvəl** çəkib dərhal imtina etsə, təqdi
 öz sənədi ilə də cavab verə bilməsi kimi, bu, cihazlararası axının məlum hüdududur (OpenID4VP 1.0 §14); etibar edən tərəf yeni təqdimat
 açır. QR yalnız şəxsə göstərilməli, təqdimat müddəti qısa saxlanmalıdır (5 dəq).
 
+**Atma (dəyişiklik qeydi 2026-10-29).** Yaddaş məhdud və çəkiliş kimlik doğrulamasız olduğu üçün atma tam önlənə bilməz: QR-ı görən
+biri real cüzdandan sonra yumşaq limiti keçəcək qədər çəkib 120 san gözləsə, ya da sərt tavanı (32) dolduracaq qədər sürətlə çəksə,
+real cüzdanın hələ cavab verməmiş qolunu atdıra bilər. Nəticə təqdimatın REJECTED olması deyil: real cüzdanın cavabı "naməlum sorğu"
+(400, cəhd sayılmır) alır, təqdimat açıq qalır, şəxs QR-ı yenidən oxudur. Əvvəlki sabit limitdə eyni hücumçu 10 çəkilişlə real
+cüzdanın çəkilişini 429-a salırdı. Ünvan başına sürət limiti (proksidə) hücumun qiymətini artırır, amma paylanmış hücumçunu
+dayandırmır. Ortaq büdcə dolarsa ən köhnə atıla bilən qol başqa təqdimatdan da ola bilər; bütün qollar emal olunursa çəkiliş 503
+alır. Yaddaşdakı vəziyyət tək proses üçündür; çox nüsxəli quraşdırma paylaşılan anbar tələb edir.
+
 # Dəyişməzlər
 
 | Kod | Qayda |
@@ -100,13 +114,14 @@ açır. QR yalnız şəxsə göstərilməli, təqdimat müddəti qısa saxlanmal
 | RQ2 | Cüzdanın xəta cavabı (şifrəsiz və ya şifrəli) yalnız `state`-inin aid olduğu qolu bağlayır; təqdimat yalnız bir qolu varsa və o qol bağlanıbsa REJECTED olur, əks halda müddəti bitənədək açıq qalır və ilk etibarlı təqdimat qalib gəlir. Bağlanmış qola gələn təqdimat qəbul edilmir. |
 | RQ3 | İmtinaya cavab 200-dür (OpenID4VP 1.0 §8.2); imtinanın `redirect_uri`-si status jetonu, yoxlama görünüşü açarı, avtorizasiya kodu və ya məlumata çıxış verən başqa dəyər daşımır. |
 | RQ4 | Heç bir qolun açarı ilə açıla bilməyən cavab təqdimata toxunmur və cəhd sayılmır; açılmış, amma sahiblik sübutuna çatmayan cavab yalnız öz qolunun cəhdidir (qol 5-də bağlanır). |
-| RQ5 | Təqdimat başına ən çox 10 çəkiliş qolu; ondan sonra 429 və mövcud qollar təsirlənmir; bağlanmış və ya müddəti keçmiş təqdimatda qol açılmır. |
+| RQ5 | Qanuni çəkilişə sabit qol limiti ilə 429 verilmir; yaddaş məhduddur: qol imzalı obyekti saxlamır, yumşaq limitdə (10) əvvəlcə bağlanmış, sonra heç cavab almamış və yaşlı (≥ 120 san) ən köhnə qol atılır, sərt tavanda (32) yaş şərti düşür, ortaq qol büdcəsi bütün təqdimatları əhatə edir; cavabı emal olunan qol atılmır. Çəkiliş sürət limiti müştəri ünvanı başınadır, təqdimat başına deyil. Bağlanmış və ya müddəti keçmiş təqdimatda qol açılmır. (Dəyişiklik qeydi 2026-10-29) |
 | RQ6 | Digital Credentials API yolunun sorğu obyekti qol deyil: onun `state`-i ilə imtina qəbul edilmir, bu yolda cəhd limiti təqdimat başınadır. |
 
 # Nəticələr
 
 - Kod: `@tamga-network/verifier` (`createRequestBranch`, `openPresentationResponse`; `responseKidOf` qolu oxuyur; `state` 128 bit;
-  paketlər mənbədə 0.7.4, npm-də dərc yoxdur); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, qollar, yumşaq imtina); qurumun
+  qol vəziyyət maşını `BranchSet` / `BranchRegistry`, iki xidmətin ortaq vahidi — dəyişiklik qeydi 2026-10-29; paketlər mənbədə
+  0.7.4, npm-də dərc yoxdur); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, qollar, yumşaq imtina); qurumun
   sənəd vermə xidməti (daxili şəxsiyyət təqdimatı, `/{slug}/vp/req/{id}` GET|POST). Cüzdan nüvəsi dəyişmir (GET ilə çəkir, imtinanı
   şifrəsiz göndərir).
 - Sənədlər: [[SPEC-PROTO-0002]] §3, §10.1, PV15; serverdə yoxlama bələdçisi (yoxlama siyahısı).
@@ -115,3 +130,15 @@ açır. QR yalnız şəxsə göstərilməli, təqdimat müddəti qısa saxlanmal
 # Status
 
 **Accepted — 2026-10-29.** Layihə rəhbərliyinin təsdiqi ilə. DECISIONS: D-PROTO-5.
+
+# Dəyişiklik qeydi
+
+- **2026-10-29 (eyni gün, ikinci baxış; layihə rəhbərliyinin "doğru olan tətbiq edilsin" təsdiqi ilə):** K4 və RQ5 dəyişdi. Sabit
+  "təqdimat başına 10 qol, sonra 429" qaydası özü xidmətdən imtina yolu idi: QR-ı görən biri 10 dəfə çəkib real cüzdanın çəkilişini
+  429-a sala bilirdi. Əvəzinə məhdud yaddaş: sıxılmış qollar (imzalı obyekt saxlanmır), yumşaq limitdə (10) heç cavab almamış və
+  yaşlı (≥ 120 san) ən köhnə qol atılır, sərt tavanda (32) yaş şərti düşür, emal olunan qol heç vaxt atılmır, ortaq qol büdcəsi
+  (20 000); çəkiliş sürət limiti müştəri ünvanı başına (proksi + tətbiqdə ümumi tavan), təqdimat başına deyil. Qalan risk "Atma"
+  paraqrafındadır. Həmçinin: qol vəziyyət maşını iki yerdə ayrıca yazılmır, `@tamga-network/verifier` `BranchSet` ortaq vahiddir;
+  imtina axtarışı `state` həşi ilədir (xətti axtarış yoxdur, sabit vaxtlı bərabərlik); tək istifadə kilidi cavab açılmazdan ƏVVƏL
+  alınır və açıldıqdan sonra qol yenidən yoxlanılır (qurumun xidmətində kilit açılmadan sonra alınırdı); təqdimatla birlikdə ilk
+  sorğu obyekti artıq yaradılmır (`initialRequestObject: false`). RQ1–RQ4 və RQ6 dəyişmir.

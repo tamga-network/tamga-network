@@ -62,7 +62,8 @@ export class MemoryRegistrationStatusCache implements RegistrationStatusCache {
 
 function verifiedList(token: string, uri: string, nowSec: number, registrarKeys: string[]): StatusList | null {
   try {
-    const l = parseStatusToken(token.trim(), uri, nowSec);
+    // ADR-0068 K3: kayıt sertifikası durum listesi `exp` taşımak zorunda (süresiz liste reddedilir → "unknown")
+    const l = parseStatusToken(token.trim(), uri, nowSec, { requireExp: true });
     return registrarKeys.includes(l.signerFingerprint) ? l : null;
   } catch {
     return null;

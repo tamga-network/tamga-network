@@ -175,7 +175,7 @@ kanıtlamaz ve aşırı talep denetimi imkânsız hâle gelir.
 | `response_mode` | `direct_post.jwt` (varsayılan) veya `dc_api.jwt` (§7) — **şifresiz mod yok** |
 | `nonce` | ≥ 128 bit entropi, tek kullanımlık; `request_uri`'nin her çekiminde yenisi ([[ADR-0067]]) |
 | `state` | ≥ 128 bit rastgele, gizli; `request_uri`'nin her çekiminde yenisi — QR'da, `request_uri` ve `response_uri` yolunda yer almaz ([[ADR-0067]]) |
-| `request_uri` çekimi | Her çekim (GET ya da `request_uri_method=post` ile POST, OpenID4VP 1.0 §5.10) yeni bir **çekim dalı** açar: aynı içerikle yeni imzalı istek nesnesi; taze `state`, `nonce` ve efemer şifreleme anahtarı (HAIP §5). POST'ta `wallet_nonce` nesneye geri yazılır. Sunum başına en çok 10 dal (2026-10-29) |
+| `request_uri` çekimi | Her çekim (GET ya da `request_uri_method=post` ile POST, OpenID4VP 1.0 §5.10) yeni bir **çekim dalı** açar: aynı içerikle yeni imzalı istek nesnesi; taze `state`, `nonce` ve efemer şifreleme anahtarı (HAIP §5). POST'ta `wallet_nonce` nesneye geri yazılır. Sabit dal sınırı ve meşru çekime 429 yok; bellek sınırlı (yumuşak sınırda yanıtsız yaşlı dal atılır, ortak dal bütçesi; [[ADR-0067]] Değişiklik notu 2026-10-29); hız sınırı istemci adresi başına |
 | İstek imzası | **Zorunlu** — imzasız istek reddedilir |
 | `client_metadata.jwks` | Yanıt şifreleme anahtarı; **zorunlu** |
 | `verifier_info` | İsteğe bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — kullanımın kayıt sertifikasını (ETSI TS 119 475 / 119 472-2). Varsa cüzdan kayıt birimi imzasını (LOTL `roles.registrar`), süreyi ve `sub`'ın erişim sertifikasındaki `organizationIdentifier` ile aynı olduğunu doğrular; tutmazsa veri gönderilmez (WRC4). Sertifikada olmayan alan fazla istek sayılır (§6). |
@@ -609,7 +609,10 @@ Ayşe (cüzdan)                        İşveren (verifier)          İndeksleyi
   sunumu **kapatmaz**. Hiçbir dalın anahtarıyla çözülemeyen yanıt (bozuk gövde, dalsız ya da bilinmeyen `kid`) sunuma dokunmaz ve
   deneme sayılmaz; çözülmüş ama başarısız yanıt (`state` uyuşmazlığı, boş `vp_token`, A1–A6 reddi) 400 `invalid_request` alır ve
   **kendi dalının** denemesidir: dal başına **5** denemede yalnız o dal kapanır (tek dallı sunumda sunum REJECTED; DC API yolunda
-  sınır sunum başına). Sunum başına en çok 10 dal; sonrası 429 (hız sınırı ayrıca). Bekleyen sunumun durumunda toplam deneme sayısı
+  sınır sunum başına). Dal sayısında sabit sınır yok: yumuşak sınırda (10) hiç yanıt almamış ve yaşlı (≥ 120 sn) en eski dal,
+  sert tavanda (32) yaşa bakılmadan atılır; yanıtı işlenen dal atılmaz; ortak dal bütçesi bütün sunumları kapsar; çekim hız sınırı
+  istemci adresi başına ([[ADR-0067]] RQ5, Değişiklik notu 2026-10-29). Tek kullanım kilidi yanıt çözülmeden önce alınır ve çözmeden
+  sonra dal yeniden denetlenir. Bekleyen sunumun durumunda toplam deneme sayısı
   ve son başarısızlığın adımı görünür (`attempts`, `last_attempt`); değer yok, dal bilgisi yok.
 - **Kalan risk.** QR'ı gerçek cüzdandan önce çekip hemen reddeden biri tek dallı sunumu kapatabilir — QR'ı görenin kendi belgesiyle
   yanıt verebilmesi gibi cihazlar arası akışın bilinen sınırı (OpenID4VP 1.0 §14); RP yeni sunum açar.

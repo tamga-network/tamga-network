@@ -8,9 +8,9 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import { timingSafeEqual } from "node:crypto";
 import QRCode from "qrcode";
 import {
+  BranchSet,
   createMdocDcApiRequest,
   createPresentationRequest,
-  createRequestBranch,
   openPresentationResponse,
   responseKidOf,
   openMdocDcApiResponse,
@@ -26,7 +26,7 @@ import {
   type VerificationResult,
 } from "@tamga-network/verifier";
 import type { VerifyContext } from "../app.js";
-import { MAX_BRANCHES, MAX_RESPONSE_ATTEMPTS, type Branch, type Presentation } from "../state.js";
+import { MAX_RESPONSE_ATTEMPTS, type Branch, type Presentation } from "../state.js";
 import { findPolicy, statusFetchOnDemandFor } from "../policies.js";
 import { registrationCertFor, registrationCwtFor } from "../wrprc.js";
 import { rateLimited } from "../rate-limit.js";
@@ -127,37 +127,39 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
   /**
    * İstek nesnesi — ADR-0067 K1: her çekim (GET ya da OpenID4VP 1.0 §5.10 POST) YENİ bir çekim dalı açar: taze `state`, `nonce`
    * ve efemer şifreleme anahtarıyla yeni imzalı nesne. POST'ta gelen `wallet_nonce` nesneye geri yazılır; `wallet_metadata`
-   * okunmaz (istek nesnesi her cüzdan için aynı profildedir). Sunum başına en çok `MAX_BRANCHES` dal (FB5): sonrası 429, var olan
-   * dallar etkilenmez. Kapanmış ya da süresi geçmiş sunum için dal açılmaz (404).
+   * okunmaz (istek nesnesi her cüzdan için aynı profildedir). İmzalı nesne çekene verilir ve saklanmaz (`BranchSet`). RQ5
+   * (Değişiklik notu 2026-10-29): sabit 429 yok — dal sayısı yumuşak sınırı aşınca hiç yanıt almamış ve yaşlı en eski dal (önce
+   * kapanmışlar) yer açar, yanıtı işlenen dal atılmaz; bellek ortak dal bütçesiyle sınırlı. Hız sınırı istemci adresi başına
+   * (vekilde; uygulamada genel tavan), sunum başına değil. Kapanmış ya da süresi geçmiş sunum için dal açılmaz (404).
    */
-  const serveRequestObject = async (id: string, reply: FastifyReply, walletNonce?: unknown) => {
+  const serveRequestObject = async (id: string, ip: string, reply: FastifyReply, walletNonce?: unknown) => {
     const p = presentations.get(id);
-    if (!p || p.req.expiresAt < nowSec() || p.used || !p.mintBranch) return reply.code(404).send("not found");
-    if (rateLimited(ctx.limits.vpResponse, `rq:${id}`, reply)) return reply;
-    if (p.branches.length + (p.minting ?? 0) >= MAX_BRANCHES) {
-      p.trace.push({ t: Date.now(), step: `Request object fetch refused: limit of ${MAX_BRANCHES} fetches reached` });
-      return reply.code(429).send({ error: "invalid_request", error_description: "too many request object fetches" });
+    if (!p || p.req.expiresAt < nowSec() || p.branches.used) return reply.code(404).send("not found");
+    if (rateLimited(ctx.limits.vpRequest, ip, reply)) return reply;
+    const f = await p.branches.fetch(walletNonce);
+    if (!f.ok) {
+      if (f.reason === "closed" || f.reason === "expired") return reply.code(404).send("not found");
+      p.trace.push({ t: Date.now(), step: `Request object fetch refused (${f.reason})` });
+      // `capacity`: ortak dal bütçesi doldu ve her dal işlenmekte (aşırı yük) · `limit`: sert tavanda bütün dallar işlenmekte
+      return reply
+        .code(f.reason === "capacity" ? 503 : 429)
+        .header("retry-after", "2")
+        .send({ error: "temporarily_unavailable", error_description: "try again" });
     }
-    p.minting = (p.minting ?? 0) + 1;
-    let b: Awaited<ReturnType<NonNullable<Presentation["mintBranch"]>>>;
-    try {
-      b = await p.mintBranch(typeof walletNonce === "string" ? walletNonce : undefined);
-    } finally {
-      p.minting -= 1;
-    }
-    if (p.used) return reply.code(404).send("not found"); // imzalanırken sunum tamamlandı
-    p.branches.push({ ...b, attempts: 0 });
+    if (f.evicted)
+      p.trace.push({ t: Date.now(), step: `Unanswered fetch ${f.evicted.index} dropped to make room (soft limit)` });
     p.trace.push({
       t: Date.now(),
-      step: `Wallet fetched the request object (fetch ${p.branches.length}; fresh state, nonce and encryption key)`,
+      step: `Wallet fetched the request object (fetch ${f.branch.index}; fresh state, nonce and encryption key)`,
       ...(typeof walletNonce === "string" ? { detail: "request_uri_method=post; wallet_nonce echoed" } : {}),
     });
-    return reply.type("application/oauth-authz-req+jwt").send(b.requestJwt);
+    return reply.type("application/oauth-authz-req+jwt").send(f.requestJwt);
   };
-  app.get("/vp/req/:id", async (req, reply) => serveRequestObject((req.params as { id: string }).id, reply));
+  app.get("/vp/req/:id", async (req, reply) => serveRequestObject((req.params as { id: string }).id, req.ip, reply));
   app.post("/vp/req/:id", async (req, reply) =>
     serveRequestObject(
       (req.params as { id: string }).id,
+      req.ip,
       reply,
       (req.body as { wallet_nonce?: unknown } | undefined)?.wallet_nonce,
     ),
@@ -165,8 +167,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
 
   /**
    * Sahiplik kanıtına (A6 / Z1; yalnız takma adlı sunumda P1) ULAŞMADAN başarısız olan (çözülmüş) yanıt: sunum tüketilmez, deneme
-   * sayılır. Çekim dalında sınır dolunca YALNIZ o dal kapanır; sunum tek dallıysa REJECTED olur (ADR-0067 FB3). DC API yolunda
-   * (dal yok) sınır sunum başınadır. Yanıt 400 `invalid_request` (AP5: doğrulama sonucu değil, istek hatası).
+   * sayılır. Çekim dalında sınır dolunca YALNIZ o dal kapanır; sunum tek çekimliyse REJECTED olur (ADR-0067 RQ4). DC API yolunda
+   * (dal yok) sınır sunum başınadır. Sayım ve kapanma `BranchSet.failedAttempt`. Yanıt 400 `invalid_request` (AP5: doğrulama
+   * sonucu değil, istek hatası).
    */
   const failedAttempt = (
     p: Presentation,
@@ -176,41 +179,35 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     reason: string,
     branch?: Branch,
   ) => {
-    p.attempts += 1;
     p.lastAttempt = { failed_step: step, failed_reason: reason, at: Date.now() };
-    const n = branch ? (branch.attempts += 1) : (p.dcAttempts += 1);
+    const f = p.branches.failedAttempt(branch);
     p.trace.push({
       t: Date.now(),
-      step: `Response not accepted (attempt ${n}/${MAX_RESPONSE_ATTEMPTS}${branch ? ` on fetch ${p.branches.indexOf(branch) + 1}` : ""}; presentation stays open)`,
+      step: `Response not accepted (attempt ${f.n}/${MAX_RESPONSE_ATTEMPTS}${branch ? ` on fetch ${branch.index}` : ""}; presentation stays open)`,
       detail: step ? `${step}: ${reason}` : reason,
     });
-    if (n >= MAX_RESPONSE_ATTEMPTS) {
-      if (branch) branch.closed = "attempts";
-      if (!branch || p.branches.length === 1) {
-        p.used = true;
-        p.result = rejectedResult(pid, `too many failed responses (${n}); last: ${reason}`, ctx, step);
-        p.resultAt = Date.now();
-        p.trace.push({ t: Date.now(), step: "Presentation closed: response attempt limit reached" });
-      } else
-        p.trace.push({
-          t: Date.now(),
-          step: `Request fetch ${p.branches.indexOf(branch) + 1} closed: response attempt limit reached (other fetches stay open)`,
-        });
-    }
+    if (f.presentationRejected) {
+      p.result = rejectedResult(pid, `too many failed responses (${f.n}); last: ${reason}`, ctx, step);
+      p.resultAt = Date.now();
+      p.trace.push({ t: Date.now(), step: "Presentation closed: response attempt limit reached" });
+    } else if (f.branchClosed && branch)
+      p.trace.push({
+        t: Date.now(),
+        step: `Request fetch ${branch.index} closed: response attempt limit reached (other fetches stay open)`,
+      });
     return reply.code(400).send({ error: "invalid_request", error_description: reason });
   };
 
   /**
    * ADR-0067 K2 (yumuşak ret): cüzdanın hata yanıtı (OpenID4VP 1.0 §8.4; şifresiz ya da şifreli, §8.3.1) YALNIZ kendi çekim dalını
-   * kapatır. Sunum bütünüyle ancak tek dalı varsa REJECTED olur; birden çok çekim varsa (biri sahte olabilir) sunum süresi bitene
-   * dek açık kalır ve ilk geçerli sunum kazanır. Neden saklanmaz (PV5); `error_description` okunmaz. Yanıt 200 (§8.2);
-   * `redirect_uri` durum jetonu TAŞIMAZ (ret yanıtı veriye ya da sonuca erişim vermez, FB6).
+   * kapatır (`BranchSet.decline`). Sunum bütünüyle ancak tek çekimi varsa REJECTED olur; birden çok çekim varsa (biri sahte
+   * olabilir) sunum süresi bitene dek açık kalır ve ilk geçerli sunum kazanır. Neden saklanmaz (PV5); `error_description` okunmaz.
+   * Yanıt 200 (§8.2); `redirect_uri` durum jetonu TAŞIMAZ (ret yanıtı veriye ya da sonuca erişim vermez, RQ3).
    */
   const declineBranch = (p: Presentation, pid: string, branch: Branch, error: string) => {
-    if (!branch.closed) {
-      branch.closed = "declined";
-      if (p.branches.length === 1) {
-        p.used = true;
+    const d = p.branches.decline(branch);
+    if (!d.alreadyClosed) {
+      if (d.presentationRejected) {
         p.result = rejectedResult(
           pid,
           error === "access_denied" ? "the wallet declined" : `wallet error: ${error.slice(0, 64)}`,
@@ -222,7 +219,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       } else
         p.trace.push({
           t: Date.now(),
-          step: `Wallet returned an error response on fetch ${p.branches.indexOf(branch) + 1} of ${p.branches.length}; only that fetch is closed, the presentation stays open (no reason is stored, PV5)`,
+          step: `Wallet returned an error response on fetch ${branch.index} of ${p.branches.fetchCount}; only that fetch is closed, the presentation stays open (no reason is stored, PV5)`,
         });
     }
     return { redirect_uri: `${cfg.publicBase}/p/${pid}` };
@@ -243,8 +240,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       const { p, branch } = hit;
       const pid = p.req.presentationId;
       if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
-      // Bir yanıt doğrulanırken gelen ret sonucu çeviremez: kabul tek yönlü durum değişikliğidir (PV10, §10.1).
-      if (p.busy)
+      // Bir yanıt doğrulanırken gelen ret sonucu çeviremez: kabul tek yönlü durum değişikliğidir (PV10, §10.1). Ret eşzamanlıdır
+      // (await yok): kilit denetimi yeter. Kapanmış dala ikinci ret 200 (değişiklik yok).
+      if (p.branches.busy)
         return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
       return declineBranch(p, pid, branch, body.error);
     }
@@ -254,34 +252,41 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     const pid = kid?.presentationId ?? "";
     const p = presentations.get(pid);
     if (!p) return reply.code(400).send({ error: "invalid_request", error_description: "bilinmeyen sunum" });
-    if (p.used)
+    if (p.branches.used)
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     if (p.req.expiresAt < nowSec())
       return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
     // Hız sınırı sunum başına (çözme işinden önce): bilinmeyen kimlikler jeton harcamaz, bir sunuma yönelik sel başka
     // kişilerin yanıtını durdurmaz (güvenlik turu 2026-10-19)
     if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
-    // ADR-0067: cihazlar arası yanıt bir çekim dalının anahtarına şifrelenmiş olmalı; dalsız `kid` (ilk istek nesnesi hiç
-    // verilmez), bilinmeyen ya da kapanmış dal sunuma dokunmaz (deneme sayılmaz — FB4)
+    // ADR-0067: cihazlar arası yanıt bir çekim dalının anahtarına şifrelenmiş olmalı; dalsız `kid` (ilk istek nesnesi üretilmez),
+    // bilinmeyen, atılmış ya da kapanmış dal sunuma dokunmaz (deneme sayılmaz — RQ4)
     let branch: Branch | undefined;
     if (kid?.path === "cross_device") {
-      branch = kid.branchId !== undefined ? p.branches.find((b) => b.branchId === kid.branchId) : undefined;
+      branch = kid.branchId !== undefined ? p.branches.get(kid.branchId) : undefined;
       if (!branch)
         return reply.code(400).send({ error: "invalid_request", error_description: "unknown request object" });
-      if (branch.closed)
-        return reply.code(400).send({
-          error: "invalid_request",
-          error_description: branch.closed === "declined" ? "this request was declined" : "this request is closed",
-        });
     }
-    // Aynı sunuma eşzamanlı ikinci yanıt doğrulama bitmeden işlenmez (tek kullanım, PV10; iki yol dahil)
-    if (p.busy)
-      return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
-    p.busy = true;
+    // Tek kullanım kilidi ÇÖZMEDEN ÖNCE (PV10; iki yol dahil): eşzamanlı ikinci yanıt ya da ret işlenmez, işlenen dal atılmaz
+    const lock = p.branches.begin(branch);
+    if (lock !== "ok")
+      return reply.code(400).send({
+        error: "invalid_request",
+        error_description:
+          lock === "busy"
+            ? "a response is being processed"
+            : lock === "used"
+              ? "nonce already used (PV10)"
+              : lock === "gone"
+                ? "unknown request object"
+                : branch?.closed === "declined"
+                  ? "this request was declined"
+                  : "this request is closed",
+      });
     try {
       return await handleEncryptedResponse(p, pid, jwe, reply, branch);
     } finally {
-      p.busy = false;
+      p.branches.end(branch);
     }
   });
   async function handleEncryptedResponse(
@@ -293,46 +298,47 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
   ) {
     // Sunum yalnız sahiplik kanıtı geçince TÜKETİLİR (SPEC-PROTO-0002 §10.1): state uyuşmazlığı, boş vp_token ve A1–A6 başarısızlığı
     // sunumu kapatmaz (deneme sayılır, `failedAttempt`); çözülemeyen gövde deneme bile sayılmaz (yalnız istek nesnesini alan
-    // şifreleyebilir — ADR-0067 FB4). Sunum kimliği QR'da açık olduğundan aksi hâlde yakındaki biri gerçek kullanıcının sunumunu
+    // şifreleyebilir — ADR-0067 RQ4). Sunum kimliği QR'da açık olduğundan aksi hâlde yakındaki biri gerçek kullanıcının sunumunu
     // "reddedildi"ye düşürebilirdi.
     // 0.6.0: iki yol, iki anahtar — QR / bağlantının yanıtı cihazlar arası (response_uri; çekim dalının anahtarı), sayfanın ilettiği
     // yanıt DC API (köken) kurallarıyla doğrulanır; hangisi önce gelirse sunumu tamamlar, öteki tek kullanım kuralıyla düşer (PV10)
-    let opened: Awaited<ReturnType<typeof openPresentationResponse>>;
+    let opened: Awaited<ReturnType<typeof openPresentationResponse<Branch>>>;
     try {
-      opened = await openPresentationResponse(jwe, p.req, `${cfg.publicBase}/vp/response`, (id) =>
+      opened = await openPresentationResponse<Branch>(jwe, p.req, `${cfg.publicBase}/vp/response`, (id) =>
         branch && branch.branchId === id ? branch : undefined,
       );
     } catch {
       return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" });
     }
-    if (p.used)
+    // Çözme sürerken sunum ya da dal kapandıysa (başka yol, süre) bu yanıt işlenmez (tek yönlü durum, PV10)
+    if (!p.branches.isOpen(branch))
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     // Dalın `nonce`'u (DC API yolunda sunumun kendi nonce'u; DC API nesnesi dal değildir)
     const nonce = branch?.nonce ?? p.req.nonce;
-    const expectedState = branch?.state ?? p.req.state;
+    // `state` eşitliği sabit süreli: dalda SHA-256 özetiyle (dal `state`'in kendisini tutmaz), DC API'de sunumun `state`'iyle
+    const stateIs = (s: string | undefined) =>
+      s !== undefined && (branch ? p.branches.stateMatches(branch, s) : sameSecret(s, p.req.state));
     if (opened.kind === "error") {
       // ADR-0067 K2: şifreli ret şifresizle aynı işlenir; DC API'de ret sayfaya döner (yanıt ucuna gelmez)
       if (!branch)
         return reply
           .code(400)
           .send({ error: "invalid_request", error_description: "error responses are not sent on this path" });
-      if (opened.state === undefined || !sameSecret(opened.state, expectedState))
-        return failedAttempt(p, pid, reply, null, "state mismatch", branch);
+      if (!stateIs(opened.state)) return failedAttempt(p, pid, reply, null, "state mismatch", branch);
       return declineBranch(p, pid, branch, opened.error);
     }
     const dec = opened.response;
     try {
+      const stateMatched = stateIs(dec.state);
       p.trace.push({
         t: Date.now(),
         step: `Response decrypted (JWE ECDH-ES/${jweEnc(jwe)}${opened.path === "dc_api" ? ", via browser Digital Credentials API" : ", cross-device"})`,
-        detail: `state ${dec.state === expectedState ? "matched" : dec.state === undefined && opened.path === "dc_api" ? "absent (DC API)" : "MISMATCH"}`,
+        detail: `state ${stateMatched ? "matched" : dec.state === undefined && opened.path === "dc_api" ? "absent (DC API)" : "MISMATCH"}`,
       });
       // OpenID4VP 1.0 Ek A.2: `state` DC API için tanımlı değil — cüzdan yanıtta göndermeyebilir (doğrulayıcı bekleyemez). Bu yolda
       // sunuma bağlama yanıt şifrelemesinin anahtarı (`kid`), `nonce` ve köken (`expected_origins` / SessionTranscript) ile yapılır.
       // Gönderildiyse yine eşleşmeli. Cihazlar arası yolda `state` zorunlu kalır ve çekim dalının `state`'idir (ADR-0067).
-      const stateOk =
-        (dec.state !== undefined && sameSecret(dec.state, expectedState)) ||
-        (opened.path === "dc_api" && dec.state === undefined);
+      const stateOk = stateMatched || (opened.path === "dc_api" && dec.state === undefined);
       if (!stateOk) return failedAttempt(p, pid, reply, null, "state mismatch", branch);
       const pc = p.policy.credentials[0];
       const pres = pc ? dec.vp_token[pc.id]?.[0] : undefined;
@@ -365,7 +371,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
             zk: ctx.zk, // ADR-0032: mso_mdoc_zk için arka uç (yerel varsa o, yoksa WASM)
           });
       // doğrulama sürerken sunum başka yoldan kapandıysa (ör. Ek C yanıtı) bu yanıt sonucu ezmez (tek yönlü durum, PV10)
-      if (p.used)
+      if (!p.branches.isOpen(branch))
         return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
       // Sahiplik kanıtına ulaşmayan sonuç (A1–A6 / Z1 reddi ya da doğrulayıcı tarafı ZK eksiği) sunumu tüketmez
       if (!holderBound(out.result))
@@ -377,7 +383,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
           out.result.failed_reason ?? out.result.outcome,
           branch,
         );
-      p.used = true; // sahiplik kanıtı geçti: sunum bu yanıtla tamamlanır (B–E sonucu ne olursa olsun; PV10)
+      p.branches.consume(); // sahiplik kanıtı geçti: sunum bu yanıtla tamamlanır (B–E sonucu ne olursa olsun; PV10)
       // ADR-0056 K9: geçiş kartı yalnız verifyPresentation'ın kendi kabul çıktısından (aşağıda `out` yeniden kurulabilir)
       const verified = out;
       // ADR-0031 PS5: takma ad — imza, aud, nonce, site, iptal edilmemiş cüzdan örneği (WIA). Değer yalnız claims'e (HV3).
@@ -468,7 +474,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       return { redirect_uri: walletRedirectUri(p, pid, out.result.outcome), ...extra };
     } catch (e) {
       // beklenmeyen hata (bozuk gövde vb.): sahiplik kanıtına ulaşmadıysa deneme; ulaştıysa sunum kapanır
-      if (!p.used) return failedAttempt(p, pid, reply, null, (e as Error).message, branch);
+      if (!p.branches.used) return failedAttempt(p, pid, reply, null, (e as Error).message, branch);
       p.trace.push({ t: Date.now(), step: "Response could not be processed", detail: (e as Error).message });
       p.result = rejectedResult(pid, (e as Error).message, ctx);
       p.resultAt = Date.now();
@@ -483,19 +489,19 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     const p = presentations.get(pid);
     if (!p || !p.mdocDc)
       return reply.code(400).send({ error: "invalid_request", error_description: "bilinmeyen sunum" });
-    if (p.used)
+    if (p.branches.used)
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     if (p.req.expiresAt < nowSec())
       return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
     if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
     const response = (req.body as { response?: unknown } | undefined)?.response;
-    if (p.busy)
+    if (p.branches.busy)
       return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
     let opened: ReturnType<typeof openMdocDcApiResponse>;
     try {
       opened = openMdocDcApiResponse(response, p.mdocDc);
     } catch {
-      return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" }); // FB4: deneme sayılmaz
+      return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" }); // RQ4: deneme sayılmaz
     }
     p.trace.push({
       t: Date.now(),
@@ -503,13 +509,15 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     });
     if ("refused" in opened) {
       // cüzdan belge vermedi (ISO 18013-5 DeviceResponse status): kişinin reddi — sunum kapanır, neden saklanmaz (PV5)
-      p.used = true;
+      p.branches.consume();
       p.result = rejectedResult(pid, "the wallet returned no document", ctx, null);
       p.resultAt = Date.now();
       p.trace.push({ t: Date.now(), step: "Wallet declined" });
       return { redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}` };
     }
-    p.busy = true;
+    // dalsız yol (DC API): kilit ve deneme sınırı sunum başına (RQ6)
+    if (p.branches.begin() !== "ok")
+      return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
     let out: Awaited<ReturnType<typeof verifyPresentation>>;
     try {
       out = await verifyPresentation({
@@ -530,14 +538,14 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         audit: (e) => ctx.audit(e),
       });
     } finally {
-      p.busy = false;
+      p.branches.end();
     }
-    if (p.used)
+    if (p.branches.used)
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     // sahiplik kanıtına (cihaz imzası, A6) ulaşmayan yanıt sunumu tüketmez (/vp/response ile aynı kural)
     if (!holderBound(out.result))
       return failedAttempt(p, pid, reply, out.result.failed_step, out.result.failed_reason ?? out.result.outcome);
-    p.used = true;
+    p.branches.consume();
     p.result = out.result;
     p.claims = out.claims;
     p.resultAt = Date.now();
@@ -632,21 +640,26 @@ export async function createPresentation(
     ...content,
     requestUriBase: `${cfg.publicBase}/vp/req`,
     ...(dcApiOrigin ? { dcApi: { expectedOrigins: [dcApiOrigin] } } : {}),
+    // ADR-0067 K1: cihazlar arası ilk istek nesnesi üretilmez — `request_uri`'nin her çekimi aynı içerikle yeni bir dal (taze
+    // state, nonce, şifreleme anahtarı); DC API nesnesi ayrı yoldur ve sayfaya gider
+    initialRequestObject: false,
   });
   const p = ctx.presentations.create(
     pr,
     policy,
     {
       t: Date.now(),
-      step: "Signed request object created (JAR, ES256, x5c=rp-verify)",
-      detail: `client_id ${cfg.clientId}${owner && owner !== cfg.clientId ? ` · adına: ${owner}` : ""} · nonce ${pr.nonce.slice(0, 8)}… · DCQL ${policy.credentials.map((c) => c.id).join(",")}`,
+      step: "Presentation opened (signed request objects are issued per fetch: JAR, ES256, x5c=rp-verify)",
+      detail: `client_id ${cfg.clientId}${owner && owner !== cfg.clientId ? ` · adına: ${owner}` : ""} · DCQL ${policy.credentials.map((c) => c.id).join(",")}`,
     },
     owner,
+    new BranchSet({
+      registry: ctx.presentations.registry,
+      presentationId: pr.presentationId,
+      expiresAt: pr.expiresAt,
+      content,
+    }),
   );
-  // ADR-0067 K1: `request_uri`'nin her çekimi aynı içerikle yeni bir dal (taze state, nonce, şifreleme anahtarı); ilk istek
-  // nesnesi (`pr.requestJwt`) hiç verilmez — DC API nesnesi ise ayrı yoldur ve sayfaya gider
-  p.mintBranch = (walletNonce) =>
-    createRequestBranch({ ...content, presentationId: pr.presentationId, expiresAt: pr.expiresAt, walletNonce });
   if (dcApiOrigin) {
     p.dcApiOrigin = dcApiOrigin;
     // ISO/IEC 18013-7 Ek C: tek mdoc belgesi isteyen, takma adsız ve geçiş kartsız politikada ikinci DC API isteği
@@ -710,7 +723,7 @@ export function webOrigin(v: unknown): string | undefined {
 function pendingView(p: Presentation) {
   return {
     state: "PENDING",
-    attempts: p.attempts,
+    attempts: p.branches.attempts,
     ...(p.lastAttempt
       ? { last_attempt: { failed_step: p.lastAttempt.failed_step, failed_reason: p.lastAttempt.failed_reason } }
       : {}),
@@ -719,7 +732,7 @@ function pendingView(p: Presentation) {
 
 /** K4: tarayıcıya giden durum — değer yok, alan adı yok. */
 function statusView(p: Presentation) {
-  if (!p.result) return { state: "PENDING", attempts: p.attempts };
+  if (!p.result) return { state: "PENDING", attempts: p.branches.attempts };
   return {
     state: "DONE",
     outcome: p.result.outcome,

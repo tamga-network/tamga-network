@@ -52,8 +52,16 @@ function unzlibCapped(data: Uint8Array, max: number): Uint8Array {
   return out;
 }
 
-/** Status token'ı doğrular ve bit dizisini açar. `now` saniye. */
-export function parseStatusToken(token: string, expectedUri: string, now: number): StatusList {
+/**
+ * Status token'ı doğrular ve bit dizisini açar. `now` saniye. `requireExp`: `exp` zorunlu (ADR-0068 K3 — kayıt sertifikası durum
+ * listesi `exp`'siz kabul edilmez; süresiz bir liste eski bir "geçerli" görüntüsünün sonsuza dek kullanılmasına izin verirdi).
+ */
+export function parseStatusToken(
+  token: string,
+  expectedUri: string,
+  now: number,
+  opts: { requireExp?: boolean } = {},
+): StatusList {
   if (token.length > MAX_STATUS_TOKEN_CHARS) throw new Error("status token too large");
   const [h] = token.split(".");
   const header = JSON.parse(new TextDecoder().decode(b64uDecode(h))) as { typ?: string; x5c?: string[] };
@@ -71,6 +79,7 @@ export function parseStatusToken(token: string, expectedUri: string, now: number
   if (p.sub !== expectedUri) throw new Error("status token sub ≠ list uri");
   const bits = p.status_list?.bits;
   if ((bits !== 1 && bits !== 2) || !p.status_list?.lst) throw new Error("status token bits not 1 or 2");
+  if (opts.requireExp && typeof p.exp !== "number") throw new Error("status token has no exp");
   if (p.exp && p.exp < now) throw new Error("status token expired");
   if (p.iat && now - p.iat > (p.ttl ?? 3600) * 24) throw new Error("status token too old");
   return {

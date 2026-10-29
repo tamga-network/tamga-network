@@ -49,20 +49,33 @@ idarə etmək istədiyiniz zaman. Daha sürətli başlanğıc üçün host edil�
 ## Axın
 
 ```ts
-import { dcqlFromPolicy, createPresentationRequest, decryptResponse, verifyPresentation, pemRpSigner,
-         PrefetchStatusCache, type Policy } from "@tamga-network/verifier";
+import { dcqlFromPolicy, createPresentationRequest, openPresentationResponse, responseKidOf, verifyPresentation,
+         pemRpSigner, BranchRegistry, BranchSet, type Policy } from "@tamga-network/verifier";
 
 const policy: Policy = { policy_id: "ise-alim", /* credentials, trust, freshness */ } as Policy;
 const signer = await pemRpSigner(RP_KEY_PEM, RP_CERT_PEM); // client_id = x509_hash (from the certificate)
-// 1) request: shown as a QR code / deep link (no personal data; request_uri only)
-const req = await createPresentationRequest({ signer, dcql: dcqlFromPolicy(policy),
-  responseUri: "https://ornek.com.tr/vp/response", requestUriBase: "https://ornek.com.tr/vp/req",
-  registrationCert: WRPRC_JWT }); // your use's registration certificate (step 4 above)
-// 2) the wallet POSTs the encrypted response to response_uri → decrypt
-const resp = await decryptResponse(jweBody, req.encPrivateKey); // key created with the request; match it with req.state
-// 3) verify (SD-JWT; for mdoc use format: "mso_mdoc" + responseUri)
-const { result, claims } = await verifyPresentation({ presentation: resp.vp_token["diploma"][0], aud: signer.clientId, nonce: req.nonce,
-  policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer, rp: trust.relyingParty(signer.clientId) });
+const registry = new BranchRegistry(); // one per process
+// 1) open a presentation: shown as a QR code / deep link (no personal data; request_uri only)
+const content = { signer, dcql: dcqlFromPolicy(policy), responseUri: "https://ornek.com.tr/vp/response",
+  registrationCert: WRPRC_JWT }; // your use's registration certificate (step 4 above)
+const req = await createPresentationRequest({ ...content, requestUriBase: "https://ornek.com.tr/vp/req",
+  initialRequestObject: false });
+const branches = new BranchSet({ registry, presentationId: req.presentationId, expiresAt: req.expiresAt, content });
+// 2) GET|POST /vp/req/:id — every fetch gets its own request object (fresh state, nonce, key; ADR-0067)
+const f = await branches.fetch(walletNonce); // f.ok → respond with f.requestJwt
+// 3) the wallet POSTs the encrypted response to response_uri → lock, decrypt, check again
+const branch = branches.get(responseKidOf(jweBody)!.branchId!)!;
+if (branches.begin(branch) !== "ok") throw new Error("busy or closed");
+try {
+  const opened = await openPresentationResponse(jweBody, req, content.responseUri, (id) => (id === branch.branchId ? branch : undefined));
+  if (opened.kind !== "response" || !branches.isOpen(branch) || !branches.stateMatches(branch, opened.response.state)) throw new Error("rejected");
+  // 4) verify (SD-JWT; for mdoc use format: "mso_mdoc" + responseUri)
+  const { result, claims } = await verifyPresentation({ presentation: opened.response.vp_token["diploma"][0],
+    aud: signer.clientId, nonce: branch.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer,
+    rp: trust.relyingParty(signer.clientId) });
+  if (result.checks_performed.includes("A6")) branches.consume(); else branches.failedAttempt(branch); // used up only after A6
+} finally { branches.end(branch); }
+// a decline (error + state): registry.byState(state)?.set.decline(…) — closes only that branch; answer 200, store no reason
 ```
 
 Sahə adları və imzalar paket tiplərində müəyyən edilib; tam işlək nümunə: `apps/verify/src/routes/presentations.ts`.

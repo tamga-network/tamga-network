@@ -1,5 +1,5 @@
 /**
- * ETSI TS 119 612 XML görünümü (ADR-0066 taslağı; varsayılan kapalı, `TAMGA_TL119612=1`).
+ * ETSI TS 119 612 XML görünümü (ADR-0066; varsayılan kapalı, `TAMGA_TL119612=1`).
  *
  * Denetimler bağımsızdır: (1) şema — ETSI'nin resmî XSD'leri (TS 119 612 V2.4.1 Ek C, `etsi/19612/`) libxml2 (xmllint-wasm) ile;
  * (2) imza — üreteç `@tamga-network/trust`'ın kanonikleştirmesini kullanır, doğrulama hem aynı paketin okuyucusuyla hem de
@@ -28,6 +28,8 @@ import { parseXml, readTrustedListXml, verifyEnvelopedXmlSignature } from "@tamg
 import {
   OID_TSL_SIGNING,
   buildTrustedListXml,
+  hasXml10InvalidChars,
+  sanitizeTrustedListInput,
   signTrustedListXml,
   subjectKeyId,
   tamgaUris,
@@ -413,6 +415,146 @@ describe("ETSI TS 119 612 XML — üreteç ve XAdES-B-B imzası", () => {
     );
     expect(r.problems.join(" ")).toMatch(/işletmeci posta adresi/);
     expect(r.problems.join(" ")).toMatch(/issuer x: ab parmak izli sertifika bulunamadı/);
+  });
+
+  it("cüzdan çözümünün zaman çizelgesi çözümün kendi geçmişi; yinelenen geçmiş örneği yok; şemaya uyar", async () => {
+    const byFp = new Map([wpCert, ca].map((k) => [k.fp, k.der]));
+    const tl = {
+      state_code: "XX",
+      version: 7,
+      issued_at: iso(now),
+      next_update: iso(now + 86400_000),
+      operator: { name: "Test Operator" },
+      root_cas: [
+        {
+          ca_id: "0xca",
+          legal_name: "XX National Root CA",
+          status: "ACTIVE",
+          // aynı durum iki kez + güncel durumla aynı an: tek değişiklik sayılır, geçmişe yazılmaz
+          status_history: [
+            { status: "ACTIVE", since: "2026-09-24T00:00:00Z" },
+            { status: "ACTIVE", since: "2026-09-30T00:00:00Z" },
+          ],
+          cert_fingerprint_sha256: ca.fp,
+        },
+      ],
+      issuers: [],
+    };
+    const provider = (status: string, solutions: unknown[]) => ({
+      wallet_providers: [
+        {
+          provider_id: "WP-1",
+          legal_name: "Wallet Co",
+          status,
+          // sağlayıcının geçmişi: çözümün çizelgesine KOPYALANMAMALI
+          status_history: [
+            { status: "ACTIVE", since: "2026-01-01T00:00:00Z" },
+            { status: "SUSPENDED", since: "2026-03-01T00:00:00Z" },
+            { status: "ACTIVE", since: "2026-04-01T00:00:00Z" },
+            ...(status === "SUSPENDED" ? [{ status: "SUSPENDED", since: "2026-10-01T00:00:00Z" }] : []),
+          ],
+          solutions,
+          wua_signing_keys: [{ fingerprint_sha256: wpCert.fp, status: "ACTIVE" }],
+          postal_address: { street_address: "2 Side St", locality: "Capital", country: "XX" },
+          contact: { support_uri: "https://wallet.example" },
+        },
+      ],
+    });
+    const opts = {
+      certByFingerprint: (fp: string) => byFp.get(fp),
+      distributionPoint: "https://trust.example/tl-xx.xml",
+      operatorContact: {
+        postal: { StreetAddress: "3 Rd", Locality: "Capital", Country: "XX" },
+        electronic: ["mailto:o@x.org"],
+      },
+    };
+    const svc = (inp: TrustedListInput, name: string) =>
+      inp.tsps.flatMap((t) => t.services).find((x) => x.name === name)!;
+    const u = tamgaUris("XX");
+    // 1) çözümün kendi geçmişi yok → başlangıç sağlayıcının listeye ilk girdiği an; geçmiş boş (sağlayıcının askısı yok)
+    const a = trustedListFromTamga(tl, provider("ACTIVE", [{ solution_id: "w", status: "ACTIVE" }]), opts).input;
+    const sa = svc(a, "Wallet Co (w)");
+    expect(sa.since).toBe("2026-01-01T00:00:00Z");
+    expect(sa.history).toEqual([]);
+    // kök CA: art arda aynı durum tek değişiklik, güncel durum geçmişe yinelenmez
+    const ra = svc(a, "XX National Root CA");
+    expect(ra.since).toBe("2026-09-24T00:00:00Z");
+    expect(ra.history).toEqual([]);
+    // 2) çözümün kendi geçmişi var → onu kullanır
+    const b = trustedListFromTamga(
+      tl,
+      provider("ACTIVE", [
+        {
+          solution_id: "w",
+          status: "ACTIVE",
+          status_history: [
+            { status: "SUSPENDED", since: "2026-06-01T00:00:00Z" },
+            { status: "ACTIVE", since: "2026-07-01T00:00:00Z" },
+          ],
+        },
+      ]),
+      opts,
+    ).input;
+    const sb = svc(b, "Wallet Co (w)");
+    expect(sb.since).toBe("2026-07-01T00:00:00Z");
+    expect(sb.history).toEqual([{ statusUri: u.status("SUSPENDED"), since: "2026-06-01T00:00:00Z" }]);
+    // 3) sağlayıcı askıda → çözüm askıda, askının başlangıcı sağlayıcınınki; önceki durum çözümün kendi etkin durumu
+    const c = trustedListFromTamga(
+      tl,
+      provider("SUSPENDED", [
+        { solution_id: "w", status: "ACTIVE", status_history: [{ status: "ACTIVE", since: "2026-05-01T00:00:00Z" }] },
+      ]),
+      opts,
+    ).input;
+    const sc = svc(c, "Wallet Co (w)");
+    expect(sc.statusUri).toBe(u.status("SUSPENDED"));
+    expect(sc.since).toBe("2026-10-01T00:00:00Z");
+    expect(sc.history).toEqual([{ statusUri: u.status("ACTIVE"), since: "2026-05-01T00:00:00Z" }]);
+    // XML: her hizmette geçmiş örnekleri benzersiz (tür + durum + başlangıç) ve şema geçerli
+    const signed = signTrustedListXml(
+      buildTrustedListXml(c),
+      { keyPem: signer.keyPem, certDer: signer.der },
+      new Date(now),
+    );
+    expect(await schemaErrors(signed)).toEqual([]);
+    const doc = parseXml(signed);
+    const services = doc.getElementsByTagNameNS(TSL, "TSPService");
+    for (let k = 0; k < services.length; k++) {
+      const hs = services.item(k).getElementsByTagNameNS(TSL, "ServiceHistoryInstance");
+      const keys = Array.from({ length: hs.length }, (_, j) => {
+        const h = hs.item(j);
+        return `${h.getElementsByTagNameNS(TSL, "ServiceStatus").item(0).textContent}@${h.getElementsByTagNameNS(TSL, "StatusStartingTime").item(0).textContent}`;
+      });
+      expect(new Set(keys).size).toBe(keys.length);
+    }
+  });
+
+  it("XML 1.0'da geçersiz karakter: gerçek ağda ret, sandbox'ta çıkarılır + uyarı; çıktı şemaya uyar", async () => {
+    const bad = "Örnek\u0001 Üniversite\uFFFE\uFFFF\u0008"; // C0 denetim + U+FFFE/FFFF
+    expect(hasXml10InvalidChars(bad)).toBe(true);
+    expect(hasXml10InvalidChars("tab\tcr\rlf\n 𝔘 ok")).toBe(false); // izinli: sekme, CR, LF, BMP dışı
+    const dirty: TrustedListInput = {
+      ...input,
+      tsps: input.tsps.map((t, k) => (k === 1 ? { ...t, name: { tr: bad, en: "Example University" } } : t)),
+    };
+    // üreteç geçersiz karakterle hiç XML üretmez (son savunma)
+    expect(() => buildTrustedListXml(dirty)).toThrow(/geçersiz karakter/);
+    expect(() => sanitizeTrustedListInput(dirty, "reject")).toThrow(
+      /tsps\[1\]\.name\.tr: .*U\+0001.*U\+FFFE.*U\+FFFF.*U\+0008/,
+    );
+    const { input: clean, findings } = sanitizeTrustedListInput(dirty, "strip");
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).not.toContain("Örnek"); // bulgu içeriği tekrar etmez
+    expect((clean.tsps[1].name as Record<string, string>).tr).toBe("Örnek Üniversite");
+    expect(clean.issuedAt).toBeInstanceOf(Date);
+    expect(clean.tsps[1].services[0].certsDer[0]).toBeInstanceOf(Uint8Array);
+    const signed = signTrustedListXml(
+      buildTrustedListXml(clean),
+      { keyPem: signer.keyPem, certDer: signer.der },
+      new Date(now),
+    );
+    expect(await schemaErrors(signed)).toEqual([]);
+    expect(sanitizeTrustedListInput(input, "reject").findings).toEqual([]);
   });
 });
 

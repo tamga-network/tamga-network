@@ -135,7 +135,10 @@ export async function buildVerifyApp(
   } = {},
 ): Promise<VerifyApp> {
   const showcase = opts.showcase ?? cfg.network === "sandbox";
-  const policies = policiesFor(showcase ? "sandbox" : "production");
+  // ADR-0069 TG3: geçiş kartı politikasının kimliğini taşır — kapı, imzalı listedeki grubun `allowed_policies`'ini kartta denetler
+  const policies = policiesFor(showcase ? "sandbox" : "production").map((p) =>
+    p.proximity ? { ...p, proximity: { ...p.proximity, policy_id: p.policy_id } } : p,
+  );
   let trust: TrustSource;
   let rootDer: Uint8Array[] = [];
   const statusCache = new PrefetchStatusCache(opts.fetchText);

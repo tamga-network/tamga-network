@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { describe, it, expect } from "vitest";
-import type { Policy, PresentationRequest } from "@tamga-network/verifier";
+import { BranchSet, type Policy, type PresentationSession, type RequestContent } from "@tamga-network/verifier";
 import { webcrypto } from "node:crypto";
 import {
   X509CertificateGenerator,
@@ -54,12 +54,22 @@ describe("hız sınırı (TokenBucketLimiter)", () => {
   });
 });
 
+/** Test sunumunun dal kümesi (imzacısız; çekim yapılmaz). */
+const branchesFor = (s: PresentationStore, id: string, expiresAt: number) =>
+  new BranchSet({ registry: s.registry, presentationId: id, expiresAt, content: {} as RequestContent });
+
 describe("PresentationStore üst sınırı", () => {
   it("dolunca önce en eski yanıtsız sunum atılır", () => {
     const s = new PresentationStore(3);
     const far = Math.floor(Date.now() / 1000) + 600;
     const mk = (id: string) =>
-      s.create({ presentationId: id, expiresAt: far } as PresentationRequest, {} as Policy, { t: 0, step: "x" });
+      s.create(
+        { presentationId: id, expiresAt: far } as PresentationSession,
+        {} as Policy,
+        { t: 0, step: "x" },
+        undefined,
+        branchesFor(s, id, far),
+      );
     const a = mk("a");
     mk("b");
     mk("c");
@@ -85,10 +95,13 @@ describe("kontrol görünümü anahtarı (?show=)", () => {
   it("showAllowed: doğru anahtar + taze sonuç; yanlış/eksik anahtar ya da süresi geçmiş sonuç reddedilir", () => {
     const s = new PresentationStore(3);
     const far = Math.floor(Date.now() / 1000) + 600;
-    const p = s.create({ presentationId: "x", expiresAt: far } as PresentationRequest, {} as Policy, {
-      t: 0,
-      step: "x",
-    });
+    const p = s.create(
+      { presentationId: "x", expiresAt: far } as PresentationSession,
+      {} as Policy,
+      { t: 0, step: "x" },
+      undefined,
+      branchesFor(s, "x", far),
+    );
     expect(s.showAllowed(p, p.showKey)).toBe(false); // sonuç yok
     p.result = {} as never;
     p.resultAt = 1_000_000;
@@ -140,6 +153,28 @@ describe.skipIf(!ready)("apps/verify uç sertleştirmesi", () => {
     await app2.close();
     expect((await post("/terminal/verify", { token: "x" })).statusCode).toBe(404); // gerçek ağ biçimli liste: kapı yok
     expect((await post("/terminal/verify", { token: "x" })).statusCode).toBe(429);
+    await app.close();
+  });
+
+  it("ADR-0067 RQ5 (2026-10-29): istek nesnesi çekimi istemci adresi başına sınırlı — bir adresin seli başka adresin çekimini 429'a düşürmez; sunum başına kova yok", async () => {
+    const app = await buildVerifyApp(cfg(), { rateRules: { vpRequest: { burst: 3, perMin: 1 } } });
+    const policy = ((await app.inject({ url: "/policies" })).json() as Array<{ policy_id: string }>)[0].policy_id;
+    const made = await app.inject({
+      method: "POST",
+      url: "/presentations",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      payload: { policy_id: policy },
+    });
+    const pid = (made.json() as { presentation_id: string }).presentation_id;
+    const fetchFrom = (ip: string) => app.inject({ method: "GET", url: `/vp/req/${pid}`, remoteAddress: ip });
+    for (let i = 0; i < 3; i++) expect((await fetchFrom("198.51.100.9")).statusCode).toBe(200);
+    const lim = await fetchFrom("198.51.100.9");
+    expect(lim.statusCode).toBe(429);
+    expect(lim.headers["retry-after"]).toBeDefined();
+    // gerçek cüzdan başka adresten: aynı sunumun isteğini alır
+    expect((await fetchFrom("203.0.113.20")).statusCode).toBe(200);
+    // bilinmeyen sunum jeton harcamaz
+    expect((await app.inject({ method: "GET", url: `/vp/req/yok`, remoteAddress: "192.0.2.1" })).statusCode).toBe(404);
     await app.close();
   });
 

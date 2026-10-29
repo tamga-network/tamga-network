@@ -110,7 +110,19 @@ export interface TrustedListInput {
 
 // ---- XML yazımı -----------------------------------------------------------------------------------------------------
 
-const escText = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/**
+ * XML 1.0 §2.2'de izinli olmayan karakterler: C0 denetim karakterleri (sekme, CR, LF hariç), tek başına vekil (surrogate) yarıları,
+ * U+FFFE ve U+FFFF. Bunlar kaçışla da yazılamaz (`&#x1;` de geçersiz) — liste ya reddedilir ya da karakter çıkarılır.
+ */
+const XML10_INVALID = /[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu;
+export const hasXml10InvalidChars = (s: string) => new RegExp(XML10_INVALID.source, "u").test(s);
+export const stripXml10InvalidChars = (s: string) => s.replace(XML10_INVALID, "");
+const escText = (s: string) => {
+  // son savunma hattı: modelde geçersiz karakter kalmışsa XML hiç üretilmez (bkz. sanitizeTrustedListInput)
+  if (hasXml10InvalidChars(s))
+    throw new Error("XML 1.0'da geçersiz karakter (sanitizeTrustedListInput ile denetleyin)");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+};
 const escAttr = (s: string) => escText(s).replace(/"/g, "&quot;");
 /** ETSI: saniye hassasiyetli UTC */
 export const isoSec = (d: Date | string) => new Date(d).toISOString().replace(/\.\d{3}Z$/, "Z");
@@ -203,6 +215,36 @@ function pointer(p: TlPointer): string {
     (p.schemeRules?.length ? other(uriList("SchemeTypeCommunityRules", p.schemeRules)) : "") +
     `</AdditionalInformation></OtherTSLPointer>`
   );
+}
+
+/**
+ * Modeldeki bütün metinlerde XML 1.0'da geçersiz karakter arar. `reject` (gerçek ağ): bulursa hata — kayıt defteri düzeltilmeli.
+ * `strip` (sandbox): karakteri çıkarır, yerini bulgu olarak döndürür (çağıran uyarı yazar). Bulgu metni yer + kod noktasıdır,
+ * içeriği tekrar etmez.
+ */
+export function sanitizeTrustedListInput(
+  input: TrustedListInput,
+  mode: "reject" | "strip",
+): { input: TrustedListInput; findings: string[] } {
+  const findings: string[] = [];
+  const walk = (v: unknown, at: string): unknown => {
+    if (typeof v === "string") {
+      if (!hasXml10InvalidChars(v)) return v;
+      const cps = [...v]
+        .filter((c) => hasXml10InvalidChars(c))
+        .map((c) => `U+${c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}`);
+      findings.push(`${at}: XML 1.0'da geçersiz karakter (${[...new Set(cps)].join(", ")})`);
+      return stripXml10InvalidChars(v);
+    }
+    if (v instanceof Uint8Array || v instanceof Date || v === null || typeof v !== "object") return v;
+    if (Array.isArray(v)) return v.map((x, k) => walk(x, `${at}[${k}]`));
+    return Object.fromEntries(
+      Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, walk(x, at ? `${at}.${k}` : k)]),
+    );
+  };
+  const cleaned = walk(input, "") as TrustedListInput;
+  if (findings.length && mode === "reject") throw new Error(`TS 119 612 XML: ${findings.join("; ")}`);
+  return { input: cleaned, findings };
 }
 
 /** İmzasız TS 119 612 XML'i (Ek B, şema sırası 19612_xsd.xsd). */
@@ -419,18 +461,38 @@ export const tlListable = (status: string) => status in STATUS_URI_SEGMENT;
 type Rec = Record<string, any>;
 const PLACEHOLDER = "(not published)";
 
+/**
+ * Kaydın durum zaman çizelgesi (§5.5.4–5.5.5, §5.6): güncel durum ve başlangıcı, önceki durumlar yeniden eskiye (§5.5.10).
+ * Aynı durumun art arda gelen girdileri tek değişiklik sayılır (başlangıcı ilk girdi); güncel durumla aynı ya da ondan sonraki
+ * zamanlı girdi geçmişe yazılmaz — böylece güncel bilgiyi tekrarlayan geçmiş örneği (yinelenen ServiceHistoryInstance) çıkmaz.
+ */
 function statusOf(rec: Rec, uris: TamgaUris, fallbackSince: string) {
   const h: Array<{ status: string; since: string }> = Array.isArray(rec.status_history) ? rec.status_history : [];
-  const sorted = [...h].filter((x) => x?.since).sort((a, b) => (a.since < b.since ? 1 : -1)); // yeniden eskiye
-  const cur = sorted.find((x) => x.status === rec.status);
-  const since = cur?.since ?? sorted[0]?.since ?? fallbackSince;
+  const asc = [...h]
+    .filter((x) => x?.since && x?.status)
+    .sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
+  const runs: Array<{ status: string; since: string }> = [];
+  for (const x of asc) if (runs[runs.length - 1]?.status !== x.status) runs.push({ status: x.status, since: x.since });
+  const last = runs[runs.length - 1];
+  const cur = last && last.status === rec.status ? last : undefined;
+  const since = cur?.since ?? last?.since ?? fallbackSince;
   return {
     statusUri: uris.status(rec.status),
     since,
-    history: sorted
-      .filter((x) => x !== cur && x.since <= since && tlListable(x.status))
+    history: runs
+      .filter((x) => x !== cur && x.since < since && tlListable(x.status))
+      .reverse()
       .map((x) => ({ statusUri: uris.status(x.status), since: x.since })),
   };
+}
+
+/** Sağlayıcının listede ilk ACTIVE olduğu an (yoksa undefined). */
+function providerListedSince(w: Rec): string | undefined {
+  const h: Array<{ status: string; since: string }> = Array.isArray(w.status_history) ? w.status_history : [];
+  return h
+    .filter((x) => x?.status === "ACTIVE" && x.since)
+    .map((x) => x.since)
+    .sort()[0];
 }
 
 function addressOf(rec: Rec, cc: string, fallbackUri: string | undefined, problems: string[], who: string): TlAddress {
@@ -567,13 +629,20 @@ export function trustedListFromTamga(
     const services = ((w.solutions ?? []) as Rec[])
       .filter((s) => tlListable(s.status))
       .map((s) => {
-        // çözümün durumu sağlayıcınınkinden "daha etkin" olamaz
-        const status = w.status !== "ACTIVE" ? w.status : s.status;
+        // hizmet = cüzdan çözümü: zaman çizelgesi çözümün KENDİ geçmişi (sağlayıcınınki değil). Çözümün durumu sağlayıcınınkinden
+        // "daha etkin" olamaz: sağlayıcı etkin değilse onun güncel durumu, başladığı anla çözümün çizelgesine eklenir.
+        const own: Rec[] = Array.isArray(s.status_history) ? s.status_history : [];
+        let rec: Rec = { status: s.status, status_history: own };
+        if (w.status !== "ACTIVE") {
+          const pSince = statusOf(w, uris, tl.issued_at).since;
+          rec = { status: w.status, status_history: [...own, { status: w.status, since: pSince }] };
+        }
         return {
           typeUri: uris.svc.wallet_solution,
           name: `${w.legal_name} (${s.solution_id})`,
           certsDer: certs,
-          ...statusOf({ ...w, status }, uris, tl.issued_at),
+          // çözümün kendi geçmişi yoksa başlangıcı sağlayıcının listeye ilk girdiği an (yayın zamanı her yayında değişirdi)
+          ...statusOf(rec, uris, providerListedSince(w) ?? tl.issued_at),
         };
       });
     tsps.push({

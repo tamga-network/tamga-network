@@ -110,7 +110,7 @@ async function makeSet(
         ca_id: caId,
         legal_name: "TR Root",
         cert_fingerprint_sha256: root.fp,
-        service_type: "NationalRootCA-QC",
+        service_type: "http://uri.etsi.org/TrstSvc/Svctype/CA/PKC",
         operator: { name: "Tamga", status: "provisional", on_behalf_of: "TR national authority" },
         status: "ACTIVE",
         valid_from: T0,

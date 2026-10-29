@@ -1,9 +1,20 @@
 /**
  * Sunum durumu (bellekte; demo). Kişisel veri: yalnızca `claims` (ayrı uçtan, AP3) — süresi dolunca silinir.
  * `showKey`: kontrol görünümü bağlantısı için rastgele anahtar (ADR-0012 C); sonuçtan sonra 5 dk geçerli.
+ * Çekim dalları ve tek kullanım kilidi `@tamga-network/verifier` `BranchSet` / `BranchRegistry` (ADR-0067; kurumun belge verme
+ * servisiyle aynı birim).
  */
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import type { Policy, PresentationRequest, RequestBranch, VerificationResult } from "@tamga-network/verifier";
+import {
+  BranchRegistry,
+  type Branch,
+  type BranchSet,
+  type Policy,
+  type PresentationSession,
+  type VerificationResult,
+} from "@tamga-network/verifier";
+
+export type { Branch };
 
 export interface TraceEntry {
   t: number;
@@ -11,45 +22,20 @@ export interface TraceEntry {
   detail?: string;
 }
 
-/**
- * ADR-0067: `request_uri`'nin bir çekimi (çekim dalı). Ret ya da deneme sınırı yalnız bu dalı kapatır; sunumun bütünü ancak tek
- * dalı varsa ve o dal kapandıysa REJECTED olur (FB3). Dal bilgisi iç durumdur; durum API'sinde görünmez.
- */
-export interface Branch extends RequestBranch {
-  /** Bu dalda sahiplik kanıtına ulaşmadan başarısız olan (çözülmüş) yanıt sayısı. */
-  attempts: number;
-  /** Dal kapandı: kişi reddetti (`declined`) ya da deneme sınırı doldu (`attempts`); kapalı dala yanıt kabul edilmez. */
-  closed?: "declined" | "attempts";
-}
-
 export interface Presentation {
-  req: PresentationRequest;
+  req: PresentationSession;
   policy: Policy;
   createdAt: number;
   /**
-   * Sunum tüketildi: ya cüzdanın yanıtı sahiplik kanıtına (A6 / Z1) kadar geçti ve sonuç yazıldı, ya tek çekim dalı olan sunumda
-   * kişi reddetti (PV5) ya da o dalın deneme sınırı doldu (ADR-0067 FB3). Öncesindeki başarısız yanıtlar (state uyuşmazlığı, boş
-   * vp_token, A1–A6) sunumu KAPATMAZ; çözülemeyen gövde deneme bile sayılmaz (FB4) — sunum kimliği QR'da açık olduğundan
-   * yakındaki biri gerçek kullanıcının sunumunu düşüremesin.
+   * ADR-0067 çekim dalları ve tek kullanım kilidi. `branches.used`: sunum tüketildi — yanıt sahiplik kanıtına (A6 / Z1) kadar geçti,
+   * ya tek çekimli sunumda kişi reddetti (PV5) ya da o dalın deneme sınırı doldu (RQ2, RQ4). `branches.busy`: bir yanıt işleniyor
+   * (PV10). `branches.attempts`: sahiplik kanıtına ulaşmadan başarısız olan (çözülmüş) yanıtların toplamı — durum API'sindeki
+   * `attempts`. Çözülemeyen gövde deneme sayılmaz (RQ4): sunum kimliği QR'da açık, yakındaki biri gerçek kullanıcının sunumunu
+   * düşüremesin.
    */
-  used: boolean;
-  /**
-   * Sahiplik kanıtına ulaşmadan başarısız olan (çözülmüş) yanıtların toplamı (bütün dallar + DC API yolu) — durum API'sindeki
-   * `attempts`. Kapanma dal başına (`Branch.attempts`) ve DC API yolu için `dcAttempts` ile sayılır.
-   */
-  attempts: number;
-  /** DC API yollarında (dc_api.jwt, Ek C) başarısız denemeler; `MAX_RESPONSE_ATTEMPTS` dolunca sunum kapanır. */
-  dcAttempts: number;
-  /** ADR-0067 K1: `request_uri`'nin çekimleri (en çok `MAX_BRANCHES`). */
-  branches: Branch[];
-  /** Yeni çekim dalı üretir (sunumun imzacısı, DCQL'i ve kayıt sertifikasıyla); `walletNonce` §5.10. */
-  mintBranch?: (walletNonce?: string) => Promise<RequestBranch>;
-  /** Şu anda imzalanmakta olan çekim sayısı (eşzamanlı çekimler dal sınırını aşmasın). */
-  minting?: number;
+  branches: BranchSet;
   /** Son başarısız (tüketmeyen) yanıtın adımı ve nedeni — bekleyen sunumun durumunda RP'ye gösterilir; kişisel veri yok. */
   lastAttempt?: { failed_step: string | null; failed_reason: string; at: number };
-  /** Bir yanıt şu anda doğrulanıyor (await sırasında ikinci yanıt işlenmez; tek kullanım kuralı — PV10). */
-  busy?: boolean;
   trace: TraceEntry[];
   result?: VerificationResult;
   resultAt?: number;
@@ -73,12 +59,10 @@ export interface Presentation {
 }
 
 /**
- * Sahiplik kanıtına ulaşmayan (çözülmüş) yanıt denemesi sınırı — çekim dalı başına (dolunca dal kapanır; sunum yalnız tek dallıysa
- * REJECTED olur, ADR-0067 FB3) ve DC API yolu için sunum başına. Hız sınırı ayrıca.
+ * Sahiplik kanıtına ulaşmayan (çözülmüş) yanıt denemesi sınırı — çekim dalı başına (dolunca dal kapanır; sunum yalnız tek çekimliyse
+ * REJECTED olur, ADR-0067 RQ4) ve DC API yolu için sunum başına. Hız sınırı ayrıca. Dal sınırları paketin `BRANCH_LIMITS`'i.
  */
 export const MAX_RESPONSE_ATTEMPTS = 5;
-/** ADR-0067 FB5: sunum başına en çok çekim dalı; sonrası 429 (var olan dallar etkilenmez). */
-export const MAX_BRANCHES = 10;
 export const SHOW_TTL_MS = 5 * 60 * 1000;
 /** ADR-0017 K3 / HV3: okunmayan değerler sonuçtan en geç 5 dk sonra silinir. */
 export const CLAIMS_TTL_MS = 5 * 60 * 1000;
@@ -99,17 +83,27 @@ export function sameKey(given: string, expected: string): boolean {
 
 export class PresentationStore {
   private map = new Map<string, Presentation>();
-  constructor(private max = MAX_PRESENTATIONS) {}
+  /** ADR-0067: bütün sunumların çekim dalları — `state` özetinden dala arama ve ortak dal bütçesi (bellek tavanı). */
+  readonly registry: BranchRegistry;
+  constructor(
+    private max = MAX_PRESENTATIONS,
+    maxBranches?: number,
+  ) {
+    this.registry = new BranchRegistry(maxBranches ? { maxBranches } : {});
+  }
 
-  create(req: PresentationRequest, policy: Policy, firstTrace: TraceEntry, owner?: string): Presentation {
+  create(
+    req: PresentationSession,
+    policy: Policy,
+    firstTrace: TraceEntry,
+    owner: string | undefined,
+    branches: BranchSet,
+  ): Presentation {
     const p: Presentation = {
       req,
       policy,
       createdAt: Date.now(),
-      used: false,
-      attempts: 0,
-      dcAttempts: 0,
-      branches: [],
+      branches,
       trace: [firstTrace],
       showKey: randomBytes(12).toString("base64url"),
       statusToken: randomBytes(16).toString("base64url"),
@@ -128,13 +122,14 @@ export class PresentationStore {
 
   /**
    * OpenID4VP şifresiz hata yanıtı (`error` + `state`) `kid` taşımaz: sunum ve çekim dalı `state` ile bulunur (yalnız bekleyen
-   * sunumlar; ADR-0067 — `state` dal başınadır ve yalnız o dalın istek nesnesinde geçer). DC API nesnesinin `state`'i dal değildir.
+   * sunumlar; ADR-0067 — `state` dal başınadır ve yalnız o dalın istek nesnesinde geçer). Arama `state` özetiyle (doğrusal tarama
+   * yok), eşitlik sabit süreli. DC API nesnesinin `state`'i dal değildir.
    */
-  byState(state: string): { p: Presentation; branch: Branch } | undefined {
+  byState(state: unknown): { p: Presentation; branch: Branch } | undefined {
     this.sweep();
-    for (const p of this.map.values())
-      if (!p.used) for (const b of p.branches) if (sameKey(state, b.state)) return { p, branch: b };
-    return undefined;
+    const hit = this.registry.byState(state);
+    const p = hit && this.map.get(hit.set.presentationId);
+    return p && hit && p.branches === hit.set ? { p, branch: hit.branch } : undefined;
   }
 
   /** ADR-0017 K3: değerleri BİR KEZ verir ve bellekten siler; okunmuşsa ya da süresi geçtiyse "gone". */
@@ -159,18 +154,24 @@ export class PresentationStore {
   private evictOne() {
     for (const [id, p] of this.map)
       if (!p.result) {
-        this.map.delete(id);
+        this.drop(id, p);
         return;
       }
-    const first = this.map.keys().next();
-    if (!first.done) this.map.delete(first.value);
+    const first = this.map.entries().next();
+    if (!first.done) this.drop(first.value[0], first.value[1]);
+  }
+
+  /** Sunum bellekten çıkar; dalları ortak kayıttan da (bütçe ve `state` araması). */
+  private drop(id: string, p: Presentation) {
+    p.branches.dispose();
+    this.map.delete(id);
   }
 
   private sweep(now = Date.now()) {
     for (const [id, p] of this.map) {
       const expiredUnanswered = !p.result && p.req.expiresAt * 1000 + RETAIN_MS < now;
       const retainedResult = p.resultAt && now - p.resultAt > RETAIN_MS;
-      if (expiredUnanswered || retainedResult) this.map.delete(id);
+      if (expiredUnanswered || retainedResult) this.drop(id, p);
       else if (p.claims && p.resultAt && now - p.resultAt > CLAIMS_TTL_MS) delete p.claims; // HV3
     }
   }

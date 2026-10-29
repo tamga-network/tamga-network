@@ -2,9 +2,13 @@
  * Example 02 — verify documents on your own server (hiring, campus, age checks), without the hosted verifier.
  *
  * 1. Load the signed trust lists (who may issue what) and pre-fetch the revocation lists.
- * 2. Create a signed OpenID4VP request with your registration certificate → show it as a QR code. Tamga Wallet refuses a
- *    request that carries no registration certificate (from packages 0.7.0), so fetch yours from the trust lists.
- * 3. The wallet posts an encrypted answer → decrypt it → run the canonical checks (T0 + A–E).
+ * 2. Open a presentation and show its QR code. Every fetch of the QR's request_uri gets its OWN signed request object
+ *    (fresh state, nonce and encryption key — a "request branch", packages 0.7.4): someone who photographs the QR and
+ *    fetches it learns only their own branch, so a forged "declined" closes only that branch. Include your registration
+ *    certificate: Tamga Wallet refuses a request without one (from packages 0.7.0).
+ * 3. The wallet posts an encrypted answer (or a "declined" error) → lock the presentation → decrypt → run the canonical checks
+ *    (T0 + A–E). The presentation is used up only once the holder-binding check (A6) has passed; earlier failures count as
+ *    attempts on that branch, and an answer you cannot decrypt changes nothing.
  * Three outcomes: ACCEPTED, REJECTED (with the failing step) or INDETERMINATE ("could not check right now").
  *
  *   npm install @tamga-network/verifier @tamga-network/trust @tamga-network/core
@@ -12,13 +16,17 @@
 import { pemToDer } from "@tamga-network/core";
 import { fetchListTrustSource, verifyJws } from "@tamga-network/trust";
 import {
+  BranchRegistry,
+  BranchSet,
   createPresentationRequest,
   dcqlFromPolicy,
-  decryptResponse,
+  openPresentationResponse,
   PrefetchStatusCache,
+  responseKidOf,
   verifyPresentation,
+  type Branch,
   type Policy,
-  type PresentationRequest,
+  type PresentationSession,
   type RpSigner,
 } from "@tamga-network/verifier";
 
@@ -45,7 +53,7 @@ export interface OwnVerifierConfig {
   rootFingerprints: string[];
   /** Your registration: pemRpSigner(KEY_PEM, CERT_PEM) — client_id is x509_hash of your access certificate (HAIP 1.0). */
   signer: RpSigner;
-  /** Your public base URL; the wallet fetches /vp/req/:id and posts to /vp/response here. */
+  /** Your public base URL; the wallet fetches (GET or POST) /vp/req/:id and posts to /vp/response here. */
   publicBase: string;
   /**
    * The registered use (`scope_id` of your trust-list record) this verifier asks for, e.g. "job-application-1". Its
@@ -77,21 +85,27 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
   const statusCache = new PrefetchStatusCache(cfg.fetchStatus);
   await statusCache.refresh([...store.status_anchors.values()].map((a) => a.list_uri));
 
-  // Open requests, in memory. Each expires with its request object (expiresAt) and the map is capped, so abandoned QR codes
-  // cannot grow it without limit. A multi-instance deployment keeps these in a shared store instead.
+  // Open presentations, in memory. Each expires (expiresAt) and the map is capped, so abandoned QR codes cannot grow it. The
+  // branch registry is shared by all presentations: it finds a branch by the hash of its state (for "declined" answers, which
+  // carry no key id) and caps branch memory across presentations. A multi-instance deployment needs a shared store instead.
   const MAX_PENDING = 10_000;
-  const pending = new Map<string, { req: PresentationRequest; policy: Policy }>();
+  const registry = new BranchRegistry();
+  const pending = new Map<string, { req: PresentationSession; policy: Policy; branches: BranchSet }>();
+  const drop = (id: string) => {
+    pending.get(id)?.branches.dispose();
+    pending.delete(id);
+  };
   const sweep = (now = Math.floor(Date.now() / 1000)) => {
-    for (const [id, e] of pending) if (e.req.expiresAt < now) pending.delete(id);
+    for (const [id, e] of pending) if (e.req.expiresAt < now || e.branches.used) drop(id);
     for (const id of pending.keys()) {
       if (pending.size < MAX_PENDING) break;
-      pending.delete(id); // oldest first
+      drop(id); // oldest first
     }
   };
   const live = (id: string) => {
     const e = pending.get(id);
     if (e && e.req.expiresAt < Math.floor(Date.now() / 1000)) {
-      pending.delete(id);
+      drop(id);
       return undefined;
     }
     return e;
@@ -116,47 +130,108 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
     return registration.jwt;
   }
 
-  /** 2) Start: returns the QR payload. Serve `requestObject(id)` at GET /vp/req/:id. */
+  /** 2) Start: returns the QR payload. Serve `requestObject(id, walletNonce)` at GET and POST /vp/req/:id. */
   async function start(policy: Policy = DIPLOMA_POLICY) {
-    const req = await createPresentationRequest({
+    const content = {
       signer: cfg.signer,
       dcql: dcqlFromPolicy(policy),
       responseUri: `${cfg.publicBase}/vp/response`,
-      requestUriBase: `${cfg.publicBase}/vp/req`,
       registrationCert: await registrationCert(),
+    };
+    // No shared request object: each fetch of request_uri gets its own branch (BranchSet.fetch below)
+    const req = await createPresentationRequest({
+      ...content,
+      requestUriBase: `${cfg.publicBase}/vp/req`,
+      initialRequestObject: false,
     });
     sweep();
-    pending.set(req.presentationId, { req, policy });
+    const branches = new BranchSet({ registry, presentationId: req.presentationId, expiresAt: req.expiresAt, content });
+    pending.set(req.presentationId, { req, policy, branches });
     return { presentationId: req.presentationId, qrPayload: req.qrPayload };
   }
 
-  /** GET /vp/req/:id → body with content-type application/oauth-authz-req+jwt. */
-  const requestObject = (id: string) => live(id)?.req.requestJwt ?? null;
+  /**
+   * GET|POST /vp/req/:id → body with content-type application/oauth-authz-req+jwt (null → 404). A POST may carry
+   * `wallet_nonce` (OpenID4VP 1.0 §5.10); it is echoed into the request object. Rate-limit this route per client address
+   * (each fetch costs a signature); do not limit it per presentation, or a stranger could lock the real wallet out.
+   */
+  async function requestObject(id: string, walletNonce?: string): Promise<string | null> {
+    const e = live(id);
+    if (!e) return null;
+    const f = await e.branches.fetch(walletNonce);
+    return f.ok ? f.requestJwt : null;
+  }
 
-  /** 3) POST /vp/response (form field `response`) → verify. Each request answers once. */
+  /** Runs `work` holding the presentation's single-use lock (taken BEFORE decrypting); throws if it is busy or closed. */
+  async function locked<T>(e: { branches: BranchSet }, branch: Branch | undefined, work: () => Promise<T>) {
+    const lock = e.branches.begin(branch);
+    if (lock !== "ok")
+      throw new Error(`request ${lock === "busy" ? "is being answered" : "already answered or closed"}`);
+    try {
+      return await work();
+    } finally {
+      e.branches.end(branch);
+    }
+  }
+
+  /**
+   * 3a) POST /vp/response with `error` + `state` (the person declined; OpenID4VP 1.0 §8.4). Answer 200 in any case and store no
+   * reason. Only the branch that `state` belongs to closes; the presentation is REJECTED only if it was fetched once.
+   */
+  function handleDecline(state: string): { presentationRejected: boolean } {
+    const hit = registry.byState(state); // hash lookup + constant-time compare
+    if (!hit || hit.set.busy) return { presentationRejected: false };
+    return { presentationRejected: hit.set.decline(hit.branch).presentationRejected };
+  }
+
+  /** 3b) POST /vp/response with `response` (an encrypted answer) → verify. Each presentation is used up once. */
   async function handleResponse(jwe: string) {
-    const kid = JSON.parse(Buffer.from(jwe.split(".")[0], "base64url").toString("utf8")).kid as string;
-    const entry = live(String(kid).replace(/^enc-/, ""));
-    if (!entry) throw new Error("unknown, expired or already answered request");
-    pending.delete(entry.req.presentationId);
-    const answer = await decryptResponse(jwe, entry.req.encPrivateKey);
-    if (answer.state !== entry.req.state) throw new Error("state mismatch");
-    const pc = entry.policy.credentials[0];
-    return verifyPresentation({
-      presentation: answer.vp_token[pc.id][0],
-      aud: cfg.signer.clientId,
-      nonce: entry.req.nonce,
-      policy: entry.policy,
-      policyCredentialId: pc.id,
-      trust,
-      statusCache,
-      rootCertsDer,
-      rp: trust.relyingParty(cfg.signer.clientId),
-    }); // → { result: { outcome, failed_step, … }, claims } — store names, never values, in your logs
+    const kid = responseKidOf(jwe); // the branch's key id: enc-<presentation>.<branch>
+    const e = kid?.branchId !== undefined ? live(kid.presentationId) : undefined;
+    const branch = e?.branches.get(kid!.branchId!);
+    if (!e || !branch) throw new Error("unknown, expired or already answered request");
+    return locked(e, branch, async () => {
+      // Never delete the presentation before this point: an answer you cannot decrypt must not cancel the real one
+      const opened = await openPresentationResponse(jwe, e.req, `${cfg.publicBase}/vp/response`, (id) =>
+        id === branch.branchId ? branch : undefined,
+      );
+      if (!e.branches.isOpen(branch)) throw new Error("already answered or closed");
+      if (!e.branches.stateMatches(branch, opened.kind === "error" ? opened.state : opened.response.state)) {
+        e.branches.failedAttempt(branch);
+        throw new Error("state mismatch");
+      }
+      if (opened.kind === "error")
+        return { declined: true as const, presentationRejected: e.branches.decline(branch).presentationRejected };
+      const pc = e.policy.credentials[0];
+      const presentation = opened.response.vp_token[pc.id]?.[0];
+      if (!presentation) {
+        e.branches.failedAttempt(branch);
+        throw new Error(`${pc.id} missing in vp_token`);
+      }
+      const out = await verifyPresentation({
+        presentation,
+        aud: cfg.signer.clientId,
+        nonce: branch.nonce, // the branch's own nonce
+        policy: e.policy,
+        policyCredentialId: pc.id,
+        trust,
+        statusCache,
+        rootCertsDer,
+        rp: trust.relyingParty(cfg.signer.clientId),
+      }); // → { result: { outcome, failed_step, … }, claims } — store names, never values, in your logs
+      // Used up only once holder binding (A6: the key-binding signature over this nonce) has passed. Before that, the answer
+      // counts as an attempt on this branch (5 close the branch) and the real wallet can still answer.
+      if (!out.result.checks_performed.includes("A6")) {
+        e.branches.failedAttempt(branch);
+        return { declined: false as const, ...out };
+      }
+      e.branches.consume();
+      return { declined: false as const, ...out };
+    });
   }
 
   /** Refresh revocation lists on a timer (e.g. every few minutes). */
   const refreshStatus = () => statusCache.refresh([...store.status_anchors.values()].map((a) => a.list_uri));
 
-  return { start, requestObject, handleResponse, refreshStatus, trust, statusCache };
+  return { start, requestObject, handleResponse, handleDecline, refreshStatus, trust, statusCache };
 }

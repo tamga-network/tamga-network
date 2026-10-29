@@ -6,6 +6,10 @@
  * ADR-0069: kapı grubu imzalı listede (`terminal_groups[]`) bir kuruma bağlıysa anahtar o kurum adına verilir; Kurum Konsolu
  * uçları kuruma daraltılmış belirteçle çağırır ve yalnız kendi gruplarını yönetir (TG2). Listede geri çekilmiş grubun anahtarı
  * geçmez (TG3). Grup listede yoksa ADR-0065 yolu aynen (yalnız işletmeci).
+ *
+ * Kapalı kalma (0.7.4): "liste bayat / okunamıyor" ile "grup listede yok" ayrılır. Sahibi olan anahtar ya da listede bir kez
+ * görülmüş grup listede doğrulanamazsa (bayat liste ya da listeden çıkmış grup) kapıda 403 — liste arızası kapıyı açmaz.
+ * Listede grubun `allowed_policies`'i kapıda da denetlenir: kartı izinli olmayan politika vermişse jeton tüketilmeden 403.
  */
 import { createHash, timingSafeEqual } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -14,6 +18,7 @@ import { langOf, noTerminalPage, terminalPage } from "../html.js";
 import { CAMPUS_GROUP } from "../policies.js";
 import { rateLimitHook } from "../rate-limit.js";
 import { institutionToken, type TerminalKeyInfo } from "../terminal-keys.js";
+import type { TerminalGroupAnswer } from "@tamga-network/trust";
 
 const DEFAULT_GROUP = CAMPUS_GROUP;
 
@@ -35,11 +40,42 @@ function adminScope(ctx: VerifyContext, req: FastifyRequest): AdminScope | null 
   return sameSecret(tok, institutionToken(admin, inst)) ? { kind: "institution", id: inst } : null;
 }
 
+/**
+ * ADR-0069 TG3: kapıda kartın politikası grubun imzalı listedeki `allowed_policies`'inde mi? Liste izinli politika vermiyorsa
+ * denetim yok (undefined). Politika kimliği olmayan eski kart yalnız bu ağda gruba bağlı BÜTÜN politikalar izinliyse geçer
+ * (hangisi vermiş olursa olsun izinli).
+ */
+export function passPolicyGate(
+  policies: ReadonlyArray<{ policy_id: string; proximity?: { terminal_group: string } }>,
+  group: string,
+  allowedPolicies: readonly string[] | undefined,
+): ((policyId: string | undefined) => boolean) | undefined {
+  if (!allowedPolicies) return undefined;
+  const allowed = new Set(allowedPolicies);
+  const mine = policies.filter((p) => p.proximity?.terminal_group === group);
+  const legacyOk = mine.length > 0 && mine.every((p) => allowed.has(p.policy_id));
+  return (policyId) => (policyId ? allowed.has(policyId) : legacyOk);
+}
+
 export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext) {
   // Kapı politikası (proximity) olmayan ağda (bugün gerçek ağ) kapı yüzü kapalıdır; sayaç ve yönetici uçları kalır.
   const hasGates = ctx.policies.some((p) => p.proximity);
   const knownGroups = () =>
     new Set(ctx.policies.map((p) => p.proximity?.terminal_group).filter((g): g is string => typeof g === "string"));
+  /**
+   * Grubun imzalı listedeki durumu: `listed` (cevap), `not_listed` (liste sağlıklı, grup yok) ya da `unknown` (liste bayat ya da
+   * kaynak kapı gruplarını okumuyor). Listede görülen grup iz bırakır; listesizken verilmiş sahipsiz anahtarlar kuruma bağlanır.
+   */
+  type GroupState = { kind: "listed"; answer: TerminalGroupAnswer } | { kind: "not_listed" } | { kind: "unknown" };
+  const groupState = (g: string): GroupState => {
+    const ts = ctx.trust();
+    if (!ts.terminalGroup || !ts.freshness().healthy) return { kind: "unknown" };
+    const answer = ts.terminalGroup(g);
+    if (!answer) return { kind: "not_listed" };
+    ctx.terminalKeys.markListed(g);
+    if (answer.group.institution_id) ctx.terminalKeys.adoptOwner(g, answer.group.institution_id);
+    return { kind: "listed", answer };
+  };
   app.post("/terminal/verify", { preHandler: rateLimitHook(ctx.limits.terminal) }, async (req, reply) => {
     if (!hasGates) return reply.code(404).send({ ok: false, reason: "no terminal groups on this network" });
     // ADR-0065 TK1: önce terminal kimliği — anahtarsız istek jetonu okumaz, tüketmez, sayaçlara girmez
@@ -57,8 +93,21 @@ export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext)
     const group = term.terminalGroup;
     if (b.terminal_group !== undefined && b.terminal_group !== group)
       return reply.code(403).send({ ok: false, reason: "terminal key is not for this terminal group" });
-    // ADR-0069 TG3: imzalı listede grup geri çekildiyse ya da başka kuruma geçtiyse anahtar geçmez (grup listede yoksa ADR-0065)
-    const listed = ctx.trust().terminalGroup?.(group) ?? null;
+    // ADR-0069 TG3: imzalı listede grup geri çekildiyse ya da başka kuruma geçtiyse anahtar geçmez (grup listede yoksa ADR-0065).
+    // Kapalı kalma: sahibi olan anahtar ya da listede görülmüş grup listede doğrulanamazsa (bayat liste / listeden çıkmış) 403.
+    const st = groupState(group);
+    const bound = !!term.owner || ctx.terminalKeys.wasListed(group);
+    if (st.kind !== "listed" && bound) {
+      const unknown = st.kind === "unknown";
+      ctx.audit({ event: unknown ? "terminal.group_unconfirmed" : "terminal.group_unlisted", terminal_group: group });
+      return reply.code(403).send({
+        ok: false,
+        reason: unknown
+          ? "terminal group cannot be confirmed (trust list unavailable)"
+          : "terminal group is not in the trust list",
+      });
+    }
+    const listed = st.kind === "listed" ? st.answer : null;
     if (listed && !listed.active) {
       ctx.audit({ event: "terminal.group_inactive", terminal_group: group });
       return reply.code(403).send({ ok: false, reason: "terminal group is not active in the trust list" });
@@ -67,7 +116,15 @@ export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext)
       ctx.audit({ event: "terminal.owner_mismatch", terminal_group: group, key_id: term.id });
       return reply.code(403).send({ ok: false, reason: "terminal key belongs to another institution" });
     }
-    const r = await ctx.passes.verifyToken(String(b.token).trim(), { terminalGroup: group });
+    const policyAllowed = listed ? passPolicyGate(ctx.policies, group, listed.group.allowed_policies) : undefined;
+    const r = await ctx.passes.verifyToken(String(b.token).trim(), {
+      terminalGroup: group,
+      ...(policyAllowed ? { policyAllowed } : {}),
+    });
+    if (!r.ok && r.reason === "pass policy not allowed for this terminal group") {
+      ctx.audit({ event: "terminal.policy_not_allowed", terminal_group: group });
+      return reply.code(403).send(r);
+    }
     ctx.gateStats.record(group, r.ok, r.reason);
     ctx.audit({
       event: r.ok ? "pass.accepted" : "pass.rejected",
@@ -80,7 +137,10 @@ export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext)
 
   // ADR-0065 TK2: terminal anahtarları — işletmeci verir ve iptal eder; yalnız yönetici belirteciyle. Liste özet taşımaz; anahtar
   // yalnız verme yanıtında bir kez görünür. ADR-0069 TG2: kuruma daraltılmış belirteç yalnız o kurumun gruplarını görür ve yönetir.
-  const listedGroup = (g: string) => ctx.trust().terminalGroup?.(g) ?? null;
+  const listedGroup = (g: string) => {
+    const st = groupState(g);
+    return st.kind === "listed" ? st.answer : null;
+  };
   const ownerOf = (k: Pick<TerminalKeyInfo, "owner" | "terminalGroup">) =>
     k.owner ?? listedGroup(k.terminalGroup)?.group.institution_id;
   const visible = (scope: AdminScope, owner: string | undefined) => scope.kind === "operator" || owner === scope.id;
@@ -119,8 +179,18 @@ export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext)
     const group = typeof b.terminal_group === "string" ? b.terminal_group : "";
     if (!GROUP_RE.test(group) || !knownGroups().has(group))
       return reply.code(400).send({ error: "invalid_request", error_description: "unknown terminal group" });
-    const listed = listedGroup(group);
+    const st = groupState(group);
+    const listed = st.kind === "listed" ? st.answer : null;
     const owner = listed?.group.institution_id;
+    // listede görülmüş grup bugün doğrulanamıyorsa (bayat liste / listeden çıkmış) kimseye anahtar verilmez (kapalı kalma)
+    if (!listed && ctx.terminalKeys.wasListed(group))
+      return reply.code(409).send({
+        error: "conflict",
+        error_description:
+          st.kind === "unknown"
+            ? "terminal group cannot be confirmed (trust list unavailable)"
+            : "terminal group is not in the trust list",
+      });
     // kurum yalnız imzalı listede kendisine bağlı grup için anahtar alır (TG2); işletmeci listede olmayan grup için de (ADR-0065)
     if (scope.kind === "institution" && owner !== scope.id)
       return reply

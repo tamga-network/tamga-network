@@ -248,6 +248,9 @@ ETSI URIs that claim "notified by a Member State" or "qualified" status in the E
 | Issuer's status list signature (`delegate_keys`, purpose `status_list`) | `…/tl/Svctype/EAA/StatusList` | Separate service, separate certificate |
 | Wallet provider solution (LOTL `wallet_providers`) | `http://uri.etsi.org/19602/SvcType/WalletSolution/Issuance` | TS 119 602 type (same as the LoTE) |
 
+`root_cas[].service_type` in the JSON national list carries the same ETSI URI (`http://uri.etsi.org/TrstSvc/Svctype/CA/PKC`); the
+list publisher rejects a value that claims qualified status (e.g. the former `NationalRootCA-QC`) (0.7.4).
+
 **Not in the list:** verifiers (they are not trust service providers; their records are in the JSON list and in registration
 certificates — [[ADR-0026]]), `RESERVED` / `PROVISIONAL` records, personal data (XC3, XC4).
 

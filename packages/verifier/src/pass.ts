@@ -22,6 +22,8 @@ export interface PassPolicy {
   valid_days: number;
   /** ADR-0012 K4 (D10 bilet): ilk GEÇ kartı tüketir; sonraki her jeton DUR ("bilet kullanıldı"). */
   single_use?: boolean;
+  /** ADR-0069 TG3: kartın hizmet ettiği kapı politikası; kapı, listedeki grubun `allowed_policies`'iyle karşılaştırır. */
+  policy_id?: string;
 }
 export interface PassRecord {
   passId: string;
@@ -33,6 +35,8 @@ export interface PassRecord {
   presentationId: string;
   singleUse?: boolean;
   consumedAt?: number;
+  /** ADR-0069: kartı veren politika (`PassPolicy.policy_id`); eski kayıtlarda yok */
+  policyId?: string;
 }
 export interface PassCheck {
   ok: boolean;
@@ -190,6 +194,7 @@ export class PassRegistry {
       issuedAt: now,
       presentationId: input.presentationId,
       ...(input.policy.single_use ? { singleUse: true } : {}),
+      ...(input.policy.policy_id ? { policyId: input.policy.policy_id } : {}),
     };
     this.grants.set(passId, record);
     this.persist();
@@ -208,7 +213,16 @@ export class PassRegistry {
   /** AP13: terminal doğrulaması. Hata nedenleri kişisel veri içermez. */
   async verifyToken(
     token: string,
-    opts: { terminalGroup: string; now?: EpochSeconds; maxClockSkewSec?: number },
+    opts: {
+      terminalGroup: string;
+      now?: EpochSeconds;
+      maxClockSkewSec?: number;
+      /**
+       * ADR-0069 TG3: kapı grubunun imzalı listedeki `allowed_policies` denetimi — kartın politikası (`policyId`; eski kayıtta
+       * `undefined`) izinli değilse jeton tüketilmeden reddedilir.
+       */
+      policyAllowed?: (policyId: string | undefined) => boolean;
+    },
   ): Promise<PassCheck> {
     const now = secondsOrNow(opts.now);
     const skew = clockSkewOption("maxClockSkewSec", opts.maxClockSkewSec, PASS_TOKEN_CLOCK_SKEW_SEC);
@@ -228,6 +242,8 @@ export class PassRegistry {
     const rec = payload.iss ? this.grants.get(payload.iss) : undefined;
     if (!rec) return { ok: false, reason: "no pass registration (registration required)" };
     if (rec.terminalGroup !== opts.terminalGroup) return { ok: false, reason: "not for this terminal group" };
+    if (opts.policyAllowed && !opts.policyAllowed(rec.policyId))
+      return { ok: false, reason: "pass policy not allowed for this terminal group" };
     if (payload.aud !== this.audience) return { ok: false, reason: "aud mismatch" };
     if (header.kid !== rec.cnfKid) return { ok: false, reason: "key id mismatch" };
     if (

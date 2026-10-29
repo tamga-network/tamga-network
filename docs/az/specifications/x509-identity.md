@@ -251,6 +251,9 @@ AB mənasında "üzv dövlət tərəfindən bildirilmiş" və ya "ixtisaslı" id
 | Sənəd verənin status siyahısı imzası (`delegate_keys`, məqsəd `status_list`) | `…/tl/Svctype/EAA/StatusList` | Ayrıca xidmət, ayrıca sertifikat |
 | Pul kisəsi təminatçısının həlli (LOTL `wallet_providers`) | `http://uri.etsi.org/19602/SvcType/WalletSolution/Issuance` | TS 119 602 növü (LoTE ilə eyni) |
 
+JSON ölkə siyahısındakı `root_cas[].service_type` eyni ETSI URI-ni (`http://uri.etsi.org/TrstSvc/Svctype/CA/PKC`) daşıyır; siyahı
+naşiri ixtisaslı iddia daşıyan dəyəri (məs. köhnə `NationalRootCA-QC`) rədd edir (0.7.4).
+
 **Siyahıda olmayanlar:** yoxlayan tərəflər (etibarlı xidmət təminatçısı deyillər; qeydləri JSON siyahısında və qeydiyyat
 sertifikatlarındadır — [[ADR-0026]]), `RESERVED` / `PROVISIONAL` qeydlər, şəxsi məlumat (XC3, XC4).
 

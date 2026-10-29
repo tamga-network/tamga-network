@@ -674,9 +674,9 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 |---|---|
 | `ADR-0067/RQ1` | `request_uri`'nin her çekimi (GET ya da POST) yeni bir çekim dalı açar: taze `state` (≥ 128 bit; QR'da, `request_uri` ve `response_uri` yolunda yok), taze `nonce` ve taze efemer şifreleme anahtarıyla yeni imzalı istek nesnesi; sunum açılırken üretilen ilk nesne verilmez. POST çekimde `wallet_nonce` geri yazılır; GET desteklenir. |
 | `ADR-0067/RQ2` | Cüzdanın hata yanıtı (şifresiz ya da şifreli) yalnız `state`'inin ait olduğu dalı kapatır; sunum yalnız tek dalı varsa ve o dal kapandıysa REJECTED olur, yoksa süresi bitene dek açık kalır ve ilk geçerli sunum kazanır. Kapanmış dala gelen sunum kabul edilmez. |
-| `ADR-0067/RQ3` | Rete yanıt 200'dür (OpenID4VP 1.0 §8.2); retin `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı, yetki kodu ya da veriye erişim veren başka bir değer taşımaz. |
+| `ADR-0067/RQ3` | Ret yanıtı 200'dür (OpenID4VP 1.0 §8.2); retin `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı, yetki kodu ya da veriye erişim veren başka bir değer taşımaz. |
 | `ADR-0067/RQ4` | Hiçbir dalın anahtarıyla çözülemeyen yanıt sunuma dokunmaz ve deneme sayılmaz; çözülmüş ama sahiplik kanıtına ulaşmayan yanıt yalnız kendi dalının denemesidir (5'te dal kapanır). |
-| `ADR-0067/RQ5` | Sunum başına en çok 10 çekim dalı; sonrası 429 ve var olan dallar etkilenmez; kapanmış ya da süresi geçmiş sunumda dal açılmaz. |
+| `ADR-0067/RQ5` | Meşru çekime sabit dal sınırıyla 429 verilmez; bellek sınırlıdır: dal imzalı nesneyi tutmaz, yumuşak sınırda (10) önce kapanmış, sonra hiç yanıt almamış ve yaşlı (≥ 120 sn) en eski dal atılır, sert tavanda (32) yaş koşulu düşer, ortak dal bütçesi bütün sunumları kapsar; yanıtı işlenmekte olan dal atılmaz. Çekim hız sınırı istemci adresi başınadır, sunum başına değil. Kapanmış ya da süresi geçmiş sunumda dal açılmaz. (Değişiklik notu 2026-10-29) |
 | `ADR-0067/RQ6` | Digital Credentials API yolunun istek nesnesi bir dal değildir: `state`'iyle ret kabul edilmez, deneme sınırı bu yolda sunum başınadır. |
 
 

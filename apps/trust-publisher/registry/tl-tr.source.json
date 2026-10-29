@@ -12,7 +12,7 @@
     {
       "cert": "root-ca",
       "legal_name": "TR National Root CA (Tamga Trust Framework)",
-      "service_type": "NationalRootCA-QC",
+      "service_type": "http://uri.etsi.org/TrstSvc/Svctype/CA/PKC",
       "operator": {
         "name": "Tamga Network",
         "status": "provisional",

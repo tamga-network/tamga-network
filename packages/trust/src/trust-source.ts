@@ -51,6 +51,8 @@ export interface TrustSource {
   /**
    * ADR-0012 K5 / ADR-0069: imzalı listedeki kapı grubu (doğrulayıcı kaydının `terminal_groups[]`'i). Listede yoksa ya da liste
    * bayatsa null. `active` = doğrulayıcı ACTIVE ve grup şu an geçerlilik aralığında (geri çekilmiş grup `active: false`).
+   * "Liste bayat" ile "grup listede yok"u ayırmak için önce `freshness().healthy`'ye bakın: sağlıksız kaynakta null "bilinmiyor"
+   * demektir ve kapı kapalı kalmalıdır (bir kez listelenmiş grup ya da kuruma bağlı anahtar için; ADR-0069 TG3).
    */
   terminalGroup?(groupId: string): TerminalGroupAnswer | null;
   /** ADR-0069 (hazırlık): sertifikalı kapı — sertifika parmak izinin (SHA-256, onaltılık) bağlı olduğu ETKİN kapı grubu. */

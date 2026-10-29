@@ -18,6 +18,12 @@ export interface RateRule {
 export const DEFAULT_RATE_RULES = {
   presentations: { burst: 60, perMin: 120 },
   vpResponse: { burst: 120, perMin: 240 },
+  /**
+   * ADR-0067 (Değişiklik notu 2026-10-29): `request_uri` çekimi (`/vp/req/:id`) — istemci adresi başına; vekil arkasında adres
+   * gelmediğinden bütün çekimler için genel bir tavan (her çekim bir imza + bir anahtar üretimi). Adres başına asıl sınır vekilde
+   * (nginx `tamga_vpreq`). Sunum başına kova YOK: QR'ı gören biri kovayı boşaltıp gerçek cüzdanın çekimini 429'a düşüremesin.
+   */
+  vpRequest: { burst: 300, perMin: 3000 },
   terminal: { burst: 300, perMin: 600 },
 } satisfies Record<string, RateRule>;
 export type RateRules = Record<keyof typeof DEFAULT_RATE_RULES, RateRule>;

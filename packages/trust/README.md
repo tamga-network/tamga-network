@@ -33,9 +33,18 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 - Rollback protection is on by default: a load without `versionMemory` uses an in-process memory per network and root fingerprints;
   pass a persistent memory to keep it across restarts, or `"none"` to turn it off.
 
+## New in 0.7.4
+
+- Gate groups (`terminal_groups[]` in a verifier record): `source.terminalGroup(groupId)` returns `{ group, rp_dns_name, active }`
+  (`group.institution_id`, `allowed_policies`, validity) or `null`. `null` also means "list stale" — check
+  `source.freshness().healthy` to tell the two apart and keep the gate closed when the list cannot confirm a group.
+  `terminalGroupByCertFingerprint` prepares certificate-based gates.
+- JSON lists signed by an ETSI XML list signer (EKU `id-tsl-kp-tslSigning`) are refused; `certExtendedKeyUsages(der)` reads a
+  certificate's EKU. `canonicalizeXml` and `parseXml` are exported for the TS 119 612 XML view.
+
 ## Status
 
-Published on npm as the `0.7.3` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.7.4` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

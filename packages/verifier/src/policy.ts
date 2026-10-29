@@ -50,7 +50,13 @@ export interface Policy {
     max_clock_skew_sec?: number;
   };
   /** ADR-0012 B: kabulde geçiş kartı (pass_grant) verilir. `single_use` (K4): kart ilk GEÇ'te tüketilir (bilet). */
-  proximity?: { terminal_group: string; valid_days: number; single_use?: boolean };
+  proximity?: {
+    terminal_group: string;
+    valid_days: number;
+    single_use?: boolean;
+    /** ADR-0069: karta yazılan politika kimliği (servis politikanın kendi `policy_id`'siyle doldurur); kapı `allowed_policies`'e bakar. */
+    policy_id?: string;
+  };
   /**
    * ADR-0031: site başına takma ad iste (hesap anahtarı). `multiple` yalnız RP kaydı `pseudonyms: "multiple"` ise (K4).
    * `credentials` boş olabilir: yalnız takma adla giriş (hiçbir belge alanı istenmez).

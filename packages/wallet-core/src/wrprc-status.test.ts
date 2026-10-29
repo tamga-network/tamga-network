@@ -88,7 +88,7 @@ const payload = (extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 /** 1 bitlik liste; `revoked` indeksleri 1 */
-function statusToken(signer: Party, revoked: number[], opts: { iat?: number; exp?: number } = {}) {
+function statusToken(signer: Party, revoked: number[], opts: { iat?: number; exp?: number | null } = {}) {
   const bytes = new Uint8Array(16);
   for (const i of revoked) bytes[i >> 3] |= 1 << (i & 7);
   const iat = opts.iat ?? nowSec - 60;
@@ -96,7 +96,7 @@ function statusToken(signer: Party, revoked: number[], opts: { iat?: number; exp
     iss: "https://trust.example",
     sub: URI,
     iat,
-    exp: opts.exp ?? iat + 86400,
+    ...(opts.exp === null ? {} : { exp: opts.exp ?? iat + 86400 }),
     ttl: 3600,
     status_list: { bits: 1, lst: Buffer.from(deflateSync(bytes)).toString("base64url") },
   });
@@ -220,6 +220,18 @@ describe("kayıt sertifikası durumu (ADR-0068 K5)", () => {
       },
     );
     expect(called).toBe(false);
+  });
+
+  it("ADR-0068 K3: `exp`'siz durum listesi kabul edilmez → denetlenemedi (iptal biti de okunmaz)", async () => {
+    for (const revoked of [[], [5]]) {
+      const st = await fetchRegistrationStatuses(
+        [{ uri: URI, idx: 5 }],
+        httpOf(await statusToken(registrar, revoked, { exp: null })),
+        [registrar.fp],
+        { nowMs: epochMillis(NOW) },
+      );
+      expect(st({ uri: URI, idx: 5 })).toBe("unknown");
+    }
   });
 
   it("liste dışı indeks → denetlenemedi", async () => {

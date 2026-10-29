@@ -89,22 +89,23 @@ export interface RequestBranch {
   createdAt: number;
 }
 
-export interface PresentationRequest {
+/**
+ * Bir sunum: kimliği, QR'ı, bitişi ve (varsa) tarayıcı DC API nesnesi. `request_uri`'de verilen cihazlar arası istek nesnesi
+ * çekim dallarıdır (ADR-0067; `createRequestBranch` / `BranchSet`) — sunumun kendisinde değil.
+ */
+export interface PresentationSession {
   presentationId: string;
+  /** DC API nesnesinin `nonce`'u (cihazlar arası yolda her dalın kendi `nonce`'u vardır). */
   nonce: string;
+  /** DC API nesnesinin `state`'i (bir dal değildir; ret kabul edilmez, ADR-0067 RQ6). */
   state: string;
-  requestJwt: string;
   requestUri: string;
   qrPayload: string;
-  encPrivateKey: KeyLike;
-  encPublicJwk: JWK;
-  /** RFC 7638 SHA-256 parmak izi (mdoc SessionTranscript — OpenID4VP 1.0 Ek B.2.6.1). */
-  encJwkThumbprint: Uint8Array;
   expiresAt: number;
   dcql: DcqlQuery;
   /**
-   * `dcApi` verildiyse: `navigator.credentials.get({ digital: { requests: [dcApiRequest] } })` girdisi. `requestJwt` (QR /
-   * "cüzdanda aç", `request_uri` ile alınan) HER ZAMAN cihazlar arası nesnedir (`direct_post.jwt` + `response_uri`); DC API'nin
+   * `dcApi` verildiyse: `navigator.credentials.get({ digital: { requests: [dcApiRequest] } })` girdisi. QR / "cüzdanda aç"
+   * (`request_uri` ile alınan) HER ZAMAN cihazlar arası nesnedir (`direct_post.jwt` + `response_uri`, çekim dalı); DC API'nin
    * nesnesi ayrıdır (`dc_api.jwt` + `expected_origins`) ve kendi şifreleme anahtarını taşır (`dcApi`).
    */
   dcApiRequest?: { protocol: "openid4vp-v1-signed"; data: { request: string } };
@@ -119,6 +120,22 @@ export interface PresentationRequest {
     encPublicJwk: JWK;
     encJwkThumbprint: Uint8Array;
   };
+}
+
+/**
+ * 0.7.3 ve öncesinin dönüş tipi: sunumla birlikte üretilen TEK cihazlar arası istek nesnesi ve anahtarı. ADR-0067'den beri
+ * önerilmez: aynı nesneyi her çekene vermek `state`'i QR'ı gören herkese açar (sahte ret). `initialRequestObject: false` ile
+ * üretilmez (bir imza + bir anahtar üretimi tasarrufu); `request_uri` çekimlerini `BranchSet` ile verin.
+ */
+export interface PresentationRequest extends PresentationSession {
+  /** @deprecated ADR-0067: her çekimde yeni dal verin (`BranchSet.fetch` / `createRequestBranch`). */
+  requestJwt: string;
+  /** @deprecated ADR-0067 */
+  encPrivateKey: KeyLike;
+  /** @deprecated ADR-0067 */
+  encPublicJwk: JWK;
+  /** @deprecated ADR-0067 — RFC 7638 SHA-256 parmak izi. */
+  encJwkThumbprint: Uint8Array;
 }
 
 /** Yanıtın geldiği yol: cihazlar arası (QR / bağlantı, `direct_post.jwt`) ya da tarayıcı DC API'si (`dc_api.jwt`). */
@@ -180,7 +197,7 @@ export interface RequestContent {
   passGrantOffered?: boolean;
 }
 
-/** ES256 / `oauth-authz-req+jwt` istek nesnesi (JAR) — ilk istek, DC API nesnesi ve çekim dalları ortak. */
+/** ES256 / `oauth-authz-req+jwt` istek nesnesi (JAR) — çekim dalları, DC API nesnesi ve (eski) ilk istek ortak. */
 function signRequestObject(
   c: Omit<RequestContent, "responseUri">,
   v: { mode: Record<string, unknown>; jwk: JWK; nonce: string; state: string; now: number; expiresAt: number },
@@ -250,7 +267,7 @@ export async function createRequestBranch(
   const branchId = c.branchId ?? randomBytes(6).toString("base64url");
   if (!/^[A-Za-z0-9_-]{1,32}$/.test(branchId)) throw new Error("branchId must be base64url (1–32 characters)");
   const nonce = randomBytes(24).toString("base64url"); // ≥128 bit, tek kullanımlık (PV10)
-  const state = randomBytes(16).toString("base64url"); // 128 bit gizli değer (ADR-0067 FB1)
+  const state = randomBytes(16).toString("base64url"); // 128 bit gizli değer (ADR-0067 RQ1)
   const enc = await newEncKey(encKid(c.presentationId, "cross_device", branchId));
   const walletNonce = acceptableWalletNonce(c.walletNonce);
   const requestJwt = await signRequestObject(
@@ -277,7 +294,7 @@ export async function createRequestBranch(
   };
 }
 
-export async function createPresentationRequest(p: {
+export interface PresentationRequestParams {
   signer: RpSigner;
   dcql: DcqlQuery;
   responseUri: string;
@@ -306,19 +323,39 @@ export async function createPresentationRequest(p: {
    * anahtar üretir ve yanıta `pass_key` sahiplik kanıtı koyar (a3/WL13). Yoksa kart belge anahtarına bağlanır.
    */
   passGrantOffered?: boolean;
-}): Promise<PresentationRequest> {
+  /**
+   * 0.7.4: `false` → sunumla birlikte cihazlar arası ilk istek nesnesi ÜRETİLMEZ (`requestJwt`, `encPrivateKey`, `encPublicJwk`,
+   * `encJwkThumbprint` dönmez; bir imza ve bir anahtar üretimi tasarrufu). `request_uri` çekimleri `BranchSet` / `createRequestBranch`
+   * ile verilir (ADR-0067). Varsayılan `true` yalnız 0.7.x uyumluluğu içindir ve önerilmez.
+   */
+  initialRequestObject?: boolean;
+}
+
+export function createPresentationRequest(
+  p: PresentationRequestParams & { initialRequestObject: false },
+): Promise<PresentationSession>;
+/** @deprecated ADR-0067: `initialRequestObject: false` + `BranchSet` kullanın (tek nesne her çekene aynı `state`'i verir). */
+export function createPresentationRequest(
+  p: PresentationRequestParams & { initialRequestObject?: true },
+): Promise<PresentationRequest>;
+export async function createPresentationRequest(
+  p: PresentationRequestParams,
+): Promise<PresentationRequest | PresentationSession> {
   const now = p.now ?? Math.floor(Date.now() / 1000);
   const presentationId = "prs_" + randomBytes(9).toString("base64url");
   const nonce = randomBytes(24).toString("base64url"); // ≥128 bit, tek kullanımlık (PV10)
-  const state = randomBytes(16).toString("base64url"); // 128 bit (ADR-0067 FB1)
-  const enc = await newEncKey(encKid(presentationId, "cross_device"));
-  const encPublicJwk = enc.jwk;
+  const state = randomBytes(16).toString("base64url"); // 128 bit (ADR-0067 RQ1)
   const expiresAt = now + (p.ttlSec ?? 300);
   // İki yol, iki nesne (0.6.0): QR / bağlantının nesnesi cihazlar arası (`direct_post.jwt` + response_uri) — telefondaki
   // cüzdan yanıtı oraya gönderir; DC API'nin nesnesi tarayıcıya (`dc_api.jwt` + expected_origins, response_uri yok; Ek A)
   const sign = (mode: Record<string, unknown>, jwk: JWK) =>
     signRequestObject(p, { mode, jwk, nonce, state, now, expiresAt });
-  const requestJwt = await sign({ response_mode: "direct_post.jwt", response_uri: p.responseUri }, encPublicJwk);
+  // ADR-0067: cihazlar arası nesne her çekimde yeni dal olarak verilir; eski tek nesne yalnız istenirse (0.7.x uyumu)
+  const legacy = p.initialRequestObject !== false;
+  const enc = legacy ? await newEncKey(encKid(presentationId, "cross_device")) : undefined;
+  const requestJwt = enc
+    ? await sign({ response_mode: "direct_post.jwt", response_uri: p.responseUri }, enc.jwk)
+    : undefined;
   const dc = p.dcApi ? await newEncKey(encKid(presentationId, "dc_api")) : undefined;
   const dcRequestJwt =
     p.dcApi && dc
@@ -330,12 +367,11 @@ export async function createPresentationRequest(p: {
     presentationId,
     nonce,
     state,
-    requestJwt,
+    ...(enc && requestJwt
+      ? { requestJwt, encPrivateKey: enc.privateKey, encPublicJwk: enc.jwk, encJwkThumbprint: enc.thumb }
+      : {}),
     requestUri,
     qrPayload,
-    encPrivateKey: enc.privateKey,
-    encPublicJwk,
-    encJwkThumbprint: enc.thumb,
     expiresAt,
     dcql: p.dcql,
     ...(p.dcApi && dc && dcRequestJwt
@@ -410,17 +446,17 @@ function checkResponseBody(raw: Record<string, unknown>): DecryptedResponse {
  * yolun kurallarıyla (mdoc SessionTranscript: `responseUri` ya da `origin`) doğrulanamaz. Dönen `binding`, `verifyPresentation`'a
  * olduğu gibi verilir (`responseUri` | `origin` + `encJwkThumbprint`).
  */
-export async function decryptPresentationResponse(
+export async function decryptPresentationResponse<B extends BranchKeys = RequestBranch>(
   jwe: string,
-  req: PresentationRequest,
+  req: ResponseKeys,
   responseUri: string,
-  branches?: (branchId: string) => RequestBranch | undefined,
+  branches?: (branchId: string) => B | undefined,
 ): Promise<{
   response: DecryptedResponse;
   path: ResponsePath;
   binding: ResponseBinding;
   /** ADR-0067: yanıtın geldiği çekim dalı (cihazlar arası yolda `kid` dalı adlandırdıysa). */
-  branch?: RequestBranch;
+  branch?: B;
 }> {
   const opened = await openPresentationResponse(jwe, req, responseUri, branches);
   if (opened.kind === "error") throw new Error("the wallet sent an error response, not a presentation");
@@ -428,24 +464,35 @@ export async function decryptPresentationResponse(
   return rest;
 }
 
+/** Bir dalın yanıtı açmak için gerekenler (`RequestBranch` ve `BranchSet`'in sıkıştırılmış `Branch`'i ikisi de uyar). */
+export interface BranchKeys {
+  branchId: string;
+  encPrivateKey: KeyLike;
+  encJwkThumbprint: Uint8Array;
+}
+
+/** Yanıtı açmak için sunumdan gerekenler: kimlik, DC API anahtarı ve (yalnız eski tek nesne yolunda) ilk nesnenin anahtarı. */
+export type ResponseKeys = PresentationSession & { encPrivateKey?: KeyLike; encJwkThumbprint?: Uint8Array };
+
 export type ResponseBinding =
   { responseUri: string; encJwkThumbprint: Uint8Array } | { origin: string; encJwkThumbprint: Uint8Array };
 
 /**
  * ADR-0067: yanıtı açar ve şifreli hata yanıtını (OpenID4VP 1.0 §8.3.1) sunumdan ayırır — `kind: "error"` (ret; `state`'i çağıran
  * dalın `state`'iyle karşılaştırır) ya da `kind: "response"`. `kid` bir çekim dalını adlandırıyorsa yanıt YALNIZ o dalın anahtarıyla
- * açılır (`branches` verilmeli; bilinmeyen dal hata); dal adı yoksa ilk istek nesnesinin anahtarıyla.
+ * açılır (`branches` verilmeli; bilinmeyen dal hata); dal adı yoksa yalnız eski tek nesnenin anahtarı varsa onunla (0.7.x uyumu;
+ * `initialRequestObject: false` ile açılan sunumda dalsız yanıt hatadır).
  */
-export async function openPresentationResponse(
+export async function openPresentationResponse<B extends BranchKeys = RequestBranch>(
   jwe: string,
-  req: PresentationRequest,
+  req: ResponseKeys,
   responseUri: string,
-  branches?: (branchId: string) => RequestBranch | undefined,
+  branches?: (branchId: string) => B | undefined,
 ): Promise<
   ({ kind: "response"; response: DecryptedResponse } | { kind: "error"; error: string; state?: string }) & {
     path: ResponsePath;
     binding: ResponseBinding;
-    branch?: RequestBranch;
+    branch?: B;
   }
 > {
   const kid = responseKidOf(jwe);
@@ -453,7 +500,7 @@ export async function openPresentationResponse(
   let key: KeyLike;
   let path: ResponsePath = "cross_device";
   let binding: ResponseBinding;
-  let branch: RequestBranch | undefined;
+  let branch: B | undefined;
   if (kid?.path === "dc_api") {
     if (!req.dcApi) throw new Error("this presentation has no Digital Credentials API request");
     key = req.dcApi.encPrivateKey;
@@ -465,6 +512,7 @@ export async function openPresentationResponse(
     key = branch.encPrivateKey;
     binding = { responseUri, encJwkThumbprint: branch.encJwkThumbprint };
   } else {
+    if (!req.encPrivateKey || !req.encJwkThumbprint) throw new Error("response is not for a request branch");
     key = req.encPrivateKey;
     binding = { responseUri, encJwkThumbprint: req.encJwkThumbprint };
   }

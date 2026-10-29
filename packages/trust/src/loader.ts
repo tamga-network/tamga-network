@@ -23,6 +23,29 @@ import { sha256Tag, utf8 } from "./portable-hash.js";
 import { TrustStore, activeFps } from "./store.js";
 import { parseLote, type ParsedLote } from "./lote-reader.js";
 import { readTrustedListXml } from "./tl-reader.js";
+import { b64ToBytes } from "./lote-reader.js";
+import { certExtendedKeyUsages, OID_TSL_SIGNING_EKU } from "./x509-names.js";
+
+/**
+ * K5 (ADR-0066 TX): ETSI XML listesinin imzacısı (EKU id-tsl-kp-tslSigning, TS 119 612 §5.7.1) bugün slotun `signing_keys`'inde
+ * JSON imzacılarıyla birlikte durur; JSON (`tamga-tl+jwt`) listesi o anahtarla imzalanmışsa kabul edilmez — XML imza anahtarının
+ * ele geçirilmesi JSON listesini de açmasın. Sertifika okunamazsa da kabul edilmez.
+ * TODO(owner decision): ayrı bir `xml_signing_keys` alanı (yeni kamuya açık ad) kapsamı daha dar tutardı — proje yönetimi onayı
+ * bekliyor; o zamana kadar ayrım bu EKU denetimiyle.
+ */
+function rejectXmlListSigner(jws: string, what: string) {
+  let eku: string[];
+  try {
+    const h = JSON.parse(new TextDecoder().decode(b64ToBytes(jws.split(".")[0]))) as { x5c?: string[] };
+    eku = certExtendedKeyUsages(b64ToBytes(String(h.x5c?.[0] ?? "")));
+  } catch {
+    throw new Error(`${what}: signer certificate unreadable`);
+  }
+  if (eku.includes(OID_TSL_SIGNING_EKU))
+    throw new Error(
+      `${what}: signed with an ETSI XML trusted-list signer (EKU tslSigning) — not accepted for JSON lists`,
+    );
+}
 
 /**
  * İmza doğrulayıcı: izinli parmak izleri (null = yalnızca kendi x5c'si) ile JWS'i doğrular, yükü döndürür.
@@ -145,6 +168,7 @@ export async function loadTrustSetWith(
 
   // 1) LOTL
   const lotlV = await verifyJws<unknown>(input.lotlJws, new Set(input.rootFingerprints));
+  rejectXmlListSigner(lotlV.raw, "lotl");
   const lotlRaw = lotlV.payload as { list_format_version?: string };
   if (!KNOWN_FORMAT_VERSIONS.has(String(lotlRaw.list_format_version))) {
     throw new Error(`CMP2: bilinmeyen list_format_version=${lotlRaw.list_format_version} — DURDU`);
@@ -189,6 +213,7 @@ export async function loadTrustSetWith(
     const fps = activeFps(ptr.signing_keys, now);
     if (fps.size === 0) throw new Error(`lotl: no active signing key for ${ptr.state_code}`);
     const v = await verifyJws<unknown>(jws, fps);
+    rejectXmlListSigner(v.raw, `tl-${ptr.state_code}`);
     const raw = v.payload as { list_format_version?: string; state_code?: string };
     if (!KNOWN_FORMAT_VERSIONS.has(String(raw.list_format_version)))
       throw new Error(`CMP2: tl-${ptr.state_code} bilinmeyen format — DURDU`);

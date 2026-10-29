@@ -48,20 +48,33 @@ yönetmek istediğinizde. Daha hızlı bir başlangıç için barındırılan do
 ## Akış
 
 ```ts
-import { dcqlFromPolicy, createPresentationRequest, decryptResponse, verifyPresentation, pemRpSigner,
-         PrefetchStatusCache, type Policy } from "@tamga-network/verifier";
+import { dcqlFromPolicy, createPresentationRequest, openPresentationResponse, responseKidOf, verifyPresentation,
+         pemRpSigner, BranchRegistry, BranchSet, type Policy } from "@tamga-network/verifier";
 
 const policy: Policy = { policy_id: "ise-alim", /* credentials, trust, freshness */ } as Policy;
 const signer = await pemRpSigner(RP_KEY_PEM, RP_CERT_PEM); // client_id = x509_hash (sertifikadan)
-// 1) istek: QR / derin bağlantı olarak gösterilir (kişisel veri yok; yalnızca request_uri)
-const req = await createPresentationRequest({ signer, dcql: dcqlFromPolicy(policy),
-  responseUri: "https://ornek.com.tr/vp/response", requestUriBase: "https://ornek.com.tr/vp/req",
-  registrationCert: WRPRC_JWT }); // kullanımınızın kayıt sertifikası (yukarıda 4. adım)
-// 2) cüzdan şifreli yanıtı response_uri'ye POST eder → çöz
-const resp = await decryptResponse(jweBody, req.encPrivateKey); // istekle üretilen anahtar; req.state ile eşleştirin
-// 3) doğrula (SD-JWT; mdoc için format: "mso_mdoc" + responseUri)
-const { result, claims } = await verifyPresentation({ presentation: resp.vp_token["diploma"][0], aud: signer.clientId, nonce: req.nonce,
-  policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer, rp: trust.relyingParty(signer.clientId) });
+const registry = new BranchRegistry(); // süreç başına bir
+// 1) sunum aç: QR / bağlantı olarak gösterilir (kişisel veri yok; yalnız request_uri)
+const content = { signer, dcql: dcqlFromPolicy(policy), responseUri: "https://ornek.com.tr/vp/response",
+  registrationCert: WRPRC_JWT }; // kullanımınızın kayıt sertifikası (yukarıda 4. adım)
+const req = await createPresentationRequest({ ...content, requestUriBase: "https://ornek.com.tr/vp/req",
+  initialRequestObject: false });
+const branches = new BranchSet({ registry, presentationId: req.presentationId, expiresAt: req.expiresAt, content });
+// 2) GET|POST /vp/req/:id — her çekim kendi istek nesnesini alır (taze state, nonce, anahtar; ADR-0067)
+const f = await branches.fetch(walletNonce); // f.ok → yanıt f.requestJwt
+// 3) cüzdan şifreli yanıtı response_uri'ye POST eder → kilit, çöz, yeniden bak
+const branch = branches.get(responseKidOf(jweBody)!.branchId!)!;
+if (branches.begin(branch) !== "ok") throw new Error("busy or closed");
+try {
+  const opened = await openPresentationResponse(jweBody, req, content.responseUri, (id) => (id === branch.branchId ? branch : undefined));
+  if (opened.kind !== "response" || !branches.isOpen(branch) || !branches.stateMatches(branch, opened.response.state)) throw new Error("rejected");
+  // 4) doğrula (SD-JWT; mdoc için format: "mso_mdoc" + responseUri)
+  const { result, claims } = await verifyPresentation({ presentation: opened.response.vp_token["diploma"][0],
+    aud: signer.clientId, nonce: branch.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer,
+    rp: trust.relyingParty(signer.clientId) });
+  if (result.checks_performed.includes("A6")) branches.consume(); else branches.failedAttempt(branch); // sunum yalnız A6'dan sonra tüketilir
+} finally { branches.end(branch); }
+// ret (error + state): registry.byState(state)?.set.decline(…) — yalnız o dalı kapatır; 200 dönün, neden saklamayın
 ```
 
 Alan adları ve imzalar paket tiplerinde tanımlıdır; tam çalışan örnek `apps/verify/src/routes/presentations.ts`.

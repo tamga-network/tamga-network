@@ -38,7 +38,7 @@ import {
   type WalletState,
 } from "@tamga-network/wallet-core";
 import { buildVerifyApp } from "../src/app.js";
-import { MAX_BRANCHES } from "../src/state.js";
+import { BRANCH_LIMITS } from "@tamga-network/verifier";
 import type { VerifyConfig } from "../src/config.js";
 
 const LAN = { allowLocalDevHost: true } as const;
@@ -363,8 +363,8 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     const p = app.presentations.get(a.id)!;
     const inflight = postJwe(app, jwe);
     // yanıt doğrulanırken (busy) ret gelir: state istek nesnesinde açık olduğundan yalnız cüzdan değil, nesneyi okuyan herkes gönderebilir
-    for (let i = 0; i < 200 && !p.busy; i++) await new Promise((r) => setImmediate(r));
-    expect(p.busy).toBe(true);
+    for (let i = 0; i < 200 && !p.branches.busy; i++) await new Promise((r) => setImmediate(r));
+    expect(p.branches.busy).toBe(true);
     const decline = await postDecline(app, a.req.state);
     expect(decline.statusCode).toBe(400);
     expect((await inflight).statusCode).toBe(200);
@@ -461,7 +461,7 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     expect((await app.inject({ method: "GET", url: `/vp/req/${a.id}` })).statusCode).toBe(404);
     // süresi geçen sunum kabul edilmedi, tüketilmedi; sonuç yok (RP `expires_at`'i başlangıçta aldı)
     expect(p.result).toBeUndefined();
-    expect(p.attempts).toBe(0);
+    expect(p.branches.attempts).toBe(0);
     // yeni deneme baştan: yeni nonce, yeni anahtar → kabul
     const b = await open(app);
     expect(b.req.nonce).not.toBe(a.req.nonce);
@@ -469,7 +469,7 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     expect((await result(app, b.id)).outcome).toBe("ACCEPTED");
   });
 
-  it("(6) önce bozuk girdi → sunum açık (çözülemeyen deneme bile sayılmaz, ADR-0067 FB4); state/nonce iki oturum arasında takas edilirse RED; sonra geçerli yanıt kabul", async () => {
+  it("(6) önce bozuk girdi → sunum açık (çözülemeyen deneme bile sayılmaz, ADR-0067 RQ4); state/nonce iki oturum arasında takas edilirse RED; sonra geçerli yanıt kabul", async () => {
     const a = await open(app);
     const b = await open(app);
     // bozuk gövde (çözülemez): dalsız `kid` ve gerçek dalın `kid`'iyle — ikisi de sunuma dokunmaz
@@ -624,11 +624,12 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     const pending = await result(app, id);
     expect(pending.state).toBe("PENDING");
     expect(pending.outcome).toBeUndefined();
-    expect(app.presentations.get(id)!.branches.map((b) => b.closed ?? "open")).toEqual([
-      "open",
-      "declined",
-      "declined",
-    ]);
+    expect(
+      app.presentations
+        .get(id)!
+        .branches.list()
+        .map((b) => b.closed ?? "open"),
+    ).toEqual(["open", "declined", "declined"]);
     // gerçek cüzdan kendi dalından yanıtlar → kabul
     expect((await postJwe(app, (await answer(real)).jwe)).statusCode).toBe(200);
     expect((await result(app, id)).outcome).toBe("ACCEPTED");
@@ -644,7 +645,7 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     expect((await result(app, a.id)).state).toBe("PENDING");
     const r = await postJwe(app, encryptedDecline(a.req));
     expect(r.statusCode).toBe(200);
-    expect(r.json().redirect_uri).toBe(`${BASE}/p/${a.id}`); // durum jetonu yok (FB6)
+    expect(r.json().redirect_uri).toBe(`${BASE}/p/${a.id}`); // durum jetonu yok (RQ3)
     const res = await result(app, a.id);
     expect(res.outcome).toBe("REJECTED");
     expect(res.failed_reason).toBe("the wallet declined");
@@ -697,14 +698,40 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     expect((await result(app, b.id)).outcome).toBe("ACCEPTED");
   });
 
-  it("ADR-0067 FB5: sunum başına en çok MAX_BRANCHES çekim, sonrası 429; var olan dallar çalışmaya devam eder", async () => {
-    const a = await open(app);
-    for (let i = 1; i < MAX_BRANCHES; i++)
+  it("ADR-0067 RQ5 (Değişiklik notu 2026-10-29): yumuşak sınırdan sonra da 429 yok — QR'ı gören birinin 20 çekimi gerçek cüzdanın genç dalını atmaz", async () => {
+    const a = await open(app); // gerçek cüzdanın çekimi (dal 1)
+    const set = app.presentations.get(a.id)!.branches;
+    for (let i = 1; i < 20; i++)
       expect((await app.inject({ method: "GET", url: `/vp/req/${a.id}` })).statusCode).toBe(200);
-    const over = await app.inject({ method: "GET", url: `/vp/req/${a.id}` });
-    expect(over.statusCode).toBe(429);
-    expect(app.presentations.get(a.id)!.branches).toHaveLength(MAX_BRANCHES);
+    expect(set.fetchCount).toBe(20);
+    // dallar yumuşak sınırı aştı (hiçbiri atılabilecek yaşta değil) ama sert tavanın altında; dal 1 bellekte
+    expect(set.list().length).toBe(20);
+    expect(set.list().length).toBeLessThanOrEqual(BRANCH_LIMITS.hardCap);
+    expect(set.list()[0].index).toBe(1);
     expect((await postJwe(app, (await answer(a.req)).jwe)).statusCode).toBe(200);
+    expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
+    // tamamlanan sunumun dalları bellekten çıktı (özel anahtarlar bırakıldı)
+    expect(set.list()).toHaveLength(0);
+  });
+
+  it("ADR-0067 RQ5: sert tavanda da 429 yok — en eski atılabilir dal yer açar, atılan dala geç yanıt deneme sayılmaz; dal bellekte imzalı nesne tutmaz", async () => {
+    const a = await open(app);
+    const set = app.presentations.get(a.id)!.branches;
+    for (let i = 1; i <= BRANCH_LIMITS.hardCap; i++)
+      expect((await app.inject({ method: "GET", url: `/vp/req/${a.id}` })).statusCode).toBe(200);
+    expect(set.list().length).toBe(BRANCH_LIMITS.hardCap);
+    expect(set.get(a.req.encJwk.kid!.split(".")[1])).toBeUndefined(); // dal 1 (en eski, hiç yanıt almamış) atıldı
+    const late = await postJwe(app, (await answer(a.req)).jwe);
+    expect(late.statusCode).toBe(400);
+    expect(late.json().error_description).toBe("unknown request object");
+    expect((await result(app, a.id)).attempts).toBe(0);
+    // dal sıkıştırılmış: state'in kendisi ve imzalı nesne yok
+    const b = set.list()[0] as unknown as Record<string, unknown>;
+    expect(b.state).toBeUndefined();
+    expect(b.requestJwt).toBeUndefined();
+    // kişi QR'ı yeniden okutur: yeni dal, kabul
+    const again = await fetchAgain(app, a.id, a.req.clientId);
+    expect((await postJwe(app, (await answer(again)).jwe)).statusCode).toBe(200);
     expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
   });
 

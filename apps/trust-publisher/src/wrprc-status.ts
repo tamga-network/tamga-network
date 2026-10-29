@@ -10,6 +10,13 @@
  *     · yayında artık olmayan sertifika (kayıt/kullanım sona erdi, askıya alındı, kaldırıldı) → İPTAL ("registration_ended").
  *   İptal edilen indeks bir daha kullanılmaz. Elle iptal (`wrprc-revoke`) içeriği engeller: içerik değişene kadar aynı
  *   sertifika yeniden verilmez.
+ * - Durum kaybı (0.7.4): durum dosyası yoksa ama daha önce bir durum listesi yayımlanmışsa yayıncı boş durumdan BAŞLAMAZ (iptal
+ *   edilmiş indeksler sessizce "geçerli" olurdu); operatör `wrprc-status --reset --reason <gerekçe>` ile yayımlanmış listeden ve
+ *   sertifikalardan durumu yeniden kurar (`recoverWrprcState`). Durum her değişiklikte `archive/`'e de yazılır.
+ * - Adres değişimi (0.7.4): `status_list_uri` değişince iptal edilmiş girdiler ve engeller yeni listeye İPTAL olarak taşınır
+ *   (`migrateWrprcState`); eski liste, ona işaret eden son sertifikanın süresi dolana kadar her yayında yeniden imzalanır.
+ * - Elle iptal gerekçesi kapalı kümeden (`WRPRC_REVOCATION_REASONS`) + isteğe bağlı kısa not; not herkese açık CHANGELOG'a
+ *   gittiği için e-posta, telefon/kimlik numarası ya da kişi adı gibi görünen metin reddedilir (`revocationNoteProblems`).
  * Kişisel veri yok: kayıtlar kurum ve kullanım kayıtlarıdır (yayın yolları zaten herkese açık).
  */
 import { createHash } from "node:crypto";
@@ -84,6 +91,32 @@ export interface WrprcStatusState {
   entries: WrprcStatusEntry[];
   /** elle iptal edilmiş içerik: aynı yol + özet yeniden verilmez */
   blocked: Array<{ path: string; digest: string; reason: string; at: string }>;
+  /**
+   * Adresi değişmiş eski listeler: ona işaret eden sertifikalar (`max_exp`) bitene kadar yeniden imzalanır. Girdileri donmuştur;
+   * yalnız elle iptal bunları da iptal eder.
+   */
+  previous?: Array<{ list_uri: string; capacity: number; entries: WrprcStatusEntry[]; retired_at: string }>;
+}
+
+/** Elle iptal gerekçeleri (kapalı küme; herkese açık CHANGELOG'a yazılır). */
+export const WRPRC_REVOCATION_REASONS = ["compromised", "superseded", "ceased", "policy_violation", "other"] as const;
+export type WrprcRevocationReason = (typeof WRPRC_REVOCATION_REASONS)[number];
+/** Notun en uzun hâli (karakter). */
+export const WRPRC_NOTE_MAX = 120;
+
+/**
+ * Not denetimi (herkese açık metin): e-posta, uzun rakam dizisi (telefon / kimlik / vergi numarası), adres bağlantısı ve kişi adı
+ * gibi görünen ardışık iki büyük harfle başlayan sözcük reddedilir. Sezgiseldir — notu kısa ve kişisiz yazın ("kurum isteği").
+ */
+export function revocationNoteProblems(note: string): string[] {
+  const p: string[] = [];
+  if (note.length > WRPRC_NOTE_MAX) p.push(`not en çok ${WRPRC_NOTE_MAX} karakter`);
+  if (/[\p{Cc}]/u.test(note)) p.push("notta denetim karakteri olamaz");
+  if (/\S+@\S+/.test(note)) p.push("notta e-posta adresi olamaz");
+  if (/\d[\d\s().-]{6,}\d/.test(note)) p.push("notta telefon ya da kimlik numarası gibi rakam dizisi olamaz");
+  if (/https?:\/\/|www\./i.test(note)) p.push("notta adres bağlantısı olamaz");
+  if (/\p{Lu}\p{Ll}+\s+\p{Lu}\p{Ll}+/u.test(note)) p.push("notta kişi adı gibi görünen ifade olamaz (Ad Soyad)");
+  return p;
 }
 
 export const emptyState = (listUri: string): WrprcStatusState => ({
@@ -166,27 +199,130 @@ export function assignWrprcStatus(
 }
 
 /**
- * Elle iptal (TS 119 475 REV-6.2.3.9-05/06: kayıt kurumunun iptal arayüzü, gerekçe serbest metin): yolun geçerli sertifikası
- * iptal edilir ve içeriği engellenir. Geçerli sertifika yoksa hata.
+ * Elle iptal (TS 119 475 REV-6.2.3.9-05/06: kayıt kurumunun iptal arayüzü): yolun geçerli sertifikası iptal edilir ve içeriği
+ * engellenir; aynı yolun eski listelerdeki (`previous`) geçerli girdileri de iptal edilir. Gerekçe kapalı kümeden
+ * (`WRPRC_REVOCATION_REASONS`), not isteğe bağlı ve kişisiz (`revocationNoteProblems`). Geçerli sertifika yoksa hata.
  */
 export function revokeWrprc(
   prev: WrprcStatusState,
   path: string,
   reason: string,
   now: Date,
+  note?: string,
 ): { state: WrprcStatusState; entry: WrprcStatusEntry } {
-  if (!reason.trim()) throw new Error("wrprc-revoke: gerekçe zorunlu (--reason)");
+  const code = reason.trim();
+  if (!code) throw new Error("wrprc-revoke: gerekçe zorunlu (--reason)");
+  if (!(WRPRC_REVOCATION_REASONS as readonly string[]).includes(code))
+    throw new Error(`wrprc-revoke: gerekçe şunlardan biri olmalı: ${WRPRC_REVOCATION_REASONS.join(", ")}`);
+  const n = note?.trim() ?? "";
+  const np = n ? revocationNoteProblems(n) : [];
+  if (np.length) throw new Error(`wrprc-revoke: ${np.join("; ")}`);
+  const text = n ? `${code} (${n})` : code;
   const entries = prev.entries.map((e) => ({ ...e }));
   const e = entries.find((x) => x.path === path && x.status === "VALID");
   if (!e) throw new Error(`wrprc-revoke: ${path} için geçerli kayıt sertifikası yok`);
   const at = now.toISOString();
-  e.status = "REVOKED";
-  e.revoked_at = at;
-  e.reason = `manual: ${reason.trim()}`;
+  const revoke = (x: WrprcStatusEntry) => {
+    x.status = "REVOKED";
+    x.revoked_at = at;
+    x.reason = `manual: ${text}`;
+  };
+  revoke(e);
+  const previous = prev.previous?.map((l) => ({
+    ...l,
+    entries: l.entries.map((x) => {
+      const c = { ...x };
+      if (c.path === path && c.status === "VALID") revoke(c);
+      return c;
+    }),
+  }));
   return {
-    state: { ...prev, entries, blocked: [...prev.blocked, { path, digest: e.digest, reason: reason.trim(), at }] },
+    state: {
+      ...prev,
+      entries,
+      blocked: [...prev.blocked, { path, digest: e.digest, reason: text, at }],
+      ...(previous ? { previous } : {}),
+    },
     entry: e,
   };
+}
+
+/**
+ * Adres değişimi: yeni boş liste; iptal edilmiş girdiler yeni listeye yeni indeksle İPTAL olarak taşınır (tarih ve gerekçe
+ * korunur), engeller aynen kalır; eski liste `previous`'a geçer ve sertifikaları bitene kadar yeniden imzalanır.
+ */
+export function migrateWrprcState(prev: WrprcStatusState, newUri: string, now: Date): WrprcStatusState {
+  if (prev.list_uri === newUri) return prev;
+  const next = emptyState(newUri);
+  const alloc = new IndexAllocator(next.capacity, []);
+  for (const e of prev.entries)
+    if (e.status === "REVOKED")
+      next.entries.push({
+        ...e,
+        idx: alloc.allocate(),
+        reason: `migrated from ${prev.list_uri}: ${e.reason ?? ""}`.trim(),
+      });
+  return {
+    ...next,
+    blocked: [...prev.blocked],
+    previous: [
+      ...(prev.previous ?? []),
+      { list_uri: prev.list_uri, capacity: prev.capacity, entries: prev.entries, retired_at: now.toISOString() },
+    ],
+  };
+}
+
+/** Sertifikalarının hepsinin süresi dolmuş eski listeleri bırakır (artık yeniden imzalanmaz). */
+export function pruneRetiredLists(state: WrprcStatusState, now: Date): { state: WrprcStatusState; dropped: string[] } {
+  if (!state.previous?.length) return { state, dropped: [] };
+  const t = Math.floor(now.getTime() / 1000);
+  const keep = state.previous.filter((l) => l.entries.some((e) => e.max_exp > t));
+  const dropped = state.previous.filter((l) => !keep.includes(l)).map((l) => l.list_uri);
+  const { previous: _p, ...rest } = state;
+  return { state: keep.length ? { ...rest, previous: keep } : rest, dropped };
+}
+
+/**
+ * Kayıp durumu yeniden kurar (`wrprc-status --reset`): yayımlanmış durum listesinin bitleri (1 = iptal; yol bilinmez, indeks bir
+ * daha kullanılmaz) ve yayımlanmış sertifikalar (yol, indeks, içerik özeti, bitiş) üzerinden. Sertifikası olan ama bit 1 olan
+ * indeks iptal sayılır.
+ */
+export function recoverWrprcState(
+  listUri: string,
+  publishedBits: { capacity: number; get(i: number): number } | null,
+  publishedCerts: Array<{ path: string; payload: Rec }>,
+  now: Date,
+): WrprcStatusState {
+  const at = now.toISOString();
+  const s = emptyState(listUri);
+  if (publishedBits) s.capacity = Math.max(s.capacity, publishedBits.capacity);
+  const byIdx = new Map<number, WrprcStatusEntry>();
+  for (const c of publishedCerts) {
+    const st = c.payload?.status?.status_list;
+    const idx = Number(st?.idx);
+    if (st?.uri !== listUri || !Number.isInteger(idx) || idx < 0 || idx >= s.capacity) continue;
+    byIdx.set(idx, {
+      idx,
+      path: c.path,
+      digest: contentDigest(c.payload),
+      status: "VALID",
+      issued_at: at,
+      max_exp: Number(c.payload.exp) || 0,
+    });
+  }
+  if (publishedBits)
+    for (let i = 0; i < publishedBits.capacity; i++)
+      if (publishedBits.get(i) !== 0) {
+        const e = byIdx.get(i);
+        byIdx.set(i, {
+          ...(e ?? { idx: i, path: "(recovered)", digest: "", issued_at: at, max_exp: 0 }),
+          status: "REVOKED",
+          revoked_at: at,
+          reason: "recovered",
+        });
+      }
+  s.entries = [...byIdx.values()].sort((a, b) => a.idx - b.idx);
+  return s;
 }
 
 /** Durumun bit dizisi (1 bit; iptal = 1). */

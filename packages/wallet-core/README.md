@@ -17,9 +17,20 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
+## New in 0.7.4
+
+- Registration certificate status (ETSI TS 119 475; Tamga ADR-0068): `fetchRegistrationStatuses(refs, http, registrarKeys, {
+  cache, offline })` fetches each registrar status list once (signer must be a list registrar key, `exp` required, unexpired
+  cached copy used offline) and returns a lookup you pass to `checkRegistrationCerts`, `checkIssuerRegistration` and
+  `checkProximityRegistration` (`presentProximity` option `registrationStatuses`). A revoked certificate makes the request
+  invalid; an unchecked status adds the flag `registration_status_unknown` (show it as a warning). Helpers:
+  `registrationStatusRefs`, `wrprcStatusRef`, `MemoryRegistrationStatusCache`.
+- SD-JWT VC over the Digital Credentials API binds the KB-JWT to `aud = "origin:<origin>"`; `checkDcqlShape` throws `WalletError`
+  on malformed queries. See the CHANGELOG "Breaking / behaviour changes in 0.7.4".
+
 ## Status
 
-Published on npm as the `0.7.3` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.7.4` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { compactVerify, decodeProtectedHeader, importX509 } from "jose";
@@ -15,6 +15,10 @@ import {
   assignWrprcStatus,
   contentDigest,
   emptyState,
+  migrateWrprcState,
+  pruneRetiredLists,
+  recoverWrprcState,
+  revocationNoteProblems,
   revokeWrprc,
   signWrprcStatusList,
   statusBits,
@@ -69,14 +73,72 @@ describe("ADR-0068 indeks verme", () => {
   it("elle iptal: gerekçe zorunlu, içerik engellenir, değişince yeniden verilir", () => {
     const a = assignWrprcStatus(emptyState(URI), [item("p")], t0);
     expect(() => revokeWrprc(a.state, "p", " ", t0)).toThrow(/gerekçe/);
-    expect(() => revokeWrprc(a.state, "yok", "x", t0)).toThrow(/geçerli/);
-    const r = revokeWrprc(a.state, "p", "kurum isteği", t0);
-    expect(r.entry.reason).toBe("manual: kurum isteği");
+    expect(() => revokeWrprc(a.state, "yok", "other", t0)).toThrow(/geçerli/);
+    const r = revokeWrprc(a.state, "p", "ceased", t0, "kurum isteği");
+    expect(r.entry.reason).toBe("manual: ceased (kurum isteği)");
     const b = assignWrprcStatus(r.state, [item("p")], t0);
     expect(b.blocked).toEqual(["p"]);
     expect(b.idxOf.has("p")).toBe(false);
     const c = assignWrprcStatus(b.state, [item("p", { name: "Shop 2" })], t0);
     expect(c.idxOf.has("p")).toBe(true);
+  });
+
+  it("elle iptal gerekçesi kapalı kümeden; not kişisiz ve kısa (e-posta, numara, bağlantı, Ad Soyad reddedilir)", () => {
+    const a = assignWrprcStatus(emptyState(URI), [item("p")], t0);
+    expect(() => revokeWrprc(a.state, "p", "kurum isteği", t0)).toThrow(/compromised, superseded, ceased/);
+    for (const bad of [
+      "ali@ornek.com tarafından",
+      "tel 0532 123 45 67",
+      "TCKN 12345678901",
+      "bkz. https://x.y",
+      "Ayşe Yılmaz istedi",
+    ])
+      expect(() => revokeWrprc(a.state, "p", "other", t0, bad), bad).toThrow(/wrprc-revoke:/);
+    expect(revocationNoteProblems("x".repeat(121))).not.toEqual([]);
+    expect(revocationNoteProblems("kurum isteği, anahtar değişimi")).toEqual([]);
+    expect(revokeWrprc(a.state, "p", "compromised", t0).entry.reason).toBe("manual: compromised");
+  });
+
+  it("adres değişimi: iptaller ve engeller yeni listeye İPTAL olarak taşınır; eski liste sertifikaları bitene kadar kalır", () => {
+    const NEW = "https://trust.sandbox.tamga.network/status/wrprc/2";
+    const a = assignWrprcStatus(emptyState(URI), [item("p", {}, 2_000_000_000), item("q"), item("r")], t0);
+    const b = assignWrprcStatus(a.state, [item("p", {}, 2_000_000_000), item("r")], t0); // q kalktı → iptal
+    const c = revokeWrprc(b.state, "r", "policy_violation", t0).state; // r elle iptal + engel
+    const m = migrateWrprcState(c, NEW, t0);
+    expect(m.list_uri).toBe(NEW);
+    expect(m.entries.every((e) => e.status === "REVOKED")).toBe(true);
+    expect(m.entries.map((e) => e.path).sort()).toEqual(["q", "r"]);
+    expect(m.entries.every((e) => /^migrated from /.test(e.reason ?? ""))).toBe(true);
+    expect(m.blocked.map((x) => x.path)).toEqual(["r"]);
+    expect(m.previous?.map((l) => l.list_uri)).toEqual([URI]);
+    // yeni listede p yeni indeksle verilir; r hâlâ engelli
+    const d = assignWrprcStatus(m, [item("p", {}, 2_000_000_000), item("r")], t0);
+    expect(d.idxOf.has("p")).toBe(true);
+    expect(d.blocked).toEqual(["r"]);
+    // elle iptal eski listedeki aynı yolu da iptal eder
+    const e = revokeWrprc(d.state, "p", "compromised", t0).state;
+    expect(e.previous![0].entries.find((x) => x.path === "p")?.status).toBe("REVOKED");
+    // eski liste: son sertifika bitene kadar kalır, sonra bırakılır
+    expect(pruneRetiredLists(e, new Date("2030-01-01T00:00:00Z")).state.previous).toHaveLength(1);
+    const gone = pruneRetiredLists(e, new Date("2034-01-01T00:00:00Z"));
+    expect(gone.dropped).toEqual([URI]);
+    expect(gone.state.previous).toBeUndefined();
+  });
+
+  it("kayıp durum yeniden kurulur: yayımlanmış bitler (iptal) + yayımlanmış sertifikalar (geçerli); iptal indeksi geri gelmez", () => {
+    const a = assignWrprcStatus(emptyState(URI), [item("p"), item("q")], t0);
+    const b = assignWrprcStatus(a.state, [item("q")], t0); // p iptal
+    const bits = statusBits(b.state);
+    const qIdx = b.idxOf.get("q")!;
+    const pIdx = a.idxOf.get("p")!;
+    const qPayload = { ...item("q").payload, status: { status_list: { idx: qIdx, uri: URI } } };
+    const r = recoverWrprcState(URI, bits, [{ path: "q", payload: qPayload }], t0);
+    expect(r.entries.find((e) => e.idx === pIdx)).toMatchObject({ status: "REVOKED", path: "(recovered)" });
+    expect(r.entries.find((e) => e.idx === qIdx)).toMatchObject({ status: "VALID", path: "q" });
+    // yeniden kurulan durumla yeniden yayın: q aynı indeksi korur, p'nin biti 1 kalır
+    const c = assignWrprcStatus(r, [item("q")], t0);
+    expect(c.idxOf.get("q")).toBe(qIdx);
+    expect(statusBits(c.state).get(pIdx)).toBe(1);
   });
 
   it("bit dizisi: iptal = 1, geçerli = 0", () => {
@@ -185,17 +247,41 @@ describe.skipIf(!ready)("ADR-0068 uçtan uca (sandbox kayıt defteri)", () => {
     const idx = payload(path).status.status_list.idx;
     run("build");
     expect(payload(path).status.status_list.idx).toBe(idx);
-    run("wrprc-revoke", path, "--reason", "test");
+    expect(() => run("wrprc-revoke", path, "--reason", "test")).toThrow(/compromised/);
+    run("wrprc-revoke", path, "--reason", "other", "--note", "test");
     expect((await listBits()).bits.get(idx)).toBe(1);
     run("build");
     expect(existsSync(join(DIST, path))).toBe(false);
-    expect(readFileSync(join(DIST, "CHANGELOG.md"), "utf8")).toMatch(new RegExp(`idx ${idx} .*REVOKED — manual: test`));
+    expect(readFileSync(join(DIST, "CHANGELOG.md"), "utf8")).toMatch(
+      new RegExp(`idx ${idx} .*REVOKED — manual: other \\(test\\)`),
+    );
     const before = (await listBits()).p.iat;
     await new Promise((r) => setTimeout(r, 1100));
     run("heartbeat");
     const after = await listBits();
     expect(after.p.iat).toBeGreaterThan(before);
     expect(after.bits.get(idx)).toBe(1);
+    // durum arşivi: her değişiklikte bir kopya
+    expect(readdirSync(join(DIST, "archive")).some((f) => /^wrprc-status\..+\.json$/.test(f))).toBe(true);
+  }, 180_000);
+
+  it("durum dosyası kaybolursa build boş durumdan BAŞLAMAZ; --reset gerekçeyle yayımlanmış listeden yeniden kurar (iptal korunur)", async () => {
+    const path = "wrprc/issuer/istanbul-bilgi.jwt";
+    const revokedIdx = JSON.parse(readFileSync(join(DIST, "wrprc-status.json"), "utf8")).entries.find(
+      (e: { path: string; status: string }) => e.path === path && e.status === "REVOKED",
+    ).idx as number;
+    rmSync(join(DIST, "wrprc-status.json"));
+    expect(() => run("build")).toThrow(/boş durumdan başlanmaz/);
+    expect(() => run("wrprc-status", "--reset")).toThrow(/gerekçe zorunlu/);
+    expect(() => run("wrprc-status", "--reset", "--reason", "Ali Veli sildi")).toThrow(/kişi adı/);
+    run("wrprc-status", "--reset", "--reason", "durum dosyası diskten silindi");
+    expect((await listBits()).bits.get(revokedIdx)).toBe(1);
+    expect(readFileSync(join(DIST, "CHANGELOG.md"), "utf8")).toMatch(
+      /wrprc-status: RESET — durum dosyası diskten silindi/,
+    );
+    expect(() => run("wrprc-status", "--reset", "--reason", "ikinci kez")).toThrow(/zaten var/);
+    run("build");
+    expect((await listBits()).bits.get(revokedIdx)).toBe(1);
   }, 180_000);
 
   it("imza: belirteç kayıt kurumu sertifikasıyla imzalı (signWrprcStatusList birim)", async () => {

@@ -169,7 +169,7 @@ Signed request object (JAR), `typ: oauth-authz-req+jwt`, `alg: ES256`, `x5c` cha
 | `response_mode` | `direct_post.jwt` (default) or `dc_api.jwt` (§7) — **no unencrypted mode** |
 | `nonce` | ≥ 128 bits of entropy, single use; a new one on every fetch of the `request_uri` ([[ADR-0067]]) |
 | `state` | ≥ 128 random bits, secret; a new one on every fetch of the `request_uri` — not in the QR code, nor in the `request_uri` or `response_uri` paths ([[ADR-0067]]) |
-| `request_uri` fetch | Every fetch (GET, or POST with `request_uri_method=post`, OpenID4VP 1.0 §5.10) opens a new **request branch**: a newly signed request object with the same content; fresh `state`, `nonce` and ephemeral encryption key (HAIP §5). With POST, `wallet_nonce` is echoed in the object. At most 10 branches per presentation (2026-10-29) |
+| `request_uri` fetch | Every fetch (GET, or POST with `request_uri_method=post`, OpenID4VP 1.0 §5.10) opens a new **request branch**: a newly signed request object with the same content; fresh `state`, `nonce` and ephemeral encryption key (HAIP §5). With POST, `wallet_nonce` is echoed in the object. No fixed branch limit and no 429 for a legitimate fetch; memory is bounded (an old unanswered branch is evicted past a soft limit, shared branch budget; [[ADR-0067]] amendment 2026-10-29); rate limit per client address |
 | Request signature | **Mandatory** — an unsigned request is rejected |
 | `client_metadata.jwks` | Response encryption key; **mandatory** |
 | `verifier_info` | Optional ([[ADR-0026]]): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — the registration certificate of the use (ETSI TS 119 475 / 119 472-2). If present, the wallet verifies the registrar signature (LOTL `roles.registrar`), the validity period and that `sub` equals the `organizationIdentifier` in the access certificate; if they do not match, no data is sent (WRC4). A field not in the certificate counts as over-asking (§6). |
@@ -591,8 +591,11 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
   any branch key (garbage body, no or unknown branch in `kid`) does not touch the presentation and is not counted; a decrypted but
   failing response (`state` mismatch, empty `vp_token`, A1–A6 rejection) gets 400 `invalid_request` and is an attempt on **its own
   branch**: at **5** attempts per branch only that branch closes (in a single-branch presentation the presentation becomes REJECTED;
-  on the DC API path the limit is per presentation). At most 10 branches per presentation; beyond that 429 (rate limiting applies on
-  top). The pending presentation's status shows the total attempt count and the last failure's step (`attempts`, `last_attempt`); no
+  on the DC API path the limit is per presentation). There is no fixed branch limit: past the soft limit (10) the oldest
+  never-answered branch at least 120 s old is evicted, at the hard ceiling (32) regardless of age; a branch whose response is being
+  processed is never evicted; a shared branch budget covers all presentations; the fetch rate limit is per client address
+  ([[ADR-0067]] RQ5, amendment 2026-10-29). The single-use lock is taken before the response is decrypted and the branch is checked
+  again after decryption. The pending presentation's status shows the total attempt count and the last failure's step (`attempts`, `last_attempt`); no
   values, no branch information.
 - **Residual risk.** Someone who fetches the QR before the real wallet and declines at once can close a single-branch presentation —
   a known limit of the cross-device flow, like the fact that whoever sees the QR can answer with their own credential (OpenID4VP 1.0

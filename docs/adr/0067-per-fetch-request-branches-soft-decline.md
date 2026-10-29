@@ -13,7 +13,8 @@ summary: >
   çekim dalı açar — taze 128 bitlik `state`, taze `nonce` ve taze efemer şifreleme anahtarıyla yeni imzalı istek nesnesi (HAIP §5
   "her yetkilendirme isteğinde efemer anahtar"ın daha sıkı karşılığı); POST çekimde `wallet_nonce` geri yazılır. Ret (şifreli ya da
   şifresiz) yalnız kendi dalını kapatır; sunum bütünüyle yalnız tek dalı varsa ve o dal kapandıysa REJECTED olur, yoksa süresi
-  bitene dek açık kalır ve ilk geçerli sunum kazanır. Çözülemeyen yanıt deneme sayılmaz; sunum başına en çok 10 dal. İmzalı ret
+  bitene dek açık kalır ve ilk geçerli sunum kazanır. Çözülemeyen yanıt deneme sayılmaz; dal sayısında sabit sınır yok, bellek
+  yumuşak sınırda eski yanıtsız dalı atarak ve ortak dal bütçesiyle sınırlı (Değişiklik notu 2026-10-29). İmzalı ret
   reddedildi (standart dışı, ARF RPA_11 gizlilik ilkesine aykırı). Kabul: 2026-10-29 (proje yönetimi onayı).
 domain: Protocol
 related: ["[[ADR-0017]]", "[[ADR-0034]]", "[[ADR-0012]]", "[[SPEC-PROTO-0002]]", "[[SPEC-PROTO-0001]]", "[[SPEC-API-0001]]"]
@@ -67,8 +68,14 @@ o dalın denemesidir; 5'te yalnız o dal kapanır (tek dallı sunumda sunum REJE
 (dalsız ya da bilinmeyen `kid`, bozuk gövde) sunuma dokunmaz ve deneme sayılmaz: yalnız istek nesnesini alan şifreleyebilir.
 
 ## K4 — Sınırlar
-Sunum başına en çok 10 dal; sonraki çekim 429 alır, var olan dallar etkilenmez. Kapanmış ya da süresi geçmiş sunum için dal açılmaz
-(404). Uç ve sunum başına hız sınırları aynen sürer. Ret sayısı dal sayısıyla sınırlıdır.
+*(Değişiklik notu 2026-10-29 ile değişti; ilk metin: "sunum başına en çok 10 dal; sonraki çekim 429".)* Dal sayısında sabit sınır
+ve meşru çekime 429 yoktur. Bellek üç yoldan sınırlıdır: dal sıkıştırılmış saklanır (imzalı nesne çekene verilir ve tutulmaz; dalda
+`state`'in özeti, `nonce`, özel anahtar, `kid` ve zamanlar); dal sayısı yumuşak sınırı (10) aşınca yeni çekim, önce kapanmış,
+sonra **hiç yanıt almamış ve en az 120 sn yaşındaki en eski** dalın yerini alır; sert tavanda (32) yaş koşulu düşer. **Yanıtı
+işlenmekte olan dal hiçbir zaman atılmaz.** Bütün sunumlar için ortak bir dal bütçesi (20 000) vardır. Hız sınırı çekim ucunda
+istemci adresi başınadır (vekilde; uygulamada genel tavan), sunum başına değil. Kapanmış ya da süresi geçmiş sunum için dal açılmaz
+(404). Atılmış dala gelen yanıt bilinmeyen dal gibi işlenir (deneme sayılmaz). Ret, `kid` taşımadığı için `state`'in özetiyle
+bulunur (doğrusal tarama yok), eşitlik sabit sürelidir. Ret sayısı dal sayısıyla sınırlıdır.
 
 ## K5 — Tarayıcı yolu (DC API) ayrıdır
 Digital Credentials API yolunda (`dc_api.jwt`, ISO/IEC 18013-7 Ek C) `request_uri` yoktur; istek nesnesi sunumu açan sayfaya gider
@@ -95,21 +102,30 @@ Saldırgan QR'ı gerçek cüzdandan **önce** çekip hemen reddederse sunumun te
 birinin kendi belgesiyle de yanıt verebilmesi gibi, cihazlar arası akışın bilinen sınırıdır (OpenID4VP 1.0 §14); RP yeni sunum açar.
 QR yalnız kişiye gösterilmeli, sunum süresi kısa tutulmalıdır (5 dk).
 
+**Atma (Değişiklik notu 2026-10-29).** Bellek sınırlı olduğu ve çekim kimlik doğrulamasız olduğu için atma tamamen önlenemez: QR'ı
+gören biri gerçek cüzdandan sonra yumuşak sınırı aşacak kadar çekip 120 sn beklerse ya da sert tavanı (32) dolduracak kadar hızla
+çekerse, gerçek cüzdanın henüz yanıt vermemiş dalını attırabilir. Sonuç sunumun REJECTED olması değildir: gerçek cüzdanın yanıtı
+"bilinmeyen istek" (400, deneme sayılmaz) alır, sunum açık kalır, kişi QR'ı yeniden okutur. Önceki sabit sınırda aynı saldırgan 10
+çekimle gerçek cüzdanın çekimini 429'a düşürüyordu. IP başına hız sınırı (vekilde) saldırının maliyetini artırır ama dağıtık bir
+saldırganı durdurmaz. Ortak bütçe dolarsa (çok sayıda sunuma aynı anda sel) en eski atılabilir dal başka bir sunumdan da olabilir;
+bütün dallar işlenmekteyse çekim 503 alır. Bellek içi durum tek süreç içindir; çok örnekli kurulum paylaşılan depo ister.
+
 # Değişmezler
 
 | Kod | Kural |
 |---|---|
 | RQ1 | `request_uri`'nin her çekimi (GET ya da POST) yeni bir çekim dalı açar: taze `state` (≥ 128 bit; QR'da, `request_uri` ve `response_uri` yolunda yok), taze `nonce` ve taze efemer şifreleme anahtarıyla yeni imzalı istek nesnesi; sunum açılırken üretilen ilk nesne verilmez. POST çekimde `wallet_nonce` geri yazılır; GET desteklenir. |
 | RQ2 | Cüzdanın hata yanıtı (şifresiz ya da şifreli) yalnız `state`'inin ait olduğu dalı kapatır; sunum yalnız tek dalı varsa ve o dal kapandıysa REJECTED olur, yoksa süresi bitene dek açık kalır ve ilk geçerli sunum kazanır. Kapanmış dala gelen sunum kabul edilmez. |
-| RQ3 | Rete yanıt 200'dür (OpenID4VP 1.0 §8.2); retin `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı, yetki kodu ya da veriye erişim veren başka bir değer taşımaz. |
+| RQ3 | Ret yanıtı 200'dür (OpenID4VP 1.0 §8.2); retin `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı, yetki kodu ya da veriye erişim veren başka bir değer taşımaz. |
 | RQ4 | Hiçbir dalın anahtarıyla çözülemeyen yanıt sunuma dokunmaz ve deneme sayılmaz; çözülmüş ama sahiplik kanıtına ulaşmayan yanıt yalnız kendi dalının denemesidir (5'te dal kapanır). |
-| RQ5 | Sunum başına en çok 10 çekim dalı; sonrası 429 ve var olan dallar etkilenmez; kapanmış ya da süresi geçmiş sunumda dal açılmaz. |
+| RQ5 | Meşru çekime sabit dal sınırıyla 429 verilmez; bellek sınırlıdır: dal imzalı nesneyi tutmaz, yumuşak sınırda (10) önce kapanmış, sonra hiç yanıt almamış ve yaşlı (≥ 120 sn) en eski dal atılır, sert tavanda (32) yaş koşulu düşer, ortak dal bütçesi bütün sunumları kapsar; yanıtı işlenmekte olan dal atılmaz. Çekim hız sınırı istemci adresi başınadır, sunum başına değil. Kapanmış ya da süresi geçmiş sunumda dal açılmaz. (Değişiklik notu 2026-10-29) |
 | RQ6 | Digital Credentials API yolunun istek nesnesi bir dal değildir: `state`'iyle ret kabul edilmez, deneme sınırı bu yolda sunum başınadır. |
 
 # Sonuçlar
 
 - Kod: `@tamga-network/verifier` (`createRequestBranch`, `openPresentationResponse`; `responseKidOf` dalı okur; `state` 128 bit;
-  paketler kaynakta 0.7.4, npm yayını yok); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, dallar, yumuşak ret);
+  dal durum makinesi `BranchSet` / `BranchRegistry`, iki servisin ortak birimi — Değişiklik notu 2026-10-29; paketler kaynakta
+  0.7.4, npm yayını yok); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, dallar, yumuşak ret);
   kurumun belge verme servisi (satır içi kimlik sunumu, `/{slug}/vp/req/{id}` GET|POST). Cüzdan çekirdeği değişmez (GET ile çeker,
   reddi şifresiz gönderir).
 - Belgeler: [[SPEC-PROTO-0002]] §3, §10.1, PV15; sunucuda doğrulama rehberi (kontrol listesi).
@@ -118,3 +134,15 @@ QR yalnız kişiye gösterilmeli, sunum süresi kısa tutulmalıdır (5 dk).
 # Durum
 
 **Accepted — 2026-10-29.** Proje yönetimi onayıyla. DECISIONS: D-PROTO-5.
+
+# Değişiklik notu
+
+- **2026-10-29 (aynı gün, ikinci inceleme; proje yönetiminin "doğru olan uygulansın" onayıyla):** K4 ve RQ5 değişti. Sabit "sunum
+  başına 10 dal, sonrası 429" kuralı kendisi bir hizmet engelleme yoluydu: QR'ı gören biri 10 kez çekip gerçek cüzdanın çekimini
+  429'a düşürebiliyordu. Yerine sınırlı bellek: dal sıkıştırılmış (imzalı nesne tutulmaz), yumuşak sınırda (10) hiç yanıt almamış
+  ve yaşlı (≥ 120 sn) en eski dal atılır, sert tavanda (32) yaş koşulu düşer, işlenen dal hiç atılmaz, ortak dal bütçesi (20 000);
+  çekim hız sınırı istemci adresi başına (vekil + uygulamada genel tavan), sunum başına değil. Kalan risk "Atma" paragrafında.
+  Ayrıca: dal durum makinesi iki serviste ayrı yazılmıyor, `@tamga-network/verifier` `BranchSet` ortak birim; ret araması
+  `state` özetiyle (doğrusal tarama yok, sabit süreli eşitlik); tek kullanım kilidi yanıt çözülmeden ÖNCE alınır ve çözmeden sonra
+  dal yeniden denetlenir (kurumun servisinde kilit çözmeden sonra alınıyordu); sunumla birlikte ilk istek nesnesi artık hiç
+  üretilmez (`initialRequestObject: false`). RQ1–RQ4, RQ6 değişmez.
