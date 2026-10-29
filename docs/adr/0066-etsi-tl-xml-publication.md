@@ -145,8 +145,8 @@ Hazırlandı (2026-10-29, varsayılan kapalı; yayın yok):
 
 - `apps/trust-publisher/src/tl119612.ts`: model, XML yazımı, XAdES-B-B imzası, §5.7.1 imzacı denetimi; `build` bayrakla
   (`TAMGA_TL119612=1`, imzacı `TAMGA_TL119612_SIGNER`) `tl-<cc>.xml`, `.sha2`, arşiv kopyası yazar.
-- `@tamga-network/trust`: XML kanonikleştirmesi ve ayrıştırıcısı dışa açıldı (`canonicalizeXml`, `parseXml`; kaynak 0.7.4, npm'e
-  yayımlanmadı) — imza ve doğrulama aynı kanonikleştirmeyi kullanır.
+- `@tamga-network/trust`: XML kanonikleştirmesi ve ayrıştırıcısı dışa açıldı (`canonicalizeXml`, `parseXml`; npm'de 0.7.4,
+  2026-10-29) — imza ve doğrulama aynı kanonikleştirmeyi kullanır.
 - `apps/trust-publisher/etsi/19612/`: ETSI'nin resmî XSD'leri (TS 119 612 V2.4.1 Ek C) ve içe aktardıkları W3C/ETSI şemaları; testler
   her üretilen listeyi bunlara karşı denetler.
 - Testler: şema (libxml2), imza (paketin doğrulayıcısı ve ondan bağımsız bir XML imza kütüphanesi), XAdES nitelikleri, kurcalama,

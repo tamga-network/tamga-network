@@ -120,8 +120,8 @@ alır. Yaddaşdakı vəziyyət tək proses üçündür; çox nüsxəli quraşdı
 # Nəticələr
 
 - Kod: `@tamga-network/verifier` (`createRequestBranch`, `openPresentationResponse`; `responseKidOf` qolu oxuyur; `state` 128 bit;
-  qol vəziyyət maşını `BranchSet` / `BranchRegistry`, iki xidmətin ortaq vahidi — dəyişiklik qeydi 2026-10-29; paketlər mənbədə
-  0.7.4, npm-də dərc yoxdur); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, qollar, yumşaq imtina); qurumun
+  qol vəziyyət maşını `BranchSet` / `BranchRegistry`, iki xidmətin ortaq vahidi — dəyişiklik qeydi 2026-10-29; paketlər npm-də
+  0.7.4, 2026-10-29); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, qollar, yumşaq imtina); qurumun
   sənəd vermə xidməti (daxili şəxsiyyət təqdimatı, `/{slug}/vp/req/{id}` GET|POST). Cüzdan nüvəsi dəyişmir (GET ilə çəkir, imtinanı
   şifrəsiz göndərir).
 - Sənədlər: [[SPEC-PROTO-0002]] §3, §10.1, PV15; serverdə yoxlama bələdçisi (yoxlama siyahısı).

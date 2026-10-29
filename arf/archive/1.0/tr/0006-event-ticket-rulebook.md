@@ -195,7 +195,9 @@ kategorisindedir. Tanımdaki düzeltme `EventTicket:2` ile gelir (yayımlanmış
 4. Organizatör hem belge veren hem doğrulayıcı olduğundan ilişkilendirilemezlik bu tür için anlamsızdır; bu kabul edilmiş
    bir durumdur.
 5. Terminal yalnız kayıtlı bir doğrulayıcının altında tanımlanır (`terminal_groups[]`) ve doğrulama servisine o terminal grubu
-   için verilmiş terminal anahtarıyla kimlik gösterir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1).
+   için verilmiş terminal anahtarıyla kimlik gösterir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). Grup imzalı listede
+   kapıları işleten kurumu (`institution_id`) ve kabul edilen geçiş politikalarını (`allowed_policies`) taşır; grubu listeden
+   çıkan ya da listesi bayat olan kapı reddedilir ([[ADR-0069]] TG1–TG3).
 6. Geçiş kartı her gösterimde PIN sormaz: bu, kişinin verdiği **süreli ve kapsamı belli** bir rızaya dayanır; rıza her an geri
    alınır ve her gösterim cüzdanda kayda geçer (Ek A §3.7; cüzdan kuralları [[SPEC-WALLET-0001]]).
 

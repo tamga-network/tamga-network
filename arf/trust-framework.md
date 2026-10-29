@@ -453,7 +453,7 @@ the law of the person's own state applies.
 | Level                | In Tamga                                                                                                       |
 | -------------------- | -------------------------------------------------------------------------------------------------------------- |
 | 1. Portability       | SD-JWT VC and OpenID4VC; an EU wallet can technically process a Tamga credential                               |
-| 2. Trust | The trusted list (in the sense of ETSI TS 119 612); an ETSI TS 119 602 view; an ETSI TS 119 612 XML view ([[ADR-0066]]; published in the sandbox, on the real network once the postal addresses are in place); root fingerprints; an external list field |
+| 2. Trust | The trusted list (in the sense of ETSI TS 119 612); an ETSI TS 119 602 view; an ETSI TS 119 612 XML view ([[ADR-0066]]; published in the sandbox; on the real network once the foundation that will operate the list is in place, with its postal address and signer); root fingerprints; an external list field |
 | 3. Legal recognition | Unilateral recognition between states; with the EU only an eIDAS Article 14 agreement between states (trust services; long term). The network is not a party to such an agreement |
 
 ### 6.1 External lists (federation)

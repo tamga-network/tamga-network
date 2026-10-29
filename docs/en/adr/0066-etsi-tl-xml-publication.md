@@ -156,8 +156,8 @@ Prepared (2026-10-29, off by default; nothing published):
 
 - `apps/trust-publisher/src/tl119612.ts`: model, XML writing, XAdES-B-B signature, §5.7.1 signer check; with the flag
   (`TAMGA_TL119612=1`, signer `TAMGA_TL119612_SIGNER`) `build` writes `tl-<cc>.xml`, `.sha2` and the archive copy.
-- `@tamga-network/trust`: the XML canonicalisation and parser are exported (`canonicalizeXml`, `parseXml`; source 0.7.4, not
-  published on npm) — signing and validation use the same canonicalisation.
+- `@tamga-network/trust`: the XML canonicalisation and parser are exported (`canonicalizeXml`, `parseXml`; on npm since 0.7.4,
+  2026-10-29) — signing and validation use the same canonicalisation.
 - `apps/trust-publisher/etsi/19612/`: ETSI's official XSDs (TS 119 612 V2.4.1 Annex C) and the W3C/ETSI schemas they import; tests
   check every generated list against them.
 - Tests: schema (libxml2), signature (the package's validator and an XML signature library independent of it), XAdES properties,

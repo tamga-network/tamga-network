@@ -78,7 +78,7 @@ server kodu tələb olunmur: [Veb sayta "Tamga ilə daxil ol"](/guides/sign-in-w
 
 <a class="tg-card" href="/packages/">
 <strong>SDK-lar</strong>
-<span>Doqquz <code>@tamga-network/*</code> paketi; Node və React Native. npm-də 0.7.3 sınaq versiyası; sabit 1.0.0 hazır olduqda.</span>
+<span>Doqquz <code>@tamga-network/*</code> paketi; Node və React Native. npm-də 0.7.4 sınaq versiyası; sabit 1.0.0 hazır olduqda.</span>
 </a>
 
 <a class="tg-card" href="/api/">

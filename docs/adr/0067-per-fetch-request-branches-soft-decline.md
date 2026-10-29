@@ -124,8 +124,8 @@ bütün dallar işlenmekteyse çekim 503 alır. Bellek içi durum tek süreç i�
 # Sonuçlar
 
 - Kod: `@tamga-network/verifier` (`createRequestBranch`, `openPresentationResponse`; `responseKidOf` dalı okur; `state` 128 bit;
-  dal durum makinesi `BranchSet` / `BranchRegistry`, iki servisin ortak birimi — Değişiklik notu 2026-10-29; paketler kaynakta
-  0.7.4, npm yayını yok); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, dallar, yumuşak ret);
+  dal durum makinesi `BranchSet` / `BranchRegistry`, iki servisin ortak birimi — Değişiklik notu 2026-10-29; paketler npm'de
+  0.7.4, 2026-10-29); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, dallar, yumuşak ret);
   kurumun belge verme servisi (satır içi kimlik sunumu, `/{slug}/vp/req/{id}` GET|POST). Cüzdan çekirdeği değişmez (GET ile çeker,
   reddi şifresiz gönderir).
 - Belgeler: [[SPEC-PROTO-0002]] §3, §10.1, PV15; sunucuda doğrulama rehberi (kontrol listesi).

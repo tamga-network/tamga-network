@@ -199,6 +199,8 @@ RB-SCH-02).
 4. Because the organiser is both issuer and verifier, unlinkability is meaningless for this type; this is an accepted situation.
 5. A terminal is defined only under a registered verifier (`terminal_groups[]`) and authenticates to the verification service
    with the terminal key issued for that terminal group; a request without a key does not touch the token ([[ADR-0065]] TK1).
+   In the signed list the group carries the institution that operates the gates (`institution_id`) and the accepted pass
+   policies (`allowed_policies`); a gate whose group leaves the list, or whose list is stale, is refused ([[ADR-0069]] TG1–TG3).
 6. The gate pass does not ask for a PIN at each presentation: this rests on a **time-limited, scoped** consent given by the person;
    the consent can be withdrawn at any time and every presentation is logged in the wallet (Annex A §3.7; wallet rules
    [[SPEC-WALLET-0001]]).

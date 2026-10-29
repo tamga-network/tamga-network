@@ -1,10 +1,10 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.7.3` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.7.4` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
-## 0.7.4 — unreleased (source only, not on npm)
+## 0.7.4 — 2026-10-29
 
 ### Breaking / behaviour changes in 0.7.4 (with migration)
 
@@ -61,6 +61,13 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
   (its `requestObject(id, walletNonce)` is now async; new `handleDecline(state)`).
 
 ### Changes
+
+- docs + ARF (2026-10-29; currency check after the 0.7.4 release): version sentences 0.7.4 (README, docs home and guides,
+  `sdk_version` examples, package index); ADR-0066/0067/0069 notes no longer say "not on npm"; the trust-list spec and the
+  audit package say registration-certificate status is configured on the real network too (ADR-0068 implementation note);
+  Trust Framework: the real network's ETSI XML view waits for the foundation that will operate the list (postal address,
+  signer); Event Ticket rulebook rule 5 names the gate group's institution and accepted pass policies (ADR-0069 TG1–TG3;
+  the Azerbaijani text also gains the ADR-0065 TK1 sentence it lacked).
 
 - verifier + verify + operator issuer (2026-10-29; ADR-0067 amendment, K16): **one branch state machine.** New
   `BranchSet` / `BranchRegistry` in `@tamga-network/verifier` (`branches.ts`): fetch (fresh branch; signed object returned, not

@@ -57,8 +57,9 @@ the DC API path, wrong `aud` for SD-JWT over the DC API (`origin:` + page origin
 LoTE signatures, base64url-wrapped registration certificate not read; one small EN 319 412-1 identifier syntax fix. One gap
 found that blocked strict EU wallets: registration certificates without `policy_id` / `certificate_policy` / `status` — since
 resolved by ADR-0068 (sandbox): in strict mode 12 of the 13 sandbox requests now pass; the 13th (`site-signup`) uses Tamga's
-pseudonym extension, which the EU wallet does not know. Sandbox only; the real network has no registration-certificate policy or
-status list yet. A weekly CI job re-runs the suite against the sandbox.
+pseudonym extension, which the EU wallet does not know. The strict-mode run was against the sandbox; the real network's
+registration certificates carry the same policy and status fields since 2026-10-29 (ADR-0068 implementation note), but the suite
+has not been run against it. A weekly CI job re-runs the suite against the sandbox.
 
 ## 4. Previous internal reviews (summary)
 

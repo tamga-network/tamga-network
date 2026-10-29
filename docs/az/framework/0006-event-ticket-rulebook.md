@@ -193,7 +193,10 @@ kateqoriyasındadır. Təsvirdəki düzəliş `EventTicket:2` ilə gəlir (dərc
    terminal qrupundakı girişlər **ümumi "istifadə olunub" siyahısı** saxlayır və interval daxilində ikinci keçidi bu siyahı dayandırır.
 4. Təşkilatçı həm sənədi verən qurum, həm də yoxlayan tərəf olduğundan əlaqələndirilməzlik bu növ üçün mənasızdır; bu, qəbul edilmiş
    vəziyyətdir.
-5. Terminal yalnız qeydiyyatdan keçmiş yoxlayan tərəfin tabeliyində müəyyən edilir (`terminal_groups[]`).
+5. Terminal yalnız qeydiyyatdan keçmiş yoxlayan tərəfin tabeliyində müəyyən edilir (`terminal_groups[]`) və yoxlama xidmətinə
+   həmin terminal qrupu üçün verilmiş terminal açarı ilə özünü təqdim edir; açarsız sorğu tokenə toxunmur ([[ADR-0065]] TK1).
+   İmzalı siyahıda qrup keçidləri idarə edən qurumu (`institution_id`) və qəbul edilən keçid siyasətlərini (`allowed_policies`)
+   daşıyır; qrupu siyahıdan çıxan və ya siyahısı köhnəlmiş keçid rədd edilir ([[ADR-0069]] TG1–TG3).
 6. Keçid kartı hər təqdimatda PIN soruşmur: bu, şəxsin verdiyi **müddətli və əhatəsi müəyyən** razılığa əsaslanır; razılıq istənilən an geri
    götürülə bilər və hər təqdimat rəqəmsal cüzdanda qeydə alınır (Əlavə A §3.7; rəqəmsal cüzdan qaydaları [[SPEC-WALLET-0001]]).
 

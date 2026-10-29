@@ -131,7 +131,7 @@ dərc etməyi gətirir. Əvvəlcə sınaq şəbəkəsində (sandbox) açıldı; 
 # Nəticələr
 
 Hazırlanıb (2026-10-29, defolt bağlı; dərc yoxdur): `apps/trust-publisher/src/tl119612.ts`; `@tamga-network/trust`-da
-`canonicalizeXml`, `parseXml` (mənbə 0.7.4, npm-də dərc olunmayıb); `apps/trust-publisher/etsi/19612/` rəsmi XSD-lər; testlər (sxem,
+`canonicalizeXml`, `parseXml` (npm-də 0.7.4, 2026-10-29); `apps/trust-publisher/etsi/19612/` rəsmi XSD-lər; testlər (sxem,
 iki müstəqil imza yoxlayıcısı, XAdES xassələri, bayraq, imzalayan profili) və sandbox nümunəsi. Nümunə AB DSS yoxlayıcısında
 "XAdES-BASELINE-B, imza və istinadlar bütöv" nəticəsini verdi (imzalayan AB-də etibar lövbəri olmadığından nəticə INDETERMINATE —
 gözlənilən).

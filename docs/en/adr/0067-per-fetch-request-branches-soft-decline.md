@@ -139,8 +139,8 @@ processed, the fetch gets 503. The in-memory state is per process; a multi-insta
 # Consequences
 
 - Code: `@tamga-network/verifier` (`createRequestBranch`, `openPresentationResponse`; `responseKidOf` reads the branch; `state` 128
-  bits; the branch state machine `BranchSet` / `BranchRegistry`, shared by both services — amendment 2026-10-29; packages at 0.7.4 in
-  source, not published to npm); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, branches, soft
+  bits; the branch state machine `BranchSet` / `BranchRegistry`, shared by both services — amendment 2026-10-29; packages on npm as
+  0.7.4, 2026-10-29); Tamga Verify (`apps/verify`: `GET|POST /vp/req/{id}`, branches, soft
   decline); the institution's issuance service (inline identity presentation, `/{slug}/vp/req/{id}` GET|POST). The wallet core does
   not change (it fetches with GET and sends declines unencrypted).
 - Documents: [[SPEC-PROTO-0002]] §3, §10.1, PV15; the server-side verification guide (checklist).

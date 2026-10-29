@@ -431,7 +431,7 @@ mahkemeleri yetkilidir. Devletler arasında konsey yetkilidir; kişinin hakları
 | Seviye | Tamga'da |
 |---|---|
 | 1. Taşınabilirlik | SD-JWT VC ve OpenID4VC; bir AB cüzdanı Tamga belgesini teknik olarak işleyebilir |
-| 2. Güven | Güven listesi (ETSI TS 119 612 anlamında); ETSI TS 119 602 görünümü; ETSI TS 119 612 XML görünümü ([[ADR-0066]]; sandbox'ta yayında, gerçek ağda posta adresleri tamamlanınca); kök parmak izleri; dış liste alanı |
+| 2. Güven | Güven listesi (ETSI TS 119 612 anlamında); ETSI TS 119 602 görünümü; ETSI TS 119 612 XML görünümü ([[ADR-0066]]; sandbox'ta yayında, gerçek ağda listeyi işletecek vakıf, posta adresi ve imzacısıyla kurulunca); kök parmak izleri; dış liste alanı |
 | 3. Hukuki tanıma | Devletler arasında tek taraflı tanıma; AB ile yalnız devletler arası eIDAS Madde 14 anlaşması (güven hizmetleri; uzun vadede). Ağ bu anlaşmanın tarafı değildir |
 
 ## 6.1 Dış listeler (federasyon)

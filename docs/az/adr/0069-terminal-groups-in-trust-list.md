@@ -115,7 +115,7 @@ girişinin açıq mühit açarları işləməyə davam edir ([[ADR-0065]] K4).
   siyahı yoxlaması); Qurum Konsolunun "Giriş terminalları" ekranı (operator deposu).
 - Sənədlər: [[SPEC-TRUST-0001]] §4 (yoxlayan tərəf qeydi), [[SPEC-API-0001]] §6.4, etibar siyahısı API tərifi, yoxlayan tərəfin
   qeydiyyat bələdçisi və sandbox bələdçisi §6, [[FW-RB-0006]] §4.3; [[ADR-0065]] K2 və K5 bu qərarla tamamlandı.
-- Paketlər: mənbə 0.7.4 (yeni oxuyucu istəyə bağlıdır; köhnə siyahılar yüklənməyə davam edir).
+- Paketlər: 0.7.4 (npm-də 2026-10-29) (yeni oxuyucu istəyə bağlıdır; köhnə siyahılar yüklənməyə davam edir).
 - **Tətbiq qeydi (0.7.4, 2026-10-29):** TG3 bağlı qalma prinsipi ilə tətbiq olunur. "Siyahı köhnəlib" ilə "qrup siyahıda yoxdur"
   ayrılır (`freshness().healthy`): quruma bağlı açar və ya siyahıda bir dəfə görülmüş qrup siyahıda təsdiqlənə bilmirsə, girişdə
   403, yeni açar verilmir. Qrup siyahısız olanda operatorun verdiyi sahibsiz açar qrup siyahıya düşəndə qrupun qurumuna bağlanır.

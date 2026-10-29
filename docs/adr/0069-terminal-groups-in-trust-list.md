@@ -115,7 +115,7 @@ Deneme kapısının herkese açık ortam anahtarları çalışmaya devam eder ([
   kapıda liste denetimi); Kurum Konsolu "Kapı terminalleri" ekranı (operatör deposu).
 - Belgeler: [[SPEC-TRUST-0001]] §4 (doğrulayıcı kaydı), [[SPEC-API-0001]] §6.4, güven listesi API tanımı, doğrulayıcı kayıt
   rehberi ve sandbox rehberi §6, [[FW-RB-0006]] §4.3; [[ADR-0065]] K2 ve K5 bu kararla tamamlandı.
-- Paketler: kaynak 0.7.4 (yeni okuyucu isteğe bağlı; eski listeler yüklenmeye devam eder).
+- Paketler: 0.7.4 (npm'de 2026-10-29) (yeni okuyucu isteğe bağlı; eski listeler yüklenmeye devam eder).
 - **Uygulama notu (0.7.4, 2026-10-29):** TG3 kapalı kalacak biçimde uygulanır. "Liste bayat" ile "grup listede yok" ayrılır
   (`freshness().healthy`): kuruma bağlı anahtar ya da listede bir kez görülmüş grup listede doğrulanamazsa kapıda 403, yeni
   anahtar verilmez. Grup listesizken işletmecinin verdiği sahipsiz anahtar, grup listeye girince grubun kurumuna bağlanır.
