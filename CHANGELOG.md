@@ -4,6 +4,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.7.3` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
+## 0.7.4 — unreleased (source only, not on npm)
+
+- trust-publisher + trust + verifier + verify (2026-10-29; independent test with the open-source EU test wallet eudi-dev 3.5.0
+  against the sandbox): (1) registration certificates (ETSI TS 119 475 Annex B.2.9, ARF RPRC_21) now register each use in its
+  presentation format — a relying-party scope may carry `format` (`dc+sd-jwt` default, `mso_mdoc`, `mso_mdoc_zk`) and, for mdoc,
+  `mdoc_namespace`; the `credentials` entry is then `doctype_value` + `[namespace, element]` (element names per CIR 2026/1731
+  Table 6) instead of always `dc+sd-jwt` + `vct_values`. An EU wallet in strict mode treated the mdoc and ZK age requests as
+  over-asking. `registrationScopesFor` (verifier) picks a use with the same format; the age scopes in both registries set it.
+  (2) Tamga Verify accepts a Digital Credentials API response without `state` (OpenID4VP 1.0 Appendix A.2: `state` is not
+  defined for the DC API); a `state` that is present must still match, and the cross-device path still requires it.
+  (3) The wallet-provider certificate check accepts any EN 319 412-1 semantic identifier (e.g. `NTRNL-NLTEST.00000000`), not
+  only letters and digits after the hyphen.
+
 ## 0.7.3 — 2026-10-27
 
 - verify (2026-10-29; OpenID4VP session and replay acceptance tests, SPEC-PROTO-0002 §10.1, PV10; no package change): a

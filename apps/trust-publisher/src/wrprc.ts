@@ -4,6 +4,8 @@
  * Alan adları standardın normatif tablolarındaki gibidir (`claim` tekil dahil — bilinen yazım hatası, birlikte çalışma için aynen).
  */
 
+import { pidMdocName } from "@tamga-network/core/pid";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Rec = Record<string, any>;
 
@@ -67,6 +69,28 @@ function common(r: Rec, sub: string, registryUri: string, now: number): Rec {
 
 const expOf = (now: number, ...limits: number[]) => Math.min(now + MAX_VALIDITY_SEC, ...limits);
 
+/** Kullanımın sunum biçimleri (kapalı küme; ADR-0013 mdoc, ADR-0032 ZK). */
+const MDOC_FORMATS = new Set(["mso_mdoc", "mso_mdoc_zk"]);
+
+/**
+ * Kullanımın kayıtlı belgesi (ETSI TS 119 475 Ek B.2.9: `format` + `meta` + `claim`, DCQL biçiminde). AB cüzdanı isteği biçim, tür
+ * ve yol ile karşılaştırır (ARF RPRC_21): mdoc / ZK isteğini `dc+sd-jwt` kaydıyla karşılamak "fazla istek" sayılır (eudi-dev
+ * denemesi 2026-10-29, K2). Biçim kayıttaki `format`'tan; yoksa `dc+sd-jwt`.
+ */
+export function registeredCredential(s: Rec): Rec {
+  const format = (s.format as string | undefined) ?? "dc+sd-jwt";
+  const claims = (s.claims as string[]) ?? [];
+  if (MDOC_FORMATS.has(format)) {
+    const ns = s.mdoc_namespace as string | undefined;
+    if (!ns) throw new Error(`kullanım ${s.scope_id}: ${format} biçiminde mdoc_namespace zorunlu`);
+    // kullanımın alanları SD-JWT VC adıyla tutulur (doğrulayıcı `scopeClaimName` aynı eşlemeyi yapar); mdoc öğesi CIR 2026/1731
+    // Tablo 6 adıyla (ör. birthdate → birth_date)
+    return { format, meta: { doctype_value: s.vct }, claim: claims.map((c) => ({ path: [ns, pidMdocName(c)] })) };
+  }
+  if (format !== "dc+sd-jwt") throw new Error(`kullanım ${s.scope_id}: bilinmeyen biçim ${format}`);
+  return { format, meta: { vct_values: [s.vct] }, claim: claims.map((c) => ({ path: [c] })) };
+}
+
 export interface WrprcItem {
   /** yayın yolu: `wrprc/<kind>/<id>.jwt` */
   path: string;
@@ -112,13 +136,7 @@ export function buildWrprcPayloads(
         ),
         ...(s.privacy_policy_uri ? { privacy_policy: s.privacy_policy_uri } : {}),
         purpose: langs(s.purpose_localized, s.purpose),
-        credentials: [
-          {
-            format: "dc+sd-jwt",
-            meta: { vct_values: [s.vct] },
-            claim: (s.claims as string[]).map((c) => ({ path: [c] })),
-          },
-        ],
+        credentials: [registeredCredential(s)],
         intended_use_id: s.scope_id,
         // ADR-0046 / ARF RPRC_17a: hizmet kimliği (gömülü açıklama politikasının `(rp_id, service_id)` ikilisi; EDP_02)
         service_id: s.service_id ?? s.scope_id,

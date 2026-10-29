@@ -197,7 +197,7 @@ export function policyScopeViolations(p: Policy, rp: RelyingParty | null, nowMs?
 }
 
 /**
- * ADR-0026: her DCQL sorgusunu karşılayan TEK kullanım (aynı vct, geçerli, istenen alanların tamamı kapsamda). Kayıt sertifikası
+ * ADR-0026: her DCQL sorgusunu karşılayan TEK kullanım (aynı vct ve sunum biçimi, geçerli, istenen alanların tamamı kapsamda). Kayıt sertifikası
  * kullanım başınadır; sorgu birden çok kullanıma yayılıyorsa ya da hiçbiri tam karşılamıyorsa o sorgu için sertifika eklenmez.
  */
 export function registrationScopesFor(
@@ -212,6 +212,9 @@ export function registrationScopesFor(
     const s = rp.scopes.find(
       (x) =>
         c.vct_values.includes(x.vct) &&
+        // 0.7.4: kullanım sunum biçimiyle kayıtlı (WRPRC `credentials` aynı biçimde; ARF RPRC_21 — eudi-dev K2 2026-10-29); biçimsiz
+        // kullanım ve biçimsiz sorgu `dc+sd-jwt`
+        ((x as { format?: string }).format ?? "dc+sd-jwt") === (c.format ?? "dc+sd-jwt") &&
         new Date(x.valid_from).getTime() <= now &&
         (!x.valid_until || now < new Date(x.valid_until).getTime()) &&
         c.required_claims.every((cl) => x.claims.includes(scopeClaimName(x.vct, c.format, cl))),

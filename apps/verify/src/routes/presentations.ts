@@ -223,9 +223,13 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       p.trace.push({
         t: Date.now(),
         step: `Response decrypted (JWE ECDH-ES/${jweEnc(jwe)}${opened.path === "dc_api" ? ", via browser Digital Credentials API" : ", cross-device"})`,
-        detail: `state ${dec.state === p.req.state ? "matched" : "MISMATCH"}`,
+        detail: `state ${dec.state === p.req.state ? "matched" : dec.state === undefined && opened.path === "dc_api" ? "absent (DC API)" : "MISMATCH"}`,
       });
-      if (dec.state !== p.req.state) return failedAttempt(p, pid, reply, null, "state mismatch");
+      // OpenID4VP 1.0 Ek A.2: `state` DC API için tanımlı değil — cüzdan yanıtta göndermeyebilir (doğrulayıcı bekleyemez). Bu yolda
+      // sunuma bağlama yanıt şifrelemesinin anahtarı (`kid`), `nonce` ve köken (`expected_origins` / SessionTranscript) ile yapılır.
+      // Gönderildiyse yine eşleşmeli. Cihazlar arası yolda `state` zorunlu kalır (eudi-dev denemesi 2026-10-29, K2).
+      const stateOk = dec.state === p.req.state || (opened.path === "dc_api" && dec.state === undefined);
+      if (!stateOk) return failedAttempt(p, pid, reply, null, "state mismatch");
       const pc = p.policy.credentials[0];
       const pres = pc ? dec.vp_token[pc.id]?.[0] : undefined;
       if (pc && !pres) return failedAttempt(p, pid, reply, null, `${pc.id} missing in vp_token`);

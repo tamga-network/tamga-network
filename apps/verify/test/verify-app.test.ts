@@ -1311,6 +1311,27 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const rb3 = (await result(b3.id)) as unknown as { state: string; last_attempt: { failed_step: string | null } };
     expect(rb3.state).toBe("PENDING");
     expect(rb3.last_attempt.failed_step).toBe("A6");
+    // 4c) OpenID4VP 1.0 Ek A.2: `state` DC API için tanımlı değil — AB cüzdanı (eudi-dev 3.5.0, K2 2026-10-29) yanıtta göndermez.
+    // DC yolunda `state`'siz yanıt kabul; gönderildiyse yine eşleşmeli. Cihazlar arası yolda `state` zorunlu kalır.
+    const b4 = await openBoth();
+    const b4Dc = await answer(b4.dc, noPost);
+    const wrongState = encryptJwe(utf8(JSON.stringify({ vp_token: b4Dc.vpToken, state: "baska" })), b4.dc.encJwk);
+    expect((await postJwe(wrongState)).statusCode).toBe(400);
+    expect(
+      ((await result(b4.id)) as unknown as { last_attempt: { failed_reason: string } }).last_attempt.failed_reason,
+    ).toBe("state mismatch");
+    const noState = encryptJwe(utf8(JSON.stringify({ vp_token: b4Dc.vpToken })), b4.dc.encJwk);
+    expect((await postJwe(noState)).statusCode).toBe(200);
+    const rb4 = await result(b4.id);
+    expect(rb4.failed_reason).toBeNull();
+    expect(rb4.outcome).toBe("ACCEPTED");
+    const b5 = await openBoth();
+    const b5Qr = await answer(b5.qr, noPostCapture);
+    const qrNoState = encryptJwe(utf8(JSON.stringify({ vp_token: b5Qr.vpToken })), b5.qr.encJwk);
+    expect((await postJwe(qrNoState)).statusCode).toBe(400);
+    expect(
+      ((await result(b5.id)) as unknown as { last_attempt: { failed_reason: string } }).last_attempt.failed_reason,
+    ).toBe("state mismatch");
 
     // 5) DC API oturumuna QR akışının (OpenID4VPHandover) imzası → oturum özeti uyuşmaz → A6
     const d2 = await openDc();

@@ -111,6 +111,60 @@ describe("kayıt sertifikası (ADR-0026)", () => {
     expect(items[0].payload.intended_use_id).toBe("discount-1");
   });
 
+  it("kayıtlı belge kullanımın sunum biçiminde (TS 119 475 Ek B.2.9, RPRC_21; eudi-dev K2 2026-10-29)", () => {
+    const base = { ...rp.scopes[0], vct: "urn:tamga:id:IdentityAttestation:1", claims: ["age_over_18"] };
+    const scopes = [
+      { ...base, scope_id: "sd" },
+      { ...base, scope_id: "mdoc", format: "mso_mdoc", mdoc_namespace: "tamga.id.1" },
+      { ...base, scope_id: "zk", format: "mso_mdoc_zk", mdoc_namespace: "tamga.id.1" },
+    ];
+    const { items } = buildWrprcPayloads(
+      { relying_parties: [{ ...rp, scopes }], issuers: [] },
+      { now, registryUri: "u" },
+    );
+    const cred = (id: string) => items.find((i) => i.scope_id === id)!.payload.credentials;
+    // biçim yoksa SD-JWT VC (eski davranış)
+    expect(cred("sd")).toEqual([
+      {
+        format: "dc+sd-jwt",
+        meta: { vct_values: ["urn:tamga:id:IdentityAttestation:1"] },
+        claim: [{ path: ["age_over_18"] }],
+      },
+    ]);
+    // mdoc: doctype_value + [ad alanı, öğe] — AB cüzdanı mdoc isteğini dc+sd-jwt kaydıyla eşlemez
+    expect(cred("mdoc")).toEqual([
+      {
+        format: "mso_mdoc",
+        meta: { doctype_value: "urn:tamga:id:IdentityAttestation:1" },
+        claim: [{ path: ["tamga.id.1", "age_over_18"] }],
+      },
+    ]);
+    expect(cred("zk")[0]).toMatchObject({ format: "mso_mdoc_zk", claim: [{ path: ["tamga.id.1", "age_over_18"] }] });
+    // alanlar SD-JWT VC adıyla kayıtlı; mdoc kaydında CIR 2026/1731 Tablo 6 öğe adı
+    const named = buildWrprcPayloads(
+      {
+        relying_parties: [
+          {
+            ...rp,
+            scopes: [
+              { ...base, scope_id: "n", format: "mso_mdoc", mdoc_namespace: "tamga.id.1", claims: ["birthdate"] },
+            ],
+          },
+        ],
+        issuers: [],
+      },
+      { now, registryUri: "u" },
+    ).items[0].payload.credentials;
+    expect(named[0].claim).toEqual([{ path: ["tamga.id.1", "birth_date"] }]);
+    // mdoc biçiminde ad alanı zorunlu
+    expect(() =>
+      buildWrprcPayloads(
+        { relying_parties: [{ ...rp, scopes: [{ ...base, scope_id: "x", format: "mso_mdoc" }] }], issuers: [] },
+        { now, registryUri: "u" },
+      ),
+    ).toThrow(/mdoc_namespace/);
+  });
+
   it("süre en çok 12 ay (WRC3)", () => {
     const long = { ...rp, scopes: [{ ...rp.scopes[0], valid_until: null }] };
     const { items } = buildWrprcPayloads({ relying_parties: [long], issuers: [] }, { now, registryUri: "u" });

@@ -312,8 +312,21 @@ export const RpScope = z
      * doğrulayıcının birden çok kullanımı aynı hizmette toplanabilir (gömülü açıklama politikası `(rp_id, service_id)` eşler).
      */
     service_id: z.string().min(1).max(256).optional(),
+    /**
+     * 0.7.4 (ADR-0026 / ETSI TS 119 475 Ek B.2.9, ARF RPRC_21): bu kullanımda istenen sunum biçimi — kayıt sertifikasının
+     * `credentials` öğesi aynı biçimle yazılır (`dc+sd-jwt` → `vct_values` + `[öğe]`; `mso_mdoc` / `mso_mdoc_zk` →
+     * `doctype_value` + `[ad alanı, öğe]`). AB cüzdanı isteği biçim + tür + yol ile karşılaştırır; biçim tutmazsa "fazla istek"
+     * sayar. Yoksa `dc+sd-jwt`. Biçim kümesi kapalıdır (ADR-0013, ADR-0032).
+     */
+    format: z.enum(["dc+sd-jwt", "mso_mdoc", "mso_mdoc_zk"]).optional(),
+    /** `format` mdoc ise öğelerin ad alanı (ör. `tamga.id.1`); mdoc biçiminde zorunlu. */
+    mdoc_namespace: z.string().min(1).max(128).optional(),
   })
-  .passthrough();
+  .passthrough()
+  .refine((s) => !s.format || s.format === "dc+sd-jwt" || !!s.mdoc_namespace, {
+    message: "mdoc biçimli kullanımda mdoc_namespace zorunlu",
+    path: ["mdoc_namespace"],
+  });
 
 export const RelyingParty = z
   .object({

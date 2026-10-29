@@ -182,7 +182,9 @@ export function inspectWalletProviderCert(
       p.push(
         "konu alanında organizationIdentifier (2.5.4.97) yok — sağlayıcının kimlik numarası gerekli (ETSI TS 119 412-6 §5, EN 319 412-3 §4.2.1; ör. VATTR-<VKN>)",
       );
-    else if (!/^(VAT|NTR|LEI)[A-Z]{2}-[A-Z0-9]+$/.test(organizationIdentifier))
+    // EN 319 412-1 §5.1.4: 3 harf tür + 2 harf ülke + "-" + kimlik (ülke ve türe göre; harf kümesi sınırlanmaz — ör. eudi-dev test
+    // sağlayıcısı `NTRNL-NLTEST.00000000`, K2 2026-10-29). Boşluk ve denetim karakteri kabul edilmez.
+    else if (!/^(VAT|NTR|PSD|LEI)[A-Z]{2}-[A-Za-z0-9][!-~]*$/.test(organizationIdentifier))
       p.push(
         `organizationIdentifier EN 319 412-1 semantik tanımlayıcı olmalı (VATTR-…, NTRTR-…, LEIXG-…); bulunan: ${organizationIdentifier}`,
       );

@@ -314,6 +314,8 @@
         },
         {
           "scope_id": "age-over-18-1",
+          "format": "mso_mdoc",
+          "mdoc_namespace": "tamga.id.1",
           "purpose": "Over-18 check — yes/no only",
           "purpose_localized": {
             "tr-TR": "18 yaş üstü doğrulaması — yalnızca evet/hayır",
@@ -326,6 +328,8 @@
         },
         {
           "scope_id": "age-over-18-zk-1",
+          "format": "mso_mdoc_zk",
+          "mdoc_namespace": "tamga.id.1",
           "purpose": "Over-18 check with a zero-knowledge proof — yes/no only",
           "purpose_localized": {
             "tr-TR": "Sıfır bilgi ispatıyla 18 yaş üstü doğrulaması — yalnızca evet/hayır",
@@ -338,6 +342,8 @@
         },
         {
           "scope_id": "age-over-15-1",
+          "format": "mso_mdoc",
+          "mdoc_namespace": "tamga.id.1",
           "purpose": "Over-15 check — yes/no only",
           "purpose_localized": {
             "tr-TR": "15 yaş üstü doğrulaması — yalnızca evet/hayır",
@@ -350,6 +356,8 @@
         },
         {
           "scope_id": "age-over-15-zk-1",
+          "format": "mso_mdoc_zk",
+          "mdoc_namespace": "tamga.id.1",
           "purpose": "Over-15 check with a zero-knowledge proof — yes/no only",
           "purpose_localized": {
             "tr-TR": "Sıfır bilgi ispatıyla 15 yaş üstü doğrulaması — yalnızca evet/hayır",

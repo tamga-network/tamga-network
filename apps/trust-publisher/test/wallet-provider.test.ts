@@ -161,6 +161,13 @@ describe("cüzdan sağlayıcı kayıt işlemleri (saf)", () => {
     expect(await problems({ subject: "C=TR, O=X Ltd, 2.5.4.97=1870632151, CN=WP" }, "production")).toMatch(
       /semantik tanımlayıcı/,
     );
+    // EN 319 412-1: kimlik kısmında nokta vb. olabilir (yabancı sağlayıcı); boşluk olamaz
+    expect(await problems({ subject: "C=NL, O=X, 2.5.4.97=NTRNL-NLTEST.00000000, CN=WP" }, "production")).not.toMatch(
+      /semantik tanımlayıcı/,
+    );
+    expect(await problems({ subject: "C=TR, O=X, 2.5.4.97=VATTR-12 34, CN=WP" }, "production")).toMatch(
+      /semantik tanımlayıcı/,
+    );
     expect(await problems({ qcTypes: null }, "production")).toMatch(/qcStatements uzantısı yok/);
     // id-etsi-qct-esign (0.4.0.1862.1.6.1) cüzdan sağlayıcı türü değildir
     expect(await problems({ qcTypes: ["0.4.0.1862.1.6.1"] }, "production")).toMatch(
