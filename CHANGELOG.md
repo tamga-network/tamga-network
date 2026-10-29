@@ -6,6 +6,16 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.4 — unreleased (source only, not on npm)
 
+- verify + verifier/web (2026-10-29; security round K10): **strict Content-Security-Policy on every Tamga Verify page.** No inline
+  script or style any more: page scripts (waiting page, sample site, gate terminal, Digital Credentials API test), the brand
+  stylesheet and the early theme stamp are separate files under `/assets/*`, values reach them through `data-*` attributes; the
+  gate's QR reader (jsQR 1.4.0, unchanged file, hash pinned in the test) is served by the verifier itself — no CDN. Policy:
+  `default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; … base-uri 'none'; object-src 'none';
+  require-trusted-types-for 'script'; trusted-types 'none'` (no nonce, no `'unsafe-inline'`, no `'unsafe-eval'`). The site kit
+  (`@tamga-network/verifier/web`) sets its styles through CSSOM instead of `style` attributes and clears the mount point without
+  `innerHTML`, so it also works on integrator sites whose CSP has no `'unsafe-inline'` and enforces Trusted Types. Shared
+  `ops/brand/tamga-ui.css` gains small utility classes; `tamga-ui.js` builds fingerprint groups with DOM nodes.
+
 - trust + trust-publisher + verify (2026-10-29; ADR-0069, completes ADR-0065 K2/K5): **gate groups in the trust list.** The
   verifier record's `terminal_groups[]` (ADR-0012 K5) gets a schema: `group_id` (unique in the list), `institution_id` (issuer
   `slug` or verifier `dns_name` operating the gates), `label`, `allowed_policies[]`, optional `cert_fingerprints[]` and

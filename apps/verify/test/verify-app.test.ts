@@ -1005,7 +1005,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     expect(bad.body).not.toContain("<script>alert");
     const ok = await app.inject({ method: "GET", url: "/terminal?group=bubilet-gate" });
     expect(ok.statusCode).toBe(200);
-    expect(ok.body).toContain('terminal_group:"bubilet-gate"');
+    expect(ok.body).toContain('data-group="bubilet-gate"'); // K10: değer betiğe değil, kaçışlı data özniteliğine
     expect(jsLit("</script><script>x")).not.toContain("</");
     expect(jsLit("a b")).toBe('"a\\u2028b"');
   });

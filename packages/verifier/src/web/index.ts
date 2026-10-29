@@ -224,6 +224,8 @@ function h(
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
     if (typeof v === "function") el.addEventListener(k.slice(2), v);
+    // Biçim CSSOM ile (style özniteliği değil): kiti kullanan site CSP'sinde `style-src 'unsafe-inline'` olmadan da çalışır
+    else if (k === "style") el.style.cssText = v;
     else el.setAttribute(k, v);
   }
   for (const c of children) el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
@@ -257,7 +259,7 @@ export async function start(opts: Pick<MountOptions, "verifier" | "policy" | "dc
 
 /** Düğme/QR'ı `el` içine çizer ve sonucu yoklar. Telefonda aynı cihaz (`openid4vp://`), bilgisayarda QR (cihazlar arası). */
 export function mount(el: HTMLElement, opts: MountOptions): { stop: () => void } {
-  el.innerHTML = "";
+  el.replaceChildren(); // HTML dizgisi yazılmaz (Trusted Types zorunlu sayfalarda da çalışır)
   const lang = resolveLang(opts.lang);
   const m = MESSAGES[lang];
   const status = h("p", { class: "tamga-status", style: "font-size:14px;color:#6B615B;margin:8px 0" }, [m.preparing]);

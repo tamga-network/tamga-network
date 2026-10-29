@@ -5,24 +5,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AsyncLocalStorage } from "node:async_hooks";
-import { randomBytes } from "node:crypto";
-
-/**
- * CSP nonce'u (güvenlik turu S9): her istek için `app.ts` onRequest kancası yeni bir nonce üretir ve isteğin bütün işlenişini bu
- * bağlamda koşturur; sayfa iskeleti ve sayfalar satır içi `<script>` etiketlerine `nonceAttr()` ile aynı değeri yazar, onSend
- * kancası başlığa `'nonce-…'` koyar. Nonce şablonlara dışarıdan gelmez (yer tutucu değiştirme yok): sayfaya ham HTML sokabilen
- * biri nonce'u bilemez.
- */
-const nonceStore = new AsyncLocalStorage<string>();
-export const runWithCspNonce = <T>(fn: () => T): T => nonceStore.run(randomBytes(16).toString("base64"), fn);
-/** İstek bağlamındaki nonce (bağlam dışında — ör. testte doğrudan sayfa üretimi — undefined). */
-export const cspNonce = (): string | undefined => nonceStore.getStore();
-/** Satır içi `<script…>` için öznitelik: ` nonce="…"` ya da boş. */
-export const nonceAttr = (): string => {
-  const n = cspNonce();
-  return n ? ` nonce="${n}"` : "";
-};
+import type { FastifyInstance } from "fastify";
 
 const BRAND_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../ops/brand");
 const read = (f: string) => {
@@ -32,8 +15,49 @@ const read = (f: string) => {
     return "";
   }
 };
-const CSS = read("tamga-ui.css");
-const JS = read("tamga-ui.js");
+/**
+ * Sayfaların bütün biçim ve betik dosyaları ayrı dosya olarak bu servisten (`/assets/*`) sunulur: CSP'de satır içi biçim ve
+ * betik yok (`style-src`/`script-src` yalnız 'self'; nonce yok). Marka dosyaları tek kaynaktan (`ops/brand`), sayfa betikleri
+ * `apps/verify/assets/`, üçüncü taraf kütüphane kendi kopyamız (`assets/vendor/`, CDN yok).
+ */
+const ASSET_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../assets");
+const readAsset = (f: string) => {
+  try {
+    return readFileSync(resolve(ASSET_DIR, f), "utf8");
+  } catch {
+    return "";
+  }
+};
+const CSS_TYPE = "text/css; charset=utf-8";
+const JS_TYPE = "application/javascript; charset=utf-8";
+export const ASSETS: Record<string, { type: string; body: string }> = {
+  "/assets/tamga-ui.css": { type: CSS_TYPE, body: read("tamga-ui.css") },
+  "/assets/tamga-ui.js": { type: JS_TYPE, body: read("tamga-ui.js") },
+  "/assets/tamga-theme.js": { type: JS_TYPE, body: read("tamga-theme.js") },
+  "/assets/pending.js": { type: JS_TYPE, body: readAsset("pending.js") },
+  "/assets/sample-site.js": { type: JS_TYPE, body: readAsset("sample-site.js") },
+  "/assets/terminal.js": { type: JS_TYPE, body: readAsset("terminal.js") },
+  "/assets/dc-test.js": { type: JS_TYPE, body: readAsset("dc-test.js") },
+  "/assets/vendor/jsQR.js": { type: JS_TYPE, body: readAsset("vendor/jsQR.js") },
+};
+/** `/assets/*` uçları (yalnız yukarıdaki sabit liste; yol parametresi yok). */
+export function registerAssetRoutes(app: FastifyInstance) {
+  for (const [path, a] of Object.entries(ASSETS))
+    app.get(path, async (_req, reply) =>
+      reply.type(a.type).header("cache-control", "public, max-age=3600").send(a.body),
+    );
+}
+
+/**
+ * Sayfa betiği: `<script src="/assets/<ad>.js" data-…>`. Değerler (adres, ileti metinleri) `data-*` özniteliklerinde, HTML
+ * kaçışlı — betik `document.currentScript.dataset` ile okur. Satır içi betik yok (CSP `script-src 'self'`).
+ */
+export function pageScript(name: string, data: Record<string, string> = {}): string {
+  const attrs = Object.entries(data)
+    .map(([k, v]) => ` data-${k}="${escHtml(v)}"`)
+    .join("");
+  return `<script src="/assets/${name}.js"${attrs}></script>`;
+}
 /**
  * Logo tek kaynaktan: üst çubukta (30 px) tam işaret `ops/brand/logo/mark.svg` (N1; tamga.network başlığıyla aynı). SVG'nin kendi viewBox'ı
  * aynen kullanılır (sabit 0 0 100 100 değil); Gök dolgusu sayfa temasına bağlanır (--primary, koyu temada açık Gök).
@@ -57,7 +81,7 @@ export type Lang = "en" | "tr";
  * app.ts HTML yanıtlarına `<body>`'nin hemen ardına ekler (süreç ortamı okunmaz).
  */
 export const sandboxBar = (lang: "en" | "tr"): string =>
-  `<div role="note" style="background:#B45309;color:#fff;font:600 13px/1.4 system-ui,sans-serif;text-align:center;padding:6px 12px">${
+  `<div role="note" class="sandbox-bar">${
     lang === "tr"
       ? "SANDBOX · TEST — Bu ortamdaki kurumlar, kişiler ve belgeler örnektir; gerçek işlemde geçmez."
       : "SANDBOX · TEST — Institutions, people and credentials here are examples; they are not valid in real transactions."
@@ -78,8 +102,8 @@ export function brandPage(o: { lang: Lang; title: string; host: string; body: st
   const [ts, tl, td] = tr ? ["Sistem", "Açık", "Koyu"] : ["System", "Light", "Dark"];
   return `<!doctype html><html lang="${o.lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escHtml(o.title)}</title><meta name="description" content="${tr ? "Tamga'nın barındırılan doğrulayıcısı: ağın kurallarına uyan cüzdanlardan belge ister ve doğrular (OpenID4VP)." : "Tamga's hosted verifier: requests and verifies credentials from wallets that follow the network's rules (OpenID4VP)."}"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#1E5A78" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#101820" media="(prefers-color-scheme: dark)">${o.headExtra ?? ""}
-<script${nonceAttr()}>try{const t=localStorage.getItem("tamga.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch{}</script>
-<style>${CSS}</style></head><body>
+<script src="/assets/tamga-theme.js"></script>
+<link rel="stylesheet" href="/assets/tamga-ui.css"></head><body>
 <header class="bar"><div class="shell">
 <a class="brand" href="https://tamga.network" aria-label="Tamga Network"><svg width="30" height="30" viewBox="${MARK_HEADER.vb}" aria-hidden="true">${MARK_HEADER.body}</svg><span class="words"><b>Tamga</b><small>Network</small></span></a>
 <span class="crumb">${escHtml(sub ?? "")}.<span>${escHtml(rest.join("."))}</span></span>
@@ -88,7 +112,7 @@ export function brandPage(o: { lang: Lang; title: string; host: string; body: st
 <button type="button" data-theme-choice="light" aria-label="${tl}" title="${tl}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
 <button type="button" data-theme-choice="dark" aria-label="${td}" title="${td}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
 </div></div></div></header>
-<main class="shell" style="padding-block:40px 0">${o.body}</main>
+<main class="shell main-pad-lg">${o.body}</main>
 <footer><div class="shell"><span>© Tamga Network</span><a href="https://tamga.network">tamga.network</a><a href="https://docs.tamga.network">${tr ? "Geliştirici belgeleri" : "Developer docs"}</a><a href="https://trust.tamga.network">${tr ? "Güven listeleri" : "Trusted lists"}</a></div></footer>
-<script${nonceAttr()}>${JS}</script></body></html>`;
+<script src="/assets/tamga-ui.js"></script></body></html>`;
 }

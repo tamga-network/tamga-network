@@ -1,6 +1,6 @@
 /*
  * Tamga UI — shared page behaviour: theme switch (system · light · dark, remembered per browser), fingerprint copy buttons,
- * and small helpers for pages that render live data (window.TamgaUI). The early theme stamp lives inline in <head>.
+ * and small helpers for pages that render live data (window.TamgaUI). The early theme stamp is tamga-theme.js in <head>.
  */
 (() => {
   const root = document.documentElement;
@@ -22,11 +22,15 @@
   document.querySelectorAll("[data-fp]").forEach((el) => {
     const fp = el.dataset.fp;
     const out = el.querySelector(".fp");
+    // DOM nodes, not an HTML string: service pages enforce Trusted Types (require-trusted-types-for 'script')
     if (out)
-      out.innerHTML = fp
-        .match(/.{1,4}/g)
-        .map((g, i) => (i % 2 ? `<i>${g}</i>` : g))
-        .join(" ");
+      out.replaceChildren(
+        ...(fp.match(/.{1,4}/g) || []).flatMap((g, i) => {
+          const part =
+            i % 2 ? Object.assign(document.createElement("i"), { textContent: g }) : document.createTextNode(g);
+          return i ? [document.createTextNode(" "), part] : [part];
+        }),
+      );
     const btn = el.querySelector(".copy");
     if (!btn) return;
     const label = btn.textContent;

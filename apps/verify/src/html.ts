@@ -5,8 +5,8 @@
 import type { RelyingParty } from "@tamga-network/trust";
 import type { Policy, Step, VerificationResult } from "@tamga-network/verifier";
 import type { Presentation } from "./state.js";
-import { brandPage, nonceAttr, type Lang } from "./brand.js";
-export { nonceAttr };
+import { brandPage, pageScript, type Lang } from "./brand.js";
+export { pageScript };
 import { isDrivingPolicy } from "./policies.js";
 
 export { langOf, type Lang } from "./brand.js";
@@ -224,7 +224,7 @@ const purposeOf = (p: Policy, lang: Lang) => p.purpose[lang === "tr" ? "tr-TR" :
 /** ADR-0039 K1/DL1: sürücü belgesi bilgisi isteyen her politikada, bekleme ve sonuç sayfalarında ibare. */
 const drivingNote = (p: Policy, lang: Lang) =>
   isDrivingPolicy(p)
-    ? `<p class="sub" role="note" data-not-official style="border:1px solid currentColor;border-radius:8px;padding:10px 12px"><b>${T[lang].notOfficialLicence}</b></p>`
+    ? `<p class="sub outlined" role="note" data-not-official><b>${T[lang].notOfficialLicence}</b></p>`
     : "";
 
 const META = new Set(["iss", "vct", "vct#integrity", "iat", "exp", "cnf", "status", "category"]);
@@ -287,7 +287,7 @@ export function tracePanel(p: Presentation, lang: Lang = "en") {
         `<tr><td class="fmt">+${((e.t - p.createdAt) / 1000).toFixed(1)}s</td><td>${esc(e.step)}${e.detail ? `<br><span class="muted small"><code>${esc(e.detail)}</code></span>` : ""}</td></tr>`,
     )
     .join("");
-  return `<section><details open><summary>${T[lang].trace}</summary><div class="table-wrap" style="margin-top:12px"><table>${rows}</table></div></details></section>`;
+  return `<section><details open><summary>${T[lang].trace}</summary><div class="table-wrap mt-12"><table>${rows}</table></div></details></section>`;
 }
 
 /** Operatör görünümü (kök): politikalar, RP kaydı, güven listesi tazeliği. İngilizce. */
@@ -321,7 +321,7 @@ export function policiesPage(
     "Verification policies",
     `<p class="eyebrow">Relying party · OpenID4VP · hosted verifier</p><h1>Tamga Verify</h1>
 <p class="lede">The reference verifier: it requests exactly the fields a policy allows, checks the credential against the trusted list and returns one of three results — valid, invalid or could not verify.</p>
-<dl class="status" style="margin-top:32px"><div><dt>Relying party</dt><dd>${rpState}</dd></div>
+<dl class="status mt-32"><div><dt>Relying party</dt><dd>${rpState}</dd></div>
 <div><dt>Scopes</dt><dd>${rp ? rp.scopes.length : 0}<small>registered purposes</small></dd></div>
 <div><dt>Trusted list</dt><dd>v${trust.version}<small>${esc(trust.source)}</small></dd></div>
 <div><dt>Status cache</dt><dd>${cachedLists}<small>lists prefetched</small></dd></div></dl>
@@ -427,7 +427,7 @@ export function homePage(
     h.title,
     `<p class="eyebrow">${h.eyebrow}</p><h1>Tamga Verify</h1>
 <p class="lede">${esc(h.lede)}</p>
-<dl class="status" style="margin-top:32px"><div><dt>${h.rp}</dt><dd>${rpState}</dd></div>
+<dl class="status mt-32"><div><dt>${h.rp}</dt><dd>${rpState}</dd></div>
 <div><dt>${h.scopes}</dt><dd>${rp ? rp.scopes.length : 0}<small>${h.scopesNote}</small></dd></div>
 <div><dt>${h.list}</dt><dd>v${trust.version}<small>${esc(trust.source)}</small></dd></div>
 <div><dt>${h.cache}</dt><dd>${cachedLists}<small>${h.cacheNote}</small></dd></div></dl>
@@ -449,10 +449,10 @@ export function pendingPage(lang: Lang, p: Presentation, id: string, qrDataUrl: 
     lang,
     t.waiting,
     `<h1>${esc(purposeOf(p.policy, lang))}</h1><p class="lede">${t.scan} ${t.requested}: <b>${wanted}</b>. ${t.nothingElse}</p>${drivingNote(p.policy, lang)}
-<section class="row" style="align-items:flex-start;gap:28px"><img class="qr" src="${qrDataUrl}" alt="QR" width="280" height="280">
-<div class="stack" style="flex:1;min-width:240px"><div class="result PENDING">${t.waiting}… <span class="mono small">${left} ${t.secondsLeft}</span></div>
+<section class="row items-start gap-28"><img class="qr" src="${qrDataUrl}" alt="QR" width="280" height="280">
+<div class="stack grow-240"><div class="result PENDING">${t.waiting}… <span class="mono small">${left} ${t.secondsLeft}</span></div>
 <pre>${esc(p.req.qrPayload)}</pre></div></section>${tracePanel(p, lang)}
-<script${nonceAttr()}>(()=>{const base=2000;let wait=base;const poll=async()=>{try{const r=await fetch('/presentations/${esc(id)}?st=${esc(p.statusToken)}');if(r.ok){wait=base;const j=await r.json();if(j.state==='DONE')return location.reload();}else{const ra=Number(r.headers.get('retry-after'));wait=Math.min(30000,Math.max(ra>0?ra*1000:0,wait*2));}}catch{wait=Math.min(30000,wait*2);}setTimeout(poll,wait);};setTimeout(poll,base);})()</script>`,
+${pageScript("pending", { poll: `/presentations/${encodeURIComponent(id)}?st=${encodeURIComponent(p.statusToken)}` })}`,
   );
 }
 
@@ -463,11 +463,7 @@ export function pendingPage(lang: Lang, p: Presentation, id: string, qrDataUrl: 
 export function statusOnlyPage(lang: Lang, done: boolean) {
   const t = T[lang];
   const head = done ? t.statusDone : t.waiting;
-  return page(
-    lang,
-    head,
-    `<div class="result PENDING">${head}</div><p class="muted" style="margin-top:16px">${t.statusOnlyText}</p>`,
-  );
+  return page(lang, head, `<div class="result PENDING">${head}</div><p class="muted mt-16">${t.statusOnlyText}</p>`);
 }
 
 /** ADR-0012 C: kontrol edenin görünümü — büyük sonuç + yalnızca açıklanan alanlar. */
@@ -482,7 +478,7 @@ export function checkPage(lang: Lang, p: Presentation, r: VerificationResult, id
     `<div class="result big ${r.outcome}">${head}</div>
 <section><h2>${esc(purposeOf(p.policy, lang))}</h2><p class="muted small">${t.presentedAgo(ago)} · ${t.verifier} ${esc(verifierName)} · ${t.knowingly}</p>${drivingNote(p.policy, lang)}
 ${rows ? `<div class="table-wrap"><table class="kv"><tbody>${rows}</tbody></table></div>` : `<p class="muted">${t.noFields}</p>`}
-<p class="muted small" style="margin-top:14px">${t.issuer}: ${esc(r.issuer?.legal_name ?? "—")} · ${t.revocation}: ${esc(r.status.value)} · <a href="/p/${esc(id)}">${t.fullTrace}</a></p></section>`,
+<p class="muted small mt-14">${t.issuer}: ${esc(r.issuer?.legal_name ?? "—")} · ${t.revocation}: ${esc(r.status.value)} · <a href="/p/${esc(id)}">${t.fullTrace}</a></p></section>`,
   );
 }
 
@@ -506,7 +502,7 @@ export function resultPage(lang: Lang, p: Presentation, r: VerificationResult, i
   return page(
     lang,
     r.outcome,
-    `<div class="result ${r.outcome}">${r.outcome}</div><p class="lede" style="margin-top:16px">${explain}</p>${drivingNote(p.policy, lang)}
+    `<div class="result ${r.outcome}">${r.outcome}</div><p class="lede mt-16">${explain}</p>${drivingNote(p.policy, lang)}
 <section><div class="checks">${steps}</div></section>
 <section><div class="table-wrap"><table class="kv"><tbody>
 <tr><td>${t.issuer}</td><td>${esc(r.issuer?.legal_name ?? "—")} · ${esc(r.issuer?.assurance ?? "")} ${esc(r.issuer?.class ?? "")}<br><span class="code small">${esc(r.issuer?.issuer_id ?? "")}</span></td></tr>
@@ -518,14 +514,21 @@ ${claims}${tracePanel(p, lang)}<section><details><summary>${t.resultJson}</summa
   );
 }
 
-/** Passkey tarayıcı yardımcıları (kit: TamgaVerifier.passkey) — sayfa içi betik; sunucu uçları /sample-site/passkey/*. */
-const passkeyJs = (lang: Lang) => {
+/** Örnek sitenin betiği (/assets/sample-site.js: site kiti + passkey) — adres, dil ve iletiler data-* özniteliklerinde. */
+const sampleSiteScript = (lang: Lang, verifierBase: string) => {
   const t = T[lang];
-  return `const pkPost=(u,b)=>fetch(u,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b||{})}).then(async r=>({ok:r.ok,j:await r.json()}));
-const pkMsg=(t)=>{const m=document.getElementById("msg");if(m)m.textContent=t;};
-const pkNote=()=>{if(!TamgaVerifier.passkey.supported()){pkMsg(${jsLit(t.pkUnsupported)});return false;}return true;};
-async function pkRegister(){if(!pkNote())return;try{const o=await pkPost("/sample-site/passkey/register/options");if(!o.ok)return pkMsg(o.j.reason);const resp=await TamgaVerifier.passkey.create(o.j);const v=await pkPost("/sample-site/passkey/register/verify",resp);if(v.ok)location.reload();else pkMsg(v.j.reason);}catch(e){pkMsg(${jsLit(t.pkNotAdded)}+e.message);}}
-async function pkLogin(){if(!pkNote())return;try{const o=await pkPost("/sample-site/passkey/login/options");if(!o.ok)return pkMsg(o.j.reason);const resp=await TamgaVerifier.passkey.get(o.j.options);const v=await pkPost("/sample-site/passkey/login/verify",{flow:o.j.flow,response:resp});if(v.ok)location.reload();else pkMsg(v.j.reason);}catch(e){pkMsg(${jsLit(t.pkNoLogin)}+e.message);}}`;
+  return `<script src="/tamga-verifier.js"></script>
+${pageScript("sample-site", {
+  verifier: verifierBase,
+  lang,
+  msg: JSON.stringify({
+    pkUnsupported: t.pkUnsupported,
+    pkNotAdded: t.pkNotAdded,
+    pkNoLogin: t.pkNoLogin,
+    openFailed: t.openFailed,
+    sessionFailed: t.sessionFailed,
+  }),
+})}`;
 };
 
 /** D11 v1: "Sign up / Sign in with Tamga" örnek sitesi. Kit: /tamga-verifier.js (herhangi bir siteye eklenir). */
@@ -540,9 +543,7 @@ export function demoSitePage(
 <section><div class="panel">${user.passkeys ? `<p class="muted">${esc(t.hasPasskeys(user.passkeys))}</p>` : `<p>${t.addPasskeyHint}</p>`}
 <div class="row"><button class="btn" id="addpk" type="button">${user.passkeys ? t.addAnother : t.addHere}</button>
 <form method="post" action="/sample-site/logout"><button class="btn secondary">${t.signOut}</button></form></div><p id="msg" class="muted"></p></div></section>
-<script src="/tamga-verifier.js"></script>
-<script${nonceAttr()}>${passkeyJs(lang)}
-document.getElementById("addpk").onclick=pkRegister;</script>`
+${sampleSiteScript(lang, verifierBase)}`
     : `<p class="eyebrow">Sample relying party</p><h1>${t.sampleTitle}</h1><p class="lede">${t.sampleText}</p>
 <section><div class="row"><button class="btn" id="signup" type="button">${t.signUp}</button><button class="btn secondary" id="pklogin" type="button">${t.passkeyLogin}</button><button class="btn secondary" id="login" type="button">${t.signIn}</button></div>
 <p class="muted small">${t.sampleNote}</p><p class="small"><button class="link-btn" id="reviewsignup" type="button">${t.reviewSignUp}</button></p><div id="tamga"></div><p id="msg" class="muted"></p></section>
@@ -555,13 +556,7 @@ TamgaVerifier.mount(document.getElementById("tamga"), {
   onResult: (presentationId) =&gt; fetch("/session", { method: "POST", body: presentationId }),
 });
 &lt;/script&gt;</pre><p class="muted small">${t.howToAddNote}</p></details></section>
-<script src="/tamga-verifier.js"></script>
-<script${nonceAttr()}>
-const go=(policy)=>{document.getElementById("msg").textContent="";TamgaVerifier.mount(document.getElementById("tamga"),{verifier:${jsLit(verifierBase)},policy,lang:${jsLit(lang)},start:(o)=>fetch("/sample-site/start",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({policy,...(o&&o.dcApiOrigin?{dc_api_origin:o.dcApiOrigin}:{})})}).then((r)=>{if(!r.ok)throw new Error(${jsLit(t.openFailed)}+" ("+r.status+")");return r.json();}),onResult:async(id)=>{const r=await fetch("/sample-site/session",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({presentation_id:id})});const j=await r.json();if(j.ok)location.reload();else document.getElementById("msg").textContent=j.reason||${jsLit(t.sessionFailed)};}});};
-document.getElementById("signup").onclick=()=>go("site-signup");document.getElementById("login").onclick=()=>go("site-signin");document.getElementById("reviewsignup").onclick=()=>go("review-site-signup");
-${passkeyJs(lang)}
-document.getElementById("pklogin").onclick=pkLogin;
-</script>`;
+${sampleSiteScript(lang, verifierBase)}`;
   return page(lang, user ? t.welcome(user.name) : t.sampleTitle, body);
 }
 
@@ -605,27 +600,25 @@ export function terminalPage(lang: Lang, group: string) {
     t.terminal,
     `<p class="eyebrow">${esc(group)}</p><h1>${t.terminal}</h1><p class="lede">${t.terminalText}</p>
 <section class="stack"><p class="muted small" id="camnote">${t.camNote}</p>
-<video id="v" playsinline style="width:100%;max-width:420px;border-radius:10px;background:#000;display:none"></video>
+<video id="v" class="cam" playsinline hidden></video>
 <label class="muted small" for="key">${t.keyLabel}</label>
 <input id="key" type="password" autocomplete="off" placeholder="tk_…">
 <div class="row"><button class="btn" id="cam" type="button">${t.openCam}</button><button class="btn secondary" id="chk" type="button">${t.check}</button></div>
 <textarea id="tok" rows="4" placeholder="tamga-pass+jwt …"></textarea>
 <div id="res" class="result PENDING">${t.waitingShort}</div><div id="det" class="muted"></div></section>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" integrity="sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx" crossorigin="anonymous"></script>
-<script${nonceAttr()}>
-const $=(i)=>document.getElementById(i);let last="";
-try{$("key").value=sessionStorage.getItem("tamga-terminal-key")||"";}catch{}
-$("key").oninput=()=>{try{sessionStorage.setItem("tamga-terminal-key",$("key").value.trim());}catch{}};
-async function check(tk){const r=await fetch("/terminal/verify",{method:"POST",headers:{"content-type":"application/json",authorization:"Bearer "+$("key").value.trim()},body:JSON.stringify({token:tk,terminal_group:${jsLit(group)}})});const j=await r.json();$("res").className="result "+(j.ok?"ACCEPTED":"REJECTED");$("res").textContent=j.ok?${jsLit(t.pass)}:${jsLit(t.stop)};$("det").textContent=j.ok?("pass "+j.passId+" · "+j.expiresIn+" "+${jsLit(t.left)}):((r.status===401||r.status===403)?${jsLit(t.keyNeeded)}:(j.reason||""));}
-$("chk").onclick=()=>check($("tok").value.trim());
-$("cam").onclick=async()=>{if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$("camnote").textContent=${jsLit(t.camInsecure)};return;}
-const v=$("v");v.style.display="block";let s;try{s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});}catch{try{s=await navigator.mediaDevices.getUserMedia({video:true});}catch(e){$("camnote").textContent=${jsLit(t.camFailed)}+e.message;return;}}
-v.srcObject=s;await v.play();let read;
-if("BarcodeDetector" in window){const d=new BarcodeDetector({formats:["qr_code"]});read=async()=>{const c=await d.detect(v);return c.length?c[0].rawValue:null;};}
-else if(window.jsQR){const cv=document.createElement("canvas");const cx=cv.getContext("2d",{willReadFrequently:true});read=async()=>{if(!v.videoWidth)return null;cv.width=v.videoWidth;cv.height=v.videoHeight;cx.drawImage(v,0,0);const im=cx.getImageData(0,0,cv.width,cv.height);const r=jsQR(im.data,im.width,im.height,{inversionAttempts:"dontInvert"});return r?r.data:null;};}
-else{$("camnote").textContent=${jsLit(t.qrLib)};return;}
-$("camnote").textContent=${jsLit(t.camOn)};
-setInterval(async()=>{try{const tk=await read();if(tk&&tk!==last){last=tk;$("tok").value=tk;check(tk);}}catch{}},400);};
-</script>`,
+<script src="/assets/vendor/jsQR.js"></script>
+${pageScript("terminal", {
+  group,
+  msg: JSON.stringify({
+    pass: t.pass,
+    stop: t.stop,
+    left: t.left,
+    keyNeeded: t.keyNeeded,
+    camInsecure: t.camInsecure,
+    camFailed: t.camFailed,
+    qrLib: t.qrLib,
+    camOn: t.camOn,
+  }),
+})}`,
   );
 }

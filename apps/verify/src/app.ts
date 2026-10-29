@@ -40,10 +40,21 @@ import { registerSiteRoutes } from "./routes/site.js";
 import { registerDcTestRoutes } from "./routes/dc-test.js";
 import { policiesFor } from "./policies.js";
 import { DEFAULT_RATE_RULES, TokenBucketLimiter, type RateRules } from "./rate-limit.js";
-import { cspNonce, runWithCspNonce, sandboxBar } from "./brand.js";
+import { registerAssetRoutes, sandboxBar } from "./brand.js";
 import type { Policy } from "@tamga-network/verifier";
 
 export { POLICIES, policiesFor } from "./policies.js";
+
+/**
+ * HTML sayfalarının CSP'si (güvenlik turu K10): satır içi betik ve biçim yok — sayfa betikleri, marka CSS'i ve QR okuyucu
+ * kütüphanesi bu servisten `/assets/*` (brand.ts; nonce gerekmez, CDN yok). Yazı tipleri Google Fonts (tamga-ui.css @import —
+ * dış CSS dosyası, satır içi değil). QR görseli `data:`. Trusted Types zorunlu: sayfa betikleri DOM'a HTML dizgisi yazmaz.
+ * `upgrade-insecure-requests` yok: bütün kaynaklar aynı köken (göreli yol) ya da https, yerel http geliştirmesi bozulmasın.
+ */
+export const VERIFY_CSP =
+  "default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; " +
+  "img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; " +
+  "require-trusted-types-for 'script'; trusted-types 'none'";
 
 /** Bellekteki denetim kaydı üst sınırı (kayıt yalnızca son olayları gösterir; kalıcı günlük değildir). */
 const AUDIT_MAX = 1000;
@@ -228,22 +239,12 @@ export async function buildVerifyApp(
   if (zk instanceof NativeZkBackend) app.addHook("onClose", async () => zk.close());
   // HTML yanıtları: sunum ve kapı sayfaları dizine girmez; sandbox'ta her sayfanın üstünde "test" şeridi (ADR-0038 SB4; ağ
   // cfg'den — süreç ortamından değil)
-  // S9: her istek kendi CSP nonce bağlamında işlenir (brand.ts); sayfalar satır içi betiğe aynı nonce'u yazar
-  app.addHook("onRequest", (_req, _reply, done) => runWithCspNonce(done));
   app.addHook("onSend", async (req, reply, payload) => {
     reply.header("x-content-type-options", "nosniff");
     if (typeof payload !== "string" || !String(reply.getHeader("content-type") ?? "").startsWith("text/html"))
       return payload;
-    // S9: HTML sayfalarına CSP — betik yalnız kendi kökeninden ve bu isteğin nonce'uyla (kapı sayfasının QR kütüphanesi jsDelivr,
-    // bütünlük özetiyle); biçim için 'unsafe-inline' (style="" öznitelikleri; CSS tek başına kod çalıştıramaz); QR görseli data:
-    const nonce = cspNonce();
-    reply.header(
-      "content-security-policy",
-      `default-src 'self'; script-src 'self'${nonce ? ` 'nonce-${nonce}'` : ""} https://cdn.jsdelivr.net; ` +
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; " +
-        "img-src 'self' data:; connect-src 'self'; media-src 'self' blob:; form-action 'self'; frame-ancestors 'none'; " +
-        "base-uri 'self'; object-src 'none'",
-    );
+    // K10: tek kaynak — CSP yalnız burada (nginx CSP koymaz; nosniff/XFO/Referrer nginx'te de var, vekil bizimkini gizler)
+    reply.header("content-security-policy", VERIFY_CSP);
     reply.header("referrer-policy", "same-origin");
     reply.header("x-frame-options", "DENY");
     const path = req.url.split("?")[0];
@@ -255,6 +256,7 @@ export async function buildVerifyApp(
       `<body>${sandboxBar(/^<!doctype html><html lang="tr"/i.test(payload) ? "tr" : "en")}`,
     );
   });
+  registerAssetRoutes(app);
   registerMiscRoutes(app, ctx);
   registerPresentationRoutes(app, ctx);
   registerTerminalRoutes(app, ctx);
