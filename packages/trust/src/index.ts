@@ -6,6 +6,9 @@ export * from "./lote-reader.js";
 export * from "./tl-reader.js";
 export {
   verifyEnvelopedXmlSignature,
+  // 0.7.4: liste yayıncısının ETSI TS 119 612 XML imzası (XAdES-B-B) aynı kanonikleştirmeyi kullanır (ADR-0066 taslağı)
+  canonicalize as canonicalizeXml,
+  parseXml,
   XmlSignatureError,
   type XmlSignatureResult,
   type VerifyXmlSignatureOptions,

@@ -6,6 +6,19 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.4 — unreleased (source only, not on npm)
 
+- trust-publisher + trust (2026-10-29; ADR-0066 **Proposed**, ETSI TS 119 612 V2.4.1): optional ETSI TS 119 612 XML view of each
+  country list, generated from the same signed `tl-<cc>` object and the LOTL with the same version (`TSLSequenceNumber` =
+  `version`) and signed XAdES-B-B (enveloped, Exclusive C14N, SigningTime / SigningCertificateV2 / DataObjectFormat, only the
+  signer certificate in KeyInfo). Off by default: only `TAMGA_TL119612=1` makes `build` write `tl-<cc>.xml`, `tl-<cc>.sha2`
+  (§6.1) and `archive/tl-<cc>.vNNNN.xml`; signer `TAMGA_TL119612_SIGNER` must follow the §5.7.1 profile (on the real network a
+  non-conforming signer or missing publication data stops the build; warning in sandbox). No EU "notified/qualified" URIs
+  (`EUgeneric`, `granted`, `recognisedatnationallevel`, `…/QC`): list type, status and rules URIs under
+  `https://trust.tamga.network/tl/` (proposed names). Verifiers are not listed; inactive records stay with their history (SKI).
+  `@tamga-network/trust` now exports `canonicalizeXml` and `parseXml` (the signer uses the reader's canonicalisation).
+  Official ETSI XSDs in `apps/trust-publisher/etsi/19612/`; tests validate every generated list against them (libxml2 via the
+  dev dependency `xmllint-wasm`) and verify the signature with the package reader and independently with xml-crypto; a sandbox
+  sample is in `apps/trust-publisher/test/fixtures/tl119612/`. Nothing is published on production addresses.
+
 - trust-publisher + trust + verifier + verify (2026-10-29; independent test with the open-source EU test wallet eudi-dev 3.5.0
   against the sandbox): (1) registration certificates (ETSI TS 119 475 Annex B.2.9, ARF RPRC_21) now register each use in its
   presentation format — a relying-party scope may carry `format` (`dc+sd-jwt` default, `mso_mdoc`, `mso_mdoc_zk`) and, for mdoc,

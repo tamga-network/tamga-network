@@ -40,11 +40,20 @@ Yerel geliştirme için hepsini birden: `npm run setup`.
 
 ## Klasörler
 
-- `src/` — komut satırı aracı (`cli.ts`), kayıt işlemleri, ETSI LoTE okuyucu (`lote.ts`), kayıt sertifikası (`wrprc.ts`)
+- `src/` — komut satırı aracı (`cli.ts`), kayıt işlemleri, ETSI LoTE görünümü (`lote.ts`), ETSI TS 119 612 XML görünümü
+  (`tl119612.ts`, taslak — aşağıda), kayıt sertifikası (`wrprc.ts`)
 - `registry/` — gerçek ağın kayıt defteri kaynağı (test/demo kurumu yok); `examples/` örnek başvurular, `pending/` bekleyenler
 - `registry-sandbox/` — sandbox (test ağı) kaynağı; `test/fixtures/registry/` — testlerin listesi (`dist-test/`)
-- `etsi/` — ETSI TS 119 602 şema dosyaları
+- `etsi/` — ETSI TS 119 602 (`19602/`) ve TS 119 612 (`19612/`) şema dosyaları (yalnız testte)
 - `dist/` — üretilen listeler (git dışında)
+
+**ETSI TS 119 612 XML görünümü (taslak, [[ADR-0066]] — Proposed; varsayılan kapalı).** `TAMGA_TL119612=1` iken `build`, imzaladığı
+`tl-<cc>` listesinden ve LOTL'dan aynı sürümle (`TSLSequenceNumber` = `version`) XAdES-B-B imzalı `tl-<cc>.xml`, `tl-<cc>.sha2`
+(SHA-256 özeti, TS 119 612 §6.1) ve `archive/tl-<cc>.vNNNN.xml` yazar. İmzacı `TAMGA_TL119612_SIGNER` (PKI'daki sertifika adı;
+varsayılan `tl-signer-1`) TS 119 612 §5.7.1 profiline uymalıdır (C/O = slot ülke kodu / işletmeci adı, keyUsage yalnız
+digitalSignature, basicConstraints CA=false, SKI, EKU `id-tsl-kp-tslSigning`); gerçek ağda uymayan imzacı ya da eksik yayın
+verisi (posta adresleri) yayını durdurur, sandbox'ta uyarıdır. Bugünkü `tl-signer-1` profile uymaz; gerçek ağ için ayrı XML imza
+sertifikası gerekir. Bayrak, ADR kabul edilmeden ve sandbox doğrulaması bitmeden açılmaz.
 
 Bir kayıt listeden **silinmez** (SPEC-TRUST-0001 TL2): kurum ya da doğrulayıcı geri çekilirken durumu değişir ve
 `status_history`'ye eklenir. Hiç geçerli olmaması gereken kayıt (ör. gerçek ağdaki örnek kurum) `REVOKED` +

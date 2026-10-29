@@ -60,6 +60,13 @@ import {
 } from "@tamga-network/trust";
 
 import { buildLote, contactFromRegistration, jadesHeader, type LoteContact, type LoteInput } from "./lote.js";
+import {
+  buildTrustedListXml,
+  signTrustedListXml,
+  tl119612Enabled,
+  tlSignerProblems,
+  trustedListFromTamga,
+} from "./tl119612.js";
 import { chainCommand } from "./chain/cli.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
 import { buildWrprcPayloads, wrprcHeader } from "./wrprc.js";
@@ -323,6 +330,73 @@ async function writeLotes(
     writeAtomic(resolve(DIST, "lote", `${l.kind}.json`), JSON.stringify(obj, null, 2) + "\n");
     writeFileSync(resolve(ARCHIVE, `lote-${l.kind}.v${String(l.sequence).padStart(4, "0")}.jws`), jws);
   }
+}
+
+/**
+ * ETSI TS 119 612 XML görünümü (ADR-0066 taslağı): imzalanmış `tl` + `lotl` nesnelerinden (aynı sürüm) XAdES-B-B imzalı
+ * `tl-<cc>.xml`, özet dosyası `tl-<cc>.sha2` (TS 119 612 §6.1) ve arşiv kopyası. İmzacı `TAMGA_TL119612_SIGNER` (PKI'daki
+ * sertifika adı; varsayılan liste imzacısı). Gerçek ağda §5.7.1 imzacı profili ya da eksik yayın verisi yayını durdurur;
+ * sandbox ve testte uyarıdır.
+ */
+function writeTl119612(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tl: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lotl: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tlSrc: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  lotlSrc: any,
+  sourceIssuers: Array<Record<string, unknown>>,
+  cc: string,
+  now: Date,
+) {
+  const byFp = new Map<string, Uint8Array>();
+  const add = (name: unknown, opts: { sharedWalletProvider?: string } = {}) => {
+    if (typeof name !== "string" || !name) return;
+    const c = cert(name, opts);
+    byFp.set(c.fp, c.der);
+  };
+  for (const r of tlSrc.root_cas as Array<{ cert: string }>) add(r.cert);
+  for (const i of sourceIssuers) {
+    add(i.cert);
+    add(i.status_cert);
+  }
+  for (const w of lotlSrc.wallet_providers as Array<{ provider_id: string; wua_signing_certs?: string[] }>)
+    for (const n of w.wua_signing_certs ?? []) add(n, { sharedWalletProvider: w.provider_id });
+  const slot = (lotl.national_lists as Array<{ state_code: string; list_url?: string }>).find(
+    (n) => n.state_code === cc,
+  );
+  const url = slot?.list_url
+    ? slot.list_url.replace(/\.jws$/, ".xml")
+    : `https://trust.tamga.network/tl-${cc.toLowerCase()}.xml`;
+  const { input, problems } = trustedListFromTamga(tl, lotl, {
+    certByFingerprint: (fp) => byFp.get(fp),
+    distributionPoint: url,
+    operatorContact: lotlSrc.operator?.lote_contact,
+  });
+  const signerName = process.env.TAMGA_TL119612_SIGNER ?? "tl-signer-1";
+  const signerCert = cert(signerName);
+  const prof = tlSignerProblems(signerCert.der, { territory: cc, operatorName: input.operatorName });
+  const errors = [...problems, ...prof.errors.map((e) => `TS 119 612 §5.7.1 imzacı ${signerName}: ${e}`)];
+  for (const w of prof.warnings) console.warn(`[uyarı] TS 119 612 imzacı ${signerName}: ${w}`);
+  if (errors.length && ENVIRONMENT === "production")
+    throw new Error(`TS 119 612 XML yayınlanmadı (ADR-0066 taslağı): ${errors.join("; ")}`);
+  for (const e of errors) console.warn(`[uyarı] TS 119 612 XML: ${e}`);
+  const xml = signTrustedListXml(
+    buildTrustedListXml(input),
+    { keyPem: readFileSync(resolve(PKI, `${signerName}.pkcs8.pem`), "utf8"), certDer: signerCert.der },
+    now,
+  );
+  const file = `tl-${cc.toLowerCase()}`;
+  mkdirSync(ARCHIVE, { recursive: true });
+  writeAtomic(resolve(DIST, `${file}.xml`), xml);
+  // §6.1: aynı yerde, ikili dosyanın SHA-256 özeti (.xml → .sha2); kimlik doğrulamaz, yalnız değişikliği gösterir
+  writeAtomic(resolve(DIST, `${file}.sha2`), createHash("sha256").update(xml, "utf8").digest("hex") + "\n");
+  writeFileSync(resolve(ARCHIVE, `${file}.v${String(tl.version).padStart(4, "0")}.xml`), xml);
+  mkdirSync(resolve(DIST, "keys"), { recursive: true });
+  writeFileSync(resolve(DIST, "keys", `${signerName}.cert.pem`), signerCert.pem);
+  changelog(`build: ${file}.xml (ETSI TS 119 612, TSLSequenceNumber ${tl.version})`);
 }
 
 /** alan adı → erişim sertifikasının organizationIdentifier'ı (2.5.4.97; EN 319 412-1); build() doldurur */
@@ -665,6 +739,9 @@ async function build() {
 
   // ---- LoTE izdüşümü (ETSI TS 119 602; ARF OIA_15b) — kaynakta açıkken üretilir
   if (lotlSrc.lote?.enabled) await writeLotes(lotlSrc, tlSrc, cc, lotl.version, tl.version, now, s.certDer);
+
+  // ---- ETSI TS 119 612 XML görünümü (ADR-0066 taslağı, Proposed) — varsayılan KAPALI: yalnız TAMGA_TL119612=1
+  if (tl119612Enabled()) writeTl119612(tl, lotl, tlSrc, lotlSrc, sourceIssuers, cc, now);
 
   // Şema çapaları: her yayımlanmış sürüm özeti bir kez (D8 kayıt anı; ADR-0010 K4 yeni küçük sürüm = yeni çapa)
   {
