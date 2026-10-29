@@ -238,7 +238,7 @@ qeydlər və identifikatorlar dəyişmir.
 
 AB mənasında "üzv dövlət tərəfindən bildirilmiş" və ya "ixtisaslı" iddiası daşıyan ETSI URI-ləri (`EUgeneric`, `EUappropriate`,
 `granted`, `recognisedatnationallevel`, `…/QC`, `…/NationalRootCA-QC`) **istifadə olunmur** (TX2). URI-lərin mənası
-[ETSI XML etibar siyahısı](/az/concepts/etsi-trusted-list) səhifəsində müəyyən edilir.
+[ETSI XML etibar siyahısı](/concepts/etsi-trusted-list) səhifəsində müəyyən edilir.
 
 **Xidmət növünün uyğunlaşdırılması (Tamga qeydi → `ServiceTypeIdentifier`):**
 

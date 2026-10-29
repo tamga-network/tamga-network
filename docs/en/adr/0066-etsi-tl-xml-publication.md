@@ -75,7 +75,7 @@ on completing the postal addresses.
 - List type `https://trust.tamga.network/tl/TSLType/<CC>list`, status determination `…/StatusDetn/<CC>determination`, rules
   `https://arf.tamga.network/trust-framework` + `…/schemerules/<CC>`, service status `…/Svcstatus/{active, suspended, revoked,
   retired, rollingover, deprecated}` (one to one with the Tamga status set). The URI names and root were approved by project
-  management (2026-10-29); their meaning is defined on `docs.tamga.network/en/concepts/etsi-trusted-list` and every URI under
+  management (2026-10-29); their meaning is defined on `docs.tamga.network/concepts/etsi-trusted-list` and every URI under
   `trust.tamga.network/tl/` redirects to that page (§5.3.7, §5.5.4).
 - ETSI URIs that mean "notified by a Member State" or "qualified" in the EU (`EUgeneric`, `EUappropriate`, `granted`,
   `recognisedatnationallevel`, `…/QC`) are not used. A reader that does not know these URIs does not treat the service as active
@@ -170,7 +170,7 @@ On acceptance (2026-10-29):
   to the publication section of [[SPEC-TRUST-0001]]; a "lifted — ADR-0066" note in the [[ADR-0036]] annex.
 - Switched on in the sandbox: `tl-xml-signer-1` (issued by the sandbox root, §5.7.1 profile), placeholder addresses marked "TEST" in
   the sandbox records, `trust.sandbox.tamga.network/tl-tr.xml` + `.sha2`, the URI explanation page
-  (`docs.tamga.network/en/concepts/etsi-trusted-list`, tr/en/az). The live list was validated against the ETSI XSD and the EU DSS
+  (`docs.tamga.network/concepts/etsi-trusted-list`, tr/en/az). The live list was validated against the ETSI XSD and the EU DSS
   validator.
 - Remaining for the real network: the production XML signing certificate (real network PKI, outside the repository; command in
   `ops/README.md`) and its fingerprint in the LOTL; the operator's postal address; institution and wallet provider address data;

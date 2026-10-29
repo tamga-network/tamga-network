@@ -70,7 +70,7 @@ numarasıyla da yayımlamayı getirir. Önce test ağında (sandbox) açıldı; 
 - Liste türü `https://trust.tamga.network/tl/TSLType/<CC>list`, durum belirleme `…/StatusDetn/<CC>determination`, kurallar
   `https://arf.tamga.network/trust-framework` + `…/schemerules/<CC>`, hizmet durumu `…/Svcstatus/{active, suspended, revoked,
   retired, rollingover, deprecated}` (Tamga durum kümesiyle birebir). URI adları ve kökü proje yönetimince onaylandı
-  (2026-10-29); anlamları `docs.tamga.network/concepts/etsi-trusted-list` sayfasında tanımlıdır ve `trust.tamga.network/tl/`
+  (2026-10-29); anlamları `docs.tamga.network/tr/concepts/etsi-trusted-list` sayfasında tanımlıdır ve `trust.tamga.network/tl/`
   altındaki her URI o sayfaya yönlenir (§5.3.7, §5.5.4).
 - AB'de "üye devletçe bildirilmiş" ya da "nitelikli" anlamı taşıyan ETSI URI'leri (`EUgeneric`, `EUappropriate`, `granted`,
   `recognisedatnationallevel`, `…/QC`) kullanılmaz. Bu URI'leri tanımayan bir okuyucu hizmeti etkin saymaz (güvenli taraf).
@@ -157,7 +157,7 @@ Kabulle (2026-10-29):
 - [[SPEC-ID-0002]] §8.1 tablosu bu profile göre yeniden yazıldı (eski `CA/QC` + `granted` eşlemesi kalktı); [[SPEC-TRUST-0001]]
   yayın bölümüne XML görünümü; [[ADR-0036]] ekine "kaldırıldı — ADR-0066" notu.
 - Sandbox'ta açıldı: `tl-xml-signer-1` (sandbox kökünce, §5.7.1 profili), sandbox kayıtlarında "TEST" işaretli yer tutucu
-  adresler, `trust.sandbox.tamga.network/tl-tr.xml` + `.sha2`, URI açıklama sayfası (`docs.tamga.network/concepts/etsi-trusted-list`,
+  adresler, `trust.sandbox.tamga.network/tl-tr.xml` + `.sha2`, URI açıklama sayfası (`docs.tamga.network/tr/concepts/etsi-trusted-list`,
   tr/en/az). Canlı liste ETSI XSD'sine ve AB DSS doğrulayıcısına karşı doğrulandı.
 - Gerçek ağ için kalanlar: üretim XML imza sertifikası (gerçek ağ PKI'sı, depo dışında; komut `ops/README.md`) ve LOTL'da
   parmak izi; işletmeci posta adresi; kurum ve cüzdan sağlayıcı adres verisi; sonra bayrak (proje yönetimi onayıyla).

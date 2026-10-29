@@ -101,7 +101,7 @@ Earlier statuses are in `ServiceHistory`, newest first, with the key identifier 
   profile — subject `C` = country code, `O` = operator name (`SchemeOperatorName`), basicConstraints CA=false, keyUsage
   digitalSignature + nonRepudiation, extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0).
 - Validating the signer the Tamga way: its fingerprint is in the `signing_keys` of the country slot in the LOTL (`lotl.jws`); the
-  LOTL itself is validated with the [trust anchor](/en/concepts/trust-lists).
+  LOTL itself is validated with the [trust anchor](/concepts/trust-lists).
 
 Sandbox XML signer (2026-10-29): `CN=Tamga Sandbox Trusted List Signer (TEST), O=Tamga Network Sandbox (TEST), C=TR`, SHA-256
 `5576ff2bf0380b32e21a1859c267e6b0031d3c2bbc935adacb7d129eb6dac9c9`.
@@ -128,4 +128,4 @@ format. Today the package recognises only ETSI's active statuses; it does not tr
 - Decision: [[ADR-0066]]
 - Mapping tables: [[SPEC-ID-0002]] §8.1
 - List format and publication points: [[SPEC-TRUST-0001]]
-- Trust lists: [Trust lists and federation](/en/concepts/trust-lists)
+- Trust lists: [Trust lists and federation](/concepts/trust-lists)

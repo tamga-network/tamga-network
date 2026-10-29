@@ -235,7 +235,7 @@ list; when a state takes over a slot the URI set can change per slot, the record
 
 ETSI URIs that claim "notified by a Member State" or "qualified" status in the EU sense (`EUgeneric`, `EUappropriate`, `granted`,
 `recognisedatnationallevel`, `…/QC`, `…/NationalRootCA-QC`) are **not used** (TX2). The meaning of the URIs is defined on the
-[ETSI XML trusted list](/en/concepts/etsi-trusted-list) page.
+[ETSI XML trusted list](/concepts/etsi-trusted-list) page.
 
 **Service type mapping (Tamga record → `ServiceTypeIdentifier`):**
 

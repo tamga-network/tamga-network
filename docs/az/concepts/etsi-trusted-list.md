@@ -98,7 +98,7 @@ Tamga statusu ilə birbaşa:
   subyekt `C` = ölkə kodu, `O` = operatorun adı (`SchemeOperatorName`), basicConstraints CA=false, keyUsage digitalSignature +
   nonRepudiation, extendedKeyUsage `id-tsl-kp-tslSigning` (0.4.0.2231.3.0).
 - İmzalayanı Tamga yolu ilə yoxlamaq: barmaq izi LOTL-da (`lotl.jws`) ölkə slotunun `signing_keys` siyahısındadır; LOTL-un özü
-  [etibar lövbəri](/az/concepts/trust-lists) ilə yoxlanılır.
+  [etibar lövbəri](/concepts/trust-lists) ilə yoxlanılır.
 
 Sandbox XML imzalayanı (2026-10-29): `CN=Tamga Sandbox Trusted List Signer (TEST), O=Tamga Network Sandbox (TEST), C=TR`, SHA-256
 `5576ff2bf0380b32e21a1859c267e6b0031d3c2bbc935adacb7d129eb6dac9c9`.
@@ -126,4 +126,4 @@ gün yalnız ETSI-nin aktiv statuslarını tanıyır; Tamga kökündəki statusl
 - Qərar: [[ADR-0066]]
 - Uyğunlaşdırma cədvəlləri: [[SPEC-ID-0002]] §8.1
 - Siyahı formatı və dərc yerləri: [[SPEC-TRUST-0001]]
-- Etibar siyahıları: [Etibar siyahıları və federasiya](/az/concepts/trust-lists)
+- Etibar siyahıları: [Etibar siyahıları və federasiya](/concepts/trust-lists)
