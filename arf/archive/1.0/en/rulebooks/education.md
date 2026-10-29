@@ -24,7 +24,7 @@ schema is in SPEC-SCHEMA-0002.
 | --- | --- | --- |
 | 1.0.0 | 2026-10-16 | Current text of Tamga ARF 1.0, in the section structure of the EU Attestation Rulebook template (version 1.5). |
 
-**Scheme owner:** Tamga Network. Operated provisionally by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ on behalf of Tamga Network (foundation to be established). **Feedback:** <https://github.com/tamga-network/tamga-network/issues>
+**Scheme owner:** Tamga Network (today the provisional operator). **Feedback:** <https://github.com/tamga-network/tamga-network/issues>
 
 ## 1. Introduction
 
