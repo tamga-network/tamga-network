@@ -194,7 +194,8 @@ qeydiyyat sertifikatı yaradır (ən çox 12 ay etibarlıdır). Məzmun yalnız 
 dərc edilən ayrıca qeydiyyat qurumu açarı ilə imzalanır. Yoxlayan tərəf sertifikatı sorğusu ilə birlikdə ötürür; cüzdan imzanı, müddəti
 və yoxlayan tərəfin giriş sertifikatındakı qurum identifikasiya nömrəsi ilə əlaqəni yoxlayır, tələb edilən sahələri sertifikatla müqayisə edir.
 Sənədi verən qurumlar üçün də hər qurum üzrə bir qeydiyyat sertifikatı yaradılır. Qurum identifikasiya nömrəsi qeydə daxil edilməmiş iştirakçıya
-sertifikat yaradılmır.
+sertifikat yaradılmır. Sertifikat öz siyasətinin identifikatorunu və ünvanını daşıyır; qeydiyyat qurumu ləğv üçün açıq status siyahısı dərc edir,
+cüzdan ləğv edilmiş sertifikatı qəbul etmir (Qeydiyyat Sertifikatı Siyasəti, [[FW-POL-0003]]; [[ADR-0068]]; bu gün sandbox-da).
 
 ### Cüzdan provayderi
 

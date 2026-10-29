@@ -116,6 +116,13 @@ const DOCS = [
     tr: "Cüzdan Kanıtı Politikası",
     en: "Wallet Attestation Policy",
   },
+  {
+    id: "FW-POL-0003",
+    file: "0015-registration-certificate-policy.md",
+    page: "policies/registration-certificate",
+    tr: "Kayıt Sertifikası Politikası",
+    en: "Registration Certificate Policy",
+  },
 ];
 /**
  * Azerbaycanca (2026-10-20, makine çevirisi; yalnız güncel yayın, resmî değil): kaynak docs/az/framework/<dosya>
@@ -137,6 +144,7 @@ const AZ_TITLE = {
   "FW-RB-0005": "Contact Rulebook",
   "FW-POL-0001": "Ləğv Siyasəti",
   "FW-POL-0002": "Cüzdan Attestasiyası Siyasəti",
+  "FW-POL-0003": "Qeydiyyat Sertifikatı Siyasəti",
 };
 // Yayınlanan metinde özel depo yolu, kişi adı ya da araç adı olmaz (DY3; onay alıntıları operatörün onay kaydında).
 const PRIVATE_BASE = /tamga-platform\/|_reports\/|\.local\.json|\.env\b|TOPARLAMA/;

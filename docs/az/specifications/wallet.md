@@ -4,7 +4,7 @@ title: "Rəqəmsal cüzdan qaydaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-23
+last_updated: 2026-10-29
 summary: >
   Rəqəmsal cüzdanın açar, yerli yaddaş, ehtiyat nüsxə və təsdiq dizaynını müəyyən edir. Mərkəzi nəticə bir ZİDDİYYƏTİN həllidir: [[SPEC-CRED-0001]] §3 sənəd sahibi açarının təhlükəsiz zonadan çıxa bilməyəcəyini bildirir, lakin layihə qeydlərindəki "24 sözlük seed ilə ehtiyat nüsxə" dizaynı açarın bərpa oluna biləcəyini nəzərdə tuturdu. İkisi eyni anda doğru ola bilməz — seed-dən törədilə bilən sənəd sahibi açarı isə rəqəmsal sənədi ÖTÜRÜLƏ BİLƏN edərək holder binding boşluğunu arxa qapıdan geri qaytarır. Qərar: açarlar seed-dən törədilmir; ehtiyat nüsxə sənədləri və manifesti daşıyır, cihaz dəyişdikdə sənədlərin YENİDƏN VERİLMƏSİ tələb olunur. Bundan əlavə, toplu verilən nüsxələrin hər yoxlayan tərəf üçün sabit ("yapışqan") istifadəsi iki açıq məsələni birdən bağlayır.
 translation_of: SPEC-WALLET-0001
@@ -395,6 +395,10 @@ xəbərdarlıq göstərilir, standart seçim paylaşmamaqdır.
 - **Qeydiyyat sertifikatı olmayan sorğu ([[ADR-0026]] K5; [[ADR-0056]] K10):** şəxsdən soruşulmadan rədd edilir (`registration_missing`;
   təfərrüat [[SPEC-PROTO-0002]] §7.5); cüzdandan cüzdana yaxın məsafə istisnadır. Yaxın məsafədə qeydiyyat sertifikatı `requestInfo.euWrprc` ilə gəlir
   və uzaqdan axında olduğu kimi yoxlanılır; etibarsızdırsa, cüzdan şəxsdən soruşmadan rədd edir (`presentProximity` `registrarKeys`).
+- **Qeydiyyat sertifikatının ləğv statusu ([[ADR-0068]] K5):** sertifikat `status.status_list` daşıyırsa cüzdan qeydiyyat orqanının status
+  siyahısını alır (imzalayan LOTL-dakı qeydiyyat orqanı açarıdır; `fetchRegistrationStatuses`), yoxlanmış siyahını keşə yazır və şəbəkə
+  olmadıqda müddəti bitməmiş nüsxədən istifadə edir. Ləğv edilmiş sertifikat → sorğu etibarsızdır, məlumat göndərilmir; sənəd verən
+  üçün sənəd istənmir. Status yoxlana bilmirsə `registration_status_unknown` xəbərdarlığı. Xarab `status` və ya `policy_id` → sertifikat etibarsızdır.
 - **Cüzdandan cüzdana təqdimat təklifi (Aİ TS9 v1.1):** təqdim edən tərəf icazə siyahısında olan və sənədində mövcud olan sahələri QR-dakı
   DeviceEngagement-ə (`-1`) təklif kimi yerləşdirir. Təklifdən kənar və ya saxlama niyyətli sorğuda heç bir sahə göndərmədən
   `DeviceResponse.status = 10` ilə dayandırır; cavab sorğunun alınmasından sabit müddət sonra göndərilir (cavab müddəti sənəddən asılı

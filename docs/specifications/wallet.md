@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-23
+last_updated: 2026-10-29
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -437,6 +437,10 @@ uyarı, varsayılan paylaşmamak.
 - **Kayıt sertifikası olmayan istek ([[ADR-0026]] K5; [[ADR-0056]] K10):** kişiye sorulmadan ret (`registration_missing`;
   ayrıntı [[SPEC-PROTO-0002]] §7.5); cüzdandan cüzdana yakın alan hariç. Yakın alanda kayıt sertifikası `requestInfo.euWrprc` ile gelir
   ve uzaktan akıştaki gibi doğrulanır; geçersizse cüzdan kişiye sormadan reddeder (`presentProximity` `registrarKeys`).
+- **Kayıt sertifikasının iptal durumu ([[ADR-0068]] K5):** sertifika `status.status_list` taşıyorsa cüzdan kayıt kurumunun durum
+  listesini çeker (imzacı LOTL'deki kayıt kurumu anahtarı; `fetchRegistrationStatuses`), doğrulanan listeyi önbelleğe yazar ve ağ
+  yokken süresi dolmamış kopyayı kullanır. İptal edilmiş sertifika → istek geçersiz, veri gitmez; belge verende belge istenmez.
+  Durum denetlenemezse `registration_status_unknown` uyarısı. Bozuk `status` ya da `policy_id` → sertifika geçersiz.
 - **Cüzdandan cüzdana sunum teklifi (AB TS9 v1.1):** gösteren, izin listesindeki ve belgesinde bulunan alanları QR'daki
   DeviceEngagement'a (`-1`) teklif olarak koyar. Teklif dışı ya da saklama niyetli istekte hiçbir alan göndermeden
   `DeviceResponse.status = 10` ile keser; yanıt isteğin alınışından sabit bir süre sonra gider (yanıt süresi belgeye bağlı

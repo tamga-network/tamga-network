@@ -32,6 +32,7 @@ artınca aynı çalışmada İngilizcesi de güncellenir.
 | `FW-RB-0005` | `0012-contact-rulebook.md` | **Contact Rulebook** (Ek C): `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` | ARF Annex 3 attestation rulebook | 1.0.0 · Active |
 | `FW-POL-0001` | `0013-revocation-policy.md` | **İptal Politikası**: belgelerin hangi koşullarda iptal edildiği, askı, yayın (ARF VCR_05) | Sağlayıcının iptal politikası (VCR_05) | 1.0.0 · Active |
 | `FW-POL-0002` | `0014-wallet-attestation-policy.md` | **Cüzdan Kanıtı Politikası**: WIA ve KA'nın verilmesi ve iptali (ARF WURevocation_03/09a) | Cüzdan sağlayıcısının WIA/KA politikası | 1.0.0 · Active |
+| `FW-POL-0003` | `0015-registration-certificate-policy.md` | **Kayıt Sertifikası Politikası**: kayıt sertifikalarının politika kimliği, PKI hiyerarşisi, iptal koşulları ve durum listesi (ARF RPRC_01b; ETSI TS 119 475 §6) | Kayıt sertifikası sağlayıcısının politikası | 1.0.0 · Active |
 | `FW-DEF-0001` | `0007-definitions.md` | **Ek D — Tanımlar** | ARF Annex 1 | 1.0.0 · Active |
 | `FW-REF-0001` | `0008-references.md` | **Ek E — Kaynaklar**: standartlar, karar kayıtları, kural kaynakları | — | 1.0.0 · Active |
 | `FW-READ-0001` | `0009-reading-path.md` | **Okuma yolu**: rol başına okuma sırası (ARF, sonra geliştirici belgeleri) | — | 1.0.0 · Active |

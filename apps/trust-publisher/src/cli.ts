@@ -19,6 +19,9 @@
  *                                                 sertifikalar, TAMGA_SANDBOX_SELF_DIR'e kayıt, liste imzalanır · sandbox-institution list
  *   wallet-provider list|show|activate|suspend|revoke  cüzdan sağlayıcı kaydı (ADR-0042), gerçek + sandbox kayıt defteri; liste
  *                                                 imzalanmaz (dağıtımda) — ayrıntı walletProviderCommand
+ *   wrprc-status                                  (ADR-0068) kayıt sertifikalarının durum listesi girdileri
+ *   wrprc-revoke <wrprc/…jwt> --reason r          (ADR-0068) kayıt sertifikasını elle iptal eder; içerik değişene kadar yeniden
+ *                                                 verilmez; durum listesi yeniden imzalanır
  *   chain-submit [--dry-run] · chain-check <jws>  zincir projeksiyonu (ADR-0051): liste sürümü + çapa günlüğü başı ÖZETLERİ
  *                                                 zincire; bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok — src/chain/
  * Kurallar: version monoton, previous_version_hash = önceki .jws'in sha256'sı; dist/ değişmez arşivi.
@@ -70,6 +73,17 @@ import {
 import { chainCommand } from "./chain/cli.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
 import { buildWrprcPayloads, wrprcHeader } from "./wrprc.js";
+import {
+  assignWrprcStatus,
+  emptyState,
+  revokeWrprc,
+  signWrprcStatusList,
+  statusListFile,
+  withPolicyAndStatus,
+  wrprcConfigProblems,
+  type WrprcPolicyConfig,
+  type WrprcStatusState,
+} from "./wrprc-status.js";
 import {
   MAX_TEST_INSTITUTIONS,
   TEST_CA,
@@ -408,6 +422,87 @@ function certOrgIdentifier(der: Uint8Array): string | null {
   return line ? line.slice(line.indexOf("=") + 1) : null;
 }
 
+/** ADR-0068: kayıt defterindeki WRPRC politika + durum listesi ayarı (`roles.registrar.wrprc`); yoksa null, hatalıysa yayın durur. */
+function wrprcPolicy(
+  lotlSrc: Record<string, unknown>,
+  cc: string,
+  nl?: Record<string, unknown>,
+): WrprcPolicyConfig | null {
+  const n =
+    nl ?? (lotlSrc.national_lists as Array<Record<string, unknown>>).find((x) => x.state_code === cc) ?? undefined;
+  const cfg = (n?.roles as Record<string, { wrprc?: unknown }> | undefined)?.registrar?.wrprc;
+  if (cfg === undefined) return null;
+  const base = new URL(String(n?.list_url ?? `https://trust.tamga.network/tl-${cc.toLowerCase()}.jws`)).origin;
+  const problems = wrprcConfigProblems(cfg, base);
+  if (problems.length) throw new Error(`ADR-0068: ${problems.join("; ")}`);
+  return cfg as WrprcPolicyConfig;
+}
+const WRPRC_STATE_FILE = () => resolve(DIST, "wrprc-status.json");
+function readWrprcState(pol: WrprcPolicyConfig): WrprcStatusState {
+  const f = WRPRC_STATE_FILE();
+  if (!existsSync(f)) return emptyState(pol.status_list_uri);
+  const s = readJson(f) as WrprcStatusState;
+  // adres değişirse yeni liste: eski indeksler eski listede kalır (yeni liste boş başlar)
+  return s.list_uri === pol.status_list_uri ? s : emptyState(pol.status_list_uri);
+}
+/** Durumu ve imzalı durum listesini yazar (ADR-0068 K3; kayıt kurumu anahtarı, `statuslist+jwt`). */
+async function publishWrprcStatus(
+  state: WrprcStatusState,
+  pol: WrprcPolicyConfig,
+  regSigner: Awaited<ReturnType<typeof signer>>,
+  now: Date,
+) {
+  const token = await signWrprcStatusList(state, regSigner, now, new URL(pol.status_list_uri).origin);
+  const file = resolve(DIST, statusListFile(pol));
+  mkdirSync(dirname(file), { recursive: true });
+  writeAtomic(file, token);
+  writeAtomic(WRPRC_STATE_FILE(), JSON.stringify(state, null, 2) + "\n");
+}
+/** Kayıt kurumu imzacısı (LOTL `roles.registrar.signing_certs[0]`); anahtar yoksa null. */
+async function registrarSigner(lotlSrc: Record<string, unknown>, cc: string) {
+  const nl = (lotlSrc.national_lists as Array<Record<string, unknown>>).find((n) => n.state_code === cc);
+  const ref = (nl?.roles as Record<string, { signing_certs?: string[] }> | undefined)?.registrar?.signing_certs?.[0];
+  return ref && existsSync(resolve(PKI, `${ref}.pkcs8.pem`)) ? signer(ref) : null;
+}
+/**
+ * Heartbeat'te durum listesini yeniden imzalar (ADR-0068 K3: `exp` 24 saat, `ttl` 1 saat; durum değişmez). Ayar ya da anahtar
+ * yoksa hiçbir şey yapmaz.
+ */
+async function refreshWrprcStatus(now = new Date()) {
+  if (!existsSync(resolve(REG, "lotl.source.json")) || !existsSync(WRPRC_STATE_FILE())) return;
+  const lotlSrc = readJson(resolve(REG, "lotl.source.json"));
+  const cc = String(readJson(resolve(REG, "tl-tr.source.json")).state_code);
+  const pol = wrprcPolicy(lotlSrc, cc);
+  const s = pol ? await registrarSigner(lotlSrc, cc) : null;
+  if (!pol || !s) return;
+  await publishWrprcStatus(readWrprcState(pol), pol, s, now);
+}
+/** `wrprc-status` (liste) · `wrprc-revoke <yol> --reason r` (ADR-0068 K4; TS 119 475 REV-6.2.3.9-05/06). */
+async function wrprcStatusCommand(cmd: string, args: string[]) {
+  const lotlSrc = readJson(resolve(REG, "lotl.source.json"));
+  const cc = String(readJson(resolve(REG, "tl-tr.source.json")).state_code);
+  const pol = wrprcPolicy(lotlSrc, cc);
+  if (!pol) throw new Error("ADR-0068: bu kayıt defterinde roles.registrar.wrprc ayarı yok");
+  const state = readWrprcState(pol);
+  if (cmd === "wrprc-status") {
+    console.log(`${pol.status_list_uri} — ${state.entries.length} girdi`);
+    for (const e of state.entries)
+      console.log(`  ${String(e.idx).padStart(6)} ${e.status.padEnd(7)} ${e.path}${e.reason ? ` (${e.reason})` : ""}`);
+    return;
+  }
+  const k = args.indexOf("--reason");
+  const reason = k >= 0 ? (args[k + 1] ?? "") : "";
+  const path = args.find((a, i) => !a.startsWith("--") && args[i - 1] !== "--reason");
+  if (!path) throw new Error("kullanım: wrprc-revoke <wrprc/rp/…/…jwt | wrprc/issuer/….jwt> --reason <gerekçe>");
+  const s = await registrarSigner(lotlSrc, cc);
+  if (!s) throw new Error("ADR-0068: kayıt kurumu anahtarı yok — iptal listesi imzalanamaz");
+  const now = new Date();
+  const r = revokeWrprc(state, path, reason, now);
+  await publishWrprcStatus(r.state, pol, s, now);
+  changelog(`wrprc-status: idx ${r.entry.idx} (${path}) REVOKED — ${r.entry.reason}`);
+  console.log(`wrprc-revoke: ${path} idx ${r.entry.idx} iptal edildi; liste yeniden imzalandı`);
+}
+
 /**
  * ADR-0026: kayıt sertifikaları — imzalı listeye giren kayıtlardan (WRC1), kayıt kurumu anahtarıyla (WRC2). Her yayında
  * `dist/wrprc/` baştan üretilir (süresi dolan ya da kaldırılan kullanım kalmaz); dizin `wrprc/index.json`.
@@ -438,6 +533,25 @@ async function writeWrprcs(
     registryUri: String(nl?.list_url ?? `https://trust.tamga.network/tl-${cc.toLowerCase()}.jws`),
   });
   for (const w of skipped) console.warn(`[uyarı] ADR-0026 kayıt sertifikası üretilmedi: ${w}`);
+  // ADR-0068: politika kimliği + durum listesi girdisi (ayar yalnız kayıt defterinde varsa; yoksa alanlar eklenmez)
+  const pol = wrprcPolicy(lotlSrc, cc, nl);
+  if (pol) {
+    for (const it of items)
+      it.payload = { ...it.payload, policy_id: [...pol.policy_id], certificate_policy: pol.certificate_policy };
+    const r = assignWrprcStatus(readWrprcState(pol), items, now);
+    for (const p of r.blocked)
+      console.warn(`[uyarı] ADR-0068: ${p} elle iptal edildi — içerik değişmeden yeniden verilmez`);
+    for (const e of r.revoked) changelog(`wrprc-status: idx ${e.idx} (${e.path}) REVOKED — ${e.reason}`);
+    const out = [];
+    for (const it of items) {
+      const idx = r.idxOf.get(it.path);
+      if (idx === undefined) continue;
+      it.payload = withPolicyAndStatus(it.payload, pol, idx);
+      out.push(it);
+    }
+    items.splice(0, items.length, ...out);
+    await publishWrprcStatus(r.state, pol, regSigner, now);
+  }
   const index = [];
   for (const it of items) {
     const jwt = await signJson(regSigner, it.payload, wrprcHeader(now));
@@ -628,7 +742,8 @@ async function build() {
           }
           // ADR-0026 K1: kayıt kurumu anahtarı (WRPRC imzası) parmak iziyle yayınlanır
           if (Array.isArray(v.signing_certs)) {
-            const { signing_certs: sc, ...rv } = v;
+            // ADR-0068: `wrprc` (politika + durum listesi ayarı) yayıncının iç ayarıdır, LOTL'e girmez
+            const { signing_certs: sc, wrprc: _w, ...rv } = v;
             return [k, { ...rv, signing_keys: (sc as string[]).map((n) => keyEntry(n)) }];
           }
           return [k, v];
@@ -1447,6 +1562,7 @@ const cmd = process.argv[2];
   else if (cmd === "heartbeat") {
     const a = await appendAnchor({ kind: "heartbeat" });
     console.log(JSON.stringify(a));
+    await refreshWrprcStatus(); // ADR-0068: kayıt sertifikası durum listesi her saat yeniden imzalanır
   } else if (cmd === "anchor") {
     const a = await appendAnchor({
       kind: "status_list",
@@ -1458,6 +1574,8 @@ const cmd = process.argv[2];
       published_at: arg("published-at", iso(new Date()))!,
     });
     console.log(JSON.stringify(a));
+  } else if (cmd === "wrprc-status" || cmd === "wrprc-revoke") {
+    await wrprcStatusCommand(cmd, process.argv.slice(3));
   } else if (cmd === "verify") await verify();
   else if (cmd === "external-fetch") await externalFetch();
   else if (cmd === "archive") {

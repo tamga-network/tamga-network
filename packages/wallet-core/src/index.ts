@@ -7,6 +7,7 @@ export * from "./store.js";
 export * from "./jwe.js";
 export * from "./oid4vp.js";
 export * from "./wrprc.js";
+export * from "./wrprc-status.js";
 export * from "./ts10.js";
 export * from "./hwkeys.js";
 export * from "./proximity.js";

@@ -45,6 +45,7 @@ const T: Record<
       "Contact Rulebook",
       "Revocation Policy",
       "Wallet Attestation Policy",
+      "Registration Certificate Policy",
     ],
     nav: {
       framework: "Framework",
@@ -76,6 +77,7 @@ const T: Record<
       "Contact Rulebook",
       "İptal Politikası",
       "Cüzdan Kanıtı Politikası",
+      "Kayıt Sertifikası Politikası",
     ],
     nav: {
       framework: "Çerçeve",
@@ -108,6 +110,7 @@ const T: Record<
       "Contact Rulebook",
       "Ləğv Siyasəti",
       "Cüzdan Attestasiyası Siyasəti",
+      "Qeydiyyat Sertifikatı Siyasəti",
     ],
     nav: {
       framework: "Çərçivə",
@@ -176,7 +179,7 @@ function theme(l: Loc): DefaultTheme.Config {
                 items: docItems(r.docs, docRoot, [3, 4, 5, 11]),
               },
               ...(r.docs[IDS[12]]
-                ? [{ text: t.nav.policies, collapsed: false, items: docItems(r.docs, docRoot, [12, 13]) }]
+                ? [{ text: t.nav.policies, collapsed: false, items: docItems(r.docs, docRoot, [12, 13, 14]) }]
                 : []),
               ...docItems(r.docs, docRoot, [6, 7]),
               ...(r.docs[IDS[9]]

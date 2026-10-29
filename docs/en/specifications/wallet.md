@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-23
+last_updated: 2026-10-29
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -425,6 +425,11 @@ it does not hold, a separate warning, defaulting to not sharing.
   (`registration_missing`; details [[SPEC-PROTO-0002]] §7.5); wallet-to-wallet proximity excepted. In proximity the registration
   certificate comes in `requestInfo.euWrprc` and is verified as in the remote flow; if it is invalid, the wallet refuses without
   asking the person (`presentProximity` `registrarKeys`).
+- **Revocation status of the registration certificate ([[ADR-0068]] K5):** if the certificate carries `status.status_list`, the
+  wallet fetches the registrar's status list (signer: the registrar key in the LOTL; `fetchRegistrationStatuses`), caches the
+  verified list and uses an unexpired copy when offline. Revoked certificate → the request is invalid, no data is sent; for an
+  issuer, no credential is requested. If the status cannot be checked: `registration_status_unknown` warning. Malformed `status`
+  or `policy_id` → the certificate is invalid.
 - **Wallet-to-wallet presentation offer (EU TS9 v1.1):** the holder puts the fields that are on the allow-list and present in its
   credential into the QR's DeviceEngagement (`-1`) as an offer. For a request outside the offer, or one with intent to retain, it
   sends no field and ends with `DeviceResponse.status = 10`; the answer goes out a fixed time after the request arrived (the

@@ -6,6 +6,24 @@ published on npm as test releases; `0.7.3` is the current one on npm (the API ma
 
 ## 0.7.4 — unreleased (source only, not on npm)
 
+- trust-publisher + wallet-core (2026-10-29; ADR-0068 **Accepted**, ETSI TS 119 475 V1.2.1 Table 7 and §6): registration
+  certificates carry `policy_id` (Tamga's own OID; ETSI's EU OID `0.4.0.19475.3.1` is refused by the publisher),
+  `certificate_policy` (the new Tamga ARF page "Registration Certificate Policy", FW-POL-0003) and `status`
+  (`status_list {idx, uri}`). The registrar publishes a 1-bit IETF Token Status List (`statuslist+jwt`, signed with the registrar
+  key that signs the certificates, `ttl` 1 h, `exp` 24 h, re-signed by `heartbeat`). Indexes are random and never reused: the
+  same path with the same content keeps its index, changed content or an earlier expiry gets a new index and the old one is
+  revoked (`superseded`); certificates that disappear from the publication are revoked (`registration_ended`). New publisher
+  commands `wrprc-status` and `wrprc-revoke <path> --reason r` (the content stays blocked until it changes); the state is kept in
+  `wrprc-status.json` next to the published files. Enabled only when the registry's `roles.registrar.wrprc` is set — today the
+  sandbox (`2.25.…` OID, `trust.sandbox.tamga.network/status/wrprc/1`); the real network's OID and addresses wait for name
+  approval. `@tamga-network/wallet-core`: `fetchRegistrationStatuses` (one request per list, signer must be a LOTL registrar key,
+  verified tokens cached, unexpired cached copy used offline), `registrationStatusRefs`, `wrprcStatusRef`,
+  `MemoryRegistrationStatusCache`; `checkRegistrationCerts`, `relevantRegistrationCerts`, `checkIssuerRegistration` and
+  `checkProximityRegistration` take the statuses as an optional last argument (`presentProximity` option
+  `registrationStatuses`): a revoked certificate makes the request invalid, an unchecked status adds the flag
+  `registration_status_unknown` (secure default when no statuses are passed); a malformed `status` or `policy_id` invalidates
+  the certificate. Certificates without `status` are accepted as before.
+
 - trust-publisher + trust (2026-10-29; ADR-0066 **Accepted** the same day, ETSI TS 119 612 V2.4.1): optional ETSI TS 119 612 XML view of each
   country list, generated from the same signed `tl-<cc>` object and the LOTL with the same version (`TSLSequenceNumber` =
   `version`) and signed XAdES-B-B (enveloped, Exclusive C14N, SigningTime / SigningCertificateV2 / DataObjectFormat, only the

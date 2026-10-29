@@ -20,7 +20,8 @@ import {
   type KeyAttestor,
   type RedeemOutput,
 } from "./oid4vci.js";
-import { checkIssuerRegistration } from "./wrprc.js";
+import { checkIssuerRegistration, issuerRegistrationStatusRefs } from "./wrprc.js";
+import { fetchRegistrationStatuses, type RegistrationStatusCache } from "./wrprc-status.js";
 import { dpopRequest, newDpopSigner } from "./dpop.js";
 
 export const AUTH_CODE_GRANT = "authorization_code";
@@ -103,6 +104,8 @@ export interface StartInput {
   signerFingerprints?: string[];
   /** ARF RPRC_22a/23: LOTL kayıt kurumu anahtarları — verilirse metadata'daki issuer_info denetlenir */
   registrarKeys?: string[];
+  /** ADR-0068 K5: kayıt sertifikası durum listesi önbelleği (çevrimdışı kopya); `registrarKeys` verilince durum çekilir */
+  registrationStatusCache?: RegistrationStatusCache;
   /**
    * PAR gövdesine eklenen, belge verene özel ek alanlar (ADR-0039: `identity_presentation` — kimlik belgesinin SD-JWT VC + KB-JWT
    * sunumu, aud = belge veren, nonce = belge verenin /nonce ucundan). Standart alanların üzerine yazamaz.
@@ -147,7 +150,21 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
     p.metadata ??
     (await fetchIssuerMetadata(p.issuer, p.http, { signerFingerprints: p.signerFingerprints, now: nowMs }));
   if (p.registrarKeys) {
-    const reg = checkIssuerRegistration(md as { issuer_info?: unknown }, p.vct, p.registrarKeys, epochMillis(nowMs));
+    // ADR-0068 K5: kayıt sertifikası iptal edilmişse belge istenmez (ARF §6.6.3.3); durum listesi yoksa uyarısız devam
+    const refs = issuerRegistrationStatusRefs(md as { issuer_info?: unknown }, p.registrarKeys, epochMillis(nowMs));
+    const statuses = refs.length
+      ? await fetchRegistrationStatuses(refs, p.http, p.registrarKeys, {
+          cache: p.registrationStatusCache,
+          nowMs: epochMillis(nowMs),
+        })
+      : undefined;
+    const reg = checkIssuerRegistration(
+      md as { issuer_info?: unknown },
+      p.vct,
+      p.registrarKeys,
+      epochMillis(nowMs),
+      statuses,
+    );
     if (!reg.valid) throw new WalletError("unsupported", `issuer registration: ${reg.reason}`);
   }
   const cfg = md.credential_configurations_supported[p.vct];

@@ -210,7 +210,9 @@ signed list, and it is signed with a separate registrar key published in the [[t
 with its request; the wallet checks the signature, the validity period and the link to the organisation identifier in the
 verifier's access certificate, and compares the requested fields with the certificate. A registration certificate is also
 issued per institution for issuers. No certificate is issued to a participant whose organisation identifier has not been
-recorded.
+recorded. The certificate carries the identifier and the address of its policy; the registrar publishes a public status list for
+revocation, and the wallet does not accept a revoked certificate (Registration Certificate Policy, [[FW-POL-0003]];
+[[ADR-0068]]; in the sandbox today).
 
 #### Wallet provider
 

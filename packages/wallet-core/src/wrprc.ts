@@ -21,12 +21,23 @@ import { fetchTrustSource, type TrustPins } from "./trustlist.js";
 import type { Http } from "./http.js";
 import type { Match, VpRequest } from "./oid4vp.js";
 import { millisOrNow, type EpochMillis } from "@tamga-network/core/time";
+import {
+  hasMalformedStatus,
+  wrprcStatusRef,
+  type RegistrationStatus,
+  type RegistrationStatusLookup,
+  type WrprcStatusRef,
+} from "./wrprc-status.js";
 
 export const WRPRC_TYP = "rc-wrp+jwt";
 const SKEW_SEC = 60;
 
-/** Onay ekranının işaretleri. `registration_missing`: istek kayıt sertifikası taşımıyor (ret nedeni). */
-export type RegistrationFlag = "registration_missing";
+/**
+ * Onay ekranının işaretleri. `registration_missing`: istek kayıt sertifikası taşımıyor (ret nedeni).
+ * `registration_status_unknown` (ADR-0068 K5): sertifikanın iptal durumu denetlenemedi (durum listesi alınamadı, süresi dolmuş
+ * kopya ya da durumlar verilmedi) — uyarı; sertifika iptal edilmişse sonuç zaten geçersizdir.
+ */
+export type RegistrationFlag = "registration_missing" | "registration_status_unknown";
 
 /**
  * Kayıt sertifikası olmayan isteğin kuralı (ADR-0056 K10): ret (`valid: false`, `reason: "registration_missing"`); cüzdan veri
@@ -77,6 +88,11 @@ export interface Wrprc {
   /** ETSI TS 119 475: kullanımın amacı, dil başına (`value`; ETSI TS 119 602 biçimindeki `content` da okunur) */
   purpose?: Array<{ lang?: string; value?: string; content?: string }>;
   intermediary?: { sub?: string };
+  /** ADR-0068 / ETSI TS 119 475 §6.1.3: politika kimlikleri (OID) ve politika belgesinin adresi */
+  policy_id?: string[];
+  certificate_policy?: string;
+  /** ADR-0068 / TS 119 475 GEN-6.2.6.1-04: kayıt kurumunun durum listesindeki girdi */
+  status?: { status_list?: { idx?: number | string; uri?: string } };
   credentials?: Array<{
     format?: string;
     meta?: { vct_values?: string[] };
@@ -157,7 +173,50 @@ export function verifyWrprc(
     return { ok: false, reason: "registration certificate not yet valid" };
   if (typeof payload.exp === "number" && payload.exp <= nowSec)
     return { ok: false, reason: "registration certificate expired" };
+  const shape = shapeProblem(payload);
+  if (shape) return { ok: false, reason: shape };
   return { ok: true, payload, signerDer: der, chainDer: chain };
+}
+
+/** ADR-0068: `status` ve `policy_id` varsa biçimleri okunabilir olmalı (bozuk durum girdisi iptal denetimini atlatmasın). */
+function shapeProblem(p: Wrprc): string | null {
+  if (hasMalformedStatus(p)) return "registration certificate status malformed";
+  if (p.policy_id !== undefined && (!Array.isArray(p.policy_id) || p.policy_id.some((x) => typeof x !== "string")))
+    return "registration certificate policy_id malformed";
+  return null;
+}
+
+/**
+ * ADR-0068 K5: sertifikanın durum sonucu. Durum alanı yoksa `"none"` (durum listesi tutmayan kayıt kurumu); durumlar
+ * verilmediyse `"unknown"`.
+ */
+export function registrationStatusOf(p: Wrprc, statuses?: RegistrationStatusLookup): RegistrationStatus | "none" {
+  const ref = wrprcStatusRef(p);
+  if (!ref) return "none";
+  return statuses ? statuses(ref) : "unknown";
+}
+
+/**
+ * İstekteki (OpenID4VP `verifier_info` ya da Ek C `euWrprc`) imzası ve süresi geçerli kayıt sertifikalarının durum girdileri —
+ * `fetchRegistrationStatuses`'a verilir. Geçersiz sertifika atlanır (denetimde zaten reddedilir).
+ */
+export function registrationStatusRefs(req: VpRequest, registrarKeys: string[], nowMs?: EpochMillis): WrprcStatusRef[] {
+  const now = millisOrNow(nowMs);
+  const payloads: Wrprc[] = [];
+  if (req.annexC) {
+    if (req.annexC.registrationCwt) {
+      const v = verifyWrprcCwt(req.annexC.registrationCwt, registrarKeys, now);
+      if (v.ok) payloads.push(v.payload);
+    }
+  } else {
+    const info = (req.payload as { verifier_info?: unknown }).verifier_info;
+    for (const e of Array.isArray(info) ? (info as Array<{ format?: string; data?: unknown }>) : [])
+      if (e?.format === "registration_cert") {
+        const v = verifyWrprc(e.data, registrarKeys, now);
+        if (v.ok) payloads.push(v.payload);
+      }
+  }
+  return payloads.map((p) => wrprcStatusRef(p)).filter((r): r is WrprcStatusRef => !!r);
 }
 
 /**
@@ -170,7 +229,9 @@ export function checkIssuerRegistration(
   vct: string,
   registrarKeys: string[],
   nowMs?: EpochMillis,
-): { present: boolean; valid: boolean; reason?: string } {
+  /** ADR-0068 K5: `fetchRegistrationStatuses` sonucu; verilmezse durum "denetlenemedi" (`statusUnknown`) */
+  statuses?: RegistrationStatusLookup,
+): { present: boolean; valid: boolean; reason?: string; statusUnknown?: boolean } {
   const now = millisOrNow(nowMs);
   const info = Array.isArray(metadata.issuer_info)
     ? (metadata.issuer_info as Array<{ format?: string; data?: unknown }>)
@@ -189,8 +250,31 @@ export function checkIssuerRegistration(
     if (!v.ok) return { present: true, valid: false, reason: v.reason };
     if (!lists((v.payload as { provides_attestations?: unknown }).provides_attestations))
       return { present: true, valid: false, reason: "registration certificate does not cover this credential type" };
+    // ARF §6.6.3.3: iptal edilmiş kayıt sertifikası → belge istenmez
+    const st = registrationStatusOf(v.payload, statuses);
+    if (st === "revoked") return { present: true, valid: false, reason: "registration certificate revoked" };
+    if (st === "unknown") return { present: true, valid: true, statusUnknown: true };
   }
   return { present: true, valid: true };
+}
+
+/** Belge verenin metadata'sındaki (`issuer_info`) geçerli kayıt sertifikasının durum girdisi (ADR-0068 K5); yoksa boş. */
+export function issuerRegistrationStatusRefs(
+  metadata: { issuer_info?: unknown },
+  registrarKeys: string[],
+  nowMs?: EpochMillis,
+): WrprcStatusRef[] {
+  const info = Array.isArray(metadata.issuer_info)
+    ? (metadata.issuer_info as Array<{ format?: string; data?: unknown }>)
+    : [];
+  const out: WrprcStatusRef[] = [];
+  for (const e of info)
+    if (e?.format === "registration_cert") {
+      const v = verifyWrprc(e.data, registrarKeys, nowMs);
+      const ref = v.ok ? wrprcStatusRef(v.payload) : null;
+      if (ref) out.push(ref);
+    }
+  return out;
 }
 
 /** Bu belge sorgusunu kapsayan, doğrulanmış kayıt sertifikası (yük + imza zinciri). */
@@ -210,7 +294,15 @@ export function relevantRegistrationCerts(
   registrarKeys: string[],
   match: Pick<Match, "queryId">,
   nowMs?: EpochMillis,
-): { present: boolean; valid: boolean; reason?: string; certs: RelevantRegistrationCert[] } {
+  /** ADR-0068 K5: `fetchRegistrationStatuses` sonucu; iptal → geçersiz, denetlenemedi → `statusUnknown` */
+  statuses?: RegistrationStatusLookup,
+): {
+  present: boolean;
+  valid: boolean;
+  reason?: string;
+  certs: RelevantRegistrationCert[];
+  statusUnknown?: boolean;
+} {
   const now = millisOrNow(nowMs);
   // ISO/IEC 18013-7 Ek C: kayıt sertifikası DeviceRequest'te (`requestInfo.euWrprc`, CBOR); bağ okuyucu imzasının yaprağıyla
   // (`req.leafDer` — `parseDcApiMdocRequest` bu oturumun dökümüyle doğruladı). İstek başına tek sertifika, isteğin bütününe ait.
@@ -233,7 +325,14 @@ export function relevantRegistrationCerts(
         reason: "registration certificate does not belong to the reader's certificate",
         certs: [],
       };
-    return { present: true, valid: true, certs: [{ payload: v.payload, chainDer: v.chainDer }] };
+    const st = registrationStatusOf(v.payload, statuses);
+    if (st === "revoked") return { present: true, valid: false, reason: "registration certificate revoked", certs: [] };
+    return {
+      present: true,
+      valid: true,
+      certs: [{ payload: v.payload, chainDer: v.chainDer }],
+      ...(st === "unknown" ? { statusUnknown: true } : {}),
+    };
   }
   const info = (req.payload as { verifier_info?: unknown }).verifier_info;
   const entries = Array.isArray(info)
@@ -250,6 +349,7 @@ export function relevantRegistrationCerts(
     orgId = null;
   }
   const certs: RelevantRegistrationCert[] = [];
+  let statusUnknown = false;
   for (const e of entries) {
     const v = verifyWrprc(e.data, registrarKeys, now);
     if (!v.ok) return fail(v.reason);
@@ -257,10 +357,14 @@ export function relevantRegistrationCerts(
     const expectedSub = payload.intermediary?.sub ?? payload.sub;
     if (!orgId || !expectedSub || orgId !== expectedSub)
       return fail("registration certificate does not belong to the certificate that signed the request");
+    // ADR-0068 K5: iptal edilmiş sertifika isteği bütünüyle geçersiz kılar (WRC4)
+    const st = registrationStatusOf(payload, statuses);
+    if (st === "revoked") return fail("registration certificate revoked");
+    if (st === "unknown") statusUnknown = true;
     if (!e.credential_ids?.length || e.credential_ids.includes(match.queryId))
       certs.push({ payload, chainDer: v.chainDer });
   }
-  return { present: true, valid: true, certs };
+  return { present: true, valid: true, certs, ...(statusUnknown ? { statusUnknown } : {}) };
 }
 
 /**
@@ -278,9 +382,11 @@ export function checkRegistrationCerts(
   registrarKeys: string[],
   match: Match,
   nowMs?: EpochMillis,
+  /** ADR-0068 K5: `fetchRegistrationStatuses(registrationStatusRefs(req, …), …)` sonucu */
+  statuses?: RegistrationStatusLookup,
 ): RegistrationCertCheck {
   const now = millisOrNow(nowMs);
-  const r = relevantRegistrationCerts(req, registrarKeys, match, now);
+  const r = relevantRegistrationCerts(req, registrarKeys, match, now, statuses);
   if (!r.present) return missingRegistrationPolicy();
   if (!r.valid) return { present: true, valid: false, reason: r.reason };
   const relevant = r.certs.map((c) => c.payload);
@@ -302,6 +408,7 @@ export function checkRegistrationCerts(
   return {
     present: true,
     valid: true,
+    ...(r.statusUnknown ? { flags: ["registration_status_unknown"] as RegistrationFlag[] } : {}),
     ...(relevant.length ? { allowedClaims: [...allowed] } : {}),
     tradeName: relevant[0]?.name,
     privacyPolicy: relevant[0]?.privacy_policy,
@@ -340,6 +447,8 @@ export function verifyWrprcCwt(
     return { ok: false, reason: "registration certificate not yet valid" };
   if (typeof payload.exp === "number" && payload.exp <= nowSec)
     return { ok: false, reason: "registration certificate expired" };
+  const shape = shapeProblem(payload);
+  if (shape) return { ok: false, reason: shape };
   return { ok: true, payload, signerDer: chain[0], chainDer: chain };
 }
 
@@ -381,6 +490,8 @@ export function checkProximityRegistration(
   registrarKeys: string[],
   readerTrust: ReaderTrust,
   nowMs?: EpochMillis,
+  /** ADR-0068 K5: önceden çekilmiş (çevrimdışıysa önbellekteki) durumlar */
+  statuses?: RegistrationStatusLookup,
 ): ProximityRegistrationCheck {
   const now = millisOrNow(nowMs);
   const reader = item.readerAuth
@@ -408,6 +519,8 @@ export function checkProximityRegistration(
   // okuyucu sertifikasının kendisi güvene bağlı olmalı: aksi hâlde kayıtlı bir kurumun kimliğini taşıyan kendinden imzalı sertifika
   // + o kurumun herkese açık kayıt sertifikası "doğrulanmış ticari ad" gösterirdi
   if (!readerTrusted) return fail("untrusted_reader_certificate");
+  const st = registrationStatusOf(v.payload, statuses);
+  if (st === "revoked") return fail("registration certificate revoked");
   const allowed = new Set<string>();
   for (const c of v.payload.credentials ?? [])
     if (!c.meta?.vct_values && !(c as { meta?: { doctype_value?: string } }).meta?.doctype_value) {
@@ -420,6 +533,7 @@ export function checkProximityRegistration(
   return {
     present: true,
     valid: true,
+    ...(st === "unknown" ? { flags: ["registration_status_unknown"] as RegistrationFlag[] } : {}),
     allowedClaims: [...allowed],
     tradeName: v.payload.name,
     privacyPolicy: v.payload.privacy_policy,

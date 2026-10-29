@@ -196,7 +196,9 @@ kayıt sertifikası üretir (en çok 12 ay geçerli). İçerik yalnız imzalı l
 yayınlanan ayrı kayıt kurumu anahtarıyla imzalanır. Doğrulayıcı sertifikayı isteğiyle birlikte taşır; cüzdan imzayı, süreyi
 ve doğrulayıcının erişim sertifikasındaki kurum kimlik numarasıyla bağı doğrular, istenen alanları sertifikayla karşılaştırır.
 Belge verenler için de kurum başına bir kayıt sertifikası üretilir. Kurum kimlik numarası kayda girilmemiş katılımcıya
-sertifika üretilmez.
+sertifika üretilmez. Sertifika politikasının kimliğini ve adresini taşır; kayıt kurumu iptal için herkese açık bir durum listesi
+yayımlar, cüzdan iptal edilmiş sertifikayı kabul etmez (Kayıt Sertifikası Politikası, [[FW-POL-0003]]; [[ADR-0068]]; bugün
+sandbox'ta).
 
 ### Cüzdan sağlayıcısı
 

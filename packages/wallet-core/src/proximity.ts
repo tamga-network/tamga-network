@@ -27,6 +27,7 @@ import type { KeyProvider } from "./keys.js";
 import { markCopyUsed, selectCopy, type StoredCredential, type WalletState } from "./store.js";
 import { offlineDisclosurePolicy, type DisclosurePolicyResult } from "./disclosure-policy.js";
 import { checkProximityRegistration, type ProximityRegistrationCheck, type ReaderTrust } from "./wrprc.js";
+import type { RegistrationStatusLookup } from "./wrprc-status.js";
 
 export interface ProximityTransport {
   start(serviceUuid: string): Promise<void>;
@@ -92,6 +93,11 @@ export async function presentProximity(p: {
    * `untrusted_reader_certificate` ile kişiye sorulmadan reddedilir (güvenli varsayılan). `registrarKeys: false` iken kullanılmaz.
    */
   readerTrust?: ReaderTrust;
+  /**
+   * ADR-0068 K5: kayıt sertifikalarının önceden çekilmiş durumları (`fetchRegistrationStatuses`; yakın alanda çoğu zaman
+   * önbellekteki kopya, `offline: true`). Verilmezse durum "denetlenemedi" uyarısı (`registration_status_unknown`).
+   */
+  registrationStatuses?: RegistrationStatusLookup;
   /** 0.6.0 (TS9): DeviceEngagement'a eklenecek ek alanlar (cüzdandan cüzdana teklif); `createEngagement` seçeneği */
   engagementOffer?: import("@tamga-network/mdoc").PresentationOffer;
   /**
@@ -200,6 +206,7 @@ export async function presentProximity(p: {
             p.registrarKeys ?? [],
             p.readerTrust ?? { trustAnchors: [] },
             epochMillis(p.now ?? Date.now()),
+            p.registrationStatuses,
           );
     const view: ProximityRequestView = {
       docType: item.docType,

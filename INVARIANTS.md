@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 370 kodlanmış değişmez, 66 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 374 kodlanmış değişmez, 67 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -666,6 +666,18 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0066/TX5` | Üretim bayrakla açılır (varsayılan kapalı); gerçek ağda açılış proje yönetimi onayıyla, sandbox ve bağımsız doğrulamadan sonra. |
 
 
+## ADR-0068
+
+*"Kayıt sertifikası politikası ve durum listesi"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0068/WRS1` | Kayıt sertifikası Tamga'nın kendi politika OID'ini ve politika belgesinin adresini taşır; ETSI'nin AB politika OID'i (`0.4.0.19475.3.1`) Tamga sertifikasına yazılmaz. |
+| `ADR-0068/WRS2` | Kayıt kurumu kayıt sertifikaları için herkese açık, imzalı, 1 bitlik bir Token Status List yayımlar; liste LOTL'deki kayıt kurumu anahtarıyla imzalanır ve en geç 24 saatte bir yeniden imzalanır. |
+| `ADR-0068/WRS3` | Kayıt ya da kullanım sona erince, askıya alınınca, iptal edilince veya sertifika içeriği değişince eski kayıt sertifikası aynı yayında iptal edilir; iptal edilen indeks yeniden kullanılmaz. |
+| `ADR-0068/WRS4` | Cüzdan iptal edilmiş kayıt sertifikası taşıyan isteğe veri göndermez ve iptal edilmiş sertifikalı belge verenden belge istemez; durum denetlenemezse kişiyi uyarır. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -950,12 +962,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 370 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 374 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TK, TL, TS, TX, W, WIA, WL, WR, WRC, XC, YE, YS, ZC, ZK, ZS.
+AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RS, RT, RV, S, SB, SD, SG, SK, SU, TI, TK, TL, TS, TX, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-29 (`scripts/sync-invariants.mjs`). Toplam 370 kodlanmış değişmez, 66 dokümanda.
+**Üretilen dosya** — 2026-10-29 (`scripts/sync-invariants.mjs`). Toplam 374 kodlanmış değişmez, 67 dokümanda.
