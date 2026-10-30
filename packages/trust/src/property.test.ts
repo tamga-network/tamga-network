@@ -145,11 +145,13 @@ describe("K11 ETSI XML güven listesi — düşmanca girdi", () => {
     expectListError(() => parseXml("<r>&x;</r>"));
   });
 
-  it("100 000 düzey iç içe öğe ve 50 000 öznitelik: çökme yok, 3 sn içinde ret (imza yok)", () => {
+  // Süre sınırı bir başarım ölçütü değil, "sonsuz döngü / üstel patlama yok" bekçisidir: tek başına ~1 sn sürer; tam paket
+  // paralel koşarken (yük altında) 3 sn aşılabildi (3,2 sn ölçüldü) — sınır 6 sn (test zaman aşımı vitest.config 20 sn)
+  it("100 000 düzey iç içe öğe ve 50 000 öznitelik: çökme yok, 6 sn içinde ret (imza yok)", () => {
     const deep = "<a>".repeat(100_000) + "</a>".repeat(100_000);
-    timed(() => expectListError(() => readTrustedListXml(deep, new Set([fp]))), 3000);
+    timed(() => expectListError(() => readTrustedListXml(deep, new Set([fp]))), 6000);
     const attrs = Array.from({ length: 50_000 }, (_, i) => `a${i}="1"`).join(" ");
-    timed(() => expectListError(() => readTrustedListXml(`<r ${attrs}/>`, new Set([fp]))), 3000);
+    timed(() => expectListError(() => readTrustedListXml(`<r ${attrs}/>`, new Set([fp]))), 6000);
   });
 
   it("rastgele dize ve rastgele XML benzeri metin: yalnız XmlSignatureError / LoteParseError", () => {

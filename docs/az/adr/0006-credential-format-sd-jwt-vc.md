@@ -4,13 +4,17 @@ title: "Rəqəmsal sənəd formatı: SD-JWT VC"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Tamga rəqəmsal sənəd formatını və vermə/təqdimetmə protokollarını QƏRAR kimi sabitləşdirir: əsas format SD-JWT VC, ikinci dərəcəli format mdoc/ISO 18013-5 (2-ci faza); vermə OpenID4VCI, təqdimetmə OpenID4VP, imza ES256 (P-256). Holder binding (`cnf` + cihaz açarı) İSTİSNASIZ MƏCBURİDİR — bu, rəqəmsal sənədin başqasının rəqəmsal cüzdanına götürülməsi boşluğunun (holder binding problemi) yeganə həllidir. Wallet Unit Attestation (WUA) əvvəldən tətbiq edilir. Revocation Token Status List-ə ([[SPEC-BC-0001]]) həvalə edilir. Tam spesifikasiya → SPEC-CRED-0001.
 domain: Credentials
 translation_of: ADR-0006
 source_version: "1.0.0"
 ---
+
+> **[[ADR-0013]] ilə qismən dəyişdirilib (2026-09-26):** mdoc (ISO/IEC 18013-5) "2-ci faza" deyil — şəxsiyyət sənədi bu gün
+> SD-JWT VC ilə yanaşı eyni sahələrlə və eyni holder açarına bağlı mdoc kimi də verilir. SD-JWT VC əsas format olaraq qalır;
+> digər bəndlər (protokollar, ES256, məcburi holder binding, WUA, Token Status List) qüvvədədir.
 
 # ADR-0006 — Rəqəmsal sənəd formatı və protokollar
 

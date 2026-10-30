@@ -4,7 +4,7 @@ title: "Geçici kimlik belgesi sağlayıcısı"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-10-09
+last_updated: 2026-10-30
 summary: >
   Devlet tarafından atanmış bir PID Provider bulunmadığı sürece Tamga, uzaktan
   kimlik doğrulama (Didit: belge + canlılık + yüz eşleştirme; ileride NFC çip
@@ -17,6 +17,10 @@ summary: >
   TL8 korunur (pid_providers[] boş), IDP3 yeniden ifade edilir.
 domain: Identity
 ---
+
+> **[[ADR-0022]] ile kısmen değiştirildi (2026-09-29):** kimlik servisinin sınıfı QUALIFIED / I3 değil, nitelikli olmayan EAA /
+> I2'dir; kimlik belgesi `category` claim'i taşımaz. Bağımsız uygunluk değerlendirmesinden sonra yeniden yükseltilebilir. Diğer
+> maddeler geçerlidir.
 
 # ADR-0011 — Tamga Geçici Kimlik Attestation Sağlayıcısı
 

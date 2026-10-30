@@ -4,7 +4,7 @@ title: "Schema registry"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Fixes the architecture of the Tamga schema registry. Seven decisions: (1) vct = a stable HTTPS URL under
   schema.tamga.network; (2) the schema document is off-chain, as SD-JWT VC Type Metadata + JSON Schema 2020-12;
@@ -16,6 +16,12 @@ domain: Credentials
 translation_of: ADR-0007
 source_version: 1.0.0
 ---
+
+> **Partly changed by [[ADR-0010]] (2026-09-24):** instead of Decision 1 (`vct` is a stable HTTPS URL), `vct` is a URN
+> (`urn:tamga:<domain>:<Type>:<major>`); Type Metadata is resolved from the catalogue (`metadata_url` + `content_hash`), the
+> catalogue address is `schemas.tamga.network`; the major version is in the URN, minor versions get a new `metadata_url` + hash
+> (ADR-0010 Decision 4). ADR-0010 keeps Decisions 2–6. The on-chain registry (Decisions 4–6) belongs to the chain phase
+> ([[ADR-0009]]).
 
 # ADR-0007 — Schema registry architecture
 

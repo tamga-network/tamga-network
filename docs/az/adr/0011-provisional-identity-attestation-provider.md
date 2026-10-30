@@ -4,13 +4,17 @@ title: "Müvəqqəti şəxsiyyət sənədi provayderi"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-10-09
+last_updated: 2026-10-30
 summary: >
   Dövlət tərəfindən təyin edilmiş PID Provider olmadığı müddətdə Tamga uzaqdan şəxsiyyət yoxlaması (Didit: sənəd + canlılıq yoxlaması + üz uyğunlaşdırması; gələcəkdə NFC çipinin oxunması) ilə yoxladığı şəxslərə özünün imzaladığı şəxsiyyət attestasiyası (urn:tamga:id:IdentityAttestation:1) verir. Bu, PID deyil, Tamga-nın sənədi verən qurum kimi verdiyi EAA-dır; dövlət PID-i gəldikdə onunla əvəz olunur (supersede). Qurumlar (universitet) rəqəmsal sənəd verərkən bu attestasiyanı təqdimat kimi qəbul edir və öz qeydləri ilə uyğunlaşdırır. Şəxsiyyətin sübutu inteqrasiyası universitetdə deyil, Tamga-nın şəxsiyyət xidmətindədir; Tamga bu məlumatlar üçün KVKK üzrə məlumat nəzarətçisi olur. TL8 qorunur (pid_providers[] boş), IDP3 yenidən ifadə edilir.
 domain: Identity
 translation_of: ADR-0011
 source_version: "1.0.0"
 ---
+
+> **[[ADR-0022]] ilə qismən dəyişdirilib (2026-09-29):** şəxsiyyət xidmətinin sinfi QUALIFIED / I3 deyil, ixtisaslı olmayan EAA
+> / I2-dir; şəxsiyyət sənədi `category` claim-i daşımır. Müstəqil uyğunluq qiymətləndirməsindən sonra yenidən yüksəldilə bilər.
+> Digər bəndlər qüvvədədir.
 
 # ADR-0011 — Tamga Müvəqqəti Şəxsiyyət Attestasiyası Provayderi
 

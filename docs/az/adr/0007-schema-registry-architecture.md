@@ -4,13 +4,18 @@ title: "Sxem reyestri"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Tamga sxem reyestrinin arxitekturasını müəyyənləşdirir. Yeddi qərar: (1) vct = sabit HTTPS URL, schema.tamga.network altında; (2) sxem dokumenti off-chain, SD-JWT VC Type Metadata + JSON Schema 2020-12 kimi; (3) vct#integrity məcburidir; (4) SchemaRegistry kontraktı yalnız lövbər saxlayır (URI + hash + versiya + status); (5) iki səviyyəli sxem sahəsi — NETWORK (2/3 səs) və NATIONAL (onlyOwnerState); (6) sənədi verən qurum↔sxem səlahiyyəti zəncirdədir və yoxlayan tərəfin yoxlamasında məcburi addımdır; (7) semver + dəyişməz URL + extends ilə versiyalaşdırma. Rədd edilmiş alternativlər və məcburi nəticələr qeydə alınıb.
 domain: Credentials
 translation_of: ADR-0007
 source_version: "1.0.0"
 ---
+
+> **[[ADR-0010]] ilə qismən dəyişdirilib (2026-09-24):** Qərar 1-in (`vct` sabit HTTPS URL-dir) yerinə `vct` URN-dir
+> (`urn:tamga:<domain>:<Type>:<major>`); Type Metadata katalogdan (`metadata_url` + `content_hash`) həll olunur, kataloq ünvanı
+> `schemas.tamga.network`-dür; əsas versiya URN-də, ara versiya yeni `metadata_url` + hash ilə (ADR-0010 Qərar 4). ADR-0010
+> Qərar 2–6-nı saxlayır. Zəncirdəki reyestr (Qərar 4–6) zəncir mərhələsinə aiddir ([[ADR-0009]]).
 
 # ADR-0007 — Sxem Reyestrinin Arxitekturası
 

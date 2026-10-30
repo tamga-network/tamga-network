@@ -4,7 +4,7 @@ title: "Positioning"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-13
+last_updated: 2026-10-30
 summary: >
   Tamga is positioned in three layers: (1) the base — all credentials, protocols and trust lists follow EU (eIDAS 2.0 / EUDI)
   standards; (2) Tamga Network — a light trust federation for the Turkic world: it collects country lists and introduces them to
@@ -16,8 +16,8 @@ translation_of: ADR-0035
 source_version: 1.0.0
 ---
 
-> **Partly changed by [[ADR-0037]] (2026-10-02):** the services of the third layer moved outside the network, to a separate
-> company; Tamga Network is only a network and sells no services. The base (EU compliance), the federation layer and PO1–PO4 still apply.
+> **Partly changed by [[ADR-0037]] and [[ADR-0042]] (2026-10-02, 2026-10-06):** the services of the third layer moved outside the network, to a separate
+> company; Tamga Network is only a network and sells no services. The base (EU compliance), the federation layer and PO1–PO4 still apply. Tamga Wallet is not part of the network either: the network runs no wallet and knows wallets through the trust list ([[ADR-0042]], 2026-10-06).
 
 # Context
 

@@ -4,13 +4,17 @@ title: "Sandbox-da real şəxsiyyətin yoxlanılması"
 status: Active
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-10-28
+last_updated: 2026-10-30
 summary: >
   Sandbox-da şəxsiyyət axını iki seçim təqdim edir: "Real şəxsiyyətinizi yoxlayan tərəf ilə təsdiqləyin (Didit)" və "Sürətli sınaq (saxta şəxs)". Real yol hamı üçün açıqdır (dəvət kodu istəyə bağlı rejim kimi qalır) və real şəbəkənin Didit hesabını və şəxsiyyət axınını paylaşır; ayrıca provayder tətbiqi yoxdur. Pulsuz aylıq kvota real şəbəkə ilə ortaq olduğu üçün sandbox-un gündəlik və aylıq limiti var; limit dolduqda yalnız sürətli sınaq açıq olur. Şəxs skan etməzdən əvvəl açıq xəbərdarlığı təsdiqləyir; rəqəmsal sənədə yalnız ad, soyad və doğum tarixi keçir, provayderdəki sessiya dərhal silinir və hər şey gecə sıfırlanmasında silinir. Qəbul edilmiş risklər (ortaq kvota, sandbox-un provayder açarını oxuya bilməsi, webhook-un real şəbəkəyə getməsi) və onların azaldılması yazılı şəkildə qeyd olunub. ADR-0038-in K4 bəndini və SB3 qaydasını dəyişir.
 domain: Identity
 translation_of: ADR-0040
 source_version: "1.0.0"
 ---
+
+> **Qeyd (2026-10-28):** xülasədəki "real yol hamıya açıqdır" ilkin mətndir. KVKK/GDPR ilkin baxışından sonra standart
+> rejim `invite`-dır: hüquqi baxış bitənədək real yol yalnız etibarlı dəvət kodu ilə açılır, sürətli sınaq hamıya açıqdır; açıq
+> rejim (`open`) yalnız açıq şəkildə təyin edildikdə qüvvədədir (RI1, D-ID-9).
 
 # Qısaca
 

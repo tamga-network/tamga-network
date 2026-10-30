@@ -4,7 +4,7 @@ title: "Mövqeləndirmə"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-13
+last_updated: 2026-10-30
 summary: >
   Tamga üç qatda mövqelənir: (1) baza — bütün rəqəmsal sənədlər, protokollar və etibar siyahıları Avropa İttifaqının (Aİ) (eIDAS 2.0 / EUDI) standartlarına uyğundur; (2) Tamga Network — türk dünyası üçün yüngül etibar federasiyası: ölkə siyahılarını bir yerə toplayır və bir-birinə tanıdır, qaydalarına əməl edən hər rəqəmsal cüzdanı tanıyır, dövlətlər qoşulduqca idarəetmə qurumu və zəncir yaranır; (3) məhsul və xidmətlər — Tamga Wallet (şəbəkənin ilk və istinad rəqəmsal cüzdanı, hər uyğun mühitdə işləyir) və qurumlara xidmətlər (Qurum Konsolu, Tamga Verify, inteqrasiya, dəstək).
 domain: Governance
@@ -12,8 +12,8 @@ translation_of: ADR-0035
 source_version: "1.0.0"
 ---
 
-> **[[ADR-0037]] ilə qismən dəyişdirilib (2026-10-02):** üçüncü qatdakı xidmətlər şəbəkədən kənara, ayrıca şirkətə
-> köçürülüb; Tamga Network yalnız şəbəkədir və xidmət satmır. Baza (Aİ uyğunluğu), federasiya qatı və PO1–PO4 qüvvədədir.
+> **[[ADR-0037]] və [[ADR-0042]] ilə qismən dəyişdirilib (2026-10-02, 2026-10-06):** üçüncü qatdakı xidmətlər şəbəkədən kənara, ayrıca şirkətə
+> köçürülüb; Tamga Network yalnız şəbəkədir və xidmət satmır. Baza (Aİ uyğunluğu), federasiya qatı və PO1–PO4 qüvvədədir. Tamga Wallet da şəbəkənin hissəsi deyil: şəbəkə cüzdan idarə etmir, cüzdanları etibar siyahısı ilə tanıyır ([[ADR-0042]], 2026-10-06).
 
 # Kontekst
 

@@ -60,6 +60,14 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
     console.warn(
       "[verify] TAMGA_VERIFY_REQUIRE_RP_AUTH=0 is ignored on the production network (ADR-0017 K6) — strict mode on",
     );
+  // ADR-0065 TK3: ortamdan yüklenen terminal anahtarları iptal edilemez, kuruma bağlanmaz — yalnız yerel geliştirme ve sandbox.
+  // Gerçek ağda servis bu ayarla başlamaz (sessizce yok saymak yerine açık hata: ayar yanlış dosyaya yazılmış demektir)
+  const terminalKeys = e.TAMGA_VERIFY_TERMINAL_KEYS?.trim() || undefined;
+  if (production && terminalKeys)
+    throw new Error(
+      "[verify] TAMGA_VERIFY_TERMINAL_KEYS is not allowed on the production network (ADR-0065 TK3) — " +
+        "remove it from the .env; issue terminal keys via POST /terminal/keys (Institution Console)",
+    );
   return {
     network,
     publicBase,
@@ -74,6 +82,6 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
     requireRpAuth: production || e.TAMGA_VERIFY_REQUIRE_RP_AUTH === "1",
     zkNativeBin: e.TAMGA_ZK_NATIVE_BIN?.trim() || undefined,
     sandboxLive: e.TAMGA_SANDBOX_LIVE !== "0", // 2026-10-04 sandbox yayında: varsayılan açık
-    terminalKeys: e.TAMGA_VERIFY_TERMINAL_KEYS?.trim() || undefined,
+    terminalKeys,
   };
 }

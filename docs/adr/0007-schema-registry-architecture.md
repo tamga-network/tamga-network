@@ -4,7 +4,7 @@ title: "Şema kayıt defteri"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Tamga şema kayıt defterinin mimarisini sabitler. Yedi karar: (1) vct = kararlı
   HTTPS URL, schema.tamga.network altında; (2) şema dokümanı off-chain, SD-JWT VC
@@ -16,6 +16,11 @@ summary: >
   ve bağlayıcı sonuçlar kayıtlıdır.
 domain: Credentials
 ---
+
+> **[[ADR-0010]] ile kısmen değiştirildi (2026-09-24):** Karar 1 (`vct` kararlı bir HTTPS URL) yerine `vct` bir URN'dir
+> (`urn:tamga:<domain>:<Type>:<major>`); Type Metadata katalogdan (`metadata_url` + `content_hash`) çözülür, katalog adresi
+> `schemas.tamga.network`'tür; ana sürüm URN'de, ara sürüm yeni `metadata_url` + hash ile (ADR-0010 Karar 4). ADR-0010, Karar
+> 2–6'yı korur. Zincirdeki kayıt (Karar 4–6) zincir aşamasındadır ([[ADR-0009]]).
 
 # ADR-0007 — Şema Kayıt Defteri Mimarisi
 

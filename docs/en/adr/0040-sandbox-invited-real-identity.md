@@ -4,7 +4,7 @@ title: "Real identity checks in sandbox"
 status: Active
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-10-28
+last_updated: 2026-10-30
 summary: >
   In the sandbox the identity flow offers two options: "Verify with your real identity (Didit)" and "Quick trial (made-up
   person)". The real path is open to everyone (the invitation code remains as an optional mode) and shares the real network's
@@ -18,6 +18,10 @@ domain: Identity
 translation_of: ADR-0040
 source_version: 1.0.0
 ---
+
+> **Note (2026-10-28):** "the real path is open to everyone" in the summary is the original text. After the GDPR/KVKK
+> preliminary review the default mode is `invite`: until the legal review ends the real path opens only with a valid invitation
+> code, the quick trial is open to everyone; the open mode (`open`) applies only when set explicitly (RI1, D-ID-9).
 
 # In brief
 

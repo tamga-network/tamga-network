@@ -47,9 +47,9 @@ normalisation, refresh-token binding (ADR-0060), PKCE verifier required.
 
 **OpenID Foundation conformance suite — verifier** (plan `oid4vp-1final-verifier-haip-test-plan`, `sd_jwt_vc` +
 `direct_post.jwt`, 14 modules, 2026-10-27): first round **no failures**; two warnings (an extra `purpose` parameter in the
-request object, an extra `show_url` key in the response-endpoint answer) fixed the same day. A second round has **not been run
-yet** (as of 2026-10-29); its result is unknown until it runs. Request branches (ADR-0067) changed the request object since the
-first round.
+request object, an extra `show_url` key in the response-endpoint answer) fixed the same day. A second round ran the same day
+(2026-10-27): 7 passed, 6 review items, 1 skipped, **no warnings** — plan complete. Both rounds predate request branches
+(ADR-0067, 2026-10-29), which changed the request object; a re-run against the current code is pending.
 
 **eudi-dev 3.5.0** (independent open-source EU test wallet, strict ARF mode, 2026-10-29): five real defects found and fixed the
 same day — registration-certificate use entries lacked `format` (mdoc / ZK requests counted as over-asking), `state` required on

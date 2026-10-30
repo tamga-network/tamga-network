@@ -4,7 +4,7 @@ title: "Credential format: SD-JWT VC"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Fixes Tamga's credential format and issuance/presentation protocols as a DECISION: primary format SD-JWT VC, secondary
   mdoc/ISO 18013-5 (phase 2); issuance OpenID4VCI, presentation OpenID4VP, signature ES256 (P-256). Holder binding (`cnf` +
@@ -15,6 +15,10 @@ domain: Credentials
 translation_of: ADR-0006
 source_version: 1.0.0
 ---
+
+> **Partly changed by [[ADR-0013]] (2026-09-26):** mdoc (ISO/IEC 18013-5) is not "phase 2" — the identity credential is issued
+> today as mdoc too, alongside SD-JWT VC, with the same fields and bound to the same holder key. SD-JWT VC stays the primary
+> format; the other points (protocols, ES256, mandatory holder binding, WUA, Token Status List) still apply.
 
 # ADR-0006 — Credential format and protocols
 

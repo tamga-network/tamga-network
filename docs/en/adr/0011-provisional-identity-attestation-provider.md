@@ -4,7 +4,7 @@ title: "Provisional identity attestation provider"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-10-09
+last_updated: 2026-10-30
 summary: >
   As long as there is no PID Provider appointed by the state, Tamga issues an identity attestation it signs itself
   (urn:tamga:id:IdentityAttestation:1) to people it has verified by remote identity verification (Didit: document +
@@ -17,6 +17,10 @@ domain: Identity
 translation_of: ADR-0011
 source_version: 1.0.0
 ---
+
+> **Partly changed by [[ADR-0022]] (2026-09-29):** the identity service's class is not QUALIFIED / I3 but non-qualified EAA /
+> I2; the identity credential carries no `category` claim. It can be raised again after an independent conformity assessment.
+> The other points still apply.
 
 # ADR-0011 — Tamga provisional identity attestation provider
 

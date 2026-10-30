@@ -4,7 +4,7 @@ title: "Sandbox'ta gerçek kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-10-28
+last_updated: 2026-10-30
 summary: >
   Sandbox'ta kimlik akışı iki seçenek sunar: "Gerçek kimliğinle doğrula (Didit)" ve "Hızlı deneme (sahte kişi)". Gerçek yol
   herkese açıktır (davet kodu isteğe bağlı bir kip olarak kalır) ve gerçek ağın Didit hesabını ve kimlik akışını paylaşır; ayrı
@@ -15,6 +15,10 @@ summary: >
   maddesini ve SB3 kuralını değiştirir.
 domain: Identity
 ---
+
+> **Not (2026-10-28):** özetteki "gerçek yol herkese açıktır" ilk metindir. KVKK/GDPR ön incelemesi sonucu varsayılan
+> kip `invite`'tır: hukuki inceleme bitene kadar gerçek yol yalnız geçerli bir davet koduyla açılır, hızlı deneme herkese
+> açıktır; açık kip (`open`) yalnız açıkça ayarlanırsa geçerlidir (RI1, D-ID-9).
 
 # Kısaca
 

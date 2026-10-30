@@ -4,7 +4,7 @@ title: "Belge biçimi: SD-JWT VC"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Tamga belge formatını ve ihraç/sunum protokollerini KARAR olarak sabitler:
   birincil format SD-JWT VC, ikincil mdoc/ISO 18013-5 (2. faz); ihraç OpenID4VCI, sunum
@@ -14,6 +14,10 @@ summary: >
   Status List'e ([[SPEC-BC-0001]]) devredilir. Tam spesifikasyon → SPEC-CRED-0001.
 domain: Credentials
 ---
+
+> **[[ADR-0013]] ile kısmen değiştirildi (2026-09-26):** mdoc (ISO/IEC 18013-5) "2. faz" değildir — kimlik belgesi bugün SD-JWT
+> VC'ye ek olarak aynı alanlarla ve aynı holder anahtarına bağlı mdoc olarak da verilir. SD-JWT VC birincil format olarak kalır;
+> diğer maddeler (protokoller, ES256, zorunlu holder binding, WUA, Token Status List) geçerlidir.
 
 # ADR-0006 — Belge Formatı ve Protokoller
 
