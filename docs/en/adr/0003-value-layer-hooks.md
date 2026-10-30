@@ -1,10 +1,10 @@
 ---
 document_id: ADR-0003
 title: "Value layer hooks"
-status: Active
+status: Superseded
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Under the [[PM-AUTH-0001]] strategy, five binding architecture decisions that must be taken TODAY to keep the
   value/payment/agent door OPEN. All of them cost almost nothing today; taken later, each would require migrating the
@@ -18,9 +18,13 @@ translation_of: ADR-0003
 source_version: 1.0.0
 ---
 
+> **Suspended — research direction (2026-10-30, [[ADR-0072]]).** The five hooks of this ADR are no longer binding; the network
+> issues no token and handles no payment or value transfer. The text is kept as research work; the conditions for reopening are in
+> [[ADR-0072]] K3.
+
 # ADR-0003 — Value layer hooks
 
-**Status:** Accepted
+**Status:** Accepted (2026-08-06) — suspended 2026-10-30 ([[ADR-0072]])
 **Date:** 2026-08-06
 **Decided by:** Tamga Network project management
 **Source:** `docs/tamga-network-varlik-katmani-strateji.md` §4 + `docs/tamga-network-cuzdan-odeme-agent.md` §2, §4

@@ -213,7 +213,8 @@ TDT-first ilkesine (D-GOV-5) göre bu tür geçicidir:
    belgeye karşı yapıldığı için asıl engel odur, ama kimlik ile kart arasında doğrudan bir bağ yoktur. Seçenek: Türkiye kartlarında
    yazılı **kimlik numarasını** belgeye yazmadan, yalnız eşleşme özetine (HMAC) katmak — kimlik belgesindeki numara ile karttaki
    numara aynı özeti vermeli; numara hiçbir yerde saklanmaz ve belgeye girmez (DL2 korunur). Kimlik numarası olmayan kartlarda
-   (öteki ülkeler) bugünkü eşleşme kalır. Karar bekliyor; kod değişikliği yapılmadı.
+   (öteki ülkeler) bugünkü eşleşme kalır. **2026-10-30: öneri kabul** (proje yönetimi onayı); uygulama mühendislik işi, sürücü
+   belgesi bilgisi gerçek kişilere açılmadan önce.
 
 # Durum
 

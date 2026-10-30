@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
+**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-30 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -422,12 +422,14 @@ These numbers are reviewed with pilot data; changes are published in a new versi
 Code is licensed under Apache-2.0 and documents under CC BY 4.0; the credential type catalogue is open and can be mirrored. Use
 of the "Tamga" mark and of the "Listed on Tamga Network" indicator is subject to the participation rules (RB-WP-18); data belonging to institutions is confidential.
 
-### 5.5 Pricing (direction)
+### 5.5 Fees and funding
 
-<!-- KARAR BEKLİYOR: katılım ücreti -->
-
-**Free for individuals** (as in eIDAS 2.0). The fee structure for institutions is set in the participation agreement at the
-end of the pilot; the pilot is free.
+In the provisional phase the network charges no participant (issuing institution, verifier, wallet provider, individual) for list
+registration, issuance, verification, the identity service or list services; **for individuals the network is always free** (as in
+eIDAS 2.0). Once established, the foundation is funded by grants, unconditional donations and state or member contributions; until
+then the provisional operator covers the costs. A financial contribution has no effect on a registration decision, a place in the
+list, the participation gates or a governance vote. Paid services (integration, hosting, support) are offered by companies outside
+the network, and a registration decision cannot depend on them ([[ADR-0071]] FN1–FN2).
 
 ### 5.6 Termination and exit
 

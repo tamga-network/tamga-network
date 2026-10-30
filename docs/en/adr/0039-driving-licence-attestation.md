@@ -230,7 +230,8 @@ Under the TDT-first principle (D-GOV-5) this type is provisional:
    and the card. Option: fold the **national ID number** printed on Turkish cards into the match digest (HMAC) only, without
    writing it into the credential — the number on the identity credential and the number on the card must give the same digest;
    the number is stored nowhere and never enters the credential (DL2 holds). Cards without a national ID number (other countries)
-   keep today's matching. Decision pending; no code change made.
+   keep today's matching. **2026-10-30: proposal accepted** (project management approval); implementation is engineering work,
+   before the driving licence information is opened to real people.
 
 # Status
 

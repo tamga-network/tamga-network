@@ -4,7 +4,7 @@ title: "Health credentials"
 status: Proposed
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Three complementary credentials for health professionals:
   (1) practice licence — authentic source the Ministry of Health; a test institution in the pilot;
@@ -16,6 +16,10 @@ domain: Credentials
 translation_of: ADR-0028
 source_version: 1.0.0
 ---
+
+> **Parked (2026-10-30, project management decision).** This draft stays Proposed but is not worked on: the first sector is the
+> university, and health credentials are not taken up without a health-sector partner and a legal review. If reopened, acceptance
+> needs a separate approval.
 
 # Context
 

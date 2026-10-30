@@ -1,10 +1,10 @@
 ---
 document_id: ADR-0003
 title: "Değer katmanı kancaları"
-status: Active
+status: Superseded
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   [[PM-AUTH-0001]] stratejisi uyarınca, değer/ödeme/agent kapısını AÇIK tutmak için
   BUGÜN alınması gereken beş bağlayıcı mimari karar. Hepsi bugün neredeyse sıfır
@@ -18,9 +18,12 @@ summary: >
 domain: Governance
 ---
 
+> **Askıda — araştırma yönü (2026-10-30, [[ADR-0072]]).** Bu ADR'nin beş kancası artık bağlayıcı değildir; ağ token ihraç etmez,
+> ödeme ya da değer aktarımı işlemez. Metin araştırma birikimi olarak korunur; yeniden açılma koşulları [[ADR-0072]] K3'te.
+
 # ADR-0003 — Değer Katmanı Kancaları
 
-**Durum:** Accepted
+**Durum:** Accepted (2026-08-06) — askıda 2026-10-30 ([[ADR-0072]])
 **Tarih:** 2026-08-06
 **Karar veren:** Tamga Network proje yönetimi
 **Kaynak:** `docs/tamga-network-varlik-katmani-strateji.md` §4 +

@@ -20,13 +20,19 @@
   "identifiers": [
     {
       "scheme": "TR-VKN",
-      "value": "[DOLDURULACAK]"
+      "value": "TR1870632151",
+      "note": "provisional operator (geçici işletmeci) — BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; replaced when the foundation is established"
     }
   ],
+  "operator": {
+    "name": "BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ",
+    "status": "provisional",
+    "on_behalf_of": "Tamga Network (foundation to be established)",
+    "note": "Provisional operator (geçici işletmeci), ADR-0070: until the Tamga foundation is established, the network's own services are operated by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ and registered with its tax number; this identifier is replaced when the foundation is established."
+  },
   "postal_address": {
-    "street_address": "[DOLDURULACAK]",
-    "locality": "[DOLDURULACAK]",
-    "postal_code": "[DOLDURULACAK]",
+    "street_address": "Harbiye Mah. Bostan Sk. No: 15 İç Kapı No: 5",
+    "locality": "Şişli / İstanbul",
     "country": "TR"
   },
   "contact": {

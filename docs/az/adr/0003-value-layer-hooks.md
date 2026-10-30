@@ -1,10 +1,10 @@
 ---
 document_id: ADR-0003
 title: "Dəyər qatı qarmaqları"
-status: Active
+status: Superseded
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   [[PM-AUTH-0001]] strategiyasına uyğun olaraq dəyər/ödəniş/agent qapısını AÇIQ saxlamaq üçün BU GÜN qəbul edilməli olan beş məcburi memarlıq qərarı. Hamısının bu gün xərci demək olar ki, sıfırdır; sonradan qəbul edilərsə, bütün istifadəçi bazasının köçürülməsini tələb edir. (1) Vətəndaş/ qurum zəncir hesabı əvvəldən AĞILLI KONTRAKT RƏQƏMSAL CÜZDANI olur (EOA deyil); (2) açar sahələri qəti şəkildə ayrılır — şəxsiyyət/aktiv/agent — və AKTİV bərpası şəxsiyyət escrow-undan ayrıdır, İSTİFADƏÇİNİN SEÇDİYİ bərpaçılarla həyata keçirilir (məcburi dövlət yox); (3) nümayəndəlik reyestri əhatə baxımından ümumidir (scope-generic); (4) credential-gating ümumi kontrakt primitividir; (5) öz token yoxdur, lakin token standartı qadağan edilmir — buraxılış FINANCE sənədi verən qurumların icazə siyahısına bağlıdır. Bu qərarlar contracts/ implementasiyası üçün məcburi məhdudiyyətdir.
 domain: Governance
@@ -12,9 +12,12 @@ translation_of: ADR-0003
 source_version: "1.0.0"
 ---
 
+> **Dayandırılıb — tədqiqat istiqaməti (2026-10-30, [[ADR-0072]]).** Bu ADR-in beş qarmağı artıq məcburi deyil; şəbəkə token
+> buraxmır, ödəniş və ya dəyər köçürməsi aparmır. Mətn tədqiqat yığımı kimi saxlanılır; yenidən açılma şərtləri [[ADR-0072]] K3-dədir.
+
 # ADR-0003 — Dəyər Qatı Qarmaqları
 
-**Status:** Accepted
+**Status:** Accepted (2026-08-06) — dayandırılıb 2026-10-30 ([[ADR-0072]])
 **Tarix:** 2026-08-06
 **Qərar verən:** Tamga Network layihə rəhbərliyi
 **Mənbə:** `docs/tamga-network-varlik-katmani-strateji.md` §4 +

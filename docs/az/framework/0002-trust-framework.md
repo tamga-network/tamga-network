@@ -4,7 +4,7 @@ title: "Əlavə A — Trust Framework"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-10-30
 summary: >
   Tamga ekosisteminin idarəetmə çərçivəsi. World Bank-ın "Digital Wallets: Trust Frameworks" beşqatlı modeli əsasında qurulmuşdur: strategiya (vizyon, prinsiplər, hüquqi kontekst, risk, idarəetmə orqanları), texnologiya (əsas sənədə istinad), sxem qaydaları (rollar, qoşulma qapıları, həyat dövrü, təminat), uyğunluq (rejim, ISO/IEC 17000 rolları, uyğunluq testi, nəzarət, sanksiyalar, insidentlərə cavab) və müqavilələr (müqavilələr toplusu, xidmət səviyyələri, məsuliyyət, müqaviləyə xitam, varislik). eIDAS 2.0 və onun icra aktları qatının Türk dünyasındakı qarşılığıdır və dövlət öz üzərinə götürdükdə ona təhvil veriləcək aktivdir.
 translation_of: FW-TF-0001
@@ -398,12 +398,14 @@ Bu rəqəmlər pilot məlumatları əsasında nəzərdən keçirilir; dəyişikl
 Kod Apache-2.0, sənədləşmə isə CC BY 4.0 lisenziyası ilə yayılır; sənəd növləri kataloqu açıqdır və güzgülənə bilər. "Tamga" brendinin və "Tamga Network-da siyahıdadır"
 göstəricisinin istifadəsi iştirak qaydalarına tabedir (RB-WP-18); qurumlara aid məlumatlar konfidensialdır.
 
-## 5.5 Ödənişlər (istiqamət qərarı)
+## 5.5 Ödənişlər və maliyyələşmə
 
-<!-- KARAR BEKLİYOR: katılım ücreti -->
-
-**Fiziki şəxslər üçün ödənişsizdir** (eIDAS 2.0-da olduğu kimi). Qurumlar üçün ödəniş strukturu pilotun sonunda iştirak müqaviləsi ilə müəyyən edilir;
-pilot ödənişsizdir.
+Müvəqqəti dövrdə şəbəkə heç bir iştirakçıdan (sənəd verən qurum, yoxlayan tərəf, cüzdan təminatçısı, fiziki şəxs) siyahı
+qeydiyyatı, sənəd vermə, yoxlama, şəxsiyyət xidməti və ya siyahı xidməti üçün haqq almır; **fiziki şəxslər üçün şəbəkə həmişə
+ödənişsizdir** (eIDAS 2.0-da olduğu kimi). Fond qurulanda şəbəkə qrantlar, şərtsiz ianələr və dövlət və ya üzv töhfələri ilə
+maliyyələşir; o vaxta qədər xərcləri müvəqqəti operator qarşılayır. Maliyyə töhfəsi qeydiyyat qərarına, siyahıdakı yerə, qoşulma
+qapılarına və ya idarəetmə səsinə təsir etmir. Ödənişli xidmətləri (inteqrasiya, hostinq, dəstək) şəbəkədən kənar şirkətlər təklif
+edir və qeydiyyat qərarı onlara bağlana bilməz ([[ADR-0071]] FN1–FN2).
 
 ## 5.6 Xitam və çıxış
 

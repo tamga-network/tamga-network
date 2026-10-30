@@ -4,6 +4,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.7.4` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
+## [Unreleased]
+
+### Planned for 0.8
+
+- **verifier — `createPresentationRequest` default flips to per-fetch branches.** `initialRequestObject` will default to `false`
+  (the safe branch mode: no shared cross-device request object, `PresentationSession` result); `true` stays available for one
+  release and is then removed. *Migration:* follow `packages/verifier/README.md` "Migrating from one shared request object" now.
+
+### Added
+
+- **trust-publisher — single provisional-operator value (ADR-0070).** `registry/provisional-operator.json` holds the legal
+  provisional operator of the network's own services; every publication checks that own records carry exactly this value and
+  that the list operator name is "Tamga Network" (OP1–OP3). The pending app-store review signer record carries the same value.
+
+### Documents
+
+- ADR-0070 (provisional operator chain), ADR-0071 (no fees in the provisional phase; Trust Framework §5.5 rewritten) and
+  ADR-0072 (value layer suspended; ADR-0003 marked superseded) accepted; ADR-0028 (health credentials) parked.
+
 ## 0.7.4 — 2026-10-29
 
 ### Breaking / behaviour changes in 0.7.4 (with migration)

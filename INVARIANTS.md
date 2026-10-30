@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 384 kodlanmış değişmez, 69 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 390 kodlanmış değişmez, 72 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -703,6 +703,36 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0069/TG3` | Listede geri çekilmiş grubun ya da kurumu değişmiş grubun anahtarı kapıda geçmez (403, jetona dokunulmaz) ve bu gruba anahtar verilmez; grup listede yoksa [[ADR-0065]] TK1–TK3 geçerlidir. |
 
 
+## ADR-0070
+
+*"Geçici işletmeci zinciri: vakıf kurulana kadar ağın kendi hizmetleri Tamga Network adına geçici işletmecide"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0070/OP1` | Liste işletmecisi ve şema sahibi adı "Tamga Network"tür (`status: provisional` vakıf kurulana kadar); geçici işletmecinin adı yalnız ağın kendi hizmet kayıtlarında, onların sertifikalarında ve tüzel kişi gerektiren belgelerde yer alır. |
+| `ADR-0070/OP2` | Geçici işletmecinin adı, kimlik numarası ve adresi tek yapılandırma değerinden gelir; liste yayıncısı bu değerden farklı bilgi taşıyan kendi kaydıyla ya da "Tamga Network" dışında bir liste işletmecisi adıyla yayın yapmaz. |
+| `ADR-0070/OP3` | Vakfa devir yalnız bu değeri ve ona bağlı kayıtları ve sertifikaları değiştirir; liste işletmecisi adı, `ca_id`, `vct` ve kurumların kalıcı kimlikleri değişmez. |
+
+
+## ADR-0071
+
+*"Geçici dönemde ağın finansmanı: hizmet ücreti yok; vakıf hibe ve devlet/üye katkısıyla"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0071/FN1` | Geçici dönemde ağ hiçbir katılımcıdan liste kaydı, belge verme, doğrulama, kimlik servisi ya da liste hizmeti ücreti almaz; kişiler için ağ her zaman ücretsizdir. |
+| `ADR-0071/FN2` | Mali katkı (hibe, bağış, devlet/üye katkısı, geçici işletmecinin giderleri karşılaması) kayıt kararına, güven listesindeki yere, katılım kapılarına ya da yönetişim oyuna etki etmez. |
+
+
+## ADR-0072
+
+*"Değer katmanı askıda: ADR-0003 kancaları araştırma yönü"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0072/VL1` | Ağ token ihraç etmez; ödeme, mutabakat ya da değer aktarımı işlemez; değer katmanı yönetişim kurumunun kararı, bağımsız güvenlik incelemesi ve yeni bir ADR olmadan açılmaz. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -988,12 +1018,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 384 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 390 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, PD, PN, PO, PR, PS, PV, RI, RPR, RQ, RS, RT, RV, S, SB, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, FN, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, OP, PD, PN, PO, PR, PS, PV, RI, RPR, RQ, RS, RT, RV, S, SB, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-10-29 (`scripts/sync-invariants.mjs`). Toplam 384 kodlanmış değişmez, 69 dokümanda.
+**Üretilen dosya** — 2026-10-30 (`scripts/sync-invariants.mjs`). Toplam 390 kodlanmış değişmez, 72 dokümanda.

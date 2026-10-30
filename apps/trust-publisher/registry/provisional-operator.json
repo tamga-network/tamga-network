@@ -1,0 +1,12 @@
+{
+  "note": "ADR-0070: the single source of the legal provisional operator of the network's own services (identity service, Tamga Verify) until the foundation is established. Every own record whose identifier note says 'provisional operator' must carry exactly these values (checked at every build). The list operator and scheme owner name stays 'Tamga Network'. Handover: tamga-platform ops/foundation-handover.ts.",
+  "scheme_operator_name": "Tamga Network",
+  "name": "BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ",
+  "on_behalf_of": "Tamga Network (foundation to be established)",
+  "identifier": { "scheme": "TR-VKN", "value": "TR1870632151" },
+  "postal_address": {
+    "street_address": "Harbiye Mah. Bostan Sk. No: 15 İç Kapı No: 5",
+    "locality": "Şişli / İstanbul",
+    "country": "TR"
+  }
+}

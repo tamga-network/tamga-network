@@ -210,7 +210,8 @@ TDT-first prinsipinə (D-GOV-5) görə bu növ müvəqqətidir:
    sənədə qarşı aparıldığı üçün əsas maneə odur, lakin şəxsiyyət ilə kart arasında birbaşa bağ yoxdur. Seçim: Türkiyə kartlarında
    yazılmış **şəxsiyyət nömrəsini** sənədə yazmadan yalnız uyğunluq heşinə (HMAC) daxil etmək — şəxsiyyət sənədindəki nömrə ilə kartdakı
    nömrə eyni heşi verməlidir; nömrə heç yerdə saxlanmır və sənədə daxil olmur (DL2 qorunur). Şəxsiyyət nömrəsi olmayan kartlarda
-   (digər ölkələr) bugünkü uyğunlaşdırma qalır. Qərar gözlənilir; kodda dəyişiklik edilməyib.
+   (digər ölkələr) bugünkü uyğunlaşdırma qalır. **2026-10-30: təklif qəbul edildi** (layihə rəhbərliyinin təsdiqi); tətbiq mühəndislik
+   işidir, sürücülük vəsiqəsi məlumatı real şəxslərə açılmazdan əvvəl.
 
 # Status
 

@@ -78,6 +78,7 @@ import {
 import { chainCommand } from "./chain/cli.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
 import { checkTerminalGroups } from "./terminal-groups.js";
+import { checkProvisionalOperator, type ProvisionalOperator } from "./provisional-operator.js";
 import { buildWrprcPayloads, wrprcHeader } from "./wrprc.js";
 import {
   assignWrprcStatus,
@@ -742,6 +743,17 @@ async function build() {
   // ---- tl-tr
   const tlSrc = readJson(resolve(REG, "tl-tr.source.json"));
   const cc: string = tlSrc.state_code;
+  // ADR-0070 OP2: geçici işletmeci tek değerden; kendi kayıtları ve liste işletmecisi adı yayından önce denetlenir
+  const provisionalFile = resolve(REG, "provisional-operator.json");
+  if (existsSync(provisionalFile)) {
+    const po = checkProvisionalOperator(readJson(provisionalFile) as ProvisionalOperator, {
+      tlOperator: tlSrc.operator,
+      lotlOperator: lotlSrc.operator,
+      issuers: tlSrc.issuers,
+      relyingParties: tlSrc.relying_parties,
+    });
+    if (po.length) throw new Error(`ADR-0070: geçici işletmeci — ${po.join("; ")}`);
+  }
   const rootCas = tlSrc.root_cas.map((r: Record<string, unknown>) => {
     // ADR-0066 TX2 / SPEC-ID-0002 §8.1: kök CA'nın hizmet türü nitelikli (QC) iddiası taşımaz — ETSI `Svctype/CA/PKC`
     if (/QC|granted|recognisedatnationallevel/i.test(String(r.service_type ?? "")))

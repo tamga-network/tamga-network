@@ -4,13 +4,16 @@ title: "Səhiyyə sənədləri"
 status: Proposed
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Tibb işçiləri üçün bir-birini tamamlayan üç rəqəmsal sənəd: (1) peşə fəaliyyəti sənədi — səlahiyyətli mənbə Səhiyyə Nazirliyidir; pilotda sınaq qurumu; (2) peşə palatası üzvlük sənədi — Türkiyə Həkimlər Birliyi / il həkim palataları; (3) qurum vəzifə sənədi — xəstəxana və ya klinika öz əməkdaşına bölmə, vəzifə və işə başlama tarixi ilə verir. Başqa qurum işə qəbul zamanı bunları yoxlayan tərəf kimi tələb edir (yoxlanılmış CV). Sənədlərdə sağlamlıq məlumatları və T.C. şəxsiyyət nömrəsi yoxdur. Pasiyent tərəfi (Aİ Health ID, e-resept) əhatə dairəsindən kənardır, gələcəkdə nəzərdə tutulur. Növ adları təklifdir.
 domain: Credentials
 translation_of: ADR-0028
 source_version: "1.0.0"
 ---
+
+> **Dayandırılıb (2026-10-30, layihə rəhbərliyinin qərarı).** Bu layihə Proposed olaraq qalır, lakin üzərində işlənmir: ilk sektor
+> universitetdir və səhiyyə sənədləri səhiyyə tərəfdaşı və hüquqi yoxlama olmadan götürülmür. Yenidən açılarsa, qəbul ayrıca təsdiq tələb edir.
 
 # Kontekst
 

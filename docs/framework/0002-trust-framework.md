@@ -4,7 +4,7 @@ title: "Ek A — Trust Framework"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-10-30
 summary: >
   Tamga ekosisteminin yönetişim çerçevesi. World Bank "Digital Wallets: Trust Frameworks" beş katmanlı modeliyle
   yapılandırılmıştır: strateji (vizyon, ilkeler, hukuki bağlam, risk, yönetişim organları), teknoloji (ana belgeye işaret),
@@ -401,12 +401,13 @@ Bu sayılar pilot verisiyle gözden geçirilir; değişiklik yeni bir sürümle 
 Kod Apache-2.0, belgeler CC BY 4.0 lisanslıdır; belge türü kataloğu açıktır ve aynalanabilir. "Tamga" markasının ve "Tamga Network'te listeli"
 göstergesinin kullanımı katılım kurallarına bağlıdır (RB-WP-18); kurumlara ait veriler gizlidir.
 
-## 5.5 Ücretlendirme (yön kararı)
+## 5.5 Ücretlendirme ve finansman
 
-<!-- KARAR BEKLİYOR: katılım ücreti -->
-
-**Kişiler için ücretsizdir** (eIDAS 2.0'daki gibi). Kurum ücret yapısı pilot sonunda katılım sözleşmesiyle belirlenir;
-pilot ücretsizdir.
+Geçici dönemde ağ hiçbir katılımcıdan (belge veren kurum, doğrulayıcı, cüzdan sağlayıcı, kişi) liste kaydı, belge verme,
+doğrulama, kimlik servisi ya da liste hizmeti için ücret almaz; **kişiler için ağ her zaman ücretsizdir** (eIDAS 2.0'daki gibi).
+Vakıf kurulunca ağ hibe, koşulsuz bağış ve devlet ya da üye katkısıyla finanse edilir; o güne kadar giderleri geçici işletmeci
+karşılar. Mali katkı kayıt kararına, listedeki yere, katılım kapılarına ya da yönetişim oyuna etki etmez. Ücretli hizmetler
+(entegrasyon, barındırma, destek) ağın dışındaki şirketlerce sunulur ve kayıt kararı bunlara bağlanamaz ([[ADR-0071]] FN1–FN2).
 
 ## 5.6 Fesih ve çıkış
 

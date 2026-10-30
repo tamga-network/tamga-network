@@ -4,7 +4,7 @@ title: "Sağlık belgeleri"
 status: Proposed
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-10-30
 summary: >
   Sağlık meslek mensupları için birbirini tamamlayan üç belge:
   (1) meslek icra belgesi — yetkili kaynak Sağlık Bakanlığı; pilotta deneme kurumu;
@@ -14,6 +14,9 @@ summary: >
   no yok. Hasta tarafı (AB Health ID, e-reçete) kapsam dışı, ileride. Tür adları öneridir.
 domain: Credentials
 ---
+
+> **Askıda (2026-10-30, proje yönetimi kararı).** Bu taslak Proposed kalır ama üzerinde çalışılmaz: ilk sektör üniversitedir ve
+> sağlık belgeleri bir sağlık kurumu ortağı ve hukuki inceleme olmadan ele alınmaz. Yeniden açılırsa kabul ayrı onay ister.
 
 # Bağlam
 
