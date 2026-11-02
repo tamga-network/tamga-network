@@ -222,6 +222,26 @@ describe("kayıt sertifikası durumu (ADR-0068 K5)", () => {
     expect(called).toBe(false);
   });
 
+  it("K4 (kontrol 2026-11-03): taze çekilen geçerli liste önbellektekinden eskiyse (iat küçük) önbellekteki yeni kopya kullanılır ve ezilmez", async () => {
+    const newer = await statusToken(registrar, [5], { iat: nowSec - 30 });
+    const older = await statusToken(registrar, [], { iat: nowSec - 120 });
+    const cache = new MemoryRegistrationStatusCache([[URI, newer]]);
+    const look = await fetchRegistrationStatuses([{ uri: URI, idx: 5 }], httpOf(older), [registrar.fp], {
+      cache,
+      nowMs: epochMillis(NOW),
+    });
+    expect(look({ uri: URI, idx: 5 })).toBe("revoked"); // eski kopya iptali geri almaz
+    expect(cache.get(URI)).toBe(newer);
+    // daha yeni bir kopya gelirse olağan: kullanılır ve önbelleğe yazılır
+    const newest = await statusToken(registrar, [], { iat: nowSec - 10 });
+    const look2 = await fetchRegistrationStatuses([{ uri: URI, idx: 5 }], httpOf(newest), [registrar.fp], {
+      cache,
+      nowMs: epochMillis(NOW),
+    });
+    expect(look2({ uri: URI, idx: 5 })).toBe("valid");
+    expect(cache.get(URI)).toBe(newest);
+  });
+
   it("ADR-0068 K3: `exp`'siz durum listesi kabul edilmez → denetlenemedi (iptal biti de okunmaz)", async () => {
     for (const revoked of [[], [5]]) {
       const st = await fetchRegistrationStatuses(

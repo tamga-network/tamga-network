@@ -125,6 +125,30 @@ describe("ADR-0068 indeks verme", () => {
     expect(gone.state.previous).toBeUndefined();
   });
 
+  it("WRS3 (kontrol 2026-11-03): adres değişiminden sonra eski listedeki geçerli girdi yayını izler — yayından kalkan iptal (registration_ended), içeriği değişen iptal (superseded), aynı içerik geçerli kalır", () => {
+    const NEW = "https://trust.sandbox.tamga.network/status/wrprc/2";
+    const a = assignWrprcStatus(emptyState(URI), [item("p"), item("q"), item("r")], t0); // A: p, q, r VALID
+    const m = migrateWrprcState(a.state, NEW, t0); // → B; A previous[]'da, girdileri VALID
+    expect(m.previous![0].entries.every((e) => e.status === "VALID")).toBe(true);
+    // yayın: p yok, q içeriği değişti, r aynı içerik
+    const b = assignWrprcStatus(m, [item("q", { name: "Shop 2" }), item("r")], t0);
+    const old = b.state.previous![0].entries;
+    expect(old.find((e) => e.path === "p")).toMatchObject({ status: "REVOKED", reason: "registration_ended" });
+    expect(old.find((e) => e.path === "q")).toMatchObject({ status: "REVOKED", reason: "superseded" });
+    expect(old.find((e) => e.path === "r")?.status).toBe("VALID");
+    // eski listenin biti aynı yayında 1: eski sertifikayı tutan doğrulayıcı "geçerli" okumaz
+    const oldBits = statusBits({ ...emptyState(URI), capacity: b.state.previous![0].capacity, entries: old });
+    expect(oldBits.get(a.idxOf.get("p")!)).toBe(1);
+    expect(oldBits.get(a.idxOf.get("q")!)).toBe(1);
+    expect(oldBits.get(a.idxOf.get("r")!)).toBe(0);
+    // bu yayının iptal listesi eski girdileri de sayar (CHANGELOG / günlük); yeni listede q yeni indeksle geçerli
+    expect(b.revoked.map((e) => e.path).sort()).toEqual(["p", "q"]);
+    expect(b.idxOf.has("q")).toBe(true);
+    // sonraki yayında aynı girdiler bir daha iptal edilmez (idempotent)
+    const c = assignWrprcStatus(b.state, [item("q", { name: "Shop 2" }), item("r")], t0);
+    expect(c.revoked).toEqual([]);
+  });
+
   it("kayıp durum yeniden kurulur: yayımlanmış bitler (iptal) + yayımlanmış sertifikalar (geçerli); iptal indeksi geri gelmez", () => {
     const a = assignWrprcStatus(emptyState(URI), [item("p"), item("q")], t0);
     const b = assignWrprcStatus(a.state, [item("q")], t0); // p iptal

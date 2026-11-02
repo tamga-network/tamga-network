@@ -269,6 +269,54 @@ describe("ETSI TS 119 612 XML — üreteç ve XAdES-B-B imzası", () => {
     xml = signTrustedListXml(buildTrustedListXml(input), { keyPem: signer.keyPem, certDer: signer.der }, new Date(now));
   });
 
+  it("K3 (kontrol 2026-11-03): geçmişte güncel durumun girdisi yoksa başlangıç listenin yayın anıdır, önceki durum başlangıç yazılmaz; geçmiş eksiksiz", () => {
+    const byFp = new Map([[ca.fp, ca.der]]);
+    const r = trustedListFromTamga(
+      {
+        state_code: "XX",
+        version: 7,
+        issued_at: "2026-10-29T10:00:00Z",
+        next_update: "2027-01-27T10:00:00Z",
+        operator: { name: "Test Operator", status: "provisional", on_behalf_of: "XX authority (to be designated)" },
+        root_cas: [
+          {
+            ca_id: "0xca",
+            legal_name: "XX National Root CA",
+            status: "SUSPENDED", // güncel durum geçmişte yok (kayıt geçmişi eksik)
+            status_history: [{ status: "ACTIVE", since: "2026-09-24T00:00:00Z" }],
+            cert_fingerprint_sha256: ca.fp,
+          },
+        ],
+        issuers: [],
+        relying_parties: [],
+      },
+      { wallet_providers: [] },
+      {
+        certByFingerprint: (fp) => byFp.get(fp),
+        distributionPoint: "https://trust.example/tl-xx.xml",
+        operatorContact: {
+          postal: { StreetAddress: "3 Operator Rd", Locality: "Capital", Country: "XX" },
+          electronic: ["mailto:ops@example.org"],
+          info: ["https://operator.example"],
+        },
+        pointers: [],
+      },
+    );
+    expect(r.problems).toEqual([]);
+    const doc = parseXml(buildTrustedListXml(r.input));
+    const u = tamgaUris("XX");
+    const svc = doc.getElementsByTagNameNS(TSL, "ServiceInformation").item(0);
+    expect(svc.getElementsByTagNameNS(TSL, "ServiceStatus").item(0).textContent).toBe(u.status("SUSPENDED"));
+    // eski kod önceki ACTIVE girdisinin zamanını (2026-09-24) güncel durumun başlangıcı yazıyordu
+    expect(svc.getElementsByTagNameNS(TSL, "StatusStartingTime").item(0).textContent).toBe("2026-10-29T10:00:00Z");
+    const hist = doc.getElementsByTagNameNS(TSL, "ServiceHistoryInstance");
+    expect(hist.length).toBe(1);
+    expect(hist.item(0).getElementsByTagNameNS(TSL, "ServiceStatus").item(0).textContent).toBe(u.status("ACTIVE"));
+    expect(hist.item(0).getElementsByTagNameNS(TSL, "StatusStartingTime").item(0).textContent).toBe(
+      "2026-09-24T00:00:00Z",
+    );
+  });
+
   it("varsayılan kapalı: yalnız TAMGA_TL119612=1 açar", () => {
     expect(tl119612Enabled({})).toBe(false);
     expect(tl119612Enabled({ TAMGA_TL119612: "0" })).toBe(false);
@@ -410,6 +458,26 @@ describe("ETSI TS 119 612 XML — üreteç ve XAdES-B-B imzası", () => {
     expect(xmlSignerSlotProblems({ xml_signing_keys: [k(signer.fp, "REVOKED")] }, signer.fp).join(" ")).toMatch(
       /etkin değil/,
     );
+    // K5 (kontrol 2026-11-03): geçerlilik penceresi de sayılır — süresi bitmiş ya da henüz başlamamış anahtar etkin değil
+    const now = new Date("2026-11-03T00:00:00Z");
+    const win = (from?: string, until?: string) => ({ ...k(signer.fp), valid_from: from, valid_until: until });
+    expect(
+      xmlSignerSlotProblems(
+        { xml_signing_keys: [win("2026-01-01T00:00:00Z", "2026-10-01T00:00:00Z")] },
+        signer.fp,
+        now,
+      ).join(" "),
+    ).toMatch(/etkin değil/);
+    expect(
+      xmlSignerSlotProblems({ xml_signing_keys: [win("2027-01-01T00:00:00Z")] }, signer.fp, now).join(" "),
+    ).toMatch(/etkin değil/);
+    expect(
+      xmlSignerSlotProblems(
+        { xml_signing_keys: [win("2026-01-01T00:00:00Z", "2027-01-01T00:00:00Z")] },
+        signer.fp,
+        now,
+      ),
+    ).toEqual([]);
     expect(
       xmlSignerSlotProblems({ signing_keys: [k(signer.fp)], xml_signing_keys: [k(signer.fp)] }, signer.fp).join(" "),
     ).toMatch(/JSON imzacısı/);
@@ -601,7 +669,9 @@ const ready =
   existsSync(resolve(ROOT, "ops/pki/tl-signer-1.pkcs8.pem")) &&
   existsSync(resolve(ROOT, "packages/schemas/dist/index.json"));
 
-describe.skipIf(!ready)("trust-publisher build: TS 119 612 XML (bayrak)", () => {
+// CLI'yi tsx ile ayrı süreçte başlatır; tam pakette yük altında varsayılan 20 sn yetmiyordu (kontrol 2026-11-03) — tek başına:
+// `npx vitest run apps/trust-publisher/test/tl119612.test.ts` (docs/audit/build-and-test.md)
+describe.skipIf(!ready)("trust-publisher build: TS 119 612 XML (bayrak)", { timeout: 180_000 }, () => {
   const tmp = mkdtempSync(join(tmpdir(), "tamga-tl119612-"));
   const REG = join(tmp, "registry");
   const PKI = join(tmp, "pki");

@@ -41,6 +41,24 @@ describe("ADR-0070 checkProvisionalOperator", () => {
     expect(errs.join("\n")).toMatch(/kimlik numarası/);
     expect(errs.join("\n")).toMatch(/postal_address.locality/);
   });
+  it("K28 (kontrol 2026-11-03): notu olmasa da operator.name ya da kimlik numarası değerle aynıysa kayıt kendi kaydıdır ve denetlenir", () => {
+    const byName = {
+      slug: "tamga-x",
+      identifiers: [{ scheme: "TR-VKN", value: "TR9999999999" }],
+      operator: { name: cfg.name, status: "provisional", on_behalf_of: cfg.on_behalf_of },
+      postal_address: cfg.postal_address,
+    };
+    const e1 = checkProvisionalOperator(cfg, { issuers: [byName], relyingParties: [] });
+    expect(e1.join("\n")).toMatch(/tamga-x: kimlik numarası/);
+    const byVkn = {
+      dns_name: "x.tamga.network",
+      identifiers: [{ scheme: cfg.identifier.scheme, value: cfg.identifier.value }],
+      operator: { name: "Başka Ad", status: "provisional", on_behalf_of: cfg.on_behalf_of },
+      postal_address: cfg.postal_address,
+    };
+    const e2 = checkProvisionalOperator(cfg, { issuers: [], relyingParties: [byVkn] });
+    expect(e2.join("\n")).toMatch(/relying_party x.tamga.network: operator.name farklı/);
+  });
   it("geçici işletmeci notu olmayan kayıt (kurum) ve geri çekilmiş kayıt denetlenmez", () => {
     expect(
       checkProvisionalOperator(cfg, {

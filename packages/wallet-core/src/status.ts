@@ -25,6 +25,8 @@ export interface StatusList {
   bytes: Uint8Array;
   signerFingerprint: string;
   iss: string;
+  /** Belirtecin yayın anı (sn); iki kopyadan yenisini seçmek için (kayıt sertifikası durumu, K4). */
+  iat?: number;
 }
 
 /** Status token ve açılmış bit dizisi üst sınırları (bellek tüketme / sıkıştırma bombası). 16 MiB = 64 milyon belge. */
@@ -88,6 +90,7 @@ export function parseStatusToken(
     bytes: unzlibCapped(b64uDecode(p.status_list.lst), MAX_STATUS_LIST_BYTES),
     signerFingerprint: certFingerprintHex(leaf),
     iss: String(p.iss ?? ""),
+    ...(typeof p.iat === "number" ? { iat: p.iat } : {}),
   };
 }
 

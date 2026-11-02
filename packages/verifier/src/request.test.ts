@@ -94,6 +94,7 @@ describe("istek nesnesi x5c ve başlık iat (REDIRECTS_RO-02/03)", () => {
     expect(signer.chainDer).toHaveLength(1);
     const now = 1_800_000_000;
     const pr = await createPresentationRequest({
+      initialRequestObject: true, // eski tek nesne (0.7.x); yeni varsayılan false (kontrol 2026-11-03)
       signer,
       dcql,
       responseUri: "https://rp.example.test/vp/response",
@@ -113,6 +114,7 @@ describe("istek nesnesi x5c ve başlık iat (REDIRECTS_RO-02/03)", () => {
   it("ara sertifika ayrı verilebilir; kök ayrı verilse de x5c'ye girmez", async () => {
     const signer = await pemRpSigner(leafKeyPem, leafPem, [caPem, rootPem]);
     const pr = await createPresentationRequest({
+      initialRequestObject: true, // eski tek nesne (0.7.x); yeni varsayılan false (kontrol 2026-11-03)
       signer,
       dcql,
       responseUri: "https://rp.example.test/vp/response",
@@ -131,6 +133,7 @@ describe("DC API açıkken iki istek nesnesi (0.6.0)", () => {
   it("QR nesnesi direct_post.jwt + response_uri; DC nesnesi dc_api.jwt + expected_origins; anahtar ayrı, nonce/state ortak", async () => {
     const signer = await pemRpSigner(leafKeyPem, leafPem);
     const pr = await createPresentationRequest({
+      initialRequestObject: true, // eski tek nesne (0.7.x); yeni varsayılan false (kontrol 2026-11-03)
       signer,
       dcql,
       responseUri: "https://rp.example.test/vp/response",
@@ -174,6 +177,7 @@ describe("DC API açıkken iki istek nesnesi (0.6.0)", () => {
   it("DC API olmadan tek nesne; DC kid'li yanıt reddedilir", async () => {
     const signer = await pemRpSigner(leafKeyPem, leafPem);
     const pr = await createPresentationRequest({
+      initialRequestObject: true, // eski tek nesne (0.7.x); yeni varsayılan false (kontrol 2026-11-03)
       signer,
       dcql,
       responseUri: "https://rp.example.test/vp/response",
@@ -194,6 +198,7 @@ describe("yanıt şifreleme anahtarı istek başına yeni", () => {
     const reqs = await Promise.all(
       Array.from({ length: 5 }, () =>
         createPresentationRequest({
+          initialRequestObject: true, // eski tek nesne (0.7.x); yeni varsayılan false (kontrol 2026-11-03)
           signer,
           dcql,
           responseUri: "https://rp.example.test/vp/response",
@@ -229,6 +234,7 @@ describe("çekim dalları (ADR-0067)", () => {
     const signer = await pemRpSigner(leafKeyPem, leafPem);
     const responseUri = "https://rp.example.test/vp/response";
     const pr = await createPresentationRequest({
+      initialRequestObject: true, // eski tek nesne (0.7.x); yeni varsayılan false (kontrol 2026-11-03)
       signer,
       dcql,
       responseUri,
@@ -294,15 +300,12 @@ describe("çekim dalları (ADR-0067)", () => {
     await expect(decryptPresentationResponse(dec, pr, responseUri, find)).rejects.toThrow(/error response/);
   });
 
-  it("0.7.4 initialRequestObject: false → ilk nesne ve anahtarı üretilmez; dalsız kid'li yanıt açılmaz; BranchSet'in sıkıştırılmış dalıyla açılır", async () => {
+  it("varsayılan (0.8, kontrol 2026-11-03): ilk nesne ve anahtarı üretilmez; dalsız kid'li yanıt açılmaz; BranchSet'in sıkıştırılmış dalıyla açılır", async () => {
     const signer = await pemRpSigner(leafKeyPem, leafPem);
     const responseUri = "https://rp.example.test/vp/response";
     const content = { signer, dcql, responseUri };
-    const pr = await createPresentationRequest({
-      ...content,
-      requestUriBase: "https://rp.example.test/vp/req",
-      initialRequestObject: false,
-    });
+    // seçenek verilmez: güvenli varsayılan (eski tek nesne yalnız `initialRequestObject: true` ile)
+    const pr = await createPresentationRequest({ ...content, requestUriBase: "https://rp.example.test/vp/req" });
     const r = pr as unknown as Record<string, unknown>;
     for (const k of ["requestJwt", "encPrivateKey", "encPublicJwk", "encJwkThumbprint"]) expect(r[k]).toBeUndefined();
     expect(pr.qrPayload).toContain(encodeURIComponent(pr.requestUri));

@@ -57,8 +57,7 @@ const registry = new BranchRegistry(); // süreç başına bir
 // 1) sunum aç: QR / bağlantı olarak gösterilir (kişisel veri yok; yalnız request_uri)
 const content = { signer, dcql: dcqlFromPolicy(policy), responseUri: "https://ornek.com.tr/vp/response",
   registrationCert: WRPRC_JWT }; // kullanımınızın kayıt sertifikası (yukarıda 4. adım)
-const req = await createPresentationRequest({ ...content, requestUriBase: "https://ornek.com.tr/vp/req",
-  initialRequestObject: false });
+const req = await createPresentationRequest({ ...content, requestUriBase: "https://ornek.com.tr/vp/req" });
 const branches = new BranchSet({ registry, presentationId: req.presentationId, expiresAt: req.expiresAt, content });
 // 2) GET|POST /vp/req/:id — her çekim kendi istek nesnesini alır (taze state, nonce, anahtar; ADR-0067)
 const f = await branches.fetch(walletNonce); // f.ok → yanıt f.requestJwt

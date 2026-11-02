@@ -18,6 +18,14 @@ npm run release:check  # pack the nine packages and smoke-test the tarballs
 `npm run setup` creates throw-away keys; nothing in the repository is a production key. In CI the variable
 `TAMGA_REQUIRE_FIXTURES=1` turns a missing fixture into a failure instead of a skipped test.
 
+Three files start child processes (the publisher CLI through `tsx`, a native ZK binary stub) and are slow under the full-suite
+load; they carry their own longer timeouts (`apps/trust-publisher/test/cli.test.ts`, `apps/trust-publisher/test/tl119612.test.ts`,
+`packages/verifier/src/zk/zk.test.ts`). If a run on a small machine still times out, run them alone:
+
+```bash
+npx vitest run apps/trust-publisher/test/cli.test.ts apps/trust-publisher/test/tl119612.test.ts packages/verifier/src/zk/zk.test.ts
+```
+
 ## Property / fuzz tests
 
 Written with [fast-check](https://fast-check.dev). They run as part of `npm test`; each prints the seed of a failing run.

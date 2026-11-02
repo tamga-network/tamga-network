@@ -4,7 +4,9 @@
  *  - `WuaRecord`: cüzdan sağlayıcıdan alınmış kanıt (JWT, x5c = güven listesindeki sağlayıcı sertifikası) ve PoP anahtarının adı.
  *  - İhraçta token isteğine iki başlık: OAuth-Client-Attestation (WUA/WIA) + OAuth-Client-Attestation-PoP
  *    (`clientAttestationPop`, örnek anahtarıyla, aud = credential_issuer).
- *  - WIA iptal listesi denetimi (`wiaStatusRef`, `wiaRevokedByList`): imzacı güven listesindeki bir cüzdan sağlayıcı olmalı.
+ *  - WIA iptal listesi denetimi (`wiaStatusRef`, `wiaStatusByList`, `wiaRevokedByList`): imzacı güven listesindeki bir cüzdan
+ *    sağlayıcı olmalı. Durum biti kapalı güvenli okunur (kontrol 2026-11-03, K11): 0 geçerli, 1 iptal, 2 askıda, 3 (tanımsız)
+ *    iptal sayılır — sıfır dışı her değer "geçerli değil"dir; yalnız iptal (1/3) yerel silmenin dayanağıdır (askı geçicidir).
  * Kanıtın sağlayıcıdan NASIL alındığı (kayıt, WIA/KA uçları, iptal, kapatma kodu) her cüzdanın kendi sağlayıcı protokolüdür; bu
  * paketin parçası değildir (ağın ADR-0042) — çağıran `WuaRecord`'u ve `keyAttestor`'u kendisi verir.
  */
@@ -73,26 +75,54 @@ export async function wiaRevokedByList(p: {
   trust: Pick<TrustSource, "isWalletProviderKey">;
   now?: number;
 }): Promise<boolean> {
+  return (await wiaStatusByList(p)) === "revoked";
+}
+
+/** WIA'nın imzalı listedeki durumu (`wiaStatusInList`); girişi yoksa (eski WUA) "valid". Hata kuralları `wiaRevokedByList` ile aynı. */
+export async function wiaStatusByList(p: {
+  wua: WuaRecord;
+  http: Http;
+  trust: Pick<TrustSource, "isWalletProviderKey">;
+  now?: number;
+}): Promise<WiaListStatus> {
   const ref = wiaStatusRef(p.wua);
-  if (!ref) return false;
+  if (!ref) return "valid";
   const r = await p.http(ref.uri, { method: "GET" });
   if (r.status !== 200) throw new WalletError("network", `wallet status list: HTTP ${r.status}`);
   const list = parseStatusToken((await r.text()).trim(), ref.uri, p.now ?? Math.floor(Date.now() / 1000));
   if (p.trust.isWalletProviderKey(list.signerFingerprint) !== "YES")
     throw new WalletError("trust_error", "wallet status list: signer is not a registered wallet provider");
-  return wiaRevokedInList(list, ref.idx);
+  return wiaStatusInList(list, ref.idx);
 }
 
+/** WIA'nın durum listesindeki okuması: `valid` (0) · `suspended` (2, geçici; WIA kullanılmaz) · `revoked` (1 ve tanımsız 3). */
+export type WiaListStatus = "valid" | "suspended" | "revoked";
+
 /**
- * WIA girişi imzası doğrulanmış listede INVALID mi. İmzalı liste girişten kısaysa giriş yok (sağlayıcının listesi yeniden
- * kuruldu): iptal değil — bunu ancak listenin kayıtlı imzacısı söyleyebilir; o imzacı zaten biti 0 da yazabilir, güvence
- * azalmaz. Sınır listenin bit genişliğine göre hesaplanır (1 bit → bayt başına 8 giriş, 2 bit → 4): sabit "×4" 1 bitlik
- * listede son yarıdaki iptal edilmiş girişleri "iptal değil" okurdu.
+ * WIA girişinin imzası doğrulanmış listedeki durumu — kapalı güvenli (kontrol 2026-11-03, K11; TS 119 472 / IETF Token Status List):
+ * yalnız 0 geçerlidir; 1 iptal, 2 askıda, 3 (uygulamaya özgü / tanımsız) iptal sayılır (belge durumuyla aynı kural,
+ * `credentialStatusFrom`). İmzalı liste girişten kısaysa giriş yok (sağlayıcının listesi yeniden kuruldu): iptal değil — bunu ancak
+ * listenin kayıtlı imzacısı söyleyebilir; o imzacı zaten biti 0 da yazabilir, güvence azalmaz. Sınır listenin bit genişliğine göre
+ * hesaplanır (1 bit → bayt başına 8 giriş, 2 bit → 4): sabit "×4" 1 bitlik listede son yarıdaki iptal edilmiş girişleri "iptal
+ * değil" okurdu.
  */
-export function wiaRevokedInList(list: Pick<StatusList, "bits" | "bytes">, idx: number): boolean {
+export function wiaStatusInList(list: Pick<StatusList, "bits" | "bytes">, idx: number): WiaListStatus {
   const perByte = 8 / (list.bits === 1 ? 1 : 2);
-  if (idx >= list.bytes.length * perByte) return false;
-  return statusBitAt(list as StatusList, idx) === 1;
+  if (idx >= list.bytes.length * perByte) return "valid";
+  const v = statusBitAt(list as StatusList, idx);
+  if (v === 0) return "valid";
+  if (v === 2) return "suspended";
+  return "revoked";
+}
+
+/** WIA girişi listede İPTAL mi (1 ya da tanımsız 3) — yerel silmenin dayanağı. Askı (2) iptal değildir; `wiaValidInList` ile bakın. */
+export function wiaRevokedInList(list: Pick<StatusList, "bits" | "bytes">, idx: number): boolean {
+  return wiaStatusInList(list, idx) === "revoked";
+}
+
+/** WIA girişi listede GEÇERLİ mi (yalnız 0): sıfır dışı her değerde WIA kullanılmaz (kapalı güvenli). */
+export function wiaValidInList(list: Pick<StatusList, "bits" | "bytes">, idx: number): boolean {
+  return wiaStatusInList(list, idx) === "valid";
 }
 
 /**

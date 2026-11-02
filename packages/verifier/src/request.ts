@@ -124,8 +124,8 @@ export interface PresentationSession {
 
 /**
  * 0.7.3 ve öncesinin dönüş tipi: sunumla birlikte üretilen TEK cihazlar arası istek nesnesi ve anahtarı. ADR-0067'den beri
- * önerilmez: aynı nesneyi her çekene vermek `state`'i QR'ı gören herkese açar (sahte ret). `initialRequestObject: false` ile
- * üretilmez (bir imza + bir anahtar üretimi tasarrufu); `request_uri` çekimlerini `BranchSet` ile verin.
+ * önerilmez: aynı nesneyi her çekene vermek `state`'i QR'ı gören herkese açar (sahte ret). Varsayılanda (`initialRequestObject`
+ * `false`) üretilmez (bir imza + bir anahtar üretimi tasarrufu); `request_uri` çekimlerini `BranchSet` ile verin.
  */
 export interface PresentationRequest extends PresentationSession {
   /** @deprecated ADR-0067: her çekimde yeni dal verin (`BranchSet.fetch` / `createRequestBranch`). */
@@ -324,19 +324,20 @@ export interface PresentationRequestParams {
    */
   passGrantOffered?: boolean;
   /**
-   * 0.7.4: `false` → sunumla birlikte cihazlar arası ilk istek nesnesi ÜRETİLMEZ (`requestJwt`, `encPrivateKey`, `encPublicJwk`,
-   * `encJwkThumbprint` dönmez; bir imza ve bir anahtar üretimi tasarrufu). `request_uri` çekimleri `BranchSet` / `createRequestBranch`
-   * ile verilir (ADR-0067). Varsayılan `true` yalnız 0.7.x uyumluluğu içindir ve önerilmez.
+   * Varsayılan `false` (0.8; güvenli varsayılan, ADR-0056): sunumla birlikte cihazlar arası ilk istek nesnesi ÜRETİLMEZ
+   * (`requestJwt`, `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint` dönmez; bir imza ve bir anahtar üretimi tasarrufu).
+   * `request_uri` çekimleri `BranchSet` / `createRequestBranch` ile verilir (ADR-0067). `true` yalnız 0.7.x uyumluluğu içindir
+   * (eski tek nesne: aynı `state` QR'ı gören herkese açık), önerilmez ve bir sürüm sonra kaldırılır.
    */
   initialRequestObject?: boolean;
 }
 
 export function createPresentationRequest(
-  p: PresentationRequestParams & { initialRequestObject: false },
+  p: PresentationRequestParams & { initialRequestObject?: false },
 ): Promise<PresentationSession>;
-/** @deprecated ADR-0067: `initialRequestObject: false` + `BranchSet` kullanın (tek nesne her çekene aynı `state`'i verir). */
+/** @deprecated ADR-0067: tek paylaşılan nesne her çekene aynı `state`'i verir; varsayılanı (`false`) + `BranchSet` kullanın. */
 export function createPresentationRequest(
-  p: PresentationRequestParams & { initialRequestObject?: true },
+  p: PresentationRequestParams & { initialRequestObject: true },
 ): Promise<PresentationRequest>;
 export async function createPresentationRequest(
   p: PresentationRequestParams,
@@ -350,8 +351,9 @@ export async function createPresentationRequest(
   // cüzdan yanıtı oraya gönderir; DC API'nin nesnesi tarayıcıya (`dc_api.jwt` + expected_origins, response_uri yok; Ek A)
   const sign = (mode: Record<string, unknown>, jwk: JWK) =>
     signRequestObject(p, { mode, jwk, nonce, state, now, expiresAt });
-  // ADR-0067: cihazlar arası nesne her çekimde yeni dal olarak verilir; eski tek nesne yalnız istenirse (0.7.x uyumu)
-  const legacy = p.initialRequestObject !== false;
+  // ADR-0067: cihazlar arası nesne her çekimde yeni dal olarak verilir; eski tek nesne yalnız AÇIKÇA istenirse (0.7.x uyumu;
+  // varsayılan güvenli yol — kontrol 2026-11-03)
+  const legacy = p.initialRequestObject === true;
   const enc = legacy ? await newEncKey(encKid(presentationId, "cross_device")) : undefined;
   const requestJwt = enc
     ? await sign({ response_mode: "direct_post.jwt", response_uri: p.responseUri }, enc.jwk)
@@ -481,7 +483,7 @@ export type ResponseBinding =
  * ADR-0067: yanıtı açar ve şifreli hata yanıtını (OpenID4VP 1.0 §8.3.1) sunumdan ayırır — `kind: "error"` (ret; `state`'i çağıran
  * dalın `state`'iyle karşılaştırır) ya da `kind: "response"`. `kid` bir çekim dalını adlandırıyorsa yanıt YALNIZ o dalın anahtarıyla
  * açılır (`branches` verilmeli; bilinmeyen dal hata); dal adı yoksa yalnız eski tek nesnenin anahtarı varsa onunla (0.7.x uyumu;
- * `initialRequestObject: false` ile açılan sunumda dalsız yanıt hatadır).
+ * varsayılanla (`initialRequestObject` `false`) açılan sunumda dalsız yanıt hatadır).
  */
 export async function openPresentationResponse<B extends BranchKeys = RequestBranch>(
   jwe: string,

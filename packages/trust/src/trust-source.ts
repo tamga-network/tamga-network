@@ -357,7 +357,12 @@ export class ListTrustSource implements TrustSource {
     for (const a of this.terminalGroupsAll()) if (a.active && (a.group.cert_fingerprints ?? []).includes(f)) return a;
     return null;
   }
-  /** Bütün kapı grupları (doğrulayıcı kayıtları üzerinden; aynı grup kimliği iki kez yayımlanmaz — yayıncı denetler). */
+  /**
+   * Bütün kapı grupları (doğrulayıcı kayıtları üzerinden; aynı grup kimliği iki kez yayımlanmaz — yayıncı denetler). Etkin:
+   * doğrulayıcı ACTIVE, zaman penceresi içinde VE grubun kurumu (`institution_id`: belge verenin `slug`'ı ya da doğrulayıcının
+   * `dns_name`'i) listede ACTIVE (kontrol 2026-11-03, K12: geri çekilmiş kurumun kapısı listeyle birlikte kapanır). Kurumsuz eski
+   * grup yalnız doğrulayıcı ve zamanla değerlendirilir (yayıncı etkin grupta kurum ister).
+   */
   private terminalGroupsAll(): TerminalGroupAnswer[] {
     const now = this.now().getTime();
     const out: TerminalGroupAnswer[] = [];
@@ -365,9 +370,21 @@ export class ListTrustSource implements TrustSource {
       for (const g of rp.terminal_groups ?? []) {
         const from = Date.parse(g.valid_from);
         const until = g.valid_until ? Date.parse(g.valid_until) : Number.POSITIVE_INFINITY;
-        out.push({ group: g, rp_dns_name: rp.dns_name, active: rp.status === "ACTIVE" && from <= now && now < until });
+        const institutionActive = g.institution_id === undefined || this.institutionActive(g.institution_id);
+        out.push({
+          group: g,
+          rp_dns_name: rp.dns_name,
+          active: rp.status === "ACTIVE" && from <= now && now < until && institutionActive,
+        });
       }
     return out;
+  }
+  /** Kapı grubunun kurumu listede ACTIVE mi (belge veren `slug` ya da doğrulayıcı `dns_name`). */
+  private institutionActive(id: string): boolean {
+    const rp = this.store.relying_parties_by_dns.get(id.toLowerCase());
+    if (rp) return rp.status === "ACTIVE";
+    for (const i of this.store.issuers.values()) if (i.slug === id) return i.status === "ACTIVE";
+    return false;
   }
 
   walletProviderMinKeyStorage(fp: string): string | null {

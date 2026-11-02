@@ -44,6 +44,10 @@ Yerel geliştirme için hepsini birden: `npm run setup`.
   (`tl119612.ts`, taslak — aşağıda), kayıt sertifikası (`wrprc.ts`)
 - `registry/` — gerçek ağın kayıt defteri kaynağı (test/demo kurumu yok); `examples/` örnek başvurular, `pending/` bekleyenler
 - `registry-sandbox/` — sandbox (test ağı) kaynağı; `test/fixtures/registry/` — testlerin listesi (`dist-test/`)
+- `registry/provisional-operator.json` — geçici işletmecinin tek değeri (ADR-0070 OP2). Denetim **yalnız `registry/`** (gerçek ağ)
+  derlenirken çalışır; sandbox ve test kaynaklarında dosya yoktur. "Kendi kaydı" sayılan: kimlik numarası notunda "provisional
+  operator" geçen, `operator.name`'i değerdeki adla aynı olan ya da kimlik numarası değerdeki numarayla aynı olan belge veren /
+  doğrulayıcı kaydı (kontrol 2026-11-03).
 - `etsi/` — ETSI TS 119 602 (`19602/`) ve TS 119 612 (`19612/`) şema dosyaları (yalnız testte)
 - `dist/` — üretilen listeler (git dışında)
 

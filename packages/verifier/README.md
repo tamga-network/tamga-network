@@ -16,7 +16,7 @@ import { BranchRegistry, BranchSet, createPresentationRequest, openPresentationR
 
 const registry = new BranchRegistry(); // one per process: state lookup + branch memory budget
 const content = { signer, dcql, responseUri, registrationCert };
-const req = await createPresentationRequest({ ...content, requestUriBase, initialRequestObject: false }); // req.qrPayload → QR
+const req = await createPresentationRequest({ ...content, requestUriBase }); // req.qrPayload → QR (no shared request object)
 const branches = new BranchSet({ registry, presentationId: req.presentationId, expiresAt: req.expiresAt, content });
 
 // GET|POST /vp/req/:id — every fetch gets its own request object (fresh state, nonce, encryption key)
@@ -53,6 +53,15 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 - A credential without a status entry is rejected at D1 when its type uses a status list; the status list signer is pinned to the
   institution's registered status keys.
 
+## Breaking in 0.8 (unreleased)
+
+- `createPresentationRequest` no longer produces the shared cross-device request object by default: `initialRequestObject`
+  defaults to `false` and the result is a `PresentationSession` (no `requestJwt`, `encPrivateKey`, `encPublicJwk`,
+  `encJwkThumbprint`). Code that served `req.requestJwt` must move to `BranchSet` — see "Migrating from one shared request
+  object" below. `initialRequestObject: true` keeps the old behaviour for one release and is deprecated.
+- Tamga Verify rate-limits `/vp/response` per request branch, not per presentation: a flood on one branch cannot starve the
+  real wallet's branch (the Digital Credentials API path, which has no branches, stays per presentation).
+
 ## New in 0.7.4
 
 - Access passes carry their gate policy: `PassPolicy.policy_id` → `PassRecord.policyId`; `PassRegistry.verifyToken(token, { terminalGroup, policyAllowed })` refuses a pass from a policy that is not allowed, before it is consumed (the gate checks the trust list's `allowed_policies`).
@@ -65,17 +74,18 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
   never-answered branch older than 120 s is evicted, at the hard ceiling (32) regardless of age, never a branch whose response is
   being processed; `BranchRegistry` caps branches across presentations (20,000). Rate-limit fetches per client address, not per
   presentation.
-- `createPresentationRequest({ …, initialRequestObject: false })` returns a `PresentationSession` without the shared
-  cross-device request object (`requestJwt`, `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`): one signature and one key
-  generation less per presentation. The default (`true`) is kept for 0.7.x compatibility and is deprecated.
+- `createPresentationRequest` returns a `PresentationSession` without the shared cross-device request object (`requestJwt`,
+  `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`): one signature and one key generation less per presentation. **Since 0.8
+  this is the default** (`initialRequestObject` defaults to `false`); `initialRequestObject: true` still returns the old
+  `PresentationRequest` for one release and is deprecated.
 - `openPresentationResponse` / `decryptPresentationResponse` accept any branch with `branchId`, `encPrivateKey`,
-  `encJwkThumbprint` (`BranchKeys`), so `BranchSet` branches work directly; with `initialRequestObject: false`, a response
-  whose `kid` names no branch is rejected.
+  `encJwkThumbprint` (`BranchKeys`), so `BranchSet` branches work directly; without the shared request object (the default), a
+  response whose `kid` names no branch is rejected.
 
 ### Migrating from one shared request object (0.7.3 and earlier)
 
-1. Open presentations with `initialRequestObject: false` and create one `BranchSet` per presentation (one `BranchRegistry` per
-   process).
+1. Open presentations with `createPresentationRequest` (drop any `initialRequestObject: true`) and create one `BranchSet` per
+   presentation (one `BranchRegistry` per process).
 2. Serve `GET` and `POST /vp/req/:id` with `branches.fetch(walletNonce)`; never serve `req.requestJwt`. Rate-limit this route per
    client address.
 3. On a response: find the branch from the JWE `kid` (`responseKidOf`), call `begin(branch)` before decrypting, check `isOpen` and

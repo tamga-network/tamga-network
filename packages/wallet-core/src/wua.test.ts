@@ -1,6 +1,6 @@
 /** WIA iptal listesi okuması (ADR-0025 `client_status`): bit genişliğine göre sınır ve bit değeri. */
 import { describe, it, expect } from "vitest";
-import { wiaRevokedInList } from "./wua.js";
+import { wiaRevokedInList, wiaStatusInList, wiaValidInList } from "./wua.js";
 
 describe("wiaRevokedInList", () => {
   it("1 bitlik listede bayt başına 8 giriş: son yarıdaki iptal okunur, liste dışı giriş iptal değil", () => {
@@ -13,13 +13,20 @@ describe("wiaRevokedInList", () => {
     expect(wiaRevokedInList(list, 16)).toBe(false); // liste dışı: giriş yok → iptal değil
   });
 
-  it("2 bitlik listede bayt başına 4 giriş: yalnız 0x01 iptaldir, askı (0x02) iptal sayılmaz", () => {
-    // idx 5 → bayt 1, bitler 2–3 = 01 (INVALID); idx 6 → bitler 4–5 = 10 (SUSPENDED)
-    const bytes = new Uint8Array([0x00, (1 << 2) | (2 << 4)]);
+  it("2 bitlik listede bayt başına 4 giriş: 0x01 iptal, askı (0x02) iptal değil ama GEÇERLİ de değil, tanımsız 0x03 iptal (kapalı güvenli, K11)", () => {
+    // idx 5 → bayt 1, bitler 2–3 = 01 (INVALID); idx 6 → bitler 4–5 = 10 (SUSPENDED); idx 7 → bitler 6–7 = 11 (tanımsız)
+    const bytes = new Uint8Array([0x00, (1 << 2) | (2 << 4) | (3 << 6)]);
     const list = { bits: 2 as const, bytes };
     expect(wiaRevokedInList(list, 5)).toBe(true);
-    expect(wiaRevokedInList(list, 6)).toBe(false);
-    expect(wiaRevokedInList(list, 7)).toBe(false);
+    expect(wiaRevokedInList(list, 6)).toBe(false); // askı: yerel silme nedeni değil
+    expect(wiaRevokedInList(list, 7)).toBe(true); // 3: fail-closed → iptal
+    expect(wiaRevokedInList(list, 4)).toBe(false);
     expect(wiaRevokedInList(list, 8)).toBe(false); // liste dışı
+    expect(wiaStatusInList(list, 4)).toBe("valid");
+    expect(wiaStatusInList(list, 5)).toBe("revoked");
+    expect(wiaStatusInList(list, 6)).toBe("suspended");
+    expect(wiaStatusInList(list, 7)).toBe("revoked");
+    // sıfır dışı her değer "geçerli değil"
+    expect([4, 5, 6, 7].map((i) => wiaValidInList(list, i))).toEqual([true, false, false, false]);
   });
 });

@@ -15,6 +15,9 @@
  *   sertifikalardan durumu yeniden kurar (`recoverWrprcState`). Durum her değişiklikte `archive/`'e de yazılır.
  * - Adres değişimi (0.7.4): `status_list_uri` değişince iptal edilmiş girdiler ve engeller yeni listeye İPTAL olarak taşınır
  *   (`migrateWrprcState`); eski liste, ona işaret eden son sertifikanın süresi dolana kadar her yayında yeniden imzalanır.
+ *   Eski listedeki GEÇERLİ girdiler de yayını izler (kontrol 2026-11-03, WRS3): yolu artık yayımlanmayan girdi
+ *   "registration_ended", içeriği değişen girdi "superseded" ile aynı yayında iptal edilir — eski sertifikayı elinde tutan
+ *   doğrulayıcı eski listede "geçerli" okumaz.
  * - Elle iptal gerekçesi kapalı kümeden (`WRPRC_REVOCATION_REASONS`) + isteğe bağlı kısa not; not herkese açık CHANGELOG'a
  *   gittiği için e-posta, telefon/kimlik numarası ya da kişi adı gibi görünen metin reddedilir (`revocationNoteProblems`).
  * Kişisel veri yok: kayıtlar kurum ve kullanım kayıtlarıdır (yayın yolları zaten herkese açık).
@@ -92,8 +95,9 @@ export interface WrprcStatusState {
   /** elle iptal edilmiş içerik: aynı yol + özet yeniden verilmez */
   blocked: Array<{ path: string; digest: string; reason: string; at: string }>;
   /**
-   * Adresi değişmiş eski listeler: ona işaret eden sertifikalar (`max_exp`) bitene kadar yeniden imzalanır. Girdileri donmuştur;
-   * yalnız elle iptal bunları da iptal eder.
+   * Adresi değişmiş eski listeler: ona işaret eden sertifikalar (`max_exp`) bitene kadar yeniden imzalanır. Yeni indeks verilmez;
+   * geçerli girdileri yayını izler (yayından kalkan ya da içeriği değişen sertifika burada da iptal olur) ve elle iptal bunları da
+   * iptal eder.
    */
   previous?: Array<{ list_uri: string; capacity: number; entries: WrprcStatusEntry[]; retired_at: string }>;
 }
@@ -195,7 +199,28 @@ export function assignWrprcStatus(
       e.reason = published.has(e.path) && !blocked.includes(e.path) ? "superseded" : "registration_ended";
       revoked.push(e);
     }
-  return { state: { ...prev, entries }, idxOf, blocked, revoked };
+  // WRS3 (kontrol 2026-11-03): adresi değişmiş eski listelerin geçerli girdileri de bu yayını izler — yolu artık yayımlanmayan
+  // ya da içeriği (özeti) bu yayında değişen sertifikanın eski listedeki girdisi aynı yayında iptal edilir. Aynı yol + aynı özet
+  // yeniden verildiyse (yalnız yeniden imzalanmış aynı sertifika) eski girdi geçerli kalır.
+  const digestOf = new Map<string, string>();
+  for (const it of items) if (idxOf.has(it.path)) digestOf.set(it.path, contentDigest(it.payload));
+  const previous = prev.previous?.map((l) => ({
+    ...l,
+    entries: l.entries.map((x) => {
+      if (x.status !== "VALID") return x;
+      const d = digestOf.get(x.path);
+      if (d === x.digest) return x;
+      const c: WrprcStatusEntry = {
+        ...x,
+        status: "REVOKED",
+        revoked_at: at,
+        reason: d === undefined ? "registration_ended" : "superseded",
+      };
+      revoked.push(c);
+      return c;
+    }),
+  }));
+  return { state: { ...prev, entries, ...(previous ? { previous } : {}) }, idxOf, blocked, revoked };
 }
 
 /**

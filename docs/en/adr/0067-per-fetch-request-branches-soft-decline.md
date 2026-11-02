@@ -13,7 +13,7 @@ summary: >
   "declined". Decision: every fetch of the `request_uri` (GET or POST) opens a separate request branch — a newly signed request
   object with a fresh 128-bit `state`, a fresh `nonce` and a fresh ephemeral encryption key (a stricter fulfilment of HAIP §5
   "ephemeral keys per Authorization Request"); with a POST fetch, `wallet_nonce` is echoed. A decline (encrypted or not) closes only
-  its own branch; the presentation as a whole becomes REJECTED only if it has exactly one branch and that branch is closed,
+  its own branch; the presentation as a whole becomes REJECTED only if it has had exactly one fetch and that branch is closed,
   otherwise it stays open until it expires and the first valid presentation wins. An undecryptable response does not count as an
   attempt; there is no fixed branch limit — memory is bounded by evicting old unanswered branches past a soft limit and by a shared
   branch budget (amendment 2026-10-29). Signed declines were rejected (non-standard, against the ARF RPA_11 privacy
@@ -63,7 +63,7 @@ keys per Authorization Request".
 
 ## K2 — Soft decline
 The wallet's error response (OpenID4VP 1.0 §8.4) — unencrypted form or encrypted JWE (§8.3.1), both handled the same — closes
-**only the branch** its `state` belongs to. The presentation as a whole becomes REJECTED **only if it has exactly one branch and
+**only the branch** its `state` belongs to. The presentation as a whole becomes REJECTED **only if it has had exactly one fetch and
 that branch is closed** (no reason is stored, PV5). If there are several fetches, the presentation stays open until it expires;
 **the first valid presentation** (a response that passes proof of possession, §10.1) wins. A presentation sent to a closed branch is
 not accepted. The response endpoint answers a decline with 200 (§8.2); the decline's `redirect_uri` carries nothing that grants
@@ -130,7 +130,7 @@ processed, the fetch gets 503. The in-memory state is per process; a multi-insta
 | Code | Rule |
 |---|---|
 | RQ1 | Every fetch of the `request_uri` (GET or POST) opens a new request branch: a newly signed request object with a fresh `state` (≥ 128 bits; not in the QR, nor in the `request_uri` or `response_uri` paths), a fresh `nonce` and a fresh ephemeral encryption key; the first object created when the presentation is opened is not served. With a POST fetch `wallet_nonce` is echoed; GET is supported. |
-| RQ2 | A wallet error response (unencrypted or encrypted) closes only the branch its `state` belongs to; the presentation becomes REJECTED only if it has exactly one branch and that branch is closed, otherwise it stays open until it expires and the first valid presentation wins. A presentation sent to a closed branch is not accepted. |
+| RQ2 | A wallet error response (unencrypted or encrypted) closes only the branch its `state` belongs to; the presentation becomes REJECTED only if it has had exactly one fetch and that branch is closed, otherwise it stays open until it expires and the first valid presentation wins. A presentation sent to a closed branch is not accepted. |
 | RQ3 | The answer to a decline is 200 (OpenID4VP 1.0 §8.2); the decline's `redirect_uri` carries no status token, check-view key, authorization code or any other value that grants access to data. |
 | RQ4 | A response that cannot be decrypted with any branch key does not touch the presentation and does not count as an attempt; a decrypted response that does not reach proof of possession is an attempt on its own branch only (the branch closes at 5). |
 | RQ5 | A legitimate fetch is not refused with 429 by a fixed branch limit; memory is bounded: a branch does not keep the signed object, past the soft limit (10) first a closed branch, then the oldest never-answered branch at least 120 s old is evicted, at the hard ceiling (32) the age condition is dropped, a shared branch budget covers all presentations; a branch whose response is being processed is never evicted. The fetch rate limit is per client address, not per presentation. No branch is opened for a closed or expired presentation. (Amendment 2026-10-29) |

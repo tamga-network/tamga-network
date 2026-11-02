@@ -2,7 +2,9 @@
  * ADR-0069 (ADR-0012 K5): doğrulayıcı kayıtlarındaki `terminal_groups[]` yayın öncesi denetimi. Biçim `@tamga-network/trust`
  * `TerminalGroup` şemasıyla; ek olarak (TG1) grup kimliği bütün listede tek, (TG2) etkin grup bir kuruma (`institution_id` =
  * aynı listedeki belge verenin `slug`'ı ya da bir doğrulayıcının `dns_name`'i) ve en az bir kapı politikasına bağlı, sertifika
- * parmak izi iki grupta birden geçmez. Geri çekilmiş grup (`valid_until` geçmiş) eski biçimiyle kalabilir (tarih kaydı).
+ * parmak izi iki grupta birden geçmez. Kurum kaydı ACTIVE olmalıdır (kontrol 2026-11-03, K12): kurumu geri çekilmiş ya da askıya
+ * alınmış bir grubu etkin yayımlamak hatadır — grup `valid_until` ile geri çekilir (okuyucu tarafında `TrustSource` kurumu ACTIVE
+ * olmayan grubu zaten etkin saymaz). Geri çekilmiş grup (`valid_until` geçmiş) eski biçimiyle kalabilir (tarih kaydı).
  */
 import { TerminalGroup } from "@tamga-network/trust";
 
@@ -10,10 +12,9 @@ type Rec = Record<string, unknown>;
 
 export function checkTerminalGroups(rps: Rec[], issuers: Rec[], now = new Date()): string[] {
   const errors: string[] = [];
-  const institutions = new Set<string>([
-    ...issuers.map((i) => String(i.slug ?? "")),
-    ...rps.map((r) => String(r.dns_name ?? "")),
-  ]);
+  const institutions = new Map<string, string>(); // kurum kimliği → durumu (yoksa ACTIVE sayılır: eski kayıt)
+  for (const i of issuers) institutions.set(String(i.slug ?? ""), String(i.status ?? "ACTIVE"));
+  for (const r of rps) institutions.set(String(r.dns_name ?? ""), String(r.status ?? "ACTIVE"));
   const ids = new Map<string, string>();
   const fps = new Map<string, string>();
   for (const rp of rps) {
@@ -42,6 +43,10 @@ export function checkTerminalGroups(rps: Rec[], issuers: Rec[], now = new Date()
       else if (!institutions.has(g.institution_id))
         errors.push(
           `${where}: institution_id "${g.institution_id}" listede bir kurum değil (belge veren slug'ı ya da doğrulayıcı dns_name'i)`,
+        );
+      else if (institutions.get(g.institution_id) !== "ACTIVE")
+        errors.push(
+          `${where}: kurum "${g.institution_id}" ${institutions.get(g.institution_id)} — etkin grup ACTIVE bir kuruma bağlı olmalı; grubu valid_until ile geri çekin (ADR-0069 TG2)`,
         );
       if (!g.allowed_policies?.length) errors.push(`${where}: etkin grupta allowed_policies en az bir politika`);
       for (const fp of g.cert_fingerprints ?? []) {

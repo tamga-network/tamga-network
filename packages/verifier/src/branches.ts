@@ -87,6 +87,8 @@ export class BranchRegistry {
   readonly maxBranches: number;
   /** base64url(SHA-256(state)) → dal; ekleme sırası = yaş */
   private byHash = new Map<string, { set: BranchSet; branch: MutableBranch }>();
+  /** Şu anda imzalanmakta olan (henüz eklenmemiş) dallar — bütçede sayılır (kontrol 2026-11-03). */
+  private minting = 0;
 
   constructor(o: { maxBranches?: number } = {}) {
     this.maxBranches = o.maxBranches ?? DEFAULT_GLOBAL_BRANCHES;
@@ -121,26 +123,37 @@ export class BranchRegistry {
     if (this.byHash.get(k)?.branch === branch) this.byHash.delete(k);
   }
 
+  /** @internal İmzalanmakta olan dal sayısı (bütçe için). */
+  _beginMint() {
+    this.minting += 1;
+  }
+  /** @internal */
+  _endMint() {
+    this.minting -= 1;
+  }
+
   /**
    * @internal Bütçe doluysa yer açar: önce süresi geçmiş ya da tamamlanmış sunumların dalları, sonra (en eskiden) kapanmış dallar,
    * hiç yanıt almamış ve `minAgeSec`'ten yaşlı dallar, başarısız yanıt almış dallar, en son herhangi bir dal. İşlenmekte olan dal
-   * atılmaz; hepsi işlenmekteyse `false` (çağıran 503 döner).
+   * atılmaz; hepsi işlenmekteyse `false` (çağıran 503 döner). İmzalanmakta olan dallar bütçede sayılır (eşzamanlı çekimler
+   * tavanı aşamaz); `spare` çağıranın imza bitince kendi kümesinden atacağı dal sayısı (o yer bu çekimin).
    */
-  _makeRoom(now: number): boolean {
-    if (this.byHash.size < this.maxBranches) return true;
+  _makeRoom(now: number, spare = 0): boolean {
+    const fits = () => this.byHash.size + this.minting - spare < this.maxBranches;
+    if (fits()) return true;
     for (const { set, branch } of [...this.byHash.values()]) if (set.used || set.expiresAt < now) set._evict(branch);
-    if (this.byHash.size < this.maxBranches) return true;
+    if (fits()) return true;
     const tiers: Array<(set: BranchSet, b: MutableBranch) => boolean> = [
       (_s, b) => !!b.closed,
       (s, b) => b.attempts === 0 && now - b.createdAt >= s.limits.minAgeSec,
       (_s, b) => b.attempts > 0,
       () => true,
     ];
-    for (const fits of tiers)
+    for (const tier of tiers)
       for (const { set, branch } of this.byHash.values())
-        if (!branch.inFlight && fits(set, branch)) {
+        if (!branch.inFlight && tier(set, branch)) {
           set._evict(branch);
-          return true;
+          if (fits()) return true;
         }
     return false;
   }
@@ -168,8 +181,10 @@ export interface BranchSetOptions {
  * const set = new BranchSet({ registry, presentationId, expiresAt, content });
  * // GET|POST /vp/req/:id
  * const f = await set.fetch(walletNonce);               // f.ok → f.requestJwt
- * // POST /vp/response (şifreli): kid → set.get(branchId) → set.begin(branch) → openPresentationResponse → set.isOpen(branch) …
- * // POST /vp/response (şifresiz ret): registry.byState(state) → set.begin(branch) → set.decline(branch) → set.end(branch)
+ * // POST /vp/response (şifreli): kid → set.get(branchId) → set.begin(branch) → openPresentationResponse → set.isOpen(branch)
+ * //   → … → set.consume() | set.failedAttempt(branch); finally set.end(branch)
+ * // POST /vp/response (şifresiz ret): registry.byState(state) → set.busy ? 400 : set.decline(branch)
+ * //   (ret eşzamanlıdır, kilit alınmaz: işlenen bir yanıt varken ret reddedilir — PV10; şifreli ret aynı yoldan `kind: "error"`)
  * ```
  */
 export class BranchSet {
@@ -232,28 +247,47 @@ export class BranchSet {
 
   /**
    * RQ1: yeni çekim dalı. Yumuşak sınırda atılabilir bir eski dalın yerini alır; ortak bütçe doluysa önce oradan yer açılır.
-   * `walletNonce` (OpenID4VP 1.0 §5.10) biçim dışıysa yazılmaz.
+   * `walletNonce` (OpenID4VP 1.0 §5.10) biçim dışıysa yazılmaz. Kurban dal imza BAŞARILI olunca atılır (kontrol 2026-11-03):
+   * imza hata verirse ya da imzalanırken sunum biterse hiçbir dal kaybolmaz; imza sürerken kurban yanıt almaya başladıysa yeniden
+   * seçilir. İmzalanmakta olan dallar hem kümenin hem ortak bütçenin sayımında.
    */
   async fetch(walletNonce?: unknown): Promise<FetchResult> {
     const now = this.clock();
     if (this._used) return { ok: false, reason: "closed" };
     if (this.expiresAt < now) return { ok: false, reason: "expired" };
-    let evicted: Branch | undefined;
     const count = this.live.size + this.minting;
+    const atHard = count >= this.limits.hardCap;
+    let victim: Branch | undefined;
     if (count >= this.limits.softCap) {
-      evicted = this.victim(now, count >= this.limits.hardCap);
-      if (evicted) this._evict(evicted);
-      else if (count >= this.limits.hardCap) return { ok: false, reason: "limit" };
+      victim = this.victim(now, atHard);
+      if (!victim && atHard) return { ok: false, reason: "limit" };
     }
-    if (!this.registry._makeRoom(now)) return { ok: false, reason: "capacity" };
+    if (!this.registry._makeRoom(now, victim ? 1 : 0)) return { ok: false, reason: "capacity" };
     this.minting += 1;
+    this.registry._beginMint();
     let rb: RequestBranch;
     try {
       rb = await this.mint(typeof walletNonce === "string" ? walletNonce : undefined);
     } finally {
       this.minting -= 1;
+      this.registry._endMint();
     }
-    if (this._used) return { ok: false, reason: "closed" }; // imzalanırken sunum tamamlandı
+    // imzalanırken sunum tamamlandı ya da süresi geçti: dal eklenmez, kurban yerinde kalır
+    if (this._used) return { ok: false, reason: "closed" };
+    if (this.expiresAt < this.clock()) return { ok: false, reason: "expired" };
+    let evicted: Branch | undefined;
+    if (victim || this.live.size + this.minting >= this.limits.softCap) {
+      // kurban imza sırasında atılmış (eşzamanlı çekim) ya da yanıt almaya başlamış olabilir → yeniden seç
+      evicted = victim && this.live.get(victim.branchId) === victim && !victim.inFlight ? victim : undefined;
+      if (!evicted && this.live.size + this.minting >= this.limits.softCap) {
+        const hardNow = this.live.size + this.minting >= this.limits.hardCap;
+        evicted = this.victim(this.clock(), hardNow);
+        if (!evicted && hardNow) return { ok: false, reason: "limit" };
+      }
+      if (evicted) this._evict(evicted);
+    }
+    // kurban atılmadıysa ortak bütçeye yeniden bakılır (imza sırasında başka çekimler yer doldurmuş olabilir)
+    if (!evicted && !this.registry._makeRoom(this.clock())) return { ok: false, reason: "capacity" };
     const b: MutableBranch = {
       branchId: rb.branchId,
       index: ++this.minted,

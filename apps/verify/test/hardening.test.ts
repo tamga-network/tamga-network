@@ -126,7 +126,7 @@ describe.skipIf(!ready)("apps/verify uç sertleştirmesi", () => {
     const lim = await post("/presentations", { policy_id: policy });
     expect(lim.statusCode).toBe(429);
     expect(lim.headers["retry-after"]).toBeDefined();
-    // yanıt ucu: bilinmeyen sunum jeton harcamaz (sel başkasının yanıtını durdurmaz); sınır sunum başına
+    // yanıt ucu: bilinmeyen sunum jeton harcamaz (sel başkasının yanıtını durdurmaz); sınır çekim dalı başına
     expect((await post("/vp/response", {})).statusCode).toBe(400);
     expect((await post("/vp/response", {})).statusCode).toBe(400);
     const app2 = await buildVerifyApp(cfg(), { rateRules: { vpResponse: one } });
@@ -137,19 +137,51 @@ describe.skipIf(!ready)("apps/verify uç sertleştirmesi", () => {
       payload: { policy_id: policy },
     });
     const pid = (made.json() as { presentation_id: string }).presentation_id;
-    const junk = (id: string) =>
-      Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid: `enc-${id}` })).toString("base64url") +
-      ".x.y.z.w";
-    const respond = (id: string) =>
+    const junk = (kid: string) =>
+      Buffer.from(JSON.stringify({ alg: "ECDH-ES", enc: "A128GCM", kid })).toString("base64url") + ".x.y.z.w";
+    const respond = (kid: string) =>
       app2.inject({
         method: "POST",
         url: "/vp/response",
         headers: { "content-type": "application/json" },
-        payload: { response: junk(id) },
+        payload: { response: junk(kid) },
       });
-    expect((await respond(pid)).statusCode).toBe(400); // çözülemedi (sunum tüketilmez)
-    expect((await respond(pid)).statusCode).toBe(429); // aynı sunuma ikinci deneme: sınır
-    expect((await respond("baska-sunum")).statusCode).toBe(400); // bilinmeyen sunum: sınırdan etkilenmez
+    // üç çekim = üç dal (gerçek cüzdan dal 1, QR'ı gören biri dal 2 ve 3); `state` yalnız istek nesnesinde
+    const states: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const r = await app2.inject({ url: `/vp/req/${pid}` });
+      expect(r.statusCode).toBe(200);
+      states.push(
+        (JSON.parse(Buffer.from(r.body.split(".")[1], "base64url").toString("utf8")) as { state: string }).state,
+      );
+    }
+    const [real, attacker, attacker2] = app2.presentations.get(pid)!.branches.list();
+    const kidOf = (branchId: string) => `enc-${pid}.${branchId}`;
+    // kontrol 2026-11-03 (K16): kova ÇEKİM DALI başına — saldırganın dalına sel gerçek cüzdanın dalını 429'a düşürmez
+    expect((await respond(kidOf(attacker.branchId))).statusCode).toBe(400); // çözülemedi (sunum tüketilmez)
+    const lim2 = await respond(kidOf(attacker.branchId));
+    expect(lim2.statusCode).toBe(429); // aynı dala ikinci deneme: sınır
+    expect(lim2.headers["retry-after"]).toBeDefined();
+    expect((await respond(kidOf(real.branchId))).statusCode).toBe(400); // gerçek cüzdanın dalı: kovası dolu, çözme denendi (429 değil)
+    expect((await respond(kidOf(real.branchId))).statusCode).toBe(429);
+    // şifresiz ret yolu da dal başına: saldırgan kendi dalına (3) ret selini basar; sunum açık kalır, dal 2'nin kovası ayrı
+    const decline = (state: string) =>
+      app2.inject({
+        method: "POST",
+        url: "/vp/response",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        payload: `error=access_denied&state=${encodeURIComponent(state)}`,
+      });
+    expect((await decline(states[2])).statusCode).toBe(200); // dal 3 kapandı (sunum açık: birden çok çekim)
+    expect((await decline(states[2])).statusCode).toBe(429);
+    expect((await decline("yok")).statusCode).toBe(400); // bilinmeyen state kova harcamaz
+    expect(app2.presentations.get(pid)!.branches.used).toBe(false);
+    expect(attacker2.closed).toBe("declined");
+    // dalsız ve bilinmeyen `kid` kovaya ulaşmadan ucuz 400: jeton harcamaz, sınırdan etkilenmez
+    expect((await respond(`enc-${pid}`)).json().error_description).toBe("unknown request object");
+    expect((await respond(`enc-${pid}.yok`)).json().error_description).toBe("unknown request object");
+    expect((await respond("enc-baska-sunum")).json().error_description).toBe("unknown presentation");
+    expect((await respond("enc-baska-sunum.dal")).statusCode).toBe(400);
     await app2.close();
     expect((await post("/terminal/verify", { token: "x" })).statusCode).toBe(404); // gerçek ağ biçimli liste: kapı yok
     expect((await post("/terminal/verify", { token: "x" })).statusCode).toBe(429);

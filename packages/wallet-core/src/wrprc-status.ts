@@ -72,7 +72,9 @@ function verifiedList(token: string, uri: string, nowSec: number, registrarKeys:
 
 /**
  * Durum listelerini çeker (adres başına bir istek; liste bütün kayıt sertifikalarını taşıdığı için hangi doğrulayıcıya
- * bakıldığını açığa vurmaz). `offline: true` → yalnız önbellek.
+ * bakıldığını açığa vurmaz). `offline: true` → yalnız önbellek. Taze çekilen geçerli liste önbellektekinden ESKİYSE (`iat`
+ * küçük: eski kopyayı veren vekil/önbellek ya da geri alınmış yayın) önbellekteki yeni kopya kullanılır ve üzerine yazılmaz
+ * (kontrol 2026-11-03, K4: iptal geri alınamaz).
  */
 export async function fetchRegistrationStatuses(
   refs: Array<WrprcStatusRef | null | undefined>,
@@ -90,7 +92,13 @@ export async function fetchRegistrationStatuses(
         if (r.status === 200) {
           const token = await r.text();
           list = verifiedList(token, uri, nowSec, registrarKeys);
-          if (list) opts.cache?.set(uri, token.trim());
+          if (list) {
+            const cachedTok = opts.cache?.get(uri);
+            const cached = cachedTok ? verifiedList(cachedTok, uri, nowSec, registrarKeys) : null;
+            if (cached && (cached.iat ?? 0) > (list.iat ?? 0))
+              list = cached; // önbellekteki daha yeni: eskiye dönülmez
+            else opts.cache?.set(uri, token.trim());
+          }
         }
       } catch {
         // ağ yok → önbellek

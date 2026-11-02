@@ -718,6 +718,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"),
     );
     const pr = await createPresentationRequest({
+      initialRequestObject: true, // eski tek nesne (0.7.x); yeni varsayılan false (kontrol 2026-11-03)
       signer,
       dcql: dcqlFromPolicy(policy),
       responseUri: "https://verify.tamga.network/vp/response",
@@ -811,6 +812,7 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
       readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"),
     );
     const pr = await createPresentationRequest({
+      initialRequestObject: true, // eski tek nesne (0.7.x); yeni varsayılan false (kontrol 2026-11-03)
       signer,
       dcql: dcqlFromPolicy(policy),
       responseUri: "https://verify.tamga.network/vp/response",

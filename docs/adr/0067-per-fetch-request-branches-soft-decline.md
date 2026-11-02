@@ -12,7 +12,7 @@ summary: >
   gönderip gerçek kişinin sunumunu "reddedildi"ye düşürebiliyordu. Karar: `request_uri`'nin her çekimi (GET ya da POST) ayrı bir
   çekim dalı açar — taze 128 bitlik `state`, taze `nonce` ve taze efemer şifreleme anahtarıyla yeni imzalı istek nesnesi (HAIP §5
   "her yetkilendirme isteğinde efemer anahtar"ın daha sıkı karşılığı); POST çekimde `wallet_nonce` geri yazılır. Ret (şifreli ya da
-  şifresiz) yalnız kendi dalını kapatır; sunum bütünüyle yalnız tek dalı varsa ve o dal kapandıysa REJECTED olur, yoksa süresi
+  şifresiz) yalnız kendi dalını kapatır; sunum bütünüyle yalnız tek çekimi varsa ve o dal kapandıysa REJECTED olur, yoksa süresi
   bitene dek açık kalır ve ilk geçerli sunum kazanır. Çözülemeyen yanıt deneme sayılmaz; dal sayısında sabit sınır yok, bellek
   yumuşak sınırda eski yanıtsız dalı atarak ve ortak dal bütçesiyle sınırlı (Değişiklik notu 2026-10-29). İmzalı ret
   reddedildi (standart dışı, ARF RPA_11 gizlilik ilkesine aykırı). Kabul: 2026-10-29 (proje yönetimi onayı).
@@ -56,7 +56,7 @@ devam eder. Bu, HAIP §5'in "her yetkilendirme isteğinde efemer anahtar" kural�
 
 ## K2 — Yumuşak ret
 Cüzdanın hata yanıtı (OpenID4VP 1.0 §8.4) — şifresiz form ya da şifreli JWE (§8.3.1), ikisi aynı işlenir — `state`'i hangi dalın
-ise **yalnız o dalı** kapatır. Sunum bütünüyle **yalnız tek dalı varsa ve o dal kapandıysa** REJECTED olur (neden saklanmaz,
+ise **yalnız o dalı** kapatır. Sunum bütünüyle **yalnız tek çekimi varsa ve o dal kapandıysa** REJECTED olur (neden saklanmaz,
 PV5). Birden çok çekim varsa sunum süresi bitene dek açık kalır; **ilk geçerli sunum** (sahiplik kanıtı geçen yanıt, §10.1)
 kazanır. Kapanmış dala gelen sunum kabul edilmez. Yanıt ucu rete 200 döner (§8.2); retin `redirect_uri`'si veriye ya da sonuca
 erişim veren hiçbir şey taşımaz (durum jetonu, kontrol görünümü anahtarı, yetki kodu yok). Kurumun satır içi kimlik sunumunda
@@ -115,7 +115,7 @@ bütün dallar işlenmekteyse çekim 503 alır. Bellek içi durum tek süreç i�
 | Kod | Kural |
 |---|---|
 | RQ1 | `request_uri`'nin her çekimi (GET ya da POST) yeni bir çekim dalı açar: taze `state` (≥ 128 bit; QR'da, `request_uri` ve `response_uri` yolunda yok), taze `nonce` ve taze efemer şifreleme anahtarıyla yeni imzalı istek nesnesi; sunum açılırken üretilen ilk nesne verilmez. POST çekimde `wallet_nonce` geri yazılır; GET desteklenir. |
-| RQ2 | Cüzdanın hata yanıtı (şifresiz ya da şifreli) yalnız `state`'inin ait olduğu dalı kapatır; sunum yalnız tek dalı varsa ve o dal kapandıysa REJECTED olur, yoksa süresi bitene dek açık kalır ve ilk geçerli sunum kazanır. Kapanmış dala gelen sunum kabul edilmez. |
+| RQ2 | Cüzdanın hata yanıtı (şifresiz ya da şifreli) yalnız `state`'inin ait olduğu dalı kapatır; sunum yalnız tek çekimi varsa ve o dal kapandıysa REJECTED olur, yoksa süresi bitene dek açık kalır ve ilk geçerli sunum kazanır. Kapanmış dala gelen sunum kabul edilmez. |
 | RQ3 | Ret yanıtı 200'dür (OpenID4VP 1.0 §8.2); retin `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı, yetki kodu ya da veriye erişim veren başka bir değer taşımaz. |
 | RQ4 | Hiçbir dalın anahtarıyla çözülemeyen yanıt sunuma dokunmaz ve deneme sayılmaz; çözülmüş ama sahiplik kanıtına ulaşmayan yanıt yalnız kendi dalının denemesidir (5'te dal kapanır). |
 | RQ5 | Meşru çekime sabit dal sınırıyla 429 verilmez; bellek sınırlıdır: dal imzalı nesneyi tutmaz, yumuşak sınırda (10) önce kapanmış, sonra hiç yanıt almamış ve yaşlı (≥ 120 sn) en eski dal atılır, sert tavanda (32) yaş koşulu düşer, ortak dal bütçesi bütün sunumları kapsar; yanıtı işlenmekte olan dal atılmaz. Çekim hız sınırı istemci adresi başınadır, sunum başına değil. Kapanmış ya da süresi geçmiş sunumda dal açılmaz. (Değişiklik notu 2026-10-29) |

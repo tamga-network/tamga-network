@@ -17,6 +17,7 @@ function harness(
   const minted: RequestBranch[] = [];
   const walletNonces: Array<string | undefined> = [];
   let gate: Promise<void> | undefined;
+  let failNext = false;
   const registry = o.registry ?? new BranchRegistry();
   const set = new BranchSet({
     registry,
@@ -28,6 +29,10 @@ function harness(
     mint: async (walletNonce) => {
       walletNonces.push(walletNonce);
       if (gate) await gate;
+      if (failNext) {
+        failNext = false;
+        throw new Error("signing failed");
+      }
       const rb: RequestBranch = {
         branchId: randomBytes(6).toString("base64url"),
         nonce: randomBytes(24).toString("base64url"),
@@ -48,6 +53,7 @@ function harness(
     minted,
     walletNonces,
     tick: (s: number) => (now += s),
+    failNextMint: () => (failNext = true),
     hold: () => {
       let release!: () => void;
       gate = new Promise<void>((r) => (release = r));
@@ -175,6 +181,75 @@ describe("BranchSet — RQ5 Değişiklik notu 2026-10-29: sabit 429 yok, sınır
     expect(await u.set.fetch()).toEqual({ ok: false, reason: "capacity" });
     t.set.end(only.branch);
     expect((await u.set.fetch()).ok).toBe(true);
+  });
+});
+
+describe("BranchSet — kontrol 2026-11-03 (K16): kurban dal yalnız imza başarılıysa atılır; bütçe imzalanmakta olanları sayar", () => {
+  it("imza hata verirse hiçbir dal atılmaz (kurban yerinde, bütçe aynı)", async () => {
+    const h = harness({ limits: { softCap: 2, hardCap: 4, minAgeSec: 0 } });
+    const a = await h.fetchOk();
+    const b = await h.fetchOk();
+    h.failNextMint();
+    await expect(h.set.fetch()).rejects.toThrow("signing failed");
+    expect(h.set.list().map((x) => x.branchId)).toEqual([a.branch.branchId, b.branch.branchId]);
+    expect(h.registry.size).toBe(2);
+    expect(h.set.fetchCount).toBe(2);
+    // sonraki çekim normal: kurban (a) imza bitince atılır
+    const c = await h.fetchOk();
+    expect(c.evicted?.branchId).toBe(a.branch.branchId);
+    expect(h.set.list()).toHaveLength(2);
+  });
+
+  it("imzalanırken sunumun süresi geçerse dal eklenmez (expired), kurban yerinde kalır", async () => {
+    const h = harness({ limits: { softCap: 1, hardCap: 4, minAgeSec: 0 } });
+    const a = await h.fetchOk();
+    const release = h.hold();
+    const pending = h.set.fetch();
+    h.tick(301);
+    release();
+    expect(await pending).toEqual({ ok: false, reason: "expired" });
+    expect(h.set.get(a.branch.branchId)).toBe(a.branch);
+    expect(h.registry.size).toBe(1);
+  });
+
+  it("imza sürerken kurban dala yanıt gelirse (işlenmekte) kurban yeniden seçilir; işlenen dal atılmaz", async () => {
+    const h = harness({ limits: { softCap: 2, hardCap: 4, minAgeSec: 0 } });
+    const a = await h.fetchOk();
+    const b = await h.fetchOk();
+    const release = h.hold();
+    const pending = h.set.fetch(); // kurban a (en eski)
+    expect(h.set.begin(a.branch)).toBe("ok"); // gerçek cüzdanın yanıtı a'ya geliyor
+    release();
+    const c = await pending;
+    expect(c.ok && c.evicted?.branchId).toBe(b.branch.branchId);
+    expect(h.set.get(a.branch.branchId)).toBe(a.branch);
+    h.set.end(a.branch);
+  });
+
+  it("ortak bütçe imzalanmakta olan dalları sayar: eşzamanlı çekimler tavanı aşamaz", async () => {
+    const registry = new BranchRegistry({ maxBranches: 2 });
+    const other = harness({ registry, id: "prs_other" });
+    await other.fetchOk();
+    const h = harness({ registry, id: "prs_h" });
+    const release = h.hold();
+    const p1 = h.set.fetch();
+    const p2 = h.set.fetch();
+    release();
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1.ok && r2.ok).toBe(true);
+    // ikinci çekim imzalanmakta olan birinciyi saydı → öteki sunumun genç dalı yer açmak için atıldı; tavan aşılmadı (önce 3 oluyordu)
+    expect(other.set.list()).toHaveLength(0);
+    expect(registry.size).toBe(registry.maxBranches);
+    // bütçe dolu ve bütün dallar işlenmekte değilken bile imzalanan sayılır: üçüncü küme için yer yoksa capacity
+    const tiny = new BranchRegistry({ maxBranches: 1 });
+    const t = harness({ registry: tiny, id: "prs_t" });
+    const rel = t.hold();
+    const pend = t.set.fetch();
+    const u = harness({ registry: tiny, id: "prs_u" });
+    expect(await u.set.fetch()).toEqual({ ok: false, reason: "capacity" }); // tek yer imzalanana ayrıldı
+    rel();
+    expect((await pend).ok).toBe(true);
+    expect(tiny.size).toBe(1);
   });
 });
 

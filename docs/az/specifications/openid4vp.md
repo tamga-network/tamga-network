@@ -592,7 +592,7 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
 - **Rədd `response_uri`-yə gedir və yalnız öz qolunu bağlayır.** Şəxs rədd etdikdə cüzdan `response_uri`-ni bilirsə (cihazlar arası
   axın) cavab ünvanına OpenID4VP 1.0 §8.4 xəta cavabını göndərir: yalnız `error=access_denied` və `state` (fərdi məlumat yoxdur;
   `error_description` yoxdur — PV5). Şifrəsiz forma və şifrəli JWE (§8.3.1) eyni işlənir. Rədd yalnız `state`-inin aid olduğu qolu
-  bağlayır; təqdimat bütövlükdə **yalnız bir qolu varsa və o qol bağlanıbsa** REJECTED olur (səbəb saxlanmır). Bir neçə çəkiliş varsa,
+  bağlayır; təqdimat bütövlükdə **yalnız bir çəkilişi varsa və o qol bağlanıbsa** REJECTED olur (səbəb saxlanmır). Bir neçə çəkiliş varsa,
   təqdimat müddəti bitənədək açıq qalır və ilk etibarlı təqdimat qalib gəlir; bağlanmış qola gələn təqdimat qəbul edilmir. Cavab ucu
   rəddə 200 qaytarır (§8.2); rəddin `redirect_uri`-si status jetonu, yoxlama görünüşü açarı və ya avtorizasiya kodu daşımır. Brauzer
   (DC API) axınında cavab ünvanı yoxdur; rədd DC API-nin öz xəta yolu ilə səhifəyə qayıdır və DC API obyektinin `state`-i ilə gələn
@@ -639,7 +639,7 @@ sorğular göndərməklə istifadəçinin hansı rəqəmsal sənədlərə malik 
 | **PV12** | Rəqəmsal cüzdan tələb olunan sahələrdən birini daşımayan rəqəmsal sənədi göndərmir (`claim_sets` yoxdursa bütün sahələr, varsa seçilmiş kombinasiyanın bütün sahələri rəqəmsal sənəddə olmalıdır); ixtiyari sahə `claim_sets` ilə tələb edilir. |
 | **PV13** | Rəqəmsal cüzdan imzalı sorğu obyektini zaman və hədəf baxımından yoxlayır: `exp` məcburidir və keçmiş ola bilməz, `iat` 60 saniyədən çox irəli tarixli ola bilməz (saat sürüşməsi tolerantlığı 60 san), `aud` verilibsə `https://self-issued.me/v2` olmalıdır; əks halda sorğu rədd edilir. `dc+sd-jwt` sorğusu növü `meta.vct_values` ilə göstərməlidir (növsüz sorğu rədd edilir). |
 | **PV14** | Vasitəçi yoxlayan tərəf ([[ADR-0017]] K7) bir RP adından yalnız əlaqə hər iki qeyddə yazılıbsa sorğu göndərə bilər: əsas RP vasitəçini `uses_intermediaries`-də, vasitəçi əsas RP-ni `served_relying_parties`-də sadalayır; birtərəfli bəyanda rəqəmsal cüzdan sorğunu rədd edir. |
-| **PV15** | `request_uri`-nin hər çəkilişi təzə `state` (≥ 128 bit, gizli), təzə `nonce` və təzə efemer şifrələmə açarı ilə ayrıca çəkiliş qoludur; cüzdanın xəta cavabı yalnız öz qolunu bağlayır və təqdimat yalnız bir qolu varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
+| **PV15** | `request_uri`-nin hər çəkilişi təzə `state` (≥ 128 bit, gizli), təzə `nonce` və təzə efemer şifrələmə açarı ilə ayrıca çəkiliş qoludur; cüzdanın xəta cavabı yalnız öz qolunu bağlayır və təqdimat yalnız bir çəkilişi varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
 
 ---
 

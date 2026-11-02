@@ -1895,6 +1895,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     );
     const SITE = `x509_hash:${"S".repeat(43)}`; // ADR-0034
     const pr = await createPresentationRequest({
+      initialRequestObject: true, // eski tek nesne (0.7.x); yeni varsayılan false (kontrol 2026-11-03)
       signer: rpSigner,
       dcql: dcqlFromPolicy({
         policy_id: "t",

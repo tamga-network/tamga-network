@@ -18,7 +18,9 @@ const ready =
   existsSync(resolve(ROOT, "ops/pki/tl-signer-1.pkcs8.pem")) &&
   existsSync(resolve(ROOT, "packages/schemas/dist/index.json"));
 
-describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", () => {
+// Her test tsx ile CLI'yi ayrı süreçte başlatır (spawnSync); tam pakette yük altında 20 sn'lik varsayılan test süresi yetmiyordu
+// (kontrol 2026-11-03) — dosya tek başına: `npx vitest run apps/trust-publisher/test/cli.test.ts` (docs/audit/build-and-test.md).
+describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", { timeout: 180_000 }, () => {
   const tmp = mkdtempSync(join(tmpdir(), "tamga-tp-"));
   const REG = join(tmp, "registry");
   const DIST = join(tmp, "dist");

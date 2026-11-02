@@ -274,7 +274,10 @@ Listede **olmayanlar:** doğrulayıcılar (güven hizmeti sağlayıcısı değil
 | `DEPRECATED` | `…/tl/Svcstatus/deprecated` |
 
 Kayıt silinmez: etkin olmayan hizmet durumuyla kalır; önceki durumlar `ServiceHistory`'de yeniden eskiye, sertifika yerine SKI ile
-(§5.5.10, §5.6.3). Bu URI'leri tanımayan bir okuyucu hizmeti etkin saymaz (güvenli taraf).
+(§5.5.10, §5.6.3). Bu URI'leri tanımayan bir okuyucu hizmeti etkin saymaz (güvenli taraf). Geçmiş örneğindeki SKI **güncel**
+sertifikanın SKI'sidir (yaklaştırma): kayıt sertifika yenilemesi (anahtar devri) taşımadığı için geçmişteki durum da aynı
+anahtara yazılır; devir desteği gelince her geçmiş örneği kendi dönemindeki sertifikanın SKI'sini alır. Kayıt geçmişinde güncel
+duruma ait girdi yoksa güncel durumun başlangıcı listenin yayın anıdır; önceki durumun başlangıcı güncel duruma yazılmaz.
 
 **İmza ve imzacı:** XAdES-B-B, zarflanmış (`URI=""`, enveloped-signature + Exclusive C14N), SignedProperties (SigningTime,
 SigningCertificateV2, DataObjectFormat), KeyInfo'da yalnız imzacı sertifikası; ECDSA P-256 / SHA-256. İmzacı ayrı bir XML imza

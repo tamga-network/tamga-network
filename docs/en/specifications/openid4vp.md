@@ -578,7 +578,7 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
 - **A refusal goes to the `response_uri` and closes only its own branch.** When the person declines, a wallet that knows the
   `response_uri` (cross-device flow) posts the OpenID4VP 1.0 §8.4 error response to it: only `error=access_denied` and `state` (no
   personal data; no `error_description` — PV5). An unencrypted form and an encrypted JWE (§8.3.1) are handled the same. The refusal
-  closes only the branch its `state` belongs to; the presentation as a whole becomes REJECTED **only if it has exactly one branch and
+  closes only the branch its `state` belongs to; the presentation as a whole becomes REJECTED **only if it has had exactly one fetch and
   that branch is closed** (no reason stored). With several fetches the presentation stays open until it expires and the first valid
   presentation wins; a presentation sent to a closed branch is not accepted. The response endpoint answers a refusal with 200 (§8.2);
   the refusal's `redirect_uri` carries no status token, check-view key or authorization code. In the browser (DC API) flow there is no
@@ -627,7 +627,7 @@ verifier could map which credentials the user holds by sending queries.
 | **PV12** | The wallet does not send a credential that lacks any requested claim (without `claim_sets` every claim, with `claim_sets` every claim of the chosen combination must be in the credential); an optional claim is requested with `claim_sets`. |
 | **PV13** | The wallet checks the signed request object's time and audience: `exp` is required and must not have passed, `iat` must not be more than 60 s in the future (clock-skew tolerance 60 s), and `aud`, if present, must be `https://self-issued.me/v2`; otherwise the request is refused. A `dc+sd-jwt` query must name the type with `meta.vct_values` (an untyped query is refused). |
 | **PV14** | An intermediary verifier ([[ADR-0017]] K7) may send a request on behalf of an RP only when the relationship is written in both records: the RP lists the intermediary in `uses_intermediaries` and the intermediary lists the RP in `served_relying_parties`; on a one-sided claim the wallet refuses the request. |
-| **PV15** | Every fetch of the `request_uri` is a separate request branch with a fresh `state` (≥ 128 bits, secret), a fresh `nonce` and a fresh ephemeral encryption key; a wallet error response closes only its own branch, and the presentation becomes REJECTED only if it has a single branch ([[ADR-0067]] RQ1–RQ6). |
+| **PV15** | Every fetch of the `request_uri` is a separate request branch with a fresh `state` (≥ 128 bits, secret), a fresh `nonce` and a fresh ephemeral encryption key; a wallet error response closes only its own branch, and the presentation becomes REJECTED only if it has had a single fetch ([[ADR-0067]] RQ1–RQ6). |
 
 ---
 

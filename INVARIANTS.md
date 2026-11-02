@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-30
+last_updated: 2026-11-02
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -673,7 +673,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | Kod | Açıklama |
 |---|---|
 | `ADR-0067/RQ1` | `request_uri`'nin her çekimi (GET ya da POST) yeni bir çekim dalı açar: taze `state` (≥ 128 bit; QR'da, `request_uri` ve `response_uri` yolunda yok), taze `nonce` ve taze efemer şifreleme anahtarıyla yeni imzalı istek nesnesi; sunum açılırken üretilen ilk nesne verilmez. POST çekimde `wallet_nonce` geri yazılır; GET desteklenir. |
-| `ADR-0067/RQ2` | Cüzdanın hata yanıtı (şifresiz ya da şifreli) yalnız `state`'inin ait olduğu dalı kapatır; sunum yalnız tek dalı varsa ve o dal kapandıysa REJECTED olur, yoksa süresi bitene dek açık kalır ve ilk geçerli sunum kazanır. Kapanmış dala gelen sunum kabul edilmez. |
+| `ADR-0067/RQ2` | Cüzdanın hata yanıtı (şifresiz ya da şifreli) yalnız `state`'inin ait olduğu dalı kapatır; sunum yalnız tek çekimi varsa ve o dal kapandıysa REJECTED olur, yoksa süresi bitene dek açık kalır ve ilk geçerli sunum kazanır. Kapanmış dala gelen sunum kabul edilmez. |
 | `ADR-0067/RQ3` | Ret yanıtı 200'dür (OpenID4VP 1.0 §8.2); retin `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı, yetki kodu ya da veriye erişim veren başka bir değer taşımaz. |
 | `ADR-0067/RQ4` | Hiçbir dalın anahtarıyla çözülemeyen yanıt sunuma dokunmaz ve deneme sayılmaz; çözülmüş ama sahiplik kanıtına ulaşmayan yanıt yalnız kendi dalının denemesidir (5'te dal kapanır). |
 | `ADR-0067/RQ5` | Meşru çekime sabit dal sınırıyla 429 verilmez; bellek sınırlıdır: dal imzalı nesneyi tutmaz, yumuşak sınırda (10) önce kapanmış, sonra hiç yanıt almamış ve yaşlı (≥ 120 sn) en eski dal atılır, sert tavanda (32) yaş koşulu düşer, ortak dal bütçesi bütün sunumları kapsar; yanıtı işlenmekte olan dal atılmaz. Çekim hız sınırı istemci adresi başınadır, sunum başına değil. Kapanmış ya da süresi geçmiş sunumda dal açılmaz. (Değişiklik notu 2026-10-29) |
@@ -900,7 +900,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-PROTO-0002/PV12` | Cüzdan, istenen alanlardan birini taşımayan belgeyi göndermez (`claim_sets` yoksa bütün alanlar, varsa seçilen kombinasyonun bütün alanları belgede olmalıdır); isteğe bağlı alan `claim_sets` ile istenir. |
 | `SPEC-PROTO-0002/PV13` | Cüzdan imzalı istek nesnesini zamanla ve hedefle denetler: `exp` zorunludur ve geçmiş olamaz, `iat` 60 sn'den fazla ileri tarihli olamaz (saat kayması toleransı 60 sn), `aud` verilmişse `https://self-issued.me/v2` olmalıdır; aksi hâlde istek reddedilir. `dc+sd-jwt` sorgusu türü `meta.vct_values` ile belirtmelidir (türsüz sorgu reddedilir). |
 | `SPEC-PROTO-0002/PV14` | Aracı doğrulayıcı ([[ADR-0017]] K7) bir RP adına ancak ilişki iki kayıtta da yazılıysa istek gönderebilir: asıl RP aracıyı `uses_intermediaries`'te, aracı asıl RP'yi `served_relying_parties`'te listeler; tek taraflı beyanda cüzdan isteği reddeder. |
-| `SPEC-PROTO-0002/PV15` | `request_uri`'nin her çekimi taze `state` (≥ 128 bit, gizli), taze `nonce` ve taze efemer şifreleme anahtarıyla ayrı bir çekim dalıdır; cüzdanın hata yanıtı yalnız kendi dalını kapatır ve sunum ancak tek dalı varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
+| `SPEC-PROTO-0002/PV15` | `request_uri`'nin her çekimi taze `state` (≥ 128 bit, gizli), taze `nonce` ve taze efemer şifreleme anahtarıyla ayrı bir çekim dalıdır; cüzdanın hata yanıtı yalnız kendi dalını kapatır ve sunum ancak tek çekimi varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
 
 
 ## SPEC-SCHEMA-0001
@@ -1026,4 +1026,4 @@ AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, FN, GE
 
 # Durum
 
-**Üretilen dosya** — 2026-10-30 (`scripts/sync-invariants.mjs`). Toplam 390 kodlanmış değişmez, 72 dokümanda.
+**Üretilen dosya** — 2026-11-02 (`scripts/sync-invariants.mjs`). Toplam 390 kodlanmış değişmez, 72 dokümanda.

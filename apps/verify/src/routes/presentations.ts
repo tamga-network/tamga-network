@@ -236,10 +236,12 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         return reply.code(400).send({ error: "invalid_request", error_description: "state missing" });
       const hit = presentations.byState(body.state);
       if (!hit || hit.p.req.expiresAt < nowSec())
-        return reply.code(400).send({ error: "invalid_request", error_description: "bilinmeyen sunum" });
+        return reply.code(400).send({ error: "invalid_request", error_description: "unknown presentation" });
       const { p, branch } = hit;
       const pid = p.req.presentationId;
-      if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
+      // Hız sınırı ÇEKİM DALI başına (kontrol 2026-11-03): `state` yalnız o dalın istek nesnesinde geçti; başka dala sel gerçek
+      // cüzdanın dalını durdurmaz
+      if (rateLimited(ctx.limits.vpResponse, `b:${pid}.${branch.branchId}`, reply)) return reply;
       // Bir yanıt doğrulanırken gelen ret sonucu çeviremez: kabul tek yönlü durum değişikliğidir (PV10, §10.1). Ret eşzamanlıdır
       // (await yok): kilit denetimi yeter. Kapanmış dala ikinci ret 200 (değişiklik yok).
       if (p.branches.busy)
@@ -251,22 +253,23 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     const kid = responseKidOf(jwe);
     const pid = kid?.presentationId ?? "";
     const p = presentations.get(pid);
-    if (!p) return reply.code(400).send({ error: "invalid_request", error_description: "bilinmeyen sunum" });
+    if (!p) return reply.code(400).send({ error: "invalid_request", error_description: "unknown presentation" });
     if (p.branches.used)
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     if (p.req.expiresAt < nowSec())
       return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
-    // Hız sınırı sunum başına (çözme işinden önce): bilinmeyen kimlikler jeton harcamaz, bir sunuma yönelik sel başka
-    // kişilerin yanıtını durdurmaz (güvenlik turu 2026-10-19)
-    if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
     // ADR-0067: cihazlar arası yanıt bir çekim dalının anahtarına şifrelenmiş olmalı; dalsız `kid` (ilk istek nesnesi üretilmez),
-    // bilinmeyen, atılmış ya da kapanmış dal sunuma dokunmaz (deneme sayılmaz — RQ4)
+    // bilinmeyen, atılmış ya da kapanmış dal sunuma dokunmaz (deneme sayılmaz — RQ4). Ucuz 400, kova harcamaz.
     let branch: Branch | undefined;
     if (kid?.path === "cross_device") {
       branch = kid.branchId !== undefined ? p.branches.get(kid.branchId) : undefined;
       if (!branch)
         return reply.code(400).send({ error: "invalid_request", error_description: "unknown request object" });
     }
+    // Hız sınırı çözme işinden önce, ÇEKİM DALI başına (kontrol 2026-11-03; önceki tur sunum başınaydı): QR'ı gören biri
+    // kendi dalına sel göndererek gerçek cüzdanın dalını 429'a düşüremez. Dalsız DC API yolunda kova sunum başına kalır
+    // (tek anahtar). Bilinmeyen kimlikler jeton harcamaz (güvenlik turu 2026-10-19).
+    if (rateLimited(ctx.limits.vpResponse, branch ? `b:${pid}.${branch.branchId}` : `p:${pid}`, reply)) return reply;
     // Tek kullanım kilidi ÇÖZMEDEN ÖNCE (PV10; iki yol dahil): eşzamanlı ikinci yanıt ya da ret işlenmez, işlenen dal atılmaz
     const lock = p.branches.begin(branch);
     if (lock !== "ok")
@@ -488,11 +491,12 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     const pid = (req.params as { id: string }).id;
     const p = presentations.get(pid);
     if (!p || !p.mdocDc)
-      return reply.code(400).send({ error: "invalid_request", error_description: "bilinmeyen sunum" });
+      return reply.code(400).send({ error: "invalid_request", error_description: "unknown presentation" });
     if (p.branches.used)
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     if (p.req.expiresAt < nowSec())
       return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
+    // dalsız yol: kova sunum başına (yanıt yalnız sayfanın ilettiği tek anahtarla gelir)
     if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
     const response = (req.body as { response?: unknown } | undefined)?.response;
     if (p.branches.busy)
@@ -640,8 +644,8 @@ export async function createPresentation(
     ...content,
     requestUriBase: `${cfg.publicBase}/vp/req`,
     ...(dcApiOrigin ? { dcApi: { expectedOrigins: [dcApiOrigin] } } : {}),
-    // ADR-0067 K1: cihazlar arası ilk istek nesnesi üretilmez — `request_uri`'nin her çekimi aynı içerikle yeni bir dal (taze
-    // state, nonce, şifreleme anahtarı); DC API nesnesi ayrı yoldur ve sayfaya gider
+    // ADR-0067 K1: cihazlar arası ilk istek nesnesi üretilmez (0.8'den beri varsayılan; burada açıkça) — `request_uri`'nin her
+    // çekimi aynı içerikle yeni bir dal (taze state, nonce, şifreleme anahtarı); DC API nesnesi ayrı yoldur ve sayfaya gider
     initialRequestObject: false,
   });
   const p = ctx.presentations.create(

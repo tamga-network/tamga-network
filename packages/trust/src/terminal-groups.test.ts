@@ -5,7 +5,7 @@
  *  - bayat listede cevap yok (BT5); sertifika parmak izinden yalnız etkin grup döner
  */
 import { describe, it, expect } from "vitest";
-import { ListTrustSource, RelyingParty, TerminalGroup, TrustStore } from "./index.js";
+import { ListTrustSource, RelyingParty, TerminalGroup, TrustStore, type Issuer } from "./index.js";
 
 const NOW = new Date("2026-10-29T12:00:00Z");
 const FP = "a".repeat(64);
@@ -25,9 +25,14 @@ function rp(dns: string, status: string, groups: unknown[]) {
   });
 }
 
-function source(rps: ReturnType<typeof rp>[], healthy = true) {
+function source(
+  rps: ReturnType<typeof rp>[],
+  healthy = true,
+  issuers: Array<{ slug: string; status: string }> = [{ slug: "bubilet", status: "ACTIVE" }], // grubun kurumu listede (K12)
+) {
   const store = new TrustStore();
   for (const r of rps) store.relying_parties_by_dns.set(r.dns_name, r);
+  for (const i of issuers) store.issuers.set(`iss-${i.slug}`, i as unknown as Issuer);
   store.setFreshness({ source: "list", healthy, lotlVersion: 1, anchorsSeq: 1, loadedAt: NOW });
   return new ListTrustSource(store, () => NOW);
 }
@@ -70,6 +75,35 @@ describe("ADR-0069 terminal_groups", () => {
     expect(ts.terminalGroup("bubilet-gate")?.active).toBe(false);
     expect(ts.terminalGroup("future-gate")?.active).toBe(false);
     expect(ts.terminalGroup("susp-gate")?.active).toBe(false);
+  });
+
+  it("K12 (kontrol 2026-11-03): grubun kurumu listede ACTIVE değilse (REVOKED belge veren, SUSPENDED doğrulayıcı, listede yok) grup etkin değil; kurumsuz eski grup doğrulayıcıyla değerlendirilir", () => {
+    const rps = [
+      rp("verify.tamga.network", "ACTIVE", [
+        gate, // bubilet
+        { ...gate, group_id: "bilgi-gate", institution_id: "istanbul-bilgi" },
+        { ...gate, group_id: "susp-rp-gate", institution_id: "susp.example" },
+        { ...gate, group_id: "ghost-gate", institution_id: "yok-boyle" },
+        { ...gate, group_id: "self-gate", institution_id: "verify.tamga.network" },
+        { group_id: "legacy-gate", valid_from: "2026-01-01T00:00:00Z" },
+      ]),
+      rp("susp.example", "SUSPENDED", []),
+    ];
+    const ts = source(rps, true, [
+      { slug: "bubilet", status: "ACTIVE" },
+      { slug: "istanbul-bilgi", status: "REVOKED" },
+    ]);
+    expect(ts.terminalGroup("bubilet-gate")?.active).toBe(true);
+    expect(ts.terminalGroup("bilgi-gate")?.active).toBe(false); // kurum geri çekildi → kapı kapanır
+    expect(ts.terminalGroup("susp-rp-gate")?.active).toBe(false);
+    expect(ts.terminalGroup("ghost-gate")?.active).toBe(false);
+    expect(ts.terminalGroup("self-gate")?.active).toBe(true);
+    expect(ts.terminalGroup("legacy-gate")?.active).toBe(true);
+    // sertifika parmak iziyle arama yalnız etkin grubu döndürür: bubilet (ilk etkin)
+    expect(ts.terminalGroupByCertFingerprint(FP)?.group.group_id).toBe("bubilet-gate");
+    // kurum geri çekilmemiş olsaydı aynı grup etkin olurdu
+    const ok = source(rps, true, [{ slug: "istanbul-bilgi", status: "ACTIVE" }]);
+    expect(ok.terminalGroup("bilgi-gate")?.active).toBe(true);
   });
 
   it("sertifika parmak izi → yalnız etkin grup (hazırlık); bayat listede hiç cevap yok", () => {

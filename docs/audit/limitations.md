@@ -80,7 +80,9 @@ has not been run against it. A weekly CI job re-runs the suite against the sandb
 2. XMLDSig: is our profile (and reading data only from the verified DOM) sufficient against signature-wrapping and
    canonicalisation-confusion attacks?
 3. Trust-list rollback: is version memory + anchor log adequate for clients that run for a long time without persistent storage?
-4. Status lists: are the bounds (5 MiB token, 2.5 MB inflated for the verifier, 16 MiB for the wallet) appropriate, and is the
-   handling of application-specific values (fail closed) correct everywhere?
+4. Status lists: are the bounds (5 MiB token, 2.5 MB inflated for the verifier, 16 MiB for the wallet) appropriate? Values are
+   read fail-closed everywhere: only 0 is valid; 1 and the undefined 3 are revoked; 2 (SUSPENDED) is "not valid" for credentials
+   and registration certificates, and for the wallet attestation it is reported as *suspended* (the WIA is not used) rather than
+   *revoked* (only revoked triggers the wallet's local wipe, because suspension is temporary). Is that split right?
 5. Registration certificates: any way for a registered RP to get claims outside its registered use (DCQL `claim_sets`,
    `credential_sets`, mdoc namespaces)?

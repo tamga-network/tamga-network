@@ -60,8 +60,7 @@ const registry = new BranchRegistry(); // one per process
 // 1) open a presentation: shown as a QR code / deep link (no personal data; request_uri only)
 const content = { signer, dcql: dcqlFromPolicy(policy), responseUri: "https://ornek.com.tr/vp/response",
   registrationCert: WRPRC_JWT }; // your use's registration certificate (step 4 above)
-const req = await createPresentationRequest({ ...content, requestUriBase: "https://ornek.com.tr/vp/req",
-  initialRequestObject: false });
+const req = await createPresentationRequest({ ...content, requestUriBase: "https://ornek.com.tr/vp/req" });
 const branches = new BranchSet({ registry, presentationId: req.presentationId, expiresAt: req.expiresAt, content });
 // 2) GET|POST /vp/req/:id — every fetch gets its own request object (fresh state, nonce, key; ADR-0067)
 const f = await branches.fetch(walletNonce); // f.ok → respond with f.requestJwt

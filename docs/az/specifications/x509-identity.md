@@ -269,7 +269,10 @@ sertifikatlarındadır — [[ADR-0026]]), `RESERVED` / `PROVISIONAL` qeydlər, �
 | `DEPRECATED` | `…/tl/Svcstatus/deprecated` |
 
 Qeydlər silinmir: aktiv olmayan xidmət statusu ilə qalır; əvvəlki statuslar `ServiceHistory`-də yenidən köhnəyə, sertifikat əvəzinə
-SKI ilə (§5.5.10, §5.6.3). Bu URI-ləri tanımayan oxuyucu xidməti aktiv saymır (təhlükəsiz tərəf).
+SKI ilə (§5.5.10, §5.6.3). Bu URI-ləri tanımayan oxuyucu xidməti aktiv saymır (təhlükəsiz tərəf). Tarixçə nümunəsindəki SKI
+**cari** sertifikatın SKI-sidir (yaxınlaşma): qeyd sertifikat yenilənməsi (açar dövriyyəsi) daşımadığı üçün əvvəlki statuslar da
+eyni açara yazılır; dövriyyə dəstəyi gələndə hər tarixçə nümunəsi öz dövrünün sertifikatının SKI-sini alır. Qeydin tarixçəsində
+cari statusa aid giriş yoxdursa, cari statusun başlanğıcı siyahının nəşr anıdır; əvvəlki statusun başlanğıcı cari statusa yazılmır.
 
 **İmza və imzalayan:** XAdES-B-B, zərflənmiş (`URI=""`, enveloped-signature + Exclusive C14N), SignedProperties (SigningTime,
 SigningCertificateV2, DataObjectFormat), KeyInfo-da yalnız imzalayanın sertifikatı; ECDSA P-256 / SHA-256. İmzalayan ayrıca XML

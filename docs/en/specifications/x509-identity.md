@@ -267,7 +267,10 @@ certificates — [[ADR-0026]]), `RESERVED` / `PROVISIONAL` records, personal dat
 
 Records are not deleted: an inactive service stays with its status; earlier statuses are in `ServiceHistory`, newest first, with
 the SKI instead of the certificate (§5.5.10, §5.6.3). A reader that does not know these URIs does not treat the service as active
-(safe side).
+(safe side). The SKI in a history instance is that of the **current** certificate (an approximation): the record carries no
+certificate rotation, so earlier statuses are written against the same key; once rotation is supported, each history instance
+gets the SKI of the certificate of its period. When the record's history has no entry for the current status, the current status
+starts at the list's issue time; the start of the previous status is not written as the start of the current one.
 
 **Signature and signer:** XAdES-B-B, enveloped (`URI=""`, enveloped-signature + Exclusive C14N), SignedProperties (SigningTime,
 SigningCertificateV2, DataObjectFormat), only the signer certificate in KeyInfo; ECDSA P-256 / SHA-256. The signer is a separate XML

@@ -16,10 +16,16 @@ export interface ProvisionalOperator {
   postal_address: { street_address: string; locality: string; country: string };
 }
 
-const isOwn = (r: Rec) =>
-  ((r.identifiers as Array<{ note?: string }> | undefined) ?? []).some((x) =>
-    /provisional operator/i.test(x.note ?? ""),
-  );
+/**
+ * Kendi kaydı: kimlik numarası notunda "provisional operator" geçen, `operator.name`'i değerdeki adla aynı olan YA DA kimlik numarası
+ * değerdeki numarayla aynı olan kayıt (kontrol 2026-11-03, K28: notu unutulmuş ya da farklı yazılmış kendi kaydı denetimden kaçamaz).
+ */
+const isOwn = (cfg: ProvisionalOperator, r: Rec) => {
+  const ids = (r.identifiers as Array<{ scheme?: string; value?: string; note?: string }> | undefined) ?? [];
+  if (ids.some((x) => /provisional operator/i.test(x.note ?? ""))) return true;
+  if (((r.operator ?? {}) as Rec).name === cfg.name) return true;
+  return ids.some((x) => x.value === cfg.identifier.value);
+};
 
 export function checkProvisionalOperator(
   cfg: ProvisionalOperator,
@@ -35,7 +41,7 @@ export function checkProvisionalOperator(
   const recs = [
     ...src.issuers.map((r) => ({ r, where: `issuer ${String(r.slug)}` })),
     ...src.relyingParties.map((r) => ({ r, where: `relying_party ${String(r.dns_name)}` })),
-  ].filter(({ r }) => isOwn(r));
+  ].filter(({ r }) => isOwn(cfg, r));
   for (const { r, where } of recs) {
     if (r.status !== undefined && r.status !== "ACTIVE") continue;
     const op = (r.operator ?? {}) as Rec;

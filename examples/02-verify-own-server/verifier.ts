@@ -138,12 +138,8 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
       responseUri: `${cfg.publicBase}/vp/response`,
       registrationCert: await registrationCert(),
     };
-    // No shared request object: each fetch of request_uri gets its own branch (BranchSet.fetch below)
-    const req = await createPresentationRequest({
-      ...content,
-      requestUriBase: `${cfg.publicBase}/vp/req`,
-      initialRequestObject: false,
-    });
+    // No shared request object (the default since 0.8): each fetch of request_uri gets its own branch (BranchSet.fetch below)
+    const req = await createPresentationRequest({ ...content, requestUriBase: `${cfg.publicBase}/vp/req` });
     sweep();
     const branches = new BranchSet({ registry, presentationId: req.presentationId, expiresAt: req.expiresAt, content });
     pending.set(req.presentationId, { req, policy, branches });

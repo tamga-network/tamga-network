@@ -6,11 +6,25 @@ published on npm as test releases; `0.7.4` is the current one on npm (the API ma
 
 ## [Unreleased]
 
-### Planned for 0.8
+### Breaking (next release is 0.8.0)
 
-- **verifier — `createPresentationRequest` default flips to per-fetch branches.** `initialRequestObject` will default to `false`
-  (the safe branch mode: no shared cross-device request object, `PresentationSession` result); `true` stays available for one
-  release and is then removed. *Migration:* follow `packages/verifier/README.md` "Migrating from one shared request object" now.
+- **verifier — `createPresentationRequest` defaults to per-fetch branches (ADR-0056 safe default).** `initialRequestObject`
+  now defaults to `false`: no shared cross-device request object is produced and the result is a `PresentationSession` (no
+  `requestJwt`, `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`). `initialRequestObject: true` keeps the old
+  `PresentationRequest` for one release and is deprecated. *Migration:* `packages/verifier/README.md` "Migrating from one shared
+  request object" — open presentations without the flag, serve `request_uri` with `BranchSet.fetch`, find the branch from the
+  response `kid`.
+
+### Fixed
+
+- **verifier — `BranchSet.fetch` evicts only after a successful signature.** The victim branch is dropped after the new branch is
+  minted (a failed or late signature loses no branch; a victim that started receiving a response meanwhile is re-selected), the
+  presentation expiry is re-checked after minting, and `BranchRegistry` counts branches being minted in its budget so concurrent
+  fetches cannot exceed it.
+- **Tamga Verify — `/vp/response` rate limit per request branch.** The bucket key is the branch (`kid`), not the presentation, on
+  both the encrypted and the plain-decline path (unknown or branch-less `kid` → 400 before the bucket); only the branch-less
+  Digital Credentials API path stays per presentation. A flood on an attacker's branch no longer returns 429 to the real
+  wallet's branch.
 
 ### Added
 

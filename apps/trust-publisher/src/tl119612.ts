@@ -419,18 +419,24 @@ export function hasTslSigningEku(der: Uint8Array): boolean {
   return !!eku && eku.usages.map(String).includes(OID_TSL_SIGNING);
 }
 
+type SlotKey = { fingerprint_sha256: string; status?: string; valid_from?: string; valid_until?: string };
+/** Slot anahtarı şu an etkin mi: `status` ACTIVE ve (varsa) `valid_from` ≤ now < `valid_until` (kontrol 2026-11-03, K5). */
+function slotKeyActive(k: SlotKey, now: Date): boolean {
+  if ((k.status ?? "ACTIVE") !== "ACTIVE") return false;
+  const t = now.getTime();
+  if (k.valid_from && !(Date.parse(k.valid_from) <= t)) return false;
+  if (k.valid_until && !(t < Date.parse(k.valid_until))) return false;
+  return true;
+}
+
 export function xmlSignerSlotProblems(
-  slot:
-    | {
-        signing_keys?: Array<{ fingerprint_sha256: string; status?: string }>;
-        xml_signing_keys?: Array<{ fingerprint_sha256: string; status?: string }>;
-      }
-    | undefined,
+  slot: { signing_keys?: SlotKey[]; xml_signing_keys?: SlotKey[] } | undefined,
   signerFingerprint: string,
+  now: Date = new Date(),
 ): string[] {
   const fp = signerFingerprint.toLowerCase();
   const errors: string[] = [];
-  const xml = (slot?.xml_signing_keys ?? []).filter((k) => (k.status ?? "ACTIVE") === "ACTIVE");
+  const xml = (slot?.xml_signing_keys ?? []).filter((k) => slotKeyActive(k, now));
   if (!xml.some((k) => k.fingerprint_sha256.toLowerCase() === fp))
     errors.push(`imzacı ${fp.slice(0, 16)}… LOTL slotunun xml_signing_keys'inde etkin değil`);
   if ((slot?.signing_keys ?? []).some((k) => k.fingerprint_sha256.toLowerCase() === fp))
@@ -496,6 +502,8 @@ const PLACEHOLDER = "(not published)";
  * Kaydın durum zaman çizelgesi (§5.5.4–5.5.5, §5.6): güncel durum ve başlangıcı, önceki durumlar yeniden eskiye (§5.5.10).
  * Aynı durumun art arda gelen girdileri tek değişiklik sayılır (başlangıcı ilk girdi); güncel durumla aynı ya da ondan sonraki
  * zamanlı girdi geçmişe yazılmaz — böylece güncel bilgiyi tekrarlayan geçmiş örneği (yinelenen ServiceHistoryInstance) çıkmaz.
+ * Geçmişte güncel duruma ait girdi yoksa (kayıt geçmişi eksik) başlangıç `fallbackSince`'tir (listenin yayın anı): önceki durumun
+ * başlangıcı güncel durumun başlangıcı olarak yazılmaz (kontrol 2026-11-03, K3) ve bütün geçmiş girdileri geçmişte kalır.
  */
 function statusOf(rec: Rec, uris: TamgaUris, fallbackSince: string) {
   const h: Array<{ status: string; since: string }> = Array.isArray(rec.status_history) ? rec.status_history : [];
@@ -506,7 +514,7 @@ function statusOf(rec: Rec, uris: TamgaUris, fallbackSince: string) {
   for (const x of asc) if (runs[runs.length - 1]?.status !== x.status) runs.push({ status: x.status, since: x.since });
   const last = runs[runs.length - 1];
   const cur = last && last.status === rec.status ? last : undefined;
-  const since = cur?.since ?? last?.since ?? fallbackSince;
+  const since = cur?.since ?? fallbackSince;
   return {
     statusUri: uris.status(rec.status),
     since,

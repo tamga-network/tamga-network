@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { checkTerminalGroups } from "../src/terminal-groups.js";
 
 const NOW = new Date("2026-10-29T00:00:00Z");
-const issuers = [{ slug: "bubilet" }, { slug: "istanbul-bilgi" }];
+const issuers = [{ slug: "bubilet" }, { slug: "istanbul-bilgi" }, { slug: "eski-kurum", status: "REVOKED" }];
 const group = (o: Record<string, unknown> = {}) => ({
   group_id: "bubilet-gate",
   institution_id: "bubilet",
@@ -31,6 +31,22 @@ describe("ADR-0069 checkTerminalGroups", () => {
     // doğrulayıcının kendisi de kurum olabilir
     expect(
       checkTerminalGroups([rp([group({ institution_id: "verify.sandbox.tamga.network" })])], issuers, NOW),
+    ).toEqual([]);
+  });
+  it("K12 (kontrol 2026-11-03): etkin grup ACTIVE olmayan kuruma (REVOKED belge veren ya da SUSPENDED doğrulayıcı) bağlanamaz; geri çekilmiş grup bağlanabilir", () => {
+    const e1 = checkTerminalGroups([rp([group({ institution_id: "eski-kurum" })])], issuers, NOW);
+    expect(e1.join(" ")).toMatch(/"eski-kurum" REVOKED/);
+    const susp = { dns_name: "susp.example", status: "SUSPENDED" };
+    expect(
+      checkTerminalGroups([rp([group({ institution_id: "susp.example" })]), susp], issuers, NOW).join(" "),
+    ).toMatch(/SUSPENDED/);
+    // kurumu geri çekilmiş grup `valid_until` ile geri çekilir: hatasız (tarih kaydı)
+    expect(
+      checkTerminalGroups(
+        [rp([group({ institution_id: "eski-kurum", valid_until: "2026-10-04T00:00:00Z" })])],
+        issuers,
+        NOW,
+      ),
     ).toEqual([]);
   });
   it("geri çekilmiş grup eski biçimle kalabilir (tarih kaydı)", () => {

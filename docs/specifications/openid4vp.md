@@ -598,7 +598,7 @@ Ayşe (cüzdan)                        İşveren (verifier)          İndeksleyi
 - **Ret `response_uri`'ye gider ve yalnız kendi dalını kapatır.** Kişi reddettiğinde cüzdan, `response_uri` biliyorsa (cihazlar arası
   akış) yanıt adresine OpenID4VP 1.0 §8.4 hata yanıtını gönderir: yalnız `error=access_denied` ve `state` (kişisel veri yok;
   `error_description` yok — PV5). Şifresiz form ya da şifreli JWE (§8.3.1) aynı işlenir. Ret yalnız `state`'inin ait olduğu dalı kapatır;
-  sunum bütünüyle **yalnız tek dalı varsa ve o dal kapandıysa** REJECTED olur (neden saklanmaz). Birden çok çekim varsa sunum süresi
+  sunum bütünüyle **yalnız tek çekimi varsa ve o dal kapandıysa** REJECTED olur (neden saklanmaz). Birden çok çekim varsa sunum süresi
   bitene dek açık kalır ve ilk geçerli sunum kazanır; kapanmış dala gelen sunum kabul edilmez. Yanıt ucu rete 200 döner (§8.2); retin
   `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı ya da yetki kodu taşımaz. Tarayıcı (DC API) akışında yanıt adresi yoktur;
   ret DC API'nin kendi hata yoluyla sayfaya döner ve DC API nesnesinin `state`'iyle gelen ret kabul edilmez. Referans:
@@ -644,7 +644,7 @@ kullanıcının hangi belgelere sahip olduğunu sorgu yaparak haritalayabilir.
 | **PV12** | Cüzdan, istenen alanlardan birini taşımayan belgeyi göndermez (`claim_sets` yoksa bütün alanlar, varsa seçilen kombinasyonun bütün alanları belgede olmalıdır); isteğe bağlı alan `claim_sets` ile istenir. |
 | **PV13** | Cüzdan imzalı istek nesnesini zamanla ve hedefle denetler: `exp` zorunludur ve geçmiş olamaz, `iat` 60 sn'den fazla ileri tarihli olamaz (saat kayması toleransı 60 sn), `aud` verilmişse `https://self-issued.me/v2` olmalıdır; aksi hâlde istek reddedilir. `dc+sd-jwt` sorgusu türü `meta.vct_values` ile belirtmelidir (türsüz sorgu reddedilir). |
 | **PV14** | Aracı doğrulayıcı ([[ADR-0017]] K7) bir RP adına ancak ilişki iki kayıtta da yazılıysa istek gönderebilir: asıl RP aracıyı `uses_intermediaries`'te, aracı asıl RP'yi `served_relying_parties`'te listeler; tek taraflı beyanda cüzdan isteği reddeder. |
-| **PV15** | `request_uri`'nin her çekimi taze `state` (≥ 128 bit, gizli), taze `nonce` ve taze efemer şifreleme anahtarıyla ayrı bir çekim dalıdır; cüzdanın hata yanıtı yalnız kendi dalını kapatır ve sunum ancak tek dalı varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
+| **PV15** | `request_uri`'nin her çekimi taze `state` (≥ 128 bit, gizli), taze `nonce` ve taze efemer şifreleme anahtarıyla ayrı bir çekim dalıdır; cüzdanın hata yanıtı yalnız kendi dalını kapatır ve sunum ancak tek çekimi varsa REJECTED olur ([[ADR-0067]] RQ1–RQ6). |
 
 ---
 

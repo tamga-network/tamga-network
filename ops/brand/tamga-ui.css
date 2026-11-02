@@ -1098,3 +1098,6 @@ form.inline {
 [hidden] {
   display: none !important;
 }
+
+/* service pages: spacing without inline style attributes (CSP style-src 'self') */
+.sub.gap { margin-top: 20px; }
