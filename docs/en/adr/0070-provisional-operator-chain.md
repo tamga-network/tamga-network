@@ -43,7 +43,7 @@ contracts, personal data registration). This information is kept in one place an
 
 ## K1 — The chain
 Tamga Network (foundation to be established) ← provisional operator **BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ** (tax
-number 1870632151; Harbiye Mah. Bostan Sk. No: 15 İç Kapı No: 5, Şişli / İstanbul). The provisional operator runs the network's own
+number 1870632151; the address and other identifiers live only in `registry/provisional-operator.json`). The provisional operator runs the network's own
 services (list publication, the registrar role on behalf of the state, the identity service, Tamga Verify, the websites and the
 domain names) on behalf of Tamga Network. Every act that needs a legal person (registration identifier, certificate subject, KVKK
 registration, domain name, contract) is made in its name with the words "on behalf of Tamga Network".

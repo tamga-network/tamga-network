@@ -36,7 +36,7 @@ qeydiyyatı) görünür. Bu məlumat bir yerdə saxlanılır və fond qurulanda 
 
 ## K1 — Zəncir
 Tamga Network (qurulacaq fond) ← müvəqqəti operator **BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ** (vergi nömrəsi
-1870632151; Harbiye Mah. Bostan Sk. No: 15 İç Kapı No: 5, Şişli / İstanbul). Müvəqqəti operator şəbəkənin öz xidmətlərini
+1870632151; ünvan və digər identifikatorlar yalnız `registry/provisional-operator.json`-dadır). Müvəqqəti operator şəbəkənin öz xidmətlərini
 (siyahıların dərci, dövlət adından qeydiyyat orqanı rolu, şəxsiyyət xidməti, Tamga Verify, saytlar və domen adları) Tamga Network
 adından idarə edir. Hüquqi şəxs tələb edən hər əməliyyat onun adı ilə və "Tamga Network adından" ifadəsi ilə edilir.
 

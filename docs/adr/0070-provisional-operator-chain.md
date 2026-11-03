@@ -38,8 +38,8 @@ bilgi tek bir yerde tutulur ve vakıf kurulunca tek seferde değiştirilir.
 # Karar
 
 ## K1 — Zincir
-Tamga Network (kurulacak vakıf) ← geçici işletmeci **BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ** (VKN 1870632151;
-Harbiye Mah. Bostan Sk. No: 15 İç Kapı No: 5, Şişli / İstanbul). Geçici işletmeci ağın kendi hizmetlerini (liste yayını, kayıt
+Tamga Network (kurulacak vakıf) ← geçici işletmeci **BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ** (VKN 1870632151; adres ve öteki
+kimlik bilgileri yalnız `registry/provisional-operator.json`'da). Geçici işletmeci ağın kendi hizmetlerini (liste yayını, kayıt
 kurumu rolünün devlet adına yürütülmesi, kimlik servisi, Tamga Verify, siteler ve alan adları) Tamga Network adına işletir. Tüzel
 kişilik gerektiren her işlem (kayıt kimlik numarası, sertifika konu alanı, KVKK kaydı, alan adı, sözleşme) onun adıyla ve
 "Tamga Network adına" ibaresiyle yapılır.
