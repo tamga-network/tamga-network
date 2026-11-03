@@ -1,7 +1,7 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.7.4` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.8.0` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## 0.8.0 — 2026-11-03
@@ -74,6 +74,8 @@ is behaviour that now fails closed.
   D-PROTO-5 say a presentation is REJECTED "if it has a single fetch" (branches being minted count; an evicted branch is not
   subtracted). `docs/audit/limitations.md` §5 Q4 (WIA status reading). ADR-0006/0007/0011/0035/0040 carry a "partly superseded"
   note.
+- docs (2026-11-03; currency check after the 0.8.0 release): version sentences 0.8.0 (README, docs home and guides in three
+  languages, code examples page, `sdk_version` examples, package index, audit package "Version under review").
 
 ## 0.7.4 — 2026-10-29
 

@@ -38,7 +38,7 @@ institution issuer service, institution console, sandbox portal, server configur
 Tamga Wallet, its provider service and app — separate project and operator), third-party dependencies (pinned, see
 `package-lock.json`).
 
-**Version under review.** Packages at version `0.7.4` (published on npm 2026-10-29). The commit to review is fixed
+**Version under review.** Packages at version `0.8.0` (published on npm 2026-11-03). The commit to review is fixed
 with the reviewer and tagged `audit-1` in the repository when the engagement starts; until then use the head of `main`.
 Eight packages are published only from CI with npm provenance (`.github/workflows/release.yml`); `@tamga-network/zk` is
 published manually from a maintainer machine without provenance, because its Android native libraries cannot yet be built in CI.
