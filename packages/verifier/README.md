@@ -53,12 +53,15 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 - A credential without a status entry is rejected at D1 when its type uses a status list; the status list signer is pinned to the
   institution's registered status keys.
 
-## Breaking in 0.8 (unreleased)
+## Breaking in 0.8.0
 
 - `createPresentationRequest` no longer produces the shared cross-device request object by default: `initialRequestObject`
   defaults to `false` and the result is a `PresentationSession` (no `requestJwt`, `encPrivateKey`, `encPublicJwk`,
-  `encJwkThumbprint`). Code that served `req.requestJwt` must move to `BranchSet` — see "Migrating from one shared request
-  object" below. `initialRequestObject: true` keeps the old behaviour for one release and is deprecated.
+  `encJwkThumbprint`); a response whose `kid` names no branch is rejected. Code that served `req.requestJwt` must move to
+  `BranchSet` — see "Migrating from one shared request object" below. `initialRequestObject: true` keeps the old behaviour for
+  one release and is deprecated. See the CHANGELOG section "Breaking / behaviour changes in 0.8.0".
+- `BranchSet.fetch` evicts a victim branch only after the new branch is signed, and `BranchRegistry` counts branches being
+  minted in its budget (no API change).
 - Tamga Verify rate-limits `/vp/response` per request branch, not per presentation: a flood on one branch cannot starve the
   real wallet's branch (the Digital Credentials API path, which has no branches, stays per presentation).
 
@@ -75,7 +78,7 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
   being processed; `BranchRegistry` caps branches across presentations (20,000). Rate-limit fetches per client address, not per
   presentation.
 - `createPresentationRequest` returns a `PresentationSession` without the shared cross-device request object (`requestJwt`,
-  `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`): one signature and one key generation less per presentation. **Since 0.8
+  `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`): one signature and one key generation less per presentation. **Since 0.8.0
   this is the default** (`initialRequestObject` defaults to `false`); `initialRequestObject: true` still returns the old
   `PresentationRequest` for one release and is deprecated.
 - `openPresentationResponse` / `decryptPresentationResponse` accept any branch with `branchId`, `encPrivateKey`,
@@ -97,7 +100,7 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 
 ## Status
 
-Published on npm as the `0.7.4` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

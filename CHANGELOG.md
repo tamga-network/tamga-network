@@ -4,38 +4,76 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.7.4` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
-## [Unreleased]
+## 0.8.0 — 2026-11-03
 
-### Breaking (next release is 0.8.0)
+All nine packages move to 0.8.0 together (minor bump: one interface default changed). The code changes below come from the
+second-model review of the 0.7.4 work (per-fetch branches, status lists, gate groups, WIA status); the second half of the list
+is behaviour that now fails closed.
+
+### Breaking / behaviour changes in 0.8.0 (with migration)
 
 - **verifier — `createPresentationRequest` defaults to per-fetch branches (ADR-0056 safe default).** `initialRequestObject`
   now defaults to `false`: no shared cross-device request object is produced and the result is a `PresentationSession` (no
-  `requestJwt`, `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`). `initialRequestObject: true` keeps the old
-  `PresentationRequest` for one release and is deprecated. *Migration:* `packages/verifier/README.md` "Migrating from one shared
-  request object" — open presentations without the flag, serve `request_uri` with `BranchSet.fetch`, find the branch from the
-  response `kid`.
+  `requestJwt`, `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`); a response whose `kid` names no branch is rejected.
+  `initialRequestObject: true` keeps the old `PresentationRequest` for one release and is deprecated. **Not backward-compatible
+  for integrators that served `req.requestJwt`:** with 0.8.0 that field is `undefined`. *Migration:* `packages/verifier/README.md`
+  "Migrating from one shared request object" — open presentations without the flag, create one `BranchSet` per presentation,
+  serve `request_uri` with `BranchSet.fetch`, find the branch from the response `kid`; `examples/02-verify-own-server` shows the
+  full flow. To keep the old shape for one more release pass `initialRequestObject: true` explicitly.
+- **wallet-core — WIA status bit reads fail closed.** `wiaRevokedInList` / `wiaRevokedByList` now treat the undefined value 3 as
+  revoked (was: only 1); new `wiaStatusInList` / `wiaStatusByList` return `valid | suspended | revoked` (`WiaListStatus`) and
+  `wiaValidInList` is true only for 0 — every non-zero value means "do not use this WIA", only revoked (1 / 3) justifies deleting
+  it locally. *Migration:* gate WIA use on `wiaValidInList` (or `wiaStatusByList(...) === "valid"`), treat `suspended` as
+  temporary (do not delete); code that only called `wiaRevokedByList` keeps working and now also deletes on 3.
+- **trust — an active gate group needs an ACTIVE institution (ADR-0069 TG2/TG3).** `TrustSource.terminalGroupsAll` /
+  `terminalGroup` report `active: false` when the group's `institution_id` names an issuer or verifier that is REVOKED, SUSPENDED
+  or not in the list, so a withdrawn institution's gates close with the list (403 in Tamga Verify). Groups without
+  `institution_id` (legacy) are still judged by the verifier record and the validity window only. *Migration:* none for
+  conforming lists; the publisher refuses to build an active group whose institution is not ACTIVE (`valid_until` withdraws it).
+- **Tamga Verify — real network refuses terminal keys from the environment (ADR-0065 TK3).** On the real network (https, not
+  sandbox) the service does not start when `TAMGA_VERIFY_TERMINAL_KEYS` is set; sandbox and local development are unchanged.
+  *Migration:* operators keep the variable in `sandbox.env` only; real-network gate keys come from the trust list.
 
 ### Fixed
 
 - **verifier — `BranchSet.fetch` evicts only after a successful signature.** The victim branch is dropped after the new branch is
   minted (a failed or late signature loses no branch; a victim that started receiving a response meanwhile is re-selected), the
   presentation expiry is re-checked after minting, and `BranchRegistry` counts branches being minted in its budget so concurrent
-  fetches cannot exceed it.
+  fetches cannot exceed it (`_makeRoom` may now evict more than one branch to make room).
 - **Tamga Verify — `/vp/response` rate limit per request branch.** The bucket key is the branch (`kid`), not the presentation, on
   both the encrypted and the plain-decline path (unknown or branch-less `kid` → 400 before the bucket); only the branch-less
   Digital Credentials API path stays per presentation. A flood on an attacker's branch no longer returns 429 to the real
   wallet's branch.
+- **wallet-core — registration-certificate status cache never rolls back.** `fetchRegistrationStatuses` keeps the cached list when
+  a freshly fetched valid list is older than it (`iat` smaller: a stale proxy or a rolled-back publication) and does not overwrite
+  the cache; `StatusList` exposes `iat`. A revocation once seen cannot disappear.
+- **trust-publisher — old registration status lists keep following their entries (WRS3).** After a registrar's `status_list_uri`
+  changes, VALID entries of the previous lists are revoked with the publication: `registration_ended` when the old path is no
+  longer published, `superseded` when its content changed; unchanged content stays valid.
+- **trust-publisher — XML signer slot check counts the validity window.** `xmlSignerSlotProblems` checks the `xml_signing_keys`
+  entry's `valid_from` / `valid_until`, not only its presence (ADR-0066 §5.7.1); `statusOf` with no current history entry starts
+  the status at the list's publication time (not at the previous status' start) — SPEC-ID-0002 §8.1 notes the SKI approximation.
+- **trust-publisher — own-record detection (ADR-0070).** `isOwn` also recognises a record whose `operator.name` or tax number
+  equals the provisional-operator value, not only the note.
+- **Tests.** Fuzz property test for hostile XML allows 6 s under full load; the spawn-heavy publisher test files get a 180 s
+  budget (`docs/audit/build-and-test.md` says how to run them alone).
 
 ### Added
 
 - **trust-publisher — single provisional-operator value (ADR-0070).** `registry/provisional-operator.json` holds the legal
   provisional operator of the network's own services; every publication checks that own records carry exactly this value and
   that the list operator name is "Tamga Network" (OP1–OP3). The pending app-store review signer record carries the same value.
+- **ops/brand — DOM builders for the service pages.** `tamga-ui.js` gains `el` / `set` / `small` / `pillNode` / `row` / `cell` /
+  `link` so fetched data enters the page as text nodes (no inline scripts, no `innerHTML`; strict CSP on the operator's pages).
 
 ### Documents
 
-- ADR-0070 (provisional operator chain), ADR-0071 (no fees in the provisional phase; Trust Framework §5.5 rewritten) and
-  ADR-0072 (value layer suspended; ADR-0003 marked superseded) accepted; ADR-0028 (health credentials) parked.
+- ADR-0070 (provisional operator chain; the provisional operator's postal address was later removed from the public text),
+  ADR-0071 (no fees in the provisional phase; Trust Framework §5.5 rewritten) and ADR-0072 (value layer suspended; ADR-0003
+  marked superseded) accepted; ADR-0028 (health credentials) parked. ADR-0067 K2 / RQ2, SPEC-PROTO-0002 §10.1 + PV15 and
+  D-PROTO-5 say a presentation is REJECTED "if it has a single fetch" (branches being minted count; an evicted branch is not
+  subtracted). `docs/audit/limitations.md` §5 Q4 (WIA status reading). ADR-0006/0007/0011/0035/0040 carry a "partly superseded"
+  note.
 
 ## 0.7.4 — 2026-10-29
 

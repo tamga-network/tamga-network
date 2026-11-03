@@ -33,6 +33,13 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 - Rollback protection is on by default: a load without `versionMemory` uses an in-process memory per network and root fingerprints;
   pass a persistent memory to keep it across restarts, or `"none"` to turn it off.
 
+## Breaking in 0.8.0
+
+- A gate group is `active` only when its institution (`institution_id`: an issuer `slug` or a verifier `dns_name`) is ACTIVE in
+  the list; a REVOKED or SUSPENDED institution's groups report `active: false` and the gate stays closed. Groups without
+  `institution_id` (legacy) are judged by the verifier record and the validity window only. See the CHANGELOG section
+  "Breaking / behaviour changes in 0.8.0".
+
 ## New in 0.7.4
 
 - Gate groups (`terminal_groups[]` in a verifier record): `source.terminalGroup(groupId)` returns `{ group, rp_dns_name, active }`
@@ -45,7 +52,7 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 
 ## Status
 
-Published on npm as the `0.7.4` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

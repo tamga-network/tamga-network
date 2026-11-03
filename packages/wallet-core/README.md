@@ -17,6 +17,14 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
+## Breaking in 0.8.0
+
+- WIA status bits read fail closed: `wiaRevokedInList` / `wiaRevokedByList` also treat the undefined value 3 as revoked; new
+  `wiaStatusInList` / `wiaStatusByList` return `valid | suspended | revoked` and `wiaValidInList` is true only for 0. Use a WIA
+  only when it is `valid`; delete it locally only when it is `revoked` (suspension is temporary). See the CHANGELOG section
+  "Breaking / behaviour changes in 0.8.0".
+- `fetchRegistrationStatuses` never replaces a cached status list with an older one (`iat`); `StatusList.iat` is exposed.
+
 ## New in 0.7.4
 
 - Registration certificate status (ETSI TS 119 475; Tamga ADR-0068): `fetchRegistrationStatuses(refs, http, registrarKeys, {
@@ -30,7 +38,7 @@ npm install @tamga-network/wallet-core
 
 ## Status
 
-Published on npm as the `0.7.4` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

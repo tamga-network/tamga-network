@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-02
+last_updated: 2026-11-03
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -1026,4 +1026,4 @@ AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, FN, GE
 
 # Durum
 
-**Üretilen dosya** — 2026-11-02 (`scripts/sync-invariants.mjs`). Toplam 390 kodlanmış değişmez, 72 dokümanda.
+**Üretilen dosya** — 2026-11-03 (`scripts/sync-invariants.mjs`). Toplam 390 kodlanmış değişmez, 72 dokümanda.
