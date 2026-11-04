@@ -4,7 +4,13 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PRIVATE_NAMES_FILE_FOUND, PRIVATE_NAMES_RE, PRIVATE_PATHS_RE, TOOL_NAMES_RE } from "./private-names.mjs";
+import {
+  PRIVATE_NAMES_FILE_FOUND,
+  PRIVATE_NAMES_RE,
+  PRIVATE_PATHS_RE,
+  PROSE_NAMES_RE,
+  TOOL_NAMES_RE,
+} from "./private-names.mjs";
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 /** docs/.vitepress/config.ts srcExclude ile aynı: yayınlanmayan iç kayıtlar. */
@@ -23,6 +29,8 @@ const FORBIDDEN = [
   [PRIVATE_NAMES_RE, "kişi adı"],
   [TOOL_NAMES_RE, "araç adı"],
   [PRIVATE_PATHS_RE, "özel çalışma alanı yolu"],
+  // 2026-11-04: geçici işletmecinin unvanı ve vergi numarası düzyazıda yok (kayıt verisi .md değildir, burada taranmaz)
+  [PROSE_NAMES_RE, "işletmeci unvanı / vergi no"],
   [/TOPARLAMA|_reports\/|tamga-platform\/docs\/|-konusma-/, "iç kayıt yolu"],
   // 2026-10-02: yayınlanan belgelerde (docs sitesi) özel depo adı yok — "operatör deposu" yazılır
   [/tamga-platform/, "özel depo adı", (rel) => /^docs\//.test(rel)],

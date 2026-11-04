@@ -4,12 +4,12 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-28
+last_updated: 2026-11-04
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
   record; never in the credential), and the protocol-level rules for integrating a remote identity verification provider
-  (reference: Didit, v3 API): creating a session, fetching the result, verifying webhooks, data minimisation, error and
+  (reference adapter): creating a session, fetching the result, verifying webhooks, data minimisation, error and
   timeout behaviour.
 translation_of: SPEC-ID-0003
 source_version: 1.0.0
@@ -105,30 +105,31 @@ DB-5). The result may be reused for the same person for 12 months (PROPOSAL); th
 
 ---
 
-# 4. Reference provider: Didit (v3 API) — protocol mapping
+# 4. Reference provider — protocol mapping
 
-Source: docs.didit.me (checked on 2026-09-24). It may change; the adapter is versioned.
+The reference adapter uses the hosted verification flow of a remote identity verification provider. The provider's name, API
+addresses and setting names are in the operator's configuration document; this specification keeps only the provider-independent
+rules. If the provider changes, the adapter changes; the rules below do not.
 
-| Step | Didit | Tamga usage |
+| Step | Expected from the provider | Tamga usage |
 |---|---|---|
-| Authentication | `x-api-key: <API_KEY>` (Business Console → Application → API & Webhooks) | Tenant secret (`TAMGA_IDV_DIDIT_API_KEY`); in `.env`, never in the repository |
-| Create session | `POST https://verification.didit.me/v3/session/` body: `workflow_id` (required), `vendor_data`, `callback`, `callback_method`, `metadata`, `language`, `contact_details`, `expected_details {first_name,last_name,date_of_birth,id_country,expected_document_types}` | `vendor_data = <opaque subject_ref>`; `callback = https://id.tamga.network/idv/return?r=<flow>`; `language = tr`; `expected_details` name/surname/date of birth (IP3); `metadata` **empty** |
-| Response | `session_id`, `session_token`, `url`, `status: "Not Started"`, `workflow_version` | Redirect to `url`; `session_id` = `session_ref` |
-| Result | `GET https://verification.didit.me/v3/session/{sessionId}/decision/` → `status`, `features[]`, `id_verifications[] {status, first_name, last_name, date_of_birth, document_type, issuing_state, expiration_date, verification_method, assurance, …}`, `liveness_checks[] {status, score}`, `face_matches[] {status, score}`, `nfc_verifications[]`, `aml_screenings[]` | Only `status`, the `status` values of the sub-checks and the name/surname/date-of-birth **match result** (boolean) are kept; image fields (`portrait_image`, `front_image`, `back_image`, `video_url`) are **read but not stored** |
-| Webhook | `POST` body: `event_id`, `webhook_type` (`status.updated` …), `session_id`, `status`, `vendor_data`, `decision`, `timestamp`, `created_at`, `environment`; headers `X-Signature-V2` (HMAC-SHA256, canonical JSON), `X-Signature` (raw body), `X-Timestamp` | `X-Signature` (raw body) + `X-Timestamp` (±300 s) are verified; deduplication by `event_id`; then confirmation through the decision API (IP7). Retries: ~1 min, ~4 min; 5 s timeout → the endpoint returns 200 quickly and queues the work |
-| States | `Not Started`, `In Progress`, `Awaiting User`, `In Review`, `Approved`, `Declined`, `Resubmitted`, `Expired`, `Kyc Expired`, `Abandoned` | Mapping in §5 |
-| Workflow | No-code workflow in the Business Console: ID + liveness + face match (+ optional NFC) | Tamga workflow: **ID document + passive liveness + face match**; AML **off** (purpose limitation); phone/e-mail **off** (T1 already uses SMS) |
-| Channel | Hosted URL (redirect), iframe, mobile SDK (iOS/Android/RN) | Today (list stage): **hosted URL** (through the identity service `id.tamga.network`, desktop/mobile browser). The in-wallet SDK is **not used** (identity proofing is the institution's job, not the wallet's) |
-| Sandbox | `sandbox_scenario` field; `environment: "sandbox"` | Demo: with sandbox scenarios; a fake adapter in end-to-end tests |
-| Price | 500 verifications/month free; per use afterwards | The pilot scale fits in the free quota |
+| Authentication | API key | Tenant secret; in the operator's settings file, never in the repository |
+| Create session | Workflow identifier, opaque customer data, return address, language, expected name/surname/date of birth | Customer data = opaque `subject_ref`; return = `https://id.tamga.network/idv/return?r=<flow>`; language `tr`; expected values name/surname/date of birth (IP3); extra metadata **empty** |
+| Response | Session identifier and hosted verification address | Redirect to the address; session identifier = `session_ref` |
+| Result | Decision endpoint: overall status, document, liveness and face match sub-checks, read name/surname/date of birth | Only the statuses + the name/surname/date-of-birth **match result** (boolean) are kept; image and video fields are **read but not stored** |
+| Webhook | Signed event notification (HMAC-SHA256, timestamped) | Signature + timestamp (±300 s) verified; deduplication by event identifier; then confirmation from the decision endpoint (IP7). The endpoint returns 200 quickly, processing is queued |
+| Workflow | Document + liveness + face match (+ NFC optional) | Tamga workflow: **identity document + passive liveness + face match**; AML **off** (purpose limitation); phone/e-mail **off** (T1 already via SMS) |
+| Channel | Hosted address (redirect) | Today (list stage): **hosted address** (through the identity service `id.tamga.network`, desktop/mobile browser). An in-wallet SDK is **not used** (identity proofing is the institution's job, not the wallet's) |
+| Test environment | The provider's test scenarios | Demo: with test scenarios; a fake adapter in e2e tests |
+
 
 ---
 
 # 5. Result → level mapping
 
-| Didit `status` | Sub-checks | Name/surname/date-of-birth match | Tamga result |
+| Provider `status` | Sub-checks | Name/surname/date-of-birth match | Tamga result |
 |---|---|---|---|
-| `Approved` | `id_verifications[].status = Approved` ∧ `liveness_checks[].status = Approved` ∧ `face_matches[].status = Approved` | Exact match | **T2** (`path: "idv:didit"`) |
+| `Approved` | `id_verifications[].status = Approved` ∧ `liveness_checks[].status = Approved` ∧ `face_matches[].status = Approved` | Exact match | **T2** (`path: "idv:<provider>"`) |
 | `Approved` | NFC `Approved` (chip document) | Exact | **T2** (note: `nfc: true`; **not** T3 — T3 requires a signature) |
 | `Approved` | any of them not `Approved` | — | **Insufficient** → desk |
 | `Approved` | all Approved | No match | **Review** (staff decision; no automatic T2) |
@@ -146,7 +147,7 @@ restriction is not applied).
 
 ```ts
 interface IdvProvider {
-  readonly id: "didit" | string;
+  readonly id: string;               // provider identifier (from settings)
   createSession(input: {
     subjectRef: string;                 // opaque, not personal data
     expected: { givenName: string; familyName: string; birthDate: string };
@@ -211,15 +212,15 @@ an issuer (`category: IDENTITY`, `class: EAA`, I2; no `category` claim in the cr
 | `vct` | `urn:tamga:id:IdentityAttestation:1` (catalogue: `id/IdentityAttestation/1.0.0`) |
 | Claims | `given_name`, `family_name`, `birthdate`, `nationalities` (array; each element disclosed separately), `personal_administrative_number` (Turkish ID number), `document_type`, `document_number_hash` (keyed SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18`, `age_over_15` ([[ADR-0064]]: ISO/IEC 18013-5 `age_over_NN`, closed set) — all selectively disclosable; no portrait; no LoA claim (PR7) |
 | Validity / status | `exp` = issuance + 730 days; Token Status List (`id.tamga.network/status/{listId}`); when the same document is verified again, the previous one is revoked (K6) |
-| Flow | Wallet: PAR (WUA) → browser `/authorize` (**KVKK privacy notice + explicit consent**) → provider (Didit v3; demo: FAKE, deviation S-15) → `/idv/return` decision query (the webhook is only a trigger, IDP5) → `code` → token (PKCE + WUA) → 10 copies |
+| Flow | Wallet: PAR (WUA) → browser `/authorize` (**KVKK privacy notice + explicit consent**) → provider (reference adapter; demo: FAKE, deviation S-15) → `/idv/return` decision query (the webhook is only a trigger, IDP5) → `code` → token (PKCE + WUA) → 10 copies |
 | Use at an institution | The institution's issuing service requests a **presentation** of the identity credential when issuing (DCQL: Turkish ID number, date of birth, given name, family name), verifies T0 + A–E and matches it with its records (Turkish ID number + date of birth; a warning on normalised names) — [[SPEC-PROTO-0001]] §11.2 |
 | Level | Remote document + liveness + face = **T2** (ETSI 119 461 Substantial); NFC chip = `document_chip_verified: true` (technically High; legally T3 = qualified e-signature/mobile signature, IDP7) |
 | Data controller | Tamga Network (K4): it keeps the record + hash; erasure request = §9.1 (the record is deleted, copies are revoked, deletion of the session at the provider is requested); the provider contract targets ≤ 30 days of image retention. **Time-based purge (2026-10-28):** an expired or revoked record is deleted automatically at the latest 30 days later together with its provider session, event-log rows after 365 days (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; the periods are a policy choice pending legal confirmation) |
 | Webhook | A single target `https://id.tamga.network/idv/webhook`, event `status.updated`; there is no per-institution webhook |
 | Age | No minimum age (2026-10-08, [[ADR-0043]]); the condition is identity verification with a valid identity document. A guardian-consent flow and the provider's limit for minors are open items |
 
-Implementation: `apps/id` (operator repository) (config/didit/store/app); the `IdvProvider` interface is the same as in §6
-(`DiditProvider`, `FakeIdvProvider`).
+Implementation: `apps/id` (operator repository) (settings, provider adapter, store, app); the `IdvProvider` interface is the same as in §6
+(the reference provider adapter and `FakeIdvProvider`).
 
 > **`issuing_country` (2026-10-11, project management decision).** The field has its EU PID meaning: the country of the
 > identity provider issuing the credential (Implementing Regulation (EU) 2026/1731). Today the Tamga identity service issues the

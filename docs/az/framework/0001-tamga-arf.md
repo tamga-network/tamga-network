@@ -163,7 +163,7 @@ təqdimat adi qaydada aparılır.
 |---|---|
 | Qurum və cüzdan tərəfindən başladılan sənəd verilməsi, uzaqdan təqdimat, Tamga Verify | İstifadəyə verilib |
 | Veb saytlara giriş, hər sayt üçün ayrıca psevdonim | İstifadəyə verilib |
-| Bilet və birdəfəlik giriş keçidi | İstifadəyə verilib |
+| Bilet və birdəfəlik giriş keçidi | İstifadəyə verilib (sandbox; real şəbəkədə giriş siyasəti müəyyən edilməyib) |
 | Məlumatların silinməsi, tarixçə, ixrac | İstifadəyə verilib |
 | Sıfır bilik sübutu — yoxlayan tərəf hissəsi | İstifadəyə verilib |
 | Sıfır bilik sübutu — cüzdan tərəfi | Cüzdana qoşulub; Android yerli kitabxanası hazırdır, iOS gözlənilir; cihaz testi hələ aparılmayıb |
@@ -173,7 +173,7 @@ təqdimat adi qaydada aparılır.
 | Sandbox (hamı üçün açıq; şəxsiyyətin təsdiqi gündəlik/aylıq limitlə) | İstifadəyə verilib |
 | Sənədi verən qurumun paylaşım qaydası (daxil edilmiş açıqlama siyasəti) | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri) |
 | Qurumun cüzdan sübutu üstünlükləri (açar anbarı tələbi, ləğv üçün yeniləmə müddəti) | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri) |
-| Aİ-nin köhnə etibar siyahısı formatı (ETSI TS 119 612, XML) və cüzdanda xarici siyahılar | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri) |
+| Aİ-nin köhnə etibar siyahısı formatı (ETSI TS 119 612, XML) və cüzdanda xarici siyahılar | Oxuma istifadəyə verilib (paketlər npm-də 0.5.0-dan bəri); Tamga siyahılarının XML görünüşü sandbox-da, real şəbəkədə fondla ([[ADR-0066]]) |
 | Attestation Revocation List (identifikatorlar siyahısı) — yoxlayan tərəf və cüzdan tərəfi | İstifadəyə verilib (paketlər npm-də 0.5.0-dan bəri); Tamga-da sənədi verən qurumlar Status List istifadə edir |
 | Şəxsiyyət sənədində dayandırma yoxdur, mdoc üçün CWT ləğv siyahısı; qeydiyyat sertifikatı olmayan sorğuda xəbərdarlıq; yaxın məsafədə oxuyucunun yoxlanılması | İstifadəyə verilib (paketlər npm-də 0.6.0-dan bəri) |
 | Paket API-lərində təhlükəsiz standart parametrlər; qeydiyyat sertifikatı olmayan sorğunun rədd edilməsi ([[ADR-0056]]) | İstifadəyə verilib (paketlər npm-də 0.7.0-dan bəri) |
@@ -478,7 +478,7 @@ tətbiqini dəyişir.
 ## 8.3 İdarəetmə qurumu
 
 İdarəetmə qurumu ilk gündən yaradılmır. Bir və ya iki dövlət qoşulmağa maraq göstərdikdə şura və ya fond yaradılır və
-siyahılar ona təhvil verilir. O vaxta qədər Tamga Network (yaradılacaq fond) adından müvəqqəti operator: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; fond yaradıldıqda operatorluq ona təhvil verilir. Tamga Network
+siyahılar ona təhvil verilir. O vaxta qədər şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti operator idarə edir; fond yaradıldıqda operatorluq ona təhvil verilir. Tamga Network
 mənfəət güdmür; operatorluq gələcəkdə fonda təhvil veriləcək. Şəbəkə heç bir
 məhsul satmır və kommersiya xidməti göstərmir; Tamga Wallet şəbəkənin ilk rəqəmsal cüzdanıdır; o, bir şirkətin ayrıca məhsuludur; xidmət təminatçıları şəbəkədən kənardadır və qeydiyyat prosesinə
 hamı kimi eyni şərtlərlə qoşulur ([[ADR-0037]]).

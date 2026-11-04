@@ -68,7 +68,7 @@ AS ([[t:authentic-source|səlahiyyətli mənbə]]) · WP ([[t:wallet-provider|c�
 
 # 2. RB-OP — Operator və siyahı operatoru (TLSO)
 
-Bu gün: Tamga Network (yaradılacaq fond) adından müvəqqəti operator: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; siyahılarda operatorun adı "Tamga Network" yazılır (RB-OP-01). Təhvil zamanı bu rol milli orqana keçir.
+Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti operator idarə edir; siyahılarda operatorun adı "Tamga Network" yazılır (RB-OP-01). Təhvil zamanı bu rol milli orqana keçir.
 
 | # | Qayda |
 |---|---|

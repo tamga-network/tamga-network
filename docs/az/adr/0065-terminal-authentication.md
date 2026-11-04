@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-26
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 translation_of: ADR-0065
 source_version: "1.0.0"
 summary: >
@@ -34,8 +34,8 @@ saymır. Biletin QR-ını uzaqdan fotoşəkilə çəkən biri onu artıq "istifa
   bilet vəziyyəti (ADR-0012 K4, [[FW-RB-0006]] §4.3) oradadır.
 - Uc heç bir kimlik tələb etmirdi (yalnız sürət həddi). Token şəxsi məlumat daşımadığı üçün məxfilik riski yox idi, lakin
   **xidmətdən imtina riski** var idi: QR-ı görən (növbəti şəxs, kamera, ekran görüntüsü) tokeni 60 saniyə ərzində göndərsə, onun
-  `jti`-si siyahıya düşür və ya birdəfəlik bilet istifadə olunur; şəxs isə əsl girişdə DAYAN görür. Müstəqil təhlükəsizlik
-  baxışının tapıntısı (2026-10-26).
+  `jti`-si siyahıya düşür və ya birdəfəlik bilet istifadə olunur; şəxs isə əsl girişdə DAYAN görür. 2026-cı ilin oktyabr
+  təhlükəsizlik baxışının tapıntısı (2026-10-26).
 - ADR-0012 K5 terminalların yoxlayıcının qeydində `terminal_groups[]` kimi (qrup, sertifikat barmaq izi, oflayn icazə) müəyyən
   edilməsini nəzərdə tutur. Bu sahə hələ siyahı sxemində deyil və bu gün heç bir terminal oflayn yoxlamır. Bugünkü girişlər
   operatorun nəzarətindəki onlayn cihazlardır (turniket kompüteri, giriş planşeti, sandbox-ın brauzer səhifəsi).
@@ -104,3 +104,5 @@ ADR yenilənir.
 
 **Qeyd (2026-10-29):** K2 (Qurum Konsolu ekranı) və K5 (siyahı sxemində `terminal_groups[]`) [[ADR-0069]] ilə tamamlandı;
 açarlar qurum adından verilir (TG1–TG3).
+
+**Qeyd (2026-11-04):** "müstəqil təhlükəsizlik baxışı" ifadəsi "təhlükəsizlik baxışı" kimi düzəldildi (müstəqil audit hələ aparılmayıb); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

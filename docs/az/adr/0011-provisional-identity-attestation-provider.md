@@ -4,9 +4,9 @@ title: "Müvəqqəti şəxsiyyət sənədi provayderi"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
-  Dövlət tərəfindən təyin edilmiş PID Provider olmadığı müddətdə Tamga uzaqdan şəxsiyyət yoxlaması (Didit: sənəd + canlılıq yoxlaması + üz uyğunlaşdırması; gələcəkdə NFC çipinin oxunması) ilə yoxladığı şəxslərə özünün imzaladığı şəxsiyyət attestasiyası (urn:tamga:id:IdentityAttestation:1) verir. Bu, PID deyil, Tamga-nın sənədi verən qurum kimi verdiyi EAA-dır; dövlət PID-i gəldikdə onunla əvəz olunur (supersede). Qurumlar (universitet) rəqəmsal sənəd verərkən bu attestasiyanı təqdimat kimi qəbul edir və öz qeydləri ilə uyğunlaşdırır. Şəxsiyyətin sübutu inteqrasiyası universitetdə deyil, Tamga-nın şəxsiyyət xidmətindədir; Tamga bu məlumatlar üçün KVKK üzrə məlumat nəzarətçisi olur. TL8 qorunur (pid_providers[] boş), IDP3 yenidən ifadə edilir.
+  Dövlət tərəfindən təyin edilmiş PID Provider olmadığı müddətdə Tamga uzaqdan şəxsiyyət yoxlaması (uzaqdan şəxsiyyət yoxlaması provayderi: sənəd + canlılıq yoxlaması + üz uyğunlaşdırması; gələcəkdə NFC çipinin oxunması) ilə yoxladığı şəxslərə özünün imzaladığı şəxsiyyət attestasiyası (urn:tamga:id:IdentityAttestation:1) verir. Bu, PID deyil, Tamga-nın sənədi verən qurum kimi verdiyi EAA-dır; dövlət PID-i gəldikdə onunla əvəz olunur (supersede). Qurumlar (universitet) rəqəmsal sənəd verərkən bu attestasiyanı təqdimat kimi qəbul edir və öz qeydləri ilə uyğunlaşdırır. Şəxsiyyətin sübutu inteqrasiyası universitetdə deyil, Tamga-nın şəxsiyyət xidmətindədir; Tamga bu məlumatlar üçün KVKK üzrə məlumat nəzarətçisi olur. TL8 qorunur (pid_providers[] boş), IDP3 yenidən ifadə edilir.
 domain: Identity
 translation_of: ADR-0011
 source_version: "1.0.0"
@@ -27,7 +27,7 @@ Tətbiq: `apps/id` (operator deposu), `@tamga-network/wallet-core` authcode/dire
 
 Türkiyədə və TDT üzvlərində [[t:eIDAS]] mənasında təyin edilmiş **[[t:PID]] Provider** (dövlətin rəqəmsal cüzdana şəxsiyyət məlumatı verən qurumu) yoxdur.
 Hazırkı dizayn (D-ID-2, SPEC-ID-0003/IDP3) [[t:identity-proofing]] işini **hər qurumun öz [[t:issuer|rəqəmsal sənəd vermə xidmətində]]** həyata keçirir: tələbə portala
-daxil olur, lazım gələrsə Didit orada işləyir. Bu, qurum inteqrasiyasından (OBS/portal) asılıdır və şəxs hər qurumda yenidən
+daxil olur, lazım gələrsə şəxsiyyət yoxlaması provayderi orada işləyir. Bu, qurum inteqrasiyasından (OBS/portal) asılıdır və şəxs hər qurumda yenidən
 yoxlanılır. Layihə rəhbərliyinin istiqaməti (2026-09-25): dövlət provayder təyin edənədək şəxsiyyət yoxlamasını **Tamga** aparır;
 şəxs rəqəmsal cüzdanındakı şəxsiyyət [[t:credential|sənədi ilə]] quruma müraciət edir, qurum onu öz qeydi ilə uyğunlaşdırır və rəqəmsal sənədi verir. Tələbə sistemi QR və e-poçt
 yolları seçim kimi qalır.
@@ -65,9 +65,9 @@ Foto/portret **daxil edilmir** (v1). [[t:holder|Sənəd sahibinin]] təminat sə
 **T3-bənzər** (NFC + canlılıq; hüquqi baxımdan T3 = NES/Mobil İmza, PM-ASSUR) səviyyəsidir. `document_chip_verified` bunu fakt kimi daşıyır.
 
 ## K3 — Şəxsiyyətin sübutu axını (rəqəmsal cüzdan tərəfindən başladılan)
-1. Rəqəmsal cüzdan → `id.tamga.network` ([[t:OpenID4VCI]] **authorization code**; SPEC-PROTO-0001 v1.2): avtorizasiya səhifəsi Didit
-   sessiyasını (rəqəmsal sənəd + passiv canlılıq yoxlaması + üz uyğunlaşdırması; NFC opsionaldır) açır.
-2. Didit qərarı (polling `GET /v3/session/{id}/decision/` əsas; webhook `https://id.tamga.network/idv/webhook`
+1. Rəqəmsal cüzdan → `id.tamga.network` ([[t:OpenID4VCI]] **authorization code**; SPEC-PROTO-0001 v1.2): avtorizasiya səhifəsi uzaqdan
+   şəxsiyyət yoxlaması provayderinin sessiyasını (rəqəmsal sənəd + passiv canlılıq yoxlaması + üz uyğunlaşdırması; NFC opsionaldır) açır.
+2. Provayderin qərarı (qərar ucunun sorğulanması əsas; webhook `https://id.tamga.network/idv/webhook`
    ikinci dərəcəli, `status.updated`) → **Approved** olduqda attestation verilir (10 nüsxə, [[t:WUA]] məcburidir, PR11).
 3. Qurumdan rəqəmsal sənədin alınması: rəqəmsal cüzdan qurumu etibar siyahısı kataloqundan seçir → sənədi verən qurumun servisi authorization code axınında
    **IdentityAttestation təqdimatı** tələb edir ([[t:OpenID4VP]], [[t:DCQL]]: `personal_administrative_number`, `given_name`, `family_name`,
@@ -75,9 +75,9 @@ Foto/portret **daxil edilmir** (v1). [[t:holder|Sənəd sahibinin]] təminat sə
 4. Pre-authorized yollar (OBS ekranında QR, e-poçt + SMS tx_code) **olduğu kimi qalır**; qurum hər ikisini təqdim edə bilər.
 
 ## K4 — Məlumatlara görə məsuliyyət və saxlama (KVKK)
-- Tamga şəxsiyyətin sübutu məlumatları üçün **məlumat nəzarətçisidir**; məlumatlandırma + açıq razılıq mətni rəqəmsal cüzdanda Didit-ə keçməzdən əvvəl göstərilir.
+- Tamga şəxsiyyətin sübutu məlumatları üçün **məlumat nəzarətçisidir**; məlumatlandırma + açıq razılıq mətni rəqəmsal cüzdanda provayderə keçməzdən əvvəl göstərilir.
 - Tamga-da saxlanılanlar: attestation qeydi (qeyri-şəffaf `subject_ref`, `iat/exp`, status `idx`, sənəd nömrəsinin hash-i, `document_chip_verified`,
-  Didit `session_id`); **sənəd təsvirləri, selfie, MRZ xam məlumatları Tamga-da saxlanılmır** (Didit tərəfində Didit-in saxlama
+  provayderin sessiya identifikatoru); **sənəd təsvirləri, selfie, MRZ xam məlumatları Tamga-da saxlanılmır** (provayder tərəfində provayderin saxlama
   siyasəti tətbiq olunur; müqavilədə ≤ 30 gün tələb edilir). Silinmə tələbi: attestation [[t:revocation]] + qeydin silinməsi.
 - FW-TF-0001 §6-ya "Şəxsiyyət Attestation Provayderi" rolu və onun vəzifələri əlavə edilir; rüblük şəffaflıq hesabatına verilmə/ləğv
   sayları daxil edilir (şəxslər göstərilmədən).
@@ -97,7 +97,7 @@ Foto/portret **daxil edilmir** (v1). [[t:holder|Sənəd sahibinin]] təminat sə
 - Attestasiya buraxılışında WUA məcburidir; demoda `software` qəbul edilir (S-9/S-14), pilotda `secure_enclave`.
 - Eyni sənəd nömrəsi hash-i ilə ikinci aktiv attestasiya verilmir (təkrar qeydiyyat); yenidən buraxılış köhnəsini ləğv edir.
 - Qurum uyğunlaşdırması: ən azı `personal_administrative_number` + `birthdate`; ad uyğunluğu normallaşdırılır (türk hərfləri).
-- Didit "In Review" → attestasiya verilmir, istifadəçiyə gözləmə bildirilir; "Declined" → 24 saat sonra yenidən cəhd; 3 rədd → manual baxış.
+- Provayder "In Review" → attestasiya verilmir, istifadəçiyə gözləmə bildirilir; "Declined" → 24 saat sonra yenidən cəhd; 3 rədd → manual baxış.
 
 # Əsaslandırma
 Şəxs bir dəfə yoxlanılır, hər quruma eyni attestasiya ilə müraciət edir; qurumun OBS olmadan işləməsi mümkün olur; ARF modeli (PID
@@ -112,18 +112,20 @@ olması və şəxsiyyət nömrəsi daşıyan tipin mövcudluğu; hər ikisi K4/K
   TCKN seçici paylaşımla və yalnız səlahiyyətli əhatə dairəsi üçün.
 
 # Nəticələr
-- Yeni servis `apps/id` (operator repozitoriyası) (`id.tamga.network`): Didit sessiyası, qərar, webhook, OpenID4VCI ilə [[t:issuance]]
-  (authorization code), attestation qeydi, [[t:status-list]]. Didit webhook hədəfi **yeganədir**: `https://id.tamga.network/idv/webhook`
+- Yeni servis `apps/id` (operator repozitoriyası) (`id.tamga.network`): provayder sessiyası, qərar, webhook, OpenID4VCI ilə [[t:issuance]]
+  (authorization code), attestation qeydi, [[t:status-list]]. Provayderin webhook hədəfi **yeganədir**: `https://id.tamga.network/idv/webhook`
   (hər qurum üçün ayrıca deyil).
 - Rəqəmsal cüzdan: "Şəxsiyyətimi təsdiqlə" axını (in-app browser), qurumlar kataloqu (etibar siyahısından), qurumdan rəqəmsal sənəd alarkən attestation
   təqdimatı (qurum yoxlayan tərəf kimi çıxış edir; verilmə daxilində OpenID4VP).
 - Sənədi verən qurumun servisi: authorization code + IdentityAttestation sorğusu + qeydiyyat uyğunlaşdırması; portalda tələbə girişi **ləğv olunur**
   (demo-da staff paneli qalır).
 - Spec/FW yeniləmələri K5; DB-21 bu ADR-in tərkib hissəsinə çevrilir; DB-22 bağlanır.
-- Demo: Didit **sandbox** (real şəxsiyyət yoxdur, GT1); təqdimatın 3-cü səhnəsi "portala giriş" → "rəqəmsal cüzdanda şəxsiyyətimi təsdiqlə + Bilgi-ni seç".
+- Demo: provayderin **sandbox**-ı (real şəxsiyyət yoxdur, GT1); təqdimatın 3-cü səhnəsi "portala giriş" → "rəqəmsal cüzdanda şəxsiyyətimi təsdiqlə + qurumu seç".
 
 # Açıq məqamlar — qəbulla birlikdə QƏRARLAŞDIRILDI (2026-09-25)
 1. `personal_administrative_number` (TCKN) attestasiyada daşınsınmı? (Təklif: bəli, seçici paylaşımla; K2.)
 2. Attestasiyanın etibarlılıq müddəti: 1 il, yoxsa 2 il? (Təklif: 2 il; sənədin müddəti bitdikdə daha tez.)
 3. NFC əlavə edildikdə ayrıca tip (`…:IdentityAttestation:1` + `document_chip_verified`) deyil, eyni tip — təsdiq.
 4. Demoda sandbox profili "Ayşe Yılmaz" üçün saxta TCKN yaradılacaq; `students.json` buna uyğun yenilənir.
+
+**Qeyd (2026-11-04):** uzaqdan şəxsiyyət yoxlaması provayderinin ticarət adı və API ünvanı açıq mətndən çıxarıldı ("uzaqdan şəxsiyyət yoxlaması provayderi", istinad adapteri; ünvan və parametr adları operatorun konfiqurasiya sənədindədir); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

@@ -7,7 +7,7 @@ version: 1.0.0
 created: 2026-10-30
 last_updated: 2026-10-30
 summary: >
-  Tamga Network-ün hüquqi şəxsiyyəti yoxdur. Qurulacaq qeyri-kommersiya fondu hüquqi şəxsiyyət qazanana qədər şəbəkənin öz xidmətlərini (siyahıların dərci, şəxsiyyət xidməti, Tamga Verify, saytlar) Tamga Network adından müvəqqəti operator BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ idarə edir; hüquqi şəxs tələb edən hər qeydiyyat, sertifikat və müqavilə onun adı ilə və "Tamga Network adından" ifadəsi ilə edilir. Siyahı operatorunun və sxem sahibinin adı "Tamga Network" olaraq qalır. Müvəqqəti operatorun adı, identifikatoru və ünvanı vahid konfiqurasiya dəyərindən gəlir; siyahı dərc edən hər dərcdə yoxlayır. Təhvil mövcud təhvil aləti və runbook ilə aparılır; fond qurulana qədər iştirak müqavilələrini müvəqqəti operator imzalayır. Qəbul: 2026-10-30.
+  Tamga Network-ün hüquqi şəxsiyyəti yoxdur. Qurulacaq qeyri-kommersiya fondu hüquqi şəxsiyyət qazanana qədər şəbəkənin öz xidmətlərini (siyahıların dərci, şəxsiyyət xidməti, Tamga Verify, saytlar) Tamga Network adından bir şirkət müvəqqəti operator kimi idarə edir; hüquqi şəxs tələb edən hər qeydiyyat, sertifikat və müqavilə onun adı ilə və "Tamga Network adından" ifadəsi ilə edilir. Siyahı operatorunun və sxem sahibinin adı "Tamga Network" olaraq qalır. Müvəqqəti operatorun adı, identifikatoru və ünvanı vahid konfiqurasiya dəyərindən gəlir; siyahı dərc edən hər dərcdə yoxlayır. Təhvil mövcud təhvil aləti və runbook ilə aparılır; fond qurulana qədər iştirak müqavilələrini müvəqqəti operator imzalayır. Qəbul: 2026-10-30.
 domain: Governance
 related: ["[[ADR-0002]]", "[[ADR-0009]]", "[[ADR-0024]]", "[[ADR-0033]]", "[[ADR-0037]]", "[[ADR-0042]]", "[[ADR-0058]]", "[[ADR-0066]]", "[[FW-TF-0001]]", "[[FW-RB-0001]]"]
 translation_of: ADR-0070
@@ -17,7 +17,7 @@ source_version: "1.0.0"
 # Qısaca
 
 Tamga Network fond olacaq, lakin fond hələ qurulmayıb. O vaxta qədər şəbəkənin öz xidmətlərini bir şirkət şəbəkə adından və
-müvəqqəti olaraq idarə edir: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. Etibar siyahılarında operator adı yenə "Tamga
+müvəqqəti olaraq idarə edir (müvəqqəti operator). Etibar siyahılarında operator adı yenə "Tamga
 Network" yazılır; şirkətin adı yalnız hüquqi şəxs tələb olunan yerlərdə (vergi nömrəsi, sertifikat, müqavilə, şəxsi məlumatların
 qeydiyyatı) görünür. Bu məlumat bir yerdə saxlanılır və fond qurulanda bir addımda dəyişdirilir.
 
@@ -35,8 +35,8 @@ qeydiyyatı) görünür. Bu məlumat bir yerdə saxlanılır və fond qurulanda 
 # Qərar
 
 ## K1 — Zəncir
-Tamga Network (qurulacaq fond) ← müvəqqəti operator **BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ** (vergi nömrəsi
-1870632151; ünvan və digər identifikatorlar yalnız `registry/provisional-operator.json`-dadır). Müvəqqəti operator şəbəkənin öz xidmətlərini
+Tamga Network (qurulacaq fond) ← **müvəqqəti operator** (hüquqi adı, vergi nömrəsi,
+ünvanı və digər identifikatorlar yalnız `registry/provisional-operator.json`-dadır). Müvəqqəti operator şəbəkənin öz xidmətlərini
 (siyahıların dərci, dövlət adından qeydiyyat orqanı rolu, şəxsiyyət xidməti, Tamga Verify, saytlar və domen adları) Tamga Network
 adından idarə edir. Hüquqi şəxs tələb edən hər əməliyyat onun adı ilə və "Tamga Network adından" ifadəsi ilə edilir.
 
@@ -93,3 +93,5 @@ Tətbiq mağazası yoxlama imzaçısının qeydi ([[ADR-0033]]) və sonrakı bü
 
 **Accepted — 2026-10-30.** Layihə rəhbərliyinin təsdiqi ilə (hərfi sitat özəl təsdiq qeydindədir). DECISIONS: D-GOV-10. OP1–OP3
 məcburidir.
+
+_Qeyd (2026-11-04): operatorun hüquqi adı ictimai mətndən çıxarıldı; qərarın məzmunu dəyişmədi (layihə rəhbərliyi)._

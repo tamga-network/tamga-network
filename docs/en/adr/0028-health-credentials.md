@@ -4,11 +4,11 @@ title: "Health credentials"
 status: Proposed
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
   Three complementary credentials for health professionals:
-  (1) practice licence — authentic source the Ministry of Health; a test institution in the pilot;
-  (2) professional chamber membership — Turkish Medical Association / provincial medical chambers;
+  (1) practice licence — authentic source the competent health ministry; a test institution in the pilot;
+  (2) professional chamber membership — the national medical professional body / provincial medical chambers;
   (3) staff appointment — a hospital or clinic issues it to its own staff with unit, title and start date.
   Another institution requests them as a verifier when hiring (a verified CV). The credentials carry no health data and no
   national ID number. The patient side (EU Health ID, e-prescription) is out of scope, for later. Type names are proposals.
@@ -43,8 +43,8 @@ patient-side e-prescription "Health ID" ([[t:mdoc]]; the prescription itself doe
 
 | Information | Authentic source |
 |---|---|
-| Right to practise, specialty | Ministry of Health |
-| Chamber membership | Turkish Medical Association / provincial medical chambers (professional bodies with public-institution status) |
+| Right to practise, specialty | The competent health ministry |
+| Chamber membership | The national medical professional body / provincial medical chambers (professional bodies with public-institution status) |
 | Employment, unit, title | The employing health institution |
 
 Under [[ADR-0020]] each credential reads its information from its own source; Tamga does not store it.
@@ -55,8 +55,8 @@ Under [[ADR-0020]] each credential reads its information from its own source; Ta
 
 | # | Credential | Issuer | Trust list class | Type name (PROPOSAL, §6) |
 |---|---|---|---|---|
-| 1 | **Practice licence** | Ministry of Health. In the pilot a test institution "Ministry of Health (test)"; in real participation the same type with the real record | `PUB` / `HEALTH` | `urn:tamga:health:PractitionerLicence:1` |
-| 2 | **Chamber membership** | Turkish Medical Association or a provincial chamber, to its own members | `PUB` (public-institution status) or `EAA` / `HEALTH` | `urn:tamga:health:ProfessionalMembership:1` |
+| 1 | **Practice licence** | The competent health ministry. In the pilot a test institution "health ministry (test)"; in real participation the same type with the real record | `PUB` / `HEALTH` | `urn:tamga:health:PractitionerLicence:1` |
+| 2 | **Chamber membership** | The national medical professional body or a provincial chamber, to its own members | `PUB` (public-institution status) or `EAA` / `HEALTH` | `urn:tamga:health:ProfessionalMembership:1` |
 | 3 | **Staff appointment** | Hospital / clinic / health group, to its own staff | `EAA` / `HEALTH` | `urn:tamga:work:EmploymentCredential:1` (sector-neutral) |
 
 None is issued by Tamga; Tamga operates the hosted issuance service.
@@ -111,7 +111,7 @@ None is issued by Tamga; Tamga operates the hosted issuance service.
 
 ## K6 — Out of scope (later)
 
-- The patient Health ID (EU e-prescription pilot, mdoc) and the e-Nabız / e-Reçete link: only if the Ministry of Health joins as
+- The patient Health ID (EU e-prescription pilot, mdoc) and the e-Nabız / e-Reçete link: only if the competent health ministry joins as
   an issuer.
 - No credential is issued for the health institution itself: the institution is recognised by its trust list record and its
   registration certificate ([[ADR-0024]], [[ADR-0026]]).
@@ -138,7 +138,7 @@ None is issued by Tamga; Tamga operates the hosted issuance service.
 1. **Type names:** the proposals in §K1 or the alternatives — `MedicalLicence`, `ChamberMembership` (all professional chambers),
    `StaffAppointment` (health-specific appointment).
 2. The class of the chamber credential: `PUB` or `EAA`?
-3. Pilot set-up: "Ministry of Health (test)", a medical chamber, a private hospital — test tenants.
+3. Pilot set-up: "health ministry (test)", a medical chamber, a private hospital — test tenants.
 
 # Status
 

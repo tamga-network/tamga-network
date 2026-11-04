@@ -33,7 +33,7 @@ source_version: "1.0.0"
 | Yoxlayan tərəf (Relying Party) | Rəqəmsal cüzdandan rəqəmsal sənəd tələb edən və onu yoxlayan, qeydiyyatdan keçmiş təşkilat: işəgötürən, veb-sayt, qurum. |
 | Giriş sertifikatı | Yoxlayan tərəfin sorğularını imzaladığı X.509 sertifikatı; müştəri identifikatoru bu sertifikatın heş dəyəridir. |
 | Federasiya | Ölkə etibar siyahılarının öz sahibləri tərəfindən idarə olunduğu və siyahıların siyahısında bir araya gətirildiyi model. |
-| Müvəqqəti operator | İdarəetmə qurumu yaradılana qədər şəbəkəni və şəbəkənin öz xidmətlərini idarə edən hüquqi şəxs. Bu gün: Tamga Network (yaradılacaq fond) adından müvəqqəti operator: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. Siyahılarda operatorun adı "Tamga Network" yazılır (`status = "provisional"`). Fond yaradıldıqda operatorluq ona ötürülür. |
+| Müvəqqəti operator | İdarəetmə qurumu yaradılana qədər şəbəkəni və şəbəkənin öz xidmətlərini idarə edən hüquqi şəxs. Bu gün bu rolu Tamga Network (yaradılacaq fond) adından müvəqqəti operator daşıyır. Siyahılarda operatorun adı "Tamga Network" yazılır (`status = "provisional"`). Fond yaradıldıqda operatorluq ona ötürülür. |
 | Keçid kartı | Yaxın məsafədə təqdimatın daimi həlli tətbiq olunana qədər istifadə edilən, qısamüddətli və əhatəsi məhdud rəqəmsal sənəd təqdimatı. |
 | Etibar siyahısı | Bir ölkənin kök sertifikatlarını, sənədi verən qurumlarını və qeydiyyatdan keçmiş yoxlayan tərəflərini əhatə edən imzalı siyahı. |
 | Etibar siyahısı operatoru (Trusted List Scheme Operator) | Milli etibar siyahısını tərtib edən, imzalayan və dərc edən təşkilat. Bu gün Türkiyə üçün dövlət adından müvəqqəti olaraq Tamga. |
@@ -46,13 +46,13 @@ source_version: "1.0.0"
 | Siyahı mərhələsi | Etibarın imzalı etibar siyahılarına və lövbər jurnalına əsaslandığı hazırkı mərhələ. |
 | Siyahıların siyahısı (LoTL) | Ölkə etibar siyahılarının ünvanlarını, imzalayanlarını və tanınma statuslarını göstərən imzalı siyahı. |
 | Ortaq reyestr | Etibar qeydlərinin bir neçə müstəqil operator tərəfindən aparıldığı reyestr (blokçeyn). Reyestr mərhələsində yaradılır. |
-| Seçici paylaşım (Selective disclosure) | Şəxsin rəqəmsal sənəddən yalnız tələb olunan sahələri göstərməsi. |
+| Seçici açıqlama (Selective disclosure) | Şəxsin rəqəmsal sənəddən yalnız tələb olunan sahələri göstərməsi. Sinonim: seçici paylaşım. |
 | Sıfır bilik sübutu | Bir məlumatın doğru olduğunu məlumatın özünü göstərmədən təsdiqləyən sübut; məsələn, doğum tarixini göstərmədən "18 yaşdan böyüyəm". |
 | Psevdonim | Rəqəmsal cüzdanın hər veb-sayt üçün ayrıca yaratdığı, sabit, lakin saytlar arasında uyğunlaşdırıla bilməyən hesab identifikatoru. |
 | Psevdonim toxumu | Şəxsiyyət xidmətinin şəxsin kimliyindən onu saxlamadan törətdiyi və yalnız rəqəmsal cüzdanda qalan gizli dəyər; psevdonimlər bundan törədilir. Göstərilə bilməyən ayrıca sənəd növü ilə verilir. |
 | Tamga Network | Bu çərçivənin müəyyən etdiyi etibar şəbəkəsi: qaydalar, etibar siyahıları, rəqəmsal sənəd növləri kataloqu və açıq mənbəli paketlər. Şəbəkə məhsul satmır. |
 | Tamga Verify | Şəbəkənin hostinq edilən yoxlayan tərəfi (vasitəçi yoxlayan tərəf). |
-| Tamga Wallet | Şəbəkənin ilk rəqəmsal cüzdanı; ayrıca məhsuldur və açıq mənbəlidir. Şəbəkənin qaydalarına hər rəqəmsal cüzdan kimi əməl edir. |
+| Tamga Wallet | Şəbəkənin ilk rəqəmsal cüzdanı; ayrıca məhsuldur və açıq mənbə lisenziyası (EUPL-1.2) ilə hazırlanır. Şəbəkənin qaydalarına hər rəqəmsal cüzdan kimi əməl edir. |
 | Səlahiyyətli mənbə | Rəqəmsal sənəddəki məlumatın əsl sahibi olan sistem; məsələn, universitetin tələbə informasiya sistemi. |
 | İdarəetmə qurumu | Dövlətlər qoşulduqda yaradılan şura və ya fond; siyahıları və şəbəkə qaydalarını idarə edir. |
 

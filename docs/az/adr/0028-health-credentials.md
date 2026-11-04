@@ -4,9 +4,9 @@ title: "Səhiyyə sənədləri"
 status: Proposed
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
-  Tibb işçiləri üçün bir-birini tamamlayan üç rəqəmsal sənəd: (1) peşə fəaliyyəti sənədi — səlahiyyətli mənbə Səhiyyə Nazirliyidir; pilotda sınaq qurumu; (2) peşə palatası üzvlük sənədi — Türkiyə Həkimlər Birliyi / il həkim palataları; (3) qurum vəzifə sənədi — xəstəxana və ya klinika öz əməkdaşına bölmə, vəzifə və işə başlama tarixi ilə verir. Başqa qurum işə qəbul zamanı bunları yoxlayan tərəf kimi tələb edir (yoxlanılmış CV). Sənədlərdə sağlamlıq məlumatları və T.C. şəxsiyyət nömrəsi yoxdur. Pasiyent tərəfi (Aİ Health ID, e-resept) əhatə dairəsindən kənardır, gələcəkdə nəzərdə tutulur. Növ adları təklifdir.
+  Tibb işçiləri üçün bir-birini tamamlayan üç rəqəmsal sənəd: (1) peşə fəaliyyəti sənədi — səlahiyyətli mənbə müvafiq səhiyyə nazirliyidir; pilotda sınaq qurumu; (2) peşə palatası üzvlük sənədi — milli həkim peşə təşkilatı / il həkim palataları; (3) qurum vəzifə sənədi — xəstəxana və ya klinika öz əməkdaşına bölmə, vəzifə və işə başlama tarixi ilə verir. Başqa qurum işə qəbul zamanı bunları yoxlayan tərəf kimi tələb edir (yoxlanılmış CV). Sənədlərdə sağlamlıq məlumatları və T.C. şəxsiyyət nömrəsi yoxdur. Pasiyent tərəfi (Aİ Health ID, e-resept) əhatə dairəsindən kənardır, gələcəkdə nəzərdə tutulur. Növ adları təklifdir.
 domain: Credentials
 translation_of: ADR-0028
 source_version: "1.0.0"
@@ -36,8 +36,8 @@ Türkiyədə [[t:authentic-source|səlahiyyətli mənbələr]]:
 
 | Məlumat | Səlahiyyətli mənbə |
 |---|---|
-| Peşə fəaliyyəti səlahiyyəti, ixtisas | Səhiyyə Nazirliyi |
-| Peşə palatası üzvlüyü | Türkiyə Həkimlər Birliyi / il həkim palataları (dövlət qurumu statuslu peşə təşkilatı) |
+| Peşə fəaliyyəti səlahiyyəti, ixtisas | Müvafiq səhiyyə nazirliyi |
+| Peşə palatası üzvlüyü | Milli həkim peşə təşkilatı / il həkim palataları (dövlət qurumu statuslu peşə təşkilatı) |
 | İş, bölmə, vəzifə | İşəgötürən səhiyyə müəssisəsi |
 
 [[ADR-0020]] əsasında məlumat hər sənəddə öz mənbəyindən oxunur; Tamga onu saxlamır.
@@ -48,8 +48,8 @@ Türkiyədə [[t:authentic-source|səlahiyyətli mənbələr]]:
 
 | # | Sənəd | Verən | Etibar siyahısı sinfi | Növ adı (TƏKLİF, §6) |
 |---|---|---|---|---|
-| 1 | **Peşə fəaliyyəti sənədi** | Səhiyyə Nazirliyi. Pilotda "Səhiyyə Nazirliyi (sınaq)" sınaq qurumu; real iştirakda eyni növ, real qeydiyyat | `PUB` / `HEALTH` | `urn:tamga:health:PractitionerLicence:1` |
-| 2 | **Palata üzvlük sənədi** | THB və ya il həkim palatası, öz üzvlərinə | `PUB` (dövlət qurumu statuslu) və ya `EAA` / `HEALTH` | `urn:tamga:health:ProfessionalMembership:1` |
+| 1 | **Peşə fəaliyyəti sənədi** | Müvafiq səhiyyə nazirliyi. Pilotda "səhiyyə nazirliyi (sınaq)" sınaq qurumu; real iştirakda eyni növ, real qeydiyyat | `PUB` / `HEALTH` | `urn:tamga:health:PractitionerLicence:1` |
+| 2 | **Palata üzvlük sənədi** | Milli peşə təşkilatı və ya il həkim palatası, öz üzvlərinə | `PUB` (dövlət qurumu statuslu) və ya `EAA` / `HEALTH` | `urn:tamga:health:ProfessionalMembership:1` |
 | 3 | **Qurum vəzifə sənədi** | Xəstəxana / klinika / səhiyyə qrupu, öz əməkdaşlarına | `EAA` / `HEALTH` | `urn:tamga:work:EmploymentCredential:1` (sektordan asılı olmayan) |
 
 Heç biri Tamga tərəfindən verilmir; Tamga yalnız hostinq edilən sənəd vermə xidmətini idarə edir.
@@ -104,7 +104,7 @@ Heç biri Tamga tərəfindən verilmir; Tamga yalnız hostinq edilən sənəd ve
 
 ## K6 — Əhatə dairəsindən kənar (gələcəkdə)
 
-- Pasiyentin Sağlamlıq Şəxsiyyəti (Aİ e-resept pilotu, mdoc) və e-Nabız / e-Reçete inteqrasiyası: yalnız Səhiyyə Nazirliyi sənədi verən qurum kimi
+- Pasiyentin Sağlamlıq Şəxsiyyəti (Aİ e-resept pilotu, mdoc) və e-Nabız / e-Reçete inteqrasiyası: yalnız müvafiq səhiyyə nazirliyi sənədi verən qurum kimi
   iştirak edərsə.
 - Səhiyyə müəssisəsinin özü üçün sənəd verilmir: müəssisə etibar siyahısındakı qeydiyyatı və qeydiyyat sertifikatı ilə tanınır
   ([[ADR-0024]], [[ADR-0026]]).
@@ -131,7 +131,7 @@ Heç biri Tamga tərəfindən verilmir; Tamga yalnız hostinq edilən sənəd ve
 1. **Növ adları:** §K1-dəki təkliflər və ya alternativləri — `MedicalLicence`, `ChamberMembership` (bütün peşə palataları),
    `StaffAppointment` (səhiyyəyə xas vəzifə).
 2. Palata sənədinin sinfi: `PUB`, yoxsa `EAA`?
-3. Pilot ssenarisi: "Səhiyyə Nazirliyi (sınaq)", bir həkim palatası, bir özəl xəstəxana — sınaq icarəçiləri.
+3. Pilot ssenarisi: "səhiyyə nazirliyi (sınaq)", bir həkim palatası, bir özəl xəstəxana — sınaq icarəçiləri.
 
 # Status
 

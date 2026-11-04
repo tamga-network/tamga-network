@@ -4,7 +4,7 @@ title: "Mağaza baxışı kodu"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-06
+last_updated: 2026-11-04
 summary: >
   Apple və Google rəyçiləri etibar siyahısındakı rəqəmsal cüzdanın şəxsiyyət axınını real Türkiyə şəxsiyyət sənədi olmadan sınaya bilməlidir. Baxış kodu şəbəkənin xidmətidir və siyahıdakı hər rəqəmsal cüzdan üçün eyni şərtlərlə açıqdır. Qərar: müddətli, birdəfəlik baxış kodu; kod daxil edildikdə şəxsiyyət xidməti yalnız həmin sessiya üçün saxta doğrulama provayderindən istifadə edir və ayrıca sınaq imzalayıcısı ilə real yoxlayan tərəflərin heç bir siyasətində keçərli olmayan sınaq şəxsiyyət sənədi verir. Şəxsiyyət tələb etməyən yollar (bilet, Tamga Verify, "Tamga ilə daxil ol") kodsuz sınanır.
 domain: Services
@@ -25,7 +25,7 @@ yolu görmür; kod bir dəfə istifadə edildikdən sonra qüvvədən düşür.
 - Apple App Review və Google Play baxışı tətbiqin bütün axınlarının sınana bilməsini tələb edir; lazım gəldikdə baxış qeydində
   sınaq hesabı və ya "demo rejimi" təqdim olunur.
 - Rəqəmsal cüzdanın şəxsiyyət axını ([[SPEC-ID-0003]] §9) real şəxsiyyət sənədi + canlılıq yoxlaması + üz uyğunlaşdırması tələb edir;
-  bu, [[t:identity-proofing]] addımıdır. Canlı mühitdə saxta provayder bağlıdır (`TAMGA_IDV_DIDIT_FAKE` yalnız açıq şəkildə aktivləşdirildikdə; GT1: canlı mühitdə real
+  bu, [[t:identity-proofing]] addımıdır. Canlı mühitdə saxta provayder bağlıdır (saxta provayder parametri yalnız açıq şəkildə aktivləşdirildikdə; GT1: canlı mühitdə real
   şəxsiyyət yoxlaması ötürülmür).
 - Şəxsiyyət tələb etməyən axınlar kodsuz sınana bilər: bilet alınması və girişdə təqdim edilməsi, Tamga Verify nümunə siyasətləri, "Tamga ilə
   daxil ol" nümunə saytı ([[t:pseudonym]] yalnız şəxsiyyət [[t:credential]] toxumu ilə işlədiyi üçün o da şəxsiyyət axınından
@@ -83,7 +83,7 @@ bütün yolları sınamasına imkan verən yeganə variantdır. Bədəli: şəxs
 | Kod sızır və başqası istifadə edir | birdəfəlik, müddətli, ən çoxu 3 aktiv; sınaq sənədi real yoxlayan tərəfdə keçərli deyil |
 | Sınaq sənədi real hesab edilir | ayrıca imzalayıcı, `DEMO` işarəsi, rəqəmsal cüzdanda "DEMO" nişanı, 7 gün |
 | Mağaza bunu "gizli funksiya" sayır | baxış qeydində açıq şəkildə izah edilir; kod sahəsi məlumatlandırma ekranında görünür, gizli deyil |
-| Saxta provayder canlı mühitdə səhvən hamı üçün açılır | kod olmadan saxta provayderə keçid yolu yoxdur; `TAMGA_IDV_DIDIT_FAKE` canlı mühitdə bağlı qalır |
+| Saxta provayder canlı mühitdə səhvən hamı üçün açılır | kod olmadan saxta provayderə keçid yolu yoxdur; saxta provayder parametri canlı mühitdə bağlı qalır |
 
 # Dəyişməzlər
 
@@ -143,7 +143,7 @@ ol" nümunə saytı) real şəbəkədə artıq yoxdur və baxış qeydinə yazı
 şəxsiyyət axınıdır: baxış kodu → DEMO şəxsiyyət sənədi → Tamga Verify baxış siyasətləri (`review-age-over-18`,
 `review-site-signup`). Baxış siyasətləri real şəbəkədə qalır, lakin Tamga Verify-ın əsas səhifəsində nümayiş üçün göstərilmir;
 rəyçiyə birbaşa keçid verilir. Qərar (D variantı, K1–K3, K5, RV1–RV3) dəyişmir.
-Həmin tarixdə saxta şəxsiyyət provayderi real şəbəkədə kod kilidi ilə tamamilə bağlandı (`TAMGA_IDV_DIDIT_FAKE=1` ilə xidmət açılmır);
+Həmin tarixdə saxta şəxsiyyət provayderi real şəbəkədə kod kilidi ilə tamamilə bağlandı (saxta provayder parametri ilə xidmət açılmır);
 baxış kodu yolu bundan asılı deyil.
 
 # İcra qeydi — 2026-10-06: hər rəqəmsal cüzdan üçün açıq şəbəkə xidməti
@@ -153,3 +153,5 @@ hər cüzdan provayderi öz tətbiqinin mağaza baxışı üçün eyni şərtlə
 yaradılır və rəqəmsal cüzdana ötürülür, rəqəmsal cüzdan isə onu öz baxış qeydinə yazır. K1–K5 və RV1–RV3 hər rəqəmsal cüzdan üçün eynidir; sınaq rəqəmsal sənədi
 hansı rəqəmsal cüzdana verilməsindən asılı olmayaraq yalnız baxış siyasətlərində keçərlidir. DEMO işarəsini göstərmək ([[SPEC-ID-0003]] §9) hər
 rəqəmsal cüzdanın öz vəzifəsidir.
+
+**Qeyd (2026-11-04):** uzaqdan şəxsiyyət yoxlaması provayderinin ticarət adı, mühit dəyişəni və əmr adları açıq mətndən çıxarıldı ("uzaqdan şəxsiyyət yoxlaması provayderi"; parametr adları operatorun konfiqurasiya sənədindədir); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

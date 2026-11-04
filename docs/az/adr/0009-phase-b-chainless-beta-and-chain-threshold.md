@@ -4,7 +4,7 @@ title: "Zəncirsiz beta və zəncir həddi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-07
+last_updated: 2026-11-04
 summary: >
   Pilotu zəncirə bağlayan ilkin şərtlər (PM-GTM-0001 Ö1/Ö2) aradan qaldırılır; Faza 0-dan əvvəl "Faza B — zəncirsiz beta" əlavə olunur. Betada etibar lövbəri Tamga-nın müvəqqəti operator kimi imzaladığı, versiyalı və hash-zəncirli etibar siyahıları (LOTL + milli siyahı) və saatlıq lövbər jurnalıdır — ETSI TS 119 612 / EUDI modeli. Zəncir (D-BC-0 Besu/QBFT, invariant) yalnız ən azı iki müstəqil validator operatoru olduqda qurulur; tək operatorun idarə etdiyi dörd validator imzalı siyahıdan artıq etibar yaratmır. Betanın hər bir məlumat strukturu çoxdövlətli (TDT) quruluşu bu gündən daşıyır; Tamga hər yerdə "vəkalətən, müvəqqəti" operatordur və təhvil yalnız operator sahəsini dəyişir. Keçid = siyahı tarixçəsinin kontraktlarda yenidən oynadılması + ekvivalentlik testi.
 domain: Trust
@@ -27,7 +27,7 @@ Tamga-nın kanonik yol xəritəsi pilotu zəncirə bağlayır: PM-GTM-0001 §2 i
 **Ö1** "kontraktlar kompilyasiya olunur və testlərdən keçir", **Ö2** "testnet işləkdir, kontraktlar yerləşdirilib"
 tamamlanmadan real məzun məlumatları emal edilə bilməz (GT1). [[ARCH-0001]] §3 Faza 0-ı "4 fond
 validatoru" kimi müəyyən edir. Kontraktlar bu günə qədər heç vaxt kompilyasiya olunmayıb (Foundry yoxdur; DECISIONS
-§10.5). Bu, universitet pilotunu və deməli, universitetlə razılaşmanı və investor görüşlərini
+§10.5). Bu, universitet pilotunu və deməli, ilk qurumun qoşulmasını
 zəncir infrastrukturunun arxasında kilidləyir.
 
 ## Müşahidə: Faza 0 zənciri etibar yaratmır (F1)
@@ -178,7 +178,7 @@ tamamlanmayıb. Verilmiş [[t:credential|rəqəmsal sənədlər]] yenidən veril
 
 ## A — Zənciri gözləmək (mövcud plan) — Rədd edildi
 Pilot Foundry quraşdırılmasından + kompilyasiyadan + testnet-dən + auditdən asılı qalır (aylar). Təminat baxımından heç bir qazanc yoxdur
-(F1). Universitet və investor görüşləri gecikir.
+(F1). Qurum pilotu aylarla zəncir quraşdırılmasını gözləyir.
 
 ## B — Tək node-lu / dörd node-lu "inkişaf zənciri" ilə pilot — Rədd edildi
 Zəncir görüntüsü yaradır, etibar yaratmır; üstəlik zəncirin istismar xərclərini (node-lar, RPC təhlükəsizliyi
@@ -238,3 +238,5 @@ vaxt** qurulacağını və o günə qədər lövbərin **kimin imzası** olduğu
 # Status
 
 **Accepted ✅** — 2026-09-24. [[DECISIONS]]-a D-BC-6, D-GTM-2, D-GOV-5 kimi daxil edildi; təsirlənən SPEC versiya yeniləmələri DECISIONS §10 açıq öhdəliklər siyahısındadır.
+
+**Qeyd (2026-11-04):** kontekstdə və A alternativində danışıqlarla bağlı ifadələr texniki əsaslandırma ilə əvəz edildi (pilot aylarla zəncir quraşdırılmasından asılı qalır); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

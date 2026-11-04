@@ -4,10 +4,10 @@ title: "Sandbox'ta gerçek kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
-  Sandbox'ta kimlik akışı iki seçenek sunar: "Gerçek kimliğinle doğrula (Didit)" ve "Hızlı deneme (sahte kişi)". Gerçek yol
-  herkese açıktır (davet kodu isteğe bağlı bir kip olarak kalır) ve gerçek ağın Didit hesabını ve kimlik akışını paylaşır; ayrı
+  Sandbox'ta kimlik akışı iki seçenek sunar: "Gerçek kimliğinle doğrula" ve "Hızlı deneme (sahte kişi)". Gerçek yol
+  herkese açıktır (davet kodu isteğe bağlı bir kip olarak kalır) ve gerçek ağın sağlayıcı hesabını ve kimlik akışını paylaşır; ayrı
   bir sağlayıcı uygulaması yoktur. Ücretsiz aylık kota gerçek ağla ortak olduğu için sandbox'ın günlük ve aylık bir tavanı
   vardır; dolunca yalnız hızlı deneme açıktır. Kişi taramadan önce açık bir uyarıyı onaylar; belgeye yalnız ad, soyad ve doğum
   tarihi geçer, sağlayıcıdaki oturum hemen silinir ve her şey gece sıfırlamasında silinir. Kabul edilen riskler (ortak kota,
@@ -27,7 +27,7 @@ cüzdanın akışını sınamak için yeterli, ama bir cüzdan geliştiricisi ya
 (belgenin taranması, canlılık, yüz eşleştirme) uygulama içinde nasıl göründüğüyle birlikte görmek ister.
 
 Bu karar, sandbox'ta gerçek adımları **isteyen herkese** açar. Kimlik akışının ilk ekranında iki seçenek vardır: "Gerçek
-kimliğinle doğrula (Didit)" ve "Hızlı deneme (sahte kişi)". Gerçek yol, gerçek ağın Didit hesabıyla çalışır; bunun getirdiği
+kimliğinle doğrula" ve "Hızlı deneme (sahte kişi)". Gerçek yol, gerçek ağın sağlayıcı hesabıyla çalışır; bunun getirdiği
 riskler aşağıda açıkça kabul edilmiş ve sınırlanmıştır.
 
 # Bağlam
@@ -44,13 +44,13 @@ riskler aşağıda açıkça kabul edilmiş ve sınırlanmıştır.
 # Karar
 
 **K1 — İki seçenek, herkese açık.** Sandbox'ta kimlik belgesi akışında, aydınlatma onayından sonra iki seçenek gösterilir:
-"Gerçek kimliğinle doğrula (Didit)" ve "Hızlı deneme (sahte kişi)". Hızlı deneme eskisi gibi sahte sağlayıcıya gider ve
+"Gerçek kimliğinle doğrula" ve "Hızlı deneme (sahte kişi)". Hızlı deneme eskisi gibi sahte sağlayıcıya gider ve
 seçim yapılmayan her akış hızlı denemedir. Gerçek yol için davet gerekmez. Gerçek yol ayarlı değilse (sağlayıcı anahtarı yoksa)
 ya da tavan dolmuşsa (K3) yalnız hızlı deneme gösterilir ve sade bir ileti yazılır ("Bugünlük kota doldu, hızlı denemeyi
 kullan").
 
 **K2 — Davet kodu isteğe bağlı bir kiptir.** Davet kodu altyapısı kalır ve yalnız sandbox yöneticisi açarsa kullanılır
-(`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`; ilk metinde varsayılan `open` — **2026-10-28 notu: varsayılan `invite`**). Bu kipte gerçek yol yalnız geçerli bir davet koduyla açılır.
+(kip ayarı `invite`; ilk metinde varsayılan `open` — **2026-10-28 notu: varsayılan `invite`**). Bu kipte gerçek yol yalnız geçerli bir davet koduyla açılır.
 Kodu yalnız sandbox yöneticisi üretir (sandbox sayfasının yönetici bölümü, yönetici belirteciyle; bölüm dışarıya kapalıdır,
 yalnız sunucunun kendisinden açılır). İki tür kod vardır: **kişiye özel** (tek kullanımlık; en çok 7 gün geçerli) ve
 **süreli** (bir etkinlik ya da atölye için; en çok 72 saat ve en çok 25 kullanım). Kullanım hakkı sağlayıcı oturumu
@@ -58,19 +58,16 @@ yalnız sunucunun kendisinden açılır). İki tür kod vardır: **kişiye özel
 anahtarlı özeti durur; düz kod yalnız üretildiği anda bir kez gösterilir ve günlüğe yazılmaz. Hatalı denemeler akış başına ve
 servis genelinde sınırlıdır; yönetici bölümünde yanlış belirteç üstel gecikmeyle yavaşlatılır. Davet kodu tavanı (K3) aşamaz.
 
-**K3 — Gerçek ağın sağlayıcı hesabı ve tavanlar.** Gerçek yol, sağlayıcıda ayrı bir uygulama açmadan **gerçek ağın Didit
-hesabı ve kimlik akışıyla** çalışır. Değerler sandbox'a ayrı adlı değişkenlerle (`TAMGA_IDV_DIDIT_SANDBOX_*`) verilir; değerler
-gerçek ağınkiyle aynıdır. Sunucuda bunları sandbox kurulum betiği gerçek ağın ayarlarından kopyalar (`sandbox-setup.sh
-didit-from-main`); değerler ekrana ve günlüğe basılmaz. Sandbox'ın ana sağlayıcısı her zaman sahtedir. Ücretsiz aylık kota
+**K3 — Gerçek ağın sağlayıcı hesabı ve tavanlar.** Gerçek yol, sağlayıcıda ayrı bir uygulama açmadan **gerçek ağın sağlayıcı hesabı ve kimlik akışıyla** çalışır. Değerler sandbox'a ayrı adlı değişkenlerle (sandbox'a özel ayarlar) verilir; değerler
+gerçek ağınkiyle aynıdır. Sunucuda bunları sandbox kurulum betiği gerçek ağın ayarlarından kopyalar (ayar kopyalama komutu); değerler ekrana ve günlüğe basılmaz. Sandbox'ın ana sağlayıcısı her zaman sahtedir. Ücretsiz aylık kota
 gerçek ağla ortak olduğundan sandbox'ta açılan **bütün** gerçek oturumlar (açık ve davetli) iki tavana sayılır: **günlük
-tavan** (varsayılan 15, `TAMGA_IDV_DIDIT_SANDBOX_DAILY_CAP`) ve **aylık tavan** (varsayılan 150,
-`TAMGA_IDV_DIDIT_SANDBOX_MONTHLY_CAP`; Türkiye saatine göre gün ve ay). Hak, sağlayıcı oturumu açılırken düşer; biri dolunca
+tavan** (varsayılan 15) ve **aylık tavan** (varsayılan 150; Türkiye saatine göre gün ve ay). Hak, sağlayıcı oturumu açılırken düşer; biri dolunca
 yeni gerçek oturum açılmaz. Sayaç kişi verisi taşımaz ve gece sıfırlamasında bu ayın değerleriyle korunur (sıfırlama aylık
 tavanı atlatamaz). Her akışta en çok bir gerçek oturum açılır.
 
 **K4 — Taramadan önce açık uyarı.** Gerçek yol seçilince, sağlayıcıya gitmeden önce ayrı bir uyarı sayfası gösterilir ve kişi
 onay kutusunu işaretlemeden devam edemez: "Bu bir test ortamıdır; gerçek kimliğinle deniyorsun; verilerin her gece silinir;
-Didit oturumu belge verilir verilmez silinir." Aynı sayfada kısa aydınlatma metni ve kişinin hakları bulunur; sağlayıcı
+sağlayıcıdaki oturum belge verilir verilmez silinir." Aynı sayfada kısa aydınlatma metni ve kişinin hakları bulunur; sağlayıcı
 hesabının gerçek ağla ortak olduğu da yazılır.
 
 **K5 — En az veri.** Sandbox belgesine kişiden yalnız **ad, soyad ve doğum tarihi** geçer (bunlardan türeyen 18 yaş bilgisi,
@@ -103,7 +100,7 @@ Gerçek ağın sağlayıcı hesabını paylaşmak üç riski bilerek kabul eder;
 | Risk | Ne olur | Azaltım |
 |---|---|---|
 | **Ortak kota** | Sandbox'ta açılan oturumlar gerçek ağın ücretsiz aylık doğrulama hakkından düşer; aşırı kullanım gerçek ağın doğrulamasını aksatabilir. | Günlük (15) ve aylık (150) tavan (K3); dolunca yalnız hızlı deneme; davet kodu da tavanı aşamaz; akış başına tek oturum; sayaç gece sıfırlamasıyla atlatılamaz. |
-| **Sandbox sağlayıcı anahtarını okuyabilir** | Sandbox servis kullanıcısı artık sağlayıcı anahtarını okur; sandbox ele geçirilirse anahtar sızar ve hesapta oturum açılıp okunabilir. | Anahtar yalnız sandbox ayar dosyasında ve yalnız sandbox kullanıcısına okunur (`root:tamga-sandbox 640`); gerçek ağın ayar dosyası, imza anahtarları, verisi ve yedekleri sandbox'a yine kapalıdır (dosya izni + servis kısıtı). Webhook gizli anahtarı sandbox'a kopyalanmaz. Şüphede anahtar dönüşümü: sağlayıcı panelinde yeni anahtar → gerçek ağın ayarlarına yazılır ve gerçek kimlik servisi yeniden başlatılır → `sandbox-setup.sh didit-from-main` yeniden çalıştırılır → eski anahtar panelde iptal edilir. |
+| **Sandbox sağlayıcı anahtarını okuyabilir** | Sandbox servis kullanıcısı artık sağlayıcı anahtarını okur; sandbox ele geçirilirse anahtar sızar ve hesapta oturum açılıp okunabilir. | Anahtar yalnız sandbox ayar dosyasında ve yalnız sandbox kullanıcısına okunur (`root:tamga-sandbox 640`); gerçek ağın ayar dosyası, imza anahtarları, verisi ve yedekleri sandbox'a yine kapalıdır (dosya izni + servis kısıtı). Webhook gizli anahtarı sandbox'a kopyalanmaz. Şüphede anahtar dönüşümü: sağlayıcı panelinde yeni anahtar → gerçek ağın ayarlarına yazılır ve gerçek kimlik servisi yeniden başlatılır → sandbox kurulum betiğinin ayar kopyalama komutu yeniden çalıştırılır → eski anahtar panelde iptal edilir. |
 | **Webhook gerçek ağa gider** | Sandbox oturumlarının bildirimleri gerçek ağın kimlik servisine ulaşır. | Sandbox webhook'a güvenmez, kararı API'den çeker; gerçek ağ bilmediği oturumun bildirimini sessizce yok sayar (K7). Bildirim yalnız tetiktir, kişi verisi okunmaz. |
 
 # Değişmezler
@@ -134,7 +131,7 @@ Gerçek ağın sağlayıcı hesabını paylaşmak üç riski bilerek kabul eder;
 
 - Kimlik servisi sandbox kipinde iki sağlayıcıyı birlikte taşır: sahte sağlayıcı (hızlı deneme) ve gerçek sağlayıcı; seçim
   kişinin seçimiyle o akış için yapılır.
-- Sandbox kurulum betiğine `didit-from-main` komutu eklenir: gerçek ağın sağlayıcı anahtarını ve kimlik akışını sandbox
+- Sandbox kurulum betiğine ayar kopyalama komutu eklenir: gerçek ağın sağlayıcı anahtarını ve kimlik akışını sandbox
   ayarlarına ayrı adlarla yazar, tavan varsayılanlarını ekler ve sandbox kimlik servisini yeniden başlatır. Sandbox ile gerçek
   ağın anahtarlarının aynı olmasını engelleyen eski denetim kaldırılır.
 - Sandbox sayfası ve cüzdanın sandbox metinleri iki seçeneği anlatır; davet kodu üretme bölümü isteğe bağlı kip için kalır.
@@ -144,10 +141,10 @@ Gerçek ağın sağlayıcı hesabını paylaşmak üç riski bilerek kabul eder;
 
 - **Varsayılan kip `invite`.** KVKK/GDPR ön incelemesi (proje yönetimi, 2026-10-28) gerçek yolun herkese açık kalmasını hukuki
   inceleme bitmeden bir risk olarak işaretledi. Gerçek yol (sağlayıcıda gerçek kimlikle doğrulama) artık **varsayılan olarak yalnız
-  geçerli bir davet koduyla** açılır; `TAMGA_IDV_DIDIT_SANDBOX_MODE=open` yalnız açıkça yazılırsa herkese açılır. Hızlı deneme (sahte
+  geçerli bir davet koduyla** açılır; kip ayarı `open` yalnız açıkça yazılırsa herkese açılır. Hızlı deneme (sahte
   kişi) her kipte herkese açıktır; OpenID uyum testleri ve sahneler bu yolu kullanır. K1/K2'deki "varsayılan `open`" bu notla okunur;
   RI1 buna göre yeniden yazıldı. İnceleme bitince kip proje yönetimi kararıyla yeniden açılabilir (tek ortam değişkeni).
-- **Sağlayıcıda silme ifadesi.** Uyarı ve aydınlatma metinlerinde "Didit oturumu belge verilir verilmez silinir" yerine "oturumun
+- **Sağlayıcıda silme ifadesi.** Uyarı ve aydınlatma metinlerinde "sağlayıcıdaki oturum belge verilir verilmez silinir" yerine "oturumun
   silinmesi belge verilir verilmez **istenir**" yazılır: sağlayıcı hesabında silme yetkisi (`delete:sessions`) ve veri işleme
   sözleşmesi tamamlanana kadar silme isteği sağlayıcının kendi saklama ayarına tabidir. K4/K6'nın kuralı (hemen silme isteği) değişmez;
   yalnız kişiye verilen söz bugünkü duruma uyar.
@@ -157,3 +154,5 @@ Gerçek ağın sağlayıcı hesabını paylaşmak üç riski bilerek kabul eder;
 **Accepted — 2026-10-04**, **güncellendi 2026-10-05** (herkese açık gerçek yol; gerçek ağın sağlayıcı hesabı; tavanlar ve kabul
 edilen riskler) — proje yönetimi onayı; birebir alıntılar özel onay kaydında. DECISIONS: D-ID-9. [[ADR-0038]] K4 ve SB3'ü
 kısmen değiştirir.
+
+**Not (2026-11-04):** uzaktan kimlik doğrulama sağlayıcısının ticari adı ile ortam değişkeni ve komut adları kamuya açık metinden çıkarıldı ("uzaktan kimlik doğrulama sağlayıcısı"; ayar adları işletmecinin yapılandırma belgesinde); karar içeriği değişmedi (proje yönetimi).

@@ -4,7 +4,7 @@ title: "Positioning"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
   Tamga is positioned in three layers: (1) the base — all credentials, protocols and trust lists follow EU (eIDAS 2.0 / EUDI)
   standards; (2) Tamga Network — a light trust federation for the Turkic world: it collects country lists and introduces them to
@@ -79,9 +79,9 @@ Three paths were considered:
 
 | Option | Result | Why |
 |---|---|---|
-| Path 1: EU-compatible wallet + services only | rejected (as the main direction) | Fastest revenue, but little differentiation, and it shrinks when the state wallet arrives. Path 3 already includes it. |
-| Path 2: heavy network and institution first | rejected | Without states it stays without revenue for years; an early institution is costly. |
-| **Path 3: layered** | **accepted** | Matches the architecture exactly; services and the wallet bring revenue now, the network grows over time, and when the state wallet and lists arrive the value is not lost — the federation's value grows. |
+| Path 1: EU-compatible wallet + services only | rejected (as the main direction) | Fastest start, but little distinctive value, and it shrinks when the state wallet arrives. Path 3 already includes it. |
+| Path 2: heavy network and institution first | rejected | Without states the network stays unused for years; high early institution cost, no basis. |
+| **Path 3: layered** | **accepted** | Matches the architecture exactly; services and the wallet are usable now, the network grows over time, and when the state wallet and lists arrive the value is not lost — the federation's value grows. |
 
 **Known tension:** the EU deliberately separates roles. An institution that runs the list and also sells services has a conflict of
 interest. One team is enough today, but later the network's governance (council or foundation) and the service company must
@@ -129,3 +129,5 @@ services sit outside the network. PO1–PO4 remain in force.
 > **Legal note (2026-10-13):** Article 5f is not third-country recognition; for countries outside the EU the only open basis is
 > Article 14 (trust services only, an agreement between states). The decision does not change. Approved by project management
 > (first EU alignment review, decision 13).
+
+**Note (2026-11-04):** the revenue wording in the rationale table was replaced by the technical rationale ("little distinctive value", "high early institution cost, no basis"); the decision content is unchanged (project management).

@@ -46,6 +46,18 @@ export const PRIVATE_PATHS_RE = new RegExp(literalSource(PRIVATE_PATHS), "i");
 /** Yayın betiği için tek PCRE deseni: araç adları + özel yollar (yalnız bu grup büyük/küçük harf duyarsız). */
 export const TOOL_NAMES_PCRE = `(?i:${TOOL_NAMES_SOURCE}|${literalSource(PRIVATE_PATHS)})`;
 
+/**
+ * Yalnız DÜZYAZIDA geçmemesi gereken işletmeci unvanı ve vergi numarası (2026-11-04): operatörün listesinden okunur
+ * (../tamga-platform/ops/public-text-prose-names.txt). Kayıt verisi (güven listesi kaynakları, imzalı listeler, PKI, test
+ * fikstürleri) bu adları bilerek taşır; bu yüzden desen yalnız belge denetiminde (public-text-check: .md) ve yayın betiğinin
+ * düzyazı taramasında (publish-public.sh: .md/.mdx/.ts/.tsx/.typ, kayıt verisi yolları hariç) kullanılır. Liste yoksa hiçbir
+ * şeyle eşleşmez.
+ */
+export const PROSE_NAMES = readList("public-text-prose-names.txt");
+export const PROSE_NAMES_RE = new RegExp(literalSource(PROSE_NAMES), "iu");
+/** Yayın betiği için PCRE (düz metin; büyük/küçük harf duyarsız grup). */
+export const PROSE_NAMES_PCRE = `(?i:${literalSource(PROSE_NAMES)})`;
+
 export const PRIVATE_NAMES = PRIVATE_NAMES_FILE_FOUND
   ? readFileSync(file, "utf8")
       .split(/\r?\n/)

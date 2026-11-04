@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-26
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 summary: >
   Geçiş kartı yolunda (ADR-0012 B) kapılar jetonu Tamga Verify'ın `/terminal/verify` ucuna gönderir; uç bugüne kadar kimlik
   istemiyordu. Cüzdandaki 60 saniyelik QR'ı gören herkes jetonu önce kendisi gönderip tek kullanımlık bileti tüketebilir ve
@@ -31,11 +31,11 @@ okumaz, tüketmez, sayaçlara girmez. Böylece bir biletin QR'ını uzaktan foto
   bilet durumu (ADR-0012 K4, [[FW-RB-0006]] §4.3) orada tutulur.
 - Uç kimlik istemiyordu (yalnız hız sınırı). Jeton kişisel veri taşımadığı için gizlilik riski yoktu; ama **hizmet engelleme
   riski** vardı: QR'ı gören (yanındaki kişi, kamera, ekran görüntüsü) jetonu 60 saniye içinde kendisi gönderirse `jti` listeye
-  girer ya da tek kullanımlık bilet tüketilir; gerçek kapıda kişi DUR görür. Bağımsız güvenlik denetiminin (2026-10-26) bulgusu.
+  girer ya da tek kullanımlık bilet tüketilir; gerçek kapıda kişi DUR görür. Ekim 2026 güvenlik incelemesinin (2026-10-26) bulgusu.
 - ADR-0012 K5 terminalleri doğrulayıcı kaydında `terminal_groups[]` (grup, sertifika parmak izi, çevrim dışı izni) ile tanımlamayı
   öngörür. Bu kayıt alanı henüz liste şemasında yok; çevrim dışı doğrulayan terminal de yok. Bugünkü kapılar çevrim içi ve
   işletmecinin denetimindeki cihazlardır (turnike bilgisayarı, kapı tableti, sandbox'ın tarayıcı sayfası).
-- Proje yönetiminin yönü: güvenlik denetiminin bulguları kapatılır; en az yıkıcı, doğru çözüm seçilir.
+- Proje yönetiminin yönü: güvenlik incelemesinin bulguları kapatılır; en az yıkıcı, doğru çözüm seçilir.
 
 # Karar
 
@@ -99,3 +99,5 @@ gösterilebilir; bu ADR o zaman güncellenir.
 **Accepted — 2026-10-26.** Proje yönetimi onayıyla (güvenlik turu düzeltmeleri, genel onay). DECISIONS: D-PROX-2.
 
 **Not (2026-10-29):** K2 (Kurum Konsolu ekranı) ve K5 (`terminal_groups[]` liste şemasında) [[ADR-0069]] ile tamamlandı; anahtar kurum adına verilir (TG1–TG3).
+
+**Not (2026-11-04):** "Bağımsız güvenlik denetimi" ifadesi "güvenlik incelemesi" olarak düzeltildi (bağımsız denetim henüz yapılmadı); karar içeriği değişmedi (proje yönetimi).

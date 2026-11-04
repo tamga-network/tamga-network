@@ -4,7 +4,7 @@ title: "Kurum kimliği (X.509)"
 status: Active
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   [[ADR-0004]] X.509 kararının kod/protokol seviyesindeki karşılığı. Kurumsal/entity
   kimlik, ulusal Root CA'lara dayanan X.509 sertifikalarıyla kurulur; kurumun zincir
@@ -53,7 +53,7 @@ devletinin çıpalı köküne kadar doğrulanabilir.
 ```
 Türkiye Root CA  (fingerprint zincirde, stateCode="TR")
    └── (opsiyonel Ara CA)
-         └── İTÜ sertifikası  (leaf)
+         └── Örnek Üniversitesi sertifikası  (leaf)
 ```
 
 **On-chain kök kaydı** (RootCARegistry — [[SPEC-BC-0001]] ile aynı yönetişim,

@@ -137,7 +137,7 @@ abbreviaturalar ingiliscə qalır: salted hash, selective disclosure, holder bin
 
 **Salted hash** — Dəyərin təsadüfi salt ilə birlikdə hesablanan heşi; dəyəri heşdən təxmin etmək mümkün deyil. SD-JWT sahələri bu üsulla gizlədir.
 
-**Selective disclosure** — Rəqəmsal sənəddən artıq məlumatın deyil, yalnız yoxlayan tərəfin tələb etdiyi sahələrin göstərilməsi.
+**Selective disclosure** (seçici açıqlama) — Rəqəmsal sənəddən artıq məlumatın deyil, yalnız yoxlayan tərəfin tələb etdiyi sahələrin göstərilməsi.
 
 **Psevdonim** (pseudonym) — Rəqəmsal cüzdanın hər veb-sayt üçün ayrıca törətdiyi sabit hesab identifikatoru; iki sayt eyni şəxsi uyğunlaşdıra bilməz.
 

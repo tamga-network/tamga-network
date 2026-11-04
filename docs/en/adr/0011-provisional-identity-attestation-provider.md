@@ -4,10 +4,10 @@ title: "Provisional identity attestation provider"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
   As long as there is no PID Provider appointed by the state, Tamga issues an identity attestation it signs itself
-  (urn:tamga:id:IdentityAttestation:1) to people it has verified by remote identity verification (Didit: document +
+  (urn:tamga:id:IdentityAttestation:1) to people it has verified by remote identity verification (a remote identity verification provider: document +
   liveness + face match; later NFC chip reading). This is not a PID but an EAA issued by Tamga as an issuer; it is
   superseded when a state PID arrives. Institutions (universities) take this attestation as a presentation when issuing
   documents and match it against their own records. The identity proofing integration lives in Tamga's identity service,
@@ -35,8 +35,8 @@ wallet screens; tests 11/11 + scene 2b over real HTTP.
 
 In Türkiye and the member states of the Organization of Turkic States there is no **[[t:PID]] Provider** appointed in the
 [[t:eIDAS]] sense (the state body that gives identity data to the wallet). The current design (D-ID-2, SPEC-ID-0003/IDP3)
-does [[t:identity-proofing]] **at each institution's own [[t:issuer]]**: the student logs into a portal, and Didit runs
-there if needed. This depends on institutional integration (student information system/portal), and the person is
+does [[t:identity-proofing]] **at each institution's own [[t:issuer]]**: the student logs into a portal, and the identity verification
+provider runs there if needed. This depends on institutional integration (student information system/portal), and the person is
 verified again at every institution. Direction from project management (2026-09-25): until the state appoints a provider,
 **Tamga** performs identity verification; the person goes to an institution with the identity document in their wallet,
 the institution matches it with its record and issues the document. The student-system QR and e-mail routes remain as
@@ -79,8 +79,8 @@ fact.
 
 ## K3 — Identity proofing flow (wallet-initiated)
 1. Wallet → `id.tamga.network` ([[t:OpenID4VCI]] **authorization code**; SPEC-PROTO-0001): the authorisation page opens a
-   Didit session (document + passive liveness + face match; NFC optional).
-2. Didit decision (polling `GET /v3/session/{id}/decision/` primary; webhook `https://id.tamga.network/idv/webhook`
+   session with the remote identity verification provider (document + passive liveness + face match; NFC optional).
+2. The provider's decision (polling its decision endpoint primary; webhook `https://id.tamga.network/idv/webhook`
    secondary, `status.updated`) → if **Approved**, the attestation is issued (10 copies, [[t:WUA]] mandatory, PR11).
 3. Getting a document from an institution: the wallet picks the institution from the trust list directory → the
    institution's issuer requests an **IdentityAttestation presentation** in the authorization code flow ([[t:OpenID4VP]],
@@ -91,10 +91,10 @@ fact.
 
 ## K4 — Data controllership and retention (KVKK)
 - Tamga is the **data controller** for identity proofing data; the privacy notice + explicit consent text is shown in the
-  wallet before handing over to Didit.
+  wallet before handing over to the provider.
 - Stored at Tamga: the attestation record (opaque `subject_ref`, `iat/exp`, status `idx`, hash of the document number,
-  `document_chip_verified`, Didit `session_id`); **document images, selfies and raw MRZ data are not stored at Tamga**
-  (they follow Didit's retention policy; ≤ 30 days requested in the contract). Erasure request: revoke the attestation +
+  `document_chip_verified`, the provider's session identifier); **document images, selfies and raw MRZ data are not stored at Tamga**
+  (they follow the provider's retention policy; ≤ 30 days requested in the contract). Erasure request: revoke the attestation +
   delete the record.
 - The role "Identity Attestation Provider" and its responsibilities are added to FW-TF-0001 §6; issuance/revocation counts
   enter the quarterly transparency report (no persons).
@@ -116,7 +116,7 @@ fact.
   old one.
 - Institutional matching: at least `personal_administrative_number` + `birthdate`; name matching normalised (Turkish
   characters).
-- Didit "In Review" → no attestation, the user waits; "Declined" → retry after 24 hours; 3 rejections → manual handling.
+- Provider "In Review" → no attestation, the user waits; "Declined" → retry after 24 hours; 3 rejections → manual handling.
 
 # Rationale
 A person is verified once and goes to every institution with the same attestation; institutions can work without a student
@@ -133,15 +133,15 @@ number exists; both are limited in K4/K2.
   rejections. Rejected; TCKN with selective disclosure, and only for authorised scopes.
 
 # Consequences
-- New service `apps/id` (operator repository) (`id.tamga.network`): Didit session, decision, webhook, OpenID4VCI issuer
-  (authorization code), attestation record, status list. A **single** Didit webhook target:
+- New service `apps/id` (operator repository) (`id.tamga.network`): provider session, decision, webhook, OpenID4VCI issuer
+  (authorization code), attestation record, status list. A **single** provider webhook target:
   `https://id.tamga.network/idv/webhook` (not one per institution).
 - Wallet: a "Verify my identity" flow (in-app browser), an institution directory (from the trust list), attestation
   presentation when getting a document from an institution (OpenID4VP within issuance).
 - Institutional issuer: authorization code + IdentityAttestation request + record matching; the portal's student login
   **is removed** (the staff panel remains in the demo).
 - Specification/framework updates per K5; DB-21 becomes part of this ADR; DB-22 is closed.
-- Demo: Didit **sandbox** (no real identity, GT1); presentation scene 3 "portal login" → "verify my identity in the wallet +
+- Demo: the provider's **sandbox** (no real identity, GT1); presentation scene 3 "portal login" → "verify my identity in the wallet +
   choose the university".
 
 # Open points — DECIDED on acceptance (2026-09-25)
@@ -151,3 +151,5 @@ number exists; both are limited in K4/K2.
 3. When NFC is added: not a separate type (`…:IdentityAttestation:1` + `document_chip_verified`) but the same type —
    confirmed.
 4. In the demo a fake TCKN is generated for the sandbox profile; `students.json` is updated accordingly.
+
+**Note (2026-11-04):** the trade name and API address of the remote identity verification provider were removed from the public text ("remote identity verification provider", reference adapter; the address and setting names are in the operator's configuration document); the decision content is unchanged (project management).

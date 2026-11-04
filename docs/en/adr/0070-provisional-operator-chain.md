@@ -9,7 +9,7 @@ last_updated: 2026-10-30
 summary: >
   Tamga Network has no legal personality. Until the non-profit foundation to be established acquires one, the network's own
   services (list publication, the identity service, Tamga Verify, the websites) are operated on behalf of Tamga Network by the
-  provisional operator BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; every registration, certificate and contract that needs
+  provisional operator (a company); every registration, certificate and contract that needs
   a legal person is made in its name with the words "on behalf of Tamga Network". The list operator and scheme owner name stays
   "Tamga Network". The provisional operator's name, identifier and address come from a single configuration value that the list
   publisher checks at every publication. The handover uses the existing handover tool and runbook; until the foundation exists,
@@ -23,7 +23,7 @@ source_version: 1.0.0
 # In short
 
 Tamga Network will become a foundation, but the foundation has not been established yet. Until then a company runs the network's
-own services on the network's behalf and provisionally: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. The trust lists still
+own services on the network's behalf and provisionally (the provisional operator). The trust lists still
 name "Tamga Network" as their operator; the company's name appears only where a legal person is needed (tax number, certificates,
 contracts, personal data registration). This information is kept in one place and changed in one step when the foundation exists.
 
@@ -42,8 +42,8 @@ contracts, personal data registration). This information is kept in one place an
 # Decision
 
 ## K1 — The chain
-Tamga Network (foundation to be established) ← provisional operator **BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ** (tax
-number 1870632151; the address and other identifiers live only in `registry/provisional-operator.json`). The provisional operator runs the network's own
+Tamga Network (foundation to be established) ← **provisional operator** (its legal
+name, tax number, address and other identifiers live only in `registry/provisional-operator.json`). The provisional operator runs the network's own
 services (list publication, the registrar role on behalf of the state, the identity service, Tamga Verify, the websites and the
 domain names) on behalf of Tamga Network. Every act that needs a legal person (registration identifier, certificate subject, KVKK
 registration, domain name, contract) is made in its name with the words "on behalf of Tamga Network".
@@ -102,3 +102,5 @@ The record of the app-store review signer ([[ADR-0033]]) and every later own rec
 
 **Accepted — 2026-10-30.** With the approval of project management (verbatim quote in the private approval record). DECISIONS:
 D-GOV-10. OP1–OP3 are binding.
+
+_Note (2026-11-04): the operator's legal name was removed from the public text; the decision itself is unchanged (project management)._

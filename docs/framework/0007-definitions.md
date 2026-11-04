@@ -18,7 +18,7 @@ summary: >
 | Aracı doğrulayıcı (Intermediary) | Bir doğrulayıcı adına cüzdandan belge isteyen ve doğrulayan hizmet. Cüzdan, asıl doğrulayıcının adını gösterir. Tamga'da Tamga Verify. |
 | Belge (elektronik öznitelik belgesi, EAA) | Bir belge verenin kişi hakkında imzaladığı ve kişinin cüzdanında taşınan belge: öğrenci belgesi, diploma, bilet gibi. |
 | Belge sahibi (Holder) | Belgeyi cüzdanında taşıyan ve kime göstereceğine karar veren kişi. |
-| Belge türü | Bir belgenin alanlarını, görünen adlarını ve seçici paylaşım politikasını tanımlayan, kalıcı kimliği olan tanım (`urn:tamga:…`). |
+| Belge türü | Bir belgenin alanlarını, görünen adlarını ve seçici açıklama politikasını tanımlayan, kalıcı kimliği olan tanım (`urn:tamga:…`). |
 | Belge türü kataloğu | Belge türü tanımlarının ve şemalarının değişmez dosyalar olarak yayınlandığı yer (`schemas.tamga.network`). |
 | Belge veren (Attestation Provider) | Belge veren kurum: üniversite, meslek kuruluşu, kamu kurumu, şirket. |
 | Cihaz kanıtı | Telefonun işletim sisteminin, anahtarın cihazın güvenli bölgesinde üretildiğini ve uygulamanın değiştirilmediğini doğrulayan imzalı beyanı (Apple App Attest, Android key attestation). |
@@ -32,7 +32,7 @@ summary: >
 | Doğrulayıcı (Relying Party) | Cüzdandan belge isteyen ve doğrulayan kayıtlı kuruluş: işveren, web sitesi, kurum. |
 | Erişim sertifikası | Doğrulayıcının isteklerini imzaladığı X.509 sertifikası; istemci kimliği bu sertifikanın özetidir. |
 | Federasyon | Ülke güven listelerinin kendi sahipleri tarafından işletildiği ve listelerin listesinde bir araya getirildiği model. |
-| Geçici işletmeci | Yönetişim kurumu kurulana kadar ağı ve ağın kendi hizmetlerini işleten tüzel kişi. Bugün: Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. Listelerde işletmeci adı "Tamga Network" yazılır (`status = "provisional"`). Vakıf kurulduğunda işletmecilik ona devredilir. |
+| Geçici işletmeci | Yönetişim kurumu kurulana kadar ağı ve ağın kendi hizmetlerini işleten tüzel kişi. Bugün bu rolü Tamga Network (kurulacak vakıf) adına bir geçici işletmeci üstlenir. Listelerde işletmeci adı "Tamga Network" yazılır (`status = "provisional"`). Vakıf kurulduğunda işletmecilik ona devredilir. |
 | Geçiş kartı | Yakın alanda gösterimin kalıcı çözümü devreye girene kadar kullanılan, kısa ömürlü ve kapsamı sınırlı belge gösterimi. |
 | Güven listesi | Bir ülkenin kök sertifikalarını, belge verenlerini ve kayıtlı doğrulayıcılarını taşıyan imzalı liste. |
 | Güven listesi işletmecisi (Trusted List Scheme Operator) | Ulusal güven listesini derleyen, imzalayan ve yayınlayan kuruluş. Bugün Türkiye için Tamga, devlet adına geçici olarak. |
@@ -45,13 +45,13 @@ summary: >
 | Liste aşaması | Güvenin imzalı güven listelerine ve çapa günlüğüne dayandığı bugünkü aşama. |
 | Listelerin listesi (LoTL) | Ülke güven listelerinin adreslerini, imzacılarını ve tanınma durumlarını gösteren imzalı liste. |
 | Ortak defter | Güven kayıtlarının birden çok bağımsız işletmeci tarafından tutulduğu defter (blokzincir). Defter aşamasında kurulur. |
-| Seçici paylaşım (Selective disclosure) | Kişinin bir belgeden yalnızca istenen alanları göstermesi. |
+| Seçici açıklama (Selective disclosure) | Kişinin bir belgeden yalnızca istenen alanları göstermesi. Eşanlamlı: seçici paylaşım. |
 | Sıfır bilgi ispatı | Bir bilginin doğru olduğunu, bilginin kendisini göstermeden kanıtlayan ispat; örneğin doğum tarihini göstermeden "18 yaşından büyüğüm". |
 | Takma ad | Cüzdanın her web sitesi için ayrı ürettiği, kararlı ama siteler arasında eşleştirilemeyen hesap kimliği. |
 | Takma ad tohumu | Kimlik servisinin kişinin kimliğinden saklamadan türettiği ve yalnızca cüzdanda kalan gizli değer; takma adlar bundan türetilir. Gösterilemeyen ayrı bir belge türüyle verilir. |
 | Tamga Network | Bu çerçevenin tanımladığı güven ağı: kurallar, güven listeleri, belge türü kataloğu ve açık kaynak paketler. Ağ bir ürün satmaz. |
 | Tamga Verify | Ağın barındırılan doğrulayıcısı (aracı doğrulayıcı). |
-| Tamga Wallet | Ağın ilk cüzdanı; ayrı bir ürün ve açık kaynaktır. Ağın kurallarına her cüzdan gibi uyar. |
+| Tamga Wallet | Ağın ilk cüzdanı; ayrı bir üründür ve açık kaynak lisansıyla (EUPL-1.2) geliştirilir. Ağın kurallarına her cüzdan gibi uyar. |
 | Yetkili kaynak | Belgedeki bilginin asıl sahibi olan sistem; örneğin üniversitenin öğrenci bilgi sistemi. |
 | Yönetişim kurumu | Devletler katıldığında kurulan konsey ya da vakıf; listeleri ve ağ kurallarını yönetir. |
 

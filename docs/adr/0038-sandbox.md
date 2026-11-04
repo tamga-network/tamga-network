@@ -4,7 +4,7 @@ title: "Sandbox: test ağı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-06
+last_updated: 2026-11-04
 summary: >
   Tamga Network, gerçek ağdan tamamen ayrı bir test ağı işletir: sandbox.tamga.network. Kendi test kök sertifikası, kendi
   güven listesi, örnek kurumları, sahte kişileri ve her belge türünden örnek belgeleri vardır. Cüzdan geliştiricileri,
@@ -69,9 +69,8 @@ kullanım rehberi, adların yalnızca gerçekçi bir deneme ortamı için kullan
 olmadığını ve belgelerin test anahtarıyla imzalandığı için hiçbir yerde geçerli olmadığını açıkça yazar; kurum logoları
 kullanılmaz.
 
-> **Not (2026-10-06, proje yönetimi):** İstanbul Bilgi Üniversitesi ile pilot ortaklık anlaşması vardır. Bu kurum için not
-> "pilot ortağımızdır" der; sandbox'taki hâli yine yalnız test kurumudur. "İlişki ya da anlaşma yoktur" cümlesi diğer örnek
-> kurumlar için geçerlidir. Test anahtarı uyarısı ve logo kuralı değişmez.
+> **Not (2026-10-06, proje yönetimi):** sandbox'taki örnek üniversite kurumu yalnız test kurumudur; örnek kurumların hiçbiri
+> gerçek bir kurumla ilişki ya da anlaşma ifade etmez. Test anahtarı uyarısı ve logo kuralı değişmez.
 
 > **Değişiklik (2026-10-06, [[ADR-0042]] K3):** K1'deki `wallet.sandbox` ve K6'daki "test cüzdan sağlayıcısı" ağın hizmeti
 > değildir. Ağ cüzdan sağlayıcısı işletmez; sandbox'ta da her cüzdan kendi sağlayıcısını işletir ve sandbox listesine
@@ -119,3 +118,5 @@ uyum servisi sonraki aşamalardır; açılmadan önce ayrıca karara bağlanır.
 kimlik doğrulama; 2026-10-05'te herkese açık), K1'deki "kurum konsolu çalışmaz" ve K7'deki kurumların kendi kendine kaydı [[ADR-0041]] ile (kurum test
 hesapları) değişti (2026-10-04). K1/K6'daki test cüzdan sağlayıcısını ağın çalıştırması [[ADR-0042]] ile değişti (2026-10-06):
 sandbox'ta cüzdan sağlayıcısını cüzdan işletir.
+
+**Not (2026-11-04):** 2026-10-06 notundaki gerçek kurum adı ve ilişki ifadesi kaldırıldı ("örnek bir üniversite kurumu"); karar içeriği değişmedi (proje yönetimi).

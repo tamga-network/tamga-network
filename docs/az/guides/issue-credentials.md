@@ -4,7 +4,7 @@ title: "Qurum kimi rəqəmsal sənəd vermək"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-20
+last_updated: 2026-11-04
 summary: >
   Universitet, dövlət qurumu və ya bilet satıcısı kimi şəxslərin rəqəmsal cüzdanına rəqəmsal sənəd vermək: Tamga-nın yerləşdirdiyi sənəd vermə xidmətini `@tamga-network/issuer/client` ilə çağırmaq (təklif, bilet satışı, ləğv/müvəqqəti dayandırma) və ya öz sənəd vermə xidmətinizi `@tamga-network/issuer` kitabxanası ilə qurmaq. Xarici giriş hər qurum üçün əhatə dairəsi məhdudlaşdırılmış API açarı ilə həyata keçirilir (ADR-0016).
 translation_of: GUIDE-0003
@@ -39,8 +39,8 @@ Bu bələdçi şəxslərin rəqəmsal cüzdanına rəqəmsal sənəd vermək ist
 
 ## Yerləşdirilmiş xidmət: klient
 
-> **Əvvəlcə sandbox-da sınayın.** Aşağıdakı nümunə test şəbəkəsindəki uydurma bilet satıcısının (`bubilet`,
-> `issuer.sandbox.tamga.network`) ünvanından istifadə edir; sandbox-un ünvanları və nümunə qurumları [[GUIDE-0013]]-dədir. Real şəbəkədə
+> **Əvvəlcə sandbox-da sınayın.** Aşağıdakı nümunə test şəbəkəsindəki nümunə bilet satıcısının (`issuer.sandbox.tamga.network`)
+> ünvanından istifadə edir; sandbox-un ünvanları və nümunə qurumları [[GUIDE-0013]]-dədir. Real şəbəkədə
 > `baseUrl` `https://issuer.tamga.network`, `slug` isə qurumunuzun qeydiyyatdakı adıdır; API açarını qurum qeydiyyatından sonra Qurum
 > Konsolu verir.
 
@@ -109,7 +109,7 @@ Tamga API-sinin tam təsviri: [Sənəd vermə API-si](/api/issuer).
 - Rəqəmsal sənəd sahələrini yalnız rəqəmsal sənəd üçün istifadə edin; onları loglara, URL-ə, ləğv siyahısına yazmayın.
 - Şəxsi öz qeydinizlə uyğunlaşdırmalısınızsa (diplom, tələbə arayışı), [[t:identity-proofing|şəxsiyyətin yoxlanılması]]
   **Tamga şəxsiyyət sənədi** ilə aparılır: rəqəmsal cüzdan şəxsiyyət sənədini təqdim edir, Tamga isə yoxlayan tərəf kimi onu təklifdəki xülasə ilə və ya sorğu endpoint-iniz (`lookup`) ilə uyğunlaşdırır. Şəxsiyyət
-  provayderi (Didit) ilə birbaşa əlaqə saxlamırsınız ([[ADR-0011]]).
+  provayderi ilə birbaşa əlaqə saxlamırsınız ([[ADR-0011]]).
 - Bilet kimi fərdi məlumat tələb etməyən rəqəmsal sənədlərdə şəxsiyyət sənədi istəməyin.
 
 ## Paylaşım qaydası: sənəd kimlərə göstərilsin {#sharing-rules}

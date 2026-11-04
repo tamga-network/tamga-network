@@ -181,7 +181,7 @@ prover package; the Android native library is ready, the iOS library is pending;
 | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Issuer- and wallet-initiated issuance, remote presentation, Tamga Verify  | Live                                                                                                      |
 | Website sign-in, per-site pseudonyms                                      | Live                                                                                                      |
-| Tickets and single-use gate entry                                         | Live                                                                                                      |
+| Tickets and single-use gate entry                                         | Live (sandbox; no gate policy is defined on the real network)                                             |
 | Data deletion, history, export                                            | Live                                                                                                      |
 | Zero-knowledge proof — verifier side                                      | Live                                                                                                      |
 | Zero-knowledge proof — wallet side                                        | Wired to the wallet; Android native library ready, iOS pending; device testing not started yet            |
@@ -190,7 +190,7 @@ prover package; the Android native library is ready, the iOS library is pending;
 | Hardware-backed keys and device attestation                               | Implemented; device testing pending                                                                       |
 | Issuer's sharing rule (embedded disclosure policy)                        | Released (packages on npm since 0.5.0)                                                                    |
 | Issuer's wallet attestation preferences (key storage requirement, revocation maintenance period) | Released (packages on npm since 0.5.0) |
-| The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Released (packages on npm since 0.5.0) |
+| The EU's older trusted list format (ETSI TS 119 612, XML) and external lists in the wallet | Reading released (packages on npm since 0.5.0); the XML view of Tamga's lists in the sandbox, on the real network with the foundation ([[ADR-0066]]) |
 | Attestation Revocation List (identifier list) — verifier and wallet side | Released (packages on npm since 0.5.0); Tamga issuers use the Status List |
 | No suspension for the identity credential, CWT revocation list for mdoc; warning for requests without a registration certificate; reader verification in proximity | Released (packages on npm since 0.6.0) |
 | Misuse-resistant defaults in the package APIs; rejection of requests without a registration certificate ([[ADR-0056]]) | Released (packages on npm since 0.7.0) |
@@ -506,7 +506,7 @@ changes. Wallets and verifiers only change the implementation of the trust sourc
 ### 8.3 Governance body
 
 The governance body is not set up on day one. When one or two states are willing to join, a council or foundation is formed
-and the lists are handed over. Until then the network is operated provisionally by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ on behalf of Tamga Network (foundation to be
+and the lists are handed over. Until then the network is operated by a provisional operator on behalf of Tamga Network (foundation to be
 established); once the foundation is formed, operation is handed over to it. Tamga Network is not-for-profit; its operation will later be handed over to a foundation. The network sells no
 product and offers no commercial services; Tamga Wallet is the network's first wallet, a company's separate product; service providers sit outside the network and join the
 registration process on the same terms as everyone else ([[ADR-0037]]).

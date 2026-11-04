@@ -4,9 +4,9 @@ title: "Rəqəmsal sənəd formatı və protokollar"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-10-16
+last_updated: 2026-11-04
 summary: >
-  Tamga rəqəmsal sənədlərinin kanonik formatını, sənədin verilməsi və təqdim edilməsi protokollarını müəyyən edir. Əsas format SD-JWT VC-dir (selective disclosure daxilidir, EUDI ARF-in əsas formatıdır), ikinci format mdoc/ISO 18013-5-dir (2-ci faza, oflayn/fiziki təqdimat). Sənədin verilməsi OpenID4VCI, təqdimat OpenID4VP, imza ES256 (P-256) ilə həyata keçirilir. Holder binding MƏCBURİDİR: credential həmişə rəqəmsal cüzdanın cihaz açarına `cnf` (key binding) ilə bağlanır — bu, "universitet ideyasındakı gizli səhvin" (rəqəmsal sənədin başqasının cüzdanına yazılması) yeganə həllidir. Wallet Unit Attestation (WUA) rəqəmsal cüzdanın həqiqiliyini bəyan edir. Ləğv Token Status List-ə ([[SPEC-BC-0001]] §5) həvalə olunur. Zəncirə credential və ya onun məzmunu HEÇ VAXT yazılmır ([[PM-TRUST-0001]]).
+  Tamga rəqəmsal sənədlərinin kanonik formatını, sənədin verilməsi və təqdim edilməsi protokollarını müəyyən edir. Əsas format SD-JWT VC-dir (selective disclosure daxilidir, EUDI ARF-in əsas formatıdır), ikinci format mdoc/ISO 18013-5-dir (şəxsiyyət tiplərində aktiv, digərlərində planlaşdırılır; oflayn/fiziki təqdimat). Sənədin verilməsi OpenID4VCI, təqdimat OpenID4VP, imza ES256 (P-256) ilə həyata keçirilir. Holder binding MƏCBURİDİR: credential həmişə rəqəmsal cüzdanın cihaz açarına `cnf` (key binding) ilə bağlanır — bu, "universitet ideyasındakı gizli səhvin" (rəqəmsal sənədin başqasının cüzdanına yazılması) yeganə həllidir. Qısa ömürlü cüzdan nümunəsi sübutu (WIA) və açar sübutu (KA) rəqəmsal cüzdanın həqiqiliyini və açar anbarını bəyan edir ([[ADR-0025]]). Ləğv Token Status List-ə ([[SPEC-BC-0001]] §5) həvalə olunur. Zəncirə credential və ya onun məzmunu HEÇ VAXT yazılmır ([[PM-TRUST-0001]]).
 translation_of: SPEC-CRED-0001
 source_version: "1.0.0"
 ---
@@ -46,13 +46,13 @@ qarşılığıdır.
 | Mövzu | Qərar | Əsaslandırma |
 |------|-------|---------|
 | **Rəqəmsal sənəd formatı (əsas)** | **SD-JWT VC** | Selective disclosure daxilidir, EUDI ARF-in əsas formatıdır, kitabxanalar boldur, JSON-LD-dən xeyli sadədir |
-| **Rəqəmsal sənəd formatı (ikinci)** | **mdoc / ISO 18013-5** — **şəxsiyyət attestation-ı üçün aktivdir** (D-CRED-5, [[ADR-0013]]); digər tiplər 2-ci fazada | Safari/iOS Digital Credentials API yalnız mdoc dəstəkləyir; ARF PID presedenti; fiziki/oflayn təqdimat (BLE, dövlət mərhələsi) |
+| **Rəqəmsal sənəd formatı (ikinci)** | **mdoc / ISO 18013-5** — **şəxsiyyət attestation-ı üçün aktivdir** (D-CRED-5, [[ADR-0013]]); digər tiplər üçün planlaşdırılır | Safari/iOS Digital Credentials API yalnız mdoc dəstəkləyir; ARF PID presedenti; fiziki/oflayn təqdimat (BLE, dövlət mərhələsi) |
 | **Vermə protokolu** | **OpenID4VCI** | Faktiki standartdır; qurumun mövcud OIDC infrastrukturuna uyğunlaşır |
 | **Təqdimat protokolu** | **OpenID4VP** | Eyni ekosistem, yoxlayan tərəfin inteqrasiyası asandır |
 | **İmza alqoritmi** | **ES256 (P-256)** | Mobil secure element və HSM-lərdə universal dəstək |
 | **Holder binding** | `cnf` + cihaz açarı — **məcburi** | §3; holder binding boşluğunun yeganə həlli |
 | **Ləğv** | **Token Status List** (bitstring) | [[SPEC-BC-0001]] §5 ilə eynidir; siyahı off-chain, pointer on-chain |
-| **Korrelyasiyaya qarşı** | Toplu sənəd vermə (birdəfəlik nüsxələr) — 2-ci faza | Pilotda təxirə salınır; arxitekturada yer ayrılır |
+| **Korrelyasiyaya qarşı** | Toplu sənəd vermə (birdəfəlik nüsxələr) — **işləyir**: 10 nüsxəlik paket, avtomatik yeniləmə ([[ADR-0023]], [[ADR-0059]]) | Eyni nüsxə iki yoxlayan tərəfə göstərilmir |
 
 `did:tamga` [[t:pseudonym]] profili (SPEC-ID-0001) və X.509 sənədi verən qurum identifikatoru ([[SPEC-ID-0002]])
 bu formatların daxilinə yerləşdirilir (sənədi verən qurum = X.509; [[t:holder]] = psevdonim açarı).
@@ -149,30 +149,34 @@ etibarlılıq səviyyəsindədir — geriləmə deyil, təxirə salınmış tək
 
 ---
 
-# 4. Wallet Unit Attestation (WUA)
+# 4. Cüzdan sübutları: WIA və KA
 
-Rəqəmsal cüzdanın özü də bir sənəd daşıyır. Yoxlayan tərəf gec-tez bunu soruşur: *"Bu real
-Tamga cüzdanıdır, yoxsa kiminsə yazdığı saxta müştəri proqramı?"*
+Rəqəmsal cüzdanın özü də sübut daşıyır. Sənədi verən qurum gec-tez soruşur: *"Bu, etibar siyahısında qeydiyyatda olan cüzdan
+provayderinin əsl cüzdanıdır, yoxsa kiminsə yazdığı saxta müştəri; sənəd açarı harada saxlanılır?"* Bu suala iki ayrı sübut cavab
+verir ([[ADR-0025]]; ətraflı qaydalar [[FW-POL-0002]]):
 
-[[t:WUA]] bunları bəyan edir: rəqəmsal cüzdanın versiyası, açarın **aparat təminatında** saxlanıldığı, PIN-in aktiv
-olduğu, cihazın root/jailbreak edilmədiyi, [[t:wallet-provider]] identifikatoru.
+- **Cüzdan nümunəsi sübutu ([[t:WIA]], Wallet Instance Attestation):** cüzdan tətbiqinin sənədi verən quruma özünü təqdim etdiyi
+  qısa ömürlü sübut. Ömrü **24 saatdan azdır**; hər sənəd verilməsində yeni sahiblik sübutu (PoP) açarı və yeni, bir-birinə
+  bağlana bilməyən status siyahısı qeydi ilə verilir (WIA1). Beləliklə provayder cüzdanın neçə qurumla işlədiyini öyrənmir.
+- **Açar sübutu (KA, key attestation):** sənəd açarlarının hansı anbarda (proqram, Secure Enclave, StrongBox) və hansı istifadəçi
+  autentifikasiyası ilə saxlanıldığını bildirir; sənədlər KA-dakı `attested_keys`-ə bağlanır. Səviyyə yoxlanılmış vəziyyətə
+  əsaslanır, yoxlanılmamış bəyan KA-ya yazılmır.
+- Hər iki sübutu **cüzdanı təqdim edən təşkilatın cüzdan provayderi** imzalayır; provayderin imza açarı etibar siyahısında
+  (`lotl.wallet_providers[]`) qeydiyyatdadır. Şəbəkə cüzdan provayderi idarə etmir, onları siyahıya alır ([[ADR-0042]]).
+- Sübutlar sənəd sahibinin təminat səviyyəsinin "autentifikator gücü" ölçüsünü ([[PM-ASSUR-0001]]) qidalandırır: proqram açarı →
+  aşağı; aparat + PIN → yüksək.
 
-- WUA cüzdan provayderi (ilk mərhələdə Tamga) tərəfindən imzalanır; provayder zəncirdə
-  sənədi verən/[[t:RP]] kimi qeydiyyatdadır.
-- **Əvvəldən daxil edilməsə, sonradan əlavə etmək ağrılıdır** — bütün mövcud rəqəmsal cüzdanları miqrasiya etmək lazım gəlir.
-  Pilotda məzmun sadə saxlanılır, lakin **sahə və axın əvvəldən açılır.**
-- WUA sənəd sahibinin təminat səviyyəsinin "autentifikator gücü" ölçüsünü ([[PM-ASSUR-0001]] eIDAS məntiqi)
-  qidalandırır: proqram açarı → aşağı; aparat + PIN → yüksək.
-
-**Tətbiq edilən profil (2026-09-24, DB-16):**
+**Tətbiq olunan profil ([[ADR-0025]]):**
 
 | Sahə | Dəyər |
 |---|---|
-| Format | JWT, `typ: oauth-client-attestation+jwt`, `alg: ES256`, `x5c` = Cüzdan provayderinin sertifikatı (siyahı mərhələsində: `wallet-provider`; siyahıda `lotl.wallet_providers[].wua_signing_keys`) |
-| Claim-lər | `iss` (provider URL), `sub` (nümunə açarının JWK thumbprint-i), `cnf.jwk` (P-256 **nümunə açarı** — sənəd açarlarından ayrıdır), `wallet_name`, `wallet_version`, `solution_id`, `key_storage` (`software` \| `secure_enclave` \| `strongbox` \| `wscd`), `user_auth`, `security_level` (W1-DEMO/W2/W3), `iat`, `exp` (30 gün) |
-| Ötürmə (sənədin verilməsi) | OpenID4VCI token sorğusunda `OAuth-Client-Attestation` + `OAuth-Client-Attestation-PoP` (PoP: `iss` = WUA `sub`, `aud` = sənədi verən qurum, `jti`, iat ±300 s) — [[SPEC-PROTO-0001]] §11.1, PR11 |
-| Provayder tərəfi | Rəqəmsal cüzdanı təqdim edən təşkilatın cüzdan provayderi; şəbəkə onu idarə etmir, siyahıya salır ([[ADR-0042]]). Tamga Wallet-ın provayderini rəqəmsal cüzdanın operatoru `provider.tamgawallet.com`-da idarə edir (canlı; etibar siyahısında `TAMGA-WP-1`, `ACTIVE`); cüzdan vahidini yalnız cihaz sübutu ilə qeydiyyata alır |
-| Təqdimat | WUA yoxlayan tərəfə göndərilmir; yoxlayan tərəf lazım gələrsə onu DCQL ilə ayrıca tələb edir (dövlət mərhələsi) |
+| WIA formatı | JWT, `typ: oauth-client-attestation+jwt` (OpenID4VCI 1.0 Əlavə E), `alg: ES256`, `x5c` = cüzdan provayderinin sertifikatı; sahələr `sub`, `wallet_name`, `wallet_version`, `wallet_link`, `wallet_solution_certification_information`, `client_status {status, exp}`, `cnf.jwk` |
+| WIA ömrü | 24 saatdan az; `client_status.exp` ən azı 31 gün irəlidə |
+| KA formatı | JWT, `typ: key-attestation+jwt` (OpenID4VCI 1.0 Əlavə D); sahələr `attested_keys`, `key_storage`, `user_authentication`, `certification`, `key_storage_status {status, exp}` |
+| Ötürmə (sənədin verilməsi) | WIA: PAR və token sorğularında `OAuth-Client-Attestation` + `OAuth-Client-Attestation-PoP`; KA: `jwt` proof-unun başlığında `key_attestation` — [[SPEC-PROTO-0001]] §11.1 |
+| Ləğv | Provayder iki Token Status List dərc edir (WIA qeydləri, KA tipləri); hər biri ən azı 10.000 qeydli |
+| Provayder tərəfi | Cüzdanı təqdim edən təşkilatın cüzdan provayderi; şəbəkə idarə etmir, siyahıya alır ([[ADR-0042]]). Tamga Wallet-ın provayderini cüzdanın operatoru `provider.tamgawallet.com` ünvanında idarə edir (canlı; etibar siyahısında `TAMGA-WP-1`, `ACTIVE`); cüzdan vahidini yalnız cihaz sübutu ilə qeydiyyata alır |
+| Təqdimat | WIA və KA yoxlayan tərəfə göndərilmir; yalnız sənəd verilməsi zamanı istifadə olunur |
 
 ---
 
@@ -186,9 +190,10 @@ Rəqəmsal sənədin [[t:revocation|ləğvi]] bu spesifikasiyada **yenidən mü�
   versiya + bitmap ([[SPEC-BC-0001]] `StatusList`).
 - Məxfilik: `listSize >= 100.000`, təsadüfi index paylanması ([[SPEC-BC-0001]]).
 
-**Korrelyasiyaya qarşı (2-ci faza):** Eyni status index-ini müxtəlif yoxlayan tərəflərə göstərmək
-izləmə vektorudur. Həll yolu **toplu rəqəmsal sənəd verilməsidir** (birdəfəlik sənəd nüsxələri); pilotda
-təxirə salınır, formatda bunun üçün yer artıq ayrılıb (`cnf` başına bir neçə nüsxə yaradıla bilər).
+**Korrelyasiyaya qarşı (işləyir):** Eyni status index-ini müxtəlif yoxlayan tərəflərə göstərmək
+izləmə vektorudur. Həll yolu **toplu rəqəmsal sənəd verilməsidir** (birdəfəlik sənəd nüsxələri): sənədi verən
+qurum hər dəfə 10 nüsxəlik paket verir, hər nüsxə öz açarına və status siyahısı qeydinə bağlıdır; cüzdan azalan
+paketi özü yeniləyir ([[ADR-0023]], [[ADR-0059]]).
 
 ---
 
@@ -205,7 +210,7 @@ Issuance (OpenID4VCI):
 Presentation (OpenID4VP):
   6. The verifier sends a presentation request (nonce + audience + requested claims)
   7. The holder selects only the required disclosures + signs the KB-JWT
-  8. Verifier: issuer signature + cnf/KB-JWT + status + WUA + assurance policy
+  8. Verifier: issuer signature + cnf/KB-JWT + status + assurance policy
      (PM-ASSUR-0001) → accept/reject
 ```
 
@@ -226,12 +231,12 @@ gözləməməsini təmin edir (bax: [[ARCH-0001]] ilk mərhələ). Qərar [[ADR-
 # Təhlükəsizlik və məxfilik qeydləri
 
 - **Holder binding istisnasız məcburidir** — söndürülərsə, sistem səssizcə yalan deyir.
-- **Açar avadanlıqdadır** (Secure Enclave/StrongBox); proqram açarı qəbul edilmir (WUA
+- **Açar avadanlıqdadır** (Secure Enclave/StrongBox); proqram açarı qəbul edilmir (KA
   bunu bəyan edir).
 - **Selective disclosure standart olaraq** — yalnız lazımi claim; məlumatların minimallaşdırılması.
-- **Toplu rəqəmsal sənəd verilməsi** korrelyasiya tədbiri 2-ci fazadadır; format bu gün buna yer ayırır.
+- **Toplu rəqəmsal sənəd verilməsi** korrelyasiya tədbiri kimi işləyir ([[ADR-0059]]).
 - İstehsaldan əvvəl **müstəqil təhlükəsizlik auditi** (KB-JWT replay, disclosure aktuallığı,
-  WUA saxtakarlığı) məcburidir.
+  WIA/KA saxtakarlığı) məcburidir.
 
 ---
 
@@ -239,10 +244,10 @@ gözləməməsini təmin edir (bax: [[ARCH-0001]] ilk mərhələ). Qərar [[ADR-
 
 1. `vct` (sənəd tipi) registry-sinin sxem idarəetməsi ([[SPEC-BC-0001]] sxem registry-si
    ilə uyğunlaşdırılması).
-2. mdoc/ISO 18013-5 profilinin tam təsviri (2-ci faza).
-3. Toplu rəqəmsal sənəd verilməsinin tətbiq vaxtı və açar/nüsxə idarəetməsi (→ korrelyasiya auditi).
-4. WUA məzmununun yekun sahələr toplusu və cihaz [[t:attestation]] mənbələri (Play Integrity /
-   App Attest) ilə əlaqə.
+2. mdoc/ISO 18013-5 profilinin şəxsiyyətdən başqa tiplər üçün təsviri (planlaşdırılır).
+3. ~~Toplu rəqəmsal sənəd verilməsinin tətbiq vaxtı~~ — bağlandı: işləyir ([[ADR-0023]], [[ADR-0059]]).
+4. WIA/KA-nın cihaz [[t:attestation]] mənbələri (Play Integrity / App Attest) ilə əlaqəsi
+   ([[FW-POL-0002]]).
 
 ---
 

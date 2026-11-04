@@ -4,7 +4,7 @@ title: "Yoxlama xətti və API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-19
+last_updated: 2026-11-04
 summary: >
   Yoxlamanın kanonik alqoritmini və issuer/verifier servislərinin HTTP səthini müəyyən edir. Əsas töhfə ADDIM KODLARI REYESTRİdir: A1…E4, dörd spesifikasiyaya paylanmış yoxlama addımlarının vahid normativ siyahısı. Bu kodlar `failed_step` sahəsində maşınla oxunan formada ötürülür, beləliklə "yoxlama uğursuz oldu" əvəzinə "C2-də dayandı — issuer bu sxem üçün səlahiyyətli deyil" demək mümkündür. İkinci qayda: HTTP status kodu yoxlama nəticəsini KODLAŞDIRMIR — rədd edilmiş credential uğurlu API çağırışıdır; 4xx yalnız nəqliyyat/sorğu xətasıdır. Üçüncüsü: nəticə üçqiymətlidir və INDETERMINATE ayrıca səbəb sahəsi daşıyır.
 translation_of: SPEC-API-0001
@@ -81,7 +81,7 @@ Z1. A4–A7 Z1-in əhatəsindədir.
 | `B5` | `extends` zənciri; hər addımda `extends#integrity` |
 | `B6` | JSON Schema 2020-12 uyğunluğu (`schema_uri` Tamga əlavəsidir, [[SPEC-SCHEMA-0001]] §2.1) |
 
-## 1.C — Etibar qatı → [[SPEC-BC-0001]] §11.2
+## 1.C — Etibar qatı → [[SPEC-TRUST-0001]] §6 (`TrustSource`; imzalı etibar siyahıları)
 
 | Kod | Addım |
 |---|---|
@@ -123,7 +123,7 @@ yoxlamada istifadə olunsaydı, iki səssiz xəta yaranardı:
 | Ssenari | Sənəd vermə zamanı sualı ilə | Düzgün yanaşma |
 |---|---|---|
 | Nazirlik bağlandı (`REVOKED`, varisi var) | Bütün diplomlar `C1`-də RƏDD | Bağlanmadan əvvəl verilənlər qəbul edilir ([[ADR-0002]] #4) |
-| Sxem `DEPRECATED` oldu (yeni versiya çıxdı) | Köhnə sxemlə verilmiş hər sənəd `C2`-də RƏDD | Qəbul — [[SPEC-BC-0001]]/SC3 |
+| Sxem `DEPRECATED` oldu (yeni versiya çıxdı) | Köhnə sxemlə verilmiş hər sənəd `C2`-də RƏDD | Qəbul — sxem qeydinin statusu, [[SPEC-TRUST-0001]] |
 | CA-nın planlı rotasiyası | `A3` + `C1` RƏDD | Qəbul — rotasiya ələ keçirilmə deyil |
 
 Buna görə hər iki sorğu sənədin **`iat`** dəyərini götürür və "həmin an qəbul
@@ -383,8 +383,8 @@ obyektindən ayrılır və bu uc nöqtəsinə giriş ayrıca avtorizasiya olunur
 Siyasət həm DCQL sorğusunu ([[SPEC-PROTO-0002]] §4), həm də `E1`–`E3` addımlarını
 qidalandırır. Vahid mənbə.
 
-**Dəyişməz AP6:** Siyasətdəki `required_claims` RP-nin zəncirdəki
-`allowedScopes`-unu aşa bilməz. Servis siyasət qeydə alınarkən bunu yoxlayır və
+**Dəyişməz AP6:** Siyasətdəki `required_claims` RP-nin etibar siyahısındakı qeydinin
+`scopes[]`-unu (`allowedScopes`) aşa bilməz. Servis siyasət qeydə alınarkən bunu yoxlayır və
 həddi aşan siyasəti **rədd edir** — həddindən artıq tələb təqdimat anında deyil, siyasət
 müəyyən edilərkən bloklanır.
 
@@ -547,12 +547,12 @@ paralel işləyir ([[ARCH-0005]] §5.3 ilə eyni siyasət).
 | **AP3** | Nəticə obyekti claim dəyərlərini deyil, adlarını daşıyır. |
 | **AP4** | `idx` heç bir API cavabında və ya qeyddə olmur. |
 | **AP5** | HTTP status kodu yoxlama nəticəsini kodlaşdırmır. |
-| **AP6** | Siyasətin `required_claims`-i RP-nin zəncirdəki scope-unu aşa bilməz. |
+| **AP6** | Siyasətin `required_claims`-i RP-nin etibar siyahısındakı qeydinin scope-unu aşa bilməz. |
 | **AP7** | Xətanın `detail` sahəsi fərdi məlumat ehtiva etmir. |
 | **AP8** | `C2` (sxem səlahiyyəti) heç bir konfiqurasiya ilə yan keçilə bilməz. |
 | **AP11** | `C1` və `C2` rəqəmsal sənədin `iat`-ını götürür; rəqəmsal sənədin verilmə vaxtına aid sorğular yoxlamada istifadə olunmur. |
 | **AP12** | `issuerId` `x5c` yarpaq sertifikatının barmaq izindən törədilir, `iss` claim-indən deyil. |
-| **AP13** | Keçid kartı tokeninin yoxlanması ([[ADR-0012]] B): imza `pass_grant`-dakı nüsxə açarı ilə, `aud` = terminalın RP client_id-si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ indi + 30 s, `exp` ≤ indi + 60 s + 30 s (saat sürüşməsi tolerantlığı), `jti` təkrar siyahısı (terminal qrupu daxilində onlayn paylaşılır); tokendən fərdi məlumat çıxarılmır və loglanmır. |
+| **AP13** | Keçid kartı tokeninin yoxlanması ([[ADR-0012]] B): imza `pass_grant`-dakı nüsxə açarı ilə, `aud` = yoxlayan tərəfin daimi identifikatoru (etibar siyahısındakı qeydinin `dns_name`-i; sertifikat yenilənsə də dəyişmir, [[ADR-0034]]), ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ indi + 30 s, `exp` ≤ indi + 60 s + 30 s (saat sürüşməsi tolerantlığı), `jti` təkrar siyahısı (terminal qrupu daxilində onlayn paylaşılır); tokendən fərdi məlumat çıxarılmır və loglanmır. |
 | **AP9** | `E4` (audit qeydi) rədd edilmiş yoxlamalarda da işləyir (audit qeydi yeri olan yoxlayan tərəfdə; host edilən yoxlayan tərəfdə həmişə). |
 | **AP10** | `tx_code` cavabdan başqa heç yerdə saxlanılmır. |
 

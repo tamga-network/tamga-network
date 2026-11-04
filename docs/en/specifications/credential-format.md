@@ -4,14 +4,14 @@ title: "Credential format and protocols"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-10-16
+last_updated: 2026-11-04
 summary: >
   Defines the canonical format of Tamga credentials and the issuance and presentation protocols. The primary format is
-  SD-JWT VC (selective disclosure built in, the main EUDI ARF format); the secondary format is mdoc / ISO 18013-5 (expansion stage,
-  offline and in-person presentation). Issuance uses OpenID4VCI, presentation OpenID4VP, signatures ES256 (P-256). Holder
+  SD-JWT VC (selective disclosure built in, the main EUDI ARF format); the secondary format is mdoc / ISO 18013-5 (active for identity types, planned for
+  the others; offline and in-person presentation). Issuance uses OpenID4VCI, presentation OpenID4VP, signatures ES256 (P-256). Holder
   binding is MANDATORY: a credential is always bound to the wallet's device key via `cnf` (key binding) — the only fix for
-  "the hidden flaw in the university idea" (a credential collected into someone else's wallet). The Wallet Unit Attestation
-  (WUA) vouches for the wallet itself. Revocation is delegated to the Token Status List ([[SPEC-BC-0001]] §5). A credential
+  "the hidden flaw in the university idea" (a credential collected into someone else's wallet). The short-lived Wallet Instance
+  Attestation (WIA) and the key attestation (KA) vouch for the wallet and its key store ([[ADR-0025]]). Revocation is delegated to the Token Status List ([[SPEC-BC-0001]] §5). A credential
   or its content is NEVER written to the chain ([[PM-TRUST-0001]]).
 translation_of: SPEC-CRED-0001
 source_version: 1.0.0
@@ -52,13 +52,13 @@ The decisions are fixed by [[ADR-0006]]. This is the formal counterpart of the t
 | Topic | Decision | Rationale |
 |------|-------|---------|
 | **Credential format (primary)** | **SD-JWT VC** | Selective disclosure built in, main EUDI ARF format, plenty of libraries, markedly simpler than JSON-LD |
-| **Credential format (secondary)** | **mdoc / ISO 18013-5** — **active for the identity attestation** (D-CRED-5, [[ADR-0013]]); other types in the expansion stage | Safari/iOS Digital Credentials API supports only mdoc; ARF PID precedent; in-person/offline presentation (BLE, state stage) |
+| **Credential format (secondary)** | **mdoc / ISO 18013-5** — **active for the identity attestation** (D-CRED-5, [[ADR-0013]]); planned for other types | Safari/iOS Digital Credentials API supports only mdoc; ARF PID precedent; in-person/offline presentation (BLE, state stage) |
 | **Issuance protocol** | **OpenID4VCI** | De facto standard; fits the institution's existing OIDC infrastructure |
 | **Presentation protocol** | **OpenID4VP** | Same ecosystem, easy verifier integration |
 | **Signature algorithm** | **ES256 (P-256)** | Universal support in mobile secure elements and HSMs |
 | **Holder binding** | `cnf` + device key — **mandatory** | §3; the only fix for the holder binding gap |
 | **Revocation** | **Token Status List** (bitstring) | Same as [[SPEC-BC-0001]] §5; list off-chain, pointer on-chain |
-| **Anti-correlation** | Batch issuance (single-use copies) — expansion stage | Deferred in the pilot; room is made in the architecture |
+| **Anti-correlation** | Batch issuance (single-use copies) — **in operation**: packages of 10 copies, automatic refresh ([[ADR-0023]], [[ADR-0059]]) | The same copy is not shown to two verifiers |
 
 The `did:tamga` [[t:pseudonym]] profile (SPEC-ID-0001) and the X.509 issuer identity ([[SPEC-ID-0002]]) are embedded
 in these formats (issuer = X.509; [[t:holder]] = pseudonym key).
@@ -149,29 +149,35 @@ documents today — not a regression but a deferred improvement. Detail: [[SPEC-
 
 ---
 
-# 4. Wallet Unit Attestation (WUA)
+# 4. Wallet attestations: WIA and KA
 
-The wallet itself also carries a credential. Sooner or later the verifier asks: *"Is this a real Tamga wallet, or a fake
-client someone wrote?"*
+The wallet itself carries proof as well. Sooner or later the issuer asks: *"Is this a genuine wallet of a wallet provider registered
+on the trust list, or a fake client somebody wrote; and where is the credential key kept?"* Two separate attestations answer
+this ([[ADR-0025]]; detailed rules in [[FW-POL-0002]]):
 
-The [[t:WUA]] states: the wallet version, that the key is held **in hardware**, that the PIN is active, that the device is
-not rooted/jailbroken, and the identity of the [[t:wallet-provider]].
+- **Wallet Instance Attestation ([[t:WIA]]):** the short-lived proof with which the wallet application introduces itself to the
+  issuer. Its lifetime is **under 24 hours**; for every issuance it is issued with a new proof-of-possession (PoP) key and a new,
+  unlinkable status list entry (WIA1), so the provider does not learn how many institutions the wallet deals with.
+- **Key attestation (KA):** states in which store (software, Secure Enclave, StrongBox) and with which user authentication the
+  credential keys are held; credentials are bound to the KA's `attested_keys`. The level rests on a verified state; an unverified
+  claim is never written into a KA.
+- Both attestations are signed by **the wallet provider of the organisation offering the wallet**; the provider's signing key is
+  registered on the trust list (`lotl.wallet_providers[]`). The network does not operate a wallet provider; it lists them
+  ([[ADR-0042]]).
+- The attestations feed the "authenticator strength" dimension of holder assurance ([[PM-ASSUR-0001]]): software key → low;
+  hardware + PIN → high.
 
-- The WUA is signed by the wallet provider (initial stage: Tamga); the provider is registered on the chain as an issuer/[[t:RP]].
-- **If it is not there from the start, adding it later is painful** — every existing wallet would have to be migrated.
-  In the pilot the content is kept simple, but **the field and the flow are opened from the start.**
-- The WUA feeds the "authenticator strength" dimension of holder assurance ([[PM-ASSUR-0001]], eIDAS logic): software
-  key → low; hardware + PIN → high.
-
-**Implemented profile (2026-09-24, DB-16):**
+**Implemented profile ([[ADR-0025]]):**
 
 | Field | Value |
 |---|---|
-| Format | JWT, `typ: oauth-client-attestation+jwt`, `alg: ES256`, `x5c` = Wallet Provider certificate (list stage: `wallet-provider`; in the list `lotl.wallet_providers[].wua_signing_keys`) |
-| Claims | `iss` (provider URL), `sub` (JWK thumbprint of the instance key), `cnf.jwk` (P-256 **instance key** — separate from the credential keys), `wallet_name`, `wallet_version`, `solution_id`, `key_storage` (`software` \| `secure_enclave` \| `strongbox` \| `wscd`), `user_auth`, `security_level` (W1-DEMO/W2/W3), `iat`, `exp` (30 days) |
-| Transport (issuance) | `OAuth-Client-Attestation` + `OAuth-Client-Attestation-PoP` in the OpenID4VCI token request (PoP: `iss` = WUA `sub`, `aud` = issuer, `jti`, iat ±300 s) — [[SPEC-PROTO-0001]] §11.1, PR11 |
-| Provider side | The wallet provider of the organisation that offers the wallet; the network does not run it, it lists it ([[ADR-0042]]). Tamga Wallet's provider is operated by the wallet's operator at `provider.tamgawallet.com` (live; listed as `TAMGA-WP-1`, `ACTIVE`); it registers a wallet unit only with device attestation |
-| Presentation | The WUA is not sent to the verifier; a verifier that needs it requests it separately with DCQL (state stage) |
+| WIA format | JWT, `typ: oauth-client-attestation+jwt` (OpenID4VCI 1.0 Annex E), `alg: ES256`, `x5c` = wallet provider certificate; fields `sub`, `wallet_name`, `wallet_version`, `wallet_link`, `wallet_solution_certification_information`, `client_status {status, exp}`, `cnf.jwk` |
+| WIA lifetime | Under 24 hours; `client_status.exp` at least 31 days ahead |
+| KA format | JWT, `typ: key-attestation+jwt` (OpenID4VCI 1.0 Annex D); fields `attested_keys`, `key_storage`, `user_authentication`, `certification`, `key_storage_status {status, exp}` |
+| Transport (issuance) | WIA: `OAuth-Client-Attestation` + `OAuth-Client-Attestation-PoP` on the PAR and token requests; KA: `key_attestation` in the header of the `jwt` proof — [[SPEC-PROTO-0001]] §11.1 |
+| Revocation | The provider publishes two Token Status Lists (WIA entries, KA types), each with at least 10,000 entries |
+| Provider side | The wallet provider of the organisation offering the wallet; the network does not operate one, it lists them ([[ADR-0042]]). Tamga Wallet's provider is run by the wallet's operator at `provider.tamgawallet.com` (live; on the trust list as `TAMGA-WP-1`, `ACTIVE`); it registers a wallet unit only with device evidence |
+| Presentation | WIA and KA are not sent to the verifier; they are used only during issuance |
 
 ---
 
@@ -185,9 +191,9 @@ Credential [[t:revocation]] is **not redefined** in this specification; it is de
   ([[SPEC-BC-0001]] `StatusList`).
 - Privacy: `listSize >= 100,000`, random index allocation ([[SPEC-BC-0001]]).
 
-**Anti-correlation (expansion stage):** showing the same status index to different verifiers is a tracking vector. The fix is
-**batch issuance** (single-use credential copies); deferred in the pilot, but the format already leaves room for it (several
-copies can be produced per `cnf`).
+**Anti-correlation (in operation):** showing the same status index to different verifiers is a tracking vector. The fix is
+**batch issuance** (single-use credential copies): the issuer issues a package of 10 copies each time, every copy bound to its own
+key and status list entry; the wallet refreshes a shrinking package by itself ([[ADR-0023]], [[ADR-0059]]).
 
 ---
 
@@ -204,7 +210,7 @@ Issuance (OpenID4VCI):
 Presentation (OpenID4VP):
   6. The verifier sends a presentation request (nonce + audience + requested claims)
   7. The holder selects only the required disclosures + signs the KB-JWT
-  8. Verifier: issuer signature + cnf/KB-JWT + status + WUA + assurance policy
+  8. Verifier: issuer signature + cnf/KB-JWT + status + assurance policy
      (PM-ASSUR-0001) → accept/reject
 ```
 
@@ -225,19 +231,19 @@ registry) sits behind it. This means the pilot does not wait for Besu (see [[ARC
 # Security and privacy notes
 
 - **Holder binding is mandatory without exception** — if it is switched off, the system silently lies.
-- **Key in hardware** (Secure Enclave/StrongBox); a software key is not accepted (the WUA states this).
+- **Key in hardware** (Secure Enclave/StrongBox); a software key is not accepted (the KA states this).
 - **Selective disclosure by default** — only the necessary claims; data minimisation.
-- The **batch issuance** anti-correlation measure comes in the expansion stage; the format makes room for it today.
-- An **independent security audit** before production (KB-JWT replay, disclosure liveness, WUA forgery) is mandatory.
+- The **batch issuance** anti-correlation measure is in operation ([[ADR-0059]]).
+- An **independent security audit** before production (KB-JWT replay, disclosure liveness, WIA/KA forgery) is mandatory.
 
 ---
 
 # Open topics
 
 1. Schema management of the `vct` (credential type) registry (alignment with the [[SPEC-BC-0001]] schema registry).
-2. Full definition of the mdoc/ISO 18013-5 profile (expansion stage).
-3. When to enable batch issuance, and key/copy management (→ correlation control).
-4. The final field set of the WUA content and its link to device [[t:attestation]] sources (Play Integrity / App Attest).
+2. Definition of the mdoc/ISO 18013-5 profile for types other than identity (planned).
+3. ~~When to enable batch issuance~~ — closed: in operation ([[ADR-0023]], [[ADR-0059]]).
+4. The link of WIA/KA to device [[t:attestation]] sources (Play Integrity / App Attest) ([[FW-POL-0002]]).
 
 ---
 

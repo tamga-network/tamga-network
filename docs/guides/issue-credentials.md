@@ -4,7 +4,7 @@ title: "Kurum olarak belge vermek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-20
+last_updated: 2026-11-04
 summary: >
   Üniversite, kamu kurumu ya da bilet satıcısı olarak kişilerin cüzdanına belge vermek: Tamga'nın barındırdığı belge verme
   servisini `@tamga-network/issuer/client` ile çağırmak (teklif, bilet satışı, iptal/askı) ya da kendi belge verme servisinizi
@@ -39,8 +39,8 @@ içindir: üniversite (diploma, öğrenci belgesi), kamu kurumu ya da bilet sat�
 
 ## Barındırılan servis: istemci
 
-> **Önce sandbox'ta deneyin.** Aşağıdaki örnek, test ağındaki kurgusal bilet satıcısının (`bubilet`,
-> `issuer.sandbox.tamga.network`) adresini kullanır; sandbox'ın adresleri ve örnek kurumları [[GUIDE-0013]]'te. Gerçek ağda
+> **Önce sandbox'ta deneyin.** Aşağıdaki örnek, test ağındaki örnek bilet satıcısının (`issuer.sandbox.tamga.network`)
+> adresini kullanır; sandbox'ın adresleri ve örnek kurumları [[GUIDE-0013]]'te. Gerçek ağda
 > `baseUrl` `https://issuer.tamga.network`, `slug` kurumunuzun kayıtlı adıdır; API anahtarını kurum kaydından sonra Kurum
 > Konsolu verir.
 
@@ -109,7 +109,7 @@ Tamga API'sinin tamamı: [Belge verme API'si](/api/issuer).
 - Belge alanlarını yalnızca belge için kullanın; loglara, URL'ye, iptal listesine yazmayın.
 - Kişiyi kendi kaydınızla eşlemeniz gerekiyorsa (diploma, öğrenci belgesi) [[t:identity-proofing|kimlik doğrulama]]
   **Tamga kimlik belgesi** ile yapılır: cüzdan kimlik belgesini sunar, Tamga bunu teklifteki özetle ya da sorgu ucunuzla (`lookup`) eşler. Kimlik
-  sağlayıcısıyla (Didit) doğrudan konuşmazsınız ([[ADR-0011]]).
+  sağlayıcısıyla doğrudan konuşmazsınız ([[ADR-0011]]).
 - Bilet gibi kişisel veri gerektirmeyen belgelerde kimlik istemeyin.
 
 ## Paylaşım kuralı: belgeyi kimlere gösterilsin {#sharing-rules}

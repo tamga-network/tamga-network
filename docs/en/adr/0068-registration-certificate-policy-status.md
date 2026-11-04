@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   Registration certificates (WRPRC, ETSI TS 119 475) carry three fields: `policy_id` (Tamga's own policy OID; ETSI's EU OID is
   not used), `certificate_policy` (the address of the policy document) and `status` (the entry in the registrar's status list).
@@ -13,8 +13,7 @@ summary: >
   certificates; when a registration or an intended use ends, is suspended or the content changes, the old certificate is revoked
   automatically, and manual revocation is possible. The wallet core rejects a request whose registration certificate is revoked
   and warns when the status cannot be checked. The policy document is added to the policies of the Tamga ARF (FW-POL-0003). It is
-  enabled in the sandbox today; the real network's policy identifier and addresses enter the registry after the names are
-  approved. Accepted: 2026-10-29.
+  in force in the sandbox and (since 2026-10-29) on the real network (FW-POL-0003 §5). Accepted: 2026-10-29.
 domain: Trust
 related: ["[[ADR-0024]]", "[[ADR-0026]]", "[[ADR-0029]]", "[[ADR-0038]]", "[[ADR-0048]]", "[[ADR-0056]]", "[[ADR-0058]]", "[[FW-POL-0001]]", "[[FW-POL-0003]]", "[[FW-TF-0001]]", "[[SPEC-CRED-0003]]", "[[SPEC-TRUST-0001]]", "[[SPEC-WALLET-0001]]"]
 translation_of: ADR-0068
@@ -171,3 +170,5 @@ certificate.
 
 **Accepted — 2026-10-29** (approval by project management; the verbatim quotation is in the private approval record).
 DECISIONS: D-REG-4. WRS1–WRS4 are binding. The real network's policy identifier and addresses were approved on 2026-10-29 and are in force (implementation note above).
+
+**Note (2026-11-04):** the summary's "enabled in the sandbox today" wording was brought up to date: since 2026-10-29 the real network's policy identifier and status list are in force as well (FW-POL-0003 §5); the decision content is unchanged (project management).

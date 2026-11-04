@@ -4,9 +4,9 @@ title: "Tədbir kateqoriyası"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-11-04
 summary: >
-  IssuerCategory qapalı çoxluğuna (GOVERNMENT, IDENTITY, EDUCATION, HEALTH, FINANCE, LOGISTICS, OTHER) yalnız EVENTS (tədbir/bilet satıcısı) əlavə olunur; TRANSPORT və TELECOM real bir qurum gələnə qədər əlavə olunmur. Yeni dəyər enum-un sonuna əlavə olunur (sıra nömrəsinin sabitliyi). Bilet satıcısı `bubilet` OTHER-dən EVENTS-ə keçirilir. Qərar DB-23-ü bağlayır.
+  IssuerCategory qapalı çoxluğuna (GOVERNMENT, IDENTITY, EDUCATION, HEALTH, FINANCE, LOGISTICS, OTHER) yalnız EVENTS (tədbir/bilet satıcısı) əlavə olunur; TRANSPORT və TELECOM real bir qurum gələnə qədər əlavə olunmur. Yeni dəyər enum-un sonuna əlavə olunur (sıra nömrəsinin sabitliyi). Nümunə bilet satıcısı OTHER-dən EVENTS-ə keçirilir. Qərar DB-23-ü bağlayır.
 domain: Credentials
 translation_of: ADR-0014
 source_version: "1.0.0"
@@ -16,7 +16,7 @@ source_version: "1.0.0"
 
 `IssuerCategory` qurumun sektorunu bildirən **qapalı çoxluqdur** ([[SPEC-BC-0001]] §3, `@tamga-network/trust`
 sxemi, `IIssuerRegistry.sol`); çoxluq DECISIONS-da "yekun" kimi bağlanmışdı, buna görə də onun genişləndirilməsi ADR tələb edir. D10 (bilet)
-ilə ilk tədbir bileti satıcısı (`bubilet`, operator modeli) [[t:trust-list|etibar siyahısına]] daxil oldu və uyğun kateqoriya olmadığından müvəqqəti
+ilə ilk tədbir bileti satıcısı (nümunə bilet satıcısı, operator modeli) [[t:trust-list|etibar siyahısına]] daxil oldu və uyğun kateqoriya olmadığından müvəqqəti
 olaraq `OTHER` aldı. Sual (DB-23, 2026-09-26): yalnız **EVENTS** əlavə olunsun, yoxsa rəqəmsal cüzdanın ekranda artıq etiketini
 göstərdiyi **TRANSPORT** və **TELECOM** də?
 
@@ -30,7 +30,7 @@ Layihə rəhbərliyinin qərarı (2026-09-27): bilet [[t:issuer|sənədlərini v
 2. **K2 — Sıra nömrəsinin sabitliyi.** Yeni dəyər enum-un **sonuna** əlavə olunur:
    `{GOVERNMENT, IDENTITY, EDUCATION, HEALTH, FINANCE, LOGISTICS, OTHER, EVENTS}`. Kontrakt hələ yerləşdirilməyib (Faza 0),
    lakin sona əlavə etmə qaydası bundan sonrakı hər genişləndirmə üçün də keçərlidir (ABI/yaddaş uyğunluğu).
-3. **K3 — Keçirmə.** `bubilet` etibar siyahısı qeydi `OTHER` → `EVENTS` (yeni siyahı versiyası); `event-ticket` [[t:verifier]]
+3. **K3 — Keçirmə.** Nümunə bilet satıcısının etibar siyahısı qeydi `OTHER` → `EVENTS` (yeni siyahı versiyası); `event-ticket` [[t:verifier]]
    siyasəti `allowed_categories: ["EVENTS"]`. Rəqəmsal cüzdan etiketi "Tədbir".
 4. **K4 — Sxem metadata-sı dəyişmir.** `urn:tamga:tkt:EventTicket:1` metadata-sındakı `issuer_categories: ["OTHER"]`
    məlumatlandırıcıdır ([[SPEC-SCHEMA-0001]]: məcburi yoxlama etibar qatındadır) və dərc olunmuş metadata-nın məzmun xülasəsi
@@ -54,7 +54,7 @@ Layihə rəhbərliyinin qərarı (2026-09-27): bilet [[t:issuer|sənədlərini v
 
 # Nəticələr
 
-- Kod: `@tamga-network/trust` sxemi, `IIssuerRegistry.sol`, etibar siyahısı mənbəyi (`bubilet`), `apps/verify` siyasəti,
+- Kod: `@tamga-network/trust` sxemi, `IIssuerRegistry.sol`, etibar siyahısı mənbəyi (nümunə bilet satıcısı), `apps/verify` siyasəti,
   rəqəmsal cüzdan etiket/ikon uyğunlaşdırması (`TICKETING` → `EVENTS`).
 - Sənədlər: [[SPEC-BC-0001]] (enum), [[SPEC-ID-0002]] (şərh sətri), terminlər lüğəti, DB-23 bağlandı.
 - Qalan: `EventTicket:2`-də `issuer_categories: ["EVENTS"]` (K4).
@@ -62,3 +62,5 @@ Layihə rəhbərliyinin qərarı (2026-09-27): bilet [[t:issuer|sənədlərini v
 # Status
 
 **Accepted — 2026-09-27.** DECISIONS: D-CAT-1.
+
+**Qeyd (2026-11-04):** real şirkət adını daşıyan nümunə qurum adı (`slug`) "nümunə bilet satıcısı" ilə əvəz edildi; qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

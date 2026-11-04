@@ -4,7 +4,7 @@ title: "Yaş sınırı yok: AB yaklaşımı"
 status: Active
 version: 1.0.0
 created: 2026-10-08
-last_updated: 2026-10-08
+last_updated: 2026-11-04
 summary: >
   Tamga Network yaş sınırı koymaz: ne ağda listelenen cüzdanlar için ne de ağın kimlik servisi (kimlik belgesi) için.
   eIDAS 2.0 Avrupa Dijital Kimlik Cüzdanı için asgari yaş öngörmez; ağ AB çerçevesine uyar. Cüzdanı ağda kullanmanın şartı
@@ -63,9 +63,11 @@ sınırı koymaz. Bir cüzdanın hukuku sınır gerektiriyorsa o sınır o cüzd
   devletler bu yaşı 13'e kadar indirebilir). Türk hukukunda KVKK özel bir yaş koymaz; 18 yaş altında fiil ehliyeti sınırlıdır.
   Kimlik servisinin aydınlatma ve açık rıza akışı için veli onayı akışı gerekebilir; hukuki inceleme sonrası ayrı kararla ele
   alınır, bugün uygulanmaz.
-- **Sonraki iş — sağlayıcı sınırı:** uzaktan kimlik doğrulama sağlayıcısının (referans: Didit) küçük yaştaki kişiler için kendi
+- **Sonraki iş — sağlayıcı sınırı:** uzaktan kimlik doğrulama sağlayıcısının (referans adaptör) küçük yaştaki kişiler için kendi
   sınırı ya da koşulu olup olmadığı henüz teyit edilmedi; teyit edilecek ve gerekiyorsa [[SPEC-ID-0003]]'e işlenecek.
 
 # Durum
 
 **Accepted — 2026-10-08** (proje yönetimi onayı; birebir alıntı özel onay kaydında). DECISIONS: D-ID-10.
+
+**Not (2026-11-04):** uzaktan kimlik doğrulama sağlayıcısının ticari adı ile ortam değişkeni ve komut adları kamuya açık metinden çıkarıldı ("uzaktan kimlik doğrulama sağlayıcısı"; ayar adları işletmecinin yapılandırma belgesinde); karar içeriği değişmedi (proje yönetimi).

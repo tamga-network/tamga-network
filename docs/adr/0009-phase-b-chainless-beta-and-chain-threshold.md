@@ -4,7 +4,7 @@ title: "Zincirsiz beta ve zincir eşiği"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-07
+last_updated: 2026-11-04
 summary: >
   Pilotu zincire bağlayan ön koşullar (PM-GTM-0001 Ö1/Ö2) kaldırılır; Faz 0'ın
   önüne "Faz B — zincirsiz beta" eklenir. Güven çapası beta'da Tamga'nın geçici
@@ -34,7 +34,7 @@ Tamga'nın kanonik yol haritası pilotu zincire bağlar: PM-GTM-0001 §2 ön ko�
 **Ö1** "kontratlar derleniyor ve testler geçiyor", **Ö2** "testnet ayakta, kontratlar dağıtılmış"
 tamamlanmadan gerçek mezun verisi işlenemez (GT1). [[ARCH-0001]] §3 Faz 0'ı "4 vakıf
 validator" olarak tanımlar. Kontratlar bugüne kadar hiç derlenmedi (Foundry yok; DECISIONS
-§10.5). Bu, üniversite pilotunu ve dolayısıyla üniversite anlaşması ile yatırımcı görüşmelerini
+§10.5). Bu, üniversite pilotunu ve dolayısıyla ilk kurumun katılımını
 zincir altyapısının arkasına kilitliyor.
 
 ## Tespit: Faz 0 zinciri güven üretmiyor (F1)
@@ -185,7 +185,7 @@ tamamlanmamıştır. Verilmiş [[t:credential|belgeler]] yeniden verilmez; cüzd
 
 ## A — Zinciri bekle (mevcut plan) — Reddedildi
 Pilot, Foundry kurulumu + derleme + testnet + denetime bağlı kalır (aylar). Güvence kazancı yok
-(F1). Üniversite ve yatırımcı görüşmeleri gecikir.
+(F1). Kurum pilotu aylarca zincir kurulumunu bekler.
 
 ## B — Tek node'lu / dört node'lu "geliştirme zinciri" ile pilot — Reddedildi
 Zincir görünümü verir, güven vermez; ayrıca zincir işletim maliyetini (node'lar, RPC güvenliği
@@ -245,3 +245,5 @@ zaman** kurulacağını ve o güne kadar çapanın **kimin imzası** olduğunu t
 # Durum
 
 **Accepted ✅** — 2026-09-24. [[DECISIONS]]'a D-BC-6, D-GTM-2, D-GOV-5 olarak işlendi; etkilenen SPEC sürüm güncellemeleri DECISIONS §10 açık taahhütler listesindedir.
+
+**Not (2026-11-04):** Bağlam ve alternatif A'daki görüşme ifadeleri teknik gerekçeyle değiştirildi (pilot aylarca zincir kurulumuna bağlı kalır); karar içeriği değişmedi (proje yönetimi).

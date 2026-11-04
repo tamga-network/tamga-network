@@ -4,7 +4,7 @@ title: "No age limit: the EU approach"
 status: Active
 version: 1.0.0
 created: 2026-10-08
-last_updated: 2026-10-08
+last_updated: 2026-11-04
 summary: >
   Tamga Network sets no age limit: neither for wallets listed on the network nor for the network's identity service (the
   identity credential). eIDAS 2.0 sets no minimum age for the European Digital Identity Wallet; the network follows the EU
@@ -67,10 +67,12 @@ information it needs (e.g. `age_over_18`).
   offered to a child below 16 (member states may lower this to 13). Under Turkish law KVKK sets no specific age; legal capacity is
   limited below 18. The identity service's notice and explicit-consent flow may need a guardian-consent flow; this is handled by a
   separate decision after legal review and is not implemented today.
-- **Follow-up — provider limits:** whether the remote identity verification provider (reference: Didit) has its own limit or
+- **Follow-up — provider limits:** whether the remote identity verification provider (reference adapter) has its own limit or
   condition for minors has not yet been confirmed; it will be confirmed and, if needed, added to [[SPEC-ID-0003]].
 
 # Status
 
 **Accepted — 2026-10-08** (project management approval; the verbatim quote is in the private approval record). DECISIONS:
 D-ID-10.
+
+**Note (2026-11-04):** the trade name of the remote identity verification provider and the environment variable and command names were removed from the public text ("remote identity verification provider"; the setting names are in the operator's configuration document); the decision content is unchanged (project management).

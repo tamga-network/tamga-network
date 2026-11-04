@@ -4,11 +4,11 @@ title: "Events category"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-11-04
 summary: >
   Only EVENTS (event/ticket seller) is added to the closed IssuerCategory set (GOVERNMENT, IDENTITY, EDUCATION, HEALTH,
   FINANCE, LOGISTICS, OTHER); TRANSPORT and TELECOM are not added until a real institution appears. The new value is
-  appended to the end of the enum (stable ordinals). The ticket seller `bubilet` moves from OTHER to EVENTS. Closes DB-23.
+  appended to the end of the enum (stable ordinals). The example ticket seller moves from OTHER to EVENTS. Closes DB-23.
 domain: Credentials
 translation_of: ADR-0014
 source_version: 1.0.0
@@ -18,7 +18,7 @@ source_version: 1.0.0
 
 `IssuerCategory` is the **closed set** that states an institution's sector ([[SPEC-BC-0001]] §3, the `@tamga-network/trust`
 schema, `IIssuerRegistry.sol`); the set was closed as "final" in DECISIONS, so extending it requires an ADR. With D10
-(tickets) the first event ticket seller (`bubilet`, operator model) entered the [[t:trust-list]] and, lacking a fitting
+(tickets) the first event ticket seller (an example ticket seller, operator model) entered the [[t:trust-list]] and, lacking a fitting
 category, was given `OTHER` temporarily. Question (DB-23, 2026-09-26): should only **EVENTS** be added, or also
 **TRANSPORT** and **TELECOM**, whose labels the wallet already shows on screen?
 
@@ -33,7 +33,7 @@ Project management decision (2026-09-27): the category for ticket [[t:issuer]]s 
 2. **K2 — Stable ordinals.** The new value is appended to the **end** of the enum:
    `{GOVERNMENT, IDENTITY, EDUCATION, HEALTH, FINANCE, LOGISTICS, OTHER, EVENTS}`. The contract is not deployed yet (chain
    stage), but the append-at-end rule applies to every future extension (ABI/storage compatibility).
-3. **K3 — Migration.** The `bubilet` trust list entry moves `OTHER` → `EVENTS` (new list version); the `event-ticket`
+3. **K3 — Migration.** The example ticket seller's trust list entry moves `OTHER` → `EVENTS` (new list version); the `event-ticket`
    [[t:verifier]] policy is `allowed_categories: ["EVENTS"]`. The wallet label is "Event".
 4. **K4 — Schema metadata unchanged.** `issuer_categories: ["OTHER"]` in the `urn:tamga:tkt:EventTicket:1` metadata is
    informative ([[SPEC-SCHEMA-0001]]: the binding check is in the trust layer), and the integrity digest of published
@@ -59,7 +59,7 @@ Project management decision (2026-09-27): the category for ticket [[t:issuer]]s 
 
 # Consequences
 
-- Code: the `@tamga-network/trust` schema, `IIssuerRegistry.sol`, the trust list source (`bubilet`), the `apps/verify`
+- Code: the `@tamga-network/trust` schema, `IIssuerRegistry.sol`, the trust list source (example ticket seller), the `apps/verify`
   policy, the wallet label/icon mapping (`TICKETING` → `EVENTS`).
 - Documents: [[SPEC-BC-0001]] (enum), [[SPEC-ID-0002]] (comment line), the glossary; DB-23 closed.
 - Remaining: `issuer_categories: ["EVENTS"]` in `EventTicket:2` (K4).
@@ -67,3 +67,5 @@ Project management decision (2026-09-27): the category for ticket [[t:issuer]]s 
 # Status
 
 **Accepted — 2026-09-27.** DECISIONS: D-CAT-1.
+
+**Note (2026-11-04):** the example institution name (`slug`) carrying a real company name was replaced by "example ticket seller"; the decision content is unchanged (project management).

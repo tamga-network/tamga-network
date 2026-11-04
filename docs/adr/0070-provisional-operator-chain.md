@@ -8,8 +8,8 @@ created: 2026-10-30
 last_updated: 2026-10-30
 summary: >
   Tamga Network'ün tüzel kişiliği yoktur; kurulacak kâr amacı gütmeyen vakıf tüzel kişilik kazanana kadar ağın kendi hizmetlerini
-  (liste yayını, kimlik servisi, Tamga Verify, siteler) Tamga Network adına geçici işletmeci BROS İNŞAAT SANAYİ VE DIŞ TİCARET
-  LİMİTED ŞİRKETİ işletir; tüzel kişilik gerektiren her kayıt, sertifika ve sözleşme onun adıyla ve "Tamga Network adına"
+  (liste yayını, kimlik servisi, Tamga Verify, siteler) Tamga Network adına bir şirket geçici işletmeci olarak
+  işletir; tüzel kişilik gerektiren her kayıt, sertifika ve sözleşme onun adıyla ve "Tamga Network adına"
   ibaresiyle yapılır. Liste işletmecisi ve şema sahibi adı "Tamga Network" kalır. Geçici işletmecinin adı, kimlik numarası ve
   adresi tek bir yapılandırma değerinden gelir; liste yayıncısı her yayında denetler. Devir mevcut devir aracı ve runbook'la
   yapılır; vakıf kurulana kadar katılım sözleşmelerini geçici işletmeci imzalar. Kabul: 2026-10-30.
@@ -20,7 +20,7 @@ related: ["[[ADR-0002]]", "[[ADR-0009]]", "[[ADR-0024]]", "[[ADR-0033]]", "[[ADR
 # Kısaca
 
 Tamga Network bir vakıf olacak, ama vakıf henüz kurulmadı. O güne kadar ağın kendi hizmetlerini bir şirket, ağ adına ve geçici
-olarak işletir: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ. Güven listelerinde işletmeci adı yine "Tamga Network" yazar;
+olarak işletir (geçici işletmeci). Güven listelerinde işletmeci adı yine "Tamga Network" yazar;
 şirketin adı yalnız bir tüzel kişinin gerektiği yerlerde (vergi numarası, sertifika, sözleşme, kişisel veri kaydı) görünür. Bu
 bilgi tek bir yerde tutulur ve vakıf kurulunca tek seferde değiştirilir.
 
@@ -38,7 +38,7 @@ bilgi tek bir yerde tutulur ve vakıf kurulunca tek seferde değiştirilir.
 # Karar
 
 ## K1 — Zincir
-Tamga Network (kurulacak vakıf) ← geçici işletmeci **BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ** (VKN 1870632151; adres ve öteki
+Tamga Network (kurulacak vakıf) ← **geçici işletmeci** (unvanı, vergi numarası, adresi ve öteki
 kimlik bilgileri yalnız `registry/provisional-operator.json`'da). Geçici işletmeci ağın kendi hizmetlerini (liste yayını, kayıt
 kurumu rolünün devlet adına yürütülmesi, kimlik servisi, Tamga Verify, siteler ve alan adları) Tamga Network adına işletir. Tüzel
 kişilik gerektiren her işlem (kayıt kimlik numarası, sertifika konu alanı, KVKK kaydı, alan adı, sözleşme) onun adıyla ve
@@ -96,3 +96,5 @@ Mağaza inceleme imzacısının kaydı ([[ADR-0033]]) ve sonraki bütün kendi k
 # Durum
 
 **Accepted — 2026-10-30.** Proje yönetiminin onayıyla (birebir alıntı özel onay kaydında). DECISIONS: D-GOV-10. OP1–OP3 bağlayıcıdır.
+
+_Not (2026-11-04): işletmeci unvanı kamuya açık metinden çıkarıldı; karar içeriği değişmedi (proje yönetimi)._

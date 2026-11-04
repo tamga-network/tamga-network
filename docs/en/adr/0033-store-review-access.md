@@ -4,7 +4,7 @@ title: "App store review code"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-06
+last_updated: 2026-11-04
 summary: >
   Apple and Google reviewers must be able to try the identity flow of a wallet listed in the trusted list without a real
   Turkish identity document. The review code is a network service, open to every listed wallet on the same terms.
@@ -29,7 +29,7 @@ accepts**. Real users never see this path; the code is spent after one use.
 - Apple App Review and Google Play review require every flow of the app to be testable; where needed a test account or a "demo
   mode" is provided in the review notes.
 - A wallet's identity flow ([[SPEC-ID-0003]] §9) requires a real identity document + liveness + face matching
-  ([[t:identity-proofing]]). In production the fake provider is off (`TAMGA_IDV_DIDIT_FAKE` only if explicitly enabled; GT1: in
+  ([[t:identity-proofing]]). In production the fake provider is off (the fake-provider setting only if explicitly enabled; GT1: in
   production a missing real identity is never treated as present).
 - Flows that need no identity can be tried without a code: buying a ticket and showing it at the gate, the Tamga Verify example
   policies, the "Sign in with Tamga" example site (the [[t:pseudonym]] works only with the seed from the identity
@@ -90,7 +90,7 @@ list.
 | The code leaks and someone else uses it | single-use, time-limited, at most 3 active; the test credential does not pass with a real verifier |
 | The test credential is mistaken for a real one | separate signer, `DEMO` marking, "DEMO" badge in the wallet, 7 days |
 | The store treats it as a "hidden feature" | explained openly in the review notes; the code field is visible on the notice screen, not hidden |
-| The fake provider is accidentally opened to everyone in production | there is no path to the fake provider without a code; `TAMGA_IDV_DIDIT_FAKE` stays off in production |
+| The fake provider is accidentally opened to everyone in production | there is no path to the fake provider without a code; the fake-provider setting stays off in production |
 
 # Invariants
 
@@ -154,7 +154,7 @@ credential → Tamga Verify review policies (`review-age-over-18`, `review-site-
 network but are not showcased on the Tamga Verify home page; the reviewer is given a direct link. The decision (option D, K1–K3,
 K5, RV1–RV3) does not change.
 On the same date the fake identity provider was closed completely on the real network by a code lock (the service does not start
-with `TAMGA_IDV_DIDIT_FAKE=1`); the review code path is independent of it.
+with the fake-provider setting); the review code path is independent of it.
 
 # Implementation note — 2026-10-06: a network service open to every wallet
 
@@ -163,3 +163,5 @@ The review code is a service of the identity service, that is, of the network; i
 same terms: the code is generated with project management approval and handed to the wallet, which writes it into its own review
 notes. K1–K5 and RV1–RV3 are the same for every wallet; whichever wallet receives the test credential, it passes only the review
 policies. Showing the DEMO mark ([[SPEC-ID-0003]] §9) is each wallet's job.
+
+**Note (2026-11-04):** the trade name of the remote identity verification provider and the environment variable and command names were removed from the public text ("remote identity verification provider"; the setting names are in the operator's configuration document); the decision content is unchanged (project management).

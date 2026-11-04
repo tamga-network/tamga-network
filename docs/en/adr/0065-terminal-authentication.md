@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-26
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 translation_of: ADR-0065
 source_version: 1.0.0
 summary: >
@@ -35,7 +35,7 @@ read, consume or count the token. Someone photographing a ticket's QR from a dis
 - The endpoint required no identity (rate limit only). Because the token carries no personal data there was no privacy risk,
   but there was a **denial-of-service risk**: whoever sees the QR (the next person, a camera, a screenshot) and submits the
   token within 60 seconds puts its `jti` on the list or consumes the single-use ticket; the person then sees STOP at the real
-  gate. Finding of the independent security review (2026-10-26).
+  gate. Finding of the October 2026 security review (2026-10-26).
 - ADR-0012 K5 foresees defining terminals in the verifier's record as `terminal_groups[]` (group, certificate fingerprint,
   offline permission). That field is not yet in the list schema and no terminal verifies offline today. Today's gates are
   online devices under the operator's control (turnstile computer, gate tablet, the sandbox's browser page).
@@ -103,3 +103,5 @@ and this ADR is updated.
 **Accepted — 2026-10-26.** With project management's approval (security review fixes, general approval). DECISIONS: D-PROX-2.
 
 **Note (2026-10-29):** K2 (Institution Console screen) and K5 (`terminal_groups[]` in the list schema) are completed by [[ADR-0069]]; keys are issued on behalf of the institution (TG1–TG3).
+
+**Note (2026-11-04):** "independent security review" corrected to "security review" (no independent audit has been performed yet); the decision content is unchanged (project management).

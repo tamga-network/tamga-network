@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   ADR-0012 K5-in nəzərdə tutduğu `terminal_groups[]` sahəsi yoxlayan tərəfin qeydində formalaşır: hər giriş qrupu `group_id`, `institution_id` (girişləri idarə edən qurum), `label`, `allowed_policies[]`, istəyə bağlı `cert_fingerprints[]` və `offline_allowed`, həmçinin etibarlılıq müddətini daşıyır. Tamga Verify qrupun qurumunu imzalı siyahıdan oxuyur: terminal açarını yalnız həmin qurum adından verir, qurum yalnız öz qruplarının açarlarını görür və ləğv edir (Qurum Konsolu, quruma məhdudlaşdırılmış tokenlə); siyahıda geri çəkilmiş qrupun açarı girişdə keçmir. Sertifikatlı giriş identifikasiyası üçün sahə və oxuyucu hazırdır; girişlər bu gün terminal açarı ilə gəlir (ADR-0065). Qəbul: 2026-10-29 (ADR-0065-in tamamlanması üçün ümumi təsdiq).
 domain: Protocol
@@ -86,8 +86,8 @@ sorğusu) və oflayn girişlər üçündür. Bu gün heç bir giriş sertifikatl
 olanda ayrıca dəyişikliklə açılır ([[ADR-0065]] K5 hədəfi).
 
 ## K7 — Sandbox
-Sandbox siyahısında üç nümunə qurumun qrupu qurumu və siyasəti ilə dərc olunur (`istanbul-bilgi-campus` → `istanbul-bilgi`,
-`campus-access`; `bubilet-gate` → `bubilet`, `event-ticket`; `paribu-cineverse-gate` → `paribu-cineverse`, `event-ticket`). Sınaq
+Sandbox siyahısında üç nümunə qurumun qrupu qurumu və siyasəti ilə dərc olunur (nümunə universitetin kampus
+qrupu → `campus-access`; nümunə tədbir şirkətinin və nümunə kinoteatr operatorunun giriş qrupları → `event-ticket`). Sınaq
 girişinin açıq mühit açarları işləməyə davam edir ([[ADR-0065]] K4).
 
 # Nəzərdən keçirilən variantlar
@@ -126,3 +126,5 @@ girişinin açıq mühit açarları işləməyə davam edir ([[ADR-0065]] K4).
 
 **Accepted — 2026-10-29.** Layihə rəhbərliyinin [[ADR-0065]]-in tamamlanması üçün ümumi təsdiqi ilə (hərfi sitat xüsusi təsdiq
 qeydində). DECISIONS: D-PROX-3. TG1–TG3 məcburidir.
+
+**Qeyd (2026-11-04):** sandbox nümunəsindəki real şirkət və qurum adlarını daşıyan qrup adları ümumi təsvirlərlə əvəz edildi; qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

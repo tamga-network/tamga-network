@@ -4,11 +4,11 @@ title: "Etkinlik kategorisi"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-02
+last_updated: 2026-11-04
 summary: >
   IssuerCategory kapalı kümesine (GOVERNMENT, IDENTITY, EDUCATION, HEALTH, FINANCE, LOGISTICS, OTHER) yalnızca EVENTS
   (etkinlik/bilet satıcısı) eklenir; TRANSPORT ve TELECOM gerçek bir kurum gelene kadar eklenmez. Yeni değer enum'un
-  sonuna eklenir (sıra numarası kararlılığı). Bilet satıcısı `bubilet` OTHER'dan EVENTS'e taşınır. Karar DB-23'ü kapatır.
+  sonuna eklenir (sıra numarası kararlılığı). Örnek bilet satıcısı OTHER'dan EVENTS'e taşınır. Karar DB-23'ü kapatır.
 domain: Credentials
 ---
 
@@ -16,7 +16,7 @@ domain: Credentials
 
 `IssuerCategory` bir kurumun sektörünü söyleyen **kapalı kümedir** ([[SPEC-BC-0001]] §3, `@tamga-network/trust`
 şeması, `IIssuerRegistry.sol`); küme DECISIONS'ta "nihai" diye kapatılmıştı, bu yüzden genişlemesi ADR ister. D10 (bilet)
-ile ilk etkinlik bileti satıcısı (`bubilet`, operatör modeli) [[t:trust-list|güven listesine]] girdi ve uygun kategori olmadığından geçici
+ile ilk etkinlik bileti satıcısı (örnek bir bilet satıcısı, operatör modeli) [[t:trust-list|güven listesine]] girdi ve uygun kategori olmadığından geçici
 olarak `OTHER` aldı. Soru (DB-23, 2026-09-26): yalnızca **EVENTS** mi eklensin, yoksa cüzdanın ekranda zaten etiketini
 gösterdiği **TRANSPORT** ve **TELECOM** de mi?
 
@@ -30,7 +30,7 @@ Proje yönetiminin kararı (2026-09-27): bilet [[t:issuer|belge verenleri]] içi
 2. **K2 — Sıra numarası kararlılığı.** Yeni değer enum'un **sonuna** eklenir:
    `{GOVERNMENT, IDENTITY, EDUCATION, HEALTH, FINANCE, LOGISTICS, OTHER, EVENTS}`. Kontrat henüz dağıtılmadı (Faz 0),
    ama sona ekleme kuralı bundan sonraki her genişleme için de geçerlidir (ABI/depolama uyumu).
-3. **K3 — Taşıma.** `bubilet` güven listesi kaydı `OTHER` → `EVENTS` (yeni liste sürümü); `event-ticket` [[t:verifier]]
+3. **K3 — Taşıma.** Örnek bilet satıcısının güven listesi kaydı `OTHER` → `EVENTS` (yeni liste sürümü); `event-ticket` [[t:verifier]]
    politikası `allowed_categories: ["EVENTS"]`. Cüzdan etiketi "Etkinlik".
 4. **K4 — Şema metadata'sı değişmez.** `urn:tamga:tkt:EventTicket:1` metadata'sındaki `issuer_categories: ["OTHER"]`
    bilgilendiricidir ([[SPEC-SCHEMA-0001]]: bağlayıcı kontrol güven katmanındadır) ve yayınlanmış metadata'nın içerik özeti
@@ -54,7 +54,7 @@ Proje yönetiminin kararı (2026-09-27): bilet [[t:issuer|belge verenleri]] içi
 
 # Sonuçlar
 
-- Kod: `@tamga-network/trust` şeması, `IIssuerRegistry.sol`, güven listesi kaynağı (`bubilet`), `apps/verify` politikası,
+- Kod: `@tamga-network/trust` şeması, `IIssuerRegistry.sol`, güven listesi kaynağı (örnek bilet satıcısı), `apps/verify` politikası,
   cüzdan etiket/ikon eşlemesi (`TICKETING` → `EVENTS`).
 - Belgeler: [[SPEC-BC-0001]] (enum), [[SPEC-ID-0002]] (yorum satırı), terimler sözlüğü, DB-23 kapandı.
 - Kalan: `EventTicket:2`'de `issuer_categories: ["EVENTS"]` (K4).
@@ -62,3 +62,5 @@ Proje yönetiminin kararı (2026-09-27): bilet [[t:issuer|belge verenleri]] içi
 # Durum
 
 **Accepted — 2026-09-27.** DECISIONS: D-CAT-1.
+
+**Not (2026-11-04):** gerçek şirket adı taşıyan örnek kurum adı (`slug`) "örnek bilet satıcısı" ile değiştirildi; karar içeriği değişmedi (proje yönetimi).

@@ -135,7 +135,7 @@ gelince (telefonda dokununca) kısa bir açıklama açılır.
 
 **Salted hash** — Bir değerin rastgele bir salt ile birlikte alınan özeti; değer özetten tahmin edilemez. SD-JWT alanları bu yolla gizler.
 
-**Selective disclosure** — Bir belgeden yalnız doğrulayıcının istediği alanların gösterilmesi, fazlasının değil.
+**Selective disclosure** — Seçici açıklama (eşanlamlı: seçici paylaşım): bir belgeden yalnız doğrulayıcının istediği alanların gösterilmesi, fazlasının değil.
 
 **Takma ad** (pseudonym) — Cüzdanın her web sitesi için ayrı türettiği kararlı hesap kimliği; iki site aynı kişiyi eşleştiremez.
 

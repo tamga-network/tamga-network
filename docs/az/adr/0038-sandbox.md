@@ -4,7 +4,7 @@ title: "Sandbox: test şəbəkəsi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-06
+last_updated: 2026-11-04
 summary: >
   Tamga Network real şəbəkədən tamamilə ayrı bir test şəbəkəsi işlədir: sandbox.tamga.network. Onun öz test kök sertifikatı, öz etibar siyahısı, nümunə qurumları, saxta şəxsləri və hər sənəd növündən nümunə rəqəmsal sənədləri var. Rəqəmsal cüzdan tərtibatçıları, qurumlar və yoxlayan tərəflər bütün axını başdan-sona burada sınaqdan keçirir. Real şəbəkədəki heç bir rəqəmsal cüzdan və ya yoxlayan tərəf sandbox-a etibar etmir; sandbox-da real fərdi məlumatlar olmur və məlumatlar istənilən an sıfırlana bilər.
 domain: Trust
@@ -68,9 +68,8 @@ istifadə bələdçisi adların yalnız realist sınaq mühiti üçün istifadə
 olmadığını və rəqəmsal sənədlərin test açarı ilə imzalandığı üçün heç yerdə etibarlı olmadığını açıq şəkildə yazır; qurum loqoları
 istifadə edilmir.
 
-> **Qeyd (2026-10-06, layihə rəhbərliyi):** İstanbul Bilgi Universiteti ilə pilot tərəfdaşlıq müqaviləsi var. Bu qurum üçün qeyd
-> "pilot tərəfdaşımızdır" deyir; sandbox-dakı halı yenə də yalnız test qurumudur. "Heç bir əlaqə və ya müqavilə yoxdur" cümləsi digər nümunə
-> qurumlar üçün keçərlidir. Test açarı xəbərdarlığı və loqo qaydası dəyişmir.
+> **Qeyd (2026-10-06, layihə rəhbərliyi):** sandbox-dakı nümunə universitet qurumu yalnız test qurumudur; nümunə qurumların heç
+> biri real qurumla əlaqə və ya müqavilə ifadə etmir. Test açarı xəbərdarlığı və loqo qaydası dəyişmir.
 
 > **Dəyişiklik (2026-10-06, [[ADR-0042]] K3):** K1-dəki `wallet.sandbox` və K6-dakı "test cüzdan provayderi" şəbəkənin xidməti
 > deyil. Şəbəkə cüzdan provayderi işlətmir; sandbox-da da hər rəqəmsal cüzdan öz provayderini işlədir və sandbox siyahısında
@@ -118,3 +117,5 @@ uyğunluq servisi növbəti mərhələlərdir; istifadəyə verilməzdən əvvə
 şəxsiyyət yoxlaması; 2026-10-05-də hamı üçün açıldı), K1-dəki "qurum konsolu işləmir" və K7-dəki qurumların özünüqeydiyyatı [[ADR-0041]] ilə (qurum test
 hesabları) dəyişdi (2026-10-04). K1/K6-dakı test cüzdan provayderinin şəbəkə tərəfindən işlədilməsi [[ADR-0042]] ilə dəyişdi (2026-10-06):
 sandbox-da cüzdan provayderini rəqəmsal cüzdanın özü işlədir.
+
+**Qeyd (2026-11-04):** 2026-10-06 qeydindəki real qurum adı və əlaqə ifadəsi çıxarıldı ("nümunə universitet qurumu"); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

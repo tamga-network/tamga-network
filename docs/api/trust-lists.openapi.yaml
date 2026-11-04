@@ -440,12 +440,12 @@ components:
       type: object
       required: [group_id, valid_from]
       properties:
-        group_id: { type: string, pattern: "^[a-z0-9-]{1,40}$", example: bubilet-gate }
+        group_id: { type: string, pattern: "^[a-z0-9-]{1,40}$", example: example-events-gate }
         institution_id:
           type: string
           pattern: "^[a-z0-9.-]{3,253}$"
           description: Issuer `slug` or verifier `dns_name` in the same list; required for an active group.
-          example: bubilet
+          example: example-events
         label: { type: string, maxLength: 160 }
         allowed_policies:
           type: array

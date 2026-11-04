@@ -69,7 +69,7 @@ AS ([[t:authentic-source|yetkili kaynak]]) · WP ([[t:wallet-provider|cüzdan sa
 
 # 2. RB-OP — İşletmeci ve liste işletmecisi (TLSO)
 
-Bugün: Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; listelerde işletmeci adı "Tamga Network" yazılır (RB-OP-01). Devirde rol ulusal otoriteye geçer.
+Bugün: ağı Tamga Network (kurulacak vakıf) adına bir geçici işletmeci işletir; listelerde işletmeci adı "Tamga Network" yazılır (RB-OP-01). Devirde rol ulusal otoriteye geçer.
 
 | # | Kural |
 |---|---|
@@ -167,7 +167,7 @@ Bugün: Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAA
 | RB-AP-ID-01 | Kimlik belgesi sağlayıcısı **MUST** uzaktan kimlik doğrulamayı yalnızca kendi servisinde yürütmek; kurumların belge verme servisleri, cüzdan ve doğrulayıcı uzaktan kimlik doğrulama sağlayıcısıyla **MUST NOT** konuşmak. |
 | RB-AP-ID-02 | Belge vermeden önce aydınlatma metni **MUST** gösterilmek ve açık rıza alınmak; rıza yoksa kimlik doğrulama **MUST NOT** başlatılmak. |
 | RB-AP-ID-03 | Kişi alanları belge verildikten sonra **MUST NOT** tutulmak; görüntü, özçekim, video, OCR ham verisi **MUST NOT** saklanmak; kalıcı kayıt yalnızca opak `subject_ref`, belge numarasının özeti, süre ve iptal listesi konumlarıdır. |
-| RB-AP-ID-04 | Belge **MUST** `urn:tamga:id:IdentityAttestation:1` türünde, `category` alanı olmadan, iptal listeli ve en çok 2 yıl geçerli olmak; ulusal kimlik numarası **MUST** seçici paylaşımlı olmak. |
+| RB-AP-ID-04 | Belge **MUST** `urn:tamga:id:IdentityAttestation:1` türünde, `category` alanı olmadan, iptal listeli ve en çok 2 yıl geçerli olmak; ulusal kimlik numarası **MUST** seçici açıklamalı olmak. |
 | RB-AP-ID-05 | Aynı belge numarası için ikinci etkin kimlik belgesi **MUST NOT** verilmek; yeniden doğrulama eskisini iptal eder. |
 | RB-AP-ID-06 | Devletin PID sağlayıcısı atandığında sağlayıcı kaydı `successor_id` ile **MUST** devretmek ve yeni belge vermeyi durdurmak; mevcut belgeler süreleri dolana kadar geçerli kalır. |
 | RB-AP-ID-07 | Kimlik belgesiyle birlikte site başına [[t:pseudonym|takma ad]] tohumu **MUST** ayrı ve gösterilemeyen bir türde (`urn:tamga:id:PseudonymSeed:1`) verilmek — kimlik belgesinden sonra aynı erişim belirteciyle, ayrı yapılandırma olarak ([[ADR-0061]]); tohum kişinin değişmeyen kimliğinden, belge özeti anahtarından **ayrı** bir anahtarla türetilir ve **MUST NOT** saklanmak (her doğrulamada yeniden hesaplanır); bu tür hiçbir doğrulayıcı kapsamında **MUST NOT** yer almak. |

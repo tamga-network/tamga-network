@@ -4,7 +4,7 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 summary: >
   End-to-end testing on sandbox.tamga.network, the test network kept apart from the real network: addresses, pinning the
   trust anchor, connecting a wallet to the sandbox, registering your own wallet provider in the sandbox list as a wallet
@@ -128,15 +128,15 @@ you give against the network's rules and reports back, are later stages and need
 ## 3. Example institutions and credential types
 
 ::: warning About the institution names
-Institution names are used to make this test environment realistic. İstanbul Bilgi Üniversitesi is our pilot partner; there is
-no relationship or agreement with Bubilet or Paribu Cineverse. The credentials here are signed with a test key and are not valid anywhere. The institutions' logos are not used.
+The sandbox institutions exist only for testing; none of them implies a relationship or agreement with a real institution. The
+short names in the addresses (`slug`) are technical identifiers only. The credentials here are signed with a test key and are not valid anywhere. The institutions' logos are not used.
 :::
 
 | Institution | Credential types (`vct`) |
 |---|---|
-| İstanbul Bilgi Üniversitesi (TEST) — `issuer.sandbox.tamga.network/istanbul-bilgi` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
-| Bubilet (TEST) — `issuer.sandbox.tamga.network/bubilet` | `urn:tamga:tkt:EventTicket:1` (fictional concerts) |
-| Paribu Cineverse (TEST) — `issuer.sandbox.tamga.network/paribu-cineverse` | `urn:tamga:tkt:EventTicket:1` (fictional film screenings; a cinema ticket is not a separate type: the film and screening are in `event_name`, the hall in `venue_name`) |
+| Example university (TEST) — `issuer.sandbox.tamga.network/istanbul-bilgi` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Example events company (TEST) — `issuer.sandbox.tamga.network/bubilet` | `urn:tamga:tkt:EventTicket:1` (fictional concerts) |
+| Example cinema operator (TEST) — `issuer.sandbox.tamga.network/paribu-cineverse` | `urn:tamga:tkt:EventTicket:1` (fictional film screenings; a cinema ticket is not a separate type: the film and screening are in `event_name`, the hall in `venue_name`) |
 | Identity service — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, pseudonym seed (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Example people
@@ -229,18 +229,18 @@ carries no status list entry.
 
 ## 8. Try with your real identity
 
-In the sandbox the identity flow offers two options ([[ADR-0040]]): **Verify with your real identity (Didit)** — the provider's
+In the sandbox the identity flow offers two options ([[ADR-0040]]): **Verify with your real identity** — the remote identity verification provider's
 real steps (document scan, liveness, face match) — or **Quick trial (made-up person)** — you pick a made-up person and approve.
 The quick trial is open to everyone. Until the data-protection legal review is complete, the real path opens **by default with an
 invitation code** (`ADR-0040/RI1`, note of 2026-10-28); ask the sandbox team for one (`support@tamga.network`). Without a code use
 the quick trial.
 
 1. Connect the wallet to the sandbox and start adding an identity credential.
-2. On the identity service's page, accept the privacy notice, enter the invitation code and choose "Verify with your real identity (Didit)".
+2. On the identity service's page, accept the privacy notice, enter the invitation code and choose "Verify with your real identity".
 3. Read and confirm the warning: "This is a test environment; you are trying it with your real identity; your data is deleted
-   every night; deletion of the verification session at Didit is requested as soon as the credential is issued." Without
+   every night; deletion of the verification session at the provider is requested as soon as the credential is issued." Without
    confirmation the provider is not opened (`ADR-0040/RI3`).
-4. Complete the steps at Didit; the test credential arrives in the wallet. The sandbox uses the real network's provider
+4. Complete the steps on the provider's page; the test credential arrives in the wallet. The sandbox uses the real network's provider
    account; the keys that sign the credential and the records are separate (`ADR-0040/RI2`).
 
 Because the free verification allowance is shared with the real network, the real path has a **daily and a monthly cap**.
@@ -252,8 +252,7 @@ number and document number a random `SANDBOX-…` value is written (`ADR-0040/RI
 provider is requested as soon as the credential is issued or at once if verification fails, and for an abandoned session within
 about an hour, at the latest at the nightly reset (`ADR-0040/RI5`); the provider deletes within its own retention setting.
 Invitation codes are personal (single use, at most 7 days) or timed (at most 72 hours, at most 25 uses), cannot exceed the caps
-and are deleted at the nightly reset. After the legal review the sandbox administrator can switch the real path to the open mode
-(`TAMGA_IDV_DIDIT_SANDBOX_MODE=open`).
+and are deleted at the nightly reset. After the legal review the sandbox administrator can switch the real path to the open mode.
 
 ## 9. Try your institution
 

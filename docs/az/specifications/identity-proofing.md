@@ -4,9 +4,9 @@ title: "Şəxsiyyətin yoxlanılması"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-28
+last_updated: 2026-11-04
 summary: >
-  Sənədi verən qurumun rəqəmsal sənədi verməzdən əvvəl tətbiq etdiyi şəxsiyyətin yoxlanılması (identity proofing) yollarını müəyyən edir: hər yolun təmin etdiyi sənəd sahibi səviyyəsi (T1–T3), onun ETSI TS 119 461 ilə uyğunlaşdırılması, hansı sənəd növünün hansı səviyyəni tələb etdiyi, nəticənin harada saxlanılacağı (sənədi verən qurumun audit qeydi; heç vaxt rəqəmsal sənədin özündə deyil) və uzaqdan şəxsiyyət yoxlama provayderi (istinad: Didit, v3 API) inteqrasiyasının protokol səviyyəsində qaydaları: sessiyanın yaradılması, nəticənin alınması, webhook-un yoxlanılması, məlumatların minimallaşdırılması, xəta və vaxt aşımı davranışı. D-ID-2-nin tətbiqidir. Səviyyə cədvəli və ETSI 119 461 uyğunlaşdırması D-ASSUR-2 ilə qərara alınıb (2026-09-26).
+  Sənədi verən qurumun rəqəmsal sənədi verməzdən əvvəl tətbiq etdiyi şəxsiyyətin yoxlanılması (identity proofing) yollarını müəyyən edir: hər yolun təmin etdiyi sənəd sahibi səviyyəsi (T1–T3), onun ETSI TS 119 461 ilə uyğunlaşdırılması, hansı sənəd növünün hansı səviyyəni tələb etdiyi, nəticənin harada saxlanılacağı (sənədi verən qurumun audit qeydi; heç vaxt rəqəmsal sənədin özündə deyil) və uzaqdan şəxsiyyət yoxlama provayderi (istinad adapteri) inteqrasiyasının protokol səviyyəsində qaydaları: sessiyanın yaradılması, nəticənin alınması, webhook-un yoxlanılması, məlumatların minimallaşdırılması, xəta və vaxt aşımı davranışı. D-ID-2-nin tətbiqidir. Səviyyə cədvəli və ETSI 119 461 uyğunlaşdırması D-ASSUR-2 ilə qərara alınıb (2026-09-26).
 translation_of: SPEC-ID-0003
 source_version: "1.0.0"
 ---
@@ -99,30 +99,31 @@ qaydaları qüvvədədir ([[PM-ASSUR-0001]] §Decay).
 
 ---
 
-# 4. İstinad provayderi: Didit (v3 API) — protokol uyğunlaşdırması
+# 4. İstinad provayderi — protokol uyğunlaşdırması
 
-Mənbə: docs.didit.me (2026-09-24 tarixində yoxlanılıb). Dəyişə bilər; adapter versiyalaşdırılır.
+İstinad adapteri uzaqdan şəxsiyyət yoxlaması provayderinin yerləşdirilmiş yoxlama axınından istifadə edir. Provayderin adı, API
+ünvanları və parametr adları operatorun konfiqurasiya sənədindədir; bu spesifikasiya yalnız provayderdən asılı olmayan qaydaları
+saxlayır. Provayder dəyişsə, adapter dəyişir; aşağıdakı qaydalar dəyişmir.
 
-| Addım | Didit | Tamga-da istifadə |
+| Addım | Provayderdən gözlənilən | Tamga-da istifadə |
 |---|---|---|
-| Autentifikasiya | `x-api-key: <API_KEY>` (Business Console → Application → API & Webhooks) | Tenant gizli dəyəri (`TAMGA_IDV_DIDIT_API_KEY`); `.env`, heç vaxt repozitoriyada deyil |
-| Sessiya yarat | `POST https://verification.didit.me/v3/session/` gövdə: `workflow_id` (məcburi), `vendor_data`, `callback`, `callback_method`, `metadata`, `language`, `contact_details`, `expected_details {first_name,last_name,date_of_birth,id_country,expected_document_types}` | `vendor_data = <opak subject_ref>`; `callback = https://id.tamga.network/idv/return?r=<akış>`; `language = tr`; `expected_details` ad/soyad/doğum tarixi (IP3); `metadata` **boş** |
-| Cavab | `session_id`, `session_token`, `url`, `status: "Not Started"`, `workflow_version` | `url`-ə yönləndir; `session_id` = `session_ref` |
-| Nəticə | `GET https://verification.didit.me/v3/session/{sessionId}/decision/` → `status`, `features[]`, `id_verifications[] {status, first_name, last_name, date_of_birth, document_type, issuing_state, expiration_date, verification_method, assurance, …}`, `liveness_checks[] {status, score}`, `face_matches[] {status, score}`, `nfc_verifications[]`, `aml_screenings[]` | Yalnız `status` və alt yoxlama `status`-ları + ad/soyad/doğum tarixi **uyğunluq nəticəsi** (boolean) saxlanılır; təsvir sahələri (`portrait_image`, `front_image`, `back_image`, `video_url`) **oxunur, lakin saxlanılmır** |
-| Webhook | `POST` gövdə: `event_id`, `webhook_type` (`status.updated` …), `session_id`, `status`, `vendor_data`, `decision`, `timestamp`, `created_at`, `environment`; başlıqlar `X-Signature-V2` (HMAC-SHA256, kanonik JSON), `X-Signature` (xam gövdə), `X-Timestamp` | `X-Signature` (xam gövdə) + `X-Timestamp` (±300 san) yoxlanılır; `event_id` ilə dublikatlar aradan qaldırılır; sonra decision API təsdiqi (IP7). Təkrar cəhd: ~1 dəq, ~4 dəq; 5 san vaxt aşımı → son nöqtə dərhal 200 qaytarır, emal növbəyə alınır |
-| Statuslar | `Not Started`, `In Progress`, `Awaiting User`, `In Review`, `Approved`, `Declined`, `Resubmitted`, `Expired`, `Kyc Expired`, `Abandoned` | §5 uyğunlaşdırması |
-| İş axını | Business Console-da no-code workflow: ID + liveness + face match (+ NFC isteğe bağlı) | Tamga workflow-u: **ID document + passive liveness + face match**; AML **söndürülüb** (məqsəd məhdudiyyəti); phone/email **söndürülüb** (T1 artıq SMS ilə) |
-| Kanal | Hosted URL (yönləndirmə), iframe, mobil SDK (iOS/Android/RN) | Bu gün (siyahı mərhələsi): **hosted URL** (şəxsiyyət xidməti `id.tamga.network` vasitəsilə, masaüstü/mobil brauzer). Rəqəmsal cüzdan daxilində SDK **istifadə olunmur** (şəxsiyyətin sübutu qurumun işidir, rəqəmsal cüzdanın deyil) |
-| Sandbox | `sandbox_scenario` sahəsi; `environment: "sandbox"` | Demo: sandbox ssenariləri ilə; e2e testdə saxta adapter |
-| Qiymət | Ayda 500 yoxlama pulsuz; sonra istifadəyə görə ödəniş | Pilot miqyası pulsuz kvota daxilindədir |
+| Autentifikasiya | API açarı | Tenant gizli dəyəri; operatorun parametr faylında, heç vaxt repozitoriyada deyil |
+| Sessiya yarat | İş axını identifikatoru, qeyri-şəffaf müştəri məlumatı, qayıdış ünvanı, dil, gözlənilən ad/soyad/doğum tarixi | Müştəri məlumatı = qeyri-şəffaf `subject_ref`; qayıdış = `https://id.tamga.network/idv/return?r=<axın>`; dil `tr`; gözlənilən dəyərlər ad/soyad/doğum tarixi (IP3); əlavə metaməlumat **boş** |
+| Cavab | Sessiya identifikatoru və yerləşdirilmiş yoxlama ünvanı | Ünvana yönləndir; sessiya identifikatoru = `session_ref` |
+| Nəticə | Qərar ucu: ümumi status, sənəd, canlılıq və üz uyğunlaşdırması alt yoxlamaları, oxunan ad/soyad/doğum tarixi | Yalnız statuslar + ad/soyad/doğum tarixi **uyğunluq nəticəsi** (boolean) saxlanılır; təsvir və video sahələri **oxunur, lakin saxlanılmır** |
+| Webhook | İmzalı hadisə bildirişi (HMAC-SHA256, vaxt möhürlü) | İmza + vaxt möhürü (±300 s) yoxlanılır; hadisə identifikatoru ilə təkrarların aradan qaldırılması; sonra qərar ucundan təsdiq (IP7). Uc nöqtə tez 200 qaytarır, emal növbəyə alınır |
+| İş axını | Sənəd + canlılıq + üz uyğunlaşdırması (+ NFC istəyə bağlı) | Tamga iş axını: **şəxsiyyət sənədi + passiv canlılıq + üz uyğunlaşdırması**; AML **söndürülüb** (məqsəd məhdudiyyəti); telefon/e-poçt **söndürülüb** (T1 artıq SMS ilə) |
+| Kanal | Yerləşdirilmiş ünvan (yönləndirmə) | Bu gün (siyahı mərhələsi): **yerləşdirilmiş ünvan** (şəxsiyyət xidməti `id.tamga.network` vasitəsilə, masaüstü/mobil brauzer). Cüzdandaxili SDK **istifadə olunmur** (şəxsiyyətin sübutu qurumun işidir, cüzdanın deyil) |
+| Sınaq mühiti | Provayderin sınaq ssenariləri | Demo: sınaq ssenariləri ilə; e2e testdə saxta adapter |
+
 
 ---
 
 # 5. Nəticə → səviyyə uyğunlaşdırması
 
-| Didit `status` | Alt yoxlamalar | Ad/soyad/doğum tarixi uyğunluğu | Tamga nəticəsi |
+| Provayder `status` | Alt yoxlamalar | Ad/soyad/doğum tarixi uyğunluğu | Tamga nəticəsi |
 |---|---|---|---|
-| `Approved` | `id_verifications[].status = Approved` ∧ `liveness_checks[].status = Approved` ∧ `face_matches[].status = Approved` | Tam uyğunluq | **T2** (`path: "idv:didit"`) |
+| `Approved` | `id_verifications[].status = Approved` ∧ `liveness_checks[].status = Approved` ∧ `face_matches[].status = Approved` | Tam uyğunluq | **T2** (`path: "idv:<provayder>"`) |
 | `Approved` | NFC `Approved` (çipli sənəd) | Tam | **T2** (qeyd: `nfc: true`; T3 **deyil** — T3 üçün imza tələb olunur) |
 | `Approved` | hər hansı biri `Approved` deyil | — | **Kifayət deyil** → masa |
 | `Approved` | hamısı Approved | Uyğun gəlmir | **Baxış** (əməkdaşın qərarı; avtomatik T2 yoxdur) |
@@ -140,7 +141,7 @@ məhdudiyyət tətbiq edilmir).
 
 ```ts
 interface IdvProvider {
-  readonly id: "didit" | string;
+  readonly id: string;               // provayder identifikatoru (parametrdən)
   createSession(input: {
     subjectRef: string;                 // opaque, not personal data
     expected: { givenName: string; familyName: string; birthDate: string };
@@ -204,14 +205,14 @@ I2; rəqəmsal sənəddə `category` claim-i yoxdur — [[ADR-0022]]) verdiyi kv
 | `vct` | `urn:tamga:id:IdentityAttestation:1` (kataloq: `id/IdentityAttestation/1.0.0`) |
 | Claim-lər | `given_name`, `family_name`, `birthdate`, `nationalities` (massiv; hər element ayrıca açıqlanır), `personal_administrative_number` (TCKN), `document_type`, `document_number_hash` (açarlı SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18`, `age_over_15` ([[ADR-0064]]: ISO/IEC 18013-5 `age_over_NN`, qapalı çoxluq) — hamısı selective disclosure ilə; portret yoxdur; LoA claim-i yoxdur (PR7) |
 | Müddət / status | `exp` = rəqəmsal sənədin verilməsi + 730 gün; Token Status List (`id.tamga.network/status/{listId}`); eyni rəqəmsal sənəd yenidən yoxlandıqda köhnəsi ləğv edilir (K6) |
-| Axın | Rəqəmsal cüzdan: PAR (WUA) → brauzer `/authorize` (**KVKK üzrə məlumatlandırma + açıq razılıq**) → provayder (Didit v3; demo: FAKE, kənarlaşma S-15) → `/idv/return` qərar sorğusu (webhook yalnız tətikdir, IDP5) → `code` → token (PKCE + WUA) → 10 nüsxə |
+| Axın | Rəqəmsal cüzdan: PAR (WUA) → brauzer `/authorize` (**KVKK üzrə məlumatlandırma + açıq razılıq**) → provayder (istinad adapteri; demo: FAKE, kənarlaşma S-15) → `/idv/return` qərar sorğusu (webhook yalnız tətikdir, IDP5) → `code` → token (PKCE + WUA) → 10 nüsxə |
 | Qurumda istifadə | Sənədi verən qurumun xidməti rəqəmsal sənədi verərkən şəxsiyyət sənədinin **təqdim edilməsini** tələb edir (DCQL: TCKN, doğum tarixi, ad, soyad), T0 + A–E yoxlayır, qeydlə uyğunlaşdırır (TCKN + doğum tarixi; adın normallaşdırılması ilə bağlı xəbərdarlıq) — [[SPEC-PROTO-0001]] §11.2 |
 | Səviyyə | Məsafədən sənəd + canlılıq + üz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` (texniki baxımdan High; hüquqi baxımdan T3 = NES/Mobil İmza, IDP7) |
 | Məlumat nəzarətçisi | Tamga Network (K4): saxlanılan qeyd + hash; silinmə tələbi = §9.1 (qeyd silinir, nüsxələr ləğv edilir, provayderdəki sessiyanın silinməsi tələb olunur); provayder müqaviləsində təsvirlərin saxlanması hədəfi ≤ 30 gün. **Vaxta əsaslanan silinmə (2026-10-28):** müddəti bitmiş və ya ləğv edilmiş qeyd ən gec 30 gün sonra provayder sessiyası ilə birlikdə, hadisə jurnalı sətirləri 365 gün sonra avtomatik silinir (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; müddətlər siyasət seçimidir, hüquqi təsdiq gözləyir) |
 | Webhook | Yeganə hədəf `https://id.tamga.network/idv/webhook`, hadisə `status.updated`; qurum üzrə ayrıca webhook yoxdur |
 | Yaş | Minimum yaş yoxdur (2026-10-08, [[ADR-0043]]); şərt etibarlı şəxsiyyət sənədi ilə şəxsiyyətin yoxlanılmasıdır. Valideyn razılığı axını və provayderin azyaşlılar üçün həddi açıq məsələdir |
 
-Tətbiq: `apps/id` (operator repozitoriyası) (config/didit/store/app), `IdvProvider` interfeysi §6 ilə eynidir (`DiditProvider`, `FakeIdvProvider`).
+Tətbiq: `apps/id` (operator repozitoriyası) (parametrlər, provayder adapteri, qeyd, tətbiq), `IdvProvider` interfeysi §6 ilə eynidir (istinad provayder adapteri və `FakeIdvProvider`).
 
 > **`issuing_country` (2026-10-11, layihə rəhbərliyinin qərarı).** Sahənin mənası Aİ PID-dəki mənadır: sənədi verən şəxsiyyət
 > provayderinin ölkəsi (İcra Reqlamenti (Aİ) 2026/1731). Bu gün sənədi Tamga-nın şəxsiyyət xidməti skan edilmiş şəxsiyyət sənədinə

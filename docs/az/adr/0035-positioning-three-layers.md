@@ -4,7 +4,7 @@ title: "Mövqeləndirmə"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
   Tamga üç qatda mövqelənir: (1) baza — bütün rəqəmsal sənədlər, protokollar və etibar siyahıları Avropa İttifaqının (Aİ) (eIDAS 2.0 / EUDI) standartlarına uyğundur; (2) Tamga Network — türk dünyası üçün yüngül etibar federasiyası: ölkə siyahılarını bir yerə toplayır və bir-birinə tanıdır, qaydalarına əməl edən hər rəqəmsal cüzdanı tanıyır, dövlətlər qoşulduqca idarəetmə qurumu və zəncir yaranır; (3) məhsul və xidmətlər — Tamga Wallet (şəbəkənin ilk və istinad rəqəmsal cüzdanı, hər uyğun mühitdə işləyir) və qurumlara xidmətlər (Qurum Konsolu, Tamga Verify, inteqrasiya, dəstək).
 domain: Governance
@@ -72,9 +72,9 @@ Qiymətləndirilən üç yol:
 
 | Seçim | Nəticə | Səbəb |
 |---|---|---|
-| Yol 1: yalnız Aİ ilə uyğun rəqəmsal cüzdan + xidmətlər | rədd (əsas istiqamət kimi) | Ən sürətli gəlir gətirir, lakin fərqləndirici xüsusiyyəti azdır və dövlət cüzdanı gəldikdə kiçilir. Yol 3 bunu artıq əhatə edir. |
-| Yol 2: əvvəlcə ağır şəbəkə və qurum | rədd | Dövlətlər qoşulmasa, illərlə gəlirsiz qalar; erkən qurumun xərci yüksəkdir. |
-| **Yol 3: qatlı** | **qəbul** | Arxitektura ilə tam üst-üstə düşür; xidmətlər və rəqəmsal cüzdan dərhal gəlir gətirir, şəbəkə zamanla böyüyür, dövlət cüzdanı və siyahıları gəldikdə dəyər itmir, əksinə federasiyanın dəyəri artır. |
+| Yol 1: yalnız Aİ ilə uyğun rəqəmsal cüzdan + xidmətlər | rədd (əsas istiqamət kimi) | Ən sürətli başlayır, lakin fərqləndirici dəyəri azdır və dövlət cüzdanı gəldikdə kiçilir. Yol 3 bunu artıq əhatə edir. |
+| Yol 2: əvvəlcə ağır şəbəkə və qurum | rədd | Dövlətlər qoşulmasa, şəbəkə illərlə istifadəsiz qalar; erkən qurum xərci yüksəkdir, əsası yoxdur. |
+| **Yol 3: qatlı** | **qəbul** | Arxitektura ilə tam üst-üstə düşür; xidmətlər və rəqəmsal cüzdan dərhal istifadəyə yararlıdır, şəbəkə zamanla böyüyür, dövlət cüzdanı və siyahıları gəldikdə dəyər itmir, əksinə federasiyanın dəyəri artır. |
 
 **Məlum gərginlik:** Aİ rolları şüurlu şəkildə ayırır. Siyahını idarə edən qurumun xidmət satması maraqlar toqquşması sayılır. Bu gün bir komanda
 kifayətdir, lakin gələcəkdə şəbəkə idarəetməsi (şura və ya fond) ilə xidmət şirkəti ayrılmalıdır. İctimai təqdimatda bu ayrılıq
@@ -117,3 +117,5 @@ işlədilmir; düzgün ifadə "Aİ standartlarına uyğun, Aİ ilə uyğun" və 
 
 > **Hüquqi qeyd (2026-10-13):** Md. 5f üçüncü ölkənin tanınması deyil; Aİ-dən kənar üçün yeganə açıq əsas md. 14-dür (yalnız etibar
 > xidmətləri, dövlətlərarası saziş). Qərar dəyişmir. Layihə rəhbərliyinin təsdiqi ilə (ilk Aİ uyğunluq mərhələsi, qərar 13).
+
+**Qeyd (2026-11-04):** əsaslandırma cədvəlindəki gəlir ifadələri texniki əsaslandırma ilə əvəz edildi ("fərqləndirici dəyər azdır", "erkən qurum xərci yüksəkdir, əsası yoxdur"); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

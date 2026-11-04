@@ -4,7 +4,7 @@ title: "Mağaza inceleme kodu"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-06
+last_updated: 2026-11-04
 summary: >
   Apple ve Google inceleyicileri, güven listesindeki bir cüzdanın kimlik akışını gerçek bir Türk kimlik belgesi olmadan
   deneyebilmelidir. İnceleme kodu ağın hizmetidir ve listedeki her cüzdana aynı koşullarla açıktır.
@@ -27,7 +27,7 @@ yolu görmez; kod bir kez kullanılınca biter.
 - Apple App Review ve Google Play incelemesi, uygulamanın bütün akışlarının denenebilmesini ister; gerektiğinde inceleme notunda
   deneme hesabı ya da "demo modu" verilir.
 - Cüzdanın kimlik akışı ([[SPEC-ID-0003]] §9) gerçek kimlik belgesi + canlılık + yüz eşleştirme ister;
-  bu bir [[t:identity-proofing]] adımıdır. Canlıda sahte sağlayıcı kapalıdır (`TAMGA_IDV_DIDIT_FAKE` yalnız açıkça açılırsa; GT1: canlıda gerçek
+  bu bir [[t:identity-proofing]] adımıdır. Canlıda sahte sağlayıcı kapalıdır (sahte sağlayıcı ayarı yalnız açıkça açılırsa; GT1: canlıda gerçek
   kimlik yok sayılmaz).
 - Kimlik gerektirmeyen akışlar kodsuz denenebilir: bilet alma ve kapıda gösterme, Tamga Verify örnek politikaları, "Tamga ile
   giriş yap" örnek sitesi ([[t:pseudonym]] yalnız kimlik [[t:credential]] tohumla çalıştığı için o da kimlik akışına
@@ -85,7 +85,7 @@ bütün yolları denemesini sağlayan tek seçenek. Bedeli: kimlik servisinde ik
 | Kod sızar ve başkası kullanır | tek kullanımlık, süreli, en çok 3 etkin; deneme belgeyi gerçek doğrulayıcıda geçmez |
 | Deneme belgeyi gerçek sanılır | ayrı imzacı, `DEMO` işareti, cüzdanda "DEMO" rozeti, 7 gün |
 | Mağaza "gizli özellik" sayar | inceleme notunda açıkça anlatılır; kod alanı aydınlatma ekranında görünür, gizli değil |
-| Sahte sağlayıcı canlıda yanlışlıkla genel açılır | kod olmadan sahte sağlayıcıya geçiş yolu yok; `TAMGA_IDV_DIDIT_FAKE` canlıda kapalı kalır |
+| Sahte sağlayıcı canlıda yanlışlıkla genel açılır | kod olmadan sahte sağlayıcıya geçiş yolu yok; sahte sağlayıcı ayarı canlıda kapalı kalır |
 
 # Değişmezler
 
@@ -145,7 +145,7 @@ yap" örnek sitesi) gerçek ağda artık yoktur ve inceleme notuna yazılmaz; bu
 kimlik akışıdır: inceleme kodu → DEMO kimlik belgesi → Tamga Verify inceleme politikaları (`review-age-over-18`,
 `review-site-signup`). İnceleme politikaları gerçek ağda kalır ama Tamga Verify ana sayfasında vitrin olarak gösterilmez;
 inceleyiciye doğrudan bağlantı verilir. Karar (D seçeneği, K1–K3, K5, RV1–RV3) değişmez.
-Aynı tarihte sahte kimlik sağlayıcı gerçek ağda kod kilidiyle tamamen kapandı (`TAMGA_IDV_DIDIT_FAKE=1` ile servis açılmaz);
+Aynı tarihte sahte kimlik sağlayıcı gerçek ağda kod kilidiyle tamamen kapandı (sahte sağlayıcı ayarı ile servis açılmaz);
 inceleme kodu yolu bundan bağımsızdır.
 
 # Uygulama notu — 2026-10-06: her cüzdana açık ağ hizmeti
@@ -155,3 +155,5 @@ her cüzdan sağlayıcısı, kendi uygulamasının mağaza incelemesi için ayn�
 üretilir ve cüzdana iletilir, cüzdan onu kendi inceleme notuna yazar. K1–K5 ve RV1–RV3 her cüzdan için aynıdır; deneme belgesi
 hangi cüzdana verilirse verilsin yalnız inceleme politikalarında geçer. DEMO işaretini göstermek ([[SPEC-ID-0003]] §9) her
 cüzdanın işidir.
+
+**Not (2026-11-04):** uzaktan kimlik doğrulama sağlayıcısının ticari adı ile ortam değişkeni ve komut adları kamuya açık metinden çıkarıldı ("uzaktan kimlik doğrulama sağlayıcısı"; ayar adları işletmecinin yapılandırma belgesinde); karar içeriği değişmedi (proje yönetimi).

@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -762,12 +762,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-API-0001/AP3` | Sonuç nesnesi claim değerlerini değil adlarını taşır. |
 | `SPEC-API-0001/AP4` | `idx` hiçbir API yanıtında veya kayıtta bulunmaz. |
 | `SPEC-API-0001/AP5` | HTTP durum kodu doğrulama sonucunu kodlamaz. |
-| `SPEC-API-0001/AP6` | Politikanın `required_claims`'i RP'nin zincirdeki scope'unu aşamaz. |
+| `SPEC-API-0001/AP6` | Politikanın `required_claims`'i RP'nin güven listesindeki kaydının scope'unu aşamaz. |
 | `SPEC-API-0001/AP7` | Hata `detail` alanı kişisel veri içermez. |
 | `SPEC-API-0001/AP8` | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. |
 | `SPEC-API-0001/AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
 | `SPEC-API-0001/AP12` | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
-| `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. Kapı isteği terminal anahtarıyla gelir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). |
+| `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = doğrulayıcının kalıcı kimliği (güven listesindeki kaydının `dns_name`'i; sertifika yenilense de değişmez, [[ADR-0034]]), ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. Kapı isteği terminal anahtarıyla gelir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). |
 | `SPEC-API-0001/AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). |
 | `SPEC-API-0001/AP10` | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
 
@@ -973,7 +973,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-TRUST-0001/TL5` | `next_update` geçmiş veya erişilemeyen liste ile doğrulama **INDETERMINATE** üretir; asla ACCEPTED, asla REJECTED. |
 | `SPEC-TRUST-0001/TL6` | Bilinmeyen `list_format_version` gören yükleyici durur ve alarm verir; kabul etmez. |
 | `SPEC-TRUST-0001/TL7` | Ulusal listeyi yalnızca o namespace'in imza anahtarı imzalar; operatör vekâleti `operator.on_behalf_of` ile beyan edilir. |
-| `SPEC-TRUST-0001/TL8` | Tamga PID vermez; `pid_providers[]` liste aşaması boyunca boştur. Tamga'nın geçici kimlik attestation'ı ([[ADR-0011]]) bir `issuers[]` kaydıdır (`category: IDENTITY`, `class: QUALIFIED`) ve devlet PID sağlayıcısı atanınca `successor_id` ile süpersede edilir. |
+| `SPEC-TRUST-0001/TL8` | Tamga PID vermez; `pid_providers[]` liste aşaması boyunca boştur. Tamga'nın geçici kimlik attestation'ı ([[ADR-0011]]) bir `issuers[]` kaydıdır (`category: IDENTITY`, `class: EAA`, `assurance: I2`; [[ADR-0022]]) ve devlet PID sağlayıcısı atanınca `successor_id` ile süpersede edilir. |
 | `SPEC-TRUST-0001/TL9` | Şema `registered_at` ve `status_history.since` kalıcıdır; yeniden derleme bunları değiştiremez (ilk çapa zamanı). |
 | `SPEC-TRUST-0001/TL10` | Zincire geçiş, liste arşivinin replay'i ve eşdeğerlik testi geçmeden tamamlanmış sayılmaz. |
 | `SPEC-TRUST-0001/TL11` | Hiçbir liste, çapa günlüğü veya değişiklik günlüğü kişisel veri, belge veya belge hash'i içermez. |
@@ -1026,4 +1026,4 @@ AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, FN, GE
 
 # Durum
 
-**Üretilen dosya** — 2026-11-03 (`scripts/sync-invariants.mjs`). Toplam 390 kodlanmış değişmez, 72 dokümanda.
+**Üretilen dosya** — 2026-11-04 (`scripts/sync-invariants.mjs`). Toplam 390 kodlanmış değişmez, 72 dokümanda.

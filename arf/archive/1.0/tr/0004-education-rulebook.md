@@ -32,7 +32,7 @@ Bu [[t:rulebook]] iki belge türünü kapsar:
 | Diploma | `urn:tamga:edu:DiplomaCredential:1` | `schemas.tamga.network/v1/edu/DiplomaCredential/1.0.0` |
 
 İkisi de `urn:tamga:core:TamgaBaseCredential:1` kök türünü genişletir. **Amaç:** yükseköğretim kurumunun öğrencilik ve mezuniyet
-bilgisini kişinin cüzdanına, seçici paylaşımlı ve doğrulanabilir bir belge olarak vermesi; işveren, indirim veren ya da kampüs
+bilgisini kişinin cüzdanına, seçici açıklamalı ve doğrulanabilir bir belge olarak vermesi; işveren, indirim veren ya da kampüs
 kapısı yalnız gereken alanı görür.
 
 Bu belgeler AB gözünde nitelikli olmayan **[[t:EAA]]**'dır; Tamga sınıfı [[t:issuer|belge verenin]] kaydına göre EAA, nitelikli ya da
@@ -68,7 +68,7 @@ Terimler Ek D'dedir; AB terimleri ARF Annex 1 anlamındadır.
 
 ## 2.1 Giriş ve hukuki kategori
 
-Alanlar Avrupa Öğrenme Modeli (ELM v3) ve Europass'la eşlenir (§8); kişi alanları seçici paylaşımlıdır. **Yasak:** ulusal kimlik
+Alanlar Avrupa Öğrenme Modeli (ELM v3) ve Europass'la eşlenir (§8); kişi alanları seçici açıklamalıdır. **Yasak:** ulusal kimlik
 numarası (TCKN vb.) hiçbir alanda yer almaz; fotoğraf alanı yoktur (yüz eşleştirmesi kimlik belgesi ya da [[t:PID]] ile yapılır).
 
 **Hukuki kategori (`category`).** AB şablonu (1.5) ve ETSI TS 119 472-1'deki `category` özniteliği (ARF metninde eski adı

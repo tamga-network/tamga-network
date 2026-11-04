@@ -4,11 +4,11 @@ title: "Real identity checks in sandbox"
 status: Active
 version: 1.0.0
 created: 2026-10-04
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
-  In the sandbox the identity flow offers two options: "Verify with your real identity (Didit)" and "Quick trial (made-up
+  In the sandbox the identity flow offers two options: "Verify with your real identity" and "Quick trial (made-up
   person)". The real path is open to everyone (the invitation code remains as an optional mode) and shares the real network's
-  Didit account and identity workflow; there is no separate provider application. Because the free monthly allowance is shared
+  provider account and identity workflow; there is no separate provider application. Because the free monthly allowance is shared
   with the real network, the sandbox has a daily and a monthly cap; when one is reached only the quick trial is open. Before
   scanning, the person confirms a clear warning; only given name, family name and date of birth go into the credential, the
   provider session is deleted at once and everything is deleted at the nightly reset. The accepted risks (shared allowance, the
@@ -30,8 +30,8 @@ screen. That is enough to test the wallet's flow, but a wallet developer or an i
 verification steps (document scan, liveness, face match) as they look inside the app.
 
 This decision opens the real steps in the sandbox **to anyone who wants them**. The first screen of the identity flow offers
-two options: "Verify with your real identity (Didit)" and "Quick trial (made-up person)". The real path runs with the real
-network's Didit account; the risks this brings are accepted openly below and limited.
+two options: "Verify with your real identity" and "Quick trial (made-up person)". The real path runs with the real
+network's provider account; the risks this brings are accepted openly below and limited.
 
 # Context
 
@@ -49,13 +49,13 @@ network's Didit account; the risks this brings are accepted openly below and lim
 # Decision
 
 **K1 — Two options, open to everyone.** In the sandbox identity credential flow, after the privacy notice is accepted, two
-options are shown: "Verify with your real identity (Didit)" and "Quick trial (made-up person)". The quick trial goes to the
+options are shown: "Verify with your real identity" and "Quick trial (made-up person)". The quick trial goes to the
 fake provider as before, and any flow without a choice is a quick trial. No invitation is needed for the real path. If the
 real path is not configured (no provider key) or a cap is reached (K3), only the quick trial is shown with a plain message
 ("Today's quota is full — use the quick trial").
 
 **K2 — The invitation code is an optional mode.** The invitation code infrastructure stays and is used only if the sandbox
-administrator turns it on (`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`; default `open` in the first text — **note of 2026-10-28: default `invite`**). In that mode the real path opens only with a
+administrator turns it on (mode setting `invite`; default `open` in the first text — **note of 2026-10-28: default `invite`**). In that mode the real path opens only with a
 valid invitation code. Only the sandbox administrator creates codes (the administration section of the sandbox page, with the
 admin token; the section is closed to the outside and reachable only from the server itself). There are two kinds of code:
 **personal** (single use; valid for at most 7 days) and **time-limited** (for an event or workshop; at most 72 hours and at
@@ -64,20 +64,19 @@ valid. A code has at least 128 bits of randomness and only its keyed hash is kep
 at creation, and is never logged. Wrong attempts are limited per flow and service-wide; in the administration section a wrong
 token is slowed down with exponential delay. An invitation code cannot exceed the caps (K3).
 
-**K3 — The real network's provider account and caps.** The real path runs **with the real network's Didit account and
+**K3 — The real network's provider account and caps.** The real path runs **with the real network's provider account and
 identity workflow**, without opening a separate application at the provider. The values are given to the sandbox under
-separately named variables (`TAMGA_IDV_DIDIT_SANDBOX_*`); the values are the same as the real network's. On the server the
-sandbox setup script copies them from the real network's settings (`sandbox-setup.sh didit-from-main`); the values are never
+separately named variables (sandbox-specific settings); the values are the same as the real network's. On the server the
+sandbox setup script copies them from the real network's settings (a settings copy command of the sandbox setup script); the values are never
 printed or logged. The sandbox's default provider is always fake. Because the free monthly allowance is shared with the real
-network, **every** real session opened in the sandbox (open or invited) counts toward two caps: a **daily cap** (default 15,
-`TAMGA_IDV_DIDIT_SANDBOX_DAILY_CAP`) and a **monthly cap** (default 150, `TAMGA_IDV_DIDIT_SANDBOX_MONTHLY_CAP`; day and month
+network, **every** real session opened in the sandbox (open or invited) counts toward two caps: a **daily cap** (default 15) and a **monthly cap** (default 150; day and month
 in Türkiye time). A use is counted when the provider session is opened; when either cap is reached no new real session opens.
 The counter carries no personal data and is kept with this month's values across the nightly reset (the reset cannot bypass
 the monthly cap). Each flow opens at most one real session.
 
 **K4 — A clear warning before scanning.** When the real path is chosen, a separate warning page is shown before going to the
 provider, and the person cannot continue without ticking the confirmation box: "This is a test environment; you are trying it
-with your real identity; your data is deleted every night; the verification session at Didit is deleted as soon as the
+with your real identity; your data is deleted every night; the verification session at the provider is deleted as soon as the
 credential is issued." The same page carries a short privacy notice and the person's rights; it also says that the provider
 account is shared with the real network.
 
@@ -112,7 +111,7 @@ Sharing the real network's provider account knowingly accepts three risks; each 
 | Risk | What happens | Mitigation |
 |---|---|---|
 | **Shared allowance** | Sessions opened in the sandbox use up the real network's free monthly verifications; heavy use could disrupt verification on the real network. | Daily (15) and monthly (150) caps (K3); when reached, only the quick trial; an invitation code cannot exceed the caps; one session per flow; the nightly reset cannot bypass the counter. |
-| **The sandbox can read the provider key** | The sandbox service user now reads the provider key; if the sandbox is compromised the key leaks and sessions could be opened and read on the account. | The key is only in the sandbox settings file and readable only by the sandbox user (`root:tamga-sandbox 640`); the real network's settings file, signing keys, data and backups stay closed to the sandbox (file permissions + service restrictions). The webhook secret is not copied to the sandbox. Key rotation on suspicion: new key in the provider dashboard → written into the real network's settings and the real identity service restarted → `sandbox-setup.sh didit-from-main` run again → old key revoked in the dashboard. |
+| **The sandbox can read the provider key** | The sandbox service user now reads the provider key; if the sandbox is compromised the key leaks and sessions could be opened and read on the account. | The key is only in the sandbox settings file and readable only by the sandbox user (`root:tamga-sandbox 640`); the real network's settings file, signing keys, data and backups stay closed to the sandbox (file permissions + service restrictions). The webhook secret is not copied to the sandbox. Key rotation on suspicion: new key in the provider dashboard → written into the real network's settings and the real identity service restarted → the settings copy command of the sandbox setup script run again → old key revoked in the dashboard. |
 | **Webhooks reach the real network** | Notifications for sandbox sessions arrive at the real network's identity service. | The sandbox does not trust webhooks and fetches the decision from the API; the real network silently ignores notifications for sessions it does not know (K7). A notification is only a trigger; no personal data is read. |
 
 # Invariants
@@ -143,7 +142,7 @@ Sharing the real network's provider account knowingly accepts three risks; each 
 
 - In sandbox mode the identity service carries two providers: the fake provider (quick trial) and the real provider; the
   choice is made per flow by the person.
-- The sandbox setup script gains a `didit-from-main` command: it writes the real network's provider key and identity workflow
+- The sandbox setup script gains a settings copy command: it writes the real network's provider key and identity workflow
   into the sandbox settings under separate names, adds the cap defaults and restarts the sandbox identity service. The old
   check that prevented the sandbox and real network keys from being the same is removed.
 - The sandbox page and the wallet's sandbox texts describe the two options; the invitation code section stays for the
@@ -153,12 +152,12 @@ Sharing the real network's provider account knowingly accepts three risks; each 
 
 - **Default mode `invite`.** The data-protection pre-review (project management, 2026-10-28) flagged keeping the real path open to
   everyone before the legal review is complete as a risk. The real path (verification with a real identity at the provider) now opens
-  **by default only with a valid invitation code**; `TAMGA_IDV_DIDIT_SANDBOX_MODE=open` opens it to everyone only when set explicitly.
+  **by default only with a valid invitation code**; the mode setting `open` opens it to everyone only when set explicitly.
   The quick trial (made-up person) stays open to everyone in every mode; the OpenID conformance tests and the scenes use that path.
   "default `open`" in K1/K2 is read with this note; RI1 was rewritten accordingly. Once the review is complete the mode can be
   reopened by a project management decision (one environment variable).
-- **Wording of deletion at the provider.** The warning and notice texts say "deletion of the Didit session is **requested** as soon as
-  the credential is issued" instead of "the Didit session is deleted as soon as the credential is issued": until the delete permission
+- **Wording of deletion at the provider.** The warning and notice texts say "deletion of the provider session is **requested** as soon as
+  the credential is issued" instead of "the provider session is deleted as soon as the credential is issued": until the delete permission
   (`delete:sessions`) and the data processing agreement with the provider are in place, the request is subject to the provider's own
   retention setting. The rule of K4/K6 (immediate deletion request) does not change; only the promise to the person matches today's
   state.
@@ -168,3 +167,5 @@ Sharing the real network's provider account knowingly accepts three risks; each 
 **Accepted — 2026-10-04**, **updated 2026-10-05** (real path open to everyone; the real network's provider account; caps and
 accepted risks) — project management approval; the verbatim quotes are in the private approval record. DECISIONS: D-ID-9.
 Partly changes K4 and SB3 of [[ADR-0038]].
+
+**Note (2026-11-04):** the trade name of the remote identity verification provider and the environment variable and command names were removed from the public text ("remote identity verification provider"; the setting names are in the operator's configuration document); the decision content is unchanged (project management).

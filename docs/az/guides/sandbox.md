@@ -4,7 +4,7 @@ title: "Sandbox: test şəbəkəsi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-21
+last_updated: 2026-11-04
 summary: >
   Real şəbəkədən ayrı olan test şəbəkəsi sandbox.tamga.network ilə başdan-sona sınaq: ünvanlar, etibar lövbərinin sabitlənməsi, rəqəmsal cüzdanın sandbox-a qoşulması, cüzdan tərtibatçısı kimi öz cüzdan provayderinizin sandbox siyahısında qeydiyyata alınması, nümunə şəxslərlə rəqəmsal sənəd alınması, nümunə yoxlayan tərəflərdə təqdim edilməsi, ləğv və dayandırma vəziyyətlərinin sınanması, qurumunuzun test qurumu kimi sınanması, real şəxsiyyətinizlə şəxsiyyətin təsdiqi addımları, qaydalar və sıfırlama.
 translation_of: GUIDE-0013
@@ -122,15 +122,15 @@ avtomatik sınayıb hesabat verdiyi avtomatik uyğunluq testi növbəti mərhəl
 ## 3. Nümunə qurumlar və sənəd növləri
 
 ::: warning Qurum adları haqqında
-Qurum adları real sınaq mühiti yaratmaq üçün istifadə edilib. İstanbul Bilgi Universiteti pilot tərəfdaşımızdır; Bubilet və Paribu
-Cineverse ilə heç bir əlaqə və ya razılaşma yoxdur. Buradakı sənədlər test açarı ilə imzalanıb və heç yerdə etibarlı deyil. Qurumların loqoları istifadə edilmir.
+Sandbox-dakı qurumlar yalnız sınaq üçündür; heç biri real qurumla əlaqə və ya razılaşma ifadə etmir. Ünvanlardakı qısa adlar
+(`slug`) yalnız texniki identifikatorlardır. Buradakı sənədlər test açarı ilə imzalanıb və heç yerdə etibarlı deyil. Qurumların loqoları istifadə edilmir.
 :::
 
 | Qurum | Sənəd növləri (`vct`) |
 |---|---|
-| İstanbul Bilgi Universiteti (TEST) — `issuer.sandbox.tamga.network/istanbul-bilgi` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
-| Bubilet (TEST) — `issuer.sandbox.tamga.network/bubilet` | `urn:tamga:tkt:EventTicket:1` (uydurma konsertlər) |
-| Paribu Cineverse (TEST) — `issuer.sandbox.tamga.network/paribu-cineverse` | `urn:tamga:tkt:EventTicket:1` (uydurma film seansları; kino bileti ayrıca növ deyil: film və seans `event_name`, zal `venue_name` sahəsindədir) |
+| Nümunə universitet (TEST) — `issuer.sandbox.tamga.network/istanbul-bilgi` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Nümunə tədbir şirkəti (TEST) — `issuer.sandbox.tamga.network/bubilet` | `urn:tamga:tkt:EventTicket:1` (uydurma konsertlər) |
+| Nümunə kinoteatr operatoru (TEST) — `issuer.sandbox.tamga.network/paribu-cineverse` | `urn:tamga:tkt:EventTicket:1` (uydurma film seansları; kino bileti ayrıca növ deyil: film və seans `event_name`, zal `venue_name` sahəsindədir) |
 | Şəxsiyyət xidməti — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, psevdonim toxumu (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Nümunə şəxslər
@@ -211,17 +211,17 @@ təqdim edin: ləğv edilmiş və ya dayandırılmış sənəd qəbul edilməmə
 
 ## 8. Real şəxsiyyətinlə sına
 
-Sandbox-da şəxsiyyət axını iki seçim təqdim edir ([[ADR-0040]]): **Real şəxsiyyətinlə doğrula (Didit)** — provayderin real addımları
+Sandbox-da şəxsiyyət axını iki seçim təqdim edir ([[ADR-0040]]): **Real şəxsiyyətinlə doğrula** — uzaqdan şəxsiyyət yoxlaması provayderinin real addımları
 (sənədin skan edilməsi, canlılıq yoxlaması, üz uyğunlaşdırması) — və ya **Sürətli sınaq (saxta şəxs)** — uydurma bir şəxs seçib təsdiqləyirsiniz.
 Sürətli sınaq hamıya açıqdır. Fərdi məlumatların qorunması üzrə hüquqi baxış bitənə qədər real yol **standart olaraq dəvət kodu
 ilə** açılır (`ADR-0040/RI1`, 2026-10-28 qeydi); kodu sandbox komandasından istəyin (`support@tamga.network`). Kodunuz yoxdursa
 sürətli sınaqdan istifadə edin.
 
 1. Rəqəmsal cüzdanı sandbox-a qoşun və şəxsiyyət rəqəmsal sənədinin əlavə edilməsini başladın.
-2. Şəxsiyyət xidmətinin səhifəsində məlumatlandırmanı təsdiqləyin, dəvət kodunu yazın və "Real şəxsiyyətinlə yoxla (Didit)" seçimini edin.
+2. Şəxsiyyət xidmətinin səhifəsində məlumatlandırmanı təsdiqləyin, dəvət kodunu yazın və "Real şəxsiyyətinlə yoxla" seçimini edin.
 3. Açılan xəbərdarlığı oxuyub təsdiqləyin: "Bu test mühitidir; real şəxsiyyətinlə sınayırsan; məlumatların hər gecə silinir;
-   Didit sessiyasının silinməsi rəqəmsal sənəd verilən kimi tələb olunur." Təsdiq olmadan provayderə keçid edilmir (`ADR-0040/RI3`).
-4. Şəxsiyyəti yoxlayan tərəf olan Didit-də addımları tamamlayın; test rəqəmsal sənədi rəqəmsal cüzdana gəlir. Sandbox real şəbəkənin provayder hesabından istifadə edir; rəqəmsal sənədi imzalayan
+   provayderdəki sessiyanın silinməsi rəqəmsal sənəd verilən kimi tələb olunur." Təsdiq olmadan provayderə keçid edilmir (`ADR-0040/RI3`).
+4. Provayderin səhifəsində addımları tamamlayın; test rəqəmsal sənədi rəqəmsal cüzdana gəlir. Sandbox real şəbəkənin provayder hesabından istifadə edir; rəqəmsal sənədi imzalayan
    açarlar və qeydlər isə ayrıdır (`ADR-0040/RI2`).
 
 Şəxsiyyəti yoxlayan tərəfdəki pulsuz yoxlama limiti real şəbəkə ilə ortaq olduğu üçün real yolun **gündəlik və aylıq həddi** var. Hədd dolduqda
@@ -233,7 +233,7 @@ təsadüfi `SANDBOX-…` dəyəri yazılır (`ADR-0040/RI4`). Provayderdəki (ş
 rəqəmsal sənəd verilən kimi və ya yoxlama uğursuz olduqda dərhal, yarımçıq qaldıqda təxminən bir saat ərzində, ən gec isə gecə
 sıfırlanmasında tələb olunur (`ADR-0040/RI5`); provayder öz saxlama parametri daxilində silir. Dəvət kodları fərdi (birdəfəlik, ən
 çox 7 gün) və ya müddətli (ən çox 72 saat, ən çox 25 istifadə) olur, həddi aşa bilməz və gecə sıfırlanmasında silinir. Hüquqi
-baxışdan sonra sandbox administratoru real yolu açıq rejimə (`TAMGA_IDV_DIDIT_SANDBOX_MODE=open`) keçirə bilər.
+baxışdan sonra sandbox administratoru real yolu açıq rejimə keçirə bilər.
 
 ## 9. Qurumunu sına
 

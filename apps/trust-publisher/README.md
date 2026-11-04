@@ -68,7 +68,7 @@ Bir kayıt listeden **silinmez** (SPEC-TRUST-0001 TL2): kurum ya da doğrulayıc
 `invalidates_from = valid_from` ile çekilir; o kurumun verdiği hiçbir belge doğrulanmaz, LoTE'den düşer.
 
 **Cüzdan sağlayıcılar (`wallet_providers[]`, ADR-0042):** ağ cüzdan sağlayıcı işletmez, yalnız listeler. Gerçek ağın
-kaydı `TAMGA-WP-1` (Tamga Wallet; işletmeci BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ, adres `https://provider.tamgawallet.com`) `ACTIVE` durumdadır
+kaydı `TAMGA-WP-1` (Tamga Wallet, adres `https://provider.tamgawallet.com`) `ACTIVE` durumdadır
 (sertifika `wallet-provider-tamga-wp-1`). Sandbox listesinde üç kayıt var: `TAMGA-SANDBOX-TEST-WP` — ağın kendi demo sahneleri
 için test anahtarı (`wallet-provider`, ADR-0042 K5; bir cüzdan hizmeti değildir) —, `OIDF-CONFORMANCE-TEST` (OpenID uyum testi
 aracı) ve Tamga Wallet işletmecisinin gerçek ağdakiyle aynı `ACTIVE` kaydı. `RESERVED` bir kayıt WUA doğrulamasında kullanılmaz. Test listesindeki (`test/fixtures/registry/`) kayıt geneldir (`Test Wallet Provider`,

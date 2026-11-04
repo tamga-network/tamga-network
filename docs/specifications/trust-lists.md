@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -201,7 +201,7 @@ Devir: yalnızca `operator` alanı değişir.
 | **TL5** | `next_update` geçmiş veya erişilemeyen liste ile doğrulama **INDETERMINATE** üretir; asla ACCEPTED, asla REJECTED. |
 | **TL6** | Bilinmeyen `list_format_version` gören yükleyici durur ve alarm verir; kabul etmez. |
 | **TL7** | Ulusal listeyi yalnızca o namespace'in imza anahtarı imzalar; operatör vekâleti `operator.on_behalf_of` ile beyan edilir. |
-| **TL8** | Tamga PID vermez; `pid_providers[]` liste aşaması boyunca boştur. Tamga'nın geçici kimlik attestation'ı ([[ADR-0011]]) bir `issuers[]` kaydıdır (`category: IDENTITY`, `class: QUALIFIED`) ve devlet PID sağlayıcısı atanınca `successor_id` ile süpersede edilir. |
+| **TL8** | Tamga PID vermez; `pid_providers[]` liste aşaması boyunca boştur. Tamga'nın geçici kimlik attestation'ı ([[ADR-0011]]) bir `issuers[]` kaydıdır (`category: IDENTITY`, `class: EAA`, `assurance: I2`; [[ADR-0022]]) ve devlet PID sağlayıcısı atanınca `successor_id` ile süpersede edilir. |
 | **TL9** | Şema `registered_at` ve `status_history.since` kalıcıdır; yeniden derleme bunları değiştiremez (ilk çapa zamanı). |
 | **TL10** | Zincire geçiş, liste arşivinin replay'i ve eşdeğerlik testi geçmeden tamamlanmış sayılmaz. |
 | **TL11** | Hiçbir liste, çapa günlüğü veya değişiklik günlüğü kişisel veri, belge veya belge hash'i içermez. |
@@ -219,7 +219,8 @@ Devir: yalnızca `operator` alanı değişir.
 # Açık Konular
 
 1. `wallet_providers[]` zincir karşılığı (ADR adayı).
-2. ETSI 119 612 XML/XAdES projeksiyon üreteci (`apps/trust-publisher export-etsi`) — devlet aşaması öncesi.
+2. ETSI 119 612 XML/XAdES projeksiyon üreteci — **KAPANDI (2026-10-29, [[ADR-0066]]):** üretici `apps/trust-publisher`
+   içinde, sandbox'ta yayında; gerçek ağda vakıf, posta adresleri ve imzacıyla açılır.
 3. ≥2 kaydırmalı sertifika (S-6) ve KMS'te imza anahtarı — pilot öncesi.
 
 # İlgili Dokümanlar

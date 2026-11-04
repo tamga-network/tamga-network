@@ -4,7 +4,7 @@ title: "Institutional identity (X.509)"
 status: Active
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   The code- and protocol-level counterpart of the X.509 decision ([[ADR-0004]]). Institutional (entity) identity is built on
   X.509 certificates rooted in national Root CAs; an institution's ledger identity is anchored as
@@ -53,7 +53,7 @@ these roots on the ledger, so an institution's certificate can be verified up to
 ```
 Türkiye Root CA  (fingerprint on the chain, stateCode="TR")
    └── (optional intermediate CA)
-         └── İTÜ certificate  (leaf)
+         └── Example University certificate  (leaf)
 ```
 
 **On-chain root record** (RootCARegistry — same governance as [[SPEC-BC-0001]], `onlyOwnerState`):

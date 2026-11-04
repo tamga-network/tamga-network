@@ -4,13 +4,13 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-28
+last_updated: 2026-11-04
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
   hangi belge tipinin hangi seviyeyi gerektirdiği, sonucun nerede tutulacağı (belge verenin
-  denetim kaydı; belgede asla) ve uzaktan kimlik doğrulama sağlayıcısı (referans:
-  Didit, v3 API) entegrasyonunun protokol düzeyi kuralları: oturum oluşturma, sonuç
+  denetim kaydı; belgede asla) ve uzaktan kimlik doğrulama sağlayıcısı (referans
+  adaptör) entegrasyonunun protokol düzeyi kuralları: oturum oluşturma, sonuç
   alma, webhook doğrulama, veri minimizasyonu, hata ve zaman aşımı davranışı.
   D-ID-2'nin uygulamasıdır. Seviye tablosu ve ETSI 119 461 eşlemesi D-ASSUR-2 ile
   karara bağlandı (2026-09-26).
@@ -104,30 +104,31 @@ kuralları geçerlidir ([[PM-ASSUR-0001]] §Decay).
 
 ---
 
-# 4. Referans sağlayıcı: Didit (v3 API) — protokol eşlemesi
+# 4. Referans sağlayıcı — protokol eşlemesi
 
-Kaynak: docs.didit.me (2026-09-24 tarihinde doğrulandı). Değişebilir; adaptör sürümlenir.
+Referans adaptör, bir uzaktan kimlik doğrulama sağlayıcısının barındırılan doğrulama akışını kullanır. Sağlayıcının adı, API
+adresleri ve ayar adları işletmecinin yapılandırma belgesindedir; bu şartname yalnız sağlayıcıdan bağımsız kuralları tutar.
+Sağlayıcı değişirse adaptör değişir, aşağıdaki kurallar değişmez.
 
-| Adım | Didit | Tamga kullanımı |
+| Adım | Sağlayıcıdan beklenen | Tamga kullanımı |
 |---|---|---|
-| Kimlik doğrulama | `x-api-key: <API_KEY>` (Business Console → Application → API & Webhooks) | Kiracı gizli değeri (`TAMGA_IDV_DIDIT_API_KEY`); `.env`, asla depoda |
-| Oturum oluştur | `POST https://verification.didit.me/v3/session/` gövde: `workflow_id` (zorunlu), `vendor_data`, `callback`, `callback_method`, `metadata`, `language`, `contact_details`, `expected_details {first_name,last_name,date_of_birth,id_country,expected_document_types}` | `vendor_data = <opak subject_ref>`; `callback = https://id.tamga.network/idv/return?r=<akış>`; `language = tr`; `expected_details` ad/soyad/doğum tarihi (IP3); `metadata` **boş** |
-| Yanıt | `session_id`, `session_token`, `url`, `status: "Not Started"`, `workflow_version` | `url`'e yönlendir; `session_id` = `session_ref` |
-| Sonuç | `GET https://verification.didit.me/v3/session/{sessionId}/decision/` → `status`, `features[]`, `id_verifications[] {status, first_name, last_name, date_of_birth, document_type, issuing_state, expiration_date, verification_method, assurance, …}`, `liveness_checks[] {status, score}`, `face_matches[] {status, score}`, `nfc_verifications[]`, `aml_screenings[]` | Yalnızca `status` ve alt kontrol `status`'ları + ad/soyad/doğum tarihi **eşleşme sonucu** (boolean) tutulur; görüntü alanları (`portrait_image`, `front_image`, `back_image`, `video_url`) **okunur ama saklanmaz** |
-| Webhook | `POST` gövde: `event_id`, `webhook_type` (`status.updated` …), `session_id`, `status`, `vendor_data`, `decision`, `timestamp`, `created_at`, `environment`; başlıklar `X-Signature-V2` (HMAC-SHA256, kanonik JSON), `X-Signature` (ham gövde), `X-Timestamp` | `X-Signature` (ham gövde) + `X-Timestamp` (±300 s) doğrulanır; `event_id` tekilleştirme; sonra decision API teyidi (IP7). Yeniden deneme: ~1 dk, ~4 dk; 5 s zaman aşımı → uç nokta hızlı 200 döner, işlem kuyruğa |
-| Durumlar | `Not Started`, `In Progress`, `Awaiting User`, `In Review`, `Approved`, `Declined`, `Resubmitted`, `Expired`, `Kyc Expired`, `Abandoned` | §5 eşlemesi |
-| İş akışı | Business Console'da no-code workflow: ID + liveness + face match (+ NFC opsiyonel) | Tamga workflow'u: **ID document + passive liveness + face match**; AML **kapalı** (amaç sınırlaması); phone/email **kapalı** (T1 zaten SMS ile) |
-| Kanal | Hosted URL (yönlendirme), iframe, mobil SDK (iOS/Android/RN) | Bugün (liste aşaması): **hosted URL** (kimlik servisi `id.tamga.network` üzerinden, masaüstü/mobil tarayıcı). Cüzdan içi SDK **kullanılmaz** (kimlik ispatı kurumun işidir, cüzdanın değil) |
-| Sandbox | `sandbox_scenario` alanı; `environment: "sandbox"` | Demo: sandbox senaryolarıyla; e2e testte sahte adaptör |
-| Ücret | 500 doğrulama/ay ücretsiz; sonrası kullanım başına | Pilot ölçeği ücretsiz kotada |
+| Kimlik doğrulama | API anahtarı | Kiracı gizli değeri; işletmecinin ayar dosyasında, asla depoda |
+| Oturum oluştur | İş akışı kimliği, opak müşteri verisi, dönüş adresi, dil, beklenen ad/soyad/doğum tarihi | Müşteri verisi = opak `subject_ref`; dönüş = `https://id.tamga.network/idv/return?r=<akış>`; dil `tr`; beklenen değerler ad/soyad/doğum tarihi (IP3); ek meta veri **boş** |
+| Yanıt | Oturum kimliği ve barındırılan doğrulama adresi | Adrese yönlendir; oturum kimliği = `session_ref` |
+| Sonuç | Karar ucu: genel durum, belge, canlılık ve yüz eşleştirme alt kontrolleri, okunan ad/soyad/doğum tarihi | Yalnızca durumlar + ad/soyad/doğum tarihi **eşleşme sonucu** (boolean) tutulur; görüntü ve video alanları **okunur ama saklanmaz** |
+| Webhook | İmzalı olay bildirimi (HMAC-SHA256, zaman damgalı) | İmza + zaman damgası (±300 s) doğrulanır; olay kimliğiyle tekilleştirme; sonra karar ucundan teyit (IP7). Uç nokta hızlı 200 döner, işlem kuyruğa |
+| İş akışı | Belge + canlılık + yüz eşleştirme (+ NFC isteğe bağlı) | Tamga iş akışı: **kimlik belgesi + pasif canlılık + yüz eşleştirme**; AML **kapalı** (amaç sınırlaması); telefon/e-posta **kapalı** (T1 zaten SMS ile) |
+| Kanal | Barındırılan adres (yönlendirme) | Bugün (liste aşaması): **barındırılan adres** (kimlik servisi `id.tamga.network` üzerinden, masaüstü/mobil tarayıcı). Cüzdan içi SDK **kullanılmaz** (kimlik ispatı kurumun işidir, cüzdanın değil) |
+| Deneme ortamı | Sağlayıcının deneme senaryoları | Demo: deneme senaryolarıyla; e2e testte sahte adaptör |
+
 
 ---
 
 # 5. Sonuç → seviye eşlemesi
 
-| Didit `status` | Alt kontroller | Ad/soyad/doğum tarihi eşleşmesi | Tamga sonucu |
+| Sağlayıcı `status` | Alt kontroller | Ad/soyad/doğum tarihi eşleşmesi | Tamga sonucu |
 |---|---|---|---|
-| `Approved` | `id_verifications[].status = Approved` ∧ `liveness_checks[].status = Approved` ∧ `face_matches[].status = Approved` | Tam eşleşme | **T2** (`path: "idv:didit"`) |
+| `Approved` | `id_verifications[].status = Approved` ∧ `liveness_checks[].status = Approved` ∧ `face_matches[].status = Approved` | Tam eşleşme | **T2** (`path: "idv:<sağlayıcı>"`) |
 | `Approved` | NFC `Approved` (çipli belge) | Tam | **T2** (not: `nfc: true`; T3 **değil** — T3 için imza gerekir) |
 | `Approved` | herhangi biri `Approved` değil | — | **Yetersiz** → masa |
 | `Approved` | hepsi Approved | Eşleşmiyor | **İnceleme** (personel kararı; otomatik T2 yok) |
@@ -145,7 +146,7 @@ kısıt uygulanmaz).
 
 ```ts
 interface IdvProvider {
-  readonly id: "didit" | string;
+  readonly id: string;               // sağlayıcı kimliği (ayarda)
   createSession(input: {
     subjectRef: string;                 // opak, kişi verisi değil
     expected: { givenName: string; familyName: string; birthDate: string };
@@ -209,14 +210,14 @@ I2; belgede `category` claim'i yok — [[ADR-0022]]) verdiği nitelikli olmayan 
 | `vct` | `urn:tamga:id:IdentityAttestation:1` (katalog: `id/IdentityAttestation/1.0.0`) |
 | Claim'ler | `given_name`, `family_name`, `birthdate`, `nationalities` (dizi; her öğe ayrı açıklanır), `personal_administrative_number` (TCKN), `document_type`, `document_number_hash` (anahtarlı SHA-256 / HMAC; 1.0.1), `issuing_country`, `document_chip_verified`, `verification_method` (`remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person`), `age_over_18`, `age_over_15` ([[ADR-0064]]: ISO/IEC 18013-5 `age_over_NN`, kapalı küme) — tümü selective disclosure ile; portre yok; LoA claim'i yok (PR7) |
 | Süre / status | `exp` = belge verme + 730 gün; Token Status List (`id.tamga.network/status/{listId}`); aynı belge yeniden doğrulanınca eskisi iptal (K6) |
-| Akış | Cüzdan: PAR (WUA) → tarayıcı `/authorize` (**KVKK aydınlatma + açık rıza**) → sağlayıcı (Didit v3; demo: FAKE, sapma S-15) → `/idv/return` karar sorgulama (webhook yalnızca tetik, IDP5) → `code` → token (PKCE + WUA) → 10 kopya |
+| Akış | Cüzdan: PAR (WUA) → tarayıcı `/authorize` (**KVKK aydınlatma + açık rıza**) → sağlayıcı (referans adaptör; demo: FAKE, sapma S-15) → `/idv/return` karar sorgulama (webhook yalnızca tetik, IDP5) → `code` → token (PKCE + WUA) → 10 kopya |
 | Kurumda kullanım | Kurumun belge veren servisi belge verilirken kimlik belgesinin **gösterilmesini** ister (DCQL: TCKN, doğum tarihi, ad, soyad), T0 + A–E doğrular, kayıtla eşler (TCKN + doğum tarihi; ad normalize uyarı) — [[SPEC-PROTO-0001]] §11.2 |
 | Seviye | Uzaktan belge + canlılık + yüz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` (High teknik; hukuken T3 = NES/Mobil İmza, IDP7) |
 | Veri sorumlusu | Tamga Network (K4): saklama kayıt + hash; silme talebi = §9.1 (kayıt silinir, kopyalar iptal, sağlayıcıda oturumun silinmesi istenir); sağlayıcı sözleşmesinde ≤ 30 gün görüntü saklama hedefi. **Zaman temelli imha (2026-10-28):** süresi dolan ya da iptal edilen kayıt en geç 30 gün sonra sağlayıcı oturumuyla, olay günlüğü satırları 365 gün sonra kendiliğinden silinir (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; süreler politika seçimi, hukuki teyit bekliyor) |
 | Webhook | Tek hedef `https://id.tamga.network/idv/webhook`, olay `status.updated`; kurum başına webhook yoktur |
 | Yaş | Asgari yaş yok (2026-10-08, [[ADR-0043]]); şart geçerli bir kimlik belgesiyle kimlik doğrulamasıdır. Veli onayı akışı ve sağlayıcının küçükler için sınırı açık konudur |
 
-Uygulama: `apps/id` (operatör deposu) (config/didit/store/app), `IdvProvider` arayüzü §6 ile aynı (`DiditProvider`, `FakeIdvProvider`).
+Uygulama: `apps/id` (operatör deposu) (ayar, sağlayıcı adaptörü, kayıt, uygulama), `IdvProvider` arayüzü §6 ile aynı (referans sağlayıcı adaptörü ve `FakeIdvProvider`).
 
 > **`issuing_country` (2026-10-11, proje yönetimi kararı).** Alanın anlamı AB PID'deki anlamdır: belgeyi veren kimlik
 > sağlayıcısının ülkesi (Uygulama Tüzüğü (AB) 2026/1731). Bugün belgeyi Tamga'nın kimlik servisi, taranan bir kimlik belgesine

@@ -4,9 +4,9 @@ title: "Ləğv və status siyahısı"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-23
+last_updated: 2026-11-04
 summary: >
-  [[ADR-0008]] qərarının normativ tətbiqi. Status List Token-in Tamga profilini (qurum siyahılarında bits=2, şəxsiyyət xidmətində bits=1; ES256, X.509 zənciri, minimum 100.000 indeks; mdoc üçün CWT təqdimatı), sabit intervallı və küylü dərc dövrünü, yenidən yazılmış StatusListRegistry lövbər müqaviləsini, on addımlı yoxlama alqoritmini, keş və aktuallıq siyasətini müəyyən edir. İki kritik məxfilik qaydası: indekslər TƏSADÜFİ ayrılır (ardıcıl ayırma məzun olma ardıcıllığını sızdırır) və siyahı URI-si QEYRİ-ŞƏFFAF olmalıdır (il/fakültə/kohortanı kodlayan URI açıqlanmamış claim-ləri sızdırır). Hər yoxlamada ayrıca sorğu əvəzinə toplu ilkin yükləmə məcburidir.
+  [[ADR-0008]] qərarının normativ tətbiqi. Status List Token-in Tamga profilini (qurum siyahılarında bits=2, şəxsiyyət xidmətində bits=1; ES256, X.509 zənciri, minimum 100.000 indeks; mdoc üçün CWT təqdimatı), sabit intervallı və küylü dərc dövrünü, lövbəri (bu gün siyahı dərcçisinin lövbər jurnalı; reyestr mərhələsində planlaşdırılan StatusListRegistry müqaviləsi), on addımlı yoxlama alqoritmini, keş və aktuallıq siyasətini müəyyən edir. İki kritik məxfilik qaydası: indekslər TƏSADÜFİ ayrılır (ardıcıl ayırma məzun olma ardıcıllığını sızdırır) və siyahı URI-si QEYRİ-ŞƏFFAF olmalıdır (il/fakültə/kohortanı kodlayan URI açıqlanmamış claim-ləri sızdırır). Hər yoxlamada ayrıca sorğu əvəzinə toplu ilkin yükləmə məcburidir.
 translation_of: SPEC-CRED-0003
 source_version: "1.0.0"
 ---
@@ -38,8 +38,8 @@ Bu spesifikasiya Tamga-da [[t:credential|rəqəmsal sənədin]] **ləğv edilib-
 dərc edildiyini, lövbərləndiyini və yoxlandığını müəyyən edir.
 
 Qərar və əsaslandırmalar [[ADR-0008]]-dadır; burada təkrarlanmır. Xülasə: bitstring
-siyahısı **off-chain** host edilir, zəncirdə yalnız URI + məzmun hash-i +
-versiya lövbəri saxlanılır.
+siyahısı **off-chain** host edilir; lövbər jurnalında (bu gün siyahı dərcçisinin `anchors.jsonl`-u, [[SPEC-TRUST-0001]] §5)
+yalnız URI + məzmun hash-i + versiya saxlanılır. Zəncir yoxdur ([[ADR-0009]], [[ADR-0051]]).
 
 **Standart əsas:** IETF Token Status List — Tamga profili Avropa İttifaqının (Aİ) CIR 2026/1731 ilə sabitlədiyi
 draft-ietf-oauth-status-list-**20**-ni (2026-04-20) izləyir. Cari layihə **draft-21**-dir (2026-06-21, RFC Editor
@@ -65,7 +65,8 @@ növbəsində); Aİ istinadı draft-20 olaraq qaldıqca Tamga da onda qalır, RF
            │ hash + version
            ▼
 ┌──────────────────────────┐
-│  StatusListRegistry      │  ← chain (anchor only)
+│  Lövbər jurnalı          │  ← bu gün anchors.jsonl (yalnız lövbər);
+│  (anchors.jsonl)         │    reyestr mərhələsində StatusListRegistry
 └──────────────────────────┘
 ```
 
@@ -73,10 +74,10 @@ növbəsində); Aİ istinadı draft-20 olaraq qaldıqca Tamga da onda qalır, RF
 |---|---|
 | **Status Provider** | Status List Token-i yaradır, imzalayır, dərc edir. Defolt olaraq sənədi verən qurumun özü. |
 | **Referenced Token** | Statusu izlənilən sənəd — Tamga-da SD-JWT VC. |
-| **Anchor** | `StatusListRegistry` müqaviləsindəki qeyd. |
+| **Anchor** | Lövbər jurnalındakı sətir (bu gün); reyestr mərhələsində `StatusListRegistry` müqaviləsindəki qeyd (planlaşdırılan, [[ADR-0051]] proyeksiyası). |
 
 **Terminologiya xəbərdarlığı:** Standart "[[t:relying-party|Relying Party]]" ifadəsini işlədir; Tamga-da bu **[[t:verifier|yoxlayan tərəfdir]]**
-([[SPEC-BC-0001]] `RelyingPartyRegistry` ilə eyni anlayış).
+(etibar siyahısındakı `relying_parties[]` qeydi ilə eyni anlayış, [[SPEC-TRUST-0001]]).
 
 ---
 
@@ -245,7 +246,10 @@ ilə birlikdə, tam token.
 **İnvariant:** Eyni versiya nömrəsinə malik token həmişə eyni baytlardır. Status
 Provider eyni `version` üçün fərqli baytlar yarada bilməz.
 
-## 4.2 Müqavilə interfeysi
+## 4.2 Müqavilə interfeysi — reyestr mərhələsi (planlaşdırılan, [[ADR-0051]] proyeksiyası)
+
+> Bu gün lövbər siyahı dərcçisinin lövbər jurnalıdır ([[SPEC-TRUST-0001]] §5); zəncir yoxdur ([[ADR-0009]]). Aşağıdakı interfeys
+> kompilyasiya edilib və sınaqdan keçirilib; zəncir açıldıqda imzalı siyahıların proyeksiyası kimi istifadə olunur.
 
 [[ADR-0008]] Qərar 4-ə əsasən `StatusListRegistry.sol` **yenidən yazılıb.**
 Bitmap saxlayan köhnə versiya etibarsızdır.

@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   ADR-0012 K5'in öngördüğü `terminal_groups[]` alanı doğrulayıcı kaydında biçimlenir: her kapı grubu `group_id`, `institution_id`
   (kapıları işleten kurum), `label`, `allowed_policies[]`, isteğe bağlı `cert_fingerprints[]` ve `offline_allowed` ile geçerlilik
@@ -86,8 +86,8 @@ isteği) ve çevrim dışı kapılar içindir. Bugün hiçbir kapı sertifikayla
 olunca ayrı bir değişiklikle açılır ([[ADR-0065]] K5 hedefi).
 
 ## K7 — Sandbox
-Sandbox listesinde üç örnek kurumun grubu kurumu ve politikasıyla yayımlanır (`istanbul-bilgi-campus` → `istanbul-bilgi`,
-`campus-access`; `bubilet-gate` → `bubilet`, `event-ticket`; `paribu-cineverse-gate` → `paribu-cineverse`, `event-ticket`).
+Sandbox listesinde üç örnek kurumun grubu kurumu ve politikasıyla yayımlanır (örnek üniversitenin kampüs
+grubu → `campus-access`; örnek etkinlik şirketinin ve örnek sinema işletmesinin kapı grupları → `event-ticket`).
 Deneme kapısının herkese açık ortam anahtarları çalışmaya devam eder ([[ADR-0065]] K4).
 
 # Değerlendirilen seçenekler
@@ -126,3 +126,5 @@ Deneme kapısının herkese açık ortam anahtarları çalışmaya devam eder ([
 
 **Accepted — 2026-10-29.** Proje yönetiminin [[ADR-0065]]'i tamamlama genel onayıyla (birebir alıntı özel onay kaydında).
 DECISIONS: D-PROX-3. TG1–TG3 bağlayıcıdır.
+
+**Not (2026-11-04):** sandbox örneğindeki gerçek şirket ve kurum adlarını taşıyan grup adları genel tanımlarla değiştirildi; karar içeriği değişmedi (proje yönetimi).

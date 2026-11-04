@@ -455,7 +455,7 @@
   "selective-disclosure": {
     "label": "selective disclosure",
     "en": "Showing only the fields a verifier asks for from a credential, and nothing else.",
-    "tr": "Bir belgeden yalnız doğrulayıcının istediği alanların gösterilmesi, fazlasının değil.",
+    "tr": "Seçici açıklama (eşanlamlı: seçici paylaşım): bir belgeden yalnız doğrulayıcının istediği alanların gösterilmesi, fazlasının değil.",
     "az": "Rəqəmsal sənəddən yalnız yoxlayan tərəfin soruşduğu sahələrin göstərilməsi, başqa heç nəyin göstərilməməsi."
   },
   "status-list": {

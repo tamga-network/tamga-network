@@ -4,7 +4,7 @@ title: "Issue credentials as an institution"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-20
+last_updated: 2026-11-04
 summary: >
   Issuing credentials to people's wallets as a university, a public body or a ticket seller: calling the issuer service hosted
   by Tamga with `@tamga-network/issuer/client` (offers, ticket sales, revocation/suspension), or building your own issuer
@@ -43,8 +43,8 @@ There are two ways:
 
 ## Hosted service: the client
 
-> **Try it in the sandbox first.** The example below uses the address of the fictional ticket seller on the test network
-> (`bubilet`, `issuer.sandbox.tamga.network`); the sandbox addresses and sample institutions are in [[GUIDE-0013]]. On the real
+> **Try it in the sandbox first.** The example below uses the address of the example ticket seller on the test network
+> (`issuer.sandbox.tamga.network`); the sandbox addresses and sample institutions are in [[GUIDE-0013]]. On the real
 > network `baseUrl` is `https://issuer.tamga.network` and `slug` is your institution's registered name; the Institution Console
 > gives you the API key after registration.
 
@@ -120,7 +120,7 @@ The whole Tamga API: [Hosted issuer API](/api/issuer).
 - Use credential fields only for the credential; never write them to logs, URLs or the status list.
 - If you need to match the person with your own record (diploma, student certificate), [[t:identity-proofing]] uses the
   **Tamga identity credential**: the wallet presents the identity credential, and Tamga matches it with the digest in the offer
-  or with your source endpoint (`lookup`). You never talk to the identity provider (Didit) directly ([[ADR-0011]]).
+  or with your source endpoint (`lookup`). You never talk to the identity verification provider directly ([[ADR-0011]]).
 - For credentials that need no personal data, such as tickets, do not ask for identity.
 
 ## Sharing rules: who may see the credential {#sharing-rules}

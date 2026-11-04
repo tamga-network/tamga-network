@@ -5,9 +5,9 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
-  Qeydiyyat sertifikatları (WRPRC, ETSI TS 119 475) üç sahə daşıyır: `policy_id` (Tamga-nın öz siyasət OID-i; ETSI-nin Aİ OID-i istifadə edilmir), `certificate_policy` (siyasət sənədinin ünvanı) və `status` (qeydiyyat orqanının status siyahısındakı qeyd). Qeydiyyat orqanı IETF Token Status List formatında, qeydiyyat sertifikatlarını imzalayan açarla imzalanmış 1 bitlik status siyahısı saxlayır; qeydiyyat və ya istifadə bitəndə, dayandırılanda və ya məzmun dəyişəndə köhnə sertifikat avtomatik ləğv edilir, əl ilə ləğv də mümkündür. Cüzdan nüvəsi ləğv edilmiş sertifikatlı sorğunu rədd edir, status yoxlana bilmirsə xəbərdarlıq edir. Siyasət sənədi Tamga ARF-in siyasətlərinə əlavə olunur (FW-POL-0003). Bu gün yalnız sandbox-da açıqdır; real şəbəkənin siyasət identifikatoru və ünvanları adlar təsdiqləndikdən sonra reyestrə daxil olur. Qəbul: 2026-10-29.
+  Qeydiyyat sertifikatları (WRPRC, ETSI TS 119 475) üç sahə daşıyır: `policy_id` (Tamga-nın öz siyasət OID-i; ETSI-nin Aİ OID-i istifadə edilmir), `certificate_policy` (siyasət sənədinin ünvanı) və `status` (qeydiyyat orqanının status siyahısındakı qeyd). Qeydiyyat orqanı IETF Token Status List formatında, qeydiyyat sertifikatlarını imzalayan açarla imzalanmış 1 bitlik status siyahısı saxlayır; qeydiyyat və ya istifadə bitəndə, dayandırılanda və ya məzmun dəyişəndə köhnə sertifikat avtomatik ləğv edilir, əl ilə ləğv də mümkündür. Cüzdan nüvəsi ləğv edilmiş sertifikatlı sorğunu rədd edir, status yoxlana bilmirsə xəbərdarlıq edir. Siyasət sənədi Tamga ARF-in siyasətlərinə əlavə olunur (FW-POL-0003). Sandbox-da və (2026-10-29-dan) real şəbəkədə qüvvədədir (FW-POL-0003 §5). Qəbul: 2026-10-29.
 domain: Trust
 related: ["[[ADR-0024]]", "[[ADR-0026]]", "[[ADR-0029]]", "[[ADR-0038]]", "[[ADR-0048]]", "[[ADR-0056]]", "[[ADR-0058]]", "[[FW-POL-0001]]", "[[FW-POL-0003]]", "[[FW-TF-0001]]", "[[SPEC-CRED-0003]]", "[[SPEC-TRUST-0001]]", "[[SPEC-WALLET-0001]]"]
 translation_of: ADR-0068
@@ -146,3 +146,5 @@ qəbul etmir.
 
 **Qəbul edildi — 2026-10-29** (layihə rəhbərliyinin təsdiqi; hərfi sitat xüsusi təsdiq qeydindədir). DECISIONS: D-REG-4.
 WRS1–WRS4 məcburidir. Real şəbəkənin siyasət identifikatoru və ünvanları 2026-10-29-da təsdiqləndi və qüvvədədir (yuxarıda tətbiq qeydi).
+
+**Qeyd (2026-11-04):** xülasədəki "bu gün yalnız sandbox-da açıqdır" ifadəsi cari vəziyyətə uyğunlaşdırıldı: 2026-10-29-dan real şəbəkənin siyasət identifikatoru və status siyahısı da qüvvədədir (FW-POL-0003 §5); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

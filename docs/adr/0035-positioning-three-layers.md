@@ -4,7 +4,7 @@ title: "Konumlanma"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
   Tamga üç katmanda konumlanır: (1) taban — bütün belgeler, protokoller ve güven listeleri AB (eIDAS 2.0 / EUDI)
   standartlarında; (2) Tamga Network — Türk dünyası için hafif bir güven federasyonu: ülke listelerini toplar ve birbirine tanıtır,
@@ -73,9 +73,9 @@ Değerlendirilen üç yol:
 
 | Seçenek | Sonuç | Neden |
 |---|---|---|
-| Yol 1: yalnız AB uyumlu cüzdan + hizmetler | ret (ana yön olarak) | En hızlı gelir, ama ayırt edici özellik az ve devlet cüzdanı gelince küçülür. Yol 3 bunu zaten içeriyor. |
-| Yol 2: önce ağır ağ ve kurum | ret | Devletler gelmezse yıllarca gelirsiz kalır; erken kurum maliyeti yüksek. |
-| **Yol 3: katmanlı** | **kabul** | Mimariyle birebir; hizmetler ve cüzdan hemen gelir getirir, ağ zamanla büyür, devlet cüzdanı ve listeleri gelince değer kaybolmaz, aksine federasyon değeri artar. |
+| Yol 1: yalnız AB uyumlu cüzdan + hizmetler | ret (ana yön olarak) | Hızlı başlar, ama ayırt edici değer az ve devlet cüzdanı gelince küçülür. Yol 3 bunu zaten içeriyor. |
+| Yol 2: önce ağır ağ ve kurum | ret | Devletler gelmezse ağ yıllarca kullanılmadan kalır; erken kurum maliyeti yüksek, dayanağı yok. |
+| **Yol 3: katmanlı** | **kabul** | Mimariyle birebir; hizmetler ve cüzdan hemen kullanılabilir, ağ zamanla büyür, devlet cüzdanı ve listeleri gelince değer kaybolmaz, aksine federasyon değeri artar. |
 
 **Bilinen gerilim:** AB rolleri bilinçli ayırır. Listeyi yöneten kurumun hizmet satması çıkar çatışması sayılır. Bugün tek ekip
 yeterlidir, ama ileride ağ yönetişimi (konsey ya da vakıf) ile hizmet şirketi ayrışmalıdır. Kamuya açık anlatımda bu ayrım
@@ -118,3 +118,5 @@ kullanılmaz; doğru ifade "AB standartlarında, AB uyumlu" ve "hukuki tanınma 
 
 > **Hukuki not (2026-10-13):** Md. 5f üçüncü ülke tanıması değildir; AB dışı için tek açık dayanak Md. 14'tür (yalnız güven
 > hizmetleri, devletler arası anlaşma). Karar değişmez. Proje yönetimi onayıyla (ilk AB uyum turu, karar 13).
+
+**Not (2026-11-04):** gerekçe tablosundaki gelir ifadeleri teknik gerekçeyle değiştirildi ("ayırt edici değer az", "erken kurum maliyeti yüksek, dayanağı yok"); karar içeriği değişmedi (proje yönetimi).

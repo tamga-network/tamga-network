@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -85,7 +85,7 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 | `B5` | `extends` chain; `extends#integrity` at every step |
 | `B6` | JSON Schema 2020-12 conformance (`schema_uri` is a Tamga extension, [[SPEC-SCHEMA-0001]] §2.1) |
 
-## 1.C — Trust layer → [[SPEC-BC-0001]] §11.2
+## 1.C — Trust layer → [[SPEC-TRUST-0001]] §6 (`TrustSource`; signed trust lists)
 
 | Code | Step |
 |---|---|
@@ -128,7 +128,7 @@ were used in verification, they would cause two silent errors:
 | Scenario | With an issuance-time question | Correct |
 |---|---|---|
 | Ministry closed (`REVOKED`, with a successor) | Every diploma REJECTED at `C1` | Those issued before the closure accepted ([[ADR-0002]] #4) |
-| Schema became `DEPRECATED` (a new version was released) | Every credential issued with the old schema REJECTED at `C2` | Accept — [[SPEC-BC-0001]]/SC3 |
+| Schema became `DEPRECATED` (a new version was released) | Every credential issued with the old schema REJECTED at `C2` | Accept — status of the schema record, [[SPEC-TRUST-0001]] |
 | Planned CA rotation | `A3` + `C1` REJECT | Accept — a rotation is not a compromise |
 
 That is why both queries take the credential's **`iat`** value and ask "was it acceptable at that moment". This accepts that
@@ -378,7 +378,7 @@ record, and access to this endpoint is authorised and logged separately.
 
 The policy feeds both the DCQL query ([[SPEC-PROTO-0002]] §4) and the `E1`–`E3` steps. A single source.
 
-**Invariant AP6:** the `required_claims` in a policy cannot exceed the RP's `allowedScopes` in the registry. The service
+**Invariant AP6:** the `required_claims` in a policy cannot exceed the `scopes[]` (`allowedScopes`) of the RP's trust list record. The service
 checks this when the policy is saved and **rejects** a policy that exceeds them — over-asking is blocked when the policy is
 defined, not at presentation time.
 
@@ -538,12 +538,12 @@ gate verification (`/terminal/verify`); the client address is not stored or logg
 | **AP3** | The result object carries claim names, not values. |
 | **AP4** | `idx` appears in no API response or record. |
 | **AP5** | The HTTP status code does not encode the verification result. |
-| **AP6** | A policy's `required_claims` cannot exceed the RP's scope in the registry. |
+| **AP6** | A policy's `required_claims` cannot exceed the scope of the RP's trust list record. |
 | **AP7** | The error `detail` field contains no personal data. |
 | **AP8** | `C2` (schema authorisation) cannot be skipped by any configuration. |
 | **AP11** | `C1` and `C2` take the credential's `iat`; issuance-time queries are not used in verification. |
 | **AP12** | `issuerId` is derived from the `x5c` leaf fingerprint, not from the `iss` claim. |
-| **AP13** | Pass token verification ([[ADR-0012]] B): signature with the copy key in `pass_grant`, `aud` = the terminal's RP client_id, lifetime (`exp` − `iat`) ≤ 60 s, `iat` ≤ now + 30 s, `exp` ≤ now + 60 s + 30 s (clock-skew tolerance), a `jti` replay list (shared online within the terminal group); no personal data is extracted from the token or logged. The gate's request carries a terminal key; a request without one does not touch the token ([[ADR-0065]] TK1). |
+| **AP13** | Pass token verification ([[ADR-0012]] B): signature with the copy key in `pass_grant`, `aud` = the verifier's persistent identity (the `dns_name` of its trust list record; unchanged when the certificate is renewed, [[ADR-0034]]), lifetime (`exp` − `iat`) ≤ 60 s, `iat` ≤ now + 30 s, `exp` ≤ now + 60 s + 30 s (clock-skew tolerance), a `jti` replay list (shared online within the terminal group); no personal data is extracted from the token or logged. The gate's request carries a terminal key; a request without one does not touch the token ([[ADR-0065]] TK1). |
 | **AP9** | `E4` (audit record) also runs for rejected verifications (in a verifier with an audit sink; always in the hosted verifier). |
 | **AP10** | `tx_code` is stored nowhere outside the response. |
 

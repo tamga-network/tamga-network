@@ -166,7 +166,7 @@ gösterme olağan yolla yapılır.
 |---|---|
 | Kurum ve cüzdan başlatmalı belge verme, uzaktan gösterme, Tamga Verify | Yayında |
 | Web sitelerine giriş, site başına takma ad | Yayında |
-| Bilet ve tek kullanımlık kapı geçişi | Yayında |
+| Bilet ve tek kullanımlık kapı geçişi | Yayında (sandbox; gerçek ağda kapı politikası tanımlı değil) |
 | Veri silme, geçmiş, dışa aktarım | Yayında |
 | Sıfır bilgi ispatı — doğrulayıcı tarafı | Yayında |
 | Sıfır bilgi ispatı — cüzdan tarafı | Cüzdana bağlandı; Android yerel kütüphanesi hazır, iOS bekliyor; cihaz testi henüz yapılmadı |
@@ -176,7 +176,7 @@ gösterme olağan yolla yapılır.
 | Sandbox (herkese açık; kimlik doğrulaması günlük/aylık tavanlı) | Yayında |
 | Belge verenin paylaşım kuralı (gömülü açıklama politikası) | Yayında (paketler npm'de 0.5.0'dan beri) |
 | Kurumun cüzdan kanıtı tercihleri (anahtar deposu şartı, iptal bakım süresi) | Yayında (paketler npm'de 0.5.0'dan beri) |
-| AB'nin eski güven listesi biçimi (ETSI TS 119 612, XML) ve cüzdanda dış listeler | Yayında (paketler npm'de 0.5.0'dan beri) |
+| AB'nin eski güven listesi biçimi (ETSI TS 119 612, XML) ve cüzdanda dış listeler | Okuma yayında (paketler npm'de 0.5.0'dan beri); Tamga listelerinin XML görünümü sandbox'ta, gerçek ağda vakıfla ([[ADR-0066]]) |
 | Attestation Revocation List (tanımlayıcı listesi) — doğrulayıcı ve cüzdan tarafı | Yayında (paketler npm'de 0.5.0'dan beri); Tamga belge verenleri Status List kullanır |
 | Kimlik belgesinde askı yok, mdoc için CWT iptal listesi; kayıt sertifikası olmayan istekte uyarı; yakın alanda okuyucu doğrulaması | Yayında (paketler npm'de 0.6.0'dan beri) |
 | Paket API'lerinde güvenli varsayılanlar; kayıt sertifikası olmayan istekte ret ([[ADR-0056]]) | Yayında (paketler npm'de 0.7.0'dan beri) |
@@ -481,7 +481,7 @@ uygulamasını değiştirir.
 ## 8.3 Yönetişim kurumu
 
 Yönetişim kurumu ilk günden kurulmaz. Bir ya da iki devlet katılmaya istekli olduğunda konsey ya da vakıf kurulur ve
-listeler devredilir. O zamana kadar Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; vakıf kurulduğunda işletmecilik ona devredilir. Tamga Network
+listeler devredilir. O zamana kadar ağı Tamga Network (kurulacak vakıf) adına bir geçici işletmeci işletir; vakıf kurulduğunda işletmecilik ona devredilir. Tamga Network
 kâr amacı gütmez; işletmecilik ileride bir vakfa devredilir. Ağ hiçbir
 ürün satmaz ve ticari hizmet sunmaz; Tamga Wallet ağın ilk cüzdanıdır; bir şirketin ayrı ürünüdür; hizmet sağlayıcılar ağın dışındadır ve kayıt sürecine
 herkes gibi aynı koşullarla katılır ([[ADR-0037]]).

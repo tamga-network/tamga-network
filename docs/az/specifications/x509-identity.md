@@ -4,7 +4,7 @@ title: "Qurum şəxsiyyəti (X.509)"
 status: Active
 version: 1.0.0
 created: 2026-08-06
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   [[ADR-0004]] X.509 qərarının kod/protokol səviyyəsində qarşılığı. Korporativ/entity şəxsiyyəti milli Root CA-lara əsaslanan X.509 sertifikatları ilə qurulur; qurumun zəncirdəki identifikatoru issuerId = keccak256(stateCode, certFingerprint) ilə lövbərlənir. Əhatə olunan mövzular: etibar zənciri (milli Root CA-ların zəncirə lövbərlənməsi), sertifikat iyerarxiyası, issuerId-nin törədilməsi, credential yoxlama alqoritmi (zəncir + registry + ləğv), Root CA-nın yenilənməsi (rollover), sertifikatın ləğvi (CRL/OCSP + on-chain), guardian/court-token X.509 bağlanması, qorunan pseudonym profili + multicodec və eIDAS/did:web körpüsü. did:tamga entity profilini əvəz edir; pseudonym profili (SPEC-ID-0001) saxlanılır.
 translation_of: SPEC-ID-0002
@@ -48,7 +48,7 @@ onun dövlətinin lövbərlənmiş kökünə qədər yoxlanıla bilər.
 ```
 Türkiye Root CA  (fingerprint on the chain, stateCode="TR")
    └── (optional intermediate CA)
-         └── İTÜ certificate  (leaf)
+         └── Nümunə Universitet sertifikatı  (leaf)
 ```
 
 **On-chain kök qeydi** (RootCARegistry — [[SPEC-BC-0001]] ilə eyni idarəetmə,

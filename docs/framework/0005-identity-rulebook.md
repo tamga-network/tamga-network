@@ -36,7 +36,7 @@ Bu [[t:rulebook]], Tamga Network kimlik servisinin (`id.tamga.network`) verdiği
 | Sürücü belgesi bilgisi | `urn:tamga:id:DrivingLicenceAttestation:1` | yalnız SD-JWT VC | `schemas.tamga.network/v1/id/DrivingLicenceAttestation/1.0.0` · [[ADR-0039]] |
 
 **Amaç.** Devlet tarafından atanmış bir [[t:PID]] sağlayıcısı yokken kişinin kimliğini bir kez uzaktan doğrulayıp cüzdanında
-seçici paylaşımlı, cihaza bağlı bir belge olarak taşımasını sağlamak: kurumlar kişiyi kendi kayıtlarıyla eşleştirir, siteler
+seçici açıklamalı, cihaza bağlı bir belge olarak taşımasını sağlamak: kurumlar kişiyi kendi kayıtlarıyla eşleştirir, siteler
 yaş ya da "geçerli kimlik var mı" sorar, kişi yalnız gerekeni açar.
 
 **Statü.** Kimlik belgesi **PID değildir**: Tamga'nın geçici olarak verdiği, nitelikli olmayan bir **[[t:EAA]]**'dır
@@ -81,7 +81,7 @@ ARF Topic 12'nin nitelikli olmayan EAA için koyduğu şartlar (eIDAS 2.0 Ek V'e
 ## 2.1 Giriş ve hukuki kategori
 
 Kimlik belgesi AB PID'inin öznitelik adlarını ve kodlamasını kullanır (Uygulama Tüzüğü (AB) 2026/1731; [[ADR-0045]]); tür ve ad
-alanı Tamga'nındır. Kişi alanlarının hepsi seçici paylaşımlıdır; portre, adres, belge görüntüsü ve güvence seviyesi
+alanı Tamga'nındır. Kişi alanlarının hepsi seçici açıklamalıdır; portre, adres, belge görüntüsü ve güvence seviyesi
 ([[t:LoA]]) alanı yoktur. Ulusal kimlik numarası yalnız bu türde bulunur (RB-AP-ID-04, RB-SCH-04).
 
 **Hukuki kategori (`category`).** AB Attestation Rulebook şablonu (1.5) ve ETSI TS 119 472-1, QEAA ve PuB-EAA için `category`

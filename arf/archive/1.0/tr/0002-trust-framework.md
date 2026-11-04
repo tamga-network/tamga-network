@@ -82,7 +82,7 @@ edilen artık riskler ana belgededir (§6.6 ve §7.4): tek işletmecinin imzası
 
 | Aşama | Organ | Yetki |
 |---|---|---|
-| **Liste aşaması ve defter aşaması (bugün)** | Tamga, geçici işletmeci | Günlük işletim, altyapı, liste işletmeciliği ve kayıt kurumu rolünün devlet adına yürütülmesi, açık paketlerin yayını |
+| **Liste aşaması (bugün) ve defter aşaması** | Tamga, geçici işletmeci | Günlük işletim, altyapı, liste işletmeciliği ve kayıt kurumu rolünün devlet adına yürütülmesi, açık paketlerin yayını |
 |  | Tamga teknik kurulu | Şartname değişiklikleri, karar kayıtlarının onayı, ağ düzeyindeki ortak belge türleri |
 |  | (henüz yok) | Konsey — üye devlet yokken kurulmaz; bu geçici durum açıkça adlandırılır |
 | **Devlet katılımı ve sonrası** | Konsey (üye devletler) | Üye kabulü ve çıkarılması, ağ düzeyindeki ortak belge türleri, protokol yükseltmeleri ve bu belgenin politikaları; hepsi üçte iki oyla |
@@ -90,7 +90,7 @@ edilen artık riskler ana belgededir (§6.6 ve §7.4): tek işletmecinin imzası
 |  | Yönetişim kurumu (vakıf ya da konsey sekretaryası) | İşletmecilik, devredilene kadar |
 
 Yönetişim kurumu ilk günden kurulmaz: bir ya da iki devlet katılmaya istekli olduğunda kurulur ve listeler devredilir. O
-zamana kadar Tamga Network (kurulacak vakıf) adına geçici işletmeci: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; vakıf kurulduğunda işletmecilik ona devredilir.
+zamana kadar Tamga Network (kurulacak vakıf) adına bir geçici işletmeci işletir; vakıf kurulduğunda işletmecilik ona devredilir.
 
 **Ölçülebilir devir eşikleri:** barındırılan belge verenlerin oranı %30'u aşarsa konu konsey gündemine gelir; devlet
 işletmecilerinin sayısı en az dört olduğunda ilk işletmecinin defter düğümleri devredilir; ilk devlet işletmecisi üretime

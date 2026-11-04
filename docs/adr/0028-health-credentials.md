@@ -4,11 +4,11 @@ title: "Sağlık belgeleri"
 status: Proposed
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
   Sağlık meslek mensupları için birbirini tamamlayan üç belge:
-  (1) meslek icra belgesi — yetkili kaynak Sağlık Bakanlığı; pilotta deneme kurumu;
-  (2) meslek odası üyelik belgesi — Türk Tabipleri Birliği / il tabip odaları;
+  (1) meslek icra belgesi — yetkili kaynak ilgili sağlık bakanlığı; pilotta deneme kurumu;
+  (2) meslek odası üyelik belgesi — ulusal hekim meslek kuruluşu / il tabip odaları;
   (3) kurum görev belgesi — hastane ya da klinik kendi personeline birim, unvan ve başlama tarihiyle verir.
   Başka bir kurum işe alımda bunları doğrulayıcı olarak ister (doğrulanmış özgeçmiş). Belgelerde sağlık verisi ve T.C. kimlik
   no yok. Hasta tarafı (AB Health ID, e-reçete) kapsam dışı, ileride. Tür adları öneridir.
@@ -39,8 +39,8 @@ Türkiye'de [[t:authentic-source|yetkili kaynaklar]]:
 
 | Bilgi | Yetkili kaynak |
 |---|---|
-| Meslek icra yetkisi, uzmanlık | Sağlık Bakanlığı |
-| Meslek odası üyeliği | Türk Tabipleri Birliği / il tabip odaları (kamu kurumu niteliğinde meslek kuruluşu) |
+| Meslek icra yetkisi, uzmanlık | İlgili sağlık bakanlığı |
+| Meslek odası üyeliği | Ulusal hekim meslek kuruluşu / il tabip odaları (kamu kurumu niteliğinde meslek kuruluşu) |
 | Çalışma, birim, unvan | İşveren sağlık kuruluşu |
 
 [[ADR-0020]] gereği bilgi her belgede kendi kaynağından okunur; Tamga saklamaz.
@@ -51,8 +51,8 @@ Türkiye'de [[t:authentic-source|yetkili kaynaklar]]:
 
 | # | Belge | Veren | Güven listesi sınıfı | Tür adı (ÖNERİ, §6) |
 |---|---|---|---|---|
-| 1 | **Meslek icra belgesi** | Sağlık Bakanlığı. Pilotta "Sağlık Bakanlığı (deneme)" deneme kurumu; gerçek katılımda aynı tür, gerçek kayıt | `PUB` / `HEALTH` | `urn:tamga:health:PractitionerLicence:1` |
-| 2 | **Oda üyelik belgesi** | TTB ya da il tabip odası, kendi üyelerine | `PUB` (kamu kurumu niteliğinde) ya da `EAA` / `HEALTH` | `urn:tamga:health:ProfessionalMembership:1` |
+| 1 | **Meslek icra belgesi** | İlgili sağlık bakanlığı. Pilotta "Sağlık bakanlığı (deneme)" deneme kurumu; gerçek katılımda aynı tür, gerçek kayıt | `PUB` / `HEALTH` | `urn:tamga:health:PractitionerLicence:1` |
+| 2 | **Oda üyelik belgesi** | Ulusal meslek kuruluşu ya da il tabip odası, kendi üyelerine | `PUB` (kamu kurumu niteliğinde) ya da `EAA` / `HEALTH` | `urn:tamga:health:ProfessionalMembership:1` |
 | 3 | **Kurum görev belgesi** | Hastane / klinik / sağlık grubu, kendi personeline | `EAA` / `HEALTH` | `urn:tamga:work:EmploymentCredential:1` (sektörsüz) |
 
 Hiçbiri Tamga tarafından verilmez; Tamga barındırılan belge verme servisini işletir.
@@ -107,7 +107,7 @@ Hiçbiri Tamga tarafından verilmez; Tamga barındırılan belge verme servisini
 
 ## K6 — Kapsam dışı (ileride)
 
-- Hasta Sağlık Kimliği (AB e-reçete pilotu, mdoc) ve e-Nabız / e-Reçete bağlantısı: yalnız Sağlık Bakanlığı belge veren olarak
+- Hasta Sağlık Kimliği (AB e-reçete pilotu, mdoc) ve e-Nabız / e-Reçete bağlantısı: yalnız ilgili sağlık bakanlığı belge veren olarak
   katılırsa.
 - Sağlık kuruluşunun kendisi için belge verilmez: kuruluş güven listesi kaydıyla ve kayıt sertifikası ile tanınır
   ([[ADR-0024]], [[ADR-0026]]).
@@ -134,7 +134,7 @@ Hiçbiri Tamga tarafından verilmez; Tamga barındırılan belge verme servisini
 1. **Tür adları:** §K1'deki öneriler ya da alternatifleri — `MedicalLicence`, `ChamberMembership` (tüm meslek odaları),
    `StaffAppointment` (sağlığa özgü görev).
 2. Oda belgesinin sınıfı: `PUB` mı, `EAA` mı?
-3. Pilot kurgusu: "Sağlık Bakanlığı (deneme)", bir tabip odası, bir özel hastane — deneme kiracıları.
+3. Pilot kurgusu: "Sağlık bakanlığı (deneme)", bir tabip odası, bir özel hastane — deneme kiracıları.
 
 # Durum
 

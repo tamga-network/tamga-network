@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -205,7 +205,7 @@ Migration: the `archive/` versions are replayed in order as contract calls; the 
 | **TL5** | Verification with a list whose `next_update` has passed, or that cannot be reached, produces **INDETERMINATE**; never ACCEPTED, never REJECTED. |
 | **TL6** | A loader that sees an unknown `list_format_version` stops and raises an alarm; it does not accept. |
 | **TL7** | A national list is signed only by that namespace's signing key; operator proxy is declared with `operator.on_behalf_of`. |
-| **TL8** | Tamga does not issue PID; `pid_providers[]` is empty throughout the list stage. Tamga's provisional identity attestation ([[ADR-0011]]) is an `issuers[]` record (`category: IDENTITY`, `class: QUALIFIED`) and is superseded with `successor_id` once a state PID provider is appointed. |
+| **TL8** | Tamga does not issue PID; `pid_providers[]` is empty throughout the list stage. Tamga's provisional identity attestation ([[ADR-0011]]) is an `issuers[]` record (`category: IDENTITY`, `class: EAA`, `assurance: I2`; [[ADR-0022]]) and is superseded with `successor_id` once a state PID provider is appointed. |
 | **TL9** | A schema's `registered_at` and `status_history.since` are permanent; a rebuild cannot change them (time of the first anchor). |
 | **TL10** | Moving to the chain is not complete until the replay of the list archive and the equivalence test pass. |
 | **TL11** | No list, anchor log or change log contains personal data, credentials or credential hashes. |
@@ -223,7 +223,8 @@ Migration: the `archive/` versions are replayed in order as contract calls; the 
 # Open issues
 
 1. Chain counterpart of `wallet_providers[]` (ADR candidate).
-2. ETSI 119 612 XML/XAdES projection generator (`apps/trust-publisher export-etsi`) — before the state stage.
+2. ETSI 119 612 XML/XAdES projection generator — **CLOSED (2026-10-29, [[ADR-0066]]):** the generator is in
+   `apps/trust-publisher` and published in the sandbox; on the real network it opens with the foundation, postal addresses and signer.
 3. ≥2 rolling certificates (S-6) and the signing key in a KMS — before the pilot.
 
 # Related documents

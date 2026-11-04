@@ -4,7 +4,7 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-06
+last_updated: 2026-11-04
 summary: >
   Tamga Network runs a test network that is completely separate from the real network: sandbox.tamga.network. It has its
   own test root certificate, its own trust list, example institutions, fake people and example credentials of every type.
@@ -73,9 +73,9 @@ the usage guide state clearly that the names are used only to make the test envi
 relationship or agreement with these institutions, and that the credentials are signed with a test key and are therefore not
 valid anywhere; the institutions' logos are not used.
 
-> **Note (2026-10-06, project management):** there is a pilot partnership agreement with İstanbul Bilgi Üniversitesi. For this
-> institution the note says "our pilot partner"; in the sandbox it is still only a test institution. The "no relationship or
-> agreement" sentence applies to the other example institutions. The test-key warning and the logo rule do not change.
+> **Note (2026-10-06, project management):** the example university institution in the sandbox is only a test institution; none
+> of the example institutions implies a relationship or agreement with a real institution. The test-key warning and the logo
+> rule do not change.
 
 > **Change (2026-10-06, [[ADR-0042]] K3):** `wallet.sandbox` in K1 and the "test wallet provider" in K6 are not network
 > services. The network runs no wallet provider; in the sandbox too every wallet runs its own provider and registers it in the
@@ -124,3 +124,5 @@ automatically and reports, are later stages; each is decided separately before i
 changed with [[ADR-0040]] (real identity verification in the sandbox; open to everyone since 2026-10-05); "no institution console" in K1 and institutions'
 self-registration in K7 changed with [[ADR-0041]] (institution test accounts) (2026-10-04). The network running the test wallet
 provider in K1/K6 changed with [[ADR-0042]] (2026-10-06): in the sandbox the wallet runs its wallet provider.
+
+**Note (2026-11-04):** the real institution name and the relationship wording in the 2026-10-06 note were removed ("an example university institution"); the decision content is unchanged (project management).

@@ -4,12 +4,13 @@ title: "İptal ve durum listesi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-23
+last_updated: 2026-11-04
 summary: >
   [[ADR-0008]] kararının normatif uygulaması. Status List Token'ın Tamga profilini
   (kurum listelerinde bits=2, kimlik servisinde bits=1; ES256, X.509 zinciri, asgari 100.000 indeks; mdoc için CWT
   gösterimi), sabit aralıklı ve
-  gürültülü yayın döngüsünü, yeniden yazılmış StatusListRegistry çapa kontratını,
+  gürültülü yayın döngüsünü, çapayı (bugün liste yayıncısının çapa günlüğü; defter aşamasında planlanan
+  StatusListRegistry kontratı),
   on adımlı doğrulama algoritmasını, önbellek ve tazelik politikasını tanımlar.
   İki kritik mahremiyet kuralı: indeksler RASTGELE tahsis edilir (sıralı tahsis
   mezuniyet sırasını sızdırır) ve liste URI'si OPAK olmalıdır (yıl/fakülte/kohort
@@ -44,8 +45,8 @@ Bu şartname, Tamga'da bir [[t:credential|belgenin]] **iptal edilip edilmediğin
 yayınlandığını, çapalandığını ve doğrulandığını tanımlar.
 
 Karar ve gerekçeler [[ADR-0008]]'dedir; burada tekrar edilmez. Özet: bitstring
-listesi **off-chain** host edilir, zincirde yalnızca URI + içerik hash'i +
-sürüm çapası durur.
+listesi **off-chain** host edilir; çapa günlüğünde (bugün liste yayıncısının `anchors.jsonl`'ı, [[SPEC-TRUST-0001]] §5)
+yalnızca URI + içerik hash'i + sürüm durur. Zincir yok ([[ADR-0009]], [[ADR-0051]]).
 
 **Standart temeli:** IETF Token Status List — Tamga profili, AB'nin CIR 2026/1731 ile sabitlediği
 draft-ietf-oauth-status-list-**20**'yi (2026-04-20) izler. Güncel taslak **draft-21**'dir (2026-06-21, RFC Editor
@@ -71,7 +72,8 @@ Kapsam dışı: kriptografik akümülatör / [[t:ZK]] iptal (`RS-REVOCATION-0001
            │ hash + sürüm
            ▼
 ┌──────────────────────────┐
-│  StatusListRegistry      │  ← zincir (yalnızca çapa)
+│  Çapa günlüğü            │  ← bugün anchors.jsonl (yalnızca çapa);
+│  (anchors.jsonl)         │    defter aşamasında StatusListRegistry
 └──────────────────────────┘
 ```
 
@@ -79,10 +81,10 @@ Kapsam dışı: kriptografik akümülatör / [[t:ZK]] iptal (`RS-REVOCATION-0001
 |---|---|
 | **Status Provider** | Status List Token'ı üretir, imzalar, yayınlar. Varsayılan olarak belge verenin kendisi. |
 | **Referenced Token** | Durumu izlenen belge — Tamga'da SD-JWT VC. |
-| **Anchor** | `StatusListRegistry` kontratındaki kayıt. |
+| **Anchor** | Çapa günlüğündeki satır (bugün); defter aşamasında `StatusListRegistry` kontratındaki kayıt (planlanan, [[ADR-0051]] projeksiyonu). |
 
 **Terminoloji uyarısı:** Standart "[[t:relying-party|Relying Party]]" der; Tamga'da bu **[[t:verifier|doğrulayıcıdır]]**
-([[SPEC-BC-0001]] `RelyingPartyRegistry` ile aynı kavram).
+(güven listesindeki `relying_parties[]` kaydıyla aynı kavram, [[SPEC-TRUST-0001]]).
 
 ---
 
@@ -251,7 +253,10 @@ birlikte, tam token.
 **Değişmez:** Aynı sürüm numarasına sahip token her zaman aynı baytlardır. Status
 Provider aynı `version` için farklı bayt üretemez.
 
-## 4.2 Kontrat arayüzü
+## 4.2 Kontrat arayüzü — defter aşaması (planlanan, [[ADR-0051]] projeksiyonu)
+
+> Bugün çapa, liste yayıncısının çapa günlüğüdür ([[SPEC-TRUST-0001]] §5); zincir yoktur ([[ADR-0009]]). Aşağıdaki arayüz
+> derlenip test edilmiştir ve zincir açıldığında imzalı listelerin projeksiyonu olarak kullanılır.
 
 [[ADR-0008]] Karar 4 gereği `StatusListRegistry.sol` **yeniden yazılmıştır.**
 Bitmap tutan eski sürüm geçersizdir.

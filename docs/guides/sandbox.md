@@ -4,7 +4,7 @@ title: "Sandbox: test ağı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 summary: >
   Gerçek ağdan ayrı test ağı sandbox.tamga.network ile uçtan uca deneme: adresler, güven çapasını sabitlemek, cüzdanı
   sandbox'a bağlamak, cüzdan geliştiricisi olarak kendi cüzdan sağlayıcını sandbox listesine kaydettirmek, örnek kişilerle belge almak, örnek doğrulayıcılarda göstermek, iptal ve askı durumlarını denemek,
@@ -122,15 +122,15 @@ kendiliğinden deneyip rapor verdiği otomatik uyum testi sonraki aşamalardır 
 ## 3. Örnek kurumlar ve belge türleri
 
 ::: warning Kurum adları hakkında
-Kurum adları gerçekçi bir deneme ortamı için kullanılmıştır. İstanbul Bilgi Üniversitesi pilot ortağımızdır; Bubilet ve Paribu
-Cineverse ile bir ilişki ya da anlaşma yoktur. Buradaki belgeler test anahtarıyla imzalıdır ve hiçbir yerde geçerli değildir. Kurumların logoları kullanılmaz.
+Sandbox'taki kurumlar yalnız deneme için vardır; hiçbiri gerçek bir kurumla ilişki ya da anlaşma ifade etmez. Adreslerdeki
+kısa adlar (`slug`) yalnız teknik tanımlayıcıdır. Buradaki belgeler test anahtarıyla imzalıdır ve hiçbir yerde geçerli değildir. Kurumların logoları kullanılmaz.
 :::
 
 | Kurum | Belge türleri (`vct`) |
 |---|---|
-| İstanbul Bilgi Üniversitesi (TEST) — `issuer.sandbox.tamga.network/istanbul-bilgi` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
-| Bubilet (TEST) — `issuer.sandbox.tamga.network/bubilet` | `urn:tamga:tkt:EventTicket:1` (kurgusal konserler) |
-| Paribu Cineverse (TEST) — `issuer.sandbox.tamga.network/paribu-cineverse` | `urn:tamga:tkt:EventTicket:1` (kurgusal film seansları; sinema bileti ayrı bir tür değildir: film ve seans `event_name`, salon `venue_name` alanındadır) |
+| Örnek üniversite (TEST) — `issuer.sandbox.tamga.network/istanbul-bilgi` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Örnek etkinlik şirketi (TEST) — `issuer.sandbox.tamga.network/bubilet` | `urn:tamga:tkt:EventTicket:1` (kurgusal konserler) |
+| Örnek sinema işletmesi (TEST) — `issuer.sandbox.tamga.network/paribu-cineverse` | `urn:tamga:tkt:EventTicket:1` (kurgusal film seansları; sinema bileti ayrı bir tür değildir: film ve seans `event_name`, salon `venue_name` alanındadır) |
 | Kimlik servisi — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, takma ad tohumu (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Örnek kişiler
@@ -221,16 +221,16 @@ gösterin: iptal edilmiş ya da askıdaki belge kabul edilmemelidir. Öğrenci b
 
 ## 8. Gerçek kimliğinle dene
 
-Sandbox'ta kimlik akışı iki seçenek sunar ([[ADR-0040]]): **Gerçek kimliğinle doğrula (Didit)** — sağlayıcının gerçek adımları
+Sandbox'ta kimlik akışı iki seçenek sunar ([[ADR-0040]]): **Gerçek kimliğinle doğrula** — uzaktan kimlik doğrulama sağlayıcısının gerçek adımları
 (belgenin taranması, canlılık, yüz eşleştirme) — ya da **Hızlı deneme (sahte kişi)** — uydurma bir kişi seçip onaylarsınız.
 Hızlı deneme herkese açıktır. Gerçek yol, veri koruma hukuki incelemesi bitene kadar **varsayılan olarak davet koduyla** açılır
 (`ADR-0040/RI1`, 2026-10-28 notu); kodu sandbox ekibinden isteyin (`support@tamga.network`). Kodunuz yoksa hızlı denemeyi kullanın.
 
 1. Cüzdanı sandbox'a bağlayın ve kimlik belgesi eklemeyi başlatın.
-2. Kimlik servisinin sayfasında aydınlatmayı onaylayın, davet kodunu yazın ve "Gerçek kimliğinle doğrula (Didit)" seçin.
+2. Kimlik servisinin sayfasında aydınlatmayı onaylayın, davet kodunu yazın ve "Gerçek kimliğinle doğrula" seçin.
 3. Açılan uyarıyı okuyup onaylayın: "Bu bir test ortamıdır; gerçek kimliğinle deniyorsun; verilerin her gece silinir;
-   Didit oturumunun silinmesi belge verilir verilmez istenir." Onay olmadan sağlayıcıya gidilmez (`ADR-0040/RI3`).
-4. Didit'te adımları tamamlayın; test belgesi cüzdana gelir. Sandbox, gerçek ağın sağlayıcı hesabını kullanır; belgeyi imzalayan
+   sağlayıcıdaki oturumun silinmesi belge verilir verilmez istenir." Onay olmadan sağlayıcıya gidilmez (`ADR-0040/RI3`).
+4. Sağlayıcının sayfasında adımları tamamlayın; test belgesi cüzdana gelir. Sandbox, gerçek ağın sağlayıcı hesabını kullanır; belgeyi imzalayan
    anahtarlar ve kayıtlar ise ayrıdır (`ADR-0040/RI2`).
 
 Ücretsiz doğrulama hakkı gerçek ağla ortak olduğu için gerçek yolun **günlük ve aylık bir tavanı** vardır. Tavan dolunca
@@ -242,7 +242,7 @@ rastgele bir `SANDBOX-…` değeri yazılır (`ADR-0040/RI4`). Sağlayıcıdaki 
 doğrulama başarısız olursa hemen, yarım bırakılırsa yaklaşık bir saat içinde, en geç gece sıfırlamasında istenir (`ADR-0040/RI5`);
 sağlayıcı kendi saklama ayarı içinde siler. Davet kodları kişiye özel (tek kullanım, en çok 7 gün) ya da süreli (en çok 72 saat, en
 çok 25 kullanım) olur, tavanı aşamaz ve gece sıfırlamasında silinir. Sandbox yöneticisi, hukuki inceleme bittikten sonra gerçek yolu
-herkese açık kipe (`TAMGA_IDV_DIDIT_SANDBOX_MODE=open`) alabilir.
+herkese açık kipe alabilir.
 
 ## 9. Kurumunu dene
 

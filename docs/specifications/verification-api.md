@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -86,7 +86,7 @@ Z1. A4–A7 Z1 kapsamındadır.
 | `B5` | `extends` zinciri; her adımda `extends#integrity` |
 | `B6` | JSON Schema 2020-12 uyumu (`schema_uri` Tamga ekidir, [[SPEC-SCHEMA-0001]] §2.1) |
 
-## 1.C — Güven katmanı → [[SPEC-BC-0001]] §11.2
+## 1.C — Güven katmanı → [[SPEC-TRUST-0001]] §6 (`TrustSource`; imzalı güven listeleri)
 
 | Kod | Adım |
 |---|---|
@@ -128,7 +128,7 @@ doğrulamada kullanılsaydı iki sessiz hata çıkardı:
 | Senaryo | Belge verme zamanı sorusuyla | Doğrusu |
 |---|---|---|
 | Bakanlık kapandı (`REVOKED`, halefi var) | Tüm diplomaları `C1`'de RED | Kapanıştan önce verilenler kabul ([[ADR-0002]] #4) |
-| Şema `DEPRECATED` oldu (yeni sürüm çıktı) | Eski şemayla verilen her belge `C2`'de RED | Kabul — [[SPEC-BC-0001]]/SC3 |
+| Şema `DEPRECATED` oldu (yeni sürüm çıktı) | Eski şemayla verilen her belge `C2`'de RED | Kabul — şema kaydının durumu, [[SPEC-TRUST-0001]] |
 | CA planlı rotasyon | `A3` + `C1` RED | Kabul — rotasyon ele geçirilme değildir |
 
 Bu yüzden her iki sorgu belgenin **`iat`** değerini alır ve "o an kabul
@@ -388,8 +388,8 @@ nesnesinden ayrılır ve bu uca erişim ayrıca yetkilendirilir ve loglanır.
 Politika hem DCQL sorgusunu ([[SPEC-PROTO-0002]] §4) hem `E1`–`E3` adımlarını
 besler. Tek kaynak.
 
-**Değişmez AP6:** Politikadaki `required_claims`, RP'nin zincirdeki
-`allowedScopes`'unu aşamaz. Servis, politika kaydedilirken bunu kontrol eder ve
+**Değişmez AP6:** Politikadaki `required_claims`, RP'nin güven listesindeki kaydının
+`scopes[]`'ini (`allowedScopes`) aşamaz. Servis, politika kaydedilirken bunu kontrol eder ve
 aşan politikayı **reddeder** — aşırı talep, sunum anında değil politika
 tanımlanırken engellenir.
 
@@ -552,12 +552,12 @@ paralel yaşar ([[ARCH-0005]] §5.3 ile aynı politika).
 | **AP3** | Sonuç nesnesi claim değerlerini değil adlarını taşır. |
 | **AP4** | `idx` hiçbir API yanıtında veya kayıtta bulunmaz. |
 | **AP5** | HTTP durum kodu doğrulama sonucunu kodlamaz. |
-| **AP6** | Politikanın `required_claims`'i RP'nin zincirdeki scope'unu aşamaz. |
+| **AP6** | Politikanın `required_claims`'i RP'nin güven listesindeki kaydının scope'unu aşamaz. |
 | **AP7** | Hata `detail` alanı kişisel veri içermez. |
 | **AP8** | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. |
 | **AP11** | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
 | **AP12** | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
-| **AP13** | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. Kapı isteği terminal anahtarıyla gelir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). |
+| **AP13** | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = doğrulayıcının kalıcı kimliği (güven listesindeki kaydının `dns_name`'i; sertifika yenilense de değişmez, [[ADR-0034]]), ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. Kapı isteği terminal anahtarıyla gelir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). |
 | **AP9** | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). |
 | **AP10** | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
 

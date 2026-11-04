@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   The `terminal_groups[]` field foreseen by ADR-0012 K5 takes its form in the verifier record: each gate group carries
   `group_id`, `institution_id` (the institution operating the gates), `label`, `allowed_policies[]`, optional
@@ -94,8 +94,8 @@ software and certificate distribution are ready ([[ADR-0065]] K5 target).
 
 ## K7 — Sandbox
 In the sandbox list the groups of the three example institutions are published with their institution and policy
-(`istanbul-bilgi-campus` → `istanbul-bilgi`, `campus-access`; `bubilet-gate` → `bubilet`, `event-ticket`;
-`paribu-cineverse-gate` → `paribu-cineverse`, `event-ticket`). The demo gate's public environment keys keep working
+(the example university's campus group → `campus-access`; the gate groups of the example events company and the example
+cinema operator → `event-ticket`). The demo gate's public environment keys keep working
 ([[ADR-0065]] K4).
 
 # Options considered
@@ -134,3 +134,5 @@ In the sandbox list the groups of the three example institutions are published w
 
 **Accepted — 2026-10-29.** With project management's general approval to finish [[ADR-0065]] (verbatim quote in the private
 approval record). DECISIONS: D-PROX-3. TG1–TG3 are binding.
+
+**Note (2026-11-04):** the group names in the sandbox example that carried real company and institution names were replaced by generic descriptions; the decision content is unchanged (project management).

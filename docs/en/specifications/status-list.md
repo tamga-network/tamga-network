@@ -4,12 +4,12 @@ title: "Revocation and status list"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-23
+last_updated: 2026-11-04
 summary: >
   The normative implementation of the [[ADR-0008]] decision. Defines the Tamga profile of the Status List Token (bits=2
   in institution lists, bits=1 for the identity service; ES256, X.509 chain, at least 100,000 indices; a CWT representation for
-  mdoc), the fixed-interval, noisy publication cycle, the rewritten
-  StatusListRegistry anchor contract, the ten-step verification algorithm, and the caching and freshness policy. Two
+  mdoc), the fixed-interval, noisy publication cycle, the anchor (today the list
+  publisher's anchor log; in the ledger stage the planned StatusListRegistry contract), the ten-step verification algorithm, and the caching and freshness policy. Two
   critical privacy rules: indices are allocated at RANDOM (sequential allocation leaks graduation order) and the list URI
   must be OPAQUE (a URI encoding year/faculty/cohort leaks undisclosed claims). Scheduled bulk prefetching is mandatory
   instead of fetching per verification.
@@ -45,7 +45,8 @@ This specification defines how, in Tamga, the **revocation status** of a [[t:cre
 anchored and verified.
 
 The decision and its rationale are in [[ADR-0008]] and are not repeated here. In short: the bitstring list is hosted
-**off-chain**; only the URI + content hash + version anchor sits on the chain.
+**off-chain**; only the URI + content hash + version sit in the anchor log (today the list publisher's `anchors.jsonl`,
+[[SPEC-TRUST-0001]] §5). There is no chain ([[ADR-0009]], [[ADR-0051]]).
 
 **Standards basis:** IETF Token Status List — the Tamga profile follows draft-ietf-oauth-status-list-**20** (2026-04-20),
 which the EU fixed in CIR 2026/1731. The current draft is **draft-21** (2026-06-21, in the RFC Editor queue); as long as the
@@ -71,7 +72,8 @@ Out of scope: cryptographic accumulators / [[t:ZK]] revocation (`RS-REVOCATION-0
            │ hash + version
            ▼
 ┌──────────────────────────┐
-│  StatusListRegistry      │  ← chain (anchor only)
+│  Anchor log              │  ← today anchors.jsonl (anchor only);
+│  (anchors.jsonl)         │    StatusListRegistry in the ledger stage
 └──────────────────────────┘
 ```
 
@@ -79,10 +81,10 @@ Out of scope: cryptographic accumulators / [[t:ZK]] revocation (`RS-REVOCATION-0
 |---|---|
 | **Status Provider** | Produces, signs and publishes the Status List Token. By default the issuer itself. |
 | **Referenced Token** | The credential whose status is tracked — in Tamga an SD-JWT VC. |
-| **Anchor** | The record in the `StatusListRegistry` contract. |
+| **Anchor** | The line in the anchor log (today); in the ledger stage the record in the `StatusListRegistry` contract (planned, [[ADR-0051]] projection). |
 
 **Terminology note:** the standard says "[[t:relying-party|Relying Party]]"; in Tamga this is the
-**[[t:verifier|Verifier]]** (the same concept as [[SPEC-BC-0001]] `RelyingPartyRegistry`).
+**[[t:verifier|Verifier]]** (the same concept as the `relying_parties[]` record on the trust list, [[SPEC-TRUST-0001]]).
 
 ---
 
@@ -249,7 +251,10 @@ That is, the string **after** `Content-Encoding: gzip` is decoded. The full toke
 **Invariant:** a token with the same version number is always the same bytes. The Status Provider cannot produce different
 bytes for the same `version`.
 
-## 4.2 Contract interface
+## 4.2 Contract interface — ledger stage (planned, [[ADR-0051]] projection)
+
+> Today the anchor is the list publisher's anchor log ([[SPEC-TRUST-0001]] §5); there is no chain ([[ADR-0009]]). The interface
+> below has been compiled and tested and is used as a projection of the signed lists once the chain is opened.
 
 Under [[ADR-0008]] decision 4, `StatusListRegistry.sol` has been **rewritten.** The earlier design that held a bitmap is
 void.

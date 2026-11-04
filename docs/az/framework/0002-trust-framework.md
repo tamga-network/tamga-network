@@ -80,7 +80,7 @@ edilən qalıq risklər əsas sənəddədir (§6.6 və §7.4): yeganə operatoru
 
 | Mərhələ | Orqan | Səlahiyyət |
 |---|---|---|
-| **Siyahı mərhələsi və reyestr mərhələsi (bu gün)** | Tamga, müvəqqəti operator | Gündəlik istismar, infrastruktur, siyahı operatorluğu və qeydiyyat qurumu rolunun dövlət adına icrası, açıq paketlərin dərci |
+| **Siyahı mərhələsi (bu gün) və reyestr mərhələsi** | Tamga, müvəqqəti operator | Gündəlik istismar, infrastruktur, siyahı operatorluğu və qeydiyyat qurumu rolunun dövlət adına icrası, açıq paketlərin dərci |
 |  | Tamga texniki şurası | Spesifikasiya dəyişiklikləri, qərar qeydlərinin təsdiqi, şəbəkə səviyyəsində ümumi rəqəmsal sənəd növləri |
 |  | (hələ yoxdur) | Şura — üzv dövlət olmadıqca yaradılmır; bu müvəqqəti vəziyyət açıq şəkildə adlandırılır |
 | **Dövlətin qoşulması və sonrası** | Şura (üzv dövlətlər) | Üzvlərin qəbulu və çıxarılması, şəbəkə səviyyəsində ümumi rəqəmsal sənəd növləri, protokol yeniləmələri və bu sənədin siyasətləri; hamısı üçdə iki səslə |
@@ -88,7 +88,7 @@ edilən qalıq risklər əsas sənəddədir (§6.6 və §7.4): yeganə operatoru
 |  | İdarəetmə qurumu (fond və ya şura katibliyi) | Operatorluq, ötürülənədək |
 
 İdarəetmə qurumu ilk gündən yaradılmır: bir və ya iki dövlət qoşulmağa maraq göstərdikdə yaradılır və siyahılar ona ötürülür. O
-vaxtadək Tamga Network (yaradılacaq fond) adından müvəqqəti operator: BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ; fond yaradıldıqda operatorluq ona ötürülür.
+vaxtadək Tamga Network (yaradılacaq fond) adından müvəqqəti operator idarə edir; fond yaradıldıqda operatorluq ona ötürülür.
 
 **Ölçülə bilən təhvil hədləri:** host edilən sənəd verən qurumların payı 30%-i keçərsə, məsələ Şuranın gündəminə çıxarılır; dövlət
 operatorlarının sayı ən azı dördə çatdıqda ilk operatorun dəftər qovşaqları təhvil verilir; ilk dövlət operatoru istismara

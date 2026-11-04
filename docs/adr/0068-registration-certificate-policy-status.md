@@ -5,15 +5,15 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   Kayıt sertifikaları (WRPRC, ETSI TS 119 475) üç alanı taşır: `policy_id` (Tamga'nın kendi politika OID'i; ETSI'nin AB OID'i
   kullanılmaz), `certificate_policy` (politika belgesinin adresi) ve `status` (kayıt kurumunun durum listesindeki girdi). Kayıt
   kurumu IETF Token Status List biçiminde, kayıt sertifikalarını imzalayan anahtarla imzalı, 1 bitlik bir durum listesi tutar;
   kayıt ya da kullanım sona erince, askıya alınınca veya içerik değişince eski sertifika otomatik iptal edilir, elle iptal de
   yapılabilir. Cüzdan çekirdeği iptal edilmiş sertifikalı isteği reddeder, durum denetlenemezse uyarır. Politika belgesi Tamga
-  ARF'ın politikalarına eklenir (FW-POL-0003). Bugün yalnız sandbox'ta açıktır; gerçek ağın politika kimliği ve adresleri ad
-  onayından sonra kayıt defterine girer. Kabul: 2026-10-29.
+  ARF'ın politikalarına eklenir (FW-POL-0003). Sandbox'ta ve (2026-10-29'dan beri) gerçek ağda
+  yürürlüktedir (FW-POL-0003 §5). Kabul: 2026-10-29.
 domain: Trust
 related: ["[[ADR-0024]]", "[[ADR-0026]]", "[[ADR-0029]]", "[[ADR-0038]]", "[[ADR-0048]]", "[[ADR-0056]]", "[[ADR-0058]]", "[[FW-POL-0001]]", "[[FW-POL-0003]]", "[[FW-TF-0001]]", "[[SPEC-CRED-0003]]", "[[SPEC-TRUST-0001]]", "[[SPEC-WALLET-0001]]"]
 ---
@@ -164,3 +164,5 @@ kimliğini ve adresini taşır, kayıt kurumu da bir iptal listesi yayımlar. C�
 
 **Accepted — 2026-10-29** (proje yönetimi onayı; birebir alıntı özel onay kaydında). DECISIONS: D-REG-4. WRS1–WRS4 bağlayıcıdır.
 Gerçek ağın politika kimliği ve adresleri 2026-10-29'da onaylandı ve yürürlükte (yukarıda uygulama notu).
+
+**Not (2026-11-04):** Özetteki "bugün yalnız sandbox'ta açık" ifadesi güncel duruma çevrildi: 2026-10-29'dan beri gerçek ağın politika kimliği ve durum listesi de yürürlükte (FW-POL-0003 §5); karar içeriği değişmedi (proje yönetimi).

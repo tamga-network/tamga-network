@@ -4,7 +4,7 @@ title: "Chainless beta and chain threshold"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-07
+last_updated: 2026-11-04
 summary: >
   The preconditions that tied the pilot to the ledger (PM-GTM-0001 Ö1/Ö2) are removed; "phase B — chainless beta" is added
   before phase 0. In the beta the trust anchor is a set of versioned, hash-chained trust lists (LOTL + national list)
@@ -33,7 +33,7 @@ On acceptance it is recorded in [[DECISIONS]] as **D-BC-6**, **D-GTM-2** and **D
 Tamga's canonical roadmap tied the pilot to the ledger: the PM-GTM-0001 §2 preconditions **Ö1** "contracts compile and
 tests pass" and **Ö2** "testnet up, contracts deployed" had to be met before real graduate data could be processed (GT1).
 [[ARCH-0001]] §3 defines phase 0 as "4 foundation validators". The contracts had never been compiled (no Foundry; DECISIONS
-§10.5). This locked the university pilot — and with it the university agreement and investor talks — behind the ledger
+§10.5). This locked the university pilot — and with it the first institution's participation — behind the ledger
 infrastructure.
 
 ## Finding: the phase 0 ledger produces no trust (F1)
@@ -181,8 +181,8 @@ issuer service do not change.
 # Alternatives considered
 
 ## A — Wait for the ledger (the previous plan) — rejected
-The pilot stays dependent on Foundry set-up + compilation + testnet + audit (months). No gain in assurance (F1). University
-and investor talks are delayed.
+The pilot stays dependent on Foundry set-up + compilation + testnet + audit (months). No gain in assurance (F1). The institution
+pilot waits months for the ledger set-up.
 
 ## B — Pilot on a single-node / four-node "development ledger" — rejected
 Gives the appearance of a ledger, not trust; it also brings the cost of operating a ledger (nodes, RPC security O1,
@@ -242,3 +242,5 @@ anchor is until then.
 
 **Accepted ✅** — 2026-09-24. Recorded in [[DECISIONS]] as D-BC-6, D-GTM-2 and D-GOV-5; the follow-up specification updates
 are tracked in the DECISIONS §10 list of open commitments.
+
+**Note (2026-11-04):** the wording about talks in the context and alternative A was replaced by the technical rationale (the pilot stays tied to the ledger set-up for months); the decision content is unchanged (project management).

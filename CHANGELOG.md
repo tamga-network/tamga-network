@@ -167,7 +167,7 @@ is behaviour that now fails closed.
   `https://arf.tamga.network/policies/registration-certificate` and `status` →
   `https://trust.tamga.network/status/wrprc/1` (1-bit Token Status List, re-signed hourly). FW-POL-0003 records the OID.
 - docs (2026-10-29): the legal operator of the network's own services is stated with one sentence everywhere it appears —
-  "Operated provisionally by BROS İNŞAAT SANAYİ VE DIŞ TİCARET LİMİTED ŞİRKETİ on behalf of Tamga Network (foundation to be
+  "Operated by a provisional operator on behalf of Tamga Network (foundation to be
   established)" (ARF definitions, roles, trust framework, rulebooks). The lists keep naming the operator "Tamga Network".
 
 - verify + verifier + trust (2026-10-29; ADR-0069 TG3 follow-up): **gates fail closed.** "List stale" and "group not in the list"
@@ -204,7 +204,7 @@ is behaviour that now fails closed.
   and a credential with a missing field; plus a Digital Credentials API origin mismatch and a response after a decline. The
   server-side verification guide has a "a success page is not proof" checklist item.
 - docs (2026-10-28; data-protection pre-review, no package change): ADR-0040 note — the sandbox's real identity path defaults to
-  the invitation mode (`TAMGA_IDV_DIDIT_SANDBOX_MODE=invite`) until the legal review is complete, the quick trial stays open to
+  the invitation mode (`invite`) until the legal review is complete, the quick trial stays open to
   everyone; RI1 rewritten (tr/en/az, INVARIANTS). Sandbox guide §8 and the warning text now say deletion of the provider session is
   *requested* at issuance. SPEC-ID-0003: time-based purge of expired/revoked identity records (30 days, with the provider session)
   and event-log rows (365 days), erasure response `provider: "partial"` without the delete permission (tr/en/az).

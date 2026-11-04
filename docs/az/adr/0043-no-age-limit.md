@@ -4,7 +4,7 @@ title: "Yaş həddi yoxdur: Aİ yanaşması"
 status: Active
 version: 1.0.0
 created: 2026-10-08
-last_updated: 2026-10-08
+last_updated: 2026-11-04
 summary: >
   Tamga Network yaş həddi qoymur: nə şəbəkədə siyahıya alınan rəqəmsal cüzdanlar üçün, nə də şəbəkənin şəxsiyyət xidməti (şəxsiyyət sənədi) üçün. eIDAS 2.0 Avropa Rəqəmsal Şəxsiyyət Cüzdanı üçün minimum yaş nəzərdə tutmur; şəbəkə Avropa İttifaqı (Aİ) çərçivəsinə uyğun hərəkət edir. Rəqəmsal cüzdandan şəbəkədə istifadənin şərti yaş deyil, yoxlayan tərəfin şəxsiyyəti etibarlı şəxsiyyət sənədi ilə təsdiqləməsidir. Şəbəkədəki rəqəmsal cüzdanlar öz hüquqları başqa cür tələb etmədikcə eyni yanaşmanı izləyir; öz rəqəmsal sənədlərində uyğunluğu (məs. tələbə kartı) sənədi verən qurum müəyyən edir. Uşaqlar üçün valideyn razılığı axını (GDPR m. 8, Türkiyə hüququ) və şəxsiyyəti yoxlayan tərəfin (provayderin) hədləri sonrakı iş kimi qeydə alınır.
 domain: Identity
@@ -61,9 +61,11 @@ tələbəyə) öz qeydlərinə əsasən müəyyən edir. Yaşdan asılı xidmət
   dövlətlər bu yaşı 13-ə qədər endirə bilər). Türkiyə hüququnda KVKK xüsusi yaş müəyyən etmir; 18 yaşdan kiçiklərin fəaliyyət qabiliyyəti məhduddur.
   Şəxsiyyət xidmətinin məlumatlandırma və açıq razılıq axını üçün valideyn razılığı axını lazım ola bilər; hüquqi araşdırmadan sonra ayrıca qərarla
   baxılacaq, bu gün tətbiq edilmir.
-- **Növbəti iş — provayder məhdudiyyəti:** məsafədən şəxsiyyəti təsdiqləmə provayderinin (istinad: Didit) azyaşlı şəxslər üçün öz
+- **Növbəti iş — provayder məhdudiyyəti:** məsafədən şəxsiyyəti təsdiqləmə provayderinin (istinad adapteri) azyaşlı şəxslər üçün öz
   məhdudiyyəti və ya şərti olub-olmadığı hələ təsdiqlənməyib; təsdiqlənəcək və lazım gələrsə, [[SPEC-ID-0003]]-yə daxil ediləcək.
 
 # Status
 
 **Qəbul edildi — 2026-10-08** (layihə rəhbərliyinin təsdiqi; hərfi sitat xüsusi təsdiq qeydindədir). DECISIONS: D-ID-10.
+
+**Qeyd (2026-11-04):** uzaqdan şəxsiyyət yoxlaması provayderinin ticarət adı, mühit dəyişəni və əmr adları açıq mətndən çıxarıldı ("uzaqdan şəxsiyyət yoxlaması provayderi"; parametr adları operatorun konfiqurasiya sənədindədir); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

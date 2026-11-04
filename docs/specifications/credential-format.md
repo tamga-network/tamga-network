@@ -4,15 +4,15 @@ title: "Belge biçimi ve protokoller"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-10-16
+last_updated: 2026-11-04
 summary: >
   Tamga belgelerinin kanonik biçimini ve belge verme/gösterme protokollerini tanımlar.
   Birincil format SD-JWT VC (selective disclosure yerleşik, EUDI ARF ana formatı),
-  ikincil mdoc/ISO 18013-5 (2. faz, çevrimdışı/fiziksel ibraz). İhraç OpenID4VCI,
+  ikincil mdoc/ISO 18013-5 (kimlik türlerinde etkin, öteki türlerde planlanan; çevrimdışı/fiziksel ibraz). İhraç OpenID4VCI,
   sunum OpenID4VP, imza ES256 (P-256). Holder binding ZORUNLU: credential her zaman
   cüzdanın cihaz anahtarına `cnf` (key binding) ile bağlanır — "üniversite fikrindeki
-  gizli hata"nın (belge başkasının cüzdanına alınır) tek çözümü. Wallet Unit Attestation
-  (WUA) cüzdanın gerçekliğini beyan eder. Revocation Token Status List'e ([[SPEC-BC-0001]]
+  gizli hata"nın (belge başkasının cüzdanına alınır) tek çözümü. Kısa ömürlü cüzdan örneği
+  kanıtı (WIA) ve anahtar kanıtı (KA) cüzdanın gerçekliğini ve anahtar deposunu beyan eder ([[ADR-0025]]). Revocation Token Status List'e ([[SPEC-BC-0001]]
   §5) devreder. Zincire credential veya içeriği ASLA yazılmaz ([[PM-TRUST-0001]]).
 ---
 **Bu şartname, Tamga belgelerinin hangi biçimde taşındığını ve hangi protokollerle verilip gösterildiğini özetler.** Ağa katılan her
@@ -51,13 +51,13 @@ karşılığıdır.
 | Konu | Karar | Gerekçe |
 |------|-------|---------|
 | **Belge formatı (birincil)** | **SD-JWT VC** | Selective disclosure yerleşik, EUDI ARF ana formatı, kütüphane bolluğu, JSON-LD'den belirgin biçimde basit |
-| **Belge formatı (ikincil)** | **mdoc / ISO 18013-5** — **kimlik attestation'ı için etkin** (D-CRED-5, [[ADR-0013]]); diğer tipler 2. faz | Safari/iOS Digital Credentials API yalnızca mdoc; ARF PID emsali; fiziksel/çevrimdışı ibraz (BLE devlet aşaması) |
+| **Belge formatı (ikincil)** | **mdoc / ISO 18013-5** — **kimlik attestation'ı için etkin** (D-CRED-5, [[ADR-0013]]); diğer tiplerde planlanan | Safari/iOS Digital Credentials API yalnızca mdoc; ARF PID emsali; fiziksel/çevrimdışı ibraz (BLE devlet aşaması) |
 | **İhraç protokolü** | **OpenID4VCI** | Fiili standart; kurumun mevcut OIDC altyapısına oturur |
 | **Sunum protokolü** | **OpenID4VP** | Aynı ekosistem, doğrulayıcı entegrasyonu kolay |
 | **İmza algoritması** | **ES256 (P-256)** | Mobil secure element ve HSM'lerde evrensel destek |
 | **Holder binding** | `cnf` + cihaz anahtarı — **zorunlu** | §3; holder binding açığının tek çözümü |
 | **İptal** | **Token Status List** (bitstring) | [[SPEC-BC-0001]] §5 ile aynı; liste off-chain, pointer on-chain |
-| **Korelasyon karşıtı** | Toplu belge verme (tek kullanımlık kopyalar) — 2. faz | Pilotta ertelenir; mimaride yer açılır |
+| **Korelasyon karşıtı** | Toplu belge verme (tek kullanımlık kopyalar) — **çalışıyor**: 10 kopyalık paket, otomatik yenileme ([[ADR-0023]], [[ADR-0059]]) | Aynı kopya iki doğrulayıcıya gösterilmez |
 
 `did:tamga` [[t:pseudonym]] profili (SPEC-ID-0001) ve X.509 belge veren kimliği ([[SPEC-ID-0002]])
 bu formatların içine gömülür (belge veren = X.509; [[t:holder]] = takma ad anahtarı).
@@ -154,30 +154,34 @@ güç seviyesindedir — gerileme değil, ertelenmiş iyileşmedir. Ayrıntı:
 
 ---
 
-# 4. Wallet Unit Attestation (WUA)
+# 4. Cüzdan kanıtları: WIA ve KA
 
-Cüzdanın kendisi de bir belge taşır. Doğrulayıcı eninde sonunda şunu sorar: *"Bu gerçek
-bir Tamga cüzdanı mı, yoksa birinin yazdığı sahte istemci mi?"*
+Cüzdanın kendisi de kanıt taşır. Belge veren eninde sonunda şunu sorar: *"Bu, güven listesinde kayıtlı bir cüzdan sağlayıcısının
+gerçek bir cüzdanı mı, yoksa birinin yazdığı sahte istemci mi; belge anahtarı nerede duruyor?"* Bu soruyu iki ayrı kanıt yanıtlar
+([[ADR-0025]]; ayrıntılı kurallar [[FW-POL-0002]]):
 
-[[t:WUA]] şunları beyan eder: cüzdan sürümü, anahtarın **donanımda** tutulduğu, PIN'in aktif
-olduğu, cihazın root'lu/jailbreak'li olmadığı, [[t:wallet-provider]] kimliği.
+- **Cüzdan örneği kanıtı ([[t:WIA]], Wallet Instance Attestation):** cüzdan uygulamasının belge verene kendini tanıttığı kısa
+  ömürlü kanıt. Ömrü **24 saatten kısadır**; her belge işleminde yeni bir sahiplik kanıtı (PoP) anahtarı ve yeni, birbirine
+  bağlanamaz bir iptal listesi girişiyle verilir (WIA1). Böylece sağlayıcı cüzdanın kaç kurumla görüştüğünü öğrenmez.
+- **Anahtar kanıtı (KA, key attestation):** belge anahtarlarının hangi depoda (yazılım, Secure Enclave, StrongBox) ve hangi
+  kullanıcı doğrulamasıyla tutulduğunu söyler; belgeler KA'daki `attested_keys`'e bağlanır. Seviye doğrulanmış duruma dayanır,
+  doğrulanmamış beyan KA'ya yazılmaz.
+- Her iki kanıtı da **cüzdanı sunan kuruluşun cüzdan sağlayıcısı** imzalar; sağlayıcının imza anahtarı güven listesinde
+  (`lotl.wallet_providers[]`) kayıtlıdır. Ağ cüzdan sağlayıcısı işletmez, listeler ([[ADR-0042]]).
+- Kanıtlar belge sahibi güvencesinin "authenticator gücü" boyutunu ([[PM-ASSUR-0001]]) besler: yazılım anahtarı → düşük;
+  donanım + PIN → yüksek.
 
-- WUA, cüzdan sağlayıcısı (ilk aşamada Tamga) tarafından imzalanır; sağlayıcı zincirde bir
-  belge veren/[[t:RP]] olarak kayıtlıdır.
-- **Baştan konmazsa sonradan eklemek acıdır** — tüm mevcut cüzdanları migrate etmek gerekir.
-  Pilotta içerik basit tutulur, ama **alan ve akış baştan açılır.**
-- WUA, belge sahibi assurance'ın "authenticator gücü" boyutunu ([[PM-ASSUR-0001]] eIDAS mantığı)
-  besler: yazılım anahtarı → düşük; donanım + PIN → yüksek.
-
-**Uygulanan profil (2026-09-24, DB-16):**
+**Uygulanan profil ([[ADR-0025]]):**
 
 | Alan | Değer |
 |---|---|
-| Biçim | JWT, `typ: oauth-client-attestation+jwt`, `alg: ES256`, `x5c` = Cüzdan sağlayıcısı sertifikası (liste aşamasında: `wallet-provider`; listede `lotl.wallet_providers[].wua_signing_keys`) |
-| Claim'ler | `iss` (provider URL), `sub` (örnek anahtarı JWK thumbprint), `cnf.jwk` (P-256 **örnek anahtarı** — belge anahtarlarından ayrı), `wallet_name`, `wallet_version`, `solution_id`, `key_storage` (`software` \| `secure_enclave` \| `strongbox` \| `wscd`), `user_auth`, `security_level` (W1-DEMO/W2/W3), `iat`, `exp` (30 gün) |
-| Taşıma (belge verme) | OpenID4VCI token isteğinde `OAuth-Client-Attestation` + `OAuth-Client-Attestation-PoP` (PoP: `iss` = WUA `sub`, `aud` = belge veren, `jti`, iat ±300 s) — [[SPEC-PROTO-0001]] §11.1, PR11 |
-| Provider tarafı | Cüzdanı sunan kuruluşun cüzdan sağlayıcısı; ağ işletmez, listeler ([[ADR-0042]]). Tamga Wallet'ınkini cüzdanın işletmecisi `provider.tamgawallet.com`'da işletir (canlı; güven listesinde `TAMGA-WP-1`, `ACTIVE`); cüzdan birimini yalnız cihaz kanıtıyla kaydeder |
-| Sunum | WUA doğrulayıcıya gönderilmez; doğrulayıcı gerekirse DCQL ile ayrıca ister (devlet aşaması) |
+| WIA biçimi | JWT, `typ: oauth-client-attestation+jwt` (OpenID4VCI 1.0 Ek E), `alg: ES256`, `x5c` = cüzdan sağlayıcısı sertifikası; alanlar `sub`, `wallet_name`, `wallet_version`, `wallet_link`, `wallet_solution_certification_information`, `client_status {status, exp}`, `cnf.jwk` |
+| WIA ömrü | 24 saatten kısa; `client_status.exp` en az 31 gün ileride |
+| KA biçimi | JWT, `typ: key-attestation+jwt` (OpenID4VCI 1.0 Ek D); alanlar `attested_keys`, `key_storage`, `user_authentication`, `certification`, `key_storage_status {status, exp}` |
+| Taşıma (belge verme) | WIA: PAR ve token isteklerinde `OAuth-Client-Attestation` + `OAuth-Client-Attestation-PoP`; KA: `jwt` proof'unun başlığında `key_attestation` — [[SPEC-PROTO-0001]] §11.1 |
+| İptal | Sağlayıcı iki Token Status List yayınlar (WIA girişleri, KA türleri); her biri en az 10.000 girişli |
+| Sağlayıcı tarafı | Cüzdanı sunan kuruluşun cüzdan sağlayıcısı; ağ işletmez, listeler ([[ADR-0042]]). Tamga Wallet'ınkini cüzdanın işletmecisi `provider.tamgawallet.com`'da işletir (canlı; güven listesinde `TAMGA-WP-1`, `ACTIVE`); cüzdan birimini yalnız cihaz kanıtıyla kaydeder |
+| Sunum | WIA ve KA doğrulayıcıya gönderilmez; yalnız belge verme sırasında kullanılır |
 
 ---
 
@@ -191,9 +195,10 @@ Belge [[t:revocation|iptali]] bu şartnamede **yeniden tanımlanmaz**; [[SPEC-BC
   versiyon + bitmap ([[SPEC-BC-0001]] `StatusList`).
 - Mahremiyet: `listSize >= 100.000`, rastgele index dağıtımı ([[SPEC-BC-0001]]).
 
-**Korelasyon karşıtı (2. faz):** Aynı status index'ini farklı doğrulayıcılara göstermek bir
-izleme vektörüdür. Çözüm **toplu belge verme** (tek-kullanımlık belge kopyaları); pilotta
-ertelenir, formatta yeri şimdiden açık (`cnf` başına birden çok kopya üretilebilir).
+**Korelasyon karşıtı (çalışıyor):** Aynı status index'ini farklı doğrulayıcılara göstermek bir
+izleme vektörüdür. Çözüm **toplu belge verme** (tek kullanımlık belge kopyaları): belge veren her
+seferde 10 kopyalık bir paket verir, her kopya kendi anahtarına ve iptal listesi girişine bağlıdır;
+cüzdan azalan paketi kendiliğinden yeniler ([[ADR-0023]], [[ADR-0059]]).
 
 ---
 
@@ -210,7 +215,7 @@ Belge verme (OpenID4VCI):
 Sunum (OpenID4VP):
   6. Verifier bir sunum talebi (nonce + audience + istenen claim'ler) gönderir
   7. Holder yalnızca gerekli disclosure'ları seçer + KB-JWT imzalar
-  8. Verifier: issuer imzası + cnf/KB-JWT + status + WUA + assurance politikası
+  8. Verifier: issuer imzası + cnf/KB-JWT + status + assurance politikası
      (PM-ASSUR-0001) → kabul/ret
 ```
 
@@ -231,12 +236,12 @@ beklememesini sağlar (bkz. [[ARCH-0001]] ilk aşama). Karar [[ADR-0006]] + [[AD
 # Güvenlik ve Mahremiyet Notları
 
 - **Holder binding istisnasız zorunlu** — kapatılırsa sistem sessizce yalan söyler.
-- **Anahtar donanımda** (Secure Enclave/StrongBox); yazılım anahtarı kabul edilmez (WUA
+- **Anahtar donanımda** (Secure Enclave/StrongBox); yazılım anahtarı kabul edilmez (KA
   bunu beyan eder).
 - **Selective disclosure varsayılan** — yalnızca gerekli claim; veri minimizasyonu.
-- **Toplu belge verme** korelasyon önlemi 2. fazda; format bugün yer açar.
+- **Toplu belge verme** korelasyon önlemi olarak çalışıyor ([[ADR-0059]]).
 - Üretim öncesi **bağımsız güvenlik denetimi** (KB-JWT replay, disclosure canlılığı,
-  WUA sahteciliği) zorunlu.
+  WIA/KA sahteciliği) zorunlu.
 
 ---
 
@@ -244,10 +249,10 @@ beklememesini sağlar (bkz. [[ARCH-0001]] ilk aşama). Karar [[ADR-0006]] + [[AD
 
 1. `vct` (belge tipi) registry'sinin şema yönetimi ([[SPEC-BC-0001]] şema registry
    ile hizası).
-2. mdoc/ISO 18013-5 profilinin tam tanımı (2. faz).
-3. Toplu belge verme devreye alma zamanı ve anahtar/kopya yönetimi (→ korelasyon denetimi).
-4. WUA içeriğinin nihai alan kümesi ve cihaz [[t:attestation]] kaynakları (Play Integrity /
-   App Attest) ile bağ.
+2. mdoc/ISO 18013-5 profilinin kimlik dışındaki türler için tanımı (planlanan).
+3. ~~Toplu belge verme devreye alma zamanı~~ — kapandı: çalışıyor ([[ADR-0023]], [[ADR-0059]]).
+4. WIA/KA'nın cihaz [[t:attestation]] kaynakları (Play Integrity / App Attest) ile bağı
+   ([[FW-POL-0002]]).
 
 ---
 

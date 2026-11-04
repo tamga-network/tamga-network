@@ -4,10 +4,10 @@ title: "Geçici kimlik belgesi sağlayıcısı"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-10-30
+last_updated: 2026-11-04
 summary: >
   Devlet tarafından atanmış bir PID Provider bulunmadığı sürece Tamga, uzaktan
-  kimlik doğrulama (Didit: belge + canlılık + yüz eşleştirme; ileride NFC çip
+  kimlik doğrulama (uzaktan kimlik doğrulama sağlayıcısı: belge + canlılık + yüz eşleştirme; ileride NFC çip
   okuma) ile doğruladığı kişilere kendi imzaladığı bir kimlik attestation'ı
   (urn:tamga:id:IdentityAttestation:1) verir. Bu bir PID değil, Tamga'nın
   belge veren olarak verdiği bir EAA'dır; devlet PID'i gelince süpersede edilir.
@@ -33,7 +33,7 @@ Uygulama: `apps/id` (operatör deposu), `@tamga-network/wallet-core` authcode/di
 
 Türkiye'de ve TDT üyelerinde [[t:eIDAS]] anlamında atanmış bir **[[t:PID]] Provider** (devletin cüzdana kimlik verisi veren kurumu) yok.
 Bugünkü tasarım (D-ID-2, SPEC-ID-0003/IDP3) [[t:identity-proofing]] işini **her kurumun kendi [[t:issuer|belge verme servisinde]]** yapıyor: öğrenci portala
-girer, gerekirse Didit orada çalışır. Bu, kurum entegrasyonuna (OBS/portal) bağımlıdır ve kişi her kurumda yeniden
+girer, gerekirse kimlik doğrulama sağlayıcısı orada çalışır. Bu, kurum entegrasyonuna (OBS/portal) bağımlıdır ve kişi her kurumda yeniden
 doğrulanır. Proje yönetiminin yönü (2026-09-25): kimlik doğrulamayı devlet bir sağlayıcı atayana kadar **Tamga** yapar;
 kişi cüzdanındaki kimlik [[t:credential|belgesiyle]] kuruma gider, kurum kaydıyla eşler ve belgeyi verir. Öğrenci sistemi QR ve e-posta
 yolları seçenek olarak kalır.
@@ -71,9 +71,9 @@ Fotoğraf/portre **konmaz** (v1). [[t:holder|Belge sahibinin]] güvence seviyesi
 **T3-benzeri** (NFC + canlılık; hukuken T3 = NES/Mobil İmza, PM-ASSUR). `document_chip_verified` bunu olgu olarak taşır.
 
 ## K3 — Kimlik ispatı akışı (cüzdan-başlatmalı)
-1. Cüzdan → `id.tamga.network` ([[t:OpenID4VCI]] **authorization code**; SPEC-PROTO-0001 v1.2): yetkilendirme sayfası Didit
-   oturumunu (belge + pasif canlılık + yüz eşleştirme; NFC opsiyonel) açar.
-2. Didit kararı (polling `GET /v3/session/{id}/decision/` birincil; webhook `https://id.tamga.network/idv/webhook`
+1. Cüzdan → `id.tamga.network` ([[t:OpenID4VCI]] **authorization code**; SPEC-PROTO-0001 v1.2): yetkilendirme sayfası uzaktan
+   kimlik doğrulama sağlayıcısının oturumunu (belge + pasif canlılık + yüz eşleştirme; NFC opsiyonel) açar.
+2. Sağlayıcının kararı (karar ucunu sorgulama birincil; webhook `https://id.tamga.network/idv/webhook`
    ikincil, `status.updated`) → **Approved** ise attestation ihraç edilir (10 kopya, [[t:WUA]] zorunlu, PR11).
 3. Kurumdan belge alma: cüzdan kurumu güven listesi dizininden seçer → kurumun belge veren servisi authorization code akışında
    **IdentityAttestation sunumu** ister ([[t:OpenID4VP]], [[t:DCQL]]: `personal_administrative_number`, `given_name`, `family_name`,
@@ -81,10 +81,10 @@ Fotoğraf/portre **konmaz** (v1). [[t:holder|Belge sahibinin]] güvence seviyesi
 4. Pre-authorized yollar (OBS ekranı QR, e-posta + SMS tx_code) **aynen kalır**; kurum ikisini de sunabilir.
 
 ## K4 — Veri sorumluluğu ve saklama (KVKK)
-- Tamga, kimlik ispatı verisi için **veri sorumlusudur**; aydınlatma + açık rıza metni cüzdanda Didit'e geçmeden gösterilir.
+- Tamga, kimlik ispatı verisi için **veri sorumlusudur**; aydınlatma + açık rıza metni cüzdanda sağlayıcıya geçmeden gösterilir.
 - Tamga'da saklanan: attestation kaydı (opak `subject_ref`, `iat/exp`, status `idx`, belge no hash'i, `document_chip_verified`,
-  Didit `session_id`); **belge görüntüleri, selfie, MRZ ham verisi Tamga'da saklanmaz** (Didit tarafında Didit saklama
-  politikası; sözleşmede ≤ 30 gün istenir). Silme talebi: attestation [[t:revocation]] + kayıt silme.
+  sağlayıcı oturum kimliği); **belge görüntüleri, selfie, MRZ ham verisi Tamga'da saklanmaz** (sağlayıcı tarafında sağlayıcının
+  saklama politikası; sözleşmede ≤ 30 gün istenir). Silme talebi: attestation [[t:revocation]] + kayıt silme.
 - FW-TF-0001 §6'ya "Kimlik Attestation Sağlayıcısı" rolü ve sorumlulukları eklenir; üç aylık şeffaflık raporuna ihraç/iptal
   sayıları girer (kişi yok).
 - Bugüne kadarki "Tamga hiçbir kişisel veri görmez" ifadesi daraltılır: **Tamga kimlik ispatı verisini görür; eğitim/sektör
@@ -103,7 +103,7 @@ Fotoğraf/portre **konmaz** (v1). [[t:holder|Belge sahibinin]] güvence seviyesi
 - Attestation ihracında WUA zorunlu; demo'da `software` kabul (S-9/S-14), pilotta `secure_enclave`.
 - Aynı belge numarası hash'i ile aktif ikinci attestation verilmez (çift kayıt); yeniden belge verme eskisini iptal eder.
 - Kurum eşleşmesi: en az `personal_administrative_number` + `birthdate`; ad eşleşmesi normalize (Türkçe karakter).
-- Didit "In Review" → attestation verilmez, kullanıcıya bekleme; "Declined" → 24 saat sonra yeniden deneme; 3 ret → manuel.
+- Sağlayıcı "In Review" → attestation verilmez, kullanıcıya bekleme; "Declined" → 24 saat sonra yeniden deneme; 3 ret → manuel.
 
 # Gerekçe
 Kişi bir kez doğrulanır, her kuruma aynı attestation'la gider; kurumun OBS'siz çalışması mümkün olur; ARF deseni (PID
@@ -118,18 +118,20 @@ olması ve kimlik numarası taşıyan bir tipin varlığı; ikisi de K4/K2'de s�
   TCKN seçici açıklamalı ve yalnızca yetkili kapsama.
 
 # Sonuçlar
-- Yeni servis `apps/id` (operatör deposu) (`id.tamga.network`): Didit oturumu, karar, webhook, OpenID4VCI ile [[t:issuance]]
-  (authorization code), attestation kaydı, [[t:status-list]]. Didit webhook hedefi **tek**: `https://id.tamga.network/idv/webhook`
+- Yeni servis `apps/id` (operatör deposu) (`id.tamga.network`): sağlayıcı oturumu, karar, webhook, OpenID4VCI ile [[t:issuance]]
+  (authorization code), attestation kaydı, [[t:status-list]]. Sağlayıcının webhook hedefi **tek**: `https://id.tamga.network/idv/webhook`
   (kurum başına değil).
 - Cüzdan: "Kimliğimi doğrula" akışı (in-app browser), kurum dizini (güven listesinden), kurumdan belge alırken attestation
   sunumu (ihraç içinde OpenID4VP).
 - Kurumun belge veren servisi: authorization code + IdentityAttestation isteği + kayıt eşleşmesi; portal öğrenci girişi **kalkar**
   (demo'da staff paneli kalır).
 - Spec/FW güncellemeleri K5; DB-21 bu ADR'nin parçası olur; DB-22 kapanır.
-- Demo: Didit **sandbox** (gerçek kimlik yok, GT1); sunum sahnesi 3 "portal girişi" → "cüzdanda kimliğimi doğrula + Bilgi'yi seç".
+- Demo: sağlayıcının **sandbox**'ı (gerçek kimlik yok, GT1); sunum sahnesi 3 "portal girişi" → "cüzdanda kimliğimi doğrula + kurumu seç".
 
 # Açık Noktalar — kabulle birlikte KARARA BAĞLANDI (2026-09-25)
 1. `personal_administrative_number` (TCKN) attestation'da taşınsın mı? (Öneri: evet, seçici açıklamalı; K2.)
 2. Attestation geçerlilik süresi: 1 yıl mı 2 yıl mı? (Öneri: 2 yıl; belge süresi dolunca daha erken.)
 3. NFC eklendiğinde ayrı tip (`…:IdentityAttestation:1` + `document_chip_verified`) değil, aynı tip — onay.
 4. Demo'da sandbox profili "Ayşe Yılmaz" için TCKN sahte üretilecek; `students.json` buna göre güncellenir.
+
+**Not (2026-11-04):** uzaktan kimlik doğrulama sağlayıcısının ticari adı ve API adresi kamuya açık metinden çıkarıldı ("uzaktan kimlik doğrulama sağlayıcısı", referans adaptör; adres ve ayar adları işletmecinin yapılandırma belgesinde); karar içeriği değişmedi (proje yönetimi).

@@ -4,7 +4,7 @@ title: "Etibar siyahıları"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   Bugünkü (zəncirsiz) mərhələnin etibar lövbəri olan imzalı, versiyalı və hash zəncirli etibar siyahılarının (lotl.jws, tl-{cc}.jws) və saatlıq lövbər jurnalının (anchors.jsonl) normativ formatı, dərc tezliyi, açar intizamı, TDT-first slotları, qeydin həyat dövrü və zəncirlə ekvivalentlik qaydaları. Hər sahə bir SPEC-BC-0001 kontrakt qeydinə uyğunlaşdırılır; oxuma yalnız TrustSource interfeysi vasitəsilə aparılır.
 translation_of: SPEC-TRUST-0001
@@ -200,7 +200,7 @@ Təhvil: yalnız `operator` sahəsi dəyişir.
 | **TL5** | `next_update` keçmiş və ya əlçatmaz siyahı ilə yoxlama **INDETERMINATE** nəticəsi verir; heç vaxt ACCEPTED, heç vaxt REJECTED. |
 | **TL6** | Naməlum `list_format_version` görən yükləyici dayanır və həyəcan siqnalı verir; qəbul etmir. |
 | **TL7** | Milli siyahını yalnız həmin namespace-in imza açarı imzalayır; operatorun səlahiyyətləndirilməsi `operator.on_behalf_of` ilə bəyan edilir. |
-| **TL8** | Tamga PID vermir; `pid_providers[]` siyahı mərhələsi boyunca boşdur. Tamga-nın müvəqqəti şəxsiyyət attestasiyası ([[ADR-0011]]) bir `issuers[]` qeydidir (`category: IDENTITY`, `class: QUALIFIED`) və dövlət PID provayderi təyin edildikdə `successor_id` ilə əvəzlənir. |
+| **TL8** | Tamga PID vermir; `pid_providers[]` siyahı mərhələsi boyunca boşdur. Tamga-nın müvəqqəti şəxsiyyət attestasiyası ([[ADR-0011]]) bir `issuers[]` qeydidir (`category: IDENTITY`, `class: EAA`, `assurance: I2`; [[ADR-0022]]) və dövlət PID provayderi təyin edildikdə `successor_id` ilə əvəzlənir. |
 | **TL9** | Sxem `registered_at` və `status_history.since` daimidir; yenidən kompilyasiya onları dəyişə bilməz (ilk lövbər vaxtı). |
 | **TL10** | Zəncirə keçid siyahı arxivinin replay-i və ekvivalentlik testi uğurla keçilmədən tamamlanmış sayılmır. |
 | **TL11** | Heç bir siyahı, lövbər jurnalı və ya dəyişiklik jurnalı fərdi məlumatlar, rəqəmsal sənəd və ya rəqəmsal sənəd hash-i ehtiva etmir. |
@@ -218,7 +218,8 @@ Təhvil: yalnız `operator` sahəsi dəyişir.
 # Açıq məsələlər
 
 1. `wallet_providers[]` zəncir qarşılığı (ADR namizədi).
-2. ETSI 119 612 XML/XAdES proyeksiya generatoru (`apps/trust-publisher export-etsi`) — dövlət mərhələsindən əvvəl.
+2. ETSI 119 612 XML/XAdES proyeksiya generatoru — **BAĞLANDI (2026-10-29, [[ADR-0066]]):** generator
+   `apps/trust-publisher` daxilindədir və sandbox-da dərcdədir; real şəbəkədə fond, poçt ünvanları və imzaçı ilə açılır.
 3. ≥2 növbələşən sertifikat (S-6) və KMS-də imza açarı — pilotdan əvvəl.
 
 # Əlaqəli sənədlər
