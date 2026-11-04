@@ -31,7 +31,7 @@
     "conformance": "npm run conformance:gen && npm test",
     "docs:sync": "node scripts/docs-sync-root.mjs",
     "docs:dev": "npm run docs:sync && vitepress dev docs",
-    "docs:build": "npm run docs:sync && node scripts/public-text-check.mjs && vitepress build docs",
+    "docs:build": "npm run docs:sync && npm run arf:sync && node scripts/public-text-check.mjs && vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "docs:check": "node scripts/public-text-check.mjs && node scripts/docs-i18n-check.mjs",
     "arf:sync": "node scripts/arf-sync.mjs",
