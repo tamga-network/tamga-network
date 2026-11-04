@@ -7,7 +7,9 @@ how the institution appears **after** registration:
 - the application files (registration data, same rules as the operator's registration tool),
 - the institution's two signing keys and the certificate requests (CSRs) — generated on your own computer,
 - your own setup: domain, DNS confirmation, https addresses, `.well-known` metadata, the lookup endpoint,
-- after joining: your record in the signed trust list, credential types, certificate chain to the network root.
+- after joining: your record in the signed trust list, credential types, certificate chain to the network root,
+- for a state or operator running a Besu node of the network's ledger: the node key, a configuration template, the node
+  declaration and read-only checks of the running node (`tamga-onboard node`).
 
 It **never writes to the network or the trust list** and sends nothing anywhere: its output is local files (applications, CSRs,
 a report) that you send to the operator. Private keys never leave your computer. No personal data is asked for or written —
@@ -19,7 +21,17 @@ can run the steps.
 ## Install
 
 > **Not yet on npm.** The package is built and checked with the others but is not part of the 0.8.1 publication; its first
-> publish comes later. Until then, run it from this repository (`npm run build:packages`, then `node packages/onboard/lib/cli.js`).
+> publish comes later. Until then, run it from source in a clone of this repository — no build step:
+>
+> ```sh
+> git clone https://github.com/tamga-network/tamga-network && cd tamga-network
+> npm install
+> npx tsx packages/onboard/src/cli.ts --help
+> ```
+>
+> Use `npx tsx packages/onboard/src/cli.ts` wherever this page says `tamga-onboard`. The compiled `lib/cli.js` does not run
+> inside the repository (the workspace packages it imports point to their TypeScript sources); it is meant for the published
+> package.
 
 ```sh
 npm install -g @tamga-network/onboard     # or: npx -p @tamga-network/onboard tamga-onboard --help
@@ -51,6 +63,30 @@ tamga-onboard check tamga-onboarding/<slug> --listing
 
 Exit codes: `0` ok · `1` a check or validation failed · `2` usage error. `--json` prints the report as JSON.
 
+## State / operator node (`tamga-onboard node`)
+
+For a state (or another operator) that runs a node of the network's Besu ledger. Nothing is written to the chain, the
+allowlist or the network: votes, allowlist reloads and peer changes stay with the operators.
+
+```sh
+tamga-onboard node init --state TR --role validator --ip 192.0.2.10 --interface 10.0.0.10 --out /var/lib/besu
+tamga-onboard node declare /var/lib/besu --contact noc@example.org        # → tr-validator.json, send to the operator
+# after genesis.json, static-nodes.json and the allowlist are in place and the node runs:
+tamga-onboard node check /var/lib/besu --chain-rpc https://<operator endpoint> --permissions-file permissions_config.rendered.toml
+```
+
+| Command | What it does |
+|---|---|
+| `node init --state <CC> --role validator\|rpc --ip <IP> [--interface <IP>] [--p2p-port 30303] [--rpc-port 8545] [--out <dir>] [--allow-synced]` | Generates the node key (secp256k1) **on the node's own machine** and writes `key` (Besu key file format, owner-only permissions; refused in a folder synced to OneDrive, Dropbox, Google Drive or iCloud unless `--allow-synced`; never overwritten), `key.pub`, `node.json` and a `besu.toml` template. Prints the enode public key and the validator address (the address Governance must hold for the state). The template: permissioned mode (both allowlist flags on), JSON-RPC on 127.0.0.1 only (QBFT, PERM, ADMIN for the node's own use; outside clients get ETH, NET, WEB3 only through `network/rpc-proxy`), P2P listening on one internal interface (`p2p-interface`; `0.0.0.0` / `::` are refused — without it Besu listens on every interface) and advertising `--ip` (`p2p-host`), discovery off, WebSocket and GraphQL off. Genesis is neither generated nor downloaded: it comes from the network's operators and its sha256 is compared out of band with at least two of them. |
+| `node declare [dir] --contact <role address> [--name <name>] [--out <file>]` | Writes the `tamga-node-declaration/1` file (schema `network/permissions/schema/node-declaration.schema.json`) the operator adds to `network/permissions/nodes/`. The contact is the institution's operations mailbox or https page — no personal names (an address that does not look like a role mailbox gets a warning). Without a node folder (key in an HSM): `--public-key --state --role --ip --p2p-port`. A declaration grants no authority. |
+| `node check [dir] [--rpc <url>] [--chain-rpc <url>] [--public-rpc <url>] [--permissions-file <toml>] [--config <besu.toml>] [--declaration <json>] [--client-cert <pem> --client-key <pem>] [--allow-private] [--json] [--report <file>]` | Read-only checks of your own node (only read-only JSON-RPC methods are ever called): reachable (N1), in sync and same genesis as a reference endpoint (N2–N3), peers (N4), running key = `node.json` / declaration (N5), node and account allowlists = the rendered file of `trust:chain-permissions render` and the reference endpoint (N6), in the validator set (N7), the external endpoint refuses `admin_`, `perm_`, `qbft_`, `debug_`, `txpool_` and `eth_accounts` but answers `eth_blockNumber` / `net_version` (N8), `besu.toml` interfaces and permissioning flags (N9), clock against the latest block (N10). |
+
+Addresses are only the ones you type; nothing is read from a file except the local RPC port in `besu.toml`. Loopback is
+allowed by default (you check your own node, whose admin endpoint listens on 127.0.0.1 by design); other local / private
+networks — RFC 1918, link-local (cloud metadata), CGNAT, ULA — need `--allow-private`, also after name resolution; plain http
+only to loopback / private addresses; redirects are not followed. Declaration matching, block proposal, voting and account-permission checks
+need operator rights and stay with the operator.
+
 ### Answers file (`init --from`)
 
 ```json
@@ -80,12 +116,16 @@ policy per use).
 { "mcpServers": { "tamga-onboard": { "command": "npx", "args": ["-y", "-p", "@tamga-network/onboard", "tamga-onboard", "mcp"] } } }
 ```
 
+Before the first publish, from source: `"command": "npx", "args": ["tsx", "<repo>/packages/onboard/src/cli.ts", "mcp", "--root", "<folder>"]`.
+
 Tools: `create_application`, `validate_application`, `generate_keys_and_csr`, `check_installation`, `check_listing`,
-`sandbox_info`. File access is limited to the server's root folder (`--root`, default the working directory), also after
+`sandbox_info`, and for a node `generate_node_key`, `create_node_declaration`, `check_node`. File access is limited to the server's root folder (`--root`, default the working directory), also after
 symbolic links and junctions are resolved; private key content is never returned (only paths and public-key digests); a
 passphrase is given only as the name of an environment variable starting with `TAMGA_`; root pins cannot be overridden and
 local network addresses are never read; request addresses outside the institution's domain are flagged; check results mark
-text read from the network as untrusted data.
+text read from the network as untrusted data. The node key is never returned and is never written to a synced folder over
+MCP; `check_node` reaches loopback / private addresses only if their origin is listed in the server's
+`TAMGA_ONBOARD_PRIVATE_NODES` environment variable (comma-separated, e.g. `http://127.0.0.1:8545`), public ones only over https.
 
 ## Security notes
 
@@ -100,7 +140,17 @@ Kurumun bilgi işlem ekibi için katılım aracı: başvuru dosyasını hazırla
 **kendi bilgisayarında** üretip operatöre gidecek CSR'ları yazar, kurulumu (alan adı, DNS teyidi, meta veri, sorgu ucu) ve
 katıldıktan sonra güven listesindeki görünümü denetler. Ağa ve listeye yazmaz; kişi bilgisi sormaz ve yazmaz; özel anahtar
 bilgisayardan çıkmaz. Sıra: `init` → `keys` → `check --report` → dosyaları operatöre gönder → kayıttan sonra `check --listing`.
-Aynı işlemler `tamga-onboard mcp` ile yerel MCP sunucusu olarak da kullanılır. Sandbox denemesi için başvuru gerekmez:
-`tamga-onboard sandbox`. Paket henüz npm'de değildir (ilk yayın sonra); o zamana dek bu depodan çalıştırılır.
+Aynı işlemler `tamga-onboard mcp` ile yerel MCP sunucusu olarak da kullanılır.
+
+**Devlet / işletmeci düğümü** (`tamga-onboard node`): `node init` düğüm anahtarını (secp256k1) düğümün kendi makinesinde üretir
+(yalnız sahibine okunur, bulut eşitleme klasörüne yazılmaz, üzerine yazılmaz), enode açık anahtarını ve validator adresini
+gösterir, `besu.toml` şablonunu yazar (izinli kip; RPC yalnız 127.0.0.1; P2P yalnız belirli iç arayüzde — 0.0.0.0 değil;
+keşif kapalı). Genesis araçla üretilmez: işletmecilerden alınır, özeti en az iki işletmeciyle bant dışı karşılaştırılır.
+`node declare` operatöre gidecek `tamga-node-declaration/1` bildirimini yazar (iletişim kurumun görev adresi; kişi adı yok).
+`node check` çalışan düğümü yalnız okuyarak denetler: senkron ve aynı genesis, eşler, anahtar, izin listesi (çizimle ve
+karşılaştırma ucuyla), validator kümesi, dış uçta yalnız eth/net/web3, yapılandırma, saat. Zincire, izin listesine, ağa yazmaz;
+oy ve izin yükleme işletmecilerde kalır. MCP araçları: `generate_node_key`, `create_node_declaration`, `check_node`. Sandbox denemesi için başvuru gerekmez:
+`tamga-onboard sandbox`. Paket henüz npm'de değildir (ilk yayın sonra); o zamana dek deponun bir kopyasında derlemeden çalıştırılır:
+`npm install`, sonra `tamga-onboard` yerine `npx tsx packages/onboard/src/cli.ts` (derlenmiş `lib/cli.js` depo içinde çalışmaz).
 
 Docs: https://docs.tamga.network · Source: https://github.com/tamga-network/tamga-network (packages/onboard) · Apache-2.0

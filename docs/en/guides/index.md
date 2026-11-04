@@ -4,7 +4,7 @@ title: "Get started"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-05
 summary: >
   An introduction for developers: the four paths in Tamga (verifier, issuer, wallet developer, network/node operator),
   which package to install, which addresses to use, how to set up a local development environment and what is ready today.
@@ -40,11 +40,13 @@ the general overview is at [tamga.network](https://tamga.network/en/learn).
 | Add "Sign in with Tamga" to your website | [[GUIDE-0001]] | `@tamga-network/verifier` (+ `/web`) |
 | Verify credentials on your server (hiring, campus, age, ticket gate) | [[GUIDE-0002]] | `@tamga-network/verifier`, `@tamga-network/trust` |
 | Register your institution as an issuer | [[GUIDE-0007]] | — |
+| The IT side of joining: application file, keys, setup check | [[GUIDE-0014]] | `tamga-onboard` |
 | Register your site as a verifier | [[GUIDE-0008]] | — |
 | Issue your institution's credentials to people's wallets | [[GUIDE-0003]] | `@tamga-network/issuer` (+ `/client`) |
 | Build a Tamga-compatible wallet | [[GUIDE-0005]], checklist [[GUIDE-0010]] | `@tamga-network/wallet-core` |
 | Read trust lists, and later run a network node | [[GUIDE-0006]] | `@tamga-network/trust` |
 | Connect your country's trust list to the network | [[GUIDE-0011]] | `apps/trust-publisher` |
+| Run a node on the shared ledger later (preparation) | [[GUIDE-0015]] | `network/` |
 | Show that your application follows the rules | [[GUIDE-0009]] | `conformance/` |
 | Test end to end without touching the real network (test network) | [[GUIDE-0013]] | `sandbox.tamga.network` |
 | See working, tested code for all of the above | [[GUIDE-0004]] | — |
@@ -106,7 +108,7 @@ the stable 1.0.0 comes when everything is ready. In test releases the API may ch
 | Wallets | the network runs no wallet; it lists the wallet providers that follow its rules ([[ADR-0042]]); the first wallet's provider, Tamga Wallet's `TAMGA-WP-1`, is `ACTIVE` in the production and sandbox lists |
 | Privacy | a pseudonym per site ([[ADR-0031]]); age verification with a zero-knowledge proof (ZK) — the verifier side is live; the wallet side is wired through `@tamga-network/zk`, the Android native library is ready, iOS is pending ([[ADR-0032]]) |
 | Sandbox | live: a single test network with the same rules as the real network, open to everyone; real identity verification with daily/monthly caps ([[GUIDE-0013]]) |
-| Ledger (Besu/QBFT) | designed, contracts written; opens once there are at least two independent validator operators ([[GUIDE-0006]]) |
+| Ledger (Besu/QBFT) | designed, contracts written; opens once there are at least two independent validator operators ([[GUIDE-0006]], preparation: [[GUIDE-0015]]) |
 
 ## Rules for every integration
 

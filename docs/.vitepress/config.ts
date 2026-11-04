@@ -260,11 +260,11 @@ function sidebars(l: Lang): DefaultTheme.Sidebar {
 
   const guides: DefaultTheme.SidebarItem[] = [
     { text: t.getStarted, items: [doc("GUIDE-0000", t.overview), doc("GUIDE-0004")] },
-    { text: t.joining, items: [doc("GUIDE-0007"), doc("GUIDE-0008"), doc("GUIDE-0009"), doc("GUIDE-0013")] },
+    { text: t.joining, items: [doc("GUIDE-0007"), doc("GUIDE-0014"), doc("GUIDE-0008"), doc("GUIDE-0009"), doc("GUIDE-0013")] },
     { text: t.verify, items: [doc("GUIDE-0001"), doc("GUIDE-0002")] },
     { text: t.issue, items: [doc("GUIDE-0003")] },
     { text: t.wallet, items: [doc("GUIDE-0005"), doc("GUIDE-0010")] },
-    { text: t.trust, items: [doc("GUIDE-0006"), doc("GUIDE-0011")] },
+    { text: t.trust, items: [doc("GUIDE-0006"), doc("GUIDE-0011"), doc("GUIDE-0015")] },
     { text: t.help, items: [doc("GUIDE-0012")] },
   ];
   const concepts: DefaultTheme.SidebarItem[] = [

@@ -4,7 +4,7 @@ title: "Read trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-05
 summary: >
   Using Tamga's trust anchor: reading the signed trust lists with TrustSource, pinning the root fingerprint, freshness and
   three-valued answers; where registration is covered; and, once the ledger stage (Besu/QBFT) opens, configuration for node and
@@ -129,8 +129,8 @@ off the ledger ([[ADR-0008]]).
 | Validator | proposes and signs blocks | an independent institution, written acceptance, key in an HSM |
 | Full node | validates and reads the chain; does not sign | an entry in the permission list |
 
-The setup steps (genesis, QBFT settings, permission list, node definitions) and the network topology are published when
-the ledger stage opens. During the switch, the list archive is replayed into contract calls; the switch is not
+The setup steps (permission list, node declaration, validator voting, RPC protection) are in [[GUIDE-0015]] today, as
+preparation; the genesis and the network topology are published when the ledger stage opens. During the switch, the list archive is replayed into contract calls; the switch is not
 complete until both implementations pass the same conformance vectors.
 
 ## Rules

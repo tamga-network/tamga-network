@@ -4,7 +4,7 @@ title: "Register as a verifier"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-23
+last_updated: 2026-11-05
 summary: >
   Registering a site or service as a verifier in the Tamga trust list: domain name and access certificate, the EU common
   registration data, intended uses (purpose, fields, privacy policy), the registration certificate, intermediaries and
@@ -22,6 +22,7 @@ event gates).
 - Before you send your first presentation request. Every field an unregistered verifier asks for is shown to the person with a
   separate "outside the registered scope" warning, and a pseudonym request is not accepted at all.
 - Next: [[GUIDE-0001]] (sign in with Tamga) or [[GUIDE-0002]] (verifying on the server).
+- For the application file, the access key and the setup check, use the onboarding tool: [[GUIDE-0014]].
 - If you want to issue credentials, read [[GUIDE-0007]] instead.
 
 ## How it works

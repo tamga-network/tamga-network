@@ -4,7 +4,7 @@ title: "Doğrulayıcı olarak kayıt olmak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-23
+last_updated: 2026-11-05
 summary: >
   Bir sitenin ya da hizmetin doğrulayıcı olarak Tamga güven listesine kaydı: alan adı ve erişim sertifikası, AB ortak kayıt
   verileri, kullanım kapsamları (amaç, alanlar, gizlilik politikası), kayıt sertifikası, aracı doğrulayıcılar ve takma ad.
@@ -18,6 +18,7 @@ Bu rehber, kişilerin cüzdanından belge isteyecek siteler ve hizmetler (mağaz
 - İlk sunum isteğinizi göndermeden önce. Kayıtsız bir doğrulayıcının istediği her alan, kişiye ayrı bir uyarıyla "kayıtlı
   kapsamın dışında" diye gösterilir; takma ad isteği hiç kabul edilmez.
 - Sonra: [[GUIDE-0001]] (Tamga ile giriş) ya da [[GUIDE-0002]] (sunucuda doğrulama).
+- Başvuru dosyası, erişim anahtarı ve kurulum denetimi için katılım aracı: [[GUIDE-0014]].
 - Belge vermek istiyorsanız bunun yerine [[GUIDE-0007]].
 
 ## Nasıl çalışır?

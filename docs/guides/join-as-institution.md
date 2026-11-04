@@ -4,7 +4,7 @@ title: "Kurum olarak ağa katılmak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-20
+last_updated: 2026-11-05
 summary: >
   Bir kurumun belge veren olarak Tamga Network'e katılması, ilk temastan canlıya adım adım: sandbox denemesi, başvuru
   dosyası ve AB ortak kayıt verileri (kontrol listesi), anahtarlar ve sertifika isteği (CSR), kurumun sorgu ucu, güven
@@ -19,6 +19,7 @@ ve onların teknik ekipleri içindir. Örnekler bir üniversitenin öğrenci bel
 **Ne zaman okunur:**
 - Kurumunuz ilk kez belge verecekse, başvurudan önce.
 - Önce: [Belge verme](/concepts/issuance) kavramı. Sonra: [[GUIDE-0003]] (belgeyi teknik olarak vermek).
+- Bilgi işlem ekibiniz başvuru dosyasını, anahtarları ve kurulum denetimini `tamga-onboard` aracıyla yapar: [[GUIDE-0014]].
 - Doğrulayıcı olarak katılıyorsanız (belge isteyen site, otel, işveren) bunun yerine [[GUIDE-0008]].
 
 ## Nasıl çalışır?

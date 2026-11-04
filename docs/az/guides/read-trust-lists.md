@@ -4,7 +4,7 @@ title: "Etibar siyahılarının oxunması"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-05
 summary: >
   Tamga-nın etibar lövbərindən istifadə: imzalı etibar siyahılarının TrustSource ilə oxunması, kök barmaq izinin sabitlənməsi, təzəlik və üçqiymətli cavablar; qeydiyyatın harada izah edildiyi; zəncir mərhələsi (Besu/QBFT) açıldıqda qovşaq və validator operatorları üçün konfiqurasiya, kontraktlar və keçidin tətbiqinizə təsiri.
 translation_of: GUIDE-0006
@@ -123,8 +123,8 @@ xülasəsi **yazılmır**; zəncir yalnız etibar qeydlərini daşıyır. Ləğv
 | Validator | blok təklif edir və imzalayır | müstəqil qurum, yazılı razılıq, açar HSM-də |
 | Tam qovşaq | zənciri yoxlayır, oxuyur; imzalamır | icazə siyahısında qeyd |
 
-Quraşdırma addımları (genesis, QBFT parametrləri, icazə siyahısı, qovşaq təsvirləri) və şəbəkə topologiyası zəncir mərhələsi açıldıqda
-dərc olunur. Keçid zamanı siyahı arxivi kontrakt çağırışlarına yenidən tətbiq edilir; iki tətbiq eyni uyğunluq vektorlarından keçmədən
+Quraşdırma addımları (icazə siyahısı, qovşaq bəyannaməsi, validator səsverməsi, RPC qorunması) bu gün hazırlıq kimi
+[[GUIDE-0015]]-dədir; genesis və şəbəkə topologiyası zəncir mərhələsi açıldıqda dərc olunur. Keçid zamanı siyahı arxivi kontrakt çağırışlarına yenidən tətbiq edilir; iki tətbiq eyni uyğunluq vektorlarından keçmədən
 keçid tamamlanmış sayılmır.
 
 ## Qaydalar

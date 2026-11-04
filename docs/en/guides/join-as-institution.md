@@ -4,7 +4,7 @@ title: "Join the network as an institution"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-20
+last_updated: 2026-11-05
 summary: >
   How an institution joins Tamga Network as an issuer, from first contact to live, step by step: the sandbox trial, the
   application file and the EU common registration data (checklist), keys and the certificate signing request (CSR), the
@@ -23,6 +23,7 @@ diplomas.
 **When to read it:**
 - Before you apply, if your institution is about to issue credentials for the first time.
 - First: the [Issuance](/concepts/issuance) concept. Next: [[GUIDE-0003]] (issuing credentials technically).
+- Your IT team prepares the application file, the keys and the setup check with the `tamga-onboard` tool: [[GUIDE-0014]].
 - If you are joining as a verifier (a site, hotel or employer asking for credentials), read [[GUIDE-0008]] instead.
 
 ## How it works

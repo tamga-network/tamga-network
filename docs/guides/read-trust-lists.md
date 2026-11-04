@@ -4,7 +4,7 @@ title: "Güven listelerini okumak"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-05
 summary: >
   Tamga'nın güven çapasını kullanmak: imzalı güven listelerini TrustSource ile okumak, kök parmak izini sabitlemek, tazelik
   ve üç değerli cevaplar; kaydın nerede anlatıldığı; zincir aşaması (Besu/QBFT) açıldığında düğüm ve validator operatörleri için
@@ -123,8 +123,8 @@ Yapılandırmanıza yeni bir kaynak adresi ve kontrat adresleri eklenir.
 | Validator | blok önerir ve imzalar | bağımsız kurum, yazılı kabul, anahtar HSM'de |
 | Tam düğüm | zinciri doğrular, okur; imzalamaz | izin listesinde kayıt |
 
-Kurulum adımları (genesis, QBFT ayarları, izin listesi, düğüm tanımları) ve ağ topolojisi zincir aşaması açılınca
-yayımlanır. Geçişte liste arşivi kontrat çağrılarına yeniden oynatılır; iki uygulama aynı uyum vektörlerini geçmeden
+Kurulum adımları (izin listesi, düğüm bildirimi, validator oylaması, RPC koruması) bugün hazırlık olarak
+[[GUIDE-0015]]'te; genesis ve ağ topolojisi zincir aşaması açılınca yayımlanır. Geçişte liste arşivi kontrat çağrılarına yeniden oynatılır; iki uygulama aynı uyum vektörlerini geçmeden
 geçiş tamamlanmış sayılmaz.
 
 ## Kurallar

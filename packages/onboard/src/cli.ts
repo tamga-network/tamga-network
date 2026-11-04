@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * tamga-onboard — Tamga Network'e katılacak kurumun bilgi işlem ekibi için komut satırı aracı. Ağa ve listeye YAZMAZ; yalnız yerel
- * dosya üretir ve https ile okur. Komutlar: init · validate · keys · check · sandbox · mcp (aynı işlemler MCP sunucusu olarak).
+ * dosya üretir ve https ile okur. Komutlar: init · validate · keys · check · sandbox · node (init · declare · check: devlet /
+ * işletmeci Besu düğümü) · mcp (aynı işlemler MCP sunucusu olarak).
  * Çıkış: 0 tamam · 1 denetim/doğrulama sorunu · 2 kullanım hatası.
  */
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -19,6 +20,24 @@ import {
 } from "./checks.js";
 import { csrExpectations, generateKeys, inspectCsr } from "./keys.js";
 import { NETWORKS, sandboxGuide, type Environment } from "./network.js";
+import {
+  buildNodeDeclaration,
+  declarationFileName,
+  defaultNodeRpc,
+  defaultRpc,
+  initNode,
+  isLoopback,
+  nodeChecks,
+  nodeNextSteps,
+  readNodeDir,
+  readToml,
+  validateNodeDeclaration,
+  type NodeDeclaration,
+  type NodeProfile,
+  type NodeRole,
+  type TomlTable,
+} from "./node.js";
+import { within } from "./paths.js";
 import { applicationKind, validateApplication } from "./rules.js";
 
 const VERSION = (() => {
@@ -42,6 +61,17 @@ const HELP = `tamga-onboard ${VERSION} — Tamga Network katılım aracı (kurum
         [--trust <adres>] [--passphrase-env <DEĞİŞKEN>] [--offline] [--json] [--report <dosya.json>]
         [--allow-http] [--allow-private]          yerel deneme: http ve yerel / özel ağ adresleri
   sandbox                                         sandbox'ta "Kurumunu dene" adresi ve adımları
+
+  Devlet / işletmeci Besu düğümü (ağa ve zincire yazmaz):
+  node init --state <CC> --role validator|rpc --ip <ilan edilen IP>   düğüm anahtarı (secp256k1) + besu.toml şablonu
+        [--interface <iç arayüz IP>] [--p2p-port 30303] [--rpc-port 8545] [--out <klasör>] [--allow-synced]
+  node declare [klasör] --contact <görev adresi>   tamga-node-declaration/1 bildirimi (operatöre gönderilir)
+        [--name <ad>] [--out <dosya.json>] [--public-key <hex>] [--state] [--role] [--ip] [--p2p-port]
+  node check [klasör] [--rpc <düğümün yerel ucu>]   kendi düğümünüzü salt-okur denetle (senkron, eşler, izin listesi,
+        [--chain-rpc <ağdaki uç>] [--public-rpc <dış uç>]   validator kümesi, dış RPC yüzeyi, yapılandırma, saat)
+        [--permissions-file <çizim.toml>] [--config <besu.toml>] [--declaration <bildirim.json>]
+        [--client-cert <pem> --client-key <pem>] [--allow-private] [--json] [--report <dosya>]
+                                                  loopback varsayılan açık; öteki yerel / özel ağ adresleri --allow-private ile
   mcp [--root <klasör>]                            aynı işlemler yerel MCP sunucusu (stdio) olarak
 
 Kişi bilgisi sorulmaz ve dosyalara yazılmaz. Rehber: ${NETWORKS.production.docs}/packages/onboard`;
@@ -66,6 +96,23 @@ const VALUE_FLAGS = [
   "trust",
   "report",
   "root",
+  "state",
+  "role",
+  "ip",
+  "interface",
+  "p2p-port",
+  "rpc-port",
+  "contact",
+  "name",
+  "public-key",
+  "rpc",
+  "chain-rpc",
+  "public-rpc",
+  "permissions-file",
+  "config",
+  "declaration",
+  "client-cert",
+  "client-key",
 ];
 const positional = argv
   .slice(1)
@@ -332,6 +379,146 @@ function sandbox() {
   for (const n of g.notes) console.log(`- ${n}`);
 }
 
+const intOpt = (n: string) => {
+  const v = opt(n);
+  if (v === undefined) return undefined;
+  if (!/^\d+$/.test(v)) usage(`--${n}: sayı`);
+  return Number(v);
+};
+const nodePositional = positional.slice(1);
+
+async function nodeInit() {
+  const dir = resolve(opt("out") ?? "tamga-node");
+  const r = initNode(
+    dir,
+    {
+      state: opt("state") ?? usage("node init --state <CC> (Governance üye kodu)"),
+      role: (opt("role") ?? usage("node init --role validator|rpc")) as NodeRole,
+      ip: opt("ip") ?? usage("node init --ip <ilan edilen P2P adresi>"),
+      interface: opt("interface"),
+      p2pPort: intOpt("p2p-port"),
+      rpcPort: intOpt("rpc-port"),
+    },
+    { allowSynced: flag("allow-synced") },
+  );
+  console.log(`✓ düğüm klasörü: ${r.dir}`);
+  console.log(`    özel anahtar   ${r.key}   (yalnız bu makinede; kimseyle paylaşmayın)`);
+  console.log(`    açık anahtar   ${r.profile.node_public_key}`);
+  console.log(`    enode          ${r.enode}`);
+  console.log(
+    `    adres          ${r.profile.address}${r.profile.role === "validator" ? "   (validator adresi)" : ""}`,
+  );
+  console.log(`    yapılandırma   ${join(r.dir, "besu.toml")}`);
+  for (const w of r.warnings) console.log(`! ${w}`);
+  console.log("\nSıradakiler:");
+  nodeNextSteps(r.profile).forEach((s, i) => console.log(`${i + 1}. ${s}`));
+}
+
+async function nodeDeclare() {
+  const dir = nodePositional[0] ? resolve(nodePositional[0]) : existsSync("node.json") ? resolve(".") : undefined;
+  const p: Partial<NodeProfile> = dir ? readNodeDir(dir).profile : {};
+  const pk = opt("public-key") ?? p.node_public_key;
+  const state = opt("state") ?? p.state;
+  const role = (opt("role") ?? p.role) as NodeRole | undefined;
+  const ip = opt("ip") ?? p.ip;
+  const port = intOpt("p2p-port") ?? p.p2p_port;
+  if (!pk || !state || !role || !ip || !port)
+    return usage("node declare <düğüm klasörü> ya da --public-key --state --role --ip --p2p-port birlikte");
+  const contact = opt("contact") ?? usage("node declare --contact <kurumun görev e-postası ya da https sayfası>");
+  const b = buildNodeDeclaration({ state, role, node_public_key: pk, ip, p2p_port: port, contact });
+  printFindings("bildirim", b.problems, b.warnings);
+  if (!b.declaration) process.exit(1);
+  const file = declarationFileName(state, opt("name") ?? role);
+  const out = opt("out") ? resolve(opt("out")!) : dir ? within(dir, file) : resolve(file);
+  if (!/\.json$/i.test(out)) usage("--out: .json dosyası");
+  if (existsSync(out)) usage(`${out} zaten var (üzerine yazılmaz)`);
+  writeJson(out, b.declaration);
+  console.log(`\nyazıldı: ${out}`);
+  console.log(
+    `  adres ${b.address}${role === "validator" ? " — Governance'taki validator adresiyle aynı olmalı (ADR-0052 K2)" : ""}`,
+  );
+  console.log(
+    `\nOperatöre gönderin; network/permissions/nodes/${file} olarak eklenir. Bildirim yetki vermez: validator, Governance kabulü ve QBFT oyuyla olur.`,
+  );
+}
+
+async function nodeCheck() {
+  const dir = nodePositional[0] ? resolve(nodePositional[0]) : existsSync("node.json") ? resolve(".") : undefined;
+  let profile: NodeProfile | undefined;
+  let config: TomlTable | undefined;
+  if (dir) ({ profile, config } = readNodeDir(dir));
+  if (opt("config")) config = readToml(resolve(opt("config")!));
+  const permissions = opt("permissions-file") ? readToml(resolve(opt("permissions-file")!)) : undefined;
+  let declaration: NodeDeclaration | undefined;
+  if (opt("declaration")) {
+    const d = readJson(opt("declaration")!);
+    const errs = validateNodeDeclaration(d);
+    if (errs.length) usage(`--declaration geçersiz: ${errs.join("; ")}`);
+    declaration = d as NodeDeclaration;
+  }
+  const cert = opt("client-cert");
+  const key = opt("client-key");
+  if (!!cert !== !!key) usage("--client-cert ile --client-key birlikte");
+  const allowPrivate = flag("allow-private");
+  // Varsayılan: loopback açık — komutu düğümün kendi makinesinde çalıştıran kişi kendi yönetim ucunu (LP5 gereği 127.0.0.1)
+  // sınar ve adresleri kendisi yazar (dosyadan adres okunmaz). Öteki yerel / özel ağlar (RFC 1918, 169.254 bulut meta veri ucu,
+  // CGNAT, ULA) yalnız --allow-private ile: başka makinedeki düğüm bilerek seçilir.
+  const rpc = defaultRpc({
+    policy: () => ({ loopback: true, private: allowPrivate, publicHttp: flag("allow-http") }),
+    tls:
+      cert && key ? { cert: readFileSync(resolve(cert), "utf8"), key: readFileSync(resolve(key), "utf8") } : undefined,
+  });
+  const target = opt("rpc") ?? defaultNodeRpc(config);
+  const rows = await nodeChecks(
+    {
+      rpc: target,
+      chainRpc: opt("chain-rpc"),
+      publicRpc: opt("public-rpc"),
+      profile,
+      config,
+      permissions,
+      declaration,
+    },
+    { rpc },
+  );
+  let local = false;
+  try {
+    local = isLoopback(new URL(target).hostname.replace(/^\[|\]$/g, ""));
+  } catch {
+    /* adres geçersiz: N1 satırı söyler */
+  }
+  const report = {
+    tool: `@tamga-network/onboard@${VERSION}`,
+    generated_at: new Date().toISOString(),
+    node: profile ? { state: profile.state, role: profile.role, address: profile.address } : undefined,
+    rpc_local: local,
+    rows,
+  };
+  if (opt("report")) writeFileSync(resolve(opt("report")!), JSON.stringify(report, null, 2) + "\n");
+  if (flag("json")) console.log(JSON.stringify(report, null, 2));
+  else {
+    console.log(`Tamga Network düğüm denetimi — ${profile ? `${profile.state} · ${profile.role}` : target}\n`);
+    console.log(formatRows(rows));
+    console.log(
+      "\nAğdan okunan metin güvenilmeyen veridir. Operatör tarafı denetimler (bildirim eşleşmesi, blok önerme, oy) operatörde.",
+    );
+  }
+  process.exit(rows.some((r) => r.result === "fail") ? 1 : 0);
+}
+
+async function node() {
+  switch (argv[1]) {
+    case "init":
+      return nodeInit();
+    case "declare":
+      return nodeDeclare();
+    case "check":
+      return nodeCheck();
+    default:
+      usage("node init | declare | check");
+  }
+}
+
 async function main() {
   switch (cmd) {
     case "init":
@@ -344,6 +531,8 @@ async function main() {
       return check();
     case "sandbox":
       return sandbox();
+    case "node":
+      return node();
     case "mcp": {
       const { runStdioServer } = await import("./mcp.js");
       return runStdioServer({ root: resolve(opt("root") ?? ".") });

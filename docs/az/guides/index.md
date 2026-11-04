@@ -4,7 +4,7 @@ title: "Başlanğıc"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-05
 summary: >
   Tərtibatçılar üçün giriş: Tamga-da dörd yol (yoxlayan tərəf, sənədi verən qurum, rəqəmsal cüzdan tərtibatçısı, şəbəkə/qovşaq operatoru), hansı paketi quraşdıracağınız, hansı ünvanlardan istifadə edəcəyiniz, lokal tərtibat mühitinin qurulması və bu gün nəyin hazır olduğu.
 translation_of: GUIDE-0000
@@ -39,11 +39,13 @@ Bu sayt **tərtibatçılar** üçündür. Rollar, qaydalar və iştirak şərtl�
 | Veb-saytınıza "Tamga ilə daxil ol" əlavə etmək | [[GUIDE-0001]] | `@tamga-network/verifier` (+ `/web`) |
 | Serverinizdə rəqəmsal sənədləri yoxlamaq (işə qəbul, kampus, yaş, bilet qapısı) | [[GUIDE-0002]] | `@tamga-network/verifier`, `@tamga-network/trust` |
 | Qurumunuzu sənədi verən qurum kimi şəbəkədə qeydiyyatdan keçirmək | [[GUIDE-0007]] | — |
+| Qoşulmanın İT tərəfi: müraciət faylı, açarlar, quraşdırmanın yoxlanılması | [[GUIDE-0014]] | `tamga-onboard` |
 | Saytınızı yoxlayan tərəf kimi qeydiyyatdan keçirmək | [[GUIDE-0008]] | — |
 | Qurumunuzun rəqəmsal sənədlərini şəxslərin rəqəmsal cüzdanına vermək | [[GUIDE-0003]] | `@tamga-network/issuer` (+ `/client`) |
 | Tamga ilə uyğun rəqəmsal cüzdan hazırlamaq | [[GUIDE-0005]], yoxlama siyahısı [[GUIDE-0010]] | `@tamga-network/wallet-core` |
 | Etibar siyahılarını oxumaq, gələcəkdə şəbəkə qovşağı işlətmək | [[GUIDE-0006]] | `@tamga-network/trust` |
 | Ölkənizin etibar siyahısını şəbəkəyə qoşmaq | [[GUIDE-0011]] | `apps/trust-publisher` |
+| Gələcəkdə ortaq reyestrdə qovşaq işlətmək (hazırlıq) | [[GUIDE-0015]] | `network/` |
 | Tətbiqinizin qaydalara uyğun olduğunu göstərmək | [[GUIDE-0009]] | `conformance/` |
 | Real şəbəkəyə toxunmadan başdan-başa sınamaq (test şəbəkəsi) | [[GUIDE-0013]] | `sandbox.tamga.network` |
 | Hamısının işləyən, testli kodunu görmək | [[GUIDE-0004]] | — |
@@ -104,7 +106,7 @@ hazır olduqda gələcək. Sınaq versiyasında interfeys dəyişə bilər. Hər
 | Rəqəmsal cüzdanlar | şəbəkə rəqəmsal cüzdan işlətmir, qaydalara uyğun cüzdan provayderlərini siyahıya alır ([[ADR-0042]]); ilk rəqəmsal cüzdan — Tamga Wallet-ın provayderi (`TAMGA-WP-1`) real və sandbox siyahılarında `ACTIVE` |
 | Məxfilik | hər sayt üçün psevdonim ([[ADR-0031]]); sıfır biliyə əsaslanan sübutla (ZK) yaşın yoxlanılması — yoxlayan tərəf hissəsi istifadədədir; rəqəmsal cüzdan hissəsi `@tamga-network/zk` ilə qoşulub, Android lokal kitabxanası hazırdır, iOS gözləmədədir ([[ADR-0032]]) |
 | Sandbox | istifadədədir: real şəbəkə ilə eyni qaydalara malik vahid test şəbəkəsi, hamı üçün açıqdır; real şəxsiyyət yoxlaması gündəlik/aylıq limitlə məhdudlaşır ([[GUIDE-0013]]) |
-| Zəncir (Besu/QBFT) | layihələndirilib, kontraktlar yazılıb; ən azı iki müstəqil validator operatoru ilə işə salınır ([[GUIDE-0006]]) |
+| Zəncir (Besu/QBFT) | layihələndirilib, kontraktlar yazılıb; ən azı iki müstəqil validator operatoru ilə işə salınır ([[GUIDE-0006]], hazırlıq: [[GUIDE-0015]]) |
 
 ## Hər inteqrasiyada ümumi qaydalar
 

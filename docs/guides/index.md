@@ -4,7 +4,7 @@ title: "Başlarken"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-05
 summary: >
   Geliştiriciler için giriş: Tamga'da dört yol (doğrulayıcı, belge veren, cüzdan geliştiricisi, ağ/düğüm operatörü),
   hangi paketi kuracağınız, hangi adresleri kullanacağınız, yerel geliştirme ortamının kurulumu ve bugün neyin hazır olduğu.
@@ -38,11 +38,13 @@ genel anlatım [tamga.network](https://tamga.network/tr/learn)'tedir.
 | Web sitenize "Tamga ile giriş yap" eklemek | [[GUIDE-0001]] | `@tamga-network/verifier` (+ `/web`) |
 | Sunucunuzda belge doğrulamak (işe alım, kampüs, yaş, bilet kapısı) | [[GUIDE-0002]] | `@tamga-network/verifier`, `@tamga-network/trust` |
 | Kurumunuzu belge veren olarak ağa kaydettirmek | [[GUIDE-0007]] | — |
+| Katılımın bilgi işlem tarafı: başvuru dosyası, anahtarlar, kurulum denetimi | [[GUIDE-0014]] | `tamga-onboard` |
 | Sitenizi doğrulayıcı olarak kaydettirmek | [[GUIDE-0008]] | — |
 | Kurumunuzun belgelerini kişilerin cüzdanına vermek | [[GUIDE-0003]] | `@tamga-network/issuer` (+ `/client`) |
 | Tamga uyumlu bir cüzdan geliştirmek | [[GUIDE-0005]], kontrol listesi [[GUIDE-0010]] | `@tamga-network/wallet-core` |
 | Güven listelerini okumak, ileride ağ düğümü çalıştırmak | [[GUIDE-0006]] | `@tamga-network/trust` |
 | Ülkenizin güven listesini ağa bağlamak | [[GUIDE-0011]] | `apps/trust-publisher` |
+| İleride ortak defterde düğüm işletmek (hazırlık) | [[GUIDE-0015]] | `network/` |
 | Uygulamanızın kurallara uyduğunu göstermek | [[GUIDE-0009]] | `conformance/` |
 | Gerçek ağa dokunmadan uçtan uca denemek (test ağı) | [[GUIDE-0013]] | `sandbox.tamga.network` |
 | Hepsinin çalışan, testli kodunu görmek | [[GUIDE-0004]] | — |
@@ -103,7 +105,7 @@ hazır olunca gelir. Deneme sürümünde arayüz değişebilir. Her sürüm bu d
 | Cüzdanlar | ağ cüzdan işletmez, kurallara uyan cüzdan sağlayıcılarını listeler ([[ADR-0042]]); ilk cüzdan Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) gerçek ve sandbox listelerinde `ACTIVE` |
 | Gizlilik | site başına takma ad ([[ADR-0031]]); sıfır bilgi ispatıyla (ZK) yaş doğrulama — doğrulayıcı tarafı yayında; cüzdan tarafı `@tamga-network/zk` ile bağlandı, Android yerel kütüphanesi hazır, iOS bekliyor ([[ADR-0032]]) |
 | Sandbox | yayında: gerçek ağla aynı kurallarla tek test ağı, herkese açık; gerçek kimlik doğrulaması günlük/aylık tavanlı ([[GUIDE-0013]]) |
-| Zincir (Besu/QBFT) | tasarlandı, kontratlar yazıldı; en az iki bağımsız validator operatörüyle açılır ([[GUIDE-0006]]) |
+| Zincir (Besu/QBFT) | tasarlandı, kontratlar yazıldı; en az iki bağımsız validator operatörüyle açılır ([[GUIDE-0006]], hazırlık: [[GUIDE-0015]]) |
 
 ## Her entegrasyonda ortak kurallar
 

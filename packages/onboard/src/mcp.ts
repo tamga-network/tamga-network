@@ -8,6 +8,10 @@
  *  - kök pinleri MCP'den değiştirilemez (D4; yalnız komut satırında `--pin`); yerel / özel ağ adresleri okunmaz (O4);
  *    dosyalardaki istek adresleri kurumun alan adı dışındaysa uyarı satırı;
  *  - dışarıdan okunan liste ve meta veri içeriği yanıtta "güvenilmeyen veri" olarak işaretlenir (talimat değildir);
+ *  - düğüm araçları (`generate_node_key`, `create_node_declaration`, `check_node`): düğüm özel anahtarı hiçbir yanıtta yok;
+ *    bulut eşitleme klasörüne yazılmaz (MCP'de açık onay seçeneği yok); `check_node` yalnız salt-okur JSON-RPC çağırır ve yalnız
+ *    çağrıda verilen adreslere gider — loopback / özel ağ adresi yalnız kullanıcı onu `TAMGA_ONBOARD_PRIVATE_NODES` ortam
+ *    değişkenine (virgülle köken listesi, ör. `http://127.0.0.1:8545`) yazdıysa; dış adreste yalnız https;
  *  - günlük yazılmaz (kişisel veri zaten yok; standart çıktı yalnız MCP iletileri).
  * Resmî TypeScript SDK (`@modelcontextprotocol/sdk`) yalnız bu giriş noktasında yüklenir; çekirdek (`.`) onu içe aktarmaz.
  */
@@ -30,6 +34,23 @@ import {
 import { generateKeys, MIN_PASSPHRASE } from "./keys.js";
 import { isInside, within } from "./paths.js";
 import { sandboxGuide, type Environment } from "./network.js";
+import {
+  buildNodeDeclaration,
+  declarationFileName,
+  defaultNodeRpc,
+  defaultRpc,
+  initNode,
+  nodeChecks,
+  nodeNextSteps,
+  readNodeDir,
+  readToml,
+  validateNodeDeclaration,
+  type NodeDeclaration,
+  type NodeProfile,
+  type NodeRole,
+  type Rpc,
+  type TomlTable,
+} from "./node.js";
 import { validateApplication } from "./rules.js";
 
 const UNTRUSTED =
@@ -40,6 +61,8 @@ export interface McpOptions {
   root: string;
   http?: Http;
   dns?: Dns;
+  /** düğüm denetiminin JSON-RPC taşıyıcısı (test için); varsayılan politikayı `TAMGA_ONBOARD_PRIVATE_NODES` belirler */
+  rpc?: Rpc;
   env?: NodeJS.ProcessEnv;
 }
 
@@ -120,6 +143,70 @@ export const TOOLS = [
     },
   },
   {
+    name: "generate_node_key",
+    description:
+      "For a state / operator Besu node: generate the node key (secp256k1, Besu key file format) on this computer and write a folder with the private key (owner-only, never returned, never overwritten, refused in a cloud-synced folder), key.pub, node.json and a besu.toml template (permissioned mode, RPC on 127.0.0.1 only, P2P on one internal interface — never 0.0.0.0). Returns the enode public key and the validator address plus genesis instructions. Writes nothing to the network or the chain.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dir: { type: "string", description: "New node folder relative to the root (default tamga-node)." },
+        state: { type: "string", description: "Governance member code, e.g. TR." },
+        role: { type: "string", enum: ["validator", "rpc"] },
+        ip: { type: "string", description: "Advertised P2P address (IPv4/IPv6 literal, as in the node declaration)." },
+        interface: { type: "string", description: "Internal interface P2P listens on (default: ip). Never 0.0.0.0." },
+        p2p_port: { type: "integer", description: "Default 30303." },
+        rpc_port: { type: "integer", description: "Local JSON-RPC port (127.0.0.1), default 8545." },
+      },
+      required: ["state", "role", "ip"],
+    },
+  },
+  {
+    name: "create_node_declaration",
+    description:
+      "Write a tamga-node-declaration/1 file (schema network/permissions) for the operator: state, role, enode public key, IP, P2P port and the institution's operations contact (role mailbox or https page — never a person's name). Validated against the schema; the file is new (never overwritten). The declaration grants no authority: a validator enters the allowlist only if its key address is the state's active validator address in Governance.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dir: { type: "string", description: "Node folder (output of generate_node_key), relative to the root." },
+        contact: { type: "string", description: "Operations mailbox (e.g. noc@…) or https page of the institution." },
+        name: { type: "string", description: "File name part: <cc>-<name>.json (default: the role)." },
+        out: { type: "string", description: "Output .json relative to the root (default: inside dir)." },
+        public_key: {
+          type: "string",
+          description: "Node public key when there is no node folder (key made in an HSM).",
+        },
+        state: { type: "string" },
+        role: { type: "string", enum: ["validator", "rpc"] },
+        ip: { type: "string" },
+        p2p_port: { type: "integer" },
+      },
+      required: ["contact"],
+    },
+  },
+  {
+    name: "check_node",
+    description:
+      "Read-only checks of the institution's own Besu node: reachable, in sync (and same genesis) against a reference endpoint, peers, node key vs node.json/declaration, node and account allowlists vs a rendered permissions file or a reference node, validator set, external endpoint exposes only eth/net/web3 (admin/perm/qbft/debug/txpool refused), besu.toml interfaces and permissioning flags, clock. Only read-only JSON-RPC methods are called (no vote, no reload, no transaction). Loopback / private addresses only when listed in the TAMGA_ONBOARD_PRIVATE_NODES environment variable of this server; public addresses only over https.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dir: { type: "string", description: "Node folder (node.json, besu.toml) relative to the root." },
+        rpc: {
+          type: "string",
+          description: "The node's own JSON-RPC endpoint (default http://127.0.0.1:<rpc-http-port>).",
+        },
+        chain_rpc: { type: "string", description: "Another endpoint on the same chain for comparison." },
+        public_rpc: { type: "string", description: "The node's externally exposed endpoint (proxy)." },
+        permissions_file: {
+          type: "string",
+          description: "Output of trust:chain-permissions render (.toml, relative to the root).",
+        },
+        config: { type: "string", description: "besu.toml relative to the root (default: dir/besu.toml)." },
+        declaration: { type: "string", description: "Node declaration .json relative to the root." },
+      },
+    },
+  },
+  {
     name: "sandbox_info",
     description:
       "Where and how to try the sandbox ('Try your institution'). There is no machine interface for it today.",
@@ -148,6 +235,41 @@ export function createServer(o: McpOptions, version = "0"): Server {
     if (!v) throw new ToolError(`passphrase_env: ${name} is empty`);
     if (v.length < MIN_PASSPHRASE) throw new ToolError(`passphrase_env: at least ${MIN_PASSPHRASE} characters`);
     return v;
+  };
+  // düğüm denetimi: loopback / özel ağ adresi yalnız kullanıcının ortam değişkenine yazdığı kökenlere (istem içeriği değiştiremez)
+  const privateNodes = new Set(
+    String(env.TAMGA_ONBOARD_PRIVATE_NODES ?? "")
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .map((x) => {
+        try {
+          return new URL(x).origin;
+        } catch {
+          return "";
+        }
+      })
+      .filter(Boolean),
+  );
+  const rpc =
+    o.rpc ??
+    defaultRpc({
+      policy: (u) =>
+        privateNodes.has(u.origin) ? { loopback: true, private: true } : { loopback: false, private: false },
+    });
+  const str = (v: unknown, name: string) => {
+    if (v === undefined) return undefined;
+    if (typeof v !== "string" || !v) throw new ToolError(`${name}: string`);
+    return v;
+  };
+  const int = (v: unknown, name: string) => {
+    if (v === undefined) return undefined;
+    if (!Number.isInteger(v)) throw new ToolError(`${name}: integer`);
+    return v as number;
+  };
+  const insideExt = (p: unknown, ext: RegExp, name: string) => {
+    if (typeof p !== "string" || !ext.test(p)) throw new ToolError(`${name}: wrong file type`);
+    return inside(p);
   };
   const rowsResult = (rows: Row[]) => ({
     untrusted_data_notice: UNTRUSTED,
@@ -243,6 +365,106 @@ export function createServer(o: McpOptions, version = "0"): Server {
       // D4: kök pinleri MCP'den değiştirilemez — yalnız pakete gömülü değer
       if (a.pins !== undefined) throw new ToolError("pins cannot be overridden over MCP (use the CLI --pin)");
       return rowsResult(await listingChecks(http, { environment: environment ?? "production", slug, rp, localCerts }));
+    },
+    async generate_node_key(a) {
+      const dir = inside(a.dir ?? "tamga-node");
+      // MCP'de bulut eşitleme klasörüne açık onay yok (allowSynced verilmez)
+      const r = initNode(
+        dir,
+        {
+          state: str(a.state, "state") as string,
+          role: str(a.role, "role") as NodeRole,
+          ip: str(a.ip, "ip") as string,
+          interface: str(a.interface, "interface"),
+          p2pPort: int(a.p2p_port, "p2p_port"),
+          rpcPort: int(a.rpc_port, "rpc_port"),
+        },
+        { env },
+      );
+      return {
+        dir: relative(root, r.dir) || ".",
+        private_key_file: relative(root, r.key),
+        files: r.files,
+        node_public_key: r.profile.node_public_key,
+        enode: r.enode,
+        address: r.profile.address,
+        role: r.profile.role,
+        warnings: r.warnings,
+        next: nodeNextSteps(r.profile),
+        note: "The private key file stays on this computer and is never returned. Send only the node declaration.",
+      };
+    },
+    async create_node_declaration(a) {
+      let p: Partial<NodeProfile> = {};
+      let dir: string | undefined;
+      if (a.dir !== undefined) {
+        dir = inside(a.dir);
+        p = readNodeDir(dir).profile;
+      }
+      const state = str(a.state, "state") ?? p.state;
+      const role = (str(a.role, "role") ?? p.role) as NodeRole | undefined;
+      const pk = str(a.public_key, "public_key") ?? p.node_public_key;
+      const ip = str(a.ip, "ip") ?? p.ip;
+      const port = int(a.p2p_port, "p2p_port") ?? p.p2p_port;
+      if (!state || !role || !pk || !ip || !port)
+        throw new ToolError("give dir, or public_key + state + role + ip + p2p_port");
+      const b = buildNodeDeclaration({
+        state,
+        role,
+        node_public_key: pk,
+        ip,
+        p2p_port: port,
+        contact: str(a.contact, "contact") as string,
+      });
+      if (!b.declaration) return { written: false, problems: b.problems, warnings: b.warnings };
+      const file = declarationFileName(state, str(a.name, "name") ?? role);
+      const out = a.out !== undefined ? insideExt(a.out, /\.json$/i, "out") : dir ? within(dir, file) : inside(file);
+      if (existsSync(out)) throw new ToolError("the declaration file already exists (never overwritten)");
+      writeFileSync(out, JSON.stringify(b.declaration, null, 2) + "\n", { flag: "wx" });
+      return {
+        written: true,
+        file: relative(root, out),
+        declaration: b.declaration,
+        address: b.address,
+        warnings: b.warnings,
+        next: `Send the file to the operator (network/permissions/nodes/${file}). It grants no authority: a validator also needs Governance admission and a QBFT vote.`,
+      };
+    },
+    async check_node(a) {
+      let profile: NodeProfile | undefined;
+      let config: TomlTable | undefined;
+      if (a.dir !== undefined) ({ profile, config } = readNodeDir(inside(a.dir)));
+      if (a.config !== undefined) config = readToml(insideExt(a.config, /\.toml$/i, "config"));
+      const permissions =
+        a.permissions_file !== undefined
+          ? readToml(insideExt(a.permissions_file, /\.toml$/i, "permissions_file"))
+          : undefined;
+      let declaration: NodeDeclaration | undefined;
+      if (a.declaration !== undefined) {
+        let d: unknown;
+        try {
+          d = JSON.parse(readFileSync(insideExt(a.declaration, /\.json$/i, "declaration"), "utf8"));
+        } catch (e) {
+          if (e instanceof ToolError) throw e;
+          throw new ToolError("declaration: not a readable JSON file");
+        }
+        const errs = validateNodeDeclaration(d);
+        if (errs.length) throw new ToolError(`declaration: ${errs.join("; ")}`);
+        declaration = d as NodeDeclaration;
+      }
+      const rows = await nodeChecks(
+        {
+          rpc: str(a.rpc, "rpc") ?? defaultNodeRpc(config),
+          chainRpc: str(a.chain_rpc, "chain_rpc"),
+          publicRpc: str(a.public_rpc, "public_rpc"),
+          profile,
+          config,
+          permissions,
+          declaration,
+        },
+        { rpc },
+      );
+      return rowsResult(rows);
     },
     async sandbox_info() {
       return sandboxGuide();

@@ -27,6 +27,21 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
   private keys never returned, network text marked untrusted). Nothing is written to the network or the list. **Not yet on npm:**
   it is packed with the release check but is not in the 0.8.1 publication (nine packages); its first publish comes later
   (manual).
+- **onboard — node steps for a state or operator (`tamga-onboard node init | declare | check`; ADR-0052).** `node init`
+  generates the Besu node key (secp256k1, Besu key file format) on the node's own machine with the same key file protections
+  as `keys` (owner-only permissions, refused in a cloud-synced folder, never overwritten), prints the enode public key and the
+  validator address, and writes a `besu.toml` template: permissioned mode, JSON-RPC on 127.0.0.1 only (outside clients get
+  ETH, NET, WEB3 through `network/rpc-proxy`), P2P on one internal interface (`p2p-interface`; `0.0.0.0` / `::` are refused),
+  discovery, WebSocket and GraphQL off; genesis is not generated — it comes from the operators and its hash is compared out of
+  band. `node declare` writes the `tamga-node-declaration/1` file, validated with the same rules as the schema (contact is a
+  role address; a non-role mailbox gets a warning). `node check` checks the running node read-only — only read-only JSON-RPC
+  methods are called: sync and genesis against a reference endpoint, peers, running key, node and account allowlists against
+  the rendered file and the reference endpoint, validator set, the external endpoint refuses `admin_`/`perm_`/`qbft_`/
+  `debug_`/`txpool_`, `besu.toml` interfaces and permissioning flags, clock. Only addresses typed by the user are contacted;
+  loopback is allowed by default, other private networks need `--allow-private`, plain http only to local addresses, no
+  redirects. MCP tools `generate_node_key`, `create_node_declaration`, `check_node` (key never returned; loopback / private
+  endpoints only when listed in `TAMGA_ONBOARD_PRIVATE_NODES`; network text marked untrusted). Nothing is written to the
+  chain, the allowlist or the network. New dependency: `@noble/hashes` (Keccak-256 for the node address).
 - **release — packages may ship a command (`bin`).** The pack script maps `bin` to `lib/` and requires a `#!/usr/bin/env node`
   line; the smoke test runs each command with `--version` from the installed tarball. `release:version` now sets ten packages.
 

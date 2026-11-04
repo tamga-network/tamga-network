@@ -18,7 +18,8 @@
 #   ... -Init -Permissioned            genesis (tek kurucu doğrulayıcı = düğüm 1) + iki düğüm anahtarı + düğüm bildirimleri
 #   ... -Start -Permissioned [-Node 2] düğüm 1: RPC 8546 / P2P 30313; düğüm 2: RPC 8547 / P2P 30314 (düğüm 1'e statik eş)
 #   ... -Apply -Permissioned           çalışan her düğüm için izin listesini ZİNCİRDEN üretir (trust:chain-permissions render),
-#                                      perm_reloadPermissionsFromFile ile yükler ve check ile denetler
+#                                      perm_reloadPermissionsFromFile ile yükler ve check ile denetler; iki düğüm çalışıyorsa
+#                                      her düğüm önce senkron olana dek beklenir (-SyncTimeout <sn>, varsayılan 180)
 #   ... -Stop|-Reset|-Status -Permissioned
 #   İki bayrak açık: --permissions-nodes-config-file-enabled, --permissions-accounts-config-file-enabled. PERM ve ADMIN ad
 #   alanları yalnız 127.0.0.1'de (düğüm zaten yalnız loopback dinler). Düğüm anahtarları Hardhat test hesapları #1 (TR
@@ -29,7 +30,7 @@
 # Windows PowerShell 5.1 ile çalışır. Linux/macOS karşılığı: docs/ledger/architecture/0002-besu-network-setup-step-by-step.md
 param(
   [switch]$Init, [switch]$Start, [switch]$Stop, [switch]$Reset, [switch]$Status, [switch]$Apply,
-  [switch]$Permissioned, [ValidateSet(1, 2)][int]$Node = 1
+  [switch]$Permissioned, [ValidateSet(1, 2)][int]$Node = 1, [ValidateRange(10, 3600)][int]$SyncTimeout = 180
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -441,12 +442,48 @@ $static
 # İzin listesini zincirden üret → yükle → denetle (her düğüm kendi dosyasını kendisi üretir; ADR-0052 K3). Besu yeniden yüklerken
 # dosyayı kendi biçimiyle yeniden yazar (yorumlar gider) — bu yüzden çizim ayrı dosyada kalır (permissions_config.rendered.toml),
 # düğümün dosyasına kopyalanır; karşılaştırma dosya özetiyle değil `check` (anlamsal fark) ve çizimin özetiyle yapılır.
+# Çizimden önce düğümün senkron olması beklenir: senkron olmayan düğüm eski blok durumunu okur ve render / check yanlış (ya da
+# hata) verir. Koşul: eth_syncing = false VE blok yüksekliği öteki çalışan düğümün en çok 1 blok gerisinde (blok 2 sn'de bir;
+# iki okuma arasındaki yarış için 1 blok pay). Yeni başlatılan düğüm 2, düğüm 1'in listesine bu -Apply'ın ilk adımıyla girer;
+# statik eş yaklaşık 1 dakikada bağlanır — bu yüzden zaman aşımı varsayılan 180 sn (-SyncTimeout).
+function Wait-PermSync($n, $refN, $timeoutSec) {
+  $url = PermRpc $n
+  $refUrl = PermRpc $refN
+  $start = Get-Date
+  $lastSay = -10
+  while ($true) {
+    $b = Get-BlockNumber $url
+    $r = Get-BlockNumber $refUrl
+    $syncing = $null
+    try { $syncing = Invoke-Rpc "eth_syncing" @() $url } catch { $syncing = $null }
+    if ($b -ge 0 -and $r -ge 0 -and ($r - $b) -le 1 -and $syncing -is [bool] -and -not $syncing) {
+      Say ("dugum {0}: senkron (blok {1}, dugum {2} blok {3})" -f $n, $b, $refN, $r)
+      return
+    }
+    $elapsed = ((Get-Date) - $start).TotalSeconds
+    if ($elapsed -ge $timeoutSec) {
+      $peers = -1
+      try { $peers = [Convert]::ToInt32((Invoke-Rpc "net_peerCount" @() $url), 16) } catch { $peers = -1 }
+      $hint = ""
+      if ($peers -eq 0) { $hint = " - es yok: dugum $refN'in izin listesinde dugum $n var mi (bildirim + -Apply), log: $(Join-Path (PermDir $n) 'besu.log')" }
+      throw ("dugum {0}: {1} sn icinde senkron olmadi (blok {2}, dugum {3} blok {4}, es {5}){6}" -f $n, $timeoutSec, $b, $refN, $r, $peers, $hint)
+    }
+    if ($elapsed - $lastSay -ge 10) {
+      Say ("dugum {0}: senkron bekleniyor (blok {1} / dugum {2} blok {3}, {4:N0} sn)" -f $n, $b, $refN, $r, $elapsed)
+      $lastSay = $elapsed
+    }
+    Start-Sleep -Seconds 1
+  }
+}
+
 function Invoke-PermApply {
   $tsx = Join-Path $Root "node_modules\tsx\dist\cli.mjs"
   $cli = Join-Path $Root "apps\trust-publisher\src\cli.ts"
   $shared = @{}
   foreach ($n in 1, 2) {
     if (-not (Get-PidFrom (PermPidFile $n))) { continue }
+    $other = 3 - $n
+    if (Get-PidFrom (PermPidFile $other)) { Wait-PermSync $n $other $SyncTimeout }
     $url = PermRpc $n
     $rendered = Join-Path (PermDir $n) "permissions_config.rendered.toml"
     $env:TAMGA_CHAIN_RPC_URL = $url

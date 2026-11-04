@@ -4,7 +4,7 @@ title: "Yoxlayan tərəf kimi qeydiyyatdan keçmək"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-23
+last_updated: 2026-11-05
 summary: >
   Saytın və ya xidmətin yoxlayan tərəf kimi Tamga etibar siyahısında qeydiyyatı: domen adı və giriş sertifikatı, Aİ-nin ümumi qeydiyyat məlumatları, istifadə əhatələri (məqsəd, sahələr, məxfilik siyasəti), qeydiyyat sertifikatı, vasitəçi yoxlayan tərəflər və psevdonim.
 translation_of: GUIDE-0008
@@ -19,6 +19,7 @@ Bu bələdçi şəxslərin rəqəmsal cüzdanından rəqəmsal sənəd tələb e
 - İlk təqdimat sorğunuzu göndərməzdən əvvəl. Qeydiyyatsız yoxlayan tərəfin tələb etdiyi hər sahə şəxsə ayrıca xəbərdarlıqla "qeydiyyatdakı
   əhatədən kənar" kimi göstərilir; psevdonim sorğusu ümumiyyətlə qəbul edilmir.
 - Sonra: [[GUIDE-0001]] (Tamga ilə giriş) və ya [[GUIDE-0002]] (serverdə yoxlama).
+- Müraciət faylı, giriş açarı və quraşdırmanın yoxlanılması üçün qoşulma aləti: [[GUIDE-0014]].
 - Rəqəmsal sənəd vermək istəyirsinizsə, bunun əvəzinə [[GUIDE-0007]].
 
 ## Necə işləyir?

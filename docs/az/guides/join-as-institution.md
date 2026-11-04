@@ -4,7 +4,7 @@ title: "Qurum kimi şəbəkəyə qoşulmaq"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-20
+last_updated: 2026-11-05
 summary: >
   Qurumun sənədi verən qurum kimi Tamga Network-a qoşulması, ilk təmasdan canlı istifadəyə qədər addım-addım: sandbox-da sınaq, müraciət faylı və Aİ-nin ümumi qeydiyyat məlumatları (yoxlama siyahısı), açarlar və sertifikat sorğusu (CSR), qurumun sorğu nöqtəsi, etibar siyahısına daxil olma və sənəd növü səlahiyyəti, Qurum Konsolu hesabı, ilk sənəd, ləğv və qeydiyyat dəyişiklikləri.
 translation_of: GUIDE-0007
@@ -19,6 +19,7 @@ və onların texniki komandaları üçündür. Nümunələr universitetin tələ
 **Nə vaxt oxunur:**
 - Qurumunuz ilk dəfə sənəd verəcəksə, müraciətdən əvvəl.
 - Əvvəl: [Sənədin verilməsi](/concepts/issuance) anlayışı. Sonra: [[GUIDE-0003]] (sənədin texniki olaraq verilməsi).
+- İT komandanız müraciət faylını, açarları və quraşdırmanın yoxlanılmasını `tamga-onboard` aləti ilə hazırlayır: [[GUIDE-0014]].
 - Yoxlayan tərəf kimi qoşulursunuzsa (sənəd tələb edən sayt, otel, işəgötürən), bunun əvəzinə [[GUIDE-0008]].
 
 ## Necə işləyir?
