@@ -106,35 +106,63 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
     }
 
     function suspendRelyingParty(bytes32 rpId) external {
-        RelyingParty storage r = _require(rpId);
-        _requireOwner(r.stateCode);
-        // yalnız ACTIVE askıya alınır; iptal edilmiş kayıt geri yazılamaz (2026-10-19 güvenlik turu F-18)
-        if (r.status != RPStatus.ACTIVE) revert RelyingPartyNotActive(rpId);
-        _setStatus(rpId, r, RPStatus.SUSPENDED);
-        emit RelyingPartySuspended(rpId);
+        _suspend(rpId, 0);
+    }
+
+    /// @inheritdoc IRelyingPartyRegistry
+    function suspendRelyingPartyAt(bytes32 rpId, uint64 at) external {
+        _suspend(rpId, at);
     }
 
     /// @inheritdoc IRelyingPartyRegistry
     function reinstateRelyingParty(bytes32 rpId) external {
-        RelyingParty storage r = _require(rpId);
-        _requireOwner(r.stateCode);
-        if (r.status != RPStatus.SUSPENDED) revert RelyingPartyNotSuspended(rpId);
-        _setStatus(rpId, r, RPStatus.ACTIVE);
-        emit RelyingPartyReinstated(rpId);
+        _reinstate(rpId, 0);
+    }
+
+    /// @inheritdoc IRelyingPartyRegistry
+    function reinstateRelyingPartyAt(bytes32 rpId, uint64 at) external {
+        _reinstate(rpId, at);
     }
 
     function revokeRelyingParty(bytes32 rpId) external {
+        _revoke(rpId, 0);
+    }
+
+    /// @inheritdoc IRelyingPartyRegistry
+    function revokeRelyingPartyAt(bytes32 rpId, uint64 at) external {
+        _revoke(rpId, at);
+    }
+
+    function _suspend(bytes32 rpId, uint64 at) private {
+        RelyingParty storage r = _require(rpId);
+        _requireOwner(r.stateCode);
+        // yalnız ACTIVE askıya alınır; iptal edilmiş kayıt geri yazılamaz (2026-10-19 güvenlik turu F-18)
+        if (r.status != RPStatus.ACTIVE) revert RelyingPartyNotActive(rpId);
+        _setStatus(rpId, r, RPStatus.SUSPENDED, _effectiveDate(at));
+        emit RelyingPartySuspended(rpId);
+    }
+
+    function _reinstate(bytes32 rpId, uint64 at) private {
+        RelyingParty storage r = _require(rpId);
+        _requireOwner(r.stateCode);
+        if (r.status != RPStatus.SUSPENDED) revert RelyingPartyNotSuspended(rpId);
+        _setStatus(rpId, r, RPStatus.ACTIVE, _effectiveDate(at));
+        emit RelyingPartyReinstated(rpId);
+    }
+
+    function _revoke(bytes32 rpId, uint64 at) private {
         RelyingParty storage r = _require(rpId);
         _requireOwner(r.stateCode);
         if (r.status == RPStatus.REVOKED) revert AlreadyRevoked(rpId);
-        _setStatus(rpId, r, RPStatus.REVOKED);
+        _setStatus(rpId, r, RPStatus.REVOKED, _effectiveDate(at));
         emit RelyingPartyRevoked(rpId);
     }
 
-    /// @dev Durum blok zamanından itibaren geçerli (doğrulayıcı durum yazımları tarih taşımaz); geçmiş yalnız eklenir.
-    function _setStatus(bytes32 rpId, RelyingParty storage r, RPStatus st) private {
+    /// @dev Durum `since` anından itibaren geçerli (ADR-0073 K1/K5): olağan yazımda blok zamanı, göç kipinde listedeki an;
+    ///      geçmiş kayıt başına sıralı ve yalnız eklenir (`StatusOutOfOrder`).
+    function _setStatus(bytes32 rpId, RelyingParty storage r, RPStatus st, uint64 since) private {
         r.status = st;
-        _history[rpId].record(uint64(block.timestamp), uint8(st));
+        _history[rpId].record(since, uint8(st));
     }
 
     // -----------------------------------------------------------------
@@ -195,7 +223,7 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         r.nameHash = c.nameHash;
         r.accessCertFingerprint = c.accessCertFingerprint;
         r.registeredAt = now_;
-        _setStatus(c.rpId, r, RPStatus.ACTIVE);
+        _setStatus(c.rpId, r, RPStatus.ACTIVE, now_); // dönem değişikliğinin tarihi yürütme anıdır (ADR-0075 açık soru 3)
         periods.push(RegistrationPeriod(c.toState, now_));
 
         if (action == PeriodAction.REASSIGNMENT) {

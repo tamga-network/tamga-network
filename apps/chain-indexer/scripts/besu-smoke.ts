@@ -25,6 +25,8 @@ const code = await chainReplayCommand(["--archive", dist], {
   dist,
   environment: "production",
   env: { ...process.env, TAMGA_CHAIN_ENABLED: "1", TAMGA_CHAIN_RPC_URL: rpc },
+  // fikstürün iptal listesi adresleri uydurmadır: bit sayısı satırda olmayan liste varsayılanla yazılır (yerel zincir)
+  fetchText: () => Promise.reject(new Error("fikstür: ağ yok")),
 });
 console.error(`besu-smoke: çıkış ${code}, ${Math.round((Date.now() - t0) / 1000)} sn`);
 rmSync(dist, { recursive: true, force: true });

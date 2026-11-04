@@ -10,7 +10,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { deflateSync } from "node:zlib";
 import { Interface } from "ethers";
-import { sha256Hex, utf8 } from "@tamga-network/trust";
+import { Anchor as AnchorSchema, sha256Hex, utf8 } from "@tamga-network/trust";
 
 import { anchorDist, runProjection } from "../src/chain/anchor.js";
 import { MemoryChainClient, loadAbi } from "../src/chain/client.js";
@@ -24,6 +24,7 @@ import {
   listKeyOf,
   logKeyOf,
   planProjection,
+  statusAnchorParams,
   statusListRegistrationOf,
   tagToBytes32,
 } from "../src/chain/projection.js";
@@ -322,6 +323,37 @@ describe("iptal listesi kaydı parametreleri (ADR-0063 SB1)", () => {
   it("Token Status List dışı bits reddedilir", () => {
     for (const b of [0, 3, 16, "2", null]) expect(() => statusListRegistrationOf(token(b))).toThrow(/bits/);
     expect(STATUS_LIST_BITS).toEqual(new Set([1, 2, 4, 8]));
+  });
+  it("çapa satırının bits/size'ı belirteçten; özet ve adres belirteçle aynı olmalı (anchor --token)", () => {
+    const t = token(2, 25_000);
+    const row = { list_uri: "https://status.example/v1/sl/7f3a9c21", content_hash: `sha256:${jwsHash(t).slice(2)}` };
+    expect(statusAnchorParams(t, row)).toEqual({ bits: 2, size: 100_000 });
+    expect(
+      statusAnchorParams(
+        `${t}
+`,
+        row,
+      ),
+    ).toEqual({ bits: 2, size: 100_000 });
+    expect(() => statusAnchorParams(t, { ...row, content_hash: `sha256:${"0".repeat(64)}` })).toThrow(/özeti/);
+    expect(() => statusAnchorParams(t, { ...row, list_uri: "https://status.example/v1/sl/other" })).toThrow(/sub/);
+    // satır şeması: bits yalnız Token Status List kümesi; size pozitif tam sayı; ikisi de isteğe bağlı (eski satırlar)
+    const base = {
+      seq: 0,
+      previous_hash: null,
+      ts: "2026-11-05T00:00:00Z",
+      kind: "status_list",
+      list_id: "0x" + "1".repeat(64),
+      issuer_id: "0x" + "2".repeat(64),
+      list_uri: row.list_uri,
+      content_hash: row.content_hash,
+      list_version: 1,
+      published_at: "2026-11-05T00:00:00Z",
+    };
+    expect(AnchorSchema.safeParse(base).success).toBe(true);
+    expect(AnchorSchema.safeParse({ ...base, bits: 2, size: 100_000 }).success).toBe(true);
+    expect(AnchorSchema.safeParse({ ...base, bits: 3, size: 100_000 }).success).toBe(false);
+    expect(AnchorSchema.safeParse({ ...base, bits: 2, size: 0 }).success).toBe(false);
   });
 });
 

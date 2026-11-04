@@ -6,10 +6,12 @@
  * zinciri. Sürümler yayın sırasıyla gezilir; her kaydın listede yeni görünen geçmişi kontrat çağrılarına çevrilir:
  *   - tarih taşıyan yazımlar listedeki anı açıkça alır (durum `since`, yetki penceresi, kayıt anı, iptal listesi yayın anı) —
  *     göç kipinde (CE1); sıra kayıt başına korunur, bütün işlemler zamana göre dizilir;
- *   - ulusal kayıtlar o devletin delegesiyle, ağ düzeyi kayıtlar (ağ şeması, cüzdan sağlayıcı) tek göç yürütücüsüyle (K1);
+ *   - ulusal kayıtlar o devletin delegesiyle, ağ düzeyi kayıtlar (ağ şeması, cüzdan sağlayıcı, ZK devresi, dış liste, belge
+ *     kategorisi, liste imzacısı, liste işletmecisi, slot, katalog — network-records.ts) tek göç yürütücüsüyle (K1);
  *     ağ şemasının iptali ve doğrulayıcı devri / iptal sonrası yeniden kaydı yalnız Governance oyuyla (ADR-0075, güvenlik turu);
  *   - durum eşlemesi ADR-0073 K5 / SPEC-BC-0001 §16.4: RETIRED kurum = yumuşak iptal (`retireIssuer`), REVOKED +
- *     `invalidates_from` = sert iptal, kök ROLLING_OVER = ACTIVE + halef olayı, doğrulayıcı RETIRED = REVOKED;
+ *     `invalidates_from` = sert iptal, kök ROLLING_OVER = ACTIVE + halef olayı, doğrulayıcı RETIRED = REVOKED; kurum halefi
+ *     (`successor_id`) iptal yazımıyla (aynı devletin o anda ACTIVE kurumu; değilse uyarıyla sıfır);
  *   - kişisel veri ve serbest metin zincire gitmez (PJ2): adlar, gerekçeler, kayıt verisi yalnız özet.
  * Plan zincire bakmaz; hangi işlemin zincirde olduğuna yürütücü (replay-exec.ts) karar verir (kaldığı yerden devam).
  */
@@ -24,6 +26,7 @@ import {
 } from "@tamga-network/trust";
 
 import { ISSUER_CATEGORIES, ISSUER_CLASSES, PRESENTATION_FORMATS } from "./contracts.js";
+import { NET_STATUS, lotlNetworkRecords, nationalNetworkRecords } from "./network-records.js";
 import {
   ZERO32,
   canonicalJson,
@@ -139,7 +142,13 @@ export type ReplayOpBody =
       validFrom: number;
       validUntil: number;
     }
-  | { op: "issuerStatus"; issuerId: string; status: "SUSPENDED" | "ACTIVE" | "REVOKED" | "RETIRED" }
+  | {
+      op: "issuerStatus";
+      issuerId: string;
+      status: "SUSPENDED" | "ACTIVE" | "REVOKED" | "RETIRED";
+      /** iptalde halef (`successor_id`; yalnız REVOKED / RETIRED) */
+      successor?: string;
+    }
   | { op: "issuerInvalidatesFrom"; issuerId: string; invalidatesFrom: number }
   | { op: "renewIssuer"; issuerId: string; validUntil: number }
   | { op: "issuerProfile"; issuerId: string; profile: IssuerProfileArgs }
@@ -153,8 +162,11 @@ export type ReplayOpBody =
       listId: string;
       bits: number;
       size: number;
-      /** `default`: arşivde listenin bit sayısı ve boyutu yok — gerçek ağ yazımında reddedilir */
-      params: "given" | "default";
+      /**
+       * bit sayısı ve boyutun kaynağı: `anchor` çapa satırı (belirteçten yazılmış), `token` belirtecin kendisi (planı kuran okudu),
+       * `default` hiçbiri — varsayılan (2 bit, 100000); gerçek ağ yazımında reddedilir
+       */
+      params: "anchor" | "token" | "default";
     }
   | { op: "publishList"; listId: string; contentHash: string; version: number }
   | { op: "recognition"; recognizing: string; recognized: string; mode: 0 | 1 }
@@ -220,7 +232,10 @@ export interface ReplayPlan {
 }
 
 export interface PlanOptions {
-  /** iptal listesinin bit sayısı ve indeks kapasitesi (arşivde yok; belirteçten okunur — `statusListRegistrationOf`) */
+  /**
+   * Çapa satırında bit sayısı ve boyut yoksa (eski satırlar) iptal listesinin kendisinden (belirteç, `statusListRegistrationOf`) —
+   * yeniden oynatma aracı adresten okur (`statusListUrisMissingParams`).
+   */
   statusListParams?: (listUri: string) => { bits: number; size: number } | null;
 }
 
@@ -341,6 +356,8 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
       delegates: boolean;
     }
   >();
+  /** ülke listesinin o sürümündeki kurum kayıtları (halef denetimi için; sürüm başında doldurulur) */
+  let issuersNow = new Map<string, { cc: string; issuer: Issuer }>();
   type RpTrack = {
     owner: string;
     /** kaydın göründüğü ülke listeleri (devir yalnız YENİ bir ülke listesinde ilk görünüşte) */
@@ -537,10 +554,25 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
       const at = sec(e.since);
       if (!futureGuard(at, `${src} kurum ${i.slug} ${e.status}`)) break;
       if (["SUSPENDED", "ACTIVE", "REVOKED", "RETIRED"].includes(e.status)) {
+        let successor: string | undefined;
+        if ((e.status === "REVOKED" || e.status === "RETIRED") && i.successor_id) {
+          // halef aynı devletin, iptal anında ACTIVE ve zincirde kayıtlı kurumu olmalı (kontrat: SuccessorNotActive,
+          // CrossStateReference) — değilse halefsiz yazılır
+          const sx = issuersNow.get(i.successor_id);
+          const sh = sx && [...sx.issuer.status_history].sort((a, b) => sec(a.since) - sec(b.since));
+          const live = sh?.filter((x) => sec(x.since) <= at).at(-1)?.status === "ACTIVE";
+          if (sx && sx.cc === cc && live && issuers.has(i.successor_id) && i.successor_id !== i.issuer_id)
+            successor = i.successor_id;
+          else
+            warnings.push(
+              `${src} kurum ${i.slug}: halef ${i.successor_id} yazılamaz (aynı devletin ACTIVE kurumu değil)`,
+            );
+        }
         push(at, who, src, {
           op: "issuerStatus",
           issuerId: i.issuer_id,
           status: e.status as "SUSPENDED" | "ACTIVE" | "REVOKED" | "RETIRED",
+          ...(successor ? { successor } : {}),
         });
         if (e.status === "REVOKED" && e.invalidates_from)
           push(at, who, src, {
@@ -764,31 +796,58 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
         flags: "0",
         digests: [],
       };
-      const writeRec = (r: NetworkRecordArgs) => {
-        const j = canonicalJson(r);
-        const k = `${r.kind}:${r.recordId}`;
-        if (records.get(k) === j) return;
-        push(issuedAt, { role: "executor" }, src, { op: "networkRecord", record: r });
-        records.set(k, j);
-      };
-      writeRec(rec);
+      writeRec(rec, issuedAt, src);
       for (const k of wp.wua_signing_keys)
-        writeRec({
-          kind: 2,
-          recordId: fpToBytes32(k.fingerprint_sha256),
-          parentId: providerId,
-          region: "0x0000",
-          subtype: 0,
-          status: STATUS[(k.status ?? "ACTIVE") as keyof typeof STATUS] ?? 0,
-          validFrom: k.valid_from ? sec(k.valid_from) : 0,
-          // liste `valid_to` dahil (activeFps: valid_to < now → dışarı); zincir yarı açık → bir saniye sonrası
-          validUntil: k.valid_to ? sec(k.valid_to) + 1 : 0,
-          fingerprint: fpToBytes32(k.fingerprint_sha256),
-          detailsHash: ZERO32,
-          flags: "0",
-          digests: [],
-        });
+        writeRec(
+          {
+            kind: 2,
+            recordId: fpToBytes32(k.fingerprint_sha256),
+            parentId: providerId,
+            region: "0x0000",
+            subtype: 0,
+            status: STATUS[(k.status ?? "ACTIVE") as keyof typeof STATUS] ?? 0,
+            validFrom: k.valid_from ? sec(k.valid_from) : 0,
+            // liste `valid_to` dahil (activeFps: valid_to < now → dışarı); zincir yarı açık → bir saniye sonrası
+            validUntil: k.valid_to ? sec(k.valid_to) + 1 : 0,
+            fingerprint: fpToBytes32(k.fingerprint_sha256),
+            detailsHash: ZERO32,
+            flags: "0",
+            digests: [],
+          },
+          issuedAt,
+          src,
+        );
     }
+    // ADR-0074 K3: öteki ağ düzeyi kayıtlar (listeden kalkan kayıt RETIRED; silinmez)
+    syncNet(
+      "lotl",
+      lotlNetworkRecords(l, archive.environment, warnings).map((x) => x.record),
+      issuedAt,
+      src,
+    );
+  };
+
+  /** Ağ düzeyi kaydı yazar (içerik değiştiyse; kayıt başına son hâl). */
+  const writeRec = (r: NetworkRecordArgs, at: number, src: string) => {
+    const j = canonicalJson(r);
+    const k = `${r.kind}:${r.recordId}`;
+    if (records.get(k) === j) return;
+    push(at, { role: "executor" }, src, { op: "networkRecord", record: r });
+    records.set(k, j);
+  };
+  /** Kaynağın (LOTL ya da bir ülke listesi) bu sürümdeki ağ düzeyi kayıtları; önceki sürümde olup şimdi olmayan → RETIRED. */
+  const netBySource = new Map<string, Map<string, NetworkRecordArgs>>();
+  const syncNet = (source: string, cur: NetworkRecordArgs[], at: number, src: string) => {
+    const prev = netBySource.get(source) ?? new Map<string, NetworkRecordArgs>();
+    const now = new Map(cur.map((r) => [`${r.kind}:${r.recordId}`, r]));
+    for (const r of cur) writeRec(r, at, src);
+    for (const [k, r] of prev)
+      if (!now.has(k)) {
+        const retired = { ...r, status: NET_STATUS.RETIRED };
+        writeRec(retired, at, src);
+        now.set(k, retired);
+      }
+    netBySource.set(source, now);
   };
 
   for (const v of versions) {
@@ -797,10 +856,17 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
     else {
       const tl = NationalList.parse(payload(v.jws));
       const cc = tl.state_code;
+      issuersNow = new Map(tl.issuers.map((i) => [i.issuer_id, { cc, issuer: i }]));
       for (const ca of tl.root_cas) replayRoot(cc, ca, src);
       for (const s of tl.national_schemas) replaySchema(s, 1, cc, v.issuedAt, src);
       for (const i of tl.issuers) replayIssuer(cc, i, v.issuedAt, src);
       for (const rp of tl.relying_parties) replayRp(cc, rp, v.issuedAt, src);
+      syncNet(
+        v.file,
+        nationalNetworkRecords(tl, archive.environment).map((x) => x.record),
+        v.issuedAt,
+        src,
+      );
     }
   }
 
@@ -813,6 +879,8 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
     content_hash: string;
     list_version: number;
     published_at: string;
+    bits?: number;
+    size?: number;
   }) => {
     const iss = issuers.get(r.issuer_id);
     if (!iss) return warnings.push(`çapa ${r.list_uri}: kurum ${r.issuer_id} listede yok — atlandı`);
@@ -824,7 +892,9 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
       issuerWithDelegate.add(r.issuer_id);
     }
     if (!lists.has(listId)) {
-      const p = opts.statusListParams?.(r.list_uri) ?? null;
+      // bit sayısı ve boyut: çapa satırı (belirteçten) → belirtecin kendisi → varsayılan (gerçek ağda ret)
+      const fromRow = r.bits !== undefined && r.size !== undefined ? { bits: r.bits, size: r.size } : null;
+      const p = fromRow ?? opts.statusListParams?.(r.list_uri) ?? null;
       push(at, who, "anchors", {
         op: "registerList",
         issuerId: r.issuer_id,
@@ -832,7 +902,7 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
         listId,
         bits: p?.bits ?? 2,
         size: p?.size ?? 100_000,
-        params: p ? "given" : "default",
+        params: fromRow ? "anchor" : p ? "token" : "default",
       });
       lists.set(listId, 0);
     }
@@ -858,7 +928,7 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
   const defaults = ops.filter((o) => o.op === "registerList" && o.params === "default").length;
   if (defaults)
     warnings.push(
-      `${defaults} iptal listesinin bit sayısı ve boyutu arşivde yok — varsayılan (2 bit, 100000) planlandı; gerçek ağ yazımı bunu reddeder`,
+      `${defaults} iptal listesinin bit sayısı ve boyutu ne çapa satırında ne belirteçte bulundu — varsayılan (2 bit, 100000) planlandı; gerçek ağ yazımı bunu reddeder`,
     );
 
   // ---- sırala: zaman, sonra bağımlılık sırası (kayıt → yetki → durum), sonra ekleniş (kayıt içi sıra korunur)
@@ -873,4 +943,24 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
       .update(canonicalJson({ format: REPLAY_PLAN_FORMAT, environment: archive.environment, planTime, ops }), "utf8")
       .digest("hex");
   return { format: REPLAY_PLAN_FORMAT, environment: archive.environment, planTime, ops, hash, warnings, summary };
+}
+
+/**
+ * Çapa günlüğünde bit sayısı ve boyutu OLMAYAN iptal listelerinin adresleri (ilk kayıt satırına göre) — yeniden oynatma aracı bunları
+ * belirteçten okur (`PlanOptions.statusListParams`). Satır (ya da baştaki kontrol noktası) bu alanları taşıyorsa liste burada yoktur.
+ */
+export function statusListUrisMissingParams(archive: ArchiveSet): string[] {
+  const seen = new Map<string, boolean>();
+  const note = (r: { list_uri: string; bits?: number; size?: number }) => {
+    if (!seen.has(r.list_uri)) seen.set(r.list_uri, r.bits !== undefined && r.size !== undefined);
+  };
+  const lines = archive.anchorsJsonl.split(/\r?\n/).filter((l) => l.trim());
+  for (const [k, line] of lines.entries()) {
+    const a = payload<Record<string, unknown> & { kind: string }>(line);
+    if (a.kind === "status_list") note(a as unknown as { list_uri: string });
+    else if (a.kind === "checkpoint" && k === 0)
+      for (const r of (a.state as { status_lists?: Array<{ list_uri: string }> } | undefined)?.status_lists ?? [])
+        note(r);
+  }
+  return [...seen].filter(([, has]) => !has).map(([u]) => u);
 }

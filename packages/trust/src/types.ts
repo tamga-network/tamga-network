@@ -409,6 +409,14 @@ export const NationalList = z
   .passthrough();
 export type NationalList = z.infer<typeof NationalList>;
 
+/** IETF Token Status List bit sayıları (zincirdeki iptal listesi kaydının kabul ettiği küme). */
+const StatusListBits = z
+  .number()
+  .int()
+  .refine((b) => b === 1 || b === 2 || b === 4 || b === 8, {
+    message: "bits must be 1, 2, 4 or 8",
+  });
+
 /** anchors.jsonl — her satır bir JWS; payload: */
 export const AnchorBase = z.object({
   seq: z.number().int().nonnegative(),
@@ -424,6 +432,12 @@ export const AnchorStatusList = AnchorBase.extend({
   list_version: z.number().int().nonnegative(),
   published_at: z.string().datetime({ offset: true }), // RFC 3339 (iç inceleme K3: bozuk tarih D5'i atlatmasın)
   request_sig: z.string().optional(),
+  /**
+   * Listenin bit sayısı (`status_list.bits`) ve indeks kapasitesi (açılmış `lst` bayt × 8 / bits) — belirteçten okunur; zincirdeki
+   * liste kaydı (`registerList`) bunları ister (ADR-0073 K1). Eski satırlarda yok; doğrulama kararına girmez.
+   */
+  bits: StatusListBits.optional(),
+  size: z.number().int().positive().optional(),
 });
 export const AnchorSchema = AnchorBase.extend({
   kind: z.literal("schema"),
@@ -491,6 +505,8 @@ export const AnchorCheckpoint = AnchorBase.extend({
           list_version: z.number().int().nonnegative(),
           published_at: z.string().datetime({ offset: true }),
           seq: z.number().int().nonnegative(),
+          bits: StatusListBits.optional(),
+          size: z.number().int().positive().optional(),
         }),
       ),
       schemas: z.array(

@@ -204,7 +204,8 @@ export class ListTrustSource implements TrustSource {
     return this.store.relying_parties.get(clientId) ?? null;
   }
   /**
-   * Kalıcı kimlikle (ADR-0034) doğrulayıcı. Aynı `dns_name` birden çok ülke listesinde görünürse hangi kaydın geçerli olduğu
+   * Kalıcı kimlikle (ADR-0034) doğrulayıcı. Aynı `dns_name` birden çok ülke listesinde görünürse iptal edilmemiş tek kayıt alınır
+   * (ADR-0075 devri: eski listede `REVOKED`, yenide `ACTIVE`); iptal edilmemiş kayıt birden çoksa hangisinin geçerli olduğu
    * belirsizdir — null (kapalı güvenli; 2026-11-04).
    */
   relyingPartyByDnsName(dnsName: string): RelyingParty | null {
@@ -213,9 +214,9 @@ export class ListTrustSource implements TrustSource {
     if (this.dnsAmbiguous(dns)) return null;
     return this.store.relying_parties_by_dns.get(dns) ?? null;
   }
-  /** Aynı `dns_name` birden çok ülke listesinde (2026-11-04). */
+  /** Aynı `dns_name` iptal edilmemiş birden çok ülke listesi kaydında (2026-11-04; ADR-0075). */
   private dnsAmbiguous(dns: string): boolean {
-    return (this.store.relying_party_states.get(dns)?.size ?? 0) > 1;
+    return this.store.relyingPartyAmbiguous(dns);
   }
   /** Kayıtlı tüm belge verenler (kurum dizini; ADR-0015 K2). Kişisel veri yok. Bayat kaynakta boş. */
   issuers(): Issuer[] {
@@ -411,8 +412,7 @@ export class ListTrustSource implements TrustSource {
     const dns = id.toLowerCase();
     const rp = this.store.relying_parties_by_dns.get(dns);
     if (rp) return !this.dnsAmbiguous(dns) && rp.status === "ACTIVE";
-    const rpStates = this.store.relying_party_states.get(rpDns);
-    const state = rpStates?.size === 1 ? [...rpStates][0] : undefined;
+    const state = this.store.relyingPartyStateOf(rpDns);
     const hits = [...this.store.issuers.values()].filter(
       (i) => i.slug === id && (state === undefined || this.store.issuer_states.get(i.issuer_id) === state),
     );

@@ -168,4 +168,40 @@ describe("ADR-0069 terminal_groups", () => {
     expect(ts.terminalGroup("example-events-gate")?.active).toBe(false);
     expect(ts.terminalGroupByCertFingerprint(FP)).toBeNull();
   });
+
+  it("ADR-0075 devir: eski ülke listesinde REVOKED, yenide ACTIVE → belirsiz değil, yeni kayıt (grupları etkin, kurum yeni ülkede)", () => {
+    const store = new TrustStore();
+    const list = (cc: string, rps: ReturnType<typeof rp>[], issuers: Array<Record<string, unknown>> = []) =>
+      ({ state_code: cc, root_cas: [], issuers, relying_parties: rps, national_schemas: [] }) as never;
+    const old = {
+      ...rp("verify.tamga.network", "REVOKED", [{ ...gate, group_id: "old-gate" }]),
+      client_id: "x509_hash:old",
+    };
+    const moved = { ...rp("verify.tamga.network", "ACTIVE", [gate]), client_id: "x509_hash:new" };
+    const issAz = { issuer_id: "iss-az", slug: "example-events", status: "ACTIVE", schema_authorizations: [] };
+    const issTr = { issuer_id: "iss-tr", slug: "example-events", status: "REVOKED", schema_authorizations: [] };
+    store.applyNationalList(list("TR", [old], [issTr]), "");
+    store.applyNationalList(list("AZ", [moved], [issAz]), "");
+    store.setFreshness({ source: "list", healthy: true, lotlVersion: 1, anchorsSeq: 1, loadedAt: NOW });
+    const ts = new ListTrustSource(store, () => NOW);
+    expect(store.relyingPartyAmbiguous("verify.tamga.network")).toBe(false);
+    expect(store.relyingPartyStateOf("verify.tamga.network")).toBe("AZ");
+    expect(ts.relyingPartyByDnsName("verify.tamga.network")?.status).toBe("ACTIVE");
+    // grubun kurumu yeni ülkenin listesindeki slug (TR'deki aynı slug geri çekilmiş olsa da)
+    expect(ts.terminalGroup("example-events-gate")?.active).toBe(true);
+    // eski kaydın grupları seçilen kayıtta değil
+    expect(ts.terminalGroup("old-gate")).toBeNull();
+    // iki liste de ACTIVE kalırsa belirsiz (kapalı güvenli)
+    const both = new TrustStore();
+    both.applyNationalList(list("TR", [{ ...old, status: "ACTIVE" }]), "");
+    both.applyNationalList(list("AZ", [moved]), "");
+    both.setFreshness({ source: "list", healthy: true, lotlVersion: 1, anchorsSeq: 1, loadedAt: NOW });
+    expect(new ListTrustSource(both, () => NOW).relyingPartyByDnsName("verify.tamga.network")).toBeNull();
+    // hepsi iptal edilmişse belirsiz değil: durumu en son değişen kayıt (REVOKED)
+    const gone = new TrustStore();
+    gone.applyNationalList(list("TR", [old]), "");
+    gone.applyNationalList(list("AZ", [{ ...moved, status: "REVOKED" }]), "");
+    gone.setFreshness({ source: "list", healthy: true, lotlVersion: 1, anchorsSeq: 1, loadedAt: NOW });
+    expect(new ListTrustSource(gone, () => NOW).relyingPartyByDnsName("verify.tamga.network")?.status).toBe("REVOKED");
+  });
 });

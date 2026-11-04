@@ -70,6 +70,9 @@ export interface StatusAnchorRow {
   version: number;
   published_at: string;
   seq: number;
+  /** listenin bit sayısı ve indeks kapasitesi (satır taşıyorsa; belirteçten okunur — zincir kaydı için) */
+  bits?: number;
+  size?: number;
 }
 /** ADR-0074 K4: kayıt sertifikası durum listesinin son çapası. */
 export interface RegistrationStatusAnchorRow {
@@ -99,6 +102,16 @@ export interface Freshness {
   staleAfter?: Date;
 }
 
+const liveRp = (r: RelyingParty) => r.status !== "REVOKED" && r.status !== "RETIRED";
+const lastChange = (r: RelyingParty) =>
+  Math.max(Date.parse(r.registered_at ?? "") || 0, ...(r.status_history ?? []).map((h) => Date.parse(h.since) || 0));
+/** ADR-0075: iptal edilmemiş kayıt (tekse o; birden çoksa ilki — belirsizlik ayrıca sorulur); yoksa durumu en son değişen. */
+function pickRelyingParty(records: RelyingParty[]): RelyingParty {
+  const live = records.filter(liveRp);
+  if (live.length) return live[0];
+  return records.reduce((a, b) => (lastChange(b) > lastChange(a) ? b : a));
+}
+
 export class TrustStore {
   lotl!: Lotl;
   lotlRaw = "";
@@ -114,9 +127,16 @@ export class TrustStore {
   /** ADR-0074 K4: dosya → son liste görünümü satırı (görünüm kaynakla çelişirse kaynak geçerlidir, PJ5) */
   list_view_anchors = new Map<string, ListViewAnchorRow>();
   relying_parties = new Map<string, RelyingParty>(); // client_id → rp
-  relying_parties_by_dns = new Map<string, RelyingParty>(); // dns_name → rp (ADR-0034: kalıcı kimlik)
-  /** dns_name → kaydın göründüğü ülke listeleri (birden çoksa kimlik belirsiz; 2026-11-04) */
+  /**
+   * dns_name → rp (ADR-0034: kalıcı kimlik). Aynı ad birden çok ülke listesinde görünürse (ADR-0075 devri: eski listede `REVOKED`,
+   * yenide `ACTIVE`) iptal edilmemiş TEK kayıt seçilir; iptal edilmemiş kayıt birden çoksa ad belirsizdir
+   * (`relyingPartyAmbiguous`). Hepsi iptal edilmişse durumu en son değişen kayıt.
+   */
+  relying_parties_by_dns = new Map<string, RelyingParty>();
+  /** dns_name → kaydın göründüğü ülke listeleri (hepsi; iptal edilmiş eski kayıt dahil) */
   relying_party_states = new Map<string, Set<string>>();
+  /** dns_name → ülke kodu → o ülke listesindeki kayıt (ADR-0075 devri) */
+  relying_party_records = new Map<string, Map<string, RelyingParty>>();
   /** issuer_id → kaydın ülke listesi (kapı grubu kurumunun `slug`'ı ülkeyle nitelenir; 2026-11-04) */
   issuer_states = new Map<string, string>();
   wallet_provider_keys = new Set<string>();
@@ -127,6 +147,29 @@ export class TrustStore {
   external_wallet_keys = new Map<string, ExternalEntity>(); // sertifika parmak izi → dış cüzdan sağlayıcısı
   recognition = new Map<string, Set<string>>(); // state → recognized states
   private freshness: Freshness | null = null;
+
+  /**
+   * ADR-0075: aynı `dns_name` iptal edilmemiş (`REVOKED` / `RETIRED` değil) birden çok ülke listesi kaydında görünüyorsa kimlik
+   * belirsizdir (kapalı güvenli). Devirden sonra eski listedeki kayıt `REVOKED` olduğundan belirsizlik yoktur: yeni kayıt geçerlidir.
+   */
+  relyingPartyAmbiguous(dnsName: string): boolean {
+    const records = this.relying_party_records.get(dnsName);
+    // kayıtlar ülke ülke tutulmamışsa (elle kurulan depo) yalnız görüldüğü liste sayısına bakılır
+    if (!records) return (this.relying_party_states.get(dnsName)?.size ?? 0) > 1;
+    return [...records.values()].filter(liveRp).length > 1;
+  }
+  /** Seçilen kaydın ülke listesi (`relying_parties_by_dns`); ad belirsizse ya da bilinmiyorsa undefined. */
+  relyingPartyStateOf(dnsName: string): string | undefined {
+    const rp = this.relying_parties_by_dns.get(dnsName);
+    if (!rp || this.relyingPartyAmbiguous(dnsName)) return undefined;
+    const records = this.relying_party_records.get(dnsName);
+    if (!records) {
+      const states = this.relying_party_states.get(dnsName);
+      return states?.size === 1 ? [...states][0] : undefined;
+    }
+    for (const [cc, r] of records) if (r === rp) return cc;
+    return undefined;
+  }
 
   /** `now`: cüzdan sağlayıcı anahtarlarının geçerlilik penceresi (valid_from/valid_to) bu ana göre (yükleme anı). */
   applyLotl(lotl: Lotl, raw: string, now: Date = new Date()) {
@@ -151,7 +194,10 @@ export class TrustStore {
     }
     for (const rp of tl.relying_parties) {
       this.relying_parties.set(rp.client_id, rp);
-      this.relying_parties_by_dns.set(rp.dns_name, rp);
+      const records = this.relying_party_records.get(rp.dns_name) ?? new Map<string, RelyingParty>();
+      records.set(tl.state_code, rp);
+      this.relying_party_records.set(rp.dns_name, records);
+      this.relying_parties_by_dns.set(rp.dns_name, pickRelyingParty([...records.values()]));
       const states = this.relying_party_states.get(rp.dns_name) ?? new Set<string>();
       states.add(tl.state_code);
       this.relying_party_states.set(rp.dns_name, states);
@@ -226,6 +272,7 @@ export class TrustStore {
         version: a.list_version,
         published_at: a.published_at,
         seq: a.seq,
+        ...(a.bits !== undefined && a.size !== undefined ? { bits: a.bits, size: a.size } : {}),
       });
     } else if (a.kind === "schema") {
       this.schema_anchors.set(a.schema_id, { content_hash: a.content_hash, seq: a.seq });
@@ -259,6 +306,8 @@ export class TrustStore {
       list_version: number;
       published_at: string;
       seq: number;
+      bits?: number;
+      size?: number;
     }>;
     schemas: Array<{ schema_id: string; content_hash: string; seq: number }>;
     registration_status?: RegistrationStatusAnchorRow[];
@@ -273,6 +322,7 @@ export class TrustStore {
         version: r.list_version,
         published_at: r.published_at,
         seq: r.seq,
+        ...(r.bits !== undefined && r.size !== undefined ? { bits: r.bits, size: r.size } : {}),
       });
     for (const r of state.schemas) this.schema_anchors.set(r.schema_id, { content_hash: r.content_hash, seq: r.seq });
     for (const r of state.registration_status ?? []) this.registration_status_anchors.set(r.list_uri, { ...r });

@@ -2,6 +2,7 @@
  * trust-publisher CLI — provisional TLSO
  *   build      registry/*.source.json + ops/pki + packages/schemas/dist → dist/{lotl,tl-tr}.{json,jws}, keys/, CHANGELOG.md, archive/
  *   anchor     --kind status_list --list-id --issuer-id --list-uri --content-hash --list-version [--published-at]
+ *              [--token <belirteç dosyası>]  (bit sayısı ve boyut belirteçten satıra yazılır; özet ve adres belirteçle aynı olmalı)
  *   heartbeat  boş çapa satırı (saatlik kadans, S5 mantığı)
  *   verify     dist/ setini yükleyici ile doğrular ve özet basar; --full: arşivlerle seq 0'dan tam zincir (TL10 replay)
  *   archive    çapa günlüğünü kontrol noktasıyla arşivler (TL12; otomatik eşik TAMGA_ANCHORS_MAX_LINES=500)
@@ -10,6 +11,9 @@
  *                                                 yeniden imzalar (≤24 s kuralı; CHANGELOG). REVOKED + --invalidates-from: o andan sonraki
  *                                                 belgeler düşer (`valid_from` = kurumun bütün belgeleri)
  *   rp-status <dns_name> <STATUS> [--reason r]    doğrulayıcı statüsü (aynı kural)
+ *   rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <onay>
+ *                                                 (ADR-0075) ülkeler arası devir: bu listedeki kayıt REVOKED, gerekçede devir kaydı;
+ *                                                 kullanımlar ve kapı grupları kapanır (yeni ülke kaydı kendi listesine ekler)
  *   end-use <dns_name> <scope_id|group_id>        doğrulayıcının bir kullanımını ya da kapı grubunu sona erdirir (valid_until = şimdi)
  *   register issuer|rp <başvuru.json> [--check]   kurum / doğrulayıcı ekler (ADR-0024 kayıt verisi denetlenir), listeyi imzalar
  *   register rp <başvuru.json> --approval <onay>  (ADR-0075) iptal edilmiş doğrulayıcının aynı alan adıyla yeniden kaydı — yalnız
@@ -86,6 +90,7 @@ import {
   xmlSignerSlotProblems,
 } from "./tl119612.js";
 import { chainCommand } from "./chain/cli.js";
+import { statusAnchorParams } from "./chain/projection.js";
 import { listViewBody, registrationStatusBody, viewLinesEnabled, viewSnapshotOf } from "./view-anchors.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
 import { checkTerminalGroups } from "./terminal-groups.js";
@@ -131,6 +136,7 @@ import {
   addScope,
   setAuthorization,
   setIssuerStatus,
+  reassignRelyingPartyOut,
   setRpStatus,
   endRpUse,
   summarize,
@@ -1353,6 +1359,7 @@ function snapshotOf(lines: string[]) {
           list_version: a.list_version,
           published_at: a.published_at,
           seq: a.seq,
+          ...(a.bits !== undefined && a.size !== undefined ? { bits: a.bits, size: a.size } : {}),
         });
     } else if (a.kind === "schema")
       schemas.set(a.schema_id, { schema_id: a.schema_id, content_hash: a.content_hash, seq: a.seq });
@@ -1420,7 +1427,7 @@ async function registryCommand(cmd: string, args: string[]) {
     ),
   };
   const check = args.includes("--check");
-  const VALUED = new Set(["--reason", "--invalidates-from", "--approval"]); // değer alan bayraklar (değerleri konumsal sayılmaz)
+  const VALUED = new Set(["--reason", "--invalidates-from", "--approval", "--reassigned-to"]); // değer alan bayraklar (değerleri konumsal sayılmaz)
   const pos = args.filter((a, k) => !a.startsWith("--") && !VALUED.has(args[k - 1] ?? ""));
   let next: Record<string, unknown>;
   let line: string;
@@ -1470,9 +1477,21 @@ async function registryCommand(cmd: string, args: string[]) {
       const [dns, st] = pos;
       if (!dns || !st)
         throw new RegistryError(["kullanım: rp-status <dns_name> <ACTIVE|SUSPENDED|REVOKED|RETIRED> [--reason r]"]);
-      const reason = arg("reason", "operator");
-      next = setRpStatus(src, dns, st, { reason }, env);
-      line = `relying_party ${dns}: ${st} (${reason}) — history kept (status_history)`;
+      const to = arg("reassigned-to");
+      if (to !== undefined) {
+        // ADR-0075: devir — eski ülke listesinde REVOKED, gerekçede devir kaydı (onay zorunlu)
+        if (st !== "REVOKED")
+          throw new RegistryError([
+            "--reassigned-to yalnız REVOKED ile (rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <onay>)",
+          ]);
+        const approval = arg("approval") ?? "";
+        next = reassignRelyingPartyOut(src, dns, { toState: to, approval }, env);
+        line = `relying_party ${dns}: REVOKED (reassignment to ${to}, approval ${approval}) — history kept (status_history)`;
+      } else {
+        const reason = arg("reason", "operator");
+        next = setRpStatus(src, dns, st, { reason }, env);
+        line = `relying_party ${dns}: ${st} (${reason}) — history kept (status_history)`;
+      }
     } else if (cmd === "end-use") {
       const [dns, id] = pos;
       if (!dns || !id) throw new RegistryError(["kullanım: end-use <dns_name> <scope_id|group_id>"]);
@@ -1905,15 +1924,24 @@ const cmd = process.argv[2];
     console.log(JSON.stringify(a));
     await refreshWrprcStatus(); // ADR-0068: kayıt sertifikası durum listesi her saat yeniden imzalanır
   } else if (cmd === "anchor") {
-    const a = await appendAnchor({
-      kind: "status_list",
+    const row = {
+      kind: "status_list" as const,
       list_id: arg("list-id")!,
       issuer_id: arg("issuer-id")!,
       list_uri: arg("list-uri")!,
       content_hash: arg("content-hash")!,
       list_version: Number(arg("list-version")),
       published_at: arg("published-at", iso(new Date()))!,
-    });
+    };
+    // --token <dosya>: listenin bit sayısı ve boyutu belirteçten (zincirdeki liste kaydı için; özet ve adres denetlenir)
+    const tokenFile = arg("token");
+    const params = tokenFile
+      ? statusAnchorParams(readFileSync(resolve(tokenFile), "utf8"), {
+          list_uri: row.list_uri,
+          content_hash: row.content_hash,
+        })
+      : {};
+    const a = await appendAnchor({ ...row, ...params });
     console.log(JSON.stringify(a));
   } else if (cmd === "wrprc-status" || cmd === "wrprc-revoke") {
     await wrprcStatusCommand(cmd, process.argv.slice(3));

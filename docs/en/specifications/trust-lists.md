@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -107,8 +107,8 @@ CHANGELOG.md                  public change log
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], xml_signing_keys[]?, recognition{mode, recognizes[]}}` | `Governance` member list + `CrossRecognition`. `signing_keys` are the signers of the JSON national list (`tl-<cc>.jws`) only; `xml_signing_keys` are the signers of the ETSI TS 119 612 XML view (`tl-<cc>.xml`, EKU id-tsl-kp-tslSigning) only — present when the slot publishes XML; the two sets are separate and an XML signer never validates a JSON list ([[ADR-0066]] 0.7.4 implementation note) |
 | `schemas[]` | `{schema_id, vct, metadata_url, content_hash, content_hashes[], layer: NETWORK, governance, status, registered_at, status_history[]}` | `SchemaRegistry` (NETWORK); `registered_at` is **permanent** (time of the first anchor); `content_hashes` = digests of the valid versions ([[ADR-0010]] K4; in the development stage only the current digest, [[ADR-0029]]), each anchored once |
 | `eaa_categories` | `{urn → description}` | Category namespace ([[ADR-0010]] K5) |
-| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA trust anchor (R-7; not yet on the chain — ADR candidate). `status` (of the entry and of `solutions[].status`) is from the `Status` set: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA validation uses only the `ACTIVE` keys of an `ACTIVE` entry. A `RESERVED` entry holds a place (e.g. a wallet provider whose operator has not yet supplied its own certificate, [[ADR-0042]]): `wua_signing_keys` may be empty and it is not used for WUA validation. `security_level` is the wallet assurance level ([[SPEC-WALLET-0001]] §2.2; W1 is not supported (except the test key for the network's own trial scenes in the sandbox list — [[ADR-0042]] K5)). Optional `identifiers[]` ([[ADR-0024]] form, `{scheme, value}`): the provider's official registration number. The registry tool (`wallet-provider activate`) checks the signing certificate against the ETSI TS 119 412-6 §5 profile: the subject's `organizationIdentifier` (2.5.4.97) must equal the semantic identifier derived from this number (`VATTR-<VKN>` …) and the qcStatements must carry the QcType `id-etsi-qct-wal` (0.4.0.194126.1.2); an entry without a registration number is not activated (exception: "(TEST)" certificates in the sandbox) |
-| `zk_circuits[]` | `{circuit_id, system, version, attributes, sha256, status}` | Accepted ZK circuits ([[ADR-0032]] ZK2; not yet on the chain) |
+| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA trust anchor (R-7; on the chain in `NetworkRegistry`, [[ADR-0074]] K3). `status` (of the entry and of `solutions[].status`) is from the `Status` set: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA validation uses only the `ACTIVE` keys of an `ACTIVE` entry. A `RESERVED` entry holds a place (e.g. a wallet provider whose operator has not yet supplied its own certificate, [[ADR-0042]]): `wua_signing_keys` may be empty and it is not used for WUA validation. `security_level` is the wallet assurance level ([[SPEC-WALLET-0001]] §2.2; W1 is not supported (except the test key for the network's own trial scenes in the sandbox list — [[ADR-0042]] K5)). Optional `identifiers[]` ([[ADR-0024]] form, `{scheme, value}`): the provider's official registration number. The registry tool (`wallet-provider activate`) checks the signing certificate against the ETSI TS 119 412-6 §5 profile: the subject's `organizationIdentifier` (2.5.4.97) must equal the semantic identifier derived from this number (`VATTR-<VKN>` …) and the qcStatements must carry the QcType `id-etsi-qct-wal` (0.4.0.194126.1.2); an entry without a registration number is not activated (exception: "(TEST)" certificates in the sandbox) |
+| `zk_circuits[]` | `{circuit_id, system, version, attributes, sha256, status}` | Accepted ZK circuits ([[ADR-0032]] ZK2; on the chain in `NetworkRegistry`, `note` is not written) |
 | `pid_providers[]` | empty, reserved | BT8 → TL8 |
 
 ---
@@ -141,7 +141,7 @@ Every line is an independent JWS; payload `{seq, previous_hash, ts, kind, …}`:
 
 | `kind` | Fields | Contract counterpart |
 |---|---|---|
-| `status_list` | `list_id, issuer_id, list_uri, content_hash, list_version, published_at` | `StatusListRegistry.publishList` (list-stage reading of S1/S4, L1) |
+| `status_list` | `list_id, issuer_id, list_uri, content_hash, list_version, published_at`, optional `bits, size` | `StatusListRegistry.publishList` (list-stage reading of S1/S4, L1); the first line `registerList(…, size, bits)` |
 | `schema` | `schema_id, vct, content_hash` | `SchemaRegistry` contentHash (D8: **after** the CDN publication) |
 | `heartbeat` | — | Hourly cadence (S5 logic on the operator side) |
 | `checkpoint` | `archive: { file, sha256, seq_from, seq_to, lines }`, `state: { status_lists[], schemas[], registration_status[]?, list_views[]? }` | Archive checkpoint (TL12); `state` = the final state produced by the archived lines |
@@ -154,6 +154,14 @@ Status List Token hash in D5; lines are never deleted; the log is public; `list_
 `registration_status` only grows per list and the `source_version` of `list_view` only grows per file (the loader rejects a step
 back). These lines do not enter the verification decision; if a view contradicts its source, the source (JSON list) prevails. The
 checkpoint `state` also carries their latest values (older checkpoints do not have the fields).
+
+**Bit count and size in a `status_list` line (2026-11-05).** The optional `bits` (Token Status List set: 1, 2, 4, 8) and `size`
+(index capacity = inflated `lst` bytes × 8 / `bits`) are read from the token: the publisher's `anchor --token <file>` command opens
+the token, checks that its digest equals `content_hash` and its `sub` equals `list_uri`, and writes both fields to the line. The
+list record on the chain (`StatusListRegistry.registerList`) needs both values; the replay reads them from the line first and, for
+older lines, from the token at the list address; if neither is available, writing to the real network is refused. The fields do not
+enter the verification decision; a checkpoint's `state.status_lists[]` carries them too. Older loaders ignore the unknown fields
+(the line type is unchanged).
 
 **Archiving and checkpoints (TL12).** As the log grows, load time grows linearly with the number of lines (each line is one
 JWS verification). When the log passes a threshold (500 lines by default), the operator moves **all** current lines into
@@ -191,12 +199,11 @@ Three-valued answer: `YES | NO | UNKNOWN`; `UNKNOWN` → INDETERMINATE (CMP4). S
 | `issuers[]` | `IssuerRegistry.registerIssuer / suspend / revoke(revokedAt) / setSuccessor` |
 | `issuers[].schema_authorizations[]` | `IssuerRegistry.setSchemaAuthorization(issuerId, schemaId, from, until)` |
 | `lotl.schemas[]` | `Governance` proposal → `SchemaRegistry.registerSchema(vct, contentHash, NETWORK)` |
-| `relying_parties[]` | `RelyingPartyRegistry.register / setScope` |
-| `anchors kind=status_list` | `StatusListRegistry.publishList(listId, uri, hash, version)` |
+| `relying_parties[]` | `RelyingPartyRegistry.register / setScope`; suspension, reinstatement and revocation with the list date (`suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt`). Reassignment between countries ([[ADR-0075]]): the record in the old country's list becomes `REVOKED`, the reason names the reassignment record (`reassignment to <CC> (approval <ref>)`); the loader takes the single non-revoked record of the same `dns_name`, and more than one non-revoked record makes the name ambiguous (`null`) |
+| `anchors kind=status_list` | `StatusListRegistry.registerList(issuerId, uri, size, bits)` (first line) + `publishList(listId, hash, version, published_at)` |
 | `anchors kind=schema` | `SchemaRegistry` contentHash |
 | `lotl` / `tl-<cc>` version (whole file) · last line of `anchors.jsonl` | Trust list anchor registry — `anchorList(listKey, version, sha256(jws), previousHash, issuedAt)` · `anchorLogHead(logKey, seq, sha256(line), ts)`; digest only, no content ([[ADR-0051]]; [[SPEC-BC-0001]] §15). The chain is a projection: on conflict the signed list prevails and the chain's answer is never required for verification. Flag `TAMGA_CHAIN_ENABLED`, off in production |
-| `wallet_providers[]` | not yet on the chain — ADR candidate |
-| `zk_circuits[]` | not yet on the chain — a `Governance` record in the chain stage (ADR candidate) |
+| `wallet_providers[]`, `zk_circuits[]`, `external_lists[]`, `eaa_categories`, signers, `operator`, `national_lists[]` slots and roles, `catalogue` | `NetworkRegistry` network-level records ([[ADR-0074]] K3; [[SPEC-BC-0001]] §16.5); a record that leaves the list becomes `RETIRED` |
 
 Migration: the `archive/` versions are replayed in order as contract calls; the migration is not complete until
 `TrustSource(list)` and `TrustSource(chain)` give the same answers to the `conformance/vectors/trust` queries (TL10;

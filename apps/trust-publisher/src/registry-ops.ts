@@ -371,6 +371,40 @@ export function setRpStatus(
 }
 
 /**
+ * ADR-0075 RO1/RO5 — ülkeler arası DEVİR, eski ülke listesi tarafı: kimliğin sahibi başka devlete geçtiğinde (proje yönetimi onaylı
+ * açık işlem; zincirde Governance devir önerisi, 2/3) bu listedeki kayıt silinmez, `REVOKED` olur; gerekçe devir kaydıdır
+ * (`reassignment to <CC> (approval <onay>)`). Kullanımlar ve kapı grupları kapanır (yeni dönem devralmaz, RO3). Böylece aynı
+ * `dns_name` eski listede REVOKED, yeni listede ACTIVE görünür ve yükleyici yeni kaydı alır (belirsiz saymaz). Yeni ülkenin listesi
+ * kaydı kendi kayıt aracıyla ekler.
+ */
+export function reassignRelyingPartyOut(
+  src: Rec,
+  dnsName: string,
+  opts: { toState: string; approval: string },
+  env: Pick<RegistryEnv, "now">,
+): Rec {
+  const out = clone(src);
+  const rp = ((out.relying_parties ?? []) as Rec[]).find((r) => r.dns_name === dnsName);
+  const p: string[] = [];
+  if (!rp) p.push(`doğrulayıcı yok: ${dnsName}`);
+  else if (rp.status === "REVOKED" || rp.status === "RETIRED")
+    p.push(`${dnsName} ${rp.status}: devir yalnız iptal edilmemiş kayıtta (ADR-0075 RO1)`);
+  if (!/^[A-Z]{2}$/.test(opts.toState)) p.push("devir: yeni devlet kodu iki büyük harf (ör. KZ)");
+  else if (opts.toState === src.state_code) p.push(`devir: yeni devlet bu listenin devleti (${opts.toState})`);
+  if (!APPROVAL_REF.test(opts.approval ?? ""))
+    p.push("approval: onay kaydının kısa kimliği (3–80 karakter: harf, rakam, . _ : -; ADR-0075 RO5)");
+  if (p.length) throw new RegistryError(p);
+  rp!.status = "REVOKED";
+  rp!.status_history.push({
+    status: "REVOKED",
+    since: iso(env.now),
+    reason: `reassignment to ${opts.toState} (approval ${opts.approval})`,
+  });
+  for (const u of [...((rp!.scopes ?? []) as Rec[]), ...((rp!.terminal_groups ?? []) as Rec[])]) endUse(u, env.now);
+  return out;
+}
+
+/**
  * Doğrulayıcının bir kullanımını (`scopes[].scope_id`) ya da kapı grubunu (`terminal_groups[].group_id`) sona erdirir: kayıt
  * kalır, bitiş tarihi (`valid_until`) şimdi olur (TL2; kayıt sertifikası artık üretilmez, AP6 kullanımı kabul etmez).
  */

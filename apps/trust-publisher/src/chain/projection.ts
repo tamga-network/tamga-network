@@ -225,3 +225,22 @@ export function statusListRegistrationOf(jws: string): StatusListRegistration {
   const bytes = inflateSync(Buffer.from(p.status_list.lst, "base64url"), { maxOutputLength: 10 * 1024 * 1024 });
   return { listURI: p.sub, bitsPerEntry: bits, listSize: (bytes.length * 8) / bits, contentHash: jwsHash(jws.trim()) };
 }
+
+/**
+ * Çapa satırının `bits` / `size` alanları belirteçten (ADR-0073 K1; SPEC-TRUST-0001 §5): satırın özeti ve adresi belirteçle aynı
+ * olmalı (yanlış belirteçten okunan değer zincire yazılmasın). İMZA DOĞRULAMAZ — belirteci kurum az önce imzaladı (S4: önce
+ * belirteç, sonra çapa); değerler yalnız zincir kaydı içindir, doğrulama kararına girmez.
+ */
+export function statusAnchorParams(
+  jws: string,
+  row: { list_uri: string; content_hash: string },
+): { bits: number; size: number } {
+  const t = jws.trim();
+  const reg = statusListRegistrationOf(t);
+  if (`sha256:${reg.contentHash.slice(2)}` !== row.content_hash.toLowerCase())
+    throw new Error("anchor: belirtecin özeti --content-hash ile aynı değil");
+  if (reg.listURI !== row.list_uri)
+    throw new Error(`anchor: belirtecin sub'ı (${reg.listURI}) --list-uri ile aynı değil`);
+  if (!Number.isInteger(reg.listSize) || reg.listSize <= 0) throw new Error("anchor: belirtecin liste boyutu geçersiz");
+  return { bits: reg.bitsPerEntry, size: reg.listSize };
+}

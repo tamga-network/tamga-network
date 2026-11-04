@@ -76,7 +76,19 @@ export const RPStatus = { NONE: 0, ACTIVE: 1, SUSPENDED: 2, REVOKED: 3 } as cons
 export const RecognitionMode = { NONE: 0, FULL: 1, CATEGORY_LIMITED: 2 } as const;
 export const PeriodAction = { NONE: 0, REASSIGNMENT: 1, RE_REGISTRATION: 2 } as const;
 export const MigrationPhase = { NOT_STARTED: 0, OPEN: 1, CLOSED: 2 } as const;
-export const RecordKind = { NONE: 0, WALLET_PROVIDER: 1, WALLET_PROVIDER_KEY: 2 } as const;
+export const RecordKind = {
+  NONE: 0,
+  WALLET_PROVIDER: 1,
+  WALLET_PROVIDER_KEY: 2,
+  ZK_CIRCUIT: 3,
+  EXTERNAL_LIST: 4,
+  EAA_CATEGORY: 5,
+  LIST_SIGNER: 6,
+  LIST_OPERATOR: 7,
+  STATE_SLOT: 8,
+  ROLE_SLOT: 9,
+  CATALOGUE: 10,
+} as const;
 export const RecordStatus = {
   NONE: 0,
   ACTIVE: 1,

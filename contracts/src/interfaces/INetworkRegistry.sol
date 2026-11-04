@@ -26,10 +26,10 @@ interface INetworkRegistry is ITamgaErrors {
         ZK_CIRCUIT, // recordId = keccak256(circuit_id); fingerprint = devre dosyası SHA-256; subtype = sistem
         EXTERNAL_LIST, // recordId = keccak256(list_id); region = ülke kodu ya da "EU"; subtype = biçim; digests = imzacı + tür özetleri
         EAA_CATEGORY, // recordId = keccak256(kod)
-        LIST_SIGNER, // recordId = imzacı parmak izi; parentId = listKey; subtype = amaç (çapa, JSON liste, XML liste)
+        LIST_SIGNER, // recordId = keccak256("tamga:signer:" ‖ parentId ‖ amaç ‖ parmak izi); parentId = listKey; subtype = amaç
         LIST_OPERATOR, // recordId = listKey; status PROVISIONAL / DESIGNATED; detailsHash = ad + on_behalf_of özeti
         STATE_SLOT, // recordId = keccak256("tamga:slot:" ‖ devlet kodu); region = devlet kodu; subtype = üyelik türü
-        ROLE_SLOT, // recordId = keccak256(rol); parentId = devlet slotu
+        ROLE_SLOT, // recordId = keccak256("tamga:slot:" ‖ devlet kodu ‖ ":" ‖ rol); parentId = devlet slotu
         CATALOGUE // recordId = keccak256("catalogue"); detailsHash = katalog adresi bloğu
     }
 

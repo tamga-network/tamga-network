@@ -1,12 +1,13 @@
 /**
  * ADR-0009 K7 / ADR-0073 K6 (CE6) / ADR-0015 K3–K5 — zincir–liste eşdeğerliği, süreç içi Hardhat zincirinde (CI'da koşar):
  *   1) birkaç sürümlük imzalı liste arşivi (apps/chain-indexer/test/fixture.ts: askı, yumuşak ve sert iptal, kök emekliliği,
- *      şema sürümü, yetki pencereleri, doğrulayıcı kapsamı, kapı grubu, iptal sonrası yeniden kayıt, DEVİR) doğrulanır ve planlanır;
+ *      şema sürümü, yetki pencereleri, doğrulayıcı kapsamı, kapı grubu, geçmiş tarihli doğrulayıcı durumları, iptal sonrası yeniden
+ *      kayıt, DEVİR, kurum halefi, NetworkRegistry'nin bütün kayıt türleri) doğrulanır ve planlanır;
  *   2) göç penceresi Governance oyuyla açılır (plan özetiyle), `trust:chain-replay` yürütücüsü planı kontratlara yazar;
  *      ikinci koşu hiçbir şey yazmaz, yarıda kalan koşu kaldığı yerden sürer;
  *   3) olay tabanlı indeksleyici zinciri okur → `ChainTrustSource`;
  *   4) aynı sorular `TrustSource(list)`, `TrustSource(chain)` ve doğrudan kontrat okumasına (sabitlenmiş blok) sorulur:
- *      C1/C2/C3/D5'te fark YOK; öteki farklar yalnız belgelenmiş bilinen farklar (ADR-0075 devir).
+ *      hiçbir soruda fark YOK (ADR-0075 devrinde eski listedeki kayıt REVOKED olduğundan bilinen fark da kalmadı).
  * Zincir istemcisi (ethers) uygulamalardadır; saf TS paketlerine zincir bağımlılığı girmez (ADR-0015 K1).
  */
 import { expect } from "chai";
@@ -105,8 +106,32 @@ describe("ADR-0073 K6 — zincir–liste eşdeğerliği (yeniden oynatma + indek
     }
     expect(report.decisionDifferences, JSON.stringify(report.differences)).to.equal(0);
     expect(report.unexpected, JSON.stringify(report.differences)).to.equal(0);
-    // bilinen fark (ADR-0075 sonucu): devirden sonra eski ülke listesindeki kayıt kapanmadığı için liste belirsiz sayar
-    expect(report.differences.map((x) => `${x.category}:${x.question}`)).to.deep.equal([`relying_party:${f.devirDns}`]);
+    expect(report.differences, JSON.stringify(report.differences)).to.deep.equal([]);
+    // her soru türünden en az bir soru: geçmiş an (tarihli doğrulayıcı durumu), halef, ağ düzeyi kayıtların her türü
+    for (const k of [
+      "relying_party",
+      "rp_status_at",
+      "rp_scopes",
+      "terminal_group",
+      "wallet_key",
+      "issuer_successor",
+      "zk_circuit",
+      "external_list",
+      "eaa_category",
+      "list_signer",
+      "list_operator",
+      "state_slot",
+      "role_slot",
+      "catalogue",
+    ] as const)
+      expect(report.questions[k], k).to.be.greaterThan(0);
+    // devredilen ad: liste ve zincir yeni sahibinde ACTIVE (eski listede REVOKED, belirsiz değil)
+    expect(list.relyingPartyByDnsName(f.devirDns)?.status).to.equal("ACTIVE");
+    expect(chain.relyingPartyByDnsName(f.devirDns)?.status).to.equal("ACTIVE");
+    // kurum halefi zincirde
+    expect(
+      Object.values(indexer.index.issuers).filter((i) => i.successor && !/^0x0+$/.test(i.successor)),
+    ).to.have.length(1);
     // indeks artımlıdır: yeni blok yoksa değişmez
     expect(await indexer.sync()).to.equal(block);
   });

@@ -38,6 +38,8 @@ export interface IxIssuer {
   status: number;
   history: Hist;
   invalidatesFrom: number;
+  /** halef kurum (iptalde; yoksa sıfır) */
+  successor?: string;
   /** schemaId → [since, until) pencereleri (until 0 = açık) */
   auth: Record<string, Array<[number, number]>>;
   profile: { issuerClass: number; publicSector: boolean; entitlements: number; registrationHash: string };
@@ -99,10 +101,17 @@ export interface IxRecord {
   kind: number;
   recordId: string;
   parentId: string;
+  region: string;
+  subtype: number;
   status: number;
   validFrom: number;
   validUntil: number;
   fingerprint: string;
+  detailsHash: string;
+  /** uint256 — onaltılık değil, ondalık metin (bit alanları 2^53'ü aşabilir) */
+  flags: string;
+  digests: string[];
+  history: Hist;
 }
 export interface ChainIndex {
   meta: { chainId: number; block: number; blockTimestamp: number; addresses: Record<string, string> };
@@ -292,6 +301,7 @@ export class ChainIndexer {
         status: N(i.status),
         history: hist(await c.IssuerRegistry.issuerStatusHistoryOf(id, o)),
         invalidatesFrom: N(await c.IssuerRegistry.invalidatesFromOf(id, o)),
+        successor: H(i.successorId),
         auth: ix.issuers[id]?.auth ?? {},
         profile: {
           issuerClass: N(p.issuerClass),
@@ -355,10 +365,16 @@ export class ChainIndexer {
         kind: N(r.kind),
         recordId: H(r.recordId),
         parentId: H(r.parentId),
+        region: H(r.region),
+        subtype: N(r.subtype),
         status: N(r.status),
         validFrom: N(r.validFrom),
         validUntil: N(r.validUntil),
         fingerprint: H(r.fingerprint),
+        detailsHash: H(r.detailsHash),
+        flags: BigInt(r.flags).toString(),
+        digests: (r.digests as string[]).map(H),
+        history: hist(await c.NetworkRegistry.recordStatusHistoryOf(N(kind), recordId, o)),
       };
     }
   }

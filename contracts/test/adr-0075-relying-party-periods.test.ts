@@ -301,8 +301,10 @@ describe("ADR-0075 — doğrulayıcı kimliğinin sahipliği ve kayıt dönemler
     // pencerede tarihsiz kayıt donuk; listedeki tarihle yeniden oynatılır
     await expect(tr.registerRelyingParty(rp())).to.be.revertedWithCustomError(reg, "DateRequiredDuringMigration");
     await (await tr.registerRelyingParty(rp({ registeredAt: past }))).wait();
-    await (await tr.revokeRelyingParty(RPID)).wait();
-    const tRevoke = await f.now();
+    // tarihsiz iptal de donuk; listedeki anla yazılır
+    await expect(tr.revokeRelyingParty(RPID)).to.be.revertedWithCustomError(reg, "DateRequiredDuringMigration");
+    const tRevoke = past + 10 * DAY;
+    await (await tr.revokeRelyingPartyAt(RPID, tRevoke)).wait();
 
     const c = change({
       action: Action.RE_REGISTRATION,
@@ -325,5 +327,71 @@ describe("ADR-0075 — doğrulayıcı kimliğinin sahipliği ve kayıt dönemler
     expect(await reg.isRelyingPartyAcceptableAt(RPID, past + DAY)).to.equal(true);
     // pencerede de yazma yetkisi yeni dönemin sahibinde
     await expect(f.as(reg, f.trDelegate).suspendRelyingParty(RPID)).to.be.revertedWithCustomError(reg, "NotOwnerState");
+  });
+
+  it("tarihli durum yazımları: göç kipinde listedeki an; kip dışında yalnız blok zamanı; geçmiş an sorusu listeyle aynı", async () => {
+    const tr = f.as(reg, f.trDelegate);
+    // kip dışında: geçmiş tarih yok, `at` = 0 blok zamanı
+    await (await tr.registerRelyingParty(rp())).wait();
+    const t0 = await f.now();
+    await expect(tr.suspendRelyingPartyAt(RPID, t0 - DAY)).to.be.revertedWithCustomError(
+      reg,
+      "PastDateOutsideMigration",
+    );
+    await (await tr.suspendRelyingPartyAt(RPID, 0)).wait();
+    const tSusp = await f.now();
+    expect(await reg.relyingPartyAt(RPID, tSusp)).to.deep.equal([BigInt(RP.SUSPENDED), TR, 0n]);
+    expect(await reg.isRelyingPartyAcceptableAt(RPID, tSusp - 1)).to.equal(true);
+    expect(await reg.isRelyingPartyAcceptableAt(RPID, tSusp)).to.equal(false);
+
+    // göç kipinde: listedeki geçmiş an (askı → dönüş → iptal), sıralı ve blok zamanından ileri değil
+    const RP2 = id("shop.example.tr");
+    const g = f.as(f.governance, f.trValidator);
+    const open = await proposalId(
+      await g.proposeMigrationOpen(await reg.getAddress(), id("replay-plan-v2"), 7 * DAY, ethers.ZeroAddress),
+      f,
+    );
+    await (await f.as(f.governance, f.trValidator).vote(open, true)).wait();
+    await (await f.as(f.governance, f.kzValidator).vote(open, true)).wait();
+    await (await f.governance.execute(open)).wait();
+    const now = await f.now();
+    const reg0 = now - 90 * DAY;
+    await (
+      await tr.registerRelyingParty(rp({ rpId: RP2, accessCertFingerprint: id("CERT-2"), registeredAt: reg0 }))
+    ).wait();
+    await expect(tr.suspendRelyingParty(RP2)).to.be.revertedWithCustomError(reg, "DateRequiredDuringMigration");
+    await expect(tr.suspendRelyingPartyAt(RP2, now + DAY)).to.be.revertedWithCustomError(reg, "DateInFuture");
+    await expect(tr.suspendRelyingPartyAt(RP2, reg0 - 1)).to.be.revertedWithCustomError(reg, "StatusOutOfOrder");
+    await (await tr.suspendRelyingPartyAt(RP2, reg0 + 50 * DAY)).wait();
+    await expect(tr.reinstateRelyingPartyAt(RP2, reg0 + 40 * DAY)).to.be.revertedWithCustomError(
+      reg,
+      "StatusOutOfOrder",
+    );
+    await (await tr.reinstateRelyingPartyAt(RP2, reg0 + 59 * DAY)).wait();
+    await (await tr.revokeRelyingPartyAt(RP2, reg0 + 80 * DAY)).wait();
+    await expect(tr.revokeRelyingPartyAt(RP2, reg0 + 81 * DAY)).to.be.revertedWithCustomError(reg, "AlreadyRevoked");
+    // başka devlet yazamaz (tarihli yol da egemenlik denetiminden geçer)
+    await expect(f.as(reg, f.kzDelegate).suspendRelyingPartyAt(RPID, now)).to.be.revertedWithCustomError(
+      reg,
+      "NotOwnerState",
+    );
+
+    const h = await reg.relyingPartyStatusHistoryOf(RP2);
+    expect(h.map((c: any) => [Number(c.since), Number(c.status)])).to.deep.equal([
+      [reg0, RP.ACTIVE],
+      [reg0 + 50 * DAY, RP.SUSPENDED],
+      [reg0 + 59 * DAY, RP.ACTIVE],
+      [reg0 + 80 * DAY, RP.REVOKED],
+    ]);
+    // yarı açık aralıklar: listenin `status_history` kuralıyla aynı cevap
+    const at = async (t: number) => reg.isRelyingPartyAcceptableAt(RP2, t);
+    expect(await at(reg0 - 1)).to.equal(false);
+    expect(await at(reg0)).to.equal(true);
+    expect(await at(reg0 + 50 * DAY - 1)).to.equal(true);
+    expect(await at(reg0 + 50 * DAY)).to.equal(false);
+    expect(await at(reg0 + 59 * DAY)).to.equal(true);
+    expect(await at(reg0 + 80 * DAY)).to.equal(false);
+    expect(await reg.relyingPartyAt(RP2, reg0 + 55 * DAY)).to.deep.equal([BigInt(RP.SUSPENDED), TR, 0n]);
+    expect((await reg.getRelyingParty(RP2)).status).to.equal(BigInt(RP.REVOKED));
   });
 });

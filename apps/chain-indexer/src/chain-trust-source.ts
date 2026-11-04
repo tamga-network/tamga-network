@@ -20,6 +20,7 @@ import type {
   TerminalGroupAnswer,
   Tri,
   TrustSource,
+  ZkCircuit,
 } from "@tamga-network/trust";
 
 import { ISSUER_CATEGORIES, ISSUER_CLASSES, PRESENTATION_FORMATS, RecordKind } from "./contracts.js";
@@ -35,7 +36,8 @@ import {
   rpIdOf,
   schemaIdOf,
 } from "./ids.js";
-import { recordKey, type ChainIndex, type Hist, type IxRP } from "./indexer.js";
+import { recordKey, type ChainIndex, type Hist, type IxRP, type IxRecord } from "./indexer.js";
+import { ZK_SYSTEMS } from "./network-records.js";
 
 export interface ChainTrustSourceOptions {
   /** şimdiki zaman (test); varsayılan saat */
@@ -169,6 +171,15 @@ export class ChainTrustSource implements TrustSource {
     const rp = this.ix.rps[rpIdOf(dnsName)];
     return rp ? this.rpRecord(rp, dnsName.toLowerCase()) : null;
   }
+  /**
+   * `t` anında doğrulayıcı ACTIVE mi (RelyingPartyRegistry.isRelyingPartyAcceptableAt; durum geçmişi yarı açık). Liste kaynağında
+   * aynı soru kaydın `status_history`'sidir; devir ve iptal sonrası yeniden kaydın zincir tarihi yürütme anıdır (ADR-0075).
+   */
+  isRelyingPartyAcceptableAt(dnsName: string, t: number): Tri {
+    if (this.unhealthy()) return "UNKNOWN";
+    const rp = this.ix.rps[rpIdOf(dnsName)];
+    return rp && statusAtChain(rp.history, t) === 1 ? "YES" : "NO";
+  }
   /** Zincirdeki istek kapsamları (özet biçiminde; ADR-0073 K4). */
   requestScopes(dnsName: string) {
     if (this.unhealthy()) return [];
@@ -224,7 +235,7 @@ export class ChainTrustSource implements TrustSource {
       status: ISSUER_STATUS[i.status],
       valid_from: isoOf(i.validFrom),
       valid_until: isoOf(i.validUntil),
-      successor_id: null,
+      successor_id: i.successor && i.successor !== ZERO32 ? i.successor : null,
       status_history: i.history.map(([since, st]) => ({
         status: ISSUER_STATUS[st],
         since: isoOf(since),
@@ -275,6 +286,38 @@ export class ChainTrustSource implements TrustSource {
     const k = this.ix.records[recordKey(RecordKind.WALLET_PROVIDER_KEY, "0x" + fingerprintHex.toLowerCase())];
     if (!live(k)) return "NO";
     return live(this.ix.records[recordKey(RecordKind.WALLET_PROVIDER, k!.parentId)]) ? "YES" : "NO";
+  }
+
+  /** Doğrulayıcının kayıt dönemleri (ADR-0075; dönem 0 ilk kayıt). */
+  registrationPeriods(dnsName: string): Array<{ state: string; since: number }> {
+    return this.ix.rps[rpIdOf(dnsName)]?.periods ?? [];
+  }
+  /** Dizindeki bütün ağ düzeyi kayıtlar (eşdeğerlik: listeden kalkmış kayıt zincirde etkin kalmamalı). */
+  networkRecords(): IxRecord[] {
+    return Object.values(this.ix.records);
+  }
+  /** Ağ düzeyi kayıt (ADR-0074 K3; `NetworkRegistry.getRecord`) — dizindeki hâli; yoksa null. */
+  networkRecord(kind: number, recordId: string): IxRecord | null {
+    if (this.unhealthy()) return null;
+    return this.ix.records[recordKey(kind, recordId)] ?? null;
+  }
+
+  /**
+   * ADR-0032 ZK2: zincirdeki ETKİN (ACTIVE) ZK devresi; yoksa null. `circuit_id` zincirde yalnız özet olarak durduğundan çağıranın
+   * verdiği kimlikle eşlenir; dosya özeti, sistem, sürüm ve öznitelik sayısı kayıttan.
+   */
+  zkCircuit(circuitId: string): ZkCircuit | null {
+    const r = this.networkRecord(RecordKind.ZK_CIRCUIT, keccakText(circuitId));
+    if (!r || r.status !== 1) return null;
+    const flags = BigInt(r.flags);
+    return {
+      circuit_id: circuitId,
+      system: ZK_SYSTEMS[r.subtype - 1],
+      version: Number(flags >> 32n),
+      attributes: Number(flags & 0xffffffffn),
+      sha256: bytes32ToFp(r.fingerprint),
+      status: "ACTIVE",
+    } as ZkCircuit;
   }
 
   terminalGroup(groupId: string): TerminalGroupAnswer | null {

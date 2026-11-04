@@ -149,6 +149,11 @@ interface IRelyingPartyRegistry is ITamgaErrors {
     /// @notice ADR-0073 K4: SUSPENDED → ACTIVE (REVOKED kesindir).
     function reinstateRelyingParty(bytes32 rpId) external;
     function revokeRelyingParty(bytes32 rpId) external;
+    // --- Tarihli durum yazımları (`at` = 0 → blok zamanı; açık geçmiş tarih yalnız göç kipinde, blok zamanından ileri değil;
+    //     kayıt başına sıralı). Liste geçmişinin yeniden oynatılmasında durum `since` anıyla yazılır (ADR-0073 K1/K5). ---
+    function suspendRelyingPartyAt(bytes32 rpId, uint64 at) external;
+    function reinstateRelyingPartyAt(bytes32 rpId, uint64 at) external;
+    function revokeRelyingPartyAt(bytes32 rpId, uint64 at) external;
     /// @notice Kapsamı ekler ya da (aynı `scopeHash`) günceller.
     function setRequestScope(bytes32 rpId, RequestScope calldata scope) external;
     /// @notice Geri çekilen kapsam silinmez, aralığı kapanır (`at` = 0 → blok zamanı; açık tarih yalnız göç kipinde).

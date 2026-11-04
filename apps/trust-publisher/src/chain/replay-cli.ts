@@ -3,7 +3,10 @@
  *   chain-replay [--dry-run] [--archive <dist klasörü>]
  * Adımlar: arşivi oku ve doğrula (imza, sürüm zinciri, çapa zinciri) → deterministik plan + `replayPlanHash` → (yazımda) göç
  * penceresi bu planın özetiyle açık mı → işlemleri kaldığı yerden yaz → indeksle → eşdeğerlik testi (CE6).
- * Varsayılan yalnız plan: `TAMGA_CHAIN_ENABLED` kapalıyken ya da `--dry-run` ile hiçbir bağlantı kurulmaz ve hiçbir şey yazılmaz.
+ * Varsayılan yalnız plan: `TAMGA_CHAIN_ENABLED` kapalıyken ya da `--dry-run` ile zincire bağlanılmaz ve hiçbir şey yazılmaz.
+ * İptal listesinin bit sayısı ve boyutu çapa satırında yoksa (eski satırlar) planı kuran araç listeyi adresinden okur (yalnız
+ * https; belirtecin `sub`'ı adresle aynı olmalı) — plan özeti bu değerleri içerir, herkes aynı adresten yeniden üretebilir. Okunamazsa
+ * varsayılan planlanır ve gerçek ağa yazım reddedilir.
  * Yazım:
  *   - yerel geliştirme zinciri (Hardhat 31337, yerel Besu 31338): dağıtım dosyası `contracts/deployments/<ağ>.json`, Hardhat'in
  *     herkese açık test hesapları; pencere yoksa Governance oyuyla açılır (yalnız yerel);
@@ -24,8 +27,8 @@ import { ChainIndexer } from "../../../chain-indexer/src/indexer.js";
 import { LOCAL_CHAIN_IDS, localDevSigners, type DevDeployment } from "../../../chain-indexer/src/local-dev.js";
 import { listSourceFromArchive, readArchiveDir, verifyArchive } from "../../../chain-indexer/src/replay-archive.js";
 import { executeReplay, openMigrationWindows } from "../../../chain-indexer/src/replay-exec.js";
-import { buildReplayPlan } from "../../../chain-indexer/src/replay-plan.js";
-import { assertEnvironmentAllowed, type Environment } from "./projection.js";
+import { buildReplayPlan, statusListUrisMissingParams } from "../../../chain-indexer/src/replay-plan.js";
+import { assertEnvironmentAllowed, statusListRegistrationOf, type Environment } from "./projection.js";
 
 const DEPLOYMENTS = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -38,15 +41,53 @@ const DEPLOYMENTS = resolve(
 );
 const DEPLOYMENT_OF: Record<number, string> = { 31337: "localhost.json", 31338: "besuDev.json" };
 
+/** Belirteci adresinden okur (yalnız https; 10 sn). */
+async function fetchToken(uri: string): Promise<string> {
+  if (!/^https:\/\//.test(uri)) throw new Error("yalnız https");
+  const r = await fetch(uri, { signal: AbortSignal.timeout(10_000), redirect: "error" });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.text();
+}
+
+/**
+ * Çapa satırında bit sayısı ve boyutu olmayan iptal listelerinin değerleri belirteçten (`statusListRegistrationOf`). Okunamayan liste
+ * uyarıyla atlanır (plan varsayılanı yazar, gerçek ağ yazımı reddeder).
+ */
+export async function statusListParamsFromTokens(
+  uris: string[],
+  fetchText: (uri: string) => Promise<string> = fetchToken,
+): Promise<{ params: Map<string, { bits: number; size: number }>; warnings: string[] }> {
+  const params = new Map<string, { bits: number; size: number }>();
+  const warnings: string[] = [];
+  for (const uri of uris)
+    try {
+      const reg = statusListRegistrationOf(await fetchText(uri));
+      if (reg.listURI !== uri) throw new Error(`belirtecin sub'ı farklı (${reg.listURI})`);
+      if (!Number.isInteger(reg.listSize) || reg.listSize <= 0) throw new Error("liste boyutu geçersiz");
+      params.set(uri, { bits: reg.bitsPerEntry, size: reg.listSize });
+    } catch (e) {
+      warnings.push(`iptal listesi ${uri}: belirteç okunamadı — ${(e as Error).message}`);
+    }
+  return { params, warnings };
+}
+
 export async function chainReplayCommand(
   args: string[],
-  ctx: { dist: string; environment: Environment; env: NodeJS.ProcessEnv },
+  ctx: {
+    dist: string;
+    environment: Environment;
+    env: NodeJS.ProcessEnv;
+    /** test: belirteç okuyucu (varsayılan https) */
+    fetchText?: (uri: string) => Promise<string>;
+  },
 ): Promise<number> {
   const k = args.indexOf("--archive");
   const dir = k >= 0 ? resolve(args[k + 1] ?? "") : ctx.dist;
   const archive = readArchiveDir(dir, ctx.environment);
   const counts = await verifyArchive(archive);
-  const plan = buildReplayPlan(archive);
+  const fetched = await statusListParamsFromTokens(statusListUrisMissingParams(archive), ctx.fetchText);
+  const plan = buildReplayPlan(archive, { statusListParams: (u) => fetched.params.get(u) ?? null });
+  plan.warnings.push(...fetched.warnings);
   const dryRun = args.includes("--dry-run") || ctx.env.TAMGA_CHAIN_ENABLED !== "1";
   const head = {
     replayPlanHash: plan.hash,
@@ -72,7 +113,7 @@ export async function chainReplayCommand(
     }
     if (plan.ops.some((o) => o.op === "registerList" && o.params === "default")) {
       console.error(
-        "chain-replay: iptal listelerinin bit sayısı ve boyutu arşivde yok — gerçek ağda varsayılan yazılmaz",
+        "chain-replay: bazı iptal listelerinin bit sayısı ve boyutu ne çapa satırında ne belirteçte — gerçek ağda varsayılan yazılmaz",
       );
       return 2;
     }

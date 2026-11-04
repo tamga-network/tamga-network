@@ -3,8 +3,11 @@
  * bir zaman çizelgesinden üretilir; her liste sürümü o andaki görüntüdür (yayıncının yaptığı gibi: geçmiş yalnız eklenir).
  * İçerik: askı ve askıdan dönüş, yumuşak iptal (RETIRED), sert iptal (`invalidates_from`), kök emekliliği ve halef (ROLLING_OVER),
  * şema sürüm özetleri, kullanımdan kalkan ve iptal edilen şema, ulusal şema, yetki pencereleri, tanıma, cüzdan sağlayıcı ve
- * anahtarları, tanımanın açılıp kapanması, doğrulayıcı kapsamları (kapanan kapsam), sertifika yenileme, kapı grupları, askı, iptal sonrası yeniden kayıt ve
- * iki ülke arasında DEVİR (ADR-0075). Tarihler `base`'e göredir (geçmişte: zincire yazılabilsin — DateInFuture).
+ * anahtarları, tanımanın açılıp kapanması, doğrulayıcı kapsamları (kapanan kapsam), sertifika yenileme, kapı grupları, geçmiş
+ * tarihli doğrulayıcı askısı / dönüşü / iptali, iptal sonrası yeniden kayıt, iki ülke arasında DEVİR (ADR-0075: eski listede
+ * `REVOKED`, gerekçede devir kaydı), kurum halefi ve ağ düzeyi kayıtlar (ZK devreleri, dış liste, belge kategorileri — biri
+ * listeden kalkar —, liste imzacıları, işletmeciler, devlet ve rol slotları, katalog). Çapa satırlarının çoğu iptal listesinin bit
+ * sayısını ve boyutunu taşır; biri taşımaz (eski satır). Tarihler `base`'e göredir (geçmişte: zincire yazılabilsin — DateInFuture).
  * Kişisel veri yok; adlar uydurmadır.
  */
 import { createHash, webcrypto } from "node:crypto";
@@ -36,7 +39,7 @@ export interface Fixture {
   /** liste kaynağının "şimdi"si (son yayından biraz sonra) */
   now: Date;
   dnsNames: string[];
-  /** fikstürde bilerek bulunan bilinen farkın kaydı (ADR-0075 devir) */
+  /** ülkeler arası devredilen kaydın alan adı (ADR-0075; eski listede REVOKED) */
   devirDns: string;
 }
 
@@ -227,7 +230,8 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
     status: lastStatus(i.h, T),
     valid_from: iso(d(-10)),
     valid_until: iso(nowSec + 200 * DAY),
-    successor_id: null,
+    // kurum halefi: birleşen kolej (RETIRED) → halefi uni-one (aynı devlet, iptal anında ACTIVE)
+    successor_id: i === U3 && T >= d(90) ? U1.id : null,
     status_history: histAt(i.h, T),
     schema_authorizations: i.auth
       .filter((a) => a.from <= T)
@@ -282,14 +286,18 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
     ],
     [{ id: "student-discount", vct: NET.student, claims: ["student_status"], from: d(16) }],
   );
+  // DEVİR (ADR-0075 RO1/RO5): TR listesindeki kayıt d(55)'te REVOKED (gerekçede devir kaydı); aynı ad KZ listesinde ACTIVE
   const RP3_TR = rp(
     "TR",
     "moved.example",
     d(12),
-    [{ status: "ACTIVE", since: d(12) }],
-    [{ id: "login", vct: NET.diploma, claims: ["degree"], from: d(12) }],
+    [
+      { status: "ACTIVE", since: d(12) },
+      { status: "REVOKED", since: d(55), reason: "reassignment to KZ (approval reassign-record-1)" },
+    ],
+    [{ id: "login", vct: NET.diploma, claims: ["degree"], from: d(12), until: d(55) }],
   );
-  // DEVİR (ADR-0075 RO1): aynı alan adı d(55)'te KZ listesinde — TR listesi kaydı kapatmaz (bilinen fark)
+  // DEVİR (ADR-0075 RO1/RO5): aynı alan adı d(55)'te KZ listesinde; TR listesindeki kayıt aynı anda REVOKED (yukarıda)
   const RP3_KZ = rp(
     "KZ",
     "moved.example",
@@ -308,6 +316,19 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
       { status: "ACTIVE", since: d(66), reason: "approval: re-registration record 1" },
     ],
     [{ id: "verify", vct: NET.diploma, claims: ["degree"], from: d(67) }],
+  );
+  // Geçmiş tarihli durum yazımları: askı, dönüş ve iptal listedeki anla zincire (zincirin geçmiş an cevabı listeyle aynı)
+  const RP5 = rp(
+    "TR",
+    "pause.example.tr",
+    d(20),
+    [
+      { status: "ACTIVE", since: d(20) },
+      { status: "SUSPENDED", since: d(30), reason: "audit" },
+      { status: "ACTIVE", since: d(33) },
+      { status: "REVOKED", since: d(91), reason: "registration ended" },
+    ],
+    [{ id: "check", vct: NET.diploma, claims: ["degree"], from: d(21) }],
   );
   const rpAt = (r: ReturnType<typeof rp>, T: number) => {
     const fpNow = r.certs.filter(([t]) => t <= T).at(-1)![1];
@@ -343,7 +364,7 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
     };
   };
   const rpsOf = (cc: string, T: number) =>
-    [RP1, RP2, RP3_TR, RP3_KZ, RP4].filter((r) => r.cc === cc && r.since <= T).map((r) => rpAt(r, T));
+    [RP1, RP2, RP3_TR, RP3_KZ, RP4, RP5].filter((r) => r.cc === cc && r.since <= T).map((r) => rpAt(r, T));
 
   // --- cüzdan sağlayıcı
   const WK1 = fp("wua-key-1");
@@ -360,6 +381,63 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
     },
   ];
 
+  // --- ağ düzeyi kayıtlar (ADR-0074 K3): ZK devreleri, dış liste, belge kategorileri, katalog, slotlar ve roller
+  const zkAt = (T: number) => [
+    {
+      circuit_id: fp("zk-circuit-1"),
+      system: "longfellow-libzk-v1",
+      version: 7,
+      attributes: 1,
+      sha256: fp("zk-file-1"),
+      status: T >= d(75) ? "DEPRECATED" : "ACTIVE",
+      note: "free text never goes on chain",
+    },
+    ...(T >= d(75)
+      ? [
+          {
+            circuit_id: fp("zk-circuit-2"),
+            system: "longfellow-libzk-v1",
+            version: 8,
+            attributes: 2,
+            sha256: fp("zk-file-2"),
+            status: "ACTIVE",
+          },
+        ]
+      : []),
+  ];
+  const externalAt = (T: number) =>
+    T >= d(40)
+      ? [
+          {
+            list_id: "eu-example-pid",
+            territory: "EU",
+            format: "etsi-lote-json",
+            list_url: "https://lists.example/eu/pid.json",
+            signing_keys: [{ fingerprint_sha256: fp("eu-list-signer"), status: "ACTIVE" }],
+            operator: { name: "Example EU list operator" },
+            status: "ACTIVE",
+            scope: {
+              entity_kinds: ["pid_provider"],
+              vct: ["urn:eudi:pid:1"],
+              category: "IDENTITY",
+              assurance: "I3",
+              class: "PUB",
+              recognized_by: ["TR", "KZ"],
+            },
+            approval: { approved_at: iso(d(39)), ref: "approval-external-1" },
+          },
+        ]
+      : [];
+  const eaaAt = (T: number) => ({
+    "urn:tamga:eaa:pub": "Public body attestation",
+    ...(T < d(75) ? { "urn:tamga:eaa:legacy": "Legacy category (removed later)" } : {}),
+  });
+  const roles = (T: number) => ({
+    registrar: { status: "PROVISIONAL", operated_by: "Tamga" },
+    tlso: { status: T >= d(75) ? "ACTIVE" : "PROVISIONAL", operated_by: "Tamga" },
+    pid_provider: { status: "RESERVED" },
+  });
+
   // --- listeler (sürüm sürüm)
   const lotlTimes = [d(0), d(40), d(75), d(100)];
   const trTimes = [d(0), d(35), d(62), d(72), d(82), d(92), d(100)];
@@ -374,28 +452,43 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
       issued_at: iso(T),
       next_update: iso(T + 400 * DAY),
       previous_version_hash: k ? sha256Tag(utf8(lotl[k - 1])) : null,
-      operator: { name: "Tamga", status: "provisional", on_behalf_of: "Tamga Trust Framework consortium" },
+      operator: {
+        name: "Tamga",
+        status: T >= d(100) ? "designated" : "provisional",
+        on_behalf_of: "Tamga Trust Framework consortium",
+      },
+      catalogue: { url: "https://schemas.example/v1/catalogue.json", note: "not on chain" },
       anchor_signing_keys: signingKeys,
       national_lists: [
         {
           state_code: "TR",
           status: "ACTIVE",
+          membership: "TDT_MEMBER",
           list_url: "https://trust.example/tl-tr.jws",
           signing_keys: signingKeys,
+          xml_signing_keys: [
+            { fingerprint_sha256: fp("tr-xml-signer"), status: "ACTIVE", valid_to: iso(nowSec + 365 * DAY) },
+          ],
           recognition: { mode: "unilateral", recognizes: T >= d(40) && T < d(75) ? ["TR", "KZ"] : ["TR"] },
+          roles: roles(T),
         },
         {
           state_code: "KZ",
           status: "ACTIVE",
+          membership: "TDT_MEMBER",
           list_url: "https://trust.example/tl-kz.jws",
           signing_keys: signingKeys,
           recognition: { mode: "unilateral", recognizes: ["KZ", "TR"] },
         },
-        { state_code: "AZ", status: "RESERVED" },
+        { state_code: "AZ", status: "RESERVED", membership: "TDT_MEMBER" },
+        { state_code: "HU", status: "RESERVED", membership: "TDT_OBSERVER" },
       ],
       schemas: schemaDefs.filter((s) => s.h[0].since <= T).map((s) => schemaAt(s, T, "NETWORK")),
+      eaa_categories: eaaAt(T),
       wallet_providers: wpAt(T),
       pid_providers: [],
+      zk_circuits: zkAt(T),
+      external_lists: externalAt(T),
     };
     lotl.push(await sign(body));
   }
@@ -423,6 +516,7 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
   const national = { "tl-tr": await tl("TR", trTimes), "tl-kz": await tl("KZ", kzTimes) };
 
   // --- çapa günlüğü: iptal listesi yayınları (kurum ACTIVE iken) + saatlik satırlar
+  // bit sayısı ve boyut belirteçten satıra (anchor --token); b2e0 eski satır gibi taşımaz (plan varsayılanı / belirteci kullanır)
   const status = (i: typeof U1, n: string, v: number, t: number) => ({
     kind: "status_list",
     list_id: "0x" + n.padStart(64, "0"),
@@ -431,6 +525,7 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
     content_hash: sha256Tag(utf8(`${i.slug}-${n}-v${v}`)),
     list_version: v,
     published_at: iso(t),
+    ...(n === "b2e0" ? {} : { bits: n === "c3d0" ? 1 : 2, size: n === "c3d0" ? 262_144 : 131_072 }),
   });
   const bodies = [
     { at: d(3), b: status(U1, "a1f0", 1, d(3)) },
@@ -458,7 +553,7 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
     base: B,
     planTime,
     now: new Date((planTime + 60) * 1000),
-    dnsNames: [RP1, RP2, RP3_TR, RP4].map((r) => r.dns),
+    dnsNames: [RP1, RP2, RP3_TR, RP4, RP5].map((r) => r.dns),
     devirDns: "moved.example",
   };
 }

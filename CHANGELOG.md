@@ -14,6 +14,11 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
   keeps the latest line per list and per file, a step back stops the load, and a checkpoint `state` may carry both (older
   loaders ignore the extra fields). An unknown line type still stops the loader, so the publisher writes these lines only once
   this package version is published (see below). The lines do not enter the verification decision.
+- **trust — a `status_list` anchor line may carry the list's bit count and size (`bits`, `size`; 0.8.2).** Both are optional
+  (`bits` from the Token Status List set 1, 2, 4, 8; `size` a positive integer = inflated `lst` bytes × 8 / `bits`), kept in the
+  store's `StatusAnchorRow` and in a checkpoint's `state.status_lists[]`. They are read from the token by the publisher and are
+  needed by the list record on chain (`StatusListRegistry.registerList`); they do not enter the verification decision. Older
+  loaders ignore the extra fields (the line type is unchanged). SPEC-TRUST-0001 §5.
 - **onboard — new package `@tamga-network/onboard` (command `tamga-onboard`, version 0.8.1 with the others).** A joining tool
   for an institution's IT team: `init` builds the registration application(s) from the institution's answers and checks them
   with the same rules as the operator's registration tool (ADR-0024; no unknown fields, so no names of people); `validate`
@@ -47,6 +52,12 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
 
 ### Changed
 
+- **trust — a relying party reassigned between countries is no longer ambiguous (ADR-0075; 0.8.2).** When the same `dns_name`
+  appears in more than one national list, `relyingPartyByDnsName` (and the terminal group answers) take the single record that is
+  not `REVOKED` / `RETIRED`: after a reassignment the old country's list keeps the record as `REVOKED` and the new country's
+  record is used. If more than one record is not revoked the name is still ambiguous (`null`, fail closed); if all are revoked,
+  the record whose status changed last is returned. New store fields and helpers: `relying_party_records` (dns name → country →
+  record), `relyingPartyAmbiguous(dns)`, `relyingPartyStateOf(dns)`; `relying_party_states` keeps every list a name appears in.
 - **ops — `pki-issue --org-id` accepts a CSR that already carries the same `organizationIdentifier`** (as `tamga-onboard keys`
   writes it); a different value is refused (exit 2). Before, any `organizationIdentifier` in the CSR subject was refused when
   `--org-id` was given.
@@ -144,11 +155,31 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
     `trust:chain-check` also checks a view file or the registration certificate status list. The trust list publisher writes the
     new lines only while the chain projection is on (`TAMGA_CHAIN_ENABLED=1`).
   - `contracts/scripts/export-abi.mjs` also exports the registry ABIs to `apps/chain-indexer/src/abi/` (`contracts:check`).
+  - Phase D remainder (2026-11-05). Relying party suspensions, reinstatements and revocations are replayed with the list date
+    (new contract functions below); the issuer successor (`successor_id`) is written with the revocation when it is an active
+    issuer of the same state at that moment (otherwise a warning); all other `NetworkRegistry` record kinds are replayed from
+    the LOTL and the national lists (ZK circuits, external lists, EAA categories, list signers, list operators, state and role
+    slots, catalogue — `apps/chain-indexer/src/network-records.ts`; a record that leaves the list is written `RETIRED`). The
+    status list's bit count and size come from the anchor line, else from the token at the list address (https, `sub` must
+    match), else the default — refused on a real network. The indexer keeps every field and the status history of network
+    records and the issuer successor; `ChainTrustSource` gains `isRelyingPartyAcceptableAt`, `zkCircuit`, `networkRecord`,
+    `registrationPeriods`. The equivalence test also asks about a relying party's status at past moments, the issuer successor
+    and every network record kind: 557 questions, 0 differences, no known difference left (the gap between the list date and
+    the execution date of a reassignment / re-registration is not asked: ADR-0075 dates it at execution).
+  - trust-publisher: `anchor --token <file>` writes the status list's `bits` and `size` from the token (its digest must equal
+    `--content-hash` and its `sub` the `--list-uri`); `rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <ref>` is the
+    old-country side of a reassignment (ADR-0075 RO5): the record becomes `REVOKED` with the reassignment record as the reason,
+    its uses and terminal groups end.
   - Fix: every chain provider of the replay, the equivalence test and `trust:chain-submit` turns off the ethers request cache
     (`cacheTimeout: -1`). ethers v6 shares identical requests for 250 ms; on a fast machine the gas estimate of a registration
     data write was taken from an earlier write with the same call data (period 0, before a re-registration), and the
     transaction ran out of gas inside the proxy (CI failure, no revert data). A failed replay write now names the decoded custom
     error, or says that the gas limit was too low.
+- **contracts — dated relying party status writes (2026-11-05; ADR-0073 K1/K5).** `RelyingPartyRegistry.suspendRelyingPartyAt`,
+  `reinstateRelyingPartyAt`, `revokeRelyingPartyAt(rpId, at)`: `at` = 0 is the block time; a past date only while the migration
+  window is open, never ahead of the block time, in order per record (`StatusOutOfOrder`). The undated forms now follow the
+  same rule as the other registries: while the window is open they are frozen for the state delegates
+  (`DateRequiredDuringMigration`). A reassignment or re-registration is still dated at execution (ADR-0075). No storage change.
 - **contracts — ADR-0075 accepted (D-BC-14): relying party identity ownership and re-registration after revocation.** The owning
   state of a relying party identity (`rpId = keccak256(dns_name)`) changes only by a typed Governance proposal (2/3):
   `Governance.proposeRelyingPartyReassignment(registry, stageId)` (identity captured by another state) and

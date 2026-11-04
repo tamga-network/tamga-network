@@ -8,6 +8,7 @@ Reading and transfer side of the Tamga Network trust-layer chain (ADR-0073 K1, A
 | `src/replay-archive.ts` | Reads the signed list archive of the trust list publisher (`dist/archive/lotl.vNNNN.jws`, `tl-<cc>.vNNNN.jws`, the anchor log with its checkpoints) and verifies it: signatures against the pinned roots, version chain, anchor chain, environment. |
 | `src/replay-plan.ts` | Deterministic replay plan and `replayPlanHash` (the digest that the Governance proposal opening the migration window carries). Dated writes take the date from the list; state mapping per SPEC-BC-0001 §16.4; no personal data or free text (digests only). |
 | `src/replay-exec.ts` | Executes the plan: checks that the migration window is open with this plan digest, skips what is already on chain (resumable), national records with the state delegate, network records with the single migration executor, Governance-only steps (network schema revocation, relying party reassignment / re-registration) only when voters are given (local chain). |
+| `src/network-records.ts` | LOTL and national list network-level records → `NetworkRegistry` records (ADR-0074 K3: ZK circuits, external lists, EAA categories, list signers, list operators, state and role slots, catalogue); shared by the plan and the equivalence test. A record that leaves the list is written `RETIRED`, never deleted. |
 | `src/indexer.ts` | Event-based indexer (SPEC-BC-0001 §11.2): events find the changed records, the records are read at the same pinned block into an in-memory index (plain JSON). |
 | `src/chain-trust-source.ts` | `ChainTrustSource` — the `TrustSource` interface of `@tamga-network/trust` answered from the index (C1/C2/C3/D5 with the contract rules). |
 | `src/equivalence.ts` | Equivalence test (ADR-0009 K7, ADR-0073 K6): the same questions to `TrustSource(list)`, `TrustSource(chain)` and direct contract reads. |
@@ -27,3 +28,9 @@ npm run chain:besu:stop
 Writing to a non-local chain needs `TAMGA_CONFIRM_PROD=<replayPlanHash>`; the key configuration for state delegates and the
 migration executor on a real network is not defined yet, so the command stops there. Sandbox lists are never written to a
 non-local chain (ADR-0074 K7). The chain client (`ethers`) lives here, not in the `packages/*` libraries (ADR-0015 K1).
+
+A status list's bit count and size come from its anchor line (`bits`, `size`, written by the publisher's `anchor --token`); for
+older lines the replay command reads them from the list token at its address (https only, `sub` must match) — otherwise the
+default is planned and a real-network write is refused. Relying party suspensions, reinstatements and revocations are written
+with the list date (`*RelyingPartyAt`); a reassignment or re-registration is dated at execution (ADR-0075), so the equivalence
+test does not ask about the gap between the list date and the execution.

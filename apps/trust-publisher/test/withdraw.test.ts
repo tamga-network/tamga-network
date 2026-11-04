@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect } from "vitest";
-import { RegistryError, endRpUse, setIssuerStatus, setRpStatus } from "../src/registry-ops.js";
+import { RegistryError, endRpUse, reassignRelyingPartyOut, setIssuerStatus, setRpStatus } from "../src/registry-ops.js";
 
 const env = { now: new Date("2026-10-04T12:00:00Z") };
 const NOW = "2026-10-04T12:00:00.000Z";
@@ -66,6 +66,40 @@ describe("kayıt geri çekme (TL2)", () => {
     expect(rp.status).toBe("REVOKED");
     expect(rp.status_history.at(-1)).toEqual({ status: "REVOKED", since: NOW, reason: "r" });
     expect(rp.scopes.map((x: { valid_until: string }) => x.valid_until)).toEqual([NOW, NOW]);
+  });
+
+  it("ADR-0075 devir (eski ülke listesi): kayıt REVOKED, gerekçede devir kaydı; kullanımlar ve kapı grupları kapanır", () => {
+    const s = reassignRelyingPartyOut(
+      { ...src(), state_code: "TR" },
+      "rp.example",
+      { toState: "KZ", approval: "reassign-record-1" },
+      env,
+    );
+    const rp = s.relying_parties[0];
+    expect(s.relying_parties).toHaveLength(1);
+    expect(rp.status).toBe("REVOKED");
+    expect(rp.status_history.at(-1)).toEqual({
+      status: "REVOKED",
+      since: NOW,
+      reason: "reassignment to KZ (approval reassign-record-1)",
+    });
+    expect(rp.scopes.map((x: { valid_until: string }) => x.valid_until)).toEqual([NOW, NOW]);
+    expect(rp.terminal_groups[0].valid_until).toBe(NOW);
+    // onaysız, aynı devlete, iptal edilmiş kayda devir yok
+    const tr = { ...src(), state_code: "TR" };
+    expect(() => reassignRelyingPartyOut(tr, "rp.example", { toState: "KZ", approval: "" }, env)).toThrow(/approval/);
+    expect(() => reassignRelyingPartyOut(tr, "rp.example", { toState: "TR", approval: "ok-123" }, env)).toThrow(
+      /bu listenin devleti/,
+    );
+    expect(() => reassignRelyingPartyOut(tr, "rp.example", { toState: "kz", approval: "ok-123" }, env)).toThrow(
+      /iki büyük harf/,
+    );
+    expect(() => reassignRelyingPartyOut(s, "rp.example", { toState: "KZ", approval: "ok-123" }, env)).toThrow(
+      /iptal edilmemiş/,
+    );
+    expect(() => reassignRelyingPartyOut(tr, "yok.example", { toState: "KZ", approval: "ok-123" }, env)).toThrow(
+      RegistryError,
+    );
   });
 
   it("REVOKED son durumdur (zincirdeki AlreadyRevoked ile aynı): geri dönüş yok; yalnız kurumda ele geçirilme tarihi eklenir", () => {

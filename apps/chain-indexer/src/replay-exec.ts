@@ -2,7 +2,8 @@
  * `trust:chain-replay` — planın zincire YÜRÜTÜLMESİ (ADR-0073 K1). Kurallar:
  *   - Önce bütün göç kipli kayıtlarda pencere AÇIK ve önerinin `replayPlanHash`'i bu planın özeti olmalı (CE1); değilse yazım yok.
  *   - Kaldığı yerden sürer: her işlemden önce zincir okunur, işlem zaten yazılmışsa atlanır (idempotent). Durum yazımları
- *     tarihleriyle, doğrulayıcı durumları geçmiş uzunluğuyla, dönem değişiklikleri dönem sayısıyla tanınır.
+ *     tarihleriyle (doğrulayıcı durumları da listedeki anla, `*RelyingPartyAt`), doğrulayıcı durumları geçmiş uzunluğuyla, dönem
+ *     değişiklikleri dönem sayısıyla tanınır.
  *   - Ulusal kayıtlar devletin delegesiyle, ağ düzeyi kayıtlar göç yürütücüsüyle; Governance oyu gereken işlem (ağ şemasının iptali,
  *     doğrulayıcı devri / yeniden kaydı) yalnız oy verenler verildiyse (yerel geliştirme zinciri) yürütülür, yoksa yürütme durur
  *     ve gereken öneri raporlanır (gerçek ağda oy üyelerindir).
@@ -338,8 +339,8 @@ async function apply(c: TrustContracts, o: ReplayOp, s: ReplaySigners): Promise<
       const r = as(c.IssuerRegistry, signer!);
       if (o.status === "SUSPENDED") await wait(r.suspendIssuerAt(o.issuerId, at));
       else if (o.status === "ACTIVE") await wait(r.reinstateIssuerAt(o.issuerId, at));
-      else if (o.status === "RETIRED") await wait(r.retireIssuer(o.issuerId, ZERO32, at));
-      else await wait(r.revokeIssuerAt(o.issuerId, ZERO32, at));
+      else if (o.status === "RETIRED") await wait(r.retireIssuer(o.issuerId, o.successor ?? ZERO32, at));
+      else await wait(r.revokeIssuerAt(o.issuerId, o.successor ?? ZERO32, at));
       return true;
     }
     case "issuerInvalidatesFrom":
@@ -384,10 +385,14 @@ async function apply(c: TrustContracts, o: ReplayOp, s: ReplaySigners): Promise<
       );
       return true;
     case "rpStatus": {
+      // Listedeki an; ancak bir dönem değişikliği (yürütme anıyla yazılır, ADR-0075 açık soru 3) bundan sonraysa geçmiş sıralı
+      // kalsın diye o dönemin başlangıcı (yeni dönemin listedeki geçmişi o aralıkta zaten zincirde farklıdır; eşdeğerlik sormaz).
+      const h = (await c.RelyingPartyRegistry.relyingPartyStatusHistoryOf(o.rpId)) as Array<{ since: bigint }>;
+      const t = Math.max(at, h.length ? num(h[h.length - 1].since) : 0);
       const r = as(c.RelyingPartyRegistry, signer!);
-      if (o.status === "SUSPENDED") await wait(r.suspendRelyingParty(o.rpId));
-      else if (o.status === "ACTIVE") await wait(r.reinstateRelyingParty(o.rpId));
-      else await wait(r.revokeRelyingParty(o.rpId));
+      if (o.status === "SUSPENDED") await wait(r.suspendRelyingPartyAt(o.rpId, t));
+      else if (o.status === "ACTIVE") await wait(r.reinstateRelyingPartyAt(o.rpId, t));
+      else await wait(r.revokeRelyingPartyAt(o.rpId, t));
       return true;
     }
     case "rpCert":

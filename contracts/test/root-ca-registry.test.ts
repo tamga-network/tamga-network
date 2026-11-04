@@ -70,8 +70,9 @@ describe("RootCARegistry (SPEC-BC-0001 §2)", function () {
       f.rootCAs,
       "MustRegisterAsActive",
     );
-    const t = await f.now();
-    await expect(w.registerRootCA(await ca({ validFrom: t + 100, validUntil: t + 100 }))).to.be.revertedWithCustomError(
+    // gelecekte yeterince uzak: süit uzun sürünce anlık görüntüden sonraki blok zamanı t + 100'ü geçebiliyordu (PastDateOutsideMigration)
+    const t = (await f.now()) + 30 * DAY;
+    await expect(w.registerRootCA(await ca({ validFrom: t, validUntil: t }))).to.be.revertedWithCustomError(
       f.rootCAs,
       "InvalidValidity",
     );

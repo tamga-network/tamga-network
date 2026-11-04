@@ -4,7 +4,7 @@ title: "Etibar siyahıları"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 summary: >
   Bugünkü (zəncirsiz) mərhələnin etibar lövbəri olan imzalı, versiyalı və hash zəncirli etibar siyahılarının (lotl.jws, tl-{cc}.jws) və saatlıq lövbər jurnalının (anchors.jsonl) normativ formatı, dərc tezliyi, açar intizamı, TDT-first slotları, qeydin həyat dövrü və zəncirlə ekvivalentlik qaydaları. Hər sahə bir SPEC-BC-0001 kontrakt qeydinə uyğunlaşdırılır; oxuma yalnız TrustSource interfeysi vasitəsilə aparılır.
 translation_of: SPEC-TRUST-0001
@@ -104,8 +104,8 @@ CHANGELOG.md                  public change log
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], xml_signing_keys[]?, recognition{mode, recognizes[]}}` | `Governance` üzv siyahısı + `CrossRecognition`. `signing_keys` yalnız JSON ölkə siyahısının (`tl-<cc>.jws`) imzalayanlarıdır; `xml_signing_keys` yalnız ETSI TS 119 612 XML görünüşünün (`tl-<cc>.xml`, EKU id-tsl-kp-tslSigning) imzalayanlarıdır — slot XML dərc edirsə olur; iki dəst ayrıdır, XML imzalayanı JSON siyahısını yoxlamır ([[ADR-0066]] 0.7.4 tətbiq qeydi) |
 | `schemas[]` | `{schema_id, vct, metadata_url, content_hash, content_hashes[], layer: NETWORK, governance, status, registered_at, status_history[]}` | `SchemaRegistry` (NETWORK); `registered_at` **daimidir** (ilk lövbərləmə vaxtı); `content_hashes` = qüvvədə olan versiya xülasələri ([[ADR-0010]] K4; inkişaf mərhələsində yalnız cari xülasə, [[ADR-0029]]), hər biri bir dəfə lövbərlənir |
 | `eaa_categories` | `{urn → açıklama}` | Kateqoriya namespace-i ([[ADR-0010]] K5) |
-| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA etibar lövbərləri (R-7; zəncirdə hələ yoxdur — ADR namizədi). `status` (qeyd və `solutions[].status`) `Status` dəstindəndir: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA yoxlamasında yalnız `ACTIVE` qeydin `ACTIVE` açarları istifadə olunur. `RESERVED` qeyd yer ayırır (məs. operatoru öz sertifikatını hələ verməmiş cüzdan provayderi, [[ADR-0042]]): `wua_signing_keys` boş ola bilər və WUA yoxlamasında istifadə olunmur. `security_level` rəqəmsal cüzdanın təminat səviyyəsidir ([[SPEC-WALLET-0001]] §2.2; W1 dəstəklənmir (sandbox siyahısındakı şəbəkənin öz sınaq ssenariləri üçün test açarı istisna olmaqla — [[ADR-0042]] K5)). İstəyə bağlı `identifiers[]` ([[ADR-0024]] formatı, `{scheme, value}`): provayderin rəsmi identifikasiya nömrəsi. Qeydiyyat aləti (`wallet-provider activate`) imza sertifikatını ETSI TS 119 412-6 §5 profilinə görə yoxlayır: subyekt sahəsində `organizationIdentifier` (2.5.4.97) bu identifikasiya nömrəsindən törədilən semantik identifikatorla (`VATTR-<VKN>` …) eyni olmalı və qcStatements QcType `id-etsi-qct-wal` (0.4.0.194126.1.2) daşımalıdır; identifikasiya nömrəsi olmayan qeyd aktivləşmir (istisna: sandbox-dakı "(TEST)" sertifikatları) |
-| `zk_circuits[]` | `{circuit_id, system, version, attributes, sha256, status}` | Qəbul edilən ZK dövrələri ([[ADR-0032]] ZK2; zəncirdə hələ yoxdur) |
+| `wallet_providers[]` | `{provider_id, legal_name, wua_signing_keys[], solutions[{solution_id, min_version, status, security_level}], status}` | WUA etibar lövbərləri (R-7; zəncirdə `NetworkRegistry`, [[ADR-0074]] K3). `status` (qeyd və `solutions[].status`) `Status` dəstindəndir: `ACTIVE \| SUSPENDED \| REVOKED \| RETIRED \| ROLLING_OVER \| RESERVED \| PROVISIONAL \| DEPRECATED`. WUA yoxlamasında yalnız `ACTIVE` qeydin `ACTIVE` açarları istifadə olunur. `RESERVED` qeyd yer ayırır (məs. operatoru öz sertifikatını hələ verməmiş cüzdan provayderi, [[ADR-0042]]): `wua_signing_keys` boş ola bilər və WUA yoxlamasında istifadə olunmur. `security_level` rəqəmsal cüzdanın təminat səviyyəsidir ([[SPEC-WALLET-0001]] §2.2; W1 dəstəklənmir (sandbox siyahısındakı şəbəkənin öz sınaq ssenariləri üçün test açarı istisna olmaqla — [[ADR-0042]] K5)). İstəyə bağlı `identifiers[]` ([[ADR-0024]] formatı, `{scheme, value}`): provayderin rəsmi identifikasiya nömrəsi. Qeydiyyat aləti (`wallet-provider activate`) imza sertifikatını ETSI TS 119 412-6 §5 profilinə görə yoxlayır: subyekt sahəsində `organizationIdentifier` (2.5.4.97) bu identifikasiya nömrəsindən törədilən semantik identifikatorla (`VATTR-<VKN>` …) eyni olmalı və qcStatements QcType `id-etsi-qct-wal` (0.4.0.194126.1.2) daşımalıdır; identifikasiya nömrəsi olmayan qeyd aktivləşmir (istisna: sandbox-dakı "(TEST)" sertifikatları) |
+| `zk_circuits[]` | `{circuit_id, system, version, attributes, sha256, status}` | Qəbul edilən ZK dövrələri ([[ADR-0032]] ZK2; zəncirdə `NetworkRegistry`, `note` yazılmır) |
 | `pid_providers[]` | boş, rezerv edilib | BT8 → TL8 |
 
 ---
@@ -138,7 +138,7 @@ Hər sətir müstəqil JWS-dir; payload `{seq, previous_hash, ts, kind, …}`:
 
 | `kind` | Sahələr | Kontrakt qarşılığı |
 |---|---|---|
-| `status_list` | `list_id, issuer_id, list_uri, content_hash, list_version, published_at` | `StatusListRegistry.publishList` (S1/S4-ün siyahı mərhələsində oxunuşu, L1) |
+| `status_list` | `list_id, issuer_id, list_uri, content_hash, list_version, published_at`, istəyə bağlı `bits, size` | `StatusListRegistry.publishList` (S1/S4-ün siyahı mərhələsində oxunuşu, L1); ilk sətir `registerList(…, size, bits)` |
 | `schema` | `schema_id, vct, content_hash` | `SchemaRegistry` contentHash (D8: CDN-də dərcdən **sonra**) |
 | `heartbeat` | — | Saatlıq tezlik (S5 məntiqi operator tərəfində) |
 | `checkpoint` | `archive: { file, sha256, seq_from, seq_to, lines }`, `state: { status_lists[], schemas[], registration_status[]?, list_views[]? }` | Arxiv nəzarət nöqtəsi (TL12); `state` = arxivə köçürülən sətirlərin yaratdığı son vəziyyət |
@@ -151,6 +151,13 @@ Token hash-i ilə müqayisə edilir; sətir silinmir; jurnal hamıya açıqdır;
 siyahı üzrə, `list_view`-un `source_version`-u hər fayl üzrə yalnız artır (yükləyici geri gedəni rədd edir). Bu sətirlər yoxlama
 qərarına daxil olmur; görünüş mənbə ilə ziddiyyət təşkil edərsə, mənbə (JSON siyahı) üstündür. Nəzarət nöqtəsinin `state`-i
 bunların son vəziyyətini də daşıyır (köhnə nəzarət nöqtələrində bu sahələr yoxdur).
+
+**`status_list` sətrində bit sayı və ölçü (2026-11-05).** İstəyə bağlı `bits` (Token Status List dəsti: 1, 2, 4, 8) və `size`
+(indeks tutumu = açılmış `lst` bayt × 8 / `bits`) tokendən oxunur: dərc edənin `anchor --token <fayl>` əmri tokeni açır, onun
+xülasəsinin `content_hash` ilə, `sub`-ının `list_uri` ilə eyni olduğunu yoxlayır və hər iki sahəni sətrə yazır. Zəncirdəki siyahı
+qeydi (`StatusListRegistry.registerList`) bu iki dəyəri tələb edir; yenidən icra onları əvvəlcə sətirdən, yoxdursa (köhnə sətirlər)
+siyahının ünvanındakı tokendən oxuyur; heç biri yoxdursa real şəbəkəyə yazı rədd edilir. Sahələr yoxlama qərarına daxil olmur;
+nəzarət nöqtəsinin `state.status_lists[]`-i də onları daşıyır. Köhnə yükləyicilər naməlum sahəni nəzərə almır (sətir növü dəyişmədi).
 
 **Arxivləşdirmə və nəzarət nöqtəsi (TL12).** Jurnal böyüdükcə yükləmə müddəti sətir sayına uyğun olaraq xətti artır (hər sətir bir
 JWS yoxlamasıdır). Jurnal müəyyən həddi keçdikdə (standart olaraq 500 sətir) operator mövcud sətirlərin **hamısını** `archive/anchors-<from>-<to>.jsonl`
@@ -186,12 +193,11 @@ yaddaşdaxili əks ([[ARCH-0003]] §2.4 cədvəlləri). İmza və formatdan sonr
 | `issuers[]` | `IssuerRegistry.registerIssuer / suspend / revoke(revokedAt) / setSuccessor` |
 | `issuers[].schema_authorizations[]` | `IssuerRegistry.setSchemaAuthorization(issuerId, schemaId, from, until)` |
 | `lotl.schemas[]` | `Governance` təklifi → `SchemaRegistry.registerSchema(vct, contentHash, NETWORK)` |
-| `relying_parties[]` | `RelyingPartyRegistry.register / setScope` |
-| `anchors kind=status_list` | `StatusListRegistry.publishList(listId, uri, hash, version)` |
+| `relying_parties[]` | `RelyingPartyRegistry.register / setScope`; dayandırma, bərpa və ləğv siyahıdakı anla (`suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt`). Ölkələr arası təhvil ([[ADR-0075]]): köhnə ölkə siyahısındakı qeyd `REVOKED` olur, səbəbdə təhvil qeydi (`reassignment to <CC> (approval <təsdiq>)`); yükləyici eyni `dns_name`-in ləğv edilməmiş yeganə qeydini götürür, ləğv edilməmiş qeyd birdən çoxdursa ad qeyri-müəyyəndir (`null`) |
+| `anchors kind=status_list` | `StatusListRegistry.registerList(issuerId, uri, size, bits)` (ilk sətir) + `publishList(listId, hash, version, published_at)` |
 | `anchors kind=schema` | `SchemaRegistry` contentHash |
 | `lotl` / `tl-<cc>` versiyası (bütün fayl) · `anchors.jsonl` son sətri | Siyahı lövbəri qeydi — `anchorList(listKey, version, sha256(jws), previousHash, issuedAt)` · `anchorLogHead(logKey, seq, sha256(satır), ts)`; yalnız xülasə (hash), məzmun yoxdur ([[ADR-0051]]; [[SPEC-BC-0001]] §15). Zəncir proyeksiyadır: ziddiyyət olduqda imzalı siyahı üstündür, zəncirin cavabı yoxlama üçün tələb olunmur. Bayraq `TAMGA_CHAIN_ENABLED`, istehsal mühitində söndürülüb |
-| `wallet_providers[]` | zəncirdə hələ yoxdur — ADR namizədi |
-| `zk_circuits[]` | zəncirdə hələ yoxdur — ilk mərhələdə `Governance` qeydi (ADR namizədi) |
+| `wallet_providers[]`, `zk_circuits[]`, `external_lists[]`, `eaa_categories`, imzalayanlar, `operator`, `national_lists[]` slotları və rolları, `catalogue` | `NetworkRegistry` şəbəkə səviyyəli qeydləri ([[ADR-0074]] K3; [[SPEC-BC-0001]] §16.5); siyahıdan çıxan qeyd `RETIRED` olur |
 
 Keçid: `archive/` versiyaları ardıcıl olaraq kontrakt çağırışlarına replay edilir; `TrustSource(list)` və `TrustSource(chain)`
 `conformance/vectors/trust` sorğularına eyni cavabı verməyənədək keçid tamamlanmış sayılmır (TL10; [[ADR-0009]] K7).
