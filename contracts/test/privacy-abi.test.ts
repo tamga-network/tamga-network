@@ -29,8 +29,8 @@ const abiOf = (name: string): Fragment[] =>
 /** Alan adı kişisel veri / belge içeriği anlamı taşıyor mu? (ad, doğum, kimlik no, belge, claim, holder, subject-DID…) */
 const PERSONAL =
   /holder|subject(?!Hash)|person|citizen|birth|given|family|tckn|national_?id|credential(?!Iat)|claim|vc\b|sdjwt|jwt|disclosure|salt|pseudonym|wallet_?id|device/i;
-/** İzinli string alanları: kurumsal URI'ler, sürüm dizgisi, gerekçe. */
-const ALLOWED_STRING = /^(certURI|crlURI|metadataURI|listURI|vctURI|version|reason)$/;
+/** İzinli string alanları: kurumsal URI'ler ve sürüm dizgisi. Gerekçe metni 2026-11-04 güvenlik turunda özete döndü. */
+const ALLOWED_STRING = /^(certURI|crlURI|metadataURI|listURI|vctURI|version)$/;
 
 function* params(ps: Param[] | undefined, path = ""): Generator<[string, string]> {
   for (const p of ps ?? []) {

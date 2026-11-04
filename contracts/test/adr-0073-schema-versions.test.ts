@@ -68,7 +68,7 @@ describe("ADR-0073 K3 — şema sürüm özetleri (CE3)", function () {
     const w = f.as(f.schemas, f.trDelegate);
     await (await w.deprecateSchema(edu, ZERO)).wait();
     await (await w.addSchemaContentHash(edu, id("v1.1"))).wait();
-    await (await w.revokeSchema(edu, "")).wait();
+    await (await w.revokeSchema(edu, ZERO)).wait();
     await expect(w.addSchemaContentHash(edu, id("v1.2"))).to.be.revertedWithCustomError(f.schemas, "AlreadyRevoked");
     expect(await f.schemas.matchesContentHash(edu, id("v1.0"))).to.equal(false);
     expect(await f.schemas.matchesContentHash(edu, id("v1.1"))).to.equal(false);

@@ -7,6 +7,7 @@
  * Kayıt verisi ADR-0024 (RPR1–RPR3) ile denetlenir; eksik zorunlu alan varsa kayıt yapılmaz.
  */
 import { issuerGaps, issuerEntitlements, rpGaps } from "./registration.js";
+import { semanticIdentifier } from "./wrprc.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Rec = Record<string, any>;
@@ -22,6 +23,30 @@ export interface RegistryEnv {
   certExists: (ref: string) => boolean;
   /** Şema kataloğundaki vct'ler */
   knownVcts: Set<string>;
+  /**
+   * Sertifikanın konu alanındaki kurum kimlik numarası (organizationIdentifier, 2.5.4.97; ASN.1 ad yapısından); yoksa null.
+   * Verilirse başvurudaki `identifiers` ile karşılaştırılır (2026-11-04 güvenlik turu O1; ADR-0026 K3, ADR-0050).
+   */
+  certOrgId?: (ref: string) => string | null;
+  /** Gerçek ağ: sertifikada kurum kimlik numarası yoksa kayıt yapılmaz (ADR-0050 CP1). */
+  requireCertOrgId?: boolean;
+}
+
+/** Sertifikadaki organizationIdentifier ile başvurudaki `identifiers`'tan hesaplanan değer (EN 319 412-1) aynı mı. */
+function certOrgIdProblems(ref: string, identifiers: Rec[] | undefined, env: RegistryEnv): string[] {
+  if (!env.certOrgId) return [];
+  const got = env.certOrgId(ref);
+  const want = semanticIdentifier(identifiers);
+  if (got === null)
+    return env.requireCertOrgId
+      ? [`${ref}: sertifikada kurum kimlik numarası (organizationIdentifier) yok (ADR-0050; pki-issue --org-id)`]
+      : [];
+  if (want === null) return []; // identifiers eksikliği kayıt verisi denetiminde ayrıca bildirilir
+  return got === want
+    ? []
+    : [
+        `${ref}: sertifikadaki kurum kimlik numarası (${got}) başvurudaki identifiers ile aynı değil (${want}; ADR-0026 K3)`,
+      ];
 }
 
 export class RegistryError extends Error {
@@ -63,8 +88,10 @@ export function addIssuer(src: Rec, app: Rec, env: RegistryEnv): Rec {
   if (!app.cert) p.push("cert (sertifika adı)");
   else if (!env.certExists(app.cert)) p.push(`sertifika bulunamadı: ${app.cert}`);
   else if (issuers.some((i) => i.cert === app.cert)) p.push(`sertifika başka bir kurumda kullanılıyor: ${app.cert}`);
+  else p.push(...certOrgIdProblems(app.cert, app.identifiers, env));
   if (app.status_cert && !env.certExists(app.status_cert))
     p.push(`iptal listesi sertifikası bulunamadı: ${app.status_cert}`);
+  else if (app.status_cert) p.push(...certOrgIdProblems(app.status_cert, app.identifiers, env));
   const parent = app.parent_ca ?? roots[0]?.cert;
   if (!roots.some((r) => r.cert === parent)) p.push(`parent_ca kök listede yok: ${parent}`);
   const vcts = (app.vcts ?? []) as string[];
@@ -116,6 +143,9 @@ export function addRelyingParty(src: Rec, app: Rec, env: RegistryEnv): Rec {
   else if (!env.certExists(app.access_cert)) p.push(`sertifika bulunamadı: ${app.access_cert}`);
   else if (rps.some((r) => r.access_cert === app.access_cert))
     p.push(`sertifika başka bir doğrulayıcıda kullanılıyor: ${app.access_cert}`);
+  // aracı kullanan doğrulayıcının kayıt sertifikası aracının numarasıyla imzalanır (wrprc.ts) — kendi sertifikası burada denetlenmez
+  else if (!(app.uses_intermediaries as unknown[] | undefined)?.length)
+    p.push(...certOrgIdProblems(app.access_cert, app.identifiers, env));
   const scopes = (app.scopes ?? []) as Rec[];
   if (!scopes.length) p.push("scopes: en az bir kullanım");
   p.push(...scopeProblems(scopes, env));

@@ -7,6 +7,13 @@ pragma solidity ^0.8.24;
  *         "iat anındaki durum" imzalı listedeki `status_history` ile aynı cevabı verir (TrustSource `statusAt`).
  * @dev    Durum değeri kaydın kendi enum'unun `uint8` karşılığıdır (0 = NONE: o anda kayıt yok). Geçmiş değiştirilmez; yeni
  *         değişiklik öncekinden geri tarihli olamaz (aynı an serbest: son yazılan geçerlidir).
+ *
+ *         Boyut (güvenlik turu 2026-11-04): dizi tavansızdır — bir tavan, ele geçirilmiş kurumun iptalini engelleyebilirdi. Yazım
+ *         O(1)'dir; `statusAt` sondan, `ever` baştan tarar (yalnız görünüm). Dizi yalnız kaydın sahibi devletin (ya da ağ
+ *         kaydında Governance'ın) yazımıyla büyür ve kip dışında günlük kotaya sayılır (SPEC-BC-0001 §12.2). Gerçekçi bir
+ *         kayıtta değişiklik sayısı onlarla sınırlıdır; zincir üstü okuyucu (TrustQueries) gaz sınırını buna göre hesaba katar.
+ *         Göç penceresinde tarihsiz olağan yazım dondurulur (MigrationWindow `_effectiveDate`): yeniden oynatılan geçmiş ile
+ *         o günkü işletim aynı dizide sessizce yarışmaz.
  */
 library StatusHistory {
     struct Change {

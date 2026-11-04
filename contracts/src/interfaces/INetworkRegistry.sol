@@ -10,6 +10,10 @@ import {StatusHistory} from "../base/StatusHistory.sol";
  *         dış listeler, belge kategorileri, liste imzacıları, liste işletmecileri, devlet ve rol slotları, katalog bilgisi.
  * @dev    Yazım yalnız Governance'ın türü belli önerisiyle (önce `stageRecord` ile içerik sabitlenir, öneri bu içeriğin
  *         özetini taşır, 2/3 oyla `commitStaged`) ya da göç kipinde tek göç yürütücüsüyle (`writeRecord`, ADR-0073 K1).
+ *         Güvenlik turu 2026-11-04: her kaydın bir yazım sayacı (`revisionOf`) vardır; sabitleme o anki sayaca bağlanır
+ *         (`stageId = keccak256(abi.encode(rec, baseRevision))`) ve yalnız sayaç değişmemişse yürütülür. Böylece oylanmış
+ *         öneriler istenen sırayla yürütülemez (ör. REVOKED'dan sonra eski ACTIVE önerisi), aynı kayda yapılan yeni bir yazım
+ *         bekleyen bütün eski önerilerin yerine geçer ve yürütülmüş içerik yeniden sabitlenip eski öneriyle yazılamaz.
  *         Zincire yalnız tanımlayıcı özetleri, parmak izleri, kapalı küme değerleri, sayılar, tarihler, bölge kodları yazılır;
  *         ad, açıklama, not, adres ve diğer serbest metin yalnız `detailsHash` (RFC 8785 kanonik JSON + SHA-256) olarak (PJ2).
  */
@@ -57,24 +61,40 @@ interface INetworkRegistry is ITamgaErrors {
         bytes32[] digests; // türüne özgü özet kümesi (tür özetleri, sabit imzacı parmak izleri, tanıyan devletler)
     }
 
-    event RecordStaged(bytes32 indexed stageId, RecordKind indexed kind, bytes32 indexed recordId);
-    event RecordWritten(RecordKind indexed kind, bytes32 indexed recordId, RecordStatus status, uint64 since);
+    event RecordStaged(bytes32 indexed stageId, RecordKind indexed kind, bytes32 indexed recordId, uint64 baseRevision);
+    /// @dev Her yazımda (durum değişmese de): sabitleme kimliği (göç yazımında 0), içerik özeti
+    ///      `keccak256(abi.encode(rec))` ve yeni yazım sayacı — indeksleyici son hâli olaylardan kurar.
+    event RecordWritten(
+        RecordKind indexed kind, bytes32 indexed recordId, bytes32 indexed stageId, bytes32 contentHash, uint64 revision
+    );
+    /// @dev Durum değiştiğinde (ya da ilk yazımda) geçmişe eklenen pencere.
+    event RecordStatusChanged(RecordKind indexed kind, bytes32 indexed recordId, RecordStatus status, uint64 since);
 
     error InvalidRecord(RecordKind kind, bytes32 recordId);
     error UnknownStage(bytes32 stageId);
     error UnknownParent(bytes32 parentId);
     error TooManyDigests(uint256 count, uint256 max);
     error NotMigrationWriter(address caller);
+    /// @dev Sabitlemeden sonra kayda başka bir yazım yapıldı; öneri eski hâle göre oylanmıştı (yeniden sabitlenmeli).
+    error StaleStage(bytes32 stageId, uint64 baseRevision, uint64 currentRevision);
 
-    /// @notice İçeriği sabitler; herkes okuyup doğrulayabilir. Etkisi yalnız Governance kabul edince (`commitStaged`).
+    /// @notice İçeriği kaydın bugünkü yazım sayacına bağlayarak sabitler; herkes okuyup doğrulayabilir. Etkisi yalnız
+    ///         Governance kabul edince (`commitStaged`).
     function stageRecord(NetworkRecord calldata rec) external returns (bytes32 stageId);
-    /// @notice Yalnız Governance (türü belli öneri, 2/3).
+    /// @notice Yalnız Governance (türü belli öneri, 2/3); kaydın sayacı sabitlemedeki gibi değilse `StaleStage`.
     function commitStaged(bytes32 stageId) external;
     /// @notice Yalnız göç kipinde tek göç yürütücüsü; `at` = 0 → blok zamanı (ADR-0073 K1).
     function writeRecord(NetworkRecord calldata rec, uint64 at) external;
 
     function stagedRecord(bytes32 stageId) external view returns (NetworkRecord memory);
-    function stageIdOf(NetworkRecord calldata rec) external pure returns (bytes32);
+    /// @notice Sabitlemenin bağlı olduğu yazım sayacı.
+    function stagedRevisionOf(bytes32 stageId) external view returns (uint64);
+    /// @notice İçeriğin kaydın BUGÜNKÜ sayacıyla sabitleme kimliği (`stageRecord` bunu döndürür).
+    function stageIdOf(NetworkRecord calldata rec) external view returns (bytes32);
+    /// @notice İçeriğin verilen sayaçla sabitleme kimliği: `keccak256(abi.encode(rec, baseRevision))`.
+    function stageIdFor(NetworkRecord calldata rec, uint64 baseRevision) external pure returns (bytes32);
+    /// @notice Kayda yapılmış yazım sayısı (0 = hiç yazılmadı).
+    function revisionOf(RecordKind kind, bytes32 recordId) external view returns (uint64);
     function exists(RecordKind kind, bytes32 recordId) external view returns (bool);
     function getRecord(RecordKind kind, bytes32 recordId) external view returns (NetworkRecord memory);
     function recordIdsOf(RecordKind kind) external view returns (bytes32[] memory);

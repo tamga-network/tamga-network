@@ -13,11 +13,15 @@
  */
 import { X509Certificate, createHash, verify as nodeVerify } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { BlockList, isIP } from "node:net";
+import type { LookupAddress } from "node:dns";
 import { loadTrustSet, type Issuer, type TrustStore } from "@tamga-network/trust";
-import type { Profile } from "./application.js";
+import { validateProfile, type Profile } from "./application.js";
 import { csrExpectations, inspectCsr, privateKeyPermissionOk, privateKeySpkiSha256, csrSpkiSha256 } from "./keys.js";
-import { validateIssuerApplication, validateRpApplication } from "./rules.js";
+import { APPLICATION_FILE_RE, within } from "./paths.js";
+import { CERT_NAME_RE, validateIssuerApplication, validateRpApplication } from "./rules.js";
 import { NETWORKS, type Environment } from "./network.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,26 +48,154 @@ export type Http = (
   init?: { method?: "GET" | "POST"; headers?: Record<string, string>; body?: string },
 ) => Promise<HttpResponse>;
 
-/** Varsayılan HTTP: zaman aşımı, en çok 2 MB gövde; https dışı adres yalnız `allowHttp` ile (yerel deneme). */
-export function defaultHttp(o: { timeoutMs?: number; allowHttp?: boolean; fetch?: typeof fetch } = {}): Http {
-  const f = o.fetch ?? fetch;
-  return async (url, init) => {
-    const u = new URL(url);
-    if (u.protocol !== "https:" && !(o.allowHttp && u.protocol === "http:"))
-      throw new Error(`yalnız https adresleri okunur: ${u.origin}`);
-    const r = await f(url, {
-      method: init?.method ?? "GET",
-      headers: init?.headers,
-      body: init?.body,
-      signal: AbortSignal.timeout(o.timeoutMs ?? 15000),
+/**
+ * Adres yerel ağa mı işaret ediyor (SSRF; 2026-11-04 güvenlik turu O4): loopback, özel (RFC 1918), bağlantı-yerel, CGNAT
+ * (100.64/10), "bu ağ" (0/8), çok noktaya yayın, ayrılmış, IPv6 ULA (fc00::/7), bağlantı-yerel (fe80::/10), IPv4 eşlemeli IPv6.
+ */
+const PRIVATE = (() => {
+  const b = new BlockList();
+  for (const [net, bits] of [
+    ["0.0.0.0", 8],
+    ["10.0.0.0", 8],
+    ["100.64.0.0", 10],
+    ["127.0.0.0", 8],
+    ["169.254.0.0", 16],
+    ["172.16.0.0", 12],
+    ["192.0.0.0", 24],
+    ["192.0.2.0", 24],
+    ["192.168.0.0", 16],
+    ["198.18.0.0", 15],
+    ["198.51.100.0", 24],
+    ["203.0.113.0", 24],
+    ["224.0.0.0", 4],
+    ["240.0.0.0", 4],
+  ] as const)
+    b.addSubnet(net, bits, "ipv4");
+  for (const [net, bits] of [
+    ["::", 128],
+    ["::1", 128],
+    ["fc00::", 7],
+    ["fe80::", 10],
+    ["fec0::", 10],
+    ["ff00::", 8],
+    ["2001:db8::", 32],
+  ] as const)
+    b.addSubnet(net, bits, "ipv6");
+  return b;
+})();
+export function isPrivateAddress(ip: string): boolean {
+  const v = isIP(ip);
+  if (v === 4) return PRIVATE.check(ip, "ipv4");
+  if (v !== 6) return true; // tanınmayan biçim: güvenli taraf
+  const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip)?.[1];
+  if (mapped) return PRIVATE.check(mapped, "ipv4");
+  if (/^::ffff:/i.test(ip)) return true; // onaltılı yazılmış eşlemeli adres
+  return PRIVATE.check(ip, "ipv6");
+}
+
+type LookupCb = (err: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void;
+/** Bağlantı anındaki çözüm denetlenir (DNS yeniden bağlama da yakalanır): bir adres bile yerel ağdaysa bağlantı kurulmaz. */
+const guardedLookup =
+  (resolveAll: (host: string) => Promise<LookupAddress[]>) => (host: string, opts: { all?: boolean }, cb: LookupCb) => {
+    resolveAll(host).then(
+      (addrs) => {
+        const bad = addrs.find((a) => isPrivateAddress(a.address));
+        if (!addrs.length) return cb(Object.assign(new Error(`çözülemedi: ${host}`), { code: "ENOTFOUND" }), "");
+        if (bad)
+          return cb(
+            Object.assign(new Error(`yerel / özel ağ adresi okunmaz: ${host} → ${bad.address} (--allow-private)`), {
+              code: "EPRIVATE",
+            }),
+            "",
+          );
+        if (opts?.all) return cb(null, addrs);
+        cb(null, addrs[0]!.address, addrs[0]!.family);
+      },
+      (e: NodeJS.ErrnoException) => cb(e, ""),
+    );
+  };
+
+export interface HttpOptions {
+  timeoutMs?: number;
+  /** http:// adresleri de oku (yerel deneme) */
+  allowHttp?: boolean;
+  /** yerel / özel ağ adreslerini de oku (yerel deneme; yalnız komut satırında `--allow-private`) */
+  allowPrivate?: boolean;
+  /** en çok yönlendirme (varsayılan 5); her adımda adres yeniden denetlenir */
+  maxRedirects?: number;
+  /** alan adı çözümü (test için) */
+  resolveAll?: (host: string) => Promise<LookupAddress[]>;
+}
+
+/**
+ * Varsayılan HTTP (O4): zaman aşımı, en çok 2 MB gövde; https dışı adres yalnız `allowHttp` ile; yönlendirmeler elle izlenir
+ * (her adımda şema ve adres denetimi); alan adı çözümünden sonra yerel / özel ağ adresi reddedilir (`allowPrivate` hariç).
+ */
+export function defaultHttp(o: HttpOptions = {}): Http {
+  const resolveAll =
+    o.resolveAll ?? (async (h: string) => (await import("node:dns/promises")).lookup(h, { all: true, verbatim: true }));
+  const lookup = o.allowPrivate ? undefined : guardedLookup(resolveAll);
+  const once = (u: URL, init: Parameters<Http>[1]) =>
+    new Promise<HttpResponse & { location?: string }>((ok, fail) => {
+      const req = (u.protocol === "https:" ? httpsRequest : httpRequest)(
+        u,
+        {
+          method: init?.method ?? "GET",
+          headers: init?.headers,
+          timeout: o.timeoutMs ?? 15000,
+          ...(lookup ? { lookup: lookup as never } : {}),
+        },
+        (res) => {
+          const chunks: Buffer[] = [];
+          let size = 0;
+          res.on("data", (c: Buffer) => {
+            size += c.length;
+            if (size > 2 * 1024 * 1024) {
+              req.destroy(new Error("yanıt çok büyük (2 MB üstü)"));
+              return;
+            }
+            chunks.push(c);
+          });
+          res.on("end", () =>
+            ok({
+              status: res.statusCode ?? 0,
+              text: Buffer.concat(chunks).toString("utf8"),
+              contentType: String(res.headers["content-type"] ?? ""),
+              location: typeof res.headers.location === "string" ? res.headers.location : undefined,
+            }),
+          );
+          res.on("error", fail);
+        },
+      );
+      req.on("timeout", () => req.destroy(new Error("zaman aşımı")));
+      req.on("error", fail);
+      if (init?.body !== undefined) req.write(init.body);
+      req.end();
     });
-    const buf = await r.arrayBuffer();
-    if (buf.byteLength > 2 * 1024 * 1024) throw new Error("yanıt çok büyük (2 MB üstü)");
-    return {
-      status: r.status,
-      text: new TextDecoder().decode(buf),
-      contentType: r.headers.get("content-type") ?? "",
-    };
+  const allowed = (u: URL) => {
+    if (u.protocol !== "https:" && !(o.allowHttp && u.protocol === "http:"))
+      throw new Error(`yalnız https adresleri okunur: ${u.protocol}//${u.host}`);
+    if (u.username || u.password) throw new Error("adreste kullanıcı bilgisi kabul edilmez");
+    const host = u.hostname.replace(/^\[|\]$/g, "");
+    if (!o.allowPrivate && isIP(host) && isPrivateAddress(host))
+      throw new Error(`yerel / özel ağ adresi okunmaz: ${host} (--allow-private)`);
+  };
+  return async (url, init) => {
+    let u = new URL(url);
+    let req = init;
+    for (let hop = 0; ; hop++) {
+      allowed(u);
+      const r = await once(u, req);
+      if (![301, 302, 303, 307, 308].includes(r.status) || !r.location) {
+        const { location: _l, ...rest } = r;
+        return rest;
+      }
+      if (hop >= (o.maxRedirects ?? 5)) throw new Error("çok fazla yönlendirme");
+      u = new URL(r.location, u);
+      // 303 (ve POST'ta 301/302): gövdesiz GET — fetch ile aynı
+      if (r.status === 303 || ((r.status === 301 || r.status === 302) && req?.method === "POST"))
+        req = { headers: req?.headers };
+    }
   };
 }
 
@@ -137,6 +269,15 @@ export async function listingChecks(http: Http, o: ListingOptions): Promise<Row[
   const base = (o.trustBase ?? net.trust).replace(/\/$/, "");
   const pins = (o.pins?.length ? o.pins : net.pins).map((p) => p.toLowerCase());
   const strict = o.environment === "production";
+  // D4: pakete gömülü pin yerine elle verilen değer — yalnız bant dışı doğrulanmış değerle; raporda görünür
+  if (o.pins?.length)
+    rows.push({
+      id: "L0",
+      check: "Kök pinleri",
+      result: "warn",
+      detail: "pin elle verildi (pakete gömülü değer yerine)",
+      fix: "değeri tamga.network/trust-anchor'daki değerle bant dışında karşılaştırdığınızdan emin olun",
+    });
   const read = async (rel: string) => {
     const r = await safe(http, `${base}/${rel}`);
     return r.status === 200 ? r.text.trim() : null;
@@ -282,8 +423,8 @@ export async function listingChecks(http: Http, o: ListingOptions): Promise<Row[
         detail: !wrprcIndex
           ? "wrprc/index.json okunamadı"
           : issuerWrprc.length
-            ? `${issuerWrprc.length} sertifika`
-            : "kurum için kayıt sertifikası yok",
+            ? `${issuerWrprc.length} sertifika (dizin imzasız — sertifikaların imzası H5'te doğrulanır)`
+            : "kurum için kayıt sertifikası yok (dizin imzasız)",
         fix:
           wrprcIndex && !issuerWrprc.length
             ? "kurum sertifikasında organizationIdentifier olmalı (tamga-onboard keys bunu CSR'a yazar) — operatöre bildirin"
@@ -334,7 +475,7 @@ export async function listingChecks(http: Http, o: ListingOptions): Promise<Row[
           ? "wrprc/index.json okunamadı"
           : noCert.length
             ? `sertifikasız kullanım: ${noCert.join(", ")}`
-            : `${rpItems.length} sertifika — her isteğe kullanımın kayıt sertifikasını ekleyin (yoksa cüzdan reddeder)`,
+            : `${rpItems.length} sertifika (dizin imzasız — imzalar H5'te) — her isteğe kullanımın kayıt sertifikasını ekleyin (yoksa cüzdan reddeder)`,
         fix: noCert.length ? "erişim sertifikasında organizationIdentifier olmalı — operatöre bildirin" : undefined,
       });
       wrprcPaths.push(...rpItems.map((x) => String(x.path)));
@@ -389,6 +530,32 @@ export async function listingChecks(http: Http, o: ListingOptions): Promise<Row[
       fix: root
         ? undefined
         : "sertifika başka ortamın (sandbox / gerçek ağ) kökünden olabilir — --env ve dosyayı kontrol edin",
+    });
+  }
+
+  // D5: wrprc/index.json imzasızdır — her kayıt sertifikası indirilir ve imzası listedeki kayıt kurumu anahtarıyla doğrulanır
+  if (wrprcPaths.length) {
+    const fps = registrarFingerprints(store);
+    const bad: string[] = [];
+    for (const p of wrprcPaths) {
+      if (!/^wrprc\/[A-Za-z0-9._/-]+\.jwt$/.test(p) || p.includes("..")) {
+        bad.push(`${p} (geçersiz yol)`);
+        continue;
+      }
+      const r = await safe(http, `${base}/${p}`);
+      if (r.status !== 200) {
+        bad.push(`${p} (HTTP ${r.status || "erişilemedi"})`);
+        continue;
+      }
+      const v = verifyRegistrationCert(r.text.trim(), fps, now);
+      if (v) bad.push(`${p} (${v})`);
+    }
+    rows.push({
+      id: "H5",
+      check: "Kayıt sertifikaları yayında ve kayıt kurumunca imzalı",
+      result: bad.length ? "fail" : "pass",
+      detail: bad.length ? clean(`sorunlu: ${bad.join(", ")}`) : `${wrprcPaths.length} sertifika — imza geçerli`,
+      fix: bad.length ? "yayın birkaç dakika gecikebilir; sürerse operatöre bildirin" : undefined,
     });
   }
 
@@ -457,17 +624,6 @@ export async function listingChecks(http: Http, o: ListingOptions): Promise<Row[
       fix: sl.status === 200 ? undefined : "iptal listesi adresi (status_list_base) yayında mı",
     });
   }
-  if (wrprcPaths.length) {
-    const bad: string[] = [];
-    for (const p of wrprcPaths) if ((await safe(http, `${base}/${p}`)).status !== 200) bad.push(p);
-    rows.push({
-      id: "H5",
-      check: "Kayıt sertifikası dosyaları yayında",
-      result: bad.length ? "fail" : "pass",
-      detail: bad.length ? clean(`erişilemeyen: ${bad.join(", ")}`) : `${wrprcPaths.length} dosya HTTP 200`,
-      fix: bad.length ? "yayın birkaç dakika gecikebilir; sürerse operatöre bildirin" : undefined,
-    });
-  }
   return rows;
 }
 
@@ -518,6 +674,53 @@ export function checkMetadataChain(
   return { ok: true, detail: `${chain.length} halka → ${root.subject.split("\n").find((l) => l.startsWith("CN="))}` };
 }
 
+/** LOTL'deki (imzası doğrulanmış) ulusal listelerin kayıt kurumu imza anahtarları (etkin; SHA-256 parmak izi). */
+function registrarFingerprints(store: TrustStore): Set<string> {
+  const out = new Set<string>();
+  for (const n of (store.lotl?.national_lists ?? []) as Rec[])
+    for (const k of (n.roles?.registrar?.signing_keys ?? []) as Rec[])
+      if (!k.status || k.status === "ACTIVE") out.add(String(k.fingerprint_sha256).toLowerCase());
+  return out;
+}
+
+/**
+ * Kayıt sertifikası (WRPRC, `rc-wrp+jwt`, ADR-0026): imzacı (x5c[0]) listedeki bir kayıt kurumu anahtarı, ES256 imzası geçerli,
+ * süresi dolmamış. Sorun yoksa null, varsa kısa neden.
+ */
+export function verifyRegistrationCert(jwt: string, registrarFps: Set<string>, now = new Date()): string | null {
+  const parts = jwt.split(".");
+  if (parts.length !== 3) return "JWT değil";
+  const [h, p, s] = parts as [string, string, string];
+  let header: Rec;
+  let payload: Rec;
+  try {
+    header = JSON.parse(Buffer.from(h, "base64url").toString("utf8"));
+    payload = JSON.parse(Buffer.from(p, "base64url").toString("utf8"));
+  } catch {
+    return "okunamadı";
+  }
+  if (String(header.typ ?? "").toLowerCase() !== "rc-wrp+jwt") return "typ rc-wrp+jwt değil";
+  if (header.alg !== "ES256") return "alg ES256 değil";
+  const x5c = header.x5c as unknown;
+  if (!Array.isArray(x5c) || typeof x5c[0] !== "string") return "x5c yok";
+  let leaf: X509Certificate;
+  try {
+    leaf = new X509Certificate(der(x5c[0]));
+  } catch {
+    return "x5c okunamadı";
+  }
+  if (!registrarFps.has(sha256Hex(leaf.raw))) return "imzacı listedeki kayıt kurumu değil";
+  const ok = nodeVerify(
+    "sha256",
+    Buffer.from(`${h}.${p}`),
+    { key: leaf.publicKey, dsaEncoding: "ieee-p1363" },
+    Buffer.from(s, "base64url"),
+  );
+  if (!ok) return "imza geçersiz";
+  if (typeof payload.exp === "number" && payload.exp * 1000 <= now.getTime()) return "süresi dolmuş";
+  return null;
+}
+
 // ───────────────────────────── kurulum aşaması ─────────────────────────────
 
 export interface InstallationInput {
@@ -532,15 +735,37 @@ export interface InstallationInput {
   dnsTxt?: string;
   /** Ağ denetimlerini atla (yalnız dosyalar) */
   offline?: boolean;
+  /** Kurumun alan adı dışındaki istek adreslerini uyarı satırıyla göster (MCP sunucusu açar) */
+  warnOffDomain?: boolean;
 }
 
-/** Katılım klasörünü okur (onboarding.json + başvurular). */
+/**
+ * Katılım klasörünü okur (onboarding.json + başvurular). O3: profil `validateProfile` ile denetlenir (bozuksa durur); başvuru
+ * dosyası adları `<kısa ad>.issuer|rp.json`, her yol (bağlar çözülünce) klasörün içinde.
+ */
 export function readOnboardingDir(dir: string): { profile: Profile; issuer?: Rec; rp?: Rec } {
-  const pf = join(dir, "onboarding.json");
+  const pf = within(dir, "onboarding.json");
   if (!existsSync(pf)) throw new Error(`${pf} yok — önce: tamga-onboard init`);
-  const profile = JSON.parse(readFileSync(pf, "utf8")) as Profile;
-  const rd = (f?: string) =>
-    f && existsSync(join(dir, f)) ? JSON.parse(readFileSync(join(dir, f), "utf8")) : undefined;
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(pf, "utf8"));
+  } catch {
+    throw new Error("onboarding.json okunamadı (JSON değil)");
+  }
+  const problems = validateProfile(raw as Rec);
+  if (problems.length) throw new Error(`onboarding.json geçersiz: ${problems.join("; ")}`);
+  const profile = raw as Profile;
+  const rd = (f?: string) => {
+    if (!f) return undefined;
+    if (!APPLICATION_FILE_RE.test(f)) throw new Error(`başvuru dosyası adı geçersiz: ${clean(f)}`);
+    const p = within(dir, f);
+    if (!existsSync(p)) return undefined;
+    try {
+      return JSON.parse(readFileSync(p, "utf8"));
+    } catch {
+      throw new Error(`${f} okunamadı (JSON değil)`);
+    }
+  };
   return { profile, issuer: rd(profile.applications?.issuer), rp: rd(profile.applications?.rp) };
 }
 
@@ -579,7 +804,7 @@ export async function installationChecks(input: InstallationInput, deps: { http:
 
   // K — anahtarlar, CSR'lar, operatörün verdiği sertifikalar
   if (profile && input.dir) {
-    const kdir = join(input.dir, "keys");
+    const kdir = within(input.dir, "keys");
     let exps: ReturnType<typeof csrExpectations> = [];
     try {
       exps = csrExpectations(profile.keys ?? [], { issuer, rp });
@@ -587,9 +812,10 @@ export async function installationChecks(input: InstallationInput, deps: { http:
       rows.push({ id: "K0", check: "Anahtar beklentileri", result: "fail", detail: (e as Error).message });
     }
     for (const e of exps) {
-      const keyPath = join(kdir, `${e.name}.key.pem`);
-      const csrPath = join(kdir, `${e.name}.csr.pem`);
-      const certPath = join(kdir, `${e.name}.cert.pem`);
+      if (!CERT_NAME_RE.test(e.name)) throw new Error(`anahtar adı geçersiz: ${clean(e.name)}`);
+      const keyPath = within(input.dir, "keys", `${e.name}.key.pem`);
+      const csrPath = within(input.dir, "keys", `${e.name}.csr.pem`);
+      const certPath = within(input.dir, "keys", `${e.name}.cert.pem`);
       const problems: string[] = [];
       const notes: string[] = [];
       let keySpki: string | undefined;
@@ -626,6 +852,35 @@ export async function installationChecks(input: InstallationInput, deps: { http:
     }
   }
 
+  // O4 (MCP): denetim, dosyalardaki adreslere istek gönderir — kurumun alan adı dışındaki adresler ayrıca gösterilir (yapay zekâ
+  // aracına verilmiş bir dosya isteği başka bir yere yönlendirmesin; kullanıcı görsün)
+  if (input.warnOffDomain && profile?.domain) {
+    const d = profile.domain.toLowerCase();
+    const hosts = new Set<string>();
+    const add = (u: unknown) => {
+      try {
+        if (typeof u === "string" && u) hosts.add(new URL(u).hostname.toLowerCase());
+      } catch {
+        hosts.add(clean(u));
+      }
+    };
+    for (const app of [issuer, rp]) {
+      if (!app) continue;
+      for (const u of [app.contact?.support_uri, app.info_uri, app.revocation_policy_uri, app.issuer_url]) add(u);
+      for (const s of (app.scopes ?? []) as Rec[]) add(s.privacy_policy_uri);
+    }
+    add(profile.lookup_url);
+    if (rp?.dns_name) hosts.add(String(rp.dns_name).toLowerCase());
+    const off = [...hosts].filter((h) => h !== d && !h.endsWith(`.${d}`));
+    if (off.length)
+      rows.push({
+        id: "S1",
+        check: `İstek gönderilecek adresler kurumun alan adında (${d})`,
+        result: "warn",
+        detail: clean(`alan adı dışında: ${off.join(", ")}`),
+        fix: "bu adreslerin kurumunuza ait olduğunu doğrulayın; değilse başvuru dosyasını düzeltin",
+      });
+  }
   if (input.offline) return rows;
   const dns = deps.dns ?? (await defaultDns());
   // N — alan adı
@@ -716,7 +971,10 @@ export async function installationChecks(input: InstallationInput, deps: { http:
     const signed = await safe(deps.http, wellKnown(issuer.issuer_url, "openid-credential-issuer"), {
       headers: { accept: "application/jwt" },
     });
-    const certPath = input.dir ? join(input.dir, "keys", `${issuer.cert}.cert.pem`) : "";
+    const certPath =
+      input.dir && CERT_NAME_RE.test(String(issuer.cert ?? ""))
+        ? within(input.dir, "keys", `${issuer.cert}.cert.pem`)
+        : "";
     let leafOk: boolean | null = null;
     try {
       const x5c = JSON.parse(Buffer.from(signed.text.split(".")[0], "base64url").toString("utf8")).x5c as string[];
@@ -827,7 +1085,8 @@ function certRow(e: ReturnType<typeof csrExpectations>[number], pem: string, key
 /** Katılım klasöründeki sertifikalar (liste aşamasında köke zincir denetimi için). */
 export function localCertificates(dir: string, profile: Profile): Array<{ name: string; pem: string }> {
   return (profile.keys ?? [])
-    .map((k) => ({ name: k.name, path: join(dir, "keys", `${k.name}.cert.pem`) }))
+    .filter((k) => CERT_NAME_RE.test(k.name))
+    .map((k) => ({ name: k.name, path: within(dir, "keys", `${k.name}.cert.pem`) }))
     .filter((k) => existsSync(k.path))
     .map((k) => ({ name: k.name, pem: readFileSync(k.path, "utf8") }));
 }

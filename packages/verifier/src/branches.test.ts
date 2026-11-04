@@ -5,7 +5,13 @@
  */
 import { randomBytes } from "node:crypto";
 import { describe, it, expect } from "vitest";
-import { BranchRegistry, BranchSet, BRANCH_LIMITS, type BranchLimits } from "./branches.js";
+import {
+  BranchRegistry,
+  BranchSet,
+  BRANCH_LIMITS,
+  PresentationAlreadyConsumedError,
+  type BranchLimits,
+} from "./branches.js";
 import type { KeyLike, RequestBranch, RequestContent } from "./request.js";
 
 const T0 = 1_000_000;
@@ -383,6 +389,46 @@ describe("BranchSet — yumuşak ret (RQ2), denemeler (RQ4), kilit (PV10)", () =
     expect(h.set.tryConsume()).toBe(false); // ikinci kabul yok
     h.set.end(atk.branch);
     expect(h.set.busy).toBe(false);
+  });
+
+  it("eski consume() kalıbı (0.8.0: isOpen → await doğrulama → consume): ikinci kabul sessizce geçmez, PresentationAlreadyConsumedError fırlatır", async () => {
+    const h = harness();
+    const a = await h.fetchOk();
+    const b = await h.fetchOk();
+    // iki dalın geçerli yanıtları aynı anda işleniyor; ikisi de doğrulamadan önce isOpen'a bakar
+    expect(h.set.begin(a.branch)).toBe("ok");
+    expect(h.set.begin(b.branch)).toBe("ok");
+    expect(h.set.isOpen(a.branch)).toBe(true);
+    expect(h.set.isOpen(b.branch)).toBe(true);
+    h.set.consume(); // ilk yanıt kabul
+    expect(() => h.set.consume()).toThrow(PresentationAlreadyConsumedError); // ikinci kabul hata (kapalı güvenli)
+    h.set.end(a.branch);
+    h.set.end(b.branch);
+    expect(h.set.used).toBe(true);
+    expect(h.set.tryConsume()).toBe(false);
+  });
+
+  it("deneme sınırı başka bir yanıt işlenirken sunumu REJECTED yapmaz: dalda yalnız dal kapanır; dalsız yolda işlenen dal yanıtı bitince", async () => {
+    // tek çekim + DC API yanıtı işleniyor: dalın sınırı yalnız dalı kapatır
+    const h = harness();
+    const only = await h.fetchOk();
+    expect(h.set.begin()).toBe("ok");
+    expect(h.set.begin(only.branch)).toBe("ok");
+    for (let i = 1; i < BRANCH_LIMITS.maxAttempts; i++) h.set.failedAttempt(only.branch);
+    expect(h.set.failedAttempt(only.branch)).toEqual({ n: 5, branchClosed: true, presentationRejected: false });
+    h.set.end(only.branch);
+    expect(h.set.used).toBe(false);
+    expect(h.set.tryConsume()).toBe(true); // işlenen DC API yanıtı kabul edilebilir
+    h.set.end();
+    // dalsız yol: bir dalın yanıtı işlenirken DC API sınırı sunumu kapatmaz; işlem bitince ilk başarısız yanıt kapatır
+    const g = harness();
+    const br = await g.fetchOk();
+    expect(g.set.begin(br.branch)).toBe("ok");
+    for (let i = 1; i <= BRANCH_LIMITS.maxAttempts; i++) expect(g.set.failedAttempt().presentationRejected).toBe(false);
+    expect(g.set.used).toBe(false);
+    g.set.end(br.branch);
+    expect(g.set.failedAttempt().presentationRejected).toBe(true);
+    expect(g.set.used).toBe(true);
   });
 
   it("declineBlocked: kendi dalının yanıtı işlenirken ret 400; tek çekimde başka yanıt işlenirken ret sunumu kapatamaz; çok çekimde başka dalın yanıtı reti engellemez", async () => {

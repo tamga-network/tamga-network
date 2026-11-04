@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {IStatusListRegistry} from "../interfaces/IStatusListRegistry.sol";
 import {IIssuerRegistry} from "../interfaces/IIssuerRegistry.sol";
@@ -84,11 +84,16 @@ contract StatusListRegistry is Initializable, UUPSUpgradeable, IStatusListRegist
 
     function _authorizeUpgrade(address) internal view override {
         if (msg.sender != governance) revert NotGovernance(msg.sender);
+        _requireNoOpenMigration(); // güvenlik turu 2026-11-04: pencere açıkken yükseltme yok
     }
 
     /// @dev ADR-0073 K1: göç kipini yalnız Governance açar, uzatır, kapatır.
     function _requireMigrationAdmin() internal view override {
-        if (msg.sender != governance) revert NotGovernance(msg.sender);
+        if (msg.sender != _migrationAdmin()) revert NotGovernance(msg.sender);
+    }
+
+    function _migrationAdmin() internal view override returns (address) {
+        return governance;
     }
 
     /// @dev R2: askıya alınmış issuer yayın yapamaz. CA rotasyonu ise ENGEL DEĞİLDİR
@@ -176,6 +181,8 @@ contract StatusListRegistry is Initializable, UUPSUpgradeable, IStatusListRegist
             revert PublishedAtInFuture(publishedAt);
         }
 
+        // Güvenlik turu 2026-11-04: göç penceresinde yayın anı açıkça verilir (K1; yeniden oynatma ile olağan yayın yarışmaz)
+        if (publishedAt == 0 && isMigrationOpen()) revert DateRequiredDuringMigration();
         uint64 effectiveAt = publishedAt == 0 ? uint64(block.timestamp) : publishedAt;
         if (effectiveAt < a.publishedAt) revert PublishedAtNotMonotonic(a.publishedAt, effectiveAt);     // L1b
 
@@ -194,12 +201,12 @@ contract StatusListRegistry is Initializable, UUPSUpgradeable, IStatusListRegist
     }
 
     /// @inheritdoc IStatusListRegistry
-    function retireList(bytes32 listId, string calldata reason) external {
+    function retireList(bytes32 listId, bytes32 reasonHash) external {
         ListAnchor storage a = _require(listId);
         if (!_canOperateList(a.issuerId)) revert NotIssuerDelegate(a.issuerId, msg.sender);
         if (a.status != ListStatus.ACTIVE) revert ListNotActive(listId);
         a.status = ListStatus.RETIRED;
-        emit ListRetired(listId, reason);
+        emit ListRetired(listId, reasonHash);
     }
 
     /// @inheritdoc IStatusListRegistry

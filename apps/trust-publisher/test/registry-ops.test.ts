@@ -131,6 +131,32 @@ describe("operatör kayıt aracı", () => {
     );
   });
 
+  it("O1: sertifikadaki kurum kimlik numarası başvurudaki identifiers ile birebir; gerçek ağda numarasız sertifika RED", () => {
+    const withOrg = (m: Record<string, string | null>, requireCertOrgId = false): RegistryEnv => ({
+      ...env,
+      certOrgId: (ref) => m[ref] ?? null,
+      requireCertOrgId,
+    });
+    // VKN TR1234567890 → VATTR-1234567890
+    expect(() => addIssuer(src(), issuerApp, withOrg({ "issuer-yeni": "VATTR-1234567890" }, true))).not.toThrow();
+    expect(() => addIssuer(src(), issuerApp, withOrg({ "issuer-yeni": "VATTR-9999999999" }))).toThrow(
+      /VATTR-9999999999\) başvurudaki identifiers ile aynı değil \(VATTR-1234567890/,
+    );
+    expect(() => addIssuer(src(), issuerApp, withOrg({}, true))).toThrow(/organizationIdentifier\) yok/);
+    expect(() => addIssuer(src(), issuerApp, withOrg({}))).not.toThrow(); // geliştirme: numarasız sertifika uyarısız geçer
+    // iptal listesi sertifikası da aynı kurumun numarasını taşımalı
+    expect(() =>
+      addIssuer(
+        src(),
+        { ...issuerApp, status_cert: "rp-yeni" },
+        withOrg({ "issuer-yeni": "VATTR-1234567890", "rp-yeni": "VATTR-1" }),
+      ),
+    ).toThrow(/rp-yeni: sertifikadaki kurum kimlik numarası/);
+    // doğrulayıcı: erişim sertifikası (aracısız) aynı kural
+    expect(() => addRelyingParty(src(), rpApp, withOrg({ "rp-yeni": "NTRTR-1" }))).toThrow(/aynı değil/);
+    expect(() => addRelyingParty(src(), rpApp, withOrg({ "rp-yeni": "VATTR-1234567890" }, true))).not.toThrow();
+  });
+
   it("aynı sertifika iki kurumda kullanılamaz", () => {
     expect(() => addIssuer(src(), { ...issuerApp, cert: "issuer-example-university" }, env)).toThrow(
       /başka bir kurumda/,

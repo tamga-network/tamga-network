@@ -37,10 +37,24 @@
     },
     {
       "contract": "NetworkRegistry",
-      "label": "__gap",
+      "label": "_revision",
       "slot": 5,
       "offset": 0,
-      "type": "t_array(t_uint256)45_storage"
+      "type": "t_mapping(t_bytes32,t_uint64)"
+    },
+    {
+      "contract": "NetworkRegistry",
+      "label": "_stagedRevision",
+      "slot": 6,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_uint64)"
+    },
+    {
+      "contract": "NetworkRegistry",
+      "label": "__gap",
+      "slot": 7,
+      "offset": 0,
+      "type": "t_array(t_uint256)43_storage"
     }
   ],
   "types": {
@@ -61,10 +75,10 @@
       "numberOfBytes": 32,
       "base": "t_struct(Change)_storage"
     },
-    "t_array(t_uint256)45_storage": {
+    "t_array(t_uint256)43_storage": {
       "encoding": "inplace",
-      "label": "uint256[45]",
-      "numberOfBytes": 1440,
+      "label": "uint256[43]",
+      "numberOfBytes": 1376,
       "base": "t_uint256"
     },
     "t_bytes2": {
@@ -100,6 +114,13 @@
       "numberOfBytes": 32,
       "key": "t_bytes32",
       "value": "t_struct(NetworkRecord)_storage"
+    },
+    "t_mapping(t_bytes32,t_uint64)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => uint64)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_uint64"
     },
     "t_mapping(t_enum(RecordKind),t_array(t_bytes32)dyn_storage)": {
       "encoding": "mapping",

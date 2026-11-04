@@ -285,7 +285,7 @@ describe("ADR-0055 — yükseltme kuyruğu ve kayıt yönetimi önerileri", func
     await expect(f.governance.execute(dep)).to.emit(f.schemas, "SchemaDeprecated");
     expect((await f.schemas.getSchema(sid)).status).to.equal(SchemaStatus.DEPRECATED);
 
-    const rev = await proposalId(await g.proposeNetworkSchemaRevocation(sid, "ele gecirildi"), f);
+    const rev = await proposalId(await g.proposeNetworkSchemaRevocation(sid, id("ele gecirildi")), f);
     await passWithTwo(f, rev);
     await expect(f.governance.execute(rev)).to.emit(f.schemas, "SchemaRevoked");
     expect((await f.schemas.getSchema(sid)).status).to.equal(SchemaStatus.REVOKED);

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {ISovereignty} from "../interfaces/ISovereignty.sol";
 import {ITamgaErrors} from "../interfaces/ITamgaErrors.sol";
@@ -81,12 +81,27 @@ abstract contract TamgaRegistryBase is Initializable, UUPSUpgradeable, ITamgaErr
         _;
     }
 
-    /// @dev SPEC-BC-0001 §9. Yalnızca Governance 2/3 oyla yükseltebilir.
-    function _authorizeUpgrade(address) internal view override onlyGovernance {}
+    /// @dev SPEC-BC-0001 §9. Yalnızca Governance 2/3 oyla yükseltebilir; göç penceresi açıkken hiç (güvenlik turu 2026-11-04).
+    function _authorizeUpgrade(address) internal view override onlyGovernance {
+        _requireNoOpenMigration();
+    }
 
     /// @dev ADR-0073 K1: göç kipini yalnız Governance (türü belli öneriyle) açar, uzatır, kapatır.
     function _requireMigrationAdmin() internal view override {
-        if (msg.sender != governance) revert NotGovernance(msg.sender);
+        if (msg.sender != _migrationAdmin()) revert NotGovernance(msg.sender);
+    }
+
+    function _migrationAdmin() internal view override returns (address) {
+        return governance;
+    }
+
+    /// @dev Güvenlik turu 2026-11-04: kayıt geçerliliğinin başlangıcı (0 = blok zamanı). Kip dışında geçmişe çekilemez — aksi
+    ///      hâlde kip dışında kaydedilen kurum (ilk pencere başlangıçsız) kayıttan ÖNCEKİ belgeleri de kabul ettirirdi; geçmiş
+    ///      yalnız göç kipinde yazılır (ADR-0073 CE1).
+    function _validFrom(uint64 validFrom) internal view returns (uint64) {
+        if (validFrom == 0) return uint64(block.timestamp);
+        if (validFrom < block.timestamp && !isMigrationOpen()) revert PastDateOutsideMigration(validFrom);
+        return validFrom;
     }
 
     // -----------------------------------------------------------------

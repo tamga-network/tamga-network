@@ -119,7 +119,10 @@ yanıt "işleniyor" (400) alıyordu. QR'ı gören biri kendi dalına yavaş işl
 geri çevirtebiliyordu (sunum açık kalıyordu; kişi yeniden göndermek zorunda kalıyordu). Kilit artık **dal başınadır** ve kabul
 **atomiktir** (`BranchSet.tryConsume`: eşzamanlı iki geçerli yanıttan yalnız ilki sunumu tamamlar). Ret, yalnız kendi dalının yanıtı
 işlenirken ya da sunumu bütünüyle kapatacakken (tek çekim) başka bir yanıt işlenirken 400 alır (PV10). Kalan: dalsız DC API yolunun
-kilidi sunum başınadır (o yolun anahtarını yalnız sunumu açan sayfa bilir). Karar içeriği (K1–K6, RQ1–RQ6) değişmedi.
+kilidi sunum başınadır (o yolun anahtarını yalnız sunumu açan sayfa bilir). ISO/IEC 18013-7 Ek C yolunda (`/vp/dc-mdoc`) cüzdanın
+reddi de başka bir yanıt işlenirken 400 alır. Sunum tamamlanmışken `BranchSet.consume()` hata verir
+(`PresentationAlreadyConsumedError`), deneme sınırı başka bir yanıt işlenirken yalnız o dalı kapatır. Karar içeriği (K1–K6, RQ1–RQ6)
+değişmedi.
 
 # Değişmezler
 

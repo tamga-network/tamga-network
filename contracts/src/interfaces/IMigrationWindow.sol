@@ -26,6 +26,11 @@ interface IMigrationWindow {
     error DateInFuture(uint64 at);
     /// @dev Kaydın geçmişi zaman sırasıyla yazılır; öncekinden geri tarih reddedilir (CE1).
     error DateOutOfOrder(uint64 previous, uint64 at);
+    /// @dev Güvenlik turu 2026-11-04: pencere açıkken kayıt kontratı yükseltilemez (önce kapanış önerisi ya da süre dolar).
+    error UpgradeDuringMigration();
+    /// @dev Güvenlik turu 2026-11-04 (K1: "kip açıkken tarih taşıyan yazımlar tarihi açıkça alır"): pencere açıkken tarihsiz
+    ///      (`at` = 0, blok zamanlı) olağan yazım reddedilir; acil yazım açık tarihle (`at` = şimdi) yapılır. Governance hariç.
+    error DateRequiredDuringMigration();
 
     /// @notice Governance: kipi bir kez açar. `deadline` ≤ açılış + 30 gün; `executor` ağ düzeyi kayıtların tek göç yürütücüsü.
     function openMigration(bytes32 replayPlanHash, uint64 deadline, address executor) external;

@@ -12,8 +12,14 @@
  * Çıktı `<klasör>/<name>.cert.pem` (+ `--generate` ile `<name>.pkcs8.pem`). Var olan ad üzerine yazılmaz.
  * Sonra: `npm run trust:register -- issuer|rp <başvuru.json>` (başvurudaki `cert` / `access_cert` = bu ad).
  * Kurallar: yalnız P-256 / ES256; CSR imzası doğrulanır; 2 yıl (en çok 3); seri numarası rastgele; SKI + AKI (kökün SKI'si).
- * Kurum sertifikası (ADR-0050, ETSI TS 119 412-6): `--prod` ile `issuer-*` adında `--org-id` (ya da konu alanında 2.5.4.97) ZORUNLU —
- *   kayıt sertifikasının `sub`'ıyla aynı değer (TR-VKN → VATTR-<VKN>, TR-MERSIS → NTRTR-<MERSİS>); konu alanında O ve C bulunmalı.
+ * Kurum sertifikası (ADR-0050, ETSI TS 119 412-6): `--prod` ile `--org-id` ZORUNLU (issuer-* ve rp-*) — kayıt sertifikasının `sub`'ıyla
+ *   aynı değer (TR-VKN → VATTR-<VKN>, TR-MERSIS → NTRTR-<MERSİS>); CSR'da organizationIdentifier varsa birebir aynı olmalı; kurum
+ *   sertifikasında konu alanında O ve C bulunmalı.
+ * Konu alanı (2026-11-04 güvenlik turu O1, `pki-subject.ts`): CSR'dan METİN olarak okunmaz; ASN.1 ad yapısından yalnız CN, OU, O,
+ *   2.5.4.97, C birer kez alınır (bilinmeyen öznitelik, çok değerli RDN, iki organizationIdentifier → ret) ve sertifikanın konusu bu
+ *   alanlardan yeniden kurulur; `--subject` verilirse CSR'daki adın yerine o kullanılır (CSR'dan yalnız açık anahtar + imza).
+ * Gerçek ağ onay kapısı (O5): `--prod` yalnız `TAMGA_CONFIRM_PROD=<kurum kısa adı>` ortam değişkeni bu sertifikanın adına uyunca
+ *   imzalar (`issuer-<kısa ad>`, `issuer-<kısa ad>-status`, `rp-issuer-<kısa ad>`, `rp-<kısa ad>`); `--dev` etkilenmez.
  * Erişim sertifikası (ADR-0058, ETSI TS 119 411-8 §6.6.1): `--contact-uri <https://…>` kayıttaki destek adresini SAN'a
  *   `uniformResourceIdentifier` olarak yazar (GEN-6.6.1-07 iletişim bilgisi; `--prod` erişim sertifikasında ZORUNLU, AC1);
  *   `--contact-email <adres>` kayıttaki kurumsal e-postayı `rfc822Name` olarak ekler (kişisel adres yazılmaz); `--service-id
@@ -41,6 +47,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFil
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { certFingerprintSha256Hex, computeIssuerId, computeRpId, pemToDer } from "@tamga-network/core";
+import { prodConfirmProblem, resolveSubject, SubjectError } from "./pki-subject.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
@@ -81,6 +88,11 @@ const toPem = (label: string, der: Uint8Array) =>
 async function main() {
   const name = arg("name") ?? fail("--name gerekli (ör. issuer-yeni, rp-shop)");
   if (!/^(issuer|rp)-[a-z0-9-]{2,40}$/.test(name)) fail("--name: issuer-<ad> ya da rp-<ad> (küçük harf, rakam, tire)");
+  // O5: gerçek ağın kökü ile imza yalnız bu sertifika için açık onayla (ortam değişkeni kısa adla eşleşmeli)
+  if (PROD) {
+    const p = prodConfirmProblem(name, process.env.TAMGA_CONFIRM_PROD);
+    if (p) fail(p);
+  }
   const REPLACE = process.argv.includes("--replace");
   if (existsSync(resolve(PKI, `${name}.cert.pem`)) && !REPLACE)
     fail(
@@ -121,7 +133,7 @@ async function main() {
   );
 
   let publicKey: CryptoKey;
-  let subject: string;
+  let csrName: Pkcs10CertificateRequest["subjectName"] | undefined;
   let privateKey: CryptoKey | undefined;
   const csrFile = arg("csr");
   if (csrFile) {
@@ -130,17 +142,17 @@ async function main() {
     const alg = csr.publicKey.algorithm as EcKeyAlgorithm;
     if (alg.name !== "ECDSA" || alg.namedCurve !== "P-256") fail("yalnız P-256 (ES256) anahtar kabul edilir");
     publicKey = await csr.publicKey.export(ALG, ["verify"], crypto);
-    subject = arg("subject") ?? csr.subject;
+    csrName = csr.subjectName; // ASN.1 ad yapısı (metin değil; O1)
   } else if (arg("key")) {
     // aynı anahtarla yenileme: açık anahtar özel anahtardan (JWK x/y); özel anahtar dosyası okunur, değiştirilmez
-    subject = arg("subject") ?? fail('--key ile --subject gerekli (ör. "CN=Tamga Verify, O=…, C=TR")');
+    if (arg("subject") === undefined) fail('--key ile --subject gerekli (ör. "CN=Tamga Verify, O=…, C=TR")');
     const sk = await crypto.subtle.importKey("pkcs8", pemBody(readFileSync(resolve(arg("key")!), "utf8")), ALG, true, [
       "sign",
     ]);
     const { kty, crv, x, y } = await crypto.subtle.exportKey("jwk", sk);
     publicKey = await crypto.subtle.importKey("jwk", { kty, crv, x, y }, ALG, true, ["verify"]);
   } else if (process.argv.includes("--generate")) {
-    subject = arg("subject") ?? fail('--generate ile --subject gerekli (ör. "CN=Yeni, O=Yeni, C=TR")');
+    if (arg("subject") === undefined) fail('--generate ile --subject gerekli (ör. "CN=Yeni, O=Yeni, C=TR")');
     const kp = (await crypto.subtle.generateKey(ALG, true, ["sign", "verify"])) as CryptoKeyPair;
     publicKey = kp.publicKey;
     privateKey = kp.privateKey;
@@ -155,34 +167,25 @@ async function main() {
       fail(`--replace: verilen anahtar ${name}.cert.pem'deki anahtarla aynı değil (yeni anahtar yeni ad ister)`);
   }
 
-  // ADR-0026 K3: kurum kimlik numarası (organizationIdentifier, EN 319 412-1) — kayıt sertifikasının `sub`'ıyla aynı
-  const orgId = arg("org-id");
-  if (orgId) {
-    if (!/^(VAT|NTR|LEI)[A-Z]{2}-[A-Za-z0-9]{1,40}$/.test(orgId))
-      fail("--org-id: VATTR-<VKN> ya da NTRTR-<MERSİS> biçiminde");
-    // Kurumun katılım aracı (`tamga-onboard keys`) CSR konusuna organizationIdentifier'ı yazar: aynı değerse kabul, farklıysa ret
-    const inCsr = /(?:^|,\s*)2\.5\.4\.97=([^,]+)/.exec(subject)?.[1]?.trim();
-    if (inCsr !== undefined && inCsr !== orgId)
-      fail(`konu alanındaki organizationIdentifier (${inCsr}) --org-id ile aynı değil (${orgId})`);
-    if (inCsr === undefined) subject = `${subject}, 2.5.4.97=${orgId}`;
-  }
-  if (serviceId !== undefined) {
-    if (/(^|,\s*)OU=/.test(subject)) fail("konu alanında zaten OU var (--service-id ile birlikte kullanılmaz)");
-    subject = `${subject}, OU=${serviceId}`;
-  }
-  // ADR-0050 (CP1): gerçek ağda kurum sertifikası kurum kimlik numarasıyla verilir
-  if (name.startsWith("issuer-")) {
-    if (PROD && !/2\.5\.4\.97=/.test(subject))
-      fail("--prod kurum sertifikası (issuer-*): --org-id VATTR-<VKN> ya da NTRTR-<MERSİS> zorunlu (ADR-0050)");
-    if (!/(^|,\s*)O=/.test(subject) || !/(^|,\s*)C=/.test(subject))
-      fail("kurum sertifikası konu alanında O (resmî ad) ve C (ülke) bulunmalı (ADR-0050)");
+  // ADR-0026 K3 / ADR-0050 / O1: konu alanı ASN.1 ad yapısından; kurum kimlik numarası (organizationIdentifier, EN 319 412-1) =
+  // kayıt sertifikasının `sub`'ı; gerçek ağda yalnız --org-id'den ve CSR'dakiyle birebir
+  let subject: ReturnType<typeof resolveSubject>;
+  try {
+    subject = resolveSubject({
+      name,
+      prod: PROD,
+      csrName,
+      subjectArg: arg("subject"),
+      orgId: arg("org-id"),
+      serviceId,
+    });
+  } catch (e) {
+    return fail(e instanceof SubjectError ? `konu alanı reddedildi:\n  - ${e.problems.join("\n  - ")}` : String(e));
   }
   // ADR-0026 K3 + ADR-0034 CI3: gerçek ağda erişim sertifikası (rp-*) kurum kimlik numarasını ve kaydın alan adını (SAN) taşır —
   // yoksa kayıt sertifikası (WRPRC) üretilmez ve yayıncı SAN denetiminde durur; sorun kayıt anında değil burada yakalansın
   if (PROD && name.startsWith("rp-")) {
     if (!dns) fail("--prod erişim sertifikası (rp-*): --dns <kayıttaki dns_name> zorunlu (ADR-0034 CI3)");
-    if (!/2\.5\.4\.97=/.test(subject))
-      fail("--prod erişim sertifikası (rp-*): --org-id VATTR-<VKN> ya da NTRTR-<MERSİS> zorunlu (ADR-0026 K3)");
     if (contactUri === undefined)
       fail(
         "--prod erişim sertifikası (rp-*): --contact-uri <kayıttaki support_uri> zorunlu (ETSI TS 119 411-8 GEN-6.6.1-07; ADR-0058 AC1)",
@@ -199,7 +202,7 @@ async function main() {
   const cert = await X509CertificateGenerator.create({
     // pozitif, 128 bit rastgele (RFC 5280 §4.1.2.2)
     serialNumber: "7" + randomBytes(16).toString("hex").slice(1),
-    subject,
+    subject: subject.subject,
     issuer: root.subject,
     notBefore,
     notAfter,
@@ -255,7 +258,7 @@ async function main() {
       toPem("PRIVATE KEY", new Uint8Array(await crypto.subtle.exportKey("pkcs8", privateKey))),
       { mode: 0o600 }, // özel anahtar yalnız sahibine okunur (POSIX; Windows'ta etkisiz)
     );
-  console.log(`${PROD ? "ÜRETİM" : "geliştirme"} PKI: ${resolve(PKI, `${name}.cert.pem`)} — ${subject}`);
+  console.log(`${PROD ? "ÜRETİM" : "geliştirme"} PKI: ${resolve(PKI, `${name}.cert.pem`)} — ${subject.text}`);
   console.log(
     `sha256 ${certFingerprintSha256Hex(pemToDer(cert.toString("pem")))} · ${notAfter.toISOString()} tarihine kadar`,
   );

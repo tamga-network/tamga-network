@@ -76,7 +76,8 @@ contract IssuerRegistry is TamgaRegistryBase, IIssuerRegistry {
     /// @inheritdoc IIssuerRegistry
     function registerIssuer(Issuer calldata data) external onlyOwnerState(data.stateCode) {
         if (data.status != IssuerStatus.ACTIVE) revert MustRegisterAsActive();
-        if (data.validUntil <= data.validFrom) revert InvalidValidity(data.validFrom, data.validUntil);
+        uint64 validFrom = _validFrom(data.validFrom);
+        if (data.validUntil <= validFrom) revert InvalidValidity(validFrom, data.validUntil);
         if (data.certFingerprint == bytes32(0)) revert EmptyContentHash();
         if (!rootCARegistry.exists(data.parentCA)) revert UnknownRootCA(data.parentCA);
         if (!rootCARegistry.isValidRootCA(data.parentCA)) revert RootCANotActive(data.parentCA); // CA3
@@ -99,7 +100,7 @@ contract IssuerRegistry is TamgaRegistryBase, IIssuerRegistry {
         i.parentCA = data.parentCA;
         i.metadataURI = data.metadataURI;
         i.status = IssuerStatus.ACTIVE;
-        i.validFrom = data.validFrom == 0 ? uint64(block.timestamp) : data.validFrom;
+        i.validFrom = validFrom;
         i.validUntil = data.validUntil;
         i.registeredAt = registeredAt;
         // Kip dışında ilk ACTIVE penceresi başlangıçsızdır (since = 0; geçerlilik validFrom'dan); göçte listedeki ilk durum anı.

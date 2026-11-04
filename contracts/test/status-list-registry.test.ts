@@ -169,7 +169,7 @@ describe("StatusListRegistry (SPEC-BC-0001 §7)", function () {
     ).to.be.revertedWithCustomError(f.statusLists, "NotIssuerDelegate");
     await f.as(f.statusLists, yokOp).publishList(listId, id("v1"), 1, await f.now());
     expect((await f.statusLists.getListAnchor(listId)).version).to.equal(1);
-    await f.as(f.statusLists, yokOp).retireList(listId, "devir tamam");
+    await f.as(f.statusLists, yokOp).retireList(listId, id("devir tamam"));
     expect(await f.statusLists.matchesContentHash(listId, id("v1"))).to.equal(false); // RETIRED liste eşleşmez
   });
 
@@ -181,8 +181,8 @@ describe("StatusListRegistry (SPEC-BC-0001 §7)", function () {
 
   it("retire: yalnız ACTIVE liste; ikinci retire ListNotActive; bilinmeyen liste UnknownList", async () => {
     const w = f.as(f.statusLists, f.uniOperator);
-    await w.retireList(listId, "kapandi");
-    await expect(w.retireList(listId, "yine")).to.be.revertedWithCustomError(f.statusLists, "ListNotActive");
+    await w.retireList(listId, id("kapandi"));
+    await expect(w.retireList(listId, id("yine"))).to.be.revertedWithCustomError(f.statusLists, "ListNotActive");
     await expect(w.publishList(listId, id("v1"), 1, 0)).to.be.revertedWithCustomError(f.statusLists, "ListNotActive");
     await expect(f.statusLists.getListAnchor(id("yok"))).to.be.revertedWithCustomError(f.statusLists, "UnknownList");
   });

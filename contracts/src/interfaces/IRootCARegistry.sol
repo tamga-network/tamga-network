@@ -27,7 +27,8 @@ interface IRootCARegistry is ITamgaErrors {
     event RootCARegistered(bytes32 indexed caId, bytes2 indexed stateCode, bytes32 certFingerprint);
     event RootCASuspended(bytes32 indexed caId);
     event RootCAReinstated(bytes32 indexed caId);
-    event RootCARevoked(bytes32 indexed caId, string reason);
+    /// @dev Güvenlik turu 2026-11-04: gerekçe serbest metin değil, özetidir (ADR-0074 PJ2).
+    event RootCARevoked(bytes32 indexed caId, bytes32 reasonHash);
     event RootCARetired(bytes32 indexed caId, bytes32 successorCA);
     event RootCACrlUpdated(bytes32 indexed caId, string crlURI);
     /// @dev ADR-0073 K5 eşlemesi: listedeki `ROLLING_OVER` = zincirde ACTIVE + bu halef olayı.
@@ -43,14 +44,14 @@ interface IRootCARegistry is ITamgaErrors {
     function registerRootCA(RootCA calldata data) external;
     function suspendRootCA(bytes32 caId) external;
     function reinstateRootCA(bytes32 caId) external;
-    function revokeRootCA(bytes32 caId, string calldata reason) external;
+    function revokeRootCA(bytes32 caId, bytes32 reasonHash) external;
     /// @notice Planlı rotasyon. Zincirler geçerli kalır; yeni issuer bağlanamaz.
     function retireRootCA(bytes32 caId, bytes32 successorCA) external;
     function updateCrlURI(bytes32 caId, string calldata crlURI) external;
     /// @notice ADR-0073 K1: `at` = 0 → blok zamanı; açık tarih yalnız göç kipinde.
     function suspendRootCAAt(bytes32 caId, uint64 at) external;
     function reinstateRootCAAt(bytes32 caId, uint64 at) external;
-    function revokeRootCAAt(bytes32 caId, string calldata reason, uint64 at) external;
+    function revokeRootCAAt(bytes32 caId, bytes32 reasonHash, uint64 at) external;
     function retireRootCAAt(bytes32 caId, bytes32 successorCA, uint64 at) external;
     /// @notice Listedeki `ROLLING_OVER`: durum ACTIVE kalır, halef olayla yayılır.
     function announceRootCARollover(bytes32 caId, bytes32 successorCA) external;

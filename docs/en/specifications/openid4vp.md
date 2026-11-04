@@ -410,6 +410,10 @@ on ACCEPTED they also return `pass_grant` and `pass` (a Tamga extension).
 | Verifier registered, **some claims outside scope** | **Over-asking warning** — out-of-scope fields are marked separately; the user can still approve |
 | Verifier **unregistered** | "This verifier is not registered with Tamga" warning; the presentation is not blocked but the warning is prominent |
 
+**Change note 2026-11-04 — mdoc scope.** For an mdoc registration the scope is compared as a **namespace + element pair**: if the
+registration certificate allows `[namespace, element]`, the same element name in another namespace is out of scope; a
+single-element path without a namespace (`[element]`) grants nothing for an mdoc registration. For SD-JWT VC the path stays `[name]`.
+
 ## 6.2 Why it is not blocked
 
 The wallet is the user's **agent**, not their gatekeeper. A user may knowingly want to present a credential to an
@@ -604,6 +608,15 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
   ([[ADR-0067]] RQ5, amendment 2026-10-29). The single-use lock is taken before the response is decrypted and the branch is checked
   again after decryption. The pending presentation's status shows the total attempt count and the last failure's step (`attempts`, `last_attempt`); no
   values, no branch information.
+- **Change note 2026-11-04 — concurrent responses.** The single-use lock is **per branch** (before, it was per presentation): while
+  one branch's response is being processed, a second response or a decline on the same branch gets 400 `invalid_request` and the
+  branch is not evicted; another branch's response can be processed (a slow response someone who saw the QR sends to their own
+  branch does not block the real wallet's response). Acceptance is **atomic**: of two concurrent valid responses only the first
+  completes the presentation (`BranchSet.tryConsume()`; the second gets 400). A decline that would close the whole presentation
+  (single fetch) or an attempt limit does not make the presentation REJECTED while another response is being processed — the
+  decline gets 400, the attempt limit closes only that branch (PV10, one-way state). Calling `BranchSet.consume()` on a completed
+  presentation throws (`PresentationAlreadyConsumedError`): the old pattern with an `await` between the check and the consumption
+  cannot silently accept a second response.
 - **Residual risk.** Someone who fetches the QR before the real wallet and declines at once can close a single-branch presentation —
   a known limit of the cross-device flow, like the fact that whoever sees the QR can answer with their own credential (OpenID4VP 1.0
   §14); the RP opens a new presentation. The inline identity presentation at the institution issuer (SPEC-PROTO-0001 §11.2) applies

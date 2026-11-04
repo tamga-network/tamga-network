@@ -363,7 +363,7 @@ interface ISchemaRegistry {
 
     event SchemaRegistered(bytes32 indexed schemaId, string vctURI, Tier tier, bytes2 indexed stateCode);
     event SchemaDeprecated(bytes32 indexed schemaId, bytes32 supersededBy);
-    event SchemaRevoked(bytes32 indexed schemaId, string reason);
+    event SchemaRevoked(bytes32 indexed schemaId, bytes32 reasonHash);
 
     error SchemaExists(bytes32 schemaId);
     error UnknownSchema(bytes32 schemaId);
@@ -377,7 +377,7 @@ interface ISchemaRegistry {
     function registerSchema(SchemaRecord calldata rec) external;
 
     function deprecateSchema(bytes32 schemaId, bytes32 supersededBy) external;
-    function revokeSchema(bytes32 schemaId, string calldata reason) external;
+    function revokeSchema(bytes32 schemaId, bytes32 reasonHash) external;
 
     function getSchema(bytes32 schemaId) external view returns (SchemaRecord memory);
     function isActiveSchema(bytes32 schemaId) external view returns (bool);

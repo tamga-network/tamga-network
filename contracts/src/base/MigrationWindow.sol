@@ -9,8 +9,13 @@ import {IMigrationWindow} from "../interfaces/IMigrationWindow.sol";
  *         NetworkRegistry bunu kalıtır.
  *
  * @dev    Depolama ERC-7201 ad alanındadır (`tamga.storage.MigrationWindow`): kalıtan kontratların sıralı depolama düzenini ve
- *         `__gap`'lerini değiştirmez. Yükseltme bu durumu sıfırlayamaz: Governance her yükseltmeden önce ve sonra
- *         `migrationState()`'i karşılaştırır, fark varsa yükseltme geri alınır (ADR-0073 K1, ADR-0055 GE2).
+ *         `__gap`'lerini değiştirmez. "Yükseltmeyle yeniden açılamaz" (CE1) üç katmanla korunur:
+ *           1) pencere AÇIKKEN kayıt kontratı yükseltilemez (`_requireNoOpenMigration`, `_authorizeUpgrade`'den);
+ *           2) Governance her yükseltmeden önce ve sonra `migrationState()`'i karşılaştırır, fark varsa yükseltme geri alınır
+ *              (ADR-0073 K1, ADR-0055 GE2);
+ *           3) yükseltme incelemesi: `scripts/check-upgrade-safety.mjs` bu dosyanın kaynak özetini, ad alanı slot sabitini ve
+ *              başka hiçbir kaynağın bu slota ya da satır içi assembly'ye dokunmadığını denetler. Yeni bir implementasyonun
+ *              göç depolamasına SONRADAN yazan bir fonksiyon taşımasını yalnız bu inceleme yakalar (güvenlik turu 2026-11-04).
  */
 abstract contract MigrationWindow is IMigrationWindow {
     /// @notice Pencere açılıştan en çok 30 gün (ADR-0073 K1, proje yönetimi kararı 2026-11-04).
@@ -28,6 +33,8 @@ abstract contract MigrationWindow is IMigrationWindow {
     /// @dev keccak256(abi.encode(uint256(keccak256("tamga.storage.MigrationWindow")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant MIGRATION_STORAGE = 0xbae22249a336a4c3cc038a352f499331483538b99714e093c49fd1263f93a700;
 
+    // ERC-7201 ad alanı erişimcisi: yalnız slot ataması (OpenZeppelin deseniyle aynı); check:uups başka assembly'ye izin vermez.
+    // slither-disable-next-line assembly
     function _migration() private pure returns (MigrationStorage storage $) {
         // solhint-disable-next-line no-inline-assembly
         assembly {
@@ -37,6 +44,9 @@ abstract contract MigrationWindow is IMigrationWindow {
 
     /// @dev Kipi açma, uzatma ve kapatma yetkisi (Governance).
     function _requireMigrationAdmin() internal view virtual;
+
+    /// @dev Kipin yöneticisi (Governance) — pencerede tarihsiz yazabilen tek adres (ör. ağ şeması iptali).
+    function _migrationAdmin() internal view virtual returns (address);
 
     /// @inheritdoc IMigrationWindow
     function openMigration(bytes32 replayPlanHash, uint64 deadline, address executor) external {
@@ -98,9 +108,19 @@ abstract contract MigrationWindow is IMigrationWindow {
         return (m.phase, m.openedAt, m.deadline, m.replayPlanHash, m.executor);
     }
 
-    /// @dev Tarih kuralı (CE1): 0 → blok zamanı; açık tarih yalnız kip açıkken ve blok zamanından ileri değil.
+    /// @dev Pencere açıkken yükseltme yok (güvenlik turu 2026-11-04). Süresi dolmuş pencere kapalı sayılır.
+    function _requireNoOpenMigration() internal view {
+        if (isMigrationOpen()) revert UpgradeDuringMigration();
+    }
+
+    /// @dev Tarih kuralı (CE1): 0 → blok zamanı; açık tarih yalnız kip açıkken ve blok zamanından ileri değil. Kip açıkken
+    ///      tarihsiz olağan yazım dondurulur (yalnız Governance tarihsiz yazar): yeniden oynatma ile o günkü işletim aynı
+    ///      kaydın geçmişinde sessizce yarışmaz, her yazım tarihini açıkça taşır (güvenlik turu 2026-11-04).
     function _effectiveDate(uint64 at) internal view returns (uint64) {
-        if (at == 0) return uint64(block.timestamp);
+        if (at == 0) {
+            if (isMigrationOpen() && msg.sender != _migrationAdmin()) revert DateRequiredDuringMigration();
+            return uint64(block.timestamp);
+        }
         if (!isMigrationOpen()) revert PastDateOutsideMigration(at);
         if (at > block.timestamp) revert DateInFuture(at);
         return at;

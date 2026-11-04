@@ -418,6 +418,10 @@ da qaytarılır (Tamga genişlənməsi).
 | Yoxlayan tərəf qeydiyyatdadır, **bəzi claim-lər scope xaricindədir** | **Həddindən artıq tələb xəbərdarlığı** — scope xaricindəki sahələr ayrıca işarələnir; istifadəçi yenə də təsdiq edə bilər |
 | Yoxlayan tərəf **qeydiyyatda deyil** | "Bu yoxlayan tərəf Tamga-da qeydiyyatda deyil" xəbərdarlığı; təqdimat bloklanmır, lakin xəbərdarlıq aydın göstərilir |
 
+**Dəyişiklik qeydi 2026-11-04 — mdoc əhatəsi.** mdoc qeydiyyatında əhatə **ad sahəsi + element cütü** ilə müqayisə edilir:
+qeydiyyat sertifikatı `[ad sahəsi, element]` icazəsini veribsə, başqa ad sahəsindəki eyni adlı element əhatədən kənardır; ad sahəsi
+daşımayan tək elementli yol (`[element]`) mdoc qeydiyyatında icazə vermir. SD-JWT VC qeydiyyatında yol `[ad]` olaraq qalır.
+
 ## 6.2 Niyə bloklanmır
 
 Cüzdan istifadəçinin keşikçisi deyil, **vasitəsidir**. İstifadəçi şüurlu
@@ -615,6 +619,14 @@ Ayşe (wallet)                        Employer (verifier)         Indexer
   istifadə kilidi cavab açılmazdan əvvəl alınır və açıldıqdan sonra qol yenidən yoxlanılır.
   Gözləyən təqdimatın vəziyyətində ümumi cəhd sayı və son uğursuzluğun addımı görünür (`attempts`, `last_attempt`); dəyər yoxdur,
   qol məlumatı yoxdur.
+- **Dəyişiklik qeydi 2026-11-04 — eyni anda gələn cavablar.** Təkistifadə kilidi **qol üzrədir** (əvvəl təqdimat üzrə idi): bir
+  qolun cavabı emal edilərkən eyni qola gələn ikinci cavab və ya rədd 400 `invalid_request` alır və qol atılmır; başqa qolun cavabı
+  emal edilə bilər (QR-ı görənin öz qoluna göndərdiyi yavaş cavab real cüzdanın cavabını əngəlləmir). Qəbul **atomardır**: eyni
+  anda gələn iki etibarlı cavabdan yalnız birincisi təqdimatı tamamlayır (`BranchSet.tryConsume()`; ikincisi 400 alır). Təqdimatı
+  bütövlükdə bağlayacaq rədd (tək çəkiliş) və ya cəhd həddi başqa cavab emal edilərkən təqdimatı REJECTED etmir — rədd 400 alır,
+  cəhd həddi yalnız o qolu bağlayır (PV10, birtərəfli vəziyyət). Tamamlanmış təqdimatda `BranchSet.consume()` çağırışı xəta verir
+  (`PresentationAlreadyConsumedError`): yoxlama ilə istifadə arasında `await` olan köhnə nümunə ikinci cavabı səssizcə qəbul edə
+  bilməz.
 - **Qalan risk.** QR-ı real cüzdandan əvvəl çəkib dərhal rədd edən biri tək qollu təqdimatı bağlaya bilər — QR-ı görənin öz sənədi ilə
   cavab verə bilməsi kimi, cihazlar arası axının məlum hüdududur (OpenID4VP 1.0 §14); RP yeni təqdimat açır. Qurumun sənəd verən
   xidmətindəki sətirdaxili şəxsiyyət təqdimatı (SPEC-PROTO-0001 §11.2) eyni qaydanı tətbiq edir; çox qollu təqdimatda rədd boş gövdə

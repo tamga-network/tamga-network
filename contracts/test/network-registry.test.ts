@@ -90,7 +90,7 @@ describe("NetworkRegistry (ADR-0074 K3)", function () {
     const stageId = await reg.stageIdOf(r);
     await expect(reg.connect(f.stranger).stageRecord(r))
       .to.emit(reg, "RecordStaged")
-      .withArgs(stageId, Kind.WALLET_PROVIDER, PROVIDER);
+      .withArgs(stageId, Kind.WALLET_PROVIDER, PROVIDER, 0);
     expect((await reg.stagedRecord(stageId)).detailsHash).to.equal(id("provider-block"));
     await expect(reg.connect(f.stranger).commitStaged(stageId)).to.be.revertedWithCustomError(reg, "NotGovernance");
     expect(await reg.exists(Kind.WALLET_PROVIDER, PROVIDER)).to.equal(false);
@@ -172,7 +172,7 @@ describe("NetworkRegistry (ADR-0074 K3)", function () {
     await (await f.governance.execute(pid)).wait();
     const past = (await f.now()) - 30 * DAY;
     await expect(reg.connect(exec).writeRecord(rec(), past))
-      .to.emit(reg, "RecordWritten")
+      .to.emit(reg, "RecordStatusChanged")
       .withArgs(Kind.WALLET_PROVIDER, PROVIDER, St.ACTIVE, past);
     await expect(reg.connect(exec).writeRecord(rec({ status: St.REVOKED }), past - 1)).to.be.revertedWithCustomError(
       reg,
@@ -184,6 +184,137 @@ describe("NetworkRegistry (ADR-0074 K3)", function () {
     );
     expect(await reg.recordStatusAt(Kind.WALLET_PROVIDER, PROVIDER, past - 1)).to.equal(St.NONE);
     expect(await reg.recordStatusAt(Kind.WALLET_PROVIDER, PROVIDER, past)).to.equal(St.ACTIVE);
+  });
+
+  describe("güvenlik turu 2026-11-04 — öneri sırası, yeniden oynatma, geri çekme", () => {
+    /** Sabitler ve öneriyi oylar ama yürütmez. */
+    async function staged(r: ReturnType<typeof rec>) {
+      const stageId = await reg.stageIdOf(r);
+      await (await reg.connect(f.stranger).stageRecord(r)).wait();
+      const pid = await proposalId(
+        await f.as(f.governance, f.trValidator).proposeNetworkRecord(await reg.getAddress(), stageId),
+        f,
+      );
+      await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
+      await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+      return { stageId, pid };
+    }
+
+    it("sıra saldırısı: aynı hâle göre oylanmış iki öneriden yalnız ilk yürütülen yazılır (REVOKED sonra ACTIVE olmaz)", async () => {
+      await (await commit(f, rec())).wait(); // sayaç 1
+      const suspend = await staged(rec({ status: St.SUSPENDED, detailsHash: id("askı") }));
+      const revoke = await staged(rec({ status: St.REVOKED }));
+      expect(await reg.stagedRevisionOf(revoke.stageId)).to.equal(1n);
+      await expect(f.governance.execute(revoke.pid))
+        .to.emit(reg, "RecordWritten")
+        .withArgs(
+          Kind.WALLET_PROVIDER,
+          PROVIDER,
+          revoke.stageId,
+          ethers.keccak256(
+            ethers.AbiCoder.defaultAbiCoder().encode(
+              ["tuple(uint8,bytes32,bytes32,bytes2,uint8,uint8,uint64,uint64,bytes32,bytes32,uint256,bytes32[])"],
+              [Object.values(rec({ status: St.REVOKED }))],
+            ),
+          ),
+          2,
+        );
+      // eski hâle göre oylanmış öneri artık yürütülemez — kimse REVOKED'dan sonra eski öneriyi sokamaz
+      await expect(f.governance.execute(suspend.pid))
+        .to.be.revertedWithCustomError(reg, "StaleStage")
+        .withArgs(suspend.stageId, 1, 2);
+      expect((await reg.getRecord(Kind.WALLET_PROVIDER, PROVIDER)).status).to.equal(BigInt(St.REVOKED));
+      // ilk ACTIVE yazımından kalan sabitleme (sayaç 0) de geçersiz
+      const early = await staged(rec({ detailsHash: id("eski") }));
+      expect(await reg.stagedRevisionOf(early.stageId)).to.equal(2n);
+    });
+
+    it("REVOKED kesin değil: yeniden etkinleştirme yalnız iptalden SONRA sabitlenmiş yeni öneriyle", async () => {
+      await (await commit(f, rec())).wait();
+      const reactivate = await staged(rec({ detailsHash: id("yeniden") })); // sayaç 1'e bağlı
+      await (await commit(f, rec({ status: St.REVOKED }))).wait(); // sayaç 2
+      await expect(f.governance.execute(reactivate.pid)).to.be.revertedWithCustomError(reg, "StaleStage");
+      await (await commit(f, rec({ detailsHash: id("yeniden") }))).wait(); // yeni oy, sayaç 2'ye bağlı
+      expect(await reg.isActiveRecord(Kind.WALLET_PROVIDER, PROVIDER)).to.equal(true);
+      const h = await reg.recordStatusHistoryOf(Kind.WALLET_PROVIDER, PROVIDER);
+      expect(h.map((c: any) => Number(c.status))).to.deep.equal([St.ACTIVE, St.REVOKED, St.ACTIVE]);
+    });
+
+    it("yürütülmüş içerik yeniden sabitlenip eski öneriyle yazılamaz (yeni sabitleme yeni kimlik alır)", async () => {
+      const r = rec();
+      const first = await staged(r);
+      await (await f.governance.execute(first.pid)).wait();
+      await (await reg.connect(f.stranger).stageRecord(r)).wait();
+      expect(await reg.stageIdOf(r)).to.not.equal(first.stageId);
+      expect((await reg.stagedRecord(first.stageId)).kind).to.equal(0n);
+      // ikinci bir öneri eski kimliği taşısa da yazamaz
+      const pid = await proposalId(
+        await f.as(f.governance, f.trValidator).proposeNetworkRecord(await reg.getAddress(), first.stageId),
+        f,
+      );
+      await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
+      await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+      await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(reg, "UnknownStage");
+      expect(await reg.revisionOf(Kind.WALLET_PROVIDER, PROVIDER)).to.equal(1n);
+    });
+
+    it("göç yazımı da sayacı artırır: bekleyen öneriler göçle çakışırsa yürütülemez", async () => {
+      const exec = f.stranger;
+      const g = f.as(f.governance, f.trValidator);
+      const open = await proposalId(
+        await g.proposeMigrationOpen(await reg.getAddress(), id("plan"), 7 * DAY, await exec.getAddress()),
+        f,
+      );
+      await (await f.as(f.governance, f.trValidator).vote(open, true)).wait();
+      await (await f.as(f.governance, f.kzValidator).vote(open, true)).wait();
+      await (await f.governance.execute(open)).wait();
+      const pending = await staged(rec());
+      await (await reg.connect(exec).writeRecord(rec({ status: St.SUSPENDED }), await f.now())).wait();
+      await expect(f.governance.execute(pending.pid)).to.be.revertedWithCustomError(reg, "StaleStage");
+    });
+
+    it("her yazım olay yayar (durum değişmese de): içerik özeti ve sayaç", async () => {
+      await (await commit(f, rec())).wait();
+      const r2 = rec({ detailsHash: id("yeni ad") });
+      const s = await staged(r2);
+      const tx = f.governance.execute(s.pid);
+      await expect(tx).to.emit(reg, "RecordWritten");
+      await expect(tx).to.not.emit(reg, "RecordStatusChanged");
+      expect(await reg.revisionOf(Kind.WALLET_PROVIDER, PROVIDER)).to.equal(2n);
+      expect((await reg.getRecord(Kind.WALLET_PROVIDER, PROVIDER)).detailsHash).to.equal(id("yeni ad"));
+    });
+
+    it("öneren önerisini geri çeker; geri çekilen öneri oylanamaz ve yürütülemez; başkası geri çekemez", async () => {
+      const r = rec();
+      const stageId = await reg.stageIdOf(r);
+      await (await reg.stageRecord(r)).wait();
+      const pid = await proposalId(
+        await f.as(f.governance, f.trValidator).proposeNetworkRecord(await reg.getAddress(), stageId),
+        f,
+      );
+      await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
+      await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+      await expect(f.as(f.governance, f.kzValidator).cancelProposal(pid))
+        .to.be.revertedWithCustomError(f.governance, "NotProposer")
+        .withArgs(await f.kzValidator.getAddress());
+      await expect(f.as(f.governance, f.stranger).cancelProposal(pid)).to.be.revertedWithCustomError(
+        f.governance,
+        "NotValidator",
+      );
+      await expect(f.as(f.governance, f.trValidator).cancelProposal(pid))
+        .to.emit(f.governance, "ProposalCancelled")
+        .withArgs(pid);
+      expect((await f.governance.getProposal(pid)).status).to.equal(3n); // CANCELLED
+      await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(f.governance, "ProposalNotOpen");
+      await expect(f.as(f.governance, f.azValidator).vote(pid, true)).to.be.revertedWithCustomError(
+        f.governance,
+        "ProposalNotOpen",
+      );
+      await expect(f.as(f.governance, f.trValidator).cancelProposal(pid)).to.be.revertedWithCustomError(
+        f.governance,
+        "ProposalNotOpen",
+      );
+    });
   });
 
   it("yükseltme yalnız Governance'tan", async () => {

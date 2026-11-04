@@ -78,6 +78,8 @@ DIFFERENTIAL_REVIEW*.md
 
 # API anahtarları depoya girmez (anahtarlar depo dışında tutulur)
 *.key
+# özel anahtar PEM dosyaları (openssl / katılım aracı çıktısı) hiçbir klasörde depoya girmez (2026-11-04 güvenlik turu D9)
+*.key.pem
 
 # Yerel Besu QBFT geliştirme ağı (scripts/besu-dev.ps1): indirilen JDK/Besu, zincir verisi, doğrulayıcı anahtarı ve o anahtara
 # bağlı genesis — her bilgisayarda yerelde üretilir (tools/zk-circuit izlenmeye devam eder)

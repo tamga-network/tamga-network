@@ -85,8 +85,8 @@ describe("F-18 kalanı ve C33 (1)", function () {
     await expect(f.governance.execute(pid)).to.emit(f.governance, "StateRemoved").withArgs(AZ, id("gerekçe metni"));
   });
 
-  it("kullanılmayan ABI öğeleri kalktı (CANCELLED, ProposalCancelled, SchemaNotAuthorized)", async () => {
-    expect(f.governance.interface.getEvent("ProposalCancelled" as any)).to.equal(null);
+  it("kullanılmayan ABI öğeleri kalktı (SchemaNotAuthorized); CANCELLED 2026-11-04'te geri çekme yoluyla kullanımda", async () => {
     expect(f.issuers.interface.getError("SchemaNotAuthorized" as any)).to.equal(null);
+    expect(f.governance.interface.getEvent("ProposalCancelled" as any)).to.not.equal(null);
   });
 });

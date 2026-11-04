@@ -9,8 +9,8 @@ interface IGovernance is ITamgaErrors {
     enum MemberStatus {NONE, ACTIVE, SUSPENDED, WITHDRAWN}
     /// @dev Değer yalnız SONA eklenir. REGISTRY_ADMIN: ADR-0055 K3.
     enum ProposalKind {NONE, STATE_ADMISSION, STATE_REMOVAL, PROTOCOL_UPGRADE, NETWORK_SCHEMA, REGISTRY_ADMIN}
-    /// @dev F-18: kullanılmayan CANCELLED kaldırıldı (öneri iptali yok; süresi dolan öneri yürütülemez).
-    enum ProposalStatus {NONE, OPEN, EXECUTED}
+    /// @dev Güvenlik turu 2026-11-04: CANCELLED yeniden eklendi (yalnız sona) — öneren yürütülmemiş önerisini geri çeker.
+    enum ProposalStatus {NONE, OPEN, EXECUTED, CANCELLED}
 
     /// @dev ADR-0055 K3 — türü belli kayıt yönetimi işlemleri (genel çağrı yok, GE3).
     enum AdminAction {
@@ -38,7 +38,7 @@ interface IGovernance is ITamgaErrors {
         uint8 required; // SET_ANCHOR_THRESHOLD
         bytes32 schemaId; // DEPRECATE / REVOKE
         bytes32 supersededBy; // DEPRECATE
-        string reason; // REVOKE
+        bytes32 reasonHash; // REVOKE — gerekçe metninin özeti (güvenlik turu 2026-11-04; ADR-0074 PJ2)
         bytes2[] founders; // BOOTSTRAP_FOUNDERS
         bytes32 digest; // OPEN_MIGRATION: plan özeti; ADD_NETWORK_SCHEMA_HASH: sürüm özeti; NETWORK_RECORD: stageId
         uint64 window; // OPEN_MIGRATION: pencere süresi (sn, ≤ 30 gün); EXTEND_MIGRATION: yeni bitiş anı
@@ -76,14 +76,18 @@ interface IGovernance is ITamgaErrors {
     /// @dev F-18: anahtarların kendisi olayda (indeksleyici delege listesini olaylardan kurar, C33 (1)).
     event DelegateKeysSet(bytes2 indexed stateCode, address[] keys);
     /// @dev F-18: SchemaRegistry bağı (bir kez) olayla görünür.
-    event SchemaRegistrySet(address registry);
+    event SchemaRegistrySet(address indexed registry);
     event ProposalCreated(bytes32 indexed id, ProposalKind kind, address proposer);
     event Voted(bytes32 indexed id, address voter, bool support);
     event ProposalExecuted(bytes32 indexed id);
+    /// @dev Güvenlik turu 2026-11-04: öneren önerisini yürütülmeden geri çekti.
+    event ProposalCancelled(bytes32 indexed id);
     /// @dev ADR-0055 GE1: yükseltme eşiği doldu, kuyruğa alındı; en erken `eta`'da uygulanır.
     event ProposalQueued(bytes32 indexed id, uint64 eta);
 
     error NotValidator(address caller);
+    /// @dev Yalnız öneren kendi önerisini geri çekebilir.
+    error NotProposer(address caller);
     error UnknownProposal(bytes32 id);
     error ProposalNotOpen(bytes32 id);
     error ProposalExpired(bytes32 id);
@@ -122,7 +126,7 @@ interface IGovernance is ITamgaErrors {
     function proposeAnchorThreshold(address registry, uint8 required) external returns (bytes32);
     function proposeFounderRecognition(address registry, bytes2[] calldata founders) external returns (bytes32);
     function proposeNetworkSchemaDeprecation(bytes32 schemaId, bytes32 supersededBy) external returns (bytes32);
-    function proposeNetworkSchemaRevocation(bytes32 schemaId, string calldata reason) external returns (bytes32);
+    function proposeNetworkSchemaRevocation(bytes32 schemaId, bytes32 reasonHash) external returns (bytes32);
     // --- ADR-0073 K1: göç kipi (kayıt başına; 2/3) ---
     function proposeMigrationOpen(address registry, bytes32 replayPlanHash, uint64 window, address executor)
         external
@@ -136,6 +140,8 @@ interface IGovernance is ITamgaErrors {
 
     function vote(bytes32 proposalId, bool support) external;
     function execute(bytes32 proposalId) external;
+    /// @notice Öneren, yürütülmemiş (açık ya da kuyruktaki) önerisini geri çeker; geri çekilen öneri oylanamaz ve yürütülemez.
+    function cancelProposal(bytes32 proposalId) external;
     function withdraw() external;
     function setDelegateKeys(bytes2 stateCode, address[] calldata keys) external;
 

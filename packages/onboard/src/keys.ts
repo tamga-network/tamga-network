@@ -12,10 +12,11 @@
  */
 import { createHash, createPrivateKey, createPublicKey, webcrypto } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { resolve, sep } from "node:path";
 import * as x509 from "@peculiar/x509";
-import { organizationIdentifier } from "./rules.js";
+import { within } from "./paths.js";
+import { CERT_NAME_RE, organizationIdentifier } from "./rules.js";
 
 x509.cryptoProvider.set(webcrypto as unknown as Crypto);
 const subtle = webcrypto.subtle as unknown as SubtleCrypto;
@@ -163,21 +164,54 @@ export async function inspectCsr(
   return { problems: p, subject: csr.subject };
 }
 
-/** Özel anahtar dosyasını yalnız sahibine okunur yazar; var olan dosyanın üzerine yazmaz. */
-export function writePrivateKey(path: string, pem: string): { protectedOnWindows?: boolean } {
-  writeFileSync(path, pem, { mode: 0o600, flag: "wx" });
-  if (process.platform !== "win32") return {};
+/**
+ * Bulut eşitleme klasörü mü (OneDrive, Dropbox, Google Drive, iCloud, macOS CloudStorage): özel anahtar oraya yazılmaz (O6) —
+ * dosya kurumun dışındaki bir sunucuya kopyalanır. Eşleşen kök (ya da klasör adı) döner; değilse null.
+ */
+export function syncedFolder(path: string, env: NodeJS.ProcessEnv = process.env): string | null {
+  const abs = resolve(path);
+  const norm = (p: string) => (process.platform === "win32" ? p.toLowerCase() : p);
+  for (const v of ["OneDrive", "OneDriveCommercial", "OneDriveConsumer"]) {
+    const root = env[v];
+    if (!root) continue;
+    const r = norm(resolve(root));
+    const a = norm(abs);
+    if (a === r || a.startsWith(r.endsWith(sep) ? r : r + sep)) return root;
+  }
+  const seg = abs
+    .split(/[/\\]+/)
+    .find((s) =>
+      /^(OneDrive( - .+)?|Dropbox|Google Drive|GoogleDrive|My Drive|iCloudDrive|iCloud Drive|CloudStorage|Mobile Documents|Box|Box Sync|pCloud Drive|MEGA)$/i.test(
+        s,
+      ),
+    );
+  return seg ?? null;
+}
+
+/**
+ * Özel anahtar dosyasını yalnız sahibine okunur yazar; var olan dosyanın üzerine yazmaz. Windows'ta (O6) önce BOŞ dosya açılır,
+ * izin icacls ile daraltılır (miras kaldırılır, yalnız geçerli kullanıcı), ancak ondan sonra içerik yazılır; icacls başarısızsa
+ * dosya silinir ve hata verilir (anahtar hiçbir an geniş izinli dosyada durmaz).
+ */
+export function writePrivateKey(path: string, pem: string, o: { platform?: NodeJS.Platform } = {}): void {
+  if ((o.platform ?? process.platform) !== "win32") {
+    writeFileSync(path, pem, { mode: 0o600, flag: "wx" });
+    return;
+  }
+  writeFileSync(path, "", { flag: "wx" });
   try {
-    // Windows: miras alınan izinleri kaldır, yalnız geçerli kullanıcıya tam yetki (POSIX 0600 karşılığı)
     const user = process.env.USERNAME
       ? `${process.env.USERDOMAIN ? process.env.USERDOMAIN + "\\" : ""}${process.env.USERNAME}`
       : "";
-    if (!user) return { protectedOnWindows: false };
+    if (!user) throw new Error("USERNAME yok");
     execFileSync("icacls", [path, "/inheritance:r", "/grant:r", `${user}:F`], { stdio: "ignore" });
-    return { protectedOnWindows: true };
-  } catch {
-    return { protectedOnWindows: false };
+  } catch (e) {
+    rmSync(path, { force: true });
+    throw new Error(
+      `Windows dosya izni daraltılamadı (icacls: ${(e as Error).message}) — anahtar yazılmadı; klasörü ve hesabı denetleyin`,
+    );
   }
+  writeFileSync(path, pem, { flag: "r+" });
 }
 
 /** Dosya izni yalnız sahibine mi (POSIX). Windows'ta bilinemez → `null`. */
@@ -212,44 +246,72 @@ export interface KeysResult {
  * Bir katılım klasörü için (init çıktısı) bütün anahtarları üretir: `<dir>/keys/<ad>.key.pem` + `<ad>.csr.pem` + `.gitignore`.
  * Herhangi bir dosya zaten varsa hiçbirini yazmaz (yarım üretim olmasın).
  */
+export const MIN_PASSPHRASE = 12;
+
+export interface GenerateKeysOptions {
+  passphrase?: string;
+  /** Parolasız üretim (Windows'ta açıkça istenmeli: `--no-passphrase`) */
+  noPassphrase?: boolean;
+  /** Bulut eşitleme klasörüne yazmaya açık onay (`--allow-synced`) */
+  allowSynced?: boolean;
+  platform?: NodeJS.Platform;
+  env?: NodeJS.ProcessEnv;
+}
+
+/**
+ * Bir katılım klasörü için (init çıktısı) bütün anahtarları üretir: `<dir>/keys/<ad>.key.pem` + `<ad>.csr.pem` + `.gitignore`.
+ * Herhangi bir dosya zaten varsa hiçbirini yazmaz (yarım üretim olmasın). O6: bulut eşitleme klasöründe (OneDrive vb.) yalnız
+ * `allowSynced` ile; Windows'ta parolasız üretim yalnız `noPassphrase` ile; parola en az 12 karakter (D3).
+ */
 export async function generateKeys(
   dir: string,
   profile: { keys: Array<{ name: string; purpose: KeyPurpose }> },
   apps: { issuer?: Rec; rp?: Rec },
-  o: { passphrase?: string } = {},
+  o: GenerateKeysOptions = {},
 ): Promise<KeysResult> {
-  const kdir = join(dir, "keys");
+  const platform = o.platform ?? process.platform;
+  if (o.passphrase !== undefined && o.passphrase.length < MIN_PASSPHRASE)
+    throw new Error(`parola en az ${MIN_PASSPHRASE} karakter olmalı`);
+  if (!o.passphrase && platform === "win32" && !o.noPassphrase)
+    throw new Error(
+      "Windows'ta özel anahtar parolasız üretilmez: --passphrase-env <DEĞİŞKEN> verin (ya da bilerek --no-passphrase)",
+    );
+  const kdir = within(dir, "keys");
+  const synced = syncedFolder(kdir, o.env);
+  if (synced && !o.allowSynced)
+    throw new Error(
+      `anahtar klasörü bulut eşitleme klasöründe (${synced}): özel anahtar kurum dışındaki bir sunucuya kopyalanır — katılım klasörünü eşitlenmeyen bir yere taşıyın (ya da bilerek --allow-synced)`,
+    );
   const exp = csrExpectations(profile.keys, apps);
-  const clash = exp.flatMap((e) => [`${e.name}.key.pem`, `${e.name}.csr.pem`].filter((f) => existsSync(join(kdir, f))));
+  for (const e of exp) if (!CERT_NAME_RE.test(e.name)) throw new Error(`anahtar adı geçersiz: ${e.name}`);
+  const clash = exp.flatMap((e) =>
+    [`${e.name}.key.pem`, `${e.name}.csr.pem`].filter((f) => existsSync(within(dir, "keys", f))),
+  );
   if (clash.length)
     throw new Error(
       `zaten var (üzerine yazılmaz; yeni anahtar gerekiyorsa eski dosyaları kendiniz taşıyın): ${clash.join(", ")}`,
     );
   mkdirSync(kdir, { recursive: true });
-  if (!existsSync(join(kdir, ".gitignore")))
-    writeFileSync(join(kdir, ".gitignore"), "# özel anahtarlar depoya girmez\n*.key.pem\n");
+  within(dir, "keys"); // oluşturulduktan sonra da (bağ yarışı) klasörün içinde mi
+  const gi = within(dir, "keys", ".gitignore");
+  if (!existsSync(gi)) writeFileSync(gi, "# özel anahtarlar depoya girmez\n*.key.pem\n");
   const warnings: string[] = [];
   const written: KeysResult["written"] = [];
   for (const e of exp) {
     const g = await generateKeyAndCsr(e, o);
-    const keyPath = join(kdir, `${e.name}.key.pem`);
-    const r = writePrivateKey(keyPath, g.privateKeyPem);
-    if (r.protectedOnWindows === false)
-      warnings.push(
-        `${e.name}.key.pem: Windows dosya izni daraltılamadı — dosyayı yalnız sizin okuyabileceğiniz yere taşıyın`,
-      );
-    writeFileSync(join(kdir, `${e.name}.csr.pem`), g.csrPem, { flag: "wx" });
-    written.push({
-      name: e.name,
-      key: keyPath,
-      csr: join(kdir, `${e.name}.csr.pem`),
-      spki_sha256: g.spkiSha256,
-      subject: g.subject,
-    });
+    const keyPath = within(dir, "keys", `${e.name}.key.pem`);
+    writePrivateKey(keyPath, g.privateKeyPem, { platform });
+    const csrPath = within(dir, "keys", `${e.name}.csr.pem`);
+    writeFileSync(csrPath, g.csrPem, { flag: "wx" });
+    written.push({ name: e.name, key: keyPath, csr: csrPath, spki_sha256: g.spkiSha256, subject: g.subject });
   }
   if (!o.passphrase)
     warnings.push(
       "özel anahtarlar parolasız: gerçek ağda anahtarı HSM / uzaktan imza hizmetinde üretmek önerilir; dosyayı yedekleyin ve kimseyle paylaşmayın",
+    );
+  if (synced)
+    warnings.push(
+      `anahtarlar bulut eşitleme klasöründe (${synced}) — açık onayla yazıldı; eşitlemeyi bu klasör için kapatın`,
     );
   return { dir: kdir, written, warnings };
 }

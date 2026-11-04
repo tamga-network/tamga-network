@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {TamgaRegistryBase} from "../base/TamgaRegistryBase.sol";
 import {IRelyingPartyRegistry} from "../interfaces/IRelyingPartyRegistry.sol";
+import {IIssuerRegistry} from "../interfaces/IIssuerRegistry.sol";
 
 /**
  * @title  RelyingPartyRegistry
@@ -36,12 +37,18 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
     mapping(bytes32 => RelyingPartyProfile) private _profiles;
     mapping(bytes32 => TerminalGroup) private _groups; // groupId => grup
     mapping(bytes32 => bytes32) private _groupOwner; // groupId => rpId (TG1: ağda tek)
+    // Yanlış alarm: eşleme setTerminalGroup'ta depolama göstericisiyle (`mine.push`) yazılır.
+    // slither-disable-next-line uninitialized-state
     mapping(bytes32 => bytes32[]) private _groupsOf; // rpId => groupId'ler
+    /// @dev Güvenlik turu 2026-11-04: kapı grubunun kurum bağı (`institutionId` = issuerId) bu kayıttan doğrulanır.
+    IIssuerRegistry public issuerRegistry;
 
-    uint256[40] private __gap;
+    uint256[39] private __gap;
 
-    function initialize(address sovereignty_, address governance_) external initializer {
+    function initialize(address sovereignty_, address governance_, address issuerRegistry_) external initializer {
         __TamgaRegistryBase_init(sovereignty_, governance_);
+        if (issuerRegistry_ == address(0)) revert ZeroAddress();
+        issuerRegistry = IIssuerRegistry(issuerRegistry_);
     }
 
     function registerRelyingParty(RelyingParty calldata data) external onlyOwnerState(data.stateCode) {
@@ -124,11 +131,16 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
 
         uint256 idx = _scopeIndex[rpId][scope.scopeHash];
         if (idx == 0) {
+            // Kapanmış kapsamlar da yer tutar (silinmez, geçmiş zincirde kalır); tavan saha verisiyle gözden geçirilir.
             RequestScope[] storage list = _scopes[rpId];
             if (list.length >= MAX_SCOPES) revert TooManyScopes(list.length + 1, MAX_SCOPES);
             list.push(scope);
             _scopeIndex[rpId][scope.scopeHash] = list.length;
         } else {
+            // Güvenlik turu 2026-11-04: kapanmış (aralığı bitmiş) kapsam aynı kimlikle sessizce yeniden açılamaz;
+            // yeni kullanım yeni `scopeHash` ister.
+            RequestScope storage cur = _scopes[rpId][idx - 1];
+            if (cur.validUntil != 0 && cur.validUntil <= block.timestamp) revert ScopeClosed(rpId, scope.scopeHash);
             _scopes[rpId][idx - 1] = scope;
         }
         emit RequestScopeSet(rpId, scope.scopeHash, scope.schemaId, scope.format, scope.validFrom, scope.validUntil);
@@ -174,14 +186,20 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         if (group.certFingerprints.length > MAX_GROUP_CERTIFICATES) {
             revert TooManyEntries(group.certFingerprints.length, MAX_GROUP_CERTIFICATES);
         }
+        _requireInstitution(group.institutionId, rpId, r.stateCode);
         bytes32 owner = _groupOwner[group.groupId];
         if (owner == bytes32(0)) {
+            // Kapanmış gruplar da yer tutar (silinmez, ADR-0074 K2); tavan saha verisiyle gözden geçirilir.
             bytes32[] storage mine = _groupsOf[rpId];
             if (mine.length >= MAX_TERMINAL_GROUPS) revert TooManyEntries(mine.length + 1, MAX_TERMINAL_GROUPS);
             mine.push(group.groupId);
             _groupOwner[group.groupId] = rpId;
         } else if (owner != rpId) {
             revert TerminalGroupOwnedByOther(group.groupId, owner);
+        } else {
+            // Güvenlik turu 2026-11-04: geri çekilmiş (aralığı bitmiş) grup aynı kimlikle sessizce yeniden açılamaz.
+            uint64 until = _groups[group.groupId].validUntil;
+            if (until != 0 && until <= block.timestamp) revert TerminalGroupNotOpen(group.groupId);
         }
         _groups[group.groupId] = group;
         emit TerminalGroupSet(rpId, group.groupId, group.institutionId, group.validFrom, group.validUntil);
@@ -197,6 +215,18 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         if (g.validUntil != 0 && g.validUntil <= t) revert InvalidTerminalGroup(groupId);
         g.validUntil = t;
         emit TerminalGroupClosed(rpId, groupId, t);
+    }
+
+    /// @dev Kurum bağı (ADR-0074 K2: issuerId ya da rpId) aynı devletin kayıtlı bir kurumu ya da doğrulayıcısı olmalı
+    ///      (ADR-0054 NS2: devletler arası bağ yok). Güvenlik turu 2026-11-04.
+    function _requireInstitution(bytes32 institutionId, bytes32 rpId, bytes2 stateCode) private view {
+        if (institutionId == rpId) return;
+        RelyingParty storage other = _rps[institutionId];
+        if (other.status != RPStatus.NONE) {
+            if (other.stateCode != stateCode) revert UnknownInstitution(institutionId);
+            return;
+        }
+        if (issuerRegistry.stateOf(institutionId) != stateCode) revert UnknownInstitution(institutionId);
     }
 
     function relyingPartyProfileOf(bytes32 rpId) external view returns (RelyingPartyProfile memory) {

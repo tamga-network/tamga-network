@@ -108,9 +108,9 @@ describe("SchemaRegistry (SPEC-BC-0001 §4)", function () {
   it("REVOKED şema doğrulanamaz; ikinci revoke AlreadyRevoked", async () => {
     const hash = id("meta-v1");
     const sid = await f.registerNationalSchema(TR, f.trDelegate, NATIONAL_VCT, hash);
-    await f.as(f.schemas, f.trDelegate).revokeSchema(sid, "sd:never on national id number");
+    await f.as(f.schemas, f.trDelegate).revokeSchema(sid, id("sd:never on national id number"));
     expect(await f.schemas.matchesContentHash(sid, hash)).to.equal(false);
-    await expect(f.as(f.schemas, f.trDelegate).revokeSchema(sid, "again")).to.be.revertedWithCustomError(
+    await expect(f.as(f.schemas, f.trDelegate).revokeSchema(sid, id("again"))).to.be.revertedWithCustomError(
       f.schemas,
       "AlreadyRevoked",
     );
@@ -131,7 +131,7 @@ describe("SchemaRegistry (SPEC-BC-0001 §4)", function () {
       f.schemas,
       "NotOwnerState",
     );
-    await expect(f.as(f.schemas, f.kzDelegate).revokeSchema(sid, "x")).to.be.revertedWithCustomError(
+    await expect(f.as(f.schemas, f.kzDelegate).revokeSchema(sid, id("x"))).to.be.revertedWithCustomError(
       f.schemas,
       "NotOwnerState",
     );

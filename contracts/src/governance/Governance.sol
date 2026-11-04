@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {IERC1822Proxiable} from "@openzeppelin/contracts/interfaces/draft-IERC1822.sol";
 
 import {IGovernance} from "../interfaces/IGovernance.sol";
@@ -339,14 +339,14 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @inheritdoc IGovernance
-    function proposeNetworkSchemaRevocation(bytes32 schemaId, string calldata reason)
+    function proposeNetworkSchemaRevocation(bytes32 schemaId, bytes32 reasonHash)
         external onlyValidator returns (bytes32 id)
     {
         if (address(schemaRegistry) == address(0)) revert SchemaRegistryNotSet();
         AdminPayload storage a;
         (id, a) = _newAdmin(AdminAction.REVOKE_NETWORK_SCHEMA, address(schemaRegistry));
         a.schemaId = schemaId;
-        a.reason = reason;
+        a.reasonHash = reasonHash;
     }
 
     // -----------------------------------------------------------------
@@ -489,6 +489,15 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         }
     }
 
+    /// @inheritdoc IGovernance
+    function cancelProposal(bytes32 proposalId) external onlyValidator {
+        Proposal storage p = _proposals[proposalId];
+        if (p.status != ProposalStatus.OPEN) revert ProposalNotOpen(proposalId);
+        if (msg.sender != p.proposer) revert NotProposer(msg.sender);
+        p.status = ProposalStatus.CANCELLED;
+        emit ProposalCancelled(proposalId);
+    }
+
     /// @dev ADR-0055 K3 — yalnız türü belli çağrılar (GE3).
     function _executeAdmin(AdminPayload storage a) private {
         if (a.action == AdminAction.SET_ANCHORER) {
@@ -500,7 +509,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         } else if (a.action == AdminAction.DEPRECATE_NETWORK_SCHEMA) {
             ISchemaRegistry(a.registry).deprecateSchema(a.schemaId, a.supersededBy);
         } else if (a.action == AdminAction.REVOKE_NETWORK_SCHEMA) {
-            ISchemaRegistry(a.registry).revokeSchema(a.schemaId, a.reason);
+            ISchemaRegistry(a.registry).revokeSchema(a.schemaId, a.reasonHash);
         } else if (a.action == AdminAction.OPEN_MIGRATION) {
             // Pencere yürütme anından sayılır (öneri oylanırken süre işlemez).
             IMigrationWindow(a.registry).openMigration(a.digest, uint64(block.timestamp) + a.window, a.account);
@@ -516,6 +525,9 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @dev Hedef göç kipini taşıyorsa ham durumunu döndürür (taşımıyorsa `ok` = false). Yalnız okuma (staticcall).
+    // Bilerek düşük düzey: hedef göç kipini taşımayabilir (Governance, TrustListAnchorRegistry); staticcall yalnız okur,
+    // başarısızlık ve dönüş uzunluğu aşağıda denetlenir.
+    // slither-disable-next-line low-level-calls
     function _migrationStateOf(address target) private view returns (bool ok, bytes memory state) {
         (ok, state) = target.staticcall(abi.encodeWithSelector(IMigrationWindow.migrationState.selector));
         if (ok && state.length != 160) ok = false; // beş sözcük: (phase, openedAt, deadline, replayPlanHash, executor)

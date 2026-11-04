@@ -57,7 +57,7 @@ Verification proceeds in five layers. This table is **canonical**; [[ARCH-0003]]
 
 | Code | Step |
 |---|---|
-| `A1` | Split the combined string on `~`; is there a KB-JWT |
+| `A1` | Split the combined string on `~`; is there a KB-JWT. A1 also carries the caller's configuration errors (2026-11-04): e.g. on the Digital Credentials API path an `aud` that differs from the one derived from the page origin, or `origin` given together with `aud` = `client_id` — REJECTED with an explicit message |
 | `A2` | Header: `alg=ES256`, `typ=dc+sd-jwt`, is `x5c` present |
 | `A3` | `x5c` chain + JWT signature; root in `RootCARegistry` **`isChainAcceptable`** (ACTIVE or RETIRED); intermediates must be CAs (`basicConstraints cA=true`), carry `keyCertSign` and stay within `pathLenConstraint`; an `iat` more than 300 s in the future is REJECTED. **mdoc:** the `x5chain` leaf is either itself one of the listed anchors (a root CA or a service certificate from an external list) or is signed directly by one — intermediates are not accepted (ISO/IEC 18013-5 Annex B: the document signer certificate is issued directly by the IACA, path length 0; the EU PID/EAA mdoc profiles use the same chain) |
 | `A3b` | **`issuerId` is derived from the fingerprint of the `x5c` leaf certificate** — NOT from the `iss` claim (§1.2) |
@@ -184,7 +184,7 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.8.0",
+  "sdk_version": "@tamga-network/verifier@0.8.1",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",

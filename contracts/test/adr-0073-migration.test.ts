@@ -197,6 +197,48 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
     expect(await f.issuers.migrationPhase()).to.equal(Phase.CLOSED);
   });
 
+  it("güvenlik turu 2026-11-04: pencere AÇIKKEN kayıt kontratı yükseltilemez; süre dolunca ya da kapanınca yükseltilir", async () => {
+    await openMigration(f, f.issuers, 10 * DAY);
+    const good = await ethers.deployContract("IssuerRegistry");
+    const g = f.as(f.governance, f.trValidator);
+    const pid = await proposalId(
+      await g.proposeProtocolUpgrade(await f.issuers.getAddress(), await good.getAddress()),
+      f,
+    );
+    await pass(f, pid);
+    await (await f.governance.execute(pid)).wait(); // kuyruk (GE1)
+    await networkHelpers.time.increase(7 * DAY);
+    await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(f.issuers, "UpgradeDuringMigration");
+    await networkHelpers.time.increase(3 * DAY + 1); // süre doldu → kapalı sayılır
+    await expect(f.governance.execute(pid)).to.emit(f.governance, "ProposalExecuted");
+    // StatusListRegistry ve NetworkRegistry de aynı kuralı taşır
+    for (const reg of [f.statusLists, f.networkRegistry] as any[]) {
+      await openMigration(f, reg, DAY);
+      const name = reg === f.statusLists ? "StatusListRegistry" : "NetworkRegistry";
+      const impl = await ethers.deployContract(name);
+      const p2 = await proposalId(await g.proposeProtocolUpgrade(await reg.getAddress(), await impl.getAddress()), f);
+      await pass(f, p2);
+      await (await f.governance.execute(p2)).wait();
+      await (await closeMigration(f, reg)).wait(); // kapanış önerisinden sonra yükseltme serbest
+      await networkHelpers.time.increase(7 * DAY);
+      await expect(f.governance.execute(p2)).to.emit(f.governance, "ProposalExecuted");
+    }
+  });
+
+  it("güvenlik turu 2026-11-04: pencere açıkken kuyruktaki yükseltme kayıt kontratında düşer (StatusList, Network)", async () => {
+    const g = f.as(f.governance, f.trValidator);
+    for (const reg of [f.statusLists, f.networkRegistry] as any[]) {
+      const name = reg === f.statusLists ? "StatusListRegistry" : "NetworkRegistry";
+      const impl = await ethers.deployContract(name);
+      const p = await proposalId(await g.proposeProtocolUpgrade(await reg.getAddress(), await impl.getAddress()), f);
+      await pass(f, p);
+      await (await f.governance.execute(p)).wait();
+      await openMigration(f, reg, 10 * DAY);
+      await networkHelpers.time.increase(7 * DAY);
+      await expect(f.governance.execute(p)).to.be.revertedWithCustomError(reg, "UpgradeDuringMigration");
+    }
+  });
+
   it("kip dışında açık tarih reddedilir; kayıt anı da verilemez", async () => {
     const past = (await f.now()) - 100;
     await expect(f.as(f.issuers, f.trDelegate).suspendIssuerAt(f.uniIssuer, past)).to.be.revertedWithCustomError(
@@ -304,6 +346,34 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
     );
   });
 
+  it("güvenlik turu 2026-11-04: göç yürütücüsü ağ şemasını kaydeder, sürüm ekler, deprecate eder ama İPTAL EDEMEZ", async () => {
+    const exec = f.stranger;
+    await openMigration(f, f.schemas, DAY, await exec.getAddress());
+    const w = f.as(f.schemas, exec);
+    await (await w.registerSchema(f.schemaRecord(NET_VCT, SchemaTier.NETWORK, "0x0000"))).wait();
+    const sid = id(NET_VCT);
+    await expect(w.revokeSchema(sid, id("reason"))).to.be.revertedWithCustomError(
+      f.schemas,
+      "NetworkTierRequiresGovernance",
+    );
+    const past = (await f.now()) - 100;
+    await expect(w.revokeSchemaAt(sid, id("reason"), past)).to.be.revertedWithCustomError(
+      f.schemas,
+      "NetworkTierRequiresGovernance",
+    );
+    await expect(w.addSchemaContentHash(sid, id("v2"))).to.emit(f.schemas, "SchemaContentHashAdded");
+    await expect(w.deprecateSchemaAt(sid, ZERO, past)).to.emit(f.schemas, "SchemaDeprecated");
+    expect(await f.schemas.isSchemaAcceptableAt(sid, past - 1)).to.equal(true);
+    // iptal yalnız Governance önerisiyle (2/3)
+    const pid = await proposalId(
+      await f.as(f.governance, f.trValidator).proposeNetworkSchemaRevocation(sid, id("reason")),
+      f,
+    );
+    await pass(f, pid);
+    await expect(f.governance.execute(pid)).to.emit(f.schemas, "SchemaRevoked").withArgs(sid, id("reason"));
+    expect(await f.schemas.isSchemaAcceptableAt(sid, past - 1)).to.equal(false);
+  });
+
   it("StatusListRegistry: kip açıkken günlük yayın kotası uygulanmaz, sürüm ve yayın anı kuralları sürer", async () => {
     const op = f.as(f.statusLists, f.uniOperator);
     const uri = "https://status.example/l/9";
@@ -377,7 +447,7 @@ describe("ADR-0073 K5 — iat anındaki durum, yarı açık sınırlar (CE5)", f
     const during = await f.now();
     expect(await f.issuers.isCredentialAcceptable(f.uniIssuer, before)).to.equal(true);
     expect(await f.issuers.isCredentialAcceptable(f.uniIssuer, during)).to.equal(false);
-    await (await f.as(f.rootCAs, f.trDelegate).revokeRootCA(f.trCA, "")).wait();
+    await (await f.as(f.rootCAs, f.trDelegate).revokeRootCA(f.trCA, ZERO)).wait();
     expect(await f.issuers.isCredentialAcceptable(f.uniIssuer, before)).to.equal(false);
   });
 
@@ -403,7 +473,7 @@ describe("ADR-0073 K5 — iat anındaki durum, yarı açık sınırlar (CE5)", f
     const after = await f.now();
     expect(await f.issuers.isCredentialSchemaAcceptable(f.uniIssuer, edu, before)).to.equal(true);
     expect(await f.issuers.isCredentialSchemaAcceptable(f.uniIssuer, edu, after)).to.equal(false);
-    await (await f.as(f.schemas, f.trDelegate).revokeSchema(edu, "")).wait();
+    await (await f.as(f.schemas, f.trDelegate).revokeSchema(edu, ZERO)).wait();
     expect(await f.issuers.isCredentialSchemaAcceptable(f.uniIssuer, edu, before)).to.equal(false);
   });
 });

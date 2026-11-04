@@ -96,6 +96,11 @@ interface IRelyingPartyRegistry is ITamgaErrors {
     /// @dev TG1: grup kimliği bütün ağda tek; başka doğrulayıcının grubu yazılamaz.
     error TerminalGroupOwnedByOther(bytes32 groupId, bytes32 rpId);
     error UnknownTerminalGroup(bytes32 groupId);
+    /// @dev Güvenlik turu 2026-11-04: kapanmış kapsam / kapı grubu aynı kimlikle yeniden açılamaz.
+    error ScopeClosed(bytes32 rpId, bytes32 scopeHash);
+    error TerminalGroupNotOpen(bytes32 groupId);
+    /// @dev Kapı grubunun kurum bağı aynı devletin kayıtlı kurumu (issuerId) ya da doğrulayıcısı (rpId) değil.
+    error UnknownInstitution(bytes32 institutionId);
 
     function registerRelyingParty(RelyingParty calldata data) external;
     /// @notice Erişim sertifikası yenilemesi: kimlik değişmez; eski ve yeni parmak izi olayla yayılır.

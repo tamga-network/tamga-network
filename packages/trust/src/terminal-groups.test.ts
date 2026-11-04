@@ -99,8 +99,8 @@ describe("ADR-0069 terminal_groups", () => {
     expect(ts.terminalGroup("ghost-gate")?.active).toBe(false);
     expect(ts.terminalGroup("self-gate")?.active).toBe(true);
     expect(ts.terminalGroup("legacy-gate")?.active).toBe(true);
-    // sertifika parmak iziyle arama yalnız etkin grubu döndürür: example-events (ilk etkin)
-    expect(ts.terminalGroupByCertFingerprint(FP)?.group.group_id).toBe("example-events-gate");
+    // aynı parmak izi birden çok ETKİN grupta (example-events, self, legacy): hangi kapı olduğu belirsiz → null (2026-11-04)
+    expect(ts.terminalGroupByCertFingerprint(FP)).toBeNull();
     // kurum geri çekilmemiş olsaydı aynı grup etkin olurdu
     const ok = source(rps, true, [{ slug: "example-university", status: "ACTIVE" }]);
     expect(ok.terminalGroup("example-university-gate")?.active).toBe(true);
@@ -128,5 +128,44 @@ describe("ADR-0069 terminal_groups", () => {
     const ambiguous = new ListTrustSource(store, () => NOW);
     expect(ambiguous.terminalGroup("example-events-gate")?.active).toBe(false);
     expect(ambiguous.terminalGroupByCertFingerprint(FP)).toBeNull();
+  });
+
+  it("2026-11-04: parmak izi yalnız bir etkin grupta → o grup (geri çekilmiş eski grup belirsizlik saymaz); iki etkin grupta → null", () => {
+    const rotated = source([
+      rp("verify.tamga.network", "ACTIVE", [
+        { ...gate, group_id: "old-gate", valid_until: "2026-10-04T00:00:00Z" },
+        { ...gate, group_id: "new-gate" },
+      ]),
+    ]);
+    expect(rotated.terminalGroupByCertFingerprint(FP)?.group.group_id).toBe("new-gate");
+    const twice = source([rp("verify.tamga.network", "ACTIVE", [gate, { ...gate, group_id: "second-gate" }])]);
+    expect(twice.terminalGroupByCertFingerprint(FP)).toBeNull();
+  });
+
+  it("2026-11-04: aynı dns_name iki ülke listesinde → doğrulayıcı belirsiz (null, grupları etkin değil); slug ülkeyle nitelenir", () => {
+    const iss = (id: string, slug: string, status = "ACTIVE") => ({ issuer_id: id, slug, status }) as unknown as Issuer;
+    // TR listesindeki doğrulayıcının kapı grubu; aynı slug AZ listesinde de var → yalnız TR'deki sayılır
+    const store = new TrustStore();
+    store.relying_parties_by_dns.set("verify.tamga.network", rp("verify.tamga.network", "ACTIVE", [gate]));
+    store.relying_party_states.set("verify.tamga.network", new Set(["TR"]));
+    store.issuers.set("iss-tr", iss("iss-tr", "example-events"));
+    store.issuers.set("iss-az", iss("iss-az", "example-events", "REVOKED"));
+    store.issuer_states.set("iss-tr", "TR");
+    store.issuer_states.set("iss-az", "AZ");
+    store.setFreshness({ source: "list", healthy: true, lotlVersion: 1, anchorsSeq: 1, loadedAt: NOW });
+    const ts = new ListTrustSource(store, () => NOW);
+    expect(ts.terminalGroup("example-events-gate")?.active).toBe(true);
+    expect(ts.terminalGroupByCertFingerprint(FP)?.group.group_id).toBe("example-events-gate");
+    expect(ts.relyingPartyByDnsName("verify.tamga.network")?.dns_name).toBe("verify.tamga.network");
+    // TR'deki kurum geri çekilirse AZ'deki aynı slug kapıyı açmaz
+    store.issuers.set("iss-tr", iss("iss-tr", "example-events", "REVOKED"));
+    store.issuers.set("iss-az", iss("iss-az", "example-events"));
+    expect(ts.terminalGroup("example-events-gate")?.active).toBe(false);
+    // aynı dns_name iki listede: belirsiz
+    store.issuers.set("iss-tr", iss("iss-tr", "example-events"));
+    store.relying_party_states.set("verify.tamga.network", new Set(["TR", "AZ"]));
+    expect(ts.relyingPartyByDnsName("verify.tamga.network")).toBeNull();
+    expect(ts.terminalGroup("example-events-gate")?.active).toBe(false);
+    expect(ts.terminalGroupByCertFingerprint(FP)).toBeNull();
   });
 });

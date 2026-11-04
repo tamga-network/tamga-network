@@ -195,6 +195,22 @@ geçmişin yalnız bir kez, denetimli bir pencerede yazılmasına izin verir.
   K2'nin "mevcut sekiz kontrat değişmez" cümlesi bu ADR ve [[ADR-0074]] ile değişmiş olur.
 - Üretimde zincir yine kapalıdır ([[ADR-0009]] K4, [[ADR-0051]] CH5); bu karar yalnız geçişin mümkün olmasını sağlar.
 
+# Uygulama notu (2026-11-04, kontrat güvenlik turu)
+
+Karar içeriği değişmedi; proje yönetiminin onayıyla uygulamadaki sınırlar netleşti:
+
+- **CE1 "yükseltme dahil hiçbir yolla yeniden açılamaz"** kontratlarda üç katmanla korunur: (1) göç penceresi açıkken kayıt
+  kontratı yükseltilemez; (2) Governance her yükseltmede hedefin göç durumunu önce ve sonra karşılaştırır, fark varsa yükseltme
+  geri alınır; (3) yükseltme incelemesi — depo denetimi (`check-upgrade-safety`) göç kipi kaynağının sabitlenmiş özetini, ad alanı
+  slotunu ve başka hiçbir kaynağın bu slota ya da ham depolama yazımına dokunmadığını denetler. Yükseltme anındaki karşılaştırma
+  tek başına yetmez: yeni bir implementasyon göç durumuna sonradan yazan bir fonksiyon taşıyabilir. Bu yüzden sınır **yükseltme
+  incelemesine de dayanır**.
+- **K1 tek göç yürütücüsü** ağ şemalarında kayıt, sürüm özeti ve deprecate yazar; ağ şemasının iptali (kalıcıdır) yalnız Governance
+  önerisiyle yapılır. İptal edilmiş şema her `iat` için reddedildiğinden iptalin anı eşdeğerliği (CE6) değiştirmez.
+- **K1 "kip açıkken tarih taşıyan yazımlar tarihi açıkça alır"** kontratta zorlanır: pencere açıkken tarihsiz (blok zamanlı)
+  olağan yazım Governance dışında reddedilir; acil yazım açık tarihle (şimdi) yapılır. Böylece yeniden oynatma ile o günkü işletim
+  aynı kaydın geçmişinde sessizce yarışmaz. Kota istisnası (CE1) bütün kip için geçerli kalır.
+
 # Durum
 
 **Accepted — 2026-11-04.** Proje yönetiminin onayıyla (birebir alıntı özel onay kaydında): askıdaki kurumun askıdan önceki

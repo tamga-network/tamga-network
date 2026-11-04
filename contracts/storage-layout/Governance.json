@@ -315,10 +315,10 @@
           "type": "t_bytes32"
         },
         {
-          "label": "reason",
+          "label": "reasonHash",
           "slot": 4,
           "offset": 0,
-          "type": "t_string_storage"
+          "type": "t_bytes32"
         },
         {
           "label": "founders",

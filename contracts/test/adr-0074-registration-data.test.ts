@@ -65,7 +65,7 @@ describe("ADR-0074 K2 — kayıt verisi ve kapı grupları", function () {
 
   const group = (over: Record<string, unknown> = {}) => ({
     groupId: id("main-gate"),
-    institutionId: id("institution"),
+    institutionId: id("gate.example.org"), // kurum bağı: doğrulayıcının kendisi (rpId)
     policyIds: [id("entry-18")],
     certFingerprints: [id("gate-cert-1")],
     offlineAllowed: false,

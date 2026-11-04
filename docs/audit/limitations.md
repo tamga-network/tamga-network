@@ -65,6 +65,7 @@ has not been run against it. A weekly CI job re-runs the suite against the sandb
 
 | Date | Scope | Result |
 |---|---|---|
+| 2026-11-04 | Contracts after ADR-0073/0074 (migration window, `NetworkRegistry`, relying party identity) | 1 high (the migration executor could revoke a network schema), 4 medium (network record proposal ordering and replay, upgrade-only protection of the migration window, events on every network record write, relying party identity ownership → ADR-0075 Proposed), low / info items — fixed or decided except two kept by design (quota exemption for the whole window, CE1; no CA validity check at `iat`, same as the list rule); Slither 0 results |
 | 2026-10-19 | Contracts (entry points, spec compliance, upgrades, maturity, audit prep; Slither added to CI) | 19 findings (2 high, 4 medium) — all fixed or decided by ADR-0053/0054/0055; Slither 60 results: 4 fixed, 56 justified exclusions, 0 open |
 | 2026-10-19 | Dependencies and services (supply chain, insecure defaults, OWASP, API sharp edges) | shared rate-limit DoS, pseudonym login of a revoked wallet, sandbox result access without RP assertion, 8 API misuse sharp edges → fixed; ADR-0056 made security inputs mandatory |
 | 2026-10-20 | Code review of the whole trust path | E3 accepted an unregistered RP when no claims were disclosed; wallet rollback memory not persistent; certificate-less request bypass in the app → fixed with tests |

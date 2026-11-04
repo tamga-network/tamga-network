@@ -64,7 +64,12 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 
 - The single-use lock is per request branch: `begin(branch)` no longer refuses a response because another branch's response is
   being processed. Accept with `tryConsume()` (returns `false` if another response completed the presentation first) and check a
-  decline with `declineBlocked(branch)`. `consume()` and `busy` keep working.
+  decline with `declineBlocked(branch)`. `busy` keeps working.
+- **Behaviour change (fail-closed):** `consume()` now throws `PresentationAlreadyConsumedError` when the presentation is already
+  completed. With the per-branch lock, two branches' valid responses can be verified at the same time; the 0.8.0 pattern
+  `isOpen` → `await verifyPresentation` → `consume()` would otherwise accept both. Migrate: replace `consume()` on acceptance with
+  `if (!branches.tryConsume()) { /* do not accept */ }`.
+- A failed-attempt limit no longer rejects the presentation while another response is being processed: only that branch closes.
 - `verifyPresentation` derives `aud` on the Digital Credentials API path (see above); `aud` is optional in `VerifyInput`.
 
 ## Breaking in 0.8.0
@@ -106,8 +111,8 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 2. Serve `GET` and `POST /vp/req/:id` with `branches.fetch(walletNonce)`; never serve `req.requestJwt`. Rate-limit this route per
    client address.
 3. On a response: find the branch from the JWE `kid` (`responseKidOf`), call `begin(branch)` before decrypting, check `isOpen` and
-   `stateMatches` after, use `branch.nonce` for `verifyPresentation`, and `consume()` only once A6 has passed (otherwise
-   `failedAttempt(branch)`). Do not delete the pending presentation before decrypting: an undecryptable answer must change
+   `stateMatches` after, use `branch.nonce` for `verifyPresentation`, and accept with `tryConsume()` only once A6 has passed
+   (`false` → another response completed the presentation first: do not accept; otherwise `failedAttempt(branch)`). Do not delete the pending presentation before decrypting: an undecryptable answer must change
    nothing.
 4. On a decline (`error` + `state`): `registry.byState(state)` → `decline(branch)`; answer 200 and store no reason.
 5. When you drop a presentation from memory, call `branches.dispose()`.

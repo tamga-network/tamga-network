@@ -114,8 +114,10 @@ alır. Yaddaşdakı vəziyyət tək proses üçündür; çox nüsxəli quraşdı
 hər cavab "emal olunur" (400) alırdı. QR-ı görən biri öz qoluna yavaş emal olunan cavablar göndərərək real cüzdanın cavabını geri
 çevirə bilirdi. Kilid indi **qol üzrədir**, qəbul **atomardır** (`BranchSet.tryConsume`: eyni anda gələn iki etibarlı cavabdan yalnız
 birincisi təqdimatı tamamlayır). İmtina yalnız öz qolunun cavabı emal olunarkən, ya da təqdimatı bütövlükdə bağlayacaqsa (tək
-çəkiliş) başqa cavab emal olunarkən 400 alır (PV10). Qalan: qolsuz DC API yolunun kilidi təqdimat üzrədir. Qərar (K1–K6, RQ1–RQ6)
-dəyişmədi.
+çəkiliş) başqa cavab emal olunarkən 400 alır (PV10). Qalan: qolsuz DC API yolunun kilidi təqdimat üzrədir. ISO/IEC 18013-7 Əlavə C
+yolunda (`/vp/dc-mdoc`) cüzdanın imtinası da başqa cavab emal olunarkən 400 alır. Tamamlanmış təqdimatda `BranchSet.consume()` xəta
+verir (`PresentationAlreadyConsumedError`), cəhd həddi isə başqa cavab emal olunarkən yalnız o qolu bağlayır. Qərar (K1–K6,
+RQ1–RQ6) dəyişmədi.
 
 # Dəyişməzlər
 

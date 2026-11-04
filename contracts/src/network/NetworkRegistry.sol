@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import {INetworkRegistry} from "../interfaces/INetworkRegistry.sol";
 import {MigrationWindow} from "../base/MigrationWindow.sol";
@@ -14,6 +14,9 @@ import {StatusHistory} from "../base/StatusHistory.sol";
  *         Governance kapısı (PJ3).
  * @dev    İki yazım yolu: (1) `stageRecord` → Governance önerisi (`proposeNetworkRecord`, içeriğin özetini taşır) → 2/3 oy →
  *         `commitStaged`; (2) göç kipinde tek göç yürütücüsü `writeRecord` ile tarihli yazar (ADR-0073 K1).
+ *         Sabitleme kaydın yazım sayacına bağlıdır (güvenlik turu 2026-11-04): öneri yalnız oylandığı hâlin üstüne yazılır;
+ *         araya giren her yazım bekleyen eski önerileri geçersiz kılar (yerine geçme). REVOKED kesin değildir (ADR-0074 bunu
+ *         söylemez); yeniden etkinleştirme ancak iptalden SONRA sabitlenmiş yeni bir öneriyle olur.
  *         Kayıt yazımı "son hâl" yazımıdır; durum geçmişi yalnız eklenir (StatusHistory, yarı açık). Kayıt silinmez.
  *         Kişisel veri ve serbest metin yok (PJ2): ayrıntı yalnız `detailsHash`.
  */
@@ -29,8 +32,11 @@ contract NetworkRegistry is Initializable, UUPSUpgradeable, INetworkRegistry, Mi
     mapping(bytes32 => StatusHistory.Change[]) private _history;
     mapping(RecordKind => bytes32[]) private _ids;
     mapping(bytes32 => NetworkRecord) private _staged; // stageId => içerik
+    /// @dev Güvenlik turu 2026-11-04: kayıt anahtarı => yazım sayacı; stageId => sabitlemedeki sayaç.
+    mapping(bytes32 => uint64) private _revision;
+    mapping(bytes32 => uint64) private _stagedRevision;
 
-    uint256[45] private __gap;
+    uint256[43] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -44,10 +50,15 @@ contract NetworkRegistry is Initializable, UUPSUpgradeable, INetworkRegistry, Mi
 
     function _authorizeUpgrade(address) internal view override {
         if (msg.sender != governance) revert NotGovernance(msg.sender);
+        _requireNoOpenMigration(); // güvenlik turu 2026-11-04: pencere açıkken yükseltme yok
     }
 
     function _requireMigrationAdmin() internal view override {
-        if (msg.sender != governance) revert NotGovernance(msg.sender);
+        if (msg.sender != _migrationAdmin()) revert NotGovernance(msg.sender);
+    }
+
+    function _migrationAdmin() internal view override returns (address) {
+        return governance;
     }
 
     // -----------------------------------------------------------------
@@ -55,16 +66,23 @@ contract NetworkRegistry is Initializable, UUPSUpgradeable, INetworkRegistry, Mi
     // -----------------------------------------------------------------
 
     /// @inheritdoc INetworkRegistry
-    function stageIdOf(NetworkRecord calldata rec) public pure returns (bytes32) {
-        return keccak256(abi.encode(rec));
+    function stageIdFor(NetworkRecord calldata rec, uint64 baseRevision) public pure returns (bytes32) {
+        return keccak256(abi.encode(rec, baseRevision));
+    }
+
+    /// @inheritdoc INetworkRegistry
+    function stageIdOf(NetworkRecord calldata rec) public view returns (bytes32) {
+        return stageIdFor(rec, _revision[_key(rec.kind, rec.recordId)]);
     }
 
     /// @inheritdoc INetworkRegistry
     function stageRecord(NetworkRecord calldata rec) external returns (bytes32 stageId) {
         _validate(rec);
-        stageId = stageIdOf(rec);
+        uint64 base = _revision[_key(rec.kind, rec.recordId)];
+        stageId = stageIdFor(rec, base);
         _staged[stageId] = rec;
-        emit RecordStaged(stageId, rec.kind, rec.recordId);
+        _stagedRevision[stageId] = base;
+        emit RecordStaged(stageId, rec.kind, rec.recordId, base);
     }
 
     /// @inheritdoc INetworkRegistry
@@ -72,15 +90,19 @@ contract NetworkRegistry is Initializable, UUPSUpgradeable, INetworkRegistry, Mi
         if (msg.sender != governance) revert NotGovernance(msg.sender);
         NetworkRecord storage s = _staged[stageId];
         if (s.kind == RecordKind.NONE) revert UnknownStage(stageId);
-        _write(s, uint64(block.timestamp));
+        uint64 base = _stagedRevision[stageId];
+        uint64 cur = _revision[_key(s.kind, s.recordId)];
+        if (cur != base) revert StaleStage(stageId, base, cur);
+        _write(s, uint64(block.timestamp), stageId);
         delete _staged[stageId];
+        delete _stagedRevision[stageId];
     }
 
     /// @inheritdoc INetworkRegistry
     function writeRecord(NetworkRecord calldata rec, uint64 at) external {
         if (!_isMigrationExecutor(msg.sender)) revert NotMigrationWriter(msg.sender);
         _validate(rec);
-        _write(rec, _effectiveDate(at));
+        _write(rec, _effectiveDate(at), bytes32(0));
     }
 
     function _validate(NetworkRecord calldata rec) private pure {
@@ -99,8 +121,9 @@ contract NetworkRegistry is Initializable, UUPSUpgradeable, INetworkRegistry, Mi
         if (kind == RecordKind.ROLE_SLOT && !_exists(RecordKind.STATE_SLOT, parentId)) revert UnknownParent(parentId);
     }
 
-    /// @dev Kayıt son hâlle yazılır; durum değiştiyse (ya da ilk yazımsa) geçmişe `since` anıyla eklenir.
-    function _write(NetworkRecord memory rec, uint64 since) private {
+    /// @dev Kayıt son hâlle yazılır; her yazım sayacı bir artırır ve `RecordWritten` yayar (içerik özetiyle); durum
+    ///      değiştiyse (ya da ilk yazımsa) geçmişe `since` anıyla eklenir ve `RecordStatusChanged` yayılır.
+    function _write(NetworkRecord memory rec, uint64 since, bytes32 stageId) private {
         _checkParent(rec.kind, rec.parentId);
         bytes32 k = _key(rec.kind, rec.recordId);
         NetworkRecord storage cur = _records[k];
@@ -108,9 +131,12 @@ contract NetworkRegistry is Initializable, UUPSUpgradeable, INetworkRegistry, Mi
         if (isNew) _ids[rec.kind].push(rec.recordId);
         if (isNew || cur.status != rec.status) {
             _history[k].record(since, uint8(rec.status));
-            emit RecordWritten(rec.kind, rec.recordId, rec.status, since);
+            emit RecordStatusChanged(rec.kind, rec.recordId, rec.status, since);
         }
+        uint64 rev = _revision[k] + 1;
+        _revision[k] = rev;
         _records[k] = rec;
+        emit RecordWritten(rec.kind, rec.recordId, stageId, keccak256(abi.encode(rec)), rev);
     }
 
     // -----------------------------------------------------------------
@@ -119,6 +145,14 @@ contract NetworkRegistry is Initializable, UUPSUpgradeable, INetworkRegistry, Mi
 
     function stagedRecord(bytes32 stageId) external view returns (NetworkRecord memory) {
         return _staged[stageId];
+    }
+
+    function stagedRevisionOf(bytes32 stageId) external view returns (uint64) {
+        return _stagedRevision[stageId];
+    }
+
+    function revisionOf(RecordKind kind, bytes32 recordId) external view returns (uint64) {
+        return _revision[_key(kind, recordId)];
     }
 
     function exists(RecordKind kind, bytes32 recordId) external view returns (bool) {

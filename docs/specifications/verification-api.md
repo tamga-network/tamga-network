@@ -58,7 +58,7 @@ onun özet görünümüdür.
 
 | Kod | Adım |
 |---|---|
-| `A1` | Birleşik dizeyi `~` ile böl; KB-JWT var mı |
+| `A1` | Birleşik dizeyi `~` ile böl; KB-JWT var mı. A1 çağıranın yapılandırma hatalarını da taşır (2026-11-04): ör. Digital Credentials API yolunda verilen `aud` sayfa kökeninden türetilenle uyuşmuyor ya da `origin` ile `aud` = `client_id` birlikte verildi — açık iletiyle REJECTED |
 | `A2` | Başlık: `alg=ES256`, `typ=dc+sd-jwt`, `x5c` var mı |
 | `A3` | `x5c` zinciri + JWT imzası; kök `RootCARegistry`'de **`isChainAcceptable`** (ACTIVE veya RETIRED); ara sertifikalar CA olmalı (`basicConstraints cA=true`), `keyCertSign` taşımalı ve `pathLenConstraint`'i aşmamalı; `iat` 300 sn'den fazla ileri tarihliyse RED. **mdoc:** `x5chain` yaprağı ya listedeki bir çapanın (kök CA ya da dış listedeki hizmet sertifikası) kendisidir ya da doğrudan onunla imzalanmıştır — ara sertifika kabul edilmez (ISO/IEC 18013-5 Ek B: belge imzacısı sertifikası doğrudan IACA'dan verilir, yol uzunluğu 0; AB PID/EAA mdoc profilleri de bu zinciri kullanır) |
 | `A3b` | **`issuerId`, `x5c` yaprak sertifikasının parmak izinden türetilir** — `iss` claim'inden DEĞİL (§1.2) |
@@ -189,7 +189,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.8.0",
+  "sdk_version": "@tamga-network/verifier@0.8.1",
   "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B5","B6",
                        "C1","C2","C3","C4",

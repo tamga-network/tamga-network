@@ -203,6 +203,24 @@ This proposal adds those abilities to the contracts and allows history to be wri
   "the existing eight contracts do not change" in [[ADR-0051]] K2 is then changed by this ADR and [[ADR-0074]].
 - The chain stays off in production ([[ADR-0009]] K4, [[ADR-0051]] CH5); this decision only makes the move possible.
 
+# Implementation note (2026-11-04, contract security round)
+
+The decision is unchanged; with project management's approval the limits in the implementation were made explicit:
+
+- **CE1 "cannot be reopened by any means (including an upgrade)"** is protected in the contracts by three layers: (1) a registry
+  contract cannot be upgraded while its migration window is open; (2) Governance compares the target's migration state before and
+  after every upgrade and reverts the upgrade if it changed; (3) upgrade review — the repository check (`check-upgrade-safety`)
+  verifies the pinned digest of the migration-mode source, the namespace slot, and that no other source touches that slot or writes
+  raw storage. The comparison at upgrade time alone is not enough: a new implementation could carry a function that writes the
+  migration state later. The limit therefore **also relies on upgrade review**.
+- **K1 single migration executor** writes network schema registrations, version digests and deprecations; revoking a network schema
+  (which is permanent) is done only by a Governance proposal. Because a revoked schema is rejected for every `iat`, the moment of
+  revocation does not change equivalence (CE6).
+- **K1 "while the mode is open, dated writes take the date explicitly"** is enforced in the contracts: while the window is open, an
+  undated (block-time) ordinary write is rejected except from Governance; an urgent write is made with an explicit date (now). The
+  replay and that day's operations therefore do not race silently in the same record's history. The quota exemption (CE1) still
+  applies to the whole mode.
+
 # Status
 
 **Accepted — 2026-11-04.** With project management's approval (verbatim quote in the private approval record): credentials a

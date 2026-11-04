@@ -78,7 +78,15 @@ describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", { timeout: 18
     const src = JSON.parse(readFileSync(join(REG, "tl-tr.source.json"), "utf8"));
     const slug = src.issuers.find((i: { status: string }) => i.status === "ACTIVE").slug as string;
     const before = src.issuers.find((i: { slug: string }) => i.slug === slug).status_history.length;
-    const r = run(["status", slug, "SUSPENDED", "--reason", "test"]);
+    // O5: gerçek ağ kayıt defterine yazma açık onay ister (TAMGA_CONFIRM_PROD = hedef); onaysız ya da başka adla RED, dosya değişmez
+    const raw = readFileSync(join(REG, "tl-tr.source.json"), "utf8");
+    for (const env of [{}, { TAMGA_CONFIRM_PROD: "baska-kurum" }] as Array<Record<string, string>>) {
+      const denied = run(["status", slug, "SUSPENDED", "--reason", "test"], env);
+      expect(denied.code).toBe(2);
+      expect(denied.err).toMatch(/TAMGA_CONFIRM_PROD/);
+      expect(readFileSync(join(REG, "tl-tr.source.json"), "utf8")).toBe(raw);
+    }
+    const r = run(["status", slug, "SUSPENDED", "--reason", "test"], { TAMGA_CONFIRM_PROD: slug });
     expect(r.code, r.err).toBe(0);
     const after = JSON.parse(readFileSync(join(REG, "tl-tr.source.json"), "utf8")).issuers.find(
       (i: { slug: string }) => i.slug === slug,

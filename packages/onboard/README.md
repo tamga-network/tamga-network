@@ -18,6 +18,9 @@ can run the steps.
 
 ## Install
 
+> **Not yet on npm.** The package is built and checked with the others but is not part of the 0.8.1 publication; its first
+> publish comes later. Until then, run it from this repository (`npm run build:packages`, then `node packages/onboard/lib/cli.js`).
+
 ```sh
 npm install -g @tamga-network/onboard     # or: npx -p @tamga-network/onboard tamga-onboard --help
 ```
@@ -39,10 +42,10 @@ tamga-onboard check tamga-onboarding/<slug> --listing
 |---|---|
 | `init [--from <answers.json>] [--out <dir>]` | Asks for (or reads) the institution's data and writes `onboarding.json` + the registration application(s). Unknown fields are rejected, so names of people cannot slip in. |
 | `validate <file\|dir> …` | Checks an application, an answers file or an onboarding folder with the registration rules (ADR-0024) plus identifier format and checksum, https addresses, ISCED-F codes. |
-| `keys [dir] [--passphrase-env <VAR>]` | Generates the keys (issuer: credential + status list; verifier: access) as P-256 / ES256 on this computer, writes `keys/<name>.key.pem` (owner-only permissions, optional passphrase) and `keys/<name>.csr.pem`. The CSR subject carries the legal name, country and `organizationIdentifier` (`VATTR-<VKN>` / `NTRTR-<MERSIS>`); an access-certificate CSR also carries the DNS name and the support address. Never overwrites. |
+| `keys [dir] [--passphrase-env <VAR>] [--no-passphrase] [--allow-synced]` | Generates the keys (issuer: credential + status list; verifier: access) as P-256 / ES256 on this computer, writes `keys/<name>.key.pem` (owner-only permissions; passphrase of at least 12 characters — on Windows required unless `--no-passphrase`) and `keys/<name>.csr.pem`. Refuses a folder synced to OneDrive, Dropbox, Google Drive or iCloud unless `--allow-synced`. The CSR subject carries the legal name, country and `organizationIdentifier` (`VATTR-<VKN>` / `NTRTR-<MERSIS>`); an access-certificate CSR also carries the DNS name and the support address. Never overwrites. |
 | `keys --inspect <csr.pem> [dir]` | Checks a CSR made elsewhere (HSM, remote signing service) against your application. |
-| `check [dir]` | Your setup: applications, keys ↔ CSRs ↔ certificates from the operator, domain and DNS TXT confirmation (`--dns-txt <value>`), https addresses, own-service metadata, lookup endpoint (probed with invalid requests only), verifier domain. |
-| `check [dir] --listing` · `check --listing-only --env sandbox --slug <slug>` | Your record in the signed trust list, verified against the root pins embedded in this package (`--pin <hex>` overrides with a value you verified out of band at tamga.network/trust-anchor). |
+| `check [dir]` | Your setup: applications, keys ↔ CSRs ↔ certificates from the operator, domain and DNS TXT confirmation (`--dns-txt <value>`), https addresses, own-service metadata, lookup endpoint (probed with invalid requests only), verifier domain. Only https; redirects are followed hop by hop and local / private network addresses are refused (`--allow-http`, `--allow-private` for local tests). |
+| `check [dir] --listing` · `check --listing-only --env sandbox --slug <slug>` | Your record in the signed trust list, verified against the root pins embedded in this package (`--pin <hex>` overrides with a value you verified out of band at tamga.network/trust-anchor; the report then shows a warning row). Registration certificates are downloaded and their signature checked against the registrar keys in the signed list. |
 | `sandbox` | Where and how to try the sandbox ("Try your institution"). |
 | `mcp [--root <dir>]` | Local MCP server (stdio) with the tools below. |
 
@@ -78,9 +81,11 @@ policy per use).
 ```
 
 Tools: `create_application`, `validate_application`, `generate_keys_and_csr`, `check_installation`, `check_listing`,
-`sandbox_info`. File access is limited to the server's root folder (`--root`, default the working directory); private key
-content is never returned (only paths and public-key digests); a passphrase is given only as the name of an environment
-variable; check results mark text read from the network as untrusted data.
+`sandbox_info`. File access is limited to the server's root folder (`--root`, default the working directory), also after
+symbolic links and junctions are resolved; private key content is never returned (only paths and public-key digests); a
+passphrase is given only as the name of an environment variable starting with `TAMGA_`; root pins cannot be overridden and
+local network addresses are never read; request addresses outside the institution's domain are flagged; check results mark
+text read from the network as untrusted data.
 
 ## Security notes
 
@@ -96,6 +101,6 @@ Kurumun bilgi işlem ekibi için katılım aracı: başvuru dosyasını hazırla
 katıldıktan sonra güven listesindeki görünümü denetler. Ağa ve listeye yazmaz; kişi bilgisi sormaz ve yazmaz; özel anahtar
 bilgisayardan çıkmaz. Sıra: `init` → `keys` → `check --report` → dosyaları operatöre gönder → kayıttan sonra `check --listing`.
 Aynı işlemler `tamga-onboard mcp` ile yerel MCP sunucusu olarak da kullanılır. Sandbox denemesi için başvuru gerekmez:
-`tamga-onboard sandbox`.
+`tamga-onboard sandbox`. Paket henüz npm'de değildir (ilk yayın sonra); o zamana dek bu depodan çalıştırılır.
 
 Docs: https://docs.tamga.network · Source: https://github.com/tamga-network/tamga-network (packages/onboard) · Apache-2.0

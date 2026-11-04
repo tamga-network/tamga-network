@@ -557,16 +557,13 @@ function purposeOf(c: Wrprc | undefined): Pick<RegistrationCertCheck, "purpose" 
 }
 
 /**
- * DCQL yolu: SD-JWT `[ad]`, mdoc `[ad alanı, öğe]` — öğe adı eklenir. mdoc yolunda ad alanı isteğinkiyle (`namespace`) aynı
- * olmalıdır (güvenlik #8: ad alanı + öğe çifti; başka ad alanındaki aynı adlı öğe kapsam dışı). `namespace` null ise ad alanlı
- * yol hiçbir şey eklemez (ihtiyatlı).
+ * mdoc kaydının DCQL yolu `[ad alanı, öğe]` — öğe adı eklenir. Ad alanı isteğinkiyle (`namespace`) aynı olmalıdır (güvenlik #8:
+ * ad alanı + öğe çifti; başka ad alanındaki aynı adlı öğe kapsam dışı). `namespace` null ise hiçbir şey eklenmez (ihtiyatlı).
+ * Ad alanı taşımayan tek elemanlı yol (`[öğe]`) mdoc kaydında izin VERMEZ (2026-11-04): hangi ad alanındaki öğeye izin verildiği
+ * belirsizdir.
  */
 function addClaimPath(out: Set<string>, path: unknown[] | undefined, namespace: string | null) {
-  if (!path?.length) return;
-  if (path.length >= 2) {
-    if (namespace === null || path[0] !== namespace) return;
-    if (typeof path[1] === "string") out.add(path[1]);
-    return;
-  }
-  if (typeof path[0] === "string") out.add(path[0]);
+  if (!path || path.length < 2) return;
+  if (namespace === null || path[0] !== namespace) return;
+  if (typeof path[1] === "string") out.add(path[1]);
 }

@@ -35,10 +35,12 @@ const HELP = `tamga-onboard ${VERSION} — Tamga Network katılım aracı (kurum
   init [--from <yanıtlar.json>] [--out <klasör>]   başvuru dosyaları (etkileşimli ya da dosyadan)
   validate <dosya|klasör> …                       başvuru / yanıt dosyasını kayıt kurallarıyla denetle
   keys [klasör] [--passphrase-env <DEĞİŞKEN>]       iki anahtar + CSR (yalnız bu bilgisayarda; özel anahtar keys/)
+        [--no-passphrase] [--allow-synced]         parolasız (Windows'ta açıkça) · bulut eşitleme klasörüne bilerek
   keys --inspect <csr.pem> [klasör]               dışarıda (HSM, uzaktan imza) üretilmiş CSR'ı denetle
   check [klasör] [--listing | --listing-only]      kurulum denetimi; --listing: güven listesinde görünüm de
         [--env production|sandbox] [--slug <ad>] [--rp <alan adı>] [--dns-txt <değer>] [--pin <hex>[,<hex>]]
         [--trust <adres>] [--passphrase-env <DEĞİŞKEN>] [--offline] [--json] [--report <dosya.json>]
+        [--allow-http] [--allow-private]          yerel deneme: http ve yerel / özel ağ adresleri
   sandbox                                         sandbox'ta "Kurumunu dene" adresi ve adımları
   mcp [--root <klasör>]                            aynı işlemler yerel MCP sunucusu (stdio) olarak
 
@@ -239,7 +241,12 @@ async function keys() {
     printFindings("CSR", r.problems, []);
     process.exit(r.problems.length ? 1 : 0);
   }
-  const r = await generateKeys(dir, profile, { issuer, rp }, { passphrase: passphrase() });
+  const r = await generateKeys(
+    dir,
+    profile,
+    { issuer, rp },
+    { passphrase: passphrase(), noPassphrase: flag("no-passphrase"), allowSynced: flag("allow-synced") },
+  );
   for (const w of r.written) {
     console.log(`✓ ${w.name}`);
     console.log(`    özel anahtar  ${w.key}   (yalnız bu bilgisayarda; kimseyle paylaşmayın)`);
@@ -262,7 +269,7 @@ async function check() {
     : !listingOnly && existsSync("onboarding.json")
       ? resolve(".")
       : undefined;
-  const http = defaultHttp({ allowHttp: flag("allow-http") });
+  const http = defaultHttp({ allowHttp: flag("allow-http"), allowPrivate: flag("allow-private") });
   const rows: Row[] = [];
   let env = opt("env") as Environment | undefined;
   if (env && !["production", "sandbox"].includes(env)) usage("--env production | sandbox");

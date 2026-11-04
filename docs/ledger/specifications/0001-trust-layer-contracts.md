@@ -29,6 +29,16 @@ summary: >
 > durum eşlemesi (§16.4); ağ düzeyi kayıt `NetworkRegistry` (§16.5);
 > kurum sınıfı, kayıt verisi özetleri ve kapı grupları (§16.6); okuma görünümleri ve F-18 kalanı (§16.7).
 
+> **Sürüm notu 1.0.0 (2026-11-04, kontrat güvenlik turu).** Göç yürütücüsü ağ şemasını iptal edemez (yalnız Governance, §16.1);
+> `NetworkRegistry` sabitlemesi kaydın yazım sayacına bağlı, eskimiş öneri `StaleStage`, her yazımda `RecordWritten` + durum
+> değişikliğinde `RecordStatusChanged`, öneren önerisini geri çeker (`cancelProposal`, `CANCELLED`) (§1, §16.5, §16.7); pencere
+> açıkken kayıt kontratı yükseltilemez ve `MigrationWindow` kaynağı yükseltme incelemesinde sabitlenir (§16.1, [[ADR-0073]]
+> uygulama notu); pencerede tarihsiz olağan yazım dondurulur, kip dışında kurum/kök `validFrom` geçmişe çekilemez (§16.1);
+> kapanmış kapsam ve kapı grubu yeniden açılmaz, kurum bağı doğrulanır, `RelyingPartyRegistry.initialize` kurum kaydını alır
+> (§6, §16.6); iptal gerekçeleri `bytes32 reasonHash` (§1, §2, §4, §7); geçmiş dizileri bilinçli olarak tavansız (§16.1).
+> Uygulanmayanlar: kota istisnasının yalnız göç yürütücüsüne daraltılması (CE1 ile çelişir) ve `isChainAcceptableAt`'e kök CA
+> geçerlilik aralığı (liste kuralında yok; CE6). Doğrulayıcı kimliğinin sahipliği [[ADR-0075]]'te (Proposed).
+
 > **Sürüm notu 1.0.0 (2026-10-23) — [[ADR-0063]].** İptal listesi kaydı listenin kendi bit sayısını (1, 2, 4, 8) kabul eder;
 > `REQUIRED_BITS` yerine `isAllowedBits`, `ListRegistered` bit sayısını taşır (§7.1, §7.2, §7.4, §13 L3).
 
@@ -111,7 +121,7 @@ struct StateMember {
 }
 
 function proposeStateAdmission(bytes2 stateCode, address validator) external onlyValidator returns (bytes32);
-function proposeStateRemoval(bytes2 stateCode, string calldata reason) external onlyValidator returns (bytes32);
+function proposeStateRemoval(bytes2 stateCode, bytes32 reasonHash) external onlyValidator returns (bytes32);
 function proposeProtocolUpgrade(address target, address newImplementation) external onlyValidator returns (bytes32);
 function proposeNetworkSchema(ISchemaRegistry.SchemaRecord calldata rec) external onlyValidator returns (bytes32);
 
@@ -124,13 +134,15 @@ function proposeAnchorerChange(address registry, address anchorer, bool allowed)
 function proposeAnchorThreshold(address registry, uint8 required) external onlyValidator returns (bytes32);
 function proposeFounderRecognition(address registry, bytes2[] calldata founders) external onlyValidator returns (bytes32);
 function proposeNetworkSchemaDeprecation(bytes32 schemaId, bytes32 supersededBy) external onlyValidator returns (bytes32);
-function proposeNetworkSchemaRevocation(bytes32 schemaId, string calldata reason) external onlyValidator returns (bytes32);
+function proposeNetworkSchemaRevocation(bytes32 schemaId, bytes32 reasonHash) external onlyValidator returns (bytes32);
 
 function vote(bytes32 proposalId, bool support) external onlyValidator;
 /// PROTOCOL_UPGRADE: ilk çağrı kuyruğa alır (ProposalQueued), en erken UPGRADE_DELAY (7 gün) sonra uygular (ADR-0055 GE1)
 function execute(bytes32 proposalId) external;
 function countedForVotes(bytes32 proposalId) external view returns (uint32);  // yürütmede sayılacak destek (GV3)
 function executableAt(bytes32 proposalId) external view returns (uint64);     // kuyruktaki yükseltmenin en erken anı
+/// Güvenlik turu 2026-11-04: öneren, yürütülmemiş (açık ya da kuyruktaki) önerisini geri çeker → CANCELLED
+function cancelProposal(bytes32 proposalId) external onlyValidator;   // yalnız öneren (NotProposer); ProposalCancelled
 
 /// Tek taraflı çıkış — oy gerekmez (ADR-0002 #5)
 function withdraw() external onlyValidator;
@@ -198,7 +210,7 @@ struct RootCA {
 
 function registerRootCA(RootCA calldata data) external onlyOwnerState(data.stateCode);
 function suspendRootCA(bytes32 caId) external onlyOwnerState(_stateOf(caId));
-function revokeRootCA(bytes32 caId, string calldata reason) external onlyOwnerState(_stateOf(caId));
+function revokeRootCA(bytes32 caId, bytes32 reasonHash) external onlyOwnerState(_stateOf(caId));
 
 function retireRootCA(bytes32 caId, bytes32 successorCA) external onlyOwnerState(_stateOf(caId)); // 2.1.0
 
@@ -420,7 +432,7 @@ function schemaIdOf(string calldata vctURI) external pure returns (bytes32);
 
 function registerSchema(SchemaRecord calldata rec) external;
 function deprecateSchema(bytes32 schemaId, bytes32 supersededBy) external;
-function revokeSchema(bytes32 schemaId, string calldata reason) external;
+function revokeSchema(bytes32 schemaId, bytes32 reasonHash) external;
 ```
 
 ## 4.2 Okuma
@@ -561,6 +573,7 @@ function suspendRelyingParty(bytes32 rpId) external onlyOwnerState(_stateOf(rpId
 function reinstateRelyingParty(bytes32 rpId) external onlyOwnerState(_stateOf(rpId));   // yalnız SUSPENDED
 function revokeRelyingParty(bytes32 rpId) external onlyOwnerState(_stateOf(rpId));      // kesin (AlreadyRevoked)
 function setRequestScope(bytes32 rpId, RequestScope calldata scope) external onlyOwnerState(_stateOf(rpId)); // ekle / güncelle; en çok MAX_SCOPES = 32
+    // aralığı bitmiş (kapanmış) kapsam aynı scopeHash ile güncellenemez (ScopeClosed); kapanmış kapsamlar da tavana sayılır
 function closeRequestScope(bytes32 rpId, bytes32 scopeHash, uint64 at) external onlyOwnerState(_stateOf(rpId)); // silinmez, aralığı kapanır
 
 function isValidRelyingParty(bytes32 rpId) external view returns (bool);
@@ -623,7 +636,7 @@ function registerList(bytes32 issuerId, string calldata listURI, uint32 listSize
 function publishList(bytes32 listId, bytes32 contentHash, uint64 version, uint64 publishedAt)
     external onlyIssuerDelegate(_issuerOf(listId));
 
-function retireList(bytes32 listId, string calldata reason) external onlyIssuerDelegate(_issuerOf(listId));
+function retireList(bytes32 listId, bytes32 reasonHash) external onlyIssuerDelegate(_issuerOf(listId));
 
 function getListAnchor(bytes32 listId) external view returns (ListAnchor memory);
 function matchesContentHash(bytes32 listId, bytes32 hash) external view returns (bool);
@@ -968,7 +981,9 @@ sürtünme sağlar.
 
 **Uygulama durumu.** §1–§11'deki sekiz kontrat ilk kez derleniyor ve test ediliyor (Hardhat, solc 0.8.24, evm shanghai,
 OpenZeppelin 5.6; `contracts/`, `npm run contracts:test`). Derleme için tek değişiklik: OZ 5.6'da `__UUPSUpgradeable_init` yok,
-çağrılar kaldırıldı; belgelenen davranış değişmedi. Üretimde çalışan zincir **yoktur** ([[ADR-0009]] K4); yerel geliştirme
+çağrılar kaldırıldı; belgelenen davranış değişmedi. `Initializable` ve `UUPSUpgradeable` 2026-11-04'ten beri doğrudan
+`@openzeppelin/contracts/proxy/utils/`'den alınır (5.6'da `contracts-upgradeable`'daki aynı adlı dosyalar bunları yeniden dışa
+aktarır; depolama ERC-7201 ad alanında, düzen değişmedi). Üretimde çalışan zincir **yoktur** ([[ADR-0009]] K4); yerel geliştirme
 zinciri Hardhat düğümüdür.
 
 **Ne çapalanır.** Zincir imzalı listelerin **projeksiyonudur**, kaynağı değil. `TrustListAnchorRegistry` iki kayıt tutar:
@@ -1032,14 +1047,28 @@ function proposeMigrationClose(address registry) external;
   `deprecateSchemaAt`, `revokeSchemaAt`) ve kayıt yapılarının `registeredAt` alanı (şemada göçte `validFrom`) açık tarih alır:
   `0` = blok zamanı; açık tarih yalnız kip açıkken (`PastDateOutsideMigration`), blok zamanından ileri değil (`DateInFuture`),
   kayıt başına sıralı (`StatusOutOfOrder`, şema yetkisinde `DateOutOfOrder`). Kip dışında `registeredAt` verilmez.
-- **Kota:** kip açıkken §12.2'deki kotalar uygulanmaz.
-- **Ağ düzeyi yazım:** kip açıkken ağ şemasını Governance'ın yanında açılış önerisinin `executor`'u (tek göç yürütücüsü) yazar.
-- **Yükseltme:** Governance her yükseltmede hedefin `migrationState()`'ini önce ve sonra okur; fark varsa yükseltme geri alınır
-  (`MigrationStateChanged`). Kapanmış kip yükseltmeyle açılamaz, pencere uzatılamaz.
+  **Kip açıkken tarihsiz yazım dondurulur** (güvenlik turu 2026-11-04; K1 "tarih açıkça"): `at` = 0, `registeredAt` = 0 ve
+  `publishList(publishedAt = 0)` Governance dışında `DateRequiredDuringMigration` ile reddedilir; acil yazım açık tarihle
+  (`at` = şimdi) yapılır. Böylece yeniden oynatılan geçmiş ile o günkü işletim aynı kaydın geçmişinde sessizce yarışmaz.
+- **Geçerlilik başlangıcı:** kip dışında kurum ve kök CA `validFrom`'u geçmişe çekilemez (0 = blok zamanı; gelecek serbest;
+  `PastDateOutsideMigration`); `validUntil` etkin başlangıçla karşılaştırılır. Kip dışında kaydedilen kurumun ilk ACTIVE penceresi
+  başlangıçsız olduğundan geçmiş `validFrom` kayıttan önceki belgeleri kabul ettirirdi (güvenlik turu 2026-11-04).
+- **Kota:** kip açıkken §12.2'deki kotalar uygulanmaz (CE1). Güvenlik turunun "istisna yalnız göç yürütücüsüne" önerisi
+  uygulanmadı: ulusal kayıtları yeniden oynatan devlet delegeleridir (K1) ve CE1 kotayı bütün kip için kaldırır; daraltma ADR ister.
+- **Ağ düzeyi yazım:** kip açıkken ağ şemasını Governance'ın yanında açılış önerisinin `executor`'u (tek göç yürütücüsü) yazar:
+  kayıt, sürüm özeti, deprecate. Ağ şemasının iptali yalnız Governance'tadır (güvenlik turu 2026-11-04;
+  `NetworkTierRequiresGovernance`).
+- **Yükseltme:** pencere açıkken kayıt kontratı yükseltilemez (`UpgradeDuringMigration`; güvenlik turu 2026-11-04). Governance
+  her yükseltmede hedefin `migrationState()`'ini önce ve sonra okur; fark varsa yükseltme geri alınır (`MigrationStateChanged`).
+  Kapanmış kip yükseltmeyle açılamaz, pencere uzatılamaz. Yeni implementasyonun göç depolamasına sonradan yazmasını yükseltme
+  incelemesi yakalar: `check:uups` `MigrationWindow.sol`'un sabitlenmiş kaynak özetini (`storage-layout/MigrationWindow.pin.json`),
+  ERC-7201 slotunu ve başka kaynağın bu slota ya da satır içi assembly'ye dokunmadığını denetler ([[ADR-0073]] uygulama notu).
 - **Durum geçmişi:** kurum, kök CA ve şema durumları yalnız eklenebilir `StatusHistory.Change { uint64 since; uint8 status; }`
   dizisinde tutulur; değişiklik `since` anından itibaren geçerlidir, aralık yarı açıktır. Kip dışında kaydın ilk ACTIVE penceresi
   başlangıçsızdır (`since = 0`); göçte listedeki ilk durum anıdır. Okuma: `issuerStatusAt`, `rootCAStatusAt`, `schemaStatusAt`,
-  `*StatusHistoryOf`; olaylar `IssuerStatusChanged`, `RootCAStatusChanged`, `SchemaStatusChanged` (anı taşır).
+  `*StatusHistoryOf`; olaylar `IssuerStatusChanged`, `RootCAStatusChanged`, `SchemaStatusChanged` (anı taşır). Dizi bilinçli
+  olarak tavansızdır (tavan ele geçirilmiş kurumun iptalini engelleyebilirdi); yazım O(1), `statusAt` sondan, `ever` baştan tarar;
+  büyüme kip dışında günlük kotayla sınırlıdır.
 - **Doğrulama:** C1 = kurum `iat` anında ACTIVE ∧ `iat ∈ [validFrom, validUntil]` ∧ `RootCARegistry.isChainAcceptableAt(parentCA,
   iat)` (kök `iat` anında ACTIVE, hiç REVOKED değil). C2 = `SchemaRegistry.isSchemaAcceptableAt(schemaId, iat)` (şema `iat` anında
   ACTIVE, hiç REVOKED değil) ∧ yetki penceresi `iat ∈ [since, until)`. Böylece: askıdan önceki belge kabul, askı süresinde ret;
@@ -1106,12 +1135,24 @@ struct NetworkRecord {
     uint64 validFrom; uint64 validUntil;   // yarı açık; validUntil = 0 açık uçlu
     bytes32 fingerprint; bytes32 detailsHash; uint256 flags; bytes32[] digests;   // en çok MAX_DIGESTS = 64
 }
-function stageRecord(NetworkRecord calldata rec) external returns (bytes32 stageId);  // stageId = keccak256(abi.encode(rec))
-function commitStaged(bytes32 stageId) external;                                     // yalnız Governance
+function stageRecord(NetworkRecord calldata rec) external returns (bytes32 stageId);
+    // stageId = keccak256(abi.encode(rec, baseRevision)); baseRevision = kaydın o anki yazım sayacı
+function commitStaged(bytes32 stageId) external;          // yalnız Governance; sayaç değiştiyse StaleStage
 function writeRecord(NetworkRecord calldata rec, uint64 at) external;                // yalnız göç kipinde göç yürütücüsü
-// Governance: proposeNetworkRecord(address registry, bytes32 stageId) — 2/3, türü belli (GE3)
-// okuma: getRecord, recordIdsOf, recordStatusAt, recordStatusHistoryOf, isActiveRecord, isListedProviderKey
+event RecordWritten(RecordKind indexed kind, bytes32 indexed recordId, bytes32 indexed stageId,
+                    bytes32 contentHash, uint64 revision);                // HER yazımda; contentHash = keccak256(abi.encode(rec))
+event RecordStatusChanged(RecordKind indexed kind, bytes32 indexed recordId, RecordStatus status, uint64 since);
+// Governance: proposeNetworkRecord(address registry, bytes32 stageId) — 2/3, türü belli (GE3); cancelProposal(id) — öneren
+// okuma: getRecord, recordIdsOf, recordStatusAt, recordStatusHistoryOf, isActiveRecord, isListedProviderKey,
+//        revisionOf, stageIdOf (bugünkü sayaçla), stageIdFor(rec, baseRevision), stagedRevisionOf
 ```
+
+**Öneri sırası (güvenlik turu 2026-11-04).** Sabitleme kaydın yazım sayacına bağlıdır; Governance önerisi yalnız oylandığı hâlin
+üstüne yazar. Araya giren her yazım (öneri ya da göç yazımı) aynı kayda ait bekleyen bütün eski önerileri geçersiz kılar
+(`StaleStage`): oylanmış öneriler istenen sırayla yürütülemez, yürütülmüş içerik yeniden sabitlenip eski öneriyle yazılamaz.
+Yeni öneri eskisinin yerine geçer; öneren önerisini yürütülmeden geri çekebilir (`cancelProposal`, `ProposalCancelled`).
+`REVOKED` ağ düzeyi kayıtta kesin değildir ([[ADR-0074]] bunu söylemez); yeniden etkinleştirme yalnız iptalden sonra sabitlenmiş
+yeni bir öneriyle olur.
 
 | LOTL alanı | `kind` | `recordId` / bağ | Notlar |
 |---|---|---|---|
@@ -1145,7 +1186,10 @@ struct TerminalGroup { bytes32 groupId; bytes32 institutionId; bytes32[] policyI
                        bool offlineAllowed; uint64 validFrom; uint64 validUntil; bytes32 labelHash; }
 function setRelyingPartyProfile(bytes32 rpId, RelyingPartyProfile calldata profile) external;
 function setTerminalGroup(bytes32 rpId, TerminalGroup calldata group) external;      // en çok 32 grup; 16 politika; 32 sertifika
+    // kurum bağı: rpId'nin kendisi ya da aynı devletin kayıtlı doğrulayıcısı / kurumu (UnknownInstitution; ADR-0054 NS2);
+    // geri çekilmiş grup aynı kimlikle yeniden açılamaz (TerminalGroupNotOpen) — güvenlik turu 2026-11-04
 function closeTerminalGroup(bytes32 rpId, bytes32 groupId, uint64 at) external;      // silinmez, aralığı kapanır
+// RelyingPartyRegistry.initialize(sovereignty, governance, issuerRegistry) — kurum bağı denetimi için (2026-11-04)
 function isActiveTerminalCertificate(bytes32 groupId, bytes32 certFingerprint) external view returns (bool);
 ```
 
@@ -1169,7 +1213,8 @@ Ayrıntı özetleri RFC 8785 kanonik JSON + SHA-256'dır; alan bloklarının sı
   `delegateKeysOf` ile okunur ve `DelegateKeysSet(stateCode, address[] keys)` olayı anahtarların kendisini taşır.
 - **Sürüm adımı:** `StatusListRegistry.publishList` ve `TrustListAnchorRegistry.anchorList` sürümü bir adımda en çok
   `MAX_VERSION_STEP = 1_000_000` artırır (`VersionStepTooLarge`); `version = 2^64-1` ile listeyi kalıcı dondurmak mümkün değil.
-- **Kullanılmayan öğeler kalktı:** `ProposalStatus.CANCELLED`, `ProposalCancelled`, `SchemaNotAuthorized`.
+- **Kullanılmayan öğeler kalktı:** `SchemaNotAuthorized`. (`ProposalStatus.CANCELLED` ve `ProposalCancelled` 2026-11-04
+  güvenlik turunda öneri geri çekme yoluyla yeniden eklendi, §16.5.)
 - **İnce olaylar:** `SchemaRegistrySet(registry)`; `proposeStateRemoval(bytes2 stateCode, bytes32 reasonHash)` gerekçeyi özet
   olarak alır (metin zincire yazılmaz, [[ADR-0074]] PJ2) ve `StateRemoved(stateCode, reasonHash)` bunu yayar.
 

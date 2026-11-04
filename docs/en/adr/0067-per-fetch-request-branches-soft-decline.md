@@ -135,8 +135,10 @@ processed responses on their own branch and so turn away the real wallet's respo
 send again). The lock is now **per branch** and acceptance is **atomic** (`BranchSet.tryConsume`: of two concurrent valid responses
 only the first completes the presentation). A decline gets 400 only while its own branch's response is being processed, or while
 another response is being processed when the decline would close the whole presentation (single fetch) (PV10). Remaining: the lock
-of the branchless DC API path is per presentation (only the page that opened the presentation knows that path's key). The decision
-(K1–K6, RQ1–RQ6) is unchanged.
+of the branchless DC API path is per presentation (only the page that opened the presentation knows that path's key). On the
+ISO/IEC 18013-7 Annex C path (`/vp/dc-mdoc`) the wallet's decline also gets 400 while another response is being processed.
+`BranchSet.consume()` throws on a completed presentation (`PresentationAlreadyConsumedError`), and an attempt limit closes only
+that branch while another response is being processed. The decision (K1–K6, RQ1–RQ6) is unchanged.
 
 # Invariants
 

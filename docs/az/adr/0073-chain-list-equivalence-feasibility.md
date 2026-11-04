@@ -194,6 +194,22 @@ yalnız bir dəfə, nəzarət olunan bir pəncərədə yazılmasına icazə veri
   K2-nin "mövcud səkkiz kontrakt dəyişmir" cümləsi bu ADR və [[ADR-0074]] ilə dəyişmiş olur.
 - İstehsal mühitində zəncir yenə söndürülmüşdür ([[ADR-0009]] K4, [[ADR-0051]] CH5); bu qərar yalnız keçidi mümkün edir.
 
+# Tətbiq qeydi (2026-11-04, kontrakt təhlükəsizlik turu)
+
+Qərarın məzmunu dəyişməyib; layihə rəhbərliyinin təsdiqi ilə tətbiqdəki sərhədlər dəqiqləşdi:
+
+- **CE1 "heç bir yolla (yeniləmə daxil) yenidən açıla bilməz"** kontraktlarda üç qatla qorunur: (1) miqrasiya pəncərəsi açıq ikən
+  qeyd kontraktı yenilənə bilməz; (2) Governance hər yeniləmədə hədəfin miqrasiya vəziyyətini əvvəl və sonra müqayisə edir, fərq
+  varsa yeniləmə geri alınır; (3) yeniləmə yoxlaması — depo yoxlaması (`check-upgrade-safety`) miqrasiya rejimi mənbəyinin
+  sabitlənmiş xülasəsini, ad sahəsi slotunu və heç bir başqa mənbənin bu slota və ya xam yaddaş yazımına toxunmadığını yoxlayır.
+  Yeniləmə anındakı müqayisə təkbaşına kifayət deyil: yeni implementasiya miqrasiya vəziyyətinə sonradan yazan funksiya daşıya
+  bilər. Buna görə sərhəd **yeniləmə yoxlamasına da əsaslanır**.
+- **K1 tək miqrasiya icraçısı** şəbəkə sxemlərində qeyd, versiya xülasəsi və deprecate yazır; şəbəkə sxeminin ləğvi (daimidir) yalnız
+  Governance təklifi ilə edilir. Ləğv edilmiş sxem hər `iat` üçün rədd edildiyindən ləğv anı ekvivalentliyi (CE6) dəyişmir.
+- **K1 "rejim açıq ikən tarix daşıyan yazımlar tarixi açıq şəkildə alır"** kontraktda məcburi edilir: pəncərə açıq ikən tarixsiz
+  (blok zamanlı) adi yazım Governance xaricində rədd edilir; təcili yazım açıq tarixlə (indi) edilir. Beləliklə yenidən oynatma ilə
+  həmin günün əməliyyatları eyni qeydin tarixçəsində səssizcə yarışmır. Kvota istisnası (CE1) bütün rejim üçün qüvvədə qalır.
+
 # Status
 
 **Accepted — 2026-11-04.** Layihə rəhbərliyinin təsdiqi ilə (hərfi sitat xüsusi təsdiq qeydində): dayandırılmış qurumun

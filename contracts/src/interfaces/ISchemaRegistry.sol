@@ -22,7 +22,8 @@ interface ISchemaRegistry is ITamgaErrors {
 
     event SchemaRegistered(bytes32 indexed schemaId, string vctURI, SchemaTier tier, bytes2 indexed stateCode);
     event SchemaDeprecated(bytes32 indexed schemaId, bytes32 supersededBy);
-    event SchemaRevoked(bytes32 indexed schemaId, string reason);
+    /// @dev Güvenlik turu 2026-11-04: gerekçe serbest metin değil, özetidir (ADR-0074 PJ2).
+    event SchemaRevoked(bytes32 indexed schemaId, bytes32 reasonHash);
     /// @dev ADR-0073 K5: her durum değişikliğinin geçerlilik anı (göç kipinde açık tarih; aksi hâlde blok zamanı).
     event SchemaStatusChanged(bytes32 indexed schemaId, SchemaStatus status, uint64 since);
     /// @dev ADR-0073 K3: şemanın yeni sürüm özeti (SHA-256 baytları; liste SRI `sha256-<base64>`) — yalnız eklenir.
@@ -46,10 +47,11 @@ interface ISchemaRegistry is ITamgaErrors {
     function schemaIdOf(string calldata vctURI) external pure returns (bytes32);
     function registerSchema(SchemaRecord calldata rec) external;
     function deprecateSchema(bytes32 schemaId, bytes32 supersededBy) external;
-    function revokeSchema(bytes32 schemaId, string calldata reason) external;
+    /// @notice Ağ şemasında yalnız Governance (göç yürütücüsü iptal edemez); `reasonHash` gerekçe metninin özeti.
+    function revokeSchema(bytes32 schemaId, bytes32 reasonHash) external;
     /// @notice ADR-0073 K1: `at` = 0 → blok zamanı; açık tarih yalnız göç kipinde.
     function deprecateSchemaAt(bytes32 schemaId, bytes32 supersededBy, uint64 at) external;
-    function revokeSchemaAt(bytes32 schemaId, string calldata reason, uint64 at) external;
+    function revokeSchemaAt(bytes32 schemaId, bytes32 reasonHash, uint64 at) external;
     /// @notice ADR-0073 K3 / CE3: yeni sürüm özeti ekler (ulusal şemada o devlet; ağ şemasında Governance önerisi ya da göç
     ///         yürütücüsü). Yazılmış özet değiştirilmez ve silinmez; REVOKED şemaya eklenmez.
     function addSchemaContentHash(bytes32 schemaId, bytes32 contentHash) external;

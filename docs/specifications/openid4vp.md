@@ -424,6 +424,10 @@ istisna geçiş kartı veren politikalardır ([[ADR-0012]] B): kabulde `pass_gra
 | Doğrulayıcı kayıtlı, **bazı claim'ler scope dışında** | **Aşırı talep uyarısı** — scope dışı alanlar ayrıca işaretlenir; kullanıcı yine de onaylayabilir |
 | Doğrulayıcı **kayıtsız** | "Bu doğrulayıcı Tamga'da kayıtlı değil" uyarısı; sunum engellenmez ama belirgin uyarı |
 
+**Değişiklik notu 2026-11-04 — mdoc kapsamı.** mdoc kaydında kapsam **ad alanı + öğe çiftiyle** karşılaştırılır: kayıt sertifikası
+`[ad alanı, öğe]` iznini verdiyse başka ad alanındaki aynı adlı öğe kapsam dışıdır; ad alanı taşımayan tek elemanlı yol (`[öğe]`)
+mdoc kaydında izin vermez. SD-JWT VC kaydında yol `[ad]` olarak kalır.
+
 ## 6.2 Neden engellenmiyor
 
 Cüzdan, kullanıcının **aracıdır**, bekçisi değil. Bir kullanıcı bilinçli
@@ -621,6 +625,13 @@ Ayşe (cüzdan)                        İşveren (verifier)          İndeksleyi
   istemci adresi başına ([[ADR-0067]] RQ5, Değişiklik notu 2026-10-29). Tek kullanım kilidi yanıt çözülmeden önce alınır ve çözmeden
   sonra dal yeniden denetlenir. Bekleyen sunumun durumunda toplam deneme sayısı
   ve son başarısızlığın adımı görünür (`attempts`, `last_attempt`); değer yok, dal bilgisi yok.
+- **Değişiklik notu 2026-11-04 — eşzamanlı yanıtlar.** Tek kullanım kilidi **dal başınadır** (önceden sunum geneliydi): bir dalın
+  yanıtı işlenirken aynı dala gelen ikinci yanıt ya da ret 400 `invalid_request` alır ve dal atılmaz; başka dalın yanıtı işlenebilir
+  (QR'ı görenin kendi dalına gönderdiği yavaş yanıt gerçek cüzdanın yanıtını engellemez). Kabul **atomiktir**: eşzamanlı iki geçerli
+  yanıttan yalnız ilki sunumu tamamlar (`BranchSet.tryConsume()`; ikincisi 400 alır). Sunumu bütünüyle kapatacak bir ret (tek çekim)
+  ya da deneme sınırı, başka bir yanıt işlenirken sunumu REJECTED yapmaz — işlenen yanıt varken ret 400 alır, deneme sınırı yalnız
+  o dalı kapatır (PV10, tek yönlü durum). Sunum tamamlanmışken `BranchSet.consume()` çağrısı hata verir
+  (`PresentationAlreadyConsumedError`): denetim ile tüketim arasında `await` olan eski kalıp ikinci yanıtı sessizce kabul edemez.
 - **Kalan risk.** QR'ı gerçek cüzdandan önce çekip hemen reddeden biri tek dallı sunumu kapatabilir — QR'ı görenin kendi belgesiyle
   yanıt verebilmesi gibi cihazlar arası akışın bilinen sınırı (OpenID4VP 1.0 §14); RP yeni sunum açar.
   Kurumun belge verme servisindeki satır içi kimlik sunumu (SPEC-PROTO-0001 §11.2) aynı kuralı uygular; çok dallı sunumda ret boş

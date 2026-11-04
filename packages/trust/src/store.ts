@@ -94,6 +94,10 @@ export class TrustStore {
   schema_anchors = new Map<string, { content_hash: string; seq: number }>(); // schema_id → latest
   relying_parties = new Map<string, RelyingParty>(); // client_id → rp
   relying_parties_by_dns = new Map<string, RelyingParty>(); // dns_name → rp (ADR-0034: kalıcı kimlik)
+  /** dns_name → kaydın göründüğü ülke listeleri (birden çoksa kimlik belirsiz; 2026-11-04) */
+  relying_party_states = new Map<string, Set<string>>();
+  /** issuer_id → kaydın ülke listesi (kapı grubu kurumunun `slug`'ı ülkeyle nitelenir; 2026-11-04) */
+  issuer_states = new Map<string, string>();
   wallet_provider_keys = new Set<string>();
   zk_circuits = new Map<string, ZkCircuit>(); // circuit_id → devre (ADR-0032 ZK2; yalnız ACTIVE)
   /** ADR-0036 federasyon: yüklenen dış listeler (list_id → durum) ve kapsamdaki kurum hizmetleri */
@@ -121,11 +125,15 @@ export class TrustStore {
     for (const ca of tl.root_cas) this.root_cas.set(ca.ca_id, ca);
     for (const i of tl.issuers) {
       this.issuers.set(i.issuer_id, i);
+      this.issuer_states.set(i.issuer_id, tl.state_code);
       this.issuer_schema_auth.set(i.issuer_id, i.schema_authorizations);
     }
     for (const rp of tl.relying_parties) {
       this.relying_parties.set(rp.client_id, rp);
       this.relying_parties_by_dns.set(rp.dns_name, rp);
+      const states = this.relying_party_states.get(rp.dns_name) ?? new Set<string>();
+      states.add(tl.state_code);
+      this.relying_party_states.set(rp.dns_name, states);
     }
     for (const s of tl.national_schemas) this.schemas.set(s.schema_id, s);
     if (!this.recognition.has(tl.state_code)) this.recognition.set(tl.state_code, new Set([tl.state_code]));

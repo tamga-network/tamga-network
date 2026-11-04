@@ -285,7 +285,7 @@ interface IStatusListRegistry {
 
     event ListRegistered(bytes32 indexed listId, bytes32 indexed issuerId, string listURI, uint32 listSize, uint8 bitsPerEntry);
     event ListPublished(bytes32 indexed listId, uint64 version, bytes32 contentHash, uint64 publishedAt);
-    event ListRetired(bytes32 indexed listId, string reason);
+    event ListRetired(bytes32 indexed listId, bytes32 reasonHash);
 
     error ListExists(bytes32 listId);
     error UnknownList(bytes32 listId);
@@ -315,7 +315,7 @@ interface IStatusListRegistry {
         uint64 publishedAt
     ) external;
 
-    function retireList(bytes32 listId, string calldata reason) external;
+    function retireList(bytes32 listId, bytes32 reasonHash) external;
 
     function getListAnchor(bytes32 listId) external view returns (ListAnchor memory);
 

@@ -167,6 +167,21 @@ describe("checkProximityRegistration (ADR-0026 K5 yakın alan)", () => {
     expect(r).toMatchObject({ present: true, valid: true, allowedClaims: [] });
   });
 
+  it("2026-11-04: mdoc kaydında ad alanı taşımayan tek elemanlı yol ([öğe]) izin vermez; [NS, öğe] verir", async () => {
+    const cert = await wrprc(registrar, {
+      credentials: [
+        {
+          format: "mso_mdoc",
+          meta: { doctype_value: DOCTYPE },
+          claim: [{ path: ["given_name"] }, { path: [NS, "age_over_18"] }],
+        },
+      ],
+    });
+    const { item, transcript } = await decoded(req(cert), gate);
+    const r = checkProximityRegistration(item, transcript, [registrar.fp], pinned(), epochMillis(NOW));
+    expect(r).toMatchObject({ present: true, valid: true, allowedClaims: ["age_over_18"] });
+  });
+
   it("0.6.0: okuyucu sertifikası güvene bağlı olmalı — kendinden imzalı kopya geçersiz; CA'ya bağlı ya da kayıtlı parmak izi geçerli", async () => {
     // saldırgan: kayıtlı kurumun organizationIdentifier'ını taşıyan kendinden imzalı okuyucu + o kurumun herkese açık WRPRC'si
     const spoof = await party("CN=Gate, O=Gate Ltd, 2.5.4.97=VATTR-1234567890");

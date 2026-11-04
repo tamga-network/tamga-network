@@ -74,6 +74,18 @@ export type FetchResult =
       reason: "closed" | "expired" | "capacity" | "limit";
     };
 
+/**
+ * `BranchSet.consume()` sunum zaten tamamlanmışken çağrıldı (2026-11-04). 0.8.0'daki `isOpen` → `await verifyPresentation` →
+ * `consume()` kalıbı dal başına kilitle eşzamanlı iki geçerli yanıtın ikisini de kabul edebilirdi; ikinci `consume()` artık
+ * sessizce geçmez, bu hatayı fırlatır (kapalı güvenli — çağıran yanıtı kabul etmemeli). Önerilen yol: `tryConsume()`.
+ */
+export class PresentationAlreadyConsumedError extends Error {
+  constructor(presentationId: string) {
+    super(`presentation ${presentationId} is already completed (PV10); accept with tryConsume()`);
+    this.name = "PresentationAlreadyConsumedError";
+  }
+}
+
 /** `begin` sonucu: `ok` dışındakiler yanıtı işlemeden reddetmek içindir. */
 export type BeginResult = "ok" | "used" | "busy" | "closed" | "gone";
 
@@ -396,7 +408,7 @@ export class BranchSet {
    */
   tryConsume(): boolean {
     if (this._used) return false;
-    this.consume();
+    this.complete();
     return true;
   }
 
@@ -409,21 +421,24 @@ export class BranchSet {
     if (m.closed || this._used) return { presentationRejected: false, alreadyClosed: true };
     m.closed = "declined";
     if (this.multi()) return { presentationRejected: false, alreadyClosed: false };
-    this.consume();
+    this.complete();
     return { presentationRejected: true, alreadyClosed: false };
   }
 
   /**
    * RQ4: çözülmüş ama sahiplik kanıtına ulaşmayan yanıt. Dalda `maxAttempts`'te yalnız o dal kapanır (sunum tek çekimliyse
-   * REJECTED); dalsız yolda (DC API) sınır sunum başınadır.
+   * REJECTED); dalsız yolda (DC API) sınır sunum başınadır. Başka bir yanıt işlenirken (başka dalın kilidi ya da dalsız yolun
+   * kilidi) sınır sunumu REJECTED yapmaz — doğrulanmakta olan yanıtı ret çeviremez (PV10, `declineBlocked` ile aynı kural,
+   * 2026-11-04): dalda yalnız o dal kapanır; dalsız yolda sayaç sınırda kalır ve işlenen yanıt bitince gelen ilk başarısız yanıt
+   * sunumu kapatır.
    */
   failedAttempt(b?: Branch): { n: number; branchClosed: boolean; presentationRejected: boolean } {
     this._attempts += 1;
     const max = this.limits.maxAttempts;
     if (!b) {
       const n = (this.pathAttempts += 1);
-      if (n >= max && !this._used) {
-        this.consume();
+      if (n >= max && !this._used && this.inFlightCount === 0) {
+        this.complete();
         return { n, branchClosed: false, presentationRejected: true };
       }
       return { n, branchClosed: false, presentationRejected: false };
@@ -432,13 +447,24 @@ export class BranchSet {
     const n = (m.attempts += 1);
     if (n < max || m.closed) return { n, branchClosed: false, presentationRejected: false };
     m.closed = "attempts";
-    if (this.multi() || this._used) return { n, branchClosed: true, presentationRejected: false };
-    this.consume();
+    const others = this.pathBusy || this.inFlightCount - (m.inFlight ? 1 : 0) > 0;
+    if (this.multi() || this._used || others) return { n, branchClosed: true, presentationRejected: false };
+    this.complete();
     return { n, branchClosed: true, presentationRejected: true };
   }
 
-  /** Sunum tamamlandı (kabul ya da ret): dallar bellekten ve ortak kayıttan çıkar (özel anahtarlar bırakılır). */
+  /**
+   * Sunumu tamamla (kabul ya da ret). Sunum zaten tamamlandıysa `PresentationAlreadyConsumedError` fırlatır (2026-11-04): dal
+   * başına kilitle iki dalın yanıtı aynı anda doğrulanabilir; denetim (`isOpen`) ile `consume()` arasında `await` olan eski
+   * kalıp ikinci yanıtı sessizce kabul etmesin diye. Kabulde `tryConsume()` kullanın (hata yerine `false`).
+   */
   consume() {
+    if (this._used) throw new PresentationAlreadyConsumedError(this.presentationId);
+    this.complete();
+  }
+
+  /** Sunum tamamlandı (kabul ya da ret): dallar bellekten ve ortak kayıttan çıkar (özel anahtarlar bırakılır). */
+  private complete() {
     this._used = true;
     for (const b of this.live.values()) this.registry._remove(b);
     this.live.clear();

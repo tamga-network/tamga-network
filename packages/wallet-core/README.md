@@ -22,7 +22,7 @@ npm install @tamga-network/wallet-core
 - `startAuthorized` reports `registrationStatusUnknown: true` when the issuer's registration certificate status could not be
   checked (no list, no unexpired cached copy): show the person a warning (ADR-0068 WRS4). A revoked certificate still throws.
 - Registration-certificate scope for mdoc compares namespace + element: an element of the same name in another namespace counts
-  as over-asking (OpenID4VP and proximity).
+  as over-asking (OpenID4VP and proximity); a path without a namespace (`[element]`) grants nothing for an mdoc registration.
 - `wiaStatusInList` computes the list bound as `8 / bits`, so 4- and 8-bit lists no longer throw for entries past the list.
 
 ## Breaking in 0.8.0

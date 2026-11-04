@@ -71,7 +71,7 @@ describe("RootCARegistry (SPEC-BC-0001 §2)", function () {
       "MustRegisterAsActive",
     );
     const t = await f.now();
-    await expect(w.registerRootCA(await ca({ validFrom: t, validUntil: t }))).to.be.revertedWithCustomError(
+    await expect(w.registerRootCA(await ca({ validFrom: t + 100, validUntil: t + 100 }))).to.be.revertedWithCustomError(
       f.rootCAs,
       "InvalidValidity",
     );
@@ -94,12 +94,12 @@ describe("RootCARegistry (SPEC-BC-0001 §2)", function () {
   });
 
   it("CA2: REVOKED — zincir kabul edilmez; ikinci revoke AlreadyRevoked", async () => {
-    await expect(f.as(f.rootCAs, f.trDelegate).revokeRootCA(f.trCA, "compromise"))
+    await expect(f.as(f.rootCAs, f.trDelegate).revokeRootCA(f.trCA, id("compromise")))
       .to.emit(f.rootCAs, "RootCARevoked")
-      .withArgs(f.trCA, "compromise");
+      .withArgs(f.trCA, id("compromise"));
     expect(await f.rootCAs.isValidRootCA(f.trCA)).to.equal(false);
     expect(await f.rootCAs.isChainAcceptable(f.trCA)).to.equal(false);
-    await expect(f.as(f.rootCAs, f.trDelegate).revokeRootCA(f.trCA, "x")).to.be.revertedWithCustomError(
+    await expect(f.as(f.rootCAs, f.trDelegate).revokeRootCA(f.trCA, id("x"))).to.be.revertedWithCustomError(
       f.rootCAs,
       "AlreadyRevoked",
     );

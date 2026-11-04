@@ -50,7 +50,15 @@ test/                                   unit, property and invariant tests (test
   `string` fields and free `bytes`. There is no `isRevoked`: revocation lives in the off-chain status list (ADR-0008).
 - **Sovereignty** (N1): a national record is written only by that state's delegate keys; network-level records only through
   Governance proposals.
-- **Upgrades** (§9): storage layout only grows; `contracts:check` fails on a reordered, removed or retyped slot.
+- **Upgrades** (§9): storage layout only grows; `contracts:check` fails on a reordered, removed or retyped slot. No contract is
+  deployed yet, so the baselines in `storage-layout/` are updated with `npm --prefix contracts run storage:update` after a
+  reviewed layout change; **the snapshots are frozen at the first production deployment** and from then on change only with a
+  published upgrade.
+- **Migration window** (ADR-0073 K1): no registry upgrade while a window is open; `contracts:check` pins
+  `MigrationWindow.sol` (source digest, ERC-7201 slot; `node scripts/check-upgrade-safety.mjs --update-pin` after a reviewed
+  change) and refuses inline assembly anywhere else.
+- **Static analysis:** `npm run contracts:slither` must report 0 results; a false positive is excluded inline
+  (`// slither-disable-next-line <detector>`) with a reason.
 - Shared errors live in `src/interfaces/ITamgaErrors.sol` (declaring one error in two interfaces breaks compilation).
 
 ## Licence

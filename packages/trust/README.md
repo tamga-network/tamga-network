@@ -36,7 +36,9 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 ## New in 0.8.1
 
 - Ambiguous gate groups are closed: `terminalGroup(id)` returns `null` when the same `group_id` appears in more than one verifier
-  record (e.g. two national lists), and a group whose `institution_id` slug matches more than one issuer record is not active.
+  record (e.g. two national lists); `terminalGroupByCertFingerprint(fp)` returns `null` when the fingerprint is in more than one
+  active group; a verifier whose `dns_name` appears in more than one national list is ambiguous (`relyingPartyByDnsName` →
+  `null`, its groups inactive); a group's `institution_id` slug is matched only against the verifier's own national list.
 
 ## Breaking in 0.8.0
 

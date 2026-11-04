@@ -71,7 +71,8 @@ try {
   const { result, claims } = await verifyPresentation({ presentation: opened.response.vp_token["diploma"][0],
     aud: signer.clientId, nonce: branch.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer,
     rp: trust.relyingParty(signer.clientId) });
-  if (result.checks_performed.includes("A6")) branches.consume(); else branches.failedAttempt(branch); // sunum yalnız A6'dan sonra tüketilir
+  if (!result.checks_performed.includes("A6")) branches.failedAttempt(branch); // sunum yalnız A6'dan sonra tüketilir
+  else if (!branches.tryConsume()) throw new Error("already answered"); // atomik kabul: başka dalın yanıtı önce kabul edildi
 } finally { branches.end(branch); }
 // ret (error + state): registry.byState(state)?.set.decline(…) — yalnız o dalı kapatır; 200 dönün, neden saklamayın
 ```

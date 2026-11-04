@@ -1,14 +1,18 @@
 /**
  * `tamga-onboard mcp` — aynı işlemleri yerel MCP sunucusu (stdio) olarak sunar: kurumun kendi yapay zekâ aracı adımları yürütür.
  * Uzak sunucu değil; ağa ve listeye yazmaz. Kurallar:
- *  - dosya okuma/yazma yalnız kök klasörün (`--root`, varsayılan çalışma klasörü) içinde; var olan dosyanın üzerine yazılmaz;
- *  - özel anahtar içeriği hiçbir yanıtta dönmez (yalnız dosya yolu ve açık anahtar özeti); parola yalnız ortam değişkeni ADI ile;
+ *  - dosya okuma/yazma yalnız kök klasörün (`--root`, varsayılan çalışma klasörü) içinde — sembolik bağ / junction çözüldükten
+ *    sonra da (O3/D2); var olan dosyanın üzerine yazılmaz; `validate_application` yalnız `*.json` okur;
+ *  - özel anahtar içeriği hiçbir yanıtta dönmez (yalnız dosya yolu ve açık anahtar özeti); parola yalnız ortam değişkeni ADI ile
+ *    ve ad `TAMGA_` ile başlamalı (başka sırlar okunamasın; D3), parola en az 12 karakter;
+ *  - kök pinleri MCP'den değiştirilemez (D4; yalnız komut satırında `--pin`); yerel / özel ağ adresleri okunmaz (O4);
+ *    dosyalardaki istek adresleri kurumun alan adı dışındaysa uyarı satırı;
  *  - dışarıdan okunan liste ve meta veri içeriği yanıtta "güvenilmeyen veri" olarak işaretlenir (talimat değildir);
  *  - günlük yazılmaz (kişisel veri zaten yok; standart çıktı yalnız MCP iletileri).
  * Resmî TypeScript SDK (`@modelcontextprotocol/sdk`) yalnız bu giriş noktasında yüklenir; çekirdek (`.`) onu içe aktarmaz.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -23,7 +27,8 @@ import {
   type Http,
   type Row,
 } from "./checks.js";
-import { generateKeys } from "./keys.js";
+import { generateKeys, MIN_PASSPHRASE } from "./keys.js";
+import { isInside, within } from "./paths.js";
 import { sandboxGuide, type Environment } from "./network.js";
 import { validateApplication } from "./rules.js";
 
@@ -74,7 +79,12 @@ export const TOOLS = [
         dir: { type: "string", description: "Onboarding folder (output of create_application), relative to the root." },
         passphrase_env: {
           type: "string",
-          description: "Name of an environment variable holding a passphrase to encrypt the private keys (optional).",
+          description:
+            "Name of an environment variable (must start with TAMGA_) holding a passphrase of at least 12 characters to encrypt the private keys.",
+        },
+        no_passphrase: {
+          type: "boolean",
+          description: "Write unencrypted private keys (on Windows only when this is set explicitly).",
         },
       },
       required: ["dir"],
@@ -106,11 +116,6 @@ export const TOOLS = [
         slug: { type: "string", description: "Issuer short name." },
         rp: { type: "string", description: "Verifier / identity-matching DNS name." },
         dir: { type: "string", description: "Onboarding folder (fills slug/rp/environment and local certificates)." },
-        pins: {
-          type: "array",
-          items: { type: "string" },
-          description: "Override the embedded root pins (hex SHA-256), only with an out-of-band verified value.",
-        },
       },
     },
   },
@@ -131,16 +136,17 @@ export function createServer(o: McpOptions, version = "0"): Server {
   const inside = (p: unknown) => {
     if (typeof p !== "string" || !p) throw new ToolError("path required");
     const abs = resolve(root, p);
-    const rel = relative(root, abs);
-    if (rel.startsWith("..") || isAbsolute(rel)) throw new ToolError("path is outside the server root");
+    // bağlar (symlink / junction) çözüldükten sonra da kök içinde (O3/D2)
+    if (!isInside(root, abs)) throw new ToolError("path is outside the server root");
     return abs;
   };
   const passphrase = (name: unknown) => {
     if (name === undefined) return undefined;
-    if (typeof name !== "string" || !/^[A-Z_][A-Z0-9_]*$/.test(name))
-      throw new ToolError("passphrase_env: variable name");
+    if (typeof name !== "string" || !/^TAMGA_[A-Z0-9_]+$/.test(name))
+      throw new ToolError("passphrase_env: variable name must start with TAMGA_");
     const v = env[name];
     if (!v) throw new ToolError(`passphrase_env: ${name} is empty`);
+    if (v.length < MIN_PASSPHRASE) throw new ToolError(`passphrase_env: at least ${MIN_PASSPHRASE} characters`);
     return v;
   };
   const rowsResult = (rows: Row[]) => ({
@@ -162,22 +168,36 @@ export function createServer(o: McpOptions, version = "0"): Server {
       if (existsSync(join(dir, "onboarding.json"))) throw new ToolError("an application already exists in that folder");
       mkdirSync(dir, { recursive: true });
       const w = (f: string, v: unknown) =>
-        writeFileSync(join(dir, f), JSON.stringify(v, null, 2) + "\n", { flag: "wx" });
+        writeFileSync(within(dir, f), JSON.stringify(v, null, 2) + "\n", { flag: "wx" });
       w("onboarding.json", b.profile);
       if (b.issuer) w(b.profile.applications.issuer!, b.issuer);
       if (b.rp) w(b.profile.applications.rp!, b.rp);
       return { written: true, dir: relative(root, dir) || ".", files: b.profile.applications, warnings: b.warnings };
     },
     async validate_application(a) {
-      const app =
-        a.application ?? (a.path !== undefined ? JSON.parse(readFileSync(inside(a.path), "utf8")) : undefined);
-      if (!app) throw new ToolError("give application or path");
+      let app = a.application;
+      if (app === undefined && a.path !== undefined) {
+        if (typeof a.path !== "string" || !/\.json$/i.test(a.path)) throw new ToolError("path: only *.json files");
+        const file = inside(a.path);
+        try {
+          app = JSON.parse(readFileSync(file, "utf8"));
+        } catch {
+          // dosya içeriği yanıta girmez (JSON hata iletisi içerikten parça taşıyabilir)
+          throw new ToolError("path: not a readable JSON file");
+        }
+      }
+      if (!app || typeof app !== "object") throw new ToolError("give application or path");
       return validateApplication(app as Record<string, unknown>);
     },
     async generate_keys_and_csr(a) {
       const dir = inside(a.dir);
       const { profile, issuer, rp } = readOnboardingDir(dir);
-      const r = await generateKeys(dir, profile, { issuer, rp }, { passphrase: passphrase(a.passphrase_env) });
+      const r = await generateKeys(
+        dir,
+        profile,
+        { issuer, rp },
+        { passphrase: passphrase(a.passphrase_env), noPassphrase: a.no_passphrase === true },
+      );
       return {
         keys: r.written.map((k) => ({
           name: k.name,
@@ -198,6 +218,7 @@ export function createServer(o: McpOptions, version = "0"): Server {
           dnsTxt: typeof a.dns_txt === "string" ? a.dns_txt : undefined,
           passphrase: passphrase(a.passphrase_env),
           offline: a.offline === true,
+          warnOffDomain: true,
         },
         { http, dns: o.dns },
       );
@@ -219,12 +240,9 @@ export function createServer(o: McpOptions, version = "0"): Server {
       if (environment !== undefined && environment !== "production" && environment !== "sandbox")
         throw new ToolError("environment: production | sandbox");
       if (!slug && !rp) throw new ToolError("give slug, rp or dir");
-      const pins = Array.isArray(a.pins)
-        ? (a.pins as unknown[]).map(String).filter((p) => /^[0-9a-fA-F]{64}$/.test(p))
-        : undefined;
-      return rowsResult(
-        await listingChecks(http, { environment: environment ?? "production", slug, rp, pins, localCerts }),
-      );
+      // D4: kök pinleri MCP'den değiştirilemez — yalnız pakete gömülü değer
+      if (a.pins !== undefined) throw new ToolError("pins cannot be overridden over MCP (use the CLI --pin)");
+      return rowsResult(await listingChecks(http, { environment: environment ?? "production", slug, rp, localCerts }));
     },
     async sandbox_info() {
       return sandboxGuide();

@@ -203,9 +203,19 @@ export class ListTrustSource implements TrustSource {
     if (this.unhealthy()) return null;
     return this.store.relying_parties.get(clientId) ?? null;
   }
+  /**
+   * Kalıcı kimlikle (ADR-0034) doğrulayıcı. Aynı `dns_name` birden çok ülke listesinde görünürse hangi kaydın geçerli olduğu
+   * belirsizdir — null (kapalı güvenli; 2026-11-04).
+   */
   relyingPartyByDnsName(dnsName: string): RelyingParty | null {
     if (this.unhealthy()) return null;
-    return this.store.relying_parties_by_dns.get(dnsName.toLowerCase()) ?? null;
+    const dns = dnsName.toLowerCase();
+    if (this.dnsAmbiguous(dns)) return null;
+    return this.store.relying_parties_by_dns.get(dns) ?? null;
+  }
+  /** Aynı `dns_name` birden çok ülke listesinde (2026-11-04). */
+  private dnsAmbiguous(dns: string): boolean {
+    return (this.store.relying_party_states.get(dns)?.size ?? 0) > 1;
   }
   /** Kayıtlı tüm belge verenler (kurum dizini; ADR-0015 K2). Kişisel veri yok. Bayat kaynakta boş. */
   issuers(): Issuer[] {
@@ -355,17 +365,23 @@ export class ListTrustSource implements TrustSource {
     const hits = this.terminalGroupsAll().filter((a) => a.group.group_id === groupId);
     return hits.length === 1 ? hits[0] : null;
   }
+  /**
+   * Sertifika parmak izinin bağlı olduğu ETKİN grup. Aynı parmak izi birden çok etkin grupta görünürse hangi kapının olduğu
+   * belirsizdir — null (kapalı güvenli; 2026-11-04). Geri çekilmiş gruptaki eski kayıt belirsizlik saymaz (sertifika yeni gruba
+   * taşınabilir).
+   */
   terminalGroupByCertFingerprint(fp: string): TerminalGroupAnswer | null {
     if (this.unhealthy()) return null;
     const f = fp.toLowerCase();
-    for (const a of this.terminalGroupsAll()) if (a.active && (a.group.cert_fingerprints ?? []).includes(f)) return a;
-    return null;
+    const hits = this.terminalGroupsAll().filter((a) => a.active && (a.group.cert_fingerprints ?? []).includes(f));
+    return hits.length === 1 ? hits[0] : null;
   }
   /**
    * Bütün kapı grupları (doğrulayıcı kayıtları üzerinden; aynı grup kimliği iki kez yayımlanmaz — yayıncı denetler). Etkin:
    * doğrulayıcı ACTIVE, zaman penceresi içinde VE grubun kurumu (`institution_id`: belge verenin `slug`'ı ya da doğrulayıcının
    * `dns_name`'i) listede ACTIVE (kontrol 2026-11-03, K12: geri çekilmiş kurumun kapısı listeyle birlikte kapanır). Kurumsuz eski
-   * grup yalnız doğrulayıcı ve zamanla değerlendirilir (yayıncı etkin grupta kurum ister).
+   * grup yalnız doğrulayıcı ve zamanla değerlendirilir (yayıncı etkin grupta kurum ister). `dns_name`'i birden çok ülke
+   * listesinde görünen doğrulayıcının grupları etkin sayılmaz (kimlik belirsiz; 2026-11-04).
    */
   private terminalGroupsAll(): TerminalGroupAnswer[] {
     const now = this.now().getTime();
@@ -374,23 +390,32 @@ export class ListTrustSource implements TrustSource {
       for (const g of rp.terminal_groups ?? []) {
         const from = Date.parse(g.valid_from);
         const until = g.valid_until ? Date.parse(g.valid_until) : Number.POSITIVE_INFINITY;
-        const institutionActive = g.institution_id === undefined || this.institutionActive(g.institution_id);
+        const ambiguous = this.dnsAmbiguous(rp.dns_name);
+        const institutionActive =
+          g.institution_id === undefined || this.institutionActive(g.institution_id, rp.dns_name);
         out.push({
           group: g,
           rp_dns_name: rp.dns_name,
-          active: rp.status === "ACTIVE" && from <= now && now < until && institutionActive,
+          active: rp.status === "ACTIVE" && !ambiguous && from <= now && now < until && institutionActive,
         });
       }
     return out;
   }
   /**
-   * Kapı grubunun kurumu listede ACTIVE mi (belge veren `slug` ya da doğrulayıcı `dns_name`). `slug` ülke listesi başınadır: aynı
-   * `slug` birden çok belge veren kaydında (ör. iki ülke listesinde) görünürse kurum belirsizdir — kapalı (false; 2026-11-04).
+   * Kapı grubunun kurumu listede ACTIVE mi (belge veren `slug` ya da doğrulayıcı `dns_name`). `slug` ülke listesi başınadır:
+   * grubu taşıyan doğrulayıcının ülke listesi biliniyorsa yalnız o listedeki belge verenlere bakılır (`institution_id` + ülke;
+   * 2026-11-04). Eşleşme birden çoksa (ör. ülkesi bilinmeyen kayıtta iki listede aynı `slug`) ya da kurum doğrulayıcısının
+   * `dns_name`'i iki listede görünüyorsa kurum belirsizdir — kapalı (false).
    */
-  private institutionActive(id: string): boolean {
-    const rp = this.store.relying_parties_by_dns.get(id.toLowerCase());
-    if (rp) return rp.status === "ACTIVE";
-    const hits = [...this.store.issuers.values()].filter((i) => i.slug === id);
+  private institutionActive(id: string, rpDns: string): boolean {
+    const dns = id.toLowerCase();
+    const rp = this.store.relying_parties_by_dns.get(dns);
+    if (rp) return !this.dnsAmbiguous(dns) && rp.status === "ACTIVE";
+    const rpStates = this.store.relying_party_states.get(rpDns);
+    const state = rpStates?.size === 1 ? [...rpStates][0] : undefined;
+    const hits = [...this.store.issuers.values()].filter(
+      (i) => i.slug === id && (state === undefined || this.store.issuer_states.get(i.issuer_id) === state),
+    );
     return hits.length === 1 && hits[0].status === "ACTIVE";
   }
 

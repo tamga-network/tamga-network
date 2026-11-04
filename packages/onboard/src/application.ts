@@ -7,6 +7,7 @@
  * ADR-0024 (kayıt verisi), ADR-0050 (kurum sertifikası), ADR-0057 (barındırılan servis), runbook §A.1 (kimlik eşleştirme kaydı).
  */
 import type { Environment } from "./network.js";
+import { APPLICATION_FILE_RE } from "./paths.js";
 import { CERT_NAME_RE, DNS_RE, SLUG_RE, iscedFOk, validateIssuerApplication, validateRpApplication } from "./rules.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -310,8 +311,27 @@ export function validateProfile(p: Rec): string[] {
   for (const k of Object.keys(p)) if (!allowed.has(k)) e.push(`onboarding.json: bilinmeyen alan ${k}`);
   if (!SLUG_RE.test(String(p.slug ?? ""))) e.push("onboarding.json: slug");
   if (!DNS_RE.test(String(p.domain ?? ""))) e.push("onboarding.json: domain");
-  for (const k of (p.keys ?? []) as Rec[])
+  if (!["issuer", "verifier"].includes(p.role)) e.push("onboarding.json: role");
+  if (!["production", "sandbox"].includes(p.environment)) e.push("onboarding.json: environment");
+  // O3: dosya adları yol taşıyamaz (başvuru `<kısa ad>.issuer|rp.json`, anahtar `issuer-…` / `rp-…`)
+  const apps = p.applications;
+  if (!apps || typeof apps !== "object" || Array.isArray(apps)) e.push("onboarding.json: applications");
+  else
+    for (const [k, v] of Object.entries(apps as Rec))
+      if (
+        !["issuer", "rp"].includes(k) ||
+        typeof v !== "string" ||
+        !APPLICATION_FILE_RE.test(v) ||
+        !v.endsWith(`.${k}.json`)
+      )
+        e.push(`onboarding.json: başvuru dosyası adı ${k}`);
+  if (!Array.isArray(p.keys)) e.push("onboarding.json: keys");
+  for (const k of (Array.isArray(p.keys) ? p.keys : []) as Rec[]) {
     if (!CERT_NAME_RE.test(String(k?.name))) e.push(`onboarding.json: anahtar adı ${k?.name}`);
+    if (!["credential", "status", "access"].includes(k?.purpose)) e.push(`onboarding.json: anahtar amacı ${k?.name}`);
+  }
+  for (const n of (p.operator_keys ?? []) as unknown[])
+    if (!CERT_NAME_RE.test(String(n))) e.push(`onboarding.json: operator_keys ${n}`);
   if (p.lookup_url !== undefined && !isHttps(p.lookup_url)) e.push("onboarding.json: lookup_url https olmalı");
   for (const c of p.isced_f_codes ?? []) if (!iscedFOk(c)) e.push(`onboarding.json: ISCED-F ${c}`);
   return e;

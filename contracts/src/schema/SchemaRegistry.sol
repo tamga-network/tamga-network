@@ -27,7 +27,7 @@ import {StatusHistory} from "../base/StatusHistory.sol";
  *               = DEPRECATED'dan ÖNCE verilmiş belge; durum belgenin iat anına göre (yarı açık pencereler).
  *
  *         Göç kipinde (ADR-0073 K1) ağ şemasını Governance'ın yanında açılış önerisinin yetkilendirdiği tek göç
- *         yürütücüsü de yazar.
+ *         yürütücüsü de yazar: kayıt, sürüm özeti ve deprecate. Ağ şemasının İPTALİ (kalıcı) yalnız Governance'tadır.
  */
 contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
     using StatusHistory for StatusHistory.Change[];
@@ -40,6 +40,8 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
     /// @dev ADR-0073 K3: schemaId => eklenen sürüm özetleri (ilk özet `SchemaRecord.contentHash`'tedir).
     mapping(bytes32 => bytes32[]) private _versionHashes;
 
+    // Yanlış alarm: iki `__gap` de private; Solidity ayrı slotlar ayırır (taban 46, bu kontrat 44), düzen check:storage'da.
+    // slither-disable-next-line shadowing-state
     uint256[44] private __gap;
 
     /// @notice ADR-0073 K3: şema başına en çok sürüm özeti (ilk özet hariç); saha verisiyle gözden geçirilir.
@@ -111,18 +113,18 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
     }
 
     /// @inheritdoc ISchemaRegistry
-    function revokeSchema(bytes32 schemaId, string calldata reason) external {
-        _revoke(schemaId, reason, 0);
+    function revokeSchema(bytes32 schemaId, bytes32 reasonHash) external {
+        _revoke(schemaId, reasonHash, 0);
     }
 
     /// @inheritdoc ISchemaRegistry
-    function revokeSchemaAt(bytes32 schemaId, string calldata reason, uint64 at) external {
-        _revoke(schemaId, reason, at);
+    function revokeSchemaAt(bytes32 schemaId, bytes32 reasonHash, uint64 at) external {
+        _revoke(schemaId, reasonHash, at);
     }
 
     function _deprecate(bytes32 schemaId, bytes32 supersededBy, uint64 at) private {
         SchemaRecord storage s = _require(schemaId);
-        _requireWriteAuth(s);
+        _requireWriteAuth(s, false);
         if (s.status != SchemaStatus.ACTIVE) revert NotActive(schemaId);
         if (supersededBy != bytes32(0)) {
             if (supersededBy == schemaId) revert SelfSuccession();
@@ -133,12 +135,14 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
         emit SchemaDeprecated(schemaId, supersededBy);
     }
 
-    function _revoke(bytes32 schemaId, string calldata reason, uint64 at) private {
+    function _revoke(bytes32 schemaId, bytes32 reasonHash, uint64 at) private {
         SchemaRecord storage s = _require(schemaId);
-        _requireWriteAuth(s);
+        // Güvenlik turu 2026-11-04 (YÜKSEK): ağ şemasının iptali kalıcıdır (S3, `ever(REVOKED)`) — tek adresli göç
+        // yürütücüsüne bırakılmaz; yalnız Governance önerisi (2/3). Yürütücü kayıt, sürüm özeti ve deprecate yazar.
+        _requireWriteAuth(s, true);
         if (s.status == SchemaStatus.REVOKED) revert AlreadyRevoked(schemaId);
         _setStatus(schemaId, s, SchemaStatus.REVOKED, at);
-        emit SchemaRevoked(schemaId, reason);
+        emit SchemaRevoked(schemaId, reasonHash);
     }
 
     /// @dev ADR-0073 K1/K5: durum değişikliği `since` anından itibaren geçerli; geçmiş sıralı ve yalnız eklenir.
@@ -152,7 +156,7 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
     /// @inheritdoc ISchemaRegistry
     function addSchemaContentHash(bytes32 schemaId, bytes32 contentHash) external {
         SchemaRecord storage s = _require(schemaId);
-        _requireWriteAuth(s);
+        _requireWriteAuth(s, false);
         if (s.status == SchemaStatus.REVOKED) revert AlreadyRevoked(schemaId);
         if (contentHash == bytes32(0)) revert EmptyContentHash();
         bytes32[] storage v = _versionHashes[schemaId];
@@ -237,15 +241,20 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
         if (s.status == SchemaStatus.NONE) revert UnknownSchema(schemaId);
     }
 
-    function _requireWriteAuth(SchemaRecord storage s) private {
+    /// @param governanceOnly ağ şemasında yalnız Governance (iptal); ulusal şemada etkisiz (egemenlik N1).
+    function _requireWriteAuth(SchemaRecord storage s, bool governanceOnly) private {
         if (s.tier == SchemaTier.NETWORK) {
-            _requireNetworkWriter();
+            if (governanceOnly) {
+                if (msg.sender != governance) revert NetworkTierRequiresGovernance();
+            } else {
+                _requireNetworkWriter();
+            }
         } else {
             _requireOwnerAndCount(s.stateCode);
         }
     }
 
-    /// @dev Ağ şemasını Governance (2/3 öneri) ya da göç kipinde tek göç yürütücüsü yazar (ADR-0073 K1).
+    /// @dev Ağ şemasını Governance (2/3 öneri) ya da göç kipinde tek göç yürütücüsü yazar (ADR-0073 K1) — iptal hariç.
     function _requireNetworkWriter() private view {
         if (msg.sender != governance && !_isMigrationExecutor(msg.sender)) revert NetworkTierRequiresGovernance();
     }

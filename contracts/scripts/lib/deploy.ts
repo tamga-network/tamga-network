@@ -81,7 +81,7 @@ export async function deployTrustLayer(
   // 4) IssuerRegistry — 2 ve 3'ten sonra.
   const issuers = await proxy("IssuerRegistry", [gov, gov, await rootCAs.getAddress(), await schemas.getAddress()]);
   // 5) Geri kalanlar
-  const relyingParties = await proxy("RelyingPartyRegistry", [gov, gov]);
+  const relyingParties = await proxy("RelyingPartyRegistry", [gov, gov, await issuers.getAddress()]);
   const recognition = await proxy("CrossRecognition", [gov, gov, await issuers.getAddress()]);
   const statusLists = await proxy("StatusListRegistry", [await issuers.getAddress(), gov]);
   // ADR-0074 K3: ağ düzeyi kayıtlar (yalnız Governance önerisiyle ya da göç kipinde göç yürütücüsüyle)

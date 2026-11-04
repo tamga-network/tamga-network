@@ -45,6 +45,7 @@ import {
 import { resolve, dirname } from "node:path";
 import { createHash, createPrivateKey, sign as nodeSign, X509Certificate } from "node:crypto";
 import { signWrprcCwt } from "@tamga-network/mdoc";
+import { X509Certificate as PecX509 } from "@peculiar/x509";
 import { fileURLToPath } from "node:url";
 import {
   pemSigner,
@@ -446,11 +447,11 @@ function writeTl119612(
 
 /** alan adı → erişim sertifikasının organizationIdentifier'ı (2.5.4.97; EN 319 412-1); build() doldurur */
 const orgIdByDns = new Map<string, string | null>();
+/** Konu alanındaki organizationIdentifier — ASN.1 ad yapısından (metin değil; O1); birden fazlaysa ret. */
 function certOrgIdentifier(der: Uint8Array): string | null {
-  const line = new X509Certificate(der).subject
-    .split("\n")
-    .find((l) => /^(organizationIdentifier|2\.5\.4\.97)=/.test(l));
-  return line ? line.slice(line.indexOf("=") + 1) : null;
+  const v = new PecX509(Buffer.from(der)).subjectName.getField("2.5.4.97");
+  if (v.length > 1) throw new Error("sertifikada birden fazla organizationIdentifier (2.5.4.97) var — kabul edilmez");
+  return v[0] ?? null;
 }
 
 /** ADR-0068: kayıt defterindeki WRPRC politika + durum listesi ayarı (`roles.registrar.wrprc`); yoksa null, hatalıysa yayın durur. */
@@ -1369,6 +1370,9 @@ async function registryCommand(cmd: string, args: string[]) {
   const env: RegistryEnv = {
     now: new Date(),
     certExists: (ref) => existsSync(resolve(PKI, `${ref}.cert.pem`)),
+    // O1: sertifikadaki kurum kimlik numarası başvurudaki identifiers ile karşılaştırılır; gerçek ağda numarasız sertifika RED
+    certOrgId: (ref) => certOrgIdentifier(pemToDer(readFileSync(resolve(PKI, `${ref}.cert.pem`), "utf8"))),
+    requireCertOrgId: ENVIRONMENT === "production",
     knownVcts: new Set(
       existsSync(SCHEMAS_INDEX) ? (readJson(SCHEMAS_INDEX) as Array<{ vct: string }>).map((x) => x.vct) : [],
     ),
@@ -1378,12 +1382,18 @@ async function registryCommand(cmd: string, args: string[]) {
   const pos = args.filter((a, k) => !a.startsWith("--") && !VALUED.has(args[k - 1] ?? ""));
   let next: Record<string, unknown>;
   let line: string;
+  // O5: gerçek ağ kayıt defterine yazma yalnız TAMGA_CONFIRM_PROD bu hedeflerden biriyse (kurum kısa adı ya da doğrulayıcı alan adı)
+  let targets: string[] = [pos[0] ?? ""];
   try {
     if (cmd === "register") {
       const [kind, file] = pos;
       if (!["issuer", "rp"].includes(kind ?? "") || !file)
         throw new RegistryError(["kullanım: register issuer|rp <başvuru.json> [--check]"]);
       const app = readJson(resolve(file));
+      targets =
+        kind === "issuer"
+          ? [String(app.slug ?? "")]
+          : [String(app.dns_name ?? ""), String(app.access_cert ?? "").replace(/^rp-(issuer-)?/, "")];
       next = kind === "issuer" ? addIssuer(src, app, env) : addRelyingParty(src, app, env);
       line = kind === "issuer" ? `issuer ${app.slug}: registered` : `relying_party ${app.dns_name}: registered`;
     } else if (cmd === "scope") {
@@ -1433,6 +1443,15 @@ async function registryCommand(cmd: string, args: string[]) {
   if (check) {
     console.log(`geçerli (yazılmadı): ${line}`);
     return;
+  }
+  const confirm = process.env.TAMGA_CONFIRM_PROD;
+  const named = targets.filter(Boolean);
+  if (ENVIRONMENT === "production" && (!confirm || !named.includes(confirm))) {
+    console.error(
+      `gerçek ağ kayıt defterine yazılmadı: açık onay gerekir — TAMGA_CONFIRM_PROD=${named[0] ?? "<kısa ad>"} ` +
+        `(yalnız bu adım için; sonra kaldırın; hafızadaki genel yetki geçmez). Kuru çalıştırma: --check`,
+    );
+    process.exit(2);
   }
   writeFileSync(p, JSON.stringify(next, null, 2) + "\n");
   changelog(line);

@@ -166,10 +166,10 @@ describe("keys — anahtar ve CSR", () => {
   it("klasöre yazar, .gitignore koyar, ikinci kez üzerine yazmaz", async () => {
     const dir = join(tmp, "keys-dir");
     mkdirSync(dir);
-    const r = await generateKeys(dir, b.profile!, apps);
+    const r = await generateKeys(dir, b.profile!, apps, { noPassphrase: true });
     expect(r.written.map((w) => w.name)).toEqual(["issuer-example-college", "issuer-example-college-status"]);
     expect(readFileSync(join(dir, "keys", ".gitignore"), "utf8")).toContain("*.key.pem");
-    await expect(generateKeys(dir, b.profile!, apps)).rejects.toThrow(/üzerine yazılmaz/);
+    await expect(generateKeys(dir, b.profile!, apps, { noPassphrase: true })).rejects.toThrow(/üzerine yazılmaz/);
   });
 });
 
@@ -218,7 +218,7 @@ describe("check — kurulum (yalnız okur)", () => {
     expect(rows.find((r) => r.id === "N2")!.result).toBe("fail");
   });
   it("keys sonrası anahtar ↔ CSR eşleşir; çevrimdışı ağ denetimi yok", async () => {
-    await generateKeys(dir, b.profile!, { issuer: b.issuer, rp: b.rp });
+    await generateKeys(dir, b.profile!, { issuer: b.issuer, rp: b.rp }, { noPassphrase: true });
     const rows = await installationChecks({ dir, offline: true }, { http: fakeHttp({}) });
     const k1 = rows.filter((r) => r.id === "K1");
     expect(k1).toHaveLength(2);
@@ -260,6 +260,8 @@ describe.skipIf(!ready)("check — liste (test listesi)", () => {
       slug: "example-university",
       expectVcts: ["urn:tamga:edu:DiplomaCredential:1"],
     });
+    // D4: elle verilen pin raporda uyarı
+    expect(rows.find((r) => r.id === "L0")).toMatchObject({ result: "warn", detail: expect.stringMatching(/elle/) });
     expect(rows.find((r) => r.id === "L1")!.result).not.toBe("fail");
     expect(rows.find((r) => r.id === "L2")!.result).toBe("pass");
     expect(rows.find((r) => r.id === "L4")!.result).toBe("pass");
@@ -293,7 +295,12 @@ describe("MCP sunucusu", () => {
   const root = join(tmp, "mcp-root");
   mkdirSync(root);
   const connect = async () => {
-    const server = createServer({ root, http: fakeHttp({}), dns: dns(), env: { ONBOARD_PASS: "örnek" } });
+    const server = createServer({
+      root,
+      http: fakeHttp({}),
+      dns: dns(),
+      env: { TAMGA_ONBOARD_PASS: "örnek-parola-12+", ONBOARD_PASS: "örnek-parola-12+" },
+    });
     const client = new Client({ name: "test", version: "1" });
     const [a, b] = InMemoryTransport.createLinkedPair();
     await Promise.all([server.connect(a), client.connect(b)]);
@@ -320,7 +327,7 @@ describe("MCP sunucusu", () => {
     const created = await call(c, "create_application", { answers: answers(), out_dir: "college" });
     expect(created.isError).toBe(false);
     expect(JSON.parse(created.text).written).toBe(true);
-    const keys = await call(c, "generate_keys_and_csr", { dir: "college", passphrase_env: "ONBOARD_PASS" });
+    const keys = await call(c, "generate_keys_and_csr", { dir: "college", passphrase_env: "TAMGA_ONBOARD_PASS" });
     expect(keys.isError).toBe(false);
     expect(keys.text).not.toMatch(/PRIVATE KEY/);
     expect(JSON.parse(keys.text).keys).toHaveLength(2);
@@ -329,7 +336,11 @@ describe("MCP sunucusu", () => {
     );
     const outside = await call(c, "check_installation", { dir: "../.." });
     expect(outside).toMatchObject({ isError: true, text: "path is outside the server root" });
-    const inst = await call(c, "check_installation", { dir: "college", offline: true, passphrase_env: "ONBOARD_PASS" });
+    const inst = await call(c, "check_installation", {
+      dir: "college",
+      offline: true,
+      passphrase_env: "TAMGA_ONBOARD_PASS",
+    });
     const body = JSON.parse(inst.text);
     expect(body.untrusted_data_notice).toMatch(/untrusted/);
     expect(body.rows.filter((r: { id: string }) => r.id === "K1")).toHaveLength(2);
@@ -347,19 +358,19 @@ const PKI = resolve(ROOT, "ops/pki");
 describe.skipIf(!existsSync(resolve(PKI, "root-ca.pkcs8.pem")))(
   "operatör uyumu — pki-issue aracın CSR'ını kabul eder",
   () => {
-    const run = async (args: string[]) => {
+    const run = async (args: string[], confirm?: string) => {
       const { spawnSync } = await import("node:child_process");
+      const env = { ...process.env };
+      delete env.TAMGA_CONFIRM_PROD;
+      if (confirm) env.TAMGA_CONFIRM_PROD = confirm;
       const r = spawnSync(
         process.execPath,
         [resolve(ROOT, "node_modules/tsx/dist/cli.mjs"), "ops/pki-issue.ts", ...args],
-        {
-          cwd: ROOT,
-          encoding: "utf8",
-        },
+        { cwd: ROOT, encoding: "utf8", env },
       );
       return { status: r.status, out: `${r.stdout}${r.stderr}` };
     };
-    it("--prod: CSR konusundaki kurum no ile verilir; aynı --org-id kabul, farklısı ret (ADR-0050)", async () => {
+    it("--prod: açık onay (TAMGA_CONFIRM_PROD) + --org-id zorunlu, CSR'daki kurum no ile birebir (ADR-0050, O1, O5)", async () => {
       const pki = join(tmp, "pki");
       mkdirSync(pki);
       for (const f of ["root-ca.cert.pem", "root-ca.pkcs8.pem"])
@@ -370,32 +381,23 @@ describe.skipIf(!existsSync(resolve(PKI, "root-ca.pkcs8.pem")))(
       const csr2 = join(tmp, "c2.csr.pem");
       writeFileSync(csr1, (await generateKeyAndCsr(e)).csrPem);
       writeFileSync(csr2, (await generateKeyAndCsr(s)).csrPem);
-      const ok = await run(["--prod", "--pki-dir", pki, "--name", e.name, "--csr", csr1]);
+      const base = ["--prod", "--pki-dir", pki, "--csr"];
+      const org = ["--org-id", "VATTR-1234567890"];
+      // onaysız ya da başka kurumun adıyla: imza yok
+      const noConfirm = await run([...base, csr1, "--name", e.name, ...org]);
+      expect(noConfirm.status).toBe(2);
+      expect(noConfirm.out).toMatch(/TAMGA_CONFIRM_PROD/);
+      expect((await run([...base, csr1, "--name", e.name, ...org], "baska-kurum")).status).toBe(2);
+      // --org-id yoksa: CSR'daki değer gerçek ağda yetmez
+      const noOrg = await run([...base, csr1, "--name", e.name], "example-college");
+      expect(noOrg.status).toBe(2);
+      expect(noOrg.out).toMatch(/--org-id .*zorunlu/);
+      const ok = await run([...base, csr1, "--name", e.name, ...org], "example-college");
       expect(ok.status, ok.out).toBe(0);
       expect(ok.out).toContain("2.5.4.97=VATTR-1234567890");
-      const same = await run([
-        "--prod",
-        "--pki-dir",
-        pki,
-        "--name",
-        s.name,
-        "--csr",
-        csr2,
-        "--org-id",
-        "VATTR-1234567890",
-      ]);
+      const same = await run([...base, csr2, "--name", s.name, ...org], "example-college");
       expect(same.status, same.out).toBe(0);
-      const diff = await run([
-        "--prod",
-        "--pki-dir",
-        pki,
-        "--name",
-        "issuer-x-y",
-        "--csr",
-        csr2,
-        "--org-id",
-        "VATTR-9999999999",
-      ]);
+      const diff = await run([...base, csr2, "--name", "issuer-x-y", "--org-id", "VATTR-9999999999"], "x-y");
       expect(diff.status).toBe(2);
       expect(diff.out).toMatch(/aynı değil/);
     }, 60_000);

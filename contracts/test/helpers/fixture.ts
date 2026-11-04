@@ -114,7 +114,7 @@ export async function deployFixture(): Promise<Fixture> {
         certURI: "https://pki.example/root.der",
         crlURI: "",
         status: CAStatus.ACTIVE,
-        validFrom: t,
+        validFrom: 0,
         validUntil: t + 3650 * DAY,
         registeredAt: 0,
       })
@@ -142,7 +142,7 @@ export async function deployFixture(): Promise<Fixture> {
         parentCA: caId,
         metadataURI: "",
         status: Status.ACTIVE,
-        validFrom: t,
+        validFrom: 0,
         validUntil: t + 365 * DAY,
         successorId: ZERO,
         registeredAt: 0,

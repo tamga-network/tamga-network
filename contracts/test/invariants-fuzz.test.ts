@@ -138,7 +138,7 @@ describe("K11 değişmez / fuzz — StatusListRegistry (gölge model)", function
           }
         } else {
           expected = !!m && who === "operator" && m.active;
-          ok = await attempt(() => w.retireList(lid, "k11"));
+          ok = await attempt(() => w.retireList(lid, id("k11")));
           if (ok && m) m.active = false;
         }
         expect(ok, `adım ${step} (${op}, ${who}, "${uri}")`).to.equal(expected);

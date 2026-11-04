@@ -45,7 +45,8 @@ contract RootCARegistry is TamgaRegistryBase, IRootCARegistry {
     function registerRootCA(RootCA calldata data) external onlyOwnerState(data.stateCode) {
         if (data.certFingerprint == bytes32(0)) revert EmptyFingerprint();
         if (data.status != CAStatus.ACTIVE) revert MustRegisterAsActive();
-        if (data.validUntil <= data.validFrom) revert InvalidValidity(data.validFrom, data.validUntil);
+        uint64 validFrom = _validFrom(data.validFrom);
+        if (data.validUntil <= validFrom) revert InvalidValidity(validFrom, data.validUntil);
         // ADR-0073 K1: kayıt anı göç kipinde açık tarihle; kip dışında blok zamanı (registeredAt verilmez)
         uint64 registeredAt = _effectiveDate(data.registeredAt);
 
@@ -60,7 +61,7 @@ contract RootCARegistry is TamgaRegistryBase, IRootCARegistry {
         c.certURI = data.certURI;
         c.crlURI = data.crlURI;
         c.status = CAStatus.ACTIVE;
-        c.validFrom = data.validFrom == 0 ? uint64(block.timestamp) : data.validFrom;
+        c.validFrom = validFrom;
         c.validUntil = data.validUntil;
         c.registeredAt = registeredAt;
         // Kip dışında ilk ACTIVE penceresi başlangıçsızdır (since = 0); göçte listedeki ilk durum anı.
@@ -86,12 +87,12 @@ contract RootCARegistry is TamgaRegistryBase, IRootCARegistry {
         _reinstate(caId, at);
     }
 
-    function revokeRootCA(bytes32 caId, string calldata reason) external {
-        _revoke(caId, reason, 0);
+    function revokeRootCA(bytes32 caId, bytes32 reasonHash) external {
+        _revoke(caId, reasonHash, 0);
     }
 
-    function revokeRootCAAt(bytes32 caId, string calldata reason, uint64 at) external {
-        _revoke(caId, reason, at);
+    function revokeRootCAAt(bytes32 caId, bytes32 reasonHash, uint64 at) external {
+        _revoke(caId, reasonHash, at);
     }
 
     /// @notice Planlı rotasyon (review R2). Mevcut issuer'lar çalışmaya devam eder.
@@ -128,12 +129,12 @@ contract RootCARegistry is TamgaRegistryBase, IRootCARegistry {
         emit RootCAReinstated(caId);
     }
 
-    function _revoke(bytes32 caId, string calldata reason, uint64 at) private {
+    function _revoke(bytes32 caId, bytes32 reasonHash, uint64 at) private {
         RootCA storage c = _require(caId);
         _requireOwner(c.stateCode);
         if (c.status == CAStatus.REVOKED) revert AlreadyRevoked(caId);
         _setStatus(caId, c, CAStatus.REVOKED, at);
-        emit RootCARevoked(caId, reason);
+        emit RootCARevoked(caId, reasonHash);
     }
 
     function _retire(bytes32 caId, bytes32 successorCA, uint64 at) private {

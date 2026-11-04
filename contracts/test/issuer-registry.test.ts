@@ -153,7 +153,7 @@ describe("IssuerRegistry (SPEC-BC-0001 §3)", function () {
     const edu = await f.registerNationalSchema(TR, f.trDelegate, EDU, id("edu"));
     await f.as(f.issuers, f.trDelegate).setSchemaAuthorization(f.uniIssuer, edu, true);
     const iat = await f.now();
-    await f.as(f.schemas, f.trDelegate).revokeSchema(edu, "yanlis sd:never");
+    await f.as(f.schemas, f.trDelegate).revokeSchema(edu, id("yanlis sd:never"));
     expect(await f.issuers.isCredentialSchemaAcceptable(f.uniIssuer, edu, iat)).to.equal(false);
   });
 
@@ -167,7 +167,7 @@ describe("IssuerRegistry (SPEC-BC-0001 §3)", function () {
 
   it("CA2: REVOKED CA (ele geçirilme) — belgeler düşer, operasyon sürer (iptal yayınlayabilmeli)", async () => {
     const iat = await f.now();
-    await f.as(f.rootCAs, f.trDelegate).revokeRootCA(f.trCA, "compromise");
+    await f.as(f.rootCAs, f.trDelegate).revokeRootCA(f.trCA, id("compromise"));
     expect(await f.issuers.isCredentialAcceptable(f.uniIssuer, iat)).to.equal(false);
     expect(await f.issuers.isOperational(f.uniIssuer)).to.equal(true);
     expect((await f.issuers.getIssuer(f.uniIssuer)).parentCA).to.equal(f.trCA);
@@ -185,7 +185,7 @@ describe("IssuerRegistry (SPEC-BC-0001 §3)", function () {
       parentCA: id("YOK-BOYLE-CA"),
       metadataURI: "",
       status: 1,
-      validFrom: t,
+      validFrom: 0,
       validUntil: t + DAY,
       successorId: ZERO,
       registeredAt: 0,

@@ -72,7 +72,8 @@ try {
   const { result, claims } = await verifyPresentation({ presentation: opened.response.vp_token["diploma"][0],
     aud: signer.clientId, nonce: branch.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer,
     rp: trust.relyingParty(signer.clientId) });
-  if (result.checks_performed.includes("A6")) branches.consume(); else branches.failedAttempt(branch); // used up only after A6
+  if (!result.checks_performed.includes("A6")) branches.failedAttempt(branch); // used up only after A6
+  else if (!branches.tryConsume()) throw new Error("already answered"); // atomic acceptance: another branch's response was accepted first
 } finally { branches.end(branch); }
 // a decline (error + state): registry.byState(state)?.set.decline(…) — closes only that branch; answer 200, store no reason
 ```

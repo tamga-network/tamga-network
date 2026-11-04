@@ -93,10 +93,17 @@
     },
     {
       "contract": "RelyingPartyRegistry",
-      "label": "__gap",
+      "label": "issuerRegistry",
       "slot": 58,
       "offset": 0,
-      "type": "t_array(t_uint256)40_storage"
+      "type": "t_contract(IIssuerRegistry)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "__gap",
+      "slot": 59,
+      "offset": 0,
+      "type": "t_array(t_uint256)39_storage"
     }
   ],
   "types": {
@@ -117,10 +124,10 @@
       "numberOfBytes": 32,
       "base": "t_struct(RequestScope)_storage"
     },
-    "t_array(t_uint256)40_storage": {
+    "t_array(t_uint256)39_storage": {
       "encoding": "inplace",
-      "label": "uint256[40]",
-      "numberOfBytes": 1280,
+      "label": "uint256[39]",
+      "numberOfBytes": 1248,
       "base": "t_uint256"
     },
     "t_array(t_uint256)46_storage": {
@@ -143,6 +150,11 @@
       "encoding": "inplace",
       "label": "bytes32",
       "numberOfBytes": 32
+    },
+    "t_contract(IIssuerRegistry)": {
+      "encoding": "inplace",
+      "label": "contract IIssuerRegistry",
+      "numberOfBytes": 20
     },
     "t_contract(ISovereignty)": {
       "encoding": "inplace",

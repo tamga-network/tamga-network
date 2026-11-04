@@ -18,7 +18,9 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
   `--listing`, its record in the signed trust list against embedded root pins (status, registration data, credential types,
   status list anchor, registration certificates, metadata chain to the listed root); `sandbox` prints the "Try your
   institution" steps. `tamga-onboard mcp` offers the same operations as a local MCP server (stdio; files only under its root,
-  private keys never returned, network text marked untrusted). Nothing is written to the network or the list.
+  private keys never returned, network text marked untrusted). Nothing is written to the network or the list. **Not yet on npm:**
+  it is packed with the release check but is not in the 0.8.1 publication (nine packages); its first publish comes later
+  (manual).
 - **release — packages may ship a command (`bin`).** The pack script maps `bin` to `lib/` and requires a `#!/usr/bin/env node`
   line; the smoke test runs each command with `--version` from the installed tarball. `release:version` now sets ten packages.
 
@@ -27,6 +29,35 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
 - **ops — `pki-issue --org-id` accepts a CSR that already carries the same `organizationIdentifier`** (as `tamga-onboard keys`
   writes it); a different value is refused (exit 2). Before, any `organizationIdentifier` in the CSR subject was refused when
   `--org-id` was given.
+
+### Security (second review, 2026-11-04)
+
+- **onboard — paths stay inside the onboarding folder.** `onboarding.json` is validated before use (a broken profile stops
+  the command); application file names must be `<slug>.issuer.json` / `<slug>.rp.json` and key names `issuer-…` / `rp-…`; every
+  path is checked after symbolic links and Windows junctions are resolved (nearest existing parent), in the CLI and in the MCP
+  server's root check. MCP `validate_application` reads only `*.json` and does not echo parse errors.
+- **onboard — no requests to local networks.** `check` follows redirects itself (scheme checked on every hop, at most 5) and
+  refuses loopback, private, link-local, CGNAT and IPv6 unique-local addresses after name resolution, at connect time
+  (`--allow-private` in the CLI for local tests; not available over MCP). Over MCP, request addresses outside the institution's
+  domain are reported as a warning row.
+- **onboard — private key files.** On Windows the key file is created empty, narrowed with `icacls` and only then written; if
+  `icacls` fails the file is removed and the command stops. Keys are not written under OneDrive / Dropbox / Google Drive / iCloud
+  folders without `--allow-synced`; on Windows an unencrypted key needs `--no-passphrase`; a passphrase has at least 12
+  characters, and over MCP the passphrase variable name must start with `TAMGA_`.
+- **onboard — trust list checks.** Root pins can no longer be overridden over MCP; a `--pin` given in the CLI is reported as a
+  warning row. Registration certificates listed in the unsigned `wrprc/index.json` are now downloaded and their signature is
+  verified against the registrar keys of the signed list (row H5, also for verifiers).
+- **ops — `pki-issue` reads the CSR subject as an ASN.1 name, not as text.** Only CN, OU, O, `organizationIdentifier` and C
+  are taken, each at most once (two `organizationIdentifier` values, unknown attributes and multi-valued RDNs are refused); the
+  certificate subject is rebuilt from these fields. With `--prod`, `--org-id` is required for every certificate and must equal
+  the value in the CSR. Signing with the production root needs `TAMGA_CONFIRM_PROD=<institution slug>` matching the certificate
+  name.
+- **trust-publisher — registration checks the certificate's institution number.** `register` compares the certificate's
+  `organizationIdentifier` (ASN.1, not text) with the application's `identifiers` (issuer certificate, status list certificate
+  and a verifier's own access certificate); on the production registry a certificate without it is refused. Writing to the
+  production registry (`register`, `status`, `authorize`, `scope`, `rp-status`, `end-use` without `--check`) needs
+  `TAMGA_CONFIRM_PROD` set to the slug or DNS name of the record.
+- **repository — `*.key.pem` is ignored in every folder.**
 
 ### Applications and repository (not in the npm packages)
 
@@ -88,14 +119,68 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
   it; status list and anchor versions may grow by at most `MAX_VERSION_STEP` (1 000 000) per step, so `version = 2^64-1` can no
   longer freeze a list; unused `CANCELLED`, `ProposalCancelled` and `SchemaNotAuthorized` removed. The anchor registry ABI copy in
   `apps/trust-publisher/src/chain/abi/` is regenerated.
+- **contracts — security review (2026-11-04).** No deployed state; storage layout baselines updated.
+  - *High:* the single migration executor could permanently revoke a network schema during the window. It now writes only
+    registrations, version digests and deprecations; revoking a network schema is Governance-only (`NetworkTierRequiresGovernance`).
+  - *Medium:* voted `NetworkRegistry` proposals could be executed by anyone in any order (e.g. an old `ACTIVE` after `REVOKED`),
+    and executed content could be re-staged and written again by an old proposal. A stage is now bound to the record's write
+    counter (`stageId = keccak256(abi.encode(rec, baseRevision))`, `revisionOf`, `stageIdFor`, `stagedRevisionOf`); a commit on a
+    changed record reverts (`StaleStage`), so any newer write supersedes pending proposals. `REVOKED` is not final for network
+    records (ADR-0074 does not say so); re-activation needs a proposal staged after the revocation. Every write emits
+    `RecordWritten(kind, recordId, stageId, contentHash, revision)`; status changes emit `RecordStatusChanged`. A proposer can
+    withdraw an unexecuted proposal: `Governance.cancelProposal` (`ProposalStatus.CANCELLED` re-added at the end,
+    `ProposalCancelled`, `NotProposer`).
+  - *Medium:* "cannot be reopened by an upgrade" relied only on the before/after comparison. Registries now refuse upgrades while
+    their window is open (`UpgradeDuringMigration`), and `contracts:check` pins the source digest of `MigrationWindow.sol`
+    (`storage-layout/MigrationWindow.pin.json`, `--update-pin`), its ERC-7201 slot, and that no other source references the slot
+    or uses inline assembly. ADR-0073 carries a dated implementation note (decision unchanged).
+  - *Medium, decision needed:* relying party identity ownership and re-registration after revocation — ADR-0075 (Proposed);
+    contract behaviour unchanged until accepted.
+  - *Low:* while the window is open, undated ordinary writes (`at = 0`, `registeredAt = 0`, `publishList(publishedAt = 0)`) are
+    refused except from Governance (`DateRequiredDuringMigration`; ADR-0073 K1 "dates explicit"); a closed request scope or gate
+    group cannot be silently reopened under the same id (`ScopeClosed`, `TerminalGroupNotOpen`); a gate group's institution must
+    be the relying party itself or a registered relying party / issuer of the same state (`UnknownInstitution`;
+    `RelyingPartyRegistry.initialize` takes the issuer registry); outside the window issuer and root CA `validFrom` cannot be in
+    the past and `validUntil` is checked against the effective start; revocation reasons are `bytes32 reasonHash` digests
+    (`revokeSchema`, `revokeRootCA`, `retireList`, `proposeNetworkSchemaRevocation`; the privacy ABI test no longer allows a
+    `reason` string); `Initializable` / `UUPSUpgradeable` imported from `@openzeppelin/contracts` (same code in 5.6, namespaced
+    storage). Not changed: the quota exemption stays for the whole window (CE1), and `isChainAcceptableAt` does not check the CA
+    validity interval (the list rule does not either; CE6).
+  - Slither is green (0 results): `SchemaRegistrySet(address indexed)`, four false positives excluded inline with reasons;
+    `scripts/slither.mjs` finds a `pip --user` install. New tests: `security-round-2026-11-04.test.ts` and
+    `migration-invariants-fuzz.test.ts` (history order, ordinary write vs replay, executor powers; seeded).
 
 ## 0.8.1 — 2026-11-04
 
-All nine packages move to 0.8.1 together (patch release). No breaking change: all additions are optional fields or methods;
-the changes below come from the 2026-11-04 review round (per-branch lock, Digital Credentials API audience, registration status
+All nine packages move to 0.8.1 together (patch release). The API additions are optional (new methods and fields;
+`VerifyInput.aud` became optional — a widened type). Some behaviours changed in the fail-closed direction; they are listed under
+"Behaviour changes in 0.8.1" below. The version stays 0.8.1 (0.x test release; every change refuses more, never accepts more).
+The changes come from the 2026-11-04 review round (per-branch lock, Digital Credentials API audience, registration status
 warning, mdoc namespace scope, ambiguous gate groups).
 
+### Behaviour changes in 0.8.1 (fail-closed, with migration)
+
+1. **verifier — Digital Credentials API audience.** A mismatching `aud` on this path is rejected at A1 with an explicit message
+   (was: a generic "aud mismatch" at A6); `origin` together with `aud` = `client_id` is now REJECTED (the audience on this path
+   is `origin:<origin>`, also for signed requests). Migrate: pass `origin` and leave `aud` out.
+2. **trust — gate groups are `null` / inactive when ambiguous.** `terminalGroup(id)` returns `null` when the same `group_id`
+   appears in more than one verifier record; `terminalGroupByCertFingerprint(fp)` returns `null` when the fingerprint is in more
+   than one active group; a verifier whose `dns_name` appears in more than one national list is ambiguous
+   (`relyingPartyByDnsName` → `null`, its groups inactive); a group's `institution_id` slug is looked up in the verifier's own
+   national list only.
+3. **wallet-core — mdoc registration scope is narrower.** `allowedClaims` lists only elements whose `[namespace, element]` path
+   matches the request's namespace; a single-element path without a namespace grants nothing for an mdoc registration. Elements
+   outside it are shown as over-asking.
+4. **verifier — per-branch lock; `consume()` throws once the presentation is completed.** `begin(branch)` locks only that
+   branch, so two branches' valid responses can be verified at the same time. `BranchSet.consume()` now throws
+   `PresentationAlreadyConsumedError` when the presentation is already completed: the 0.8.0 pattern `isOpen` → `await
+   verifyPresentation` → `consume()` fails instead of accepting a second response. Migrate: accept with
+   `if (!branches.tryConsume()) { /* do not accept */ }`. A failed-attempt limit no longer rejects the presentation while another
+   response is being processed (only that branch closes).
+
 ### Added
+
+- **verifier — `PresentationAlreadyConsumedError`** (thrown by `BranchSet.consume()` on a completed presentation; see above).
 
 - **verifier — `BranchSet.tryConsume()` and `BranchSet.declineBlocked(branch)`.** `tryConsume` completes the presentation
   atomically and returns `false` when another response already did (use it instead of `consume` when accepting);
@@ -120,8 +205,14 @@ warning, mdoc namespace scope, ambiguous gate groups).
   whose `[namespace, element]` path in the certificate matches the request's namespace (OpenID4VP and proximity); an element of
   the same name in another namespace counts as over-asking.
 - **trust — ambiguous gate groups are closed.** `terminalGroup(id)` returns `null` when the same `group_id` appears in more than
-  one verifier record (e.g. two national lists); a group whose `institution_id` slug matches more than one issuer record is not
-  active.
+  one verifier record (e.g. two national lists); `terminalGroupByCertFingerprint` returns `null` when the fingerprint is in more
+  than one active group (a withdrawn old group does not count); a verifier `dns_name` listed by more than one national list is
+  ambiguous (`relyingPartyByDnsName` → `null`, its groups inactive); a group's `institution_id` slug is matched only against the
+  issuers of the verifier's own national list (institution + country), and is not active if that still matches more than one.
+- **wallet-core — an mdoc registration path without a namespace (`[element]`) grants nothing** (was: allowed the element in any
+  namespace).
+- **verifier — `failedAttempt` does not reject the presentation while another response is being processed**; it closes only that
+  branch (on the branch-less path the limit applies once the other response is done).
 
 ### Fixed
 
@@ -157,7 +248,10 @@ warning, mdoc namespace scope, ambiguous gate groups).
   SPEC-PROTO-0001 §2.1 `display[].locale` canonicalisation (full ICU note); SPEC-CRED-0002 Ş5(g) forbidden claim names
   (`__proto__`, `constructor`, `prototype`); SPEC-CRED-0003 §3.3 `0x03` is APPLICATION_SPECIFIC and read fail-closed;
   ADR-0067 K1 note on `request_uri_method` and residual-risk note on the per-branch lock; hosted verifier OpenAPI (Annex C
-  decline).
+  decline). SPEC-PROTO-0002 §10.1 change note 2026-11-04 (per-branch lock, atomic acceptance, 400 for a decline while a response
+  is processed, `consume()` throws once completed) and §6.1 (mdoc scope by namespace + element); SPEC-API-0001 §1.A A1 also
+  carries caller configuration errors, example `sdk_version` 0.8.1; ADR-0067 note on the Annex C decline 400; verifier README and
+  "Verify on your own server" guide accept with `tryConsume()`.
 
 ## 0.8.0 — 2026-11-03
 

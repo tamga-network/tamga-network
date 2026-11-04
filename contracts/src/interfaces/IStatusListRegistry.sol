@@ -28,7 +28,8 @@ interface IStatusListRegistry is ITamgaErrors {
         bytes32 indexed listId, bytes32 indexed issuerId, string listURI, uint32 listSize, uint8 bitsPerEntry
     );
     event ListPublished(bytes32 indexed listId, uint64 version, bytes32 contentHash, uint64 publishedAt);
-    event ListRetired(bytes32 indexed listId, string reason);
+    /// @dev Güvenlik turu 2026-11-04: gerekçe serbest metin değil, özetidir (ADR-0074 PJ2).
+    event ListRetired(bytes32 indexed listId, bytes32 reasonHash);
 
     error ListExists(bytes32 listId);
     error UnknownList(bytes32 listId);
@@ -50,7 +51,7 @@ interface IStatusListRegistry is ITamgaErrors {
     function registerList(bytes32 issuerId, string calldata listURI, uint32 listSize, uint8 bitsPerEntry)
         external returns (bytes32);
     function publishList(bytes32 listId, bytes32 contentHash, uint64 version, uint64 publishedAt) external;
-    function retireList(bytes32 listId, string calldata reason) external;
+    function retireList(bytes32 listId, bytes32 reasonHash) external;
 
     function getListAnchor(bytes32 listId) external view returns (ListAnchor memory);
     function matchesContentHash(bytes32 listId, bytes32 hash) external view returns (bool);
