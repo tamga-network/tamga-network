@@ -53,7 +53,7 @@ const SITE = "https://shop.example";
 const approvalFor = (req: VpRequest) => checkRp(null, req, { requested: [] } as unknown as Match).approval!;
 
 describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (su.engineering)", () => {
-  const ISS = "https://issuer.tamga.network/bilgi";
+  const ISS = "https://issuer.tamga.network/example-university";
   const VCT = "urn:tamga:edu:DiplomaCredential:1";
   const STATUS_URI = "https://status.tamga.network/feedfacefeedface";
   const ID_ISS = "https://id.tamga.network";
@@ -201,8 +201,8 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
         family_name: "Yılmaz",
         given_name: "Ayşe",
         birth_date: "2001-05-05",
-        awarding_body_name: { "tr-TR": "Bilgi" },
-        awarding_body_id: "bilgi",
+        awarding_body_name: { "tr-TR": "Örnek Üniversitesi" },
+        awarding_body_id: "example-university",
         awarding_body_country: "TR",
         qualification_title: { "tr-TR": "Bilgisayar Müh." },
         eqf_level: 6,

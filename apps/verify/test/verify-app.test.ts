@@ -62,10 +62,10 @@ import {
   type Match as MatchForTest,
   type VpRequest as VpRequestForTest,
 } from "@tamga-network/wallet-core";
-// Test listesi (dist-test, test/fixtures/registry) bilet kapısını `bubilet-gate` adıyla taşır; politikaların varsayılan grup adı
+// Test listesi (dist-test, test/fixtures/registry) bilet kapısını `example-events-gate` adıyla taşır; politikaların varsayılan grup adı
 // sandbox'ın kurgusal kurumudur (example-events-gate, 2026-11-04) — bu dosya listedeki adı kullanır (modüller yüklenmeden önce).
 vi.hoisted(() => {
-  process.env.TAMGA_VERIFY_TICKET_GROUP ??= "bubilet-gate";
+  process.env.TAMGA_VERIFY_TICKET_GROUP ??= "example-events-gate";
 });
 /** ADR-0056 K8: testte `respond` için `checkRp` onayı (kayıtsız doğrulayıcı: engelleyici durum yok). */
 const testApproval = (req: VpRequestForTest) =>
@@ -90,9 +90,9 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     dataDir: join(tmpdir(), "tamga-verify-test-" + process.pid),
     requireRpAuth: false,
     // ADR-0065: kapılar terminal anahtarıyla gelir (ortamdan yüklenen deneme anahtarları — sandbox/yerel yolu)
-    terminalKeys: "bilgi-campus:test-campus-key-0001,bubilet-gate:test-gate-key-0001",
+    terminalKeys: "example-university-turnstiles:test-campus-key-0001,example-events-gate:test-gate-key-0001",
   };
-  const ISS = "https://issuer.tamga.network/bilgi";
+  const ISS = "https://issuer.tamga.network/example-university";
   const VCT = "urn:tamga:edu:DiplomaCredential:1";
   const STATUS_URI = "https://status.tamga.network/feedfacefeedface";
   let app: Awaited<ReturnType<typeof buildVerifyApp>>;
@@ -151,8 +151,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         family_name: "Yılmaz",
         given_name: "Ayşe",
         birth_date: "2001-05-05",
-        awarding_body_name: { "tr-TR": "Bilgi" },
-        awarding_body_id: "bilgi",
+        awarding_body_name: { "tr-TR": "Örnek Üniversitesi" },
+        awarding_body_id: "example-university",
         awarding_body_country: "TR",
         qualification_title: { "tr-TR": "Bilgisayar Müh." },
         eqf_level: 6,
@@ -426,8 +426,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
           family_name: "Yılmaz",
           given_name: "Ayşe",
           birth_date: "2001-05-05",
-          awarding_body_name: { "tr-TR": "Bilgi" },
-          awarding_body_id: "bilgi",
+          awarding_body_name: { "tr-TR": "Örnek Üniversitesi" },
+          awarding_body_id: "example-university",
           awarding_body_country: "TR",
           student_status: "ACTIVE",
           enrollment_year: 2022,
@@ -1008,9 +1008,9 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     });
     expect(bad.statusCode).toBe(400);
     expect(bad.body).not.toContain("<script>alert");
-    const ok = await app.inject({ method: "GET", url: "/terminal?group=bubilet-gate" });
+    const ok = await app.inject({ method: "GET", url: "/terminal?group=example-events-gate" });
     expect(ok.statusCode).toBe(200);
-    expect(ok.body).toContain('data-group="bubilet-gate"'); // K10: değer betiğe değil, kaçışlı data özniteliğine
+    expect(ok.body).toContain('data-group="example-events-gate"'); // K10: değer betiğe değil, kaçışlı data özniteliğine
     expect(jsLit("</script><script>x")).not.toContain("</");
     expect(jsLit("a b")).toBe('"a\\u2028b"');
   });
@@ -1806,8 +1806,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         family_name: "Yılmaz",
         given_name: "Ayşe",
         birth_date: "2001-05-05",
-        awarding_body_name: { "tr-TR": "Bilgi" },
-        awarding_body_id: "bilgi",
+        awarding_body_name: { "tr-TR": "Örnek Üniversitesi" },
+        awarding_body_id: "example-university",
         awarding_body_country: "TR",
         qualification_title: { "tr-TR": "Bilgisayar Müh." },
         eqf_level: 6,
@@ -2064,21 +2064,21 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         method: "POST",
         url: "/terminal/verify",
         headers: { authorization: "Bearer test-campus-key-0001" },
-        payload: { token: "bozuk", terminal_group: "bilgi-campus" },
+        payload: { token: "bozuk", terminal_group: "example-university-turnstiles" },
       });
       expect(v.json().ok).toBe(false);
-      expect((await app.inject({ method: "GET", url: "/stats/gates?group=bilgi-campus" })).statusCode).toBe(404);
+      expect((await app.inject({ method: "GET", url: "/stats/gates?group=example-university-turnstiles" })).statusCode).toBe(404);
       const r = await app.inject({
         method: "GET",
-        url: "/stats/gates?group=bilgi-campus,<x>&days=7",
+        url: "/stats/gates?group=example-university-turnstiles,<x>&days=7",
         headers: { "x-admin-token": "stats-token" },
       });
       const j = r.json() as {
         groups: string[];
         rows: Array<{ group: string; rejected: number; reasons: Record<string, number> }>;
       };
-      expect(j.groups).toEqual(["bilgi-campus"]); // geçersiz grup adı atıldı
-      const row = j.rows.find((x) => x.group === "bilgi-campus")!;
+      expect(j.groups).toEqual(["example-university-turnstiles"]); // geçersiz grup adı atıldı
+      const row = j.rows.find((x) => x.group === "example-university-turnstiles")!;
       expect(row.rejected).toBeGreaterThanOrEqual(1);
       expect(row.reasons["token unreadable"]).toBeGreaterThanOrEqual(1);
       expect(JSON.stringify(j)).not.toMatch(/pass_id|passId/);
@@ -2096,16 +2096,16 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         (
           await app.inject({
             method: "GET",
-            url: "/stats/gates?group=bubilet-gate&days=0",
+            url: "/stats/gates?group=example-events-gate&days=0",
             headers: { "x-admin-token": "stats-token" },
           })
         ).json() as { rows: Array<{ group: string; rejected: number; accepted: number }> };
-      const row = (r: Awaited<ReturnType<typeof stats>>) => r.rows.find((x) => x.group === "bubilet-gate");
+      const row = (r: Awaited<ReturnType<typeof stats>>) => r.rows.find((x) => x.group === "example-events-gate");
       const b0 = row(await stats());
       const post = (headers: Record<string, string>, payload: Record<string, unknown>) =>
         app.inject({ method: "POST", url: "/terminal/verify", headers, payload });
       // anahtarsız → 401 + WWW-Authenticate; jetona dokunulmadı (sayaç değişmedi)
-      const noKey = await post({}, { token: "bozuk", terminal_group: "bubilet-gate" });
+      const noKey = await post({}, { token: "bozuk", terminal_group: "example-events-gate" });
       expect(noKey.statusCode).toBe(401);
       expect(noKey.headers["www-authenticate"]).toMatch(/^Bearer/);
       expect(noKey.json()).toEqual({ ok: false, reason: "terminal key required" });
@@ -2115,7 +2115,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       // kampüs anahtarıyla bilet kapısı gibi davranılamaz
       const wrong = await post(
         { authorization: "Bearer test-campus-key-0001" },
-        { token: "bozuk", terminal_group: "bubilet-gate" },
+        { token: "bozuk", terminal_group: "example-events-gate" },
       );
       expect(wrong.statusCode).toBe(403);
       expect(row(await stats())?.rejected ?? 0).toBe(b0?.rejected ?? 0);
@@ -2141,7 +2141,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     try {
       expect((await app.inject({ method: "GET", url: "/terminal/keys" })).statusCode).toBe(404);
       expect(
-        (await app.inject({ method: "POST", url: "/terminal/keys", payload: { terminal_group: "bubilet-gate" } }))
+        (await app.inject({ method: "POST", url: "/terminal/keys", payload: { terminal_group: "example-events-gate" } }))
           .statusCode,
       ).toBe(404);
       const unknown = await app.inject({
@@ -2155,17 +2155,17 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         method: "POST",
         url: "/terminal/keys",
         headers: admin,
-        payload: { terminal_group: "bubilet-gate", label: "kapı 1" },
+        payload: { terminal_group: "example-events-gate", label: "kapı 1" },
       });
       expect(made.statusCode).toBe(201);
       const k = made.json() as { id: string; key: string; terminal_group: string };
       expect(k.key).toMatch(/^tk_/);
-      expect(k.terminal_group).toBe("bubilet-gate");
+      expect(k.terminal_group).toBe("example-events-gate");
       const list = (await app.inject({ method: "GET", url: "/terminal/keys", headers: admin })).json() as {
         keys: Array<Record<string, unknown>>;
       };
       const mine = list.keys.find((x) => x.id === k.id)!;
-      expect(mine).toMatchObject({ terminalGroup: "bubilet-gate", label: "kapı 1", source: "issued" });
+      expect(mine).toMatchObject({ terminalGroup: "example-events-gate", label: "kapı 1", source: "issued" });
       expect(JSON.stringify(list)).not.toContain(k.key);
       expect(list.keys.some((x) => x.source === "env")).toBe(true);
       // verilen anahtar çalışır; iptalden sonra 401

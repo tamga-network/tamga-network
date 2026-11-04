@@ -1,6 +1,6 @@
 # Test güven listesi kaynağı
 
-Uçtan uca testlerin kullandığı kayıt defteri: örnek kurumlar (`bilgi`, `bubilet`) ve doğrulayıcının bütün kullanımları burada
+Uçtan uca testlerin kullandığı kayıt defteri: örnek kurumlar (`example-university`, `example-events`) ve doğrulayıcının bütün kullanımları burada
 ACTIVE'dir. **Gerçek ağın kaynağı değildir** — gerçek ağ `../../../registry/`'dedir ve orada test/demo kurumu yoktur (örnek
 kurumlar REVOKED, geçmişiyle). Deneme senaryoları için ayrı test ağı: `../../../registry-sandbox/`.
 

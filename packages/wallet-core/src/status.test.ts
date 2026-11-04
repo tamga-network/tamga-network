@@ -26,7 +26,7 @@ describe.skipIf(!have)("cüzdan: belge iptal durumu (VCR_19)", async () => {
   bits.set(11, 3 as StatusValue); // uygulamaya özgü değer
   const token = await signStatusListToken({
     signer,
-    iss: "https://issuer.tamga.network/bilgi",
+    iss: "https://issuer.tamga.network/example-university",
     uri: URI,
     bitstring: bits,
     iat: now,

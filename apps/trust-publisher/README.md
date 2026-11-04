@@ -29,6 +29,7 @@ Liste biçimi: [[SPEC-TRUST-0001]]. Dış listeler (federasyon, ETSI TS 119 602)
 | `npx tsx apps/trust-publisher/src/cli.ts end-use <dns_name> <kullanım>` | doğrulayıcının bir kullanımını / kapı grubunu sona erdirir                          |
 | `npm run trust:test-fixtures`                                           | testlerin listesini üretir (`test/fixtures/registry` → `dist-test/`)                |
 | `npm run trust:build:sandbox`                                           | sandbox listesini üretir (`registry-sandbox` + `ops/pki-sandbox` → `dist-sandbox/`) |
+| `npx tsx apps/trust-publisher/src/cli.ts history-reset --reason <r>`    | yalnız sandbox: yayın geçmişini temizler (aşağıda)                                  |
 | `npm run trust:list`                                                    | kayıtlı kurumlar ve doğrulayıcılar                                                  |
 | `npm run trust:wallet-provider -- list\|show [--id <id>]`               | cüzdan sağlayıcılar (gerçek + sandbox kayıt defteri)                                |
 | `npm run trust:wallet-provider -- check --id <id> --cert <pem>`         | sertifikayı aynı kurallarla denetler, hiçbir şey yazmaz (anahtar yenilemesi)        |
@@ -62,6 +63,14 @@ verisi (posta adresleri) yayını durdurur, sandbox'ta uyarıdır. Bugünkü `tl
 `TAMGA_TL119612=1`, `TAMGA_TL119612_SIGNER=tl-xml-signer-1`; kayıtlarda "Sandbox (TEST)" yer tutucu adresler). Gerçek ağda bayrak,
 gerçek posta adresleri ve üretim imza sertifikası gelmeden açılmaz (`ops/README.md` "XML liste imzacısı"). URI'lerin açıklaması:
 `docs/concepts/etsi-trusted-list.md`.
+
+**Sandbox geçmiş temizliği (`history-reset`, ADR-0038 K5).** Sandbox yayın klasörü zamanla eski test kayıtlarının adlarını
+taşıyan geçmiş biriktirir. `history-reset --reason <gerekçe>` (yalnız sandbox kayıt defteriyle ve adı `sandbox` içeren yayın
+klasöründe) arşivde her listenin yalnız son sürümünü bırakır, durum dosyası kopyalarını tek güncel kopyaya indirir, CHANGELOG'u
+tek satırla yeniden başlatır ve yayımlanmayan iptal edilmiş kayıt sertifikalarının yolunu `(retired)` yapar. Güncel imzalı
+listeler ve sürüm zinciri (TL2), durum listesinin bitleri (iptal iptal kalır, geçerli sertifikalar aynı indeksle geçerli),
+elle iptal engelleri ve çapa günlüğü değişmez. Tekrar çalıştırmak değişiklik yapmaz. Sunucuda: `sandbox-setup.sh reset-history`.
+Testler: `test/history-reset.test.ts`.
 
 Bir kayıt listeden **silinmez** (SPEC-TRUST-0001 TL2): kurum ya da doğrulayıcı geri çekilirken durumu değişir ve
 `status_history`'ye eklenir. Hiç geçerli olmaması gereken kayıt (ör. gerçek ağdaki örnek kurum) `REVOKED` +

@@ -21,7 +21,7 @@ const cred = (vct: string, issuerId: string, receivedAt: number): StoredCredenti
   id: `c-${vct}`,
   vct,
   typeName: "Student",
-  issuer: "https://issuer.tamga.network/bilgi",
+  issuer: "https://issuer.tamga.network/example-university",
   issuerId,
   leafFingerprint: "f",
   iat: receivedAt / 1000,
@@ -77,10 +77,10 @@ const lookup: Ts10Lookup = {
     dpaContact: ["https://www.kvkk.gov.tr"],
   }),
   issuer: () => ({
-    name: "Bilgi",
+    name: "Örnek Üniversitesi",
     contact: ["TR"],
     issuerType: "NonQEAAProvider",
-    supplyPointURL: "https://issuer.tamga.network/bilgi",
+    supplyPointURL: "https://issuer.tamga.network/example-university",
   }),
 };
 
@@ -119,7 +119,7 @@ describe("TS10 işlem günlüğü", () => {
       expect.objectContaining({
         credentialIdentifier: "urn:tamga:edu:StudentCredential:1",
         format: "dc+sd-jwt",
-        supplyPointURL: "https://issuer.tamga.network/bilgi",
+        supplyPointURL: "https://issuer.tamga.network/example-university",
       }),
     ]);
     expect(d.nonDeviceBoundCredentials).toEqual([]);

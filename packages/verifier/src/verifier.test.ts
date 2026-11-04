@@ -33,7 +33,7 @@ const ready = existsSync(resolve(PKI, "issuer-bilgi.pkcs8.pem")) && existsSync(r
 const AUD = existsSync(resolve(PKI, "rp-verify.cert.pem"))
   ? x509HashClientId(pemToDer(readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8")))
   : ""; // ADR-0034: x509_hash
-const ISS = "https://issuer.tamga.network/bilgi";
+const ISS = "https://issuer.tamga.network/example-university";
 const VCT = "urn:tamga:edu:DiplomaCredential:1";
 const policy: Policy = {
   policy_id: "t",
@@ -88,8 +88,8 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     family_name: "Yılmaz",
     given_name: "Ayşe",
     birth_date: "2001-05-05",
-    awarding_body_name: { "tr-TR": "İstanbul Bilgi Üniversitesi" },
-    awarding_body_id: "bilgi",
+    awarding_body_name: { "tr-TR": "Örnek Üniversitesi" },
+    awarding_body_id: "example-university",
     awarding_body_country: "TR",
     qualification_title: { "tr-TR": "Bilgisayar Mühendisliği Lisans" },
     eqf_level: 6,

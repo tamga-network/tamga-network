@@ -12,7 +12,7 @@ import {
 
 const env: RegistryEnv = {
   now: new Date("2026-10-01T00:00:00Z"),
-  certExists: (r) => ["issuer-yeni", "rp-yeni", "issuer-bilgi"].includes(r),
+  certExists: (r) => ["issuer-yeni", "rp-yeni", "issuer-example-university"].includes(r),
   knownVcts: new Set(["urn:tamga:edu:StudentCredential:1", "urn:tamga:edu:DiplomaCredential:1"]),
 };
 const registration = {
@@ -26,8 +26,8 @@ const src = () => ({
   root_cas: [{ cert: "root-ca" }],
   issuers: [
     {
-      slug: "bilgi",
-      cert: "issuer-bilgi",
+      slug: "example-university",
+      cert: "issuer-example-university",
       status: "ACTIVE",
       category: "EDUCATION",
       class: "EAA",
@@ -96,7 +96,7 @@ describe("operatör kayıt aracı", () => {
   it("eksiklerin tamamı tek hatada", () => {
     const bad = {
       ...issuerApp,
-      slug: "bilgi",
+      slug: "example-university",
       class: "QUALIFIED",
       cert: "yok",
       vcts: ["urn:tamga:x:Y:1"],
@@ -132,7 +132,7 @@ describe("operatör kayıt aracı", () => {
   });
 
   it("aynı sertifika iki kurumda kullanılamaz", () => {
-    expect(() => addIssuer(src(), { ...issuerApp, cert: "issuer-bilgi" }, env)).toThrow(/başka bir kurumda/);
+    expect(() => addIssuer(src(), { ...issuerApp, cert: "issuer-example-university" }, env)).toThrow(/başka bir kurumda/);
   });
 
   it("doğrulayıcı başvurusu + yeni kullanım; gizlilik politikası zorunlu", () => {
@@ -173,21 +173,21 @@ describe("operatör kayıt aracı", () => {
   });
 
   it("şema yetkisi: ver, kaldır (kayıt silinmez, bitiş tarihi), tekrar ver", () => {
-    let s = setAuthorization(src(), "bilgi", "urn:tamga:edu:DiplomaCredential:1", true, env);
-    expect(() => setAuthorization(s, "bilgi", "urn:tamga:edu:DiplomaCredential:1", true, env)).toThrow(/zaten yetkili/);
-    s = setAuthorization(s, "bilgi", "urn:tamga:edu:StudentCredential:1", false, env);
+    let s = setAuthorization(src(), "example-university", "urn:tamga:edu:DiplomaCredential:1", true, env);
+    expect(() => setAuthorization(s, "example-university", "urn:tamga:edu:DiplomaCredential:1", true, env)).toThrow(/zaten yetkili/);
+    s = setAuthorization(s, "example-university", "urn:tamga:edu:StudentCredential:1", false, env);
     const auths = s.issuers[0].schema_authorizations;
     expect(auths).toHaveLength(2);
     expect(auths[0]).toMatchObject({
       vct: "urn:tamga:edu:StudentCredential:1",
       valid_until: "2026-10-01T00:00:00.000Z",
     });
-    s = setAuthorization(s, "bilgi", "urn:tamga:edu:StudentCredential:1", true, env);
+    s = setAuthorization(s, "example-university", "urn:tamga:edu:StudentCredential:1", true, env);
     expect(s.issuers[0].schema_authorizations).toHaveLength(3);
   });
 
   it("özet eksik kayıt verisini gösterir", () => {
     const lines = summarize(src());
-    expect(lines[0]).toMatch(/^kurum\s+bilgi\s+ACTIVE\s+EDUCATION\/EAA\/I2\s+1 tür\s+eksik: trade_name/);
+    expect(lines[0]).toMatch(/^kurum\s+example-university\s+ACTIVE\s+EDUCATION\/EAA\/I2\s+1 tür\s+eksik: trade_name/);
   });
 });

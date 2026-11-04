@@ -39,7 +39,7 @@ const havePki = existsSync(resolve(PKI, "issuer-bilgi.pkcs8.pem"));
 
 describe("b64 / utf8", () => {
   it("gidiş-dönüş ve Türkçe karakterler", () => {
-    const s = "İstanbul Bilgi Üniversitesi — ğüşöçı 😀";
+    const s = "Örnek Üniversitesi — ğüşöçı 😀";
     expect(utf8Decode(utf8(s))).toBe(s);
     expect(b64uDecode(b64u(utf8(s)))).toEqual(utf8(s));
     expect(b64u(new Uint8Array([0xfb, 0xff, 0xfe]))).toBe("-__-");
@@ -54,13 +54,13 @@ describe("SoftwareKeyProvider + JWT", () => {
     expect(a.x).not.toBe(b.x);
     const jwt = await signJwt(
       { typ: "openid4vci-proof+jwt", jwk: a },
-      { aud: "https://issuer.tamga.network/bilgi", nonce: "n", iat: 1 },
+      { aud: "https://issuer.tamga.network/example-university", nonce: "n", iat: 1 },
       keys,
       "c1.0",
     );
     expect(verifyJwt(jwt, a).payload.nonce).toBe("n");
     const { payload } = await compactVerify(jwt, await importJWK(a as JWK, "ES256"));
-    expect(JSON.parse(new TextDecoder().decode(payload)).aud).toBe("https://issuer.tamga.network/bilgi");
+    expect(JSON.parse(new TextDecoder().decode(payload)).aud).toBe("https://issuer.tamga.network/example-university");
     expect(() => verifyJwt(jwt, b)).toThrow();
     expect((await keys.attestation()).level).toBe("W1");
     await keys.delete("c1.0");
@@ -73,10 +73,10 @@ describe("offer ayrıştırma", () => {
   it("deep link, URL, inline JSON", () => {
     expect(
       parseOffer(
-        "openid-credential-offer://?credential_offer_uri=https%3A%2F%2Fissuer.tamga.network%2Fbilgi%2Foffers%2Fabc",
+        "openid-credential-offer://?credential_offer_uri=https%3A%2F%2Fissuer.tamga.network%2Fexample-university%2Foffers%2Fabc",
       ).offerUri,
-    ).toBe("https://issuer.tamga.network/bilgi/offers/abc");
-    expect(parseOffer("https://issuer.tamga.network/bilgi/offers/abc").offerUri).toContain("/offers/abc");
+    ).toBe("https://issuer.tamga.network/example-university/offers/abc");
+    expect(parseOffer("https://issuer.tamga.network/example-university/offers/abc").offerUri).toContain("/offers/abc");
     expect(
       parseOffer('{"credential_issuer":"https://i.test/x","credential_configuration_ids":["v"]}').offer
         ?.credential_issuer,
@@ -89,11 +89,11 @@ describe("offer ayrıştırma", () => {
     expect(() => parseOffer("openid-credential-offer://?credential_offer_uri=javascript:alert(1)")).toThrow(
       /web address/,
     );
-    expect(issuerMetadataUrl("https://issuer.tamga.network/bilgi")).toBe(
-      "https://issuer.tamga.network/.well-known/openid-credential-issuer/bilgi",
+    expect(issuerMetadataUrl("https://issuer.tamga.network/example-university")).toBe(
+      "https://issuer.tamga.network/.well-known/openid-credential-issuer/example-university",
     );
-    expect(issuerMetadataUrl("http://192.168.1.5:4001/bilgi/")).toBe(
-      "http://192.168.1.5:4001/.well-known/openid-credential-issuer/bilgi",
+    expect(issuerMetadataUrl("http://192.168.1.5:4001/example-university/")).toBe(
+      "http://192.168.1.5:4001/.well-known/openid-credential-issuer/example-university",
     );
   });
 });
@@ -102,7 +102,7 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
   const leafPem = readFileSync(resolve(PKI, "issuer-bilgi.cert.pem"), "utf8");
   const keyPem = readFileSync(resolve(PKI, "issuer-bilgi.pkcs8.pem"), "utf8");
   const rootPem = readFileSync(resolve(PKI, "root-ca.cert.pem"), "utf8");
-  const ISS = "https://issuer.tamga.network/bilgi";
+  const ISS = "https://issuer.tamga.network/example-university";
   const VCT = "urn:tamga:edu:DiplomaCredential:1";
   const INTEG = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
@@ -259,12 +259,12 @@ describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => 
 
 describe("alma anı güven denetimi (assertIssuerAuthorized)", () => {
   const entry = (over: Partial<DirectoryEntry> = {}): DirectoryEntry => ({
-    slug: "bilgi",
-    legalName: "İstanbul Bilgi Üniversitesi",
+    slug: "example-university",
+    legalName: "Örnek Üniversitesi",
     category: "EDUCATION",
     klass: "EAA",
     assurance: "I2",
-    issuerUrl: "https://issuer.tamga.network/bilgi",
+    issuerUrl: "https://issuer.tamga.network/example-university",
     issuerId: "0x" + "ab".repeat(32),
     status: "ACTIVE",
     vcts: ["urn:tamga:edu:DiplomaCredential:1"],
@@ -273,7 +273,7 @@ describe("alma anı güven denetimi (assertIssuerAuthorized)", () => {
   });
   const VCT = "urn:tamga:edu:DiplomaCredential:1";
   it("kayıtlı, ACTIVE ve yetkili issuer kabul", () => {
-    expect(assertIssuerAuthorized([entry()], "0x" + "AB".repeat(32), VCT).slug).toBe("bilgi");
+    expect(assertIssuerAuthorized([entry()], "0x" + "AB".repeat(32), VCT).slug).toBe("example-university");
   });
   it("listede yok / ACTIVE değil / tip yetkisi yok → trust_error", () => {
     expect(() => assertIssuerAuthorized([entry()], "0x" + "cd".repeat(32), VCT)).toThrow(/not registered/);

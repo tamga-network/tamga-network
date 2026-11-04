@@ -24,6 +24,9 @@
  *   wrprc-revoke <wrprc/…jwt> --reason kod [--note n] (ADR-0068) kayıt sertifikasını elle iptal eder (kod: compromised |
  *                                                 superseded | ceased | policy_violation | other); içerik değişene kadar yeniden
  *                                                 verilmez; durum listesi yeniden imzalanır
+ *   history-reset --reason r                      (yalnız sandbox; ADR-0038 K5) yayın geçmişini temizler: arşivde her listenin yalnız
+ *                                                 son sürümü, CHANGELOG yeniden başlar, iptal edilmiş kayıt sertifikalarının yolu
+ *                                                 adsızlaşır (bitler aynı); güncel listeler ve çapa günlüğü değişmez — history-reset.ts
  *   chain-submit [--dry-run] · chain-check <jws>  zincir projeksiyonu (ADR-0051): liste sürümü + çapa günlüğü başı ÖZETLERİ
  *                                                 zincire; bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok — src/chain/
  * Kurallar: version monoton, previous_version_hash = önceki .jws'in sha256'sı; dist/ değişmez arşivi.
@@ -86,6 +89,7 @@ import {
   migrateWrprcState,
   pruneRetiredLists,
   recoverWrprcState,
+  redactRetiredWrprcPaths,
   revocationNoteProblems,
   revokeWrprc,
   signWrprcStatusList,
@@ -96,6 +100,7 @@ import {
   type WrprcPolicyConfig,
   type WrprcStatusState,
 } from "./wrprc-status.js";
+import { HISTORY_RESET_MARK, changelogIsReset, planArchivePrune } from "./history-reset.js";
 import { MIN_CAPACITY, StatusBitstring } from "@tamga-network/sd-jwt";
 import {
   MAX_TEST_INSTITUTIONS,
@@ -653,6 +658,81 @@ async function wrprcStatusCommand(cmd: string, args: string[]) {
   await publishWrprcStatus(r.state, pol, s, now);
   changelog(`wrprc-status: idx ${r.entry.idx} (${path}) REVOKED — ${r.entry.reason}`);
   console.log(`wrprc-revoke: ${path} idx ${r.entry.idx} iptal edildi; liste yeniden imzalandı`);
+}
+
+/**
+ * `history-reset --reason <gerekçe>` (yalnız sandbox; ADR-0038 K5) — ayrıntı history-reset.ts. Tekrar çalıştırmak güvenlidir:
+ * temizlenecek bir şey yoksa hiçbir dosya değişmez. Kayıt kilidi altında (aynı anda liste imzalanmaz).
+ */
+async function historyReset(args: string[]) {
+  if (ENVIRONMENT !== "sandbox") throw new Error("history-reset: yalnız sandbox kayıt defteriyle (ADR-0038 K5)");
+  if (!/sandbox/i.test(DIST)) throw new Error(`history-reset: yayın klasörü sandbox'a ait görünmüyor: ${DIST}`);
+  const reason = (argOf(args, "--reason") ?? "").trim();
+  if (!reason) throw new Error('history-reset: gerekçe zorunlu (--reason "<gerekçe>")');
+  const np = revocationNoteProblems(reason); // herkese açık CHANGELOG'a yazılır
+  if (np.length) throw new Error(`history-reset: ${np.join("; ")}`);
+  if (!existsSync(resolve(DIST, "lotl.jws"))) throw new Error(`history-reset: ${DIST} içinde yayımlanmış liste yok`);
+  const now = new Date();
+  const done: string[] = [];
+
+  // 1. Kayıt sertifikası durumu: yayımlanmayan iptal girdilerinin yolu adsızlaşır; bitler ve geçerli girdiler aynı kalır
+  const lotlSrc = readJson(resolve(REG, "lotl.source.json"));
+  const cc = String(readJson(resolve(REG, "tl-tr.source.json")).state_code);
+  const pol = wrprcPolicy(lotlSrc, cc);
+  let wrprcState: WrprcStatusState | null = null;
+  if (pol && existsSync(WRPRC_STATE_FILE())) {
+    const published = new Set(publishedWrprcCerts().map((c) => c.path));
+    const r = redactRetiredWrprcPaths(readWrprcState(pol), published);
+    wrprcState = r.state;
+    if (r.redacted) done.push(`${r.redacted} retired registration-certificate path(s) redacted`);
+  }
+
+  // 2. Arşiv: her listenin yalnız son sürümü; durum dosyası kopyaları gider, güncel durum tek kopya olarak yeniden arşivlenir
+  const plan = planArchivePrune(existsSync(ARCHIVE) ? readdirSync(ARCHIVE) : []);
+  const isStateCopy = (f: string) => f.startsWith("wrprc-status.");
+  const curJson = wrprcState ? JSON.stringify(wrprcState, null, 2) + "\n" : null;
+  const copies = plan.remove.filter(isStateCopy);
+  // önceki temizlikten kalan tek kopya güncel durumla aynıysa dokunulmaz (tekrar çalıştırma değişiklik yapmaz)
+  const copyIsCurrent =
+    copies.length === 1 && curJson !== null && readFileSync(resolve(ARCHIVE, copies[0]), "utf8") === curJson;
+  const remove = copyIsCurrent ? plan.remove.filter((f) => !isStateCopy(f)) : plan.remove;
+  for (const f of remove) rmSync(resolve(ARCHIVE, f), { force: true });
+  const nOld = remove.filter((f) => !isStateCopy(f)).length;
+  if (nOld) done.push(`${nOld} archived list version(s) removed (latest kept: ${plan.kept.join(", ")})`);
+  const nCopies = remove.filter(isStateCopy).length;
+  if (nCopies) done.push(`${nCopies} archived registration-certificate status cop(ies) removed`);
+  if (wrprcState && pol && (readFileSync(WRPRC_STATE_FILE(), "utf8") !== curJson || !copyIsCurrent)) {
+    const s = await registrarSigner(lotlSrc, cc);
+    if (!s) throw new Error("ADR-0068: kayıt kurumu anahtarı yok — durum listesi imzalanamaz");
+    await publishWrprcStatus(wrprcState, pol, s, now); // bitler aynı; durum dosyası + (değiştiyse) arşiv kopyası
+    if (!archivedWrprcStates().length) {
+      const stamp = now
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d+Z$/, "Z");
+      mkdirSync(ARCHIVE, { recursive: true });
+      writeAtomic(resolve(ARCHIVE, `wrprc-status.${stamp}.json`), curJson!);
+    }
+  }
+
+  // 3. CHANGELOG yeniden başlar (yalnız bir temizlik satırı)
+  const clFile = resolve(DIST, "CHANGELOG.md");
+  const clReset = existsSync(clFile) && changelogIsReset(readFileSync(clFile, "utf8"));
+  if (!clReset || done.length) {
+    const lotl = readJson(resolve(DIST, "lotl.json"));
+    const tl = existsSync(resolve(DIST, `tl-${cc.toLowerCase()}.json`))
+      ? readJson(resolve(DIST, `tl-${cc.toLowerCase()}.json`))
+      : null;
+    writeAtomic(clFile, "# trust.tamga.network — Changelog (public)\n\n");
+    changelog(
+      `${HISTORY_RESET_MARK}: ${reason} — earlier entries and archived list versions removed; current lists unchanged ` +
+        `(lotl v${lotl.version}${tl ? `, tl-${cc.toLowerCase()} v${tl.version}` : ""}); registration-certificate status bits unchanged`,
+    );
+    done.push("CHANGELOG restarted");
+  }
+  console.log(
+    done.length ? `history-reset: ${done.join("; ")}` : "history-reset: temizlenecek geçmiş yok (değişiklik yok)",
+  );
 }
 
 /**
@@ -1766,6 +1846,8 @@ const cmd = process.argv[2];
     console.log(JSON.stringify(a));
   } else if (cmd === "wrprc-status" || cmd === "wrprc-revoke") {
     await wrprcStatusCommand(cmd, process.argv.slice(3));
+  } else if (cmd === "history-reset") {
+    await withDirLock("registry.lock", () => historyReset(process.argv.slice(3)));
   } else if (cmd === "verify") await verify();
   else if (cmd === "external-fetch") await externalFetch();
   else if (cmd === "archive") {
@@ -1779,7 +1861,7 @@ const cmd = process.argv[2];
     process.exitCode = await chainCommand(cmd, process.argv.slice(3), { dist: DIST, environment: ENVIRONMENT });
   } else {
     console.error(
-      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | chain-submit [--dry-run] | chain-check <dosya.jws>",
+      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | history-reset --reason <gerekçe> | chain-submit [--dry-run] | chain-check <dosya.jws>",
     );
     process.exit(1);
   }

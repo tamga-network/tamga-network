@@ -39,7 +39,7 @@ const IDENTITY = schemasIndex.find((s) => s.vct === "urn:tamga:id:IdentityAttest
 
 let credSigner: IssuerSigner, statusSigner: IssuerSigner;
 const NOW = 1790000000,
-  ISS = "https://issuer.tamga.network/bilgi";
+  ISS = "https://issuer.tamga.network/example-university";
 async function selfSigned(cn: string): Promise<IssuerSigner> {
   const keys = (await crypto.subtle.generateKey(ALG, true, ["sign", "verify"])) as CryptoKeyPair;
   const cert = await X509CertificateGenerator.createSelfSigned({
@@ -65,8 +65,8 @@ async function holderKeys(n: number) {
   return ks;
 }
 beforeAll(async () => {
-  credSigner = await selfSigned("Bilgi cred");
-  statusSigner = await selfSigned("Bilgi status");
+  credSigner = await selfSigned("Example University cred");
+  statusSigner = await selfSigned("Example University status");
 });
 
 describe("status list (SPEC-CRED-0003)", () => {
@@ -120,7 +120,7 @@ describe("status list (SPEC-CRED-0003)", () => {
 
 describe("OpenID4VCI yardımcıları (SPEC-PROTO-0001)", () => {
   it("offer: on-screen 5 dk, tek kullanımlık, tx_code zorunlu, 3 deneme", () => {
-    const o = createOffer({ slug: "bilgi", subjectRef: "s-1", vct: DIPLOMA.vct, klass: "on-screen", now: NOW });
+    const o = createOffer({ slug: "example-university", subjectRef: "s-1", vct: DIPLOMA.vct, klass: "on-screen", now: NOW });
     expect(o.expiresAt - o.createdAt).toBe(300);
     expect(redeemOffer(o, o.preAuthorizedCode, undefined, NOW)).toEqual({ ok: false, error: "invalid_request" });
     expect(redeemOffer(o, o.preAuthorizedCode, "000000" === o.txCode ? "111111" : "000000", NOW)).toEqual({
@@ -130,7 +130,7 @@ describe("OpenID4VCI yardımcıları (SPEC-PROTO-0001)", () => {
     const ok = redeemOffer(o, o.preAuthorizedCode, o.txCode, NOW);
     expect(ok.ok).toBe(true);
     expect(redeemOffer(o, o.preAuthorizedCode, o.txCode, NOW)).toEqual({ ok: false, error: "offer_used" });
-    const o2 = createOffer({ slug: "bilgi", subjectRef: "s-1", vct: DIPLOMA.vct, klass: "out-of-band", now: NOW });
+    const o2 = createOffer({ slug: "example-university", subjectRef: "s-1", vct: DIPLOMA.vct, klass: "out-of-band", now: NOW });
     expect(o2.expiresAt - o2.createdAt).toBe(72 * 3600);
     for (let i = 0; i < 3; i++)
       redeemOffer(o2, o2.preAuthorizedCode, "999999" === o2.txCode ? "000001" : "999999", NOW);
@@ -171,8 +171,8 @@ describe("OpenID4VCI yardımcıları (SPEC-PROTO-0001)", () => {
 
 describe("credential fabrikası", () => {
   const body = {
-    name_tr: "İstanbul Bilgi Üniversitesi (DEMO)",
-    name_en: "Istanbul Bilgi University (DEMO)",
+    name_tr: "Örnek Üniversitesi (DEMO)",
+    name_en: "Example University (DEMO)",
     id: "TR-UNI-DEMO",
     country: "TR",
   };

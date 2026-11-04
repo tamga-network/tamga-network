@@ -30,13 +30,13 @@ describe("yanlış kullanım korumaları", () => {
   });
 
   it("yerel issuer adresi: ana makine adı tam eşleşir", () => {
-    for (const u of ["http://localhost:4001/bilgi", "http://192.168.1.20:4001/x", "https://10.0.0.5/x"])
+    for (const u of ["http://localhost:4001/example-university", "http://192.168.1.20:4001/x", "https://10.0.0.5/x"])
       expect(isLocalUrl(u), u).toBe(true);
     for (const u of [
       "http://localhost.evil.example/x",
       "http://10.0.0.1.evil.example/x",
       "https://localhost/x",
-      "https://issuer.tamga.network/bilgi",
+      "https://issuer.tamga.network/example-university",
       "not a url",
     ])
       expect(isLocalUrl(u), u).toBe(false);

@@ -42,7 +42,7 @@ const PKI = resolve(ROOT, "ops/pki");
 const DIST = resolve(ROOT, "apps/trust-publisher/dist-test"); // test listesi (test/fixtures/registry; npm run setup)
 const ready = existsSync(resolve(PKI, "rp-verify.pkcs8.pem")) && existsSync(resolve(DIST, "lotl.jws"));
 const TRUST = "https://trust.test";
-const ISS = "https://issuer.tamga.network/bilgi";
+const ISS = "https://issuer.tamga.network/example-university";
 const VCT = "urn:tamga:edu:DiplomaCredential:1";
 const STATUS_URI = "https://status.tamga.network/feedfacefeedface";
 const YEAR = 365 * 86400_000;
@@ -147,8 +147,8 @@ describe.skipIf(!ready)("examples", () => {
         family_name: "Example",
         given_name: "Graduate",
         birth_date: "2000-01-01",
-        awarding_body_name: { "tr-TR": "Bilgi (DEMO)" },
-        awarding_body_id: "bilgi",
+        awarding_body_name: { "tr-TR": "Örnek Üniversitesi (DEMO)" },
+        awarding_body_id: "example-university",
         awarding_body_country: "TR",
         qualification_title: { "tr-TR": "Bilgisayar Müh." },
         eqf_level: 6,
@@ -283,21 +283,21 @@ describe.skipIf(!ready)("examples", () => {
         }),
       );
     }) as typeof fetch;
-    const uni = institution({ apiKey: "tmg_bilgi_k", slug: "bilgi", fetch: fake });
+    const uni = institution({ apiKey: "tmg_example-university_k", slug: "example-university", fetch: fake });
     const offer = await uni.offerDiploma("121200001");
-    expect(calls[0].url).toBe("https://issuer.tamga.network/bilgi/api/v1/offers");
-    expect(calls[0].auth).toBe("Bearer tmg_bilgi_k");
+    expect(calls[0].url).toBe("https://issuer.tamga.network/example-university/api/v1/offers");
+    expect(calls[0].auth).toBe("Bearer tmg_example-university_k");
     expect(calls[0].body).toMatchObject({ subject_id: "121200001", vct: VCT });
     expect(offer.deepLink).not.toContain(offer.txCode);
     expect(await uni.cancel("nope", "test")).toBeNull();
   });
 
   it("04 — trust lists: registered, active and authorized for diplomas; unknown institution", async () => {
-    const s = await institutionStatus(TRUST, pins(), "bilgi", VCT, { fetch: trustFetch });
+    const s = await institutionStatus(TRUST, pins(), "example-university", VCT, { fetch: trustFetch });
     expect(s).toMatchObject({ registered: true, status: "ACTIVE", authorized: true, category: "EDUCATION" });
     expect((await institutionStatus(TRUST, pins(), "yok", VCT, { fetch: trustFetch })).registered).toBe(false);
     expect(
-      (await institutionStatus(TRUST, pins(), "bilgi", "urn:tamga:tkt:EventTicket:1", { fetch: trustFetch }))
+      (await institutionStatus(TRUST, pins(), "example-university", "urn:tamga:tkt:EventTicket:1", { fetch: trustFetch }))
         .authorized,
     ).toBe(false);
   });

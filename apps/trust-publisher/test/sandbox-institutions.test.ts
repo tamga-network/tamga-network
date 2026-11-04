@@ -101,10 +101,10 @@ describe("sandbox test kurumları (ADR-0041)", () => {
     ])
       expect(validateRequest({ ...req, name }), name).toHaveLength(1);
     const reserved = reservedNamesOf(
-      { issuers: [{ legal_name: "Örnek Bilgi Okulu" }], relying_parties: [{ trade_name: "Örnek Etkinlik" }] },
+      { issuers: [{ legal_name: "Örnek Bilim Okulu" }], relying_parties: [{ trade_name: "Örnek Etkinlik" }] },
       { issuers: [{ legal_name: { tr: "Örnek Kurs Merkezi" } }] },
     );
-    expect(validateRequest({ ...req, name: "Ornek Bilgi Okulu (TEST)" }, reserved)).toHaveLength(1);
+    expect(validateRequest({ ...req, name: "Ornek Bilim Okulu (TEST)" }, reserved)).toHaveLength(1);
     expect(validateRequest({ ...req, name: "Ornek Etkinlik Plus (TEST)" }, reserved)).toHaveLength(1);
     expect(validateRequest({ ...req, name: "ornek kurs merkezi (TEST)" }, reserved)).toHaveLength(1);
     expect(validateRequest(req, reserved)).toEqual([]);

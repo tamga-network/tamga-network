@@ -94,7 +94,7 @@ async function makeSet(
 ) {
   const tlSigner = await mkCert("TL Signer");
   const root = await mkCert("Root");
-  const issuer = await mkCert("Bilgi");
+  const issuer = await mkCert("Örnek Üniversitesi");
   const other = await mkCert("Other");
   const caId = computeCaId("TR", root.der),
     issuerId = computeIssuerId("TR", issuer.der);
@@ -127,15 +127,15 @@ async function makeSet(
     issuers: [
       {
         issuer_id: issuerId,
-        slug: "bilgi",
-        legal_name: "Bilgi",
+        slug: "example-university",
+        legal_name: "Örnek Üniversitesi",
         category: "EDUCATION",
         assurance: "I2",
         class: "EAA",
         parent_ca_id: caId,
         cert_fingerprint_sha256: issuer.fp,
-        issuer_url: "https://issuer.bilgi.tamga.network",
-        status_list_base: "https://status.bilgi.tamga.network/",
+        issuer_url: "https://issuer.example-university.tamga.network",
+        status_list_base: "https://status.example-university.tamga.network/",
         status: "SUSPENDED",
         valid_from: T0,
         valid_until: "2028-01-01T00:00:00Z",
@@ -241,7 +241,7 @@ async function makeSet(
                   {
                     list_id: "0xold",
                     issuer_id: issuerId,
-                    list_uri: "https://status.bilgi.tamga.network/opaque-old",
+                    list_uri: "https://status.example-university.tamga.network/opaque-old",
                     content_hash: "sha256:00",
                     list_version: 3,
                     published_at: "2026-09-24T11:20:00Z",
@@ -260,7 +260,7 @@ async function makeSet(
     kind: "status_list",
     list_id: "0xabc",
     issuer_id: issuerId,
-    list_uri: "https://status.bilgi.tamga.network/opaque1",
+    list_uri: "https://status.example-university.tamga.network/opaque1",
     content_hash: "sha256:11",
     list_version: 7,
     published_at: "2026-09-24T11:49:00Z",
@@ -460,7 +460,7 @@ describe("TrustSource(list) taahhüt testleri", () => {
     expect(ts.relyingPartyByDnsName("example.com")).toBeNull();
     // taze kaynakta aynı okuyucular cevap verir
     const fresh = new ListTrustSource((await ctx.load()).store, () => ctx.now);
-    expect(fresh.issuer(ctx.issuerId)?.slug).toBe("bilgi");
+    expect(fresh.issuer(ctx.issuerId)?.slug).toBe("example-university");
     expect(fresh.schemaContentHashes(schemaId)).toEqual(["sha256-AAAA"]);
     expect(fresh.statusAnchor("0xabc")?.version).toBe(7);
   });

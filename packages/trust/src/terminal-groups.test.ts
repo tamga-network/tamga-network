@@ -28,7 +28,7 @@ function rp(dns: string, status: string, groups: unknown[]) {
 function source(
   rps: ReturnType<typeof rp>[],
   healthy = true,
-  issuers: Array<{ slug: string; status: string }> = [{ slug: "bubilet", status: "ACTIVE" }], // grubun kurumu listede (K12)
+  issuers: Array<{ slug: string; status: string }> = [{ slug: "example-events", status: "ACTIVE" }], // grubun kurumu listede (K12)
 ) {
   const store = new TrustStore();
   for (const r of rps) store.relying_parties_by_dns.set(r.dns_name, r);
@@ -39,8 +39,8 @@ function source(
 
 describe("ADR-0069 terminal_groups", () => {
   const gate = {
-    group_id: "bubilet-gate",
-    institution_id: "bubilet",
+    group_id: "example-events-gate",
+    institution_id: "example-events",
     label: "Event gates",
     allowed_policies: ["event-ticket"],
     cert_fingerprints: [FP],
@@ -49,7 +49,7 @@ describe("ADR-0069 terminal_groups", () => {
   };
 
   it("şema: ADR-0069 alanları; eski kayıt (kurum ve politika yok) da geçer; bozuk grup kimliği reddedilir", () => {
-    expect(TerminalGroup.parse(gate).institution_id).toBe("bubilet");
+    expect(TerminalGroup.parse(gate).institution_id).toBe("example-events");
     expect(TerminalGroup.safeParse({ group_id: "old-gate", valid_from: "2026-01-01T00:00:00Z" }).success).toBe(true);
     expect(TerminalGroup.safeParse({ ...gate, group_id: "Büyük Kapı" }).success).toBe(false);
     expect(TerminalGroup.safeParse({ ...gate, cert_fingerprints: ["XYZ"] }).success).toBe(false);
@@ -58,7 +58,7 @@ describe("ADR-0069 terminal_groups", () => {
 
   it("etkin grup: kurum, politika ve doğrulayıcı kimliğiyle döner", () => {
     const ts = source([rp("verify.sandbox.tamga.network", "ACTIVE", [gate])]);
-    const a = ts.terminalGroup("bubilet-gate");
+    const a = ts.terminalGroup("example-events-gate");
     expect(a).toMatchObject({ rp_dns_name: "verify.sandbox.tamga.network", active: true });
     expect(a?.group.allowed_policies).toEqual(["event-ticket"]);
     expect(ts.terminalGroup("yok")).toBeNull();
@@ -72,7 +72,7 @@ describe("ADR-0069 terminal_groups", () => {
       ]),
       rp("old.example", "SUSPENDED", [{ ...gate, group_id: "susp-gate" }]),
     ]);
-    expect(ts.terminalGroup("bubilet-gate")?.active).toBe(false);
+    expect(ts.terminalGroup("example-events-gate")?.active).toBe(false);
     expect(ts.terminalGroup("future-gate")?.active).toBe(false);
     expect(ts.terminalGroup("susp-gate")?.active).toBe(false);
   });
@@ -80,8 +80,8 @@ describe("ADR-0069 terminal_groups", () => {
   it("K12 (kontrol 2026-11-03): grubun kurumu listede ACTIVE değilse (REVOKED belge veren, SUSPENDED doğrulayıcı, listede yok) grup etkin değil; kurumsuz eski grup doğrulayıcıyla değerlendirilir", () => {
     const rps = [
       rp("verify.tamga.network", "ACTIVE", [
-        gate, // bubilet
-        { ...gate, group_id: "bilgi-gate", institution_id: "istanbul-bilgi" },
+        gate, // example-events
+        { ...gate, group_id: "example-university-gate", institution_id: "example-university" },
         { ...gate, group_id: "susp-rp-gate", institution_id: "susp.example" },
         { ...gate, group_id: "ghost-gate", institution_id: "yok-boyle" },
         { ...gate, group_id: "self-gate", institution_id: "verify.tamga.network" },
@@ -90,28 +90,28 @@ describe("ADR-0069 terminal_groups", () => {
       rp("susp.example", "SUSPENDED", []),
     ];
     const ts = source(rps, true, [
-      { slug: "bubilet", status: "ACTIVE" },
-      { slug: "istanbul-bilgi", status: "REVOKED" },
+      { slug: "example-events", status: "ACTIVE" },
+      { slug: "example-university", status: "REVOKED" },
     ]);
-    expect(ts.terminalGroup("bubilet-gate")?.active).toBe(true);
-    expect(ts.terminalGroup("bilgi-gate")?.active).toBe(false); // kurum geri çekildi → kapı kapanır
+    expect(ts.terminalGroup("example-events-gate")?.active).toBe(true);
+    expect(ts.terminalGroup("example-university-gate")?.active).toBe(false); // kurum geri çekildi → kapı kapanır
     expect(ts.terminalGroup("susp-rp-gate")?.active).toBe(false);
     expect(ts.terminalGroup("ghost-gate")?.active).toBe(false);
     expect(ts.terminalGroup("self-gate")?.active).toBe(true);
     expect(ts.terminalGroup("legacy-gate")?.active).toBe(true);
-    // sertifika parmak iziyle arama yalnız etkin grubu döndürür: bubilet (ilk etkin)
-    expect(ts.terminalGroupByCertFingerprint(FP)?.group.group_id).toBe("bubilet-gate");
+    // sertifika parmak iziyle arama yalnız etkin grubu döndürür: example-events (ilk etkin)
+    expect(ts.terminalGroupByCertFingerprint(FP)?.group.group_id).toBe("example-events-gate");
     // kurum geri çekilmemiş olsaydı aynı grup etkin olurdu
-    const ok = source(rps, true, [{ slug: "istanbul-bilgi", status: "ACTIVE" }]);
-    expect(ok.terminalGroup("bilgi-gate")?.active).toBe(true);
+    const ok = source(rps, true, [{ slug: "example-university", status: "ACTIVE" }]);
+    expect(ok.terminalGroup("example-university-gate")?.active).toBe(true);
   });
 
   it("sertifika parmak izi → yalnız etkin grup (hazırlık); bayat listede hiç cevap yok", () => {
     const ts = source([rp("verify.tamga.network", "ACTIVE", [gate])]);
-    expect(ts.terminalGroupByCertFingerprint(FP.toUpperCase())?.group.group_id).toBe("bubilet-gate");
+    expect(ts.terminalGroupByCertFingerprint(FP.toUpperCase())?.group.group_id).toBe("example-events-gate");
     expect(ts.terminalGroupByCertFingerprint("c".repeat(64))).toBeNull();
     const stale = source([rp("verify.tamga.network", "ACTIVE", [gate])], false);
-    expect(stale.terminalGroup("bubilet-gate")).toBeNull();
+    expect(stale.terminalGroup("example-events-gate")).toBeNull();
     expect(stale.terminalGroupByCertFingerprint(FP)).toBeNull();
   });
 });

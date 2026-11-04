@@ -77,7 +77,7 @@ describe.skipIf(!ready)("S-13: imzalı güven listesi (cüzdan)", () => {
     expect(rp?.legal_name).toContain("Verification");
     expect(rp?.dns_name).toBe("verify.tamga.network");
     const dir = await fetchIssuerDirectory(BASE, httpFor(), pins());
-    expect(dir.map((d) => d.slug)).toContain("bilgi");
+    expect(dir.map((d) => d.slug)).toContain("example-university");
   });
 
   it("yanlış pin → reddedilir; RP kaydı null (onay ekranı 'bulunamadı' uyarısı verir)", async () => {

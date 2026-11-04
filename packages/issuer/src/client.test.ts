@@ -23,13 +23,13 @@ describe("createIssuerClient", () => {
         offer_id: "o1",
         tx_code: "123456",
         expires_at: 1000,
-        offer_uri: "https://issuer.tamga.network/bilgi/offers/o1",
+        offer_uri: "https://issuer.tamga.network/example-university/offers/o1",
         deep_link: "openid-credential-offer://x",
       }),
     );
     const client = createIssuerClient({
       baseUrl: "https://issuer.tamga.network/",
-      slug: "bilgi",
+      slug: "example-university",
       adminToken: "gizli-t",
       fetch: fetchMock as unknown as typeof fetch,
     });
@@ -37,7 +37,7 @@ describe("createIssuerClient", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://issuer.tamga.network/bilgi/admin/offers");
+    expect(url).toBe("https://issuer.tamga.network/example-university/admin/offers");
     expect((init.headers as Record<string, string>)["x-admin-token"]).toBe("gizli-t");
   });
 
@@ -47,15 +47,15 @@ describe("createIssuerClient", () => {
     );
     const client = createIssuerClient({
       baseUrl: "https://issuer.tamga.network",
-      slug: "bubilet",
-      apiKey: "tmg_bubilet_abc",
+      slug: "example-events",
+      apiKey: "tmg_example-events_abc",
       fetch: fetchMock as unknown as typeof fetch,
     });
     await client.revoke("c-1", "iade");
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://issuer.tamga.network/bubilet/api/v1/revocations");
+    expect(url).toBe("https://issuer.tamga.network/example-events/api/v1/revocations");
     const h = init.headers as Record<string, string>;
-    expect(h.authorization).toBe("Bearer tmg_bubilet_abc");
+    expect(h.authorization).toBe("Bearer tmg_example-events_abc");
     expect(h["x-admin-token"]).toBeUndefined();
     expect(() => createIssuerClient({ baseUrl: "x", slug: "a" })).toThrow();
     expect(() => createIssuerClient({ baseUrl: "x", slug: "a", apiKey: "k", adminToken: "t" })).toThrow();
@@ -67,13 +67,13 @@ describe("createIssuerClient", () => {
         offer_id: "o42",
         tx_code: "654321",
         expires_at: 1234567890,
-        offer_uri: "https://issuer.tamga.network/bilgi/offers/o42",
+        offer_uri: "https://issuer.tamga.network/example-university/offers/o42",
         deep_link: "openid-credential-offer://y",
       }),
     );
     const client = createIssuerClient({
       baseUrl: "https://issuer.tamga.network",
-      slug: "bilgi",
+      slug: "example-university",
       adminToken: "t",
       fetch: fetchMock as unknown as typeof fetch,
     });
@@ -83,7 +83,7 @@ describe("createIssuerClient", () => {
       offerId: "o42",
       txCode: "654321",
       expiresAt: 1234567890,
-      offerUri: "https://issuer.tamga.network/bilgi/offers/o42",
+      offerUri: "https://issuer.tamga.network/example-university/offers/o42",
       deepLink: "openid-credential-offer://y",
     });
   });
@@ -92,7 +92,7 @@ describe("createIssuerClient", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(403, { message: "yanlış anahtar" }));
     const client = createIssuerClient({
       baseUrl: "https://issuer.tamga.network",
-      slug: "bilgi",
+      slug: "example-university",
       adminToken: "yanlis",
       fetch: fetchMock as unknown as typeof fetch,
     });
@@ -108,7 +108,7 @@ describe("createIssuerClient", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(404, { reason: "bilinmeyen teklif" }));
     const client = createIssuerClient({
       baseUrl: "https://issuer.tamga.network",
-      slug: "bilgi",
+      slug: "example-university",
       adminToken: "t",
       fetch: fetchMock as unknown as typeof fetch,
     });
@@ -122,7 +122,7 @@ describe("createIssuerClient", () => {
     fetchMock.mockResolvedValueOnce(textResponse(500, "internal server error (html değil, düz metin)"));
     const client = createIssuerClient({
       baseUrl: "https://issuer.tamga.network",
-      slug: "bilgi",
+      slug: "example-university",
       adminToken: "t",
       fetch: fetchMock as unknown as typeof fetch,
     });
@@ -144,21 +144,21 @@ describe("createIssuerClient", () => {
           offer_id: "o9",
           tx_code: "111222",
           expires_at: 999,
-          offer_uri: "https://issuer.tamga.network/bubilet/offers/o9",
+          offer_uri: "https://issuer.tamga.network/example-events/offers/o9",
           deep_link: "openid-credential-offer://z",
         },
       }),
     );
     const client = createIssuerClient({
       baseUrl: "https://issuer.tamga.network",
-      slug: "bubilet",
+      slug: "example-events",
       adminToken: "t",
       fetch: fetchMock as unknown as typeof fetch,
     });
     const sale = await client.sellTicket({ eventId: "EVT-1", ticketClass: "STANDARD", seat: "A1" });
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://issuer.tamga.network/bubilet/admin/tickets");
+    expect(url).toBe("https://issuer.tamga.network/example-events/admin/tickets");
     const body = JSON.parse(init.body as string);
     expect(body.event_id).toBe("EVT-1");
     expect(body.ticket_class).toBe("STANDARD");
@@ -169,15 +169,15 @@ describe("createIssuerClient", () => {
     let body: Record<string, unknown> = {};
     const c = createIssuerClient({
       baseUrl: "https://issuer.tamga.network",
-      slug: "bilgi",
-      apiKey: "tmg_bilgi_x",
+      slug: "example-university",
+      apiKey: "tmg_example-university_x",
       fetch: (async (_u: string, init: RequestInit) => {
         body = JSON.parse(String(init.body));
         return new Response(
           JSON.stringify({
             offer_id: "o7",
             expires_at: 1,
-            offer_uri: "https://issuer.tamga.network/bilgi/offers/o7",
+            offer_uri: "https://issuer.tamga.network/example-university/offers/o7",
             deep_link: "openid-credential-offer://?credential_offer_uri=x",
             identity_bound: true,
           }),
@@ -197,7 +197,7 @@ describe("createIssuerClient", () => {
     expect(o).toEqual({
       offerId: "o7",
       expiresAt: 1,
-      offerUri: "https://issuer.tamga.network/bilgi/offers/o7",
+      offerUri: "https://issuer.tamga.network/example-university/offers/o7",
       deepLink: "openid-credential-offer://?credential_offer_uri=x",
     });
     expect("txCode" in o).toBe(false);

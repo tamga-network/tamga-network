@@ -350,6 +350,33 @@ export function recoverWrprcState(
   return s;
 }
 
+/** Yolu silinmiş (artık yayımlanmayan) iptal girdisinin yer tutucu yolu. */
+export const RETIRED_PATH = "(retired)";
+
+/**
+ * Sandbox geçmiş temizliği (ADR-0038 K5, `history-reset`): artık yayımlanmayan sertifikaların İPTAL girdilerinde yayın yolu
+ * (kurum kısa adını taşır) `RETIRED_PATH` olur. İndeks, bit (iptal = 1), içerik özeti, tarih ve gerekçe korunur — eski sertifikayı
+ * elinde tutan doğrulayıcı listede hâlâ "iptal" okur, iptal indeksi yeniden verilmez. Geçerli girdilere ve yayımlanan yollara
+ * dokunulmaz (yeni sertifikaların indeksi ve durumu değişmez). Elle iptal engellerine (`blocked`) dokunulmaz: engellenen
+ * sertifika yayımlanmadığı için "yayımlanmayan" görünür, ama kaydı hâlâ kayıt defterindedir — yolu silinirse aynı içerik bir
+ * sonraki yayında yeniden verilirdi. Eski listeler (`previous`) aynı kuralla. Durum değiştirilmez; yeni durum ve değişen girdi
+ * sayısı döner.
+ */
+export function redactRetiredWrprcPaths(
+  state: WrprcStatusState,
+  published: ReadonlySet<string>,
+): { state: WrprcStatusState; redacted: number } {
+  let redacted = 0;
+  const fix = (e: WrprcStatusEntry): WrprcStatusEntry => {
+    if (e.status !== "REVOKED" || e.path === RETIRED_PATH || published.has(e.path)) return e;
+    redacted++;
+    return { ...e, path: RETIRED_PATH };
+  };
+  const entries = state.entries.map(fix);
+  const previous = state.previous?.map((l) => ({ ...l, entries: l.entries.map(fix) }));
+  return { state: { ...state, entries, ...(previous ? { previous } : {}) }, redacted };
+}
+
 /** Durumun bit dizisi (1 bit; iptal = 1). */
 export function statusBits(state: WrprcStatusState): StatusBitstring {
   const b = new StatusBitstring(state.capacity, undefined, 1);

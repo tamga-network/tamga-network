@@ -243,13 +243,13 @@ describe("authcode", () => {
     expect(createPar({ ...noAd }).ok).toBe(false);
   });
   it("RFC 9207: issuer verilirse başarılı ve hatalı yetki yanıtında iss bulunur", () => {
-    const r = createPar({ ...base, state: "st", issuer: "https://issuer.tamga.network/bilgi" });
+    const r = createPar({ ...base, state: "st", issuer: "https://issuer.tamga.network/example-university" });
     if (!r.ok) throw new Error("par");
     const ok = new URL(callbackUrl(r.par, "c1"));
-    expect(ok.searchParams.get("iss")).toBe("https://issuer.tamga.network/bilgi");
+    expect(ok.searchParams.get("iss")).toBe("https://issuer.tamga.network/example-university");
     expect(ok.searchParams.get("state")).toBe("st");
     const err = new URL(errorCallbackUrl(r.par, "access_denied", "x"));
-    expect(err.searchParams.get("iss")).toBe("https://issuer.tamga.network/bilgi");
+    expect(err.searchParams.get("iss")).toBe("https://issuer.tamga.network/example-university");
     const plain = createPar(base);
     if (!plain.ok) throw new Error("par");
     expect(callbackUrl(plain.par, "c")).not.toContain("iss=");

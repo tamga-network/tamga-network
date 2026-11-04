@@ -46,7 +46,7 @@ beforeAll(async () => {
   const leafKeys = (await crypto.subtle.generateKey(ALG, true, ["sign", "verify"])) as CryptoKeyPair;
   const leaf = await X509CertificateGenerator.create({
     serialNumber: "02",
-    subject: "CN=Bilgi (test)",
+    subject: "CN=Example University (test)",
     issuer: root.subject,
     notBefore: new Date(0),
     notAfter: new Date("2099-01-01"),
@@ -68,7 +68,7 @@ beforeAll(async () => {
 async function issueDiploma() {
   return issueSdJwtVc({
     signer,
-    iss: "https://issuer.tamga.network/bilgi",
+    iss: "https://issuer.tamga.network/example-university",
     vct: "urn:tamga:edu:DiplomaCredential:1",
     vctIntegrity: "sha256-r+Pdm2xQrKxuuX9WwXGwntrJ7PtDjCbZ5pysOj3u6KA=",
     iat: NOW - 1000,
@@ -340,7 +340,7 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     return [jwt, ...ds.map((d) => d.disclosure), ""].join("~");
   }
   const basePayload = () => ({
-    iss: "https://issuer.tamga.network/bilgi",
+    iss: "https://issuer.tamga.network/example-university",
     vct: "urn:tamga:edu:DiplomaCredential:1",
     "vct#integrity": "sha256-x",
     iat: NOW - 1000,

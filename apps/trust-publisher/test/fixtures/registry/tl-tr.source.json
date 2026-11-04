@@ -36,13 +36,13 @@
       "cert": "issuer-bilgi",
       "status_cert": "issuer-bilgi-status",
       "parent_ca": "root-ca",
-      "slug": "bilgi",
-      "legal_name": "İstanbul Bilgi Üniversitesi",
+      "slug": "example-university",
+      "legal_name": "Örnek Üniversitesi",
       "category": "EDUCATION",
       "assurance": "I2",
       "class": "EAA",
       "assurance_basis": "Foundation university; recognition by the Council of Higher Education (YÖK) is public. Identity proofing: institution registrar desk or presentation of a Tamga Identity Attestation (T2).",
-      "issuer_url": "https://issuer.tamga.network/bilgi",
+      "issuer_url": "https://issuer.tamga.network/example-university",
       "status_list_base": "https://status.tamga.network/",
       "status": "ACTIVE",
       "valid_from": "2026-09-24T00:00:00Z",
@@ -70,7 +70,7 @@
         }
       ],
       "authentic_source": {
-        "name": "Bilgi Student Information System",
+        "name": "Example University Student Information System",
         "mode": "PORTAL_DB"
       }
     },
@@ -136,7 +136,7 @@
         }
       ],
       "authentic_source": {
-        "name": "Remote identity verification provider (Didit v3) — Tamga is the data controller (ADR-0011 K4)",
+        "name": "Remote identity verification provider (example-idv) — Tamga is the data controller (ADR-0011 K4)",
         "mode": "IDV_PROVIDER"
       },
       "trade_name": "Tamga Identity Service",
@@ -155,13 +155,13 @@
       "cert": "issuer-bubilet",
       "status_cert": "issuer-bubilet-status",
       "parent_ca": "root-ca",
-      "slug": "bubilet",
-      "legal_name": "Bubilet",
+      "slug": "example-events",
+      "legal_name": "Örnek Etkinlik",
       "category": "EVENTS",
       "assurance": "I2",
       "class": "EAA",
       "assurance_basis": "Ticket seller; Tamga hosts the issuing service, the seller is the issuer in the trusted list. Tickets carry no personal data (T0).",
-      "issuer_url": "https://issuer.tamga.network/bubilet",
+      "issuer_url": "https://issuer.tamga.network/example-events",
       "status_list_base": "https://status.tamga.network/",
       "status": "ACTIVE",
       "valid_from": "2026-09-26T00:00:00Z",
@@ -183,7 +183,7 @@
         }
       ],
       "authentic_source": {
-        "name": "Bubilet sales system",
+        "name": "Example Events sales system",
         "mode": "TICKET_SALES"
       }
     }
@@ -344,18 +344,18 @@
       ],
       "terminal_groups": [
         {
-          "group_id": "bilgi-campus",
-          "institution_id": "bilgi",
+          "group_id": "example-university-turnstiles",
+          "institution_id": "example-university",
           "allowed_policies": ["campus-access"],
-          "label": "İstanbul Bilgi Üniversitesi campus turnstiles",
+          "label": "Örnek Üniversitesi campus turnstiles",
           "offline_allowed": true,
           "valid_from": "2026-09-25T00:00:00Z"
         },
         {
-          "group_id": "bubilet-gate",
-          "institution_id": "bubilet",
+          "group_id": "example-events-gate",
+          "institution_id": "example-events",
           "allowed_policies": ["event-ticket"],
-          "label": "Bubilet event gates — single-use ticket entry",
+          "label": "Example Events event gates — single-use ticket entry",
           "offline_allowed": false,
           "valid_from": "2026-09-26T00:00:00Z"
         }
@@ -382,7 +382,7 @@
     {
       "access_cert": "rp-issuer-bilgi",
       "dns_name": "issuer.tamga.network",
-      "legal_name": "İstanbul Bilgi Üniversitesi — identity matching at issuance",
+      "legal_name": "Örnek Üniversitesi — identity matching at issuance",
       "status": "ACTIVE",
       "registered_at": "2026-09-25T00:00:00Z",
       "status_history": [
@@ -393,7 +393,7 @@
       ],
       "scopes": [
         {
-          "scope_id": "bilgi-identity-matching-1",
+          "scope_id": "example-university-identity-matching-1",
           "purpose": "Identity matching for issuance: national ID number and birth date are compared with the institution record and not stored",
           "purpose_localized": {
             "tr-TR": "Belge ihracı için kimlik eşleştirme: T.C. kimlik no ve doğum tarihi kurum kaydıyla karşılaştırılır, saklanmaz",

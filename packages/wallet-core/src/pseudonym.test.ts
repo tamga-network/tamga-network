@@ -150,11 +150,11 @@ describe.skipIf(!existsSync(resolve(PKI, "issuer-id.pkcs8.pem")))("ADR-0031 tohu
     const idLeaf = (await import("./sdjwt.js")).verifyIssuedSdJwt(await mk(), { now: 20 });
     if (!idLeaf.ok) throw new Error(idLeaf.reason);
     const identity = { leafFingerprint: idLeaf.leafFingerprint };
-    const bilgi = await mk({ signer: await sign("issuer-bilgi") });
+    const university = await mk({ signer: await sign("issuer-bilgi") });
     const wrongType = await mk({ vct: "urn:tamga:id:IdentityAttestation:1" });
     const wrongKey = await mk({ cnfJwk: other });
     expect(readPseudonymSeed(out(await mk()), identity, { now: 20 })).toBe(SEED);
-    expect(() => readPseudonymSeed(out(bilgi), identity, { now: 20 })).toThrow(/identity issuer/);
+    expect(() => readPseudonymSeed(out(university), identity, { now: 20 })).toThrow(/identity issuer/);
     expect(() => readPseudonymSeed(out(wrongType), identity, { now: 20 })).toThrow(/wrong type/);
     expect(() => readPseudonymSeed(out(wrongKey), identity, { now: 20 })).toThrow(/rejected/);
     expect(() => readPseudonymSeed({ copies: [] } as unknown as RedeemOutput, identity)).toThrow(/no pseudonym seed/);

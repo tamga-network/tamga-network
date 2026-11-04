@@ -102,17 +102,17 @@ describe("HAIP-1 (b) DPoP-Nonce", () => {
 describe("HAIP-1 (a) RFC 9207 iss", () => {
   const start = (issSupported: boolean) =>
     ({
-      issuer: "https://issuer.tamga.network/bilgi",
+      issuer: "https://issuer.tamga.network/example-university",
       vct: "urn:tamga:edu:Diploma:1",
       redirectUri: "tamga-wallet://cb",
       state: "st",
       pkce: { verifier: "v", challenge: "c" },
       requestUri: "urn:x",
-      authorizeUrl: "https://issuer.tamga.network/bilgi/authorize",
+      authorizeUrl: "https://issuer.tamga.network/example-university/authorize",
       metadata: {} as never,
       as: {
-        issuer: "https://issuer.tamga.network/bilgi",
-        token_endpoint: "https://issuer.tamga.network/bilgi/token",
+        issuer: "https://issuer.tamga.network/example-university",
+        token_endpoint: "https://issuer.tamga.network/example-university/token",
         authorization_response_iss_parameter_supported: issSupported,
       },
     }) as AuthStart;
@@ -140,7 +140,7 @@ describe("HAIP-1 (a) RFC 9207 iss", () => {
     );
   });
   it("doğru iss denetimi geçer (sonraki adımlar bu testte sahte olduğu için başka bir hatayla durur)", async () => {
-    const e = await run("tamga-wallet://cb?code=c&state=st&iss=https%3A%2F%2Fissuer.tamga.network%2Fbilgi").catch(
+    const e = await run("tamga-wallet://cb?code=c&state=st&iss=https%3A%2F%2Fissuer.tamga.network%2Fexample-university").catch(
       (x: Error) => x,
     );
     expect(String((e as Error).message)).not.toMatch(/iss does not match/);
