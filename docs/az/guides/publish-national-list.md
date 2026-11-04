@@ -4,7 +4,7 @@ title: "Milli etibar siyahısının dərc edilməsi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-11-05
 summary: >
   Dövlətin və ya onun səlahiyyətli qurumunun öz etibar siyahısını Tamga Network-a qoşması: iki yol (Tamga formatında milli siyahı və ya ETSI formatında xarici siyahı), LOTL-dakı qeyd, rollar, imza açarları, əhatə dairəsi, tanınma, təhvil və dərc qaydaları.
 translation_of: GUIDE-0011
@@ -20,6 +20,7 @@ texniki komandaları üçündür.
 - Ölkə Tamga Network-a qoşularkən və ya Tamga-nın vəkalətən idarə etdiyi siyahını təhvil alarkən.
 - Ölkəniz siyahısını artıq ETSI formatında dərc edirsə və Tamga rəqəmsal cüzdanlarının və yoxlayan tərəflərinin onu tanımasını istəyirsinizsə.
 - Əvvəlcə: [Etibar siyahıları](/concepts/trust-lists) və [Federasiya](/concepts/federation).
+- Siyahının idarə edilməsinin texniki tərəfi (açarlar, nəşriyyatçı, nəşr serveri, monitorinq): [[GUIDE-0017]].
 
 ## Necə işləyir?
 

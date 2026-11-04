@@ -11,7 +11,7 @@ limit_req_zone $ssl_client_s_dn zone=tamga_rpc:1m rate=20r/s;
 server {
     listen 8443 ssl;
     listen [::]:8443 ssl;
-    http2 on;
+    http2 on;                                               # nginx >= 1.25.1 (Ubuntu 24.04 ships 1.24: remove this line)
     server_name rpc.<operator-domain>;                      # placeholder
 
     ssl_protocols TLSv1.3;

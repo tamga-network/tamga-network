@@ -44,7 +44,9 @@ Bu sayt **tərtibatçılar** üçündür. Rollar, qaydalar və iştirak şərtl�
 | Qurumunuzun rəqəmsal sənədlərini şəxslərin rəqəmsal cüzdanına vermək | [[GUIDE-0003]] | `@tamga-network/issuer` (+ `/client`) |
 | Tamga ilə uyğun rəqəmsal cüzdan hazırlamaq | [[GUIDE-0005]], yoxlama siyahısı [[GUIDE-0010]] | `@tamga-network/wallet-core` |
 | Etibar siyahılarını oxumaq, gələcəkdə şəbəkə qovşağı işlətmək | [[GUIDE-0006]] | `@tamga-network/trust` |
+| İki rejimi birlikdə görmək: imzalanmış siyahılar və ortaq reyestr, hansı bələdçi kimə | [[GUIDE-0016]] | — |
 | Ölkənizin etibar siyahısını şəbəkəyə qoşmaq | [[GUIDE-0011]] | `apps/trust-publisher` |
+| Milli etibar siyahısını idarə etmək (açarlar, nəşr, monitorinq) | [[GUIDE-0017]] | `apps/trust-publisher` |
 | Gələcəkdə ortaq reyestrdə qovşaq işlətmək (hazırlıq) | [[GUIDE-0015]] | `network/` |
 | Tətbiqinizin qaydalara uyğun olduğunu göstərmək | [[GUIDE-0009]] | `conformance/` |
 | Real şəbəkəyə toxunmadan başdan-başa sınamaq (test şəbəkəsi) | [[GUIDE-0013]] | `sandbox.tamga.network` |

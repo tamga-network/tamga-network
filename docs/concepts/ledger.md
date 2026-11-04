@@ -52,5 +52,6 @@ zincir kaynağına sorulup kabul/ret farkı çıkmadan kapanmaz. Verilmiş belge
 ## Ayrıntı
 
 - Kararlar: [[ADR-0001]] · [[ADR-0009]] · [[ADR-0051]] · [[ADR-0052]] · [[ADR-0073]] · [[ADR-0074]] · [[ADR-0075]]
+- İki hâl yan yana, senkron kalma ve hangi rehber kime: [[GUIDE-0016]]
 - Liste biçimi ve kontrat eşlemesi: [[SPEC-TRUST-0001]]
 - Güven listeleri: [Güven listeleri ve federasyon](/concepts/trust-lists)

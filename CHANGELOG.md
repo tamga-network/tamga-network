@@ -82,6 +82,18 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
 
 ### Applications and repository (not in the npm packages)
 
+- **chain — Linux multi-node Besu test network (`network/testnet/`, CI `testnet.yml`; production chain still off).** Bash
+  scripts (shellcheck-clean): `install-besu.sh` (Temurin JDK 25 + Besu 26.11.0 from the official release pages, sha256-pinned;
+  `--system` installs root-owned binaries in `/opt/tamga-besu`, a `besu` service user and `/var/lib/tamga-besu`),
+  `make-network.sh` (4 QBFT validators + 1 extra node by default: genesis `extraData`, static peers, start-up permissions file,
+  node declarations, one `besu.toml` per node with JSON-RPC on 127.0.0.1 and `p2p-interface` set; `--keys generate` uses
+  `besu operator generate-blockchain-config`, `--hosts` one node per test server), `node.sh` (process or systemd mode),
+  `besu@.service` (hardened unit) and `deploy-and-wire.sh`, the end-to-end test: contracts → list replay and equivalence →
+  `trust:chain-submit` / `chain-check` → Governance admission of the other validators' test states → permissions rendered from
+  each node's own chain view, reloaded and checked (equal `shared_sha256`) → validator added and removed by QBFT vote → one
+  stopped validator does not stop the chain, two do, restart resumes → RPC protection (`rpc-proxy-check.sh`: method filter and
+  nginx mutual TLS). The GitHub Actions workflow runs it on ubuntu-latest (manually, weekly and on chain code changes) plus a
+  systemd job, and writes the results to the job summary. Chain id 31338 and Hardhat's public test keys — test only.
 - **chain — Besu local permissioning and operations (ADR-0052; production chain still off).**
   - `npm run trust:chain-permissions -- render` reads `Governance`, `IssuerRegistry`, `TrustListAnchorRegistry` and the open
     migration windows at one pinned block and writes a deterministic `permissions_config.toml` (sorted, unique, lower case, LF;

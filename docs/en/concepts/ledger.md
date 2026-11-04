@@ -54,5 +54,6 @@ and the chain source, show no accept/reject difference. Issued credentials are n
 ## More
 
 - Decisions: [[ADR-0001]] · [[ADR-0009]] · [[ADR-0051]] · [[ADR-0052]] · [[ADR-0073]] · [[ADR-0074]] · [[ADR-0075]]
+- Both modes side by side, staying in sync, and which guide is for whom: [[GUIDE-0016]]
 - List format and contract mapping: [[SPEC-TRUST-0001]]
 - Trust lists: [Trust lists and federation](/concepts/trust-lists)

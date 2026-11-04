@@ -93,3 +93,5 @@ network/dev/genesis.json
 network/dev/perm/
 # RPC vekili yerel test sertifikaları (network/rpc-proxy/gen-dev-certs.sh)
 network/rpc-proxy/dev-certs/
+# Linux çok düğümlü test ağı (network/testnet/make-network.sh): genesis, düğüm anahtarları, zincir verisi, raporlar
+network/testnet/run/

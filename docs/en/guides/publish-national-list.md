@@ -4,7 +4,7 @@ title: "Publish a national trust list"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-11-05
 summary: >
   How a state, or a body it authorises, connects its own trust list to Tamga Network: two ways (a national list in the Tamga
   format or an external list in the ETSI format), the LOTL entry, roles, signing keys, scope, recognition, hand-over and
@@ -22,6 +22,7 @@ technical teams.
 - When a country joins Tamga Network, or takes over the list Tamga runs on its behalf.
 - When your country already publishes its list in the ETSI format and you want Tamga wallets and verifiers to recognise it.
 - First: [Trust lists](/concepts/trust-lists) and [Federation](/concepts/federation).
+- The technical side of operating the list (keys, publisher, publication server, monitoring): [[GUIDE-0017]].
 
 ## How it works
 

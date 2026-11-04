@@ -264,7 +264,10 @@ function sidebars(l: Lang): DefaultTheme.Sidebar {
     { text: t.verify, items: [doc("GUIDE-0001"), doc("GUIDE-0002")] },
     { text: t.issue, items: [doc("GUIDE-0003")] },
     { text: t.wallet, items: [doc("GUIDE-0005"), doc("GUIDE-0010")] },
-    { text: t.trust, items: [doc("GUIDE-0006"), doc("GUIDE-0011"), doc("GUIDE-0015")] },
+    {
+      text: t.trust,
+      items: [doc("GUIDE-0016"), doc("GUIDE-0006"), doc("GUIDE-0011"), doc("GUIDE-0017"), doc("GUIDE-0015")],
+    },
     { text: t.help, items: [doc("GUIDE-0012")] },
   ];
   const concepts: DefaultTheme.SidebarItem[] = [

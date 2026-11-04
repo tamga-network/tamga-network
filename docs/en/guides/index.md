@@ -45,7 +45,9 @@ the general overview is at [tamga.network](https://tamga.network/en/learn).
 | Issue your institution's credentials to people's wallets | [[GUIDE-0003]] | `@tamga-network/issuer` (+ `/client`) |
 | Build a Tamga-compatible wallet | [[GUIDE-0005]], checklist [[GUIDE-0010]] | `@tamga-network/wallet-core` |
 | Read trust lists, and later run a network node | [[GUIDE-0006]] | `@tamga-network/trust` |
+| See both modes together: signed lists and a shared ledger, which guide for whom | [[GUIDE-0016]] | — |
 | Connect your country's trust list to the network | [[GUIDE-0011]] | `apps/trust-publisher` |
+| Operate the national trust list (keys, publication, monitoring) | [[GUIDE-0017]] | `apps/trust-publisher` |
 | Run a node on the shared ledger later (preparation) | [[GUIDE-0015]] | `network/` |
 | Show that your application follows the rules | [[GUIDE-0009]] | `conformance/` |
 | Test end to end without touching the real network (test network) | [[GUIDE-0013]] | `sandbox.tamga.network` |

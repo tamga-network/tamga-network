@@ -13,6 +13,8 @@ network/
 ├── qbft/          QBFT parameters (block time, epoch)                           — planned
 ├── permissions/   node declarations (schema, examples, nodes/) — input of `npm run trust:chain-permissions -- render|check`
 ├── rpc-proxy/     JSON-RPC behind mutual TLS: nginx example + method filter (eth/net/web3 only)
+├── testnet/       Linux multi-node test network (bash): install JDK + Besu, 4-validator QBFT network, systemd unit, end-to-end
+│                  test (deploy, replay + equivalence, anchoring, permissions, validator vote, fault tolerance, RPC protection)
 └── dev/           local development networks, produced by scripts/besu-dev.ps1 (git-ignored):
                    genesis.json, keys/, data/ (single validator) and perm/ (two-node permissioned network)
 ```
@@ -24,6 +26,9 @@ network/
 - **Two-node permissioned network** (ADR-0052): `scripts/besu-dev.ps1 -Init|-Start [-Node 2]|-Apply|-Status|-Stop|-Reset
   -Permissioned` — both permissioning flags on, the allowlists rendered from the chain (`-Apply`), validator added and removed by
   QBFT vote (`apps/trust-publisher/scripts/besu-permissions-smoke.ts`). ARCH-0002 "Yerel izinli ağ".
+
+- **Linux multi-node test network:** `network/testnet/` (README there) — 4 validators + 1 extra node on one host or one node
+  per test server (systemd), the end-to-end test `deploy-and-wire.sh`, run weekly in CI (`.github/workflows/testnet.yml`).
 
 Linux/macOS steps: ARCH-0002 "Local development network". Besu runs directly on JDK 25.
 

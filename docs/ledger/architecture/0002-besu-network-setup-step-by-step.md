@@ -73,7 +73,7 @@ npm run chain:besu:reset    # zincir verisini siler; genesis ve anahtar korunur 
 Betik `scripts/besu-dev.ps1`; log `network/dev/data/besu.log`. Hardhat ağ adı `besuDev` (adres `TAMGA_BESU_RPC`, varsayılan
 `http://127.0.0.1:8546`).
 
-**Linux / macOS** — aynı ayarlar, elle (betik Windows içindir):
+**Linux / macOS** — aynı ayarlar, elle (betik Windows içindir; Linux'ta çok düğümlü ağ için betikler: "Linux çok düğümlü test ağı"):
 
 ```bash
 # 1) Temurin JDK 25 + Besu 26.11.0 indir, sha256'yı yayın sayfasındaki değerle karşılaştır, aç
@@ -127,6 +127,20 @@ send transactions"), listedeki devlet delegesinin işlemi bloğa girdi; iki dü�
 yeniden bağlandı; düğüm 2 `qbft_proposeValidatorVote` ile kümeye eklendi (iki doğrulayıcı da blok önerdi) ve iki doğrulayıcının
 çıkarma oyuyla çıkarıldı. Besu `perm_reloadPermissionsFromFile` sırasında dosyayı kendi biçimiyle yeniden yazar (yorumlar gider):
 çizim ayrı dosyada kalır (`permissions_config.rendered.toml`), denetim `check` ile anlamsaldır.
+
+## Linux çok düğümlü test ağı
+
+Yukarıdaki adımların Linux karşılığı, çok düğümle ve uçtan uca: `network/testnet/` (bash; ayrıntı oradaki README). Yalnız test
+ağıdır (zincir kimliği 31338, herkesçe bilinen test anahtarları); aynı betikler test sunucusu kurulumunun başlangıcıdır.
+
+| Betik | Ne yapar |
+|---|---|
+| `install-besu.sh` | JDK 25 + Besu 26.11.0, resmi kaynak, sha256 sabit; `--system`: `/opt/tamga-besu`, `besu` kullanıcısı, `/var/lib/tamga-besu` |
+| `make-network.sh` | 4 doğrulayıcı (3f+1, f=1) + 1 ek düğüm: genesis (`extraData`), statik eşler, başlangıç izin dosyası, düğüm bildirimleri, `besu.toml` (RPC ve P2P yalnız düğümün arayüzünde) |
+| `node.sh`, `besu@.service` | düğüm işletimi; sıkılaştırılmış systemd birimi |
+| `deploy-and-wire.sh` | kontratlar → yeniden oynatma + eşdeğerlik → çapa → Governance kabulü → her düğümde izin listesi (LP3) → validator ekleme/çıkarma oyu → bir doğrulayıcı dururken bloklar sürer, iki dururken durur → RPC koruması (süzgeç + nginx mTLS) |
+
+GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/workflows/testnet.yml`); sonuç özeti iş özetindedir.
 
 ---
 

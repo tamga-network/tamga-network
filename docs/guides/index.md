@@ -43,7 +43,9 @@ genel anlatım [tamga.network](https://tamga.network/tr/learn)'tedir.
 | Kurumunuzun belgelerini kişilerin cüzdanına vermek | [[GUIDE-0003]] | `@tamga-network/issuer` (+ `/client`) |
 | Tamga uyumlu bir cüzdan geliştirmek | [[GUIDE-0005]], kontrol listesi [[GUIDE-0010]] | `@tamga-network/wallet-core` |
 | Güven listelerini okumak, ileride ağ düğümü çalıştırmak | [[GUIDE-0006]] | `@tamga-network/trust` |
+| İki hâli birlikte görmek: imzalı listeler ve ortak defter, hangi rehber kime | [[GUIDE-0016]] | — |
 | Ülkenizin güven listesini ağa bağlamak | [[GUIDE-0011]] | `apps/trust-publisher` |
+| Ulusal güven listesini işletmek (anahtarlar, yayın, izleme) | [[GUIDE-0017]] | `apps/trust-publisher` |
 | İleride ortak defterde düğüm işletmek (hazırlık) | [[GUIDE-0015]] | `network/` |
 | Uygulamanızın kurallara uyduğunu göstermek | [[GUIDE-0009]] | `conformance/` |
 | Gerçek ağa dokunmadan uçtan uca denemek (test ağı) | [[GUIDE-0013]] | `sandbox.tamga.network` |

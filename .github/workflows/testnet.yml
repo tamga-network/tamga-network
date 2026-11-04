@@ -1,0 +1,148 @@
+# Multi-node Besu test network on Linux (network/testnet; ADR-0052, ARCH-0002). The production chain stays off (ADR-0009 K4):
+# this only proves, on a fresh ubuntu-latest machine, that the chain layer can be set up and operated as written —
+# 4 QBFT validators, contracts, list replay + equivalence, anchoring, permissions rendered from the chain on every node,
+# validator add/remove vote, one-fault tolerance, RPC protection (filter + nginx mTLS) and the hardened systemd unit.
+# Results go to the job summary; node logs and reports are kept as an artifact for 14 days.
+name: testnet
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 4 * * 1" # weekly, Monday 04:23 UTC
+  push:
+    branches: [main]
+    paths:
+      - "contracts/**"
+      - "apps/chain-indexer/**"
+      - "apps/trust-publisher/src/chain/**"
+      - "network/testnet/**"
+      - "network/rpc-proxy/**"
+      - "network/permissions/**"
+      - ".github/workflows/testnet.yml"
+  pull_request:
+    paths:
+      - "contracts/**"
+      - "apps/chain-indexer/**"
+      - "apps/trust-publisher/src/chain/**"
+      - "network/testnet/**"
+      - "network/rpc-proxy/**"
+      - "network/permissions/**"
+      - ".github/workflows/testnet.yml"
+permissions:
+  contents: read
+concurrency:
+  group: testnet-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: bash -n + shellcheck
+        run: |
+          command -v shellcheck >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q shellcheck; }
+          shellcheck --version | sed -n 2p
+          for f in network/testnet/*.sh network/rpc-proxy/gen-dev-certs.sh; do bash -n "$f"; done
+          shellcheck network/testnet/*.sh network/rpc-proxy/gen-dev-certs.sh
+
+  network:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      TESTNET_REQUIRE_NGINX: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: cache JDK + Besu downloads (sha256-pinned in network/testnet/lib.sh)
+        uses: actions/cache@v4
+        with:
+          path: tools/_dl
+          key: besu-jdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('network/testnet/lib.sh') }}
+      - name: system tools
+        run: |
+          command -v nginx >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q nginx; }
+          for c in curl jq unzip ss openssl nginx; do command -v "$c" >/dev/null || { echo "missing: $c"; exit 1; }; done
+          nginx -v
+      - name: install JDK 25 + Besu
+        run: bash network/testnet/install-besu.sh
+      - name: packages, signed lists, contracts
+        run: |
+          npm ci --no-audit --no-fund
+          npm run setup
+          npm run contracts:install
+          npm run contracts:compile
+      - name: make network (4 validators + 1 extra node)
+        run: bash network/testnet/make-network.sh --validators 4 --extra 1
+      - name: deploy and wire (end-to-end)
+        run: bash network/testnet/deploy-and-wire.sh
+      - name: logs and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testnet-logs
+          path: |
+            network/testnet/run/**/besu.log
+            network/testnet/run/**/permissions_config*.toml
+            network/testnet/run/**/permissions-check.json
+            network/testnet/run/*.json
+            network/testnet/run/*.md
+            network/testnet/run/*.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # The systemd layout of a test server: root-owned binaries in /opt/tamga-besu, service user `besu`, data in
+  # /var/lib/tamga-besu, unit network/testnet/besu@.service with its hardening; one validator with a generated key.
+  systemd:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: cache JDK + Besu downloads
+        uses: actions/cache@v4
+        with:
+          path: tools/_dl
+          key: besu-jdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('network/testnet/lib.sh') }}
+      - name: install (system layout)
+        run: sudo bash network/testnet/install-besu.sh --system --cache "$PWD/tools/_dl"
+      - name: one-validator network with a generated key
+        run: |
+          sudo bash network/testnet/make-network.sh --validators 1 --extra 0 --keys generate --dir /var/lib/tamga-besu \
+            --besu-home /opt/tamga-besu/besu --java-home /opt/tamga-besu/jdk-25
+          sudo chown -R besu:besu /var/lib/tamga-besu
+          sudo install -m 0644 network/testnet/besu@.service /etc/systemd/system/besu@.service
+          sudo systemctl daemon-reload
+          sudo systemd-analyze verify besu@node1.service
+      - name: start under systemd, blocks, sockets, hardening
+        run: |
+          set -euo pipefail
+          sudo TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd bash network/testnet/node.sh start 1
+          bn() { curl -s -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' http://127.0.0.1:8546 | jq -r .result; }
+          b0=$(( $(bn) )); sleep 12; b1=$(( $(bn) ))
+          echo "blocks: $b0 -> $b1"
+          test "$b1" -gt "$b0"
+          pid=$(systemctl show -p MainPID --value besu@node1)
+          user=$(ps -o user= -p "$pid")
+          test "$user" = besu
+          sudo ss -H -ltnup | grep "pid=$pid," | tee sockets.txt
+          bad=$(awk '{print $5}' sockets.txt | grep -v -E '^(127\.0\.0\.1|\[::ffff:127\.0\.0\.1\]):' || true)
+          if [ -n "$bad" ]; then echo "non-loopback listening sockets: $bad"; exit 1; fi
+          exposure=$(sudo systemd-analyze security besu@node1.service --no-pager | tail -n 1)
+          echo "$exposure"
+          {
+            echo "## Tamga test network — systemd unit"
+            echo "| | |"
+            echo "|---|---|"
+            echo "| unit | besu@node1 (user $user, /opt/tamga-besu, /var/lib/tamga-besu) |"
+            echo "| blocks | $b0 → $b1 in 12 s |"
+            echo "| listening sockets | $(wc -l < sockets.txt), all 127.0.0.1 |"
+            echo "| systemd-analyze security | ${exposure#*: } |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          sudo TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd bash network/testnet/node.sh stop 1
+      - name: journal
+        if: failure()
+        run: sudo journalctl -u besu@node1 -n 200 --no-pager || true

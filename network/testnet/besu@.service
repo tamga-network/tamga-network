@@ -1,0 +1,68 @@
+# Tamga Network test network — one Besu node per instance: besu@node1, besu@node2, … (EXAMPLE for test servers).
+#   sudo bash network/testnet/install-besu.sh --system          # /opt/tamga-besu (root-owned), user besu, /var/lib/tamga-besu
+#   sudo bash network/testnet/make-network.sh --dir /var/lib/tamga-besu --besu-home /opt/tamga-besu/besu \
+#        --java-home /opt/tamga-besu/jdk-25 [--keys generate] [--hosts "…"]
+#   sudo chown -R besu:besu /var/lib/tamga-besu
+#   sudo install -m 0644 network/testnet/besu@.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now besu@node1
+#
+# The node's settings are in /var/lib/tamga-besu/%i/besu.toml (make-network.sh): JSON-RPC on 127.0.0.1 only, P2P only on the
+# node's own address (p2p-interface — p2p-host is only the advertised address; Besu's default interface is 0.0.0.0), discovery
+# off, both permissioning flags on. Outside access to JSON-RPC: network/rpc-proxy (nginx mTLS + method filter). The firewall
+# opens the P2P port to the allow-listed peers' addresses only.
+[Unit]
+Description=Tamga Network test network Besu node %i
+Documentation=https://docs.tamga.network
+After=network-online.target time-sync.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=besu
+Group=besu
+WorkingDirectory=/var/lib/tamga-besu/%i
+Environment=JAVA_HOME=/opt/tamga-besu/jdk-25
+Environment="BESU_OPTS=-Xms256m -Xmx1g"
+ExecStart=/opt/tamga-besu/besu/bin/besu --config-file=/var/lib/tamga-besu/%i/besu.toml
+# Besu closes its database on SIGTERM; give it time before SIGKILL
+KillSignal=SIGTERM
+TimeoutStopSec=120
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=65536
+UMask=0077
+
+# --- hardening -------------------------------------------------------------------------------------------------------------
+# the node writes only its own data directory (database, permissions file — Besu rewrites it on perm_reloadPermissionsFromFile)
+ReadWritePaths=/var/lib/tamga-besu/%i
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RemoveIPC=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+# AF_UNIX: JVM attach / local sockets; AF_NETLINK: the JVM enumerates network interfaces
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+# MemoryDenyWriteExecute is NOT set: the JVM's JIT compiler needs writable+executable memory.
+# Optional on a server with fixed peers (allow-listed peers' addresses and the loopback interface only):
+# IPAddressDeny=any
+# IPAddressAllow=localhost 192.0.2.10 192.0.2.11 192.0.2.12
+
+[Install]
+WantedBy=multi-user.target

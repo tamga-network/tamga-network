@@ -52,5 +52,6 @@ Verilmiş sənədlər yenidən verilmir; rəqəmsal cüzdan və yoxlayan tərəf
 ## Ətraflı
 
 - Qərarlar: [[ADR-0001]] · [[ADR-0009]] · [[ADR-0051]] · [[ADR-0052]] · [[ADR-0073]] · [[ADR-0074]] · [[ADR-0075]]
+- İki rejim yan-yana, sinxron qalma və hansı bələdçi kimə: [[GUIDE-0016]]
 - Siyahı formatı və müqavilə uyğunluğu: [[SPEC-TRUST-0001]]
 - Etibar siyahıları: [Etibar siyahıları və federasiya](/concepts/trust-lists)
