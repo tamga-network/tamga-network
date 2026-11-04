@@ -6,6 +6,8 @@
  *   UNKNOWN  bayrak kapalı / zincir erişilemez / çapa yok ya da onaysız
  * İsteğe bağlı ek güvencedir; A–E doğrulama hattının adımı değildir ve `UNKNOWN` sonucu kötüleştirmez (CH1).
  */
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import type { Tri } from "@tamga-network/trust";
 
 import type { ChainClient } from "./client.js";
@@ -81,4 +83,28 @@ async function checkAnchored(client: ChainClient | null, a: ListVersionAnchor): 
   } catch (e) {
     return { ...base, anchored: "UNKNOWN", reason: `zincir erişilemedi: ${(e as Error).message}` };
   }
+}
+
+/**
+ * C32 (7): bir yayın klasöründeki imzalı listelerin (`lotl.jws`, `tl-<cc>.jws`; ad sırasıyla) zincir denetimi — doğrulayıcının
+ * sağlık sayfası (`apps/verify` `/healthz` `chain`) bunu kullanır. Okunamayan dosya `UNKNOWN`.
+ */
+export async function checkDistAnchored(
+  client: ChainClient | null,
+  environment: Environment,
+  dist: string,
+): Promise<ChainCheck[]> {
+  const files = readdirSync(dist)
+    .filter((f) => /^(lotl|tl-[a-z]{2})\.jws$/.test(f))
+    .sort();
+  const out: ChainCheck[] = [];
+  for (const f of files) {
+    const name = f.replace(/\.jws$/, "");
+    try {
+      out.push(await checkListAnchored(client, environment, name, readFileSync(join(dist, f), "utf8")));
+    } catch (e) {
+      out.push({ file: name, version: 0, contentHash: "", anchored: "UNKNOWN", reason: (e as Error).message });
+    }
+  }
+  return out;
 }

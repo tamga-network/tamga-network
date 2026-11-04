@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tamga.network/schemas/network/node-declaration.schema.json",
+  "title": "Tamga Network Besu node declaration",
+  "description": "An operator's declaration of one Besu node (ADR-0052 K2). Not written to the chain. A validator declaration enters the node allowlist only if the address derived from node_public_key is the ACTIVE validator address of `state` in Governance. No personal data: `contact` is the institution's role address, never a person's name.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "state", "role", "node_public_key", "ip", "p2p_port", "contact"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "format": { "const": "tamga-node-declaration/1" },
+    "state": {
+      "description": "Governance member code (ISO 3166-1 alpha-2, upper case)",
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "role": {
+      "description": "validator: QBFT validator (in every operator's allowlist); rpc: the operator's own RPC/full node (only in that operator's allowlist)",
+      "enum": ["validator", "rpc"]
+    },
+    "node_public_key": {
+      "description": "secp256k1 node public key (enode id): uncompressed, without the 04 prefix and without 0x — 128 lower-case hex characters",
+      "type": "string",
+      "pattern": "^[0-9a-f]{128}$"
+    },
+    "ip": {
+      "description": "IPv4 or IPv6 literal (Besu node allowlists do not accept DNS names by default)",
+      "type": "string",
+      "anyOf": [{ "format": "ipv4" }, { "format": "ipv6" }]
+    },
+    "p2p_port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+    "contact": {
+      "description": "the institution's operations contact (role mailbox or https page) — no personal names",
+      "type": "string",
+      "maxLength": 254,
+      "pattern": "^((mailto:)?[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}|https://\\S+)$"
+    }
+  }
+}

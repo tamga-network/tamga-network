@@ -33,6 +33,8 @@
  *                                                 zincire; bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok — src/chain/
  *   chain-replay [--dry-run] [--archive <dist>]   (ADR-0073 K1) liste arşivinin kontratlara yeniden oynatılması: plan +
  *                                                 replayPlanHash, kaldığı yerden yazım, eşdeğerlik testi — src/chain/replay-cli.ts
+ *   chain-permissions render|check                (ADR-0052 K3) Besu yerel izin listesi zincir durumundan (belirleyici
+ *                                                 permissions_config.toml + sha256) ve düğümle fark — src/chain/permissions-cli.ts
  * Kurallar: version monoton, previous_version_hash = önceki .jws'in sha256'sı; dist/ değişmez arşivi.
  */
 import {
@@ -1925,12 +1927,12 @@ const cmd = process.argv[2];
     console.log(cp ? JSON.stringify(cp) : "anchors: arşivlenecek satır yok");
   } else if (["register", "scope", "authorize", "list", "status", "rp-status", "end-use"].includes(cmd ?? "")) {
     await registryCommand(cmd!, process.argv.slice(3));
-  } else if (cmd === "chain-submit" || cmd === "chain-check" || cmd === "chain-replay") {
+  } else if (cmd === "chain-submit" || cmd === "chain-check" || cmd === "chain-replay" || cmd === "chain-permissions") {
     // ADR-0051: zincir projeksiyonu — bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok (CH5)
     process.exitCode = await chainCommand(cmd, process.argv.slice(3), { dist: DIST, environment: ENVIRONMENT });
   } else {
     console.error(
-      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | history-reset --reason <gerekçe> | chain-submit [--dry-run] | chain-check <dosya> | chain-replay [--dry-run] [--archive <dist>]",
+      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | history-reset --reason <gerekçe> | chain-submit [--dry-run] | chain-check <dosya> | chain-replay [--dry-run] [--archive <dist>] | chain-permissions render|check",
     );
     process.exit(1);
   }

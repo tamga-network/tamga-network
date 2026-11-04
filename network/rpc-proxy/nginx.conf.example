@@ -1,0 +1,43 @@
+# Tamga Network — Besu JSON-RPC behind mutual TLS (ADR-0052 K5 / LP5). EXAMPLE: copy, fill in the placeholders, never commit
+# real certificates or keys. The Besu RPC port (8545) listens on 127.0.0.1 only; this vhost is the only way in from outside.
+#
+#   client (trust publisher / indexer / verifier read path; certificate from the operator's client CA)
+#     --TLS 1.3 + client certificate--> nginx :8443 --> rpc filter 127.0.0.1:8550 (filter.mjs: eth/net/web3 only) --> Besu 127.0.0.1:8545
+#
+# nginx cannot read the JSON-RPC body without njs; the method filter is the small Node process filter.mjs (no dependencies).
+
+limit_req_zone $ssl_client_s_dn zone=tamga_rpc:1m rate=20r/s;
+
+server {
+    listen 8443 ssl;
+    listen [::]:8443 ssl;
+    http2 on;
+    server_name rpc.<operator-domain>;                      # placeholder
+
+    ssl_protocols TLSv1.3;
+    ssl_certificate     /etc/tamga/rpc-proxy/server.crt;    # placeholder (operator's server certificate)
+    ssl_certificate_key /etc/tamga/rpc-proxy/server.key;    # placeholder (stays on the host, mode 600)
+
+    # mTLS: every client must present a certificate issued by the operator's client CA (not the public web PKI)
+    ssl_client_certificate /etc/tamga/rpc-proxy/clients-ca.crt;   # placeholder
+    ssl_verify_client on;
+    ssl_verify_depth 1;
+    # optional: revoked client certificates
+    # ssl_crl /etc/tamga/rpc-proxy/clients-ca.crl;
+
+    access_log off;                                         # no IPs or bodies in logs (the filter counts refusals)
+    client_max_body_size 256k;
+    keepalive_timeout 30s;
+
+    location = / {
+        limit_except POST { deny all; }
+        limit_req zone=tamga_rpc burst=40 nodelay;
+        proxy_pass http://127.0.0.1:8550;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Connection "";
+        proxy_read_timeout 35s;
+    }
+
+    location / { return 404; }
+}

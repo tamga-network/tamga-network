@@ -41,6 +41,7 @@ import { registerDcTestRoutes } from "./routes/dc-test.js";
 import { policiesFor } from "./policies.js";
 import { DEFAULT_RATE_RULES, TokenBucketLimiter, type RateRules } from "./rate-limit.js";
 import { registerAssetRoutes, sandboxBar } from "./brand.js";
+import { ChainHealthMonitor, type ChainHealth } from "./chain-health.js";
 import type { Policy } from "@tamga-network/verifier";
 
 export { POLICIES, policiesFor } from "./policies.js";
@@ -99,6 +100,8 @@ export interface VerifyContext {
    * verildiyse yok (istek imzasız gider).
    */
   readerAuth?: { sk: Uint8Array; x5chain: Uint8Array[] };
+  /** C32 (7): zincir çapası durumu (`/healthz` `chain`); bayrak kapalıyken `UNKNOWN` — chain-health.ts */
+  chainHealth: () => ChainHealth;
 }
 
 /**
@@ -121,6 +124,8 @@ export interface VerifyApp extends FastifyInstance {
   trust: () => TrustSource;
   statusCache: PrefetchStatusCache;
   presentations: PresentationStore;
+  /** C32 (7): zincir denetimini yeniler (bayrak kapalıyken bir şey yapmaz) */
+  refreshChainHealth: () => Promise<ChainHealth>;
 }
 
 export async function buildVerifyApp(
@@ -132,6 +137,8 @@ export async function buildVerifyApp(
     showcase?: boolean;
     /** Hız sınırı kuralları (varsayılan DEFAULT_RATE_RULES); testler küçültür. */
     rateRules?: Partial<RateRules>;
+    /** C32 (7): zincir sağlık monitörü (server.ts ortamdan kurar); verilmezse kapalı → `UNKNOWN` */
+    chainHealth?: ChainHealthMonitor;
   } = {},
 ): Promise<VerifyApp> {
   const showcase = opts.showcase ?? cfg.network === "sandbox";
@@ -186,8 +193,10 @@ export async function buildVerifyApp(
         onWarn: (m) => console.warn(`[verify] ${m}`), // yalnız arka uç durumu; kişi verisi yok
       })
     : defaultZkBackend();
+  const chainHealth = opts.chainHealth ?? new ChainHealthMonitor(null);
   const ctx: VerifyContext = {
     cfg,
+    chainHealth: () => chainHealth.current(),
     signer,
     ...(readerAuth ? { readerAuth } : {}),
     zk,
@@ -238,6 +247,7 @@ export async function buildVerifyApp(
     trust: () => trust,
     statusCache,
     presentations: ctx.presentations,
+    refreshChainHealth: () => chainHealth.refresh(),
   });
   if (zk instanceof NativeZkBackend) app.addHook("onClose", async () => zk.close());
   // HTML yanıtları: sunum ve kapı sayfaları dizine girmez; sandbox'ta her sayfanın üstünde "test" şeridi (ADR-0038 SB4; ağ

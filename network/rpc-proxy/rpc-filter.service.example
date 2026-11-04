@@ -1,0 +1,22 @@
+# systemd unit for filter.mjs (EXAMPLE). Runs as an unprivileged user, loopback only.
+[Unit]
+Description=Tamga Network Besu JSON-RPC method filter (eth/net/web3 only)
+After=network-online.target
+
+[Service]
+Type=simple
+User=tamga-rpc
+Environment=TAMGA_RPC_FILTER_LISTEN=127.0.0.1:8550
+Environment=TAMGA_RPC_FILTER_UPSTREAM=http://127.0.0.1:8545
+ExecStart=/usr/bin/node /opt/tamga/rpc-proxy/filter.mjs
+Restart=on-failure
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+RestrictAddressFamilies=AF_INET AF_INET6
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

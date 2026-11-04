@@ -5,6 +5,7 @@
  *                                               ADR-0074 K4: görünüm (tl-<cc>.xml, lote/<tür>.jws) ve kayıt sertifikası durum
  *                                               listesi (status/<ad>) da — sürüm dist/anchors.jsonl'daki satırdan
  *   chain-replay …                              liste geçmişinin kontratlara yeniden oynatılması (ADR-0073 K1) — replay-cli.ts
+ *   chain-permissions render|check              Besu yerel izin listesi zincir durumundan (ADR-0052 K3) — permissions-cli.ts
  * Ortam: TAMGA_CHAIN_ENABLED (0/1, varsayılan 0) · TAMGA_CHAIN_RPC_URL · TAMGA_CHAIN_ANCHOR_REGISTRY · TAMGA_CHAIN_ANCHORER_KEY
  * (yalnız yazma; .env'de, depoda yer tutucu). Üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz (K4).
  */
@@ -14,6 +15,7 @@ import { basename, relative, resolve } from "node:path";
 import { anchorDist } from "./anchor.js";
 import { EthersChainClient, MemoryChainClient, type ChainClient } from "./client.js";
 import type { Environment } from "./projection.js";
+import { chainPermissionsCommand } from "./permissions-cli.js";
 import { chainReplayCommand } from "./replay-cli.js";
 import { checkListAnchored, checkViewAnchored } from "./verify.js";
 
@@ -91,5 +93,6 @@ export async function chainCommand(
     return out.anchored === "NO" ? 3 : 0;
   }
   if (cmd === "chain-replay") return chainReplayCommand(args, { ...ctx, env });
+  if (cmd === "chain-permissions") return chainPermissionsCommand(args, env);
   throw new Error(`chain: bilinmeyen komut ${cmd}`);
 }

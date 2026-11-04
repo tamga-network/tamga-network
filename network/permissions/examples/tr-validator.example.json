@@ -1,0 +1,10 @@
+{
+  "$schema": "../schema/node-declaration.schema.json",
+  "format": "tamga-node-declaration/1",
+  "state": "TR",
+  "role": "validator",
+  "node_public_key": "ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4",
+  "ip": "192.0.2.10",
+  "p2p_port": 30303,
+  "contact": "noc@example.org"
+}

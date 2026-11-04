@@ -89,3 +89,7 @@ tools/_dl/
 network/dev/data/
 network/dev/keys/
 network/dev/genesis.json
+# izinli kip (besu-dev.ps1 -Permissioned): iki düğümün verisi, test anahtarları, izin dosyaları, yerel düğüm bildirimleri
+network/dev/perm/
+# RPC vekili yerel test sertifikaları (network/rpc-proxy/gen-dev-certs.sh)
+network/rpc-proxy/dev-certs/

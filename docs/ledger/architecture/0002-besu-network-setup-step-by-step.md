@@ -4,14 +4,14 @@ title: "Besu ağı kurulumu"
 status: Draft
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 summary: >
   "Hyperledger Besu ile ağ kurmak ne demek?" sorusunu adım adım, somut olarak
   yanıtlar: chain ID/genesis, QBFT validator anahtarları ve extraData, bootnode,
   node başlatma, izinli erişim (yerel izinlendirme, ADR-0052), RPC koruması, Trust Registry EVM
   kontratlarının deploy'u, Tamga Wallet/issuer entegrasyonu, testnet→mainnet, ve fazlı
   validator devri (vakıf→devlet); ayrıca Docker'sız yerel tek-validator geliştirme ağı
-  (Windows + Linux, Java 25). Detaylı config/ABI'lar sonraki Specification
+  (Windows + Linux, Java 25) ve iki düğümlü yerel izinli ağ (izin listesi zincirden, QBFT validator oylaması). Detaylı config/ABI'lar sonraki Specification
   dokümanlarına bırakılır; bu doküman referans kurulum akışını verir.
 ---
 
@@ -55,7 +55,7 @@ tek validator, herkesçe bilinen test hesapları; gerçek ağ ≥2 bağımsız i
 | chainId | 31338 (Hardhat 31337'den ayrı) |
 | Uzlaşı | QBFT, blok süresi 2 sn, epoch 30000, istek zaman aşımı 4 sn |
 | Genesis | `shanghaiTime: 0` (kontratlar `evmVersion: shanghai`), `zeroBaseFee: true`; Hardhat test hesaplarına bakiye |
-| Dinleme | yalnız 127.0.0.1 — RPC 8546 (8545 Hardhat'indir), P2P 30313, keşif kapalı, host izin listesi localhost/127.0.0.1 |
+| Dinleme | yalnız 127.0.0.1 — RPC 8546 (8545 Hardhat'indir), P2P 30313 (`p2p-interface` da 127.0.0.1 — `p2p-host` yalnız ilan edilen adrestir), keşif kapalı, host izin listesi localhost/127.0.0.1 |
 | RPC ad alanları | `ETH`, `NET`, `WEB3` + yalnız yerelde `QBFT` (doğrulayıcı listesi için); gaz fiyatı alt sınırı 0 |
 
 **Windows (PowerShell 5.1 yeterli)** — depo kökünden:
@@ -84,7 +84,7 @@ tools/besu-26.11.0/bin/besu operator generate-blockchain-config \
 #    _gen/genesis.json → network/dev/genesis.json, _gen/keys/0x…/key → network/dev/keys/key
 # 3) başlat
 tools/besu-26.11.0/bin/besu --data-path=network/dev/data/db --genesis-file=network/dev/genesis.json \
-  --node-private-key-file=network/dev/keys/key --p2p-host=127.0.0.1 --p2p-port=30313 --discovery-enabled=false \
+  --node-private-key-file=network/dev/keys/key --p2p-host=127.0.0.1 --p2p-interface=127.0.0.1 --p2p-port=30313 --discovery-enabled=false \
   --rpc-http-enabled --rpc-http-host=127.0.0.1 --rpc-http-port=8546 --rpc-http-api=ETH,NET,WEB3,QBFT \
   --host-allowlist=localhost,127.0.0.1 --min-gas-price=0
 # 4) dağıt
@@ -93,6 +93,40 @@ npm run chain:besu:deploy
 
 Dikkat: Besu anında blok kazmaz (2 sn); dağıtım kodu her dağıtım/işlemden sonra bloğa girmesini bekler
 (`contracts/scripts/lib/deploy.ts`, `waitForDeployment` / `tx.wait()`), yoksa proxy kurulumu henüz kodu olmayan adrese bakar.
+
+## Yerel izinli ağ (iki düğüm, [[ADR-0052]])
+
+Yerel izinlendirmeyi, izin listesinin zincirden üretilmesini ve validator oylamasını denemek için ayrı bir yerel ağ
+(`network/dev/perm/`, gitignore). **Yalnız yerel:** düğüm anahtarları Hardhat test hesapları #1 ve #2'dir (herkesçe bilinen); bu
+sayede QBFT doğrulayıcı adresi = Governance'taki TR/KZ validator adresi = enode adresi ve [[ADR-0052]] K2 eşleşme kuralı gerçek
+biçimiyle denenir.
+
+| Düğüm | RPC | P2P | Rol |
+|---|---|---|---|
+| 1 (TR) | 127.0.0.1:8546 | 127.0.0.1:30313 | genesis'teki tek kurucu doğrulayıcı (`extraData`: `besu rlp encode --type=QBFT_EXTRA_DATA`) |
+| 2 (KZ) | 127.0.0.1:8547 | 127.0.0.1:30314 | tam düğüm, düğüm 1'e statik eş; oyla doğrulayıcı olur |
+
+İki izin bayrağı açık (`--permissions-nodes-config-file-enabled`, `--permissions-accounts-config-file-enabled`, ikisi de aynı
+`permissions_config.toml`); RPC ad alanları `ETH,NET,WEB3,QBFT,PERM,ADMIN` yalnız 127.0.0.1'de.
+
+```powershell
+powershell -File scripts\besu-dev.ps1 -Init -Permissioned            # genesis, iki anahtar, iki düğüm bildirimi
+powershell -File scripts\besu-dev.ps1 -Start -Permissioned           # düğüm 1; ilk izin dosyası = düğüm 1 + dağıtım hesapları #0..#4
+npm run chain:besu:deploy                                            # kontratlar
+powershell -File scripts\besu-dev.ps1 -Apply -Permissioned           # her düğüm: render (zincirden) → perm_reloadPermissionsFromFile → check
+powershell -File scripts\besu-dev.ps1 -Start -Permissioned -Node 2   # düğüm 2; sonra yeniden -Apply (paylaşılan özetler aynı olmalı)
+npx tsx apps/trust-publisher/scripts/besu-permissions-smoke.ts accounts      # izinsiz hesap reddi, delege yazar
+npx tsx apps/trust-publisher/scripts/besu-permissions-smoke.ts vote-add      # düğüm 2 doğrulayıcı kümesine
+npx tsx apps/trust-publisher/scripts/besu-permissions-smoke.ts vote-remove   # ve çıkarılır
+powershell -File scripts\besu-dev.ps1 -Stop -Permissioned
+```
+
+Sonuç (2026-11-05, Besu 26.11.0): izin listesinde olmayan hesabın işlemi düğümde reddedildi ("Sender account not authorized to
+send transactions"), listedeki devlet delegesinin işlemi bloğa girdi; iki düğüm listeyi farklı bloklarda kendisi üretti ve
+özetler aynı çıktı (LP3); bildirimi kaldırılan düğüm listeden çıkınca bağlantısı hemen koptu, geri eklenince statik eş ~1 dk içinde
+yeniden bağlandı; düğüm 2 `qbft_proposeValidatorVote` ile kümeye eklendi (iki doğrulayıcı da blok önerdi) ve iki doğrulayıcının
+çıkarma oyuyla çıkarıldı. Besu `perm_reloadPermissionsFromFile` sırasında dosyayı kendi biçimiyle yeniden yazar (yorumlar gider):
+çizim ayrı dosyada kalır (`permissions_config.rendered.toml`), denetim `check` ile anlamsaldır.
 
 ---
 
@@ -133,8 +167,11 @@ Dikkat: Besu anında blok kazmaz (2 sn); dağıtım kodu her dağıtım/işlemde
   kendi RPC/full düğümleri yalnız kendi düğümlerinin listesinde.
 - **Hesap izni:** validator'lar, devlet ve kurum delege anahtarları, liste çapası yazıcıları; Faz 0 başlangıcında ayrıca dağıtım
   hesabı (kontratlar kurulunca çıkar).
-- **Liste elle yazılmaz:** zincirdeki kontrat durumundan `trust:chain-permissions render` ile üretilir (sıralı, belirleyici; sha256
-  özeti basılır). Her işletmeci dosyayı kendisi üretir ve uygular; çalışırken `perm_reloadPermissionsFromFile` ile yüklenir.
+- **Liste elle yazılmaz:** zincirdeki kontrat durumundan `trust:chain-permissions render` ile üretilir (sabitlenmiş blokta okur;
+  sıralı, belirleyici; blok numarası ya da zaman dosyaya girmez). İki özet basılır: `sha256` (dosya) ve `shared_sha256`
+  (işletmecinin kendi RPC düğümleri hariç) — validator'lar `shared_sha256`'yı karşılaştırır. Her işletmeci dosyayı kendisi üretir
+  ve uygular; çalışırken `perm_reloadPermissionsFromFile` ile yüklenir. Düğüm bildirimleri `network/permissions/nodes/`
+  (biçim `tamga-node-declaration/1`; şema ve eşleşme kuralı `network/permissions/README.md`).
   Bütün validator'lar aynı listeyi taşır — Besu yerel hesap kurallarını başka düğümün ürettiği blokta uygulamaz.
   `trust:chain-permissions check` düğümün yürürlükteki listesini (`perm_getNodesAllowlist`, `perm_getAccountsAllowlist`) üretilen
   dosyayla karşılaştırır; fark işletme olayıdır.
@@ -142,6 +179,8 @@ Dikkat: Besu anında blok kazmaz (2 sn); dağıtım kodu her dağıtım/işlemde
 - **RPC koruması:** JSON-RPC/WebSocket (8545/8546) yalnız iç ağda dinler; dış erişim nginx ters vekil arkasından karşılıklı TLS
   (mTLS) ile, yalnız tanımlı istemcilere (liste yayıncısı, indeksleyici, doğrulayıcı okuma yolu) ve yalnız `ETH`, `NET`, `WEB3` ad
   alanlarıyla. `PERM`, `ADMIN`, `QBFT`, `DEBUG`, `TXPOOL` yalnız localhost'tan. P2P portu güvenlik duvarında yalnız izinli eşlere.
+  nginx JSON-RPC gövdesini njs olmadan okuyamaz; yöntem süzgeci ayrı küçük bir Node süreci: `network/rpc-proxy/` (nginx örneği,
+  `filter.mjs`, systemd birimi, yerel test sertifikası betiği).
 
 ## 7. Trust Registry kontratlarını deploy et
 - EVM/Solidity ile [[ARCH-0001]] §5'teki kayıtları deploy et:
@@ -164,6 +203,11 @@ Dikkat: Besu anında blok kazmaz (2 sn); dağıtım kodu her dağıtım/işlemde
 ## 10. Faz geçişi — validator devri (vakıf → devlet)
 - Devlet katılınca: QBFT **validator ekleme oylaması** ile devlet node'u sete
   eklenir; vakıf node'ları kademeli **çıkarılır** (oylama).
+- Sıra: (1) Governance kabulü (2/3) ve devletin delege anahtarları; (2) düğüm bildirimi + her işletmecide izin listesi
+  (`render` → yükle → `check`, paylaşılan özetler aynı); (3) yeni düğüm tam düğüm olarak eşleşir ve senkron olur; (4) mevcut her
+  doğrulayıcı kendi düğümünde `qbft_proposeValidatorVote(<adres>, true)` — çoğunluk (> 1/2) oy bloğa girince küme değişir, sonra
+  `qbft_discardValidatorVote`; çıkarmada aynı oy `false` ile; (5) düğüm denetimi (senkron, izin listesi, küme, imza, RPC yüzeyi,
+  saat). Yerel deneme: "Yerel izinli ağ" bölümü.
 - Bu bir **oy-gücü devridir**, ağ kesintisi değildir (set çalışırken güncellenir).
 - Hedef: consensus gücünün devletlere geçmesi ([[ARCH-0001]] §3, Faz 1).
 
@@ -211,5 +255,5 @@ Dikkat: Besu anında blok kazmaz (2 sn); dağıtım kodu her dağıtım/işlemde
 # Durum
 
 **Taslak** — sürüm 1.0.0 (2026-10-02; §6 yerel izinlendirme ve RPC koruması 2026-10-19, [[ADR-0052]]; Java 25 ve Docker'sız
-yerel geliştirme ağı 2026-11-04).
+yerel geliştirme ağı 2026-11-04; iki düğümlü yerel izinli ağ, izin listesi aracı, RPC süzgeci ve validator oylaması 2026-11-05).
 

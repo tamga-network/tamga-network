@@ -37,6 +37,7 @@ export default defineConfig({
       "examples/**/*.test.ts",
       "scripts/**/*.test.ts",
       "ops/**/*.test.ts",
+      "network/**/*.test.ts",
     ],
     globalSetup: ["./scripts/require-fixtures.ts"], // O1: CI'da TAMGA_REQUIRE_FIXTURES=1 → eksik PKI/liste sessiz atlama değil hata
     exclude: ["**/node_modules/**"],

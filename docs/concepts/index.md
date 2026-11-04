@@ -4,7 +4,7 @@ title: Kavramlar
 
 # Kavramlar
 
-Tamga ile çalışmak için bilmeniz gereken altı fikir. Her sayfa birkaç dakikada okunur; ayrıntı ve bağlayıcı kurallar
+Tamga ile çalışmak için bilmeniz gereken temel fikirler. Her sayfa birkaç dakikada okunur; ayrıntı ve bağlayıcı kurallar
 şartnamelerdedir.
 
 <div class="tg-cards">
@@ -42,6 +42,11 @@ Tamga ile çalışmak için bilmeniz gereken altı fikir. Her sayfa birkaç daki
 <a class="tg-card" href="/concepts/revocation">
 <strong>İptal ve tazelik</strong>
 <span>İptal listeleri, önceden çekme ve "şu an doğrulanamadı" sonucu.</span>
+</a>
+
+<a class="tg-card" href="/concepts/ledger">
+<strong>Ortak defter (zincir)</strong>
+<span>Zincir neden var, neyin projeksiyonu: bağımsız tanıklık, kişisel veri yok, bugün üretimde kapalı.</span>
 </a>
 
 </div>

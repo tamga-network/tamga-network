@@ -17,6 +17,8 @@ export function registerMiscRoutes(app: FastifyInstance, ctx: VerifyContext) {
     status_cached: ctx.statusCache.uris().length,
     policies: ctx.policies.map((p) => p.policy_id),
     presentations: ctx.presentations.size(),
+    // C32 (7): zincir çapası (bilgi; `ok`'u değiştirmez — CH1); bayrak kapalıyken UNKNOWN
+    chain: ctx.chainHealth(),
   }));
 
   /** Cüzdanın "Kontrol ettir" (ADR-0012 C) ekranı için senaryo listesi — kişisel veri yok. */

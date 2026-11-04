@@ -4,7 +4,7 @@ title: Anlayışlar
 
 # Anlayışlar
 
-Tamga ilə işləmək üçün bilməli olduğunuz altı ideya. Hər səhifəni bir neçə dəqiqəyə oxumaq olar; təfərrüatlar və məcburi qaydalar
+Tamga ilə işləmək üçün bilməli olduğunuz əsas ideyalar. Hər səhifəni bir neçə dəqiqəyə oxumaq olar; təfərrüatlar və məcburi qaydalar
 spesifikasiyalarda verilib.
 
 <div class="tg-cards">
@@ -42,6 +42,11 @@ spesifikasiyalarda verilib.
 <a class="tg-card" href="/concepts/revocation">
 <strong>Ləğv və aktuallıq</strong>
 <span>Ləğv siyahıları, əvvəlcədən yükləmə və "hazırda yoxlanıla bilmədi" nəticəsi.</span>
+</a>
+
+<a class="tg-card" href="/concepts/ledger">
+<strong>Ortaq reyestr (zəncir)</strong>
+<span>Zəncir nə üçündür, nəyin proyeksiyasıdır: müstəqil şahidlik, şəxsi məlumat yoxdur, bu gün istehsalda söndürülüb.</span>
 </a>
 
 </div>

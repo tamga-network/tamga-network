@@ -4,7 +4,7 @@ title: Concepts
 
 # Concepts
 
-Six ideas you need to work with Tamga. Each page takes a few minutes to read; the details and the binding rules are in the
+The core ideas you need to work with Tamga. Each page takes a few minutes to read; the details and the binding rules are in the
 specifications.
 
 <div class="tg-cards">
@@ -42,6 +42,11 @@ specifications.
 <a class="tg-card" href="/concepts/revocation">
 <strong>Revocation and freshness</strong>
 <span>Status lists, prefetching and the "cannot be verified right now" outcome.</span>
+</a>
+
+<a class="tg-card" href="/concepts/ledger">
+<strong>Shared ledger (chain)</strong>
+<span>Why a chain, and a projection of what: independent witnessing, no personal data, off in production today.</span>
 </a>
 
 </div>

@@ -1,8 +1,9 @@
 import { loadVerifyConfig } from "./config.js";
 import { buildVerifyApp } from "./app.js";
+import { chainHealthFromEnv } from "./chain-health.js";
 
 const cfg = loadVerifyConfig();
-const app = await buildVerifyApp(cfg);
+const app = await buildVerifyApp(cfg, { chainHealth: await chainHealthFromEnv(cfg.network, cfg.trustDist) });
 let lastFailed = "";
 let ticking = false; // üst üste binme yok: önceki tur bitmeden yeni tur başlamaz
 const tick = async () => {
@@ -11,6 +12,7 @@ const tick = async () => {
   try {
     await app.reloadTrust();
     const r = await app.prefetchStatus();
+    await app.refreshChainHealth(); // C32 (7): bayrak kapalıyken bir şey yapmaz
     const key = r.failed.join("|");
     if (key !== lastFailed) {
       lastFailed = key;

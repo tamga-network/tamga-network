@@ -281,6 +281,7 @@ function sidebars(l: Lang): DefaultTheme.Sidebar {
           "presentation",
           "privacy",
           "revocation",
+          "ledger",
         ].map((s) => ({
           text: conceptTitle(l, s),
           link: `${p}/concepts/${s}`,

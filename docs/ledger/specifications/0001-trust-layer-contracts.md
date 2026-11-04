@@ -4,7 +4,7 @@ title: "Güven katmanı kontratları"
 status: Active
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 summary: >
   Hyperledger Besu (EVM) üzerinde çalışan güven katmanı kontratlarının kanonik
   veri şeması, fonksiyon arayüzleri ve değişmezleri. Sürüm 2.0.0 üç yapısal
@@ -16,6 +16,10 @@ summary: >
   politikası ve doğrulama okuma seti normatifleştirildi. Egemenlik
   onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
 ---
+
+> **Sürüm notu 1.0.0 (2026-11-05) — yerel izinlendirme aracı ve işletim ([[ADR-0052]]; C33, C32 (7)).** İzin listesi zincir
+> durumundan üretilir ve düğümle karşılaştırılır (`trust:chain-permissions render|check`), düğüm bildirimi biçimi, iki düğümlü yerel
+> izinli ağ ve validator oylaması, RPC yöntem süzgeci, doğrulayıcı sağlık sayfasında zincir çapası (§16.9). Kontrat değişmedi.
 
 > **Sürüm notu 1.0.0 (2026-11-04) — okuma ve aktarma ([[ADR-0073]] K1/K6, [[ADR-0074]] K4/K5).** Liste arşivinin kontratlara
 > yeniden oynatılması (`trust:chain-replay`), olay tabanlı indeksleyici ve `ChainTrustSource` (`apps/chain-indexer/`), eşdeğerlik
@@ -926,8 +930,8 @@ Hesap izni ikinci savunma hattıdır; yazma yetkisinin asıl denetimi kontratlar
 listesi bu yetkiyi genişletmez ([[ADR-0052]]/LP4). Zincir üstü izin kontratı yoktur: Besu 25.6.0 zincir üstü izinlendirmeyi ve
 Tessera tabanlı gizliliği kaldırdı; ikisine de gerek yoktur (zincirde kişisel veri yok, DP1). Düğüm izni aynı dosyanın düğüm
 izin listesidir; düğümün JSON-RPC ucu internete açılmaz, dış erişim mTLS'li ters vekil arkasındandır ([[ADR-0052]] K5).
-Kümeleri sayan okuma görünümleri (üye listesi, yazıcı listesi, kurum delege listesi) izin aracıyla (`trust:chain-permissions`)
-birlikte eklenir.
+Kümeleri sayan okuma görünümleri (üye listesi, yazıcı listesi, kurum delege listesi) §16.7'de; izin aracı
+(`trust:chain-permissions render|check`) ve yerel deneme §16.9'da.
 
 **Değişmez GA1:** Gas ücretsiz olsa bile, zincire yazılan her bayt her
 validator'ın diskinde kalıcıdır. "Ücretsiz" maliyet yokluğu değildir — bu,
@@ -1325,6 +1329,39 @@ doğrudan kontrat okumasına sorulur. Sonuç (2026-11-04): C1/C2/C3/D5'te fark y
 kayıt sertifikası durum listesi (`tamga:registration-status:<ortam>:<ad>`) için son satırı `anchorList` ile yazar; `trust:chain-check`
 görünüm dosyasını da denetler. Satırlar yalnız zincir projeksiyonu açıkken yazılır ([[SPEC-TRUST-0001]] §5).
 
+## 16.9 Yerel izinlendirme aracı ve işletim ([[ADR-0052]] K2/K3/K5; C33, C32 (7)) — uygulama notu (2026-11-05)
+
+Kontrat değişmedi; araç §16.7 okuma görünümlerini kullanır.
+
+**`trust:chain-permissions render`.** Tek bir sabitlenmiş blokta okur ve belirleyici `permissions_config.toml` yazar:
+
+| Liste | Kaynak (o bloktaki durum) |
+|---|---|
+| hesap | `Governance.memberList()` → `getMember`: `ACTIVE` üyenin `validatorAddress`'i ve `delegateKeysOf` (askıdaki devletin delegesi yazamaz, `isDelegateOf`) |
+| hesap | her üye devletin `IssuerRegistry.getIssuersByState` → `isOperational` olan kurumun `issuerDelegatesOf` (§7: `StatusListRegistry` yalnız kurum durumuna bakar, devletin üyelik durumuna değil) |
+| hesap | `TrustListAnchorRegistry.anchorers()` |
+| hesap | göç penceresi açık (`isMigrationOpen`) kayıtların `migrationState().executor`'ı ([[ADR-0073]] K1; pencere kapanınca listeden çıkar) |
+| düğüm | işletmeci bildirimi (`network/permissions/nodes/*.json`, `tamga-node-declaration/1`): `role: validator` ve açık anahtardan türeyen adres o devletin AKTİF `validatorAddress`'i; `--operator <CC>` ile o devletin `rpc` düğümleri |
+
+Biçim: sıralı, tekrarsız, küçük harf, LF; dosyada blok numarası ve zaman yok (aynı durum → aynı bayt). `shared_sha256`
+işletmecinin kendi RPC düğümleri hariç özettir ve bütün validator'larda aynı olmalıdır (LP3). Eşleşmeyen, çift anahtarlı ya da
+şemaya uymayan bildirim reddedilir (yetki vermez; çıkış 3). Elle hesap ekleme seçeneği yoktur (LP2).
+
+**`check`.** Düğümün `perm_getAccountsAllowlist` / `perm_getNodesAllowlist` cevabını beklenen listeyle (dosya ya da zincirden
+çizim) anlamsal karşılaştırır; yalnız loopback yönetim ucu (LP5). Besu `perm_reloadPermissionsFromFile`'da dosyayı kendi biçimiyle
+yeniden yazar; bu yüzden disk dosyasının özeti değil `check` ve çizimin özeti karşılaştırılır.
+
+**Yerel deneme (C33 (4)).** [[ARCH-0002]] "Yerel izinli ağ": iki düğüm, iki izin bayrağı açık; izinsiz hesap reddedildi, delege
+yazdı, iki düğümün paylaşılan özeti aynı çıktı, listeden çıkan düğümün bağlantısı koptu, ikinci düğüm `qbft_proposeValidatorVote`
+ile doğrulayıcı kümesine eklenip çıkarıldı.
+
+**RPC koruması (C33 (5)).** `network/rpc-proxy/`: nginx TLS 1.3 + zorunlu istemci sertifikası, arkasında JSON-RPC yöntem süzgeci
+(yalnız `eth_*`/`net_*`/`web3_*`; imzalayan, kazan ve abonelik yöntemleri hariç; toplu istekte tek ret bütününü reddeder).
+
+**Sağlık sayfası (C32 (7)).** Referans doğrulayıcının `/healthz` cevabında `chain`: yüklü `lotl` / `tl-<cc>` listeleri zincirde
+onaylı çapalı mı (`YES` / `NO` / `UNKNOWN`). Bayrak kapalıyken ve sandbox'ta `UNKNOWN` (bağlanılmaz); `ok` ve doğrulama sonucu
+değişmez ([[ADR-0051]] CH1).
+
 ---
 
 # İlgili Dokümanlar
@@ -1342,5 +1379,5 @@ görünüm dosyasını da denetler. Satırlar yalnız zincir projeksiyonu açık
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02; §15 2026-10-19, [[ADR-0051]]: kontratlar derleniyor ve test ediliyor, üretimde kapalı;
 §12.1 hesap izni 2026-10-19, [[ADR-0052]]: zincir üstü izin kontratı yerine Besu yerel izinlendirme; 2026-10-19 [[ADR-0053]],
 [[ADR-0054]], [[ADR-0055]]: rakip çapa adayları, şema ad alanları ve kota kapsamı, yükseltme kuyruğu ve kayıt yönetimi önerileri;
-2026-10-23 [[ADR-0063]]: iptal listesi kaydı listenin kendi bit sayısıyla).
+2026-10-23 [[ADR-0063]]: iptal listesi kaydı listenin kendi bit sayısıyla; §16.9 2026-11-05: yerel izinlendirme aracı ve işletim).
 

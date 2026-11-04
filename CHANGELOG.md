@@ -67,6 +67,32 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
 
 ### Applications and repository (not in the npm packages)
 
+- **chain — Besu local permissioning and operations (ADR-0052; production chain still off).**
+  - `npm run trust:chain-permissions -- render` reads `Governance`, `IssuerRegistry`, `TrustListAnchorRegistry` and the open
+    migration windows at one pinned block and writes a deterministic `permissions_config.toml` (sorted, unique, lower case, LF;
+    no block number or time — the same chain state gives the same bytes): accounts = active members' validator addresses and
+    delegate keys, delegates of operational issuers, list anchorers, the executor of an open migration window; nodes = the
+    declared validator nodes whose key matches an active validator address in `Governance` (plus, with `--operator <CC>`, that
+    operator's own RPC nodes). It prints `sha256` and `shared_sha256` (without the operator's own RPC nodes — must be equal on
+    all validators). `check` compares the node's `perm_getAccountsAllowlist` / `perm_getNodesAllowlist` with the expected list
+    (loopback admin endpoint only); exit 3 on a difference or a rejected declaration. There is no option to add an account by
+    hand. Read-only on the local development chains while `TAMGA_CHAIN_ENABLED=0`.
+  - `network/permissions/`: node declaration format `tamga-node-declaration/1` (JSON schema, examples; state code, role
+    `validator` | `rpc`, node public key, IP literal, P2P port, institutional contact — no personal data) and the matching rule.
+  - `scripts/besu-dev.ps1 -Permissioned` (`-Init`, `-Start [-Node 2]`, `-Apply`, `-Stop`, `-Reset`, `-Status`): a local two-node
+    network with both permissioning flags on and `PERM`/`ADMIN` on 127.0.0.1 only; `-Apply` renders each node's list from the
+    chain, reloads it and checks it. Tried locally: an unlisted account is refused ("Sender account not authorized"), a state
+    delegate writes; a node removed from the list is disconnected; node 2 is added to and removed from the QBFT validator set by
+    `qbft_proposeValidatorVote` (`apps/trust-publisher/scripts/besu-permissions-smoke.ts`). Besu rewrites the permissions file in
+    its own format on reload, so the rendered file is kept next to it and compared with `check`. Fix: the local P2P port now
+    binds to 127.0.0.1 (`p2p-interface`; `p2p-host` is only the advertised address).
+  - `network/rpc-proxy/`: nginx example with TLS 1.3 and a mandatory client certificate, and `filter.mjs`, a dependency-free
+    JSON-RPC method filter (only `eth_*`, `net_*`, `web3_*` without the signing, mining and subscription methods; one refused call
+    refuses the whole batch; body and batch limits; only refusal counts are logged), a systemd unit example and a local test
+    certificate script.
+  - Verifier `/healthz` has a `chain` field (C32 (7)): whether the loaded `lotl.jws` / `tl-<cc>.jws` are anchored on chain
+    (`YES` / `NO` / `UNKNOWN`). With `TAMGA_CHAIN_ENABLED=0` and in the sandbox it is `UNKNOWN` without connecting; it never
+    changes `ok` or a verification result (CH1).
 - **chain — reading and transfer side (ADR-0073 K1/K6, ADR-0074 K4/K5, ADR-0075; production chain still off).**
   - `npm run trust:chain-replay` replays the signed list archive into the contracts: it verifies the archive (signatures,
     version chain, anchor chain, environment), builds a deterministic plan starting at the first archived version and prints it
