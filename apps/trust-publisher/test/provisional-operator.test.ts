@@ -63,7 +63,7 @@ describe("ADR-0070 checkProvisionalOperator", () => {
     expect(
       checkProvisionalOperator(cfg, {
         issuers: [
-          { slug: "bubilet", identifiers: [{ scheme: "TR-VKN", value: "TR1" }] },
+          { slug: "example-events", identifiers: [{ scheme: "TR-VKN", value: "TR1" }] },
           { slug: "old", status: "REVOKED", identifiers: [{ scheme: "X", value: "Y", note: "provisional operator" }] },
         ],
         relyingParties: [],

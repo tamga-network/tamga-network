@@ -267,7 +267,7 @@ describe.skipIf(!ready)("ADR-0068 uçtan uca (sandbox kayıt defteri)", () => {
   });
 
   it("yeniden yayın aynı indeksleri korur; elle iptal biti 1 yapar ve sertifika yeniden verilmez; heartbeat yeniden imzalar", async () => {
-    const path = "wrprc/issuer/istanbul-bilgi.jwt";
+    const path = "wrprc/issuer/example-university.jwt";
     const idx = payload(path).status.status_list.idx;
     run("build");
     expect(payload(path).status.status_list.idx).toBe(idx);
@@ -290,7 +290,7 @@ describe.skipIf(!ready)("ADR-0068 uçtan uca (sandbox kayıt defteri)", () => {
   }, 180_000);
 
   it("durum dosyası kaybolursa build boş durumdan BAŞLAMAZ; --reset gerekçeyle yayımlanmış listeden yeniden kurar (iptal korunur)", async () => {
-    const path = "wrprc/issuer/istanbul-bilgi.jwt";
+    const path = "wrprc/issuer/example-university.jwt";
     const revokedIdx = JSON.parse(readFileSync(join(DIST, "wrprc-status.json"), "utf8")).entries.find(
       (e: { path: string; status: string }) => e.path === path && e.status === "REVOKED",
     ).idx as number;

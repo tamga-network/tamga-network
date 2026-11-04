@@ -486,7 +486,7 @@ itmir, yalnız aktuallıq azalır.
 # Açıq məsələlər
 
 1. ~~İndeksləyicini kim idarə edir~~ — **BAĞLANDI** (2026-09-09, [[PM-GOV-0001]]
-   Qərar P3). Hər yoxlayan tərəf öz nüsxəsini işlədir; fond **hostinqli
+   Qərar P3). Hər yoxlayan tərəf öz nüsxəsini işlədir; fond **host edilən
    indeksləyici təqdim etmir**, yalnız istinad paylanmasını dərc edir. Yoxlama trafiki
    ləğv məlumatlarından daha intensiv olduğu üçün bu, status hostinqindən daha sərt qaydadır.
 2. Yüksək riskli yoxlamada indeksləyicini keçmə həddini kim müəyyən edir —

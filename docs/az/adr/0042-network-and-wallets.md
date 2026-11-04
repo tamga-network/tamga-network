@@ -23,7 +23,7 @@ onların sərhədini müəyyənləşdirir: şəbəkə cüzdan idarə etmir, cüz
 - [[ADR-0035]]: şəbəkə rəqəmsal cüzdanları qaydalara əsasən tanıyır, rəqəmsal cüzdan şəbəkəyə bağlı deyil. [[ADR-0037]]: şəbəkə yalnız şəbəkədir; məhsullar və
   xidmətlər başqa strukturlardadır.
 - Tamga Wallet şəbəkə repozitoriyasının daxilində hazırlanmağa başlandı; tətbiq 2026-10-02 tarixində öz repozitoriyasına köçürüldü. Rəqəmsal cüzdanın backend hissəsi
-  olan **cüzdan provayderi** ([[t:wallet-provider]]; vahid qeydiyyatı, cihaz sübutu, cüzdan vahidi sübutu WIA və açar sübutu KA —
+  olan **cüzdan provayderi** ([[t:wallet-provider]]; vahid qeydiyyatı, cihaz sübutu, cüzdan vahidi sübutu WIA və açar attestasiyası KA —
   [[ADR-0025]]; uzaqdan söndürmə) rəqəmsal cüzdanın öz serveri və domen adı olmadığı üçün şəbəkənin serverində, şəbəkənin domen adı altında
   işləməyə davam etdi: `wallet.tamga.network` və sandbox-da `wallet.sandbox.tamga.network` ([[ADR-0038]]).
 - Aİ strukturunda hər bir rəqəmsal cüzdanı onu təqdim edən qurum idarə edir (Wallet Provider); etibar çərçivəsi cüzdan provayderlərini yalnız siyahıya alır.

@@ -80,7 +80,7 @@ intervalla dərc edir. Aİ-dəki qarşılığı elektron atribut sənədi provay
 müvəqqəti sənədi verən qurumdur (Identity Rulebook).
 
 **Öhdəliklər.** Əlavə B §4 (RB-AP-01…25): qurum sertifikatının milli kökə zəncirlənməsi, imza açarının qurumun
-nəzarətində olması, sənəd verməzdən əvvəl cüzdan nümunəsi sübutunu ([[t:WIA]]) və açar sübutunu (KA) yoxlamaq, növün
+nəzarətində olması, sənəd verməzdən əvvəl cüzdan nümunəsi sübutunu ([[t:WIA]]) və açar attestasiyasını (KA) yoxlamaq, növün
 tələb etdiyi autentifikasiya səviyyəsini təmin etmək, əməliyyat kodunu ayrıca kanalla göndərmək, uyğunlaşdırmada qarşılığı olmayan məlumat üçün
 sənəd verməmək, ləğv siyahısını sabit intervalla dərc etmək, şəxsə "sənədiniz cüzdana əlavə edildi" bildirişi. Sənəd növünə xas
 qaydalar Əlavə C-dədir.
@@ -119,7 +119,7 @@ sertifikatı; yoxlama proqram təminatı və aktual etibar siyahıları.
 # 7. Cüzdan provayderi
 
 **Nə edir.** Şəxsin sənədlərini saxladığı və təqdim etdiyi rəqəmsal cüzdanı təqdim edir; cüzdan vahidlərini qeydiyyata alır; hər əməliyyat üçün cüzdan nümunəsi
-sübutunu (WIA) və açar sübutunu (KA) imzalayır; cüzdan həllində zəiflik aşkarlanarsa, sübutları ləğv edir. Şəbəkə cüzdan seçmir, tanıyır:
+sübutunu (WIA) və açar attestasiyasını (KA) imzalayır; cüzdan həllində zəiflik aşkarlanarsa, sübutları ləğv edir. Şəbəkə cüzdan seçmir, tanıyır:
 qaydalara əməl edən və uyğunluq testlərindən keçən hər cüzdan şəbəkədə işləyir. Cüzdan provayderini cüzdanı təqdim edən təşkilat idarə edir; şəbəkə
 heç bir cüzdan provayderini idarə etmir, yalnız etibar siyahısına daxil edir.
 

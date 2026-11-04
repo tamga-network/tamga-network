@@ -16,7 +16,7 @@ source_version: "1.0.0"
 Aİ ARF (VCR_05) ləğv edilə bilən rəqəmsal sənəd verən hər bir provayderdən verdiyi sənədin hansı şərtlərlə ləğv ediləcəyini göstərən
 siyasətinin olmasını tələb edir. Bu sənəd Tamga şəbəkəsindəki bütün [[t:issuer|sənədi verənlər]] üçün həmin siyasətdir: Tamga Network şəxsiyyət xidməti
 və etibar siyahısındakı hər bir qurum. Əhatə dairəsi Əlavə C-dəki sənəd növləridir (Education, Identity, Event Ticket, Contact rulebook-ları).
-Cüzdan provayderlərinin verdiyi cüzdan nüsxəsi sübutu (WIA) və açar sübutu (KA) üçün şərtlər [[FW-POL-0002]] sənədindədir.
+Cüzdan provayderlərinin verdiyi cüzdan nüsxəsi sübutu (WIA) və açar attestasiyası (KA) üçün şərtlər [[FW-POL-0002]] sənədindədir.
 
 Siyasət qərar vermir: şərtlər Tamga Rulebook-dan (Əlavə B), növlərin rulebook-larından və onların əsaslandığı qərarlardan toplanıb;
 mənbə hər sətirdə göstərilib. Ziddiyyət olduqda mənbə üstünlük təşkil edir (RB-ENF-05).

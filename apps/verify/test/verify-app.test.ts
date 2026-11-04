@@ -5,7 +5,7 @@
  */
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { issueSdJwtVc, pemIssuerSigner } from "@tamga-network/sd-jwt";
@@ -62,6 +62,11 @@ import {
   type Match as MatchForTest,
   type VpRequest as VpRequestForTest,
 } from "@tamga-network/wallet-core";
+// Test listesi (dist-test, test/fixtures/registry) bilet kapısını `bubilet-gate` adıyla taşır; politikaların varsayılan grup adı
+// sandbox'ın kurgusal kurumudur (example-events-gate, 2026-11-04) — bu dosya listedeki adı kullanır (modüller yüklenmeden önce).
+vi.hoisted(() => {
+  process.env.TAMGA_VERIFY_TICKET_GROUP ??= "bubilet-gate";
+});
 /** ADR-0056 K8: testte `respond` için `checkRp` onayı (kayıtsız doğrulayıcı: engelleyici durum yok). */
 const testApproval = (req: VpRequestForTest) =>
   checkRpForTest(null, req, { requested: [] } as unknown as MatchForTest).approval!;

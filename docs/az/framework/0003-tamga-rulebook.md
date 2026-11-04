@@ -116,7 +116,7 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 | # | Qayda |
 |---|---|
 | RB-AP-01 | Sənədi verən qurumun identifikatoru milli kök sertifikatına zəncirlənən X.509 sertifikatı olmalıdır (**MUST**); `issuer_id` son (leaf) sertifikatın barmaq izindən törədilir. |
-| RB-AP-02 | Sənədi imzalama açarı qurumun nəzarətində olmalıdır (**MUST**) (I3-də HSM-də); Tamga-da saxlanılmamalıdır (**MUST NOT**). Hostinq edilən sənəd vermə xidmətində imza qurumun məsafədən imza xidmətindən (CSC API v2) tələb olunur; xidmətə yalnız imzalanacaq məlumatın heşi göndərilməli (**MUST**), xidmət isə gələn imzanı qurumun etibar siyahısındakı sertifikatı ilə yoxlamalıdır. |
+| RB-AP-02 | Sənədi imzalama açarı qurumun nəzarətində olmalıdır (**MUST**) (I3-də HSM-də); Tamga-da saxlanılmamalıdır (**MUST NOT**). Host edilən sənəd vermə xidmətində imza qurumun məsafədən imza xidmətindən (CSC API v2) tələb olunur; xidmətə yalnız imzalanacaq məlumatın heşi göndərilməli (**MUST**), xidmət isə gələn imzanı qurumun etibar siyahısındakı sertifikatı ilə yoxlamalıdır. |
 | RB-AP-03 | Ləğv siyahısını imzalama açarı sənəd açarından ayrı olmalıdır (**MUST**). |
 | RB-AP-04 | İmza və açar sübutunda yalnız ES256 (P-256) istifadə olunur. |
 
@@ -129,7 +129,7 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 | RB-AP-07 | Təklif keçidi birdəfəlikdir; ekranda göstərilən təklif 5 dəqiqə, ayrı kanaldan göndərilən təklif ən çoxu 72 saat etibarlıdır. |
 | RB-AP-08 | Birdəfəlik dəyərin (`c_nonce`) istifadəsi atomikdir; giriş tokeni ən çoxu 5 dəqiqə etibarlıdır. |
 | RB-AP-09 | Toplu verilən hər nüsxə fərqli cihaz açarına bağlanmalıdır (**MUST**) (10 nüsxə); nüsxə ilə ləğv siyahısındakı mövqeyin (`idx`) uyğunluğu sənədi verən qurumda qalır, kənara çıxmır. |
-| RB-AP-10 | Sənədi verən qurum sənədi verməzdən **əvvəl** rəqəmsal cüzdanın cüzdan nümunəsi sübutunu ([[t:WIA]]) və açar sübutunu (KA) `wallet_providers[]` siyahısına qarşı yoxlamalı (**MUST**) və təhlükəsiz aparat səviyyəsinin növün tələbinə cavab verdiyini yoxlamalıdır. |
+| RB-AP-10 | Sənədi verən qurum sənədi verməzdən **əvvəl** rəqəmsal cüzdanın cüzdan nümunəsi sübutunu ([[t:WIA]]) və açar attestasiyasını (KA) `wallet_providers[]` siyahısına qarşı yoxlamalı (**MUST**) və təhlükəsiz aparat səviyyəsinin növün tələbinə cavab verdiyini yoxlamalıdır. |
 | RB-AP-11 | Sənədi verən qurum növün tələb etdiyi autentifikasiya səviyyəsini sənədi verməzdən əvvəl təmin etməlidir (**MUST**); bağlama yolu audit jurnalına yazılır, sənədə isə yazılmamalıdır (**MUST NOT**). T3 yalnız avtorizasiya kodu axını ilə və ya üz-üzə təmin edilir. |
 | RB-AP-12 | Sənədin subyekti müraciət edən şəxsdən fərqlidirsə, təmsilçilik səlahiyyətinin sübutu məcburidir (**MUST**) (valideyn, vəkil). |
 | RB-AP-13 | Mənbə məlumatlarında uyğunluq cədvəlində qarşılığı olmayan dəyər üçün sənədin verilməsi dayandırılmalıdır (**MUST**); təxmini dəyər yaradılmır. |
@@ -157,7 +157,7 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 |---|---|
 | RB-AP-23 | Məsafədən autentifikasiya provayderindən istifadə olunursa, sənədi verən qurum yalnız nəticənin xülasəsini (səviyyə, sessiya identifikatoru, vaxt, provayder) saxlamalıdır (**MUST**); sənəd təsvirləri, üz məlumatları və OCR xam məlumatları sənədi verən qurumun sistemində saxlanılmamalıdır (**MUST NOT**). |
 | RB-AP-24 | Provayderin nəticəsi **T səviyyəsinə** uyğunlaşdırılır; uyğunlaşdırma [[SPEC-ID-0003]] cədvəlinə əsasən aparılır; səviyyə yoxlayan tərəfə ötürülmür. |
-| RB-AP-25 | Hostinq edilən xidmətdən istifadə edən qurum API açarını öz serverində saxlamalıdır (**MUST**) (brauzerə, rəqəmsal cüzdana, koda yerləşdirməməlidir); açar 90 gündən bir yenilənir (iki açar müəyyən müddət birlikdə etibarlı olur); sızma şübhəsi olduqda qurum ləğv tələb edir. |
+| RB-AP-25 | Host edilən xidmətdən istifadə edən qurum API açarını öz serverində saxlamalıdır (**MUST**) (brauzerə, rəqəmsal cüzdana, koda yerləşdirməməlidir); açar 90 gündən bir yenilənir (iki açar müəyyən müddət birlikdə etibarlı olur); sızma şübhəsi olduqda qurum ləğv tələb edir. |
 
 ## 4.5 RB-AP-ID — Şəxsiyyət sənədi provayderi
 
@@ -210,7 +210,7 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 | RB-WP-14 | Cüzdan sənədi verən qurumun paylaşım qaydasını (daxili açıqlama siyasəti) sənədi alarkən **MUST** saxlamaq və təqdimat zamanı şəbəkə sorğusu etmədən yoxlayan tərəfin qeydiyyat və giriş sertifikatı ilə qiymətləndirmək; qayda ödənmirsə və ya qiymətləndirilə bilmirsə, təsdiq ekranında ayrıca xəbərdarlıq **MUST** göstərmək, standart seçim paylaşmamaqdır; son qərar şəxsə məxsusdur. |
 | RB-WP-15 | Cüzdan provayderi şəxsin telefonu əlində olmadan cüzdan vahidini ləğv edə biləcəyi bir yol **MUST** təqdim etmək; bu yol istifadəçi hesabı **MUST NOT** tələb etmək (məs. aktivləşdirmə zamanı bir dəfə göstərilən, provayderdə yalnız yavaş heşi saxlanılan ləğv sirri; [[ADR-0047]] K3). |
 | RB-WP-16 | Cüzdan provayderi şəxsin cüzdan vahidinin ləğv edildiyini cüzdandan kənarda öyrənə biləcəyi ən azı bir yol **MUST** təqdim etmək; vahidi öz qərarı ilə ləğv edibsə, bu yol ən gec 24 saat ərzində ləğvin səbəbini, nəyin işləməyə davam etdiyini və şəxsin nə edə biləcəyini göstərir (Aİ WURevocation_14/16; [[ADR-0047]] K4). |
-| RB-WP-17 | W3 səviyyəsində cüzdan provayderi vahidi aktivləşdirərkən və W3 bəyan edən hər açar sübutundan əvvəl platformanın cihaz sübutunu (Apple App Attest, Android açar sübutu, Play Integrity) **MUST** yoxlamaq; W2-də cihaz sübutu könüllüdür (**MAY**) ([[ADR-0047]] K5). |
+| RB-WP-17 | W3 səviyyəsində cüzdan provayderi vahidi aktivləşdirərkən və W3 bəyan edən hər açar attestasiyasından əvvəl platformanın cihaz sübutunu (Apple App Attest, Android açar attestasiyası, Play Integrity) **MUST** yoxlamaq; W2-də cihaz sübutu könüllüdür (**MAY**) ([[ADR-0047]] K5). |
 | RB-WP-18 | Etibar siyahısındakı cüzdan "Tamga Network-da siyahıya alınıb" / "Listed on Tamga Network" göstəricisini yalnız mətn kimi göstərir; loqo, Aİ ulduzları və rəngləri, "etibar nişanı" və ya "trust mark" ifadəsi **MUST NOT** istifadə edilmək. Göstəriciyə toxunduqda imzası yoxlanılmış siyahıdakı `wallet_providers[]` qeydi göstərilir. Cüzdan vahidi ləğv edilibsə, provayder və ya həll qeydi `ACTIVE` deyilsə, siyahı yoxlanıla bilmirsə və ya cüzdan yalnız sandbox siyahısına bağlıdırsa, göstərici **MUST** gizlədilmək ([[ADR-0049]]). |
 | RB-WP-19 | Qeydiyyat sertifikatı daşımayan sorğu **MUST** rədd edilmək; cüzdan şəxsdən soruşmadan dayanır (cüzdandan cüzdana yaxın məsafə istisna olmaqla). Yaxın məsafədə qeydiyyat sertifikatı `euWrprc` ilə gəlir və eyni yoxlamalardan keçir ([[ADR-0026]] K5; [[ADR-0056]] K10, 2026-10-19; paketlər 0.7.0). |
 
@@ -226,12 +226,12 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 | RB-RP-04 | `issuer_id` `x5c` son (leaf) sertifikatın barmaq izindən törədilir, `iss` sahəsindən deyil. |
 | RB-RP-05 | Nəticə üç qiymətlidir; `INDETERMINATE` **MUST NOT** `REJECTED` kimi emal edilməməlidir; nəticə obyekti aparılmış və ötürülmüş yoxlamaları (`checks_performed`, `checks_skipped`) daşıyır. |
 | RB-RP-06 | Yoxlayan tərəf hər yoxlamada ləğv siyahısını yükləmir; siyahıları əvvəlcədən toplu şəkildə yükləyir; `exp` və `ttl` HTTP keşindən üstündür. |
-| RB-RP-07 | Yoxlayan tərəf öz siyahı indeksatorunu və ya etibar mənbəyi keşini işlədir; Tamga-dan hostinq edilən indeksləmə xidməti gözləmir. |
+| RB-RP-07 | Yoxlayan tərəf öz siyahı indeksatorunu və ya etibar mənbəyi keşini işlədir; Tamga-dan host edilən indeksləmə xidməti gözləmir. |
 | RB-RP-08 | Nəticə obyekti və loglar sahə dəyərini və ləğv siyahısının yerini daşımır; audit qeydi rədd edilmiş yoxlamalarda da aparılır; HTTP status kodu nəticəni kodlaşdırmır. |
 | RB-RP-09 | Siyasət "sənəd növü × sənədi verən qurumun sinfi" kimi ifadə olunur; yoxlayan tərəf ayrıca sənəd sahibi təminat sahəsi gözləmir; yüksək riskli əməliyyatda əlavə şəxsiyyət yoxlaması yoxlayan tərəfin məsuliyyətidir. |
 | RB-RP-10 | İmtina səbəbi yoxlayan tərəfə ötürülmür (rəqəmsal cüzdan tərəfi); yoxlayan tərəf "yoxlanıla bilmədi" vəziyyətində istifadəçini günahlandıran ifadəni **SHOULD NOT** işlətməməlidir. |
 | RB-RP-11 | Üz uyğunlaşdırması tələb olunarsa, yoxlayan tərəf bunu şəxsiyyət sənədi və ya PID ilə edir; diplom və tələbə sənədi foto daşımır. |
-| RB-RP-12 | Hostinq edilən yoxlama xidmətindən istifadə edən yoxlayan tərəf təqdimatı **MUST** öz serverindən, etibar siyahısındakı açarı ilə imzalanmış bəyanatla açmalı və dəyərləri öz serverində oxumalıdır; səhifə yalnız statusu görür. |
+| RB-RP-12 | Host edilən yoxlama xidmətindən istifadə edən yoxlayan tərəf təqdimatı **MUST** öz serverindən, etibar siyahısındakı açarı ilə imzalanmış bəyanatla açmalı və dəyərləri öz serverində oxumalıdır; səhifə yalnız statusu görür. |
 | RB-RP-13 | Veb sayta giriş ("Tamga ilə daxil ol") hesab açarı kimi **MUST** hər sayt üçün ayrıca psevdonimdən istifadə etməlidir; sayt siyasətləri sənəd həşini və ya şəxsiyyət nömrəsini **MUST NOT** tələb etməməlidir; psevdonim imza, `aud` və `nonce`, sayt və ləğv edilməmiş rəqəmsal cüzdan nümunəsi (WIA) ilə yoxlanılır. Birdən çox psevdonim yalnız qeydiyyatında `pseudonyms: "multiple"` olan saytda istifadə olunur. |
 | RB-RP-14 | Yoxlayan tərəf, istifadə üçün qeydiyyat sertifikatı varsa, hər sorğuda həmin istifadənin **yeganə** qeydiyyat sertifikatını `verifier_info` daxilində `{"format": "registration_cert", "data": "<jwt>"}` kimi **MUST** göndərməlidir; `credential_ids` və `registrar_dataset` istifadə olunmur ([[ADR-0026]] 2026-10-13 dəyişikliyi). |
 | RB-RP-ID-01 | Şəxsiyyət sənədini öz qeydləri ilə uyğunlaşdırmaq üçün onu qəbul edən qurum (sənəd vermə xidməti daxil olmaqla) sənədi **MUST** yalnız qeydiyyatdan keçmiş yoxlayan tərəfin əhatə dairəsindəki sahələrlə və tam yoxlama ardıcıllığından keçirərək almalıdır; uyğunlaşdırma açarlarını **MUST NOT** saxlamamalı və ya loglamamalıdır. |

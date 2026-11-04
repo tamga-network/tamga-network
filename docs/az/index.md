@@ -23,7 +23,7 @@ features:
     linkText: Yoxlama bələdçisi
   - icon: ⬇
     title: Sənəd verin
-    details: Qurumunuzun sənədlərini şəxslərin rəqəmsal cüzdanına verin — hostinqdəki xidmətlə və ya öz serverinizlə.
+    details: Qurumunuzun sənədlərini şəxslərin rəqəmsal cüzdanına verin — host edilən xidmətlə və ya öz serverinizlə.
     link: /az/guides/issue-credentials
     linkText: Sənəd vermə bələdçisi
   - icon: ▣
@@ -64,7 +64,7 @@ const req = await createPresentationRequest({ signer, dcql: dcqlFromPolicy(DIPLO
 show(req.qrPayload);
 ```
 
-Tam, test edilmiş nümunə: [Kod nümunələri](/guides/code-examples). Hostinqdə yerləşdirilmiş yoxlayan tərəf olan Tamga Verify-dan istifadə etsəniz,
+Tam, test edilmiş nümunə: [Kod nümunələri](/guides/code-examples). Host edilən yoxlayan tərəf olan Tamga Verify-dan istifadə etsəniz,
 server kodu tələb olunmur: [Veb sayta "Tamga ilə daxil ol"](/guides/sign-in-with-tamga).
 
 ## Nəzər salın
@@ -99,8 +99,8 @@ server kodu tələb olunmur: [Veb sayta "Tamga ilə daxil ol"](/guides/sign-in-w
 |---|---|
 | `trust.tamga.network` | İmzalanmış etibar siyahıları |
 | `schemas.tamga.network` | Rəqəmsal sənəd növləri kataloqu |
-| `issuer.tamga.network/{kurum}` | Hostinqdə yerləşdirilmiş rəqəmsal sənəd vermə xidməti |
-| `verify.tamga.network` | Tamga Verify — hostinqdə yerləşdirilmiş yoxlayan tərəf və səhifə dəsti |
+| `issuer.tamga.network/{kurum}` | Host edilən rəqəmsal sənəd vermə xidməti |
+| `verify.tamga.network` | Tamga Verify — host edilən yoxlayan tərəf və səhifə dəsti |
 | `status.tamga.network` | Ləğv siyahıları |
 | `console.tamga.network` | Qurum Konsolu — sənədi verən qurumların idarəetmə ekranı |
 | `id.tamga.network` | Şəxsiyyət xidməti — müvəqqəti şəxsiyyət sənədi (dövlət PID-i gələnədək) |

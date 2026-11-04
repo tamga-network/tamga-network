@@ -134,9 +134,9 @@ short names in the addresses (`slug`) are technical identifiers only. The creden
 
 | Institution | Credential types (`vct`) |
 |---|---|
-| Example university (TEST) — `issuer.sandbox.tamga.network/istanbul-bilgi` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
-| Example events company (TEST) — `issuer.sandbox.tamga.network/bubilet` | `urn:tamga:tkt:EventTicket:1` (fictional concerts) |
-| Example cinema operator (TEST) — `issuer.sandbox.tamga.network/paribu-cineverse` | `urn:tamga:tkt:EventTicket:1` (fictional film screenings; a cinema ticket is not a separate type: the film and screening are in `event_name`, the hall in `venue_name`) |
+| Example university (TEST) — `issuer.sandbox.tamga.network/example-university` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Example events company (TEST) — `issuer.sandbox.tamga.network/example-events` | `urn:tamga:tkt:EventTicket:1` (fictional concerts) |
+| Example cinema operator (TEST) — `issuer.sandbox.tamga.network/example-cinema` | `urn:tamga:tkt:EventTicket:1` (fictional film screenings; a cinema ticket is not a separate type: the film and screening are in `event_name`, the hall in `venue_name`) |
 | Identity service — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, pseudonym seed (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Example people
@@ -190,10 +190,10 @@ same page.
 
 **Gate (turnstile / ticket gate):** `https://verify.sandbox.tamga.network/terminal?group=<group>` is the demo gate; it reads the
 pass QR from the wallet's “Show” screen with the camera. The gate identifies itself with a terminal key ([[ADR-0065]]); the
-sandbox's demo keys are public and go into the field on the page: `istanbul-bilgi-campus` → `sandbox-gate-campus`, `bubilet-gate`
+sandbox's demo keys are public and go into the field on the page: `example-university-campus` → `sandbox-gate-campus`, `example-events-gate`
 → `sandbox-gate-ticket`. On the production network the gate's operator issues the key. In the sandbox list each gate group is
-bound to its institution ([[ADR-0069]]): `istanbul-bilgi-campus` → `istanbul-bilgi`, `bubilet-gate` → `bubilet`,
-`paribu-cineverse-gate` → `paribu-cineverse`; the admin of an institution with its own gates creates and revokes keys on the
+bound to its institution ([[ADR-0069]]): `example-university-campus` → `example-university`, `example-events-gate` → `example-events`,
+`example-cinema-gate` → `example-cinema`; the admin of an institution with its own gates creates and revokes keys on the
 **Gate terminals** screen of the Institution Console (a key is shown once).
 
 To try your own verifier: connect it to the sandbox list and the sandbox pins, then present credentials received in the

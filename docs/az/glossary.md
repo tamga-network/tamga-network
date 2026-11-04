@@ -53,7 +53,7 @@ abbreviaturalar ingiliscə qalır: salted hash, selective disclosure, holder bin
 
 **Sənədi verən qurum** (issuer) — Rəqəmsal sənədi imzalayıb verən qurum: universitet, peşə təşkilatı, dövlət qurumu və ya şirkət.
 
-**Cüzdan provayderi** (wallet provider) — Rəqəmsal cüzdanı təqdim edən, cüzdan vahidlərini qeydiyyata alan və cüzdan və açar sübutlarını imzalayan təşkilat. Hər cüzdan öz provayderini idarə edir; şəbəkə provayder kimi fəaliyyət göstərmir, onu etibar siyahısında qeyd edir.
+**Cüzdan provayderi** (wallet provider) — Rəqəmsal cüzdanı təqdim edən, cüzdan vahidlərini qeydiyyata alan və cüzdan və açar attestasiyalarını imzalayan təşkilat. Hər cüzdan öz provayderini idarə edir; şəbəkə provayder kimi fəaliyyət göstərmir, onu etibar siyahısında qeyd edir.
 
 **Yoxlayan tərəf** (verifier) — Təqdim edilən rəqəmsal sənədi yoxlayan tərəf: imza, sənədi verən qurumun etibar siyahısındakı qeydi, status və siyasət. Relying party kimi də adlandırılır.
 

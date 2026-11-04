@@ -47,7 +47,7 @@ içindir: üniversite (diploma, öğrenci belgesi), kamu kurumu ya da bilet sat�
 ```ts
 import { createIssuerClient } from "@tamga-network/issuer/client";
 
-const tamga = createIssuerClient({ baseUrl: "https://issuer.sandbox.tamga.network", slug: "bubilet", apiKey: process.env.TAMGA_API_KEY! });
+const tamga = createIssuerClient({ baseUrl: "https://issuer.sandbox.tamga.network", slug: "example-events", apiKey: process.env.TAMGA_API_KEY! });
 
 // Bilet sattınız → cüzdana teklif (bilette kişisel veri yok)
 const sale = await tamga.sellTicket({ eventId: "EVT-2026-KONSER-01", ticketClass: "STANDARD" });

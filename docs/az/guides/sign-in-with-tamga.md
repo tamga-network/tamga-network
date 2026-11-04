@@ -14,7 +14,7 @@ source_version: "1.0.0"
 # Veb saytınıza "Tamga ilə daxil ol" əlavə etmək
 
 Bu bələdçi veb saytına şəbəkənin qaydalarına uyğun rəqəmsal cüzdanla (məs. Tamga Wallet) qeydiyyat və giriş əlavə etmək istəyən tərtibatçılar üçündür. Yoxlamanı Tamga-nın
-hostinq edilən [[t:verifier|yoxlayan tərəfi]] Tamga Verify həyata keçirir; Sizə bir səhifə dəsti və bir neçə server uc nöqtəsi qalır.
+host edilən [[t:verifier|yoxlayan tərəfi]] Tamga Verify həyata keçirir; Sizə bir səhifə dəsti və bir neçə server uc nöqtəsi qalır.
 
 **Nə vaxt oxunmalı:** saytınıza parolsuz, telefonla qeydiyyat və giriş əlavə etmək istədiyiniz zaman. Əvvəlcə [[GUIDE-0000]] ilə tanış olun.
 Yoxlamanı tamamilə öz serverinizdə aparmaq istəsəniz, [[GUIDE-0002]] bölməsinə keçin.
@@ -39,7 +39,7 @@ bir dəyər görür, saytlar şəxsləri bir-biri ilə əlaqələndirə bilməz.
 
 ## 1. Server: təqdimatı Siz açırsınız
 
-Hostinq edilən yoxlayan tərəfə etdiyiniz hər çağırış qısamüddətli, imzalı bəyan daşıyır (`Authorization: Bearer …`, ən çoxu
+Host edilən yoxlayan tərəfə etdiyiniz hər çağırış qısamüddətli, imzalı bəyan daşıyır (`Authorization: Bearer …`, ən çoxu
 60 saniyə, birdəfəlik). Bəyanı saytınızın etibar siyahısındakı qeydində yer alan **[[t:access-certificate|əlçatanlıq sertifikatının]] açarı ilə**
 imzalayırsınız; ayrıca
 parol yoxdur ([[ADR-0017]]).
@@ -127,7 +127,7 @@ WebAuthn **IP ünvanında işləmir**: `localhost` və ya HTTPS domen adı lazı
 ## 5. İstismara verməzdən əvvəl
 
 - Saytınız Tamga etibar siyahısında **yoxlayan tərəf qeydi** tələb edir; istədiyiniz sahələr qeydin əhatə dairəsini aşa bilməz.
-- Hostinq edilən yoxlayan tərəf real şəbəkədə və sandbox-da bəyansız sorğunu rədd edir (`TAMGA_VERIFY_REQUIRE_RP_AUTH=1`). Yalnız lokal
+- Host edilən yoxlayan tərəf real şəbəkədə və sandbox-da bəyansız sorğunu rədd edir (`TAMGA_VERIFY_REQUIRE_RP_AUTH=1`). Yalnız lokal
   inkişaf (demo/LAN) rejimində bəyansız köhnə yol `Deprecation` başlığı ilə işləyir. İstəsəniz, yoxlamanı tamamilə öz serverinizdə aparın: [[GUIDE-0002]].
 - Siyasət adları və sahə dəstləri Tamga ilə birlikdə müəyyən edilir (məs. yalnız "18 yaşdan yuxarı" → `age-over-18-mdoc`).
 

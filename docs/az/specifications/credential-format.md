@@ -6,7 +6,7 @@ version: 1.0.0
 created: 2026-09-03
 last_updated: 2026-11-04
 summary: >
-  Tamga rəqəmsal sənədlərinin kanonik formatını, sənədin verilməsi və təqdim edilməsi protokollarını müəyyən edir. Əsas format SD-JWT VC-dir (selective disclosure daxilidir, EUDI ARF-in əsas formatıdır), ikinci format mdoc/ISO 18013-5-dir (şəxsiyyət tiplərində aktiv, digərlərində planlaşdırılır; oflayn/fiziki təqdimat). Sənədin verilməsi OpenID4VCI, təqdimat OpenID4VP, imza ES256 (P-256) ilə həyata keçirilir. Holder binding MƏCBURİDİR: credential həmişə rəqəmsal cüzdanın cihaz açarına `cnf` (key binding) ilə bağlanır — bu, "universitet ideyasındakı gizli səhvin" (rəqəmsal sənədin başqasının cüzdanına yazılması) yeganə həllidir. Qısa ömürlü cüzdan nümunəsi sübutu (WIA) və açar sübutu (KA) rəqəmsal cüzdanın həqiqiliyini və açar anbarını bəyan edir ([[ADR-0025]]). Ləğv Token Status List-ə ([[SPEC-BC-0001]] §5) həvalə olunur. Zəncirə credential və ya onun məzmunu HEÇ VAXT yazılmır ([[PM-TRUST-0001]]).
+  Tamga rəqəmsal sənədlərinin kanonik formatını, sənədin verilməsi və təqdim edilməsi protokollarını müəyyən edir. Əsas format SD-JWT VC-dir (selective disclosure daxilidir, EUDI ARF-in əsas formatıdır), ikinci format mdoc/ISO 18013-5-dir (şəxsiyyət tiplərində aktiv, digərlərində planlaşdırılır; oflayn/fiziki təqdimat). Sənədin verilməsi OpenID4VCI, təqdimat OpenID4VP, imza ES256 (P-256) ilə həyata keçirilir. Holder binding MƏCBURİDİR: credential həmişə rəqəmsal cüzdanın cihaz açarına `cnf` (key binding) ilə bağlanır — bu, "universitet ideyasındakı gizli səhvin" (rəqəmsal sənədin başqasının cüzdanına yazılması) yeganə həllidir. Qısa ömürlü cüzdan nümunəsi sübutu (WIA) və açar attestasiyası (KA) rəqəmsal cüzdanın həqiqiliyini və açar anbarını bəyan edir ([[ADR-0025]]). Ləğv Token Status List-ə ([[SPEC-BC-0001]] §5) həvalə olunur. Zəncirə credential və ya onun məzmunu HEÇ VAXT yazılmır ([[PM-TRUST-0001]]).
 translation_of: SPEC-CRED-0001
 source_version: "1.0.0"
 ---
@@ -158,7 +158,7 @@ verir ([[ADR-0025]]; ətraflı qaydalar [[FW-POL-0002]]):
 - **Cüzdan nümunəsi sübutu ([[t:WIA]], Wallet Instance Attestation):** cüzdan tətbiqinin sənədi verən quruma özünü təqdim etdiyi
   qısa ömürlü sübut. Ömrü **24 saatdan azdır**; hər sənəd verilməsində yeni sahiblik sübutu (PoP) açarı və yeni, bir-birinə
   bağlana bilməyən status siyahısı qeydi ilə verilir (WIA1). Beləliklə provayder cüzdanın neçə qurumla işlədiyini öyrənmir.
-- **Açar sübutu (KA, key attestation):** sənəd açarlarının hansı anbarda (proqram, Secure Enclave, StrongBox) və hansı istifadəçi
+- **Açar attestasiyası (KA, key attestation):** sənəd açarlarının hansı anbarda (proqram, Secure Enclave, StrongBox) və hansı istifadəçi
   autentifikasiyası ilə saxlanıldığını bildirir; sənədlər KA-dakı `attested_keys`-ə bağlanır. Səviyyə yoxlanılmış vəziyyətə
   əsaslanır, yoxlanılmamış bəyan KA-ya yazılmır.
 - Hər iki sübutu **cüzdanı təqdim edən təşkilatın cüzdan provayderi** imzalayır; provayderin imza açarı etibar siyahısında

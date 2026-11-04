@@ -47,7 +47,7 @@ Bu bələdçi şəxslərin rəqəmsal cüzdanına rəqəmsal sənəd vermək ist
 ```ts
 import { createIssuerClient } from "@tamga-network/issuer/client";
 
-const tamga = createIssuerClient({ baseUrl: "https://issuer.sandbox.tamga.network", slug: "bubilet", apiKey: process.env.TAMGA_API_KEY! });
+const tamga = createIssuerClient({ baseUrl: "https://issuer.sandbox.tamga.network", slug: "example-events", apiKey: process.env.TAMGA_API_KEY! });
 
 // You sold a ticket → an offer to the wallet (no personal data in the ticket)
 const sale = await tamga.sellTicket({ eventId: "EVT-2026-KONSER-01", ticketClass: "STANDARD" });

@@ -73,7 +73,7 @@ depoya düşmür). Kodunuzu bu lokal siyahılara qarşı sınaya bilərsiniz. Uy
 | `@tamga-network/schemas` | sənəd növləri kataloqu: növün tərifi, JSON Schema, məzmun heşləri | sənədi verən qurum, yoxlayan tərəf |
 | `@tamga-network/sd-jwt` | SD-JWT VC: selective disclosure, holder binding, ləğv siyahısı | sənədi verən qurum, yoxlayan tərəf |
 | `@tamga-network/mdoc` | ISO 18013-5 mdoc: CBOR, COSE, vermə və yoxlama | şəxsiyyət sənədini verən qurum, yoxlayan tərəf |
-| `@tamga-network/issuer` (+ `/client`) | sənəd yaradılması, OpenID4VCI; `/client` hostinq edilən xidmət üçün | sənədi verən qurum |
+| `@tamga-network/issuer` (+ `/client`) | sənəd yaradılması, OpenID4VCI; `/client` host edilən xidmət üçün | sənədi verən qurum |
 | `@tamga-network/verifier` (+ `/web`, `/zk`) | yoxlama axını, üçqiymətli nəticə, OpenID4VP; `/web` səhifə dəsti, `/zk` sıfır biliyə əsaslanan sübut | yoxlayan tərəf, veb-sayt |
 | `@tamga-network/wallet-core` | rəqəmsal cüzdan nüvəsi: açarlar, sənədin alınması, lokal yoxlama, təqdimat (Node + React Native) | rəqəmsal cüzdan tərtibatçısı |
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | rəqəmsal cüzdan tərəfində sıfır biliyə əsaslanan sübut generatoru (mdoc, Longfellow); `/react-native` telefonda lokal sübut generatoru, `/node` masaüstündə | rəqəmsal cüzdan tərtibatçısı |
@@ -88,9 +88,9 @@ hazır olduqda gələcək. Sınaq versiyasında interfeys dəyişə bilər. Hər
 | `https://trust.tamga.network` | imzalı etibar siyahıları (`lotl.jws`, `tl-tr.jws`), lövbər jurnalı, `keys/` | hamı — `TrustSource` vasitəsilə |
 | `https://tamga.network/trust-anchor` | kök barmaq izləri (konfiqurasiyanızda sabitləyirsiniz) | hamı |
 | `https://schemas.tamga.network/v1/catalogue.json` | sənəd növləri kataloqu | sənədi verən qurum, yoxlayan tərəf, rəqəmsal cüzdan |
-| `https://issuer.tamga.network/{kurum}` | hostinq edilən sənəd vermə xidməti (OpenID4VCI + `/api/v1`) | sənədi verən qurum, rəqəmsal cüzdan |
+| `https://issuer.tamga.network/{kurum}` | host edilən sənəd vermə xidməti (OpenID4VCI + `/api/v1`) | sənədi verən qurum, rəqəmsal cüzdan |
 | `https://status.tamga.network/{opak}` | ləğv siyahıları (Token Status List) | yoxlayan tərəf |
-| `https://verify.tamga.network` | Tamga Verify: hostinq edilən yoxlayan tərəf + səhifə dəsti (`/tamga-verifier.js`) | veb-sayt, yoxlayan tərəf |
+| `https://verify.tamga.network` | Tamga Verify: host edilən yoxlayan tərəf + səhifə dəsti (`/tamga-verifier.js`) | veb-sayt, yoxlayan tərəf |
 | `https://id.tamga.network` | müvəqqəti şəxsiyyət sənədi xidməti | rəqəmsal cüzdan |
 
 ## Bu gün nə hazırdır?
@@ -98,8 +98,8 @@ hazır olduqda gələcək. Sınaq versiyasında interfeys dəyişə bilər. Hər
 | Hissə | Status |
 |---|---|
 | Paketlər | npm-də 0.8.0 sınaq versiyası; sabit 1.0.0 hazır olduqda gələcək (sınaq versiyasında interfeys dəyişə bilər) |
-| Hostinq edilən yoxlayan tərəf | işləyir: təqdimatı saytın serveri imzalı bəyanla açır, dəyərlər yalnız ona və yalnız bir dəfə verilir ([[ADR-0017]]); siyasətlər hazırda sabitdir |
-| Hostinq edilən sənəd vermə | işləyir: hər qurum üçün əhatə dairəsi məhdud API açarı ([[ADR-0016]]) |
+| Host edilən yoxlayan tərəf | işləyir: təqdimatı saytın serveri imzalı bəyanla açır, dəyərlər yalnız ona və yalnız bir dəfə verilir ([[ADR-0017]]); siyasətlər hazırda sabitdir |
+| Host edilən sənəd vermə | işləyir: hər qurum üçün əhatə dairəsi məhdud API açarı ([[ADR-0016]]) |
 | Etibar lövbəri | imzalı etibar siyahıları ([[ADR-0009]]); sənədi verən qurumların və yoxlayan tərəflərin qeydiyyatını Tamga operatoru aparır |
 | Rəqəmsal cüzdanlar | şəbəkə rəqəmsal cüzdan işlətmir, qaydalara uyğun cüzdan provayderlərini siyahıya alır ([[ADR-0042]]); ilk rəqəmsal cüzdan — Tamga Wallet-ın provayderi (`TAMGA-WP-1`) real və sandbox siyahılarında `ACTIVE` |
 | Məxfilik | hər sayt üçün psevdonim ([[ADR-0031]]); sıfır biliyə əsaslanan sübutla (ZK) yaşın yoxlanılması — yoxlayan tərəf hissəsi istifadədədir; rəqəmsal cüzdan hissəsi `@tamga-network/zk` ilə qoşulub, Android lokal kitabxanası hazırdır, iOS gözləmədədir ([[ADR-0032]]) |

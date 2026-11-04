@@ -84,7 +84,7 @@ describe("sandbox test kurumları (ADR-0041)", () => {
 
   it("istek denetimi: slug biçimi, (TEST) eki, tür", () => {
     expect(validateRequest(req)).toEqual([]);
-    expect(validateRequest({ ...req, slug: "istanbul-bilgi" }).length).toBe(1);
+    expect(validateRequest({ ...req, slug: "example-university" }).length).toBe(1);
     expect(validateRequest({ ...req, name: "Deneme Okulu Çağ" }).length).toBe(1);
     expect(validateRequest({ ...req, kind: "health" as never }).length).toBe(1);
     expect(asciiName('Ç"ağ,=Ş (TEST)')).toBe("C ag S");
@@ -101,11 +101,11 @@ describe("sandbox test kurumları (ADR-0041)", () => {
     ])
       expect(validateRequest({ ...req, name }), name).toHaveLength(1);
     const reserved = reservedNamesOf(
-      { issuers: [{ legal_name: "İstanbul Bilgi Okulu" }], relying_parties: [{ trade_name: "Bubilet" }] },
+      { issuers: [{ legal_name: "Örnek Bilgi Okulu" }], relying_parties: [{ trade_name: "Örnek Etkinlik" }] },
       { issuers: [{ legal_name: { tr: "Örnek Kurs Merkezi" } }] },
     );
-    expect(validateRequest({ ...req, name: "Istanbul Bilgi Okulu (TEST)" }, reserved)).toHaveLength(1);
-    expect(validateRequest({ ...req, name: "Bubilet Plus (TEST)" }, reserved)).toHaveLength(1);
+    expect(validateRequest({ ...req, name: "Ornek Bilgi Okulu (TEST)" }, reserved)).toHaveLength(1);
+    expect(validateRequest({ ...req, name: "Ornek Etkinlik Plus (TEST)" }, reserved)).toHaveLength(1);
     expect(validateRequest({ ...req, name: "ornek kurs merkezi (TEST)" }, reserved)).toHaveLength(1);
     expect(validateRequest(req, reserved)).toEqual([]);
   });

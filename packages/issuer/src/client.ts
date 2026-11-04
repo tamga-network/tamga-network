@@ -3,7 +3,7 @@
  * kendi sisteminden çağırdığı istemci (D14). Kendi anahtarıyla kendi ihraç servisini çalıştıran kurum bunu değil
  * `@tamga-network/issuer` kütüphanesini kullanır.
  *
- *   const tamga = createIssuerClient({ baseUrl: "https://issuer.tamga.network", slug: "bubilet", apiKey });
+ *   const tamga = createIssuerClient({ baseUrl: "https://issuer.tamga.network", slug: "example-events", apiKey });
  *   const sale = await tamga.sellTicket({ eventId: "konser-2026-10", ticketClass: "Genel" });
  *   // sale.offer.deepLink → QR / "cüzdanda aç";  sale.offer.txCode → AYRI kanaldan (S5: SMS, e-posta, kasa ekranı)
  *
@@ -15,7 +15,7 @@
 export interface IssuerClientOptions {
   /** Barındırılan ihraç servisinin tabanı, ör. `https://issuer.tamga.network` (slug eklenmez). */
   baseUrl: string;
-  /** Kurumun güven listesindeki kısa adı (ör. `bilgi`, `bubilet`). */
+  /** Kurumun güven listesindeki kısa adı (ör. `example-university`, `example-events`). */
   slug: string;
   /** Kiracı API anahtarı (`tmg_<slug>_…`, ADR-0016). Gizli; yalnızca sunucuda. */
   apiKey?: string;

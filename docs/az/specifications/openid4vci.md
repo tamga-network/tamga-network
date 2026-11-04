@@ -350,7 +350,7 @@ Cavab yalnız `c_nonce` daşıyır (OpenID4VCI 1.0 Final §7.2); ömür cavabda 
 
 | Qayda | Dəyər |
 |---|---|
-| Ömür | 300 saniyə (5 dəqiqə) — cüzdan nonce-u aldıqdan sonra 10 nüsxə üçün aparat açarı yaradır və cüzdan provayderindən açar sübutu alır; yavaş cihazda bu bir dəqiqədən çox çəkə bilər |
+| Ömür | 300 saniyə (5 dəqiqə) — cüzdan nonce-u aldıqdan sonra 10 nüsxə üçün aparat açarı yaradır və cüzdan provayderindən açar attestasiyası alır; yavaş cihazda bu bir dəqiqədən çox çəkə bilər |
 | İstifadə | **Birdəfəlik** — istehlak edilir |
 | Anbar | Atomik (yarış vəziyyəti = təkrar oynatma boşluğu) |
 
@@ -769,7 +769,7 @@ qalanları 400.
 
 | Kod | HTTP | Nə vaxt | Rəqəmsal cüzdanın davranışı |
 |---|---|---|---|
-| `invalid_proof` | 400 | Sübut etibarsızdır (imza, `typ`, `aud`, `iat`, açar sübutu); açar saxlanması minimumdan aşağıdır; bir sorğuda **eyni açarla iki sübut** (PR6, sorğu başına); provayderin ləğv xidməti müddəti bitib (ISSU_12c) | **Eyni sübutla təkrar cəhd edilmir** — xəta bildirilir |
+| `invalid_proof` | 400 | Sübut etibarsızdır (imza, `typ`, `aud`, `iat`, açar attestasiyası); açar saxlanması minimumdan aşağıdır; bir sorğuda **eyni açarla iki sübut** (PR6, sorğu başına); provayderin ləğv xidməti müddəti bitib (ISSU_12c) | **Eyni sübutla təkrar cəhd edilmir** — xəta bildirilir |
 | `invalid_nonce` | 400 | Sübutdakı `c_nonce` naməlumdur, müddəti bitib və ya **artıq istifadə olunub** — nonce ilk `await`-dən əvvəl atomik istifadə olunur (PR4) və sübut sonra rədd edilsə də geri qaytarılmır | Yeni `c_nonce` alınır, sübutlar yenidən imzalanır |
 | `invalid_credential_request` | 400 | Struktur səhvdir; istənilən konfiqurasiya bu tokenin əhatəsində deyil; ön şərt düşüb (dəvət kodu ləğv edilib, bağlı şəxsiyyət sənədi aktiv deyil, toxum şəxsiyyət sənədindən əvvəl istənib) | **Təkrar cəhd edilmir** — xəta bildirilir |
 | `unknown_credential_configuration` | 400 | Sənədi verən qurum bu konfiqurasiyanı ümumiyyətlə təqdim etmir | Metadata yenilənir |

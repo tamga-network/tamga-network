@@ -36,7 +36,7 @@ Tamga-dır; dövlət öz siyahısını təhvil aldıqda müraciətlər həmin d�
 | 4. Baxış və sertifikat | Qeydiyyat qurumu müraciəti yoxlayır; milli kök sertifikat qurumun sertifikatını imzalayır (RB-AP-01). |
 | 5. Uyğunluq testi | Növ təsvirinə və uyğunluq test vektorlarına qarşı sınaq rəqəmsal sənədi yaradılır; ləğv siyahısının dərci və rəqəmsal cüzdan sübutlarının yoxlanılması test edilir. |
 | 6. Siyahıya daxil olma və səlahiyyət | Qurum siyahıya əlavə olunur; hər rəqəmsal sənəd növü üçün ayrıca səlahiyyət verilir (RB-REG-04). Qeydiyyat sertifikatı yaradılır. |
-| 7. İlk rəqəmsal sənəd | Qurum öz sənəd vermə proqram təminatı ilə və ya hostinq olunan sənəd vermə xidməti vasitəsilə (quruma bağlı API açarı ilə, RB-OP-18) ilk rəqəmsal sənədi verir. |
+| 7. İlk rəqəmsal sənəd | Qurum öz sənəd vermə proqram təminatı ilə və ya host edilən sənəd vermə xidməti vasitəsilə (quruma bağlı API açarı ilə, RB-OP-18) ilk rəqəmsal sənədi verir. |
 
 **Tələb olunan sənədlər**
 
@@ -61,7 +61,7 @@ Texniki addımlar: [[GUIDE-0007]] və [[GUIDE-0003]].
 | 3. Əhatə dairəsinə baxış | Tələb olunacaq sahələr məlumatların minimallaşdırılması prinsipi əsasında nəzərdən keçirilir; əhatə dairəsi hər istifadə halı üzrə ayrılır (RB-REG-08). |
 | 4. Sertifikatlar | Giriş sertifikatı verilir; qeydiyyat qurumu hər istifadə halı üçün ən çoxu 12 ay etibarlı olan qeydiyyat sertifikatı yaradır. |
 | 5. Uyğunluq testi | İmzalanmış sorğu, yoxlama zənciri, köhnəlmiş siyahı olduqda "yoxlanıla bilmədi" nəticəsi və əhatə dairəsindən kənar sahələrin tələb olunmaması test edilir. |
-| 6. Siyahıya daxil olma | Yoxlayan tərəf etibar siyahısına əlavə olunur. Hostinq olunan yoxlama xidmətindən istifadə edəcəksə, bu da qeydiyyata yazılır. |
+| 6. Siyahıya daxil olma | Yoxlayan tərəf etibar siyahısına əlavə olunur. Host edilən yoxlama xidmətindən istifadə edəcəksə, bu da qeydiyyata yazılır. |
 
 Texniki addımlar: [[GUIDE-0008]], daha sonra [[GUIDE-0002]] və ya [[GUIDE-0001]].
 
@@ -71,7 +71,7 @@ Texniki addımlar: [[GUIDE-0008]], daha sonra [[GUIDE-0002]] və ya [[GUIDE-0001
 |---|---|
 | 1. Cüzdan həllinin bəyannaməsi | Platformalar, təhlükəsiz aparat səviyyəsi (W2 və ya W3), PIN və biometriya, ehtiyat nüsxə modeli; Tamga Rulebook-dakı rəqəmsal cüzdan qaydalarına uyğun olmalıdır (Əlavə B §6). |
 | 2. Müqavilə | Cüzdan provayderi müqaviləsi: sübutlar, təhlükəsiz aparat səviyyəsi, yeniləmə və ləğv müddətləri, bərpa açarının saxlanılmaması (Əlavə A §5.1). |
-| 3. Uyğunluq testləri | Rəqəmsal cüzdan qaydaları, cüzdan nüsxəsi sübutu və açar sübutu, təqdimetmə protokolu; cihaz üzərində təqdimetmə. |
+| 3. Uyğunluq testləri | Rəqəmsal cüzdan qaydaları, cüzdan nüsxəsi sübutu və açar attestasiyası, təqdimetmə protokolu; cihaz üzərində təqdimetmə. |
 | 4. Siyahıya daxil olma | Sübut imza açarı siyahılar siyahısına, cüzdan provayderi qeydiyyatına əlavə olunur. Bundan sonra sənədi verən qurumlar bu rəqəmsal cüzdanın sübutlarını qəbul edir. |
 
 Cüzdan provayderini rəqəmsal cüzdanı təqdim edən təşkilat idarə edir; şəbəkə onu yalnız siyahıya salır. Siyahıya daxil olmazdan əvvəl cüzdan tərtibatçısı öz rəqəmsal cüzdanını
@@ -99,7 +99,7 @@ Təhvil heç bir rəqəmsal sənədi, qeydiyyatı və ya identifikatoru etibars�
 |---|---|---|
 | Qeydiyyat dəyişikliyi | Qeydiyyat qurumu ən gec 5 iş günü ərzində icra edir. | RB-REG-09 |
 | Sertifikatın və ya açarın yenilənməsi | Ən azı 30 gün əvvəl bildirilir; yeni identifikator köhnəsinə varis kimi bağlanır, köhnə rəqəmsal sənədlər köhnə qeydiyyatla yoxlanılır. | Əlavə A §3.3, RB-REG-06 |
-| API açarı | Hostinq olunan xidmətin açarı 90 gündən bir yenilənir; sızma şübhəsi olduqda qurum ləğv tələb edir. | RB-AP-25 |
+| API açarı | Host edilən xidmətin açarı 90 gündən bir yenilənir; sızma şübhəsi olduqda qurum ləğv tələb edir. | RB-AP-25 |
 | Yeni rəqəmsal sənəd növü | Rəqəmsal sənəd növü səlahiyyəti ayrıca tələb olunur; yeni növ əvvəlcə kataloqda dərc olunmalıdır. | RB-REG-04, RB-SCH-05 |
 
 # 7. Fəaliyyətin dayandırılması

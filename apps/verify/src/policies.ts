@@ -35,8 +35,8 @@ const TRUST_REVIEW: Policy["trust"] = {
  * ADR-0038: kapı grubu adları ortamdan; varsayılan sandbox örnek kurumlarının grupları. Kapı politikaları kurgusal senaryodur ve
  * yalnız sandbox'ta yüklenir (2026-10-04) — gerçek ağda kapı grubu yoktur.
  */
-export const CAMPUS_GROUP = process.env.TAMGA_VERIFY_CAMPUS_GROUP ?? "istanbul-bilgi-campus";
-export const TICKET_GROUP = process.env.TAMGA_VERIFY_TICKET_GROUP ?? "bubilet-gate";
+export const CAMPUS_GROUP = process.env.TAMGA_VERIFY_CAMPUS_GROUP ?? "example-university-campus";
+export const TICKET_GROUP = process.env.TAMGA_VERIFY_TICKET_GROUP ?? "example-events-gate";
 const FRESH: Policy["freshness"] = { max_status_token_age_sec: 6 * 3600, max_trust_age_sec: 24 * 3600 };
 
 /** Bütün politikalar (iki ağın birleşimi). Bir sürecin kullandığı küme: `policiesFor(ağ)`. */

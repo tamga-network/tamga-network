@@ -6,7 +6,7 @@ version: 1.0.0
 created: 2026-10-11
 last_updated: 2026-10-16
 summary: >
-  Tamga etibar siyahısındakı hər bir cüzdan provayderinin cüzdan nüsxəsi sübutunu (WIA) və açar sübutunu (KA) necə verdiyini, hansı şərtlərdə ləğv etdiyini və ləğvi necə dərc etdiyini bir yerdə toplayan və Avropa İttifaqı (Aİ) ARF (VCR_05, WURevocation_03, WURevocation_09a) və ETSI TS 119 471 bənd 6–7 ilə uyğunlaşdıran siyasət. Şəbəkə rəqəmsal cüzdan idarə etmir; bu sənəd şəbəkənin siyahıdakı cüzdan provayderlərindən gözlədiyi minimum siyasətdir və ADR-0025, ADR-0047, cüzdan spesifikasiyası və Tamga Rulebook qaydalarından tərtib edilib.
+  Tamga etibar siyahısındakı hər bir cüzdan provayderinin cüzdan nüsxəsi sübutunu (WIA) və açar attestasiyasını (KA) necə verdiyini, hansı şərtlərdə ləğv etdiyini və ləğvi necə dərc etdiyini bir yerdə toplayan və Avropa İttifaqı (Aİ) ARF (VCR_05, WURevocation_03, WURevocation_09a) və ETSI TS 119 471 bənd 6–7 ilə uyğunlaşdıran siyasət. Şəbəkə rəqəmsal cüzdan idarə etmir; bu sənəd şəbəkənin siyahıdakı cüzdan provayderlərindən gözlədiyi minimum siyasətdir və ADR-0025, ADR-0047, cüzdan spesifikasiyası və Tamga Rulebook qaydalarından tərtib edilib.
 translation_of: FW-POL-0002
 source_version: "1.0.0"
 ---
@@ -18,7 +18,7 @@ tanıyır ([[ADR-0042]]). Bu siyasət siyahıdakı hər bir [[t:wallet-provider|
 qaydalarını toplayır:
 
 - **Cüzdan nümunəsi sübutu ([[t:WIA]])** — rəqəmsal cüzdan tətbiqinin (Wallet Instance) özünü sənədi verən quruma təqdim etdiyi qısa ömürlü sübut;
-- **Açar sübutu (KA)** — rəqəmsal sənəd açarlarının hansı təhlükəsiz aparatda saxlandığını və istifadəçini yoxlayan tərəfin hansı yoxlama üsulu ilə qorunduğunu göstərən sübut.
+- **Açar attestasiyası (KA)** — rəqəmsal sənəd açarlarının hansı təhlükəsiz aparatda saxlandığını və istifadəçini yoxlayan tərəfin hansı yoxlama üsulu ilə qorunduğunu göstərən sübut.
 
 İkisi birlikdə Aİ-dəki cüzdan vahidi sübutunun (WUA) qarşılığıdır. Siyasət qərar vermir: qaydalar [[ADR-0025]], [[ADR-0047]], [[SPEC-WALLET-0001]],
 [[SPEC-PROTO-0001]] §11.1, Tamga Rulebook-un RB-WP və RB-AP qaydaları və Trust Framework-dən (Əlavə A) tərtib edilib. Hər cüzdan provayderi

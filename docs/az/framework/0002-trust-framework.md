@@ -124,14 +124,14 @@ Texniki təfərrüatlar tərtibatçı sənədlərindədir (Əlavə E).
 |---|---|---|---|
 | Sənəd sahibinin şəxsiyyətinin yoxlanması (T0–T3; eIDAS Low / Substantial / High) | Bağlama yolu | Sənədi verən qurum və ya qeydiyyat orqanı (yoxlayan tərəf deyil) | Sənədi verən qurumun audit qeydi; rəqəmsal sənəd növünün ilkin şərti |
 | Sənədi verən qurum (I1–I3) | Akkreditasiya | Qeydiyyat qurumu; I3-də müstəqil qiymətləndirmə | Etibar siyahısında (təminat və sinif sahələri) |
-| Rəqəmsal cüzdan (W1–W3) | Təhlükəsiz aparat (WSCD — Wallet Secure Cryptographic Device) səviyyəsi | Cüzdan provayderi (cüzdan nüsxəsinin sübutu və açar sübutu) | Siyahılar siyahısında, cüzdan provayderinin qeydində |
+| Rəqəmsal cüzdan (W1–W3) | Təhlükəsiz aparat (WSCD — Wallet Secure Cryptographic Device) səviyyəsi | Cüzdan provayderi (cüzdan nüsxəsinin sübutu və açar attestasiyası) | Siyahılar siyahısında, cüzdan provayderinin qeydində |
 
 Xaricə yönəlik adlandırma eIDAS terminləri ilə aparılır (Low / Substantial / High; [[t:EAA]], QEAA qarşılığı, dövlət sənədi).
 İstifadəçiyə rəqəm göstərilmir.
 
 Rəqəmsal cüzdan səviyyələri: **W1** proqram açarı (sənəd verilmir, RB-WP-01), **W2** cihazın təhlükəsiz zonası, **W3** sertifikatlı təhlükəsiz
-aparat. Ən yüksək səviyyədə (W3) cüzdan provayderi aktivləşdirmə zamanı və W3 bəyan edən hər açar sübutundan əvvəl platformanın cihaz
-sübutunu (Apple App Attest, Android açar sübutu, Play Integrity) yoxlayır; W2-də cihaz sübutu ixtiyaridir (RB-WP-17,
+aparat. Ən yüksək səviyyədə (W3) cüzdan provayderi aktivləşdirmə zamanı və W3 bəyan edən hər açar attestasiyasından əvvəl platformanın cihaz
+sübutunu (Apple App Attest, Android açar attestasiyası, Play Integrity) yoxlayır; W2-də cihaz sübutu ixtiyaridir (RB-WP-17,
 [[ADR-0047]] K5).
 
 ## 2.3 Açarın qorunması tələbləri
@@ -200,7 +200,7 @@ cüzdan ləğv edilmiş sertifikatı qəbul etmir (Qeydiyyat Sertifikatı Siyas�
 ### Cüzdan provayderi
 
 Cüzdan həlli bəyanatı (platformalar, təhlükəsiz aparat səviyyəsi, PIN və biometrika, ehtiyat nüsxə modeli; Tamga Rulebook-dakı cüzdan
-qaydalarına uyğun) verilir, uyğunluq testlərindən keçilir, cüzdan nümunəsi sübutunun ([[t:WIA]]) və açar sübutunun (KA) imza açarları
+qaydalarına uyğun) verilir, uyğunluq testlərindən keçilir, cüzdan nümunəsi sübutunun ([[t:WIA]]) və açar attestasiyasının (KA) imza açarları
 siyahılar siyahısına əlavə olunur. Dövlətlər qoşulduqda sertifikatlaşdırılmış cüzdan həlləri siyahısı tətbiq edilir (Aİ-nin 2025/849 saylı İcra Reqlamentinin
 qarşılığı).
 
@@ -299,7 +299,7 @@ fərdi məlumatlar və şəxsi açar ehtiva etmir.
 |---|---|---|
 | Sənədi verən qurum | Növ təsvirinə uyğun rəqəmsal sənəd yaradılması, imza və sertifikat zənciri, ləğv siyahısının dərci, rəqəmsal cüzdan sübutlarının yoxlanılması | Uyğunluq vektorları ilə sınaq sənədi; nəticə hesabatı qeydiyyat müraciətinə əlavə edilir |
 | Yoxlayan tərəf | İmzalanmış sorğu, yoxlama xəttinin addımları, köhnəlmiş siyahıda "yoxlanıla bilmədi" nəticəsi, əhatə dairəsindən kənar sahələrin tələb edilməməsi | Uyğunluq vektorları və öhdəlik testləri; nəticə hesabatı qeydiyyat müraciətinə əlavə edilir |
-| Cüzdan provayderi | Rəqəmsal cüzdan qaydaları (açarın qorunması, təsdiq ekranı, tarixçə, silmə), cüzdan nümunəsi sübutu və açar sübutu, təqdimetmə protokolu | Uyğunluq vektorları, öhdəlik testləri və cihaz üzərində nümayiş |
+| Cüzdan provayderi | Rəqəmsal cüzdan qaydaları (açarın qorunması, təsdiq ekranı, tarixçə, silmə), cüzdan nümunəsi sübutu və açar attestasiyası, təqdimetmə protokolu | Uyğunluq vektorları, öhdəlik testləri və cihaz üzərində nümayiş |
 
 Öhdəlik testləri ən azı bunları əhatə edir: köhnəlmiş siyahı "yoxlanıla bilmədi" nəticəsini verir; naməlum formatda əməliyyat dayanır; imza xətasında
 əməliyyat dayanır. Testlərin icra addımları tərtibatçı sənədlərində verilir (Əlavə E). Nəticələr qeydiyyat orqanına təqdim olunur; qeydiyyat orqanı
@@ -361,7 +361,7 @@ orqanına ünvanlanır.
 | **İştirak müqaviləsi (sənədi verən qurum)** | Qurum ↔ sxem sahibi | Əhatə dairəsi, sinif və təminat, sənəd növü səlahiyyətləri, açarların idarə edilməsi (imza açarı qurumda), ləğv siyahısının dərci öhdəliyi, autentifikasiya səviyyələri, bildirişlər, KVKK əlavələri, xidmət səviyyələri, məsuliyyət, xitam, varislik |
 | **Hostinq əlavəsi** | Qurum ↔ operator | Sənəd vermə xidməti operatorda işləyir, imza açarı qurumda qalır; operatorun jurnal aparma qaydaları; host edilən qurumların siyahısı ictimaiyyətə açıqdır; hostinq payı həddi |
 | **Yoxlayan tərəf üçün istifadə şərtləri** | Yoxlayan tərəf ↔ sxem sahibi | Əhatə dairəsi, məlumatların minimallaşdırılması, həddindən artıq sorğu qadağası, sənəd sahələrinin və ləğv siyahısındakı mövqeyin qeydə alınmaması, birdəfəlik dəyər, "yoxlanıla bilmədi" nəticəsinin düzgün emalı, qeydiyyat məlumatlarının aktual saxlanılması |
-| **Cüzdan provayderi müqaviləsi** | Cüzdan provayderi ↔ sxem sahibi | Cüzdan nümunəsi sübutu və açar sübutu, təhlükəsiz aparat səviyyəsi, yeniləmə və ləğv müddətləri, bərpa açarının saxlanılmaması |
+| **Cüzdan provayderi müqaviləsi** | Cüzdan provayderi ↔ sxem sahibi | Cüzdan nümunəsi sübutu və açar attestasiyası, təhlükəsiz aparat səviyyəsi, yeniləmə və ləğv müddətləri, bərpa açarının saxlanılmaması |
 | **Məlumatların emalı müqaviləsi** | Sənədi verən qurum ↔ səlahiyyətli mənbə və ya operator (məlumatları emal edən) | KVKK maddə 12; uyğunlaşdırma cədvəli; saxlama müddətləri |
 | **Pilot iştirakçı bildirişi** | Pilot iştirakçıları | Pilotun hüdudları sadə dildə: etibar bu gün imzalanmış siyahılara əsaslanır, lövbər tək operatordadır, ləğv bir neçə dəqiqəyə qüvvəyə minir, iştirak könüllüdür, razılıq istənilən an geri götürülə bilər |
 | **Varislik müqaviləsi** | Operator ↔ əmanətçi və ya şura | Domen adı, kök sertifikatlar, siyahı arxivi, açarların ötürülməsi |

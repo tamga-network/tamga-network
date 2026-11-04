@@ -1,12 +1,12 @@
 ---
 document_id: ADR-0016
-title: "Hostinq edilən rəqəmsal sənəd vermə xidmətinə giriş"
+title: "Host edilən rəqəmsal sənəd vermə xidmətinə giriş"
 status: Active
 version: 1.0.0
 created: 2026-09-27
 last_updated: 2026-10-02
 summary: >
-  Hostinq edilən rəqəmsal sənəd vermə xidmətinin operator uc nöqtələri (`/{slug}/admin/*`) bu gün yalnız serverin özündən (127.0.0.1) əlçatandır və vahid ortaq administrator açarı ilə qorunur. `@tamga-network/issuer/client` ilə xarici qurumun (bilet satıcısı, universitet sistemi) öz serverindən təklif/bilet/ləğv çağırışları edə bilməsi üçün ayrıca, kirayəçiyə bağlı, səlahiyyət əhatəli API səthi təklif olunur.
+  Host edilən rəqəmsal sənəd vermə xidmətinin operator uc nöqtələri (`/{slug}/admin/*`) bu gün yalnız serverin özündən (127.0.0.1) əlçatandır və vahid ortaq administrator açarı ilə qorunur. `@tamga-network/issuer/client` ilə xarici qurumun (bilet satıcısı, universitet sistemi) öz serverindən təklif/bilet/ləğv çağırışları edə bilməsi üçün ayrıca, kirayəçiyə bağlı, səlahiyyət əhatəli API səthi təklif olunur.
 domain: Services
 translation_of: ADR-0016
 source_version: "1.0.0"

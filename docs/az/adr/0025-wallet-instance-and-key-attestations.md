@@ -1,6 +1,6 @@
 ---
 document_id: ADR-0025
-title: "Rəqəmsal cüzdan və açar sübutu"
+title: "Rəqəmsal cüzdan və açar attestasiyası"
 status: Active
 version: 1.0.0
 created: 2026-09-29
@@ -146,9 +146,9 @@ Bu qeydlər qərarı dəyişmir; istinad cüzdanının (Tamga Wallet) və provay
    yenilənməsi şəxsə sorğu göstərmir. Şəxsin başlatmadığı axınlar rəqəmsal sənəd açarını sorğusuz sınayır; təsdiq tələb olunarsa,
    səssizcə ötürür və istifadəçi əməliyyatında yenidən cəhd edir. Miqrasiya kodu yoxdur ([[ADR-0029]]): siyasət dəyişdikdə mövcud test
    cüzdanları yenidən quraşdırılır.
-2. **Play Integrity — məcburi deyil.** Android cüzdanı açar sübutu ilə birlikdə Play Integrity (standart API) tokeni
+2. **Play Integrity — məcburi deyil.** Android cüzdanı açar attestasiyası ilə birlikdə Play Integrity (standart API) tokeni
    göndərə bilər; provayder, xidmət hesabı tənzimlənibsə, tokeni Google vasitəsilə deşifrə etdirir və yalnız hökm siniflərini vahidin cihaz qeydinə
-   yazır. KA-dakı `key_storage` səviyyəsi Android açar sübutundan gəlir; Play Integrity onu aşağı salmır, onun olmaması qeydiyyata
+   yazır. KA-dakı `key_storage` səviyyəsi Android açar attestasiyasından gəlir; Play Integrity onu aşağı salmır, onun olmaması qeydiyyata
    mane olmur, xidmət hesabı yoxdursa yoxlama ötürülür. Play Integrity-ni məcburi etmək (qeydiyyatı və ya səviyyəni ona bağlamaq)
    bu qərarın K1/K3-ünü dəyişir və **ayrıca ADR tələb edir**.
 

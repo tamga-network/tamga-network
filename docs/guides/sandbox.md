@@ -128,9 +128,9 @@ kısa adlar (`slug`) yalnız teknik tanımlayıcıdır. Buradaki belgeler test a
 
 | Kurum | Belge türleri (`vct`) |
 |---|---|
-| Örnek üniversite (TEST) — `issuer.sandbox.tamga.network/istanbul-bilgi` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
-| Örnek etkinlik şirketi (TEST) — `issuer.sandbox.tamga.network/bubilet` | `urn:tamga:tkt:EventTicket:1` (kurgusal konserler) |
-| Örnek sinema işletmesi (TEST) — `issuer.sandbox.tamga.network/paribu-cineverse` | `urn:tamga:tkt:EventTicket:1` (kurgusal film seansları; sinema bileti ayrı bir tür değildir: film ve seans `event_name`, salon `venue_name` alanındadır) |
+| Örnek üniversite (TEST) — `issuer.sandbox.tamga.network/example-university` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Örnek etkinlik şirketi (TEST) — `issuer.sandbox.tamga.network/example-events` | `urn:tamga:tkt:EventTicket:1` (kurgusal konserler) |
+| Örnek sinema işletmesi (TEST) — `issuer.sandbox.tamga.network/example-cinema` | `urn:tamga:tkt:EventTicket:1` (kurgusal film seansları; sinema bileti ayrı bir tür değildir: film ve seans `event_name`, salon `venue_name` alanındadır) |
 | Kimlik servisi — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, takma ad tohumu (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Örnek kişiler
@@ -184,10 +184,10 @@ sayfada görünür.
 
 **Kapı (turnike / bilet kapısı):** `https://verify.sandbox.tamga.network/terminal?group=<grup>` deneme kapısıdır; cüzdanın “Göster”
 ekranındaki geçiş kartı QR'ını kameraya tutar. Kapı kendini terminal anahtarıyla tanıtır ([[ADR-0065]]); sandbox'ın deneme
-anahtarları herkese açıktır ve sayfadaki alana yazılır: `istanbul-bilgi-campus` → `sandbox-gate-campus`, `bubilet-gate` →
+anahtarları herkese açıktır ve sayfadaki alana yazılır: `example-university-campus` → `sandbox-gate-campus`, `example-events-gate` →
 `sandbox-gate-ticket`. Gerçek ağda anahtarı kapının işletmecisi verir. Sandbox listesinde her kapı grubu kurumuna bağlıdır
-([[ADR-0069]]): `istanbul-bilgi-campus` → `istanbul-bilgi`, `bubilet-gate` → `bubilet`, `paribu-cineverse-gate` →
-`paribu-cineverse`; kendi kapıları olan bir kurumun yöneticisi anahtarları Kurum Konsolu'nun **Kapı terminalleri** ekranından
+([[ADR-0069]]): `example-university-campus` → `example-university`, `example-events-gate` → `example-events`, `example-cinema-gate` →
+`example-cinema`; kendi kapıları olan bir kurumun yöneticisi anahtarları Kurum Konsolu'nun **Kapı terminalleri** ekranından
 oluşturur ve iptal eder (anahtar bir kez gösterilir).
 
 Kendi doğrulayıcınızı denemek için: doğrulayıcınızı sandbox listesine ve sandbox pinlerine bağlayın, sandbox'ta alınmış

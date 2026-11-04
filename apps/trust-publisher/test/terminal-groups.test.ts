@@ -7,10 +7,10 @@ import { describe, expect, it } from "vitest";
 import { checkTerminalGroups } from "../src/terminal-groups.js";
 
 const NOW = new Date("2026-10-29T00:00:00Z");
-const issuers = [{ slug: "bubilet" }, { slug: "istanbul-bilgi" }, { slug: "eski-kurum", status: "REVOKED" }];
+const issuers = [{ slug: "example-events" }, { slug: "example-university" }, { slug: "eski-kurum", status: "REVOKED" }];
 const group = (o: Record<string, unknown> = {}) => ({
-  group_id: "bubilet-gate",
-  institution_id: "bubilet",
+  group_id: "example-events-gate",
+  institution_id: "example-events",
   allowed_policies: ["event-ticket"],
   valid_from: "2026-10-01T00:00:00Z",
   ...o,
@@ -51,7 +51,7 @@ describe("ADR-0069 checkTerminalGroups", () => {
   });
   it("geri çekilmiş grup eski biçimle kalabilir (tarih kaydı)", () => {
     const old = {
-      group_id: "bilgi-campus",
+      group_id: "example-university-campus",
       label: "eski",
       valid_from: "2026-09-25T00:00:00Z",
       valid_until: "2026-10-04T00:00:00Z",

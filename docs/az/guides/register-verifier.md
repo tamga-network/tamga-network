@@ -110,7 +110,7 @@ növünü yalnız müəyyən yoxlayan tərəflərə və xidmətlərə göstəril
 
 ## 5. Vasitəçi yoxlayan tərəf
 
-Başqa saytlar adından yoxlama aparan xidmətsinizsə (hostinq edilən yoxlayan tərəf kimi), [[t:intermediary|vasitəçi]] kimi qeydiyyatdan keçirsiniz
+Başqa saytlar adından yoxlama aparan xidmətsinizsə (host edilən yoxlayan tərəf kimi), [[t:intermediary|vasitəçi]] kimi qeydiyyatdan keçirsiniz
 (`served_relying_parties[]`); əsas sayt da öz qeydində sizi göstərir (`uses_intermediaries[]`). Rəqəmsal cüzdan ekranda **əsas saytın** adını
 göstərir və əhatəni onun qeydinə əsasən yoxlayır ([[ADR-0017]]).
 

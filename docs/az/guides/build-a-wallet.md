@@ -6,7 +6,7 @@ version: 1.0.0
 created: 2026-09-27
 last_updated: 2026-10-16
 summary: >
-  Tamga rəqəmsal sənədlərini qəbul edən, saxlayan və təqdim edən rəqəmsal cüzdan hazırlamaq: cüzdan provayderi kimi qeydiyyat, cihaz açarları, cihaz sübutu (App Attest, Android açar sübutu), Wallet Unit Attestation (WUA), OpenID4VCI ilə sənəd almaq, OpenID4VP ilə selective disclosure, razılıq ekranı, əməliyyat jurnalı və ixrac, cihaz dəyişmə, nəşrdən əvvəl yoxlama və riayət edilməli qaydalar. Şəbəkənin ilk cüzdanı olan Tamga Wallet (bir şirkətin ayrıca məhsulu; ayrıca repozitoriya, Expo) bu paketdən istifadə edir.
+  Tamga rəqəmsal sənədlərini qəbul edən, saxlayan və təqdim edən rəqəmsal cüzdan hazırlamaq: cüzdan provayderi kimi qeydiyyat, cihaz açarları, cihaz sübutu (App Attest, Android açar attestasiyası), Wallet Unit Attestation (WUA), OpenID4VCI ilə sənəd almaq, OpenID4VP ilə selective disclosure, razılıq ekranı, əməliyyat jurnalı və ixrac, cihaz dəyişmə, nəşrdən əvvəl yoxlama və riayət edilməli qaydalar. Şəbəkənin ilk cüzdanı olan Tamga Wallet (bir şirkətin ayrıca məhsulu; ayrıca repozitoriya, Expo) bu paketdən istifadə edir.
 translation_of: GUIDE-0005
 source_version: "1.0.0"
 ---
@@ -98,14 +98,14 @@ const keys = new HardwareKeyProvider(
 
 `SoftwareKeyProvider` yalnız test və demo üçündür; pilotda proqram açarlı cüzdana sənəd verilmir.
 
-## 4. Cihaz sübutu: App Attest və Android açar sübutu
+## 4. Cihaz sübutu: App Attest və Android açar attestasiyası
 
 Cüzdan provayderi açarın həqiqətən təhlükəsiz zonada olub-olmadığına cihazın bəyanatına görə deyil, **platformanın imzalı sübutuna** əsasən qərar
 verir. Sübut yoxlayan tərəf tərəfindən təsdiqlənmədikcə vahid proqram təminatı səviyyəsində sayılır.
 
 | Platforma | Sübut | Nə yoxlanılır |
 |---|---|---|
-| Android | Açar sübutu zənciri (key attestation) | Zəncir Google aparat kökünə bağlıdır; birdəfəlik dəyər; təhlükəsizlik səviyyəsi (TEE / StrongBox); təsdiqlənmiş yükləmə; tətbiqin paket adı |
+| Android | Açar attestasiyası zənciri (key attestation) | Zəncir Google aparat kökünə bağlıdır; birdəfəlik dəyər; təhlükəsizlik səviyyəsi (TEE / StrongBox); təsdiqlənmiş yükləmə; tətbiqin paket adı |
 | iOS | Apple App Attest | Sübut Apple kökünə bağlıdır; tətbiq identifikatoru (Team ID + Bundle ID); müştəri məlumatları vahid açarının barmaq izini daşıyır |
 
 Vahidi ilk quraşdırmada qeydiyyatdan keçirin və sübutu `deviceEvidence` ilə təqdim edin:
@@ -125,9 +125,9 @@ Sübut rədd edilərsə, vahid proqram səviyyəsində qeydiyyata alınır; prov
 Şəxsə bu cihazda yüksək təhlükəsizlikli sənəd almağın mümkün olmadığını bildirin; səssizcə davam etməyin.
 
 ::: info Səviyyəyə görə cihaz sübutu
-W3 səviyyəsində provayderiniz vahidi aktivləşdirərkən və W3 bəyan edən hər açar sübutundan əvvəl platformanın cihaz sübutunu
+W3 səviyyəsində provayderiniz vahidi aktivləşdirərkən və W3 bəyan edən hər açar attestasiyasından əvvəl platformanın cihaz sübutunu
 yoxlamalıdır; W2-də bu, məcburi deyil (RB-WP-17). Android-də tətbiqin mağazadan gəldiyini əlavə olaraq göstərən Play Integrity
-sübutu əlavə edilə bilər; bu gün Android-də aparat açar sübutu, iOS-da isə App Attest yoxlanılır.
+sübutu əlavə edilə bilər; bu gün Android-də aparat açar attestasiyası, iOS-da isə App Attest yoxlanılır.
 :::
 
 ## 5. Wallet Unit Attestation (WUA)
@@ -142,7 +142,7 @@ const pop = await clientAttestationPop({ keys, wua: wia, aud: credentialIssuer }
 Sübut sənəd alma zamanı qurumun token sorğusuna əlavə edilir. Müddəti bitməzdən əvvəl yeniləyin (`wuaExpiringSoon`).
 
 Qeydiyyatlı vahid üçün daha iki sübut var: hər sənəd əməliyyatı üçün yeni və qısamüddətli (24 saatdan az) cüzdan nümunəsi
-sübutu ([[t:WIA]]) və sənəd açarlarının təhlükəsiz zonada olduğunu göstərən açar sübutu ([[t:key-attestation|KA]]).
+sübutu ([[t:WIA]]) və sənəd açarlarının təhlükəsiz zonada olduğunu göstərən açar attestasiyası ([[t:key-attestation|KA]]).
 Provayder hər ikisi üçün ləğv siyahısı dərc edir (`wiaRevokedByList` ilə yoxlanılır); şəxs cihazını başqasına verərkən vahid ləğv edilir.
 
 ## 6. Sənəd almaq (OpenID4VCI)

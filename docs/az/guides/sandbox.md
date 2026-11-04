@@ -106,7 +106,7 @@ və sənədləri ayrı saxlanmalıdır. Məsələn, şəbəkənin ilk rəqəmsal
 ### Cüzdan provayderinizi sandbox siyahısında qeydiyyata aldırın
 
 Sandbox-dakı sənədi verən qurumlar və şəxsiyyət xidməti, real şəbəkədə olduğu kimi, yalnız siyahıda qeydiyyatda olan cüzdan provayderinin
-imzaladığı cüzdan nümunəsi sübutunu (WIA) və açar sübutunu (KA) qəbul edir. Buna görə rəqəmsal cüzdanınızı sınamazdan əvvəl öz
+imzaladığı cüzdan nümunəsi sübutunu (WIA) və açar attestasiyasını (KA) qəbul edir. Buna görə rəqəmsal cüzdanınızı sınamazdan əvvəl öz
 provayderiniz sandbox siyahısının `wallet_providers[]` bölməsində qeydiyyatda olmalıdır:
 
 1. Test üçün ayrıca provayder imza açarı yaradın; real şəbəkədəki açarınızı sandbox-da istifadə etməyin.
@@ -128,9 +128,9 @@ Sandbox-dakı qurumlar yalnız sınaq üçündür; heç biri real qurumla əlaq�
 
 | Qurum | Sənəd növləri (`vct`) |
 |---|---|
-| Nümunə universitet (TEST) — `issuer.sandbox.tamga.network/istanbul-bilgi` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
-| Nümunə tədbir şirkəti (TEST) — `issuer.sandbox.tamga.network/bubilet` | `urn:tamga:tkt:EventTicket:1` (uydurma konsertlər) |
-| Nümunə kinoteatr operatoru (TEST) — `issuer.sandbox.tamga.network/paribu-cineverse` | `urn:tamga:tkt:EventTicket:1` (uydurma film seansları; kino bileti ayrıca növ deyil: film və seans `event_name`, zal `venue_name` sahəsindədir) |
+| Nümunə universitet (TEST) — `issuer.sandbox.tamga.network/example-university` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Nümunə tədbir şirkəti (TEST) — `issuer.sandbox.tamga.network/example-events` | `urn:tamga:tkt:EventTicket:1` (uydurma konsertlər) |
+| Nümunə kinoteatr operatoru (TEST) — `issuer.sandbox.tamga.network/example-cinema` | `urn:tamga:tkt:EventTicket:1` (uydurma film seansları; kino bileti ayrıca növ deyil: film və seans `event_name`, zal `venue_name` sahəsindədir) |
 | Şəxsiyyət xidməti — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, psevdonim toxumu (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Nümunə şəxslər
@@ -184,9 +184,9 @@ səhifədə görünür.
 
 **Giriş (turniket / bilet girişi):** `https://verify.sandbox.tamga.network/terminal?group=<qrup>` sınaq girişidir; cüzdanın
 “Göstər” ekranındakı keçid kartı QR kodunu kamerayla oxuyur. Giriş özünü terminal açarı ilə təqdim edir; sandbox-un sınaq
-açarları hamıya açıqdır: `istanbul-bilgi-campus` → `sandbox-gate-campus`, `bubilet-gate` → `sandbox-gate-ticket`. Sandbox
-siyahısında hər giriş qrupu öz qurumuna bağlıdır ([[ADR-0069]]): `istanbul-bilgi-campus` → `istanbul-bilgi`, `bubilet-gate` →
-`bubilet`, `paribu-cineverse-gate` → `paribu-cineverse`. Real şəbəkədə açarı qurumun inzibatçısı Qurum Konsolunun **Giriş
+açarları hamıya açıqdır: `example-university-campus` → `sandbox-gate-campus`, `example-events-gate` → `sandbox-gate-ticket`. Sandbox
+siyahısında hər giriş qrupu öz qurumuna bağlıdır ([[ADR-0069]]): `example-university-campus` → `example-university`, `example-events-gate` →
+`example-events`, `example-cinema-gate` → `example-cinema`. Real şəbəkədə açarı qurumun inzibatçısı Qurum Konsolunun **Giriş
 terminalları** ekranında yaradır.
 
 Öz yoxlayan tərəfinizi sınamaq üçün: yoxlayan tərəfinizi sandbox siyahısına və sandbox pinlərinə bağlayın, sandbox-da alınmış

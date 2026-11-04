@@ -15,7 +15,7 @@ source_version: "1.0.0"
 
 | Termin | Tərif |
 |---|---|
-| Açar sübutu (Key Attestation, KA) | Cüzdan provayderinin, rəqəmsal sənədin bağlanacağı açarların cihazın təhlükəsiz aparat hissəsində yaradıldığını və qorunduğunu bəyan edən qısamüddətli imzalı sənədi; sənədi verən qurum rəqəmsal sənədi verməzdən əvvəl onu yoxlayır. |
+| Açar attestasiyası (Key Attestation, KA) | Cüzdan provayderinin, rəqəmsal sənədin bağlanacağı açarların cihazın təhlükəsiz aparat hissəsində yaradıldığını və qorunduğunu bəyan edən qısamüddətli imzalı sənədi; sənədi verən qurum rəqəmsal sənədi verməzdən əvvəl onu yoxlayır. |
 | Vasitəçi yoxlayan tərəf (Intermediary) | Yoxlayan tərəf adından rəqəmsal cüzdandan rəqəmsal sənəd tələb edən və onu yoxlayan xidmət. Rəqəmsal cüzdan əsl yoxlayan tərəfin adını göstərir. Tamga-da bu, Tamga Verify-dır. |
 | Rəqəmsal sənəd (elektron atribut sənədi, EAA) | Sənədi verən qurumun şəxs haqqında imzaladığı və şəxsin rəqəmsal cüzdanında saxlanılan sənəd: tələbə arayışı, diplom, bilet kimi. |
 | Sənəd sahibi (Holder) | Rəqəmsal sənədi öz rəqəmsal cüzdanında saxlayan və onu kimə göstərəcəyinə qərar verən şəxs. |
@@ -26,7 +26,7 @@ source_version: "1.0.0"
 | Rəqəmsal cüzdan | Şəxsin rəqəmsal sənədlərini saxlayan və göstərən tətbiq. Şəbəkənin qaydalarına uyğun hər rəqəmsal cüzdan şəbəkədə istifadə oluna bilər; Tamga Wallet şəbəkənin ilk rəqəmsal cüzdanıdır. |
 | Cüzdan vahidi (Wallet unit) | Rəqəmsal cüzdanın müəyyən cihazdakı quraşdırılması. |
 | Cüzdan nümunəsi sübutu (Wallet Instance Attestation, WIA) | Cüzdan provayderinin cüzdan vahidi üçün imzaladığı, ən çoxu 24 saat etibarlı bəyanat: cüzdan versiyası, açarın aparat hissəsində olması, PIN və ya biometriyanın aktiv olması. Sənədi verən qurum rəqəmsal sənədi verməzdən əvvəl onu yoxlayır. |
-| Cüzdan provayderi | Rəqəmsal cüzdanı təqdim edən, cüzdan vahidlərini qeydiyyata alan və cüzdan nümunəsi sübutunu və açar sübutunu imzalayan təşkilat. |
+| Cüzdan provayderi | Rəqəmsal cüzdanı təqdim edən, cüzdan vahidlərini qeydiyyata alan və cüzdan nümunəsi sübutunu və açar attestasiyasını imzalayan təşkilat. |
 | Lövbər jurnalı | Ləğv siyahısı dərclərini və sənəd növü təriflərinin heş dəyərlərini saatlıq imzalı qeydlərlə saxlayan, hamıya açıq jurnal. |
 | Reyestr mərhələsi | Etibar qeydlərinin bir neçə müstəqil operatorun apardığı ortaq reyestrə köçürüldüyü mərhələ. Ən azı iki müstəqil operator yazılı razılıq verdikdə başlayır. |
 | Yoxlama xətti | Yoxlayan tərəfin təqdimatı yoxladığı sabit addımlar: ilkin şərt, struktur, növ, etibar, status, siyasət. Nəticə qəbul, rədd və ya "hazırda yoxlanıla bilmədi" olur. |
@@ -51,7 +51,7 @@ source_version: "1.0.0"
 | Psevdonim | Rəqəmsal cüzdanın hər veb-sayt üçün ayrıca yaratdığı, sabit, lakin saytlar arasında uyğunlaşdırıla bilməyən hesab identifikatoru. |
 | Psevdonim toxumu | Şəxsiyyət xidmətinin şəxsin kimliyindən onu saxlamadan törətdiyi və yalnız rəqəmsal cüzdanda qalan gizli dəyər; psevdonimlər bundan törədilir. Göstərilə bilməyən ayrıca sənəd növü ilə verilir. |
 | Tamga Network | Bu çərçivənin müəyyən etdiyi etibar şəbəkəsi: qaydalar, etibar siyahıları, rəqəmsal sənəd növləri kataloqu və açıq mənbəli paketlər. Şəbəkə məhsul satmır. |
-| Tamga Verify | Şəbəkənin hostinq edilən yoxlayan tərəfi (vasitəçi yoxlayan tərəf). |
+| Tamga Verify | Şəbəkənin host edilən yoxlayan tərəfi (vasitəçi yoxlayan tərəf). |
 | Tamga Wallet | Şəbəkənin ilk rəqəmsal cüzdanı; ayrıca məhsuldur və açıq mənbə lisenziyası (EUPL-1.2) ilə hazırlanır. Şəbəkənin qaydalarına hər rəqəmsal cüzdan kimi əməl edir. |
 | Səlahiyyətli mənbə | Rəqəmsal sənəddəki məlumatın əsl sahibi olan sistem; məsələn, universitetin tələbə informasiya sistemi. |
 | İdarəetmə qurumu | Dövlətlər qoşulduqda yaradılan şura və ya fond; siyahıları və şəbəkə qaydalarını idarə edir. |

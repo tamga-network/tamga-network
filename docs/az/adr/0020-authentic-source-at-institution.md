@@ -6,7 +6,7 @@ version: 1.0.0
 created: 2026-09-29
 last_updated: 2026-10-02
 summary: >
-  Hostinqli buraxılışda fərdi məlumatların səlahiyyətli mənbəyi qurumdur; Tamga şəxs qeydləri saxlamır. İki yol var: (A) qurum API vasitəsilə şəxsin şəxsiyyətinə bağlı təklif yaradır və bağlantını özü göndərir; şəxs rəqəmsal cüzdanda şəxsiyyətini təqdim edir, uyğunluq olarsa rəqəmsal sənəd verilir. (B) şəxs rəqəmsal cüzdandan sorğu göndərir və şəxsiyyətini təqdim edir; Tamga imzalı sorğu ilə qurumun sorğu nöqtəsinə müraciət edir. Hər iki yolda rəqəmsal sənəd məlumatları imza anında qurumdan oxunur, saxlanmır. Qurum Konsolundakı qeyd reyestri yalnız "nümunə mənbə" (sınaq) kimi qalır.
+  Host edilən buraxılışda fərdi məlumatların səlahiyyətli mənbəyi qurumdur; Tamga şəxs qeydləri saxlamır. İki yol var: (A) qurum API vasitəsilə şəxsin şəxsiyyətinə bağlı təklif yaradır və bağlantını özü göndərir; şəxs rəqəmsal cüzdanda şəxsiyyətini təqdim edir, uyğunluq olarsa rəqəmsal sənəd verilir. (B) şəxs rəqəmsal cüzdandan sorğu göndərir və şəxsiyyətini təqdim edir; Tamga imzalı sorğu ilə qurumun sorğu nöqtəsinə müraciət edir. Hər iki yolda rəqəmsal sənəd məlumatları imza anında qurumdan oxunur, saxlanmır. Qurum Konsolundakı qeyd reyestri yalnız "nümunə mənbə" (sınaq) kimi qalır.
 domain: Services
 translation_of: ADR-0020
 source_version: "1.0.0"
@@ -14,7 +14,7 @@ source_version: "1.0.0"
 
 # Kontekst
 
-Hazırda hostinqli buraxılışda Tamga qurumun şəxs qeydlərini (tələbələri) öz verilənlər bazasında saxlayır ([[ADR-0019]]). Qeydlər Qurum
+Hazırda host edilən buraxılışda Tamga qurumun şəxs qeydlərini (tələbələri) öz verilənlər bazasında saxlayır ([[ADR-0019]]). Qeydlər Qurum
 Konsolundan daxil edilir. Şəxs rəqəmsal cüzdandan rəqəmsal sənəd istədikdə onun şəxsiyyəti bu qeyd reyestrində axtarılır. Qurum təklif yaratdıqda da şəxs bu
 reyestrdən seçilir.
 
@@ -104,7 +104,7 @@ Qurum ləğvi API-dən və ya Konsoldan həyata keçirir ([[ADR-0016]]).
 
 | Kod | Qayda |
 |---|---|
-| AS1 | Hostinqli buraxılışda rəqəmsal sənəd məlumatları daimi saxlanmır; imza anında səlahiyyətli mənbədən oxunur. Daimi saxlanan yalnız qurumun opak şəxs identifikatoru və uyğunlaşdırma açarlarının açarlı heşidir. |
+| AS1 | Host edilən buraxılışda rəqəmsal sənəd məlumatları daimi saxlanmır; imza anında səlahiyyətli mənbədən oxunur. Daimi saxlanan yalnız qurumun opak şəxs identifikatoru və uyğunlaşdırma açarlarının açarlı heşidir. |
 | AS2 | Şəxsiyyətə bağlı təklif yalnız təqdim edilən şəxsiyyət sənədindəki uyğunlaşdırma açarları təklifdəki heşlə uyğun gəldikdə rəqəmsal sənədə çevrilir. |
 | AS3 | Tamga təklif üçün şəxsin əlaqə ünvanını almır; bağlantını qurum ötürür. |
 | AS4 | `sandbox` mənbəyi yalnız sınaq üçündür; real fərdi məlumatlarla istifadə edilmir. |

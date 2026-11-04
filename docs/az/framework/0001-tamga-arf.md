@@ -197,7 +197,7 @@ Tamga-nın bu gün üzərinə götürdüyü dövlət rolları müvəqqətidir v�
 | Müvəqqəti şəxsiyyət sənədi provayderi | PID provayderi olmadıqda uzaqdan şəxsiyyət təsdiqi ilə şəxsiyyət sənədi verir | Tamga şəxsiyyət xidməti | PID provayderi təhvil alır |
 | Sənədi verən qurum (Attestation Provider) | Elektron atribut sənədi verir | Universitetlər, bilet satıcıları | Qurumlar və dövlət qurumları |
 | Səlahiyyətli mənbə | Məlumatın əsl sahibi olan sistem | Qurumun öz sistemi | Eyni, həmçinin dövlət mənbələri |
-| Cüzdan provayderi | Rəqəmsal cüzdanı təqdim edir; cüzdan nüsxəsi sübutunu və açar sübutunu imzalayır | Cüzdanı təqdim edən qurum (birincisi Tamga Wallet; ayrıca məhsul). Şəbəkə cüzdan provayderi idarə etmir, onları siyahıya salır | Qaydalara əməl edən istənilən provayder |
+| Cüzdan provayderi | Rəqəmsal cüzdanı təqdim edir; cüzdan nüsxəsi sübutunu və açar attestasiyasını imzalayır | Cüzdanı təqdim edən qurum (birincisi Tamga Wallet; ayrıca məhsul). Şəbəkə cüzdan provayderi idarə etmir, onları siyahıya salır | Qaydalara əməl edən istənilən provayder |
 | Yoxlayan tərəf (Relying Party) | Rəqəmsal sənəd tələb edir və yoxlayır; qeydiyyatdadır və əhatə dairəsi məhduddur | İşəgötürən, veb sayt, qurum | Eyni |
 | Vasitəçi yoxlayan tərəf (Intermediary) | Yoxlayan tərəf adından sənəd tələb edir və yoxlayır | Tamga Verify | Eyni |
 | Sənəd sahibi (Holder) | Sənədi rəqəmsal cüzdanında saxlayır və kimə göstərəcəyinə qərar verir | Tələbə, məzun, istifadəçi | Vətəndaş |
@@ -216,7 +216,7 @@ səhifəsində verilib ([[FW-ROLE-0001]]).
 | Komponent | Vəzifə | Sahibi |
 |---|---|---|
 | Rəqəmsal cüzdan | Şəxsin sənədlərini saxlayır, göstərir, tarixçəni və psevdonimləri idarə edir | Cüzdanı təqdim edən qurum; şəbəkənin ilk cüzdanı Tamga Wallet (ayrıca məhsul, açıq mənbə) |
-| Cüzdan provayderi | Cüzdan vahidini qeydiyyata alır; cüzdan nüsxəsi sübutunu və açar sübutunu imzalayır | Cüzdanı təqdim edən qurum; şəbəkə idarə etmir, etibar siyahısına daxil edir (Tamga Wallet-ınkı cüzdanın operatorundadır, `provider.tamgawallet.com`) |
+| Cüzdan provayderi | Cüzdan vahidini qeydiyyata alır; cüzdan nüsxəsi sübutunu və açar attestasiyasını imzalayır | Cüzdanı təqdim edən qurum; şəbəkə idarə etmir, etibar siyahısına daxil edir (Tamga Wallet-ınkı cüzdanın operatorundadır, `provider.tamgawallet.com`) |
 | Sənəd vermə xidməti | Qurumlar adından OpenID4VCI ilə sənəd verir, ləğv siyahılarını dərc edir | Yerləşdirilmiş xidmət (qurum öz xidmətini də işlədə bilər) |
 | Qurum Konsolu | Qurum əməkdaşlarının sənədləri, qeydləri, API açarlarını və istifadəçiləri idarə etdiyi interfeys | Yerləşdirilmiş xidmət |
 | Şəxsiyyət xidməti | Müvəqqəti şəxsiyyət sənədi verir; psevdonim toxumunu (seed) törədir | Tamga, müvəqqəti |
@@ -260,7 +260,7 @@ identifikatoru və verdiyi sənədlər dəyişmir.
 
 1. Qurum təklif yaradır və ya şəxs rəqəmsal cüzdandan sənəd tələb edir.
 2. Cüzdan icazə tələb edir; lazım olduqda əməliyyat kodunu və ya şəxsiyyət sənədinin təqdimatını əlavə edir.
-3. Cüzdan sənədin bağlanacağı açarları, cüzdan nüsxəsi sübutunu və açar sübutunu göndərir.
+3. Cüzdan sənədin bağlanacağı açarları, cüzdan nüsxəsi sübutunu və açar attestasiyasını göndərir.
 4. Sənəd vermə xidməti bu sübutları etibar siyahısına, sənədin məzmununu isə kataloqdakı sxemə qarşı yoxlayır, sənədi
    qurumun açarı ilə imzalayır və hər nüsxə üçün ləğv siyahısında yer ayırır.
 5. Şəxsə "sənədiniz rəqəmsal cüzdana əlavə edildi; bu siz deyilsinizsə, bildirin" bildirişi göndərilir.
@@ -418,7 +418,7 @@ reyestr və bir neçə müstəqil imzalayan ilə aradan qalxır.
 ## 7.1 Cüzdan təhlükəsizliyi
 
 Cüzdan vahidi ([[t:wallet-unit]]) cüzdan provayderində qeydiyyatdan keçir. Hər əməliyyat üçün ən çoxu 24 saat etibarlı olan cüzdan nüsxəsi sübutu
-(WIA) və rəqəmsal sənədlərin açarlarını təsvir edən ayrıca açar sübutu ([[t:key-attestation]], KA) alır. Sənədi verən qurum rəqəmsal sənəd verməzdən əvvəl
+(WIA) və rəqəmsal sənədlərin açarlarını təsvir edən ayrıca açar attestasiyası ([[t:key-attestation]], KA) alır. Sənədi verən qurum rəqəmsal sənəd verməzdən əvvəl
 bu sübutları etibar siyahısındakı provayderə qarşı yoxlayır. Açarlar cihazın təhlükəsiz zonasında saxlanılır və cihaz sübutu ilə
 (Apple App Attest, Android key attestation) dəstəklənir. Proqram təminatı açarlı rəqəmsal cüzdana rəqəmsal sənəd verilmir.
 

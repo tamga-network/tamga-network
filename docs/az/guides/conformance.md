@@ -101,7 +101,7 @@ icra edir ([Tamga ARF — Trust Framework §4.3](https://arf.tamga.network/az/tr
 |---|---|---|
 | Sənədi verən qurum | Növ təsvirinə uyğun rəqəmsal sənəd, imza və sertifikat zənciri, ləğv siyahısının dərci, rəqəmsal cüzdan sübutlarının yoxlanması | Vektorlarla sınaq rəqəmsal sənədi + nəticə hesabatı |
 | Yoxlayan tərəf | İmzalı sorğu, yoxlama addımları, köhnəlmiş siyahıda "yoxlanıla bilmədi", əhatə dairəsindən kənar sahə tələb etməmək | Vektorlar + öhdəlik testləri + nəticə hesabatı |
-| Cüzdan provayderi | Rəqəmsal cüzdan qaydaları (açarın qorunması, təsdiq ekranı, tarixçə, silmə), cüzdan və açar sübutu, təqdimat protokolu | Vektorlar + öhdəlik testləri + cihaz üzərində nümayiş |
+| Cüzdan provayderi | Rəqəmsal cüzdan qaydaları (açarın qorunması, təsdiq ekranı, tarixçə, silmə), cüzdan və açar attestasiyası, təqdimat protokolu | Vektorlar + öhdəlik testləri + cihaz üzərində nümayiş |
 
 **Öhdəlik testləri** ən azı bunları əhatə edir: köhnəlmiş siyahı "yoxlanıla bilmədi" nəticəsini verir; naməlum format versiyasında əməliyyat dayanır;
 imza xətasında əməliyyat dayanır. Hesabatda proqram təminatınızın versiyasını və keçdiyiniz vektor dəstinin versiyasını (`VERSION`) göstərin.

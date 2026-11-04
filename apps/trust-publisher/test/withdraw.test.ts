@@ -161,7 +161,7 @@ describe("gerçek ağ kayıt defteri: test/demo kurumu yok (2026-10-04)", () => 
     const sb = read("registry-sandbox");
     const active = sb.issuers.filter((i) => i.status === "ACTIVE").map((i) => i.slug);
     expect(active).toEqual(
-      expect.arrayContaining(["istanbul-bilgi", "bubilet", "paribu-cineverse", "tamga-id-review"]),
+      expect.arrayContaining(["example-university", "example-events", "example-cinema", "tamga-id-review"]),
     );
     const v = sb.relying_parties.find((r) => r.dns_name === "verify.sandbox.tamga.network")!;
     const ids = v.scopes.filter((s) => Date.parse(s.valid_until) > Date.now()).map((s) => s.scope_id);

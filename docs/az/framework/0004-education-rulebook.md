@@ -231,7 +231,7 @@ Qurum özünə səlahiyyət verə bilməz; səlahiyyət qeydiyyat qurumunun qeyd
 - **Diplom:** məzunluq prosesini başa vurmuş şəxsə. Müraciəti şəxsin özü edir; üçüncü şəxs (valideyn, nümayəndə) adından sənəd verilməsi üçün təmsilçilik
   səlahiyyətinin sübutu tələb olunur (RB-AP-12).
 - Hər tələbəyə **bir aktiv nüsxə dəsti** (10 nüsxə) düşür; sənəd yenidən verildikdə köhnə dəst ləğv edilir.
-- Sənəd verilməzdən əvvəl cüzdan nümunəsinin sübutu (WIA) və açar sübutu (KA) `wallet_providers[]` siyahısına əsasən yoxlanılır (RB-AP-10).
+- Sənəd verilməzdən əvvəl cüzdan nümunəsinin sübutu (WIA) və açar attestasiyası (KA) `wallet_providers[]` siyahısına əsasən yoxlanılır (RB-AP-10).
 
 ## 4.4 Rəqəmsal sənəd verilməzdən əvvəl şəxsiyyətin yoxlanılması
 

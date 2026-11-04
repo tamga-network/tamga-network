@@ -52,47 +52,47 @@
     "not_after": "2028-10-13T11:26:03.000Z",
     "created_at": "2026-10-13T11:26:02.919Z"
   },
-  "issuer-istanbul-bilgi": {
-    "subject": "CN=Istanbul Bilgi Universitesi (TEST), OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
-    "fingerprint_sha256": "02da85c477342d4c861a834c9dea70c19e6826363e3fe57871995c9a28a5ee90",
-    "not_after": "2028-10-13T11:26:03.000Z",
-    "created_at": "2026-10-13T11:26:02.919Z"
+  "issuer-example-university": {
+    "subject": "CN=Ornek Universitesi (TEST), OU=Ogrenci Isleri, O=Ornek Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
+    "fingerprint_sha256": "52fb5107fcad0bf17703bef59700efb48d7120478460a06834cea920841b21e6",
+    "not_after": "2028-11-04T11:11:25.000Z",
+    "created_at": "2026-11-04T11:11:25.258Z"
   },
-  "issuer-istanbul-bilgi-status": {
-    "subject": "CN=Istanbul Bilgi Universitesi - Status List (TEST), OU=Status, O=Istanbul Bilgi Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
-    "fingerprint_sha256": "34aaf636b6c1c90d55b03f3bdb760a2d25fe51c02f4d19bea2444bac2005d6e0",
-    "not_after": "2028-10-13T11:26:03.000Z",
-    "created_at": "2026-10-13T11:26:02.919Z"
+  "issuer-example-university-status": {
+    "subject": "CN=Ornek Universitesi - Status List (TEST), OU=Status, O=Ornek Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
+    "fingerprint_sha256": "cc6ad9f03fe40d2acdf43f4b56f9de4c730373636abc094bb4bf7969b5c26115",
+    "not_after": "2028-11-04T11:11:25.000Z",
+    "created_at": "2026-11-04T11:11:25.258Z"
   },
-  "rp-issuer-istanbul-bilgi": {
-    "subject": "CN=issuer.sandbox.tamga.network, O=Istanbul Bilgi Universitesi - kimlik eslestirme (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
-    "fingerprint_sha256": "69444600175c5983eb46cb56ba1f9fb5f131cb432b412872977f91f690f9a5d2",
-    "not_after": "2028-10-09T12:27:22.000Z",
-    "created_at": "2026-10-09T12:27:22.722Z"
+  "rp-issuer-example-university": {
+    "subject": "CN=issuer.sandbox.tamga.network, O=Ornek Universitesi - kimlik eslestirme (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
+    "fingerprint_sha256": "29cedd2e133ddcb426ee1ed43402a934589570f404699fc64b64600a91e62cde",
+    "not_after": "2028-11-04T11:11:25.000Z",
+    "created_at": "2026-11-04T11:11:25.258Z"
   },
-  "issuer-bubilet": {
-    "subject": "CN=Bubilet (TEST), OU=Bilet Satisi, O=Bubilet (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
-    "fingerprint_sha256": "0df953c3c943a71b84086945a26eb2a63f68767407d1d53f818434098c5c68a6",
-    "not_after": "2028-10-13T11:26:03.000Z",
-    "created_at": "2026-10-13T11:26:02.919Z"
+  "issuer-example-events": {
+    "subject": "CN=Ornek Etkinlik (TEST), OU=Bilet Satisi, O=Ornek Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
+    "fingerprint_sha256": "bdaca843d21b469a62edd096b9255b7bd5de5f54f56e86edadb8caf1add978fe",
+    "not_after": "2028-11-04T11:11:25.000Z",
+    "created_at": "2026-11-04T11:11:25.258Z"
   },
-  "issuer-bubilet-status": {
-    "subject": "CN=Bubilet - Status List (TEST), OU=Status, O=Bubilet (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
-    "fingerprint_sha256": "95869a4beac60db80bd57c4284215b08068dbba17ecc6cd691cc0c5b6c66d551",
-    "not_after": "2028-10-13T11:26:03.000Z",
-    "created_at": "2026-10-13T11:26:02.919Z"
+  "issuer-example-events-status": {
+    "subject": "CN=Ornek Etkinlik - Status List (TEST), OU=Status, O=Ornek Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
+    "fingerprint_sha256": "9d6ab6d7203d4b00cffd69c838cf98c6233e5b2e2001f3a834e89cf9e2626d93",
+    "not_after": "2028-11-04T11:11:25.000Z",
+    "created_at": "2026-11-04T11:11:25.258Z"
   },
-  "issuer-paribu-cineverse": {
-    "subject": "CN=Paribu Cineverse (TEST), OU=Bilet Satisi, O=Paribu Cineverse (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
-    "fingerprint_sha256": "a405a318deacfc15594587a56f8a5af18ea3e3eb12d687c3a797e1147704c78a",
-    "not_after": "2028-10-13T11:26:03.000Z",
-    "created_at": "2026-10-13T11:26:02.919Z"
+  "issuer-example-cinema": {
+    "subject": "CN=Ornek Sinema (TEST), OU=Bilet Satisi, O=Ornek Sinema (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+    "fingerprint_sha256": "622d62660fd343716e1276588ba01a2ca5f23b9b44554bcb8c4c1e1bb53baac7",
+    "not_after": "2028-11-04T11:11:25.000Z",
+    "created_at": "2026-11-04T11:11:25.258Z"
   },
-  "issuer-paribu-cineverse-status": {
-    "subject": "CN=Paribu Cineverse - Status List (TEST), OU=Status, O=Paribu Cineverse (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
-    "fingerprint_sha256": "6a9581b58116e8cb6505ded0ff5abd0d59f3338cb74f4671ef90ee6bd84303c1",
-    "not_after": "2028-10-13T11:26:03.000Z",
-    "created_at": "2026-10-13T11:26:02.919Z"
+  "issuer-example-cinema-status": {
+    "subject": "CN=Ornek Sinema - Status List (TEST), OU=Status, O=Ornek Sinema (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+    "fingerprint_sha256": "57b569050105559cafa48feb4f203dbe5e64d3dddb45eb949e90ed6a068a3bd2",
+    "not_after": "2028-11-04T11:11:25.000Z",
+    "created_at": "2026-11-04T11:11:25.258Z"
   },
   "test-institutions-ca": {
     "subject": "CN=Tamga Sandbox Test Institutions CA (TEST), O=Tamga Network Sandbox, C=TR",
@@ -110,13 +110,13 @@
     "issuer-id": "0xf880116803bef8a4482b20354f11119ec4cbc79ced19c0ce2b0df0029b023b0a",
     "issuer-id-status": "0x06cbc1c557a9de66ca63ab958cb928387ac0c86e8e404bc5521b951bdb6964d7",
     "issuer-id-review": "0xa6f8595d2f12643b51c660a45b071f24dd819e1504765edd4d5a1fff2fde78f5",
-    "issuer-istanbul-bilgi": "0xd99f368c049b285b69c2c6ca25d547955a50deee7abd378189e3c4dc3f7b5a0e",
-    "issuer-istanbul-bilgi-status": "0x64da6e708ecc1c5c4e8c03542c497ddb3ee95f77d2d508c7d1262ee767a85832",
-    "rp-issuer-istanbul-bilgi": "0x708e2ea997e7d2266b20556f50abd00fee6205dbf572364c705f1010990ae938",
-    "issuer-bubilet": "0x1aac79553e11a8ed91ef2c11f61ab9c84b8eb6071a76713e1221c5d323a70dc4",
-    "issuer-bubilet-status": "0x375c28dc7cf8cea870ee3102b82dbd4ccee2853c0dec3f09bfc90b62031b468d",
-    "issuer-paribu-cineverse": "0xde4e671f9f4d7bdbad5e9ef6dbe1648059679fc936c5eafcdde41f1b7538be07",
-    "issuer-paribu-cineverse-status": "0x4ee96145211a92aad5bf1e8b2cfdee2ce4a37af4c913288e844ab170a7a3c508",
+    "issuer-example-university": "0x33e392e1904e6819da3f3263e41614b45ff171ad2ad0fa97c8cb2e7d7ce64bc3",
+    "issuer-example-university-status": "0xfba19b089605688bad029e972b0b4cdc6fd368ecfc2cc779ab0d4ffed399de9b",
+    "rp-issuer-example-university": "0x3d58cf982ce0a384691c4473dd3e1f08e0e364cfde933035bf0fa6d36f6b744c",
+    "issuer-example-events": "0x81915f880f15924289d0cf630768ff749e54617d1cdaa81c14b43ddb1ea9da7d",
+    "issuer-example-events-status": "0xd4ea5651de413504fbc932a52df21563b86a3f46874e8f7ce2ef85b94093ee69",
+    "issuer-example-cinema": "0x00a1d81710d575adce51aebf09b8328f8c8bc5cdcd5bcce79e5039609fa63905",
+    "issuer-example-cinema-status": "0x91eda98577ba6f5e811dcfa5af5ca0c8d0d712fd5d4ef74a81f0f5499542643a",
     "test-institutions-ca": "0x746b935c11d2a9bba85643e12c91f2e0d1071ecf10d99b1465ad6718b4f3826a"
   }
 }

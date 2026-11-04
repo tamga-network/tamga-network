@@ -333,7 +333,7 @@ açıqlamadır. Kodlaşdırılmış sənəd və açıqlama nümunələri uyğunl
 | Açar | Şəxsiyyət xidmətinin sənəd imza açarı; ləğv siyahısı açarı ayrıdır (RB-AP-03) | eyni |
 | İlkin şərt | Şəxsiyyətin doğrulanması (§4.3); ZK nüsxəsi və toxum yalnız şəxsiyyət sənədi ilə birlikdə və ya onun yeniləmə tokeni ilə | Rəqəmsal cüzdandakı **aktiv Tamga şəxsiyyət sənədi** təqdim olunur (ad, soyad, doğum tarixi); kartdakı ad və doğum tarixi onunla uyğun gəlməlidir (RB-AP-ID-09) |
 | Nüsxələr | Şəxsiyyət sənədi 10 nüsxə, hər biri ayrı cihaz açarına; hər yoxlayan tərəf üçün ayrı nüsxə (ARF metod D). ZK nüsxəsi kiçik paketlər şəklində (ən çoxu 3) | 10 nüsxə |
-| Rəqəmsal cüzdan | Sənəd verilməzdən əvvəl cüzdan instansiyası sübutu (WIA) və açar sübutu (KA) `wallet_providers[]` siyahısına əsasən yoxlanılır (RB-AP-10) | eyni |
+| Rəqəmsal cüzdan | Sənəd verilməzdən əvvəl cüzdan instansiyası sübutu (WIA) və açar attestasiyası (KA) `wallet_providers[]` siyahısına əsasən yoxlanılır (RB-AP-10) | eyni |
 | Tətbiq mağazası yoxlaması | Ayrıca test imzalayıcısı `tamga-id-review` (I1; `verification_method: review-demo`, ən çoxu 7 gün); yalnız birdəfəlik yoxlama kodu ilə; I2 tələb edən heç bir siyasətdə keçərli deyil | — |
 | Daxili açıqlama siyasəti | Daşımır ([[ADR-0046]] K1) | Daşımır |
 

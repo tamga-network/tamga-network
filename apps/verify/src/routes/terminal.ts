@@ -252,7 +252,7 @@ export function registerTerminalRoutes(app: FastifyInstance, ctx: VerifyContext)
         .type("text/html")
         .send(noTerminalPage(langOf(req.headers["accept-language"])));
     const group = (req.query as { group?: string }).group ?? DEFAULT_GROUP;
-    // grup kimliği biçimi (politikalardaki terminal_group: bilgi-campus, bubilet-gate …) — başka her şey reddedilir (K1)
+    // grup kimliği biçimi (politikalardaki terminal_group: example-university-campus, example-events-gate …) — başka her şey reddedilir (K1)
     if (!GROUP_RE.test(group)) return reply.code(400).type("text/plain").send("invalid terminal group");
     return reply.type("text/html").send(terminalPage(langOf(req.headers["accept-language"]), group));
   });

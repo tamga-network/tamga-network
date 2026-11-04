@@ -106,7 +106,7 @@ kimi yazılır, üsul isə provayderə aiddir.
 - Cüzdan səviyyələri Trust Framework-dəki üç səviyyədir: W1 proqram açarı (rəqəmsal sənəd verilmir, RB-WP-01), W2 cihazın təhlükəsiz zonası,
   W3 sertifikatlı təhlükəsiz aparat.
 - **W3:** cüzdan provayderi vahidi aktivləşdirərkən və W3 bəyan edən hər KA-dan əvvəl platformanın cihaz sübutunu (Apple App Attest,
-  Android açar sübutu, Play Integrity) **MUST** yoxlasın; yoxlanılmamış cihaza W3 KA verilmir ([[ADR-0025]] WIA3 "səviyyə
+  Android açar attestasiyası, Play Integrity) **MUST** yoxlasın; yoxlanılmamış cihaza W3 KA verilmir ([[ADR-0025]] WIA3 "səviyyə
   həqiqəti əks etdirir").
 - **W2:** cihaz sübutu istəyə bağlıdır (**MAY**); bu, cüzdan provayderinin qərarıdır. Tamga Wallet canlı mühitdə yalnız aparat sübutu
   yoxlanılmış cihaza WIA verir (cüzdanın WA-ADR-0005 qərarı); bu, şəbəkənin minimum tələbindən yuxarıdır.

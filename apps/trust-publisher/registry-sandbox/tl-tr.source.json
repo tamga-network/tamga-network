@@ -33,16 +33,16 @@
   ],
   "issuers": [
     {
-      "cert": "issuer-istanbul-bilgi",
-      "status_cert": "issuer-istanbul-bilgi-status",
+      "cert": "issuer-example-university",
+      "status_cert": "issuer-example-university-status",
       "parent_ca": "root-ca",
-      "slug": "istanbul-bilgi",
-      "legal_name": "İstanbul Bilgi Üniversitesi (TEST)",
+      "slug": "example-university",
+      "legal_name": "Örnek Üniversitesi (TEST)",
       "category": "EDUCATION",
       "assurance": "I2",
       "class": "EAA",
-      "assurance_basis": "Sandbox example institution (ADR-0038). Pilot partner institution; in the sandbox it is a test institution only. Credentials are signed with test keys and are not valid anywhere.",
-      "issuer_url": "https://issuer.sandbox.tamga.network/istanbul-bilgi",
+      "assurance_basis": "Sandbox example institution with a fictional name (ADR-0038). Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/example-university",
       "status_list_base": "https://status.sandbox.tamga.network/",
       "status": "ACTIVE",
       "valid_from": "2026-10-03T00:00:00Z",
@@ -73,7 +73,7 @@
         "name": "Sandbox example registry",
         "mode": "PORTAL_DB"
       },
-      "trade_name": "İstanbul Bilgi Üniversitesi (TEST)",
+      "trade_name": "Örnek Üniversitesi (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -254,16 +254,16 @@
       }
     },
     {
-      "cert": "issuer-bubilet",
-      "status_cert": "issuer-bubilet-status",
+      "cert": "issuer-example-events",
+      "status_cert": "issuer-example-events-status",
       "parent_ca": "root-ca",
-      "slug": "bubilet",
-      "legal_name": "Bubilet (TEST)",
+      "slug": "example-events",
+      "legal_name": "Örnek Etkinlik (TEST)",
       "category": "EVENTS",
       "assurance": "I2",
       "class": "EAA",
-      "assurance_basis": "Sandbox example ticket seller (concert tickets; ADR-0038). Tickets carry no personal data. Real institution name used only for a realistic test environment; no relationship or agreement with the institution. Credentials are signed with test keys and are not valid anywhere.",
-      "issuer_url": "https://issuer.sandbox.tamga.network/bubilet",
+      "assurance_basis": "Sandbox example ticket seller with a fictional name (concert tickets; ADR-0038). Tickets carry no personal data. Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/example-events",
       "status_list_base": "https://status.sandbox.tamga.network/",
       "status": "ACTIVE",
       "valid_from": "2026-10-03T00:00:00Z",
@@ -288,7 +288,7 @@
         "name": "Sandbox example sales system",
         "mode": "TICKET_SALES"
       },
-      "trade_name": "Bubilet (TEST)",
+      "trade_name": "Örnek Etkinlik (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -313,16 +313,16 @@
       }
     },
     {
-      "cert": "issuer-paribu-cineverse",
-      "status_cert": "issuer-paribu-cineverse-status",
+      "cert": "issuer-example-cinema",
+      "status_cert": "issuer-example-cinema-status",
       "parent_ca": "root-ca",
-      "slug": "paribu-cineverse",
-      "legal_name": "Paribu Cineverse (TEST)",
+      "slug": "example-cinema",
+      "legal_name": "Örnek Sinema (TEST)",
       "category": "EVENTS",
       "assurance": "I2",
       "class": "EAA",
-      "assurance_basis": "Sandbox example cinema ticket seller (film screenings; ADR-0038). Tickets carry no personal data. Real institution name used only for a realistic test environment; no relationship or agreement with the institution. Credentials are signed with test keys and are not valid anywhere.",
-      "issuer_url": "https://issuer.sandbox.tamga.network/paribu-cineverse",
+      "assurance_basis": "Sandbox example cinema ticket seller with a fictional name (film screenings; ADR-0038). Tickets carry no personal data. Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/example-cinema",
       "status_list_base": "https://status.sandbox.tamga.network/",
       "status": "ACTIVE",
       "valid_from": "2026-10-03T00:00:00Z",
@@ -347,7 +347,7 @@
         "name": "Sandbox example sales system",
         "mode": "TICKET_SALES"
       },
-      "trade_name": "Paribu Cineverse (TEST)",
+      "trade_name": "Örnek Sinema (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -575,26 +575,26 @@
       ],
       "terminal_groups": [
         {
-          "group_id": "istanbul-bilgi-campus",
-          "institution_id": "istanbul-bilgi",
+          "group_id": "example-university-campus",
+          "institution_id": "example-university",
           "allowed_policies": ["campus-access"],
-          "label": "İstanbul Bilgi Üniversitesi campus turnstiles (TEST)",
+          "label": "Example University campus turnstiles (TEST)",
           "offline_allowed": true,
           "valid_from": "2026-10-03T00:00:00Z"
         },
         {
-          "group_id": "bubilet-gate",
-          "institution_id": "bubilet",
+          "group_id": "example-events-gate",
+          "institution_id": "example-events",
           "allowed_policies": ["event-ticket"],
-          "label": "Bubilet event gates (TEST)",
+          "label": "Example Events gates (TEST)",
           "offline_allowed": false,
           "valid_from": "2026-10-03T00:00:00Z"
         },
         {
-          "group_id": "paribu-cineverse-gate",
-          "institution_id": "paribu-cineverse",
+          "group_id": "example-cinema-gate",
+          "institution_id": "example-cinema",
           "allowed_policies": ["event-ticket"],
-          "label": "Paribu Cineverse cinema gates (TEST)",
+          "label": "Example Cinema gates (TEST)",
           "offline_allowed": false,
           "valid_from": "2026-10-03T00:00:00Z"
         }
@@ -632,9 +632,9 @@
       }
     },
     {
-      "access_cert": "rp-issuer-istanbul-bilgi",
+      "access_cert": "rp-issuer-example-university",
       "dns_name": "issuer.sandbox.tamga.network",
-      "legal_name": "İstanbul Bilgi Üniversitesi — identity matching at issuance (TEST)",
+      "legal_name": "Örnek Üniversitesi — identity matching at issuance (TEST)",
       "status": "ACTIVE",
       "registered_at": "2026-10-03T00:00:00Z",
       "status_history": [
@@ -645,7 +645,7 @@
       ],
       "scopes": [
         {
-          "scope_id": "istanbul-bilgi-identity-matching-1",
+          "scope_id": "example-university-identity-matching-1",
           "purpose": "Identity matching for issuance: national ID number and birth date are compared with the institution record and not stored",
           "purpose_localized": {
             "tr-TR": "Belge ihracı için kimlik eşleştirme: T.C. kimlik no ve doğum tarihi kurum kaydıyla karşılaştırılır, saklanmaz",
@@ -658,7 +658,7 @@
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
         }
       ],
-      "trade_name": "İstanbul Bilgi Üniversitesi (TEST)",
+      "trade_name": "Örnek Üniversitesi (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",

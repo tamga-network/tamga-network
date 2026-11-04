@@ -52,7 +52,7 @@ Türkiyədə [[t:authentic-source|səlahiyyətli mənbələr]]:
 | 2 | **Palata üzvlük sənədi** | Milli peşə təşkilatı və ya il həkim palatası, öz üzvlərinə | `PUB` (dövlət qurumu statuslu) və ya `EAA` / `HEALTH` | `urn:tamga:health:ProfessionalMembership:1` |
 | 3 | **Qurum vəzifə sənədi** | Xəstəxana / klinika / səhiyyə qrupu, öz əməkdaşlarına | `EAA` / `HEALTH` | `urn:tamga:work:EmploymentCredential:1` (sektordan asılı olmayan) |
 
-Heç biri Tamga tərəfindən verilmir; Tamga yalnız hostinq edilən sənəd vermə xidmətini idarə edir.
+Heç biri Tamga tərəfindən verilmir; Tamga yalnız host edilən sənəd vermə xidmətini idarə edir.
 
 ## K2 — Sahələr (təklif)
 

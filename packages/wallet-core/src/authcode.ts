@@ -1,7 +1,7 @@
 /**
  * OpenID4VCI authorization code akışı — cüzdan tarafı (SPEC-PROTO-0001 v1.2 §12; ADR-0011 K3: cüzdan-başlatmalı ihraç).
  *  PAR + PKCE S256 · istemci kimliği = WUA (OAuth-Client-Attestation + PoP başlıkları PAR ve token'da) · redirect_uri cüzdanın
- *  İki yetkilendirme biçimi: (a) tarayıcı — Tamga kimlik servisi Didit'e yönlendirir, geri dönüş URL'inde code;
+ *  İki yetkilendirme biçimi: (a) tarayıcı — Tamga kimlik servisi uzaktan kimlik doğrulama sağlayıcısına yönlendirir, geri dönüş URL'inde code;
  *  (b) satır içi sunum — kurum issuer'ı `Accept: application/json` ile OpenID4VP isteği döner, cüzdan mevcut sunum akışını çalıştırır,
  *      response'daki redirect_uri code taşır. Her iki durumda son adım exchangeCode → obtainCredential.
  */

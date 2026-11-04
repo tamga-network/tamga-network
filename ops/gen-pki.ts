@@ -29,9 +29,8 @@
  *      yalnız kamu sertifikası alınır (gerçek ve sandbox listesinde aynı sertifika; anahtarı ağda yok, ADR-0042)
  *
  * Sandbox (ADR-0038, SB1): `--profile=sandbox` ayrı bir test kökü ve yaprakları `ops/pki-sandbox/`'a üretir; gerçek PKI ile
- * hiçbir anahtar paylaşılmaz. Konu adları "… (TEST)"; örnek kurumlar `istanbul-bilgi`, `bubilet`, `paribu-cineverse` (gerçek
- * kurum adları gerçekçi bir deneme için; İstanbul Bilgi Üniversitesi pilot ortak, diğerleriyle ilişki ya da anlaşma yok; belgeler
- * test anahtarıyla imzalı ve geçersiz).
+ * hiçbir anahtar paylaşılmaz. Konu adları "… (TEST)"; örnek kurumlar kurgusaldır: `example-university`, `example-events`,
+ * `example-cinema` (2026-11-04'e kadar gerçek kurum adları taşıyordu; belgeler test anahtarıyla imzalı ve geçersiz).
  * Kip: eksik olan sertifikalar üretilir, var olanlar KORUNUR (issuer_id değişmez); tamamını yenilemek için --force; yalnız
  * birkaç yaprağın sertifikasını aynı anahtarla yeniden imzalamak için --reissue=<ad,ad> (üretim kipinde yok).
  * Kurum sertifika profili (ADR-0050, ETSI TS 119 412-6 V1.2.1 / EN 319 412-3): belge veren yapraklarında (belge + iptal listesi
@@ -417,57 +416,55 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
         "CN=Tamga Sandbox Kimlik - Magaza Incelemesi DEMO (TEST), OU=Review, O=Tamga Network Sandbox, 2.5.4.97=VATTR-0000000007, C=TR",
       ),
     ),
-    // Örnek kurumlar: gerçek kurum adları yalnız gerçekçi deneme için (ilişki/anlaşma yok); seri numaraları ilk örnek
-    // kurumların (1001/1002/2002/1201/1202, kaldırıldı) numaralarını yeniden kullanmaz.
+    // Örnek kurumlar: kurgusal adlar (2026-11-04, proje yönetimi onayı: gerçek kurum adları sandbox'tan çıkarıldı). Seri
+    // numaraları önceki örnek kurumların (1001/1002/2002/1201/1202 ilk set; 1011/1012/2012/1211/1212/1301/1302 gerçek adlı set,
+    // ikisi de kaldırıldı) numaralarını yeniden kullanmaz (RFC 5280 §4.1.2.2).
     await ensure(
-      "issuer-istanbul-bilgi",
+      "issuer-example-university",
       signedByRoot(
-        1011,
-        // ADR-0050: registry-sandbox istanbul-bilgi TR-VKN TR0000000001
-        "CN=Istanbul Bilgi Universitesi (TEST), OU=Ogrenci Isleri, O=Istanbul Bilgi Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
+        1021,
+        // ADR-0050: registry-sandbox example-university TR-VKN TR0000000001
+        "CN=Ornek Universitesi (TEST), OU=Ogrenci Isleri, O=Ornek Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
       ),
     ),
     await ensure(
-      "issuer-istanbul-bilgi-status",
+      "issuer-example-university-status",
       signedByRoot(
-        1012,
-        "CN=Istanbul Bilgi Universitesi - Status List (TEST), OU=Status, O=Istanbul Bilgi Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
+        1022,
+        "CN=Ornek Universitesi - Status List (TEST), OU=Status, O=Ornek Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
       ),
     ),
     await ensure(
-      "rp-issuer-istanbul-bilgi",
+      "rp-issuer-example-university",
       signedByRoot(
-        2012,
+        2022,
         // ADR-0026 K3: organizationIdentifier = kayıt sertifikasının `sub`'ı (registry-sandbox TR-VKN TR0000000005)
-        "CN=issuer.sandbox.tamga.network, O=Istanbul Bilgi Universitesi - kimlik eslestirme (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
+        "CN=issuer.sandbox.tamga.network, O=Ornek Universitesi - kimlik eslestirme (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
         san("issuer.sandbox.tamga.network"),
       ),
     ),
-    // ADR-0050: registry-sandbox bubilet TR-VKN TR0000000003
+    // ADR-0050: registry-sandbox example-events TR-VKN TR0000000003
     await ensure(
-      "issuer-bubilet",
-      signedByRoot(1211, "CN=Bubilet (TEST), OU=Bilet Satisi, O=Bubilet (TEST), 2.5.4.97=VATTR-0000000003, C=TR"),
+      "issuer-example-events",
+      signedByRoot(1221, "CN=Ornek Etkinlik (TEST), OU=Bilet Satisi, O=Ornek Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR"),
     ),
     await ensure(
-      "issuer-bubilet-status",
+      "issuer-example-events-status",
       signedByRoot(
-        1212,
-        "CN=Bubilet - Status List (TEST), OU=Status, O=Bubilet (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
+        1222,
+        "CN=Ornek Etkinlik - Status List (TEST), OU=Status, O=Ornek Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
       ),
     ),
     await ensure(
-      "issuer-paribu-cineverse",
-      // ADR-0050: registry-sandbox paribu-cineverse TR-VKN TR0000000006
-      signedByRoot(
-        1301,
-        "CN=Paribu Cineverse (TEST), OU=Bilet Satisi, O=Paribu Cineverse (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
-      ),
+      "issuer-example-cinema",
+      // ADR-0050: registry-sandbox example-cinema TR-VKN TR0000000006
+      signedByRoot(1311, "CN=Ornek Sinema (TEST), OU=Bilet Satisi, O=Ornek Sinema (TEST), 2.5.4.97=VATTR-0000000006, C=TR"),
     ),
     await ensure(
-      "issuer-paribu-cineverse-status",
+      "issuer-example-cinema-status",
       signedByRoot(
-        1302,
-        "CN=Paribu Cineverse - Status List (TEST), OU=Status, O=Paribu Cineverse (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+        1312,
+        "CN=Ornek Sinema - Status List (TEST), OU=Status, O=Ornek Sinema (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
       ),
     ),
     // ADR-0041 K4: test kurumları ara sertifika makamı — kökçe burada (kök anahtarının durduğu bilgisayarda) imzalanır; yol uzunluğu

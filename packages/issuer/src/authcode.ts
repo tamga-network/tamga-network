@@ -3,7 +3,7 @@
  *  PAR (RFC 9126) + PKCE S256 (RFC 7636) zorunlu · istemci kimliği = Wallet Unit Attestation (`sub`) — client_secret yok
  *  istenen vct: `scope` (HAIP §4.3; kapsam değeri = vct) ya da authorization_details · code tek kullanımlık, ≤ 60 s ·
  *  redirect_uri PAR'da bağlanır, /authorize'da değiştirilemez · yetki yanıtında `iss` (RFC 9207; HAIP → FAPI2)
- *  Kimlik ispatı yetkilendirme sunucusunda: Tamga kimlik servisinde IDV (Didit), kurum issuer'ında IdentityAttestation SUNUMU.
+ *  Kimlik ispatı yetkilendirme sunucusunda: Tamga kimlik servisinde IDV (uzaktan kimlik doğrulama sağlayıcısı), kurum issuer'ında IdentityAttestation SUNUMU.
  */
 import { createHash, randomBytes } from "node:crypto";
 import { secondsOrNow, type EpochSeconds } from "@tamga-network/core/time";
