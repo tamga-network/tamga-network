@@ -1,7 +1,8 @@
 ---
 document_id: ADR-0075
 title: "Doğrulayıcı alan adı kimliğinin sahipliği ve iptal sonrası yeniden kayıt"
-status: Proposed
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
@@ -10,7 +11,8 @@ summary: >
   bir devlet, alan adı kendisine ait olmayan bir doğrulayıcıyı önce kaydederek kimliği kapabilir ve iptal edilmiş bir kimlik bir daha
   hiç kaydedilemez. Öneri: (a) Governance'ın türü belli bir anlaşmazlık / devir önerisiyle (2/3) kimliğin sahibi değiştirilir;
   iptalden sonra yeniden kayıt yalnız Governance oyuyla açılır. Alternatif (b): alan adı sahipliğinin DNS kanıtıyla zincir dışında
-  denetlenmesi + Governance onayı. Önerilen (a).
+  denetlenmesi + Governance onayı. Önerilen (a). Kabul edildi (2026-11-04): (a), öneriyle; yeni dönem eski geçmişi korur, liste
+  aynı kuralla güncellenir.
 domain: Trust
 related: ["[[ADR-0002]]", "[[ADR-0034]]", "[[ADR-0054]]", "[[ADR-0055]]", "[[ADR-0073]]", "[[ADR-0074]]", "[[SPEC-BC-0001]]"]
 ---
@@ -57,13 +59,51 @@ DNS kanıtı (b) oyu kolaylaştıran bir belge olarak öneriye eklenebilir ama t
 3. Devir ya da yeniden kayıt imzalı listede de aynı kuralla yazılır (zincir–liste eşdeğerliği, [[ADR-0073]] CE6).
 4. Fonksiyon, öneri ve olay adları kabulde onaylanır.
 
-# Sonuçlar (kabul edilirse)
+# Karar (2026-11-04)
+
+**(a) öneriyle kabul edildi.** Bağlayıcı kurallar aşağıdaki RO1–RO5; adlar tablonun altında.
+
+# Değişmezler
+
+| Kod | Kural |
+|---|---|
+| RO1 | Doğrulayıcı kimliğinin (`rpId = keccak256(dns_name)`) sahibi devlet yalnız Governance'ın türü belli **devir** önerisiyle (2/3) değişir. Öneri, kayıtta önce sabitlenen içeriğin özetini (`stageId`) taşır; içerik kimliği, eski ve yeni devlet kodunu, yeni dönemin ad özetini ve erişim sertifikası parmak izini ve gerekçe özetini içerir (serbest metin yok, [[ADR-0074]] PJ2). Devir yalnız iptal edilmemiş kayda ve başka bir etkin üye devlete yapılır. |
+| RO2 | `REVOKED` bir dönem için kesin kalır. Aynı kimliğin **yeniden kaydı** yalnız Governance'ın türü belli yeniden kayıt önerisiyle (2/3) ve yalnız iptal edilmiş kayıtta açılır (aynı ya da başka etkin üye devlet). |
+| RO3 | Devir ve yeniden kayıt yeni bir **kayıt dönemi** başlatır (ACTIVE, yürütme anından). Kayıt silinmez; durum geçmişi ve dönem listesi yalnız eklenir; eski dönemin olayları ve kayıtları korunur. Yeni dönem eski dönemin kapsamlarını, kayıt verisini ve kapı gruplarını devralmaz; eski dönemin açık kapı grupları kapanır. `t` anındaki okumalar (`relyingPartyAt`, `isRelyingPartyAcceptableAt`) o andaki döneme göre cevap verir. |
+| RO4 | Sabitlemeden sonra kayda başka bir dönem eklendiyse öneri bayattır, yazılmaz; öneri türü sabitlenen içeriğin türüyle aynı olmalıdır. |
+| RO5 | İmzalı listede de aynı kural: `dns_name` durumu ne olursa olsun ikinci kez kaydedilmez; sahiplik değişimi ve iptal sonrası yeniden kayıt yalnız proje yönetimi onaylı açık işlemle yapılır. Yeniden kayıt aynı kayda yeni dönem olarak eklenir (`status_history` → `ACTIVE`, gerekçede onay kaydı); eski kullanımlar kapanmış hâlde kalır. Gerçek ağ kayıt defterine yazım ayrıca `TAMGA_CONFIRM_PROD` kapısından geçer. |
+
+Adlar (kamuya açık ABI; mevcut adlandırma düzenine göre — `proposeNetworkRecord` / `stageRecord` / `commitStaged` deseni):
+
+| Yer | Ad |
+|---|---|
+| `Governance` öneri fonksiyonları | `proposeRelyingPartyReassignment(registry, stageId)`, `proposeRelyingPartyReRegistration(registry, stageId)` |
+| `Governance` kayıt yönetimi işlemleri (`AdminAction`, yalnız sona) | `REASSIGN_RELYING_PARTY`, `REREGISTER_RELYING_PARTY` |
+| `RelyingPartyRegistry` yazım | `stagePeriodChange(PeriodChange)` (herkes; yalnız saklar), `commitPeriodChange(stageId, PeriodAction)` (yalnız Governance) |
+| `RelyingPartyRegistry` okuma | `periodChangeIdOf`, `stagedPeriodChangeOf`, `registrationPeriodsOf`, `relyingPartyAt(rpId, t)`, `isRelyingPartyAcceptableAt(rpId, t)`, `relyingPartyStatusHistoryOf` |
+| Türler | `PeriodAction {NONE, REASSIGNMENT, RE_REGISTRATION}`, `PeriodChange`, `RegistrationPeriod` |
+| Olaylar | `PeriodChangeStaged`, `RelyingPartyReassigned`, `RelyingPartyReRegistered` |
+| Hatalar | `UnknownPeriodChange`, `InvalidPeriodChange`, `StalePeriodChange` |
+| Liste yayıncısı | `register rp <başvuru> --approval <onay kaydı>` (iptal sonrası yeniden kayıt) |
+
+# Açık soruların kararları (2026-11-04)
+
+1. **Seçenek:** (a). DNS kanıtı (b) öneriye eklenebilecek destekleyici belgedir; gerekçe özetinin içinde yer alabilir.
+2. **Adlar:** yukarıdaki tablo (mevcut adlandırma düzenine göre).
+3. **Göç penceresi:** dönem değişikliği pencere açıkken de yalnız Governance oyuyla yazılır; tarihi yürütme anıdır (geri tarihlenmez),
+   pencerede yeniden oynatılan geçmiş önceki dönemde kalır.
+
+# Sonuçlar
 
 - `RelyingPartyRegistry` ve `Governance`: yeni türü belli öneri ve yalnız Governance'ın çağırabildiği devir / yeniden kayıt yolu;
   kayıt dönemi sayacı; depolama düzenine yalnız sona ekleme.
 - [[SPEC-BC-0001]] §6 ve §16; liste yayıncısının kayıt aracı ve `TrustSource` eşdeğerlik testi.
-- Kabul edilene kadar kontrat davranışı değişmez; kayıt kurumu alan adı sahipliğini kayıttan önce denetlemeye devam eder.
+- Kayıt kurumu alan adı sahipliğini kayıttan önce denetlemeye devam eder; anlaşmazlıkta yol Governance önerisidir. `TrustSource`
+  tarafında aynı `dns_name`'in birden çok ülke listesinde görünmesi bugün kapalı güvenli (belirsiz) sayılır; devirden sonra eski
+  listedeki kaydın kapatılması liste eşdeğerlik testiyle ayrıca ele alınır.
 
 # Durum
 
-**Proposed — 2026-11-04.** Proje yönetiminin kararını bekliyor (2026-11-04 kontrat güvenlik turu bulgusu).
+**Accepted — 2026-11-04.** Proje yönetiminin onayıyla (birebir alıntı özel onay kaydında): seçenek (a), öneriyle. DECISIONS:
+D-BC-14. RO1–RO5 bağlayıcıdır. Uygulama: `RelyingPartyRegistry`, `Governance`, liste yayıncısının kayıt aracı ([[SPEC-BC-0001]]
+sürüm notu).

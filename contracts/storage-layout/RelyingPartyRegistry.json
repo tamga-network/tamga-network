@@ -100,10 +100,38 @@
     },
     {
       "contract": "RelyingPartyRegistry",
-      "label": "__gap",
+      "label": "_history",
       "slot": 59,
       "offset": 0,
-      "type": "t_array(t_uint256)39_storage"
+      "type": "t_mapping(t_bytes32,t_array(t_struct(Change)_storage)dyn_storage)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_periods",
+      "slot": 60,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_array(t_struct(RegistrationPeriod)_storage)dyn_storage)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_stagedChanges",
+      "slot": 61,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_struct(PeriodChange)_storage)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_stagedBase",
+      "slot": 62,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_uint32)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "__gap",
+      "slot": 63,
+      "offset": 0,
+      "type": "t_array(t_uint256)35_storage"
     }
   ],
   "types": {
@@ -118,16 +146,28 @@
       "numberOfBytes": 32,
       "base": "t_bytes32"
     },
+    "t_array(t_struct(Change)_storage)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "struct StatusHistory.Change[]",
+      "numberOfBytes": 32,
+      "base": "t_struct(Change)_storage"
+    },
+    "t_array(t_struct(RegistrationPeriod)_storage)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "struct IRelyingPartyRegistry.RegistrationPeriod[]",
+      "numberOfBytes": 32,
+      "base": "t_struct(RegistrationPeriod)_storage"
+    },
     "t_array(t_struct(RequestScope)_storage)dyn_storage": {
       "encoding": "dynamic_array",
       "label": "struct IRelyingPartyRegistry.RequestScope[]",
       "numberOfBytes": 32,
       "base": "t_struct(RequestScope)_storage"
     },
-    "t_array(t_uint256)39_storage": {
+    "t_array(t_uint256)35_storage": {
       "encoding": "inplace",
-      "label": "uint256[39]",
-      "numberOfBytes": 1248,
+      "label": "uint256[35]",
+      "numberOfBytes": 1120,
       "base": "t_uint256"
     },
     "t_array(t_uint256)46_storage": {
@@ -166,6 +206,11 @@
       "label": "enum IRelyingPartyRegistry.AliasPolicy",
       "numberOfBytes": 1
     },
+    "t_enum(PeriodAction)": {
+      "encoding": "inplace",
+      "label": "enum IRelyingPartyRegistry.PeriodAction",
+      "numberOfBytes": 1
+    },
     "t_enum(PresentationFormat)": {
       "encoding": "inplace",
       "label": "enum IRelyingPartyRegistry.PresentationFormat",
@@ -197,6 +242,20 @@
       "key": "t_bytes32",
       "value": "t_array(t_bytes32)dyn_storage"
     },
+    "t_mapping(t_bytes32,t_array(t_struct(Change)_storage)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct StatusHistory.Change[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_array(t_struct(Change)_storage)dyn_storage"
+    },
+    "t_mapping(t_bytes32,t_array(t_struct(RegistrationPeriod)_storage)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct IRelyingPartyRegistry.RegistrationPeriod[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_array(t_struct(RegistrationPeriod)_storage)dyn_storage"
+    },
     "t_mapping(t_bytes32,t_array(t_struct(RequestScope)_storage)dyn_storage)": {
       "encoding": "mapping",
       "label": "mapping(bytes32 => struct IRelyingPartyRegistry.RequestScope[])",
@@ -217,6 +276,13 @@
       "numberOfBytes": 32,
       "key": "t_bytes32",
       "value": "t_mapping(t_bytes32,t_uint256)"
+    },
+    "t_mapping(t_bytes32,t_struct(PeriodChange)_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct IRelyingPartyRegistry.PeriodChange)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_struct(PeriodChange)_storage"
     },
     "t_mapping(t_bytes32,t_struct(RelyingParty)_storage)": {
       "encoding": "mapping",
@@ -246,12 +312,106 @@
       "key": "t_bytes32",
       "value": "t_uint256"
     },
+    "t_mapping(t_bytes32,t_uint32)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => uint32)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_uint32"
+    },
     "t_mapping(t_uint64,t_uint32)": {
       "encoding": "mapping",
       "label": "mapping(uint64 => uint32)",
       "numberOfBytes": 32,
       "key": "t_uint64",
       "value": "t_uint32"
+    },
+    "t_struct(Change)_storage": {
+      "encoding": "inplace",
+      "label": "struct StatusHistory.Change",
+      "numberOfBytes": 32,
+      "members": [
+        {
+          "label": "since",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_uint64"
+        },
+        {
+          "label": "status",
+          "slot": 0,
+          "offset": 8,
+          "type": "t_uint8"
+        }
+      ]
+    },
+    "t_struct(PeriodChange)_storage": {
+      "encoding": "inplace",
+      "label": "struct IRelyingPartyRegistry.PeriodChange",
+      "numberOfBytes": 192,
+      "members": [
+        {
+          "label": "action",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_enum(PeriodAction)"
+        },
+        {
+          "label": "rpId",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "fromState",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_bytes2"
+        },
+        {
+          "label": "toState",
+          "slot": 2,
+          "offset": 2,
+          "type": "t_bytes2"
+        },
+        {
+          "label": "nameHash",
+          "slot": 3,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "accessCertFingerprint",
+          "slot": 4,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "reasonHash",
+          "slot": 5,
+          "offset": 0,
+          "type": "t_bytes32"
+        }
+      ]
+    },
+    "t_struct(RegistrationPeriod)_storage": {
+      "encoding": "inplace",
+      "label": "struct IRelyingPartyRegistry.RegistrationPeriod",
+      "numberOfBytes": 32,
+      "members": [
+        {
+          "label": "stateCode",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_bytes2"
+        },
+        {
+          "label": "since",
+          "slot": 0,
+          "offset": 2,
+          "type": "t_uint64"
+        }
+      ]
     },
     "t_struct(RelyingParty)_storage": {
       "encoding": "inplace",
@@ -469,6 +629,11 @@
       "encoding": "inplace",
       "label": "uint64",
       "numberOfBytes": 8
+    },
+    "t_uint8": {
+      "encoding": "inplace",
+      "label": "uint8",
+      "numberOfBytes": 1
     }
   }
 }

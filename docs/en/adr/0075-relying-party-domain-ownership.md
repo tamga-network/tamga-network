@@ -1,7 +1,8 @@
 ---
 document_id: ADR-0075
 title: "Ownership of the verifier domain-name identity and re-registration after revocation"
-status: Proposed
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
@@ -10,7 +11,8 @@ summary: >
   registers it first; another state can capture the identity of a verifier whose domain it does not own by registering it first,
   and a revoked identity can never be registered again. Proposal: (a) a typed Governance dispute / transfer proposal (2/3) changes
   the owner of the identity; re-registration after revocation opens only by a Governance vote. Alternative (b): off-chain DNS proof
-  of domain ownership + Governance approval. Recommended: (a).
+  of domain ownership + Governance approval. Recommended: (a). Accepted (2026-11-04): (a), as recommended; a new period keeps
+  the old history, and the list is updated under the same rule.
 domain: Trust
 related: ["[[ADR-0002]]", "[[ADR-0034]]", "[[ADR-0054]]", "[[ADR-0055]]", "[[ADR-0073]]", "[[ADR-0074]]", "[[SPEC-BC-0001]]"]
 translation_of: ADR-0075
@@ -59,13 +61,51 @@ gives both cases a way out: in a dispute and after revocation, the decision goes
 3. A transfer or re-registration is written to the signed list under the same rule (chain–list equivalence, [[ADR-0073]] CE6).
 4. Function, proposal and event names are approved on acceptance.
 
-# Consequences (if accepted)
+# Decision (2026-11-04)
+
+**(a) accepted as recommended.** The binding rules are RO1–RO5 below; the names follow the table.
+
+# Invariants
+
+| Code | Rule |
+|---|---|
+| RO1 | The owning state of a verifier identity (`rpId = keccak256(dns_name)`) changes only by a typed Governance **reassignment** proposal (2/3). The proposal carries the digest (`stageId`) of content first staged in the registry; the content holds the identity, the old and new state codes, the new period's name digest and access certificate fingerprint, and a reason digest (no free text, [[ADR-0074]] PJ2). Reassignment applies only to a record that is not revoked, and only to another active member state. |
+| RO2 | `REVOKED` stays final for a period. **Re-registration** of the same identity opens only by a typed Governance re-registration proposal (2/3) and only for a revoked record (same or another active member state). |
+| RO3 | Reassignment and re-registration start a new **registration period** (ACTIVE, from the time of execution). The record is not deleted; the status history and the period list are append-only; the old period's events and records are kept. The new period does not inherit the old period's scopes, registration data or terminal groups; the old period's open terminal groups are closed. Point-in-time reads (`relyingPartyAt`, `isRelyingPartyAcceptableAt`) answer for the period in force at that time. |
+| RO4 | If another period was added to the record after staging, the proposal is stale and is not written; the proposal type must match the staged content's type. |
+| RO5 | The signed list follows the same rule: a `dns_name` is never registered twice, whatever its status; an ownership change or a re-registration after revocation happens only through an explicit operation approved by project management. Re-registration is added to the same record as a new period (`status_history` → `ACTIVE`, with the approval record in the reason); old uses stay closed. Writing to the production registry also passes the `TAMGA_CONFIRM_PROD` gate. |
+
+Names (public ABI; following the existing naming pattern — `proposeNetworkRecord` / `stageRecord` / `commitStaged`):
+
+| Where | Name |
+|---|---|
+| `Governance` proposal functions | `proposeRelyingPartyReassignment(registry, stageId)`, `proposeRelyingPartyReRegistration(registry, stageId)` |
+| `Governance` registry admin actions (`AdminAction`, appended) | `REASSIGN_RELYING_PARTY`, `REREGISTER_RELYING_PARTY` |
+| `RelyingPartyRegistry` writes | `stagePeriodChange(PeriodChange)` (anyone; stores only), `commitPeriodChange(stageId, PeriodAction)` (Governance only) |
+| `RelyingPartyRegistry` reads | `periodChangeIdOf`, `stagedPeriodChangeOf`, `registrationPeriodsOf`, `relyingPartyAt(rpId, t)`, `isRelyingPartyAcceptableAt(rpId, t)`, `relyingPartyStatusHistoryOf` |
+| Types | `PeriodAction {NONE, REASSIGNMENT, RE_REGISTRATION}`, `PeriodChange`, `RegistrationPeriod` |
+| Events | `PeriodChangeStaged`, `RelyingPartyReassigned`, `RelyingPartyReRegistered` |
+| Errors | `UnknownPeriodChange`, `InvalidPeriodChange`, `StalePeriodChange` |
+| List publisher | `register rp <application> --approval <approval record>` (re-registration after revocation) |
+
+# Decisions on the open questions (2026-11-04)
+
+1. **Option:** (a). A DNS proof (b) is supporting evidence that can be attached to the proposal; it can be part of the reason digest.
+2. **Names:** the table above (following the existing naming pattern).
+3. **Migration window:** a period change is written only by a Governance vote, also while the window is open; its date is the time
+   of execution (never backdated), and history replayed in the window stays in the earlier period.
+
+# Consequences
 
 - `RelyingPartyRegistry` and `Governance`: a new typed proposal and a transfer / re-registration path that only Governance can call;
   a registration period counter; storage layout only appended to.
 - [[SPEC-BC-0001]] §6 and §16; the list publisher's registration tool and the `TrustSource` equivalence test.
-- Until accepted, contract behaviour does not change; the registration authority keeps checking domain ownership before registering.
+- The registration authority keeps checking domain ownership before registering; in a dispute the path is a Governance proposal. On
+  the `TrustSource` side, the same `dns_name` appearing in more than one national list is treated today as fail-closed (ambiguous);
+  closing the record in the old list after a reassignment is handled separately with the list equivalence test.
 
 # Status
 
-**Proposed — 2026-11-04.** Awaiting project management's decision (finding of the 2026-11-04 contract security round).
+**Accepted — 2026-11-04.** Approved by project management (verbatim quote in the private approval record): option (a), as
+recommended. DECISIONS: D-BC-14. RO1–RO5 are binding. Implementation: `RelyingPartyRegistry`, `Governance`, the list publisher's
+registration tool ([[SPEC-BC-0001]] version note).

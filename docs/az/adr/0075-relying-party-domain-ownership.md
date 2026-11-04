@@ -1,7 +1,8 @@
 ---
 document_id: ADR-0075
 title: "Yoxlayıcının domen adı kimliyinin sahibliyi və ləğvdən sonra yenidən qeydiyyat"
-status: Proposed
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
@@ -10,7 +11,8 @@ summary: >
   başqa bir dövlət domen adı özünə məxsus olmayan yoxlayıcını əvvəlcə qeydə alaraq kimliyi ələ keçirə bilər, ləğv edilmiş kimlik
   isə bir daha heç vaxt qeydə alına bilməz. Təklif: (a) Governance-in növü müəyyən mübahisə / ötürmə təklifi ilə (2/3) kimliyin
   sahibi dəyişdirilir; ləğvdən sonra yenidən qeydiyyat yalnız Governance səsverməsi ilə açılır. Alternativ (b): domen sahibliyinin
-  zəncirdən kənarda DNS sübutu ilə yoxlanması + Governance təsdiqi. Tövsiyə olunan (a).
+  zəncirdən kənarda DNS sübutu ilə yoxlanması + Governance təsdiqi. Tövsiyə olunan (a). Qəbul edildi (2026-11-04): (a), tövsiyə
+  edildiyi kimi; yeni dövr köhnə tarixçəni qoruyur, siyahı eyni qayda ilə yenilənir.
 domain: Trust
 related: ["[[ADR-0002]]", "[[ADR-0034]]", "[[ADR-0054]]", "[[ADR-0055]]", "[[ADR-0073]]", "[[ADR-0074]]", "[[SPEC-BC-0001]]"]
 translation_of: ADR-0075
@@ -60,13 +62,51 @@ Təklif olunan qaydalar:
 3. Ötürmə və ya yenidən qeydiyyat imzalanmış siyahıya da eyni qayda ilə yazılır (zəncir–siyahı ekvivalentliyi, [[ADR-0073]] CE6).
 4. Funksiya, təklif və hadisə adları qəbul zamanı təsdiqlənir.
 
-# Nəticələr (qəbul edilərsə)
+# Qərar (2026-11-04)
+
+**(a) tövsiyə edildiyi kimi qəbul edildi.** Məcburi qaydalar aşağıdakı RO1–RO5; adlar cədvəldən sonra.
+
+# Dəyişməz qaydalar
+
+| Kod | Qayda |
+|---|---|
+| RO1 | Yoxlayıcı kimliyinin (`rpId = keccak256(dns_name)`) sahibi olan dövlət yalnız Governance-in növü müəyyən **ötürmə** təklifi ilə (2/3) dəyişir. Təklif əvvəlcə qeyddə sabitlənmiş məzmunun xülasəsini (`stageId`) daşıyır; məzmun kimliyi, köhnə və yeni dövlət kodunu, yeni dövrün ad xülasəsini və giriş sertifikatı barmaq izini, əsaslandırma xülasəsini ehtiva edir (sərbəst mətn yoxdur, [[ADR-0074]] PJ2). Ötürmə yalnız ləğv edilməmiş qeydə və başqa aktiv üzv dövlətə edilir. |
+| RO2 | `REVOKED` dövr üçün qəti qalır. Eyni kimliyin **yenidən qeydiyyatı** yalnız Governance-in növü müəyyən yenidən qeydiyyat təklifi ilə (2/3) və yalnız ləğv edilmiş qeyddə açılır (eyni və ya başqa aktiv üzv dövlət). |
+| RO3 | Ötürmə və yenidən qeydiyyat yeni **qeydiyyat dövrü** başladır (ACTIVE, icra anından). Qeyd silinmir; status tarixçəsi və dövr siyahısı yalnız əlavə olunur; köhnə dövrün hadisələri və qeydləri qorunur. Yeni dövr köhnə dövrün əhatələrini, qeydiyyat məlumatlarını və keçid qruplarını miras almır; köhnə dövrün açıq keçid qrupları bağlanır. `t` anı üzrə oxumalar (`relyingPartyAt`, `isRelyingPartyAcceptableAt`) həmin andakı dövrə görə cavab verir. |
+| RO4 | Sabitləmədən sonra qeydə başqa dövr əlavə olunubsa, təklif köhnəlmişdir və yazılmır; təklifin növü sabitlənmiş məzmunun növü ilə eyni olmalıdır. |
+| RO5 | İmzalanmış siyahıda da eyni qayda: `dns_name` statusundan asılı olmayaraq ikinci dəfə qeydə alınmır; sahiblik dəyişikliyi və ləğvdən sonra yenidən qeydiyyat yalnız layihə rəhbərliyinin təsdiqlədiyi açıq əməliyyatla edilir. Yenidən qeydiyyat eyni qeydə yeni dövr kimi əlavə olunur (`status_history` → `ACTIVE`, əsaslandırmada təsdiq qeydi); köhnə istifadələr bağlı qalır. Real şəbəkə qeydiyyat dəftərinə yazma əlavə olaraq `TAMGA_CONFIRM_PROD` qapısından keçir. |
+
+Adlar (ictimai ABI; mövcud adlandırma qaydasına görə — `proposeNetworkRecord` / `stageRecord` / `commitStaged` nümunəsi):
+
+| Yer | Ad |
+|---|---|
+| `Governance` təklif funksiyaları | `proposeRelyingPartyReassignment(registry, stageId)`, `proposeRelyingPartyReRegistration(registry, stageId)` |
+| `Governance` qeydiyyat idarəetmə əməliyyatları (`AdminAction`, yalnız sona) | `REASSIGN_RELYING_PARTY`, `REREGISTER_RELYING_PARTY` |
+| `RelyingPartyRegistry` yazma | `stagePeriodChange(PeriodChange)` (hər kəs; yalnız saxlayır), `commitPeriodChange(stageId, PeriodAction)` (yalnız Governance) |
+| `RelyingPartyRegistry` oxuma | `periodChangeIdOf`, `stagedPeriodChangeOf`, `registrationPeriodsOf`, `relyingPartyAt(rpId, t)`, `isRelyingPartyAcceptableAt(rpId, t)`, `relyingPartyStatusHistoryOf` |
+| Növlər | `PeriodAction {NONE, REASSIGNMENT, RE_REGISTRATION}`, `PeriodChange`, `RegistrationPeriod` |
+| Hadisələr | `PeriodChangeStaged`, `RelyingPartyReassigned`, `RelyingPartyReRegistered` |
+| Xətalar | `UnknownPeriodChange`, `InvalidPeriodChange`, `StalePeriodChange` |
+| Siyahı dərcçisi | `register rp <müraciət> --approval <təsdiq qeydi>` (ləğvdən sonra yenidən qeydiyyat) |
+
+# Açıq suallar üzrə qərarlar (2026-11-04)
+
+1. **Seçim:** (a). DNS sübutu (b) təklifə əlavə oluna bilən dəstəkləyici sənəddir; əsaslandırma xülasəsinin içində ola bilər.
+2. **Adlar:** yuxarıdakı cədvəl (mövcud adlandırma qaydasına görə).
+3. **Miqrasiya pəncərəsi:** dövr dəyişikliyi pəncərə açıq olanda da yalnız Governance səsverməsi ilə yazılır; tarixi icra anıdır
+   (geriyə tarixlənmir), pəncərədə təkrar oynadılan tarixçə əvvəlki dövrdə qalır.
+
+# Nəticələr
 
 - `RelyingPartyRegistry` və `Governance`: yeni növü müəyyən təklif və yalnız Governance-in çağıra bildiyi ötürmə / yenidən qeydiyyat
   yolu; qeydiyyat dövrü sayğacı; yaddaş düzülüşünə yalnız sona əlavə.
 - [[SPEC-BC-0001]] §6 və §16; siyahı dərcçisinin qeydiyyat aləti və `TrustSource` ekvivalentlik testi.
-- Qəbul edilənə qədər kontraktın davranışı dəyişmir; qeydiyyat qurumu domen sahibliyini qeydiyyatdan əvvəl yoxlamağa davam edir.
+- Qeydiyyat qurumu domen sahibliyini qeydiyyatdan əvvəl yoxlamağa davam edir; mübahisədə yol Governance təklifidir. `TrustSource`
+  tərəfində eyni `dns_name`-in birdən çox ölkə siyahısında görünməsi bu gün qapalı-təhlükəsiz (qeyri-müəyyən) sayılır; ötürmədən
+  sonra köhnə siyahıdakı qeydin bağlanması siyahı ekvivalentlik testi ilə ayrıca həll edilir.
 
 # Status
 
-**Proposed — 2026-11-04.** Layihə rəhbərliyinin qərarını gözləyir (2026-11-04 kontrakt təhlükəsizlik turunun tapıntısı).
+**Accepted — 2026-11-04.** Layihə rəhbərliyinin təsdiqi ilə (hərfi sitat xüsusi təsdiq qeydində): seçim (a), tövsiyə edildiyi
+kimi. DECISIONS: D-BC-14. RO1–RO5 məcburidir. Tətbiq: `RelyingPartyRegistry`, `Governance`, siyahı dərcçisinin qeydiyyat aləti
+([[SPEC-BC-0001]] versiya qeydi).

@@ -12,6 +12,8 @@
  *   rp-status <dns_name> <STATUS> [--reason r]    doğrulayıcı statüsü (aynı kural)
  *   end-use <dns_name> <scope_id|group_id>        doğrulayıcının bir kullanımını ya da kapı grubunu sona erdirir (valid_until = şimdi)
  *   register issuer|rp <başvuru.json> [--check]   kurum / doğrulayıcı ekler (ADR-0024 kayıt verisi denetlenir), listeyi imzalar
+ *   register rp <başvuru.json> --approval <onay>  (ADR-0075) iptal edilmiş doğrulayıcının aynı alan adıyla yeniden kaydı — yalnız
+ *                                                 proje yönetimi onay kaydıyla; yeni dönem aynı kayda eklenir (geçmiş korunur)
  *   scope <dns_name> <kullanım.json> [--check]    kayıtlı doğrulayıcıya yeni kullanım (kapsam) ekler (ADR-0034: alan adıyla)
  *   authorize <slug> <vct> [--revoke]             kuruma şema yetkisi verir / kaldırır (kayıt silinmez, bitiş tarihi konur)
  *   list                                          kurumlar ve doğrulayıcılar; eksik kayıt verisi
@@ -1378,7 +1380,7 @@ async function registryCommand(cmd: string, args: string[]) {
     ),
   };
   const check = args.includes("--check");
-  const VALUED = new Set(["--reason", "--invalidates-from"]); // değer alan bayraklar (değerleri konumsal sayılmaz)
+  const VALUED = new Set(["--reason", "--invalidates-from", "--approval"]); // değer alan bayraklar (değerleri konumsal sayılmaz)
   const pos = args.filter((a, k) => !a.startsWith("--") && !VALUED.has(args[k - 1] ?? ""));
   let next: Record<string, unknown>;
   let line: string;
@@ -1388,14 +1390,24 @@ async function registryCommand(cmd: string, args: string[]) {
     if (cmd === "register") {
       const [kind, file] = pos;
       if (!["issuer", "rp"].includes(kind ?? "") || !file)
-        throw new RegistryError(["kullanım: register issuer|rp <başvuru.json> [--check]"]);
+        throw new RegistryError([
+          "kullanım: register issuer|rp <başvuru.json> [--check] [--approval <onay> (yalnız rp)]",
+        ]);
       const app = readJson(resolve(file));
       targets =
         kind === "issuer"
           ? [String(app.slug ?? "")]
           : [String(app.dns_name ?? ""), String(app.access_cert ?? "").replace(/^rp-(issuer-)?/, "")];
-      next = kind === "issuer" ? addIssuer(src, app, env) : addRelyingParty(src, app, env);
-      line = kind === "issuer" ? `issuer ${app.slug}: registered` : `relying_party ${app.dns_name}: registered`;
+      const approval = arg("approval");
+      if (approval !== undefined && kind !== "rp")
+        throw new RegistryError(["--approval yalnız doğrulayıcının yeniden kaydında (register rp …; ADR-0075)"]);
+      next = kind === "issuer" ? addIssuer(src, app, env) : addRelyingParty(src, app, env, { approval });
+      line =
+        kind === "issuer"
+          ? `issuer ${app.slug}: registered`
+          : approval !== undefined
+            ? `relying_party ${app.dns_name}: re-registered after revocation (approval ${approval}) — history kept`
+            : `relying_party ${app.dns_name}: registered`;
     } else if (cmd === "scope") {
       const [clientId, file] = pos;
       if (!clientId || !file) throw new RegistryError(["kullanım: scope <dns_name> <kullanım.json> [--check]"]);

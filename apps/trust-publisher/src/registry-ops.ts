@@ -57,6 +57,8 @@ export class RegistryError extends Error {
 }
 
 const SLUG = /^[a-z0-9-]{3,32}$/;
+/** ADR-0075: proje yönetimi onay kaydının kısa kimliği (ör. onay kaydı kodu; zincirde Governance öneri kimliği). */
+const APPROVAL_REF = /^[A-Za-z0-9._:-]{3,80}$/;
 const iso = (d: Date) => d.toISOString();
 const plusYears = (d: Date, n: number) => {
   const x = new Date(d);
@@ -129,19 +131,39 @@ export function addIssuer(src: Rec, app: Rec, env: RegistryEnv): Rec {
 /**
  * Doğrulayıcı başvurusu. Zorunlu: dns_name (erişim sertifikasının SAN'ındaki alan adı; ADR-0034), legal_name, access_cert, scopes[] (scope_id, purpose, vct, claims,
  * privacy_policy_uri) + ADR-0024 kayıt verisi. Kapsam süresi varsayılan 1 yıl.
+ *
+ * ADR-0075: alan adı (`dns_name`) kimliktir ve durumu ne olursa olsun ikinci kez kaydedilmez — sahiplik değişimi ve iptal
+ * sonrası yeniden kayıt yalnız proje yönetimi onaylı açık işlemle (zincirde Governance önerisi, 2/3). Bu kayıt defterinde açık
+ * işlem `approval` ile yapılan **yeniden kayıttır**: yalnız `REVOKED` doğrulayıcı için; kayıt silinmez, yeni dönem aynı kayda
+ * eklenir (`status_history` → `ACTIVE`, gerekçede onay kaydı), eski kullanımlar ve kapı grupları kapanmış hâlde tarih için kalır,
+ * yeni dönem onları devralmaz (yeni `scope_id` gerekir).
  */
-export function addRelyingParty(src: Rec, app: Rec, env: RegistryEnv): Rec {
+export function addRelyingParty(src: Rec, app: Rec, env: RegistryEnv, opts: { approval?: string } = {}): Rec {
   const p: string[] = [...placeholderProblems(app)];
   const rps = (src.relying_parties ?? []) as Rec[];
+  const prev = rps.find((r) => r.dns_name === app.dns_name);
+  const reRegister = prev !== undefined && prev.status === "REVOKED" && opts.approval !== undefined;
   if (app.client_id !== undefined)
     p.push("client_id başvuruda verilmez: yayıncı erişim sertifikasından x509_hash olarak hesaplar (ADR-0034)");
+  if (opts.approval !== undefined && !APPROVAL_REF.test(opts.approval))
+    p.push("approval: onay kaydının kısa kimliği (3–80 karakter: harf, rakam, . _ : -)");
   if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(String(app.dns_name ?? "")))
     p.push("dns_name: alan adı (ör. shop.example.com)");
-  else if (rps.some((r) => r.dns_name === app.dns_name)) p.push(`dns_name zaten kayıtlı: ${app.dns_name}`);
+  else if (prev?.status === "REVOKED" && !reRegister)
+    p.push(
+      `dns_name iptal edilmiş (REVOKED): ${app.dns_name} — yeniden kayıt yalnız proje yönetimi onaylı açık işlemle ` +
+        "(--approval <onay kaydı>; ADR-0075)",
+    );
+  else if (prev && !reRegister)
+    p.push(
+      `dns_name zaten kayıtlı: ${app.dns_name} — sahiplik değişimi yalnız proje yönetimi onayıyla (ADR-0075), yeni kayıtla değil`,
+    );
+  else if (!prev && opts.approval !== undefined)
+    p.push("approval yalnız iptal edilmiş (REVOKED) doğrulayıcının yeniden kaydında (ADR-0075)");
   if (!app.legal_name) p.push("legal_name");
   if (!app.access_cert) p.push("access_cert (erişim sertifikası adı)");
   else if (!env.certExists(app.access_cert)) p.push(`sertifika bulunamadı: ${app.access_cert}`);
-  else if (rps.some((r) => r.access_cert === app.access_cert))
+  else if (rps.some((r) => r.access_cert === app.access_cert && !(reRegister && r === prev)))
     p.push(`sertifika başka bir doğrulayıcıda kullanılıyor: ${app.access_cert}`);
   // aracı kullanan doğrulayıcının kayıt sertifikası aracının numarasıyla imzalanır (wrprc.ts) — kendi sertifikası burada denetlenmez
   else if (!(app.uses_intermediaries as unknown[] | undefined)?.length)
@@ -150,9 +172,33 @@ export function addRelyingParty(src: Rec, app: Rec, env: RegistryEnv): Rec {
   if (!scopes.length) p.push("scopes: en az bir kullanım");
   p.push(...scopeProblems(scopes, env));
   for (const g of rpGaps(app)) p.push(`kayıt verisi eksik (ADR-0024): ${g}`);
+  if (reRegister) {
+    const old = new Set(((prev.scopes ?? []) as Rec[]).map((s) => s.scope_id));
+    for (const s of scopes)
+      if (old.has(s.scope_id))
+        p.push(`scope_id önceki dönemde kullanıldı: ${s.scope_id} — yeni dönem yeni kimlik ister`);
+  }
   if (p.length) throw new RegistryError(p);
 
   const now = iso(env.now);
+  const out = clone(src);
+  if (reRegister) {
+    const i = rps.indexOf(prev);
+    const old = out.relying_parties[i] as Rec;
+    for (const u of [...((old.scopes ?? []) as Rec[]), ...((old.terminal_groups ?? []) as Rec[])]) endUse(u, env.now);
+    out.relying_parties[i] = {
+      ...app,
+      status: "ACTIVE",
+      registered_at: now,
+      status_history: [
+        ...(old.status_history as Rec[]),
+        { status: "ACTIVE", since: now, reason: `re-registration (approval ${opts.approval})` },
+      ],
+      scopes: [...(old.scopes as Rec[]), ...scopes.map((s) => withScopeDates(s, env.now))],
+      ...(old.terminal_groups ? { terminal_groups: old.terminal_groups } : {}),
+    };
+    return out;
+  }
   const rec: Rec = {
     ...app,
     status: "ACTIVE",
@@ -160,7 +206,6 @@ export function addRelyingParty(src: Rec, app: Rec, env: RegistryEnv): Rec {
     status_history: [{ status: "ACTIVE", since: now, reason: "initial-registration" }],
     scopes: scopes.map((s) => withScopeDates(s, env.now)),
   };
-  const out = clone(src);
   out.relying_parties = [...rps, rec];
   return out;
 }

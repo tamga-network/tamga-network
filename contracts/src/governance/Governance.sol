@@ -12,6 +12,7 @@ import {ITrustListAnchorRegistry} from "../interfaces/ITrustListAnchorRegistry.s
 import {ICrossRecognition} from "../interfaces/ICrossRecognition.sol";
 import {IMigrationWindow} from "../interfaces/IMigrationWindow.sol";
 import {INetworkRegistry} from "../interfaces/INetworkRegistry.sol";
+import {IRelyingPartyRegistry} from "../interfaces/IRelyingPartyRegistry.sol";
 import {VctNamespace} from "../schema/VctNamespace.sol";
 
 interface IUpgradeableTarget {
@@ -392,8 +393,27 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function proposeNetworkRecord(address registry, bytes32 stageId) external onlyValidator returns (bytes32 id) {
+        id = _proposeStaged(AdminAction.NETWORK_RECORD, registry, stageId);
+    }
+
+    /// @inheritdoc IGovernance
+    function proposeRelyingPartyReassignment(address registry, bytes32 stageId)
+        external onlyValidator returns (bytes32 id)
+    {
+        id = _proposeStaged(AdminAction.REASSIGN_RELYING_PARTY, registry, stageId);
+    }
+
+    /// @inheritdoc IGovernance
+    function proposeRelyingPartyReRegistration(address registry, bytes32 stageId)
+        external onlyValidator returns (bytes32 id)
+    {
+        id = _proposeStaged(AdminAction.REREGISTER_RELYING_PARTY, registry, stageId);
+    }
+
+    /// @dev Kayıtta sabitlenmiş içeriğin özetini taşıyan öneri (ADR-0074 K3 deseni; ADR-0075 aynı deseni kullanır).
+    function _proposeStaged(AdminAction action, address registry, bytes32 stageId) private returns (bytes32 id) {
         AdminPayload storage a;
-        (id, a) = _newAdmin(AdminAction.NETWORK_RECORD, registry);
+        (id, a) = _newAdmin(action, registry);
         a.digest = stageId;
     }
 
@@ -521,6 +541,10 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
             ISchemaRegistry(a.registry).addSchemaContentHash(a.schemaId, a.digest);
         } else if (a.action == AdminAction.NETWORK_RECORD) {
             INetworkRegistry(a.registry).commitStaged(a.digest);
+        } else if (a.action == AdminAction.REASSIGN_RELYING_PARTY) {
+            IRelyingPartyRegistry(a.registry).commitPeriodChange(a.digest, IRelyingPartyRegistry.PeriodAction.REASSIGNMENT);
+        } else if (a.action == AdminAction.REREGISTER_RELYING_PARTY) {
+            IRelyingPartyRegistry(a.registry).commitPeriodChange(a.digest, IRelyingPartyRegistry.PeriodAction.RE_REGISTRATION);
         }
     }
 

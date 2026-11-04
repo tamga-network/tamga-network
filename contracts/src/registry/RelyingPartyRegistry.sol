@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {TamgaRegistryBase} from "../base/TamgaRegistryBase.sol";
 import {IRelyingPartyRegistry} from "../interfaces/IRelyingPartyRegistry.sol";
 import {IIssuerRegistry} from "../interfaces/IIssuerRegistry.sol";
+import {StatusHistory} from "../base/StatusHistory.sol";
 
 /**
  * @title  RelyingPartyRegistry
@@ -15,8 +16,17 @@ import {IIssuerRegistry} from "../interfaces/IIssuerRegistry.sol";
  *         (SPEC-BC-0001 §14 açık konu 3 kapandı): her kullanım bir kapsam kaydıdır — hizmet, tür, biçim, ad alanı, öğe
  *         özetleri, geçerlilik ve ayrıntı özeti. Cüzdan "bu doğrulayıcı bu hizmette bu türün bu öğesini şu anda isteyebilir mi"
  *         diye sorar (`mayRequest`).
+ *
+ *         ADR-0075 — kayıt dönemleri: ilk kayıt dönem 0'dır. Kimliğin sahibi devlet (devir) ya da iptal edilmiş kimliğin
+ *         yeniden kaydı yalnız Governance'ın türü belli önerisiyle (2/3) değişir: içerik önce `stagePeriodChange` ile sabitlenir,
+ *         öneri yalnız `stageId`'yi taşır, yürütme `commitPeriodChange`'i çağırır (NetworkRegistry deseni). Yeni dönem kaydı
+ *         ACTIVE açar; kapsamlar, kayıt verisi ve kapı grubu listesi döneme göre ayrı tutulur (eski dönemin kayıtları silinmez,
+ *         yeni dönem devralmaz), eski dönemin açık kapı grupları kapanır. Durum geçmişi bütün dönemler boyunca yalnız eklenir;
+ *         `relyingPartyAt` ve `isRelyingPartyAcceptableAt` `t` anındaki döneme göre cevap verir.
  */
 contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
+    using StatusHistory for StatusHistory.Change[];
+
     /// @notice Doğrulayıcı başına kapsam ve kapsam başına öğe tavanları (ADR-0073 açık soru 6: başlangıç değeri).
     uint256 public constant MAX_SCOPES = 32;
     uint256 public constant MAX_ATTRIBUTES = 64;
@@ -42,8 +52,13 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
     mapping(bytes32 => bytes32[]) private _groupsOf; // rpId => groupId'ler
     /// @dev Güvenlik turu 2026-11-04: kapı grubunun kurum bağı (`institutionId` = issuerId) bu kayıttan doğrulanır.
     IIssuerRegistry public issuerRegistry;
+    /// @dev ADR-0075: durum geçmişi (bütün dönemler), kayıt dönemleri ve sabitlenmiş dönem değişiklikleri.
+    mapping(bytes32 => StatusHistory.Change[]) private _history;
+    mapping(bytes32 => RegistrationPeriod[]) private _periods;
+    mapping(bytes32 => PeriodChange) private _stagedChanges;
+    mapping(bytes32 => uint32) private _stagedBase;
 
-    uint256[39] private __gap;
+    uint256[35] private __gap;
 
     function initialize(address sovereignty_, address governance_, address issuerRegistry_) external initializer {
         __TamgaRegistryBase_init(sovereignty_, governance_);
@@ -65,8 +80,11 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         r.nameHash = data.nameHash;
         r.accessCertFingerprint = data.accessCertFingerprint;
         r.status = RPStatus.ACTIVE;
-        r.registeredAt = _effectiveDate(data.registeredAt); // ADR-0073 K1
+        uint64 since = _effectiveDate(data.registeredAt); // ADR-0073 K1
+        r.registeredAt = since;
         _certOwner[data.accessCertFingerprint] = data.rpId;
+        _periods[data.rpId].push(RegistrationPeriod(data.stateCode, since));
+        _history[data.rpId].record(since, uint8(RPStatus.ACTIVE));
 
         _byState[data.stateCode].push(data.rpId);
         emit RelyingPartyRegistered(data.rpId, data.stateCode);
@@ -92,7 +110,7 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         _requireOwner(r.stateCode);
         // yalnız ACTIVE askıya alınır; iptal edilmiş kayıt geri yazılamaz (2026-10-19 güvenlik turu F-18)
         if (r.status != RPStatus.ACTIVE) revert RelyingPartyNotActive(rpId);
-        r.status = RPStatus.SUSPENDED;
+        _setStatus(rpId, r, RPStatus.SUSPENDED);
         emit RelyingPartySuspended(rpId);
     }
 
@@ -101,7 +119,7 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         RelyingParty storage r = _require(rpId);
         _requireOwner(r.stateCode);
         if (r.status != RPStatus.SUSPENDED) revert RelyingPartyNotSuspended(rpId);
-        r.status = RPStatus.ACTIVE;
+        _setStatus(rpId, r, RPStatus.ACTIVE);
         emit RelyingPartyReinstated(rpId);
     }
 
@@ -109,8 +127,101 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         RelyingParty storage r = _require(rpId);
         _requireOwner(r.stateCode);
         if (r.status == RPStatus.REVOKED) revert AlreadyRevoked(rpId);
-        r.status = RPStatus.REVOKED;
+        _setStatus(rpId, r, RPStatus.REVOKED);
         emit RelyingPartyRevoked(rpId);
+    }
+
+    /// @dev Durum blok zamanından itibaren geçerli (doğrulayıcı durum yazımları tarih taşımaz); geçmiş yalnız eklenir.
+    function _setStatus(bytes32 rpId, RelyingParty storage r, RPStatus st) private {
+        r.status = st;
+        _history[rpId].record(uint64(block.timestamp), uint8(st));
+    }
+
+    // -----------------------------------------------------------------
+    // ADR-0075 — devir ve iptal sonrası yeniden kayıt (yalnız Governance oyuyla)
+    // -----------------------------------------------------------------
+
+    /// @inheritdoc IRelyingPartyRegistry
+    function periodChangeIdOf(PeriodChange calldata change) public view returns (bytes32) {
+        return keccak256(abi.encode(change, uint32(_periods[change.rpId].length)));
+    }
+
+    /// @inheritdoc IRelyingPartyRegistry
+    function stagePeriodChange(PeriodChange calldata change) external returns (bytes32 stageId) {
+        if (
+            change.action == PeriodAction.NONE || change.rpId == bytes32(0) || change.toState == bytes2(0)
+                || change.nameHash == bytes32(0) || change.accessCertFingerprint == bytes32(0)
+                || change.reasonHash == bytes32(0)
+        ) revert InvalidPeriodChange(change.rpId);
+        uint32 base = uint32(_periods[change.rpId].length);
+        stageId = periodChangeIdOf(change);
+        _stagedChanges[stageId] = change;
+        _stagedBase[stageId] = base;
+        emit PeriodChangeStaged(stageId, change.rpId, change.action, base);
+    }
+
+    /// @inheritdoc IRelyingPartyRegistry
+    function commitPeriodChange(bytes32 stageId, PeriodAction action) external onlyGovernance {
+        PeriodChange memory c = _stagedChanges[stageId];
+        if (c.action == PeriodAction.NONE || c.action != action) revert UnknownPeriodChange(stageId);
+        RelyingParty storage r = _require(c.rpId);
+        RegistrationPeriod[] storage periods = _periods[c.rpId];
+        uint32 cur = uint32(periods.length);
+        uint32 base = _stagedBase[stageId];
+        if (cur != base) revert StalePeriodChange(stageId, base, cur);
+        bool revoked = r.status == RPStatus.REVOKED;
+        // Devir: iptal edilmemiş kayıt başka devlete; yeniden kayıt: yalnız iptal edilmiş kayıt (aynı ya da başka devlet).
+        if (
+            r.stateCode != c.fromState
+                || (action == PeriodAction.REASSIGNMENT ? (revoked || c.toState == c.fromState) : !revoked)
+                || !sovereignty.isActiveMember(c.toState)
+        ) revert InvalidPeriodChange(c.rpId);
+        bytes32 owner = _certOwner[c.accessCertFingerprint];
+        if (owner != bytes32(0) && owner != c.rpId) revert CertificateInUse(c.accessCertFingerprint, owner);
+        delete _stagedChanges[stageId];
+        delete _stagedBase[stageId];
+
+        uint64 now_ = uint64(block.timestamp);
+        _closeOpenGroups(c.rpId, _periodKey(c.rpId), now_); // eski dönemin kapı grupları yeni sahibe geçmez
+        bool known = false;
+        for (uint256 i = 0; i < cur; i++) {
+            if (periods[i].stateCode == c.toState) known = true;
+        }
+        if (!known) _byState[c.toState].push(c.rpId);
+
+        delete _certOwner[r.accessCertFingerprint];
+        _certOwner[c.accessCertFingerprint] = c.rpId;
+        r.stateCode = c.toState;
+        r.nameHash = c.nameHash;
+        r.accessCertFingerprint = c.accessCertFingerprint;
+        r.registeredAt = now_;
+        _setStatus(c.rpId, r, RPStatus.ACTIVE);
+        periods.push(RegistrationPeriod(c.toState, now_));
+
+        if (action == PeriodAction.REASSIGNMENT) {
+            emit RelyingPartyReassigned(c.rpId, c.fromState, c.toState, cur, c.reasonHash);
+        } else {
+            emit RelyingPartyReRegistered(c.rpId, c.toState, cur, c.reasonHash);
+        }
+    }
+
+    /// @dev Dönemin açık kapı gruplarını `t` anında kapatır (dönem başına en çok MAX_TERMINAL_GROUPS).
+    function _closeOpenGroups(bytes32 rpId, bytes32 key, uint64 t) private {
+        bytes32[] storage ids = _groupsOf[key];
+        for (uint256 i = 0; i < ids.length; i++) {
+            TerminalGroup storage g = _groups[ids[i]];
+            if (g.validUntil == 0 || g.validUntil > t) {
+                g.validUntil = t;
+                emit TerminalGroupClosed(rpId, ids[i], t);
+            }
+        }
+    }
+
+    /// @dev Dönem anahtarı: dönem 0'da rpId'nin kendisi, sonraki dönemlerde keccak256(rpId, dönem). Kapsamlar, kayıt verisi ve
+    ///      kapı grubu listesi bu anahtarla tutulur: yeni dönem eskisinin kayıtlarını devralmaz, eskiler silinmez.
+    function _periodKey(bytes32 rpId) private view returns (bytes32) {
+        uint256 n = _periods[rpId].length;
+        return n <= 1 ? rpId : keccak256(abi.encode(rpId, n - 1));
     }
 
     /// @inheritdoc IRelyingPartyRegistry
@@ -129,19 +240,20 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
             if (scope.attributes[k] <= scope.attributes[k - 1]) revert AttributesNotSorted();
         }
 
-        uint256 idx = _scopeIndex[rpId][scope.scopeHash];
+        bytes32 key = _periodKey(rpId);
+        RequestScope[] storage list = _scopes[key];
+        uint256 idx = _scopeIndex[key][scope.scopeHash];
         if (idx == 0) {
             // Kapanmış kapsamlar da yer tutar (silinmez, geçmiş zincirde kalır); tavan saha verisiyle gözden geçirilir.
-            RequestScope[] storage list = _scopes[rpId];
             if (list.length >= MAX_SCOPES) revert TooManyScopes(list.length + 1, MAX_SCOPES);
             list.push(scope);
-            _scopeIndex[rpId][scope.scopeHash] = list.length;
+            _scopeIndex[key][scope.scopeHash] = list.length;
         } else {
             // Güvenlik turu 2026-11-04: kapanmış (aralığı bitmiş) kapsam aynı kimlikle sessizce yeniden açılamaz;
             // yeni kullanım yeni `scopeHash` ister.
-            RequestScope storage cur = _scopes[rpId][idx - 1];
+            RequestScope storage cur = list[idx - 1];
             if (cur.validUntil != 0 && cur.validUntil <= block.timestamp) revert ScopeClosed(rpId, scope.scopeHash);
-            _scopes[rpId][idx - 1] = scope;
+            list[idx - 1] = scope;
         }
         emit RequestScopeSet(rpId, scope.scopeHash, scope.schemaId, scope.format, scope.validFrom, scope.validUntil);
     }
@@ -150,9 +262,10 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
     function closeRequestScope(bytes32 rpId, bytes32 scopeHash, uint64 at) external {
         RelyingParty storage r = _require(rpId);
         _requireOwner(r.stateCode);
-        uint256 idx = _scopeIndex[rpId][scopeHash];
+        bytes32 key = _periodKey(rpId);
+        uint256 idx = _scopeIndex[key][scopeHash];
         if (idx == 0) revert UnknownScope(rpId, scopeHash);
-        RequestScope storage s = _scopes[rpId][idx - 1];
+        RequestScope storage s = _scopes[key][idx - 1];
         uint64 t = _effectiveDate(at);
         // aralık yalnız daralır (genişlemez); başlamadan kapatılan kapsamın aralığı boştur
         if (s.validUntil != 0 && s.validUntil <= t) revert InvalidScope(scopeHash);
@@ -166,7 +279,7 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         _requireOwner(r.stateCode);
         if (profile.intermediaries.length > MAX_LINKED) revert TooManyEntries(profile.intermediaries.length, MAX_LINKED);
         if (profile.servedParties.length > MAX_LINKED) revert TooManyEntries(profile.servedParties.length, MAX_LINKED);
-        _profiles[rpId] = profile;
+        _profiles[_periodKey(rpId)] = profile;
         emit RelyingPartyProfileSet(rpId, profile.registrationHash);
     }
 
@@ -190,7 +303,7 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         bytes32 owner = _groupOwner[group.groupId];
         if (owner == bytes32(0)) {
             // Kapanmış gruplar da yer tutar (silinmez, ADR-0074 K2); tavan saha verisiyle gözden geçirilir.
-            bytes32[] storage mine = _groupsOf[rpId];
+            bytes32[] storage mine = _groupsOf[_periodKey(rpId)];
             if (mine.length >= MAX_TERMINAL_GROUPS) revert TooManyEntries(mine.length + 1, MAX_TERMINAL_GROUPS);
             mine.push(group.groupId);
             _groupOwner[group.groupId] = rpId;
@@ -230,7 +343,7 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
     }
 
     function relyingPartyProfileOf(bytes32 rpId) external view returns (RelyingPartyProfile memory) {
-        return _profiles[rpId];
+        return _profiles[_periodKey(rpId)];
     }
 
     function terminalGroupOf(bytes32 groupId) external view returns (bytes32 rpId, TerminalGroup memory group) {
@@ -238,7 +351,7 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
     }
 
     function terminalGroupsOf(bytes32 rpId) external view returns (bytes32[] memory) {
-        return _groupsOf[rpId];
+        return _groupsOf[_periodKey(rpId)];
     }
 
     /// @inheritdoc IRelyingPartyRegistry
@@ -272,7 +385,7 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         bytes32 attribute
     ) external view returns (bool) {
         if (_rps[rpId].status != RPStatus.ACTIVE) return false;
-        RequestScope[] storage list = _scopes[rpId];
+        RequestScope[] storage list = _scopes[_periodKey(rpId)];
         uint64 now_ = uint64(block.timestamp);
         for (uint256 i = 0; i < list.length; i++) {
             RequestScope storage s = list[i];
@@ -299,7 +412,7 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
     }
 
     function requestScopesOf(bytes32 rpId) external view returns (RequestScope[] memory) {
-        return _scopes[rpId];
+        return _scopes[_periodKey(rpId)];
     }
 
     function getRelyingParty(bytes32 rpId) external view returns (RelyingParty memory) {
@@ -308,8 +421,41 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
         return r;
     }
 
+    /// @dev ADR-0075: bir devletin sahip olduğu ya da olmuş kimlikler (yalnız eklenir); bugünkü sahip `getRelyingParty`.
     function getRelyingPartiesByState(bytes2 stateCode) external view returns (bytes32[] memory) {
         return _byState[stateCode];
+    }
+
+    /// @inheritdoc IRelyingPartyRegistry
+    function stagedPeriodChangeOf(bytes32 stageId) external view returns (PeriodChange memory, uint32) {
+        return (_stagedChanges[stageId], _stagedBase[stageId]);
+    }
+
+    function registrationPeriodsOf(bytes32 rpId) external view returns (RegistrationPeriod[] memory) {
+        return _periods[rpId];
+    }
+
+    /// @inheritdoc IRelyingPartyRegistry
+    function relyingPartyAt(bytes32 rpId, uint64 t)
+        external
+        view
+        returns (RPStatus status, bytes2 stateCode, uint32 period)
+    {
+        status = RPStatus(_history[rpId].statusAt(t));
+        if (status == RPStatus.NONE) return (status, bytes2(0), 0);
+        RegistrationPeriod[] storage ps = _periods[rpId];
+        for (uint256 i = ps.length; i > 0; i--) {
+            if (ps[i - 1].since <= t) return (status, ps[i - 1].stateCode, uint32(i - 1));
+        }
+    }
+
+    /// @inheritdoc IRelyingPartyRegistry
+    function isRelyingPartyAcceptableAt(bytes32 rpId, uint64 t) external view returns (bool) {
+        return RPStatus(_history[rpId].statusAt(t)) == RPStatus.ACTIVE;
+    }
+
+    function relyingPartyStatusHistoryOf(bytes32 rpId) external view returns (StatusHistory.Change[] memory) {
+        return _history[rpId];
     }
 
     function _require(bytes32 rpId) private view returns (RelyingParty storage r) {

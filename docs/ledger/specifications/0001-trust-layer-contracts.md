@@ -17,6 +17,15 @@ summary: >
   onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
 ---
 
+> **Sürüm notu 1.0.0 (2026-11-04) — [[ADR-0075]] kabul edildi ve uygulandı.** Doğrulayıcı kimliğinin (`rpId =
+> keccak256(dns_name)`) sahibi devlet yalnız Governance'ın türü belli devir önerisiyle (`proposeRelyingPartyReassignment`, 2/3)
+> değişir; iptal edilmiş kimlik yalnız yeniden kayıt önerisiyle (`proposeRelyingPartyReRegistration`, 2/3) yeniden kaydedilir.
+> Öneri, `RelyingPartyRegistry.stagePeriodChange` ile sabitlenen içeriğin özetini taşır; yürütme `commitPeriodChange`'i çağırır
+> (yalnız Governance; bayat öneri `StalePeriodChange`). İkisi de yeni bir kayıt dönemi açar: durum geçmişi ve dönemler yalnız
+> eklenir, kapsamlar / kayıt verisi / kapı grubu listesi döneme göre ayrı tutulur, eski dönemin açık kapı grupları kapanır;
+> `relyingPartyAt` ve `isRelyingPartyAcceptableAt` `t` anındaki döneme göre cevap verir (§6.1). Depolama düzenine yalnız ekleme
+> (`__gap` 39 → 35). Liste yayıncısı aynı kuralı uygular (`register rp … --approval`; RO5).
+
 > **Sürüm notu 1.0.0 (2026-11-04) — [[ADR-0073]] ve [[ADR-0074]] kabul edildi, uygulama sürüyor.** Askı kuralı listeyle
 > eşitlendi: C1 belgenin `iat` anındaki duruma bakar, askıdaki kurumun askıdan önceki belgeleri geçerlidir, sınırlar yarı açıktır
 > (§3.3). Göç kipi (en çok 30 gün, tek göç yürütücüsü), sert iptal (`invalidatesFrom`), şema sürüm özetleri, doğrulayıcı kimliği
@@ -37,7 +46,7 @@ summary: >
 > kapanmış kapsam ve kapı grubu yeniden açılmaz, kurum bağı doğrulanır, `RelyingPartyRegistry.initialize` kurum kaydını alır
 > (§6, §16.6); iptal gerekçeleri `bytes32 reasonHash` (§1, §2, §4, §7); geçmiş dizileri bilinçli olarak tavansız (§16.1).
 > Uygulanmayanlar: kota istisnasının yalnız göç yürütücüsüne daraltılması (CE1 ile çelişir) ve `isChainAcceptableAt`'e kök CA
-> geçerlilik aralığı (liste kuralında yok; CE6). Doğrulayıcı kimliğinin sahipliği [[ADR-0075]]'te (Proposed).
+> geçerlilik aralığı (liste kuralında yok; CE6). Doğrulayıcı kimliğinin sahipliği [[ADR-0075]]'te (kabul edildi, §6.1).
 
 > **Sürüm notu 1.0.0 (2026-10-23) — [[ADR-0063]].** İptal listesi kaydı listenin kendi bit sayısını (1, 2, 4, 8) kabul eder;
 > `REQUIRED_BITS` yerine `isAllowedBits`, `ListRegistered` bit sayısını taşır (§7.1, §7.2, §7.4, §13 L3).
@@ -592,6 +601,41 @@ doğrulayıcı bu hizmette, bu türde, bu biçimde, bu öğeyi şu anda isteyebi
 > `x509_hash`, `base64url(SHA-256(DER yaprak sertifika))` değeridir — bu alandaki `bytes32` ile birebir aynı baytlar. Cüzdan istekteki
 > client identifier'ı `rpIdOfCertificate` ile kalıcı kimliğe çözer; sertifika yenilenince kimlik, takma adlar ve açıklama
 > politikası değişmez ([[ADR-0034]] CI3/CI4).
+
+## 6.1 Kayıt dönemleri: devir ve iptal sonrası yeniden kayıt ([[ADR-0075]] RO1–RO4)
+
+```solidity
+enum PeriodAction { NONE, REASSIGNMENT, RE_REGISTRATION }      // yalnız sona eklenir
+struct PeriodChange {                                           // Governance önerisinin sabitlenmiş içeriği (serbest metin yok)
+    PeriodAction action; bytes32 rpId; bytes2 fromState; bytes2 toState;
+    bytes32 nameHash; bytes32 accessCertFingerprint; bytes32 reasonHash;
+}
+struct RegistrationPeriod { bytes2 stateCode; uint64 since; }  // dönem 0 = ilk kayıt; silinmez
+
+function stagePeriodChange(PeriodChange calldata change) external returns (bytes32 stageId);   // herkes; yalnız saklar
+function commitPeriodChange(bytes32 stageId, PeriodAction action) external;                    // yalnız Governance
+function periodChangeIdOf(PeriodChange calldata change) external view returns (bytes32);       // keccak256(change, dönem sayısı)
+function stagedPeriodChangeOf(bytes32 stageId) external view returns (PeriodChange memory, uint32 basePeriods);
+function registrationPeriodsOf(bytes32 rpId) external view returns (RegistrationPeriod[] memory);
+function relyingPartyAt(bytes32 rpId, uint64 t) external view returns (RPStatus, bytes2 stateCode, uint32 period);
+function isRelyingPartyAcceptableAt(bytes32 rpId, uint64 t) external view returns (bool);
+function relyingPartyStatusHistoryOf(bytes32 rpId) external view returns (StatusHistory.Change[] memory);
+// Governance (REGISTRY_ADMIN, AdminAction REASSIGN_RELYING_PARTY / REREGISTER_RELYING_PARTY):
+function proposeRelyingPartyReassignment(address registry, bytes32 stageId) external returns (bytes32);
+function proposeRelyingPartyReRegistration(address registry, bytes32 stageId) external returns (bytes32);
+// Olaylar: PeriodChangeStaged, RelyingPartyReassigned(rpId, fromState, toState, period, reasonHash),
+//          RelyingPartyReRegistered(rpId, stateCode, period, reasonHash)
+```
+
+- **Yürütme koşulları:** kayıt var; `fromState` bugünkü sahip; sabitlemedeki dönem sayısı bugünküyle aynı (`StalePeriodChange`);
+  öneri türü içerikle aynı (`UnknownPeriodChange`); `toState` etkin üye; devirde kayıt `REVOKED` değil ve `toState ≠ fromState`,
+  yeniden kayıtta kayıt `REVOKED` (`InvalidPeriodChange`); yeni erişim sertifikası başka doğrulayıcıda değil (`CertificateInUse`).
+- **Yeni dönem:** kayıt `ACTIVE`, `registeredAt` = yürütme anı (geri tarihlenmez; göç penceresinde de), ad özeti ve sertifika
+  yenilenir, eski sertifika serbest kalır; `getRelyingPartiesByState` yalnız eklenir (devletin sahip olduğu ya da olmuş kimlikler).
+  Kapsamlar, kayıt verisi ve kapı grubu listesi dönem anahtarıyla (`dönem 0 → rpId`, sonra `keccak256(rpId, dönem)`) tutulur;
+  eski dönemin kayıtları silinmez, yeni dönem devralmaz; eski dönemin açık kapı grupları yürütme anında kapanır (`TerminalGroupClosed`).
+- **`t` anındaki okuma:** durum bütün dönemler boyunca tek, yalnız eklenen geçmişte (`StatusHistory`); `relyingPartyAt(t)` o andaki
+  durumu, sahibi devleti ve dönemi verir. Devletin olağan durum yazımları (askı, dönüş, iptal) blok zamanıyla geçmişe eklenir.
 
 ---
 

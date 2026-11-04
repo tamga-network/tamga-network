@@ -27,7 +27,10 @@ interface IGovernance is ITamgaErrors {
         // ADR-0073 K3: ağ şemasına yeni sürüm özeti
         ADD_NETWORK_SCHEMA_HASH,
         // ADR-0074 K3: NetworkRegistry'de sabitlenmiş (stageRecord) kaydı yazar
-        NETWORK_RECORD
+        NETWORK_RECORD,
+        // ADR-0075: RelyingPartyRegistry'de sabitlenmiş (stagePeriodChange) devir / iptal sonrası yeniden kayıt
+        REASSIGN_RELYING_PARTY,
+        REREGISTER_RELYING_PARTY
     }
 
     struct AdminPayload {
@@ -40,7 +43,7 @@ interface IGovernance is ITamgaErrors {
         bytes32 supersededBy; // DEPRECATE
         bytes32 reasonHash; // REVOKE — gerekçe metninin özeti (güvenlik turu 2026-11-04; ADR-0074 PJ2)
         bytes2[] founders; // BOOTSTRAP_FOUNDERS
-        bytes32 digest; // OPEN_MIGRATION: plan özeti; ADD_NETWORK_SCHEMA_HASH: sürüm özeti; NETWORK_RECORD: stageId
+        bytes32 digest; // OPEN_MIGRATION: plan özeti; ADD_NETWORK_SCHEMA_HASH: sürüm özeti; NETWORK_RECORD / ADR-0075: stageId
         uint64 window; // OPEN_MIGRATION: pencere süresi (sn, ≤ 30 gün); EXTEND_MIGRATION: yeni bitiş anı
         // `account` OPEN_MIGRATION'da ağ düzeyi kayıtların tek göç yürütücüsüdür.
     }
@@ -137,6 +140,10 @@ interface IGovernance is ITamgaErrors {
     function proposeNetworkSchemaContentHash(bytes32 schemaId, bytes32 contentHash) external returns (bytes32);
     /// @notice ADR-0074 K3: ağ düzeyi kayıt (NetworkRegistry.stageRecord ile sabitlenmiş içeriğin özeti), 2/3.
     function proposeNetworkRecord(address registry, bytes32 stageId) external returns (bytes32);
+    /// @notice ADR-0075: doğrulayıcı kimliğinin sahibi devleti değiştirir (RelyingPartyRegistry.stagePeriodChange özeti), 2/3.
+    function proposeRelyingPartyReassignment(address registry, bytes32 stageId) external returns (bytes32);
+    /// @notice ADR-0075: iptal edilmiş doğrulayıcı kimliğini yeni dönemle yeniden kaydeder (sabitlenmiş özet), 2/3.
+    function proposeRelyingPartyReRegistration(address registry, bytes32 stageId) external returns (bytes32);
 
     function vote(bytes32 proposalId, bool support) external;
     function execute(bytes32 proposalId) external;

@@ -6,6 +6,7 @@ import {
   addRelyingParty,
   addScope,
   setAuthorization,
+  setRpStatus,
   summarize,
   type RegistryEnv,
 } from "../src/registry-ops.js";
@@ -190,6 +191,33 @@ describe("operatör kayıt aracı", () => {
     );
     expect(out2.relying_parties[0].scopes).toHaveLength(2);
     expect(() => addRelyingParty(out, rpApp, env)).toThrow(/zaten kayıtlı/);
+  });
+
+  it("ADR-0075: iptal edilmiş alan adı yalnız onay kaydıyla yeniden kaydedilir; yeni dönem eski geçmişi korur, devralmaz", () => {
+    const later = { ...env, now: new Date("2026-11-01T00:00:00Z") };
+    const out = addRelyingParty(src(), rpApp, env);
+    // etkin kayıt: sahiplik değişimi yeni kayıtla yapılamaz; onay da etkin kaydı yeniden kaydetmez
+    expect(() => addRelyingParty(out, rpApp, env)).toThrow(/ADR-0075/);
+    expect(() => addRelyingParty(out, rpApp, env, { approval: "OK-2026-11-01" })).toThrow(/sahiplik değişimi/);
+    // hiç kaydedilmemiş alan adında onay anlamsız
+    expect(() => addRelyingParty(src(), rpApp, env, { approval: "OK-2026-11-01" })).toThrow(/yalnız iptal edilmiş/);
+    const revoked = setRpStatus(out, rpApp.dns_name, "REVOKED", { reason: "operator" }, env);
+    expect(() => addRelyingParty(revoked, rpApp, later)).toThrow(/yalnız proje yönetimi onaylı açık işlemle/);
+    expect(() => addRelyingParty(revoked, rpApp, later, { approval: "bad ref!" })).toThrow(/approval/);
+    // yeni dönem eski kullanım kimliğini yeniden kullanamaz
+    expect(() => addRelyingParty(revoked, rpApp, later, { approval: "OK-2026-11-01" })).toThrow(/önceki dönemde/);
+
+    const next = { ...rpApp, scopes: [{ ...rpApp.scopes[0], scope_id: "student-discount-2" }] };
+    const re = addRelyingParty(revoked, next, later, { approval: "OK-2026-11-01" });
+    expect(re.relying_parties).toHaveLength(1); // kayıt silinmez, yeni dönem aynı kayda eklenir
+    const rp = re.relying_parties[0] as Record<string, any>;
+    expect(rp.status).toBe("ACTIVE");
+    expect(rp.registered_at).toBe("2026-11-01T00:00:00.000Z");
+    expect(rp.status_history.map((h: any) => h.status)).toEqual(["ACTIVE", "REVOKED", "ACTIVE"]);
+    expect(rp.status_history[2].reason).toBe("re-registration (approval OK-2026-11-01)");
+    expect(rp.scopes.map((s: any) => s.scope_id)).toEqual(["student-discount-1", "student-discount-2"]);
+    expect(Date.parse(rp.scopes[0].valid_until)).toBeLessThanOrEqual(Date.parse("2026-10-01T00:00:00Z")); // eski kapalı
+    expect(revoked.relying_parties[0]).not.toHaveProperty("scopes.1"); // kaynak değişmez
   });
 
   it("ADR-0034: başvuruda client_id verilmez (yayıncı x509_hash hesaplar); dns_name alan adı olmalı", () => {

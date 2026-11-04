@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 444 kodlanmış değişmez, 77 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 449 kodlanmış değişmez, 78 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -760,6 +760,19 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0074/PJ5` | Liste görünümleri ve kayıt sertifikası durum listesi çapa günlüğüne satır olarak girer ve zincirde kaynak sürümüyle çapalanır; görünüm kaynakla çelişirse kaynak geçerlidir. |
 
 
+## ADR-0075
+
+*"Doğrulayıcı alan adı kimliğinin sahipliği ve iptal sonrası yeniden kayıt"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0075/RO1` | Doğrulayıcı kimliğinin (`rpId = keccak256(dns_name)`) sahibi devlet yalnız Governance'ın türü belli **devir** önerisiyle (2/3) değişir. Öneri, kayıtta önce sabitlenen içeriğin özetini (`stageId`) taşır; içerik kimliği, eski ve yeni devlet kodunu, yeni dönemin ad özetini ve erişim sertifikası parmak izini ve gerekçe özetini içerir (serbest metin yok, [[ADR-0074]] PJ2). Devir yalnız iptal edilmemiş kayda ve başka bir etkin üye devlete yapılır. |
+| `ADR-0075/RO2` | `REVOKED` bir dönem için kesin kalır. Aynı kimliğin **yeniden kaydı** yalnız Governance'ın türü belli yeniden kayıt önerisiyle (2/3) ve yalnız iptal edilmiş kayıtta açılır (aynı ya da başka etkin üye devlet). |
+| `ADR-0075/RO3` | Devir ve yeniden kayıt yeni bir **kayıt dönemi** başlatır (ACTIVE, yürütme anından). Kayıt silinmez; durum geçmişi ve dönem listesi yalnız eklenir; eski dönemin olayları ve kayıtları korunur. Yeni dönem eski dönemin kapsamlarını, kayıt verisini ve kapı gruplarını devralmaz; eski dönemin açık kapı grupları kapanır. `t` anındaki okumalar (`relyingPartyAt`, `isRelyingPartyAcceptableAt`) o andaki döneme göre cevap verir. |
+| `ADR-0075/RO4` | Sabitlemeden sonra kayda başka bir dönem eklendiyse öneri bayattır, yazılmaz; öneri türü sabitlenen içeriğin türüyle aynı olmalıdır. |
+| `ADR-0075/RO5` | İmzalı listede de aynı kural: `dns_name` durumu ne olursa olsun ikinci kez kaydedilmez; sahiplik değişimi ve iptal sonrası yeniden kayıt yalnız proje yönetimi onaylı açık işlemle yapılır. Yeniden kayıt aynı kayda yeni dönem olarak eklenir (`status_history` → `ACTIVE`, gerekçede onay kaydı); eski kullanımlar kapanmış hâlde kalır. Gerçek ağ kayıt defterine yazım ayrıca `TAMGA_CONFIRM_PROD` kapısından geçer. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1112,12 +1125,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 444 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 449 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CT, D, DL, DP, DS, DY, E, EP, FD, FN, GA, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RPR, RQ, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CT, D, DL, DP, DS, DY, E, EP, FD, FN, GA, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-04 (`scripts/sync-invariants.mjs`). Toplam 444 kodlanmış değişmez, 77 dokümanda.
+**Üretilen dosya** — 2026-11-04 (`scripts/sync-invariants.mjs`). Toplam 449 kodlanmış değişmez, 78 dokümanda.

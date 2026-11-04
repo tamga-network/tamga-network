@@ -2,11 +2,14 @@
 pragma solidity ^0.8.24;
 
 import {ITamgaErrors} from "./ITamgaErrors.sol";
+import {StatusHistory} from "../base/StatusHistory.sol";
 
 /**
  * @title IRelyingPartyRegistry — SPEC-BC-0001 §6, ADR-0073 K4 (CE4)
  * @dev   Kimlik `rpId = keccak256(utf8(dns_name))`: kayıt kurumu hesaplar (ABI'de alan adı metni yok), erişim sertifikası
  *        yenilenince değişmez. İstek kapsamları öğe öğedir; serbest metin yalnız özetle (ayrıntı özeti, RFC 8785 + SHA-256).
+ *        ADR-0075: kimliğin sahibi devlet yalnız Governance oyuyla (2/3) değişir; iptal edilmiş kimlik yalnız Governance oyuyla
+ *        yeniden kaydedilir. İkisi de yeni bir kayıt dönemi açar; eski dönemin geçmişi ve olayları korunur.
  */
 interface IRelyingPartyRegistry is ITamgaErrors {
     enum RPStatus {NONE, ACTIVE, SUSPENDED, REVOKED}
@@ -46,6 +49,29 @@ interface IRelyingPartyRegistry is ITamgaErrors {
         uint64 registeredAt; // göç kipinde açık tarih; aksi hâlde 0 verilir (blok zamanı)
     }
 
+    /// @dev ADR-0075 — dönem değişikliğinin türü (değer yalnız SONA eklenir).
+    ///      REASSIGNMENT: iptal edilmemiş kimliğin sahibi devlet değişir (anlaşmazlık / devir).
+    ///      RE_REGISTRATION: iptal edilmiş (REVOKED) kimlik yeniden kaydedilir (aynı ya da başka devlet).
+    enum PeriodAction {NONE, REASSIGNMENT, RE_REGISTRATION}
+
+    /// @dev ADR-0075 — Governance önerisinin sabitlenmiş içeriği (öneri yalnız `stageId` özetini taşır, ADR-0074 K3 deseni).
+    ///      Serbest metin yok (ADR-0074 PJ2): gerekçe yalnız özet.
+    struct PeriodChange {
+        PeriodAction action;
+        bytes32 rpId;
+        bytes2 fromState; // yürütmede kaydın bugünkü sahibi olmalı
+        bytes2 toState; // yeni dönemin sahibi (etkin üye)
+        bytes32 nameHash; // yeni dönemin ad özeti
+        bytes32 accessCertFingerprint; // yeni dönemin erişim sertifikası (aynı anda tek doğrulayıcı)
+        bytes32 reasonHash; // gerekçe / kanıt bloğunun özeti
+    }
+
+    /// @dev ADR-0075 — kayıt dönemi: ilk kayıt dönem 0'dır; her devir ya da yeniden kayıt bir dönem ekler (silinmez).
+    struct RegistrationPeriod {
+        bytes2 stateCode;
+        uint64 since; // dönemin başlangıcı (yarı açık: sonraki dönemin başlangıcına kadar)
+    }
+
     /// @dev Listedeki bir kullanım (`relying_parties[].scopes[]`) — ADR-0073 K4 tablosu.
     struct RequestScope {
         bytes32 scopeHash; // keccak256(scope_id)
@@ -76,6 +102,14 @@ interface IRelyingPartyRegistry is ITamgaErrors {
     event RelyingPartyProfileSet(bytes32 indexed rpId, bytes32 registrationHash);
     event TerminalGroupSet(bytes32 indexed rpId, bytes32 indexed groupId, bytes32 institutionId, uint64 validFrom, uint64 validUntil);
     event TerminalGroupClosed(bytes32 indexed rpId, bytes32 indexed groupId, uint64 validUntil);
+    /// @dev ADR-0075: dönem değişikliği sabitlendi (`basePeriods`: sabitlemedeki dönem sayısı; araya giren değişiklik bayatlatır).
+    event PeriodChangeStaged(bytes32 indexed stageId, bytes32 indexed rpId, PeriodAction action, uint32 basePeriods);
+    /// @dev ADR-0075: sahibi devlet Governance oyuyla değişti; `period` yeni dönemin sırası (0 tabanlı).
+    event RelyingPartyReassigned(
+        bytes32 indexed rpId, bytes2 indexed fromState, bytes2 indexed toState, uint32 period, bytes32 reasonHash
+    );
+    /// @dev ADR-0075: iptal edilmiş kimlik Governance oyuyla yeniden kaydedildi.
+    event RelyingPartyReRegistered(bytes32 indexed rpId, bytes2 indexed stateCode, uint32 period, bytes32 reasonHash);
 
     error RPExists(bytes32 rpId);
     error UnknownRP(bytes32 rpId);
@@ -101,6 +135,12 @@ interface IRelyingPartyRegistry is ITamgaErrors {
     error TerminalGroupNotOpen(bytes32 groupId);
     /// @dev Kapı grubunun kurum bağı aynı devletin kayıtlı kurumu (issuerId) ya da doğrulayıcısı (rpId) değil.
     error UnknownInstitution(bytes32 institutionId);
+    /// @dev ADR-0075: sabitlenmiş dönem değişikliği yok ya da önerinin türüyle uyuşmuyor.
+    error UnknownPeriodChange(bytes32 stageId);
+    /// @dev ADR-0075: içerik eksik ya da yürütme anında koşul tutmuyor (sahip, durum, yeni devletin üyeliği).
+    error InvalidPeriodChange(bytes32 rpId);
+    /// @dev ADR-0075: sabitlemeden sonra kayda başka bir dönem eklendi — öneri yeniden sabitlenip oylanır.
+    error StalePeriodChange(bytes32 stageId, uint32 basePeriods, uint32 currentPeriods);
 
     function registerRelyingParty(RelyingParty calldata data) external;
     /// @notice Erişim sertifikası yenilemesi: kimlik değişmez; eski ve yeni parmak izi olayla yayılır.
@@ -138,5 +178,23 @@ interface IRelyingPartyRegistry is ITamgaErrors {
     /// @notice Grup şu anda etkin mi (sahibi etkin doğrulayıcı, aralık içinde) ve bu kapı sertifikası gruba ait mi.
     function isActiveTerminalCertificate(bytes32 groupId, bytes32 certFingerprint) external view returns (bool);
     function getRelyingParty(bytes32 rpId) external view returns (RelyingParty memory);
+
+    // --- ADR-0075: kimliğin sahipliği ve iptal sonrası yeniden kayıt ---
+    /// @notice Dönem değişikliğini sabitler (herkes; yalnız saklar). Governance önerisi dönen `stageId`'yi taşır.
+    function stagePeriodChange(PeriodChange calldata change) external returns (bytes32 stageId);
+    /// @notice Yalnız Governance (2/3 oyla yürütülen türü belli öneri): sabitlenmiş değişikliği yeni dönem olarak yazar.
+    function commitPeriodChange(bytes32 stageId, PeriodAction action) external;
+    /// @notice Değişikliğin bugünkü dönem sayısına göre `stageId`'si.
+    function periodChangeIdOf(PeriodChange calldata change) external view returns (bytes32);
+    function stagedPeriodChangeOf(bytes32 stageId) external view returns (PeriodChange memory change, uint32 basePeriods);
+    function registrationPeriodsOf(bytes32 rpId) external view returns (RegistrationPeriod[] memory);
+    /// @notice `t` anındaki durum, sahibi devlet ve dönem (o anda kayıt yoksa NONE).
+    function relyingPartyAt(bytes32 rpId, uint64 t)
+        external
+        view
+        returns (RPStatus status, bytes2 stateCode, uint32 period);
+    /// @notice `t` anında (ör. `iat`) doğrulayıcı ACTIVE mıydı — o andaki döneme göre.
+    function isRelyingPartyAcceptableAt(bytes32 rpId, uint64 t) external view returns (bool);
+    function relyingPartyStatusHistoryOf(bytes32 rpId) external view returns (StatusHistory.Change[] memory);
     function getRelyingPartiesByState(bytes2 stateCode) external view returns (bytes32[] memory);
 }

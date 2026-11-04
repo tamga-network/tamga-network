@@ -61,6 +61,25 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
 
 ### Applications and repository (not in the npm packages)
 
+- **contracts — ADR-0075 accepted (D-BC-14): relying party identity ownership and re-registration after revocation.** The owning
+  state of a relying party identity (`rpId = keccak256(dns_name)`) changes only by a typed Governance proposal (2/3):
+  `Governance.proposeRelyingPartyReassignment(registry, stageId)` (identity captured by another state) and
+  `proposeRelyingPartyReRegistration(registry, stageId)` (identity revoked; new `AdminAction` values `REASSIGN_RELYING_PARTY`,
+  `REREGISTER_RELYING_PARTY`, appended). The content is staged first in `RelyingPartyRegistry.stagePeriodChange(PeriodChange)`
+  (identity, old and new state, name digest, access certificate fingerprint, reason digest; no free text) and the proposal carries
+  only its `stageId`; execution calls `commitPeriodChange(stageId, action)` (Governance only). A stage is bound to the record's
+  period count (`StalePeriodChange`), the proposal type must match (`UnknownPeriodChange`), and the record, owner, status and new
+  state are checked at execution (`InvalidPeriodChange`, `CertificateInUse`). Both paths open a new registration period: the record
+  is not deleted, status history and periods are append-only (`registrationPeriodsOf`, `relyingPartyStatusHistoryOf`), scopes,
+  registration data and the terminal group list are kept per period (the new period inherits none; the old period's open terminal
+  groups close), and `relyingPartyAt(rpId, t)` / `isRelyingPartyAcceptableAt(rpId, t)` answer for the period in force at `t`.
+  Events `PeriodChangeStaged`, `RelyingPartyReassigned`, `RelyingPartyReRegistered`. Storage layout only appended (`__gap` 39 → 35);
+  `Governance` stays under the 24 KB code size limit. Contract tests 247; Slither 0 results.
+- **trust-publisher — same rule in the registry tool (ADR-0075 RO5).** A `dns_name` is never registered twice, whatever its
+  status; the error now says that an ownership change needs project management approval. A revoked relying party can be
+  re-registered only with `register rp <application> --approval <approval record>`: the same record gets a new period
+  (`status_history` → `ACTIVE`, reason `re-registration (approval …)`), old uses and terminal groups stay closed, new uses need new
+  `scope_id`s. Writing to the production registry still needs `TAMGA_CONFIRM_PROD`.
 - **contracts — ADR-0073 and ADR-0074 accepted (D-BC-12, D-BC-13); `contracts/`, `network/` and `docs/ledger` are public.**
   The contracts are not an npm package; no production chain exists (ADR-0009 K4).
 - **contracts — one-time migration window (ADR-0073 K1, CE1).** Every registry (`RootCARegistry`, `IssuerRegistry`,
@@ -134,8 +153,8 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
     their window is open (`UpgradeDuringMigration`), and `contracts:check` pins the source digest of `MigrationWindow.sol`
     (`storage-layout/MigrationWindow.pin.json`, `--update-pin`), its ERC-7201 slot, and that no other source references the slot
     or uses inline assembly. ADR-0073 carries a dated implementation note (decision unchanged).
-  - *Medium, decision needed:* relying party identity ownership and re-registration after revocation — ADR-0075 (Proposed);
-    contract behaviour unchanged until accepted.
+  - *Medium, decision needed:* relying party identity ownership and re-registration after revocation — ADR-0075, accepted the
+    same day and implemented (see Applications and repository).
   - *Low:* while the window is open, undated ordinary writes (`at = 0`, `registeredAt = 0`, `publishList(publishedAt = 0)`) are
     refused except from Governance (`DateRequiredDuringMigration`; ADR-0073 K1 "dates explicit"); a closed request scope or gate
     group cannot be silently reopened under the same id (`ScopeClosed`, `TerminalGroupNotOpen`); a gate group's institution must
