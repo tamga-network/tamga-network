@@ -625,14 +625,44 @@ export function stepE(ctx: VerifyCtx): StepFail | undefined {
   } else ctx.skipped.push("E3");
 }
 
+/**
+ * SD-JWT VC sunumunun beklenen KB-JWT `aud`'u (PV7). Digital Credentials API yolunda (`origin` verilmiş) hedef OpenID4VP 1.0 Ek A.4
+ * gereği `origin:<köken>`dür — imzalı istekte de: `aud` verilmemişse buradan türetilir; verilmiş ve farklıysa açık iletiyle A1 reddi
+ * (yanlış yapılandırma A6'da anlamsız "aud uyuşmazlığı" olarak görünmesin). Cihazlar arası yolda `aud` zorunludur (client identifier).
+ */
+export function expectedSdJwtAud(
+  input: Pick<VerifyInput, "aud" | "origin">,
+): { ok: true; aud: string } | { ok: false; reason: string } {
+  if (input.origin !== undefined) {
+    const derived = `origin:${input.origin}`;
+    if (input.aud === undefined || input.aud === "") return { ok: true, aud: derived };
+    if (input.aud !== derived)
+      return {
+        ok: false,
+        reason:
+          'aud does not match the Digital Credentials API origin: on this path the audience must be "origin:" + the page origin (OpenID4VP 1.0 Annex A.4); omit aud to derive it',
+      };
+    return { ok: true, aud: derived };
+  }
+  if (input.aud === undefined || input.aud === "")
+    return { ok: false, reason: "aud required (client identifier; on the Digital Credentials API path pass origin)" };
+  return { ok: true, aud: input.aud };
+}
+
 /** A adımının format seçimi: sonucu ortak biçime indirir (B–E iki format için aynı). */
 async function formatStep(input: VerifyInput, now: EpochSeconds): Promise<FormatResult> {
   if (input.format === "mso_mdoc_zk") {
     if (!input.responseUri && !input.origin)
       return { ok: false, failedStep: "A1", reason: "responseUri or origin required for mso_mdoc_zk" };
+    if (!input.origin && !input.aud)
+      return {
+        ok: false,
+        failedStep: "A1",
+        reason: "aud required (client identifier) when the response came via responseUri",
+      };
     const pc = input.policy.credentials.find((c) => c.id === input.policyCredentialId);
     return verifyMdocZkFormat(input.presentation, {
-      clientId: input.aud,
+      clientId: input.aud ?? "",
       nonce: input.nonce,
       responseUri: input.responseUri ?? "",
       origin: input.origin,
@@ -651,8 +681,14 @@ async function formatStep(input: VerifyInput, now: EpochSeconds): Promise<Format
   if (input.format === "mso_mdoc") {
     if (!input.responseUri && !input.origin && !input.sessionTranscript)
       return { ok: false, failedStep: "A1", reason: "responseUri, origin or sessionTranscript required for mso_mdoc" };
+    if (!input.origin && !input.sessionTranscript && !input.aud)
+      return {
+        ok: false,
+        failedStep: "A1",
+        reason: "aud required (client identifier) when the response came via responseUri",
+      };
     return verifyMdocFormat(input.presentation, {
-      clientId: input.aud,
+      clientId: input.aud ?? "",
       nonce: input.nonce,
       responseUri: input.responseUri ?? "",
       origin: input.origin,
@@ -667,8 +703,10 @@ async function formatStep(input: VerifyInput, now: EpochSeconds): Promise<Format
         .flatMap((c) => c.vct_values),
     });
   }
+  const aud = expectedSdJwtAud(input);
+  if (!aud.ok) return { ok: false, failedStep: "A1", reason: aud.reason };
   const r = await verifySdJwtVc(input.presentation, {
-    aud: input.aud,
+    aud: aud.aud,
     nonce: input.nonce,
     stateCode: input.policy.trust.state_code,
     now,

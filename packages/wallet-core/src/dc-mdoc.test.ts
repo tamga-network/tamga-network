@@ -78,8 +78,8 @@ const cwt = (o: Record<string, unknown> = {}) =>
     x5chain: [registrar.der],
     sign: sign(registrar.sk),
   });
-const matchFor = (requested: string[]) =>
-  ({ queryId: ANNEX_C_QUERY_ID, requested, credential: { vct: DOCTYPE } }) as unknown as Match;
+const matchFor = (requested: string[], namespace = NS) =>
+  ({ queryId: ANNEX_C_QUERY_ID, requested, namespace, credential: { vct: DOCTYPE } }) as unknown as Match;
 
 describe("parseDcApiRequest — org-iso-mdoc (ISO/IEC 18013-7 Ek C)", () => {
   it("okuyucu imzalı istek → VpRequest: client_id = x509_hash(yaprak), DCQL mso_mdoc, saklama niyeti, köken", () => {
@@ -133,6 +133,11 @@ describe("parseDcApiRequest — org-iso-mdoc (ISO/IEC 18013-7 Ek C)", () => {
     expect(hasRegistrationCert(r)).toBe(true);
     const ok = checkRegistrationCerts(r, [registrar.fp], matchFor(["age_over_18", "given_name"]), epochMillis(NOW));
     expect(ok).toMatchObject({ present: true, valid: true, allowedClaims: ["age_over_18"], tradeName: "Verify" });
+    // güvenlik #8: izin ad alanı + öğe çifti — aynı adlı öğe başka ad alanında istenirse kapsam dışı
+    expect(
+      checkRegistrationCerts(r, [registrar.fp], matchFor(["age_over_18"], "org.example.other"), epochMillis(NOW))
+        .allowedClaims,
+    ).toEqual([]);
     // sertifikasız istek: ADR-0056 K10
     const bare = parseDcApiRequest(request(items()), SITE);
     expect(checkRegistrationCerts(bare, [registrar.fp], matchFor(["age_over_18"]), epochMillis(NOW))).toEqual(

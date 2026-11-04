@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   OpenID4VP 1.0-da rəqəmsal cüzdanın xəta cavabı (imtina) imzalanmır və şifrəsiz göndərilə bilər; onu təqdimata bağlayan yeganə şey `state`-dir. Tamga-da `state` sorğu obyektində idi və sorğu obyektini QR-dakı ünvandan hər kəs çəkə bilirdi: QR-ı görən biri saxta imtina göndərib real şəxsin təqdimatını "imtina edildi"yə sala bilirdi. Qərar: `request_uri`-nin hər çəkilişi (GET və ya POST) ayrıca çəkiliş qolu açır — təzə 128 bitlik `state`, təzə `nonce` və təzə efemer şifrələmə açarı ilə yeni imzalanmış sorğu obyekti (HAIP §5 "hər avtorizasiya sorğusunda efemer açar" qaydasının daha sərt yerinə yetirilməsi); POST çəkilişdə `wallet_nonce` geri yazılır. İmtina (şifrəli və ya şifrəsiz) yalnız öz qolunu bağlayır; təqdimat bütövlükdə yalnız bir çəkilişi varsa və o qol bağlanıbsa REJECTED olur, əks halda müddəti bitənədək açıq qalır və ilk etibarlı təqdimat qalib gəlir. Açıla bilməyən cavab cəhd sayılmır; qol sayında sabit limit yoxdur — yaddaş yumşaq limitdən sonra köhnə cavabsız qolu ataraq və ortaq qol büdcəsi ilə məhduddur (Dəyişiklik qeydi 2026-10-29). İmzalı imtina rədd edildi (standartdan kənar, ARF RPA_11 məxfilik prinsipinə zidd). Qəbul: 2026-10-29 (layihə rəhbərliyinin təsdiqi).
 domain: Protocol
@@ -47,6 +47,10 @@ təsadüfi, gizli: QR-da, `request_uri` yolunda və `response_uri` yolunda yoxdu
 açarı**. Açar identifikatoru qolu adlandırır (`enc-<təqdimat>.<qol>`). Təqdimat açılanda yaradılan ilk sorğu obyekti heç vaxt
 verilmir. POST çəkilişdə cüzdanın `wallet_nonce`-u sorğu obyektinə geri yazılır (§5.10; `wallet_metadata` oxunmur); GET işləməyə
 davam edir. Bu, HAIP §5-in "hər avtorizasiya sorğusunda efemer açar" qaydasının daha sərt yerinə yetirilməsidir.
+
+*Qeyd (2026-11-04): QR / keçid `request_uri_method=post` elan etmir; OpenID4VP 1.0 §5.10-a görə parametr yoxdursa, cüzdan
+`request_uri`-ni GET ilə çəkir. POST endpoint-i yenə qəbul edilir (POST sınayan cüzdanlar və OpenID uyğunluq testi üçün); qoruma
+qollardan gəlir, `wallet_nonce`-dan yox. Qərarın məzmunu dəyişmədi.*
 
 ## K2 — Yumşaq imtina
 Cüzdanın xəta cavabı (OpenID4VP 1.0 §8.4) — şifrəsiz forma və ya şifrəli JWE (§8.3.1), hər ikisi eyni işlənir — `state`-i hansı
@@ -105,6 +109,13 @@ real cüzdanın hələ cavab verməmiş qolunu atdıra bilər. Nəticə təqdima
 cüzdanın çəkilişini 429-a salırdı. Ünvan başına sürət limiti (proksidə) hücumun qiymətini artırır, amma paylanmış hücumçunu
 dayandırmır. Ortaq büdcə dolarsa ən köhnə atıla bilən qol başqa təqdimatdan da ola bilər; bütün qollar emal olunursa çəkiliş 503
 alır. Yaddaşdakı vəziyyət tək proses üçündür; çox nüsxəli quraşdırma paylaşılan anbar tələb edir.
+
+**Təkistifadə kilidi (qeyd 2026-11-04).** Tətbiqdə təkistifadə kilidi təqdimat üzrə idi: bir cavab emal olunarkən eyni təqdimata gələn
+hər cavab "emal olunur" (400) alırdı. QR-ı görən biri öz qoluna yavaş emal olunan cavablar göndərərək real cüzdanın cavabını geri
+çevirə bilirdi. Kilid indi **qol üzrədir**, qəbul **atomardır** (`BranchSet.tryConsume`: eyni anda gələn iki etibarlı cavabdan yalnız
+birincisi təqdimatı tamamlayır). İmtina yalnız öz qolunun cavabı emal olunarkən, ya da təqdimatı bütövlükdə bağlayacaqsa (tək
+çəkiliş) başqa cavab emal olunarkən 400 alır (PV10). Qalan: qolsuz DC API yolunun kilidi təqdimat üzrədir. Qərar (K1–K6, RQ1–RQ6)
+dəyişmədi.
 
 # Dəyişməzlər
 

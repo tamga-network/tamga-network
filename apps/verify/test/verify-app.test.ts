@@ -43,6 +43,7 @@ import { createHash, createPrivateKey, generateKeyPairSync, randomBytes, sign as
 import { pemToDer } from "@tamga-network/core";
 import {
   buildDeviceResponse,
+  buildDeviceResponseStatus,
   deviceSignAsync,
   discloseMdoc,
   issueMdoc,
@@ -1511,6 +1512,15 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     // başka sunumun Ek C yanıtı bu sunuma: döküm (EncryptionInfo) farklı → açılmaz
     const c2 = await openMdocDc();
     expect((await postMdoc(c2.presentation_id, await walletAnswer(SITE, annexReq.data))).statusCode).toBe(400);
+    // Ek C reddi (belgesiz DeviceResponse, status ≠ 0): sunum REJECTED; `redirect_uri` durum jetonu TAŞIMAZ (ADR-0067 RQ3)
+    const refused = await postMdoc(
+      c2.presentation_id,
+      sealAnnexCResponse(buildDeviceResponseStatus(10), parseAnnexCRequest(c2.dc_api_requests[1].data, SITE)).response,
+    );
+    expect(refused.statusCode).toBe(200);
+    expect(refused.json().redirect_uri).toBe(`${BASE}/p/${c2.presentation_id}`);
+    expect(refused.json().redirect_uri).not.toMatch(/[?&](st|show)=/);
+    expect((await result(c2.presentation_id)).outcome).toBe("REJECTED");
     // 7) wallet-core Ek C (0.7.1): aynı onay yolu — parseDcApiRequest (okuyucu imzası bu dökümle) → matchDcql → checkRp → respond
     // (HPKE şifreli DeviceResponse; POST yok) → sayfa yanıtı doğrulayıcıya iletir → ACCEPTED
     const c3 = await openMdocDc();
@@ -2067,7 +2077,9 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         payload: { token: "bozuk", terminal_group: "example-university-turnstiles" },
       });
       expect(v.json().ok).toBe(false);
-      expect((await app.inject({ method: "GET", url: "/stats/gates?group=example-university-turnstiles" })).statusCode).toBe(404);
+      expect(
+        (await app.inject({ method: "GET", url: "/stats/gates?group=example-university-turnstiles" })).statusCode,
+      ).toBe(404);
       const r = await app.inject({
         method: "GET",
         url: "/stats/gates?group=example-university-turnstiles,<x>&days=7",
@@ -2141,8 +2153,13 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     try {
       expect((await app.inject({ method: "GET", url: "/terminal/keys" })).statusCode).toBe(404);
       expect(
-        (await app.inject({ method: "POST", url: "/terminal/keys", payload: { terminal_group: "example-events-gate" } }))
-          .statusCode,
+        (
+          await app.inject({
+            method: "POST",
+            url: "/terminal/keys",
+            payload: { terminal_group: "example-events-gate" },
+          })
+        ).statusCode,
       ).toBe(404);
       const unknown = await app.inject({
         method: "POST",

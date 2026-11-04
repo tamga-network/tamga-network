@@ -400,10 +400,11 @@ export function checkRegistrationCerts(
         ? docType === undefined || docType === match.credential.vct
         : !c.meta?.vct_values || c.meta.vct_values.includes(match.credential.vct);
       if (!applies) continue;
-      for (const cl of c.claim ?? c.claims ?? []) {
-        const name = mdoc && (cl.path?.length ?? 0) >= 2 ? cl.path[1] : cl.path?.[0];
-        if (typeof name === "string") allowed.add(name);
-      }
+      // mdoc: ad alanı + öğe ÇİFTİ karşılaştırılır (güvenlik #8, 2026-11-04): sertifika `[ns1, family_name]` izni verdiyse
+      // `[ns2, family_name]` isteği kapsam içinde sayılmaz. Eşleşmenin ad alanı (`match.namespace`) yoksa mdoc izni verilmez.
+      for (const cl of c.claim ?? c.claims ?? [])
+        if (mdoc) addClaimPath(allowed, cl.path, match.namespace ?? null);
+        else if (typeof cl.path?.[0] === "string") allowed.add(cl.path[0]);
     }
   return {
     present: true,
@@ -521,15 +522,18 @@ export function checkProximityRegistration(
   if (!readerTrusted) return fail("untrusted_reader_certificate");
   const st = registrationStatusOf(v.payload, statuses);
   if (st === "revoked") return fail("registration certificate revoked");
+  // izin verilen öğeler isteğin ad alanında (kişiye gösterilen ve açıklanan ilk ad alanı, `presentProximity`): ad alanı + öğe
+  // çifti karşılaştırılır (güvenlik #8, 2026-11-04)
+  const namespace = Object.keys(item.nameSpaces ?? {})[0] ?? null;
   const allowed = new Set<string>();
   for (const c of v.payload.credentials ?? [])
     if (!c.meta?.vct_values && !(c as { meta?: { doctype_value?: string } }).meta?.doctype_value) {
-      for (const cl of c.claim ?? c.claims ?? []) addClaimPath(allowed, cl.path);
+      for (const cl of c.claim ?? c.claims ?? []) addClaimPath(allowed, cl.path, namespace);
     } else if (
       c.meta?.vct_values?.includes(item.docType) ||
       (c as { meta?: { doctype_value?: string } }).meta?.doctype_value === item.docType
     )
-      for (const cl of c.claim ?? c.claims ?? []) addClaimPath(allowed, cl.path);
+      for (const cl of c.claim ?? c.claims ?? []) addClaimPath(allowed, cl.path, namespace);
   return {
     present: true,
     valid: true,
@@ -552,9 +556,17 @@ function purposeOf(c: Wrprc | undefined): Pick<RegistrationCertCheck, "purpose" 
   return { purpose: canonical.text, ...(Object.keys(localized).length ? { purposeLocalized: localized } : {}) };
 }
 
-/** DCQL yolu: SD-JWT `[ad]`, mdoc `[ad alanı, öğe]` — öğe adı eklenir. */
-function addClaimPath(out: Set<string>, path: unknown[] | undefined) {
+/**
+ * DCQL yolu: SD-JWT `[ad]`, mdoc `[ad alanı, öğe]` — öğe adı eklenir. mdoc yolunda ad alanı isteğinkiyle (`namespace`) aynı
+ * olmalıdır (güvenlik #8: ad alanı + öğe çifti; başka ad alanındaki aynı adlı öğe kapsam dışı). `namespace` null ise ad alanlı
+ * yol hiçbir şey eklemez (ihtiyatlı).
+ */
+function addClaimPath(out: Set<string>, path: unknown[] | undefined, namespace: string | null) {
   if (!path?.length) return;
-  const last = path.length >= 2 ? path[1] : path[0];
-  if (typeof last === "string") out.add(last);
+  if (path.length >= 2) {
+    if (namespace === null || path[0] !== namespace) return;
+    if (typeof path[1] === "string") out.add(path[1]);
+    return;
+  }
+  if (typeof path[0] === "string") out.add(path[0]);
 }

@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   OpenID4VP 1.0'da cüzdanın hata yanıtı (ret) imzasızdır ve şifresiz gönderilebilir; yanıtı sunuma bağlayan tek şey `state`'tir.
   Tamga'da `state` istek nesnesindeydi ve istek nesnesini QR'daki adresten herkes çekebiliyordu: QR'ı gören biri sahte bir ret
@@ -53,6 +53,10 @@ rastgele, gizli: QR'da, `request_uri` yolunda ve `response_uri` yolunda yer alma
 şifreleme anahtarı**. Anahtar kimliği dalı adlandırır (`enc-<sunum>.<dal>`). Sunum açılırken üretilen ilk istek nesnesi hiç
 verilmez. POST çekimde cüzdanın `wallet_nonce`'u istek nesnesine geri yazılır (§5.10; `wallet_metadata` okunmaz); GET çalışmaya
 devam eder. Bu, HAIP §5'in "her yetkilendirme isteğinde efemer anahtar" kuralının daha sıkı karşılığıdır.
+
+*Not (2026-11-04): QR / bağlantı `request_uri_method=post` ilan etmez; OpenID4VP 1.0 §5.10'a göre parametre yoksa cüzdan
+`request_uri`'yi GET ile çeker. POST ucu yine kabul edilir (POST deneyen cüzdanlar ve OpenID uyum testi için); koruma dallardan
+gelir, `wallet_nonce`'tan değil. Karar içeriği değişmedi.*
 
 ## K2 — Yumuşak ret
 Cüzdanın hata yanıtı (OpenID4VP 1.0 §8.4) — şifresiz form ya da şifreli JWE (§8.3.1), ikisi aynı işlenir — `state`'i hangi dalın
@@ -109,6 +113,13 @@ gören biri gerçek cüzdandan sonra yumuşak sınırı aşacak kadar çekip 120
 çekimle gerçek cüzdanın çekimini 429'a düşürüyordu. IP başına hız sınırı (vekilde) saldırının maliyetini artırır ama dağıtık bir
 saldırganı durdurmaz. Ortak bütçe dolarsa (çok sayıda sunuma aynı anda sel) en eski atılabilir dal başka bir sunumdan da olabilir;
 bütün dallar işlenmekteyse çekim 503 alır. Bellek içi durum tek süreç içindir; çok örnekli kurulum paylaşılan depo ister.
+
+**Tek kullanım kilidi (not 2026-11-04).** Uygulamada tek kullanım kilidi sunum geneliydi: bir yanıt işlenirken aynı sunuma gelen her
+yanıt "işleniyor" (400) alıyordu. QR'ı gören biri kendi dalına yavaş işlenen yanıtlar göndererek gerçek cüzdanın yanıtını bu yolla
+geri çevirtebiliyordu (sunum açık kalıyordu; kişi yeniden göndermek zorunda kalıyordu). Kilit artık **dal başınadır** ve kabul
+**atomiktir** (`BranchSet.tryConsume`: eşzamanlı iki geçerli yanıttan yalnız ilki sunumu tamamlar). Ret, yalnız kendi dalının yanıtı
+işlenirken ya da sunumu bütünüyle kapatacakken (tek çekim) başka bir yanıt işlenirken 400 alır (PV10). Kalan: dalsız DC API yolunun
+kilidi sunum başınadır (o yolun anahtarını yalnız sunumu açan sayfa bilir). Karar içeriği (K1–K6, RQ1–RQ6) değişmedi.
 
 # Değişmezler
 

@@ -132,7 +132,9 @@ describe("operatör kayıt aracı", () => {
   });
 
   it("aynı sertifika iki kurumda kullanılamaz", () => {
-    expect(() => addIssuer(src(), { ...issuerApp, cert: "issuer-example-university" }, env)).toThrow(/başka bir kurumda/);
+    expect(() => addIssuer(src(), { ...issuerApp, cert: "issuer-example-university" }, env)).toThrow(
+      /başka bir kurumda/,
+    );
   });
 
   it("doğrulayıcı başvurusu + yeni kullanım; gizlilik politikası zorunlu", () => {
@@ -174,7 +176,9 @@ describe("operatör kayıt aracı", () => {
 
   it("şema yetkisi: ver, kaldır (kayıt silinmez, bitiş tarihi), tekrar ver", () => {
     let s = setAuthorization(src(), "example-university", "urn:tamga:edu:DiplomaCredential:1", true, env);
-    expect(() => setAuthorization(s, "example-university", "urn:tamga:edu:DiplomaCredential:1", true, env)).toThrow(/zaten yetkili/);
+    expect(() => setAuthorization(s, "example-university", "urn:tamga:edu:DiplomaCredential:1", true, env)).toThrow(
+      /zaten yetkili/,
+    );
     s = setAuthorization(s, "example-university", "urn:tamga:edu:StudentCredential:1", false, env);
     const auths = s.issuers[0].schema_authorizations;
     expect(auths).toHaveLength(2);

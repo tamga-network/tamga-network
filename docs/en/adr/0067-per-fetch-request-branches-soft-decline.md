@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-29
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   In OpenID4VP 1.0 the wallet's error response (a decline) is not signed and may be sent unencrypted; the only thing that ties it
   to a presentation is `state`. In Tamga, `state` was in the request object, and anyone could fetch the request object from the
@@ -60,6 +60,10 @@ and a **fresh ephemeral response encryption key**. The key id names the branch (
 object created when the presentation is opened is never served. With a POST fetch the wallet's `wallet_nonce` is echoed in the
 request object (§5.10; `wallet_metadata` is not read); GET keeps working. This is a stricter fulfilment of HAIP §5's "ephemeral
 keys per Authorization Request".
+
+*Note (2026-11-04): the QR / link does not advertise `request_uri_method=post`; under OpenID4VP 1.0 §5.10 a wallet fetches the
+`request_uri` with GET when the parameter is absent. The POST endpoint is still accepted (for wallets that try POST and for the
+OpenID conformance test); the protection comes from the branches, not from `wallet_nonce`. The decision is unchanged.*
 
 ## K2 — Soft decline
 The wallet's error response (OpenID4VP 1.0 §8.4) — unencrypted form or encrypted JWE (§8.3.1), both handled the same — closes
@@ -124,6 +128,15 @@ the QR again. Under the previous fixed limit the same attacker needed 10 fetches
 per-address rate limit (at the proxy) raises the attacker's cost but does not stop a distributed attacker. If the shared budget fills
 (a flood across many presentations), the oldest evictable branch may belong to another presentation; if every branch is being
 processed, the fetch gets 503. The in-memory state is per process; a multi-instance deployment needs a shared store.
+
+**Single-use lock (note 2026-11-04).** In the implementation the single-use lock was per presentation: while one response was being
+processed, every other response to the same presentation got "being processed" (400). Someone who sees the QR could send slowly
+processed responses on their own branch and so turn away the real wallet's response (the presentation stayed open; the person had to
+send again). The lock is now **per branch** and acceptance is **atomic** (`BranchSet.tryConsume`: of two concurrent valid responses
+only the first completes the presentation). A decline gets 400 only while its own branch's response is being processed, or while
+another response is being processed when the decline would close the whole presentation (single fetch) (PV10). Remaining: the lock
+of the branchless DC API path is per presentation (only the page that opened the presentation knows that path's key). The decision
+(K1–K6, RQ1–RQ6) is unchanged.
 
 # Invariants
 

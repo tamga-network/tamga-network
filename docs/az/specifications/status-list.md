@@ -202,7 +202,7 @@ Status dəyərləri və onların Tamga-dakı qarşılıqları:
 | `0x00` | VALID | Etibarlı |
 | `0x01` | INVALID | **Daimi ləğv** — geri dönüşü yoxdur |
 | `0x02` | SUSPENDED | **Müvəqqəti dayandırma** — geri alına bilər |
-| `0x03` | (ehtiyatda) | Tamga-da istifadə edilmir |
+| `0x03` | APPLICATION_SPECIFIC (tətbiqə xas; IETF Token Status List) | Tamga **yazmır**. Oxunarsa mənası bilinmədiyi üçün qapalı-təhlükəsiz qiymətləndirilir: yoxlayan tərəfdə RED (Ş9), cüzdanda və WIA siyahısında ləğv sayılır. 4 və ya 8 bitlik siyahıda `0x03`-dən böyük hər dəyər (digər tətbiqə xas və ehtiyatda olan dəyərlər) eyni qaydayla oxunur (2026-11-04) |
 
 **Dayandırma niyə lazımdır (icazə verilən növlərdə):** Diplomla bağlı plagiat araşdırması başladıqda
 qurum sənədi daimi ləğv etmək istəmir — araşdırma yekunlaşana qədər müvəqqəti dayandırmaq

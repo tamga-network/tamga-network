@@ -4,7 +4,7 @@ title: "SD-JWT VC profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-11-04
 summary: >
   Defines the bytes of a Tamga credential: how a disclosure is produced (salt, array structure, JSON serialisation rule,
   base64url), how the _sd array is filled and why it is sorted, the decoy digest policy, the placement of _sd_alg, cnf and
@@ -515,6 +515,9 @@ layer in [[SPEC-CRED-0003]] §7. The full order is assembled in [[SPEC-API-0001]
        d) Array does not have 3 elements → REJECT
        e) Salt < 128 bits → REJECT
        f) Claim name already present in the clear in the payload → REJECT (collision)
+       g) Claim name forbidden → REJECT (2026-11-04): reserved names (`iss`, `vct`, `cnf`, `status`, …), mechanism names
+          (`_sd`, `_sd_alg`, `...`) and the JavaScript prototype names `__proto__`, `constructor`, `prototype` — these names
+          cannot be used at issuance either (prototype pollution: a decoded value could change the object's prototype)
 
 Ş6.  The same digest claimed by two disclosures → REJECT.
 

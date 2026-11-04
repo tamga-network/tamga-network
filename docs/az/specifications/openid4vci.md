@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdana necə daxil olduğunu müəyyən edir. OpenID4VCI 1.0 Final üzərində Tamga profili: issuer metadata, credential offer (QR + tx_code), pre-authorized və authorization code axını seçimi, Nonce Endpoint-dən c_nonce, openid4vci-proof+jwt açar sübutu, credential endpoint, təxirə salınmış sənəd verilməsi və bildiriş ucunun bugünkü vəziyyəti (hər ikisi təqdim edilmir). İki açıq məsələ bağlanır: batch partiyasının ölçüsü 10 olaraq sabitlənir və batch nüsxələrinin HƏR BİRİ FƏRQLİ cihaz açarından istifadə edir — eyni `cnf` istifadə edilsəydi, nüsxələr bir-biri ilə əlaqələndirilə bilərdi və batch-in bütün mənası itərdi. Bundan əlavə, sənəd verilməsi anındakı holder binding üsulunun holder assurance səviyyəsinə (T1/T2/T3) uyğunluğu verilir.
 translation_of: SPEC-PROTO-0001
@@ -145,6 +145,7 @@ kanaldan (OBS sessiyası daxilində) verilir.
 | `vct` | Qeydiyyatdan keçmiş sxem olmalıdır ([[SPEC-SCHEMA-0001]]) |
 | Konfiqurasiya identifikatoru və `scope` | Hər ikisi sənəd növünün `vct` URN-idir (`urn:tamga:edu:DiplomaCredential:1`); ayrıca konfiqurasiya adı və ya qısa scope adı yoxdur. Rəqəmsal cüzdan [[t:PAR]]-da növü `scope` ilə tələb edir ([[t:HAIP]] §4.3) |
 | `display` (sənəd verən) | Qurumun imzalı etibar siyahısındakı **qeydiyyatlı adı** (`legal_name`; lokalsız giriş) və varsa dillər üzrə xidmət təsvirləri (`service_description`, BCP 47 açarı → `locale` + `description`). Sənəd növünün adı və ya sabit bir dil yazılmır; `credential_metadata.display` növ kataloqundan gəlir (bu nümunədə `claims` yoxdur: sahə siyahısı növ metadata-sındadır, burada təkrarlanmır) |
+| `display[].locale` (OpenID4VCI 1.0 §12.2.4; 2026-11-04) | BCP 47 (RFC 5646) etiketi **kanonik formada** yazılır (`en-us` → `en-US`, `TR` → `tr`; `Intl.getCanonicalLocales`). Forması pozulmuş (`en_US`), dil alt etiketi qeydiyyatsız (`xx`, `und`) və ya regionu naməlum etiketli giriş yazılmır, dil uydurulmur; eyni dilə çıxan iki girişdən birincisi qalır. **Tam ICU qeydi:** dil və region etibarlılığı `Intl.DisplayNames` ilə yoxlanılır; bu, iş mühitində tam ICU məlumatı tələb edir (Node.js rəsmi yığımları tam ICU ilə gəlir). Kiçik ICU-lu (`small-icu`, `--with-intl=none`) yığımda etibarlı dillər tanınmaya və görünüş girişləri səssizcə düşə bilər — sənəd verən xidmət tam ICU-lu Node ilə işlədilməlidir |
 | `nonce_endpoint` | **Məcburi** — Tamga həmişə `c_nonce` tələb edir |
 | `deferred_credential_endpoint`, `notification_endpoint` | **Elan edilmir** — bu gün hər iki uc yoxdur (§9, §10) |
 | `batch_credential_issuance.batch_size` | **10** (§8) |

@@ -346,10 +346,14 @@ export class ListTrustSource implements TrustSource {
     return { listed: true, provider_id: providerId, ...rec, ...solution, ...listMeta };
   }
 
+  /**
+   * Grup kimliği bütün listelerde TEK olmalı: aynı `group_id` birden çok doğrulayıcı kaydında (ör. iki ülke listesinde) görünürse
+   * hangisinin kapısı olduğu belirsizdir — kapı kapalı (null; 2026-11-04). Yayıncı kendi listesinde tekrarı zaten reddeder.
+   */
   terminalGroup(groupId: string): TerminalGroupAnswer | null {
     if (this.unhealthy()) return null;
-    for (const a of this.terminalGroupsAll()) if (a.group.group_id === groupId) return a;
-    return null;
+    const hits = this.terminalGroupsAll().filter((a) => a.group.group_id === groupId);
+    return hits.length === 1 ? hits[0] : null;
   }
   terminalGroupByCertFingerprint(fp: string): TerminalGroupAnswer | null {
     if (this.unhealthy()) return null;
@@ -379,12 +383,15 @@ export class ListTrustSource implements TrustSource {
       }
     return out;
   }
-  /** Kapı grubunun kurumu listede ACTIVE mi (belge veren `slug` ya da doğrulayıcı `dns_name`). */
+  /**
+   * Kapı grubunun kurumu listede ACTIVE mi (belge veren `slug` ya da doğrulayıcı `dns_name`). `slug` ülke listesi başınadır: aynı
+   * `slug` birden çok belge veren kaydında (ör. iki ülke listesinde) görünürse kurum belirsizdir — kapalı (false; 2026-11-04).
+   */
   private institutionActive(id: string): boolean {
     const rp = this.store.relying_parties_by_dns.get(id.toLowerCase());
     if (rp) return rp.status === "ACTIVE";
-    for (const i of this.store.issuers.values()) if (i.slug === id) return i.status === "ACTIVE";
-    return false;
+    const hits = [...this.store.issuers.values()].filter((i) => i.slug === id);
+    return hits.length === 1 && hits[0].status === "ACTIVE";
   }
 
   walletProviderMinKeyStorage(fp: string): string | null {

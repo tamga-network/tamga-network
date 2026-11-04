@@ -340,14 +340,18 @@ describe("BranchSet — yumuşak ret (RQ2), denemeler (RQ4), kilit (PV10)", () =
     expect(dc.set.failedAttempt().presentationRejected).toBe(true);
   });
 
-  it("kilit çözmeden önce: işlenirken ikinci yanıt/ret busy; çözme sırasında kapanan dal isOpen ile yakalanır; atılan dal gone", async () => {
+  it("kilit DAL BAŞINA, çözmeden önce: aynı dala ikinci yanıt busy, başka dal ve DC API yolu işlenebilir; çözme sırasında kapanan dal isOpen ile yakalanır; atılan dal gone", async () => {
     const h = harness({ limits: { softCap: 2, hardCap: 2 } });
     const a = await h.fetchOk();
     const b = await h.fetchOk();
     expect(h.set.begin(a.branch)).toBe("ok");
     expect(h.set.busy).toBe(true);
-    expect(h.set.begin(b.branch)).toBe("busy"); // ikinci yanıt
-    expect(h.set.begin()).toBe("busy"); // DC API yolu
+    expect(h.set.begin(a.branch)).toBe("busy"); // aynı dala ikinci yanıt
+    expect(h.set.begin(b.branch)).toBe("ok"); // başka dal (gerçek cüzdan) beklemez — 2026-11-04
+    h.set.end(b.branch);
+    expect(h.set.begin()).toBe("ok"); // DC API yolu: kendi kilidi (sunum başına)
+    expect(h.set.begin()).toBe("busy");
+    h.set.end();
     // kilit tutulurken sert tavanda yeni çekim işlenen dalı atmaz, ötekini atar
     const c = await h.fetchOk();
     expect(c.evicted?.branchId).toBe(b.branch.branchId);
@@ -365,5 +369,33 @@ describe("BranchSet — yumuşak ret (RQ2), denemeler (RQ4), kilit (PV10)", () =
     expect(h.set.isOpen(d.branch)).toBe(false);
     h.set.end(d.branch);
     expect(h.set.begin(d.branch)).toBe("used");
+  });
+
+  it("kabul atomik (tryConsume): iki dal eşzamanlı işlenir, yalnız ilki sunumu tamamlar; sahte dalın yavaş yanıtı gerçek dalı engellemez", async () => {
+    const h = harness();
+    const atk = await h.fetchOk();
+    const real = await h.fetchOk();
+    expect(h.set.begin(atk.branch)).toBe("ok"); // saldırganın yanıtı işleniyor (yavaş)
+    expect(h.set.begin(real.branch)).toBe("ok"); // gerçek cüzdanın yanıtı 400 almaz
+    expect(h.set.tryConsume()).toBe(true); // gerçek yanıt kabul
+    h.set.end(real.branch);
+    expect(h.set.isOpen(atk.branch)).toBe(false);
+    expect(h.set.tryConsume()).toBe(false); // ikinci kabul yok
+    h.set.end(atk.branch);
+    expect(h.set.busy).toBe(false);
+  });
+
+  it("declineBlocked: kendi dalının yanıtı işlenirken ret 400; tek çekimde başka yanıt işlenirken ret sunumu kapatamaz; çok çekimde başka dalın yanıtı reti engellemez", async () => {
+    const h = harness();
+    const a = await h.fetchOk();
+    expect(h.set.begin()).toBe("ok"); // DC API yanıtı işleniyor
+    expect(h.set.declineBlocked(a.branch)).toBe(true); // tek çekim: ret sunumu kapatırdı
+    h.set.end();
+    expect(h.set.declineBlocked(a.branch)).toBe(false);
+    const b = await h.fetchOk();
+    expect(h.set.begin(b.branch)).toBe("ok");
+    expect(h.set.declineBlocked(a.branch)).toBe(false); // yalnız kendi dalını kapatır
+    expect(h.set.declineBlocked(b.branch)).toBe(true); // kendi yanıtı işleniyor
+    h.set.end(b.branch);
   });
 });

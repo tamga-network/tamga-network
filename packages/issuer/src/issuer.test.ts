@@ -120,7 +120,13 @@ describe("status list (SPEC-CRED-0003)", () => {
 
 describe("OpenID4VCI yardımcıları (SPEC-PROTO-0001)", () => {
   it("offer: on-screen 5 dk, tek kullanımlık, tx_code zorunlu, 3 deneme", () => {
-    const o = createOffer({ slug: "example-university", subjectRef: "s-1", vct: DIPLOMA.vct, klass: "on-screen", now: NOW });
+    const o = createOffer({
+      slug: "example-university",
+      subjectRef: "s-1",
+      vct: DIPLOMA.vct,
+      klass: "on-screen",
+      now: NOW,
+    });
     expect(o.expiresAt - o.createdAt).toBe(300);
     expect(redeemOffer(o, o.preAuthorizedCode, undefined, NOW)).toEqual({ ok: false, error: "invalid_request" });
     expect(redeemOffer(o, o.preAuthorizedCode, "000000" === o.txCode ? "111111" : "000000", NOW)).toEqual({
@@ -130,7 +136,13 @@ describe("OpenID4VCI yardımcıları (SPEC-PROTO-0001)", () => {
     const ok = redeemOffer(o, o.preAuthorizedCode, o.txCode, NOW);
     expect(ok.ok).toBe(true);
     expect(redeemOffer(o, o.preAuthorizedCode, o.txCode, NOW)).toEqual({ ok: false, error: "offer_used" });
-    const o2 = createOffer({ slug: "example-university", subjectRef: "s-1", vct: DIPLOMA.vct, klass: "out-of-band", now: NOW });
+    const o2 = createOffer({
+      slug: "example-university",
+      subjectRef: "s-1",
+      vct: DIPLOMA.vct,
+      klass: "out-of-band",
+      now: NOW,
+    });
     expect(o2.expiresAt - o2.createdAt).toBe(72 * 3600);
     for (let i = 0; i < 3; i++)
       redeemOffer(o2, o2.preAuthorizedCode, "999999" === o2.txCode ? "000001" : "999999", NOW);

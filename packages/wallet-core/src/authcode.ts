@@ -87,6 +87,11 @@ export interface AuthStart {
   as: AuthServerMetadata;
   /** PAR'da kullanılan WIA (AB TS3 §2.4.2: kurumun bakım süresi tercihine göre yenilenmiş olabilir) — token isteği de bunu kullanır */
   wua?: WuaRecord;
+  /**
+   * ADR-0068 WRS4: belge verenin kayıt sertifikasının durumu denetlenemedi (liste alınamadı, önbellek yok ya da süresi geçti).
+   * Belge istenir ama uygulama kişiyi uyarmalıdır. İptal edilmişse `startAuthorized` zaten hata verir.
+   */
+  registrationStatusUnknown?: true;
 }
 export interface StartInput {
   issuer: string;
@@ -146,11 +151,13 @@ export function companionScopes(md: IssuerMetadata, vct: string): string[] {
 /** PAR: cüzdan istediği tipi, redirect_uri'sini ve PKCE meydan okumasını issuer'a iletir; authorize URL'i döner. */
 export async function startAuthorized(p: StartInput): Promise<AuthStart> {
   const nowMs = p.now !== undefined ? p.now * 1000 : Date.now(); // p.now saniye; metadata/kayıt denetimi milisaniye
+  let registrationStatusUnknown = false;
   const md =
     p.metadata ??
     (await fetchIssuerMetadata(p.issuer, p.http, { signerFingerprints: p.signerFingerprints, now: nowMs }));
   if (p.registrarKeys) {
-    // ADR-0068 K5: kayıt sertifikası iptal edilmişse belge istenmez (ARF §6.6.3.3); durum listesi yoksa uyarısız devam
+    // ADR-0068 K5: kayıt sertifikası iptal edilmişse belge istenmez (ARF §6.6.3.3). Durum denetlenemezse (liste alınamadı,
+    // önbellek yok) belge istenir ama sonuç `registrationStatusUnknown` taşır: uygulama kişiyi uyarır (WRS4)
     const refs = issuerRegistrationStatusRefs(md as { issuer_info?: unknown }, p.registrarKeys, epochMillis(nowMs));
     const statuses = refs.length
       ? await fetchRegistrationStatuses(refs, p.http, p.registrarKeys, {
@@ -166,6 +173,7 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
       statuses,
     );
     if (!reg.valid) throw new WalletError("unsupported", `issuer registration: ${reg.reason}`);
+    if (reg.statusUnknown) registrationStatusUnknown = true;
   }
   const cfg = md.credential_configurations_supported[p.vct];
   if (!cfg || cfg.format !== "dc+sd-jwt") throw new WalletError("unsupported", `tip desteklenmiyor: ${p.vct}`);
@@ -230,6 +238,7 @@ export async function startAuthorized(p: StartInput): Promise<AuthStart> {
     metadata: md,
     as,
     ...(wua !== p.wua ? { wua } : {}),
+    ...(registrationStatusUnknown ? { registrationStatusUnknown: true as const } : {}),
   };
 }
 

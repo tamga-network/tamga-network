@@ -103,11 +103,11 @@ export type WiaListStatus = "valid" | "suspended" | "revoked";
  * yalnız 0 geçerlidir; 1 iptal, 2 askıda, 3 (uygulamaya özgü / tanımsız) iptal sayılır (belge durumuyla aynı kural,
  * `credentialStatusFrom`). İmzalı liste girişten kısaysa giriş yok (sağlayıcının listesi yeniden kuruldu): iptal değil — bunu ancak
  * listenin kayıtlı imzacısı söyleyebilir; o imzacı zaten biti 0 da yazabilir, güvence azalmaz. Sınır listenin bit genişliğine göre
- * hesaplanır (1 bit → bayt başına 8 giriş, 2 bit → 4): sabit "×4" 1 bitlik listede son yarıdaki iptal edilmiş girişleri "iptal
+ * hesaplanır (`8 / bits`: 1 bit → bayt başına 8 giriş, 2 bit → 4, 4 bit → 2, 8 bit → 1): sabit "×4" 1 bitlik listede son yarıdaki iptal edilmiş girişleri "iptal
  * değil" okurdu.
  */
 export function wiaStatusInList(list: Pick<StatusList, "bits" | "bytes">, idx: number): WiaListStatus {
-  const perByte = 8 / (list.bits === 1 ? 1 : 2);
+  const perByte = 8 / list.bits;
   if (idx >= list.bytes.length * perByte) return "valid";
   const v = statusBitAt(list as StatusList, idx);
   if (v === 0) return "valid";

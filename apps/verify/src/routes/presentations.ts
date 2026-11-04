@@ -242,9 +242,10 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       // Hız sınırı ÇEKİM DALI başına (kontrol 2026-11-03): `state` yalnız o dalın istek nesnesinde geçti; başka dala sel gerçek
       // cüzdanın dalını durdurmaz
       if (rateLimited(ctx.limits.vpResponse, `b:${pid}.${branch.branchId}`, reply)) return reply;
-      // Bir yanıt doğrulanırken gelen ret sonucu çeviremez: kabul tek yönlü durum değişikliğidir (PV10, §10.1). Ret eşzamanlıdır
-      // (await yok): kilit denetimi yeter. Kapanmış dala ikinci ret 200 (değişiklik yok).
-      if (p.branches.busy)
+      // Bir yanıt doğrulanırken gelen ret sonucu çeviremez: kabul tek yönlü durum değişikliğidir (PV10, §10.1). Kilit dal başınadır
+      // (2026-11-04): ret yalnız kendi dalının yanıtı işlenirken ya da sunumu bütünüyle kapatacakken (tek çekim) başka bir yanıt
+      // işlenirken bekletilir. Ret eşzamanlıdır (await yok). Kapanmış dala ikinci ret 200 (değişiklik yok).
+      if (p.branches.declineBlocked(branch))
         return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
       return declineBranch(p, pid, branch, body.error);
     }
@@ -270,7 +271,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     // kendi dalına sel göndererek gerçek cüzdanın dalını 429'a düşüremez. Dalsız DC API yolunda kova sunum başına kalır
     // (tek anahtar). Bilinmeyen kimlikler jeton harcamaz (güvenlik turu 2026-10-19).
     if (rateLimited(ctx.limits.vpResponse, branch ? `b:${pid}.${branch.branchId}` : `p:${pid}`, reply)) return reply;
-    // Tek kullanım kilidi ÇÖZMEDEN ÖNCE (PV10; iki yol dahil): eşzamanlı ikinci yanıt ya da ret işlenmez, işlenen dal atılmaz
+    // Tek kullanım kilidi ÇÖZMEDEN ÖNCE (PV10), DAL BAŞINA (2026-11-04): aynı dala eşzamanlı ikinci yanıt ya da ret işlenmez,
+    // işlenen dal atılmaz; başka dalın (ör. QR'ı gören birinin) yavaş yanıtı gerçek cüzdanın yanıtını bekletmez. Dalsız DC API
+    // yolunun kilidi sunum başınadır. Kabul `tryConsume` ile atomiktir (eşzamanlı iki geçerli yanıttan yalnız ilki).
     const lock = p.branches.begin(branch);
     if (lock !== "ok")
       return reply.code(400).send({
@@ -328,9 +331,12 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
           .code(400)
           .send({ error: "invalid_request", error_description: "error responses are not sent on this path" });
       if (!stateIs(opened.state)) return failedAttempt(p, pid, reply, null, "state mismatch", branch);
+      if (p.branches.declineBlocked(branch, { holdingLock: true }))
+        return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
       return declineBranch(p, pid, branch, opened.error);
     }
     const dec = opened.response;
+    let mine = false; // sunumu BU yanıt mı tamamladı (eşzamanlı başka dal önce tamamlamış olabilir)
     try {
       const stateMatched = stateIs(dec.state);
       p.trace.push({
@@ -386,7 +392,11 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
           out.result.failed_reason ?? out.result.outcome,
           branch,
         );
-      p.branches.consume(); // sahiplik kanıtı geçti: sunum bu yanıtla tamamlanır (B–E sonucu ne olursa olsun; PV10)
+      // sahiplik kanıtı geçti: sunum bu yanıtla tamamlanır (B–E sonucu ne olursa olsun; PV10) — atomik: eşzamanlı başka dal önce
+      // tamamladıysa bu yanıt kabul edilmez
+      if (!p.branches.tryConsume())
+        return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
+      mine = true;
       // ADR-0056 K9: geçiş kartı yalnız verifyPresentation'ın kendi kabul çıktısından (aşağıda `out` yeniden kurulabilir)
       const verified = out;
       // ADR-0031 PS5: takma ad — imza, aud, nonce, site, iptal edilmemiş cüzdan örneği (WIA). Değer yalnız claims'e (HV3).
@@ -476,8 +486,12 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       // yanıtla (şifreli yanıtı gönderen cüzdana) gider
       return { redirect_uri: walletRedirectUri(p, pid, out.result.outcome), ...extra };
     } catch (e) {
-      // beklenmeyen hata (bozuk gövde vb.): sahiplik kanıtına ulaşmadıysa deneme; ulaştıysa sunum kapanır
-      if (!p.branches.used) return failedAttempt(p, pid, reply, null, (e as Error).message, branch);
+      // beklenmeyen hata (bozuk gövde vb.): sahiplik kanıtına ulaşmadıysa deneme; ulaştıysa sunum kapanır. Sunumu başka bir yanıt
+      // tamamladıysa onun sonucu ezilmez
+      if (!mine) {
+        if (!p.branches.used) return failedAttempt(p, pid, reply, null, (e as Error).message, branch);
+        return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
+      }
       p.trace.push({ t: Date.now(), step: "Response could not be processed", detail: (e as Error).message });
       p.result = rejectedResult(pid, (e as Error).message, ctx);
       p.resultAt = Date.now();
@@ -499,8 +513,6 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     // dalsız yol: kova sunum başına (yanıt yalnız sayfanın ilettiği tek anahtarla gelir)
     if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
     const response = (req.body as { response?: unknown } | undefined)?.response;
-    if (p.branches.busy)
-      return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
     let opened: ReturnType<typeof openMdocDcApiResponse>;
     try {
       opened = openMdocDcApiResponse(response, p.mdocDc);
@@ -512,12 +524,15 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       step: "Response decrypted (HPKE P-256/AES-128-GCM, ISO/IEC 18013-7 Annex C, via browser Digital Credentials API)",
     });
     if ("refused" in opened) {
-      // cüzdan belge vermedi (ISO 18013-5 DeviceResponse status): kişinin reddi — sunum kapanır, neden saklanmaz (PV5)
-      p.branches.consume();
+      // cüzdan belge vermedi (ISO 18013-5 DeviceResponse status): kişinin reddi — sunum kapanır, neden saklanmaz (PV5). İşlenmekte
+      // olan bir yanıt varken ret sonucu çeviremez (PV10)
+      if (p.branches.busy || !p.branches.tryConsume())
+        return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
       p.result = rejectedResult(pid, "the wallet returned no document", ctx, null);
       p.resultAt = Date.now();
       p.trace.push({ t: Date.now(), step: "Wallet declined" });
-      return { redirect_uri: `${cfg.publicBase}/p/${pid}?st=${encodeURIComponent(p.statusToken)}` };
+      // RQ3: retin `redirect_uri`'si durum jetonu taşımaz (sayfa jetonu zaten tutar; ret veriye ya da sonuca erişim vermez)
+      return { redirect_uri: `${cfg.publicBase}/p/${pid}` };
     }
     // dalsız yol (DC API): kilit ve deneme sınırı sunum başına (RQ6)
     if (p.branches.begin() !== "ok")
@@ -549,7 +564,8 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     // sahiplik kanıtına (cihaz imzası, A6) ulaşmayan yanıt sunumu tüketmez (/vp/response ile aynı kural)
     if (!holderBound(out.result))
       return failedAttempt(p, pid, reply, out.result.failed_step, out.result.failed_reason ?? out.result.outcome);
-    p.branches.consume();
+    if (!p.branches.tryConsume())
+      return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     p.result = out.result;
     p.claims = out.claims;
     p.resultAt = Date.now();

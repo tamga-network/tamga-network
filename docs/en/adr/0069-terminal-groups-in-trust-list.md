@@ -15,7 +15,7 @@ summary: >
   the gate. The field and the reader for certificate-based gate identity are ready; gates authenticate with terminal keys today
   (ADR-0065). Accepted: 2026-10-29 (general approval to finish ADR-0065).
 domain: Protocol
-related: ["[[ADR-0012]]", "[[ADR-0038]]", "[[ADR-0065]]", "[[SPEC-TRUST-0001]]", "[[SPEC-API-0001]]", "[[FW-RB-0006]]"]
+related: ["[[ADR-0012]]", "[[ADR-0038]]", "[[ADR-0065]]", "[[SPEC-TRUST-0001]]", "[[SPEC-API-0001]]", "[[FW-RB-0004]]"]
 translation_of: ADR-0069
 source_version: 1.0.0
 ---
@@ -122,7 +122,7 @@ cinema operator → `event-ticket`). The demo gate's public environment keys kee
   (`terminal-keys.ts` institution and last use, `institutionToken`; `routes/terminal.ts` institution-scoped endpoints and the list
   check at the gate); the Institution Console "Gate terminals" screen (operator repository).
 - Documents: [[SPEC-TRUST-0001]] §4 (verifier record), [[SPEC-API-0001]] §6.4, the trust list API definition, the verifier
-  registration guide and the sandbox guide §6, [[FW-RB-0006]] §4.3; [[ADR-0065]] K2 and K5 are completed by this decision.
+  registration guide and the sandbox guide §6, [[FW-RB-0004]] §4.3; [[ADR-0065]] K2 and K5 are completed by this decision.
 - Packages: 0.7.4 (on npm 2026-10-29) (the new reader is optional; older lists keep loading).
 - **Implementation note (0.7.4, 2026-10-29):** TG3 is implemented fail-closed. "List stale" and "group not in the list" are
   told apart (`freshness().healthy`): a key bound to an institution, or a group once seen in the list, that the list cannot

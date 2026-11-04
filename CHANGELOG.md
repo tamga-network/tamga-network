@@ -4,6 +4,63 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.8.0` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
+## Unreleased
+
+No breaking change; all additions are optional fields or methods.
+
+### Added
+
+- **verifier — `BranchSet.tryConsume()` and `BranchSet.declineBlocked(branch)`.** `tryConsume` completes the presentation
+  atomically and returns `false` when another response already did (use it instead of `consume` when accepting);
+  `declineBlocked` tells whether a decline must wait (its own branch's response is being processed, or the decline would close a
+  single-fetch presentation while another response is being processed).
+- **verifier — `aud` may be omitted on the Digital Credentials API path.** For `dc+sd-jwt`, when `origin` is given and `aud` is
+  not, `verifyPresentation` derives `origin:<origin>` (OpenID4VP 1.0 Annex A.4). `VerifyInput.aud` is now optional; without
+  `origin` it is still required (A1).
+- **wallet-core — `AuthStart.registrationStatusUnknown`.** `startAuthorized` reports `true` when the issuer's registration
+  certificate status could not be checked (no list, no unexpired cached copy); the app warns the person (ADR-0068 WRS4). A revoked
+  certificate still throws.
+- **trust-publisher — `history-reset` (sandbox only).** Cleans the sandbox publication's history: each list keeps only its current
+  version in the archive, the public changelog restarts, retired registration-certificate paths are anonymised. Current lists,
+  version numbers, the version chain and status bits are unchanged; refused on the real network.
+
+### Changed
+
+- **verifier — the single-use lock is per request branch (ADR-0067, note 2026-11-04).** `BranchSet.begin(branch)` locks only that
+  branch; another branch's response can be processed at the same time and acceptance is decided by `tryConsume`. Before, one
+  slowly processed response on an attacker's branch made the real wallet's response get "a response is being processed" (400).
+  The branch-less Digital Credentials API path keeps one lock per presentation. `busy` still means "any response in progress".
+- **verifier — a mismatching `aud` on the Digital Credentials API path is rejected at A1** with an explicit message (was: a
+  generic "aud mismatch" at A6).
+- **wallet-core — registration-certificate scope for mdoc compares namespace + element.** `allowedClaims` lists only elements
+  whose `[namespace, element]` path in the certificate matches the request's namespace (OpenID4VP and proximity); an element of
+  the same name in another namespace counts as over-asking.
+- **trust — ambiguous gate groups are closed.** `terminalGroup(id)` returns `null` when the same `group_id` appears in more than
+  one verifier record (e.g. two national lists); a group whose `institution_id` slug matches more than one issuer record is not
+  active.
+- **Tamga Verify / sandbox list — sandbox gate group ids are fictional.** Sandbox test institutions and their gate groups are
+  `example-university-campus`, `example-events-gate`, `example-cinema-gate` (also the defaults of `TAMGA_VERIFY_CAMPUS_GROUP` /
+  `TAMGA_VERIFY_TICKET_GROUP`); sandbox terminals paired with the previous group ids must be paired again.
+- **contracts — `VersionNotMonotonic` is declared once in `ITamgaErrors`** (shared by `IStatusListRegistry` and
+  `ITrustListAnchorRegistry`; same selector; the anchor registry ABI's first parameter is now named `current`).
+
+### Fixed
+
+- **Tamga Verify — ISO/IEC 18013-7 Annex C decline carries no status token (ADR-0067 RQ3).** The `redirect_uri` returned for a
+  declined `org-iso-mdoc` response is the bare result page; a decline while another response is being processed gets 400.
+- **Tamga Verify — a response whose processing fails after another branch completed the presentation no longer overwrites the
+  result.**
+- **wallet-core — `wiaStatusInList` list bound is `8 / bits`.** 4- and 8-bit lists no longer treat entries past the list as
+  inside it (which threw "idx outside the list").
+
+### Documents
+
+- SPEC-PROTO-0002 PV7 and §7.1 (Digital Credentials API `origin:` audience, also for signed requests), §7.4 (Annex C decline);
+  SPEC-PROTO-0001 §2.1 `display[].locale` canonicalisation (full ICU note); SPEC-CRED-0002 Ş5(g) forbidden claim names
+  (`__proto__`, `constructor`, `prototype`); SPEC-CRED-0003 §3.3 `0x03` is APPLICATION_SPECIFIC and read fail-closed;
+  ADR-0067 K1 note on `request_uri_method` and residual-risk note on the per-branch lock; hosted verifier OpenAPI (Annex C
+  decline).
+
 ## 0.8.0 — 2026-11-03
 
 All nine packages move to 0.8.0 together (minor bump: one interface default changed). The code changes below come from the
@@ -46,7 +103,7 @@ is behaviour that now fails closed.
   wallet's branch.
 - **wallet-core — registration-certificate status cache never rolls back.** `fetchRegistrationStatuses` keeps the cached list when
   a freshly fetched valid list is older than it (`iat` smaller: a stale proxy or a rolled-back publication) and does not overwrite
-  the cache; `StatusList` exposes `iat`. A revocation once seen cannot disappear.
+  the cache; `StatusList` exposes `iat`. A revocation once seen cannot disappear while the cached list has not expired.
 - **trust-publisher — old registration status lists keep following their entries (WRS3).** After a registrar's `status_list_uri`
   changes, VALID entries of the previous lists are revoked with the publication: `registration_ended` when the old path is no
   longer published, `superseded` when its content changed; unchanged content stays valid.

@@ -27,6 +27,8 @@ import {
   type StoredCredential,
 } from "./index.js";
 import { epochMillis } from "@tamga-network/core";
+import { startAuthorized } from "./authcode.js";
+import { MemoryKeyStore, SoftwareKeyProvider } from "./keys.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
@@ -309,5 +311,75 @@ describe("kayıt sertifikası durumu (ADR-0068 K5)", () => {
       valid: true,
       statusUnknown: true,
     });
+  });
+
+  it("WRS4: startAuthorized durum denetlenemezse belgeyi ister ama `registrationStatusUnknown` taşır; durum geçerliyse taşımaz", async () => {
+    const ISS = "https://issuer.example/uni";
+    const md = {
+      credential_issuer: ISS,
+      credential_configurations_supported: { "urn:x:1": { format: "dc+sd-jwt", vct: "urn:x:1" } },
+      issuer_info: [
+        {
+          format: "registration_cert",
+          data: await sign(registrar, "rc-wrp+jwt", {
+            ...payload(),
+            credentials: undefined,
+            provides_attestations: [{ format: "dc+sd-jwt", meta: { vct_values: ["urn:x:1"] } }],
+          }),
+        },
+      ],
+    };
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    await keys.generate("wia");
+    const wua = {
+      jwt: "h.p.s",
+      sub: "wallet-instance",
+      exp: nowSec + 86400,
+      keyRef: "wia",
+      keyStorage: "software" as const,
+      solutionId: "test",
+      provider: "https://provider.example",
+    };
+    const httpWith =
+      (statusBody: string | null): Http =>
+      async (url) => {
+        if (url === URI)
+          return statusBody === null
+            ? Promise.reject(new Error("offline"))
+            : { status: 200, text: async () => statusBody };
+        if (url.includes("/.well-known/oauth-authorization-server"))
+          return {
+            status: 200,
+            text: async () =>
+              JSON.stringify({
+                issuer: ISS,
+                pushed_authorization_request_endpoint: `${ISS}/par`,
+                authorization_endpoint: `${ISS}/authorize`,
+                token_endpoint: `${ISS}/token`,
+              }),
+          };
+        if (url === `${ISS}/par`)
+          return { status: 201, text: async () => JSON.stringify({ request_uri: "urn:par:1" }) };
+        throw new Error(`beklenmeyen istek ${url}`);
+      };
+    const start = (http: Http) =>
+      startAuthorized({
+        issuer: ISS,
+        vct: "urn:x:1",
+        redirectUri: "tamga-wallet://cb",
+        keys,
+        http,
+        wua,
+        randomBytes: (n) => new Uint8Array(n).fill(7),
+        now: nowSec,
+        metadata: md as never,
+        registrarKeys: [registrar.fp],
+      });
+    const unknown = await start(httpWith(null));
+    expect(unknown.registrationStatusUnknown).toBe(true);
+    expect(unknown.requestUri).toBe("urn:par:1");
+    const ok = await start(httpWith(await statusToken(registrar, [])));
+    expect(ok.registrationStatusUnknown).toBeUndefined();
+    await expect(start(httpWith(await statusToken(registrar, [5])))).rejects.toThrow(/revoked/);
   });
 });

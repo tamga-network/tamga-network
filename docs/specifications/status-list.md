@@ -209,7 +209,7 @@ Durum değerleri ve Tamga karşılıkları:
 | `0x00` | VALID | Geçerli |
 | `0x01` | INVALID | **Kalıcı iptal** — geri dönüşü yok |
 | `0x02` | SUSPENDED | **Geçici askı** — geri alınabilir |
-| `0x03` | (ayrılmış) | Tamga'da kullanılmaz |
+| `0x03` | APPLICATION_SPECIFIC (uygulamaya özgü; IETF Token Status List) | Tamga **yazmaz**. Okunursa anlamı bilinmediği için kapalı güvenli değerlendirilir: doğrulayıcıda RED (Ş9), cüzdanda ve WIA listesinde iptal sayılır. 4 ya da 8 bitlik bir listede `0x03`'ten büyük her değer (öteki uygulamaya özgü ve ayrılmış değerler) aynı kuralla okunur (2026-11-04) |
 
 **Askı neden gerekli (izin veren türlerde):** Bir diploma hakkında intihal soruşturması açıldığında
 kurum belgeyi kalıcı iptal etmek istemez — soruşturma sonuçlanana kadar askıya

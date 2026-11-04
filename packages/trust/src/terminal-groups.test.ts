@@ -114,4 +114,19 @@ describe("ADR-0069 terminal_groups", () => {
     expect(stale.terminalGroup("example-events-gate")).toBeNull();
     expect(stale.terminalGroupByCertFingerprint(FP)).toBeNull();
   });
+
+  it("2026-11-04: aynı group_id iki doğrulayıcı kaydında (iki ülke listesi) ya da kurumun slug'ı iki belge veren kaydında → kapı kapalı", () => {
+    // aynı grup kimliği TR ve AZ listesindeki iki doğrulayıcıda: hangisinin kapısı belirsiz → null
+    const dup = source([rp("verify.tamga.network", "ACTIVE", [gate]), rp("verify.az.example", "ACTIVE", [gate])]);
+    expect(dup.terminalGroup("example-events-gate")).toBeNull();
+    // grubun kurumu (slug) iki ülke listesindeki iki belge verende aynı: kurum belirsiz → grup etkin değil
+    const store = new TrustStore();
+    store.relying_parties_by_dns.set("verify.tamga.network", rp("verify.tamga.network", "ACTIVE", [gate]));
+    store.issuers.set("iss-tr", { slug: "example-events", status: "ACTIVE" } as unknown as Issuer);
+    store.issuers.set("iss-az", { slug: "example-events", status: "ACTIVE" } as unknown as Issuer);
+    store.setFreshness({ source: "list", healthy: true, lotlVersion: 1, anchorsSeq: 1, loadedAt: NOW });
+    const ambiguous = new ListTrustSource(store, () => NOW);
+    expect(ambiguous.terminalGroup("example-events-gate")?.active).toBe(false);
+    expect(ambiguous.terminalGroupByCertFingerprint(FP)).toBeNull();
+  });
 });

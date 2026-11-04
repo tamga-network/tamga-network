@@ -4,7 +4,7 @@ title: "SD-JWT VC profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-11-04
 summary: >
   Tamga rəqəmsal sənədinin baytlarını müəyyən edir. Disclosure necə yaradılır (salt, massiv strukturu, JSON seriyalaşdırma qaydası, base64url), _sd massivi necə doldurulur və niyə sıralanır, decoy digest siyasəti, _sd_alg, cnf və x5c yerləşməsi, ~ ayırıcılı birləşik format, KB-JWT-nin sd_hash hesablanması və on addımlı yoxlama alqoritmi. SPEC-SCHEMA-0002-dəki diplom nümunəsi əvvəldən sona qədər real baytlarla işlənir. Tamga profili normativ məhdudiyyətlər qoyur: ES256 məcburidir, _sd_alg sha-256-dır, KB-JWT istisnasız məcburidir, decoy qadağandır.
 translation_of: SPEC-CRED-0002
@@ -536,6 +536,9 @@ ardıcıllıq [[SPEC-API-0001]] sənədində birləşdirilir.
        d) Array does not have 3 elements → REJECT
        e) Salt < 128 bits → REJECT
        f) Claim name already present in the clear in the payload → REJECT (collision)
+       g) Claim name forbidden → REJECT (2026-11-04): reserved names (`iss`, `vct`, `cnf`, `status`, …), mechanism names
+          (`_sd`, `_sd_alg`, `...`) and the JavaScript prototype names `__proto__`, `constructor`, `prototype` — these names
+          cannot be used at issuance either (prototype pollution: a decoded value could change the object's prototype)
 
 Ş6.  The same digest claimed by two disclosures → REJECT.
 

@@ -140,9 +140,9 @@ describe("HAIP-1 (a) RFC 9207 iss", () => {
     );
   });
   it("doğru iss denetimi geçer (sonraki adımlar bu testte sahte olduğu için başka bir hatayla durur)", async () => {
-    const e = await run("tamga-wallet://cb?code=c&state=st&iss=https%3A%2F%2Fissuer.tamga.network%2Fexample-university").catch(
-      (x: Error) => x,
-    );
+    const e = await run(
+      "tamga-wallet://cb?code=c&state=st&iss=https%3A%2F%2Fissuer.tamga.network%2Fexample-university",
+    ).catch((x: Error) => x);
     expect(String((e as Error).message)).not.toMatch(/iss does not match/);
     // sunucu iss ilan etmiyor ve yanıtta iss yoksa denetim atlanır (eski issuer'larla uyum)
     const e2 = await run("tamga-wallet://cb?code=c&state=st", false).catch((x: Error) => x);

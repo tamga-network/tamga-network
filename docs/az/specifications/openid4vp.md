@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdandan yoxlayan tərəfə necə təqdim edildiyini müəyyən edir. OpenID4VP 1.0 Final üzərində Tamga profili: DCQL sorğuları (Presentation Exchange İSTİFADƏ EDİLMİR), imzalı sorğu obyekti, cavabın şifrələnməsi, brauzerdə Digital Credentials API. Əsas tapıntı: HAIP-in məcburi etdiyi `x509_hash` client identifier prefiksi base64url(SHA-256(DER)) dəyəridir — bu, zəncirdəki `RelyingParty.accessCertFingerprint` ilə TAM EYNİ BAYTLARDIR. Buna görə rəqəmsal cüzdan sorğudakı client identifier-dən birbaşa zəncir qeydini tapa və həddindən artıq tələb nəzarətini ([[SPEC-BC-0001]] §6) protokol səviyyəsində tətbiq edə bilər. Bundan əlavə, istənilməyən sahələrin aşkarlanması, təqdimatdan sonra istifadəçi jurnalı və cavabın şifrələnməsi qaydaları.
 translation_of: SPEC-PROTO-0002
@@ -461,6 +461,10 @@ güclü bağdır: saxta sayt öz origin-indən başqasını iddia edə bilməz.
 identifier kimi qəbul etmir; yalnız brauzerin verdiyi origin-i
 `aud` bağlamasında istifadə edir.
 
+**Yoxlayan tərəf (PV7, 2026-11-04):** Bu yolda SD-JWT VC təqdimatının KB-JWT `aud`-u imzalı sorğuda da `origin:` + səhifə
+mənşəyidir (OpenID4VP 1.0 Əlavə A.4), client identifier deyil. `verifyPresentation` `origin` verilib `aud` verilməyəndə bu dəyəri
+özü çıxarır; `aud` verilib fərqlidirsə, təqdimatı aydın mesajla A1-də rədd edir.
+
 ## 7.2 Zəncir qeydi ilə əlaqə
 
 DC API axınında `x509_hash` yoxdursa, həddindən artıq tələbin yoxlanılması (§6) aparıla bilməz.
@@ -492,7 +496,9 @@ təqdimat üçün ikinci DC API sorğusu verir (siyasət tək `mso_mdoc` rəqəm
   DHKEM(P-256, HKDF-SHA256) / HKDF-SHA256 / AES-128-GCM, `info` = transkript baytları, `aad` boş; açıq mətn `DeviceResponse`.
 - **Axın (host edilən yoxlayan tərəf):** `POST /presentations` (`dc_api_origin` ilə) `dc_api_requests` (OpenID4VP + Əlavə C) və
   `dc_mdoc_response_uri` qaytarır; səhifə cavabı bu ünvana ötürür (`POST /vp/dc-mdoc/{id}`, forma sahəsi `response`). Açıla bilməyən
-  cavab təqdimatı istifadə edilmiş saymır. Səhifə dəsti protokolu brauzerə görə seçir (Apple WebKit-ə yalnız `org-iso-mdoc`) və cavabı cavabın
+  cavab təqdimatı istifadə edilmiş saymır. Cüzdanın imtinası (sənədsiz, status kodu sıfır olmayan `DeviceResponse`) təqdimatı
+  REJECTED edir; bu cavabın `redirect_uri`-si sadə nəticə səhifəsidir (`/p/{id}`) — status tokeni və ya yoxlama görünüşü açarı
+  daşımır ([[ADR-0067]] RQ3). Səhifə dəsti protokolu brauzerə görə seçir (Apple WebKit-ə yalnız `org-iso-mdoc`) və cavabı cavabın
   protokoluna uyğun olaraq düzgün endpoint-ə ötürür. Masaüstündə DC API varsa, defolt yol odur; QR ehtiyat variant kimi yanında qalır (ETSI TS 119
   472-2 SUPPORT-03).
 - **Kod:** `@tamga-network/mdoc` (`createAnnexCRequest`, `parseAnnexCRequest`, `sealAnnexCResponse`, `openAnnexCResponse`,
@@ -631,7 +637,7 @@ sorğular göndərməklə istifadəçinin hansı rəqəmsal sənədlərə malik 
 | **PV4** | `origin` prefiksi sorğu daxilində client identifier kimi qəbul edilmir. |
 | **PV5** | Rədd səbəbi yoxlayan tərəfə sızmır. |
 | **PV6** | Sorğu obyekti imzalı olmalıdır (MUST); `redirect_uri` prefiksi rədd edilir. |
-| **PV7** | KB-JWT `aud` dəyəri client identifier-in tamamıdır (prefiks daxil). |
+| **PV7** | KB-JWT `aud` dəyəri client identifier-in tamamıdır (prefiks daxil); Digital Credentials API yolunda imzalı sorğuda da `origin:` + səhifə mənşəyidir (OpenID4VP 1.0 Əlavə A.4). |
 | **PV8** | Təqdimat qeydi cihazda qalır; serverə göndərilmir. |
 | **PV9** | Bir sorğuda ən çox 3 rəqəmsal sənəd, 2 `credential_sets`. |
 | **PV10** | `nonce` birdəfəlikdir; yoxlayan tərəf təkrar qəbul etmir. |

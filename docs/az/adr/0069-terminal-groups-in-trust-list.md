@@ -9,7 +9,7 @@ last_updated: 2026-11-04
 summary: >
   ADR-0012 K5-in nəzərdə tutduğu `terminal_groups[]` sahəsi yoxlayan tərəfin qeydində formalaşır: hər giriş qrupu `group_id`, `institution_id` (girişləri idarə edən qurum), `label`, `allowed_policies[]`, istəyə bağlı `cert_fingerprints[]` və `offline_allowed`, həmçinin etibarlılıq müddətini daşıyır. Tamga Verify qrupun qurumunu imzalı siyahıdan oxuyur: terminal açarını yalnız həmin qurum adından verir, qurum yalnız öz qruplarının açarlarını görür və ləğv edir (Qurum Konsolu, quruma məhdudlaşdırılmış tokenlə); siyahıda geri çəkilmiş qrupun açarı girişdə keçmir. Sertifikatlı giriş identifikasiyası üçün sahə və oxuyucu hazırdır; girişlər bu gün terminal açarı ilə gəlir (ADR-0065). Qəbul: 2026-10-29 (ADR-0065-in tamamlanması üçün ümumi təsdiq).
 domain: Protocol
-related: ["[[ADR-0012]]", "[[ADR-0038]]", "[[ADR-0065]]", "[[SPEC-TRUST-0001]]", "[[SPEC-API-0001]]", "[[FW-RB-0006]]"]
+related: ["[[ADR-0012]]", "[[ADR-0038]]", "[[ADR-0065]]", "[[SPEC-TRUST-0001]]", "[[SPEC-API-0001]]", "[[FW-RB-0004]]"]
 translation_of: ADR-0069
 source_version: "1.0.0"
 ---
@@ -114,7 +114,7 @@ girişinin açıq mühit açarları işləməyə davam edir ([[ADR-0065]] K4).
   (`terminal-keys.ts` qurum və son istifadə, `institutionToken`; `routes/terminal.ts` quruma məhdudlaşdırılmış uclar və girişdə
   siyahı yoxlaması); Qurum Konsolunun "Giriş terminalları" ekranı (operator deposu).
 - Sənədlər: [[SPEC-TRUST-0001]] §4 (yoxlayan tərəf qeydi), [[SPEC-API-0001]] §6.4, etibar siyahısı API tərifi, yoxlayan tərəfin
-  qeydiyyat bələdçisi və sandbox bələdçisi §6, [[FW-RB-0006]] §4.3; [[ADR-0065]] K2 və K5 bu qərarla tamamlandı.
+  qeydiyyat bələdçisi və sandbox bələdçisi §6, [[FW-RB-0004]] §4.3; [[ADR-0065]] K2 və K5 bu qərarla tamamlandı.
 - Paketlər: 0.7.4 (npm-də 2026-10-29) (yeni oxuyucu istəyə bağlıdır; köhnə siyahılar yüklənməyə davam edir).
 - **Tətbiq qeydi (0.7.4, 2026-10-29):** TG3 bağlı qalma prinsipi ilə tətbiq olunur. "Siyahı köhnəlib" ilə "qrup siyahıda yoxdur"
   ayrılır (`freshness().healthy`): quruma bağlı açar və ya siyahıda bir dəfə görülmüş qrup siyahıda təsdiqlənə bilmirsə, girişdə

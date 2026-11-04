@@ -210,7 +210,7 @@ Status values and their Tamga meaning:
 | `0x00` | VALID | Valid |
 | `0x01` | INVALID | **Permanent revocation** — irreversible |
 | `0x02` | SUSPENDED | **Temporary suspension** — reversible |
-| `0x03` | (reserved) | Not used in Tamga |
+| `0x03` | APPLICATION_SPECIFIC (IETF Token Status List) | Tamga **does not write it**. When read, its meaning is unknown, so it is evaluated fail-closed: REJECT at the verifier (Ş9), revoked in the wallet and in the WIA list. In a 4- or 8-bit list every value above `0x03` (the other application-specific and reserved values) is read the same way (2026-11-04) |
 
 **Why suspension is needed (in types that allow it):** when a plagiarism investigation is opened about a diploma, the institution does not want to
 revoke it permanently — it wants to suspend it until the investigation ends. With `bits = 1` the institution would either

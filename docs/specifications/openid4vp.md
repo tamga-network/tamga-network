@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -467,6 +467,11 @@ güçlü bir bağdır: sahte bir site kendi origin'inden başkasını iddia edem
 identifier olarak kabul etmez; yalnızca tarayıcının verdiği origin'i
 `aud` bağlamasında kullanır.
 
+**Doğrulayıcı tarafı (PV7, 2026-11-04):** Bu yolda SD-JWT VC sunumunun KB-JWT `aud`'u imzalı istekte de `origin:` + sayfa
+kökenidir (OpenID4VP 1.0 Ek A.4), client identifier değil. `verifyPresentation` `origin` verilip `aud` verilmezse bu değeri
+kendisi türetir; `aud` verilmiş ve farklıysa sunumu açık bir iletiyle A1'de reddeder (yanlış yapılandırma A6'da anlamsız bir
+"aud uyuşmazlığı" olarak görünmez).
+
 ## 7.2 Zincir kaydıyla ilişki
 
 DC API akışında `x509_hash` yoksa aşırı talep denetimi (§6) yapılamaz.
@@ -498,7 +503,9 @@ sunum için ikinci bir DC API isteği verir (politika tek `mso_mdoc` belgesi ist
   DHKEM(P-256, HKDF-SHA256) / HKDF-SHA256 / AES-128-GCM, `info` = döküm baytları, `aad` boş; açık metin `DeviceResponse`.
 - **Akış (barındırılan doğrulayıcı):** `POST /presentations` (`dc_api_origin` ile) `dc_api_requests` (OpenID4VP + Ek C) ve
   `dc_mdoc_response_uri` döndürür; sayfa yanıtı bu adrese iletir (`POST /vp/dc-mdoc/{id}`, form alanı `response`). Açılamayan
-  yanıt sunumu tüketmez. Sayfa kiti protokolü tarayıcıya göre seçer (Apple WebKit'e yalnız `org-iso-mdoc`) ve yanıtı yanıtın
+  yanıt sunumu tüketmez. Cüzdanın reddi (belgesiz `DeviceResponse`, durum kodu sıfır değil) sunumu REJECTED yapar; bu yanıtın
+  `redirect_uri`'si yalın sonuç sayfasıdır (`/p/{id}`) — durum jetonu ya da kontrol görünümü anahtarı taşımaz ([[ADR-0067]] RQ3;
+  sayfa jetonu zaten tutar). Sayfa kiti protokolü tarayıcıya göre seçer (Apple WebKit'e yalnız `org-iso-mdoc`) ve yanıtı yanıtın
   protokolüne göre doğru uca iletir. Masaüstünde DC API varsa varsayılan yol odur; QR yedek olarak yanında kalır (ETSI TS 119
   472-2 SUPPORT-03).
 - **Kod:** `@tamga-network/mdoc` (`createAnnexCRequest`, `parseAnnexCRequest`, `sealAnnexCResponse`, `openAnnexCResponse`,
@@ -636,7 +643,7 @@ kullanıcının hangi belgelere sahip olduğunu sorgu yaparak haritalayabilir.
 | **PV4** | `origin` prefix'i istek içinde client identifier olarak kabul edilmez. |
 | **PV5** | Ret sebebi doğrulayıcıya sızmaz. |
 | **PV6** | İstek nesnesi imzalı olmalıdır; `redirect_uri` prefix'i reddedilir. |
-| **PV7** | KB-JWT `aud` değeri client identifier'ın tamamıdır (prefix dahil). |
+| **PV7** | KB-JWT `aud` değeri client identifier'ın tamamıdır (prefix dahil); Digital Credentials API yolunda imzalı istekte de `origin:` + sayfa kökenidir (OpenID4VP 1.0 Ek A.4). |
 | **PV8** | Sunum kaydı cihazda kalır; sunucuya gönderilmez. |
 | **PV9** | Bir istekte en fazla 3 belge, 2 `credential_sets`. |
 | **PV10** | `nonce` tek kullanımlıktır; doğrulayıcı tekrar kabul etmez. |

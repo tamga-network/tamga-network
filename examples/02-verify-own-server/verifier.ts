@@ -158,7 +158,10 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
     return f.ok ? f.requestJwt : null;
   }
 
-  /** Runs `work` holding the presentation's single-use lock (taken BEFORE decrypting); throws if it is busy or closed. */
+  /**
+   * Runs `work` holding the branch's single-use lock (taken BEFORE decrypting); throws if that branch is busy or closed. The lock is
+   * per branch: another branch's response is not blocked, and acceptance is decided by `tryConsume`.
+   */
   async function locked<T>(e: { branches: BranchSet }, branch: Branch | undefined, work: () => Promise<T>) {
     const lock = e.branches.begin(branch);
     if (lock !== "ok")
@@ -176,7 +179,7 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
    */
   function handleDecline(state: string): { presentationRejected: boolean } {
     const hit = registry.byState(state); // hash lookup + constant-time compare
-    if (!hit || hit.set.busy) return { presentationRejected: false };
+    if (!hit || hit.set.declineBlocked(hit.branch)) return { presentationRejected: false };
     return { presentationRejected: hit.set.decline(hit.branch).presentationRejected };
   }
 
@@ -196,8 +199,10 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
         e.branches.failedAttempt(branch);
         throw new Error("state mismatch");
       }
-      if (opened.kind === "error")
+      if (opened.kind === "error") {
+        if (e.branches.declineBlocked(branch, { holdingLock: true })) throw new Error("a response is being processed");
         return { declined: true as const, presentationRejected: e.branches.decline(branch).presentationRejected };
+      }
       const pc = e.policy.credentials[0];
       const presentation = opened.response.vp_token[pc.id]?.[0];
       if (!presentation) {
@@ -221,7 +226,8 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
         e.branches.failedAttempt(branch);
         return { declined: false as const, ...out };
       }
-      e.branches.consume();
+      // Atomic: if another branch's answer completed the presentation while this one was being verified, do not accept it
+      if (!e.branches.tryConsume()) throw new Error("already answered");
       return { declined: false as const, ...out };
     });
   }

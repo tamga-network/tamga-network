@@ -111,7 +111,12 @@ export interface VerifyInput {
   sessionTranscript?: Uint8Array;
   /** mso_mdoc: yanıt şifreliyse şifreleme anahtarının RFC 7638 parmak izi (SessionTranscript'e girer). */
   encJwkThumbprint?: Uint8Array;
-  aud: string;
+  /**
+   * KB-JWT / mdoc bağlamasının hedefi (PV7): cihazlar arası yolda client identifier (tam dize). SD-JWT VC'de Digital Credentials API
+   * yolunda (`origin` verilmiş) verilmeyebilir: `origin:<köken>` türetilir (OpenID4VP 1.0 Ek A.4); verilir ve farklıysa A1 reddi.
+   * mdoc'ta `origin` / `sessionTranscript` verildiyse kullanılmaz.
+   */
+  aud?: string;
   nonce: string; // KB-JWT bağlaması (client_id tam dize — PV7)
   policy: Policy;
   policyCredentialId: string;

@@ -892,7 +892,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-PROTO-0002/PV4` | `origin` prefix'i istek içinde client identifier olarak kabul edilmez. |
 | `SPEC-PROTO-0002/PV5` | Ret sebebi doğrulayıcıya sızmaz. |
 | `SPEC-PROTO-0002/PV6` | İstek nesnesi imzalı olmalıdır; `redirect_uri` prefix'i reddedilir. |
-| `SPEC-PROTO-0002/PV7` | KB-JWT `aud` değeri client identifier'ın tamamıdır (prefix dahil). |
+| `SPEC-PROTO-0002/PV7` | KB-JWT `aud` değeri client identifier'ın tamamıdır (prefix dahil); Digital Credentials API yolunda imzalı istekte de `origin:` + sayfa kökenidir (OpenID4VP 1.0 Ek A.4). |
 | `SPEC-PROTO-0002/PV8` | Sunum kaydı cihazda kalır; sunucuya gönderilmez. |
 | `SPEC-PROTO-0002/PV9` | Bir istekte en fazla 3 belge, 2 `credential_sets`. |
 | `SPEC-PROTO-0002/PV10` | `nonce` tek kullanımlıktır; doğrulayıcı tekrar kabul etmez. |

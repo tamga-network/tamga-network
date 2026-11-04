@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -447,6 +447,11 @@ cannot claim any origin other than its own.
 **Invariant PV4:** the wallet does not accept the `origin` prefix as a client identifier **inside the request**; it uses only
 the origin supplied by the browser for the `aud` binding.
 
+**Verifier side (PV7, 2026-11-04):** on this path the KB-JWT `aud` of an SD-JWT VC presentation is `origin:` + the page origin
+even for a signed request (OpenID4VP 1.0 Annex A.4), not the client identifier. `verifyPresentation` derives it when `origin` is
+given and `aud` is not; when `aud` is given and differs, the presentation is rejected at A1 with an explicit message (a
+misconfiguration does not show up as a puzzling "aud mismatch" at A6).
+
 ## 7.2 Relationship with the registry record
 
 Without `x509_hash` in the DC API flow, over-asking control (§6) cannot be done. The Tamga profile therefore recommends a
@@ -478,7 +483,9 @@ gives a second DC API request for the same presentation (when the policy asks fo
   `DeviceResponse`.
 - **Flow (hosted verifier):** `POST /presentations` (with `dc_api_origin`) returns `dc_api_requests` (OpenID4VP + Annex C) and
   `dc_mdoc_response_uri`; the page forwards the response there (`POST /vp/dc-mdoc/{id}`, form field `response`). A response that
-  cannot be decrypted does not consume the presentation. The page kit chooses the protocol by browser (Apple WebKit gets only
+  cannot be decrypted does not consume the presentation. A decline by the wallet (a `DeviceResponse` with no document and a
+  non-zero status) makes the presentation REJECTED; its `redirect_uri` is the bare result page (`/p/{id}`) with no status token
+  and no check view key ([[ADR-0067]] RQ3; the page already holds its token). The page kit chooses the protocol by browser (Apple WebKit gets only
   `org-iso-mdoc`) and forwards the response to the endpoint of its protocol. On desktop the DC API is the default path when
   available; the QR code stays next to it as a fallback (ETSI TS 119 472-2 SUPPORT-03).
 - **Code:** `@tamga-network/mdoc` (`createAnnexCRequest`, `parseAnnexCRequest`, `sealAnnexCResponse`, `openAnnexCResponse`,
@@ -619,7 +626,7 @@ verifier could map which credentials the user holds by sending queries.
 | **PV4** | The `origin` prefix is not accepted as a client identifier inside the request. |
 | **PV5** | The reason for a refusal does not leak to the verifier. |
 | **PV6** | The request object must be signed; the `redirect_uri` prefix is rejected. |
-| **PV7** | The KB-JWT `aud` value is the full client identifier (prefix included). |
+| **PV7** | The KB-JWT `aud` value is the full client identifier (prefix included); on the Digital Credentials API path it is `origin:` + the page origin, also for a signed request (OpenID4VP 1.0 Annex A.4). |
 | **PV8** | The presentation log stays on the device; it is not sent to a server. |
 | **PV9** | At most 3 credentials and 2 `credential_sets` in one request. |
 | **PV10** | `nonce` is single use; the verifier does not accept it again. |

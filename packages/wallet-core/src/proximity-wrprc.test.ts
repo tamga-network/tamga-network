@@ -154,6 +154,19 @@ describe("checkProximityRegistration (ADR-0026 K5 yakın alan)", () => {
     });
   });
 
+  it("güvenlik #8: izin ad alanı + öğe çifti — sertifika [NS, age_over_18] verir, istek başka ad alanında aynı öğeyi isterse kapsam dışı", async () => {
+    const other: ItemsRequest[] = [
+      {
+        docType: DOCTYPE,
+        nameSpaces: { "org.example.other": { age_over_18: false } },
+        requestInfo: { euWrprc: await wrprc() },
+      },
+    ];
+    const { item, transcript } = await decoded(other, gate);
+    const r = checkProximityRegistration(item, transcript, [registrar.fp], pinned(), epochMillis(NOW));
+    expect(r).toMatchObject({ present: true, valid: true, allowedClaims: [] });
+  });
+
   it("0.6.0: okuyucu sertifikası güvene bağlı olmalı — kendinden imzalı kopya geçersiz; CA'ya bağlı ya da kayıtlı parmak izi geçerli", async () => {
     // saldırgan: kayıtlı kurumun organizationIdentifier'ını taşıyan kendinden imzalı okuyucu + o kurumun herkese açık WRPRC'si
     const spoof = await party("CN=Gate, O=Gate Ltd, 2.5.4.97=VATTR-1234567890");

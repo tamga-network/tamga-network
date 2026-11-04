@@ -275,10 +275,15 @@ paths:
         "200":
           description: >-
             Verified (the outcome is in `getPresentation`); only `redirect_uri` for the same device (OpenID4VP 1.0 §8.2). On
-            ACCEPTED it also carries the face-to-face check view key (`&show=…`, valid 5 minutes after the result).
+            ACCEPTED it also carries the face-to-face check view key (`&show=…`, valid 5 minutes after the result). If the
+            wallet declined (a DeviceResponse with no document and a non-zero status) the presentation becomes REJECTED and
+            `redirect_uri` is the bare result page (`/p/{id}`, no status token and no check view key — a decline grants no access
+            to the result; the page already holds its status token).
           x-tr: >-
             Doğrulandı (sonuç `getPresentation`'da); aynı cihaz için yalnız `redirect_uri` (OpenID4VP 1.0 §8.2). Kabulde yüz yüze
-            kontrol görünümünün anahtarını da taşır (`&show=…`, sonuçtan sonra 5 dk).
+            kontrol görünümünün anahtarını da taşır (`&show=…`, sonuçtan sonra 5 dk). Cüzdan reddettiyse (belgesiz, durum kodu
+            sıfır olmayan DeviceResponse) sunum REJECTED olur ve `redirect_uri` yalın sonuç sayfasıdır (`/p/{id}`; durum jetonu
+            ve kontrol görünümü anahtarı yok — ret sonuca erişim vermez; sayfa durum jetonunu zaten tutar).
           content:
             application/json:
               schema:
@@ -287,8 +292,11 @@ paths:
                 properties:
                   redirect_uri: { type: string, format: uri }
         "400":
-          description: Unknown or expired presentation, already answered, or the response could not be decrypted.
-          x-tr: Bilinmeyen ya da süresi geçmiş sunum, zaten yanıtlanmış ya da yanıt açılamadı.
+          description: >-
+            Unknown or expired presentation, already answered, the response could not be decrypted, or another response is
+            being processed.
+          x-tr: >-
+            Bilinmeyen ya da süresi geçmiş sunum, zaten yanıtlanmış, yanıt açılamadı ya da başka bir yanıt işleniyor.
   /presentations/{id}/qr.png:
     get:
       tags: [Presentations]

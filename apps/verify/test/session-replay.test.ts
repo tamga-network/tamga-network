@@ -127,7 +127,13 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     };
     const uri = parseVpUri(created.qr_payload);
     const req = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(a)), uri.clientId, LAN);
-    return { id: created.presentation_id, st: created.status_token, req, dc: created.dc_api_request };
+    return {
+      id: created.presentation_id,
+      st: created.status_token,
+      req,
+      dc: created.dc_api_request,
+      qr: created.qr_payload,
+    };
   };
   /** Cüzdanın geçerli yanıtı (JWE) — gönderilmez. `disclose` verilmezse istenen bütün alanlar. */
   const answer = async (req: VpRequest, opt: { disclose?: string[]; w?: WalletState; c?: string } = {}) => {
@@ -373,6 +379,33 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     // kabulden sonra ret de 400 (sunum kapalı; byState yalnız bekleyenleri bulur)
     expect((await postDecline(app, a.req.state)).statusCode).toBe(400);
     expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
+  });
+
+  it("(3c) kilit dal başına (2026-11-04): başka dalın yanıtı işlenirken gerçek cüzdanın yanıtı 400 almaz ve kabul edilir; eşzamanlı iki geçerli yanıttan yalnız biri kabul", async () => {
+    const a = await open(app);
+    const uri = parseVpUri(a.qr);
+    const real = verifyRequestObject(await fetchRequestObject(uri.requestUri, http(app)), uri.clientId, LAN);
+    const p = app.presentations.get(a.id)!;
+    // QR'ı gören biri ilk dalı çekti; başka doğrulayıcıya üretilmiş (aud yanlış) yanıtı gönderir — çözülür, A6'ya dek işlenir
+    const forOther = await answer({ ...a.req, clientId: "x509_hash:QmFza2FEb2dydWxheWljaQ" });
+    const atk = postJwe(
+      app,
+      encryptJwe(utf8(JSON.stringify({ vp_token: forOther.vpToken, state: a.req.state })), a.req.encJwk),
+    );
+    for (let i = 0; i < 200 && !p.branches.busy; i++) await new Promise((r) => setImmediate(r));
+    expect(p.branches.busy).toBe(true);
+    const ok = await postJwe(app, (await answer(real)).jwe);
+    expect(ok.statusCode).toBe(200);
+    expect((await atk).statusCode).toBe(400);
+    expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
+    // iki dal, iki geçerli yanıt, aynı anda: biri kabul, öteki PV10 (iki kez tamamlanmaz)
+    const b = await open(app);
+    const ub = parseVpUri(b.qr);
+    const b2 = verifyRequestObject(await fetchRequestObject(ub.requestUri, http(app)), ub.clientId, LAN);
+    const both = await Promise.all([postJwe(app, (await answer(b.req)).jwe), postJwe(app, (await answer(b2)).jwe)]);
+    expect(both.map((r) => r.statusCode).sort()).toEqual([200, 400]);
+    expect(both.find((r) => r.statusCode === 400)!.json().error_description).toMatch(/PV10/);
+    expect((await result(app, b.id)).outcome).toBe("ACCEPTED");
   });
 
   it("(4) başka oturum / başka RP sonucu ister → 404 (HV2); başka sunumun durum jetonu işe yaramaz; örnek site sunumu bir kez kullanır", async () => {

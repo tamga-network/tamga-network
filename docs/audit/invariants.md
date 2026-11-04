@@ -12,7 +12,7 @@ Rows without a test are either enforced by construction (types, schemas, data fi
 that do not cite the code, process rules (governance, documentation), or genuinely untested. Reviewers should treat
 untested rows in the parsing, signature, status and trust-list areas as priority questions.
 
-**Summary:** 381 invariants in 68 documents · 93 with at least one test reference (24%) · 13 with a direct reference.
+**Summary:** 390 invariants in 72 documents · 104 with at least one test reference (27%) · 19 with a direct reference.
 
 ## ADR-0013 — Kimlik belgesi için mdoc
 
@@ -469,7 +469,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 |---|---|---|---|
 | `TK1` | `POST /terminal/verify` yalnız bir terminal grubuna bağlı terminal anahtarıyla (`Authorization: Bearer`) çalışır; anahtarsız ya da geçers… | `apps/verify/test/verify-app.test.ts` | direct |
 | `TK2` | Terminal anahtarlarını işletmeci doğrulayıcının yönetici uçlarından verir ve iptal eder; anahtar yalnız verildiği yanıtta görünür; grup y… | `apps/verify/test/verify-app.test.ts` | direct |
-| `TK3` | Doğrulayıcı anahtarın yalnız özetini saklar (kişisel veri yok) ve sabit zamanlı karşılaştırır; ortamdan yüklenen anahtar yalnız yerel gel… | `apps/verify/test/verify-app.test.ts` | scoped |
+| `TK3` | Doğrulayıcı anahtarın yalnız özetini saklar (kişisel veri yok) ve sabit zamanlı karşılaştırır; ortamdan yüklenen anahtar yalnız yerel gel… | `apps/verify/test/config.test.ts`<br>`apps/verify/test/verify-app.test.ts` | direct |
 
 ## ADR-0066 — ETSI TS 119 612 XML liste görünümü
 
@@ -485,11 +485,11 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
-| `RQ1` | `request_uri`'nin her çekimi (GET ya da POST) yeni bir çekim dalı açar: taze `state` (≥ 128 bit; QR'da, `request_uri` ve `response_uri` y… | — | none |
-| `RQ2` | Cüzdanın hata yanıtı (şifresiz ya da şifreli) yalnız `state`'inin ait olduğu dalı kapatır; sunum yalnız tek dalı varsa ve o dal kapandıys… | — | none |
-| `RQ3` | Rete yanıt 200'dür (OpenID4VP 1.0 §8.2); retin `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı, yetki kodu ya da veriye erişim… | — | none |
-| `RQ4` | Hiçbir dalın anahtarıyla çözülemeyen yanıt sunuma dokunmaz ve deneme sayılmaz; çözülmüş ama sahiplik kanıtına ulaşmayan yanıt yalnız kend… | — | none |
-| `RQ5` | Sunum başına en çok 10 çekim dalı; sonrası 429 ve var olan dallar etkilenmez; kapanmış ya da süresi geçmiş sunumda dal açılmaz. | — | none |
+| `RQ1` | `request_uri`'nin her çekimi (GET ya da POST) yeni bir çekim dalı açar: taze `state` (≥ 128 bit; QR'da, `request_uri` ve `response_uri` y… | `packages/verifier/src/branches.test.ts` | scoped |
+| `RQ2` | Cüzdanın hata yanıtı (şifresiz ya da şifreli) yalnız `state`'inin ait olduğu dalı kapatır; sunum yalnız tek çekimi varsa ve o dal kapandı… | `packages/verifier/src/branches.test.ts` | scoped |
+| `RQ3` | Ret yanıtı 200'dür (OpenID4VP 1.0 §8.2); retin `redirect_uri`'si durum jetonu, kontrol görünümü anahtarı, yetki kodu ya da veriye erişim… | `apps/verify/test/verify-app.test.ts`<br>`apps/verify/test/session-replay.test.ts` | direct |
+| `RQ4` | Hiçbir dalın anahtarıyla çözülemeyen yanıt sunuma dokunmaz ve deneme sayılmaz; çözülmüş ama sahiplik kanıtına ulaşmayan yanıt yalnız kend… | `apps/verify/test/session-replay.test.ts`<br>`packages/verifier/src/branches.test.ts` | direct |
+| `RQ5` | Meşru çekime sabit dal sınırıyla 429 verilmez; bellek sınırlıdır: dal imzalı nesneyi tutmaz, yumuşak sınırda (10) önce kapanmış, sonra hi… | `apps/verify/test/hardening.test.ts`<br>`apps/verify/test/session-replay.test.ts`<br>`packages/verifier/src/branches.test.ts` | direct |
 | `RQ6` | Digital Credentials API yolunun istek nesnesi bir dal değildir: `state`'iyle ret kabul edilmez, deneme sınırı bu yolda sunum başınadır. | — | none |
 
 ## ADR-0068 — Kayıt sertifikası politikası ve durum listesi
@@ -498,8 +498,37 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 |---|---|---|---|
 | `WRS1` | Kayıt sertifikası Tamga'nın kendi politika OID'ini ve politika belgesinin adresini taşır; ETSI'nin AB politika OID'i (`0.4.0.19475.3.1`)… | — | none |
 | `WRS2` | Kayıt kurumu kayıt sertifikaları için herkese açık, imzalı, 1 bitlik bir Token Status List yayımlar; liste LOTL'deki kayıt kurumu anahtar… | — | none |
-| `WRS3` | Kayıt ya da kullanım sona erince, askıya alınınca, iptal edilince veya sertifika içeriği değişince eski kayıt sertifikası aynı yayında ip… | — | none |
-| `WRS4` | Cüzdan iptal edilmiş kayıt sertifikası taşıyan isteğe veri göndermez ve iptal edilmiş sertifikalı belge verenden belge istemez; durum den… | — | none |
+| `WRS3` | Kayıt ya da kullanım sona erince, askıya alınınca, iptal edilince veya sertifika içeriği değişince eski kayıt sertifikası aynı yayında ip… | `apps/trust-publisher/test/wrprc-status.test.ts` | scoped |
+| `WRS4` | Cüzdan iptal edilmiş kayıt sertifikası taşıyan isteğe veri göndermez ve iptal edilmiş sertifikalı belge verenden belge istemez; durum den… | `packages/wallet-core/src/wrprc-status.test.ts` | scoped |
+
+## ADR-0069 — Kapı grupları güven listesinde: kurum, politika, sertifika; terminal anahtarı kurum adına
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `TG1` | Kapı grubu doğrulayıcı kaydının `terminal_groups[]` öğesidir; `group_id` bütün listede tektir; etkin grup listede bulunan bir kuruma (`in… | `apps/trust-publisher/test/terminal-groups.test.ts` | scoped |
+| `TG2` | Kurum adına terminal anahtarı yönetimi kuruma daraltılmış belirteçle yapılır: kurum yalnız imzalı listede kendisine bağlı etkin grubun an… | `apps/trust-publisher/test/terminal-groups.test.ts`<br>`apps/verify/test/terminal-groups.test.ts` | scoped |
+| `TG3` | Listede geri çekilmiş grubun ya da kurumu değişmiş grubun anahtarı kapıda geçmez (403, jetona dokunulmaz) ve bu gruba anahtar verilmez; g… | `packages/verifier/src/pass.test.ts`<br>`apps/verify/test/terminal-groups.test.ts` | direct |
+
+## ADR-0070 — Geçici işletmeci zinciri: vakıf kurulana kadar ağın kendi hizmetleri Tamga Network adına geçici işletmecide
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `OP1` | Liste işletmecisi ve şema sahibi adı "Tamga Network"tür (`status: provisional` vakıf kurulana kadar); geçici işletmecinin adı yalnız ağın… | — | none |
+| `OP2` | Geçici işletmecinin adı, kimlik numarası ve adresi tek yapılandırma değerinden gelir; liste yayıncısı bu değerden farklı bilgi taşıyan ke… | `apps/trust-publisher/test/provisional-operator.test.ts` | direct |
+| `OP3` | Vakfa devir yalnız bu değeri ve ona bağlı kayıtları ve sertifikaları değiştirir; liste işletmecisi adı, `ca_id`, `vct` ve kurumların kalı… | — | none |
+
+## ADR-0071 — Geçici dönemde ağın finansmanı: hizmet ücreti yok; vakıf hibe ve devlet/üye katkısıyla
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `FN1` | Geçici dönemde ağ hiçbir katılımcıdan liste kaydı, belge verme, doğrulama, kimlik servisi ya da liste hizmeti ücreti almaz; kişiler için… | — | none |
+| `FN2` | Mali katkı (hibe, bağış, devlet/üye katkısı, geçici işletmecinin giderleri karşılaması) kayıt kararına, güven listesindeki yere, katılım… | — | none |
+
+## ADR-0072 — Değer katmanı askıda: ADR-0003 kancaları araştırma yönü
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `VL1` | Ağ token ihraç etmez; ödeme, mutabakat ya da değer aktarımı işlemez; değer katmanı yönetişim kurumunun kararı, bağımsız güvenlik inceleme… | — | none |
 
 ## ARCH-0003 — Bileşen mimarisi
 
@@ -525,12 +554,12 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `AP3` | Sonuç nesnesi claim değerlerini değil adlarını taşır. | `packages/verifier/src/verifier.test.ts`<br>`apps/verify/test/verify-app.test.ts` | scoped |
 | `AP4` | `idx` hiçbir API yanıtında veya kayıtta bulunmaz. | `packages/verifier/src/verifier.test.ts` | scoped |
 | `AP5` | HTTP durum kodu doğrulama sonucunu kodlamaz. | — | none |
-| `AP6` | Politikanın `required_claims`'i RP'nin zincirdeki scope'unu aşamaz. | `packages/verifier/src/verifier.test.ts`<br>`apps/verify/test/verify-app.test.ts` | scoped |
+| `AP6` | Politikanın `required_claims`'i RP'nin güven listesindeki kaydının scope'unu aşamaz. | `packages/verifier/src/verifier.test.ts`<br>`apps/verify/test/verify-app.test.ts` | scoped |
 | `AP7` | Hata `detail` alanı kişisel veri içermez. | — | none |
 | `AP8` | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. | — | none |
 | `AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. | — | none |
 | `AP12` | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. | — | none |
-| `AP13` | Geçiş kartı jetonu doğrulaması (ADR-0012 B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = terminalin RP client_id'si, ömür (`exp` −… | `packages/verifier/src/pass.test.ts` | unique |
+| `AP13` | Geçiş kartı jetonu doğrulaması (ADR-0012 B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = doğrulayıcının kalıcı kimliği (güven liste… | `packages/verifier/src/pass.test.ts` | unique |
 | `AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). | — | none |
 | `AP10` | `tx_code` yanıt dışında hiçbir yerde saklanmaz. | — | none |
 
@@ -637,10 +666,10 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `PV4` | `origin` prefix'i istek içinde client identifier olarak kabul edilmez. | `packages/wallet-core/src/oid4vp.test.ts` | scoped |
 | `PV5` | Ret sebebi doğrulayıcıya sızmaz. | `apps/verify/test/session-replay.test.ts`<br>`packages/wallet-core/src/oid4vp.test.ts` | scoped |
 | `PV6` | İstek nesnesi imzalı olmalıdır; `redirect_uri` prefix'i reddedilir. | `packages/wallet-core/src/oid4vp.test.ts`<br>`packages/wallet-core/src/dc-mdoc.test.ts` | scoped |
-| `PV7` | KB-JWT `aud` değeri client identifier'ın tamamıdır (prefix dahil). | `apps/verify/test/session-replay.test.ts` | scoped |
+| `PV7` | KB-JWT `aud` değeri client identifier'ın tamamıdır (prefix dahil); Digital Credentials API yolunda imzalı istekte de `origin:` + sayfa kö… | `apps/verify/test/session-replay.test.ts`<br>`packages/verifier/src/verifier.test.ts` | scoped |
 | `PV8` | Sunum kaydı cihazda kalır; sunucuya gönderilmez. | — | none |
 | `PV9` | Bir istekte en fazla 3 belge, 2 `credential_sets`. | — | none |
-| `PV10` | `nonce` tek kullanımlıktır; doğrulayıcı tekrar kabul etmez. | `apps/verify/test/session-replay.test.ts`<br>`apps/verify/test/verify-app.test.ts` | scoped |
+| `PV10` | `nonce` tek kullanımlıktır; doğrulayıcı tekrar kabul etmez. | `apps/verify/test/session-replay.test.ts`<br>`apps/verify/test/verify-app.test.ts`<br>`packages/verifier/src/branches.test.ts` | scoped |
 | `PV11` | `mso_mdoc` sunumunda cihaz imzası, client identifier'ın tamamını (prefix dahil), `nonce`'u, `response_uri`'yi ve yanıtın şifrelendiği ana… | — | none |
 | `PV12` | Cüzdan, istenen alanlardan birini taşımayan belgeyi göndermez (`claim_sets` yoksa bütün alanlar, varsa seçilen kombinasyonun bütün alanla… | — | none |
 | `PV13` | Cüzdan imzalı istek nesnesini zamanla ve hedefle denetler: `exp` zorunludur ve geçmiş olamaz, `iat` 60 sn'den fazla ileri tarihli olamaz… | — | none |
@@ -700,7 +729,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
 | `TL1` | Her listede `operator.status` vardır ve liste aşaması boyunca `"provisional"`dır; `on_behalf_of` boş bırakılmaz. | `packages/trust/src/trust-source.test.ts` | scoped |
-| `TL2` | Liste ve çapa günlüğü sürümleri monoton artar; her sürüm bir öncekinin hash'ini taşır; hiçbir satır/kayıt silinmez (statü değişikliği `st… | `apps/trust-publisher/test/withdraw.test.ts`<br>`apps/trust-publisher/test/cli.test.ts`<br>`packages/trust/src/trust-source.test.ts` +1 | direct |
+| `TL2` | Liste ve çapa günlüğü sürümleri monoton artar; her sürüm bir öncekinin hash'ini taşır; hiçbir satır/kayıt silinmez (statü değişikliği `st… | `apps/trust-publisher/test/withdraw.test.ts`<br>`apps/trust-publisher/test/cli.test.ts`<br>`packages/trust/src/trust-source.test.ts` +2 | direct |
 | `TL3` | Liste ve çapa imzası ≥2 kaydırmalı sertifikayla yapılır; rotasyon ≥30 gün önce duyurulur; yeni anahtar eskisiyle imzalanır. (Demo sapması… | — | none |
 | `TL4` | `TrustSource` dışında hiçbir bileşen liste dosyalarını yorumlamaz. | — | none |
 | `TL5` | `next_update` geçmiş veya erişilemeyen liste ile doğrulama **INDETERMINATE** üretir; asla ACCEPTED, asla REJECTED. | — | none |

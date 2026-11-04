@@ -126,8 +126,12 @@ describe.skipIf(!ready)("ADR-0069 kapı grupları — Tamga Verify", () => {
   it("TG2: yanlış ya da başka kurumun belirteci 404; kurum yalnız kendi gruplarını ve anahtarlarını görür", async () => {
     expect((await keys(inst("example-events", institutionToken("yanlis", "example-events")))).statusCode).toBe(404);
     expect(
-      (await keys({ "x-tamga-institution": "example-events", "x-institution-token": institutionToken(ADMIN, "example-university") }))
-        .statusCode,
+      (
+        await keys({
+          "x-tamga-institution": "example-events",
+          "x-institution-token": institutionToken(ADMIN, "example-university"),
+        })
+      ).statusCode,
     ).toBe(404);
     const r = await keys(inst("example-events"));
     expect(r.statusCode).toBe(200);
@@ -169,7 +173,10 @@ describe.skipIf(!ready)("ADR-0069 kapı grupları — Tamga Verify", () => {
   });
 
   it("TG2: başka kurum iptal edemez (404, varlığı açığa çıkmaz); sahibi iptal eder → kapıda 401; denetim kaydında anahtar yok", async () => {
-    const k = (await issue(inst("example-events"), "example-events-gate", "iptal denemesi")).json() as { id: string; key: string };
+    const k = (await issue(inst("example-events"), "example-events-gate", "iptal denemesi")).json() as {
+      id: string;
+      key: string;
+    };
     const del = (headers: Record<string, string>, id: string) =>
       app.inject({ method: "DELETE", url: `/terminal/keys/${id}`, headers });
     expect((await del(inst("example-university"), k.id)).statusCode).toBe(404);

@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -147,6 +147,7 @@ read over the shoulder; the `tx_code` is delivered through a separate channel (i
 | `vct` | Must be a registered schema ([[SPEC-SCHEMA-0001]]) |
 | Configuration identifier and `scope` | Both are the credential type's `vct` URN (`urn:tamga:edu:DiplomaCredential:1`); there is no separate configuration name or short scope name. The wallet asks for the type with `scope` in the [[t:PAR]] ([[t:HAIP]] §4.3) |
 | `display` (issuer) | The institution's **registered name** in the signed trust list (`legal_name`; entry without locale) and, if present, its service descriptions per language (`service_description`, BCP 47 key → `locale` + `description`). Neither the credential type's name nor a fixed language is written; `credential_metadata.display` comes from the type catalogue (this example has no `claims`: the claim list lives in the type metadata and is not repeated here) |
+| `display[].locale` (OpenID4VCI 1.0 §12.2.4; 2026-11-04) | A BCP 47 (RFC 5646) tag written **in canonical form** (`en-us` → `en-US`, `TR` → `tr`; `Intl.getCanonicalLocales`). An entry whose tag is malformed (`en_US`), whose language subtag is unregistered (`xx`, `und`) or whose region is unknown is not written, and no language is invented; of two entries that map to the same language the first one stays. **Full ICU note:** language and region validity are checked with `Intl.DisplayNames`, which needs full ICU data in the runtime (official Node.js builds ship with full ICU). On a small-ICU build (`small-icu`, `--with-intl=none`) valid languages may not be recognised and display entries are dropped silently — run the issuing service on a Node.js with full ICU |
 | `nonce_endpoint` | **Mandatory** — Tamga always requires `c_nonce` |
 | `deferred_credential_endpoint`, `notification_endpoint` | **Not declared** — neither endpoint exists today (§9, §10) |
 | `batch_credential_issuance.batch_size` | **10** (§8) |

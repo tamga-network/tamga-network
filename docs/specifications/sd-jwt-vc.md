@@ -4,7 +4,7 @@ title: "SD-JWT VC profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-11-04
 summary: >
   Bir Tamga belgesinin baytlarını tanımlar. Disclosure nasıl üretilir
   (salt, dizi yapısı, JSON serileştirme kuralı, base64url), _sd dizisi nasıl
@@ -540,6 +540,9 @@ sıralama [[SPEC-API-0001]]'de birleştirilir.
        d) Dizi 3 elemanlı değilse → RED
        e) Salt < 128 bit ise → RED
        f) Claim adı zaten payload'da açıkta varsa → RED (çakışma)
+       g) Claim adı yasaklıysa → RED (2026-11-04): ayrılmış adlar (`iss`, `vct`, `cnf`, `status`, …), mekanizma adları
+          (`_sd`, `_sd_alg`, `...`) ve JavaScript nesne öntipi adları `__proto__`, `constructor`, `prototype` — bu adlar
+          belge verirken de kullanılamaz (öntip kirletme: çözülen değer nesnenin öntipini değiştirebilirdi)
 
 Ş6.  Aynı digest iki disclosure tarafından iddia ediliyorsa → RED.
 

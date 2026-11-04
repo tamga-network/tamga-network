@@ -12,8 +12,11 @@
  *    (`hardCap`) yaş koşulu düşer. Bütün sunumlar için ortak bir dal bütçesi (`BranchRegistry`) belleği sınırlar.
  *  - Ret `state` ile bulunur (şifresiz hata yanıtı `kid` taşımaz): arama `state` özetiyle Map'ten (doğrusal tarama yok), eşitlik
  *    `timingSafeEqual` ile (sabit süreli).
- *  - Tek kullanım (PV10): `begin` → (çözme / doğrulama) → `end`; kilit tutulurken başka yanıt ya da ret işlenmez, işlenen dal atılmaz.
- *    Çözmeden ÖNCE `begin` çağrılır; çözmeden sonra `isOpen` ile yeniden bakılır.
+ *  - Tek kullanım (PV10): `begin` → (çözme / doğrulama) → `tryConsume` → `end`. Kilit DAL BAŞINADIR (2026-11-04; önceki sürümde
+ *    sunum geneliydi): bir dalın yanıtı işlenirken o dala ikinci yanıt ya da ret işlenmez ve dal atılmaz, ama BAŞKA dalın yanıtı
+ *    işlenebilir — QR'ı gören birinin kendi dalına gönderdiği yavaş/anlamsız yanıtlar gerçek cüzdanın yanıtını "işleniyor" (400)
+ *    diye geri çeviremez. Kabul atomiktir: `tryConsume` yalnız ilk çağrıda `true` döner (eşzamanlı iki geçerli yanıttan yalnız
+ *    biri sunumu tamamlar). Dalsız yolun (DC API) kilidi ayrıdır, sunum başınadır. Çözmeden ÖNCE `begin`; sonra `isOpen`.
  * Hız sınırı HTTP katmanındadır (vekilde IP başına + uygulamada genel tavan); bu birim kişisel veri ve istemci adresi tutmaz.
  */
 import { createHash, timingSafeEqual } from "node:crypto";
@@ -182,9 +185,9 @@ export interface BranchSetOptions {
  * // GET|POST /vp/req/:id
  * const f = await set.fetch(walletNonce);               // f.ok → f.requestJwt
  * // POST /vp/response (şifreli): kid → set.get(branchId) → set.begin(branch) → openPresentationResponse → set.isOpen(branch)
- * //   → … → set.consume() | set.failedAttempt(branch); finally set.end(branch)
- * // POST /vp/response (şifresiz ret): registry.byState(state) → set.busy ? 400 : set.decline(branch)
- * //   (ret eşzamanlıdır, kilit alınmaz: işlenen bir yanıt varken ret reddedilir — PV10; şifreli ret aynı yoldan `kind: "error"`)
+ * //   → … → set.tryConsume() (false → kabul etme) | set.failedAttempt(branch); finally set.end(branch)
+ * // POST /vp/response (şifresiz ret): registry.byState(state) → set.declineBlocked(branch) ? 400 : set.decline(branch)
+ * //   (ret eşzamanlıdır, kilit alınmaz; kilit dal başına — PV10; şifreli ret aynı yoldan `kind: "error"`)
  * ```
  */
 export class BranchSet {
@@ -195,7 +198,10 @@ export class BranchSet {
   private minted = 0;
   private minting = 0;
   private _used = false;
-  private _busy = false;
+  /** İşlenmekte olan dal yanıtı sayısı (dal kilitleri) */
+  private inFlightCount = 0;
+  /** Dalsız yolun (DC API) kilidi — sunum başına */
+  private pathBusy = false;
   private _attempts = 0;
   private pathAttempts = 0;
   private readonly registry: BranchRegistry;
@@ -220,9 +226,22 @@ export class BranchSet {
   get used() {
     return this._used;
   }
-  /** Bir yanıt şu anda işleniyor (`begin` … `end`). */
+  /** Herhangi bir yanıt şu anda işleniyor (bir dalda ya da dalsız yolda; `begin` … `end`). */
   get busy() {
-    return this._busy;
+    return this.pathBusy || this.inFlightCount > 0;
+  }
+
+  /**
+   * Bu dala gelen ret şimdi işlenemez mi (2026-11-04, dal başına kilit): dalın kendi yanıtı işleniyorsa; ya da ret sunumu bütünüyle
+   * kapatacaksa (tek çekim) ve herhangi bir yanıt işleniyorsa — doğrulanmakta olan yanıtı ret çeviremez (PV10, tek yönlü durum).
+   * Yalnız kendi dalını kapatan ret başka dalların işlenen yanıtını beklemez.
+   */
+  declineBlocked(b: Branch, opts: { holdingLock?: boolean } = {}): boolean {
+    // `holdingLock`: ret, dalın kendi kilidi altında çözülen şifreli bir hata yanıtı (kendi kilidi engel değildir)
+    const own = !!opts.holdingLock && b.inFlight;
+    if (b.inFlight && !own) return true;
+    const others = this.pathBusy || this.inFlightCount - (own ? 1 : 0) > 0;
+    return !this.multi() && others;
   }
   /** Sahiplik kanıtına ulaşmadan başarısız olan (çözülmüş) yanıtların toplamı — durum API'sindeki `attempts`. */
   get attempts() {
@@ -339,25 +358,46 @@ export class BranchSet {
   }
 
   /**
-   * Bir yanıtı (sunum ya da ret; dalsız yolda `b` yok) işlemeye başla: tek kullanım kilidi. Çözmeden ÖNCE çağrılır; `ok` dönerse
-   * işin sonunda `end` (try/finally). Kilit tutulurken başka yanıt/ret `busy` alır ve dal atılmaz.
+   * Bir yanıtı (sunum ya da ret; dalsız yolda `b` yok) işlemeye başla: DAL BAŞINA kilit (dalsız yolda sunum başına). Çözmeden ÖNCE
+   * çağrılır; `ok` dönerse işin sonunda `end` (try/finally). Kilit tutulurken aynı dala ikinci yanıt/ret `busy` alır ve dal atılmaz;
+   * başka dalların yanıtları işlenebilir — kabul `tryConsume` ile atomiktir.
    */
   begin(b?: Branch): BeginResult {
     if (this._used) return "used";
-    if (this._busy) return "busy";
     if (b) {
       if (this.live.get(b.branchId) !== b) return "gone";
       if (b.closed) return "closed";
+      if (b.inFlight) return "busy";
       (b as MutableBranch).inFlight = true;
       (b as MutableBranch).answeredAt = this.clock();
+      this.inFlightCount += 1;
+      return "ok";
     }
-    this._busy = true;
+    if (this.pathBusy) return "busy";
+    this.pathBusy = true;
     return "ok";
   }
 
   end(b?: Branch) {
-    this._busy = false;
-    if (b) (b as MutableBranch).inFlight = false;
+    if (!b) {
+      this.pathBusy = false;
+      return;
+    }
+    const m = b as MutableBranch;
+    if (m.inFlight) {
+      m.inFlight = false;
+      this.inFlightCount = Math.max(0, this.inFlightCount - 1);
+    }
+  }
+
+  /**
+   * Kabulde atomik tüketim (PV10): sunum henüz tamamlanmadıysa tamamlar ve `true` döner; tamamlanmışsa (eşzamanlı başka bir yanıt
+   * önce kabul edildi, ret ya da deneme sınırı) `false` — çağıran bu yanıtı kabul etmez. Denetim ile tüketim arasında `await` yok.
+   */
+  tryConsume(): boolean {
+    if (this._used) return false;
+    this.consume();
+    return true;
   }
 
   /**

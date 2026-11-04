@@ -22,7 +22,7 @@ const branches = new BranchSet({ registry, presentationId: req.presentationId, e
 // GET|POST /vp/req/:id — every fetch gets its own request object (fresh state, nonce, encryption key)
 const f = await branches.fetch(walletNonce); // f.ok → send f.requestJwt
 
-// POST /vp/response with `response` — lock BEFORE decrypting, check again after
+// POST /vp/response with `response` — lock the branch BEFORE decrypting, check again after; accept atomically
 const branch = branches.get(responseKidOf(jwe)!.branchId!);
 if (branch && branches.begin(branch) === "ok") try {
   const opened = await openPresentationResponse(jwe, req, responseUri, (id) => (id === branch.branchId ? branch : undefined));
@@ -30,14 +30,21 @@ if (branch && branches.begin(branch) === "ok") try {
     const { result, claims } = await verifyPresentation({ presentation: opened.response.vp_token.diploma[0],
       aud: signer.clientId, nonce: branch.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer,
       rp: trust.relyingParty(signer.clientId), audit: (entry) => log(entry) });
-    if (result.checks_performed.includes("A6")) branches.consume(); else branches.failedAttempt(branch);
+    if (!result.checks_performed.includes("A6")) branches.failedAttempt(branch);
+    else if (!branches.tryConsume()) { /* another branch completed the presentation first: do not accept */ }
   }
 } finally { branches.end(branch); }
 
 // POST /vp/response with `error` + `state` (the person declined) — closes only that branch
 const hit = registry.byState(state);
-if (hit && !hit.set.busy) hit.set.decline(hit.branch); // { presentationRejected } — true only with a single fetch
+if (hit && !hit.set.declineBlocked(hit.branch)) hit.set.decline(hit.branch); // { presentationRejected } — true only with a single fetch
 ```
+
+**Digital Credentials API (browser).** On this path the KB-JWT audience of an SD-JWT VC is `origin:` + the page origin, also for a
+signed request (OpenID4VP 1.0 Annex A.4) — not the client identifier. Pass the page origin as `origin` and leave `aud` out:
+`verifyPresentation` derives `origin:<origin>`. If you pass an `aud` that differs, the presentation is rejected at A1 with an
+explicit message. The DC API response has no request branch (`openPresentationResponse` returns `path: "dc_api"`); call
+`begin()` / `end()` without a branch (one lock per presentation) and accept with `tryConsume()`.
 
 A complete, tested version: [`examples/02-verify-own-server`](https://github.com/tamga-network/tamga-network/tree/main/examples/02-verify-own-server).
 
@@ -52,6 +59,13 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 - `verifyPseudonym` requires `walletStatusOf` (or `"none"`); the result carries `clientStatus`.
 - A credential without a status entry is rejected at D1 when its type uses a status list; the status list signer is pinned to the
   institution's registered status keys.
+
+## Unreleased
+
+- The single-use lock is per request branch: `begin(branch)` no longer refuses a response because another branch's response is
+  being processed. Accept with `tryConsume()` (returns `false` if another response completed the presentation first) and check a
+  decline with `declineBlocked(branch)`. `consume()` and `busy` keep working.
+- `verifyPresentation` derives `aud` on the Digital Credentials API path (see above); `aud` is optional in `VerifyInput`.
 
 ## Breaking in 0.8.0
 

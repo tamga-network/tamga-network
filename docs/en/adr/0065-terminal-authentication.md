@@ -17,7 +17,7 @@ summary: >
   (ADR-0012 K5 `terminal_groups[]`) remains the target for offline gates. Accepted 2026-10-26 (security review, general
   approval by project management).
 domain: Protocol
-related: ["[[ADR-0012]]", "[[ADR-0017]]", "[[SPEC-API-0001]]", "[[FW-RB-0006]]"]
+related: ["[[ADR-0012]]", "[[ADR-0017]]", "[[SPEC-API-0001]]", "[[FW-RB-0004]]"]
 ---
 
 # In short
@@ -31,7 +31,7 @@ read, consume or count the token. Someone photographing a ticket's QR from a dis
 - [[ADR-0012]] B: for a registered gate the wallet shows a `tamga-pass+jwt` token signed with the copy key, free of personal
   data and valid for 60 seconds; the terminal verifies it and the `jti` replay list is shared online among the gates of a
   terminal group. In practice all gates call Tamga Verify's `POST /terminal/verify`; the replay list and the single-use ticket
-  state (ADR-0012 K4, [[FW-RB-0006]] §4.3) live there.
+  state (ADR-0012 K4, [[FW-RB-0004]] §4.3) live there.
 - The endpoint required no identity (rate limit only). Because the token carries no personal data there was no privacy risk,
   but there was a **denial-of-service risk**: whoever sees the QR (the next person, a camera, a screenshot) and submits the
   token within 60 seconds puts its `jti` on the list or consumes the single-use ticket; the person then sees STOP at the real
@@ -95,7 +95,7 @@ and this ADR is updated.
   gate page — kept only in the browser tab); nginx on the network server closes `/terminal/keys` to the outside; demo keys in
   the sandbox environment; the scene rehearsal (`ops/demo-scenes`) calls with the key.
 - Documents: [[SPEC-API-0001]] §6.4 (authentication table) and the AP13 note; the verifier API page; sandbox guide §6;
-  [[FW-RB-0006]] §4.3.
+  [[FW-RB-0004]] §4.3.
 - Work list: terminal-key screen in the Institution Console (K2); `terminal_groups[]` in the list schema (K5).
 
 # Status

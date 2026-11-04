@@ -141,6 +141,48 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     return signStatusListToken({ signer, iss: ISS, uri: STATUS_URI, bitstring: bs, iat: now, ttlSec, expSec });
   }
 
+  it("PV7 DC API: origin verilip aud verilmezse `origin:<köken>` türetilir; verilip farklıysa açık iletiyle A1 reddi", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const ORIGIN = "https://shop.example";
+    const { combined, ref } = await issue(14, now);
+    const cache = new MemoryStatusCache();
+    cache.set(STATUS_URI, await statusToken(now), now);
+    const pres = await presentSdJwt({
+      combined,
+      discloseClaims: ["is_graduate", "eqf_level", "qualification_title", "awarding_body_name"],
+      keys,
+      keyRef: ref,
+      aud: `origin:${ORIGIN}`,
+      nonce: "n-dc",
+      iat: now,
+    });
+    const base = {
+      rp: "none" as const,
+      presentation: pres,
+      nonce: "n-dc",
+      policy,
+      policyCredentialId: "diploma",
+      trust,
+      statusCache: cache,
+      rootCertsDer: rootDer,
+      now: epochSeconds(now),
+    };
+    // türetilen aud KB-JWT'ninkiyle aynı → kabul
+    expect((await verifyPresentation({ ...base, origin: ORIGIN })).result.outcome).toBe("ACCEPTED");
+    // açık ve doğru aud da kabul
+    expect((await verifyPresentation({ ...base, origin: ORIGIN, aud: `origin:${ORIGIN}` })).result.outcome).toBe(
+      "ACCEPTED",
+    );
+    // DC API yolunda client identifier verilirse A1 (A6'da anlamsız "aud uyuşmazlığı" yerine)
+    const wrong = await verifyPresentation({ ...base, origin: ORIGIN, aud: AUD });
+    expect(wrong.result.outcome).toBe("REJECTED");
+    expect(wrong.result.failed_step).toBe("A1");
+    expect(wrong.result.failed_reason).toMatch(/Digital Credentials API origin/);
+    // cihazlar arası yolda (origin yok) aud zorunlu
+    const none = await verifyPresentation({ ...base });
+    expect(none.result.failed_step).toBe("A1");
+    expect(none.result.failed_reason).toMatch(/aud required/);
+  });
   it("D3: iptal listesini kurumun kayıtlı iptal anahtarı dışında bir anahtar imzalamışsa RED (S11)", async () => {
     const now = Math.floor(Date.now() / 1000);
     const { combined, ref } = await issue(12, now);

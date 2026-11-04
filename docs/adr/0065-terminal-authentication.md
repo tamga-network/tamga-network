@@ -14,7 +14,7 @@ summary: >
   verir ve iptal eder; sunucuda yalnız özeti durur. Sertifika tabanlı terminal kaydı (ADR-0012 K5 `terminal_groups[]`) çevrim
   dışı kapılar için hedef olmaya devam eder. Kabul: 2026-10-26 (güvenlik turu, proje yönetiminin genel onayı).
 domain: Protocol
-related: ["[[ADR-0012]]", "[[ADR-0017]]", "[[SPEC-API-0001]]", "[[FW-RB-0006]]"]
+related: ["[[ADR-0012]]", "[[ADR-0017]]", "[[SPEC-API-0001]]", "[[FW-RB-0004]]"]
 ---
 
 # Kısaca
@@ -28,7 +28,7 @@ okumaz, tüketmez, sayaçlara girmez. Böylece bir biletin QR'ını uzaktan foto
 - [[ADR-0012]] B: kayıtlı kapı için cüzdan kopya anahtarıyla imzalı, kişisel veri içermeyen, 60 saniyelik `tamga-pass+jwt` jetonunu
   QR olarak gösterir; terminal jetonu doğrular ve `jti` tekrar listesi aynı terminal grubundaki kapılar arasında çevrim içi
   paylaşılır. Uygulamada bütün kapılar Tamga Verify'ın `POST /terminal/verify` ucunu çağırır; tekrar listesi ve tek kullanımlık
-  bilet durumu (ADR-0012 K4, [[FW-RB-0006]] §4.3) orada tutulur.
+  bilet durumu (ADR-0012 K4, [[FW-RB-0004]] §4.3) orada tutulur.
 - Uç kimlik istemiyordu (yalnız hız sınırı). Jeton kişisel veri taşımadığı için gizlilik riski yoktu; ama **hizmet engelleme
   riski** vardı: QR'ı gören (yanındaki kişi, kamera, ekran görüntüsü) jetonu 60 saniye içinde kendisi gönderirse `jti` listeye
   girer ya da tek kullanımlık bilet tüketilir; gerçek kapıda kişi DUR görür. Ekim 2026 güvenlik incelemesinin (2026-10-26) bulgusu.
@@ -91,7 +91,7 @@ gösterilebilir; bu ADR o zaman güncellenir.
   alanı — yalnız tarayıcı sekmesinde tutulur); ağ sunucusunda nginx `/terminal/keys` dışa kapalı; sandbox ortamında deneme
   anahtarları; sahne provası (`ops/demo-scenes`) anahtarla çağırır.
 - Belgeler: [[SPEC-API-0001]] §6.4 (kimlik doğrulama tablosu) ve AP13 notu; doğrulayıcı API sayfası; sandbox rehberi §6;
-  [[FW-RB-0006]] §4.3.
+  [[FW-RB-0004]] §4.3.
 - İş listesi: Kurum Konsolu'nda terminal anahtarı ekranı (K2); liste şemasına `terminal_groups[]` (K5).
 
 # Durum

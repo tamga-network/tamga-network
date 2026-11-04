@@ -446,7 +446,10 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
     // ADR-0050: registry-sandbox example-events TR-VKN TR0000000003
     await ensure(
       "issuer-example-events",
-      signedByRoot(1221, "CN=Ornek Etkinlik (TEST), OU=Bilet Satisi, O=Ornek Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR"),
+      signedByRoot(
+        1221,
+        "CN=Ornek Etkinlik (TEST), OU=Bilet Satisi, O=Ornek Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
+      ),
     ),
     await ensure(
       "issuer-example-events-status",
@@ -458,7 +461,10 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
     await ensure(
       "issuer-example-cinema",
       // ADR-0050: registry-sandbox example-cinema TR-VKN TR0000000006
-      signedByRoot(1311, "CN=Ornek Sinema (TEST), OU=Bilet Satisi, O=Ornek Sinema (TEST), 2.5.4.97=VATTR-0000000006, C=TR"),
+      signedByRoot(
+        1311,
+        "CN=Ornek Sinema (TEST), OU=Bilet Satisi, O=Ornek Sinema (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+      ),
     ),
     await ensure(
       "issuer-example-cinema-status",

@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-26
+last_updated: 2026-11-04
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -151,6 +151,7 @@ kanaldan (OBS oturumu içinde) verilir.
 | `vct` | Kayıtlı bir şema olmalı ([[SPEC-SCHEMA-0001]]) |
 | Yapılandırma kimliği ve `scope` | İkisi de belge türünün `vct` URN'üdür (`urn:tamga:edu:DiplomaCredential:1`); ayrı bir yapılandırma adı ya da kısa kapsam adı yoktur. Cüzdan [[t:PAR]]'da türü `scope` ile ister ([[t:HAIP]] §4.3) |
 | `display` (belge veren) | Kurumun imzalı güven listesindeki **kayıtlı adı** (`legal_name`; yerelsiz girdi) ve varsa dildeki hizmet açıklamaları (`service_description`, BCP 47 anahtarı → `locale` + `description`). Belge türünün adı ya da sabit bir dil yazılmaz; `credential_metadata.display` tür kataloğundan gelir (bu örnekte `claims` yoktur: alan listesi tür metadata'sındadır, metadata'da yinelenmez) |
+| `display[].locale` (OpenID4VCI 1.0 §12.2.4; 2026-11-04) | BCP 47 (RFC 5646) etiketi **kanonik biçimde** yazılır (`en-us` → `en-US`, `TR` → `tr`; `Intl.getCanonicalLocales`). Biçimi bozuk (`en_US`), dil alt etiketi kayıtsız (`xx`, `und`) ya da bölgesi bilinmeyen etiketli girdi yazılmaz, dil uydurulmaz; aynı dile çıkan iki girdiden ilki kalır. **Tam ICU notu:** dil ve bölge geçerliliği `Intl.DisplayNames` ile denetlenir; bu, çalışma ortamında tam ICU verisi ister (Node.js resmî derlemeleri tam ICU ile gelir). Küçük ICU'lu (`small-icu`, `--with-intl=none`) bir derlemede geçerli diller tanınmayabilir ve görünüm girdileri sessizce düşer — belge veren servisi tam ICU'lu Node ile çalıştırılmalıdır |
 | `nonce_endpoint` | **Zorunlu** — Tamga her zaman `c_nonce` ister |
 | `deferred_credential_endpoint`, `notification_endpoint` | **İlan edilmez** — bugün iki uç da yoktur (§9, §10) |
 | `batch_credential_issuance.batch_size` | **10** (§8) |

@@ -17,7 +17,7 @@ summary: >
   `terminal_groups[]`) oflayn girişlər üçün hədəf olaraq qalır. Qəbul: 2026-10-26 (təhlükəsizlik baxışı, layihə rəhbərliyinin
   ümumi təsdiqi).
 domain: Protocol
-related: ["[[ADR-0012]]", "[[ADR-0017]]", "[[SPEC-API-0001]]", "[[FW-RB-0006]]"]
+related: ["[[ADR-0012]]", "[[ADR-0017]]", "[[SPEC-API-0001]]", "[[FW-RB-0004]]"]
 ---
 
 # Qısaca
@@ -31,7 +31,7 @@ saymır. Biletin QR-ını uzaqdan fotoşəkilə çəkən biri onu artıq "istifa
 - [[ADR-0012]] B: qeydiyyatdan keçmiş giriş üçün cüzdan nüsxə açarı ilə imzalanmış, şəxsi məlumatsız, 60 saniyə etibarlı
   `tamga-pass+jwt` tokeni göstərir; terminal onu yoxlayır və `jti` təkrar siyahısı terminal qrupunun girişləri arasında onlayn
   paylaşılır. Praktikada bütün girişlər Tamga Verify-ın `POST /terminal/verify` ucunu çağırır; təkrar siyahısı və birdəfəlik
-  bilet vəziyyəti (ADR-0012 K4, [[FW-RB-0006]] §4.3) oradadır.
+  bilet vəziyyəti (ADR-0012 K4, [[FW-RB-0004]] §4.3) oradadır.
 - Uc heç bir kimlik tələb etmirdi (yalnız sürət həddi). Token şəxsi məlumat daşımadığı üçün məxfilik riski yox idi, lakin
   **xidmətdən imtina riski** var idi: QR-ı görən (növbəti şəxs, kamera, ekran görüntüsü) tokeni 60 saniyə ərzində göndərsə, onun
   `jti`-si siyahıya düşür və ya birdəfəlik bilet istifadə olunur; şəxs isə əsl girişdə DAYAN görür. 2026-cı ilin oktyabr
@@ -94,7 +94,7 @@ ADR yenilənir.
 - Kod: `apps/verify` (`terminal-keys.ts`, `/terminal/verify` 401/403, `/terminal/keys` inzibatçı ucları, giriş səhifəsində açar
   sahəsi — yalnız brauzer tabında saxlanılır); şəbəkə serverində nginx `/terminal/keys`-i xaricə bağlayır; sandbox mühitində
   sınaq açarları; səhnə məşqi (`ops/demo-scenes`) açarla çağırır.
-- Sənədlər: [[SPEC-API-0001]] §6.4 (kimlik cədvəli) və AP13 qeydi; yoxlayıcı API səhifəsi; sandbox bələdçisi §6; [[FW-RB-0006]]
+- Sənədlər: [[SPEC-API-0001]] §6.4 (kimlik cədvəli) və AP13 qeydi; yoxlayıcı API səhifəsi; sandbox bələdçisi §6; [[FW-RB-0004]]
   §4.3.
 - İş siyahısı: Qurum Konsolunda terminal açarı ekranı (K2); siyahı sxemində `terminal_groups[]` (K5).
 

@@ -274,7 +274,7 @@
       "inputs": [
         {
           "internalType": "uint64",
-          "name": "latestConfirmed",
+          "name": "current",
           "type": "uint64"
         },
         {
