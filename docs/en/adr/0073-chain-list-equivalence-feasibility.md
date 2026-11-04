@@ -1,8 +1,8 @@
 ---
 document_id: ADR-0073
 title: "Making chain–list equivalence achievable: migration mode, hard revocation, schema versions, relying party identity, status mapping"
-status: Proposed
-review_status: Draft
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
@@ -10,12 +10,12 @@ summary: >
   ADR-0009 K7 ties the move from signed lists to the chain to a replay of the list history into the contracts and an equivalence
   test. With today's contracts that history cannot be replayed faithfully: dates come from block time, there is no hard
   revocation, a schema has a single content digest, the relying party identity is bound to its certificate and cannot return from
-  suspension, the status sets and boundaries differ, and daily quotas stop bulk writing. Proposal: a one-time migration mode in
+  suspension, the status sets and boundaries differ, and daily quotas stop bulk writing. Decision: a one-time migration mode in
   every registry contract, opened once by Governance and never reopened after it closes (past dates only up to block time, no
   quotas); hard revocation via `invalidatesFrom`; schema version digests as an append-only array; `rpId = keccak256(dns_name)`,
   certificate update, return from suspension and fine-grained scopes (as digests); a status mapping table and evaluation by the
-  status at the credential's `iat` with half-open intervals. The replay command is `trust:chain-replay`. Proposal; acceptance
-  rests with project management.
+  status at the credential's `iat` with half-open intervals. The replay command is `trust:chain-replay`. Accepted
+  (2026-11-04): credentials a suspended issuer issued before the suspension stay valid; the migration window is at most 30 days.
 domain: Trust
 related: ["[[ADR-0009]]", "[[ADR-0010]]", "[[ADR-0015]]", "[[ADR-0029]]", "[[ADR-0034]]", "[[ADR-0046]]", "[[ADR-0051]]", "[[ADR-0053]]", "[[ADR-0054]]", "[[ADR-0055]]", "[[ADR-0063]]", "[[ADR-0074]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]"]
 translation_of: ADR-0073
@@ -54,7 +54,7 @@ This proposal adds those abilities to the contracts and allows history to be wri
   migration mode, hard revocation, append-only schema version digests and a permanent relying party identity. The replay command
   name is approved: `trust:chain-replay`.
 
-# Proposed decision
+# Decision
 
 ## K1 — One-time migration mode (F1, F10)
 
@@ -66,12 +66,15 @@ This proposal adds those abilities to the contracts and allows history to be wri
   replay plan (`replayPlanHash` = SHA-256 of the plan generated deterministically from the public archive); anyone can regenerate
   the plan from the archive and compare it with the events on chain. Closing is also a Governance proposal and rests on the
   equivalence report in K6.
+- **The window is at most 30 days** (counted from opening). Governance may extend it only while the mode is open and within this
+  cap. When the time runs out the mode counts as **closed** by itself; this closing is final too.
 - While the mode is open, writes that carry a date take it **explicitly** (moment of a status change, authorisation window, start of
   validity, registration time, status list publication time). Rules: no date may be later than `block.timestamp`; a record's history
   is written in time order (a date earlier than the previous one is rejected); written history does not change.
 - Who writes: national records still through that state's delegate keys (sovereignty and [[SPEC-BC-0001]]/N1 unchanged);
   network-level records (network schemas, [[ADR-0074]] K3) through the **migration executor** address authorised by the opening
-  proposal, and only while the mode is open.
+  proposal — **a single migration executor**, no separate Governance vote per record — and only while the mode is open.
+- The replay starts from the **first archived version** of the production archive.
 - While the mode is open, the daily quotas of [[ADR-0054]]/NS3 are **not applied** (F10); when it closes, the quotas return as before.
 - While the mode is not open (not started or closed) today's rule holds: dates are `block.timestamp`. The only exception is the
   hard revocation date in K2.
@@ -103,7 +106,8 @@ This proposal adds those abilities to the contracts and allows history to be wri
 - **Identity:** `rpId = keccak256(utf8(dns_name))`. It does not change when the certificate is renewed ([[ADR-0034]] CI3/CI4). The
   ABI carries no domain name text; the registrar computes the digest and the indexer and the K6 test check the formula. The contract
   still records the state code for sovereignty. Because identifiers follow the chain formula, the list's `rp_id` moves to the same
-  formula (see open question 4).
+  formula; today's embedded disclosure policies ([[ADR-0046]]) are rewritten under the
+  development-phase rule ([[ADR-0029]]).
 - **Certificate:** the access certificate fingerprint can be updated; the old and new fingerprints are emitted in an event and the
   history stays. A fingerprint belongs to only one relying party at a time.
 - **Return from suspension:** `SUSPENDED → ACTIVE` is added (as for issuers and root CAs). `REVOKED` is final.
@@ -135,7 +139,7 @@ This proposal adds those abilities to the contracts and allows history to be wri
 |---|---|---|---|---|---|
 | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | |
 | `ROLLING_OVER` | `ACTIVE` + successor event | — | — | — | The list treats it as active in C1 |
-| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Only credentials issued during the suspension fail (see open question 1) |
+| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Only credentials issued during the suspension fail; those issued before stay valid (list rule) |
 | `RETIRED` | `RETIRED` | `REVOKED`, soft (`revokedAt` = `since`) | — | `REVOKED` | Earlier credentials stay valid (GV1) |
 | `REVOKED` | `REVOKED` | `REVOKED`; K2 if `invalidates_from` | `REVOKED` | `REVOKED` | |
 | `DEPRECATED` | — | — | `DEPRECATED` | — | SC3 |
@@ -166,46 +170,42 @@ This proposal adds those abilities to the contracts and allows history to be wri
 | One digest for all element paths in a scope | rejected | "May this element be requested" cannot be asked on chain; a digest per element enables the over-asking check |
 | Leave the contract's C1 on the current status | rejected | Different answer from the list; the [[ADR-0009]] K7 test does not pass |
 
-# Proposed rules (moved into a binding table if accepted)
+# Invariants
 
 | Code | Rule |
 |---|---|
-| CE1 | The migration mode is opened once in every registry contract by a Governance proposal; once closed it cannot be reopened by any path (including upgrade). While it is open past dates may be written, but no date may be later than block time, the order per record is kept and the daily quotas are not applied; while it is not open, dates are block time (except CE2). |
+| CE1 | The migration mode is opened once in every registry contract by a Governance proposal; the window is at most 30 days and closes by itself when the time runs out; once closed it cannot be reopened by any path (including upgrade). While it is open past dates may be written, but no date may be later than block time, the order per record is kept and the daily quotas are not applied; while it is not open, dates are block time (except CE2). |
 | CE2 | The hard revocation date (`invalidatesFrom`) lies between the issuer's start of validity and the revocation moment; once written it is not removed and can only be moved earlier; a credential whose `iat` is equal to or later than this date is not accepted. |
 | CE3 | A schema's `vctURI` and every written content digest are never changed or removed; a new version digest is only appended. |
 | CE4 | A relying party's chain and list identity is `keccak256(dns_name)`; renewing the access certificate does not change the identity. |
-| CE5 | The contract evaluates C1/C2/C3 by the status at the credential's `iat`, with half-open intervals; list statuses are written to the contract by the mapping table. |
+| CE5 | The contract evaluates C1/C2/C3 by the status at the credential's `iat`, with half-open intervals (credentials a suspended issuer issued before the suspension stay valid); list statuses are written to the contract by the mapping table. |
 | CE6 | The migration does not close until the `trust:chain-replay` equivalence test shows no ACCEPTED/REJECTED difference in the C1/C2/C3/D5 answers. |
 
-# Open questions (for project management)
+# Decisions on the open questions (2026-11-04)
 
-1. **Old credentials of a suspended issuer.** The list ([[ADR-0009]] D-BC-3 `iat` rule, GV1) accepts a credential issued before the
-   suspension; [[SPEC-BC-0001]] §3.3 treats suspension on chain as "precautionary" and rejects all credentials. Proposal: the list
-   rule (K5).
-2. **Network-level writes in the migration.** A single migration executor authorised by the opening proposal (proposal), or a
-   separate Governance vote for every network schema and network record (reading of [[SPEC-BC-0001]]/GV2)?
-3. **Migration time cap.** As long as the window is open, past dates can be written. Proposal: 30 days, Governance may extend only
-   while it is open; when the time runs out, does the mode close by itself or do only the writes stop?
-4. **The list's `rp_id`.** If K4 is accepted, the list's `rp_id` also becomes `keccak256(dns_name)`. Embedded disclosure policies
-   ([[ADR-0046]]) carry `rp_id`; they no longer break on certificate renewal, but today's ones are rewritten (development phase,
-   [[ADR-0029]]).
-5. **Start of the replay.** From the first version of the production archive, or from the version where the in-place fix period of
-   [[ADR-0029]] ended? A version digest removed from the list stays on chain (K3) and causes an equivalence difference.
-6. Caps for scopes and element arrays (today `MAX_SCOPES`) to be set from field data.
+1. **Old credentials of a suspended issuer:** the list rule. A credential issued before the suspension is valid; only credentials
+   issued during the suspension fail (K5). [[SPEC-BC-0001]] §3.3 follows this.
+2. **Network-level writes in the migration:** a single migration executor authorised by the opening proposal writes them (K1).
+3. **Migration time cap:** at most 30 days; Governance extends only while the mode is open and within the cap; when the time runs out
+   the mode counts as closed by itself (K1, CE1).
+4. **The list's `rp_id`:** becomes `keccak256(dns_name)` (K4); today's embedded disclosure policies are rewritten ([[ADR-0029]]).
+5. **Start of the replay:** the first archived version of the production archive (K1).
+6. Caps for scopes and element arrays are set with an initial value in the implementation and reviewed with field data.
 
 # Consequences
 
-- Contracts (after acceptance, together with [[ADR-0074]]): migration state and Governance proposals; status windows and half-open
+- Contracts (together with [[ADR-0074]]): migration state and Governance proposals; status windows and half-open
   boundaries for issuers, root CAs and schemas; `invalidatesFrom`; schema version digests; relying party identity, certificate
   update, return from suspension and scope records; the `privacy-abi` test covers the new fields. Struct fields are only appended
   (UUPS storage layout).
-- `apps/trust-publisher`: `trust:chain-replay` (plan, digest, dry run, resume, equivalence test); list `rp_id` computation (open
-  question 4).
-- Documents: [[SPEC-BC-0001]] §3.3, §4.4 SC1, §6, §12.2, §13, §14 and [[SPEC-TRUST-0001]] §7 change after acceptance; the sentence
+- `apps/trust-publisher`: `trust:chain-replay` (plan, digest, dry run, resume, equivalence test); list `rp_id` computation (K4).
+- Documents: [[SPEC-BC-0001]] §3.3, §4.4 SC1, §6, §12.2, §13, §14 and [[SPEC-TRUST-0001]] §7 change; the sentence
   "the existing eight contracts do not change" in [[ADR-0051]] K2 is then changed by this ADR and [[ADR-0074]].
-- The chain stays off in production ([[ADR-0009]] K4, [[ADR-0051]] CH5); this proposal only makes the move possible.
+- The chain stays off in production ([[ADR-0009]] K4, [[ADR-0051]] CH5); this decision only makes the move possible.
 
 # Status
 
-**Proposed — 2026-11-04.** Written on project management's 2026-11-04 direction; acceptance rests with project management. The
-command name `trust:chain-replay` is approved. If accepted, it receives a D-BC code in DECISIONS and rules CE1–CE6 become binding.
+**Accepted — 2026-11-04.** With project management's approval (verbatim quote in the private approval record): credentials a
+suspended issuer issued before the suspension stay valid; the remaining open questions as proposed. The command name
+`trust:chain-replay` is approved. DECISIONS: D-BC-12. CE1–CE6 are binding. Implementation in the contracts is in progress
+([[SPEC-BC-0001]] version notes).

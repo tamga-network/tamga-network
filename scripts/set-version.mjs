@@ -2,7 +2,7 @@
 /**
  * Paket sürümünü tek seferde değiştirir (rehber: operatörün iç paket güncelleme notu).
  *   node scripts/set-version.mjs 0.2.1
- * Değiştirdikleri: 9 `packages/<ad>/package.json` sürümü, doğrulayıcının `SDK_VERSION` sabiti, package-lock.json.
+ * Değiştirdikleri: 10 `packages/<ad>/package.json` sürümü, doğrulayıcının `SDK_VERSION` sabiti, package-lock.json.
  * Değiştirmedikleri (elle, rehberdeki listeye göre): belgelerdeki sürüm cümleleri, CHANGELOG, tamga-web SDK rozeti.
  * Belge ve ARF sürümleri (1.0) bu betiğin işi değil — onlar ayrı kuraldır.
  */
@@ -12,7 +12,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
-const PKGS = ["core", "mdoc", "schemas", "sd-jwt", "trust", "issuer", "verifier", "wallet-core", "zk"];
+const PKGS = ["core", "mdoc", "schemas", "sd-jwt", "trust", "issuer", "verifier", "wallet-core", "zk", "onboard"];
 const next = process.argv[2];
 if (!next || !/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(next)) {
   console.error("Kullanım: node scripts/set-version.mjs <sürüm>   ör. 0.2.1");
@@ -40,7 +40,7 @@ for (const [f, data] of writes) writeFileSync(f, data);
 if (prev.size !== 1) console.warn(`⚠ paketler farklı sürümlerdeydi: ${[...prev].join(", ")} — hepsi ${next} yapıldı`);
 
 execSync("npm install --package-lock-only --no-audit --no-fund", { cwd: ROOT, stdio: "inherit" });
-console.log(`✓ ${[...prev].join(", ")} → ${next} (9 paket + SDK_VERSION + package-lock.json)`);
+console.log(`✓ ${[...prev].join(", ")} → ${next} (10 paket + SDK_VERSION + package-lock.json)`);
 console.log(
   "Sıradaki: rehberdeki elle güncellenecek yerler (belgelerdeki sürüm cümlesi, CHANGELOG, tamga-web SDK rozeti).",
 );

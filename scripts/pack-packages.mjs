@@ -21,7 +21,7 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
-const ALL_PKGS = ["core", "mdoc", "schemas", "sd-jwt", "trust", "issuer", "verifier", "wallet-core", "zk"];
+const ALL_PKGS = ["core", "mdoc", "schemas", "sd-jwt", "trust", "issuer", "verifier", "wallet-core", "zk", "onboard"];
 const SEL = (process.env.TAMGA_PACK_PACKAGES ?? "").split(/\s+/).filter(Boolean);
 for (const s of SEL) if (!ALL_PKGS.includes(s)) throw new Error(`TAMGA_PACK_PACKAGES: bilinmeyen paket "${s}"`);
 const PKGS = SEL.length ? ALL_PKGS.filter((p) => SEL.includes(p)) : ALL_PKGS;
@@ -129,6 +129,15 @@ for (const p of PKGS) {
   }
   if (src.scripts?.postinstall || src.scripts?.install || src.scripts?.preinstall)
     errors.push(`${src.name}: install/postinstall betiği yasak (ARCH-0005 P1)`);
+  // bin: "./src/x.ts" → "./lib/x.js" (derlenmiş dosya #!/usr/bin/env node ile başlamalı)
+  const binOut = {};
+  for (const [k, v] of Object.entries(src.bin ?? {})) {
+    binOut[k] = toLib(v, ".js");
+    const f = join(dest, binOut[k]);
+    if (!existsSync(f)) errors.push(`${src.name}: bin ${k} → ${binOut[k]} yok`);
+    else if (!readFileSync(f, "utf8").startsWith("#!/usr/bin/env node"))
+      errors.push(`${src.name}: bin ${k} #!/usr/bin/env node ile başlamıyor`);
+  }
   const out = {
     name: src.name,
     version: src.version,
@@ -138,6 +147,7 @@ for (const p of PKGS) {
     main: exportsOut["."].default,
     types: exportsOut["."].types,
     exports: exportsOut,
+    ...(Object.keys(binOut).length ? { bin: binOut } : {}),
     files: ["lib", "README.md", "LICENSE", ...native],
     sideEffects: src.sideEffects ?? false,
     engines: { node: ">=22" },

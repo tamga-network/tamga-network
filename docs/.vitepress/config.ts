@@ -32,13 +32,14 @@ function isAzPage(file: string): boolean {
 
 /**
  * Yayın kapsamı: geliştiriciye bugün gereken belgeler yayında; arka plan, zincir aşaması, iç kayıtlar ve arşiv depoda kalır.
- * Bunlar public depoya da girmez (.publicignore); yayında olmayan belgeye verilen [[DOC-ID]] atfı bağlantısız kod olarak görünür.
+ * Çoğu public depoya da girmez (.publicignore; zincir aşaması `ledger/` ve `audit/` depoda açık ama sitede yok); yayında olmayan
+ * belgeye verilen [[DOC-ID]] atfı bağlantısız kod olarak görünür.
  */
 const UNPUBLISHED = [
   "framework/**", // Tamga ARF sitesinde
   "_archive/**",
   "_internal/**",
-  "ledger/**",
+  "ledger/**", // public depoda (ADR-0074 K6), sitede değil
   "background/**",
   "audit/**", // dış denetçi paketi: GitHub'da okunur (İngilizce, Mermaid GitHub'da çizilir), sitede değil
   "architecture/servers.md", // işletim içi
@@ -59,7 +60,7 @@ const unpublishedRe = UNPUBLISHED.map(
 );
 const isPublished = (src: string) => !unpublishedRe.some((re) => re.test(src));
 
-const PACKAGES = ["core", "trust", "schemas", "sd-jwt", "mdoc", "issuer", "verifier", "wallet-core"];
+const PACKAGES = ["core", "trust", "schemas", "sd-jwt", "mdoc", "issuer", "verifier", "wallet-core", "onboard"];
 
 /** Arayüz metinleri. */
 const T = {

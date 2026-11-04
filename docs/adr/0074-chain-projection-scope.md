@@ -1,19 +1,19 @@
 ---
 document_id: ADR-0074
 title: "Projeksiyon kapsamı 0.8: imzalı listelerdeki bütün güven kayıtları zincirde"
-status: Proposed
-review_status: Draft
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
 summary: >
   İmzalı listelerde olup zincirde karşılığı olmayan kayıtların (kapı grupları, kayıt sertifikası durum listesi, XML ve LoTE
   görünümleri, liste imzacıları, cüzdan sağlayıcılar, ZK devreleri, dış listeler, belge kategorileri, liste işletmecisi, kurum
-  sınıfı ve kayıt verisi) hangi kontrata, hangi alan ve olayla yansıyacağını önerir. Sınır: zincire kişisel veri ve serbest metin
+  sınıfı ve kayıt verisi) hangi kontrata, hangi alan ve olayla yansıyacağını belirler. Sınır: zincire kişisel veri ve serbest metin
   girmez; kayıt ayrıntıları yalnız özet (`bytes32`) ve mevcut `metadataURI` deseniyle; yeni `string` alanı yok. Ağ düzeyi kayıtlar
   Governance önerisiyle yazılır. Kayıt sertifikası durum listesi ve liste görünümleri çapa günlüğüne yeni satır türleriyle girer.
-  Okuma yolu `ChainTrustSource` + indeksleyici `apps/` altında. Sandbox zincire yazılmaz. `contracts/` public depoya alınır.
-  Yeni adlar onay bekliyor. Öneri; kabul proje yönetiminde.
+  Okuma yolu `ChainTrustSource` + indeksleyici `apps/` altında. Sandbox zincire yazılmaz. `contracts/`, `network/` ve
+  `docs/ledger` public depoya alınır. Kabul edildi (2026-11-04); adlar onaylı.
 domain: Trust
 related: ["[[ADR-0009]]", "[[ADR-0015]]", "[[ADR-0024]]", "[[ADR-0032]]", "[[ADR-0036]]", "[[ADR-0038]]", "[[ADR-0051]]", "[[ADR-0055]]", "[[ADR-0066]]", "[[ADR-0068]]", "[[ADR-0069]]", "[[ADR-0070]]", "[[ADR-0073]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]"]
 ---
@@ -44,7 +44,7 @@ uygulanması önerilir.
   sağlayıcılar, dış listeler, ZK devreleri, belge kategorileri ve kayıt bilgileri dahil. Sınır: kişisel veri ve serbest metin zincire
   girmez; kayıt ayrıntısı özet ya da adres olarak. Açıklık: rehber, PDF, belge sitesi kavram sayfası ve `contracts/` herkese açık.
 
-# Önerilen karar
+# Karar
 
 ## K1 — Kapsam ilkesi ve veri sınırı
 
@@ -75,7 +75,7 @@ uygulanması önerilir.
 
 ## K3 — LOTL ve ağ düzeyi kayıtlar (F6, F7, F8)
 
-- LOTL'un ağ düzeyi içeriği için **yeni bir ağ düzeyi kayıt kontratı** önerilir (önerilen ad `NetworkRegistry`, **onay bekliyor**).
+- LOTL'un ağ düzeyi içeriği için **yeni bir ağ düzeyi kayıt kontratı** gelir: `NetworkRegistry` (ad onaylı).
   Yazım yalnız Governance'ın türü belli önerileriyle (2/3, [[ADR-0055]]/GE3) ya da göç kipinde göç yürütücüsüyle ([[ADR-0073]] K1).
 
 | LOTL alanı | Zincirde |
@@ -92,12 +92,11 @@ uygulanması önerilir.
 
 ## K4 — Çapa günlüğüne yeni satır türleri (F6)
 
-Kayıt sertifikası durum listesi ve liste görünümleri bugün çapa günlüğünde değil. İki yeni satır türü önerilir (**adlar onay
-bekliyor**):
+Kayıt sertifikası durum listesi ve liste görünümleri bugün çapa günlüğünde değil. İki yeni satır türü gelir (adlar onaylı):
 
-| Satır türü (önerilen ad) | Alanlar | Zincirde |
+| Satır türü | Alanlar | Zincirde |
 |---|---|---|
-| `registration_status` (alternatif `wrprc_status`) | `list_uri` (opak, S8), `content_hash` (imzalı listenin SHA-256'sı), `list_version` (yayıncının liste başına monoton sayacı), `published_at` | Liste çapası kaydında `anchorList`; anahtar `keccak256("tamga:registration-status:<ortam>:<n>")` |
+| `registration_status` | `list_uri` (opak, S8), `content_hash` (imzalı listenin SHA-256'sı), `list_version` (yayıncının liste başına monoton sayacı), `published_at` | Liste çapası kaydında `anchorList`; anahtar `keccak256("tamga:registration-status:<ortam>:<n>")` |
 | `list_view` | `file` (ör. `tl-tr.xml`), `format` (`etsi-tl-xml`, `etsi-lote-json`), `source_file` (`lotl`, `tl-<cc>`), `source_version`, `content_hash` (dosyanın SHA-256'sı = `.sha2`) | `anchorList`; anahtar `keccak256("tamga:trust-list-view:<ortam>:<dosya>")`, sürüm = kaynak listenin sürümü ([[ADR-0066]] K1: görünüm ayrı liste değildir) |
 
 - Kontrol noktasının `state`'i bu satırları da taşır (TL12). Kontrat değişikliği gerekmez; yeni anahtar ad alanları yeter.
@@ -106,18 +105,19 @@ bekliyor**):
 
 ## K5 — Okuma yolu: `ChainTrustSource` ve indeksleyici
 
-- İndeksleyici ve `ChainTrustSource` yeni bir uygulamada: `apps/chain-indexer/` (önerilen ad, **onay bekliyor**). İndeksleyici
+- İndeksleyici ve `ChainTrustSource` yeni bir uygulamada: `apps/chain-indexer/` (ad onaylı). İndeksleyici
   kontrat olaylarını okur ve kayıtları bellekteki liste biçimine çevirir; `ChainTrustSource` aynı `TrustSource` arayüzünü uygular
   ([[ADR-0015]] K3): C1/C2/C3'ü sabitlenmiş bir bloktaki kontrat okumalarından (`TrustQueries`), kayıtları indeksten verir.
   İndeks bayatsa ya da zincir erişilemezse cevap `UNKNOWN`'dur (CMP4).
 - `@tamga-network/trust/core` hafif kalır ([[ADR-0015]] K1); zincir istemcisi bağımlılığı oraya girmez. Üçüncü taraflar için ayrı
-  paket gerekirse önerilen ad `@tamga-network/chain` (**onay bekliyor**). Liste yayıncısının `trust:chain-check`'i yerinde kalır.
+  paket gerekirse adı `@tamga-network/chain` (ad onaylı). Liste yayıncısının `trust:chain-check`'i yerinde kalır.
 - [[ADR-0073]] K6 eşdeğerlik testi bu okuma yolunu kullanır.
 
-## K6 — `contracts/` herkese açık depoya
+## K6 — `contracts/`, `network/` ve `docs/ledger` herkese açık depoya
 
-- Proje yönetiminin açıklık kararı (2026-11-04) gereği `contracts/` public depoya alınır.
-- **Uygulama adımı:** `.publicignore`'dan `contracts/` satırı ve dış denetçi paketinin kontrat bölümü
+- Proje yönetiminin açıklık kararı (2026-11-04) gereği `contracts/`, Besu ağ dosyaları (`network/`, `scripts/besu-dev.ps1`) ve
+  zincir aşaması belgeleri (`docs/ledger`) public depoya alınır.
+- **Uygulama adımı:** `.publicignore`'dan bu satırlar ve dış denetçi paketinin kontrat bölümü
   (`docs/audit/contracts.md`, `docs/audit/contracts-invariants.md`) çıkarılır; public yayın denetimi yeniden çalıştırılır; `contracts/`
   içinde anahtar, `.env` ve dağıtım kaydı olmadığı doğrulanır; README İngilizce ve kısa olur.
 
@@ -139,7 +139,7 @@ bekliyor**):
 | Sandbox'ı da zincire çapalamak | ret | Gece sıfırlaması CH4 ile çelişir; test ağı gerçek ağın güven kaydına karışmaz |
 | `ChainTrustSource`'u `trust/core`'a koymak | ret | Cüzdan ve tarayıcı çekirdeği zincir istemcisini taşımaz ([[ADR-0015]] K1) |
 
-# Önerilen kurallar (kabul edilirse bağlayıcı tabloya taşınır)
+# Değişmezler
 
 | Kod | Kural |
 |---|---|
@@ -149,27 +149,28 @@ bekliyor**):
 | PJ4 | Sandbox listeleri ve çapa günlüğü üretim zincirine yazılmaz ve yeniden oynatılmaz. |
 | PJ5 | Liste görünümleri ve kayıt sertifikası durum listesi çapa günlüğüne satır olarak girer ve zincirde kaynak sürümüyle çapalanır; görünüm kaynakla çelişirse kaynak geçerlidir. |
 
-# Açık sorular (proje yönetimine)
+# Açık soruların kararları (2026-11-04)
 
-1. **Ad:** yeni ağ düzeyi kontrat `NetworkRegistry` mi (öneri), yoksa kayıtlar türüne göre ayrı kontratlara mı dağıtılsın?
-2. **Ad:** çapa günlüğü satır türleri `registration_status` (ya da `wrprc_status`) ve `list_view`.
-3. **Ad:** `apps/chain-indexer/`; gerekirse paket `@tamga-network/chain`.
-4. **Açıklık:** kararda `contracts/` adı geçiyor. Besu ağ dosyaları (`network/`) ve zincir aşaması belgeleri de herkese açık olsun mu?
-5. **Ayrıntı özeti biçimi:** RFC 8785 kanonik JSON + SHA-256 (öneri); alan bloklarının sınırı uygulamada tabloyla sabitlenir.
-6. **Sandbox:** ileride sandbox'a ayrı, sıfırlanabilir bir test zinciri kurulsun mu? Öneri: hayır, yalnız yerel geliştirme zinciri.
+1. **Ad:** yeni ağ düzeyi kontrat `NetworkRegistry` (K3).
+2. **Ad:** çapa günlüğü satır türleri `registration_status` ve `list_view` (K4).
+3. **Ad:** `apps/chain-indexer/`; ileride gerekirse paket `@tamga-network/chain` (K5).
+4. **Açıklık:** `contracts/`, `network/` ve `docs/ledger` herkese açık (K6).
+5. **Ayrıntı özeti biçimi:** RFC 8785 kanonik JSON + SHA-256 (K1); alan bloklarının sınırı uygulamada tabloyla sabitlenir.
+6. **Sandbox:** ayrı test zinciri kurulmaz; yalnız yerel geliştirme zinciri (K7).
 
 # Sonuçlar
 
-- Kontratlar (kabulden sonra, [[ADR-0073]] ile birlikte): `IssuerRegistry` ve `RelyingPartyRegistry` yeni alanları ve kapı grupları,
+- Kontratlar ([[ADR-0073]] ile birlikte): `IssuerRegistry` ve `RelyingPartyRegistry` yeni alanları ve kapı grupları,
   yeni ağ düzeyi kontrat, Governance öneri türleri, `privacy-abi` testinin yeni kontratı kapsaması; [[ADR-0051]] K2'nin "mevcut sekiz
   kontrat değişmez" cümlesi değişmiş olur.
 - `@tamga-network/trust`: yeni çapa satırı türleri, kontrol noktası `state`'i; `apps/trust-publisher`: projeksiyon planı yeni
-  kayıtları ve ortam denetimini kapsar; `apps/chain-indexer/` (ad onayıyla).
-- Belgeler: [[SPEC-BC-0001]] (§3, §6, yeni bölüm, §13, §15) ve [[SPEC-TRUST-0001]] §5 ve §7 kabulden sonra değişir.
+  kayıtları ve ortam denetimini kapsar; `apps/chain-indexer/`.
+- Belgeler: [[SPEC-BC-0001]] (§3, §6, yeni bölüm, §13, §15) ve [[SPEC-TRUST-0001]] §5 ve §7 değişir.
 - Üretimde zincir yine kapalıdır ([[ADR-0009]] K4, [[ADR-0051]] CH5).
 
 # Durum
 
-**Proposed — 2026-11-04.** Proje yönetiminin 2026-11-04 yönü ("her şey zincirde", "hepsi açık") üzerine yazıldı; kabul proje
-yönetiminde. Yeni adlar (`NetworkRegistry`, `registration_status`, `list_view`, `apps/chain-indexer/`, `@tamga-network/chain`)
-onay bekliyor. Kabul edilirse DECISIONS'a D-BC kodu alır ve kurallar PJ1–PJ5 bağlayıcı olur.
+**Accepted — 2026-11-04.** Proje yönetiminin onayıyla (birebir alıntı özel onay kaydında): adlar `NetworkRegistry`,
+`registration_status`, `list_view`, `apps/chain-indexer/`, ileride `@tamga-network/chain`; `contracts/`, `network/` ve
+`docs/ledger` herkese açık; açık soruların kalanı önerildiği gibi. DECISIONS: D-BC-13. PJ1–PJ5 bağlayıcıdır. Kontratlardaki
+uygulama sürüyor ([[SPEC-BC-0001]] sürüm notları).

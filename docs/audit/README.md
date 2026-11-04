@@ -31,7 +31,7 @@ part of the documentation website.
 | ZK prover | `packages/zk` | wallet-side zero-knowledge proof generation for mdoc |
 | Reference verifier service | `apps/verify` | hosted verifier (Fastify): presentation API, result access, DC API test page, example site, terminal endpoints |
 | Trust list publisher | `apps/trust-publisher` | builds and signs the trust lists, anchor log, LoTE / TL XML projections, registration certificates and their status list |
-| Contracts (chain stage, not in production) | `contracts/` | Solidity registries; **not in the public repository** until the chain is opened — package `contracts.md` is shared with the reviewer separately on request |
+| Contracts (chain stage, not in production) | `contracts/` | Solidity registries (public since 2026-11-04, ADR-0074 K6); review package `contracts.md` |
 
 **Out of scope for this package** (reviewed separately or not yet public): the operator repository (identity-attestation service,
 institution issuer service, institution console, sandbox portal, server configuration), wallets listed on the network (including

@@ -1,0 +1,16 @@
+{
+  "solc_remaps": "@openzeppelin/=node_modules/@openzeppelin/",
+  "solc_args": "--optimize --optimize-runs 200 --evm-version shanghai",
+  "exclude_dependencies": true,
+  "filter_paths": "node_modules",
+  "compile_force_framework": "solc",
+  "detectors_to_exclude": "timestamp,incorrect-equality,naming-convention,unused-state,costly-loop,cyclomatic-complexity",
+  "_exclusion_reasons": {
+    "timestamp": "block.timestamp is used on purpose for validity windows (CA/issuer validFrom..validUntil), proposal TTL and upgrade delay (ADR-0055), daily quota buckets and publishedAt skew. QBFT validators can shift a block time by seconds; every window is hours to years long, so the drift is not exploitable. Many hits are enum comparisons inside functions that also read a timestamp field.",
+    "incorrect-equality": "Every hit is an equality on an enum status (NONE/ACTIVE/...) or a zero sentinel (queuedAt == 0). The detector targets equality on balances or timestamps that an attacker can steer; none of these can be steered.",
+    "naming-convention": "__gap and __TamgaRegistryBase_init follow the OpenZeppelin upgradeable convention (storage gap, onlyInitializing init function).",
+    "unused-state": "__gap arrays are reserved storage for UUPS upgrades (SPEC-BC-0001 §9); they are unused by design and checked by contracts:storage-check.",
+    "costly-loop": "Counter updates inside loops run only in initialize (founders, initial anchorers), bounded by the caller's array and executed once.",
+    "cyclomatic-complexity": "Governance.execute and SchemaRegistry.registerSchema are flat dispatch/validation functions (one branch per proposal kind or field rule); splitting them would not reduce risk. Covered branch by branch in tests."
+  }
+}

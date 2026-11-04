@@ -1,13 +1,13 @@
 ---
 document_id: ADR-0074
 title: "Proyeksiyanın əhatə dairəsi 0.8: imzalanmış siyahılardakı bütün etibar qeydləri zəncirdə"
-status: Proposed
-review_status: Draft
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
 summary: >
-  İmzalanmış siyahılarda olub zəncirdə qarşılığı olmayan qeydlərin (keçid qrupları, qeydiyyat sertifikatı status siyahısı, XML və LoTE görünüşləri, siyahı imzalayanları, cüzdan provayderləri, ZK sxemləri, xarici siyahılar, sənəd kateqoriyaları, siyahı operatoru, qurum sinfi və qeydiyyat məlumatları) hansı kontrakta, hansı sahə və hadisə ilə əks olunacağını təklif edir. Sərhəd: zəncirə şəxsi məlumat və sərbəst mətn daxil olmur; qeydiyyat təfərrüatları yalnız xülasə (`bytes32`) və mövcud `metadataURI` nümunəsi ilə; yeni `string` sahəsi yoxdur. Şəbəkə səviyyəli qeydlər Governance təklifi ilə yazılır. Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri lövbər jurnalına yeni sətir növləri ilə daxil olur. Oxu yolu `ChainTrustSource` + indeksləyici `apps/` altındadır. Sandbox zəncirə yazılmır. `contracts/` ictimai depoya keçir. Yeni adlar təsdiq gözləyir. Təklifdir; qəbul layihə rəhbərliyindədir.
+  İmzalanmış siyahılarda olub zəncirdə qarşılığı olmayan qeydlərin (keçid qrupları, qeydiyyat sertifikatı status siyahısı, XML və LoTE görünüşləri, siyahı imzalayanları, cüzdan provayderləri, ZK sxemləri, xarici siyahılar, sənəd kateqoriyaları, siyahı operatoru, qurum sinfi və qeydiyyat məlumatları) hansı kontrakta, hansı sahə və hadisə ilə əks olunacağını təklif edir. Sərhəd: zəncirə şəxsi məlumat və sərbəst mətn daxil olmur; qeydiyyat təfərrüatları yalnız xülasə (`bytes32`) və mövcud `metadataURI` nümunəsi ilə; yeni `string` sahəsi yoxdur. Şəbəkə səviyyəli qeydlər Governance təklifi ilə yazılır. Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri lövbər jurnalına yeni sətir növləri ilə daxil olur. Oxu yolu `ChainTrustSource` + indeksləyici `apps/` altındadır. Sandbox zəncirə yazılmır. `contracts/`, `network/` və `docs/ledger` ictimai depoya keçir. Qəbul edildi (2026-11-04); adlar təsdiqlənib.
 domain: Trust
 related: ["[[ADR-0009]]", "[[ADR-0015]]", "[[ADR-0024]]", "[[ADR-0032]]", "[[ADR-0036]]", "[[ADR-0038]]", "[[ADR-0051]]", "[[ADR-0055]]", "[[ADR-0066]]", "[[ADR-0068]]", "[[ADR-0069]]", "[[ADR-0070]]", "[[ADR-0073]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]"]
 translation_of: ADR-0074
@@ -41,7 +41,7 @@ siyahıda qalır. 0.8 paket xəttində tətbiqi təklif olunur.
   məlumat və sərbəst mətn zəncirə daxil olmur; qeydiyyat təfərrüatı xülasə və ya ünvan kimi. Açıqlıq: bələdçi, PDF, sənəd saytının
   anlayış səhifəsi və `contracts/` ictimaidir.
 
-# Təklif olunan qərar
+# Qərar
 
 ## K1 — Əhatə prinsipi və məlumat sərhədi
 
@@ -73,8 +73,8 @@ siyahıda qalır. 0.8 paket xəttində tətbiqi təklif olunur.
 
 ## K3 — LOTL və şəbəkə səviyyəli qeydlər (F6, F7, F8)
 
-- LOTL-un şəbəkə səviyyəli məzmunu üçün **yeni şəbəkə səviyyəli reyestr kontraktı** təklif olunur (təklif olunan ad `NetworkRegistry`,
-  **təsdiq gözləyir**). Yazı yalnız Governance-in növü müəyyən təklifləri ilə (2/3, [[ADR-0055]]/GE3) və ya miqrasiya rejimində
+- LOTL-un şəbəkə səviyyəli məzmunu üçün **yeni şəbəkə səviyyəli reyestr kontraktı** gəlir: `NetworkRegistry`
+  (ad təsdiqlənib). Yazı yalnız Governance-in növü müəyyən təklifləri ilə (2/3, [[ADR-0055]]/GE3) və ya miqrasiya rejimində
   miqrasiya icraçısı ilə ([[ADR-0073]] K1).
 
 | LOTL sahəsi | Zəncirdə |
@@ -91,12 +91,12 @@ siyahıda qalır. 0.8 paket xəttində tətbiqi təklif olunur.
 
 ## K4 — Lövbər jurnalında yeni sətir növləri (F6)
 
-Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri bu gün lövbər jurnalında deyil. İki yeni sətir növü təklif olunur
-(**adlar təsdiq gözləyir**):
+Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri bu gün lövbər jurnalında deyil. İki yeni sətir növü əlavə olunur
+(adlar təsdiqlənib):
 
-| Sətir növü (təklif olunan ad) | Sahələr | Zəncirdə |
+| Sətir növü | Sahələr | Zəncirdə |
 |---|---|---|
-| `registration_status` (alternativ `wrprc_status`) | `list_uri` (qeyri-şəffaf, S8), `content_hash` (imzalanmış siyahının SHA-256-sı), `list_version` (dərc edənin siyahı üzrə monoton sayğacı), `published_at` | Siyahı lövbəri reyestrində `anchorList`; açar `keccak256("tamga:registration-status:<mühit>:<n>")` |
+| `registration_status` | `list_uri` (qeyri-şəffaf, S8), `content_hash` (imzalanmış siyahının SHA-256-sı), `list_version` (dərc edənin siyahı üzrə monoton sayğacı), `published_at` | Siyahı lövbəri reyestrində `anchorList`; açar `keccak256("tamga:registration-status:<mühit>:<n>")` |
 | `list_view` | `file` (məs. `tl-tr.xml`), `format` (`etsi-tl-xml`, `etsi-lote-json`), `source_file` (`lotl`, `tl-<cc>`), `source_version`, `content_hash` (faylın SHA-256-sı = `.sha2`) | `anchorList`; açar `keccak256("tamga:trust-list-view:<mühit>:<fayl>")`, versiya = mənbə siyahının versiyası ([[ADR-0066]] K1: görünüş ayrıca siyahı deyil) |
 
 - Nəzarət nöqtəsinin `state`-i bu sətirləri də daşıyır (TL12). Kontrakt dəyişikliyi lazım deyil; yeni açar ad sahələri kifayətdir.
@@ -105,19 +105,20 @@ Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri bu gün l�
 
 ## K5 — Oxu yolu: `ChainTrustSource` və indeksləyici
 
-- İndeksləyici və `ChainTrustSource` yeni tətbiqdədir: `apps/chain-indexer/` (təklif olunan ad, **təsdiq gözləyir**). İndeksləyici
+- İndeksləyici və `ChainTrustSource` yeni tətbiqdədir: `apps/chain-indexer/` (ad təsdiqlənib). İndeksləyici
   kontrakt hadisələrini oxuyur və qeydləri yaddaşdakı siyahı formasına çevirir; `ChainTrustSource` eyni `TrustSource` interfeysini
   həyata keçirir ([[ADR-0015]] K3): C1/C2/C3-ü sabitlənmiş blokdakı kontrakt oxunuşlarından (`TrustQueries`), qeydləri indeksdən verir.
   İndeks köhnəlibsə və ya zəncir əlçatan deyilsə, cavab `UNKNOWN`-dur (CMP4).
 - `@tamga-network/trust/core` yüngül qalır ([[ADR-0015]] K1); zəncir müştərisi asılılığı ora daxil olmur. Üçüncü tərəflər üçün ayrıca
-  paket lazım olarsa, təklif olunan ad `@tamga-network/chain`-dir (**təsdiq gözləyir**). Siyahı dərc edənin `trust:chain-check`-i
+  paket lazım olarsa, adı `@tamga-network/chain`-dir (ad təsdiqlənib). Siyahı dərc edənin `trust:chain-check`-i
   yerində qalır.
 - [[ADR-0073]] K6 ekvivalentlik testi bu oxu yolundan istifadə edir.
 
-## K6 — `contracts/` ictimai depoya
+## K6 — `contracts/`, `network/` və `docs/ledger` ictimai depoya
 
-- Layihə rəhbərliyinin açıqlıq qərarına (2026-11-04) əsasən `contracts/` ictimai depoya keçir.
-- **Tətbiq addımı:** `.publicignore`-dan `contracts/` sətri və xarici auditor paketinin kontrakt hissəsi (`docs/audit/contracts.md`,
+- Layihə rəhbərliyinin açıqlıq qərarına (2026-11-04) əsasən `contracts/`, Besu şəbəkə faylları (`network/`, `scripts/besu-dev.ps1`)
+  və zəncir mərhələsi sənədləri (`docs/ledger`) ictimai depoya keçir.
+- **Tətbiq addımı:** `.publicignore`-dan bu sətirlər və xarici auditor paketinin kontrakt hissəsi (`docs/audit/contracts.md`,
   `docs/audit/contracts-invariants.md`) çıxarılır; ictimai dərc yoxlaması yenidən işə salınır; `contracts/` daxilində açar, `.env` və
   yerləşdirmə qeydi olmadığı təsdiqlənir; README ingiliscə və qısa olur.
 
@@ -139,7 +140,7 @@ Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri bu gün l�
 | Sandbox-u da zəncirə lövbərləmək | rədd | Gecə sıfırlanması CH4 ilə ziddiyyət təşkil edir; sınaq şəbəkəsi real şəbəkənin etibar qeydinə qarışmır |
 | `ChainTrustSource`-u `trust/core`-a qoymaq | rədd | Cüzdan və brauzer nüvəsi zəncir müştərisini daşımır ([[ADR-0015]] K1) |
 
-# Təklif olunan qaydalar (qəbul edilərsə məcburi cədvələ köçürülür)
+# Dəyişməz qaydalar
 
 | Kod | Qayda |
 |---|---|
@@ -149,27 +150,28 @@ Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri bu gün l�
 | PJ4 | Sandbox siyahıları və lövbər jurnalı istehsal zəncirinə yazılmır və yenidən icra edilmir. |
 | PJ5 | Siyahı görünüşləri və qeydiyyat sertifikatı status siyahısı lövbər jurnalına sətir kimi daxil olur və zəncirdə mənbənin versiyası ilə lövbərlənir; görünüş mənbə ilə ziddiyyət təşkil edərsə, mənbə qüvvədədir. |
 
-# Açıq suallar (layihə rəhbərliyinə)
+# Açıq suallar üzrə qərarlar (2026-11-04)
 
-1. **Ad:** yeni şəbəkə səviyyəli kontrakt `NetworkRegistry` (təklif), yoxsa qeydlər növünə görə ayrı kontraktlara paylansın?
-2. **Ad:** lövbər jurnalı sətir növləri `registration_status` (və ya `wrprc_status`) və `list_view`.
-3. **Ad:** `apps/chain-indexer/`; lazım olarsa paket `@tamga-network/chain`.
-4. **Açıqlıq:** qərarda `contracts/` adı çəkilir. Besu şəbəkə faylları (`network/`) və zəncir mərhələsi sənədləri də ictimai olsunmu?
-5. **Təfərrüat xülasəsinin formatı:** RFC 8785 kanonik JSON + SHA-256 (təklif); sahə bloklarının sərhədləri tətbiqdə cədvəllə sabitlənir.
-6. **Sandbox:** gələcəkdə sandbox üçün ayrıca, sıfırlana bilən sınaq zənciri qurulsunmu? Təklif: xeyr, yalnız yerli inkişaf zənciri.
+1. **Ad:** yeni şəbəkə səviyyəli kontrakt `NetworkRegistry` (K3).
+2. **Ad:** lövbər jurnalı sətir növləri `registration_status` və `list_view` (K4).
+3. **Ad:** `apps/chain-indexer/`; gələcəkdə lazım olarsa paket `@tamga-network/chain` (K5).
+4. **Açıqlıq:** `contracts/`, `network/` və `docs/ledger` ictimaidir (K6).
+5. **Təfərrüat xülasəsinin formatı:** RFC 8785 kanonik JSON + SHA-256 (K1); sahə bloklarının sərhədləri tətbiqdə cədvəllə sabitlənir.
+6. **Sandbox:** ayrıca sınaq zənciri qurulmur; yalnız yerli inkişaf zənciri (K7).
 
 # Nəticələr
 
-- Kontraktlar (qəbuldan sonra, [[ADR-0073]] ilə birlikdə): `IssuerRegistry` və `RelyingPartyRegistry`-də yeni sahələr və keçid
+- Kontraktlar ([[ADR-0073]] ilə birlikdə): `IssuerRegistry` və `RelyingPartyRegistry`-də yeni sahələr və keçid
   qrupları, yeni şəbəkə səviyyəli kontrakt, Governance təklif növləri, `privacy-abi` testinin yeni kontraktı əhatə etməsi; [[ADR-0051]]
   K2-nin "mövcud səkkiz kontrakt dəyişmir" cümləsi dəyişmiş olur.
 - `@tamga-network/trust`: yeni lövbər sətir növləri, nəzarət nöqtəsinin `state`-i; `apps/trust-publisher`: proyeksiya planı yeni
-  qeydləri və mühit yoxlamasını əhatə edir; `apps/chain-indexer/` (ad təsdiqi ilə).
-- Sənədlər: [[SPEC-BC-0001]] (§3, §6, yeni bölmə, §13, §15) və [[SPEC-TRUST-0001]] §5 və §7 qəbuldan sonra dəyişir.
+  qeydləri və mühit yoxlamasını əhatə edir; `apps/chain-indexer/`.
+- Sənədlər: [[SPEC-BC-0001]] (§3, §6, yeni bölmə, §13, §15) və [[SPEC-TRUST-0001]] §5 və §7 dəyişir.
 - İstehsal mühitində zəncir yenə söndürülmüşdür ([[ADR-0009]] K4, [[ADR-0051]] CH5).
 
 # Status
 
-**Proposed — 2026-11-04.** Layihə rəhbərliyinin 2026-11-04 istiqaməti ("hər şey zəncirdə", "hamısı açıq") əsasında yazıldı; qəbul layihə
-rəhbərliyindədir. Yeni adlar (`NetworkRegistry`, `registration_status`, `list_view`, `apps/chain-indexer/`, `@tamga-network/chain`)
-təsdiq gözləyir. Qəbul edilərsə DECISIONS-da D-BC kodu alır və PJ1–PJ5 qaydaları məcburi olur.
+**Accepted — 2026-11-04.** Layihə rəhbərliyinin təsdiqi ilə (hərfi sitat xüsusi təsdiq qeydində): adlar `NetworkRegistry`,
+`registration_status`, `list_view`, `apps/chain-indexer/`, gələcəkdə `@tamga-network/chain`; `contracts/`, `network/` və
+`docs/ledger` ictimaidir; açıq sualların qalanı təklif edildiyi kimi. DECISIONS: D-BC-13. PJ1–PJ5 məcburidir. Kontraktlarda
+tətbiq davam edir ([[SPEC-BC-0001]] versiya qeydləri).

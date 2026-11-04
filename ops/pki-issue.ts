@@ -160,8 +160,11 @@ async function main() {
   if (orgId) {
     if (!/^(VAT|NTR|LEI)[A-Z]{2}-[A-Za-z0-9]{1,40}$/.test(orgId))
       fail("--org-id: VATTR-<VKN> ya da NTRTR-<MERSİS> biçiminde");
-    if (/2\.5\.4\.97=/.test(subject)) fail("konu alanında zaten organizationIdentifier var");
-    subject = `${subject}, 2.5.4.97=${orgId}`;
+    // Kurumun katılım aracı (`tamga-onboard keys`) CSR konusuna organizationIdentifier'ı yazar: aynı değerse kabul, farklıysa ret
+    const inCsr = /(?:^|,\s*)2\.5\.4\.97=([^,]+)/.exec(subject)?.[1]?.trim();
+    if (inCsr !== undefined && inCsr !== orgId)
+      fail(`konu alanındaki organizationIdentifier (${inCsr}) --org-id ile aynı değil (${orgId})`);
+    if (inCsr === undefined) subject = `${subject}, 2.5.4.97=${orgId}`;
   }
   if (serviceId !== undefined) {
     if (/(^|,\s*)OU=/.test(subject)) fail("konu alanında zaten OU var (--service-id ile birlikte kullanılmaz)");

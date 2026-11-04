@@ -1,0 +1,1194 @@
+---
+document_id: SPEC-BC-0001
+title: "Güven katmanı kontratları"
+status: Active
+version: 1.0.0
+created: 2026-08-05
+last_updated: 2026-11-04
+summary: >
+  Hyperledger Besu (EVM) üzerinde çalışan güven katmanı kontratlarının kanonik
+  veri şeması, fonksiyon arayüzleri ve değişmezleri. Sürüm 2.0.0 üç yapısal
+  değişiklik getirir: (1) SchemaRegistry eklendi ve IssuerRegistry'ye issuer↔şema
+  yetkilendirmesi girdi ([[ADR-0007]]); (2) StatusListRegistry bitmap tutmaktan
+  vazgeçip yalnızca çapa tutar hâle geldi, isRevoked arayüzü kaldırıldı
+  ([[ADR-0008]]); (3) RootCARegistry ilk kez spesifikasyona alındı — kontratlarda
+  vardı, dokümanda yoktu. Ayrıca yükseltme deseni (UUPS), rol modeli, gas/izin
+  politikası ve doğrulama okuma seti normatifleştirildi. Egemenlik
+  onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
+---
+
+> **Sürüm notu 1.0.0 (2026-11-04) — [[ADR-0073]] ve [[ADR-0074]] kabul edildi, uygulama sürüyor.** Askı kuralı listeyle
+> eşitlendi: C1 belgenin `iat` anındaki duruma bakar, askıdaki kurumun askıdan önceki belgeleri geçerlidir, sınırlar yarı açıktır
+> (§3.3). Göç kipi (en çok 30 gün, tek göç yürütücüsü), sert iptal (`invalidatesFrom`), şema sürüm özetleri, doğrulayıcı kimliği
+> `keccak256(dns_name)`, listelerdeki bütün güven kayıtlarının zincire yansıması (`NetworkRegistry`) ve çapa günlüğü satır türleri
+> (`registration_status`, `list_view`) kontratlara işlendikçe ilgili bölümler (§3, §4.4, §6, §12.2, §13, §14, §15) bu nota eklenen
+> maddelerle güncellenir; işlenmemiş bölümde bugünkü metin kontratın bugünkü hâlidir. Kurallar ADR'lerde (CE1–CE6, PJ1–PJ5).
+> **Uygulanan:** göç kipi, kota istisnası, durum geçmişi ve `iat` anındaki durum, iki sınır düzeltmesi (bir saniyelik `<=`,
+> emekli kök), C33 (1) okuma görünümlerinin bir kısmı (§3.3, §12.2, §16.1); sert iptal `invalidatesFrom` (§16.2); şema sürüm özetleri
+> (§4.4 SC1, §16.3); doğrulayıcı kimliği, sertifika güncelleme, askıdan dönüş, öğe öğe kapsam (§6, §14 açık konu 3);
+> durum eşlemesi (§16.4); ağ düzeyi kayıt `NetworkRegistry` (§16.5);
+> kurum sınıfı, kayıt verisi özetleri ve kapı grupları (§16.6); okuma görünümleri ve F-18 kalanı (§16.7).
+
+> **Sürüm notu 1.0.0 (2026-10-23) — [[ADR-0063]].** İptal listesi kaydı listenin kendi bit sayısını (1, 2, 4, 8) kabul eder;
+> `REQUIRED_BITS` yerine `isAllowedBits`, `ListRegistered` bit sayısını taşır (§7.1, §7.2, §7.4, §13 L3).
+
+> **Sürüm notu 1.0.0 (2026-10-19) — [[ADR-0053]], [[ADR-0054]], [[ADR-0055]] ve kontrat güvenlik turu.** Liste çapasında rakip
+> adaylar ve çelişki olayı (§15); şema ad alanları ayrık, kurum yalnız kendi devletine bağlanır, kota kapsamı (§3.1, §4, §7, §12.2);
+> yükseltme kuyruğu ve 7 gün bekleme, parametresiz başlangıç seçicisi, türü belli kayıt yönetimi önerileri (§1, §9). Güvenlik turunda
+> eklenenler: `ValidatorInUse`, `DelegateKeyInUse` (§1), `RootCANotActive`, `InvalidSuccessor`, `IssuerReinstated`,
+> `schemaAuthHistoryOf` (§3), `AlreadyBootstrapped` (§5), `countedForVotes` (§1). Metnin kodun gerisinde kaldığı yerler düzeltildi
+> (§0, §1 `setDelegateKeys`, §4.4 SC2, §5 imzalar, §10 `onlyIssuerDelegate`, §12.2). Kurallar ADR'lerde tanımlıdır (AC1–AC4,
+> NS1–NS3, GE1–GE3); burada tekrarlanmaz.
+
+# Kapsam
+
+Bu spesifikasyon güven katmanının **"nasıl"ını** tanımlar: kontrat veri
+yapıları, fonksiyon imzaları, erişim kısıtları, roller ve değişmezler.
+
+Kararlar [[ADR-0002]] (yönetişim), [[ADR-0001]] (motor), [[ADR-0007]] (şema
+kaydı) ve [[ADR-0008]] (status list yerleşimi) ile sabitlenmiştir.
+
+**Değişmez ilke:** Zincir yalnızca kişisel-OLMAYAN güven referansları tutar
+([[PM-TRUST-0001]]). Hiçbir kontrat kişisel veri, credential içeriği veya
+credential hash'i saklamaz.
+
+## 1.0.0 → 2.0.0 değişiklikleri
+
+| # | Değişiklik | Kaynak |
+|---|---|---|
+| 1 | **`SchemaRegistry` eklendi** (§4) | [[ADR-0007]] |
+| 2 | **`IssuerRegistry`'ye şema yetkisi eklendi** (§3.4) | [[ADR-0007]] Karar 6 |
+| 3 | **`StatusListRegistry` yeniden yazıldı** — bitmap kaldırıldı, çapa modeli (§7) | [[ADR-0008]] |
+| 4 | **`isRevoked` arayüzü kaldırıldı** — zincir bu soruyu cevaplayamaz (§7.3) | [[ADR-0008]] |
+| 5 | **`RootCARegistry` spesifikasyona alındı** (§2) — kontratta vardı, dokümanda yoktu | Denetim bulgusu |
+| 6 | Yükseltme deseni **UUPS** olarak karara bağlandı (§9) | Açık Konu 4 kapatıldı |
+| 7 | Rol modeli ve gas/izin politikası normatifleştirildi (§10, §12) | Yeni |
+| 8 | Doğrulama okuma seti 3'ten **5**'e çıktı (§11.2) | 1 ve 3'ün sonucu |
+| 9 | §5'teki "kullanılmayan index rastgele dağıtılır" ifadesi [[SPEC-CRED-0003]] §6'ya devredildi | [[ADR-0008]] |
+
+---
+
+# 0. Egemenlik ve Namespace
+
+Her devletin bir **namespace**'i vardır; o alana yalnızca o devletin yetkili
+anahtarı yazabilir. [[ADR-0002]] Katman 2 egemenliğinin kod garantisidir.
+
+```solidity
+/// stateCode: ISO 3166-1 alpha-2 (bytes2) — "TR", "KZ", "AZ", "KG", "UZ", "TM"
+modifier onlyOwnerState(bytes2 stateCode) {
+    if (!_isDelegateOf(msg.sender, stateCode)) revert NotOwnerState(stateCode, msg.sender);
+    _;
+}
+```
+
+- Namespace deseni: `TR:issuer:*`, `KZ:rp:*`, `TR:schema:*`.
+- Yetkili anahtarlar `Governance` içindeki `StateMember.delegateKeys`'ten gelir.
+- Türkiye'nin anahtarı `KZ:` ile başlayan hiçbir kaydı değiştiremez → revert.
+
+**Değişmez N1:** Hiçbir yazma fonksiyonu, namespace sahibi olmayan bir çağırana
+açık olamaz. Tek istisna `Governance` yürütmesidir (2/3 oy): `NETWORK` katmanı
+şemaları (§4.3), protokol yükseltmesi (§9) ve türü belli kayıt yönetimi önerileri
+(§1, [[ADR-0055]]). Bir anahtar ve bir validator adresi yalnız bir devlete ait
+olabilir (`DelegateKeyInUse`, `ValidatorInUse`); bir devletin kayıtları başka bir
+devletin kaydına bağlanamaz ([[ADR-0054]]/NS2).
+
+---
+
+# 1. Governance Kontratı (Katman 1)
+
+Kapsam **dar**: yalnızca ağ üyeliği ve protokol. Ulusal kayıtlar burada
+değildir.
+
+```solidity
+enum MemberStatus { NONE, ACTIVE, SUSPENDED, WITHDRAWN }
+
+struct StateMember {
+    bytes2       stateCode;
+    address      validatorAddress;   // QBFT validator node adresi
+    address[]    delegateKeys;       // registry yazma yetkisi
+    MemberStatus status;
+    uint64       joinedAt;
+}
+
+function proposeStateAdmission(bytes2 stateCode, address validator) external onlyValidator returns (bytes32);
+function proposeStateRemoval(bytes2 stateCode, string calldata reason) external onlyValidator returns (bytes32);
+function proposeProtocolUpgrade(address target, address newImplementation) external onlyValidator returns (bytes32);
+function proposeNetworkSchema(ISchemaRegistry.SchemaRecord calldata rec) external onlyValidator returns (bytes32);
+
+/// ADR-0055 K2 — yükseltme + yeni sürümün PARAMETRESİZ başlangıç fonksiyonu (yalnız 4 baytlık seçici)
+function proposeProtocolUpgradeAndInit(address target, address newImplementation, bytes4 initSelector)
+    external onlyValidator returns (bytes32);
+
+/// ADR-0055 K3 — türü belli kayıt yönetimi önerileri (REGISTRY_ADMIN; 2/3, bekleme yok)
+function proposeAnchorerChange(address registry, address anchorer, bool allowed) external onlyValidator returns (bytes32);
+function proposeAnchorThreshold(address registry, uint8 required) external onlyValidator returns (bytes32);
+function proposeFounderRecognition(address registry, bytes2[] calldata founders) external onlyValidator returns (bytes32);
+function proposeNetworkSchemaDeprecation(bytes32 schemaId, bytes32 supersededBy) external onlyValidator returns (bytes32);
+function proposeNetworkSchemaRevocation(bytes32 schemaId, string calldata reason) external onlyValidator returns (bytes32);
+
+function vote(bytes32 proposalId, bool support) external onlyValidator;
+/// PROTOCOL_UPGRADE: ilk çağrı kuyruğa alır (ProposalQueued), en erken UPGRADE_DELAY (7 gün) sonra uygular (ADR-0055 GE1)
+function execute(bytes32 proposalId) external;
+function countedForVotes(bytes32 proposalId) external view returns (uint32);  // yürütmede sayılacak destek (GV3)
+function executableAt(bytes32 proposalId) external view returns (uint64);     // kuyruktaki yükseltmenin en erken anı
+
+/// Tek taraflı çıkış — oy gerekmez (ADR-0002 #5)
+function withdraw() external onlyValidator;
+
+/// Devletin kendi iç işi — oy gerekmez. Yalnız o devletin VALIDATOR adresi çağırır; anahtar başka bir devletin
+/// delegesiyse reddedilir (DelegateKeyInUse — N1).
+function setDelegateKeys(bytes2 stateCode, address[] calldata keys) external;
+```
+
+**Eşikler ([[ADR-0002]]):** kabul **2/3**; çıkarma **2/3** (çıkarılanın oyu
+sayılmaz); protokol yükseltme **2/3**; NETWORK şeması **2/3** (§4.3); kayıt
+yönetimi önerileri **2/3** ([[ADR-0055]]). Yürütmede destek oyları bugünkü
+`ACTIVE` üyelerin validator adresinden yeniden sayılır: çekilen ya da çıkarılan
+üyenin eski oyu eşiği dolduramaz (GV3; 2026-10-19 güvenlik turu). Protokol
+yükseltmesi eşik dolunca kuyruğa alınır ve en erken 7 gün sonra, eşik yeniden
+sayılarak uygulanır; katılmayan devlet bu sürede çekilebilir ([[ADR-0055]]/GE1).
+
+**Asgari mutlak oy = 2 (2.1.0 — review bulgusu R6):** 2/3 kuralı n<3'te
+dejenere olur. İki üyeli ağda çıkarma oylamasında eligible=1 → required=1;
+yani **bir devlet diğerini tek başına atabilirdi**. `requiredVotes` artık
+`max(ceil(2n/3), 2)` döner. Sonuç: iki üyeli ağda çıkarma **imkânsızdır** —
+iki taraf da yalnızca gönüllü `withdraw` edebilir. Bu bilinçli bir anayasal
+korumadır; üçüncü üye gelene kadar ağ bir ortaklık gibi davranır.
+
+**Yeniden kabul (2.1.0 — R7):** `SUSPENDED`/`WITHDRAWN` bir devlet
+`proposeStateAdmission` ile yeniden kabul edilebilir; eski validator ve delegate
+eşlemeleri temizlenir. 2.0.0'da `MemberExists` kontrolü `NONE` dışındaki her
+durumda revert ediyordu — çıkarılan bir devlet **asla** geri dönemiyordu.
+
+**`setSchemaRegistry` erişimi (2.1.0 — R5):** 2.0.0'da bu fonksiyon
+**herkese açıktı** (ilk çağıran kazanıyordu). `onlyValidator` oldu.
+
+**Değişmezler:**
+
+- **GV1** — Çıkarma/çıkış yalnızca yeni yazımı ve blok üretimini durdurur;
+  **mevcut kayıtları ve credential'ları geçersiz kılmaz** ([[ADR-0002]] #4).
+- **GV2** — `proposeNetworkSchema` 2.0.0'da eklendi; NETWORK katmanı şemalarının
+  tek giriş yoludur.
+
+---
+
+# 2. Root CA Registry Kontratı (Katman 2)
+
+> **Yeni bölüm.** Bu kontrat `contracts/src/` altında mevcuttu ancak
+> spesifikasyonda tanımlı değildi. 2026-09-09 denetiminde tespit edildi.
+
+Her üye devletin bir veya birden çok ulusal Root CA'sı vardır. Issuer
+sertifika zincirleri buraya bağlanır ([[SPEC-ID-0002]]).
+
+```solidity
+enum CAStatus { NONE, ACTIVE, SUSPENDED, RETIRED, REVOKED }  // RETIRED: 2.1.0
+
+struct RootCA {
+    bytes32  caId;              // keccak256(stateCode, certFingerprint)
+    bytes2   stateCode;
+    bytes32  certFingerprint;   // SHA-256(DER kodlu sertifika)
+    bytes32  subjectHash;
+    string   certURI;           // sertifikanın kendisi off-chain
+    string   crlURI;            // iptal listesi
+    CAStatus status;
+    uint64   validFrom;
+    uint64   validUntil;
+    uint64   registeredAt;
+}
+
+function registerRootCA(RootCA calldata data) external onlyOwnerState(data.stateCode);
+function suspendRootCA(bytes32 caId) external onlyOwnerState(_stateOf(caId));
+function revokeRootCA(bytes32 caId, string calldata reason) external onlyOwnerState(_stateOf(caId));
+
+function retireRootCA(bytes32 caId, bytes32 successorCA) external onlyOwnerState(_stateOf(caId)); // 2.1.0
+
+function isValidRootCA(bytes32 caId) external view returns (bool);       // yeni issuer bağlanabilir mi — yalnızca ACTIVE
+function isChainAcceptable(bytes32 caId) external view returns (bool);   // zincir doğrulanır mı — ACTIVE veya RETIRED (2.1.0)
+function getRootCA(bytes32 caId) external view returns (RootCA memory);
+function getRootCAsByState(bytes2 stateCode) external view returns (bytes32[] memory);
+```
+
+**Sertifikanın kendisi zincirde değildir** — yalnızca parmak izi ve URI. Aynı
+"içerik off-chain, çapa on-chain" deseni ([[ADR-0007]], [[ADR-0008]]).
+
+**Değişmezler:**
+
+- **CA1** — `certFingerprint` bir kez yazılır, asla güncellenmez. Yeni sertifika
+  = yeni `caId`.
+- **CA2** — İki ayrı durum vardır ve **karıştırılması 2.0.0'daki hataydı**:
+  - `RETIRED` (planlı rotasyon): yeni issuer bağlanamaz, **mevcut issuer'lar
+    çalışmaya devam eder** (status yayını dahil) ve eski credential'lar
+    doğrulanır. `isChainAcceptable` true.
+  - `REVOKED` (ele geçirilme): sert. Zincir doğrulaması düşer,
+    `isCredentialAcceptable` false. Ama `isOperational` **hâlâ true** — çünkü
+    ele geçirilmiş CA altındaki issuer'ın sahte belgeleri iptal
+    yayınlayabilmesi gerekir.
+  - 2.0.0'da rotasyon ile ele geçirilme aynı durumdu ve rutin bir CA
+    rotasyonu, o CA'ya bağlı tüm issuer'ların status yayınını durdurup 50 saat
+    sonra tüm doğrulamaları `INDETERMINATE`'e düşürürdü. Review bulgusu **R2**.
+
+---
+
+# 3. Issuer Registry Kontratı (Katman 2)
+
+```solidity
+enum IssuerCategory  { GOVERNMENT, IDENTITY, EDUCATION, HEALTH, FINANCE, LOGISTICS, OTHER, EVENTS }   // ADR-0014: yeni değer yalnızca sona
+enum IssuerAssurance { I1, I2, I3 }        // PM-ASSUR-0001 Eksen B
+enum IssuerStatus    { NONE, ACTIVE, SUSPENDED, REVOKED }
+
+struct Issuer {
+    bytes32         issuerId;         // keccak256(stateCode, certFingerprint)
+    bytes2          stateCode;
+    bytes32         nameHash;
+    IssuerCategory  category;
+    IssuerAssurance assurance;
+    bytes32         certFingerprint;  // SHA-256(X.509 DER)
+    bytes32         parentCA;         // RootCARegistry.caId  (§2)
+    string          metadataURI;
+    IssuerStatus    status;
+    uint64          validFrom;
+    uint64          validUntil;
+    bytes32         successorId;      // yumuşak devir
+    uint64          registeredAt;
+    uint64          revokedAt;        // 2.1.0 — 0 ise iptal yok; yumuşak iptalin zaman sınırı
+}
+```
+
+## 3.1 Yazma — yalnızca ilgili devlet, oylama yok
+
+```solidity
+/// parentCA: kurumun KENDİ devletinin ACTIVE kök sertifikası (CA3; ADR-0054/NS2 — aksi CrossStateReference)
+function registerIssuer(Issuer calldata data) external onlyOwnerState(data.stateCode);
+function suspendIssuer(bytes32 issuerId) external onlyOwnerState(_stateOf(issuerId));
+function reinstateIssuer(bytes32 issuerId) external onlyOwnerState(_stateOf(issuerId));   // SUSPENDED → ACTIVE, IssuerReinstated
+/// successorId: aynı devletin ACTIVE kurumu, kendisi değil (InvalidSuccessor; NS2 — CrossStateReference)
+function revokeIssuer(bytes32 issuerId, bytes32 successorId) external onlyOwnerState(_stateOf(issuerId));
+function renewIssuer(bytes32 issuerId, uint64 newValidUntil) external onlyOwnerState(_stateOf(issuerId));
+function setIssuerDelegates(bytes32 issuerId, address[] calldata keys) external onlyOwnerState(_stateOf(issuerId));
+```
+
+> Türkiye MEB'i eklemek istediğinde **tek işlem** gönderir; oy yok, bekleme yok.
+> Diğer devletler yalnızca görür.
+
+## 3.2 Okuma — üç ayrı soru (2.1.0)
+
+> **Review bulgusu R1.** 2.0.0'da doğrulama adımı `C1`, `isValidIssuer`'ı
+> kullanıyordu. `isValidIssuer` "**yeni** credential verebilir mi" sorusudur ve
+> `REVOKED` issuer için false döner — yani kapanmış bir bakanlığın **tüm**
+> diplomaları `C1`'de düşüyordu. Bu, §3.3 yumuşak iptal ve [[ADR-0002]] #4 ile
+> doğrudan çelişkiydi. Soru üçe ayrıldı.
+
+```solidity
+/// "ŞİMDİ yeni credential verebilir mi?"       → ihraç, PR2 metadata kontrolü
+function isValidIssuer(bytes32 issuerId) external view returns (bool);
+
+/// "Günlük operasyon yapabilir mi?"             → status list yayını (CA'dan bağımsız)
+function isOperational(bytes32 issuerId) external view returns (bool);
+
+/// "iat anında verilmiş credential kabul edilebilir mi?"  → DOĞRULAMA adımı C1
+function isCredentialAcceptable(bytes32 issuerId, uint64 iat) external view returns (bool);
+
+function getIssuer(bytes32 issuerId) external view returns (Issuer memory);
+function getIssuersByState(bytes2 stateCode) external view returns (bytes32[] memory);
+function isIssuerDelegate(bytes32 issuerId, address key) external view returns (bool);
+```
+
+## 3.3 Yumuşak iptal modeli
+
+Bir issuer `REVOKED` olsa bile, `validUntil` tarihine kadar verdiği
+credential'lar **geçerli kalır**; issuer yalnızca **yeni** credential veremez.
+`successorId` ile kurum devri tanımlanır — bakanlık kapanınca diplomalar çöp
+olmaz.
+
+Üç sorgunun tanımı:
+
+```
+isValidIssuer(id) =                                   // ihraç
+      status == ACTIVE
+   && now ∈ [validFrom, validUntil]
+   && RootCARegistry.isValidRootCA(parentCA)          // yalnızca ACTIVE CA
+
+isOperational(id) =                                   // status yayını
+      status == ACTIVE
+   && now ∈ [validFrom, validUntil]
+   // CA'ya BAKMAZ — rotasyon yayını durdurmamalı
+
+isCredentialAcceptable(id, iat) =                     // doğrulama C1 (ADR-0073 K5)
+      statusAt(id, iat) == ACTIVE                     // durum iat anında; aralık yarı açık [since, sonraki since)
+   && iat ∈ [validFrom, validUntil]
+   && (invalidatesFrom == 0 || iat < invalidatesFrom) // sert iptal (ADR-0073 K2)
+   && RootCARegistry.isChainAcceptableAt(parentCA, iat) // kök iat anında ACTIVE ve hiç REVOKED değil
+```
+
+**Askı (2026-11-04, liste kuralı):** askı yalnız askı süresinde verilen belgeyi düşürür; askıdan **önce** verilmiş belge
+geçerlidir ([[ADR-0073]] K5, [[ADR-0009]] D-BC-3 `iat` kuralı, GV1). Önceki metindeki "SUSPENDED → false (ihtiyati)" kuralı
+kalktı; imzalı liste ile zincir aynı cevabı verir.
+
+**Yumuşak iptalin anlamı artık kesin:** `revokedAt`'ten **önce** verilmiş
+credential kabul edilir (`iat < revokedAt`); iptal anında ya da sonra verilmiş (sahte tarihli) reddedilir.
+
+## 3.4 Şema yetkilendirmesi
+
+> **2.0.0'da eklendi.** [[ADR-0007]] Karar 6.
+
+```solidity
+event SchemaAuthorizationSet(bytes32 indexed issuerId, bytes32 indexed schemaId, bool allowed);
+
+error SchemaNotAuthorized(bytes32 issuerId, bytes32 schemaId);
+
+/// Issuer'ı hangi devlet kaydettiyse yetkiyi de o verir.
+function setSchemaAuthorization(bytes32 issuerId, bytes32 schemaId, bool allowed)
+    external onlyOwnerState(_stateOf(issuerId));
+
+/// Verifier doğrulamasında ZORUNLU adım.
+function isAuthorizedForSchema(bytes32 issuerId, bytes32 schemaId) external view returns (bool);
+
+function authorizedSchemasOf(bytes32 issuerId) external view returns (bytes32[] memory);
+```
+
+### Yetki penceresi (2.1.0 — review bulgusu R3)
+
+Yetki bir boolean değil, bir **zaman penceresidir**:
+
+```solidity
+struct SchemaAuth { bool allowed; uint64 since; uint64 until; }  // until=0 → hâlâ yetkili
+
+/// Doğrulama adımı C2 — "iat anında yetkili miydi?"
+function isCredentialSchemaAcceptable(bytes32 issuerId, bytes32 schemaId, uint64 iat)
+    external view returns (bool);
+```
+
+`isCredentialSchemaAcceptable` = `iat ∈ [since, until]` **ve** şema `REVOKED`
+değil. Şemanın `DEPRECATED` olması **engel değildir** — SC3'ün yetki tarafı.
+
+2.0.0'da `C2 = isAuthorizedForSchema` idi; o da şemanın `ACTIVE` olmasını
+istediği için `DEPRECATED` şemayla verilmiş her eski diploma `C2`'de
+düşüyordu — SC3 ("deprecated şema doğrulanabilir kalır") ile çelişki.
+
+`isAuthorizedForSchema` (ihraç anlamı) **üç koşulu birden** sağlamalıdır:
+
+1. `isValidIssuer(issuerId)` ✓
+2. `SchemaRegistry.isActiveSchema(schemaId)` ✓ — `DEPRECATED` şemayla yeni ihraç
+   yapılamaz
+3. `(issuerId, schemaId)` çifti açıkça yetkilendirilmiş ✓
+
+**Değişmez I1 — allowlist:** Üçüncü koşulun varsayılanı `false`'tur. Yetki
+açıkça verilmediyse yoktur.
+
+**Kapattığı açık:** [[PM-SCHEMA-0001]] Zafiyet 1. `EDUCATION` kategorili bir
+üniversite sağlık şemasıyla belge imzalasa bile, o şemaya yetkilendirilmediği
+için hiçbir uyumlu verifier kabul etmez.
+
+## 3.5 İki eksen ayrımı
+
+`category` issuer'ın **sektörünü**, `assurance` (I1–I3) **akreditasyon
+derecesini** söyler; iki eksen diktir ([[PM-ASSUR-0001]]). Verifier politikası
+ikisini birden kullanır: `category == EDUCATION && assurance >= I2`.
+
+Holder assurance (T0–T3) **zincire yazılmaz** — kişisel veridir
+([[PM-TRUST-0001]]); credential sunumunda kanıtlanır ([[SPEC-CRED-0001]]).
+
+---
+
+# 4. Schema Registry Kontratı (Katman 1 + 2)
+
+> **Yeni bölüm.** [[ADR-0007]] ve [[SPEC-SCHEMA-0001]] §5.1.
+
+```solidity
+enum SchemaTier   { NETWORK, NATIONAL }
+enum SchemaStatus { NONE, ACTIVE, DEPRECATED, REVOKED }
+
+struct SchemaRecord {
+    string       vctURI;        // kanonik tip URL'i
+    bytes32      contentHash;   // Type Metadata dokümanının SHA-256'sı
+    string       version;       // semver, "1.0.0"
+    SchemaTier   tier;
+    bytes2       stateCode;     // NATIONAL ise sahibi; NETWORK ise 0x0000
+    SchemaStatus status;
+    uint64       validFrom;
+    bytes32      supersededBy;  // yeni sürüm; yoksa 0x0
+}
+```
+
+## 4.1 Yazma
+
+```solidity
+/// schemaId = keccak256(bytes(vctURI))
+/// Ad alanı (ADR-0054/NS1): NATIONAL vctURI = urn:tamga:<cc>:<alan>:<Tür>:<ana sürüm> (<cc> kaydı yapan devletin
+/// küçük harfli kodu; aksi NationalVctOutsideNamespace); NETWORK vctURI bu biçimde olamaz (NetworkVctInNationalNamespace).
+function schemaIdOf(string calldata vctURI) external pure returns (bytes32);
+
+function registerSchema(SchemaRecord calldata rec) external;
+function deprecateSchema(bytes32 schemaId, bytes32 supersededBy) external;
+function revokeSchema(bytes32 schemaId, string calldata reason) external;
+```
+
+## 4.2 Okuma
+
+```solidity
+function getSchema(bytes32 schemaId) external view returns (SchemaRecord memory);
+function isActiveSchema(bytes32 schemaId) external view returns (bool);
+function matchesContentHash(bytes32 schemaId, bytes32 hash) external view returns (bool);
+function getSchemasByState(bytes2 stateCode) external view returns (bytes32[] memory);
+```
+
+## 4.3 İki katmanlı yetki
+
+| `tier` | Kim yazar | Nasıl |
+|---|---|---|
+| `NETWORK` | Ağ | `Governance.proposeNetworkSchema` → 2/3 oy → `execute` |
+| `NATIONAL` | Tek devlet | `onlyOwnerState(rec.stateCode)`, oy yok |
+
+```solidity
+function registerSchema(SchemaRecord calldata rec) external {
+    if (rec.tier == SchemaTier.NETWORK) {
+        if (msg.sender != address(governance)) revert NetworkTierRequiresGovernance();
+        if (rec.stateCode != bytes2(0))       revert NetworkTierHasNoState();
+    } else {
+        if (!_isDelegateOf(msg.sender, rec.stateCode)) revert NotOwnerState(rec.stateCode, msg.sender);
+        if (rec.stateCode == bytes2(0))       revert NationalTierRequiresState();
+    }
+    // ...
+}
+```
+
+**İlke:** Sınır ötesi anlam taşıması gereken şemalar NETWORK, ulusal hukuka
+özgü olanlar NATIONAL. Bir devlet NATIONAL şemasını kimseye sormadan kaydeder;
+kimse engelleyemez.
+
+**Ad alanları ayrıktır ([[ADR-0054]]/NS1).** NATIONAL kaydın `vctURI`'si
+[[ADR-0010]]'daki devlet-özel biçimdedir ve kendi devlet kodunu taşır; NETWORK
+kaydı bu biçimde olamaz (Governance öneri anında da denetler). Böylece bir ağ
+şeması oylanırken hiçbir devlet aynı adı ulusal şema olarak kapamaz. NETWORK
+şemasının kullanımdan kaldırılması ve iptali Governance önerisiyle yapılır
+(`proposeNetworkSchemaDeprecation`, `proposeNetworkSchemaRevocation`; §1).
+
+## 4.4 Değişmezler
+
+- **SC1** — Kayıtlı bir şemanın `vctURI`'si ve yazılmış her içerik özeti **asla
+  güncellenmez ya da silinmez**; yeni sürüm özeti yalnız eklenir
+  (`addSchemaContentHash`, 2026-11-04 — [[ADR-0073]] K3/CE3). Ana sürüm değişikliği
+  = yeni `vct` = yeni `schemaId`.
+- **SC2** — `deprecateSchema` ve `revokeSchema` `status` alanını değiştirir;
+  `deprecateSchema` ayrıca halefi (`supersededBy`, §4.1 imzası) yazar. Başka
+  alan değişmez (SC1).
+- **SC3** — `DEPRECATED` bir şema **doğrulanabilir kalır**; yalnızca yeni ihraç
+  engellenir ([[SPEC-SCHEMA-0001]] §9.2). 2026-11-04'ten ([[ADR-0073]] K5) beri
+  doğrulama `iat` anındaki duruma bakar: kullanımdan kaldırılmadan önce verilmiş
+  belge kabul, sonra verilmiş belge ret.
+- **SC4** — Zincir kaydı, CDN yayınından **sonra** yapılır
+  ([[SPEC-SCHEMA-0001]] §6). Kontrat bunu zorlayamaz; issuer yayın hattı
+  disiplinidir.
+
+---
+
+# 5. Cross-Recognition Kontratı (Katman 3)
+
+```solidity
+enum RecognitionMode { NONE, FULL, CATEGORY_LIMITED }
+
+struct RecognitionPolicy {
+    bytes2           recognizingState;
+    bytes2           recognizedState;
+    RecognitionMode  mode;
+    IssuerCategory[] categories;   // CATEGORY_LIMITED ise
+    uint64           updatedAt;
+}
+
+/// recognizingState AÇIKÇA parametredir: delege hangi devlet adına yazdığını beyan eder, onlyOwnerState doğrular
+function setRecognition(
+    bytes2 recognizingState,
+    bytes2 recognizedState,
+    RecognitionMode mode,
+    IssuerCategory[] calldata categories
+) external onlyOwnerState(recognizingState);
+
+/// İstisna: genel tanı ama şu issuer'ı tanıma (blocked=false kaldırır)
+function setIssuerBlocklist(bytes2 byState, bytes32 issuerId, bool blocked) external onlyOwnerState(byState);
+
+/// Kurucular arası FULL — yalnız governance, BİR KEZ (AlreadyBootstrapped); Governance önerisiyle (ADR-0055 K3)
+function bootstrapFounders(bytes2[] calldata founders) external onlyGovernance;
+
+function isRecognizedBy(bytes2 verifierState, bytes32 issuerId) external view returns (bool);
+```
+
+**Varsayılan ([[ADR-0002]] #3):** kurucu üyeler arasında **FULL**; sonradan
+katılan devlet için tüm ilişkiler **NONE** (opt-in).
+
+> Kazakistan: "Türkiye'nin eğitim ve kimlik credential'larını tanıyorum, sağlığı
+> henüz tanımıyorum" → `CATEGORY_LIMITED, [EDUCATION, IDENTITY]`.
+
+**Açık konu (devam ediyor):** Şema seviyesinde tanıma gerekir mi? Yani
+Kazakistan "Türkiye'nin diploma şemasını tanıyorum ama YÖK denklik şemasını
+tanımıyorum" diyebilmeli mi? Şu an tanıma **kategori** granülaritesindedir.
+NATIONAL şemaların yaygınlaşmasıyla bu yetersiz kalabilir → §14 Açık Konu 2.
+
+---
+
+# 6. Relying Party Registry Kontratı (Katman 2)
+
+> **2026-11-04 — [[ADR-0073]] K4 (CE4).** Kimlik `keccak256(dns_name)`, sertifika güncelleme, askıdan dönüş ve öğe öğe kapsam;
+> kaba `allowedScopes`, `updateScope`, `hasScope` kalktı (§14 açık konu 3 kapandı).
+
+```solidity
+enum RPStatus { NONE, ACTIVE, SUSPENDED, REVOKED }
+enum PresentationFormat { SD_JWT_VC, MSO_MDOC, MSO_MDOC_ZK }   // dc+sd-jwt, mso_mdoc, mso_mdoc_zk — yalnız sona eklenir
+
+struct RelyingParty {
+    bytes32  rpId;                   // keccak256(utf8(dns_name)) — kayıt kurumu hesaplar; ABI'de alan adı metni yok
+    bytes2   stateCode;              // egemenlik (N1)
+    bytes32  nameHash;
+    bytes32  accessCertFingerprint;  // güncellenebilir; aynı anda yalnız bir doğrulayıcıya ait
+    RPStatus status;
+    uint64   registeredAt;           // göç kipinde açık tarih (ADR-0073 K1); aksi hâlde 0 verilir
+}
+
+struct RequestScope {                // listedeki bir kullanım (relying_parties[].scopes[])
+    bytes32   scopeHash;             // keccak256(scope_id)
+    bytes32   serviceHash;           // keccak256(service_id ?? scope_id)
+    bytes32   schemaId;              // keccak256(vct)
+    PresentationFormat format;
+    bytes32   namespaceHash;         // keccak256(mdoc_namespace) ya da 0
+    bytes32[] attributes;            // keccak256(utf8(öğe yolu)), kesin artan sırada; en çok MAX_ATTRIBUTES = 64
+    uint64    validFrom;
+    uint64    validUntil;            // 0 = açık uçlu; yarı açık [validFrom, validUntil)
+    bytes32   detailsHash;           // purpose, purpose_localized, privacy_policy_uri bloğunun RFC 8785 + SHA-256'sı
+}
+
+function registerRelyingParty(RelyingParty calldata data) external onlyOwnerState(data.stateCode);
+function updateAccessCertificate(bytes32 rpId, bytes32 newFingerprint) external onlyOwnerState(_stateOf(rpId)); // REVOKED değil
+function suspendRelyingParty(bytes32 rpId) external onlyOwnerState(_stateOf(rpId));     // yalnız ACTIVE (RelyingPartyNotActive)
+function reinstateRelyingParty(bytes32 rpId) external onlyOwnerState(_stateOf(rpId));   // yalnız SUSPENDED
+function revokeRelyingParty(bytes32 rpId) external onlyOwnerState(_stateOf(rpId));      // kesin (AlreadyRevoked)
+function setRequestScope(bytes32 rpId, RequestScope calldata scope) external onlyOwnerState(_stateOf(rpId)); // ekle / güncelle; en çok MAX_SCOPES = 32
+function closeRequestScope(bytes32 rpId, bytes32 scopeHash, uint64 at) external onlyOwnerState(_stateOf(rpId)); // silinmez, aralığı kapanır
+
+function isValidRelyingParty(bytes32 rpId) external view returns (bool);
+function rpIdOfCertificate(bytes32 fingerprint) external view returns (bytes32);
+function mayRequest(bytes32 rpId, bytes32 serviceHash, bytes32 schemaId, PresentationFormat format,
+                    bytes32 namespaceHash, bytes32 attribute) external view returns (bool);
+function requestScopesOf(bytes32 rpId) external view returns (RequestScope[] memory);
+function getRelyingPartiesByState(bytes2 stateCode) external view returns (bytes32[] memory);
+```
+
+**Aşırı istek koruması:** cüzdan, belge sunmadan önce (1) doğrulayıcı kayıtlı ve etkin mi, (2) istenen her öğe için "bu
+doğrulayıcı bu hizmette, bu türde, bu biçimde, bu öğeyi şu anda isteyebilir mi" (`mayRequest`) diye sorar. Öğe adları ABI'de
+`attribute` olarak geçer (kişisel veri denetiminin yasak köklerinden kaçınır, DP1).
+
+> **`accessCertFingerprint` = `x509_hash`.** [[SPEC-PROTO-0002]] §2.2: OpenID4VP 1.0 / HAIP'in client identifier prefix'i
+> `x509_hash`, `base64url(SHA-256(DER yaprak sertifika))` değeridir — bu alandaki `bytes32` ile birebir aynı baytlar. Cüzdan istekteki
+> client identifier'ı `rpIdOfCertificate` ile kalıcı kimliğe çözer; sertifika yenilenince kimlik, takma adlar ve açıklama
+> politikası değişmez ([[ADR-0034]] CI3/CI4).
+
+---
+
+# 7. Status List Registry Kontratı — Çapa Modeli
+
+> **Tamamen yeniden yazıldı.** [[ADR-0008]] ve [[SPEC-CRED-0003]] §4.
+
+## 7.1 Veri şeması
+
+```solidity
+enum ListStatus { NONE, ACTIVE, RETIRED }
+
+struct ListAnchor {
+    bytes32    issuerId;
+    string     listURI;       // Status List Token'ın sub claim'i
+    bytes32    contentHash;   // SHA-256(JWS compact serialization ASCII baytları)
+    uint32     listSize;      // toplam indeks kapasitesi
+    uint8      bitsPerEntry;  // listenin kendi bits değeri: 1, 2, 4, 8 (ADR-0063); Tamga'da kimlik servisi 1, kurum 2
+    uint64     version;       // monoton artan
+    uint64     publishedAt;
+    ListStatus status;
+}
+
+uint32 public constant MIN_LIST_SIZE = 100_000;
+function isAllowedBits(uint8 bits) public pure returns (bool); // 1, 2, 4, 8 — IETF Token Status List (ADR-0063)
+```
+
+**Zincirde tek bir iptal biti yoktur.** Bitmap off-chain'dedir.
+
+## 7.2 Arayüz
+
+```solidity
+/// listId = keccak256(abi.encodePacked(issuerId, bytes(listURI)))
+function listIdOf(bytes32 issuerId, string calldata listURI) external pure returns (bytes32);
+
+/// Kurum başına günde en çok MAX_LIST_REGISTRATIONS_PER_ISSUER_PER_DAY (8) yeni liste (ADR-0054/NS3)
+/// bitsPerEntry = listenin imzalı belirtecindeki status_list.bits; bir kez yazılır (ADR-0063/BL1)
+function registerList(bytes32 issuerId, string calldata listURI, uint32 listSize, uint8 bitsPerEntry)
+    external onlyIssuerDelegate(issuerId) returns (bytes32 listId);
+// event ListRegistered(listId, issuerId, listURI, listSize, bitsPerEntry)
+
+function publishList(bytes32 listId, bytes32 contentHash, uint64 version, uint64 publishedAt)
+    external onlyIssuerDelegate(_issuerOf(listId));
+
+function retireList(bytes32 listId, string calldata reason) external onlyIssuerDelegate(_issuerOf(listId));
+
+function getListAnchor(bytes32 listId) external view returns (ListAnchor memory);
+function matchesContentHash(bytes32 listId, bytes32 hash) external view returns (bool);
+```
+
+## 7.3 Kaldırılan arayüzler
+
+| Kaldırılan | Neden |
+|---|---|
+| `setRevoked(issuerId, index)` | Zincir bit tutmuyor |
+| `setRevokedBatch(...)` | aynı |
+| `unsetRevoked(...)` | aynı |
+| `getChunk(issuerId, chunkIndex)` | aynı |
+| `initStatusList(...)` | `registerList` ile değişti |
+| `IStatusList.isRevoked(...)` (`ITrustQueries.sol`) | **Zincir bu soruyu cevaplayamaz** |
+
+Son satır kritiktir. Cevaplanamayacak bir soruyu soran arayüz bırakmak,
+çağıranın `false` dönüşünü "iptal edilmemiş" sanmasına yol açar. Arayüz
+kalkmalıdır ki derleme hatası versin.
+
+**Halef yetkisi (2.1.0 — review bulgusu R4):** `REVOKED` bir issuer'ın listesi
+donmamalıdır — bakanlık kapandı, diplomalar geçerli, ama sahte bir diplomayı kim
+iptal edecek? `publishList` ve `retireList`, issuer'ın kendi delegesine **veya**
+`successorId`'nin delegesine açıktır. Halef zinciri tek seviyedir.
+
+**Bağımlı etki — `CredentialGate.sol`:** Zincir-üstü credential-gating
+([[ADR-0003]] Karar 4) iptal durumunu artık doğrudan göremez. Çağıranın sunduğu
+taze bir kanıta dayanmak zorundadır. Bu, `ADR-0003`'ün bir sonucunu **daraltır**
+ve `SPEC-AGENT-0001`'de çözülecektir.
+
+## 7.4 Değişmezler
+
+- **L1** — `version` monoton artar; azalan sürüm `VersionNotMonotonic` ile
+  reddedilir. Bu, issuer'ın listeyi sessizce geri almasını engeller.
+- **L2** — `listSize >= MIN_LIST_SIZE`.
+- **L3** — `bitsPerEntry ∈ {1, 2, 4, 8}` — listenin kendi bit sayısı, kayıtta bir kez yazılır ([[ADR-0063]]/BL1; 2026-10-23'e
+  kadar `== 2`). Türe göre bit kuralı ([[ADR-0048]]) kontratta değil, yayıncıda ve doğrulayıcıdadır (BL2).
+- **L4** — `listURI` bir kez yazılır, güncellenmez.
+- **L5** — İndeks tahsisi, doluluk oranı ve URI opaklığı kuralları
+  **kontrat dışıdır** ve [[SPEC-CRED-0003]] §6'da normatiftir. Kontrat bunları
+  zorlayamaz; issuer disiplinidir.
+
+---
+
+# 8. Kontrat Topolojisi
+
+> 2026-11-04: `NetworkRegistry` (§16.5) Governance'a bağlı ağ düzeyi kayıttır; dağıtım `scripts/lib/deploy.ts` (StatusListRegistry'den
+> sonra, `initialize(governance)`).
+
+```
+                    ┌──────────────┐
+                    │  Governance  │ ── 2/3 oy
+                    └──────┬───────┘
+                           │ execute()
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+┌───────────────┐  ┌───────────────┐  ┌──────────────────┐
+│ RootCARegistry│◀─│ IssuerRegistry│─▶│  SchemaRegistry  │
+└───────────────┘  └───────┬───────┘  └──────────────────┘
+                           │                  ▲
+        ┌──────────────────┼──────────────────┘
+        ▼                  ▼
+┌──────────────────┐  ┌────────────────────┐  ┌────────────────────┐
+│ CrossRecognition │  │ StatusListRegistry │  │ RelyingPartyRegistry│
+└──────────────────┘  └────────────────────┘  └────────────────────┘
+
+Ayrı kapsam (SPEC-BC-0002): GuardianRegistry, DisclosureRegistry
+```
+
+**Bağımlılık yönü kuralı:** Oklar tek yönlüdür. `SchemaRegistry`,
+`IssuerRegistry`'yi tanımaz — `IssuerRegistry` şema yetkisi sorarken
+`SchemaRegistry.isActiveSchema`'yı çağırır, tersi olmaz. Döngüsel bağımlılık
+yasaktır.
+
+---
+
+# 9. Yükseltilebilirlik — UUPS
+
+> Açık Konu 4 (1.0.0) burada kapanmıştır.
+
+**Karar: UUPS (ERC-1822 / ERC-1967 proxy).**
+
+| Seçenek | Değerlendirme |
+|---|---|
+| Transparent proxy | Her çağrıda admin kontrolü → ek gas; proxy sözleşmesi daha büyük |
+| **UUPS** | **Seçildi.** Yükseltme mantığı implementasyonda; proxy ince |
+| Diamond (EIP-2535) | Tamga'nın ihtiyacından fazla karmaşık |
+| Yükseltilemez | Kabul edilemez — 5+ yıllık altyapı |
+
+```solidity
+function _authorizeUpgrade(address newImplementation) internal override {
+    if (msg.sender != address(governance)) revert OnlyGovernance();
+}
+```
+
+**Bilinen risk — brick.** UUPS'te yükseltme fonksiyonu implementasyonda
+olduğundan, `_authorizeUpgrade`'i içermeyen bir implementasyona yükseltmek
+kontratı kalıcı olarak kilitler.
+
+**Azaltma (zorunlu):**
+
+1. CI'da her implementasyon için `_authorizeUpgrade` varlığı test edilir.
+2. Yükseltme, önce test ağında aynı adımlarla uygulanır.
+3. `Governance.proposeProtocolUpgrade` yeni implementasyonun
+   `proxiableUUID()` döndürdüğünü çağrı öncesi doğrular.
+
+**Bekleme süresi ve başlangıç çağrısı ([[ADR-0055]]).** Eşiği dolan yükseltme
+önce kuyruğa alınır (`ProposalQueued`), en erken 7 gün (`UPGRADE_DELAY`) sonra
+ve en geç 30 gün içinde, eşik yeniden sayılarak uygulanır. Başlangıç fonksiyonu
+olan yeni sürüm `proposeProtocolUpgradeAndInit` ile aynı işlemde etkinleşir;
+öneri yalnız parametresiz fonksiyonun 4 baytlık seçicisini taşır (serbest veri
+yok, DP1).
+
+**Depolama düzeni:** Her yükseltilebilir kontrat `__gap` dizisi taşır ve
+depolama düzeni değişikliği yalnızca sona ekleme şeklinde yapılır. CI'da
+depolama düzeni karşılaştırması zorunludur (`contracts:storage-check`, taban
+çizgisi `contracts/storage-layout/`). Statik analiz CI'da Slither ile yapılır
+(`contracts:slither`; dışlanan dedektörler ve gerekçeleri
+`contracts/slither.config.json`).
+
+---
+
+# 10. Rol Modeli
+
+Üç ayrı yetki kaynağı vardır ve karıştırılmamalıdır:
+
+| Rol | Kaynak | Ne yapar |
+|---|---|---|
+| **Validator** | `Governance.StateMember.validatorAddress` | Öneri verir, oy kullanır |
+| **State delegate** | `Governance.StateMember.delegateKeys` | Ulusal kayıtlara yazar (`onlyOwnerState`) |
+| **Issuer delegate** | `IssuerRegistry.setIssuerDelegates` | Günlük operasyon: status list yayını (`onlyIssuerDelegate`) |
+
+```solidity
+modifier onlyValidator() { ... }
+modifier onlyOwnerState(bytes2 stateCode) { ... }
+modifier onlyIssuerDelegate(bytes32 issuerId) {
+    if (!issuerRegistry.isIssuerDelegate(issuerId, msg.sender)) revert NotIssuerDelegate(issuerId, msg.sender);
+    // isOperational: CA'ya bakmaz — CA rotasyonu (RETIRED) yayını durdurmaz (CA2, §3.2)
+    if (!issuerRegistry.isOperational(issuerId))               revert IssuerNotActive(issuerId);
+    _;
+}
+```
+
+**Değişmez R1:** Issuer delegate anahtarı **ulusal kayıtlara yazamaz.** Bir
+üniversitenin operasyon anahtarı, kendi status listesini yayınlayabilir ama
+kendini `IssuerRegistry`'ye kaydedemez veya assurance seviyesini
+değiştiremez.
+
+**Değişmez R2:** `onlyIssuerDelegate`, issuer aktif değilse revert eder.
+Askıya alınmış bir issuer status list yayınlayamaz.
+
+---
+
+# 11. Uçtan Uca Akış
+
+## 11.1 Sınır ötesi senaryo
+
+Türk üniversite mezunu Kazakistan'da işe başvuruyor.
+
+| # | Adım | Zincir işlemi |
+|---|---|---|
+| 1 | Türkiye ulusal Root CA'sını kaydeder | `registerRootCA` |
+| 2 | Türkiye üniversiteyi kaydeder | `registerIssuer` |
+| 3 | Ağ diploma şemasını kaydeder | `Governance` → `registerSchema` (NETWORK) |
+| 4 | Türkiye üniversiteye şema yetkisi verir | `setSchemaAuthorization` |
+| 5 | Üniversite status listesini kaydeder | `registerList` |
+| 6 | Kazakistan tanıma politikasını açar | `setRecognition("TR", CATEGORY_LIMITED, [EDUCATION])` |
+| 7 | **İhraç** — diploma SD-JWT VC olarak cüzdana | **hiçbiri** |
+| 8 | Üniversite listeyi saatte bir yayınlar | `publishList` |
+| 9 | **Sunum** — öğrenci seçici ifşa ile sunar | **hiçbiri** |
+| 10 | **Doğrulama** | 5 `view` çağrısı (§11.2) |
+
+**Adım 7 kritiktir:** İhraç anında zincire hiçbir şey yazılmaz. Yalnızca bir
+status indeksi rezerve edilir — ve o rezervasyon issuer'ın kendi
+veritabanındadır, zincirde değil. İndeks tahsisi kurallarında
+[[SPEC-CRED-0003]] §6 geçerlidir (rastgele tahsis, opak URI).
+
+## 11.2 Doğrulama okuma seti
+
+1.0.0'da 3 çağrıydı; 2.0.0'da **5**:
+
+```solidity
+// 1. iat anında bu issuer'ın credential'ı kabul edilebilir miydi   ← 2.1.0 (R1)
+issuerRegistry.isCredentialAcceptable(issuerId, credentialIat)
+
+// 2. iat anında issuer bu şemaya yetkili miydi                       ← 2.1.0 (R3)
+issuerRegistry.isCredentialSchemaAcceptable(issuerId, schemaId, credentialIat)
+
+// 3. Şema kaydı ve bütünlüğü                            ← YENİ (ADR-0007)
+schemaRegistry.matchesContentHash(schemaId, typeMetadataHash)
+
+// 4. Verifier'ın devleti bu issuer'ı tanıyor mu
+crossRecognition.isRecognizedBy(verifierState, issuerId)
+
+// 5. Status list çapası                                 ← DEĞİŞTİ (ADR-0008)
+statusListRegistry.getListAnchor(listId)
+//    → contentHash ve version karşılaştırması verifier tarafında
+```
+
+**Dikkat — ihraç sorguları doğrulamada kullanılmaz:** `isValidIssuer` ve
+`isAuthorizedForSchema` **yalnızca ihraç anındadır**. Doğrulamada kullanılmaları
+2.0.0'daki hataydı (R1, R3).
+
+**Kaldırılan:** `isRevoked(issuerId, index)`. İptal durumu artık zincirden
+değil, off-chain Status List Token'dan okunur ([[SPEC-CRED-0003]] §7).
+
+**Performans etkisi:** Okuma sayısı arttı ve bu, her doğrulamada RPC node'a
+gitmeyi daha maliyetli kılıyor. Çözüm **indeksleyicidir**: bu beş kaydın
+tamamı olay (event) tabanlı olarak yerel bir veritabanına yansıtılır ve
+doğrulama oradan yapılır. Zincir doğrudan sorgulanmaz.
+
+Bu, `ARCH-0003`'te tanımlanacak zorunlu bir bileşendir — opsiyonel bir
+optimizasyon değil.
+
+---
+
+# 12. Gas ve İzin Politikası
+
+## 12.1 Gas
+
+İzinli ağda gas **ücretsizdir** (`gasPrice = 0`). Ancak bu, spam'in serbest
+olduğu anlamına gelmez.
+
+| Mekanizma | Nasıl |
+|---|---|
+| **Hesap izni** | Besu yerel izinlendirme ([[ADR-0052]]): her düğümde `permissions_config.toml` hesap izin listesi — yalnızca validator'lar, devlet ve kurum delege anahtarları ve liste çapası yazıcıları işlem gönderebilir. Liste zincir durumundan üretilir ve bütün validator'larda aynıdır (LP2, LP3) |
+| **Blok gas limiti** | Tek işlemin blok kapasitesini tüketmesi engellenir |
+| **Kontrat içi kota** | Devlet başına günlük yazma sayacı (§12.2) |
+
+Hesap izni ikinci savunma hattıdır; yazma yetkisinin asıl denetimi kontratlardadır (N1, R1, R2, [[ADR-0051]]/CH3) ve izin
+listesi bu yetkiyi genişletmez ([[ADR-0052]]/LP4). Zincir üstü izin kontratı yoktur: Besu 25.6.0 zincir üstü izinlendirmeyi ve
+Tessera tabanlı gizliliği kaldırdı; ikisine de gerek yoktur (zincirde kişisel veri yok, DP1). Düğüm izni aynı dosyanın düğüm
+izin listesidir; düğümün JSON-RPC ucu internete açılmaz, dış erişim mTLS'li ters vekil arkasındandır ([[ADR-0052]] K5).
+Kümeleri sayan okuma görünümleri (üye listesi, yazıcı listesi, kurum delege listesi) izin aracıyla (`trust:chain-permissions`)
+birlikte eklenir.
+
+**Değişmez GA1:** Gas ücretsiz olsa bile, zincire yazılan her bayt her
+validator'ın diskinde kalıcıdır. "Ücretsiz" maliyet yokluğu değildir — bu,
+[[ADR-0007]] ve [[ADR-0008]]'deki off-chain kararlarının temel gerekçesidir.
+
+## 12.2 Kota
+
+```solidity
+// TamgaRegistryBase — her kayıt kontratında AYRI sayılır (ADR-0054/NS3)
+uint32 public constant MAX_WRITES_PER_STATE_PER_DAY = 10_000;
+// StatusListRegistry — LİSTE başına
+uint32 public constant MAX_PUBLISH_PER_DAY = 48;                        // saatte 1 + pay
+// StatusListRegistry — KURUM başına yeni liste kaydı
+uint32 public constant MAX_LIST_REGISTRATIONS_PER_ISSUER_PER_DAY = 8;
+```
+
+Birinci kota devletin her ulusal yazımını sayar (`onlyOwnerState` yolu: kayıt,
+askı, iptal, yenileme, delege, şema yetkisi, tanıma); her kayıt kontratı kendi
+sayacını tutar, yani bir devletin günlük toplam ulusal yazımı kayıt kontratı
+sayısıyla sınırlıdır. İkinci kota, [[SPEC-CRED-0003]] §5.1'in saatlik yayın
+döngüsünü hem destekler hem sınırlar; liste başınadır (birden çok listesi olan
+kurum her listesini saatlik yayınlar). Üçüncü kota yayın kotasının yeni liste
+açılarak aşılmasını engeller.
+
+Kota aşımı `QuotaExceeded`, `PublishQuotaExceeded` ve
+`ListRegistrationQuotaExceeded` ile revert eder; sayaçlar UTC gün başında
+sıfırlanır.
+
+**Göç kipi istisnası (2026-11-04, [[ADR-0073]] K1):** bir kontratta göç kipi açıkken o kontratın üç kotası da uygulanmaz
+(sayaç artmaz); kip kapanınca aynen döner (§16.1).
+
+---
+
+# 13. Tüm Değişmezler (Özet)
+
+| # | Değişmez |
+|---|---|
+| **N1** | Namespace sahibi olmayan çağıran yazamaz; tek istisna `Governance` yürütmesi (NETWORK şeması, yükseltme, kayıt yönetimi önerileri). |
+| **GV1** | Çıkarma/çıkış mevcut kayıtları ve credential'ları geçersiz kılmaz. |
+| **GV2** | NETWORK şeması yalnızca `Governance` üzerinden kaydedilir. |
+| **CA1** | `certFingerprint` bir kez yazılır; yeni sertifika = yeni `caId`. |
+| **CA2** | `RETIRED` CA: operasyon ve eski credential'lar sürer; `REVOKED` CA: credential'lar düşer, operasyon sürer. |
+| **CA3** | Yeni issuer yalnızca `ACTIVE` CA'ya bağlanabilir. |
+| **I1** | Şema yetkisi allowlist'tir; varsayılan `false`. |
+| **I2** | Doğrulama `isCredentialAcceptable(id, iat)` kullanır; `isValidIssuer` yalnızca ihraçtır. |
+| **I3** | Şema yetkisi zaman penceresidir; doğrulama `iat`'a göre bakar. |
+| **I4** | `REVOKED` issuer'ın listesini halefi yayınlayabilir. |
+| **SC1** | Şemanın `vctURI`'si ve yazılmış her içerik özeti asla güncellenmez ya da silinmez; yeni sürüm özeti yalnız eklenir. |
+| **SC3** | `DEPRECATED` şema, kullanımdan kaldırılmadan önce verilmiş belgeler için doğrulanabilir kalır. |
+| **L1** | Status list `version` monoton artar. |
+| **L2** | `listSize >= 100.000`. |
+| **L3** | `bitsPerEntry ∈ {1, 2, 4, 8}`, listenin kendi değeri, değişmez ([[ADR-0063]]). |
+| **R1** | Issuer delegate anahtarı ulusal kayıtlara yazamaz. |
+| **R2** | Askıya alınmış issuer status list yayınlayamaz. |
+| **GA1** | Ücretsiz gas, maliyet yokluğu değildir. |
+| **GV3** | Asgari mutlak oy 2; iki üyeli ağda çıkarma imkânsızdır. |
+| **GV4** | Çıkarılmış/çekilmiş devlet yeniden kabul edilebilir. |
+| **DP1** | Hiçbir kontrat kişisel veri, credential içeriği veya credential hash'i saklamaz. |
+
+ADR'lerde tanımlı kontrat kuralları (burada tekrarlanmaz): [[ADR-0051]]/CH1–CH5, [[ADR-0052]]/LP1–LP5, [[ADR-0053]]/AC1–AC4,
+[[ADR-0054]]/NS1–NS3, [[ADR-0055]]/GE1–GE3, [[ADR-0063]]/BL1–BL2, [[ADR-0073]]/CE1–CE6, [[ADR-0074]]/PJ1–PJ5.
+
+---
+
+# Güvenlik ve Mahremiyet Notları
+
+**Egemenlik koda gömülüdür.** `onlyOwnerState` iyi niyete bağlı değildir.
+
+**Yumuşak iptal benimsenmeyi korur.** Çıkarma veya iptal, credential imhası
+değildir.
+
+**Zincir bir gözlem yüzeyidir.** İzinli ağda her işlem her validator'a
+görünür. `publishList` işlemleri sabit aralıkta ve gürültülü olmalıdır
+([[SPEC-CRED-0003]] §5.1) — aksi hâlde iptal zamanlaması sızar.
+
+**`nameHash` neden hash.** Kurum adı kamusaldır ama zincire düz metin yazmak,
+zincir üzerinde aranabilir bir kurum dizini yaratır. Hash, kaydı doğrulanabilir
+kılar ama taramayı zorlaştırır. Yine de bu **zayıf bir korumadır** — kurum
+adları sonlu bir kümedir ve kaba kuvvetle çözülebilir. Gerçek koruma değil,
+sürtünme sağlar.
+
+**Bağımsız güvenlik denetimi üretim önkoşuludur.** Özellikle: UUPS brick riski
+(§9), depolama düzeni, `onlyOwnerState` atlatma yolları, ve reentrancy
+(kontratlar arası çağrılar var: `IssuerRegistry` → `SchemaRegistry`).
+
+---
+
+# 14. Açık Konular
+
+1. `IssuerCategory` listesinin nihai kümesi (dikey platformlarla senkron).
+2. **Şema seviyesinde cross-recognition** gerekir mi? Şu an tanıma kategori
+   granülaritesinde; NATIONAL şemalar yaygınlaşırsa yetersiz kalabilir (§5).
+3. ~~RP scope'ları `schemaId`'ye bağlansın mı?~~ — **KAPANDI** (2026-11-04,
+   [[ADR-0073]] K4): kapsam kayıtları tür, biçim, ad alanı ve öğe özetleriyle (§6).
+4. ~~Proxy/upgrade deseni~~ — **KAPANDI** (2026-09-09), UUPS (§9).
+5. Cross-recognition matrisinin okuma optimizasyonu (büyük N) — indeksleyici
+   ile çözülüyor mu, yoksa kontrat tarafı optimizasyon gerekiyor mu?
+6. `MAX_WRITES_PER_STATE_PER_DAY` değeri saha verisiyle kalibre edilmeli.
+7. Guardian/escrow kontratları ayrı kapsamda — [[SPEC-BC-0002]] mevcut, bu
+   dokümanla arayüz tutarlılığı gözden geçirilmeli.
+
+---
+
+# 15. Liste çapası kaydı ve uygulama durumu (2026-10-19)
+
+> **Yürürlükte** — [[ADR-0051]] (kabul 2026-10-19). Kod hazır, üretimde kapalıdır.
+
+**Uygulama durumu.** §1–§11'deki sekiz kontrat ilk kez derleniyor ve test ediliyor (Hardhat, solc 0.8.24, evm shanghai,
+OpenZeppelin 5.6; `contracts/`, `npm run contracts:test`). Derleme için tek değişiklik: OZ 5.6'da `__UUPSUpgradeable_init` yok,
+çağrılar kaldırıldı; belgelenen davranış değişmedi. Üretimde çalışan zincir **yoktur** ([[ADR-0009]] K4); yerel geliştirme
+zinciri Hardhat düğümüdür.
+
+**Ne çapalanır.** Zincir imzalı listelerin **projeksiyonudur**, kaynağı değil. `TrustListAnchorRegistry` iki kayıt tutar:
+
+| Kayıt | Alanlar | Kaynak |
+|---|---|---|
+| Liste sürümü | `listKey = keccak256("tamga:trust-list:<ortam>:<dosya>")`, `version`, `contentHash = sha256(<dosya>.jws)`, `previousHash`, `issuedAt` | `lotl.jws`, `tl-<cc>.jws` ([[SPEC-TRUST-0001]] §3–§4) |
+| Çapa günlüğü başı | `logKey = keccak256("tamga:anchors:<ortam>")`, `seq`, `lineHash = sha256(satır)`, `ts` | `anchors.jsonl` son satırı (§5) |
+
+**Ne zaman.** Liste yayıncısı (`npm run trust:chain-submit`) her liste yayınından ve saatlik çapa satırından sonra; set önce
+yükleyiciyle doğrulanır (sağlıksız set çapalanmaz). Bayrak `TAMGA_CHAIN_ENABLED` varsayılan 0: kapalıyken hiçbir bağlantı yok;
+`--dry-run` yalnız plan basar.
+
+**Kim yazar.** `governance`'ın yetkilendirdiği yazıcılar. Bir çapa `requiredConfirmations` kadar **farklı** yazıcı birebir aynı
+veriyi gönderince onaylıdır; üretimde eşik **≥ 2** (ikinci bağımsız işletmeci kapısı; tek işletmeci onaylı çapa üretemez).
+Açılmış sürüm için farklı veri reddedilmez: ayrı **aday** olarak kaydedilir ve `AnchorConflict` olayı yayar (çift konuşma alarmı);
+eşik kadar farklı ve hâlâ yetkili yazıcının desteklediği **ilk** aday onaylanır ve sürüm kapanır. Her yazıcı bir sürüm için tek
+aday destekler; kümeden çıkarılan yazıcının desteği sayılmaz; eşik yazıcı sayısını aşamaz ([[ADR-0053]]). Sürüm/sıra monoton
+açılır; onaylı kayıt değişmez. Yazıcı kümesi ve eşik Governance önerisiyle yönetilir (`proposeAnchorerChange`,
+`proposeAnchorThreshold`; [[ADR-0055]]).
+
+**Doğrulayıcı nasıl kullanır.** `trust:chain-check`: elindeki listenin özeti zincirde onaylı mı — `YES` / `NO` (onaylı farklı özet:
+alarm, sonuç değişmez) / `UNKNOWN` (kapalı, erişilemez, çapa yok, eşik dolmadı). İsteğe bağlı ek güvencedir; A–E hattının adımı
+değildir; `UNKNOWN` sonucu kötüleştirmez. Çelişkide imzalı liste geçerlidir.
+
+**Zincirde OLMAYANLAR.** Liste içeriği; kurum, doğrulayıcı, şema kayıtları (onlar Faz 0 replay'iyle §2–§7 kontratlarına girer,
+[[ADR-0009]] K7); belge, belge özeti, iptal biti, kişi, takma ad, cihaz ya da cüzdan kimliği (DP1, [[PM-TRUST-0001]]). Kontratın
+ABI'sinde `string`/`bytes` alanı yoktur; `test/privacy-abi.test.ts` bütün kontratlar için bunu denetler.
+
+**Kurallar:** [[ADR-0051]]/CH1–CH5 ve [[ADR-0053]]/AC1–AC4 (bağlayıcı; ADR'de tanımlıdır, burada tekrarlanmaz). Yazıcı adresleri hesap izin listesine bu
+kontratın durumundan girer ([[ADR-0052]]/LP2).
+
+---
+
+# 16. ADR-0073 ve ADR-0074 uygulaması (2026-11-04)
+
+> Kurallar ADR'lerdedir (CE1–CE6, PJ1–PJ5); bu bölüm kontrat arayüzünü verir. Uygulanan parçalar sürüm notunda sayılır.
+
+## 16.1 Göç kipi ve `iat` anındaki durum ([[ADR-0073]] K1, K5)
+
+```solidity
+// MigrationWindow — RootCA/Issuer/Schema/RelyingParty/CrossRecognition (TamgaRegistryBase üzerinden), StatusListRegistry
+enum MigrationPhase { NOT_STARTED, OPEN, CLOSED }      // yalnız ileri
+uint64 constant MAX_MIGRATION_WINDOW = 30 days;          // açılış anından
+function openMigration(bytes32 replayPlanHash, uint64 deadline, address executor) external;  // yalnız Governance, bir kez
+function extendMigration(uint64 deadline) external;      // yalnız açıkken, açılış + 30 güne kadar
+function closeMigration() external;                      // kesin
+function migrationPhase() external view returns (MigrationPhase); // süresi dolmuş açık pencere = CLOSED
+function migrationState() external view returns (MigrationPhase storedPhase, uint64 openedAt, uint64 deadline,
+                                                  bytes32 replayPlanHash, address executor);
+
+// Governance — türü belli öneriler (2/3, ADR-0055 GE3), kayıt başına
+function proposeMigrationOpen(address registry, bytes32 replayPlanHash, uint64 window, address executor) external;
+function proposeMigrationExtend(address registry, uint64 deadline) external;
+function proposeMigrationClose(address registry) external;
+```
+
+- Depolama ERC-7201 ad alanındadır (`tamga.storage.MigrationWindow`); sıralı düzeni ve `__gap`'leri değiştirmez.
+- **Tarih kuralı:** tarih taşıyan yazımların `*At` biçimi (`suspendIssuerAt`, `reinstateIssuerAt`, `revokeIssuerAt`,
+  `retireIssuer`, `setSchemaAuthorizationAt`, `suspendRootCAAt`, `reinstateRootCAAt`, `revokeRootCAAt`, `retireRootCAAt`,
+  `deprecateSchemaAt`, `revokeSchemaAt`) ve kayıt yapılarının `registeredAt` alanı (şemada göçte `validFrom`) açık tarih alır:
+  `0` = blok zamanı; açık tarih yalnız kip açıkken (`PastDateOutsideMigration`), blok zamanından ileri değil (`DateInFuture`),
+  kayıt başına sıralı (`StatusOutOfOrder`, şema yetkisinde `DateOutOfOrder`). Kip dışında `registeredAt` verilmez.
+- **Kota:** kip açıkken §12.2'deki kotalar uygulanmaz.
+- **Ağ düzeyi yazım:** kip açıkken ağ şemasını Governance'ın yanında açılış önerisinin `executor`'u (tek göç yürütücüsü) yazar.
+- **Yükseltme:** Governance her yükseltmede hedefin `migrationState()`'ini önce ve sonra okur; fark varsa yükseltme geri alınır
+  (`MigrationStateChanged`). Kapanmış kip yükseltmeyle açılamaz, pencere uzatılamaz.
+- **Durum geçmişi:** kurum, kök CA ve şema durumları yalnız eklenebilir `StatusHistory.Change { uint64 since; uint8 status; }`
+  dizisinde tutulur; değişiklik `since` anından itibaren geçerlidir, aralık yarı açıktır. Kip dışında kaydın ilk ACTIVE penceresi
+  başlangıçsızdır (`since = 0`); göçte listedeki ilk durum anıdır. Okuma: `issuerStatusAt`, `rootCAStatusAt`, `schemaStatusAt`,
+  `*StatusHistoryOf`; olaylar `IssuerStatusChanged`, `RootCAStatusChanged`, `SchemaStatusChanged` (anı taşır).
+- **Doğrulama:** C1 = kurum `iat` anında ACTIVE ∧ `iat ∈ [validFrom, validUntil]` ∧ `RootCARegistry.isChainAcceptableAt(parentCA,
+  iat)` (kök `iat` anında ACTIVE, hiç REVOKED değil). C2 = `SchemaRegistry.isSchemaAcceptableAt(schemaId, iat)` (şema `iat` anında
+  ACTIVE, hiç REVOKED değil) ∧ yetki penceresi `iat ∈ [since, until)`. Böylece: askıdan önceki belge kabul, askı süresinde ret;
+  iptal ya da yetki geri alma anında verilen belge ret; emekli kökün emeklilikten sonraki belgeleri ret; DEPRECATED'dan önce
+  verilmiş belge kabul. Bugünkü durum soruları (`isValidIssuer`, `isOperational`, `isChainAcceptable`, `isActiveSchema`) değişmedi.
+- **Eşleme yardımcıları:** listedeki kurum `RETIRED` → `retireIssuer` (yumuşak iptal + `IssuerRetired`); kök `ROLLING_OVER` →
+  ACTIVE + `announceRootCARollover` (`RootCARollingOver`).
+- **Okuma görünümleri (C33 (1)):** `Governance.memberList`, `IssuerRegistry.issuerDelegatesOf`.
+
+## 16.2 Sert iptal ([[ADR-0073]] K2, CE2)
+
+```solidity
+event IssuerInvalidatedFrom(bytes32 indexed issuerId, uint64 invalidatesFrom);
+error InvalidInvalidatesFrom(uint64 invalidatesFrom);
+/// kurum REVOKED; validFrom ≤ invalidatesFrom ≤ revokedAt; yalnız daha geriye çekilir (silinmez)
+function setIssuerInvalidatesFrom(bytes32 issuerId, uint64 invalidatesFrom) external;   // onlyOwnerState(_stateOf(issuerId))
+function invalidatesFromOf(bytes32 issuerId) external view returns (uint64);             // 0 = yok
+```
+
+C1'e eklenen koşul: `invalidatesFrom == 0 || iat < invalidatesFrom` (liste: `invalidates_from ≤ iat` → NO). Göç kipi dışında
+geçmiş tarih yazılabilen tek alandır; kurumun kendi geçerlilik aralığıyla sınırlıdır. Kök CA iptali bugün de bütün altını
+düşürür (CA2), değişmedi.
+
+## 16.3 Şema sürüm özetleri ([[ADR-0073]] K3, CE3)
+
+```solidity
+uint256 constant MAX_CONTENT_HASHES = 32;              // ilk özet hariç; saha verisiyle gözden geçirilir
+event SchemaContentHashAdded(bytes32 indexed schemaId, bytes32 contentHash);
+error ContentHashExists(bytes32 schemaId, bytes32 contentHash);
+error TooManyContentHashes(bytes32 schemaId, uint256 max);
+/// ulusal şema: onlyOwnerState(stateCode); ağ şeması: Governance (proposeNetworkSchemaContentHash, 2/3) ya da göç yürütücüsü
+function addSchemaContentHash(bytes32 schemaId, bytes32 contentHash) external;
+function contentHashesOf(bytes32 schemaId) external view returns (bytes32[] memory);   // [ilk özet, eklenenler…]
+```
+
+`matchesContentHash` (C3) ilk özetle ya da eklenen herhangi bir özetle eşleşir; `REVOKED` şemada hiçbiriyle. Boş ve yinelenen
+özet (ilk özet dahil) reddedilir; `REVOKED` şemaya eklenmez, `DEPRECATED` şemaya eklenebilir. Liste biçimi SRI'dir
+(`sha256-<base64>`); zincirde aynı SHA-256 baytları `bytes32` olarak yazılır. Yayınlanmış şema metadata'sı değişmez (D1).
+
+## 16.4 Durum eşlemesi ([[ADR-0073]] K5)
+
+Kontrat enum'larına değer eklenmedi; ayrım gereken yerde olay kullanılır.
+
+| Liste durumu | Kök CA | Kurum | Şema | Doğrulayıcı | Ağ düzeyi kayıt (§16.5) |
+|---|---|---|---|---|---|
+| `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` |
+| `ROLLING_OVER` | `ACTIVE` + `announceRootCARollover` | — | — | — | — |
+| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | `SUSPENDED` |
+| `RETIRED` | `RETIRED` | `retireIssuer` (yumuşak `REVOKED` + `IssuerRetired`) | — | `REVOKED` | `RETIRED` |
+| `REVOKED` | `REVOKED` | `REVOKED` (+ `setIssuerInvalidatesFrom`) | `REVOKED` | `REVOKED` | `REVOKED` |
+| `DEPRECATED` | — | — | `DEPRECATED` | — | `DEPRECATED` |
+| `RESERVED`, `PROVISIONAL` | yazılmaz | yazılmaz | yazılmaz | yazılmaz | slot ve işletmeci kaydında yazılır |
+
+"—": o kayıt türünde listede kullanılmayan değer; yeniden oynatma görürse durur.
+
+## 16.5 Ağ düzeyi kayıt: `NetworkRegistry` ([[ADR-0074]] K3, PJ1–PJ3)
+
+```solidity
+enum RecordKind { NONE, WALLET_PROVIDER, WALLET_PROVIDER_KEY, ZK_CIRCUIT, EXTERNAL_LIST, EAA_CATEGORY,
+                  LIST_SIGNER, LIST_OPERATOR, STATE_SLOT, ROLE_SLOT, CATALOGUE }          // yalnız sona eklenir
+enum RecordStatus { NONE, ACTIVE, SUSPENDED, REVOKED, RETIRED, RESERVED, PROVISIONAL, DEPRECATED, DESIGNATED }
+struct NetworkRecord {
+    RecordKind kind; bytes32 recordId; bytes32 parentId; bytes2 region; uint8 subtype; RecordStatus status;
+    uint64 validFrom; uint64 validUntil;   // yarı açık; validUntil = 0 açık uçlu
+    bytes32 fingerprint; bytes32 detailsHash; uint256 flags; bytes32[] digests;   // en çok MAX_DIGESTS = 64
+}
+function stageRecord(NetworkRecord calldata rec) external returns (bytes32 stageId);  // stageId = keccak256(abi.encode(rec))
+function commitStaged(bytes32 stageId) external;                                     // yalnız Governance
+function writeRecord(NetworkRecord calldata rec, uint64 at) external;                // yalnız göç kipinde göç yürütücüsü
+// Governance: proposeNetworkRecord(address registry, bytes32 stageId) — 2/3, türü belli (GE3)
+// okuma: getRecord, recordIdsOf, recordStatusAt, recordStatusHistoryOf, isActiveRecord, isListedProviderKey
+```
+
+| LOTL alanı | `kind` | `recordId` / bağ | Notlar |
+|---|---|---|---|
+| `wallet_providers[]` | `WALLET_PROVIDER` | `keccak256(provider_id)` | ad → `detailsHash` |
+| WUA imza anahtarları | `WALLET_PROVIDER_KEY` | parmak izi; `parentId` = sağlayıcı | `isListedProviderKey` |
+| `zk_circuits[]` | `ZK_CIRCUIT` | `keccak256(circuit_id)` | `subtype` sistem, `flags` sürüm ve öznitelik sayısı, `fingerprint` dosya SHA-256; `note` yazılmaz |
+| `external_lists[]` | `EXTERNAL_LIST` | `keccak256(list_id)` | `region` ülke ya da `EU`, `subtype` biçim, `digests` sabit imzacılar + tür özetleri, `flags` rol maskesi |
+| `eaa_categories` | `EAA_CATEGORY` | `keccak256(kod)` | etiket → `detailsHash` |
+| imza anahtarları (çapa, JSON, XML liste) | `LIST_SIGNER` | parmak izi; `parentId` = liste anahtarı | `subtype` amaç |
+| `operator` | `LIST_OPERATOR` | liste anahtarı | `PROVISIONAL` / `DESIGNATED`; ad + `on_behalf_of` → `detailsHash` |
+| `national_lists[]` slotları | `STATE_SLOT` / `ROLE_SLOT` | devlet / rol; rolün `parentId`'si devlet slotu | `RESERVED`, `PROVISIONAL` burada yazılır |
+| `catalogue.url` | `CATALOGUE` | `keccak256("catalogue")` | adres → `detailsHash` |
+
+Kayıt yazımı son hâl yazımıdır; durum geçmişi yalnız eklenir, kayıt silinmez. Üst kayıt bağı yazım anında denetlenir.
+
+## 16.6 Ulusal listelerin kayıt verisi ve kapı grupları ([[ADR-0074]] K2)
+
+```solidity
+// IssuerRegistry — onlyOwnerState(_stateOf(issuerId))
+enum IssuerClass { NONE, PUB, QUALIFIED, EAA }                    // issuers[].class — yalnız sona eklenir
+struct IssuerProfile { IssuerClass issuerClass; bool publicSector; uint32 entitlements;
+                       bytes32 registrationHash; bytes32 operationsHash; }
+function setIssuerProfile(bytes32 issuerId, IssuerProfile calldata profile) external;
+function issuerProfileOf(bytes32 issuerId) external view returns (IssuerProfile memory);
+
+// RelyingPartyRegistry — onlyOwnerState(_stateOf(rpId))
+enum AliasPolicy { UNSPECIFIED, SINGLE, MULTIPLE }                 // relying_parties[].pseudonyms
+struct RelyingPartyProfile { bool publicSector; uint32 entitlements; AliasPolicy aliasPolicy; bytes32 registrationHash;
+                             bytes32[] intermediaries; bytes32[] servedParties; }   // rpId dizileri, en çok MAX_LINKED = 32
+struct TerminalGroup { bytes32 groupId; bytes32 institutionId; bytes32[] policyIds; bytes32[] certFingerprints;
+                       bool offlineAllowed; uint64 validFrom; uint64 validUntil; bytes32 labelHash; }
+function setRelyingPartyProfile(bytes32 rpId, RelyingPartyProfile calldata profile) external;
+function setTerminalGroup(bytes32 rpId, TerminalGroup calldata group) external;      // en çok 32 grup; 16 politika; 32 sertifika
+function closeTerminalGroup(bytes32 rpId, bytes32 groupId, uint64 at) external;      // silinmez, aralığı kapanır
+function isActiveTerminalCertificate(bytes32 groupId, bytes32 certFingerprint) external view returns (bool);
+```
+
+| Liste alanı | Zincirde |
+|---|---|
+| `issuers[].class` | `issuerClass` |
+| `issuers[]` kayıt verisi ([[ADR-0024]]) | `registrationHash`; `is_public_sector_body` → `publicSector`; `entitlements` → bit maskesi |
+| `issuers[]` işletim adresleri, `assurance_basis`, `authentic_source`, `delegate_keys` | `operationsHash` (liste `delegate_keys` imza anahtarı parmak izidir; zincir delege adresleriyle karıştırılmaz) |
+| `relying_parties[]` kayıt verisi | `registrationHash`, `publicSector`, `entitlements` |
+| `uses_intermediaries`, `served_relying_parties` | `intermediaries`, `servedParties` (rpId dizileri) |
+| `pseudonyms` | `aliasPolicy` |
+| `terminal_groups[]` ([[ADR-0069]]) | `TerminalGroup`: `keccak256(group_id)` ağda tek (TG1: başka doğrulayıcı aynı grubu yazamaz), kurum bağı, en az bir politika özeti, kapı sertifikası parmak izleri, `offline_allowed`, aralık, `label` → özet |
+| `legal_name` | mevcut `nameHash` (değişmedi) |
+
+Ayrıntı özetleri RFC 8785 kanonik JSON + SHA-256'dır; alan bloklarının sınırını yeniden oynatma planı sabitler.
+
+## 16.7 Okuma görünümleri (C33 (1)) ve güvenlik turu F-18 kalanı
+
+- **Küme okumaları:** `Governance.memberList()` (üye kodları; durum `getMember`), `TrustListAnchorRegistry.anchorers()` (bugünkü
+  yazıcılar; izin listesi üretimi, [[ADR-0052]] LP2), `IssuerRegistry.issuerDelegatesOf(issuerId)`. Devlet delege anahtarları
+  `delegateKeysOf` ile okunur ve `DelegateKeysSet(stateCode, address[] keys)` olayı anahtarların kendisini taşır.
+- **Sürüm adımı:** `StatusListRegistry.publishList` ve `TrustListAnchorRegistry.anchorList` sürümü bir adımda en çok
+  `MAX_VERSION_STEP = 1_000_000` artırır (`VersionStepTooLarge`); `version = 2^64-1` ile listeyi kalıcı dondurmak mümkün değil.
+- **Kullanılmayan öğeler kalktı:** `ProposalStatus.CANCELLED`, `ProposalCancelled`, `SchemaNotAuthorized`.
+- **İnce olaylar:** `SchemaRegistrySet(registry)`; `proposeStateRemoval(bytes2 stateCode, bytes32 reasonHash)` gerekçeyi özet
+  olarak alır (metin zincire yazılmaz, [[ADR-0074]] PJ2) ve `StateRemoved(stateCode, reasonHash)` bunu yayar.
+
+---
+
+# İlgili Dokümanlar
+
+[[ADR-0001]] · [[ADR-0002]] · [[ADR-0003]] · [[ADR-0007]] · [[ADR-0008]] ·
+[[ARCH-0001]] · [[ARCH-0002]] · [[ARCH-0003]] · [[PM-TRUST-0001]] ·
+[[PM-SCHEMA-0001]] · [[PM-ASSUR-0001]] · [[SPEC-ID-0002]] ·
+[[SPEC-SCHEMA-0001]] · [[SPEC-CRED-0001]] · [[SPEC-CRED-0003]] · [[SPEC-BC-0002]] ·
+[[ADR-0009]] · [[ADR-0051]] · [[ADR-0052]] · [[ADR-0053]] · [[ADR-0054]] · [[ADR-0055]] · [[ADR-0063]] · [[SPEC-TRUST-0001]]
+
+---
+
+# Durum
+
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; §15 2026-10-19, [[ADR-0051]]: kontratlar derleniyor ve test ediliyor, üretimde kapalı;
+§12.1 hesap izni 2026-10-19, [[ADR-0052]]: zincir üstü izin kontratı yerine Besu yerel izinlendirme; 2026-10-19 [[ADR-0053]],
+[[ADR-0054]], [[ADR-0055]]: rakip çapa adayları, şema ad alanları ve kota kapsamı, yükseltme kuyruğu ve kayıt yönetimi önerileri;
+2026-10-23 [[ADR-0063]]: iptal listesi kaydı listenin kendi bit sayısıyla).
+

@@ -135,7 +135,7 @@ A record is never removed from the list (TL2); a withdrawn institution stays in 
 
 # 5. `anchors.jsonl` — anchor log
 
-> **Proposal:** [[ADR-0074]] (Proposed) proposes new line types for the registration certificate status list and the list views; this section changes after acceptance.
+> **Accepted, implementation in progress (2026-11-04):** [[ADR-0074]] adds new line types for the registration certificate status list and the list views (`registration_status`, `list_view`); the lines start with the package version that recognises them, and this section is updated with that version.
 
 Every line is an independent JWS; payload `{seq, previous_hash, ts, kind, …}`:
 
@@ -177,7 +177,7 @@ Three-valued answer: `YES | NO | UNKNOWN`; `UNKNOWN` → INDETERMINATE (CMP4). S
 
 # 7. Contract mapping and moving to the chain
 
-> **Proposal:** [[ADR-0073]] and [[ADR-0074]] (Proposed) extend the replay and the mapping (migration mode, hard revocation, schema version digests, relying party identity, network-level records); this section changes after acceptance.
+> **Accepted, implementation in progress (2026-11-04):** [[ADR-0073]] and [[ADR-0074]] extend the replay and the mapping (migration mode, hard revocation, schema version digests, relying party identity, network-level records); the contract side is in the [[SPEC-BC-0001]] version notes, and this section is updated with `trust:chain-replay`.
 
 | List field | Contract call |
 |---|---|

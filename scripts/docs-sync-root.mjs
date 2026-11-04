@@ -120,6 +120,11 @@ const PKG = [
     "Wallet core: keys, issuance, local checks, presentation",
     "Cüzdan çekirdeği: anahtarlar, belge alma, yerel denetim, gösterme",
   ],
+  [
+    "onboard",
+    "Joining tool for institutions: application check, keys + CSR, setup and listing checks (CLI + MCP)",
+    "Kurumlar için katılım aracı: başvuru denetimi, anahtar + CSR, kurulum ve liste denetimi (komut satırı + MCP)",
+  ],
 ];
 for (const lang of ["en", "tr"]) {
   const out = join(L[lang], "packages");

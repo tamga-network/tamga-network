@@ -28,6 +28,9 @@
     },
     {
       "path": "packages/zk/tsconfig.build.json"
+    },
+    {
+      "path": "packages/onboard/tsconfig.build.json"
     }
   ]
 }

@@ -1,8 +1,8 @@
 ---
 document_id: ADR-0073
 title: "Zincir–liste eşdeğerliğinin uygulanabilirliği: göç kipi, sert iptal, şema sürümleri, doğrulayıcı kimliği, durum eşlemesi"
-status: Proposed
-review_status: Draft
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
@@ -10,11 +10,11 @@ summary: >
   ADR-0009 K7, imzalı listelerden zincire geçişi liste geçmişinin kontratlara yeniden oynatılmasına ve eşdeğerlik testine bağlar.
   Bugünkü kontratlarla bu geçmiş birebir oynatılamaz: tarihler blok zamanından gelir, sert iptal yoktur, şemanın tek içerik özeti
   vardır, doğrulayıcı kimliği sertifikaya bağlıdır ve askıdan dönemez, durum kümeleri ve sınırları farklıdır, günlük kotalar toplu
-  yazımı durdurur. Öneri: her kayıt kontratında Governance'ın bir kez açtığı, kapanınca bir daha açılamayan tek seferlik göç kipi
+  yazımı durdurur. Karar: her kayıt kontratında Governance'ın bir kez açtığı, kapanınca bir daha açılamayan tek seferlik göç kipi
   (geçmiş tarih yalnız blok zamanına kadar, kota yok); `invalidatesFrom` ile sert iptal; şema sürüm özetleri yalnız eklenebilir
   dizi; `rpId = keccak256(dns_name)`, sertifika güncelleme, askıdan dönüş ve ince kapsamlar (özetlerle); durum eşleme tablosu ve
-  belgenin `iat` anındaki duruma göre yarı açık aralıklarla değerlendirme. Yeniden oynatma komutu `trust:chain-replay`. Öneri;
-  kabul proje yönetiminde.
+  belgenin `iat` anındaki duruma göre yarı açık aralıklarla değerlendirme. Yeniden oynatma komutu `trust:chain-replay`. Kabul
+  edildi (2026-11-04): askıdaki kurumun askıdan önceki belgeleri geçerli, göç penceresi en çok 30 gün.
 domain: Trust
 related: ["[[ADR-0009]]", "[[ADR-0010]]", "[[ADR-0015]]", "[[ADR-0029]]", "[[ADR-0034]]", "[[ADR-0046]]", "[[ADR-0051]]", "[[ADR-0053]]", "[[ADR-0054]]", "[[ADR-0055]]", "[[ADR-0063]]", "[[ADR-0074]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]"]
 ---
@@ -50,7 +50,7 @@ geçmişin yalnız bir kez, denetimli bir pencerede yazılmasına izin verir.
   iptal, yalnız eklenebilir şema sürüm özetleri ve kalıcı doğrulayıcı kimliği önerilsin. Yeniden oynatma komutunun adı onaylandı:
   `trust:chain-replay`.
 
-# Önerilen karar
+# Karar
 
 ## K1 — Tek seferlik göç kipi (F1, F10)
 
@@ -61,11 +61,15 @@ geçmişin yalnız bir kez, denetimli bir pencerede yazılmasına izin verir.
 - Kipi **Governance** türü belli bir öneriyle (2/3, [[ADR-0055]]) **bir kez** açar. Öneri, yeniden oynatma planının özetini
   (`replayPlanHash` = herkese açık arşivden deterministik üretilen planın SHA-256'sı) taşır; herkes planı arşivden yeniden üretip
   zincirdeki olaylarla karşılaştırabilir. Kapanış da Governance önerisiyle olur ve K6'daki eşdeğerlik raporuna dayanır.
+- **Pencere en çok 30 gündür** (açılış anından sayılır). Governance yalnız kip açıkken ve bu tavanı aşmadan uzatabilir. Süre dolunca
+  kip kendiliğinden **kapanmış** sayılır; bu kapanış da kesindir.
 - Kip açıkken tarih taşıyan yazımlar tarihi **açıkça** alır (durum değişikliği anı, yetki penceresi, geçerlilik başlangıcı, kayıt
   anı, iptal listesi yayın anı). Kurallar: hiçbir tarih `block.timestamp`'ten ileri olamaz; bir kaydın geçmişi zaman sırasıyla
   yazılır (öncekinden geri tarih reddedilir); yazılmış geçmiş değiştirilmez.
 - Kim yazar: ulusal kayıtlar yine o devletin delege anahtarlarıyla (egemenlik ve [[SPEC-BC-0001]]/N1 değişmez); ağ düzeyi kayıtlar
-  (ağ şemaları, [[ADR-0074]] K3) açılış önerisinin yetkilendirdiği **göç yürütücüsü** adresiyle ve yalnız kip açıkken.
+  (ağ şemaları, [[ADR-0074]] K3) açılış önerisinin yetkilendirdiği **tek bir göç yürütücüsü** adresiyle ve yalnız kip açıkken
+  (her kayıt için ayrı Governance oyu gerekmez).
+- Yeniden oynatma üretim arşivinin **ilk arşivlenmiş sürümünden** başlar.
 - Kip açıkken [[ADR-0054]]/NS3 günlük kotaları **uygulanmaz** (F10); kip kapanınca kotalar aynen döner.
 - Kip kapalıyken (başlamadı ya da kapandı) bugünkü kural sürer: tarihler `block.timestamp`'tir. Tek istisna K2'deki sert iptal
   tarihidir.
@@ -96,7 +100,8 @@ geçmişin yalnız bir kez, denetimli bir pencerede yazılmasına izin verir.
 
 - **Kimlik:** `rpId = keccak256(utf8(dns_name))`. Sertifika yenilenince değişmez ([[ADR-0034]] CI3/CI4). ABI'de alan adı metni
   yoktur; kayıt kurumu özeti hesaplar, indeksleyici ve K6 testi formülü denetler. Kontrat devlet kodunu egemenlik için ayrıca tutar.
-  Kimlikler zincir formülüyle olduğundan listedeki `rp_id` de aynı formüle geçer (bkz. açık soru 4).
+  Kimlikler zincir formülüyle olduğundan listedeki `rp_id` de aynı formüle geçer; bugünkü gömülü açıklama politikaları
+  ([[ADR-0046]]) geliştirme evresi kuralıyla yeniden yazılır ([[ADR-0029]]).
 - **Sertifika:** erişim sertifikası parmak izi güncellenebilir; eski ve yeni parmak izi olayla yayılır, geçmiş kalır. Bir parmak
   izi aynı anda yalnız bir doğrulayıcıya aittir.
 - **Askıdan dönüş:** `SUSPENDED → ACTIVE` dönüşü eklenir (kurum ve kök CA'da olduğu gibi). `REVOKED` kesindir.
@@ -128,7 +133,7 @@ geçmişin yalnız bir kez, denetimli bir pencerede yazılmasına izin verir.
 |---|---|---|---|---|---|
 | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | |
 | `ROLLING_OVER` | `ACTIVE` + halef olayı | — | — | — | Liste C1'de etkin sayar |
-| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Yalnız askı süresinde verilen belge düşer (bkz. açık soru 1) |
+| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Yalnız askı süresinde verilen belge düşer; askıdan önceki belgeler geçerlidir (liste kuralı) |
 | `RETIRED` | `RETIRED` | `REVOKED`, yumuşak (`revokedAt` = `since`) | — | `REVOKED` | Önceki belgeler geçerli kalır (GV1) |
 | `REVOKED` | `REVOKED` | `REVOKED`; `invalidates_from` varsa K2 | `REVOKED` | `REVOKED` | |
 | `DEPRECATED` | — | — | `DEPRECATED` | — | SC3 |
@@ -158,43 +163,40 @@ geçmişin yalnız bir kez, denetimli bir pencerede yazılmasına izin verir.
 | Kapsamda öğe yollarını tek özetle tutmak | ret | Zincirde "bu öğe istenebilir mi" sorulamaz; öğe başına özet aşırı istek denetimini mümkün kılar |
 | Kontrat C1'ini bugünkü duruma göre bırakmak | ret | Listeyle farklı cevap; [[ADR-0009]] K7 testi geçmez |
 
-# Önerilen kurallar (kabul edilirse bağlayıcı tabloya taşınır)
+# Değişmezler
 
 | Kod | Kural |
 |---|---|
-| CE1 | Göç kipi her kayıt kontratında Governance önerisiyle bir kez açılır; kapanınca hiçbir yolla (yükseltme dahil) yeniden açılamaz. Kip açıkken geçmiş tarih yazılabilir ama hiçbir tarih blok zamanından ileri olamaz, kayıt başına sıra korunur ve günlük kotalar uygulanmaz; kip kapalıyken tarihler blok zamanıdır (CE2 hariç). |
+| CE1 | Göç kipi her kayıt kontratında Governance önerisiyle bir kez açılır; pencere en çok 30 gündür ve süre dolunca kendiliğinden kapanır; kapanınca hiçbir yolla (yükseltme dahil) yeniden açılamaz. Kip açıkken geçmiş tarih yazılabilir ama hiçbir tarih blok zamanından ileri olamaz, kayıt başına sıra korunur ve günlük kotalar uygulanmaz; kip kapalıyken tarihler blok zamanıdır (CE2 hariç). |
 | CE2 | Sert iptal tarihi (`invalidatesFrom`) kurumun geçerlilik başlangıcı ile iptal anı arasındadır; yazıldıktan sonra silinmez, yalnız geriye çekilebilir; `iat` bu tarihe eşit ya da sonraysa belge kabul edilmez. |
 | CE3 | Şemanın `vctURI`'si ve yazılmış her içerik özeti değiştirilmez ve silinmez; yeni sürüm özeti yalnız eklenir. |
 | CE4 | Doğrulayıcının zincir ve liste kimliği `keccak256(dns_name)`'dir; erişim sertifikasının yenilenmesi kimliği değiştirmez. |
-| CE5 | Kontrat C1/C2/C3'ü belgenin `iat` anındaki duruma göre, yarı açık aralıklarla değerlendirir; liste durumları kontrata eşleme tablosuyla yazılır. |
+| CE5 | Kontrat C1/C2/C3'ü belgenin `iat` anındaki duruma göre, yarı açık aralıklarla değerlendirir (askıdaki kurumun askıdan önceki belgeleri geçerlidir); liste durumları kontrata eşleme tablosuyla yazılır. |
 | CE6 | Göç, `trust:chain-replay` eşdeğerlik testinde C1/C2/C3/D5 cevaplarında ACCEPTED/REJECTED farkı kalmadan kapanmaz. |
 
-# Açık sorular (proje yönetimine)
+# Açık soruların kararları (2026-11-04)
 
-1. **Askıdaki kurumun eski belgeleri.** Liste ([[ADR-0009]] D-BC-3 `iat` kuralı, GV1) askıdan önce verilmiş belgeyi kabul eder;
-   [[SPEC-BC-0001]] §3.3 kontratta askıyı "ihtiyati" sayar ve bütün belgeleri reddeder. Öneri: liste kuralı (K5).
-2. **Göçte ağ düzeyi yazımlar.** Açılış önerisinin yetkilendirdiği tek bir göç yürütücüsü (öneri) mi, yoksa her ağ şeması ve ağ
-   kaydı için ayrı Governance oyu mu ([[SPEC-BC-0001]]/GV2 okuması)?
-3. **Göç süresi tavanı.** Pencere açık kaldıkça geçmiş tarih yazılabilir. Öneri: 30 gün, Governance yalnız açıkken uzatabilir;
-   süre dolunca kip kendiliğinden kapanır mı, yoksa yalnız yazımlar mı durur?
-4. **Listedeki `rp_id`.** K4 kabul edilirse listedeki `rp_id` de `keccak256(dns_name)` olur. Gömülü açıklama politikaları
-   ([[ADR-0046]]) `rp_id` taşır; sertifika yenilemesinde bozulmazlar ama bugünküler yeniden yazılır (geliştirme evresi,
-   [[ADR-0029]]).
-5. **Yeniden oynatmanın başlangıcı.** Üretim arşivinin ilk sürümünden mi, yoksa [[ADR-0029]]'un yerinde düzeltme döneminin bittiği
-   sürümden mi? Listeden çıkarılmış bir sürüm özeti zincirde kalır (K3) ve eşdeğerlik farkı doğurur.
-6. Kapsam ve öğe dizisi tavanları (bugün `MAX_SCOPES`) saha verisiyle belirlenecek.
+1. **Askıdaki kurumun eski belgeleri:** liste kuralı. Askıdan önce verilmiş belge geçerlidir; yalnız askı süresinde verilen belge
+   düşer (K5). [[SPEC-BC-0001]] §3.3 buna uyar.
+2. **Göçte ağ düzeyi yazımlar:** açılış önerisinin yetkilendirdiği tek göç yürütücüsü yazar (K1).
+3. **Göç süresi tavanı:** en çok 30 gün; Governance yalnız kip açıkken ve tavan içinde uzatır; süre dolunca kip kendiliğinden
+   kapanmış sayılır (K1, CE1).
+4. **Listedeki `rp_id`:** `keccak256(dns_name)` olur (K4); bugünkü gömülü açıklama politikaları yeniden yazılır ([[ADR-0029]]).
+5. **Yeniden oynatmanın başlangıcı:** üretim arşivinin ilk arşivlenmiş sürümü (K1).
+6. Kapsam ve öğe dizisi tavanları uygulamada başlangıç değeriyle konur, saha verisiyle gözden geçirilir.
 
 # Sonuçlar
 
-- Kontratlar (kabulden sonra, [[ADR-0074]] ile birlikte): göç durumu ve Governance önerileri; kurum, kök CA ve şemada durum
+- Kontratlar ([[ADR-0074]] ile birlikte): göç durumu ve Governance önerileri; kurum, kök CA ve şemada durum
   pencereleri ve yarı açık sınırlar; `invalidatesFrom`; şema sürüm özetleri; doğrulayıcı kimliği, sertifika güncelleme, askıdan
   dönüş ve kapsam kayıtları; `privacy-abi` testi yeni alanları kapsar. Struct'lara alan yalnız sona eklenir (UUPS depolama düzeni).
-- `apps/trust-publisher`: `trust:chain-replay` (plan, özet, kuru prova, devam, eşdeğerlik testi); liste `rp_id` hesabı (açık soru 4).
-- Belgeler: [[SPEC-BC-0001]] §3.3, §4.4 SC1, §6, §12.2, §13, §14 ve [[SPEC-TRUST-0001]] §7 kabulden sonra değişir; [[ADR-0051]]
+- `apps/trust-publisher`: `trust:chain-replay` (plan, özet, kuru prova, devam, eşdeğerlik testi); liste `rp_id` hesabı (K4).
+- Belgeler: [[SPEC-BC-0001]] §3.3, §4.4 SC1, §6, §12.2, §13, §14 ve [[SPEC-TRUST-0001]] §7 değişir; [[ADR-0051]]
   K2'nin "mevcut sekiz kontrat değişmez" cümlesi bu ADR ve [[ADR-0074]] ile değişmiş olur.
-- Üretimde zincir yine kapalıdır ([[ADR-0009]] K4, [[ADR-0051]] CH5); bu öneri yalnız geçişin mümkün olmasını sağlar.
+- Üretimde zincir yine kapalıdır ([[ADR-0009]] K4, [[ADR-0051]] CH5); bu karar yalnız geçişin mümkün olmasını sağlar.
 
 # Durum
 
-**Proposed — 2026-11-04.** Proje yönetiminin 2026-11-04 yönü üzerine yazıldı; kabul proje yönetiminde. Komut adı
-`trust:chain-replay` onaylıdır. Kabul edilirse DECISIONS'a D-BC kodu alır ve kurallar CE1–CE6 bağlayıcı olur.
+**Accepted — 2026-11-04.** Proje yönetiminin onayıyla (birebir alıntı özel onay kaydında): askıdaki kurumun askıdan önceki
+belgeleri geçerli; açık soruların kalanı önerildiği gibi. Komut adı `trust:chain-replay` onaylıdır. DECISIONS: D-BC-12.
+CE1–CE6 bağlayıcıdır. Kontratlardaki uygulama sürüyor ([[SPEC-BC-0001]] sürüm notları).

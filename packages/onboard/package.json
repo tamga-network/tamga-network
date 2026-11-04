@@ -1,0 +1,34 @@
+{
+  "name": "@tamga-network/onboard",
+  "version": "0.8.1",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Tamga Network katılım aracı (kurumun bilgi işlem ekibi için): başvuru dosyası ve girdi doğrulama, kurumun kendi tarafında anahtar + CSR, kurulum ve güven listesi denetimi (yalnız okur). Komut `tamga-onboard`; `tamga-onboard mcp` aynı işlemleri yerel MCP sunucusu (stdio) olarak sunar. Ağa ve listeye yazmaz.",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./mcp": "./src/mcp.ts"
+  },
+  "bin": {
+    "tamga-onboard": "./src/cli.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@peculiar/x509": "^1.12.0",
+    "@tamga-network/core": "*",
+    "@tamga-network/schemas": "*",
+    "@tamga-network/trust": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamga-network/tamga-network.git",
+    "directory": "packages/onboard"
+  },
+  "homepage": "https://docs.tamga.network",
+  "sideEffects": false
+}

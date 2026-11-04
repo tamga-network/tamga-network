@@ -1,13 +1,13 @@
 ---
 document_id: ADR-0073
 title: "Zəncir–siyahı ekvivalentliyinin tətbiq oluna bilməsi: miqrasiya rejimi, sərt ləğv, sxem versiyaları, yoxlayan tərəfin identifikatoru, status uyğunlaşdırması"
-status: Proposed
-review_status: Draft
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
 summary: >
-  ADR-0009 K7 imzalanmış siyahılardan zəncirə keçidi siyahı tarixçəsinin kontraktlarda yenidən icrasına və ekvivalentlik testinə bağlayır. Bugünkü kontraktlarla bu tarixçə dəqiq yenidən icra edilə bilmir: tarixlər blok vaxtından gəlir, sərt ləğv yoxdur, sxemin bir məzmun xülasəsi var, yoxlayan tərəfin identifikatoru sertifikata bağlıdır və dayandırmadan qayıda bilmir, status dəstləri və sərhədləri fərqlidir, gündəlik kvotalar toplu yazını dayandırır. Təklif: hər reyestr kontraktında Governance-in bir dəfə açdığı, bağlandıqdan sonra yenidən açıla bilməyən birdəfəlik miqrasiya rejimi (keçmiş tarix yalnız blok vaxtına qədər, kvota yoxdur); `invalidatesFrom` ilə sərt ləğv; sxem versiya xülasələri yalnız əlavə oluna bilən massiv; `rpId = keccak256(dns_name)`, sertifikatın yenilənməsi, dayandırmadan qayıdış və incə əhatə dairələri (xülasələrlə); status uyğunlaşdırma cədvəli və sənədin `iat` anındakı statusa görə yarımaçıq intervallarla qiymətləndirmə. Yenidən icra komandası `trust:chain-replay`. Təklifdir; qəbul layihə rəhbərliyindədir.
+  ADR-0009 K7 imzalanmış siyahılardan zəncirə keçidi siyahı tarixçəsinin kontraktlarda yenidən icrasına və ekvivalentlik testinə bağlayır. Bugünkü kontraktlarla bu tarixçə dəqiq yenidən icra edilə bilmir: tarixlər blok vaxtından gəlir, sərt ləğv yoxdur, sxemin bir məzmun xülasəsi var, yoxlayan tərəfin identifikatoru sertifikata bağlıdır və dayandırmadan qayıda bilmir, status dəstləri və sərhədləri fərqlidir, gündəlik kvotalar toplu yazını dayandırır. Qərar: hər reyestr kontraktında Governance-in bir dəfə açdığı, bağlandıqdan sonra yenidən açıla bilməyən birdəfəlik miqrasiya rejimi (keçmiş tarix yalnız blok vaxtına qədər, kvota yoxdur); `invalidatesFrom` ilə sərt ləğv; sxem versiya xülasələri yalnız əlavə oluna bilən massiv; `rpId = keccak256(dns_name)`, sertifikatın yenilənməsi, dayandırmadan qayıdış və incə əhatə dairələri (xülasələrlə); status uyğunlaşdırma cədvəli və sənədin `iat` anındakı statusa görə yarımaçıq intervallarla qiymətləndirmə. Yenidən icra komandası `trust:chain-replay`. Qəbul edildi (2026-11-04): dayandırılmış qurumun dayandırmadan əvvəlki sənədləri etibarlıdır, miqrasiya pəncərəsi ən çoxu 30 gündür.
 domain: Trust
 related: ["[[ADR-0009]]", "[[ADR-0010]]", "[[ADR-0015]]", "[[ADR-0029]]", "[[ADR-0034]]", "[[ADR-0046]]", "[[ADR-0051]]", "[[ADR-0053]]", "[[ADR-0054]]", "[[ADR-0055]]", "[[ADR-0063]]", "[[ADR-0074]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]"]
 translation_of: ADR-0073
@@ -46,7 +46,7 @@ yalnız bir dəfə, nəzarət olunan bir pəncərədə yazılmasına icazə veri
   miqrasiya rejimi, sərt ləğv, yalnız əlavə oluna bilən sxem versiya xülasələri və daimi yoxlayan tərəf identifikatoru təklif olunsun.
   Yenidən icra komandasının adı təsdiqləndi: `trust:chain-replay`.
 
-# Təklif olunan qərar
+# Qərar
 
 ## K1 — Birdəfəlik miqrasiya rejimi (F1, F10)
 
@@ -57,12 +57,15 @@ yalnız bir dəfə, nəzarət olunan bir pəncərədə yazılmasına icazə veri
 - Rejimi **Governance** növü müəyyən təkliflə (2/3, [[ADR-0055]]) **bir dəfə** açır. Təklif yenidən icra planının xülasəsini
   (`replayPlanHash` = ictimai arxivdən deterministik yaradılan planın SHA-256-sı) daşıyır; hər kəs planı arxivdən yenidən yaradıb
   zəncirdəki hadisələrlə müqayisə edə bilər. Bağlanış da Governance təklifi ilə olur və K6-dakı ekvivalentlik hesabatına əsaslanır.
+- **Pəncərə ən çoxu 30 gündür** (açılış anından sayılır). Governance yalnız rejim açıq olarkən və bu tavanı aşmadan uzada bilər.
+  Müddət bitəndə rejim özü-özünə **bağlanmış** sayılır; bu bağlanış da qətidir.
 - Rejim açıq olarkən tarix daşıyan yazılar tarixi **açıq şəkildə** alır (status dəyişikliyi anı, icazə pəncərəsi, etibarlılığın
   başlanğıcı, qeydiyyat anı, ləğv siyahısının dərc anı). Qaydalar: heç bir tarix `block.timestamp`-dən irəli ola bilməz; qeydin
   tarixçəsi zaman ardıcıllığı ilə yazılır (əvvəlkindən geri tarix rədd edilir); yazılmış tarixçə dəyişmir.
 - Kim yazır: milli qeydlər yenə həmin dövlətin nümayəndə açarları ilə (suverenlik və [[SPEC-BC-0001]]/N1 dəyişmir); şəbəkə səviyyəli
-  qeydlər (şəbəkə sxemləri, [[ADR-0074]] K3) açılış təklifinin səlahiyyət verdiyi **miqrasiya icraçısı** ünvanı ilə və yalnız rejim
-  açıq olarkən.
+  qeydlər (şəbəkə sxemləri, [[ADR-0074]] K3) açılış təklifinin səlahiyyət verdiyi **tək miqrasiya icraçısı** ünvanı ilə (hər qeyd üçün ayrıca
+  Governance səsverməsi lazım deyil) və yalnız rejim açıq olarkən.
+- Yenidən icra istehsal arxivinin **ilk arxivləşdirilmiş versiyasından** başlayır.
 - Rejim açıq olarkən [[ADR-0054]]/NS3 gündəlik kvotaları **tətbiq edilmir** (F10); rejim bağlananda kvotalar olduğu kimi qayıdır.
 - Rejim açıq olmadıqda (başlamayıb və ya bağlı) bugünkü qayda qüvvədədir: tarixlər `block.timestamp`-dir. Yeganə istisna K2-dəki sərt
   ləğv tarixidir.
@@ -93,7 +96,8 @@ yalnız bir dəfə, nəzarət olunan bir pəncərədə yazılmasına icazə veri
 
 - **İdentifikator:** `rpId = keccak256(utf8(dns_name))`. Sertifikat yenilənəndə dəyişmir ([[ADR-0034]] CI3/CI4). ABI-də domen adı
   mətni yoxdur; qeydiyyat qurumu xülasəni hesablayır, indeksləyici və K6 testi formulu yoxlayır. Kontrakt suverenlik üçün dövlət
-  kodunu ayrıca saxlayır. İdentifikatorlar zəncir formulu ilə olduğundan siyahıdakı `rp_id` də eyni formula keçir (bax açıq sual 4).
+  kodunu ayrıca saxlayır. İdentifikatorlar zəncir formulu ilə olduğundan siyahıdakı `rp_id` də eyni formula keçir; bugünkü daxili açıqlama
+  siyasətləri ([[ADR-0046]]) inkişaf mərhələsi qaydası ilə yenidən yazılır ([[ADR-0029]]).
 - **Sertifikat:** giriş sertifikatının barmaq izi yenilənə bilər; köhnə və yeni barmaq izi hadisə ilə yayılır, tarixçə qalır. Bir
   barmaq izi eyni anda yalnız bir yoxlayan tərəfə məxsusdur.
 - **Dayandırmadan qayıdış:** `SUSPENDED → ACTIVE` qayıdışı əlavə olunur (qurum və kök CA-da olduğu kimi). `REVOKED` qətidir.
@@ -125,7 +129,7 @@ yalnız bir dəfə, nəzarət olunan bir pəncərədə yazılmasına icazə veri
 |---|---|---|---|---|---|
 | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | |
 | `ROLLING_OVER` | `ACTIVE` + varis hadisəsi | — | — | — | Siyahı C1-də aktiv sayır |
-| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Yalnız dayandırma müddətində verilən sənəd düşür (bax açıq sual 1) |
+| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Yalnız dayandırma müddətində verilən sənəd düşür; dayandırmadan əvvəlkilər etibarlıdır (siyahı qaydası) |
 | `RETIRED` | `RETIRED` | `REVOKED`, yumşaq (`revokedAt` = `since`) | — | `REVOKED` | Əvvəlki sənədlər etibarlı qalır (GV1) |
 | `REVOKED` | `REVOKED` | `REVOKED`; `invalidates_from` varsa K2 | `REVOKED` | `REVOKED` | |
 | `DEPRECATED` | — | — | `DEPRECATED` | — | SC3 |
@@ -156,44 +160,42 @@ yalnız bir dəfə, nəzarət olunan bir pəncərədə yazılmasına icazə veri
 | Əhatədə element yollarını tək xülasə ilə saxlamaq | rədd | "Bu element tələb edilə bilərmi" sualı zəncirdə verilə bilməz; element üzrə xülasə artıq tələb yoxlamasını mümkün edir |
 | Kontraktın C1-ini bugünkü statusa görə saxlamaq | rədd | Siyahıdan fərqli cavab; [[ADR-0009]] K7 testi keçmir |
 
-# Təklif olunan qaydalar (qəbul edilərsə məcburi cədvələ köçürülür)
+# Dəyişməz qaydalar
 
 | Kod | Qayda |
 |---|---|
-| CE1 | Miqrasiya rejimi hər reyestr kontraktında Governance təklifi ilə bir dəfə açılır; bağlandıqdan sonra heç bir yolla (yeniləmə daxil) yenidən açıla bilməz. Rejim açıq olarkən keçmiş tarix yazıla bilər, lakin heç bir tarix blok vaxtından irəli ola bilməz, qeyd üzrə ardıcıllıq qorunur və gündəlik kvotalar tətbiq edilmir; rejim açıq olmadıqda tarixlər blok vaxtıdır (CE2 istisna). |
+| CE1 | Miqrasiya rejimi hər reyestr kontraktında Governance təklifi ilə bir dəfə açılır; pəncərə ən çoxu 30 gündür və müddət bitəndə özü bağlanır; bağlandıqdan sonra heç bir yolla (yeniləmə daxil) yenidən açıla bilməz. Rejim açıq olarkən keçmiş tarix yazıla bilər, lakin heç bir tarix blok vaxtından irəli ola bilməz, qeyd üzrə ardıcıllıq qorunur və gündəlik kvotalar tətbiq edilmir; rejim açıq olmadıqda tarixlər blok vaxtıdır (CE2 istisna). |
 | CE2 | Sərt ləğv tarixi (`invalidatesFrom`) qurumun etibarlılıq başlanğıcı ilə ləğv anı arasındadır; yazıldıqdan sonra silinmir, yalnız geriyə çəkilə bilər; `iat` bu tarixə bərabər və ya ondan sonra olan sənəd qəbul edilmir. |
 | CE3 | Sxemin `vctURI`-si və yazılmış hər məzmun xülasəsi dəyişdirilmir və silinmir; yeni versiya xülasəsi yalnız əlavə edilir. |
 | CE4 | Yoxlayan tərəfin zəncir və siyahı identifikatoru `keccak256(dns_name)`-dir; giriş sertifikatının yenilənməsi identifikatoru dəyişmir. |
-| CE5 | Kontrakt C1/C2/C3-ü sənədin `iat` anındakı statusa görə, yarımaçıq intervallarla qiymətləndirir; siyahı statusları kontrakta uyğunlaşdırma cədvəli ilə yazılır. |
+| CE5 | Kontrakt C1/C2/C3-ü sənədin `iat` anındakı statusa görə, yarımaçıq intervallarla qiymətləndirir (dayandırılmış qurumun dayandırmadan əvvəlki sənədləri etibarlıdır); siyahı statusları kontrakta uyğunlaşdırma cədvəli ilə yazılır. |
 | CE6 | Miqrasiya `trust:chain-replay` ekvivalentlik testində C1/C2/C3/D5 cavablarında ACCEPTED/REJECTED fərqi qalmayana qədər bağlanmır. |
 
-# Açıq suallar (layihə rəhbərliyinə)
+# Açıq suallar üzrə qərarlar (2026-11-04)
 
-1. **Dayandırılmış qurumun köhnə sənədləri.** Siyahı ([[ADR-0009]] D-BC-3 `iat` qaydası, GV1) dayandırmadan əvvəl verilmiş sənədi
-   qəbul edir; [[SPEC-BC-0001]] §3.3 kontraktda dayandırmanı "ehtiyat tədbiri" sayır və bütün sənədləri rədd edir. Təklif: siyahı qaydası (K5).
-2. **Miqrasiyada şəbəkə səviyyəli yazılar.** Açılış təklifinin səlahiyyət verdiyi tək miqrasiya icraçısı (təklif), yoxsa hər şəbəkə
-   sxemi və şəbəkə qeydi üçün ayrıca Governance səsverməsi ([[SPEC-BC-0001]]/GV2 oxunuşu)?
-3. **Miqrasiya müddətinin tavanı.** Pəncərə açıq qaldıqca keçmiş tarix yazıla bilər. Təklif: 30 gün, Governance yalnız açıq olarkən
-   uzada bilər; müddət bitəndə rejim özü bağlanırmı, yoxsa yalnız yazılar dayanırmı?
-4. **Siyahıdakı `rp_id`.** K4 qəbul edilərsə siyahıdakı `rp_id` də `keccak256(dns_name)` olur. Daxili açıqlama siyasətləri
-   ([[ADR-0046]]) `rp_id` daşıyır; sertifikat yenilənməsində pozulmurlar, lakin bugünkülər yenidən yazılır (inkişaf mərhələsi, [[ADR-0029]]).
-5. **Yenidən icranın başlanğıcı.** İstehsal arxivinin ilk versiyasından, yoxsa [[ADR-0029]]-un yerində düzəliş dövrünün bitdiyi
-   versiyadan? Siyahıdan çıxarılmış versiya xülasəsi zəncirdə qalır (K3) və ekvivalentlik fərqi yaradır.
-6. Əhatə və element massivlərinin tavanları (bu gün `MAX_SCOPES`) sahə məlumatları ilə müəyyən ediləcək.
+1. **Dayandırılmış qurumun köhnə sənədləri:** siyahı qaydası. Dayandırmadan əvvəl verilmiş sənəd etibarlıdır; yalnız dayandırma
+   müddətində verilən sənəd düşür (K5). [[SPEC-BC-0001]] §3.3 buna uyğunlaşır.
+2. **Miqrasiyada şəbəkə səviyyəli yazılar:** açılış təklifinin səlahiyyət verdiyi tək miqrasiya icraçısı yazır (K1).
+3. **Miqrasiya müddətinin tavanı:** ən çoxu 30 gün; Governance yalnız rejim açıq olarkən və tavan daxilində uzadır; müddət bitəndə
+   rejim özü-özünə bağlanmış sayılır (K1, CE1).
+4. **Siyahıdakı `rp_id`:** `keccak256(dns_name)` olur (K4); bugünkü daxili açıqlama siyasətləri yenidən yazılır ([[ADR-0029]]).
+5. **Yenidən icranın başlanğıcı:** istehsal arxivinin ilk arxivləşdirilmiş versiyası (K1).
+6. Əhatə və element massivlərinin tavanları tətbiqdə başlanğıc dəyərlə qoyulur, sahə məlumatları ilə yenidən baxılır.
 
 # Nəticələr
 
-- Kontraktlar (qəbuldan sonra, [[ADR-0074]] ilə birlikdə): miqrasiya vəziyyəti və Governance təklifləri; qurum, kök CA və sxemdə
+- Kontraktlar ([[ADR-0074]] ilə birlikdə): miqrasiya vəziyyəti və Governance təklifləri; qurum, kök CA və sxemdə
   status pəncərələri və yarımaçıq sərhədlər; `invalidatesFrom`; sxem versiya xülasələri; yoxlayan tərəfin identifikatoru, sertifikatın
   yenilənməsi, dayandırmadan qayıdış və əhatə qeydləri; `privacy-abi` testi yeni sahələri əhatə edir. Struct-lara sahə yalnız sona
   əlavə edilir (UUPS yaddaş düzülüşü).
 - `apps/trust-publisher`: `trust:chain-replay` (plan, xülasə, quru sınaq, davam, ekvivalentlik testi); siyahı `rp_id` hesablaması
-  (açıq sual 4).
-- Sənədlər: [[SPEC-BC-0001]] §3.3, §4.4 SC1, §6, §12.2, §13, §14 və [[SPEC-TRUST-0001]] §7 qəbuldan sonra dəyişir; [[ADR-0051]]
+  (K4).
+- Sənədlər: [[SPEC-BC-0001]] §3.3, §4.4 SC1, §6, §12.2, §13, §14 və [[SPEC-TRUST-0001]] §7 dəyişir; [[ADR-0051]]
   K2-nin "mövcud səkkiz kontrakt dəyişmir" cümləsi bu ADR və [[ADR-0074]] ilə dəyişmiş olur.
-- İstehsal mühitində zəncir yenə söndürülmüşdür ([[ADR-0009]] K4, [[ADR-0051]] CH5); bu təklif yalnız keçidi mümkün edir.
+- İstehsal mühitində zəncir yenə söndürülmüşdür ([[ADR-0009]] K4, [[ADR-0051]] CH5); bu qərar yalnız keçidi mümkün edir.
 
 # Status
 
-**Proposed — 2026-11-04.** Layihə rəhbərliyinin 2026-11-04 istiqaməti əsasında yazıldı; qəbul layihə rəhbərliyindədir. Komanda adı
-`trust:chain-replay` təsdiqlənib. Qəbul edilərsə DECISIONS-da D-BC kodu alır və CE1–CE6 qaydaları məcburi olur.
+**Accepted — 2026-11-04.** Layihə rəhbərliyinin təsdiqi ilə (hərfi sitat xüsusi təsdiq qeydində): dayandırılmış qurumun
+dayandırmadan əvvəlki sənədləri etibarlıdır; açıq sualların qalanı təklif edildiyi kimi. Komanda adı `trust:chain-replay`
+təsdiqlənib. DECISIONS: D-BC-12. CE1–CE6 məcburidir. Kontraktlarda tətbiq davam edir ([[SPEC-BC-0001]] versiya qeydləri).

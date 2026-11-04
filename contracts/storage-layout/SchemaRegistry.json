@@ -1,0 +1,271 @@
+{
+  "storage": [
+    {
+      "contract": "SchemaRegistry",
+      "label": "sovereignty",
+      "slot": 0,
+      "offset": 0,
+      "type": "t_contract(ISovereignty)"
+    },
+    {
+      "contract": "SchemaRegistry",
+      "label": "governance",
+      "slot": 1,
+      "offset": 0,
+      "type": "t_address"
+    },
+    {
+      "contract": "SchemaRegistry",
+      "label": "_writeCount",
+      "slot": 2,
+      "offset": 0,
+      "type": "t_mapping(t_bytes2,t_mapping(t_uint64,t_uint32))"
+    },
+    {
+      "contract": "SchemaRegistry",
+      "label": "__gap",
+      "slot": 3,
+      "offset": 0,
+      "type": "t_array(t_uint256)46_storage"
+    },
+    {
+      "contract": "SchemaRegistry",
+      "label": "_schemas",
+      "slot": 49,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_struct(SchemaRecord)_storage)"
+    },
+    {
+      "contract": "SchemaRegistry",
+      "label": "_byState",
+      "slot": 50,
+      "offset": 0,
+      "type": "t_mapping(t_bytes2,t_array(t_bytes32)dyn_storage)"
+    },
+    {
+      "contract": "SchemaRegistry",
+      "label": "_networkSchemas",
+      "slot": 51,
+      "offset": 0,
+      "type": "t_array(t_bytes32)dyn_storage"
+    },
+    {
+      "contract": "SchemaRegistry",
+      "label": "_history",
+      "slot": 52,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_array(t_struct(Change)_storage)dyn_storage)"
+    },
+    {
+      "contract": "SchemaRegistry",
+      "label": "_versionHashes",
+      "slot": 53,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_array(t_bytes32)dyn_storage)"
+    },
+    {
+      "contract": "SchemaRegistry",
+      "label": "__gap",
+      "slot": 54,
+      "offset": 0,
+      "type": "t_array(t_uint256)44_storage"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": 20
+    },
+    "t_array(t_bytes32)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "bytes32[]",
+      "numberOfBytes": 32,
+      "base": "t_bytes32"
+    },
+    "t_array(t_struct(Change)_storage)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "struct StatusHistory.Change[]",
+      "numberOfBytes": 32,
+      "base": "t_struct(Change)_storage"
+    },
+    "t_array(t_uint256)44_storage": {
+      "encoding": "inplace",
+      "label": "uint256[44]",
+      "numberOfBytes": 1408,
+      "base": "t_uint256"
+    },
+    "t_array(t_uint256)46_storage": {
+      "encoding": "inplace",
+      "label": "uint256[46]",
+      "numberOfBytes": 1472,
+      "base": "t_uint256"
+    },
+    "t_bytes2": {
+      "encoding": "inplace",
+      "label": "bytes2",
+      "numberOfBytes": 2
+    },
+    "t_bytes32": {
+      "encoding": "inplace",
+      "label": "bytes32",
+      "numberOfBytes": 32
+    },
+    "t_contract(ISovereignty)": {
+      "encoding": "inplace",
+      "label": "contract ISovereignty",
+      "numberOfBytes": 20
+    },
+    "t_enum(SchemaStatus)": {
+      "encoding": "inplace",
+      "label": "enum ISchemaRegistry.SchemaStatus",
+      "numberOfBytes": 1
+    },
+    "t_enum(SchemaTier)": {
+      "encoding": "inplace",
+      "label": "enum ISchemaRegistry.SchemaTier",
+      "numberOfBytes": 1
+    },
+    "t_mapping(t_bytes2,t_array(t_bytes32)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes2 => bytes32[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes2",
+      "value": "t_array(t_bytes32)dyn_storage"
+    },
+    "t_mapping(t_bytes2,t_mapping(t_uint64,t_uint32))": {
+      "encoding": "mapping",
+      "label": "mapping(bytes2 => mapping(uint64 => uint32))",
+      "numberOfBytes": 32,
+      "key": "t_bytes2",
+      "value": "t_mapping(t_uint64,t_uint32)"
+    },
+    "t_mapping(t_bytes32,t_array(t_bytes32)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => bytes32[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_array(t_bytes32)dyn_storage"
+    },
+    "t_mapping(t_bytes32,t_array(t_struct(Change)_storage)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct StatusHistory.Change[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_array(t_struct(Change)_storage)dyn_storage"
+    },
+    "t_mapping(t_bytes32,t_struct(SchemaRecord)_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct ISchemaRegistry.SchemaRecord)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_struct(SchemaRecord)_storage"
+    },
+    "t_mapping(t_uint64,t_uint32)": {
+      "encoding": "mapping",
+      "label": "mapping(uint64 => uint32)",
+      "numberOfBytes": 32,
+      "key": "t_uint64",
+      "value": "t_uint32"
+    },
+    "t_string_storage": {
+      "encoding": "bytes",
+      "label": "string",
+      "numberOfBytes": 32
+    },
+    "t_struct(Change)_storage": {
+      "encoding": "inplace",
+      "label": "struct StatusHistory.Change",
+      "numberOfBytes": 32,
+      "members": [
+        {
+          "label": "since",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_uint64"
+        },
+        {
+          "label": "status",
+          "slot": 0,
+          "offset": 8,
+          "type": "t_uint8"
+        }
+      ]
+    },
+    "t_struct(SchemaRecord)_storage": {
+      "encoding": "inplace",
+      "label": "struct ISchemaRegistry.SchemaRecord",
+      "numberOfBytes": 160,
+      "members": [
+        {
+          "label": "vctURI",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_string_storage"
+        },
+        {
+          "label": "contentHash",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "version",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_string_storage"
+        },
+        {
+          "label": "tier",
+          "slot": 3,
+          "offset": 0,
+          "type": "t_enum(SchemaTier)"
+        },
+        {
+          "label": "stateCode",
+          "slot": 3,
+          "offset": 1,
+          "type": "t_bytes2"
+        },
+        {
+          "label": "status",
+          "slot": 3,
+          "offset": 3,
+          "type": "t_enum(SchemaStatus)"
+        },
+        {
+          "label": "validFrom",
+          "slot": 3,
+          "offset": 4,
+          "type": "t_uint64"
+        },
+        {
+          "label": "supersededBy",
+          "slot": 4,
+          "offset": 0,
+          "type": "t_bytes32"
+        }
+      ]
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": 32
+    },
+    "t_uint32": {
+      "encoding": "inplace",
+      "label": "uint32",
+      "numberOfBytes": 4
+    },
+    "t_uint64": {
+      "encoding": "inplace",
+      "label": "uint64",
+      "numberOfBytes": 8
+    },
+    "t_uint8": {
+      "encoding": "inplace",
+      "label": "uint8",
+      "numberOfBytes": 1
+    }
+  }
+}

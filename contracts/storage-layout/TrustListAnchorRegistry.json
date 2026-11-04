@@ -1,0 +1,299 @@
+{
+  "storage": [
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "governance",
+      "slot": 0,
+      "offset": 0,
+      "type": "t_address"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_required",
+      "slot": 0,
+      "offset": 20,
+      "type": "t_uint8"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_anchorerCount",
+      "slot": 0,
+      "offset": 21,
+      "type": "t_uint32"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_anchorers",
+      "slot": 1,
+      "offset": 0,
+      "type": "t_mapping(t_address,t_bool)"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_lists",
+      "slot": 2,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_mapping(t_uint64,t_struct(ListAnchor)_storage))"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_latestListVersion",
+      "slot": 3,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_uint64)"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_logs",
+      "slot": 4,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_mapping(t_uint64,t_struct(LogHead)_storage))"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_latestLogSeq",
+      "slot": 5,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_uint64)"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_confirmedBy",
+      "slot": 6,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_mapping(t_address,t_bool))"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_candidateConfirmers",
+      "slot": 7,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_array(t_address)dyn_storage)"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_candidateCount",
+      "slot": 8,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_uint32)"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "_anchorerList",
+      "slot": 9,
+      "offset": 0,
+      "type": "t_array(t_address)dyn_storage"
+    },
+    {
+      "contract": "TrustListAnchorRegistry",
+      "label": "__gap",
+      "slot": 10,
+      "offset": 0,
+      "type": "t_array(t_uint256)40_storage"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": 20
+    },
+    "t_array(t_address)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "address[]",
+      "numberOfBytes": 32,
+      "base": "t_address"
+    },
+    "t_array(t_uint256)40_storage": {
+      "encoding": "inplace",
+      "label": "uint256[40]",
+      "numberOfBytes": 1280,
+      "base": "t_uint256"
+    },
+    "t_bool": {
+      "encoding": "inplace",
+      "label": "bool",
+      "numberOfBytes": 1
+    },
+    "t_bytes32": {
+      "encoding": "inplace",
+      "label": "bytes32",
+      "numberOfBytes": 32
+    },
+    "t_mapping(t_address,t_bool)": {
+      "encoding": "mapping",
+      "label": "mapping(address => bool)",
+      "numberOfBytes": 32,
+      "key": "t_address",
+      "value": "t_bool"
+    },
+    "t_mapping(t_bytes32,t_array(t_address)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => address[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_array(t_address)dyn_storage"
+    },
+    "t_mapping(t_bytes32,t_mapping(t_address,t_bool))": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => mapping(address => bool))",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_mapping(t_address,t_bool)"
+    },
+    "t_mapping(t_bytes32,t_mapping(t_uint64,t_struct(ListAnchor)_storage))": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => mapping(uint64 => struct ITrustListAnchorRegistry.ListAnchor))",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_mapping(t_uint64,t_struct(ListAnchor)_storage)"
+    },
+    "t_mapping(t_bytes32,t_mapping(t_uint64,t_struct(LogHead)_storage))": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => mapping(uint64 => struct ITrustListAnchorRegistry.LogHead))",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_mapping(t_uint64,t_struct(LogHead)_storage)"
+    },
+    "t_mapping(t_bytes32,t_uint32)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => uint32)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_uint32"
+    },
+    "t_mapping(t_bytes32,t_uint64)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => uint64)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_uint64"
+    },
+    "t_mapping(t_uint64,t_struct(ListAnchor)_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(uint64 => struct ITrustListAnchorRegistry.ListAnchor)",
+      "numberOfBytes": 32,
+      "key": "t_uint64",
+      "value": "t_struct(ListAnchor)_storage"
+    },
+    "t_mapping(t_uint64,t_struct(LogHead)_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(uint64 => struct ITrustListAnchorRegistry.LogHead)",
+      "numberOfBytes": 32,
+      "key": "t_uint64",
+      "value": "t_struct(LogHead)_storage"
+    },
+    "t_struct(ListAnchor)_storage": {
+      "encoding": "inplace",
+      "label": "struct ITrustListAnchorRegistry.ListAnchor",
+      "numberOfBytes": 128,
+      "members": [
+        {
+          "label": "version",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_uint64"
+        },
+        {
+          "label": "contentHash",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "previousHash",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "issuedAt",
+          "slot": 3,
+          "offset": 0,
+          "type": "t_uint64"
+        },
+        {
+          "label": "confirmations",
+          "slot": 3,
+          "offset": 8,
+          "type": "t_uint8"
+        },
+        {
+          "label": "confirmed",
+          "slot": 3,
+          "offset": 9,
+          "type": "t_bool"
+        },
+        {
+          "label": "confirmedAt",
+          "slot": 3,
+          "offset": 10,
+          "type": "t_uint64"
+        }
+      ]
+    },
+    "t_struct(LogHead)_storage": {
+      "encoding": "inplace",
+      "label": "struct ITrustListAnchorRegistry.LogHead",
+      "numberOfBytes": 96,
+      "members": [
+        {
+          "label": "seq",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_uint64"
+        },
+        {
+          "label": "lineHash",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "ts",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_uint64"
+        },
+        {
+          "label": "confirmations",
+          "slot": 2,
+          "offset": 8,
+          "type": "t_uint8"
+        },
+        {
+          "label": "confirmed",
+          "slot": 2,
+          "offset": 9,
+          "type": "t_bool"
+        },
+        {
+          "label": "confirmedAt",
+          "slot": 2,
+          "offset": 10,
+          "type": "t_uint64"
+        }
+      ]
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": 32
+    },
+    "t_uint32": {
+      "encoding": "inplace",
+      "label": "uint32",
+      "numberOfBytes": 4
+    },
+    "t_uint64": {
+      "encoding": "inplace",
+      "label": "uint64",
+      "numberOfBytes": 8
+    },
+    "t_uint8": {
+      "encoding": "inplace",
+      "label": "uint8",
+      "numberOfBytes": 1
+    }
+  }
+}

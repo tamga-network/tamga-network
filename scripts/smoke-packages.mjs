@@ -45,6 +45,15 @@ try {
       `\nconsole.log("çalışma zamanı: ${entries.length - RN_ONLY.size} giriş içe aktarıldı (React Native girişi hariç)");\n`,
   );
   console.log(sh("node smoke.mjs").trim());
+  // 1b) komut satırı araçları (bin): kurulan paketten düz Node ile çalışır ve sürümünü söyler
+  for (const p of readdirSync(join(ROOT, ".publish")).filter((d) => d !== "tarballs")) {
+    const pj = JSON.parse(readFileSync(join(ROOT, ".publish", p, "package.json"), "utf8"));
+    for (const [bin, rel] of Object.entries(pj.bin ?? {})) {
+      const out = sh(`node "${join(dir, "node_modules", ...pj.name.split("/"), rel)}" --version`).trim();
+      if (out !== pj.version) throw new Error(`${bin} --version: "${out}" (beklenen ${pj.version})`);
+      console.log(`komut: ${bin} ${out}`);
+    }
+  }
   // 2) tipler: NodeNext çözümlemesiyle her giriş
   writeFileSync(
     join(dir, "smoke.ts"),

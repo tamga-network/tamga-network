@@ -1,0 +1,195 @@
+{
+  "storage": [
+    {
+      "contract": "StatusListRegistry",
+      "label": "issuerRegistry",
+      "slot": 0,
+      "offset": 0,
+      "type": "t_contract(IIssuerRegistry)"
+    },
+    {
+      "contract": "StatusListRegistry",
+      "label": "governance",
+      "slot": 1,
+      "offset": 0,
+      "type": "t_address"
+    },
+    {
+      "contract": "StatusListRegistry",
+      "label": "_anchors",
+      "slot": 2,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_struct(ListAnchor)_storage)"
+    },
+    {
+      "contract": "StatusListRegistry",
+      "label": "_byIssuer",
+      "slot": 3,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_array(t_bytes32)dyn_storage)"
+    },
+    {
+      "contract": "StatusListRegistry",
+      "label": "_publishCount",
+      "slot": 4,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_mapping(t_uint64,t_uint32))"
+    },
+    {
+      "contract": "StatusListRegistry",
+      "label": "_registerCount",
+      "slot": 5,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_mapping(t_uint64,t_uint32))"
+    },
+    {
+      "contract": "StatusListRegistry",
+      "label": "__gap",
+      "slot": 6,
+      "offset": 0,
+      "type": "t_array(t_uint256)44_storage"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": 20
+    },
+    "t_array(t_bytes32)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "bytes32[]",
+      "numberOfBytes": 32,
+      "base": "t_bytes32"
+    },
+    "t_array(t_uint256)44_storage": {
+      "encoding": "inplace",
+      "label": "uint256[44]",
+      "numberOfBytes": 1408,
+      "base": "t_uint256"
+    },
+    "t_bytes32": {
+      "encoding": "inplace",
+      "label": "bytes32",
+      "numberOfBytes": 32
+    },
+    "t_contract(IIssuerRegistry)": {
+      "encoding": "inplace",
+      "label": "contract IIssuerRegistry",
+      "numberOfBytes": 20
+    },
+    "t_enum(ListStatus)": {
+      "encoding": "inplace",
+      "label": "enum IStatusListRegistry.ListStatus",
+      "numberOfBytes": 1
+    },
+    "t_mapping(t_bytes32,t_array(t_bytes32)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => bytes32[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_array(t_bytes32)dyn_storage"
+    },
+    "t_mapping(t_bytes32,t_mapping(t_uint64,t_uint32))": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => mapping(uint64 => uint32))",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_mapping(t_uint64,t_uint32)"
+    },
+    "t_mapping(t_bytes32,t_struct(ListAnchor)_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct IStatusListRegistry.ListAnchor)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_struct(ListAnchor)_storage"
+    },
+    "t_mapping(t_uint64,t_uint32)": {
+      "encoding": "mapping",
+      "label": "mapping(uint64 => uint32)",
+      "numberOfBytes": 32,
+      "key": "t_uint64",
+      "value": "t_uint32"
+    },
+    "t_string_storage": {
+      "encoding": "bytes",
+      "label": "string",
+      "numberOfBytes": 32
+    },
+    "t_struct(ListAnchor)_storage": {
+      "encoding": "inplace",
+      "label": "struct IStatusListRegistry.ListAnchor",
+      "numberOfBytes": 128,
+      "members": [
+        {
+          "label": "issuerId",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "listURI",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_string_storage"
+        },
+        {
+          "label": "contentHash",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "listSize",
+          "slot": 3,
+          "offset": 0,
+          "type": "t_uint32"
+        },
+        {
+          "label": "bitsPerEntry",
+          "slot": 3,
+          "offset": 4,
+          "type": "t_uint8"
+        },
+        {
+          "label": "version",
+          "slot": 3,
+          "offset": 5,
+          "type": "t_uint64"
+        },
+        {
+          "label": "publishedAt",
+          "slot": 3,
+          "offset": 13,
+          "type": "t_uint64"
+        },
+        {
+          "label": "status",
+          "slot": 3,
+          "offset": 21,
+          "type": "t_enum(ListStatus)"
+        }
+      ]
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": 32
+    },
+    "t_uint32": {
+      "encoding": "inplace",
+      "label": "uint32",
+      "numberOfBytes": 4
+    },
+    "t_uint64": {
+      "encoding": "inplace",
+      "label": "uint64",
+      "numberOfBytes": 8
+    },
+    "t_uint8": {
+      "encoding": "inplace",
+      "label": "uint8",
+      "numberOfBytes": 1
+    }
+  }
+}

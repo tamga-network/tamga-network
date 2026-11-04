@@ -28,6 +28,8 @@
       "@tamga-network/wallet-core": ["packages/wallet-core/src/index.ts"],
       "@tamga-network/verifier": ["packages/verifier/src/index.ts"],
       "@tamga-network/mdoc": ["packages/mdoc/src/index.ts"],
+      "@tamga-network/onboard/mcp": ["packages/onboard/src/mcp.ts"],
+      "@tamga-network/onboard": ["packages/onboard/src/index.ts"],
       "@tamga-network/zk/node": ["packages/zk/src/node.ts"],
       "@tamga-network/zk/react-native": ["packages/zk/src/react-native.ts"],
       "@tamga-network/zk": ["packages/zk/src/index.ts"]

@@ -1,8 +1,8 @@
 ---
 document_id: ADR-0074
 title: "Projection scope 0.8: every trust record in the signed lists on chain"
-status: Proposed
-review_status: Draft
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
@@ -13,8 +13,8 @@ summary: >
   data and no free text go on chain; registration details only as a digest (`bytes32`) and the existing `metadataURI` pattern; no new
   `string` field. Network-level records are written by Governance proposal. The registration certificate status list and the list
   views enter the anchor log as new line types. The read path `ChainTrustSource` + indexer lives under `apps/`. The sandbox is not
-  written to the chain. `contracts/` goes into the public repository. New names await approval. Proposal; acceptance rests with
-  project management.
+  written to the chain. `contracts/`, `network/` and `docs/ledger` go into the public repository. Accepted (2026-11-04);
+  names approved.
 domain: Trust
 related: ["[[ADR-0009]]", "[[ADR-0015]]", "[[ADR-0024]]", "[[ADR-0032]]", "[[ADR-0036]]", "[[ADR-0038]]", "[[ADR-0051]]", "[[ADR-0055]]", "[[ADR-0066]]", "[[ADR-0068]]", "[[ADR-0069]]", "[[ADR-0070]]", "[[ADR-0073]]", "[[SPEC-BC-0001]]", "[[SPEC-TRUST-0001]]"]
 translation_of: ADR-0074
@@ -48,7 +48,7 @@ signed list. It is proposed for the 0.8 package line.
   data and no free text on chain; registration details as a digest or an address. Openness: the guide, the PDF, the documentation
   concept page and `contracts/` are public.
 
-# Proposed decision
+# Decision
 
 ## K1 — Scope principle and data boundary
 
@@ -80,8 +80,7 @@ signed list. It is proposed for the 0.8 package line.
 
 ## K3 — LOTL and network-level records (F6, F7, F8)
 
-- A **new network-level registry contract** is proposed for the LOTL's network-level content (proposed name `NetworkRegistry`,
-  **awaiting approval**). Writes only through typed Governance proposals (2/3, [[ADR-0055]]/GE3) or, in the migration mode, through
+- A **new network-level registry contract** holds the LOTL's network-level content: `NetworkRegistry` (name approved). Writes only through typed Governance proposals (2/3, [[ADR-0055]]/GE3) or, in the migration mode, through
   the migration executor ([[ADR-0073]] K1).
 
 | LOTL field | On chain |
@@ -98,12 +97,12 @@ signed list. It is proposed for the 0.8 package line.
 
 ## K4 — New line types in the anchor log (F6)
 
-The registration certificate status list and the list views are not in the anchor log today. Two new line types are proposed
-(**names awaiting approval**):
+The registration certificate status list and the list views are not in the anchor log today. Two new line types are added
+(names approved):
 
-| Line type (proposed name) | Fields | On chain |
+| Line type | Fields | On chain |
 |---|---|---|
-| `registration_status` (alternative `wrprc_status`) | `list_uri` (opaque, S8), `content_hash` (SHA-256 of the signed list), `list_version` (the publisher's monotonic counter per list), `published_at` | `anchorList` in the list anchor registry; key `keccak256("tamga:registration-status:<environment>:<n>")` |
+| `registration_status` | `list_uri` (opaque, S8), `content_hash` (SHA-256 of the signed list), `list_version` (the publisher's monotonic counter per list), `published_at` | `anchorList` in the list anchor registry; key `keccak256("tamga:registration-status:<environment>:<n>")` |
 | `list_view` | `file` (e.g. `tl-tr.xml`), `format` (`etsi-tl-xml`, `etsi-lote-json`), `source_file` (`lotl`, `tl-<cc>`), `source_version`, `content_hash` (SHA-256 of the file = `.sha2`) | `anchorList`; key `keccak256("tamga:trust-list-view:<environment>:<file>")`, version = version of the source list ([[ADR-0066]] K1: a view is not a separate list) |
 
 - The checkpoint `state` carries these lines too (TL12). No contract change is needed; new key namespaces suffice.
@@ -112,19 +111,20 @@ The registration certificate status list and the list views are not in the ancho
 
 ## K5 — Read path: `ChainTrustSource` and the indexer
 
-- The indexer and `ChainTrustSource` live in a new application: `apps/chain-indexer/` (proposed name, **awaiting approval**). The
+- The indexer and `ChainTrustSource` live in a new application: `apps/chain-indexer/` (name approved). The
   indexer reads contract events and turns records into the in-memory list shape; `ChainTrustSource` implements the same
   `TrustSource` interface ([[ADR-0015]] K3): C1/C2/C3 from contract reads at a pinned block (`TrustQueries`), records from the
   index. If the index is stale or the chain unreachable, the answer is `UNKNOWN` (CMP4).
 - `@tamga-network/trust/core` stays light ([[ADR-0015]] K1); no chain client dependency goes there. If third parties need a separate
-  package, the proposed name is `@tamga-network/chain` (**awaiting approval**). The list publisher's `trust:chain-check` stays where
+  package, its name is `@tamga-network/chain` (name approved). The list publisher's `trust:chain-check` stays where
   it is.
 - The equivalence test of [[ADR-0073]] K6 uses this read path.
 
-## K6 — `contracts/` into the public repository
+## K6 — `contracts/`, `network/` and `docs/ledger` into the public repository
 
-- Following project management's openness decision (2026-11-04), `contracts/` goes into the public repository.
-- **Implementation step:** remove the `contracts/` line and the contract part of the external auditor package
+- Following project management's openness decision (2026-11-04), `contracts/`, the Besu network files (`network/`,
+  `scripts/besu-dev.ps1`) and the chain phase documents (`docs/ledger`) go into the public repository.
+- **Implementation step:** remove these lines and the contract part of the external auditor package
   (`docs/audit/contracts.md`, `docs/audit/contracts-invariants.md`) from `.publicignore`; rerun the public publication check; confirm
   that `contracts/` contains no keys, `.env` or deployment record; keep the README in English and short.
 
@@ -146,7 +146,7 @@ The registration certificate status list and the list views are not in the ancho
 | Anchor the sandbox too | rejected | The nightly reset conflicts with CH4; the test network does not mix into the trust record of the real network |
 | Put `ChainTrustSource` in `trust/core` | rejected | The wallet and browser core does not carry a chain client ([[ADR-0015]] K1) |
 
-# Proposed rules (moved into a binding table if accepted)
+# Invariants
 
 | Code | Rule |
 |---|---|
@@ -156,29 +156,29 @@ The registration certificate status list and the list views are not in the ancho
 | PJ4 | Sandbox lists and the sandbox anchor log are not written to or replayed into the production chain. |
 | PJ5 | List views and the registration certificate status list enter the anchor log as lines and are anchored on chain with the version of their source; if a view contradicts its source, the source prevails. |
 
-# Open questions (for project management)
+# Decisions on the open questions (2026-11-04)
 
-1. **Name:** is the new network-level contract `NetworkRegistry` (proposal), or should the records be spread over separate contracts
-   by type?
-2. **Name:** anchor log line types `registration_status` (or `wrprc_status`) and `list_view`.
-3. **Name:** `apps/chain-indexer/`; if needed, the package `@tamga-network/chain`.
-4. **Openness:** the decision names `contracts/`. Should the Besu network files (`network/`) and the chain phase documents also be public?
-5. **Detail digest format:** RFC 8785 canonical JSON + SHA-256 (proposal); the field block boundaries are fixed in a table during
+1. **Name:** the new network-level contract is `NetworkRegistry` (K3).
+2. **Name:** anchor log line types `registration_status` and `list_view` (K4).
+3. **Name:** `apps/chain-indexer/`; later, if needed, the package `@tamga-network/chain` (K5).
+4. **Openness:** `contracts/`, `network/` and `docs/ledger` are public (K6).
+5. **Detail digest format:** RFC 8785 canonical JSON + SHA-256 (K1); the field block boundaries are fixed in a table during
    implementation.
-6. **Sandbox:** should the sandbox later get its own resettable test chain? Proposal: no, only the local development chain.
+6. **Sandbox:** no separate test chain; only the local development chain (K7).
 
 # Consequences
 
-- Contracts (after acceptance, together with [[ADR-0073]]): new fields and terminal groups in `IssuerRegistry` and
+- Contracts (together with [[ADR-0073]]): new fields and terminal groups in `IssuerRegistry` and
   `RelyingPartyRegistry`, the new network-level contract, Governance proposal types, the `privacy-abi` test covering the new
   contract; the sentence "the existing eight contracts do not change" in [[ADR-0051]] K2 is then changed.
 - `@tamga-network/trust`: new anchor line types, checkpoint `state`; `apps/trust-publisher`: the projection plan covers the new
-  records and the environment check; `apps/chain-indexer/` (subject to name approval).
-- Documents: [[SPEC-BC-0001]] (§3, §6, a new section, §13, §15) and [[SPEC-TRUST-0001]] §5 and §7 change after acceptance.
+  records and the environment check; `apps/chain-indexer/`.
+- Documents: [[SPEC-BC-0001]] (§3, §6, a new section, §13, §15) and [[SPEC-TRUST-0001]] §5 and §7 change.
 - The chain stays off in production ([[ADR-0009]] K4, [[ADR-0051]] CH5).
 
 # Status
 
-**Proposed — 2026-11-04.** Written on project management's 2026-11-04 direction ("everything on chain", "all open"); acceptance rests
-with project management. New names (`NetworkRegistry`, `registration_status`, `list_view`, `apps/chain-indexer/`,
-`@tamga-network/chain`) await approval. If accepted, it receives a D-BC code in DECISIONS and rules PJ1–PJ5 become binding.
+**Accepted — 2026-11-04.** With project management's approval (verbatim quote in the private approval record): names
+`NetworkRegistry`, `registration_status`, `list_view`, `apps/chain-indexer/`, later `@tamga-network/chain`; `contracts/`, `network/`
+and `docs/ledger` are public; the remaining open questions as proposed. DECISIONS: D-BC-13. PJ1–PJ5 are binding. Implementation
+in the contracts is in progress ([[SPEC-BC-0001]] version notes).

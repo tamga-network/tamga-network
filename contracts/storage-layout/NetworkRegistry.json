@@ -1,0 +1,225 @@
+{
+  "storage": [
+    {
+      "contract": "NetworkRegistry",
+      "label": "governance",
+      "slot": 0,
+      "offset": 0,
+      "type": "t_address"
+    },
+    {
+      "contract": "NetworkRegistry",
+      "label": "_records",
+      "slot": 1,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_struct(NetworkRecord)_storage)"
+    },
+    {
+      "contract": "NetworkRegistry",
+      "label": "_history",
+      "slot": 2,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_array(t_struct(Change)_storage)dyn_storage)"
+    },
+    {
+      "contract": "NetworkRegistry",
+      "label": "_ids",
+      "slot": 3,
+      "offset": 0,
+      "type": "t_mapping(t_enum(RecordKind),t_array(t_bytes32)dyn_storage)"
+    },
+    {
+      "contract": "NetworkRegistry",
+      "label": "_staged",
+      "slot": 4,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_struct(NetworkRecord)_storage)"
+    },
+    {
+      "contract": "NetworkRegistry",
+      "label": "__gap",
+      "slot": 5,
+      "offset": 0,
+      "type": "t_array(t_uint256)45_storage"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": 20
+    },
+    "t_array(t_bytes32)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "bytes32[]",
+      "numberOfBytes": 32,
+      "base": "t_bytes32"
+    },
+    "t_array(t_struct(Change)_storage)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "struct StatusHistory.Change[]",
+      "numberOfBytes": 32,
+      "base": "t_struct(Change)_storage"
+    },
+    "t_array(t_uint256)45_storage": {
+      "encoding": "inplace",
+      "label": "uint256[45]",
+      "numberOfBytes": 1440,
+      "base": "t_uint256"
+    },
+    "t_bytes2": {
+      "encoding": "inplace",
+      "label": "bytes2",
+      "numberOfBytes": 2
+    },
+    "t_bytes32": {
+      "encoding": "inplace",
+      "label": "bytes32",
+      "numberOfBytes": 32
+    },
+    "t_enum(RecordKind)": {
+      "encoding": "inplace",
+      "label": "enum INetworkRegistry.RecordKind",
+      "numberOfBytes": 1
+    },
+    "t_enum(RecordStatus)": {
+      "encoding": "inplace",
+      "label": "enum INetworkRegistry.RecordStatus",
+      "numberOfBytes": 1
+    },
+    "t_mapping(t_bytes32,t_array(t_struct(Change)_storage)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct StatusHistory.Change[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_array(t_struct(Change)_storage)dyn_storage"
+    },
+    "t_mapping(t_bytes32,t_struct(NetworkRecord)_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct INetworkRegistry.NetworkRecord)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_struct(NetworkRecord)_storage"
+    },
+    "t_mapping(t_enum(RecordKind),t_array(t_bytes32)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(enum INetworkRegistry.RecordKind => bytes32[])",
+      "numberOfBytes": 32,
+      "key": "t_enum(RecordKind)",
+      "value": "t_array(t_bytes32)dyn_storage"
+    },
+    "t_struct(Change)_storage": {
+      "encoding": "inplace",
+      "label": "struct StatusHistory.Change",
+      "numberOfBytes": 32,
+      "members": [
+        {
+          "label": "since",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_uint64"
+        },
+        {
+          "label": "status",
+          "slot": 0,
+          "offset": 8,
+          "type": "t_uint8"
+        }
+      ]
+    },
+    "t_struct(NetworkRecord)_storage": {
+      "encoding": "inplace",
+      "label": "struct INetworkRegistry.NetworkRecord",
+      "numberOfBytes": 256,
+      "members": [
+        {
+          "label": "kind",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_enum(RecordKind)"
+        },
+        {
+          "label": "recordId",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "parentId",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "region",
+          "slot": 3,
+          "offset": 0,
+          "type": "t_bytes2"
+        },
+        {
+          "label": "subtype",
+          "slot": 3,
+          "offset": 2,
+          "type": "t_uint8"
+        },
+        {
+          "label": "status",
+          "slot": 3,
+          "offset": 3,
+          "type": "t_enum(RecordStatus)"
+        },
+        {
+          "label": "validFrom",
+          "slot": 3,
+          "offset": 4,
+          "type": "t_uint64"
+        },
+        {
+          "label": "validUntil",
+          "slot": 3,
+          "offset": 12,
+          "type": "t_uint64"
+        },
+        {
+          "label": "fingerprint",
+          "slot": 4,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "detailsHash",
+          "slot": 5,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "flags",
+          "slot": 6,
+          "offset": 0,
+          "type": "t_uint256"
+        },
+        {
+          "label": "digests",
+          "slot": 7,
+          "offset": 0,
+          "type": "t_array(t_bytes32)dyn_storage"
+        }
+      ]
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": 32
+    },
+    "t_uint64": {
+      "encoding": "inplace",
+      "label": "uint64",
+      "numberOfBytes": 8
+    },
+    "t_uint8": {
+      "encoding": "inplace",
+      "label": "uint8",
+      "numberOfBytes": 1
+    }
+  }
+}

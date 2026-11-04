@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 390 kodlanmış değişmez, 72 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 444 kodlanmış değişmez, 77 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -733,6 +733,33 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0072/VL1` | Ağ token ihraç etmez; ödeme, mutabakat ya da değer aktarımı işlemez; değer katmanı yönetişim kurumunun kararı, bağımsız güvenlik incelemesi ve yeni bir ADR olmadan açılmaz. |
 
 
+## ADR-0073
+
+*"Zincir–liste eşdeğerliğinin uygulanabilirliği: göç kipi, sert iptal, şema sürümleri, doğrulayıcı kimliği, durum eşlemesi"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0073/CE1` | Göç kipi her kayıt kontratında Governance önerisiyle bir kez açılır; pencere en çok 30 gündür ve süre dolunca kendiliğinden kapanır; kapanınca hiçbir yolla (yükseltme dahil) yeniden açılamaz. Kip açıkken geçmiş tarih yazılabilir ama hiçbir tarih blok zamanından ileri olamaz, kayıt başına sıra korunur ve günlük kotalar uygulanmaz; kip kapalıyken tarihler blok zamanıdır (CE2 hariç). |
+| `ADR-0073/CE2` | Sert iptal tarihi (`invalidatesFrom`) kurumun geçerlilik başlangıcı ile iptal anı arasındadır; yazıldıktan sonra silinmez, yalnız geriye çekilebilir; `iat` bu tarihe eşit ya da sonraysa belge kabul edilmez. |
+| `ADR-0073/CE3` | Şemanın `vctURI`'si ve yazılmış her içerik özeti değiştirilmez ve silinmez; yeni sürüm özeti yalnız eklenir. |
+| `ADR-0073/CE4` | Doğrulayıcının zincir ve liste kimliği `keccak256(dns_name)`'dir; erişim sertifikasının yenilenmesi kimliği değiştirmez. |
+| `ADR-0073/CE5` | Kontrat C1/C2/C3'ü belgenin `iat` anındaki duruma göre, yarı açık aralıklarla değerlendirir (askıdaki kurumun askıdan önceki belgeleri geçerlidir); liste durumları kontrata eşleme tablosuyla yazılır. |
+| `ADR-0073/CE6` | Göç, `trust:chain-replay` eşdeğerlik testinde C1/C2/C3/D5 cevaplarında ACCEPTED/REJECTED farkı kalmadan kapanmaz. |
+
+
+## ADR-0074
+
+*"Projeksiyon kapsamı 0.8: imzalı listelerdeki bütün güven kayıtları zincirde"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0074/PJ1` | İmzalı listelerde güven kararını etkileyen her kayıt zincirde bir kayda ya da çapaya eşlenir; liste kaynak kalır ve çelişkide liste geçerlidir. |
+| `ADR-0074/PJ2` | Zincire kişisel veri ve serbest metin yazılmaz; kayıt ayrıntıları yalnız kanonik JSON özeti ve mevcut `metadataURI` ile temsil edilir; yeni `string` alanı ve serbest `bytes` eklenmez. |
+| `ADR-0074/PJ3` | Ağ düzeyi kayıtlar (cüzdan sağlayıcı, ZK devresi, dış liste, belge kategorisi, liste imzacısı, liste işletmecisi, slot) yalnız Governance önerisiyle ya da göç kipinde göç yürütücüsüyle yazılır. |
+| `ADR-0074/PJ4` | Sandbox listeleri ve çapa günlüğü üretim zincirine yazılmaz ve yeniden oynatılmaz. |
+| `ADR-0074/PJ5` | Liste görünümleri ve kayıt sertifikası durum listesi çapa günlüğüne satır olarak girer ve zincirde kaynak sürümüyle çapalanır; görünüm kaynakla çelişirse kaynak geçerlidir. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -749,6 +776,26 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ARCH-0003/CMP8` | Cüzdan şemaları toplu çeker, kullanım anında değil (§6). |
 | `ARCH-0003/K1` | Belge ve status imzalama anahtarları ayrıdır (§8). |
 | `ARCH-0003/CMP9` | Doğrulama sonucu üç değerlidir: ACCEPTED / REJECTED / INDETERMINATE. |
+
+
+## SPEC-AGENT-0001
+
+*"Ajan yetkilendirme (zincir aşaması)"*
+
+| Kod | Açıklama |
+|---|---|
+| `SPEC-AGENT-0001/AG1` | Agent'ın kendi kimliği yoktur; yalnızca türetilmiş işlemsel yetkisi vardır. |
+| `SPEC-AGENT-0001/AG2` | Süresiz delegasyon yoktur; her delegasyon `validUntil` taşır. |
+| `SPEC-AGENT-0001/AG3` | Delegasyon koşulsuz ve anında iptal edilebilir (kill switch); iptal ileriye dönük kesindir, geçmiş işlemleri geri almaz. |
+| `SPEC-AGENT-0001/AG4` | Delegasyon sorumluluğu velide (principal) kalır. |
+| `SPEC-AGENT-0001/AG5` | Her agent işlemi delegasyon referansıyla loglanır. |
+| `SPEC-AGENT-0001/AG6` | Agent kimlik credential'ı sunamaz; yalnızca işlemsel yetki taşır. |
+| `SPEC-AGENT-0001/AG7` | `scope` genişletilebilir tasarlanır; `pay:*` Faz 0'da tanımlı değildir. |
+| `SPEC-AGENT-0001/AG8` | Faz 0'da zincir üstü credential-gating yoktur; hiçbir kontrat bir credential'ın geçerliliğini zincirde kontrol etmez. |
+| `SPEC-AGENT-0001/AG9` | Zincir bir credential'ın iptal durumunu göremez ([[ADR-0008]], [[SPEC-CRED-0003]]/S1); gating "credential doğrulama" olarak zincirde uygulanamaz. |
+| `SPEC-AGENT-0001/AG10` | Gelecekte gating açılırsa zincir credential'ı doğrulamaz; yalnızca kayıtlı bir verifier'ın imzalı beyanına güvenir (güven kayması dokümante edilir). |
+| `SPEC-AGENT-0001/AG11` | Beyanı üreten verifier RelyingPartyRegistry'de `ACTIVE` olmalıdır; beyan verifier'ın kayıtlı sertifikasıyla (`accessCertFingerprint`) doğrulanır. |
+| `SPEC-AGENT-0001/AG12` | Beyan taze olmalıdır (azami yaş, ör. ≤ 15 dk) ve tek kullanımlık nonce taşır; nonce tüketimi atomiktir. |
 
 
 ## SPEC-API-0001
@@ -770,6 +817,53 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = doğrulayıcının kalıcı kimliği (güven listesindeki kaydının `dns_name`'i; sertifika yenilense de değişmez, [[ADR-0034]]), ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. Kapı isteği terminal anahtarıyla gelir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). |
 | `SPEC-API-0001/AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). |
 | `SPEC-API-0001/AP10` | `tx_code` yanıt dışında hiçbir yerde saklanmaz. |
+
+
+## SPEC-BC-0001
+
+*"Güven katmanı kontratları"*
+
+| Kod | Açıklama |
+|---|---|
+| `SPEC-BC-0001/N1` | Namespace sahibi olmayan çağıran yazamaz; tek istisna `Governance` yürütmesi (NETWORK şeması, yükseltme, kayıt yönetimi önerileri). |
+| `SPEC-BC-0001/GV1` | Çıkarma/çıkış mevcut kayıtları ve credential'ları geçersiz kılmaz. |
+| `SPEC-BC-0001/GV2` | NETWORK şeması yalnızca `Governance` üzerinden kaydedilir. |
+| `SPEC-BC-0001/CA1` | `certFingerprint` bir kez yazılır; yeni sertifika = yeni `caId`. |
+| `SPEC-BC-0001/CA2` | `RETIRED` CA: operasyon ve eski credential'lar sürer; `REVOKED` CA: credential'lar düşer, operasyon sürer. |
+| `SPEC-BC-0001/CA3` | Yeni issuer yalnızca `ACTIVE` CA'ya bağlanabilir. |
+| `SPEC-BC-0001/I1` | Şema yetkisi allowlist'tir; varsayılan `false`. |
+| `SPEC-BC-0001/I2` | Doğrulama `isCredentialAcceptable(id, iat)` kullanır; `isValidIssuer` yalnızca ihraçtır. |
+| `SPEC-BC-0001/I3` | Şema yetkisi zaman penceresidir; doğrulama `iat`'a göre bakar. |
+| `SPEC-BC-0001/I4` | `REVOKED` issuer'ın listesini halefi yayınlayabilir. |
+| `SPEC-BC-0001/SC1` | Şemanın `vctURI`'si ve yazılmış her içerik özeti asla güncellenmez ya da silinmez; yeni sürüm özeti yalnız eklenir. |
+| `SPEC-BC-0001/SC3` | `DEPRECATED` şema, kullanımdan kaldırılmadan önce verilmiş belgeler için doğrulanabilir kalır. |
+| `SPEC-BC-0001/L1` | Status list `version` monoton artar. |
+| `SPEC-BC-0001/L2` | `listSize >= 100.000`. |
+| `SPEC-BC-0001/L3` | `bitsPerEntry ∈ {1, 2, 4, 8}`, listenin kendi değeri, değişmez ([[ADR-0063]]). |
+| `SPEC-BC-0001/R1` | Issuer delegate anahtarı ulusal kayıtlara yazamaz. |
+| `SPEC-BC-0001/R2` | Askıya alınmış issuer status list yayınlayamaz. |
+| `SPEC-BC-0001/GA1` | Ücretsiz gas, maliyet yokluğu değildir. |
+| `SPEC-BC-0001/GV3` | Asgari mutlak oy 2; iki üyeli ağda çıkarma imkânsızdır. |
+| `SPEC-BC-0001/GV4` | Çıkarılmış/çekilmiş devlet yeniden kabul edilebilir. |
+| `SPEC-BC-0001/DP1` | Hiçbir kontrat kişisel veri, credential içeriği veya credential hash'i saklamaz. |
+
+
+## SPEC-BC-0002
+
+*"Emanet ve hesap verebilir açıklama"*
+
+| Kod | Açıklama |
+|---|---|
+| `SPEC-BC-0002/GD1` | **Zincirde sır yok:** kişisel veri, eşleştirme, pay, ciphertext, düz-metin sonuç asla zincirde — yalnızca commitment/hash, kompozisyon, policy, denetim izi. |
+| `SPEC-BC-0002/GD2` | **Devlet-bazlı anahtar:** bir devletin seti yalnızca kendi vatandaşını çözer (kriptografik); başka devletin anahtarı çözemez. |
+| `SPEC-BC-0002/GD3` | **3-of-5 + yürütme-dışı:** `threshold ≥ 3`, `size = 5`, `executiveSeats ≤ threshold−1`, her `execute`'ta `nonExecutiveApprovals ≥ 1`. |
+| `SPEC-BC-0002/GD4` | **Egemenlik:** seti yalnızca home-state kurar/günceller (`onlyOwnerState`, [[ADR-0002]]); kompozisyon on-chain yayınlanır. |
+| `SPEC-BC-0002/GD5` | **DKG + threshold:** anahtar hiç yeniden kurulmaz; merkezî üretim yok. |
+| `SPEC-BC-0002/GD6` | **Escrow-geçerlilik:** escrow makbuzu olmayan pseudonym ağ-geçersiz; escrow verifiable-encryption ile doğrulanır. |
+| `SPEC-BC-0002/GD7` | **Yasal tetik zorunlu:** geçerli court token olmadan `execute` yok; hukuki + kriptografik kenetli. |
+| `SPEC-BC-0002/GD8` | **Mutlak ret / temyiz yok:** subjectState gerekçesiz reddedebilir; ağ seviyesinde üst merci yoktur. |
+| `SPEC-BC-0002/GD9` | **Dar kapsam:** yalnızca pseudonym↔kimlik; credential/geçmiş/canlı-izleme yok. |
+| `SPEC-BC-0002/GD10` | **Silinemez iz + bildirim:** her talep/onay/ret/açma append-only; bildirim tavanı kontratta sabit (2/3 ile değişir). |
 
 
 ## SPEC-CRED-0002
@@ -1018,12 +1112,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 390 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 444 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AP, AR, AS, AT, BL, C, CH, CI, CMP, CP, CT, D, DL, DS, DY, E, EP, FD, FN, GE, HA, HV, IC, IDC, IDP, K, KC, LI, LP, LX, MD, MR, NS, NW, OP, PD, PN, PO, PR, PS, PV, RI, RPR, RQ, RS, RT, RV, S, SB, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CT, D, DL, DP, DS, DY, E, EP, FD, FN, GA, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RPR, RQ, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-04 (`scripts/sync-invariants.mjs`). Toplam 390 kodlanmış değişmez, 72 dokümanda.
+**Üretilen dosya** — 2026-11-04 (`scripts/sync-invariants.mjs`). Toplam 444 kodlanmış değişmez, 77 dokümanda.

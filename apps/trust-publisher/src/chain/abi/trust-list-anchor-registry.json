@@ -287,6 +287,22 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "current",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "submitted",
+          "type": "uint64"
+        }
+      ],
+      "name": "VersionStepTooLarge",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "ZeroAddress",
       "type": "error"
@@ -526,6 +542,19 @@
     },
     {
       "inputs": [],
+      "name": "MAX_VERSION_STEP",
+      "outputs": [
+        {
+          "internalType": "uint64",
+          "name": "",
+          "type": "uint64"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "UPGRADE_INTERFACE_VERSION",
       "outputs": [
         {
@@ -606,6 +635,19 @@
           "internalType": "uint32",
           "name": "",
           "type": "uint32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "anchorers",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
         }
       ],
       "stateMutability": "view",

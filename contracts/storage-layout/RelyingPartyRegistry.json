@@ -1,0 +1,462 @@
+{
+  "storage": [
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "sovereignty",
+      "slot": 0,
+      "offset": 0,
+      "type": "t_contract(ISovereignty)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "governance",
+      "slot": 1,
+      "offset": 0,
+      "type": "t_address"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_writeCount",
+      "slot": 2,
+      "offset": 0,
+      "type": "t_mapping(t_bytes2,t_mapping(t_uint64,t_uint32))"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "__gap",
+      "slot": 3,
+      "offset": 0,
+      "type": "t_array(t_uint256)46_storage"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_rps",
+      "slot": 49,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_struct(RelyingParty)_storage)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_byState",
+      "slot": 50,
+      "offset": 0,
+      "type": "t_mapping(t_bytes2,t_array(t_bytes32)dyn_storage)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_certOwner",
+      "slot": 51,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_bytes32)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_scopes",
+      "slot": 52,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_array(t_struct(RequestScope)_storage)dyn_storage)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_scopeIndex",
+      "slot": 53,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_mapping(t_bytes32,t_uint256))"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_profiles",
+      "slot": 54,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_struct(RelyingPartyProfile)_storage)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_groups",
+      "slot": 55,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_struct(TerminalGroup)_storage)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_groupOwner",
+      "slot": 56,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_bytes32)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "_groupsOf",
+      "slot": 57,
+      "offset": 0,
+      "type": "t_mapping(t_bytes32,t_array(t_bytes32)dyn_storage)"
+    },
+    {
+      "contract": "RelyingPartyRegistry",
+      "label": "__gap",
+      "slot": 58,
+      "offset": 0,
+      "type": "t_array(t_uint256)40_storage"
+    }
+  ],
+  "types": {
+    "t_address": {
+      "encoding": "inplace",
+      "label": "address",
+      "numberOfBytes": 20
+    },
+    "t_array(t_bytes32)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "bytes32[]",
+      "numberOfBytes": 32,
+      "base": "t_bytes32"
+    },
+    "t_array(t_struct(RequestScope)_storage)dyn_storage": {
+      "encoding": "dynamic_array",
+      "label": "struct IRelyingPartyRegistry.RequestScope[]",
+      "numberOfBytes": 32,
+      "base": "t_struct(RequestScope)_storage"
+    },
+    "t_array(t_uint256)40_storage": {
+      "encoding": "inplace",
+      "label": "uint256[40]",
+      "numberOfBytes": 1280,
+      "base": "t_uint256"
+    },
+    "t_array(t_uint256)46_storage": {
+      "encoding": "inplace",
+      "label": "uint256[46]",
+      "numberOfBytes": 1472,
+      "base": "t_uint256"
+    },
+    "t_bool": {
+      "encoding": "inplace",
+      "label": "bool",
+      "numberOfBytes": 1
+    },
+    "t_bytes2": {
+      "encoding": "inplace",
+      "label": "bytes2",
+      "numberOfBytes": 2
+    },
+    "t_bytes32": {
+      "encoding": "inplace",
+      "label": "bytes32",
+      "numberOfBytes": 32
+    },
+    "t_contract(ISovereignty)": {
+      "encoding": "inplace",
+      "label": "contract ISovereignty",
+      "numberOfBytes": 20
+    },
+    "t_enum(AliasPolicy)": {
+      "encoding": "inplace",
+      "label": "enum IRelyingPartyRegistry.AliasPolicy",
+      "numberOfBytes": 1
+    },
+    "t_enum(PresentationFormat)": {
+      "encoding": "inplace",
+      "label": "enum IRelyingPartyRegistry.PresentationFormat",
+      "numberOfBytes": 1
+    },
+    "t_enum(RPStatus)": {
+      "encoding": "inplace",
+      "label": "enum IRelyingPartyRegistry.RPStatus",
+      "numberOfBytes": 1
+    },
+    "t_mapping(t_bytes2,t_array(t_bytes32)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes2 => bytes32[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes2",
+      "value": "t_array(t_bytes32)dyn_storage"
+    },
+    "t_mapping(t_bytes2,t_mapping(t_uint64,t_uint32))": {
+      "encoding": "mapping",
+      "label": "mapping(bytes2 => mapping(uint64 => uint32))",
+      "numberOfBytes": 32,
+      "key": "t_bytes2",
+      "value": "t_mapping(t_uint64,t_uint32)"
+    },
+    "t_mapping(t_bytes32,t_array(t_bytes32)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => bytes32[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_array(t_bytes32)dyn_storage"
+    },
+    "t_mapping(t_bytes32,t_array(t_struct(RequestScope)_storage)dyn_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct IRelyingPartyRegistry.RequestScope[])",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_array(t_struct(RequestScope)_storage)dyn_storage"
+    },
+    "t_mapping(t_bytes32,t_bytes32)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => bytes32)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_bytes32"
+    },
+    "t_mapping(t_bytes32,t_mapping(t_bytes32,t_uint256))": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => mapping(bytes32 => uint256))",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_mapping(t_bytes32,t_uint256)"
+    },
+    "t_mapping(t_bytes32,t_struct(RelyingParty)_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct IRelyingPartyRegistry.RelyingParty)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_struct(RelyingParty)_storage"
+    },
+    "t_mapping(t_bytes32,t_struct(RelyingPartyProfile)_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct IRelyingPartyRegistry.RelyingPartyProfile)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_struct(RelyingPartyProfile)_storage"
+    },
+    "t_mapping(t_bytes32,t_struct(TerminalGroup)_storage)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => struct IRelyingPartyRegistry.TerminalGroup)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_struct(TerminalGroup)_storage"
+    },
+    "t_mapping(t_bytes32,t_uint256)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => uint256)",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_uint256"
+    },
+    "t_mapping(t_uint64,t_uint32)": {
+      "encoding": "mapping",
+      "label": "mapping(uint64 => uint32)",
+      "numberOfBytes": 32,
+      "key": "t_uint64",
+      "value": "t_uint32"
+    },
+    "t_struct(RelyingParty)_storage": {
+      "encoding": "inplace",
+      "label": "struct IRelyingPartyRegistry.RelyingParty",
+      "numberOfBytes": 160,
+      "members": [
+        {
+          "label": "rpId",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "stateCode",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes2"
+        },
+        {
+          "label": "nameHash",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "accessCertFingerprint",
+          "slot": 3,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "status",
+          "slot": 4,
+          "offset": 0,
+          "type": "t_enum(RPStatus)"
+        },
+        {
+          "label": "registeredAt",
+          "slot": 4,
+          "offset": 1,
+          "type": "t_uint64"
+        }
+      ]
+    },
+    "t_struct(RelyingPartyProfile)_storage": {
+      "encoding": "inplace",
+      "label": "struct IRelyingPartyRegistry.RelyingPartyProfile",
+      "numberOfBytes": 128,
+      "members": [
+        {
+          "label": "publicSector",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_bool"
+        },
+        {
+          "label": "entitlements",
+          "slot": 0,
+          "offset": 1,
+          "type": "t_uint32"
+        },
+        {
+          "label": "aliasPolicy",
+          "slot": 0,
+          "offset": 5,
+          "type": "t_enum(AliasPolicy)"
+        },
+        {
+          "label": "registrationHash",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "intermediaries",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_array(t_bytes32)dyn_storage"
+        },
+        {
+          "label": "servedParties",
+          "slot": 3,
+          "offset": 0,
+          "type": "t_array(t_bytes32)dyn_storage"
+        }
+      ]
+    },
+    "t_struct(RequestScope)_storage": {
+      "encoding": "inplace",
+      "label": "struct IRelyingPartyRegistry.RequestScope",
+      "numberOfBytes": 256,
+      "members": [
+        {
+          "label": "scopeHash",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "serviceHash",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "schemaId",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "format",
+          "slot": 3,
+          "offset": 0,
+          "type": "t_enum(PresentationFormat)"
+        },
+        {
+          "label": "namespaceHash",
+          "slot": 4,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "attributes",
+          "slot": 5,
+          "offset": 0,
+          "type": "t_array(t_bytes32)dyn_storage"
+        },
+        {
+          "label": "validFrom",
+          "slot": 6,
+          "offset": 0,
+          "type": "t_uint64"
+        },
+        {
+          "label": "validUntil",
+          "slot": 6,
+          "offset": 8,
+          "type": "t_uint64"
+        },
+        {
+          "label": "detailsHash",
+          "slot": 7,
+          "offset": 0,
+          "type": "t_bytes32"
+        }
+      ]
+    },
+    "t_struct(TerminalGroup)_storage": {
+      "encoding": "inplace",
+      "label": "struct IRelyingPartyRegistry.TerminalGroup",
+      "numberOfBytes": 192,
+      "members": [
+        {
+          "label": "groupId",
+          "slot": 0,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "institutionId",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes32"
+        },
+        {
+          "label": "policyIds",
+          "slot": 2,
+          "offset": 0,
+          "type": "t_array(t_bytes32)dyn_storage"
+        },
+        {
+          "label": "certFingerprints",
+          "slot": 3,
+          "offset": 0,
+          "type": "t_array(t_bytes32)dyn_storage"
+        },
+        {
+          "label": "offlineAllowed",
+          "slot": 4,
+          "offset": 0,
+          "type": "t_bool"
+        },
+        {
+          "label": "validFrom",
+          "slot": 4,
+          "offset": 1,
+          "type": "t_uint64"
+        },
+        {
+          "label": "validUntil",
+          "slot": 4,
+          "offset": 9,
+          "type": "t_uint64"
+        },
+        {
+          "label": "labelHash",
+          "slot": 5,
+          "offset": 0,
+          "type": "t_bytes32"
+        }
+      ]
+    },
+    "t_uint256": {
+      "encoding": "inplace",
+      "label": "uint256",
+      "numberOfBytes": 32
+    },
+    "t_uint32": {
+      "encoding": "inplace",
+      "label": "uint32",
+      "numberOfBytes": 4
+    },
+    "t_uint64": {
+      "encoding": "inplace",
+      "label": "uint64",
+      "numberOfBytes": 8
+    }
+  }
+}

@@ -22,6 +22,8 @@ export default defineConfig({
       "@tamga-network/schemas": r("./packages/schemas/src/index.ts"),
       "@tamga-network/wallet-core": r("./packages/wallet-core/src/index.ts"),
       "@tamga-network/verifier": r("./packages/verifier/src/index.ts"),
+      "@tamga-network/onboard/mcp": r("./packages/onboard/src/mcp.ts"),
+      "@tamga-network/onboard": r("./packages/onboard/src/index.ts"),
       "@tamga-network/zk/node": r("./packages/zk/src/node.ts"),
       "@tamga-network/zk/react-native": r("./packages/zk/src/react-native.ts"),
       "@tamga-network/zk": r("./packages/zk/src/index.ts"),

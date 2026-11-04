@@ -4,6 +4,91 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.8.0` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
+## Unreleased
+
+### Added
+
+- **onboard — new package `@tamga-network/onboard` (command `tamga-onboard`, version 0.8.1 with the others).** A joining tool
+  for an institution's IT team: `init` builds the registration application(s) from the institution's answers and checks them
+  with the same rules as the operator's registration tool (ADR-0024; no unknown fields, so no names of people); `validate`
+  checks an application; `keys` generates the institution's P-256 keys on its own computer and writes CSRs whose subject carries
+  the `organizationIdentifier` (ADR-0050) and, for an access certificate, the DNS name and support address (ADR-0058 AC1) —
+  `keys --inspect` checks a CSR made in an HSM; `check` checks the institution's own setup (keys ↔ CSRs ↔ certificates, domain
+  and DNS TXT confirmation, https addresses, own-service metadata, lookup endpoint probed with invalid requests only) and, with
+  `--listing`, its record in the signed trust list against embedded root pins (status, registration data, credential types,
+  status list anchor, registration certificates, metadata chain to the listed root); `sandbox` prints the "Try your
+  institution" steps. `tamga-onboard mcp` offers the same operations as a local MCP server (stdio; files only under its root,
+  private keys never returned, network text marked untrusted). Nothing is written to the network or the list.
+- **release — packages may ship a command (`bin`).** The pack script maps `bin` to `lib/` and requires a `#!/usr/bin/env node`
+  line; the smoke test runs each command with `--version` from the installed tarball. `release:version` now sets ten packages.
+
+### Changed
+
+- **ops — `pki-issue --org-id` accepts a CSR that already carries the same `organizationIdentifier`** (as `tamga-onboard keys`
+  writes it); a different value is refused (exit 2). Before, any `organizationIdentifier` in the CSR subject was refused when
+  `--org-id` was given.
+
+### Applications and repository (not in the npm packages)
+
+- **contracts — ADR-0073 and ADR-0074 accepted (D-BC-12, D-BC-13); `contracts/`, `network/` and `docs/ledger` are public.**
+  The contracts are not an npm package; no production chain exists (ADR-0009 K4).
+- **contracts — one-time migration window (ADR-0073 K1, CE1).** Every registry (`RootCARegistry`, `IssuerRegistry`,
+  `SchemaRegistry`, `RelyingPartyRegistry`, `CrossRecognition`, `StatusListRegistry`) carries a migration state that only moves
+  forward (not started → open → closed). Governance opens it once per registry by a typed proposal
+  (`proposeMigrationOpen(registry, replayPlanHash, window, executor)`, window ≤ 30 days, counted from execution); it may be
+  extended only while open and within 30 days of opening (`proposeMigrationExtend`), and closes by proposal
+  (`proposeMigrationClose`) or by itself when the time runs out — finally. While open, dated writes (`*At` functions, the
+  `registeredAt` field) may carry a past date (never later than block time, in order per record) and the daily quotas are not
+  applied; outside the window an explicit date is refused (`PastDateOutsideMigration`). Network schemas may be written by the
+  single migration executor while the window is open. Governance compares each upgrade target's `migrationState()` before and
+  after the upgrade and reverts on any change (`MigrationStateChanged`), so no upgrade can reopen or extend a window. The state
+  lives in ERC-7201 namespaced storage (`tamga.storage.MigrationWindow`).
+- **contracts — C1/C2 evaluated at the credential's `iat` (ADR-0073 K5, CE5).** Issuers, root CAs and schemas keep an
+  append-only status history (`*StatusAt`, `*StatusHistoryOf`); intervals are half-open. A suspended issuer's credentials issued
+  before the suspension are accepted (list rule; before, a suspension rejected all of them). Two boundary fixes: a credential
+  issued at the revocation second or at the schema-authorisation withdrawal second is now rejected (`iat < revokedAt`,
+  `iat < until`), and a retired root CA no longer accepts credentials issued after its retirement (`isChainAcceptableAt`). A
+  deprecated schema accepts only credentials issued before the deprecation; a schema or root CA ever revoked accepts none.
+  List mapping helpers: `retireIssuer` (soft revocation + `IssuerRetired`), `announceRootCARollover` (`ROLLING_OVER`).
+- **contracts — read views (C33 (1)):** `Governance.memberList`, `IssuerRegistry.issuerDelegatesOf`.
+- **contracts — hard revocation `invalidatesFrom` (ADR-0073 K2, CE2).** `IssuerRegistry.setIssuerInvalidatesFrom(issuerId,
+  from)` marks a compromised issuer: credentials with `iat ≥ from` fail C1. Only on a revoked issuer, `validFrom ≤ from ≤
+  revokedAt`, and the date can only be moved earlier (never removed); it is the one past date that may be written outside the
+  migration window. Read with `invalidatesFromOf`.
+- **contracts — schema version digests are append-only (ADR-0073 K3, CE3).** `SchemaRegistry.addSchemaContentHash(schemaId,
+  contentHash)` adds a new version digest (national schema: the owning state; network schema: Governance
+  `proposeNetworkSchemaContentHash`, or the migration executor); `matchesContentHash` accepts the first digest or any added one,
+  none on a revoked schema; `contentHashesOf` lists them. At most 32 added digests per schema; empty and duplicate digests are
+  refused. SPEC-BC-0001 SC1 now reads "every written digest never changes; new version digests are only appended".
+- **contracts — relying party identity and request scopes (ADR-0073 K4, CE4).** `RelyingPartyRegistry` takes the identity
+  `rpId = keccak256(utf8(dns_name))` from the registrar (no domain text in the ABI); renewing the access certificate keeps it
+  (`updateAccessCertificate`, old and new fingerprint in `AccessCertificateUpdated`; a fingerprint belongs to one relying party at
+  a time, `rpIdOfCertificate`). Suspension can be lifted (`reinstateRelyingParty`); revocation is final. The coarse
+  `allowedScopes` / `updateScope` / `hasScope` are removed: each use is a `RequestScope` (scope, service, type, format
+  `dc+sd-jwt`/`mso_mdoc`/`mso_mdoc_zk`, mdoc namespace, sorted element-path digests, validity, details digest), set with
+  `setRequestScope` and closed (never deleted) with `closeRequestScope`; wallets ask `mayRequest(rpId, service, type, format,
+  namespace, element)`. Caps: 32 scopes, 64 elements. Storage layout baseline updated (no deployed state).
+- **contracts — new `NetworkRegistry` (ADR-0074 K3, PJ1–PJ3).** The network's own records (wallet providers and their WUA
+  signing keys, ZK circuits, external lists, EAA categories, list signers, list operators, state and role slots, catalogue) as
+  typed records: identifier digests, fingerprints, closed-set values, numbers, dates and a details digest only — no free text.
+  Written only through Governance: content is pinned with `stageRecord`, a typed proposal `proposeNetworkRecord(registry,
+  stageId)` carries its digest, and 2/3 executes `commitStaged`; during the migration window the single migration executor
+  writes dated records (`writeRecord`). Status history is append-only; `isListedProviderKey(fingerprint)` answers "is this a WUA
+  key of a listed wallet provider now". UUPS, deployed by `scripts/lib/deploy.ts`; covered by the privacy ABI, UUPS and storage
+  layout checks.
+- **contracts — registration data and gate groups on chain (ADR-0074 K2).** `IssuerRegistry.setIssuerProfile` (class
+  `PUB`/`QUALIFIED`/`EAA`, public-sector flag, entitlement bit mask, registration and operations detail digests) and
+  `RelyingPartyRegistry.setRelyingPartyProfile` (registration digest, flags, alias policy, intermediary and served relying
+  parties as `rpId` arrays). Gate groups (ADR-0069) as `TerminalGroup` records: the group id is unique across the network,
+  bound to an institution and at least one gate policy; withdrawn groups are closed, not deleted;
+  `isActiveTerminalCertificate(groupId, fingerprint)`.
+- **contracts — read views (C33 (1), continued) and the 2026-10-19 security round remainder (F-18).**
+  `TrustListAnchorRegistry.anchorers()`; `DelegateKeysSet` now carries the keys; `SchemaRegistrySet` event;
+  `proposeStateRemoval(stateCode, bytes32 reasonHash)` takes a reason digest instead of an unused string and `StateRemoved` emits
+  it; status list and anchor versions may grow by at most `MAX_VERSION_STEP` (1 000 000) per step, so `version = 2^64-1` can no
+  longer freeze a list; unused `CANCELLED`, `ProposalCancelled` and `SchemaNotAuthorized` removed. The anchor registry ABI copy in
+  `apps/trust-publisher/src/chain/abi/` is regenerated.
+
 ## 0.8.1 — 2026-11-04
 
 All nine packages move to 0.8.1 together (patch release). No breaking change: all additions are optional fields or methods;
