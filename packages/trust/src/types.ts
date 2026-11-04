@@ -432,6 +432,34 @@ export const AnchorSchema = AnchorBase.extend({
   content_hash: z.string(), // SRI
 });
 export const AnchorHeartbeat = AnchorBase.extend({ kind: z.literal("heartbeat") });
+/** `sha256:<hex>` — çapa satırlarındaki dosya özeti biçimi (yeni satır türleri bunu zorunlu tutar). */
+const Sha256Tag = z.string().regex(/^sha256:[0-9a-f]{64}$/);
+/**
+ * ADR-0074 K4 (PJ5): kayıt sertifikası durum listesi (ADR-0068) her yayımlandığında bir satır. `list_uri` opak (S8);
+ * `content_hash` imzalı listenin (statuslist+jwt) baytlarının SHA-256'sı; `list_version` yayıncının liste başına monoton sayacı.
+ */
+export const AnchorRegistrationStatus = AnchorBase.extend({
+  kind: z.literal("registration_status"),
+  list_uri: z.string().url(),
+  content_hash: Sha256Tag,
+  list_version: z.number().int().positive(),
+  published_at: z.string().datetime({ offset: true }),
+});
+/** ADR-0066 / ADR-0074 K4: liste görünümleri (ETSI XML, LoTE) — görünüm ayrı liste değildir, sürümü kaynağın sürümüdür. */
+export const ListViewFormat = z.enum(["etsi-tl-xml", "etsi-lote-json"]);
+export const AnchorListView = AnchorBase.extend({
+  kind: z.literal("list_view"),
+  /** yayın kökündeki dosya yolu, ör. `tl-tr.xml`, `lote/wallet-providers.jws` (`..` yok) */
+  file: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9._/-]{0,127}$/)
+    .refine((f) => !f.split("/").includes(".."), { message: "path traversal" }),
+  format: ListViewFormat,
+  source_file: z.string().regex(/^(lotl|tl-[a-z]{2})$/),
+  source_version: z.number().int().positive(),
+  /** dosyanın SHA-256'sı (XML için `.sha2` ile aynı değer) */
+  content_hash: Sha256Tag,
+});
 /**
  * Kontrol noktası (TL12): günlük büyüdüğünde önceki satırlar `archive/anchors-<from>-<to>.jsonl` dosyasına taşınır (silinmez);
  * yeni günlüğün ilk satırı bu kayıttır. `previous_hash` = arşivdeki son satırın hash'i; zincir kesintisiz sürer.
@@ -468,8 +496,40 @@ export const AnchorCheckpoint = AnchorBase.extend({
       schemas: z.array(
         z.object({ schema_id: z.string(), content_hash: z.string(), seq: z.number().int().nonnegative() }),
       ),
+      /** ADR-0074 K4: liste başına son kayıt sertifikası durum listesi satırı (eski kontrol noktalarında yok) */
+      registration_status: z
+        .array(
+          z.object({
+            list_uri: z.string().url(),
+            content_hash: Sha256Tag,
+            list_version: z.number().int().positive(),
+            published_at: z.string().datetime({ offset: true }),
+            seq: z.number().int().nonnegative(),
+          }),
+        )
+        .optional(),
+      /** ADR-0074 K4: dosya başına son görünüm satırı (eski kontrol noktalarında yok) */
+      list_views: z
+        .array(
+          z.object({
+            file: z.string(),
+            format: ListViewFormat,
+            source_file: z.string(),
+            source_version: z.number().int().positive(),
+            content_hash: Sha256Tag,
+            seq: z.number().int().nonnegative(),
+          }),
+        )
+        .optional(),
     })
     .optional(),
 });
-export const Anchor = z.discriminatedUnion("kind", [AnchorStatusList, AnchorSchema, AnchorHeartbeat, AnchorCheckpoint]);
+export const Anchor = z.discriminatedUnion("kind", [
+  AnchorStatusList,
+  AnchorSchema,
+  AnchorHeartbeat,
+  AnchorCheckpoint,
+  AnchorRegistrationStatus,
+  AnchorListView,
+]);
 export type Anchor = z.infer<typeof Anchor>;

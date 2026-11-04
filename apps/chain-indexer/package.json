@@ -1,0 +1,12 @@
+{
+  "name": "@tamga-network/chain-indexer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zincir okuma ve aktarma (ADR-0073 K1, ADR-0074 K5): imzalı liste arşivinin kontratlara yeniden oynatılması (trust:chain-replay), olay tabanlı indeksleyici ve TrustSource(chain) = ChainTrustSource; eşdeğerlik testi (ADR-0009 K7). Üretimde zincir kapalı.",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@tamga-network/trust": "*",
+    "ethers": "6.17.0"
+  }
+}

@@ -15,6 +15,7 @@ import { loadTrustSet } from "@tamga-network/trust";
 
 import type { ChainClient } from "./client.js";
 import {
+  assertEnvironmentAllowed,
   planProjection,
   type Environment,
   type ListVersionAnchor,
@@ -25,7 +26,8 @@ import {
 export type Decision = "ANCHOR" | "SKIP" | "CONFLICT" | "STALE" | "CONTEST";
 
 export interface ListDecision {
-  kind: "list";
+  /** "list" = imzalı liste sürümü; "view" = ADR-0074 K4 görünüm / kayıt sertifikası durum listesi satırı */
+  kind: "list" | "view";
   file: string;
   version: number;
   contentHash: string;
@@ -102,7 +104,8 @@ export async function verifySet(set: DistSet, clock?: { now?: Date; anchorMaxAge
 }
 
 async function decideList(client: ChainClient, a: ListVersionAnchor): Promise<ListDecision> {
-  const base = { kind: "list" as const, file: a.file, version: a.version, contentHash: a.contentHash };
+  const kind: ListDecision["kind"] = a.kind && a.kind !== "list" ? "view" : "list";
+  const base = { kind, file: a.file, version: a.version, contentHash: a.contentHash };
   const existing = await client.listAnchor(a.listKey, a.version);
   if (existing?.confirmed) {
     if (existing.contentHash === a.contentHash)
@@ -160,8 +163,9 @@ export async function runProjection(
   opts: { dryRun: boolean; verified: boolean },
 ): Promise<AnchorReport> {
   const chain = await client.describe();
+  assertEnvironmentAllowed(plan.environment, chain.chainId); // ADR-0074 K7 (PJ4)
   const decisions: Array<ListDecision | LogDecision> = [];
-  for (const a of plan.lists) {
+  for (const a of [...plan.lists, ...(plan.views ?? [])]) {
     const d = await decideList(client, a);
     if (writes(d.decision) && !opts.dryRun) d.tx = await client.anchorList(a);
     decisions.push(d);

@@ -135,7 +135,7 @@ A record is never removed from the list (TL2); a withdrawn institution stays in 
 
 # 5. `anchors.jsonl` — anchor log
 
-> **Accepted, implementation in progress (2026-11-04):** [[ADR-0074]] adds new line types for the registration certificate status list and the list views (`registration_status`, `list_view`); the lines start with the package version that recognises them, and this section is updated with that version.
+> **Implemented (2026-11-04), [[ADR-0074]] K4:** two new line types for the registration certificate status list and the list views (`registration_status`, `list_view`). The loader recognises them; an unknown type still STOPS the loader. The publisher therefore writes these lines only while the chain projection is on (`TAMGA_CHAIN_ENABLED=1`; off in production): the package version that recognises them is published before the chain is opened.
 
 Every line is an independent JWS; payload `{seq, previous_hash, ts, kind, …}`:
 
@@ -144,10 +144,16 @@ Every line is an independent JWS; payload `{seq, previous_hash, ts, kind, …}`:
 | `status_list` | `list_id, issuer_id, list_uri, content_hash, list_version, published_at` | `StatusListRegistry.publishList` (list-stage reading of S1/S4, L1) |
 | `schema` | `schema_id, vct, content_hash` | `SchemaRegistry` contentHash (D8: **after** the CDN publication) |
 | `heartbeat` | — | Hourly cadence (S5 logic on the operator side) |
-| `checkpoint` | `archive: { file, sha256, seq_from, seq_to, lines }`, `state: { status_lists[], schemas[] }` | Archive checkpoint (TL12); `state` = the final state produced by the archived lines |
+| `checkpoint` | `archive: { file, sha256, seq_from, seq_to, lines }`, `state: { status_lists[], schemas[], registration_status[]?, list_views[]? }` | Archive checkpoint (TL12); `state` = the final state produced by the archived lines |
+| `registration_status` | `list_uri, content_hash, list_version, published_at` | Every publication of the registration certificate status list ([[ADR-0068]]); `anchorList` in the list anchor registry, key `keccak256("tamga:registration-status:<env>:<name>")` (`<name>` = the address after `/status/`), version = `list_version` |
+| `list_view` | `file, format, source_file, source_version, content_hash` | Every generation of a list view ([[ADR-0066]]: `tl-<cc>.xml`, `lote/<kind>.jws`); `anchorList`, key `keccak256("tamga:trust-list-view:<env>:<file>")`, version = the version of the source list |
 
 Rules: ≥1 line per hour; `list_version` is monotonic per institution (L1/S3); the verifier compares `content_hash` with the
-Status List Token hash in D5; lines are never deleted; the log is public; `list_uri` is opaque (S8).
+Status List Token hash in D5; lines are never deleted; the log is public; `list_uri` is opaque (S8). In the new line types
+(PJ5) `content_hash` is the SHA-256 of the file (`sha256:<hex>`; for XML the same as `.sha2`); the `list_version` of
+`registration_status` only grows per list and the `source_version` of `list_view` only grows per file (the loader rejects a step
+back). These lines do not enter the verification decision; if a view contradicts its source, the source (JSON list) prevails. The
+checkpoint `state` also carries their latest values (older checkpoints do not have the fields).
 
 **Archiving and checkpoints (TL12).** As the log grows, load time grows linearly with the number of lines (each line is one
 JWS verification). When the log passes a threshold (500 lines by default), the operator moves **all** current lines into

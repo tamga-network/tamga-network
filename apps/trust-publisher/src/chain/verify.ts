@@ -9,7 +9,7 @@
 import type { Tri } from "@tamga-network/trust";
 
 import type { ChainClient } from "./client.js";
-import { listAnchorOf, type Environment } from "./projection.js";
+import { allViewAnchorsOf, jwsHash, listAnchorOf, type Environment, type ListVersionAnchor } from "./projection.js";
 
 export interface ChainCheck {
   file: string;
@@ -26,7 +26,35 @@ export async function checkListAnchored(
   file: string,
   jws: string,
 ): Promise<ChainCheck> {
-  const a = listAnchorOf(environment, file, jws);
+  return checkAnchored(client, listAnchorOf(environment, file, jws));
+}
+
+/**
+ * ADR-0074 K4 (PJ5): liste görünümü (`tl-tr.xml`, `lote/<tür>.jws`) ya da kayıt sertifikası durum listesi (`status/<ad>`) zincirde
+ * onaylı mı. Sürüm, dosyanın özetini taşıyan çapa günlüğü satırından okunur; satır yoksa `UNKNOWN` (çapalanmamış).
+ */
+export async function checkViewAnchored(
+  client: ChainClient | null,
+  environment: Environment,
+  file: string,
+  bytes: string,
+  anchorsJsonl: string,
+): Promise<ChainCheck> {
+  const contentHash = jwsHash(bytes);
+  const hit = allViewAnchorsOf(environment, anchorsJsonl).find((a) => a.file === file && a.contentHash === contentHash);
+  if (!hit)
+    return {
+      file,
+      version: 0,
+      contentHash,
+      anchored: "UNKNOWN",
+      reason: "çapa günlüğünde bu dosya ve özet için satır yok (ADR-0074 K4)",
+    };
+  return checkAnchored(client, hit);
+}
+
+async function checkAnchored(client: ChainClient | null, a: ListVersionAnchor): Promise<ChainCheck> {
+  const file = a.file;
   const base = { file, version: a.version, contentHash: a.contentHash };
   if (!client) return { ...base, anchored: "UNKNOWN", reason: "zincir kapalı (TAMGA_CHAIN_ENABLED=0)" };
   try {

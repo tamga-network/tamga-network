@@ -84,6 +84,19 @@ Liste çapası projeksiyonunu denemek ([[ADR-0051]]): `TAMGA_CHAIN_ENABLED=1`, `
 `npm run trust:chain-check -- apps/trust-publisher/dist/lotl.jws` → `YES`. Hızlı EVM denemesi için Hardhat düğümü de kullanılabilir
 (`npm run contracts:node` + `npm run contracts:deploy:dev`, port 8545).
 
+Liste geçmişinin kontratlara yeniden oynatılması ve okuma yolu ([[ADR-0073]] K1/K6, [[ADR-0074]] K5; [[SPEC-BC-0001]] §16.8):
+
+```bash
+npm run trust:chain-replay -- --dry-run   # arşivi doğrula, planı ve replayPlanHash'i bas (bayrak kapalıyken varsayılan)
+npm run contracts:test                    # contracts/test/chain-equivalence.test.ts: yeniden oynatma + indeksleyici + eşdeğerlik
+# yerel Besu duman testi (Besu çalışır ve dağıtım yapılmışken)
+npx tsx apps/chain-indexer/scripts/besu-smoke.ts   # fikstür arşivi → göç penceresi → yeniden oynatma → indeks → eşdeğerlik
+npm run chain:besu:stop
+```
+
+Gerçek bir arşivle yerel zincire: `TAMGA_CHAIN_ENABLED=1 TAMGA_CHAIN_RPC_URL=http://127.0.0.1:8546 npm run trust:chain-replay`
+(yerelde pencere Governance oyuyla açılır; gerçek ağda pencereyi üyeler açar ve yazım `TAMGA_CONFIRM_PROD=<plan özeti>` ister).
+
 ## 2.2 Adım 3–4: SDK çekirdeği + servisler
 
 Kontrat derlenince ABI ve deploy adresleri `@tamga-network/contracts`'a girer; `@tamga-network/

@@ -17,6 +17,11 @@ summary: >
   onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
 ---
 
+> **Sürüm notu 1.0.0 (2026-11-04) — okuma ve aktarma ([[ADR-0073]] K1/K6, [[ADR-0074]] K4/K5).** Liste arşivinin kontratlara
+> yeniden oynatılması (`trust:chain-replay`), olay tabanlı indeksleyici ve `ChainTrustSource` (`apps/chain-indexer/`), eşdeğerlik
+> testi (Hardhat'te, CI'da) ve çapa günlüğünün yeni satırlarının (`registration_status`, `list_view`) liste çapası kaydına
+> yazımı uygulandı (§11.2 uygulama notu, §16.8). Kontrat değişmedi.
+
 > **Sürüm notu 1.0.0 (2026-11-04) — [[ADR-0075]] kabul edildi ve uygulandı.** Doğrulayıcı kimliğinin (`rpId =
 > keccak256(dns_name)`) sahibi devlet yalnız Governance'ın türü belli devir önerisiyle (`proposeRelyingPartyReassignment`, 2/3)
 > değişir; iptal edilmiş kimlik yalnız yeniden kayıt önerisiyle (`proposeRelyingPartyReRegistration`, 2/3) yeniden kaydedilir.
@@ -895,6 +900,13 @@ doğrulama oradan yapılır. Zincir doğrudan sorgulanmaz.
 Bu, `ARCH-0003`'te tanımlanacak zorunlu bir bileşendir — opsiyonel bir
 optimizasyon değil.
 
+> **Uygulama notu (2026-11-04, [[ADR-0074]] K5).** İndeksleyici `apps/chain-indexer/` (`ChainIndexer`): kontrat olayları değişen
+> kaydı bulur, kaydın tamamı (durum geçmişi, yetki pencereleri, kapsamlar, dönemler, çapa) **aynı sabitlenmiş bloktaki** okumayla
+> dizine yazılır; `sync()` artımlıdır, dizin düz JSON'dur (bellek ya da dosya). `ChainTrustSource` `TrustSource` arayüzünü dizinden
+> cevaplar; kurallar yukarıdaki beş okumanın kurallarıdır (C1 = 1+kök, C2 = 2, C3 = 4, D5 = 5; şema bütünlüğü 3 sürüm özetleriyle).
+> Dizin bayatsa cevap `UNKNOWN`'dur (CMP4). Zincir istemcisi uygulamadadır; `@tamga-network/trust` zincir bağımlılığı taşımaz
+> ([[ADR-0015]] K1). Ayrıntı §16.8.
+
 ---
 
 # 12. Gas ve İzin Politikası
@@ -1261,6 +1273,57 @@ Ayrıntı özetleri RFC 8785 kanonik JSON + SHA-256'dır; alan bloklarının sı
   güvenlik turunda öneri geri çekme yoluyla yeniden eklendi, §16.5.)
 - **İnce olaylar:** `SchemaRegistrySet(registry)`; `proposeStateRemoval(bytes2 stateCode, bytes32 reasonHash)` gerekçeyi özet
   olarak alır (metin zincire yazılmaz, [[ADR-0074]] PJ2) ve `StateRemoved(stateCode, reasonHash)` bunu yayar.
+
+## 16.8 Okuma ve aktarma: yeniden oynatma, indeksleyici, eşdeğerlik ([[ADR-0073]] K1/K6, [[ADR-0074]] K4/K5)
+
+**Yeniden oynatma (`npm run trust:chain-replay`).** Liste yayıncısının arşivi (`archive/lotl.vNNNN.jws`, `tl-<cc>.vNNNN.jws`, çapa
+günlüğü ve kontrol noktaları) doğrulanır (imza, sürüm zinciri, çapa zinciri, ortam); ilk arşivlenmiş sürümden başlayan
+deterministik plan ve `replayPlanHash` (= SHA-256(kanonik JSON {biçim, ortam, plan anı, işlemler})) üretilir. Varsayılan ve
+`--dry-run`: yalnız plan. Yazımda önce bütün göç kipli kayıtlarda pencerenin bu özetle açık olduğu denetlenir (CE1); işlemler zaman
+sırasıyla, tarih taşıyanlar listedeki anla yazılır; zincirde olan işlem atlanır (kaldığı yerden devam: durum yazımları tarihle,
+doğrulayıcı durumları geçmiş uzunluğuyla, son-hâl yazımları olay sayısı / kayıt sayacıyla tanınır). Kim yazar: ulusal kayıtlar
+devletin delegesi; ağ şeması ve cüzdan sağlayıcı kayıtları tek göç yürütücüsü; ağ şemasının iptali ve doğrulayıcı devri / iptal
+sonrası yeniden kaydı Governance oyu (oy yoksa komut durur ve öneriyi bildirir). Gerçek ağ yazımı `TAMGA_CONFIRM_PROD=<plan özeti>`
+ister; sandbox seti yalnız yerel geliştirme zincirine (PJ4). Sonunda §11.2 indeksleyicisi ve eşdeğerlik testi çalışır.
+
+| Liste | Yeniden oynatmada |
+|---|---|
+| kök CA `status_history` | `registerRootCA` (kayıt anı = ilk durum anı), `suspend/reinstate/retire/revokeRootCAAt`; `ROLLING_OVER` → `announceRootCARollover` |
+| kurum `status_history`, `invalidates_from` | `registerIssuer`, `suspend/reinstateIssuerAt`, `revokeIssuerAt`, `retireIssuer`, `setIssuerInvalidatesFrom`; `valid_until` uzaması `renewIssuer` |
+| `schema_authorizations[]` | pencere başına `setSchemaAuthorizationAt(true, valid_from)` ve `(false, valid_until)` |
+| şemalar | `registerSchema` (ilk özet, `validFrom` = ilk durum anı), `addSchemaContentHash`, `deprecateSchemaAt`; ağ şeması iptali Governance |
+| doğrulayıcılar | `registerRelyingParty` (`rpId = keccak256(dns_name)`), askı/dönüş/iptal, `updateAccessCertificate`, `setRequestScope`, `setTerminalGroup`, `setRelyingPartyProfile`; başka ülke listesinde ilk görünüş = devir, iptalden sonra ACTIVE = yeniden kayıt (Governance, [[ADR-0075]]) |
+| kurum kayıt verisi | `setIssuerProfile` (sınıf, kamu kurumu, yetki maskesi, kayıt ve işletim özetleri) |
+| LOTL tanıma | `setRecognition` (FULL / NONE) |
+| `wallet_providers[]` | `NetworkRegistry.writeRecord` (sağlayıcı ve WUA anahtarları; liste `valid_to` dahil → zincir yarı açık +1 sn) |
+| çapa `status_list` | kurum delegesi (devlet delegesi atanır) → `registerList` + her sürüm `publishList(…, published_at)` |
+
+**İndeksleyici ve `ChainTrustSource`.** §11.2 uygulama notu. `relyingParty*` kaydında zincirde metin olmadığından ad alanları boştur;
+`dns_name` yalnız çağıranın bildiği adla dolar; kapsamlar özet biçimindedir (`requestScopes`, `mayRequest`).
+
+**Eşdeğerlik testi (CE6).** `contracts/test/chain-equivalence.test.ts` (Hardhat; CI'da): birkaç sürümlük fikstür arşivi
+(askı, yumuşak ve sert iptal, kök emekliliği ve halef, şema sürümü, kullanımdan kalkan ve iptal edilen şema, yetki pencereleri,
+tanımanın açılıp kapanması, cüzdan anahtarları, kapsam, kapı grubu, iptal sonrası yeniden kayıt, devir) yeniden oynatılır; her
+kurum için kayıtlı her an ve sınır anları (t − 1, t, t + 1) üzerinden C1/C2/C3/D5 soruları liste kaynağına, `ChainTrustSource`'a ve
+doğrudan kontrat okumasına sorulur. Sonuç (2026-11-04): C1/C2/C3/D5'te fark yok; tek fark belgelenmiş bilinen farktır.
+
+**Bilinen farklar ve sınırlar.**
+- [[ADR-0075]] sonucu: aynı `dns_name` devirden sonra iki ülke listesinde kalırsa liste kaynağı kimliği belirsiz sayar (`null`,
+  kapalı güvenli); zincirde tek kayıt vardır, yeni sahibinde. Eski listedeki kaydın kapatılma kuralı paket değişikliği ister
+  (öneri: devir işleminde eski ülke listesindeki kayda `REVOKED` + gerekçede devir kaydı yazılır ve yükleyici, bir listede
+  `REVOKED` öteki listede `ACTIVE` olan aynı adı belirsiz saymaz).
+- Doğrulayıcı durum yazımları (askı, dönüş, iptal) kontratta tarih taşımaz: zincirdeki geçmiş yeniden oynatma anını gösterir.
+  Bugünkü durum aynıdır; `isRelyingPartyAcceptableAt(t)` geçmiş bir `t` için listeden farklı olabilir (`TrustSource`'ta böyle bir soru
+  yoktur).
+- Çapa günlüğü iptal listesinin bit sayısını ve boyutunu taşımaz; plan yerel zincirde varsayılan (2 bit, 100000) kullanır, gerçek
+  ağ yazımı bunu reddeder (belirteçlerden okunması gerekir).
+- Kurum halefi (`successor_id`) yeniden oynatılmaz (sıfır); ileri tarihli bir yetki bitişi zincire yazılamaz (DateInFuture), uyarıyla
+  atlanır. `NetworkRegistry`'nin öteki kayıtları (ZK devreleri, dış listeler, imzacılar, işletmeci, slotlar, kategoriler) ve kapı
+  grubu sertifikaları dışındaki ayrıntı özetleri henüz plana girmez.
+
+**Çapa günlüğünün yeni satırları ([[ADR-0074]] K4).** `trust:chain-submit` görünüm (`tamga:trust-list-view:<ortam>:<dosya>`) ve
+kayıt sertifikası durum listesi (`tamga:registration-status:<ortam>:<ad>`) için son satırı `anchorList` ile yazar; `trust:chain-check`
+görünüm dosyasını da denetler. Satırlar yalnız zincir projeksiyonu açıkken yazılır ([[SPEC-TRUST-0001]] §5).
 
 ---
 

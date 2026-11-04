@@ -133,7 +133,7 @@ vb., [[SPEC-ID-0002]] §8.1) kalır ve LoTE'ye girmez.
 
 # 5. `anchors.jsonl` — çapa günlüğü
 
-> **Kabul edildi, uygulama sürüyor (2026-11-04):** [[ADR-0074]] kayıt sertifikası durum listesi ve liste görünümleri için yeni satır türleri (`registration_status`, `list_view`) getirir; satırlar yeni türleri tanıyan paket sürümüyle yayınlanmaya başlar, bu bölüm o sürümle güncellenir.
+> **Uygulandı (2026-11-04), [[ADR-0074]] K4:** kayıt sertifikası durum listesi ve liste görünümleri için iki yeni satır türü (`registration_status`, `list_view`). Yükleyici bu türleri tanır; bilinmeyen tür yine DURDURUR. Bu yüzden yayıncı satırları yalnız zincir projeksiyonu açıkken (`TAMGA_CHAIN_ENABLED=1`; üretimde kapalı) yazar: zincir açılmadan önce yeni türleri tanıyan paket sürümü yayımlanmış olur.
 
 Her satır bağımsız JWS; payload `{seq, previous_hash, ts, kind, …}`:
 
@@ -142,10 +142,16 @@ Her satır bağımsız JWS; payload `{seq, previous_hash, ts, kind, …}`:
 | `status_list` | `list_id, issuer_id, list_uri, content_hash, list_version, published_at` | `StatusListRegistry.publishList` (S1/S4 liste aşaması okuması, L1) |
 | `schema` | `schema_id, vct, content_hash` | `SchemaRegistry` contentHash (D8: CDN yayınından **sonra**) |
 | `heartbeat` | — | Saatlik kadans (S5 mantığı operatör tarafında) |
-| `checkpoint` | `archive: { file, sha256, seq_from, seq_to, lines }`, `state: { status_lists[], schemas[] }` | Arşiv kontrol noktası (TL12); `state` = arşive giden satırların ürettiği son durum |
+| `checkpoint` | `archive: { file, sha256, seq_from, seq_to, lines }`, `state: { status_lists[], schemas[], registration_status[]?, list_views[]? }` | Arşiv kontrol noktası (TL12); `state` = arşive giden satırların ürettiği son durum |
+| `registration_status` | `list_uri, content_hash, list_version, published_at` | Kayıt sertifikası durum listesi ([[ADR-0068]]) her yayımlandığında; liste çapası kaydında `anchorList`, anahtar `keccak256("tamga:registration-status:<ortam>:<ad>")` (`<ad>` = adresin `/status/`'tan sonrası), sürüm = `list_version` |
+| `list_view` | `file, format, source_file, source_version, content_hash` | Liste görünümü ([[ADR-0066]]: `tl-<cc>.xml`, `lote/<tür>.jws`) her üretildiğinde; `anchorList`, anahtar `keccak256("tamga:trust-list-view:<ortam>:<dosya>")`, sürüm = kaynak listenin sürümü |
 
 Kurallar: saatte ≥1 satır; `list_version` kurum başına monoton (L1/S3); `content_hash` doğrulayıcı D5'te Status List
-Token hash'iyle karşılaştırılır; satır silinmez; günlük herkese açık; `list_uri` opak (S8).
+Token hash'iyle karşılaştırılır; satır silinmez; günlük herkese açık; `list_uri` opak (S8). Yeni satır türlerinde (PJ5)
+`content_hash` dosyanın SHA-256'sıdır (`sha256:<hex>`; XML'de `.sha2` ile aynı); `registration_status`'un `list_version`'ı liste
+başına, `list_view`'un `source_version`'ı dosya başına yalnız artar (yükleyici geri gideni reddeder). Bu satırlar doğrulama
+kararına girmez; görünüm kaynakla çelişirse kaynak (JSON liste) geçerlidir. Kontrol noktasının `state`'i bunların son hâlini de
+taşır (eski kontrol noktalarında alan yoktur).
 
 **Arşivleme ve kontrol noktası (TL12).** Günlük büyüdükçe yükleme süresi satır sayısıyla doğrusal artar (her satır bir
 JWS doğrulaması). Operatör, günlük bir eşiği aşınca (varsayılan 500 satır) mevcut satırların **hepsini** `archive/anchors-<from>-<to>.jsonl`

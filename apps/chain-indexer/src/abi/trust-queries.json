@@ -1,0 +1,414 @@
+{
+  "_note": "contracts/scripts/export-abi.mjs üretir — elle düzenlenmez. Kaynak: contracts/src/TrustQueries.sol (SPEC-BC-0001; ADR-0073, ADR-0074).",
+  "contractName": "TrustQueries",
+  "solidity": "0.8.24",
+  "evmVersion": "shanghai",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "issuers_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "schemas_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "recognition_",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "statusLists_",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "id",
+          "type": "bytes32"
+        }
+      ],
+      "name": "AlreadyRevoked",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "EmptyContentHash",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "validFrom",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "validUntil",
+          "type": "uint64"
+        }
+      ],
+      "name": "InvalidValidity",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "MustRegisterAsActive",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NetworkVctInNationalNamespace",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        }
+      ],
+      "name": "NotGovernance",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes2",
+          "name": "stateCode",
+          "type": "bytes2"
+        },
+        {
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        }
+      ],
+      "name": "NotOwnerState",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes2",
+          "name": "stateCode",
+          "type": "bytes2"
+        },
+        {
+          "internalType": "uint32",
+          "name": "limit",
+          "type": "uint32"
+        }
+      ],
+      "name": "QuotaExceeded",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "successorId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "SuccessorNotActive",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "count",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "max",
+          "type": "uint256"
+        }
+      ],
+      "name": "TooManyDelegates",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "current",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "submitted",
+          "type": "uint64"
+        }
+      ],
+      "name": "VersionNotMonotonic",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "current",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "submitted",
+          "type": "uint64"
+        }
+      ],
+      "name": "VersionStepTooLarge",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroAddress",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "issuerId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "iat",
+          "type": "uint64"
+        }
+      ],
+      "name": "isCredentialAcceptable",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "issuerId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "schemaId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "iat",
+          "type": "uint64"
+        }
+      ],
+      "name": "isCredentialSchemaAcceptable",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes2",
+          "name": "verifierState",
+          "type": "bytes2"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "issuerId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "isRecognizedBy",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "issuers",
+      "outputs": [
+        {
+          "internalType": "contract IIssuerRegistry",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "recognition",
+      "outputs": [
+        {
+          "internalType": "contract ICrossRecognition",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "schemaId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "hash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "schemaMatchesContentHash",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "schemas",
+      "outputs": [
+        {
+          "internalType": "contract ISchemaRegistry",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "listId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "hash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "statusListMatchesContentHash",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "statusLists",
+      "outputs": [
+        {
+          "internalType": "contract IStatusListRegistry",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "issuerId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint64",
+          "name": "credentialIat",
+          "type": "uint64"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "schemaId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "schemaHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes2",
+          "name": "verifierState",
+          "type": "bytes2"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "listId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "listHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "verifyAll",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "ok",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool[5]",
+          "name": "results",
+          "type": "bool[5]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}

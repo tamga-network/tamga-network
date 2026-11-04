@@ -132,7 +132,7 @@ və s., [[SPEC-ID-0002]] §8.1) qalır və LoTE-yə daxil edilmir.
 
 # 5. `anchors.jsonl` — lövbər jurnalı
 
-> **Qəbul edildi, tətbiq davam edir (2026-11-04):** [[ADR-0074]] qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri üçün yeni sətir növləri (`registration_status`, `list_view`) gətirir; sətirlər yeni növləri tanıyan paket versiyası ilə dərc olunmağa başlayır, bu bölmə həmin versiya ilə yenilənir.
+> **Tətbiq edildi (2026-11-04), [[ADR-0074]] K4:** qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri üçün iki yeni sətir növü (`registration_status`, `list_view`). Yükləyici bu növləri tanıyır; naməlum növ yenə də yükləyicini DAYANDIRIR. Buna görə dərc edən bu sətirləri yalnız zəncir proyeksiyası açıq olduqda (`TAMGA_CHAIN_ENABLED=1`; istehsalda bağlıdır) yazır: zəncir açılmazdan əvvəl yeni növləri tanıyan paket versiyası dərc olunmuş olur.
 
 Hər sətir müstəqil JWS-dir; payload `{seq, previous_hash, ts, kind, …}`:
 
@@ -141,10 +141,16 @@ Hər sətir müstəqil JWS-dir; payload `{seq, previous_hash, ts, kind, …}`:
 | `status_list` | `list_id, issuer_id, list_uri, content_hash, list_version, published_at` | `StatusListRegistry.publishList` (S1/S4-ün siyahı mərhələsində oxunuşu, L1) |
 | `schema` | `schema_id, vct, content_hash` | `SchemaRegistry` contentHash (D8: CDN-də dərcdən **sonra**) |
 | `heartbeat` | — | Saatlıq tezlik (S5 məntiqi operator tərəfində) |
-| `checkpoint` | `archive: { file, sha256, seq_from, seq_to, lines }`, `state: { status_lists[], schemas[] }` | Arxiv nəzarət nöqtəsi (TL12); `state` = arxivə köçürülən sətirlərin yaratdığı son vəziyyət |
+| `checkpoint` | `archive: { file, sha256, seq_from, seq_to, lines }`, `state: { status_lists[], schemas[], registration_status[]?, list_views[]? }` | Arxiv nəzarət nöqtəsi (TL12); `state` = arxivə köçürülən sətirlərin yaratdığı son vəziyyət |
+| `registration_status` | `list_uri, content_hash, list_version, published_at` | Qeydiyyat sertifikatı status siyahısının ([[ADR-0068]]) hər dərcində; siyahı lövbəri reyestrində `anchorList`, açar `keccak256("tamga:registration-status:<mühit>:<ad>")` (`<ad>` = ünvanın `/status/`-dan sonrakı hissəsi), versiya = `list_version` |
+| `list_view` | `file, format, source_file, source_version, content_hash` | Siyahı görünüşünün ([[ADR-0066]]: `tl-<cc>.xml`, `lote/<növ>.jws`) hər yaradılışında; `anchorList`, açar `keccak256("tamga:trust-list-view:<mühit>:<fayl>")`, versiya = mənbə siyahının versiyası |
 
 Qaydalar: saatda ≥1 sətir; `list_version` hər qurum üzrə monotondur (L1/S3); `content_hash` yoxlayan tərəf tərəfindən D5-də Status List
-Token hash-i ilə müqayisə edilir; sətir silinmir; jurnal hamıya açıqdır; `list_uri` opakdır (S8).
+Token hash-i ilə müqayisə edilir; sətir silinmir; jurnal hamıya açıqdır; `list_uri` opakdır (S8). Yeni sətir növlərində (PJ5)
+`content_hash` faylın SHA-256-sıdır (`sha256:<hex>`; XML-də `.sha2` ilə eyni); `registration_status`-un `list_version`-u hər
+siyahı üzrə, `list_view`-un `source_version`-u hər fayl üzrə yalnız artır (yükləyici geri gedəni rədd edir). Bu sətirlər yoxlama
+qərarına daxil olmur; görünüş mənbə ilə ziddiyyət təşkil edərsə, mənbə (JSON siyahı) üstündür. Nəzarət nöqtəsinin `state`-i
+bunların son vəziyyətini də daşıyır (köhnə nəzarət nöqtələrində bu sahələr yoxdur).
 
 **Arxivləşdirmə və nəzarət nöqtəsi (TL12).** Jurnal böyüdükcə yükləmə müddəti sətir sayına uyğun olaraq xətti artır (hər sətir bir
 JWS yoxlamasıdır). Jurnal müəyyən həddi keçdikdə (standart olaraq 500 sətir) operator mövcud sətirlərin **hamısını** `archive/anchors-<from>-<to>.jsonl`

@@ -1,5 +1,6 @@
 // Liste çapası kaydının ABI'sini liste yayıncısına kopyalar (ADR-0051 K2): apps/trust-publisher/src/chain/abi/.
-// Kaynak contracts/, kopya liste yayıncısında (yayıncı contracts/'ı derlemeden kurulur) — bu betik ikisini aynı tutar.
+// ADR-0073 K1 / ADR-0074 K5: kayıt kontratlarının ABI'leri zincir indeksleyicisine ve yeniden oynatmaya: apps/chain-indexer/src/abi/.
+// Kaynak contracts/, kopyalar uygulamalarda (uygulamalar contracts/'ı derlemeden kurulur) — bu betik ikisini aynı tutar.
 //   node scripts/export-abi.mjs            → yazar
 //   node scripts/export-abi.mjs --check    → fark varsa çıkış 1 (CI: npm run contracts:check)
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -12,7 +13,26 @@ const EXPORTS = [
   {
     artifact: "artifacts/src/anchor/TrustListAnchorRegistry.sol/TrustListAnchorRegistry.json",
     out: "../apps/trust-publisher/src/chain/abi/trust-list-anchor-registry.json",
+    source: "contracts/src/anchor/TrustListAnchorRegistry.sol (ADR-0051, SPEC-BC-0001 §15)",
   },
+  ...[
+    ["governance/Governance", "governance"],
+    ["identity/RootCARegistry", "root-ca-registry"],
+    ["schema/SchemaRegistry", "schema-registry"],
+    ["registry/IssuerRegistry", "issuer-registry"],
+    ["registry/RelyingPartyRegistry", "relying-party-registry"],
+    ["recognition/CrossRecognition", "cross-recognition"],
+    ["revocation/StatusListRegistry", "status-list-registry"],
+    ["network/NetworkRegistry", "network-registry"],
+    ["TrustQueries", "trust-queries"],
+  ].map(([src, out]) => {
+    const name = src.split("/").pop();
+    return {
+      artifact: `artifacts/src/${src}.sol/${name}.json`,
+      out: `../apps/chain-indexer/src/abi/${out}.json`,
+      source: `contracts/src/${src}.sol (SPEC-BC-0001; ADR-0073, ADR-0074)`,
+    };
+  }),
 ];
 
 let diff = 0;
@@ -24,8 +44,7 @@ for (const e of EXPORTS) {
   }
   const art = JSON.parse(readFileSync(a, "utf8"));
   const out = {
-    _note:
-      "contracts/scripts/export-abi.mjs üretir — elle düzenlenmez. Kaynak: contracts/src/anchor/TrustListAnchorRegistry.sol (ADR-0051, SPEC-BC-0001 §15).",
+    _note: `contracts/scripts/export-abi.mjs üretir — elle düzenlenmez. Kaynak: ${e.source}.`,
     contractName: art.contractName,
     solidity: "0.8.24",
     evmVersion: "shanghai",

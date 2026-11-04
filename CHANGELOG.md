@@ -8,6 +8,12 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
 
 ### Added
 
+- **trust — two new anchor log line types (ADR-0074 K4).** The loader recognises `registration_status` (every publication of
+  the registration certificate status list, ADR-0068: `list_uri`, `content_hash`, a per-list `list_version`, `published_at`) and
+  `list_view` (every ETSI XML / LoTE view, ADR-0066: `file`, `format`, `source_file`, `source_version`, `content_hash`); the store
+  keeps the latest line per list and per file, a step back stops the load, and a checkpoint `state` may carry both (older
+  loaders ignore the extra fields). An unknown line type still stops the loader, so the publisher writes these lines only once
+  this package version is published (see below). The lines do not enter the verification decision.
 - **onboard — new package `@tamga-network/onboard` (command `tamga-onboard`, version 0.8.1 with the others).** A joining tool
   for an institution's IT team: `init` builds the registration application(s) from the institution's answers and checks them
   with the same rules as the operator's registration tool (ADR-0024; no unknown fields, so no names of people); `validate`
@@ -61,6 +67,30 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
 
 ### Applications and repository (not in the npm packages)
 
+- **chain — reading and transfer side (ADR-0073 K1/K6, ADR-0074 K4/K5, ADR-0075; production chain still off).**
+  - `npm run trust:chain-replay` replays the signed list archive into the contracts: it verifies the archive (signatures,
+    version chain, anchor chain, environment), builds a deterministic plan starting at the first archived version and prints it
+    with its `replayPlanHash` (default and `--dry-run`); when writing it checks that every migration-capable registry has its
+    window open with this digest, writes in time order with the dates from the lists, skips what is already on chain (resumable),
+    uses the state delegate for national records, the single migration executor for network schemas and wallet providers, and a
+    Governance vote for network schema revocation and relying party reassignment / re-registration. It ends with the
+    equivalence test. Writing to a non-local chain needs `TAMGA_CONFIRM_PROD=<plan digest>`; a sandbox set is refused outside the
+    local development chain.
+  - New application `apps/chain-indexer/`: event-based indexer (events find the changed records, the records are read at the same
+    pinned block into a plain-JSON index) and `ChainTrustSource`, the `TrustSource` interface answered from the index with the
+    contract rules (C1/C2/C3/D5). `ethers` stays in the application; the `packages/*` libraries take no chain dependency.
+  - Equivalence test `contracts/test/chain-equivalence.test.ts` (Hardhat, runs in CI; the contracts job now installs the root
+    packages): a multi-version fixture archive (suspension and reinstatement, soft and hard revocation, retired root with
+    successor, schema versions, deprecated and revoked schemas, authorisation windows, recognition on and off, wallet keys,
+    scopes, terminal groups, re-registration after revocation, reassignment between two states) is replayed and the same 493
+    questions go to the list source, the chain source and direct contract reads: no difference in C1/C2/C3/D5; one documented
+    known difference (the same `dns_name` left in two state lists after a reassignment — the list source treats it as ambiguous).
+    Local Besu smoke script `apps/chain-indexer/scripts/besu-smoke.ts`.
+  - `trust:chain-submit` also anchors the new anchor log lines (`tamga:trust-list-view:<env>:<file>`,
+    `tamga:registration-status:<env>:<name>`) and refuses a sandbox set outside the local development chain (ADR-0074 K7);
+    `trust:chain-check` also checks a view file or the registration certificate status list. The trust list publisher writes the
+    new lines only while the chain projection is on (`TAMGA_CHAIN_ENABLED=1`).
+  - `contracts/scripts/export-abi.mjs` also exports the registry ABIs to `apps/chain-indexer/src/abi/` (`contracts:check`).
 - **contracts — ADR-0075 accepted (D-BC-14): relying party identity ownership and re-registration after revocation.** The owning
   state of a relying party identity (`rpId = keccak256(dns_name)`) changes only by a typed Governance proposal (2/3):
   `Governance.proposeRelyingPartyReassignment(registry, stageId)` (identity captured by another state) and

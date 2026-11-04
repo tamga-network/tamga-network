@@ -57,6 +57,7 @@
     "trust:external": "tsx apps/trust-publisher/src/cli.ts external-fetch",
     "trust:chain-submit": "tsx apps/trust-publisher/src/cli.ts chain-submit",
     "trust:chain-check": "tsx apps/trust-publisher/src/cli.ts chain-check",
+    "trust:chain-replay": "tsx apps/trust-publisher/src/cli.ts chain-replay",
     "release:version": "node scripts/set-version.mjs",
     "contracts:install": "npm --prefix contracts ci --no-audit --no-fund",
     "contracts:compile": "npm --prefix contracts run -s compile",

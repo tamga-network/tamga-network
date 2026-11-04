@@ -1,17 +1,21 @@
 /**
  * chain-submit / chain-check komutları (ADR-0051; CH5 bayrak).
  *   chain-submit [--dry-run] [--skip-verify]   dist/ özetlerini zincire yaz (bayrak kapalıysa yalnız --dry-run çalışır)
- *   chain-check <dosya.jws>                     listenin özeti zincirde onaylı mı? (YES / NO / UNKNOWN)
+ *   chain-check <dosya>                         listenin özeti zincirde onaylı mı? (YES / NO / UNKNOWN) — lotl.jws / tl-<cc>.jws;
+ *                                               ADR-0074 K4: görünüm (tl-<cc>.xml, lote/<tür>.jws) ve kayıt sertifikası durum
+ *                                               listesi (status/<ad>) da — sürüm dist/anchors.jsonl'daki satırdan
+ *   chain-replay …                              liste geçmişinin kontratlara yeniden oynatılması (ADR-0073 K1) — replay-cli.ts
  * Ortam: TAMGA_CHAIN_ENABLED (0/1, varsayılan 0) · TAMGA_CHAIN_RPC_URL · TAMGA_CHAIN_ANCHOR_REGISTRY · TAMGA_CHAIN_ANCHORER_KEY
  * (yalnız yazma; .env'de, depoda yer tutucu). Üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz (K4).
  */
-import { readFileSync } from "node:fs";
-import { basename } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { basename, relative, resolve } from "node:path";
 
 import { anchorDist } from "./anchor.js";
 import { EthersChainClient, MemoryChainClient, type ChainClient } from "./client.js";
 import type { Environment } from "./projection.js";
-import { checkListAnchored } from "./verify.js";
+import { chainReplayCommand } from "./replay-cli.js";
+import { checkListAnchored, checkViewAnchored } from "./verify.js";
 
 export const chainEnabled = (env: NodeJS.ProcessEnv = process.env) => env.TAMGA_CHAIN_ENABLED === "1";
 
@@ -62,12 +66,30 @@ export async function chainCommand(
   }
   if (cmd === "chain-check") {
     const path = args.find((a) => !a.startsWith("--"));
-    if (!path) throw new Error("kullanım: chain-check <lotl.jws|tl-xx.jws>");
-    const file = basename(path).replace(/\.jws$/, "");
+    if (!path) throw new Error("kullanım: chain-check <lotl.jws|tl-xx.jws|tl-xx.xml|lote/<tür>.jws|status/<ad>>");
     const client = chainClientFromEnv(env, false);
-    const out = await checkListAnchored(client, ctx.environment, file, readFileSync(path, "utf8"));
+    const name = basename(path);
+    let out;
+    if (/^(lotl|tl-[a-z]{2})\.jws$/.test(name) && !/[\\/]lote[\\/]/.test(path))
+      out = await checkListAnchored(client, ctx.environment, name.replace(/\.jws$/, ""), readFileSync(path, "utf8"));
+    else {
+      // görünüm: yayın kökündeki yol (dist içindeyse göreli yol, değilse olduğu gibi)
+      const abs = resolve(path);
+      const rel = abs.startsWith(resolve(ctx.dist))
+        ? relative(ctx.dist, abs).replace(/\\/g, "/")
+        : path.replace(/\\/g, "/");
+      const log = resolve(ctx.dist, "anchors.jsonl");
+      out = await checkViewAnchored(
+        client,
+        ctx.environment,
+        rel,
+        readFileSync(path, "utf8"), // görünüm baytları olduğu gibi (XML sonundaki satır sonu özete dahil)
+        existsSync(log) ? readFileSync(log, "utf8") : "",
+      );
+    }
     console.log(JSON.stringify(out, null, 2));
     return out.anchored === "NO" ? 3 : 0;
   }
+  if (cmd === "chain-replay") return chainReplayCommand(args, { ...ctx, env });
   throw new Error(`chain: bilinmeyen komut ${cmd}`);
 }

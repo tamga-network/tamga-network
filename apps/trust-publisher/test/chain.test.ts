@@ -16,6 +16,7 @@ import { anchorDist, runProjection } from "../src/chain/anchor.js";
 import { MemoryChainClient, loadAbi } from "../src/chain/client.js";
 import { chainCommand } from "../src/chain/cli.js";
 import {
+  assertEnvironmentAllowed,
   STATUS_LIST_BITS,
   ZERO32,
   jwsHash,
@@ -26,7 +27,10 @@ import {
   statusListRegistrationOf,
   tagToBytes32,
 } from "../src/chain/projection.js";
-import { checkListAnchored } from "../src/chain/verify.js";
+import { checkListAnchored, checkViewAnchored } from "../src/chain/verify.js";
+import { keccak256Hex } from "@tamga-network/trust";
+
+const keccak = (s: string) => keccak256Hex(utf8(s));
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const DIST_TEST = resolve(ROOT, "apps/trust-publisher/dist-test");
@@ -318,5 +322,118 @@ describe("iptal listesi kaydı parametreleri (ADR-0063 SB1)", () => {
   it("Token Status List dışı bits reddedilir", () => {
     for (const b of [0, 3, 16, "2", null]) expect(() => statusListRegistrationOf(token(b))).toThrow(/bits/);
     expect(STATUS_LIST_BITS).toEqual(new Set([1, 2, 4, 8]));
+  });
+});
+
+describe("ADR-0074 K4 — görünüm ve kayıt sertifikası durum listesi çapaları; K7 sandbox", () => {
+  const H = (c: string) => `sha256:${c.repeat(64)}`;
+  const rsLine = (seq: number, v: number, h: string) =>
+    fakeJws({
+      seq,
+      previous_hash: null,
+      ts: "2026-11-04T10:00:00Z",
+      kind: "registration_status",
+      list_uri: "https://trust.tamga.network/status/wrprc/1",
+      content_hash: H(h),
+      list_version: v,
+      published_at: "2026-11-04T09:59:00Z",
+    });
+  const lvLine = (seq: number, v: number, h: string, file = "tl-tr.xml") =>
+    fakeJws({
+      seq,
+      previous_hash: null,
+      ts: "2026-11-04T10:05:00Z",
+      kind: "list_view",
+      file,
+      format: "etsi-tl-xml",
+      source_file: "tl-tr",
+      source_version: v,
+      content_hash: H(h),
+    });
+  const views = [rsLine(0, 1, "a"), lvLine(1, 7, "b"), rsLine(2, 2, "c"), lvLine(3, 8, "d")].join("\n") + "\n";
+
+  it("plan anahtar başına son satırı alır; anahtar ad alanları ayrık; özet satırdaki content_hash", () => {
+    const p = planProjection({ ...set(), anchorsJsonl: views });
+    expect(p.views.map((v) => [v.kind, v.file, v.version])).toEqual([
+      ["registration_status", "status/wrprc/1", 2],
+      ["list_view", "tl-tr.xml", 8],
+    ]);
+    const rs = p.views[0];
+    expect(rs.listKey).toBe(keccak("tamga:registration-status:production:wrprc/1"));
+    expect(p.views[1].listKey).toBe(keccak("tamga:trust-list-view:production:tl-tr.xml"));
+    expect(rs.contentHash).toBe("0x" + "c".repeat(64));
+    expect(rs.previousHash).toBe(ZERO32);
+    expect(rs.issuedAt).toBe(Date.parse("2026-11-04T09:59:00Z") / 1000);
+  });
+
+  it("baştaki kontrol noktasının durumu da çapaya girer (TL12)", () => {
+    const cp = fakeJws({
+      seq: 9,
+      previous_hash: null,
+      ts: "2026-11-04T11:00:00Z",
+      kind: "checkpoint",
+      state: {
+        status_lists: [],
+        schemas: [],
+        list_views: [
+          {
+            file: "lote/wallet-providers.jws",
+            format: "etsi-lote-json",
+            source_file: "lotl",
+            source_version: 4,
+            content_hash: H("e"),
+            seq: 2,
+          },
+        ],
+      },
+    });
+    const p = planProjection({ ...set(), anchorsJsonl: `${cp}\n` });
+    expect(p.views.map((v) => [v.file, v.version])).toEqual([["lote/wallet-providers.jws", 4]]);
+  });
+
+  it("chain-submit görünümleri yazar; ikinci koşuda SKIP; chain-check görünüm dosyasını sürümüyle bulur", async () => {
+    const c = new MemoryChainClient(1);
+    const r = await runProjection(c, planProjection({ ...set(), anchorsJsonl: views }), {
+      dryRun: false,
+      verified: true,
+    });
+    const v = r.decisions.filter((d) => d.kind === "view");
+    expect(v.map((d) => d.decision)).toEqual(["ANCHOR", "ANCHOR"]);
+    const again = await runProjection(c, planProjection({ ...set(), anchorsJsonl: views }), {
+      dryRun: false,
+      verified: true,
+    });
+    expect(again.decisions.filter((d) => d.kind === "view").map((d) => d.decision)).toEqual(["SKIP", "SKIP"]);
+    // dosya baytları satırdaki özetle aynı olmalı: gerçek bir içerikle
+    const xml = "<TrustServiceStatusList/>\n";
+    const real = fakeJws({
+      seq: 0,
+      previous_hash: null,
+      ts: "2026-11-04T10:05:00Z",
+      kind: "list_view",
+      file: "tl-tr.xml",
+      format: "etsi-tl-xml",
+      source_file: "tl-tr",
+      source_version: 9,
+      content_hash: `sha256:${sha256Hex(utf8(xml))}`,
+    });
+    const c2 = new MemoryChainClient(1);
+    await runProjection(c2, planProjection({ ...set(), anchorsJsonl: `${real}\n` }), { dryRun: false, verified: true });
+    const ok = await checkViewAnchored(c2, "production", "tl-tr.xml", xml, `${real}\n`);
+    expect(ok).toMatchObject({ anchored: "YES", version: 9 });
+    const other = await checkViewAnchored(c2, "production", "tl-tr.xml", xml + " ", `${real}\n`);
+    expect(other.anchored).toBe("UNKNOWN");
+  });
+
+  it("K7 (PJ4): sandbox seti yalnız yerel geliştirme zincirine; başka zincirde ret", async () => {
+    const sb = { ...planProjection(set()), environment: "sandbox" as const };
+    await expect(runProjection(new MemoryChainClient(1, 7777), sb, { dryRun: true, verified: true })).rejects.toThrow(
+      /sandbox seti bu zincire yazılmaz/,
+    );
+    for (const id of [0, 31337, 31338])
+      await expect(
+        runProjection(new MemoryChainClient(1, id), sb, { dryRun: true, verified: true }),
+      ).resolves.toBeTruthy();
+    expect(() => assertEnvironmentAllowed("production", 7777)).not.toThrow();
   });
 });

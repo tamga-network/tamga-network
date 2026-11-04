@@ -49,6 +49,10 @@ jobs:
       - name: contracts present?
         id: present
         run: if [ -f contracts/package.json ]; then echo "yes=1" >> "$GITHUB_OUTPUT"; fi
+      # root packages: the chain–list equivalence test (contracts/test/chain-equivalence.test.ts) replays a signed list archive
+      # with apps/chain-indexer and compares TrustSource(list) with TrustSource(chain) (ADR-0073 K6)
+      - if: steps.present.outputs.yes == '1'
+        run: npm ci --no-audit --no-fund
       - if: steps.present.outputs.yes == '1'
         run: npm run contracts:install
       - if: steps.present.outputs.yes == '1'

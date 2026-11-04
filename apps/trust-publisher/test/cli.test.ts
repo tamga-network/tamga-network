@@ -127,6 +127,49 @@ describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", { timeout: 18
     expect(full.report.healthy).toBe(true);
   }, 60_000); // alt süreç zinciri: yük altında 20 sn sınırını aşabilir
 
+  it("ADR-0074 K4: zincir projeksiyonu kapalıyken yeni satır türü yazılmaz; açıkken görünüm ve kayıt sertifikası durum listesi satırları yazılır, kontrol noktası taşır", () => {
+    const kinds = () =>
+      readFileSync(join(DIST, "anchors.jsonl"), "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(Buffer.from(l.split(".")[1], "base64url").toString("utf8")) as Record<string, unknown>);
+    const before = kinds().length;
+    // LoTE görünümü (ETSI TS 119 602) bu testte açılır; XML görünümü gerçek ağ kayıt defterinde yayın verisi ister
+    const lotlSrc = JSON.parse(readFileSync(join(REG, "lotl.source.json"), "utf8"));
+    lotlSrc.lote = { ...lotlSrc.lote, enabled: true };
+    writeFileSync(join(REG, "lotl.source.json"), JSON.stringify(lotlSrc, null, 2));
+    expect(run(["build"]).code).toBe(0);
+    expect(run(["heartbeat"]).code).toBe(0);
+    expect(kinds().filter((k) => k.kind === "list_view" || k.kind === "registration_status")).toHaveLength(0);
+    expect(kinds().length).toBeGreaterThan(before);
+    const b = run(["build"], { TAMGA_CHAIN_ENABLED: "1" });
+    expect(b.code, b.err).toBe(0);
+    const h = run(["heartbeat"], { TAMGA_CHAIN_ENABLED: "1" });
+    expect(h.code, h.err).toBe(0);
+    const lines = kinds();
+    const wp = lines.find((k) => k.kind === "list_view" && k.file === "lote/wallet-providers.jws");
+    expect(wp, JSON.stringify(lines.slice(-4))).toBeTruthy();
+    expect(wp!.format).toBe("etsi-lote-json");
+    expect(wp!.source_file).toBe("lotl");
+    expect(wp!.source_version).toBe(json("lotl.json").version);
+    expect(wp!.content_hash).toBe(sha256Tag(utf8(readFileSync(join(DIST, "lote", "wallet-providers.jws"), "utf8"))));
+    expect(lines.find((k) => k.kind === "list_view" && k.file === "lote/eaa-providers.jws")?.source_file).toBe("tl-tr");
+    const rs = lines.filter((k) => k.kind === "registration_status");
+    if (existsSync(join(DIST, "wrprc-status.json"))) {
+      expect(rs.length).toBeGreaterThan(0);
+      expect(Math.max(...rs.map((r) => r.list_version as number))).toBe(rs.length); // liste başına sayaç 1, 2, …
+    }
+    // arşivleme: kontrol noktası yeni satırların son durumunu taşır; tam zincir sağlıklı
+    expect(run(["archive"]).code).toBe(0);
+    const cp = kinds()[0] as { kind: string; state: { list_views?: Array<{ file: string }> } };
+    expect(cp.kind).toBe("checkpoint");
+    expect(cp.state.list_views?.some((v) => v.file === "lote/wallet-providers.jws")).toBe(true);
+    const full = verify(true);
+    expect(full.code, full.err).toBe(0);
+    lotlSrc.lote.enabled = false;
+    writeFileSync(join(REG, "lotl.source.json"), JSON.stringify(lotlSrc, null, 2));
+  }, 120_000);
+
   it("kurcalanmış liste: imzalı gövdede tek bayt değişirse doğrulama sağlıksız (çıkış 2 ya da hata)", () => {
     const f = join(DIST, "tl-tr.jws");
     const jws = readFileSync(f, "utf8");

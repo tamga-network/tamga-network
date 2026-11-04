@@ -6,6 +6,12 @@
  * Anahtarlar:
  *   listKey = keccak256(utf8("tamga:trust-list:<ortam>:<dosya>"))   ör. production:lotl, production:tl-tr
  *   logKey  = keccak256(utf8("tamga:anchors:<ortam>"))
+ *   ADR-0074 K4 (PJ5) — çapa günlüğünün yeni satırları da liste çapası kaydına `anchorList` ile yazılır:
+ *   kayıt sertifikası durum listesi  keccak256(utf8("tamga:registration-status:<ortam>:<ad>"))  ad = adresin `/status/`'tan sonrası
+ *                                    (ör. `wrprc/1`); sürüm = satırın `list_version`'ı, zaman = `published_at`
+ *   liste görünümü                   keccak256(utf8("tamga:trust-list-view:<ortam>:<dosya>"))  dosya = `tl-tr.xml`,
+ *                                    `lote/<tür>.jws`; sürüm = kaynak listenin sürümü (ADR-0066 K1), zaman = satırın `ts`'i
+ *   İkisinde de önceki özet alanı sıfırdır (görünüm zinciri yok); özet satırdaki `content_hash`.
  * Özetler: contentHash = sha256(<dosya>.jws) (= sonraki sürümün previous_version_hash'i, SPEC-TRUST-0001 §1.3);
  *          lineHash = sha256(satır JWS) (çapa günlüğü zinciri aynı değeri kullanır, §5).
  */
@@ -15,8 +21,10 @@ import { keccak256Hex, sha256Hex, utf8 } from "@tamga-network/trust";
 export type Environment = "production" | "sandbox";
 
 export interface ListVersionAnchor {
-  /** dosya adı: "lotl" ya da "tl-tr" */
+  /** dosya adı: "lotl" ya da "tl-tr"; görünümde yayın yolu (`tl-tr.xml`), durum listesinde `status/<ad>` */
   file: string;
+  /** ADR-0074 K4: liste sürümü (yoksa) ya da çapa günlüğü satırından gelen görünüm / kayıt sertifikası durum listesi */
+  kind?: "list" | "list_view" | "registration_status";
   listKey: string; // 0x… bytes32
   version: number;
   contentHash: string; // 0x… bytes32 — sha256(jws)
@@ -35,6 +43,8 @@ export interface ProjectionPlan {
   environment: Environment;
   lists: ListVersionAnchor[];
   logHead: LogHeadAnchor | null;
+  /** ADR-0074 K4: günlükteki son görünüm ve durum listesi satırları (yoksa boş) */
+  views: ListVersionAnchor[];
 }
 
 export const ZERO32 = "0x" + "0".repeat(64);
@@ -42,6 +52,16 @@ export const ZERO32 = "0x" + "0".repeat(64);
 export const listKeyOf = (environment: Environment, file: string) =>
   keccak256Hex(utf8(`tamga:trust-list:${environment}:${file}`));
 export const logKeyOf = (environment: Environment) => keccak256Hex(utf8(`tamga:anchors:${environment}`));
+/** ADR-0074 K4: `https://…/status/wrprc/1` → `wrprc/1` (adresin `/status/`'tan sonrası; ADR-0068 yol kuralı). */
+export function registrationStatusName(listUri: string): string {
+  const m = /^\/status\/([a-z0-9][a-z0-9/-]*)$/.exec(new URL(listUri).pathname);
+  if (!m) throw new Error(`chain: kayıt sertifikası durum listesi adresi beklenmiyor: ${listUri}`);
+  return m[1];
+}
+export const registrationStatusKeyOf = (environment: Environment, name: string) =>
+  keccak256Hex(utf8(`tamga:registration-status:${environment}:${name}`));
+export const listViewKeyOf = (environment: Environment, file: string) =>
+  keccak256Hex(utf8(`tamga:trust-list-view:${environment}:${file}`));
 
 /** "sha256:<hex>" → "0x<hex>"; null/boş → sıfır. Başka önek hata (sessizce yanlış özet çapalanmasın). */
 export function tagToBytes32(tag: string | null | undefined): string {
@@ -100,14 +120,82 @@ export interface PlanInput {
   anchorsJsonl: string;
 }
 
-/** Bütün set için plan: lotl + ulusal listeler + günlük başı. Deterministik; aynı girdi aynı plan. */
+/**
+ * ADR-0074 K4: çapa günlüğünün güncel diliminden (baştaki kontrol noktasının durumu dahil) görünüm ve kayıt sertifikası durum
+ * listesi başına SON satır → zincir çapası. Satır imzası burada doğrulanmaz (set önce `loadTrustSet` ile doğrulanır).
+ */
+export function viewAnchorsOf(environment: Environment, anchorsJsonl: string): ListVersionAnchor[] {
+  const out = new Map<string, ListVersionAnchor>();
+  for (const a of allViewAnchorsOf(environment, anchorsJsonl)) {
+    const cur = out.get(a.listKey);
+    if (!cur || a.version > cur.version) out.set(a.listKey, a);
+  }
+  return [...out.values()].sort((a, b) => a.file.localeCompare(b.file));
+}
+
+/** Günlük dilimindeki BÜTÜN görünüm ve durum listesi satırları (çapa denetimi eski bir sürümü de arayabilir; `chain-check`). */
+export function allViewAnchorsOf(environment: Environment, anchorsJsonl: string): ListVersionAnchor[] {
+  const out: ListVersionAnchor[] = [];
+  const lines = anchorsJsonl.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  type Row = Record<string, unknown>;
+  const put = (a: ListVersionAnchor) => out.push(a);
+  const rs = (r: Row, ts: unknown): ListVersionAnchor => {
+    const name = registrationStatusName(String(r.list_uri));
+    return {
+      kind: "registration_status",
+      file: `status/${name}`,
+      listKey: registrationStatusKeyOf(environment, name),
+      version: Number(r.list_version),
+      contentHash: tagToBytes32(String(r.content_hash)),
+      previousHash: ZERO32,
+      issuedAt: epoch(r.published_at ?? ts, "registration_status published_at"),
+    };
+  };
+  const lv = (r: Row, ts: unknown): ListVersionAnchor => ({
+    kind: "list_view",
+    file: String(r.file),
+    listKey: listViewKeyOf(environment, String(r.file)),
+    version: Number(r.source_version),
+    contentHash: tagToBytes32(String(r.content_hash)),
+    previousHash: ZERO32,
+    issuedAt: epoch(ts, "list_view ts"),
+  });
+  for (const line of lines) {
+    const p = jwsPayload<Row & { kind?: string; ts?: unknown; state?: Row }>(line);
+    if (p.kind === "checkpoint" && p.state) {
+      for (const r of (p.state.registration_status as Row[] | undefined) ?? []) put(rs(r, p.ts));
+      for (const r of (p.state.list_views as Row[] | undefined) ?? []) put(lv(r, p.ts));
+    } else if (p.kind === "registration_status") put(rs(p, p.ts));
+    else if (p.kind === "list_view") put(lv(p, p.ts));
+  }
+  return out;
+}
+
+/** Bütün set için plan: lotl + ulusal listeler + günlük başı + görünümler. Deterministik; aynı girdi aynı plan. */
 export function planProjection(input: PlanInput): ProjectionPlan {
   const lists = [listAnchorOf(input.environment, "lotl", input.lotlJws)];
   for (const file of Object.keys(input.nationalListJws).sort()) {
     if (!/^tl-[a-z]{2}$/.test(file)) throw new Error(`chain: ulusal liste dosya adı beklenmiyor: ${file}`);
     lists.push(listAnchorOf(input.environment, file, input.nationalListJws[file]));
   }
-  return { environment: input.environment, lists, logHead: logHeadOf(input.environment, input.anchorsJsonl) };
+  return {
+    environment: input.environment,
+    lists,
+    logHead: logHeadOf(input.environment, input.anchorsJsonl),
+    views: viewAnchorsOf(input.environment, input.anchorsJsonl),
+  };
+}
+
+/**
+ * ADR-0074 K7 (PJ4): sandbox listeleri yalnız yerel geliştirme zincirine yazılır (Hardhat 31337, yerel Besu 31338; bellek içi
+ * istemci 0). Gerçek ağa ya da bilinmeyen zincire sandbox seti çapalanmaz ve yeniden oynatılmaz.
+ */
+export const LOCAL_DEV_CHAIN_IDS: ReadonlySet<number> = new Set([0, 31337, 31338]);
+export function assertEnvironmentAllowed(environment: Environment, chainId: number): void {
+  if (environment === "sandbox" && !LOCAL_DEV_CHAIN_IDS.has(chainId))
+    throw new Error(
+      `chain: sandbox seti bu zincire yazılmaz (chainId ${chainId}; ADR-0074 K7/PJ4 — yalnız yerel geliştirme zinciri)`,
+    );
 }
 
 /**

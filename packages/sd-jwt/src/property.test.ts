@@ -25,7 +25,14 @@ const decodeJson = (d: string) => JSON.parse(Buffer.from(d, "base64url").toStrin
 const jsonNorm = (v: unknown) => JSON.parse(JSON.stringify(v));
 const FORBIDDEN = new Set(["_sd", "_sd_alg", "...", "__proto__", "constructor", "prototype"]);
 const claimName = fc.string({ minLength: 1, maxLength: 12 }).filter((s) => !FORBIDDEN.has(s));
-const jsonValue = fc.jsonValue({ maxDepth: 3 });
+/** İç içe nesnelerde de yasaklı ad yok: fast-check `__proto__` gibi adları bilerek üretir; bunlar yükte zaten reddedilir (SPEC-CRED-0002 Ş5(g)) — ret ayrı testte. */
+const hasForbiddenKey = (v: unknown): boolean =>
+  Array.isArray(v)
+    ? v.some(hasForbiddenKey)
+    : v !== null && typeof v === "object"
+      ? Object.keys(v).some((k) => FORBIDDEN.has(k) || hasForbiddenKey((v as Record<string, unknown>)[k]))
+      : false;
+const jsonValue = fc.jsonValue({ maxDepth: 3 }).filter((v) => !hasForbiddenKey(v));
 
 describe("K11 SD-JWT disclosure — özellikler", () => {
   it("üret → çöz: ad ve değer aynen döner; özet = SHA-256(dize)", () => {

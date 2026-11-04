@@ -71,6 +71,23 @@ export interface StatusAnchorRow {
   published_at: string;
   seq: number;
 }
+/** ADR-0074 K4: kayıt sertifikası durum listesinin son çapası. */
+export interface RegistrationStatusAnchorRow {
+  list_uri: string;
+  content_hash: string;
+  list_version: number;
+  published_at: string;
+  seq: number;
+}
+/** ADR-0074 K4: liste görünümünün (ETSI XML / LoTE) son çapası. */
+export interface ListViewAnchorRow {
+  file: string;
+  format: "etsi-tl-xml" | "etsi-lote-json";
+  source_file: string;
+  source_version: number;
+  content_hash: string;
+  seq: number;
+}
 export interface Freshness {
   source: "list" | "chain";
   healthy: boolean;
@@ -92,6 +109,10 @@ export class TrustStore {
   schemas = new Map<string, SchemaEntry>(); // schema_id → entry (NETWORK + NATIONAL)
   status_anchors = new Map<string, StatusAnchorRow>(); // list_id → latest
   schema_anchors = new Map<string, { content_hash: string; seq: number }>(); // schema_id → latest
+  /** ADR-0074 K4: list_uri → son kayıt sertifikası durum listesi satırı (doğrulama kararına girmez; denetim ve zincir için) */
+  registration_status_anchors = new Map<string, RegistrationStatusAnchorRow>();
+  /** ADR-0074 K4: dosya → son liste görünümü satırı (görünüm kaynakla çelişirse kaynak geçerlidir, PJ5) */
+  list_view_anchors = new Map<string, ListViewAnchorRow>();
   relying_parties = new Map<string, RelyingParty>(); // client_id → rp
   relying_parties_by_dns = new Map<string, RelyingParty>(); // dns_name → rp (ADR-0034: kalıcı kimlik)
   /** dns_name → kaydın göründüğü ülke listeleri (birden çoksa kimlik belirsiz; 2026-11-04) */
@@ -208,6 +229,24 @@ export class TrustStore {
       });
     } else if (a.kind === "schema") {
       this.schema_anchors.set(a.schema_id, { content_hash: a.content_hash, seq: a.seq });
+    } else if (a.kind === "registration_status") {
+      // ADR-0074 K4: liste başına monoton sayaç (zincirdeki çapa sürümü de yalnız artar, CH4)
+      const prev = this.registration_status_anchors.get(a.list_uri);
+      if (prev && a.list_version <= prev.list_version)
+        throw new Error(
+          `ADR-0074: registration_status list_version not monotonic (${a.list_uri}: ${prev.list_version} → ${a.list_version})`,
+        );
+      const { seq, list_uri, content_hash, list_version, published_at } = a;
+      this.registration_status_anchors.set(list_uri, { list_uri, content_hash, list_version, published_at, seq });
+    } else if (a.kind === "list_view") {
+      // Görünümün sürümü kaynak listenin sürümüdür (ADR-0066 K1); aynı dosya için yalnız artar
+      const prev = this.list_view_anchors.get(a.file);
+      if (prev && a.source_version <= prev.source_version)
+        throw new Error(
+          `ADR-0074: list_view source_version not monotonic (${a.file}: ${prev.source_version} → ${a.source_version})`,
+        );
+      const { seq, file, format, source_file, source_version, content_hash } = a;
+      this.list_view_anchors.set(file, { file, format, source_file, source_version, content_hash, seq });
     }
   }
   /** TL12: baştaki kontrol noktasının anlık durumunu uygular (arşiv okunmadan). */
@@ -222,6 +261,8 @@ export class TrustStore {
       seq: number;
     }>;
     schemas: Array<{ schema_id: string; content_hash: string; seq: number }>;
+    registration_status?: RegistrationStatusAnchorRow[];
+    list_views?: ListViewAnchorRow[];
   }) {
     for (const r of state.status_lists)
       this.status_anchors.set(r.list_id, {
@@ -234,6 +275,8 @@ export class TrustStore {
         seq: r.seq,
       });
     for (const r of state.schemas) this.schema_anchors.set(r.schema_id, { content_hash: r.content_hash, seq: r.seq });
+    for (const r of state.registration_status ?? []) this.registration_status_anchors.set(r.list_uri, { ...r });
+    for (const r of state.list_views ?? []) this.list_view_anchors.set(r.file, { ...r });
   }
   setFreshness(f: Freshness) {
     this.freshness = f;
@@ -252,6 +295,8 @@ export class TrustStore {
       relying_parties: this.relying_parties.size,
       status_anchors: this.status_anchors.size,
       schema_anchors: this.schema_anchors.size,
+      registration_status_anchors: this.registration_status_anchors.size,
+      list_view_anchors: this.list_view_anchors.size,
       wallet_provider_keys: this.wallet_provider_keys.size,
       external_lists: [...this.external_lists.values()].map((x) => `${x.pointer.list_id}#${x.sequence}`),
       freshness: this.freshness,

@@ -31,6 +31,8 @@
  *                                                 adsızlaşır (bitler aynı); güncel listeler ve çapa günlüğü değişmez — history-reset.ts
  *   chain-submit [--dry-run] · chain-check <jws>  zincir projeksiyonu (ADR-0051): liste sürümü + çapa günlüğü başı ÖZETLERİ
  *                                                 zincire; bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok — src/chain/
+ *   chain-replay [--dry-run] [--archive <dist>]   (ADR-0073 K1) liste arşivinin kontratlara yeniden oynatılması: plan +
+ *                                                 replayPlanHash, kaldığı yerden yazım, eşdeğerlik testi — src/chain/replay-cli.ts
  * Kurallar: version monoton, previous_version_hash = önceki .jws'in sha256'sı; dist/ değişmez arşivi.
  */
 import {
@@ -82,6 +84,7 @@ import {
   xmlSignerSlotProblems,
 } from "./tl119612.js";
 import { chainCommand } from "./chain/cli.js";
+import { listViewBody, registrationStatusBody, viewLinesEnabled, viewSnapshotOf } from "./view-anchors.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
 import { checkTerminalGroups } from "./terminal-groups.js";
 import { checkProvisionalOperator, type ProvisionalOperator } from "./provisional-operator.js";
@@ -364,6 +367,17 @@ async function writeLotes(
     writeAtomic(resolve(DIST, "lote", `${l.kind}.jws`), jws);
     writeAtomic(resolve(DIST, "lote", `${l.kind}.json`), JSON.stringify(obj, null, 2) + "\n");
     writeFileSync(resolve(ARCHIVE, `lote-${l.kind}.v${String(l.sequence).padStart(4, "0")}.jws`), jws);
+    // ADR-0074 K4: görünüm satırı; sürüm = kaynak listenin sürümü (cüzdan sağlayıcılar LOTL'dan, ötekiler ülke listesinden)
+    if (viewLinesEnabled())
+      await appendAnchor(
+        listViewBody({
+          file: `lote/${l.kind}.jws`,
+          format: "etsi-lote-json",
+          sourceFile: l.kind === "wallet-providers" ? "lotl" : `tl-${cc.toLowerCase()}`,
+          sourceVersion: l.sequence,
+          bytes: utf8(jws),
+        }),
+      );
   }
 }
 
@@ -373,7 +387,7 @@ async function writeLotes(
  * sertifika adı; varsayılan liste imzacısı). Gerçek ağda §5.7.1 imzacı profili ya da eksik yayın verisi yayını durdurur;
  * sandbox ve testte uyarıdır.
  */
-function writeTl119612(
+async function writeTl119612(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tl: any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -442,6 +456,17 @@ function writeTl119612(
   // §6.1: aynı yerde, ikili dosyanın SHA-256 özeti (.xml → .sha2); kimlik doğrulamaz, yalnız değişikliği gösterir
   writeAtomic(resolve(DIST, `${file}.sha2`), createHash("sha256").update(xml, "utf8").digest("hex") + "\n");
   writeFileSync(resolve(ARCHIVE, `${file}.v${String(tl.version).padStart(4, "0")}.xml`), xml);
+  // ADR-0074 K4: görünüm satırı (özet = .sha2)
+  if (viewLinesEnabled())
+    await appendAnchor(
+      listViewBody({
+        file: `${file}.xml`,
+        format: "etsi-tl-xml",
+        sourceFile: file,
+        sourceVersion: tl.version,
+        bytes: utf8(xml),
+      }),
+    );
   mkdirSync(resolve(DIST, "keys"), { recursive: true });
   writeFileSync(resolve(DIST, "keys", `${signerName}.cert.pem`), signerCert.pem);
   changelog(`build: ${file}.xml (ETSI TS 119 612, TSLSequenceNumber ${tl.version})`);
@@ -530,6 +555,8 @@ async function publishWrprcStatus(
     const file = resolve(DIST, new URL(st.list_uri).pathname.slice(1));
     mkdirSync(dirname(file), { recursive: true });
     writeAtomic(file, token);
+    // ADR-0074 K4: çapa günlüğüne satır (yalnız zincir projeksiyonu açıkken — view-anchors.ts)
+    if (viewLinesEnabled()) await appendAnchor((ps) => registrationStatusBody(ps, st.list_uri, token, now));
   }
   const json = JSON.stringify(state, null, 2) + "\n";
   const f = WRPRC_STATE_FILE();
@@ -1129,7 +1156,7 @@ async function build() {
   if (lotlSrc.lote?.enabled) await writeLotes(lotlSrc, tlSrc, cc, lotl.version, tl.version, now, s.certDer);
 
   // ---- ETSI TS 119 612 XML görünümü (ADR-0066, Accepted 2026-10-29) — varsayılan KAPALI: yalnız TAMGA_TL119612=1
-  if (tl119612Enabled()) writeTl119612(tl, lotl, tlSrc, lotlSrc, sourceIssuers, cc, now);
+  if (tl119612Enabled()) await writeTl119612(tl, lotl, tlSrc, lotlSrc, sourceIssuers, cc, now);
 
   // Şema çapaları: her yayımlanmış sürüm özeti bir kez (D8 kayıt anı; ADR-0010 K4 yeni küçük sürüm = yeni çapa)
   {
@@ -1207,10 +1234,15 @@ const anchorLines = (file: string) =>
     : [];
 const payloadOf = (line: string) => JSON.parse(Buffer.from(line.split(".")[1], "base64url").toString("utf8")) as Anchor;
 
-async function appendAnchor(body: AnchorBody) {
+/**
+ * Çapa satırı ekler. Gövde bir fonksiyonsa kilit altında, günlüğün güncel dilimindeki yüklerle hesaplanır (ADR-0074 K4: liste
+ * başına sayaç önceki satırdan türetilir; iki süreç aynı sayacı yazamaz).
+ */
+async function appendAnchor(body: AnchorBody | ((payloads: Anchor[]) => AnchorBody)) {
   return withAnchorLock(async () => {
     const file = ANCHORS_FILE();
     const lines = anchorLines(file);
+    if (typeof body === "function") body = body(lines.map(payloadOf));
     const last = lines.at(-1);
     // seq = son satırın seq'i + 1 (satır sayısı DEĞİL: kontrol noktasından sonra satır sayısı seq'i vermez)
     const seq = last ? payloadOf(last).seq + 1 : 0;
@@ -1292,6 +1324,8 @@ function snapshotOf(lines: string[]) {
   const status = new Map<string, Record<string, unknown>>();
   const schemas = new Map<string, Record<string, unknown>>();
   let src = lines;
+  // ADR-0074 K4: yeni satır türlerinin son durumu (baştaki durumlu kontrol noktası dahil)
+  let viewSrc = lines;
   const head = lines[0] ? payloadOf(lines[0]) : null;
   if (head?.kind === "checkpoint") {
     if (head.state) {
@@ -1299,10 +1333,11 @@ function snapshotOf(lines: string[]) {
       for (const r of head.state.schemas) schemas.set(r.schema_id, r);
       src = lines.slice(1);
     } else
-      src = fullAnchorsJsonl()
+      viewSrc = src = fullAnchorsJsonl()
         .jsonl.split(/\r?\n/)
         .filter((l) => l.trim()); // eski biçim: tam zincirden kur
   }
+  const views = viewSnapshotOf(viewSrc.map(payloadOf));
   for (const l of src) {
     const a = payloadOf(l);
     if (a.kind === "status_list") {
@@ -1331,6 +1366,9 @@ function snapshotOf(lines: string[]) {
       seq: number;
     }>,
     schemas: [...schemas.values()] as Array<{ schema_id: string; content_hash: string; seq: number }>,
+    // eski yükleyiciler (0.8.1 ve öncesi) bilinmeyen durum alanlarını yok sayar; boşsa alan yazılmaz
+    ...(views.registration_status.length ? { registration_status: views.registration_status } : {}),
+    ...(views.list_views.length ? { list_views: views.list_views } : {}),
   };
 }
 
@@ -1887,12 +1925,12 @@ const cmd = process.argv[2];
     console.log(cp ? JSON.stringify(cp) : "anchors: arşivlenecek satır yok");
   } else if (["register", "scope", "authorize", "list", "status", "rp-status", "end-use"].includes(cmd ?? "")) {
     await registryCommand(cmd!, process.argv.slice(3));
-  } else if (cmd === "chain-submit" || cmd === "chain-check") {
+  } else if (cmd === "chain-submit" || cmd === "chain-check" || cmd === "chain-replay") {
     // ADR-0051: zincir projeksiyonu — bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok (CH5)
     process.exitCode = await chainCommand(cmd, process.argv.slice(3), { dist: DIST, environment: ENVIRONMENT });
   } else {
     console.error(
-      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | history-reset --reason <gerekçe> | chain-submit [--dry-run] | chain-check <dosya.jws>",
+      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | history-reset --reason <gerekçe> | chain-submit [--dry-run] | chain-check <dosya> | chain-replay [--dry-run] [--archive <dist>]",
     );
     process.exit(1);
   }

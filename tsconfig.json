@@ -39,6 +39,7 @@
     "packages/**/*.ts",
     "apps/_shared/**/*.ts",
     "apps/trust-publisher/**/*.ts",
+    "apps/chain-indexer/**/*.ts",
     "apps/verify/**/*.ts",
     "ops/**/*.ts",
     "conformance/**/*.ts",
