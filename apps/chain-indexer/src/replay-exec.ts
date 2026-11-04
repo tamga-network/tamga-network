@@ -429,6 +429,45 @@ async function apply(c: TrustContracts, o: ReplayOp, s: ReplaySigners): Promise<
   }
 }
 
+/** Hata nesnesindeki geri alma verisi (ethers sarmalarının farklı katmanları). */
+function revertData(e: unknown): string | undefined {
+  const x = e as { data?: unknown; error?: { data?: unknown }; info?: { error?: { data?: unknown } } };
+  for (const d of [x?.data, x?.error?.data, x?.info?.error?.data])
+    if (typeof d === "string" && /^0x[0-9a-f]*$/i.test(d)) return d;
+  return undefined;
+}
+
+/**
+ * Başarısız işlemin nedeni (teşhis için): özel hata kontrat ABI'lerinden çözülür; veri boşsa işlem gaz sınırı olmadan
+ * yeniden denenir (eth_call) — o hâlde geçiyorsa neden gaz sınırıdır, değilse veri taşımayan geri almadır.
+ */
+async function explainFailure(c: TrustContracts, e: unknown): Promise<string> {
+  const data = revertData(e);
+  if (data && data.length >= 10) {
+    for (const k of Object.values(c)) {
+      try {
+        const p = k.interface.parseError(data);
+        if (p) return ` [${p.name}(${p.args.map((a) => String(a)).join(", ")})]`;
+      } catch {
+        /* başka kontratın hatası */
+      }
+    }
+    return ` [bilinmeyen hata ${data.slice(0, 10)}]`;
+  }
+  const tx = (e as { payload?: { params?: unknown[] } })?.payload?.params?.[0] as Record<string, unknown> | undefined;
+  const runner = Object.values(c)[0]?.runner;
+  if (!tx || !runner?.provider) return " [geri alma verisi yok]";
+  try {
+    await runner.provider.call({ from: String(tx.from), to: String(tx.to), data: String(tx.data) });
+    return ` [geri alma verisi yok; gaz sınırı olmadan geçiyor → gaz sınırı ${Number(tx.gas)} yetmedi]`;
+  } catch (e2) {
+    const d2 = revertData(e2);
+    return d2 && d2.length >= 10
+      ? await explainFailure(c, e2)
+      : " [geri alma verisi yok; gaz sınırı olmadan da geri alınıyor]";
+  }
+}
+
 /**
  * Planı yürütür. Pencere ve plan özeti denetlenir (CE1); zincirde olan işlem atlanır. `onProgress` her işlemden sonra çağrılır.
  */
@@ -457,7 +496,8 @@ export async function executeReplay(
     try {
       ok = await apply(c, o, s);
     } catch (e) {
-      throw new Error(`replay: işlem #${o.seq} ${o.op} (${o.src}) başarısız — ${(e as Error).message}`);
+      const why = await explainFailure(c, e);
+      throw new Error(`replay: işlem #${o.seq} ${o.op} (${o.src}) başarısız${why} — ${(e as Error).message}`);
     }
     if (!ok)
       return {

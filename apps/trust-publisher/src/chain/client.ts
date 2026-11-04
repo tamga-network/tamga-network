@@ -155,7 +155,8 @@ export class EthersChainClient implements ChainClient {
   constructor(readonly opts: EthersClientOptions) {
     if (!/^https?:\/\//.test(opts.rpcUrl)) throw new Error("chain: TAMGA_CHAIN_RPC_URL http(s) olmalı");
     if (!/^0x[0-9a-fA-F]{40}$/.test(opts.registry)) throw new Error("chain: TAMGA_CHAIN_ANCHOR_REGISTRY adres değil");
-    this.provider = new JsonRpcProvider(opts.rpcUrl);
+    // istek önbelleği kapalı: yazımdan hemen sonraki okuma (son sürüm, çapa var mı) bayat gelmesin (ethers v6 250 ms paylaşır)
+    this.provider = new JsonRpcProvider(opts.rpcUrl, undefined, { cacheTimeout: -1 });
     const abi = loadAbi();
     this.reader = new Contract(opts.registry, abi, this.provider);
     // NonceManager: ardışık yazımlarda (liste + liste + günlük başı) nonce yerelde sayılır; aksi hâlde anında madencilik yapan

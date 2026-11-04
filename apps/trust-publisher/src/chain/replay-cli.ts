@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 import { JsonRpcProvider } from "ethers";
 
 import { ChainTrustSource } from "../../../chain-indexer/src/chain-trust-source.js";
-import { addressesFrom, connectTrustContracts } from "../../../chain-indexer/src/contracts.js";
+import { UNCACHED_PROVIDER, addressesFrom, connectTrustContracts } from "../../../chain-indexer/src/contracts.js";
 import { compareSources } from "../../../chain-indexer/src/equivalence.js";
 import { ChainIndexer } from "../../../chain-indexer/src/indexer.js";
 import { LOCAL_CHAIN_IDS, localDevSigners, type DevDeployment } from "../../../chain-indexer/src/local-dev.js";
@@ -62,7 +62,7 @@ export async function chainReplayCommand(
   }
   const rpc = ctx.env.TAMGA_CHAIN_RPC_URL;
   if (!rpc || !/^https?:\/\//.test(rpc)) throw new Error("chain-replay: TAMGA_CHAIN_RPC_URL gerekir (http/https)");
-  const provider = new JsonRpcProvider(rpc);
+  const provider = new JsonRpcProvider(rpc, undefined, UNCACHED_PROVIDER);
   const chainId = Number((await provider.getNetwork()).chainId);
   assertEnvironmentAllowed(ctx.environment, chainId); // PJ4
   if (!LOCAL_CHAIN_IDS.has(chainId)) {

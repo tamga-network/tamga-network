@@ -91,6 +91,11 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
     `trust:chain-check` also checks a view file or the registration certificate status list. The trust list publisher writes the
     new lines only while the chain projection is on (`TAMGA_CHAIN_ENABLED=1`).
   - `contracts/scripts/export-abi.mjs` also exports the registry ABIs to `apps/chain-indexer/src/abi/` (`contracts:check`).
+  - Fix: every chain provider of the replay, the equivalence test and `trust:chain-submit` turns off the ethers request cache
+    (`cacheTimeout: -1`). ethers v6 shares identical requests for 250 ms; on a fast machine the gas estimate of a registration
+    data write was taken from an earlier write with the same call data (period 0, before a re-registration), and the
+    transaction ran out of gas inside the proxy (CI failure, no revert data). A failed replay write now names the decoded custom
+    error, or says that the gas limit was too low.
 - **contracts — ADR-0075 accepted (D-BC-14): relying party identity ownership and re-registration after revocation.** The owning
   state of a relying party identity (`rpId = keccak256(dns_name)`) changes only by a typed Governance proposal (2/3):
   `Governance.proposeRelyingPartyReassignment(registry, stageId)` (identity captured by another state) and

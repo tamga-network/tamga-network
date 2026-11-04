@@ -47,6 +47,9 @@ describe("ADR-0073 K6 — zincir–liste eşdeğerliği (yeniden oynatma + indek
 
     // uygulamaların ethers'ı ile aynı sağlayıcı (süreç içi zincirin EIP-1193 arayüzü)
     const provider = providerFromEip1193(conn.provider as any);
+    // ethers'ın 250 ms istek önbelleği kapalı olmalı: aynı çağrı verisiyle art arda yazımda (dönem 0 ve yeniden kayıttan sonra
+    // dönem 1 kayıt verisi) bayat gaz tahmini hızlı makinede işlemi gazsız bırakıyordu (CI 2026-11-04, işlem #62)
+    expect(provider._getOption("cacheTimeout")).to.equal(-1);
     const c = connectTrustContracts(addressesFrom({ contracts: d.addresses }), provider);
     const signer = (a: { getAddress(): Promise<string> }) => a.getAddress().then((x) => provider.getSigner(x));
     const s = {

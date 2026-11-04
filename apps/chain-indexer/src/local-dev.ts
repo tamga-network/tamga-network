@@ -5,6 +5,7 @@
  */
 import { BrowserProvider, HDNodeWallet, type Eip1193Provider, type Provider, type Signer } from "ethers";
 
+import { UNCACHED_PROVIDER } from "./contracts.js";
 import type { ReplaySigners } from "./replay-exec.js";
 
 /** Yerel geliştirme zincirleri (bellek içi istemci 0 dahil değil: burada gerçek zincir). */
@@ -12,7 +13,8 @@ export const LOCAL_CHAIN_IDS: ReadonlySet<number> = new Set([31337, 31338]);
 /** Hardhat'in herkese açık test anımsatıcısı (genesis'te bakiyeli; gerçek anahtar DEĞİL). */
 export const DEV_MNEMONIC = "test test test test test test test test test test test junk";
 
-export const providerFromEip1193 = (p: Eip1193Provider) => new BrowserProvider(p);
+/** Süreç içi zincirin EIP-1193 arayüzünden ethers sağlayıcısı (istek önbelleği kapalı — `UNCACHED_PROVIDER`). */
+export const providerFromEip1193 = (p: Eip1193Provider) => new BrowserProvider(p, undefined, UNCACHED_PROVIDER);
 
 /**
  * Test hesapları. NonceManager yok: yürütücü her işlemin makbuzunu bekler, sıra numarası her gönderimde düğümden okunur (önbellekli

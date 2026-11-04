@@ -40,6 +40,15 @@ export const MIGRATING_REGISTRIES: RegistryName[] = [
 
 export type TrustContracts = Record<RegistryName, Contract>;
 
+/**
+ * Sağlayıcı seçenekleri: ethers'ın istek önbelleği KAPALI. ethers v6 aynı istekleri (yöntem + parametre) 250 ms boyunca tek
+ * cevapla paylaşır; durum değiştiren yürütücüde bu bayat okuma ve bayat gaz tahmini demektir. Örnek (CI, 2026-11-04): aynı
+ * doğrulayıcıya aynı kayıt verisi dönem 0'da ve yeniden kayıttan sonra dönem 1'de yazılır — çağrı verisi birebir aynı; hızlı
+ * makinede ikinci yazımın gaz tahmini birincinin önbellekteki değeri (dönem anahtarı özeti hesaplanmadan) çıktı ve işlem
+ * proxy içinde gazı bitip veri taşımadan geri alındı. Zincire yazan ya da yazımdan sonra okuyan her sağlayıcı bununla kurulur.
+ */
+export const UNCACHED_PROVIDER = { cacheTimeout: -1 } as const;
+
 /** Dağıtım dosyasının `contracts` bölümünden adresler (eksik ad → hata). */
 export function addressesFrom(deployment: { contracts: Record<string, string> }): TrustAddresses {
   const out = {} as TrustAddresses;
