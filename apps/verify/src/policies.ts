@@ -306,10 +306,14 @@ POLICIES.push(
       "en-US": "App review (DEMO credential): over-18 check — yes/no only",
       "tr-TR": "Uygulama incelemesi (DEMO belge): 18 yaş üstü — yalnızca evet/hayır",
     },
+    // mdoc (2026-11-04): doğrulayıcının kayıtlı 18 yaş kullanımı (`age-over-18-1`) yalnız `mso_mdoc` (0.7.4'ten beri kullanım biçimle
+    // eşleşir); SD-JWT istek kayıt sertifikasız gidiyordu ve cüzdan reddediyordu. İnceleme belgesi de kopya başına mdoc alır (D-CRED-5).
     credentials: [
       {
         id: "identity",
         vct_values: ["urn:tamga:id:IdentityAttestation:1"],
+        format: "mso_mdoc",
+        namespace: "tamga.id.1",
         required_claims: ["age_over_18"],
         constraints: { age_over_18: true },
       },

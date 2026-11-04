@@ -1,12 +1,15 @@
 /**
  * ADR-0033 RV2: mağaza incelemesi DEMO imzacısının (`tamga-id-review`, güven listesinde I1) belgesi gerçek politikalarda (I2)
- * E1'de REDDEDİLİR; yalnız I1 kabul eden inceleme politikasında geçer. Güven listesi kaydı, kimlik servisinin kaydından
+ * E1'de REDDEDİLİR; yalnız I1 kabul eden inceleme politikasında geçer. Sunum mdoc'tur (2026-11-04): inceleme politikası
+ * `review-age-over-18`, doğrulayıcının kayıtlı 18 yaş kullanımı (`age-over-18-1`, yalnız `mso_mdoc`) ile aynı biçimde sorar. Güven listesi kaydı, kimlik servisinin kaydından
  * türetilip I1 yapılarak teste eklenir (kayıt listeye kurumun kimlik numarası girilince eklenecek — ADR-0024).
  */
 import { describe, it, expect, beforeAll } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { issueSdJwtVc, pemIssuerSigner } from "@tamga-network/sd-jwt";
+import { createPrivateKey, randomBytes } from "node:crypto";
+import { pemIssuerSigner } from "@tamga-network/sd-jwt";
+import { issueMdoc, toPidMdocElements } from "@tamga-network/mdoc";
 import { signStatusListToken, StatusBitstring, MIN_CAPACITY } from "@tamga-network/sd-jwt";
 import {
   certFingerprintSha256Hex,
@@ -15,7 +18,7 @@ import {
   pemToDer,
   type ListTrustSource,
 } from "@tamga-network/trust";
-import { SoftwareKeyProvider, MemoryKeyStore, presentSdJwt } from "@tamga-network/wallet-core";
+import { SoftwareKeyProvider, MemoryKeyStore, jwkToPoint, presentMdoc } from "@tamga-network/wallet-core";
 import { verifyPresentation, MemoryStatusCache, type Policy } from "./index.js";
 import { epochSeconds } from "@tamga-network/core";
 
@@ -30,12 +33,21 @@ const ISS = "https://id.tamga.network";
 const VCT = "urn:tamga:id:IdentityAttestation:1";
 const STATUS_URI = "https://id.tamga.network/status/0123456789abcdef";
 const AUD = "x509_hash:test-review";
+const RESPONSE_URI = "https://verify.test/response";
+const NS = "tamga.id.1";
 
 const policyWith = (min: "I1" | "I2"): Policy => ({
   policy_id: `age-${min}`,
   purpose: { "en-US": "test" },
   credentials: [
-    { id: "identity", vct_values: [VCT], required_claims: ["age_over_18"], constraints: { age_over_18: true } },
+    {
+      id: "identity",
+      vct_values: [VCT],
+      format: "mso_mdoc",
+      namespace: NS,
+      required_claims: ["age_over_18"],
+      constraints: { age_over_18: true },
+    },
   ],
   trust: { min_issuer_assurance: min, allowed_categories: ["IDENTITY"], require_recognition: true, state_code: "TR" },
   freshness: { max_status_token_age_sec: 6 * 3600, max_trust_age_sec: 86400 },
@@ -71,48 +83,45 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
   });
 
   async function present(now: number) {
-    const catalogue = JSON.parse(readFileSync(resolve(ROOT, "packages/schemas/dist/index.json"), "utf8")) as Array<{
-      vct: string;
-      content_hash: string;
-    }>;
-    const signer = await pemIssuerSigner(
-      readFileSync(resolve(PKI, "issuer-id-review.pkcs8.pem"), "utf8"),
-      readFileSync(resolve(PKI, "issuer-id-review.cert.pem"), "utf8"),
-    );
+    const reviewCertDer = pemToDer(readFileSync(resolve(PKI, "issuer-id-review.cert.pem"), "utf8"));
+    const jwk = createPrivateKey(readFileSync(resolve(PKI, "issuer-id-review.pkcs8.pem"), "utf8")).export({
+      format: "jwk",
+    }) as { d: string };
     const ref = `r-${now}-${Math.random().toString(36).slice(2, 8)}`;
     const cnf = await keys.generate(ref);
-    const { combined } = await issueSdJwtVc({
-      signer,
-      iss: ISS,
-      vct: VCT,
-      vctIntegrity: catalogue.find((c) => c.vct === VCT)!.content_hash,
-      iat: now,
-      exp: now + 7 * 86400,
-      cnfJwk: cnf as never,
-      status: { status_list: { idx: 3, uri: STATUS_URI } },
-      claims: {
-        family_name: "App Reviewer",
-        given_name: "DEMO",
-        birthdate: "1990-01-01",
-        nationalities: ["TR"],
-        personal_administrative_number: "DEMO-TEST01",
-        document_type: "ID_CARD",
-        document_number_hash: "sha256-demo",
-        issuing_country: "TR",
-        document_chip_verified: false,
-        verification_method: "review-demo",
-        age_over_18: true,
+    // kimlik servisinin kopya başına mdoc'u gibi (D-CRED-5): aynı alanlar, AB PID öğe adları, deviceKey = kopyanın anahtarı
+    const issued = issueMdoc({
+      docType: VCT,
+      namespaces: {
+        [NS]: toPidMdocElements({
+          family_name: "App Reviewer",
+          given_name: "DEMO",
+          birthdate: "1990-01-01",
+          nationalities: ["TR"],
+          personal_administrative_number: "DEMO-TEST01",
+          issuing_country: "TR",
+          age_over_18: true,
+        }),
       },
-      sdPolicy: {},
+      deviceKeyRaw: jwkToPoint(cnf as never),
+      issuerSk: new Uint8Array(Buffer.from(jwk.d, "base64url")),
+      x5chain: [reviewCertDer],
+      signed: now,
+      validFrom: now,
+      validUntil: now + 7 * 86400,
+      randomBytes: (n) => new Uint8Array(randomBytes(n)),
+      status: { idx: 3, uri: STATUS_URI },
     });
-    const pres = await presentSdJwt({
-      combined,
-      discloseClaims: ["age_over_18"],
+    const pres = await presentMdoc({
+      mdocB64u: Buffer.from(issued.issuerSigned).toString("base64url"),
+      docType: VCT,
+      namespace: NS,
+      disclose: ["age_over_18"],
+      clientId: AUD,
+      nonce: "n-review",
+      responseUri: RESPONSE_URI,
       keys,
       keyRef: ref,
-      aud: AUD,
-      nonce: "n-review",
-      iat: now,
     });
     const st = await pemIssuerSigner(
       readFileSync(resolve(PKI, "issuer-id-status.pkcs8.pem"), "utf8"),
@@ -140,6 +149,8 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
     const out = await verifyPresentation({
       rp: "none",
       presentation: pres,
+      format: "mso_mdoc",
+      responseUri: RESPONSE_URI,
       aud: AUD,
       nonce: "n-review",
       policy: policyWith("I2"),
@@ -159,6 +170,8 @@ describe.skipIf(!ready)("ADR-0033: DEMO inceleme belgesi gerçek politikada geç
     const out = await verifyPresentation({
       rp: "none",
       presentation: pres,
+      format: "mso_mdoc",
+      responseUri: RESPONSE_URI,
       aud: AUD,
       nonce: "n-review",
       policy: policyWith("I1"),

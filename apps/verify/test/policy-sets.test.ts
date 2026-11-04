@@ -84,6 +84,20 @@ describe("policiesFor", () => {
     const z15 = POLICIES.find((p) => p.policy_id === "age-over-15-zk")!.credentials[0];
     expect(z15).toMatchObject({ format: "mso_mdoc_zk", vct_values: [ZK_COPY_VCT], constraints: { age_over_15: true } });
   });
+  it("ADR-0033: inceleme 18 yaş politikası, kayıtlı 18 yaş kullanımıyla (age-over-18-1, yalnız mso_mdoc) aynı biçimde sorar", () => {
+    // SD-JWT istek kayıt sertifikasız giderdi (kullanım biçimle eşleşir) ve cüzdan reddederdi
+    const rv = POLICIES.find((p) => p.policy_id === "review-age-over-18")!;
+    const gen = POLICIES.find((p) => p.policy_id === "age-over-18-mdoc")!.credentials[0];
+    expect(rv.credentials).toHaveLength(1);
+    expect(rv.credentials[0]).toMatchObject({
+      format: "mso_mdoc",
+      namespace: gen.namespace,
+      vct_values: gen.vct_values,
+      required_claims: ["age_over_18"],
+      constraints: { age_over_18: true },
+    });
+    expect(rv.trust.min_issuer_assurance).toBe("I1");
+  });
   it("sandbox bağlantısı: yayındaysa portal / sandbox örnek sitesi, değilse rehber (TR/EN)", () => {
     expect(sandboxUrl(true, "tr")).toBe("https://sandbox.tamga.network");
     expect(sandboxUrl(false, "tr")).toBe("https://docs.tamga.network/guides/sandbox");

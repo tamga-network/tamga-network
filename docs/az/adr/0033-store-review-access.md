@@ -121,6 +121,10 @@ Təxmini iş həcmi: 2–3 gün (testlərlə birlikdə).
   Tamga-nın bu məlumatları daxil edildikdən sonra `register issuer` ilə əlavə olunur. O vaxta qədər baxış yolu "aktiv deyil" cavabını verir (503).
 - **Yoxlayan tərəf:** Tamga Verify `review-age-over-18` və `review-site-signup` (I1); nümunə saytda "DEMO rəqəmsal sənədlə qeydiyyatdan keç". Yoxlayan tərəfin bütün real
   siyasətləri I2 tələb edir → DEMO rəqəmsal sənəd E1-də RƏDD (test: `packages/verifier/src/review-demo.test.ts`).
+  _Qeyd (2026-11-04):_ `review-age-over-18` rəqəmsal sənədi `mso_mdoc` ilə istəyir (`tamga.id.1`; ümumi `age-over-18-mdoc` ilə eyni
+  format): yoxlayan tərəfin siyahıdakı 18 yaş istifadəsi (`age-over-18-1`) yalnız `mso_mdoc`-dur və istifadə formata görə uyğunlaşdığı
+  üçün SD-JWT sorğusu qeydiyyat sertifikatı olmadan gedirdi və rəqəmsal cüzdan onu rədd edirdi; baxış rəqəmsal sənədi də hər nüsxə
+  üçün mdoc alır. Qərarın məzmunu dəyişmədi (layihə rəhbərliyi).
 - **Sxem:** `verification_method` dəyərlərinə `review-demo` əlavə edildi (inkişaf mərhələsi, [[ADR-0029]]); FW-RB-0003 (Identity
   Rulebook) buna uyğun yazıldı.
 - **Rəqəmsal cüzdan:** rəqəmsal sənədin təfərrüatlarında "DEMO — tətbiq baxışı rəqəmsal sənədi" kartı.

@@ -130,6 +130,10 @@ Estimated effort: 2–3 days (with tests).
   then the review path answers "not enabled" (503).
 - **Verification:** Tamga Verify `review-age-over-18` and `review-site-signup` (I1); "Sign up with a DEMO credential" on the example
   site. Every real policy requires I2 → the DEMO credential is REJECTED at E1 (test: `packages/verifier/src/review-demo.test.ts`).
+  _Note (2026-11-04):_ `review-age-over-18` requests the credential as `mso_mdoc` (`tamga.id.1`; the same format as the general
+  `age-over-18-mdoc`): the verifier's over-18 usage in the list (`age-over-18-1`) is `mso_mdoc` only and usages match by format, so
+  the SD-JWT request went without a registration certificate and the wallet refused it; the review credential also carries an mdoc
+  per copy. The decision content is unchanged (project management).
 - **Schema:** `review-demo` added to the `verification_method` values (development stage, [[ADR-0029]]); FW-RB-0003 (Identity
   Rulebook) is written accordingly.
 - **Wallet:** a "DEMO — app review credential" card in the credential details.

@@ -60,6 +60,9 @@ warning, mdoc namespace scope, ambiguous gate groups).
   or A6 / A1), per-fetch request branches (encrypted response to a branch key, encrypted and plaintext decline, soft decline,
   attempts, responses no branch key opens) and branch `kid` naming. Keys, time, `state`/`nonce` and the wallet's JWE ephemeral
   bytes are fixed (test keys from public seeds); the runner checks them against the current packages.
+- **Tamga Verify — the store-review over-18 policy (`review-age-over-18`, ADR-0033) requests `mso_mdoc`** (`tamga.id.1`, as
+  `age-over-18-mdoc`). The verifier's registered over-18 usage (`age-over-18-1`) is `mso_mdoc` only, so the SD-JWT request was sent
+  without a registration certificate and the wallet refused it; the review credential carries an mdoc per copy.
 - **contracts — `VersionNotMonotonic` is declared once in `ITamgaErrors`** (shared by `IStatusListRegistry` and
   `ITrustListAnchorRegistry`; same selector; the anchor registry ABI's first parameter is now named `current`).
 

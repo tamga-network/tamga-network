@@ -123,6 +123,9 @@ Tahmini iş: 2–3 gün (testlerle).
   Tamga'nın bu bilgileri girilince `register issuer` ile eklenir. O zamana kadar inceleme yolu "etkin değil" der (503).
 - **Doğrulama:** Tamga Verify `review-age-over-18` ve `review-site-signup` (I1); örnek sitede "DEMO belgeyle kayıt ol". Gerçek
   politikaların hepsi I2 ister → DEMO belge E1'de RED (test: `packages/verifier/src/review-demo.test.ts`).
+  _Not (2026-11-04):_ `review-age-over-18` belgeyi `mso_mdoc` ile ister (`tamga.id.1`; genel `age-over-18-mdoc` ile aynı biçim):
+  doğrulayıcının listedeki 18 yaş kullanımı (`age-over-18-1`) yalnız `mso_mdoc`, kullanım biçimle eşleştiği için SD-JWT istek kayıt
+  sertifikasız gidiyor ve cüzdan reddediyordu; inceleme belgesi de kopya başına mdoc alır. Karar içeriği değişmedi (proje yönetimi).
 - **Şema:** `verification_method` değerlerine `review-demo` eklendi (geliştirme evresi, [[ADR-0029]]); FW-RB-0003 (Identity
   Rulebook) buna göre yazıldı.
 - **Cüzdan:** belge ayrıntısında "DEMO — uygulama inceleme belgesi" kartı.
