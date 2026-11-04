@@ -32,7 +32,8 @@ HOSTS=""
 BLOCK_PERIOD=2
 FORCE=0
 BESU_HOME=${TESTNET_BESU_HOME:-$REPO_ROOT/tools/besu}
-JAVA_DIR=${JAVA_HOME:-$REPO_ROOT/tools/jdk-25}
+# Not the generic JAVA_HOME: CI runners (and many servers) point it at an older JDK; Besu 26.x needs 25.
+JAVA_DIR=${TESTNET_JAVA_HOME:-$REPO_ROOT/tools/jdk-25}
 while [ $# -gt 0 ]; do
   case "$1" in
     --validators) N=$2; shift 2 ;;
@@ -57,7 +58,7 @@ need jq
 case "$KEYS" in dev | generate) ;; *) die "--keys dev|generate" ;; esac
 TOTAL=$((N + E))
 [ -x "$BESU_HOME/bin/besu" ] || die "Besu not found in $BESU_HOME — run install-besu.sh (or --besu-home / TESTNET_BESU_HOME)"
-[ -x "$JAVA_DIR/bin/java" ] || die "JDK 25 not found in $JAVA_DIR — run install-besu.sh (or --java-home / JAVA_HOME)"
+[ -x "$JAVA_DIR/bin/java" ] || die "JDK 25 not found in $JAVA_DIR — run install-besu.sh (or --java-home / TESTNET_JAVA_HOME)"
 BESU_HOME=$(cd "$BESU_HOME" && pwd)
 JAVA_DIR=$(cd "$JAVA_DIR" && pwd)
 besu() { JAVA_HOME="$JAVA_DIR" "$BESU_HOME/bin/besu" "$@"; }
