@@ -60,7 +60,7 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 - A credential without a status entry is rejected at D1 when its type uses a status list; the status list signer is pinned to the
   institution's registered status keys.
 
-## Unreleased
+## New in 0.8.1
 
 - The single-use lock is per request branch: `begin(branch)` no longer refuses a response because another branch's response is
   being processed. Accept with `tryConsume()` (returns `false` if another response completed the presentation first) and check a
@@ -114,7 +114,7 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 
 ## Status
 
-Published on npm as the `0.8.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

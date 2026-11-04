@@ -9,13 +9,25 @@ import { fileURLToPath } from "node:url";
 import { loadTrustSet, ListTrustSource } from "@tamga-network/trust";
 import { StatusBitstring, verifySdJwtVc, verifyStatusListCwt, verifyStatusListToken } from "@tamga-network/sd-jwt";
 import { epochSeconds, pemToDer } from "@tamga-network/core";
+import { encKid, responseKidOf } from "@tamga-network/verifier";
+import { declineRequest } from "@tamga-network/wallet-core";
 import { run } from "../generate.js";
+import {
+  jweHeaderOnly,
+  runKbAudCase,
+  runScenario,
+  type EncKidCase,
+  type KbAudCase,
+  type KidCase,
+  type ResponseScenario,
+} from "../openid4vp.js";
 
 const V = resolve(dirname(fileURLToPath(import.meta.url)), "..", "vectors");
 const trustPath = resolve(V, "trust", "basic.json");
 const sdPath = resolve(V, "sd-jwt", "diploma-basic.json");
 const idPath = resolve(V, "sd-jwt", "identity-pid-names.json");
 const slPath = resolve(V, "status-list", "jwt-cwt.json");
+const ovPath = resolve(V, "openid4vp", "basic.json");
 
 describe.skipIf(!existsSync(trustPath))("conformance: trust/basic", () => {
   const vec = existsSync(trustPath) ? JSON.parse(readFileSync(trustPath, "utf8")) : null;
@@ -140,4 +152,63 @@ describe.skipIf(!existsSync(slPath))("conformance: status-list/jwt-cwt (ADR-0048
       });
     }
   }
+});
+
+describe.skipIf(!existsSync(ovPath))("conformance: openid4vp/basic (PV7, ADR-0067)", () => {
+  const vec = existsSync(ovPath) ? JSON.parse(readFileSync(ovPath, "utf8")) : null;
+  const now = () => Math.floor(new Date(vec.now).getTime() / 1000);
+  for (const c of (vec?.kb_aud.cases ?? []) as KbAudCase[]) {
+    it(`KB-JWT aud — ${c.name}`, async () => {
+      expect(await runKbAudCase(c, { policy: vec.kb_aud.policy, rootCertPem: vec.root_cert_pem, now: now() })).toEqual(
+        c.expect,
+      );
+      // beklenen aud yola göre: DC API'de `origin:` + köken, cihazlar arası yolda client identifier (PV7)
+      if (c.expected_kb_aud !== null)
+        expect(c.expected_kb_aud).toBe(c.path === "dc_api" ? `origin:${c.verifier.origin}` : vec.client_id);
+    });
+  }
+  for (const s of (vec?.responses.scenarios ?? []) as ResponseScenario[]) {
+    it(`yanıtlar — ${s.name}`, async () => {
+      const r = await runScenario(
+        {
+          presentationId: vec.presentation_id,
+          expiresAt: vec.expires_at,
+          now: now(),
+          responseUri: vec.response_uri,
+          branches: vec.responses.branches,
+          dcApi: vec.responses.dc_api,
+        },
+        s,
+      );
+      expect(r.events).toEqual(s.events.map((e) => e.expect));
+      expect(r.final).toEqual(s.expect_final);
+    });
+  }
+  it("cüzdanın şifresiz reddi: yalnız error=access_denied ve state, response_uri'ye; DC API yolunda POST yok", async () => {
+    const calls: Array<{ url: string; body?: string; method?: string }> = [];
+    const http = async (url: string, init?: { method?: string; body?: string }) => {
+      calls.push({ url, body: init?.body, method: init?.method });
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    };
+    const d = vec.responses.wallet_decline;
+    await declineRequest({ responseUri: vec.response_uri, state: d.state }, http as never);
+    expect(calls).toEqual([{ url: vec.response_uri, method: "POST", body: d.expect_body }]);
+    const dc = await declineRequest(
+      { responseUri: vec.response_uri, state: d.state, origin: vec.responses.dc_api.expected_origins[0] },
+      http as never,
+    );
+    expect(dc.status).toBe(0);
+    expect(calls).toHaveLength(1);
+  });
+  it("dal kid'i: responseKidOf ve encKid", () => {
+    for (const c of vec.kid_naming.response_kid_cases as KidCase[])
+      expect(responseKidOf(jweHeaderOnly(c.kid))).toEqual(c.expect);
+    for (const c of vec.kid_naming.enc_kid_cases as EncKidCase[])
+      expect(encKid(c.presentation_id, c.path, c.branch_id)).toBe(c.expect);
+    for (const b of vec.responses.branches) {
+      expect(b.kid).toBe(encKid(vec.presentation_id, "cross_device", b.branch_id));
+      expect(b.enc_public_jwk.kid).toBe(b.kid);
+    }
+    expect(vec.responses.dc_api.kid).toBe(encKid(vec.presentation_id, "dc_api"));
+  });
 });

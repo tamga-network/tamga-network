@@ -33,6 +33,11 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 - Rollback protection is on by default: a load without `versionMemory` uses an in-process memory per network and root fingerprints;
   pass a persistent memory to keep it across restarts, or `"none"` to turn it off.
 
+## New in 0.8.1
+
+- Ambiguous gate groups are closed: `terminalGroup(id)` returns `null` when the same `group_id` appears in more than one verifier
+  record (e.g. two national lists), and a group whose `institution_id` slug matches more than one issuer record is not active.
+
 ## Breaking in 0.8.0
 
 - A gate group is `active` only when its institution (`institution_id`: an issuer `slug` or a verifier `dns_name`) is ACTIVE in
@@ -52,7 +57,7 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 
 ## Status
 
-Published on npm as the `0.8.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

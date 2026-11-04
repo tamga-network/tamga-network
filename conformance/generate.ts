@@ -4,13 +4,14 @@
  *        packages/schemas/dist/index.json (vct, content_hash).
  * Çıktı: conformance/vectors/trust/basic.json, conformance/vectors/sd-jwt/diploma-basic.json,
  *        conformance/vectors/sd-jwt/identity-pid-names.json (ADR-0045),
- *        conformance/vectors/status-list/jwt-cwt.json (ADR-0048: bits 1/2, aynı listenin JWT ve CWT gösterimi)
+ *        conformance/vectors/status-list/jwt-cwt.json (ADR-0048: bits 1/2, aynı listenin JWT ve CWT gösterimi),
+ *        conformance/vectors/openid4vp/basic.json (PV7 KB `aud` iki yol, ADR-0067 dal yanıtları ve ret, dal `kid`'i)
  */
 import { mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
 import { X509Certificate } from "node:crypto";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { exportJWK, generateKeyPair } from "jose";
+import { exportJWK, generateKeyPair, importJWK, type JWK } from "jose";
 import {
   computeSchemaId,
   pemToDer,
@@ -32,6 +33,27 @@ import {
   verifyStatusListCwt,
   verifyStatusListToken,
 } from "@tamga-network/sd-jwt";
+import { encKid, responseKidOf, RESPONSE_ENC, type KeyLike } from "@tamga-network/verifier";
+import { encryptJwe, utf8 } from "@tamga-network/wallet-core";
+import {
+  A_STEPS_DONE,
+  aStagePolicy,
+  jweHeaderOnly,
+  publicJwk,
+  runKbAudCase,
+  runScenario,
+  seededP256,
+  seededRandom,
+  seededValue,
+  type EncKidCase,
+  type KbAudCase,
+  type KidCase,
+  type Observed,
+  type ResponseEvent,
+  type ResponseScenario,
+  type VectorBranch,
+  type VectorDcApi,
+} from "./openid4vp.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, "..");
@@ -428,6 +450,410 @@ async function statusListVectors() {
   return lists.length;
 }
 
+/**
+ * OpenID4VP (SPEC-PROTO-0002, ADR-0067): (1) KB-JWT `aud` iki yol — cihazlar arası yolda client identifier, DC API yolunda
+ * `origin:<köken>` (PV7; OpenID4VP 1.0 Ek A.4); beklenen sonuç `verifyPresentation`'ın A adımı. (2) Yanıtın işlenmesi: dalın
+ * anahtarına şifreli yanıt, şifreli ve şifresiz ret, yumuşak ret, deneme, çözülemeyen yanıt. (3) Dal `kid`'i. Anahtarlar, zaman,
+ * `state` / `nonce` ve JWE efemer baytları sabit (conformance/openid4vp.ts). Beklentiler elle yazılır; üreteç kodla karşılaştırır.
+ */
+async function openid4vpVectors() {
+  const leafPem = readFileSync(resolve(PKI, "issuer-bilgi.cert.pem"), "utf8");
+  const keyPem = readFileSync(resolve(PKI, "issuer-bilgi.pkcs8.pem"), "utf8");
+  const rootPem = readFileSync(resolve(PKI, "root-ca.cert.pem"), "utf8");
+  const signer = await pemIssuerSigner(keyPem, leafPem);
+  const leafFrom = Math.floor(new Date(new X509Certificate(leafPem).validFrom).getTime() / 1000);
+  const OV_NOW = epochSeconds(Math.max(NOW, leafFrom + 2 * 86400));
+  const OV_NOW_ISO = new Date(OV_NOW * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
+  const schemas = rj(resolve(ROOT, "packages", "schemas", "dist", "index.json")) as Array<{
+    vct: string;
+    content_hash: string;
+  }>;
+  const diploma = schemas.find((s) => s.vct === "urn:tamga:edu:DiplomaCredential:1")!;
+  const CLIENT_ID = x509HashClientId(pemToDer(readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8")));
+  const RESPONSE_URI = "https://verify.tamga.network/vp/response";
+  const ORIGIN = "https://shop.example";
+  const OTHER_ORIGIN = "https://other.example";
+  const PID = "prs_conformance0001";
+  const EXPIRES = OV_NOW + 300;
+
+  // Sabit holder anahtarı; belge (tuzlar ve belge veren imzası her üretimde değişir)
+  const holder = seededP256("holder");
+  const holderKey = (await importJWK(holder, "ES256")) as KeyLike;
+  const issued = await issueSdJwtVc({
+    signer,
+    iss: "https://issuer.tamga.network/example-university",
+    vct: diploma.vct,
+    vctIntegrity: diploma.content_hash,
+    iat: OV_NOW - 86400,
+    cnfJwk: publicJwk(holder),
+    claims: { is_graduate: true, eqf_level: 6, awarding_date: "2026-06-20" },
+    sdPolicy: {},
+  });
+
+  // Çekim dalları (ADR-0067 K1) ve DC API nesnesi (dal değil, K5) — sabit `state` / `nonce` / şifreleme anahtarı
+  const encJwk = (label: string, kid: string) => {
+    const k = seededP256(label);
+    return {
+      pub: { ...publicJwk(k), use: "enc", alg: "ECDH-ES", kid } as JWK,
+      priv: { ...k, use: "enc", alg: "ECDH-ES", kid } as JWK,
+    };
+  };
+  const branches: VectorBranch[] = ["b1", "b2"].map((id) => {
+    const kid = encKid(PID, "cross_device", id);
+    const k = encJwk(`enc-${id}`, kid);
+    return {
+      branch_id: id,
+      kid,
+      state: seededValue(`state-${id}`, 16),
+      nonce: seededValue(`nonce-${id}`, 24),
+      enc_public_jwk: k.pub,
+      enc_private_jwk: k.priv,
+    };
+  });
+  const [b1, b2] = branches;
+  const dcKid = encKid(PID, "dc_api");
+  const dcK = encJwk("enc-dc", dcKid);
+  const dcApi: VectorDcApi = {
+    state: seededValue("state-dc", 16),
+    nonce: seededValue("nonce-dc", 24),
+    expected_origins: [ORIGIN],
+    kid: dcKid,
+    enc_public_jwk: dcK.pub,
+    enc_private_jwk: dcK.priv,
+  };
+  const requestClaims = (mode: Record<string, unknown>, nonce: string, state: string, jwk: JWK) => ({
+    client_id: CLIENT_ID,
+    response_type: "vp_token",
+    ...mode,
+    nonce,
+    state,
+    client_metadata: { jwks: { keys: [jwk] }, encrypted_response_enc_values_supported: [...RESPONSE_ENC] },
+  });
+
+  // Sunumlar: cüzdan KB-JWT `aud`'u yola göre yazar (wallet-core `respond`)
+  const present = (aud: string, nonce: string) =>
+    presentSdJwtVc({
+      combined: issued.combined,
+      discloseClaims: ["is_graduate"],
+      holderKey,
+      aud,
+      nonce,
+      iat: OV_NOW,
+    });
+  const P = {
+    qr_b1: await present(CLIENT_ID, b1.nonce),
+    qr_b2: await present(CLIENT_ID, b2.nonce),
+    qr_origin_aud: await present(`origin:${ORIGIN}`, b1.nonce),
+    dc: await present(`origin:${ORIGIN}`, dcApi.nonce),
+    dc_client_id_aud: await present(CLIENT_ID, dcApi.nonce),
+    dc_other_origin: await present(`origin:${OTHER_ORIGIN}`, dcApi.nonce),
+  };
+
+  // (1) KB-JWT `aud` — doğrulayıcı girdisi + beklenen adım (`verifyPresentation`)
+  const kbCases: KbAudCase[] = [
+    {
+      name: "cross-device (signed request / QR): KB-JWT aud = client identifier → passes",
+      path: "cross_device",
+      presentation: P.qr_b1,
+      verifier: { aud: CLIENT_ID, nonce: b1.nonce },
+      expected_kb_aud: CLIENT_ID,
+      expect: { a_steps: "pass" },
+    },
+    {
+      name: "cross-device: KB-JWT aud = origin:<origin> (DC API binding on the QR path) → A6",
+      path: "cross_device",
+      presentation: P.qr_origin_aud,
+      verifier: { aud: CLIENT_ID, nonce: b1.nonce },
+      expected_kb_aud: CLIENT_ID,
+      expect: { failed_step: "A6" },
+    },
+    {
+      name: "cross-device: verifier passes neither aud nor origin → A1",
+      path: "cross_device",
+      presentation: P.qr_b1,
+      verifier: { nonce: b1.nonce },
+      expected_kb_aud: null,
+      expect: { failed_step: "A1" },
+    },
+    {
+      name: "DC API: KB-JWT aud = origin:<origin>, verifier passes origin only (aud derived) → passes",
+      path: "dc_api",
+      presentation: P.dc,
+      verifier: { origin: ORIGIN, nonce: dcApi.nonce },
+      expected_kb_aud: `origin:${ORIGIN}`,
+      expect: { a_steps: "pass" },
+    },
+    {
+      name: "DC API: verifier passes origin and aud = origin:<origin> → passes",
+      path: "dc_api",
+      presentation: P.dc,
+      verifier: { origin: ORIGIN, aud: `origin:${ORIGIN}`, nonce: dcApi.nonce },
+      expected_kb_aud: `origin:${ORIGIN}`,
+      expect: { a_steps: "pass" },
+    },
+    {
+      name: "DC API: KB-JWT aud = client identifier (cross-device binding on the DC API path) → A6",
+      path: "dc_api",
+      presentation: P.dc_client_id_aud,
+      verifier: { origin: ORIGIN, nonce: dcApi.nonce },
+      expected_kb_aud: `origin:${ORIGIN}`,
+      expect: { failed_step: "A6" },
+    },
+    {
+      name: "DC API: KB-JWT aud = origin of another site → A6",
+      path: "dc_api",
+      presentation: P.dc_other_origin,
+      verifier: { origin: ORIGIN, nonce: dcApi.nonce },
+      expected_kb_aud: `origin:${ORIGIN}`,
+      expect: { failed_step: "A6" },
+    },
+    {
+      name: "DC API: verifier misconfigured with aud = client identifier → A1 (explicit, not a generic A6)",
+      path: "dc_api",
+      presentation: P.dc,
+      verifier: { origin: ORIGIN, aud: CLIENT_ID, nonce: dcApi.nonce },
+      expected_kb_aud: null,
+      expect: { failed_step: "A1" },
+    },
+  ];
+  const policy = aStagePolicy(diploma.vct);
+  for (const c of kbCases) {
+    const got = await runKbAudCase(c, { policy, rootCertPem: rootPem, now: OV_NOW });
+    if (JSON.stringify(got) !== JSON.stringify(c.expect))
+      throw new Error(`kb_aud "${c.name}": expected ${JSON.stringify(c.expect)}, got ${JSON.stringify(got)}`);
+  }
+
+  // (2) Yanıtlar: cüzdan → doğrulayıcı gövdeleri (`response=<JWE>` ya da şifresiz hata formu)
+  const jwe = (label: string, payload: Record<string, unknown>, to: JWK, kid = to.kid as string) =>
+    "response=" +
+    encodeURIComponent(
+      encryptJwe(utf8(JSON.stringify(payload)), to as never, { randomBytes: seededRandom(label), kid, enc: "A256GCM" }),
+    );
+  const form = (state: string) => `error=access_denied&state=${encodeURIComponent(state)}`;
+  const R = {
+    resp_b1: jwe("resp-b1", { vp_token: { diploma: [P.qr_b1] }, state: b1.state }, b1.enc_public_jwk),
+    resp_b2: jwe("resp-b2", { vp_token: { diploma: [P.qr_b2] }, state: b2.state }, b2.enc_public_jwk),
+    resp_b2_state_of_b1: jwe("resp-b2-s1", { vp_token: { diploma: [P.qr_b2] }, state: b1.state }, b2.enc_public_jwk),
+    err_b1: jwe("err-b1", { error: "access_denied", state: b1.state }, b1.enc_public_jwk),
+    err_b2: jwe("err-b2", { error: "access_denied", state: b2.state }, b2.enc_public_jwk),
+    err_dc: jwe("err-dc", { error: "access_denied", state: dcApi.state }, dcApi.enc_public_jwk),
+    resp_dc: jwe("resp-dc", { vp_token: { diploma: [P.dc] } }, dcApi.enc_public_jwk),
+    unknown_branch: jwe(
+      "unknown-branch",
+      { vp_token: { diploma: [P.qr_b1] }, state: b1.state },
+      b1.enc_public_jwk,
+      encKid(PID, "cross_device", "zz"),
+    ),
+    wrong_key: jwe("wrong-key", { vp_token: { diploma: [P.qr_b1] }, state: b1.state }, b1.enc_public_jwk, b2.kid),
+    other_presentation: jwe(
+      "other-presentation",
+      { vp_token: { diploma: [P.qr_b1] }, state: b1.state },
+      b1.enc_public_jwk,
+      encKid("prs_other0000000001", "cross_device", "b1"),
+    ),
+    branchless_kid: jwe(
+      "branchless",
+      { vp_token: { diploma: [P.qr_b1] }, state: b1.state },
+      b1.enc_public_jwk,
+      encKid(PID, "cross_device"),
+    ),
+    form_b1: form(b1.state),
+    form_b2: form(b2.state),
+    form_unknown: form(seededValue("state-unknown", 16)),
+    form_dc: form(dcApi.state),
+  };
+  const ev = (name: string, kind: "jwe" | "form", body: string, expect: Observed): ResponseEvent => ({
+    name,
+    kind,
+    body,
+    expect,
+  });
+  const presented = (branch: string | null, path: "cross_device" | "dc_api", nonce: string): Observed => ({
+    result: "presentation",
+    branch,
+    path,
+    nonce,
+    consumed: true,
+  });
+  const scenarios: ResponseScenario[] = [
+    {
+      name: "single fetch: plaintext decline closes the only branch → presentation REJECTED",
+      fetches: ["b1"],
+      events: [
+        ev("decline b1 (form)", "form", R.form_b1, { result: "declined", branch: "b1", presentation_rejected: true }),
+        ev("late response on b1", "jwe", R.resp_b1, { result: "used" }),
+      ],
+      expect_final: { attempts: 0, used: true },
+    },
+    {
+      name: "single fetch: encrypted decline is handled like the plaintext one",
+      fetches: ["b1"],
+      events: [
+        ev("decline b1 (JWE)", "jwe", R.err_b1, { result: "declined", branch: "b1", presentation_rejected: true }),
+      ],
+      expect_final: { attempts: 0, used: true },
+    },
+    {
+      name: "two fetches: a decline closes only its own branch (soft decline); the other branch completes",
+      fetches: ["b1", "b2"],
+      events: [
+        ev("decline b1 (form)", "form", R.form_b1, { result: "declined", branch: "b1", presentation_rejected: false }),
+        ev("response on the declined branch b1", "jwe", R.resp_b1, { result: "closed", branch: "b1" }),
+        ev("response on b2", "jwe", R.resp_b2, presented("b2", "cross_device", b2.nonce)),
+        ev("decline b2 after completion", "form", R.form_b2, { result: "unknown_presentation" }),
+      ],
+      expect_final: { attempts: 0, used: true },
+    },
+    {
+      name: "two fetches: encrypted decline on b2, then b1 completes",
+      fetches: ["b1", "b2"],
+      events: [
+        ev("decline b2 (JWE)", "jwe", R.err_b2, { result: "declined", branch: "b2", presentation_rejected: false }),
+        ev("response on b1", "jwe", R.resp_b1, presented("b1", "cross_device", b1.nonce)),
+      ],
+      expect_final: { attempts: 0, used: true },
+    },
+    {
+      name: "state of another branch: decrypted but counted as an attempt on the receiving branch only",
+      fetches: ["b1", "b2"],
+      events: [
+        ev("b2 response carrying b1's state", "jwe", R.resp_b2_state_of_b1, {
+          result: "attempt",
+          branch: "b2",
+          attempts: 1,
+          branch_closed: false,
+        }),
+        ev("response on b2", "jwe", R.resp_b2, presented("b2", "cross_device", b2.nonce)),
+      ],
+      expect_final: { attempts: 1, used: true },
+    },
+    {
+      name: "responses that no branch key opens do not touch the presentation and are not attempts (RQ4, RQ6)",
+      fetches: ["b1"],
+      events: [
+        ev("unknown branch kid", "jwe", R.unknown_branch, { result: "unknown_request_object" }),
+        ev("kid of b2 (not fetched), key of b1", "jwe", R.wrong_key, { result: "unknown_request_object" }),
+        ev("another presentation's kid", "jwe", R.other_presentation, { result: "unknown_presentation" }),
+        ev("branch-less cross-device kid", "jwe", R.branchless_kid, { result: "unknown_request_object" }),
+        ev("plaintext decline with an unknown state", "form", R.form_unknown, { result: "unknown_presentation" }),
+        ev("plaintext decline with the DC API state", "form", R.form_dc, { result: "unknown_presentation" }),
+        ev("encrypted decline on the DC API key", "jwe", R.err_dc, { result: "error_not_on_this_path" }),
+        ev("response on b1", "jwe", R.resp_b1, presented("b1", "cross_device", b1.nonce)),
+      ],
+      expect_final: { attempts: 0, used: true },
+    },
+    {
+      name: "two fetches: response encrypted to b1's key but labelled b2 does not decrypt (not an attempt)",
+      fetches: ["b1", "b2"],
+      events: [
+        ev("kid of b2, key of b1", "jwe", R.wrong_key, { result: "undecryptable" }),
+        ev("response on b2", "jwe", R.resp_b2, presented("b2", "cross_device", b2.nonce)),
+      ],
+      expect_final: { attempts: 0, used: true },
+    },
+    {
+      name: "DC API response (enc-dc-<presentation>): not a branch; state may be absent (Annex A.2)",
+      fetches: ["b1"],
+      events: [
+        ev("DC API response", "jwe", R.resp_dc, presented(null, "dc_api", dcApi.nonce)),
+        ev("late response on b1", "jwe", R.resp_b1, { result: "used" }),
+      ],
+      expect_final: { attempts: 0, used: true },
+    },
+  ];
+  const setup = { presentationId: PID, expiresAt: EXPIRES, now: OV_NOW, responseUri: RESPONSE_URI, branches, dcApi };
+  for (const s of scenarios) {
+    const r = await runScenario(setup, s);
+    if (JSON.stringify(r) !== JSON.stringify({ events: s.events.map((e) => e.expect), final: s.expect_final }))
+      throw new Error(`responses "${s.name}": got ${JSON.stringify(r)}`);
+  }
+
+  // (3) Dal `kid`'i: `enc-<sunum>.<dal>` (cihazlar arası dal) · `enc-<sunum>` (dalsız, eski tek nesne) · `enc-dc-<sunum>` (DC API)
+  const kidCases: KidCase[] = [
+    { kid: `enc-${PID}.b1`, expect: { presentationId: PID, path: "cross_device", branchId: "b1" } },
+    { kid: `enc-${PID}`, expect: { presentationId: PID, path: "cross_device" } },
+    { kid: `enc-dc-${PID}`, expect: { presentationId: PID, path: "dc_api" } },
+    { kid: `enc-${PID}.b1.x`, expect: null },
+    { kid: `enc-${PID}.`, expect: null },
+    { kid: `${PID}.b1`, expect: null },
+    { kid: null, expect: null },
+  ];
+  for (const c of kidCases) {
+    const got = responseKidOf(jweHeaderOnly(c.kid));
+    if (JSON.stringify(got) !== JSON.stringify(c.expect)) throw new Error(`kid ${c.kid}: got ${JSON.stringify(got)}`);
+  }
+  const encKidCases: EncKidCase[] = [
+    { presentation_id: PID, path: "cross_device", branch_id: "b1", expect: `enc-${PID}.b1` },
+    { presentation_id: PID, path: "cross_device", expect: `enc-${PID}` },
+    { presentation_id: PID, path: "dc_api", expect: `enc-dc-${PID}` },
+  ];
+  for (const c of encKidCases)
+    if (encKid(c.presentation_id, c.path, c.branch_id) !== c.expect) throw new Error(`encKid ${c.expect}`);
+
+  const vec = {
+    vector: "openid4vp/basic",
+    version: 1,
+    generated_at: new Date().toISOString(),
+    now: OV_NOW_ISO,
+    note:
+      "SPEC-PROTO-0002 §5.1, §7.1, §10.1, PV7, PV15; ADR-0067. Fake person data. The enc_private_jwk values are fixed TEST keys " +
+      "derived from public seeds (SHA-256 of 'tamga-conformance/openid4vp/<label>'); they exist only so that the encrypted " +
+      "responses can be opened and are never used by a real system. No other private key. Fixed: keys, time, state, nonce, " +
+      "branch ids, the wallet's JWE ephemeral key and IV. Varies per generation: issuer signature, disclosure salts, KB-JWT signature.",
+    root_cert_pem: rootPem,
+    client_id: CLIENT_ID,
+    response_uri: RESPONSE_URI,
+    presentation_id: PID,
+    expires_at: EXPIRES,
+    holder_public_jwk: publicJwk(holder),
+    kb_aud: {
+      rule:
+        "cross_device: KB-JWT aud = client_id (full, with prefix); dc_api: KB-JWT aud = 'origin:' + page origin, also with a " +
+        "signed request (OpenID4VP 1.0 Annex A.4). A verifier given an origin and a different aud rejects at A1.",
+      policy,
+      trust: "minimal trust source: freshness healthy, no records (A steps only; B2 follows)",
+      expect_pass_steps: [...A_STEPS_DONE],
+      cases: kbCases,
+    },
+    responses: {
+      branches: branches.map((b) => ({
+        ...b,
+        request_object_claims: requestClaims(
+          { response_mode: "direct_post.jwt", response_uri: RESPONSE_URI },
+          b.nonce,
+          b.state,
+          b.enc_public_jwk,
+        ),
+      })),
+      dc_api: {
+        ...dcApi,
+        request_object_claims: requestClaims(
+          { response_mode: "dc_api.jwt", expected_origins: [ORIGIN] },
+          dcApi.nonce,
+          dcApi.state,
+          dcApi.enc_public_jwk,
+        ),
+      },
+      wallet_decline: {
+        note:
+          "wallet-core declineRequest: plaintext form to response_uri with only error=access_denied and state (PV5); " +
+          "no POST on the DC API path",
+        state: b1.state,
+        expect_body: R.form_b1,
+      },
+      scenarios,
+    },
+    kid_naming: {
+      rule: "cross-device branch enc-<presentation>.<branch>; DC API enc-dc-<presentation>; branch ids are base64url without '.'",
+      response_kid_cases: kidCases,
+      enc_kid_cases: encKidCases,
+    },
+  };
+  mkdirSync(resolve(OUT, "openid4vp"), { recursive: true });
+  writeFileSync(resolve(OUT, "openid4vp", "basic.json"), JSON.stringify(vec, null, 2) + "\n");
+  return { kb_aud: kbCases.length, scenarios: scenarios.length, kid: kidCases.length + encKidCases.length };
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   (async () => {
     if (!existsSync(resolve(DIST, "lotl.jws"))) throw new Error("önce npm run setup");
@@ -435,13 +861,19 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
     const s = await sdJwtVectors();
     const i = await identityVectors();
     const l = await statusListVectors();
+    const o = await openid4vpVectors();
+    // 8: OpenID4VP vektörleri (PV7 KB `aud` iki yol, ADR-0067 dal yanıtları ve ret, dal `kid`'i);
     // 7: protokol incelemesi 2026-10-24 — doğrulayıcı iptal listesi bits 4/8'i okur (0/1/2 dışı değer DOĞRULANAMADI), `_sd_alg`
     // dış türde isteğe bağlı, DCQL'de boş `claims` yok, `vp_formats_supported` yalnız sorgudaki biçimler; 6: ADR-0056 güvenli
     // varsayılanlar (zorunlu güvenlik girdileri, iptal listesi imzacısı sabit); 5: ADR-0048 iptal listesi bits 1/2 ve CWT gösterimi
     // (4: ADR-0045 kimlik belgesi AB PID adları; 3: SPEC-CRED-0002 §3.5 disclosure serileştirme; 2: ADR-0034 dns_name, x509_hash)
-    writeFileSync(resolve(OUT, "VERSION"), "7\n");
+    writeFileSync(resolve(OUT, "VERSION"), "8\n");
     console.log(
-      JSON.stringify({ trust_cases: t, sd_jwt_cases: s, identity_cases: i, status_lists: l, out: OUT }, null, 2),
+      JSON.stringify(
+        { trust_cases: t, sd_jwt_cases: s, identity_cases: i, status_lists: l, openid4vp: o, out: OUT },
+        null,
+        2,
+      ),
     );
   })().catch((e) => {
     console.error(e);

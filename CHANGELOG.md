@@ -4,9 +4,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.8.0` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
-## Unreleased
+## 0.8.1 — 2026-11-04
 
-No breaking change; all additions are optional fields or methods.
+All nine packages move to 0.8.1 together (patch release). No breaking change: all additions are optional fields or methods;
+the changes below come from the 2026-11-04 review round (per-branch lock, Digital Credentials API audience, registration status
+warning, mdoc namespace scope, ambiguous gate groups).
 
 ### Added
 
@@ -20,9 +22,6 @@ No breaking change; all additions are optional fields or methods.
 - **wallet-core — `AuthStart.registrationStatusUnknown`.** `startAuthorized` reports `true` when the issuer's registration
   certificate status could not be checked (no list, no unexpired cached copy); the app warns the person (ADR-0068 WRS4). A revoked
   certificate still throws.
-- **trust-publisher — `history-reset` (sandbox only).** Cleans the sandbox publication's history: each list keeps only its current
-  version in the archive, the public changelog restarts, retired registration-certificate paths are anonymised. Current lists,
-  version numbers, the version chain and status bits are unchanged; refused on the real network.
 
 ### Changed
 
@@ -38,20 +37,31 @@ No breaking change; all additions are optional fields or methods.
 - **trust — ambiguous gate groups are closed.** `terminalGroup(id)` returns `null` when the same `group_id` appears in more than
   one verifier record (e.g. two national lists); a group whose `institution_id` slug matches more than one issuer record is not
   active.
-- **Tamga Verify / sandbox list — sandbox gate group ids are fictional.** Sandbox test institutions and their gate groups are
-  `example-university-campus`, `example-events-gate`, `example-cinema-gate` (also the defaults of `TAMGA_VERIFY_CAMPUS_GROUP` /
-  `TAMGA_VERIFY_TICKET_GROUP`); sandbox terminals paired with the previous group ids must be paired again.
-- **contracts — `VersionNotMonotonic` is declared once in `ITamgaErrors`** (shared by `IStatusListRegistry` and
-  `ITrustListAnchorRegistry`; same selector; the anchor registry ABI's first parameter is now named `current`).
 
 ### Fixed
+
+- **wallet-core — `wiaStatusInList` list bound is `8 / bits`.** 4- and 8-bit lists no longer treat entries past the list as
+  inside it (which threw "idx outside the list").
+
+### Applications and repository (not in the npm packages)
 
 - **Tamga Verify — ISO/IEC 18013-7 Annex C decline carries no status token (ADR-0067 RQ3).** The `redirect_uri` returned for a
   declined `org-iso-mdoc` response is the bare result page; a decline while another response is being processed gets 400.
 - **Tamga Verify — a response whose processing fails after another branch completed the presentation no longer overwrites the
   result.**
-- **wallet-core — `wiaStatusInList` list bound is `8 / bits`.** 4- and 8-bit lists no longer treat entries past the list as
-  inside it (which threw "idx outside the list").
+- **Tamga Verify / sandbox list — sandbox gate group ids are fictional.** Sandbox test institutions and their gate groups are
+  `example-university-campus`, `example-events-gate`, `example-cinema-gate` (also the defaults of `TAMGA_VERIFY_CAMPUS_GROUP` /
+  `TAMGA_VERIFY_TICKET_GROUP`); sandbox terminals paired with the previous group ids must be paired again.
+- **trust-publisher — `history-reset` (sandbox only).** Cleans the sandbox publication's history: each list keeps only its current
+  version in the archive, the public changelog restarts, retired registration-certificate paths are anonymised. Current lists,
+  version numbers, the version chain and status bits are unchanged; refused on the real network.
+- **conformance — OpenID4VP vectors (`conformance/vectors/openid4vp/basic.json`; vector set version 8).** KB-JWT `aud` on both
+  paths (client identifier on the cross-device path, `origin:<origin>` on the Digital Credentials API path; expected: A steps pass,
+  or A6 / A1), per-fetch request branches (encrypted response to a branch key, encrypted and plaintext decline, soft decline,
+  attempts, responses no branch key opens) and branch `kid` naming. Keys, time, `state`/`nonce` and the wallet's JWE ephemeral
+  bytes are fixed (test keys from public seeds); the runner checks them against the current packages.
+- **contracts — `VersionNotMonotonic` is declared once in `ITamgaErrors`** (shared by `IStatusListRegistry` and
+  `ITrustListAnchorRegistry`; same selector; the anchor registry ABI's first parameter is now named `current`).
 
 ### Documents
 

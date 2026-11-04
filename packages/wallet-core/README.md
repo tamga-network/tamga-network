@@ -17,6 +17,14 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
+## New in 0.8.1
+
+- `startAuthorized` reports `registrationStatusUnknown: true` when the issuer's registration certificate status could not be
+  checked (no list, no unexpired cached copy): show the person a warning (ADR-0068 WRS4). A revoked certificate still throws.
+- Registration-certificate scope for mdoc compares namespace + element: an element of the same name in another namespace counts
+  as over-asking (OpenID4VP and proximity).
+- `wiaStatusInList` computes the list bound as `8 / bits`, so 4- and 8-bit lists no longer throw for entries past the list.
+
 ## Breaking in 0.8.0
 
 - WIA status bits read fail closed: `wiaRevokedInList` / `wiaRevokedByList` also treat the undefined value 3 as revoked; new
@@ -38,7 +46,7 @@ npm install @tamga-network/wallet-core
 
 ## Status
 
-Published on npm as the `0.8.0` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

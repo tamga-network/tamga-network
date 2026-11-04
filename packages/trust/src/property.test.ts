@@ -137,8 +137,10 @@ describe("K11 ETSI XML güven listesi — düşmanca girdi", () => {
     ["karışık harf ve boşluk", '<?xml version="1.0"?>\n<!DocType r PUBLIC "-//x" "http://127.0.0.1:1/x.dtd"><r/>'],
     ["iç DTD varsayılan öznitelik", '<!DOCTYPE r [<!ATTLIST r Id CDATA "tsl">]><r/>'],
   ])("%s: DTD reddedilir, varlık çözülmez", (_n, xml) => {
-    timed(() => expectListError(() => verifyEnvelopedXmlSignature(xml)), 200);
-    timed(() => expectListError(() => readTrustedListXml(xml, new Set([fp]))), 200);
+    // Süre sınırı bekçidir (varlık açılımı / ağ beklemesi yok): tek başına birkaç ms; tam paket paralel koşarken 200 ms ara ara
+    // aşıldı (2026-11-04) — sınır 2 sn (milyar kahkaha açılsaydı ve ağa gidilseydi bunun çok üstüne çıkardı)
+    timed(() => expectListError(() => verifyEnvelopedXmlSignature(xml)), 2000);
+    timed(() => expectListError(() => readTrustedListXml(xml, new Set([fp]))), 2000);
   });
 
   it("tanımsız varlık başvurusu (DTD'siz) bozuk XML'dir", () => {
