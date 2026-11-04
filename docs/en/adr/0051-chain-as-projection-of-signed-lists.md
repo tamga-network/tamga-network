@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-17
-last_updated: 2026-10-19
+last_updated: 2026-11-04
 summary: >
   The chain code is written before a production chain exists and is wired to the chainless design: the signed trust lists
   (lotl, tl-<cc>) and the anchor log remain the source; the chain is their projection. Only the digest of a list version
@@ -112,7 +112,7 @@ verifier application (a line on the health page) is separate work once the flag 
 
 - The contracts compile and are tested with **Hardhat** (TypeScript tests); Foundry was removed (same language as the repository's
   tooling; forge is not available on the development machines). The local development chain is the Hardhat node; a Besu/QBFT
-  single-validator development network (Docker) is separate work.
+  single-validator development network is separate work (2026-11-04: set up without Docker, `scripts/besu-dev.ps1`).
 - The move to phase 0 is [[ADR-0009]] K7 and is unchanged by this ADR: the list archive is replayed into the contracts and the
   equivalence test passes; the trust list anchor registry keeps working after that day (lists are still published in phase 0 —
   as the chain's projection, [[ARCH-0003]] SEV1).
@@ -157,7 +157,8 @@ verifier application (a line on the health page) is separate work once the flag 
 2. The exact production threshold (proposal 2) and who the second writer will be — together with the second-operator candidate.
 3. ~~A generic "execute call" proposal in `Governance`~~ — **closed (2026-10-19, [[ADR-0055]]):** the writer set/threshold and
    `CrossRecognition.bootstrapFounders` are managed through typed Governance proposals; no generic call proposal was created.
-4. A Besu/QBFT single-validator development network (Docker) and `ChainTrustSource` + indexer (the phase 0 read path).
+4. ~~A Besu/QBFT single-validator development network~~ — **closed (2026-11-04):** a local network without Docker
+   (`scripts/besu-dev.ps1`, `npm run chain:besu:*`). Remaining: `ChainTrustSource` + indexer (the phase 0 read path).
 5. Moving `contracts/` into the public repository (today in `.publicignore`).
 
 # Status
@@ -166,3 +167,7 @@ verifier application (a line on the health page) is separate work once the flag 
 `trust:chain-submit` and `trust:chain-check`). DECISIONS: D-BC-7. Proposed on 2026-10-17, on project management's direction of the
 same day ("the chain code is written now, integrated with the chainless design, off in production"). CH1–CH5 are binding.
 2026-10-19: the last item of K3 and CH4 were changed by [[ADR-0053]] (competing candidates); open item 3 was closed by [[ADR-0055]].
+
+**Note (2026-11-04):** the "(Docker)" wording in K6 was removed: the Besu/QBFT single-validator development network was set up
+without Docker (a local JDK + the Besu binary, `scripts/besu-dev.ps1`, `npm run chain:besu:*`); that part of open item 4 is
+closed. The decision content is unchanged (project management).

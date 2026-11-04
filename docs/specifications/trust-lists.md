@@ -133,6 +133,8 @@ vb., [[SPEC-ID-0002]] §8.1) kalır ve LoTE'ye girmez.
 
 # 5. `anchors.jsonl` — çapa günlüğü
 
+> **Öneri:** [[ADR-0074]] (Proposed) kayıt sertifikası durum listesi ve liste görünümleri için yeni satır türleri önerir; bu bölüm kabulden sonra değişir.
+
 Her satır bağımsız JWS; payload `{seq, previous_hash, ts, kind, …}`:
 
 | `kind` | Alanlar | Kontrat karşılığı |
@@ -170,6 +172,8 @@ bellek-içi yansıma ([[ARCH-0003]] §2.4 tabloları). İmza ve biçimden sonra 
 ---
 
 # 7. Kontrat eşlemesi ve zincire geçiş
+
+> **Öneri:** [[ADR-0073]] ve [[ADR-0074]] (Proposed) yeniden oynatmayı ve eşlemeyi genişletir (göç kipi, sert iptal, şema sürüm özetleri, doğrulayıcı kimliği, ağ düzeyi kayıtlar); bu bölüm kabulden sonra değişir.
 
 | Liste alanı | Kontrat çağrısı |
 |---|---|

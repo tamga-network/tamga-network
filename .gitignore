@@ -78,3 +78,12 @@ DIFFERENTIAL_REVIEW*.md
 
 # API anahtarları depoya girmez (anahtarlar depo dışında tutulur)
 *.key
+
+# Yerel Besu QBFT geliştirme ağı (scripts/besu-dev.ps1): indirilen JDK/Besu, zincir verisi, doğrulayıcı anahtarı ve o anahtara
+# bağlı genesis — her bilgisayarda yerelde üretilir (tools/zk-circuit izlenmeye devam eder)
+tools/jdk-*/
+tools/besu-*/
+tools/_dl/
+network/dev/data/
+network/dev/keys/
+network/dev/genesis.json

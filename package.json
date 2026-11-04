@@ -65,7 +65,13 @@
     "contracts:storage-check": "npm --prefix contracts run -s check:storage",
     "contracts:slither": "npm --prefix contracts run -s slither",
     "contracts:node": "npm --prefix contracts run -s node",
-    "contracts:deploy:dev": "npm --prefix contracts run -s deploy:dev"
+    "contracts:deploy:dev": "npm --prefix contracts run -s deploy:dev",
+    "chain:besu:init": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/besu-dev.ps1 -Init",
+    "chain:besu:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/besu-dev.ps1 -Start",
+    "chain:besu:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/besu-dev.ps1 -Stop",
+    "chain:besu:reset": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/besu-dev.ps1 -Reset",
+    "chain:besu:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/besu-dev.ps1 -Status",
+    "chain:besu:deploy": "npm --prefix contracts run -s deploy:besu"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

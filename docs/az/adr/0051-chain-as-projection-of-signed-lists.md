@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-17
-last_updated: 2026-10-19
+last_updated: 2026-11-04
 summary: >
   Zəncir kodu istehsal zənciri qurulmazdan əvvəl yazılır və zəncirsiz dizayna bağlanır: imzalanmış etibar siyahıları (lotl, tl-<cc>) və lövbər jurnalı mənbə olaraq qalır; zəncir onların proyeksiyasıdır. Zəncirə yalnız siyahı versiyasının xülasəsi (versiya, məzmun hash-i, əvvəlki hash, dərc vaxtı) və lövbər jurnalının son sətrinin xülasəsi yazılır — məzmun, qeyd, rəqəmsal sənəd və ya fərdi məlumatlar yazılmır. Lövbər yalnız hədd sayda müstəqil yazıcı eyni məlumatı göndərdikdə təsdiqlənmiş sayılır; istehsal mühitində hədd ən azı 2-dir (ikinci operator qapısı, ADR-0009 K4). Zəncirin cavabı yoxlama üçün heç vaxt tələb olunmur; ziddiyyət olduqda imzalanmış siyahı qüvvədədir. Funksiya bayrağı defolt olaraq söndürülüb. Kontraktlar Hardhat ilə kompilyasiya və test edilir; istehsal zənciri yoxdur. Adlar: kontrakt `TrustListAnchorRegistry`, komandalar `trust:chain-submit` və `trust:chain-check`. Qəbul tarixi: 2026-10-19.
 domain: Trust
@@ -98,8 +98,8 @@ səhifəsində göstərilməsi) bayraq aktivləşdirildikdə ayrıca işdir.
 ## K6 — Alət zənciri və keçid
 
 - Kontraktlar **Hardhat** (TypeScript testləri) ilə kompilyasiya və test edilir; Foundry çıxarıldı (repozitoriyanın alət dəsti ilə eyni dil; forge
-  inkişaf maşınlarında yoxdur). Lokal inkişaf zənciri Hardhat node-udur; Besu/QBFT tək validatorlu inkişaf şəbəkəsi (Docker)
-  ayrıca işdir.
+  inkişaf maşınlarında yoxdur). Lokal inkişaf zənciri Hardhat node-udur; Besu/QBFT tək validatorlu inkişaf şəbəkəsi
+  ayrıca işdir (2026-11-04: Docker olmadan quruldu, `scripts/besu-dev.ps1`).
 - Faza 0-a keçid [[ADR-0009]] K7-dir və bu ADR ilə dəyişmir: siyahı arxivi kontraktlarda yenidən icra edilir, ekvivalentlik testindən keçir; siyahı
   lövbəri reyestri o gündən sonra da işləyir (siyahılar Faza 0-da da dərc edilir — zəncirin proyeksiyası kimi, [[ARCH-0003]] SEV1).
 
@@ -141,7 +141,8 @@ səhifəsində göstərilməsi) bayraq aktivləşdirildikdə ayrıca işdir.
 2. İstehsal həddinin dəqiq dəyəri (təklif: 2) və ikinci yazıcının kim olacağı — ikinci operator namizədi ilə birlikdə.
 3. ~~`Governance`-da ümumi "çağırışı icra et" təklifi~~ — **bağlandı (2026-10-19, [[ADR-0055]]):** yazıcı dəsti/həddi və
    `CrossRecognition.bootstrapFounders` növü müəyyən Governance təklifləri ilə idarə olunur; ümumi çağırış təklifi qurulmadı.
-4. Besu/QBFT tək-validatorlu inkişaf şəbəkəsi (Docker) və `ChainTrustSource` + indeksləyici (Faza 0 oxuma yolu).
+4. ~~Besu/QBFT tək-validatorlu inkişaf şəbəkəsi~~ — **bağlandı (2026-11-04):** Docker olmadan lokal şəbəkə
+   (`scripts/besu-dev.ps1`, `npm run chain:besu:*`). Qalan: `ChainTrustSource` + indeksləyici (Faza 0 oxuma yolu).
 5. `contracts/` qovluğunun public repozitoriyaya köçürülməsi (bu gün `.publicignore`-dadır).
 
 # Status
@@ -150,3 +151,7 @@ səhifəsində göstərilməsi) bayraq aktivləşdirildikdə ayrıca işdir.
 `trust:chain-check`). DECISIONS: D-BC-7. Təklif 2026-10-17-də, layihə rəhbərliyinin həmin günkü istiqaməti ("zəncir kodu indi yazılır,
 zəncirsiz dizaynla inteqrasiya olunur, istehsalda söndürülüb") əsasında yazıldı. CH1–CH5 məcburidir. 2026-10-19: K3-ün son bəndi və CH4
 [[ADR-0053]] ilə dəyişdi (rəqib namizədlər); açıq məsələ 3 [[ADR-0055]] ilə bağlandı.
+
+**Qeyd (2026-11-04):** K6-dakı "(Docker)" ifadəsi çıxarıldı: Besu/QBFT tək validatorlu inkişaf şəbəkəsi Docker olmadan quruldu
+(lokal JDK + Besu binar faylı, `scripts/besu-dev.ps1`, `npm run chain:besu:*`); açıq məsələ 4-ün bu hissəsi bağlandı. Qərarın
+məzmunu dəyişmədi (layihə rəhbərliyi).

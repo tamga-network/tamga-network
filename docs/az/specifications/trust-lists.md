@@ -132,6 +132,8 @@ və s., [[SPEC-ID-0002]] §8.1) qalır və LoTE-yə daxil edilmir.
 
 # 5. `anchors.jsonl` — lövbər jurnalı
 
+> **Təklif:** [[ADR-0074]] (Proposed) qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri üçün yeni sətir növləri təklif edir; bu bölmə qəbuldan sonra dəyişir.
+
 Hər sətir müstəqil JWS-dir; payload `{seq, previous_hash, ts, kind, …}`:
 
 | `kind` | Sahələr | Kontrakt qarşılığı |
@@ -169,6 +171,8 @@ yaddaşdaxili əks ([[ARCH-0003]] §2.4 cədvəlləri). İmza və formatdan sonr
 ---
 
 # 7. Kontrakt uyğunlaşdırması və zəncirə keçid
+
+> **Təklif:** [[ADR-0073]] və [[ADR-0074]] (Proposed) yenidən icranı və uyğunlaşdırmanı genişləndirir (miqrasiya rejimi, sərt ləğv, sxem versiya xülasələri, yoxlayan tərəfin identifikatoru, şəbəkə səviyyəli qeydlər); bu bölmə qəbuldan sonra dəyişir.
 
 | Siyahı sahəsi | Kontrakt çağırışı |
 |---|---|

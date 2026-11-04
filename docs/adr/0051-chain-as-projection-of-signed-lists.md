@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-17
-last_updated: 2026-10-19
+last_updated: 2026-11-04
 summary: >
   Zincir kodu üretim zinciri kurulmadan önce yazılır ve zincirsiz tasarıma bağlanır: imzalı güven listeleri (lotl, tl-<cc>) ve
   çapa günlüğü kaynak kalır; zincir onların projeksiyonudur. Zincire yalnız liste sürümünün özeti (sürüm, içerik hash'i, önceki
@@ -102,8 +102,8 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
 ## K6 — Araç zinciri ve geçiş
 
 - Kontratlar **Hardhat** (TypeScript testleri) ile derlenir ve test edilir; Foundry kaldırıldı (depo araç setiyle aynı dil; forge
-  geliştirme makinelerinde yok). Yerel geliştirme zinciri Hardhat düğümüdür; Besu/QBFT tek-validator geliştirme ağı (Docker)
-  ayrı iş.
+  geliştirme makinelerinde yok). Yerel geliştirme zinciri Hardhat düğümüdür; Besu/QBFT tek-validator geliştirme ağı
+  ayrı iş (2026-11-04: Docker'sız kuruldu, `scripts/besu-dev.ps1`).
 - Faz 0'a geçiş [[ADR-0009]] K7'dir ve bu ADR'yle değişmez: liste arşivi kontratlara oynatılır, eşdeğerlik testi geçer; liste
   çapası kaydı o günden sonra da çalışır (listeler Faz 0'da da yayınlanır — zincirin projeksiyonu olarak, [[ARCH-0003]] SEV1).
 
@@ -145,7 +145,8 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
 2. Üretim eşiği tam değeri (öneri 2) ve ikinci yazıcının kim olacağı — ikinci işletmeci adayıyla birlikte.
 3. ~~`Governance`'ta genel "çağrı yürüt" önerisi~~ — **kapandı (2026-10-19, [[ADR-0055]]):** yazıcı kümesi/eşiği ve
    `CrossRecognition.bootstrapFounders` türü belli Governance önerileriyle yönetilir; genel çağrı önerisi kurulmadı.
-4. Besu/QBFT tek-validator geliştirme ağı (Docker) ve `ChainTrustSource` + indeksleyici (Faz 0 okuma yolu).
+4. ~~Besu/QBFT tek-validator geliştirme ağı~~ — **kapandı (2026-11-04):** Docker'sız yerel ağ (`scripts/besu-dev.ps1`,
+   `npm run chain:besu:*`). Kalan: `ChainTrustSource` + indeksleyici (Faz 0 okuma yolu).
 5. `contracts/` klasörünün public depoya alınması (bugün `.publicignore`'da).
 
 # Durum
@@ -154,3 +155,7 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
 `trust:chain-check`). DECISIONS: D-BC-7. Öneri 2026-10-17'de, proje yönetiminin aynı günkü yönü ("zincir kodu şimdi yazılır,
 zincirsiz tasarımla entegre olur, üretimde kapalı") üzerine yazıldı. CH1–CH5 bağlayıcıdır. 2026-10-19: K3'ün son maddesi ve CH4
 [[ADR-0053]] ile değişti (rakip adaylar); açık konu 3 [[ADR-0055]] ile kapandı.
+
+**Not (2026-11-04):** K6'daki "(Docker)" ifadesi çıkarıldı: Besu/QBFT tek-validator geliştirme ağı Docker'sız kuruldu (yerel
+JDK + Besu ikilisi, `scripts/besu-dev.ps1`, `npm run chain:besu:*`); açık konu 4'ün bu kısmı kapandı. Karar içeriği değişmedi
+(proje yönetimi).
