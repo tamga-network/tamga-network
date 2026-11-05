@@ -120,6 +120,8 @@ Tam örnek: depoda `apps/trust-publisher/registry/examples/issuer-application.ex
 (barındırılan servisin adresi `issuer.tamga.network/<slug>`); kayıt kurumuyla birlikte seçilir ve bir kez kullanılan ad, kayıt
 kapansa da yeniden verilmez.
 
+Araçla: `tamga-onboard init` dosyayı sorularla yazar, `tamga-onboard validate` kayıt kurallarıyla denetler ([[GUIDE-0014]]).
+
 ## 3. Anahtarlar ve sertifika isteği
 
 İki anahtar çifti üretirsiniz; ikisi de P-256 (ES256) ve ikisi de sizde kalır:
@@ -149,6 +151,9 @@ Anahtarın nerede durduğu belge verme yolunuza göre değişir:
   kayıt kurumuna bildirirsiniz ([[ADR-0057]]). Gerçek ağda kurum anahtarı barındırılan servisin sunucusunda dosya olarak
   tutulmaz.
 
+Araçla: `tamga-onboard keys` anahtarları ve CSR'ları kendi bilgisayarınızda üretir; HSM'de ya da uzaktan imza hizmetinde
+üretilen bir CSR'ı `tamga-onboard keys --inspect` başvurunuza karşı denetler ([[GUIDE-0014]]).
+
 ## 4. Sorgu ucu: belge bilgisi sizin sisteminizden
 
 [[t:authentic-source|Yetkili kaynak]] sizin sisteminizdir. Tamga kişi kaydı tutmaz; belge verildiği anda sisteminizin **sorgu
@@ -176,6 +181,9 @@ adresi cüzdanda gösterilir; istenen alanlar yalnız T.C. kimlik numarası ve d
 
 Her yayında kayıtlarınız için [[t:registration-certificate|kayıt sertifikaları]] (WRPRC) de otomatik üretilir; cüzdanlar kaydı
 bunlarla da denetler ([[ADR-0026]]).
+
+Araçla: kurulumunuzu `tamga-onboard check` ile, listeye girdikten sonra kaydınızı `tamga-onboard check --listing` ile denetleyin.
+Araç listeye yazmaz; kayıt kararı ve listeye yazma kayıt kurumundadır ([[GUIDE-0014]]).
 
 ## 6. Kurum Konsolu hesabı
 

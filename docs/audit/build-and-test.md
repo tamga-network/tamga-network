@@ -12,7 +12,7 @@ npm run setup        # development PKI (random, under ops/pki/, gitignored), sch
 npm run check        # all unit + integration tests (vitest) and the TypeScript type check
 npm run conformance  # regenerate conformance vectors and run the tests again
 npm run format:check
-npm run release:check  # pack the nine packages and smoke-test the tarballs
+npm run release:check  # pack the ten packages and smoke-test the tarballs
 ```
 
 `npm run setup` creates throw-away keys; nothing in the repository is a production key. In CI the variable

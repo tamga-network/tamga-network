@@ -43,6 +43,8 @@ cüzdan                         kurum (issuer.tamga.network/{kurum})
 - **Barındırılan servis:** `issuer.tamga.network/{kurum}`; kurumunuz kendi sistemlerinden API anahtarıyla teklif oluşturur,
   belgeleri Kurum Konsolu'ndan yönetir. Rehber: [[GUIDE-0003]].
 - **Kendi servisiniz:** [`@tamga-network/issuer`](/packages/issuer) ile; güven listesine belge veren olarak kaydolursunuz.
+- **İki yolda da kayıt:** kurum tarafındaki adımları (başvuru dosyası, anahtarlar ve CSR, kurulum ve listedeki görünüm)
+  bilgi işlem ekibiniz [`@tamga-network/onboard`](/packages/onboard) katılım aracıyla hazırlar ve sınar: [[GUIDE-0014]].
 
 ## Ayrıntı
 

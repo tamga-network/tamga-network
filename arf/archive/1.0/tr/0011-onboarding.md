@@ -50,7 +50,9 @@ Tamga'dır; bir devlet kendi listesini devraldığında başvurular o devletin k
 | Anahtarların HSM'de olduğunun ya da nitelikli e-Mühür kullanıldığının kanıtı | — | — | ✓ |
 | Denetim ve kayıt tutma düzeni, olay bildirim süreleri, askıya alma prosedürü, sorumluluk sigortası | — | — | ✓ |
 
-Teknik adımlar: [[GUIDE-0007]] ve [[GUIDE-0003]].
+Teknik adımlar: [[GUIDE-0007]] ve [[GUIDE-0003]]. Bilgilendirici not: başvuru dosyasını, anahtarları ve CSR'ları, kurulumu ve
+listedeki görünümü kurumun bilgi işlem ekibi açık katılım aracıyla (`tamga-onboard`) hazırlayıp sınayabilir; araç listeye
+yazmaz, kayıt kararı kayıt kurumundadır ([[GUIDE-0014]]).
 
 # 3. Doğrulayıcı
 
@@ -63,7 +65,8 @@ Teknik adımlar: [[GUIDE-0007]] ve [[GUIDE-0003]].
 | 5. Uyum testi | İmzalı istek, doğrulama hattı, bayat listede "doğrulanamadı" sonucu ve kapsam dışı alan istememe test edilir. |
 | 6. Listeye giriş | Doğrulayıcı güven listesine eklenir. Barındırılan doğrulayıcıyı kullanacaksa bu da kayda yazılır. |
 
-Teknik adımlar: [[GUIDE-0008]], ardından [[GUIDE-0002]] ya da [[GUIDE-0001]].
+Teknik adımlar: [[GUIDE-0008]], ardından [[GUIDE-0002]] ya da [[GUIDE-0001]]; başvuru dosyası, erişim anahtarı ve
+kurulum denetimi için katılım aracı: [[GUIDE-0014]] (bilgilendirici).
 
 # 4. Cüzdan sağlayıcısı
 

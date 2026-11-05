@@ -44,6 +44,8 @@ wallet                         institution (issuer.tamga.network/{institution})
 - **Hosted service:** `issuer.tamga.network/{institution}`; your institution creates offers from its own systems with an API
   key and manages credentials in the Institution Console. Guide: [[GUIDE-0003]].
 - **Your own service:** with [`@tamga-network/issuer`](/packages/issuer); you register in the trust list as an issuer.
+- **Registration, on either path:** your IT team prepares and tests the institution's side (application file, keys and CSRs, setup
+  and how you appear in the list) with the [`@tamga-network/onboard`](/packages/onboard) joining tool: [[GUIDE-0014]].
 
 ## Details
 

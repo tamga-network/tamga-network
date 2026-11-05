@@ -170,11 +170,11 @@ operators: the national list is run today as well; when the chain opens, a node 
 | Registering your institution (including the IT steps) | [[GUIDE-0007]], [[GUIDE-0014]] | the same |
 | Issuing with the hosted service | [[GUIDE-0003]] | the same |
 | Running your own issuance server | [[GUIDE-0003]] § In depth: your own service, working code [[GUIDE-0004]], protocol [[SPEC-PROTO-0001]]; registration and key management are agreed with the network operator | the same |
-| Registering as a relying party | [[GUIDE-0008]] | the same |
+| Registering as a relying party | [[GUIDE-0008]], [[GUIDE-0014]] | the same |
 | Reading trust lists, keeping your own copy | [[GUIDE-0006]] | [[GUIDE-0006]] §5 |
 | Connecting your country's list to the network (LOTL entry) | [[GUIDE-0011]] | the same; the list stays the source |
 | Operating the national trust list (setup) | [[GUIDE-0017]] | [[GUIDE-0017]] § When the chain is on |
-| Running a node or validator | — | [[GUIDE-0015]] (handbook); test network setup: [[GUIDE-0018]] |
+| Running a node or validator | — | [[GUIDE-0015]] (handbook; node key, declaration and checks: `tamga-onboard node`); test network setup: [[GUIDE-0018]] |
 | Trying it end to end | [[GUIDE-0013]] (sandbox) | the sandbox is not written to the chain; local development chain: [[GUIDE-0015]] § Local trial |
 
 ## Glossary

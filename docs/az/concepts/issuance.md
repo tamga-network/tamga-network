@@ -43,6 +43,8 @@ wallet                         institution (issuer.tamga.network/{institution})
 - **Xidmət kimi təqdim olunan servis:** `issuer.tamga.network/{kurum}`; qurumunuz öz sistemlərindən API açarı ilə təklif yaradır,
   rəqəmsal sənədləri Qurum Konsolundan idarə edir. Bələdçi: [[GUIDE-0003]].
 - **Öz servisiniz:** [`@tamga-network/issuer`](/packages/issuer) ilə; etibar siyahısında sənədi verən qurum kimi qeydiyyatdan keçirsiniz.
+- **Hər iki yolda qeydiyyat:** qurum tərəfindəki addımları (müraciət faylı, açarlar və CSR, quraşdırma və siyahıdakı görünüş)
+  İT komandanız [`@tamga-network/onboard`](/packages/onboard) qoşulma aləti ilə hazırlayır və sınayır: [[GUIDE-0014]].
 
 ## Ətraflı
 

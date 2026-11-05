@@ -168,11 +168,11 @@ siyahı bu gün də idarə olunur; zəncir açılanda yanına bir qovşaq əlav�
 | Qurumunuzu şəbəkədə qeydiyyatdan keçirmək (İT addımları daxil) | [[GUIDE-0007]], [[GUIDE-0014]] | eyni |
 | Host edilən xidmətlə sənəd vermək | [[GUIDE-0003]] | eyni |
 | Öz sənəd vermə serverinizi qurmaq | [[GUIDE-0003]] § Ətraflı: öz xidmətiniz, işlək kod [[GUIDE-0004]], protokol [[SPEC-PROTO-0001]]; qeydiyyat və açar idarəetməsi şəbəkə operatoru ilə razılaşdırılır | eyni |
-| Yoxlayan tərəf kimi qeydiyyatdan keçmək | [[GUIDE-0008]] | eyni |
+| Yoxlayan tərəf kimi qeydiyyatdan keçmək | [[GUIDE-0008]], [[GUIDE-0014]] | eyni |
 | Etibar siyahılarını oxumaq, öz nüsxənizi saxlamaq | [[GUIDE-0006]] | [[GUIDE-0006]] §5 |
 | Ölkənizin siyahısını şəbəkəyə qoşmaq (LOTL qeydi) | [[GUIDE-0011]] | eyni; siyahı mənbə qalır |
 | Milli etibar siyahısını idarə etmək (quraşdırma) | [[GUIDE-0017]] | [[GUIDE-0017]] § Zəncir açıq olduqda |
-| Qovşaq və ya validator işlətmək | — | [[GUIDE-0015]] (təlimat); test şəbəkəsinin quraşdırılması: [[GUIDE-0018]] |
+| Qovşaq və ya validator işlətmək | — | [[GUIDE-0015]] (təlimat; qovşaq açarı, bəyannamə və yoxlama: `tamga-onboard node`); test şəbəkəsinin quraşdırılması: [[GUIDE-0018]] |
 | Başdan sona sınamaq | [[GUIDE-0013]] (sandbox) | sandbox zəncirə yazılmır; yerli inkişaf zənciri: [[GUIDE-0015]] § Yerli sınaq |
 
 ## Terminlər

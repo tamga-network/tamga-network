@@ -266,6 +266,10 @@ Sınırlar: aynı anda en çok 30 test kurumu (dolunca en eski boş test kurumu 
 Kurum, hesabı, kayıtları ve sertifikaları her gece silinir ve sandbox listesinden çıkar (`ADR-0041/TI5`). Etkinlik bileti
 kurumları, cüzdanın başlattığı ihraç ve test kurumu için API anahtarı sonraki aşamadadır.
 
+Bilgi işlem ekibiniz aynı sayfaya katılım aracıyla da ulaşır: `tamga-onboard sandbox` adresi ve adımları basar; test kurumunun
+sandbox listesindeki görünümünü `tamga-onboard check --listing-only --env sandbox --slug t-…` ile denetleyebilirsiniz. Gerçek ağa
+katılımın kurum tarafındaki adımları (başvuru dosyası, anahtarlar ve CSR, kurulum denetimi) için [[GUIDE-0014]].
+
 ## Kurallar ve sınırlar
 
 - **Gerçek kişisel veri girmeyin.** Sandbox'a yalnız örnek kişiler, örnek adresler ve uydurma kayıtlar girer; tek istisna
@@ -279,4 +283,4 @@ kurumları, cüzdanın başlattığı ihraç ve test kurumu için API anahtarı 
 
 ## İlgili
 
-[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]]
+[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]] · [[GUIDE-0014]]

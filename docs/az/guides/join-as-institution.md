@@ -120,6 +120,8 @@ Tam nümunə: repozitoriyada `apps/trust-publisher/registry/examples/issuer-appl
 (yerləşdirilmiş xidmətin ünvanı `issuer.tamga.network/<slug>`); qeydiyyat qurumu ilə birlikdə seçilir və bir dəfə istifadə olunmuş ad, qeydiyyat
 bağlansa belə, yenidən verilmir.
 
+Alətlə: `tamga-onboard init` faylı suallarla yazır, `tamga-onboard validate` onu qeydiyyat qaydaları ilə yoxlayır ([[GUIDE-0014]]).
+
 ## 3. Açarlar və sertifikat sorğusu
 
 İki açar cütü yaradırsınız; hər ikisi P-256 (ES256) olur və hər ikisi sizdə qalır:
@@ -149,6 +151,9 @@ Açarın harada saxlanması sənəd vermə üsulunuzdan asılıdır:
   qeydiyyat qurumuna bildirirsiniz ([[ADR-0057]]). Real şəbəkədə qurumun açarı yerləşdirilmiş xidmətin serverində fayl kimi
   saxlanılmır.
 
+Alətlə: `tamga-onboard keys` açarları və CSR-ları öz kompüterinizdə yaradır; HSM-də və ya məsafədən imza xidmətində yaradılan
+CSR-ı `tamga-onboard keys --inspect` müraciətinizə qarşı yoxlayır ([[GUIDE-0014]]).
+
 ## 4. Sorğu nöqtəsi: sənəd məlumatı sizin sisteminizdən
 
 [[t:authentic-source|Səlahiyyətli mənbə]] sizin sisteminizdir. Tamga şəxslərin qeydlərini saxlamır; sənəd verildiyi anda sisteminizin **sorğu
@@ -176,6 +181,9 @@ və identifikasiya nömrəsini ehtiva edir, daimi adı qurumunuza məxsus domen 
 
 Hər dərcdə qeydləriniz üçün [[t:registration-certificate|qeydiyyat sertifikatları]] (WRPRC) da avtomatik yaradılır; rəqəmsal cüzdanlar qeydi
 onlarla da yoxlayır ([[ADR-0026]]).
+
+Alətlə: quraşdırmanızı `tamga-onboard check` ilə, siyahıya daxil olduqdan sonra qeydinizi `tamga-onboard check --listing` ilə
+yoxlayın. Alət siyahıya yazmır; qeydiyyat qərarı və siyahıya yazma qeydiyyat qurumundadır ([[GUIDE-0014]]).
 
 ## 6. Qurum Konsolu hesabı
 

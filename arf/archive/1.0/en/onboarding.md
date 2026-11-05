@@ -58,7 +58,9 @@ registrar.
 | Proof that keys are in an HSM or that a qualified e-seal is used                                                                                                        | —   | —   | ✓   |
 | Audit and record-keeping arrangements, incident notification times, suspension procedure, liability insurance                                                           | —   | —   | ✓   |
 
-Technical steps: [[GUIDE-0007]] and [[GUIDE-0003]].
+Technical steps: [[GUIDE-0007]] and [[GUIDE-0003]]. Informative note: the institution's IT team can prepare and test the
+application file, the keys and CSRs, the setup and how the institution appears in the list with the open onboarding tool
+(`tamga-onboard`); the tool does not write to the list, and the registration decision stays with the registrar ([[GUIDE-0014]]).
 
 ## 3. Verifier
 
@@ -71,7 +73,8 @@ Technical steps: [[GUIDE-0007]] and [[GUIDE-0003]].
 | 5. Conformance test         | The signed request, the verification pipeline, the "cannot be verified" result on a stale list and not requesting out-of-scope attributes are tested.                                                                                                    |
 | 6. Entry into the list      | The verifier is added to the trusted list. If it will use the hosted verifier, this is also recorded.                                                                                                                                                    |
 
-Technical steps: [[GUIDE-0008]], then [[GUIDE-0002]] or [[GUIDE-0001]].
+Technical steps: [[GUIDE-0008]], then [[GUIDE-0002]] or [[GUIDE-0001]]; for the application file, the access key and the
+setup check, the onboarding tool: [[GUIDE-0014]] (informative).
 
 ## 4. Wallet provider
 

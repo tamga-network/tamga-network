@@ -257,6 +257,10 @@ Məhdudiyyətlər: eyni anda ən çoxu 30 test qurumu (dolduqda yer açmaq üç�
 Qurum, onun hesabı, qeydləri və sertifikatları hər gecə silinir və sandbox siyahısından çıxarılır (`ADR-0041/TI5`). Tədbir bileti
 qurumları, rəqəmsal cüzdanın başlatdığı buraxılış və test qurumu üçün API açarı növbəti mərhələdədir.
 
+İT komandanız eyni səhifəyə qoşulma aləti ilə də çatır: `tamga-onboard sandbox` ünvanı və addımları çap edir; test qurumunun
+sandbox siyahısındakı görünüşünü `tamga-onboard check --listing-only --env sandbox --slug t-…` ilə yoxlaya bilərsiniz. Real
+şəbəkəyə qoşulmanın qurum tərəfindəki addımları (müraciət faylı, açarlar və CSR, quraşdırmanın yoxlanılması) üçün [[GUIDE-0014]].
+
 ## Qaydalar və məhdudiyyətlər
 
 - **Real fərdi məlumatlar daxil etməyin.** Sandbox-a yalnız nümunə şəxslər, nümunə ünvanlar və uydurma qeydlər daxil edilir; yeganə istisna
@@ -270,4 +274,4 @@ qurumları, rəqəmsal cüzdanın başlatdığı buraxılış və test qurumu ü
 
 ## Əlaqəli
 
-[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]]
+[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]] · [[GUIDE-0014]]

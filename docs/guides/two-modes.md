@@ -163,11 +163,11 @@ bugün de işletilir; zincir açılınca yanına bir düğüm eklenir.
 | Kurumunuzu ağa kaydettirmek (bilgi işlem adımları dahil) | [[GUIDE-0007]], [[GUIDE-0014]] | aynı |
 | Barındırılan servisle belge vermek | [[GUIDE-0003]] | aynı |
 | Kendi belge verme sunucunuzu kurmak | [[GUIDE-0003]] § Derinlik: kendi servisiniz, çalışan kod [[GUIDE-0004]], protokol [[SPEC-PROTO-0001]]; kayıt ve anahtar yönetimi ağ işletmecisiyle konuşulur | aynı |
-| Doğrulayıcı olarak kaydolmak | [[GUIDE-0008]] | aynı |
+| Doğrulayıcı olarak kaydolmak | [[GUIDE-0008]], [[GUIDE-0014]] | aynı |
 | Güven listelerini okumak, kendi kopyanızı tutmak | [[GUIDE-0006]] | [[GUIDE-0006]] §5 |
 | Ülkenizin listesini ağa bağlamak (LOTL kaydı) | [[GUIDE-0011]] | aynı; liste kaynak kalır |
 | Ulusal güven listesini işletmek (kurulum) | [[GUIDE-0017]] | [[GUIDE-0017]] § Zincir açıkken |
-| Düğüm ya da validator işletmek | — | [[GUIDE-0015]] (el kitabı); test ağı kurulumu: [[GUIDE-0018]] |
+| Düğüm ya da validator işletmek | — | [[GUIDE-0015]] (el kitabı; düğüm anahtarı, bildirim ve denetim: `tamga-onboard node`); test ağı kurulumu: [[GUIDE-0018]] |
 | Uçtan uca denemek | [[GUIDE-0013]] (sandbox) | sandbox zincire yazılmaz; yerel geliştirme zinciri: [[GUIDE-0015]] § Yerel deneme |
 
 ## Terimler

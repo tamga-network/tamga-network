@@ -125,6 +125,9 @@ Full sample: `apps/trust-publisher/registry/examples/issuer-application.example.
 institution's permanent short name (the hosted service address is `issuer.tamga.network/<slug>`); it is chosen together with the
 registrar, and a name once used is not given out again, even after the entry is closed.
 
+With the tool: `tamga-onboard init` writes the file from your answers and `tamga-onboard validate` checks it against the
+registration rules ([[GUIDE-0014]]).
+
 ## 3. Keys and certificate signing request
 
 You generate two key pairs; both are P-256 (ES256) and both stay with you:
@@ -153,6 +156,9 @@ Where the key lives depends on how you issue:
   digest of the data to be signed; no credential content and no personal data. You give the registrar the address of your remote
   signing service and the client identity you grant the service ([[ADR-0057]]). On the production network the
   institution's key is never kept as a file on the hosted service's host.
+
+With the tool: `tamga-onboard keys` generates the keys and CSRs on your own computer; `tamga-onboard keys --inspect` checks a
+CSR made in an HSM or a remote signing service against your application ([[GUIDE-0014]]).
 
 ## 4. Lookup endpoint: the data comes from your system
 
@@ -183,6 +189,10 @@ requested are the national ID number and the date of birth. Your lookup endpoint
 
 At every publication [[t:registration-certificate|registration certificates]] (WRPRC) are also generated for your entries;
 wallets check them as well ([[ADR-0026]]).
+
+With the tool: check your setup with `tamga-onboard check` and, once you are in the list, your record with
+`tamga-onboard check --listing`. The tool does not write to the list; the registration decision and the write stay with the
+registrar ([[GUIDE-0014]]).
 
 ## 6. Institution Console account
 

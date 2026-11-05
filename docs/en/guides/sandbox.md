@@ -277,6 +277,10 @@ offers per hour. The institution, its account, records and certificates are dele
 (`ADR-0041/TI5`). Event ticket institutions, wallet-initiated issuance and API keys for test institutions come in a later
 phase.
 
+Your IT team reaches the same page with the onboarding tool: `tamga-onboard sandbox` prints the address and the steps, and
+`tamga-onboard check --listing-only --env sandbox --slug t-…` checks how the test institution appears in the sandbox list. For the
+institution's side of joining the real network (application file, keys and CSRs, setup check), see [[GUIDE-0014]].
+
 ## Rules and limits
 
 - **Do not enter real personal data.** Only the example people, example addresses and made-up records go into the sandbox; the
@@ -292,4 +296,4 @@ phase.
 
 ## Related
 
-[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]]
+[[ADR-0038]] · [[ADR-0040]] · [[ADR-0041]] · [[ADR-0042]] · [[SPEC-TRUST-0001]] · [[GUIDE-0005]] · [[GUIDE-0010]] · [[GUIDE-0009]] · [[GUIDE-0012]] · [[GUIDE-0014]]

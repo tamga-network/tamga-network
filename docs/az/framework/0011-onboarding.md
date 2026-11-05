@@ -50,7 +50,9 @@ Tamga-dır; dövlət öz siyahısını təhvil aldıqda müraciətlər həmin d�
 | Açarların HSM-də saxlandığının və ya ixtisaslı e-Möhürdən istifadə olunduğunun sübutu | — | — | ✓ |
 | Audit və qeydlərin aparılması qaydası, insident bildirişi müddətləri, fəaliyyətin dayandırılması proseduru, məsuliyyət sığortası | — | — | ✓ |
 
-Texniki addımlar: [[GUIDE-0007]] və [[GUIDE-0003]].
+Texniki addımlar: [[GUIDE-0007]] və [[GUIDE-0003]]. Məlumat xarakterli qeyd: müraciət faylını, açarları və CSR-ları, quraşdırmanı
+və siyahıdakı görünüşü qurumun İT komandası açıq qoşulma aləti (`tamga-onboard`) ilə hazırlayıb sınaya bilər; alət siyahıya
+yazmır, qeydiyyat qərarı qeydiyyat qurumundadır ([[GUIDE-0014]]).
 
 # 3. Yoxlayan tərəf
 
@@ -63,7 +65,8 @@ Texniki addımlar: [[GUIDE-0007]] və [[GUIDE-0003]].
 | 5. Uyğunluq testi | İmzalanmış sorğu, yoxlama zənciri, köhnəlmiş siyahı olduqda "yoxlanıla bilmədi" nəticəsi və əhatə dairəsindən kənar sahələrin tələb olunmaması test edilir. |
 | 6. Siyahıya daxil olma | Yoxlayan tərəf etibar siyahısına əlavə olunur. Host edilən yoxlama xidmətindən istifadə edəcəksə, bu da qeydiyyata yazılır. |
 
-Texniki addımlar: [[GUIDE-0008]], daha sonra [[GUIDE-0002]] və ya [[GUIDE-0001]].
+Texniki addımlar: [[GUIDE-0008]], daha sonra [[GUIDE-0002]] və ya [[GUIDE-0001]]; müraciət faylı, giriş açarı və
+quraşdırmanın yoxlanılması üçün qoşulma aləti: [[GUIDE-0014]] (məlumat xarakterli).
 
 # 4. Cüzdan provayderi
 
