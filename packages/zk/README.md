@@ -62,7 +62,7 @@ as the verifier (`packages/verifier/zk`).
 
 ## Status
 
-Published on npm as the `0.8.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.2` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Unlike the other eight packages, `zk` is published by hand without npm provenance: its Android native libraries
 cannot yet be built in CI.
 

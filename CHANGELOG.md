@@ -4,11 +4,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.8.1` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
-## Unreleased
+## 0.8.2 — 2026-11-05
+
+All ten packages move to 0.8.2 together (patch release). New: the first publication of `@tamga-network/onboard`, the joining
+tool for institutions and for state / operator nodes (it was built and checked with 0.8.1 but not published). One change in
+`wallet-core` refuses more (below); no API change in the other packages. The date is the preparation date — if the release is
+made on another day, it is corrected.
+
+### Behaviour changes in 0.8.2 (fail-closed)
+
+1. **wallet-core — `fetchRpRecord` applies the cross-country name rule on the `x509_hash:` path too (ADR-0075).** In 0.8.1 the
+   lookup by `dns_name` returned `null` for a relying party whose name is ambiguous between national lists (no structured
+   reassignment record), but the lookup by client identifier read the record directly. Now both return `null`: the request is
+   treated as unregistered ("not found in the trust list" warning; a request that needs a registration is refused). A properly
+   reassigned name (old record `REVOKED` with `reassigned_to`) still resolves. Nothing to migrate.
 
 ### Added
 
-- **onboard — new package `@tamga-network/onboard` (command `tamga-onboard`, version 0.8.1 with the others).** A joining tool
+- **onboard — new package `@tamga-network/onboard` (command `tamga-onboard`; first published in 0.8.2).** A joining tool
   for an institution's IT team: `init` builds the registration application(s) from the institution's answers and checks them
   with the same rules as the operator's registration tool (ADR-0024; no unknown fields, so no names of people); `validate`
   checks an application; `keys` generates the institution's P-256 keys on its own computer and writes CSRs whose subject carries
@@ -18,9 +31,9 @@ published on npm as test releases; `0.8.1` is the current one on npm (the API ma
   `--listing`, its record in the signed trust list against embedded root pins (status, registration data, credential types,
   status list anchor, registration certificates, metadata chain to the listed root); `sandbox` prints the "Try your
   institution" steps. `tamga-onboard mcp` offers the same operations as a local MCP server (stdio; files only under its root,
-  private keys never returned, network text marked untrusted). Nothing is written to the network or the list. **Not yet on npm:**
-  it is packed with the release check but is not in the 0.8.1 publication (nine packages); its first publish comes later
-  (manual).
+  private keys never returned, network text marked untrusted). Nothing is written to the network or the list. **First
+  publication in 0.8.2,** by hand without npm provenance (trusted publishing from GitHub Actions can only be set up for a
+  package that already exists on npm); later releases come from the release workflow.
 - **onboard — node steps for a state or operator (`tamga-onboard node init | declare | check`; ADR-0052).** `node init`
   generates the Besu node key (secp256k1, Besu key file format) on the node's own machine with the same key file protections
   as `keys` (owner-only permissions, refused in a cloud-synced folder, never overwritten), prints the enode public key and the
@@ -36,14 +49,6 @@ published on npm as test releases; `0.8.1` is the current one on npm (the API ma
   redirects. MCP tools `generate_node_key`, `create_node_declaration`, `check_node` (key never returned; loopback / private
   endpoints only when listed in `TAMGA_ONBOARD_PRIVATE_NODES`; network text marked untrusted). Nothing is written to the
   chain, the allowlist or the network. New dependency: `@noble/hashes` (Keccak-256 for the node address).
-- **release — packages may ship a command (`bin`).** The pack script maps `bin` to `lib/` and requires a `#!/usr/bin/env node`
-  line; the smoke test runs each command with `--version` from the installed tarball. `release:version` now sets ten packages.
-
-### Changed
-
-- **ops — `pki-issue --org-id` accepts a CSR that already carries the same `organizationIdentifier`** (as `tamga-onboard keys`
-  writes it); a different value is refused (exit 2). Before, any `organizationIdentifier` in the CSR subject was refused when
-  `--org-id` was given.
 
 ### Security (second review, 2026-11-04)
 
@@ -62,20 +67,25 @@ published on npm as test releases; `0.8.1` is the current one on npm (the API ma
 - **onboard — trust list checks.** Root pins can no longer be overridden over MCP; a `--pin` given in the CLI is reported as a
   warning row. Registration certificates listed in the unsigned `wrprc/index.json` are now downloaded and their signature is
   verified against the registrar keys of the signed list (row H5, also for verifiers).
-- **ops — `pki-issue` reads the CSR subject as an ASN.1 name, not as text.** Only CN, OU, O, `organizationIdentifier` and C
-  are taken, each at most once (two `organizationIdentifier` values, unknown attributes and multi-valued RDNs are refused); the
-  certificate subject is rebuilt from these fields. With `--prod`, `--org-id` is required for every certificate and must equal
-  the value in the CSR. Signing with the production root needs `TAMGA_CONFIRM_PROD=<institution slug>` matching the certificate
-  name.
-- **trust-publisher — registration checks the certificate's institution number.** `register` compares the certificate's
-  `organizationIdentifier` (ASN.1, not text) with the application's `identifiers` (issuer certificate, status list certificate
-  and a verifier's own access certificate); on the production registry a certificate without it is refused. Writing to the
-  production registry (`register`, `status`, `authorize`, `scope`, `rp-status`, `end-use` without `--check`) needs
-  `TAMGA_CONFIRM_PROD` set to the slug or DNS name of the record.
-- **repository — `*.key.pem` is ignored in every folder.**
 
 ### Applications and repository (not in the npm packages)
 
+- **release — packages may ship a command (`bin`).** The pack script maps `bin` to `lib/` and requires a `#!/usr/bin/env node`
+  line; the smoke test runs each command with `--version` from the installed tarball. `release:version` now sets ten packages.
+- **ops — `pki-issue --org-id` accepts a CSR that already carries the same `organizationIdentifier`** (as `tamga-onboard keys`
+  writes it); a different value is refused (exit 2). Before, any `organizationIdentifier` in the CSR subject was refused when
+  `--org-id` was given.
+- **Security (second review, 2026-11-04) — ops — `pki-issue` reads the CSR subject as an ASN.1 name, not as text.** Only CN, OU,
+  O, `organizationIdentifier` and C are taken, each at most once (two `organizationIdentifier` values, unknown attributes and
+  multi-valued RDNs are refused); the certificate subject is rebuilt from these fields. With `--prod`, `--org-id` is required for
+  every certificate and must equal the value in the CSR. Signing with the production root needs
+  `TAMGA_CONFIRM_PROD=<institution slug>` matching the certificate name.
+- **Security (second review, 2026-11-04) — trust-publisher — registration checks the certificate's institution number.**
+  `register` compares the certificate's `organizationIdentifier` (ASN.1, not text) with the application's `identifiers` (issuer
+  certificate, status list certificate and a verifier's own access certificate); on the production registry a certificate without
+  it is refused. Writing to the production registry (`register`, `status`, `authorize`, `scope`, `rp-status`, `end-use` without
+  `--check`) needs `TAMGA_CONFIRM_PROD` set to the slug or DNS name of the record.
+- **Security (second review, 2026-11-04) — repository — `*.key.pem` is ignored in every folder.**
 - **chain — test network path C: Governance with generated keys (GUIDE-0018; `network/testnet/`, CI job `staging`;
   production chain still off).** `make-network.sh --keys generate` now uses chain id **31339** (31337/31338 stay the local ids of
   the public test keys and are refused in this mode; `--keys dev` refuses 31339) and also generates the role keys of a key map
@@ -433,7 +443,7 @@ API audience, registration status warning, mdoc namespace scope, ambiguous gate 
   "Verify on your own server" guide accept with `tryConsume()`.
 - docs (2026-11-05; currency check after the 0.8.1 release): version sentences 0.8.1 (README, docs home and guides in three
   languages, code examples page, package index, audit package "Version under review"). `@tamga-network/onboard` is not part of
-  this release (see "Unreleased").
+  this release (first published in 0.8.2).
 
 ## 0.8.0 — 2026-11-03
 

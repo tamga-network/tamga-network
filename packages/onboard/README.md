@@ -18,26 +18,25 @@ not even the name of a signatory.
 The same operations are available as a local **MCP server** (`tamga-onboard mcp`, stdio), so the institution's own AI assistant
 can run the steps.
 
+## New in 0.8.2
+
+First published release: the institution steps (`init`, `validate`, `keys`, `check`, `sandbox`), the state / operator node
+steps (`node init | declare | check`) and the local MCP server (`tamga-onboard mcp`).
+
 ## Install
 
-> **Not yet on npm.** The package is built and checked with the others but is not part of the 0.8.1 publication; its first
-> publish comes later. Until then, run it from source in a clone of this repository — no build step:
->
-> ```sh
-> git clone https://github.com/tamga-network/tamga-network && cd tamga-network
-> npm install
-> npx tsx packages/onboard/src/cli.ts --help
-> ```
->
-> Use `npx tsx packages/onboard/src/cli.ts` wherever this page says `tamga-onboard`. The compiled `lib/cli.js` does not run
-> inside the repository (the workspace packages it imports point to their TypeScript sources); it is meant for the published
-> package.
+Published on npm as the `0.8.2` test release (first release of this package; the stable `1.0.0` comes when everything is
+ready — in test releases the commands and options may change). Released together with the other `@tamga-network/*` packages.
+This first release is published by hand without npm provenance (npm's trusted publishing from GitHub Actions can only be set
+up for a package that already exists); later releases are built by GitHub Actions and carry provenance.
 
 ```sh
 npm install -g @tamga-network/onboard     # or: npx -p @tamga-network/onboard tamga-onboard --help
 ```
 
-Node.js 22 or later. No `openssl` needed.
+Node.js 22 or later. No `openssl` needed. In a clone of this repository it also runs from source without a build step:
+`npm install`, then `npx tsx packages/onboard/src/cli.ts` in place of `tamga-onboard` (the compiled `lib/cli.js` is meant for
+the published package).
 
 ## Steps
 
@@ -150,7 +149,7 @@ keşif kapalı). Genesis araçla üretilmez: işletmecilerden alınır, özeti e
 `node check` çalışan düğümü yalnız okuyarak denetler: senkron ve aynı genesis, eşler, anahtar, izin listesi (çizimle ve
 karşılaştırma ucuyla), validator kümesi, dış uçta yalnız eth/net/web3, yapılandırma, saat. Zincire, izin listesine, ağa yazmaz;
 oy ve izin yükleme işletmecilerde kalır. MCP araçları: `generate_node_key`, `create_node_declaration`, `check_node`. Sandbox denemesi için başvuru gerekmez:
-`tamga-onboard sandbox`. Paket henüz npm'de değildir (ilk yayın sonra); o zamana dek deponun bir kopyasında derlemeden çalıştırılır:
-`npm install`, sonra `tamga-onboard` yerine `npx tsx packages/onboard/src/cli.ts` (derlenmiş `lib/cli.js` depo içinde çalışmaz).
+`tamga-onboard sandbox`. Paket npm'de `0.8.2` deneme sürümü olarak yayımlanmıştır (ilk sürüm):
+`npm install -g @tamga-network/onboard` ya da `npx -p @tamga-network/onboard tamga-onboard --help`; Node.js 22 ve üstü.
 
 Docs: https://docs.tamga.network · Source: https://github.com/tamga-network/tamga-network (packages/onboard) · Apache-2.0

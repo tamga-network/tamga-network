@@ -369,8 +369,14 @@ export async function fetchRpRecord(
     const { source } = await fetchTrustSource(trustBase, http, { pins, stateCode });
     // TS1: yalnızca TrustSource sorgusu. ADR-0034: `x509_hash:` istemci kimliğiyle ya da kalıcı alan adıyla (günlükteki kayıtlar
     // ve takma adlar alan adını tutar; sertifika yenilense de kayıt bulunur).
-    const rec = clientId.includes(":") ? source.relyingParty(clientId) : source.relyingPartyByDnsName(clientId);
-    return (rec as unknown as RpRecord | null) ?? null;
+    const byClientId = clientId.includes(":");
+    const rec = byClientId ? source.relyingParty(clientId) : source.relyingPartyByDnsName(clientId);
+    if (!rec) return null;
+    // ADR-0075 (0.8.2): `x509_hash:` yolunda da ülkeler arası ad belirsizliği. Kaydın alan adı birden çok ülke listesinde iptal
+    // edilmemiş görünüyorsa (makinece okunur devir kaydı yok) `relyingPartyByDnsName` null döner → kayıt yok sayılır (kapalı
+    // güvenli; onay ekranı "güven listesinde bulunamadı", kayıtsız istek reddi). `dns_name` şemada küçük harf.
+    if (byClientId && rec.dns_name && !source.relyingPartyByDnsName(rec.dns_name)) return null;
+    return rec as unknown as RpRecord;
   } catch {
     return null;
   }

@@ -17,6 +17,12 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
+## New in 0.8.2
+
+- `fetchRpRecord` with an `x509_hash:` client identifier also applies the cross-country name rule (ADR-0075): when the record's
+  `dns_name` is ambiguous between national lists (no structured reassignment record), it returns `null` — the request is treated
+  as unregistered (fail closed). Lookup by `dns_name` already did this in 0.8.1.
+
 ## New in 0.8.1
 
 - `startAuthorized` reports `registrationStatusUnknown: true` when the issuer's registration certificate status could not be
@@ -46,7 +52,7 @@ npm install @tamga-network/wallet-core
 
 ## Status
 
-Published on npm as the `0.8.1` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.2` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 
