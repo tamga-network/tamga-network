@@ -122,7 +122,7 @@ const PKG = [
   ],
   [
     "onboard",
-    "Joining tool for institutions: application check, keys + CSR, setup and listing checks (CLI + MCP)",
+    "Onboarding tool for institutions: application check, keys + CSR, setup and listing checks (CLI + MCP)",
     "Kurumlar için katılım aracı: başvuru denetimi, anahtar + CSR, kurulum ve liste denetimi (komut satırı + MCP)",
   ],
 ];

@@ -109,7 +109,7 @@ chmod 600 /var/lib/besu/key
 
 ### With the tool: `tamga-onboard node init`
 
-The joining tool does the same job; run it **on the node's own machine**:
+The onboarding tool does the same job; run it **on the node's own machine**:
 
 ```bash
 tamga-onboard node init --state TR --role validator --ip 192.0.2.10 --interface 10.0.0.10 --out /var/lib/besu
@@ -218,7 +218,7 @@ Each node is introduced by a JSON declaration (format `tamga-node-declaration/1`
 | `ip`, `p2p_port` | address and P2P port; not a domain name |
 | `contact` | the institution's operations mailbox or page — **no personal names** |
 
-The joining tool also writes the declaration (from the `node init` folder):
+The onboarding tool also writes the declaration (from the `node init` folder):
 
 ```bash
 tamga-onboard node declare /var/lib/besu --contact noc@example.org     # → tr-validator.json; send it to the operator
@@ -287,7 +287,7 @@ certificate → TLS refusal.
 
 ### With the tool: `tamga-onboard node check`
 
-The joining tool checks your running node read-only; only read-only JSON-RPC methods are called (no vote, no allowlist reload,
+The onboarding tool checks your running node read-only; only read-only JSON-RPC methods are called (no vote, no allowlist reload,
 no peer change, no transaction):
 
 ```bash

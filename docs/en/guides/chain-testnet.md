@@ -764,7 +764,7 @@ curl -s http://localhost:4004/healthz | jq .chain     # enabled, anchored (YES/N
 
 This field is informational: it never changes a verification result or the `ok` field; `NO` is only an alarm ([[ADR-0051]] CH1).
 
-The real network's list of checks for a joining node (sync, permission list, set, RPC, clock): [[GUIDE-0015]] §8; the joining tool
+The real network's list of checks for a joining node (sync, permission list, set, RPC, clock): [[GUIDE-0015]] §8; the onboarding tool
 `tamga-onboard node check` runs the same checks read-only.
 
 ## Reset and clean-up

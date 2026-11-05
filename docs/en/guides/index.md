@@ -84,7 +84,7 @@ keys never enter the repository). You can test your code against these local lis
 | `@tamga-network/verifier` (+ `/web`, `/zk`) | verification pipeline, three-valued result, OpenID4VP; `/web` page kit, `/zk` zero-knowledge proofs | verifier, website |
 | `@tamga-network/wallet-core` | wallet core: keys, receiving credentials, local checks, presentation (Node + React Native) | wallet developer |
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | wallet-side zero-knowledge prover (mdoc, Longfellow); `/react-native` native prover on the phone, `/node` on the desktop | wallet developer |
-| `@tamga-network/onboard` (command `tamga-onboard`) | joining tool: application file, keys, setup and listing check; state / operator node steps; local MCP server ([[GUIDE-0014]], [[GUIDE-0015]]) | institution IT team, node operator |
+| `@tamga-network/onboard` (command `tamga-onboard`) | onboarding tool: application file, keys, setup and listing check; state / operator node steps; local MCP server ([[GUIDE-0014]], [[GUIDE-0015]]) | institution IT team, node operator |
 
 Every package has its own page in the **SDKs** section. The packages are published on npm as the **0.8.2** test release;
 the stable 1.0.0 comes when everything is ready. In test releases the API may change. Each release is built from this repository; eight packages are published by GitHub Actions and carry provenance, while `@tamga-network/zk` is published manually without provenance (its Android native libraries cannot yet be built in CI). The first release of `@tamga-network/onboard` (0.8.2) was also made by hand without provenance (npm trusted publishing can only be set up for a package that already exists); later releases come from GitHub Actions.

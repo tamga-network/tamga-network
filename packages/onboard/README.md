@@ -1,6 +1,6 @@
 # @tamga-network/onboard
 
-Joining tool for institutions — for the IT team of a university, company or public body that will issue or verify credentials
+Onboarding tool for institutions — for the IT team of a university, company or public body that will issue or verify credentials
 on Tamga Network. It prepares and checks everything on the institution's side **before** the operator registers it, and checks
 how the institution appears **after** registration:
 

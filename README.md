@@ -31,7 +31,7 @@ Published on npm as the **0.8.2 test release** — the API may change until the 
 | `@tamga-network/verifier` | Verification pipeline and OpenID4VP; `/web` page kit, `/zk` zero-knowledge proof verification |
 | `@tamga-network/wallet-core` | Wallet core for Node and React Native: keys, receiving, local checks, presentation |
 | `@tamga-network/zk` | Wallet-side zero-knowledge prover for mdoc (Longfellow ZK) |
-| `@tamga-network/onboard` | Joining tool for an institution's IT team and for state / operator nodes (command `tamga-onboard`, local MCP server) |
+| `@tamga-network/onboard` | Onboarding tool for an institution's IT team and for state / operator nodes (command `tamga-onboard`, local MCP server) |
 
 ```sh
 npm install @tamga-network/verifier @tamga-network/trust

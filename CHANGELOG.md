@@ -20,7 +20,7 @@ tool for institutions and for state / operator nodes (it was built and checked w
 
 ### Added
 
-- **onboard — new package `@tamga-network/onboard` (command `tamga-onboard`; first published in 0.8.2).** A joining tool
+- **onboard — new package `@tamga-network/onboard` (command `tamga-onboard`; first published in 0.8.2).** An onboarding tool
   for an institution's IT team: `init` builds the registration application(s) from the institution's answers and checks them
   with the same rules as the operator's registration tool (ADR-0024; no unknown fields, so no names of people); `validate`
   checks an application; `keys` generates the institution's P-256 keys on its own computer and writes CSRs whose subject carries
@@ -306,7 +306,7 @@ tool for institutions and for state / operator nodes (it was built and checked w
 
 - docs (2026-11-05; currency check after the 0.8.2 release): version sentences 0.8.2 (README — `@tamga-network/onboard` added
   to the package table —, docs home and guides in three languages, package index, code examples page, SPEC-API-0001 example
-  `sdk_version`, audit package "Version under review"); GUIDE-0014 and GUIDE-0015 (three languages) install the joining tool from
+  `sdk_version`, audit package "Version under review"); GUIDE-0014 and GUIDE-0015 (three languages) install the onboarding tool from
   npm (`npm install -g @tamga-network/onboard`), running from source stays as an optional note; the guides' package table lists
   `@tamga-network/onboard`.
 
