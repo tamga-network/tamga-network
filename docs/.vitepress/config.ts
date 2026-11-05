@@ -12,7 +12,7 @@
 import { defineConfig, type DefaultTheme } from "vitepress";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { brandHead, pageHead } from "./seo";
+import { brandHead, gitLastmod, pageHead } from "./seo";
 import { ARF_BASE, ARF_PAGES, buildDocIndex, docLinks, docsLangOf, localeLinks, type Lang } from "./doc-index";
 import { termTips } from "./terms";
 
@@ -436,7 +436,31 @@ export default defineConfig({
     ["meta", { name: "robots", content: "index,follow" }],
     ...brandHead("Tamga Docs"),
   ],
-  sitemap: { hostname: "https://docs.tamga.network" },
+  sitemap: {
+    hostname: "https://docs.tamga.network",
+    // lastmod = kaynağın son commit tarihi (rewrites'ın tersi: /tr/x ← docs/x.md, /az/x ← docs/az/x.md, /x ← docs/en/x.md);
+    // üretilen sayfalarda (docs-sync-root.mjs) kaynağı: API ← openapi.yaml, sürüm notları ← CHANGELOG, kurallar ← INVARIANTS.
+    transformItems: gitLastmod(
+      join(DOCS, ".."),
+      (p) => `docs/${p.startsWith("tr/") ? p.slice(3) : p.startsWith("az/") ? p : `en/${p}`}.md`,
+      (src) => {
+        const rest = src.replace(/^docs\/(en\/|az\/)?/, "").replace(/\.md$/, "");
+        const gen: Record<string, string> = {
+          changelog: "CHANGELOG.md",
+          rules: "INVARIANTS.md",
+          "api/issuer": "docs/api/tamga-issuer-api.openapi.yaml",
+          "api/verify": "docs/api/hosted-verifier-api.openapi.yaml",
+          "packages/index": "scripts/docs-sync-root.mjs",
+        };
+        return [
+          `docs/en/${rest}.md`,
+          `docs/${rest}.md`,
+          ...(rest.startsWith("api/") ? [`docs/${rest}.openapi.yaml`] : []),
+          ...(gen[rest] ? [gen[rest]] : []),
+        ];
+      },
+    ),
+  },
   // Dil eşleri: kök (en) ↔ /tr/ (↔ /az/ varsa) — yalnız en ve tr'de sayfa varsa.
   transformHead: (ctx) =>
     pageHead("docs.tamga.network", ctx, (rel) => {

@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { ARF_PAGES, DOCS_BASE, buildDocIndex, docLinks } from "../../docs/.vitepress/doc-index";
 import { termTips } from "../../docs/.vitepress/terms";
-import { brandHead, pageHead } from "../../docs/.vitepress/seo";
+import { brandHead, gitLastmod, pageHead } from "../../docs/.vitepress/seo";
 
 const REPO = join(__dirname, "..", "..");
 // Geliştirici belgelerine bağlantı sayfanın diline göre: İngilizce ARF → docs kökü, Türkçe ARF → docs /tr/.
@@ -215,7 +215,19 @@ export default defineConfig({
   cleanUrls: true,
   ignoreDeadLinks: true,
   lastUpdated: false,
-  sitemap: { hostname: "https://arf.tamga.network" },
+  sitemap: {
+    hostname: "https://arf.tamga.network",
+    // lastmod = kaynağın son commit tarihi (adres = arf/<yol>.md; üretilen tr/az sayfalarında "Kaynak:" işareti, yoksa
+    // İngilizce eşi; "ne değişti" sayfası ← releases.json).
+    transformItems: gitLastmod(
+      join(__dirname, "..", ".."),
+      (p) => `arf/${p}.md`,
+      (src) => {
+        const rest = src.replace(/^arf\/((tr|az)\/)?/, "");
+        return [`arf/${rest}`, ...(/(^|\/)changes\.md$/.test(rest) ? ["arf/releases.json"] : [])];
+      },
+    ),
+  },
   // Dil eşleri: İngilizce kök ↔ /tr/ — yalnız iki dilde de sayfa varsa (eski yayınlar yalnız Türkçe olabilir: v0.1).
   transformHead: (ctx) =>
     pageHead("arf.tamga.network", ctx, (rel) => {
