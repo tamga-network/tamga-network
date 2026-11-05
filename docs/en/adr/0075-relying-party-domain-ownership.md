@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 summary: >
   ADR-0073 K4 made the verifier identity `rpId = keccak256(dns_name)`. In the contract this identity belongs to the state that
   registers it first; another state can capture the identity of a verifier whose domain it does not own by registering it first,
@@ -103,6 +103,14 @@ Names (public ABI; following the existing naming pattern — `proposeNetworkReco
 - The registration authority keeps checking domain ownership before registering; in a dispute the path is a Governance proposal. On
   the `TrustSource` side, the same `dns_name` appearing in more than one national list is treated today as fail-closed (ambiguous);
   closing the record in the old list after a reassignment is handled separately with the list equivalence test.
+- **Implementation note (2026-11-05; the decision is unchanged):** the list side recognises a reassignment through a
+  machine-readable field. The old country's registration tool (`rp-status <dns_name> REVOKED --reassigned-to <CC> --approval
+  <ref>`) makes the record `REVOKED` and writes the structured `reassigned_to: "<CC>"` into the history entry (the reason text
+  stays but is not read for the decision). The loader (`@tamga-network/trust` 0.8.1) takes the single non-revoked record of the
+  same `dns_name` only if every other record's last `REVOKED` entry names its country in `reassigned_to`; otherwise the name is
+  ambiguous (`null`, fail closed). `SUSPENDED` counts as not revoked; if all are revoked, the record whose status changed last
+  is returned. A re-registration after revocation in another country (RO2) stays ambiguous until a network-level record
+  exists. Details [[SPEC-TRUST-0001]] §6–§7; the chain–list equivalence test shows 0 differences.
 
 # Status
 

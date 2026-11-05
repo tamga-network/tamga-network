@@ -133,7 +133,7 @@ vb., [[SPEC-ID-0002]] §8.1) kalır ve LoTE'ye girmez.
 
 # 5. `anchors.jsonl` — çapa günlüğü
 
-> **Uygulandı (2026-11-04), [[ADR-0074]] K4:** kayıt sertifikası durum listesi ve liste görünümleri için iki yeni satır türü (`registration_status`, `list_view`). Yükleyici bu türleri tanır; bilinmeyen tür yine DURDURUR. Bu yüzden yayıncı satırları yalnız zincir projeksiyonu açıkken (`TAMGA_CHAIN_ENABLED=1`; üretimde kapalı) yazar: zincir açılmadan önce yeni türleri tanıyan paket sürümü yayımlanmış olur.
+> **Uygulandı (2026-11-04), [[ADR-0074]] K4:** kayıt sertifikası durum listesi ve liste görünümleri için iki yeni satır türü (`registration_status`, `list_view`). Yükleyici bu türleri tanır; bilinmeyen tür yine DURDURUR. Bu yüzden yayıncı satırları yalnız zincir projeksiyonu açıkken (`TAMGA_CHAIN_ENABLED=1`; üretimde kapalı) yazar. **Zincir açma koşulu (2026-11-05):** bu türleri tanıyan en düşük yükleyici sürümü `@tamga-network/trust` **0.8.1**'dir; yeni satır türleri ancak listeyi okuyan tüketiciler (doğrulayıcılar, cüzdanlar, belge veren servisleri) en az bu sürüme geçince yazılır — bayrak bundan önce açılmaz. `status_list` satırındaki `bits`/`size` ikisi birlikte gelir, `size × bits` 8'in katıdır ve `size` ≤ 2^32 − 1'dir (zincirdeki `uint32`); `list_view` için monotonluk anahtarı (`file`, `source_file`) çiftidir; kontrol noktasındaki `list_views[]` satırla aynı biçim kuralına uyar.
 
 Her satır bağımsız JWS; payload `{seq, previous_hash, ts, kind, …}`:
 
@@ -178,9 +178,21 @@ maliyeti böylece güncel dilimle sınırlı kalır; arşivler herkese açık ka
 (`signing_keys`) → biçim (`list_format_version`) → hash zinciri → `next_update` → `anchors.jsonl` zinciri →
 bellek-içi yansıma ([[ARCH-0003]] §2.4 tabloları). İmza ve biçimden sonra `environment` beklenen ağla karşılaştırılır (varsayılan `production`); test ağına bağlanan cüzdan ve doğrulayıcı `sandbox` bekler ve yalnız test ağının köküne sabitlenir ([[ADR-0038]]). Sonra `ListTrustSource` [[SPEC-BC-0001]] §11.2 okuma setini sunar:
 `isCredentialAcceptable(issuerId, iat)`, `isCredentialSchemaAcceptable(issuerId, schemaId, iat)`, `isRecognizedBy`,
-`schemaContentHash`, `statusAnchor`, `relyingParty`, `issuer`, `schema`, `isWalletProviderKey`, `freshness()`.
+`schemaContentHash`, `statusAnchor`, `relyingParty`, `relyingPartyByDnsName`, `issuer`, `schema`, `isWalletProviderKey`,
+`freshness()`.
 Üç değerli cevap: `YES | NO | UNKNOWN`; `UNKNOWN` → INDETERMINATE (CMP4). Servisler listeyi periyodik yeniden yükler
 (belge veren servisi `TAMGA_TRUST_RELOAD_SEC`, doğrulayıcı `TAMGA_VERIFY_TRUST_RELOAD_SEC`).
+
+**Aynı `dns_name` birden çok ülke listesinde ([[ADR-0075]]; 2026-11-05).** `relyingPartyByDnsName` (ve kapı grubu cevapları)
+kaydı şu kuralla seçer; sonuç listelerin yükleme sırasından bağımsızdır:
+
+1. İptal edilmemiş kayıt (`REVOKED` ya da `RETIRED` olmayan; **`SUSPENDED` iptal edilmemiş sayılır**) yoksa: **durumu en son
+   değişen kayıt** döner (belirsiz değil).
+2. İptal edilmemiş **tek** kayıt varsa: yalnız öteki bütün kayıtların son `REVOKED` girdisi `reassigned_to` alanıyla bu kaydın
+   ülkesini gösteriyorsa o kayıt alınır. **Devir yalnız `reassigned_to` ile tanınır**; gerekçe metni (`reason`) okunmaz.
+3. Aksi hâlde (iptal edilmemiş iki kayıt, devir kaydı olmayan ya da başka ülkeyi gösteren iptal) ad **belirsizdir**: `null`,
+   kapı grupları etkin değil (kapalı güvenli). Başka ülkede iptal sonrası yeniden kayıt (RO2) ağ düzeyinde kayıt gelene kadar
+   bu yüzden belirsiz kalır.
 
 ---
 
@@ -194,7 +206,7 @@ bellek-içi yansıma ([[ARCH-0003]] §2.4 tabloları). İmza ve biçimden sonra 
 | `issuers[]` | `IssuerRegistry.registerIssuer / suspend / revoke(revokedAt) / setSuccessor` |
 | `issuers[].schema_authorizations[]` | `IssuerRegistry.setSchemaAuthorization(issuerId, schemaId, from, until)` |
 | `lotl.schemas[]` | `Governance` önerisi → `SchemaRegistry.registerSchema(vct, contentHash, NETWORK)` |
-| `relying_parties[]` | `RelyingPartyRegistry.register / setScope`; askı, dönüş, iptal listedeki anla (`suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt`). Ülkeler arası devir ([[ADR-0075]]): eski ülke listesindeki kayıt `REVOKED` olur, gerekçede devir kaydı (`reassignment to <CC> (approval <onay>)`); yükleyici aynı `dns_name`'in iptal edilmemiş tek kaydını alır, iptal edilmemiş kayıt birden çoksa ad belirsizdir (`null`) |
+| `relying_parties[]` | `RelyingPartyRegistry.register / setScope`; askı, dönüş, iptal listedeki anla (`suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt`). Ülkeler arası devir ([[ADR-0075]]): eski ülke listesindeki kayıt `REVOKED` olur; geçmiş girdisi yapılı devir kaydı `reassigned_to: "<CC>"` ve gerekçe (`reassignment to <CC> (approval <onay>)`) taşır (`rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <onay>`). Yükleyici yeni ülkedeki kaydı yalnız bu alanla alır; devir kaydı yoksa ad belirsizdir (`null`; §6) |
 | `anchors kind=status_list` | `StatusListRegistry.registerList(issuerId, uri, size, bits)` (ilk satır) + `publishList(listId, hash, version, published_at)` |
 | `anchors kind=schema` | `SchemaRegistry` contentHash |
 | `lotl` / `tl-<cc>` sürümü (bütün dosya) · `anchors.jsonl` son satırı | Liste çapası kaydı — `anchorList(listKey, version, sha256(jws), previousHash, issuedAt)` · `anchorLogHead(logKey, seq, sha256(satır), ts)`; yalnız özet, içerik yok ([[ADR-0051]]; [[SPEC-BC-0001]] §15). Zincir projeksiyondur: çelişkide imzalı liste geçerlidir, zincir cevabı doğrulama için gerekli değildir. Bayrak `TAMGA_CHAIN_ENABLED`, üretimde kapalı |
@@ -247,4 +259,9 @@ Devir: yalnızca `operator` alanı değişir.
 # Durum
 
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+
+**Sürüm notu (2026-11-05):** §5 zincir açma koşulu (en düşük yükleyici `@tamga-network/trust` 0.8.1; yeni satır türleri
+tüketiciler güncellenince), `bits`/`size` biçim kuralı ve `list_view` monotonluk anahtarı; §6 aynı `dns_name`'in birden çok ülke
+listesinde seçim kuralı ve okuma setinde `relyingPartyByDnsName`; §7 devrin yapılı kaydı (`reassigned_to`). Davranış
+`@tamga-network/trust` 0.8.1 ile; [[ADR-0075]] karar içeriği değişmedi.
 

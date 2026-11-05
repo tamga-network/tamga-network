@@ -34,6 +34,15 @@ export const StatusHistoryEntry = z
     /** REVOKED için: bu andan itibaren verilmiş belgeler düşer (ele geçirilme). Yoksa REVOKED
      *  yumuşak iptaldir: `since` öncesi belgeler geçerli kalır (GV1 / D-BC-4). */
     invalidates_from: IsoDate.optional(),
+    /**
+     * ADR-0075 RO1/RO5 (0.8.1): ülkeler arası DEVİR — `REVOKED` girdisinde kimliğin geçtiği yeni ülke listesinin kodu. Yükleyici aynı
+     * `dns_name`'in başka ülke listesindeki iptal edilmemiş kaydını yalnız eski kaydın son `REVOKED` girdisi bunu gösteriyorsa alır;
+     * yoksa ad belirsizdir. Gerekçe metni (`reason`) karar için okunmaz.
+     */
+    reassigned_to: z
+      .string()
+      .regex(/^[A-Z]{2}$/)
+      .optional(),
   })
   .passthrough();
 export type StatusHistoryEntry = z.infer<typeof StatusHistoryEntry>;
@@ -417,6 +426,31 @@ const StatusListBits = z
     message: "bits must be 1, 2, 4 or 8",
   });
 
+/** Zincirdeki liste kaydının boyut alanı `uint32`'dir (StatusListRegistry.registerList); daha büyük boyut yazılamaz. */
+export const STATUS_LIST_MAX_SIZE = 0xffff_ffff;
+/**
+ * `bits` ve `size` birlikte gelir (biri tek başına anlamsızdır), `size × bits` 8'in katıdır (açılmış `lst` tam bayttır) ve `size`
+ * zincirin kabul edeceği aralıktadır. Satırda ikisi de yoksa geçerlidir (eski satır).
+ */
+function checkBitsSize(v: { bits?: number; size?: number }, ctx: z.RefinementCtx, path: Array<string | number> = []) {
+  if ((v.bits === undefined) !== (v.size === undefined)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, v.bits === undefined ? "bits" : "size"],
+      message: "bits and size go together",
+    });
+    return;
+  }
+  if (v.bits === undefined || v.size === undefined) return;
+  if ((v.size * v.bits) % 8 !== 0)
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [...path, "size"],
+      message: "size × bits must be a multiple of 8",
+    });
+}
+const ListSize = z.number().int().positive().max(STATUS_LIST_MAX_SIZE);
+
 /** anchors.jsonl — her satır bir JWS; payload: */
 export const AnchorBase = z.object({
   seq: z.number().int().nonnegative(),
@@ -434,10 +468,11 @@ export const AnchorStatusList = AnchorBase.extend({
   request_sig: z.string().optional(),
   /**
    * Listenin bit sayısı (`status_list.bits`) ve indeks kapasitesi (açılmış `lst` bayt × 8 / bits) — belirteçten okunur; zincirdeki
-   * liste kaydı (`registerList`) bunları ister (ADR-0073 K1). Eski satırlarda yok; doğrulama kararına girmez.
+   * liste kaydı (`registerList`) bunları ister (ADR-0073 K1). Eski satırlarda yok; doğrulama kararına girmez. İkisi birlikte gelir,
+   * `size × bits` 8'in katıdır, `size` ≤ `STATUS_LIST_MAX_SIZE` (birleşimde denetlenir: `Anchor`).
    */
   bits: StatusListBits.optional(),
-  size: z.number().int().positive().optional(),
+  size: ListSize.optional(),
 });
 export const AnchorSchema = AnchorBase.extend({
   kind: z.literal("schema"),
@@ -461,15 +496,19 @@ export const AnchorRegistrationStatus = AnchorBase.extend({
 });
 /** ADR-0066 / ADR-0074 K4: liste görünümleri (ETSI XML, LoTE) — görünüm ayrı liste değildir, sürümü kaynağın sürümüdür. */
 export const ListViewFormat = z.enum(["etsi-tl-xml", "etsi-lote-json"]);
+/** Görünüm dosyasının yayın kökündeki yolu, ör. `tl-tr.xml`, `lote/wallet-providers.jws` (`..` yok). */
+const ListViewFile = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9._/-]{0,127}$/)
+  .refine((f) => !f.split("/").includes(".."), { message: "path traversal" });
+/** Görünümün kaynak listesi: `lotl` ya da `tl-<cc>`. */
+const ListViewSource = z.string().regex(/^(lotl|tl-[a-z]{2})$/);
 export const AnchorListView = AnchorBase.extend({
   kind: z.literal("list_view"),
   /** yayın kökündeki dosya yolu, ör. `tl-tr.xml`, `lote/wallet-providers.jws` (`..` yok) */
-  file: z
-    .string()
-    .regex(/^[a-z0-9][a-z0-9._/-]{0,127}$/)
-    .refine((f) => !f.split("/").includes(".."), { message: "path traversal" }),
+  file: ListViewFile,
   format: ListViewFormat,
-  source_file: z.string().regex(/^(lotl|tl-[a-z]{2})$/),
+  source_file: ListViewSource,
   source_version: z.number().int().positive(),
   /** dosyanın SHA-256'sı (XML için `.sha2` ile aynı değer) */
   content_hash: Sha256Tag,
@@ -497,17 +536,19 @@ export const AnchorCheckpoint = AnchorBase.extend({
   state: z
     .object({
       status_lists: z.array(
-        z.object({
-          list_id: z.string(),
-          issuer_id: z.string(),
-          list_uri: z.string().url(),
-          content_hash: z.string(),
-          list_version: z.number().int().nonnegative(),
-          published_at: z.string().datetime({ offset: true }),
-          seq: z.number().int().nonnegative(),
-          bits: StatusListBits.optional(),
-          size: z.number().int().positive().optional(),
-        }),
+        z
+          .object({
+            list_id: z.string(),
+            issuer_id: z.string(),
+            list_uri: z.string().url(),
+            content_hash: z.string(),
+            list_version: z.number().int().nonnegative(),
+            published_at: z.string().datetime({ offset: true }),
+            seq: z.number().int().nonnegative(),
+            bits: StatusListBits.optional(),
+            size: ListSize.optional(),
+          })
+          .superRefine((v, ctx) => checkBitsSize(v, ctx)),
       ),
       schemas: z.array(
         z.object({ schema_id: z.string(), content_hash: z.string(), seq: z.number().int().nonnegative() }),
@@ -528,9 +569,9 @@ export const AnchorCheckpoint = AnchorBase.extend({
       list_views: z
         .array(
           z.object({
-            file: z.string(),
+            file: ListViewFile,
             format: ListViewFormat,
-            source_file: z.string(),
+            source_file: ListViewSource,
             source_version: z.number().int().positive(),
             content_hash: Sha256Tag,
             seq: z.number().int().nonnegative(),
@@ -540,12 +581,16 @@ export const AnchorCheckpoint = AnchorBase.extend({
     })
     .optional(),
 });
-export const Anchor = z.discriminatedUnion("kind", [
-  AnchorStatusList,
-  AnchorSchema,
-  AnchorHeartbeat,
-  AnchorCheckpoint,
-  AnchorRegistrationStatus,
-  AnchorListView,
-]);
+export const Anchor = z
+  .discriminatedUnion("kind", [
+    AnchorStatusList,
+    AnchorSchema,
+    AnchorHeartbeat,
+    AnchorCheckpoint,
+    AnchorRegistrationStatus,
+    AnchorListView,
+  ])
+  .superRefine((a, ctx) => {
+    if (a.kind === "status_list") checkBitsSize(a, ctx);
+  });
 export type Anchor = z.infer<typeof Anchor>;

@@ -399,6 +399,7 @@ export function reassignRelyingPartyOut(
     status: "REVOKED",
     since: iso(env.now),
     reason: `reassignment to ${opts.toState} (approval ${opts.approval})`,
+    reassigned_to: opts.toState,
   });
   for (const u of [...((rp!.scopes ?? []) as Rec[]), ...((rp!.terminal_groups ?? []) as Rec[])]) endUse(u, env.now);
   return out;

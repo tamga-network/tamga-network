@@ -592,6 +592,10 @@ PowerShell-də (Yol A) eyni dəyişənlər `$env:TAMGA_CHAIN_ENABLED = "1"` şə
 Qurumların ləğv siyahısı lövbərləri də zəncirdəki siyahı qeydinə düşür; bunun üçün lövbər sətri siyahının bit sayını və ölçüsünü
 daşıyır (`trust:anchor --token <token faylı>`, [[SPEC-TRUST-0001]] §5).
 
+Bayraq açıq olduqda lövbər jurnalına qeydiyyat sertifikatı status siyahısı və siyahı görünüşü sətirləri (`registration_status`,
+`list_view`) də yazılır. Test şəbəkəsində problem yoxdur; real şəbəkədə zəncir yalnız siyahını oxuyan bütün istehlakçıların
+yükləyicisi ən azı `@tamga-network/trust` **0.8.1** olduqda açılır — köhnə yükləyici naməlum sətir növündə dayanır (2026-11-05).
+
 ## Tarixçənin köçürülməsi və ekvivalentlik testi
 
 Zəncir bir gün açılanda imzalanmış siyahıların bütün tarixçəsi kontraktlara bir dəfə, siyahıdakı tarixlərlə təkrar oynadılır

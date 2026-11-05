@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 summary: >
   ADR-0073 K4 doğrulayıcı kimliğini `rpId = keccak256(dns_name)` yaptı. Kontratta bu kimlik onu ilk kaydeden devletindir; başka
   bir devlet, alan adı kendisine ait olmayan bir doğrulayıcıyı önce kaydederek kimliği kapabilir ve iptal edilmiş bir kimlik bir daha
@@ -101,6 +101,13 @@ Adlar (kamuya açık ABI; mevcut adlandırma düzenine göre — `proposeNetwork
 - Kayıt kurumu alan adı sahipliğini kayıttan önce denetlemeye devam eder; anlaşmazlıkta yol Governance önerisidir. `TrustSource`
   tarafında aynı `dns_name`'in birden çok ülke listesinde görünmesi bugün kapalı güvenli (belirsiz) sayılır; devirden sonra eski
   listedeki kaydın kapatılması liste eşdeğerlik testiyle ayrıca ele alınır.
+- **Uygulama notu (2026-11-05; karar içeriği değişmedi):** liste tarafı devri makinece okunur bir alanla tanır. Eski ülkenin
+  kayıt aracı (`rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <onay>`) kaydı `REVOKED` yapar ve geçmiş girdisine
+  yapılı `reassigned_to: "<CC>"` yazar (gerekçe metni ayrıca kalır ama karar için okunmaz). Yükleyici (`@tamga-network/trust`
+  0.8.1) aynı `dns_name`'in iptal edilmemiş tek kaydını ancak öteki bütün kayıtların son `REVOKED` girdisi `reassigned_to` ile
+  onun ülkesini gösteriyorsa alır; aksi hâlde ad belirsizdir (`null`, kapalı güvenli). `SUSPENDED` iptal edilmemiş sayılır;
+  hepsi iptalse durumu en son değişen kayıt döner. Başka ülkede iptal sonrası yeniden kayıt (RO2) ağ düzeyinde kayıt gelene
+  kadar belirsiz kalır. Ayrıntı [[SPEC-TRUST-0001]] §6–§7; zincir–liste eşdeğerlik testinde fark 0.
 
 # Durum
 

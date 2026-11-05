@@ -599,6 +599,11 @@ In PowerShell (path A) the same variables are set as `$env:TAMGA_CHAIN_ENABLED =
 Institutions' status list anchors also enter the list record on the chain; for that the anchor line carries the list's bit count
 and size (`trust:anchor --token <token file>`, [[SPEC-TRUST-0001]] §5).
 
+With the flag on, registration certificate status list and list view lines (`registration_status`, `list_view`) are also
+written to the anchor log. On the test network this is fine; on the real network the chain is opened only once every consumer
+that reads the list runs a loader of at least `@tamga-network/trust` **0.8.1** — an older loader stops on an unknown line type
+(2026-11-05).
+
 ## Replaying the history and the equivalence test
 
 When the chain opens one day, the whole history of the signed lists is replayed into the contracts once, with the dates in the

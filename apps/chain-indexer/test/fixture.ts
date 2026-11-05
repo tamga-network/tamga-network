@@ -43,7 +43,7 @@ export interface Fixture {
   devirDns: string;
 }
 
-type H = Array<{ status: string; since: number; reason?: string; invalidates_from?: number }>;
+type H = Array<{ status: string; since: number; reason?: string; invalidates_from?: number; reassigned_to?: string }>;
 const histAt = (h: H, T: number) =>
   h
     .filter((x) => x.since <= T)
@@ -52,6 +52,7 @@ const histAt = (h: H, T: number) =>
       since: iso(x.since),
       ...(x.reason ? { reason: x.reason } : {}),
       ...(x.invalidates_from ? { invalidates_from: iso(x.invalidates_from) } : {}),
+      ...(x.reassigned_to ? { reassigned_to: x.reassigned_to } : {}),
     }));
 const lastStatus = (h: H, T: number) => histAt(h, T).at(-1)?.status ?? "ACTIVE";
 
@@ -293,7 +294,12 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
     d(12),
     [
       { status: "ACTIVE", since: d(12) },
-      { status: "REVOKED", since: d(55), reason: "reassignment to KZ (approval reassign-record-1)" },
+      {
+        status: "REVOKED",
+        since: d(55),
+        reason: "reassignment to KZ (approval reassign-record-1)",
+        reassigned_to: "KZ",
+      },
     ],
     [{ id: "login", vct: NET.diploma, claims: ["degree"], from: d(12), until: d(55) }],
   );

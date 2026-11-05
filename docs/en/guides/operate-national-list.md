@@ -379,6 +379,9 @@ npm run trust:chain-check -- dist/tl-xx.jws   # is your list digest confirmed on
   `CONFLICT`, is not written and the command ends with an error code: something you must look at.
 - An anchor is confirmed only when a threshold of independent writers submit the same digest; in production the threshold is at
   least 2.
+- Before opening the chain (2026-11-05): every consumer that reads the list (verifiers, wallets, issuer services) must run a
+  loader of at least `@tamga-network/trust` **0.8.1**. With the flag on, new line types (`registration_status`, `list_view`) are
+  written to the anchor log; an older loader stops on an unknown line type ([[SPEC-TRUST-0001]] §5).
 
 Your state's validator node and the work next to the chain: [[GUIDE-0015]]. Step-by-step setup of the test network:
 [[GUIDE-0018]].

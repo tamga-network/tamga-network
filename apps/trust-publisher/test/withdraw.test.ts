@@ -68,7 +68,7 @@ describe("kayıt geri çekme (TL2)", () => {
     expect(rp.scopes.map((x: { valid_until: string }) => x.valid_until)).toEqual([NOW, NOW]);
   });
 
-  it("ADR-0075 devir (eski ülke listesi): kayıt REVOKED, gerekçede devir kaydı; kullanımlar ve kapı grupları kapanır", () => {
+  it("ADR-0075 devir (eski ülke listesi): kayıt REVOKED, yapılı devir kaydı (reassigned_to); kullanımlar ve kapı grupları kapanır", () => {
     const s = reassignRelyingPartyOut(
       { ...src(), state_code: "TR" },
       "rp.example",
@@ -82,6 +82,7 @@ describe("kayıt geri çekme (TL2)", () => {
       status: "REVOKED",
       since: NOW,
       reason: "reassignment to KZ (approval reassign-record-1)",
+      reassigned_to: "KZ", // makinece okunur devir kaydı: yükleyici yeni ülkedeki kaydı yalnız bununla alır
     });
     expect(rp.scopes.map((x: { valid_until: string }) => x.valid_until)).toEqual([NOW, NOW]);
     expect(rp.terminal_groups[0].valid_until).toBe(NOW);

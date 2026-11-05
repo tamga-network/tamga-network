@@ -377,6 +377,10 @@ npm run trust:chain-check -- dist/tl-xx.jws   # siyahınızın həşi zəncirdə
 - Eyni versiya eyni həşlə ikinci dəfə yazılmır (`SKIP`); təsdiqlənmiş versiya üçün fərqli həş `CONFLICT` verir, yazılmır və komanda
   xəta kodu ilə bitir: baxmalı olduğunuz vəziyyətdir.
 - Lövbər yalnız hədd sayda müstəqil yazıcı eyni həşi göndərdikdə təsdiqlənir; istehsalda hədd ən azı 2-dir.
+- Zənciri açmazdan əvvəl (2026-11-05): siyahını oxuyan bütün istehlakçıların (yoxlayan tərəflər, rəqəmsal cüzdanlar, sənədi
+  verən qurumların xidmətləri) yükləyicisi ən azı `@tamga-network/trust` **0.8.1** olmalıdır. Bayraq açıq olduqda lövbər
+  jurnalına yeni sətir növləri (`registration_status`, `list_view`) yazılır; köhnə yükləyici naməlum sətir növündə dayanır
+  ([[SPEC-TRUST-0001]] §5).
 
 Dövlətinizin validator qovşağı və zəncirin yanındakı işlər: [[GUIDE-0015]]. Test şəbəkəsinin addım-addım quraşdırılması:
 [[GUIDE-0018]].

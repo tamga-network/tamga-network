@@ -176,6 +176,15 @@ describe("ADR-0069 terminal_groups", () => {
     const old = {
       ...rp("verify.tamga.network", "REVOKED", [{ ...gate, group_id: "old-gate" }]),
       client_id: "x509_hash:old",
+      // makinece okunur devir kaydı (0.8.1): yükleyici AZ'deki kaydı yalnız bununla alır (ayrıntı rp-reassignment.test.ts)
+      status_history: [
+        {
+          status: "REVOKED" as const,
+          since: "2026-06-01T00:00:00Z",
+          reason: "reassignment to AZ (approval r-1)",
+          reassigned_to: "AZ",
+        },
+      ],
     };
     const moved = { ...rp("verify.tamga.network", "ACTIVE", [gate]), client_id: "x509_hash:new" };
     const issAz = { issuer_id: "iss-az", slug: "example-events", status: "ACTIVE", schema_authorizations: [] };

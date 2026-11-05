@@ -132,7 +132,7 @@ və s., [[SPEC-ID-0002]] §8.1) qalır və LoTE-yə daxil edilmir.
 
 # 5. `anchors.jsonl` — lövbər jurnalı
 
-> **Tətbiq edildi (2026-11-04), [[ADR-0074]] K4:** qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri üçün iki yeni sətir növü (`registration_status`, `list_view`). Yükləyici bu növləri tanıyır; naməlum növ yenə də yükləyicini DAYANDIRIR. Buna görə dərc edən bu sətirləri yalnız zəncir proyeksiyası açıq olduqda (`TAMGA_CHAIN_ENABLED=1`; istehsalda bağlıdır) yazır: zəncir açılmazdan əvvəl yeni növləri tanıyan paket versiyası dərc olunmuş olur.
+> **Tətbiq edildi (2026-11-04), [[ADR-0074]] K4:** qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri üçün iki yeni sətir növü (`registration_status`, `list_view`). Yükləyici bu növləri tanıyır; naməlum növ yenə də yükləyicini DAYANDIRIR. Buna görə dərc edən bu sətirləri yalnız zəncir proyeksiyası açıq olduqda (`TAMGA_CHAIN_ENABLED=1`; istehsalda bağlıdır) yazır. **Zəncirin açılma şərti (2026-11-05):** bu növləri tanıyan ən aşağı yükləyici versiyası `@tamga-network/trust` **0.8.1**-dir; yeni sətir növləri yalnız siyahını oxuyan istehlakçılar (yoxlayan tərəflər, rəqəmsal cüzdanlar, sənədi verən qurumların xidmətləri) ən azı bu versiyaya keçdikdən sonra yazılır — bayraq bundan əvvəl açılmır. `status_list` sətrində `bits`/`size` birlikdə gəlir, `size × bits` 8-in misli olur və `size` ≤ 2^32 − 1-dir (zəncirdəki `uint32`); `list_view` üçün monotonluq açarı (`file`, `source_file`) cütüdür; nəzarət nöqtəsindəki `list_views[]` sətirlə eyni format qaydasına tabedir.
 
 Hər sətir müstəqil JWS-dir; payload `{seq, previous_hash, ts, kind, …}`:
 
@@ -177,9 +177,21 @@ xərci cari hissə ilə məhdud qalır; arxivlər hamıya açıq qalır.
 (`signing_keys`) → format (`list_format_version`) → hash zənciri → `next_update` → `anchors.jsonl` zənciri →
 yaddaşdaxili əks ([[ARCH-0003]] §2.4 cədvəlləri). İmza və formatdan sonra `environment` gözlənilən şəbəkə ilə müqayisə edilir (defolt olaraq `production`); test şəbəkəsinə qoşulan rəqəmsal cüzdan və yoxlayan tərəf `sandbox` gözləyir və yalnız test şəbəkəsinin kökünə bərkidilir ([[ADR-0038]]). Sonra `ListTrustSource` [[SPEC-BC-0001]] §11.2 oxuma dəstini təqdim edir:
 `isCredentialAcceptable(issuerId, iat)`, `isCredentialSchemaAcceptable(issuerId, schemaId, iat)`, `isRecognizedBy`,
-`schemaContentHash`, `statusAnchor`, `relyingParty`, `issuer`, `schema`, `isWalletProviderKey`, `freshness()`.
+`schemaContentHash`, `statusAnchor`, `relyingParty`, `relyingPartyByDnsName`, `issuer`, `schema`, `isWalletProviderKey`,
+`freshness()`.
 Üçqiymətli cavab: `YES | NO | UNKNOWN`; `UNKNOWN` → INDETERMINATE (CMP4). Xidmətlər siyahını dövri olaraq yenidən yükləyir
 (sənədi verən qurumun xidməti `TAMGA_TRUST_RELOAD_SEC`, yoxlayan tərəf `TAMGA_VERIFY_TRUST_RELOAD_SEC`).
+
+**Eyni `dns_name` birdən çox milli siyahıda ([[ADR-0075]]; 2026-11-05).** `relyingPartyByDnsName` (və keçid qrupu cavabları)
+qeydi bu qayda ilə seçir; nəticə siyahıların yüklənmə ardıcıllığından asılı deyil:
+
+1. Ləğv edilməmiş qeyd (`REVOKED` və ya `RETIRED` olmayan; **`SUSPENDED` ləğv edilməmiş sayılır**) yoxdursa: **statusu ən son
+   dəyişən qeyd** qaytarılır (qeyri-müəyyən deyil).
+2. Ləğv edilməmiş **yeganə** qeyd varsa: yalnız digər bütün qeydlərin son `REVOKED` girişi `reassigned_to` sahəsi ilə bu qeydin
+   ölkəsini göstərirsə həmin qeyd götürülür. **Təhvil yalnız `reassigned_to` ilə tanınır**; səbəb mətni (`reason`) oxunmur.
+3. Əks halda (ləğv edilməmiş iki qeyd, təhvil qeydi olmayan və ya başqa ölkəni göstərən ləğv) ad **qeyri-müəyyəndir**: `null`,
+   keçid qrupları aktiv deyil (qapalı təhlükəsiz). Başqa ölkədə ləğvdən sonra yenidən qeydiyyat (RO2) şəbəkə səviyyəsində qeyd
+   gələnə qədər buna görə qeyri-müəyyən qalır.
 
 ---
 
@@ -193,7 +205,7 @@ yaddaşdaxili əks ([[ARCH-0003]] §2.4 cədvəlləri). İmza və formatdan sonr
 | `issuers[]` | `IssuerRegistry.registerIssuer / suspend / revoke(revokedAt) / setSuccessor` |
 | `issuers[].schema_authorizations[]` | `IssuerRegistry.setSchemaAuthorization(issuerId, schemaId, from, until)` |
 | `lotl.schemas[]` | `Governance` təklifi → `SchemaRegistry.registerSchema(vct, contentHash, NETWORK)` |
-| `relying_parties[]` | `RelyingPartyRegistry.register / setScope`; dayandırma, bərpa və ləğv siyahıdakı anla (`suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt`). Ölkələr arası təhvil ([[ADR-0075]]): köhnə ölkə siyahısındakı qeyd `REVOKED` olur, səbəbdə təhvil qeydi (`reassignment to <CC> (approval <təsdiq>)`); yükləyici eyni `dns_name`-in ləğv edilməmiş yeganə qeydini götürür, ləğv edilməmiş qeyd birdən çoxdursa ad qeyri-müəyyəndir (`null`) |
+| `relying_parties[]` | `RelyingPartyRegistry.register / setScope`; dayandırma, bərpa və ləğv siyahıdakı anla (`suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt`). Ölkələr arası təhvil ([[ADR-0075]]): köhnə ölkə siyahısındakı qeyd `REVOKED` olur; tarixçə girişi strukturlaşdırılmış təhvil qeydini `reassigned_to: "<CC>"` və səbəbi (`reassignment to <CC> (approval <təsdiq>)`) daşıyır (`rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <təsdiq>`). Yükləyici yeni ölkədəki qeydi yalnız bu sahə ilə götürür; təhvil qeydi yoxdursa ad qeyri-müəyyəndir (`null`; §6) |
 | `anchors kind=status_list` | `StatusListRegistry.registerList(issuerId, uri, size, bits)` (ilk sətir) + `publishList(listId, hash, version, published_at)` |
 | `anchors kind=schema` | `SchemaRegistry` contentHash |
 | `lotl` / `tl-<cc>` versiyası (bütün fayl) · `anchors.jsonl` son sətri | Siyahı lövbəri qeydi — `anchorList(listKey, version, sha256(jws), previousHash, issuedAt)` · `anchorLogHead(logKey, seq, sha256(satır), ts)`; yalnız xülasə (hash), məzmun yoxdur ([[ADR-0051]]; [[SPEC-BC-0001]] §15). Zəncir proyeksiyadır: ziddiyyət olduqda imzalı siyahı üstündür, zəncirin cavabı yoxlama üçün tələb olunmur. Bayraq `TAMGA_CHAIN_ENABLED`, istehsal mühitində söndürülüb |
@@ -246,4 +258,9 @@ Təhvil: yalnız `operator` sahəsi dəyişir.
 # Status
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02).
+
+**Versiya qeydi (2026-11-05):** §5 zəncirin açılma şərti (ən aşağı yükləyici `@tamga-network/trust` 0.8.1; yeni sətir növləri
+istehlakçılar yeniləndikdən sonra), `bits`/`size` format qaydası və `list_view` monotonluq açarı; §6 eyni `dns_name`-in birdən
+çox milli siyahıda seçim qaydası və oxuma dəstində `relyingPartyByDnsName`; §7 təhvilin strukturlaşdırılmış qeydi
+(`reassigned_to`). Davranış `@tamga-network/trust` 0.8.1 ilə; [[ADR-0075]] qərarının məzmunu dəyişmədi.
 

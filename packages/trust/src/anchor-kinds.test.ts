@@ -7,7 +7,15 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { webcrypto } from "node:crypto";
 import { X509CertificateGenerator, cryptoProvider } from "@peculiar/x509";
 import { CompactSign, importPKCS8 } from "jose";
-import { Anchor, certFingerprintSha256Hex, loadTrustSet, sha256Tag, utf8, TL_TYP } from "./index.js";
+import {
+  Anchor,
+  STATUS_LIST_MAX_SIZE,
+  certFingerprintSha256Hex,
+  loadTrustSet,
+  sha256Tag,
+  utf8,
+  TL_TYP,
+} from "./index.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
@@ -75,11 +83,11 @@ const rs = (v: number, h = "a") => ({
   list_version: v,
   published_at: "2026-11-04T11:00:00Z",
 });
-const lv = (v: number, file = "tl-tr.xml") => ({
+const lv = (v: number, file = "tl-tr.xml", source_file = "tl-tr") => ({
   kind: "list_view",
   file,
   format: "etsi-tl-xml",
-  source_file: "tl-tr",
+  source_file,
   source_version: v,
   content_hash: H("b"),
 });
@@ -154,5 +162,122 @@ describe("ADR-0074 K4 — çapa günlüğü satır türleri", () => {
     });
     expect(store.list_view_anchors.get("tl-tr.xml")?.source_version).toBe(9);
     expect(store.registration_status_anchors.get(rs(1).list_uri)?.list_version).toBe(5);
+  });
+});
+
+const sl = (v: number, extra: Record<string, unknown> = {}) => ({
+  kind: "status_list",
+  list_id: "list-1",
+  issuer_id: "issuer-1",
+  list_uri: "https://issuer.example/status/1",
+  content_hash: H("a"),
+  list_version: v,
+  published_at: "2026-11-04T11:00:00Z",
+  ...extra,
+});
+
+/** Baştaki kontrol noktası `state` ile yükler (TL12); ardından isteğe bağlı satırlar. */
+async function loadFromCheckpoint(state: Record<string, unknown>, after: Array<Record<string, unknown>> = []) {
+  const cp = {
+    kind: "checkpoint",
+    archive: { file: "archive/anchors-0000000-0000003.jsonl", sha256: H("d"), seq_from: 0, seq_to: 3, lines: 4 },
+    state: { status_lists: [], schemas: [], ...state },
+  };
+  const lines = [await signer.sign({ seq: 4, previous_hash: H("e"), ts: "2026-11-04T11:40:00Z", ...cp })];
+  for (const [i, b] of after.entries())
+    lines.push(
+      await signer.sign({
+        seq: 5 + i,
+        previous_hash: sha256Tag(utf8(lines[lines.length - 1])),
+        ts: "2026-11-04T11:50:00Z",
+        ...b,
+      }),
+    );
+  return loadTrustSet({
+    lotlJws: await signer.sign({
+      list_format_version: "1.0",
+      list_type: "lotl",
+      version: 1,
+      issued_at: "2026-11-01T00:00:00Z",
+      next_update: "2026-12-01T00:00:00Z",
+      previous_version_hash: null,
+      operator: { name: "Tamga", status: "provisional", on_behalf_of: "consortium" },
+      anchor_signing_keys: [{ fingerprint_sha256: signer.fp, status: "ACTIVE" }],
+      national_lists: [],
+      schemas: [],
+      wallet_providers: [],
+      pid_providers: [],
+    }),
+    nationalListJws: {},
+    anchorsJsonl: lines.join("\n") + "\n",
+    rootFingerprints: [signer.fp],
+    now: NOW,
+    versionMemory: "none",
+  });
+}
+
+describe("0.8.1 — status_list satırında bits / size (ADR-0073 K1)", () => {
+  const base = { seq: 0, previous_hash: null, ts: "2026-11-04T11:30:00Z" };
+  it("biçim: ikisi birlikte, size × bits 8'in katı, size zincirin uint32 aralığında; ikisi de yoksa eski satır geçerli", () => {
+    const ok = (extra: Record<string, unknown>) => Anchor.safeParse({ ...base, ...sl(1, extra) }).success;
+    expect(ok({})).toBe(true);
+    expect(ok({ bits: 1, size: 100_000 })).toBe(true);
+    expect(ok({ bits: 2, size: 4 })).toBe(true);
+    expect(ok({ bits: 1 })).toBe(false);
+    expect(ok({ size: 100_000 })).toBe(false);
+    expect(ok({ bits: 2, size: 3 })).toBe(false); // 6 bit: tam bayt değil
+    expect(ok({ bits: 1, size: 12 })).toBe(false);
+    expect(ok({ bits: 3, size: 8 })).toBe(false);
+    expect(ok({ bits: 8, size: STATUS_LIST_MAX_SIZE })).toBe(true);
+    expect(ok({ bits: 8, size: STATUS_LIST_MAX_SIZE + 1 })).toBe(false);
+    expect(ok({ bits: 1, size: 0 })).toBe(false);
+  });
+
+  it("yükleyiciden depoya: bits/size satırla gelir; bozuk satır yüklemeyi DURDURUR", async () => {
+    const { store } = await load([sl(1), sl(2, { bits: 2, size: 400_000 })]);
+    expect(store.status_anchors.get("list-1")).toMatchObject({ version: 2, bits: 2, size: 400_000 });
+    const { store: old } = await load([sl(1)]);
+    expect(old.status_anchors.get("list-1")).not.toHaveProperty("bits");
+    await expect(load([sl(1, { bits: 1 })])).rejects.toThrow(/bits and size go together/);
+  });
+
+  it("kontrol noktası state'inden depoya: bits/size taşınır; yarım ya da hizasız değer DURDURUR", async () => {
+    const row = { ...sl(3), bits: 1, size: 100_000, seq: 2 };
+    const { kind: _k, ...snap } = row;
+    const { store } = await loadFromCheckpoint({ status_lists: [snap] }, [sl(4, { bits: 1, size: 100_000 })]);
+    expect(store.status_anchors.get("list-1")).toMatchObject({ version: 4, bits: 1, size: 100_000 });
+    const { store: restored } = await loadFromCheckpoint({ status_lists: [snap] });
+    expect(restored.status_anchors.get("list-1")).toMatchObject({ version: 3, bits: 1, size: 100_000, seq: 2 });
+    const { size: _s, ...half } = snap;
+    await expect(loadFromCheckpoint({ status_lists: [half] })).rejects.toThrow(/bits and size go together/);
+    await expect(loadFromCheckpoint({ status_lists: [{ ...snap, bits: 4, size: 3 }] })).rejects.toThrow(
+      /multiple of 8/,
+    );
+  });
+});
+
+describe("0.8.1 — list_view monotonluk anahtarı (dosya, kaynak) ve kontrol noktası satır biçimi", () => {
+  it("aynı dosya başka kaynağa bağlanınca sayaçlar ayrıdır; aynı kaynakta geri gidiş DURDURUR", async () => {
+    const { store } = await load([lv(5), lv(3, "tl-tr.xml", "lotl"), lv(6)]);
+    expect(store.list_view_anchors.get("tl-tr.xml")).toMatchObject({ source_file: "tl-tr", source_version: 6 });
+    await expect(load([lv(5), lv(3, "tl-tr.xml", "lotl"), lv(4)])).rejects.toThrow(
+      /list_view source_version not monotonic \(tl-tr\.xml ← tl-tr: 5 → 4\)/,
+    );
+    await expect(load([lv(5, "tl-tr.xml", "lotl"), lv(5, "tl-tr.xml", "lotl")])).rejects.toThrow(/not monotonic/);
+  });
+
+  it("kontrol noktası state'i sayacı da kurar: aynı (dosya, kaynak) için eski sürüm DURDURUR", async () => {
+    const { kind: _k, ...snap } = { ...lv(9), seq: 2 };
+    await expect(loadFromCheckpoint({ list_views: [snap] }, [lv(9)])).rejects.toThrow(/not monotonic/);
+    const { store } = await loadFromCheckpoint({ list_views: [snap] }, [lv(10)]);
+    expect(store.list_view_anchors.get("tl-tr.xml")?.source_version).toBe(10);
+  });
+
+  it("M3: kontrol noktasındaki list_views[].file / source_file satır şemasıyla aynı kurala uyar", async () => {
+    const { kind: _k, ...snap } = { ...lv(9), seq: 2 };
+    await expect(loadFromCheckpoint({ list_views: [{ ...snap, file: "lote/../tl-tr.jws" }] })).rejects.toThrow();
+    await expect(loadFromCheckpoint({ list_views: [{ ...snap, file: "/etc/passwd" }] })).rejects.toThrow();
+    await expect(loadFromCheckpoint({ list_views: [{ ...snap, source_file: "tl-TR" }] })).rejects.toThrow();
+    await expect(loadFromCheckpoint({ list_views: [{ ...snap, source_file: "anything" }] })).rejects.toThrow();
   });
 });

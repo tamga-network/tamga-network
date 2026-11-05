@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 summary: >
   ADR-0073 K4 yoxlayıcı kimliyini `rpId = keccak256(dns_name)` etdi. Kontraktda bu kimlik onu ilk qeydə alan dövlətə məxsusdur;
   başqa bir dövlət domen adı özünə məxsus olmayan yoxlayıcını əvvəlcə qeydə alaraq kimliyi ələ keçirə bilər, ləğv edilmiş kimlik
@@ -104,6 +104,14 @@ Adlar (ictimai ABI; mövcud adlandırma qaydasına görə — `proposeNetworkRec
 - Qeydiyyat qurumu domen sahibliyini qeydiyyatdan əvvəl yoxlamağa davam edir; mübahisədə yol Governance təklifidir. `TrustSource`
   tərəfində eyni `dns_name`-in birdən çox ölkə siyahısında görünməsi bu gün qapalı-təhlükəsiz (qeyri-müəyyən) sayılır; ötürmədən
   sonra köhnə siyahıdakı qeydin bağlanması siyahı ekvivalentlik testi ilə ayrıca həll edilir.
+- **Tətbiq qeydi (2026-11-05; qərarın məzmunu dəyişmədi):** siyahı tərəfi ötürməni maşınla oxunan sahə ilə tanıyır. Köhnə
+  ölkənin qeydiyyat aləti (`rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <təsdiq>`) qeydi `REVOKED` edir və
+  tarixçə girişinə strukturlaşdırılmış `reassigned_to: "<CC>"` yazır (səbəb mətni qalır, lakin qərar üçün oxunmur). Yükləyici
+  (`@tamga-network/trust` 0.8.1) eyni `dns_name`-in ləğv edilməmiş yeganə qeydini yalnız digər bütün qeydlərin son `REVOKED`
+  girişi `reassigned_to` ilə onun ölkəsini göstərirsə götürür; əks halda ad qeyri-müəyyəndir (`null`, qapalı-təhlükəsiz).
+  `SUSPENDED` ləğv edilməmiş sayılır; hamısı ləğv edilibsə statusu ən son dəyişən qeyd qaytarılır. Başqa ölkədə ləğvdən sonra
+  yenidən qeydiyyat (RO2) şəbəkə səviyyəsində qeyd gələnə qədər qeyri-müəyyən qalır. Təfərrüat [[SPEC-TRUST-0001]] §6–§7;
+  zəncir–siyahı ekvivalentlik testində fərq 0.
 
 # Status
 

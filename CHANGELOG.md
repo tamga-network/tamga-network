@@ -8,17 +8,6 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
 
 ### Added
 
-- **trust — two new anchor log line types (ADR-0074 K4).** The loader recognises `registration_status` (every publication of
-  the registration certificate status list, ADR-0068: `list_uri`, `content_hash`, a per-list `list_version`, `published_at`) and
-  `list_view` (every ETSI XML / LoTE view, ADR-0066: `file`, `format`, `source_file`, `source_version`, `content_hash`); the store
-  keeps the latest line per list and per file, a step back stops the load, and a checkpoint `state` may carry both (older
-  loaders ignore the extra fields). An unknown line type still stops the loader, so the publisher writes these lines only once
-  this package version is published (see below). The lines do not enter the verification decision.
-- **trust — a `status_list` anchor line may carry the list's bit count and size (`bits`, `size`; 0.8.2).** Both are optional
-  (`bits` from the Token Status List set 1, 2, 4, 8; `size` a positive integer = inflated `lst` bytes × 8 / `bits`), kept in the
-  store's `StatusAnchorRow` and in a checkpoint's `state.status_lists[]`. They are read from the token by the publisher and are
-  needed by the list record on chain (`StatusListRegistry.registerList`); they do not enter the verification decision. Older
-  loaders ignore the extra fields (the line type is unchanged). SPEC-TRUST-0001 §5.
 - **onboard — new package `@tamga-network/onboard` (command `tamga-onboard`, version 0.8.1 with the others).** A joining tool
   for an institution's IT team: `init` builds the registration application(s) from the institution's answers and checks them
   with the same rules as the operator's registration tool (ADR-0024; no unknown fields, so no names of people); `validate`
@@ -52,12 +41,6 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
 
 ### Changed
 
-- **trust — a relying party reassigned between countries is no longer ambiguous (ADR-0075; 0.8.2).** When the same `dns_name`
-  appears in more than one national list, `relyingPartyByDnsName` (and the terminal group answers) take the single record that is
-  not `REVOKED` / `RETIRED`: after a reassignment the old country's list keeps the record as `REVOKED` and the new country's
-  record is used. If more than one record is not revoked the name is still ambiguous (`null`, fail closed); if all are revoked,
-  the record whose status changed last is returned. New store fields and helpers: `relying_party_records` (dns name → country →
-  record), `relyingPartyAmbiguous(dns)`, `relyingPartyStateOf(dns)`; `relying_party_states` keeps every list a name appears in.
 - **ops — `pki-issue --org-id` accepts a CSR that already carries the same `organizationIdentifier`** (as `tamga-onboard keys`
   writes it); a different value is refused (exit 2). Before, any `organizationIdentifier` in the CSR subject was refused when
   `--org-id` was given.
@@ -189,8 +172,9 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
     the execution date of a reassignment / re-registration is not asked: ADR-0075 dates it at execution).
   - trust-publisher: `anchor --token <file>` writes the status list's `bits` and `size` from the token (its digest must equal
     `--content-hash` and its `sub` the `--list-uri`); `rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <ref>` is the
-    old-country side of a reassignment (ADR-0075 RO5): the record becomes `REVOKED` with the reassignment record as the reason,
-    its uses and terminal groups end.
+    old-country side of a reassignment (ADR-0075 RO5): the record becomes `REVOKED` with the reassignment record as the reason
+    and the structured `reassigned_to: "<CC>"` in the history entry (what the loader reads, 0.8.1), its uses and terminal groups
+    end.
   - Fix: every chain provider of the replay, the equivalence test and `trust:chain-submit` turns off the ethers request cache
     (`cacheTimeout: -1`). ethers v6 shares identical requests for 250 ms; on a fast machine the gas estimate of a registration
     data write was taken from an earlier write with the same call data (period 0, before a re-registration), and the
@@ -309,13 +293,15 @@ published on npm as test releases; `0.8.0` is the current one on npm (the API ma
     `scripts/slither.mjs` finds a `pip --user` install. New tests: `security-round-2026-11-04.test.ts` and
     `migration-invariants-fuzz.test.ts` (history order, ordinary write vs replay, executor powers; seeded).
 
-## 0.8.1 — 2026-11-04
+## 0.8.1 — 2026-11-05
 
 All nine packages move to 0.8.1 together (patch release). The API additions are optional (new methods and fields;
-`VerifyInput.aud` became optional — a widened type). Some behaviours changed in the fail-closed direction; they are listed under
-"Behaviour changes in 0.8.1" below. The version stays 0.8.1 (0.x test release; every change refuses more, never accepts more).
-The changes come from the 2026-11-04 review round (per-branch lock, Digital Credentials API audience, registration status
-warning, mdoc namespace scope, ambiguous gate groups).
+`VerifyInput.aud` became optional — a widened type; the `Anchor` union gained two line types, see below). Some behaviours changed
+in the fail-closed direction; they are listed under "Behaviour changes in 0.8.1" below. The version stays 0.8.1 (0.x test
+release; every change refuses more — the one name it resolves again, a relying party reassigned between countries, needs a
+signed, structured reassignment record). The changes come from the 2026-11-04 review round (per-branch lock, Digital Credentials
+API audience, registration status warning, mdoc namespace scope, ambiguous gate groups) and the 2026-11-05 trust additions
+(anchor line types for the chain projection, `bits` / `size`, reassignment rule).
 
 ### Behaviour changes in 0.8.1 (fail-closed, with migration)
 
@@ -325,8 +311,8 @@ warning, mdoc namespace scope, ambiguous gate groups).
 2. **trust — gate groups are `null` / inactive when ambiguous.** `terminalGroup(id)` returns `null` when the same `group_id`
    appears in more than one verifier record; `terminalGroupByCertFingerprint(fp)` returns `null` when the fingerprint is in more
    than one active group; a verifier whose `dns_name` appears in more than one national list is ambiguous
-   (`relyingPartyByDnsName` → `null`, its groups inactive); a group's `institution_id` slug is looked up in the verifier's own
-   national list only.
+   (`relyingPartyByDnsName` → `null`, its groups inactive) unless the lists show a reassignment (item 5); a group's
+   `institution_id` slug is looked up in the verifier's own national list only.
 3. **wallet-core — mdoc registration scope is narrower.** `allowedClaims` lists only elements whose `[namespace, element]` path
    matches the request's namespace; a single-element path without a namespace grants nothing for an mdoc registration. Elements
    outside it are shown as over-asking.
@@ -336,9 +322,37 @@ warning, mdoc namespace scope, ambiguous gate groups).
    verifyPresentation` → `consume()` fails instead of accepting a second response. Migrate: accept with
    `if (!branches.tryConsume()) { /* do not accept */ }`. A failed-attempt limit no longer rejects the presentation while another
    response is being processed (only that branch closes).
+5. **trust — reassignment between countries only with a structured record (ADR-0075 RO1/RO5).** When the same `dns_name` is in
+   more than one national list, the loader takes the single record that is not `REVOKED` / `RETIRED` (a `SUSPENDED` record counts
+   as not revoked) **only if** every other record's last `REVOKED` history entry carries `reassigned_to` naming that record's
+   country. Otherwise the name stays ambiguous (`null`, fail closed): no reassignment record, one naming another country, two
+   records not revoked, or a re-registration after revocation in another country (RO2 — until a network-level record exists). The
+   free-text `reason` is never read for this. If all records are revoked, the record whose status changed last is returned. The
+   result does not depend on the order in which lists are loaded. Migrate: write the old country's side with
+   `rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <ref>` (trust-publisher), which adds `reassigned_to`.
 
 ### Added
 
+- **trust — two new anchor log line types (ADR-0074 K4).** The loader recognises `registration_status` (every publication of
+  the registration certificate status list, ADR-0068: `list_uri`, `content_hash`, a per-list `list_version`, `published_at`) and
+  `list_view` (every ETSI XML / LoTE view, ADR-0066: `file`, `format`, `source_file`, `source_version`, `content_hash`); the store
+  keeps the latest line per list and per file. A step back stops the load: per list for `registration_status`, per
+  (`file`, `source_file`) pair for `list_view` (a file moved to another source list continues from that source's own version). A
+  checkpoint `state` may carry both; its `list_views[].file` / `source_file` follow the same rules as the line (no `..`, source
+  `lotl` or `tl-<cc>`). An unknown line type still stops the loader, so loaders before 0.8.1 stop on these lines: the publisher
+  writes them only once 0.8.1 is the minimum loader version of every consumer. The lines do not enter the verification decision.
+- **trust — a `status_list` anchor line may carry the list's bit count and size (`bits`, `size`).** Both are optional but come
+  together (`bits` from the Token Status List set 1, 2, 4, 8; `size` a positive integer = inflated `lst` bytes × 8 / `bits`, so
+  `size × bits` is a multiple of 8, at most `STATUS_LIST_MAX_SIZE` = 2^32 − 1, the chain field's `uint32`); a line breaking this
+  stops the load. Kept in the store's `StatusAnchorRow` and in a checkpoint's `state.status_lists[]` (same rule). They are read
+  from the token by the publisher and are needed by the list record on chain (`StatusListRegistry.registerList`); they do not
+  enter the verification decision. Older loaders ignore the extra fields (the line type is unchanged). SPEC-TRUST-0001 §5.
+- **trust — `StatusHistoryEntry.reassigned_to`** (optional, two capital letters): on a `REVOKED` entry, the country list the
+  identity moved to (ADR-0075 RO1/RO5; behaviour change 5). Older lists without it stay valid.
+- **trust — `TrustStore.relying_party_records`, `relyingPartyAmbiguous(dns)`, `relyingPartyStateOf(dns)`.** `relying_party_records`
+  is dns name → country → record; `relyingPartyAmbiguous` applies the reassignment rule (for a store built by hand without
+  `relying_party_records`, a name seen in more than one list is ambiguous); `relyingPartyStateOf` is the selected record's
+  country (undefined when ambiguous). `relying_party_states` keeps every list a name appears in.
 - **verifier — `PresentationAlreadyConsumedError`** (thrown by `BranchSet.consume()` on a completed presentation; see above).
 
 - **verifier — `BranchSet.tryConsume()` and `BranchSet.declineBlocked(branch)`.** `tryConsume` completes the presentation
@@ -370,6 +384,12 @@ warning, mdoc namespace scope, ambiguous gate groups).
   issuers of the verifier's own national list (institution + country), and is not active if that still matches more than one.
 - **wallet-core — an mdoc registration path without a namespace (`[element]`) grants nothing** (was: allowed the element in any
   namespace).
+- **trust — the `Anchor` union is wider and refined.** `Anchor` (the zod schema and its TypeScript type) now also has the
+  `registration_status` and `list_view` members; code that switches exhaustively on `kind` must handle them (a `never` check
+  fails to compile until it does). `Anchor` is now a refined schema (the `bits` / `size` rule), so `Anchor.options` and other
+  discriminated-union helpers are no longer available on it; `parse` / `safeParse` are unchanged.
+- **trust — relying party reassigned between countries (ADR-0075).** `relyingPartyByDnsName` and the terminal group answers
+  follow the reassignment rule of behaviour change 5 instead of treating every name in two lists as ambiguous.
 - **verifier — `failedAttempt` does not reject the presentation while another response is being processed**; it closes only that
   branch (on the branch-less path the limit applies once the other response is done).
 

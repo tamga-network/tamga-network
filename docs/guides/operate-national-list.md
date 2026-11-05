@@ -370,6 +370,9 @@ npm run trust:chain-check -- dist/tl-xx.jws   # liste özetiniz zincirde onaylı
 - Aynı sürüm aynı özetle ikinci kez yazılmaz (`SKIP`); onaylı bir sürüm için farklı özet `CONFLICT` verir, yazılmaz ve komut
   hata koduyla biter: bakmanız gereken bir durumdur.
 - Bir çapa ancak eşik kadar bağımsız yazıcı aynı özeti gönderince onaylıdır; üretimde eşik en az 2'dir.
+- Zinciri açmadan önce (2026-11-05): listeyi okuyan bütün tüketicilerin (doğrulayıcılar, cüzdanlar, belge veren servisleri)
+  yükleyicisi en az `@tamga-network/trust` **0.8.1** olmalıdır. Bayrak açıkken çapa günlüğüne yeni satır türleri
+  (`registration_status`, `list_view`) yazılır; daha eski yükleyici bilinmeyen satır türünde durur ([[SPEC-TRUST-0001]] §5).
 
 Devletinizin validator düğümü ve zincirin yanındaki işler: [[GUIDE-0015]]. Test ağının adım adım kurulumu:
 [[GUIDE-0018]].

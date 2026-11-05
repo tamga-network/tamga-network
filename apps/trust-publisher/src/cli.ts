@@ -1375,7 +1375,7 @@ function snapshotOf(lines: string[]) {
       seq: number;
     }>,
     schemas: [...schemas.values()] as Array<{ schema_id: string; content_hash: string; seq: number }>,
-    // eski yükleyiciler (0.8.1 ve öncesi) bilinmeyen durum alanlarını yok sayar; boşsa alan yazılmaz
+    // eski yükleyiciler (0.8.0 ve öncesi) bilinmeyen durum alanlarını yok sayar; boşsa alan yazılmaz
     ...(views.registration_status.length ? { registration_status: views.registration_status } : {}),
     ...(views.list_views.length ? { list_views: views.list_views } : {}),
   };

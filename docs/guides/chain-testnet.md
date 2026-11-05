@@ -589,6 +589,10 @@ PowerShell'de (Yol A) aynı değişkenler `$env:TAMGA_CHAIN_ENABLED = "1"` biçi
 Kurumların iptal listesi çapaları da zincirdeki liste kaydına girer; bunun için çapa satırı listenin bit sayısını ve boyutunu
 taşır (`trust:anchor --token <belirteç dosyası>`, [[SPEC-TRUST-0001]] §5).
 
+Bayrak açıkken çapa günlüğüne kayıt sertifikası durum listesi ve liste görünümü satırları (`registration_status`, `list_view`)
+da yazılır. Test ağında sorun yoktur; gerçek ağda zincir ancak listeyi okuyan bütün tüketicilerin yükleyicisi en az
+`@tamga-network/trust` **0.8.1** olunca açılır — daha eski yükleyici bilinmeyen satır türünde durur (2026-11-05).
+
 ## Geçmişi aktarmak ve eşdeğerlik testi
 
 Zincir bir gün açıldığında imzalı listelerin bütün geçmişi kontratlara bir kez, listedeki tarihlerle yeniden oynatılır

@@ -105,11 +105,35 @@ export interface Freshness {
 const liveRp = (r: RelyingParty) => r.status !== "REVOKED" && r.status !== "RETIRED";
 const lastChange = (r: RelyingParty) =>
   Math.max(Date.parse(r.registered_at ?? "") || 0, ...(r.status_history ?? []).map((h) => Date.parse(h.since) || 0));
-/** ADR-0075: iptal edilmemiş kayıt (tekse o; birden çoksa ilki — belirsizlik ayrıca sorulur); yoksa durumu en son değişen. */
-function pickRelyingParty(records: RelyingParty[]): RelyingParty {
-  const live = records.filter(liveRp);
-  if (live.length) return live[0];
-  return records.reduce((a, b) => (lastChange(b) > lastChange(a) ? b : a));
+/** Kaydın en son `REVOKED` girdisinin yapılı devir kaydı (`reassigned_to`; ADR-0075 RO1/RO5); yoksa undefined. */
+function lastReassignment(r: RelyingParty): string | undefined {
+  const revoked = (r.status_history ?? [])
+    .map((h, i) => ({ h, i, t: Date.parse(h.since) || 0 }))
+    .filter((x) => x.h.status === "REVOKED")
+    .sort((a, b) => a.t - b.t || a.i - b.i);
+  const last = revoked[revoked.length - 1]?.h;
+  return typeof last?.reassigned_to === "string" ? last.reassigned_to : undefined;
+}
+/**
+ * ADR-0075: bir `dns_name`'in ülke listesi kayıtlarından geçerli olanı seçer (yükleme sırasından bağımsız; ülke koduna göre sıralı).
+ * - İptal edilmemiş (`REVOKED` / `RETIRED` değil; `SUSPENDED` dahil) kayıt yoksa: durumu en son değişen kayıt, belirsiz değil.
+ * - İptal edilmemiş TEK kayıt varsa: ancak öteki bütün kayıtların son `REVOKED` girdisi `reassigned_to` ile bu kaydın ülkesini
+ *   gösteriyorsa (makinece okunur devir onayı) o kayıt alınır; aksi hâlde ad belirsizdir (kapalı güvenli). Başka ülkede iptal
+ *   sonrası yeniden kayıt (RO2) ağ düzeyinde kayıt gelene kadar bu yüzden belirsiz kalır.
+ * - İptal edilmemiş kayıt birden çoksa: belirsiz.
+ * Belirsizlikte de bir kayıt döner (denetim ve eşdeğerlik için); karar `relyingPartyAmbiguous` ile verilir.
+ */
+function resolveRelyingParty(records: Map<string, RelyingParty>): { rp: RelyingParty; ambiguous: boolean } {
+  const entries = [...records.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const live = entries.filter(([, r]) => liveRp(r));
+  if (!live.length) {
+    const rp = entries.map(([, r]) => r).reduce((a, b) => (lastChange(b) > lastChange(a) ? b : a));
+    return { rp, ambiguous: false };
+  }
+  if (live.length > 1) return { rp: live[0][1], ambiguous: true };
+  const [cc, rp] = live[0];
+  const handedOver = entries.every(([c, r]) => c === cc || lastReassignment(r) === cc);
+  return { rp, ambiguous: !handedOver };
 }
 
 export class TrustStore {
@@ -126,11 +150,13 @@ export class TrustStore {
   registration_status_anchors = new Map<string, RegistrationStatusAnchorRow>();
   /** ADR-0074 K4: dosya → son liste görünümü satırı (görünüm kaynakla çelişirse kaynak geçerlidir, PJ5) */
   list_view_anchors = new Map<string, ListViewAnchorRow>();
+  /** (dosya, kaynak) → son görünüm sürümü — `list_view` monotonluk anahtarı */
+  private list_view_versions = new Map<string, number>();
   relying_parties = new Map<string, RelyingParty>(); // client_id → rp
   /**
-   * dns_name → rp (ADR-0034: kalıcı kimlik). Aynı ad birden çok ülke listesinde görünürse (ADR-0075 devri: eski listede `REVOKED`,
-   * yenide `ACTIVE`) iptal edilmemiş TEK kayıt seçilir; iptal edilmemiş kayıt birden çoksa ad belirsizdir
-   * (`relyingPartyAmbiguous`). Hepsi iptal edilmişse durumu en son değişen kayıt.
+   * dns_name → rp (ADR-0034: kalıcı kimlik). Aynı ad birden çok ülke listesinde görünürse (ADR-0075 devri: eski listede `REVOKED`
+   * ve son girdide `reassigned_to: <yeni ülke>`, yenide `ACTIVE`) iptal edilmemiş TEK kayıt seçilir; devir kaydı yoksa ya da iptal
+   * edilmemiş kayıt birden çoksa ad belirsizdir (`relyingPartyAmbiguous`). Hepsi iptal edilmişse durumu en son değişen kayıt.
    */
   relying_parties_by_dns = new Map<string, RelyingParty>();
   /** dns_name → kaydın göründüğü ülke listeleri (hepsi; iptal edilmiş eski kayıt dahil) */
@@ -149,14 +175,16 @@ export class TrustStore {
   private freshness: Freshness | null = null;
 
   /**
-   * ADR-0075: aynı `dns_name` iptal edilmemiş (`REVOKED` / `RETIRED` değil) birden çok ülke listesi kaydında görünüyorsa kimlik
-   * belirsizdir (kapalı güvenli). Devirden sonra eski listedeki kayıt `REVOKED` olduğundan belirsizlik yoktur: yeni kayıt geçerlidir.
+   * ADR-0075: aynı `dns_name` birden çok ülke listesinde görünüyorsa kimlik ancak makinece okunur bir devirle belirlidir: iptal
+   * edilmemiş (`REVOKED` / `RETIRED` değil) TEK kayıt var ve öteki kayıtların son `REVOKED` girdisi `reassigned_to` ile onun ülkesini
+   * gösteriyor. Aksi hâlde (iki iptal edilmemiş kayıt, devir kaydı olmayan ya da başka ülkeyi gösteren iptal) belirsizdir — kapalı
+   * güvenli. Hepsi iptal edilmişse belirsiz değildir.
    */
   relyingPartyAmbiguous(dnsName: string): boolean {
     const records = this.relying_party_records.get(dnsName);
     // kayıtlar ülke ülke tutulmamışsa (elle kurulan depo) yalnız görüldüğü liste sayısına bakılır
     if (!records) return (this.relying_party_states.get(dnsName)?.size ?? 0) > 1;
-    return [...records.values()].filter(liveRp).length > 1;
+    return resolveRelyingParty(records).ambiguous;
   }
   /** Seçilen kaydın ülke listesi (`relying_parties_by_dns`); ad belirsizse ya da bilinmiyorsa undefined. */
   relyingPartyStateOf(dnsName: string): string | undefined {
@@ -197,7 +225,7 @@ export class TrustStore {
       const records = this.relying_party_records.get(rp.dns_name) ?? new Map<string, RelyingParty>();
       records.set(tl.state_code, rp);
       this.relying_party_records.set(rp.dns_name, records);
-      this.relying_parties_by_dns.set(rp.dns_name, pickRelyingParty([...records.values()]));
+      this.relying_parties_by_dns.set(rp.dns_name, resolveRelyingParty(records).rp);
       const states = this.relying_party_states.get(rp.dns_name) ?? new Set<string>();
       states.add(tl.state_code);
       this.relying_party_states.set(rp.dns_name, states);
@@ -286,13 +314,16 @@ export class TrustStore {
       const { seq, list_uri, content_hash, list_version, published_at } = a;
       this.registration_status_anchors.set(list_uri, { list_uri, content_hash, list_version, published_at, seq });
     } else if (a.kind === "list_view") {
-      // Görünümün sürümü kaynak listenin sürümüdür (ADR-0066 K1); aynı dosya için yalnız artar
-      const prev = this.list_view_anchors.get(a.file);
-      if (prev && a.source_version <= prev.source_version)
+      // Görünümün sürümü kaynak listenin sürümüdür (ADR-0066 K1); monotonluk anahtarı (dosya, kaynak): aynı dosya aynı kaynak
+      // için yalnız artar. Dosya başka bir kaynağa bağlanırsa sayaç o kaynağın kendi sürümünden sürer (kaynaklar ayrı sayaçtır).
+      const key = listViewKey(a.file, a.source_file);
+      const prev = this.list_view_versions.get(key);
+      if (prev !== undefined && a.source_version <= prev)
         throw new Error(
-          `ADR-0074: list_view source_version not monotonic (${a.file}: ${prev.source_version} → ${a.source_version})`,
+          `ADR-0074: list_view source_version not monotonic (${a.file} ← ${a.source_file}: ${prev} → ${a.source_version})`,
         );
       const { seq, file, format, source_file, source_version, content_hash } = a;
+      this.list_view_versions.set(key, source_version);
       this.list_view_anchors.set(file, { file, format, source_file, source_version, content_hash, seq });
     }
   }
@@ -326,7 +357,10 @@ export class TrustStore {
       });
     for (const r of state.schemas) this.schema_anchors.set(r.schema_id, { content_hash: r.content_hash, seq: r.seq });
     for (const r of state.registration_status ?? []) this.registration_status_anchors.set(r.list_uri, { ...r });
-    for (const r of state.list_views ?? []) this.list_view_anchors.set(r.file, { ...r });
+    for (const r of state.list_views ?? []) {
+      this.list_view_anchors.set(r.file, { ...r });
+      this.list_view_versions.set(listViewKey(r.file, r.source_file), r.source_version);
+    }
   }
   setFreshness(f: Freshness) {
     this.freshness = f;
@@ -353,6 +387,8 @@ export class TrustStore {
     };
   }
 }
+
+const listViewKey = (file: string, sourceFile: string) => `${file}|${sourceFile}`;
 
 /** Hizmet erişim noktalarından `https` alan adları (küçük harf, tekil); bozuk ya da `https` olmayan adres atlanır. */
 function supplyPointHosts(services: Array<{ supplyPoints?: string[] }>): string[] {

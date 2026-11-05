@@ -38,7 +38,15 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 - Ambiguous gate groups are closed: `terminalGroup(id)` returns `null` when the same `group_id` appears in more than one verifier
   record (e.g. two national lists); `terminalGroupByCertFingerprint(fp)` returns `null` when the fingerprint is in more than one
   active group; a verifier whose `dns_name` appears in more than one national list is ambiguous (`relyingPartyByDnsName` →
-  `null`, its groups inactive); a group's `institution_id` slug is matched only against the verifier's own national list.
+  `null`, its groups inactive) unless the lists show a reassignment; a group's `institution_id` slug is matched only against the
+  verifier's own national list.
+- Reassignment between countries (ADR-0075) is recognised only through a structured record: the single record that is not
+  `REVOKED` / `RETIRED` is taken when every other record's last `REVOKED` history entry carries `reassigned_to` naming its
+  country; otherwise the name stays ambiguous. New: `StatusHistoryEntry.reassigned_to`, `TrustStore.relying_party_records`,
+  `relyingPartyAmbiguous(dns)`, `relyingPartyStateOf(dns)`.
+- Anchor log: new line types `registration_status` and `list_view` (the `Anchor` union is wider — handle them in exhaustive
+  switches); a `status_list` line may carry `bits` and `size` (together, `size × bits` a multiple of 8, at most
+  `STATUS_LIST_MAX_SIZE`). These lines do not enter the verification decision.
 
 ## Breaking in 0.8.0
 

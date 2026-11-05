@@ -135,7 +135,7 @@ A record is never removed from the list (TL2); a withdrawn institution stays in 
 
 # 5. `anchors.jsonl` — anchor log
 
-> **Implemented (2026-11-04), [[ADR-0074]] K4:** two new line types for the registration certificate status list and the list views (`registration_status`, `list_view`). The loader recognises them; an unknown type still STOPS the loader. The publisher therefore writes these lines only while the chain projection is on (`TAMGA_CHAIN_ENABLED=1`; off in production): the package version that recognises them is published before the chain is opened.
+> **Implemented (2026-11-04), [[ADR-0074]] K4:** two new line types for the registration certificate status list and the list views (`registration_status`, `list_view`). The loader recognises them; an unknown type still STOPS the loader. The publisher therefore writes these lines only while the chain projection is on (`TAMGA_CHAIN_ENABLED=1`; off in production). **Condition for opening the chain (2026-11-05):** the lowest loader version that recognises these types is `@tamga-network/trust` **0.8.1**; the new line types are written only once the consumers that read the list (verifiers, wallets, issuer services) run at least that version — the flag is not turned on before. In a `status_list` line `bits`/`size` come together, `size × bits` is a multiple of 8 and `size` ≤ 2^32 − 1 (the chain's `uint32`); the monotonicity key of `list_view` is the (`file`, `source_file`) pair; a checkpoint's `list_views[]` follows the same format rules as the line.
 
 Every line is an independent JWS; payload `{seq, previous_hash, ts, kind, …}`:
 
@@ -183,9 +183,21 @@ seq 0. Load cost thus stays bounded by the current slice; archives remain public
 (`signing_keys`) → format (`list_format_version`) → hash chain → `next_update` → `anchors.jsonl` chain → in-memory
 projection (the tables of [[ARCH-0003]] §2.4). After signature and format, `environment` is compared with the expected network (default `production`); a wallet or verifier that connects to the test network expects `sandbox` and is pinned only to the test network's root ([[ADR-0038]]). `ListTrustSource` then offers the read set of [[SPEC-BC-0001]] §11.2:
 `isCredentialAcceptable(issuerId, iat)`, `isCredentialSchemaAcceptable(issuerId, schemaId, iat)`, `isRecognizedBy`,
-`schemaContentHash`, `statusAnchor`, `relyingParty`, `issuer`, `schema`, `isWalletProviderKey`, `freshness()`.
+`schemaContentHash`, `statusAnchor`, `relyingParty`, `relyingPartyByDnsName`, `issuer`, `schema`, `isWalletProviderKey`,
+`freshness()`.
 Three-valued answer: `YES | NO | UNKNOWN`; `UNKNOWN` → INDETERMINATE (CMP4). Services reload the list periodically
 (issuer service `TAMGA_TRUST_RELOAD_SEC`, verifier `TAMGA_VERIFY_TRUST_RELOAD_SEC`).
+
+**The same `dns_name` in more than one national list ([[ADR-0075]]; 2026-11-05).** `relyingPartyByDnsName` (and the terminal
+group answers) select the record with this rule; the result does not depend on the order in which lists are loaded:
+
+1. No record that is not revoked (not `REVOKED` or `RETIRED`; **`SUSPENDED` counts as not revoked**): **the record whose status
+   changed last** is returned (not ambiguous).
+2. **One** record not revoked: it is taken only if every other record's last `REVOKED` entry names its country in the
+   `reassigned_to` field. **A reassignment is recognised only through `reassigned_to`**; the free-text `reason` is not read.
+3. Otherwise (two records not revoked, a revocation with no reassignment record or naming another country) the name is
+   **ambiguous**: `null`, terminal groups inactive (fail closed). A re-registration after revocation in another country (RO2)
+   therefore stays ambiguous until a network-level record exists.
 
 ---
 
@@ -199,7 +211,7 @@ Three-valued answer: `YES | NO | UNKNOWN`; `UNKNOWN` → INDETERMINATE (CMP4). S
 | `issuers[]` | `IssuerRegistry.registerIssuer / suspend / revoke(revokedAt) / setSuccessor` |
 | `issuers[].schema_authorizations[]` | `IssuerRegistry.setSchemaAuthorization(issuerId, schemaId, from, until)` |
 | `lotl.schemas[]` | `Governance` proposal → `SchemaRegistry.registerSchema(vct, contentHash, NETWORK)` |
-| `relying_parties[]` | `RelyingPartyRegistry.register / setScope`; suspension, reinstatement and revocation with the list date (`suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt`). Reassignment between countries ([[ADR-0075]]): the record in the old country's list becomes `REVOKED`, the reason names the reassignment record (`reassignment to <CC> (approval <ref>)`); the loader takes the single non-revoked record of the same `dns_name`, and more than one non-revoked record makes the name ambiguous (`null`) |
+| `relying_parties[]` | `RelyingPartyRegistry.register / setScope`; suspension, reinstatement and revocation with the list date (`suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt`). Reassignment between countries ([[ADR-0075]]): the record in the old country's list becomes `REVOKED`; its history entry carries the structured reassignment record `reassigned_to: "<CC>"` and the reason (`reassignment to <CC> (approval <ref>)`) (`rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <ref>`). The loader takes the new country's record only through this field; without it the name is ambiguous (`null`; §6) |
 | `anchors kind=status_list` | `StatusListRegistry.registerList(issuerId, uri, size, bits)` (first line) + `publishList(listId, hash, version, published_at)` |
 | `anchors kind=schema` | `SchemaRegistry` contentHash |
 | `lotl` / `tl-<cc>` version (whole file) · last line of `anchors.jsonl` | Trust list anchor registry — `anchorList(listKey, version, sha256(jws), previousHash, issuedAt)` · `anchorLogHead(logKey, seq, sha256(line), ts)`; digest only, no content ([[ADR-0051]]; [[SPEC-BC-0001]] §15). The chain is a projection: on conflict the signed list prevails and the chain's answer is never required for verification. Flag `TAMGA_CHAIN_ENABLED`, off in production |
@@ -252,3 +264,8 @@ Migration: the `archive/` versions are replayed in order as contract calls; the 
 # Status
 
 **In force** — version 1.0.0 (2026-10-02).
+
+**Version note (2026-11-05):** §5 condition for opening the chain (lowest loader `@tamga-network/trust` 0.8.1; new line types
+once consumers are updated), the `bits`/`size` format rule and the `list_view` monotonicity key; §6 the selection rule for the
+same `dns_name` in more than one national list and `relyingPartyByDnsName` in the read set; §7 the structured reassignment
+record (`reassigned_to`). Behaviour ships with `@tamga-network/trust` 0.8.1; the [[ADR-0075]] decision is unchanged.

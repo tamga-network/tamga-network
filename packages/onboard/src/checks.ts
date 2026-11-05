@@ -436,19 +436,27 @@ export async function listingChecks(http: Http, o: ListingOptions): Promise<Row[
 
   if (o.rp) {
     const rp = store.relying_parties_by_dns.get(o.rp);
-    const rpActive = !!rp && rp.status === "ACTIVE";
+    // ADR-0075: ad birden çok ülke listesinde ve makinece okunur devir yoksa doğrulayıcı kaynağı kaydı tanımaz (kapalı güvenli)
+    const ambiguous = !!rp && store.relyingPartyAmbiguous(o.rp);
+    const rpActive = !!rp && !ambiguous && rp.status === "ACTIVE";
     const scopes = (rp?.scopes ?? []).filter((s) => activeAt(s.valid_from, s.valid_until, now));
+    const states = [...(store.relying_party_states.get(o.rp) ?? [])].sort().join(", ");
     rows.push({
       id: "R1",
       check: `Doğrulayıcı / kimlik eşleştirme kaydı (${o.rp})`,
       result: rpActive && scopes.length ? "pass" : "fail",
-      detail: rp
-        ? clean(
-            `${rp.status} · etkin kullanım: ${scopes.map((s) => `${s.scope_id} (${s.vct}: ${s.claims.join("+")})`).join("; ") || "yok"}`,
-          )
-        : "listede yok",
-      fix:
-        rpActive && scopes.length ? undefined : "kayıt operatörde yapılır; kayıttan ve yayından sonra tekrar deneyin",
+      detail: !rp
+        ? "listede yok"
+        : ambiguous
+          ? `ad belirsiz: birden çok ülke listesinde (${states}) ve devir kaydı (reassigned_to) yok — doğrulayıcılar kaydı tanımaz`
+          : clean(
+              `${rp.status} · etkin kullanım: ${scopes.map((s) => `${s.scope_id} (${s.vct}: ${s.claims.join("+")})`).join("; ") || "yok"}`,
+            ),
+      fix: ambiguous
+        ? "eski ülke listesindeki kayıt devirle kapatılmalı (rp-status <dns_name> REVOKED --reassigned-to <CC> --approval <onay>) — operatöre bildirin"
+        : rpActive && scopes.length
+          ? undefined
+          : "kayıt operatörde yapılır; kayıttan ve yayından sonra tekrar deneyin",
     });
     if (rp) {
       const rmiss = missing(rp as unknown as Rec, REG_FIELDS_RP);
