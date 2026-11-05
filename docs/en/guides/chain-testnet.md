@@ -28,8 +28,10 @@ Tamga's trust rests today on signed [[t:trust-list|trust lists]]; there is **no*
 [[ADR-0051]]). The network you set up with this guide is a **test network**:
 
 - it has no connection to the live system (signed lists, verification, wallet, sandbox); it neither slows it down nor changes it;
-- its chain id is the local development id (31338), and the repository's tools recognise only 31337 and 31338 as "local chains";
-- the node keys (paths A and B) are publicly known test keys: for `127.0.0.1` or a closed test network only.
+- its chain id is 31338 in paths A and B (the local development id; the repository's tools recognise only 31337 and 31338 as
+  "local chains") and 31339 in path C (the test/staging id);
+- the node keys (paths A and B) are publicly known test keys: for `127.0.0.1` or a closed test network only; in path C every key is
+  freshly generated but all of them sit on one machine: a test network only as well.
 
 How the two modes (chainless and chain) relate, what the chain adds and how the two stay in sync: [[GUIDE-0016]].
 :::
@@ -52,7 +54,7 @@ This section is enough to read the rest of the guide.
 | QBFT | Besu's consensus method. Validators vote on every block; a block is final once more than two thirds of the validators accept it and is never rolled back |
 | 3f+1 | QBFT's resilience rule: a network of n validators tolerates at most f = ⌊(n−1)/3⌋ validators being down or misbehaving. See the table below |
 | Genesis | The chain's first block and starting settings (`genesis.json`): chain id, block time, first validators, starting balances. It must be byte for byte the same on every node; if it changes, a separate chain results |
-| chainId | The chain's numeric identity. Every signed transaction carries it, so a transaction signed for one chain is not valid on another. Test network: `31338` |
+| chainId | The chain's numeric identity. Every signed transaction carries it, so a transaction signed for one chain is not valid on another. Test network: `31338` (paths A and B), `31339` (path C) |
 | `extraData` | A genesis field; in QBFT it carries the list of the first validator addresses in RLP (Ethereum's binary encoding) |
 | enode | A node's network address: `enode://<128-character public key>@<IP>:<P2P port>`. The public key is the node's identity; its address is derived from that key |
 | Bootnode / static nodes | The nodes a freshly started node connects to first. In Tamga discovery is off; each node reads the peers it connects to from `static-nodes.json` |
@@ -90,8 +92,8 @@ with 4 validators, 3 votes with 5. This is a separate vote from the 2/3 vote in 
 | For | A first look at the contracts, the permission list and voting | Trying the whole multi-node network end to end | Trying the installation on test servers |
 | Nodes | 1 (not permissioned) or 2 (permissioned mode) | 4 validators + 1 extra node, all on `127.0.0.1` | 1 node per server |
 | Scripts | `scripts/besu-dev.ps1` (`npm run chain:besu:*`) | `network/testnet/*.sh` (process mode) | `network/testnet/*.sh` + `besu@.service` (systemd mode) |
-| Keys | Generated locally (single node) or Hardhat test accounts | Hardhat test accounts (`--keys dev`) | Freshly generated (`--keys generate`) |
-| Tried on | Windows 11, PowerShell 5.1 | Ubuntu 24.04 (GitHub Actions, weekly) | Ubuntu 24.04 (GitHub Actions, single-validator systemd job) |
+| Keys | Generated locally (single node) or Hardhat test accounts | Hardhat test accounts (`--keys dev`) | Freshly generated (`--keys generate`), with a key map |
+| Tried on | Windows 11, PowerShell 5.1 | Ubuntu 24.04 (GitHub Actions, weekly) | Ubuntu 24.04 (GitHub Actions: single-validator `systemd` job; 4 validators with generated keys, `staging` job) |
 
 What they share: the same Besu version (26.11.0), the same Java version (JDK 25), the same genesis settings, the same contracts and
 the same tools. Moving from path A to B does not mean learning anything again.
@@ -231,7 +233,7 @@ bash network/testnet/make-network.sh       # default: 4 validators + 1 extra nod
 | `--validators N` | 4 | Validators in the genesis |
 | `--extra E` | 1 | Extra nodes that start as full nodes and can be voted in as validators later |
 | `--keys dev\|generate` | `dev` | `dev`: Hardhat's publicly known test accounts #1 #2 #6 #7 #8 (at most 5 nodes). `generate`: fresh random keys |
-| `--chain-id` | 31338 | Chain id (the end-to-end test works only with 31338) |
+| `--chain-id` | 31338 | Chain id (the end-to-end test works only with 31338; with `--keys generate` the default is 31339) |
 | `--block-period` | 2 | Block time (seconds) |
 | `--hosts "ip1 ip2 …"` | — | One node per server (path C) |
 | `--dir`, `--besu-home`, `--java-home` | `network/testnet/run`, `tools/besu`, `tools/jdk-25` | Directories |
@@ -428,13 +430,60 @@ sudo ufw allow from 192.0.2.13 to any port 30303 proto tcp
 Add the rule for your management access (SSH) **before** these. As an extra layer, the unit has `IPAddressDeny=any` and
 `IPAddressAllow=localhost <peer addresses>` lines ready, as comments.
 
-### C5. What path C has today, and what it does not
+### C5. Contracts and Governance with the generated keys
 
-The scripts set up the network and run the nodes with systemd; the voting and monitoring commands work unchanged on every server's
-own `127.0.0.1:8545`. There is no ready script that sets up the contracts and Governance **with generated keys**: the repository's
-local deploy script (`contracts/scripts/deploy-dev.ts`) makes Hardhat test accounts the founders. So in path C the nodes run on the
-start-up permissions file; rendering the permission list from the chain, anchoring, replay and the end-to-end test are done in
-path B (`deploy-and-wire.sh` also refuses a `--keys generate` network).
+With `--keys generate`, `make-network.sh` also writes a **key map** next to the node keys: `keys/keys.json`, and for every role a
+freshly generated key in its own file (mode `0600`): the deployer, the migration executor, two list anchorers and one delegate per
+state; a state's validator key is its node key. The chain id is **31339**: the repository's tools treat it neither as a local chain
+(no public test key, no sandbox set) nor as the real network.
+
+::: warning Test and staging networks only
+On the real network nobody holds every key: each state generates its validator key on its own hardware and keeps its signing keys
+in an HSM ([[GUIDE-0015]] §3). The key map exists because on a test network one person plays every state. Every tool that reads it
+refuses it unless `purpose` is `test`, the chain id is 31339 and every key file is `0600` and belongs to its address.
+:::
+
+On the machine that ran `make-network.sh` (one node per server: server 1, which still holds the whole output):
+
+```bash
+sudo env "PATH=$PATH" TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd \
+     bash network/testnet/bootstrap-governance.sh --nodes 1
+```
+
+With all nodes on one machine, without `--nodes`; in process mode without `sudo` and the `TESTNET_*` variables:
+
+```bash
+bash network/testnet/make-network.sh --keys generate
+bash network/testnet/node.sh start all
+bash network/testnet/bootstrap-governance.sh
+```
+
+The script, step by step; every step is logged and a re-run skips what is already done:
+
+| Step | What happens |
+|---|---|
+| 1. Network | The nodes answer, blocks grow, the QBFT set has 4 validators. A chain id other than 31339 is refused |
+| 2. Contracts | `contracts/scripts/deploy-network.ts` (Hardhat network `besuStaging`): founders TR and KZ with their delegates; recognition between the founders by a Governance vote (`proposeFounderRecognition`, [[ADR-0055]] K3); the list anchor registry administered by the Governance contract, 2 anchorers, threshold 2. Addresses: `deployment.json` |
+| 3. Governance | XA and XB admitted by 2/3 vote; each state sets its delegate with its own validator |
+| 4. Permission list | Rendered from the chain on every node, loaded and checked; `shared_sha256` equal; the deployer drops out of the list; a random unlisted key is refused, a delegate's transaction is mined |
+| 5. Anchoring | `trust:chain-submit` with the first anchorer, the second confirms; `trust:chain-check` answers YES for every list |
+| 6. Replay | The migration window is opened by vote; the permission list is rendered again and now contains the window's executor; the sample archive is replayed with the key map; equivalence test. `--no-replay` skips this step |
+| 7. Summary | `bootstrap-summary.md` and `.json` in the network directory |
+
+Then on every other server, the permission list of its own node. Copy `deployment.json` and the `nodes/` folder from server 1
+first; no key is needed:
+
+```bash
+sudo env "PATH=$PATH" TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd \
+     bash network/testnet/bootstrap-governance.sh --only permissions --nodes 2
+```
+
+| Variable | What |
+|---|---|
+| `TAMGA_CHAIN_KEYS` | The key map (default: `keys/keys.json` in the network directory) |
+| `TAMGA_CHAIN_DEPLOYMENT` | The deployment file (the script sets it: `deployment.json` in the network directory) |
+
+The `staging` job on GitHub runs these steps from scratch with 4 validators under systemd (§ Automated test on GitHub).
 
 ## Deploying the contracts
 
@@ -449,6 +498,9 @@ The deploy script (`contracts/scripts/deploy-dev.ts`) sets up Tamga's contracts,
 KZ; validators Hardhat accounts #1 and #2, delegates #3 and #4) and saves the addresses to `contracts/deployments/besuDev.json`. The
 list anchor registry's address is in this file's `anchor.registry` field. Besu processes a transaction only in the next block
 (2 s); the script waits for the block at every step.
+
+In path C the contracts are deployed with the generated keys by `contracts/scripts/deploy-network.ts`
+(`bootstrap-governance.sh` step 2, § C5); the Hardhat test accounts are not used there.
 
 The contracts' source code, tests and specification are in the repository (`contracts/`, Hardhat; Solidity).
 
@@ -541,7 +593,7 @@ In PowerShell (path A) the same variables are set as `$env:TAMGA_CHAIN_ENABLED =
 - `chain-check` answers: **YES** (the digest is confirmed on the chain), **NO** (a different digest is confirmed on the chain: a
   sign of equivocation), **UNKNOWN** (chain off, unreachable or threshold not met). This check never makes a verification result
   worse.
-- On the test network the anchorer threshold is 1; on the real network an anchor is not confirmed until at least 2 independent
+- In paths A and B the anchorer threshold is 1, in path C 2 (two anchorers); on the real network an anchor is not confirmed until at least 2 independent
   anchorers send the same digest ([[ADR-0051]] CH3).
 
 Institutions' status list anchors also enter the list record on the chain; for that the anchor line carries the list's bit count
@@ -749,6 +801,7 @@ scratch every time, on a clean Ubuntu 24.04 machine.
 | `lint` | Checks all scripts with `bash -n` and `shellcheck` |
 | `network` | Installs JDK 25 + Besu, prepares the packages and signed lists, compiles the contracts, writes the 4-validator + 1-extra-node network and runs `deploy-and-wire.sh` (nginx required). Node logs, permissions files and reports are kept for 14 days |
 | `systemd` | The `--system` installation, one validator with a generated key, `systemd-analyze verify`, the node running as the `besu` user, block growth, listening only on `127.0.0.1` and the `systemd-analyze security` score |
+| `staging` | Path C on one machine: the `--system` installation, 4 validators with generated keys under systemd (heap `-Xmx640m` through a unit drop-in), `bootstrap-governance.sh` end to end (§ C5), then a second run that must write nothing |
 
 **When it runs:** every Monday (04:23 UTC); when `contracts/`, `apps/chain-indexer/`, `apps/trust-publisher/src/chain/`,
 `network/testnet/`, `network/rpc-proxy/`, `network/permissions/` or the workflow itself changes; and by hand. To trigger it by hand,
@@ -762,7 +815,9 @@ gh run view <run number> --log              # the whole log
 
 **Where the summary is:** on the run's page, in the job summary: the `network` job's summary is the table given as "measured
 result" in this guide (validator and peer counts, contracts, replay, equivalence, anchoring, permission list, votes, fault test, RPC
-protection, resource use, duration); the `systemd` job's summary gives the unit's user, block growth, sockets and security score.
+protection, resource use, duration); the `systemd` job's summary gives the unit's user, block growth, sockets and security score; the `staging` job's summary is the
+table of `bootstrap-governance.sh` (contracts, Governance members, permission list, anchoring, migration window, replay and
+equivalence) and the result of the second run.
 The measurements in this guide are from the run of 2026-11-05.
 
 ## Shadow chain

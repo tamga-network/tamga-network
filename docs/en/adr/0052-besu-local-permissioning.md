@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-19
-last_updated: 2026-10-19
+last_updated: 2026-11-05
 summary: >
   Hyperledger Besu 25.6.0 removed onchain permissioning and Tessera-based privacy (both deprecated in 24.12). Once the chain is
   switched on, which nodes may connect and which accounts may send transactions is set by the local `permissions_config.toml` file
@@ -68,6 +68,7 @@ The allowlists are not written by hand; they are derived from the on-chain contr
 | Account | Delegate keys of active member states | `Governance.delegateKeysOf` |
 | Account | Delegate keys of operational institutions (status list anchor publishing) | `IssuerRegistry` |
 | Account | Trust list anchor writers | `TrustListAnchorRegistry` ([[ADR-0051]] K3) |
+| Account | The executor of an open migration window (only while the window is open; note of 2026-11-05) | Registries in migration mode ([[ADR-0073]] K1) |
 | Node | Validator nodes: the address derived from the enode ID is an active validator address in `Governance` | `Governance` + the operator's node declaration (`host:port` only) |
 | Node | An operator's own RPC/full nodes | Only in the file of that operator's nodes; not in other operators' lists |
 
@@ -148,3 +149,8 @@ is; only the mechanism changes.
 
 **Accepted — 2026-10-19.** With project management approval. DECISIONS: D-NET-6. Replaces: [[SPEC-BC-0001]] §12.1, [[ARCH-0001]] §6,
 [[ARCH-0002]] §6 and open point 3 (the onchain permissioning contract assumption); it supersedes no ADR.
+
+**Note (2026-11-05):** a line added to the account list of the K2 table: while a migration window is open ([[ADR-0073]] K1), the
+account that executes it (the single migration executor named by the Governance proposal; `migrationState().executor` in the
+registries) is also on the permission list, and leaves it when the window closes. `trust:chain-permissions` already rendered it
+this way, the table did not say so; the decision content is unchanged (project management).

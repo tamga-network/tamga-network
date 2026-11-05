@@ -10,9 +10,10 @@
 | `make-network.sh` | N-validator QBFT network (default 4 + 1 extra node): keys, genesis (`extraData` by `besu rlp encode`), static peers, start-up permissions file, node declarations, one `besu.toml` per node |
 | `node.sh` | `start / stop / restart / status / logs <n\|all>`; `TESTNET_MODE=process` (background JVMs) or `systemd` (`besu@node<n>`) |
 | `besu@.service` | systemd unit template with hardening (own user, read-only system, only its data directory writable, no capabilities, syscall filter) |
-| `deploy-and-wire.sh` | the end-to-end test (below) |
+| `deploy-and-wire.sh` | the end-to-end test with the public test keys (below) |
+| `bootstrap-governance.sh` | path C: contracts + Governance with **generated** keys (key map), permissions, anchoring, replay (below) |
 | `rpc-proxy-check.sh` | `network/rpc-proxy` in front of a node: method filter + nginx mutual TLS |
-| `testnet.mjs` | chain-side helpers (Governance admission, account permissioning, key check) — test chain and public test keys only |
+| `testnet.mjs` | chain-side helpers (Governance admission, account permissioning, key and key-map check) — public test keys on 31337/31338, the key map on 31339; nothing else |
 | `lib.sh` | shared helpers and the pinned versions |
 
 ## Quick start
@@ -51,16 +52,57 @@ founders' test keys.
 
 ## Chain id and keys
 
-Chain id **31338**, the same as the local Besu development chain (`scripts/besu-dev.ps1`): the repository's tools recognise
-only 31337/31338 as local chains (deployment file `contracts/deployments/besuDev.json`, test signers, rendering permissions while
-`TAMGA_CHAIN_ENABLED=0`), so a separate id would need changes outside this folder. Do not run the Windows development chain and
-this network on the same machine at the same time (same deployment file, same ports 8546/8547).
+| Keys | Chain id | Used by | Who knows the keys |
+|---|---|---|---|
+| `--keys dev` (default) | **31338** (local Besu development id) | `deploy-and-wire.sh`, path B | everybody: Hardhat's public test accounts #1 #2 #6 #7 #8 as node keys |
+| `--keys generate` | **31339** (test/staging id) | `bootstrap-governance.sh`, path C | only the machine that ran `make-network.sh` |
 
-`--keys dev` (default) uses Hardhat's **public** test accounts #1 #2 #6 #7 #8 as node keys, so that the QBFT validator address
-equals the Governance validator address and the enode address. Everybody knows these keys: 127.0.0.1 and test servers only.
-`--keys generate` creates fresh keys with `besu operator generate-blockchain-config` (test servers); Governance must then be set up
-with those addresses, so `deploy-and-wire.sh` refuses this mode. Test state codes are user-assigned ISO codes (`XA`…) — no real
-state is implied.
+The repository's tools tell the two apart by chain id: 31337/31338 are "local chains" (test mnemonic, deployment file
+`contracts/deployments/besuDev.json`, sandbox set allowed); 31339 is neither local nor the real network — its keys come only from the
+key map (`TAMGA_CHAIN_KEYS`), the deployment file from `TAMGA_CHAIN_DEPLOYMENT`, and the sandbox set is refused (ADR-0074 K7). Any
+other id is the real network: replay needs `TAMGA_CONFIRM_PROD` there and stops, because production keys are not configured here.
+`make-network.sh` refuses `--keys generate` with 31337/31338 and `--keys dev` with 31339. Do not run the Windows development chain
+and a path B network on the same machine at the same time (same deployment file, same ports 8546/8547).
+
+With `--keys dev` the QBFT validator address equals the Governance validator address and the enode address. Test state codes are
+user-assigned ISO codes (`XA`…) — no real state is implied.
+
+### Key map (`--keys generate`) — test and staging networks only
+
+> **Production keys never take this form.** On the real network every state generates its validator key on its own hardware and
+> keeps its signing keys in an HSM (ARCH-0002 §2, GUIDE-0015); nobody holds another state's key. The key map exists because on a
+> test network one person plays every state.
+
+`make-network.sh --keys generate` writes, next to the node keys, `<dir>/keys/` (mode 0700, every file 0600):
+
+| File | Role |
+|---|---|
+| `deployer.key` | deploys the contracts; allowed only by the start-up permissions file and drops out once the list is rendered from the chain (ADR-0052 K2) |
+| `migration-executor.key` | the executor named by the migration-window vote (ADR-0073); listed while a window is open |
+| `anchorer-1.key`, `anchorer-2.key` | list anchorers; threshold 2 (ADR-0051 K3) |
+| `delegate-<cc>.key` | one delegate per state, set by the state's own validator (`setDelegateKeys`) |
+| `keys.json` | the key map (`tamga-chain-keys/1`), below |
+
+```json
+{
+  "format": "tamga-chain-keys/1",
+  "purpose": "test",
+  "chainId": 31339,
+  "deployer": { "address": "0x…", "key": "deployer.key" },
+  "migration_executor": { "address": "0x…", "key": "migration-executor.key" },
+  "anchor": { "threshold": 2, "anchorers": [{ "address": "0x…", "key": "anchorer-1.key" }, { "address": "0x…", "key": "anchorer-2.key" }] },
+  "states": [
+    { "code": "TR", "founder": true, "genesis_validator": true, "node": 1,
+      "validator": { "address": "0x…", "key": "../node1/key" }, "delegate": { "address": "0x…", "key": "delegate-tr.key" } }
+  ]
+}
+```
+
+Key paths are relative to `keys.json`; a validator's key is its node key (QBFT validator = Governance validator, ADR-0052 K2).
+Every reader (`apps/chain-indexer/src/chain-keys.ts`, `testnet.mjs`) refuses a map whose `purpose` is not `test`, whose chain id is
+not 31339, whose key file is missing, readable by others or belongs to another address. Environment variable: `TAMGA_CHAIN_KEYS`
+(path of the map; default `<dir>/keys/keys.json` in `bootstrap-governance.sh`). The first two genesis states (TR, KZ) are the
+founders; the others are admitted by 2/3 vote.
 
 ## Ports (all on 127.0.0.1)
 
@@ -71,6 +113,30 @@ state is implied.
 | nginx | 8443 | | mutual TLS, local test certificates (`network/rpc-proxy/gen-dev-certs.sh`) |
 
 With `--hosts "ip1 ip2 …"` (one node per server) P2P listens on that IP, port 30303, JSON-RPC 127.0.0.1:8545.
+
+## Path C: generated keys and Governance (`bootstrap-governance.sh`)
+
+```bash
+bash network/testnet/make-network.sh --keys generate            # chain 31339, node + role keys, keys/keys.json
+bash network/testnet/node.sh start all
+bash network/testnet/bootstrap-governance.sh                    # --no-replay skips step 6; a re-run continues where it stopped
+```
+
+`bootstrap-governance.sh`, step by step (each logged; a re-run skips what is done):
+
+1. The nodes answer, blocks grow, the QBFT set has N validators, the chain id is 31339 (anything else is refused).
+2. Contracts: `contracts/scripts/deploy-network.ts` (`npm --prefix contracts run deploy:network`, Hardhat network `besuStaging`)
+   with the key map — founders TR + KZ and their delegates, founder recognition by **Governance vote** (`proposeFounderRecognition`,
+   ADR-0055 K3), list anchor registry administered by the Governance contract, anchorers and threshold 2 from the map →
+   `contracts/deployments/besuStaging.json`, copied to `<dir>/deployment.json`.
+3. Governance: the other genesis states (XA, XB) admitted by 2/3 vote; each sets its delegate with its own validator.
+4. Permissions from the chain on every node: render (from its own node) → load → check; `shared_sha256` equal; the deployer is no
+   longer listed; a random unlisted key is refused, a delegate's transaction is mined.
+5. Anchoring: `trust:chain-submit` once per anchorer (the second confirms) → `trust:chain-check` YES for every list.
+6. Replay (optional): migration windows opened by vote (`trust:chain-replay --open-only`) → permissions rendered again: the
+   executor of the open window is now listed → the sample archive (`apps/chain-indexer/scripts/besu-smoke.ts --archive-dir`) is
+   replayed with the key map → equivalence, no decision difference allowed.
+7. Summary: `<dir>/bootstrap-summary.md` / `.json` (and the GitHub Actions job summary).
 
 ## Test server with systemd
 
@@ -84,9 +150,19 @@ sudo systemctl enable --now besu@node1                     # on server 1; node2 
 sudo TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd bash network/testnet/node.sh status 1
 ```
 
-`make-network.sh` writes every node's key in one place; on real test servers each node directory is then copied to its server
-(only its own `key`). For the production network each operator generates the key on its own hardware (ARCH-0002 §2).
-The firewall opens the P2P port to the allow-listed peers only; JSON-RPC leaves the host only through `network/rpc-proxy`.
+`make-network.sh` writes every key in one place; each node directory is then copied to its server (only its own `key`; `keys/`
+stays on the machine that ran `make-network.sh`). Governance with one node per server, on that machine (server 1):
+
+```bash
+sudo env "PATH=$PATH" TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd bash network/testnet/bootstrap-governance.sh --nodes 1
+# then copy deployment.json and nodes/ to every other server and run there (no keys needed):
+sudo env "PATH=$PATH" TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd \
+     bash network/testnet/bootstrap-governance.sh --only permissions --nodes 2
+```
+
+Run as root under systemd: the permissions file is handed to the node's user (Besu rewrites it when it loads it). For the
+production network each operator generates the key on its own hardware (ARCH-0002 §2). The firewall opens the P2P port to the
+allow-listed peers only; JSON-RPC leaves the host only through `network/rpc-proxy`.
 
 ## Requirements per node
 
@@ -102,7 +178,9 @@ Measured in CI (GitHub Actions, 2026-11-05: ubuntu-24.04, 4 CPU / 16 GiB; 4 vali
 | systemd unit | `systemd-analyze security`: 1.5 OK (one validator, generated key) |
 
 CI: `.github/workflows/testnet.yml` (manual, weekly, and on changes to `contracts/`, `apps/chain-indexer/`,
-`apps/trust-publisher/src/chain/`, `network/`).
+`apps/trust-publisher/src/chain/`, `network/`): `lint`, `network` (path B, `deploy-and-wire.sh`), `systemd` (one validator, unit
+hardening) and `staging` (path C: 4 validators under systemd with generated keys, heap `-Xmx640m` through a unit drop-in,
+`bootstrap-governance.sh` end to end, then a second run that must write nothing).
 
 ---
 
@@ -119,7 +197,12 @@ zincir katmanını gerçekçi bir Linux ortamında kurup sınamak; aynı betikle
   çapa (`chain-submit` / `chain-check`) → Governance'a öteki doğrulayıcıların devletlerinin kabulü → her düğümde izin listesi
   kendi düğümünden (paylaşılan özetler aynı) ve izinsiz hesabın reddi → 5. düğümün oyla eklenip çıkarılması → 1 doğrulayıcı
   dururken bloklar sürer, 2 dururken durur, yeniden başlayınca devam eder → RPC koruması (süzgeç + nginx mTLS) → özet.
-- Zincir kimliği 31338 (yerel geliştirme zinciriyle aynı; depodaki araçlar yalnız 31337/31338'i yerel tanır). Anahtarlar
-  Hardhat'in herkesçe bilinen test hesapları — yalnız test; test sunucusunda `--keys generate`.
+- Zincir kimliği: `--keys dev` 31338 (yerel geliştirme zinciriyle aynı; anahtarlar Hardhat'in herkesçe bilinen test hesapları);
+  `--keys generate` 31339 (test/staging; düğüm ve rol anahtarları yeni üretilir, `keys/keys.json` anahtar haritası — yalnız test,
+  üretim anahtarları HSM'de).
+- `bootstrap-governance.sh` (yol C) — üretilmiş anahtarlarla: kontratlar (`deploy-network.ts`, kurucular arası tanıma Governance
+  oyuyla) → öteki devletlerin 2/3 oyla kabulü → her düğümde izin listesi zincirden (dağıtan listeden düşer) → iki yazıcıyla çapa
+  (eşik 2) → göç penceresi oyla açılır, yürütücü izin listesine girer → yeniden oynatma + eşdeğerlik → özet. Her adım günlüklü;
+  yeniden çalıştırma kaldığı yerden sürer.
 - Kaynak gereksinimi CI'da ölçüldü (2026-11-05, 4 CPU / 16 GiB, yığın `-Xmx768m`): düğüm başına 505–568 MiB bellek, 74–76 MiB
   disk (404 blok), 10–37 sn işlemci zamanı; uçtan uca sınama 921 sn. Adım adım anlatım: GUIDE-0018 (`docs/guides/chain-testnet.md`).

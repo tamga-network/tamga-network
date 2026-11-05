@@ -16,6 +16,10 @@ JDK_SHA256_AARCH64="bb5b2ded252f21c6090cf780b0a408ad0d83bbb557e702955643557f1323
 # Test chain id: the same as the local Besu development chain (31338). The repository's tools recognise only 31337/31338 as
 # local chains (deployment file, test signers, permission rendering without TAMGA_CHAIN_ENABLED); see README "Chain id".
 DEFAULT_CHAIN_ID=31338
+# Test/staging chain id (GUIDE-0018 path C, make-network.sh --keys generate, bootstrap-governance.sh): a separate id so that the
+# generated keys never share a chain id with the public test keys. The tools treat it neither as a local chain (no test mnemonic,
+# no sandbox set) nor as the real network (keys come from the key map, TAMGA_CHAIN_KEYS) — apps/chain-indexer/src/chain-keys.ts.
+STAGING_CHAIN_ID=31339
 
 TESTNET_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$TESTNET_LIB_DIR/../.." && pwd)"

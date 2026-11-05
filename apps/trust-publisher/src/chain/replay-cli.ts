@@ -10,9 +10,14 @@
  * Yazım:
  *   - yerel geliştirme zinciri (Hardhat 31337, yerel Besu 31338): dağıtım dosyası `contracts/deployments/<ağ>.json`, Hardhat'in
  *     herkese açık test hesapları; pencere yoksa Governance oyuyla açılır (yalnız yerel);
- *   - gerçek ağ: `TAMGA_CONFIRM_PROD=<plan özeti>` kapısı; pencere üyelerin oyuyla önceden açılmış olmalı. Devlet delegesi ve göç
- *     yürütücüsü anahtarlarının yapılandırması henüz tanımlı değil (ad onayı bekliyor) — kapıdan sonra yine durur.
+ *   - test/staging zinciri (`STAGING_CHAIN_IDS`, 31339; GUIDE-0018 yol C): dağıtım dosyası `TAMGA_CHAIN_DEPLOYMENT`, anahtarlar
+ *     `TAMGA_CHAIN_KEYS` anahtar haritasından (`tamga-chain-keys/1`, apps/chain-indexer/src/chain-keys.ts): devlet delegeleri, göç
+ *     yürütücüsü, Governance oyu = zincirde aktif üyelerin doğrulayıcıları; pencere yoksa oyla açılır;
+ *   - gerçek ağ: `TAMGA_CONFIRM_PROD=<plan özeti>` kapısı; pencere üyelerin oyuyla önceden açılmış olmalı. Gerçek ağın devlet
+ *     delegesi ve göç yürütücüsü anahtarları HSM'dedir; yapılandırması tanımlı değil — kapıdan sonra yine durur.
  *   - sandbox seti yalnız yerel zincire (ADR-0074 K7 / PJ4).
+ *   `--open-only`: yalnız göç pencerelerini açar (plan özeti + yürütücü) ve durur — yol C'de izin listesi, yürütücü listeye girdikten
+ *   sonra yeniden üretilsin diye (ADR-0052 K2 notu 2026-11-05).
  * Çıkış: 0 tamam · 2 kapı / yapılandırma · 3 eşdeğerlik farkı (göç kapanmaz) · 4 Governance oyu bekleniyor.
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -22,11 +27,12 @@ import { JsonRpcProvider } from "ethers";
 
 import { ChainTrustSource } from "../../../chain-indexer/src/chain-trust-source.js";
 import { UNCACHED_PROVIDER, addressesFrom, connectTrustContracts } from "../../../chain-indexer/src/contracts.js";
+import { STAGING_CHAIN_IDS, keyMapSigners, loadChainKeys } from "../../../chain-indexer/src/chain-keys.js";
 import { compareSources } from "../../../chain-indexer/src/equivalence.js";
 import { ChainIndexer } from "../../../chain-indexer/src/indexer.js";
 import { LOCAL_CHAIN_IDS, localDevSigners, type DevDeployment } from "../../../chain-indexer/src/local-dev.js";
 import { listSourceFromArchive, readArchiveDir, verifyArchive } from "../../../chain-indexer/src/replay-archive.js";
-import { executeReplay, openMigrationWindows } from "../../../chain-indexer/src/replay-exec.js";
+import { executeReplay, openMigrationWindows, type ReplaySigners } from "../../../chain-indexer/src/replay-exec.js";
 import { buildReplayPlan, statusListUrisMissingParams } from "../../../chain-indexer/src/replay-plan.js";
 import { assertEnvironmentAllowed, statusListRegistrationOf, type Environment } from "./projection.js";
 
@@ -106,7 +112,34 @@ export async function chainReplayCommand(
   const provider = new JsonRpcProvider(rpc, undefined, UNCACHED_PROVIDER);
   const chainId = Number((await provider.getNetwork()).chainId);
   assertEnvironmentAllowed(ctx.environment, chainId); // PJ4
-  if (!LOCAL_CHAIN_IDS.has(chainId)) {
+  let deployment: DevDeployment;
+  let signers: ReplaySigners;
+  if (LOCAL_CHAIN_IDS.has(chainId)) {
+    const file = resolve(DEPLOYMENTS, DEPLOYMENT_OF[chainId]);
+    if (!existsSync(file)) throw new Error(`chain-replay: dağıtım dosyası yok: ${file} (önce chain:besu:deploy)`);
+    deployment = JSON.parse(readFileSync(file, "utf8")) as DevDeployment;
+    signers = await localDevSigners(provider, deployment);
+  } else if (STAGING_CHAIN_IDS.has(chainId)) {
+    // GUIDE-0018 yol C: test/staging zinciri, anahtarlar haritadan (Hardhat test anahtarları burada kullanılmaz)
+    const keysFile = ctx.env.TAMGA_CHAIN_KEYS;
+    const depFile = ctx.env.TAMGA_CHAIN_DEPLOYMENT;
+    if (!keysFile || !depFile || !existsSync(depFile)) {
+      console.error(
+        `chain-replay: test/staging zinciri (chainId ${chainId}) TAMGA_CHAIN_KEYS ve TAMGA_CHAIN_DEPLOYMENT ister — yazılmadı`,
+      );
+      return 2;
+    }
+    deployment = JSON.parse(readFileSync(depFile, "utf8")) as DevDeployment;
+    if (deployment.chainId !== chainId) {
+      console.error(`chain-replay: dağıtım dosyası chainId ${deployment.chainId}, zincir ${chainId} — yazılmadı`);
+      return 2;
+    }
+    signers = await keyMapSigners(provider, loadChainKeys(keysFile), deployment.contracts.Governance);
+    if (plan.ops.some((o) => o.op === "registerList" && o.params === "default"))
+      console.error(
+        "chain-replay: UYARI — bazı iptal listelerinin bit sayısı ve boyutu bilinmiyor, varsayılan yazılıyor (yalnız test/staging)",
+      );
+  } else {
     if (ctx.env.TAMGA_CONFIRM_PROD !== plan.hash) {
       console.error(`chain-replay: gerçek ağa yazım TAMGA_CONFIRM_PROD=${plan.hash} ister (plan özeti) — yazılmadı`);
       return 2;
@@ -118,16 +151,16 @@ export async function chainReplayCommand(
       return 2;
     }
     console.error(
-      "chain-replay: gerçek ağ için devlet delegesi ve göç yürütücüsü anahtar yapılandırması henüz tanımlı değil — yazılmadı",
+      "chain-replay: gerçek ağın devlet delegesi ve göç yürütücüsü anahtarları HSM'dedir; yapılandırması tanımlı değil — yazılmadı",
     );
     return 2;
   }
-  const file = resolve(DEPLOYMENTS, DEPLOYMENT_OF[chainId]);
-  if (!existsSync(file)) throw new Error(`chain-replay: dağıtım dosyası yok: ${file} (önce chain:besu:deploy)`);
-  const deployment = JSON.parse(readFileSync(file, "utf8")) as DevDeployment;
   const contracts = connectTrustContracts(addressesFrom(deployment), provider);
-  const signers = await localDevSigners(provider, deployment);
   await openMigrationWindows(contracts, signers.governance!, plan.hash, await signers.executor.getAddress());
+  if (args.includes("--open-only")) {
+    console.log(JSON.stringify({ ...head, migration: "open", executor: await signers.executor.getAddress() }, null, 2));
+    return 0;
+  }
   let done = 0;
   const report = await executeReplay(plan, contracts, signers, {
     onProgress: () => {

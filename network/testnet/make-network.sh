@@ -2,7 +2,7 @@
 # network/testnet/make-network.sh — writes a permissioned N-validator QBFT network (ADR-0052) into one directory:
 # genesis, node keys, static peers, the start-up permissions file and one besu.toml per node.
 #
-#   bash network/testnet/make-network.sh [--validators 4] [--extra 1] [--keys dev|generate] [--chain-id 31338]
+#   bash network/testnet/make-network.sh [--validators 4] [--extra 1] [--keys dev|generate] [--chain-id 31338|31339]
 #                                        [--dir DIR] [--besu-home DIR] [--java-home DIR] [--hosts "ip1 ip2 …"]
 #                                        [--block-period 2] [--force]
 #
@@ -11,14 +11,18 @@
 #   --keys dev      (default) node keys = Hardhat's PUBLIC test accounts #1 #2 #6 #7 #8 — so the QBFT validator address =
 #                   the Governance validator address = the enode address (ADR-0052 K2) with the repository's local deploy
 #                   script. TEST ONLY: everybody knows these keys.
-#   --keys generate fresh random keys (`besu operator generate-blockchain-config`) — for test servers; Governance then has to
-#                   be set up with those addresses (deploy-and-wire.sh refuses this mode)
+#   --keys generate fresh random keys (`besu operator generate-blockchain-config`) — test servers (GUIDE-0018 path C): node keys
+#                   AND the role keys of the key map <dir>/keys/keys.json (tamga-chain-keys/1: deployer, migration executor,
+#                   two list anchorers, one delegate per state; 0600). Chain id 31339 (default in this mode; 31337/31338 are
+#                   refused — they are the local ids of the public test keys). Governance is then set up by
+#                   bootstrap-governance.sh (deploy-and-wire.sh refuses this mode). TEST ONLY — production keys live in HSMs.
 #   --hosts         one IP per node (real test servers, one node per host): P2P listens on that IP, ports 30303 / RPC 8545.
 #                   Without it: every node on 127.0.0.1 with its own ports (node n: RPC 8545+n, P2P 30312+n).
 #   --dir           output (default network/testnet/run, git-ignored; systemd layout: /var/lib/tamga-besu)
 #
 # Ağ dosyaları: <dir>/genesis.json · network.env (öteki betikler okur) · declarations/ (düğüm bildirimleri,
-# tamga-node-declaration/1) · node<n>/{key,key.pub,address,state,besu.toml,static-nodes.json,permissions_config.toml}.
+# tamga-node-declaration/1) · node<n>/{key,key.pub,address,state,besu.toml,static-nodes.json,permissions_config.toml} ·
+# --keys generate: keys/ (rol anahtarları + keys.json anahtar haritası; yalnız test — üretim anahtarları HSM'de).
 # JSON-RPC yalnız 127.0.0.1; P2P yalnız düğümün kendi IP'sinde (p2p-interface — p2p-host yalnız ilan edilen adrestir); keşif kapalı.
 set -euo pipefail
 # shellcheck source=lib.sh
@@ -27,7 +31,7 @@ set -euo pipefail
 N=4
 E=1
 KEYS=dev
-CHAIN_ID=$DEFAULT_CHAIN_ID
+CHAIN_ID=""
 HOSTS=""
 BLOCK_PERIOD=2
 FORCE=0
@@ -46,16 +50,26 @@ while [ $# -gt 0 ]; do
     --hosts) HOSTS=$2; shift 2 ;;
     --block-period) BLOCK_PERIOD=$2; shift 2 ;;
     --force) FORCE=1; shift ;;
-    -h | --help) sed -n '2,24p' "$0"; exit 0 ;;
+    -h | --help) sed -n '2,28p' "$0"; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
 done
 need jq
 [[ "$N" =~ ^[1-9][0-9]*$ ]] || die "--validators must be >= 1"
 [[ "$E" =~ ^[0-9]+$ ]] || die "--extra must be >= 0"
-[[ "$CHAIN_ID" =~ ^[0-9]+$ ]] || die "--chain-id must be a number"
-[[ "$BLOCK_PERIOD" =~ ^[1-9][0-9]*$ ]] || die "--block-period must be >= 1"
 case "$KEYS" in dev | generate) ;; *) die "--keys dev|generate" ;; esac
+if [ -z "$CHAIN_ID" ]; then
+  if [ "$KEYS" = dev ]; then CHAIN_ID=$DEFAULT_CHAIN_ID; else CHAIN_ID=$STAGING_CHAIN_ID; fi
+fi
+[[ "$CHAIN_ID" =~ ^[0-9]+$ ]] || die "--chain-id must be a number"
+# public test keys <-> local ids, generated keys <-> test/staging id: the repository's tools tell the two apart by chain id
+if [ "$KEYS" = generate ] && { [ "$CHAIN_ID" = 31337 ] || [ "$CHAIN_ID" = 31338 ]; }; then
+  die "--keys generate: chain id $CHAIN_ID is a local id (public test keys) — use $STAGING_CHAIN_ID"
+fi
+if [ "$KEYS" = dev ] && [ "$CHAIN_ID" = "$STAGING_CHAIN_ID" ]; then
+  die "--keys dev: chain id $STAGING_CHAIN_ID is the test/staging id — the public test keys are not used there (--keys generate)"
+fi
+[[ "$BLOCK_PERIOD" =~ ^[1-9][0-9]*$ ]] || die "--block-period must be >= 1"
 TOTAL=$((N + E))
 [ -x "$BESU_HOME/bin/besu" ] || die "Besu not found in $BESU_HOME — run install-besu.sh (or --besu-home / TESTNET_BESU_HOME)"
 [ -x "$JAVA_DIR/bin/java" ] || die "JDK 25 not found in $JAVA_DIR — run install-besu.sh (or --java-home / TESTNET_JAVA_HOME)"
@@ -93,7 +107,7 @@ declare -A DEV_ADDR=(
   [8]=23618e81e3f5cdf7f54c3d65f7fbc0abf5b21e8f
 )
 # accounts allowed before the contracts exist (ADR-0052 K2 "start-up"): deployer #0 and the TR/KZ delegates #3/#4 of the local
-# deploy script; the validators' own addresses are added below
+# deploy script; the validators' own addresses are added below. --keys generate: the generated deployer only (below).
 BOOT_ACCOUNTS=(f39fd6e51aad88f6f4ce6ab8827279cfffb92266 90f79bf6eb2c4f870365e785982e1f101e93b906 15d34aaf54267db7d7c367839aaf71a00a2c6a65)
 ALLOC_ACCOUNTS=(f39fd6e51aad88f6f4ce6ab8827279cfffb92266 70997970c51812dc3a010c7d01b50e0d17dc79c8
   3c44cdddb6a900fa2b585dd299e03d12fa4293bc 90f79bf6eb2c4f870365e785982e1f101e93b906 15d34aaf54267db7d7c367839aaf71a00a2c6a65
@@ -166,8 +180,12 @@ if [ "$KEYS" = dev ]; then
   done
   qbft_genesis_json >"$work/genesis.base.json"
 else
-  # besu operator generate-blockchain-config: keys for every node (genesis validators + extra nodes)
-  jq -n --argjson g "$(qbft_genesis_json)" --argjson count "$TOTAL" \
+  # besu operator generate-blockchain-config: keys for every node (genesis validators + extra nodes) and for the roles of the key
+  # map (deployer, migration executor, two anchorers, one delegate per state)
+  ROLES=(deployer migration-executor anchorer-1 anchorer-2)
+  for ((n = 1; n <= TOTAL; n++)); do ROLES+=("delegate-${STATES[$((n - 1))],,}"); done
+  KEYCOUNT=$((TOTAL + ${#ROLES[@]}))
+  jq -n --argjson g "$(qbft_genesis_json)" --argjson count "$KEYCOUNT" \
     '{genesis: $g, blockchain: {nodes: {generate: true, count: $count}}}' >"$work/qbft-config.json"
   besu operator generate-blockchain-config --config-file="$work/qbft-config.json" --to="$work/out" \
     --private-key-file-name=key >"$work/generate.log" 2>&1 || {
@@ -175,7 +193,7 @@ else
     die "besu operator generate-blockchain-config failed"
   }
   mapfile -t keydirs < <(find "$work/out/keys" -mindepth 1 -maxdepth 1 -type d | sort)
-  [ "${#keydirs[@]}" -eq "$TOTAL" ] || die "expected $TOTAL generated keys, got ${#keydirs[@]}"
+  [ "${#keydirs[@]}" -eq "$KEYCOUNT" ] || die "expected $KEYCOUNT generated keys, got ${#keydirs[@]}"
   for ((n = 1; n <= TOTAL; n++)); do
     kd=${keydirs[$((n - 1))]}
     d="$TESTNET_DIR/node$n"
@@ -184,8 +202,23 @@ else
     printf '\n' >>"$d/key.pub"
     basename "$kd" | sed 's/^0x//' | tr '[:upper:]' '[:lower:]' >"$d/address"
   done
+  mkdir -p "$TESTNET_DIR/keys"
+  chmod 700 "$TESTNET_DIR/keys"
+  declare -A ROLE_ADDR=()
+  for ((r = 0; r < ${#ROLES[@]}; r++)); do
+    kd=${keydirs[$((TOTAL + r))]}
+    tr -d '[:space:]' <"$kd/key" >"$TESTNET_DIR/keys/${ROLES[$r]}.key"
+    chmod 600 "$TESTNET_DIR/keys/${ROLES[$r]}.key"
+    ROLE_ADDR[${ROLES[$r]}]=$(basename "$kd" | sed 's/^0x//' | tr '[:upper:]' '[:lower:]')
+  done
+  BOOT_ACCOUNTS=("${ROLE_ADDR[deployer]}")
+  # balances for the generated accounts only (validators + roles; ethers prices transactions above zero) — no Hardhat account
+  alloc=$({
+    for ((n = 1; n <= TOTAL; n++)); do cat "$TESTNET_DIR/node$n/address"; done
+    printf '%s\n' "${ROLE_ADDR[@]}"
+  } | jq -R . | jq -s 'map({key: ., value: {balance: "0x3635C9ADC5DEA00000"}}) | from_entries')
   # generated genesis (its extraData lists all generated keys — replaced below by the genesis validators only)
-  jq 'del(.extraData)' "$work/out/genesis.json" >"$work/genesis.base.json"
+  jq --argjson alloc "$alloc" 'del(.extraData) | .alloc = $alloc' "$work/out/genesis.json" >"$work/genesis.base.json"
 fi
 for ((n = 1; n <= TOTAL; n++)); do
   d="$TESTNET_DIR/node$n"
@@ -256,8 +289,37 @@ permissions-accounts-config-file="$d/permissions_config.toml"
 EOF
 done
 
+# --- key map (--keys generate): role → address + private key file (relative to keys/) — TEST ONLY --------------------------
+if [ "$KEYS" = generate ]; then
+  FOUNDERS=$((N < 2 ? N : 2)) # TR + KZ as in the local deploy script; the other genesis states are admitted by 2/3 vote
+  ref() { jq -n --arg a "0x$1" --arg k "$2" '{address: $a, key: $k}'; }
+  for ((n = 1; n <= TOTAL; n++)); do
+    s=${STATES[$((n - 1))]}
+    f=false
+    g=false
+    [ "$n" -le "$FOUNDERS" ] && f=true
+    [ "$n" -le "$N" ] && g=true
+    jq -n --arg c "$s" --argjson node "$n" --argjson f "$f" --argjson g "$g" \
+      --argjson v "$(ref "$(cat "$TESTNET_DIR/node$n/address")" "../node$n/key")" \
+      --argjson d "$(ref "${ROLE_ADDR[delegate-${s,,}]}" "delegate-${s,,}.key")" \
+      '{code: $c, founder: $f, genesis_validator: $g, node: $node, validator: $v, delegate: $d}'
+  done | jq -s . >"$TESTNET_DIR/keys/states.json"
+  jq -n --argjson chainId "$CHAIN_ID" --slurpfile states "$TESTNET_DIR/keys/states.json" \
+    --argjson dep "$(ref "${ROLE_ADDR[deployer]}" deployer.key)" \
+    --argjson ex "$(ref "${ROLE_ADDR[migration-executor]}" migration-executor.key)" \
+    --argjson a1 "$(ref "${ROLE_ADDR[anchorer-1]}" anchorer-1.key)" \
+    --argjson a2 "$(ref "${ROLE_ADDR[anchorer-2]}" anchorer-2.key)" \
+    '{format: "tamga-chain-keys/1", purpose: "test",
+      note: "TEST/STAGING ONLY (GUIDE-0018 path C). Production keys are generated by each state on its own hardware and live in HSMs.",
+      chainId: $chainId, deployer: $dep, migration_executor: $ex,
+      anchor: {threshold: 2, anchorers: [$a1, $a2]}, states: $states[0]}' >"$TESTNET_DIR/keys/keys.json"
+  rm -f "$TESTNET_DIR/keys/states.json"
+  chmod 600 "$TESTNET_DIR/keys/keys.json"
+  log "key map: $TESTNET_DIR/keys/keys.json (deployer 0x${ROLE_ADDR[deployer]}; founders $(jq -r '[.states[] | select(.founder) | .code] | join(", ")' "$TESTNET_DIR/keys/keys.json"); list anchor threshold 2 of 2)"
+fi
+
 {
-  printf '# written by make-network.sh — read by node.sh, deploy-and-wire.sh\n'
+  printf '# written by make-network.sh — read by node.sh, deploy-and-wire.sh, bootstrap-governance.sh\n'
   printf 'TESTNET_CHAIN_ID=%s\nTESTNET_VALIDATORS=%s\nTESTNET_EXTRA=%s\nTESTNET_KEYS=%s\n' "$CHAIN_ID" "$N" "$E" "$KEYS"
   printf 'TESTNET_BLOCK_PERIOD=%s\n' "$BLOCK_PERIOD"
   printf 'TESTNET_BESU_HOME=%q\nTESTNET_JAVA_HOME=%q\n' "$BESU_HOME" "$JAVA_DIR"
@@ -270,4 +332,8 @@ for ((n = 1; n <= TOTAL; n++)); do
   [ "$n" -le "$N" ] || role="extra node (full node; voted in by deploy-and-wire.sh)"
   log "node $n ${STATES[$((n - 1))]} 0x$(cat "$TESTNET_DIR/node$n/address") RPC 127.0.0.1:${RPC_PORTS[$((n - 1))]} P2P ${IPS[$((n - 1))]}:${P2P_PORTS[$((n - 1))]} — $role"
 done
-log "next: bash network/testnet/node.sh start all   (or: deploy-and-wire.sh, which starts the nodes itself)"
+if [ "$KEYS" = generate ]; then
+  log "next: bash network/testnet/node.sh start all && bash network/testnet/bootstrap-governance.sh"
+else
+  log "next: bash network/testnet/node.sh start all   (or: deploy-and-wire.sh, which starts the nodes itself)"
+fi

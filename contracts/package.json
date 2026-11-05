@@ -14,6 +14,7 @@
     "node": "hardhat node",
     "deploy:dev": "hardhat run scripts/deploy-dev.ts --network localhost",
     "deploy:besu": "hardhat run scripts/deploy-dev.ts --network besuDev",
+    "deploy:network": "hardhat run scripts/deploy-network.ts --network besuStaging",
     "deploy:inmemory": "hardhat run scripts/deploy-dev.ts",
     "abi:export": "node scripts/export-abi.mjs",
     "check:uups": "node scripts/check-upgrade-safety.mjs",

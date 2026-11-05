@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-19
-last_updated: 2026-10-19
+last_updated: 2026-11-05
 summary: >
   Hyperledger Besu 25.6.0 zəncirüstü icazələndirməni və Tessera əsaslı məxfiliyi çıxardı (24.12-də köhnəlmiş elan edilmişdi). Zəncir işə salındıqda hansı qovşağın qoşula biləcəyi və hansı hesabın əməliyyat göndərə biləcəyi hər validator və RPC qovşağındakı yerli `permissions_config.toml` faylı ilə (qovşaq və hesab icazə siyahısı) müəyyən edilir. Siyahı əl ilə yazılmır: zəncirdəki kontraktların vəziyyətindən (Governance, IssuerRegistry, TrustListAnchorRegistry) törədilir; hər operator faylı özü yaradır və tətbiq edir, bütün validator-lar eyni siyahını daşıyır, fərq yoxlanılır (`trust:chain-permissions`). Yazma səlahiyyətinin əsas nəzarəti kontraktlarda qalır (namespace, deleqat, yazıcı həddi). Qovşağın JSON-RPC ucu internetə açılmır; xarici giriş mTLS-li əks proksi arxasından həyata keçirilir. SPEC-BC-0001 §12.1, ARCH-0001 və ARCH-0002-dəki zəncirüstü icazə kontraktı fərziyyəsini əvəz edir; heç bir ADR qərarı dəyişmir. Qəbul: 2026-10-19.
 domain: Trust
@@ -59,6 +59,7 @@ yoxdur).
 | Hesab | Aktiv üzv dövlətlərin deleqat açarları | `Governance.delegateKeysOf` |
 | Hesab | Fəaliyyətdə olan qurumların deleqat açarları (ləğv siyahısı lövbərinin dərci) | `IssuerRegistry` |
 | Hesab | Siyahı lövbəri yazıcıları | `TrustListAnchorRegistry` ([[ADR-0051]] K3) |
+| Hesab | Açıq köç pəncərəsinin icraçısı (yalnız pəncərə açıq olarkən; qeyd 2026-11-05) | Köç rejimli qeydlər ([[ADR-0073]] K1) |
 | Qovşaq | Validator qovşaqları: enode identifikatorundan törəyən ünvan `Governance` kontraktında aktiv validator ünvanıdır | `Governance` + operatorun qovşaq bildirişi (yalnız `host:port`) |
 | Qovşaq | Operatorun öz RPC/full qovşaqları | Yalnız həmin operatorun qovşaqlarının faylında; digər operatorların siyahısına düşmür |
 
@@ -136,3 +137,8 @@ mexanizmdir.
 
 **Qəbul edilib — 2026-10-19.** Layihə rəhbərliyinin təsdiqi ilə. DECISIONS: D-NET-6. Əvəz etdiyi: [[SPEC-BC-0001]] §12.1, [[ARCH-0001]] §6,
 [[ARCH-0002]] §6 və açıq məsələ 3 (zəncir üzərində icazə kontraktı fərziyyəsi); heç bir ADR-i əvəz etmir.
+
+**Qeyd (2026-11-05):** K2 cədvəlinin hesab siyahısına bir sətir izahı: köç pəncərəsi açıq olarkən ([[ADR-0073]] K1) onu icra
+edən hesab da (Governance təklifinin adlandırdığı yeganə köç icraçısı; qeydlərdə `migrationState().executor`) icazə siyahısına
+daxil olur, pəncərə bağlananda siyahıdan çıxır. `trust:chain-permissions` bunu artıq belə hazırlayırdı, cədvəldə yazılmırdı;
+qərarın məzmunu dəyişmədi (layihə rəhbərliyi).

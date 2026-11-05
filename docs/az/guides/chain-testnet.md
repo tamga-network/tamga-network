@@ -29,8 +29,10 @@ Tamga-nın etibarı bu gün imzalanmış [[t:trust-list|etibar siyahılarına]] 
 ([[ADR-0009]] K4, [[ADR-0051]]). Bu bələdçi ilə qurulan şəbəkə **test şəbəkəsidir**:
 
 - canlı sistemlə (imzalanmış siyahılar, yoxlama, cüzdan, sandbox) heç bir əlaqəsi yoxdur; onu nə yavaşladır, nə də dəyişir;
-- zəncir identifikatoru yerli inkişaf identifikatorudur (31338) və depodakı alətlər yalnız 31337 və 31338-i "yerli zəncir" kimi tanıyır;
-- qovşaq açarları (A və B yollarında) hamıya məlum test açarlarıdır: yalnız `127.0.0.1` və ya qapalı test şəbəkəsi üçün.
+- zəncir identifikatoru A və B yollarında 31338-dir (yerli inkişaf identifikatoru; depodakı alətlər yalnız 31337 və 31338-i
+  "yerli zəncir" kimi tanıyır), C yolunda 31339-dur (test/hazırlıq identifikatoru);
+- qovşaq açarları (A və B yollarında) hamıya məlum test açarlarıdır: yalnız `127.0.0.1` və ya qapalı test şəbəkəsi üçün; C yolunda
+  hər açar yeni yaradılır, amma hamısı bir maşındadır: o da yalnız test şəbəkəsi üçündür.
 
 İki rejimin (zəncirsiz və zəncirli) əlaqəsi, zəncirin nə əlavə etdiyi və iki rejimin necə sinxron qaldığı: [[GUIDE-0016]].
 :::
@@ -53,7 +55,7 @@ Bu bölmə bələdçinin qalanını oxumaq üçün kifayətdir. Texniki terminl�
 | QBFT | Besu-nun konsensus üsulu. Validatorlar hər bloka səs verir; blok validatorların üçdə ikisindən çoxu qəbul edəndə qətiləşir və bir daha geri alınmır |
 | 3f+1 | QBFT-nin dayanıqlıq qaydası: n validatorlu şəbəkə ən çox f = ⌊(n−1)/3⌋ validatorun dayanmasına və ya səhv davranmasına davam gətirir. Aşağıdakı cədvələ baxın |
 | Genesis | Zəncirin ilk bloku və başlanğıc parametrləri (`genesis.json`): zəncir identifikatoru, blok müddəti, ilk validatorlar, başlanğıc balanslar. Bütün qovşaqlarda bayt-bayt eyni olmalıdır; dəyişsə, ayrı zəncir yaranır |
-| chainId | Zəncirin rəqəm kimi identifikatoru. Hər imzalanmış əməliyyat bu rəqəmi daşıyır, beləliklə bir zəncir üçün imzalanmış əməliyyat başqa zəncirdə keçmir. Test şəbəkəsi: `31338` |
+| chainId | Zəncirin rəqəm kimi identifikatoru. Hər imzalanmış əməliyyat bu rəqəmi daşıyır, beləliklə bir zəncir üçün imzalanmış əməliyyat başqa zəncirdə keçmir. Test şəbəkəsi: `31338` (A və B yolları), `31339` (C yolu) |
 | `extraData` | Genesis-dəki sahə; QBFT-də ilk validator ünvanlarının siyahısını RLP (Ethereum-un ikili kodlaşdırması) şəklində daşıyır |
 | enode | Qovşağın şəbəkə ünvanı: `enode://<128 simvolluq açıq açar>@<IP>:<P2P portu>`. Açıq açar qovşağın identifikatorudur, ünvanı bu açardan törənir |
 | Bootnode / statik həmyaşıdlar (static nodes) | Yeni açılan qovşağın ilk qoşulduğu qovşaqlar. Tamga-da kəşf (discovery) bağlıdır; hər qovşaq qoşulacağı həmyaşıdları `static-nodes.json` faylından oxuyur |
@@ -91,8 +93,8 @@ validatordan biri dayananda bloklar davam etdi, ikincisi dayananda dayandı, yen
 | Nə üçün | Kontraktları, icazə siyahısını və səsverməni ilk dəfə görmək | Çoxqovşaqlı şəbəkənin hamısını başdan sona sınamaq | Test serverlərinə quraşdırmanı sınamaq |
 | Qovşaq sayı | 1 (icazəsiz) və ya 2 (icazəli rejim) | 4 validator + 1 əlavə qovşaq, hamısı `127.0.0.1` | Server başına 1 qovşaq |
 | Skript | `scripts/besu-dev.ps1` (`npm run chain:besu:*`) | `network/testnet/*.sh` (proses rejimi) | `network/testnet/*.sh` + `besu@.service` (systemd rejimi) |
-| Açar | Yerli yaradılan (tək qovşaq) və ya Hardhat test hesabları | Hardhat test hesabları (`--keys dev`) | Yeni yaradılan (`--keys generate`) |
-| Sınandığı mühit | Windows 11, PowerShell 5.1 | Ubuntu 24.04 (GitHub Actions, hər həftə) | Ubuntu 24.04 (GitHub Actions, tək validatorlu systemd işi) |
+| Açar | Yerli yaradılan (tək qovşaq) və ya Hardhat test hesabları | Hardhat test hesabları (`--keys dev`) | Yeni yaradılan (`--keys generate`), açar xəritəsi ilə |
+| Sınandığı mühit | Windows 11, PowerShell 5.1 | Ubuntu 24.04 (GitHub Actions, hər həftə) | Ubuntu 24.04 (GitHub Actions: tək validatorlu `systemd` işi; yaradılmış açarlı 4 validator, `staging` işi) |
 
 Hamısının ortaq cəhəti: eyni Besu versiyası (26.11.0), eyni Java versiyası (JDK 25), eyni genesis parametrləri, eyni kontraktlar və
 eyni alətlər. Yol A-dan B-yə keçmək üçün heç nəyi yenidən öyrənmək lazım deyil.
@@ -229,7 +231,7 @@ bash network/testnet/make-network.sh       # standart: 4 validator + 1 əlavə q
 | `--validators N` | 4 | Genesis-dəki validator sayı |
 | `--extra E` | 1 | Tam qovşaq kimi başlayan, sonra səslə validator edilə bilən əlavə qovşaq sayı |
 | `--keys dev\|generate` | `dev` | `dev`: Hardhat-ın hamıya məlum test hesabları #1 #2 #6 #7 #8 (ən çox 5 qovşaq). `generate`: yeni təsadüfi açarlar |
-| `--chain-id` | 31338 | Zəncir identifikatoru (başdan sona sınaq yalnız 31338 ilə işləyir) |
+| `--chain-id` | 31338 | Zəncir identifikatoru (başdan sona sınaq yalnız 31338 ilə işləyir; `--keys generate` ilə standart 31339) |
 | `--block-period` | 2 | Blok müddəti (saniyə) |
 | `--hosts "ip1 ip2 …"` | — | Server başına bir qovşaq (Yol C) |
 | `--dir`, `--besu-home`, `--java-home` | `network/testnet/run`, `tools/besu`, `tools/jdk-25` | Qovluqlar |
@@ -424,13 +426,61 @@ sudo ufw allow from 192.0.2.13 to any port 30303 proto tcp
 İdarəetmə girişiniz (SSH) üçün qaydanı bunlardan **əvvəl** əlavə edin. Vahiddə əlavə qat kimi `IPAddressDeny=any` və
 `IPAddressAllow=localhost <həmyaşıdların ünvanları>` sətirləri hazırdır, şərh kimi durur.
 
-### C5. Yol C-də bu gün nə var, nə yoxdur
+### C5. Yaradılmış açarlarla kontraktlar və Governance
 
-Skriptlər şəbəkəni qurur, qovşaqları systemd ilə işlədir; səsvermə və monitorinq əmrləri hər serverin öz `127.0.0.1:8545`-ində
-olduğu kimi işləyir. Kontraktların və Governance-ın **yaradılmış açarlarla** qurulması üçün hazır skript yoxdur: depodakı yerli
-yerləşdirmə skripti (`contracts/scripts/deploy-dev.ts`) Hardhat test hesablarını təsisçi edir. Buna görə Yol C-də qovşaqlar
-başlanğıc icazə faylı ilə işləyir; icazə siyahısının zəncirdən hazırlanması, lövbərləmə, təkrar oynatma və başdan sona sınaq Yol
-B-də edilir (`deploy-and-wire.sh` da `--keys generate` şəbəkəsini rədd edir).
+`--keys generate` ilə `make-network.sh` qovşaq açarlarının yanına **açar xəritəsi** də yazır: `keys/keys.json` və hər rol üçün yeni
+yaradılmış, öz faylında (icazə `0600`) bir açar: yerləşdirən, köç icraçısı, iki siyahı lövbəri yazıçısı və hər dövlət üçün bir
+nümayəndə; dövlətin validator açarı onun qovşaq açarıdır. Zəncir identifikatoru **31339**-dur: depodakı alətlər bu identifikatoru nə
+yerli zəncir (hamıya məlum test açarı yoxdur, sandbox dəsti yoxdur), nə də real şəbəkə sayır.
+
+::: warning Yalnız test və hazırlıq şəbəkələri üçün
+Real şəbəkədə bütün açarlar heç kimdə olmur: hər dövlət validator açarını öz avadanlığında yaradır, imza açarlarını HSM-də saxlayır
+([[GUIDE-0015]] §3). Açar xəritəsi test şəbəkəsində bütün dövlətləri bir nəfər oynadığı üçün mövcuddur. Onu oxuyan hər alət
+`purpose` `test` deyilsə, zəncir identifikatoru 31339 deyilsə və ya açar faylı `0600` deyilsə ya da öz ünvanına aid deyilsə
+xəritəni rədd edir.
+:::
+
+`make-network.sh`-i işlədən maşında (server başına bir qovşaqda: bütün çıxış hələ də üzərində olan 1-ci server):
+
+```bash
+sudo env "PATH=$PATH" TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd \
+     bash network/testnet/bootstrap-governance.sh --nodes 1
+```
+
+Bütün qovşaqlar bir maşındadırsa `--nodes` olmadan; proses rejimində `sudo` və `TESTNET_*` dəyişənləri olmadan:
+
+```bash
+bash network/testnet/make-network.sh --keys generate
+bash network/testnet/node.sh start all
+bash network/testnet/bootstrap-governance.sh
+```
+
+Skript addım-addım; hər addım jurnala yazılır, təkrar işə salma artıq edilmiş olanı ötürür:
+
+| Addım | Nə baş verir |
+|---|---|
+| 1. Şəbəkə | Qovşaqlar cavab verir, bloklar artır, QBFT dəstində 4 validator var. 31339-dan fərqli zəncir identifikatoru rədd edilir |
+| 2. Kontraktlar | `contracts/scripts/deploy-network.ts` (Hardhat şəbəkəsi `besuStaging`): təsisçilər TR və KZ nümayəndələri ilə; təsisçilər arası tanınma Governance səsverməsi ilə (`proposeFounderRecognition`, [[ADR-0055]] K3); siyahı lövbəri qeydinin idarəçisi Governance kontraktı, 2 yazıçı, hədd 2. Ünvanlar: `deployment.json` |
+| 3. Governance | XA və XB 2/3 səslə qəbul edilir; hər dövlət nümayəndəsini öz validatoru ilə təyin edir |
+| 4. İcazə siyahısı | Hər qovşaqda zəncirdən hazırlanır, yüklənir və yoxlanılır; `shared_sha256` eynidir; yerləşdirən siyahıdan düşür; siyahıda olmayan təsadüfi açar rədd edilir, nümayəndənin əməliyyatı bloka düşür |
+| 5. Lövbər | Birinci yazıçı ilə `trust:chain-submit`, ikincisi təsdiqləyir; `trust:chain-check` hər siyahı üçün YES cavabı verir |
+| 6. Təkrar oynatma | Köç pəncərəsi səslə açılır; icazə siyahısı yenidən hazırlanır və artıq pəncərənin icraçısını ehtiva edir; nümunə arxiv açar xəritəsi ilə təkrar oynadılır; ekvivalentlik testi. `--no-replay` bu addımı ötürür |
+| 7. Xülasə | Şəbəkə qovluğunda `bootstrap-summary.md` və `.json` |
+
+Sonra digər hər serverdə öz qovşağının icazə siyahısı. Əvvəlcə `deployment.json` faylını və `nodes/` qovluğunu 1-ci serverdən
+köçürün; açar lazım deyil:
+
+```bash
+sudo env "PATH=$PATH" TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd \
+     bash network/testnet/bootstrap-governance.sh --only permissions --nodes 2
+```
+
+| Dəyişən | Nə |
+|---|---|
+| `TAMGA_CHAIN_KEYS` | Açar xəritəsi (standart: şəbəkə qovluğunda `keys/keys.json`) |
+| `TAMGA_CHAIN_DEPLOYMENT` | Yerləşdirmə faylı (skript təyin edir: şəbəkə qovluğunda `deployment.json`) |
+
+GitHub-dakı `staging` işi bu addımları systemd altında 4 validatorla sıfırdan işlədir (§ GitHub-da avtomatik sınaq).
 
 ## Kontraktların yerləşdirilməsi
 
@@ -445,6 +495,9 @@ Yerləşdirmə skripti (`contracts/scripts/deploy-dev.ts`) Tamga-nın kontraktla
 validatorları Hardhat hesabları #1 və #2, nümayəndələri #3 və #4) yazır və ünvanları `contracts/deployments/besuDev.json`-a saxlayır.
 Siyahı lövbəri qeydinin ünvanı bu faylda `anchor.registry` sahəsindədir. Besu əməliyyatı yalnız növbəti blokda (2 san) emal edir;
 skript hər addımda bloku gözləyir.
+
+C yolunda kontraktlar yaradılmış açarlarla `contracts/scripts/deploy-network.ts` ilə yerləşdirilir (`bootstrap-governance.sh`
+2-ci addım, § C5); orada Hardhat test hesablarından istifadə edilmir.
 
 Kontraktların mənbə kodu, testləri və spesifikasiyası depodadır (`contracts/`, Hardhat; Solidity).
 
@@ -533,7 +586,7 @@ PowerShell-də (Yol A) eyni dəyişənlər `$env:TAMGA_CHAIN_ENABLED = "1"` şə
 - Eyni versiya eyni həşlə ikinci dəfə yazılmır (`SKIP`); fərqli həş `CONFLICT` verir, yazılmır və əmr xəta kodu ilə bitir.
 - `chain-check` cavabları: **YES** (həş zəncirdə təsdiqlənib), **NO** (zəncirdə fərqli həş təsdiqlənib: ikili danışıq əlaməti),
   **UNKNOWN** (zəncir bağlıdır, əlçatmazdır və ya hədd dolmayıb). Bu yoxlama yoxlama nəticəsini heç vaxt pisləşdirmir.
-- Test şəbəkəsində yazıçı həddi 1-dir; real şəbəkədə ən azı 2 müstəqil yazıçı eyni həşi göndərmədən lövbər təsdiqlənmir
+- A və B yollarında yazıçı həddi 1, C yolunda 2-dir (iki yazıçı); real şəbəkədə ən azı 2 müstəqil yazıçı eyni həşi göndərmədən lövbər təsdiqlənmir
   ([[ADR-0051]] CH3).
 
 Qurumların ləğv siyahısı lövbərləri də zəncirdəki siyahı qeydinə düşür; bunun üçün lövbər sətri siyahının bit sayını və ölçüsünü
@@ -737,6 +790,7 @@ maşınında sıfırdan qurur və sınayır.
 | `lint` | Bütün skriptləri `bash -n` və `shellcheck` ilə yoxlayır |
 | `network` | JDK 25 + Besu qurur, paketləri və imzalanmış siyahıları hazırlayır, kontraktları kompilyasiya edir, 4 validator + 1 əlavə qovşaqlı şəbəkəni yazır və `deploy-and-wire.sh`-i işlədir (nginx məcburidir). Qovşaq jurnalları, icazə faylları və hesabatlar 14 gün saxlanılır |
 | `systemd` | `--system` quraşdırması, yaradılmış açarlı tək validator, `systemd-analyze verify`, qovşağın `besu` istifadəçisi ilə işləməsi, blok artımı, yalnız `127.0.0.1`-də dinləmə və `systemd-analyze security` balı |
+| `staging` | Bir maşında C yolu: `--system` quraşdırması, systemd altında yaradılmış açarlı 4 validator (vahidə əlavə faylla yığın `-Xmx640m`), `bootstrap-governance.sh` başdan sona (§ C5), sonra heç nə yazmamalı olan ikinci işə salma |
 
 **Nə vaxt işləyir:** hər bazar ertəsi (04:23 UTC); `contracts/`, `apps/chain-indexer/`, `apps/trust-publisher/src/chain/`,
 `network/testnet/`, `network/rpc-proxy/`, `network/permissions/` və ya iş axınının özü dəyişəndə; və əl ilə. Əl ilə işə salmaq üçün
@@ -751,7 +805,8 @@ gh run view <iş nömrəsi> --log              # bütün jurnal
 **Nəticə xülasəsi harada:** işin səhifəsində, iş xülasəsində (job summary): `network` işinin xülasəsi bu bələdçidə "ölçülmüş nəticə"
 kimi verilən cədvəldir (validator və həmyaşıd sayı, kontraktlar, təkrar oynatma, ekvivalentlik, lövbər, icazə siyahısı, səslər,
 nasazlıq sınağı, RPC qorunması, resurs istifadəsi, müddət); `systemd` işinin xülasəsi vahidin istifadəçisini, blok artımını,
-soketləri və təhlükəsizlik balını verir. Bu bələdçidəki ölçmələr 2026-11-05 tarixli işdəndir.
+soketləri və təhlükəsizlik balını verir; `staging` işinin xülasəsi `bootstrap-governance.sh`-in cədvəlidir (kontraktlar, Governance
+üzvləri, icazə siyahısı, lövbər, köç pəncərəsi, təkrar oynatma və ekvivalentlik) və ikinci işə salmanın nəticəsidir. Bu bələdçidəki ölçmələr 2026-11-05 tarixli işdəndir.
 
 ## Kölgə zəncir
 

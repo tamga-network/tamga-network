@@ -1,7 +1,8 @@
 # Multi-node Besu test network on Linux (network/testnet; ADR-0052, ARCH-0002). The production chain stays off (ADR-0009 K4):
 # this only proves, on a fresh ubuntu-latest machine, that the chain layer can be set up and operated as written —
 # 4 QBFT validators, contracts, list replay + equivalence, anchoring, permissions rendered from the chain on every node,
-# validator add/remove vote, one-fault tolerance, RPC protection (filter + nginx mTLS) and the hardened systemd unit.
+# validator add/remove vote, one-fault tolerance, RPC protection (filter + nginx mTLS) and the hardened systemd unit; and
+# (job `staging`, GUIDE-0018 path C) the same chain set up with generated keys under systemd by bootstrap-governance.sh.
 # Results go to the job summary; node logs and reports are kept as an artifact for 14 days.
 name: testnet
 on:
@@ -146,3 +147,87 @@ jobs:
       - name: journal
         if: failure()
         run: sudo journalctl -u besu@node1 -n 200 --no-pager || true
+
+  # GUIDE-0018 path C on one machine: the systemd layout (root-owned /opt/tamga-besu, user besu, /var/lib/tamga-besu, hardened
+  # unit) with 4 validators and GENERATED keys (make-network.sh --keys generate, chain id 31339 — no Hardhat test key), then
+  # bootstrap-governance.sh end to end: contracts + Governance from the key map, permissions rendered from the chain on every
+  # node, anchoring with threshold 2, migration window + replay + equivalence. A second run must change nothing (idempotent).
+  staging:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      TESTNET_DIR: /var/lib/tamga-besu
+      TESTNET_MODE: systemd
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: cache JDK + Besu downloads
+        uses: actions/cache@v4
+        with:
+          path: tools/_dl
+          key: besu-jdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('network/testnet/lib.sh') }}
+      - name: install (system layout)
+        run: sudo bash network/testnet/install-besu.sh --system --cache "$PWD/tools/_dl"
+      - name: packages, signed lists, contracts
+        run: |
+          npm ci --no-audit --no-fund
+          npm run setup
+          npm run contracts:install
+          npm run contracts:compile
+      - name: 4-validator network with generated keys + systemd units (heap 640m)
+        run: |
+          set -euo pipefail
+          sudo bash network/testnet/make-network.sh --validators 4 --extra 0 --keys generate --dir /var/lib/tamga-besu \
+            --besu-home /opt/tamga-besu/besu --java-home /opt/tamga-besu/jdk-25
+          sudo chown -R besu:besu /var/lib/tamga-besu
+          sudo install -m 0644 network/testnet/besu@.service /etc/systemd/system/besu@.service
+          # 4 JVMs on one runner: smaller heap than the unit's -Xmx1g, through a drop-in (the unit itself stays unchanged)
+          sudo install -d /etc/systemd/system/besu@.service.d
+          printf '[Service]\nEnvironment="BESU_OPTS=-Xms256m -Xmx640m"\n' | sudo tee /etc/systemd/system/besu@.service.d/heap.conf
+          sudo systemctl daemon-reload
+          for n in 1 2 3 4; do sudo systemd-analyze verify "besu@node$n.service"; done
+          sudo find /var/lib/tamga-besu/keys -type f ! -perm 0600 | { ! grep .; } # every key file 0600
+      - name: start the 4 validators under systemd
+        run: sudo env "PATH=$PATH" TESTNET_DIR="$TESTNET_DIR" TESTNET_MODE=systemd bash network/testnet/node.sh start all
+      - name: bootstrap Governance with the generated keys (end-to-end)
+        run: |
+          sudo env "PATH=$PATH" TESTNET_DIR="$TESTNET_DIR" TESTNET_MODE=systemd GITHUB_STEP_SUMMARY="$GITHUB_STEP_SUMMARY" \
+            bash network/testnet/bootstrap-governance.sh
+      - name: second run (idempotent — nothing new is written)
+        run: |
+          set -euo pipefail
+          sudo env "PATH=$PATH" TESTNET_DIR="$TESTNET_DIR" TESTNET_MODE=systemd bash network/testnet/bootstrap-governance.sh
+          s=$(sudo cat "$TESTNET_DIR/bootstrap-summary.json")
+          echo "$s" | jq -e '(.contracts | test("skipped")) and (.replay | test("skipped"))'
+          for i in 1 2; do sudo jq -se "last | .written == 0" "$TESTNET_DIR/chain-submit-$i.json"; done
+          {
+            echo "### second run (idempotent)"
+            echo "$s" | jq -r '"contracts: \(.contracts) · Governance: \(."Governance members") · replay: \(.replay)"'
+          } >> "$GITHUB_STEP_SUMMARY"
+          sudo TESTNET_DIR="$TESTNET_DIR" TESTNET_MODE=systemd bash network/testnet/node.sh status all
+      - name: journal and reports (no key files)
+        if: always()
+        run: |
+          mkdir -p staging-logs
+          for n in 1 2 3 4; do
+            sudo journalctl -u "besu@node$n" --no-pager > "staging-logs/node$n-besu.log" 2>&1 || true
+            for f in permissions_config.toml permissions_config.rendered.toml permissions-check.json; do
+              sudo cp "/var/lib/tamga-besu/node$n/$f" "staging-logs/node$n-$f" 2>/dev/null || true
+            done
+          done
+          for f in /var/lib/tamga-besu/*.json /var/lib/tamga-besu/*.md /var/lib/tamga-besu/*.log; do
+            sudo cp "$f" staging-logs/ 2>/dev/null || true
+          done
+          sudo chown -R "$(id -u)" staging-logs
+      - name: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-logs
+          path: staging-logs
+          if-no-files-found: ignore
+          retention-days: 14

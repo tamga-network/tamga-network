@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-19
-last_updated: 2026-10-19
+last_updated: 2026-11-05
 summary: >
   Hyperledger Besu 25.6.0 zincir üstü izinlendirmeyi ve Tessera tabanlı gizliliği kaldırdı (24.12'de kullanımdan kalkmıştı).
   Zincir açıldığında hangi düğümün bağlanabileceği ve hangi hesabın işlem gönderebileceği her validator ve RPC düğümündeki yerel
@@ -64,6 +64,7 @@ yok).
 | Hesap | Aktif üye devletlerin delege anahtarları | `Governance.delegateKeysOf` |
 | Hesap | Çalışır durumdaki kurumların delege anahtarları (iptal listesi çapası yayını) | `IssuerRegistry` |
 | Hesap | Liste çapası yazıcıları | `TrustListAnchorRegistry` ([[ADR-0051]] K3) |
+| Hesap | Açık göç penceresinin yürütücüsü (yalnız pencere açıkken; not 2026-11-05) | Göç kipli kayıtlar ([[ADR-0073]] K1) |
 | Düğüm | Validator düğümleri: enode kimliğinden türeyen adres `Governance`'ta aktif bir validator adresidir | `Governance` + işletmecinin düğüm bildirimi (yalnız `host:port`) |
 | Düğüm | İşletmecinin kendi RPC/full düğümleri | Yalnız o işletmecinin düğümlerinin dosyasında; diğer işletmecilerin listesine girmez |
 
@@ -141,3 +142,8 @@ mekanizmadır.
 
 **Accepted — 2026-10-19.** Proje yönetimi onayıyla. DECISIONS: D-NET-6. Yerine geçtiği: [[SPEC-BC-0001]] §12.1, [[ARCH-0001]] §6,
 [[ARCH-0002]] §6 ve açık konu 3 (zincir üstü izin kontratı varsayımı); hiçbir ADR'nin yerini almaz.
+
+**Not (2026-11-05):** K2 tablosundaki hesap listesine bir satır açıklaması: göç penceresi açıkken ([[ADR-0073]] K1) onu yürüten
+hesap da (Governance önerisinin adlandırdığı tek göç yürütücüsü; kayıtlarda `migrationState().executor`) izin listesine girer,
+pencere kapanınca listeden çıkar. `trust:chain-permissions` bunu zaten böyle üretiyordu, tabloda yazmıyordu; karar içeriği
+değişmedi (proje yönetimi).

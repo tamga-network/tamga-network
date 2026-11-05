@@ -26,8 +26,10 @@ Tamga'nın güveni bugün imzalı [[t:trust-list|güven listelerinde]] durur; ç
 [[ADR-0051]]). Bu rehberde kurulan ağ bir **test ağıdır**:
 
 - canlı sistemle (imzalı listeler, doğrulama, cüzdan, sandbox) hiçbir bağlantısı yoktur; onu yavaşlatmaz, değiştirmez;
-- zincir kimliği yerel geliştirme kimliğidir (31338) ve depodaki araçlar yalnız 31337 ile 31338'i "yerel zincir" olarak tanır;
-- düğüm anahtarları (Yol A ve B'de) herkesçe bilinen test anahtarlarıdır: yalnız `127.0.0.1` ya da kapalı bir test ağı için.
+- zincir kimliği Yol A ve B'de 31338'dir (yerel geliştirme kimliği; depodaki araçlar yalnız 31337 ile 31338'i "yerel zincir"
+  olarak tanır), Yol C'de 31339'dur (test/hazırlık kimliği);
+- düğüm anahtarları (Yol A ve B'de) herkesçe bilinen test anahtarlarıdır: yalnız `127.0.0.1` ya da kapalı bir test ağı için; Yol
+  C'de her anahtar yeni üretilir ama hepsi tek makinededir: o da yalnız test ağı içindir.
 
 İki hâlin (zincirsiz ve zincirli) ilişkisi, zincirin ne eklediği ve iki hâlin nasıl senkron kaldığı: [[GUIDE-0016]].
 :::
@@ -50,7 +52,7 @@ Bu bölüm rehberin geri kalanını okumak için yeterlidir. Teknik terimler çe
 | QBFT | Besu'nun uzlaşma (consensus) yöntemi. Validator'lar her bloğu oylar; bir blok, validator'ların üçte ikisinden fazlası kabul edince kesinleşir ve bir daha geri alınmaz |
 | 3f+1 | QBFT'nin dayanıklılık kuralı: n validator'lı bir ağ en çok f = ⌊(n−1)/3⌋ validator'ın durmasına ya da hatalı davranmasına dayanır. Aşağıdaki tabloya bakın |
 | Genesis | Zincirin ilk bloğu ve başlangıç ayarları (`genesis.json`): zincir kimliği, blok süresi, ilk validator'lar, başlangıç bakiyeleri. Bütün düğümlerde bayt bayt aynı olmalıdır; değişirse ortaya ayrı bir zincir çıkar |
-| chainId | Zincirin sayı olarak kimliği. İmzalı her işlem bu sayıyı taşır, böylece bir zincir için imzalanan işlem başka bir zincirde geçmez. Test ağı: `31338` |
+| chainId | Zincirin sayı olarak kimliği. İmzalı her işlem bu sayıyı taşır, böylece bir zincir için imzalanan işlem başka bir zincirde geçmez. Test ağı: `31338` (Yol A ve B), `31339` (Yol C) |
 | `extraData` | Genesis'teki alan; QBFT'de ilk validator adreslerinin listesini RLP (Ethereum'un ikili kodlaması) biçiminde taşır |
 | enode | Bir düğümün ağ adresi: `enode://<128 karakterlik açık anahtar>@<IP>:<P2P portu>`. Açık anahtar düğümün kimliğidir, adresi bu anahtardan türer |
 | Bootnode / statik eşler (static nodes) | Yeni açılan bir düğümün ilk bağlandığı düğümler. Tamga'da keşif (discovery) kapalıdır; her düğüm bağlanacağı eşleri `static-nodes.json` dosyasından okur |
@@ -88,8 +90,8 @@ durunca bloklar sürdü, ikincisi durunca durdu, yeniden başlatılınca devam e
 | Ne için | Kontratları, izin listesini ve oylamayı ilk kez görmek | Çok düğümlü ağın tamamını uçtan uca denemek | Test sunucularına kurulumu denemek |
 | Düğüm sayısı | 1 (izinsiz) ya da 2 (izinli kip) | 4 validator + 1 ek düğüm, hepsi `127.0.0.1` | Sunucu başına 1 düğüm |
 | Betik | `scripts/besu-dev.ps1` (`npm run chain:besu:*`) | `network/testnet/*.sh` (süreç kipi) | `network/testnet/*.sh` + `besu@.service` (systemd kipi) |
-| Anahtar | Yerelde üretilen (tek düğüm) ya da Hardhat test hesapları | Hardhat test hesapları (`--keys dev`) | Yeni üretilen (`--keys generate`) |
-| Denendiği ortam | Windows 11, PowerShell 5.1 | Ubuntu 24.04 (GitHub Actions, her hafta) | Ubuntu 24.04 (GitHub Actions, tek validator'lı systemd işi) |
+| Anahtar | Yerelde üretilen (tek düğüm) ya da Hardhat test hesapları | Hardhat test hesapları (`--keys dev`) | Yeni üretilen (`--keys generate`), anahtar haritasıyla |
+| Denendiği ortam | Windows 11, PowerShell 5.1 | Ubuntu 24.04 (GitHub Actions, her hafta) | Ubuntu 24.04 (GitHub Actions: tek validator'lı `systemd` işi; üretilmiş anahtarlı 4 validator, `staging` işi) |
 
 Hepsinin ortak noktası: aynı Besu sürümü (26.11.0), aynı Java sürümü (JDK 25), aynı genesis ayarları, aynı kontratlar ve aynı
 araçlar. Yol A'dan B'ye geçmek için hiçbir şeyi baştan öğrenmeniz gerekmez.
@@ -226,7 +228,7 @@ bash network/testnet/make-network.sh       # varsayılan: 4 validator + 1 ek dü
 | `--validators N` | 4 | Genesis'teki validator sayısı |
 | `--extra E` | 1 | Tam düğüm olarak başlayan, sonra oyla validator yapılabilecek ek düğüm sayısı |
 | `--keys dev\|generate` | `dev` | `dev`: Hardhat'in herkesçe bilinen test hesapları #1 #2 #6 #7 #8 (en çok 5 düğüm). `generate`: yeni rastgele anahtarlar |
-| `--chain-id` | 31338 | Zincir kimliği (uçtan uca sınama yalnız 31338 ile çalışır) |
+| `--chain-id` | 31338 | Zincir kimliği (uçtan uca sınama yalnız 31338 ile çalışır; `--keys generate` ile varsayılan 31339) |
 | `--block-period` | 2 | Blok süresi (saniye) |
 | `--hosts "ip1 ip2 …"` | — | Sunucu başına bir düğüm (Yol C) |
 | `--dir`, `--besu-home`, `--java-home` | `network/testnet/run`, `tools/besu`, `tools/jdk-25` | Klasörler |
@@ -422,13 +424,61 @@ sudo ufw allow from 192.0.2.13 to any port 30303 proto tcp
 Yönetim erişiminiz (SSH) için kuralı bunlardan **önce** ekleyin. Birimde ek bir katman olarak `IPAddressDeny=any` ve
 `IPAddressAllow=localhost <eşlerin adresleri>` satırları hazır, yorum olarak durur.
 
-### C5. Yol C'de bugün neler var, neler yok
+### C5. Üretilmiş anahtarlarla kontratlar ve Governance
 
-Betikler ağı kurar, düğümleri systemd ile işletir; oylama ve izleme komutları her sunucunun kendi `127.0.0.1:8545`'inde aynen
-çalışır. Kontratların ve Governance'ın **üretilmiş anahtarlarla** kurulması için hazır bir betik yoktur: depodaki yerel dağıtım
-betiği (`contracts/scripts/deploy-dev.ts`) Hardhat test hesaplarını kurucu yapar. Bu yüzden Yol C'de düğümler başlangıç izin
-dosyasıyla çalışır; izin listesinin zincirden üretilmesi, çapalama, yeniden oynatma ve uçtan uca sınama Yol B'de yapılır
-(`deploy-and-wire.sh` da `--keys generate` ağını reddeder).
+`--keys generate` ile `make-network.sh` düğüm anahtarlarının yanına bir **anahtar haritası** da yazar: `keys/keys.json` ve her rol
+için yeni üretilmiş, kendi dosyasında (izin `0600`) bir anahtar: dağıtan, göç yürütücüsü, iki liste çapası yazıcısı ve her devlet
+için bir delege; devletin validator anahtarı düğüm anahtarıdır. Zincir kimliği **31339**'dur: depodaki araçlar bu kimliği ne yerel
+zincir (herkesçe bilinen test anahtarı yok, sandbox seti yok) ne de gerçek ağ sayar.
+
+::: warning Yalnız test ve hazırlık ağları için
+Gerçek ağda bütün anahtarlar kimsede değildir: her devlet validator anahtarını kendi donanımında üretir, imza anahtarlarını HSM'de
+tutar ([[GUIDE-0015]] §3). Anahtar haritası, test ağında bütün devletleri tek kişi oynadığı için vardır. Onu okuyan her araç;
+`purpose` `test` değilse, zincir kimliği 31339 değilse ya da bir anahtar dosyası `0600` değilse veya kendi adresine ait değilse
+haritayı reddeder.
+:::
+
+`make-network.sh`'i çalıştıran makinede (sunucu başına bir düğümde: çıktının tamamı hâlâ üzerinde duran 1. sunucu):
+
+```bash
+sudo env "PATH=$PATH" TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd \
+     bash network/testnet/bootstrap-governance.sh --nodes 1
+```
+
+Bütün düğümler tek makinedeyse `--nodes` olmadan; süreç kipinde `sudo` ve `TESTNET_*` değişkenleri olmadan:
+
+```bash
+bash network/testnet/make-network.sh --keys generate
+bash network/testnet/node.sh start all
+bash network/testnet/bootstrap-governance.sh
+```
+
+Betik adım adım; her adım günlüğe yazılır, yeniden çalıştırma yapılmış olanı atlar:
+
+| Adım | Ne olur |
+|---|---|
+| 1. Ağ | Düğümler yanıt verir, bloklar artar, QBFT kümesinde 4 validator vardır. 31339 dışındaki zincir kimliği reddedilir |
+| 2. Kontratlar | `contracts/scripts/deploy-network.ts` (Hardhat ağı `besuStaging`): kurucular TR ve KZ ile delegeleri; kurucular arası tanıma Governance oyuyla (`proposeFounderRecognition`, [[ADR-0055]] K3); liste çapası kaydının yöneticisi Governance kontratı, 2 yazıcı, eşik 2. Adresler: `deployment.json` |
+| 3. Governance | XA ve XB 2/3 oyla kabul edilir; her devlet delegesini kendi validator'ıyla atar |
+| 4. İzin listesi | Her düğümde zincirden üretilir, yüklenir ve denetlenir; `shared_sha256` aynı; dağıtan listeden düşer; listede olmayan rastgele bir anahtar reddedilir, delegenin işlemi bloğa girer |
+| 5. Çapa | İlk yazıcıyla `trust:chain-submit`, ikincisi onaylar; `trust:chain-check` her liste için YES cevabı verir |
+| 6. Yeniden oynatma | Göç penceresi oyla açılır; izin listesi yeniden üretilir ve artık pencerenin yürütücüsünü içerir; örnek arşiv anahtar haritasıyla yeniden oynatılır; eşdeğerlik testi. `--no-replay` bu adımı atlar |
+| 7. Özet | Ağ klasöründe `bootstrap-summary.md` ve `.json` |
+
+Sonra öteki her sunucuda, kendi düğümünün izin listesi. Önce `deployment.json` dosyasını ve `nodes/` klasörünü 1. sunucudan
+kopyalayın; anahtar gerekmez:
+
+```bash
+sudo env "PATH=$PATH" TESTNET_DIR=/var/lib/tamga-besu TESTNET_MODE=systemd \
+     bash network/testnet/bootstrap-governance.sh --only permissions --nodes 2
+```
+
+| Değişken | Ne |
+|---|---|
+| `TAMGA_CHAIN_KEYS` | Anahtar haritası (varsayılan: ağ klasöründe `keys/keys.json`) |
+| `TAMGA_CHAIN_DEPLOYMENT` | Dağıtım dosyası (betik ayarlar: ağ klasöründe `deployment.json`) |
+
+GitHub'daki `staging` işi bu adımları systemd altında 4 validator'la baştan çalıştırır (§ GitHub'da otomatik sınama).
 
 ## Kontratları dağıtmak
 
@@ -443,6 +493,9 @@ Dağıtım betiği (`contracts/scripts/deploy-dev.ts`) Tamga'nın kontratların�
 validator'ları Hardhat hesapları #1 ve #2, delegeleri #3 ve #4) yazar ve adresleri `contracts/deployments/besuDev.json`'a kaydeder.
 Liste çapası kaydının adresi bu dosyada `anchor.registry` alanındadır. Besu bir işlemi ancak bir sonraki blokta (2 sn) işler;
 betik her adımda bloğu bekler.
+
+Yol C'de kontratlar üretilmiş anahtarlarla `contracts/scripts/deploy-network.ts` ile dağıtılır (`bootstrap-governance.sh`
+2. adım, § C5); orada Hardhat test hesapları kullanılmaz.
 
 Kontratların kaynak kodu, testleri ve şartnamesi depodadır (`contracts/`, Hardhat; Solidity).
 
@@ -531,7 +584,7 @@ PowerShell'de (Yol A) aynı değişkenler `$env:TAMGA_CHAIN_ENABLED = "1"` biçi
 - Aynı sürüm aynı özetle ikinci kez yazılmaz (`SKIP`); farklı özet `CONFLICT` verir, yazılmaz ve komut hata koduyla biter.
 - `chain-check` cevapları: **YES** (özet zincirde onaylı), **NO** (zincirde farklı bir özet onaylı: çift konuşma işareti),
   **UNKNOWN** (zincir kapalı, erişilemez ya da eşik dolmadı). Bu denetim doğrulama sonucunu hiçbir zaman kötüleştirmez.
-- Test ağında yazıcı eşiği 1'dir; gerçek ağda en az 2 bağımsız yazıcı aynı özeti göndermeden çapa onaylanmaz ([[ADR-0051]] CH3).
+- Yol A ve B'de yazıcı eşiği 1, Yol C'de 2'dir (iki yazıcı); gerçek ağda en az 2 bağımsız yazıcı aynı özeti göndermeden çapa onaylanmaz ([[ADR-0051]] CH3).
 
 Kurumların iptal listesi çapaları da zincirdeki liste kaydına girer; bunun için çapa satırı listenin bit sayısını ve boyutunu
 taşır (`trust:anchor --token <belirteç dosyası>`, [[SPEC-TRUST-0001]] §5).
@@ -733,6 +786,7 @@ Ubuntu 24.04 makinesinde baştan kurar ve sınar.
 | `lint` | Bütün betikleri `bash -n` ve `shellcheck` ile denetler |
 | `network` | JDK 25 + Besu kurar, paketleri ve imzalı listeleri hazırlar, kontratları derler, 4 validator + 1 ek düğümlü ağı yazar ve `deploy-and-wire.sh`'i çalıştırır (nginx zorunlu). Düğüm günlükleri, izin dosyaları ve raporlar 14 gün saklanır |
 | `systemd` | `--system` kurulumu, üretilmiş anahtarlı tek validator, `systemd-analyze verify`, düğümün `besu` kullanıcısıyla çalışması, blok artışı, yalnız `127.0.0.1`'de dinleme ve `systemd-analyze security` puanı |
+| `staging` | Tek makinede Yol C: `--system` kurulumu, systemd altında üretilmiş anahtarlı 4 validator (birime ek dosyayla yığın `-Xmx640m`), `bootstrap-governance.sh` baştan sona (§ C5), ardından hiçbir şey yazmaması gereken ikinci çalıştırma |
 
 **Ne zaman çalışır:** her pazartesi (04:23 UTC); `contracts/`, `apps/chain-indexer/`, `apps/trust-publisher/src/chain/`,
 `network/testnet/`, `network/rpc-proxy/`, `network/permissions/` ya da iş akışının kendisi değişince; ve elle. Elle tetiklemek
@@ -747,7 +801,8 @@ gh run view <çalışma numarası> --log        # bütün günlük
 **Sonuç özeti nerede:** çalışmanın sayfasında, iş özetinde (job summary): `network` işinin özeti bu rehberde "ölçülen sonuç"
 olarak verilen tablodur (validator ve eş sayısı, kontratlar, yeniden oynatma, eşdeğerlik, çapa, izin listesi, oylar, arıza
 denemesi, RPC koruması, kaynak kullanımı, süre); `systemd` işinin özeti birimin kullanıcısını, blok artışını, soketleri ve güvenlik
-puanını verir. Bu rehberdeki ölçümler 2026-11-05 tarihli çalışmadandır.
+puanını verir; `staging` işinin özeti `bootstrap-governance.sh`'in tablosudur (kontratlar, Governance üyeleri, izin listesi, çapa,
+göç penceresi, yeniden oynatma ve eşdeğerlik) ve ikinci çalıştırmanın sonucudur. Bu rehberdeki ölçümler 2026-11-05 tarihli çalışmadandır.
 
 ## Gölge zincir
 
