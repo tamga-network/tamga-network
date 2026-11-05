@@ -47,22 +47,17 @@ Dövlət və ya operator kimi ortaq reyestrdə qovşaq işlədəcəksinizsə, ey
 
 Lazımdır: Node.js 22 və ya daha yeni. `openssl` lazım deyil.
 
-::: warning Paket hələ npm-də deyil
-`@tamga-network/onboard` digər paketlərlə birlikdə qurulur və yoxlanılır, lakin hələ npm-də dərc olunmayıb; ilk dərc sonra
-olacaq. O vaxta qədər aləti mənbə kodundan işlədin:
-
-```sh
-git clone https://github.com/tamga-network/tamga-network && cd tamga-network
-npm install
-npx tsx packages/onboard/src/cli.ts --help
-```
-
-Bu bələdçidəki `tamga-onboard` əmrlərinin yerinə `npx tsx packages/onboard/src/cli.ts` yazın (və ya qabıq ləqəbi təyin edin).
-İlk dərcdən sonra:
-
 ```sh
 npm install -g @tamga-network/onboard     # və ya: npx -p @tamga-network/onboard tamga-onboard --help
 ```
+
+Paket npm-də 0.8.2 sınaq versiyası ilə dərc olunur (ilk versiya; sabit 1.0.0 hazır olduqda gələcək — sınaq versiyasında əmrlər
+və seçimlər dəyişə bilər). İlk versiya əl ilə və mənşə sübutu (provenance) olmadan dərc olundu; sonrakı versiyalar GitHub
+Actions-dan gəlir və mənşə sübutu daşıyır.
+
+::: tip Mənbə kodundan işlətmə (istəyə bağlı)
+Repozitoriyanın surətində alət yığım addımı olmadan da işləyir: `npm install`, sonra `tamga-onboard` əvəzinə
+`npx tsx packages/onboard/src/cli.ts`.
 :::
 
 Çıxış kodları: `0` problem yoxdur · `1` yoxlama və ya doğrulama uğursuz oldu · `2` istifadə xətası. `--json` hesabatı JSON kimi
@@ -311,7 +306,7 @@ köməkçisinə qoşun; köməkçi addımları sizin təsdiqinizlə icra edir. �
 { "mcpServers": { "tamga-onboard": { "command": "npx", "args": ["-y", "-p", "@tamga-network/onboard", "tamga-onboard", "mcp", "--root", "C:\\tamga-onboarding"] } } }
 ```
 
-Dərcdən əvvəl mənbə kodundan: `"command": "npx", "args": ["tsx", "<repozitoriya>/packages/onboard/src/cli.ts", "mcp", "--root", "<qovluq>"]`.
+Mənbə kodundan (repozitoriyanın surətində): `"command": "npx", "args": ["tsx", "<repozitoriya>/packages/onboard/src/cli.ts", "mcp", "--root", "<qovluq>"]`.
 
 | Alət | Əmr qarşılığı |
 |---|---|

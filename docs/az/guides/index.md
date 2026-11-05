@@ -82,9 +82,10 @@ depoya düşmür). Kodunuzu bu lokal siyahılara qarşı sınaya bilərsiniz. Uy
 | `@tamga-network/verifier` (+ `/web`, `/zk`) | yoxlama axını, üçqiymətli nəticə, OpenID4VP; `/web` səhifə dəsti, `/zk` sıfır biliyə əsaslanan sübut | yoxlayan tərəf, veb-sayt |
 | `@tamga-network/wallet-core` | rəqəmsal cüzdan nüvəsi: açarlar, sənədin alınması, lokal yoxlama, təqdimat (Node + React Native) | rəqəmsal cüzdan tərtibatçısı |
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | rəqəmsal cüzdan tərəfində sıfır biliyə əsaslanan sübut generatoru (mdoc, Longfellow); `/react-native` telefonda lokal sübut generatoru, `/node` masaüstündə | rəqəmsal cüzdan tərtibatçısı |
+| `@tamga-network/onboard` (əmr `tamga-onboard`) | qoşulma aləti: müraciət faylı, açarlar, quraşdırmanın və siyahıda görünmənin yoxlanılması; dövlət / operator node addımları; lokal MCP serveri ([[GUIDE-0014]], [[GUIDE-0015]]) | qurumun İT komandası, node operatoru |
 
-Hər paketin öz səhifəsi **SDK-lar** bölməsindədir. Paketlər npm-də **0.8.1** sınaq versiyası ilə dərc olunur; sabit 1.0.0
-hazır olduqda gələcək. Sınaq versiyasında interfeys dəyişə bilər. Hər versiya bu depodan yaradılır; səkkiz paket GitHub Actions ilə nəşr olunur və mənşə sübutu (provenance) daşıyır, `@tamga-network/zk` isə Android yerli kitabxanaları hələ CI-da yığıla bilmədiyi üçün əl ilə və mənşə sübutu olmadan nəşr olunur.
+Hər paketin öz səhifəsi **SDK-lar** bölməsindədir. Paketlər npm-də **0.8.2** sınaq versiyası ilə dərc olunur; sabit 1.0.0
+hazır olduqda gələcək. Sınaq versiyasında interfeys dəyişə bilər. Hər versiya bu depodan yaradılır; səkkiz paket GitHub Actions ilə nəşr olunur və mənşə sübutu (provenance) daşıyır, `@tamga-network/zk` isə Android yerli kitabxanaları hələ CI-da yığıla bilmədiyi üçün əl ilə və mənşə sübutu olmadan nəşr olunur. `@tamga-network/onboard`-un ilk versiyası (0.8.2) da əl ilə və mənşə sübutu olmadan nəşr olundu (npm-də etibarlı nəşriyyatçı yalnız mövcud paket üçün qurula bilir); sonrakı versiyaları GitHub Actions-dan gəlir.
 
 ## Ünvanlar
 
@@ -102,7 +103,7 @@ hazır olduqda gələcək. Sınaq versiyasında interfeys dəyişə bilər. Hər
 
 | Hissə | Status |
 |---|---|
-| Paketlər | npm-də 0.8.1 sınaq versiyası; sabit 1.0.0 hazır olduqda gələcək (sınaq versiyasında interfeys dəyişə bilər) |
+| Paketlər | npm-də 0.8.2 sınaq versiyası; sabit 1.0.0 hazır olduqda gələcək (sınaq versiyasında interfeys dəyişə bilər) |
 | Host edilən yoxlayan tərəf | işləyir: təqdimatı saytın serveri imzalı bəyanla açır, dəyərlər yalnız ona və yalnız bir dəfə verilir ([[ADR-0017]]); siyasətlər hazırda sabitdir |
 | Host edilən sənəd vermə | işləyir: hər qurum üçün əhatə dairəsi məhdud API açarı ([[ADR-0016]]) |
 | Etibar lövbəri | imzalı etibar siyahıları ([[ADR-0009]]); sənədi verən qurumların və yoxlayan tərəflərin qeydiyyatını Tamga operatoru aparır |

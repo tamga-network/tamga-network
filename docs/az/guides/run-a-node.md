@@ -38,8 +38,8 @@ Bu sənəddə adı və ya kodu çəkilən dövlətlər üçün yer ayrılıb; bu
 - Ətraflı quraşdırma axını və alətlər açıq repozitoriyadadır: `network/` (icazə siyahısı, qovşaq bəyannamələri, RPC qorunması) və
   `docs/ledger/` (Besu şəbəkə arxitekturası, kontrakt spesifikasiyası).
 - Qurum tərəfindəki addımların (açar, konfiqurasiya şablonu, bəyannamə, yoxlama) aləti: `tamga-onboard node` (§3, §4, §5, §8).
-  Quraşdırılması və mənbə kodundan işlədilməsi [[GUIDE-0014]] § Quraşdırma bölməsindədir; orada olduğu kimi, ilk nəşrdən əvvəl
-  `tamga-onboard` əvəzinə `npx tsx packages/onboard/src/cli.ts` yazın.
+  Quraşdırma: `npm install -g @tamga-network/onboard` (və ya `npx -p @tamga-network/onboard tamga-onboard …`); təfərrüatlar
+  və mənbə kodundan işlətmə [[GUIDE-0014]] § Quraşdırma bölməsindədir.
 
 ## Zəncirin rolu
 

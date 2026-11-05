@@ -47,22 +47,17 @@ commands and MCP tools are covered in [[GUIDE-0015]] (node operator handbook).
 
 You need Node.js 22 or later. No `openssl` needed.
 
-::: warning Not yet on npm
-`@tamga-network/onboard` is built and checked with the other packages but has not been published to npm yet; the first
-publication comes later. Until then, run the tool from source:
-
-```sh
-git clone https://github.com/tamga-network/tamga-network && cd tamga-network
-npm install
-npx tsx packages/onboard/src/cli.ts --help
-```
-
-Wherever this guide says `tamga-onboard`, type `npx tsx packages/onboard/src/cli.ts` (or define a shell alias). After the first
-publication:
-
 ```sh
 npm install -g @tamga-network/onboard     # or: npx -p @tamga-network/onboard tamga-onboard --help
 ```
+
+The package is published on npm as the 0.8.2 test release (its first release; the stable 1.0.0 comes when everything is
+ready — in test releases the commands and options may change). The first release was published by hand without provenance;
+later releases come from GitHub Actions and carry provenance.
+
+::: tip Running from source (optional)
+In a clone of the repository the tool also runs without a build step: `npm install`, then
+`npx tsx packages/onboard/src/cli.ts` in place of `tamga-onboard`.
 :::
 
 Exit codes: `0` all good · `1` a check or validation failed · `2` usage error. `--json` prints the report as JSON.
@@ -311,7 +306,7 @@ the assistant runs the steps with your approval. After the first publication:
 { "mcpServers": { "tamga-onboard": { "command": "npx", "args": ["-y", "-p", "@tamga-network/onboard", "tamga-onboard", "mcp", "--root", "C:\\tamga-onboarding"] } } }
 ```
 
-Before publication, from source: `"command": "npx", "args": ["tsx", "<repo>/packages/onboard/src/cli.ts", "mcp", "--root", "<folder>"]`.
+From source (in a clone of the repository): `"command": "npx", "args": ["tsx", "<repo>/packages/onboard/src/cli.ts", "mcp", "--root", "<folder>"]`.
 
 | Tool | Command equivalent |
 |---|---|

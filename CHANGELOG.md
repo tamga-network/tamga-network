@@ -1,15 +1,14 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.8.1` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.8.2` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## 0.8.2 — 2026-11-05
 
 All ten packages move to 0.8.2 together (patch release). New: the first publication of `@tamga-network/onboard`, the joining
 tool for institutions and for state / operator nodes (it was built and checked with 0.8.1 but not published). One change in
-`wallet-core` refuses more (below); no API change in the other packages. The date is the preparation date — if the release is
-made on another day, it is corrected.
+`wallet-core` refuses more (below); no API change in the other packages. Published on npm on 2026-11-05.
 
 ### Behaviour changes in 0.8.2 (fail-closed)
 
@@ -302,6 +301,14 @@ made on another day, it is corrected.
   - Slither is green (0 results): `SchemaRegistrySet(address indexed)`, four false positives excluded inline with reasons;
     `scripts/slither.mjs` finds a `pip --user` install. New tests: `security-round-2026-11-04.test.ts` and
     `migration-invariants-fuzz.test.ts` (history order, ordinary write vs replay, executor powers; seeded).
+
+### Documents
+
+- docs (2026-11-05; currency check after the 0.8.2 release): version sentences 0.8.2 (README — `@tamga-network/onboard` added
+  to the package table —, docs home and guides in three languages, package index, code examples page, SPEC-API-0001 example
+  `sdk_version`, audit package "Version under review"); GUIDE-0014 and GUIDE-0015 (three languages) install the joining tool from
+  npm (`npm install -g @tamga-network/onboard`), running from source stays as an optional note; the guides' package table lists
+  `@tamga-network/onboard`.
 
 ## 0.8.1 — 2026-11-05
 

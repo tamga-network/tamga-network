@@ -1,10 +1,11 @@
 # @tamga-network/* npm release — started manually only (Actions → release → Run workflow), with project management approval.
-# Versions: the packages are published as 0.x test releases (today 0.8.1; stable 1.0.0 when ready) under npm's default `latest`
+# Versions: the packages are published as 0.x test releases (today 0.8.2; stable 1.0.0 when ready) under npm's default `latest`
 # tag. Versions must be committed beforehand.
 # Identity: npm Trusted Publishing (OIDC) — no long-lived token. Each package's Trusted Publisher on npmjs.com is GitHub
 # Actions, this repository, workflow `release.yml`, environment `npm`. Trusted Publishing needs npm CLI >= 11.5.1 (Node 22
 # ships npm 10), so npm is upgraded below. A Trusted Publisher can only be set on a package that already exists on npm: a new
-# package's first release is made by hand with 2FA. Provenance records that each package was built from this commit by
+# package's first release is made by hand with 2FA (@tamga-network/onboard 0.8.2, 2026-11-05: its Trusted Publisher is set
+# before the next release, which then adds `onboard` to the `packages` input). Provenance records that each package was built from this commit by
 # GitHub Actions.
 # @tamga-network/zk: the phone prover's Android libraries (jniLibs/{arm64-v8a,armeabi-v7a,x86_64}/libtamga_zk_prover.so) are
 # not in the repository and the runner has no NDK, so zk cannot be released from this workflow until a provisioning step is

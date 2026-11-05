@@ -39,8 +39,8 @@ or of talks.
 - The detailed setup flow and tools are in the public repository: `network/` (allowlist, node declarations, RPC protection) and
   `docs/ledger/` (Besu network architecture, contract specification).
 - The tool for the steps on the institution's side (key, configuration template, declaration, checks): `tamga-onboard node`
-  (§3, §4, §5, §8). Installing it and running it from source: [[GUIDE-0014]] § Installing; as there, before the first publication
-  type `npx tsx packages/onboard/src/cli.ts` instead of `tamga-onboard`.
+  (§3, §4, §5, §8). Install: `npm install -g @tamga-network/onboard` (or `npx -p @tamga-network/onboard tamga-onboard …`);
+  details and running from source in [[GUIDE-0014]] § Installing.
 
 ## The role of the chain
 

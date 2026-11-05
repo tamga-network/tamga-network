@@ -115,7 +115,7 @@ policy per use).
 { "mcpServers": { "tamga-onboard": { "command": "npx", "args": ["-y", "-p", "@tamga-network/onboard", "tamga-onboard", "mcp"] } } }
 ```
 
-Before the first publish, from source: `"command": "npx", "args": ["tsx", "<repo>/packages/onboard/src/cli.ts", "mcp", "--root", "<folder>"]`.
+From source (in a clone of this repository): `"command": "npx", "args": ["tsx", "<repo>/packages/onboard/src/cli.ts", "mcp", "--root", "<folder>"]`.
 
 Tools: `create_application`, `validate_application`, `generate_keys_and_csr`, `check_installation`, `check_listing`,
 `sandbox_info`, and for a node `generate_node_key`, `create_node_declaration`, `check_node`. File access is limited to the server's root folder (`--root`, default the working directory), also after

@@ -45,22 +45,17 @@ komutlarını ve MCP araçlarını [[GUIDE-0015]] (düğüm işletme el kitabı)
 
 Gereken: Node.js 22 ya da sonrası. `openssl` gerekmez.
 
-::: warning Paket henüz npm'de değil
-`@tamga-network/onboard` diğer paketlerle birlikte derlenip denetlenir ama npm'e henüz yayımlanmadı; ilk yayın sonra gelir.
-O zamana dek aracı kaynak koddan çalıştırın:
-
-```sh
-git clone https://github.com/tamga-network/tamga-network && cd tamga-network
-npm install
-npx tsx packages/onboard/src/cli.ts --help
-```
-
-Bu rehberdeki `tamga-onboard` komutlarının yerine `npx tsx packages/onboard/src/cli.ts` yazın (ya da bir kabuk takma adı
-tanımlayın). İlk yayından sonra:
-
 ```sh
 npm install -g @tamga-network/onboard     # ya da: npx -p @tamga-network/onboard tamga-onboard --help
 ```
+
+Paket npm'de 0.8.2 deneme sürümüyle yayımlanır (ilk sürüm; kararlı 1.0.0 hazır olunca gelir — deneme sürümünde komutlar ve
+seçenekler değişebilir). İlk sürüm elle ve kaynak kanıtı (provenance) olmadan yayımlandı; sonraki sürümler GitHub Actions'tan
+gelir ve kaynak kanıtı taşır.
+
+::: tip Kaynak koddan çalıştırma (isteğe bağlı)
+Deponun bir kopyasında araç derleme adımı olmadan da çalışır: `npm install`, sonra `tamga-onboard` yerine
+`npx tsx packages/onboard/src/cli.ts`.
 :::
 
 Çıkış kodları: `0` sorun yok · `1` bir denetim ya da doğrulama kaldı · `2` kullanım hatası. `--json` raporu JSON olarak basar.
@@ -303,7 +298,7 @@ bağlayın; asistan adımları sizin onayınızla yürütür. İlk yayından son
 { "mcpServers": { "tamga-onboard": { "command": "npx", "args": ["-y", "-p", "@tamga-network/onboard", "tamga-onboard", "mcp", "--root", "C:\\tamga-onboarding"] } } }
 ```
 
-Yayından önce kaynak koddan: `"command": "npx", "args": ["tsx", "<depo>/packages/onboard/src/cli.ts", "mcp", "--root", "<klasör>"]`.
+Kaynak koddan (deponun bir kopyasında): `"command": "npx", "args": ["tsx", "<depo>/packages/onboard/src/cli.ts", "mcp", "--root", "<klasör>"]`.
 
 | Araç | Komut karşılığı |
 |---|---|

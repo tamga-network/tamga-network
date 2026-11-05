@@ -36,8 +36,8 @@ Bu belgede adı ya da kodu geçen devletler için yer ayrılmıştır; bu, bir a
 - Ayrıntılı kurulum akışı ve araçlar herkese açık depoda: `network/` (izin listesi, düğüm bildirimleri, RPC koruması) ve
   `docs/ledger/` (Besu ağ mimarisi, kontrat şartnamesi).
 - Kurum tarafındaki adımların (anahtar, yapılandırma şablonu, bildirim, denetim) aracı: `tamga-onboard node` (§3, §4, §5, §8).
-  Kurulumu ve kaynak koddan çalıştırma [[GUIDE-0014]] § Kurulum'da; o rehberdeki gibi, ilk yayından önce `tamga-onboard` yerine
-  `npx tsx packages/onboard/src/cli.ts` yazın.
+  Kurulum: `npm install -g @tamga-network/onboard` (ya da `npx -p @tamga-network/onboard tamga-onboard …`); ayrıntı ve
+  kaynak koddan çalıştırma [[GUIDE-0014]] § Kurulum'da.
 
 ## Zincirin rolü
 
