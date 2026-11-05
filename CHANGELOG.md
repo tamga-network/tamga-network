@@ -1,7 +1,7 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.8.0` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.8.1` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## Unreleased
@@ -431,6 +431,9 @@ API audience, registration status warning, mdoc namespace scope, ambiguous gate 
   is processed, `consume()` throws once completed) and §6.1 (mdoc scope by namespace + element); SPEC-API-0001 §1.A A1 also
   carries caller configuration errors, example `sdk_version` 0.8.1; ADR-0067 note on the Annex C decline 400; verifier README and
   "Verify on your own server" guide accept with `tryConsume()`.
+- docs (2026-11-05; currency check after the 0.8.1 release): version sentences 0.8.1 (README, docs home and guides in three
+  languages, code examples page, package index, audit package "Version under review"). `@tamga-network/onboard` is not part of
+  this release (see "Unreleased").
 
 ## 0.8.0 — 2026-11-03
 
