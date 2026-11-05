@@ -49,6 +49,7 @@ the general overview is at [tamga.network](https://tamga.network/en/learn).
 | Connect your country's trust list to the network | [[GUIDE-0011]] | `apps/trust-publisher` |
 | Operate the national trust list (keys, publication, monitoring) | [[GUIDE-0017]] | `apps/trust-publisher` |
 | Run a node on the shared ledger later (preparation) | [[GUIDE-0015]] | `network/` |
+| Set up a chain test network on your computer or test server (Besu, step by step) | [[GUIDE-0018]] | `network/testnet/` |
 | Show that your application follows the rules | [[GUIDE-0009]] | `conformance/` |
 | Test end to end without touching the real network (test network) | [[GUIDE-0013]] | `sandbox.tamga.network` |
 | See working, tested code for all of the above | [[GUIDE-0004]] | — |
@@ -110,7 +111,7 @@ the stable 1.0.0 comes when everything is ready. In test releases the API may ch
 | Wallets | the network runs no wallet; it lists the wallet providers that follow its rules ([[ADR-0042]]); the first wallet's provider, Tamga Wallet's `TAMGA-WP-1`, is `ACTIVE` in the production and sandbox lists |
 | Privacy | a pseudonym per site ([[ADR-0031]]); age verification with a zero-knowledge proof (ZK) — the verifier side is live; the wallet side is wired through `@tamga-network/zk`, the Android native library is ready, iOS is pending ([[ADR-0032]]) |
 | Sandbox | live: a single test network with the same rules as the real network, open to everyone; real identity verification with daily/monthly caps ([[GUIDE-0013]]) |
-| Ledger (Besu/QBFT) | designed, contracts written; opens once there are at least two independent validator operators ([[GUIDE-0006]], preparation: [[GUIDE-0015]]) |
+| Ledger (Besu/QBFT) | designed, contracts written; opens once there are at least two independent validator operators ([[GUIDE-0006]], preparation: [[GUIDE-0015]], test network: [[GUIDE-0018]]) |
 
 ## Rules for every integration
 

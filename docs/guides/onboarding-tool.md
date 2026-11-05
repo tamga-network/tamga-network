@@ -30,7 +30,7 @@ güven listesindeki görünümünüz.
 
 | Yapar | Yapmaz |
 |---|---|
-| Başvuru dosyalarını yazar ve kayıt kurallarıyla denetler ([[ADR-0024]]) | Ağa ya da [[t:trust-list|güven listesine]] yazmaz; kaydı kayıt kurumu yapar |
+| Başvuru dosyalarını yazar ve kayıt kurallarıyla denetler ([[ADR-0024]]) | Ağa yazmaz, [[t:trust-list]] içeriğini değiştirmez; kaydı kayıt kurumu yapar |
 | İki imza anahtarınızı **sizin bilgisayarınızda** üretir, sertifika isteklerini (CSR) yazar | Özel anahtarı hiçbir yere göndermez; çıktısı yalnız yerel dosyalardır |
 | Alan adınızı, DNS teyidini, https adreslerini, meta verinizi ve sorgu ucunuzu denetler | Kişi bilgisi sormaz, dosyalara yazmaz (imza yetkilisinin adı bile) |
 | Katıldıktan sonra imzalı listedeki kaydınızı pakete gömülü kök pinlerine karşı doğrular | Ağdan okuduğu hiçbir şeyi çalıştırmaz |

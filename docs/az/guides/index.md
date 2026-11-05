@@ -48,6 +48,7 @@ Bu sayt **tərtibatçılar** üçündür. Rollar, qaydalar və iştirak şərtl�
 | Ölkənizin etibar siyahısını şəbəkəyə qoşmaq | [[GUIDE-0011]] | `apps/trust-publisher` |
 | Milli etibar siyahısını idarə etmək (açarlar, nəşr, monitorinq) | [[GUIDE-0017]] | `apps/trust-publisher` |
 | Gələcəkdə ortaq reyestrdə qovşaq işlətmək (hazırlıq) | [[GUIDE-0015]] | `network/` |
+| Zəncir test şəbəkəsini öz kompüterinizdə və ya test serverinizdə qurmaq (Besu, addım-addım) | [[GUIDE-0018]] | `network/testnet/` |
 | Tətbiqinizin qaydalara uyğun olduğunu göstərmək | [[GUIDE-0009]] | `conformance/` |
 | Real şəbəkəyə toxunmadan başdan-başa sınamaq (test şəbəkəsi) | [[GUIDE-0013]] | `sandbox.tamga.network` |
 | Hamısının işləyən, testli kodunu görmək | [[GUIDE-0004]] | — |
@@ -108,7 +109,7 @@ hazır olduqda gələcək. Sınaq versiyasında interfeys dəyişə bilər. Hər
 | Rəqəmsal cüzdanlar | şəbəkə rəqəmsal cüzdan işlətmir, qaydalara uyğun cüzdan provayderlərini siyahıya alır ([[ADR-0042]]); ilk rəqəmsal cüzdan — Tamga Wallet-ın provayderi (`TAMGA-WP-1`) real və sandbox siyahılarında `ACTIVE` |
 | Məxfilik | hər sayt üçün psevdonim ([[ADR-0031]]); sıfır biliyə əsaslanan sübutla (ZK) yaşın yoxlanılması — yoxlayan tərəf hissəsi istifadədədir; rəqəmsal cüzdan hissəsi `@tamga-network/zk` ilə qoşulub, Android lokal kitabxanası hazırdır, iOS gözləmədədir ([[ADR-0032]]) |
 | Sandbox | istifadədədir: real şəbəkə ilə eyni qaydalara malik vahid test şəbəkəsi, hamı üçün açıqdır; real şəxsiyyət yoxlaması gündəlik/aylıq limitlə məhdudlaşır ([[GUIDE-0013]]) |
-| Zəncir (Besu/QBFT) | layihələndirilib, kontraktlar yazılıb; ən azı iki müstəqil validator operatoru ilə işə salınır ([[GUIDE-0006]], hazırlıq: [[GUIDE-0015]]) |
+| Zəncir (Besu/QBFT) | layihələndirilib, kontraktlar yazılıb; ən azı iki müstəqil validator operatoru ilə işə salınır ([[GUIDE-0006]], hazırlıq: [[GUIDE-0015]], test şəbəkəsi: [[GUIDE-0018]]) |
 
 ## Hər inteqrasiyada ümumi qaydalar
 

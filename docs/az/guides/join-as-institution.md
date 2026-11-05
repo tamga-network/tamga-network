@@ -127,7 +127,7 @@ bağlansa belə, yenidən verilmir.
 | Açar | İmzaladığı | Müraciətdəki adı |
 |---|---|---|
 | Sənəd açarı | Verdiyiniz sənədlər | `cert` |
-| Ləğv siyahısı açarı | [[t:status-list|Ləğv siyahınız]] | `status_cert` |
+| Ləğv siyahısı açarı | Qurumunuzun [[t:status-list]] | `status_cert` |
 
 Hər biri üçün sertifikat sorğusu (CSR) yaradıb müraciətlə birlikdə göndərin:
 

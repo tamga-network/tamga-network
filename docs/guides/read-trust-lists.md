@@ -71,7 +71,7 @@ Doğrulayıcı kaydının kalıcı kimliği alan adıdır (`dns_name`); istemci 
 |---|---|
 | `lotl.jws` | List of Trusted Lists: ülke listeleri, belge türleri, cüzdan sağlayıcıları, operatör |
 | `tl-tr.jws` | Türkiye listesi: kök sertifikalar, belge verenler (yetkileriyle), doğrulayıcılar (kapsamlarıyla) |
-| `anchors.jsonl` | saatlik imzalı [[t:anchor-log|çapa günlüğü]] (iptal listesi ve şema özetleri buraya çapalanır) |
+| `anchors.jsonl` | saatlik imzalı [[t:anchor-log]] (iptal listesi ve şema özetleri buraya çapalanır) |
 | `keys/root-fingerprints.json` | kök parmak izleri (aynısı `tamga.network/trust-anchor` sayfasında) |
 | `CHANGELOG.md` | kim, ne zaman, ne değişti |
 
@@ -103,7 +103,7 @@ Yapılandırmanıza yeni bir kaynak adresi ve kontrat adresleri eklenir.
 **Ağ.** Hyperledger Besu, QBFT uzlaşması, izinli ağ (yalnızca izinli düğümler bağlanır). Zincire kişisel veri, belge ya da belge
 özeti **yazılmaz**; zincir yalnızca güven kayıtlarını taşır. İptal listeleri zincir dışında kalır ([[ADR-0008]]).
 
-**Kontratlar** (Solidity + Foundry; kaynak kodu zincir aşaması açılınca yayımlanır):
+**Kontratlar** (Solidity, Hardhat ile derlenir ve test edilir; kaynak kodu, testleri ve şartnamesi 2026-11-04'ten beri herkese açık depoda, `contracts/`):
 
 | Kontrat | Ne tutar |
 |---|---|
@@ -124,7 +124,7 @@ Yapılandırmanıza yeni bir kaynak adresi ve kontrat adresleri eklenir.
 | Tam düğüm | zinciri doğrular, okur; imzalamaz | izin listesinde kayıt |
 
 Kurulum adımları (izin listesi, düğüm bildirimi, validator oylaması, RPC koruması) bugün hazırlık olarak
-[[GUIDE-0015]]'te; genesis ve ağ topolojisi zincir aşaması açılınca yayımlanır. Geçişte liste arşivi kontrat çağrılarına yeniden oynatılır; iki uygulama aynı uyum vektörlerini geçmeden
+[[GUIDE-0015]]'te, test ağında adım adım denenmesi [[GUIDE-0018]]'de; genesis ve ağ topolojisi zincir aşaması açılınca yayımlanır. Geçişte liste arşivi kontrat çağrılarına yeniden oynatılır; iki uygulama aynı uyum vektörlerini geçmeden
 geçiş tamamlanmış sayılmaz.
 
 ## Kurallar

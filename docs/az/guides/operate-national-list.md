@@ -379,7 +379,7 @@ npm run trust:chain-check -- dist/tl-xx.jws   # siyahınızın həşi zəncirdə
 - Lövbər yalnız hədd sayda müstəqil yazıcı eyni həşi göndərdikdə təsdiqlənir; istehsalda hədd ən azı 2-dir.
 
 Dövlətinizin validator qovşağı və zəncirin yanındakı işlər: [[GUIDE-0015]]. Test şəbəkəsinin addım-addım quraşdırılması:
-`guides/chain-testnet.md`.
+[[GUIDE-0018]].
 
 ## Problemlərin həlli
 

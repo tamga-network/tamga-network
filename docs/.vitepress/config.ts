@@ -266,7 +266,7 @@ function sidebars(l: Lang): DefaultTheme.Sidebar {
     { text: t.wallet, items: [doc("GUIDE-0005"), doc("GUIDE-0010")] },
     {
       text: t.trust,
-      items: [doc("GUIDE-0016"), doc("GUIDE-0006"), doc("GUIDE-0011"), doc("GUIDE-0017"), doc("GUIDE-0015")],
+      items: [doc("GUIDE-0016"), doc("GUIDE-0006"), doc("GUIDE-0011"), doc("GUIDE-0017"), doc("GUIDE-0015"), doc("GUIDE-0018")],
     },
     { text: t.help, items: [doc("GUIDE-0012")] },
   ];

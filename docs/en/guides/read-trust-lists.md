@@ -109,7 +109,7 @@ credential types (`vct`) do not change. A new source address and the contract ad
 credential and no credential digest is **ever written** to the ledger; it carries only the trust entries. Status lists stay
 off the ledger ([[ADR-0008]]).
 
-**Contracts** (Solidity + Foundry; the source code is published when the ledger stage opens):
+**Contracts** (Solidity, compiled and tested with Hardhat; the source code, tests and specification have been in the public repository since 2026-11-04, `contracts/`):
 
 | Contract | What it holds |
 |---|---|
@@ -130,7 +130,7 @@ off the ledger ([[ADR-0008]]).
 | Full node | validates and reads the chain; does not sign | an entry in the permission list |
 
 The setup steps (permission list, node declaration, validator voting, RPC protection) are in [[GUIDE-0015]] today, as
-preparation; the genesis and the network topology are published when the ledger stage opens. During the switch, the list archive is replayed into contract calls; the switch is not
+preparation, and trying them step by step on a test network in [[GUIDE-0018]]; the genesis and the network topology are published when the ledger stage opens. During the switch, the list archive is replayed into contract calls; the switch is not
 complete until both implementations pass the same conformance vectors.
 
 ## Rules

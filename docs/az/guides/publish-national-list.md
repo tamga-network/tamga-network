@@ -64,8 +64,8 @@ Bu, hazırkı Türkiyə qeydidir. Təhvil zamanı eyni qeyddə yalnız `operator
 | Rol | Nə edir |
 |---|---|
 | `tlso` | Siyahını imzalayır və dərc edir |
-| `registrar` | Sənədi verən qurumları və yoxlayan tərəfləri qeydiyyata alır; [[t:registration-certificate|qeydiyyat sertifikatlarını]] imzalayır |
-| `access_ca` | Yoxlayan tərəflərə [[t:access-certificate|giriş sertifikatı]] verir |
+| `registrar` | Sənədi verən qurumları və yoxlayan tərəfləri qeydiyyata alır; hər [[t:registration-certificate]] onun imzası ilə verilir |
+| `access_ca` | Yoxlayan tərəflərə [[t:access-certificate]] verir |
 | `national_root_ca` | Sənədi verən qurumların sertifikatlarının kökü |
 | `pid_provider` | Milli şəxsiyyət sənədini ([[t:PID]]) verən qurum; hazırda rezerv edilib |
 

@@ -71,7 +71,7 @@ Yoxlayan tərəf qeydinin daimi identifikatoru domen adıdır (`dns_name`); mü�
 |---|---|
 | `lotl.jws` | List of Trusted Lists: ölkə siyahıları, rəqəmsal sənəd növləri, cüzdan provayderləri, operator |
 | `tl-tr.jws` | Türkiyə siyahısı: kök sertifikatlar, sənədi verən qurumlar (səlahiyyətləri ilə), yoxlayan tərəflər (əhatə dairələri ilə) |
-| `anchors.jsonl` | saatlıq imzalı [[t:anchor-log|lövbər jurnalı]] (ləğv siyahısı və sxem xülasələri buraya lövbərlənir) |
+| `anchors.jsonl` | saatlıq imzalı lövbər jurnalı ([[t:anchor-log]]) (ləğv siyahısı və sxem xülasələri buraya lövbərlənir) |
 | `keys/root-fingerprints.json` | kök barmaq izləri (eynisi `tamga.network/trust-anchor` səhifəsində) |
 | `CHANGELOG.md` | kim, nə vaxt, nə dəyişdi |
 
@@ -103,7 +103,7 @@ Konfiqurasiyanıza yeni mənbə ünvanı və kontrakt ünvanları əlavə olunur
 **Şəbəkə.** Hyperledger Besu, QBFT konsensusu, icazəli şəbəkə (yalnız icazəli qovşaqlar qoşulur). Zəncirə fərdi məlumatlar, rəqəmsal sənəd və ya sənəd
 xülasəsi **yazılmır**; zəncir yalnız etibar qeydlərini daşıyır. Ləğv siyahıları zəncirdən kənarda qalır ([[ADR-0008]]).
 
-**Kontraktlar** (Solidity + Foundry; mənbə kodu zəncir mərhələsi açıldıqda dərc olunur):
+**Kontraktlar** (Solidity, Hardhat ilə kompilyasiya və test edilir; mənbə kodu, testləri və spesifikasiyası 2026-11-04-dən açıq depodadır, `contracts/`):
 
 | Kontrakt | Nəyi saxlayır |
 |---|---|
@@ -124,7 +124,7 @@ xülasəsi **yazılmır**; zəncir yalnız etibar qeydlərini daşıyır. Ləğv
 | Tam qovşaq | zənciri yoxlayır, oxuyur; imzalamır | icazə siyahısında qeyd |
 
 Quraşdırma addımları (icazə siyahısı, qovşaq bəyannaməsi, validator səsverməsi, RPC qorunması) bu gün hazırlıq kimi
-[[GUIDE-0015]]-dədir; genesis və şəbəkə topologiyası zəncir mərhələsi açıldıqda dərc olunur. Keçid zamanı siyahı arxivi kontrakt çağırışlarına yenidən tətbiq edilir; iki tətbiq eyni uyğunluq vektorlarından keçmədən
+[[GUIDE-0015]]-dədir, test şəbəkəsində addım-addım sınanması [[GUIDE-0018]]-dədir; genesis və şəbəkə topologiyası zəncir mərhələsi açıldıqda dərc olunur. Keçid zamanı siyahı arxivi kontrakt çağırışlarına yenidən tətbiq edilir; iki tətbiq eyni uyğunluq vektorlarından keçmədən
 keçid tamamlanmış sayılmır.
 
 ## Qaydalar

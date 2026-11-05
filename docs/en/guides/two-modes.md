@@ -174,7 +174,7 @@ operators: the national list is run today as well; when the chain opens, a node 
 | Reading trust lists, keeping your own copy | [[GUIDE-0006]] | [[GUIDE-0006]] §5 |
 | Connecting your country's list to the network (LOTL entry) | [[GUIDE-0011]] | the same; the list stays the source |
 | Operating the national trust list (setup) | [[GUIDE-0017]] | [[GUIDE-0017]] § When the chain is on |
-| Running a node or validator | — | [[GUIDE-0015]] (handbook); test network setup: `guides/chain-testnet.md` |
+| Running a node or validator | — | [[GUIDE-0015]] (handbook); test network setup: [[GUIDE-0018]] |
 | Trying it end to end | [[GUIDE-0013]] (sandbox) | the sandbox is not written to the chain; local development chain: [[GUIDE-0015]] § Local trial |
 
 ## Glossary

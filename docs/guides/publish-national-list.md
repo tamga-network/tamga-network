@@ -63,8 +63,8 @@ Bugünkü Türkiye kaydı budur. Devralmada aynı kayıtta yalnız `operator`, `
 | Rol | Ne yapar |
 |---|---|
 | `tlso` | Listeyi imzalar ve yayınlar |
-| `registrar` | Belge verenleri ve doğrulayıcıları kaydeder; [[t:registration-certificate|kayıt sertifikalarını]] imzalar |
-| `access_ca` | Doğrulayıcılara [[t:access-certificate|erişim sertifikası]] verir |
+| `registrar` | Belge verenleri ve doğrulayıcıları kaydeder; her [[t:registration-certificate]] onun imzasıyla verilir |
+| `access_ca` | Doğrulayıcılara [[t:access-certificate]] verir |
 | `national_root_ca` | Belge veren sertifikalarının kökü |
 | `pid_provider` | Ulusal kimlik belgesini ([[t:PID]]) veren; bugün ayrılmış |
 

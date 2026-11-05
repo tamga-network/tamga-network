@@ -90,12 +90,16 @@ The firewall opens the P2P port to the allow-listed peers only; JSON-RPC leaves 
 
 ## Requirements per node
 
-| | Estimate (to be replaced by the values measured in CI) |
+Measured in CI (GitHub Actions, 2026-11-05: ubuntu-24.04, 4 CPU / 16 GiB; 4 validators + 1 extra node on one host, heap
+`-Xmx768m`, 2 s blocks; `deploy-and-wire.sh` summary, "resources" and "host" rows):
+
+| | Measured |
 |---|---|
-| Memory | ~1 GiB RSS with `-Xmx768m` (`TESTNET_HEAP`); systemd unit `-Xmx1g` |
-| CPU | < 0.5 core when idle (2 s blocks, empty chain); startup ~10–20 s of one core |
-| Disk | < 100 MiB for a test run |
-| Whole test (5 nodes on one host) | 2 vCPU / 7 GiB (GitHub private runner) is the lower limit; 4 vCPU / 16 GiB comfortable |
+| Memory | 505–568 MiB RSS per node (`TESTNET_HEAP`, default `768m`); systemd unit `-Xmx1g` |
+| CPU | 10–37 s of CPU time per node over the whole run (921 s); JSON-RPC up 2–3 s after start |
+| Disk | 74–76 MiB per node at block 404 |
+| Whole test (5 nodes on one host) | 921 s, of which 616 s replay (111 operations); plan ~0.6 GiB memory per node (5 nodes ≈ 3 GiB) |
+| systemd unit | `systemd-analyze security`: 1.5 OK (one validator, generated key) |
 
 CI: `.github/workflows/testnet.yml` (manual, weekly, and on changes to `contracts/`, `apps/chain-indexer/`,
 `apps/trust-publisher/src/chain/`, `network/`).
@@ -117,4 +121,5 @@ zincir katmanını gerçekçi bir Linux ortamında kurup sınamak; aynı betikle
   dururken bloklar sürer, 2 dururken durur, yeniden başlayınca devam eder → RPC koruması (süzgeç + nginx mTLS) → özet.
 - Zincir kimliği 31338 (yerel geliştirme zinciriyle aynı; depodaki araçlar yalnız 31337/31338'i yerel tanır). Anahtarlar
   Hardhat'in herkesçe bilinen test hesapları — yalnız test; test sunucusunda `--keys generate`.
-- Kaynak gereksinimi şimdilik **tahmin**; CI'da ölçülen değerler (özetteki "resources" satırı) gelince tablo güncellenir.
+- Kaynak gereksinimi CI'da ölçüldü (2026-11-05, 4 CPU / 16 GiB, yığın `-Xmx768m`): düğüm başına 505–568 MiB bellek, 74–76 MiB
+  disk (404 blok), 10–37 sn işlemci zamanı; uçtan uca sınama 921 sn. Adım adım anlatım: GUIDE-0018 (`docs/guides/chain-testnet.md`).

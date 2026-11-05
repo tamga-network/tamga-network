@@ -172,7 +172,7 @@ siyahı bu gün də idarə olunur; zəncir açılanda yanına bir qovşaq əlav�
 | Etibar siyahılarını oxumaq, öz nüsxənizi saxlamaq | [[GUIDE-0006]] | [[GUIDE-0006]] §5 |
 | Ölkənizin siyahısını şəbəkəyə qoşmaq (LOTL qeydi) | [[GUIDE-0011]] | eyni; siyahı mənbə qalır |
 | Milli etibar siyahısını idarə etmək (quraşdırma) | [[GUIDE-0017]] | [[GUIDE-0017]] § Zəncir açıq olduqda |
-| Qovşaq və ya validator işlətmək | — | [[GUIDE-0015]] (təlimat); test şəbəkəsinin quraşdırılması: `guides/chain-testnet.md` |
+| Qovşaq və ya validator işlətmək | — | [[GUIDE-0015]] (təlimat); test şəbəkəsinin quraşdırılması: [[GUIDE-0018]] |
 | Başdan sona sınamaq | [[GUIDE-0013]] (sandbox) | sandbox zəncirə yazılmır; yerli inkişaf zənciri: [[GUIDE-0015]] § Yerli sınaq |
 
 ## Terminlər

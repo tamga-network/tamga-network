@@ -35,7 +35,7 @@ qərarlardır (AP2).
 
 | `indeterminate_reason` | Səbəb | Həll |
 |---|---|---|
-| `STATUS_UNREACHABLE` | Rəqəmsal sənədin [[t:status-list|ləğv siyahısı]] endirilə bilmədi | Ləğv siyahılarını əvvəlcədən çəkin (`PrefetchStatusCache` + müntəzəm `refresh`); yoxlama anında şəbəkəyə müraciət etməyin |
+| `STATUS_UNREACHABLE` | Rəqəmsal sənədin [[t:status-list]] endirilə bilmədi | Ləğv siyahılarını əvvəlcədən çəkin (`PrefetchStatusCache` + müntəzəm `refresh`); yoxlama anında şəbəkəyə müraciət etməyin |
 | `STATUS_STALE` | Keşdəki ləğv siyahısı təzəlik həddini aşıb və ya lövbər anından əvvəl çəkilib | Yeniləmə intervalını qısaldın; saat fərqini yoxlayın (NTP) |
 | `SCHEMA_UNREACHABLE` | Rəqəmsal sənəd növünün təsviri əldə edilə bilmədi | Sxem kataloqunu əvvəlcədən keşə yükləyin |
 | `CHAIN_UNREACHABLE` / `INDEXER_STALE` | Etibar mənbəyi oxuna bilmədi və ya köhnəlib | Etibar siyahılarını müntəzəm endirin; `next_update` keçibsə, yeni siyahını alın |

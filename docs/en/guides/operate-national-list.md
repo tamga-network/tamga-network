@@ -381,7 +381,7 @@ npm run trust:chain-check -- dist/tl-xx.jws   # is your list digest confirmed on
   least 2.
 
 Your state's validator node and the work next to the chain: [[GUIDE-0015]]. Step-by-step setup of the test network:
-`guides/chain-testnet.md`.
+[[GUIDE-0018]].
 
 ## Troubleshooting
 

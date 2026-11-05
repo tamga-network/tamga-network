@@ -32,7 +32,7 @@ how your institution appears in the trust list.
 
 | It does | It does not |
 |---|---|
-| Writes the application files and checks them with the registration rules ([[ADR-0024]]) | Write to the network or the [[t:trust-list|trust list]]; the registrar makes the entry |
+| Writes the application files and checks them with the registration rules ([[ADR-0024]]) | Write to the network or the [[t:trust-list]]; the registrar makes the entry |
 | Generates your two signing keys **on your computer** and writes the certificate signing requests (CSRs) | Send a private key anywhere; its output is local files only |
 | Checks your domain, DNS confirmation, https addresses, metadata and lookup endpoint | Ask for or write personal data (not even the name of a signatory) |
 | After joining, verifies your entry in the signed list against root pins embedded in the package | Execute anything it reads from the network |

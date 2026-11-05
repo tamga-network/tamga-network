@@ -372,7 +372,7 @@ npm run trust:chain-check -- dist/tl-xx.jws   # liste özetiniz zincirde onaylı
 - Bir çapa ancak eşik kadar bağımsız yazıcı aynı özeti gönderince onaylıdır; üretimde eşik en az 2'dir.
 
 Devletinizin validator düğümü ve zincirin yanındaki işler: [[GUIDE-0015]]. Test ağının adım adım kurulumu:
-`guides/chain-testnet.md`.
+[[GUIDE-0018]].
 
 ## Sorun giderme
 

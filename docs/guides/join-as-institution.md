@@ -127,7 +127,7 @@ kapansa da yeniden verilmez.
 | Anahtar | İmzaladığı | Başvurudaki ad |
 |---|---|---|
 | Belge anahtarı | Verdiğiniz belgeler | `cert` |
-| İptal listesi anahtarı | [[t:status-list|İptal listeniz]] | `status_cert` |
+| İptal listesi anahtarı | Kurumunuzun [[t:status-list]] | `status_cert` |
 
 Her biri için bir sertifika isteği (CSR) üretip başvuruyla gönderin:
 

@@ -47,6 +47,7 @@ genel anlatım [tamga.network](https://tamga.network/tr/learn)'tedir.
 | Ülkenizin güven listesini ağa bağlamak | [[GUIDE-0011]] | `apps/trust-publisher` |
 | Ulusal güven listesini işletmek (anahtarlar, yayın, izleme) | [[GUIDE-0017]] | `apps/trust-publisher` |
 | İleride ortak defterde düğüm işletmek (hazırlık) | [[GUIDE-0015]] | `network/` |
+| Zincir test ağını kendi bilgisayarınızda ya da test sunucunuzda kurmak (Besu, adım adım) | [[GUIDE-0018]] | `network/testnet/` |
 | Uygulamanızın kurallara uyduğunu göstermek | [[GUIDE-0009]] | `conformance/` |
 | Gerçek ağa dokunmadan uçtan uca denemek (test ağı) | [[GUIDE-0013]] | `sandbox.tamga.network` |
 | Hepsinin çalışan, testli kodunu görmek | [[GUIDE-0004]] | — |
@@ -107,7 +108,7 @@ hazır olunca gelir. Deneme sürümünde arayüz değişebilir. Her sürüm bu d
 | Cüzdanlar | ağ cüzdan işletmez, kurallara uyan cüzdan sağlayıcılarını listeler ([[ADR-0042]]); ilk cüzdan Tamga Wallet'ın sağlayıcısı (`TAMGA-WP-1`) gerçek ve sandbox listelerinde `ACTIVE` |
 | Gizlilik | site başına takma ad ([[ADR-0031]]); sıfır bilgi ispatıyla (ZK) yaş doğrulama — doğrulayıcı tarafı yayında; cüzdan tarafı `@tamga-network/zk` ile bağlandı, Android yerel kütüphanesi hazır, iOS bekliyor ([[ADR-0032]]) |
 | Sandbox | yayında: gerçek ağla aynı kurallarla tek test ağı, herkese açık; gerçek kimlik doğrulaması günlük/aylık tavanlı ([[GUIDE-0013]]) |
-| Zincir (Besu/QBFT) | tasarlandı, kontratlar yazıldı; en az iki bağımsız validator operatörüyle açılır ([[GUIDE-0006]], hazırlık: [[GUIDE-0015]]) |
+| Zincir (Besu/QBFT) | tasarlandı, kontratlar yazıldı; en az iki bağımsız validator operatörüyle açılır ([[GUIDE-0006]], hazırlık: [[GUIDE-0015]], test ağı: [[GUIDE-0018]]) |
 
 ## Her entegrasyonda ortak kurallar
 

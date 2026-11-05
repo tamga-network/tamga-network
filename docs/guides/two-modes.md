@@ -167,7 +167,7 @@ bugün de işletilir; zincir açılınca yanına bir düğüm eklenir.
 | Güven listelerini okumak, kendi kopyanızı tutmak | [[GUIDE-0006]] | [[GUIDE-0006]] §5 |
 | Ülkenizin listesini ağa bağlamak (LOTL kaydı) | [[GUIDE-0011]] | aynı; liste kaynak kalır |
 | Ulusal güven listesini işletmek (kurulum) | [[GUIDE-0017]] | [[GUIDE-0017]] § Zincir açıkken |
-| Düğüm ya da validator işletmek | — | [[GUIDE-0015]] (el kitabı); test ağı kurulumu: `guides/chain-testnet.md` |
+| Düğüm ya da validator işletmek | — | [[GUIDE-0015]] (el kitabı); test ağı kurulumu: [[GUIDE-0018]] |
 | Uçtan uca denemek | [[GUIDE-0013]] (sandbox) | sandbox zincire yazılmaz; yerel geliştirme zinciri: [[GUIDE-0015]] § Yerel deneme |
 
 ## Terimler

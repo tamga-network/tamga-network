@@ -66,8 +66,8 @@ This is today's Türkiye entry. In a hand-over only `operator`, `list_url` and t
 | Role | What it does |
 |---|---|
 | `tlso` | Signs and publishes the list |
-| `registrar` | Registers issuers and verifiers; signs [[t:registration-certificate|registration certificates]] |
-| `access_ca` | Issues [[t:access-certificate|access certificates]] to verifiers |
+| `registrar` | Registers issuers and verifiers; signs every [[t:registration-certificate]] |
+| `access_ca` | Issues an [[t:access-certificate]] to each verifier |
 | `national_root_ca` | The root of issuer certificates |
 | `pid_provider` | Issues the national identity credential ([[t:PID]]); reserved today |
 

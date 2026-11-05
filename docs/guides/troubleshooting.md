@@ -34,7 +34,7 @@ kararlardır (AP2).
 
 | `indeterminate_reason` | Sebep | Çözüm |
 |---|---|---|
-| `STATUS_UNREACHABLE` | Belgenin [[t:status-list|iptal listesi]] indirilemedi | İptal listelerini önceden çekin (`PrefetchStatusCache` + düzenli `refresh`); doğrulama anında ağa çıkmayın |
+| `STATUS_UNREACHABLE` | Belgenin [[t:status-list]] indirilemedi | İptal listelerini önceden çekin (`PrefetchStatusCache` + düzenli `refresh`); doğrulama anında ağa çıkmayın |
 | `STATUS_STALE` | Önbellekteki iptal listesi tazelik eşiğini aştı ya da çapadan önce çekildi | Yenileme aralığını kısaltın; saat farkını denetleyin (NTP) |
 | `SCHEMA_UNREACHABLE` | Belge türünün tanımı alınamadı | Şema kataloğunu önceden önbelleğe alın |
 | `CHAIN_UNREACHABLE` / `INDEXER_STALE` | Güven kaynağı okunamadı ya da bayat | Güven listelerini düzenli indirin; `next_update` geçmişse yeni listeyi alın |

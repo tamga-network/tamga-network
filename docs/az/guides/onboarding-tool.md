@@ -32,7 +32,7 @@ siyahısında qurumunuzun görünüşü.
 
 | Edir | Etmir |
 |---|---|
-| Müraciət fayllarını yazır və qeydiyyat qaydaları ilə yoxlayır ([[ADR-0024]]) | Şəbəkəyə və ya [[t:trust-list|etibar siyahısına]] yazmır; qeydi qeydiyyat qurumu edir |
+| Müraciət fayllarını yazır və qeydiyyat qaydaları ilə yoxlayır ([[ADR-0024]]) | Şəbəkəyə yazmır, [[t:trust-list]] məzmununu dəyişmir; qeydi qeydiyyat qurumu edir |
 | İki imza açarınızı **öz kompüterinizdə** yaradır, sertifikat sorğularını (CSR) yazır | Şəxsi açarı heç yerə göndərmir; nəticəsi yalnız yerli fayllardır |
 | Domeninizi, DNS təsdiqini, https ünvanlarını, metaməlumatınızı və sorğu nöqtənizi yoxlayır | Şəxsi məlumat soruşmur və fayllara yazmır (hətta imza səlahiyyətlisinin adını da) |
 | Qoşulduqdan sonra imzalanmış siyahıdakı qeydinizi paketə daxil edilmiş kök pinlərinə qarşı yoxlayır | Şəbəkədən oxuduğu heç nəyi icra etmir |
