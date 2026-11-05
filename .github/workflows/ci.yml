@@ -31,6 +31,8 @@ jobs:
       - run: if [ -f scripts/master-index.mjs ]; then node scripts/master-index.mjs --check; fi
       - run: npm run arf:check
       - run: npm run docs:check
+      # the docs site is built on the server at deploy time; a page that does not compile stops the deploy (2026-11-05)
+      - run: npm run docs:build
       # @tamga-network/zk is left out: its compiled Android libraries are not in the repository (see release.yml)
       - name: release preparation + smoke test (no npm publish)
         env:
