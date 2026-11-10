@@ -37,11 +37,11 @@
       "status_cert": "issuer-example-university-status",
       "parent_ca": "root-ca",
       "slug": "example-university",
-      "legal_name": "Örnek Üniversitesi (TEST)",
+      "legal_name": "Example University (TEST)",
       "category": "EDUCATION",
       "assurance": "I2",
       "class": "EAA",
-      "assurance_basis": "Sandbox example institution with a fictional name (ADR-0038). Credentials are signed with test keys and are not valid anywhere.",
+      "assurance_basis": "Sandbox example institution with a fictional name (ADR-0038). Records come from the university's own student information system through the institution source endpoint (ADR-0020); credentials and the status list are signed through the university's remote signing service (CSC API v2, ADR-0057) with test keys and are not valid anywhere.",
       "issuer_url": "https://issuer.sandbox.tamga.network/example-university",
       "status_list_base": "https://status.sandbox.tamga.network/",
       "status": "ACTIVE",
@@ -70,10 +70,10 @@
         }
       ],
       "authentic_source": {
-        "name": "Sandbox example registry",
-        "mode": "PORTAL_DB"
+        "name": "Example University Student Information System (TEST)",
+        "mode": "REMOTE"
       },
-      "trade_name": "Örnek Üniversitesi (TEST)",
+      "trade_name": "Example University (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -634,7 +634,7 @@
     {
       "access_cert": "rp-issuer-example-university",
       "dns_name": "issuer.sandbox.tamga.network",
-      "legal_name": "Örnek Üniversitesi — identity matching at issuance (TEST)",
+      "legal_name": "Example University — identity matching at issuance (TEST)",
       "status": "ACTIVE",
       "registered_at": "2026-10-03T00:00:00Z",
       "status_history": [
@@ -658,7 +658,7 @@
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
         }
       ],
-      "trade_name": "Örnek Üniversitesi (TEST)",
+      "trade_name": "Example University (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
