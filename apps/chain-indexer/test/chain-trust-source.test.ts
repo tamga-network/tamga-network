@@ -101,6 +101,19 @@ describe("ChainTrustSource — kontrat okuma kuralları", () => {
     ix.schemas[SCH].history.push([360, 3]);
     expect(src(ix).isCredentialSchemaAcceptable(ISS, SCH, 120)).toBe("NO");
   });
+  it("C2: şema başlangıcından (validFrom) önce verilmiş belge kabul edilmez (kontratla aynı kural)", () => {
+    const ix = index();
+    ix.schemas[SCH].history = [[0, 1]]; // kip dışında kayıt: ilk pencere başlangıçsız
+    ix.schemas[SCH].validFrom = 200;
+    expect([150, 199, 200, 399].map((t) => src(ix).isCredentialSchemaAcceptable(ISS, SCH, t))).toEqual([
+      "NO",
+      "NO",
+      "YES",
+      "YES",
+    ]);
+    delete ix.schemas[SCH].validFrom; // alanı olmayan eski dizin: başlangıç 0 sayılır
+    expect(src(ix).isCredentialSchemaAcceptable(ISS, SCH, 150)).toBe("YES");
+  });
   it("C3: kendi devleti, kategori sınırlı tanıma, engel", () => {
     const ix = index();
     expect(src(ix).isRecognizedBy("TR", ISS)).toBe("YES");

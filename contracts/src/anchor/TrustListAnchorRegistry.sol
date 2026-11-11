@@ -102,6 +102,9 @@ contract TrustListAnchorRegistry is Initializable, UUPSUpgradeable, ITrustListAn
     function _setAnchorer(address anchorer, bool allowed) private {
         if (anchorer == address(0)) revert ZeroAddress();
         if (_anchorers[anchorer] == allowed) return;
+        // Kontrat denetimi 2026-11-11 (AC4): çıkarma, yazıcı sayısını eşiğin altına düşüremez — aksi hâlde hiçbir çapa
+        // onaylanamaz. Önce eşik düşürülür (`setRequiredConfirmations`), sonra yazıcı çıkarılır.
+        if (!allowed && _anchorerCount <= _required) revert InvalidThreshold(_required);
         _anchorers[anchorer] = allowed;
         if (allowed) {
             _anchorerCount++;

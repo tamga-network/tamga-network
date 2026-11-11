@@ -350,7 +350,11 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
     const exec = f.stranger;
     await openMigration(f, f.schemas, DAY, await exec.getAddress());
     const w = f.as(f.schemas, exec);
-    await (await w.registerSchema(f.schemaRecord(NET_VCT, SchemaTier.NETWORK, "0x0000"))).wait();
+    // yeniden oynatma: başlangıç listedeki ilk durum anıdır (geçmiş); kabul bu andan başlar (kontrat denetimi 2026-11-11, D1)
+    const start = (await f.now()) - 1000;
+    await (
+      await w.registerSchema({ ...f.schemaRecord(NET_VCT, SchemaTier.NETWORK, "0x0000"), validFrom: start })
+    ).wait();
     const sid = id(NET_VCT);
     await expect(w.revokeSchema(sid, id("reason"))).to.be.revertedWithCustomError(
       f.schemas,

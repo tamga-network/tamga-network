@@ -375,6 +375,17 @@
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "impl",
+          "type": "address"
+        }
+      ],
+      "name": "UpgradeImplementationChanged",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "bytes32",
           "name": "id",
           "type": "bytes32"
@@ -1063,6 +1074,67 @@
     {
       "inputs": [
         {
+          "internalType": "bytes32",
+          "name": "id",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getSchemaPayload",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "vctURI",
+              "type": "string"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "contentHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "string",
+              "name": "version",
+              "type": "string"
+            },
+            {
+              "internalType": "enum ISchemaRegistry.SchemaTier",
+              "name": "tier",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bytes2",
+              "name": "stateCode",
+              "type": "bytes2"
+            },
+            {
+              "internalType": "enum ISchemaRegistry.SchemaStatus",
+              "name": "status",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint64",
+              "name": "validFrom",
+              "type": "uint64"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "supersededBy",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct ISchemaRegistry.SchemaRecord",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "bytes2[]",
           "name": "founders",
           "type": "bytes2[]"
@@ -1610,6 +1682,25 @@
     {
       "inputs": [
         {
+          "internalType": "bytes32",
+          "name": "id",
+          "type": "bytes32"
+        }
+      ],
+      "name": "removalReasonOf",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "bytes2",
           "name": "excludedState",
           "type": "bytes2"
@@ -1681,6 +1772,30 @@
       "name": "setSchemaRegistry",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "id",
+          "type": "bytes32"
+        }
+      ],
+      "name": "upgradePayloadOf",
+      "outputs": [
+        {
+          "internalType": "bytes4",
+          "name": "initSelector",
+          "type": "bytes4"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "implCodehash",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {

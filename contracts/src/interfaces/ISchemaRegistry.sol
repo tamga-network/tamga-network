@@ -49,7 +49,8 @@ interface ISchemaRegistry is ITamgaErrors {
     function deprecateSchema(bytes32 schemaId, bytes32 supersededBy) external;
     /// @notice Ağ şemasında yalnız Governance (göç yürütücüsü iptal edemez); `reasonHash` gerekçe metninin özeti.
     function revokeSchema(bytes32 schemaId, bytes32 reasonHash) external;
-    /// @notice ADR-0073 K1: `at` = 0 → blok zamanı; açık tarih yalnız göç kipinde.
+    /// @notice ADR-0073 K1: `at` = 0 → blok zamanı; açık tarih yalnız göç kipinde. Göç yürütücüsü yalnız kendi yazdığı ağ
+    ///         şemasını deprecate eder; Governance'ın kaydettiği ağ şemasında yalnız Governance (kontrat denetimi 2026-11-11).
     function deprecateSchemaAt(bytes32 schemaId, bytes32 supersededBy, uint64 at) external;
     function revokeSchemaAt(bytes32 schemaId, bytes32 reasonHash, uint64 at) external;
     /// @notice ADR-0073 K3 / CE3: yeni sürüm özeti ekler (ulusal şemada o devlet; ağ şemasında Governance önerisi ya da göç
@@ -63,7 +64,7 @@ interface ISchemaRegistry is ITamgaErrors {
     function isActiveSchema(bytes32 schemaId) external view returns (bool);
     /// @notice Bütünlük (C3): özet ilk özetle ya da eklenen herhangi bir sürüm özetiyle eşleşir; REVOKED şemada hiçbiriyle.
     function matchesContentHash(bytes32 schemaId, bytes32 hash) external view returns (bool);
-    /// @notice Doğrulama C2'nin şema adımı (ADR-0073 K5): şema `iat` anında ACTIVE ve hiç REVOKED değil.
+    /// @notice Doğrulama C2'nin şema adımı (ADR-0073 K5): şema `iat` anında ACTIVE, hiç REVOKED değil ve `iat ≥ validFrom`.
     ///         DEPRECATED'dan ÖNCE verilmiş belge kabul (SC3), sonra verilmiş belge ret (liste kuralı).
     function isSchemaAcceptableAt(bytes32 schemaId, uint64 iat) external view returns (bool);
     function schemaStatusAt(bytes32 schemaId, uint64 t) external view returns (SchemaStatus);

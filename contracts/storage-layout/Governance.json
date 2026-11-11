@@ -508,7 +508,7 @@
     "t_struct(UpgradeQueue)_storage": {
       "encoding": "inplace",
       "label": "struct Governance.UpgradeQueue",
-      "numberOfBytes": 32,
+      "numberOfBytes": 64,
       "members": [
         {
           "label": "queuedAt",
@@ -521,6 +521,12 @@
           "slot": 0,
           "offset": 8,
           "type": "t_bytes4"
+        },
+        {
+          "label": "implCodehash",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_bytes32"
         }
       ]
     },

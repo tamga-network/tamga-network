@@ -117,6 +117,8 @@ interface IGovernance is ITamgaErrors {
     error InvalidMigrationProposal();
     /// @dev ADR-0073 K1: yükseltme hedefin göç durumunu değiştirdi (kapanmış kip yükseltmeyle açılamaz) — yükseltme geri alınır.
     error MigrationStateChanged(address target);
+    /// @dev Kontrat denetimi 2026-11-11: yeni implementasyonun kodu öneri açıldığındaki kod değil (aynı adrese başka kod).
+    error UpgradeImplementationChanged(address impl);
 
     function proposeStateAdmission(bytes2 stateCode, address validator) external returns (bytes32);
     /// @param reasonHash gerekçe metninin özeti (metin zincire yazılmaz, ADR-0074 PJ2).
@@ -170,4 +172,11 @@ interface IGovernance is ITamgaErrors {
     /// @notice Kuyruktaki yükseltmenin en erken uygulama anı (0 = kuyrukta değil).
     function executableAt(bytes32 id) external view returns (uint64);
     function getAdminPayload(bytes32 id) external view returns (AdminPayload memory);
+    // --- Kontrat denetimi 2026-11-11: oy veren, oyladığı yükü zincirden okur (öteki türlerde boş döner) ---
+    /// @notice NETWORK_SCHEMA önerisinin yürütmede kaydedilecek şema kaydı.
+    function getSchemaPayload(bytes32 id) external view returns (ISchemaRegistry.SchemaRecord memory);
+    /// @notice PROTOCOL_UPGRADE önerisinin başlangıç seçicisi (0 = çağrı yok) ve öneri açılırken sabitlenen kod özeti.
+    function upgradePayloadOf(bytes32 id) external view returns (bytes4 initSelector, bytes32 implCodehash);
+    /// @notice STATE_REMOVAL önerisinin gerekçe özeti.
+    function removalReasonOf(bytes32 id) external view returns (bytes32);
 }

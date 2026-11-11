@@ -74,9 +74,12 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     mapping(bytes32 => mapping(address => bool)) private _support;
 
     /// @dev ADR-0055: yükseltme kuyruğu ve başlangıç seçicisi (öneri kimliğine göre).
+    ///      `implCodehash` (kontrat denetimi 2026-11-11): öneri açılırken yeni implementasyonun kod özeti; yürütmede
+    ///      karşılaştırılır. Yapı yalnız mapping değeridir — üye sona eklenir, sıralı düzen ve `__gap` değişmez.
     struct UpgradeQueue {
         uint64 queuedAt;
         bytes4 initSelector;
+        bytes32 implCodehash;
     }
 
     mapping(bytes32 => UpgradeQueue) private _upgradeQueue;
@@ -104,7 +107,8 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         if (founders.length == 0 || founders.length != validators.length) revert FounderMismatch();
 
         for (uint256 i = 0; i < founders.length; i++) {
-            if (validators[i] == address(0)) revert ZeroAddress();
+            // Kontrat denetimi 2026-11-11: sıfır devlet kodu üye olamaz (`proposeStateAdmission` ile aynı kural).
+            if (founders[i] == bytes2(0) || validators[i] == address(0)) revert ZeroAddress();
             if (_members[founders[i]].status != MemberStatus.NONE) revert MemberExists(founders[i]);
             bytes2 used = _validatorToState[validators[i]];
             if (used != bytes2(0)) revert ValidatorInUse(validators[i], used);
@@ -198,10 +202,15 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     // Öneriler
     // -----------------------------------------------------------------
 
+    /// @dev Gövde ayrı fonksiyondadır: değiştirici her kullanımda satır içine kopyalanır (EIP-170 bayt payı).
     modifier onlyValidator() {
+        _requireValidator();
+        _;
+    }
+
+    function _requireValidator() private view {
         bytes2 s = _validatorToState[msg.sender];
         if (s == bytes2(0) || _members[s].status != MemberStatus.ACTIVE) revert NotValidator(msg.sender);
-        _;
     }
 
     function _newProposal(ProposalKind kind) private returns (bytes32 id) {
@@ -261,6 +270,9 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         id = _newProposal(ProposalKind.PROTOCOL_UPGRADE);
         _proposals[id].target = target;
         _proposals[id].newImplementation = newImplementation;
+        // Kontrat denetimi 2026-11-11: oylanan şey adres değil KODDUR. Zincir Shanghai kurallarındadır (SELFDESTRUCT kodu
+        // siler); CREATE2 ile aynı adrese başka kod konabilir. Kod özeti burada sabitlenir, `execute` karşılaştırır.
+        _upgradeQueue[id].implCodehash = newImplementation.codehash;
     }
 
     /// @inheritdoc IGovernance
@@ -300,6 +312,17 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         a.registry = registry;
     }
 
+    /// @dev Bağlı SchemaRegistry'ye giden ağ şeması yönetim önerisi (hedef öneriyle verilmez).
+    function _newSchemaAdmin(AdminAction action, bytes32 schemaId)
+        private
+        returns (bytes32 id, AdminPayload storage a)
+    {
+        address registry = address(schemaRegistry);
+        if (registry == address(0)) revert SchemaRegistryNotSet();
+        (id, a) = _newAdmin(action, registry);
+        a.schemaId = schemaId;
+    }
+
     /// @inheritdoc IGovernance
     function proposeAnchorerChange(address registry, address anchorer, bool allowed)
         external onlyValidator returns (bytes32 id)
@@ -332,10 +355,8 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     function proposeNetworkSchemaDeprecation(bytes32 schemaId, bytes32 supersededBy)
         external onlyValidator returns (bytes32 id)
     {
-        if (address(schemaRegistry) == address(0)) revert SchemaRegistryNotSet();
         AdminPayload storage a;
-        (id, a) = _newAdmin(AdminAction.DEPRECATE_NETWORK_SCHEMA, address(schemaRegistry));
-        a.schemaId = schemaId;
+        (id, a) = _newSchemaAdmin(AdminAction.DEPRECATE_NETWORK_SCHEMA, schemaId);
         a.supersededBy = supersededBy;
     }
 
@@ -343,10 +364,8 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     function proposeNetworkSchemaRevocation(bytes32 schemaId, bytes32 reasonHash)
         external onlyValidator returns (bytes32 id)
     {
-        if (address(schemaRegistry) == address(0)) revert SchemaRegistryNotSet();
         AdminPayload storage a;
-        (id, a) = _newAdmin(AdminAction.REVOKE_NETWORK_SCHEMA, address(schemaRegistry));
-        a.schemaId = schemaId;
+        (id, a) = _newSchemaAdmin(AdminAction.REVOKE_NETWORK_SCHEMA, schemaId);
         a.reasonHash = reasonHash;
     }
 
@@ -384,10 +403,8 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     function proposeNetworkSchemaContentHash(bytes32 schemaId, bytes32 contentHash)
         external onlyValidator returns (bytes32 id)
     {
-        if (address(schemaRegistry) == address(0)) revert SchemaRegistryNotSet();
         AdminPayload storage a;
-        (id, a) = _newAdmin(AdminAction.ADD_NETWORK_SCHEMA_HASH, address(schemaRegistry));
-        a.schemaId = schemaId;
+        (id, a) = _newSchemaAdmin(AdminAction.ADD_NETWORK_SCHEMA_HASH, schemaId);
         a.digest = contentHash;
     }
 
@@ -423,9 +440,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function vote(bytes32 proposalId, bool support) external onlyValidator {
-        Proposal storage p = _proposals[proposalId];
-        if (p.status == ProposalStatus.NONE) revert UnknownProposal(proposalId);
-        if (p.status != ProposalStatus.OPEN) revert ProposalNotOpen(proposalId);
+        Proposal storage p = _openProposal(proposalId);
         _requireVotable(p, proposalId);
 
         // ADR-0002: çıkarma oylamasında çıkarılanın oyu SAYILMAZ.
@@ -455,9 +470,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function retractVote(bytes32 proposalId) external onlyValidator {
-        Proposal storage p = _proposals[proposalId];
-        if (p.status == ProposalStatus.NONE) revert UnknownProposal(proposalId);
-        if (p.status != ProposalStatus.OPEN) revert ProposalNotOpen(proposalId);
+        Proposal storage p = _openProposal(proposalId);
         _requireVotable(p, proposalId);
         if (!_hasVoted[proposalId][msg.sender]) revert NoVote(proposalId, msg.sender);
         if (_support[proposalId][msg.sender]) p.forVotes--;
@@ -465,6 +478,13 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         _hasVoted[proposalId][msg.sender] = false;
         _support[proposalId][msg.sender] = false;
         emit VoteRetracted(proposalId, msg.sender);
+    }
+
+    /// @dev Bilinen ve hâlâ açık öneri (oy, geri çekme, yürütme ortak denetimi).
+    function _openProposal(bytes32 proposalId) private view returns (Proposal storage p) {
+        p = _proposals[proposalId];
+        if (p.status == ProposalStatus.NONE) revert UnknownProposal(proposalId);
+        if (p.status != ProposalStatus.OPEN) revert ProposalNotOpen(proposalId);
     }
 
     /// @dev Oy verme / değiştirme / geri çekme penceresi: açık öneride `expiresAt`'a kadar; kuyruktaki yükseltmede uygulama
@@ -489,9 +509,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function execute(bytes32 proposalId) external {
-        Proposal storage p = _proposals[proposalId];
-        if (p.status == ProposalStatus.NONE) revert UnknownProposal(proposalId);
-        if (p.status != ProposalStatus.OPEN) revert ProposalNotOpen(proposalId);
+        Proposal storage p = _openProposal(proposalId);
 
         UpgradeQueue storage q = _upgradeQueue[proposalId];
         bool queued = q.queuedAt != 0;
@@ -510,6 +528,11 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         // GV3: eşik bugünkü ACTIVE üyelerin oylarıyla karşılaştırılır; `forVotes` atılan oyların ham sayısıdır.
         uint32 counted = _countedForVotes(proposalId, excluded);
         if (counted < need) revert ThresholdNotMet(counted, need);
+
+        // Kuyruğa alınırken de uygulanırken de: implementasyonun kodu öneri açıldığındaki kod olmalı.
+        if (p.kind == ProposalKind.PROTOCOL_UPGRADE && p.newImplementation.codehash != q.implCodehash) {
+            revert UpgradeImplementationChanged(p.newImplementation);
+        }
 
         if (p.kind == ProposalKind.PROTOCOL_UPGRADE && !queued) {
             // GE1: eşik doldu — uygulanmaz, kuyruğa alınır
@@ -686,6 +709,22 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     /// @inheritdoc IGovernance
     function getAdminPayload(bytes32 id) external view returns (AdminPayload memory) {
         return _admin[id];
+    }
+
+    /// @inheritdoc IGovernance
+    function getSchemaPayload(bytes32 id) external view returns (ISchemaRegistry.SchemaRecord memory) {
+        return _schemaPayload[id];
+    }
+
+    /// @inheritdoc IGovernance
+    function upgradePayloadOf(bytes32 id) external view returns (bytes4 initSelector, bytes32 implCodehash) {
+        UpgradeQueue storage q = _upgradeQueue[id];
+        return (q.initSelector, q.implCodehash);
+    }
+
+    /// @inheritdoc IGovernance
+    function removalReasonOf(bytes32 id) external view returns (bytes32) {
+        return _removalReason[id];
     }
 
     function _authorizeUpgrade(address) internal view override {

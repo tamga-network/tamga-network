@@ -931,6 +931,55 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
       `${defaults} iptal listesinin bit sayısı ve boyutu ne çapa satırında ne belirteçte bulundu — varsayılan (2 bit, 100000) planlandı; gerçek ağ yazımı bunu reddeder`,
     );
 
+  // ---- yetki kayıtlı şemaya verilir (IssuerRegistry: kayıtsız şemada `UnknownSchema`). Arşivde şeması hiç kaydedilmemiş bir
+  // yetki yazılmaz; şemanın ilk durum anından önce açılan pencere o ana çekilir (C2 o andan önce zaten "hayır"dır), o andan
+  // önce kapanmışsa hiç yazılmaz. Cevaplar değişmez; listedeki pencere başlangıcıyla fark uyarıda görünür.
+  const schemaStart = new Map<string, number>();
+  for (const o of ops)
+    if (o.op === "registerSchema")
+      schemaStart.set(o.schemaId.toLowerCase(), Math.min(o.at, schemaStart.get(o.schemaId.toLowerCase()) ?? Infinity));
+  const skip = new Set<ReplayOp>();
+  const early = new Map<string, ReplayOp[]>(); // şema kaydından önce açılmış, henüz kapanmamış pencereler
+  const orphan = new Set<string>();
+  for (const o of ops) {
+    if (o.op !== "schemaAuth") continue;
+    const pair = `${o.issuerId.toLowerCase()}|${o.schemaId.toLowerCase()}`;
+    const start = schemaStart.get(o.schemaId.toLowerCase());
+    if (start === undefined) {
+      skip.add(o);
+      if (!orphan.has(pair))
+        warnings.push(`${o.src} yetki ${o.schemaId}: şema arşivde kayıtlı değil — yetki yazılmadı`);
+      orphan.add(pair);
+    } else if (o.allowed) {
+      if (o.at < start) early.set(pair, [...(early.get(pair) ?? []), o]);
+    } else {
+      const open = early.get(pair)?.pop();
+      if (!open) continue;
+      if (o.at <= start) {
+        skip.add(open);
+        skip.add(o);
+        warnings.push(`${o.src} yetki ${o.schemaId}: pencere şemanın kaydından önce kapanmış — yazılmadı`);
+      } else {
+        open.at = start;
+        warnings.push(
+          `${open.src} yetki ${o.schemaId}: pencere şemanın kaydından önce açılmış — başlangıç şema kaydına çekildi`,
+        );
+      }
+    }
+  }
+  for (const [pair, opens] of early)
+    for (const open of opens) {
+      open.at = schemaStart.get(pair.split("|")[1])!;
+      warnings.push(
+        `${open.src} yetki ${pair.split("|")[1]}: pencere şemanın kaydından önce açılmış — başlangıç şema kaydına çekildi`,
+      );
+    }
+  if (skip.size) {
+    const kept = ops.filter((o) => !skip.has(o));
+    ops.length = 0;
+    ops.push(...kept);
+  }
+
   // ---- sırala: zaman, sonra bağımlılık sırası (kayıt → yetki → durum), sonra ekleniş (kayıt içi sıra korunur)
   ops.sort((a, b) => a.at - b.at || rankOf(a) - rankOf(b) || a.seq - b.seq);
   ops.forEach((o, k) => (o.seq = k));

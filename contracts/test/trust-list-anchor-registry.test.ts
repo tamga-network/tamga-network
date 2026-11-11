@@ -153,8 +153,10 @@ describe("TrustListAnchorRegistry (ADR-0051)", function () {
     const { reg, as, gov } = await twoOfTwo();
     const h = id("v1");
     await as(a1).anchorList(LOTL, 1, h, ZERO, 1); // işletmecinin eski anahtarı a1
-    await as(gov).setAnchorer(await a1.getAddress(), false); // anahtar döndürülür
+    // anahtar döndürme: önce yeni anahtar eklenir, sonra eski çıkarılır (kontrat denetimi 2026-11-11, D2: yazıcı sayısı eşiğin
+    // altına düşemez)
     await as(gov).setAnchorer(await a3.getAddress(), true); // aynı işletmecinin yeni anahtarı a3
+    await as(gov).setAnchorer(await a1.getAddress(), false); // eski anahtar çıkarılır
     await expect(as(a3).anchorList(LOTL, 1, h, ZERO, 1)).not.to.emit(reg, "ListAnchorConfirmed");
     expect(await reg.isListAnchored(LOTL, 1, h)).to.equal(false);
     expect(await reg.listCandidateConfirmations(LOTL, 1, h, ZERO, 1)).to.equal(1);
@@ -286,6 +288,11 @@ describe("TrustListAnchorRegistry (ADR-0051)", function () {
     expect(await reg.isListAnchored(LOTL, 1, id("v1"))).to.equal(false);
     await as(a3).anchorList(LOTL, 1, id("v1"), ZERO, 1);
     expect(await reg.isListAnchored(LOTL, 1, id("v1"))).to.equal(true);
+    // kontrat denetimi 2026-11-11 (D2): eşik 3, yazıcı 3 iken çıkarma reddedilir; önce eşik düşürülür
+    await expect(as(gov).setAnchorer(await a3.getAddress(), false))
+      .to.be.revertedWithCustomError(reg, "InvalidThreshold")
+      .withArgs(3);
+    await as(gov).setRequiredConfirmations(2);
     await as(gov).setAnchorer(await a3.getAddress(), false);
     expect(await reg.anchorerCount()).to.equal(2);
     await expect(as(a3).anchorList(LOTL, 2, id("v2"), id("v1"), 2)).to.be.revertedWithCustomError(reg, "NotAnchorer");

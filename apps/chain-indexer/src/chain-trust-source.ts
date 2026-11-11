@@ -137,6 +137,8 @@ export class ChainTrustSource implements TrustSource {
     if (this.unhealthy()) return "UNKNOWN";
     const s = this.ix.schemas[schemaId.toLowerCase()];
     if (!s || ever(s.history, 3) || statusAtChain(s.history, iat) !== 1) return "NO";
+    // kontratla aynı kural (SchemaRegistry.isSchemaAcceptableAt): başlangıcından önce verilmiş belge kabul edilmez
+    if (iat < (s.validFrom ?? 0)) return "NO";
     const w = this.ix.issuers[issuerId.toLowerCase()]?.auth[schemaId.toLowerCase()] ?? [];
     return w.some(([since, until]) => since !== 0 && iat >= since && (until === 0 || iat < until)) ? "YES" : "NO";
   }

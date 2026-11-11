@@ -153,7 +153,10 @@ describe("Güvenlik turu 2026-10-19 — regresyonlar", function () {
 
     it("kayıtsız şemayla sorgu revert etmez, false döner", async () => {
       const ghost = id("urn:tamga:none:Ghost:1");
-      await f.as(f.issuers, f.trDelegate).setSchemaAuthorization(f.uniIssuer, ghost, true);
+      // kontrat denetimi 2026-11-11 (D1): yetki kayıtsız şemaya verilemez; sorgu yine revert etmez
+      await expect(f.as(f.issuers, f.trDelegate).setSchemaAuthorization(f.uniIssuer, ghost, true))
+        .to.be.revertedWithCustomError(f.schemas, "UnknownSchema")
+        .withArgs(ghost);
       expect(await f.issuers.isCredentialSchemaAcceptable(f.uniIssuer, ghost, await f.now())).to.equal(false);
     });
 

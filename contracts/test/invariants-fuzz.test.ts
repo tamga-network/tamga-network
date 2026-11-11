@@ -203,9 +203,14 @@ describe("K11 değişmez / fuzz — TrustListAnchorRegistry (eşik, monotonluk, 
           const on = r.next() < 0.5;
           const caller = r.next() < 0.85 ? gov : stranger;
           const ok = await attempt(() => as(caller).setAnchorer(addr.get(s)!, on));
-          expect(ok, "setAnchorer yalnız governance").to.equal(caller === gov);
+          // kontrat denetimi 2026-11-11 (D2): çıkarma, yazıcı sayısını eşiğin altına düşürüyorsa reddedilir
+          const underflow = !on && allowed.has(addr.get(s)!) && allowed.size <= required;
+          expect(ok, "setAnchorer yalnız governance; eşiğin altına düşüren çıkarma ret").to.equal(
+            caller === gov && !underflow,
+          );
           if (ok) on ? allowed.add(addr.get(s)!) : allowed.delete(addr.get(s)!);
           expect(await reg.anchorerCount()).to.equal(BigInt(allowed.size));
+          expect(allowed.size, "yazıcı sayısı eşiğin altına düşmez").to.be.gte(required);
           continue;
         }
         if (roll < 0.2) {

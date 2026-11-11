@@ -4,7 +4,7 @@ title: "Güven katmanı kontratları"
 status: Active
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-11-05
+last_updated: 2026-11-11
 summary: >
   Hyperledger Besu (EVM) üzerinde çalışan güven katmanı kontratlarının kanonik
   veri şeması, fonksiyon arayüzleri ve değişmezleri. Sürüm 2.0.0 üç yapısal
@@ -16,6 +16,15 @@ summary: >
   politikası ve doğrulama okuma seti normatifleştirildi. Egemenlik
   onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
 ---
+
+> **Sürüm notu 1.0.0 (2026-11-11, kontrat denetimi).** Yükseltme önerisi yeni implementasyonun **kod özetini** sabitler; yürütmede
+> kod aynı değilse yükseltme düşer (`UpgradeImplementationChanged`, §9). `Governance.initialize` sıfır devlet kodunu reddeder;
+> öneri yükleri zincirden okunur (`getSchemaPayload`, `upgradePayloadOf`, `removalReasonOf`, §1). Göç yürütücüsü yalnız kendi
+> yazdığı ağ şemasını kullanımdan kaldırır (§16.1). C2'nin şema adımı `iat ≥ validFrom` ister; yetki kayıtsız şemaya verilemez
+> (§3.4, §16.1). Yazıcı çıkarma, yazıcı sayısını eşiğin altına düşüremez (§15). Göç penceresinde ileri tarihli şema başlangıcı
+> yazılır (§16.1). `contracts:check` kod boyutu payını da denetler (§9). Depolama: `SchemaRegistry` `__gap` 44 → 43; Governance
+> yükseltme kuyruğu yapısına bir üye (mapping değeri, `__gap` değişmedi). İki üyeli ağda çıkışın yönetişimi kilitlemesi açık
+> konudur (§14 madde 8; [[ADR-0076]], öneri).
 
 > **Sürüm notu 1.0.0 (2026-11-05) — Faz D kalanları ([[ADR-0073]] K1/K5/K6, [[ADR-0074]] K3, [[ADR-0075]] Sonuçlar).**
 > Doğrulayıcı durum yazımları tarih taşır: `suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt` (§16.1 tarih
@@ -169,6 +178,10 @@ function retractVote(bytes32 proposalId) external onlyValidator;
 function execute(bytes32 proposalId) external;
 function countedForVotes(bytes32 proposalId) external view returns (uint32);  // yürütmede sayılacak destek (GV3)
 function executableAt(bytes32 proposalId) external view returns (uint64);     // kuyruktaki yükseltmenin en erken anı
+/// 2026-11-11: oy veren, oyladığı yükü zincirden okur (öteki türde öneride boş döner; yönetim önerileri `getAdminPayload`)
+function getSchemaPayload(bytes32 proposalId) external view returns (ISchemaRegistry.SchemaRecord memory);
+function upgradePayloadOf(bytes32 proposalId) external view returns (bytes4 initSelector, bytes32 implCodehash);
+function removalReasonOf(bytes32 proposalId) external view returns (bytes32);
 /// Güvenlik turu 2026-11-04: öneren, yürütülmemiş (açık ya da kuyruktaki) önerisini geri çeker → CANCELLED
 function cancelProposal(bytes32 proposalId) external onlyValidator;   // yalnız öneren (NotProposer); ProposalCancelled
 
@@ -194,6 +207,18 @@ yani **bir devlet diğerini tek başına atabilirdi**. `requiredVotes` artık
 `max(ceil(2n/3), 2)` döner. Sonuç: iki üyeli ağda çıkarma **imkânsızdır** —
 iki taraf da yalnızca gönüllü `withdraw` edebilir. Bu bilinçli bir anayasal
 korumadır; üçüncü üye gelene kadar ağ bir ortaklık gibi davranır.
+
+**Bilinen sınır (kontrat denetimi 2026-11-11; açık konu, §14 madde 8).** Etkin üye
+sayısı 2 iken bir üye `withdraw` ederse sayı 1'e düşer; asgari mutlak oy 2
+olduğundan kalan üye hiçbir öneriyi (yeni üye kabulü dahil) yürütemez ve son
+üye çekilemez (`LastValidator`): yönetişim kalıcı olarak kilitlenir. Çıkış hakkı
+([[ADR-0002]] #5) ile yönetişimin sürekliliği burada çatışır; kural değişikliği
+karar ister ([[ADR-0076]], öneri). O zamana kadar işletim kuralı: iki üyeli ağda
+çekilmeden önce üçüncü üye kabul edilir.
+
+**Kuruluş (2026-11-11).** `initialize` sıfır devlet kodunu (`0x0000`) ve sıfır
+validator adresini reddeder (`ZeroAddress`). Tek kuruculu kuruluş yalnız yerel
+geliştirme içindir: tek üyeyle hiçbir öneri yürütülemez (asgari mutlak oy 2).
 
 **Yeniden kabul (2.1.0 — R7):** `SUSPENDED`/`WITHDRAWN` bir devlet
 `proposeStateAdmission` ile yeniden kabul edilebilir; eski validator ve delegate
@@ -404,6 +429,13 @@ değil. Şemanın `DEPRECATED` olması **engel değildir** — SC3'ün yetki tar
 2.0.0'da `C2 = isAuthorizedForSchema` idi; o da şemanın `ACTIVE` olmasını
 istediği için `DEPRECATED` şemayla verilmiş her eski diploma `C2`'de
 düşüyordu — SC3 ("deprecated şema doğrulanabilir kalır") ile çelişki.
+
+**Kayıtlı şema (2026-11-11).** `setSchemaAuthorization(…, true)` şema
+`SchemaRegistry`'de kayıtlı değilse `UnknownSchema` ile reddedilir (yazım hatası
+boş bir yetki bırakmaz; sonradan kaydedilen şema eski bir yetkiyi kendiliğinden
+devralmaz). Geri alma kayıt aramaz. Bir devletin kendi kurumunu başka bir
+devletin ulusal şemasına yetkilendirmesi kontratta engellenmez (açık konu, §14
+madde 9).
 
 `isAuthorizedForSchema` (ihraç anlamı) **üç koşulu birden** sağlamalıdır:
 
@@ -810,6 +842,17 @@ kontratı kalıcı olarak kilitler.
 3. `Governance.proposeProtocolUpgrade` yeni implementasyonun
    `proxiableUUID()` döndürdüğünü çağrı öncesi doğrular.
 
+**Oylanan şey koddur (kontrat denetimi 2026-11-11).** Öneri açılırken yeni
+implementasyonun kod özeti (`EXTCODEHASH`) saklanır (`upgradePayloadOf`);
+`execute` kuyruğa alırken ve uygularken yeniden okur, farklıysa
+`UpgradeImplementationChanged` ile düşer. Gerekçe: zincir Shanghai
+kurallarındadır, `SELFDESTRUCT` kodu siler; `CREATE2` ile dağıtılmış bir
+implementasyon bekleme süresinde silinip aynı adrese başka kodla yeniden
+dağıtılabilirdi. Oy verenler adresi değil, `implCodehash`'i incelenen derleme
+çıktısıyla karşılaştırır. Kod özeti implementasyonun bağlandığı başka
+kontratların (kütüphane) kodunu kapsamaz; bugün hiçbir kontrat dış kütüphaneye
+bağlanmaz ve yükseltme incelemesi bunu denetler.
+
 **Bekleme süresi ve başlangıç çağrısı ([[ADR-0055]]).** Eşiği dolan yükseltme
 önce kuyruğa alınır (`ProposalQueued`), en erken 7 gün (`UPGRADE_DELAY`) sonra
 ve en geç 30 gün içinde, eşik yeniden sayılarak uygulanır. Başlangıç fonksiyonu
@@ -823,6 +866,13 @@ depolama düzeni karşılaştırması zorunludur (`contracts:storage-check`, tab
 çizgisi `contracts/storage-layout/`). Statik analiz CI'da Slither ile yapılır
 (`contracts:slither`; dışlanan dedektörler ve gerekçeleri
 `contracts/slither.config.json`).
+
+**Kod boyutu (2026-11-11).** Bir kontratın çalışma kodu en çok 24.576 bayttır
+(EIP-170). `contracts:check` her kontratın boyutunu ölçer ve sınıra 512 bayttan
+az kalmışsa hata verir (`contracts/scripts/check-code-size.mjs`); pay azalınca
+eşik düşürülmez, mantık ayrılır. Governance 24.530 bayttan 22.881 bayta indi
+(`onlyValidator` gövdesi ve yinelenen denetimler ortak fonksiyonlara alındı;
+dış arayüz ve depolama düzeni değişmedi).
 
 ---
 
@@ -1046,6 +1096,18 @@ sürtünme sağlar.
 6. `MAX_WRITES_PER_STATE_PER_DAY` değeri saha verisiyle kalibre edilmeli.
 7. Guardian/escrow kontratları ayrı kapsamda — [[SPEC-BC-0002]] mevcut, bu
    dokümanla arayüz tutarlılığı gözden geçirilmeli.
+8. **İki üyeli ağda çıkış** (kontrat denetimi 2026-11-11): etkin üye sayısı 2
+   iken `withdraw` yönetişimi kalıcı olarak kilitler (§1). Çıkış hakkı
+   ([[ADR-0002]] #5) ile çatıştığı için kural değişikliği karar bekler —
+   [[ADR-0076]] (öneri).
+9. **Başka devletin ulusal şemasına yetki** (2026-11-11): bir devlet kendi
+   kurumunu başka bir devletin `NATIONAL` şemasına yetkilendirebilir (§3.4);
+   kontrat engellemez. İzin mi verilecek, şema sahibi devletin onayı mı
+   aranacak — karar bekler.
+10. **Zincir kuralları Shanghai** (2026-11-11): `SELFDESTRUCT` kodu siler. §9'daki
+    kod özeti denetimi yükseltme yolunu kapatır; genesis'e Cancun eklenmesi
+    (EIP-6780: `SELFDESTRUCT` kodu silmez) aynı sınıfı kökten kapatır ve derleme
+    hedefiyle birlikte ayrıca değerlendirilir (ARCH-0002).
 
 ---
 
@@ -1075,7 +1137,9 @@ yükleyiciyle doğrulanır (sağlıksız set çapalanmaz). Bayrak `TAMGA_CHAIN_E
 veriyi gönderince onaylıdır; üretimde eşik **≥ 2** (ikinci bağımsız işletmeci kapısı; tek işletmeci onaylı çapa üretemez).
 Açılmış sürüm için farklı veri reddedilmez: ayrı **aday** olarak kaydedilir ve `AnchorConflict` olayı yayar (çift konuşma alarmı);
 eşik kadar farklı ve hâlâ yetkili yazıcının desteklediği **ilk** aday onaylanır ve sürüm kapanır. Her yazıcı bir sürüm için tek
-aday destekler; kümeden çıkarılan yazıcının desteği sayılmaz; eşik yazıcı sayısını aşamaz ([[ADR-0053]]). Sürüm/sıra monoton
+aday destekler; kümeden çıkarılan yazıcının desteği sayılmaz; eşik yazıcı sayısını aşamaz ([[ADR-0053]]) — kurulumda, eşik
+değişirken ve (2026-11-11) yazıcı çıkarılırken: çıkarma yazıcı sayısını eşiğin altına düşürüyorsa `InvalidThreshold` ile
+reddedilir; anahtar döndürmede önce yeni yazıcı eklenir, sonra eskisi çıkarılır (ya da önce eşik düşürülür). Sürüm/sıra monoton
 açılır; onaylı kayıt değişmez. Yazıcı kümesi ve eşik Governance önerisiyle yönetilir (`proposeAnchorerChange`,
 `proposeAnchorThreshold`; [[ADR-0055]]).
 
@@ -1136,7 +1200,13 @@ function proposeMigrationClose(address registry) external;
   uygulanmadı: ulusal kayıtları yeniden oynatan devlet delegeleridir (K1) ve CE1 kotayı bütün kip için kaldırır; daraltma ADR ister.
 - **Ağ düzeyi yazım:** kip açıkken ağ şemasını Governance'ın yanında açılış önerisinin `executor`'u (tek göç yürütücüsü) yazar:
   kayıt, sürüm özeti, deprecate. Ağ şemasının iptali yalnız Governance'tadır (güvenlik turu 2026-11-04;
-  `NetworkTierRequiresGovernance`).
+  `NetworkTierRequiresGovernance`). Yürütücü yalnız **kendi yazdığı** (yeniden oynatılan) ağ şemasını kullanımdan kaldırır;
+  Governance'ın kaydettiği ağ şemasında deprecate de yalnız Governance'tadır (kontrat denetimi 2026-11-11). Gerekçe iptalle
+  aynıdır: yürütücü, geri tarihli bir deprecate ile (`at` = 1) o şemayla verilmiş bütün belgeleri C2'de düşürebilirdi ve
+  deprecate geri alınamaz. [[ADR-0073]] K1'in yürütücüye verdiği iş (listedeki geçmişin yeniden oynatılması) değişmez.
+- **İleri tarihli şema başlangıcı (2026-11-11):** kip açıkken `validFrom` blok zamanından ileriyse kayıt reddedilmez; başlangıç
+  aynen yazılır, ilk durum anı blok zamanıdır (hiçbir durum anı ileri olamaz, CE1). Eski hâlde ileri tarihli ağ şeması önerisi
+  pencere açıkken `DateInFuture` ile yürümüyordu.
 - **Yükseltme:** pencere açıkken kayıt kontratı yükseltilemez (`UpgradeDuringMigration`; güvenlik turu 2026-11-04). Governance
   her yükseltmede hedefin `migrationState()`'ini önce ve sonra okur; fark varsa yükseltme geri alınır (`MigrationStateChanged`).
   Kapanmış kip yükseltmeyle açılamaz, pencere uzatılamaz. Yeni implementasyonun göç depolamasına sonradan yazmasını yükseltme
@@ -1150,7 +1220,8 @@ function proposeMigrationClose(address registry) external;
   büyüme kip dışında günlük kotayla sınırlıdır.
 - **Doğrulama:** C1 = kurum `iat` anında ACTIVE ∧ `iat ∈ [validFrom, validUntil]` ∧ `RootCARegistry.isChainAcceptableAt(parentCA,
   iat)` (kök `iat` anında ACTIVE, hiç REVOKED değil). C2 = `SchemaRegistry.isSchemaAcceptableAt(schemaId, iat)` (şema `iat` anında
-  ACTIVE, hiç REVOKED değil) ∧ yetki penceresi `iat ∈ [since, until)`. Böylece: askıdan önceki belge kabul, askı süresinde ret;
+  ACTIVE, hiç REVOKED değil, ve 2026-11-11'den beri `iat ≥ validFrom`: kip dışında ilk pencere başlangıçsız olduğundan ileri
+  tarihli şema bugünden kabul görüyordu) ∧ yetki penceresi `iat ∈ [since, until)`. Böylece: askıdan önceki belge kabul, askı süresinde ret;
   iptal ya da yetki geri alma anında verilen belge ret; emekli kökün emeklilikten sonraki belgeleri ret; DEPRECATED'dan önce
   verilmiş belge kabul. Bugünkü durum soruları (`isValidIssuer`, `isOperational`, `isChainAcceptable`, `isActiveSchema`) değişmedi.
 - **Eşleme yardımcıları:** listedeki kurum `RETIRED` → `retireIssuer` (yumuşak iptal + `IssuerRetired`); kök `ROLLING_OVER` →

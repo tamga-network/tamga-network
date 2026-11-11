@@ -342,6 +342,17 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "schemaId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "UnknownSchema",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "UpgradeDuringMigration",
       "type": "error"

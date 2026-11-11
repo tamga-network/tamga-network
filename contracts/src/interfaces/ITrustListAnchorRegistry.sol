@@ -59,6 +59,8 @@ interface ITrustListAnchorRegistry is ITamgaErrors {
     error AlreadyConfirmed(bytes32 key, uint64 versionOrSeq);
 
     // --- yönetim (governance) ---
+    /// @notice Çıkarma, yazıcı sayısını eşiğin altına düşürüyorsa `InvalidThreshold` ile reddedilir (AC4; kontrat denetimi
+    ///         2026-11-11): önce yeni yazıcı eklenir ya da eşik düşürülür.
     function setAnchorer(address anchorer, bool allowed) external;
     function setRequiredConfirmations(uint8 required) external;
 

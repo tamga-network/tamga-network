@@ -269,6 +269,9 @@ contract IssuerRegistry is TamgaRegistryBase, IIssuerRegistry {
 
         SchemaAuth storage a = _schemaAuth[issuerId][schemaId];
         if (a.allowed == allowed) return;
+        // Kontrat denetimi 2026-11-11: yetki kayıtsız şemaya verilemez (yazım hatası sessizce boş bir yetki bırakırdı; şema
+        // sonradan başka içerikle kaydedilirse yetki kendiliğinden işlerdi). Geri alma kayıt aramaz.
+        if (allowed && !schemaRegistry.exists(schemaId)) revert ISchemaRegistry.UnknownSchema(schemaId);
 
         uint64 t = _effectiveDate(at);
         a.allowed = allowed;

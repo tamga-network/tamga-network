@@ -13,7 +13,7 @@ proxies). Specification: `docs/ledger/specifications/0001-trust-layer-contracts.
 npm run contracts:install        # pinned dependencies (contracts/package-lock.json)
 npm run contracts:compile
 npm run contracts:test           # mocha + ethers on the in-process Hardhat network
-npm run contracts:check          # UUPS safety (static) + storage layout baseline + exported ABI is current
+npm run contracts:check          # UUPS safety (static) + storage layout baseline + code size headroom + exported ABI is current
 npm run contracts:storage-check  # storage layout comparison only (storage-layout/)
 npm run contracts:slither        # static analysis (needs slither-analyzer + solc 0.8.24, see scripts/slither.mjs)
 ```
@@ -57,6 +57,12 @@ test/                                   unit, property and invariant tests (test
 - **Migration window** (ADR-0073 K1): no registry upgrade while a window is open; `contracts:check` pins
   `MigrationWindow.sol` (source digest, ERC-7201 slot; `node scripts/check-upgrade-safety.mjs --update-pin` after a reviewed
   change) and refuses inline assembly anywhere else.
+- **Code size:** deployed code is limited to 24,576 bytes (EIP-170). `contracts:check` fails when a contract has less than
+  512 bytes of headroom (`scripts/check-code-size.mjs`); when headroom runs low, split the logic instead of lowering the
+  threshold.
+- **Upgrade proposals pin the code:** a protocol upgrade proposal stores the new implementation's code hash and execution
+  refuses a different code at the same address (`UpgradeImplementationChanged`). Voters compare `upgradePayloadOf(id)` with
+  the reviewed build.
 - **Static analysis:** `npm run contracts:slither` must report 0 results; a false positive is excluded inline
   (`// slither-disable-next-line <detector>`) with a reason.
 - Shared errors live in `src/interfaces/ITamgaErrors.sol` (declaring one error in two interfaces breaks compilation).

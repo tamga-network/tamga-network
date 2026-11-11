@@ -60,6 +60,8 @@ export interface IxSchema {
   tier: number;
   state: string;
   status: number;
+  /** Şemanın geçerlilik başlangıcı (epoch saniye); C2 `iat ≥ validFrom` ister. Eski dizinde alan yoktur (0 sayılır). */
+  validFrom?: number;
   history: Hist;
   hashes: string[];
 }
@@ -388,6 +390,7 @@ export class ChainIndexer {
           tier: N(s.tier),
           state: stateOf(s.stateCode),
           status: N(s.status),
+          validFrom: N(s.validFrom),
           history,
           hashes,
         };

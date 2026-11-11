@@ -128,6 +128,52 @@ describe("ADR-0073 K1 — yeniden oynatma planı", () => {
     expect(slotIdx).toBeLessThan(roleIdx);
   });
 
+  it("yetki kayıtlı şemaya: kayıtsız şemanın yetkisi yazılmaz; şemadan önce açılan pencere şema kaydına çekilir", () => {
+    // plan imzayı doğrulamaz (doğrulama `verifyArchive`'da); son TR sürümünün yükü değiştirilir
+    const tr = [...f.archive.national["tl-tr"]];
+    const [h, p, s] = tr[tr.length - 1].split(".");
+    const body = JSON.parse(Buffer.from(p, "base64url").toString()) as {
+      issuers: Array<{
+        issuer_id: string;
+        schema_authorizations: Array<{
+          schema_id: string;
+          allowed: boolean;
+          valid_from: string;
+          valid_until: string | null;
+        }>;
+      }>;
+    };
+    const issuer = body.issuers.find((i) => i.schema_authorizations.length > 0)!;
+    const ghost = keccakText("urn:tamga:edu:GhostCredential:1");
+    const known = issuer.schema_authorizations[0];
+    const start = plan.ops.find((o) => o.op === "registerSchema" && o.schemaId === known.schema_id)!.at;
+    const iso = (t: number) => new Date(t * 1000).toISOString().replace(".000Z", "Z");
+    issuer.schema_authorizations.push(
+      { schema_id: ghost, allowed: true, valid_from: iso(start + 86400), valid_until: null },
+      { schema_id: known.schema_id, allowed: true, valid_from: iso(start - 5 * 86400), valid_until: null },
+      {
+        schema_id: known.schema_id,
+        allowed: true,
+        valid_from: iso(start - 9 * 86400),
+        valid_until: iso(start - 7 * 86400),
+      },
+    );
+    tr[tr.length - 1] = [h, Buffer.from(JSON.stringify(body)).toString("base64url"), s].join(".");
+    const p2 = buildReplayPlan({ ...f.archive, national: { ...f.archive.national, "tl-tr": tr } });
+    const auth = p2.ops.filter((o) => o.op === "schemaAuth") as Array<{ schemaId: string; at: number; seq: number }>;
+    expect(auth.some((o) => o.schemaId === ghost)).toBe(false);
+    expect(auth.every((o) => o.at >= start || o.schemaId !== known.schema_id)).toBe(true);
+    // her yetki açılışı şemasının kaydından sonra sıralanır
+    for (const o of auth) {
+      const reg = p2.ops.find((x) => x.op === "registerSchema" && x.schemaId === o.schemaId)!;
+      expect(reg.seq).toBeLessThan(o.seq);
+    }
+    const w = p2.warnings.filter((x) => /yetki/.test(x));
+    expect(w.some((x) => /kayıtlı değil/.test(x))).toBe(true);
+    expect(w.some((x) => /şema kaydına çekildi/.test(x))).toBe(true);
+    expect(w.some((x) => /önce kapanmış/.test(x))).toBe(true);
+  });
+
   it("PJ2: planda ad, alan adı ya da gerekçe metni yok (yalnız özet)", () => {
     const text = JSON.stringify(plan.ops);
     for (const s of [

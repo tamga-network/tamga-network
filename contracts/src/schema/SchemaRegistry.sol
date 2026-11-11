@@ -27,7 +27,8 @@ import {StatusHistory} from "../base/StatusHistory.sol";
  *               = DEPRECATED'dan ÖNCE verilmiş belge; durum belgenin iat anına göre (yarı açık pencereler).
  *
  *         Göç kipinde (ADR-0073 K1) ağ şemasını Governance'ın yanında açılış önerisinin yetkilendirdiği tek göç
- *         yürütücüsü de yazar: kayıt, sürüm özeti ve deprecate. Ağ şemasının İPTALİ (kalıcı) yalnız Governance'tadır.
+ *         yürütücüsü de yazar: kayıt, sürüm özeti ve — yalnız kendi yazdığı kayıtta — deprecate. Ağ şemasının İPTALİ
+ *         (kalıcı) ve Governance'ın kaydettiği ağ şemasının deprecate'i yalnız Governance'tadır.
  */
 contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
     using StatusHistory for StatusHistory.Change[];
@@ -39,10 +40,13 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
     mapping(bytes32 => StatusHistory.Change[]) private _history;
     /// @dev ADR-0073 K3: schemaId => eklenen sürüm özetleri (ilk özet `SchemaRecord.contentHash`'tedir).
     mapping(bytes32 => bytes32[]) private _versionHashes;
+    /// @dev Kontrat denetimi 2026-11-11: schemaId => ağ şemasını göç yürütücüsü mü yazdı (yeniden oynatılan kayıt). Yürütücü
+    ///      yalnız bunları deprecate eder; Governance'ın kaydettiği ağ şemasına dokunamaz.
+    mapping(bytes32 => bool) private _replayed;
 
-    // Yanlış alarm: iki `__gap` de private; Solidity ayrı slotlar ayırır (taban 46, bu kontrat 44), düzen check:storage'da.
+    // Yanlış alarm: iki `__gap` de private; Solidity ayrı slotlar ayırır (taban 46, bu kontrat 43), düzen check:storage'da.
     // slither-disable-next-line shadowing-state
-    uint256[44] private __gap;
+    uint256[43] private __gap;
 
     /// @notice ADR-0073 K3: şema başına en çok sürüm özeti (ilk özet hariç); saha verisiyle gözden geçirilir.
     uint256 public constant MAX_CONTENT_HASHES = 32;
@@ -101,11 +105,20 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
         s.validFrom = _validFrom(from);
         // Kip dışında ilk ACTIVE penceresi başlangıçsızdır (since = 0); göç kipinde listedeki ilk durum anı = validFrom
         // (blok zamanından ileri olamaz).
-        uint64 since = isMigrationOpen() && rec.validFrom != 0 ? _effectiveDate(rec.validFrom) : 0;
+        // Kontrat denetimi 2026-11-11: başlangıç ileri tarihliyse durum anı blok zamanıdır (hiçbir durum anı ileri olamaz, CE1;
+        // eski hâl `DateInFuture` ile kaydı reddediyordu). Kabul yine `validFrom`'dan başlar (`isSchemaAcceptableAt`).
+        uint64 since = 0;
+        if (isMigrationOpen() && rec.validFrom != 0) {
+            since = _effectiveDate(rec.validFrom > block.timestamp ? uint64(block.timestamp) : rec.validFrom);
+        }
         _history[schemaId].record(since, uint8(SchemaStatus.ACTIVE));
 
-        if (rec.tier == SchemaTier.NETWORK) _networkSchemas.push(schemaId);
-        else _byState[rec.stateCode].push(schemaId);
+        if (rec.tier == SchemaTier.NETWORK) {
+            _networkSchemas.push(schemaId);
+            if (msg.sender != governance) _replayed[schemaId] = true; // yazan göç yürütücüsü (`_requireNetworkWriter`)
+        } else {
+            _byState[rec.stateCode].push(schemaId);
+        }
 
         emit SchemaRegistered(schemaId, rec.vctURI, rec.tier, rec.stateCode);
     }
@@ -133,6 +146,12 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
     function _deprecate(bytes32 schemaId, bytes32 supersededBy, uint64 at) private {
         SchemaRecord storage s = _require(schemaId);
         _requireWriteAuth(s, false);
+        // Kontrat denetimi 2026-11-11: göç yürütücüsü yalnız kendi yeniden oynattığı ağ şemasını deprecate eder. Aksi hâlde
+        // Governance'ın kaydettiği bir ağ şemasını geri tarihle (`at` = 1) DEPRECATED yapıp o şemayla verilmiş bütün belgeleri
+        // C2'de düşürebilirdi; deprecate geri alınamaz. İptalin yürütücüden alınmasıyla aynı gerekçe (güvenlik turu 2026-11-04).
+        if (s.tier == SchemaTier.NETWORK && msg.sender != governance && !_replayed[schemaId]) {
+            revert NetworkTierRequiresGovernance();
+        }
         if (s.status != SchemaStatus.ACTIVE) revert NotActive(schemaId);
         if (supersededBy != bytes32(0)) {
             if (supersededBy == schemaId) revert SelfSuccession();
@@ -223,6 +242,10 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
 
     /// @inheritdoc ISchemaRegistry
     function isSchemaAcceptableAt(bytes32 schemaId, uint64 iat) external view returns (bool) {
+        // Kontrat denetimi 2026-11-11: şema başlangıcından önce verilmiş belge kabul edilmez. Kip dışında ilk ACTIVE penceresi
+        // başlangıçsızdır (since = 0); `validFrom` olmadan ileri tarihli şema bugünden kabul görürdü (kurumdaki C1 ile aynı kural).
+        // Kayıtsız şemada `validFrom` = 0 ve geçmiş boştur → false.
+        if (iat < _schemas[schemaId].validFrom) return false;
         StatusHistory.Change[] storage h = _history[schemaId];
         if (h.ever(uint8(SchemaStatus.REVOKED))) return false;
         return h.statusAt(iat) == uint8(SchemaStatus.ACTIVE);

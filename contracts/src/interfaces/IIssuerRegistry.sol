@@ -103,6 +103,8 @@ interface IIssuerRegistry is ITamgaErrors {
     function setIssuerProfile(bytes32 issuerId, IssuerProfile calldata profile) external;
     function issuerProfileOf(bytes32 issuerId) external view returns (IssuerProfile memory);
 
+    /// @notice Yetki yalnız `SchemaRegistry`'de kayıtlı şemaya verilir (`UnknownSchema`; kontrat denetimi 2026-11-11). Geri alma
+    ///         kayıt aramaz.
     function setSchemaAuthorization(bytes32 issuerId, bytes32 schemaId, bool allowed) external;
     function isAuthorizedForSchema(bytes32 issuerId, bytes32 schemaId) external view returns (bool);
     function authorizedSchemasOf(bytes32 issuerId) external view returns (bytes32[] memory);

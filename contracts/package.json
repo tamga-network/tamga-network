@@ -19,6 +19,7 @@
     "abi:export": "node scripts/export-abi.mjs",
     "check:uups": "node scripts/check-upgrade-safety.mjs",
     "check:storage": "node scripts/check-storage-layout.mjs",
+    "check:size": "node scripts/check-code-size.mjs",
     "storage:update": "node scripts/check-storage-layout.mjs --update",
     "slither": "node scripts/slither.mjs",
     "clean": "hardhat clean"

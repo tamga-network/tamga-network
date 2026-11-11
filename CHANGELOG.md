@@ -36,6 +36,40 @@ A code review of the changes above found the following; the fixes are part of 0.
   past is now written as the execution time; a later date is kept, and the rule is unchanged for delegates and the migration
   executor. Source and tests only: an already deployed registry needs a protocol upgrade vote. Until then give `validFrom` as
   `0` or a date after the voting period.
+- **contracts — an upgrade proposal pins the code it was opened with.** `proposeProtocolUpgrade` stored only the address of
+  the new implementation. The chain runs with Shanghai rules, where `SELFDESTRUCT` removes code, so an implementation deployed
+  with `CREATE2` could be destroyed during the 7-day delay and redeployed at the same address with different code. The proposal
+  now stores the implementation's code hash and `execute` refuses a different code (`UpgradeImplementationChanged`), both when
+  queueing and when applying. Storage: one member appended to the upgrade queue struct (a mapping value; `__gap` unchanged).
+- **contracts — Governance has room again and the build checks it.** The deployed code was 24,530 of 24,576 bytes (EIP-170),
+  which left no room for a fix. The validator check and repeated proposal checks moved into shared internal functions: 22,881
+  bytes with everything in this list included; external interface and storage layout unchanged. `npm run contracts:check` now
+  fails when any contract has less than 512 bytes of headroom.
+- **contracts — proposal payloads can be read from the chain.** New views on Governance: `getSchemaPayload` (network schema
+  proposal), `upgradePayloadOf` (initialiser selector and pinned code hash) and `removalReasonOf` (reason digest of a removal
+  proposal), so that a voter can read what the vote will execute.
+- **contracts — `Governance.initialize` refuses the zero state code.** A founder with code `0x0000` was accepted as an active
+  member.
+- **contracts — the migration executor can deprecate only the network schemas it wrote.** During a migration window the
+  executor could deprecate any network schema with a back-dated time (`deprecateSchemaAt(…, 1)`), which rejects every credential
+  issued with that schema and cannot be undone. A network schema registered by Governance can now be deprecated only by
+  Governance; replayed schemas are unchanged (ADR-0073 K1). Same reasoning as the 2026-11-04 change for revocation. Storage:
+  one mapping in `SchemaRegistry` (`__gap` 44 → 43).
+- **contracts — the schema step of C2 honours `validFrom`; an authorisation needs a registered schema.**
+  `isSchemaAcceptableAt` ignored `validFrom`, so a schema registered with a future start accepted credentials from the day of
+  registration; it now requires `iat ≥ validFrom` (the chain indexer applies the same rule). `setSchemaAuthorization(…, true)`
+  is refused with `UnknownSchema` when the schema is not registered. The replay plan skips an authorisation whose schema is not
+  in the archive and moves a window that opens before the schema's first status to that time, with a warning.
+- **contracts — removing an anchor writer cannot take the writer count below the threshold.** `setAnchorer(…, false)` is
+  refused with `InvalidThreshold` when it would leave fewer writers than `requiredConfirmations` (no anchor could be confirmed
+  after that). Rotate a key by adding the new writer first, or lower the threshold first.
+- **contracts — a schema with a future `validFrom` can be registered while a migration window is open.** It failed with
+  `DateInFuture`, so a future-dated network schema proposal could not be executed during the window. The start is written as
+  given and the first status time is the block time.
+
+Known and open: in a network with two active members, one member's `withdraw` leaves governance unable to execute anything
+(minimum of 2 votes), permanently. The rule change touches closed decisions and is proposed in ADR-0076 (not accepted yet);
+until then, admit a third member before a member of a two-member network withdraws.
 
 ### Correction to the 0.8.2 notes
 
