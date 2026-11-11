@@ -42,8 +42,9 @@ export async function fetchListTrustSource(
     /**
      * 0.8.3: `stateCode`'a ek olarak yüklenecek ülke listeleri (ör. `["AZ", "KZ"]`). Ülkeler arası kurallar (aynı `dns_name`'in
      * iki listede görünmesi — ADR-0075) yalnız yüklü listeler arasında görülür; verilmezse TEK liste yüklenir ve bu kurallar
-     * devreye giremez. Listelenen her ülkenin LOTL'da ACTIVE bir listesi olmalı ve hepsi doğrulanmalıdır (biri eksikse yükleme
-     * reddedilir).
+     * devreye giremez. Listelenen her ülkenin LOTL'da ACTIVE bir listesi olmalı ve hepsi doğrulanmalıdır; biri eksikse yükleme
+     * `TrustListError` ile reddedilir: kod iki harfli değilse, ülke LOTL'da yoksa ya da listesi ACTIVE değilse (askıda), liste
+     * alınamıyorsa. Sessizce daha az listeyle dönülmez — çağıran, kuralın işlediğini sanmasın.
      */
     additionalStates?: string[];
     now?: Date;
@@ -74,9 +75,13 @@ export async function fetchListTrustSource(
     if (r.status !== 200) throw new TrustListError(`trusted list could not be fetched: ${path} (${r.status})`);
     return (await r.text()).trim();
   };
-  const extra = [...new Set((opts.additionalStates ?? []).map((s) => s.toUpperCase()))].filter(
-    (s) => /^[A-Z]{2}$/.test(s) && s !== cc,
-  );
+  const requested = [...new Set((opts.additionalStates ?? []).map((s) => String(s).toUpperCase()))];
+  const malformed = requested.filter((s) => !/^[A-Z]{2}$/.test(s));
+  if (malformed.length)
+    throw new TrustListError(
+      `additionalStates: not a two-letter state code: ${malformed.map((s) => `"${s}"`).join(", ")}`,
+    );
+  const extra = requested.filter((s) => s !== cc);
   const [lotlJws, tlJws, anchorsJsonl, ...extraJws] = await Promise.all([
     get("lotl.jws"),
     get(`tl-${cc.toLowerCase()}.jws`).catch(() => ""),
@@ -129,6 +134,11 @@ export async function fetchListTrustSource(
   const tl = store.national.get(cc)?.list;
   if (!tl) throw new TrustListError(`no active ${cc} list in the lotl`);
   if (!report.healthy) throw new TrustListError(`trusted list stale (${report.warnings.join("; ")})`);
+  // İstenen her ek ülke gerçekten yüklenmiş olmalı: LOTL'da yoksa ya da listesi ACTIVE değilse yükleyici onu atlar ve `healthy`
+  // kalır (alınamayan liste yukarıda yakalanır). Sessizce daha az listeyle dönmek, ülkeler arası kuralı (ADR-0075) habersiz kapatır.
+  const missing = extra.filter((s) => !store.national.has(s));
+  if (missing.length)
+    throw new TrustListError(`additionalStates: no active ${missing.join(", ")} list in the lotl — not loaded`);
   const key = `${base}|${cc}`;
   const prev = seen.get(key);
   if (prev && (store.lotl.version < prev.lotl || tl.version < prev.tl))

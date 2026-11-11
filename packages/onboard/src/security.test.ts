@@ -3,10 +3,11 @@
  * (O6: Windows izni, bulut eşitleme klasörü, parolasız üretim), MCP parola değişkeni (D3), pin (D4), kayıt sertifikası imzası (D5).
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { webcrypto } from "node:crypto";
 import * as x509 from "@peculiar/x509";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -29,6 +30,7 @@ import {
 } from "./index.js";
 import { createServer } from "./mcp.js";
 
+const ROOT = resolve(import.meta.dirname, "../../..");
 const tmp = mkdtempSync(join(tmpdir(), "tamga-onboard-sec-"));
 afterAll(() => rmSync(tmp, { recursive: true, force: true }));
 
@@ -193,6 +195,79 @@ describe("O6: özel anahtar dosyası", () => {
     for (const bad of ["issuer-x.key.json", "issuer-x.pem.json", "node-key.json", "key.json"])
       expect(() => writeReport(join(dir, bad), {}), bad).toThrow(/anahtar/);
     expect(readFileSync(key, "utf8")).toBe("KEY");
+  });
+
+  it("--report: aracın kendi önceki raporu yenilenir (ikinci çalıştırma düşmez); başka JSON ve sembolik bağ ezilmez", () => {
+    const dir = join(tmp, "report-again");
+    mkdirSync(dir);
+    const report = (n: number) => ({ tool: "@tamga-network/onboard@0.0.0", generated_at: `t${n}`, rows: [{ n }] });
+    const p = join(dir, "rapor.json");
+    writeReport(p, report(1));
+    writeReport(p, report(2)); // aynı komut ikinci kez
+    expect(JSON.parse(readFileSync(p, "utf8"))).toEqual(report(2));
+    expect(readdirSync(dir)).toEqual(["rapor.json"]); // geçici dosya kalmaz
+    // rapor olmayan JSON'lar (başvuru, bildirim, yapılandırma) korunur
+    for (const [name, body] of [
+      ["application.json", JSON.stringify({ slug: "x", rows: [] })],
+      ["other-tool.json", JSON.stringify({ tool: "başka-araç@1", rows: [] })],
+      ["no-rows.json", JSON.stringify({ tool: "@tamga-network/onboard@0.0.0" })],
+      ["bozuk.json", "{"],
+    ] as const) {
+      const other = join(dir, name);
+      writeFileSync(other, body);
+      expect(() => writeReport(other, report(3)), name).toThrow(/zaten var.*üzerine yazılmaz/);
+      expect(readFileSync(other, "utf8")).toBe(body);
+    }
+    // sembolik bağ: hedefi eski bir rapor olsa bile izlenmez, hedef değişmez
+    const target = join(dir, "hedef.json");
+    writeFileSync(target, JSON.stringify(report(4)));
+    const link = join(dir, "bag.json");
+    let linked = true;
+    try {
+      symlinkSync(target, link);
+    } catch {
+      linked = false; // Windows'ta yetkisiz kullanıcı bağ kuramaz
+    }
+    if (linked) {
+      expect(() => writeReport(link, report(5))).toThrow(/üzerine yazılmaz/);
+      expect(JSON.parse(readFileSync(target, "utf8"))).toEqual(report(4));
+    }
+  });
+
+  it("check --report ikinci çalıştırmada da sonuç tablosunu basar; yazılamayan raporda tablo yine basılır", () => {
+    const dir = join(tmp, "cli-report");
+    mkdirSync(dir);
+    const run = (file: string) =>
+      spawnSync(
+        process.execPath,
+        [
+          resolve(ROOT, "node_modules/tsx/dist/cli.mjs"),
+          resolve(ROOT, "packages/onboard/src/cli.ts"),
+          "check",
+          "--listing-only",
+          "--offline",
+          "--slug",
+          "example-college",
+          "--report",
+          file,
+        ],
+        { cwd: dir, encoding: "utf8" },
+      );
+    const first = run("rapor.json");
+    expect(first.stderr).not.toMatch(/hata:/);
+    expect(first.stdout).toMatch(/katılım denetimi — example-college/);
+    const second = run("rapor.json"); // eski hâl: EEXIST ile düşüyor, tablo basılmıyordu
+    expect(second.status).toBe(first.status);
+    expect(second.stderr).not.toMatch(/hata:/);
+    expect(second.stdout).toMatch(/katılım denetimi — example-college/);
+    expect(JSON.parse(readFileSync(join(dir, "rapor.json"), "utf8")).tool).toMatch(/^@tamga-network\/onboard@/);
+    // hedef başka bir dosya: tablo ÖNCE basılır, sonra açık hata
+    writeFileSync(join(dir, "baska.json"), "{}");
+    const third = run("baska.json");
+    expect(third.stdout).toMatch(/katılım denetimi — example-college/);
+    expect(third.stderr).toMatch(/hata: rapor yazılmadı: .*zaten var/);
+    expect(third.status).toBe(1);
+    expect(readFileSync(join(dir, "baska.json"), "utf8")).toBe("{}");
   });
 
   it.runIf(process.platform === "win32")("Windows: dosya önce boş açılır, izin daraltılır, sonra yazılır", () => {

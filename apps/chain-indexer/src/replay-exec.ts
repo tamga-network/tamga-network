@@ -9,7 +9,7 @@
  *     ve gereken öneri raporlanır (gerçek ağda oy üyelerindir).
  * İlk hatada durur (sonraki işlemler sıraya bağlı olabilir); yeniden çalıştırma kaldığı yerden devam eder.
  */
-import { type Contract, type ContractTransactionResponse, type Signer } from "ethers";
+import { type Contract, type ContractTransactionResponse, type Signer, type TopicFilter } from "ethers";
 
 import {
   CAStatus,
@@ -136,23 +136,51 @@ export async function openMigrationWindows(
 }
 
 /**
- * Bir olay süzgecinin bütün kayıtları, en çok `LOG_CHUNK` blokluk dilimlerle (düğümlerin `eth_getLogs` aralık sınırı; aralıksız
- * `queryFilter` uzun zincirde reddedilir ya da zaman aşımına uğrar — kontrol 2026-11-10). `fromBlock`: kontratların dağıtım bloğu
- * biliniyorsa oradan (varsayılan 0).
+ * Yürütme boyunca olay sayımı belleği. Sıra numaralı her plan işlemi "bu olaydan zincirde kaç tane var" diye sorar; her soruda
+ * zinciri baştan taramak büyük planda işlem sayısı × (zincir boyu / dilim) istek demekti (kod incelemesi 2026-11-11). Burada
+ * (kontrat, olay) başına kayıtlar BİR KEZ toplanır; sonraki sorular yalnız o andan sonra eklenen blokları okur (yürütmenin kendi
+ * yazdıkları dahil) ve süzgeç (indeksli alanlar) bellekte uygulanır — cevap, her seferinde baştan taramakla aynıdır.
+ * İstekler en çok `chunk` blokluktur (düğümlerin `eth_getLogs` aralık sınırı; aralıksız istek uzun zincirde reddedilir ya da zaman
+ * aşımına uğrar — kontrol 2026-11-10). `fromBlock`: kontratların dağıtım bloğu biliniyorsa oradan (varsayılan 0).
  */
-export async function queryFilterPaged(k: Contract, filter: unknown, fromBlock = 0, chunk = LOG_CHUNK) {
-  const provider = k.runner?.provider;
-  if (!provider) throw new Error("replay: kontratın sağlayıcısı yok");
-  const head = await provider.getBlockNumber();
-  const out: Awaited<ReturnType<Contract["queryFilter"]>> = [];
-  for (let lo = fromBlock; lo <= head; lo += chunk)
-    out.push(...(await k.queryFilter(filter as never, lo, Math.min(lo + chunk - 1, head))));
-  return out;
+export class EventCounts {
+  /** `<adres>|<olay imzası özeti>` → okunan son bloğun bir fazlası + o olayın kayıtlarının konu (topic) dizileri */
+  private readonly seen = new Map<string, { next: number; topics: string[][] }>();
+  constructor(
+    private readonly fromBlock = 0,
+    private readonly chunk = LOG_CHUNK,
+  ) {}
+
+  /** `filter`: `k.filters.Olay(...indeksli alanlar)`. Dönen: süzgece uyan olay sayısı (zincirin o anki son bloğuna kadar). */
+  async count(k: Contract, filter: unknown): Promise<number> {
+    const provider = k.runner?.provider;
+    if (!provider) throw new Error("replay: kontratın sağlayıcısı yok");
+    const want = (await (filter as { getTopicFilter(): Promise<TopicFilter> }).getTopicFilter()).map((t) =>
+      Array.isArray(t) ? t.map((x) => x.toLowerCase()) : (t?.toLowerCase() ?? null),
+    );
+    const topic0 = want[0];
+    if (typeof topic0 !== "string") throw new Error("replay: olay süzgecinin imza özeti yok");
+    const address = await k.getAddress();
+    const key = `${address.toLowerCase()}|${topic0}`;
+    let e = this.seen.get(key);
+    if (!e) this.seen.set(key, (e = { next: this.fromBlock, topics: [] }));
+    const head = await provider.getBlockNumber();
+    const step = Math.max(1, Math.floor(this.chunk));
+    for (let lo = e.next; lo <= head; lo += step) {
+      const hi = Math.min(lo + step - 1, head);
+      const logs = await provider.getLogs({ address, topics: [topic0], fromBlock: lo, toBlock: hi });
+      for (const l of logs) e.topics.push(l.topics.map((t) => t.toLowerCase()));
+      e.next = hi + 1; // dilim dilim ilerler: yarıda kesilen tarama okunan dilimi yinelemez
+    }
+    return e.topics.filter((got) =>
+      want.every((w, i) => w === null || (Array.isArray(w) ? w.includes(got[i]) : w === got[i])),
+    ).length;
+  }
 }
 
 /** Son-hâl yazımları: olay sayısı (ya da kaydın yazım sayacı) planın sıra numarasına ulaştıysa yazılmış (`ReplayOp.n`). */
-async function writes(c: TrustContracts, o: ReplayOp, fromBlock: number): Promise<number | null> {
-  const count = async (k: Contract, f: unknown) => (await queryFilterPaged(k, f, fromBlock)).length;
+async function writes(c: TrustContracts, o: ReplayOp, events: EventCounts): Promise<number | null> {
+  const count = (k: Contract, f: unknown) => events.count(k, f);
   const rp = c.RelyingPartyRegistry;
   switch (o.op) {
     case "issuerProfile":
@@ -183,14 +211,14 @@ async function applied(
   c: TrustContracts,
   o: ReplayOp,
   stateSigner: (cc: string) => Promise<string>,
-  fromBlock = 0,
+  events: EventCounts,
 ): Promise<boolean> {
   if (o.n !== undefined) {
     if (o.op === "rpScope" || o.op === "rpGroup" || o.op === "rpProfile") {
       const period = ((await c.RelyingPartyRegistry.registrationPeriodsOf(o.rpId)) as unknown[]).length - 1;
       if (o.period < period) return true; // eski dönem: artık yazılamaz, yeni dönem devralmaz (RO3)
     }
-    const w = await writes(c, o, fromBlock);
+    const w = await writes(c, o, events);
     if (w !== null) return w >= o.n;
   }
   switch (o.op) {
@@ -199,10 +227,7 @@ async function applied(
     case "rootCAStatus":
       return hasHistory(await c.RootCARegistry.rootCAStatusHistoryOf(o.caId), o.at, CAStatus[o.status]);
     case "rootCARollover":
-      return (
-        (await queryFilterPaged(c.RootCARegistry, c.RootCARegistry.filters.RootCARollingOver(o.caId), fromBlock))
-          .length > 0
-      );
+      return (await events.count(c.RootCARegistry, c.RootCARegistry.filters.RootCARollingOver(o.caId))) > 0;
     case "registerSchema":
       return Boolean(await c.SchemaRegistry.exists(o.schemaId));
     case "addSchemaHash":
@@ -508,6 +533,8 @@ export async function executeReplay(
     onProgress?: (o: ReplayOp, written: boolean) => void;
     /** olay sayımlarının başladığı blok (kontratların dağıtım bloğu; varsayılan 0) */
     logsFromBlock?: number;
+    /** olay isteği dilimi (blok; varsayılan `LOG_CHUNK`) */
+    logChunk?: number;
   } = {},
 ): Promise<ReplayReport> {
   const problems = await migrationProblems(c, plan.hash, await s.executor.getAddress());
@@ -517,10 +544,11 @@ export async function executeReplay(
     if (!stateAddr.has(cc)) stateAddr.set(cc, await s.state(cc).getAddress());
     return stateAddr.get(cc)!;
   };
+  const events = new EventCounts(opts.logsFromBlock ?? 0, opts.logChunk);
   let written = 0;
   let skipped = 0;
   for (const o of plan.ops) {
-    if (await applied(c, o, stateSigner, opts.logsFromBlock ?? 0)) {
+    if (await applied(c, o, stateSigner, events)) {
       skipped++;
       opts.onProgress?.(o, false);
       continue;

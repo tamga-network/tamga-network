@@ -39,6 +39,8 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
   lists (ADR-0075) — the same answer as `relyingPartyByDnsName`. The rule is inside the source; callers need no extra check.
 - `fetchListTrustSource(..., { additionalStates: ["AZ", "KZ"] })` loads further national lists besides `stateCode`. The
   cross-list rules only see the lists that are loaded: a client that loads one list cannot detect an ambiguity with another.
+- `fetchListTrustSource` throws a `TrustListError` when an `additionalStates` entry cannot be loaded: the state is not in the
+  LOTL, its list is not ACTIVE, or the code is not two letters. It no longer returns with fewer lists than requested.
 
 ## New in 0.8.1
 

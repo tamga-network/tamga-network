@@ -23,6 +23,8 @@ can run the steps.
 - `--report <file>` never overwrites an existing file, requires a `.json` name and refuses a name that looks like a key or
   certificate file.
 - On Windows `icacls` is called by its full path when a private key file's permissions are narrowed or checked.
+- `check --report` / `node check --report` print the result first and refresh a report file that this tool wrote earlier, so
+  the same command can be run again. Any other existing file is still never overwritten.
 
 ## New in 0.8.2
 

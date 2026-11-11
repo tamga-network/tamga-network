@@ -12,7 +12,7 @@
  */
 import { createHash, createPrivateKey, createPublicKey, webcrypto } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve, sep } from "node:path";
 import * as x509 from "@peculiar/x509";
 import { within } from "./paths.js";
@@ -197,9 +197,24 @@ export function icaclsPath(env: NodeJS.ProcessEnv = process.env): string {
   return join(root, "System32", "icacls.exe");
 }
 
+/** Hedef, bu aracın daha önce yazdığı bir rapor mu: sıradan dosya (sembolik bağ değil), `tool` + `rows` taşıyan JSON. */
+function isOwnReport(path: string): boolean {
+  try {
+    const st = lstatSync(path);
+    if (!st.isFile() || st.size > 16 * 1024 * 1024) return false;
+    const j = JSON.parse(readFileSync(path, "utf8")) as { tool?: unknown; rows?: unknown } | null;
+    return typeof j?.tool === "string" && j.tool.startsWith("@tamga-network/onboard@") && Array.isArray(j.rows);
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Rapor dosyası (`--report`) yazımı: var olan dosyanın üzerine YAZILMAZ ve hedef anahtar / sertifika gibi görünen bir dosya olamaz
- * (yanlış yazılmış bir yol özel anahtarı ya da CSR'ı rapor JSON'uyla ezmesin — kontrol 2026-11-10). Uzantı `.json` olmalıdır.
+ * Rapor dosyası (`--report`) yazımı: hedef anahtar / sertifika gibi görünen bir dosya olamaz ve uzantı `.json` olmalıdır; var olan
+ * BAŞKA bir dosyanın üzerine YAZILMAZ (yanlış yazılmış bir yol özel anahtarı, CSR'ı ya da başka bir JSON dosyasını rapor JSON'uyla
+ * ezmesin — kontrol 2026-11-10). Tek istisna: hedef bu aracın önceki raporuysa yenilenir — aynı komutun ikinci çalıştırılması
+ * hata vermesin (kod incelemesi 2026-11-11). Yenileme yanına yazıp ad değiştirerek yapılır: sembolik bağ izlenmez (bağ hedefi
+ * rapor sayılmaz; ad değiştirme de bağın gösterdiği dosyaya değil, adın kendisine yazar) ve yarım rapor kalmaz.
  */
 export function writeReport(path: string, report: unknown): void {
   const name = basename(path).toLowerCase();
@@ -209,13 +224,23 @@ export function writeReport(path: string, report: unknown): void {
     /(^|[.-])key([.-]|$)/.test(name)
   )
     throw new Error(`rapor dosyası .json uzantılı olmalı ve anahtar / sertifika adı taşımamalı: ${basename(path)}`);
+  const body = JSON.stringify(report, null, 2) + "\n";
   try {
-    writeFileSync(path, JSON.stringify(report, null, 2) + "\n", { flag: "wx" });
+    writeFileSync(path, body, { flag: "wx" });
+    return;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "EEXIST")
-      throw new Error(
-        `rapor dosyası zaten var, üzerine yazılmaz: ${path} — başka bir ad verin ya da eskisini kendiniz silin`,
-      );
+    if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+  }
+  if (!isOwnReport(path))
+    throw new Error(
+      `rapor yazılmadı: ${path} zaten var ve bu aracın önceki raporu değil, üzerine yazılmaz — başka bir ad verin ya da eskisini kendiniz silin`,
+    );
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, body, { flag: "wx" });
+  try {
+    renameSync(tmp, path);
+  } catch (e) {
+    rmSync(tmp, { force: true });
     throw e;
   }
 }

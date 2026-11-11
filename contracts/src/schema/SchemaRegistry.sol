@@ -92,7 +92,13 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
         s.status = SchemaStatus.ACTIVE;
         // Kontrol 2026-11-10: başlangıç öteki kayıtlarla aynı kuraldan geçer — kip dışında geçmişe çekilemez (`_validFrom`),
         // göç kipinde blok zamanından ileri olamaz (`_effectiveDate`, aşağıda).
-        s.validFrom = _validFrom(rec.validFrom);
+        // Kod incelemesi 2026-11-11: Governance önerisinin yükü oylama boyunca bekler ve yeniden gönderilemez; öneri anında
+        // verilen ya da oylama sürerken geçen başlangıç yürütmeyi kalıcı olarak kilitlemesin diye o hâlde başlangıç yürütme
+        // anıdır (göç penceresinin yürütme anından sayılmasıyla aynı ilke). Kayda yine geçmiş tarih yazılmaz; delege ve göç
+        // yürütücüsü için kural aynen sürer (onlar düzeltip yeniden gönderebilir).
+        uint64 from = rec.validFrom;
+        if (msg.sender == governance && from < block.timestamp && !isMigrationOpen()) from = 0;
+        s.validFrom = _validFrom(from);
         // Kip dışında ilk ACTIVE penceresi başlangıçsızdır (since = 0); göç kipinde listedeki ilk durum anı = validFrom
         // (blok zamanından ileri olamaz).
         uint64 since = isMigrationOpen() && rec.validFrom != 0 ? _effectiveDate(rec.validFrom) : 0;

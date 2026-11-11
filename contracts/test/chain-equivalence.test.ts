@@ -86,6 +86,37 @@ describe("ADR-0073 K6 — zincir–liste eşdeğerliği (yeniden oynatma + indek
     const r3 = await executeReplay(plan, c, s);
     expect(r3.written).to.equal(0);
 
+    // Kod incelemesi 2026-11-11: olay sayımı (kontrat, olay) başına zinciri BİR KEZ tarar — sıra numaralı her işlemde baştan değil.
+    // Küçük dilimle koşulur; hiçbir blok aynı (adres, olay) için iki kez istenmez ve sonuç değişmez.
+    const asked = new Map<string, Array<[number, number]>>();
+    const getLogs = provider.getLogs.bind(provider);
+    provider.getLogs = async (filter: any) => {
+      const key = `${String(filter.address).toLowerCase()}|${filter.topics?.[0]}`;
+      asked.set(key, [...(asked.get(key) ?? []), [Number(filter.fromBlock), Number(filter.toBlock)]]);
+      return getLogs(filter);
+    };
+    const CHUNK = 25;
+    const r4 = await executeReplay(plan, c, s, { logChunk: CHUNK });
+    provider.getLogs = getLogs;
+    expect(r4.written).to.equal(0);
+    expect(r4.skipped).to.equal(plan.ops.length);
+    const chainHead = await provider.getBlockNumber();
+    const counted = plan.ops.filter((o) => o.n !== undefined).length;
+    expect(counted).to.be.greaterThan(asked.size); // aynı olayı soran birden çok işlem var
+    expect(asked.size).to.be.greaterThan(0);
+    let requests = 0;
+    for (const [key, ranges] of asked) {
+      requests += ranges.length;
+      let next = 0;
+      for (const [lo, hi] of ranges) {
+        expect(lo, key).to.equal(next); // aralıklar ardışık: örtüşme ve yeniden tarama yok
+        expect(hi - lo, key).to.be.lessThan(CHUNK);
+        next = hi + 1;
+      }
+      expect(next - 1, key).to.equal(chainHead);
+    }
+    expect(requests).to.equal(asked.size * Math.ceil((chainHead + 1) / CHUNK));
+
     // indeksleyici + iki kaynak
     const indexer = new ChainIndexer(provider, c);
     const block = await indexer.sync();

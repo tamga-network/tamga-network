@@ -12,7 +12,8 @@
  *   - Yalnız DURUM DEĞİŞTİREN olaylar izlenir. Sabitleme olayları (`PeriodChangeStaged`, `RecordStaged`) herkesin çağırabildiği
  *     fonksiyonlardan gelir ve kayıt yazmaz; bunlara tepki vermek indeksi olmayan kaydı okumaya ve durmaya götürüyordu (kontrol
  *     2026-11-10).
- *   - Tek bir kaydın okuması kontratta geri dönerse (revert) imleç DURMAZ: kayıt `errors`'a yazılır, sonraki `sync` yeniden dener;
+ *   - Tek bir kaydın okuması kontratta geri dönerse (revert) imleç DURMAZ: kayıt `errors`'a yazılır, sonraki `sync` yeniden dener
+ *     (yeni blok olmasa da);
  *     `errors` boş olmadıkça `ChainTrustSource` sağlıksızdır (UNKNOWN). Ağ / düğüm hatası ise yükselir (imleç ilerlemez).
  *   - Kaldığı yerden sürdürülen dizin başka bir zincire (chainId, kontrat adresleri, son bloğun özeti) ya da daha kısa bir zincire
  *     bağlanırsa `sync` reddeder.
@@ -217,6 +218,16 @@ const emptyTouched = (): Touched => ({
   rollover: new Map(),
 });
 
+/** Yeniden denenecek kayıtlar: okunamayanların (`errors`) işaretlendiği boş değişiklik kümesi. */
+function touchedBy(errors: IxError[]): Touched {
+  const t = emptyTouched();
+  for (const e of errors) {
+    const set = (t as unknown as Record<string, unknown>)[e.set];
+    if (set instanceof Set) set.add(e.id);
+  }
+  return t;
+}
+
 export class ChainIndexer {
   readonly index: ChainIndex;
   constructor(
@@ -225,6 +236,8 @@ export class ChainIndexer {
     index?: ChainIndex,
   ) {
     this.index = index ?? emptyIndex();
+    // `errors` alanından önce yazılmış (eski biçim) dizin: eksik alan boş listedir
+    this.index.errors ??= [];
   }
 
   /**
@@ -240,17 +253,18 @@ export class ChainIndexer {
     await this.assertSameChain(chainId, addresses, chainHead);
     const head = toBlock ?? chainHead;
     const from = this.index.meta.block + 1;
-    if (head < from) return this.index.meta.block;
+    if (head < from) {
+      // yeni blok yok: bekleyen hatalar yine yeniden denenir — dizinin sabitlendiği blokta (imleç ilerlemez)
+      if (this.index.errors.length > 0 && this.index.meta.block >= 0)
+        await this.read(touchedBy(this.index.errors), this.index.meta.block);
+      return this.index.meta.block;
+    }
     const step = Math.max(1, Math.floor(chunk));
     // önceki koşuda okunamayan kayıtlar ilk dilimde yeniden denenir
     let retry = this.index.errors;
     for (let lo = from; lo <= head; lo += step) {
       const hi = Math.min(lo + step - 1, head);
-      const t = emptyTouched();
-      for (const e of retry) {
-        const set = (t as unknown as Record<string, unknown>)[e.set];
-        if (set instanceof Set) set.add(e.id);
-      }
+      const t = touchedBy(retry);
       retry = [];
       for (const name of REGISTRIES) for (const ev of await this.events(this.c[name], lo, hi)) this.mark(name, ev, t);
       await this.read(t, head);

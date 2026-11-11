@@ -103,4 +103,41 @@ describe("ADR-0075 — ad belirsizliği gerçek yükleyiciyle (iki imzalı liste
       }),
     ).rejects.toThrow(/stale|verilmedi/);
   });
+
+  // Kod incelemesi 2026-11-11: eski hâl bu üç durumda ek ülkeyi sessizce atlıyor, tek listeyle sağlıklı dönüyordu — çağıran
+  // ülkeler arası ad kuralının (ADR-0075) işlediğini sanıyordu.
+  it("additionalStates: LOTL'da olmayan, askıdaki ya da biçimi bozuk ülke kodu açık hatadır (sessizce atlanmaz)", async () => {
+    const { f, http } = await lists();
+    const load = (additionalStates: string[], get = http) =>
+      fetchListTrustSource(BASE, get, {
+        rootFingerprints: f.archive.rootFingerprints,
+        verifyJws,
+        stateCode: "TR",
+        additionalStates,
+        now: f.now,
+        versionMemory: "none",
+      });
+    // (a) LOTL'da hiç olmayan ülke
+    await expect(load(["XX"])).rejects.toThrow(/additionalStates: no active XX list/);
+    await expect(load(["KZ", "XX"])).rejects.toThrow(/no active XX list/);
+    // (b) LOTL'da var ama listesi ACTIVE değil (askıda): liste dosyası yerinde dursa da yüklenmez
+    const lotl = decodeJwt(f.archive.lotl.at(-1)!) as unknown as {
+      national_lists: Array<{ state_code: string; status: string }>;
+    };
+    expect(lotl.national_lists.some((p) => p.state_code === "KZ" && p.status === "ACTIVE")).toBe(true);
+    const suspended = await f.sign({
+      ...lotl,
+      national_lists: lotl.national_lists.map((p) => (p.state_code === "KZ" ? { ...p, status: "SUSPENDED" } : p)),
+    });
+    const withSuspended = async (url: string) =>
+      url.endsWith("lotl.jws") ? { status: 200, text: async () => suspended } : http(url);
+    await expect(load(["KZ"], withSuspended)).rejects.toThrow(/additionalStates: no active KZ list/);
+    // aynı LOTL ile ek ülke istenmeyince yükleme geçer (hata istenen ek ülkeden)
+    expect([...(await load([], withSuspended)).store.national.keys()]).toEqual(["TR"]);
+    // (c) biçimi bozuk kod
+    for (const bad of ["KAZ", "K", "", "K1", "kz "])
+      await expect(load([bad]), JSON.stringify(bad)).rejects.toThrow(/additionalStates: not a two-letter state code/);
+    // küçük harf ve ana ülkenin yinelenmesi geçerli
+    expect([...(await load(["kz", "tr", "KZ"])).store.national.keys()].sort()).toEqual(["KZ", "TR"]);
+  });
 });

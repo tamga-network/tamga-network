@@ -1128,6 +1128,10 @@ function proposeMigrationClose(address registry) external;
 - **Geçerlilik başlangıcı:** kip dışında kurum ve kök CA `validFrom`'u geçmişe çekilemez (0 = blok zamanı; gelecek serbest;
   `PastDateOutsideMigration`); `validUntil` etkin başlangıçla karşılaştırılır. Kip dışında kaydedilen kurumun ilk ACTIVE penceresi
   başlangıçsız olduğundan geçmiş `validFrom` kayıttan önceki belgeleri kabul ettirirdi (güvenlik turu 2026-11-04).
+  Şema `validFrom`'u da aynı kuraldan geçer (kontrol 2026-11-10). Tek ayrım Governance'ın yürüttüğü ağ şeması önerisidir
+  (`proposeNetworkSchema`): yük oylama boyunca bekler ve yeniden gönderilemez, bu yüzden yürütme anında geçmişte kalmış
+  `validFrom` reddedilmez, başlangıç yürütme anı (blok zamanı) olarak yazılır — kayda yine geçmiş tarih girmez. Hâlâ ilerideki
+  tarih aynen yazılır; delege ve göç yürütücüsü için kural değişmez (kod incelemesi 2026-11-11).
 - **Kota:** kip açıkken §12.2'deki kotalar uygulanmaz (CE1). Güvenlik turunun "istisna yalnız göç yürütücüsüne" önerisi
   uygulanmadı: ulusal kayıtları yeniden oynatan devlet delegeleridir (K1) ve CE1 kotayı bütün kip için kaldırır; daraltma ADR ister.
 - **Ağ düzeyi yazım:** kip açıkken ağ şemasını Governance'ın yanında açılış önerisinin `executor`'u (tek göç yürütücüsü) yazar:

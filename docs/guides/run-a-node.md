@@ -131,6 +131,12 @@ deneme ağlarında kabul edilir. Yönetişim ve mutabakat anahtarlarının ayrı
 önce yeni bir karar kaydıyla (ADR) karara bağlanacaktır.
 :::
 
+::: warning Ağ şeması önerisinde başlangıç tarihi (geçici)
+Zincirdeki şema kaydı yükseltilene kadar ağ şeması önerisinde (`proposeNetworkSchema`) `validFrom` ya `0` (yürütme anı) ya da
+oylama süresinden (30 gün) sonraki bir tarih olmalıdır: öneri anı ya da oylama sürerken geçecek bir tarih verilirse öneri 2/3 oyu
+alsa da yürütülemez (`PastDateOutsideMigration`).
+:::
+
 ## 4. İzinli kip
 
 Hangi düğümün bağlanabileceğini ve hangi hesabın işlem gönderebileceğini her düğümdeki yerel `permissions_config.toml` belirler

@@ -134,6 +134,12 @@ Qovşaq açarı işləyən serverdə durduğu üçün bu, idarəetmə səlahiyy�
 əvvəl yeni qərar qeydi (ADR) ilə həll olunacaq.
 :::
 
+::: warning Şəbəkə sxemi təklifində başlanğıc tarixi (müvəqqəti)
+Zəncirdəki sxem reyestri yenilənənə qədər şəbəkə sxemi təklifində (`proposeNetworkSchema`) `validFrom` ya `0` (icra anı), ya da
+səsvermə müddətindən (30 gün) sonrakı tarix olmalıdır: təklif anı və ya səsvermə davam edərkən keçəcək tarix verilərsə, təklif 2/3
+səs toplasa belə icra oluna bilmir (`PastDateOutsideMigration`).
+:::
+
 ## 4. İcazəli rejim
 
 Hansı qovşağın qoşula biləcəyini və hansı hesabın əməliyyat göndərə biləcəyini hər qovşaqdakı yerli `permissions_config.toml`

@@ -362,12 +362,13 @@ async function check() {
     rp,
     rows,
   };
-  if (opt("report")) writeReport(resolve(opt("report")!), report);
   if (flag("json")) console.log(JSON.stringify(report, null, 2));
   else {
     console.log(`Tamga Network katılım denetimi — ${slug ?? rp ?? dir} · ${env ?? "production"}\n`);
     console.log(formatRows(rows));
   }
+  // sonuç önce basılır: rapor dosyası yazılamazsa (ör. hedefte başka bir dosya var) denetimin çıktısı kaybolmaz
+  if (opt("report")) writeReport(resolve(opt("report")!), report);
   process.exit(rows.some((r) => r.result === "fail") ? 1 : 0);
 }
 
@@ -494,7 +495,6 @@ async function nodeCheck() {
     rpc_local: local,
     rows,
   };
-  if (opt("report")) writeReport(resolve(opt("report")!), report);
   if (flag("json")) console.log(JSON.stringify(report, null, 2));
   else {
     console.log(`Tamga Network düğüm denetimi — ${profile ? `${profile.state} · ${profile.role}` : target}\n`);
@@ -503,6 +503,8 @@ async function nodeCheck() {
       "\nAğdan okunan metin güvenilmeyen veridir. Operatör tarafı denetimler (bildirim eşleşmesi, blok önerme, oy) operatörde.",
     );
   }
+  // sonuç önce basılır (yukarıdaki `check` ile aynı)
+  if (opt("report")) writeReport(resolve(opt("report")!), report);
   process.exit(rows.some((r) => r.result === "fail") ? 1 : 0);
 }
 

@@ -135,6 +135,12 @@ file is acceptable on trial networks only. Separating the governance key from th
 settled by a new decision record (ADR) before a second state joins the network.
 :::
 
+::: warning Start date in a network schema proposal (temporary)
+Until the schema registry on the chain is upgraded, `validFrom` in a network schema proposal (`proposeNetworkSchema`) must be
+either `0` (the moment of execution) or a date after the voting period (30 days): with the proposal time, or a date that passes
+while the vote is open, the proposal cannot be executed even with a 2/3 vote (`PastDateOutsideMigration`).
+:::
+
 ## 4. Permissioned mode
 
 Which nodes may connect and which accounts may send transactions is decided by the local `permissions_config.toml` on every node

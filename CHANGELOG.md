@@ -9,6 +9,34 @@ published on npm as test releases; `0.8.2` is the current one on npm (the API ma
 All ten packages move to 0.8.3 together (patch release) after an independent review of the 0.8.2 code base (2026-11-10). Not
 yet published on npm when this entry was written.
 
+### Fixed after a second review (2026-11-11)
+
+A code review of the changes above found the following; the fixes are part of 0.8.3.
+
+- **onboard — `check --report` / `node check --report` can be run twice.** An earlier change in this release made the report file exclusive-create and wrote
+  it before printing the result, so the second run of the same command failed with `EEXIST` after all checks had run and the
+  result table was never printed. The result is now printed first, and a report file is refreshed when the existing file is an
+  earlier report of this tool (written beside it and renamed, so a symbolic link is never followed). Any other existing file —
+  another JSON document, a symbolic link — is still never overwritten and gives a clear error; the `.json` and key-like-name
+  rules are unchanged.
+- **trust — `fetchListTrustSource` refuses an `additionalStates` entry it cannot load.** A state that is not in the LOTL, whose
+  list is not ACTIVE (suspended), or whose code is not two letters was skipped silently and the load stayed healthy, so the
+  caller believed the cross-country name rule (ADR-0075) was in effect with fewer lists than it asked for. Each case is now a
+  `TrustListError`, as the option's documentation already said.
+- **chain indexer — an index without `errors` resumes; pending errors are retried without a new block.** An index saved before
+  the `errors` field existed failed with `retry is not iterable`; a missing field is now an empty list. Records whose read
+  failed are retried on the next `sync` even when the chain has no new block (at the block the index is pinned to).
+- **chain replay — event counts scan the chain once.** Every numbered plan operation re-read the chain from block 0 in
+  2,000-block slices to count one event; logs are now collected once per contract and event and only new blocks are read after
+  that. The answers are the same.
+- **contracts — a network schema proposal no longer becomes unexecutable when its `validFrom` passes during the vote.** Since
+  the 2026-11-10 change the schema registry refuses a past `validFrom` outside the migration window, while a Governance
+  proposal stores `validFrom` when it is opened and sends it unchanged at execution: a proposal opened with the current time (or
+  a date that passes while the vote is open) could never be executed. When the caller is Governance, a start that is already
+  past is now written as the execution time; a later date is kept, and the rule is unchanged for delegates and the migration
+  executor. Source and tests only: an already deployed registry needs a protocol upgrade vote. Until then give `validFrom` as
+  `0` or a date after the voting period.
+
 ### Correction to the 0.8.2 notes
 
 The 0.8.2 entry said that `wallet-core`'s `fetchRpRecord` "applies the cross-country name rule on the `x509_hash:` path too"
