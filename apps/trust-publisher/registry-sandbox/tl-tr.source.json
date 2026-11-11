@@ -258,7 +258,7 @@
       "status_cert": "issuer-example-events-status",
       "parent_ca": "root-ca",
       "slug": "example-events",
-      "legal_name": "Örnek Etkinlik (TEST)",
+      "legal_name": "Example Event Service (TEST)",
       "category": "EVENTS",
       "assurance": "I2",
       "class": "EAA",
@@ -288,7 +288,7 @@
         "name": "Sandbox example sales system",
         "mode": "TICKET_SALES"
       },
-      "trade_name": "Örnek Etkinlik (TEST)",
+      "trade_name": "Example Event Service (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -317,7 +317,7 @@
       "status_cert": "issuer-example-cinema-status",
       "parent_ca": "root-ca",
       "slug": "example-cinema",
-      "legal_name": "Örnek Sinema (TEST)",
+      "legal_name": "Example Cinema (TEST)",
       "category": "EVENTS",
       "assurance": "I2",
       "class": "EAA",
@@ -347,7 +347,7 @@
         "name": "Sandbox example sales system",
         "mode": "TICKET_SALES"
       },
-      "trade_name": "Örnek Sinema (TEST)",
+      "trade_name": "Example Cinema (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -586,7 +586,7 @@
           "group_id": "example-events-gate",
           "institution_id": "example-events",
           "allowed_policies": ["event-ticket"],
-          "label": "Example Events gates (TEST)",
+          "label": "Example Event Service gates (TEST)",
           "offline_allowed": false,
           "valid_from": "2026-10-03T00:00:00Z"
         },
