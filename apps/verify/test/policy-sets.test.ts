@@ -100,10 +100,10 @@ describe("policiesFor", () => {
   });
   it("sandbox bağlantısı: yayındaysa portal / sandbox örnek sitesi, değilse rehber (TR/EN)", () => {
     expect(sandboxUrl(true, "tr")).toBe("https://sandbox.tamga.network");
-    expect(sandboxUrl(false, "tr")).toBe("https://docs.tamga.network/guides/sandbox");
-    expect(sandboxUrl(false, "en")).toBe("https://docs.tamga.network/en/guides/sandbox");
+    expect(sandboxUrl(false, "tr")).toBe("https://docs.tamga.network/tr/guides/sandbox");
+    expect(sandboxUrl(false, "en")).toBe("https://docs.tamga.network/guides/sandbox");
     expect(sandboxSampleSiteUrl(true, "en")).toBe("https://verify.sandbox.tamga.network/sample-site");
-    expect(sandboxSampleSiteUrl(false, "en")).toBe("https://docs.tamga.network/en/guides/sandbox");
+    expect(sandboxSampleSiteUrl(false, "en")).toBe("https://docs.tamga.network/guides/sandbox");
   });
 });
 
@@ -134,13 +134,13 @@ describe.skipIf(!prodReady)("gerçek ağ kipi (uygulama)", () => {
     expect(en.body).not.toContain('action="/presentations"');
     expect(en.body).not.toMatch(/review-age-over-18|review-site-signup|campus-access/);
     expect(en.body).toContain("https://docs.tamga.network/en/guides/sign-in-with-tamga");
-    expect(en.body).toContain("https://docs.tamga.network/en/guides/sandbox");
+    expect(en.body).toContain("https://docs.tamga.network/guides/sandbox");
     expect(en.body).not.toContain("/sample-site");
     expect(en.body).not.toContain("SANDBOX · TEST"); // gerçek ağda şerit yok
     expect(en.headers["x-robots-tag"]).toBeUndefined(); // ana sayfa dizine girebilir
     const tr = await app.inject({ method: "GET", url: "/", headers: { "accept-language": "tr-TR" } });
     // Sayfalar tek dilde İngilizce (2026-10-27): Türkçe tarayıcı da İngilizce görür.
-    expect(tr.body).toContain("https://docs.tamga.network/en/guides/sandbox");
+    expect(tr.body).toContain("https://docs.tamga.network/guides/sandbox");
     expect(tr.body).not.toContain("Gerçek ağda deneme yoktur");
 
     const health = (await app.inject({ method: "GET", url: "/healthz" })).json() as { policies: string[] };
@@ -191,7 +191,7 @@ describe.skipIf(!prodReady)("gerçek ağ kipi (uygulama)", () => {
     for (const url of ["/sample-site", "/demo-site", "/ornek-site", "/sample-site/session"]) {
       const r = await off.inject({ method: "GET", url });
       expect(r.statusCode, url).toBe(302);
-      expect(r.headers.location, url).toBe("https://docs.tamga.network/en/guides/sandbox");
+      expect(r.headers.location, url).toBe("https://docs.tamga.network/guides/sandbox");
     }
     const st = await off.inject({ method: "POST", url: "/sample-site/start", payload: {} });
     expect(st.statusCode).toBe(302);

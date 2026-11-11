@@ -114,6 +114,12 @@ gören biri gerçek cüzdandan sonra yumuşak sınırı aşacak kadar çekip 120
 saldırganı durdurmaz. Ortak bütçe dolarsa (çok sayıda sunuma aynı anda sel) en eski atılabilir dal başka bir sunumdan da olabilir;
 bütün dallar işlenmekteyse çekim 503 alır. Bellek içi durum tek süreç içindir; çok örnekli kurulum paylaşılan depo ister.
 
+**Saldırının gerçek maliyeti (not 2026-11-11).** Tek adresten sert tavanı doldurmak **yaklaşık 32 çekim** ister. Vekildeki
+adres başına sınır 2 istek/sn'dir; ani izin (burst) 20 iken bu 32 çekim ~6 saniyede yapılabiliyordu — sınır saldırıyı
+neredeyse hiç yavaşlatmıyordu. Ani izin 5'e indirildi: aynı 32 çekim tek adresten ~14 saniye sürer; olağan cüzdan bir sunum için
+bir, en çok birkaç çekim yapar ve etkilenmez. Bu bir yavaşlatmadır, engel değildir: birkaç adres kullanan saldırgan için maliyet
+yine düşüktür ve sonuç değişmez (sunum REJECTED olmaz, kişi QR'ı yeniden okutur).
+
 **Tek kullanım kilidi (not 2026-11-04).** Uygulamada tek kullanım kilidi sunum geneliydi: bir yanıt işlenirken aynı sunuma gelen her
 yanıt "işleniyor" (400) alıyordu. QR'ı gören biri kendi dalına yavaş işlenen yanıtlar göndererek gerçek cüzdanın yanıtını bu yolla
 geri çevirtebiliyordu (sunum açık kalıyordu; kişi yeniden göndermek zorunda kalıyordu). Kilit artık **dal başınadır** ve kabul

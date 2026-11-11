@@ -60,6 +60,12 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 - A credential without a status entry is rejected at D1 when its type uses a status list; the status list signer is pinned to the
   institution's registered status keys.
 
+## New in 0.8.3
+
+- `verifyPseudonym({ ..., clientStatus: "required" })` refuses a wallet instance attestation that carries no revocation entry
+  (`client_status`); the default `"optional"` accepts it with `clientStatus: "NOT_APPLICABLE"`. Use `"required"` on a real
+  network when a site pseudonym is accepted as a login.
+
 ## New in 0.8.1
 
 - The single-use lock is per request branch: `begin(branch)` no longer refuses a response because another branch's response is
@@ -119,7 +125,7 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 
 ## Status
 
-Published on npm as the `0.8.2` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.3` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

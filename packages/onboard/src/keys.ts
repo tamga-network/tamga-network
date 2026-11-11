@@ -13,7 +13,7 @@
 import { createHash, createPrivateKey, createPublicKey, webcrypto } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { resolve, sep } from "node:path";
+import { basename, join, resolve, sep } from "node:path";
 import * as x509 from "@peculiar/x509";
 import { within } from "./paths.js";
 import { CERT_NAME_RE, organizationIdentifier } from "./rules.js";
@@ -189,6 +189,38 @@ export function syncedFolder(path: string, env: NodeJS.ProcessEnv = process.env)
 }
 
 /**
+ * `icacls`'in TAM yolu (`%SystemRoot%\\System32\\icacls.exe`). Adıyla çağırmak aramayı PATH'e ve çalışma klasörüne bırakır: katılım
+ * klasörüne ya da PATH'teki yazılabilir bir klasöre konmuş sahte `icacls.exe` özel anahtar yazılırken çalışırdı (kontrol 2026-11-10).
+ */
+export function icaclsPath(env: NodeJS.ProcessEnv = process.env): string {
+  const root = env.SystemRoot ?? env.SYSTEMROOT ?? env.windir ?? "C:\\Windows";
+  return join(root, "System32", "icacls.exe");
+}
+
+/**
+ * Rapor dosyası (`--report`) yazımı: var olan dosyanın üzerine YAZILMAZ ve hedef anahtar / sertifika gibi görünen bir dosya olamaz
+ * (yanlış yazılmış bir yol özel anahtarı ya da CSR'ı rapor JSON'uyla ezmesin — kontrol 2026-11-10). Uzantı `.json` olmalıdır.
+ */
+export function writeReport(path: string, report: unknown): void {
+  const name = basename(path).toLowerCase();
+  if (
+    !name.endsWith(".json") ||
+    /\.(pem|key|csr|crt|cer|der|p12|pfx|jks)\.json$/.test(name) ||
+    /(^|[.-])key([.-]|$)/.test(name)
+  )
+    throw new Error(`rapor dosyası .json uzantılı olmalı ve anahtar / sertifika adı taşımamalı: ${basename(path)}`);
+  try {
+    writeFileSync(path, JSON.stringify(report, null, 2) + "\n", { flag: "wx" });
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "EEXIST")
+      throw new Error(
+        `rapor dosyası zaten var, üzerine yazılmaz: ${path} — başka bir ad verin ya da eskisini kendiniz silin`,
+      );
+    throw e;
+  }
+}
+
+/**
  * Özel anahtar dosyasını yalnız sahibine okunur yazar; var olan dosyanın üzerine yazmaz. Windows'ta (O6) önce BOŞ dosya açılır,
  * izin icacls ile daraltılır (miras kaldırılır, yalnız geçerli kullanıcı), ancak ondan sonra içerik yazılır; icacls başarısızsa
  * dosya silinir ve hata verilir (anahtar hiçbir an geniş izinli dosyada durmaz).
@@ -204,7 +236,7 @@ export function writePrivateKey(path: string, pem: string, o: { platform?: NodeJ
       ? `${process.env.USERDOMAIN ? process.env.USERDOMAIN + "\\" : ""}${process.env.USERNAME}`
       : "";
     if (!user) throw new Error("USERNAME yok");
-    execFileSync("icacls", [path, "/inheritance:r", "/grant:r", `${user}:F`], { stdio: "ignore" });
+    execFileSync(icaclsPath(), [path, "/inheritance:r", "/grant:r", `${user}:F`], { stdio: "ignore" });
   } catch (e) {
     rmSync(path, { force: true });
     throw new Error(
@@ -221,7 +253,7 @@ export function privateKeyPermissionOk(path: string): boolean | null {
     // (grup adları dile göre değişir — "Users"/"Kullanıcılar")
     try {
       const user = process.env.USERNAME?.toLowerCase();
-      const out = execFileSync("icacls", [path], { encoding: "utf8" });
+      const out = execFileSync(icaclsPath(), [path], { encoding: "utf8" });
       const principals = out
         .split(/\r?\n/)
         .map((l) => l.replace(path, "").trim())

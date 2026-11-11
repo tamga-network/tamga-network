@@ -21,7 +21,7 @@ import { network } from "hardhat";
 import { keyMapSigners, loadChainKeys } from "../../apps/chain-indexer/src/chain-keys.js";
 import { addressesFrom, connectTrustContracts } from "../../apps/chain-indexer/src/contracts.js";
 import { ChainIndexer } from "../../apps/chain-indexer/src/indexer.js";
-import { ChainTrustSource } from "../../apps/chain-indexer/src/chain-trust-source.js";
+import { ChainTrustSource, listLevelOf } from "../../apps/chain-indexer/src/chain-trust-source.js";
 import { compareSources } from "../../apps/chain-indexer/src/equivalence.js";
 import { providerFromEip1193 } from "../../apps/chain-indexer/src/local-dev.js";
 import { executeReplay, openMigrationWindows } from "../../apps/chain-indexer/src/replay-exec.js";
@@ -163,9 +163,13 @@ describe("GUIDE-0018 yol C — test/staging kurulumu (anahtar haritası, Governa
 
     const indexer = new ChainIndexer(provider, c);
     const block = await indexer.sync();
-    const chain = new ChainTrustSource(indexer.index, { now: () => f.now, dnsNames: [...f.dnsNames, f.devirDns] });
     const { store, source: list } = await listSourceFromArchive(f.archive, f.now);
-    const report = await compareSources(store, list, chain, { contracts: c, blockTag: block });
+    const chain = new ChainTrustSource(indexer.index, {
+      now: () => f.now,
+      dnsNames: [...f.dnsNames, f.devirDns],
+      content: { projectedLevel: plan.planTime, listLevel: () => listLevelOf(store) },
+    });
+    const report = await compareSources(store, list, chain, { contracts: c, blockTag: block, plan });
     console.log(
       `      yol C eşdeğerliği: ${report.total} soru; karar farkı ${report.decisionDifferences}, beklenmeyen ${report.unexpected}; plan ${plan.ops.length} işlem`,
     );

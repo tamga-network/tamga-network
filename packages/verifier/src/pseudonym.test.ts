@@ -73,6 +73,18 @@ describe("verifyPseudonym — cüzdan birimi iptal durumu (ADR-0056)", () => {
       clientStatus: "NOT_APPLICABLE",
     });
   });
+  it('0.8.3: clientStatus "required" — iptal girişi olmayan WIA reddedilir; girişi olan geçer; varsayılan "optional"', async () => {
+    const bare = await pseudonymToken(false);
+    const base = { aud: AUD, nonce: NONCE, rpKey: RP, trust, walletStatusOf: async () => "VALID" as const, now: NOW };
+    const strict = await verifyPseudonym({ ...base, token: bare, clientStatus: "required" });
+    expect(strict.ok).toBe(false);
+    expect(strict.ok ? "" : strict.reason).toMatch(/without client_status/);
+    expect((await verifyPseudonym({ ...base, token: bare, clientStatus: "optional" })).ok).toBe(true);
+    expect((await verifyPseudonym({ ...base, token: bare })).ok).toBe(true);
+    const withEntry = await verifyPseudonym({ ...base, token: await pseudonymToken(true), clientStatus: "required" });
+    expect(withEntry).toMatchObject({ ok: true, clientStatus: "VALID" });
+  });
+
   it("iptal edilmiş birim reddedilir; sorgu verilmemesi (JavaScript çağıran) ret", async () => {
     expect(await verify(await pseudonymToken(true), async () => "INVALID")).toMatchObject({
       ok: false,

@@ -21,6 +21,7 @@ import {
   type TrustContracts,
 } from "./contracts.js";
 import { ZERO32, bytes2, canonicalJson } from "./ids.js";
+import { LOG_CHUNK } from "./indexer.js";
 import type { ReplayOp, ReplayPlan, Who } from "./replay-plan.js";
 
 export interface ReplayGovernance {
@@ -134,9 +135,24 @@ export async function openMigrationWindows(
   }
 }
 
+/**
+ * Bir olay süzgecinin bütün kayıtları, en çok `LOG_CHUNK` blokluk dilimlerle (düğümlerin `eth_getLogs` aralık sınırı; aralıksız
+ * `queryFilter` uzun zincirde reddedilir ya da zaman aşımına uğrar — kontrol 2026-11-10). `fromBlock`: kontratların dağıtım bloğu
+ * biliniyorsa oradan (varsayılan 0).
+ */
+export async function queryFilterPaged(k: Contract, filter: unknown, fromBlock = 0, chunk = LOG_CHUNK) {
+  const provider = k.runner?.provider;
+  if (!provider) throw new Error("replay: kontratın sağlayıcısı yok");
+  const head = await provider.getBlockNumber();
+  const out: Awaited<ReturnType<Contract["queryFilter"]>> = [];
+  for (let lo = fromBlock; lo <= head; lo += chunk)
+    out.push(...(await k.queryFilter(filter as never, lo, Math.min(lo + chunk - 1, head))));
+  return out;
+}
+
 /** Son-hâl yazımları: olay sayısı (ya da kaydın yazım sayacı) planın sıra numarasına ulaştıysa yazılmış (`ReplayOp.n`). */
-async function writes(c: TrustContracts, o: ReplayOp): Promise<number | null> {
-  const count = async (k: Contract, f: unknown) => (await k.queryFilter(f as never)).length;
+async function writes(c: TrustContracts, o: ReplayOp, fromBlock: number): Promise<number | null> {
+  const count = async (k: Contract, f: unknown) => (await queryFilterPaged(k, f, fromBlock)).length;
   const rp = c.RelyingPartyRegistry;
   switch (o.op) {
     case "issuerProfile":
@@ -163,13 +179,18 @@ async function writes(c: TrustContracts, o: ReplayOp): Promise<number | null> {
 }
 
 /** İşlem zincirde zaten var mı (kaldığı yerden devam). */
-async function applied(c: TrustContracts, o: ReplayOp, stateSigner: (cc: string) => Promise<string>): Promise<boolean> {
+async function applied(
+  c: TrustContracts,
+  o: ReplayOp,
+  stateSigner: (cc: string) => Promise<string>,
+  fromBlock = 0,
+): Promise<boolean> {
   if (o.n !== undefined) {
     if (o.op === "rpScope" || o.op === "rpGroup" || o.op === "rpProfile") {
       const period = ((await c.RelyingPartyRegistry.registrationPeriodsOf(o.rpId)) as unknown[]).length - 1;
       if (o.period < period) return true; // eski dönem: artık yazılamaz, yeni dönem devralmaz (RO3)
     }
-    const w = await writes(c, o);
+    const w = await writes(c, o, fromBlock);
     if (w !== null) return w >= o.n;
   }
   switch (o.op) {
@@ -178,7 +199,10 @@ async function applied(c: TrustContracts, o: ReplayOp, stateSigner: (cc: string)
     case "rootCAStatus":
       return hasHistory(await c.RootCARegistry.rootCAStatusHistoryOf(o.caId), o.at, CAStatus[o.status]);
     case "rootCARollover":
-      return (await c.RootCARegistry.queryFilter(c.RootCARegistry.filters.RootCARollingOver(o.caId))).length > 0;
+      return (
+        (await queryFilterPaged(c.RootCARegistry, c.RootCARegistry.filters.RootCARollingOver(o.caId), fromBlock))
+          .length > 0
+      );
     case "registerSchema":
       return Boolean(await c.SchemaRegistry.exists(o.schemaId));
     case "addSchemaHash":
@@ -480,7 +504,11 @@ export async function executeReplay(
   plan: ReplayPlan,
   c: TrustContracts,
   s: ReplaySigners,
-  opts: { onProgress?: (o: ReplayOp, written: boolean) => void } = {},
+  opts: {
+    onProgress?: (o: ReplayOp, written: boolean) => void;
+    /** olay sayımlarının başladığı blok (kontratların dağıtım bloğu; varsayılan 0) */
+    logsFromBlock?: number;
+  } = {},
 ): Promise<ReplayReport> {
   const problems = await migrationProblems(c, plan.hash, await s.executor.getAddress());
   if (problems.length) throw new Error(`replay: göç penceresi hazır değil — ${problems.join("; ")}`);
@@ -492,7 +520,7 @@ export async function executeReplay(
   let written = 0;
   let skipped = 0;
   for (const o of plan.ops) {
-    if (await applied(c, o, stateSigner)) {
+    if (await applied(c, o, stateSigner, opts.logsFromBlock ?? 0)) {
       skipped++;
       opts.onProgress?.(o, false);
       continue;

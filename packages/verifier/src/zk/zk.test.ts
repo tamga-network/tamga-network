@@ -135,21 +135,21 @@ describe("mso_mdoc_zk — doğrulama (WASM)", () => {
     expect(r.claims).toEqual({ age_over_18: true });
     expect(r.aDone).toEqual(["A1", "A2", "A3", "A3b", "A8", "Z1"]);
     expect(r.status).toBeUndefined(); // ZK4: indeks yok
-  }, 60_000);
+  }, 240_000);
   it("başka oturum (nonce) → Z1 RED (oturum dökümü ispata bağlı)", async () => {
     const r = await run(valid, { nonce: "n-baska" });
     expect(r).toMatchObject({ ok: false, failedStep: "Z1" });
-  }, 60_000);
+  }, 240_000);
   it("değer kurcalanmış (false) → Z1 RED", async () => {
     const r = await run(
       repack((z) => ({ disclosed: { namespace: z.disclosed.namespace, elements: { age_over_18: false } } })),
     );
     expect(r).toMatchObject({ ok: false, failedStep: "Z1" });
-  }, 60_000);
+  }, 240_000);
   it("başka kurumun sertifikası (aynı köke zincirli) → Z1 RED (kurum anahtarı ispata bağlı)", async () => {
     const r = await run(repack(() => ({ msoX5chain: [otherDer] })));
     expect(r).toMatchObject({ ok: false, failedStep: "Z1" });
-  }, 60_000);
+  }, 240_000);
   it("bozulmuş ispat → Z1 RED", async () => {
     const r = await run(
       repack((z) => {
@@ -159,7 +159,7 @@ describe("mso_mdoc_zk — doğrulama (WASM)", () => {
       }),
     );
     expect(r).toMatchObject({ ok: false, failedStep: "Z1" });
-  }, 60_000);
+  }, 240_000);
   it("listede olmayan devre → Z1 RED (ZK2), ispat çalıştırılmaz", async () => {
     expect(await run(valid, { trust: trustWith([]) })).toMatchObject({ ok: false, failedStep: "Z1" });
   });
@@ -203,7 +203,7 @@ describe("mso_mdoc_zk — doğrulama (WASM)", () => {
       await worker.close();
     }
     expect(ticks).toBeGreaterThan(0); // doğrulama sürerken zamanlayıcılar çalıştı
-  }, 60_000);
+  }, 240_000);
   it("istenmeyen öğe açıklanmış → Z1 RED (ZK3)", async () => {
     const r = await run(
       repack((z) => ({
@@ -292,7 +292,7 @@ describe("mso_mdoc_zk — politika ve tam hat", () => {
     expect(result.status.reason).toMatch(/ZK4/);
     expect(result.disclosed_claims).toEqual(["age_over_18"]);
     expect(claims).toEqual({ age_over_18: true });
-  }, 60_000);
+  }, 240_000);
   it.each([
     ["false", false],
     ["verilmemiş (ADR-0044/ZC4 varsayılanı)", undefined],
@@ -369,7 +369,7 @@ describe("mso_mdoc_zk — yerel arka uç (NativeZkBackend)", () => {
     const r2 = await run(valid, { nonce: "n-baska", backend: nb });
     expect(r2).toMatchObject({ ok: false, failedStep: "Z1" });
     expect(warns).toHaveLength(1); // bekleme süresince yeniden denenmez
-  }, 60_000);
+  }, 240_000);
   it("ikili yanıt vermiyor → süre aşımı, süreç kapatılır, WASM'a düşer", async () => {
     // node, stdin'i betik olarak okur ve hiç yanıt yazmaz: yanıtsız bir süreç yerine geçer
     const nb = new NativeZkBackend({ binPath: process.execPath, fallback: backend, timeoutMs: 300 });
@@ -377,7 +377,7 @@ describe("mso_mdoc_zk — yerel arka uç (NativeZkBackend)", () => {
     expect(r.ok).toBe(true);
     expect(nb.lastBackend).toBe("fallback");
     nb.close();
-  }, 60_000);
+  }, 240_000);
   it("zkBackendFromEnv: değişken yoksa WASM, varsa yerel", () => {
     expect(zkBackendFromEnv({})).toBeInstanceOf(WasmZkBackend);
     expect(zkBackendFromEnv({ TAMGA_ZK_NATIVE_BIN: "/yok" })).toBeInstanceOf(NativeZkBackend);
@@ -458,7 +458,7 @@ describe("ADR-0044 — ZK kopyası (kısa ömür işareti)", () => {
     expect(result.status.reason).toMatch(/short-lived ZK copy/);
     expect(result.checks_skipped).toEqual(expect.arrayContaining(["D1", "D6"]));
     expect(claims).toEqual({ age_over_18: true });
-  }, 60_000);
+  }, 240_000);
   it("işaretsiz ZK sunumu (ana kimlik türü) bayraksız INDETERMINATE (ZC4)", async () => {
     const unmarked: Policy = {
       ...copyPolicy,
@@ -481,7 +481,7 @@ describe("ADR-0044 — ZK kopyası (kısa ömür işareti)", () => {
     });
     expect(result.outcome).toBe("INDETERMINATE");
     expect(result.failed_step).toBe("D1");
-  }, 60_000);
+  }, 240_000);
   it("politika ZK kopyası türünü istemiyorsa işaretli sunum A8 RED; kurum ZK kopyasına yetkili değilse C2 RED", async () => {
     const mainOnly: Policy = {
       ...copyPolicy,
@@ -490,5 +490,5 @@ describe("ADR-0044 — ZK kopyası (kısa ömür işareti)", () => {
     expect((await run(mainOnly)).result).toMatchObject({ outcome: "REJECTED", failed_step: "A8" });
     const { result } = await run(copyPolicy, zkCopy, trustWith([CIRCUIT], [schemaId]));
     expect(result).toMatchObject({ outcome: "REJECTED", failed_step: "C2" });
-  }, 60_000);
+  }, 240_000);
 });

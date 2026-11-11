@@ -4,6 +4,94 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.8.2` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
+## 0.8.3 — 2026-11-11
+
+All ten packages move to 0.8.3 together (patch release) after an independent review of the 0.8.2 code base (2026-11-10). Not
+yet published on npm when this entry was written.
+
+### Correction to the 0.8.2 notes
+
+The 0.8.2 entry said that `wallet-core`'s `fetchRpRecord` "applies the cross-country name rule on the `x509_hash:` path too"
+and presented this as a fail-closed behaviour change. That statement was misleading: `fetchRpRecord` loads the LOTL and **one**
+national list (`stateCode`), and the rule only compares records across the national lists that are loaded. With a single list
+loaded, an ambiguity with another country's list cannot be seen, so the 0.8.2 change had no effect for the wallet in practice; its
+test built a multi-list store by hand that the real loader never produces. What is true as of 0.8.3: the rule lives inside
+`ListTrustSource` (both lookups), it is tested through the real loader with two signed lists, and it takes effect for callers
+that load several national lists (the reference verifier, the onboarding tool, `fetchListTrustSource` with `additionalStates`).
+The wallet's single-list scope is now documented in the code.
+
+### Behaviour changes in 0.8.3 (fail-closed)
+
+1. **trust — `ListTrustSource.relyingParty(clientId)` returns `null` for an ambiguous name (ADR-0075).** The cross-country
+   rule (the same `dns_name` not revoked in more than one loaded national list, or no structured reassignment record) was applied
+   only by `relyingPartyByDnsName`; a lookup by client identifier returned the record. Both now answer `null`. Affects callers
+   that load more than one national list.
+2. **issuer — `WalletStatusChecker` counts status list entries from the list's own `bits`.** The minimum-size rule (10,000
+   entries, CIR 2026/1731 Annex Ib) computed entries as bytes × 4, which is right only for 2-bit lists: a compliant 1-bit list of
+   10,000 entries was reported `NONCOMPLIANT`, and a 4-bit or 8-bit list half or a quarter of the required size was accepted. The
+   count is now bytes × 8 / bits.
+3. **onboard — `--report` never overwrites and refuses key-like targets.** `check --report` / `node check --report` wrote the
+   report over any existing file. The file is now created with exclusive create (an existing file is an error), must end in
+   `.json`, and a name that looks like a key or certificate file is refused.
+
+### Added
+
+- **trust — `fetchListTrustSource` option `additionalStates`.** Loads further national lists besides `stateCode` so that the
+  cross-list rules can take effect; every listed state must have an ACTIVE list that verifies (a missing one refuses the load).
+- **verifier — `verifyPseudonym` option `clientStatus`** (`"optional"` default, `"required"`): with `"required"` a wallet
+  instance attestation without a revocation entry (`client_status`) is refused, so a wallet unit that cannot be revoked cannot
+  log in with a site pseudonym. Tamga Verify uses `"required"` on the real network.
+
+### Fixed
+
+- **onboard — `icacls` is called by its full path** (`%SystemRoot%\System32\icacls.exe`) when a private key file's
+  permissions are narrowed or checked on Windows; calling it by name let a planted `icacls.exe` earlier in the search path run.
+- **verifier — comment on `RequestBranch.branchId`:** uniqueness within a presentation is not guaranteed by
+  `createRequestBranch` (48 random bits); `BranchSet` is the unit that keeps branches apart.
+
+### Applications and repository (not part of the npm packages)
+
+- **Tamga Verify — branchless Digital Credentials API response path.** The response key identifier for this path
+  (`enc-dc-<presentation>`) derives from the public presentation identifier. A presentation without a DC API request now answers
+  such a response with a cheap 400; with one, the response is decrypted first and only a response that decrypts is charged to
+  the presentation's rate bucket and single-use lock (also on the ISO/IEC 18013-7 Annex C endpoint). Before, junk responses from
+  anyone who saw the QR could exhaust the bucket and hold the lock against the page's real response.
+- **Tamga Verify — `/healthz` chain field** returns a fixed reason when the chain cannot be reached or is misconfigured; the
+  error detail (which may carry an RPC address) goes to the service log only. English sandbox guide links point to the site root.
+- **Trust list publisher — record removal is checked (SPEC-TRUST-0001 TL2).** A build stops when an issuer, relying party
+  or terminal group of the previously published national list is missing from the new one, unless the registry carries an approved
+  removal entry with exactly matching counts (`registry/removals.json`); the public changelog of the list then gets a line without
+  names. Used once: test records left from the pre-pilot test period were removed from the real network's list (2026-11-11).
+- **Chain stage (contracts, indexer, node tooling; no production chain):**
+  - `RelyingPartyRegistry.stagePeriodChange` requires a registered identifier; `TrustListAnchorRegistry.anchorLogHead` caps
+    the sequence step (as list versions already were); `SchemaRegistry.registerSchema` no longer accepts a past validity start
+    outside the migration mode; deployment verifies the Governance → SchemaRegistry link.
+  - `Governance`: a member can change its vote (`vote` to the other side) or take it back (`retractVote`) until the proposal
+    is executed, including a queued upgrade during its delay; the threshold is recounted at execution.
+  - Indexer: reacts to state-changing events only (staging events that anyone can emit no longer make it read a record that
+    does not exist and stop), a record whose read reverts is recorded as an error instead of stopping the cursor, events are
+    read in chunks of at most 2,000 blocks with the cursor advancing per chunk (also in the replay's "already written" checks),
+    and an index resumed against another chain id, other contract addresses or a shorter chain is refused.
+  - `ChainTrustSource`: healthy only when the caller binds it to content (level projected on chain ≥ level of the signed
+    lists) and the index has no unreadable record — otherwise every answer is `UNKNOWN`; a status list lookup whose last path
+    segment is shared by two issuers no longer returns the other issuer's anchor; a terminal group whose institution is not in
+    the index is inactive. It must not be used in verification until an ongoing projection exists (ADR-0074 K5 note).
+  - Equivalence test: a reverse pass (every indexed issuer, authorization, relying party, terminal group, status list and
+    wallet provider key must be in the signed lists or never have been active), comparison of the index against the replay
+    plan's record set, and cheap record fields (certificate fingerprints, registration periods, gate certificates, offline flag).
+  - Besu allowlist reader accepts IPv6 enode addresses; the JSON-RPC filter forwards the request it parsed and checked instead of
+    the client's bytes (repeated-key bodies) and refuses `net_enode` / `net_services`; `make-network.sh --keys dev` (public test
+    keys) is refused with non-loopback hosts.
+- **Release workflow:** GitHub Actions are pinned by commit SHA and the npm CLI by exact version.
+
+### Documents
+
+- ADR-0073 (the migration window closes by itself regardless of the equivalence result; failure means redeploying; keep it
+  short and close early), ADR-0074 (read path wording; content-bound health; not consumed in verification yet), ADR-0055 (vote
+  change and retraction), ADR-0067 (real cost of the eviction attack; proxy burst lowered), ADR-0075, the chain test network
+  guide and the node operator handbook (governance and consensus key are the same key today — HSM required on the real network,
+  separation is an open decision), trust list specification (record removal check; `contact` is a role address).
+
 ## 0.8.2 — 2026-11-05
 
 All ten packages move to 0.8.2 together (patch release). New: the first publication of `@tamga-network/onboard`, the joining

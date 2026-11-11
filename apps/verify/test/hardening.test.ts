@@ -182,6 +182,45 @@ describe.skipIf(!ready)("apps/verify uç sertleştirmesi", () => {
     expect((await respond(`enc-${pid}.yok`)).json().error_description).toBe("unknown request object");
     expect((await respond("enc-baska-sunum")).json().error_description).toBe("unknown presentation");
     expect((await respond("enc-baska-sunum.dal")).statusCode).toBe(400);
+    // kontrol 2026-11-10: dalsız DC API `kid`'i (`enc-dc-<sunum>`) sunum kimliğinden türer — QR'ı gören yazabilir.
+    // DC API nesnesi olmayan sunumda ucuz 400; kova (burst 1) hiç harcanmaz
+    for (let i = 0; i < 3; i++) {
+      const r = await respond(`enc-dc-${pid}`);
+      expect(r.statusCode).toBe(400);
+      expect(r.json().error_description).toBe("unknown request object");
+    }
+    // DC API nesnesi OLAN sunumda çöp yanıt önce çözülmeye çalışılır: çözülemeyen kova ve kilit harcamaz — sayfadan gelecek
+    // gerçek yanıt 429'a ya da "işleniyor"a düşmez
+    const dcMade = await app2.inject({
+      method: "POST",
+      url: "/presentations",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      payload: { policy_id: "age-over-18-mdoc", dc_api_origin: "https://shop.example" },
+    });
+    expect(dcMade.statusCode).toBeLessThan(400);
+    const dc = dcMade.json() as { presentation_id: string; dc_mdoc_response_uri?: string };
+    for (let i = 0; i < 3; i++) {
+      const r = await respond(`enc-dc-${dc.presentation_id}`);
+      expect(r.statusCode).toBe(400);
+      expect(r.json().error_description).toBe("response could not be decrypted");
+    }
+    const dcp = app2.presentations.get(dc.presentation_id)!;
+    expect(dcp.branches.busy).toBe(false);
+    expect(dcp.branches.used).toBe(false);
+    expect(dcp.branches.begin()).toBe("ok"); // kilit boşta
+    dcp.branches.end();
+    // ISO 18013-7 Ek C ucu (sunum kimliği adreste): çöp gövde de kova harcamaz
+    if (dc.dc_mdoc_response_uri)
+      for (let i = 0; i < 3; i++) {
+        const r = await app2.inject({
+          method: "POST",
+          url: `/vp/dc-mdoc/${dc.presentation_id}`,
+          headers: { "content-type": "application/json" },
+          payload: { response: "AAAA" },
+        });
+        expect(r.statusCode).toBe(400);
+        expect(r.json().error_description).toBe("response could not be decrypted");
+      }
     await app2.close();
     expect((await post("/terminal/verify", { token: "x" })).statusCode).toBe(404); // gerçek ağ biçimli liste: kapı yok
     expect((await post("/terminal/verify", { token: "x" })).statusCode).toBe(429);

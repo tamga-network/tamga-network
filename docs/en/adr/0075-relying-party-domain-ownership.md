@@ -81,7 +81,7 @@ Names (public ABI; following the existing naming pattern — `proposeNetworkReco
 |---|---|
 | `Governance` proposal functions | `proposeRelyingPartyReassignment(registry, stageId)`, `proposeRelyingPartyReRegistration(registry, stageId)` |
 | `Governance` registry admin actions (`AdminAction`, appended) | `REASSIGN_RELYING_PARTY`, `REREGISTER_RELYING_PARTY` |
-| `RelyingPartyRegistry` writes | `stagePeriodChange(PeriodChange)` (anyone; stores only), `commitPeriodChange(stageId, PeriodAction)` (Governance only) |
+| `RelyingPartyRegistry` writes | `stagePeriodChange(PeriodChange)` (anyone; stores only; the identifier must be registered — an unregistered one reverts with `UnknownRP`, 2026-11-11), `commitPeriodChange(stageId, PeriodAction)` (Governance only) |
 | `RelyingPartyRegistry` reads | `periodChangeIdOf`, `stagedPeriodChangeOf`, `registrationPeriodsOf`, `relyingPartyAt(rpId, t)`, `isRelyingPartyAcceptableAt(rpId, t)`, `relyingPartyStatusHistoryOf` |
 | Types | `PeriodAction {NONE, REASSIGNMENT, RE_REGISTRATION}`, `PeriodChange`, `RegistrationPeriod` |
 | Events | `PeriodChangeStaged`, `RelyingPartyReassigned`, `RelyingPartyReRegistered` |

@@ -9,7 +9,12 @@
  * Sınır (ADR-0031 K4): türetmenin doğruluğu gerçek cüzdan varsayımına dayanır; kesin kanıt sıfır bilgi ispatıyla (Z5).
  */
 import { calculateJwkThumbprint, decodeProtectedHeader, importJWK, jwtVerify, type JWK } from "jose";
-import { verifyWalletAttestation, type StatusCheck, type WuaResult } from "@tamga-network/trust";
+import {
+  verifyWalletAttestation,
+  type ClientStatusPolicy,
+  type StatusCheck,
+  type WuaResult,
+} from "@tamga-network/trust";
 import type { TrustSource } from "@tamga-network/trust";
 import { secondsOrNow, type EpochSeconds } from "@tamga-network/core/time";
 
@@ -47,6 +52,12 @@ export async function verifyPseudonym(p: {
    * edilmiş cüzdanın takma adı da kabul edilir; sonuç `clientStatus: "NOT_CHECKED"`.
    */
   walletStatusOf: StatusCheck;
+  /**
+   * İptal girişi (`client_status`) taşımayan WIA için politika (0.8.3): `"optional"` (varsayılan) kabul eder — sonuç
+   * `clientStatus: "NOT_APPLICABLE"`, o cüzdan birimi iptal edilse de takma adı geçer; `"required"` reddeder. Gerçek ağda takma
+   * adla giriş kabul eden doğrulayıcı `"required"` kullanmalıdır (iptal edilemeyen birimin takma adı kalıcı bir giriş anahtarıdır).
+   */
+  clientStatus?: ClientStatusPolicy;
   /** Unix saniyesi (ADR-0056 K12) */
   now?: EpochSeconds;
 }): Promise<PseudonymResult> {
@@ -79,6 +90,7 @@ export async function verifyPseudonym(p: {
       now,
       isProviderKey: (fp) => p.trust.isWalletProviderKey(fp),
       statusOf: p.walletStatusOf,
+      clientStatus: p.clientStatus,
     });
     if (!w.ok) return { ok: false, reason: `wallet: ${w.reason}`, indeterminate: w.indeterminate };
     return {

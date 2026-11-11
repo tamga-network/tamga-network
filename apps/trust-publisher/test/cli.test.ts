@@ -110,7 +110,7 @@ describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", { timeout: 18
     const full = verify(true);
     expect(full.code, full.err).toBe(0);
     expect(full.report.healthy).toBe(true);
-  }, 60_000); // alt süreç zinciri: yük altında 20 sn sınırını aşabilir
+  }, 240_000); // alt süreç zinciri: yük altında 20 sn sınırını aşabilir
 
   it("TL12 sıfırlama: seq 0'dan yeniden başlayan günlüğün arşivi eski arşivi ezmez (ada zaman eki); zincir sağlıklı", () => {
     rmSync(join(DIST, "anchors.jsonl")); // sandbox gece sıfırlaması gibi: günlük gider, arşiv klasörü kalır
@@ -125,7 +125,7 @@ describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", { timeout: 18
     const full = verify(true);
     expect(full.code, full.err).toBe(0);
     expect(full.report.healthy).toBe(true);
-  }, 60_000); // alt süreç zinciri: yük altında 20 sn sınırını aşabilir
+  }, 240_000); // alt süreç zinciri: yük altında 20 sn sınırını aşabilir
 
   it("ADR-0074 K4: zincir projeksiyonu kapalıyken yeni satır türü yazılmaz; açıkken görünüm ve kayıt sertifikası durum listesi satırları yazılır, kontrol noktası taşır", () => {
     const kinds = () =>

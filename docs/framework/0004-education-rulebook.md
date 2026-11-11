@@ -350,7 +350,7 @@ Cüzdan belge alırken aynı kayıtla kurumun bu türü vermeye yetkili olduğun
 
 | Konu | Durum |
 |---|---|
-| Diploma için I3 akreditasyonunun zorunlu olması | **Ertelenmiş karar** ([[ADR-0047]] K9): bugün asgari I2, I3 **SHOULD**. Tetikleyici (hangisi önce gelirse): eğitim pilotunun sonuç raporu, pilot ortağı dışındaki ilk kurumun diploma başvurusu ya da bir devletin eğitim makamının ağa katılması |
+| Diploma için I3 akreditasyonunun zorunlu olması | **Ertelenmiş karar** ([[ADR-0047]] K9): bugün asgari I2, I3 **SHOULD**. Tetikleyici (hangisi önce gelirse): eğitim pilotunun sonuç raporu, ilk kurumdan başka bir kurumun diploma başvurusu ya da bir devletin eğitim makamının ağa katılması |
 | ELM JSON-LD dışa aktarımı | AB eğitim birlikte çalışabilirliği için açık konu |
 | Güven çapası konumu belgede (ARB_21) | **Karar (2026-10-12, [[ADR-0047]] K7):** belgeye alan eklenmez; belgedeki bir konum belge verenin kendi beyanı olurdu ve doğrulayıcı çapayı yalnız kendi seçtiği listeden alır |
 | Nitelikli olmayan EAA göstergesi (ARB_12) | **Karar (2026-10-12, [[ADR-0047]] K6):** yazılmaz; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 nitelikli olmayan EAA'da `category` bulunmamasını ister |

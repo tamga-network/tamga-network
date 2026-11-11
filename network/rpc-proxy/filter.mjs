@@ -27,6 +27,9 @@ export const DENIED_METHODS = new Set([
   "eth_submitHashrate",
   "eth_subscribe",
   "eth_unsubscribe",
+  // node topology (the node's own enode URL with its address, the services it runs) — not needed by clients
+  "net_enode",
+  "net_services",
 ]);
 export const LIMITS = { maxBodyBytes: 256 * 1024, maxBatch: 50 };
 
@@ -38,7 +41,12 @@ export function methodAllowed(method) {
 
 const rpcError = (id, code, message) => ({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
 
-/** Decides on a request body. `{ ok: true }` or `{ ok: false, status, body }` (JSON-RPC error object or array). */
+/**
+ * Decides on a request body. `{ ok: true, forward }` or `{ ok: false, status, body }` (JSON-RPC error object or array).
+ * `forward` is the body re-serialised from what was parsed and checked here: the node never sees the client's bytes. A body with
+ * a repeated key (`"method":"admin_peers", …, "method":"eth_blockNumber"`) is read differently by different JSON parsers; passing
+ * the original bytes on would let the node act on a method this filter did not check.
+ */
 export function decide(text) {
   let parsed;
   try {
@@ -56,7 +64,7 @@ export function decide(text) {
       errors.push(rpcError(c?.id, -32600, "invalid request"));
     else if (!methodAllowed(c.method)) errors.push(rpcError(c.id, -32601, "method not allowed"));
   }
-  if (errors.length === 0) return { ok: true };
+  if (errors.length === 0) return { ok: true, forward: JSON.stringify(parsed) };
   return { ok: false, status: 403, body: Array.isArray(parsed) ? errors : errors[0] };
 }
 
@@ -95,7 +103,7 @@ export function createFilterServer({ upstream, maxBodyBytes = LIMITS.maxBodyByte
         const r = await fetch(up, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: text,
+          body: d.forward,
           signal: AbortSignal.timeout(30_000),
         });
         res.writeHead(r.status, { "content-type": "application/json", "cache-control": "no-store" });

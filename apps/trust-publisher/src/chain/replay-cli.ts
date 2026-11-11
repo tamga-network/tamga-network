@@ -25,7 +25,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { JsonRpcProvider } from "ethers";
 
-import { ChainTrustSource } from "../../../chain-indexer/src/chain-trust-source.js";
+import { ChainTrustSource, listLevelOf } from "../../../chain-indexer/src/chain-trust-source.js";
 import { UNCACHED_PROVIDER, addressesFrom, connectTrustContracts } from "../../../chain-indexer/src/contracts.js";
 import { STAGING_CHAIN_IDS, keyMapSigners, loadChainKeys } from "../../../chain-indexer/src/chain-keys.js";
 import { compareSources } from "../../../chain-indexer/src/equivalence.js";
@@ -182,8 +182,10 @@ export async function chainReplayCommand(
   const chain = new ChainTrustSource(indexer.index, {
     now: () => now,
     dnsNames: [...store.relying_parties_by_dns.keys()],
+    // içerik bağı: zincir bu planın düzeyinde; liste seti aynı arşivin son sürümleri
+    content: { projectedLevel: plan.planTime, listLevel: () => listLevelOf(store) },
   });
-  const eq = await compareSources(store, list, chain, { contracts, blockTag: block });
+  const eq = await compareSources(store, list, chain, { contracts, blockTag: block, plan });
   console.log(JSON.stringify({ ...head, report, equivalence: eq }, null, 2));
   return eq.decisionDifferences > 0 || eq.unexpected > 0 ? 3 : 0;
 }

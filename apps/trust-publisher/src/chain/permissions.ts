@@ -144,27 +144,53 @@ export function parsePermissionsToml(text: string): { accounts: string[]; nodes:
     .split(/\r?\n/)
     .filter((l) => !/^\s*#/.test(l))
     .join("\n");
+  // Karakter karakter okunur: dizi tırnak DIŞINDAKİ ilk `]` ile biter. Düzenli ifadeyle `[^\]]*` okumak IPv6 adresli enode'u
+  // (`enode://…@[2001:db8::1]:30303`) adresin köşeli parantezinde kesiyordu (kontrol 2026-11-10).
   const out: Record<string, string[]> = {};
-  const re = /([a-z-]+)\s*=\s*\[([^\]]*)\]/g;
-  let m: RegExpExecArray | null;
-  let rest = body;
-  while ((m = re.exec(body))) {
-    const key = m[1];
+  const ws = /\s/;
+  let i = 0;
+  const skipWs = () => {
+    while (i < body.length && ws.test(body[i])) i++;
+  };
+  for (skipWs(); i < body.length; skipWs()) {
+    const km = /^([a-z-]+)\s*=/.exec(body.slice(i));
+    if (!km) throw new Error("izin dosyası: tanınmayan içerik");
+    const key = km[1];
     if (key !== "accounts-allowlist" && key !== "nodes-allowlist")
       throw new Error(`izin dosyası: beklenmeyen anahtar ${key}`);
-    const items = m[2]
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((s) => {
-        const q = /^"([^"]*)"$/.exec(s);
-        if (!q) throw new Error(`izin dosyası: tırnaksız değer ${s}`);
-        return q[1];
-      });
+    if (key in out) throw new Error(`izin dosyası: yinelenen anahtar ${key}`);
+    i += key.length;
+    skipWs();
+    if (body[i] !== "=") throw new Error("izin dosyası: tanınmayan içerik");
+    i++;
+    skipWs();
+    if (body[i] !== "[") throw new Error("izin dosyası: tanınmayan içerik");
+    i++;
+    const items: string[] = [];
+    for (;;) {
+      skipWs();
+      if (i >= body.length) throw new Error("izin dosyası: kapanmamış dizi");
+      if (body[i] === "]") {
+        i++;
+        break;
+      }
+      if (body[i] !== '"') {
+        const bad = /^[^,\]\s]*/.exec(body.slice(i))![0];
+        throw new Error(`izin dosyası: tırnaksız değer ${bad}`);
+      }
+      const end = body.indexOf('"', i + 1);
+      if (end < 0) throw new Error("izin dosyası: kapanmamış tırnak");
+      const value = body.slice(i + 1, end);
+      if (/[\\\n]/.test(value)) throw new Error("izin dosyası: değerde kaçış ya da satır sonu");
+      items.push(value);
+      i = end + 1;
+      skipWs();
+      if (body[i] === ",") i++;
+      else if (i >= body.length) throw new Error("izin dosyası: kapanmamış dizi");
+      else if (body[i] !== "]") throw new Error("izin dosyası: tanınmayan içerik");
+    }
     out[key] = items;
-    rest = rest.replace(m[0], "");
   }
-  if (rest.trim()) throw new Error("izin dosyası: tanınmayan içerik");
   return { accounts: out["accounts-allowlist"] ?? [], nodes: out["nodes-allowlist"] ?? [] };
 }
 

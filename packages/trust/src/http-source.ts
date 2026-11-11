@@ -39,6 +39,13 @@ export async function fetchListTrustSource(
     rootFingerprints: string[];
     verifyJws: JwsVerifier;
     stateCode?: string;
+    /**
+     * 0.8.3: `stateCode`'a ek olarak yüklenecek ülke listeleri (ör. `["AZ", "KZ"]`). Ülkeler arası kurallar (aynı `dns_name`'in
+     * iki listede görünmesi — ADR-0075) yalnız yüklü listeler arasında görülür; verilmezse TEK liste yüklenir ve bu kurallar
+     * devreye giremez. Listelenen her ülkenin LOTL'da ACTIVE bir listesi olmalı ve hepsi doğrulanmalıdır (biri eksikse yükleme
+     * reddedilir).
+     */
+    additionalStates?: string[];
     now?: Date;
     /** Çapa günlüğünü de yükle (doğrulayıcı sunucular: iptal listesi çapaları için gerekir). */
     anchors?: boolean;
@@ -67,20 +74,28 @@ export async function fetchListTrustSource(
     if (r.status !== 200) throw new TrustListError(`trusted list could not be fetched: ${path} (${r.status})`);
     return (await r.text()).trim();
   };
-  const [lotlJws, tlJws, anchorsJsonl] = await Promise.all([
+  const extra = [...new Set((opts.additionalStates ?? []).map((s) => s.toUpperCase()))].filter(
+    (s) => /^[A-Z]{2}$/.test(s) && s !== cc,
+  );
+  const [lotlJws, tlJws, anchorsJsonl, ...extraJws] = await Promise.all([
     get("lotl.jws"),
     get(`tl-${cc.toLowerCase()}.jws`).catch(() => ""),
     opts.anchors ? get("anchors.jsonl") : Promise.resolve(""),
+    ...extra.map((s) => get(`tl-${s.toLowerCase()}.jws`).catch(() => "")),
   ]);
+  const nationalListJws: Record<string, string> = tlJws ? { [cc]: tlJws } : {};
+  extra.forEach((s, k) => {
+    if (extraJws[k]) nationalListJws[s] = extraJws[k];
+  });
   const { store, report } = await loadTrustSetWith(
     {
       lotlJws,
-      nationalListJws: tlJws ? { [cc]: tlJws } : {},
+      nationalListJws,
       anchorsJsonl,
       rootFingerprints: opts.rootFingerprints.map((f) => f.toLowerCase()),
       now,
       skipAnchors: !opts.anchors,
-      states: [cc],
+      states: [cc, ...extra],
       anchorMaxAgeMs: opts.anchorMaxAgeMs,
       environment: opts.environment,
       versionMemory: opts.versionMemory,

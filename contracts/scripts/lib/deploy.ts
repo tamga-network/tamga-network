@@ -50,6 +50,19 @@ export async function deployed(
 }
 
 /**
+ * Governance → SchemaRegistry bağı beklenen adreste mi (kurulum denetimi). `setSchemaRegistry` bir kez ve herhangi bir üye
+ * validator'ı tarafından çağrılabilir; yanlış adrese kurulmuş bağ yalnız protokol yükseltmesiyle (2/3) düzelir — bu yüzden
+ * dağıtım ve ağ kurulumu bağı okuyup doğrular, tutmuyorsa durur.
+ */
+export async function assertSchemaRegistryBound(governance: BaseContract, expected: string): Promise<void> {
+  const got = String(await (governance as any).schemaRegistry());
+  if (got.toLowerCase() !== expected.toLowerCase())
+    throw new Error(
+      `deploy: Governance.schemaRegistry ${got} — beklenen ${expected}; dağıtım geçersiz, yeniden dağıtın`,
+    );
+}
+
+/**
  * Bütün kontratları UUPS (ERC1967) proxy arkasında dağıtır ve bağlar.
  * @param deployer İmplementasyon ve proxy'leri dağıtan hesap. `setSchemaRegistry` `onlyValidator` olduğundan (review R5)
  *                 ilk kurucunun validator'ı bu çağrıyı yapar; `founders[0].validator` için bir Signer verilmelidir.
@@ -88,7 +101,15 @@ export async function deployTrustLayer(
   const networkRegistry = await proxy("NetworkRegistry", [gov]);
 
   // 6) Governance → SchemaRegistry bağı (BİR KEZ, geri alınamaz; onlyValidator — R5)
-  await (await (governance.connect(firstValidatorSigner) as any).setSchemaRegistry(await schemas.getAddress())).wait();
+  //    Kontrol 2026-11-10: bağ dağıtım ile bu çağrı arasında başka bir validator tarafından BAŞKA bir adrese kurulmuş olabilir
+  //    (tek seferlik; geri alınamaz). Zaten kuruluysa çağrı yapılmaz; her durumda bağın beklenen kayda gittiği doğrulanır —
+  //    değilse dağıtım geçersizdir (yeniden dağıtılır).
+  const bound = String(await (governance as any).schemaRegistry());
+  if (/^0x0+$/.test(bound))
+    await (
+      await (governance.connect(firstValidatorSigner) as any).setSchemaRegistry(await schemas.getAddress())
+    ).wait();
+  await assertSchemaRegistryBound(governance, await schemas.getAddress());
 
   // 7) Kurucular arası FULL tanıma (ADR-0002 #3) — `onlyGovernance`: Governance kontratının kendisi çağırmalıdır.
   //    Gerçek ağda bu, Governance önerisiyle yapılır: `proposeFounderRecognition` → 2/3 oy → `execute` (ADR-0055 K3).

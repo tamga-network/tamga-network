@@ -7,7 +7,7 @@ version: 1.0.0
 created: 2026-11-04
 last_updated: 2026-11-04
 summary: >
-  Proposes to which contract, with which field and event, the records that are in the signed lists but have no counterpart on chain
+  Defines to which contract, with which field and event, the records that are in the signed lists but have no counterpart on chain
   are projected (terminal groups, the registration certificate status list, XML and LoTE views, list signers, wallet providers, ZK
   circuits, external lists, credential categories, the list operator, issuer class and registration data). Boundary: no personal
   data and no free text go on chain; registration details only as a digest (`bytes32`) and the existing `metadataURI` pattern; no new
@@ -27,7 +27,7 @@ The chain is a second register of the signed lists; whatever the lists say, the 
 (terminal groups, wallet providers, external lists, the revocation list of registration certificates, the list operator and
 registration details) is not on chain at all. This proposal says where and how each of them is written on chain. Personal details
 and descriptive text do not go to the chain; a short "fingerprint"-like digest is written instead and the text itself stays in the
-signed list. It is proposed for the 0.8 package line.
+signed list. It was accepted for the 0.8 package line.
 
 # Context
 
@@ -113,8 +113,18 @@ The registration certificate status list and the list views are not in the ancho
 
 - The indexer and `ChainTrustSource` live in a new application: `apps/chain-indexer/` (name approved). The
   indexer reads contract events and turns records into the in-memory list shape; `ChainTrustSource` implements the same
-  `TrustSource` interface ([[ADR-0015]] K3): C1/C2/C3 from contract reads at a pinned block (`TrustQueries`), records from the
-  index. If the index is stale or the chain unreachable, the answer is `UNKNOWN` (CMP4).
+  `TrustSource` interface ([[ADR-0015]] K3): C1/C2/C3 and the records are answered **from the index**, with the same rules as the
+  contract's read functions (correction 2026-11-11: the earlier text said "from contract reads at a pinned block (`TrustQueries`)";
+  the implementation answers from the index, and the contract read is compared as a third source in the equivalence test). If the
+  index is stale or the chain unreachable, the answer is `UNKNOWN` (CMP4).
+- **Health is bound to content; not used in verification until an ongoing projection exists (note 2026-11-11).** The block time
+  stays fresh as long as the chain produces blocks, but the chain's content today comes only from a one-off replay: the signed
+  lists move on while the chain stands still. `ChainTrustSource` is therefore healthy only when the caller supplies the content
+  level (level projected on chain ≥ today's level of the signed lists) and the index has no unreadable record; otherwise every
+  answer is `UNKNOWN`. Until an **ongoing projection** that writes every list change to the chain exists, this source must not be
+  consumed in any verification decision (C1/C2/C3/D5); its only use today is the equivalence test. The indexer follows
+  state-changing events only (not the staging events anyone can emit), reads events in chunks and refuses an index that is
+  resumed against another chain.
 - `@tamga-network/trust/core` stays light ([[ADR-0015]] K1); no chain client dependency goes there. If third parties need a separate
   package, its name is `@tamga-network/chain` (name approved). The list publisher's `trust:chain-check` stays where
   it is.

@@ -252,8 +252,9 @@ async function main() {
 
   if (PROFILE === "sandbox") return finish(root, await sandboxItems(root, signedByRoot, selfSigned), notBefore);
 
-  // Üretim kipinde iptal edilmiş ilk örnek kurumlar (Bilgi, Bubilet; gerçek listede REVOKED): yalnız sertifikaları kalır (kayıt
-  // defteri ve geçmiş belgeler onları anar); asla yeniden üretilmez, özel anahtarları yoktur. Geliştirme kipinde test anahtarı.
+  // Sınama döneminin örnek kurumları (dosya adları tarihseldir): gerçek ağın listesinden 2026-11-11'de çıkarıldı. Üretim kipinde
+  // asla üretilmezler ve özel anahtarları yoktur; eski sertifika dosyası duruyorsa yalnız okunur (arşivdeki eski liste sürümleri
+  // onları anar). Geliştirme kipinde bunlar yerel test anahtarlarıdır (testlerin örnek üniversitesi ve örnek bilet kurumu).
   const devOrCertOnly = async (name: string, make: Make): Promise<Item[]> => {
     if (!PROD) return [await ensure(name, make)];
     if (existsSync(resolve(outDir, `${name}.cert.pem`))) return [await load(name)];
@@ -322,10 +323,13 @@ async function main() {
       signedByRoot(1103, "CN=Tamga Kimlik Servisi - Magaza Incelemesi (DEMO), OU=Review, O=Tamga Network, C=TR"),
     ),
     // 8) D10: bilet satıcısı — operatör modeli: Tamga barındırır, satıcı güven listesinde issuer (credential + status)
-    ...(await devOrCertOnly("issuer-bubilet", signedByRoot(1201, "CN=Bubilet, OU=Bilet Satisi, O=Bubilet, C=TR"))),
+    ...(await devOrCertOnly(
+      "issuer-bubilet",
+      signedByRoot(1201, "CN=Ornek Etkinlik (DEV), OU=Bilet Satisi, O=Ornek Etkinlik (DEV), C=TR"),
+    )),
     ...(await devOrCertOnly(
       "issuer-bubilet-status",
-      signedByRoot(1202, "CN=Bubilet - Status List, OU=Status, O=Bubilet, C=TR"),
+      signedByRoot(1202, "CN=Ornek Etkinlik (DEV) - Status List, OU=Status, O=Ornek Etkinlik (DEV), C=TR"),
     )),
     // 7) ADR-0011 K3: kurum issuer'ı kimlik attestation'ını SUNUM olarak ister → RP erişim sertifikası (SAN issuer.tamga.network; client_id = x509_hash, ADR-0034)
     ...(await devOrCertOnly(

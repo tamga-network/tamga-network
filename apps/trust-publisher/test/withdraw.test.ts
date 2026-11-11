@@ -168,22 +168,15 @@ const DEMO_SCOPES = [
 
 describe("gerçek ağ kayıt defteri: test/demo kurumu yok (2026-10-04)", () => {
   const prod = read("registry");
-  it("örnek kurumlar silinmedi, REVOKED; bütün belgeleri geçersiz (invalidates_from = valid_from); açık yetki yok", () => {
-    for (const slug of ["bilgi", "bubilet"]) {
-      const i = prod.issuers.find((x) => x.slug === slug)!;
-      expect(i, slug).toBeDefined();
-      expect(i.status).toBe("REVOKED");
-      const last = i.status_history.at(-1)!;
-      expect(last.status).toBe("REVOKED");
-      expect(last.invalidates_from).toBe(i.valid_from);
-      expect(i.status_history[0].status).toBe("ACTIVE"); // geçmiş korunur
-      expect(i.schema_authorizations.every((a) => a.valid_until !== null)).toBe(true);
-    }
-    const active = prod.issuers.filter((i) => i.status === "ACTIVE").map((i) => i.slug);
-    expect(active).toEqual(["tamga-id"]);
+  // 2026-10-04: sınama döneminin örnek kurumları REVOKED yapıldı (bütün belgeleri geçersiz). 2026-11-11: proje yönetimi kararıyla
+  // bu test kayıtları gerçek listeden çıkarıldı (onaylı çıkarma kaydı registry/removals.json; denetim removals.test.ts). Eski
+  // liste sürümleri arşivde durur.
+  it("gerçek listede sınama döneminin örnek kurumları yok; kalan tek belge veren ağın kimlik servisi (ACTIVE)", () => {
+    expect(prod.issuers.map((i) => [i.slug, i.status])).toEqual([["tamga-id", "ACTIVE"]]);
+    expect(prod.issuers.every((i) => i.status_history[0].status === "ACTIVE")).toBe(true);
   });
-  it("örnek kurumun eşleştirme doğrulayıcısı REVOKED; Tamga Verify'ın kurgusal kullanımları ve kapı grupları sona erdi", () => {
-    expect(prod.relying_parties.find((r) => r.dns_name === "issuer.tamga.network")!.status).toBe("REVOKED");
+  it("örnek kurumun eşleştirme doğrulayıcısı listede yok; Tamga Verify'ın kurgusal kullanımları sona erdi, kapı grubu yok", () => {
+    expect(prod.relying_parties.map((r) => r.dns_name)).toEqual(["verify.tamga.network"]);
     const v = prod.relying_parties.find((r) => r.dns_name === "verify.tamga.network")!;
     expect(v.status).toBe("ACTIVE");
     const now = Date.now();

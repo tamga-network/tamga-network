@@ -78,11 +78,20 @@ geçmişin yalnız bir kez, denetimli bir pencerede yazılmasına izin verir.
   Yazım `TAMGA_CHAIN_ENABLED` açık ve göç kipi açıkken yapılır; komut kaldığı yerden sürer (zincirde olanı atlar) ve sonunda K6
   testini çalıştırır.
 
+**Pencere eşdeğerliğe bakmadan kapanır (not 2026-11-11).** Kontrat eşdeğerlik raporunu bilmez: süre dolunca kip, yeniden oynatma
+yarım kalmış ya da K6 testi fark bulmuş olsa da kapanır ve bir daha açılamaz. Kapanmış bir kipte eksik ya da yanlış yazılmış geçmiş
+düzeltilemez; tek yol kontratların **yeniden dağıtılması** ve yeniden oynatmanın baştan yapılmasıdır. Bu yüzden: pencere işin
+gerektirdiği kadar **kısa** açılır (yeniden oynatma deneme zincirinde önceden ölçülür), süre dolmadan önce K6 testi çalıştırılır,
+test farksız geçince kip beklenmeden Governance önerisiyle **erken kapatılır**; test fark bulursa kip açıkken düzeltilir ya da
+dağıtım geçersiz sayılır. Açık pencere, yürütücü anahtarının geçmiş tarihli yazım yapabildiği süredir; gereğinden uzun tutulmaz.
+
 ## K2 — Sert iptal: `invalidatesFrom` (F2)
 
 - Kurum kaydı `invalidatesFrom` taşır (0 = yok). Ele geçirilme iptali bu tarihi yazar; koşul: `validFrom ≤ invalidatesFrom ≤
   revokedAt`. Tarih geçmişte olabilir (ele geçirilme sonradan anlaşılır); bu, göç kipi dışında geçmiş tarih yazılabilen tek alandır
-  ve kurumun kendi geçerlilik aralığıyla sınırlıdır.
+  ve kurumun kendi geçerlilik aralığıyla sınırlıdır. Yalnız iptal edilmiş (`REVOKED`) kurum için yazılır ve iptali geri almaz:
+  kabul edilen belge kümesini yalnız daraltır. (Düzeltme 2026-11-11: şema kaydının geçerlilik başlangıcı da kip dışında geçmiş tarih
+  kabul ediyordu; artık öteki kayıtlarla aynı kuraldan geçer — "tek alan" ifadesi bu düzeltmeyle doğrudur.)
 - C1: `iat ≥ invalidatesFrom` olan belge düşer (listede `invalidates_from ≤ iat` → NO, `TrustSource`'un bugünkü kuralı).
 - Bir kez yazılan tarih silinmez; yalnız daha geriye çekilebilir (iptal kapsamı genişler, daralmaz).
 - Kök CA iptali bugün zaten bütün altını düşürür (CA2); değişmez.

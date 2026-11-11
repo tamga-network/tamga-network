@@ -82,6 +82,8 @@ interface IGovernance is ITamgaErrors {
     event SchemaRegistrySet(address indexed registry);
     event ProposalCreated(bytes32 indexed id, ProposalKind kind, address proposer);
     event Voted(bytes32 indexed id, address voter, bool support);
+    /// @dev Kontrol 2026-11-10: üye, yürütülmemiş öneride oyunu geri çekti (oy değişikliği yeni bir `Voted` olayıdır).
+    event VoteRetracted(bytes32 indexed id, address voter);
     event ProposalExecuted(bytes32 indexed id);
     /// @dev Güvenlik turu 2026-11-04: öneren önerisini yürütülmeden geri çekti.
     event ProposalCancelled(bytes32 indexed id);
@@ -95,6 +97,8 @@ interface IGovernance is ITamgaErrors {
     error ProposalNotOpen(bytes32 id);
     error ProposalExpired(bytes32 id);
     error AlreadyVoted(bytes32 id, address voter);
+    /// @dev Geri çekilecek oy yok.
+    error NoVote(bytes32 id, address voter);
     error ThresholdNotMet(uint32 forVotes, uint32 required);
     error MemberExists(bytes2 stateCode);
     error UnknownMember(bytes2 stateCode);
@@ -145,7 +149,11 @@ interface IGovernance is ITamgaErrors {
     /// @notice ADR-0075: iptal edilmiş doğrulayıcı kimliğini yeni dönemle yeniden kaydeder (sabitlenmiş özet), 2/3.
     function proposeRelyingPartyReRegistration(address registry, bytes32 stageId) external returns (bytes32);
 
+    /// @notice Oy verir ya da — öneri yürütülene kadar (kuyruktaki yükseltme dahil) — verdiği oyu öteki yöne çevirir.
+    ///         Aynı yönde ikinci oy `AlreadyVoted` ile reddedilir.
     function vote(bytes32 proposalId, bool support) external;
+    /// @notice Verdiği oyu geri çeker (öneri yürütülene kadar). Eşik yürütmede o anki oylardan sayılır.
+    function retractVote(bytes32 proposalId) external;
     function execute(bytes32 proposalId) external;
     /// @notice Öneren, yürütülmemiş (açık ya da kuyruktaki) önerisini geri çeker; geri çekilen öneri oylanamaz ve yürütülemez.
     function cancelProposal(bytes32 proposalId) external;

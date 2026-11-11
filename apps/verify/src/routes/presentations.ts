@@ -267,9 +267,28 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       if (!branch)
         return reply.code(400).send({ error: "invalid_request", error_description: "unknown request object" });
     }
+    // Dalsız DC API yolu (kontrol 2026-11-10): `kid` (`enc-dc-<sunum>`) sunum kimliğinden türediği için QR'ı gören herkes
+    // yazabilir. Sunumda DC API nesnesi yoksa ucuz 400 (kova ve kilit harcanmaz); varsa yanıt ÖNCE çözülür — yalnız DC API isteğini
+    // alan (sayfanın kökenindeki cüzdan) şifreleyebilir — kova ve kilit ancak çözülen yanıt için harcanır. Aksi hâlde yakındaki
+    // biri çöp yanıtlarla sunumun tek kovasını doldurup sayfadan gelen gerçek yanıtı 429'a / "işleniyor"a düşürebilirdi.
+    let preOpened: OpenedResponse | undefined;
+    if (!branch) {
+      if (!p.req.dcApiRequest)
+        return reply.code(400).send({ error: "invalid_request", error_description: "unknown request object" });
+      try {
+        preOpened = await openPresentationResponse<Branch>(
+          jwe,
+          p.req,
+          `${cfg.publicBase}/vp/response`,
+          () => undefined,
+        );
+      } catch {
+        return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" });
+      }
+    }
     // Hız sınırı çözme işinden önce, ÇEKİM DALI başına (kontrol 2026-11-03; önceki tur sunum başınaydı): QR'ı gören biri
-    // kendi dalına sel göndererek gerçek cüzdanın dalını 429'a düşüremez. Dalsız DC API yolunda kova sunum başına kalır
-    // (tek anahtar). Bilinmeyen kimlikler jeton harcamaz (güvenlik turu 2026-10-19).
+    // kendi dalına sel göndererek gerçek cüzdanın dalını 429'a düşüremez. Dalsız DC API yolunda kova sunum başınadır ve yalnız
+    // çözülebilen yanıt harcar (yukarıda). Bilinmeyen kimlikler jeton harcamaz (güvenlik turu 2026-10-19).
     if (rateLimited(ctx.limits.vpResponse, branch ? `b:${pid}.${branch.branchId}` : `p:${pid}`, reply)) return reply;
     // Tek kullanım kilidi ÇÖZMEDEN ÖNCE (PV10), DAL BAŞINA (2026-11-04): aynı dala eşzamanlı ikinci yanıt ya da ret işlenmez,
     // işlenen dal atılmaz; başka dalın (ör. QR'ı gören birinin) yavaş yanıtı gerçek cüzdanın yanıtını bekletmez. Dalsız DC API
@@ -290,17 +309,19 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
                   : "this request is closed",
       });
     try {
-      return await handleEncryptedResponse(p, pid, jwe, reply, branch);
+      return await handleEncryptedResponse(p, pid, jwe, reply, branch, preOpened);
     } finally {
       p.branches.end(branch);
     }
   });
+  type OpenedResponse = Awaited<ReturnType<typeof openPresentationResponse<Branch>>>;
   async function handleEncryptedResponse(
     p: Presentation,
     pid: string,
     jwe: string,
     reply: FastifyReply,
     branch: Branch | undefined,
+    preOpened?: OpenedResponse,
   ) {
     // Sunum yalnız sahiplik kanıtı geçince TÜKETİLİR (SPEC-PROTO-0002 §10.1): state uyuşmazlığı, boş vp_token ve A1–A6 başarısızlığı
     // sunumu kapatmaz (deneme sayılır, `failedAttempt`); çözülemeyen gövde deneme bile sayılmaz (yalnız istek nesnesini alan
@@ -308,11 +329,13 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     // "reddedildi"ye düşürebilirdi.
     // 0.6.0: iki yol, iki anahtar — QR / bağlantının yanıtı cihazlar arası (response_uri; çekim dalının anahtarı), sayfanın ilettiği
     // yanıt DC API (köken) kurallarıyla doğrulanır; hangisi önce gelirse sunumu tamamlar, öteki tek kullanım kuralıyla düşer (PV10)
-    let opened: Awaited<ReturnType<typeof openPresentationResponse<Branch>>>;
+    let opened: OpenedResponse;
     try {
-      opened = await openPresentationResponse<Branch>(jwe, p.req, `${cfg.publicBase}/vp/response`, (id) =>
-        branch && branch.branchId === id ? branch : undefined,
-      );
+      opened =
+        preOpened ??
+        (await openPresentationResponse<Branch>(jwe, p.req, `${cfg.publicBase}/vp/response`, (id) =>
+          branch && branch.branchId === id ? branch : undefined,
+        ));
     } catch {
       return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" });
     }
@@ -411,6 +434,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
               rpKey: ctx.trust().relyingParty(p.owner ?? cfg.clientId)?.dns_name ?? p.owner ?? cfg.clientId,
               trust: ctx.trust(),
               walletStatusOf: ctx.walletStatusOf, // ADR-0031 PS5: iptal edilmemiş cüzdan
+              // Gerçek ağda iptal girişi olmayan WIA ile takma ad kabul edilmez (iptal edilemeyen birimin takma adı kalıcı bir
+              // giriş anahtarı olurdu); sandbox'ta genel kanıt kabul edilir (kontrol 2026-11-10)
+              clientStatus: (cfg.network ?? "production") === "production" ? "required" : "optional",
               now: nowSec(),
             })
           : { ok: false as const, reason: "pseudonym missing in vp_token", indeterminate: false };
@@ -510,8 +536,6 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     if (p.req.expiresAt < nowSec())
       return reply.code(400).send({ error: "invalid_request", error_description: "request expired" });
-    // dalsız yol: kova sunum başına (yanıt yalnız sayfanın ilettiği tek anahtarla gelir)
-    if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
     const response = (req.body as { response?: unknown } | undefined)?.response;
     let opened: ReturnType<typeof openMdocDcApiResponse>;
     try {
@@ -519,6 +543,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     } catch {
       return reply.code(400).send({ error: "invalid_request", error_description: "response could not be decrypted" }); // RQ4: deneme sayılmaz
     }
+    // dalsız yol: kova sunum başına, yalnız ÇÖZÜLEN yanıt harcar (kontrol 2026-11-10 — sunum kimliği adreste açık; çöp gövde
+    // sunumun kovasını dolduramaz)
+    if (rateLimited(ctx.limits.vpResponse, `p:${pid}`, reply)) return reply;
     p.trace.push({
       t: Date.now(),
       step: "Response decrypted (HPKE P-256/AES-128-GCM, ISO/IEC 18013-7 Annex C, via browser Digital Credentials API)",

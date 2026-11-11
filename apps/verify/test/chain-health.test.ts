@@ -14,7 +14,9 @@ import { checkDistAnchored } from "../../trust-publisher/src/chain/verify.js";
 import { buildVerifyApp } from "../src/app.js";
 import {
   CHAIN_DISABLED_REASON,
+  CHAIN_MISCONFIGURED_REASON,
   CHAIN_SANDBOX_REASON,
+  CHAIN_UNREACHABLE_REASON,
   ChainHealthMonitor,
   chainHealthFromEnv,
   summarizeChain,
@@ -48,12 +50,21 @@ describe("zincir sağlığı — özet ve monitör", () => {
       lists: [],
     });
     expect(await off.refresh()).toBe(off.current());
-    const broken = new ChainHealthMonitor(async () => {
-      throw new Error("ECONNREFUSED");
-    });
+    // kontrol 2026-11-10: hata metni (RPC adresi, kimlik bilgisi taşıyabilir) herkese açık cevaba girmez — sabit gerekçe; ayrıntı günlüğe
+    const logged: unknown[] = [];
+    const broken = new ChainHealthMonitor(
+      async () => {
+        throw new Error("connect ECONNREFUSED https://user:secret@rpc.internal.example:8545");
+      },
+      undefined,
+      undefined,
+      (e) => logged.push(e),
+    );
     const s = await broken.refresh();
     expect(s.anchored).toBe("UNKNOWN");
-    expect(s.reason).toContain("ECONNREFUSED");
+    expect(s.reason).toBe(CHAIN_UNREACHABLE_REASON);
+    expect(JSON.stringify(s)).not.toMatch(/ECONNREFUSED|secret|rpc\.internal/);
+    expect((logged[0] as Error).message).toContain("ECONNREFUSED");
     expect(s.checked_at).not.toBeNull();
   });
 
@@ -64,7 +75,7 @@ describe("zincir sağlığı — özet ve monitör", () => {
     );
     const miss = (await chainHealthFromEnv("production", "x", { TAMGA_CHAIN_ENABLED: "1" })).current();
     expect(miss.enabled).toBe(false);
-    expect(miss.reason).toMatch(/ayarı eksik.*TAMGA_CHAIN_RPC_URL/);
+    expect(miss.reason).toBe(CHAIN_MISCONFIGURED_REASON); // ayrıntı (hangi ayar) günlükte
   });
 
   it("yayın klasörü denetimi: onaylı aynı özet YES, farklı özet NO, çapasız UNKNOWN; zincir kapalı → UNKNOWN", async () => {

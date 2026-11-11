@@ -126,6 +126,14 @@ yazılmır. Açar HSM-dədirsə, `node init` istifadə olunmur: açıq açarı H
 bəyan edin. Süni intellekt köməkçisi vasitəsilə eyni addım MCP aləti `generate_node_key`-dir; gizli açar heç bir cavabda
 qaytarılmır və MCP ilə sinxronlaşdırılan qovluğa heç vaxt yazılmır.
 
+::: warning Eyni açar həm blok imzalayır, həm səs verir (açıq qərar)
+Bu gün validatorun qovşaq açarı eyni zamanda dövlətin **Governance səs açarıdır**: blok imzalayan açar təklif açır və səs verir.
+Qovşaq açarı işləyən serverdə durduğu üçün bu, idarəetmə səlahiyyətini də həmin serverə bağlayır. Bu iki açar ayrılana qədər
+**real şəbəkədə validator qovşaq açarı HSM-də (və ya ekvivalent aparat seyfində) saxlanılMALIDIR**; faylda duran açar yalnız sınaq
+şəbəkələrində qəbul olunur. İdarəetmə və konsensus açarlarının ayrılması **açıq qərardır**: ikinci dövlət şəbəkəyə qoşulmazdan
+əvvəl yeni qərar qeydi (ADR) ilə həll olunacaq.
+:::
+
 ## 4. İcazəli rejim
 
 Hansı qovşağın qoşula biləcəyini və hansı hesabın əməliyyat göndərə biləcəyini hər qovşaqdakı yerli `permissions_config.toml`

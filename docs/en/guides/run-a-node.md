@@ -127,6 +127,14 @@ exists in the folder, none is written. If the key is in an HSM, `node init` is n
 declare it with `node declare --public-key …` (§5). Through an AI assistant the same step is the MCP tool `generate_node_key`; the
 private key is never returned in any response and over MCP it is never written to a synced folder.
 
+::: warning The same key signs blocks and votes (open decision)
+Today a validator's node key is also the state's **Governance voting key**: the key that signs blocks opens proposals and votes.
+Because the node key sits on the running server, this ties governance authority to that server as well. Until the two keys are
+separated, **on the real network the validator node key MUST be kept in an HSM (or an equivalent hardware vault)**; a key kept in a
+file is acceptable on trial networks only. Separating the governance key from the consensus key is an **open decision**: it will be
+settled by a new decision record (ADR) before a second state joins the network.
+:::
+
 ## 4. Permissioned mode
 
 Which nodes may connect and which accounts may send transactions is decided by the local `permissions_config.toml` on every node

@@ -141,7 +141,7 @@ fəaliyyətin dayandırılması, məxfilik, təchizat zənciri). İcra Reqlament
 ## K9 — Diplomda I3: pilotdan sonra qərar (təxirə salınmış qərar)
 
 Diplom növündə I3 (akkreditə olunmuş) sənədi verən qurumu məcburi etmək bu gün **qərara alınmır**; minimum I2 olaraq qalır, I3 tövsiyə olunur (**SHOULD**).
-**Tətikləyici** (hansı əvvəl baş verərsə): (a) təhsil pilotunun yekun hesabatı, (b) pilot tərəfdaşından başqa ilk qurumun diplom vermək
+**Tətikləyici** (hansı əvvəl baş verərsə): (a) təhsil pilotunun yekun hesabatı, (b) ilk qurumdan başqa bir qurumun diplom vermək
 üçün müraciəti, (c) hər hansı dövlətin təhsil orqanının şəbəkəyə qoşulması. Tətikləyici baş verdikdə məsələ layihə rəhbərliyinə çıxarılır.
 
 # Nəzərdən keçirilmiş variantlar

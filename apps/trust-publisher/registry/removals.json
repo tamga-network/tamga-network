@@ -1,0 +1,10 @@
+[
+  {
+    "list": "tl-tr",
+    "date": "2026-11-11",
+    "issuers": 2,
+    "relying_parties": 1,
+    "terminal_groups": 2,
+    "note": "test records from the pre-pilot test period (already REVOKED; never used by a real institution)"
+  }
+]

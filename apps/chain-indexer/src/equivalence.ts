@@ -14,14 +14,21 @@
  * şemanın durum anları, yetki pencereleri) ve sınır anları (t − 1, t, t + 1) — yarı açık aralıkların bir saniyelik farkını yakalar.
  * `(issuer_id, schema_id, iat, list_id, version)` sorusu böylece bileşenlerine ayrılır: C1 (kurum, iat), C2 (kurum, şema, iat),
  * C3 (devlet, kurum), D5 (liste kimliği → sürüm + özet).
+ *
+ * TERS GEÇİŞ (kontrol 2026-11-10): sorular yalnız listeden türetilirse zincirde FAZLADAN duran kayıt (listede olmayan kurum, yetki,
+ * doğrulayıcı, iptal listesi, cüzdan sağlayıcı anahtarı) hiç sorulmaz. Bu yüzden dizindeki her kayıt da listeye sorulur
+ * (`chain_only`): listede yoksa zincirde hiç etkin olmamış olmalıdır. Plan verildiyse (`opts.plan`) dizindeki kimlik kümesi
+ * planın işlemlerinin kimlik kümesiyle birebir karşılaştırılır (`plan_set`): planda olmayan zincir kaydı ya da zincirde olmayan
+ * plan kaydı farktır. Ucuz kayıt alanları da karşılaştırılır (`record_fields`): kurum sertifikası parmak izi, doğrulayıcının erişim
+ * sertifikası ve dönem sayısı, kapı grubunun sertifika parmak izleri ve çevrimdışı izni.
  */
 import { statusAt, type ListTrustSource, type RelyingParty, type TrustStore } from "@tamga-network/trust";
 
 import type { ChainTrustSource } from "./chain-trust-source.js";
-import { bytes2, canonicalJson, listIdOf, rpIdOf, sec } from "./ids.js";
+import { bytes2, bytes32ToFp, canonicalJson, groupIdOf, listIdOf, rpIdOf, sec } from "./ids.js";
 import { NET_KIND_NAMES, NetKind, lotlNetworkRecords, nationalNetworkRecords } from "./network-records.js";
 import type { TrustContracts } from "./contracts.js";
-import { scopeArgs } from "./replay-plan.js";
+import { scopeArgs, type ReplayPlan } from "./replay-plan.js";
 
 export type Category =
   | "C1"
@@ -42,7 +49,10 @@ export type Category =
   | "list_operator"
   | "state_slot"
   | "role_slot"
-  | "catalogue";
+  | "catalogue"
+  | "record_fields"
+  | "chain_only"
+  | "plan_set";
 export interface Difference {
   category: Category;
   question: string;
@@ -59,7 +69,7 @@ export interface EquivalenceReport {
   answers: Record<"C1" | "C2" | "C3", { YES: number; NO: number; UNKNOWN: number }>;
   total: number;
   differences: Difference[];
-  /** C1/C2/C3/D5'te ACCEPTED/REJECTED farkı (bilinen fark dahil) — 0 değilse göç kapanmaz (CE6) */
+  /** C1/C2/C3/D5'te ACCEPTED/REJECTED farkı ve zincirde fazladan duran etkin kayıt (`chain_only`) — 0 değilse göç kapanmaz (CE6) */
   decisionDifferences: number;
   /** bilinen fark sayılmadan öteki farklar */
   unexpected: number;
@@ -72,7 +82,7 @@ export async function compareSources(
   store: TrustStore,
   list: ListTrustSource,
   chain: ChainTrustSource,
-  opts: { contracts?: TrustContracts; blockTag?: number; extraIats?: number[] } = {},
+  opts: { contracts?: TrustContracts; blockTag?: number; extraIats?: number[]; plan?: ReplayPlan } = {},
 ): Promise<EquivalenceReport> {
   const q: Record<Category, number> = {
     C1: 0,
@@ -94,6 +104,9 @@ export async function compareSources(
     state_slot: 0,
     role_slot: 0,
     catalogue: 0,
+    record_fields: 0,
+    chain_only: 0,
+    plan_set: 0,
   };
   const diffs: Difference[] = [];
   const answers = {
@@ -226,6 +239,13 @@ export async function compareSources(
           ? { known: "aynı dns_name iptal edilmemiş iki ülke listesi kaydında — liste kaynağı belirsiz sayar (null)" }
           : {}),
       });
+    if (!ambiguous && l && c && rp.status !== "REVOKED" && rp.status !== "RETIRED") {
+      // erişim sertifikası (yenileme zincire `updateAccessCertificate` ile yansır)
+      q.record_fields++;
+      const lf = l.access_cert_fingerprint_sha256.toLowerCase();
+      const cf = c.access_cert_fingerprint_sha256;
+      if (lf !== cf) add({ category: "record_fields", question: `${rp.dns_name} access_cert`, list: lf, chain: cf });
+    }
     if (!ambiguous && l && rp.status !== "REVOKED" && rp.status !== "RETIRED") {
       q.rp_scopes++;
       const want = rp.scopes
@@ -244,8 +264,15 @@ export async function compareSources(
       q.terminal_group++;
       const lt = list.terminalGroup(g.group_id);
       const ctg = chain.terminalGroup(g.group_id);
-      const lv2 = lt && { active: lt.active };
-      const cv2 = ctg && { active: ctg.active };
+      // etkinlik + ucuz alanlar: kapı sertifikaları (sıralı) ve çevrimdışı izni
+      const gv = (x: typeof lt) =>
+        x && {
+          active: x.active,
+          offline_allowed: Boolean(x.group.offline_allowed),
+          cert_fingerprints: [...(x.group.cert_fingerprints ?? [])].map((f) => f.toLowerCase()).sort(),
+        };
+      const lv2 = gv(lt);
+      const cv2 = gv(ctg);
       if (canonicalJson(lv2) !== canonicalJson(cv2))
         add({
           category: "terminal_group",
@@ -270,6 +297,15 @@ export async function compareSources(
     // dönem değişikliği: listedeki an ile zincirdeki yürütme anı arasındaki aralık sorulmaz (ADR-0075 açık soru 3)
     const periods = chain.registrationPeriods(dns);
     const listStarts = periodStartsInList(records);
+    // dönem sayısı: listedeki her dönem başlangıcı (devir, iptal sonrası yeniden kayıt) zincirde bir kayıt dönemidir (ADR-0075)
+    q.record_fields++;
+    if (periods.length !== listStarts.length + 1)
+      add({
+        category: "record_fields",
+        question: `${dns} periods`,
+        list: listStarts.length + 1,
+        chain: periods.length,
+      });
     const skip =
       periods.length > 1 && listStarts.length
         ? ([Math.min(...listStarts), Math.max(...periods.slice(1).map((p) => p.since))] as const)
@@ -295,6 +331,11 @@ export async function compareSources(
     const l = i.status === "REVOKED" || i.status === "RETIRED" ? (i.successor_id ?? null) : null;
     const c = chain.issuer(i.issuer_id)?.successor_id ?? null;
     if (l !== c) add({ category: "issuer_successor", question: i.slug, list: l, chain: c });
+    // kurumun sertifika parmak izi (kimlik bundan türer; zincirdeki kayıt aynı sertifikayı taşımalı)
+    q.record_fields++;
+    const lf = i.cert_fingerprint_sha256.toLowerCase();
+    const cf = chain.issuer(i.issuer_id)?.cert_fingerprint_sha256 ?? null;
+    if (lf !== cf) add({ category: "record_fields", question: `${i.slug} cert_fingerprint`, list: lf, chain: cf });
   }
 
   // ---- ağ düzeyi kayıtlar (ADR-0074 K3): listedeki her kaydın zincirdeki karşılığı aynı mı; listeden kalkan zincirde etkin değil
@@ -364,7 +405,100 @@ export async function compareSources(
       if (l !== c) add({ category: "wallet_key", question: k.fingerprint_sha256.slice(0, 16), list: l, chain: c });
     }
 
-  const decision = diffs.filter((d) => ["C1", "C2", "C3", "D5"].includes(d.category));
+  // ---- TERS GEÇİŞ: dizindeki her kayıt listede var mı (yoksa zincirde hiç etkin olmamış olmalı)
+  const ix = chain.indexSnapshot();
+  if (!ix) add({ category: "chain_only", question: "dizin okunamıyor (kaynak sağlıksız)", list: null, chain: null });
+  else {
+    const everActive = (h: Array<[number, number]>) => h.some(([, st]) => st === 1);
+    for (const i of Object.values(ix.issuers)) {
+      q.chain_only++;
+      const inList = store.issuers.get(i.issuerId);
+      if (!inList && everActive(i.history))
+        add({ category: "chain_only", question: `kurum ${i.issuerId.slice(0, 12)}`, list: null, chain: i.status });
+      const listed = new Set((inList?.schema_authorizations ?? []).filter((a) => a.allowed).map((a) => a.schema_id));
+      for (const [schemaId, windows] of Object.entries(i.auth)) {
+        q.chain_only++;
+        if (windows.length && !listed.has(schemaId))
+          add({
+            category: "chain_only",
+            question: `yetki ${i.issuerId.slice(0, 12)} ${schemaId.slice(0, 12)}`,
+            list: null,
+            chain: windows.length,
+          });
+      }
+    }
+    const rpIds = new Set([...store.relying_party_records.keys()].map((dns) => rpIdOf(dns)));
+    for (const rp of Object.values(ix.rps)) {
+      q.chain_only++;
+      if (!rpIds.has(rp.rpId) && everActive(rp.history))
+        add({ category: "chain_only", question: `doğrulayıcı ${rp.rpId.slice(0, 12)}`, list: null, chain: rp.status });
+    }
+    const groupIds = new Set(
+      [...store.relying_party_records.values()].flatMap((m) =>
+        [...m.values()].flatMap((r) => (r.terminal_groups ?? []).map((g) => groupIdOf(g.group_id))),
+      ),
+    );
+    for (const rp of Object.values(ix.rps))
+      for (const g of rp.groups) {
+        q.chain_only++;
+        if (!groupIds.has(g.groupId))
+          add({ category: "chain_only", question: `kapı grubu ${g.groupId.slice(0, 12)}`, list: null, chain: true });
+      }
+    const listIds = new Set([...store.status_anchors.values()].map((a) => listIdOf(a.issuer_id, a.list_uri)));
+    for (const l of Object.values(ix.lists)) {
+      q.chain_only++;
+      if (l.version > 0 && !listIds.has(l.listId))
+        add({
+          category: "chain_only",
+          question: `iptal listesi ${l.listId.slice(0, 12)}`,
+          list: null,
+          chain: l.version,
+        });
+    }
+    for (const r of Object.values(ix.records)) {
+      if (r.kind !== NetKind.WALLET_PROVIDER_KEY) continue;
+      q.chain_only++;
+      const fp = bytes32ToFp(r.recordId);
+      const c = chain.isWalletProviderKey(fp);
+      if (c === "YES" && list.isWalletProviderKey(fp) !== "YES")
+        add({ category: "chain_only", question: `cüzdan sağlayıcı anahtarı ${fp.slice(0, 16)}`, list: "NO", chain: c });
+    }
+    // ---- plan ↔ dizin kimlik kümeleri (plan verildiyse): zincirde plandan fazla ya da eksik kayıt yok
+    if (opts.plan) {
+      const planned = planIdSets(opts.plan);
+      const indexed: Record<string, Set<string>> = {
+        rootCAs: new Set(Object.keys(ix.rootCAs)),
+        schemas: new Set(Object.keys(ix.schemas)),
+        issuers: new Set(Object.keys(ix.issuers)),
+        auth: new Set(
+          Object.values(ix.issuers).flatMap((i) =>
+            Object.entries(i.auth)
+              .filter(([, w]) => w.length)
+              .map(([sid]) => `${i.issuerId}|${sid}`),
+          ),
+        ),
+        rps: new Set(Object.keys(ix.rps)),
+        groups: new Set(Object.values(ix.rps).flatMap((rp) => rp.groups.map((g) => g.groupId))),
+        lists: new Set(Object.keys(ix.lists)),
+        records: new Set(Object.keys(ix.records)),
+      };
+      for (const [set, want] of Object.entries(planned)) {
+        const got = indexed[set];
+        q.plan_set++;
+        const extra = [...got].filter((x) => !want.has(x));
+        const missing = [...want].filter((x) => !got.has(x));
+        if (extra.length || missing.length)
+          add({
+            category: "plan_set",
+            question: set,
+            list: { missing_on_chain: missing.map((x) => x.slice(0, 24)) },
+            chain: { not_in_plan: extra.map((x) => x.slice(0, 24)) },
+          });
+      }
+    }
+  }
+
+  const decision = diffs.filter((d) => ["C1", "C2", "C3", "D5", "chain_only"].includes(d.category));
   return {
     questions: q,
     answers,
@@ -373,6 +507,40 @@ export async function compareSources(
     decisionDifferences: decision.length,
     unexpected: diffs.filter((d) => !d.known).length,
   };
+}
+
+/**
+ * Planın yazdığı kayıtların kimlik kümeleri (dizinin kümeleriyle aynı anahtar biçiminde, küçük harf). Eski dönemlerin kapı grupları
+ * dizinde yoktur (dizin yalnız güncel dönemin gruplarını okur); bu yüzden gruplar için yalnız doğrulayıcının SON dönemindeki
+ * işlemler sayılır.
+ */
+export function planIdSets(plan: ReplayPlan): Record<string, Set<string>> {
+  const out: Record<string, Set<string>> = {
+    rootCAs: new Set(),
+    schemas: new Set(),
+    issuers: new Set(),
+    auth: new Set(),
+    rps: new Set(),
+    groups: new Set(),
+    lists: new Set(),
+    records: new Set(),
+  };
+  const L = (x: string) => x.toLowerCase();
+  const lastPeriod = new Map<string, number>();
+  for (const o of plan.ops)
+    if (o.op === "rpGroup" || o.op === "rpScope" || o.op === "rpProfile" || o.op === "rpPeriod")
+      lastPeriod.set(L(o.rpId), Math.max(lastPeriod.get(L(o.rpId)) ?? 0, o.period));
+  for (const o of plan.ops) {
+    if (o.op === "registerRootCA") out.rootCAs.add(L(o.caId));
+    else if (o.op === "registerSchema") out.schemas.add(L(o.schemaId));
+    else if (o.op === "registerIssuer") out.issuers.add(L(o.issuerId));
+    else if (o.op === "schemaAuth" && o.allowed) out.auth.add(`${L(o.issuerId)}|${L(o.schemaId)}`);
+    else if (o.op === "registerRP") out.rps.add(L(o.rpId));
+    else if (o.op === "rpGroup" && o.period === (lastPeriod.get(L(o.rpId)) ?? 0)) out.groups.add(L(o.group.groupId));
+    else if (o.op === "registerList") out.lists.add(L(o.listId));
+    else if (o.op === "networkRecord") out.records.add(`${o.record.kind}|${L(o.record.recordId)}`);
+  }
+  return out;
 }
 
 /**

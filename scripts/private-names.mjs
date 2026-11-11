@@ -18,11 +18,21 @@ const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export const PRIVATE_NAMES_FILE_FOUND = existsSync(file);
 /**
  * Kamuya açık metinde geçmeyen araç adları — tek kaynak (public-text-check, arf-sync ve tamga-platform/ops/publish-public.sh
- * ortak). Büyük/küçük harf duyarsız; araç adının -api/-agent/-code/_… biçimleri, nokta klasörü ve sağlayıcı adı da yakalanır
- * (araç klasörü yolları bu yüzden ayrıca yazılmaz). Desenler JS ve PCRE (git grep -P) ile uyumludur.
+ * ortak). Desenin KENDİSİ herkese açık depoda durmaz (denetlenen adları saymış olurdu): geliştirme deposundaki
+ * `scripts/public-text-tools.txt` dosyasından okunur (`.publicignore`'da; tek satır, JS ve PCRE — git grep -P — ile uyumlu düzenli
+ * ifade kaynağı; `#` ile başlayan satırlar yorum). Dosya yoksa (herkese açık kopya ve onun CI'ı) desen hiçbir şeyle eşleşmez:
+ * oradaki `docs:check` kalan kuralları uygular, araç adı denetimi yayından ÖNCE geliştirme deposunda ve yayın betiğinde yapılır.
  */
-export const TOOL_NAMES_SOURCE =
-  "(?<![a-z0-9])claude(?:[-_ ]?(?:api|agent|code))?|(?<![a-z0-9])anthropic|\\bopus\\b|\\bfable\\b|\\bsonnet\\b";
+const toolsFile = join(dirname(fileURLToPath(import.meta.url)), "public-text-tools.txt");
+/** Araç adı deseni dosyası bulundu mu (yoksa araç adı denetimi yapılmaz — yalnız herkese açık kopyada beklenir). */
+export const TOOL_NAMES_FILE_FOUND = existsSync(toolsFile);
+export const TOOL_NAMES_SOURCE = TOOL_NAMES_FILE_FOUND
+  ? readFileSync(toolsFile, "utf8")
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith("#"))
+      .join("|") || "(?!)"
+  : "(?!)";
 export const TOOL_NAMES_RE = new RegExp(TOOL_NAMES_SOURCE, "i");
 
 /** Satır başına bir değer; # ile başlayan satırlar yorum. Dosya yoksa boş liste. */

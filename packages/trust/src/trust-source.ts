@@ -199,9 +199,17 @@ export class ListTrustSource implements TrustSource {
     if (this.unhealthy()) return null;
     return this.store.status_anchors.get(listId) ?? null;
   }
+  /**
+   * İstemci kimliğiyle (`x509_hash:…`) doğrulayıcı. Ülkeler arası ad kuralı BURADA da uygulanır (0.8.3; ADR-0075): kaydın
+   * `dns_name`'i yüklü ülke listelerinde belirsizse (iptal edilmemiş birden çok kayıt ya da makinece okunur devir kaydı yok)
+   * null — alan adıyla aramayla (`relyingPartyByDnsName`) aynı cevap. Kural kaynağın içinde olduğundan çağıranın ayrıca
+   * denetlemesi gerekmez. Yalnız YÜKLÜ listeler arasında görülür: tek ülke listesi yükleyen istemci başka listeyi bilemez.
+   */
   relyingParty(clientId: string): RelyingParty | null {
     if (this.unhealthy()) return null;
-    return this.store.relying_parties.get(clientId) ?? null;
+    const rp = this.store.relying_parties.get(clientId) ?? null;
+    if (rp?.dns_name && this.dnsAmbiguous(rp.dns_name.toLowerCase())) return null;
+    return rp;
   }
   /**
    * Kalıcı kimlikle (ADR-0034) doğrulayıcı. Aynı `dns_name` birden çok ülke listesinde görünürse iptal edilmemiş tek kayıt alınır

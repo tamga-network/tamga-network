@@ -156,6 +156,10 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 - Her validator için node anahtar çifti üret. Adresler QBFT oy setini oluşturur.
 - Faz 0'da **4 validator = Tamga vakfı** (QBFT'de 3f+1 → f=1: bir node arızalansa
   ağ çalışır). Anahtarlar HSM/kasada saklanır.
+- **Yönetişim ve mutabakat anahtarı bugün aynıdır (açık karar, not 2026-11-11).** Validator'ın düğüm anahtarı aynı zamanda
+  devletin Governance oy anahtarıdır (`Governance.StateMember.validatorAddress`). Bu iki anahtar ayrılana kadar gerçek ağda
+  validator düğüm anahtarı **HSM'de tutulmak zorundadır**; dosyadaki anahtar yalnız deneme ağlarında kabul edilir. Ayrım, ikinci
+  bir devlet katılmadan önce yeni bir karar kaydıyla (ADR) karara bağlanır (Açık Konular 6).
 
 ## 3. Genesis'i oluştur (QBFT)
 - `genesis.json`: chain ID, QBFT consensus config (blok süresi, epoch), başlangıç
@@ -252,6 +256,8 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
    dosya ([[ADR-0052]]); Besu 25.6.0 zincir üstü izinlendirmeyi kaldırdı.
 4. Trust Registry kontrat arayüzleri → SPEC-BC-0001.
 5. Faz geçiş eşikleri → [[PM-GOV-0001]] (planlı).
+6. **Yönetişim anahtarı ile mutabakat (düğüm) anahtarının ayrılması** — bugün aynı anahtar; karar ikinci devlet katılmadan önce yeni
+   bir ADR ile verilir. O zamana kadar gerçek ağda validator düğüm anahtarı HSM'de tutulur (Adım 2).
 
 ---
 

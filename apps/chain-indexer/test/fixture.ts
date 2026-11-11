@@ -41,6 +41,8 @@ export interface Fixture {
   dnsNames: string[];
   /** ülkeler arası devredilen kaydın alan adı (ADR-0075; eski listede REVOKED) */
   devirDns: string;
+  /** fikstürün liste imzacısıyla imzalar (testler listeyi değiştirip yeniden imzalayabilsin) */
+  sign: (payload: unknown) => Promise<string>;
 }
 
 type H = Array<{ status: string; since: number; reason?: string; invalidates_from?: number; reassigned_to?: string }>;
@@ -561,6 +563,7 @@ export async function buildFixture(nowSec = Math.floor(Date.now() / 1000)): Prom
     now: new Date((planTime + 60) * 1000),
     dnsNames: [RP1, RP2, RP3_TR, RP4, RP5].map((r) => r.dns),
     devirDns: "moved.example",
+    sign,
   };
 }
 

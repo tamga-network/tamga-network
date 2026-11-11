@@ -75,6 +75,16 @@ New proposal kind `REGISTRY_ADMIN`; each operation has its own typed proposal fu
 
 The target address cannot be zero, Governance itself or an address without code. No generic "execute call" proposal is created.
 
+## Changing and retracting a vote (note 2026-11-11)
+
+A member can change or retract its vote **until the proposal is executed** (project management decision 2026-11-11): `vote`
+flips it to the other side (a second vote on the same side is still refused), `retractVote` withdraws it. This holds during the
+voting period of an open proposal and, for a queued upgrade (K1), until the end of its execution window — the delay exists
+precisely so that members can review and, if needed, change their mind. The threshold is recounted from the current votes on
+every `execute` call: if a retracted vote brings the count below the threshold during the delay, the upgrade is not applied. Votes
+cannot change on an executed, cancelled or expired proposal. Before this change a vote could not be taken back, so a vote cast
+with a compromised or misused member key could not be corrected during the delay.
+
 # Options considered
 
 | Option | Result | Why |

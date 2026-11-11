@@ -68,6 +68,14 @@ Yeni təklif növü `REGISTRY_ADMIN`; hər əməliyyat üçün ayrıca, növü m
 
 Hədəf ünvan sıfır, Governance-ın özü və ya kodu olmayan ünvan ola bilməz. Ümumi "çağırışı icra et" təklifi yaradılmır.
 
+## Səsin dəyişdirilməsi və geri götürülməsi (qeyd 2026-11-11)
+
+Üzv verdiyi səsi təklif **icra olunana qədər** dəyişə və ya geri götürə bilər (layihə rəhbərliyinin qərarı 2026-11-11): `vote`
+ilə digər tərəfə çevirir (eyni tərəfə ikinci səs yenə rədd olunur), `retractVote` ilə tamamilə geri alır. Açıq təklifdə səsvermə
+müddətində, növbədəki yeniləmədə (K1) tətbiq pəncərəsinin sonuna qədər qüvvədədir — gözləmə müddəti məhz üzvlərin yoxlaması və
+lazım gələrsə fikrini dəyişməsi üçündür. Hədd hər `execute` çağırışında həmin andakı səslərdən yenidən sayılır: gözləmə müddətində
+geri götürülən səslə hədd düşərsə yeniləmə tətbiq olunmur. İcra olunmuş, geri çəkilmiş və ya müddəti bitmiş təklifdə səs dəyişmir.
+
 # Nəzərdən keçirilmiş variantlar
 
 | Variant | Nəticə | Səbəb |

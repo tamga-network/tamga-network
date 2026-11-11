@@ -355,7 +355,7 @@ At issuance the wallet checks against the same entry that the institution is aut
 
 | Topic | Status |
 | --- | --- |
-| Making I3 accreditation mandatory for the diploma | **Deferred decision** ([[ADR-0047]] K9): today the minimum is I2, I3 **SHOULD**. Trigger (whichever comes first): the education pilot's final report, the first diploma application from an institution other than the pilot partner, or a state's education authority joining the network |
+| Making I3 accreditation mandatory for the diploma | **Deferred decision** ([[ADR-0047]] K9): today the minimum is I2, I3 **SHOULD**. Trigger (whichever comes first): the education pilot's final report, the first diploma application from an institution other than the first institution, or a state's education authority joining the network |
 | ELM JSON-LD export | Open topic for EU education interoperability |
 | Trust anchor location in the credential (ARB_21) | **Decision (2026-10-12, [[ADR-0047]] K7):** no field is added; a location in the credential would be the issuer's own claim, and a verifier takes the anchor only from a list it chose itself |
 | Indication of a non-qualified EAA (ARB_12) | **Decision (2026-10-12, [[ADR-0047]] K6):** not written; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires that a non-qualified EAA has no `category` |

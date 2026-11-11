@@ -71,6 +71,16 @@ Yeni öneri türü `REGISTRY_ADMIN`; her işlem için ayrı, türü belli bir ö
 
 Hedef adres sıfır, Governance'ın kendisi ya da kodsuz bir adres olamaz. Genel "çağrı yürüt" önerisi kurulmaz.
 
+## Oy değiştirme ve geri çekme (not 2026-11-11)
+
+Üye, verdiği oyu öneri **yürütülene kadar** değiştirebilir ya da geri çekebilir (proje yönetimi kararı 2026-11-11): `vote` ile
+öteki yöne çevirir (aynı yönde ikinci oy yine reddedilir), `retractVote` ile bütünüyle geri alır. Açık öneride oylama süresi
+boyunca, kuyruktaki yükseltmede (K1) uygulama penceresinin sonuna kadar geçerlidir — bekleme süresi tam da üyelerin incelemesi ve
+gerekirse fikir değiştirmesi içindir. Eşik her `execute` çağrısında o anki oylardan yeniden sayılır: bekleme süresinde geri
+çekilen oyla eşik düşerse yükseltme uygulanmaz. Yürütülmüş, geri çekilmiş ya da süresi dolmuş öneride oy değişmez. Önceki
+davranışta verilen oy geri alınamıyordu; ele geçirilmiş ya da yanlış kullanılmış bir üye anahtarının oyu bekleme süresinde
+düzeltilemiyordu.
+
 # Değerlendirilen seçenekler
 
 | Seçenek | Sonuç | Neden |

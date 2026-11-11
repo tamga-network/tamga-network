@@ -625,6 +625,14 @@ heç qoşulmadan görmək üçün: `npm run trust:chain-replay -- --dry-run`.
 Yol B-də təkrar oynatmanı icazə siyahısı zəncirdən hazırlanmazdan **əvvəl** işlədin: yerli oynatma Governance səslərini təsisçilərin
 test açarları ilə imzalayır və `deploy-and-wire.sh` da bu ardıcıllığa əməl edir.
 
+::: warning Miqrasiya pəncərəsi özü bağlanır
+Pəncərə vaxtı bitəndə ekvivalentlik testinin nəticəsinə **baxmadan** bağlanır və bir daha açıla bilməz ([[ADR-0073]] K1). Təkrar
+oynatma yarımçıq qalıbsa və ya test fərq tapıbsa, bağlanmış rejimdə düzəliş edilə bilməz: kontraktlar **yenidən yerləşdirilir** və
+təkrar oynatma əvvəldən aparılır. Buna görə pəncərəni qısa açın (müddəti əvvəlcə sınaq zəncirində ölçün), ekvivalentlik testini
+vaxt bitməzdən əvvəl işə salın və test fərqsiz keçəndə pəncərəni gözləmədən Governance təklifi ilə (`proposeMigrationClose`)
+**erkən bağlayın**.
+:::
+
 ## Validator əlavə etmək və çıxarmaq
 
 Validator dəsti QBFT səsi ilə dəyişir. Ardıcıllıq vacibdir:

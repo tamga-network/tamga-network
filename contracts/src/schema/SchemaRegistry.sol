@@ -90,7 +90,9 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
         s.tier = rec.tier;
         s.stateCode = rec.stateCode;
         s.status = SchemaStatus.ACTIVE;
-        s.validFrom = rec.validFrom == 0 ? uint64(block.timestamp) : rec.validFrom;
+        // Kontrol 2026-11-10: başlangıç öteki kayıtlarla aynı kuraldan geçer — kip dışında geçmişe çekilemez (`_validFrom`),
+        // göç kipinde blok zamanından ileri olamaz (`_effectiveDate`, aşağıda).
+        s.validFrom = _validFrom(rec.validFrom);
         // Kip dışında ilk ACTIVE penceresi başlangıçsızdır (since = 0); göç kipinde listedeki ilk durum anı = validFrom
         // (blok zamanından ileri olamaz).
         uint64 since = isMigrationOpen() && rec.validFrom != 0 ? _effectiveDate(rec.validFrom) : 0;

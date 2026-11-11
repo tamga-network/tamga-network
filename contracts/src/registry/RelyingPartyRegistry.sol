@@ -181,6 +181,9 @@ contract RelyingPartyRegistry is TamgaRegistryBase, IRelyingPartyRegistry {
                 || change.nameHash == bytes32(0) || change.accessCertFingerprint == bytes32(0)
                 || change.reasonHash == bytes32(0)
         ) revert InvalidPeriodChange(change.rpId);
+        // Kontrol 2026-11-10: yalnız KAYITLI kimlik için sabitlenir (devir de yeniden kayıt da var olan kaydın üstünedir);
+        // kayıtsız kimlik için yayılan olay, olayı izleyen indeksleyicileri olmayan kaydı okumaya yöneltiyordu.
+        _require(change.rpId);
         uint32 base = uint32(_periods[change.rpId].length);
         stageId = periodChangeIdOf(change);
         _stagedChanges[stageId] = change;

@@ -33,6 +33,13 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 - Rollback protection is on by default: a load without `versionMemory` uses an in-process memory per network and root fingerprints;
   pass a persistent memory to keep it across restarts, or `"none"` to turn it off.
 
+## New in 0.8.3
+
+- `ListTrustSource.relyingParty(clientId)` returns `null` when the record's `dns_name` is ambiguous between the loaded national
+  lists (ADR-0075) — the same answer as `relyingPartyByDnsName`. The rule is inside the source; callers need no extra check.
+- `fetchListTrustSource(..., { additionalStates: ["AZ", "KZ"] })` loads further national lists besides `stateCode`. The
+  cross-list rules only see the lists that are loaded: a client that loads one list cannot detect an ambiguity with another.
+
 ## New in 0.8.1
 
 - Ambiguous gate groups are closed: `terminalGroup(id)` returns `null` when the same `group_id` appears in more than one verifier
@@ -67,7 +74,7 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 
 ## Status
 
-Published on npm as the `0.8.2` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.3` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

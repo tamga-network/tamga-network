@@ -351,7 +351,7 @@ Cüzdan sənədi alarkən eyni qeyd vasitəsilə qurumun bu növü verməyə sə
 
 | Mövzu | Vəziyyət |
 |---|---|
-| Diplom üçün I3 akkreditasiyasının məcburi olması | **Təxirə salınmış qərar** ([[ADR-0047]] K9): hazırda minimum I2, I3 **SHOULD**. Tətikləyici (hansı əvvəl baş verərsə): təhsil pilotunun yekun hesabatı, pilot tərəfdaşından başqa ilk qurumun diplom müraciəti və ya hər hansı dövlətin təhsil orqanının şəbəkəyə qoşulması |
+| Diplom üçün I3 akkreditasiyasının məcburi olması | **Təxirə salınmış qərar** ([[ADR-0047]] K9): hazırda minimum I2, I3 **SHOULD**. Tətikləyici (hansı əvvəl baş verərsə): təhsil pilotunun yekun hesabatı, ilk qurumdan başqa bir qurumun diplom müraciəti və ya hər hansı dövlətin təhsil orqanının şəbəkəyə qoşulması |
 | ELM JSON-LD ixracı | Aİ təhsil sahəsində qarşılıqlı fəaliyyət üçün açıq məsələ |
 | Etibar lövbərinin yerinin sənəddə göstərilməsi (ARB_21) | **Qərar (2026-10-12, [[ADR-0047]] K7):** sənədə sahə əlavə edilmir; sənəddəki yer sənədi verən qurumun öz bəyanatı olardı və yoxlayan tərəf lövbəri yalnız özünün seçdiyi siyahıdan götürür |
 | Kvalifikasiyalı olmayan EAA göstəricisi (ARB_12) | **Qərar (2026-10-12, [[ADR-0047]] K6):** yazılmır; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 kvalifikasiyalı olmayan EAA-da `category` olmamasını tələb edir |

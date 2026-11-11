@@ -3,7 +3,7 @@
  * (O6: Windows izni, bulut eşitleme klasörü, parolasız üretim), MCP parola değişkeni (D3), pin (D4), kayıt sertifikası imzası (D5).
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -15,6 +15,7 @@ import {
   buildApplications,
   defaultHttp,
   generateKeys,
+  icaclsPath,
   installationChecks,
   isPrivateAddress,
   privateKeyPermissionOk,
@@ -22,6 +23,7 @@ import {
   syncedFolder,
   verifyRegistrationCert,
   writePrivateKey,
+  writeReport,
   type Answers,
   type Http,
 } from "./index.js";
@@ -165,6 +167,32 @@ describe("O6: özel anahtar dosyası", () => {
     mkdirSync(dir);
     await expect(generateKeys(dir, b.profile!, apps, { platform: "win32" })).rejects.toThrow(/parolasız/);
     await expect(generateKeys(dir, b.profile!, apps, { passphrase: "kısa" })).rejects.toThrow(/12 karakter/);
+  });
+
+  it("icacls tam yoluyla çağrılır (PATH / çalışma klasöründeki sahte icacls.exe çalışmaz)", () => {
+    const norm = (p: string) => p.replaceAll("\\", "/");
+    expect(norm(icaclsPath({ SystemRoot: "D:/WinNT" }))).toBe("D:/WinNT/System32/icacls.exe");
+    expect(norm(icaclsPath({ windir: "C:/Windows" }))).toBe("C:/Windows/System32/icacls.exe");
+    expect(norm(icaclsPath({}))).toBe("C:/Windows/System32/icacls.exe");
+    expect(icaclsPath({ SystemRoot: "D:/WinNT", PATH: "C:/evil" })).not.toMatch(/evil/);
+  });
+
+  it("--report: var olan dosyanın üzerine yazılmaz; anahtar / sertifika gibi görünen hedef reddedilir", () => {
+    const dir = join(tmp, "report");
+    mkdirSync(dir);
+    const ok = join(dir, "check-report.json");
+    writeReport(ok, { rows: [] });
+    expect(JSON.parse(readFileSync(ok, "utf8"))).toEqual({ rows: [] });
+    expect(() => writeReport(ok, { rows: [1] })).toThrow(/zaten var/);
+    expect(JSON.parse(readFileSync(ok, "utf8"))).toEqual({ rows: [] });
+    // yanlış yazılmış yol özel anahtarı ezmesin: var olan anahtar dosyası (wx) ve anahtar adı taşıyan yeni hedefler
+    const key = join(dir, "issuer-x.key.pem");
+    writeFileSync(key, "KEY");
+    for (const bad of [key, join(dir, "issuer-x.csr.pem"), join(dir, "rapor.txt"), join(dir, "rapor")])
+      expect(() => writeReport(bad, {}), bad).toThrow(/\.json uzantılı/);
+    for (const bad of ["issuer-x.key.json", "issuer-x.pem.json", "node-key.json", "key.json"])
+      expect(() => writeReport(join(dir, bad), {}), bad).toThrow(/anahtar/);
+    expect(readFileSync(key, "utf8")).toBe("KEY");
   });
 
   it.runIf(process.platform === "win32")("Windows: dosya önce boş açılır, izin daraltılır, sonra yazılır", () => {

@@ -153,7 +153,7 @@ separately.
 
 Making an I3 (accredited) issuer mandatory for the diploma type is **not decided** today; the minimum stays I2, with I3 recommended
 (**SHOULD**). **Trigger** (whichever comes first): (a) the education pilot's final report, (b) the first application to issue diplomas
-from an institution other than the pilot partner, (c) a state's education authority joining the network. When the trigger occurs the
+from an institution other than the first institution, (c) a state's education authority joining the network. When the trigger occurs the
 topic is brought to the project management.
 
 # Options considered

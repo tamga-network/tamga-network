@@ -28,6 +28,14 @@ export type ChainChecker = () => Promise<ChainListCheck[]>;
 
 export const CHAIN_DISABLED_REASON = "zincir kapalı (TAMGA_CHAIN_ENABLED=0)";
 export const CHAIN_SANDBOX_REASON = "sandbox listeleri zincire yazılmaz (ADR-0074 PJ4)";
+/**
+ * `/healthz` herkese açıktır: hata metni (RPC adresi, kimlik bilgili URL, iç ana makine adı taşıyabilir) oraya yazılmaz — sabit
+ * gerekçe döner, ayrıntı servisin günlüğüne gider (kontrol 2026-11-10).
+ */
+export const CHAIN_UNREACHABLE_REASON = "zincir erişilemedi";
+export const CHAIN_MISCONFIGURED_REASON = "zincir ayarı eksik";
+const logDetail = (what: string, e: unknown) =>
+  console.error(`[verify] ${what}: ${(e as Error)?.message ?? String(e)}`);
 
 /** Toplu cevap: bir `NO` → NO; hepsi `YES` (ve en az bir liste) → YES; aksi UNKNOWN. */
 export function summarizeChain(lists: ChainListCheck[]): { anchored: Tri; reason: string } {
@@ -52,6 +60,8 @@ export class ChainHealthMonitor {
     private readonly checker: ChainChecker | null,
     disabledReason = CHAIN_DISABLED_REASON,
     private readonly now: () => Date = () => new Date(),
+    /** hata ayrıntısı buraya (varsayılan: stderr); `/healthz` cevabına girmez */
+    private readonly onError: (e: unknown) => void = (e) => logDetail("zincir denetimi başarısız", e),
   ) {
     this.state = {
       enabled: !!checker,
@@ -70,11 +80,12 @@ export class ChainHealthMonitor {
       const lists = await this.checker();
       this.state = { enabled: true, ...summarizeChain(lists), checked_at: this.now().toISOString(), lists };
     } catch (e) {
-      // erişilemeyen zincir → UNKNOWN (kötüleştirmez)
+      // erişilemeyen zincir → UNKNOWN (kötüleştirmez); ayrıntı günlüğe, herkese açık cevaba sabit metin
+      this.onError(e);
       this.state = {
         enabled: true,
         anchored: "UNKNOWN",
-        reason: `zincir erişilemedi: ${(e as Error).message}`,
+        reason: CHAIN_UNREACHABLE_REASON,
         checked_at: this.now().toISOString(),
         lists: [],
       };
@@ -101,7 +112,8 @@ export async function chainHealthFromEnv(
     client = chainClientFromEnv(env, false);
   } catch (e) {
     // eksik ayar doğrulayıcıyı durdurmaz: sağlık sayfası UNKNOWN + gerekçe
-    return new ChainHealthMonitor(null, `zincir ayarı eksik: ${(e as Error).message}`);
+    logDetail("zincir ayarı eksik", e);
+    return new ChainHealthMonitor(null, CHAIN_MISCONFIGURED_REASON);
   }
   return new ChainHealthMonitor(async () => checkDistAnchored(client, "production", trustDist));
 }

@@ -76,7 +76,11 @@ export async function pemRpSigner(
  * yanıtı (sunum ya da ret) yalnız kendi dalını etkiler; `state` yalnız bu dalın istek nesnesinde geçer.
  */
 export interface RequestBranch {
-  /** Dal kimliği (sunum içinde benzersiz, gizli değil): şifreleme anahtarının `kid`'inde `enc-<sunum>.<dal>`. */
+  /**
+   * Dal kimliği (gizli değil): şifreleme anahtarının `kid`'inde `enc-<sunum>.<dal>`. Verilmezse rastgele 48 bittir — sunum içinde
+   * benzersizliği bu fonksiyon GARANTİ ETMEZ (çakışma olasılığı ihmal edilir düzeydedir); çağıran dalları bu kimlikle tutuyorsa
+   * var olan kimliği denetlemeli ya da kimliği kendisi vermelidir (`branchId`).
+   */
   branchId: string;
   nonce: string;
   state: string;

@@ -33,11 +33,17 @@ async function provider() {
 }
 
 /** `entries` girişli (2 bit) liste; `revoked` indeksleri 1 (iptal). Token Status List biçimi (LSB önce). */
-async function statusToken(p: Awaited<ReturnType<typeof provider>>, entries: number, revoked: number[] = []) {
-  const raw = new Uint8Array(Math.ceil(entries / 4));
-  for (const i of revoked) raw[i >> 2] |= 1 << ((i & 3) * 2);
+async function statusToken(
+  p: Awaited<ReturnType<typeof provider>>,
+  entries: number,
+  revoked: number[] = [],
+  bits: 1 | 2 | 4 | 8 = 2,
+) {
+  const perByte = 8 / bits;
+  const raw = new Uint8Array(Math.ceil(entries / perByte));
+  for (const i of revoked) raw[Math.floor(i / perByte)] |= 1 << ((i % perByte) * bits);
   const lst = Buffer.from(deflateSync(raw)).toString("base64url");
-  return new SignJWT({ sub: URI, status_list: { bits: 2, lst } })
+  return new SignJWT({ sub: URI, status_list: { bits, lst } })
     .setProtectedHeader({ alg: "ES256", typ: "statuslist+jwt", x5c: [Buffer.from(p.der).toString("base64")] })
     .setIssuedAt(now)
     .setExpirationTime(now + 3600)
@@ -70,6 +76,22 @@ describe("WalletStatusChecker — en az giriş sayısı (CIR 2026/1731 Ek Ib)", 
     expect(await b.statusOf({ idx: 5, uri: URI }, epochSeconds(now))).toBe("INVALID");
     expect(await b.statusOf({ idx: 6, uri: URI }, epochSeconds(now))).toBe("VALID");
     expect(await b.statusOf({ idx: 999_999, uri: URI }, epochSeconds(now))).toBe("UNKNOWN"); // listenin dışı
+  });
+
+  it("0.8.3: giriş sayısı bit sayısına göre (bayt × 8 / bit) — 1 bitlik yeterli liste VALID, 4 / 8 bitlik küçük liste NONCOMPLIANT", async () => {
+    const p = await provider();
+    const isKey = (fp: string) => (fp === p.fp ? ("YES" as const) : ("NO" as const));
+    const at = epochSeconds(now);
+    const check = async (entries: number, bits: 1 | 2 | 4 | 8) =>
+      new WalletStatusChecker(async () => statusToken(p, entries, [], bits), isKey).statusOf({ idx: 1, uri: URI }, at);
+    // 1 bit: 10.000 giriş = 1.250 bayt (eski "bayt × 4" bunu 5.000 sayıp reddediyordu)
+    expect(await check(10_000, 1)).toBe("VALID");
+    expect(await check(9_992, 1)).toBe("NONCOMPLIANT");
+    // 4 bit: 5.000 giriş = 2.500 bayt (eski hesap 10.000 sayıp kabul ediyordu); 8 bit: 2.500 giriş = 2.500 bayt
+    expect(await check(5_000, 4)).toBe("NONCOMPLIANT");
+    expect(await check(10_000, 4)).toBe("VALID");
+    expect(await check(2_500, 8)).toBe("NONCOMPLIANT");
+    expect(await check(10_000, 8)).toBe("VALID");
   });
 
   it("minEntries: 0 denetimi kapatır (geliştirme/test)", async () => {

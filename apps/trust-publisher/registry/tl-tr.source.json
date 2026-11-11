@@ -33,54 +33,6 @@
   ],
   "issuers": [
     {
-      "cert": "issuer-bilgi",
-      "status_cert": "issuer-bilgi-status",
-      "parent_ca": "root-ca",
-      "slug": "bilgi",
-      "legal_name": "İstanbul Bilgi Üniversitesi",
-      "category": "EDUCATION",
-      "assurance": "I2",
-      "class": "EAA",
-      "assurance_basis": "Foundation university; recognition by the Council of Higher Education (YÖK) is public. Identity proofing: institution registrar desk or presentation of a Tamga Identity Attestation (T2).",
-      "issuer_url": "https://issuer.tamga.network/bilgi",
-      "status_list_base": "https://status.tamga.network/",
-      "status": "REVOKED",
-      "valid_from": "2026-09-24T00:00:00Z",
-      "valid_until": "2028-09-24T00:00:00Z",
-      "successor_id": null,
-      "status_history": [
-        {
-          "status": "ACTIVE",
-          "since": "2026-09-24T00:00:00Z",
-          "reason": "initial-registration"
-        },
-        {
-          "status": "REVOKED",
-          "since": "2026-10-04T16:49:37.992Z",
-          "reason": "demonstration registration withdrawn from the production network (moved to the sandbox network)",
-          "invalidates_from": "2026-09-24T00:00:00Z"
-        }
-      ],
-      "schema_authorizations": [
-        {
-          "vct": "urn:tamga:edu:StudentCredential:1",
-          "allowed": true,
-          "valid_from": "2026-09-24T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:37.992Z"
-        },
-        {
-          "vct": "urn:tamga:edu:DiplomaCredential:1",
-          "allowed": true,
-          "valid_from": "2026-09-24T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:37.992Z"
-        }
-      ],
-      "authentic_source": {
-        "name": "Bilgi Student Information System",
-        "mode": "PORTAL_DB"
-      }
-    },
-    {
       "cert": "issuer-id",
       "status_cert": "issuer-id-status",
       "parent_ca": "root-ca",
@@ -174,48 +126,6 @@
         "street_address": "Harbiye Mah. Bostan Sk. No: 15 İç Kapı No: 5",
         "locality": "Şişli / İstanbul",
         "country": "TR"
-      }
-    },
-    {
-      "cert": "issuer-bubilet",
-      "status_cert": "issuer-bubilet-status",
-      "parent_ca": "root-ca",
-      "slug": "bubilet",
-      "legal_name": "Bubilet",
-      "category": "EVENTS",
-      "assurance": "I2",
-      "class": "EAA",
-      "assurance_basis": "Ticket seller; Tamga hosts the issuing service, the seller is the issuer in the trusted list. Tickets carry no personal data (T0).",
-      "issuer_url": "https://issuer.tamga.network/bubilet",
-      "status_list_base": "https://status.tamga.network/",
-      "status": "REVOKED",
-      "valid_from": "2026-09-26T00:00:00Z",
-      "valid_until": "2028-09-26T00:00:00Z",
-      "successor_id": null,
-      "status_history": [
-        {
-          "status": "ACTIVE",
-          "since": "2026-09-26T00:00:00Z",
-          "reason": "initial-registration (D10 bilet)"
-        },
-        {
-          "status": "REVOKED",
-          "since": "2026-10-04T16:49:40.045Z",
-          "reason": "demonstration registration withdrawn from the production network (moved to the sandbox network)",
-          "invalidates_from": "2026-09-26T00:00:00Z"
-        }
-      ],
-      "schema_authorizations": [
-        {
-          "vct": "urn:tamga:tkt:EventTicket:1",
-          "allowed": true,
-          "valid_from": "2026-09-26T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:40.045Z"
-        }
-      ],
-      "authentic_source": {
-        "name": "Bubilet sales system",
-        "mode": "TICKET_SALES"
       }
     }
   ],
@@ -381,22 +291,6 @@
           "valid_until": "2026-10-04T16:49:53.764Z"
         }
       ],
-      "terminal_groups": [
-        {
-          "group_id": "bilgi-campus",
-          "label": "İstanbul Bilgi Üniversitesi campus turnstiles",
-          "offline_allowed": true,
-          "valid_from": "2026-09-25T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:55.673Z"
-        },
-        {
-          "group_id": "bubilet-gate",
-          "label": "Bubilet event gates — single-use ticket entry",
-          "offline_allowed": false,
-          "valid_from": "2026-09-26T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:57.611Z"
-        }
-      ],
       "trade_name": "Tamga Verify",
       "info_uri": "https://verify.tamga.network",
       "contact": {
@@ -434,38 +328,6 @@
         "locality": "Şişli / İstanbul",
         "country": "TR"
       }
-    },
-    {
-      "access_cert": "rp-issuer-bilgi",
-      "dns_name": "issuer.tamga.network",
-      "legal_name": "İstanbul Bilgi Üniversitesi — identity matching at issuance",
-      "status": "REVOKED",
-      "registered_at": "2026-09-25T00:00:00Z",
-      "status_history": [
-        {
-          "status": "ACTIVE",
-          "since": "2026-09-25T00:00:00Z"
-        },
-        {
-          "status": "REVOKED",
-          "since": "2026-10-04T16:49:42.130Z",
-          "reason": "demonstration registration withdrawn from the production network (moved to the sandbox network)"
-        }
-      ],
-      "scopes": [
-        {
-          "scope_id": "bilgi-identity-matching-1",
-          "purpose": "Identity matching for issuance: national ID number and birth date are compared with the institution record and not stored",
-          "purpose_localized": {
-            "tr-TR": "Belge ihracı için kimlik eşleştirme: T.C. kimlik no ve doğum tarihi kurum kaydıyla karşılaştırılır, saklanmaz",
-            "tk-TM": "Resminama bermek üçin şahsyýeti deňeşdirmek: şahsyýet belgisi we doglan senesi edaranyň ýazgysy bilen deňeşdirilýär, saklanmaýar"
-          },
-          "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": ["personal_administrative_number", "birthdate", "given_name", "family_name"],
-          "valid_from": "2026-09-25T00:00:00Z",
-          "valid_until": "2026-10-04T16:49:42.130Z"
-        }
-      ]
     }
   ],
   "national_schemas": []

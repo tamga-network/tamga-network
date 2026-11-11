@@ -1,5 +1,5 @@
 # @tamga-network/* npm release — started manually only (Actions → release → Run workflow), with project management approval.
-# Versions: the packages are published as 0.x test releases (today 0.8.2; stable 1.0.0 when ready) under npm's default `latest`
+# Versions: the packages are published as 0.x test releases (today 0.8.3; stable 1.0.0 when ready) under npm's default `latest`
 # tag. Versions must be committed beforehand.
 # Identity: npm Trusted Publishing (OIDC) — no long-lived token. Each package's Trusted Publisher on npmjs.com is GitHub
 # Actions, this repository, workflow `release.yml`, environment `npm`. Trusted Publishing needs npm CLI >= 11.5.1 (Node 22
@@ -34,13 +34,15 @@ jobs:
     env:
       TAMGA_REQUIRE_FIXTURES: "1"
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - name: npm CLI (>= 11.5.1 for Trusted Publishing)
-        run: npm install -g npm@11 --no-audit --no-fund && npm --version
+      # Exact version (not a range): the publishing toolchain does not change between two runs of the same commit. Raise it
+      # deliberately, together with a dry run. Actions above are pinned by commit SHA for the same reason (review 2026-11-10).
+      - name: npm CLI (>= 11.5.1 for Trusted Publishing; pinned)
+        run: npm install -g npm@11.21.2 --no-audit --no-fund && npm --version
       - run: npm ci --no-audit --no-fund
       - run: npm run setup # same preparation as ci.yml (including sandbox PKI and lists; test prerequisites)
       - run: npm test && npm run typecheck

@@ -74,7 +74,19 @@ yalnız bir dəfə, nəzarət olunan bir pəncərədə yazılmasına icazə veri
   çap edir. Yazı `TAMGA_CHAIN_ENABLED` açıq və miqrasiya rejimi açıq olarkən aparılır; komanda qaldığı yerdən davam edir (zəncirdə
   olanı keçir) və sonda K6 testini işə salır.
 
+**Pəncərə ekvivalentliyə baxmadan bağlanır (qeyd 2026-11-11).** Kontrakt ekvivalentlik hesabatını bilmir: vaxt bitəndə rejim —
+təkrar oynatma yarımçıq qalsa və ya K6 testi fərq tapsa belə — bağlanır və bir daha açıla bilməz. Bağlanmış rejimdə əskik və ya
+səhv yazılmış tarixçə düzəldilə bilməz; yeganə yol kontraktların **yenidən yerləşdirilməsi** və təkrar oynatmanın əvvəldən
+aparılmasıdır. Buna görə: pəncərə işin tələb etdiyi qədər **qısa** açılır (təkrar oynatma sınaq zəncirində əvvəlcədən ölçülür),
+vaxt bitməzdən əvvəl K6 testi işə salınır, test fərqsiz keçəndə rejim gözləmədən Governance təklifi ilə **erkən bağlanır**; test
+fərq taparsa rejim açıq ikən düzəldilir və ya yerləşdirmə etibarsız sayılır. Açıq pəncərə icraçı açarının keçmiş tarixli yazı yaza
+bildiyi müddətdir; lazım olduğundan uzun saxlanmır.
+
 ## K2 — Sərt ləğv: `invalidatesFrom` (F2)
+
+> Dəqiqləşdirmə (2026-11-11): `invalidatesFrom` yalnız ləğv edilmiş (`REVOKED`) qurum üçün yazılır və ləğvi geri almır; qəbul
+> edilən sənəd çoxluğunu yalnız daraldır. Miqrasiya rejimindən kənarda keçmiş tarix qəbul edən yeganə sahədir. Sxem qeydinin
+> etibarlılıq başlanğıcı da bu tarixə qədər rejimdən kənarda keçmiş tarix qəbul edirdi; indi digər qeydlərlə eyni qaydadan keçir.
 
 - Qurum qeydi `invalidatesFrom` daşıyır (0 = yoxdur). Ələ keçirilmə ləğvi bu tarixi yazır; şərt: `validFrom ≤ invalidatesFrom ≤
   revokedAt`. Tarix keçmişdə ola bilər (ələ keçirilmə sonradan aşkarlanır); bu, miqrasiya rejimindən kənarda keçmiş tarix yazıla bilən

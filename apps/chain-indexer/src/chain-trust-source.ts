@@ -7,7 +7,13 @@
  *   C2 `isCredentialSchemaAcceptable` = şema iat anında ACTIVE ve hiç REVOKED değil ∧ yetki penceresi [since, until)
  *   C3 `isRecognizedBy`          = CrossRecognition.isRecognizedBy (kendi devleti, engel, FULL / kategori)
  *   D5 `statusAnchor`            = StatusListRegistry çapası (liste kimliği doğrulayıcının araması: adresin son parçası)
- * İndeks bayatsa (blok zamanı çok eski) ya da hiç senkronlanmadıysa cevap `UNKNOWN` / boş (CMP4). Zincirde metin yok (PJ2):
+ * İndeks bayatsa (blok zamanı çok eski) ya da hiç senkronlanmadıysa cevap `UNKNOWN` / boş (CMP4).
+ * SAĞLIK İÇERİĞE BAĞLIDIR (kontrol 2026-11-10): blok zamanı zincir yürüdükçe tazelenir, ama zincirin İÇERİĞİ bugün yalnız bir
+ * kerelik yeniden oynatmadan gelir — imzalı listeler ilerlerken zincir yerinde sayar. Bu yüzden kaynak ancak çağıran içerik
+ * düzeyini verirse (`content`: zincire yansıtılan düzey ≥ imzalı listelerin bugünkü düzeyi) ve dizinde okunamayan kayıt yoksa
+ * sağlıklıdır; `content` verilmezse bütün cevaplar `UNKNOWN` / boş. Sürekli bir projeksiyon (listedeki her değişikliğin zincire
+ * yazılması) gelene kadar bu kaynak doğrulama kararında KULLANILMAZ (ADR-0074 K5); bugünkü kullanım eşdeğerlik testidir.
+ * Zincirde metin yok (PJ2):
  * kayıtlar liste biçiminde döner ama ad, adres gibi alanlar boştur; doğrulayıcı kaydında `dns_name` yalnız çağıranın bildiği
  * adla doldurulur (zincirde yalnız özeti var).
  * `@tamga-network/trust/core`'a girmez (ADR-0015 K1: çekirdek zincir istemcisi taşımaz); servisler bunu doğrudan kullanır.
@@ -46,6 +52,23 @@ export interface ChainTrustSourceOptions {
   maxAgeSec?: number;
   /** çağıranın bildiği alan adları (doğrulayıcı kaydında `dns_name` göstermek için; zincirde yalnız özet var) */
   dnsNames?: string[];
+  /**
+   * İçerik bağı: `projectedLevel` zincire yansıtılan içeriğin düzeyi (yeniden oynatma planının `planTime`'ı — arşivdeki en son
+   * liste yayını, saniye), `listLevel` imzalı listelerin şu anki düzeyi (`listLevelOf(store)`; bilinmiyorsa null). Zincir listenin
+   * gerisindeyse ya da bu alan verilmediyse kaynak sağlıksızdır (UNKNOWN).
+   */
+  content?: { projectedLevel: number; listLevel: () => number | null };
+}
+
+/** İmzalı liste setinin düzeyi: yüklü listelerin (LOTL + ülke listeleri) en son yayın anı (saniye). Liste yoksa null. */
+export function listLevelOf(store: {
+  lotl?: { issued_at?: string };
+  national: Map<string, { list: { issued_at?: string } }>;
+}): number | null {
+  const ts = [store.lotl?.issued_at, ...[...store.national.values()].map((n) => n.list.issued_at)]
+    .map((x) => (x ? Math.floor(Date.parse(x) / 1000) : NaN))
+    .filter((x) => Number.isFinite(x));
+  return ts.length ? Math.max(...ts) : null;
 }
 
 /** `t` anındaki durum: since ≤ t olan son değişiklik; yoksa 0 (NONE) — StatusHistory.statusAt ile aynı. */
@@ -63,20 +86,34 @@ const RP_STATUS = ["NONE", "ACTIVE", "SUSPENDED", "REVOKED"] as const;
 export class ChainTrustSource implements TrustSource {
   private readonly now: () => Date;
   private readonly dnsByRpId = new Map<string, string>();
-  private readonly listsByLookup = new Map<string, string>();
+  /** arama kimliği (liste adresinin son parçası) → o parçayı taşıyan listeler; son parça kurumlar arasında çakışabilir */
+  private readonly listsByLookup = new Map<string, Array<{ issuerId: string; listId: string }>>();
   constructor(
     private readonly ix: ChainIndex,
     private readonly opts: ChainTrustSourceOptions = {},
   ) {
     this.now = opts.now ?? (() => new Date());
     for (const d of opts.dnsNames ?? []) this.dnsByRpId.set(rpIdOf(d), d.toLowerCase());
-    for (const l of Object.values(ix.lists)) this.listsByLookup.set(listLookupIdOf(l.listUri), l.listId);
+    for (const l of Object.values(ix.lists)) {
+      const k = listLookupIdOf(l.listUri);
+      this.listsByLookup.set(k, [...(this.listsByLookup.get(k) ?? []), { issuerId: l.issuerId, listId: l.listId }]);
+    }
   }
 
-  private unhealthy(): boolean {
-    if (this.ix.meta.block < 0) return true;
+  /** Kaynağın neden sağlıksız olduğu (sağlıklıysa null): hiç senkron yok, bayat blok, okunamayan kayıt, içerik bağı. */
+  healthProblem(): "not_synced" | "stale_block" | "index_errors" | "content_unbound" | "content_behind" | null {
+    if (this.ix.meta.block < 0) return "not_synced";
     const age = Math.floor(this.now().getTime() / 1000) - this.ix.meta.blockTimestamp;
-    return age > (this.opts.maxAgeSec ?? 7200);
+    if (age > (this.opts.maxAgeSec ?? 7200)) return "stale_block";
+    if ((this.ix.errors ?? []).length > 0) return "index_errors";
+    const c = this.opts.content;
+    if (!c) return "content_unbound";
+    const level = c.listLevel();
+    if (level === null || !Number.isFinite(level) || c.projectedLevel < level) return "content_behind";
+    return null;
+  }
+  private unhealthy(): boolean {
+    return this.healthProblem() !== null;
   }
 
   freshness() {
@@ -127,10 +164,18 @@ export class ChainTrustSource implements TrustSource {
     return (this.ix.schemas[schemaId.toLowerCase()]?.hashes ?? []).map(bytes32ToSri);
   }
 
-  statusAnchor(listId: string): StatusAnchorRow | null {
+  /**
+   * `listId`: zincir liste kimliği ya da doğrulayıcının araması (adresin son parçası). Son parça iki kurumda aynıysa hangisinin
+   * çapası olduğu `issuerId` ile belirlenir; verilmediyse belirsizdir — null (çapa yok sayılır; yanlış kurumun çapası dönmez).
+   */
+  statusAnchor(listId: string, issuerId?: string): StatusAnchorRow | null {
     if (this.unhealthy()) return null;
-    const id = this.listsByLookup.get(listId.toLowerCase()) ?? listId.toLowerCase();
+    const hits = this.listsByLookup.get(listId.toLowerCase()) ?? [];
+    const mine = issuerId ? hits.filter((h) => h.issuerId === issuerId.toLowerCase()) : hits;
+    if (mine.length > 1) return null;
+    const id = mine[0]?.listId ?? (hits.length ? "" : listId.toLowerCase());
     const l = this.ix.lists[id];
+    if (l && issuerId && l.issuerId !== issuerId.toLowerCase()) return null;
     if (!l || l.version === 0) return null;
     return {
       list_id: listLookupIdOf(l.listUri),
@@ -273,6 +318,7 @@ export class ChainTrustSource implements TrustSource {
   }
   /** Kök sertifikanın zincirdeki durumu (liste biçiminde ad; ROLLING_OVER halef olayından). */
   rootCAStatus(caId: string): string | null {
+    if (this.unhealthy()) return null;
     const r = this.ix.rootCAs[caId.toLowerCase()];
     if (!r) return null;
     return r.status === 1 && r.successor ? "ROLLING_OVER" : CA_STATUS[r.status];
@@ -290,10 +336,16 @@ export class ChainTrustSource implements TrustSource {
 
   /** Doğrulayıcının kayıt dönemleri (ADR-0075; dönem 0 ilk kayıt). */
   registrationPeriods(dnsName: string): Array<{ state: string; since: number }> {
+    if (this.unhealthy()) return [];
     return this.ix.rps[rpIdOf(dnsName)]?.periods ?? [];
+  }
+  /** Dizinin kendisi (eşdeğerliğin ters geçişi: zincirde fazladan kayıt var mı); kaynak sağlıksızsa null. */
+  indexSnapshot(): ChainIndex | null {
+    return this.unhealthy() ? null : this.ix;
   }
   /** Dizindeki bütün ağ düzeyi kayıtlar (eşdeğerlik: listeden kalkmış kayıt zincirde etkin kalmamalı). */
   networkRecords(): IxRecord[] {
+    if (this.unhealthy()) return [];
     return Object.values(this.ix.records);
   }
   /** Ağ düzeyi kayıt (ADR-0074 K3; `NetworkRegistry.getRecord`) — dizindeki hâli; yoksa null. */
@@ -327,12 +379,14 @@ export class ChainTrustSource implements TrustSource {
       const g = rp.groups.find((x) => x.groupId === gid);
       if (!g) continue;
       const now = Math.floor(this.now().getTime() / 1000);
+      // kurum dizinde yoksa (bilinmeyen kimlik) kapı kapalıdır: kontrat kurumu kayıtta ister, dizinde olmayan kurum doğrulanamaz
       const inst = this.ix.issuers[g.institutionId] ?? this.ix.rps[g.institutionId];
       const active =
         rp.status === 1 &&
         now >= g.validFrom &&
         (g.validUntil === 0 || now < g.validUntil) &&
-        (inst === undefined || inst.status === 1);
+        inst !== undefined &&
+        inst.status === 1;
       return {
         group: {
           group_id: groupId,

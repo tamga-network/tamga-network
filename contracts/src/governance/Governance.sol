@@ -426,19 +426,54 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         Proposal storage p = _proposals[proposalId];
         if (p.status == ProposalStatus.NONE) revert UnknownProposal(proposalId);
         if (p.status != ProposalStatus.OPEN) revert ProposalNotOpen(proposalId);
-        if (block.timestamp > p.expiresAt) revert ProposalExpired(proposalId);
-        if (_hasVoted[proposalId][msg.sender]) revert AlreadyVoted(proposalId, msg.sender);
+        _requireVotable(p, proposalId);
 
         // ADR-0002: çıkarma oylamasında çıkarılanın oyu SAYILMAZ.
         if (p.kind == ProposalKind.STATE_REMOVAL && _validatorToState[msg.sender] == p.stateCode) {
             revert NotValidator(msg.sender);
         }
 
-        _hasVoted[proposalId][msg.sender] = true;
+        if (_hasVoted[proposalId][msg.sender]) {
+            // Oy değiştirme (kontrol 2026-11-10): öneri yürütülene kadar — kuyruktaki yükseltme dahil — üye oyunu çevirebilir.
+            // Aynı yönde ikinci oy yine reddedilir (çift sayım yok).
+            if (_support[proposalId][msg.sender] == support) revert AlreadyVoted(proposalId, msg.sender);
+            if (support) {
+                p.againstVotes--;
+                p.forVotes++;
+            } else {
+                p.forVotes--;
+                p.againstVotes++;
+            }
+        } else {
+            _hasVoted[proposalId][msg.sender] = true;
+            if (support) p.forVotes++;
+            else p.againstVotes++;
+        }
         _support[proposalId][msg.sender] = support;
-        if (support) p.forVotes++;
-        else p.againstVotes++;
         emit Voted(proposalId, msg.sender, support);
+    }
+
+    /// @inheritdoc IGovernance
+    function retractVote(bytes32 proposalId) external onlyValidator {
+        Proposal storage p = _proposals[proposalId];
+        if (p.status == ProposalStatus.NONE) revert UnknownProposal(proposalId);
+        if (p.status != ProposalStatus.OPEN) revert ProposalNotOpen(proposalId);
+        _requireVotable(p, proposalId);
+        if (!_hasVoted[proposalId][msg.sender]) revert NoVote(proposalId, msg.sender);
+        if (_support[proposalId][msg.sender]) p.forVotes--;
+        else p.againstVotes--;
+        _hasVoted[proposalId][msg.sender] = false;
+        _support[proposalId][msg.sender] = false;
+        emit VoteRetracted(proposalId, msg.sender);
+    }
+
+    /// @dev Oy verme / değiştirme / geri çekme penceresi: açık öneride `expiresAt`'a kadar; kuyruktaki yükseltmede uygulama
+    ///      penceresinin sonuna (eta + PROPOSAL_TTL) kadar — bekleme süresi tam da üyelerin fikir değiştirebilmesi içindir.
+    ///      `execute` eşiği her seferinde o anki oylardan yeniden sayar; geri çekilen oyla eşik düşerse yükseltme uygulanmaz.
+    function _requireVotable(Proposal storage p, bytes32 proposalId) private view {
+        uint64 queuedAt = _upgradeQueue[proposalId].queuedAt;
+        uint64 until = queuedAt != 0 ? queuedAt + UPGRADE_DELAY + PROPOSAL_TTL : p.expiresAt;
+        if (block.timestamp > until) revert ProposalExpired(proposalId);
     }
 
     /// @inheritdoc IGovernance

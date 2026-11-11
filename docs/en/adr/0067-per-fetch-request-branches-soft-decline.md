@@ -129,6 +129,13 @@ per-address rate limit (at the proxy) raises the attacker's cost but does not st
 (a flood across many presentations), the oldest evictable branch may belong to another presentation; if every branch is being
 processed, the fetch gets 503. The in-memory state is per process; a multi-instance deployment needs a shared store.
 
+**The real cost of the attack (note 2026-11-11).** Filling the hard ceiling from one address takes **about 32 fetches**. The
+per-address limit at the proxy is 2 requests/s; with a burst of 20 those 32 fetches could be made in ~6 seconds — the limit
+hardly slowed the attack. The burst was lowered to 5: the same 32 fetches now take ~14 seconds from one address; an ordinary
+wallet makes one, at most a few, fetches per presentation and is not affected. This slows the attack down, it does not stop it:
+for an attacker using several addresses the cost stays low, and the outcome is unchanged (the presentation does not become
+REJECTED; the person scans the QR again).
+
 **Single-use lock (note 2026-11-04).** In the implementation the single-use lock was per presentation: while one response was being
 processed, every other response to the same presentation got "being processed" (400). Someone who sees the QR could send slowly
 processed responses on their own branch and so turn away the real wallet's response (the presentation stayed open; the person had to

@@ -145,7 +145,7 @@ sonlandırma, mahremiyet, tedarik zinciri). Uygulama Tüzüğü (AB) 2025/1569'u
 ## K9 — Diplomada I3: pilottan sonra karar (ertelenmiş karar)
 
 Diploma türünde I3 (akredite) belge vereni zorunlu kılmak bugün **kararlaştırılmaz**; asgari I2, I3 önerilir (**SHOULD**) olarak kalır.
-**Tetikleyici** (hangisi önce gelirse): (a) eğitim pilotunun sonuç raporu, (b) pilot ortağı dışındaki ilk kurumun diploma vermek
+**Tetikleyici** (hangisi önce gelirse): (a) eğitim pilotunun sonuç raporu, (b) ilk kurumdan başka bir kurumun diploma vermek
 için başvurusu, (c) bir devletin eğitim makamının ağa katılması. Tetikleyici gerçekleşince konu proje yönetimine getirilir.
 
 # Değerlendirilen seçenekler

@@ -107,7 +107,15 @@ Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri bu gün l�
 
 - İndeksləyici və `ChainTrustSource` yeni tətbiqdədir: `apps/chain-indexer/` (ad təsdiqlənib). İndeksləyici
   kontrakt hadisələrini oxuyur və qeydləri yaddaşdakı siyahı formasına çevirir; `ChainTrustSource` eyni `TrustSource` interfeysini
-  həyata keçirir ([[ADR-0015]] K3): C1/C2/C3-ü sabitlənmiş blokdakı kontrakt oxunuşlarından (`TrustQueries`), qeydləri indeksdən verir.
+  həyata keçirir ([[ADR-0015]] K3): C1/C2/C3-ü və qeydləri **indeksdən**, kontraktın oxu qaydalarının eynisi ilə verir (düzəliş
+  2026-11-11: əvvəlki mətn "sabitlənmiş blokdakı kontrakt oxunuşlarından (`TrustQueries`)" deyirdi; tətbiq indeksdən cavab verir,
+  kontrakt oxunuşu ekvivalentlik testində üçüncü mənbə kimi müqayisə olunur).
+- **Sağlamlıq məzmuna bağlıdır; davamlı proyeksiya qurulana qədər doğrulamada istifadə olunmur (qeyd 2026-11-11).** Blok vaxtı
+  zəncir işlədikcə təzələnir, amma zəncirin məzmunu bu gün yalnız birdəfəlik təkrar oynatmadan gəlir: imzalı siyahılar irəlilədikcə
+  zəncir yerində qalır. Buna görə `ChainTrustSource` yalnız çağıran məzmun səviyyəsini verəndə (zəncirə əks olunan səviyyə ≥ imzalı
+  siyahıların bugünkü səviyyəsi) və indeksdə oxunmayan qeyd olmayanda sağlamdır; əks halda bütün cavablar `UNKNOWN`-dur. Siyahıdakı
+  hər dəyişikliyi zəncirə yazan **davamlı proyeksiya** qurulana qədər bu mənbə heç bir doğrulama qərarında (C1/C2/C3/D5) istifadə
+  olunmur; bugünkü yeganə istifadəsi ekvivalentlik testidir.
   İndeks köhnəlibsə və ya zəncir əlçatan deyilsə, cavab `UNKNOWN`-dur (CMP4).
 - `@tamga-network/trust/core` yüngül qalır ([[ADR-0015]] K1); zəncir müştərisi asılılığı ora daxil olmur. Üçüncü tərəflər üçün ayrıca
   paket lazım olarsa, adı `@tamga-network/chain`-dir (ad təsdiqlənib). Siyahı dərc edənin `trust:chain-check`-i

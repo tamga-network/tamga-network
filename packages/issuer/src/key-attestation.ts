@@ -287,8 +287,9 @@ export class WalletStatusChecker {
         bit = null; // indeks listenin dışında
       }
       if (bit !== null && bit !== 0) return "INVALID";
-      // 2 bit/giriş (D6): açılmış bayt sayısı × 4
-      if (v.bitstring.bytes.length * 4 < this.minEntries) return "NONCOMPLIANT";
+      // Giriş sayısı = bayt × 8 / bit sayısı (0.8.3): 1 bit/giriş listede bayt başına 8, 2 bitte 4, 4 bitte 2, 8 bitte 1 giriş.
+      // Önceki "bayt × 4" yalnız 2 bitlik listede doğruydu: 1 bitlik yeterli listeyi küçük, 4 / 8 bitlik küçük listeyi yeterli sayıyordu.
+      if (v.bitstring.entries < this.minEntries) return "NONCOMPLIANT";
       return bit === 0 ? "VALID" : "UNKNOWN";
     } catch {
       return "UNKNOWN";

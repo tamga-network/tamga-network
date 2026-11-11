@@ -79,7 +79,7 @@ Adlar (kamuya açık ABI; mevcut adlandırma düzenine göre — `proposeNetwork
 |---|---|
 | `Governance` öneri fonksiyonları | `proposeRelyingPartyReassignment(registry, stageId)`, `proposeRelyingPartyReRegistration(registry, stageId)` |
 | `Governance` kayıt yönetimi işlemleri (`AdminAction`, yalnız sona) | `REASSIGN_RELYING_PARTY`, `REREGISTER_RELYING_PARTY` |
-| `RelyingPartyRegistry` yazım | `stagePeriodChange(PeriodChange)` (herkes; yalnız saklar), `commitPeriodChange(stageId, PeriodAction)` (yalnız Governance) |
+| `RelyingPartyRegistry` yazım | `stagePeriodChange(PeriodChange)` (herkes; yalnız saklar; kimlik kayıtlı olmalı — kayıtsız kimlik `UnknownRP`, 2026-11-11), `commitPeriodChange(stageId, PeriodAction)` (yalnız Governance) |
 | `RelyingPartyRegistry` okuma | `periodChangeIdOf`, `stagedPeriodChangeOf`, `registrationPeriodsOf`, `relyingPartyAt(rpId, t)`, `isRelyingPartyAcceptableAt(rpId, t)`, `relyingPartyStatusHistoryOf` |
 | Türler | `PeriodAction {NONE, REASSIGNMENT, RE_REGISTRATION}`, `PeriodChange`, `RegistrationPeriod` |
 | Olaylar | `PeriodChangeStaged`, `RelyingPartyReassigned`, `RelyingPartyReRegistered` |

@@ -90,6 +90,7 @@ import {
   xmlSignerSlotProblems,
 } from "./tl119612.js";
 import { chainCommand } from "./chain/cli.js";
+import { removalChangelogLine, removedRecords } from "./removals.js";
 import { statusAnchorParams } from "./chain/projection.js";
 import { listViewBody, registrationStatusBody, viewLinesEnabled, viewSnapshotOf } from "./view-anchors.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
@@ -958,6 +959,18 @@ async function build() {
   const tg = checkTerminalGroups(rps, issuers, now);
   if (tg.length) throw new Error(`ADR-0069: terminal_groups — ${tg.join("; ")}`);
   const tlPrev = prevInfo(`tl-${cc.toLowerCase()}`);
+  // TL2: önceki yayımlanmış sürümdeki bir kayıt yeni listede yoksa yayın durur; onaylı çıkarma kaydı (removals.json) varsa
+  // yayımlanır ve CHANGELOG'a adsız satır yazılır (removals.ts). Sandbox'ta uygulanmaz (ADR-0041 TI5).
+  const tlPrevJson = resolve(DIST, `tl-${cc.toLowerCase()}.json`);
+  const removalsFile = resolve(REG, "removals.json");
+  const removalLine =
+    ENVIRONMENT === "sandbox"
+      ? null
+      : removalChangelogLine(
+          `tl-${cc.toLowerCase()}`,
+          removedRecords(existsSync(tlPrevJson) ? readJson(tlPrevJson) : null, { issuers, relying_parties: rps }),
+          existsSync(removalsFile) ? readJson(removalsFile) : [],
+        );
   const tl = {
     list_format_version: tlSrc.list_format_version,
     list_type: "trusted_list",
@@ -1174,6 +1187,7 @@ async function build() {
         if (!anchored.has(`${x.schema_id}|${h}`))
           await appendAnchor({ kind: "schema", schema_id: x.schema_id, vct: x.vct, content_hash: h });
   }
+  if (removalLine) changelog(removalLine);
   const wps = (lotlSrc.wallet_providers as Array<{ provider_id: string; status: string }>)
     .map((w) => (w.status === "ACTIVE" ? w.provider_id : `${w.provider_id}(${w.status})`))
     .join(",");

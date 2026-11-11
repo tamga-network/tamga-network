@@ -175,6 +175,21 @@ describe("render — belirleyicilik ve biçim", () => {
     expect(parsePermissionsToml(a.toml)).toEqual({ accounts: a.accounts, nodes: a.nodes });
   });
 
+  it("okuyucu IPv6 adresli enode'u okur: dizi tırnak dışındaki ilk `]` ile biter (kontrol 2026-11-10)", () => {
+    const v6 = `enode://${pub(1)}@[2001:db8::1]:30303`;
+    const v4 = `enode://${pub(2)}@10.0.0.1:30303`;
+    const toml = `accounts-allowlist=[\n  "0xabc",\n]\nnodes-allowlist=[\n  "${v6}",\n  "${v4}",\n]\n`;
+    // eski hâl: düzenli ifade diziyi IPv6 adresinin `]`'inde kesiyor, kalan satırlar "tanınmayan içerik" hatası veriyordu
+    expect(parsePermissionsToml(toml)).toEqual({ accounts: ["0xabc"], nodes: [v6, v4] });
+    expect(parsePermissionsToml(`nodes-allowlist=["${v6}"]`)).toEqual({ accounts: [], nodes: [v6] });
+    expect(diffPermissions({ accounts: [], nodes: [v6] }, { accounts: [], nodes: [v6 + "?discport=0"] }).equal).toBe(
+      true,
+    );
+    expect(() => parsePermissionsToml('accounts-allowlist=["0x1"\n')).toThrow(/kapanmamış/);
+    expect(() => parsePermissionsToml('accounts-allowlist=["0x1"]\naccounts-allowlist=["0x2"]\n')).toThrow(/yinelenen/);
+    expect(() => parsePermissionsToml('accounts-allowlist=["0x1" "0x2"]\n')).toThrow(/tanınmayan/);
+  });
+
   it("okuyucu yalnız kendi biçimini kabul eder; fark hesabı büyük/küçük harf ve enode sorgusunu yok sayar", () => {
     expect(() => parsePermissionsToml('accounts-allowlist=["0x1"]\nnodes-whitelist=[]\n')).toThrow(/beklenmeyen/);
     expect(() => parsePermissionsToml("accounts-allowlist=[0x1]\n")).toThrow(/tırnaksız/);

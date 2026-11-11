@@ -18,7 +18,7 @@ import {
   readOnboardingDir,
   type Row,
 } from "./checks.js";
-import { csrExpectations, generateKeys, inspectCsr } from "./keys.js";
+import { csrExpectations, generateKeys, inspectCsr, writeReport } from "./keys.js";
 import { NETWORKS, sandboxGuide, type Environment } from "./network.js";
 import {
   buildNodeDeclaration,
@@ -362,7 +362,7 @@ async function check() {
     rp,
     rows,
   };
-  if (opt("report")) writeFileSync(resolve(opt("report")!), JSON.stringify(report, null, 2) + "\n");
+  if (opt("report")) writeReport(resolve(opt("report")!), report);
   if (flag("json")) console.log(JSON.stringify(report, null, 2));
   else {
     console.log(`Tamga Network katılım denetimi — ${slug ?? rp ?? dir} · ${env ?? "production"}\n`);
@@ -494,7 +494,7 @@ async function nodeCheck() {
     rpc_local: local,
     rows,
   };
-  if (opt("report")) writeFileSync(resolve(opt("report")!), JSON.stringify(report, null, 2) + "\n");
+  if (opt("report")) writeReport(resolve(opt("report")!), report);
   if (flag("json")) console.log(JSON.stringify(report, null, 2));
   else {
     console.log(`Tamga Network düğüm denetimi — ${profile ? `${profile.state} · ${profile.role}` : target}\n`);

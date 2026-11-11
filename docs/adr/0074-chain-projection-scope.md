@@ -107,8 +107,16 @@ Kayıt sertifikası durum listesi ve liste görünümleri bugün çapa günlüğ
 
 - İndeksleyici ve `ChainTrustSource` yeni bir uygulamada: `apps/chain-indexer/` (ad onaylı). İndeksleyici
   kontrat olaylarını okur ve kayıtları bellekteki liste biçimine çevirir; `ChainTrustSource` aynı `TrustSource` arayüzünü uygular
-  ([[ADR-0015]] K3): C1/C2/C3'ü sabitlenmiş bir bloktaki kontrat okumalarından (`TrustQueries`), kayıtları indeksten verir.
-  İndeks bayatsa ya da zincir erişilemezse cevap `UNKNOWN`'dur (CMP4).
+  ([[ADR-0015]] K3): C1/C2/C3'ü ve kayıtları **indeksten**, kontratın okuma kurallarının aynısıyla verir (düzeltme 2026-11-11:
+  önceki metin "sabitlenmiş bloktaki kontrat okumalarından (`TrustQueries`)" diyordu; uygulama indeksten cevaplar, kontrat okuması
+  eşdeğerlik testinde üçüncü kaynak olarak karşılaştırılır). İndeks bayatsa ya da zincir erişilemezse cevap `UNKNOWN`'dur (CMP4).
+- **Sağlık içeriğe bağlıdır; sürekli projeksiyon gelene kadar doğrulamada kullanılmaz (not 2026-11-11).** Blok zamanı zincir
+  yürüdükçe tazelenir, ama zincirin içeriği bugün yalnız bir kerelik yeniden oynatmadan gelir: imzalı listeler ilerlerken zincir
+  yerinde sayar. Bu yüzden `ChainTrustSource` ancak çağıran içerik düzeyini verirse (zincire yansıtılan düzey ≥ imzalı listelerin
+  bugünkü düzeyi) ve indekste okunamayan kayıt yoksa sağlıklıdır; aksi hâlde bütün cevaplar `UNKNOWN`'dur. Listedeki her
+  değişikliği zincire yazan **sürekli bir projeksiyon** kurulana kadar bu kaynak hiçbir doğrulama kararında (C1/C2/C3/D5)
+  tüketilmez; bugünkü tek kullanımı eşdeğerlik testidir. İndeksleyici yalnız durum değiştiren olayları izler (herkesin
+  çağırabildiği sabitleme olaylarını değil), olayları dilimlerle okur ve başka zincire bağlanan dizini reddeder.
 - `@tamga-network/trust/core` hafif kalır ([[ADR-0015]] K1); zincir istemcisi bağımlılığı oraya girmez. Üçüncü taraflar için ayrı
   paket gerekirse adı `@tamga-network/chain` (ad onaylı). Liste yayıncısının `trust:chain-check`'i yerinde kalır.
 - [[ADR-0073]] K6 eşdeğerlik testi bu okuma yolunu kullanır.

@@ -123,6 +123,14 @@ Anahtar HSM'deyse `node init` kullanılmaz: açık anahtarı HSM'den alıp §5't
 Yapay zekâ asistanı üzerinden aynı adım MCP aracı `generate_node_key`'dir; özel anahtar hiçbir yanıtta dönmez ve MCP ile eşitlenen
 klasöre hiç yazılmaz.
 
+::: warning Aynı anahtar hem blok imzalar hem oy verir (açık karar)
+Bugün validator'ın düğüm anahtarı aynı zamanda devletin **Governance oy anahtarıdır**: blok imzalayan anahtar öneri açar ve oy
+verir. Düğüm anahtarı çalışan sunucuda durduğu için bu, yönetişim yetkisini de o sunucuya bağlar. Bu iki anahtar ayrılana kadar
+**gerçek ağda validator düğüm anahtarı HSM'de (ya da eşdeğer donanım kasasında) tutulmak ZORUNDADIR**; dosyada duran anahtar yalnız
+deneme ağlarında kabul edilir. Yönetişim ve mutabakat anahtarlarının ayrılması **açık karardır**: ikinci bir devlet ağa katılmadan
+önce yeni bir karar kaydıyla (ADR) karara bağlanacaktır.
+:::
+
 ## 4. İzinli kip
 
 Hangi düğümün bağlanabileceğini ve hangi hesabın işlem gönderebileceğini her düğümdeki yerel `permissions_config.toml` belirler

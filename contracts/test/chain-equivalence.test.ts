@@ -14,7 +14,7 @@ import { expect } from "chai";
 
 import { addressesFrom, connectTrustContracts } from "../../apps/chain-indexer/src/contracts.js";
 import { ChainIndexer } from "../../apps/chain-indexer/src/indexer.js";
-import { ChainTrustSource } from "../../apps/chain-indexer/src/chain-trust-source.js";
+import { ChainTrustSource, listLevelOf } from "../../apps/chain-indexer/src/chain-trust-source.js";
 import { compareSources } from "../../apps/chain-indexer/src/equivalence.js";
 import { providerFromEip1193 } from "../../apps/chain-indexer/src/local-dev.js";
 import { executeReplay, openMigrationWindows } from "../../apps/chain-indexer/src/replay-exec.js";
@@ -89,9 +89,13 @@ describe("ADR-0073 K6 — zincir–liste eşdeğerliği (yeniden oynatma + indek
     // indeksleyici + iki kaynak
     const indexer = new ChainIndexer(provider, c);
     const block = await indexer.sync();
-    const chain = new ChainTrustSource(indexer.index, { now: () => f.now, dnsNames: [...f.dnsNames, f.devirDns] });
     const { store, source: list } = await listSourceFromArchive(f.archive, f.now);
-    const report = await compareSources(store, list, chain, { contracts: c, blockTag: block });
+    const chain = new ChainTrustSource(indexer.index, {
+      now: () => f.now,
+      dnsNames: [...f.dnsNames, f.devirDns],
+      content: { projectedLevel: plan.planTime, listLevel: () => listLevelOf(store) },
+    });
+    const report = await compareSources(store, list, chain, { contracts: c, blockTag: block, plan });
 
     console.log(
       `      eşdeğerlik: ${report.total} soru ${JSON.stringify(report.questions)}; fark ${report.differences.length} ` +
@@ -134,5 +138,41 @@ describe("ADR-0073 K6 — zincir–liste eşdeğerliği (yeniden oynatma + indek
     ).to.have.length(1);
     // indeks artımlıdır: yeni blok yoksa değişmez
     expect(await indexer.sync()).to.equal(block);
+
+    // TERS GEÇİŞ (kontrol 2026-11-10): zincirde listede olmayan etkin kayıt ve farklı kayıt alanı farktır. Dizinin kopyasına
+    // fazladan kurum / yetki / doğrulayıcı / iptal listesi eklenir ve bir kurumun parmak izi değiştirilir.
+    const tampered = JSON.parse(JSON.stringify(indexer.index)) as typeof indexer.index;
+    const some = Object.values(tampered.issuers)[0];
+    const extraIssuer = "0x" + "e1".repeat(32);
+    tampered.issuers[extraIssuer] = { ...some, issuerId: extraIssuer, auth: {} };
+    const schemaId = Object.keys(tampered.schemas)[0];
+    const unauthorized = Object.values(tampered.issuers).find((i) => i.issuerId !== extraIssuer && !i.auth[schemaId])!;
+    unauthorized.auth[schemaId] = [[1, 0]];
+    const someRp = Object.values(tampered.rps)[0];
+    const extraRp = "0x" + "e2".repeat(32);
+    tampered.rps[extraRp] = { ...someRp, rpId: extraRp, groups: [], history: [[1, 1]], status: 1 };
+    const someList = Object.values(tampered.lists)[0];
+    const extraList = "0x" + "e3".repeat(32);
+    tampered.lists[extraList] = { ...someList, listId: extraList, listUri: "https://status.example/extra/ffff" };
+    const changed = Object.values(tampered.issuers).find((i) => store.issuers.has(i.issuerId))!;
+    changed.fp = "0x" + "e4".repeat(32);
+    const chain2 = new ChainTrustSource(tampered, {
+      now: () => f.now,
+      dnsNames: [...f.dnsNames, f.devirDns],
+      content: { projectedLevel: plan.planTime, listLevel: () => listLevelOf(store) },
+    });
+    const report2 = await compareSources(store, list, chain2, { plan });
+    const of = (cat: string) => report2.differences.filter((x) => x.category === cat).map((x) => x.question);
+    expect(of("chain_only").some((x) => x.startsWith("kurum 0xe1e1"))).to.equal(true);
+    expect(of("chain_only").some((x) => x.startsWith("yetki "))).to.equal(true);
+    expect(of("chain_only").some((x) => x.startsWith("doğrulayıcı 0xe2e2"))).to.equal(true);
+    expect(of("chain_only").some((x) => x.startsWith("iptal listesi 0xe3e3"))).to.equal(true);
+    expect(of("record_fields").some((x) => x.endsWith("cert_fingerprint"))).to.equal(true);
+    expect(of("plan_set").sort()).to.deep.equal(["auth", "issuers", "lists", "rps"]);
+    expect(report2.decisionDifferences).to.be.greaterThan(3); // göç kapanmaz (CE6)
+    // içerik bağı yoksa kaynak cevap vermez: bütün kararlar UNKNOWN, ters geçiş dizini okuyamaz
+    const unbound = new ChainTrustSource(indexer.index, { now: () => f.now });
+    expect(unbound.isCredentialAcceptable(some.issuerId, plan.planTime)).to.equal("UNKNOWN");
+    expect(unbound.indexSnapshot()).to.equal(null);
   });
 });

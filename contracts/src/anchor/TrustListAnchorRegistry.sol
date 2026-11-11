@@ -186,6 +186,11 @@ contract TrustListAnchorRegistry is Initializable, UUPSUpgradeable, ITrustListAn
             if (_latestLogSeq[logKey] != 0 || _logs[logKey][0].confirmed) {
                 if (seq <= _latestLogSeq[logKey]) revert SeqNotMonotonic(_latestLogSeq[logKey], seq);
             }
+            // Kontrol 2026-11-10: sıra da bir adımda en çok MAX_VERSION_STEP artar (liste sürümüyle aynı kural, F-18) —
+            // tek yazıcılı ağda 2^64-1 sırası onaylanıp günlüğün çapası kalıcı olarak dondurulamaz.
+            if (seq > _latestLogSeq[logKey] && seq - _latestLogSeq[logKey] > MAX_VERSION_STEP) {
+                revert VersionStepTooLarge(_latestLogSeq[logKey], seq);
+            }
             h.seq = seq;
             h.lineHash = lineHash;
             h.ts = ts;

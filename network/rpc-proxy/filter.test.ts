@@ -34,6 +34,8 @@ describe("rpc filter — decide", () => {
       "eth_sign",
       "eth_accounts",
       "eth_subscribe",
+      "net_enode",
+      "net_services",
       "rpc_modules",
       "ETH_blockNumber",
       "eth",
@@ -43,7 +45,8 @@ describe("rpc filter — decide", () => {
   });
 
   it("single call, batch, malformed", () => {
-    expect(decide(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] }))).toEqual({ ok: true });
+    const single = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_chainId", params: [] });
+    expect(decide(single)).toEqual({ ok: true, forward: single });
     const one = decide(JSON.stringify({ jsonrpc: "2.0", id: 7, method: "admin_nodeInfo" }));
     expect(one).toMatchObject({ ok: false, status: 403, body: { id: 7, error: { code: -32601 } } });
     const batch = decide(
@@ -102,6 +105,32 @@ describe("rpc filter — server", () => {
     const bad = await post(JSON.stringify({ jsonrpc: "2.0", id: 2, method: "admin_peers" }));
     expect(bad.status).toBe(403);
     expect(seen).toHaveLength(1);
+  });
+
+  it("repeated keys: the node receives what the filter checked, never the client's bytes (review 2026-11-10)", async () => {
+    // JSON parsers disagree on a repeated key (first wins / last wins). The filter reads the LAST one; a node reading the FIRST
+    // would run the unchecked method if the original bytes were passed on.
+    const smuggle = '{"jsonrpc":"2.0","id":1,"method":"admin_peers","params":[],"method":"eth_blockNumber"}';
+    const d = decide(smuggle);
+    expect(d.ok).toBe(true);
+    expect(d.forward).toBe('{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}');
+    expect(d.forward).not.toContain("admin_peers");
+    // the other order is refused outright
+    expect(decide('{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[],"method":"admin_peers"}').ok).toBe(false);
+    // a "__proto__" member does not change the method that is checked or forwarded
+    const proto = decide('{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","__proto__":{"method":"admin_peers"}}');
+    expect(proto.ok).toBe(true);
+    expect(JSON.parse(proto.forward).method).toBe("eth_blockNumber");
+    seen = [];
+    expect((await post(smuggle)).status).toBe(200);
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).not.toContain("admin_peers");
+    expect(JSON.parse(seen[0]).method).toBe("eth_blockNumber");
+    // batch with a repeated key inside one call
+    seen = [];
+    const batch = '[{"jsonrpc":"2.0","id":1,"method":"debug_traceBlock","method":"net_version"}]';
+    expect((await post(batch)).status).toBe(200);
+    expect(seen[0]).toBe('[{"jsonrpc":"2.0","id":1,"method":"net_version"}]');
   });
 
   it("method, path, content type and size limits", async () => {

@@ -83,7 +83,20 @@ This proposal adds those abilities to the contracts and allows history to be wri
   plan. Writing happens with `TAMGA_CHAIN_ENABLED` on and the migration mode open; the command resumes where it stopped (skips what
   is already on chain) and runs the K6 test at the end.
 
+**The window closes regardless of equivalence (note 2026-11-11).** The contract does not know the equivalence report: when the
+time is up the mode closes — even if the replay is unfinished or the K6 test found a difference — and it can never be opened again.
+History that is missing or wrong in a closed mode cannot be corrected; the only way is to **redeploy** the contracts and replay from
+the start. Therefore: the window is opened only as **short** as the work needs (the replay is timed beforehand on a trial chain),
+the K6 test is run before the deadline, and once it passes without a difference the mode is **closed early** by a Governance
+proposal instead of waiting; if the test finds a difference it is fixed while the mode is open, or the deployment is treated as
+void. An open window is the time during which the executor key can write dated history; it is not kept open longer than needed.
+
 ## K2 — Hard revocation: `invalidatesFrom` (F2)
+
+> Clarification (2026-11-11): `invalidatesFrom` is written only for a revoked (`REVOKED`) issuer and does not undo the revocation;
+> it only narrows the set of accepted credentials. It is the single field that accepts a past date outside the migration mode. The
+> schema record's validity start also accepted a past date outside the mode until this date; it now goes through the same rule as
+> the other records, which makes the "single field" statement below true.
 
 - The issuer record carries `invalidatesFrom` (0 = none). A compromise revocation writes this date; condition: `validFrom ≤
   invalidatesFrom ≤ revokedAt`. The date may be in the past (compromise is discovered later); it is the only field that can carry a

@@ -634,6 +634,14 @@ see the plan without connecting to the chain at all: `npm run trust:chain-replay
 In path B run the replay **before** the permission list is rendered from the chain: the local replay signs Governance votes with the
 founders' test keys, and `deploy-and-wire.sh` follows the same order.
 
+::: warning The migration window closes by itself
+When its time is up the window closes **regardless** of the equivalence test result and can never be opened again ([[ADR-0073]]
+K1). If the replay is unfinished or the test found a difference, nothing can be corrected in a closed mode: the contracts are
+**redeployed** and the replay starts over. So keep the window short (time the replay on a trial chain first), run the equivalence
+test before the deadline, and once it passes without a difference **close the window early** with a Governance proposal
+(`proposeMigrationClose`) instead of waiting.
+:::
+
 ## Adding and removing validators
 
 The validator set changes by QBFT vote. The order matters:

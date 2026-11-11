@@ -1,7 +1,8 @@
 /**
- * ADR-0075 (0.8.2): `fetchRpRecord` `x509_hash:` yolunda da ülkeler arası ad belirsizliğini denetler. Aynı `dns_name` iki ülke
- * listesinde iptal edilmemiş görünürse (makinece okunur devir kaydı yok) istemci kimliğiyle bulunan kayıt da yok sayılır (null →
- * onay ekranı "güven listesinde bulunamadı", kayıtsız istek reddi). Devir kaydı doğruysa yeni ülkenin kaydı döner.
+ * ADR-0075: `fetchRpRecord` güven kaynağının cevabını olduğu gibi kullanır — kaynak belirsiz ad için null dönerse (iki arama
+ * yolunda da; kural 0.8.3'ten beri `ListTrustSource`'un içinde) kayıt yok sayılır. Bu test kaynağı ELLE kurulmuş çok listeli bir
+ * depoyla değiştirir: `fetchRpRecord`'un kendisi LOTL + TEK ülke listesi yükler, bu yüzden sahada cüzdan başka ülkenin listesindeki
+ * kaydı göremez (belgelenmiş kapsam; gerçek yükleyiciyle iki imzalı liste: apps/chain-indexer/test/rp-ambiguity-fetch.test.ts).
  */
 import { describe, expect, it, vi } from "vitest";
 import { ListTrustSource, RelyingParty, TrustStore } from "@tamga-network/trust/core";

@@ -160,7 +160,11 @@ function proposeFounderRecognition(address registry, bytes2[] calldata founders)
 function proposeNetworkSchemaDeprecation(bytes32 schemaId, bytes32 supersededBy) external onlyValidator returns (bytes32);
 function proposeNetworkSchemaRevocation(bytes32 schemaId, bytes32 reasonHash) external onlyValidator returns (bytes32);
 
+/// Oy verir; öneri yürütülene kadar (kuyruktaki yükseltme dahil) öteki yöne ÇEVİREBİLİR. Aynı yönde ikinci oy AlreadyVoted.
 function vote(bytes32 proposalId, bool support) external onlyValidator;
+/// 2026-11-11: verdiği oyu geri çeker (yürütülene kadar; kuyruktaki yükseltmede uygulama penceresinin sonuna kadar) → VoteRetracted;
+/// oyu yoksa NoVote. Eşik her `execute`'ta o anki oylardan sayılır: geri çekilen oyla eşik düşerse yürütme ThresholdNotMet.
+function retractVote(bytes32 proposalId) external onlyValidator;
 /// PROTOCOL_UPGRADE: ilk çağrı kuyruğa alır (ProposalQueued), en erken UPGRADE_DELAY (7 gün) sonra uygular (ADR-0055 GE1)
 function execute(bytes32 proposalId) external;
 function countedForVotes(bytes32 proposalId) external view returns (uint32);  // yürütmede sayılacak destek (GV3)

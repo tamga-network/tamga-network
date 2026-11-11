@@ -54,6 +54,17 @@ while [ $# -gt 0 ]; do
     *) die "unknown option: $1" ;;
   esac
 done
+# --keys dev = Hardhat's PUBLIC test keys (validators, deployer, delegates): anyone who can reach such a node's P2P port can sign
+# blocks and transactions. They are therefore refused together with --hosts addresses other than loopback (review 2026-11-10).
+# Açık test anahtarlarıyla yalnız bu makinede (127.0.0.0/8, ::1, localhost) ağ kurulur; gerçek adresler için --keys generate.
+if [ "$KEYS" = dev ] && [ -n "$HOSTS" ]; then
+  for h in $HOSTS; do
+    case "$h" in
+      127.* | ::1 | localhost) ;;
+      *) die "--keys dev uses the public test keys and is refused with a non-loopback host ($h) — use --keys generate" ;;
+    esac
+  done
+fi
 need jq
 [[ "$N" =~ ^[1-9][0-9]*$ ]] || die "--validators must be >= 1"
 [[ "$E" =~ ^[0-9]+$ ]] || die "--extra must be >= 0"

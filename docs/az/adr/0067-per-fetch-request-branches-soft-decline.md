@@ -110,6 +110,12 @@ cüzdanın çəkilişini 429-a salırdı. Ünvan başına sürət limiti (proksi
 dayandırmır. Ortaq büdcə dolarsa ən köhnə atıla bilən qol başqa təqdimatdan da ola bilər; bütün qollar emal olunursa çəkiliş 503
 alır. Yaddaşdakı vəziyyət tək proses üçündür; çox nüsxəli quraşdırma paylaşılan anbar tələb edir.
 
+**Hücumun real qiyməti (qeyd 2026-11-11).** Bir ünvandan sərt tavanı doldurmaq **təxminən 32 çəkiliş** tələb edir. Proksidəki
+ünvan başına limit 2 sorğu/san-dir; ani icazə (burst) 20 olanda bu 32 çəkiliş ~6 saniyəyə edilə bilirdi — limit hücumu demək olar
+ki, yavaşlatmırdı. Ani icazə 5-ə endirildi: eyni 32 çəkiliş bir ünvandan ~14 saniyə çəkir; adi cüzdan bir təqdimat üçün bir, ən
+çoxu bir neçə çəkiliş edir və təsirlənmir. Bu, yavaşlatmadır, maneə deyil: bir neçə ünvan işlədən hücumçu üçün qiymət yenə aşağıdır
+və nəticə dəyişmir (təqdimat REJECTED olmur, şəxs QR-ı yenidən oxudur).
+
 **Təkistifadə kilidi (qeyd 2026-11-04).** Tətbiqdə təkistifadə kilidi təqdimat üzrə idi: bir cavab emal olunarkən eyni təqdimata gələn
 hər cavab "emal olunur" (400) alırdı. QR-ı görən biri öz qoluna yavaş emal olunan cavablar göndərərək real cüzdanın cavabını geri
 çevirə bilirdi. Kilid indi **qol üzrədir**, qəbul **atomardır** (`BranchSet.tryConsume`: eyni anda gələn iki etibarlı cavabdan yalnız

@@ -18,6 +18,12 @@ not even the name of a signatory.
 The same operations are available as a local **MCP server** (`tamga-onboard mcp`, stdio), so the institution's own AI assistant
 can run the steps.
 
+## New in 0.8.3
+
+- `--report <file>` never overwrites an existing file, requires a `.json` name and refuses a name that looks like a key or
+  certificate file.
+- On Windows `icacls` is called by its full path when a private key file's permissions are narrowed or checked.
+
 ## New in 0.8.2
 
 First published release: the institution steps (`init`, `validate`, `keys`, `check`, `sandbox`), the state / operator node
@@ -25,7 +31,7 @@ steps (`node init | declare | check`) and the local MCP server (`tamga-onboard m
 
 ## Install
 
-Published on npm as the `0.8.2` test release (first release of this package; the stable `1.0.0` comes when everything is
+Published on npm as the `0.8.3` test release (first release of this package; the stable `1.0.0` comes when everything is
 ready — in test releases the commands and options may change). Released together with the other `@tamga-network/*` packages.
 This first release is published by hand without npm provenance (npm's trusted publishing from GitHub Actions can only be set
 up for a package that already exists); later releases are built by GitHub Actions and carry provenance.

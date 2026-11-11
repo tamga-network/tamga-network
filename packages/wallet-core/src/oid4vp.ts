@@ -372,10 +372,11 @@ export async function fetchRpRecord(
     const byClientId = clientId.includes(":");
     const rec = byClientId ? source.relyingParty(clientId) : source.relyingPartyByDnsName(clientId);
     if (!rec) return null;
-    // ADR-0075 (0.8.2): `x509_hash:` yolunda da ülkeler arası ad belirsizliği. Kaydın alan adı birden çok ülke listesinde iptal
-    // edilmemiş görünüyorsa (makinece okunur devir kaydı yok) `relyingPartyByDnsName` null döner → kayıt yok sayılır (kapalı
-    // güvenli; onay ekranı "güven listesinde bulunamadı", kayıtsız istek reddi). `dns_name` şemada küçük harf.
-    if (byClientId && rec.dns_name && !source.relyingPartyByDnsName(rec.dns_name)) return null;
+    // ADR-0075: ülkeler arası ad belirsizliği kuralı `TrustSource`'un içindedir (0.8.3; iki arama yolu da null döner).
+    // KAPSAM: bu fonksiyon LOTL ile TEK ülke listesini (`stateCode`) yükler; aynı ad başka bir ülkenin listesinde de iptal
+    // edilmemiş duruyorsa cüzdan bunu GÖREMEZ — kural yalnız birden çok liste yükleyen çağıranda (referans doğrulayıcı,
+    // katılım aracı, `fetchListTrustSource` `additionalStates`) işler. 0.8.2 notundaki "x509_hash yolunda kapatıldı" ifadesi
+    // tek liste yükleyen cüzdan için fiilen bir şey değiştirmiyordu (0.8.3 notunda düzeltildi).
     return rec as unknown as RpRecord;
   } catch {
     return null;

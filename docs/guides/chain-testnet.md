@@ -621,6 +621,13 @@ bağlanmadan görmek için: `npm run trust:chain-replay -- --dry-run`.
 Yol B'de yeniden oynatmayı izin listesi zincirden üretilmeden **önce** çalıştırın: yerel oynatma Governance oylarını kurucuların
 test anahtarlarıyla imzalar ve bu sırayı `deploy-and-wire.sh` da izler.
 
+::: warning Göç penceresi kendiliğinden kapanır
+Pencere, süresi dolunca eşdeğerlik testinin sonucuna **bakmadan** kapanır ve bir daha açılamaz ([[ADR-0073]] K1). Yeniden oynatma
+yarım kaldıysa ya da test fark bulduysa kapanmış kipte düzeltme yapılamaz: kontratlar **yeniden dağıtılır** ve yeniden oynatma baştan
+yapılır. Bu yüzden pencereyi kısa açın (süreyi önce deneme zincirinde ölçün), eşdeğerlik testini süre dolmadan çalıştırın ve test
+farksız geçince pencereyi beklemeden Governance önerisiyle (`proposeMigrationClose`) **erken kapatın**.
+:::
+
 ## Validator eklemek ve çıkarmak
 
 Validator kümesi QBFT oyuyla değişir. Sıra önemlidir:

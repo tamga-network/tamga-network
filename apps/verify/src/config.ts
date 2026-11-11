@@ -39,7 +39,7 @@ export interface VerifyConfig {
 const SANDBOX_PORTAL = "https://sandbox.tamga.network";
 const SANDBOX_SAMPLE_SITE = "https://verify.sandbox.tamga.network/sample-site";
 const sandboxGuide = (lang: "en" | "tr") =>
-  lang === "tr" ? "https://docs.tamga.network/guides/sandbox" : "https://docs.tamga.network/en/guides/sandbox";
+  lang === "tr" ? "https://docs.tamga.network/tr/guides/sandbox" : "https://docs.tamga.network/guides/sandbox";
 /** "Denemek için sandbox" bağlantısı (portal yayındaysa portal, değilse rehber). */
 export const sandboxUrl = (live: boolean | undefined, lang: "en" | "tr") =>
   live ? SANDBOX_PORTAL : sandboxGuide(lang);
