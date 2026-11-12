@@ -139,7 +139,8 @@ A code review of the changes above found the following; the fixes are part of 0.
   CI3). `build` rejects a duplicate `dns_name` (case and trailing dot ignored) and a list operator that is not `provisional`
   with a non-empty `on_behalf_of` (RO5, TL1).
 - **trust-publisher — without `provisional-operator.json` a production registry is not published**; the sandbox exception
-  requires a "(TEST)" list operator name (ADR-0070 OP2).
+  requires the list operator name to be exactly "Tamga Network Sandbox (TEST)" (ADR-0070 OP2); another name that merely
+  carries "(TEST)" is refused.
 - **trust-publisher — the removal guard also counts root CAs, schemas, and — in records that stay — scopes, schema
   authorizations and status-history rows** (TL2). The next version, the previous hash and schema `registered_at` are read from
   the signed `.jws` of the previous publication (signature verified), not from the unsigned `.json` copy (TL9).
@@ -187,6 +188,11 @@ A code review of the changes above found the following; the fixes are part of 0.
   notice of WL6 is not implemented yet (first wallet update); target behaviour when copies run out in a proximity session
   (background refresh, immediate refresh when online, reuse of the last copy with a warning when offline) is recorded as
   pending.
+- **docs — SPEC-WALLET-0001 §2.3: the PIN attempt rule now describes the wallet as built** (approved by project management,
+  2026-11-12). After the 5th wrong attempt in a row the wait starts at 30 s and doubles with every further wrong attempt, up to
+  1 hour; the counter survives an app restart and a clock change. The wallet is not erased or locked for good after 10 wrong
+  attempts, as the text said before: a forgotten PIN is handled by the person resetting the wallet, confirmed with the phone's
+  own lock (§7.6). tr / en / az.
 
 ### Correction to the 0.8.2 notes
 

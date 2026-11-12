@@ -172,7 +172,7 @@ Doğrulamanın yolu açarın harada saxlandığından asılıdır:
 |---|---|
 | Uzunluq (tətbiq PIN-i) | Ən azı 6 rəqəm |
 | Biometriya | PIN-in **əvəzinə** deyil, onunla yanaşı (ehtiyat variant PIN-dir) |
-| Cəhd | 5 səhv → 30 san gecikmə; 10 → rəqəmsal cüzdan kilidlənir; bərpa yoxdur, cüzdan sıfırlanır və sənədlər yenidən alınır (§7.6) |
+| Cəhd | Ardıcıl 5-ci səhv cəhddən sonra 30 san gözləmə; sonrakı hər səhv cəhddə gözləmə iki dəfə artır (1 dəq, 2 dəq, …), ən çoxu 1 saat. Sayğac cihazda daimidir: tətbiqi bağlamaq və ya saatı geri çəkmək gözləməni qısaltmır; düzgün PIN sayğacı sıfırlayır. Rəqəmsal cüzdan səhv cəhdlərə görə öz-özünə silinmir. Unudulmuş PIN üçün bərpa yoxdur: şəxs cüzdanı özü sıfırlayır (telefonun öz kilidi ilə təsdiqləyir) və sənədləri yenidən alır (§7.6) |
 | Təqdimatın təsdiqi | Yoxlayan tərəfə hər təqdimatda istifadəçinin doğrulanması **məcburidir**: təhlükəsiz aparatda cihaz biometriyası və ya cihaz parolu; proqram açarı yolunda PIN və ya biometriya |
 | Ehtiyat variant | Əməliyyat sisteminin sorğusu texniki və ya müvəqqəti səbəbdən göstərilə bilmirsə (ön planda pəncərə yoxdur, doğrulama xidməti əlçatan deyil), tətbiq PIN-i soruşulur. İstifadəçi sorğudan **imtina edərsə**, ehtiyat variant yoxdur: təqdimat edilmir |
 
@@ -596,9 +596,11 @@ təkrarlanmalıdır: asan bərpa tələb edən hər dizayn təklifi "bu, rəqəm
 yoxlayan tərəflərə təqdimat etdiyini ehtiva edir — `presentation_log` qədər həssasdır və
 eyni qaydalara tabedir (cihazda qalır, köçürmə faylına daxil olmur).
 
-**PIN bloklanması DoS səthidir.** Cihazı ələ keçirən şəxs 10 dəfə səhv
-PIN daxil edərək rəqəmsal cüzdanı bloklaya bilər. Qəbul edilmiş riskdir — alternativi kobud güc
-hücumuna açıq qoymaqdır.
+**PIN gözləməsi məhdud DoS səthidir.** Cihazı ələ keçirən şəxs ardıcıl səhv
+PIN daxil edərək rəqəmsal cüzdanın açılmasını ən çoxu 1 saat gecikdirə bilər; sənədləri silə bilməz.
+Qəbul edilmiş riskdir — alternativi kobud güc hücumuna açıq qoymaqdır. Səhv cəhdlərdə
+cüzdanı silmək bilərəkdən seçilmədi: bu, telefonu ələ keçirən hər kəsə şəxsin
+sənədlərini məhv etmək yolu verərdi.
 
 ---
 

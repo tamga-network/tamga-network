@@ -198,5 +198,8 @@ describe("ADR-0070 OP2: geçici işletmeci değeri yoksa", () => {
     expect(missingOperatorConfigProblems("sandbox", op("Tamga Network Sandbox (TEST)"))).toEqual([]);
     expect(missingOperatorConfigProblems("sandbox", op("Tamga Network"))).toHaveLength(2);
     expect(missingOperatorConfigProblems("sandbox", op("Başka Bir İşletmeci A.Ş."))).toHaveLength(2);
+    // "(TEST)" işareti yetmez: ad tam olarak kuraldaki ad olmalı
+    expect(missingOperatorConfigProblems("sandbox", op("Başka Bir İşletmeci (TEST)"))).toHaveLength(2);
+    expect(missingOperatorConfigProblems("sandbox", op("Tamga Network Sandbox (TEST) "))).toHaveLength(2);
   });
 });

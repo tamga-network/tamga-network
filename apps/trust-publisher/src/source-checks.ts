@@ -359,10 +359,11 @@ export function listOperatorProblems(ops: Array<[where: string, op: unknown]>): 
  * ADR-0070 OP2 — geçici işletmeci değeri yoksa ne olur:
  *  - gerçek ağ kayıt defteri: değer ZORUNLU; dosya yoksa yayın durur (önce: denetim sessizce atlanıyordu).
  *  - sandbox kayıt defteri (`environment: "sandbox"`, ADR-0038): değer istenmez — test ağının işletmecisi kurgusaldır. İstisna açık
- *    koşula bağlıdır: liste işletmecisi adları "(TEST)" işareti taşır (SB1 adlandırması) ve gerçek ağın adıyla ("Tamga Network")
- *    aynı değildir; aksi hâlde yayın durur. Sandbox kayıt defterine değer dosyası konursa olağan denetim uygulanır.
+ *    koşula bağlıdır: liste işletmecisi adı tam olarak "Tamga Network Sandbox (TEST)" olur (OP2 kural metni; "(TEST)" işareti
+ *    taşıyan başka bir ad yetmez); aksi hâlde yayın durur. Sandbox kayıt defterine değer dosyası konursa olağan denetim uygulanır.
  * Dosya varsa denetimi `checkProvisionalOperator` yapar; bu fonksiyon yalnız dosyanın YOKLUĞUNU değerlendirir.
  */
+const SANDBOX_LIST_OPERATOR_NAME = "Tamga Network Sandbox (TEST)";
 export function missingOperatorConfigProblems(
   environment: "production" | "sandbox",
   ops: Array<[where: string, op: unknown]>,
@@ -372,9 +373,9 @@ export function missingOperatorConfigProblems(
   const out: string[] = [];
   for (const [where, op] of ops) {
     const name = isObj(op) ? String(op.name ?? "") : "";
-    if (!/\(TEST\)/.test(name) || name === "Tamga Network")
+    if (name !== SANDBOX_LIST_OPERATOR_NAME)
       out.push(
-        `${where}: sandbox liste işletmecisi adı "(TEST)" işareti taşımalı ("${name}") — geçici işletmeci değeri olmadan ` +
+        `${where}: sandbox liste işletmecisi adı "${SANDBOX_LIST_OPERATOR_NAME}" olmalı ("${name}") — geçici işletmeci değeri olmadan ` +
           "yayın yalnız bu koşulla (OP2 sandbox istisnası)",
       );
   }

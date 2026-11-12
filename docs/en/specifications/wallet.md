@@ -166,7 +166,7 @@ hardware does that). How the user is verified depends on where the key lives:
 |---|---|
 | Length (app PIN) | At least 6 digits |
 | Biometrics | Next to the PIN, **not instead of** it (the fallback is the PIN) |
-| Attempts | 5 wrong → 30 s delay; 10 → the wallet locks; there is no recovery, the wallet is reset and the credentials are obtained again (§7.6) |
+| Attempts | After the 5th wrong attempt in a row, a 30 s wait; every further wrong attempt doubles the wait (1 min, 2 min, …), up to 1 hour. The counter is persistent on the device: closing the app or setting the clock back does not shorten the wait; the correct PIN clears the counter. The wallet is never erased because of wrong attempts. There is no recovery for a forgotten PIN: the person resets the wallet themselves (confirmed with the phone's own lock) and obtains the credentials again (§7.6) |
 | Presentation approval | User verification **mandatory** for every presentation: device biometrics or device passcode on secure hardware; PIN or biometrics on the software-key path |
 | Fallback | If the operating-system prompt cannot be shown for a technical or temporary reason (no foreground window, authentication service unavailable), the app PIN is asked. If the user **cancels** the prompt there is no fallback: nothing is presented |
 
@@ -625,8 +625,10 @@ rejected.
 **The sticky mapping keeps a list.** `verifier_map` contains the verifiers to which the user has presented — it is as sensitive
 as the `presentation_log` and subject to the same rules (it stays on the device, it does not enter the migration file).
 
-**PIN lockout is a DoS surface.** Someone who seizes the device can enter a wrong PIN 10 times and lock the wallet. Accepted
-risk — the alternative is to leave it open to brute force.
+**The PIN wait is a limited DoS surface.** Someone who seizes the device can enter wrong PINs in a row and delay unlocking the
+wallet by up to 1 hour; they cannot erase the credentials. Accepted risk — the alternative is to leave it open to brute force.
+Erasing the wallet on wrong attempts was deliberately not chosen: it would give anyone holding the phone a way to destroy the
+person's credentials.
 
 ---
 

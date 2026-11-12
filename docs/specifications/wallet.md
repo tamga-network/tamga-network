@@ -179,7 +179,7 @@ Doğrulamanın yolu anahtarın nerede durduğuna bağlıdır:
 |---|---|
 | Uzunluk (uygulama PIN'i) | En az 6 hane |
 | Biyometri | PIN'in **yerine** değil, yanında (geri düşüş PIN'dir) |
-| Deneme | 5 hatalı → 30 sn gecikme; 10 → cüzdan kilitlenir; kurtarma yoktur, cüzdan sıfırlanır ve belgeler yeniden alınır (§7.6) |
+| Deneme | Art arda 5. hatalı denemeden sonra 30 sn bekleme; sonraki her hatalı denemede bekleme iki katına çıkar (1 dk, 2 dk, …), en çok 1 saat. Sayaç cihazda kalıcıdır: uygulamayı kapatmak ya da saati geri almak beklemeyi kısaltmaz; doğru PIN sayacı sıfırlar. Cüzdan hatalı deneme yüzünden kendiliğinden silinmez. Unutulan PIN için kurtarma yoktur: kişi cüzdanı kendisi sıfırlar (telefonun kendi kilidiyle onaylar) ve belgeleri yeniden alır (§7.6) |
 | Sunum onayı | Her sunumda kullanıcı doğrulaması **zorunlu**: güvenli donanımda cihaz biyometrisi ya da cihaz parolası; yazılım anahtarı yolunda PIN ya da biyometri |
 | Geri düşüş | İşletim sistemi istemi teknik ya da geçici bir nedenle gösterilemezse (ön planda pencere yok, doğrulama hizmeti kullanılamıyor) uygulama PIN'i sorulur. Kullanıcı istemden **vazgeçerse** geri düşüş yoktur: sunum yapılmaz |
 
@@ -636,9 +636,11 @@ devredilebilir kılar mı?" sorusundan geçmelidir. Cevap evet ise reddedilir.
 doğrulayıcılara sunum yaptığını içerir — `presentation_log` kadar hassastır ve
 aynı kurallara tabidir (cihazda kalır, taşıma dosyasına girmez).
 
-**PIN kilitlenmesi bir DoS yüzeyidir.** Cihazı ele geçiren biri 10 kez yanlış
-PIN girip cüzdanı kilitleyebilir. Kabul edilmiş risk — alternatifi kaba kuvvet
-saldırısına açık bırakmak.
+**PIN beklemesi sınırlı bir DoS yüzeyidir.** Cihazı ele geçiren biri art arda yanlış
+PIN girerek cüzdanın açılmasını en çok 1 saat geciktirebilir; belgeleri silemez.
+Kabul edilmiş risk — alternatifi kaba kuvvet saldırısına açık bırakmak. Hatalı
+denemede cüzdanı silmek bilerek seçilmedi: başkasının eline geçen telefonda
+kişinin belgelerini yok etmenin yolu olurdu.
 
 ---
 
