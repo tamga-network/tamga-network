@@ -52,8 +52,8 @@ npm install -g @tamga-network/onboard     # or: npx -p @tamga-network/onboard ta
 ```
 
 The package is published on npm as the 0.8.3 test release (the stable 1.0.0 comes when everything is
-ready — in test releases the commands and options may change). The first release was published by hand without provenance;
-later releases come from GitHub Actions and carry provenance.
+ready — in test releases the commands and options may change). For now this package is published by hand
+without provenance (0.8.2 and 0.8.3); once it moves to the automated release workflow, releases will carry provenance.
 
 ::: tip Running from source (optional)
 In a clone of the repository the tool also runs without a build step: `npm install`, then

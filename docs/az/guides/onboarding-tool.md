@@ -52,8 +52,8 @@ npm install -g @tamga-network/onboard     # və ya: npx -p @tamga-network/onboar
 ```
 
 Paket npm-də 0.8.3 sınaq versiyası ilə dərc olunur (sabit 1.0.0 hazır olduqda gələcək — sınaq versiyasında əmrlər
-və seçimlər dəyişə bilər). İlk versiya əl ilə və mənşə sübutu (provenance) olmadan dərc olundu; sonrakı versiyalar GitHub
-Actions-dan gəlir və mənşə sübutu daşıyır.
+və seçimlər dəyişə bilər). Bu paket hələlik əl ilə və mənşə sübutu (provenance) olmadan dərc olunur (0.8.2 və 0.8.3);
+avtomatik dərc axınına keçəndə versiyalar mənşə sübutu daşıyacaq.
 
 ::: tip Mənbə kodundan işlətmə (istəyə bağlı)
 Repozitoriyanın surətində alət yığım addımı olmadan da işləyir: `npm install`, sonra `tamga-onboard` əvəzinə
