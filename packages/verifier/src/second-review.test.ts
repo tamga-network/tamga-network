@@ -277,18 +277,21 @@ describe.skipIf(!ready)("ikinci inceleme — verifyPresentation (dev PKI + dist)
   });
 
   it("D5: çapa günlüğünde hiç olmayan liste yalnız yeni verilmiş belgede geçer; pencere dolduysa DOĞRULANAMADI", async () => {
-    const now = Math.floor(Date.now() / 1000);
+    // Belge ŞİMDİ verilir, doğrulama anı ileri alınır. Veriliş anını geriye almak, PKI'nın testten hemen önce üretildiği
+    // ortamda (CI) belgeyi imza sertifikasının geçerlilik başlangıcından önceye düşürür (A3: RED) — D5'e hiç gelinmez.
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const soon = issuedAt + 60;
+    const late = issuedAt + DEFAULT_MAX_ANCHOR_LAG_SEC + 300;
     const noAnchor = anchored(null);
-    const fresh = await issue(now - 60);
+    const doc = await issue(issuedAt);
     const freshOut = await verifyPresentation({
-      ...input(await present(fresh.combined, fresh.ref, now), now, await cacheWith(now)),
+      ...input(await present(doc.combined, doc.ref, soon), soon, await cacheWith(soon)),
       trust: noAnchor,
     });
     expect(freshOut.result.outcome, freshOut.result.failed_reason ?? "").toBe("ACCEPTED");
     expect(freshOut.result.checks_skipped).toContain("D5");
-    const old = await issue(now - DEFAULT_MAX_ANCHOR_LAG_SEC - 300);
     const oldOut = await verifyPresentation({
-      ...input(await present(old.combined, old.ref, now), now, await cacheWith(now)),
+      ...input(await present(doc.combined, doc.ref, late), late, await cacheWith(late)),
       trust: noAnchor,
     });
     expect(oldOut.result).toMatchObject({
@@ -297,17 +300,17 @@ describe.skipIf(!ready)("ikinci inceleme — verifyPresentation (dev PKI + dist)
       indeterminate_reason: "STATUS_STALE",
     });
     // çapa belirteçle eşleşiyorsa belgenin yaşı önemsizdir (D5 yapıldı)
-    const cache = await cacheWith(now);
+    const cache = await cacheWith(late);
     const tok = cache.get(STATUS_URI)!.token;
     const { createHash } = await import("node:crypto");
     const matching = anchored({
       content_hash: "sha256:" + createHash("sha256").update(tok).digest("hex"),
-      published_at: new Date(now * 1000).toISOString(),
+      published_at: new Date(late * 1000).toISOString(),
       version: 3,
       list_uri: STATUS_URI,
     });
     const ok = await verifyPresentation({
-      ...input(await present(old.combined, old.ref, now), now, cache),
+      ...input(await present(doc.combined, doc.ref, late), late, cache),
       trust: matching,
     });
     expect(ok.result.outcome, ok.result.failed_reason ?? "").toBe("ACCEPTED");
