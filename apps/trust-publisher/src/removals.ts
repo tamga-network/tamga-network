@@ -34,6 +34,13 @@
  *    Bitişi geçmiş (kapanmış) satırın bitişi değiştirilemez; hiçbir satırın bitişi ileri alınamaz ya da kaldırılamaz (süre
  *    uzatma yok: yeni dönem yeni kimlikle yeni satırdır). Böyle değişmiş satır silinmiş sayılır (`scopes` / `terminal_groups`
  *    sayısına girer). Amaç metni, çeviriler, istenen alanlar, etiket, politika gibi açıklayıcı alanlar düzenlenebilir.
+ *
+ * 0.8.4 (bağımsız inceleme): "açık dönem" ve yeni bitişin alt sınırı ÖNCEKİ imzalı listenin yayın anına (`issued_at`) göredir,
+ * yeni yayın anına göre değil.
+ *  - Yeni bitiş, satırın başlangıcından (`valid_from`) ve önceki imzalı listenin yayın anından önce olamaz: önceki liste o satırı
+ *    yayın anında açık diye imzaladı; bitişi daha eskiye (ör. 1970) yazmak o beyanı onaysız, geriye dönük değiştirirdi.
+ *  - Dönem, bitişi önceki listenin yayın anından sonraysa açıktır. Önce yeni yayın anına bakılıyordu: 1 Aralık'ta bitecek satır
+ *    30 Kasım'da `end-use` ile kapatılıp liste 2 Aralık'ta yayımlanınca satır "kapanmış" sayılıyor, yayın yersiz duruyordu.
  */
 export interface RemovalCounts {
   issuers: number;
@@ -111,6 +118,8 @@ interface Validity {
 }
 type AuthRow = Record<string, unknown>;
 interface ListRecords {
+  /** imzalı listenin yayın anı (önceki sürümde: geçerlilik karşılaştırmasının dayanağı) */
+  issued_at?: string;
   root_cas?: Array<{ ca_id?: string; status_history?: HistoryRow[] }>;
   issuers?: Array<{
     issuer_id?: string;
@@ -186,17 +195,23 @@ function sameInstant(a: string | null | undefined, b: string | null | undefined)
 }
 /**
  * Listede kalan kullanım / kapı grubu satırının geçerlilik alanları korunmuş mu: başlangıç aynı; bitiş aynı ya da AÇIK dönem
- * (bitiş yok, ya da `now`'dan sonra) daha erken bir tarihle kapatılmış. Kapanmış dönem değişmez; bitiş ileri alınamaz, kaldırılamaz.
+ * (bitiş yok, ya da önceki imzalı listenin yayın anı `prevAt`'ten sonra) daha erken bir tarihle kapatılmış. Yeni bitiş
+ * başlangıçtan ve `prevAt`'ten önce olamaz (geriye dönük yeniden yazım yok). Kapanmış dönem değişmez; bitiş ileri alınamaz,
+ * kaldırılamaz.
  */
-function validityKept(prev: Validity, next: Validity, now: Date): boolean {
+function validityKept(prev: Validity, next: Validity, prevAt: number): boolean {
   if (!sameInstant(prev.valid_from, next.valid_from)) return false;
   if (sameInstant(prev.valid_until, next.valid_until)) return true;
   if (next.valid_until == null) return false; // bitişi olan satır yeniden açılamaz
   const to = Date.parse(next.valid_until);
   if (Number.isNaN(to)) return false;
+  // önceki liste satırı yayın anında açık diye imzaladı: bitiş o andan ve başlangıçtan geriye yazılamaz
+  if (to < prevAt) return false;
+  const from = prev.valid_from == null ? NaN : Date.parse(prev.valid_from);
+  if (!Number.isNaN(from) && to < from) return false;
   if (prev.valid_until == null) return true; // açık dönem kapatıldı
   const was = Date.parse(prev.valid_until);
-  return !Number.isNaN(was) && was > now.getTime() && to < was; // henüz bitmemiş dönem öne çekildi
+  return !Number.isNaN(was) && was > prevAt && to < was; // önceki yayında henüz bitmemiş dönem öne çekildi
 }
 /** Önceki sürümdeki satırlardan yenisinde bulunmayanların sayısı (aynı satır iki kez varsa iki kez aranır). */
 function missing(prevKeys: string[], nextKeys: string[]): number {
@@ -212,15 +227,19 @@ function missing(prevKeys: string[], nextKeys: string[]): number {
 }
 
 /**
- * Önceki yayımlanmış listede olup yenisinde olmayan kayıtların sayısı (önceki liste yoksa hepsi 0). `now`: yayın anı — kullanım
- * ve kapı grubu satırında "kapanmış dönem" buna göre ayrılır (bitişi `now`'dan önce ya da `now` olan satırın bitişi değişmez).
+ * Önceki yayımlanmış listede olup yenisinde olmayan kayıtların sayısı (önceki liste yoksa hepsi 0). Kullanım ve kapı grubu
+ * satırında "kapanmış dönem" ve yeni bitişin alt sınırı ÖNCEKİ imzalı listenin yayın anına göredir (`prev.issued_at`): bitişi o
+ * andan önce ya da o an olan satırın bitişi değişmez; yeni bitiş o andan geriye yazılamaz. `prevPublishedAt` yalnız önceki listede
+ * okunabilir `issued_at` yoksa kullanılır (imzalı listede hep vardır; varsayılan şimdi — en sıkı hâl).
  */
 export function removedRecords(
   prev: ListRecords | null | undefined,
   next: ListRecords,
-  now: Date = new Date(),
+  prevPublishedAt: Date = new Date(),
 ): RemovalCounts {
   if (!prev) return { issuers: 0, relying_parties: 0, terminal_groups: 0 };
+  const issuedAt = typeof prev.issued_at === "string" ? Date.parse(prev.issued_at) : NaN;
+  const prevAt = Number.isNaN(issuedAt) ? prevPublishedAt.getTime() : issuedAt;
   const a = ids(prev);
   const b = ids(next);
   const gone = (x: Set<string>, y: Set<string>) => [...x].filter((v) => !y.has(v)).length;
@@ -281,7 +300,7 @@ export function removedRecords(
     const scopeNext = new Map((n.scopes ?? []).map((s) => [String(s.scope_id), s]));
     for (const s of r.scopes ?? []) {
       const k = scopeNext.get(String(s.scope_id));
-      if (k && !validityKept(s, k, now)) detail.scopes++;
+      if (k && !validityKept(s, k, prevAt)) detail.scopes++;
     }
   }
   // listede kalan kapı grubu (kimlik bütün listede tektir — ADR-0069 TG1): aynı kural
@@ -291,7 +310,7 @@ export function removedRecords(
   let groupsChanged = 0;
   for (const g of (prev.relying_parties ?? []).flatMap((r) => r.terminal_groups ?? [])) {
     const k = groupNext.get(String(g.group_id));
-    if (k && !validityKept(g, k, now)) groupsChanged++;
+    if (k && !validityKept(g, k, prevAt)) groupsChanged++;
   }
   return {
     issuers: gone(a.issuers, b.issuers),

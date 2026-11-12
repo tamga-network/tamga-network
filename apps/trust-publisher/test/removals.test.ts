@@ -346,9 +346,10 @@ describe("TL2: listeden kayıt çıkarma", () => {
   });
 
   it("kullanım ve kapı grubu: başlangıç değişmez; bitiş yalnız açık dönemin kapatılması yönünde değişir", () => {
-    const NOW = new Date("2026-06-01T00:00:00.000Z");
+    const NOW = new Date("2026-06-01T00:00:00.000Z"); // önceki imzalı listenin yayın anı
     const PAST = "2026-03-01T00:00:00.000Z"; // NOW'dan önce: kapanmış dönem
     const FUTURE = "2027-01-01T00:00:00.000Z"; // NOW'dan sonra: dönem açık
+    const AFTER = "2026-06-10T00:00:00.000Z"; // önceki yayından sonra, FUTURE'dan önce
     type Row = Record<string, unknown>;
     const rows = () => ({
       relying_parties: [
@@ -383,8 +384,16 @@ describe("TL2: listeden kayıt çıkarma", () => {
       }),
     ).toEqual(NONE);
     // açık dönemin kapatılması: bitiş yok → tarih; henüz gelmemiş bitiş → daha erken tarih
-    expect(check((s) => void (s[2].valid_until = T1))).toEqual(NONE);
+    expect(check((s) => void (s[2].valid_until = AFTER))).toEqual(NONE);
+    expect(check((s) => void (s[0].valid_until = AFTER))).toEqual(NONE);
     expect(check((s) => void (s[0].valid_until = "2026-06-01T00:00:00.000Z"))).toEqual(NONE);
+    // 0.8.4: açık dönem GEÇMİŞE kapatılamaz — önceki imzalı listenin yayın anından ya da başlangıçtan önceki bitiş, o listenin
+    // "açık" beyanını onaysız geriye dönük değiştirir
+    expect(check((s) => void (s[2].valid_until = T1))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((s) => void (s[2].valid_until = "1970-01-01T00:00:00.000Z"))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((s) => void (s[0].valid_until = "2025-06-01T00:00:00.000Z"))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((s) => void (s[0].valid_until = "2026-05-31T23:59:59.000Z"))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((_s, g) => void (g[0].valid_until = T1))).toEqual({ ...NONE, terminal_groups: 1 });
     expect(check((_s, g) => void (g[0].valid_until = "2026-06-01T00:00:00.000Z"))).toEqual(NONE);
     expect(check((_s, g) => void (g[0].valid_until = null))).toEqual(NONE); // yok ile null aynı
     // aynı anın başka yazımı fark değildir
@@ -427,6 +436,61 @@ describe("TL2: listeden kayıt çıkarma", () => {
     );
   });
 
+  it("0.8.4: dayanak önceki imzalı listenin yayın anıdır (`issued_at`), yeni yayın anı değil", () => {
+    type Row = Record<string, unknown>;
+    const END = "2026-12-01T00:00:00.000Z";
+    const prev = (issued_at?: string) => ({
+      ...(issued_at ? { issued_at } : {}),
+      relying_parties: [
+        {
+          dns_name: "verify.example",
+          scopes: [{ scope_id: "s", valid_from: T0, valid_until: END } as Row],
+          terminal_groups: [{ group_id: "g", valid_from: "2026-11-01T00:00:00.000Z" } as Row],
+        },
+      ],
+    });
+    const next = (scopeEnd: string, groupEnd?: string) => ({
+      relying_parties: [
+        {
+          dns_name: "verify.example",
+          scopes: [{ scope_id: "s", valid_from: T0, valid_until: scopeEnd } as Row],
+          terminal_groups: [
+            {
+              group_id: "g",
+              valid_from: "2026-11-01T00:00:00.000Z",
+              ...(groupEnd ? { valid_until: groupEnd } : {}),
+            } as Row,
+          ],
+        },
+      ],
+    });
+    const PUBLISHED = "2026-11-29T00:00:00.000Z"; // önceki imzalı liste
+    const ENDED_USE = "2026-11-30T09:00:00.000Z"; // `end-use` 30 Kasım'da çalıştı
+    const REPUBLISH = new Date("2026-12-02T00:00:00.000Z"); // yeni liste, satırın eski bitişinden SONRA yayımlanıyor
+    // yanlış alarm kalktı: eski bitiş (1 Aralık) yeni yayın anından önce olsa da önceki yayında dönem açıktı
+    expect(removedRecords(prev(PUBLISHED), next(ENDED_USE), REPUBLISH)).toEqual(NONE);
+    // `issued_at` verilen tarihin önüne geçer; yoksa verilen tarih kullanılır (eski davranış: satır kapanmış sayılır)
+    expect(removedRecords(prev(), next(ENDED_USE), REPUBLISH)).toEqual({ ...NONE, scopes: 1 });
+    // önceki yayında zaten kapanmış dönem değişmez
+    expect(removedRecords(prev("2026-12-01T00:00:00.000Z"), next(ENDED_USE), REPUBLISH)).toEqual({
+      ...NONE,
+      scopes: 1,
+    });
+    // bitiş önceki yayın anından geriye yazılamaz (kapı grubu: önceki yayından önce ama başlangıçtan sonra)
+    expect(removedRecords(prev(PUBLISHED), next(END, "2026-11-15T00:00:00.000Z"))).toEqual({
+      ...NONE,
+      terminal_groups: 1,
+    });
+    // bitiş başlangıçtan önce olamaz (önceki liste satır başlamadan yayımlanmış olsa bile)
+    expect(removedRecords(prev("2026-10-01T00:00:00.000Z"), next(END, "2026-10-15T00:00:00.000Z"))).toEqual({
+      ...NONE,
+      terminal_groups: 1,
+    });
+    expect(removedRecords(prev("2026-10-01T00:00:00.000Z"), next(END, "2026-11-01T00:00:00.000Z"))).toEqual(NONE);
+    // önceki yayından sonraki kapatma olağan
+    expect(removedRecords(prev(PUBLISHED), next(END, ENDED_USE))).toEqual(NONE);
+  });
+
   // Kaynak kaydı listeye girerken yalnız kimlik alanları hesaplanır; geçmiş satırları olduğu gibi taşınır. Karşılaştırma için
   // kaynak → liste biçimi: belge verenin kimliği yerine kısa adı, şema kimliği yerine tür adı (ikisi de kalıcı ve tekil).
   type Src = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -467,7 +531,8 @@ describe("TL2: listeden kayıt çıkarma", () => {
       const later = { ...env, now: new Date("2026-11-13T10:00:00.000Z") };
       const much = { ...env, now: new Date("2026-11-14T10:00:00.000Z") };
       const last = { ...env, now: new Date("2026-11-15T10:00:00.000Z") };
-      const publishAt = new Date("2026-11-16T00:00:00.000Z");
+      // önceki imzalı listenin yayın anı: komutlardan önce (0.8.4 — karşılaştırmanın dayanağı yeni yayın anı değil)
+      const publishAt = new Date("2026-11-12T00:00:00.000Z");
       const issuer = (src.issuers as Src[]).find((i) => i.status === "ACTIVE")!;
       const slug = issuer.slug as string;
       const openVct = (issuer.schema_authorizations as Src[]).find((a) => a.allowed && !a.valid_until)!.vct as string;
@@ -519,7 +584,7 @@ describe("TL2: listeden kayıt çıkarma", () => {
       let cur = src;
       for (const [name, step] of steps) {
         const nextSrc = step(cur);
-        // yayın anı: komuttan sonra (komutun yazdığı bitiş geçmişte kalmıştır)
+        // komutun yazdığı bitiş önceki yayından sonradır; yeni yayın ne zaman yapılırsa yapılsın sonuç aynı
         expect(removedRecords(asList(cur), asList(nextSrc), publishAt), name).toEqual(NONE);
         expect(
           removalChangelogLine("tl-tr", removedRecords(asList(cur), asList(nextSrc), publishAt), [], at),

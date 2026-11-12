@@ -4,6 +4,88 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.8.3` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
+## 0.8.4 — 2026-11-12
+
+All ten packages move to 0.8.4 together (patch release). The code change in the packages is in `wallet-core` (additions only;
+without the new options the behaviour is that of 0.8.3); the other packages carry the version number and README wording. Not
+published on npm when this entry was written.
+
+### Added
+
+- **wallet-core — copy state and reuse decision for proximity and wallet-to-wallet presentation** (wallet rules §4.1, target
+  behaviour decided 2026-11-12). Every proximity session uses a new copy; running out must not leave the person standing at
+  the door. The core gives the decision and the state, the app makes the refresh call and shows the warning:
+  - `proximityCopies(credential, lowAt?)` returns `{ total, remaining, low, exhausted, refreshable }` for the copies that can be
+    shown in proximity (those with an mdoc); `planProximityCopy(credential, { online, lowAt? })` adds the action for the table in
+    the specification — `present`, `refresh_first` (no copy left, device online), `reuse_with_warning` (no copy left, device
+    offline), `unavailable` — and `refreshInBackground` (few copies left and the credential has a refresh token).
+  - `presentProximity` and `presentToPerson` carry the state to the caller: `copies` in the consent view (before the session)
+    and in the result (after), and `reused` in the result.
+  - New option `reuseLastCopy`: when no unused copy is left, the last copy is reused — only when the caller passes the option,
+    that is after the person accepted the warning that this presentation can be linked to the previous one. Reuse always falls on
+    the same copy (copies shown only in proximity are preferred over one a remote verifier has seen), and the presentation log
+    entry is marked `reused: true` (`PresentationLogEntry.reused`). Without the option the behaviour is unchanged: the session
+    ends with an error and no copy is reused; the reason is exported as `PROXIMITY_NO_COPY_REASON`.
+  - `selectProximityCopy(credential, { reuseLastCopy? })` and `PROXIMITY_COPY_PREFIX` are exported for callers that build their
+    own flow. Copy selection in proximity now takes the first unused copy **that has an mdoc** (before: the first unused copy,
+    which failed the session if that copy had no mdoc while another one did).
+- **wallet-core — `beforeSend` hook in `presentProximity` and `presentToPerson`** (found by an independent review). The copy
+  was marked as used only in the returned state: if the app stopped while the response was being sent, the mark was lost and
+  the same copy could be given to another reader as unused. The optional hook is called once, after the response is built and
+  signed and immediately before it is sent, with the state in which the copy is marked; the caller saves it. If the hook throws,
+  nothing is sent and the returned state is unchanged. Same contract as `respond({ beforeSend })`.
+- **wallet-core — `sharedBefore(state, rpKey, requested, { vct? })`** for the notice about earlier sharing (WL6, wallet rules
+  §4.2): from the presentation log on the device it returns how often and when something was sent to this verifier, the field
+  names shared before with the date each was last sent, which requested fields were shared before (`again`) and which are
+  requested for the first time (`firstTime`). Only sent presentations count; values are never returned. The key is the
+  verifier's persistent identity (the registered `dns_name`); proximity readers and wallet-to-wallet peers have none, so nothing
+  is returned for them.
+
+### Changed
+
+- **onboard — README:** the sentence about provenance now says that the package is published by hand for now (0.8.2 and
+  0.8.3) and will carry provenance once it moves to the automated release workflow; the command table was reformatted. This
+  wording was written after 0.8.3 was published, so it first ships with 0.8.4. No code change.
+
+### Applications and repository (not part of the npm packages)
+
+- **Trust list publisher — closing a validity period cannot rewrite the past, and the comparison uses the previous signed
+  list** (record removal check, SPEC-TRUST-0001 TL2; found by an independent review). (1) An open period of a scope or a
+  terminal group could be closed with any earlier date, even one before `valid_from` or in 1970, without an approved removal
+  entry — a retroactive rewrite of what the previous signed list stated. The new end must now be at or after `valid_from` and at
+  or after the publication time (`issued_at`) of the previous signed list. (2) Whether a period is still open was decided by the
+  time of the **new** publication: a row ending on 1 December, closed with `end-use` on 30 November and published on 2 December,
+  counted as already closed and stopped the build. The comparison now uses the publication time of the previous signed list.
+- **Chain stage (contracts; no production chain):**
+  - ADR-0082: the state of a revoked issuer can correct, change or remove its successor afterwards
+    (`IssuerRegistry.setIssuerSuccessor`, event `IssuerSuccessorSet`, error `IssuerNotRevoked`). Before, the successor was written
+    in one step with the revocation and could not be changed: a wrong successor was permanent, and the status lists froze when
+    an issuer was revoked without a successor or when the successor itself was closed.
+  - ADR-0082: the delegate key mapping in `Governance` is kept per state. A state could block another state's delegate
+    assignment by writing the same key into its own list first (`DelegateKeyInUse`); the error is removed, and one state's list
+    neither touches nor blocks another's. Only a state's own delegate writes to its records, as before. Storage: slot 2 of
+    `Governance` is retyped (`_delegateToState` → `_isDelegate`); there is no deployed chain, so the storage baseline was
+    rewritten. Governance runtime code 22,880 bytes (1,696 bytes of headroom).
+  - Migration window (ADR-0073 implementation note): while the window is open the start of validity (`validFrom`) must be given
+    explicitly when a root CA, an issuer or a schema is registered; an undated start is rejected except from Governance
+    (`DateRequiredDuringMigration`). Before, the start silently became the block time, could not be corrected, and every
+    credential issued before that moment was rejected for that record.
+  - Votes after a Governance upgrade: verified from the code and by test that an upgrade to a version that records vote times
+    cannot lock itself (the threshold is counted before the upgrade call); other open proposals and queued upgrades wait until
+    the members cast their votes again in the same direction, which is accepted. Written as an explicit step into the contract
+    specification (§9) and the network set-up document (step 11). No code change.
+  - Development tools: `hardhat` 3.20.0 → 3.21.2 and `@nomicfoundation/hardhat-ethers` 4.2.1 → 4.2.2 (no major change); the
+    remaining `npm audit` notices (zod through hardhat, glob and minimatch through mocha) have no fix without a major change and
+    affect development tools only.
+
+### Documents
+
+- Wallet rules (SPEC-WALLET-0001 §4.1, §4.2; tr / en / az): the wallet-core part of the target behaviour when copies run out in
+  proximity and of the notice about earlier sharing is ready in 0.8.4; the app screens are pending.
+- ADR-0082 (accepted 2026-11-12; tr / en / az): correctable issuer successor and per-state delegate keys (IS1–IS2, DK1–DK2).
+  ADR-0073 implementation note (tr / en / az): the explicit-date rule of the migration window also covers the start of a record.
+  Contract specification: N1, §1, §3, §7.3, §9, §16.1.
+
 ## 0.8.3 — 2026-11-11
 
 All ten packages move to 0.8.3 together (patch release) after an independent review of the 0.8.2 code base (2026-11-10).

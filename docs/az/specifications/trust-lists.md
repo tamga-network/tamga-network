@@ -125,6 +125,9 @@ Status lüğəti: `ACTIVE | SUSPENDED | REVOKED | RETIRED` (+ kök: `ROLLING_OVE
 (`successor_id`) dərc edə bilər (I4). Operator aləti: `trust-publisher status <slug> <STATUS> --reason r`
 (`REVOKED --invalidates-from <tarih>`: həmin andan sonra verilmiş rəqəmsal sənədlər etibarsız olur; `valid_from` = qurumun bütün rəqəmsal sənədləri),
 yoxlayan tərəf üçün `rp-status <dns_name> <STATUS>`, tək istifadə və ya qapı qrupu üçün `end-use <dns_name> <id>` (bitmə tarixi).
+İstifadənin və qapı qrupunun başlanğıcı dəyişmir; bitməsi yalnız açıq dövrün bağlanması istiqamətində dəyişir və yeni bitmə
+sətrin başlanğıcından və ya əvvəlki imzalı siyahının dərc anından əvvəl ola bilməz (əvvəlki siyahının "açıq" dediyi dövr geriyə
+dönük bağlana bilməz). Dövrün açıq olub-olmadığı da əvvəlki imzalı siyahının dərc anına görə müəyyən edilir.
 Nəşriyyatçı bunu yoxlayır: əvvəlki dərc olunmuş versiyadakı sənəd verən, etibar edən tərəf və ya keçid qrupu yeni siyahıda
 yoxdursa, dərc dayanır. Yeganə istisna reyestrdə açıq yazılmış, sayları tam uyğun gələn təsdiqlənmiş çıxarma qeydidir
 (`removals.json`; yalnız siyahı, tarix, çıxarmadan əvvəlki imzalı versiyanın nömrəsi, saylar və qısa əsas — ad və ya kimlik

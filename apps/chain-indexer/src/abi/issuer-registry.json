@@ -171,6 +171,17 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "issuerId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "IssuerNotRevoked",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "MigrationAlreadyStarted",
       "type": "error"
@@ -594,6 +605,25 @@
         }
       ],
       "name": "IssuerStatusChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "issuerId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "successorId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "IssuerSuccessorSet",
       "type": "event"
     },
     {
@@ -1727,6 +1757,24 @@
         }
       ],
       "name": "setIssuerProfile",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "issuerId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "successorId",
+          "type": "bytes32"
+        }
+      ],
+      "name": "setIssuerSuccessor",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

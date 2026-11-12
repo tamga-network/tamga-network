@@ -16,10 +16,10 @@
     },
     {
       "contract": "Governance",
-      "label": "_delegateToState",
+      "label": "_isDelegate",
       "slot": 2,
       "offset": 0,
-      "type": "t_mapping(t_address,t_bytes2)"
+      "type": "t_mapping(t_address,t_mapping(t_bytes2,t_bool))"
     },
     {
       "contract": "Governance",
@@ -213,6 +213,13 @@
       "key": "t_address",
       "value": "t_bytes2"
     },
+    "t_mapping(t_address,t_mapping(t_bytes2,t_bool))": {
+      "encoding": "mapping",
+      "label": "mapping(address => mapping(bytes2 => bool))",
+      "numberOfBytes": 32,
+      "key": "t_address",
+      "value": "t_mapping(t_bytes2,t_bool)"
+    },
     "t_mapping(t_address,t_uint64)": {
       "encoding": "mapping",
       "label": "mapping(address => uint64)",
@@ -226,6 +233,13 @@
       "numberOfBytes": 32,
       "key": "t_bytes2",
       "value": "t_array(t_address)dyn_storage"
+    },
+    "t_mapping(t_bytes2,t_bool)": {
+      "encoding": "mapping",
+      "label": "mapping(bytes2 => bool)",
+      "numberOfBytes": 32,
+      "key": "t_bytes2",
+      "value": "t_bool"
     },
     "t_mapping(t_bytes2,t_struct(StateMember)_storage)": {
       "encoding": "mapping",

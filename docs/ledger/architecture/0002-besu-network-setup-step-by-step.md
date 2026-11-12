@@ -241,6 +241,12 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
   değişiminden sonra yapılır; tarihi işletmecinin kendi kaydına yazılır. Yedek, asıl anahtarla aynı korumayı ister (erişim
   denetimi, şifreli saklama); depoya, ortak sürücüye ya da düğüm sunucusuna konmaz. Üç ve daha çok üyeli ağda yedek önerilir
   (anahtarını kaybeden üye öteki üyelerin oyuyla çıkarılıp yeni adresle yeniden kabul edilebilir).
+- **Governance yükseltmesinden sonra oylar ([[SPEC-BC-0001]] §9, 2026-11-12).** Oy sayımının dayandığı depolamayı değiştiren
+  bir Governance yükseltmesinden sonra, yükseltmeden önce verilmiş oylar sayılmayabilir (oy zamanı kaydı olmayan oy sayılmaz).
+  Yükseltmeyi yapan öneri etkilenmez (eşik yükseltmeden önce sayılır). Adım: yükseltme uygulanınca açık önerileri ve kuyruktaki
+  yükseltmeleri listele; `countedForVotes` beklenenden düşükse her üye oyunu **aynı yönde yeniden verir** (`vote`), sonra
+  `execute` çağrılır. Oy penceresi: açık öneride `expiresAt`, kuyruktaki yükseltmede bekleme süresi + 30 gün; süre dolmuşsa
+  öneri yeniden açılır. Yükseltme takvimi buna göre kurulur: mümkünse Governance yükseltmesi açık öneri yokken uygulanır.
 - Güvenlik sertleştirme referansı: depo kökündeki `security.sh` yaklaşımı.
 
 ---
@@ -288,5 +294,6 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 # Durum
 
 **Taslak** — sürüm 1.0.0 (2026-10-02; §6 yerel izinlendirme ve RPC koruması 2026-10-19, [[ADR-0052]]; Java 25 ve Docker'sız
-yerel geliştirme ağı 2026-11-04; iki düğümlü yerel izinli ağ, izin listesi aracı, RPC süzgeci ve validator oylaması 2026-11-05).
+yerel geliştirme ağı 2026-11-04; iki düğümlü yerel izinli ağ, izin listesi aracı, RPC süzgeci ve validator oylaması 2026-11-05;
+Adım 11 Governance yükseltmesinden sonra oylar 2026-11-12).
 

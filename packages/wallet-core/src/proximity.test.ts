@@ -18,6 +18,8 @@ import {
   jwkToRaw,
   newState,
   presentProximity,
+  PROXIMITY_NO_COPY_REASON,
+  type ProximityRequestView,
   type ProximityTransport,
   type StoredCredential,
   type WalletState,
@@ -299,5 +301,182 @@ describe("presentProximity", () => {
     });
     expect(asked).toBe(false);
     expect(r.outcome).toBe("declined");
+  });
+});
+
+describe("yakın alan kopya tüketimi (SPEC-WALLET-0001 §4.1; 0.8.4)", () => {
+  const run = async (state: WalletState, keys: SoftwareKeyProvider, extra: { reuseLastCopy?: boolean } = {}) => {
+    const link = bleLink({ age_over_18: false });
+    const views: ProximityRequestView[] = [];
+    const r = await presentProximity({
+      registrarKeys: false,
+      transport: link.transport,
+      state,
+      keys,
+      onQr: link.onQr,
+      approve: async (v) => (views.push(v), ["age_over_18"]),
+      ...extra,
+    });
+    return { r, view: views[0], link };
+  };
+  const deviceKeyOf = (link: ReturnType<typeof bleLink>) =>
+    b64u(
+      verifyIssuerSigned(parseDeviceResponse(link.result.response!).issuerSigned, {
+        issuerPubRaw: issuerPub,
+        expectedDocType: DOCTYPE,
+      }).deviceKeyRaw!,
+    );
+
+  it("her oturum yeni kopya; durum çağırana döner (onaydan önce ve oturumdan sonra)", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const a = await run(state, keys);
+    expect(a.view.copies).toEqual({ total: 2, remaining: 2, low: true, exhausted: false, refreshable: false });
+    expect(a.r).toMatchObject({ outcome: "sent", copies: { remaining: 1, exhausted: false } });
+    expect(a.r.reused).toBeUndefined();
+    const b = await run(a.r.state, keys);
+    expect(b.r).toMatchObject({ outcome: "sent", copies: { remaining: 0, low: true, exhausted: true } });
+    expect(deviceKeyOf(a.link)).not.toBe(deviceKeyOf(b.link)); // iki oturum iki ayrı kopya (bağlanamaz)
+    expect(b.r.state.presentationLog.every((e) => e.reused === undefined)).toBe(true);
+  });
+
+  it("kopya bitti, seçenek yok: bugünkü davranış — oturum hatayla biter, kopya yeniden kullanılmaz", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const spent = (await run((await run(state, keys)).r.state, keys)).r.state;
+    const c = await run(spent, keys);
+    expect(c.view.copies).toMatchObject({ remaining: 0, exhausted: true });
+    expect(c.r).toMatchObject({ outcome: "error", reason: PROXIMITY_NO_COPY_REASON });
+    expect(c.r.reused).toBeUndefined();
+    expect(c.link.result.response).toBeNull();
+    expect(c.r.state).toBe(spent); // hiçbir şey işaretlenmedi, günlüğe yazılmadı
+  });
+
+  it("kopya bitti, kişi uyarıyı kabul etti (reuseLastCopy): son kopya yeniden kullanılır; sonuç ve günlük işaretli", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const first = await run(state, keys);
+    const second = await run(first.r.state, keys);
+    const third = await run(second.r.state, keys, { reuseLastCopy: true });
+    expect(third.r).toMatchObject({ outcome: "sent", reused: true, copies: { remaining: 0, exhausted: true } });
+    expect(deviceKeyOf(third.link)).toBe(deviceKeyOf(second.link)); // SON kopya
+    expect(third.r.state.presentationLog.at(-1)).toMatchObject({
+      clientId: "proximity",
+      disclosed: ["age_over_18"],
+      outcome: "sent",
+      reused: true,
+    });
+    // sonraki yeniden kullanım da aynı kopyada toplanır
+    const fourth = await run(third.r.state, keys, { reuseLastCopy: true });
+    expect(deviceKeyOf(fourth.link)).toBe(deviceKeyOf(second.link));
+    expect(fourth.r.state.credentials[0].copies.map((k) => k.usedBy.length)).toEqual([1, 3]);
+  });
+
+  it("kullanılmamış kopya varken reuseLastCopy etkisizdir (yeni kopya gider, işaret yok)", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const a = await run(state, keys, { reuseLastCopy: true });
+    expect(a.r.outcome).toBe("sent");
+    expect(a.r.reused).toBeUndefined();
+    expect(a.r.state.presentationLog.at(-1)?.reused).toBeUndefined();
+    expect(a.r.copies?.remaining).toBe(1);
+  });
+
+  it("yeniden kullanımda gönderim yarıda kalırsa günlükteki hata girişi de işaretlidir", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const spent = (await run((await run(state, keys)).r.state, keys)).r.state;
+    const link = bleLink({ age_over_18: false });
+    const r = await presentProximity({
+      registrarKeys: false,
+      transport: {
+        ...link.transport,
+        send: async () => {
+          throw new Error("ble write failed");
+        },
+      },
+      state: spent,
+      keys,
+      onQr: link.onQr,
+      approve: async () => ["age_over_18"],
+      reuseLastCopy: true,
+    });
+    expect(r).toMatchObject({ outcome: "error", reason: "ble write failed", reused: true });
+    expect(r.state.presentationLog.at(-1)).toMatchObject({ outcome: "error", disclosed: [], reused: true });
+  });
+});
+
+describe("beforeSend kancası (WL5; 0.8.4)", () => {
+  it("yanıt üretildikten sonra, gönderilmeden önce bir kez çağrılır; verilen durumda kopya işaretli", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const link = bleLink({ age_over_18: false });
+    const calls: Array<{ marked: WalletState; sentBefore: boolean }> = [];
+    let sent = false;
+    const r = await presentProximity({
+      registrarKeys: false,
+      transport: { ...link.transport, send: async (c) => ((sent = true), link.transport.send(c)) },
+      state,
+      keys,
+      onQr: link.onQr,
+      approve: async () => ["age_over_18"],
+      beforeSend: async (marked) => void calls.push({ marked, sentBefore: sent }),
+    });
+    expect(r.outcome).toBe("sent");
+    expect(calls).toHaveLength(1);
+    expect(calls[0].sentBefore).toBe(false); // gönderimden ÖNCE
+    expect(calls[0].marked.credentials[0].copies.map((k) => k.usedBy.length)).toEqual([1, 0]);
+    expect(calls[0].marked.presentationLog).toEqual([]); // kalıcı işaret; günlük girişi sonuçla gelir
+    expect(r.state.credentials[0].copies[0].usedBy).toEqual(calls[0].marked.credentials[0].copies[0].usedBy);
+  });
+
+  it("kanca hata verirse yanıt gönderilmez; dönen durum değişmemiştir", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const link = bleLink({ age_over_18: false });
+    let sent = 0;
+    const r = await presentProximity({
+      registrarKeys: false,
+      transport: { ...link.transport, send: async (c) => (sent++, link.transport.send(c)) },
+      state,
+      keys,
+      onQr: link.onQr,
+      approve: async () => ["age_over_18"],
+      beforeSend: async () => {
+        throw new Error("disk full");
+      },
+    });
+    expect(r).toMatchObject({ outcome: "error", reason: "disk full" });
+    expect(sent).toBe(0);
+    expect(link.result.response).toBeNull();
+    expect(r.state).toBe(state);
+    expect(r.copies).toBeUndefined();
+  });
+
+  it("ret ve kopyasız oturumda çağrılmaz", async () => {
+    const { state, keys } = await walletWithIdentity();
+    let called = 0;
+    const link = bleLink({ age_over_18: false });
+    await presentProximity({
+      registrarKeys: false,
+      transport: link.transport,
+      state,
+      keys,
+      onQr: link.onQr,
+      approve: async () => null,
+      beforeSend: () => void called++,
+    });
+    const spent = {
+      ...state,
+      credentials: state.credentials.map((c) => ({
+        ...c,
+        copies: c.copies.map((k) => ({ ...k, usedBy: ["proximity:x"] })),
+      })),
+    };
+    const link2 = bleLink({ age_over_18: false });
+    const r = await presentProximity({
+      registrarKeys: false,
+      transport: link2.transport,
+      state: spent,
+      keys,
+      onQr: link2.onQr,
+      approve: async () => ["age_over_18"],
+      beforeSend: () => void called++,
+    });
+    expect(r.outcome).toBe("error");
+    expect(called).toBe(0);
   });
 });

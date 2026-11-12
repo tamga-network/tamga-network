@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-04
+last_updated: 2026-11-12
 summary: >
   ADR-0009 K7 ties the move from signed lists to the chain to a replay of the list history into the contracts and an equivalence
   test. With today's contracts that history cannot be replayed faithfully: dates come from block time, there is no hard
@@ -233,6 +233,16 @@ The decision is unchanged; with project management's approval the limits in the 
   undated (block-time) ordinary write is rejected except from Governance; an urgent write is made with an explicit date (now). The
   replay and that day's operations therefore do not race silently in the same record's history. The quota exemption (CE1) still
   applies to the whole mode.
+
+# Implementation note (2026-11-12, contract review)
+
+The decision is unchanged. K1's "the date explicitly" rule also covers the **start** of a record: while the window is open, the
+start of validity (`validFrom`) cannot be left empty when a root, an issuer or a schema is registered; an undated start is rejected
+except from Governance (`DateRequiredDuringMigration`). Before, the registration time could be given explicitly while the start
+was left empty: the start silently became the block time, could not be corrected afterwards, and every credential the record had
+issued before that moment was rejected (equivalence, CE6, would break for that record); schema registration also let an undated
+ordinary write through while the window was open. The replay (`trust:chain-replay`) already writes the start explicitly; with
+the window closed the behaviour is the same. [[SPEC-BC-0001]] §16.1.
 
 # Status
 

@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-04
+last_updated: 2026-11-12
 summary: >
   ADR-0009 K7 imzalanmış siyahılardan zəncirə keçidi siyahı tarixçəsinin kontraktlarda yenidən icrasına və ekvivalentlik testinə bağlayır. Bugünkü kontraktlarla bu tarixçə dəqiq yenidən icra edilə bilmir: tarixlər blok vaxtından gəlir, sərt ləğv yoxdur, sxemin bir məzmun xülasəsi var, yoxlayan tərəfin identifikatoru sertifikata bağlıdır və dayandırmadan qayıda bilmir, status dəstləri və sərhədləri fərqlidir, gündəlik kvotalar toplu yazını dayandırır. Qərar: hər reyestr kontraktında Governance-in bir dəfə açdığı, bağlandıqdan sonra yenidən açıla bilməyən birdəfəlik miqrasiya rejimi (keçmiş tarix yalnız blok vaxtına qədər, kvota yoxdur); `invalidatesFrom` ilə sərt ləğv; sxem versiya xülasələri yalnız əlavə oluna bilən massiv; `rpId = keccak256(dns_name)`, sertifikatın yenilənməsi, dayandırmadan qayıdış və incə əhatə dairələri (xülasələrlə); status uyğunlaşdırma cədvəli və sənədin `iat` anındakı statusa görə yarımaçıq intervallarla qiymətləndirmə. Yenidən icra komandası `trust:chain-replay`. Qəbul edildi (2026-11-04): dayandırılmış qurumun dayandırmadan əvvəlki sənədləri etibarlıdır, miqrasiya pəncərəsi ən çoxu 30 gündür.
 domain: Trust
@@ -221,6 +221,15 @@ Qərarın məzmunu dəyişməyib; layihə rəhbərliyinin təsdiqi ilə tətbiqd
 - **K1 "rejim açıq ikən tarix daşıyan yazımlar tarixi açıq şəkildə alır"** kontraktda məcburi edilir: pəncərə açıq ikən tarixsiz
   (blok zamanlı) adi yazım Governance xaricində rədd edilir; təcili yazım açıq tarixlə (indi) edilir. Beləliklə yenidən oynatma ilə
   həmin günün əməliyyatları eyni qeydin tarixçəsində səssizcə yarışmır. Kvota istisnası (CE1) bütün rejim üçün qüvvədə qalır.
+
+# Tətbiq qeydi (2026-11-12, kontrakt yoxlaması)
+
+Qərarın məzmunu dəyişmədi. K1-in "tarix açıq şəkildə" qaydası qeydin **başlanğıcını** da əhatə edir: pəncərə açıq ikən kök,
+qurum və sxem qeydində etibarlılığın başlanğıcı (`validFrom`) boş buraxıla bilməz; Governance xaricində tarixsiz başlanğıc rədd
+edilir (`DateRequiredDuringMigration`). Əvvəl qeyd anı açıq verilib başlanğıc boş buraxıla bilirdi: başlanğıc səssizcə blok
+zamanı olur, sonradan düzəldilə bilmir və qeydin həmin andan əvvəl verdiyi bütün sənədlər rədd edilirdi (ekvivalentlik, CE6,
+həmin qeyddə pozulardı); sxem qeydində də pəncərə açıq ikən tarixsiz adi yazım keçirdi. Yenidən oynatma (`trust:chain-replay`)
+başlanğıcı onsuz da açıq yazır; pəncərə bağlı ikən davranış eynidir. [[SPEC-BC-0001]] §16.1.
 
 # Status
 

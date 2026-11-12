@@ -253,8 +253,8 @@ Doğrulayıcı sunumu alıp hata dönse ya da yanıt yolda kaybolsa da kopya o d
 **Yakın alan ve cüzdandan cüzdana:** okuyucunun oturumlar arasında kalıcı bir kimliği yoktur (oturum anahtarı her seferinde
 yenidir). Bu yüzden her yakın alan oturumu **yeni bir kopya** kullanır.
 
-Kopyaların bitmesi kişiyi kapıda bırakmamalıdır. **Hedef davranış** (karar 2026-11-12; **uygulama: bekliyor**, mağaza yayınından
-önce):
+Kopyaların bitmesi kişiyi kapıda bırakmamalıdır. **Hedef davranış** (karar 2026-11-12; **cüzdan çekirdeği: hazır**
+(`@tamga-network/wallet-core` 0.8.4), **uygulama ekranları: bekliyor**, mağaza yayınından önce):
 
 | Durum | Cüzdan davranışı |
 |---|---|
@@ -264,7 +264,17 @@ Kopyaların bitmesi kişiyi kapıda bırakmamalıdır. **Hedef davranış** (kar
 
 Çevrimdışı yeniden kullanım sessiz yapılmaz: uyarı ve kişinin onayı şarttır. Cihaz çevrimiçi olunca kopyalar yenilenir.
 
-**Bugünkü uygulama:** kullanılmamış kopya kalmadıysa sunum yapılmaz — kopya yeniden kullanılmaz; kişi belgeyi yeniler (§4.3).
+**Cüzdan çekirdeğinde (0.8.4).** Çekirdek yalnız kararı ve durumu verir; yenileme çağrısı ve uyarı ekranı uygulamanın işidir:
+
+- `planProximityCopy` gösterimden önce tablodaki satırı döndürür (göster · önce yenile · uyarıyla yeniden kullan) ve kopya
+  azaldıysa arka planda yenileme gerektiğini söyler; `proximityCopies` kalan kopya sayısını, eşik altını ve bittiğini verir.
+- Yakın alan ve cüzdandan cüzdana sunum, kopya durumunu onay ekranına ve sonuca taşır.
+- Son kopya **yalnız** uygulama açıkça isterse (`reuseLastCopy`; kişi uyarıyı kabul etti) yeniden kullanılır. Yeniden kullanım
+  hep aynı kopyada toplanır ve cihazdaki sunum günlüğünde işaretlenir ("yeniden kullanıldı").
+- Seçenek verilmezse davranış değişmez: kullanılmamış kopya kalmadıysa sunum yapılmaz, kopya yeniden kullanılmaz.
+
+**Bugünkü uygulama (Tamga Wallet):** uyarı ekranı ve sunumdan önce yenileme henüz yok; kullanılmamış kopya kalmadıysa sunum
+yapılmaz — kişi belgeyi yeniler (§4.3).
 
 ## 4.2 Tutarlı açıklama seti
 
@@ -279,9 +289,10 @@ Doğrulayıcı daha az alan isterse cüzdan **fazlasını sunmaz** — kesişim 
 yeni isteğin kendisi geçerlidir; ama kullanıcıya "bu doğrulayıcıya daha önce şu
 alanları vermiştiniz" bilgisi gösterilir.
 
-**Uygulama notu (2026-11-12).** Önceki paylaşım bildirimi **henüz uygulanmadı**; cüzdanın ilk güncellemesinde, sade hâliyle
-gelir: onay ekranında "bu doğrulayıcıyla daha önce şunları paylaştınız" satırı ve bu kez yeni istenen alanların vurgusu. Kuralın
-metni değişmedi.
+**Uygulama notu (2026-11-12).** Önceki paylaşım bildirimi **ekranda henüz yok**; cüzdanın ilk güncellemesinde, sade hâliyle
+gelir: onay ekranında "bu doğrulayıcıyla daha önce şunları paylaştınız" satırı ve bu kez yeni istenen alanların vurgusu. Cüzdan
+çekirdeği bunun verisini hazır verir (`sharedBefore`, 0.8.4): cihazdaki sunum günlüğünden, doğrulayıcının kalıcı kimliğine göre,
+yalnız alan adları ve tarihler — değer yok. Kuralın metni değişmedi.
 
 ## 4.3 Tükenme
 
@@ -674,6 +685,6 @@ kişinin belgelerini yok etmenin yolu olurdu.
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02; son güncelleme 2026-11-12).
 
 **2026-11-12:** [[ADR-0078]] — yedek yok, taşınan tek şey taşıma dosyası (WL2 metni; §1.3, §1.4, §2.1, §7, §8). Uygulama
-notları: WL6 önceki paylaşım bildirimi ilk güncellemede (§4.2); yakın alanda kopya bitince hedef davranış, uygulama bekliyor
-(§4.1).
+notları: WL6 önceki paylaşım bildirimi ilk güncellemede (§4.2); yakın alanda kopya bitince hedef davranış (§4.1) — ikisinin
+de cüzdan çekirdeği kısmı 0.8.4'te hazır, uygulama ekranları bekliyor.
 

@@ -17,6 +17,16 @@ summary: >
   onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
 ---
 
+> **Sürüm notu 1.0.0 (2026-11-12, kontrat denetiminden kalanlar) — [[ADR-0082]], göç penceresinde başlangıç.** (1) IS1:
+> iptal edilmiş kurumun halefini devleti sonradan düzeltir, değiştirir ya da kaldırır (`setIssuerSuccessor`,
+> `IssuerSuccessorSet`, `IssuerNotRevoked`; §3.1, §3.3, §7.3, I4). Önce halef iptalle tek adımda yazılıyor ve değişmiyordu.
+> (2) DK1: delege anahtarı eşlemesi devlet başınadır; `DelegateKeyInUse` kalktı — bir devlet ötekinin kullanacağı anahtarı önce
+> yazarak onu engelleyemez (§0 N1, §1). (3) Göç penceresi açıkken kayıt başlangıcı (`validFrom`) da açıkça verilir: kök, kurum ve
+> şema kaydında tarihsiz başlangıç Governance dışında `DateRequiredDuringMigration` ile reddedilir (§16.1; [[ADR-0073]] uygulama
+> notu). (4) Yükseltme sonrası oylar: §9'a açık adım yazıldı. ABI: `IssuerRegistry`'ye bir fonksiyon, bir olay, bir hata;
+> `Governance`'tan bir hata kalktı. Depolama: `Governance` 2. yuva `_delegateToState` → `_isDelegate` (çalışan zincir yok; taban
+> çizgisi yeniden yazıldı), öteki kontratlarda değişiklik yok. Kod boyutu: Governance 22.880 bayt (pay 1.696).
+
 > **Sürüm notu 1.0.0 (2026-11-12) — en az iki kurucu, Cancun, başka devletin ulusal şemasına yetki.** (1) [[ADR-0076]] GC4:
 > `Governance.initialize` ikiden az kurucuyu reddeder (`FounderMismatch`); tek kuruculu kuruluş kalktı, kurulum betikleri ve
 > anahtar haritası aynı kuralı dağıtımdan önce denetler (§1). (2) [[ADR-0077]]: zincir Cancun kural setiyle kurulur (genesis
@@ -157,9 +167,11 @@ modifier onlyOwnerState(bytes2 stateCode) {
 **Değişmez N1:** Hiçbir yazma fonksiyonu, namespace sahibi olmayan bir çağırana
 açık olamaz. Tek istisna `Governance` yürütmesidir (2/3 oy): `NETWORK` katmanı
 şemaları (§4.3), protokol yükseltmesi (§9) ve türü belli kayıt yönetimi önerileri
-(§1, [[ADR-0055]]). Bir anahtar ve bir validator adresi yalnız bir devlete ait
-olabilir (`DelegateKeyInUse`, `ValidatorInUse`); bir devletin kayıtları başka bir
-devletin kaydına bağlanamaz ([[ADR-0054]]/NS2).
+(§1, [[ADR-0055]]). Bir validator adresi yalnız bir devlete ait olabilir
+(`ValidatorInUse`). Delege anahtarı eşlemesi devlet başınadır ([[ADR-0082]]/DK1):
+bir devletin delege listesi yalnız o devletin kayıtlarına yetki verir, başka
+devletin atamasını engelleyemez ve yetkisini düşüremez. Bir devletin kayıtları
+başka bir devletin kaydına bağlanamaz ([[ADR-0054]]/NS2).
 
 ---
 
@@ -215,8 +227,8 @@ function cancelProposal(bytes32 proposalId) external onlyValidator;   // yalnız
 /// TooFewMembers(active, required = 3) — ADR-0076 GC1; iki üyeli ağda önce üçüncü üye kabul edilir
 function withdraw() external onlyValidator;
 
-/// Devletin kendi iç işi — oy gerekmez. Yalnız o devletin VALIDATOR adresi çağırır; anahtar başka bir devletin
-/// delegesiyse reddedilir (DelegateKeyInUse — N1).
+/// Devletin kendi iç işi — oy gerekmez. Yalnız o devletin VALIDATOR adresi çağırır. Eşleme devlet başınadır
+/// (ADR-0082 DK1): liste yalnız bu devletin eşlemesini yazar ve siler; başka devletin listesindeki anahtar reddedilmez.
 function setDelegateKeys(bytes2 stateCode, address[] calldata keys) external;
 ```
 
@@ -382,6 +394,9 @@ function suspendIssuer(bytes32 issuerId) external onlyOwnerState(_stateOf(issuer
 function reinstateIssuer(bytes32 issuerId) external onlyOwnerState(_stateOf(issuerId));   // SUSPENDED → ACTIVE, IssuerReinstated
 /// successorId: aynı devletin ACTIVE kurumu, kendisi değil (InvalidSuccessor; NS2 — CrossStateReference)
 function revokeIssuer(bytes32 issuerId, bytes32 successorId) external onlyOwnerState(_stateOf(issuerId));
+/// ADR-0082 IS1: iptal edilmiş kurumun halefini düzeltir, değiştirir ya da kaldırır (0); kurallar iptaldekiyle aynı.
+/// Kurum REVOKED değilse IssuerNotRevoked. Olay: IssuerSuccessorSet(issuerId, successorId)
+function setIssuerSuccessor(bytes32 issuerId, bytes32 successorId) external onlyOwnerState(_stateOf(issuerId));
 function renewIssuer(bytes32 issuerId, uint64 newValidUntil) external onlyOwnerState(_stateOf(issuerId));
 function setIssuerDelegates(bytes32 issuerId, address[] calldata keys) external onlyOwnerState(_stateOf(issuerId));
 ```
@@ -417,7 +432,9 @@ function isIssuerDelegate(bytes32 issuerId, address key) external view returns (
 Bir issuer `REVOKED` olsa bile, `validUntil` tarihine kadar verdiği
 credential'lar **geçerli kalır**; issuer yalnızca **yeni** credential veremez.
 `successorId` ile kurum devri tanımlanır — bakanlık kapanınca diplomalar çöp
-olmaz.
+olmaz. Halef iptalle birlikte yazılır; devlet onu sonradan `setIssuerSuccessor`
+ile düzeltir, değiştirir ya da kaldırır ([[ADR-0082]]/IS1). Halef yalnız iptal
+listesi yayın yetkisini belirler (§7.3); belgelerin kabulünü değiştirmez (IS2).
 
 Üç sorgunun tanımı:
 
@@ -823,7 +840,10 @@ kalkmalıdır ki derleme hatası versin.
 **Halef yetkisi (2.1.0 — review bulgusu R4):** `REVOKED` bir issuer'ın listesi
 donmamalıdır — bakanlık kapandı, diplomalar geçerli, ama sahte bir diplomayı kim
 iptal edecek? `publishList` ve `retireList`, issuer'ın kendi delegesine **veya**
-`successorId`'nin delegesine açıktır. Halef zinciri tek seviyedir.
+`successorId`'nin delegesine açıktır. Halef zinciri tek seviyedir: halef de
+kapanırsa ya da halef yanlış yazılmışsa devlet yenisini yazar
+(`setIssuerSuccessor`, [[ADR-0082]]/IS1); eski halefin anahtarları yetkisini o an
+yitirir.
 
 **Bağımlı etki — `CredentialGate.sol`:** Zincir-üstü credential-gating
 ([[ADR-0003]] Karar 4) iptal durumunu artık doğrudan göremez. Çağıranın sunduğu
@@ -918,6 +938,30 @@ bu yol kapalıdır; denetim ikinci savunma hattı olarak kalır (CR3). Oy verenl
 adresi değil, `implCodehash`'i incelenen derleme çıktısıyla karşılaştırır. Kod özeti implementasyonun bağlandığı başka
 kontratların (kütüphane) kodunu kapsamaz; bugün hiçbir kontrat dış kütüphaneye
 bağlanmaz ve yükseltme incelemesi bunu denetler.
+
+**Yükseltmeden sonra oylar (2026-11-12).** Yürütmede bir oy yalnız zamanı
+kayıtlıysa ve üyenin son kabulünden sonraysa sayılır (§1). Oy zamanını tutmayan
+bir Governance sürümünden bu sürüme yükseltilirse, yükseltmeden önce verilmiş
+oyların zamanı 0'dır ve hiçbiri sayılmaz. Koddan ve testle doğrulanan sonuç:
+
+- Governance'ı yükselten önerinin kendisi etkilenmez: eşik, yükseltme çağrısından
+  **önce**, eski kodla sayılır ve öneri aynı işlemde `EXECUTED` olur; yeni kod o
+  öneri için yeniden sayım yapmaz. Yükseltme kendi kendini kilitleyemez.
+- O anda açık olan öteki öneriler ve kuyruktaki öteki yükseltmeler
+  `ThresholdNotMet` ile bekler. Kilit değildir: her üye oyunu **aynı yönde
+  yeniden verir** (`AlreadyVoted` ile reddedilmez, ham sayaçlar değişmez); açık
+  öneride `expiresAt`'a, kuyruktaki yükseltmede uygulama penceresinin sonuna
+  (bekleme süresi + 30 gün) kadar. Süre o zamana kadar dolmuşsa öneri yeniden
+  açılır.
+- İşletim adımı: Governance yükseltmesi uygulandıktan hemen sonra açık öneriler
+  listelenir (`countedForVotes` 0 döner) ve üyeler oylarını yeniden verir; adım
+  [[ARCH-0002]] Adım 11'dedir.
+
+Çalışan bir zincir yoktur ([[ADR-0009]] K4): ağ doğrudan bu sürümle kurulur ve
+bu durum ilk kurulumda oluşmaz. Kural, oy sayımının dayandığı depolamayı
+değiştiren ilerideki her Governance yükseltmesi için de geçerlidir: yükseltme
+incelemesi, açık önerilerdeki oyların yeni kodda nasıl sayılacağını ayrıca
+yazar.
 
 **Bekleme süresi ve başlangıç çağrısı ([[ADR-0055]]).** Eşiği dolan yükseltme
 önce kuyruğa alınır (`ProposalQueued`), en erken 7 gün (`UPGRADE_DELAY`) sonra
@@ -1108,7 +1152,7 @@ sıfırlanır.
 | **I1** | Şema yetkisi allowlist'tir; varsayılan `false`. |
 | **I2** | Doğrulama `isCredentialAcceptable(id, iat)` kullanır; `isValidIssuer` yalnızca ihraçtır. |
 | **I3** | Şema yetkisi zaman penceresidir; doğrulama `iat`'a göre bakar. |
-| **I4** | `REVOKED` issuer'ın listesini halefi yayınlayabilir. |
+| **I4** | `REVOKED` issuer'ın listesini halefi yayınlayabilir. Halefi yalnız kurumun devleti yazar; iptalden sonra da düzeltebilir ([[ADR-0082]]/IS1). |
 | **SC1** | Şemanın `vctURI`'si ve yazılmış her içerik özeti asla güncellenmez ya da silinmez; yeni sürüm özeti yalnız eklenir. |
 | **SC3** | `DEPRECATED` şema, kullanımdan kaldırılmadan önce verilmiş belgeler için doğrulanabilir kalır. |
 | **L1** | Status list `version` monoton artar. |
@@ -1258,6 +1302,10 @@ function proposeMigrationClose(address registry) external;
   **Kip açıkken tarihsiz yazım dondurulur** (güvenlik turu 2026-11-04; K1 "tarih açıkça"): `at` = 0, `registeredAt` = 0 ve
   `publishList(publishedAt = 0)` Governance dışında `DateRequiredDuringMigration` ile reddedilir; acil yazım açık tarihle
   (`at` = şimdi) yapılır. Böylece yeniden oynatılan geçmiş ile o günkü işletim aynı kaydın geçmişinde sessizce yarışmaz.
+  Aynı kural kaydın **başlangıcına** da uygulanır (kontrat denetimi 2026-11-12): kip açıkken kök, kurum ve şema kaydında
+  `validFrom` = 0 Governance dışında `DateRequiredDuringMigration` ile reddedilir. Önce `registeredAt` verilip `validFrom` boş
+  bırakılabiliyordu: başlangıç sessizce blok zamanı oluyor, sonradan düzeltilemiyor ve kaydın o andan önceki bütün belgeleri
+  reddediliyordu; şema kaydında da pencere açıkken tarihsiz olağan yazım geçiyordu. Yeniden oynatma başlangıcı zaten açıkça yazar.
 - **Geçerlilik başlangıcı:** kip dışında kurum ve kök CA `validFrom`'u geçmişe çekilemez (0 = blok zamanı; gelecek serbest;
   `PastDateOutsideMigration`); `validUntil` etkin başlangıçla karşılaştırılır. Kip dışında kaydedilen kurumun ilk ACTIVE penceresi
   başlangıçsız olduğundan geçmiş `validFrom` kayıttan önceki belgeleri kabul ettirirdi (güvenlik turu 2026-11-04).
@@ -1545,5 +1593,7 @@ değişmez ([[ADR-0051]] CH1).
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02; §15 2026-10-19, [[ADR-0051]]: kontratlar derleniyor ve test ediliyor, üretimde kapalı;
 §12.1 hesap izni 2026-10-19, [[ADR-0052]]: zincir üstü izin kontratı yerine Besu yerel izinlendirme; 2026-10-19 [[ADR-0053]],
 [[ADR-0054]], [[ADR-0055]]: rakip çapa adayları, şema ad alanları ve kota kapsamı, yükseltme kuyruğu ve kayıt yönetimi önerileri;
-2026-10-23 [[ADR-0063]]: iptal listesi kaydı listenin kendi bit sayısıyla; §16.9 2026-11-05: yerel izinlendirme aracı ve işletim).
+2026-10-23 [[ADR-0063]]: iptal listesi kaydı listenin kendi bit sayısıyla; §16.9 2026-11-05: yerel izinlendirme aracı ve işletim;
+2026-11-12 [[ADR-0082]]: düzeltilebilir kurum halefi, devlet başına delege anahtarı; göç penceresinde açık başlangıç; §9
+yükseltmeden sonra oylar).
 

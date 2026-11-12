@@ -128,6 +128,10 @@ looks at `status_history` with the credential's `iat` (D-BC-3, [[SPEC-BC-0001]]/
 may be published by its successor (`successor_id`) (I4). Operator tool: `trust-publisher status <slug> <STATUS> --reason r`
 (`REVOKED --invalidates-from <date>`: credentials issued from that moment fail; `valid_from` = all of the institution's credentials),
 `rp-status <dns_name> <STATUS>` for a relying party, `end-use <dns_name> <id>` for a single use or gate group (end date).
+The start of a use or a gate group does not change; its end changes only by closing an open period, and the new end cannot be
+earlier than the start of the row or than the publication time of the previous signed list (a period the previous list stated as
+open cannot be closed retroactively). Whether a period is open is also decided by the publication time of the previous signed
+list.
 The publisher enforces this: if an issuer, relying party or terminal group of the previously published version is missing from
 the new list, publication stops. The only exception is an approved removal entry written explicitly in the registry, with exactly
 matching counts (`removals.json`; list, date, the number of the signed version before the removal, counts and a short reason only — no names or

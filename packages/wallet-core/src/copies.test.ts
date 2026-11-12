@@ -3,6 +3,9 @@ import { describe, it, expect } from "vitest";
 import {
   LOW_COPIES,
   planCopy,
+  planProximityCopy,
+  proximityCopies,
+  selectProximityCopy,
   remainingCopies,
   supersedeCredential,
   canSupersede,
@@ -182,5 +185,74 @@ describe("depo şifrelemesi", () => {
     expect(openText(k, s)).toContain("Ayşe");
     expect(() => openText(rnd(32), s)).toThrow();
     expect(() => openText(k, s.slice(0, -2) + (s.endsWith("A") ? "BB" : "AA"))).toThrow();
+  });
+});
+
+describe("yakın alan kopya tüketimi (SPEC-WALLET-0001 §4.1; 0.8.4)", () => {
+  const withMdoc = (c: StoredCredential, has: boolean[] = []): StoredCredential => ({
+    ...c,
+    copies: c.copies.map((k, i) => (has[i] === false ? k : { ...k, mdoc: "bWRvYw" })),
+  });
+  const refreshable = (c: StoredCredential) =>
+    ({ ...c, refresh: { token: "t", tokenEndpoint: "u", dpopRef: "d", dpopJwk: {} } }) as unknown as StoredCredential;
+
+  it("durum: yalnız mdoc'u olan kopyalar sayılır; kalan / eşik altı / bitti", () => {
+    const c = withMdoc(cred("a", [[], [], [], ["rp1"], []]), [true, true, true, true, false]);
+    expect(proximityCopies(c)).toEqual({ total: 4, remaining: 3, low: false, exhausted: false, refreshable: false });
+    const low = withMdoc(cred("a", [["proximity:1"], [], []]));
+    expect(proximityCopies(low)).toMatchObject({ remaining: LOW_COPIES, low: true, exhausted: false });
+    expect(proximityCopies(low, 1).low).toBe(false); // eşik çağırandan da verilebilir
+    const done = withMdoc(cred("a", [["proximity:1"], ["rp1"]]));
+    expect(proximityCopies(done)).toMatchObject({ remaining: 0, low: true, exhausted: true });
+    expect(proximityCopies(refreshable(done)).refreshable).toBe(true);
+    expect(proximityCopies(cred("a", [[], []]))).toMatchObject({ total: 0, remaining: 0, exhausted: true });
+  });
+
+  it("seçim: kullanılmamış mdoc kopyası; kalmadıysa null — yeniden kullanım yalnız açık seçenekle ve işaretli", () => {
+    const c = withMdoc(cred("a", [["proximity:1"], [], []]), [true, false, true]);
+    expect(selectProximityCopy(c)).toMatchObject({ copy: { keyRef: "a.2" }, reused: false }); // a.1'in mdoc'u yok
+    expect(selectProximityCopy(c, { reuseLastCopy: true })).toMatchObject({ copy: { keyRef: "a.2" }, reused: false });
+    const done = withMdoc(cred("a", [["proximity:1"], ["proximity:2"]]));
+    expect(selectProximityCopy(done)).toBeNull();
+    expect(selectProximityCopy(done, { reuseLastCopy: false })).toBeNull();
+    expect(selectProximityCopy(done, { reuseLastCopy: true })).toMatchObject({ copy: { keyRef: "a.1" }, reused: true });
+    expect(selectProximityCopy(cred("a", [["x"]]), { reuseLastCopy: true })).toBeNull(); // mdoc'u olan kopya yok
+  });
+
+  it("son kopya hep aynı kopyadır; uzak doğrulayıcının gördüğü kopya en son tercih edilir", () => {
+    // a.1 zaten bir kez yeniden kullanılmış: yeniden kullanım onda toplanır (a.0 ve a.2'nin gösterimleri bağlanmaz)
+    const again = withMdoc(cred("a", [["proximity:1"], ["proximity:2", "proximity:4"], ["proximity:3"]]));
+    expect(selectProximityCopy(again, { reuseLastCopy: true })?.copy.keyRef).toBe("a.1");
+    // a.2 kimliği bilen uzak doğrulayıcıya gösterilmiş: yüz yüze gösterim ona bağlanmasın
+    const mixed = withMdoc(cred("a", [["proximity:1"], ["proximity:2"], ["rp.example"]]));
+    expect(selectProximityCopy(mixed, { reuseLastCopy: true })?.copy.keyRef).toBe("a.1");
+    const onlyRemote = withMdoc(cred("a", [["rp1.example"], ["rp2.example", "proximity:9"]]));
+    expect(selectProximityCopy(onlyRemote, { reuseLastCopy: true })?.copy.keyRef).toBe("a.1");
+  });
+
+  it("karar tablosu (§4.1): göster / arka planda yenile / önce yenile / uyarıyla yeniden kullan", () => {
+    const plenty = withMdoc(cred("a", [[], [], [], []]));
+    expect(planProximityCopy(plenty, { online: false })).toMatchObject({
+      action: "present",
+      refreshInBackground: false,
+    });
+    const low = withMdoc(cred("a", [["proximity:1"], [], []]));
+    // kopya azaldı: yenileme belirteci varsa arka planda yenile; yoksa yenileme kişinin eylemidir (WL7)
+    expect(planProximityCopy(refreshable(low), { online: true })).toMatchObject({
+      action: "present",
+      low: true,
+      refreshInBackground: true,
+    });
+    expect(planProximityCopy(low, { online: true })).toMatchObject({ action: "present", refreshInBackground: false });
+    const done = withMdoc(cred("a", [["proximity:1"], ["proximity:2"]]));
+    expect(planProximityCopy(refreshable(done), { online: true })).toMatchObject({
+      action: "refresh_first",
+      exhausted: true,
+      refreshable: true,
+      refreshInBackground: false,
+    });
+    expect(planProximityCopy(done, { online: true })).toMatchObject({ action: "refresh_first", refreshable: false });
+    expect(planProximityCopy(done, { online: false })).toMatchObject({ action: "reuse_with_warning", remaining: 0 });
+    expect(planProximityCopy(cred("a", [[]]), { online: true }).action).toBe("unavailable");
   });
 });

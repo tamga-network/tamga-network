@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-04
+last_updated: 2026-11-12
 summary: >
   ADR-0009 K7, imzalı listelerden zincire geçişi liste geçmişinin kontratlara yeniden oynatılmasına ve eşdeğerlik testine bağlar.
   Bugünkü kontratlarla bu geçmiş birebir oynatılamaz: tarihler blok zamanından gelir, sert iptal yoktur, şemanın tek içerik özeti
@@ -219,6 +219,15 @@ Karar içeriği değişmedi; proje yönetiminin onayıyla uygulamadaki sınırla
 - **K1 "kip açıkken tarih taşıyan yazımlar tarihi açıkça alır"** kontratta zorlanır: pencere açıkken tarihsiz (blok zamanlı)
   olağan yazım Governance dışında reddedilir; acil yazım açık tarihle (şimdi) yapılır. Böylece yeniden oynatma ile o günkü işletim
   aynı kaydın geçmişinde sessizce yarışmaz. Kota istisnası (CE1) bütün kip için geçerli kalır.
+
+# Uygulama notu (2026-11-12, kontrat denetimi)
+
+Karar içeriği değişmedi. K1'in "tarih açıkça" kuralı kaydın **başlangıcını** da kapsar: pencere açıkken kök, kurum ve şema
+kaydında geçerlilik başlangıcı (`validFrom`) boş bırakılamaz; Governance dışında tarihsiz başlangıç reddedilir
+(`DateRequiredDuringMigration`). Önce kayıt anı açıkça verilip başlangıç boş bırakılabiliyordu: başlangıç sessizce blok zamanı
+oluyor, sonradan düzeltilemiyor ve kaydın o andan önce verdiği bütün belgeler reddediliyordu (eşdeğerlik CE6 o kayıtta bozulurdu);
+şema kaydında da pencere açıkken tarihsiz olağan yazım geçiyordu. Yeniden oynatma (`trust:chain-replay`) başlangıcı zaten açıkça
+yazar; pencere kapalıyken davranış aynıdır. [[SPEC-BC-0001]] §16.1.
 
 # Durum
 

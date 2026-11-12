@@ -58,6 +58,8 @@ interface IIssuerRegistry is ITamgaErrors {
     event IssuerStatusChanged(bytes32 indexed issuerId, IssuerStatus status, uint64 since);
     /// @dev ADR-0073 K5 eşlemesi: listedeki `RETIRED` = zincirde yumuşak REVOKED + bu olay (önceki belgeler geçerli, GV1).
     event IssuerRetired(bytes32 indexed issuerId, bytes32 successorId);
+    /// @dev ADR-0082 IS1: iptalden sonra halef değişti (sıfır = halef kaldırıldı).
+    event IssuerSuccessorSet(bytes32 indexed issuerId, bytes32 successorId);
     /// @dev Şema yetkisi penceresinin açılış/kapanış anı (göç kipinde açık tarih).
     event SchemaAuthorizationWindow(bytes32 indexed issuerId, bytes32 indexed schemaId, bool allowed, uint64 at);
     /// @dev ADR-0073 K2: sert iptal — bu andan itibaren verilmiş belgeler düşer (yalnız geriye çekilir).
@@ -73,6 +75,8 @@ interface IIssuerRegistry is ITamgaErrors {
     error RootCANotActive(bytes32 caId);
     /// @dev Issuer kendisinin halefi olamaz (I4: listesi donardı).
     error InvalidSuccessor(bytes32 successorId);
+    /// @dev ADR-0082 IS1: halef yalnız iptal edilmiş kurumda sonradan yazılır (iptalde `revokeIssuer` ile birlikte).
+    error IssuerNotRevoked(bytes32 issuerId);
     /// @dev ADR-0054 NS2: kök sertifika ya da halef başka bir devlete ait.
     error CrossStateReference(bytes32 ref, bytes2 refState);
     /// @dev ADR-0073 K2 / CE2: validFrom ≤ tarih ≤ revokedAt, kurum REVOKED ve tarih yalnız geriye çekilir.
@@ -91,6 +95,9 @@ interface IIssuerRegistry is ITamgaErrors {
     function revokeIssuerAt(bytes32 issuerId, bytes32 successorId, uint64 at) external;
     /// @notice Listedeki `RETIRED`: yumuşak iptal (revokedAt = since) + IssuerRetired.
     function retireIssuer(bytes32 issuerId, bytes32 successorId, uint64 at) external;
+    /// @notice ADR-0082 IS1: iptal edilmiş kurumun halefini düzeltir, değiştirir ya da kaldırır (sıfır). Yalnız kurumun devleti;
+    ///         halef aynı devletin ACTIVE kurumu, kendisi değil. Kurum iptal edilmemişse `IssuerNotRevoked`.
+    function setIssuerSuccessor(bytes32 issuerId, bytes32 successorId) external;
     function setSchemaAuthorizationAt(bytes32 issuerId, bytes32 schemaId, bool allowed, uint64 at) external;
 
     /// @notice ADR-0073 K2 — sert iptal (ele geçirilme): `invalidatesFrom` ≤ iat olan belge C1'de düşer. Kurum REVOKED olmalı;

@@ -33,7 +33,7 @@ steps (`node init | declare | check`) and the local MCP server (`tamga-onboard m
 
 ## Install
 
-Published on npm as the `0.8.3` test release (the stable `1.0.0` comes when everything is
+Published on npm as the `0.8.4` test release (the stable `1.0.0` comes when everything is
 ready — in test releases the commands and options may change). Released together with the other `@tamga-network/*` packages.
 For now this package is published by hand without npm provenance (0.8.2 and 0.8.3); once it moves to the automated release
 workflow, releases will carry provenance.
@@ -161,7 +161,7 @@ keşif kapalı). Genesis araçla üretilmez: işletmecilerden alınır, özeti e
 `node check` çalışan düğümü yalnız okuyarak denetler: senkron ve aynı genesis, eşler, anahtar, izin listesi (çizimle ve
 karşılaştırma ucuyla), validator kümesi, dış uçta yalnız eth/net/web3, yapılandırma, saat. Zincire, izin listesine, ağa yazmaz;
 oy ve izin yükleme işletmecilerde kalır. MCP araçları: `generate_node_key`, `create_node_declaration`, `check_node`. Sandbox denemesi için başvuru gerekmez:
-`tamga-onboard sandbox`. Paket npm'de `0.8.3` deneme sürümü olarak yayımlanmıştır:
+`tamga-onboard sandbox`. Paket npm'de `0.8.4` deneme sürümü olarak yayımlanmıştır:
 `npm install -g @tamga-network/onboard` ya da `npx -p @tamga-network/onboard tamga-onboard --help`; Node.js 22 ve üstü.
 
 Docs: https://docs.tamga.network · Source: https://github.com/tamga-network/tamga-network (packages/onboard) · Apache-2.0

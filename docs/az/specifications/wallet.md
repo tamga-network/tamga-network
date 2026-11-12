@@ -248,8 +248,8 @@ yoxlayan tərəfə "istifadə olunmamış" kimi verilmir.
 **Yaxın məsafə və cüzdandan cüzdana:** oxuyucunun sessiyalar arasında daimi kimliyi yoxdur (sessiya açarı hər dəfə yenidir).
 Buna görə hər yaxın məsafə sessiyası **yeni nüsxə** istifadə edir.
 
-Nüsxələrin bitməsi şəxsi qapıda saxlamamalıdır. **Hədəf davranış** (qərar 2026-11-12; **tətbiq: gözləyir**, mağazada dərcdən
-əvvəl):
+Nüsxələrin bitməsi şəxsi qapıda saxlamamalıdır. **Hədəf davranış** (qərar 2026-11-12; **cüzdan nüvəsi: hazırdır**
+(`@tamga-network/wallet-core` 0.8.4), **tətbiq ekranları: gözləyir**, mağazada dərcdən əvvəl):
 
 | Vəziyyət | Cüzdanın davranışı |
 |---|---|
@@ -259,8 +259,18 @@ Nüsxələrin bitməsi şəxsi qapıda saxlamamalıdır. **Hədəf davranış** 
 
 Oflayn təkrar istifadə səssiz edilmir: xəbərdarlıq və şəxsin razılığı şərtdir. Cihaz onlayn olanda nüsxələr yenilənir.
 
-**Bugünkü tətbiq:** istifadə olunmamış nüsxə qalmayıbsa, təqdimat edilmir — nüsxə təkrar istifadə olunmur; şəxs sənədi yeniləyir
-(§4.3).
+**Cüzdan nüvəsində (0.8.4).** Nüvə yalnız qərarı və vəziyyəti verir; yeniləmə çağırışı və xəbərdarlıq ekranı tətbiqin işidir:
+
+- `planProximityCopy` təqdimatdan əvvəl cədvəldəki sətri qaytarır (təqdim et · əvvəlcə yenilə · xəbərdarlıqla təkrar istifadə
+  et) və nüsxə azalıbsa arxa planda yeniləmə lazım olduğunu bildirir; `proximityCopies` qalan nüsxə sayını, həddən aşağı
+  olduğunu və bitdiyini verir.
+- Yaxın məsafə və cüzdandan cüzdana təqdimat nüsxə vəziyyətini təsdiq ekranına və nəticəyə daşıyır.
+- Son nüsxə **yalnız** tətbiq açıq şəkildə istədikdə (`reuseLastCopy`; şəxs xəbərdarlığı qəbul edib) təkrar istifadə olunur.
+  Təkrar istifadə həmişə eyni nüsxədə toplanır və cihazdakı təqdimat jurnalında işarələnir ("təkrar istifadə olundu").
+- Seçim verilməzsə davranış dəyişmir: istifadə olunmamış nüsxə qalmayıbsa, təqdimat edilmir, nüsxə təkrar istifadə olunmur.
+
+**Bugünkü tətbiq (Tamga Wallet):** xəbərdarlıq ekranı və təqdimatdan əvvəl yeniləmə hələ yoxdur; istifadə olunmamış nüsxə
+qalmayıbsa, təqdimat edilmir — şəxs sənədi yeniləyir (§4.3).
 
 ## 4.2 Ardıcıl açıqlama dəsti
 
@@ -275,9 +285,10 @@ Yoxlayan tərəf daha az sahə istəsə, rəqəmsal cüzdan **artığını təqd
 yeni sorğunun özü əsas götürülür; lakin istifadəçiyə "bu yoxlayan tərəfə əvvəllər bu
 sahələri vermişdiniz" məlumatı göstərilir.
 
-**Tətbiq qeydi (2026-11-12).** Əvvəlki paylaşım haqqında bildiriş **hələ tətbiq olunmayıb**; cüzdanın ilk yeniləməsində sadə
+**Tətbiq qeydi (2026-11-12).** Əvvəlki paylaşım haqqında bildiriş **ekranda hələ yoxdur**; cüzdanın ilk yeniləməsində sadə
 şəkildə gəlir: təsdiq ekranında "bu yoxlayan tərəflə əvvəllər bunları paylaşmısınız" sətri və bu dəfə yeni istənilən sahələrin
-vurğulanması. Qaydanın mətni dəyişmədi.
+vurğulanması. Cüzdan nüvəsi bunun məlumatını hazır verir (`sharedBefore`, 0.8.4): cihazdakı təqdimat jurnalından, yoxlayan
+tərəfin daimi kimliyinə görə, yalnız sahə adları və tarixlər — dəyər yoxdur. Qaydanın mətni dəyişmədi.
 
 ## 4.3 Tükənmə
 
@@ -634,6 +645,6 @@ sənədlərini məhv etmək yolu verərdi.
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02; son yenilənmə 2026-11-12).
 
 **2026-11-12:** [[ADR-0078]] — ehtiyat nüsxə yoxdur, daşınan yeganə şey köçürmə faylıdır (WL2-nin mətni; §1.3, §1.4, §2.1, §7,
-§8). Tətbiq qeydləri: WL6 əvvəlki paylaşım bildirişi ilk yeniləmədə (§4.2); yaxın məsafədə nüsxə bitəndə hədəf davranış, tətbiq
-gözləyir (§4.1).
+§8). Tətbiq qeydləri: WL6 əvvəlki paylaşım bildirişi ilk yeniləmədə (§4.2); yaxın məsafədə nüsxə bitəndə hədəf davranış (§4.1) —
+hər ikisinin cüzdan nüvəsi hissəsi 0.8.4-də hazırdır, tətbiq ekranları gözləyir.
 

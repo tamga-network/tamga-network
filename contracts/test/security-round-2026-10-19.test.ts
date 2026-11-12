@@ -81,12 +81,14 @@ describe("Güvenlik turu 2026-10-19 — regresyonlar", function () {
       expect((await f.governance.getMember(AZ)).status).to.equal(1); // ACTIVE
     });
 
-    it("F-02: bir devletin validator'ı başka devletin delege anahtarını kendine yazamaz (N1)", async () => {
+    it("F-02: bir devletin validator'ı başka devletin delege anahtarını listesine yazınca o devletin yetkisi düşmez (N1)", async () => {
+      // ADR-0082 DK1: eşleme devlet başınadır — yazım reddedilmez (kapma kapısıydı), ama öteki devletin eşlemesine dokunamaz
       const kzKey = await f.kzDelegate.getAddress();
-      await expect(f.as(f.governance, f.trValidator).setDelegateKeys(TR, [kzKey]))
-        .to.be.revertedWithCustomError(f.governance, "DelegateKeyInUse")
-        .withArgs(kzKey, KZ);
+      await f.as(f.governance, f.trValidator).setDelegateKeys(TR, [kzKey]);
       expect(await f.governance.isDelegateOf(kzKey, KZ)).to.equal(true);
+      await f.as(f.governance, f.trValidator).setDelegateKeys(TR, []);
+      expect(await f.governance.isDelegateOf(kzKey, KZ)).to.equal(true);
+      expect(await f.governance.isDelegateOf(kzKey, TR)).to.equal(false);
     });
 
     it("F-02: anahtar devirde eski devletin listesi yeni sahibinin eşlemesini silmez", async () => {

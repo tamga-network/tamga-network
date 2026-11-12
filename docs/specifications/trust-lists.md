@@ -126,6 +126,9 @@ Statü sözlüğü: `ACTIVE | SUSPENDED | REVOKED | RETIRED` (+ kök: `ROLLING_O
 (`successor_id`) yayınlayabilir (I4). Operatör aracı: `trust-publisher status <slug> <STATUS> --reason r`
 (`REVOKED --invalidates-from <tarih>`: o andan sonra verilmiş belgeler düşer; `valid_from` = kurumun bütün belgeleri),
 doğrulayıcı için `rp-status <dns_name> <STATUS>`, tek kullanım ya da kapı grubu için `end-use <dns_name> <id>` (bitiş tarihi).
+Kullanımın ve kapı grubunun başlangıcı değişmez; bitişi yalnız açık dönemin kapatılması yönünde değişir ve yeni bitiş, satırın
+başlangıcından ya da önceki imzalı listenin yayın anından önce olamaz (önceki listenin "açık" dediği dönem geriye dönük
+kapatılamaz). Dönemin açık olup olmadığı da önceki imzalı listenin yayın anına göre belirlenir.
 Yayıncı bunu denetler: önceki yayımlanmış sürümdeki bir belge veren, doğrulayıcı ya da kapı grubu yeni listede yoksa yayın
 durur. Tek istisna kayıt defterinde açıkça yazılmış, sayıları birebir tutan onaylı bir çıkarma kaydıdır (`removals.json`; yalnız
 liste, tarih, çıkarmadan önceki imzalı sürümün numarası, sayılar ve kısa gerekçe — ad ya da kimlik taşımaz; kayıt yalnız o

@@ -241,8 +241,8 @@ copy still belongs to that verifier; it is not given to another verifier as "unu
 **Proximity and wallet to wallet:** a reader has no identity that lasts across sessions (the session key is new every time).
 Every proximity session therefore uses **a new copy**.
 
-Running out of copies must not leave the person standing at the door. **Target behaviour** (decided 2026-11-12;
-**implementation: pending**, before the store release):
+Running out of copies must not leave the person standing at the door. **Target behaviour** (decided 2026-11-12; **wallet
+core: ready** (`@tamga-network/wallet-core` 0.8.4), **app screens: pending**, before the store release):
 
 | Situation | Wallet behaviour |
 |---|---|
@@ -253,8 +253,19 @@ Running out of copies must not leave the person standing at the door. **Target b
 Offline reuse is never silent: the warning and the person's consent are required. Once the device is online the copies are
 refreshed.
 
-**Today's implementation:** when no unused copy is left, nothing is presented — a copy is not reused; the person refreshes the
-credential (§4.3).
+**In the wallet core (0.8.4).** The core gives only the decision and the state; the refresh call and the warning screen are
+the app's job:
+
+- `planProximityCopy` returns the table row before presenting (present · refresh first · reuse with a warning) and says when a
+  background refresh is due because few copies are left; `proximityCopies` gives the number of copies left, whether it is
+  below the threshold and whether none is left.
+- Proximity and wallet-to-wallet presentation carry the copy state to the consent screen and to the result.
+- The last copy is reused **only** when the app asks for it explicitly (`reuseLastCopy`; the person accepted the warning).
+  Reuse always falls on the same copy and is marked in the presentation log on the device ("reused").
+- Without the option nothing changes: when no unused copy is left, nothing is presented and no copy is reused.
+
+**Today's implementation (Tamga Wallet):** the warning screen and the refresh before presenting are not there yet; when no
+unused copy is left, nothing is presented — the person refreshes the credential (§4.3).
 
 ## 4.2 A consistent disclosure set
 
@@ -267,9 +278,11 @@ fields are disclosed in the first presentation and 6 in the second, the verifier
 If the verifier asks for fewer fields, the wallet **does not present more** — the new request itself applies, not an
 intersection; but the user is shown "you previously gave this verifier these fields".
 
-**Implementation note (2026-11-12).** The notice about earlier sharing is **not implemented yet**; it comes with the wallet's
+**Implementation note (2026-11-12).** The notice about earlier sharing is **not on screen yet**; it comes with the wallet's
 first update, in a plain form: a line on the consent screen, "you have shared these with this verifier before", and emphasis on
-the fields requested for the first time. The text of the rule is unchanged.
+the fields requested for the first time. The wallet core provides the data for it (`sharedBefore`, 0.8.4): from the presentation
+log on the device, by the verifier's persistent identity, field names and dates only — no values. The text of the rule is
+unchanged.
 
 ## 4.3 Running out
 
@@ -660,4 +673,4 @@ person's credentials.
 
 **2026-11-12:** [[ADR-0078]] — no backup, the migration file is the only thing that moves (text of WL2; §1.3, §1.4, §2.1, §7,
 §8). Implementation notes: the WL6 notice about earlier sharing comes with the first update (§4.2); target behaviour when
-copies run out in proximity, implementation pending (§4.1).
+copies run out in proximity (§4.1) — the wallet-core part of both is ready in 0.8.4, the app screens are pending.

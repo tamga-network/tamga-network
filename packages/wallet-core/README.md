@@ -16,6 +16,28 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
+## New in 0.8.4
+
+All additions are optional; without them the behaviour is that of 0.8.3.
+
+- **Copies in proximity and wallet to wallet** (wallet rules §4.1). Every session still uses a new copy. The core now reports
+  the copy state and makes the decision; the refresh call and the warning screen are the app's:
+  - `proximityCopies(credential)` → `{ total, remaining, low, exhausted, refreshable }`;
+    `planProximityCopy(credential, { online })` adds `action` (`present` · `refresh_first` · `reuse_with_warning` ·
+    `unavailable`) and `refreshInBackground`.
+  - `presentProximity` / `presentToPerson`: the consent view carries `copies` (before the session), the result carries `copies`
+    (after) and `reused`.
+  - `reuseLastCopy: true` — pass it only after the person accepted the warning that this presentation can be linked to the
+    previous one. When no unused copy is left, the last copy is reused (always the same copy) and the log entry is marked
+    `reused: true`. Without the option nothing is presented, as before (`PROXIMITY_NO_COPY_REASON`).
+  - `beforeSend(marked)` — called once after the response is built and before it is sent, with the state in which the copy is
+    marked as used. Save that state there; if the hook throws, nothing is sent. Same contract as `respond({ beforeSend })`.
+- **Earlier sharing with a verifier** (WL6): `sharedBefore(state, rpKey, requested, { vct })` reads the presentation log on the
+  device and returns the fields shared with that verifier before (names and dates, no values), which of the requested fields
+  were shared before (`again`) and which are requested for the first time (`firstTime`). `rpKey` is the verifier's persistent
+  identity (`VpRequest.rpKey`). Proximity readers and wallet-to-wallet peers have no persistent identity, so nothing is returned
+  for them.
+
 ## New in 0.8.3
 
 - Correction to the 0.8.2 note below: `fetchRpRecord` loads the LOTL and **one** national list (`stateCode`). The cross-country
@@ -58,7 +80,7 @@ cache, offline })` fetches each registrar status list once (signer must be a lis
 
 ## Status
 
-Published on npm as the `0.8.3` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.4` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

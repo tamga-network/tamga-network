@@ -231,7 +231,9 @@ describe("göç kipi değişmez / fuzz — göç yürütücüsünün yetkileri",
         const s = f.as(f.schemas, exec);
         if (op === "register") {
           expected = open && !registered.has(sid);
-          call = () => s.registerSchema(f.schemaRecord(vct, SchemaTier.NETWORK, "0x0000", id(`h0-${vct}`)));
+          // pencerede başlangıç açıkça verilir (kontrat denetimi 2026-11-12, D6)
+          call = () =>
+            s.registerSchema({ ...f.schemaRecord(vct, SchemaTier.NETWORK, "0x0000", id(`h0-${vct}`)), validFrom: now });
         } else if (op === "addHash") {
           const n = hashes.get(sid) ?? 0;
           expected = open && registered.has(sid) && n < 32;

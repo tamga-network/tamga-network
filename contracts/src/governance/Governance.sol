@@ -55,7 +55,9 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     mapping(bytes2 => StateMember) private _members;
     mapping(bytes2 => address[]) private _delegateKeys;
-    mapping(address => bytes2) private _delegateToState;
+    /// @dev ADR-0082 DK1: anahtar => devlet => delege mi. Eşleme devlet BAŞINADIR: bir devletin listesi başka devletin
+    ///      eşlemesine dokunamaz (çalma yok) ve bir anahtarı önce yazan devlet onu ötekine kapatamaz (kapma yok).
+    mapping(address => mapping(bytes2 => bool)) private _isDelegate;
     mapping(address => bytes2) private _validatorToState;
 
     mapping(bytes32 => Proposal) private _proposals;
@@ -157,7 +159,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     /// @inheritdoc ISovereignty
     function isDelegateOf(address account, bytes2 stateCode) external view returns (bool) {
         if (_members[stateCode].status != MemberStatus.ACTIVE) return false;
-        return _delegateToState[account] == stateCode && stateCode != bytes2(0);
+        return _isDelegate[account][stateCode];
     }
 
     /// @inheritdoc ISovereignty
@@ -181,20 +183,20 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
         for (uint256 i = 0; i < keys.length; i++) {
             if (keys[i] == address(0)) revert ZeroAddress();
-            // N1: başka bir devletin anahtarı bu devlete yazılamaz (yazılsaydı o devletin yazma yetkisi düşerdi).
-            bytes2 owner = _delegateToState[keys[i]];
-            if (owner != bytes2(0) && owner != stateCode) revert DelegateKeyInUse(keys[i], owner);
+            // N1 / ADR-0082 DK1: yalnız BU devletin eşlemesi yazılır. Önceki tek değerli eşlemede (anahtar => devlet) başka
+            // devletin kullandığı anahtar reddediliyordu (`DelegateKeyInUse`); bir devlet ötekinin kullanacağı anahtarı önce
+            // kendi listesine yazıp onu kilitleyebiliyordu.
             _delegateKeys[stateCode].push(keys[i]);
-            _delegateToState[keys[i]] = stateCode;
+            _isDelegate[keys[i]][stateCode] = true;
         }
         emit DelegateKeysSet(stateCode, keys);
     }
 
-    /// @dev Devletin delege listesini boşaltır; yalnız HÂLÂ bu devlete eşli anahtarların eşlemesini siler.
+    /// @dev Devletin delege listesini boşaltır; yalnız bu devletin eşlemesini siler (başka devletinkine dokunmaz).
     function _clearDelegates(bytes2 stateCode) private {
         address[] storage old = _delegateKeys[stateCode];
         for (uint256 i = 0; i < old.length; i++) {
-            if (_delegateToState[old[i]] == stateCode) delete _delegateToState[old[i]];
+            delete _isDelegate[old[i]][stateCode];
         }
         delete _delegateKeys[stateCode];
     }
@@ -660,7 +662,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
         bool readmission = (m.status != MemberStatus.NONE);
         if (readmission) {
-            // Eski validator eşlemesini temizle; eski delegate anahtarları da düşer (yalnız bu devlete eşli olanlar).
+            // Eski validator eşlemesini temizle; eski delegate anahtarları da düşer.
             if (_validatorToState[m.validatorAddress] == stateCode) delete _validatorToState[m.validatorAddress];
             _clearDelegates(stateCode);
         } else {

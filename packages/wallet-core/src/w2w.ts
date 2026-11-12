@@ -42,7 +42,7 @@ import { parseStatusBody, parseStatusToken, statusBitAt } from "./status.js";
 import { presentProximity, type ProximityTransport } from "./proximity.js";
 import { offlineDisclosurePolicy } from "./disclosure-policy.js";
 import type { KeyProvider } from "./keys.js";
-import type { WalletState } from "./store.js";
+import type { ProximityCopies, WalletState } from "./store.js";
 
 /** Cüzdanın cüzdandan cüzdana kararı: tek mdoc türü, ad alanı ve gösterilebilecek alanlar (sıra = ekrandaki sıra). */
 export interface W2wProfile {
@@ -446,6 +446,8 @@ export interface W2wHolderView {
   missing: string[];
   /** doğrulayan cüzdanın gerçek bir cüzdan olduğunun kanıtı — bugün hep "none" (AB ortak yöntemi yok, W2W_23) */
   verifierProof: "none";
+  /** 0.8.4 (SPEC-WALLET-0001 §4.1): belgenin yakın alan kopyalarının bu oturumdan önceki durumu (`ProximityRequestView.copies`) */
+  copies?: ProximityCopies;
 }
 
 export interface W2wHolderResult {
@@ -460,6 +462,10 @@ export interface W2wHolderResult {
   reason?: string;
   /** 0.6.0 (TS9): QR'a konan teklif (alan adları; teklif yoksa yok) */
   offered?: string[];
+  /** 0.8.4 (§4.1): belgenin yakın alan kopyalarının oturumdan sonraki durumu (kopya seçildiyse) */
+  copies?: ProximityCopies;
+  /** 0.8.4 (§4.1): son kopya yeniden kullanıldı (yalnız `reuseLastCopy` ile; günlük girişinde de işaretli) */
+  reused?: true;
 }
 
 /** TS9 STS9_34: kesme yanıtının, isteğin alınışından sonra gönderildiği sabit süre (ms). */
@@ -492,6 +498,16 @@ export async function presentToPerson(p: {
   timeoutMs?: number;
   now?: number;
   personKey?: string;
+  /**
+   * 0.8.4 (§4.1): kopya bittiyse son kopyayı yeniden kullan — yalnız kişi bağlanabilirlik uyarısını kabul ettiyse
+   * (`presentProximity`'nin aynı adlı seçeneği). Verilmezse davranış öncekiyle aynıdır.
+   */
+  reuseLastCopy?: boolean;
+  /**
+   * 0.8.4 (WL5): yanıt gönderilmeden hemen önce bir kez çağrılır; çağıran verilen durumu (kopya işaretli) kalıcı yazar. Hata
+   * verirse yanıt gönderilmez (`presentProximity`'nin aynı adlı kancası).
+   */
+  beforeSend?: (marked: WalletState) => void | Promise<void>;
   /** TS9 teklifi QR'a konsun mu (varsayılan evet; STS9_12 SHOULD) */
   offer?: boolean;
   /** kesme yanıtının sabit süresi (ms; varsayılan `W2W_REJECT_DELAY_MS`) ve testler için bekleme / saat */
@@ -528,6 +544,8 @@ export async function presentToPerson(p: {
     timeoutMs: p.timeoutMs,
     now: p.now,
     registrarKeys: false, // karşı taraf bir kişi: kayıt sertifikası kuralı uygulanmaz
+    ...(p.reuseLastCopy ? { reuseLastCopy: true } : {}),
+    ...(p.beforeSend ? { beforeSend: p.beforeSend } : {}),
     ...(offer ? { engagementOffer: offer } : {}),
     screenRequest: (item) => {
       const items = [item];
@@ -559,6 +577,7 @@ export async function presentToPerson(p: {
         blocked,
         missing: allowed.filter((e) => !has(e)),
         verifierProof: "none",
+        ...(pv.copies ? { copies: pv.copies } : {}),
       };
       if (!view.allowed.length) {
         await p.approve(view); // gönderilebilecek alan yok: ekran yalnız reddi sunar
@@ -576,6 +595,8 @@ export async function presentToPerson(p: {
     disclosed,
     reason: refused ?? r.reason,
     ...(offer ? { offered: offeredElements } : {}),
+    ...(r.copies ? { copies: r.copies } : {}),
+    ...(r.reused ? { reused: true as const } : {}),
   };
 }
 

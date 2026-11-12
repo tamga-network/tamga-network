@@ -84,6 +84,11 @@ export interface PresentationLogEntry {
   /** TS10: doğrulayıcının istediği alan adları (gönderilenden fazla olabilir); değer yok */
   requested?: string[];
   outcome: "sent" | "declined" | "error";
+  /**
+   * 0.8.4 (§4.1): yakın alanda kopya bittiği için son kopya, kişinin onayıyla YENİDEN kullanıldı (bu gösterim öncekiyle
+   * eşleştirilebilir). Yalnız yeniden kullanımda yazılır.
+   */
+  reused?: true;
 } // WL4: cihazda kalır
 /** ARF DASH_05a: sunum dışındaki günlük olayları (ör. kullanıcının belge silmesi). Değer içermez. */
 export interface WalletEvent {
@@ -340,6 +345,91 @@ export function planCopy(cred: StoredCredential, clientId: string): CopyPlan {
   if (fresh) return { kind: "fresh", keyRef: fresh.keyRef, remaining: remainingCopies(cred) };
   const reuse = [...cred.copies].sort((a, b) => a.usedBy.length - b.usedBy.length)[0];
   return { kind: "exhausted", remaining: 0, reuse: reuse ? { keyRef: reuse.keyRef, seenBy: [...reuse.usedBy] } : null };
+}
+
+// ---------- Yakın alan ve cüzdandan cüzdana: kopya tüketimi (SPEC-WALLET-0001 §4.1; 0.8.4)
+/** Yakın alan oturumlarının `usedBy` anahtar öneki (`proximity:<oturumun hizmet UUID'si>`; okuyucunun kalıcı kimliği yoktur). */
+export const PROXIMITY_COPY_PREFIX = "proximity:";
+
+/**
+ * Bir belgenin yakın alanda gösterilebilen (mdoc'u olan) kopyalarının durumu. Değer içermez; yalnız sayılar.
+ * `low`: kalan kopya eşiğe indi (varsayılan `LOW_COPIES`) · `exhausted`: kullanılmamış kopya yok · `refreshable`: belgenin
+ * yenileme belirteci var (yoksa yenileme kişinin eylemidir — WL7).
+ */
+export interface ProximityCopies {
+  total: number;
+  remaining: number;
+  low: boolean;
+  exhausted: boolean;
+  refreshable: boolean;
+}
+const proximityUsable = (c: StoredCopy) => !!c.mdoc;
+export function proximityCopies(cred: StoredCredential, lowAt = LOW_COPIES): ProximityCopies {
+  const usable = cred.copies.filter(proximityUsable);
+  const remaining = usable.filter((c) => c.usedBy.length === 0).length;
+  return {
+    total: usable.length,
+    remaining,
+    low: remaining <= lowAt,
+    exhausted: remaining === 0,
+    refreshable: !!cred.refresh,
+  };
+}
+
+/**
+ * Yakın alan oturumunun kopyası. Varsayılan: kullanılmamış mdoc kopyası; kalmadıysa `null` (sessiz yeniden kullanım yok).
+ * `reuseLastCopy: true` (kişi bağlanabilirlik uyarısını kabul etti — §4.1): kopya bittiyse SON kopya yeniden kullanılır ve sonuç
+ * `reused: true` taşır. Son kopya hep aynı kopyadır (yeniden kullanım tek kopyada toplanır, öbür kopyaların gösterimleri
+ * birbirine bağlanmaz): önce yalnız yakın alanda gösterilmiş kopyalar (kimliği bilen uzak doğrulayıcının gördüğü kopya en son
+ * tercih edilir), sonra yakın alanda en çok gösterilen, eşitlikte dizideki sonuncu.
+ */
+export function selectProximityCopy(
+  cred: StoredCredential,
+  opt: { reuseLastCopy?: boolean } = {},
+): { copy: StoredCopy; reused: boolean } | null {
+  const usable = cred.copies.filter(proximityUsable);
+  const fresh = usable.find((c) => c.usedBy.length === 0);
+  if (fresh) return { copy: fresh, reused: false };
+  if (!opt.reuseLastCopy || !usable.length) return null;
+  const sessions = (c: StoredCopy) => c.usedBy.filter((u) => u.startsWith(PROXIMITY_COPY_PREFIX)).length;
+  const remote = (c: StoredCopy) => c.usedBy.length - sessions(c);
+  let last = usable[0];
+  for (const c of usable.slice(1)) {
+    const better =
+      (remote(c) === 0) !== (remote(last) === 0)
+        ? remote(c) === 0
+        : sessions(c) !== sessions(last)
+          ? sessions(c) > sessions(last)
+          : true; // eşitlikte dizideki sonuncu
+    if (better) last = c;
+  }
+  return { copy: last, reused: true };
+}
+
+/**
+ * Yakın alan gösteriminden ÖNCE verilecek saf karar (§4.1 tablosu). Ağ çağrısı ve ekran uygulamanın işidir:
+ *  - `present`: kullanılmamış kopya var. `refreshInBackground` doğruysa (kopya azaldı ve yenileme belirteci var) uygulama
+ *    gösterimden sonra arka planda yeniler (`autoRefreshCredential`; WL7 / ADR-0023 koşulları ve kişinin ayarı uygulamada).
+ *  - `refresh_first`: kopya bitti, cihaz çevrimiçi — önce yenile, yeni kopyayla göster (`refreshable` değilse yenileme kişinin
+ *    eylemidir: belgeyi yeniden alır).
+ *  - `reuse_with_warning`: kopya bitti, cihaz çevrimdışı — kişiye "bu gösterim öncekiyle eşleştirilebilir" uyarısı; kabul ederse
+ *    `presentProximity` / `presentToPerson` `reuseLastCopy: true` ile çağrılır. Uyarısız yeniden kullanım yoktur.
+ *  - `unavailable`: belgenin yakın alanda gösterilebilen kopyası hiç yok.
+ */
+export interface ProximityCopyPlan extends ProximityCopies {
+  action: "present" | "refresh_first" | "reuse_with_warning" | "unavailable";
+  refreshInBackground: boolean;
+}
+export function planProximityCopy(cred: StoredCredential, p: { online: boolean; lowAt?: number }): ProximityCopyPlan {
+  const s = proximityCopies(cred, p.lowAt);
+  const action = !s.total
+    ? "unavailable"
+    : !s.exhausted
+      ? "present"
+      : p.online
+        ? "refresh_first"
+        : "reuse_with_warning";
+  return { ...s, action, refreshInBackground: action === "present" && s.low && s.refreshable };
 }
 
 /**

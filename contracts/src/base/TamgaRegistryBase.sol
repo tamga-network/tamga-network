@@ -98,8 +98,15 @@ abstract contract TamgaRegistryBase is Initializable, UUPSUpgradeable, ITamgaErr
     /// @dev Güvenlik turu 2026-11-04: kayıt geçerliliğinin başlangıcı (0 = blok zamanı). Kip dışında geçmişe çekilemez — aksi
     ///      hâlde kip dışında kaydedilen kurum (ilk pencere başlangıçsız) kayıttan ÖNCEKİ belgeleri de kabul ettirirdi; geçmiş
     ///      yalnız göç kipinde yazılır (ADR-0073 CE1).
+    ///      Kontrat denetimi 2026-11-12 (D6): göç kipi açıkken başlangıç da açıkça verilir (`_effectiveDate` ile aynı kural;
+    ///      yalnız Governance tarihsiz yazar). Aksi hâlde yeniden oynatılan kayıt başlangıcı sessizce blok zamanı olurdu:
+    ///      başlangıç sonradan düzeltilemez ve kaydın o andan önceki bütün belgeleri reddedilirdi; şema kaydında da pencere
+    ///      açıkken tarihsiz olağan yazım geçiyordu.
     function _validFrom(uint64 validFrom) internal view returns (uint64) {
-        if (validFrom == 0) return uint64(block.timestamp);
+        if (validFrom == 0) {
+            if (isMigrationOpen() && msg.sender != _migrationAdmin()) revert DateRequiredDuringMigration();
+            return uint64(block.timestamp);
+        }
         if (validFrom < block.timestamp && !isMigrationOpen()) revert PastDateOutsideMigration(validFrom);
         return validFrom;
     }

@@ -51,22 +51,6 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "key",
-          "type": "address"
-        },
-        {
-          "internalType": "bytes2",
-          "name": "ownerState",
-          "type": "bytes2"
-        }
-      ],
-      "name": "DelegateKeyInUse",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
           "name": "implementation",
           "type": "address"
         }

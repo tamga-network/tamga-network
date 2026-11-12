@@ -12,6 +12,11 @@
  * Kopya (WL5): okuyucunun kalıcı bir kimliği yoktur (oturum anahtarı her seferinde yenidir), bu yüzden her oturum YENİ bir kopya
  * harcar ve kullanılmamış mdoc kopyası kalmayınca oturum hatayla biter (sessiz yeniden kullanım yok). Kopya, yanıt gönderilmeden
  * önce "kullanıldı" sayılır: gönderim yarıda kalsa da dönen durumda işaretlidir (0.8.3).
+ *
+ * 0.8.4 (SPEC-WALLET-0001 §4.1): kopya durumu çağırana döner (`view.copies` onaydan önce, `result.copies` oturumdan sonra:
+ * kalan / eşik altı / bitti). Kopya bittiyse son kopya YALNIZ çağıran `reuseLastCopy: true` verirse yeniden kullanılır (kişi
+ * bağlanabilirlik uyarısını kabul etti); sonuç ve günlük girişi `reused: true` taşır. Gösterimden önceki karar
+ * `planProximityCopy` (store.ts); yenileme çağrısı ve uyarı ekranı uygulamanın işidir.
  */
 import { pidSdJwtName } from "@tamga-network/core/pid";
 import { epochMillis } from "@tamga-network/core/time";
@@ -29,7 +34,15 @@ import {
 } from "@tamga-network/mdoc";
 import { b64uDecode } from "./b64.js";
 import type { KeyProvider } from "./keys.js";
-import { markCopyUsed, selectCopy, type StoredCredential, type WalletState } from "./store.js";
+import {
+  markCopyUsed,
+  PROXIMITY_COPY_PREFIX,
+  proximityCopies,
+  selectProximityCopy,
+  type ProximityCopies,
+  type StoredCredential,
+  type WalletState,
+} from "./store.js";
 import { offlineDisclosurePolicy, type DisclosurePolicyResult } from "./disclosure-policy.js";
 import { checkProximityRegistration, type ProximityRegistrationCheck, type ReaderTrust } from "./wrprc.js";
 import type { RegistrationStatusLookup } from "./wrprc-status.js";
@@ -65,13 +78,25 @@ export interface ProximityRequestView {
    * reddeder, görünüm yalnız sonucu açıklamak içindir. Cüzdandan cüzdana gösterimde yok.
    */
   registration?: ProximityRegistrationCheck;
+  /**
+   * 0.8.4 (§4.1): belgenin yakın alan kopyalarının bu oturumdan ÖNCEKİ durumu (belge yoksa alan yok). `exhausted` ve çağıran
+   * `reuseLastCopy` verdiyse bu onay, öncekiyle eşleştirilebilir bir gösterimin onayıdır — ekran bunu söyler.
+   */
+  copies?: ProximityCopies;
 }
+
+/** Kullanılmamış kopya kalmadığında (ve yeniden kullanım istenmediğinde) oturumun hata nedeni. */
+export const PROXIMITY_NO_COPY_REASON = "no unused copy with an mdoc";
 
 export interface ProximityResult {
   state: WalletState;
   outcome: "sent" | "declined" | "error";
   view?: ProximityRequestView;
   reason?: string;
+  /** 0.8.4 (§4.1): belgenin yakın alan kopyalarının bu oturumdan SONRAKİ durumu (kopya seçildiyse) */
+  copies?: ProximityCopies;
+  /** 0.8.4 (§4.1): son kopya yeniden kullanıldı (yalnız `reuseLastCopy` ile; günlük girişinde de işaretli) */
+  reused?: true;
 }
 
 /**
@@ -115,6 +140,20 @@ export async function presentProximity(p: {
   ) => { status: number; reason: string } | null;
   /** `screenRequest` reddinde isteğin alınışından yanıta kadar sabit süre (ms; varsayılan 1500) */
   rejectDelayMs?: number;
+  /**
+   * 0.8.4 (§4.1): kullanılmamış kopya kalmadıysa son kopyayı yeniden kullan. Yalnız kişi "bu gösterim öncekiyle
+   * eşleştirilebilir" uyarısını kabul ettiyse verilir (hedef davranış: kopya bitti ve cihaz çevrimdışı). Verilmezse davranış
+   * öncekiyle aynıdır: kopya yoksa oturum `PROXIMITY_NO_COPY_REASON` hatasıyla biter. Kullanılmamış kopya varken etkisi yoktur.
+   */
+  reuseLastCopy?: boolean;
+  /**
+   * 0.8.4 (WL5; `respond`'un aynı adlı kancasıyla aynı sözleşme): yanıt üretildikten (seçici açıklama + cihaz imzası) sonra,
+   * taşıyıcıya GÖNDERİLMEDEN hemen önce bir kez çağrılır. Çağıran burada verilen durumu (kopya "kullanıldı" işaretli) kalıcı
+   * yazar (`WalletStore.save`): uygulama gönderim sırasında kapanırsa da kopya başka okuyucuya "kullanılmamış" diye verilmez.
+   * Kanca hata verirse yanıt GÖNDERİLMEZ; oturum `error` ile biter ve dönen durum değişmemiştir (kopya işaretsiz — cihazdan
+   * hiçbir şey çıkmadı). Verilmezse davranış öncekiyle aynıdır: işaret yalnız dönen durumdadır, yazmak çağıranın işidir.
+   */
+  beforeSend?: (marked: WalletState) => void | Promise<void>;
   /** test için: bekleme ve saat (ms) */
   sleep?: (ms: number) => Promise<void>;
   clock?: () => number;
@@ -145,6 +184,7 @@ export async function presentProximity(p: {
   let timer: ReturnType<typeof setTimeout> | undefined;
   /** hata dönüşünün durumu: kopya imzalandıktan sonra işaretli + günlüklü durum (WL5; gönderim yarıda kalsa da) */
   let stateOnError: WalletState = p.state;
+  let errorExtra: Pick<ProximityResult, "copies" | "reused"> = {};
   const offClose = p.transport.onClose?.((reason) => rejectMsg(new Error(reason)));
   const cleanup = async () => {
     offChunk();
@@ -224,17 +264,26 @@ export async function presentProximity(p: {
       requested,
       missing: cred ? requested.filter((r) => !has(r)) : requested,
       credential: cred,
-      ...(cred ? { disclosurePolicy: offlineDisclosurePolicy(cred) } : {}),
+      ...(cred ? { disclosurePolicy: offlineDisclosurePolicy(cred), copies: proximityCopies(cred) } : {}),
       ...(registration ? { registration } : {}),
     };
     // ADR-0026 K5 / ADR-0056 K10: geçersiz kayıt sertifikası ya da sertifikasız istek — kişiye sorulmadan ret
     const chosen = cred && registration?.valid !== false ? await p.approve(view) : null;
-    const rpKey = `proximity:${eng.bleServiceUuid}`;
+    const rpKey = `${PROXIMITY_COPY_PREFIX}${eng.bleServiceUuid}`;
+    let reused = false;
     const log = (outcome: "sent" | "declined" | "error", disclosed: string[], state = p.state): WalletState => ({
       ...state,
       presentationLog: [
         ...state.presentationLog,
-        { ts: p.now ?? Date.now(), clientId: "proximity", vct: item.docType, requested, disclosed, outcome },
+        {
+          ts: p.now ?? Date.now(),
+          clientId: "proximity",
+          vct: item.docType,
+          requested,
+          disclosed,
+          outcome,
+          ...(reused ? { reused: true as const } : {}),
+        },
       ],
     });
     if (!cred || !chosen) {
@@ -248,24 +297,33 @@ export async function presentProximity(p: {
       };
     }
     const disclose = chosen.filter((e) => requested.includes(e) && has(e));
-    const copy = selectCopy(cred, rpKey);
-    if (!copy?.mdoc) throw new Error("no unused copy with an mdoc");
+    const picked = selectProximityCopy(cred, { reuseLastCopy: p.reuseLastCopy === true });
+    const copy = picked?.copy;
+    if (!picked || !copy?.mdoc) throw new Error(PROXIMITY_NO_COPY_REASON);
     const partial = discloseMdoc(b64uDecode(copy.mdoc), { [namespace]: disclose });
     const devSig = await deviceSignAsync(hs.transcript, item.docType, (tbs) => p.keys.sign(copy.keyRef, tbs));
     // WL5: kopya gönderimden ÖNCE kullanıldı sayılır — yanıtın bir kısmı karşıya ulaşıp taşıyıcı hata verirse aynı kopya başka
     // okuyucuya "kullanılmamış" diye verilmez
     const used = markCopyUsed(p.state, cred.id, copy.keyRef, rpKey);
-    stateOnError = log("error", [], used);
-    await send(
-      holderSendResponse(
-        hs,
-        buildDeviceResponse({ docType: item.docType, issuerSigned: partial, deviceSignature: devSig }),
-      ),
+    const response = holderSendResponse(
+      hs,
+      buildDeviceResponse({ docType: item.docType, issuerSigned: partial, deviceSignature: devSig }),
     );
+    // kalıcı işaret: yanıt üretildi, henüz gönderilmedi; kanca hata verirse gönderime gelinmez (dönen durum: değişmemiş `p.state`)
+    await p.beforeSend?.(used);
+    reused = picked.reused;
+    const after = used.credentials.find((c) => c.id === cred.id);
+    const outcomeExtra = {
+      ...(after ? { copies: proximityCopies(after) } : {}),
+      ...(reused ? { reused: true as const } : {}),
+    };
+    errorExtra = outcomeExtra;
+    stateOnError = log("error", [], used);
+    await send(response);
     await cleanup();
-    return { state: log("sent", disclose, used), outcome: "sent", view };
+    return { state: log("sent", disclose, used), outcome: "sent", view, ...outcomeExtra };
   } catch (e) {
     await cleanup();
-    return { state: stateOnError, outcome: "error", reason: (e as Error).message };
+    return { state: stateOnError, outcome: "error", reason: (e as Error).message, ...errorExtra };
   }
 }

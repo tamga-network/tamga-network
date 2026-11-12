@@ -84,3 +84,56 @@ export function sharedWith(state: WalletState): SharedParty[] {
   }
   return out.sort((a, b) => b.lastActivityAt - a.lastActivityAt);
 }
+
+/** Daha önce paylaşılan tek alan: adı ve en son gönderildiği zaman (değer yok). */
+export interface SharedField {
+  name: string;
+  lastSharedAt: number;
+}
+export interface SharedBefore {
+  /** Bu doğrulayıcıya daha önce gönderilen sunum sayısı (0 ise ekranda satır gösterilmez) */
+  sentCount: number;
+  /** Son gönderilen sunumun zamanı */
+  lastSharedAt?: number;
+  /** Daha önce açıklanan alan adları — en son paylaşılan önce */
+  fields: SharedField[];
+  /** Bu istekte istenen ve daha önce de paylaşılmış alan adları (istek sırasıyla) */
+  again: string[];
+  /** Bu istekte İLK KEZ istenen alan adları (istek sırasıyla); `sentCount` 0 ise bütün istek */
+  firstTime: string[];
+}
+
+/**
+ * WL6 önceki paylaşım bildirimi (SPEC-WALLET-0001 §4.2): onay ekranındaki "bu doğrulayıcıyla daha önce şunları paylaştınız"
+ * satırı ve bu kez yeni istenen alanların vurgusu için. Kaynak yalnız cihazdaki sunum günlüğüdür (WL4; ağ erişimi yok) ve yalnız
+ * GÖNDERİLEN sunumlar sayılır. `rpKey` doğrulayıcının kalıcı kimliğidir (`VpRequest.rpKey`: kayıttaki `dns_name`, ADR-0075);
+ * günlük de bu anahtarla yazılır. `vct` verilirse yalnız o belge türünün sunumları (WL6 tür başınadır). Yüz yüze okuyucunun ve
+ * cüzdandan cüzdana karşı tarafın kalıcı kimliği yoktur: o anahtarlarda (`proximity`, `w2w:…`) önceki paylaşım dönmez.
+ * Değer döndürmez: yalnız alan adları ve tarihler.
+ */
+export function sharedBefore(
+  state: WalletState,
+  rpKey: string,
+  requested: readonly string[],
+  opt: { vct?: string } = {},
+): SharedBefore {
+  const last = new Map<string, number>();
+  let sentCount = 0;
+  let lastSharedAt: number | undefined;
+  const persistent = rpKey !== PROXIMITY_RP_KEY && !rpKey.startsWith("proximity:") && !rpKey.startsWith("w2w:");
+  if (persistent)
+    for (const e of state.presentationLog) {
+      if (e.clientId !== rpKey || e.outcome !== "sent" || (opt.vct !== undefined && e.vct !== opt.vct)) continue;
+      sentCount++;
+      lastSharedAt = Math.max(lastSharedAt ?? 0, e.ts);
+      for (const f of e.disclosed) last.set(f, Math.max(last.get(f) ?? 0, e.ts));
+    }
+  const wanted = [...new Set(requested)];
+  return {
+    sentCount,
+    ...(lastSharedAt !== undefined ? { lastSharedAt } : {}),
+    fields: [...last].map(([name, ts]) => ({ name, lastSharedAt: ts })).sort((a, b) => b.lastSharedAt - a.lastSharedAt),
+    again: wanted.filter((f) => last.has(f)),
+    firstTime: wanted.filter((f) => !last.has(f)),
+  };
+}

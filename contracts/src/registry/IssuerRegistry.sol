@@ -165,6 +165,14 @@ contract IssuerRegistry is TamgaRegistryBase, IIssuerRegistry {
         Issuer storage i = _require(issuerId);
         _requireOwner(i.stateCode);
         if (i.status == IssuerStatus.REVOKED) revert AlreadyRevoked(issuerId);
+        _requireSuccessor(i, issuerId, successorId);
+        i.successorId = successorId;
+        i.revokedAt = _setStatus(issuerId, i, IssuerStatus.REVOKED, at); // yumuşak iptalin zaman sınırı
+        emit IssuerRevoked(issuerId, successorId);
+    }
+
+    /// @dev Halef: sıfır (yok) ya da aynı devletin ACTIVE kurumu, kendisi değil.
+    function _requireSuccessor(Issuer storage i, bytes32 issuerId, bytes32 successorId) private view {
         if (successorId == issuerId) revert InvalidSuccessor(successorId);
         if (successorId != bytes32(0)) {
             Issuer storage s = _issuers[successorId];
@@ -172,9 +180,21 @@ contract IssuerRegistry is TamgaRegistryBase, IIssuerRegistry {
             // ADR-0054 NS2: halef aynı devletin kurumu olmalı (aksi hâlde başka devletin anahtarları öncülün listelerini yönetir)
             if (s.stateCode != i.stateCode) revert CrossStateReference(successorId, s.stateCode);
         }
+    }
+
+    /// @inheritdoc IIssuerRegistry
+    /// @dev ADR-0082 IS1 (kontrat denetimi 2026-11-12, D4): halef iptalle TEK adımda yazılıyor ve bir daha değişmiyordu
+    ///      (`AlreadyRevoked`). Yanlış yazılan halef öncülün iptal listelerini kalıcı olarak yanlış kurumun anahtarlarına
+    ///      bırakır; halefsiz iptalde ya da halef de kapanınca listeler kalıcı donardı (I4: halef zinciri tek seviyedir).
+    ///      Devlet, iptal edilmiş kurumunun halefini aynı kurallarla düzeltir, değiştirir ya da kaldırır (sıfır). Belgelerin
+    ///      kabulünü etkilemez (C1/C2 halefe bakmaz); yalnız liste yayın yetkisini (`StatusListRegistry`) belirler.
+    function setIssuerSuccessor(bytes32 issuerId, bytes32 successorId) external {
+        Issuer storage i = _require(issuerId);
+        _requireOwner(i.stateCode);
+        if (i.status != IssuerStatus.REVOKED) revert IssuerNotRevoked(issuerId);
+        _requireSuccessor(i, issuerId, successorId);
         i.successorId = successorId;
-        i.revokedAt = _setStatus(issuerId, i, IssuerStatus.REVOKED, at); // yumuşak iptalin zaman sınırı
-        emit IssuerRevoked(issuerId, successorId);
+        emit IssuerSuccessorSet(issuerId, successorId);
     }
 
     /// @dev ADR-0073 K1/K5: durum değişikliği `since` anından itibaren geçerli; geçmiş sıralı ve yalnız eklenir.

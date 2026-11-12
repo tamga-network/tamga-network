@@ -1,6 +1,6 @@
 /** "Paylaştığım kurumlar": günlüğün doğrulayıcıya göre gruplanması (değer yok, yalnız alan adları). */
 import { describe, it, expect } from "vitest";
-import { sharedWith, PROXIMITY_RP_KEY } from "./shared-with.js";
+import { sharedBefore, sharedWith, PROXIMITY_RP_KEY } from "./shared-with.js";
 import type { WalletState } from "./store.js";
 
 const state = {
@@ -80,5 +80,76 @@ describe("paylaştığım kurumlar", () => {
 
   it("günlük boşsa liste boş", () => {
     expect(sharedWith({ ...state, presentationLog: [], events: [], pseudonyms: [] })).toEqual([]);
+  });
+});
+
+describe("WL6 önceki paylaşım bildirimi (sharedBefore)", () => {
+  const rp = "kariyer.example.edu.tr";
+  const vct = "urn:tamga:edu:DiplomaCredential:1";
+
+  it("daha önce açıklanan alanlar (en son paylaşılan önce) ve bu istekte ilk kez istenenler", () => {
+    const r = sharedBefore(state, rp, ["degree", "student_number", "graduation_date", "student_number"]);
+    expect(r.sentCount).toBe(2);
+    expect(r.lastSharedAt).toBe(30);
+    expect(r.fields).toEqual([
+      { name: "degree", lastSharedAt: 30 },
+      { name: "graduation_date", lastSharedAt: 30 },
+    ]);
+    expect(r.again).toEqual(["degree", "graduation_date"]);
+    expect(r.firstTime).toEqual(["student_number"]);
+  });
+
+  it("reddedilen ve başarısız sunumlar sayılmaz; yalnız verilen doğrulayıcının günlüğü okunur", () => {
+    const s = {
+      ...state,
+      presentationLog: [
+        { ts: 1, clientId: rp, vct, disclosed: ["degree"], outcome: "declined" },
+        { ts: 2, clientId: rp, vct, disclosed: ["degree"], outcome: "error" },
+        { ts: 3, clientId: "baska.example", vct, disclosed: ["degree"], outcome: "sent" },
+      ],
+    } as unknown as WalletState;
+    expect(sharedBefore(s, rp, ["degree"])).toEqual({ sentCount: 0, fields: [], again: [], firstTime: ["degree"] });
+  });
+
+  it("tür süzgeci: WL6 tür başınadır", () => {
+    const s = {
+      ...state,
+      presentationLog: [
+        ...state.presentationLog,
+        {
+          ts: 50,
+          clientId: rp,
+          vct: "urn:tamga:edu:StudentCredential:1",
+          disclosed: ["student_number"],
+          outcome: "sent",
+        },
+      ],
+    } as unknown as WalletState;
+    expect(sharedBefore(s, rp, ["student_number"]).again).toEqual(["student_number"]);
+    const d = sharedBefore(s, rp, ["student_number"], { vct });
+    expect(d.sentCount).toBe(2);
+    expect(d.firstTime).toEqual(["student_number"]);
+  });
+
+  it("yüz yüze okuyucu ve cüzdandan cüzdana: kalıcı kimlik yok, önceki paylaşım dönmez", () => {
+    expect(sharedBefore(state, PROXIMITY_RP_KEY, ["age_over_18"])).toEqual({
+      sentCount: 0,
+      fields: [],
+      again: [],
+      firstTime: ["age_over_18"],
+    });
+    const s = {
+      ...state,
+      presentationLog: [{ ts: 1, clientId: "w2w:person", vct: "v", disclosed: ["given_name"], outcome: "sent" }],
+    } as unknown as WalletState;
+    expect(sharedBefore(s, "w2w:person", ["given_name"]).sentCount).toBe(0);
+  });
+
+  it("değer döndürmez: çıktıda yalnız alan adları ve tarihler", () => {
+    const s = {
+      ...state,
+      credentials: [{ id: "c", vct, claims: { degree: "GIZLI-DEGER" }, copies: [] }],
+    } as unknown as WalletState;
+    expect(JSON.stringify(sharedBefore(s, rp, ["degree"]))).not.toContain("GIZLI-DEGER");
   });
 });

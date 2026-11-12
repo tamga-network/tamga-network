@@ -334,7 +334,15 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
       "NetworkTierRequiresGovernance",
     );
     await openMigration(f, f.schemas, DAY, await exec.getAddress());
-    await expect(f.as(f.schemas, exec).registerSchema(rec)).to.emit(f.schemas, "SchemaRegistered");
+    // kontrat denetimi 2026-11-12 (D6): pencerede başlangıç açıkça verilir; tarihsiz kayıt yürütücüde de reddedilir
+    await expect(f.as(f.schemas, exec).registerSchema(rec)).to.be.revertedWithCustomError(
+      f.schemas,
+      "DateRequiredDuringMigration",
+    );
+    await expect(f.as(f.schemas, exec).registerSchema({ ...rec, validFrom: await f.now() })).to.emit(
+      f.schemas,
+      "SchemaRegistered",
+    );
     // yürütücü ulusal şemaya yazamaz (egemenlik N1)
     await expect(
       f.as(f.schemas, exec).registerSchema(f.schemaRecord(EDU, SchemaTier.NATIONAL, TR)),

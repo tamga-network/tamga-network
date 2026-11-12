@@ -108,8 +108,6 @@ interface IGovernance is ITamgaErrors {
     error UpgradeTargetNotProxiable(address impl);
     /// @dev Bir validator adresi yalnız bir devlete ait olabilir (N1 — başka devletin koltuğu ele geçirilemez).
     error ValidatorInUse(address validator, bytes2 ownerState);
-    /// @dev Bir delege anahtarı yalnız bir devlete ait olabilir (N1 — başka devletin anahtarı çekilemez).
-    error DelegateKeyInUse(address key, bytes2 ownerState);
     /// @dev ADR-0055 GE1: kuyruktaki yükseltmenin bekleme süresi dolmadı.
     error UpgradeNotReady(bytes32 id, uint64 eta);
     /// @dev ADR-0055 K3: yönetim önerisinin hedefi sıfır, Governance'ın kendisi ya da kodsuz adres.

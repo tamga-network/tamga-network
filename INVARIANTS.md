@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 467 kodlanmış değişmez, 83 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 471 kodlanmış değişmez, 84 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -831,6 +831,18 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0081/RR4` | Çıkarılan kayıtları taşıyan imzalı liste sürümleri arşivde kalır ve değiştirilmez; çıkarma sürüm numarasını ve özet zincirini kesmez. |
 
 
+## ADR-0082
+
+*"Düzeltilebilir kurum halefi ve devlet başına delege anahtarı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0082/IS1` | İptal edilmiş (`REVOKED`) bir kurumun halefini yalnız kurumun devleti sonradan yazar: düzeltir, değiştirir ya da kaldırır (`setIssuerSuccessor`). Halef iptaldeki kurallara uyar: aynı devletin o anda `ACTIVE` kurumu, kurumun kendisi değil ([[ADR-0054]] NS2); sıfır halefi kaldırır. İptal edilmemiş kurumda çağrı reddedilir (`IssuerNotRevoked`): halef iptalle birlikte gelir. |
+| `ADR-0082/IS2` | Halef yalnız iptal listesi yayın yetkisini belirler ([[SPEC-BC-0001]] I4); belgelerin kabulünü (C1/C2), kurumun durum geçmişini ve iptal anını değiştirmez. Halef zinciri tek seviyede kalır: halef kapanırsa devlet yenisini yazar. Her değişiklik zincirde olayla görünür (`IssuerSuccessorSet`). |
+| `ADR-0082/DK1` | Delege anahtarı eşlemesi devlet başınadır. Bir devletin delege listesini yazması ya da boşaltması yalnız o devletin eşlemesini değiştirir; başka devletin delege atamasını engelleyemez ve yetkisini düşüremez. `DelegateKeyInUse` kalkar. |
+| `ADR-0082/DK2` | N1 aynen sürer: bir devletin kaydına yalnız o devletin delegesi yazar. Bir anahtar birden çok devletin listesinde bulunabilir; her devlet kendi listesinden sorumludur (başka devletin anahtarını listesine yazan devlet, o anahtara yalnız kendi kayıtları üzerinde yetki vermiş olur). Validator adresi için tek devlet kuralı (`ValidatorInUse`) değişmez. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -905,7 +917,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-BC-0001/I1` | Şema yetkisi allowlist'tir; varsayılan `false`. |
 | `SPEC-BC-0001/I2` | Doğrulama `isCredentialAcceptable(id, iat)` kullanır; `isValidIssuer` yalnızca ihraçtır. |
 | `SPEC-BC-0001/I3` | Şema yetkisi zaman penceresidir; doğrulama `iat`'a göre bakar. |
-| `SPEC-BC-0001/I4` | `REVOKED` issuer'ın listesini halefi yayınlayabilir. |
+| `SPEC-BC-0001/I4` | `REVOKED` issuer'ın listesini halefi yayınlayabilir. Halefi yalnız kurumun devleti yazar; iptalden sonra da düzeltebilir ([[ADR-0082]]/IS1). |
 | `SPEC-BC-0001/SC1` | Şemanın `vctURI`'si ve yazılmış her içerik özeti asla güncellenmez ya da silinmez; yeni sürüm özeti yalnız eklenir. |
 | `SPEC-BC-0001/SC3` | `DEPRECATED` şema, kullanımdan kaldırılmadan önce verilmiş belgeler için doğrulanabilir kalır. |
 | `SPEC-BC-0001/L1` | Status list `version` monoton artar. |
@@ -1183,12 +1195,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 467 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 471 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, D, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IS, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-12 (`scripts/sync-invariants.mjs`). Toplam 467 kodlanmış değişmez, 83 dokümanda.
+**Üretilen dosya** — 2026-11-12 (`scripts/sync-invariants.mjs`). Toplam 471 kodlanmış değişmez, 84 dokümanda.

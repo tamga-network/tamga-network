@@ -545,3 +545,56 @@ describe("TS9 sunum teklifi (0.6.0)", () => {
     expect(h.disclosed).toEqual(["family_name"]);
   });
 });
+
+describe("cüzdandan cüzdana kopya tüketimi (SPEC-WALLET-0001 §4.1; 0.8.4)", () => {
+  const show = async (w: Awaited<ReturnType<typeof wallet>>, reuseLastCopy?: boolean) => {
+    const link = fakeBleLink();
+    let gotQr: (s: string) => void = () => {};
+    const qr = new Promise<string>((r) => (gotQr = r));
+    const views: W2wHolderView[] = [];
+    const saved: WalletState[] = [];
+    const holder = presentToPerson({
+      profile: PROFILE,
+      transport: link.holder,
+      state: w.state,
+      keys: w.keys,
+      onQr: gotQr,
+      timeoutMs: 5000,
+      approve: async (v) => (views.push(v), v.allowed),
+      ...(reuseLastCopy ? { reuseLastCopy } : {}),
+      beforeSend: (marked) => void saved.push(marked),
+    });
+    const verifier = await runW2wVerifier({
+      profile: PROFILE,
+      transport: link.reader,
+      qr: await qr,
+      elements: ["given_name"],
+      timeoutMs: 5000,
+    });
+    return { verifier, holder: await holder, view: views[0], saved };
+  };
+
+  it("durum görünümde ve sonuçta; kopya bitince varsayılan hata, açık seçenekle işaretli yeniden kullanım", async () => {
+    const w = await wallet();
+    const a = await show(w);
+    expect(a.view.copies).toMatchObject({ total: 1, remaining: 1, exhausted: false });
+    expect(a.holder).toMatchObject({ outcome: "sent", copies: { remaining: 0, exhausted: true } });
+    expect(a.holder.reused).toBeUndefined();
+    // beforeSend: gönderimden önce bir kez, kopya işaretli durumla
+    expect(a.saved).toHaveLength(1);
+    expect(a.saved[0].credentials[0].copies[0].usedBy).toHaveLength(1);
+    const b = await show({ ...w, state: a.holder.state });
+    expect(b.holder.outcome).toBe("error"); // bugünkü davranış: sessiz yeniden kullanım yok
+    expect(b.saved).toHaveLength(0);
+    expect(b.verifier.outcome).not.toBe("response");
+    const c = await show({ ...w, state: a.holder.state }, true);
+    expect(c.view.copies).toMatchObject({ remaining: 0, exhausted: true });
+    expect(c.holder).toMatchObject({ outcome: "sent", reused: true, disclosed: ["given_name"] });
+    expect(c.verifier.outcome).toBe("response");
+    expect(c.holder.state.presentationLog.at(-1)).toMatchObject({
+      clientId: W2W_PERSON_KEY,
+      outcome: "sent",
+      reused: true,
+    });
+  });
+});
