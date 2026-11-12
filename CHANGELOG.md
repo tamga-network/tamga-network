@@ -269,6 +269,37 @@ A code review of the changes above found the following; the fixes are part of 0.
   token digest differs from the anchor" and referred to a version field the token does not carry; it now lists the D5 cases
   (older token: rollback or prefetch delay; newer token: allowed up to `max_anchor_lag_sec`; no anchor). Ş4 and S11 state the
   lapsed-key case (tr / en / az).
+- **trust-publisher — the validity period of a scope and of a terminal group is protected** (TL2). In a relying party that
+  stays in the list, `scopes` and `terminal_groups` rows were compared by identifier only, so an ended use could be reopened or
+  extended by editing its dates. A row that stays keeps its `valid_from`; `valid_until` may only move towards closing a period
+  that is still open (no end, or an end that has not passed, set to an earlier time — what `end-use`, `rp-status
+  REVOKED|RETIRED`, re-registration and reassignment write). A period that has ended is not changed, and no end is moved later
+  or removed: a new period is a new row with a new identifier. A row changed in any other way counts as removed (`scopes` /
+  `terminal_groups`) and stops the build unless an approved removal entry covers it. Descriptive fields (purpose text,
+  translations, requested claims, label, policies) can still be edited. The check is not applied in the sandbox, as before.
+  SPEC-TRUST-0001 (TL2 implementation note) updated (tr / en / az).
+- **trust-publisher — the 2026-11-11 removal entry carries the digest of the version it applied to.**
+  `registry/removals.json` now has `previous_version_hash` (`sha256:` + 64 hex digits, the form the publisher computes for
+  the previous signed version) besides `previous_version`; the comment in the source named the form `sha-256:`.
+- **contracts — a re-admitted member's earlier votes are no longer counted.** When a member that withdrew or was removed was
+  admitted again with the same validator address, its "for" votes on proposals that were still open counted again without
+  the member voting. A vote is now counted at execution only if it was cast after the member's latest admission; the member
+  casts its vote again (a vote from the earlier membership period can be repeated in the same direction without
+  `AlreadyVoted`; the raw `forVotes` / `againstVotes` counters do not change). ABI unchanged. Storage: one mapping in
+  `Governance` (vote time; `__gap` 38 → 37, layout baseline updated). Governance is 23,121 bytes (1,455 bytes of headroom).
+  Source and tests only: an already deployed Governance needs a protocol upgrade vote, and votes cast before that upgrade
+  have no recorded time, so they are cast again on proposals that are still open. SPEC-BC-0001 §1 updated.
+- **docs — the pass grant limit is written as a number.** The code allows 184 days (`PASS_MAX_VALID_DAYS`,
+  `PASS_GRANT_MAX_VALIDITY_SEC`); the wallet specification said "≤ 6 months". SPEC-WALLET-0001 (§ on the pass grant and WL13),
+  the education rulebook and the limitations page now say "at most 6 months (184 days)" (tr / en / az). No code change.
+- **docs — the result example of SPEC-API-0001 §2.2 matches the reference implementation.** The example listed `A3c`
+  (certificate revocation query) and `B5` (`extends` chain) under `checks_performed`; the reference verifier does not perform
+  these two steps and reports them in `checks_skipped` for every presentation. The example now shows that, with `E4` under
+  `checks_performed` (audit record written), and a note explains it (tr / en / az). No code change.
+- **docs — key backup while the network has two members** (ADR-0076 implementation note). In a two-member network the loss of
+  one member's governance key means that no proposal can pass and the member can neither be removed nor withdraw. Operating
+  rule: until a third member joins, every member keeps a backup of its governance key, stored in a separate place and tested
+  by restoring it. Written into ADR-0076 (tr / en / az), the Besu network set-up document (step 11) and the test network guide.
 
 ### Correction to the 0.8.2 notes
 

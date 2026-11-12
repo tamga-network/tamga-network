@@ -200,12 +200,12 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
 
   "spec_version": "SPEC-API-0001@1.0.0",
   "sdk_version": "@tamga-network/verifier@0.8.2",
-  "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
-                       "B1","B2","B3","B4","B5","B6",
+  "checks_performed": ["A1","A2","A3","A3b","A3d","A4","A5","A6","A7","A8",
+                       "B1","B2","B3","B4","B6",
                        "C1","C2","C3","C4",
                        "D1","D2","D3","D4","D5","D6",
-                       "E1","E2","E3"],
-  "checks_skipped": [],
+                       "E1","E2","E3","E4"],
+  "checks_skipped": ["A3c","B5"],
 
   "issuer": {
     "issuer_id": "0x7f3a…",
@@ -236,6 +236,8 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
   "evaluated_at": "2026-09-09T09:12:44Z"
 }
 ```
+
+**Örnekteki `checks_skipped` (uygulama notu, 2026-11-12).** Örnek, referans uygulamanın (`@tamga-network/verifier`) denetim kaydı yeri verilmiş bir SD-JWT VC sunumunda döndürdüğü sonuçtur. Referans uygulama iki adımı bugün yapmaz ve her sunumda `checks_skipped`'te bildirir: `A3c` (yaprak sertifikanın CRL/OCSP sorgusu) ve `B5` (`extends` zinciri). `E4`, denetim kaydı yazıldığı için `checks_performed`'tedir; denetim kaydı yeri verilmediyse o da `checks_skipped`'te görünür (§1.E, `E4`).
 
 | Alan | Anlamı |
 |---|---|

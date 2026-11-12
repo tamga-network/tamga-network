@@ -88,7 +88,13 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     /// @dev F-18: STATE_REMOVAL önerisinin gerekçe özeti (öneri kimliğine göre).
     mapping(bytes32 => bytes32) private _removalReason;
 
-    uint256[38] private __gap;
+    /// @dev Oyun verildiği (ya da son değiştirildiği / tazelendiği) blok zamanı. Yürütmede oy yalnız üyenin SON kabulünden
+    ///      (`joinedAt`) sonra verilmişse sayılır: çıkarılan ya da çekilen üye aynı adresle yeniden kabul edilince açık
+    ///      önerilerdeki eski "evet" oyları kendiliğinden yeniden sayılmaz; başka bir devlete geçen adresin eski oyları da
+    ///      sayılmaz (ikinci kontrol 2026-11-12). `__gap`'ten bir slot alındı (38 → 37).
+    mapping(bytes32 => mapping(address => uint64)) private _votedAt;
+
+    uint256[37] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -453,8 +459,13 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         if (_hasVoted[proposalId][msg.sender]) {
             // Oy değiştirme (kontrol 2026-11-10): öneri yürütülene kadar — kuyruktaki yükseltme dahil — üye oyunu çevirebilir.
             // Aynı yönde ikinci oy yine reddedilir (çift sayım yok).
-            if (_support[proposalId][msg.sender] == support) revert AlreadyVoted(proposalId, msg.sender);
-            if (support) {
+            // Tek istisna: üyenin son kabulünden ÖNCE verilmiş (artık sayılmayan) oy aynı yönde yeniden verilebilir — sayaçlar
+            // değişmez, yalnız oyun zamanı tazelenir.
+            if (_support[proposalId][msg.sender] == support) {
+                if (_votedAt[proposalId][msg.sender] >= _members[_validatorToState[msg.sender]].joinedAt) {
+                    revert AlreadyVoted(proposalId, msg.sender);
+                }
+            } else if (support) {
                 p.againstVotes--;
                 p.forVotes++;
             } else {
@@ -467,6 +478,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
             else p.againstVotes++;
         }
         _support[proposalId][msg.sender] = support;
+        _votedAt[proposalId][msg.sender] = uint64(block.timestamp);
         emit Voted(proposalId, msg.sender, support);
     }
 
@@ -618,7 +630,8 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @dev Destek oylarını bugünkü ACTIVE üyelerin bugünkü validator adresinden sayar; çıkarma hedefi sayılmaz.
-    ///      Üye sayısı küçüktür (devlet sayısı); döngü sınırlıdır.
+    ///      Oy, üyenin son kabulünden sonra verilmiş olmalıdır (`_votedAt` ≥ `joinedAt`): yeniden kabul edilen üyenin önceki
+    ///      üyelik dönemindeki oyu sayılmaz; üye oyunu yeniden verir. Üye sayısı küçüktür (devlet sayısı); döngü sınırlıdır.
     function _countedForVotes(bytes32 proposalId, bytes2 excluded) private view returns (uint32 n) {
         uint256 len = _memberList.length;
         for (uint256 i = 0; i < len; i++) {
@@ -626,7 +639,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
             StateMember storage m = _members[s];
             if (m.status != MemberStatus.ACTIVE || s == excluded) continue;
             address v = m.validatorAddress;
-            if (_hasVoted[proposalId][v] && _support[proposalId][v]) n++;
+            if (_hasVoted[proposalId][v] && _support[proposalId][v] && _votedAt[proposalId][v] >= m.joinedAt) n++;
         }
     }
 

@@ -9,8 +9,10 @@ import { describe, expect, it } from "vitest";
 
 import { removalChangelogLine, removedRecords } from "../src/removals.js";
 import {
+  addRelyingParty,
   addScope,
   endRpUse,
+  reassignRelyingPartyOut,
   setAuthorization,
   setIssuerStatus,
   setRpStatus,
@@ -41,7 +43,7 @@ const approved = [
   },
 ];
 // çıkarma kaydının yazıldığı geçiş: önceki imzalı sürüm 7
-const at = { version: 7, hash: "sha-256:" + "a".repeat(64) };
+const at = { version: 7, hash: "sha256:" + "a".repeat(64) };
 
 describe("TL2: listeden kayıt çıkarma", () => {
   it("sayım: çıkan belge veren, doğrulayıcı (alan adıyla; sertifika yenilemesi çıkarma değil) ve kapı grubu", () => {
@@ -192,16 +194,25 @@ describe("TL2: listeden kayıt çıkarma", () => {
         "list",
         "note",
         "previous_version",
+        "previous_version_hash",
         "relying_parties",
         "terminal_groups",
       ]);
       expect(Number.isInteger(r.previous_version)).toBe(true);
+      // yayıncının önceki sürüm için hesapladığı özetle aynı biçim (`sha256Tag`): "sha256:" + 64 onaltılık hane
+      expect((r as { previous_version_hash?: string }).previous_version_hash).toMatch(/^sha256:[0-9a-f]{64}$/);
     }
     // 2026-11-11 kararı yalnız sürüm 240 → 241 geçişinde geçerliydi (ADR-0081); bugün aynı sayılarla yeniden kullanılamaz
     const used = { issuers: 2, relying_parties: 1, terminal_groups: 2 };
-    expect(removalChangelogLine("tl-tr", used, removals, { version: 240, hash: null })).not.toBeNull();
+    const hash = (removals[0] as { previous_version_hash?: string }).previous_version_hash!;
+    expect(removalChangelogLine("tl-tr", used, removals, { version: 240, hash })).not.toBeNull();
+    // kayıt özeti de taşır: aynı numaralı ama başka içerikli (ya da özeti bilinmeyen) önceki sürümde geçmez
+    expect(() =>
+      removalChangelogLine("tl-tr", used, removals, { version: 240, hash: "sha256:" + "0".repeat(64) }),
+    ).toThrow(/TL2/);
+    expect(() => removalChangelogLine("tl-tr", used, removals, { version: 240, hash: null })).toThrow(/TL2/);
     for (const version of [239, 241, 242, 500])
-      expect(() => removalChangelogLine("tl-tr", used, removals, { version, hash: null })).toThrow(/TL2/);
+      expect(() => removalChangelogLine("tl-tr", used, removals, { version, hash })).toThrow(/TL2/);
     const src = JSON.parse(readFileSync(resolve(reg, "tl-tr.source.json"), "utf8")) as {
       operator: { status: string; on_behalf_of: string };
       issuers: Array<{ slug: string; status: string }>;
@@ -334,6 +345,88 @@ describe("TL2: listeden kayıt çıkarma", () => {
     );
   });
 
+  it("kullanım ve kapı grubu: başlangıç değişmez; bitiş yalnız açık dönemin kapatılması yönünde değişir", () => {
+    const NOW = new Date("2026-06-01T00:00:00.000Z");
+    const PAST = "2026-03-01T00:00:00.000Z"; // NOW'dan önce: kapanmış dönem
+    const FUTURE = "2027-01-01T00:00:00.000Z"; // NOW'dan sonra: dönem açık
+    type Row = Record<string, unknown>;
+    const rows = () => ({
+      relying_parties: [
+        {
+          dns_name: "verify.example",
+          scopes: [
+            { scope_id: "open", purpose: "p", claims: ["a"], valid_from: T0, valid_until: FUTURE } as Row,
+            { scope_id: "ended", purpose: "p", claims: ["a"], valid_from: T0, valid_until: PAST } as Row,
+            { scope_id: "no-end", purpose: "p", claims: ["a"], valid_from: T0, valid_until: null } as Row,
+          ],
+          terminal_groups: [
+            { group_id: "g-open", label: "Gate", valid_from: T0 } as Row,
+            { group_id: "g-ended", label: "Gate", valid_from: T0, valid_until: PAST } as Row,
+          ],
+        },
+      ] as Array<{ dns_name: string; scopes?: Row[]; terminal_groups: Row[] }>,
+    });
+    const check = (edit: (scopes: Row[], groups: Row[]) => void) => {
+      const next = rows();
+      edit(next.relying_parties[0].scopes!, next.relying_parties[0].terminal_groups);
+      return removedRecords(rows(), next, NOW);
+    };
+    expect(check(() => {})).toEqual(NONE);
+    // açıklayıcı alanlar düzenlenebilir
+    expect(
+      check((s, g) => {
+        s[0].purpose = "reworded";
+        s[0].claims = ["a", "b"];
+        s[1].purpose_localized = { "tr-TR": "amaç" };
+        g[0].label = "Main gate";
+        g[0].allowed_policies = ["campus"];
+      }),
+    ).toEqual(NONE);
+    // açık dönemin kapatılması: bitiş yok → tarih; henüz gelmemiş bitiş → daha erken tarih
+    expect(check((s) => void (s[2].valid_until = T1))).toEqual(NONE);
+    expect(check((s) => void (s[0].valid_until = "2026-06-01T00:00:00.000Z"))).toEqual(NONE);
+    expect(check((_s, g) => void (g[0].valid_until = "2026-06-01T00:00:00.000Z"))).toEqual(NONE);
+    expect(check((_s, g) => void (g[0].valid_until = null))).toEqual(NONE); // yok ile null aynı
+    // aynı anın başka yazımı fark değildir
+    expect(check((s) => void (s[1].valid_until = "2026-03-01T00:00:00Z"))).toEqual(NONE);
+    expect(check((s) => void (s[0].valid_from = "2026-01-01T00:00:00Z"))).toEqual(NONE);
+
+    // başlangıç değişemez (geri de ileri de)
+    expect(check((s) => void (s[0].valid_from = "2025-01-01T00:00:00.000Z"))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((s) => void (s[2].valid_from = T1))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((s) => void delete s[0].valid_from)).toEqual({ ...NONE, scopes: 1 });
+    expect(check((_s, g) => void (g[0].valid_from = T1))).toEqual({ ...NONE, terminal_groups: 1 });
+    // kapanmış dönem yeniden açılamaz, uzatılamaz, bitişi öne de çekilemez
+    expect(check((s) => void (s[1].valid_until = null))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((s) => void (s[1].valid_until = FUTURE))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((s) => void (s[1].valid_until = T1))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((_s, g) => void delete g[1].valid_until)).toEqual({ ...NONE, terminal_groups: 1 });
+    expect(check((_s, g) => void (g[1].valid_until = FUTURE))).toEqual({ ...NONE, terminal_groups: 1 });
+    // açık dönem uzatılamaz, bitişi kaldırılamaz (yeni dönem = yeni kimlikle yeni satır)
+    expect(check((s) => void (s[0].valid_until = "2028-01-01T00:00:00.000Z"))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((s) => void (s[0].valid_until = null))).toEqual({ ...NONE, scopes: 1 });
+    expect(check((s) => void (s[0].valid_until = "not-a-date"))).toEqual({ ...NONE, scopes: 1 });
+    // silinen satır bir kez sayılır (hem eksik hem değişmiş sayılmaz); değişen + silinen birlikte toplanır
+    expect(
+      check((s, g) => {
+        s.splice(1, 1);
+        s[0].valid_until = null;
+        g.pop();
+        g[0].valid_from = T1;
+      }),
+    ).toEqual({ ...NONE, terminal_groups: 2, scopes: 2 });
+    // kapı grubu başka doğrulayıcının kaydına taşınsa da aynı kural (kimlik bütün listede tektir)
+    const moved = rows();
+    const [g1] = moved.relying_parties[0].terminal_groups.splice(1, 1);
+    moved.relying_parties.push({ dns_name: "other.example", terminal_groups: [{ ...g1, valid_until: FUTURE }] });
+    expect(removedRecords(rows(), moved, NOW)).toEqual({ ...NONE, terminal_groups: 1 });
+    // onaysız yayımlanmaz; ileti kuralı söyler
+    const counts = check((s) => void (s[1].valid_until = FUTURE));
+    expect(() => removalChangelogLine("tl-tr", counts, approved, at)).toThrow(
+      /TL2.*kullanım 1.*bitişi yalnız öne çekilir.*DURDU/s,
+    );
+  });
+
   // Kaynak kaydı listeye girerken yalnız kimlik alanları hesaplanır; geçmiş satırları olduğu gibi taşınır. Karşılaştırma için
   // kaynak → liste biçimi: belge verenin kimliği yerine kısa adı, şema kimliği yerine tür adı (ikisi de kalıcı ve tekil).
   type Src = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -351,7 +444,14 @@ describe("TL2: listeden kayıt çıkarma", () => {
     (dir) => {
       const src = read(dir, "tl-tr.source.json");
       const lotl = read(dir, "lotl.source.json");
-      // kendisiyle: fark yok (yeniden yayın)
+      // kayıt defteri olduğu gibi: kendisiyle fark yok (yeniden yayın)
+      expect(removedRecords(asList(src), asList(src))).toEqual(NONE);
+      // etkin doğrulayıcıya bir açık kapı grubu eklenir (gerçek kayıt defterinde grup yok): komutların grubu kapatması da sınansın
+      const withGroup = (src.relying_parties as Src[]).find((r) => r.status === "ACTIVE")!;
+      withGroup.terminal_groups = [
+        ...((withGroup.terminal_groups ?? []) as Src[]),
+        { group_id: "tg-removals-test", institution_id: withGroup.dns_name, allowed_policies: ["p"], valid_from: T0 },
+      ];
       expect(removedRecords(asList(src), asList(src))).toEqual(NONE);
       expect(removedRecords(lotl, lotl)).toEqual(NONE);
 
@@ -365,6 +465,9 @@ describe("TL2: listeden kayıt çıkarma", () => {
         ]),
       };
       const later = { ...env, now: new Date("2026-11-13T10:00:00.000Z") };
+      const much = { ...env, now: new Date("2026-11-14T10:00:00.000Z") };
+      const last = { ...env, now: new Date("2026-11-15T10:00:00.000Z") };
+      const publishAt = new Date("2026-11-16T00:00:00.000Z");
       const issuer = (src.issuers as Src[]).find((i) => i.status === "ACTIVE")!;
       const slug = issuer.slug as string;
       const openVct = (issuer.schema_authorizations as Src[]).find((a) => a.allowed && !a.valid_until)!.vct as string;
@@ -394,19 +497,49 @@ describe("TL2: listeden kayıt çıkarma", () => {
             ),
         ],
         ["end-use", (s) => endRpUse(s, dns, openScope.scope_id as string, env)],
+        ["end-use (kapı grubu)", (s) => endRpUse(s, dns, "tg-removals-test", env)],
         ["rp-status SUSPENDED", (s) => setRpStatus(s, dns, "SUSPENDED", { reason: "review" }, env)],
         ["rp-status ACTIVE", (s) => setRpStatus(s, dns, "ACTIVE", { reason: "review closed" }, later)],
         ["rp-status REVOKED", (s) => setRpStatus(s, dns, "REVOKED", { reason: "ceased" }, later)],
+        [
+          "register rp --approval (yeniden kayıt)",
+          (s) => {
+            const old = (s.relying_parties as Src[]).find((r) => r.dns_name === dns)!;
+            const app: Src = { ...old };
+            for (const k of ["status", "status_history", "registered_at", "scopes", "terminal_groups", "client_id"])
+              delete app[k];
+            const scope: Src = { ...openScope, scope_id: "second-period-1", privacy_policy_uri: "https://x.example/p" };
+            delete scope.valid_from;
+            delete scope.valid_until;
+            return addRelyingParty(s, { ...app, scopes: [scope] }, much, { approval: "REC-2026-11-13" });
+          },
+        ],
+        ["devir (başka devlete)", (s) => reassignRelyingPartyOut(s, dns, { toState: "KZ", approval: "REC-2" }, last)],
       ];
       let cur = src;
       for (const [name, step] of steps) {
         const nextSrc = step(cur);
-        expect(removedRecords(asList(cur), asList(nextSrc)), name).toEqual(NONE);
-        expect(removalChangelogLine("tl-tr", removedRecords(asList(cur), asList(nextSrc)), [], at), name).toBeNull();
+        // yayın anı: komuttan sonra (komutun yazdığı bitiş geçmişte kalmıştır)
+        expect(removedRecords(asList(cur), asList(nextSrc), publishAt), name).toEqual(NONE);
+        expect(
+          removalChangelogLine("tl-tr", removedRecords(asList(cur), asList(nextSrc), publishAt), [], at),
+          name,
+        ).toBeNull();
         cur = nextSrc;
       }
       // baştaki sürümle sondaki arasında da fark yok (ara yayınlar atlansa da)
-      expect(removedRecords(asList(src), asList(cur))).toEqual(NONE);
+      expect(removedRecords(asList(src), asList(cur), publishAt)).toEqual(NONE);
+      expect(removedRecords(asList(src), asList(cur), env.now)).toEqual(NONE);
+      // komutların kapattığı kullanım ve kapı grubu elle eski bitişine döndürülür ya da yeniden açılırsa yakalanır
+      const stretched = JSON.parse(JSON.stringify(cur)) as Src;
+      const sRp = (stretched.relying_parties as Src[]).find((r) => r.dns_name === dns)!;
+      (sRp.scopes as Src[]).find((x) => x.scope_id === openScope.scope_id)!.valid_until = openScope.valid_until;
+      (sRp.terminal_groups as Src[]).find((x) => x.group_id === "tg-removals-test")!.valid_until = null;
+      expect(removedRecords(asList(cur), asList(stretched), publishAt)).toEqual({
+        ...NONE,
+        terminal_groups: 1,
+        scopes: 1,
+      });
       // komutların kapattığı yetki elle yeniden açılırsa yakalanır
       const reopened = JSON.parse(JSON.stringify(cur)) as Src;
       for (const a of (reopened.issuers as Src[]).find((i) => i.slug === slug)!.schema_authorizations as Src[])

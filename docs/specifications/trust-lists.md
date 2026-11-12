@@ -289,7 +289,10 @@ listesinde seçim kuralı ve okuma setinde `relyingPartyByDnsName`; §7 devrin y
   `invalidates_from`'u değiştirilen satır silinmiş sayılır); şema yetkisi satırında tek serbest değişiklik açık dönemin
   kapatılmasıdır (`valid_until` yok → tarih). Sayılanlara belge verenin `delegate_keys` satırı ve LOTL'daki `national_lists`,
   `wallet_providers`, `external_lists` kayıtları eklendi (aynı adlı isteğe bağlı sayılar): iptal listesi anahtarı yenilenirken
-  eski anahtar listeden atılmaz, bitiş tarihiyle (`valid_to`) kalır. Yükleyici, sürüm birden fazla atladığında aradaki
+  eski anahtar listeden atılmaz, bitiş tarihiyle (`valid_to`) kalır. Listede kalan kullanım (`scopes`) ve kapı grubu (`terminal_groups`) satırının geçerlilik alanları da korunur: `valid_from`
+  değişmez; `valid_until` yalnız açık dönemin kapatılması yönünde değişir (bitişi olmayan ya da bitişi henüz gelmemiş satıra
+  daha erken bir bitiş). Kapanmış dönem değiştirilmez, hiçbir bitiş ileri alınmaz ya da kaldırılmaz: yeni dönem yeni kimlikle
+  yeni satırdır. Böyle değişmiş satır silinmiş sayılır; amaç metni gibi açıklayıcı alanlar düzenlenebilir. Yükleyici, sürüm birden fazla atladığında aradaki
   özetleri doğrulayamaz; yalnız "atlayan sürüm öncülü olarak son görüleni gösteriyor" çelişkisini reddeder (tam denetim arşivle).
 - **TL11.** Yayıncı kaynakta her kayıt türü için bilinen alanların izin listesini uygular: bilinmeyen ya da hesaplanan alan
   (`client_id`, `rp_id`, `issuer_id`, `ca_id`, parmak izleri — [[ADR-0034]] CI3) yayını durdurur, sessizce atılmaz. `contact`

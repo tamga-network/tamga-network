@@ -4,7 +4,7 @@ title: "Education Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-11-12
 summary: >
   Eğitim alanındaki iki ortak belge türünün (öğrenci belgesi, diploma) rulebook'u, AB Attestation Rulebook şablonunun bölüm
   yapısıyla: öznitelikler ve üst veri, hukuki kategori, SD-JWT VC kodlaması ve seçici açıklama, kullanım ve belge verme
@@ -287,7 +287,7 @@ bağı. Türe özgü kurallar:
 |---|---|
 | `job-application-degree` (mezuniyet teyidi) | `vct = DiplomaCredential:1`; belge veren `EDUCATION` kategorisinde ve bu türe yetkili; sınıf en az I2 (**I3 SHOULD**); iptal edilmemiş; `is_graduate = true`, `eqf_level ≥ 6`; belge sahibi güvence alanı yoktur — diploma türü T2 ile bağlanmıştır |
 | `student-discount` | `vct = StudentCredential:1`; belge veren en az I2; süresi dolmamış; yalnız `is_enrolled = true` |
-| `campus-access` | `student-discount` ile aynı ve geçiş kartı kaydı; süreli rıza en çok 6 ay |
+| `campus-access` | `student-discount` ile aynı ve geçiş kartı kaydı; süreli rıza en çok 6 ay (184 gün) |
 | Yüksek riskli (kamu, banka) | Yukarıdakiler ve kimlik belgesi ya da PID ile yüz eşleştirmesi (doğrulayıcının sorumluluğu) |
 
 Politika adları referans doğrulayıcıdakilerdir. Sonuç üç değerlidir; `INDETERMINATE` kabul değildir; kullanıcıya "doğrulanamadı"

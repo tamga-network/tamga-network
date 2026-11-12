@@ -195,12 +195,12 @@ arasındakı fərq bir insanın işə götürülüb-götürülməməsidir.
 
   "spec_version": "SPEC-API-0001@1.0.0",
   "sdk_version": "@tamga-network/verifier@0.8.2",
-  "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
-                       "B1","B2","B3","B4","B5","B6",
+  "checks_performed": ["A1","A2","A3","A3b","A3d","A4","A5","A6","A7","A8",
+                       "B1","B2","B3","B4","B6",
                        "C1","C2","C3","C4",
                        "D1","D2","D3","D4","D5","D6",
-                       "E1","E2","E3"],
-  "checks_skipped": [],
+                       "E1","E2","E3","E4"],
+  "checks_skipped": ["A3c","B5"],
 
   "issuer": {
     "issuer_id": "0x7f3a…",
@@ -231,6 +231,8 @@ arasındakı fərq bir insanın işə götürülüb-götürülməməsidir.
   "evaluated_at": "2026-09-09T09:12:44Z"
 }
 ```
+
+**Nümunədəki `checks_skipped` (tətbiq qeydi, 2026-11-12).** Nümunə, istinad tətbiqinin (`@tamga-network/verifier`) audit qeydi yeri verilmiş SD-JWT VC təqdimatında qaytardığı nəticədir. İstinad tətbiqi bu gün iki addımı aparmır və hər təqdimatda `checks_skipped`-də bildirir: `A3c` (yarpaq sertifikatın CRL/OCSP sorğusu) və `B5` (`extends` zənciri). `E4` audit qeydi yazıldığı üçün `checks_performed`-dədir; audit qeydi yeri verilməyibsə, o da `checks_skipped`-də görünür (§1.E, `E4`).
 
 | Sahə | Mənası |
 |---|---|

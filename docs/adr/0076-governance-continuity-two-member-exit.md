@@ -115,6 +115,15 @@ Ad (kamuya açık ABI; mevcut hata adlandırma düzenine göre — `TooManyDeleg
 - Kalan sınır (bilinçli): iki üyeli ağda öteki üye yeni üye kabulüne oy vermezse çıkış zincirde gerçekleşmez. Üye validator'ını
   durdurabilir ve kayıt yazmayı bırakabilir; üyelik kaydı sürer. Bu, iki üyeli ağın ortaklık gibi davranmasının sonucudur
   ([[SPEC-BC-0001]] §1).
+- **Uygulama notu (2026-11-12; karar içeriği değişmedi) — iki üyeli dönemde anahtar yedeği.** İki üyeli ağda bir üyenin
+  yönetişim anahtarı (bugün validator düğüm anahtarıyla aynı anahtardır) kaybolursa o üye oy veremez. Kalan üye tek başına
+  hiçbir öneriyi geçiremez (asgari mutlak oy 2); anahtarını kaybeden üye çıkarılamaz (iki üyeli ağda çıkarma yoktur,
+  [[SPEC-BC-0001]] §1) ve çekilemez (GC1; çekilme de aynı anahtarı ister). Validator adresini değiştirmenin tek yolu yeniden
+  kabuldür, o da iki oy ister. Yönetişim, GC1'in önlediği kilitlenmeye bu yoldan düşer ve geri dönüşü yoktur. Bu yüzden, proje
+  yönetiminin onayıyla (2026-11-12), işletim kuralı: **üçüncü üye katılana kadar her üyenin yönetişim anahtarının, asıl
+  anahtardan ayrı bir yerde saklanan ve geri yüklenerek sınanmış bir yedeği zorunludur.** Kural işletim düzeyindedir (kontrat
+  bunu denetleyemez); işletim belgesindeki yeri [[ARCH-0002]] Adım 11. Üç ve daha çok üyeli ağda anahtarını kaybeden üye öteki
+  üyelerin oyuyla çıkarılıp yeni adresle yeniden kabul edilebilir; yedek orada da önerilir.
 
 # Durum
 

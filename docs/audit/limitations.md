@@ -11,7 +11,7 @@ The project keeps a deviation register (codes `S-n`); open items as of 2026-10-2
 | S-6 | Trust lists are signed with a single signing certificate | ≥ 2 certificates with rolling replacement, with a second operator / HSM (ETSI TS 119 612 A.2) |
 | S-8 | **No independent security audit yet** | this package |
 | S-14 | Wallet provider verifies Android key attestation; iOS App Attest and Play Integrity wait for store accounts | before store release |
-| S-16 | Proximity pass (event entry) does not ask for PIN / biometrics at every use; consent is time-limited (≤ 6 months) and every use is logged | re-evaluated with pilot data |
+| S-16 | Proximity pass (event entry) does not ask for PIN / biometrics at every use; consent is time-limited (at most 6 months — 184 days) and every use is logged | re-evaluated with pilot data |
 | S-19 | Pass registration request is started by the wallet | relying party starts it (desk / page QR) in the pilot |
 
 Closed deviations (for context): software-only holder keys outside development builds (S-9), unencrypted wallet store (S-11),

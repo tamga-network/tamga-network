@@ -299,7 +299,11 @@ record (`reassigned_to`). Behaviour ships with `@tamga-network/trust` 0.8.1; the
   authorization row the only free change is closing an open period (`valid_until` absent → a date). Also counted now: an
   issuer's `delegate_keys` rows and the `national_lists`, `wallet_providers` and `external_lists` records of the LOTL (optional
   counts of the same names): when a status-list key is renewed the old key is not dropped from the list, it stays with its
-  end date (`valid_to`). When the version jumps by more than
+  end date (`valid_to`). The validity fields of a scope (`scopes`) and a terminal group (`terminal_groups`) row that stays in
+  the list are protected too: `valid_from` does not change; `valid_until` changes only towards closing an open period (an
+  earlier end for a row with no end or with an end that has not passed). A period that has ended is not changed, and no end is
+  moved later or removed: a new period is a new row with a new identifier. A row changed in any other way counts as removed;
+  descriptive fields such as the purpose text can be edited. When the version jumps by more than
   one the loader cannot verify the hashes in between; it rejects only the contradiction "the jumping version names the last
   seen version as its predecessor" (the full check uses the archive).
 - **TL11.** The publisher applies an allow-list of known fields per record type in the source: an unknown or computed field

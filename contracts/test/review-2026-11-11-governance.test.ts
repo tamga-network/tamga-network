@@ -274,4 +274,82 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       expect((await g.getSchemaPayload(rm)).vctURI).to.equal("");
     });
   });
+
+  // İkinci kontrol (2026-11-12): oy, üyenin SON kabulünden sonra verilmişse sayılır. Önce: çekilen ya da çıkarılan üye aynı
+  // adresle yeniden kabul edilince açık önerilerdeki eski "evet" oyu kendiliğinden yeniden sayılıyordu.
+  describe("yeniden kabul edilen üyenin eski oyu sayılmaz", () => {
+    /** AZ'nin oy verdiği açık bir öneri (UZ kabulü), sonra AZ çekilir ve aynı adresle yeniden kabul edilir. */
+    async function staleVote(support: boolean) {
+      const f = await loadFixture();
+      const tr = f.as(f.governance, f.trValidator);
+      const kz = f.as(f.governance, f.kzValidator);
+      const az = f.as(f.governance, f.azValidator);
+      const open = await proposalId(await tr.proposeStateAdmission(UZ, await f.stranger.getAddress()), f);
+      await (await az.vote(open, support)).wait();
+      expect(await f.governance.countedForVotes(open)).to.equal(support ? 1 : 0);
+      await (await az.withdraw()).wait(); // 3 → 2
+      expect(await f.governance.countedForVotes(open)).to.equal(0); // GV3: üye değilken sayılmaz
+      const back = await proposalId(await tr.proposeStateAdmission(AZ, await f.azValidator.getAddress()), f);
+      await (await tr.vote(back, true)).wait();
+      await (await kz.vote(back, true)).wait();
+      await (await f.governance.execute(back)).wait();
+      expect(await f.governance.isActiveMember(AZ)).to.equal(true);
+      return { f, tr, kz, az, open };
+    }
+
+    it("eski evet oyu yeniden kabulden sonra sayılmaz; eşik onunla dolmaz", async () => {
+      const { f, kz, open } = await staleVote(true);
+      expect(await f.governance.countedForVotes(open)).to.equal(0);
+      await (await kz.vote(open, true)).wait();
+      expect(await f.governance.countedForVotes(open)).to.equal(1);
+      // üç etkin üye, gereken 2: AZ'nin önceki dönemdeki oyu + KZ'nin oyu yetmez
+      await expect(f.governance.execute(open))
+        .to.be.revertedWithCustomError(f.governance, "ThresholdNotMet")
+        .withArgs(1, 2);
+    });
+
+    it("üye oyunu yeniden verir: aynı yönde tazeleme sayaçları değiştirmez, ikinci kez reddedilir", async () => {
+      const { f, kz, az, open } = await staleVote(true);
+      await (await kz.vote(open, true)).wait();
+      const before = await f.governance.getProposal(open);
+      await expect(az.vote(open, true))
+        .to.emit(f.governance, "Voted")
+        .withArgs(open, await f.azValidator.getAddress(), true);
+      const after = await f.governance.getProposal(open);
+      expect(after.forVotes).to.equal(before.forVotes); // ham sayaç çift artmaz
+      expect(after.againstVotes).to.equal(before.againstVotes);
+      expect(await f.governance.countedForVotes(open)).to.equal(2);
+      // tazelenen oy artık güncel: aynı yönde bir kez daha verilemez
+      await expect(az.vote(open, true)).to.be.revertedWithCustomError(f.governance, "AlreadyVoted");
+      await expect(f.governance.execute(open)).to.emit(f.governance, "ProposalExecuted").withArgs(open);
+      expect(await f.governance.isActiveMember(UZ)).to.equal(true);
+    });
+
+    it("eski oy geri çekilebilir ya da çevrilebilir; çevrilen oy sayılır", async () => {
+      const { f, az, open } = await staleVote(false);
+      await (await az.vote(open, true)).wait(); // hayır → evet: yeni dönemde verilmiş oy
+      expect(await f.governance.countedForVotes(open)).to.equal(1);
+      await (await az.retractVote(open)).wait();
+      expect(await f.governance.countedForVotes(open)).to.equal(0);
+      await (await az.vote(open, true)).wait();
+      expect(await f.governance.countedForVotes(open)).to.equal(1);
+    });
+
+    it("üyeliği kesilmemiş üyenin oyu etkilenmez; başka üyenin yeniden kabulü onun oyunu düşürmez", async () => {
+      const f = await loadFixture();
+      const tr = f.as(f.governance, f.trValidator);
+      const kz = f.as(f.governance, f.kzValidator);
+      const open = await proposalId(await tr.proposeStateAdmission(UZ, await f.stranger.getAddress()), f);
+      await (await tr.vote(open, true)).wait();
+      await (await f.as(f.governance, f.azValidator).withdraw()).wait();
+      const back = await proposalId(await tr.proposeStateAdmission(AZ, await f.azValidator.getAddress()), f);
+      await (await tr.vote(back, true)).wait();
+      await (await kz.vote(back, true)).wait();
+      await (await f.governance.execute(back)).wait();
+      expect(await f.governance.countedForVotes(open)).to.equal(1); // TR'nin oyu yerinde
+      await expect(tr.vote(open, true)).to.be.revertedWithCustomError(f.governance, "AlreadyVoted");
+      await (await kz.vote(open, true)).wait();
+      await expect(f.governance.execute(open)).to.emit(f.governance, "ProposalExecuted").withArgs(open);
+    });
+  });
 });

@@ -1043,12 +1043,11 @@ async function build() {
       : [
           removalChangelogLine(
             `tl-${cc.toLowerCase()}`,
-            removedRecords(tlPrev.list, {
-              root_cas: rootCas,
-              issuers,
-              relying_parties: rps,
-              national_schemas: tlSrc.national_schemas,
-            }),
+            removedRecords(
+              tlPrev.list,
+              { root_cas: rootCas, issuers, relying_parties: rps, national_schemas: tlSrc.national_schemas },
+              now,
+            ),
             approvedRemovals,
             tlPrev,
           ),

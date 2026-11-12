@@ -28,6 +28,12 @@
  *    yetkinin yeniden açılması ya da bitişinin değiştirilmesi satırın silinmesi sayılır.
  *  - Sayılanlara eklendi: listede kalan belge verenin `delegate_keys` satırı (parmak izi + amaç) ve LOTL'da `national_lists`,
  *    `wallet_providers`, `external_lists` kayıtları (cüzdan sağlayıcının durum geçmişi satırları da).
+ *  - Listede kalan kullanım (`scopes`) ve kapı grubu (`terminal_groups`) satırının GEÇERLİLİK alanları da korunur: başlangıç
+ *    (`valid_from`) değişemez; bitiş (`valid_until`) yalnız açık dönemin kapatılması yönünde değişir — bitişi olmayan ya da
+ *    bitişi henüz gelmemiş satıra daha erken bir bitiş yazılabilir (`end-use`, `rp-status REVOKED|RETIRED`, yeniden kayıt, devir).
+ *    Bitişi geçmiş (kapanmış) satırın bitişi değiştirilemez; hiçbir satırın bitişi ileri alınamaz ya da kaldırılamaz (süre
+ *    uzatma yok: yeni dönem yeni kimlikle yeni satırdır). Böyle değişmiş satır silinmiş sayılır (`scopes` / `terminal_groups`
+ *    sayısına girer). Amaç metni, çeviriler, istenen alanlar, etiket, politika gibi açıklayıcı alanlar düzenlenebilir.
  */
 export interface RemovalCounts {
   issuers: number;
@@ -87,7 +93,7 @@ export interface ApprovedRemoval extends RemovalCounts {
   note: string;
   /** çıkarmadan ÖNCEKİ imzalı sürümün numarası: kayıt yalnız bu sürümden sonraki yayında geçer */
   previous_version: number;
-  /** isteğe bağlı: o sürümün `.jws` özeti (`sha-256:…`, listedeki `previous_version_hash` ile aynı biçim); yazılmışsa tutmalıdır */
+  /** isteğe bağlı: o sürümün `.jws` özeti (`sha256:…`, listedeki `previous_version_hash` ile aynı biçim); yazılmışsa tutmalıdır */
   previous_version_hash?: string;
 }
 
@@ -98,6 +104,11 @@ export interface PreviousVersion {
 }
 
 type HistoryRow = Record<string, unknown>;
+/** kullanım ve kapı grubu satırının geçerlilik alanları (`RpScope`, `TerminalGroup` — `@tamga-network/trust`) */
+interface Validity {
+  valid_from?: string;
+  valid_until?: string | null;
+}
 type AuthRow = Record<string, unknown>;
 interface ListRecords {
   root_cas?: Array<{ ca_id?: string; status_history?: HistoryRow[] }>;
@@ -110,8 +121,8 @@ interface ListRecords {
   relying_parties?: Array<{
     rp_id?: string;
     dns_name?: string;
-    terminal_groups?: Array<{ group_id?: string }>;
-    scopes?: Array<{ scope_id?: string }>;
+    terminal_groups?: Array<{ group_id?: string } & Validity>;
+    scopes?: Array<{ scope_id?: string } & Validity>;
     status_history?: HistoryRow[];
   }>;
   /** ülke listesi */
@@ -166,6 +177,27 @@ function missingAuthorizations(prev: AuthRow[] | undefined, next: AuthRow[] | un
   return changed.filter((p) => !(p.until === null && take((n) => n.base === p.base && typeof n.until === "string")))
     .length;
 }
+/** İki tarih aynı an mı (yazım farkı — `…00Z` / `…00.000Z` — fark sayılmaz); tarih olarak okunamıyorsa metin birebir. */
+function sameInstant(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (a == null || b == null) return a == null && b == null;
+  const x = Date.parse(a);
+  const y = Date.parse(b);
+  return Number.isNaN(x) || Number.isNaN(y) ? a === b : x === y;
+}
+/**
+ * Listede kalan kullanım / kapı grubu satırının geçerlilik alanları korunmuş mu: başlangıç aynı; bitiş aynı ya da AÇIK dönem
+ * (bitiş yok, ya da `now`'dan sonra) daha erken bir tarihle kapatılmış. Kapanmış dönem değişmez; bitiş ileri alınamaz, kaldırılamaz.
+ */
+function validityKept(prev: Validity, next: Validity, now: Date): boolean {
+  if (!sameInstant(prev.valid_from, next.valid_from)) return false;
+  if (sameInstant(prev.valid_until, next.valid_until)) return true;
+  if (next.valid_until == null) return false; // bitişi olan satır yeniden açılamaz
+  const to = Date.parse(next.valid_until);
+  if (Number.isNaN(to)) return false;
+  if (prev.valid_until == null) return true; // açık dönem kapatıldı
+  const was = Date.parse(prev.valid_until);
+  return !Number.isNaN(was) && was > now.getTime() && to < was; // henüz bitmemiş dönem öne çekildi
+}
 /** Önceki sürümdeki satırlardan yenisinde bulunmayanların sayısı (aynı satır iki kez varsa iki kez aranır). */
 function missing(prevKeys: string[], nextKeys: string[]): number {
   const left = new Map<string, number>();
@@ -179,8 +211,15 @@ function missing(prevKeys: string[], nextKeys: string[]): number {
   return n;
 }
 
-/** Önceki yayımlanmış listede olup yenisinde olmayan kayıtların sayısı (önceki liste yoksa hepsi 0). */
-export function removedRecords(prev: ListRecords | null | undefined, next: ListRecords): RemovalCounts {
+/**
+ * Önceki yayımlanmış listede olup yenisinde olmayan kayıtların sayısı (önceki liste yoksa hepsi 0). `now`: yayın anı — kullanım
+ * ve kapı grubu satırında "kapanmış dönem" buna göre ayrılır (bitişi `now`'dan önce ya da `now` olan satırın bitişi değişmez).
+ */
+export function removedRecords(
+  prev: ListRecords | null | undefined,
+  next: ListRecords,
+  now: Date = new Date(),
+): RemovalCounts {
   if (!prev) return { issuers: 0, relying_parties: 0, terminal_groups: 0 };
   const a = ids(prev);
   const b = ids(next);
@@ -238,11 +277,26 @@ export function removedRecords(prev: ListRecords | null | undefined, next: ListR
       (r.scopes ?? []).map((s) => String(s.scope_id)),
       (n.scopes ?? []).map((s) => String(s.scope_id)),
     );
+    // listede kalan kullanım: geçerlilik alanları değişmişse satır silinmiş sayılır
+    const scopeNext = new Map((n.scopes ?? []).map((s) => [String(s.scope_id), s]));
+    for (const s of r.scopes ?? []) {
+      const k = scopeNext.get(String(s.scope_id));
+      if (k && !validityKept(s, k, now)) detail.scopes++;
+    }
+  }
+  // listede kalan kapı grubu (kimlik bütün listede tektir — ADR-0069 TG1): aynı kural
+  const groupNext = new Map(
+    (next.relying_parties ?? []).flatMap((r) => (r.terminal_groups ?? []).map((g) => [String(g.group_id), g] as const)),
+  );
+  let groupsChanged = 0;
+  for (const g of (prev.relying_parties ?? []).flatMap((r) => r.terminal_groups ?? [])) {
+    const k = groupNext.get(String(g.group_id));
+    if (k && !validityKept(g, k, now)) groupsChanged++;
   }
   return {
     issuers: gone(a.issuers, b.issuers),
     relying_parties: gone(a.rps, b.rps),
-    terminal_groups: gone(a.groups, b.groups),
+    terminal_groups: gone(a.groups, b.groups) + groupsChanged,
     ...Object.fromEntries(DETAIL_KEYS.filter((k) => detail[k] > 0).map((k) => [k, detail[k]])),
   };
 }
@@ -284,7 +338,8 @@ export function removalChangelogLine(
         `${counts.relying_parties}, kapı grubu ${counts.terminal_groups}` +
         details.map((k) => `, ${DETAIL_TR[k]} ${counts[k]}`).join("") +
         `). Kayıt silinmez: durum değişikliği için status / ` +
-        `rp-status / end-use kullanın; geçmiş satırları (status_history, kapanmış şema yetkisi) değiştirilmez. Çıkarma bilerek ` +
+        `rp-status / end-use kullanın; geçmiş satırları (status_history, kapanmış şema yetkisi) değiştirilmez; kullanım ve kapı ` +
+        `grubunun başlangıcı değişmez, bitişi yalnız öne çekilir (uzatma yerine yeni kimlikle yeni satır). Çıkarma bilerek ` +
         `yapılıyorsa kayıt defterine (removals.json) sayıları birebir tutan ve bu geçişe yazılmış (previous_version: ` +
         `${prev?.version ?? "?"}) onaylı bir çıkarma kaydı ekleyin; eski bir çıkarma kaydı yeniden kullanılamaz — DURDU`,
     );

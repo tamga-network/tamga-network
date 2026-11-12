@@ -188,7 +188,7 @@ cüzdanın arka planda sessizce sunum yapması engellenir. Kişinin başlatmadı
 yenileme) istem göstermez; doğrulama gerekiyorsa o tur atlanır.
 
 **Geçiş kartı izninin süresi (WL13).** Geçiş kartı, her gösterimde kullanıcı doğrulaması istemeyen tek akıştır; bu yüzden
-kayıt anında verilen rıza süreyle sınırlıdır. Cüzdan, süresi 6 ayı aşan bir izni (`exp` − `iat` ve `exp` − şimdi) saklamaz.
+kayıt anında verilen rıza süreyle sınırlıdır. Cüzdan, süresi 6 ayı (184 gün) aşan bir izni (`exp` − `iat` ve `exp` − şimdi) saklamaz.
 Tek istisna tek kullanımlık bilettir (`single_use`): iznin `exp` değeri etkinliğin bitişidir ([[ADR-0012]] K4) ve bilet ilk
 geçişte tükenir; etkinlik 6 aydan ileri bir tarihte olabileceği için bu izin 6 aylık tavana tabi değildir. İznin öteki
 denetimleri (kayıtlı RP/terminal grubu, kapsam, geri alma) tek kullanımlık bilette de aynen uygulanır.
@@ -620,7 +620,7 @@ veri kurumdadır; yol TS7 silme talebidir (Geçmiş → "Verilerimi silmesini is
 | **WL10** | Tamga kullanıcı adına kurtarma anahtarı tutmaz. |
 | **WL11** | Her sunum kullanıcı doğrulaması gerektirir: güvenli donanım anahtarı olan cihazda cihazın biyometrisi ya da cihaz parolası (belge anahtarı telefon kilidine bağlıdır); yazılım anahtarı yolunda (S-9) uygulama PIN'i ya da biyometri. Geri düşüş ve vazgeçme §2.3'te. |
 | **WL12** | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat` (≤ şimdi + 30 s), `exp` (ömür ≤ 60 s; ≤ şimdi + 60 s + 30 s saat kayması toleransı), `jti`; belge içeriği ve claim'ler QR'a girmez ([[ADR-0012]]). |
-| **WL13** | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsamlıdır; kullanıcı rızayı istediği an geri alır (grant silinir). Tek kullanımlık bilet (`single_use`) 6 aylık tavandan muaftır: izni etkinlik bitişinde sona erer (`exp` = etkinlik bitişi, [[ADR-0012]] K4) ve ilk geçişte tükenir. WL11'in tek istisnasıdır. |
+| **WL13** | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (en çok 6 ay — 184 gün) ve kapsamlıdır; kullanıcı rızayı istediği an geri alır (grant silinir). Tek kullanımlık bilet (`single_use`) 6 aylık tavandan muaftır: izni etkinlik bitişinde sona erer (`exp` = etkinlik bitişi, [[ADR-0012]] K4) ve ilk geçişte tükenir. WL11'in tek istisnasıdır. |
 | **WL14** | Her geçiş kartı gösterimi `presentation_log`'a yazılır (WL4 kapsamında, cihazda); Göster ekranı canlı saat ve süre gösterir. |
 | **WL15** | Site takma ad anahtarları belge sahibi anahtarı değildir: yalnız [[ADR-0031]] tohumundan site ve sıra başına türetilir, kalıcı saklanmaz; tohum yalnız cihazın güvenli deposunda durur, yedeğe, taşıma dosyasına ve hiçbir sunuma girmez. |
 

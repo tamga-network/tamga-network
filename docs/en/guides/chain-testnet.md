@@ -439,7 +439,8 @@ state; a state's validator key is its node key. The chain id is **31339**: the r
 
 ::: warning Test and staging networks only
 On the real network nobody holds every key: each state generates its validator key on its own hardware and keeps its signing keys
-in an HSM ([[GUIDE-0015]] §3). The key map exists because on a test network one person plays every state. Every tool that reads it
+in an HSM ([[GUIDE-0015]] §3). While the network has two members, each member also keeps a tested backup of its governance key
+in a separate place: the loss of one key locks governance ([[ADR-0076]] implementation note). The key map exists because on a test network one person plays every state. Every tool that reads it
 refuses it unless `purpose` is `test`, the chain id is 31339 and every key file is `0600` and belongs to its address.
 :::
 

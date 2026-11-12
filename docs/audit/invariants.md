@@ -12,7 +12,7 @@ Rows without a test are either enforced by construction (types, schemas, data fi
 that do not cite the code, process rules (governance, documentation), or genuinely untested. Reviewers should treat
 untested rows in the parsing, signature, status and trust-list areas as priority questions.
 
-**Summary:** 463 invariants in 82 documents · 126 with at least one test reference (27%) · 26 with a direct reference.
+**Summary:** 467 invariants in 83 documents · 126 with at least one test reference (27%) · 26 with a direct reference.
 
 ## ADR-0013 — Kimlik belgesi için mdoc
 
@@ -595,6 +595,15 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `VL3` | Kimlik doğrulama başlamadan önce, doğrulamayı yapan kişiye bu doğrulamanın hangi cüzdan için yapıldığı ve bağlantıyı kendisi açmadıysa de… | — | none |
 | `VL4` | Gerçek ağda kimlik doğrulama, VL1–VL3 uygulanmadan herkese açılmaz. | — | none |
 
+## ADR-0081 — Sınama kayıtlarının listeden çıkarılması
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `RR1` | Gerçek ağın güven listesinden kayıt silinmez: belge veren, doğrulayıcı, kapı grubu, kök CA ve şema kaydı kapanınca durumu değişir, geçmiş… | — | none |
+| `RR2` | Listeden yalnız sınama kaydı çıkarılabilir: kurum katılımından önce sınama amacıyla konmuş, hiçbir gerçek kişiye belge vermemiş ve hiçbir… | — | none |
+| `RR3` | İstisna, ilk katılımcı kurum (sınama amacıyla konmamış ve ağın geçici işletmecisinin kendi servisi olmayan belge veren ya da doğrulayıcı)… | — | none |
+| `RR4` | Çıkarılan kayıtları taşıyan imzalı liste sürümleri arşivde kalır ve değiştirilmez; çıkarma sürüm numarasını ve özet zincirini kesmez. | — | none |
+
 ## ARCH-0003 — Bileşen mimarisi
 
 | Code | Rule (truncated) | Tests | Match |
@@ -639,7 +648,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `AP6` | Politikanın `required_claims`'i RP'nin güven listesindeki kaydının scope'unu aşamaz. | `packages/verifier/src/verifier.test.ts`<br>`apps/verify/test/verify-app.test.ts` | scoped |
 | `AP7` | Hata `detail` alanı kişisel veri içermez. | — | none |
 | `AP8` | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. | — | none |
-| `AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. | — | none |
+| `AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. İstisna: ZK sunumunda (`mso_mdoc_zk`) belgeni… | — | none |
 | `AP12` | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. | — | none |
 | `AP13` | Geçiş kartı jetonu doğrulaması (ADR-0012 B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = doğrulayıcının kalıcı kimliği (güven liste… | `packages/verifier/src/pass.test.ts` | unique |
 | `AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). | `apps/verify/test/second-review.test.ts`<br>`apps/verify/test/verify-app.test.ts` | unique |
@@ -880,7 +889,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `WL10` | Tamga kullanıcı adına kurtarma anahtarı tutmaz. | — | none |
 | `WL11` | Her sunum kullanıcı doğrulaması gerektirir: güvenli donanım anahtarı olan cihazda cihazın biyometrisi ya da cihaz parolası (belge anahtar… | `packages/wallet-core/src/zk.test.ts` | unique |
 | `WL12` | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat` (≤ şimdi + 30 s), `exp` (ömür ≤ 6… | `packages/verifier/src/pass.test.ts` | unique |
-| `WL13` | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsaml… | `packages/wallet-core/src/second-review.test.ts`<br>`packages/wallet-core/src/hwkeys.test.ts`<br>`apps/verify/test/verify-app.test.ts` +1 | direct |
+| `WL13` | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (en çok 6 ay — 184… | `packages/wallet-core/src/second-review.test.ts`<br>`packages/wallet-core/src/hwkeys.test.ts`<br>`apps/verify/test/verify-app.test.ts` +1 | direct |
 | `WL14` | Her geçiş kartı gösterimi `presentation_log`'a yazılır (WL4 kapsamında, cihazda); Göster ekranı canlı saat ve süre gösterir. | `packages/verifier/src/pass.test.ts` | unique |
 | `WL15` | Site takma ad anahtarları belge sahibi anahtarı değildir: yalnız ADR-0031 tohumundan site ve sıra başına türetilir, kalıcı saklanmaz; toh… | — | none |
 | `W1` | Yazılım (güvenli bölge yok) \| Desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — ADR-0042 K5) | `packages/wallet-core/src/hwkeys.test.ts` | scoped |

@@ -81,7 +81,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `R1` | Issuer delegate anahtarı ulusal kayıtlara yazamaz. | `contracts/test/governance.test.ts`<br>`contracts/test/issuer-registry.test.ts` | scoped |
 | `R2` | Askıya alınmış issuer status list yayınlayamaz. | `contracts/test/issuer-registry.test.ts`<br>`contracts/test/status-list-registry.test.ts` | scoped |
 | `GA1` | Ücretsiz gas, maliyet yokluğu değildir. | — | none |
-| `GV3` | Asgari mutlak oy 2; iki üyeli ağda çıkarma imkânsızdır. | `contracts/test/governance.test.ts`<br>`contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/security-round-2026-10-19.test.ts` | scoped |
+| `GV3` | Asgari mutlak oy 2; iki üyeli ağda çıkarma imkânsızdır. | `contracts/test/governance.test.ts`<br>`contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/review-2026-11-11-governance.test.ts` +1 | scoped |
 | `GV4` | Çıkarılmış/çekilmiş devlet yeniden kabul edilebilir. | `contracts/test/governance.test.ts` | scoped |
 | `DP1` | Hiçbir kontrat kişisel veri, credential içeriği veya credential hash'i saklamaz. | `contracts/test/privacy-abi.test.ts`<br>`contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/trust-list-anchor-registry.test.ts` +1 | direct |
 

@@ -107,10 +107,17 @@
     },
     {
       "contract": "Governance",
-      "label": "__gap",
+      "label": "_votedAt",
       "slot": 15,
       "offset": 0,
-      "type": "t_array(t_uint256)38_storage"
+      "type": "t_mapping(t_bytes32,t_mapping(t_address,t_uint64))"
+    },
+    {
+      "contract": "Governance",
+      "label": "__gap",
+      "slot": 16,
+      "offset": 0,
+      "type": "t_array(t_uint256)37_storage"
     }
   ],
   "types": {
@@ -131,10 +138,10 @@
       "numberOfBytes": 32,
       "base": "t_bytes2"
     },
-    "t_array(t_uint256)38_storage": {
+    "t_array(t_uint256)37_storage": {
       "encoding": "inplace",
-      "label": "uint256[38]",
-      "numberOfBytes": 1216,
+      "label": "uint256[37]",
+      "numberOfBytes": 1184,
       "base": "t_uint256"
     },
     "t_bool": {
@@ -206,6 +213,13 @@
       "key": "t_address",
       "value": "t_bytes2"
     },
+    "t_mapping(t_address,t_uint64)": {
+      "encoding": "mapping",
+      "label": "mapping(address => uint64)",
+      "numberOfBytes": 32,
+      "key": "t_address",
+      "value": "t_uint64"
+    },
     "t_mapping(t_bytes2,t_array(t_address)dyn_storage)": {
       "encoding": "mapping",
       "label": "mapping(bytes2 => address[])",
@@ -233,6 +247,13 @@
       "numberOfBytes": 32,
       "key": "t_bytes32",
       "value": "t_mapping(t_address,t_bool)"
+    },
+    "t_mapping(t_bytes32,t_mapping(t_address,t_uint64))": {
+      "encoding": "mapping",
+      "label": "mapping(bytes32 => mapping(address => uint64))",
+      "numberOfBytes": 32,
+      "key": "t_bytes32",
+      "value": "t_mapping(t_address,t_uint64)"
     },
     "t_mapping(t_bytes32,t_struct(AdminPayload)_storage)": {
       "encoding": "mapping",

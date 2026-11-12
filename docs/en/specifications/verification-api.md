@@ -195,12 +195,12 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
 
   "spec_version": "SPEC-API-0001@1.0.0",
   "sdk_version": "@tamga-network/verifier@0.8.2",
-  "checks_performed": ["A1","A2","A3","A3b","A3c","A3d","A4","A5","A6","A7","A8",
-                       "B1","B2","B3","B4","B5","B6",
+  "checks_performed": ["A1","A2","A3","A3b","A3d","A4","A5","A6","A7","A8",
+                       "B1","B2","B3","B4","B6",
                        "C1","C2","C3","C4",
                        "D1","D2","D3","D4","D5","D6",
-                       "E1","E2","E3"],
-  "checks_skipped": [],
+                       "E1","E2","E3","E4"],
+  "checks_skipped": ["A3c","B5"],
 
   "issuer": {
     "issuer_id": "0x7f3a…",
@@ -231,6 +231,8 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
   "evaluated_at": "2026-09-09T09:12:44Z"
 }
 ```
+
+**`checks_skipped` in the example (implementation note, 2026-11-12).** The example is the result the reference implementation (`@tamga-network/verifier`) returns for an SD-JWT VC presentation when an audit sink is given. The reference implementation does not perform two steps today and reports them in `checks_skipped` for every presentation: `A3c` (CRL/OCSP query for the leaf certificate) and `B5` (`extends` chain). `E4` is in `checks_performed` because the audit record was written; without an audit sink it also appears in `checks_skipped` (§1.E, `E4`).
 
 | Field | Meaning |
 |---|---|

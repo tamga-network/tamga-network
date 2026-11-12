@@ -128,6 +128,16 @@ Name (public ABI; following the existing error naming pattern — `TooManyDelega
 - Remaining limit (deliberate): in a two-member network, if the other member does not vote to admit a new member, the exit does
   not take place on chain. The member can stop its validator and stop writing records; the membership record continues. This
   follows from a two-member network behaving like a partnership ([[SPEC-BC-0001]] §1).
+- **Implementation note (2026-11-12; the decision itself is unchanged) — key backup while the network has two members.** If a
+  member of a two-member network loses its governance key (today the same key as the validator node key), that member cannot
+  vote. The remaining member cannot pass any proposal alone (minimum absolute vote 2); the member that lost its key cannot be
+  removed (there is no removal in a two-member network, [[SPEC-BC-0001]] §1) and cannot withdraw (GC1; withdrawal also needs
+  the same key). The only way to change a validator address is re-admission, which needs two votes. Governance then falls into
+  the lock that GC1 prevents, with no way back. For this reason, with the approval of project management (2026-11-12), the
+  operating rule is: **until a third member joins, every member must keep a backup of its governance key that is stored in a
+  place separate from the key itself and has been tested by restoring it.** The rule is an operating rule (the contract cannot
+  check it); its place in the operations document is [[ARCH-0002]] Step 11. In a network of three or more members, a member that
+  loses its key can be removed by the votes of the others and re-admitted with a new address; a backup is recommended there too.
 
 # Status
 

@@ -122,6 +122,16 @@ Ad (ictimai ABI; mövcud xəta adlandırma qaydasına görə — `TooManyDelegat
 - Qalan məhdudiyyət (şüurlu): iki üzvlü şəbəkədə digər üzv yeni üzvün qəbuluna səs verməsə, çıxış zəncirdə baş tutmur. Üzv
   validatorunu dayandıra və qeyd yazmağı saxlaya bilər; üzvlük qeydi davam edir. Bu, iki üzvlü şəbəkənin ortaqlıq kimi
   davranmasının nəticəsidir ([[SPEC-BC-0001]] §1).
+- **Tətbiq qeydi (2026-11-12; qərarın məzmunu dəyişmədi) — iki üzvlü dövrdə açarın ehtiyat nüsxəsi.** İki üzvlü şəbəkədə bir
+  üzvün idarəetmə açarı (bu gün validator qovşaq açarı ilə eyni açardır) itərsə, həmin üzv səs verə bilmir. Qalan üzv təkbaşına
+  heç bir təklifi keçirə bilmir (minimal mütləq səs 2); açarını itirən üzv çıxarıla bilmir (iki üzvlü şəbəkədə çıxarma yoxdur,
+  [[SPEC-BC-0001]] §1) və çıxa bilmir (GC1; çıxış da eyni açarı tələb edir). Validator ünvanını dəyişməyin yeganə yolu yenidən
+  qəbuldur, o da iki səs tələb edir. İdarəetmə GC1-in qarşısını aldığı kilidlənməyə bu yolla düşür və geri dönüşü yoxdur. Buna
+  görə, layihə rəhbərliyinin təsdiqi ilə (2026-11-12), istismar qaydası: **üçüncü üzv qoşulana qədər hər üzvün idarəetmə
+  açarının əsas açardan ayrı yerdə saxlanılan və bərpa edilərək sınanmış ehtiyat nüsxəsi məcburidir.** Qayda istismar
+  səviyyəsindədir (kontrakt bunu yoxlaya bilmir); istismar sənədindəki yeri [[ARCH-0002]] Addım 11. Üç və daha çox üzvlü şəbəkədə
+  açarını itirən üzv digər üzvlərin səsi ilə çıxarılıb yeni ünvanla yenidən qəbul edilə bilər; ehtiyat nüsxə orada da tövsiyə
+  olunur.
 
 # Status
 

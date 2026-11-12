@@ -4,7 +4,7 @@ title: "Education Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-16
+last_updated: 2026-11-12
 summary: >
   Təhsil sahəsindəki iki ümumi rəqəmsal sənəd növünün (tələbə sənədi, diplom) rulebook-u, Aİ Attestation Rulebook şablonunun bölmə strukturu ilə: atributlar və metaməlumatlar, hüquqi kateqoriya, SD-JWT VC kodlaşdırması və seçici paylaşım, istifadə və sənəd vermə şərtləri, autentifikasiya səviyyəsi, yoxlama siyasətləri, etibar lövbərləri, etibarlılıq və ləğv, semantik əsas (ELM v3 / ISCED-F / EQF) və Aİ ilə uyğunluq. Tamga Rulebook-dan ([[FW-RB-0001]]) törəyir; texniki sxem SPEC-SCHEMA-0002 sənədindədir.
 translation_of: FW-RB-0002
@@ -288,7 +288,7 @@ bağlılığı. Növə xas qaydalar:
 |---|---|
 | `job-application-degree` (məzunluğun təsdiqi) | `vct = DiplomaCredential:1`; sənədi verən qurum `EDUCATION` kateqoriyasındadır və bu növ üçün səlahiyyətlidir; sinif ən azı I2 (**I3 SHOULD**); ləğv edilməyib; `is_graduate = true`, `eqf_level ≥ 6`; sənəd sahibinin təminat sahəsi yoxdur — diplom növü T2 ilə bağlanıb |
 | `student-discount` | `vct = StudentCredential:1`; sənədi verən qurum ən azı I2; müddəti bitməyib; yalnız `is_enrolled = true` |
-| `campus-access` | `student-discount` ilə eyni və giriş kartı qeydi; müddətli razılıq ən çoxu 6 ay |
+| `campus-access` | `student-discount` ilə eyni və giriş kartı qeydi; müddətli razılıq ən çoxu 6 ay (184 gün) |
 | Yüksək riskli (dövlət, bank) | Yuxarıdakılar və şəxsiyyət sənədi və ya PID ilə üz uyğunlaşdırması (yoxlayan tərəfin məsuliyyəti) |
 
 Siyasət adları istinad yoxlayan tərəfdə olduğu kimidir. Nəticə üç dəyərlidir; `INDETERMINATE` qəbul demək deyil; istifadəçiyə "yoxlanıla bilmədi"

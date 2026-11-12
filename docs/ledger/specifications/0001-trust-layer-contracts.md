@@ -31,6 +31,14 @@ summary: >
 > (GC2). [[ADR-0002]] #5 bu kayıtla okunur (GC3). §1; §14 madde 8 kapandı. Depolama düzeni ve fonksiyon imzaları değişmedi;
 > ABI'ye bir hata eklendi.
 
+> **Sürüm notu 1.0.0 (2026-11-12, ikinci kontrol — yeniden kabul ve eski oylar).** Yürütmede bir destek oyu yalnız üyenin **son
+> kabulünden sonra** verilmişse sayılır (§1). Önce: çekilen ya da çıkarılan üye aynı validator adresiyle yeniden kabul edilince
+> açık önerilerdeki eski "evet" oyları kendiliğinden yeniden sayılıyordu. Yeniden kabul edilen üye oyunu yeniden verir; aynı yönde
+> yeniden verilen eski oy `AlreadyVoted` ile reddedilmez (ham sayaçlar değişmez). ABI değişmedi. Depolama: Governance'a oy
+> zamanı eşlemesi eklendi, `__gap` 38 → 37 (taban çizgisi güncellendi). Kod boyutu 23.121 bayt (pay 1.455). Zaten dağıtılmış bir
+> Governance bu düzeltmeyi yükseltme oyuyla alır; yükseltmeden önce verilmiş oyların zamanı kayıtlı olmadığından açık önerilerde
+> oylar yeniden verilir.
+
 > **Sürüm notu 1.0.0 (2026-11-12, ikinci kontrol).** Göç yürütücüsü yalnız kendi yeniden oynattığı ağ şemasına sürüm özeti
 > ekler; Governance'ın kaydettiği şemaya ekleyemez (`NetworkTierRequiresGovernance`, §16.1 — kullanımdan kaldırmayla aynı sınır).
 > Kontrat testlerinin süreç içi ağı Cancun'a sabitlendi ([[ADR-0077]] uygulama notu). ABI ve depolama düzeni değişmedi.
@@ -216,7 +224,11 @@ function setDelegateKeys(bytes2 stateCode, address[] calldata keys) external;
 sayılmaz); protokol yükseltme **2/3**; NETWORK şeması **2/3** (§4.3); kayıt
 yönetimi önerileri **2/3** ([[ADR-0055]]). Yürütmede destek oyları bugünkü
 `ACTIVE` üyelerin validator adresinden yeniden sayılır: çekilen ya da çıkarılan
-üyenin eski oyu eşiği dolduramaz (GV3; 2026-10-19 güvenlik turu). Protokol
+üyenin eski oyu eşiği dolduramaz (GV3; 2026-10-19 güvenlik turu). Oy ayrıca
+üyenin **son kabulünden sonra** verilmiş olmalıdır (oy zamanı ≥ üyenin `joinedAt`
+değeri; 2026-11-12): yeniden kabul edilen üyenin önceki üyelik dönemindeki oyu
+sayılmaz, üye oyunu yeniden verir (aynı yönde yeniden verilebilir; ham
+`forVotes` / `againstVotes` sayaçları değişmez). Protokol
 yükseltmesi eşik dolunca kuyruğa alınır ve en erken 7 gün sonra, eşik yeniden
 sayılarak uygulanır; katılmayan devlet bu sürede çekilebilir ([[ADR-0055]]/GE1).
 

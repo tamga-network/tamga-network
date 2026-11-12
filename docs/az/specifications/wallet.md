@@ -181,7 +181,7 @@ rəqəmsal cüzdanın arxa planda səssizcə təqdimat etməsinin qarşısı al�
 yenilənməsi) sorğu göstərmir; doğrulama tələb olunursa, həmin dövr ötürülür.
 
 **Keçid kartı icazəsinin müddəti (WL13).** Keçid kartı hər göstərişdə istifadəçi doğrulaması tələb etməyən yeganə axındır; buna
-görə qeydiyyat zamanı verilən razılıq müddətlə məhdudlaşdırılır. Rəqəmsal cüzdan müddəti 6 ayı keçən icazəni (`exp` − `iat` və
+görə qeydiyyat zamanı verilən razılıq müddətlə məhdudlaşdırılır. Rəqəmsal cüzdan müddəti 6 ayı (184 gün) keçən icazəni (`exp` − `iat` və
 `exp` − indi) saxlamır. Yeganə istisna birdəfəlik biletdir (`single_use`): icazənin `exp` dəyəri tədbirin sonudur
 ([[ADR-0012]] K4) və bilet ilk keçiddə tükənir; tədbir 6 aydan sonrakı tarixdə ola bildiyi üçün bu icazə 6 aylıq həddə tabe
 deyil. İcazənin digər yoxlamaları (qeydiyyatda olan RP/terminal qrupu, əhatə, geri götürmə) birdəfəlik biletdə də eyni qaydada
@@ -580,7 +580,7 @@ məlumatlar qurumdadır; yol TS7 silmə tələbidir (Tarixçə → "Məlumatlar�
 | **WL10** | Tamga istifadəçi adından bərpa açarı saxlamır. |
 | **WL11** | Hər təqdimat istifadəçinin təsdiqlənməsini tələb edir: təhlükəsiz aparat açarı olan cihazda cihazın biometrikası və ya cihaz parolu (rəqəmsal sənəd açarı telefon kilidinə bağlıdır); proqram açarı yolunda (S-9) tətbiq PIN-i və ya biometrika. Ehtiyat yol (fallback) və imtina §2.3-dədir. |
 | **WL12** | Keçid kartı jetonu (`tamga-pass+jwt`) fərdi məlumatlar daşımır: yalnız `iss` (qeyri-şəffaf pass_id), `aud`, `iat` (≤ indi + 30 s), `exp` (ömrü ≤ 60 s; ≤ indi + 60 s + 30 s saat sürüşməsi tolerantlığı), `jti`; rəqəmsal sənədin məzmunu və claim-lər QR-a daxil olmur ([[ADR-0012]]). |
-| **WL13** | Keçid kartı yalnız etibar siyahısında qeydiyyatda olan RP/terminal qrupu üçün yaradılır və qeydiyyat zamanı verilən razılıq müddətli (≤ 6 ay) və əhatəsi müəyyən olunmuşdur; istifadəçi razılığı istədiyi an geri götürür (grant silinir). Birdəfəlik bilet (`single_use`) 6 aylıq həddən azaddır: icazəsi tədbirin sonunda bitir (`exp` = tədbirin sonu, [[ADR-0012]] K4) və ilk keçiddə tükənir. WL11-in yeganə istisnasıdır. |
+| **WL13** | Keçid kartı yalnız etibar siyahısında qeydiyyatda olan RP/terminal qrupu üçün yaradılır və qeydiyyat zamanı verilən razılıq müddətli (ən çoxu 6 ay — 184 gün) və əhatəsi müəyyən olunmuşdur; istifadəçi razılığı istədiyi an geri götürür (grant silinir). Birdəfəlik bilet (`single_use`) 6 aylıq həddən azaddır: icazəsi tədbirin sonunda bitir (`exp` = tədbirin sonu, [[ADR-0012]] K4) və ilk keçiddə tükənir. WL11-in yeganə istisnasıdır. |
 | **WL14** | Keçid kartının hər göstərilməsi `presentation_log`-a yazılır (WL4 çərçivəsində, cihazda); Göstər ekranı canlı saatı və müddəti göstərir. |
 | **WL15** | Sayt psevdonim açarları sənəd sahibinin açarı deyil: yalnız [[ADR-0031]] toxumundan sayt və sıra nömrəsi üzrə törədilir, daimi saxlanmır; toxum yalnız cihazın təhlükəsiz anbarında qalır, ehtiyat nüsxəyə, köçürmə faylına və heç bir təqdimata daxil olmur. |
 

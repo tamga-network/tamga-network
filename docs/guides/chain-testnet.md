@@ -433,7 +433,8 @@ zincir (herkesçe bilinen test anahtarı yok, sandbox seti yok) ne de gerçek a�
 
 ::: warning Yalnız test ve hazırlık ağları için
 Gerçek ağda bütün anahtarlar kimsede değildir: her devlet validator anahtarını kendi donanımında üretir, imza anahtarlarını HSM'de
-tutar ([[GUIDE-0015]] §3). Anahtar haritası, test ağında bütün devletleri tek kişi oynadığı için vardır. Onu okuyan her araç;
+tutar ([[GUIDE-0015]] §3). Ağda iki üye varken her üye yönetişim anahtarının ayrı yerde saklanan, sınanmış bir yedeğini de
+tutar: tek anahtarın kaybı yönetişimi kilitler ([[ADR-0076]] uygulama notu). Anahtar haritası, test ağında bütün devletleri tek kişi oynadığı için vardır. Onu okuyan her araç;
 `purpose` `test` değilse, zincir kimliği 31339 değilse ya da bir anahtar dosyası `0600` değilse veya kendi adresine ait değilse
 haritayı reddeder.
 :::

@@ -176,7 +176,7 @@ prompt; if verification is needed, that round is skipped.
 
 **Lifetime of the pass grant (WL13).** The pass is the only flow that does not ask for user verification at every display; this
 is why the consent given at registration is limited in time. The wallet does not store a grant that lasts longer than 6 months
-(`exp` − `iat` and `exp` − now). The only exception is the single-use ticket (`single_use`): the grant's `exp` is the end of the
+(184 days; `exp` − `iat` and `exp` − now). The only exception is the single-use ticket (`single_use`): the grant's `exp` is the end of the
 event ([[ADR-0012]] K4) and the ticket is used up at the first passage; because the event can be more than 6 months ahead, this
 grant is not subject to the 6-month ceiling. The other checks on the grant (registered RP/terminal group, scope, withdrawal)
 apply to a single-use ticket unchanged.
@@ -610,7 +610,7 @@ my data").
 | **WL10** | Tamga does not hold a recovery key on the user's behalf. |
 | **WL11** | Every presentation requires user verification: on a device with a secure hardware key, the device's biometrics or device passcode (the credential key is bound to the phone lock); on the software-key path (S-9), the app PIN or biometrics. Fallback and cancellation in §2.3. |
 | **WL12** | The pass token (`tamga-pass+jwt`) carries no personal data: only `iss` (opaque pass_id), `aud`, `iat` (≤ now + 30 s), `exp` (lifetime ≤ 60 s; ≤ now + 60 s + 30 s clock-skew tolerance), `jti`; credential content and claims do not enter the QR code ([[ADR-0012]]). |
-| **WL13** | A pass is generated only for an RP/terminal group registered in the trust list, and the consent given at registration is time-limited (≤ 6 months) and scoped; the user can withdraw consent at any moment (the grant is deleted). A single-use ticket (`single_use`) is exempt from the 6-month ceiling: its grant ends when the event ends (`exp` = end of the event, [[ADR-0012]] K4) and it is used up at the first passage. It is the only exception to WL11. |
+| **WL13** | A pass is generated only for an RP/terminal group registered in the trust list, and the consent given at registration is time-limited (at most 6 months — 184 days) and scoped; the user can withdraw consent at any moment (the grant is deleted). A single-use ticket (`single_use`) is exempt from the 6-month ceiling: its grant ends when the event ends (`exp` = end of the event, [[ADR-0012]] K4) and it is used up at the first passage. It is the only exception to WL11. |
 | **WL14** | Every display of a pass is written to the `presentation_log` (within WL4, on the device); the Show screen displays a live clock and the remaining time. |
 | **WL15** | Site pseudonym keys are not holder keys: they are derived only from the [[ADR-0031]] seed per site and index, and are not stored persistently; the seed stays only in the device's secure storage and enters no backup, no migration file and no presentation. |
 

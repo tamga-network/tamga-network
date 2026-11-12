@@ -3,6 +3,7 @@
     "list": "tl-tr",
     "date": "2026-11-11",
     "previous_version": 240,
+    "previous_version_hash": "sha256:1bdff955fa45be29e677fc8d69184b886fec89f46d78d72b8c87734736f7b7a4",
     "issuers": 2,
     "relying_parties": 1,
     "terminal_groups": 2,

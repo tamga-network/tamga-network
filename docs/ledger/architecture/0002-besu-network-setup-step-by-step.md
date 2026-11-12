@@ -232,6 +232,15 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 ## 11. Operasyon, izleme, yedekleme
 - Metrik/log (Prometheus/Grafana), SLA, otomatik yeniden başlatma.
 - Anahtar rotasyonu, felaket kurtarma, node bakımı prosedürleri.
+- **Yönetişim anahtarının yedeği (iki üyeli dönemde zorunlu; [[ADR-0076]] uygulama notu, 2026-11-12).** Ağda iki etkin üye
+  varken bir üyenin yönetişim anahtarı (bugün validator düğüm anahtarı — Açık Konular 6) kaybolursa hiçbir öneri geçemez, o üye
+  çıkarılamaz ve çekilemez: yönetişim geri dönüşsüz kilitlenir. Kural: üçüncü üye katılana kadar her üye, yönetişim anahtarının
+  asıl anahtardan **ayrı bir yerde** (ayrı bina ya da ayrı kasa; HSM'de tutuluyorsa üreticinin sarılı anahtar yedeği ya da
+  ikinci HSM) saklanan bir yedeğini tutar ve yedeği **sınar**: yedekten geri yüklenen anahtarın adresi Governance'taki
+  validator adresiyle aynı olmalı ve bu anahtarla bir sınama imzası atılabilmelidir. Sınama, ağ açılmadan önce ve her anahtar
+  değişiminden sonra yapılır; tarihi işletmecinin kendi kaydına yazılır. Yedek, asıl anahtarla aynı korumayı ister (erişim
+  denetimi, şifreli saklama); depoya, ortak sürücüye ya da düğüm sunucusuna konmaz. Üç ve daha çok üyeli ağda yedek önerilir
+  (anahtarını kaybeden üye öteki üyelerin oyuyla çıkarılıp yeni adresle yeniden kabul edilebilir).
 - Güvenlik sertleştirme referansı: depo kökündeki `security.sh` yaklaşımı.
 
 ---

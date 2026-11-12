@@ -435,7 +435,8 @@ yerli zəncir (hamıya məlum test açarı yoxdur, sandbox dəsti yoxdur), nə d
 
 ::: warning Yalnız test və hazırlıq şəbəkələri üçün
 Real şəbəkədə bütün açarlar heç kimdə olmur: hər dövlət validator açarını öz avadanlığında yaradır, imza açarlarını HSM-də saxlayır
-([[GUIDE-0015]] §3). Açar xəritəsi test şəbəkəsində bütün dövlətləri bir nəfər oynadığı üçün mövcuddur. Onu oxuyan hər alət
+([[GUIDE-0015]] §3). Şəbəkədə iki üzv olduqda hər üzv idarəetmə açarının ayrı yerdə saxlanılan, sınanmış ehtiyat nüsxəsini də
+saxlayır: tək açarın itməsi idarəetməni kilidləyir ([[ADR-0076]] tətbiq qeydi). Açar xəritəsi test şəbəkəsində bütün dövlətləri bir nəfər oynadığı üçün mövcuddur. Onu oxuyan hər alət
 `purpose` `test` deyilsə, zəncir identifikatoru 31339 deyilsə və ya açar faylı `0600` deyilsə ya da öz ünvanına aid deyilsə
 xəritəni rədd edir.
 :::

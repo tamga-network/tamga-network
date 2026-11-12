@@ -290,7 +290,11 @@ istehlakçılar yeniləndikdən sonra), `bits`/`size` format qaydası və `list_
   qalmalıdır (məs. `invalidates_from`-u dəyişdirilən sətir silinmiş sayılır); sxem səlahiyyəti sətrində yeganə sərbəst dəyişiklik
   açıq dövrün bağlanmasıdır (`valid_until` yox → tarix). Sayılanlara sənəd verənin `delegate_keys` sətri və LOTL-dakı
   `national_lists`, `wallet_providers`, `external_lists` qeydləri əlavə olundu (eyni adlı istəyə bağlı saylar): ləğv siyahısı
-  açarı yenilənəndə köhnə açar siyahıdan atılmır, bitmə tarixi (`valid_to`) ilə qalır. Versiya birdən çox atladıqda
+  açarı yenilənəndə köhnə açar siyahıdan atılmır, bitmə tarixi (`valid_to`) ilə qalır. Siyahıda qalan istifadə (`scopes`) və keçid
+  qrupu (`terminal_groups`) sətrinin etibarlılıq sahələri də qorunur: `valid_from` dəyişmir; `valid_until` yalnız açıq dövrün
+  bağlanması istiqamətində dəyişir (bitməsi olmayan və ya bitməsi hələ çatmamış sətrə daha erkən bitmə). Bağlanmış dövr
+  dəyişdirilmir, heç bir bitmə irəli çəkilmir və ya silinmir: yeni dövr yeni identifikatorlu yeni sətirdir. Belə dəyişmiş sətir
+  silinmiş sayılır; məqsəd mətni kimi izahedici sahələr redaktə oluna bilər. Versiya birdən çox atladıqda
   yükləyici aradakı xülasələri yoxlaya bilmir; yalnız "atlayan versiya sələfi kimi son görüləni göstərir" ziddiyyətini rədd
   edir (tam yoxlama arxivlə).
 - **TL11.** Dərcçi mənbədə hər qeyd növü üçün məlum sahələrin icazə siyahısını tətbiq edir: naməlum və ya hesablanan sahə
