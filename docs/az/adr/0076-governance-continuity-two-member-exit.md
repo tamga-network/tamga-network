@@ -1,17 +1,18 @@
 ---
 document_id: ADR-0076
 title: "İki üzvlü şəbəkədə çıxış və idarəetmənin davamlılığı"
-status: Proposed
+status: Active
+review_status: Completed
 version: 1.0.0
 created: 2026-11-11
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Governance kontraktında minimal mütləq səs sayı 2-dir. Aktiv üzv sayı 2 ikən bir üzv birtərəfli çıxarsa (`withdraw`), say 1-ə
   düşür; qalan üzv heç bir təklifi icra edə bilmir, yeni üzv qəbul edə bilmir və özü də çıxa bilmir: idarəetmə həmişəlik
   kilidlənir. Çıxış hüququ (ADR-0002 #5) ilə idarəetmənin davamlılığı bu nöqtədə toqquşur. Təklif: (a) aktiv üzv sayı 2 ikən
   `withdraw` rədd edilir; çıxmaq istəyən üzv əvvəlcə üçüncü üzvün qəbulunu gözləyir. Alternativ (b): çıxış sərbəst qalır, tək üzv
-  qalanda hədd 1-ə enir. Tövsiyə olunan (a). Həmçinin tək təsisçili quruluşun yalnız yerli inkişafda qalıb-qalmayacağı soruşulur.
-  Qərar gözlənilir.
+  qalanda hədd 1-ə enir. Tövsiyə olunan (a). Qəbul edildi (2026-11-12): (a), tövsiyə edildiyi kimi. Çıxmaq istəyən üzvün yolu:
+  əvvəlcə üçüncü üzv qəbul edilir, sonra üzv çıxır. Tək təsisçili quruluş yalnız yerli inkişaf üçündür.
 domain: Governance
 related: ["[[ADR-0002]]", "[[ADR-0009]]", "[[ADR-0055]]", "[[SPEC-BC-0001]]"]
 translation_of: ADR-0076
@@ -22,7 +23,8 @@ source_version: 1.0.0
 
 Şəbəkənin ortaq qərarları (yeni üzvün qəbulu, yeniləmə, şəbəkə sxemi) ən azı iki üzvün səsi ilə qəbul edilir. Şəbəkədə iki üzv
 olanda biri öz istəyi ilə çıxarsa, tək üzv qalır və tək üzv heç bir qərarı təkbaşına qəbul edə bilmir. Yeni üzv də qəbul edilə
-bilmədiyi üçün şəbəkə bu vəziyyətdən çıxa bilmir. Bu təklif həmin nöqtəyə düşməyin qarşısını alan qaydanı müəyyən edir.
+bilmədiyi üçün şəbəkə bu vəziyyətdən çıxa bilmir. Bu qərar həmin nöqtəyə düşməyin qarşısını alır: iki üzvlü şəbəkədə birtərəfli
+çıxış rədd edilir; çıxmaq istəyən üzv əvvəlcə üçüncü üzvün qəbul edilməsini gözləyir, sonra səsvermə olmadan çıxır.
 
 # Kontekst
 
@@ -30,7 +32,8 @@ bilmədiyi üçün şəbəkə bu vəziyyətdən çıxa bilmir. Bu təklif həmin
 - [[SPEC-BC-0001]] §1 (müstəqil yoxlama tapıntısı R6): 2/3 qaydası üç üzvdən az olduqda mənasını itirdiyi üçün `requiredVotes`
   heç vaxt 2-dən aşağı düşmür. Eyni bölmə iki üzvlü şəbəkədə çıxarmanın mümkün olmadığını, hər iki tərəfin "yalnız könüllü
   `withdraw` edə biləcəyini" deyir.
-- Kontrakt auditi (2026-11-11), testlə təsdiqləndi: aktiv üzv sayı 2 ikən `withdraw` sayı 1-ə endirir. Bundan sonra
+- Kontrakt auditi (2026-11-11), testlə təsdiqləndi (qərardan əvvəlki davranış): aktiv üzv sayı 2 ikən `withdraw` sayı 1-ə
+  endirirdi. Bundan sonra
   - qalan üzvün hər təklifi `ThresholdNotMet(1, 2)` ilə düşür (yeni üzvün qəbulu daxil);
   - qalan üzv çıxa bilmir (`LastValidator`);
   - kontraktlar yenilənə bilmir, şəbəkə sxemi yazıla bilmir, siyahı lövbəri yazıcıları və köç rejimi idarə oluna bilmir.
@@ -39,7 +42,7 @@ bilmədiyi üçün şəbəkə bu vəziyyətdən çıxa bilmir. Bu təklif həmin
 - Eyni vəziyyət quruluşda da yarana bilər: `initialize` tək təsisçini qəbul edir; tək üzvlə heç bir təklif icra oluna bilmir. Bu
   gün bu yalnız yerli inkişaf quraşdırmalarında istifadə olunur. İstehsal zənciri yoxdur və ən azı iki müstəqil operatorla açılır
   ([[ADR-0009]] K4).
-- İki bağlanmış qayda toqquşduğu üçün kod dəyişdirilmədi; bu sənəd qaydanı təklif edir.
+- İki bağlanmış qayda toqquşduğu üçün kod qərardan əvvəl dəyişdirilmədi; qayda bu sənədlə müəyyən edildi.
 
 # Seçimlər
 
@@ -65,15 +68,39 @@ cədvələ köçürülür):
    inkişaf və test şəbəkəsi quraşdırmaları bu gün tək təsisçi ilə işləyə bildiyi üçün bu layihə onu dəyişmir.
 4. Xəta adı və spesifikasiya mətni qəbulda təsdiqlənir.
 
-# Nəticələr (qəbul edilərsə)
+# Qərar (2026-11-12)
 
-- `Governance.withdraw`: şərtin bir sətirlik dəyişikliyi; yaddaş düzümü və xarici interfeys dəyişmir. Test: iki üzvlü şəbəkədə
-  çıxış rədd edilir, üçüncü üzv qəbul ediləndən sonra çıxış keçir.
-- [[SPEC-BC-0001]] §1 ("hər iki tərəf yalnız könüllü `withdraw` edə bilər" cümləsi) və §14 bənd 8; [[ADR-0002]]-yə tətbiq
-  qeydi.
-- Qəbul edilənə qədər kontraktın davranışı dəyişmir; əməliyyat qaydası qüvvədədir: iki üzvlü şəbəkədə çıxmazdan əvvəl üçüncü
-  üzv qəbul edilir. Mövcud davranış testlə qeydə alınıb (`contracts/test/review-2026-11-11-governance.test.ts`).
+**(a) tövsiyə edildiyi kimi qəbul edildi.** Məcburi qaydalar aşağıdakı GC1–GC3; ad cədvəldən sonra. Tək təsisçili quruluş
+dəyişmədi: yalnız yerli inkişaf üçündür; quruluşun ən azı iki təsisçi tələb etməsi ayrıca qərarlaşdırılır.
+
+# Dəyişməz qaydalar
+
+| Kod | Qayda |
+|---|---|
+| GC1 | Birtərəfli çıxış (`Governance.withdraw`) yalnız şəbəkədə ən azı üç aktiv üzv olanda keçir; aktiv üzv sayı 2 və ya daha az ikən rədd edilir (`TooFewMembers`). Nə çıxış, nə də çıxarılma aktiv üzv sayını minimal mütləq səs sayından (2) aşağı endirə bilməz: idarəetmə həmişə qərar qəbul edə bilən vəziyyətdə qalır. |
+| GC2 | İki üzvlü şəbəkədə çıxmaq istəyən üzvün yolu ardıcıldır: əvvəlcə üçüncü üzv qəbul edilir (`proposeStateAdmission`, iki üzvün səsi ilə), sonra üzv `withdraw` ilə çıxır; bu ikinci addım səsvermə tələb etmir. Qəbul baş tutana qədər üzv validatorunu dayandıra və qeyd yazmağı saxlaya bilər; üzvlüyü davam edir. |
+| GC3 | [[ADR-0002]] #5 bu qeydlə oxunur: çıxış hüququ ləğv olunmur, ardıcıllığa bağlanır. Ən azı üç aktiv üzvü olan şəbəkədə birtərəflidir, səsvermə tələb etmir və kodla təmin olunur. Çıxışın rəqəmsal sənədlərə təsiri dəyişmir: verilmiş rəqəmsal sənədlər və mövcud qeydlər etibarlı qalır ([[ADR-0002]] #4). |
+
+Ad (ictimai ABI; mövcud xəta adlandırma qaydasına görə — `TooManyDelegates(count, max)` nümunəsi):
+
+| Yer | Ad |
+|---|---|
+| `Governance` xətası | `TooFewMembers(uint32 active, uint32 required)` — `active`: çağırış anındakı aktiv üzv sayı; `required`: birtərəfli çıxış üçün tələb olunan ən az aktiv üzv sayı (3) |
+
+# Nəticələr
+
+- `Governance.withdraw`: şərtin bir sətirlik dəyişikliyi (`activeMemberCount ≤ 2` → rədd). Yaddaş düzümü və funksiya imzaları
+  dəyişmir; ABI-yə bir xəta əlavə olunur. Tək üzvlü (yerli inkişaf) quruluşda da çıxış eyni xəta ilə rədd edilir;
+  `LastValidator` yalnız çıxarılma təklifində qalır.
+- Testlər (`contracts/test/review-2026-11-11-governance.test.ts`, `contracts/test/governance.test.ts`): üç üzvdən biri çıxır
+  (3 → 2), iki üzvlü şəbəkədə çıxış rədd edilir (2 → 1), üçüncü üzv qəbul ediləndən sonra çıxış keçir və qalan iki üzv qərar
+  qəbul etməyə davam edir.
+- [[SPEC-BC-0001]] §1 və §14 bənd 8 (bağlandı); [[ADR-0002]]-yə tətbiq qeydi.
+- Qalan məhdudiyyət (şüurlu): iki üzvlü şəbəkədə digər üzv yeni üzvün qəbuluna səs verməsə, çıxış zəncirdə baş tutmur. Üzv
+  validatorunu dayandıra və qeyd yazmağı saxlaya bilər; üzvlük qeydi davam edir. Bu, iki üzvlü şəbəkənin ortaqlıq kimi
+  davranmasının nəticəsidir ([[SPEC-BC-0001]] §1).
 
 # Status
 
-**Proposed — 2026-11-11.** Layihə rəhbərliyinin qərarını gözləyir (2026-11-11 kontrakt auditi tapıntısı).
+**Accepted — 2026-11-12.** Layihə rəhbərliyinin təsdiqi ilə (2026-11-12): seçim (a), tövsiyə edildiyi kimi. DECISIONS: D-GOV-12.
+GC1–GC3 məcburidir. Tətbiq: `Governance.withdraw` ([[SPEC-BC-0001]] versiya qeydi).

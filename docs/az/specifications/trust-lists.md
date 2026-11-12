@@ -4,7 +4,7 @@ title: "Etibar siyahıları"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Bugünkü (zəncirsiz) mərhələnin etibar lövbəri olan imzalı, versiyalı və hash zəncirli etibar siyahılarının (lotl.jws, tl-{cc}.jws) və saatlıq lövbər jurnalının (anchors.jsonl) normativ formatı, dərc tezliyi, açar intizamı, TDT-first slotları, qeydin həyat dövrü və zəncirlə ekvivalentlik qaydaları. Hər sahə bir SPEC-BC-0001 kontrakt qeydinə uyğunlaşdırılır; oxuma yalnız TrustSource interfeysi vasitəsilə aparılır.
 translation_of: SPEC-TRUST-0001
@@ -294,8 +294,11 @@ istehlakçılar yeniləndikdən sonra), `bits`/`size` format qaydası və `list_
 - **§6 — qovluq yükləyicisində lövbər aktuallığı.** `loadTrustSourceFromDir` lövbər jurnalının aktuallıq həddini verilmədikdə
   **365 gün** götürür (əsas yükləyicidə 2 saat): bu yol saatlıq heartbeat-in işləmədiyi inkişaf və test qovluqları ilə də
   istifadə olunur. Bu standart dəyərlə lövbər jurnalının dayanması aktuallığı pozmur (aktuallıq yalnız siyahıların
-  `next_update`-indən gəlir); lövbər jurnalının aktuallığını da şərt etmək istəyən xidmət həddi (`anchorMaxAgeMs`, məs. 2 saat) özü verir — istinad
-  xidmətləri bu gün standart dəyəri istifadə edir. Xarici siyahılar: [[ADR-0036]] tətbiq qeydi.
+  `next_update`-indən gəlir); lövbər jurnalının aktuallığını da şərt etmək istəyən xidmət həddi (`anchorMaxAgeMs`, məs. 2 saat) özü verir.
+  İstinad yoxlayıcısı (Tamga Verify, 2026-11-12) dərc ünvanı HTTPS olanda həddi verir: standart dəyər **3 saat**,
+  `TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC` ilə tənzimlənir; son lövbər bundan köhnədirsə mənbə köhnəlmiş sayılır və nəticə
+  INDETERMINATE olur (REJECTED deyil). Yerli inkişafda (http) ayar verilmədikdə 365 günlük standart dəyər qüvvədədir. Xarici
+  siyahılar: [[ADR-0036]] tətbiq qeydi.
 - **Qeydiyyat əmrləri.** `registry.lock` altında işləyir (kilid saxlanılarkən yenilənir); siyahı yoxlaması imzalı siyahı
   yazılmadan uğursuz olarsa mənbə faylı əvvəlki vəziyyətinə qayıdır və dəyişiklik jurnalına sətir yazılmır. Müvəqqəti operator
   dəyəri yoxdursa real şəbəkədə dərc dayanır ([[ADR-0070]] tətbiq qeydi).

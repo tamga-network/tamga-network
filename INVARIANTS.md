@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-05
+last_updated: 2026-11-12
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 449 kodlanmış değişmez, 78 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 452 kodlanmış değişmez, 79 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -773,6 +773,17 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0075/RO5` | İmzalı listede de aynı kural: `dns_name` durumu ne olursa olsun ikinci kez kaydedilmez; sahiplik değişimi ve iptal sonrası yeniden kayıt yalnız proje yönetimi onaylı açık işlemle yapılır. Yeniden kayıt aynı kayda yeni dönem olarak eklenir (`status_history` → `ACTIVE`, gerekçede onay kaydı); eski kullanımlar kapanmış hâlde kalır. Gerçek ağ kayıt defterine yazım ayrıca `TAMGA_CONFIRM_PROD` kapısından geçer. |
 
 
+## ADR-0076
+
+*"İki üyeli ağda çıkış ve yönetişimin sürekliliği"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0076/GC1` | Tek taraflı çıkış (`Governance.withdraw`) yalnız ağda en az üç etkin üye varken geçer; etkin üye sayısı 2 ya da daha az iken reddedilir (`TooFewMembers`). Çıkış da çıkarma da etkin üye sayısını asgari mutlak oyun (2) altına indiremez: yönetişim her zaman karar alabilir durumda kalır. |
+| `ADR-0076/GC2` | İki üyeli ağda çıkmak isteyen üyenin yolu sıralıdır: önce üçüncü bir üye kabul edilir (`proposeStateAdmission`, iki üyenin oyuyla), sonra üye `withdraw` ile çekilir; bu ikinci adım oy gerektirmez. Kabul gerçekleşene kadar üye validator'ını durdurabilir ve kayıt yazmayı bırakabilir; üyeliği sürer. |
+| `ADR-0076/GC3` | [[ADR-0002]] #5 bu kayıtla okunur: çıkış hakkı kalkmaz, sıraya bağlanır. En az üç etkin üyeli ağda tek taraflıdır, oy gerektirmez ve kodla güvence altındadır. Çıkışın belgeler üzerindeki etkisi değişmez: verilmiş belgeler ve mevcut kayıtlar geçerli kalır ([[ADR-0002]] #4). |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1105,7 +1116,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-WALLET-0001/WL10` | Tamga kullanıcı adına kurtarma anahtarı tutmaz. |
 | `SPEC-WALLET-0001/WL11` | Her sunum kullanıcı doğrulaması gerektirir: güvenli donanım anahtarı olan cihazda cihazın biyometrisi ya da cihaz parolası (belge anahtarı telefon kilidine bağlıdır); yazılım anahtarı yolunda (S-9) uygulama PIN'i ya da biyometri. Geri düşüş ve vazgeçme §2.3'te. |
 | `SPEC-WALLET-0001/WL12` | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat` (≤ şimdi + 30 s), `exp` (ömür ≤ 60 s; ≤ şimdi + 60 s + 30 s saat kayması toleransı), `jti`; belge içeriği ve claim'ler QR'a girmez ([[ADR-0012]]). |
-| `SPEC-WALLET-0001/WL13` | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsamlıdır; kullanıcı rızayı istediği an geri alır (grant silinir). WL11'in tek istisnasıdır. |
+| `SPEC-WALLET-0001/WL13` | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsamlıdır; kullanıcı rızayı istediği an geri alır (grant silinir). Tek kullanımlık bilet (`single_use`) 6 aylık tavandan muaftır: izni etkinlik bitişinde sona erer (`exp` = etkinlik bitişi, [[ADR-0012]] K4) ve ilk geçişte tükenir. WL11'in tek istisnasıdır. |
 | `SPEC-WALLET-0001/WL14` | Her geçiş kartı gösterimi `presentation_log`'a yazılır (WL4 kapsamında, cihazda); Göster ekranı canlı saat ve süre gösterir. |
 | `SPEC-WALLET-0001/WL15` | Site takma ad anahtarları belge sahibi anahtarı değildir: yalnız [[ADR-0031]] tohumundan site ve sıra başına türetilir, kalıcı saklanmaz; tohum yalnız cihazın güvenli deposunda durur, yedeğe, taşıma dosyasına ve hiçbir sunuma girmez. |
 | `SPEC-WALLET-0001/W1` | Yazılım (güvenli bölge yok) | Desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5) |
@@ -1125,12 +1136,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 449 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 452 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CT, D, DL, DP, DS, DY, E, EP, FD, FN, GA, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CT, D, DL, DP, DS, DY, E, EP, FD, FN, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-05 (`scripts/sync-invariants.mjs`). Toplam 449 kodlanmış değişmez, 78 dokümanda.
+**Üretilen dosya** — 2026-11-12 (`scripts/sync-invariants.mjs`). Toplam 452 kodlanmış değişmez, 79 dokümanda.

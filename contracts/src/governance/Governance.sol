@@ -677,9 +677,12 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @inheritdoc IGovernance
+    /// @dev ADR-0076 GC1: çıkıştan sonra etkin üye sayısı asgari mutlak oyun (2) altına inemez. İki üyeli ağda tek üye
+    ///      kalsaydı hiçbir öneri yürütülemez, yeni üye kabul edilemezdi (yönetişim kalıcı kilitlenirdi); çıkmak isteyen
+    ///      üye önce üçüncü üyenin kabulünü bekler.
     function withdraw() external onlyValidator {
         bytes2 s = _validatorToState[msg.sender];
-        if (_activeCount <= 1) revert LastValidator();
+        if (_activeCount <= MIN_ABSOLUTE_VOTES) revert TooFewMembers(_activeCount, MIN_ABSOLUTE_VOTES + 1);
         _members[s].status = MemberStatus.WITHDRAWN;
         _activeCount--;
         emit StateWithdrawn(s);

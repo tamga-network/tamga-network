@@ -4,7 +4,7 @@ title: "Suverenlik prioritetli idarəetmə"
 status: Active
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-10-02
+last_updated: 2026-11-12
 summary: >
   Tamga Network idarəetməni SUVERENLİK PRİORİTETLİ üç səviyyəyə bölür: (1) Şəbəkəyə üzvlük (yeni dövlətin validator olması) validatorların əksəriyyəti (2/3) ilə səsə qoyulur; (2) Milli reyestrlər (sənədi verən qurum, relying party) YALNIZ müvafiq dövlətin səlahiyyətindədir, heç bir xarici səsvermə yoxdur (kod səviyyəsində onlyOwnerState); (3) Transsərhəd tanınma hər dövlət tərəfindən birtərəfli müəyyən edilir. Dövlətin çıxarılması vətəndaşların rəqəmsal sənədlərini etibarsız etmir; çıxış hüququ (withdraw) kodla təmin edilir. Model eIDAS LOTL presedentini izləyir. PM-BC-0001-dəki "təsisçi konsorsium + on-chain səsvermə" ifadəsini dəqiqləşdirir; SPEC-BC-0001 ilə tətbiq edilir.
 domain: Governance
@@ -62,6 +62,10 @@ başqasının hansı qurumu sənədi verən qurum edəcəyinə səs vermir. Qar�
    etibarsız olmur; onların taleyi digər dövlətlərin Səviyyə 3 tanınma qərarından asılıdır.
 5. **Çıxış hüququ (exit):** dövlət birtərəfli olaraq `withdraw()` ilə çıxa bilər; səsvermə
    tələb olunmur. Kod səviyyəsində təminat.
+   **Qeyd (2026-11-12, [[ADR-0076]]):** bu bənd daraldıldı. Birtərəfli çıxış şəbəkədə ən azı üç
+   aktiv üzv olanda qüvvədədir. İki üzvlü şəbəkədə çıxış rədd edilir (tək üzv qalsaydı, şəbəkənin
+   ortaq qərarları həmişəlik kilidlənərdi); çıxmaq istəyən üzv əvvəlcə üçüncü üzvün qəbul
+   edilməsini gözləyir, sonra səsvermə olmadan çıxır.
 6. **Transsərhəd yurisdiksiya (home-state suverenliyi):** vətəndaşın [[t:pseudonym|psevdonimini]]
    YALNIZ onun öz dövlətinin guardian həddi + öz məhkəməsi aça bilər; başqa dövlət
    aça bilməz. Təfərrüatlar [[PM-ID-0002]] (accountable disclosure) ilə işlənir; [[PM-ID-0001]]

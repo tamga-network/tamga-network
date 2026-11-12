@@ -4,7 +4,7 @@ title: "Güven katmanı kontratları"
 status: Active
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Hyperledger Besu (EVM) üzerinde çalışan güven katmanı kontratlarının kanonik
   veri şeması, fonksiyon arayüzleri ve değişmezleri. Sürüm 2.0.0 üç yapısal
@@ -17,14 +17,20 @@ summary: >
   onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
 ---
 
+> **Sürüm notu 1.0.0 (2026-11-12) — [[ADR-0076]] iki üyeli ağda çıkış.** `Governance.withdraw` etkin üye sayısı 2 ya da daha
+> az iken reddedilir (`TooFewMembers(active, required)`; GC1): çıkış etkin üye sayısını asgari mutlak oyun (2) altına indiremez,
+> yönetişim kilitlenmez. İki üyeli ağda çıkmak isteyen üye önce üçüncü üyenin kabulünü bekler, sonra oy gerekmeden çekilir
+> (GC2). [[ADR-0002]] #5 bu kayıtla okunur (GC3). §1; §14 madde 8 kapandı. Depolama düzeni ve fonksiyon imzaları değişmedi;
+> ABI'ye bir hata eklendi.
+
 > **Sürüm notu 1.0.0 (2026-11-11, kontrat denetimi).** Yükseltme önerisi yeni implementasyonun **kod özetini** sabitler; yürütmede
 > kod aynı değilse yükseltme düşer (`UpgradeImplementationChanged`, §9). `Governance.initialize` sıfır devlet kodunu reddeder;
 > öneri yükleri zincirden okunur (`getSchemaPayload`, `upgradePayloadOf`, `removalReasonOf`, §1). Göç yürütücüsü yalnız kendi
 > yazdığı ağ şemasını kullanımdan kaldırır (§16.1). C2'nin şema adımı `iat ≥ validFrom` ister; yetki kayıtsız şemaya verilemez
 > (§3.4, §16.1). Yazıcı çıkarma, yazıcı sayısını eşiğin altına düşüremez (§15). Göç penceresinde ileri tarihli şema başlangıcı
 > yazılır (§16.1). `contracts:check` kod boyutu payını da denetler (§9). Depolama: `SchemaRegistry` `__gap` 44 → 43; Governance
-> yükseltme kuyruğu yapısına bir üye (mapping değeri, `__gap` değişmedi). İki üyeli ağda çıkışın yönetişimi kilitlemesi açık
-> konudur (§14 madde 8; [[ADR-0076]], öneri).
+> yükseltme kuyruğu yapısına bir üye (mapping değeri, `__gap` değişmedi). İki üyeli ağda çıkışın yönetişimi kilitlemesi o gün açık
+> konuydu; 2026-11-12'de kapandı (§14 madde 8; [[ADR-0076]]).
 
 > **Sürüm notu 1.0.0 (2026-11-05) — Faz D kalanları ([[ADR-0073]] K1/K5/K6, [[ADR-0074]] K3, [[ADR-0075]] Sonuçlar).**
 > Doğrulayıcı durum yazımları tarih taşır: `suspendRelyingPartyAt`, `reinstateRelyingPartyAt`, `revokeRelyingPartyAt` (§16.1 tarih
@@ -185,7 +191,8 @@ function removalReasonOf(bytes32 proposalId) external view returns (bytes32);
 /// Güvenlik turu 2026-11-04: öneren, yürütülmemiş (açık ya da kuyruktaki) önerisini geri çeker → CANCELLED
 function cancelProposal(bytes32 proposalId) external onlyValidator;   // yalnız öneren (NotProposer); ProposalCancelled
 
-/// Tek taraflı çıkış — oy gerekmez (ADR-0002 #5)
+/// Tek taraflı çıkış — oy gerekmez (ADR-0002 #5). Etkin üye sayısı 2 ya da daha az iken reddedilir:
+/// TooFewMembers(active, required = 3) — ADR-0076 GC1; iki üyeli ağda önce üçüncü üye kabul edilir
 function withdraw() external onlyValidator;
 
 /// Devletin kendi iç işi — oy gerekmez. Yalnız o devletin VALIDATOR adresi çağırır; anahtar başka bir devletin
@@ -204,17 +211,33 @@ sayılarak uygulanır; katılmayan devlet bu sürede çekilebilir ([[ADR-0055]]/
 **Asgari mutlak oy = 2 (2.1.0 — review bulgusu R6):** 2/3 kuralı n<3'te
 dejenere olur. İki üyeli ağda çıkarma oylamasında eligible=1 → required=1;
 yani **bir devlet diğerini tek başına atabilirdi**. `requiredVotes` artık
-`max(ceil(2n/3), 2)` döner. Sonuç: iki üyeli ağda çıkarma **imkânsızdır** —
-iki taraf da yalnızca gönüllü `withdraw` edebilir. Bu bilinçli bir anayasal
-korumadır; üçüncü üye gelene kadar ağ bir ortaklık gibi davranır.
+`max(ceil(2n/3), 2)` döner. Sonuç: iki üyeli ağda çıkarma **imkânsızdır**.
+Bu bilinçli bir anayasal korumadır; üçüncü üye gelene kadar ağ bir ortaklık
+gibi davranır. (İlk metin "iki taraf da yalnızca gönüllü `withdraw` edebilir"
+diyordu; [[ADR-0076]] bunu değiştirdi — aşağıdaki paragraf.)
 
-**Bilinen sınır (kontrat denetimi 2026-11-11; açık konu, §14 madde 8).** Etkin üye
-sayısı 2 iken bir üye `withdraw` ederse sayı 1'e düşer; asgari mutlak oy 2
-olduğundan kalan üye hiçbir öneriyi (yeni üye kabulü dahil) yürütemez ve son
-üye çekilemez (`LastValidator`): yönetişim kalıcı olarak kilitlenir. Çıkış hakkı
-([[ADR-0002]] #5) ile yönetişimin sürekliliği burada çatışır; kural değişikliği
-karar ister ([[ADR-0076]], öneri). O zamana kadar işletim kuralı: iki üyeli ağda
-çekilmeden önce üçüncü üye kabul edilir.
+**İki üyeli ağda çıkış ([[ADR-0076]] GC1–GC3; 2026-11-12).** Tek taraflı çıkış
+(`withdraw`) yalnız ağda en az üç etkin üye varken geçer. Etkin üye sayısı 2 ya
+da daha az iken `TooFewMembers(active, required)` ile reddedilir (`required` = 3,
+yani asgari mutlak oy + 1). Gerekçe: iki üyeden biri çekilseydi sayı 1'e düşer,
+asgari mutlak oy 2 olduğundan kalan üye hiçbir öneriyi (yeni üye kabulü dahil)
+yürütemez, kendisi de çekilemezdi; yönetişim kalıcı olarak kilitlenirdi (kontrat
+denetimi 2026-11-11). Çıkış da çıkarma da etkin üye sayısını 2'nin altına
+indiremez.
+
+İki üyeli ağda çıkmak isteyen üyenin yolu:
+
+1. Üçüncü bir üye kabul edilir: `proposeStateAdmission` + iki üyenin oyu +
+   `execute` (etkin üye sayısı 3 olur).
+2. Üye `withdraw` çağırır; bu adım oy gerektirmez (etkin üye sayısı 2'ye iner,
+   kalan iki üye karar almayı sürdürür).
+
+Kabul gerçekleşene kadar üye validator'ını durdurabilir ve kayıt yazmayı
+bırakabilir; üyelik kaydı sürer. Öteki üye kabule oy vermezse çıkış zincirde
+gerçekleşmez: bu, iki üyeli ağın ortaklık gibi davranmasının bilinçli sonucudur.
+[[ADR-0002]] #5 bu kayıtla okunur: çıkış hakkı kalkmaz, sıraya bağlanır. Tek
+üyeli (yalnız yerel geliştirme) kuruluşta da `withdraw` aynı hatayla reddedilir;
+`LastValidator` yalnız çıkarma önerisinde (`proposeStateRemoval`) kalır.
 
 **Kuruluş (2026-11-11).** `initialize` sıfır devlet kodunu (`0x0000`) ve sıfır
 validator adresini reddeder (`ZeroAddress`). Tek kuruculu kuruluş yalnız yerel
@@ -1096,10 +1119,10 @@ sürtünme sağlar.
 6. `MAX_WRITES_PER_STATE_PER_DAY` değeri saha verisiyle kalibre edilmeli.
 7. Guardian/escrow kontratları ayrı kapsamda — [[SPEC-BC-0002]] mevcut, bu
    dokümanla arayüz tutarlılığı gözden geçirilmeli.
-8. **İki üyeli ağda çıkış** (kontrat denetimi 2026-11-11): etkin üye sayısı 2
-   iken `withdraw` yönetişimi kalıcı olarak kilitler (§1). Çıkış hakkı
-   ([[ADR-0002]] #5) ile çatıştığı için kural değişikliği karar bekler —
-   [[ADR-0076]] (öneri).
+8. ~~**İki üyeli ağda çıkış** (kontrat denetimi 2026-11-11): etkin üye sayısı 2
+   iken `withdraw` yönetişimi kalıcı olarak kilitler.~~ — **KAPANDI**
+   (2026-11-12, [[ADR-0076]]): iki üyeli ağda `withdraw` reddedilir; çıkmak
+   isteyen üye üçüncü üyenin kabulünden sonra çekilir (§1).
 9. **Başka devletin ulusal şemasına yetki** (2026-11-11): bir devlet kendi
    kurumunu başka bir devletin `NATIONAL` şemasına yetkilendirebilir (§3.4);
    kontrat engellemez. İzin mi verilecek, şema sahibi devletin onayı mı

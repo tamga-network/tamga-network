@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -292,8 +292,11 @@ listesinde seçim kuralı ve okuma setinde `relyingPartyByDnsName`; §7 devrin y
 - **§6 — dizin yükleyicisinin çapa tazeliği.** `loadTrustSourceFromDir` çapa günlüğü tazelik sınırını verilmezse **365 gün** alır
   (çekirdek yükleyicide 2 saat): bu yol saatlik heartbeat'in çalışmadığı geliştirme ve test klasörleriyle de kullanılır. Bu
   varsayılanla çapa günlüğünün durması tazeliği bozmaz (tazelik yalnız listelerin `next_update`'inden gelir); çapa
-  günlüğünün tazeliğini de koşul yapmak isteyen servis sınırı (`anchorMaxAgeMs`, ör. 2 saat) kendisi verir — referans servisler
-  bugün varsayılanı kullanır. Dış listeler: [[ADR-0036]] uygulama notu.
+  günlüğünün tazeliğini de koşul yapmak isteyen servis sınırı (`anchorMaxAgeMs`, ör. 2 saat) kendisi verir. Referans
+  doğrulayıcı (Tamga Verify, 2026-11-12) yayın adresi HTTPS iken sınırı verir: varsayılan **3 saat**,
+  `TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC` ile ayarlanır; son çapa bundan eskiyse kaynak bayattır ve sonuç INDETERMINATE olur
+  (RED değil). Yerel geliştirmede (http) ayar verilmezse 365 günlük varsayılan geçerlidir. Dış listeler: [[ADR-0036]]
+  uygulama notu.
 - **Kayıt komutları.** `registry.lock` altında çalışır (kilit tutulurken tazelenir); liste doğrulaması imzalı liste yazılmadan
   başarısız olursa kaynak dosya eski hâline döner ve değişiklik günlüğüne satır yazılmaz. Geçici işletmeci değeri yoksa gerçek
   ağda yayın durur ([[ADR-0070]] uygulama notu).

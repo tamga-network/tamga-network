@@ -160,7 +160,12 @@ export async function buildVerifyApp(
     (fp) => trust.isWalletProviderKey(fp),
   );
   const loadTrust = async () => {
-    const { trust: t, rootCertPem } = await loadTrustSourceFromDir(cfg.trustDist, { environment: cfg.network });
+    // Çapa günlüğü tazeliği: HTTPS yayında sıkı sınır (config.ts; varsayılan 3 saat), yerelde tanımsız → paketin gevşek varsayılanı.
+    // Sınır aşılınca yeni mantık yok: yükleyici kaynağı bayat işaretler, cevaplar UNKNOWN → INDETERMINATE (SPEC-TRUST-0001 §6).
+    const { trust: t, rootCertPem } = await loadTrustSourceFromDir(cfg.trustDist, {
+      environment: cfg.network,
+      anchorMaxAgeMs: cfg.anchorMaxAgeSec === undefined ? undefined : cfg.anchorMaxAgeSec * 1000,
+    });
     trust = t;
     rootDer = rootCertPem ? [pemToDer(rootCertPem)] : [];
   };

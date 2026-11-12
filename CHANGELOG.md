@@ -66,11 +66,13 @@ A code review of the changes above found the following; the fixes are part of 0.
 - **contracts — a schema with a future `validFrom` can be registered while a migration window is open.** It failed with
   `DateInFuture`, so a future-dated network schema proposal could not be executed during the window. The start is written as
   given and the first status time is the block time.
-
-Known and open: in a network with two active members, one member's `withdraw` leaves governance unable to execute anything
-(minimum of 2 votes), permanently. The rule change touches closed decisions and is proposed in ADR-0076 (not accepted yet);
-until then, admit a third member before a member of a two-member network withdraws.
-
+- **contracts — `withdraw` is refused in a network with two active members** (ADR-0076, accepted 2026-11-12; narrows
+  ADR-0002 #5). With two members, one member's `withdraw` left a single member, and a single member cannot execute anything
+  (minimum of 2 votes), cannot admit a member and cannot withdraw: governance was locked for good. `Governance.withdraw`
+  now reverts with `TooFewMembers(active, required)` while the network has 2 or fewer active members; leaving a network of
+  three or more members is unchanged (unilateral, no vote). A member that wants to leave a two-member network first has a
+  third member admitted, then withdraws. One error added to the ABI (the copy in `apps/chain-indexer` is regenerated);
+  function signatures and storage layout unchanged; Governance is 22,918 bytes.
 - **verifier — `verifyPresentation` returns only the values the policy asks for** (`required_claims`). Technical fields of an
   SD-JWT VC (`iss`, `iat`, `exp`, `vct`, `category`, `cnf`, `status` with the revocation index) and claims disclosed beyond the
   request are no longer in `claims` (AP3/AP4). An always-visible claim that the policy asks for now counts as disclosed: it
@@ -99,6 +101,12 @@ until then, admit a third member before a member of a two-member network withdra
 - **Tamga Verify sample site — a session opens only in the browser that started the presentation** (flow cookie);
   `/sample-site/start` is rate limited. The sign-in guide states the rule with example code. Optional
   `TAMGA_VERIFY_CLIENT_KEY_HEADER` separates rate-limit buckets per client behind the proxy.
+- **Tamga Verify — the anchor log must be fresh when the service runs on HTTPS.** The service loaded the lists with the
+  directory loader's default (anchor log accepted for 365 days), so a stopped anchor log did not make the trust source stale.
+  With an HTTPS public address (production and sandbox) the limit is now 3 hours (the heartbeat is hourly), set with
+  `TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC` (seconds). When the last anchor is older, the existing stale path applies: `/healthz`
+  reports `trust.healthy: false` and verifications return INDETERMINATE, not REJECTED. With an http address (local
+  development and tests) the behaviour is unchanged unless the setting is given. No package change.
 - **trust — a `dns_name` that appears in two records of one national list is ambiguous** (answers `null` by name and by client
   id) instead of the second record silently replacing the first; the list schema rejects a trailing dot, leading dot or empty
   label in `dns_name` (ADR-0075 RO5).
@@ -145,7 +153,8 @@ until then, admit a third member before a member of a two-member network withdra
   and software as W1**; W3 is never reported. A failing backend `info()` is no longer cached and no longer falls back to
   software keys silently (`hardware_unavailable`); a failed hardware key deletion is reported to the caller.
 - **docs** — SPEC-API-0001, SPEC-TRUST-0001, SPEC-WALLET-0001, ADR-0036 / ADR-0070 / ADR-0075 implementation notes and the
-  sign-in guide updated in tr / en / az.
+  sign-in guide updated in tr / en / az. SPEC-WALLET-0001 WL13 now states the exception the code already had: a single-use
+  ticket is exempt from the 6-month consent ceiling (its grant ends when the event ends, ADR-0012 K4).
 
 ### Correction to the 0.8.2 notes
 

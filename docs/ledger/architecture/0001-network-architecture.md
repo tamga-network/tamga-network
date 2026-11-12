@@ -168,7 +168,8 @@ Ağın kalbi, EVM üstünde çalışan güven katmanı kontratlarıdır. Yöneti
 kanonik olarak [[SPEC-BC-0001]]'de tanımlıdır:
 
 - **Governance (Katman 1):** yalnızca ağa üyelik (yeni devlet validator'ı) 2/3 oyla;
-  `withdraw()` tek taraflı.
+  `withdraw()` tek taraflı (ağda en az üç etkin üye varken; iki üyeli ağda önce üçüncü
+  üye kabul edilir — [[ADR-0076]]).
 - **Issuer Registry (Katman 2):** her devlet kendi issuer'larını **oy olmadan**
   kaydeder (`onlyOwnerState`); yumuşak iptal + `successorId`.
 - **Relying Party Registry (Katman 2):** RP kaydı + scope (aşırı-talep koruması).

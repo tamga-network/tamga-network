@@ -4,7 +4,7 @@ title: "Egemenlik öncelikli yönetişim"
 status: Active
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-10-02
+last_updated: 2026-11-12
 summary: >
   Tamga Network yönetişimini EGEMENLİK-ÖNCELİKLİ üç katmana ayırır: (1) Ağa üyelik
   (yeni devletin validator olması) validator çoğunluğuyla (2/3) oylanır; (2) Ulusal
@@ -67,6 +67,10 @@ Yönetişim üç katmana ayrılır; her katmanda karar **farklı** aktördedir:
    geçersiz olmaz; akıbetleri diğer devletlerin Katman 3 tanıma kararına kalır.
 5. **Çıkış hakkı (exit):** bir devlet tek taraflı `withdraw()` ile çekilebilir; oy
    gerekmez. Kod seviyesinde garanti.
+   **Not (2026-11-12, [[ADR-0076]]):** bu madde daraltıldı. Tek taraflı çıkış ağda en az üç
+   etkin üye varken geçerlidir. İki üyeli ağda çıkış reddedilir (tek üye kalsaydı ağın ortak
+   kararları kalıcı olarak kilitlenirdi); çıkmak isteyen üye önce üçüncü bir üyenin kabul
+   edilmesini bekler, sonra oy gerekmeden çekilir.
 6. **Sınır-ötesi yargı (home-state egemenliği):** bir vatandaşın [[t:pseudonym|takma adını]]
    YALNIZCA kendi devletinin guardian eşiği + kendi mahkemesi açabilir; başka devlet
    açamaz. Detay [[PM-ID-0002]] (accountable disclosure) ile işlenir; [[PM-ID-0001]]

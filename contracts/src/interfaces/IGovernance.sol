@@ -103,6 +103,8 @@ interface IGovernance is ITamgaErrors {
     error MemberExists(bytes2 stateCode);
     error UnknownMember(bytes2 stateCode);
     error LastValidator();
+    /// @dev ADR-0076 GC1: tek taraflı çıkış en az `required` (3) etkin üye ister; iki üyeli ağda önce üçüncü üye kabul edilir.
+    error TooFewMembers(uint32 active, uint32 required);
     error UpgradeTargetNotProxiable(address impl);
     /// @dev Bir validator adresi yalnız bir devlete ait olabilir (N1 — başka devletin koltuğu ele geçirilemez).
     error ValidatorInUse(address validator, bytes2 ownerState);
@@ -159,6 +161,8 @@ interface IGovernance is ITamgaErrors {
     function execute(bytes32 proposalId) external;
     /// @notice Öneren, yürütülmemiş (açık ya da kuyruktaki) önerisini geri çeker; geri çekilen öneri oylanamaz ve yürütülemez.
     function cancelProposal(bytes32 proposalId) external;
+    /// @notice Tek taraflı çıkış, oy gerekmez (ADR-0002 #5). Etkin üye sayısı 2 ya da daha az iken `TooFewMembers` ile
+    ///         reddedilir (ADR-0076 GC1): iki üyeli ağda çıkış, üçüncü üyenin kabulünden sonra kullanılır.
     function withdraw() external;
     function setDelegateKeys(bytes2 stateCode, address[] calldata keys) external;
 

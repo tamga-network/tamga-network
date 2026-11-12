@@ -146,15 +146,16 @@ describe("Governance / egemenlik (SPEC-BC-0001 §0–§1)", function () {
     );
   });
 
-  it("withdraw: tek taraflı çıkış, oy gerekmez; son validator çıkamaz", async () => {
+  it("withdraw: tek taraflı çıkış, oy gerekmez (3 → 2); iki üyeli ağda çıkış reddedilir (ADR-0076 GC1)", async () => {
     await f.as(f.governance, f.azValidator).withdraw();
     expect(await f.governance.isActiveMember(AZ)).to.equal(false);
     expect(await f.governance.activeMemberCount()).to.equal(2);
-    await f.as(f.governance, f.kzValidator).withdraw();
-    await expect(f.as(f.governance, f.trValidator).withdraw()).to.be.revertedWithCustomError(
-      f.governance,
-      "LastValidator",
-    );
+    for (const v of [f.kzValidator, f.trValidator]) {
+      await expect(f.as(f.governance, v).withdraw())
+        .to.be.revertedWithCustomError(f.governance, "TooFewMembers")
+        .withArgs(2, 3);
+    }
+    expect(await f.governance.activeMemberCount()).to.equal(2);
   });
 
   it("öneri süresi (30 gün) geçince yürütülemez", async () => {

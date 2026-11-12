@@ -4,7 +4,7 @@ title: "Rəqəmsal cüzdan qaydaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Rəqəmsal cüzdanın açar, yerli yaddaş, ehtiyat nüsxə və təsdiq dizaynını müəyyən edir. Mərkəzi nəticə bir ZİDDİYYƏTİN həllidir: [[SPEC-CRED-0001]] §3 sənəd sahibi açarının təhlükəsiz zonadan çıxa bilməyəcəyini bildirir, lakin layihə qeydlərindəki "24 sözlük seed ilə ehtiyat nüsxə" dizaynı açarın bərpa oluna biləcəyini nəzərdə tuturdu. İkisi eyni anda doğru ola bilməz — seed-dən törədilə bilən sənəd sahibi açarı isə rəqəmsal sənədi ÖTÜRÜLƏ BİLƏN edərək holder binding boşluğunu arxa qapıdan geri qaytarır. Qərar: açarlar seed-dən törədilmir; ehtiyat nüsxə sənədləri və manifesti daşıyır, cihaz dəyişdikdə sənədlərin YENİDƏN VERİLMƏSİ tələb olunur. Bundan əlavə, toplu verilən nüsxələrin hər yoxlayan tərəf üçün sabit ("yapışqan") istifadəsi iki açıq məsələni birdən bağlayır.
 translation_of: SPEC-WALLET-0001
@@ -175,6 +175,13 @@ Doğrulamanın yolu açarın harada saxlandığından asılıdır:
 **Təqdimatın təsdiqi sətri vacibdir:** Yoxlayan tərəfə təqdimat istifadəçinin şüurlu hərəkəti olmalıdır. Açıq
 rəqəmsal cüzdanın arxa planda səssizcə təqdimat etməsinin qarşısı alınır. Şəxsin başlatmadığı axınlar (keçid kartının yenilənməsi, nüsxənin
 yenilənməsi) sorğu göstərmir; doğrulama tələb olunursa, həmin dövr ötürülür.
+
+**Keçid kartı icazəsinin müddəti (WL13).** Keçid kartı hər göstərişdə istifadəçi doğrulaması tələb etməyən yeganə axındır; buna
+görə qeydiyyat zamanı verilən razılıq müddətlə məhdudlaşdırılır. Rəqəmsal cüzdan müddəti 6 ayı keçən icazəni (`exp` − `iat` və
+`exp` − indi) saxlamır. Yeganə istisna birdəfəlik biletdir (`single_use`): icazənin `exp` dəyəri tədbirin sonudur
+([[ADR-0012]] K4) və bilet ilk keçiddə tükənir; tədbir 6 aydan sonrakı tarixdə ola bildiyi üçün bu icazə 6 aylıq həddə tabe
+deyil. İcazənin digər yoxlamaları (qeydiyyatda olan RP/terminal qrupu, əhatə, geri götürmə) birdəfəlik biletdə də eyni qaydada
+tətbiq olunur.
 
 ---
 
@@ -559,7 +566,7 @@ məlumatlar qurumdadır; yol TS7 silmə tələbidir (Tarixçə → "Məlumatlar�
 | **WL10** | Tamga istifadəçi adından bərpa açarı saxlamır. |
 | **WL11** | Hər təqdimat istifadəçinin təsdiqlənməsini tələb edir: təhlükəsiz aparat açarı olan cihazda cihazın biometrikası və ya cihaz parolu (rəqəmsal sənəd açarı telefon kilidinə bağlıdır); proqram açarı yolunda (S-9) tətbiq PIN-i və ya biometrika. Ehtiyat yol (fallback) və imtina §2.3-dədir. |
 | **WL12** | Keçid kartı jetonu (`tamga-pass+jwt`) fərdi məlumatlar daşımır: yalnız `iss` (qeyri-şəffaf pass_id), `aud`, `iat` (≤ indi + 30 s), `exp` (ömrü ≤ 60 s; ≤ indi + 60 s + 30 s saat sürüşməsi tolerantlığı), `jti`; rəqəmsal sənədin məzmunu və claim-lər QR-a daxil olmur ([[ADR-0012]]). |
-| **WL13** | Keçid kartı yalnız etibar siyahısında qeydiyyatda olan RP/terminal qrupu üçün yaradılır və qeydiyyat zamanı verilən razılıq müddətli (≤ 6 ay) və əhatəsi müəyyən olunmuşdur; istifadəçi razılığı istədiyi an geri götürür (grant silinir). WL11-in yeganə istisnasıdır. |
+| **WL13** | Keçid kartı yalnız etibar siyahısında qeydiyyatda olan RP/terminal qrupu üçün yaradılır və qeydiyyat zamanı verilən razılıq müddətli (≤ 6 ay) və əhatəsi müəyyən olunmuşdur; istifadəçi razılığı istədiyi an geri götürür (grant silinir). Birdəfəlik bilet (`single_use`) 6 aylıq həddən azaddır: icazəsi tədbirin sonunda bitir (`exp` = tədbirin sonu, [[ADR-0012]] K4) və ilk keçiddə tükənir. WL11-in yeganə istisnasıdır. |
 | **WL14** | Keçid kartının hər göstərilməsi `presentation_log`-a yazılır (WL4 çərçivəsində, cihazda); Göstər ekranı canlı saatı və müddəti göstərir. |
 | **WL15** | Sayt psevdonim açarları sənəd sahibinin açarı deyil: yalnız [[ADR-0031]] toxumundan sayt və sıra nömrəsi üzrə törədilir, daimi saxlanmır; toxum yalnız cihazın təhlükəsiz anbarında qalır, ehtiyat nüsxəyə, köçürmə faylına və heç bir təqdimata daxil olmur. |
 

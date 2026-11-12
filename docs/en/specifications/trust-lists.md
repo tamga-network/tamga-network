@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -303,7 +303,10 @@ record (`reassigned_to`). Behaviour ships with `@tamga-network/trust` 0.8.1; the
   limit when none is given (2 hours in the core loader): this path is also used with development and test folders where the
   hourly heartbeat does not run. With this default a stopped anchor log does not make the source stale (freshness comes only
   from the lists' `next_update`); a service that also wants anchor-log freshness as a condition passes the limit itself
-  (`anchorMaxAgeMs`, e.g. 2 hours) — the reference services use the default today. External lists: [[ADR-0036]] implementation note.
+  (`anchorMaxAgeMs`, e.g. 2 hours). The reference verifier (Tamga Verify, 2026-11-12) passes the limit when its public address
+  is HTTPS: the default is **3 hours**, set with `TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC`; if the last anchor is older, the source
+  is stale and the result is INDETERMINATE (not REJECTED). In local development (http) the 365-day default applies unless the
+  setting is given. External lists: [[ADR-0036]] implementation note.
 - **Registration commands.** They run under `registry.lock` (refreshed while held); if list validation fails before a signed
   list is written, the source file is restored and no line is written to the change log. Without the provisional-operator
   value, publication stops in the real network ([[ADR-0070]] implementation note).

@@ -15,6 +15,14 @@ export interface VerifyConfig {
   trustDist: string; // trust-publisher dist (veya trust.tamga.network aynası)
   stateCode: string;
   trustReloadSec: number;
+  /**
+   * Çapa günlüğü tazelik sınırı, saniye (`TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC`). Günlüğün son satırı bundan eskiyse güven kaynağı
+   * bayat sayılır ve cevaplar "bilinmiyor" olur (paketin mevcut yolu: `anchorMaxAgeMs` → `freshness().healthy` = false →
+   * INDETERMINATE; SPEC-TRUST-0001 §6). Yayın adresi HTTPS iken (gerçek ağ ve sandbox) varsayılan 3 saat: heartbeat saatlik,
+   * iptal listesi çapaları dakikalar aralığında yazılır. Yerelde (http) ayar verilmezse tanımsızdır → dizin yükleyicisinin gevşek
+   * varsayılanı (365 gün; heartbeat'siz `dist/` klasörleri).
+   */
+  anchorMaxAgeSec?: number;
   statusPrefetchSec: number;
   dataDir: string; // geçiş kartı kayıtları (passes.json) — gitignore
   /** ADR-0017 K6: üretimde 1 — sunum açmak ve sonuç/değer okumak RP beyanı ister; 0 (demo) eski yol Deprecation başlığıyla. */
@@ -42,6 +50,22 @@ export interface VerifyConfig {
   clientKeyHeader?: string;
 }
 
+/** HTTPS yayın adresinde çapa günlüğü tazelik sınırının varsayılanı: 3 saat (saatlik heartbeat'in üç turu). */
+export const DEFAULT_ANCHOR_MAX_AGE_SEC = 3 * 3600;
+
+/** `TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC`: pozitif sayı ise o; değilse HTTPS'te varsayılan, yerelde tanımsız (gevşek). */
+function anchorMaxAgeSecOf(raw: string | undefined, https: boolean): number | undefined {
+  const v = raw?.trim();
+  if (v) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+    console.warn(
+      `[verify] TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC is not a positive number — ${https ? `using the default (${DEFAULT_ANCHOR_MAX_AGE_SEC} s)` : "ignored"}`,
+    );
+  }
+  return https ? DEFAULT_ANCHOR_MAX_AGE_SEC : undefined;
+}
+
 const SANDBOX_PORTAL = "https://sandbox.tamga.network";
 const SANDBOX_SAMPLE_SITE = "https://verify.sandbox.tamga.network/sample-site";
 const sandboxGuide = (lang: "en" | "tr") =>
@@ -61,7 +85,8 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
   const publicBase = (e.TAMGA_VERIFY_BASE ?? "http://localhost:4004").replace(/\/$/, "");
   // Güvenlik turu S3 / ADR-0017 K6: gerçek ağda (HTTPS yayın adresi, sandbox değil) RP beyanı her zaman zorunlu — ayar
   // unutulsa ya da 0 yazılsa da sıkı kip; eski beyansız yol yalnız yerelde (http) ve sandbox'ta açılabilir
-  const production = publicBase.startsWith("https://") && network !== "sandbox";
+  const https = publicBase.startsWith("https://");
+  const production = https && network !== "sandbox";
   if (production && e.TAMGA_VERIFY_REQUIRE_RP_AUTH === "0")
     console.warn(
       "[verify] TAMGA_VERIFY_REQUIRE_RP_AUTH=0 is ignored on the production network (ADR-0017 K6) — strict mode on",
@@ -83,6 +108,7 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
     trustDist: resolve(root, e.TAMGA_TRUST_DIST ?? "apps/trust-publisher/dist"),
     stateCode: e.TAMGA_STATE_CODE ?? "TR",
     trustReloadSec: Number(e.TAMGA_VERIFY_TRUST_RELOAD_SEC ?? 60),
+    anchorMaxAgeSec: anchorMaxAgeSecOf(e.TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC, https),
     statusPrefetchSec: Number(e.TAMGA_VERIFY_STATUS_PREFETCH_SEC ?? 60),
     dataDir: e.TAMGA_VERIFY_DATA_DIR ?? resolve(root, "apps/verify/data"),
     requireRpAuth: production || e.TAMGA_VERIFY_REQUIRE_RP_AUTH === "1",

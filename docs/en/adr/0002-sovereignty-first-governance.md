@@ -4,7 +4,7 @@ title: "Sovereignty-first governance"
 status: Active
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-10-02
+last_updated: 2026-11-12
 summary: >
   Tamga Network splits governance into three SOVEREIGNTY-FIRST layers: (1) network membership (a new state becoming a
   validator) is voted by a validator majority (2/3); (2) national registries (issuers, relying parties) are ONLY under the
@@ -66,6 +66,10 @@ Governance is split into three layers; in each layer a **different** actor decid
    The [[t:credential|credentials]] in its citizens' wallets do not become invalid; their fate depends on the other
    states' layer 3 recognition decisions.
 5. **Right to exit:** a state can leave unilaterally with `withdraw()`; no vote is needed. Guaranteed in code.
+   **Note (2026-11-12, [[ADR-0076]]):** this item was narrowed. Unilateral exit applies while the network has at least
+   three active members. In a two-member network exit is refused (with a single member left, the network's joint
+   decisions would be locked for good); a member that wants to leave first waits for a third member to be admitted,
+   then withdraws without a vote.
 6. **Cross-border jurisdiction (home-state sovereignty):** a citizen's [[t:pseudonym]] can be opened ONLY by their own
    state's guardian threshold + their own court; no other state can do so. Detailed in [[PM-ID-0002]] (accountable
    disclosure); consistent with the principle "disclosure = home-state sovereignty" in [[PM-ID-0001]].

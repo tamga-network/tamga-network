@@ -9,6 +9,10 @@ Politika seç → imzalı OpenID4VP isteği (QR) → cüzdanın şifreli sunumu 
 npm run verify            # :4004; env: TAMGA_VERIFY_BASE, TAMGA_TRUST_DIST, TAMGA_PKI_DIR (rp-verify)
 ```
 
+Çapa günlüğü tazeliği: `TAMGA_VERIFY_ANCHOR_MAX_AGE_SEC` (saniye). Yayın adresi HTTPS iken varsayılan 10800 (3 saat; heartbeat
+saatlik): son çapa bundan eskiyse güven kaynağı bayat sayılır, `/healthz` `trust.healthy` = `false` olur ve doğrulamalar
+INDETERMINATE döner (RED değil). Yerelde (http) ayar verilmezse sınır gevşektir (365 gün; heartbeat'siz `dist/` klasörleri).
+
 | Uç                              | Ne                                                                                                                                                   |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GET /`                         | Gerçek ağ: Tamga Verify nedir + geliştirici bağlantıları + "denemek için sandbox" (deneme paneli yok). Sandbox: politikalar + "QR üret" paneli (AP6) |

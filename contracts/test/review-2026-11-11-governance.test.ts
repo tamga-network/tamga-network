@@ -2,9 +2,9 @@
  * Kontrat denetimi 2026-11-11 — Governance bulguları, süreç içi Hardhat zincirinde (her biri düzeltmeden önce kırmızı görüldü):
  *   - Y1 : yükseltme önerisi yeni implementasyonun kod özetini sabitler; aynı adrese başka kod konursa (CREATE2 +
  *          SELFDESTRUCT, Shanghai kuralları) yürütme `UpgradeImplementationChanged` ile düşer.
- *   - Y2 : `initialize` sıfır devlet kodunu reddeder. İki üyeden birinin çekilmesiyle yönetişimin kilitlenmesi AÇIK
- *          (kapatılmış kararlara dokunur: ADR-0002 #5, şartname §1 — karar taslağı ADR-0076, Proposed); test bugünkü davranışı
- *          kayda geçirir.
+ *   - Y2 : `initialize` sıfır devlet kodunu reddeder. İki üyeli ağda tek taraflı çıkış reddedilir (`TooFewMembers`,
+ *          ADR-0076 GC1): tek üye kalsaydı yönetişim kalıcı kilitlenirdi. Çıkmak isteyen üye üçüncü üyenin kabulünden
+ *          sonra çekilir.
  *   - O2 : öneri yükleri zincirden okunur (`getSchemaPayload`, `upgradePayloadOf`, `removalReasonOf`).
  * Kayıt kontratlarının bulguları: review-2026-11-11-registries.test.ts.
  */
@@ -37,6 +37,7 @@ async function proposalIdOf(tx: any, governance: any): Promise<string> {
   }
   throw new Error("ProposalCreated yok");
 }
+const UZ = stateCode(ethers, "UZ");
 const proposalId = (tx: any, f: Fixture) => proposalIdOf(tx, f.governance);
 async function pass(f: Fixture, pid: string) {
   await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
@@ -139,21 +140,51 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       ).to.be.revertedWithCustomError(impl, "ZeroAddress");
     });
 
-    it("AÇIK (ADR-0076 taslağı): iki üyeden biri çekilince kalan üye hiçbir öneriyi yürütemez", async () => {
+    it("ADR-0076 GC1: üç üyeden biri çekilir (3 → 2); iki üyeli ağda çıkış reddedilir, yönetişim çalışmaya devam eder", async () => {
       const f = await loadFixture();
-      await (await f.as(f.governance, f.azValidator).withdraw()).wait();
-      await (await f.as(f.governance, f.kzValidator).withdraw()).wait(); // 2 → 1: bugün serbest (ADR-0002 #5, şartname §1)
-      expect(await f.governance.activeMemberCount()).to.equal(1);
-      expect(await f.governance.requiredVotes("0x0000")).to.equal(2); // asgari mutlak oy
-      const g = f.as(f.governance, f.trValidator);
-      const pid = await proposalId(await g.proposeStateAdmission(KZ, await f.stranger.getAddress()), f);
-      await (await g.vote(pid, true)).wait();
-      await expect(f.governance.execute(pid))
-        .to.be.revertedWithCustomError(f.governance, "ThresholdNotMet")
-        .withArgs(1, 2);
-      // son üye çekilemez de: ağ bu noktadan çıkamaz
-      await expect(g.withdraw()).to.be.revertedWithCustomError(f.governance, "LastValidator");
-      expect(await f.governance.isActiveMember(AZ)).to.equal(false);
+      await expect(f.as(f.governance, f.azValidator).withdraw()) // 3 → 2: serbest, oy gerekmez (ADR-0002 #5)
+        .to.emit(f.governance, "StateWithdrawn")
+        .withArgs(AZ);
+      expect(await f.governance.activeMemberCount()).to.equal(2);
+      // 2 → 1: iki üyeden hiçbiri tek taraflı çekilemez
+      for (const v of [f.kzValidator, f.trValidator]) {
+        await expect(f.as(f.governance, v).withdraw())
+          .to.be.revertedWithCustomError(f.governance, "TooFewMembers")
+          .withArgs(2, 3);
+      }
+      expect(await f.governance.activeMemberCount()).to.equal(2);
+      expect(await f.governance.requiredVotes("0x0000")).to.equal(2); // asgari mutlak oy: iki üye birlikte karar alır
+    });
+
+    it("ADR-0076 GC1: iki üyeli ağda çıkmak isteyen üye, üçüncü üyenin kabulünden sonra çekilir", async () => {
+      const f = await loadFixture();
+      await (await f.as(f.governance, f.azValidator).withdraw()).wait(); // geriye TR + KZ
+      const tr = f.as(f.governance, f.trValidator);
+      const kz = f.as(f.governance, f.kzValidator);
+      await expect(kz.withdraw()).to.be.revertedWithCustomError(f.governance, "TooFewMembers");
+      // üçüncü üye iki üyenin oyuyla kabul edilir
+      const pid = await proposalId(await tr.proposeStateAdmission(UZ, await f.stranger.getAddress()), f);
+      await (await tr.vote(pid, true)).wait();
+      await (await kz.vote(pid, true)).wait();
+      await (await f.governance.execute(pid)).wait();
+      expect(await f.governance.activeMemberCount()).to.equal(3);
+      // şimdi çıkış serbest; kalan iki üye yönetişimi sürdürür
+      await expect(kz.withdraw()).to.emit(f.governance, "StateWithdrawn").withArgs(KZ);
+      expect(await f.governance.activeMemberCount()).to.equal(2);
+      expect(await f.governance.isActiveMember(KZ)).to.equal(false);
+      const again = await proposalId(await tr.proposeStateAdmission(KZ, await f.kzValidator.getAddress()), f);
+      await (await tr.vote(again, true)).wait();
+      await (await f.as(f.governance, f.stranger).vote(again, true)).wait();
+      await expect(f.governance.execute(again)).to.emit(f.governance, "ProposalExecuted").withArgs(again);
+    });
+
+    it("ADR-0076 GC1: tek kuruculu (yalnız yerel geliştirme) kuruluşta da çıkış reddedilir", async () => {
+      const impl = await ethers.deployContract("Governance");
+      const [, v] = await ethers.getSigners();
+      const data = impl.interface.encodeFunctionData("initialize", [[stateCode(ethers, "TR")], [await v.getAddress()]]);
+      const proxy = await ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), data]);
+      const g = impl.attach(await proxy.getAddress()).connect(v) as any;
+      await expect(g.withdraw()).to.be.revertedWithCustomError(impl, "TooFewMembers").withArgs(1, 3);
     });
   });
 
