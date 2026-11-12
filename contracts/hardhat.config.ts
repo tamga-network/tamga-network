@@ -44,10 +44,17 @@ export default defineConfig({
     },
   },
   networks: {
-    hardhat: {
+    // ADR-0077: testler zincirle aynı kural setinde koşar. Hardhat 3'te süreç içi ağın adı `default`tur (`network.create()`
+    // argümansız buna bağlanır); `hardhat node` ise `node` ağını kullanır. İkisi de Cancun'a sabitlenir — adsız bırakılırsa
+    // daha yeni bir kural setiyle koşar (ikinci kontrol 2026-11-12: `hardhat` adlı ağ hiç kullanılmıyordu).
+    default: {
       type: "edr-simulated",
       chainType: "l1",
-      // ADR-0077: testler zincirle aynı kural setinde koşar (varsayılan daha yeni bir sürümdür)
+      hardfork: "cancun",
+    },
+    node: {
+      type: "edr-simulated",
+      chainType: "l1",
       hardfork: "cancun",
     },
     localhost: {

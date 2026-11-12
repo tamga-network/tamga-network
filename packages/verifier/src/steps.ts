@@ -188,7 +188,9 @@ export const TECHNICAL_CLAIMS: ReadonlySet<string> = new Set([
  * Çağırana dönecek değerler (SPEC-API-0001 §2.4–§2.5, §4.3): doğrulanmış belgeden yalnız politikanın istediği alanlar
  * (`required_claims`). İstenen ad kök düzeyde bir alansa değeri olduğu gibi; bir yolsa (`address.country`) yalnız o yol — yol bir
  * dizi öğesine iniyorsa (`nationalities[0]`) dizinin kendisi. Teknik alanlar (`TECHNICAL_CLAIMS`) istenmiş olsa da dönmez.
- * `alwaysVisible`: dönen kök alanlardan seçici açıklamayla gelmemiş olanlar (kurum açıkta bırakmış) — SD-JWT VC'de.
+ * `alwaysVisible`: değeri dönen İSTENEN adlardan, kökü seçici açıklamayla gelmemiş olanlar (kurum açıkta bırakmış) — SD-JWT VC'de.
+ * İstenen adın kendisi yazılır (`address.country`), kökü değil: E3 kapsam denetimi dönen değerle aynı adı görür (0.8.3 — önce kök
+ * yazılıyordu ve kapsamı yalnız `address.country` olan doğrulayıcının meşru sunumu E3'te reddediliyordu).
  */
 export function returnedClaims(
   a: Pick<FormatOk, "claims" | "disclosedClaimNames" | "format">,
@@ -196,15 +198,21 @@ export function returnedClaims(
 ): { claims: Record<string, unknown>; alwaysVisible: string[] } {
   const out: Record<string, unknown> = {};
   const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
+  const disclosedRoots = new Set(a.disclosedClaimNames.map((p) => p.match(/^[^.[]+/)?.[0] ?? p));
+  const visible = new Set<string>();
   for (const rc of requested) {
     if (has(a.claims, rc)) {
-      if (!TECHNICAL_CLAIMS.has(rc)) out[rc] = a.claims[rc];
+      if (!TECHNICAL_CLAIMS.has(rc)) {
+        out[rc] = a.claims[rc];
+        if (!disclosedRoots.has(rc)) visible.add(rc);
+      }
       continue;
     }
     const tokens = rc.match(/[^.[\]]+|\[\d+\]/g) ?? [];
     const root = tokens[0];
     // `getClaimAtPath` yalnız nesnenin KENDİ alanlarından yürür: tanımlıysa yol boyunca her ara değer nesne ya da dizidir
     if (!root || TECHNICAL_CLAIMS.has(root) || getClaimAtPath(a.claims, rc) === undefined) continue;
+    if (!disclosedRoots.has(root)) visible.add(rc);
     let src = a.claims;
     let dst = out;
     for (let i = 0; i < tokens.length; i++) {
@@ -220,9 +228,7 @@ export function returnedClaims(
       src = val as Record<string, unknown>;
     }
   }
-  const disclosedRoots = new Set(a.disclosedClaimNames.map((p) => p.match(/^[^.[]+/)?.[0] ?? p));
-  const alwaysVisible = a.format === "dc+sd-jwt" ? Object.keys(out).filter((k) => !disclosedRoots.has(k)) : [];
-  return { claims: out, alwaysVisible };
+  return { claims: out, alwaysVisible: a.format === "dc+sd-jwt" ? [...visible] : [] };
 }
 
 /** B — şema (B1 vct, B2 kayıt, B3 metadata, B4 content_hash = vct#integrity, B5 atlanır, B6 JSON Schema). */
@@ -415,21 +421,33 @@ function stepCExternal(ctx: VerifyCtx): StepFail | undefined {
 }
 
 /**
- * S11: kurumun güven listesindeki iptal anahtarlarından ŞU AN geçerli olanlar — `status` ACTIVE (yoksa ACTIVE) ve `now`,
- * `valid_from..valid_to` penceresinde (liste imzacılarıyla aynı kural). Süresi dolmuş ya da henüz başlamamış anahtar imzacı sayılmaz.
+ * S11: kurumun güven listesindeki iptal anahtarları iki kümede. `active`: ŞU AN geçerli olanlar — `status` ACTIVE (yoksa ACTIVE)
+ * ve `now`, `valid_from..valid_to` penceresinde (liste imzacılarıyla aynı kural); yalnız bunlar imzacı sayılır. `lapsed`: KAYITLI
+ * ama penceresi dışında (süresi dolmuş / henüz başlamamış `ACTIVE` anahtar ya da `RETIRED` anahtar). `lapsed` anahtarla imzalı
+ * liste kabul edilmez ama sahte de sayılmaz: anahtar yenilenirken önbellekte kalan eski liste budur → DOĞRULANAMADI (AP2), RED
+ * değil. `REVOKED` / `SUSPENDED` anahtar iki kümeye de girmez (onunla imzalı liste kayıtsız imzacı gibi RED).
  */
-function activeStatusKeys(issuerRec: IssuerRecord | null | undefined, now: EpochSeconds): string[] {
+function statusKeysOf(
+  issuerRec: IssuerRecord | null | undefined,
+  now: EpochSeconds,
+): { active: string[]; lapsed: string[] } {
   const at = (v: unknown) => (typeof v === "string" ? new Date(v).getTime() : NaN);
-  return (issuerRec?.delegate_keys ?? [])
-    .filter((k) => {
-      if (k.purpose !== "status_list" || (k.status ?? "ACTIVE") !== "ACTIVE") return false;
-      const w = k as { valid_from?: unknown; valid_to?: unknown };
-      if (w.valid_from !== undefined && !(at(w.valid_from) <= now * 1000)) return false;
-      if (w.valid_to !== undefined && !(at(w.valid_to) >= now * 1000)) return false;
-      return true;
-    })
-    .map((k) => k.fingerprint_sha256);
+  const active: string[] = [];
+  const lapsed: string[] = [];
+  for (const k of issuerRec?.delegate_keys ?? []) {
+    if (k.purpose !== "status_list") continue;
+    const status = k.status ?? "ACTIVE";
+    if (status !== "ACTIVE" && status !== "RETIRED") continue;
+    const w = k as { valid_from?: unknown; valid_to?: unknown };
+    const inWindow =
+      (w.valid_from === undefined || at(w.valid_from) <= now * 1000) &&
+      (w.valid_to === undefined || at(w.valid_to) >= now * 1000);
+    (status === "ACTIVE" && inWindow ? active : lapsed).push(k.fingerprint_sha256);
+  }
+  return { active, lapsed };
 }
+const LAPSED_STATUS_KEY =
+  "signed with a registered status key that is outside its validity window; refreshed on the next prefetch";
 
 /** D — iptal (D1 status claim, D2 ön çekim önbelleği, D3 imza+sub+iss, D4 tazelik, D5 çapa, D6 bit). */
 export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
@@ -503,18 +521,25 @@ export async function stepD(ctx: VerifyCtx): Promise<StepFail | undefined> {
   ctx.done.push("D2");
   // S11: iptal listesini kurumun güven listesinde kayıtlı iptal anahtarı imzalamış olmalı — imzacı doğrulamada sabitlenir
   // (ADR-0056 K6); anahtar kayıtlı değilse liste doğrulanamaz
-  const statusKeys = activeStatusKeys(issuerRec, now);
+  const { active: statusKeys, lapsed: lapsedKeys } = statusKeysOf(issuerRec, now);
   if (!statusKeys.length)
     return indet("D3", "STATUS_UNREACHABLE", "the institution's status list key is not registered in the trusted list");
+  // İmzacı kayıtlı ama penceresi dışındaki bir iptal anahtarıysa (anahtar yenilendi, önbellekte eski liste) RED değil DOĞRULANAMADI
+  let lapsedSigner = false;
   // ADR-0048 K3: mdoc kopyası CWT gösterimine (ikili; önbellekte `b64u:`), SD-JWT kopyası JWT gösterimine işaret eder — gövde
   // hangisiyse o doğrulanır (eski mdoc kopyaları JWT adresini gösterebilir)
   let tok: Awaited<ReturnType<typeof verifyStatusListAny>>;
   try {
     tok = await verifyStatusListAny(cached.token, a.status.status_list.uri, now, {
-      expectedSignerFingerprints: statusKeys,
+      expectedSignerFingerprints: (fp) => {
+        if (statusKeys.includes(fp)) return true;
+        if (lapsedKeys.includes(fp)) lapsedSigner = true;
+        return false;
+      },
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "";
+    if (lapsedSigner) return indet("D3", "STATUS_STALE", `status token ${LAPSED_STATUS_KEY}`);
     // önbellekteki token exp aşımı → tazelik sorunu, geçersizlik değil (AP2). Azami yaş politikada (aşağıda, D4)
     if (msg.startsWith("D4:"))
       return indet(
@@ -725,11 +750,14 @@ async function stepDIdentifierList(ctx: VerifyCtx, ref: { id: string; uri: strin
     // kendi denetimlerimizden gelmeyen hata (çözülemeyen CBOR, kütüphane): DOĞRULANAMADI; nedene istisna iletisi girmez (AP3)
     return indet("D4", "STATUS_UNREACHABLE", `identifier list unreadable (${e instanceof Error ? e.name : typeof e})`);
   }
-  const statusKeys = activeStatusKeys(ctx.issuerRec, now);
+  const { active: statusKeys, lapsed: lapsedKeys } = statusKeysOf(ctx.issuerRec, now);
   if (!statusKeys.length)
     return indet("D3", "STATUS_UNREACHABLE", "the institution's status list key is not registered in the trusted list");
-  if (!statusKeys.includes(certFingerprintSha256Hex(list.leafDer)))
+  const signerFp = certFingerprintSha256Hex(list.leafDer);
+  if (!statusKeys.includes(signerFp)) {
+    if (lapsedKeys.includes(signerFp)) return indet("D3", "STATUS_STALE", `identifier list ${LAPSED_STATUS_KEY}`);
     return reject("D3", "identifier list signer is not the institution's registered status key");
+  }
   ctx.done.push("D3");
   const age = now - list.iat;
   if (age > input.policy.freshness.max_status_token_age_sec)

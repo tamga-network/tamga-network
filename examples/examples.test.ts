@@ -101,16 +101,29 @@ describe.skipIf(!ready)("examples", () => {
       if (String(url) === `${TRUST}/wrprc/rp/x/job-application-1.jwt`) return new Response(WRPRC);
       return trustFetch(url as string);
     }) as typeof fetch;
+    // count what the verifier fetches: the trust lists and the anchor log must be re-read on a timer, not only at start-up
+    const fetched: string[] = [];
+    const counted = (async (url: string | URL) => {
+      fetched.push(String(url).slice(TRUST.length + 1));
+      return withWrprc(url as string);
+    }) as typeof fetch;
     const v = await createOwnVerifier({
       trustBase: TRUST,
       rootFingerprints: pins(),
       signer,
       publicBase: PUB,
       registrationScope: "job-application-1",
-      fetch: withWrprc,
+      fetch: counted,
       fetchStatus: async (u) => (u === STATUS_URI ? statusTok : null),
       anchorMaxAgeMs: YEAR,
     });
+    const loads = (f: string) => fetched.filter((x) => x === f).length;
+    expect([loads("lotl.jws"), loads("tl-tr.jws"), loads("anchors.jsonl")]).toEqual([1, 1, 1]);
+    const atStart = v.trust;
+    await v.refresh(); // what your timer calls (more often than freshness.max_anchor_lag_sec)
+    expect([loads("lotl.jws"), loads("tl-tr.jws"), loads("anchors.jsonl")]).toEqual([2, 2, 2]);
+    expect(v.trust).not.toBe(atStart); // the reloaded set is the one verifications use from now on
+    expect(v.trust.freshness().healthy).toBe(true);
     // a use without a published registration certificate fails loudly (Tamga Wallet would refuse the request)
     const unregistered = await createOwnVerifier({
       trustBase: TRUST,

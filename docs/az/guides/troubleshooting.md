@@ -36,7 +36,7 @@ qərarlardır (AP2).
 | `indeterminate_reason` | Səbəb | Həll |
 |---|---|---|
 | `STATUS_UNREACHABLE` | Rəqəmsal sənədin [[t:status-list]] endirilə bilmədi | Ləğv siyahılarını əvvəlcədən çəkin (`PrefetchStatusCache` + müntəzəm `refresh`); yoxlama anında şəbəkəyə müraciət etməyin |
-| `STATUS_STALE` | Keşdəki ləğv siyahısı təzəlik həddini aşıb və ya lövbər anından əvvəl çəkilib | Yeniləmə intervalını qısaldın; saat fərqini yoxlayın (NTP) |
+| `STATUS_STALE` | Keşdəki ləğv siyahısı təzəlik həddini aşıb və ya lövbər anından əvvəl çəkilib. Və ya **lövbər jurnalınız köhnədir**: siyahı bildiyiniz son lövbərdən `max_anchor_lag_sec`-dən (standart 3600 san) daha yenidir; və ya siyahı lövbər jurnalınızda heç yoxdur (lövbərlər yüklənməyib). Və ya siyahı qurumun müddəti bitmiş ləğv açarı ilə imzalanıb (açar yenilənib, keş köhnədir) | Yeniləmə intervalını qısaldın. Etibar siyahılarını və lövbər jurnalını (`anchors: true`) yalnız işə salınanda deyil, `max_anchor_lag_sec`-dən tez-tez yenidən yükləyin (məs. 10 dəqiqədən bir). Saat fərqini yoxlayın (NTP) |
 | `SCHEMA_UNREACHABLE` | Rəqəmsal sənəd növünün təsviri əldə edilə bilmədi | Sxem kataloqunu əvvəlcədən keşə yükləyin |
 | `CHAIN_UNREACHABLE` / `INDEXER_STALE` | Etibar mənbəyi oxuna bilmədi və ya köhnəlib | Etibar siyahılarını müntəzəm endirin; `next_update` keçibsə, yeni siyahını alın |
 | `SDK_VERSION_MISMATCH` | Kitabxana versiyası qayda versiyası ilə uyğun deyil | `@tamga-network/*` paketlərini yeniləyin |

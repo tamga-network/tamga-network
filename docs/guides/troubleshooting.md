@@ -4,7 +4,7 @@ title: "Sorun giderme"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-11-12
 summary: >
   Sık karşılaşılan sorunlar ve çözümleri: doğrulamada "doğrulanamadı" sebepleri, reddedilen adımlar, güven listesi yükleme
   hataları, cüzdanda belge alma ve gösterme hataları, cihaz kanıtı, kayıt başvurusu ve servis hata biçimi.
@@ -35,7 +35,7 @@ kararlardır (AP2).
 | `indeterminate_reason` | Sebep | Çözüm |
 |---|---|---|
 | `STATUS_UNREACHABLE` | Belgenin [[t:status-list]] indirilemedi | İptal listelerini önceden çekin (`PrefetchStatusCache` + düzenli `refresh`); doğrulama anında ağa çıkmayın |
-| `STATUS_STALE` | Önbellekteki iptal listesi tazelik eşiğini aştı ya da çapadan önce çekildi | Yenileme aralığını kısaltın; saat farkını denetleyin (NTP) |
+| `STATUS_STALE` | Önbellekteki iptal listesi tazelik eşiğini aştı ya da çapadan önce çekildi. Ya da **çapa günlüğünüz eski**: liste, bildiğiniz son çapadan `max_anchor_lag_sec`'ten (varsayılan 3600 sn) daha yeni; ya da liste çapa günlüğünüzde hiç yok (çapalar yüklenmemiş). Ya da liste, kurumun süresi dolmuş iptal anahtarıyla imzalı (anahtar yenilenmiş, önbellek eski) | Yenileme aralığını kısaltın. Güven listelerini ve çapa günlüğünü (`anchors: true`) yalnız açılışta değil, `max_anchor_lag_sec`'ten sık yeniden yükleyin (ör. 10 dakikada bir). Saat farkını denetleyin (NTP) |
 | `SCHEMA_UNREACHABLE` | Belge türünün tanımı alınamadı | Şema kataloğunu önceden önbelleğe alın |
 | `CHAIN_UNREACHABLE` / `INDEXER_STALE` | Güven kaynağı okunamadı ya da bayat | Güven listelerini düzenli indirin; `next_update` geçmişse yeni listeyi alın |
 | `SDK_VERSION_MISMATCH` | Kütüphane sürümü kural sürümüyle uyumsuz | `@tamga-network/*` paketlerini güncelleyin |

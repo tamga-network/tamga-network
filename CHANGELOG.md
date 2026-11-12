@@ -193,6 +193,82 @@ A code review of the changes above found the following; the fixes are part of 0.
   1 hour; the counter survives an app restart and a clock change. The wallet is not erased or locked for good after 10 wrong
   attempts, as the text said before: a forgotten PIN is handled by the person resetting the wallet, confirmed with the phone's
   own lock (§7.6). tr / en / az.
+- **trust-publisher — an approved removal entry is bound to one version transition** (TL2, ADR-0081 implementation note).
+  `registry/removals.json` entries now carry `previous_version` (required: the number of the signed list version before the
+  removal) and optionally `previous_version_hash` (the digest of that version's `.jws`); the publisher accepts an entry only
+  when the previously published version is that one. Before, an entry matched on the list name and the counts only, so the
+  entry of 2026-11-11 would also have let through a later removal of the same number of other records and written the old
+  reason to the list's change log. That entry is now bound to the transition from version 240 to 241. An entry without
+  `previous_version` (the earlier format) matches nothing.
+- **trust-publisher — history rows are kept with their content, and more removals are counted** (TL2). In a record that
+  stays in the list, every `status_history` row of the previous version must be present unchanged in the new one (compared
+  canonically): changing a row — for example moving the `invalidates_from` of an existing REVOKED row forward — counts as
+  removing it. A schema authorization row must stay as it was; the only free change is closing an open period (`valid_until`
+  absent → a date), so a closed authorization can no longer be reopened or its end date changed. Before, rows were recognised
+  by two fields only and such edits were not seen. Also counted now: an issuer's `delegate_keys` rows (by fingerprint and
+  purpose) and the `national_lists`, `wallet_providers` (with their status history) and `external_lists` records of the LOTL;
+  removal entries carry them as optional counts of the same names. What the registry commands write (`status`, `rp-status`,
+  `authorize`, `authorize --revoke`, `scope`, `end-use`, `wallet-provider`) passes unchanged. Operating note: when a status
+  list key is renewed, keep the old key in the issuer's `delegate_keys` with a `valid_to` date instead of dropping it.
+- **trust-publisher — the public-text filter accepts an ISO date.** `--reason "key compromise 2026-11-12"` was refused as a
+  "phone or identity number"; a valid calendar date (`YYYY-MM-DD`) with no digit or hyphen next to it is no longer counted as
+  a digit run. The other rules are unchanged: two capitalised words in a row (`Contract Ended`) are still read as a person's
+  name — write the reason in lower case.
+- **trust-publisher — the "previous list could not be verified" message no longer suggests removing the publication folder.**
+  On the real network that would restart the list at version 1 and break the hash chain and the removal check. The message
+  now says: never remove the folder on the real network; when the list signer changes, keep the old signer in the source
+  (`signing_certs` / `anchor_signing_certs`) for one publication. Removing the folder is for local development only.
+- **verifier — a status list signed with a registered but lapsed status key gives INDETERMINATE, not REJECTED** (D3). When an
+  institution renews its status key, a verifier's cache can still hold a list — inside its own validity — signed with the old
+  key. If that key is still in the trust list but outside its `valid_from`…`valid_to` window (or `RETIRED`), the result is
+  now INDETERMINATE / STATUS_STALE and the next prefetch settles it; before it was REJECTED D3 once a new key was registered
+  (and INDETERMINATE only when there was none). A signer that is not registered, or a `REVOKED` / `SUSPENDED` key, is still
+  REJECTED. The same rule applies to identifier lists.
+- **verifier — operating note for D5 (`freshness.max_anchor_lag_sec`, default 3600 s).** The anchor log must be reloaded more
+  often than `max_anchor_lag_sec`: a verifier that keeps refreshing status lists but holds the anchors it loaded at start-up
+  answers INDETERMINATE / STATUS_STALE at D5 for every credential after about an hour. A verifier that loads its trust source
+  without anchors (`fetchListTrustSource` without `anchors: true`, the default) has no anchor for any list and gets the same
+  answer for every Tamga credential with a status entry that is older than `max_anchor_lag_sec`: verifiers that check
+  revocation must load with `anchors: true`. Example 02 (`examples/02-verify-own-server`) loaded the lists once; it now
+  exposes `refresh()` (trust lists and anchors, then the status lists) for a timer, and `trust` returns the set in use. The
+  server guide and the troubleshooting page say the same (tr / en / az).
+- **verifier — a nested path requested from an always-visible object is reported under the requested path** (E3). When the
+  policy asks for `address.country` and the issuer left the whole `address` object undisclosable, `disclosed_claims` carried
+  the root name `address`, and a relying party whose registered scope is `address.country` was REJECTED at E3 for a
+  legitimate presentation. The requested path itself is now reported and checked.
+- **verifier — `PassRegistry.issue` refuses a pass longer than 6 months** (WL13). `valid_days` must be a positive number of at
+  most `PASS_MAX_VALID_DAYS` (184, the same limit as wallet-core's `PASS_GRANT_MAX_VALIDITY_SEC`) unless the pass is
+  `single_use`; before, a longer pass was issued and the 0.8.3 wallet discarded it.
+- **Tamga Verify — one audit record per response at the attempt limit.** The last failed response of a presentation that
+  closes on the attempt limit wrote two records with the same `verification_id` (the attempt and the closing result); now
+  only the closing record is written (also on the ISO/IEC 18013-7 Annex C route). The sample site's flow cookie is re-sent on
+  every start, so its `Max-Age` is extended together with the server-side flow. SPEC-API-0001 §2.3 now states why an internal
+  error after the presentation has been used up is reported as `INDEXER_STALE` with an empty `failed_step` (the closed set
+  has no "internal error" value; no new value was added).
+- **wallet-core — migration note for applications (0.8.2 → 0.8.3): the application must be updated, not only the package.**
+  (1) http and local development: `parseOffer` refuses an `http` offer address or `credential_issuer` (`invalid_offer`), and
+  `respond` drops an `http` `redirect_uri`. An application that issues or presents against a local development server
+  (localhost, `.test` / `.local`, a private IPv4 address) must pass `{ allowLocalDevHost: true }` to `parseOffer` and
+  `allowLocalDevHost: true` in the `respond` input — in a development build or on the sandbox only. (2) Registration
+  certificates: `checkRegistrationCerts` / `relevantRegistrationCerts` called the 0.8.2 way, without `signerTrust`, still
+  return `valid: true` — the check stays open, and the only signal is `signerTrusted: false` with the
+  `registration_binding_unverified` flag. To get the protection the application passes `signerTrust` (the relying party's
+  `access_cert_fingerprint_sha256` from its trust-list record as `registeredFingerprints`, `{}` when there is no record,
+  and/or `root_cas`) and does not treat a result with `signerTrusted: false` as valid. (3) Authorization-code issuance
+  with an identity presentation: the institution returns the result (code or error) in `redirect_uri` on the wallet's own
+  callback address, which is usually an app scheme and not https. `respond` returns such an address only when the
+  application passes it as the new `callbackUri` input (exact address, optionally followed by a query or fragment); without
+  it `redirectUri` is undefined and the issuance cannot be completed.
+- **contracts — the migration executor adds a version hash only to a network schema it replayed itself.**
+  `SchemaRegistry.addSchemaContentHash` on a network schema registered by Governance now reverts with
+  `NetworkTierRequiresGovernance` for the executor (the same limit as deprecation): it could otherwise add a content hash
+  nobody voted on (hashes cannot be removed) or fill the hash quota. The in-process test network is now really Cancun
+  (Hardhat 3 names it `default`; the `hardhat` entry was never used and the tests ran with a newer rule set). ABI and storage
+  layout unchanged. SPEC-BC-0001 §16.1 and ADR-0077 (implementation note) updated.
+- **docs — SPEC-CRED-0003 §7 step Ş6 follows the D5 definition of SPEC-API-0001.** The step still said "REJECT when the
+  token digest differs from the anchor" and referred to a version field the token does not carry; it now lists the D5 cases
+  (older token: rollback or prefetch delay; newer token: allowed up to `max_anchor_lag_sec`; no anchor). Ş4 and S11 state the
+  lapsed-key case (tr / en / az).
 
 ### Correction to the 0.8.2 notes
 
@@ -276,6 +352,18 @@ The wallet's single-list scope is now documented in the code.
   change and retraction), ADR-0067 (real cost of the eviction attack; proxy burst lowered), ADR-0075, the chain test network
   guide and the node operator handbook (governance and consensus key are the same key today — HSM required on the real network,
   separation is an open decision), trust list specification (record removal check; `contact` is a role address).
+- ADR-0081 (accepted 2026-11-12): the test-record exception to "no record is deleted from the trust list" (SPEC-TRUST-0001
+  TL2) is tied to a decision. Only a record entered for testing, which never issued to a real person and never received a real
+  presentation, may be removed, before the first participant institution enters the real network's list and with the reason in
+  the public changelog; the exception closes with the first institution; signed list versions stay in the archive. The trust
+  list specification (§4, TL2) refers to it. No code change.
+- Four deviations left from the document–code scan are closed on the document side (2026-11-12; no behaviour change):
+  verification pipeline specification — in a ZK presentation `C1`/`C2` are asked at proof time, written into AP11 as an explicit
+  exception (ADR-0032 implementation note); `C4` is not applied to mdoc and ZK presentations and the issuer class is read from
+  `issuer.class` (ADR-0010 implementation note); the reporting of `A3d` and `A8` under neighbouring codes is the binding
+  behaviour of the reference implementation (ADR-0056 implementation note); trust list specification — the `designated`
+  operator status is reserved for the handover: the loader recognises it, the publisher does not publish it in the list stage
+  (ADR-0070 implementation note).
 
 ## 0.8.2 — 2026-11-05
 

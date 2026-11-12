@@ -4,7 +4,7 @@ title: "Sunucuda doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-29
+last_updated: 2026-11-12
 summary: >
   Kendi sunucunuzda Tamga belgesi doğrulamak: güven kaynağını yükleme, iptal listesi ön çekimi, politika → imzalı OpenID4VP isteği,
   şifreli yanıtı çözme ve kanonik doğrulama hattı (T0 + A–E). Referans uygulama: apps/verify.
@@ -40,6 +40,10 @@ yönetmek istediğinizde. Daha hızlı bir başlangıç için barındırılan do
 2. **Güven kaynağı.** `@tamga-network/trust` ile güven listelerini yükleyin: `loadTrustSourceFromDir(dist)` ya da düzenli
    indirme + yeniden yükleme (`guardedReload`). Güvenle ilgili her soruyu yalnızca `TrustSource`'a sorun.
 3. **İptal listelerini önceden çekin.** `new PrefetchStatusCache()` + düzenli `refresh(uriler)`. Doğrulama anında ağa çıkılmaz.
+   Güven listelerini ve çapa günlüğünü de (`fetchListTrustSource(…, { anchors: true })`) düzenli yeniden yükleyin — politikanın
+   `freshness.max_anchor_lag_sec`'inden (varsayılan 3600 sn) sık, ör. 10 dakikada bir. Çapaları yalnız açılışta yükleyen
+   doğrulayıcı yaklaşık bir saat sonra her belgeye "doğrulanamadı" (`STATUS_STALE`, D5) verir; çapaları hiç yüklemeyen
+   doğrulayıcı bir saatten eski her belgeye aynı cevabı verir. Çalışan örnek: [[GUIDE-0004]] §2 (`refresh()`).
 4. **Kayıt sertifikanız.** Kayıt kurumu her kayıtlı kullanımınız için bir [[t:registration-certificate|kayıt sertifikası]]
    yayınlar (`trust.tamga.network/wrprc/index.json` → `client_id` ve `scope_id`'si sizinki olan öğe). Her isteğe ekleyin
    (`registrationCert`): 0.7.0 paketlerinden itibaren Tamga Wallet kayıt sertifikası taşımayan isteği reddeder ([[ADR-0026]],

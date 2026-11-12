@@ -41,6 +41,10 @@ idarə etmək istədiyiniz zaman. Daha sürətli başlanğıc üçün host edil�
 2. **Etibar mənbəyi.** `@tamga-network/trust` ilə etibar siyahılarını yükləyin: `loadTrustSourceFromDir(dist)` və ya müntəzəm
    endirmə + yenidən yükləmə (`guardedReload`). Etibarla bağlı hər sualı yalnız `TrustSource`-a verin.
 3. **Ləğv siyahılarını əvvəlcədən alın.** `new PrefetchStatusCache()` + müntəzəm `refresh(uriler)`. Yoxlama zamanı şəbəkəyə müraciət edilmir.
+   Etibar siyahılarını və lövbər jurnalını da (`fetchListTrustSource(…, { anchors: true })`) müntəzəm yenidən yükləyin — siyasətin
+   `freshness.max_anchor_lag_sec` dəyərindən (standart 3600 san) tez-tez, məs. 10 dəqiqədən bir. Lövbərləri yalnız işə salınanda
+   yükləyən yoxlayıcı təxminən bir saatdan sonra hər sənədə "yoxlanıla bilmədi" (`STATUS_STALE`, D5) cavabı verir; lövbərləri heç
+   yükləməyən yoxlayıcı bir saatdan köhnə hər sənədə eyni cavabı verir. İşlək nümunə: [[GUIDE-0004]] §2 (`refresh()`).
 4. **Qeydiyyat sertifikatınız.** Qeydiyyat qurumu hər qeydə alınmış istifadəniz üçün [[t:registration-certificate|qeydiyyat sertifikatı]]
    dərc edir (`trust.tamga.network/wrprc/index.json` → `client_id` və `scope_id`-si sizə məxsus olan element). Onu hər sorğuya əlavə edin
    (`registrationCert`): 0.7.0 paketlərindən başlayaraq Tamga Wallet qeydiyyat sertifikatı olmayan sorğunu rədd edir ([[ADR-0026]],

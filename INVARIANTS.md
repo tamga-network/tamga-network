@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 463 kodlanmış değişmez, 82 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 467 kodlanmış değişmez, 83 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -819,6 +819,18 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0080/VL4` | Gerçek ağda kimlik doğrulama, VL1–VL3 uygulanmadan herkese açılmaz. |
 
 
+## ADR-0081
+
+*"Sınama kayıtlarının listeden çıkarılması"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0081/RR1` | Gerçek ağın güven listesinden kayıt silinmez: belge veren, doğrulayıcı, kapı grubu, kök CA ve şema kaydı kapanınca durumu değişir, geçmişi listede kalır ([[SPEC-TRUST-0001]]/TL2). Gerçek bir kurumun kaydı için istisna yoktur. |
+| `ADR-0081/RR2` | Listeden yalnız sınama kaydı çıkarılabilir: kurum katılımından önce sınama amacıyla konmuş, hiçbir gerçek kişiye belge vermemiş ve hiçbir gerçek sunum almamış kayıt. Çıkarma proje yönetiminin kararıyla yapılır; gerekçesi, kayıt sayıları ve karar tarihi herkese açık değişiklik günlüğüne ad ve kimlik taşımayan bir satırla yazılır. Yayıncı, sayıları birebir tutan onaylı çıkarma kaydı olmadan kayıt eksilten listeyi yayımlamaz. |
+| `ADR-0081/RR3` | İstisna, ilk katılımcı kurum (sınama amacıyla konmamış ve ağın geçici işletmecisinin kendi servisi olmayan belge veren ya da doğrulayıcı) gerçek ağın listesine girdiği yayınla kapanır; sonrasında gerçek ağın listesinden hiçbir kayıt çıkarılmaz. Sınama yalnız sandbox'ta yapılır; gerçek ağın listesine sınama kaydı konmaz. |
+| `ADR-0081/RR4` | Çıkarılan kayıtları taşıyan imzalı liste sürümleri arşivde kalır ve değiştirilmez; çıkarma sürüm numarasını ve özet zincirini kesmez. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -871,7 +883,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-API-0001/AP6` | Politikanın `required_claims`'i RP'nin güven listesindeki kaydının scope'unu aşamaz. |
 | `SPEC-API-0001/AP7` | Hata `detail` alanı kişisel veri içermez. |
 | `SPEC-API-0001/AP8` | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. |
-| `SPEC-API-0001/AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
+| `SPEC-API-0001/AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. İstisna: ZK sunumunda (`mso_mdoc_zk`) belgenin imza anı ispatta gizlidir; `C1` ve `C2` ispatın zaman damgasını alır (§1.1, [[ADR-0032]]). |
 | `SPEC-API-0001/AP12` | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
 | `SPEC-API-0001/AP13` | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = doğrulayıcının kalıcı kimliği (güven listesindeki kaydının `dns_name`'i; sertifika yenilense de değişmez, [[ADR-0034]]), ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. Kapı isteği terminal anahtarıyla gelir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). |
 | `SPEC-API-0001/AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). |
@@ -967,7 +979,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-CRED-0003/S8` | Liste URI'si opaktır; yıl, bölüm, kohort kodlamaz (§6.3). |
 | `SPEC-CRED-0003/S9` | Listeler tip dışında hiçbir ölçütle bölünmez (§6.4). |
 | `SPEC-CRED-0003/S10` | Liste kapasitesi ≥ 100.000; doluluk ≤ %80. |
-| `SPEC-CRED-0003/S11` | Status anahtarı, belge imzalama anahtarından ayrıdır (§3.4). Status anahtarının sertifika parmak izi güven listesinde kurum kaydının `delegate_keys[]` alanında `purpose: "status_list"` ile yayınlanır; doğrulayıcı D3'te token imzacısını bu kayıtla eşler (kayıt yoksa INDETERMINATE, eşleşmezse REJECTED); paketlerde imzacı doğrulama girdisidir (`expectedSignerFingerprints`, zorunlu — [[ADR-0056]] K6). Liste dışı `idx` geçerli okunmaz (D6 RED). |
+| `SPEC-CRED-0003/S11` | Status anahtarı, belge imzalama anahtarından ayrıdır (§3.4). Status anahtarının sertifika parmak izi güven listesinde kurum kaydının `delegate_keys[]` alanında `purpose: "status_list"` ile yayınlanır; doğrulayıcı D3'te token imzacısını bu kayıtla eşler (kayıt yoksa INDETERMINATE, eşleşmezse REJECTED; imzacı kayıtlı ama geçerlilik penceresi dışındaki bir anahtarsa INDETERMINATE); paketlerde imzacı doğrulama girdisidir (`expectedSignerFingerprints`, zorunlu — [[ADR-0056]] K6). Liste dışı `idx` geçerli okunmaz (D6 RED). |
 | `SPEC-CRED-0003/S12` | Doğrulayıcı doğrulama başına çekim yapmaz; toplu ön çekim kullanır (§9.1). |
 | `SPEC-CRED-0003/S13` | `exp`/`ttl` claim'leri HTTP önbellek başlıklarını geçersiz kılar. |
 | `SPEC-CRED-0003/S14` | "Geçersiz" ile "doğrulanamadı" kullanıcıya farklı gösterilir (§7.1). |
@@ -1120,7 +1132,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | Kod | Açıklama |
 |---|---|
 | `SPEC-TRUST-0001/TL1` | Her listede `operator.status` vardır ve liste aşaması boyunca `"provisional"`dır; `on_behalf_of` boş bırakılmaz. |
-| `SPEC-TRUST-0001/TL2` | Liste ve çapa günlüğü sürümleri monoton artar; her sürüm bir öncekinin hash'ini taşır; hiçbir satır/kayıt silinmez (statü değişikliği `status_history`'ye eklenir). |
+| `SPEC-TRUST-0001/TL2` | Liste ve çapa günlüğü sürümleri monoton artar; her sürüm bir öncekinin hash'ini taşır; hiçbir satır/kayıt silinmez (statü değişikliği `status_history`'ye eklenir). Tek istisna, ilk katılımcı kurum listeye girmeden önce çıkarılan sınama kayıtlarıdır ([[ADR-0081]]). |
 | `SPEC-TRUST-0001/TL3` | Liste ve çapa imzası ≥2 kaydırmalı sertifikayla yapılır; rotasyon ≥30 gün önce duyurulur; yeni anahtar eskisiyle imzalanır. (Demo sapması S-6 beyanlı.) |
 | `SPEC-TRUST-0001/TL4` | `TrustSource` dışında hiçbir bileşen liste dosyalarını yorumlamaz. |
 | `SPEC-TRUST-0001/TL5` | `next_update` geçmiş veya erişilemeyen liste ile doğrulama **INDETERMINATE** üretir; asla ACCEPTED, asla REJECTED. |
@@ -1171,12 +1183,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 463 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 467 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, D, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, D, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-12 (`scripts/sync-invariants.mjs`). Toplam 463 kodlanmış değişmez, 82 dokümanda.
+**Üretilen dosya** — 2026-11-12 (`scripts/sync-invariants.mjs`). Toplam 467 kodlanmış değişmez, 83 dokümanda.

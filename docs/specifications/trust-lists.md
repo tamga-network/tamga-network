@@ -99,7 +99,7 @@ CHANGELOG.md                  herkese açık değişiklik günlüğü
 | `list_type` | `"lotl"` | |
 | `environment` | `"production"` \| `"sandbox"` (isteğe bağlı; yoksa `production`) | Listenin ait olduğu ağ ([[ADR-0038]]). Test ağının listesi `sandbox` taşır; yükleyici beklediği ağla eşleşmeyen listede **durur** (`ADR-0038/SB2`) |
 | `version`, `issued_at`, `next_update`, `previous_version_hash` | | Sürüm/hash zinciri (§1.3, §1.6) |
-| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report?}` | Kurucu vekil; `trust_framework` = [[FW-TF-0001]] URL'i (`https://arf.tamga.network/trust-framework`); `transparency_report` isteğe bağlı, yayın sayfası açılınca eklenir. `name`: gerçek ağda "Tamga Network" (`ADR-0070/OP1`); `environment: "sandbox"` listesinde ad "(TEST)" ibaresi taşımak zorundadır ve liste "Tamga Network Sandbox (TEST)" adıyla yayımlanır — yayıncı aksi hâlde yayın yapmaz (`ADR-0070/OP2`, 2026-11-12) |
+| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report?}` | Kurucu vekil. `status` değerleri `provisional` ve `designated`'dır: liste aşamasında yalnız `provisional` yayımlanır (TL1; yayıncı başka değerle yayın yapmaz). `designated`, liste işletmeciliği devletin atadığı kuruma devredildiğinde kullanılacak değerdir ([[ADR-0009]] K5; zincirdeki işletmeci kaydı [[ADR-0074]] K3) ve o değerle yayın ayrı bir devir kararıyla açılır; yükleyici değeri bugünden tanır ki devirde listeyi okuyanların güncellenmesi gerekmesin. Değer doğrulama kararına girmez ([[ADR-0070]] uygulama notu 2026-11-12). `trust_framework` = [[FW-TF-0001]] URL'i (`https://arf.tamga.network/trust-framework`); `transparency_report` isteğe bağlı, yayın sayfası açılınca eklenir. `name`: gerçek ağda "Tamga Network" (`ADR-0070/OP1`); `environment: "sandbox"` listesinde ad "(TEST)" ibaresi taşımak zorundadır ve liste "Tamga Network Sandbox (TEST)" adıyla yayımlanır — yayıncı aksi hâlde yayın yapmaz (`ADR-0070/OP2`, 2026-11-12) |
 | `catalogue` | `{url}` | Type Metadata çözümleme yolu (`schemas.tamga.network/v1/catalogue.json`) |
 | `anchor_signing_keys[]` | `{fingerprint_sha256, cert_ref, status}` | Çapa günlüğü imzacıları (≥2 kaydırmalı — TL3) |
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], xml_signing_keys[]?, recognition{mode, recognizes[]}}` | `Governance` üye listesi + `CrossRecognition`. `signing_keys` yalnız JSON ülke listesinin (`tl-<cc>.jws`) imzacıları; `xml_signing_keys` yalnız ETSI TS 119 612 XML görünümünün (`tl-<cc>.xml`, EKU id-tsl-kp-tslSigning) imzacıları — slot XML yayımlıyorsa bulunur; iki küme ayrıdır, XML imzacısı JSON listesini doğrulamaz ([[ADR-0066]] 0.7.4 uygulama notu) |
@@ -128,10 +128,13 @@ Statü sözlüğü: `ACTIVE | SUSPENDED | REVOKED | RETIRED` (+ kök: `ROLLING_O
 doğrulayıcı için `rp-status <dns_name> <STATUS>`, tek kullanım ya da kapı grubu için `end-use <dns_name> <id>` (bitiş tarihi).
 Yayıncı bunu denetler: önceki yayımlanmış sürümdeki bir belge veren, doğrulayıcı ya da kapı grubu yeni listede yoksa yayın
 durur. Tek istisna kayıt defterinde açıkça yazılmış, sayıları birebir tutan onaylı bir çıkarma kaydıdır (`removals.json`; yalnız
-liste, tarih, sayılar ve kısa gerekçe — ad ya da kimlik taşımaz); o zaman yayın yapılır ve herkese açık değişiklik günlüğüne adsız
-bir satır yazılır, eski liste sürümleri arşivde kalır. Bu yol bugüne dek bir kez kullanıldı (proje yönetimi kararı 2026-11-11):
-pilot öncesi sınama döneminden kalan, zaten `REVOKED` olan ve hiçbir gerçek kurumun kullanmadığı test kayıtları gerçek ağın
-listesinden çıkarıldı. Gerçek bir katılımcının kaydı için bu yol kullanılmaz.
+liste, tarih, çıkarmadan önceki imzalı sürümün numarası, sayılar ve kısa gerekçe — ad ya da kimlik taşımaz; kayıt yalnız o
+sürümden sonraki yayında geçer, başka bir yayında yeniden kullanılamaz); o zaman yayın yapılır ve herkese açık değişiklik günlüğüne adsız
+bir satır yazılır, eski liste sürümleri arşivde kalır. Bu yolun sınırı [[ADR-0081]] ile bağlayıcıdır (RR1–RR4): yalnız kurum
+katılımından önce sınama amacıyla konmuş, hiçbir gerçek kişiye belge vermemiş ve hiçbir gerçek sunum almamış kayıt çıkarılabilir;
+ilk katılımcı kurum gerçek ağın listesine girince yol kapanır ve sınama yalnız sandbox'ta yapılır. Bugüne dek bir kez kullanıldı
+(2026-11-11): pilot öncesi sınama döneminden kalan, zaten `REVOKED` olan sınama kayıtları gerçek ağın listesinden çıkarıldı.
+Gerçek bir kurumun kaydı için bu yol kullanılmaz.
 Kayıt listeden çıkarılmaz (TL2); geri çekilen kurum ETSI XML görünümünde kendi Tamga durum URI'siyle (`…/tl/Svcstatus/revoked`
 vb., [[SPEC-ID-0002]] §8.1) kalır ve LoTE'ye girmez.
 
@@ -229,7 +232,7 @@ Devir: yalnızca `operator` alanı değişir.
 | # | Değişmez |
 |---|---|
 | **TL1** | Her listede `operator.status` vardır ve liste aşaması boyunca `"provisional"`dır; `on_behalf_of` boş bırakılmaz. |
-| **TL2** | Liste ve çapa günlüğü sürümleri monoton artar; her sürüm bir öncekinin hash'ini taşır; hiçbir satır/kayıt silinmez (statü değişikliği `status_history`'ye eklenir). |
+| **TL2** | Liste ve çapa günlüğü sürümleri monoton artar; her sürüm bir öncekinin hash'ini taşır; hiçbir satır/kayıt silinmez (statü değişikliği `status_history`'ye eklenir). Tek istisna, ilk katılımcı kurum listeye girmeden önce çıkarılan sınama kayıtlarıdır ([[ADR-0081]]). |
 | **TL3** | Liste ve çapa imzası ≥2 kaydırmalı sertifikayla yapılır; rotasyon ≥30 gün önce duyurulur; yeni anahtar eskisiyle imzalanır. (Demo sapması S-6 beyanlı.) |
 | **TL4** | `TrustSource` dışında hiçbir bileşen liste dosyalarını yorumlamaz. |
 | **TL5** | `next_update` geçmiş veya erişilemeyen liste ile doğrulama **INDETERMINATE** üretir; asla ACCEPTED, asla REJECTED. |
@@ -280,7 +283,13 @@ listesinde seçim kuralı ve okuma setinde `relyingPartyByDnsName`; §7 devrin y
   ister. Yükleyici şeması `designated` değerini tanımayı sürdürür; o değerle yayın devir kararından sonra açılır.
 - **TL2.** Kayıt silme denetimi kök CA'yı, şemayı (ülke listesi ve LOTL) ve listede kalan kayıtlardaki kullanım, şema yetkisi ve
   `status_history` satırlarını da sayar; onaylı çıkarma kaydı bunları isteğe bağlı sayılarla taşır (`root_cas`, `schemas`,
-  `scopes`, `schema_authorizations`, `status_history`; yazılmamışsa 0). Yükleyici, sürüm birden fazla atladığında aradaki
+  `scopes`, `schema_authorizations`, `status_history`; yazılmamışsa 0). İkinci inceleme (2026-11-12): çıkarma kaydı tek bir sürüm geçişine bağlıdır
+  (`previous_version`: çıkarmadan önceki imzalı sürümün numarası, zorunlu; `previous_version_hash`: o sürümün `.jws` özeti,
+  isteğe bağlı) ve başka geçişte geçmez. Geçmiş satırları içerikleriyle korunur: `status_history` satırı aynen kalmalıdır (ör.
+  `invalidates_from`'u değiştirilen satır silinmiş sayılır); şema yetkisi satırında tek serbest değişiklik açık dönemin
+  kapatılmasıdır (`valid_until` yok → tarih). Sayılanlara belge verenin `delegate_keys` satırı ve LOTL'daki `national_lists`,
+  `wallet_providers`, `external_lists` kayıtları eklendi (aynı adlı isteğe bağlı sayılar): iptal listesi anahtarı yenilenirken
+  eski anahtar listeden atılmaz, bitiş tarihiyle (`valid_to`) kalır. Yükleyici, sürüm birden fazla atladığında aradaki
   özetleri doğrulayamaz; yalnız "atlayan sürüm öncülü olarak son görüleni gösteriyor" çelişkisini reddeder (tam denetim arşivle).
 - **TL11.** Yayıncı kaynakta her kayıt türü için bilinen alanların izin listesini uygular: bilinmeyen ya da hesaplanan alan
   (`client_id`, `rp_id`, `issuer_id`, `ca_id`, parmak izleri — [[ADR-0034]] CI3) yayını durdurur, sessizce atılmaz. `contact`
@@ -300,4 +309,8 @@ listesinde seçim kuralı ve okuma setinde `relyingPartyByDnsName`; §7 devrin y
 - **Kayıt komutları.** `registry.lock` altında çalışır (kilit tutulurken tazelenir); liste doğrulaması imzalı liste yazılmadan
   başarısız olursa kaynak dosya eski hâline döner ve değişiklik günlüğüne satır yazılmaz. Geçici işletmeci değeri yoksa gerçek
   ağda yayın durur ([[ADR-0070]] uygulama notu).
+
+**Sürüm notu (2026-11-12; proje yönetimi onayıyla).** TL2'nin sınama kayıtları istisnası [[ADR-0081]] ile karara bağlandı (§4,
+TL2 satırı); yayıncı davranışı değişmedi. §3 `operator` satırı `designated` değerinin anlamını ve bugün neden yayımlanmadığını
+yazar ([[ADR-0070]] uygulama notu); yükleyici ve yayıncı davranışı değişmedi.
 

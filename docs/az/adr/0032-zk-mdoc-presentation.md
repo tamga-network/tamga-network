@@ -4,7 +4,7 @@ title: "Sıfır bilik sübutu (ZK)"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-07
+last_updated: 2026-11-12
 summary: >
   Rəqəmsal cüzdan qurumların ES256 ilə imzalanmış mdoc rəqəmsal sənədlərini DƏYİŞDİRMƏDƏN, bu sənədlər haqqında Longfellow ZK ilə sıfır bilik sübutu yaradır (ilk predikat: 18 yaşdan yuxarı). Yoxlayan tərəf yalnız sübut olunan sahəni və sənədi verən qurumu görür; iki təqdimat bir-biri ilə əlaqələndirilə bilməz. Qəbul edilən sxemlər heşləri ilə birlikdə imzalı etibar siyahısında dərc olunur; daşınma OpenID4VP DCQL `mso_mdoc_zk` (Avropa İttifaqı (Aİ) TS13) və/və ya Digital Credentials API vasitəsilədir; sübut yaradıla bilmədikdə toplu nüsxə üsulu ehtiyat yoldur. Z5 Mərhələ 1 masaüstü uyğunluq ölçməsinə əsaslanır (`tools/zk-circuit/`).
 domain: Identity
@@ -76,6 +76,19 @@ yoxlamasını gözləmir; `accept_unrevocable_zk: true` yalnız qısa ömürlü 
 ## K7 — Cihaza bağlama
 Sübut cihaz açarının SessionTranscript üzərindəki ES256 imzasını ehtiva edir və cihazın açıq açarını gizlədir; açar təhlükəsiz
 aparat təminatında qalır (Secure Enclave / StrongBox), imzalama axını dəyişmir.
+
+*Tətbiq qeydi (2026-11-12; layihə rəhbərliyinin təsdiqi ilə) — etibar sorğuları sübut anına görə.* ZK təqdimatında sənədin özü
+və imzalandığı an yoxlayan tərəfə gəlmir; sübut yalnız sənədin sübut anında etibarlılıq müddəti daxilində olduğunu göstərir.
+Buna görə etibar addımları `C1` və `C2` ([[SPEC-API-0001]]) ZK təqdimatında sənədin `iat`-ı ilə soruşula bilməz; **sübutun vaxt
+damğası ilə** soruşulur (damğa yoxlayan tərəfin saatına icazə verilən pəncərə daxilində yaxın olmalıdır): qurum və növ səlahiyyəti
+təqdimat anında etibarlı olmalıdır. Qurum sertifikatının etibarlılığı da eyni səbəbdən sübut anına görə yoxlanılır (`A3`). Bu,
+SPEC-API-0001/AP11-in ("`C1` və `C2` rəqəmsal sənədin `iat`-ını götürür") ZK təqdimatı üçün açıq istisnasıdır; SD-JWT VC və mdoc
+təqdimatında AP11 olduğu kimi tətbiq edilir. İki nəticəsi var: (i) qurum sənədi verdikdən sonra bağlanıbsa, ZK təqdimatı rədd
+edilir (`iat` qaydasından sərt); (ii) qurum sənədin verildiyi anda qəbul edilə bilən deyildisə, amma təqdimat anında qəbul edilə
+biləndirsə, təqdimat bu addımlardan keçir. (ii)-nin pəncərəsi qısa ömürlü ZK nüsxəsində ən çox 24 saatdır ([[ADR-0044]] ZC1:
+nüsxə ən çox 24 saat etibarlıdır, verildiyi an ilə təqdimat anı arasındakı fərq bunu aşa bilməz). İşarəsiz ZK təqdimatında bu
+hədd yoxdur; həmin təqdimat yalnız siyasət `accept_unrevocable_zk: true` deyərsə qəbul edilir (ZC4) və bu seçimi açan yoxlayan
+tərəf bu fərqi də qəbul etmiş olur. Kod dəyişmədi; davranış ZK təqdimatının ilk tətbiqindən bəri belədir.
 
 ## K8 — Namespace bağlanmır: sahə adının unikallığı
 Longfellow v8 sübutu qurum açarını, docType-ı, sahə adını və dəyəri bağlayır; namespace-i bağlamır. Yoxlayan tərəf "bu qurumun bu

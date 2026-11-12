@@ -17,9 +17,10 @@ import {
   newPassKeyRef,
   parsePassGrant,
   signJwt,
+  PASS_GRANT_MAX_VALIDITY_SEC,
 } from "@tamga-network/wallet-core";
 import { pemRpSigner } from "./request.js";
-import { PassRegistry, filePassStore, holderCnfOf, verifyPassKeyProof } from "./pass.js";
+import { PASS_MAX_VALID_DAYS, PassRegistry, filePassStore, holderCnfOf, verifyPassKeyProof } from "./pass.js";
 import { registerAccepted } from "./accepted.js";
 import type { VerifyOutput } from "./verify.js";
 
@@ -219,6 +220,33 @@ describe("PassRegistry (ADR-0012 B)", () => {
         passKey: { jws: foreign, nonce },
       }),
     ).rejects.toThrow(/aud/);
+  });
+
+  it("WL13: tek kullanımlık bilet dışında izin en çok 184 gün — cüzdanın sakladığı sınırla aynı; aşan politika kart üretmez", async () => {
+    // iki paketin sınırı aynı sayı olmalı (cüzdan daha uzun izni atar)
+    expect(PASS_MAX_VALID_DAYS * 86400).toBe(PASS_GRANT_MAX_VALIDITY_SEC);
+    const signer = await pemRpSigner(
+      readFileSync(resolve(PKI, "rp-verify.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"),
+    );
+    const reg = new PassRegistry(signer, undefined, "verify.tamga.network");
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    const pres = await fakePresentation(keys, "kw");
+    const issue = (policy: { terminal_group: string; valid_days: number; single_use?: boolean }, id: string) =>
+      reg.issue({ verified: acceptedOutput(pres), presentationId: id, policy });
+    for (const days of [185, 365, 400, 0, -1, Number.NaN])
+      await expect(issue({ terminal_group: "g1", valid_days: days }, `prs_long_${days}`), String(days)).rejects.toThrow(
+        /valid_days.*at most 184 days/,
+      );
+    expect(reg.list()).toHaveLength(0);
+    // sınırdaki izin üretilir ve cüzdan onu saklar
+    const edge = await issue({ terminal_group: "g1", valid_days: PASS_MAX_VALID_DAYS }, "prs_edge");
+    expect(() =>
+      parsePassGrant(edge.jws, { rpClientId: CLIENT, rpName: "Test", credentialId: "c1", keyRef: "kw" }),
+    ).not.toThrow();
+    // tek kullanımlık bilet tavana tabi değil (ADR-0012 K4)
+    const ticket = await issue({ terminal_group: "gate", valid_days: 400, single_use: true }, "prs_ticket");
+    expect(ticket.record.singleUse).toBe(true);
   });
 
   it("dosya deposu: kayıtlar ve tekrar listesi yeniden başlatmada korunur", async () => {

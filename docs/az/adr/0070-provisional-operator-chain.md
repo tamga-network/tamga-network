@@ -97,6 +97,15 @@ Tətbiq mağazası yoxlama imzaçısının qeydi ([[ADR-0033]]) və sonrakı bü
 - **Qayda mətni (2026-11-12).** Layihə rəhbərliyinin təsdiqi ilə (2026-11-12) sandbox istisnası OP2-nin öz mətninə yazıldı
   (yuxarıdakı cədvəl): sandbox-da siyahı operatorunun adı "(TEST)" işarəsini daşıyır və siyahı "Tamga Network Sandbox (TEST)"
   adı ilə dərc olunur. Real şəbəkənin qaydası dəyişmədi. Kod dəyişmədi (dərc edənin yoxlaması 2026-11-11-dən bəri belədir).
+- **Tətbiq qeydi (2026-11-12; layihə rəhbərliyinin təsdiqi ilə; qərarın məzmunu dəyişmədi) — operator statusunda
+  `designated`.** Siyahı operatorunun `status` sahəsi iki dəyər tanıyır: `provisional` (bu gün) və `designated` (siyahının idarə
+  edilməsi dövlətin təyin etdiyi quruma təhvil veriləndə; [[ADR-0009]] K5, zəncirdəki qarşılığı [[ADR-0074]] K3). Siyahı
+  mərhələsində yalnız `provisional` dərc olunur ([[SPEC-TRUST-0001]]/TL1): dərc edən `designated` və ya boş `on_behalf_of` ilə
+  dərc etmir. Yükləyici (`@tamga-network/trust`) `designated` dəyərini bu gündən tanıyır və həmin dəyərdə `on_behalf_of` tələb
+  etmir; beləliklə təhvil günü siyahını oxuyan yoxlayan tərəflərin və cüzdanların yenilənməsi lazım olmur. Dəyər yoxlama
+  qərarına daxil olmur: siyahıya etibar imzalayanın sabitlənmiş açarından gəlir, yükləyicinin dəyəri tanıması etibarı
+  genişləndirmir. `designated` ilə dərc ayrıca təhvil qərarı ilə açılır və TL1 mətni həmin qərarla birlikdə yenilənir. Kod
+  dəyişmədi: dərc edən sərt, yükləyici irəliyə uyğun qalır.
 
 # Status
 

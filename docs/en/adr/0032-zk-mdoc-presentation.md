@@ -4,7 +4,7 @@ title: "Zero-knowledge proofs (ZK)"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-07
+last_updated: 2026-11-12
 summary: >
   WITHOUT CHANGING the institutions' ES256-signed mdoc credentials, the wallet produces zero-knowledge proofs about them with
   Longfellow ZK (first predicate: over 18). The verifier sees only the proven attribute and the issuer; two presentations cannot
@@ -84,6 +84,21 @@ credential is revoked or suspended. Implemented (packages 0.4.0): the ZK copy is
 ## K7 — Device binding
 The proof contains the device key's ES256 signature over the SessionTranscript and hides the device public key; the key stays in
 secure hardware (Secure Enclave / StrongBox) and the signing flow does not change.
+
+*Implementation note (2026-11-12; approved by project management) — trust queries at proof time.* In a ZK presentation the
+credential itself and the moment it was signed do not reach the verifier; the proof only shows that the credential is within its
+validity period at proof time. The trust steps `C1` and `C2` ([[SPEC-API-0001]]) therefore cannot be asked with the credential's
+`iat` in a ZK presentation; they are asked **with the proof timestamp** (the timestamp must be close to the verifier's clock,
+within the allowed window): the institution and its authorisation for the type must be valid at presentation time. For the same
+reason the validity of the institution's certificate is also checked at proof time (`A3`). This is the explicit exception to
+SPEC-API-0001/AP11 ("`C1` and `C2` take the credential's `iat`") for ZK presentations; for SD-JWT VC and mdoc presentations AP11
+applies unchanged. It has two consequences: (i) if the institution was closed after it issued the credential, the ZK presentation
+is rejected (stricter than the `iat` rule); (ii) if the institution was not acceptable when the credential was issued but is
+acceptable at presentation time, the presentation passes these steps. The window of (ii) is at most 24 hours for a short-lived ZK
+copy ([[ADR-0044]] ZC1: a copy is valid for at most 24 hours, so the moment of issuance and the moment of presentation cannot
+differ by more). For an unmarked ZK presentation this bound does not exist; such a presentation is accepted only if the policy
+says `accept_unrevocable_zk: true` (ZC4), and a verifier that switches this option on accepts this difference as well. No code
+change; the behaviour has been this way since ZK presentation was first implemented.
 
 ## K8 — The namespace is not bound: unique attribute names
 A Longfellow v8 proof binds the institution key, the docType, the attribute name and the value; it does not bind the namespace.

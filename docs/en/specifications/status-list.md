@@ -492,7 +492,8 @@ Normative. Run for every credential that carries a `status` claim.
 Ş4.  Verify the token:
      - typ == "statuslist+jwt"
      - the signer is pinned: the x5c leaf fingerprint is one of the institution's ACTIVE status keys in
-       the trust list (S11), before the signature check → otherwise REJECT ([[ADR-0056]] K6)
+       the trust list (S11), before the signature check → otherwise REJECT ([[ADR-0056]] K6);
+       a signer that IS registered but outside its validity window (key renewed) → "COULD NOT VERIFY"
      - signature valid, the x5c chain links to the issuer's X.509 chain
        (SPEC-ID-0002); root anchored in RootCARegistry
      - sub == the uri in the credential  → otherwise REJECT
@@ -505,12 +506,17 @@ Normative. Run for every credential that carries a `status` claim.
      - now − iat > the policy's max_status_token_age_sec → "COULD NOT VERIFY"
      (the exp/ttl claims decide, not the HTTP cache headers)
 
-Ş6.  CHAIN ANCHOR:
+Ş6.  CHAIN ANCHOR (step D5 of SPEC-API-0001 §1 — the result values are defined there):
      listId = keccak256(issuerId, sub)
      anchor = StatusListRegistry.getListAnchor(listId)
      - anchor.status == ACTIVE  → otherwise REJECT
-     - SHA-256(token bytes) == anchor.contentHash → otherwise REJECT
-     - version in the token lower than anchor.version → REJECT (rollback)
+     - SHA-256(token bytes) == anchor.contentHash → passed
+     - a mismatch is NOT a REJECT by itself (the token carries no version field; a rollback shows in time):
+         token OLDER than the anchor: fetched clearly after the anchor → REJECT (rollback);
+           fetched before the anchor or within the clock tolerance → "COULD NOT VERIFY"
+         token NEWER than the anchor: the normal publishing order (CDN first, then the anchor — §5.2), allowed for
+           at most max_anchor_lag_sec (+ clock tolerance); beyond that → "COULD NOT VERIFY"
+     - the list has no anchor at all: a credential older than max_anchor_lag_sec → "COULD NOT VERIFY"
 
 Ş7.  Capacity: idx < anchor.listSize → otherwise REJECT
 
@@ -538,7 +544,7 @@ Tamga issuers publish the Status List (one is enough, VCR_11).
 
 ## 7.1 "Invalid" versus "could not verify"
 
-In Ş3(c) and Ş5 the result is **"could not verify", not "invalid"**, and the verifier must show the two **differently** to
+In Ş3(c) and Ş5 — and in the lapsed-registered-key case of Ş4 and the anchor-lag cases of Ş6 — the result is **"could not verify", not "invalid"**, and the verifier must show the two **differently** to
 the user.
 
 The difference between "this diploma has been revoked" and "I cannot check the revocation status right now" is the
@@ -718,7 +724,7 @@ database.
 | **S8** | The list URI is opaque; it encodes no year, department or cohort (§6.3). |
 | **S9** | Lists are split by no criterion other than type (§6.4). |
 | **S10** | List capacity ≥ 100,000; fill ≤ 80%. |
-| **S11** | The status key is separate from the credential signing key (§3.4). The certificate fingerprint of the status key is published in the trust list in the institution entry's `delegate_keys[]` field with `purpose: "status_list"`; at D3 the verifier matches the token signer against this entry (no entry → INDETERMINATE, mismatch → REJECTED); in the packages the signer is a verification input (`expectedSignerFingerprints`, required — [[ADR-0056]] K6). An `idx` outside the list is not read as valid (D6 REJECT). |
+| **S11** | The status key is separate from the credential signing key (§3.4). The certificate fingerprint of the status key is published in the trust list in the institution entry's `delegate_keys[]` field with `purpose: "status_list"`; at D3 the verifier matches the token signer against this entry (no entry → INDETERMINATE, mismatch → REJECTED; a signer that is registered but outside its validity window → INDETERMINATE); in the packages the signer is a verification input (`expectedSignerFingerprints`, required — [[ADR-0056]] K6). An `idx` outside the list is not read as valid (D6 REJECT). |
 | **S12** | The verifier does not fetch per verification; it uses bulk prefetching (§9.1). |
 | **S13** | The `exp`/`ttl` claims override HTTP cache headers. |
 | **S14** | "Invalid" and "could not verify" are shown to the user differently (§7.1). |

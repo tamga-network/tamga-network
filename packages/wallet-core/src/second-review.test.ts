@@ -274,4 +274,23 @@ describe("respond — teslim sözleşmesi (WL5) ve redirect_uri", () => {
     );
     expect((await out("http://verify.example/p/1", { allowLocalDevHost: true })).redirectUri).toBeUndefined();
   });
+
+  it("cüzdanın kendi dönüş adresi (`callbackUri`) uygulama şemasıyla da döner — kimliğe bağlı belge vermede kod buraya gelir", async () => {
+    const out = (uri: unknown, extra = {}) => send(req(), answering(200, { redirect_uri: uri }), extra);
+    const cb = { callbackUri: "tamga-wallet://idv/cb" };
+    expect((await out("tamga-wallet://idv/cb?code=abc&state=s", cb)).redirectUri).toBe(
+      "tamga-wallet://idv/cb?code=abc&state=s",
+    );
+    expect((await out("tamga-wallet://idv/cb", cb)).redirectUri).toBe("tamga-wallet://idv/cb");
+    expect((await out("tamga-wallet://idv/cb#error=access_denied", cb)).redirectUri).toBeTruthy();
+    // seçenek verilmeden, başka yol / başka şema / önek benzerliği ile dönmez
+    expect((await out("tamga-wallet://idv/cb?code=abc")).redirectUri).toBeUndefined();
+    for (const bad of [
+      "tamga-wallet://idv/cbx?code=a",
+      "tamga-wallet://settings",
+      "other://idv/cb?code=a",
+      "tamga-wallet://idv/cb?a b",
+    ])
+      expect((await out(bad, cb)).redirectUri).toBeUndefined();
+  });
 });

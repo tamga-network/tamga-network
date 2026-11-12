@@ -70,6 +70,12 @@ describe("Kontrat denetimi 2026-11-11 — kayıt kontratları", function () {
         "NetworkTierRequiresGovernance",
       );
       expect(await f.schemas.isSchemaAcceptableAt(sid, issuedAt)).to.equal(true);
+      // ikinci kontrol 2026-11-12: aynı sınır sürüm özetinde — yürütücü oylanmamış özet ekleyemez
+      await expect(ex.addSchemaContentHash(sid, id("unvoted"))).to.be.revertedWithCustomError(
+        f.schemas,
+        "NetworkTierRequiresGovernance",
+      );
+      expect(await f.schemas.matchesContentHash(sid, id("unvoted"))).to.equal(false);
 
       const dep = await proposalId(
         await f.as(f.governance, f.trValidator).proposeNetworkSchemaDeprecation(sid, ZERO),
@@ -89,6 +95,7 @@ describe("Kontrat denetimi 2026-11-11 — kayıt kontratları", function () {
       await (
         await ex.registerSchema({ ...f.schemaRecord(VCT, SchemaTier.NETWORK, "0x0000"), validFrom: t - 30 * DAY })
       ).wait();
+      await expect(ex.addSchemaContentHash(id(VCT), id("v2"))).to.emit(f.schemas, "SchemaContentHashAdded");
       await (await ex.deprecateSchemaAt(id(VCT), ZERO, t - 10 * DAY)).wait();
       expect(await f.schemas.isSchemaAcceptableAt(id(VCT), t - 20 * DAY)).to.equal(true);
       expect(await f.schemas.isSchemaAcceptableAt(id(VCT), t - 10 * DAY)).to.equal(false);

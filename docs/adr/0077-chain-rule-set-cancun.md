@@ -79,6 +79,10 @@ için kural seti bugün bedelsiz seçilir: zincir Cancun ile kurulur.
 - Doğrulama: yerelde tek doğrulayıcılı QBFT ağı (Besu 26.11.0) `cancunTime: 0` ile kuruldu, blok üretti, kontratlar dağıtıldı;
   Cancun işlem kodları (`MCOPY`, `TSTORE`/`TLOAD`, `BLOBBASEFEE`) çalıştı, blok başlığı blob alanlarını sıfır değerle taşıdı. KZG
   kurulumu için ek seçenek gerekmedi. Çok düğümlü ağ CI test ağı iş akışında (`testnet.yml`) doğrulanır.
+- **Uygulama notu (2026-11-12, ikinci kontrol; karar içeriği değişmedi):** CR2'nin test tarafı bu düzeltmeyle gerçekleşti —
+  test aracında süreç içi ağın adı `default`tur; yapılandırma hiç kullanılmayan `hardhat` adlı ağı Cancun'a sabitlemişti ve
+  testler daha yeni bir kural setiyle koşuyordu. `default` ve `node` ağları Cancun'a sabitlendi; bir test koşulan kural setini
+  denetler.
 - Belgeler: [[SPEC-BC-0001]] §9 ve §14 madde 10 (kapandı), [[ARCH-0002]], [[GUIDE-0018]].
 
 # Durum

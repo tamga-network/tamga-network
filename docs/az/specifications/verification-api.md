@@ -4,7 +4,7 @@ title: "Yoxlama xətti və API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Yoxlamanın kanonik alqoritmini və issuer/verifier servislərinin HTTP səthini müəyyən edir. Əsas töhfə ADDIM KODLARI REYESTRİdir: A1…E4, dörd spesifikasiyaya paylanmış yoxlama addımlarının vahid normativ siyahısı. Bu kodlar `failed_step` sahəsində maşınla oxunan formada ötürülür, beləliklə "yoxlama uğursuz oldu" əvəzinə "C2-də dayandı — issuer bu sxem üçün səlahiyyətli deyil" demək mümkündür. İkinci qayda: HTTP status kodu yoxlama nəticəsini KODLAŞDIRMIR — rədd edilmiş credential uğurlu API çağırışıdır; 4xx yalnız nəqliyyat/sorğu xətasıdır. Üçüncüsü: nəticə üçqiymətlidir və INDETERMINATE ayrıca səbəb sahəsi daşıyır.
 translation_of: SPEC-API-0001
@@ -88,7 +88,7 @@ Z1. A4–A7 Z1-in əhatəsindədir.
 | `C1` | `isCredentialAcceptable(issuerId, iat)` — **iat = sənədin `iat` claim-i** |
 | `C2` | `isCredentialSchemaAcceptable(issuerId, schemaId, iat)` — **buraxıla bilməz** |
 | `C3` | `isRecognizedBy(kendi devletim, issuerId)` |
-| `C4` | Sənədin `category` claim-i ↔ qeydiyyatdakı sənədi verən qurumun sinfi: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ claim yoxdur; uyğunsuzluq → RƏDD ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18). mdoc və ZK təqdimatında `category` sahəsi yoxdur: bu formatlarda C4 tətbiq edilmir və `checks_skipped`-də görünür; xarici siyahıdakı qurumda da tətbiq edilmir ([[ADR-0036]]) |
+| `C4` | Sənədin `category` claim-i ↔ qeydiyyatdakı sənədi verən qurumun sinfi: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ claim yoxdur; uyğunsuzluq → RƏDD ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18). mdoc və ZK təqdimatında `category` sahəsi yoxdur: bu formatlarda C4 tətbiq edilmir və `checks_skipped`-də görünür; xarici siyahıdakı qurumda da tətbiq edilmir ([[ADR-0036]]). Qurumun sinfi hər formatda nəticə obyektində `issuer.class` kimi etibar siyahısındakı qeyddən qayıdır ([[ADR-0010]] tətbiq qeydi, 2026-11-12) |
 
 ## 1.D — Ləğv qatı → [[SPEC-CRED-0003]] §7
 
@@ -96,7 +96,7 @@ Z1. A4–A7 Z1-in əhatəsindədir.
 |---|---|
 | `D1` | `status.status_list` oxu (`idx`, `uri`). ZK təqdimatında (`mso_mdoc_zk`) indeks gəlmir: sübutun bağlandığı növ qısaömürlü ZK nüsxəsidirsə (`urn:tamga:id:ShortLivedIdentityAttestation:1`, növ qaydası ≤ 24 saat, ləğv siyahısı yoxdur — [[ADR-0044]] K5) D addımları tətbiq edilmir və `status.value = NOT_APPLICABLE` (əsaslandırma: qısa ömür); işarəsiz ZK təqdimatı aşağıdakı qaydaya tabedir. ZK olmayan sənəddə `status` yoxdursa: növün sxemində `uses_status_list: true` olarsa RƏDD (ləğv yoxlaması səssizcə buraxılmır — [[ADR-0056]] K13), əks halda `NOT_APPLICABLE` |
 | `D2` | Status List Token-i **qabaqcadan yükləmə keşindən** götür |
-| `D3` | Token imzası; `sub == uri`; `iss` eyni etibar zəncirində. İmzalayan imza yoxlamasından əvvəl qurumun etibar siyahısındakı ACTIVE ləğv açarlarına bağlanır (`expectedSignerFingerprints` — [[ADR-0056]] K6); qeydiyyatda açar yoxdursa `INDETERMINATE`. Ləğv açarı yalnız etibarlılıq pəncərəsindədirsə (`valid_from`…`valid_to`, verilibsə) imzalayan sayılır. Keşdəki gövdə token kimi oxuna bilmirsə (məs. serverin xəta səhifəsi) nəticə RƏDD deyil, `INDETERMINATE`/`STATUS_UNREACHABLE`-dır |
+| `D3` | Token imzası; `sub == uri`; `iss` eyni etibar zəncirində. İmzalayan imza yoxlamasından əvvəl qurumun etibar siyahısındakı ACTIVE ləğv açarlarına bağlanır (`expectedSignerFingerprints` — [[ADR-0056]] K6); qeydiyyatda açar yoxdursa `INDETERMINATE`. Ləğv açarı yalnız etibarlılıq pəncərəsindədirsə (`valid_from`…`valid_to`, verilibsə) imzalayan sayılır. İmzalayan **qeydiyyatlı**, lakin pəncərəsindən kənar (və ya `RETIRED`) ləğv açarıdırsa — açar yenilənib, keşdə köhnə siyahı qalıb — nəticə RƏDD deyil, `INDETERMINATE`/`STATUS_STALE`-dir; qeydiyyatda olmayan (və ya `REVOKED` / `SUSPENDED`) imzalayan `REJECTED` qalır. Keşdəki gövdə token kimi oxuna bilmirsə (məs. serverin xəta səhifəsi) nəticə RƏDD deyil, `INDETERMINATE`/`STATUS_UNREACHABLE`-dır |
 | `D4` | Təzəlik: `exp` keçməyib, tokenin yaşı (`şimdi − iat`) siyasətin `max_status_token_age_sec` həddi daxilindədir |
 | `D5` | Lövbər: tokenin heşi (`contentHash`) siyahının lövbər jurnalındakı son sətri ilə uyğun gəlirmi. Token versiya sahəsi daşımır; geri qaytarma zamana görə aşkarlanır. Uyğun gəlməyən token lövbərdən **köhnədirsə**: keş lövbərdən əvvəl (və ya saat tolerantlığı daxilində) yüklənibsə `INDETERMINATE`/`STATUS_STALE`, açıq şəkildə sonra yüklənibsə `REJECTED`. Uyğun gəlməyən token lövbərdən **yenidirsə**, bu, adi dərc ardıcıllığıdır (əvvəl CDN, sonra lövbər — [[SPEC-CRED-0003]] §5.2) və D5 `checks_skipped`-də görünür; pay məhduddur: token məlum son lövbərdən `max_anchor_lag_sec` (+ saat tolerantlığı) qədərdən daha yenidirsə, lövbəri gecikib → `INDETERMINATE`/`STATUS_STALE`. Siyahı lövbər jurnalında heç yoxdursa, eyni pay sənədin `iat`-ından sayılır: yeni verilmiş sənəddə D5 buraxılır, pay dolubsa `INDETERMINATE`/`STATUS_STALE`. Xarici siyahıdakı qurumun ləğv siyahısı üçün lövbər jurnalı yoxdur, D5 buraxılır ([[ADR-0036]]). `max_anchor_lag_sec` siyasətin təzəlik sahəsidir (§4.4): standart 3600 san (lövbər jurnalının saatlıq ritmi); Tamga Verify 600 san istifadə edir |
 | `D6` | `bits=2` ilə `idx` oxu; `0x00` xaricində → RƏDD |
@@ -133,7 +133,7 @@ edilə bilən idimi" deyə soruşur. Bu, yoxlamanın **retrospektiv** əməliyya
 olduğunu qəbul edir — sənəd keçmişdə verilib, bugünkü vəziyyət deyil, həmin
 günkü vəziyyət həlledicidir.
 
-**ZK təqdimatı (`mso_mdoc_zk`).** Sıfır bilgi sübutunda sənədin imzalanma anı açıqlanmır. Bu yolda `C1` və `C2` sübutun vaxt damğası ilə (təqdimat anı; yoxlayan tərəfin saatına saat tolerantlığı daxilində yaxın olmalıdır) soruşulur: qurum və növ səlahiyyəti təqdimat anında etibarlı olmalıdır. Qısa ömürlü ZK nüsxəsi ən çox 24 saat əvvəl verildiyi üçün ([[ADR-0044]]) iki an arasındakı fərq ən çox bir gündür.
+**ZK təqdimatı (`mso_mdoc_zk`).** Sıfır bilgi sübutunda sənədin imzalanma anı açıqlanmır. Bu yolda `C1` və `C2` sübutun vaxt damğası ilə (təqdimat anı; yoxlayan tərəfin saatına saat tolerantlığı daxilində yaxın olmalıdır) soruşulur: qurum və növ səlahiyyəti təqdimat anında etibarlı olmalıdır. Qısa ömürlü ZK nüsxəsi ən çox 24 saat əvvəl verildiyi üçün ([[ADR-0044]]) iki an arasındakı fərq ən çox bir gündür. Bu, AP11-in ZK təqdimatı üçün açıq istisnasıdır ([[ADR-0032]] tətbiq qeydi, 2026-11-12). İki nəticəsi var: qurum sənədi verdikdən sonra bağlanıbsa, ZK təqdimatı rədd edilir; qurum sənədin verildiyi anda qəbul edilə bilən deyildisə, amma təqdimat anında qəbul edilə biləndirsə, təqdimat bu addımlardan keçir. İşarəsiz ZK təqdimatında (yalnız `accept_unrevocable_zk: true` ilə qəbul edilir) bir günlük hədd yoxdur.
 
 ## 1.2 `issuerId` sertifikatdan törədilir
 
@@ -158,7 +158,7 @@ Addımlar **ardıcıl** icra olunur. İlk uğursuzluqda dayanılır və həmin k
 **İstisna:** `E4` hər halda işləyir — rədd edilmiş yoxlama da qeydə alınır (audit qeydi yeri olan yoxlayan tərəfdə; əks halda E4
 buraxılmış kimi bildirilir — [[ADR-0056]] K11).
 
-**Kodların bildirilməsi (tətbiq qeydi, 2026-11-11).** İstinad tətbiqi bəzi addımları qonşu kodla bildirir: `cnf` çatışmazlığı (`A3d`) `A3`, təkrarlanan heş və toqquşma (`A8`) SD-JWT VC-də `A5` kimi qayıdır; mdoc və ZK-də `A8` sənəd növünün (docType) siyasətdə olmamasıdır. `A2` (Tamga növündə köhnə `typ`) və `A4` (Tamga növündə `_sd_alg` yoxdur) növün kataloqda olub-olmadığı bilinəndə, yəni `B2`-dən sonra; `A3b` (`iss` uyğunluğu) etibar qeydi oxunanda, yəni `B6`-dan sonra yoxlanılır — birdən çox qüsuru olan sənəddə qayıdan kod sıradakı ilk kod olmaya bilər. Gözlənilməz istisnada `failed_step` həmin qatın ilk kodudur (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). mdoc-un A-ardıcıllığı: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6.
+**Kodların bildirilməsi (tətbiq qeydi, 2026-11-11).** İstinad tətbiqi bəzi addımları qonşu kodla bildirir: `cnf` çatışmazlığı (`A3d`) `A3`, təkrarlanan heş və toqquşma (`A8`) SD-JWT VC-də `A5` kimi qayıdır; mdoc və ZK-də `A8` sənəd növünün (docType) siyasətdə olmamasıdır. `A2` (Tamga növündə köhnə `typ`) və `A4` (Tamga növündə `_sd_alg` yoxdur) növün kataloqda olub-olmadığı bilinəndə, yəni `B2`-dən sonra; `A3b` (`iss` uyğunluğu) etibar qeydi oxunanda, yəni `B6`-dan sonra yoxlanılır — birdən çox qüsuru olan sənəddə qayıdan kod sıradakı ilk kod olmaya bilər. Gözlənilməz istisnada `failed_step` həmin qatın ilk kodudur (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). mdoc-un A-ardıcıllığı: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6. Yoxlamaların özü tam aparılır: uğurlu yoxlamada `A3d` və `A8` `checks_performed`-də görünür; uğursuzluğun dəqiq səbəbi `failed_reason` sahəsindədir. Bu bildirmə layihə rəhbərliyinin təsdiqi ilə (2026-11-12) istinad tətbiqinin məcburi davranışıdır; kodların qeydlərdəki oxunuşu dəyişməsin deyə (AP1) dəyişdirilmir ([[ADR-0056]] tətbiq qeydi).
 
 ## 1.4 Kodların sabitliyi
 
@@ -244,7 +244,7 @@ arasındakı fərq bir insanın işə götürülüb-götürülməməsidir.
 |---|---|
 | `SCHEMA_UNREACHABLE` | [[SPEC-SCHEMA-0001]] §7 Ş3(c) |
 | `STATUS_UNREACHABLE` | [[SPEC-CRED-0003]] §7 Ş3(c) |
-| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 təzəlik həddi aşılıb; və ya D5-də yoxlayan tərəfin qabaqcadan yükləmə gecikməsi / saat tolerantlığı pəncərəsi / oxuna bilməyən lövbər vaxtı / lövbər gecikmə pəncərəsinin aşılması (token son lövbərdən `max_anchor_lag_sec`-dən daha yenidir və ya siyahı heç lövbərlənməyib) |
+| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 təzəlik həddi aşılıb; və ya D5-də yoxlayan tərəfin qabaqcadan yükləmə gecikməsi / saat tolerantlığı pəncərəsi / oxuna bilməyən lövbər vaxtı / lövbər gecikmə pəncərəsinin aşılması (token son lövbərdən `max_anchor_lag_sec`-dən daha yenidir və ya siyahı heç lövbərlənməyib); və ya D3-də siyahı qurumun qeydiyyatlı, lakin etibarlılıq pəncərəsindən kənar ləğv açarı ilə imzalanıb |
 | `CHAIN_UNREACHABLE` | Zəncir və indeksləyici əlçatan deyil |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
 | `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; həmçinin `Z1`-də yoxlayan tərəfin ZK komponenti istifadə edilə bilmirsə (dövrə faylı yoxdur, WASM yüklənə bilmir) — təqdimatın deyil, yoxlayan tərəfin çatışmazlığı |
@@ -254,7 +254,10 @@ Həmçinin aşağıdakı hallar `INDETERMINATE` verir, `REJECTED` vermir:
 
 - **Gözlənilməz istisna** (kitabxana xətası, zədələnmiş etibar qeydi …): həmin addımda `INDETERMINATE`, səbəb isə həmin qatın dəyəridir (A →
   `CHAIN_UNREACHABLE`, B → `SCHEMA_UNREACHABLE`, C/E/T0 → `INDEXER_STALE`, D → `STATUS_UNREACHABLE`); `failed_reason`-a
-  istisna mesajı daxil edilmir (AP3), yalnız addım və xəta növü. Nəticə yenə də E4 audit qeydinə düşür.
+  istisna mesajı daxil edilmir (AP3), yalnız addım və xəta növü. Nəticə yenə də E4 audit qeydinə düşür. Yerləşdirilən
+  yoxlayıcıda təqdimat istifadə edildikdən **sonra** yaranan daxili xəta da bu qaydaya düşür: xəta xəttin sonundakı (E) qatda
+  və ya ondan sonradır; səbəb `INDEXER_STALE`, `failed_step` `null`, `failed_reason` isə "internal error after verification (…)"
+  olur. Qapalı çoxluqda ayrıca "daxili xəta" dəyəri yoxdur; bu hal köhnəlmiş siyahıdan `failed_step`-in boş olması ilə seçilir.
 - **İşarəsiz ZK təqdimatı və `accept_unrevocable_zk: false`:** ZK təqdimatında ləğv indeksi gəlmir (ZK4). Qısa ömür işarəsini
   daşıyan təqdimat (sübutun bağladığı növün ZK nüsxəsi, [[ADR-0044]] K5) bu bayraq olmadan qəbul edilir. İşarəsiz ZK təqdimatında
   siyasət ləğv yoxlamasını tələb edirsə, nəticə `D1` / `STATUS_UNREACHABLE` olur; yalnız açıq şəkildə `true` yazılıbsa qəbul edilir:
@@ -570,7 +573,7 @@ Nümunə saytın təqdimat başlatma ucu (`/sample-site/start`, yalnız sandbox)
 | **AP6** | Siyasətin `required_claims`-i RP-nin etibar siyahısındakı qeydinin scope-unu aşa bilməz. |
 | **AP7** | Xətanın `detail` sahəsi fərdi məlumat ehtiva etmir. |
 | **AP8** | `C2` (sxem səlahiyyəti) heç bir konfiqurasiya ilə yan keçilə bilməz. |
-| **AP11** | `C1` və `C2` rəqəmsal sənədin `iat`-ını götürür; rəqəmsal sənədin verilmə vaxtına aid sorğular yoxlamada istifadə olunmur. |
+| **AP11** | `C1` və `C2` rəqəmsal sənədin `iat`-ını götürür; rəqəmsal sənədin verilmə vaxtına aid sorğular yoxlamada istifadə olunmur. İstisna: ZK təqdimatında (`mso_mdoc_zk`) sənədin imzalanma anı sübutda gizlidir; `C1` və `C2` sübutun vaxt damğasını götürür (§1.1, [[ADR-0032]]). |
 | **AP12** | `issuerId` `x5c` yarpaq sertifikatının barmaq izindən törədilir, `iss` claim-indən deyil. |
 | **AP13** | Keçid kartı tokeninin yoxlanması ([[ADR-0012]] B): imza `pass_grant`-dakı nüsxə açarı ilə, `aud` = yoxlayan tərəfin daimi identifikatoru (etibar siyahısındakı qeydinin `dns_name`-i; sertifikat yenilənsə də dəyişmir, [[ADR-0034]]), ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ indi + 30 s, `exp` ≤ indi + 60 s + 30 s (saat sürüşməsi tolerantlığı), `jti` təkrar siyahısı (terminal qrupu daxilində onlayn paylaşılır); tokendən fərdi məlumat çıxarılmır və loglanmır. |
 | **AP9** | `E4` (audit qeydi) rədd edilmiş yoxlamalarda da işləyir (audit qeydi yeri olan yoxlayan tərəfdə; host edilən yoxlayan tərəfdə həmişə). |
@@ -588,9 +591,10 @@ səthinə çevrilməsinin qarşısını alır.
 açıqlanan dəyərləri oxumaq fərqli səlahiyyətlərdir. İnsan resursları üzrə köməkçi "namizəd
 yoxlanıldı" nəticəsini görə bilər, lakin orta balı (açıqlanıbsa) görməyə bilər.
 
-**`checks_skipped` boş deyilsə, diqqətli olun.** Bu, köhnə SDK-nın hansısa yoxlamanı ötürdüyü deməkdir
-([[ARCH-0005]] §4.1). Yoxlayan tərəf tətbiqi bunu **görünən** etməli, səssizcə
-qəbul etməməlidir.
+**`checks_skipped` boş deyilsə, diqqətli olun.** Bu, bir addımın tətbiq edilmədiyi deməkdir: formatın daşımadığı (məs. mdoc və
+ZK təqdimatında `C4`), siyasətin tələb etmədiyi (`C3`), çağıranın bilərəkdən söndürdüyü (`E3`, `E4`) və ya tətbiqin
+aparmadığı addım; köhnə SDK da hansısa yoxlamanı ötürmüş ola bilər ([[ARCH-0005]] §4.1). Yoxlayan tərəf tətbiqi ötürülənləri
+**görünən** etməli, səssizcə qəbul etməməlidir.
 
 **Preflight sızma səthinə çevrilə bilər.** `/offers/preflight` `subject_ref`
 ilə sorğulanır və "bu tələbə mövcuddurmu" sualına cavab verir. Bu, qurumdaxili uc nöqtəsidir;
@@ -626,4 +630,10 @@ xaricə açılmamalıdır.
 # Status
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02).
+
+**Versiya qeydi (2026-11-12; layihə rəhbərliyinin təsdiqi ilə — davranış dəyişmədi).** Sənəd–kod yoxlamasından qalan üç
+uyğunsuzluq sənəd tərəfində bağlandı və qərar sənədlərinə bağlandı: ZK təqdimatında `C1`/`C2`-nin sübut anına görə soruşulması
+AP11-in açıq istisnasıdır ([[ADR-0032]] tətbiq qeydi; §1.1, AP11 sətri); mdoc və ZK təqdimatında `C4`-ün tətbiq edilməməsi və
+sinfin `issuer.class`-dan oxunması ([[ADR-0010]] tətbiq qeydi; §1.C); `A3d` və `A8` kodlarının bildirilməsi ([[ADR-0056]]
+tətbiq qeydi; §1.3).
 

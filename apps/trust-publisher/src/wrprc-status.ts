@@ -110,14 +110,18 @@ export const WRPRC_NOTE_MAX = 120;
 
 /**
  * Not denetimi (herkese açık metin): e-posta, uzun rakam dizisi (telefon / kimlik / vergi numarası), adres bağlantısı ve kişi adı
- * gibi görünen ardışık iki büyük harfle başlayan sözcük reddedilir. Sezgiseldir — notu kısa ve kişisiz yazın ("kurum isteği").
+ * gibi görünen ardışık iki büyük harfle başlayan sözcük reddedilir. Sezgiseldir — notu kısa ve kişisiz yazın ("kurum isteği");
+ * baş harfi büyük iki sözcük ("Contract Ended") kişi adı sayılır: küçük harfle yazın. ISO takvim tarihi (2026-11-12) yazılabilir.
  */
 export function revocationNoteProblems(note: string): string[] {
   const p: string[] = [];
   if (note.length > WRPRC_NOTE_MAX) p.push(`not en çok ${WRPRC_NOTE_MAX} karakter`);
   if (/[\p{Cc}]/u.test(note)) p.push("notta denetim karakteri olamaz");
   if (/\S+@\S+/.test(note)) p.push("notta e-posta adresi olamaz");
-  if (/\d[\d\s().-]{6,}\d/.test(note)) p.push("notta telefon ya da kimlik numarası gibi rakam dizisi olamaz");
+  // ISO takvim tarihi (2026-11-12) rakam dizisi sayılmaz (0.8.3: "key compromise 2026-11-12" reddediliyordu); yalnız geçerli
+  // görünen yıl-ay-gün ve bitişiğinde başka rakam/tire yokken — yerine boşluk konur, çevresindeki rakamlar yine birlikte denetlenir
+  const noDates = note.replace(/(?<![\d-])(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?![\d-])/g, " ");
+  if (/\d[\d\s().-]{6,}\d/.test(noDates)) p.push("notta telefon ya da kimlik numarası gibi rakam dizisi olamaz");
   if (/https?:\/\/|www\./i.test(note)) p.push("notta adres bağlantısı olamaz");
   if (/\p{Lu}\p{Ll}+\s+\p{Lu}\p{Ll}+/u.test(note)) p.push("notta kişi adı gibi görünen ifade olamaz (Ad Soyad)");
   return p;

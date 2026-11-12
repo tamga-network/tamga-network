@@ -4,7 +4,7 @@ title: "Belge türü kimliği (URN)"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-07
+last_updated: 2026-11-12
 summary: >
   D-SCHEMA-1 ("vct kararlı HTTPS URL") süpersede edilir: belge tipinin
   kimliği urn:tamga:<domain>:<Type>:<major> biçiminde bir URN olur; Type
@@ -137,6 +137,15 @@ uyarınca yeni kod); (b) belge sahibinin güvence seviyesi (T0–T3) **hiçbir z
 korunur, seviye tipin ön koşuludur (DB-6); (c) AB URN'leri (`urn:etsi:esi:eaa:eu:*`) Tamga
 belge verenleri tarafından **kullanılamaz** (AB bağlamı dışıyız); (d) Faz 1'de bir devlet kendi
 nitelikli sınıfını tanımlarsa `urn:tamga:<cc>:eaa:qualified` alt-namespace'i açılır.
+
+*Uygulama notu (2026-11-12; proje yönetimi onayıyla) — mdoc ve ZK sunumunda sınıf sinyali.* Kategori sinyali SD-JWT VC'nin
+`category` claim'idir; mdoc (ISO/IEC 18013-5) belgesinde ve ZK sunumunda böyle bir öğe yoktur. Bu biçimlerde doğrulayıcı `C4`'ü
+uygulamaz ve sonuçta `checks_skipped`'te gösterir. Belge verenin sınıfı her biçimde sonuç nesnesinde (`issuer.class`) güven
+listesindeki kayıttan döner; güvenen taraf sınıfı hep aynı yerden okur. `C4` sahte bir sinyale karşı tutarlılık denetimidir:
+sinyal taşımayan biçimde sahte sinyal olamaz, bu yüzden adımın uygulanmaması güveni zayıflatmaz. Bugün mdoc yalnız kimlik
+türlerinde verilir ([[ADR-0013]]) ve bu türlerin belge vereni `EAA` sınıfındadır (sinyal zaten beklenmez). `PUB` ya da
+`QUALIFIED` sınıfındaki bir kurum mdoc vermeye başlamadan önce, mdoc'ta sınıf sinyalinin taşınıp taşınmayacağı ayrı bir kararla
+belirlenir (taşınacaksa yeni bir öğe adı gerekir). Kod değişmedi.
 
 ## Karar 6 — `urn:tamga` isim alanı yönetimi
 

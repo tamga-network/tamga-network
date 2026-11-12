@@ -19,6 +19,7 @@ import { SoftwareKeyProvider, MemoryKeyStore, presentSdJwt } from "@tamga-networ
 import { epochSeconds } from "@tamga-network/core";
 import { verifyPresentation, MemoryStatusCache, type Policy } from "./index.js";
 import { isLocalUrl, returnedClaims, stepT0, DEFAULT_MAX_ANCHOR_LAG_SEC, type VerifyCtx } from "./steps.js";
+import { scopeCovers } from "./policy.js";
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
@@ -68,6 +69,34 @@ describe("returnedClaims / isLocalUrl / T0 (birim)", () => {
       address: { country: "TR", locality: "İzmir" },
     });
     expect(returnedClaims(a, []).claims).toEqual({});
+  });
+
+  it("E3: kurumun açıkta bıraktığı kök nesneden iç içe yol istenirse açıklanmış ad istenen yoldur, kök değil", () => {
+    // `address` seçici açıklanamaz (kurum bütünüyle açıkta bırakmış); doğrulayıcı yalnız `address.country` ister
+    const a = {
+      format: "dc+sd-jwt" as const,
+      disclosedClaimNames: ["given_name"],
+      claims: { given_name: "A", address: { country: "TR", locality: "İzmir" }, nationalities: ["TR"], gate: "B" },
+    };
+    const r = returnedClaims(a, ["address.country", "given_name"]);
+    expect(r.claims).toEqual({ address: { country: "TR" }, given_name: "A" });
+    expect(r.alwaysVisible).toEqual(["address.country"]); // önce: ["address"] → kapsamı `address.country` olan RP'de E3 reddi
+    // kapsam denetimi (E3 ile aynı kural): istenen yol kapsamda; kök kapsamda değil
+    expect(scopeCovers(new Set(["address.country"]), r.alwaysVisible[0])).toBe(true);
+    expect(scopeCovers(new Set(["address.country"]), "address")).toBe(false);
+    // dizi öğesi yolu ve kök birlikte; kök düzey ad eskisi gibi
+    expect(returnedClaims(a, ["nationalities[0]", "address", "address.country", "gate"]).alwaysVisible).toEqual([
+      "nationalities[0]",
+      "address",
+      "address.country",
+      "gate",
+    ]);
+    // kökün altı seçici açıklamayla geldiyse (iç içe SD) açıkta sayılmaz — eskisi gibi
+    expect(
+      returnedClaims({ ...a, disclosedClaimNames: ["address.country"] }, ["address.country"]).alwaysVisible,
+    ).toEqual([]);
+    // mdoc'ta kavram yok
+    expect(returnedClaims({ ...a, format: "mso_mdoc" as const }, ["address.country"]).alwaysVisible).toEqual([]);
   });
 
   it("A3b: `allowLocalIssuerUrls` yalnız localhost ve özel ağ aralıklarını yerel sayar — genel IP yerel değildir", () => {
@@ -370,6 +399,43 @@ describe.skipIf(!ready)("ikinci inceleme — verifyPresentation (dev PKI + dist)
       trust: windowed({ valid_from: iso(now - 3600), valid_to: iso(now + 3600) }),
     });
     expect(inside.result.outcome, inside.result.failed_reason ?? "").toBe("ACCEPTED");
+  });
+
+  it("D3: anahtar yenilendi — önbellekteki liste KAYITLI ama süresi dolmuş anahtarla imzalıysa RED değil DOĞRULANAMADI; kayıtsız imzacı RED", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { combined, ref } = await issue(now);
+    const pres = await present(combined, ref, now);
+    const cache = await cacheWith(now); // süresi içinde, kurumun (eski) iptal anahtarıyla imzalı liste
+    const iso = (s: number) => new Date(s * 1000).toISOString();
+    const NEW = { fingerprint_sha256: "ab".repeat(32), purpose: "status_list", status: "ACTIVE" as const };
+    // eski anahtarın kaydı `old` ile değişir (null → kayıttan çıkar), yanına yeni anahtar eklenir
+    const rotated = (old: Record<string, unknown> | null): ListTrustSource => {
+      const t: ListTrustSource = Object.create(trust);
+      t.issuer = (id: string) => {
+        const rec = trust.issuer(id);
+        if (!rec) return rec;
+        const prev = (rec.delegate_keys ?? []).filter((k) => k.purpose === "status_list");
+        return { ...rec, delegate_keys: [...(old ? prev.map((k) => ({ ...k, ...old })) : []), NEW] };
+      };
+      return t;
+    };
+    const run = async (old: Record<string, unknown> | null) =>
+      (await verifyPresentation({ ...input(pres, now, cache), trust: rotated(old) })).result;
+    // eski anahtar listede duruyor, penceresi kapandı: belge geçerli olabilir — bilinmiyor (önce: REJECTED D3)
+    const lapsed = await run({ valid_to: iso(now - 60) });
+    expect(lapsed).toMatchObject({ outcome: "INDETERMINATE", failed_step: "D3", indeterminate_reason: "STATUS_STALE" });
+    expect(await run({ status: "RETIRED", valid_to: iso(now - 60) })).toMatchObject({
+      outcome: "INDETERMINATE",
+      failed_step: "D3",
+      indeterminate_reason: "STATUS_STALE",
+    });
+    expect(await run({ valid_from: iso(now + 3600) })).toMatchObject({ outcome: "INDETERMINATE", failed_step: "D3" });
+    // eski anahtar hâlâ geçerliyse kabul (iki anahtar birlikte)
+    expect((await run({ valid_to: iso(now + 3600) })).outcome).toBe("ACCEPTED");
+    // imzacı kayıtlı DEĞİL (yalnız yeni anahtar kayıtlı) ya da anahtar geri çekilmiş: RED kalır
+    expect(await run(null)).toMatchObject({ outcome: "REJECTED", failed_step: "D3" });
+    expect(await run({ status: "REVOKED" })).toMatchObject({ outcome: "REJECTED", failed_step: "D3" });
+    expect(await run({ status: "SUSPENDED" })).toMatchObject({ outcome: "REJECTED", failed_step: "D3" });
   });
 
   it("E4: fırlatan ya da reddeden denetim yazıcısı doğrulamayı düşürmez — sonuç döner, E4 `checks_skipped`'te", async () => {

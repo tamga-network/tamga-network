@@ -85,6 +85,10 @@ yeniləmənin arxasınca kodun dəyişdirilməsinə yol açırdı. Növbəti qay
   yerləşdirildi; Cancun əməliyyat kodları (`MCOPY`, `TSTORE`/`TLOAD`, `BLOBBASEFEE`) işlədi, blok başlığı blob sahələrini sıfır
   dəyərlə daşıdı. KZG quraşdırması üçün əlavə seçim tələb olunmadı. Çox qovşaqlı şəbəkə CI test şəbəkəsi iş axınında
   (`testnet.yml`) yoxlanılır.
+- **Tətbiq qeydi (2026-11-12, ikinci yoxlama; qərarın məzmunu dəyişməyib):** CR2-nin test tərəfi bu düzəlişlə gerçəkləşdi —
+  test alətində proses daxili şəbəkənin adı `default`-dur; konfiqurasiya heç istifadə olunmayan `hardhat` adlı şəbəkəni Cancun-a
+  bağlamışdı və testlər daha yeni qayda dəsti ilə işləyirdi. `default` və `node` şəbəkələri Cancun-a bağlandı; bir test
+  işlədilən qayda dəstini yoxlayır.
 - Sənədlər: [[SPEC-BC-0001]] §9 və §14 bənd 10 (bağlandı), [[ARCH-0002]], [[GUIDE-0018]].
 
 # Status

@@ -4,7 +4,7 @@ title: "Sənəd növünün identifikatoru (URN)"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-07
+last_updated: 2026-11-12
 summary: >
   D-SCHEMA-1 ("vct sabit HTTPS URL") əvəz edilir (supersede): sənəd növünün identifikatoru urn:tamga:<domain>:<Type>:<major> formatında URN olur; Type Metadata IETF SD-JWT VC §5.3.2 "registry" yolu ilə Tamga kataloqundan (metadata_url + content_hash) həll edilir; vct#integrity məcburi olaraq qalır (ETSI TS 119 472-1 EAA-5.2.1.2-03); schemaId = keccak256(vct) dəyişmir. Əsaslandırma: çoxdövlətli (TDT-first) ekosistemdə növ identifikatoru bir fondun domen adına bağlı ola bilməz; EUDI-nin PID razılaşması (urn:eudi:pid:1 + kataloq) eyni modeldir. Bundan əlavə, ETSI 119 472-1-in kontekstə xas EAA kateqoriya siqnalına icazə verməsinə əsaslanaraq Tamga öz kateqoriya URN-lərini müəyyən edir (urn:tamga:eaa:pub, urn:tamga:eaa:qualified); I1–I2 sənədi verən qurumlar kateqoriya daşımır; sənəd sahibinin LoA-sı heç vaxt rəqəmsal sənədə daxil edilmir (PR7 qorunur).
 domain: Credentials
@@ -129,6 +129,15 @@ onu reyestrlə müqayisə edir, uyğunsuzluq → REJECTED (yeni addım kodu **C4
 qorunur, səviyyə növün ilkin şərtidir (DB-6); (c) Aİ URN-ləri (`urn:etsi:esi:eaa:eu:*`) Tamga
 sənədi verən qurumları tərəfindən **istifadə edilə bilməz** (Aİ kontekstindən kənardayıq); (d) Faza 1-də bir dövlət öz
 kvalifikasiyalı sinfini müəyyən edərsə, `urn:tamga:<cc>:eaa:qualified` alt-namespace-i açılır.
+
+*Tətbiq qeydi (2026-11-12; layihə rəhbərliyinin təsdiqi ilə) — mdoc və ZK təqdimatında sinif siqnalı.* Kateqoriya siqnalı
+SD-JWT VC-nin `category` claim-idir; mdoc (ISO/IEC 18013-5) sənədində və ZK təqdimatında belə element yoxdur. Bu formatlarda
+yoxlayan tərəf `C4`-ü tətbiq etmir və nəticədə `checks_skipped`-də göstərir. Sənədi verən qurumun sinfi hər formatda nəticə
+obyektində (`issuer.class`) etibar siyahısındakı qeyddən qayıdır; etibar edən tərəf sinfi həmişə eyni yerdən oxuyur. `C4` saxta
+siqnala qarşı uyğunluq yoxlamasıdır: siqnal daşımayan formatda saxta siqnal ola bilməz, buna görə addımın tətbiq edilməməsi
+etibarı zəiflətmir. Bu gün mdoc yalnız şəxsiyyət növlərində verilir ([[ADR-0013]]) və bu növlərin sənəd verəni `EAA`
+sinfindədir (siqnal onsuz da gözlənilmir). `PUB` və ya `QUALIFIED` sinfindəki qurum mdoc verməyə başlamazdan əvvəl mdoc-da sinif
+siqnalının daşınıb-daşınmayacağı ayrıca qərarla müəyyən edilir (daşınacaqsa yeni element adı lazımdır). Kod dəyişmədi.
 
 ## Qərar 6 — `urn:tamga` ad sahəsinin idarə edilməsi
 

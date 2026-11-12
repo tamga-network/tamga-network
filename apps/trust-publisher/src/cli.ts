@@ -259,7 +259,10 @@ async function prevPublished(
     throw new Error(
       `${file}.jws: önceki yayımlanmış listenin imzası kaynaktaki liste imzacılarıyla (${signerRefs.join(", ") || "yok"}) ` +
         `doğrulanamadı — ${(e as Error).message}. Sürüm ve kayıt zamanları imzasız kopyadan okunmaz; yayın DURDU. ` +
-        `(Geliştirme anahtarları yeniden üretildiyse eski yayın klasörünü kaldırın: ${DIST})`,
+        `Gerçek ağda yayın klasörünü ASLA kaldırmayın (sürüm 1'e döner; özet zinciri ve "kayıt silinmez" karşılaştırması kopar): ` +
+        `liste imzacısı değiştiyse eski imzacıyı bir yayın boyunca kaynaktaki imzacı listesinde (signing_certs / ` +
+        `anchor_signing_certs) tutun, sonraki yayında çıkarın. Yalnız yerel geliştirmede, geliştirme anahtarları yeniden ` +
+        `üretildiyse eski yayın klasörü kaldırılabilir: ${DIST}`,
     );
   }
   if (!Number.isInteger(list.version) || (list.version as number) < 1)
@@ -1027,9 +1030,10 @@ async function build() {
   );
   const tlPrev = await prevPublished(`tl-${cc.toLowerCase()}`, tlSlot?.signing_certs ?? []);
   const lotlPrev = await prevPublished("lotl", (lotlSrc.anchor_signing_certs as string[]) ?? []);
-  // TL2: önceki yayımlanmış sürümdeki bir kayıt (belge veren, doğrulayıcı, kapı grubu, kök CA, şema; kalan kayıtlarda kullanım,
-  // şema yetkisi, durum geçmişi satırı) yeni listede yoksa yayın durur; onaylı çıkarma kaydı (removals.json) varsa yayımlanır ve
-  // CHANGELOG'a adsız satır yazılır (removals.ts). Sandbox'ta uygulanmaz (ADR-0041 TI5).
+  // TL2: önceki yayımlanmış sürümdeki bir kayıt (belge veren, doğrulayıcı, kapı grubu, kök CA, şema; LOTL'da ülke listesi kaydı,
+  // cüzdan sağlayıcı, dış liste; kalan kayıtlarda kullanım, şema yetkisi, yetkili anahtar, durum geçmişi satırı — geçmiş satırları
+  // içerikleriyle) yeni listede yoksa yayın durur; bu sürüm geçişine yazılmış onaylı çıkarma kaydı (removals.json) varsa
+  // yayımlanır ve CHANGELOG'a adsız satır yazılır (removals.ts). Sandbox'ta uygulanmaz (ADR-0041 TI5).
   const removalsFile = resolve(REG, "removals.json");
   const approvedRemovals = existsSync(removalsFile) ? readJson(removalsFile) : [];
   const networkSchemaIds = schemasIndex.filter((x) => x.layer === "NETWORK").map((x) => ({ schema_id: x.schema_id }));
@@ -1046,14 +1050,19 @@ async function build() {
               national_schemas: tlSrc.national_schemas,
             }),
             approvedRemovals,
+            tlPrev,
           ),
           // LOTL şemaları katalogdan yeniden kurulur: katalogdan kalkan şema listeden de sessizce kalkmasın
           removalChangelogLine(
             "lotl",
-            removedRecords(lotlPrev.list ? { schemas: lotlPrev.list.schemas as never } : null, {
+            removedRecords(lotlPrev.list as never, {
               schemas: networkSchemaIds,
+              national_lists: lotlSrc.national_lists,
+              wallet_providers: lotlSrc.wallet_providers,
+              external_lists: lotlSrc.external_lists,
             }),
             approvedRemovals,
+            lotlPrev,
           ),
         ].filter((l): l is string => l !== null);
   const tl = {

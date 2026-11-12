@@ -98,7 +98,7 @@ CHANGELOG.md                  public change log
 | `list_type` | `"lotl"` | |
 | `environment` | `"production"` \| `"sandbox"` (istəyə bağlı; yoxdursa `production`) | Siyahının aid olduğu şəbəkə ([[ADR-0038]]). Test şəbəkəsinin siyahısı `sandbox` daşıyır; yükləyici gözlədiyi şəbəkəyə uyğun gəlməyən siyahıda **dayanır** (`ADR-0038/SB2`) |
 | `version`, `issued_at`, `next_update`, `previous_version_hash` | | Versiya/hash zənciri (§1.3, §1.6) |
-| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report?}` | Təsisçi müvəkkil; `trust_framework` = [[FW-TF-0001]] URL-i (`https://arf.tamga.network/trust-framework`); `transparency_report` istəyə bağlıdır, dərc səhifəsi açıldıqda əlavə olunur. `name`: real şəbəkədə "Tamga Network" (`ADR-0070/OP1`); `environment: "sandbox"` siyahısında ad "(TEST)" işarəsini daşımalıdır və siyahı "Tamga Network Sandbox (TEST)" adı ilə dərc olunur — əks halda dərc edən dərc etmir (`ADR-0070/OP2`, 2026-11-12) |
+| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report?}` | Təsisçi müvəkkil. `status` dəyərləri `provisional` və `designated`-dır: siyahı mərhələsində yalnız `provisional` dərc olunur (TL1; dərcçi başqa dəyərlə dərc etmir). `designated` siyahının idarə edilməsi dövlətin təyin etdiyi quruma təhvil veriləndə istifadə olunacaq dəyərdir ([[ADR-0009]] K5; zəncirdəki operator qeydi [[ADR-0074]] K3) və həmin dəyərlə dərc ayrıca təhvil qərarı ilə açılır; yükləyici dəyəri bu gündən tanıyır ki, təhvildə siyahını oxuyanların yenilənməsi lazım olmasın. Dəyər yoxlama qərarına daxil olmur ([[ADR-0070]] tətbiq qeydi 2026-11-12). `trust_framework` = [[FW-TF-0001]] URL-i (`https://arf.tamga.network/trust-framework`); `transparency_report` istəyə bağlıdır, dərc səhifəsi açıldıqda əlavə olunur. `name`: real şəbəkədə "Tamga Network" (`ADR-0070/OP1`); `environment: "sandbox"` siyahısında ad "(TEST)" işarəsini daşımalıdır və siyahı "Tamga Network Sandbox (TEST)" adı ilə dərc olunur — əks halda dərc edən dərc etmir (`ADR-0070/OP2`, 2026-11-12) |
 | `catalogue` | `{url}` | Type Metadata həll yolu (`schemas.tamga.network/v1/catalogue.json`) |
 | `anchor_signing_keys[]` | `{fingerprint_sha256, cert_ref, status}` | Lövbər jurnalının imzaçıları (≥2, rotasiyalı — TL3) |
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], xml_signing_keys[]?, recognition{mode, recognizes[]}}` | `Governance` üzv siyahısı + `CrossRecognition`. `signing_keys` yalnız JSON ölkə siyahısının (`tl-<cc>.jws`) imzalayanlarıdır; `xml_signing_keys` yalnız ETSI TS 119 612 XML görünüşünün (`tl-<cc>.xml`, EKU id-tsl-kp-tslSigning) imzalayanlarıdır — slot XML dərc edirsə olur; iki dəst ayrıdır, XML imzalayanı JSON siyahısını yoxlamır ([[ADR-0066]] 0.7.4 tətbiq qeydi) |
@@ -127,10 +127,13 @@ Status lüğəti: `ACTIVE | SUSPENDED | REVOKED | RETIRED` (+ kök: `ROLLING_OVE
 yoxlayan tərəf üçün `rp-status <dns_name> <STATUS>`, tək istifadə və ya qapı qrupu üçün `end-use <dns_name> <id>` (bitmə tarixi).
 Nəşriyyatçı bunu yoxlayır: əvvəlki dərc olunmuş versiyadakı sənəd verən, etibar edən tərəf və ya keçid qrupu yeni siyahıda
 yoxdursa, dərc dayanır. Yeganə istisna reyestrdə açıq yazılmış, sayları tam uyğun gələn təsdiqlənmiş çıxarma qeydidir
-(`removals.json`; yalnız siyahı, tarix, saylar və qısa əsas — ad və ya kimlik daşımır); onda siyahı dərc olunur və açıq dəyişiklik
-jurnalına adsız sətir yazılır, əvvəlki siyahı versiyaları arxivdə qalır. Bu yol indiyədək bir dəfə istifadə olunub (layihə
-rəhbərliyinin qərarı 2026-11-11): pilotdan əvvəlki sınaq dövründən qalan, artıq `REVOKED` olan və heç bir real qurumun istifadə
-etmədiyi test qeydləri real şəbəkənin siyahısından çıxarıldı. Real iştirakçının qeydi üçün bu yol istifadə edilmir.
+(`removals.json`; yalnız siyahı, tarix, çıxarmadan əvvəlki imzalı versiyanın nömrəsi, saylar və qısa əsas — ad və ya kimlik
+daşımır; qeyd yalnız həmin versiyadan sonrakı dərcdə keçir, başqa dərcdə yenidən istifadə edilə bilməz); onda siyahı dərc olunur və açıq dəyişiklik
+jurnalına adsız sətir yazılır, əvvəlki siyahı versiyaları arxivdə qalır. Bu yolun sərhədi [[ADR-0081]] ilə məcburidir (RR1–RR4):
+yalnız qurumların qoşulmasından əvvəl sınaq məqsədilə daxil edilmiş, heç bir real şəxsə rəqəmsal sənəd verməmiş və heç bir real
+təqdimat almamış qeyd çıxarıla bilər; ilk iştirakçı qurum real şəbəkənin siyahısına daxil olanda yol bağlanır və sınaq yalnız
+sandbox-da aparılır. İndiyədək bir dəfə istifadə olunub (2026-11-11): pilotdan əvvəlki sınaq dövründən qalan, artıq `REVOKED`
+olan sınaq qeydləri real şəbəkənin siyahısından çıxarıldı. Real qurumun qeydi üçün bu yol istifadə edilmir.
 Qeyd siyahıdan çıxarılmır (TL2); geri çəkilən qurum ETSI XML görünüşündə öz Tamga status URI-si ilə (`…/tl/Svcstatus/revoked`
 və s., [[SPEC-ID-0002]] §8.1) qalır və LoTE-yə daxil edilmir.
 
@@ -228,7 +231,7 @@ Təhvil: yalnız `operator` sahəsi dəyişir.
 | # | İnvariant |
 |---|---|
 | **TL1** | Hər siyahıda `operator.status` var və siyahı mərhələsi boyunca `"provisional"` olaraq qalır; `on_behalf_of` boş buraxılmır. |
-| **TL2** | Siyahı və lövbər jurnalı versiyaları monoton artır; hər versiya özündən əvvəlkinin hash-ini daşıyır; heç bir sətir/qeyd silinmir (status dəyişikliyi `status_history`-ə əlavə edilir). |
+| **TL2** | Siyahı və lövbər jurnalı versiyaları monoton artır; hər versiya özündən əvvəlkinin hash-ini daşıyır; heç bir sətir/qeyd silinmir (status dəyişikliyi `status_history`-ə əlavə edilir). Yeganə istisna ilk iştirakçı qurum siyahıya daxil olmazdan əvvəl çıxarılan sınaq qeydləridir ([[ADR-0081]]). |
 | **TL3** | Siyahı və lövbər imzası ≥2 növbələşən sertifikatla həyata keçirilir; rotasiya ən azı 30 gün əvvəl elan edilir; yeni açar köhnəsi ilə imzalanır. (Demo kənarlaşması S-6 bəyan edilib.) |
 | **TL4** | `TrustSource` istisna olmaqla, heç bir komponent siyahı fayllarını şərh etmir. |
 | **TL5** | `next_update` keçmiş və ya əlçatmaz siyahı ilə yoxlama **INDETERMINATE** nəticəsi verir; heç vaxt ACCEPTED, heç vaxt REJECTED. |
@@ -281,7 +284,13 @@ istehlakçılar yeniləndikdən sonra), `bits`/`size` format qaydası və `list_
   tələb edir. Yükləyici sxemi `designated` dəyərini tanımağa davam edir; həmin dəyərlə dərc təhvil qərarından sonra açılır.
 - **TL2.** Qeydin silinməsi yoxlaması kök CA-nı, sxemi (ölkə siyahısı və LOTL) və siyahıda qalan qeydlərdəki istifadəni, sxem
   səlahiyyətini və `status_history` sətirlərini də sayır; təsdiqlənmiş çıxarma qeydi bunları istəyə bağlı saylarla daşıyır
-  (`root_cas`, `schemas`, `scopes`, `schema_authorizations`, `status_history`; yazılmayıbsa 0). Versiya birdən çox atladıqda
+  (`root_cas`, `schemas`, `scopes`, `schema_authorizations`, `status_history`; yazılmayıbsa 0). İkinci yoxlama (2026-11-12): çıxarma qeydi tək bir versiya keçidinə bağlıdır
+  (`previous_version`: çıxarmadan əvvəlki imzalı versiyanın nömrəsi, məcburi; `previous_version_hash`: həmin versiyanın `.jws`
+  xülasəsi, istəyə bağlı) və başqa keçiddə keçmir. Tarixçə sətirləri məzmunu ilə qorunur: `status_history` sətri olduğu kimi
+  qalmalıdır (məs. `invalidates_from`-u dəyişdirilən sətir silinmiş sayılır); sxem səlahiyyəti sətrində yeganə sərbəst dəyişiklik
+  açıq dövrün bağlanmasıdır (`valid_until` yox → tarix). Sayılanlara sənəd verənin `delegate_keys` sətri və LOTL-dakı
+  `national_lists`, `wallet_providers`, `external_lists` qeydləri əlavə olundu (eyni adlı istəyə bağlı saylar): ləğv siyahısı
+  açarı yenilənəndə köhnə açar siyahıdan atılmır, bitmə tarixi (`valid_to`) ilə qalır. Versiya birdən çox atladıqda
   yükləyici aradakı xülasələri yoxlaya bilmir; yalnız "atlayan versiya sələfi kimi son görüləni göstərir" ziddiyyətini rədd
   edir (tam yoxlama arxivlə).
 - **TL11.** Dərcçi mənbədə hər qeyd növü üçün məlum sahələrin icazə siyahısını tətbiq edir: naməlum və ya hesablanan sahə
@@ -302,4 +311,8 @@ istehlakçılar yeniləndikdən sonra), `bits`/`size` format qaydası və `list_
 - **Qeydiyyat əmrləri.** `registry.lock` altında işləyir (kilid saxlanılarkən yenilənir); siyahı yoxlaması imzalı siyahı
   yazılmadan uğursuz olarsa mənbə faylı əvvəlki vəziyyətinə qayıdır və dəyişiklik jurnalına sətir yazılmır. Müvəqqəti operator
   dəyəri yoxdursa real şəbəkədə dərc dayanır ([[ADR-0070]] tətbiq qeydi).
+
+**Versiya qeydi (2026-11-12; layihə rəhbərliyinin təsdiqi ilə).** TL2-nin sınaq qeydləri istisnası [[ADR-0081]] ilə qərara
+bağlandı (§4, TL2 sətri); dərcçinin davranışı dəyişmədi. §3 `operator` sətri `designated` dəyərinin mənasını və bu gün niyə
+dərc olunmadığını yazır ([[ADR-0070]] tətbiq qeydi); yükləyicinin və dərcçinin davranışı dəyişmədi.
 

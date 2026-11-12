@@ -42,7 +42,11 @@ your own infrastructure. For a faster start, use the hosted verifier: [[GUIDE-00
 2. **Trust source.** Load the trust lists with `@tamga-network/trust`: `loadTrustSourceFromDir(dist)`, or regular download +
    reload (`guardedReload`). Ask every trust question of `TrustSource` only.
 3. **Prefetch the status lists.** `new PrefetchStatusCache()` + a regular `refresh(uris)`. Nothing goes over the network at the
-   moment of verification.
+   moment of verification. Reload the trust lists and the anchor log (`fetchListTrustSource(…, { anchors: true })`) regularly
+   too — more often than the policy's `freshness.max_anchor_lag_sec` (default 3600 s), for example every 10 minutes. A
+   verifier that loads the anchors only at start-up answers "could not verify" (`STATUS_STALE`, D5) for every credential
+   after about an hour; a verifier that never loads them gives the same answer for every credential older than an hour.
+   Working example: [[GUIDE-0004]] §2 (`refresh()`).
 4. **Your registration certificate.** For each registered use the registrar publishes a [[t:registration-certificate]]
    (`trust.tamga.network/wrprc/index.json` → the item with your `client_id` and `scope_id`). Put it into every request
    (`registrationCert`): from packages 0.7.0 Tamga Wallet refuses a request without one ([[ADR-0026]], [[ADR-0056]]). Working

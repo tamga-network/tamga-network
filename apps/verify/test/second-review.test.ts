@@ -273,8 +273,10 @@ describe.skipIf(!ready)("apps/verify — ikinci inceleme", () => {
     const st = (await app.inject({ method: "GET", url: `/presentations/${a.id}?st=${a.st}` })).json() as Res;
     expect(st).toMatchObject({ state: "DONE", outcome: "INDETERMINATE", indeterminate_reason: "INDEXER_STALE" });
     // denetim kaydındaki son satır dönen sonuçla aynı
-    const last = (await auditOf(app)).filter((e) => e.verification_id === res.verification_id).pop();
-    expect(last).toMatchObject({ outcome: "INDETERMINATE", failed_step: "T0" });
+    const rows = (await auditOf(app)).filter((e) => e.verification_id === res.verification_id);
+    expect(rows.at(-1)).toMatchObject({ outcome: "INDETERMINATE", failed_step: "T0" });
+    // her yanıt tek kayıt: açık kalan denemeler birer kayıt, sınıra ulaşan son yanıt YALNIZ kapanış kaydı (önce: son yanıtta iki kayıt)
+    expect(rows).toHaveLength(MAX_RESPONSE_ATTEMPTS);
   });
 
   it("E4/AP9: doğrulama hattına girmeyen ret (cüzdan reddi) de denetim kaydına düşer ve sonuçta E4 görünür", async () => {
@@ -344,7 +346,10 @@ describe.skipIf(!ready)("apps/verify — ikinci inceleme", () => {
     expect((await session({}, vc.pair)).statusCode).toBe(400);
     // aynı tarayıcının ikinci başlatması aynı akışa eklenir (çerez değişmez), ikisi de onundur
     const again = await start(vc.pair);
-    expect(flowCookie(again)?.pair ?? vc.pair).toBe(vc.pair);
+    // …ve çerez her başlatmada yeniden yazılır: `Max-Age` sunucudaki akış süresiyle birlikte uzar (önce yalnız ilkinde yazılıyordu)
+    expect(flowCookie(again)?.pair).toBe(vc.pair);
+    expect(flowCookie(again)!.raw).toMatch(/Max-Age=900/);
+    expect(vc.raw).toMatch(/Max-Age=900/);
     const vid2 = (again.json() as { presentation_id: string }).presentation_id;
     expect((await session({ presentation_id: vid2 }, vc.pair)).statusCode).toBe(400);
     expect((await session({ presentation_id: vid }, vc.pair)).statusCode).toBe(400);

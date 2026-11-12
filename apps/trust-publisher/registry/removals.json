@@ -2,6 +2,7 @@
   {
     "list": "tl-tr",
     "date": "2026-11-11",
+    "previous_version": 240,
     "issuers": 2,
     "relying_parties": 1,
     "terminal_groups": 2,

@@ -129,6 +129,13 @@ export async function fetchRequestObject(requestUri: string, http: Http): Promis
   return (await r.text()).trim();
 }
 
+/** Cüzdanın kendi dönüş adresi mi: birebir, ya da hemen ardından sorgu / parça gelir (`…/cb?code=…`); boşluk içermez. */
+function isOwnCallback(value: unknown, callbackUri: string | undefined): boolean {
+  if (typeof value !== "string" || !callbackUri || /\s/.test(value) || !value.startsWith(callbackUri)) return false;
+  const rest = value.slice(callbackUri.length);
+  return rest === "" || rest.startsWith("?") || rest.startsWith("#");
+}
+
 /** Yerel geliştirme adresi mi (`web-address.ts`; `allowLocalDevHost` kapılarının ortak tanımı). */
 export { isLocalDevHost };
 
@@ -1054,13 +1061,21 @@ export interface RespondInput {
    * (`isLocalDevHost`) `http` de kabul edilir — `verifyRequestObject`'teki kapıyla aynı; varsayılan KAPALI.
    */
   allowLocalDevHost?: boolean;
+  /**
+   * Cüzdanın KENDİ dönüş adresi (yetkilendirme kodlu belge verme akışında PAR'a yazdığı `redirect_uri`; uygulama şeması
+   * olabilir: `myapp://idv/cb`). Verilirse doğrulayıcının yanıtındaki `redirect_uri` bu adresin kendisi ya da hemen ardından
+   * sorgu / parça gelen hâli (`…/cb?code=…`) ise de döndürülür — kimliğe bağlı belge vermede kurum, kimlik sunumunun
+   * sonucunu (kod ya da hata) bu adrese koyar. Başka hiçbir https dışı adres döndürülmez (0.8.3).
+   */
+  callbackUri?: string;
 }
 export interface RespondOutput {
   status: number;
   /**
    * OpenID4VP 1.0 §8.2: doğrulayıcının yanıtındaki tek standart alan. Tamga Verify kabulde yüz yüze kontrol görünümünün
    * anahtarını da bu adrese koyar (ADR-0012 C, `?show=`, sonuçtan sonra 5 dk); "Kontrol ettir"de cüzdan bu adresi QR olarak gösterir.
-   * Yalnız `https` adres döner (yerel geliştirmede `RespondInput.allowLocalDevHost` ile `http`); başka şema yok sayılır (0.8.3).
+   * Yalnız `https` adres döner (yerel geliştirmede `RespondInput.allowLocalDevHost` ile `http`) ya da cüzdanın kendi dönüş
+   * adresi (`RespondInput.callbackUri`); başka şema yok sayılır (0.8.3).
    */
   redirectUri?: string;
   vpToken: Record<string, string[]>;
@@ -1139,7 +1154,8 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
   try {
     const j = (await readJson(r, "verifier")) as { redirect_uri?: unknown; pass_grant?: string };
     // yalnız https (yerel geliştirme seçeneği hariç): cüzdan bu adresi açar / QR olarak gösterir — başka şema yok sayılır
-    if (isAllowedWebAddress(j.redirect_uri, p.allowLocalDevHost)) redirectUri = j.redirect_uri;
+    if (isAllowedWebAddress(j.redirect_uri, p.allowLocalDevHost) || isOwnCallback(j.redirect_uri, p.callbackUri))
+      redirectUri = j.redirect_uri as string;
     passGrant = j.pass_grant;
   } catch {
     /* boş gövde olabilir */

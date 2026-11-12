@@ -105,8 +105,12 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     }
     return { id: m[1], ...f };
   };
-  /** Sunumu tarayıcının akışına ekler; akış yoksa yenisini açar ve çerezini döndürür. */
-  const bindFlow = (req: { headers: Record<string, unknown> }, pid: string): string | undefined => {
+  /**
+   * Sunumu tarayıcının akışına ekler; akış yoksa yenisini açar. Akışın süresi her başlatmada uzar; çerez de HER çağrıda yeniden
+   * yazılır ki `Max-Age`'i sunucudaki süreyle birlikte uzasın (önce yalnız ilkinde yazılıyordu: 15 dk sonra tarayıcı çerezi
+   * atıyor, sunucudaki akış yaşıyordu).
+   */
+  const bindFlow = (req: { headers: Record<string, unknown> }, pid: string): string => {
     const cur = flowOf(req);
     const id = cur?.id ?? randomBytes(18).toString("base64url");
     const pids = [...(cur?.pids ?? []), pid].slice(-MAX_FLOW_PRESENTATIONS);
@@ -116,9 +120,7 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
       if (flows.size >= MAX_PENDING) flows.delete(flows.keys().next().value!);
     }
     flows.set(id, { pids, exp: Date.now() + FLOW_TTL_MS });
-    return cur
-      ? undefined
-      : `${FLOW_COOKIE}=${id}; Path=/sample-site; HttpOnly; SameSite=Lax; Max-Age=${FLOW_TTL_MS / 1000}${secure}`;
+    return `${FLOW_COOKIE}=${id}; Path=/sample-site; HttpOnly; SameSite=Lax; Max-Age=${FLOW_TTL_MS / 1000}${secure}`;
   };
   /**
    * CSRF (Y3): durum değiştiren site uçları yalnızca JSON kabul eder (CORS yok → başka siteden JSON gönderimi ön uçuşta
@@ -248,8 +250,7 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     const made = await createPresentation(ctx, policy, ctx.cfg.clientId, dcApiOrigin);
     if ("error" in made) return reply.code(400).send(made);
     // Sunum, başlatan tarayıcının akışına bağlanır: `/session` yalnız bu çerezle gelen isteğe oturum açar
-    const flowCookie = bindFlow(req as never, made.p.req.presentationId);
-    if (flowCookie) reply.header("set-cookie", flowCookie);
+    reply.header("set-cookie", bindFlow(req as never, made.p.req.presentationId));
     return startedJson(made.p, ctx.cfg.publicBase);
   });
 

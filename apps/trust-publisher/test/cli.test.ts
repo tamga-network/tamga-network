@@ -291,6 +291,10 @@ describe.skipIf(!ready)("trust-publisher CLI — yayın öncesi denetimler (0.8.
     const bad = run(["build"]);
     expect(bad.code).not.toBe(0);
     expect(bad.err).toMatch(/tl-tr\.jws: önceki yayımlanmış listenin imzası.*doğrulanamadı/);
+    // ileti gerçek ağda klasör kaldırmayı ÖNERMEZ (uygulanırsa sürüm 1'e döner): doğru yol eski imzacıyı bir yayın boyunca tutmak
+    expect(bad.err).toMatch(/Gerçek ağda yayın klasörünü ASLA kaldırmayın/);
+    expect(bad.err).toMatch(/eski imzacıyı bir yayın boyunca/);
+    expect(bad.err).toMatch(/Yalnız yerel geliştirmede/);
     writeFileSync(f, jws);
     expect(payload("lotl.jws").version).toBe(2);
   });
@@ -368,5 +372,124 @@ describe.skipIf(!ready)("trust-publisher CLI — yayın öncesi denetimler (0.8.
     expect(locked.err).toMatch(/registry\.lock: kilit alınamadı/);
     expect(readFileSync(SRC, "utf8")).toBe(raw);
     expect(payload("tl-tr.jws").version).toBe(version);
+  });
+
+  it("TL2: çıkarma kaydı yalnız yazıldığı sürüm geçişinde geçer; aynı sayılarla ikinci çıkarma durur", () => {
+    const v = payload("tl-tr.jws").version as number;
+    const record = {
+      list: "tl-tr",
+      date: "2026-11-12",
+      previous_version: v,
+      issuers: 0,
+      relying_parties: 0,
+      terminal_groups: 0,
+      scopes: 1,
+      note: "test: one scope removed",
+    };
+    const file = join(REG, "removals.json");
+    const rawRemovals = readFileSync(file, "utf8");
+    // gerçek kayıt defterindeki 2026-11-11 kaydı bu geçişe ait değil: kullanım silme onu kullanamaz (yukarıdaki test), yeni kayıt gerekir
+    writeFileSync(file, JSON.stringify([...JSON.parse(rawRemovals), record], null, 2) + "\n");
+    try {
+      // başka geçişe yazılmış kayıt geçmez
+      writeFileSync(file, JSON.stringify([{ ...record, previous_version: v + 1 }], null, 2) + "\n");
+      const early = buildWith("tl-tr.source.json", (s) => s.relying_parties[0].scopes.pop());
+      expect(early.code).not.toBe(0);
+      expect(early.err).toMatch(/TL2: tl-tr.*kullanım 1.*DURDU/s);
+      // bu geçişe yazılmış kayıt geçer; günlüğe adsız satır düşer
+      writeFileSync(file, JSON.stringify([record], null, 2) + "\n");
+      const ok = buildWith("tl-tr.source.json", (s) => s.relying_parties[0].scopes.pop());
+      expect(ok.code, ok.err).toBe(0);
+      expect(payload("tl-tr.jws").version).toBe(v + 1);
+      expect(readFileSync(join(DIST, "CHANGELOG.md"), "utf8")).toMatch(
+        /records removed from tl-tr: 0 issuer\(s\), .*1 scope\(s\) — test: one scope removed \(decision 2026-11-12\)/,
+      );
+      // aynı kayıt, aynı sayı, BAŞKA bir kullanım: sürüm ilerlediği için geçmez (önce: geçiyor ve eski gerekçe günlüğe yazılıyordu)
+      const replay = buildWith("tl-tr.source.json", (s) => {
+        s.relying_parties[0].scopes.pop();
+        s.relying_parties[0].scopes.shift();
+      });
+      expect(replay.code).not.toBe(0);
+      expect(replay.err).toMatch(/TL2: tl-tr.*kullanım 1.*eski bir çıkarma kaydı yeniden kullanılamaz.*DURDU/s);
+      expect(payload("tl-tr.jws").version).toBe(v + 1);
+    } finally {
+      writeFileSync(file, rawRemovals);
+    }
+  });
+
+  it("TL2: kayıt komutlarının değişiklikleri geçer (tarihli gerekçe dahil); geçmiş satırı ve kapanmış yetki sonradan yumuşatılamaz", () => {
+    // son çıkarılan kullanım kaynağa geri dönmüştü: yeniden yayımlanır (ekleme çıkarma değildir)
+    expect(run(["build"]).code).toBe(0);
+    const issuer = readSrc().issuers[0] as Rec;
+    const slug = issuer.slug as string;
+    const vct = issuer.schema_authorizations[0].vct as string;
+    const confirm = { TAMGA_CONFIRM_PROD: slug };
+    // şema yetkisi bitirme: açık dönem kapanır (valid_until null → tarih)
+    const end = run(["authorize", slug, vct, "--revoke"], confirm);
+    expect(end.code, end.err).toBe(0);
+    const reopened = buildWith("tl-tr.source.json", (s) => (s.issuers[0].schema_authorizations[0].valid_until = null));
+    expect(reopened.code).not.toBe(0);
+    expect(reopened.err).toMatch(/TL2: tl-tr.*şema yetkisi 1.*DURDU/s);
+    // yeniden yetki: kapanmış satır kalır, yeni dönem eklenir
+    const again = run(["authorize", slug, vct], confirm);
+    expect(again.code, again.err).toBe(0);
+    // askı → geri alma → iptal (belgeleri geçersiz kılan tarihle; gerekçede ISO tarihi yazılabilir)
+    for (const args of [
+      ["status", slug, "SUSPENDED", "--reason", "review opened 2026-11-12"],
+      ["status", slug, "ACTIVE", "--reason", "review closed"],
+      [
+        "status",
+        slug,
+        "REVOKED",
+        "--reason",
+        "key compromise 2026-11-12",
+        "--invalidates-from",
+        "2026-10-01T00:00:00Z",
+      ],
+    ]) {
+      const r = run(args, confirm);
+      expect(r.code, `${args.join(" ")}: ${r.err}`).toBe(0);
+    }
+    const signed = payload("tl-tr.jws").issuers[0] as Rec;
+    expect(signed.status_history.at(-1)).toMatchObject({
+      status: "REVOKED",
+      reason: "key compromise 2026-11-12",
+      invalidates_from: "2026-10-01T00:00:00Z",
+    });
+    expect(signed.schema_authorizations.every((a: Rec) => typeof a.valid_until === "string")).toBe(true);
+    const version = payload("tl-tr.jws").version;
+    // var olan REVOKED satırının invalidates_from'u ileri çekilemez (iptal geriye dönük yumuşar)
+    const softened = buildWith(
+      "tl-tr.source.json",
+      (s) => (s.issuers[0].status_history.at(-1).invalidates_from = "2026-11-12T00:00:00Z"),
+    );
+    expect(softened.code).not.toBe(0);
+    expect(softened.err).toMatch(/TL2: tl-tr.*durum geçmişi satırı 1.*DURDU/s);
+    // iptalle kapanan yetkiler yeniden açılamaz
+    const open = buildWith("tl-tr.source.json", (s) => {
+      for (const a of s.issuers[0].schema_authorizations) a.valid_until = null;
+    });
+    expect(open.code).not.toBe(0);
+    expect(open.err).toMatch(/TL2: tl-tr.*şema yetkisi \d+.*DURDU/s);
+    // doğrulayıcı: kullanım bitirme ve durum komutları geçer
+    const rp = readSrc().relying_parties[0] as Rec;
+    const dns = rp.dns_name as string;
+    const live = (rp.scopes as Rec[]).find((x) => Date.parse(x.valid_until) > Date.now())!.scope_id as string;
+    for (const args of [
+      ["end-use", dns, live],
+      ["rp-status", dns, "SUSPENDED", "--reason", "review"],
+      ["rp-status", dns, "REVOKED", "--reason", "ceased"],
+    ]) {
+      const r = run(args, { TAMGA_CONFIRM_PROD: dns });
+      expect(r.code, `${args.join(" ")}: ${r.err}`).toBe(0);
+    }
+    expect(payload("tl-tr.jws").version).toBe(version + 3);
+    // LOTL: cüzdan sağlayıcı kaydı ve ayrılmış ülke yuvası silinemez
+    const wp = buildWith("lotl.source.json", (s) => (s.wallet_providers = []));
+    expect(wp.code).not.toBe(0);
+    expect(wp.err).toMatch(/TL2: lotl.*cüzdan sağlayıcı 1.*DURDU/s);
+    const nl = buildWith("lotl.source.json", (s) => s.national_lists.pop());
+    expect(nl.code).not.toBe(0);
+    expect(nl.err).toMatch(/TL2: lotl.*ülke listesi kaydı 1.*DURDU/s);
   });
 });

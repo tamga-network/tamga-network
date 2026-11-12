@@ -177,6 +177,10 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
    * sonucu değil, istek hatası). `ind`: deneme reddedilmedi, DOĞRULANAMADI (doğrulayıcının eksiği — bayat liste, kök yok, ZK
    * bileşeni yok): sınır yine sayılır (taşma koruması) ama sunum bu yüzden kapanırsa sonucu REJECTED değil INDETERMINATE'tir ve
    * neden korunur (AP2).
+   *
+   * `attemptAudit`: bu denemenin doğrulama hattından gelen bekleyen denetim kaydını yazar. Yalnız sunum AÇIK kalıyorsa çağrılır;
+   * deneme sınırıyla kapanıyorsa yazılmaz — kapanış kaydı (`closedResult`) aynı `verification_id` ile tek kayıttır (önce: son
+   * başarısız yanıtta iki kayıt yazılıyordu).
    */
   const failedAttempt = (
     p: Presentation,
@@ -186,6 +190,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     reason: string,
     branch?: Branch,
     ind: VerificationResult["indeterminate_reason"] = null,
+    attemptAudit?: () => void,
   ) => {
     p.lastAttempt = {
       failed_step: step,
@@ -200,6 +205,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       step: `Response not accepted (attempt ${f.n}/${MAX_RESPONSE_ATTEMPTS}${branch ? ` on fetch ${branch.index}` : ""}; presentation stays open)`,
       detail: step ? `${step}: ${reason}` : reason,
     });
+    if (!f.presentationRejected) attemptAudit?.();
     if (f.presentationRejected) {
       p.result = closedResult(pid, `too many failed responses (${f.n}); last: ${reason}`, ctx, step, ind);
       p.resultAt = Date.now();
@@ -440,7 +446,6 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       }
       // Sahiplik kanıtına ulaşmayan sonuç (A1–A6 / Z1 reddi ya da doğrulayıcı tarafı ZK eksiği) sunumu tüketmez
       if (!holderBound(out.result)) {
-        flushAudit();
         return failedAttempt(
           p,
           pid,
@@ -449,6 +454,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
           out.result.failed_reason ?? out.result.outcome,
           branch,
           out.result.outcome === "INDETERMINATE" ? out.result.indeterminate_reason : null,
+          flushAudit,
         );
       }
       // sahiplik kanıtı geçti: sunum bu yanıtla tamamlanır (B–E sonucu ne olursa olsun; PV10) — atomik: eşzamanlı başka dal önce
@@ -557,13 +563,25 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       // İstisna iletisi sonuca, yanıta ve ize girmez (kişisel veri / iç ayrıntı taşıyabilir — AP3); yalnız hata türü
       const kind = e instanceof Error ? e.name : typeof e;
       if (!mine) {
-        flushAudit();
         if (!p.branches.used)
-          return failedAttempt(p, pid, reply, null, `response could not be processed (${kind})`, branch);
+          return failedAttempt(
+            p,
+            pid,
+            reply,
+            null,
+            `response could not be processed (${kind})`,
+            branch,
+            null,
+            flushAudit,
+          );
+        flushAudit();
         return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
       }
       // Sunum tüketildikten sonraki beklenmeyen hata belgenin kusuru değildir: RED değil DOĞRULANAMADI (AP2, §2.3). Doğrulama
       // hattının bekleyen kaydı yazılmaz; yerine bu sonucun kaydı yazılır (kayıt ile sonuç ayrışmaz).
+      // Neden değeri: kapalı kümede "iç hata" yoktur; SPEC-API-0001 §2.3'ün beklenmeyen istisna kuralı uygulanır — hata doğrulama
+      // hattının sonundaki (E) katmanda ya da sonrasında olduğundan o katmanın değeri `INDEXER_STALE`. Ayırt edici olan
+      // `failed_step: null` + `failed_reason` ("internal error after verification …"): liste bayatlığında `failed_step` doludur.
       pendingAudit = undefined;
       p.trace.push({ t: Date.now(), step: "Response could not be processed", detail: `internal error (${kind})` });
       p.result = closedResult(pid, `internal error after verification (${kind})`, ctx, null, "INDEXER_STALE");
@@ -613,6 +631,11 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     if (p.branches.begin() !== "ok")
       return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
     let out: Awaited<ReturnType<typeof verifyPresentation>>;
+    let pendingAudit: AuditEntry | undefined;
+    const flushAudit = () => {
+      if (pendingAudit) ctx.audit(pendingAudit);
+      pendingAudit = undefined;
+    };
     try {
       out = await verifyPresentation({
         presentation: opened.presentation,
@@ -629,13 +652,18 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         allowLocalIssuerUrls: !cfg.publicBase.startsWith("https://"),
         now: nowSec(),
         verificationId: `vrf_${pid.slice(4)}`,
-        audit: (e) => ctx.audit(e),
+        // kayıt ertelenir: deneme sınırıyla kapanan sunumda yalnız kapanış kaydı yazılır (`failedAttempt`)
+        audit: (e) => {
+          pendingAudit = e;
+        },
       });
     } finally {
       p.branches.end();
     }
-    if (p.branches.used)
+    if (p.branches.used) {
+      flushAudit();
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
+    }
     // sahiplik kanıtına (cihaz imzası, A6) ulaşmayan yanıt sunumu tüketmez (/vp/response ile aynı kural)
     if (!holderBound(out.result))
       return failedAttempt(
@@ -646,7 +674,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
         out.result.failed_reason ?? out.result.outcome,
         undefined,
         out.result.outcome === "INDETERMINATE" ? out.result.indeterminate_reason : null,
+        flushAudit,
       );
+    flushAudit();
     if (!p.branches.tryConsume())
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     p.result = out.result;

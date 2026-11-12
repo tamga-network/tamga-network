@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-19
-last_updated: 2026-10-19
+last_updated: 2026-11-12
 summary: >
   `@tamga-network/*` paketlərinin 0.7.0 versiyasında təhlükəsizlik yoxlamasından yan keçən defolt dəyərlər aradan qaldırılır: etibar lövbəri, qayıdış ünvanı icazə siyahısı, ləğv sorğusu və yoxlayan tərəfin qeydiyyatı məcburi giriş parametridir (bilərəkdən ötürmək üçün açıq `"none"` dəyəri); DPoP token və resurs son nöqtəsi üçün iki ayrı funksiya; ləğv siyahısını imzalayan sabitlənir; cihaz açarı olmayan mdoc etibarsızdır; rəqəmsal cüzdan yalnız `checkRp` təsdiqi ilə təqdimat edir; keçid kartı yalnız yoxlama axınının qəbul nəticəsindən verilir; qeydiyyat sertifikatı olmayan sorğu bu gündən rədd edilir (ADR-0026 K5-in 2028-ə qədərki xəbərdarlıq keçidinin əvəzinə); E4 yalnız audit qeydi yazıldıqda "yerinə yetirildi" sayılır; saniyə və millisaniyə tiplə ayrılır. Həmçinin: tipi ləğv siyahısından istifadə edən, lakin ləğv qeydi daşımayan rəqəmsal sənəd rədd edilir, etibar siyahısının geriyə sarma qorunması defolt olaraq aktivdir, saat sürüşməsi seçimləri 600 san ilə məhdudlaşır. Qəbul: 2026-10-19.
 domain: Trust
@@ -145,6 +145,15 @@ Layihə rəhbərliyinin təsdiqi ilə: `"none"` (açıq ötürmə dəyəri), `st
   cüzdan provayderi (paket nüsxələri).
 - İstismar ilkin şərti (K10): canlı yoxlayan tərəflərin qeydiyyat sertifikatları dərc edilmədən yenilənmiş rəqəmsal cüzdan onlara təqdimat etmir.
 - Dəyişməyən qərarlar: D-PROTO-1, D-PRIV-1 (psevdonim), D-PROX-1 (keçid kartı), D-CRED-7 (WIA/KA), D-API-2.
+- **Tətbiq qeydi (2026-11-12; layihə rəhbərliyinin təsdiqi ilə; qərarın məzmunu dəyişmədi) — addım kodlarının bildirilməsi.**
+  [[SPEC-API-0001]] §1.A cədvəlindəki iki kod uğursuzluqda qonşu kodla qayıdır: `cnf` (mdoc-da cihaz açarı) çatışmazlığı `A3d`
+  əvəzinə `A3`; SD-JWT VC-də təkrarlanan heş və toqquşma `A8` əvəzinə `A5`. mdoc və ZK təqdimatında `A8` sənəd növünün (docType)
+  siyasətdə olmadığını bildirir. Yoxlamaların özü tam aparılır: uğurlu yoxlamada `A3d` və `A8` `checks_performed`-də görünür,
+  uğursuzluğun dəqiq səbəbi `failed_reason` sahəsindədir. İki yol qiymətləndirildi: tətbiqi cədvəldəki koda gətirmək və ya bu
+  bildirməni spesifikasiyaya yazmaq. İkincisi seçildi. Təhlükəsizliyə təsiri yoxdur (heç bir yoxlama əlavə edilmir və ya
+  götürülmür); birincisi isə `sd-jwt` paketinin açıq addım tipini və `failed_step` dəyərlərini dəyişər, dərc olunmuş
+  versiyalarla yaradılmış audit qeydlərindəki kodların oxunuşunu ikiyə bölərdi ([[SPEC-API-0001]]/AP1: kodun qeydlərdəki mənası
+  dəyişmir). Bildirmə SPEC-API-0001 §1.3-də yazılıb və istinad tətbiqinin məcburi davranışıdır.
 
 # Status
 

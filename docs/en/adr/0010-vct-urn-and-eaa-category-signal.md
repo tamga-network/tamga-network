@@ -4,7 +4,7 @@ title: "Credential type identifier (URN)"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-07
+last_updated: 2026-11-12
 summary: >
   D-SCHEMA-1 ("vct is a stable HTTPS URL") is superseded: the credential type identifier becomes a URN of the form
   urn:tamga:<domain>:<Type>:<major>; Type Metadata is resolved from the Tamga catalogue (metadata_url + content_hash) via
@@ -133,6 +133,16 @@ layer C, a mismatch → REJECTED (new step code **C4**, a new code per [[SPEC-AP
 is **never** written into the credential — PR7 kept, the level is a precondition of the type (DB-6); (c) the EU URNs
 (`urn:etsi:esi:eaa:eu:*`) **may not be used** by Tamga issuers (we are outside the EU context); (d) if a state defines its
 own qualified class in phase 1, the sub-namespace `urn:tamga:<cc>:eaa:qualified` is opened.
+
+*Implementation note (2026-11-12; approved by project management) — the class signal in mdoc and ZK presentations.* The
+category signal is the `category` claim of the SD-JWT VC; an mdoc (ISO/IEC 18013-5) credential and a ZK presentation have no
+such element. For these formats the verifier does not apply `C4` and shows it in `checks_skipped` in the result. In every format
+the issuer class is returned in the result object (`issuer.class`) from the record in the trust list; the relying party always
+reads the class from the same place. `C4` is a consistency check against a forged signal: a format that carries no signal cannot
+carry a forged one, so not applying the step does not weaken trust. Today mdoc is issued only for identity types ([[ADR-0013]])
+and the issuer of those types is of class `EAA` (no signal is expected anyway). Before an institution of class `PUB` or
+`QUALIFIED` starts issuing mdoc, a separate decision settles whether the class signal is carried in mdoc (if it is, a new element
+name is needed). No code change.
 
 ## Decision 6 — Managing the `urn:tamga` namespace
 

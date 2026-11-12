@@ -184,6 +184,12 @@ contract SchemaRegistry is TamgaRegistryBase, ISchemaRegistry {
     function addSchemaContentHash(bytes32 schemaId, bytes32 contentHash) external {
         SchemaRecord storage s = _require(schemaId);
         _requireWriteAuth(s, false);
+        // İkinci kontrol 2026-11-12: deprecate ile aynı sınır — göç yürütücüsü yalnız kendi yeniden oynattığı ağ şemasına
+        // sürüm özeti ekler. Aksi hâlde Governance'ın kaydettiği şemaya oylanmamış bir içerik özeti ekleyebilir (silinemez)
+        // ya da özet kotasını doldurup ileride sürüm eklenmesini kalıcı engelleyebilirdi.
+        if (s.tier == SchemaTier.NETWORK && msg.sender != governance && !_replayed[schemaId]) {
+            revert NetworkTierRequiresGovernance();
+        }
         if (s.status == SchemaStatus.REVOKED) revert AlreadyRevoked(schemaId);
         if (contentHash == bytes32(0)) revert EmptyContentHash();
         bytes32[] storage v = _versionHashes[schemaId];

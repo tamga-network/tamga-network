@@ -19,8 +19,16 @@ export const PASS_TOKEN_CLOCK_SKEW_SEC = 30;
 /** Jetonun `jti`'si için kabul edilen azami uzunluk (karakter); cüzdan 16 karakterlik rastgele değer üretir. */
 export const PASS_TOKEN_MAX_JTI_LENGTH = 128;
 
+/**
+ * WL13 / ADR-0012 K8: geçiş izninin azami süresi — 6 ay (en uzun altı takvim ayı = 184 gün). Cüzdan bundan uzun izni saklamaz
+ * (`@tamga-network/wallet-core` `PASS_GRANT_MAX_VALIDITY_SEC` ile aynı sınır); doğrulayıcı da üretmez. Tek kullanımlık bilet
+ * (`single_use`, ADR-0012 K4) ilk geçişte tükendiği için tavana tabi değildir.
+ */
+export const PASS_MAX_VALID_DAYS = 184;
+
 export interface PassPolicy {
   terminal_group: string;
+  /** İznin süresi (gün). Tek kullanımlık bilet dışında en çok `PASS_MAX_VALID_DAYS`; aşan politika için kart verilmez (hata). */
   valid_days: number;
   /** ADR-0012 K4 (D10 bilet): ilk GEÇ kartı tüketir; sonraki her jeton DUR ("bilet kullanıldı"). */
   single_use?: boolean;
@@ -165,6 +173,12 @@ export class PassRegistry {
   }): Promise<{ record: PassRecord; jws: string }> {
     const accepted = acceptedPresentationOf(input.verified);
     if (!accepted) throw new Error("pass: only an ACCEPTED result of verifyPresentation can be turned into a pass");
+    // WL13: cüzdanın atacağı izni üretme — yapılandırma hatası sunumdan önce, açıkça görünsün
+    const days = input.policy.valid_days;
+    if (!(typeof days === "number" && days > 0) || (!input.policy.single_use && days > PASS_MAX_VALID_DAYS))
+      throw new Error(
+        `pass: valid_days must be a positive number of at most ${PASS_MAX_VALID_DAYS} days (6 months, WL13) unless the pass is single_use`,
+      );
     const now = secondsOrNow(input.now);
     const { jwk, kid } = input.passKey
       ? await verifyPassKeyProof(input.passKey.jws, { clientId: this.signer.clientId, nonce: input.passKey.nonce, now })

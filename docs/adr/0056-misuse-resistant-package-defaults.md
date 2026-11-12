@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-19
-last_updated: 2026-10-19
+last_updated: 2026-11-12
 summary: >
   `@tamga-network/*` paketlerinin 0.7.0 sürümünde güvenlik denetimini atlatan varsayılanlar kaldırılır: güven çapası, dönüş adresi
   izin listesi, iptal sorgusu ve doğrulayıcı kaydı zorunlu girdidir (bilerek atlamak için açık `"none"` değeri); DPoP token ve
@@ -150,6 +150,15 @@ Proje yönetimi onayıyla: `"none"` (açık atlama değeri), `statusChecked`, `c
   cüzdan sağlayıcı (paket kopyaları).
 - İşletim önkoşulu (K10): canlı doğrulayıcıların kayıt sertifikaları yayınlanmadan güncel cüzdan onlara sunum yapmaz.
 - Değişmeyen kararlar: D-PROTO-1, D-PRIV-1 (takma ad), D-PROX-1 (geçiş kartı), D-CRED-7 (WIA/KA), D-API-2.
+- **Uygulama notu (2026-11-12; proje yönetimi onayıyla; karar içeriği değişmedi) — adım kodlarının raporlanışı.**
+  [[SPEC-API-0001]] §1.A tablosundaki iki kod başarısızlıkta komşu kodla döner: `cnf` (mdoc'ta cihaz anahtarı) eksikliği `A3d`
+  yerine `A3`; SD-JWT VC'de yinelenen özet ve çakışma `A8` yerine `A5`. mdoc ve ZK sunumunda `A8`, belge türünün (docType)
+  politikada olmamasını bildirir. Denetimlerin kendisi eksiksiz yapılır: başarılı doğrulamada `A3d` ve `A8`
+  `checks_performed`'ta görünür, başarısızlığın tam nedeni `failed_reason` alanındadır. İki yol değerlendirildi: uygulamayı
+  tablodaki koda çekmek ya da bu raporlamayı şartnameye yazmak. İkincisi seçildi. Güvenlik etkisi yoktur (hiçbir denetim
+  eklenmez ya da kalkmaz); ilki ise `sd-jwt` paketinin kamuya açık adım tipini ve `failed_step` değerlerini değiştirir,
+  yayımlanmış sürümlerle üretilmiş denetim kayıtlarındaki kodların okunuşunu ikiye bölerdi ([[SPEC-API-0001]]/AP1: bir kodun
+  kayıtlardaki anlamı değişmez). Raporlama SPEC-API-0001 §1.3'te yazılıdır ve referans uygulamanın bağlayıcı davranışıdır.
 
 # Durum
 

@@ -23,6 +23,7 @@ import {
   loadFixture,
   networkHelpers,
   type Fixture,
+  conn,
 } from "./helpers/fixture.js";
 
 async function proposalIdOf(tx: any, governance: any): Promise<string> {
@@ -126,6 +127,8 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
 
     it("Cancun (ADR-0077): SELFDESTRUCT kodu silmez; aynı adrese başka kod konamaz (EIP-6780)", async () => {
       // Shanghai'de bu yol açıktı: implementasyon kendini siler, aynı tuzla (CREATE2) aynı adrese başka kod konurdu.
+      // Test ağı gerçekten Cancun'da mı (ikinci kontrol 2026-11-12: ad yanlış olunca varsayılan, daha yeni kural seti koşuyordu)
+      expect((conn.networkConfig as { hardfork?: string }).hardfork).to.equal("cancun");
       const q = await queuedUpgrade();
       await (await ((await ethers.getContractAt("ReviewedImplMock", q.implAddr)) as any).retire()).wait();
       expect(await ethers.provider.getCode(q.implAddr)).to.equal(q.reviewedCode); // kod yerinde

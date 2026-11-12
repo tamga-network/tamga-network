@@ -31,6 +31,10 @@ summary: >
 > (GC2). [[ADR-0002]] #5 bu kayıtla okunur (GC3). §1; §14 madde 8 kapandı. Depolama düzeni ve fonksiyon imzaları değişmedi;
 > ABI'ye bir hata eklendi.
 
+> **Sürüm notu 1.0.0 (2026-11-12, ikinci kontrol).** Göç yürütücüsü yalnız kendi yeniden oynattığı ağ şemasına sürüm özeti
+> ekler; Governance'ın kaydettiği şemaya ekleyemez (`NetworkTierRequiresGovernance`, §16.1 — kullanımdan kaldırmayla aynı sınır).
+> Kontrat testlerinin süreç içi ağı Cancun'a sabitlendi ([[ADR-0077]] uygulama notu). ABI ve depolama düzeni değişmedi.
+
 > **Sürüm notu 1.0.0 (2026-11-11, kontrat denetimi).** Yükseltme önerisi yeni implementasyonun **kod özetini** sabitler; yürütmede
 > kod aynı değilse yükseltme düşer (`UpgradeImplementationChanged`, §9). `Governance.initialize` sıfır devlet kodunu reddeder;
 > öneri yükleri zincirden okunur (`getSchemaPayload`, `upgradePayloadOf`, `removalReasonOf`, §1). Göç yürütücüsü yalnız kendi
@@ -1253,10 +1257,14 @@ function proposeMigrationClose(address registry) external;
   uygulanmadı: ulusal kayıtları yeniden oynatan devlet delegeleridir (K1) ve CE1 kotayı bütün kip için kaldırır; daraltma ADR ister.
 - **Ağ düzeyi yazım:** kip açıkken ağ şemasını Governance'ın yanında açılış önerisinin `executor`'u (tek göç yürütücüsü) yazar:
   kayıt, sürüm özeti, deprecate. Ağ şemasının iptali yalnız Governance'tadır (güvenlik turu 2026-11-04;
-  `NetworkTierRequiresGovernance`). Yürütücü yalnız **kendi yazdığı** (yeniden oynatılan) ağ şemasını kullanımdan kaldırır;
-  Governance'ın kaydettiği ağ şemasında deprecate de yalnız Governance'tadır (kontrat denetimi 2026-11-11). Gerekçe iptalle
-  aynıdır: yürütücü, geri tarihli bir deprecate ile (`at` = 1) o şemayla verilmiş bütün belgeleri C2'de düşürebilirdi ve
-  deprecate geri alınamaz. [[ADR-0073]] K1'in yürütücüye verdiği iş (listedeki geçmişin yeniden oynatılması) değişmez.
+  `NetworkTierRequiresGovernance`). Yürütücü yalnız **kendi yazdığı** (yeniden oynatılan) ağ şemasını kullanımdan kaldırır
+  ve yalnız ona sürüm özeti ekler; Governance'ın kaydettiği ağ şemasında deprecate de sürüm özeti eklemek de yalnız
+  Governance'tadır (deprecate: kontrat denetimi 2026-11-11; sürüm özeti: ikinci kontrol 2026-11-12 — ikisi de
+  `NetworkTierRequiresGovernance`). Gerekçe iptalle aynıdır: yürütücü, geri tarihli bir deprecate ile (`at` = 1) o şemayla
+  verilmiş bütün belgeleri C2'de düşürebilirdi ve deprecate geri alınamaz; sürüm özetinde de Governance'ın kaydettiği şemaya
+  oylanmamış bir içerik özeti ekleyebilir (özet silinemez, SC1) ya da özet kotasını (`MAX_CONTENT_HASHES`) doldurup ileride
+  sürüm eklenmesini kalıcı olarak engelleyebilirdi. [[ADR-0073]] K1'in yürütücüye verdiği iş (listedeki geçmişin yeniden
+  oynatılması) değişmez.
 - **İleri tarihli şema başlangıcı (2026-11-11):** kip açıkken `validFrom` blok zamanından ileriyse kayıt reddedilmez; başlangıç
   aynen yazılır, ilk durum anı blok zamanıdır (hiçbir durum anı ileri olamaz, CE1). Eski hâlde ileri tarihli ağ şeması önerisi
   pencere açıkken `DateInFuture` ile yürümüyordu.
@@ -1303,6 +1311,7 @@ event SchemaContentHashAdded(bytes32 indexed schemaId, bytes32 contentHash);
 error ContentHashExists(bytes32 schemaId, bytes32 contentHash);
 error TooManyContentHashes(bytes32 schemaId, uint256 max);
 /// ulusal şema: onlyOwnerState(stateCode); ağ şeması: Governance (proposeNetworkSchemaContentHash, 2/3) ya da göç yürütücüsü
+/// (yalnız kendi yeniden oynattığı ağ şemasında; Governance'ın kaydettiği şemada NetworkTierRequiresGovernance — §16.1)
 function addSchemaContentHash(bytes32 schemaId, bytes32 contentHash) external;
 function contentHashesOf(bytes32 schemaId) external view returns (bytes32[] memory);   // [ilk özet, eklenenler…]
 ```

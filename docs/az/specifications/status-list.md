@@ -496,7 +496,8 @@ Normativdir. `status` claim-i daşıyan hər sənəd üçün icra edilir.
 Ş4.  Verify the token:
      - typ == "statuslist+jwt"
      - the signer is pinned: the x5c leaf fingerprint is one of the institution's ACTIVE status keys in
-       the trust list (S11), before the signature check → otherwise REJECT ([[ADR-0056]] K6)
+       the trust list (S11), before the signature check → otherwise REJECT ([[ADR-0056]] K6);
+       a signer that IS registered but outside its validity window (key renewed) → "COULD NOT VERIFY"
      - signature valid, the x5c chain links to the issuer's X.509 chain
        (SPEC-ID-0002); root anchored in RootCARegistry
      - sub == the uri in the credential  → otherwise REJECT
@@ -509,12 +510,17 @@ Normativdir. `status` claim-i daşıyan hər sənəd üçün icra edilir.
      - now − iat > the policy's max_status_token_age_sec → "COULD NOT VERIFY"
      (the exp/ttl claims decide, not the HTTP cache headers)
 
-Ş6.  CHAIN ANCHOR:
+Ş6.  CHAIN ANCHOR (step D5 of SPEC-API-0001 §1 — the result values are defined there):
      listId = keccak256(issuerId, sub)
      anchor = StatusListRegistry.getListAnchor(listId)
      - anchor.status == ACTIVE  → otherwise REJECT
-     - SHA-256(token bytes) == anchor.contentHash → otherwise REJECT
-     - version in the token lower than anchor.version → REJECT (rollback)
+     - SHA-256(token bytes) == anchor.contentHash → passed
+     - a mismatch is NOT a REJECT by itself (the token carries no version field; a rollback shows in time):
+         token OLDER than the anchor: fetched clearly after the anchor → REJECT (rollback);
+           fetched before the anchor or within the clock tolerance → "COULD NOT VERIFY"
+         token NEWER than the anchor: the normal publishing order (CDN first, then the anchor — §5.2), allowed for
+           at most max_anchor_lag_sec (+ clock tolerance); beyond that → "COULD NOT VERIFY"
+     - the list has no anchor at all: a credential older than max_anchor_lag_sec → "COULD NOT VERIFY"
 
 Ş7.  Capacity: idx < anchor.listSize → otherwise REJECT
 
@@ -540,7 +546,7 @@ yenilənir). Siyahı ikili CWT-dir və məzmun növünə baxılmadan bayt kimi s
 
 ## 7.1 "Etibarsız" ilə "yoxlanıla bilmədi" arasındakı fərq
 
-Ş3(c) və Ş5-də nəticə **"etibarsız" deyil, "yoxlanıla bilmədi"**dir və yoxlayan tərəf bu
+Ş3(c) və Ş5-də — həmçinin Ş4-ün müddəti bitmiş qeydiyyatlı açar və Ş6-nın lövbər gecikməsi hallarında — nəticə **"etibarsız" deyil, "yoxlanıla bilmədi"**dir və yoxlayan tərəf bu
 ikisini istifadəçiyə **fərqli** göstərməlidir.
 
 "Bu diplom ləğv edilib" ilə "hazırda ləğv statusunu yoxlaya bilmirəm"
@@ -729,7 +735,7 @@ Siyahı törəmə məhsuldur; mənbə verilənlər bazasıdır.
 | **S8** | Siyahı URI-si qeyri-şəffafdır; il, fakültə, kohort kodlaşdırmır (§6.3). |
 | **S9** | Siyahılar tipdən başqa heç bir meyara görə bölünmür (§6.4). |
 | **S10** | Siyahı tutumu ≥ 100.000; doluluq ≤ 80%. |
-| **S11** | Status açarı sənəd imzalama açarından ayrıdır (§3.4). Status açarının sertifikat barmaq izi etibar siyahısında qurum qeydinin `delegate_keys[]` sahəsində `purpose: "status_list"` ilə dərc olunur; yoxlayan tərəf D3-də token imzalayanını bu qeydlə uyğunlaşdırır (qeyd yoxdursa INDETERMINATE, uyğun gəlmirsə REJECTED); paketlərdə imzalayan yoxlama girişidir (`expectedSignerFingerprints`, məcburi — [[ADR-0056]] K6). Siyahıdan kənar `idx` etibarlı sayılmır (D6 RƏDD). |
+| **S11** | Status açarı sənəd imzalama açarından ayrıdır (§3.4). Status açarının sertifikat barmaq izi etibar siyahısında qurum qeydinin `delegate_keys[]` sahəsində `purpose: "status_list"` ilə dərc olunur; yoxlayan tərəf D3-də token imzalayanını bu qeydlə uyğunlaşdırır (qeyd yoxdursa INDETERMINATE, uyğun gəlmirsə REJECTED; imzalayan qeydiyyatlı, lakin etibarlılıq pəncərəsindən kənar açardırsa INDETERMINATE); paketlərdə imzalayan yoxlama girişidir (`expectedSignerFingerprints`, məcburi — [[ADR-0056]] K6). Siyahıdan kənar `idx` etibarlı sayılmır (D6 RƏDD). |
 | **S12** | Yoxlayan tərəf hər yoxlama üçün ayrıca sorğu etmir; toplu ilkin yükləmədən istifadə edir (§9.1). |
 | **S13** | `exp`/`ttl` claim-ləri HTTP keş başlıqlarını üstələyir. |
 | **S14** | "Etibarsız" ilə "yoxlanıla bilmədi" istifadəçiyə fərqli göstərilir (§7.1). |

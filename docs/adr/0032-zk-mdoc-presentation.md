@@ -4,7 +4,7 @@ title: "Sıfır bilgi ispatı (ZK)"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-07
+last_updated: 2026-11-12
 summary: >
   Cüzdan, kurumların ES256 imzalı mdoc belgelerini DEĞİŞTİRMEDEN, bu belgeler hakkında Longfellow ZK ile sıfır bilgi
   ispatı üretir (ilk yüklem: 18 yaş üstü). Doğrulayıcı yalnız ispatlanan alanı ve belge vereni görür; iki gösterim birbirine
@@ -78,6 +78,19 @@ denetimi beklemez; `accept_unrevocable_zk: true` yalnız kısa ömürlü kopya o
 ## K7 — Cihaz bağlaması
 İspat, cihaz anahtarının SessionTranscript üzerindeki ES256 imzasını içerir ve cihaz açık anahtarını gizler; anahtar güvenli
 donanımda kalır (Secure Enclave / StrongBox), imzalama akışı değişmez.
+
+*Uygulama notu (2026-11-12; proje yönetimi onayıyla) — güven sorguları ispat anına göre.* ZK sunumunda belgenin kendisi ve
+imzalandığı an doğrulayıcıya gelmez; ispat yalnız belgenin ispat anında geçerlilik süresi içinde olduğunu gösterir. Bu yüzden
+güven adımları `C1` ve `C2` ([[SPEC-API-0001]]) ZK sunumunda belgenin `iat`'ıyla sorulamaz; **ispatın zaman damgasıyla** sorulur
+(damga doğrulayıcının saatine izin verilen pencere içinde yakın olmalıdır): kurum ve tür yetkisi sunum anında geçerli olmalıdır.
+Kurum sertifikasının geçerliliği de aynı nedenle ispat anına göre denetlenir (`A3`). Bu, SPEC-API-0001/AP11'in ("`C1` ve `C2`
+belgenin `iat`'ını alır") ZK sunumu için açık istisnasıdır; SD-JWT VC ve mdoc sunumunda AP11 aynen uygulanır. İki sonucu vardır:
+(i) kurum belgeyi verdikten sonra kapandıysa ZK sunumu reddedilir (`iat` kuralından sıkı); (ii) kurum belgenin verildiği anda
+kabul edilebilir değildiyse ama sunum anında kabul edilebilirse sunum bu adımlardan geçer. (ii)'nin penceresi kısa ömürlü ZK
+kopyasında en çok 24 saattir ([[ADR-0044]] ZC1: kopya en çok 24 saat geçerlidir, verildiği an ile sunum anı arasındaki fark bunu
+aşamaz). İşaretsiz ZK sunumunda bu sınır yoktur; o sunum yalnız politika `accept_unrevocable_zk: true` derse kabul edilir (ZC4)
+ve bu seçeneği açan doğrulayıcı bu farkı da kabul etmiş olur. Kod değişmedi; davranış ZK sunumunun ilk uygulamasından beri
+böyledir.
 
 ## K8 — Namespace bağlanmaz: alan adı tekliği
 Longfellow v8 ispatı kurum anahtarını, docType'ı, alan adını ve değeri bağlar; namespace'i bağlamaz. Doğrulayıcı "bu kurumun bu

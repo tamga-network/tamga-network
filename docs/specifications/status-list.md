@@ -4,7 +4,7 @@ title: "İptal ve durum listesi"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-04
+last_updated: 2026-11-12
 summary: >
   [[ADR-0008]] kararının normatif uygulaması. Status List Token'ın Tamga profilini
   (kurum listelerinde bits=2, kimlik servisinde bits=1; ES256, X.509 zinciri, asgari 100.000 indeks; mdoc için CWT
@@ -503,7 +503,8 @@ Normatif. `status` claim'i taşıyan her belge için çalıştırılır.
 Ş4.  Token'ı doğrula:
      - typ == "statuslist+jwt"
      - imzacı sabitlenir: x5c yaprağının parmak izi kurumun güven listesindeki ACTIVE iptal anahtarlarından
-       biri (S11), imza denetiminden önce → değilse RED ([[ADR-0056]] K6)
+       biri (S11), imza denetiminden önce → değilse RED ([[ADR-0056]] K6);
+       imzacı KAYITLI ama geçerlilik penceresi dışındaki bir anahtarsa (anahtar yenilenmiş) → "DOĞRULANAMADI"
      - imza geçerli, x5c zinciri belge verenin X.509 zincirine bağlanıyor
        (SPEC-ID-0002); kök RootCARegistry'de çapalı
      - sub == belgedeki uri  → değilse RED
@@ -516,12 +517,17 @@ Normatif. `status` claim'i taşıyan her belge için çalıştırılır.
      - şimdi − iat > politikanın max_status_token_age_sec'i → "DOĞRULANAMADI"
      (HTTP önbellek başlıkları değil, exp/ttl claim'leri belirleyicidir)
 
-Ş6.  ZİNCİR ÇAPASI:
+Ş6.  ZİNCİR ÇAPASI (SPEC-API-0001 §1'in D5 adımı — sonuç değerleri orada tanımlıdır):
      listId = keccak256(issuerId, sub)
      anchor = StatusListRegistry.getListAnchor(listId)
      - anchor.status == ACTIVE  → değilse RED
-     - SHA-256(token baytları) == anchor.contentHash → değilse RED
-     - token içindeki version, anchor.version'dan küçükse → RED (geri alma)
+     - SHA-256(token baytları) == anchor.contentHash → geçti
+     - uyuşmazlık kendiliğinden RED DEĞİLDİR (token sürüm alanı taşımaz; geri alma zamanla anlaşılır):
+         token çapadan ESKİ: çapadan açıkça sonra çekildiyse → RED (geri alma);
+           çapadan önce ya da saat toleransı içinde çekildiyse → "DOĞRULANAMADI"
+         token çapadan YENİ: olağan yayın sırası (önce CDN, sonra çapa — §5.2), en çok
+           max_anchor_lag_sec (+ saat toleransı) kadar; aşılırsa → "DOĞRULANAMADI"
+     - liste çapa günlüğünde hiç yok: belge max_anchor_lag_sec'ten eskiyse → "DOĞRULANAMADI"
 
 Ş7.  Kapasite: idx < anchor.listSize → değilse RED
 
@@ -548,7 +554,7 @@ tazelenir). Liste ikili CWT'dir ve içerik türüne bakılmadan bayt olarak sakl
 
 ## 7.1 "Geçersiz" ile "doğrulanamadı" ayrımı
 
-Ş3(c) ve Ş5'te sonuç **"geçersiz" değil "doğrulanamadı"**dır ve doğrulayıcı bu
+Ş3(c) ve Ş5'te — ayrıca Ş4'ün süresi dolmuş kayıtlı anahtar ve Ş6'nın çapa gecikmesi durumlarında — sonuç **"geçersiz" değil "doğrulanamadı"**dır ve doğrulayıcı bu
 ikisini kullanıcıya **farklı** göstermek zorundadır.
 
 "Bu diploma iptal edilmiş" ile "şu an iptal durumunu kontrol edemiyorum"
@@ -737,7 +743,7 @@ Liste türetilmiş bir üründür; kaynak veritabanıdır.
 | **S8** | Liste URI'si opaktır; yıl, bölüm, kohort kodlamaz (§6.3). |
 | **S9** | Listeler tip dışında hiçbir ölçütle bölünmez (§6.4). |
 | **S10** | Liste kapasitesi ≥ 100.000; doluluk ≤ %80. |
-| **S11** | Status anahtarı, belge imzalama anahtarından ayrıdır (§3.4). Status anahtarının sertifika parmak izi güven listesinde kurum kaydının `delegate_keys[]` alanında `purpose: "status_list"` ile yayınlanır; doğrulayıcı D3'te token imzacısını bu kayıtla eşler (kayıt yoksa INDETERMINATE, eşleşmezse REJECTED); paketlerde imzacı doğrulama girdisidir (`expectedSignerFingerprints`, zorunlu — [[ADR-0056]] K6). Liste dışı `idx` geçerli okunmaz (D6 RED). |
+| **S11** | Status anahtarı, belge imzalama anahtarından ayrıdır (§3.4). Status anahtarının sertifika parmak izi güven listesinde kurum kaydının `delegate_keys[]` alanında `purpose: "status_list"` ile yayınlanır; doğrulayıcı D3'te token imzacısını bu kayıtla eşler (kayıt yoksa INDETERMINATE, eşleşmezse REJECTED; imzacı kayıtlı ama geçerlilik penceresi dışındaki bir anahtarsa INDETERMINATE); paketlerde imzacı doğrulama girdisidir (`expectedSignerFingerprints`, zorunlu — [[ADR-0056]] K6). Liste dışı `idx` geçerli okunmaz (D6 RED). |
 | **S12** | Doğrulayıcı doğrulama başına çekim yapmaz; toplu ön çekim kullanır (§9.1). |
 | **S13** | `exp`/`ttl` claim'leri HTTP önbellek başlıklarını geçersiz kılar. |
 | **S14** | "Geçersiz" ile "doğrulanamadı" kullanıcıya farklı gösterilir (§7.1). |

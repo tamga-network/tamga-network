@@ -87,6 +87,10 @@ running yet, so the rule set can be chosen today at no cost: the chain is set up
   contracts deployed; the Cancun opcodes (`MCOPY`, `TSTORE`/`TLOAD`, `BLOBBASEFEE`) worked and the block header carried the blob
   fields with zero values. No extra option was needed for the KZG setup. The multi-node network is verified in the CI test
   network workflow (`testnet.yml`).
+- **Implementation note (2026-11-12, second check; the decision is unchanged):** the test side of CR2 became true with this
+  fix — in the test tool the in-process network is named `default`; the configuration had pinned a network named `hardhat`,
+  which is never used, to Cancun, so the tests ran with a newer rule set. The `default` and `node` networks are pinned to
+  Cancun; a test asserts the rule set the tests run with.
 - Documents: [[SPEC-BC-0001]] §9 and §14 item 10 (closed), [[ARCH-0002]], [[GUIDE-0018]].
 
 # Status

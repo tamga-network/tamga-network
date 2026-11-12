@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -92,7 +92,7 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 | `C1` | `isCredentialAcceptable(issuerId, iat)` — **iat = the credential's `iat` claim** |
 | `C2` | `isCredentialSchemaAcceptable(issuerId, schemaId, iat)` — **cannot be skipped** |
 | `C3` | `isRecognizedBy(my own state, issuerId)` |
-| `C4` | Credential `category` claim ↔ the issuer class in the record: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ no claim; mismatch → REJECT ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18). mdoc and ZK presentations carry no `category` field: C4 is not applied to these formats and appears in `checks_skipped`; it is not applied to an institution in an external list either ([[ADR-0036]]) |
+| `C4` | Credential `category` claim ↔ the issuer class in the record: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ no claim; mismatch → REJECT ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18). mdoc and ZK presentations carry no `category` field: C4 is not applied to these formats and appears in `checks_skipped`; it is not applied to an institution in an external list either ([[ADR-0036]]). In every format the issuer class is returned in the result object as `issuer.class`, from the record in the trust list ([[ADR-0010]] implementation note, 2026-11-12) |
 
 ## 1.D — Revocation layer → [[SPEC-CRED-0003]] §7
 
@@ -100,7 +100,7 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 |---|---|
 | `D1` | Read `status.status_list` (`idx`, `uri`). A ZK presentation (`mso_mdoc_zk`) carries no index: if the type bound by the proof is the short-lived ZK copy (`urn:tamga:id:ShortLivedIdentityAttestation:1`, type rule ≤ 24 hours, no revocation list — [[ADR-0044]] K5) the D steps do not apply and `status.value = NOT_APPLICABLE` (reason: short validity); an unmarked ZK presentation follows the rule below. A non-ZK credential without `status`: if the type schema says `uses_status_list: true` it is REJECTED (the revocation check is never skipped silently — [[ADR-0056]] K13), otherwise `NOT_APPLICABLE` |
 | `D2` | Take the Status List Token **from the prefetch cache** |
-| `D3` | Token signature; `sub == uri`; `iss` in the same chain of trust. Before the signature check the signer is pinned to the institution's ACTIVE status keys in the trusted list (`expectedSignerFingerprints` — [[ADR-0056]] K6); without a registered key `INDETERMINATE`. A status key counts as a signer only inside its validity window (`valid_from`…`valid_to`, when given). If the cached body cannot be read as a token (for example the server's error page) the result is not REJECTED but `INDETERMINATE`/`STATUS_UNREACHABLE` |
+| `D3` | Token signature; `sub == uri`; `iss` in the same chain of trust. Before the signature check the signer is pinned to the institution's ACTIVE status keys in the trusted list (`expectedSignerFingerprints` — [[ADR-0056]] K6); without a registered key `INDETERMINATE`. A status key counts as a signer only inside its validity window (`valid_from`…`valid_to`, when given). If the signer is a **registered** status key outside its window (or a `RETIRED` one) — the key was renewed and the cache still holds the old list — the result is not REJECTED but `INDETERMINATE`/`STATUS_STALE`; a signer that is not registered (or is `REVOKED` / `SUSPENDED`) stays `REJECTED`. If the cached body cannot be read as a token (for example the server's error page) the result is not REJECTED but `INDETERMINATE`/`STATUS_UNREACHABLE` |
 | `D4` | Freshness: `exp` not passed, token age (`now − iat`) within the policy's `max_status_token_age_sec` |
 | `D5` | Anchor: does the token digest (`contentHash`) match the latest row for the list in the anchor log. The token carries no version field; rollback is detected by time. If the mismatching token is **older** than the anchor: `INDETERMINATE`/`STATUS_STALE` when the cache was fetched before the anchor (or within clock tolerance), `REJECTED` when it was clearly fetched after. If the mismatching token is **newer** than the anchor, that is the normal publication order (CDN first, then the anchor — [[SPEC-CRED-0003]] §5.2) and D5 appears in `checks_skipped`; the allowance is bounded: a token newer than the latest known anchor by more than `max_anchor_lag_sec` (+ clock tolerance) has an overdue anchor → `INDETERMINATE`/`STATUS_STALE`. If the list is not in the anchor log at all, the same allowance is counted from the credential's `iat`: D5 is skipped for a freshly issued credential, and the result is `INDETERMINATE`/`STATUS_STALE` once the allowance has passed. There is no anchor log for the status list of an institution in an external list; D5 is skipped ([[ADR-0036]]). `max_anchor_lag_sec` is a freshness field of the policy (§4.4): default 3600 s (the hourly cadence of the anchor log); Tamga Verify uses 600 s |
 | `D6` | Read `idx` with `bits=2`; anything other than `0x00` → REJECT |
@@ -137,7 +137,7 @@ That is why both queries take the credential's **`iat`** value and ask "was it a
 verification is a **retrospective** operation — the credential was issued in the past, and the state of that day, not
 today's, is decisive.
 
-**ZK presentation (`mso_mdoc_zk`).** A zero-knowledge proof does not reveal when the credential was signed. On this path `C1` and `C2` are asked with the proof timestamp (the presentation time; it must be close to the verifier clock, within the clock tolerance): the institution and its authorisation for the type must be valid at presentation time. Because a short-lived ZK copy was issued at most 24 hours earlier ([[ADR-0044]]), the two moments differ by at most one day.
+**ZK presentation (`mso_mdoc_zk`).** A zero-knowledge proof does not reveal when the credential was signed. On this path `C1` and `C2` are asked with the proof timestamp (the presentation time; it must be close to the verifier clock, within the clock tolerance): the institution and its authorisation for the type must be valid at presentation time. Because a short-lived ZK copy was issued at most 24 hours earlier ([[ADR-0044]]), the two moments differ by at most one day. This is the explicit exception to AP11 for ZK presentations ([[ADR-0032]] implementation note, 2026-11-12). It has two consequences: if the institution was closed after it issued the credential, the ZK presentation is rejected; if the institution was not acceptable when the credential was issued but is acceptable at presentation time, the presentation passes these steps. For an unmarked ZK presentation (accepted only with `accept_unrevocable_zk: true`) the one-day bound does not exist.
 
 ## 1.2 `issuerId` is derived from the certificate
 
@@ -159,7 +159,7 @@ The steps are run **in order**. Execution stops at the first failure and that co
 **Exception:** `E4` always runs — a rejected verification is logged as well (in a verifier with an audit sink; without one E4 is
 reported as skipped — [[ADR-0056]] K11).
 
-**How codes are reported (implementation note, 2026-11-11).** The reference implementation reports some steps under a neighbouring code: a missing `cnf` (`A3d`) is returned as `A3`, and a duplicate digest or a collision (`A8`) as `A5` for SD-JWT VC; for mdoc and ZK, `A8` means the document type (docType) is not in the policy. `A2` (legacy `typ` on a Tamga type) and `A4` (no `_sd_alg` on a Tamga type) are checked once it is known whether the type is in the catalogue, that is after `B2`; `A3b` (`iss` consistency) is checked once the trust record has been read, that is after `B6` — for a credential with more than one defect the returned code may not be the first one in order. On an unexpected exception `failed_step` is the first code of that layer (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). The A order for mdoc: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6.
+**How codes are reported (implementation note, 2026-11-11).** The reference implementation reports some steps under a neighbouring code: a missing `cnf` (`A3d`) is returned as `A3`, and a duplicate digest or a collision (`A8`) as `A5` for SD-JWT VC; for mdoc and ZK, `A8` means the document type (docType) is not in the policy. `A2` (legacy `typ` on a Tamga type) and `A4` (no `_sd_alg` on a Tamga type) are checked once it is known whether the type is in the catalogue, that is after `B2`; `A3b` (`iss` consistency) is checked once the trust record has been read, that is after `B6` — for a credential with more than one defect the returned code may not be the first one in order. On an unexpected exception `failed_step` is the first code of that layer (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). The A order for mdoc: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6. The checks themselves are all carried out: in a successful verification `A3d` and `A8` appear in `checks_performed`; the exact cause of a failure is in the `failed_reason` field. With the approval of project management (2026-11-12) this reporting is the binding behaviour of the reference implementation; it is not changed, so that the reading of codes in existing records does not change (AP1) ([[ADR-0056]] implementation note).
 
 ## 1.4 Code stability
 
@@ -244,7 +244,7 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
 |---|---|
 | `SCHEMA_UNREACHABLE` | [[SPEC-SCHEMA-0001]] §7 Ş3(c) |
 | `STATUS_UNREACHABLE` | [[SPEC-CRED-0003]] §7 Ş3(c) |
-| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 freshness threshold exceeded; or, at D5, the verifier's prefetch delay / clock-tolerance window / unreadable anchor time / anchor lag window exceeded (the token is newer than the latest anchor by more than `max_anchor_lag_sec`, or the list has never been anchored) |
+| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 freshness threshold exceeded; or, at D5, the verifier's prefetch delay / clock-tolerance window / unreadable anchor time / anchor lag window exceeded (the token is newer than the latest anchor by more than `max_anchor_lag_sec`, or the list has never been anchored); or, at D3, the list is signed with a status key of the institution that is registered but outside its validity window |
 | `CHAIN_UNREACHABLE` | Chain and indexer unreachable |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
 | `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; also at `Z1` when the verifier's own ZK component is unavailable (circuit file missing, WASM cannot be loaded) — the verifier's shortcoming, not the presentation's |
@@ -254,7 +254,11 @@ The following also give `INDETERMINATE`, not `REJECTED`:
 
 - **Unexpected exception** (library error, corrupt trust record …): `INDETERMINATE` at that step, with that layer's reason (A →
   `CHAIN_UNREACHABLE`, B → `SCHEMA_UNREACHABLE`, C/E/T0 → `INDEXER_STALE`, D → `STATUS_UNREACHABLE`); the exception message is
-  not put in `failed_reason` (AP3), only the step and the error type. The result still goes to the E4 audit record.
+  not put in `failed_reason` (AP3), only the step and the error type. The result still goes to the E4 audit record. In the
+  hosted verifier an internal error **after** the presentation has been used up follows the same rule: the error is in or
+  after the last layer of the pipeline (E), so the reason is `INDEXER_STALE`, `failed_step` is `null` and `failed_reason` is
+  "internal error after verification (…)". The closed set has no separate "internal error" value; the empty `failed_step`
+  tells this case apart from a stale list.
 - **Unmarked ZK presentation with `accept_unrevocable_zk: false`:** a ZK presentation carries no revocation index (ZK4). A
   presentation carrying the short-validity marker (the type bound by the proof is the ZK copy, [[ADR-0044]] K5) is accepted
   without this flag. For an unmarked ZK presentation, if the policy requires a revocation check the outcome is `D1` /
@@ -561,7 +565,7 @@ The sample site's start endpoint (`/sample-site/start`, sandbox only) is limited
 | **AP6** | A policy's `required_claims` cannot exceed the scope of the RP's trust list record. |
 | **AP7** | The error `detail` field contains no personal data. |
 | **AP8** | `C2` (schema authorisation) cannot be skipped by any configuration. |
-| **AP11** | `C1` and `C2` take the credential's `iat`; issuance-time queries are not used in verification. |
+| **AP11** | `C1` and `C2` take the credential's `iat`; issuance-time queries are not used in verification. Exception: in a ZK presentation (`mso_mdoc_zk`) the signing time of the credential is hidden in the proof; `C1` and `C2` take the proof timestamp (§1.1, [[ADR-0032]]). |
 | **AP12** | `issuerId` is derived from the `x5c` leaf fingerprint, not from the `iss` claim. |
 | **AP13** | Pass token verification ([[ADR-0012]] B): signature with the copy key in `pass_grant`, `aud` = the verifier's persistent identity (the `dns_name` of its trust list record; unchanged when the certificate is renewed, [[ADR-0034]]), lifetime (`exp` − `iat`) ≤ 60 s, `iat` ≤ now + 30 s, `exp` ≤ now + 60 s + 30 s (clock-skew tolerance), a `jti` replay list (shared online within the terminal group); no personal data is extracted from the token or logged. The gate's request carries a terminal key; a request without one does not touch the token ([[ADR-0065]] TK1). |
 | **AP9** | `E4` (audit record) also runs for rejected verifications (in a verifier with an audit sink; always in the hosted verifier). |
@@ -577,8 +581,10 @@ prevent this period from becoming a tracking surface.
 **The `/claims` endpoint is authorised separately.** Seeing the verification result and reading the disclosed values are
 different permissions. An HR assistant may see "candidate verified" without seeing the grade average (if disclosed).
 
-**Pay attention if `checks_skipped` is not empty.** It means an old SDK skipped a check ([[ARCH-0005]] §4.1). The verifier
-application must make this **visible**, not accept it silently.
+**Pay attention if `checks_skipped` is not empty.** It means a step was not applied: a step the format does not carry (for
+example `C4` for mdoc and ZK presentations), one the policy does not ask for (`C3`), one the caller switched off deliberately
+(`E3`, `E4`), or one the implementation does not perform; an old SDK may also have skipped a check ([[ARCH-0005]] §4.1). The
+verifier application must make skipped steps **visible**, not accept them silently.
 
 **Preflight can be a leak surface.** `/offers/preflight` is queried with `subject_ref` and answers the question "does this
 student exist". It is an internal endpoint of the institution; it must not be exposed.
@@ -610,3 +616,9 @@ student exist". It is an internal endpoint of the institution; it must not be ex
 # Status
 
 **In force** — version 1.0.0 (2026-10-02).
+
+**Version note (2026-11-12; approved by project management — behaviour unchanged).** Three deviations left from the
+document–code scan were closed on the document side and tied to decision records: asking `C1`/`C2` at proof time in a ZK
+presentation is the explicit exception to AP11 ([[ADR-0032]] implementation note; §1.1, the AP11 row); `C4` is not applied to
+mdoc and ZK presentations and the class is read from `issuer.class` ([[ADR-0010]] implementation note; §1.C); how the codes
+`A3d` and `A8` are reported ([[ADR-0056]] implementation note; §1.3).

@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-19
-last_updated: 2026-10-19
+last_updated: 2026-11-12
 summary: >
   Version 0.7.0 of the `@tamga-network/*` packages removes the defaults that let a security check be skipped: the trust anchors,
   the redirect address allowlist, the status check and the relying party registration are required inputs (an explicit `"none"`
@@ -160,6 +160,16 @@ With project management approval: `"none"` (explicit skip value), `statusChecked
 - Operational precondition (K10): until the live verifiers' registration certificates are published, the updated wallet does not
   present to them.
 - Unchanged decisions: D-PROTO-1, D-PRIV-1 (pseudonym), D-PROX-1 (access pass), D-CRED-7 (WIA/KA), D-API-2.
+- **Implementation note (2026-11-12; approved by project management; the decision is unchanged) — how step codes are
+  reported.** Two codes of the table in [[SPEC-API-0001]] §1.A are returned under a neighbouring code on failure: a missing `cnf`
+  (the device key in mdoc) as `A3` instead of `A3d`; a duplicate digest or a collision in SD-JWT VC as `A5` instead of `A8`. For
+  mdoc and ZK presentations `A8` reports that the document type (docType) is not in the policy. The checks themselves are all
+  carried out: in a successful verification `A3d` and `A8` appear in `checks_performed`, and the exact cause of a failure is in
+  the `failed_reason` field. Two ways were considered: moving the implementation to the code in the table, or writing this
+  reporting into the specification. The second was chosen. There is no security effect (no check is added or removed); the first
+  would change the public step type of the `sd-jwt` package and the `failed_step` values, and would split the reading of codes in
+  audit records produced with published versions ([[SPEC-API-0001]]/AP1: the meaning of a code in records does not change). The
+  reporting is written in SPEC-API-0001 §1.3 and is the binding behaviour of the reference implementation.
 
 # Status
 

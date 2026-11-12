@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -93,7 +93,7 @@ Z1. A4–A7 Z1 kapsamındadır.
 | `C1` | `isCredentialAcceptable(issuerId, iat)` — **iat = belgenin `iat` claim'i** |
 | `C2` | `isCredentialSchemaAcceptable(issuerId, schemaId, iat)` — **atlanamaz** |
 | `C3` | `isRecognizedBy(kendi devletim, issuerId)` |
-| `C4` | Belgenin `category` claim'i ↔ kayıttaki belge veren sınıfı: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ claim yok; uyuşmazlık → RED ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18). mdoc ve ZK sunumunda `category` alanı yoktur: bu formatlarda C4 uygulanmaz ve `checks_skipped`'te görünür; dış listedeki kurumda da uygulanmaz ([[ADR-0036]]) |
+| `C4` | Belgenin `category` claim'i ↔ kayıttaki belge veren sınıfı: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ claim yok; uyuşmazlık → RED ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18). mdoc ve ZK sunumunda `category` alanı yoktur: bu formatlarda C4 uygulanmaz ve `checks_skipped`'te görünür; dış listedeki kurumda da uygulanmaz ([[ADR-0036]]). Kurumun sınıfı her biçimde sonuç nesnesinde `issuer.class` olarak güven listesindeki kayıttan döner ([[ADR-0010]] uygulama notu, 2026-11-12) |
 
 ## 1.D — İptal katmanı → [[SPEC-CRED-0003]] §7
 
@@ -101,7 +101,7 @@ Z1. A4–A7 Z1 kapsamındadır.
 |---|---|
 | `D1` | `status.status_list` oku (`idx`, `uri`). ZK sunumunda (`mso_mdoc_zk`) indeks gelmez: ispatın bağladığı tür kısa ömürlü ZK kopyasıysa (`urn:tamga:id:ShortLivedIdentityAttestation:1`, tür kuralı ≤ 24 saat, iptal listesi yok — [[ADR-0044]] K5) D adımları uygulanmaz ve `status.value = NOT_APPLICABLE` (gerekçe kısa ömür); işaretsiz ZK sunumu aşağıdaki kurala tabidir. ZK dışı belgede `status` yoksa: tür şemasında `uses_status_list: true` ise RED (iptal denetimi sessizce atlanmaz — [[ADR-0056]] K13), değilse `NOT_APPLICABLE` |
 | `D2` | Status List Token'ı **ön çekim önbelleğinden** al |
-| `D3` | Token imzası; `sub == uri`; `iss` aynı güven zincirinde. İmzacı, imza denetiminden önce kurumun güven listesindeki ACTIVE iptal anahtarlarına sabitlenir (`expectedSignerFingerprints` — [[ADR-0056]] K6); kayıtlı anahtar yoksa `INDETERMINATE`. İptal anahtarı yalnız geçerlilik penceresindeyse (`valid_from`…`valid_to`, verilmişse) imzacı sayılır. Önbellekteki gövde bir belirteç olarak okunamıyorsa (ör. sunucunun hata sayfası) sonuç RED değil `INDETERMINATE`/`STATUS_UNREACHABLE`'dır |
+| `D3` | Token imzası; `sub == uri`; `iss` aynı güven zincirinde. İmzacı, imza denetiminden önce kurumun güven listesindeki ACTIVE iptal anahtarlarına sabitlenir (`expectedSignerFingerprints` — [[ADR-0056]] K6); kayıtlı anahtar yoksa `INDETERMINATE`. İptal anahtarı yalnız geçerlilik penceresindeyse (`valid_from`…`valid_to`, verilmişse) imzacı sayılır. İmzacı **kayıtlı** ama penceresi dışındaki (ya da `RETIRED`) bir iptal anahtarıysa — anahtar yenilenmiş, önbellekte eski liste — sonuç RED değil `INDETERMINATE`/`STATUS_STALE`'dir; kayıtlı olmayan (ya da `REVOKED` / `SUSPENDED`) imzacı `REJECTED` kalır. Önbellekteki gövde bir belirteç olarak okunamıyorsa (ör. sunucunun hata sayfası) sonuç RED değil `INDETERMINATE`/`STATUS_UNREACHABLE`'dır |
 | `D4` | Tazelik: `exp` geçmemiş, token yaşı (`şimdi − iat`) politikanın `max_status_token_age_sec` sınırında |
 | `D5` | Çapa: belirtecin özeti (`contentHash`), listenin çapa günlüğündeki son satırıyla eşleşiyor mu. Belirteç sürüm alanı taşımaz; geri alma zamanla anlaşılır. Uyuşmayan belirteç çapadan **eskiyse**: önbellek çapadan önce (ya da saat toleransı içinde) çekildiyse `INDETERMINATE`/`STATUS_STALE`, açıkça sonra çekildiyse `REJECTED`. Uyuşmayan belirteç çapadan **yeniyse** bu olağan yayın sırasıdır (önce CDN, sonra çapa — [[SPEC-CRED-0003]] §5.2) ve D5 `checks_skipped`'te görünür; pay sınırlıdır: belirteç bilinen son çapadan `max_anchor_lag_sec` (+ saat toleransı) kadardan daha yeniyse çapası gecikmiştir → `INDETERMINATE`/`STATUS_STALE`. Liste çapa günlüğünde hiç yoksa aynı pay belgenin `iat`'ından sayılır: yeni verilmiş belgede D5 atlanır, pay dolduysa `INDETERMINATE`/`STATUS_STALE`. Dış listedeki kurumun iptal listesi için çapa günlüğü yoktur, D5 atlanır ([[ADR-0036]]). `max_anchor_lag_sec` politikanın tazelik alanıdır (§4.4): varsayılan 3600 sn (çapa günlüğünün saatlik kadansı); Tamga Verify 600 sn kullanır |
 | `D6` | `bits=2` ile `idx` oku; `0x00` dışı → RED |
@@ -138,7 +138,7 @@ edilebilir miydi" diye sorar. Bu, doğrulamanın **geçmişe dönük** bir işle
 olduğunu kabul eder — belge geçmişte verilmiştir, bugünkü durum değil o
 günkü durum belirleyicidir.
 
-**ZK sunumu (`mso_mdoc_zk`).** Sıfır bilgi ispatında belgenin imza anı açıklanmaz. Bu yolda `C1` ve `C2` ispatın zaman damgasıyla (sunum anı; doğrulayıcı saatine saat toleransı içinde yakın olmalıdır) sorulur: kurum ve tür yetkisi sunum anında geçerli olmalıdır. Kısa ömürlü ZK kopyası en çok 24 saat önce verildiğinden ([[ADR-0044]]) iki an arasındaki fark en çok bir gündür.
+**ZK sunumu (`mso_mdoc_zk`).** Sıfır bilgi ispatında belgenin imza anı açıklanmaz. Bu yolda `C1` ve `C2` ispatın zaman damgasıyla (sunum anı; doğrulayıcı saatine saat toleransı içinde yakın olmalıdır) sorulur: kurum ve tür yetkisi sunum anında geçerli olmalıdır. Kısa ömürlü ZK kopyası en çok 24 saat önce verildiğinden ([[ADR-0044]]) iki an arasındaki fark en çok bir gündür. Bu, AP11'in ZK sunumu için açık istisnasıdır ([[ADR-0032]] uygulama notu, 2026-11-12). İki sonucu vardır: kurum belgeyi verdikten sonra kapandıysa ZK sunumu reddedilir; kurum belgenin verildiği anda kabul edilebilir değildiyse ama sunum anında kabul edilebilirse sunum bu adımlardan geçer. İşaretsiz ZK sunumunda (yalnız `accept_unrevocable_zk: true` ile kabul edilir) bir günlük sınır yoktur.
 
 ## 1.2 `issuerId` sertifikadan türetilir
 
@@ -163,7 +163,7 @@ Adımlar **sırayla** çalıştırılır. İlk başarısızlıkta durulur ve o k
 **İstisna:** `E4` her durumda çalışır — reddedilen doğrulama da kayda geçer (denetim kaydı yeri olan doğrulayıcıda; yoksa E4
 atlandı olarak raporlanır — [[ADR-0056]] K11).
 
-**Kodların raporlanışı (uygulama notu, 2026-11-11).** Referans uygulama bazı adımları komşu kodla raporlar: `cnf` eksikliği (`A3d`) `A3`, yinelenen özet ve çakışma (`A8`) SD-JWT VC'de `A5` olarak döner; mdoc ve ZK'de `A8`, belge türünün (docType) politikada olmamasıdır. `A2` (Tamga türünde eski `typ`) ve `A4` (Tamga türünde `_sd_alg` yok) türün katalogda olup olmadığı bilinince, yani `B2`'den sonra; `A3b` (`iss` tutarlılığı) güven kaydı okununca, yani `B6`'dan sonra denetlenir — birden çok kusuru olan belgede dönen kod sıradaki ilk kod olmayabilir. Beklenmeyen istisnada `failed_step` o katmanın ilk kodudur (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). mdoc'un A-sırası: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6.
+**Kodların raporlanışı (uygulama notu, 2026-11-11).** Referans uygulama bazı adımları komşu kodla raporlar: `cnf` eksikliği (`A3d`) `A3`, yinelenen özet ve çakışma (`A8`) SD-JWT VC'de `A5` olarak döner; mdoc ve ZK'de `A8`, belge türünün (docType) politikada olmamasıdır. `A2` (Tamga türünde eski `typ`) ve `A4` (Tamga türünde `_sd_alg` yok) türün katalogda olup olmadığı bilinince, yani `B2`'den sonra; `A3b` (`iss` tutarlılığı) güven kaydı okununca, yani `B6`'dan sonra denetlenir — birden çok kusuru olan belgede dönen kod sıradaki ilk kod olmayabilir. Beklenmeyen istisnada `failed_step` o katmanın ilk kodudur (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). mdoc'un A-sırası: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6. Denetimlerin kendisi eksiksiz yapılır: başarılı doğrulamada `A3d` ve `A8` `checks_performed`'ta görünür; başarısızlığın tam nedeni `failed_reason` alanındadır. Bu raporlama proje yönetiminin onayıyla (2026-11-12) referans uygulamanın bağlayıcı davranışıdır; kodların kayıtlardaki okunuşu değişmesin diye (AP1) değiştirilmez ([[ADR-0056]] uygulama notu).
 
 ## 1.4 Kod kararlılığı
 
@@ -249,7 +249,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
 |---|---|
 | `SCHEMA_UNREACHABLE` | [[SPEC-SCHEMA-0001]] §7 Ş3(c) |
 | `STATUS_UNREACHABLE` | [[SPEC-CRED-0003]] §7 Ş3(c) |
-| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 tazelik eşiği aşıldı; ya da D5'te doğrulayıcının ön çekim gecikmesi / saat toleransı penceresi / okunamayan çapa zamanı / çapa gecikme penceresinin aşılması (belirteç son çapadan `max_anchor_lag_sec`'ten daha yeni ya da liste hiç çapalanmamış) |
+| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 tazelik eşiği aşıldı; ya da D5'te doğrulayıcının ön çekim gecikmesi / saat toleransı penceresi / okunamayan çapa zamanı / çapa gecikme penceresinin aşılması (belirteç son çapadan `max_anchor_lag_sec`'ten daha yeni ya da liste hiç çapalanmamış); ya da D3'te liste, kurumun kayıtlı ama geçerlilik penceresi dışındaki bir iptal anahtarıyla imzalı |
 | `CHAIN_UNREACHABLE` | Zincir ve indeksleyici erişilemez |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
 | `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; ayrıca `Z1`'de doğrulayıcı tarafının ZK bileşeni kullanılamıyorsa (devre dosyası yok, WASM yüklenemiyor) — sunumun değil doğrulayıcının eksiği |
@@ -259,7 +259,10 @@ Ayrıca şu durumlar `INDETERMINATE` verir, `REJECTED` vermez:
 
 - **Beklenmeyen istisna** (kütüphane hatası, bozuk güven kaydı …): o adımda `INDETERMINATE`, nedeni o katmanın değeri (A →
   `CHAIN_UNREACHABLE`, B → `SCHEMA_UNREACHABLE`, C/E/T0 → `INDEXER_STALE`, D → `STATUS_UNREACHABLE`); `failed_reason`'a
-  istisna iletisi girmez (AP3), yalnız adım ve hata türü. Sonuç E4 denetim kaydına yine düşer.
+  istisna iletisi girmez (AP3), yalnız adım ve hata türü. Sonuç E4 denetim kaydına yine düşer. Barındırılan doğrulayıcıda
+  sunum tüketildikten **sonra** oluşan iç hata da bu kurala girer: hata, hattın sonundaki (E) katmanda ya da sonrasındadır;
+  neden `INDEXER_STALE`, `failed_step` `null`, `failed_reason` "internal error after verification (…)" olur. Kapalı kümede ayrı
+  bir "iç hata" değeri yoktur; bu durum liste bayatlığından `failed_step`'in boş olmasıyla ayrılır.
 - **İşaretsiz ZK sunumu ve `accept_unrevocable_zk: false`:** ZK sunumunda iptal indeksi gelmez (ZK4). Kısa ömür işaretini
   taşıyan sunum (ispatın bağladığı tür ZK kopyası, [[ADR-0044]] K5) bu bayrak olmadan kabul edilir. İşaretsiz ZK sunumunda
   politika iptal denetimini şart koşuyorsa sonuç `D1` / `STATUS_UNREACHABLE`; yalnız açıkça `true` yazılmışsa kabul edilir:
@@ -575,7 +578,7 @@ paralel yaşar ([[ARCH-0005]] §5.3 ile aynı politika).
 | **AP6** | Politikanın `required_claims`'i RP'nin güven listesindeki kaydının scope'unu aşamaz. |
 | **AP7** | Hata `detail` alanı kişisel veri içermez. |
 | **AP8** | `C2` (şema yetkisi) hiçbir yapılandırmayla atlanamaz. |
-| **AP11** | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. |
+| **AP11** | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. İstisna: ZK sunumunda (`mso_mdoc_zk`) belgenin imza anı ispatta gizlidir; `C1` ve `C2` ispatın zaman damgasını alır (§1.1, [[ADR-0032]]). |
 | **AP12** | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. |
 | **AP13** | Geçiş kartı jetonu doğrulaması ([[ADR-0012]] B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = doğrulayıcının kalıcı kimliği (güven listesindeki kaydının `dns_name`'i; sertifika yenilense de değişmez, [[ADR-0034]]), ömür (`exp` − `iat`) ≤ 60 s, `iat` ≤ şimdi + 30 s, `exp` ≤ şimdi + 60 s + 30 s (saat kayması toleransı), `jti` tekrar listesi (terminal grubu içinde çevrim içi paylaşılır); jetondan kişisel veri çıkarılmaz ve loglanmaz. Kapı isteği terminal anahtarıyla gelir; anahtarsız istek jetona dokunmaz ([[ADR-0065]] TK1). |
 | **AP9** | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). |
@@ -593,8 +596,9 @@ yüzeyine dönüşmesini engeller.
 açıklanan değerleri okumak farklı yetkilerdir. Bir İK asistanı "aday
 doğrulandı" görebilir ama not ortalamasını (açıklanmışsa) görmeyebilir.
 
-**`checks_skipped` boş değilse dikkat.** Eski SDK bir kontrolü atlamış demektir
-([[ARCH-0005]] §4.1). Doğrulayıcı uygulaması bunu **görünür** kılmalı, sessizce
+**`checks_skipped` boş değilse dikkat.** Bir adım uygulanmamış demektir: biçimin taşımadığı (ör. mdoc ve ZK sunumunda
+`C4`), politikanın istemediği (`C3`), çağıranın bilerek kapattığı (`E3`, `E4`) ya da uygulamanın yapmadığı bir adım; eski bir
+SDK da bir kontrolü atlamış olabilir ([[ARCH-0005]] §4.1). Doğrulayıcı uygulaması atlananları **görünür** kılmalı, sessizce
 kabul etmemelidir.
 
 **Preflight bir sızıntı yüzeyi olabilir.** `/offers/preflight`, `subject_ref`
@@ -631,4 +635,9 @@ dışarı açılmamalıdır.
 # Durum
 
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+
+**Sürüm notu (2026-11-12; proje yönetimi onayıyla — davranış değişmedi).** Belge–kod taramasından kalan üç sapma belge
+tarafında kapatıldı ve karar belgelerine bağlandı: ZK sunumunda `C1`/`C2`'nin ispat anına göre sorulması AP11'in açık istisnası
+([[ADR-0032]] uygulama notu; §1.1, AP11 satırı); mdoc ve ZK sunumunda `C4`'ün uygulanmaması ve sınıfın `issuer.class`'tan
+okunması ([[ADR-0010]] uygulama notu; §1.C); `A3d` ve `A8` kodlarının raporlanışı ([[ADR-0056]] uygulama notu; §1.3).
 

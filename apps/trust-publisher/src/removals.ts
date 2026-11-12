@@ -7,6 +7,8 @@
  * kaydıdır (proje yönetimi kararıyla; ör. pilot öncesi sınama döneminden kalan, hiçbir gerçek kurumun kullanmadığı test
  * kayıtları). O zaman yayın yapılır ve herkese açık CHANGELOG'a adsız bir satır yazılır; eski liste sürümleri arşivde kalır.
  * Çıkarma kaydı kimlik ya da ad taşımaz: yalnız liste, tarih, sayılar ve kısa gerekçe.
+ * İstisnanın sınırı ADR-0081'dedir (RR1–RR4): yalnız sınama kaydı, ilk katılımcı kurum gerçek ağın listesine girmeden önce; gerçek
+ * bir kurumun kaydı için bu yol kullanılmaz. Bu koşulu yayıncı bilemez — karar düzeyinde denetlenir; yayıncı sayıları denetler.
  * Sandbox'ta uygulanmaz (test kurumları orada her gece kaldırılır — ADR-0041 TI5).
  *
  * 0.8.3: denetim kaydın İÇİNE de bakar. Önceki sürümde olup yenisinde olmayan kök CA, şema (ülke listesinde `national_schemas`,
@@ -14,6 +16,18 @@
  * satırı (`status_history`) de sayılır; biri eksikse yayın aynı kuralla durur. Bunlar çıkarma kaydında isteğe bağlı sayılardır
  * (`root_cas`, `schemas`, `scopes`, `schema_authorizations`, `status_history`; yazılmamışsa 0) ve birebir tutmalıdır. Tümüyle
  * çıkan kaydın kullanımları ve geçmişi ayrıca sayılmaz (kayıt sayısı onları kapsar).
+ *
+ * 0.8.3 (ikinci inceleme):
+ *  - Çıkarma kaydı TEK bir sürüm geçişine bağlıdır: `previous_version` (çıkarmadan önceki imzalı sürümün numarası; zorunlu) ve
+ *    isteğe bağlı `previous_version_hash` (o sürümün `.jws` özeti). Yayıncı kaydı yalnız önceki yayımlanmış sürüm bu ise kabul
+ *    eder; yayın yapılınca sürüm ilerler ve kayıt kendiliğinden geçersiz kalır (önce: aynı sayıda başka kaydın silinmesini de
+ *    geçiriyordu).
+ *  - Geçmiş satırları İÇERİKLERİYLE korunur: listede kalan kayıtta önceki sürümdeki her `status_history` satırı yeni listede
+ *    aynen (kanonik karşılaştırma) bulunmalıdır — ör. `invalidates_from`'u değiştirilen satır silinmiş sayılır. Şema yetkisi
+ *    satırı da aynen kalır; tek serbest değişiklik açık dönemin KAPATILMASIDIR (`valid_until`: yok/null → tarih). Kapanmış
+ *    yetkinin yeniden açılması ya da bitişinin değiştirilmesi satırın silinmesi sayılır.
+ *  - Sayılanlara eklendi: listede kalan belge verenin `delegate_keys` satırı (parmak izi + amaç) ve LOTL'da `national_lists`,
+ *    `wallet_providers`, `external_lists` kayıtları (cüzdan sağlayıcının durum geçmişi satırları da).
  */
 export interface RemovalCounts {
   issuers: number;
@@ -25,14 +39,32 @@ export interface RemovalCounts {
   scopes?: number;
   schema_authorizations?: number;
   status_history?: number;
+  delegate_keys?: number;
+  national_lists?: number;
+  wallet_providers?: number;
+  external_lists?: number;
 }
-const DETAIL_KEYS = ["root_cas", "schemas", "scopes", "schema_authorizations", "status_history"] as const;
+const DETAIL_KEYS = [
+  "root_cas",
+  "schemas",
+  "scopes",
+  "schema_authorizations",
+  "status_history",
+  "delegate_keys",
+  "national_lists",
+  "wallet_providers",
+  "external_lists",
+] as const;
 const DETAIL_TR = {
   root_cas: "kök CA",
   schemas: "şema",
   scopes: "kullanım",
   schema_authorizations: "şema yetkisi",
   status_history: "durum geçmişi satırı",
+  delegate_keys: "yetkili anahtar",
+  national_lists: "ülke listesi kaydı",
+  wallet_providers: "cüzdan sağlayıcı",
+  external_lists: "dış liste",
 } as const;
 const DETAIL_EN = {
   root_cas: "root CA(s)",
@@ -40,6 +72,10 @@ const DETAIL_EN = {
   scopes: "scope(s)",
   schema_authorizations: "schema authorization(s)",
   status_history: "status history row(s)",
+  delegate_keys: "delegate key(s)",
+  national_lists: "national list entr(y/ies)",
+  wallet_providers: "wallet provider(s)",
+  external_lists: "external list(s)",
 } as const;
 
 export interface ApprovedRemoval extends RemovalCounts {
@@ -49,15 +85,27 @@ export interface ApprovedRemoval extends RemovalCounts {
   date: string;
   /** CHANGELOG'a yazılacak kısa, adsız gerekçe (İngilizce) */
   note: string;
+  /** çıkarmadan ÖNCEKİ imzalı sürümün numarası: kayıt yalnız bu sürümden sonraki yayında geçer */
+  previous_version: number;
+  /** isteğe bağlı: o sürümün `.jws` özeti (`sha-256:…`, listedeki `previous_version_hash` ile aynı biçim); yazılmışsa tutmalıdır */
+  previous_version_hash?: string;
 }
 
-type HistoryRow = { status?: string; since?: string };
+/** Önceki yayımlanmış imzalı sürüm (yayıncının `prevPublished` çıktısı). */
+export interface PreviousVersion {
+  version: number;
+  hash: string | null;
+}
+
+type HistoryRow = Record<string, unknown>;
+type AuthRow = Record<string, unknown>;
 interface ListRecords {
   root_cas?: Array<{ ca_id?: string; status_history?: HistoryRow[] }>;
   issuers?: Array<{
     issuer_id?: string;
     status_history?: HistoryRow[];
-    schema_authorizations?: Array<{ schema_id?: string; vct?: string; valid_from?: string }>;
+    schema_authorizations?: AuthRow[];
+    delegate_keys?: Array<{ fingerprint_sha256?: string; purpose?: string }>;
   }>;
   relying_parties?: Array<{
     rp_id?: string;
@@ -70,6 +118,9 @@ interface ListRecords {
   national_schemas?: Array<{ schema_id?: string }>;
   /** LOTL */
   schemas?: Array<{ schema_id?: string }>;
+  national_lists?: Array<{ state_code?: string }>;
+  wallet_providers?: Array<{ provider_id?: string; status_history?: HistoryRow[] }>;
+  external_lists?: Array<{ list_id?: string }>;
 }
 
 // doğrulayıcının kalıcı kimliği alan adıdır (ADR-0034): sertifika yenilemesi (`rp_id` değişir) çıkarma sayılmaz
@@ -80,7 +131,41 @@ const ids = (l: ListRecords | null | undefined) => ({
   groups: new Set((l?.relying_parties ?? []).flatMap((r) => (r.terminal_groups ?? []).map((g) => String(g.group_id)))),
   schemas: new Set([...(l?.national_schemas ?? []), ...(l?.schemas ?? [])].map((s) => String(s.schema_id))),
 });
-const historyKeys = (h: HistoryRow[] | undefined) => (h ?? []).map((x) => `${String(x.status)}|${String(x.since)}`);
+/** Kanonik metin: anahtarlar sıralı (alan sırası değişikliği fark sayılmaz), değerler birebir. */
+function canonical(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(canonical).join(",")}]`;
+  if (v && typeof v === "object") {
+    const o = v as Record<string, unknown>;
+    return `{${Object.keys(o)
+      .sort()
+      .filter((k) => o[k] !== undefined)
+      .map((k) => `${JSON.stringify(k)}:${canonical(o[k])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(v);
+}
+// durum geçmişi satırı tam içeriğiyle tanınır (durum, tarih, gerekçe, `invalidates_from`, …)
+const historyKeys = (h: HistoryRow[] | undefined) => (h ?? []).map(canonical);
+/**
+ * Şema yetkisi satırları: önceki sürümdeki her satır yenisinde aynen bulunmalı; tek serbest değişiklik açık dönemin kapatılması
+ * (`valid_until` yok/null → tarih; `authorize --revoke`, `status REVOKED|RETIRED`). Eksik (ya da başka türlü değişmiş) satır sayısı.
+ */
+function missingAuthorizations(prev: AuthRow[] | undefined, next: AuthRow[] | undefined): number {
+  const split = (r: AuthRow) => {
+    const { valid_until, ...rest } = r;
+    return { base: canonical(rest), until: valid_until ?? null };
+  };
+  const left = (next ?? []).map(split);
+  const take = (ok: (n: { base: string; until: unknown }) => boolean) => {
+    const k = left.findIndex(ok);
+    if (k >= 0) left.splice(k, 1);
+    return k >= 0;
+  };
+  // önce birebir eşleşenler ayrılır; kalan AÇIK satırlar kapatılmış karşılıklarıyla eşleşir
+  const changed = (prev ?? []).map(split).filter((p) => !take((n) => n.base === p.base && n.until === p.until));
+  return changed.filter((p) => !(p.until === null && take((n) => n.base === p.base && typeof n.until === "string")))
+    .length;
+}
 /** Önceki sürümdeki satırlardan yenisinde bulunmayanların sayısı (aynı satır iki kez varsa iki kez aranır). */
 function missing(prevKeys: string[], nextKeys: string[]): number {
   const left = new Map<string, number>();
@@ -100,6 +185,7 @@ export function removedRecords(prev: ListRecords | null | undefined, next: ListR
   const a = ids(prev);
   const b = ids(next);
   const gone = (x: Set<string>, y: Set<string>) => [...x].filter((v) => !y.has(v)).length;
+  const keySet = <T>(rows: T[] | undefined, key: (r: T) => unknown) => new Set((rows ?? []).map((r) => String(key(r))));
   // kaydın içi: yalnız iki sürümde de bulunan kayıtlarda (tümüyle çıkan kayıt yukarıdaki sayılarla kapsanır)
   const detail = {
     root_cas: 0,
@@ -107,7 +193,24 @@ export function removedRecords(prev: ListRecords | null | undefined, next: ListR
     scopes: 0,
     schema_authorizations: 0,
     status_history: 0,
+    delegate_keys: 0,
+    // LOTL
+    national_lists: gone(
+      keySet(prev.national_lists, (n) => n.state_code),
+      keySet(next.national_lists, (n) => n.state_code),
+    ),
+    wallet_providers: 0,
+    external_lists: gone(
+      keySet(prev.external_lists, (e) => e.list_id),
+      keySet(next.external_lists, (e) => e.list_id),
+    ),
   };
+  const wpNext = new Map((next.wallet_providers ?? []).map((w) => [String(w.provider_id), w]));
+  for (const w of prev.wallet_providers ?? []) {
+    const n = wpNext.get(String(w.provider_id));
+    if (!n) detail.wallet_providers++;
+    else detail.status_history += missing(historyKeys(w.status_history), historyKeys(n.status_history));
+  }
   const caNext = new Map((next.root_cas ?? []).map((c) => [String(c.ca_id), c]));
   for (const c of prev.root_cas ?? []) {
     const n = caNext.get(String(c.ca_id));
@@ -115,14 +218,16 @@ export function removedRecords(prev: ListRecords | null | undefined, next: ListR
     else detail.status_history += missing(historyKeys(c.status_history), historyKeys(n.status_history));
   }
   type Iss = NonNullable<ListRecords["issuers"]>[number];
-  const authKeys = (i: Iss) =>
-    (i.schema_authorizations ?? []).map((x) => `${String(x.schema_id ?? x.vct)}|${String(x.valid_from)}`);
+  // yetkili anahtar (ör. iptal listesi imzacısı) parmak izi + amaçla tanınır: durumu ve bitişi (`valid_to`) güncellenebilir, satır silinmez
+  const delegateKeys = (i: Iss) =>
+    (i.delegate_keys ?? []).map((k) => `${String(k.fingerprint_sha256)}|${String(k.purpose)}`);
   const issNext = new Map((next.issuers ?? []).map((i) => [String(i.issuer_id), i]));
   for (const i of prev.issuers ?? []) {
     const n = issNext.get(String(i.issuer_id));
     if (!n) continue;
     detail.status_history += missing(historyKeys(i.status_history), historyKeys(n.status_history));
-    detail.schema_authorizations += missing(authKeys(i), authKeys(n));
+    detail.schema_authorizations += missingAuthorizations(i.schema_authorizations, n.schema_authorizations);
+    detail.delegate_keys += missing(delegateKeys(i), delegateKeys(n));
   }
   const rpNext = new Map((next.relying_parties ?? []).map((r) => [rpKey(r), r]));
   for (const r of prev.relying_parties ?? []) {
@@ -146,15 +251,23 @@ export const anyRemoved = (c: RemovalCounts) =>
   c.issuers + c.relying_parties + c.terminal_groups + DETAIL_KEYS.reduce((n, k) => n + (c[k] ?? 0), 0) > 0;
 
 /**
- * Çıkarma varsa onaylı kaydı bulur ve CHANGELOG satırını döndürür; çıkarma yoksa null. Onaylı, sayıları birebir tutan kayıt yoksa
- * hata (yayın durur).
+ * Çıkarma varsa onaylı kaydı bulur ve CHANGELOG satırını döndürür; çıkarma yoksa null. Onaylı, sayıları birebir tutan VE bu sürüm
+ * geçişine (önceki imzalı sürüm `prev`) yazılmış kayıt yoksa hata (yayın durur). Kayıt başka bir geçişte yeniden kullanılamaz.
  */
-export function removalChangelogLine(list: string, counts: RemovalCounts, approved: unknown): string | null {
+export function removalChangelogLine(
+  list: string,
+  counts: RemovalCounts,
+  approved: unknown,
+  prev: PreviousVersion | null | undefined,
+): string | null {
   if (!anyRemoved(counts)) return null;
   const rows = (Array.isArray(approved) ? approved : []) as Array<Partial<ApprovedRemoval>>;
   const hit = rows.find(
     (r) =>
       r.list === list &&
+      Number.isInteger(r.previous_version) &&
+      r.previous_version === prev?.version &&
+      (r.previous_version_hash === undefined || (prev?.hash != null && r.previous_version_hash === prev.hash)) &&
       r.issuers === counts.issuers &&
       r.relying_parties === counts.relying_parties &&
       r.terminal_groups === counts.terminal_groups &&
@@ -171,8 +284,9 @@ export function removalChangelogLine(list: string, counts: RemovalCounts, approv
         `${counts.relying_parties}, kapı grubu ${counts.terminal_groups}` +
         details.map((k) => `, ${DETAIL_TR[k]} ${counts[k]}`).join("") +
         `). Kayıt silinmez: durum değişikliği için status / ` +
-        `rp-status / end-use kullanın. Çıkarma bilerek yapılıyorsa kayıt defterine (removals.json) sayıları birebir tutan onaylı ` +
-        `bir çıkarma kaydı ekleyin — DURDU`,
+        `rp-status / end-use kullanın; geçmiş satırları (status_history, kapanmış şema yetkisi) değiştirilmez. Çıkarma bilerek ` +
+        `yapılıyorsa kayıt defterine (removals.json) sayıları birebir tutan ve bu geçişe yazılmış (previous_version: ` +
+        `${prev?.version ?? "?"}) onaylı bir çıkarma kaydı ekleyin; eski bir çıkarma kaydı yeniden kullanılamaz — DURDU`,
     );
   return (
     `records removed from ${list}: ${counts.issuers} issuer(s), ${counts.relying_parties} relying part(y/ies), ` +

@@ -101,7 +101,7 @@ CHANGELOG.md                  public change log
 | `list_type` | `"lotl"` | |
 | `environment` | `"production"` \| `"sandbox"` (optional; absent means `production`) | The network the list belongs to ([[ADR-0038]]). The test network's list carries `sandbox`; the loader **stops** on a list that does not match the network it expects (`ADR-0038/SB2`) |
 | `version`, `issued_at`, `next_update`, `previous_version_hash` | | Version/hash chain (§1.3, §1.6) |
-| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report?}` | Founding proxy; `trust_framework` = URL of [[FW-TF-0001]] (`https://arf.tamga.network/trust-framework`); `transparency_report` is optional, added once its page is published. `name`: "Tamga Network" in the real network (`ADR-0070/OP1`); in a list with `environment: "sandbox"` the name must carry the "(TEST)" mark and the list is published as "Tamga Network Sandbox (TEST)" — otherwise the publisher does not publish (`ADR-0070/OP2`, 2026-11-12) |
+| `operator` | `{name, status: "provisional", on_behalf_of, trust_framework, transparency_report?}` | Founding proxy. The `status` values are `provisional` and `designated`: in the list stage only `provisional` is published (TL1; the publisher does not publish with any other value). `designated` is the value to be used once list operation is handed over to the body designated by the state ([[ADR-0009]] K5; the operator record on the chain, [[ADR-0074]] K3), and publishing with it opens with a separate handover decision; the loader recognises the value already today so that readers of the list need no update at the handover. The value does not enter the verification decision ([[ADR-0070]] implementation note 2026-11-12). `trust_framework` = URL of [[FW-TF-0001]] (`https://arf.tamga.network/trust-framework`); `transparency_report` is optional, added once its page is published. `name`: "Tamga Network" in the real network (`ADR-0070/OP1`); in a list with `environment: "sandbox"` the name must carry the "(TEST)" mark and the list is published as "Tamga Network Sandbox (TEST)" — otherwise the publisher does not publish (`ADR-0070/OP2`, 2026-11-12) |
 | `catalogue` | `{url}` | Type Metadata resolution path (`schemas.tamga.network/v1/catalogue.json`) |
 | `anchor_signing_keys[]` | `{fingerprint_sha256, cert_ref, status}` | Anchor log signers (≥2, rolling — TL3) |
 | `national_lists[]` | `{state_code, status: ACTIVE\|RESERVED, membership, list_url, operator, roles{registrar, tlso, pid_provider, access_ca, national_root_ca}, signing_keys[], xml_signing_keys[]?, recognition{mode, recognizes[]}}` | `Governance` member list + `CrossRecognition`. `signing_keys` are the signers of the JSON national list (`tl-<cc>.jws`) only; `xml_signing_keys` are the signers of the ETSI TS 119 612 XML view (`tl-<cc>.xml`, EKU id-tsl-kp-tslSigning) only — present when the slot publishes XML; the two sets are separate and an XML signer never validates a JSON list ([[ADR-0066]] 0.7.4 implementation note) |
@@ -130,10 +130,14 @@ may be published by its successor (`successor_id`) (I4). Operator tool: `trust-p
 `rp-status <dns_name> <STATUS>` for a relying party, `end-use <dns_name> <id>` for a single use or gate group (end date).
 The publisher enforces this: if an issuer, relying party or terminal group of the previously published version is missing from
 the new list, publication stops. The only exception is an approved removal entry written explicitly in the registry, with exactly
-matching counts (`removals.json`; list, date, counts and a short reason only — no names or identifiers); the list is then published
-and a line without names is written to the public changelog, while earlier list versions stay in the archive. This path has been
-used once so far (project management decision 2026-11-11): test records left over from the pre-pilot test period, already `REVOKED`
-and never used by a real institution, were removed from the real network's list. It is not used for a real participant's record.
+matching counts (`removals.json`; list, date, the number of the signed version before the removal, counts and a short reason only — no names or
+identifiers; the entry passes only in the publication that follows that version and cannot be used again); the list is then published
+and a line without names is written to the public changelog, while earlier list versions stay in the archive. The limits of this
+path are binding through [[ADR-0081]] (RR1–RR4): only a record that was entered for testing before institutions joined, that never
+issued a credential to a real person and never received a real presentation, may be removed; once the first participant institution
+enters the real network's list the path closes and testing is done only in the sandbox. It has been used once so far (2026-11-11):
+test records left over from the pre-pilot test period, already `REVOKED`, were removed from the real network's list. It is not used
+for the record of a real institution.
 A record is never removed from the list (TL2); a withdrawn institution stays in the ETSI XML view with its Tamga status URI
 (`…/tl/Svcstatus/revoked` etc., [[SPEC-ID-0002]] §8.1) and leaves the LoTE.
 
@@ -234,7 +238,7 @@ Migration: the `archive/` versions are replayed in order as contract calls; the 
 | # | Invariant |
 |---|---|
 | **TL1** | Every list has `operator.status`, which is `"provisional"` throughout the list stage; `on_behalf_of` is never left empty. |
-| **TL2** | List and anchor log versions increase monotonically; every version carries the hash of the previous one; no line/record is deleted (status changes are appended to `status_history`). |
+| **TL2** | List and anchor log versions increase monotonically; every version carries the hash of the previous one; no line/record is deleted (status changes are appended to `status_history`). The only exception is test records removed before the first participant institution enters the list ([[ADR-0081]]). |
 | **TL3** | Lists and anchors are signed with ≥2 rolling certificates; a rotation is announced ≥30 days in advance; the new key is signed with the old one. (Demo deviation S-6 declared.) |
 | **TL4** | No component other than `TrustSource` interprets the list files. |
 | **TL5** | Verification with a list whose `next_update` has passed, or that cannot be reached, produces **INDETERMINATE**; never ACCEPTED, never REJECTED. |
@@ -288,7 +292,14 @@ record (`reassigned_to`). Behaviour ships with `@tamga-network/trust` 0.8.1; the
   value opens after the handover decision.
 - **TL2.** The record-removal check also counts root CAs, schemas (national list and LOTL) and, in records that stay in the
   list, scopes, schema authorizations and `status_history` rows; an approved removal record carries them as optional counts
-  (`root_cas`, `schemas`, `scopes`, `schema_authorizations`, `status_history`; 0 if absent). When the version jumps by more than
+  (`root_cas`, `schemas`, `scopes`, `schema_authorizations`, `status_history`; 0 if absent). Second review (2026-11-12): a removal record is bound to one version transition
+  (`previous_version`: the number of the signed version before the removal, required; `previous_version_hash`: the digest of
+  that version's `.jws`, optional) and does not pass in any other. History rows are kept with their content: a
+  `status_history` row must stay exactly as it was (a row whose `invalidates_from` is changed counts as removed); in a schema
+  authorization row the only free change is closing an open period (`valid_until` absent → a date). Also counted now: an
+  issuer's `delegate_keys` rows and the `national_lists`, `wallet_providers` and `external_lists` records of the LOTL (optional
+  counts of the same names): when a status-list key is renewed the old key is not dropped from the list, it stays with its
+  end date (`valid_to`). When the version jumps by more than
   one the loader cannot verify the hashes in between; it rejects only the contradiction "the jumping version names the last
   seen version as its predecessor" (the full check uses the archive).
 - **TL11.** The publisher applies an allow-list of known fields per record type in the source: an unknown or computed field
@@ -310,3 +321,7 @@ record (`reassigned_to`). Behaviour ships with `@tamga-network/trust` 0.8.1; the
 - **Registration commands.** They run under `registry.lock` (refreshed while held); if list validation fails before a signed
   list is written, the source file is restored and no line is written to the change log. Without the provisional-operator
   value, publication stops in the real network ([[ADR-0070]] implementation note).
+
+**Version note (2026-11-12; approved by project management).** The test-record exception to TL2 is now tied to a decision,
+[[ADR-0081]] (§4, the TL2 row); publisher behaviour is unchanged. The `operator` row in §3 states what the `designated` value
+means and why it is not published today ([[ADR-0070]] implementation note); loader and publisher behaviour are unchanged.

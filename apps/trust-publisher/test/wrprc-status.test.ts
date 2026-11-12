@@ -96,6 +96,25 @@ describe("ADR-0068 indeks verme", () => {
       expect(() => revokeWrprc(a.state, "p", "other", t0, bad), bad).toThrow(/wrprc-revoke:/);
     expect(revocationNoteProblems("x".repeat(121))).not.toEqual([]);
     expect(revocationNoteProblems("kurum isteği, anahtar değişimi")).toEqual([]);
+    // ISO takvim tarihi rakam dizisi sayılmaz (önce: "key compromise 2026-11-12" reddediliyordu)
+    for (const ok of ["key compromise 2026-11-12", "ceased on 2026-11-12, renewed 2027-01-05", "2026-11-12"])
+      expect(revocationNoteProblems(ok), ok).toEqual([]);
+    // …ama tarih biçimi numara sızdırmaya yaramaz: geçersiz tarih, bitişik rakam/tire, tarihin çevresindeki rakamlar
+    for (const bad of [
+      "ref 1234-56-78",
+      "id 2026-11-1234567",
+      "no 12345-2026-11-12",
+      "tel 0532 2026-11-12 123 45",
+      "TCKN 12345678901 on 2026-11-12",
+      "2026-11-12 2026-11-12 12345678",
+    ])
+      expect(revocationNoteProblems(bad), bad).toContain(
+        "notta telefon ya da kimlik numarası gibi rakam dizisi olamaz",
+      );
+    // kişi adı kuralı gevşetilmedi
+    expect(revocationNoteProblems("Ali Veli 2026-11-12")).toEqual([
+      "notta kişi adı gibi görünen ifade olamaz (Ad Soyad)",
+    ]);
     expect(revokeWrprc(a.state, "p", "compromised", t0).entry.reason).toBe("manual: compromised");
   });
 

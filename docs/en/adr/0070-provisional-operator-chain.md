@@ -107,6 +107,16 @@ The record of the app-store review signer ([[ADR-0033]]) and every later own rec
   text of OP2 itself (table above): in the sandbox the list operator name carries the "(TEST)" mark and the list is published as
   "Tamga Network Sandbox (TEST)". The rule for the real network is unchanged. No code change (the publisher check has worked this
   way since 2026-11-11).
+- **Implementation note (2026-11-12; approved by project management; the decision is unchanged) — `designated` as operator
+  status.** The `status` field of the list operator recognises two values: `provisional` (today) and `designated` (once list
+  operation is handed over to the body designated by the state; [[ADR-0009]] K5, its counterpart on the chain [[ADR-0074]] K3).
+  In the list stage only `provisional` is published ([[SPEC-TRUST-0001]]/TL1): the publisher does not publish with `designated`
+  or with an empty `on_behalf_of`. The loader (`@tamga-network/trust`) recognises `designated` already today and does not require
+  `on_behalf_of` with that value; that way the verifiers and wallets that read the list need no update on the day of the
+  handover. The value does not enter the verification decision: trust in the list comes from the pinned key of the signer, and
+  the loader recognising the value does not widen trust. Publishing with `designated` opens with a separate handover decision,
+  and the text of TL1 is updated together with that decision. No code change: the publisher stays strict, the loader stays
+  forward compatible.
 
 # Status
 

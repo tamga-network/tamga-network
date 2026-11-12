@@ -1,7 +1,8 @@
 /**
  * Example 02 — verify documents on your own server (hiring, campus, age checks), without the hosted verifier.
  *
- * 1. Load the signed trust lists (who may issue what) and pre-fetch the revocation lists.
+ * 1. Load the signed trust lists (who may issue what) and pre-fetch the revocation lists — and RE-READ both on a timer
+ *    (`refresh()`, e.g. every 10 minutes): a verifier that loads them once starts answering INDETERMINATE within about an hour.
  * 2. Open a presentation and show its QR code. Every fetch of the QR's request_uri gets its OWN signed request object
  *    (fresh state, nonce and encryption key — a "request branch", packages 0.7.4): someone who photographs the QR and
  *    fetches it learns only their own branch, so a forged "declined" closes only that branch. Include your registration
@@ -73,17 +74,23 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
     const r = await f(url);
     return { status: r.status, text: () => r.text() };
   };
-  // 1) Trust lists, verified against your fixed root fingerprints; anchors included (revocation checks need them).
-  const { source: trust, store } = await fetchListTrustSource(cfg.trustBase, http, {
-    rootFingerprints: cfg.rootFingerprints,
-    verifyJws,
-    anchors: true,
-    anchorMaxAgeMs: cfg.anchorMaxAgeMs,
-  });
-  const rootCertsDer = [...store.root_cas.values()].flatMap((ca) => (ca.cert_pem ? [pemToDer(ca.cert_pem)] : []));
+  // 1) Trust lists, verified against your fixed root fingerprints; anchors included (revocation checks need them: without
+  //    `anchors: true` every credential older than `max_anchor_lag_sec` is INDETERMINATE at D5).
+  const loadTrust = async () => {
+    const { source, store } = await fetchListTrustSource(cfg.trustBase, http, {
+      rootFingerprints: cfg.rootFingerprints,
+      verifyJws,
+      anchors: true,
+      anchorMaxAgeMs: cfg.anchorMaxAgeMs,
+    });
+    const rootCertsDer = [...store.root_cas.values()].flatMap((ca) => (ca.cert_pem ? [pemToDer(ca.cert_pem)] : []));
+    return { trust: source, store, rootCertsDer };
+  };
+  // The set in use; `refreshTrust()` swaps it as a whole (a verification in progress keeps the set it started with).
+  let current = await loadTrust();
   // Pre-fetch every anchored revocation list: no network call at verification time.
   const statusCache = new PrefetchStatusCache(cfg.fetchStatus);
-  await statusCache.refresh([...store.status_anchors.values()].map((a) => a.list_uri));
+  await statusCache.refresh([...current.store.status_anchors.values()].map((a) => a.list_uri));
 
   // Open presentations, in memory. Each expires (expiresAt) and the map is capped, so abandoned QR codes cannot grow it. The
   // branch registry is shared by all presentations: it finds a branch by the hash of its state (for "declined" answers, which
@@ -209,6 +216,7 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
         e.branches.failedAttempt(branch);
         throw new Error(`${pc.id} missing in vp_token`);
       }
+      const { trust, rootCertsDer } = current; // the latest loaded set
       const out = await verifyPresentation({
         presentation,
         aud: cfg.signer.clientId,
@@ -232,8 +240,40 @@ export async function createOwnVerifier(cfg: OwnVerifierConfig) {
     });
   }
 
-  /** Refresh revocation lists on a timer (e.g. every few minutes). */
-  const refreshStatus = () => statusCache.refresh([...store.status_anchors.values()].map((a) => a.list_uri));
+  /**
+   * Re-read the trust lists and the anchor log. Do this on a timer and MORE OFTEN than the policy's
+   * `freshness.max_anchor_lag_sec` (default 3600 s) — every 10 minutes is a good value. Revocation lists are re-issued and
+   * anchored about hourly: a verifier that keeps refreshing the lists but still holds the anchors it loaded at start-up sees
+   * status tokens that are "newer than their latest anchor" and, after `max_anchor_lag_sec` (+ clock tolerance), answers
+   * INDETERMINATE / STATUS_STALE at D5 for every credential; after two hours without a new anchor row the whole trust source
+   * counts as stale (T0). If a reload fails (network), this throws and the previous set stays in use until its own deadline.
+   */
+  async function refreshTrust() {
+    current = await loadTrust();
+  }
+  /** Refresh the revocation lists the current anchor log names. */
+  const refreshStatus = () => statusCache.refresh([...current.store.status_anchors.values()].map((a) => a.list_uri));
+  /**
+   * One call for your timer — `setInterval(() => v.refresh().catch(log), 10 * 60_000)`: trust lists and anchors first, then
+   * the revocation lists (in that order, so a list is never older than the anchor it is compared with).
+   */
+  async function refresh() {
+    await refreshTrust();
+    await refreshStatus();
+  }
 
-  return { start, requestObject, handleResponse, handleDecline, refreshStatus, trust, statusCache };
+  return {
+    start,
+    requestObject,
+    handleResponse,
+    handleDecline,
+    refresh,
+    refreshTrust,
+    refreshStatus,
+    /** The trust source in use (replaced by `refreshTrust`). */
+    get trust() {
+      return current.trust;
+    },
+    statusCache,
+  };
 }

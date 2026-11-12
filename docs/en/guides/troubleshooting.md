@@ -37,7 +37,7 @@ lead to different decisions (AP2).
 | `indeterminate_reason` | Cause | Fix |
 |---|---|---|
 | `STATUS_UNREACHABLE` | The credential's [[t:status-list]] could not be downloaded | Prefetch status lists (`PrefetchStatusCache` + regular `refresh`); do not go to the network at verification time |
-| `STATUS_STALE` | The cached status list passed the freshness threshold, or was fetched before the anchor | Shorten the refresh interval; check clock drift (NTP) |
+| `STATUS_STALE` | The cached status list passed the freshness threshold, or was fetched before the anchor. Or **your anchor log is old**: the list is newer than the latest anchor you know by more than `max_anchor_lag_sec` (default 3600 s), or the list is not in your anchor log at all (anchors not loaded). Or the list is signed with a status key of the institution that has expired (key renewed, cache old) | Shorten the refresh interval. Reload the trust lists and the anchor log (`anchors: true`) not only at start-up but more often than `max_anchor_lag_sec` (for example every 10 minutes). Check clock drift (NTP) |
 | `SCHEMA_UNREACHABLE` | The credential type definition could not be fetched | Cache the schema catalogue in advance |
 | `CHAIN_UNREACHABLE` / `INDEXER_STALE` | The trust source could not be read, or is stale | Download the trust lists regularly; fetch the new list once `next_update` has passed |
 | `SDK_VERSION_MISMATCH` | The library version does not match the rule version | Update the `@tamga-network/*` packages |

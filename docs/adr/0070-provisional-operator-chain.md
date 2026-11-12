@@ -100,6 +100,14 @@ Mağaza inceleme imzacısının kaydı ([[ADR-0033]]) ve sonraki bütün kendi k
 - **Kural metni (2026-11-12).** Sandbox istisnası, proje yönetiminin onayıyla (2026-11-12) OP2'nin kendi metnine yazıldı
   (yukarıdaki tablo): sandbox'ta liste işletmecisi adı "(TEST)" ibaresi taşır ve "Tamga Network Sandbox (TEST)" adıyla yayımlanır.
   Gerçek ağın kuralı değişmedi. Kod değişmedi (yayıncı denetimi 2026-11-11'den beri böyle).
+- **Uygulama notu (2026-11-12; proje yönetimi onayıyla; karar içeriği değişmedi) — işletmeci durumunda `designated`.** Liste
+  işletmecisinin `status` alanı iki değer tanır: `provisional` (bugün) ve `designated` (liste işletmeciliği devletin atadığı
+  kuruma devredildiğinde; [[ADR-0009]] K5, zincirdeki karşılığı [[ADR-0074]] K3). Liste aşamasında yalnız `provisional`
+  yayımlanır ([[SPEC-TRUST-0001]]/TL1): yayıncı `designated` ya da boş `on_behalf_of` ile yayın yapmaz. Yükleyici
+  (`@tamga-network/trust`) `designated` değerini bugünden tanır ve o değerde `on_behalf_of` istemez; böylece devir günü listeyi
+  okuyan doğrulayıcıların ve cüzdanların güncellenmesi gerekmez. Değer doğrulama kararına girmez: listenin güveni imzacının
+  sabitlenmiş anahtarından gelir, yükleyicinin değeri tanıması güveni genişletmez. `designated` ile yayın ayrı bir devir
+  kararıyla açılır ve TL1 metni o kararla birlikte güncellenir. Kod değişmedi: yayıncı sıkı, yükleyici ileriye uyumlu kalır.
 
 # Durum
 
