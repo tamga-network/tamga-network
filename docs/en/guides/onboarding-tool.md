@@ -51,7 +51,7 @@ You need Node.js 22 or later. No `openssl` needed.
 npm install -g @tamga-network/onboard     # or: npx -p @tamga-network/onboard tamga-onboard --help
 ```
 
-The package is published on npm as the 0.8.2 test release (its first release; the stable 1.0.0 comes when everything is
+The package is published on npm as the 0.8.3 test release (the stable 1.0.0 comes when everything is
 ready — in test releases the commands and options may change). The first release was published by hand without provenance;
 later releases come from GitHub Actions and carry provenance.
 

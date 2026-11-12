@@ -157,7 +157,7 @@ keşif kapalı). Genesis araçla üretilmez: işletmecilerden alınır, özeti e
 `node check` çalışan düğümü yalnız okuyarak denetler: senkron ve aynı genesis, eşler, anahtar, izin listesi (çizimle ve
 karşılaştırma ucuyla), validator kümesi, dış uçta yalnız eth/net/web3, yapılandırma, saat. Zincire, izin listesine, ağa yazmaz;
 oy ve izin yükleme işletmecilerde kalır. MCP araçları: `generate_node_key`, `create_node_declaration`, `check_node`. Sandbox denemesi için başvuru gerekmez:
-`tamga-onboard sandbox`. Paket npm'de `0.8.2` deneme sürümü olarak yayımlanmıştır (ilk sürüm):
+`tamga-onboard sandbox`. Paket npm'de `0.8.3` deneme sürümü olarak yayımlanmıştır:
 `npm install -g @tamga-network/onboard` ya da `npx -p @tamga-network/onboard tamga-onboard --help`; Node.js 22 ve üstü.
 
 Docs: https://docs.tamga.network · Source: https://github.com/tamga-network/tamga-network (packages/onboard) · Apache-2.0

@@ -51,7 +51,7 @@ Lazımdır: Node.js 22 və ya daha yeni. `openssl` lazım deyil.
 npm install -g @tamga-network/onboard     # və ya: npx -p @tamga-network/onboard tamga-onboard --help
 ```
 
-Paket npm-də 0.8.2 sınaq versiyası ilə dərc olunur (ilk versiya; sabit 1.0.0 hazır olduqda gələcək — sınaq versiyasında əmrlər
+Paket npm-də 0.8.3 sınaq versiyası ilə dərc olunur (sabit 1.0.0 hazır olduqda gələcək — sınaq versiyasında əmrlər
 və seçimlər dəyişə bilər). İlk versiya əl ilə və mənşə sübutu (provenance) olmadan dərc olundu; sonrakı versiyalar GitHub
 Actions-dan gəlir və mənşə sübutu daşıyır.
 

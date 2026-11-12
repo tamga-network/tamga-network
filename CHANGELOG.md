@@ -1,13 +1,13 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.8.2` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.8.3` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## 0.8.3 — 2026-11-11
 
-All ten packages move to 0.8.3 together (patch release) after an independent review of the 0.8.2 code base (2026-11-10). Not
-yet published on npm when this entry was written.
+All ten packages move to 0.8.3 together (patch release) after an independent review of the 0.8.2 code base (2026-11-10).
+Published on npm on 2026-11-12.
 
 ### Fixed after a second review (2026-11-11)
 

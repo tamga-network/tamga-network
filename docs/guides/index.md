@@ -83,7 +83,7 @@ depoya girmez). Kodunuzu bu yerel listelere karşı deneyebilirsiniz. Uyum vekt�
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | cüzdan tarafı sıfır bilgi ispatçısı (mdoc, Longfellow); `/react-native` telefonda yerel ispatçı, `/node` masaüstünde | cüzdan geliştiricisi |
 | `@tamga-network/onboard` (komut `tamga-onboard`) | katılım aracı: başvuru dosyası, anahtarlar, kurulum ve listede görünme denetimi; devlet / işletmeci düğümü adımları; yerel MCP sunucusu ([[GUIDE-0014]], [[GUIDE-0015]]) | kurumun bilgi işlemi, düğüm işletmecisi |
 
-Her paketin kendi sayfası **SDK'lar** bölümündedir. Paketler npm'de **0.8.2** deneme sürümüyle yayımlanır; kararlı 1.0.0
+Her paketin kendi sayfası **SDK'lar** bölümündedir. Paketler npm'de **0.8.3** deneme sürümüyle yayımlanır; kararlı 1.0.0
 hazır olunca gelir. Deneme sürümünde arayüz değişebilir. Her sürüm bu depodan üretilir; sekiz paket GitHub Actions ile yayımlanır ve kaynak kanıtı (provenance) taşır, `@tamga-network/zk` ise Android yerel kütüphaneleri henüz CI'da derlenemediği için elle ve kaynak kanıtı olmadan yayımlanır. `@tamga-network/onboard`'un ilk sürümü (0.8.2) de elle ve kaynak kanıtı olmadan yayımlandı (npm'de güvenilir yayıncı ancak var olan pakete kurulabiliyor); sonraki sürümleri GitHub Actions'tan gelir.
 
 ## Adresler
@@ -102,7 +102,7 @@ hazır olunca gelir. Deneme sürümünde arayüz değişebilir. Her sürüm bu d
 
 | Parça | Durum |
 |---|---|
-| Paketler | npm'de 0.8.2 deneme sürümü; kararlı 1.0.0 hazır olunca gelir (deneme sürümünde arayüz değişebilir) |
+| Paketler | npm'de 0.8.3 deneme sürümü; kararlı 1.0.0 hazır olunca gelir (deneme sürümünde arayüz değişebilir) |
 | Barındırılan doğrulayıcı | çalışıyor: sunumu sitenin sunucusu imzalı beyanla açar, değerler yalnızca ona ve bir kez verilir ([[ADR-0017]]); politikalar bugün sabit |
 | Barındırılan belge verme | çalışıyor: kurum başına kapsamlı API anahtarı ([[ADR-0016]]) |
 | Güven çapası | imzalı güven listeleri ([[ADR-0009]]); belge veren ve doğrulayıcı kaydını Tamga operatörü yapar |

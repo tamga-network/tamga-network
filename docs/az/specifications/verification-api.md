@@ -194,7 +194,7 @@ arasındakı fərq bir insanın işə götürülüb-götürülməməsidir.
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.8.2",
+  "sdk_version": "@tamga-network/verifier@0.8.3",
   "checks_performed": ["A1","A2","A3","A3b","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B6",
                        "C1","C2","C3","C4",

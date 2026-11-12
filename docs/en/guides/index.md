@@ -86,7 +86,7 @@ keys never enter the repository). You can test your code against these local lis
 | `@tamga-network/zk` (+ `/node`, `/react-native`) | wallet-side zero-knowledge prover (mdoc, Longfellow); `/react-native` native prover on the phone, `/node` on the desktop | wallet developer |
 | `@tamga-network/onboard` (command `tamga-onboard`) | onboarding tool: application file, keys, setup and listing check; state / operator node steps; local MCP server ([[GUIDE-0014]], [[GUIDE-0015]]) | institution IT team, node operator |
 
-Every package has its own page in the **SDKs** section. The packages are published on npm as the **0.8.2** test release;
+Every package has its own page in the **SDKs** section. The packages are published on npm as the **0.8.3** test release;
 the stable 1.0.0 comes when everything is ready. In test releases the API may change. Each release is built from this repository; eight packages are published by GitHub Actions and carry provenance, while `@tamga-network/zk` is published manually without provenance (its Android native libraries cannot yet be built in CI). The first release of `@tamga-network/onboard` (0.8.2) was also made by hand without provenance (npm trusted publishing can only be set up for a package that already exists); later releases come from GitHub Actions.
 
 ## Addresses
@@ -105,7 +105,7 @@ the stable 1.0.0 comes when everything is ready. In test releases the API may ch
 
 | Part | Status |
 |---|---|
-| Packages | 0.8.2 test release on npm; the stable 1.0.0 comes when everything is ready (the API may change in test releases) |
+| Packages | 0.8.3 test release on npm; the stable 1.0.0 comes when everything is ready (the API may change in test releases) |
 | Hosted verifier | running: the website's server opens the presentation with a signed statement, and the values are given only to it, only once ([[ADR-0017]]); policies are fixed for now |
 | Hosted issuer | running: a scoped API key per institution ([[ADR-0016]]) |
 | Trust anchor | signed trust lists ([[ADR-0009]]); the Tamga operator registers issuers and verifiers |
