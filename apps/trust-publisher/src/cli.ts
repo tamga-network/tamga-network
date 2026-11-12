@@ -901,13 +901,17 @@ async function build() {
     ["lotl operator", lotlSrc.operator],
   ];
   const provisionalFile = resolve(REG, "provisional-operator.json");
+  // Sandbox'ta ad kuralı değer dosyası olsa da geçerlidir: gerçek ağın adıyla sandbox listesi yayımlanmaz (OP2).
   const po = existsSync(provisionalFile)
-    ? checkProvisionalOperator(readJson(provisionalFile) as ProvisionalOperator, {
-        tlOperator: tlSrc.operator,
-        lotlOperator: lotlSrc.operator,
-        issuers: tlSrc.issuers,
-        relyingParties: tlSrc.relying_parties,
-      })
+    ? [
+        ...checkProvisionalOperator(readJson(provisionalFile) as ProvisionalOperator, {
+          tlOperator: tlSrc.operator,
+          lotlOperator: lotlSrc.operator,
+          issuers: tlSrc.issuers,
+          relyingParties: tlSrc.relying_parties,
+        }),
+        ...(ENVIRONMENT === "sandbox" ? missingOperatorConfigProblems("sandbox", listOperators) : []),
+      ]
     : missingOperatorConfigProblems(ENVIRONMENT, listOperators);
   if (po.length) throw new Error(`ADR-0070: geçici işletmeci — ${po.join("; ")}`);
   // TL1: liste işletmecisi (ülke listesi, LOTL ve LOTL'daki etkin ülke slotları) liste aşamasında `provisional`, `on_behalf_of` dolu
