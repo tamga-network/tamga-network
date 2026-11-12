@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-30
-last_updated: 2026-10-30
+last_updated: 2026-11-11
 summary: >
   Tamga Network has no legal personality. Until the non-profit foundation to be established acquires one, the network's own
   services (list publication, the identity service, Tamga Verify, the websites) are operated on behalf of Tamga Network by the
@@ -97,6 +97,12 @@ The record of the app-store review signer ([[ADR-0033]]) and every later own rec
 - Code: list publisher check `provisional-operator.ts` and `registry/provisional-operator.json`; the pending record of the app-store
   review signer was completed with the same value (registration and publication on the operator's computer).
 - Documents: [[FW-TF-0001]], [[FW-RB-0001]] RB-OP-01 and the definitions already describe the same chain; no change was needed.
+- **Implementation note (2026-11-11; the decision is unchanged) — when the value file is missing.** The list publisher no
+  longer skips the OP2 check silently when the value file (`provisional-operator.json`) is absent: in the real network's
+  registry, no file means no list is signed. The sandbox registry (`environment: "sandbox"`, [[ADR-0038]]) is an explicit
+  exception: the operator of the test network is fictional and no value file is required. Its condition: the list operator name
+  carries the "(TEST)" mark (today "Tamga Network Sandbox (TEST)") and is not the real network's name; otherwise sandbox
+  publication stops as well. If a value file is placed in the sandbox registry, the ordinary check applies.
 
 # Status
 

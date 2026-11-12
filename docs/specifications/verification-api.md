@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-04
+last_updated: 2026-11-11
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -60,8 +60,8 @@ onun özet görünümüdür.
 |---|---|
 | `A1` | Birleşik dizeyi `~` ile böl; KB-JWT var mı. A1 çağıranın yapılandırma hatalarını da taşır (2026-11-04): ör. Digital Credentials API yolunda verilen `aud` sayfa kökeninden türetilenle uyuşmuyor ya da `origin` ile `aud` = `client_id` birlikte verildi — açık iletiyle REJECTED |
 | `A2` | Başlık: `alg=ES256`, `typ=dc+sd-jwt`, `x5c` var mı |
-| `A3` | `x5c` zinciri + JWT imzası; kök `RootCARegistry`'de **`isChainAcceptable`** (ACTIVE veya RETIRED); ara sertifikalar CA olmalı (`basicConstraints cA=true`), `keyCertSign` taşımalı ve `pathLenConstraint`'i aşmamalı; `iat` 300 sn'den fazla ileri tarihliyse RED. **mdoc:** `x5chain` yaprağı ya listedeki bir çapanın (kök CA ya da dış listedeki hizmet sertifikası) kendisidir ya da doğrudan onunla imzalanmıştır — ara sertifika kabul edilmez (ISO/IEC 18013-5 Ek B: belge imzacısı sertifikası doğrudan IACA'dan verilir, yol uzunluğu 0; AB PID/EAA mdoc profilleri de bu zinciri kullanır) |
-| `A3b` | **`issuerId`, `x5c` yaprak sertifikasının parmak izinden türetilir** — `iss` claim'inden DEĞİL (§1.2) |
+| `A3` | `x5c` zinciri + JWT imzası: yaprak, verilen güven çapalarından birine bağlanır (Tamga kök CA'sı ya da tazelik içindeki bir dış listenin çapası). Ara sertifikalar CA olmalı (`basicConstraints cA=true`), **KeyUsage uzantısını taşımalı ve içinde `keyCertSign` olmalı** (uzantısı olmayan ara sertifika RED) ve `pathLenConstraint`'i aşmamalı; `iat` 300 sn'den fazla ileri tarihliyse RED. Kök CA'nın durumu bu adımda değil **`C1`**'de denetlenir: kurumun bağlı olduğu kök, belgenin `iat`'ında `ACTIVE` ya da `ROLLING_OVER` olmalı ve hiç `REVOKED` olmamış olmalıdır ([[SPEC-ID-0002]] §3; sonradan emekli edilen kök, önce verilmiş belgeyi düşürmez; iptal edilmiş kökün belgesi `C1` koduyla reddedilir). Tek sertifikalık `x5c`'de yaprağın kendisi çapa olabilir (dış listedeki hizmet sertifikası, [[ADR-0036]]); `issuerId` yine yapraktan türer ve `C1` onu listede arar. Çağıran zincir denetimini bilerek kapattıysa (`rootCertsDer: "none"`, yalnız SD-JWT VC) A3 `checks_performed`'te değil `checks_skipped`'te görünür. **mdoc:** `x5chain` yaprağı ya listedeki bir çapanın (kök CA ya da dış listedeki hizmet sertifikası) kendisidir ya da doğrudan onunla imzalanmıştır — ara sertifika kabul edilmez (ISO/IEC 18013-5 Ek B: belge imzacısı sertifikası doğrudan IACA'dan verilir, yol uzunluğu 0; AB PID/EAA mdoc profilleri de bu zinciri kullanır) |
+| `A3b` | **`issuerId`, `x5c` yaprak sertifikasının parmak izinden türetilir** — `iss` claim'inden DEĞİL (§1.2). `iss` tutarlılık denetimi güven kaydını gerektirdiği için B adımlarından sonra, `C1`'den önce çalışır ve bu kodla raporlanır |
 | `A3c` | Yaprak sertifika CRL/OCSP'de iptal edilmiş mi ([[SPEC-ID-0002]]) |
 | `A3d` | `cnf` claim'i **mevcut** mu — yoksa RED (Tamga'da KB istisnasız zorunlu) |
 | `A4` | `_sd_alg == "sha-256"` |
@@ -93,7 +93,7 @@ Z1. A4–A7 Z1 kapsamındadır.
 | `C1` | `isCredentialAcceptable(issuerId, iat)` — **iat = belgenin `iat` claim'i** |
 | `C2` | `isCredentialSchemaAcceptable(issuerId, schemaId, iat)` — **atlanamaz** |
 | `C3` | `isRecognizedBy(kendi devletim, issuerId)` |
-| `C4` | Belgenin `category` claim'i ↔ kayıttaki belge veren sınıfı: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ claim yok; uyuşmazlık → RED ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18) |
+| `C4` | Belgenin `category` claim'i ↔ kayıttaki belge veren sınıfı: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ claim yok; uyuşmazlık → RED ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18). mdoc ve ZK sunumunda `category` alanı yoktur: bu formatlarda C4 uygulanmaz ve `checks_skipped`'te görünür; dış listedeki kurumda da uygulanmaz ([[ADR-0036]]) |
 
 ## 1.D — İptal katmanı → [[SPEC-CRED-0003]] §7
 
@@ -101,9 +101,9 @@ Z1. A4–A7 Z1 kapsamındadır.
 |---|---|
 | `D1` | `status.status_list` oku (`idx`, `uri`). ZK sunumunda (`mso_mdoc_zk`) indeks gelmez: ispatın bağladığı tür kısa ömürlü ZK kopyasıysa (`urn:tamga:id:ShortLivedIdentityAttestation:1`, tür kuralı ≤ 24 saat, iptal listesi yok — [[ADR-0044]] K5) D adımları uygulanmaz ve `status.value = NOT_APPLICABLE` (gerekçe kısa ömür); işaretsiz ZK sunumu aşağıdaki kurala tabidir. ZK dışı belgede `status` yoksa: tür şemasında `uses_status_list: true` ise RED (iptal denetimi sessizce atlanmaz — [[ADR-0056]] K13), değilse `NOT_APPLICABLE` |
 | `D2` | Status List Token'ı **ön çekim önbelleğinden** al |
-| `D3` | Token imzası; `sub == uri`; `iss` aynı güven zincirinde. İmzacı, imza denetiminden önce kurumun güven listesindeki ACTIVE iptal anahtarlarına sabitlenir (`expectedSignerFingerprints` — [[ADR-0056]] K6); kayıtlı anahtar yoksa `INDETERMINATE` |
+| `D3` | Token imzası; `sub == uri`; `iss` aynı güven zincirinde. İmzacı, imza denetiminden önce kurumun güven listesindeki ACTIVE iptal anahtarlarına sabitlenir (`expectedSignerFingerprints` — [[ADR-0056]] K6); kayıtlı anahtar yoksa `INDETERMINATE`. İptal anahtarı yalnız geçerlilik penceresindeyse (`valid_from`…`valid_to`, verilmişse) imzacı sayılır. Önbellekteki gövde bir belirteç olarak okunamıyorsa (ör. sunucunun hata sayfası) sonuç RED değil `INDETERMINATE`/`STATUS_UNREACHABLE`'dır |
 | `D4` | Tazelik: `exp` geçmemiş, token yaşı (`şimdi − iat`) politikanın `max_status_token_age_sec` sınırında |
-| `D5` | Zincir çapası: `contentHash` eşleşiyor, `version` geri gitmemiş (önbellek çapadan önce çekildiyse `INDETERMINATE`/`STATUS_STALE`, sonra çekildiyse `REJECTED`) |
+| `D5` | Çapa: belirtecin özeti (`contentHash`), listenin çapa günlüğündeki son satırıyla eşleşiyor mu. Belirteç sürüm alanı taşımaz; geri alma zamanla anlaşılır. Uyuşmayan belirteç çapadan **eskiyse**: önbellek çapadan önce (ya da saat toleransı içinde) çekildiyse `INDETERMINATE`/`STATUS_STALE`, açıkça sonra çekildiyse `REJECTED`. Uyuşmayan belirteç çapadan **yeniyse** bu olağan yayın sırasıdır (önce CDN, sonra çapa — [[SPEC-CRED-0003]] §5.2) ve D5 `checks_skipped`'te görünür; pay sınırlıdır: belirteç bilinen son çapadan `max_anchor_lag_sec` (+ saat toleransı) kadardan daha yeniyse çapası gecikmiştir → `INDETERMINATE`/`STATUS_STALE`. Liste çapa günlüğünde hiç yoksa aynı pay belgenin `iat`'ından sayılır: yeni verilmiş belgede D5 atlanır, pay dolduysa `INDETERMINATE`/`STATUS_STALE`. Dış listedeki kurumun iptal listesi için çapa günlüğü yoktur, D5 atlanır ([[ADR-0036]]). `max_anchor_lag_sec` politikanın tazelik alanıdır (§4.4): varsayılan 3600 sn (çapa günlüğünün saatlik kadansı); Tamga Verify 600 sn kullanır |
 | `D6` | `bits=2` ile `idx` oku; `0x00` dışı → RED |
 
 ## 1.E — Politika katmanı → yerel
@@ -112,12 +112,14 @@ Z1. A4–A7 Z1 kapsamındadır.
 |---|---|
 | `E1` | Assurance eşiği (ör. `category=EDUCATION && assurance>=I2`) |
 | `E2` | İstenen claim'lerin hepsi açıklanmış mı |
-| `E3` | RP scope aşımı yok mu ([[SPEC-PROTO-0002]] §6). RP kaydı zorunlu girdidir: verilmemesi RED, `null` (kayıtsız RP) RED; `"none"` adımı bilerek atlar ve E3 `checks_skipped`'te görünür ([[ADR-0056]] K4) |
-| `E4` | Denetim kaydı yazıldı — yalnız denetim kaydı yeri (`audit`) verildiyse ve kayıt yazıldıysa `checks_performed`'te; yoksa `checks_skipped`'te ([[ADR-0056]] K11) |
+| `E3` | RP scope aşımı yok mu ([[SPEC-PROTO-0002]] §6). RP kaydı zorunlu girdidir: verilmemesi RED, `null` (kayıtsız RP) RED; `"none"` adımı bilerek atlar ve E3 `checks_skipped`'te görünür ([[ADR-0056]] K4). Kapsam denetimine seçici açıklanan bütün alanlar ile kurumun açıkta bıraktığı alanlardan politikanın istedikleri girer; ikisi de `disclosed_claims`'te görünür |
+| `E4` | Denetim kaydı yazıldı — yalnız denetim kaydı yeri (`audit`) verildiyse ve kayıt yazıldıysa `checks_performed`'te; yoksa `checks_skipped`'te ([[ADR-0056]] K11). Denetim yazıcısı hata verirse doğrulama sonucu yine döner ve E4 `checks_skipped`'te görünür |
 
 **Evet/hayır alanının okunuşu:** `isYes(çıktı, alan)` yalnız sonuç `ACCEPTED` ve açıklanan değer tam olarak `true` ise `true`
 döner (ör. `age_over_18`, düz ya da ZK sunumda); red, doğrulanamadı, değer yok ya da `"true"`/`1` gibi başka değerler `false`'tur
 ([[ADR-0056]]). Geçiş kartı yalnız bu sürecin `ACCEPTED` çıktısından verilir (`PassRegistry.issue({ verified })` — K9).
+
+Geçiş kartı jetonunun `jti`'si en çok 128 karakterlik bir dizgidir; dize olmayan ya da daha uzun `jti` reddedilir (AP13 tekrar listesi).
 
 ## 1.1 C1/C2 zamana bağlıdır
 
@@ -136,6 +138,8 @@ edilebilir miydi" diye sorar. Bu, doğrulamanın **geçmişe dönük** bir işle
 olduğunu kabul eder — belge geçmişte verilmiştir, bugünkü durum değil o
 günkü durum belirleyicidir.
 
+**ZK sunumu (`mso_mdoc_zk`).** Sıfır bilgi ispatında belgenin imza anı açıklanmaz. Bu yolda `C1` ve `C2` ispatın zaman damgasıyla (sunum anı; doğrulayıcı saatine saat toleransı içinde yakın olmalıdır) sorulur: kurum ve tür yetkisi sunum anında geçerli olmalıdır. Kısa ömürlü ZK kopyası en çok 24 saat önce verildiğinden ([[ADR-0044]]) iki an arasındaki fark en çok bir gündür.
+
 ## 1.2 `issuerId` sertifikadan türetilir
 
 `A3b` kritiktir. Doğrulayıcı `issuerId`'yi **`iss`
@@ -147,6 +151,10 @@ Kural: `issuerId = keccak256(stateCode, SHA-256(x5c[0] DER))` — [[SPEC-ID-0002
 `iss` claim'i yalnızca **tutarlılık kontrolü** için kullanılır: kayıtlı
 belge verenin `metadataURI`'siyle eşleşmeli; eşleşmiyorsa RED.
 
+**`iss` zorunludur (SD-JWT VC).** Tamga kataloğundaki türlerde `iss` eksik ya da boşsa sonuç `A3b` ile RED'dir; değer, kurumun güven listesindeki kaydının `issuer_url` alanıyla birebir aynı olmalıdır. mdoc ve ZK sunumunda `iss` alanı yoktur; bağ yalnız sertifikadan kurulur. Dış listedeki kurumda ([[ADR-0036]]) kayıtta adres olmadığından bu denetim uygulanmaz.
+
+**Yerel geliştirme bayrağı (`allowLocalIssuerUrls`).** Varsayılan kapalıdır. Açıkken `iss` yerel bir adresse — `http://localhost` ya da 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 aralığında bir IPv4 adresi — kayıttaki adresle eşitlik aranmaz; aynı gevşetme iptal belirtecinin `iss`'i için de geçerlidir. Genel bir IP adresi yerel sayılmaz. Tamga Verify bu bayrağı yalnız yayın adresi `https` değilken açar; canlı doğrulayıcıda kapalıdır.
+
 ## 1.3 Sıra ve kısa devre
 
 Adımlar **sırayla** çalıştırılır. İlk başarısızlıkta durulur ve o kod
@@ -154,6 +162,8 @@ Adımlar **sırayla** çalıştırılır. İlk başarısızlıkta durulur ve o k
 
 **İstisna:** `E4` her durumda çalışır — reddedilen doğrulama da kayda geçer (denetim kaydı yeri olan doğrulayıcıda; yoksa E4
 atlandı olarak raporlanır — [[ADR-0056]] K11).
+
+**Kodların raporlanışı (uygulama notu, 2026-11-11).** Referans uygulama bazı adımları komşu kodla raporlar: `cnf` eksikliği (`A3d`) `A3`, yinelenen özet ve çakışma (`A8`) SD-JWT VC'de `A5` olarak döner; mdoc ve ZK'de `A8`, belge türünün (docType) politikada olmamasıdır. `A2` (Tamga türünde eski `typ`) ve `A4` (Tamga türünde `_sd_alg` yok) türün katalogda olup olmadığı bilinince, yani `B2`'den sonra; `A3b` (`iss` tutarlılığı) güven kaydı okununca, yani `B6`'dan sonra denetlenir — birden çok kusuru olan belgede dönen kod sıradaki ilk kod olmayabilir. Beklenmeyen istisnada `failed_step` o katmanın ilk kodudur (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). mdoc'un A-sırası: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6.
 
 ## 1.4 Kod kararlılığı
 
@@ -239,7 +249,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
 |---|---|
 | `SCHEMA_UNREACHABLE` | [[SPEC-SCHEMA-0001]] §7 Ş3(c) |
 | `STATUS_UNREACHABLE` | [[SPEC-CRED-0003]] §7 Ş3(c) |
-| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 tazelik eşiği aşıldı; ya da D5'te doğrulayıcının ön çekim gecikmesi / saat toleransı penceresi / okunamayan çapa zamanı |
+| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 tazelik eşiği aşıldı; ya da D5'te doğrulayıcının ön çekim gecikmesi / saat toleransı penceresi / okunamayan çapa zamanı / çapa gecikme penceresinin aşılması (belirteç son çapadan `max_anchor_lag_sec`'ten daha yeni ya da liste hiç çapalanmamış) |
 | `CHAIN_UNREACHABLE` | Zincir ve indeksleyici erişilemez |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
 | `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; ayrıca `Z1`'de doğrulayıcı tarafının ZK bileşeni kullanılamıyorsa (devre dosyası yok, WASM yüklenemiyor) — sunumun değil doğrulayıcının eksiği |
@@ -255,6 +265,10 @@ Ayrıca şu durumlar `INDETERMINATE` verir, `REJECTED` vermez:
   politika iptal denetimini şart koşuyorsa sonuç `D1` / `STATUS_UNREACHABLE`; yalnız açıkça `true` yazılmışsa kabul edilir:
   `status.value = NOT_APPLICABLE`, `status.reason` dolu. **Alan verilmemişse `false` sayılır** (`ADR-0044/ZC4`).
 
+- **Ret nedeni sabit iletidir (2026-11-11):** `failed_reason` belgedeki bir değeri (ör. `category`, `typ`, `_sd_alg`), cüzdanın gönderdiği serbest metni ya da kütüphane istisnasının iletisini taşımaz; alan **adı** taşıyabilir. Belgeden gelen sertifika ya da imza okunamıyorsa sonuç RED'dir; sertifikalar okunduktan sonraki beklenmeyen hata (çağıranın verdiği çapa bozuk, kütüphane hatası) `INDETERMINATE`'tir.
+- **Kullanılamayan dış liste ([[ADR-0036]] FD3):** zincir verilen köklerin hiçbirine bağlanmıyorsa (`A3`) ya da tür katalogda yoksa ve çapa bir dış kuruma çözülemiyorsa (`B2`), istenen türe kefil olabilecek bir dış liste o an kullanılamıyor (yüklenememiş ya da süresi geçmiş) ise sonuç RED değil `INDETERMINATE`/`INDEXER_STALE`'dir. Tür, `A3`'te politikadan okunur (imzası doğrulanmamış belgeden değil).
+- **Barındırılan doğrulayıcıda deneme sınırı:** sahiplik kanıtına ulaşmadan `INDETERMINATE` olan yanıtlar da deneme sayılır; sunum bu yüzden kapanırsa sonucu `REJECTED` değil `INDETERMINATE`'tir ve `indeterminate_reason` korunur (AP2). Bekleyen sunumun `last_attempt` alanı denemenin `outcome` ve `indeterminate_reason` değerlerini de taşır. Doğrulama hattına girmeyen sonuçlar (kişinin reddi, deneme sınırı) da denetim kaydına yazılır ve E4 `checks_performed`'te görünür; denetim kaydı her zaman dönen sonuçla aynı çıktıyı taşır. Cüzdanın hata yanıtındaki `error` yalnız OpenID4VP'nin tanımlı kodlarından biriyse kayda geçer; başka değer `wallet error` olarak yazılır.
+
 ## 2.4 `disclosed_claims` — yalnızca adlar
 
 **Değişmez AP3:** Sonuç nesnesi claim **değerlerini** taşımaz, yalnızca
@@ -263,6 +277,8 @@ istendiğinde verilir.
 
 Gerekçe: sonuç nesnesi denetim kaydına yazılır ([[ARCH-0004]] §5.2). Değerler
 oraya sızarsa, kişisel veri log altyapısına yayılır.
+
+**Dönen değerler (2026-11-11).** Çağırana (`claims`; barındırılan doğrulayıcıda §4.3) yalnız politikanın **istediği** alanların (`required_claims`) doğrulanmış değerleri verilir. Cüzdanın fazladan açıkladığı alan `disclosed_claims`'te görünür ve E3'te denetlenir ama değeri dönmez. Belgenin teknik alanları — `iss`, `iat`, `exp`, `vct`, `category`, kişinin kopya anahtarı `cnf` ve iptal sırasını taşıyan `status` — hiçbir zaman dönmez (AP4).
 
 ## 2.5 `idx` asla yer almaz
 
@@ -387,6 +403,8 @@ nesnesinden ayrılır ve bu uca erişim ayrıca yetkilendirilir ve loglanır.
 
 Politika hem DCQL sorgusunu ([[SPEC-PROTO-0002]] §4) hem `E1`–`E3` adımlarını
 besler. Tek kaynak.
+
+`freshness.max_anchor_lag_sec` (isteğe bağlı, sn): D5 çapa gecikme penceresi; verilmezse 3600. `freshness.max_clock_skew_sec` (isteğe bağlı, en çok 600 sn): saat toleransı; verilmezse 120.
 
 **Değişmez AP6:** Politikadaki `required_claims`, RP'nin güven listesindeki kaydının
 `scopes[]`'ini (`allowedScopes`) aşamaz. Servis, politika kaydedilirken bunu kontrol eder ve
@@ -540,6 +558,8 @@ paralel yaşar ([[ARCH-0005]] §5.3 ile aynı politika).
 `429` + `Retry-After`. Öneri: `/offers` için kurum başına 100/dk,
 `/presentations` için 1000/dk. Tamga Verify sunum açma (`/presentations`), cüzdan yanıtı (`/vp/response`) ve kapı doğrulama
 (`/terminal/verify`) uçlarında `429 rate_limited` + `Retry-After` döner; istemci adresi saklanmaz ve loglanmaz.
+
+Örnek sitenin sunum başlatma ucu (`/sample-site/start`, yalnız sandbox) da sınırlıdır. Vekil istemci adresini iletmediğinden beyansız istekler tek kovayı paylaşır; vekil her istekte kendi yazdığı bir istemci anahtarı başlığı gönderiyorsa (`TAMGA_VERIFY_CLIENT_KEY_HEADER`) kovalar istemci başına ayrılır. Başlık yalnız yerel vekilden gelen istekte okunur; değeri saklanmaz ve loglanmaz.
 
 ---
 

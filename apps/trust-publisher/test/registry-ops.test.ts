@@ -76,6 +76,28 @@ const rpApp = {
 };
 
 describe("operatör kayıt aracı", () => {
+  it("0.8.3 — ADR-0075 RO5: kayıtlı ad başka yazımla (büyük harf, sonda nokta) kaynakta dursa da ikinci kez kaydedilmez", () => {
+    for (const stored of ["Shop.Example", "shop.example."]) {
+      const s = src();
+      s.relying_parties.push({
+        dns_name: stored,
+        status: "ACTIVE",
+        access_cert: "rp-eski",
+        scopes: [],
+        status_history: [],
+      });
+      expect(() => addRelyingParty(s, rpApp, env), stored).toThrow(/dns_name zaten kayıtlı/);
+    }
+    expect(() => addRelyingParty(src(), { ...rpApp, dns_name: "shop.example." }, env)).toThrow(/dns_name: alan adı/);
+  });
+
+  it("0.8.3 — TL11: başvurudaki iletişim alanı biçimsizse kayıt yapılmaz", () => {
+    expect(() => addIssuer(src(), { ...issuerApp, contact: { email: "Ad Soyad" } }, env)).toThrow(/contact\.email/);
+    expect(() => addRelyingParty(src(), { ...rpApp, contact: { support_uri: "http://shop.example" } }, env)).toThrow(
+      /contact\.support_uri/,
+    );
+  });
+
   it("kurum başvurusu → kayıt: durum, tarihçe, 2 yıl geçerlilik, yetki türü, şema yetkisi üretilir; kaynak değişmez", () => {
     const s = src();
     const out = addIssuer(s, issuerApp, env);

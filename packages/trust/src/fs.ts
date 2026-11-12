@@ -5,7 +5,20 @@ import { loadTrustSet } from "./jws.js";
 import type { ListVersionMemory } from "./loader.js";
 import { ListTrustSource } from "./trust-source.js";
 
+/**
+ * Dizin yükleyicisinin çapa günlüğü tazelik varsayılanı: 365 gün (çekirdek yükleyicinin varsayılanı 2 saattir — saatlik kadans).
+ * Neden: bu yol geliştirme ve testte, saatlik heartbeat'in çalışmadığı yerel `dist/` klasörüyle de kullanılır; 2 saatlik sınır
+ * orada her şeyi "bilinmiyor" yapardı. Varsayılanla çapa günlüğünün durması tazeliği BOZMAZ — tazelik yalnız listelerin
+ * `next_update`'inden gelir. Saatlik heartbeat'in çalıştığı ortamda (üretim servisi) `anchorMaxAgeMs: 2 * 3600_000` verin
+ * (SPEC-TRUST-0001 §6 uygulama notu).
+ */
+const DIR_ANCHOR_MAX_AGE_MS = 365 * 86400_000;
+
 export interface DistLoadOptions {
+  /**
+   * Çapa günlüğünün son satırı bundan eskiyse kaynak bayat sayılır. Verilmezse 365 gün (yukarıdaki not); saatlik heartbeat'li
+   * üretim ortamında 2 saat verin.
+   */
   anchorMaxAgeMs?: number;
   /** ADR-0038: beklenen ağ (varsayılan "production"). */
   environment?: "production" | "sandbox";
@@ -46,7 +59,7 @@ export async function loadTrustSourceFromDir(
     anchorsJsonl: existsSync(anchorsPath) ? readFileSync(anchorsPath, "utf8") : "",
     rootFingerprints: keys.lotl_signing_keys.map((k) => k.fingerprint_sha256),
     now: opt.now,
-    anchorMaxAgeMs: opt.anchorMaxAgeMs ?? 365 * 86400_000,
+    anchorMaxAgeMs: opt.anchorMaxAgeMs ?? DIR_ANCHOR_MAX_AGE_MS,
     externalListJws: external,
     environment: opt.environment,
     versionMemory: opt.versionMemory,

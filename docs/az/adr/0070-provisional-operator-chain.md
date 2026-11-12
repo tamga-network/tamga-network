@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-30
-last_updated: 2026-10-30
+last_updated: 2026-11-11
 summary: >
   Tamga Network-ün hüquqi şəxsiyyəti yoxdur. Qurulacaq qeyri-kommersiya fondu hüquqi şəxsiyyət qazanana qədər şəbəkənin öz xidmətlərini (siyahıların dərci, şəxsiyyət xidməti, Tamga Verify, saytlar) Tamga Network adından bir şirkət müvəqqəti operator kimi idarə edir; hüquqi şəxs tələb edən hər qeydiyyat, sertifikat və müqavilə onun adı ilə və "Tamga Network adından" ifadəsi ilə edilir. Siyahı operatorunun və sxem sahibinin adı "Tamga Network" olaraq qalır. Müvəqqəti operatorun adı, identifikatoru və ünvanı vahid konfiqurasiya dəyərindən gəlir; siyahı dərc edən hər dərcdə yoxlayır. Təhvil mövcud təhvil aləti və runbook ilə aparılır; fond qurulana qədər iştirak müqavilələrini müvəqqəti operator imzalayır. Qəbul: 2026-10-30.
 domain: Governance
@@ -88,6 +88,12 @@ Tətbiq mağazası yoxlama imzaçısının qeydi ([[ADR-0033]]) və sonrakı bü
 - Kod: siyahı dərc edənin `provisional-operator.ts` yoxlaması və `registry/provisional-operator.json`; tətbiq mağazası yoxlama
   imzaçısının gözləyən qeydi eyni dəyərlə tamamlandı (qeydiyyat və dərc operatorun kompüterində).
 - Sənədlər: [[FW-TF-0001]], [[FW-RB-0001]] RB-OP-01 və təriflər eyni zənciri artıq yazır; dəyişiklik lazım olmadı.
+- **Tətbiq qeydi (2026-11-11; qərarın məzmunu dəyişmədi) — dəyər faylı yoxdursa.** Siyahı dərc edən OP2 yoxlamasını dəyər faylı
+  (`provisional-operator.json`) olmadıqda səssizcə ötürmür: real şəbəkənin qeydiyyat dəftərində fayl yoxdursa siyahı imzalanmır.
+  Sandbox qeydiyyat dəftəri (`environment: "sandbox"`, [[ADR-0038]]) açıq istisnadır: test şəbəkəsinin operatoru uydurmadır,
+  dəyər faylı tələb olunmur. Şərti: siyahı operatorunun adı "(TEST)" işarəsi daşıyır (bu gün "Tamga Network Sandbox (TEST)") və
+  real şəbəkənin adı ilə eyni deyil; əks halda sandbox dərci də dayanır. Sandbox qeydiyyat dəftərinə dəyər faylı qoyularsa adi
+  yoxlama tətbiq olunur.
 
 # Status
 

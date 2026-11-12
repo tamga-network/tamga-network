@@ -4,7 +4,7 @@ title: "Trust federation"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-13
+last_updated: 2026-11-11
 summary: >
   The Tamga LOTL can point to trust lists published by other operators (a state, an institution the state authorises, the EU):
   address + signer pinned in the LOTL + scope (which roles, which credential types) + approval record. The first format read is
@@ -145,6 +145,16 @@ Implemented (2026-10-01):
 - `@tamga-network/schemas`: external type definitions.
 - Tamga Verify: external anchors in the root set.
 - Tests: federation conformance tests with a synthetic external LoTE; unit tests for nested disclosure.
+- **Implementation note (2026-11-11; the decision is unchanged) — "missing / unverifiable" in FD3 and the revocation service
+  in FD2.** `@tamga-network/trust` 0.8.3: questions that depend on an external list which is active in the LOTL but could not be
+  loaded (not supplied, signature or territory not verified, rolled back) also return UNKNOWN — an unknown wallet provider key
+  (if the list can vouch for wallet providers) and an unknown anchor that is not a Tamga root (if the list can vouch for that
+  credential type). Before, these questions were answered "not listed"; UNKNOWN was returned only for a loaded list whose
+  validity had passed. Questions that depend on the Tamga lists are not affected. The read set gained
+  `unavailableExternalListFor(vct)`: it names the external list that can vouch for a credential type but is unavailable right
+  now (so that a credential whose chain reaches no root can end as "unknown" rather than a rejection). FD2: an external
+  institution's revocation service certificate and supply point are attached only to the issuance service of the same role
+  (in scope); the revocation service of an out-of-scope role is ignored.
 
 # Addendum — ETSI TS 119 612 XML list publication (deferred decision, 2026-10-13)
 

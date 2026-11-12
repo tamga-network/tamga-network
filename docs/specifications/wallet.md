@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-29
+last_updated: 2026-11-11
 summary: >
   Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -231,8 +231,17 @@ Gerekçe, iki yönlü bir mantıktır:
 | **Aynı doğrulayıcıya aynı kopya** | Doğrulayıcı zaten kim olduğunu biliyor (başvuru isimli). Farklı kopya sunmak korelasyon kazandırmaz, yalnızca kopya harcar. |
 | **Farklı doğrulayıcıya farklı kopya** | İki doğrulayıcı iş birliği yaparsa `cnf` ve `idx` üzerinden eşleştirme yapamaz ([[SPEC-CRED-0003]] §9.4). |
 
-`verifier_id`, [[t:x509_hash]] client identifier'ıdır ([[SPEC-PROTO-0002]] §2.1) —
-kararlı ve doğrulanabilir bir anahtar.
+`verifier_id`, doğrulayıcının güven listesindeki **kalıcı kimliğidir**: kayıttaki alan adı (`dns_name`; [[ADR-0034]] CI4).
+İstekteki [[t:x509_hash]] client identifier'ı ([[SPEC-PROTO-0002]] §2.1) erişim sertifikası yenilenince değişir; bu yüzden
+eşlemenin anahtarı o değildir. Yalnız kaydı çözülemeyen (kayıtsız) doğrulayıcıda, alan adı bilinmediği için onun yerine kullanılır.
+
+**Kopya ne zaman kullanılmış sayılır:** sunum cihazdan çıktığı anda. Cüzdan kopyayı gönderimden **önce** kalıcı olarak işaretler.
+Doğrulayıcı sunumu alıp hata dönse ya da yanıt yolda kaybolsa da kopya o doğrulayıcıya ait kalır; başka bir doğrulayıcıya
+"kullanılmamış" diye verilmez.
+
+**Yakın alan ve cüzdandan cüzdana:** okuyucunun oturumlar arasında kalıcı bir kimliği yoktur (oturum anahtarı her seferinde
+yenidir). Bu yüzden her yakın alan oturumu **yeni bir kopya** kullanır. Kullanılmamış kopya kalmadıysa sunum yapılmaz — kopya
+sessizce yeniden kullanılmaz; kişi belgeyi yeniler (§4.3).
 
 ## 4.2 Tutarlı açıklama seti
 

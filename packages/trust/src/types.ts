@@ -368,6 +368,9 @@ export const TerminalGroup = z
   .passthrough();
 export type TerminalGroup = z.infer<typeof TerminalGroup>;
 
+/** Doğrulayıcının kalıcı kimliği olan alan adının liste biçimi: küçük harf/rakam/tire etiketler, noktayla ayrılmış; sonda nokta yok. */
+export const DNS_NAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/;
+
 export const RelyingParty = z
   .object({
     rp_id: z.string(),
@@ -378,9 +381,11 @@ export const RelyingParty = z
     client_id: z.string().regex(/^x509_hash:[A-Za-z0-9_-]{43}$/),
     /**
      * ADR-0034: kalıcı kayıt kimliği — erişim sertifikasının SAN'ındaki alan adı. Sertifika yenilenince değişmez; takma ad (ADR-0031),
-     * kopya ayrımı (WL5), aracı ilişkileri ve kayıt araçları bunu kullanır.
+     * kopya ayrımı (WL5), aracı ilişkileri ve kayıt araçları bunu kullanır. Biçim (0.8.3; ADR-0075 uygulama notu): küçük harfli
+     * etiketler, noktayla ayrılmış — sonda nokta, baştaki nokta ve boş etiket (`..`) yok; aynı ad iki ayrı yazımla (`a.example` /
+     * `a.example.`) iki ayrı kimlik gibi yayımlanamasın.
      */
-    dns_name: z.string().regex(/^[a-z0-9.-]+$/),
+    dns_name: z.string().regex(DNS_NAME_RE),
     legal_name: z.string(),
     access_cert_fingerprint_sha256: z.string().regex(/^[0-9a-f]{64}$/),
     status: Status,

@@ -39,9 +39,18 @@ export interface TrustSource {
   freshness(): { source: "list" | "chain"; version: number; ageSec: number; healthy: boolean };
   /**
    * ADR-0036 federasyon: belge zinciri bir dış liste çapasına bağlandıysa o kurumun Tamga gösterimi. Çapa dış listede değilse
-   * null (Tamga kaydı aranır). Liste bayatsa ya da eksikse tri=UNKNOWN; tür kapsam dışıysa NO (FD2).
+   * null (Tamga kaydı aranır). Liste bayatsa ya da eksikse tri=UNKNOWN; tür kapsam dışıysa NO (FD2). "Eksik" (0.8.3, FD3):
+   * LOTL'da ETKİN olup yüklenememiş (verilmemiş, imzası doğrulanamamış, geri sarılmış) bir dış liste bu türe kefil olabiliyorsa
+   * ve çapa bir Tamga kökü değilse cevap null değil UNKNOWN'dur.
    */
   externalIssuerByAnchor?(anchorFingerprint: string, vct: string, iat: number): ExternalIssuerAnswer | null;
+  /**
+   * ADR-0036 FD3 (0.8.3): bu belge türüne (`vct` / docType) kefil olabilecek, LOTL'da ETKİN ama şu an KULLANILAMAYAN (yüklenememiş
+   * ya da `NextUpdate`'i geçmiş) dış listenin kimliği; yoksa null. Böyle bir listenin çapaları kök kümesine girmez
+   * (`externalAnchorCertsDer`); doğrulayıcı zinciri hiçbir köke bağlayamadığında RED vermeden önce buna bakar: null değilse
+   * sonuç "bilinmiyor"dur (INDETERMINATE), RED değil.
+   */
+  unavailableExternalListFor?(vct: string): string | null;
   /** ADR-0036: tazelik içindeki dış listelerin çapa sertifikaları (DER) — doğrulayıcının kök kümesine eklenir. */
   externalAnchorCertsDer?(): Uint8Array[];
   /** ADR-0036: dış cüzdan sağlayıcısının kapsamındaki en az anahtar deposu (yoksa null). */
@@ -256,7 +265,40 @@ export class ListTrustSource implements TrustSource {
     if (this.unhealthy()) return "UNKNOWN";
     const ext = this.store.external_wallet_keys.get(fp);
     if (ext) return this.externalFresh(ext.list_id) ? "YES" : "UNKNOWN";
-    return this.store.wallet_provider_keys.has(fp) ? "YES" : "NO";
+    if (this.store.wallet_provider_keys.has(fp)) return "YES";
+    // FD3: cüzdan sağlayıcılarına kefil olabilen ETKİN bir dış liste yüklenememişse anahtar orada olabilir — "yok" denemez
+    return this.unloadedExternalLists().some((p) => p.scope.entity_kinds.includes("wallet_provider"))
+      ? "UNKNOWN"
+      : "NO";
+  }
+
+  /**
+   * ADR-0036 FD3: LOTL'da ETKİN olup bu yüklemede depoya uygulanmamış dış listeler (verilmemiş, imzası / ülkesi doğrulanamamış,
+   * geri sarılmış ya da biçimi okunamayan). Tamga listelerinin tazeliğini bozmazlar; yalnız onlara bağlı sorular UNKNOWN olur.
+   */
+  private unloadedExternalLists() {
+    return (this.store.lotl?.external_lists ?? []).filter(
+      (p) => p.status === "ACTIVE" && !this.store.external_lists.has(p.list_id),
+    );
+  }
+  /** Bu türe belge veren olarak (PID / EAA) kefil olabilen dış liste mi. */
+  private static vouchesFor(p: { scope: { entity_kinds: string[]; vct?: string[] } }, vct: string): boolean {
+    return (
+      (p.scope.entity_kinds.includes("pid_provider") || p.scope.entity_kinds.includes("eaa_provider")) &&
+      (p.scope.vct ?? []).includes(vct)
+    );
+  }
+  unavailableExternalListFor(vct: string): string | null {
+    const missing = this.unloadedExternalLists().find((p) => ListTrustSource.vouchesFor(p, vct));
+    if (missing) return missing.list_id;
+    for (const st of this.store.external_lists.values())
+      if (
+        st.pointer.status === "ACTIVE" &&
+        ListTrustSource.vouchesFor(st.pointer, vct) &&
+        !this.externalFresh(st.pointer.list_id)
+      )
+        return st.pointer.list_id;
+    return null;
   }
 
   /** ADR-0036: dış liste yüklü ve NextUpdate geçmemiş mi (Tamga listesi de sağlıklı olmalı). */
@@ -267,7 +309,23 @@ export class ListTrustSource implements TrustSource {
 
   externalIssuerByAnchor(anchorFingerprint: string, vct: string, iat: number): ExternalIssuerAnswer | null {
     const ent = this.store.external_anchors.get(anchorFingerprint);
-    if (!ent || ent.kind === "access_ca" || ent.kind === "wallet_provider") return null;
+    if (!ent) {
+      // FD3: çapa yüklü hiçbir dış listede yok. Tamga köküyse soru dış listeye bağlı değildir (null → Tamga kaydı aranır);
+      // değilse ve bu türe kefil olabilen ETKİN bir dış liste yüklenememişse çapa o listede olabilir → UNKNOWN (RED değil).
+      const fp = anchorFingerprint.toLowerCase();
+      for (const ca of this.store.root_cas.values()) if (ca.cert_fingerprint_sha256 === fp) return null;
+      const missing = this.unloadedExternalLists().find((p) => ListTrustSource.vouchesFor(p, vct));
+      if (!missing) return null;
+      return {
+        tri: "UNKNOWN",
+        issuer: null,
+        list_id: missing.list_id,
+        territory: missing.territory,
+        recognized_by: missing.scope.recognized_by ?? (missing.territory === "EU" ? [] : [missing.territory]),
+        status_hosts: [],
+      };
+    }
+    if (ent.kind === "access_ca" || ent.kind === "wallet_provider") return null;
     const base = {
       list_id: ent.list_id,
       territory: ent.territory,

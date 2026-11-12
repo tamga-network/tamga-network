@@ -71,6 +71,82 @@ Known and open: in a network with two active members, one member's `withdraw` le
 (minimum of 2 votes), permanently. The rule change touches closed decisions and is proposed in ADR-0076 (not accepted yet);
 until then, admit a third member before a member of a two-member network withdraws.
 
+- **verifier — `verifyPresentation` returns only the values the policy asks for** (`required_claims`). Technical fields of an
+  SD-JWT VC (`iss`, `iat`, `exp`, `vct`, `category`, `cnf`, `status` with the revocation index) and claims disclosed beyond the
+  request are no longer in `claims` (AP3/AP4). An always-visible claim that the policy asks for now counts as disclosed: it
+  appears in `disclosed_claims` and is checked at E3.
+- **verifier — D5 bounds the "token newer than its anchor" case.** New policy field `freshness.max_anchor_lag_sec` (default
+  3600 s): a status token newer than the latest anchor by more than this, or a list with no anchor on a credential older than
+  this, gives INDETERMINATE / STATUS_STALE. External-list issuers are unchanged.
+- **verifier — `iss` is mandatory for SD-JWT VC of Tamga types** (A3b); `allowLocalIssuerUrls` treats only `http://localhost`
+  and loopback / private IPv4 ranges as local.
+- **verifier — a status key outside its `valid_from`…`valid_to` window is not accepted as the status list signer** (D3). A
+  cached status body that is not a token gives INDETERMINATE / STATUS_UNREACHABLE instead of REJECTED.
+- **verifier — an unavailable external list gives INDETERMINATE, not REJECTED** (ADR-0036 FD3): when the chain reaches none of
+  the given roots (A3), or the type is not in the catalogue and the anchor does not resolve to an external institution (B2),
+  and an external list that could vouch for the requested type is unavailable (`TrustSource.unavailableExternalListFor`).
+- **verifier — a throwing or rejecting `audit` sink no longer fails the verification**; E4 is reported in `checks_skipped`.
+  Async sinks are awaited. With `rootCertsDer: "none"` (SD-JWT VC) A3 is reported in `checks_skipped`.
+- **verifier — pass tokens with a non-string or over-long (more than 128 characters) `jti` are rejected** (AP13 replay list).
+- **sd-jwt — an intermediate CA without the KeyUsage extension is rejected** (A3; `keyCertSign` required). Failure reasons are
+  fixed messages: no header or payload value and no library exception text. `VerifyFail.internal` marks unexpected internal
+  errors (reported as INDETERMINATE by the verifier). The same holds for the mdoc and ZK paths; an unreadable trust anchor
+  gives INDETERMINATE / CHAIN_UNREACHABLE.
+- **Tamga Verify — attempts that end INDETERMINATE before proof of possession no longer turn the presentation into REJECTED**
+  at the attempt limit; `last_attempt` carries `outcome` and `indeterminate_reason`. The audit record always matches the
+  stored result (pseudonym rejection, wallet decline, attempt limit). The `error` of a wallet error response is recorded only
+  when it is a defined OpenID4VP / OAuth error code, otherwise as `wallet error`.
+- **Tamga Verify sample site — a session opens only in the browser that started the presentation** (flow cookie);
+  `/sample-site/start` is rate limited. The sign-in guide states the rule with example code. Optional
+  `TAMGA_VERIFY_CLIENT_KEY_HEADER` separates rate-limit buckets per client behind the proxy.
+- **trust — a `dns_name` that appears in two records of one national list is ambiguous** (answers `null` by name and by client
+  id) instead of the second record silently replacing the first; the list schema rejects a trailing dot, leading dot or empty
+  label in `dns_name` (ADR-0075 RO5).
+- **trust — questions that depend on an external list that is active in the LOTL but was not loaded answer UNKNOWN** instead
+  of NO / null (`isWalletProviderKey`, `externalIssuerByAnchor`); new `unavailableExternalListFor(vct)` (ADR-0036 FD3). An
+  external entity's revocation-service certificates and supply points are bound only to the issuance service of the same role
+  (FD2).
+- **trust — a list version that jumps by more than one but names the last seen version as its predecessor is rejected** (TL2).
+- **trust-publisher — source records are checked against an allow-list of known fields per record type**; unknown or computed
+  fields (`client_id`, `rp_id`, `issuer_id`, `ca_id`, fingerprints) stop the build instead of being published (TL11, ADR-0034
+  CI3). `build` rejects a duplicate `dns_name` (case and trailing dot ignored) and a list operator that is not `provisional`
+  with a non-empty `on_behalf_of` (RO5, TL1).
+- **trust-publisher — without `provisional-operator.json` a production registry is not published**; the sandbox exception
+  requires a "(TEST)" list operator name (ADR-0070 OP2).
+- **trust-publisher — the removal guard also counts root CAs, schemas, and — in records that stay — scopes, schema
+  authorizations and status-history rows** (TL2). The next version, the previous hash and schema `registered_at` are read from
+  the signed `.jws` of the previous publication (signature verified), not from the unsigned `.json` copy (TL9).
+- **trust-publisher — registration commands run under `registry.lock`**, roll the source back when list validation fails, and
+  write the change-log line only after a successful build; the lock is refreshed while held. `--reason` of `status`,
+  `rp-status` and `wallet-provider suspend|revoke` passes the public-text filter; `contact` fields are format-checked (TL11).
+- **wallet-core — `checkRegistrationCerts` / `relevantRegistrationCerts` take the trust of the certificate that signed the
+  request** (`signerTrust`: the relying party's registered access-certificate fingerprint and/or `root_cas`). When given, a
+  registration certificate is valid only if that certificate is anchored (`untrusted_access_certificate` otherwise) — a
+  self-signed certificate copying a registered organisation's identifier no longer binds to that organisation's public
+  registration certificate (remote flow and ISO/IEC 18013-7 Annex C; proximity already did this). When omitted, the result
+  carries `signerTrusted: false` and the `registration_binding_unverified` flag. A registration certificate without `exp` is
+  rejected (JWT and CWT).
+- **wallet-core — `parsePassGrant` rejects a consent period over 6 months** (single-use tickets excepted), an expired grant and
+  an `aud` that is neither a domain name nor an `x509_hash:` identifier (the latter is kept with the `aud_not_dns_name`
+  warning); optional checks verify the grant signature against the request's certificate, `cnf_kid` against the wallet's pass
+  key and the relying party's registration. `mintPassToken` accepts the same trust source.
+- **wallet-core — `respond` gains `beforeSend`**, called after signing and before the presentation leaves the wallet, so
+  copies are marked used before delivery (WL5). `presentProximity` marks the copy before sending and keeps it marked when the
+  transport fails. `respond` returns the verifier's `redirect_uri` only when it is https.
+- **wallet-core — http is refused by default**: `parseOffer` rejects http offer addresses and http `credential_issuer`;
+  Digital Credentials API requests from `http://localhost` / `http://127.0.0.1` are accepted only with `allowLocalDevHost`
+  (the Annex C branch no longer drops the option).
+- **wallet-core — `matchDcql` and `presentProximity` no longer offer an expired credential.** `rpRecordOf` and
+  `registrarKeysOf` read from an already verified trust source; `fetchRpRecord` / `fetchRegistrarKeys` accept
+  `{ throwOnListError: true }` to tell "list unavailable" from "not registered".
+- **wallet-core — TS10 export uses 600,000 PBKDF2 iterations by default** and refuses fewer than 200,000; import refuses files
+  with fewer than 100,000.
+- **wallet-core — `HardwareKeyProvider.attestation()` reports the device secure area (Secure Enclave, StrongBox, TEE) as W2
+  and software as W1**; W3 is never reported. A failing backend `info()` is no longer cached and no longer falls back to
+  software keys silently (`hardware_unavailable`); a failed hardware key deletion is reported to the caller.
+- **docs** — SPEC-API-0001, SPEC-TRUST-0001, SPEC-WALLET-0001, ADR-0036 / ADR-0070 / ADR-0075 implementation notes and the
+  sign-in guide updated in tr / en / az.
+
 ### Correction to the 0.8.2 notes
 
 The 0.8.2 entry said that `wallet-core`'s `fetchRpRecord` "applies the cross-country name rule on the `x509_hash:` path too"
@@ -385,11 +461,11 @@ tool for institutions and for state / operator nodes (it was built and checked w
   List mapping helpers: `retireIssuer` (soft revocation + `IssuerRetired`), `announceRootCARollover` (`ROLLING_OVER`).
 - **contracts — read views (C33 (1)):** `Governance.memberList`, `IssuerRegistry.issuerDelegatesOf`.
 - **contracts — hard revocation `invalidatesFrom` (ADR-0073 K2, CE2).** `IssuerRegistry.setIssuerInvalidatesFrom(issuerId,
-  from)` marks a compromised issuer: credentials with `iat ≥ from` fail C1. Only on a revoked issuer, `validFrom ≤ from ≤
-  revokedAt`, and the date can only be moved earlier (never removed); it is the one past date that may be written outside the
+from)` marks a compromised issuer: credentials with `iat ≥ from` fail C1. Only on a revoked issuer, `validFrom ≤ from ≤
+revokedAt`, and the date can only be moved earlier (never removed); it is the one past date that may be written outside the
   migration window. Read with `invalidatesFromOf`.
 - **contracts — schema version digests are append-only (ADR-0073 K3, CE3).** `SchemaRegistry.addSchemaContentHash(schemaId,
-  contentHash)` adds a new version digest (national schema: the owning state; network schema: Governance
+contentHash)` adds a new version digest (national schema: the owning state; network schema: Governance
   `proposeNetworkSchemaContentHash`, or the migration executor); `matchesContentHash` accepts the first digest or any added one,
   none on a revoked schema; `contentHashesOf` lists them. At most 32 added digests per schema; empty and duplicate digests are
   refused. SPEC-BC-0001 SC1 now reads "every written digest never changes; new version digests are only appended".
@@ -400,12 +476,12 @@ tool for institutions and for state / operator nodes (it was built and checked w
   `allowedScopes` / `updateScope` / `hasScope` are removed: each use is a `RequestScope` (scope, service, type, format
   `dc+sd-jwt`/`mso_mdoc`/`mso_mdoc_zk`, mdoc namespace, sorted element-path digests, validity, details digest), set with
   `setRequestScope` and closed (never deleted) with `closeRequestScope`; wallets ask `mayRequest(rpId, service, type, format,
-  namespace, element)`. Caps: 32 scopes, 64 elements. Storage layout baseline updated (no deployed state).
+namespace, element)`. Caps: 32 scopes, 64 elements. Storage layout baseline updated (no deployed state).
 - **contracts — new `NetworkRegistry` (ADR-0074 K3, PJ1–PJ3).** The network's own records (wallet providers and their WUA
   signing keys, ZK circuits, external lists, EAA categories, list signers, list operators, state and role slots, catalogue) as
   typed records: identifier digests, fingerprints, closed-set values, numbers, dates and a details digest only — no free text.
   Written only through Governance: content is pinned with `stageRecord`, a typed proposal `proposeNetworkRecord(registry,
-  stageId)` carries its digest, and 2/3 executes `commitStaged`; during the migration window the single migration executor
+stageId)` carries its digest, and 2/3 executes `commitStaged`; during the migration window the single migration executor
   writes dated records (`writeRecord`). Status history is append-only; `isListedProviderKey(fingerprint)` answers "is this a WUA
   key of a listed wallet provider now". UUPS, deployed by `scripts/lib/deploy.ts`; covered by the privacy ABI, UUPS and storage
   layout checks.
@@ -422,9 +498,9 @@ tool for institutions and for state / operator nodes (it was built and checked w
   longer freeze a list; unused `CANCELLED`, `ProposalCancelled` and `SchemaNotAuthorized` removed. The anchor registry ABI copy in
   `apps/trust-publisher/src/chain/abi/` is regenerated.
 - **contracts — security review (2026-11-04).** No deployed state; storage layout baselines updated.
-  - *High:* the single migration executor could permanently revoke a network schema during the window. It now writes only
+  - _High:_ the single migration executor could permanently revoke a network schema during the window. It now writes only
     registrations, version digests and deprecations; revoking a network schema is Governance-only (`NetworkTierRequiresGovernance`).
-  - *Medium:* voted `NetworkRegistry` proposals could be executed by anyone in any order (e.g. an old `ACTIVE` after `REVOKED`),
+  - _Medium:_ voted `NetworkRegistry` proposals could be executed by anyone in any order (e.g. an old `ACTIVE` after `REVOKED`),
     and executed content could be re-staged and written again by an old proposal. A stage is now bound to the record's write
     counter (`stageId = keccak256(abi.encode(rec, baseRevision))`, `revisionOf`, `stageIdFor`, `stagedRevisionOf`); a commit on a
     changed record reverts (`StaleStage`), so any newer write supersedes pending proposals. `REVOKED` is not final for network
@@ -432,13 +508,13 @@ tool for institutions and for state / operator nodes (it was built and checked w
     `RecordWritten(kind, recordId, stageId, contentHash, revision)`; status changes emit `RecordStatusChanged`. A proposer can
     withdraw an unexecuted proposal: `Governance.cancelProposal` (`ProposalStatus.CANCELLED` re-added at the end,
     `ProposalCancelled`, `NotProposer`).
-  - *Medium:* "cannot be reopened by an upgrade" relied only on the before/after comparison. Registries now refuse upgrades while
+  - _Medium:_ "cannot be reopened by an upgrade" relied only on the before/after comparison. Registries now refuse upgrades while
     their window is open (`UpgradeDuringMigration`), and `contracts:check` pins the source digest of `MigrationWindow.sol`
     (`storage-layout/MigrationWindow.pin.json`, `--update-pin`), its ERC-7201 slot, and that no other source references the slot
     or uses inline assembly. ADR-0073 carries a dated implementation note (decision unchanged).
-  - *Medium, decision needed:* relying party identity ownership and re-registration after revocation — ADR-0075, accepted the
+  - _Medium, decision needed:_ relying party identity ownership and re-registration after revocation — ADR-0075, accepted the
     same day and implemented (see Applications and repository).
-  - *Low:* while the window is open, undated ordinary writes (`at = 0`, `registeredAt = 0`, `publishList(publishedAt = 0)`) are
+  - _Low:_ while the window is open, undated ordinary writes (`at = 0`, `registeredAt = 0`, `publishList(publishedAt = 0)`) are
     refused except from Governance (`DateRequiredDuringMigration`; ADR-0073 K1 "dates explicit"); a closed request scope or gate
     group cannot be silently reopened under the same id (`ScopeClosed`, `TerminalGroupNotOpen`); a gate group's institution must
     be the relying party itself or a registered relying party / issuer of the same state (`UnknownInstitution`;
@@ -486,7 +562,7 @@ API audience, registration status warning, mdoc namespace scope, ambiguous gate 
 4. **verifier — per-branch lock; `consume()` throws once the presentation is completed.** `begin(branch)` locks only that
    branch, so two branches' valid responses can be verified at the same time. `BranchSet.consume()` now throws
    `PresentationAlreadyConsumedError` when the presentation is already completed: the 0.8.0 pattern `isOpen` → `await
-   verifyPresentation` → `consume()` fails instead of accepting a second response. Migrate: accept with
+verifyPresentation` → `consume()` fails instead of accepting a second response. Migrate: accept with
    `if (!branches.tryConsume()) { /* do not accept */ }`. A failed-attempt limit no longer rejects the presentation while another
    response is being processed (only that branch closes).
 5. **trust — reassignment between countries only with a structured record (ADR-0075 RO1/RO5).** When the same `dns_name` is in
@@ -614,23 +690,23 @@ is behaviour that now fails closed.
   now defaults to `false`: no shared cross-device request object is produced and the result is a `PresentationSession` (no
   `requestJwt`, `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`); a response whose `kid` names no branch is rejected.
   `initialRequestObject: true` keeps the old `PresentationRequest` for one release and is deprecated. **Not backward-compatible
-  for integrators that served `req.requestJwt`:** with 0.8.0 that field is `undefined`. *Migration:* `packages/verifier/README.md`
+  for integrators that served `req.requestJwt`:** with 0.8.0 that field is `undefined`. _Migration:_ `packages/verifier/README.md`
   "Migrating from one shared request object" — open presentations without the flag, create one `BranchSet` per presentation,
   serve `request_uri` with `BranchSet.fetch`, find the branch from the response `kid`; `examples/02-verify-own-server` shows the
   full flow. To keep the old shape for one more release pass `initialRequestObject: true` explicitly.
 - **wallet-core — WIA status bit reads fail closed.** `wiaRevokedInList` / `wiaRevokedByList` now treat the undefined value 3 as
   revoked (was: only 1); new `wiaStatusInList` / `wiaStatusByList` return `valid | suspended | revoked` (`WiaListStatus`) and
   `wiaValidInList` is true only for 0 — every non-zero value means "do not use this WIA", only revoked (1 / 3) justifies deleting
-  it locally. *Migration:* gate WIA use on `wiaValidInList` (or `wiaStatusByList(...) === "valid"`), treat `suspended` as
+  it locally. _Migration:_ gate WIA use on `wiaValidInList` (or `wiaStatusByList(...) === "valid"`), treat `suspended` as
   temporary (do not delete); code that only called `wiaRevokedByList` keeps working and now also deletes on 3.
 - **trust — an active gate group needs an ACTIVE institution (ADR-0069 TG2/TG3).** `TrustSource.terminalGroupsAll` /
   `terminalGroup` report `active: false` when the group's `institution_id` names an issuer or verifier that is REVOKED, SUSPENDED
   or not in the list, so a withdrawn institution's gates close with the list (403 in Tamga Verify). Groups without
-  `institution_id` (legacy) are still judged by the verifier record and the validity window only. *Migration:* none for
+  `institution_id` (legacy) are still judged by the verifier record and the validity window only. _Migration:_ none for
   conforming lists; the publisher refuses to build an active group whose institution is not ACTIVE (`valid_until` withdraws it).
 - **Tamga Verify — real network refuses terminal keys from the environment (ADR-0065 TK3).** On the real network (https, not
   sandbox) the service does not start when `TAMGA_VERIFY_TERMINAL_KEYS` is set; sandbox and local development are unchanged.
-  *Migration:* operators keep the variable in `sandbox.env` only; real-network gate keys come from the trust list.
+  _Migration:_ operators keep the variable in `sandbox.env` only; real-network gate keys come from the trust list.
 
 ### Fixed
 
@@ -683,51 +759,51 @@ is behaviour that now fails closed.
   `aud = "origin:<origin>"` (OpenID4VP 1.0 Appendix A.4), no longer to the client identifier; Tamga Verify expects the same and
   rejects a proof bound to the other path. **Not backward-compatible:** there is no transition code — a 0.7.3 wallet's SD-JWT
   presentation over the DC API is rejected by a 0.7.4 verifier, and the other way round (by decision: development phase, no
-  compatibility shims before the beta, ADR-0029). *Migration:* wallets and verifiers update to 0.7.4 together for SD-JWT over the
+  compatibility shims before the beta, ADR-0029). _Migration:_ wallets and verifiers update to 0.7.4 together for SD-JWT over the
   DC API; a verifier that checks DC API presentations itself must expect `origin:<origin>`. Cross-device (QR) keeps the client
   identifier and is unaffected.
 - **verifier — `registrationScopesFor` matches the presentation format.** A registered use only matches a request of the same
-  format (`dc+sd-jwt` default, `mso_mdoc`, `mso_mdoc_zk`). *Migration:* registry scopes for mdoc / ZK requests set `format` (and
+  format (`dc+sd-jwt` default, `mso_mdoc`, `mso_mdoc_zk`). _Migration:_ registry scopes for mdoc / ZK requests set `format` (and
   `mdoc_namespace` for mdoc); otherwise the request finds no registration certificate.
 - **wallet-core — `checkDcqlShape` is stricter.** Malformed DCQL (non-object credential query, `claims` not an array, invalid
-  claim path, empty `values`) throws a `WalletError` instead of a `TypeError` or passing. *Migration:* catch `WalletError`; fix
+  claim path, empty `values`) throws a `WalletError` instead of a `TypeError` or passing. _Migration:_ catch `WalletError`; fix
   queries that relied on the lenient shape.
 - **wallet-core — registration status.** New flag `registration_status_unknown` when a registration certificate's status could
   not be checked (also when no statuses are passed); a revoked certificate makes the request invalid. `startAuthorized` (auth
   code issuance) now fetches the registrar's status list when `registrarKeys` is given; a registration-certificate status list
-  without `exp` is not accepted (reads as unknown). *Migration:* pass `fetchRegistrationStatuses(...)` results to the
+  without `exp` is not accepted (reads as unknown). _Migration:_ pass `fetchRegistrationStatuses(...)` results to the
   registration checks (or accept the flag as a warning); allow the wallet to reach the registrar's `/status/...` address.
-- **core — `resolveSdPayload` rejects `__proto__`.** A payload with a plain `__proto__` key is rejected. *Migration:* none for
+- **core — `resolveSdPayload` rejects `__proto__`.** A payload with a plain `__proto__` key is rejected. _Migration:_ none for
   conforming issuers; never use `__proto__` as a claim name.
-- **wallet-core — `statusBitAt` reads 4- and 8-bit lists.** Values above 3 read as 3 (invalid). *Migration:* none; treat 3 as
+- **wallet-core — `statusBitAt` reads 4- and 8-bit lists.** Values above 3 read as 3 (invalid). _Migration:_ none; treat 3 as
   invalid as before.
 - **trust — XML list signers in their own LOTL field (`xml_signing_keys`).** The ETSI TS 119 612 XML list signer is published in
   the country slot's new `national_lists[].xml_signing_keys` instead of `signing_keys`; JSON lists are validated only against
   `signing_keys`. As defence in depth, a LOTL or `tl-<cc>` JSON list whose signer certificate has EKU `id-tsl-kp-tslSigning`
   (0.4.0.2231.3.0) is still not loaded. The publisher refuses a tslSigning-EKU certificate in `signing_certs` and checks the XML
-  signer against `xml_signing_keys` before writing the XML (stops on the real network). *Migration:* registries move the XML
+  signer against `xml_signing_keys` before writing the XML (stops on the real network). _Migration:_ registries move the XML
   signer from `signing_certs` to `xml_signing_certs`; XML readers look the signer up in `xml_signing_keys`; sign JSON lists with
   the JSON list signer only.
 - **verify — gates fail closed.** A terminal key with an owner, or a key of a group once seen in the list, gets 403 when the list
   is stale or the group is gone; a pass from a policy not in the group's `allowed_policies` gets 403 without being consumed.
-  *Migration:* keep the trust list fresh; passes issued before 0.7.4 (no policy id) still pass when every policy of the group is
+  _Migration:_ keep the trust list fresh; passes issued before 0.7.4 (no policy id) still pass when every policy of the group is
   allowed.
 - **trust-publisher — `wrprc-revoke` reason codes.** `--reason` takes `compromised | superseded | ceased | policy_violation |
-  other`, optional `--note` (short, no personal data). A lost `wrprc-status.json` stops the build. *Migration:* use a code; after
+other`, optional `--note` (short, no personal data). A lost `wrprc-status.json` stops the build. _Migration:_ use a code; after
   state loss run `wrprc-status --reset --reason "<why>"`.
 - `purpose` removal in `createPresentationRequest` happened in 0.7.3 (now flagged there).
 - **verify / operator issuer — no 429 for a request-object fetch past 10 branches (ADR-0067 amendment 2026-10-29).** The fixed
   "10 branches, then 429" rule let a bystander lock the real wallet out with 10 fetches. Now a new fetch past the soft limit (10)
   replaces a closed branch or the oldest never-answered branch at least 120 s old; at the hard ceiling (32) the age condition is
   dropped; a branch whose response is being processed is never evicted. A response to an evicted branch gets 400 `unknown request
-  object` (not counted; the person scans again). A shared budget caps branches across presentations (20,000; when every branch
+object` (not counted; the person scans again). A shared budget caps branches across presentations (20,000; when every branch
   is in flight a fetch gets 503). The per-presentation fetch bucket is gone; fetches are limited per client address (nginx zone
-  `tamga_vpreq`, 2 r/s, burst 20; application-wide ceiling `vpRequest`). *Migration:* none for wallets; operators reload nginx.
+  `tamga_vpreq`, 2 r/s, burst 20; application-wide ceiling `vpRequest`). _Migration:_ none for wallets; operators reload nginx.
 - **verifier — `createPresentationRequest({ initialRequestObject: false })`.** Without the shared cross-device request object the
   result is a `PresentationSession` (no `requestJwt`, `encPrivateKey`, `encPublicJwk`, `encJwkThumbprint`) and a response whose
   `kid` names no branch is rejected. The default (`true`, old shape) stays for 0.7.x and is deprecated: one object served to
   every fetch exposes `state` to anyone who sees the QR. `openPresentationResponse` / `decryptPresentationResponse` now type `req`
-  as `ResponseKeys` and branches as `BranchKeys` (generic) — `PresentationRequest` and `RequestBranch` still fit. *Migration:*
+  as `ResponseKeys` and branches as `BranchKeys` (generic) — `PresentationRequest` and `RequestBranch` still fit. _Migration:_
   `packages/verifier/README.md` "Migrating from one shared request object"; `examples/02-verify-own-server` shows the full flow
   (its `requestObject(id, walletNonce)` is now async; new `handleDecline(state)`).
 
@@ -804,7 +880,7 @@ is behaviour that now fails closed.
 - docs (2026-10-28; data-protection pre-review, no package change): ADR-0040 note — the sandbox's real identity path defaults to
   the invitation mode (`invite`) until the legal review is complete, the quick trial stays open to
   everyone; RI1 rewritten (tr/en/az, INVARIANTS). Sandbox guide §8 and the warning text now say deletion of the provider session is
-  *requested* at issuance. SPEC-ID-0003: time-based purge of expired/revoked identity records (30 days, with the provider session)
+  _requested_ at issuance. SPEC-ID-0003: time-based purge of expired/revoked identity records (30 days, with the provider session)
   and event-log rows (365 days), erasure response `provider: "partial"` without the delete permission (tr/en/az).
 
 - verify + docs/ARF sites + brand (2026-10-29; K14): **fonts are self-hosted — no Google Fonts.** Onest, IBM Plex Sans (upright +
@@ -819,7 +895,7 @@ is behaviour that now fails closed.
   stylesheet and the early theme stamp are separate files under `/assets/*`, values reach them through `data-*` attributes; the
   gate's QR reader (jsQR 1.4.0, unchanged file, hash pinned in the test) is served by the verifier itself — no CDN. Policy:
   `default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; … base-uri 'none'; object-src 'none';
-  require-trusted-types-for 'script'; trusted-types 'none'` (no nonce, no `'unsafe-inline'`, no `'unsafe-eval'`; since K14 no font or style host other than `'self'`). The site kit
+require-trusted-types-for 'script'; trusted-types 'none'` (no nonce, no `'unsafe-inline'`, no `'unsafe-eval'`; since K14 no font or style host other than `'self'`). The site kit
   (`@tamga-network/verifier/web`) sets its styles through CSSOM instead of `style` attributes and clears the mount point without
   `innerHTML`, so it also works on integrator sites whose CSP has no `'unsafe-inline'` and enforces Trusted Types. Shared
   `ops/brand/tamga-ui.css` gains small utility classes; `tamga-ui.js` builds fingerprint groups with DOM nodes.

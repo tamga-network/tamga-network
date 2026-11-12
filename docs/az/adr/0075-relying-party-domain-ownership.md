@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-05
+last_updated: 2026-11-11
 summary: >
   ADR-0073 K4 yoxlayıcı kimliyini `rpId = keccak256(dns_name)` etdi. Kontraktda bu kimlik onu ilk qeydə alan dövlətə məxsusdur;
   başqa bir dövlət domen adı özünə məxsus olmayan yoxlayıcını əvvəlcə qeydə alaraq kimliyi ələ keçirə bilər, ləğv edilmiş kimlik
@@ -112,6 +112,15 @@ Adlar (ictimai ABI; mövcud adlandırma qaydasına görə — `proposeNetworkRec
   `SUSPENDED` ləğv edilməmiş sayılır; hamısı ləğv edilibsə statusu ən son dəyişən qeyd qaytarılır. Başqa ölkədə ləğvdən sonra
   yenidən qeydiyyat (RO2) şəbəkə səviyyəsində qeyd gələnə qədər qeyri-müəyyən qalır. Təfərrüat [[SPEC-TRUST-0001]] §6–§7;
   zəncir–siyahı ekvivalentlik testində fərq 0.
+- **Tətbiq qeydi (2026-11-11; qərarın məzmunu dəyişmədi) — RO5-in tətbiq olunduğu yerlər.** *Qeydiyyat aləti*
+  (`register rp`): ad mənbədə hərf böyüklüyü və sondakı nöqtə nəzərə alınmadan axtarılır. *Dərc* (`build`): mənbədə eyni ad iki
+  qeyddə olarsa və ya ad siyahı formatında deyilsə (kiçik hərfli etiketlər, nöqtə ilə ayrılmış, sonda nöqtə yoxdur) siyahı
+  imzalanmır. *Yükləyici* (`@tamga-network/trust` 0.8.3): adın formatı siyahı sxemində yoxlanılır; eyni ölkə siyahısında eyni ad
+  iki qeyddə görünərsə ad qeyri-müəyyəndir (`null` — həm domen adı, həm də müştəri identifikatoru ilə; əvvəl ikinci qeyd
+  birincinin yerini səssizcə tuturdu). *Ölkələrarası* qayda yalnız yükləyicidə və yalnız yüklənmiş siyahılar arasında tətbiq
+  olunur ([[SPEC-TRUST-0001]] §6): dərcçi tək ölkə siyahısının mənbəyini görür, başqa ölkənin siyahısı ilə müqayisə aparmır; tək
+  ölkə siyahısı yükləyən müştəri başqa siyahıdakı qeydi görə bilmir. Şəbəkə səviyyəsində yeganəlik zəncir qeydi ilə (RO1) təmin
+  olunur.
 
 # Status
 

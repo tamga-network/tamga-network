@@ -8,6 +8,12 @@
  * kapanmışsa etkileşimli `sign()` bir kez yeniden sorar (zayıf biyometri anahtarı açmadıysa bir kez de cihaz parolasıyla);
  * `interactive: false` ile istem çıkmaz, `auth_required` döner (kişinin başlatmadığı akışlar sessizce atlar).
  * Köprüdeki ikili veri standart base64; imza ham r||s.
+ *
+ * 0.8.3 (ikinci inceleme): (1) seviye etiketi SPEC-WALLET-0001 §2.2 / ADR-0047 K5'e göre — cihazın güvenli bölgesi (Secure
+ * Enclave, StrongBox, TEE) W2'dir; W3 yalnız sertifikalı güvenli donanımdır ve bu sağlayıcı onu bildirmez; arka uç "software"
+ * bildirirse W1. (2) Arka ucun `info()` çağrısı hata verirse sonuç önbelleğe ALINMAZ ve yazılım anahtarına sessizce düşülmez:
+ * çağrı `hardware_unavailable` hatasıyla biter, sonraki çağrı yeniden dener. (3) Başarısız donanım anahtarı silme çağırana
+ * bildirilir (anahtar arka uçta gerçekten yoksa hata sayılmaz).
  */
 import { b64, b64Decode, b64u } from "./b64.js";
 import {
@@ -33,6 +39,12 @@ export const ERR_DEVICE_LOCK_REQUIRED = "ERR_DEVICE_LOCK_REQUIRED";
 export const ERR_KEY_INVALIDATED = "ERR_KEY_INVALIDATED";
 /** Yerel arka ucun "kişi imza anındaki sistem istemini iptal etti" hata kodu (iOS) — yeniden istem gösterilmez. */
 export const ERR_USER_CANCELED = "ERR_USER_CANCELED";
+/**
+ * Yerel arka uç var ama durumu okunamadı (`info()` hata verdi — köprü hazır değil, geçici hata). Anahtar üretilmez / kullanılmaz;
+ * çağrı yinelenebilir. Arka ucun hiç olmaması (Expo Go) ya da "none" bildirmesi bu hata DEĞİLDİR (yazılım yolu, sapma S-9).
+ */
+export const HARDWARE_UNAVAILABLE = "hardware_unavailable";
+export const isHardwareUnavailable = (e: unknown) => (e as { code?: unknown } | null)?.code === HARDWARE_UNAVAILABLE;
 /** a3: kullanım penceresi (yerel modüllerle aynı, 60 sn) — bu süre içinde başarılı doğrulama "yeni" sayılır */
 const AUTH_WINDOW_MS = 60_000;
 
@@ -80,8 +92,11 @@ const mapNative = (e: unknown) =>
 const authRequired = (cause: unknown) =>
   Object.assign(new Error("key use requires device authentication"), { code: AUTH_REQUIRED, cause });
 
+type BackendInfo = { storage: HardwareStorage; platform: string; userAuth?: DeviceUserAuth };
+
 export class HardwareKeyProvider implements KeyProvider {
-  private info: Promise<{ storage: HardwareStorage; platform: string; userAuth?: DeviceUserAuth } | null>;
+  /** arka ucun durumu — yalnız BAŞARILI yanıt saklanır; hata saklanmaz (sonraki çağrı yeniden sorar) */
+  private infoOk: Promise<BackendInfo> | null = null;
   /** Android anahtar kanıtı zincirleri (ref → DER base64[]); cüzdan sağlayıcıya kanıt olarak gider */
   private evidence = new Map<string, string[]>();
   /** son başarılı cihaz doğrulaması (ms); pencere içindeyken imza yine açılmıyorsa doğrulama anahtarı açmamıştır */
@@ -98,11 +113,30 @@ export class HardwareKeyProvider implements KeyProvider {
       cancelLabel?: () => string;
     },
   ) {
-    this.info = native ? native.info().catch(() => null) : Promise.resolve(null);
+    // açılışta bir kez sorulur (ilk anahtar işlemi beklemesin); hata burada yutulur ama SAKLANMAZ — ilk kullanım yeniden dener
+    if (native) void this.info().catch(() => undefined);
+  }
+
+  /** Arka ucun durumu; arka uç yoksa `null`. Hata `hardware_unavailable` olarak fırlatılır ve önbelleğe alınmaz. */
+  private async info(): Promise<BackendInfo | null> {
+    const native = this.native;
+    if (!native) return null;
+    if (!this.infoOk) {
+      const p: Promise<BackendInfo> = native.info();
+      this.infoOk = p;
+      p.catch(() => {
+        if (this.infoOk === p) this.infoOk = null;
+      });
+    }
+    try {
+      return await this.infoOk;
+    } catch (e) {
+      throw Object.assign(new Error("hardware key backend is unavailable"), { code: HARDWARE_UNAVAILABLE, cause: e });
+    }
   }
 
   private async backend(): Promise<NativeKeyBackend | null> {
-    const i = await this.info;
+    const i = await this.info();
     return i && i.storage !== "none" ? this.native : null;
   }
 
@@ -160,18 +194,37 @@ export class HardwareKeyProvider implements KeyProvider {
     }
   }
 
+  /**
+   * Anahtarı iki depodan da siler. Donanım silmesi başarısız olur ve anahtar arka uçta DURUYORSA hata fırlatılır (0.8.3; önce
+   * yutuluyordu) — çağıran anahtarın silinmediğini bilir (belge silme, cüzdan sıfırlama). Yazılım anahtarı ve kanıt her durumda
+   * silinir; anahtar arka uçta zaten yoksa (eski yazılım anahtarı) yerel hata yok sayılır.
+   */
   async delete(ref: string): Promise<void> {
     const n = await this.backend();
-    if (n) await n.delete(ref).catch(() => undefined);
+    let failure: unknown;
+    if (n) {
+      try {
+        await n.delete(ref);
+      } catch (e) {
+        const still = await n.publicKey(ref).catch(() => true as const);
+        if (still) failure = e;
+      }
+    }
     this.evidence.delete(ref);
     await this.software.delete(ref);
+    if (failure !== undefined) throw mapNative(failure);
   }
 
+  /**
+   * Sağlayıcının anahtar deposu ve seviyesi (bilgi; kuruma giden anahtar kanıtını cüzdan sağlayıcı üretir, ADR-0025). Seviye
+   * SPEC-WALLET-0001 §2.2: yazılım W1; cihazın güvenli bölgesi (TEE, Secure Enclave, StrongBox) W2. W3 (sertifikalı güvenli
+   * donanım) buradan hiç bildirilmez.
+   */
   async attestation(): Promise<KeyAttestation> {
-    const i = await this.info;
+    const i = await this.info();
     if (!i || i.storage === "none") return this.software.attestation();
     const storage = storageOf(i.storage);
-    return { storage, level: storage === "tee" ? "W2" : "W3", platform: this.opts.platform };
+    return { storage, level: storage === "software" ? "W1" : "W2", platform: this.opts.platform };
   }
 
   /** Android anahtar kanıtı (varsa): cüzdan sağlayıcı doğrular ve anahtar kanıtında (KA) seviyeyi belirler. */
@@ -194,7 +247,7 @@ export class HardwareKeyProvider implements KeyProvider {
 
   /** a3: arka ucun bildirdiği cihaz doğrulama türü (bilgi; "Cüzdan bilgisi" ekranı). Donanım yoksa `undefined`. */
   async userAuth(): Promise<DeviceUserAuth | undefined> {
-    const i = await this.info;
+    const i = await this.info();
     return i && i.storage !== "none" ? (i.userAuth ?? "none") : undefined;
   }
 

@@ -3,7 +3,7 @@
  * Güven katmanı (C: TrustSource), şema (B) ve iptal (D) BU PAKETTE DEĞİL; verifier paketi birleştirir.
  * Çıktı üç değerli değil: format hatası kesin RED'dir; INDETERMINATE yalnızca dış kaynak (liste/CDN) için.
  */
-import { compactVerify, decodeProtectedHeader, importJWK, importX509, jwtVerify, type JWK } from "jose";
+import { compactVerify, decodeProtectedHeader, errors, importJWK, importX509, jwtVerify, type JWK } from "jose";
 import {
   BasicConstraintsExtension,
   KeyUsageFlags,
@@ -53,13 +53,14 @@ export type FormatStep = "A1" | "A2" | "A3" | "A4" | "A5" | "A6" | "A7";
 /** Belgenin `iat`'ı doğrulayıcı saatinden en fazla bu kadar ileride olabilir (saat kayması; KB-JWT penceresiyle aynı). */
 export const IAT_FUTURE_SKEW_SEC = 300;
 
-/** RFC 5280 §4.2.1.9 / §4.2.1.3: ara halka CA olmalı (basicConstraints cA=true), sertifika imzalayabilmeli (keyCertSign) ve
+/** RFC 5280 §4.2.1.9 / §4.2.1.3: ara halka CA olmalı (basicConstraints cA=true), sertifika imzalayabilmeli (KeyUsage uzantısı
+ *  VAR ve keyCertSign taşıyor — uzantının yokluğu serbestlik sayılmaz; RFC 5280 uyumlu CA sertifikası bu uzantıyı taşır) ve
  *  pathLenConstraint'i altındaki ara CA sayısını aşmamalı. `below` = bu halkanın altındaki ara CA sayısı (yaprak hariç). */
 function intermediateProblem(c: X509Certificate, below: number): string | null {
   const bc = c.getExtension(BasicConstraintsExtension);
   if (!bc?.ca) return "x5c intermediate is not a CA (basicConstraints)";
   const ku = c.getExtension(KeyUsagesExtension);
-  if (ku && !(ku.usages & KeyUsageFlags.keyCertSign)) return "x5c intermediate lacks keyCertSign";
+  if (!ku || !(ku.usages & KeyUsageFlags.keyCertSign)) return "x5c intermediate lacks keyCertSign";
   if (typeof bc.pathLength === "number" && below > bc.pathLength) return "x5c intermediate pathLenConstraint exceeded";
   return null;
 }
@@ -107,7 +108,12 @@ export interface VerifyOptions {
 
 export interface VerifyOk {
   ok: true;
-  claims: Record<string, unknown>; // _sd/_sd_alg kaldırılmış, disclosure'lar yerleştirilmiş
+  /**
+   * İmzalı gövdenin TAMAMI (_sd/_sd_alg kaldırılmış, disclosure'lar yerleştirilmiş): `iss`, `iat`, `cnf` ve iptal sırasını
+   * taşıyan `status` dahil. Biçim katmanının iç çıktısıdır — bir API yanıtına ya da kayda OLDUĞU GİBİ yazılmaz (SPEC-API-0001
+   * AP4). Güvenen tarafa verilecek değerler için `@tamga-network/verifier` `verifyPresentation` (yalnız istenen alanlar).
+   */
+  claims: Record<string, unknown>;
   disclosedClaimNames: string[]; // AP3: yalnızca adlar loglanır
   issuerId: string; // C15: x5c[0] parmak izinden
   leafFingerprint: string;
@@ -130,8 +136,14 @@ export interface VerifyOk {
 export interface VerifyFail {
   ok: false;
   failedStep: FormatStep;
+  /** Sabit ileti: başlık/gövde değeri ve kütüphane istisnası iletisi taşımaz (SPEC-API-0001 AP3); alan ADI taşıyabilir. */
   reason: string;
   checksPerformed: FormatStep[];
+  /**
+   * `true`: adım belgenin kusurundan değil, beklenmeyen bir iç hatadan (kütüphane, bozuk çapa sertifikası) düştü. Bu işlev yine
+   * `ok: false` döndürür (kabul yok); `@tamga-network/verifier` bunu RED değil DOĞRULANAMADI olarak raporlar (AP2).
+   */
+  internal?: true;
 }
 export type VerifyResult = VerifyOk | VerifyFail;
 
@@ -142,6 +154,11 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
     failedStep,
     reason,
     checksPerformed: done,
+  });
+  /** Beklenmeyen iç hata: nedene istisna iletisi girmez, yalnız hata türü (AP3). */
+  const internal = (failedStep: FormatStep, e: unknown): VerifyFail => ({
+    ...fail(failedStep, `internal error (${e instanceof Error ? e.name : typeof e})`),
+    internal: true,
   });
   const now = secondsOrNow(opt.now);
   const requireKb = opt.requireKb ?? true;
@@ -154,8 +171,8 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   let parts: ReturnType<typeof splitCombined>;
   try {
     parts = splitCombined(combined);
-  } catch (e) {
-    return fail("A1", String((e as Error).message));
+  } catch {
+    return fail("A1", "presentation is not a well-formed SD-JWT (Ş1)");
   }
   if (requireKb && !parts.kb) return fail("A1", "KB-JWT missing (C8)");
   done.push("A1");
@@ -167,10 +184,10 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   } catch {
     return fail("A2", "JWT header could not be decoded");
   }
-  if (header.alg !== "ES256") return fail("A2", `alg=${header.alg} (C1)`);
+  if (header.alg !== "ES256") return fail("A2", "alg is not ES256 (C1)");
   if (header.typ !== SD_JWT_TYP) {
     if (!(header.typ === LEGACY_SD_JWT_TYP && (opt.acceptLegacyVcSdJwtTyp ?? true)))
-      return fail("A2", `typ=${header.typ} (C13)`);
+      return fail("A2", "typ is not dc+sd-jwt (C13)");
   }
   if (!header.x5c?.length) return fail("A2", "x5c missing (C7)");
   done.push("A2");
@@ -181,12 +198,20 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   let leaf: X509Certificate;
   let anchorFingerprint: string | null = null;
   let chain: X509Certificate[] = [];
+  // Belgeden gelen sertifikalar okunamıyorsa belge bozuktur (RED). Okunduktan sonraki beklenmeyen hata (çağıranın verdiği çapa
+  // sertifikası bozuk, kütüphane hatası) belgenin kusuru değildir: `internal` (doğrulayıcıda DOĞRULANAMADI).
   try {
     leafDer = b64ToDer(header.x5c[0]);
     leaf = new X509Certificate(toAB(leafDer));
+    if (roots !== "none") chain = header.x5c.map((c) => new X509Certificate(toAB(b64ToDer(c))));
+  } catch {
+    return fail("A3", "x5c certificate unreadable");
+  }
+  const leafAlg = leaf.publicKey.algorithm as { name?: string; namedCurve?: string };
+  if (leafAlg.name !== "ECDSA" || leafAlg.namedCurve !== "P-256") return fail("A3", "x5c leaf key is not P-256");
+  try {
     if (roots !== "none") {
       // x5c: yaprak + (varsa) ara CA'lar, kök hariç (C7). Her halka bir sonrakince imzalanmış olmalı; son halka bir köke bağlanır.
-      chain = header.x5c.map((c) => new X509Certificate(toAB(b64ToDer(c))));
       for (let i = 0; i + 1 < chain.length; i++) {
         if (chain[i].issuer !== chain[i + 1].subject) return fail("A3", "x5c chain order broken");
         const bad = intermediateProblem(chain[i + 1], i);
@@ -197,7 +222,9 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
       const top = chain[chain.length - 1];
       const topFp = certFingerprintSha256Hex(b64ToDer(header.x5c[header.x5c.length - 1]));
       for (const rootDer of roots) {
-        // ADR-0036: dış listede imzacının kendisi çapa olabilir (ETSI LoTE hizmet sertifikası)
+        // ADR-0036: dış listede imzacının kendisi çapa olabilir (ETSI LoTE hizmet sertifikası) — tek sertifikalık x5c'de yaprak
+        // doğrudan çapadır. Kabul kararı yine güven katmanında: `issuerId` bu yapraktan türer ve C1 onu listede arar (Tamga
+        // kökünün kendisi belge veren olarak kayıtlı değildir → C1 RED).
         if (certFingerprintSha256Hex(rootDer) === topFp) {
           anchorFingerprint = topFp;
           break;
@@ -211,11 +238,17 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
       }
       if (!anchorFingerprint) return fail("A3", "x5c leaf does not chain to any of the given roots");
     }
+  } catch (e) {
+    return internal("A3", e);
+  }
+  try {
     const pub = await importX509(derToPem(leafDer), "ES256");
     const { payload: raw } = await compactVerify(parts.jwt, pub);
     payload = JSON.parse(new TextDecoder().decode(raw));
   } catch (e) {
-    return fail("A3", `signature/chain: ${(e as Error).message}`);
+    if (e instanceof errors.JWSSignatureVerificationFailed) return fail("A3", "JWT signature invalid");
+    if (e instanceof errors.JOSEError || e instanceof SyntaxError) return fail("A3", "JWT malformed");
+    return internal("A3", e);
   }
   if (typeof payload !== "object" || payload === null || Array.isArray(payload))
     return fail("A3", "JWT payload is not a JSON object");
@@ -242,7 +275,7 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
   // A4 — _sd_alg: yalnız sha-256; eksikse (RFC 9901 §4.1.1 varsayılanı) ancak çağıran izin verdiyse kabul (dış türler, B adımı)
   const sdAlgPresent = payload._sd_alg !== undefined;
   if (!sdAlgPresent && !opt.allowMissingSdAlg) return fail("A4", "_sd_alg missing (C2)");
-  if (sdAlgPresent && payload._sd_alg !== SD_ALG) return fail("A4", `_sd_alg=${String(payload._sd_alg)} (C2)`);
+  if (sdAlgPresent && payload._sd_alg !== SD_ALG) return fail("A4", "_sd_alg is not sha-256 (C2)");
   done.push("A4");
 
   // A5 — disclosure'lar: önce hash, sonra çöz (C4/C14); iç içe nesne ve dizi öğeleri (RFC 9901 §7.1); her disclosure tam bir
@@ -257,8 +290,9 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
     claims = r.claims;
     disclosedClaimNames = r.resolved.map((d) => d.path);
   } catch (e) {
+    // SdStructureError iletileri sabittir (yalnız alan ADI taşıyabilir — AP3); başka her hata beklenmeyen iç hatadır
     if (e instanceof SdStructureError) return fail("A5", e.message);
-    return fail("A5", (e as Error).message);
+    return internal("A5", e);
   }
   done.push("A5");
 
@@ -280,7 +314,12 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
       if (kbp.sd_hash !== sdHashOf(withoutKb)) return fail("A6", "sd_hash mismatch (C9)");
       kb = { aud: opt.aud, nonce: opt.nonce, iat: kbp.iat };
     } catch (e) {
-      return fail("A6", `KB-JWT: ${(e as Error).message}`);
+      if (e instanceof errors.JWTClaimValidationFailed)
+        return fail("A6", e.claim === "aud" ? "KB-JWT aud mismatch" : "KB-JWT claim invalid");
+      if (e instanceof errors.JWSSignatureVerificationFailed) return fail("A6", "KB-JWT signature invalid");
+      if (e instanceof errors.JOSEError || e instanceof TypeError || e instanceof SyntaxError)
+        return fail("A6", "KB-JWT malformed or holder key unusable");
+      return internal("A6", e);
     }
     done.push("A6"); // yalnız KB-JWT gerçekten doğrulandıysa (requireKb: false ve KB yoksa A6 yapılmış sayılmaz)
   }

@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-05
+last_updated: 2026-11-11
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -275,3 +275,35 @@ Migration: the `archive/` versions are replayed in order as contract calls; the 
 once consumers are updated), the `bits`/`size` format rule and the `list_view` monotonicity key; §6 the selection rule for the
 same `dns_name` in more than one national list and `relyingPartyByDnsName` in the read set; §7 the structured reassignment
 record (`reassigned_to`). Behaviour ships with `@tamga-network/trust` 0.8.1; the [[ADR-0075]] decision is unchanged.
+
+**Version note (2026-11-11; implementation notes — the rules are unchanged).** `@tamga-network/trust` and the list publisher
+0.8.3:
+
+- **§1.4, TL9 — the previous version comes from the signed file.** The publisher reads the next version number, the previous
+  version hash and the permanent `registered_at` / `status_history` of schemas from the **signed** `.jws` of the previous
+  publication, verifying its signature against the list signers named in the source. The unsigned `.json` copy is not read;
+  publication stops if the previous list's signature cannot be verified.
+- **TL1.** For the list operator (`lotl`, `tl-<cc>` and the LOTL national slots) the publisher requires
+  `status: "provisional"` and a non-empty `on_behalf_of`. The loader schema still recognises `designated`; publishing with that
+  value opens after the handover decision.
+- **TL2.** The record-removal check also counts root CAs, schemas (national list and LOTL) and, in records that stay in the
+  list, scopes, schema authorizations and `status_history` rows; an approved removal record carries them as optional counts
+  (`root_cas`, `schemas`, `scopes`, `schema_authorizations`, `status_history`; 0 if absent). When the version jumps by more than
+  one the loader cannot verify the hashes in between; it rejects only the contradiction "the jumping version names the last
+  seen version as its predecessor" (the full check uses the archive).
+- **TL11.** The publisher applies an allow-list of known fields per record type in the source: an unknown or computed field
+  (`client_id`, `rp_id`, `issuer_id`, `ca_id`, fingerprints — [[ADR-0034]] CI3) stops publication; it is not dropped silently.
+  The form of `contact` is checked (`support_uri` an https address, `email` an e-mail address, `phone` in international form);
+  whether an address belongs to a person cannot be checked by machine. The `--reason` text of the status commands (it enters
+  the list and the change log) passes the public-text filter: an e-mail address, a long digit sequence, a link or what looks
+  like a person's name is refused.
+- **§4 — form of `dns_name`.** Lower-case labels separated by dots; no trailing dot. A name that appears in two records of
+  one list is ambiguous ([[ADR-0075]] implementation note).
+- **§6 — anchor freshness in the directory loader.** `loadTrustSourceFromDir` uses **365 days** as the anchor-log freshness
+  limit when none is given (2 hours in the core loader): this path is also used with development and test folders where the
+  hourly heartbeat does not run. With this default a stopped anchor log does not make the source stale (freshness comes only
+  from the lists' `next_update`); a service that also wants anchor-log freshness as a condition passes the limit itself
+  (`anchorMaxAgeMs`, e.g. 2 hours) — the reference services use the default today. External lists: [[ADR-0036]] implementation note.
+- **Registration commands.** They run under `registry.lock` (refreshed while held); if list validation fails before a signed
+  list is written, the source file is restored and no line is written to the change log. Without the provisional-operator
+  value, publication stops in the real network ([[ADR-0070]] implementation note).

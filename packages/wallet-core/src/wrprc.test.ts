@@ -253,3 +253,76 @@ describe("belge verenin kayıt bilgisi (RPRC_22a/23, ETSI 472-3 §4.2.3)", () =>
     expect(checkIssuerRegistration(narrow, "v", [registrar.fp], epochMillis(NOW)).reason).toMatch(/does not cover/);
   });
 });
+
+describe("ikinci inceleme 0.8.3 — erişim sertifikası bağı ve süre (MR5 / WRC4)", () => {
+  /** İsteği verilen tarafın sertifikasıyla imzalar (saldırgan kendi sertifikasıyla imzalar) */
+  async function requestBy(signer: Party, verifierInfo: unknown[]) {
+    const enc = await generateKeyPair("ECDH-ES", { crv: "P-256", extractable: true });
+    const jwk = { ...(await exportJWK(enc.publicKey)), use: "enc" } as JWK;
+    const jwt = await new SignJWT({
+      client_id: `x509_hash:${createHash("sha256").update(signer.der).digest("base64url")}`,
+      response_type: "vp_token",
+      response_mode: "direct_post.jwt",
+      response_uri: "https://shop.example/vp/response",
+      nonce: "n".repeat(24),
+      dcql_query: {
+        credentials: [
+          { id: "student", format: "dc+sd-jwt", meta: { vct_values: ["urn:tamga:edu:StudentCredential:1"] } },
+        ],
+      },
+      client_metadata: { jwks: { keys: [jwk] } },
+      exp: Math.floor(Date.now() / 1000) + 300,
+      verifier_info: verifierInfo,
+    })
+      .setProtectedHeader({ alg: "ES256", typ: "oauth-authz-req+jwt", x5c: [signer.b64] })
+      .sign(signer.key);
+    return verifyRequestObject(jwt);
+  }
+
+  it("kendinden imzalı, kurum kimliği kopyalanmış erişim sertifikası + kurumun herkese açık kayıt sertifikası: güven verilince GEÇERSİZ", async () => {
+    // saldırgan: aynı organizationIdentifier ve aynı alan adı, ama kendi anahtarı — listede kayıtlı parmak izi `shop.fp`
+    const fake = await party("CN=shop.example, O=Shop, 2.5.4.97=VATTR-1234567890", "shop.example");
+    const cert = await wrprc(registrar, basePayload);
+    const req = await requestBy(fake, [{ format: "registration_cert", data: cert }]);
+    const r = checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW), undefined, {
+      registeredFingerprints: [shop.fp],
+    });
+    expect(r).toMatchObject({ present: true, valid: false, reason: "untrusted_access_certificate" });
+    expect(r.tradeName).toBeUndefined();
+    expect(r.purpose).toBeUndefined();
+    // kayıt yok (boş güven): bağ kurulamaz → geçersiz
+    expect(
+      checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW), undefined, {}).valid,
+    ).toBe(false);
+  });
+
+  it("kayıttaki erişim sertifikasıyla imzalanmış istek: güven verilince geçerli ve `signerTrusted: true`", async () => {
+    const req = await request([{ format: "registration_cert", data: await wrprc(registrar, basePayload) }]);
+    const r = checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW), undefined, {
+      registeredFingerprints: [shop.fp.toUpperCase()],
+    });
+    expect(r).toMatchObject({ present: true, valid: true, signerTrusted: true, tradeName: "Shop" });
+    expect(r.flags ?? []).not.toContain("registration_binding_unverified");
+  });
+
+  it("güven verilmezse (0.8.2 çağrısı) sonuç sessiz geçerli değildir: `signerTrusted: false` + `registration_binding_unverified`", async () => {
+    const req = await request([{ format: "registration_cert", data: await wrprc(registrar, basePayload) }]);
+    const r = checkRegistrationCerts(req, [registrar.fp], match(["is_enrolled"]), epochMillis(NOW));
+    expect(r.valid).toBe(true);
+    expect(r.signerTrusted).toBe(false);
+    expect(r.flags).toContain("registration_binding_unverified");
+  });
+
+  it("`exp` taşımayan kayıt sertifikası reddedilir (ADR-0026: iat ≤ şimdi < exp)", async () => {
+    const { exp: _exp, ...noExp } = basePayload;
+    const req = await request([{ format: "registration_cert", data: await wrprc(registrar, noExp) }]);
+    expect(checkRegistrationCerts(req, [registrar.fp], match([]), epochMillis(NOW))).toMatchObject({
+      valid: false,
+      reason: /expired|exp/,
+    });
+    const strExp = await request([
+      { format: "registration_cert", data: await wrprc(registrar, { ...noExp, exp: String(nowSec + 86400) }) },
+    ]);
+    expect(checkRegistrationCerts(strExp, [registrar.fp], match([]), epochMillis(NOW)).valid).toBe(false);
+  });
+});

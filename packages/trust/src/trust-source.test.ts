@@ -415,6 +415,14 @@ describe("TrustSource(list) taahhüt testleri", () => {
     const oldTl = await makeSet({ lotlVersion: 5, tlVersion: 1 }); // lotl sürüm boşluğu (zincir doğrulanamaz) kabul; tl eski
     await expect(oldTl.load(undefined, { versionMemory: mem })).rejects.toThrow(/TL2: tl-TR.*rollback/);
     expect(mem.get("lotl")?.version).toBe(3); // başarısız yükleme belleği ilerletmez
+    // 0.8.3: sürüm atlıyor (3 → 5) ama öncülü olarak son görüleni (v3) gösteriyor — sürüm ile özet zinciri çelişir, DUR
+    const jump = await makeSet({
+      lotlVersion: 5,
+      tlVersion: 3,
+      prevLotlHash: sha256Tag(utf8(v3.lotlJws)),
+      prevTlHash: sha256Tag(utf8(v2.tlJws)),
+    });
+    await expect(jump.load(undefined, { versionMemory: mem })).rejects.toThrow(/TL2: lotl version jumps 3 → 5/);
     // başka kökle imzalı set (farklı imzacı) varsayılan bellekte ayrı tutulur
     await expect((await makeSet()).load()).resolves.toBeTruthy();
   });

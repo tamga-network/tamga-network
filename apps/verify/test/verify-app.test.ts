@@ -216,6 +216,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         return { status: x.status, text: async () => responseBody };
       },
       now,
+      allowLocalDevHost: true, // test doğrulayıcısı http://verify.local — cüzdan http redirect_uri'yi yalnız bu seçenekle döndürür
     });
     expect(out.status).toBe(200);
     expect(out.redirectUri).toContain(`/p/${created.presentation_id}`);
@@ -642,15 +643,22 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const seen: string[] = [];
 
     // site kiti + politika ile sunum; cüzdan yalnızca istenen alanları + bu siteye özel takma adı gönderir
+    // Sunumu örnek sitenin sunucusu açar (/sample-site/start) ve başlatan tarayıcıya akış çereziyle bağlar; oturum yalnız o
+    // çerezle açılır (tarayıcının çerez kavanozu: flowCookie)
+    let flowCookie = "";
     const present = async (policy: string, o: { rpOverride?: string; noPseudonym?: boolean; expect?: string } = {}) => {
-      const created = (
-        await app2.inject({
-          method: "POST",
-          url: "/presentations",
-          headers: { accept: "application/json", "content-type": "application/json" },
-          payload: { policy_id: policy },
-        })
-      ).json() as { presentation_id: string; qr_payload: string };
+      const started = await app2.inject({
+        method: "POST",
+        url: "/sample-site/start",
+        headers: { "content-type": "application/json", ...(flowCookie ? { cookie: flowCookie } : {}) },
+        payload: { policy },
+      });
+      expect(started.statusCode).toBe(200);
+      const setFlow = ([] as string[])
+        .concat((started.headers["set-cookie"] as string | string[] | undefined) ?? [])
+        .find((c) => c.startsWith("tamga_site_flow="));
+      if (setFlow) flowCookie = setFlow.split(";")[0];
+      const created = started.json() as { presentation_id: string; qr_payload: string };
       const png = await app2.inject({ method: "GET", url: `/presentations/${created.presentation_id}/qr.png` });
       expect(png.headers["content-type"]).toContain("image/png");
       const uri = parseVpUri(created.qr_payload);
@@ -689,7 +697,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
         now,
       });
       expect(out.status).toBe(200);
-      const res = (await app2.inject({ method: "GET", url: `/presentations/${created.presentation_id}` })).json() as {
+      // sunumun sahibi örnek sitenin kendi kaydıdır: sonuç dış çağırana verilmez (HV2) — test saklanan sonuca bakar
+      const res = app2.presentations.get(created.presentation_id)!.result as unknown as {
         outcome: string;
         failed_reason: string | null;
         disclosed_claims: string[];
@@ -706,7 +715,7 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       app2.inject({
         method: "POST",
         url: "/sample-site/session",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...(flowCookie ? { cookie: flowCookie } : {}) },
         payload: { presentation_id: id },
       });
 
@@ -752,8 +761,8 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     const login = await present("site-signin");
     const s2 = await session(login.id);
     expect(s2.json()).toMatchObject({ ok: true, new: false });
-    // doğrulanmamış sunum → 400
-    expect((await session("prs_yok")).statusCode).toBe(400);
+    // bu tarayıcının başlatmadığı (bilinmeyen) sunum → 403
+    expect((await session("prs_yok")).statusCode).toBe(403);
     // ADR-0031: başka bir site için türetilmiş takma ad → RED (P1); takma adsız yanıt → RED; oturum açılmaz
     const other = await present("site-signin", { rpOverride: "baska-site.example", expect: "REJECTED" });
     expect((other.res as { failed_step?: string }).failed_step).toBe("P1");
@@ -767,6 +776,11 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
     process.env.TAMGA_ADMIN_TOKEN = "t";
     const audit = (await app2.inject({ method: "GET", url: "/audit", headers: { "x-admin-token": "t" } })).body;
     expect(audit).toContain("site.signup");
+    // E4/AP9 (ikinci inceleme): takma ad denetimi sonucu RED'e çevirdiyse denetim kaydı da RED'dir — ACCEPTED satırı kalmaz
+    const rows = (
+      JSON.parse(audit) as Array<{ verification_id?: string; outcome?: string; failed_step?: string }>
+    ).filter((e) => e.verification_id === `vrf_${other.id.slice(4)}`);
+    expect(rows.map((e) => [e.outcome, e.failed_step])).toEqual([["REJECTED", "P1"]]);
     expect(audit).not.toContain("Yılmaz");
     expect(audit).not.toContain("abc123");
     expect(audit).not.toContain(seen[0]); // takma ad değeri denetim kaydına yazılmaz
@@ -1630,6 +1644,9 @@ describe.skipIf(!ready)("apps/verify e2e", () => {
       const dreq = parseDcApiRequest(
         st.requests.find((r) => r.protocol === protocol)!,
         LOCAL,
+        {
+          allowLocalDevHost: true, // yerel http kökeni yalnız bu seçenekle (cüzdan çekirdeği 0.8.3)
+        },
       );
       const m = matchDcql(dreq.dcql, wallet.credentials).matches[0];
       const o = await respond({

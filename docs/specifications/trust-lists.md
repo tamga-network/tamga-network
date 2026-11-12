@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-05
+last_updated: 2026-11-11
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -270,4 +270,31 @@ Devir: yalnızca `operator` alanı değişir.
 tüketiciler güncellenince), `bits`/`size` biçim kuralı ve `list_view` monotonluk anahtarı; §6 aynı `dns_name`'in birden çok ülke
 listesinde seçim kuralı ve okuma setinde `relyingPartyByDnsName`; §7 devrin yapılı kaydı (`reassigned_to`). Davranış
 `@tamga-network/trust` 0.8.1 ile; [[ADR-0075]] karar içeriği değişmedi.
+
+**Sürüm notu (2026-11-11; uygulama notları — kural içeriği değişmedi).** `@tamga-network/trust` ve liste yayıncısı 0.8.3:
+
+- **§1.4, TL9 — önceki sürüm imzalı dosyadan.** Yayıncı sıradaki sürüm numarasını, önceki sürüm özetini ve şemaların kalıcı
+  `registered_at` / `status_history` değerlerini önceki yayının **imzalı** `.jws` dosyasından, imzasını kaynağın andığı liste
+  imzacılarına karşı doğrulayarak okur. İmzasız `.json` kopya okunmaz; imzası doğrulanamayan önceki listeyle yayın durur.
+- **TL1.** Yayıncı liste işletmecisinde (`lotl`, `tl-<cc>` ve LOTL ülke slotları) `status: "provisional"` ve dolu `on_behalf_of`
+  ister. Yükleyici şeması `designated` değerini tanımayı sürdürür; o değerle yayın devir kararından sonra açılır.
+- **TL2.** Kayıt silme denetimi kök CA'yı, şemayı (ülke listesi ve LOTL) ve listede kalan kayıtlardaki kullanım, şema yetkisi ve
+  `status_history` satırlarını da sayar; onaylı çıkarma kaydı bunları isteğe bağlı sayılarla taşır (`root_cas`, `schemas`,
+  `scopes`, `schema_authorizations`, `status_history`; yazılmamışsa 0). Yükleyici, sürüm birden fazla atladığında aradaki
+  özetleri doğrulayamaz; yalnız "atlayan sürüm öncülü olarak son görüleni gösteriyor" çelişkisini reddeder (tam denetim arşivle).
+- **TL11.** Yayıncı kaynakta her kayıt türü için bilinen alanların izin listesini uygular: bilinmeyen ya da hesaplanan alan
+  (`client_id`, `rp_id`, `issuer_id`, `ca_id`, parmak izleri — [[ADR-0034]] CI3) yayını durdurur, sessizce atılmaz. `contact`
+  biçimi denetlenir (`support_uri` https adresi, `email` e-posta adresi, `phone` uluslararası biçim); adresin bir kişiye ait olup
+  olmadığı makinece denetlenemez. Durum komutlarının `--reason` metni (listeye ve değişiklik günlüğüne girer) herkese açık metin
+  süzgecinden geçer: e-posta, uzun rakam dizisi, bağlantı ve kişi adı gibi görünen ifade reddedilir.
+- **§4 — `dns_name` biçimi.** Küçük harfli etiketler, noktayla ayrılmış; sonda nokta yok. Aynı listede iki kayıtta görünen ad
+  belirsizdir ([[ADR-0075]] uygulama notu).
+- **§6 — dizin yükleyicisinin çapa tazeliği.** `loadTrustSourceFromDir` çapa günlüğü tazelik sınırını verilmezse **365 gün** alır
+  (çekirdek yükleyicide 2 saat): bu yol saatlik heartbeat'in çalışmadığı geliştirme ve test klasörleriyle de kullanılır. Bu
+  varsayılanla çapa günlüğünün durması tazeliği bozmaz (tazelik yalnız listelerin `next_update`'inden gelir); çapa
+  günlüğünün tazeliğini de koşul yapmak isteyen servis sınırı (`anchorMaxAgeMs`, ör. 2 saat) kendisi verir — referans servisler
+  bugün varsayılanı kullanır. Dış listeler: [[ADR-0036]] uygulama notu.
+- **Kayıt komutları.** `registry.lock` altında çalışır (kilit tutulurken tazelenir); liste doğrulaması imzalı liste yazılmadan
+  başarısız olursa kaynak dosya eski hâline döner ve değişiklik günlüğüne satır yazılmaz. Geçici işletmeci değeri yoksa gerçek
+  ağda yayın durur ([[ADR-0070]] uygulama notu).
 

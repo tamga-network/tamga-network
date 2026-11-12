@@ -4,7 +4,7 @@ title: "“Tamga ile giriş yap” eklemek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-11
 summary: >
   Bir web sitesine Tamga ile kayıt ve giriş eklemek: sayfada `@tamga-network/verifier/web` kiti (QR / telefonda cüzdanı aç),
   sunucuda sonucun doğrulayıcıdan alınıp oturum açılması, kayıttan sonra passkey ile telefonsuz giriş. Çalışan örnek
@@ -55,6 +55,15 @@ const r = await fetch(`${VERIFIER}/presentations`, { method: "POST",
   body: JSON.stringify({ policy_id: policy }) }).then((x) => x.json());
 ```
 
+**Sunum kimliğini, başlatan tarayıcının oturumuna bağlayın.** `presentation_id` QR'da açıktır ve tek başına yetki değildir. Sunumu başlatan tarayıcıya rastgele bir akış çerezi verin, sunucuda çerez → sunum eşlemesini tutun ve oturumu yalnız bu eşlemedeki sunum için açın (3. adım). Aksi hâlde sunum kimliğini gören biri, başkasının cüzdanıyla onayladığı sunumu kendi tarayıcısında oturuma çevirebilir.
+
+```ts
+// POST /tamga/start — sunumu açtıktan hemen sonra
+const flow = crypto.randomBytes(18).toString("base64url");
+flows.set(flow, { presentationId: r.presentation_id, expires: Date.now() + 15 * 60_000 });
+res.setHeader("Set-Cookie", `tamga_flow=${flow}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=900`);
+```
+
 İstemci kimliği ([[t:x509_hash]]) sertifikanızdan hesaplanır. Takma ad ise sitenizin kayıtlı alan adına bağlıdır; sertifikayı
 yenileseniz de değişmez ([[ADR-0034]]).
 
@@ -89,7 +98,10 @@ Kit **doğrulama yapmaz** ve **değer görmez**: yalnızca `status_token` ile du
 ## 3. Sunucu: oturum açma
 
 ```ts
-// POST /oturum { presentation_id }  — yalnızca JSON kabul edin (CSRF), Origin aynı site olmalı
+// POST /oturum  — yalnızca JSON kabul edin (CSRF), Origin aynı site olmalı
+const flow = flows.get(cookies.tamga_flow);           // sunum kimliği gövdeden değil, akış çerezinden
+if (!flow || flow.expires < Date.now()) return res.status(403).send();
+const id = flow.presentationId;
 const r = await fetch(`${VERIFIER}/presentations/${id}`, { headers: await auth() }).then((x) => x.json());
 if (r.outcome !== "ACCEPTED") return res.status(400).send();       // INDETERMINATE → "tekrar deneyin"
 const { claims } = await fetch(`${VERIFIER}/presentations/${id}/claims`, { headers: await auth() }).then((x) => x.json());
@@ -101,6 +113,7 @@ Sonucu ve değerleri yalnızca sunumu açan site alabilir; sunum kimliğini bile
 
 Örnek sitede uygulanmış hâlleriyle (`apps/verify/src/routes/site.ts`) dikkat edilecekler:
 
+- **Başlatan tarayıcı:** oturum yalnız sunumu başlatan tarayıcıda açılır (akış çerezi → sunum eşlemesi). İstek gövdesinde gelen sunum kimliğine güvenmeyin.
 - **Tek kullanım:** bir sunum yalnızca bir oturum açar.
 - **Politika denetimi:** yalnızca kendi site politikalarınızla yapılmış sunumu kabul edin.
 - **Hesap anahtarı:** `claims.pseudonym`. Doğrulayıcı imzayı, `aud`/[[t:nonce]] değerlerini ve [[t:WIA]] kanıtını zaten

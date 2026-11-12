@@ -491,6 +491,16 @@ describe.skipIf(!havePki)("İstek nesnesi (jose imzalı, rp-verify x5c) → cüz
     // tarayıcı isteği QR ile gelirse açık hata
     expect(() => verifyRequestObject(jwt)).toThrow(/browser/);
   });
+  it("ikinci inceleme 0.8.3: DC API'de `http://localhost` / `127.0.0.1` kökeni yalnız `allowLocalDevHost` ile kabul edilir", async () => {
+    const { response_uri: _ru, ...noUri } = base;
+    for (const origin of ["http://localhost:4004", "http://127.0.0.1"]) {
+      const jwt = await sign({ client_id: CID, ...noUri, response_mode: "dc_api.jwt", expected_origins: [origin] });
+      const req = { protocol: DC_API_PROTOCOL, data: { request: jwt } };
+      expect(() => parseDcApiRequest(req, origin)).toThrow(/invalid calling origin/);
+      expect(() => parseDcApiRequest(req, origin, { allowLocalDevHost: false })).toThrow(/invalid calling origin/);
+      expect(parseDcApiRequest(req, origin, { allowLocalDevHost: true }).origin).toBe(origin);
+    }
+  });
   it("profil ihlalleri reddedilir: PE (PV1), şifresiz mod (PV3), redirect_uri (PV6), origin (PV4), x509_hash dışı önek", async () => {
     await expect(
       sign({ client_id: CID, ...base, presentation_definition: {} }).then(verifyRequestObject),

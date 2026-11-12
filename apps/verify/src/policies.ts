@@ -37,7 +37,13 @@ const TRUST_REVIEW: Policy["trust"] = {
  */
 export const CAMPUS_GROUP = process.env.TAMGA_VERIFY_CAMPUS_GROUP ?? "example-university-campus";
 export const TICKET_GROUP = process.env.TAMGA_VERIFY_TICKET_GROUP ?? "example-events-gate";
-const FRESH: Policy["freshness"] = { max_status_token_age_sec: 6 * 3600, max_trust_age_sec: 24 * 3600 };
+// max_anchor_lag_sec: bu servis çapa günlüğünü yerelden, dakikada bir okur; iptal listesi 2 dakikada bir yayımlanır ve çapası hemen
+// ardından yazılır (SPEC-CRED-0003 §5.2) → 10 dakika (beş yayın aralığı) bol paydır (paket varsayılanı 1 saat)
+const FRESH: Policy["freshness"] = {
+  max_status_token_age_sec: 6 * 3600,
+  max_trust_age_sec: 24 * 3600,
+  max_anchor_lag_sec: 600,
+};
 
 /** Bütün politikalar (iki ağın birleşimi). Bir sürecin kullandığı küme: `policiesFor(ağ)`. */
 export const POLICIES: Policy[] = [

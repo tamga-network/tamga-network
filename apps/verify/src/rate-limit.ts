@@ -25,6 +25,8 @@ export const DEFAULT_RATE_RULES = {
    */
   vpRequest: { burst: 300, perMin: 3000 },
   terminal: { burst: 300, perMin: 600 },
+  /** Örnek sitenin sunum başlatması (`/sample-site/start`; yalnız deneme vitrininde): her çağrı bir sunum kaydı açar. */
+  siteStart: { burst: 60, perMin: 120 },
 } satisfies Record<string, RateRule>;
 export type RateRules = Record<keyof typeof DEFAULT_RATE_RULES, RateRule>;
 
@@ -63,6 +65,23 @@ export class TokenBucketLimiter {
   retryAfterSec() {
     return Math.max(1, Math.ceil(60 / this.rule.perMin));
   }
+}
+
+/**
+ * İstemcinin kova anahtarı. Varsayılan: bağlantı adresi (`req.ip`) — vekil arkasında hep vekilin adresidir, yani tek ortak kova.
+ * `header` (`TAMGA_VERIFY_CLIENT_KEY_HEADER`) yapılandırılmışsa ve istek YEREL vekilden geliyorsa (bağlantı adresi geri döngü)
+ * vekilin o başlığa yazdığı değer anahtar olur: kovalar istemci başına ayrılır. Doğrudan gelen istekte başlık yok sayılır
+ * (istemci kendi yazabilir). Vekil başlığı her istekte kendi değeriyle EZMELİDİR. Değer saklanmaz ve loglanmaz; kova anahtarı
+ * yine süreç içi HMAC'tir (`TokenBucketLimiter`).
+ */
+export function clientKeyOf(
+  req: { ip?: string; headers: Record<string, unknown> },
+  header: string | undefined,
+): string {
+  const ip = req.ip ?? "";
+  if (!header || !(ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1")) return ip;
+  const v = req.headers[header.toLowerCase()];
+  return typeof v === "string" && v.length > 0 && v.length <= 128 ? `h:${v}` : ip;
 }
 
 /** Fastify preHandler: sınır aşılınca 429 (kişisel veri yok; adres loglanmaz). */

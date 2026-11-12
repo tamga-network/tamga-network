@@ -16,6 +16,8 @@ export const PASS_GRANT_TYP = "tamga-pass-grant+jwt";
 export const PASS_TOKEN_MAX_TTL_SEC = 60;
 /** Terminal ile telefon saati arasında izin verilen fark (sn) — gelecekten jeton bu kadarını aşamaz (AP13/WL12). */
 export const PASS_TOKEN_CLOCK_SKEW_SEC = 30;
+/** Jetonun `jti`'si için kabul edilen azami uzunluk (karakter); cüzdan 16 karakterlik rastgele değer üretir. */
+export const PASS_TOKEN_MAX_JTI_LENGTH = 128;
 
 export interface PassPolicy {
   terminal_group: string;
@@ -233,13 +235,14 @@ export class PassRegistry {
       return { ok: false, reason: "token unreadable" };
     }
     if (header.typ !== PASS_TOKEN_TYP || header.alg !== "ES256") return { ok: false, reason: "unexpected token type" };
-    let payload: { iss?: string; aud?: string; iat?: number; exp?: number; jti?: string };
+    let payload: { iss?: string; aud?: string; iat?: number; exp?: number; jti?: unknown };
     try {
       payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
     } catch {
       return { ok: false, reason: "token body malformed" };
     }
-    const rec = payload.iss ? this.grants.get(payload.iss) : undefined;
+    if (typeof payload !== "object" || payload === null) return { ok: false, reason: "token body malformed" };
+    const rec = typeof payload.iss === "string" && payload.iss ? this.grants.get(payload.iss) : undefined;
     if (!rec) return { ok: false, reason: "no pass registration (registration required)" };
     if (rec.terminalGroup !== opts.terminalGroup) return { ok: false, reason: "not for this terminal group" };
     if (opts.policyAllowed && !opts.policyAllowed(rec.policyId))
@@ -257,7 +260,10 @@ export class PassRegistry {
       return { ok: false, reason: "token issued in the future (check the phone clock)" };
     if (now > payload.exp) return { ok: false, reason: "token expired (show again)" };
     if (now > rec.validUntil) return { ok: false, reason: "pass registration expired" };
-    if (!payload.jti) return { ok: false, reason: "jti missing" };
+    // AP13: `jti` dize olmalı — nesne/dizi her ayrıştırmada yeni bir değerdir, tekrar listesinde (Map) hiç eşleşmez ve aynı jeton
+    // süresi içinde yeniden geçerdi. Uzunluk sınırı tekrar listesinin (ve dosyasının) şişirilmesini önler.
+    if (typeof payload.jti !== "string" || !payload.jti || payload.jti.length > PASS_TOKEN_MAX_JTI_LENGTH)
+      return { ok: false, reason: "jti missing or malformed" };
     try {
       const key = await importJWK(rec.cnf, "ES256");
       await compactVerify(token, key);

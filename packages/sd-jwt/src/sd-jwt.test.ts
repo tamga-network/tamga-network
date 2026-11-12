@@ -598,6 +598,52 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
       if (!r4.ok) expect(r4.failedStep).toBe("A3");
       if (!r4.ok) expect(r4.reason).toMatch(/intermediate not valid/);
     });
+    it("A3: KeyUsage uzantısı hiç olmayan ara CA RED (keyCertSign zorunlu, yokluğu serbestlik değil)", async () => {
+      const noKu = await mk("ICA no KeyUsage", root, [new BasicConstraintsExtension(true, undefined, true)]);
+      const r = await run(await mk("Leaf 5", noKu, LEAF), [noKu]);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.failedStep).toBe("A3");
+      if (!r.ok) expect(r.reason).toMatch(/keyCertSign/);
+    });
+    it("AP3: ret nedeni başlık/gövde değerini ve kütüphane iletisini taşımaz (sabit iletiler)", async () => {
+      const ica = await mk("ICA fixed", root, CA(1));
+      const leaf = await mk("Leaf fixed", ica, LEAF);
+      const s: IssuerSigner = {
+        x5c: [leaf, ica].map((k) => new Uint8Array(k.cert.rawData)),
+        sign: (h, p) => new CompactSign(p).setProtectedHeader(h as never).sign(leaf.keys.privateKey),
+      };
+      const opt = {
+        aud: AUD,
+        nonce: NONCE,
+        stateCode: "TR",
+        now: epochSeconds(NOW),
+        rootCertsDer: [new Uint8Array(root.cert.rawData)],
+      };
+      const badTyp = await verifySdJwtVc(await present(await craft(basePayload(), [], s, "SIZINTI-typ"), []), opt);
+      expect(badTyp.ok).toBe(false);
+      if (!badTyp.ok) expect(badTyp.reason).not.toMatch(/SIZINTI/);
+      const header = { alg: "ES256", typ: "dc+sd-jwt", x5c: s.x5c.map((d) => Buffer.from(d).toString("base64")) };
+      const algJwt = await s.sign(
+        header,
+        new TextEncoder().encode(JSON.stringify({ ...basePayload(), _sd_alg: "SIZINTI-alg" })),
+      );
+      const badAlg = await verifySdJwtVc(await present(`${algJwt}~`, []), opt);
+      expect(badAlg.ok).toBe(false);
+      if (!badAlg.ok) expect(badAlg.failedStep).toBe("A4");
+      if (!badAlg.ok) expect(badAlg.reason).not.toMatch(/SIZINTI/);
+      // imzası bozuk JWT: jose iletisi nedene girmez
+      const good = await present(await craft(basePayload(), [], s), []);
+      const [jwt, ...rest] = good.split("~");
+      const [h, p, sig] = jwt.split(".");
+      const flipped = sig.slice(0, -2) + (sig.endsWith("AA") ? "BB" : "AA");
+      const badSig = await verifySdJwtVc([`${h}.${p}.${flipped}`, ...rest].join("~"), opt);
+      expect(badSig.ok).toBe(false);
+      if (!badSig.ok) {
+        expect(badSig.failedStep).toBe("A3");
+        expect(badSig.reason).toBe("JWT signature invalid");
+        expect(badSig.internal).toBeUndefined();
+      }
+    });
   });
 });
 

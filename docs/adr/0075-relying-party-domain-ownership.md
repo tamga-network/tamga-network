@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-05
+last_updated: 2026-11-11
 summary: >
   ADR-0073 K4 doğrulayıcı kimliğini `rpId = keccak256(dns_name)` yaptı. Kontratta bu kimlik onu ilk kaydeden devletindir; başka
   bir devlet, alan adı kendisine ait olmayan bir doğrulayıcıyı önce kaydederek kimliği kapabilir ve iptal edilmiş bir kimlik bir daha
@@ -108,6 +108,14 @@ Adlar (kamuya açık ABI; mevcut adlandırma düzenine göre — `proposeNetwork
   onun ülkesini gösteriyorsa alır; aksi hâlde ad belirsizdir (`null`, kapalı güvenli). `SUSPENDED` iptal edilmemiş sayılır;
   hepsi iptalse durumu en son değişen kayıt döner. Başka ülkede iptal sonrası yeniden kayıt (RO2) ağ düzeyinde kayıt gelene
   kadar belirsiz kalır. Ayrıntı [[SPEC-TRUST-0001]] §6–§7; zincir–liste eşdeğerlik testinde fark 0.
+- **Uygulama notu (2026-11-11; karar içeriği değişmedi) — RO5'in uygulandığı yerler.** *Kayıt aracı* (`register rp`): ad,
+  kaynakta harf büyüklüğü ve sondaki nokta sayılmadan aranır. *Yayın* (`build`): kaynakta aynı ad iki kayıtta bulunuyorsa ya da
+  ad liste biçiminde değilse (küçük harfli etiketler, noktayla ayrılmış, sonda nokta yok) liste imzalanmaz. *Yükleyici*
+  (`@tamga-network/trust` 0.8.3): ad biçimi liste şemasında denetlenir; aynı ülke listesinde aynı ad iki kayıtta görünürse ad
+  belirsizdir (`null` — alan adıyla da istemci kimliğiyle de; önce ikinci kayıt birincinin yerini sessizce alıyordu).
+  *Ülkeler arası* kural yalnız yükleyicide ve yalnız yüklenen listeler arasında uygulanır ([[SPEC-TRUST-0001]] §6): yayıncı tek
+  ülke listesinin kaynağını görür, başka ülkenin listesiyle karşılaştırma yapmaz; tek ülke listesi yükleyen istemci başka
+  listedeki kaydı göremez. Ağ düzeyinde teklik zincir kaydıyla (RO1) sağlanır.
 
 # Durum
 

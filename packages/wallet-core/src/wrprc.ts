@@ -10,6 +10,12 @@
  * sertifikasıyla (`readerAuth`) kurulur (`checkProximityRegistration`). 0.6.0 ön-yayın düzeltmesi: okuyucu sertifikası kendisi
  * güvene bağlanmadan (imzalı listenin `root_cas`'ı ya da tarafın kaydındaki parmak izi) sonuç hiçbir zaman geçerli değildir —
  * kayıt sertifikası herkese açıktır; kendinden imzalı, kurum kimliği kopyalanmış bir okuyucu sertifikası ona bağlanamaz.
+ *
+ * 0.8.3 (ikinci inceleme; ADR-0056 MR5 / ADR-0026 WRC4): aynı kural uzak akışta ve Ek C'de — `checkRegistrationCerts` /
+ * `relevantRegistrationCerts` isteği imzalayan erişim sertifikasının güvenini (`signerTrust`: RP kaydındaki parmak izi ve/veya
+ * `root_cas`) alır; verilmişse yaprak ona bağlanmadan sonuç geçerli olmaz (`untrusted_access_certificate`). Verilmemişse sonuç
+ * `signerTrusted: false` ve `registration_binding_unverified` işaretini taşır: 3. adım yalnız metin eşitliğidir, bağ doğrulanmış
+ * DEĞİLDİR. Ayrıca `exp` taşımayan sertifika reddedilir (ADR-0026 K4: `iat` ≤ şimdi < `exp`).
  */
 import { parseWrprcCwt, verifyReaderAuth, type DecodedItemsRequest } from "@tamga-network/mdoc";
 import { b64Decode } from "./b64.js";
@@ -17,9 +23,9 @@ import { decodeJwt, verifyJwt } from "./jws.js";
 import { certFingerprintHex, p256PointFromCertDer } from "./sdjwt.js";
 import { certOrganizationIdentifier } from "./asn1.js";
 import { chainAnchored, type TrustAnchor } from "./anchors.js";
-import { fetchTrustSource, type TrustPins } from "./trustlist.js";
+import { fetchTrustSource, type TrustPins, type VerifiedTrust } from "./trustlist.js";
 import type { Http } from "./http.js";
-import type { Match, VpRequest } from "./oid4vp.js";
+import type { Match, TrustFetchOptions, VpRequest } from "./oid4vp.js";
 import { millisOrNow, type EpochMillis } from "@tamga-network/core/time";
 import {
   hasMalformedStatus,
@@ -36,8 +42,12 @@ const SKEW_SEC = 60;
  * Onay ekranının işaretleri. `registration_missing`: istek kayıt sertifikası taşımıyor (ret nedeni).
  * `registration_status_unknown` (ADR-0068 K5): sertifikanın iptal durumu denetlenemedi (durum listesi alınamadı, süresi dolmuş
  * kopya ya da durumlar verilmedi) — uyarı; sertifika iptal edilmişse sonuç zaten geçersizdir.
+ * `registration_binding_unverified` (0.8.3): çağıran isteği imzalayan erişim sertifikasının güvenini (`signerTrust`) vermedi —
+ * sertifikanın bu isteğe ait olduğu yalnız `organizationIdentifier` metin eşitliğiyle görüldü; kendinden imzalı bir kopya da bu
+ * eşitliği sağlar. Bu işaret varken ticari ad / amaç "doğrulanmış" diye gösterilmemeli ve veri gönderilmemelidir (WRC4).
  */
-export type RegistrationFlag = "registration_missing" | "registration_status_unknown";
+export type RegistrationFlag =
+  "registration_missing" | "registration_status_unknown" | "registration_binding_unverified";
 
 /**
  * Kayıt sertifikası olmayan isteğin kuralı (ADR-0056 K10): ret (`valid: false`, `reason: "registration_missing"`); cüzdan veri
@@ -73,6 +83,12 @@ export interface RegistrationCertCheck {
    */
   purpose?: string;
   purposeLocalized?: Record<string, string>;
+  /**
+   * 0.8.3: isteği imzalayan erişim sertifikası (Ek C'de okuyucu sertifikası) güvene bağlandı mı — `signerTrust` verildi ve yaprak
+   * RP kaydındaki parmak iziyle eşleşti ya da zinciri `root_cas`'a bağlandı. `false`: `signerTrust` verilmedi, bağ doğrulanmadı
+   * (`flags` `registration_binding_unverified` taşır). Sertifika yoksa ya da geçersizse alan yok.
+   */
+  signerTrusted?: boolean;
 }
 
 export interface Wrprc {
@@ -101,27 +117,40 @@ export interface Wrprc {
   }>;
 }
 
-/** LOTL `roles.registrar.signing_keys` → etkin anahtar parmak izleri (liste imzası doğrulanmış, S-13). Alınamazsa boş. */
+/**
+ * İmzası doğrulanmış LOTL'dan (`fetchTrustSource(...).lists`) bir ülkenin kayıt kurumu imza anahtarları:
+ * `roles.registrar.signing_keys` → etkin anahtar parmak izleri (küçük harf). Ağ isteği yok, hata yutma yok — boş dizi yalnız
+ * "bu ülke için etkin kayıt kurumu anahtarı yok" demektir (0.8.3; "liste alınamadı" çağıranın ayrı durumudur).
+ */
+export function registrarKeysOf(lists: Pick<VerifiedTrust, "lotl">, stateCode = "tr"): string[] {
+  const nl = (lists.lotl as unknown as { national_lists?: Array<Record<string, unknown>> }).national_lists?.find(
+    (n) => String(n.state_code).toLowerCase() === stateCode.toLowerCase(),
+  );
+  const keys = (nl?.roles as { registrar?: { signing_keys?: Array<{ fingerprint_sha256: string; status?: string }> } })
+    ?.registrar?.signing_keys;
+  return (keys ?? []).filter((k) => !k.status || k.status === "ACTIVE").map((k) => k.fingerprint_sha256.toLowerCase());
+}
+
+/**
+ * LOTL `roles.registrar.signing_keys` → etkin anahtar parmak izleri (liste imzası doğrulanmış, S-13); `registrarKeysOf`'un
+ * listeyi kendisi yükleyen ince sarmalayıcısı. Liste alınamaz ya da doğrulanamazsa boş dizi — iki durumu ayırmak için
+ * `{ throwOnListError: true }` (hata fırlatılır) ya da listeyi bir kez yükleyip `registrarKeysOf` kullanın.
+ */
 export async function fetchRegistrarKeys(
   trustBase: string,
   http: Http,
   pins: TrustPins,
   stateCode = "tr",
+  opts: TrustFetchOptions = {},
 ): Promise<string[]> {
+  let lists: VerifiedTrust;
   try {
-    const { lists } = await fetchTrustSource(trustBase, http, { pins, stateCode });
-    const nl = (lists.lotl as unknown as { national_lists?: Array<Record<string, unknown>> }).national_lists?.find(
-      (n) => String(n.state_code).toLowerCase() === stateCode.toLowerCase(),
-    );
-    const keys = (
-      nl?.roles as { registrar?: { signing_keys?: Array<{ fingerprint_sha256: string; status?: string }> } }
-    )?.registrar?.signing_keys;
-    return (keys ?? [])
-      .filter((k) => !k.status || k.status === "ACTIVE")
-      .map((k) => k.fingerprint_sha256.toLowerCase());
-  } catch {
+    ({ lists } = await fetchTrustSource(trustBase, http, { pins, stateCode }));
+  } catch (e) {
+    if (opts.throwOnListError) throw e;
     return [];
   }
+  return registrarKeysOf(lists, stateCode);
 }
 
 /** base64url → UTF-8 metin; geçersizse null. */
@@ -171,8 +200,9 @@ export function verifyWrprc(
   }
   if (typeof payload.iat !== "number" || payload.iat > nowSec + SKEW_SEC)
     return { ok: false, reason: "registration certificate not yet valid" };
-  if (typeof payload.exp === "number" && payload.exp <= nowSec)
-    return { ok: false, reason: "registration certificate expired" };
+  // ADR-0026 K4: `iat` ≤ şimdi < `exp` — `exp` taşımayan (ya da sayı olmayan) sertifika süresiz sayılmaz, reddedilir (0.8.3)
+  if (typeof payload.exp !== "number") return { ok: false, reason: "registration certificate without exp" };
+  if (payload.exp <= nowSec) return { ok: false, reason: "registration certificate expired" };
   const shape = shapeProblem(payload);
   if (shape) return { ok: false, reason: shape };
   return { ok: true, payload, signerDer: der, chainDer: chain };
@@ -288,6 +318,11 @@ export interface RelevantRegistrationCert {
  * K5 1–3 denetimi + bu sorguyu kapsayan sertifikalar (`credential_ids` yoksa hepsi; AB profili istek başına tek sertifika ve
  * `credential_ids`'siz gönderir — ETSI TS 119 472-2 RO-13…16 — başka doğrulayıcıların `credential_ids`'li isteği de okunur). Bir sertifika bile 1–3'ü geçmezse
  * `valid: false` (WRC4). Gömülü açıklama politikası (ADR-0046 K3) aynı sertifikalarla değerlendirilir.
+ *
+ * `signerTrust` (0.8.3; MR5 / WRC4): isteği imzalayan erişim sertifikasının (Ek C'de okuyucu sertifikasının) güveni — güven
+ * listesindeki RP kaydının erişim sertifikası parmak izi (`registeredFingerprints`) ve/veya imzalı listenin `root_cas`'ı
+ * (`trustAnchors`). Verilmişse yaprak bunlardan birine bağlanmadan sonuç geçerli olmaz (`untrusted_access_certificate`; boş
+ * nesne = kayıt yok → geçersiz). Verilmemişse `signerTrusted: false` döner: bağ yalnız metin eşitliğidir, doğrulanmamıştır.
  */
 export function relevantRegistrationCerts(
   req: VpRequest,
@@ -296,14 +331,23 @@ export function relevantRegistrationCerts(
   nowMs?: EpochMillis,
   /** ADR-0068 K5: `fetchRegistrationStatuses` sonucu; iptal → geçersiz, denetlenemedi → `statusUnknown` */
   statuses?: RegistrationStatusLookup,
+  signerTrust?: Partial<ReaderTrust>,
 ): {
   present: boolean;
   valid: boolean;
   reason?: string;
   certs: RelevantRegistrationCert[];
   statusUnknown?: boolean;
+  /** yalnız `valid: true` iken: erişim sertifikası güvene bağlandı mı (`signerTrust` verilmediyse `false`) */
+  signerTrusted?: boolean;
 } {
   const now = millisOrNow(nowMs);
+  // kayıt sertifikası herkese açıktır: kendinden imzalı, kurum kimliği kopyalanmış bir erişim sertifikası 3. adımın metin
+  // eşitliğini sağlar — yaprak güvene bağlanmadan sertifika bu isteğe "ait" sayılmaz (yakın alandaki kuralın aynısı)
+  const signerTrusted = signerTrust
+    ? chainAnchored(req.chainDer?.length ? req.chainDer : [req.leafDer], signerTrust)
+    : false;
+  const untrusted = !!signerTrust && !signerTrusted;
   // ISO/IEC 18013-7 Ek C: kayıt sertifikası DeviceRequest'te (`requestInfo.euWrprc`, CBOR); bağ okuyucu imzasının yaprağıyla
   // (`req.leafDer` — `parseDcApiMdocRequest` bu oturumun dökümüyle doğruladı). İstek başına tek sertifika, isteğin bütününe ait.
   if (req.annexC) {
@@ -325,11 +369,13 @@ export function relevantRegistrationCerts(
         reason: "registration certificate does not belong to the reader's certificate",
         certs: [],
       };
+    if (untrusted) return { present: true, valid: false, reason: "untrusted_access_certificate", certs: [] };
     const st = registrationStatusOf(v.payload, statuses);
     if (st === "revoked") return { present: true, valid: false, reason: "registration certificate revoked", certs: [] };
     return {
       present: true,
       valid: true,
+      signerTrusted,
       certs: [{ payload: v.payload, chainDer: v.chainDer }],
       ...(st === "unknown" ? { statusUnknown: true } : {}),
     };
@@ -357,6 +403,7 @@ export function relevantRegistrationCerts(
     const expectedSub = payload.intermediary?.sub ?? payload.sub;
     if (!orgId || !expectedSub || orgId !== expectedSub)
       return fail("registration certificate does not belong to the certificate that signed the request");
+    if (untrusted) return fail("untrusted_access_certificate");
     // ADR-0068 K5: iptal edilmiş sertifika isteği bütünüyle geçersiz kılar (WRC4)
     const st = registrationStatusOf(payload, statuses);
     if (st === "revoked") return fail("registration certificate revoked");
@@ -364,7 +411,7 @@ export function relevantRegistrationCerts(
     if (!e.credential_ids?.length || e.credential_ids.includes(match.queryId))
       certs.push({ payload, chainDer: v.chainDer });
   }
-  return { present: true, valid: true, certs, ...(statusUnknown ? { statusUnknown } : {}) };
+  return { present: true, valid: true, signerTrusted, certs, ...(statusUnknown ? { statusUnknown } : {}) };
 }
 
 /**
@@ -377,6 +424,13 @@ export function hasRegistrationCert(req: VpRequest): boolean {
   return Array.isArray(info) && info.some((e) => (e as { format?: unknown } | null)?.format === "registration_cert");
 }
 
+/**
+ * Uzak akışın (OpenID4VP `verifier_info`) ve Ek C'nin (`requestInfo.euWrprc`) kayıt sertifikası denetimi: K5 1–3 + izinli alanlar.
+ * `signerTrust` (0.8.3) VERİLMELİDİR: güven listesindeki RP kaydının erişim sertifikası parmak izi
+ * (`{ registeredFingerprints: [rp.access_cert_fingerprint_sha256] }`; kayıt yoksa `{}`) ve/veya `root_cas` çapaları. Verilirse
+ * yaprak ona bağlanmadan `valid: true` dönmez. Verilmezse (0.8.2 çağrı biçimi) sonuç `signerTrusted: false` ve
+ * `registration_binding_unverified` işaretini taşır — çağıran bunu "geçerli" saymamalıdır (WRC4).
+ */
 export function checkRegistrationCerts(
   req: VpRequest,
   registrarKeys: string[],
@@ -384,9 +438,10 @@ export function checkRegistrationCerts(
   nowMs?: EpochMillis,
   /** ADR-0068 K5: `fetchRegistrationStatuses(registrationStatusRefs(req, …), …)` sonucu */
   statuses?: RegistrationStatusLookup,
+  signerTrust?: Partial<ReaderTrust>,
 ): RegistrationCertCheck {
   const now = millisOrNow(nowMs);
-  const r = relevantRegistrationCerts(req, registrarKeys, match, now, statuses);
+  const r = relevantRegistrationCerts(req, registrarKeys, match, now, statuses, signerTrust);
   if (!r.present) return missingRegistrationPolicy();
   if (!r.valid) return { present: true, valid: false, reason: r.reason };
   const relevant = r.certs.map((c) => c.payload);
@@ -406,10 +461,15 @@ export function checkRegistrationCerts(
         if (mdoc) addClaimPath(allowed, cl.path, match.namespace ?? null);
         else if (typeof cl.path?.[0] === "string") allowed.add(cl.path[0]);
     }
+  const flags: RegistrationFlag[] = [
+    ...(r.statusUnknown ? (["registration_status_unknown"] as const) : []),
+    ...(r.signerTrusted ? [] : (["registration_binding_unverified"] as const)),
+  ];
   return {
     present: true,
     valid: true,
-    ...(r.statusUnknown ? { flags: ["registration_status_unknown"] as RegistrationFlag[] } : {}),
+    signerTrusted: r.signerTrusted === true,
+    ...(flags.length ? { flags } : {}),
     ...(relevant.length ? { allowedClaims: [...allowed] } : {}),
     tradeName: relevant[0]?.name,
     privacyPolicy: relevant[0]?.privacy_policy,
@@ -446,8 +506,9 @@ export function verifyWrprcCwt(
   const nowSec = Math.floor(now / 1000);
   if (typeof payload.iat !== "number" || payload.iat > nowSec + SKEW_SEC)
     return { ok: false, reason: "registration certificate not yet valid" };
-  if (typeof payload.exp === "number" && payload.exp <= nowSec)
-    return { ok: false, reason: "registration certificate expired" };
+  // ADR-0026 K4: `iat` ≤ şimdi < `exp` — `exp` taşımayan (ya da sayı olmayan) sertifika süresiz sayılmaz, reddedilir (0.8.3)
+  if (typeof payload.exp !== "number") return { ok: false, reason: "registration certificate without exp" };
+  if (payload.exp <= nowSec) return { ok: false, reason: "registration certificate expired" };
   const shape = shapeProblem(payload);
   if (shape) return { ok: false, reason: shape };
   return { ok: true, payload, signerDer: chain[0], chainDer: chain };

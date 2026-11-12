@@ -4,6 +4,7 @@
  */
 import { b64Decode, utf8 } from "./b64.js";
 import { WalletError, type Http, readJson } from "./http.js";
+import { isAllowedWebAddress } from "./web-address.js";
 import { decodeJwt, signJwt, verifyJwt } from "./jws.js";
 import { certFingerprintHex, p256PointFromCertDer } from "./sdjwt.js";
 import type { KeyProvider, PublicJwk } from "./keys.js";
@@ -134,11 +135,25 @@ async function resolveTokenEndpoint(
   return te;
 }
 
-/** QR/deep link/URL/JSON → offer kaynağı. Kabul: openid-credential-offer://?credential_offer_uri=… | ?credential_offer=… | https://… | {json} */
-export function parseOffer(input: string): { offerUri?: string; offer?: CredentialOffer } {
+/**
+ * QR/deep link/URL/JSON → offer kaynağı. Kabul: openid-credential-offer://?credential_offer_uri=… | ?credential_offer=… | https://… | {json}
+ * 0.8.3: teklif adresi ve gömülü teklifin `credential_issuer`'ı `https` olmalıdır — `http` varsayılan olarak reddedilir (ön
+ * yetkili kod ve belirteçler açık kanaldan gitmesin). Yerel geliştirme: `{ allowLocalDevHost: true }` ile yalnız yerel adrese
+ * (`isLocalDevHost`: localhost, .test / .local, özel IPv4) `http` kabul edilir.
+ */
+export function parseOffer(
+  input: string,
+  opts: { allowLocalDevHost?: boolean } = {},
+): { offerUri?: string; offer?: CredentialOffer } {
+  const web = (u: string, what: string) => {
+    if (!isAllowedWebAddress(u, opts.allowLocalDevHost))
+      throw new WalletError("invalid_offer", `${what} must use https`);
+    return u;
+  };
+  const inline = (o: CredentialOffer) => (web(o.credential_issuer, "credential_issuer"), o);
   const s = input.trim();
-  if (s.startsWith("{")) return { offer: checkOffer(parseJson(s)) };
-  if (s.startsWith("http://") || s.startsWith("https://")) return { offerUri: s };
+  if (s.startsWith("{")) return { offer: inline(checkOffer(parseJson(s))) };
+  if (s.startsWith("http://") || s.startsWith("https://")) return { offerUri: web(s, "offer address") };
   const q = s.indexOf("?");
   if (q < 0) throw new WalletError("invalid_offer", "offer link not recognised");
   // URLSearchParams kullanılmaz (RN polyfill'inde get() yok) — elle ayrıştırma
@@ -150,9 +165,9 @@ export function parseOffer(input: string): { offerUri?: string; offer?: Credenti
   if (params.credential_offer_uri) {
     if (!/^https?:\/\//.test(params.credential_offer_uri))
       throw new WalletError("invalid_offer", "credential_offer_uri is not a web address");
-    return { offerUri: params.credential_offer_uri };
+    return { offerUri: web(params.credential_offer_uri, "credential_offer_uri") };
   }
-  if (params.credential_offer) return { offer: checkOffer(parseJson(params.credential_offer)) };
+  if (params.credential_offer) return { offer: inline(checkOffer(parseJson(params.credential_offer))) };
   throw new WalletError("invalid_offer", "credential_offer(_uri) missing");
 }
 function decodeParam(v: string): string {

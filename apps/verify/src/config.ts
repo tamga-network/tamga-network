@@ -34,6 +34,12 @@ export interface VerifyConfig {
    * Gerçek ağda anahtarlar yönetici ucundan verilir (`POST /terminal/keys`, `terminal-keys.json`).
    */
   terminalKeys?: string;
+  /**
+   * Hız sınırı için istemci anahtarı başlığı (`TAMGA_VERIFY_CLIENT_KEY_HEADER`; varsayılan yok). Vekil istemci adresini
+   * iletmediğinden beyansız istekler tek kovaya düşer; vekil bu başlığa istemciyi ayıran bir değer yazarsa (her istekte ezerek)
+   * kovalar istemci başına ayrılır. Yalnız yerel vekilden gelen istekte okunur; değer saklanmaz, loglanmaz (rate-limit.ts).
+   */
+  clientKeyHeader?: string;
 }
 
 const SANDBOX_PORTAL = "https://sandbox.tamga.network";
@@ -83,5 +89,8 @@ export function loadVerifyConfig(root = resolve(import.meta.dirname, "../../..")
     zkNativeBin: e.TAMGA_ZK_NATIVE_BIN?.trim() || undefined,
     sandboxLive: e.TAMGA_SANDBOX_LIVE !== "0", // 2026-10-04 sandbox yayında: varsayılan açık
     terminalKeys,
+    clientKeyHeader: /^[a-z0-9-]{1,64}$/i.test(e.TAMGA_VERIFY_CLIENT_KEY_HEADER ?? "")
+      ? e.TAMGA_VERIFY_CLIENT_KEY_HEADER!.toLowerCase()
+      : undefined,
   };
 }

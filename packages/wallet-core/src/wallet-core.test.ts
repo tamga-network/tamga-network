@@ -98,6 +98,32 @@ describe("offer ayrıştırma", () => {
   });
 });
 
+describe("ikinci inceleme 0.8.3 — parseOffer http şemasını varsayılan olarak reddeder", () => {
+  const inline = (iss: string) => `{"credential_issuer":"${iss}","credential_configuration_ids":["v"]}`;
+  it("http teklif adresi, http `credential_offer_uri` ve http `credential_issuer` reddedilir", () => {
+    expect(() => parseOffer("http://issuer.example/offers/abc")).toThrow(/https/);
+    expect(() =>
+      parseOffer("openid-credential-offer://?credential_offer_uri=http%3A%2F%2Fissuer.example%2Foffers%2Fabc"),
+    ).toThrow(/https/);
+    expect(() => parseOffer(inline("http://issuer.example/x"))).toThrow(/https/);
+    expect(() =>
+      parseOffer(
+        `openid-credential-offer://?credential_offer=${encodeURIComponent(inline("http://192.168.1.5:4001/x"))}`,
+      ),
+    ).toThrow(/https/);
+  });
+  it("`allowLocalDevHost`: yalnız yerel geliştirme adresine http; internetteki ada yine ret", () => {
+    const dev = { allowLocalDevHost: true };
+    expect(parseOffer("http://192.168.1.5:4001/example-university/offers/abc", dev).offerUri).toContain("/offers/abc");
+    expect(parseOffer("http://localhost:4001/offers/abc", dev).offerUri).toContain("/offers/abc");
+    expect(parseOffer(inline("http://issuer.test/x"), dev).offer?.credential_issuer).toBe("http://issuer.test/x");
+    expect(() => parseOffer("http://issuer.example/offers/abc", dev)).toThrow(/https/);
+    expect(() => parseOffer(inline("http://issuer.example/x"), dev)).toThrow(/https/);
+    // https her zaman
+    expect(parseOffer("https://issuer.tamga.network/offers/abc").offerUri).toContain("/offers/abc");
+  });
+});
+
 describe.skipIf(!havePki)("SD-JWT VC yerel doğrulama + sunum (dev PKI)", () => {
   const leafPem = readFileSync(resolve(PKI, "issuer-bilgi.cert.pem"), "utf8");
   const keyPem = readFileSync(resolve(PKI, "issuer-bilgi.pkcs8.pem"), "utf8");

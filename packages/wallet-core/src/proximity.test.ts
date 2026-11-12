@@ -259,4 +259,45 @@ describe("presentProximity", () => {
     });
     expect(r).toMatchObject({ outcome: "error", reason: "disconnected" });
   });
+
+  it("ikinci inceleme 0.8.3 (WL5): yanıt gönderilirken taşıyıcı hata verirse imzalanan kopya 'kullanıldı' kalır", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const link = bleLink({ age_over_18: false });
+    const failing: ProximityTransport = {
+      ...link.transport,
+      send: async () => {
+        throw new Error("ble write failed");
+      },
+    };
+    const r = await presentProximity({
+      registrarKeys: false,
+      transport: failing,
+      state,
+      keys,
+      onQr: link.onQr,
+      approve: async () => ["age_over_18"],
+    });
+    expect(r).toMatchObject({ outcome: "error", reason: "ble write failed" });
+    // karşı taraf yanıtın bir kısmını almış olabilir: aynı kopya başka okuyucuya "kullanılmamış" diye verilmez
+    expect(r.state.credentials[0].copies.filter((c) => c.usedBy.length).length).toBe(1);
+    expect(r.state.presentationLog.at(-1)).toMatchObject({ clientId: "proximity", disclosed: [], outcome: "error" });
+  });
+
+  it("ikinci inceleme 0.8.3: süresi dolmuş belge yakın alanda da önerilmez", async () => {
+    const { state, keys } = await walletWithIdentity();
+    const past = Math.floor(Date.now() / 1000) - 10;
+    const s = { ...state, credentials: state.credentials.map((c) => ({ ...c, exp: past })) };
+    const link = bleLink({ age_over_18: false });
+    let asked = false;
+    const r = await presentProximity({
+      registrarKeys: false,
+      transport: link.transport,
+      state: s,
+      keys,
+      onQr: link.onQr,
+      approve: async () => ((asked = true), ["age_over_18"]),
+    });
+    expect(asked).toBe(false);
+    expect(r.outcome).toBe("declined");
+  });
 });

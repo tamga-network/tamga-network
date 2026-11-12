@@ -35,7 +35,14 @@ export interface Presentation {
    */
   branches: BranchSet;
   /** Son başarısız (tüketmeyen) yanıtın adımı ve nedeni — bekleyen sunumun durumunda RP'ye gösterilir; kişisel veri yok. */
-  lastAttempt?: { failed_step: string | null; failed_reason: string; at: number };
+  lastAttempt?: {
+    failed_step: string | null;
+    failed_reason: string;
+    at: number;
+    /** Denemenin sonucu: doğrulanamadıysa (AP2) nedeniyle birlikte — sınırda sunum REJECTED'a çevrilmez. */
+    outcome: "REJECTED" | "INDETERMINATE";
+    indeterminate_reason: VerificationResult["indeterminate_reason"];
+  };
   trace: TraceEntry[];
   result?: VerificationResult;
   resultAt?: number;

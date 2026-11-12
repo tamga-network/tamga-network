@@ -62,18 +62,18 @@ export async function verifyMdocZkFormat(
   let z: ReturnType<typeof parseZkDeviceResponse>;
   try {
     z = parseZkDeviceResponse(b64uToBytes(presentation));
-  } catch (e) {
-    return fail("A1", `ZK DeviceResponse could not be decoded: ${(e as Error).message}`);
+  } catch {
+    return fail("A1", "ZK DeviceResponse could not be decoded");
   }
   // A8 — docType politikada mı
-  if (!opt.expectedDocTypes.includes(z.docType)) return fail("A8", `docType not in policy: ${z.docType}`);
+  if (!opt.expectedDocTypes.includes(z.docType)) return fail("A8", "docType not in policy");
   // A2/A3 — kurum sertifikası, verilen köklerden birine zincirlenmeli; ispatın açık girdisi bu sertifikanın anahtarıdır
   const leafDer = z.msoX5chain[0];
   let leaf: X509Certificate;
   try {
     leaf = new X509Certificate(toAB(leafDer));
-  } catch (e) {
-    return fail("A2", `msoX5chain leaf unreadable: ${(e as Error).message}`);
+  } catch {
+    return fail("A2", "msoX5chain leaf unreadable");
   }
   try {
     let chained = false;
@@ -87,7 +87,13 @@ export async function verifyMdocZkFormat(
     }
     if (!chained) return fail("A3", "msoX5chain leaf does not chain to any of the given roots");
   } catch (e) {
-    return fail("A3", `chain: ${(e as Error).message}`);
+    // yaprak okundu; buradaki hata çağıranın verdiği çapa sertifikasından ya da kütüphaneden: belgenin kusuru değil (AP2)
+    return {
+      ok: false,
+      failedStep: "A3",
+      reason: `chain could not be checked (${e instanceof Error ? e.name : typeof e})`,
+      indeterminate: "CHAIN_UNREACHABLE",
+    };
   }
   // Belgenin imza anı gizli (ZK): sertifika ispat anında geçerli olmalı (kurum anahtarı o an kullanılabilir)
   if (opt.now * 1000 < leaf.notBefore.getTime() || opt.now * 1000 > leaf.notAfter.getTime())
@@ -115,8 +121,8 @@ export async function verifyMdocZkFormat(
   let pk: { pkx: string; pky: string };
   try {
     pk = coords(leafDer);
-  } catch (e) {
-    return fail("A3", (e as Error).message);
+  } catch {
+    return fail("A3", "issuer key is not P-256");
   }
   const transcript = opt.origin
     ? dcApiSessionTranscript(opt.origin, opt.nonce, opt.encJwkThumbprint ?? null)
@@ -141,10 +147,12 @@ export async function verifyMdocZkFormat(
       return {
         ok: false,
         failedStep: "Z1",
-        reason: `ZK verifier unavailable: ${(e as Error).message}`,
+        reason: "ZK verifier unavailable (circuit file or WASM backend missing or not matching the manifest)",
         indeterminate: "SDK_VERSION_MISMATCH",
       };
-    return fail("Z1", `ZK proof could not be processed: ${(e as Error).message}`);
+    // yalnız kendi sabit iletimiz (devre dosyası listedeki özetle tutmuyor — ZK2) nedene girer; kütüphane iletisi girmez (AP3)
+    const own = e instanceof Error && /\(ZK\d\)$/.test(e.message) ? e.message : null;
+    return fail("Z1", own ?? "ZK proof could not be processed");
   }
   if (code !== 0) return fail("Z1", `ZK proof rejected: ${ZK_CODES[code] ?? `code ${code}`}`);
 

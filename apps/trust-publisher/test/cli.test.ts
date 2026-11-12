@@ -181,3 +181,192 @@ describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", { timeout: 18
     writeFileSync(f, jws);
   });
 });
+
+/**
+ * 0.8.3 ikinci inceleme — yayın öncesi denetimler ve kayıt komutlarının geri alınması (gerçek süreç, geçici klasör; gerçek kayıt
+ * defterinin KOPYASI üzerinde). Her senaryoda imzalı liste yazılmadığı / kaynağın değişmediği dosyadan doğrulanır.
+ */
+describe.skipIf(!ready)("trust-publisher CLI — yayın öncesi denetimler (0.8.3)", { timeout: 300_000 }, () => {
+  const tmp = mkdtempSync(join(tmpdir(), "tamga-tp2-"));
+  const REG = join(tmp, "registry");
+  const DIST = join(tmp, "dist");
+  const SRC = join(REG, "tl-tr.source.json");
+  const run = (args: string[], extraEnv: Record<string, string> = {}) => {
+    const r = spawnSync(process.execPath, [TSX, CLI, ...args], {
+      cwd: ROOT,
+      encoding: "utf8",
+      env: { ...process.env, TAMGA_TP_REGISTRY: REG, TAMGA_TP_DIST: DIST, ...extraEnv },
+      timeout: 60_000,
+    });
+    return { code: r.status, out: r.stdout, err: r.stderr };
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type Rec = Record<string, any>;
+  const readSrc = () => JSON.parse(readFileSync(SRC, "utf8")) as Rec;
+  const json = (f: string) => JSON.parse(readFileSync(join(DIST, f), "utf8")) as Rec;
+  const payload = (f: string) =>
+    JSON.parse(
+      Buffer.from(readFileSync(join(DIST, f), "utf8").trim().split(".")[1], "base64url").toString("utf8"),
+    ) as Rec;
+  /** Kaynağı geçici olarak değiştirip `build` çalıştırır, sonra eski hâline döndürür. */
+  const buildWith = (file: string, change: (s: Rec) => void) => {
+    const path = join(REG, file);
+    const raw = readFileSync(path, "utf8");
+    const s = JSON.parse(raw) as Rec;
+    change(s);
+    writeFileSync(path, JSON.stringify(s, null, 2) + "\n");
+    try {
+      return run(["build"]);
+    } finally {
+      writeFileSync(path, raw);
+    }
+  };
+
+  beforeAll(() => {
+    cpSync(resolve(ROOT, "apps/trust-publisher/registry"), REG, { recursive: true });
+    mkdirSync(DIST);
+  });
+  afterAll(() => rmSync(tmp, { recursive: true, force: true }));
+
+  it("kaynak sorunluysa hiçbir liste imzalanmaz: işletmeci değeri yok (OP2), bilinmeyen / hesaplanan alan (TL11, CI3), yinelenen ad (RO5), işletmeci durumu (TL1)", () => {
+    // ADR-0070 OP2: gerçek ağ kayıt defterinde değer dosyası yoksa yayın durur (önce: denetim sessizce atlanıyordu)
+    const cfg = join(REG, "provisional-operator.json");
+    const cfgRaw = readFileSync(cfg, "utf8");
+    rmSync(cfg);
+    const op2 = run(["build"]);
+    writeFileSync(cfg, cfgRaw);
+    expect(op2.code).not.toBe(0);
+    expect(op2.err).toMatch(/ADR-0070.*provisional-operator\.json yok/);
+
+    const unknown = buildWith("tl-tr.source.json", (s) => (s.relying_parties[0].internal_note = "x"));
+    expect(unknown.code).not.toBe(0);
+    expect(unknown.err).toMatch(/TL11.*bilinmeyen alan "internal_note"/);
+
+    // CI3: kaynakta client_id yazılamaz — hesaplanan değeri ezemez
+    const cid = buildWith("tl-tr.source.json", (s) => (s.relying_parties[0].client_id = "x509_hash:" + "A".repeat(43)));
+    expect(cid.code).not.toBe(0);
+    expect(cid.err).toMatch(/bilinmeyen alan "client_id"/);
+
+    // RO5: aynı ad başka yazımla ikinci kayıtta
+    const dup = buildWith("tl-tr.source.json", (s) =>
+      s.relying_parties.push({ ...s.relying_parties[0], dns_name: "Verify.Tamga.Network." }),
+    );
+    expect(dup.code).not.toBe(0);
+    expect(dup.err).toMatch(/ADR-0075 RO5.*sonda nokta/);
+    expect(dup.err).toMatch(/iki kayıtta/);
+
+    const tl1 = buildWith("lotl.source.json", (s) => (s.operator.status = "designated"));
+    expect(tl1.code).not.toBe(0);
+    expect(tl1.err).toMatch(/TL1.*lotl operator.*provisional/);
+
+    expect(existsSync(join(DIST, "tl-tr.jws"))).toBe(false);
+    expect(existsSync(join(DIST, "lotl.jws"))).toBe(false);
+  });
+
+  it("sıradaki sürüm ve şema kayıt zamanı imzalı .jws'den okunur: imzasız .json kopya değiştirilse de etkilemez; imzası tutmayan önceki liste yayını durdurur", () => {
+    const b1 = run(["build"]);
+    expect(b1.code, b1.err).toBe(0);
+    const registeredAt = payload("lotl.jws").schemas[0].registered_at as string;
+    // imzasız okunabilir kopyalar kurcalanır
+    const tlJson = json("tl-tr.json");
+    writeFileSync(join(DIST, "tl-tr.json"), JSON.stringify({ ...tlJson, version: 41 }, null, 2));
+    const lotlJson = json("lotl.json");
+    lotlJson.version = 77;
+    lotlJson.schemas[0].registered_at = "2020-01-01T00:00:00.000Z";
+    lotlJson.schemas[0].status_history = [{ status: "ACTIVE", since: "2020-01-01T00:00:00.000Z" }];
+    writeFileSync(join(DIST, "lotl.json"), JSON.stringify(lotlJson, null, 2));
+    const b2 = run(["build"]);
+    expect(b2.code, b2.err).toBe(0);
+    expect(payload("tl-tr.jws").version).toBe(2); // 42 değil
+    expect(payload("lotl.jws").version).toBe(2); // 78 değil
+    expect(payload("lotl.jws").schemas[0].registered_at).toBe(registeredAt); // TL9: kalıcı, kopyadan etkilenmez
+    expect(payload("lotl.jws").schemas[0].status_history[0].since).toBe(registeredAt);
+
+    // önceki .jws'in imzası tutmuyorsa (gövde değişmiş) sürüm ondan okunmaz: yayın durur, dosyalar değişmez
+    const f = join(DIST, "tl-tr.jws");
+    const jws = readFileSync(f, "utf8");
+    const [h, p, s] = jws.trim().split(".");
+    const body = Buffer.from(p, "base64url").toString("utf8").replace('"version":2', '"version":1');
+    writeFileSync(f, [h, Buffer.from(body, "utf8").toString("base64url"), s].join("."));
+    const bad = run(["build"]);
+    expect(bad.code).not.toBe(0);
+    expect(bad.err).toMatch(/tl-tr\.jws: önceki yayımlanmış listenin imzası.*doğrulanamadı/);
+    writeFileSync(f, jws);
+    expect(payload("lotl.jws").version).toBe(2);
+  });
+
+  it("TL2: listede kalan kayıttan kullanım ya da durum geçmişi satırı silinirse yayın durur", () => {
+    const before = payload("tl-tr.jws").version;
+    const scope = buildWith("tl-tr.source.json", (s) => s.relying_parties[0].scopes.pop());
+    expect(scope.code).not.toBe(0);
+    expect(scope.err).toMatch(/TL2: tl-tr.*kullanım 1.*DURDU/s);
+    const hist = buildWith("tl-tr.source.json", (s) => {
+      s.issuers[0].status_history = [{ status: "ACTIVE", since: "2026-11-01T00:00:00Z", reason: "rewritten" }];
+    });
+    expect(hist.code).not.toBe(0);
+    expect(hist.err).toMatch(/TL2: tl-tr.*durum geçmişi satırı 1/s);
+    expect(payload("tl-tr.jws").version).toBe(before);
+  });
+
+  it("kayıt komutu: liste doğrulaması başarısızsa kaynak geri alınır ve günlüğe yazılmaz; --reason süzülür; kayıt kilidi beklenir", () => {
+    const raw = readFileSync(SRC, "utf8");
+    const version = payload("tl-tr.jws").version;
+    const base = readSrc().relying_parties[0] as Rec;
+    // Başvuru kayıt denetiminden geçer ama erişim sertifikasının SAN'ı bu alan adını taşımaz → `build` reddeder
+    const app = {
+      dns_name: "shop.example",
+      legal_name: "Example Shop Ltd",
+      trade_name: "Example Shop",
+      access_cert: "issuer-id",
+      uses_intermediaries: [base.dns_name],
+      identifiers: [{ scheme: "TR-VKN", value: "TR1234567890" }],
+      postal_address: { street_address: "Example St. 1", country: "TR" },
+      contact: { support_uri: "https://shop.example/support" },
+      service_description: { "en-US": "Example shop" },
+      is_public_sector_body: false,
+      entitlements: ["service_provider"],
+      supervisory_authority: base.supervisory_authority,
+      scopes: [
+        {
+          scope_id: "example-shop-1",
+          purpose: "Example purpose",
+          vct: base.scopes[0].vct,
+          claims: [],
+          privacy_policy_uri: "https://shop.example/privacy",
+        },
+      ],
+    };
+    const appFile = join(tmp, "rp-app.json");
+    writeFileSync(appFile, JSON.stringify(app));
+    const r = run(["register", "rp", appFile], { TAMGA_CONFIRM_PROD: "shop.example" });
+    expect(r.code).not.toBe(0);
+    expect(r.err).toMatch(/alan adı erişim sertifikasının SAN'ında yok/);
+    expect(r.err).toMatch(/kayıt geri alındı/);
+    expect(readFileSync(SRC, "utf8")).toBe(raw); // önce: reddedilen kayıt kaynakta kalıyordu
+    expect(readFileSync(join(DIST, "CHANGELOG.md"), "utf8")).not.toMatch(/shop\.example/); // ve günlükte "registered" görünüyordu
+    expect(payload("tl-tr.jws").version).toBe(version);
+    // bilinmeyen alan taşıyan başvuru kaynağa hiç yazılmaz (--check de görür)
+    writeFileSync(appFile, JSON.stringify({ ...app, account_manager: "x" }));
+    const unk = run(["register", "rp", appFile, "--check"]);
+    expect(unk.code).toBe(2);
+    expect(unk.err).toMatch(/bilinmeyen alan "account_manager"/);
+
+    // TL11: --reason herkese açık listeye ve günlüğe girer — e-posta / ad / numara taşıyan gerekçe reddedilir
+    const slug = readSrc().issuers[0].slug as string;
+    for (const reason of ["contact ali@example.com", "Requested by Ali Veli", "call 0555 123 45 67"]) {
+      const bad = run(["status", slug, "SUSPENDED", "--reason", reason], { TAMGA_CONFIRM_PROD: slug });
+      expect(bad.code, reason).toBe(2);
+      expect(bad.err, reason).toMatch(/--reason herkese açık listeye/);
+    }
+    expect(readFileSync(SRC, "utf8")).toBe(raw);
+
+    // kayıt komutu `registry.lock` alır: kilit başka süreçteyken (taze) yazmaz
+    mkdirSync(join(DIST, "registry.lock"));
+    const locked = run(["status", slug, "SUSPENDED", "--reason", "test"], { TAMGA_CONFIRM_PROD: slug });
+    rmSync(join(DIST, "registry.lock"), { recursive: true, force: true });
+    expect(locked.code).not.toBe(0);
+    expect(locked.err).toMatch(/registry\.lock: kilit alınamadı/);
+    expect(readFileSync(SRC, "utf8")).toBe(raw);
+    expect(payload("tl-tr.jws").version).toBe(version);
+  });
+});

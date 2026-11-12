@@ -8,7 +8,6 @@ The wallet core, for Node and React Native (Hermes): device keys per credential 
 npm install @tamga-network/wallet-core
 ```
 
-
 ## Secure defaults (0.7.0)
 
 - `respond` requires the `approval` that `checkRp` returns for the same request (no approval for impersonation, an inactive
@@ -23,6 +22,7 @@ npm install @tamga-network/wallet-core
   name rule (ADR-0075) compares records across the lists that are loaded, so with a single list the wallet cannot see an
   ambiguity with another country's list. The rule now lives inside the trust source (`@tamga-network/trust`) and takes effect
   for callers that load several national lists; nothing changes for a wallet that loads one.
+- Pass `signerTrust` to `checkRegistrationCerts` and do not send data while `registration_binding_unverified` is flagged. Mark copies inside `respond({ beforeSend })`. http offers, http `redirect_uri` and local Digital Credentials API origins need `allowLocalDevHost: true`. `parsePassGrant` takes `signerFingerprint`, `cnf` and `trust`. Load the list once and use `rpRecordOf` / `registrarKeysOf`. `HardwareKeyProvider` operations and `delete` can throw (`isHardwareUnavailable`). TS10 export defaults to 600,000 iterations.
 
 ## New in 0.8.2
 
@@ -48,7 +48,7 @@ npm install @tamga-network/wallet-core
 ## New in 0.7.4
 
 - Registration certificate status (ETSI TS 119 475; Tamga ADR-0068): `fetchRegistrationStatuses(refs, http, registrarKeys, {
-  cache, offline })` fetches each registrar status list once (signer must be a list registrar key, `exp` required, unexpired
+cache, offline })` fetches each registrar status list once (signer must be a list registrar key, `exp` required, unexpired
   cached copy used offline) and returns a lookup you pass to `checkRegistrationCerts`, `checkIssuerRegistration` and
   `checkProximityRegistration` (`presentProximity` option `registrationStatuses`). A revoked certificate makes the request
   invalid; an unchecked status adds the flag `registration_status_unknown` (show it as a warning). Helpers:

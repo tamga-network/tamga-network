@@ -18,7 +18,7 @@ export interface StoredCopy {
   usedBy: string[];
   /** D-CRED-5: aynı anahtara bağlı mdoc (base64url IssuerSigned). */
   mdoc?: string;
-} // usedBy: client_id'ler (WL5)
+} // usedBy: doğrulayıcının kalıcı kimliği — kayıtlı RP'de `dns_name` (ADR-0034 CI4, `stableRpKey`); kayıtsızda client_id (WL5)
 /** ADR-0044: ZK kopyası — kimlik belgesinin kısa ömürlü mdoc kopyası; yalnız ZK sunumunda (ZC1). Kendi cihaz anahtarına bağlı. */
 export interface ZkCopy {
   keyRef: string;
@@ -293,7 +293,13 @@ export function receiveCredentials(
   return { state: { ...state, credentials: [...state.credentials, credential] }, credential, verified: first };
 }
 
-/** WL5: aynı verifier'a her zaman aynı kopya; yeni verifier'a kullanılmamış kopya; tükenirse null (yeniden ihraç gerekir). */
+/**
+ * WL5: aynı verifier'a her zaman aynı kopya; yeni verifier'a kullanılmamış kopya; tükenirse null (yeniden ihraç gerekir).
+ * `clientId` doğrulayıcının kalıcı kimliğidir (`VpRequest.rpKey` — `stableRpKey`: kaydın `dns_name`'i; ADR-0034 CI4).
+ * SÖZLEŞME (0.8.3): seçilen kopya, sunum cihazdan ÇIKMADAN ÖNCE `markCopyUsed` ile işaretlenip depoya yazılır (`respond`'un
+ * `beforeSend` kancası) — yalnız başarılı teslimden sonra işaretlemek, sunumu alıp hata dönen doğrulayıcının gördüğü kopyayı
+ * başka doğrulayıcıya "kullanılmamış" diye verir.
+ */
 export function selectCopy(cred: StoredCredential, clientId: string): StoredCopy | null {
   return cred.copies.find((c) => c.usedBy.includes(clientId)) ?? cred.copies.find((c) => c.usedBy.length === 0) ?? null;
 }
@@ -312,7 +318,7 @@ export function markCopyUsed(state: WalletState, credId: string, keyRef: string,
     ),
   };
 }
-// ---------- D7: kopya tükenmesi ve kullanıcı-başlatmalı yenileme (SPEC-WALLET-0001 §4.3; WL7: otomatik yenileme YOK)
+// ---------- D7: kopya tükenmesi ve kullanıcı-başlatmalı yenileme (SPEC-WALLET-0001 §4.3). Sessiz yenileme: `autorefresh.ts` (WL7 / ADR-0023)
 /** §4.3: kalan kopya bu sayıya inince kullanıcıya bildirilir ("2 kullanım kaldı"). */
 export const LOW_COPIES = 2;
 
@@ -339,6 +345,11 @@ export function planCopy(cred: StoredCredential, clientId: string): CopyPlan {
 /**
  * Yenileme sonrası: yeni belge eskisinin yerini alır. Güvenlik: aynı tip ve aynı issuer olmalı. Eski belge ve ona bağlı geçiş
  * kartları (anahtarları silineceği için artık imzalanamaz) kaldırılır; çağıran `removedKeyRefs` anahtarlarını KeyProvider'dan siler.
+ * SIRA SÖZLEŞMESİ (0.8.3; `autoRefreshCredential`, `refreshZkCopies` ve `removeCredential` için de geçerli): bu işlevler durumu
+ * ve silinecek anahtar referanslarını DÖNDÜRÜR, anahtar silmez. Çağıran ÖNCE dönen durumu kalıcı yazar (`WalletStore.save`
+ * başarıyla bitmeli), SONRA anahtarları siler. Ters sırada, yazma başarısız olursa depoda hâlâ eski belge kaydı durur ama
+ * anahtarları silinmiştir — belge sunulamaz ve geri getirilemez. Anahtar silme hata verirse (`HardwareKeyProvider.delete`) kayıt
+ * yine doğrudur; artık anahtar sonraki açılışta yeniden silinebilir.
  */
 /**
  * D7 güvencesi: `newId` belgesi `oldId`'nin yerini alabilir mi? Yalnızca ikisi de varsa, farklıysa ve aynı tür + aynı kurumdansa.

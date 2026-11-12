@@ -158,3 +158,46 @@ describe("parseDcApiRequest — org-iso-mdoc (ISO/IEC 18013-7 Ek C)", () => {
     });
   });
 });
+
+describe("ikinci inceleme 0.8.3 — Ek C: yerel köken kapısı, okuyucu sertifikası bağı, süre", () => {
+  const LOCAL = "http://localhost:4004";
+  it("`http://localhost` / `127.0.0.1` kökeni yalnız `allowLocalDevHost` ile kabul edilir (Ek C dalı seçeneği düşürmez)", () => {
+    expect(() => parseDcApiRequest(request(items(), reader, LOCAL), LOCAL)).toThrow(/invalid calling origin/);
+    expect(() => parseDcApiRequest(request(items(), reader, "http://127.0.0.1:8080"), "http://127.0.0.1:8080")).toThrow(
+      /invalid calling origin/,
+    );
+    const ok = parseDcApiRequest(request(items(), reader, LOCAL), LOCAL, { allowLocalDevHost: true });
+    expect(ok.origin).toBe(LOCAL);
+    // seçenek açıkken de yerel olmayan http kökeni kabul edilmez
+    expect(() =>
+      parseDcApiRequest(request(items(), reader, "http://evil.example"), "http://evil.example", {
+        allowLocalDevHost: true,
+      }),
+    ).toThrow(/invalid calling origin/);
+  });
+
+  it("okuyucu sertifikası güvene bağlı değilse kayıt sertifikalı istek geçersiz; kayıtlı parmak iziyle geçerli; güven verilmezse işaret", async () => {
+    // kendinden imzalı, kurum kimliği kopyalanmış okuyucu sertifikası (aynı organizationIdentifier, başka anahtar)
+    const fake = await party("CN=verify.example, O=Verify, 2.5.4.97=VATTR-1234567890");
+    const forged = parseDcApiRequest(request(items({ requestInfo: { euWrprc: await cwt() } }), fake), SITE);
+    expect(
+      checkRegistrationCerts(forged, [registrar.fp], matchFor(["age_over_18"]), epochMillis(NOW), undefined, {
+        registeredFingerprints: [reader.fp],
+      }),
+    ).toMatchObject({ valid: false, reason: "untrusted_access_certificate" });
+    const real = parseDcApiRequest(request(items({ requestInfo: { euWrprc: await cwt() } })), SITE);
+    expect(
+      checkRegistrationCerts(real, [registrar.fp], matchFor(["age_over_18"]), epochMillis(NOW), undefined, {
+        registeredFingerprints: [reader.fp],
+      }),
+    ).toMatchObject({ valid: true, signerTrusted: true });
+    const legacy = checkRegistrationCerts(real, [registrar.fp], matchFor(["age_over_18"]), epochMillis(NOW));
+    expect(legacy).toMatchObject({ valid: true, signerTrusted: false });
+    expect(legacy.flags).toContain("registration_binding_unverified");
+  });
+
+  it("`exp` taşımayan CBOR kayıt sertifikası reddedilir", async () => {
+    const r = parseDcApiRequest(request(items({ requestInfo: { euWrprc: await cwt({ exp: undefined }) } })), SITE);
+    expect(checkRegistrationCerts(r, [registrar.fp], matchFor(["age_over_18"]), epochMillis(NOW)).valid).toBe(false);
+  });
+});

@@ -5,8 +5,13 @@
  * açıklama + holder anahtarıyla cihaz imzası (anahtar cihazdan çıkmaz) → şifreli yanıt → günlük. Ret: oturum sonu.
  *
  * 0.6.0 (ADR-0026 K5): istek kayıt sertifikası (`requestInfo.euWrprc`) ve okuyucu imzası (`readerAuth`) taşıyabilir; cüzdan onu
- * uzaktan akıştaki kurallarla doğrular (`view.registration`). Sertifika geçersizse kişiye sorulmadan ret; sertifika yoksa uyarı +
- * varsayılan "Paylaşma" (2028-08-11'den sonra ret). Cüzdandan cüzdana gösterimde (karşı taraf bir kişi) bu denetim yapılmaz.
+ * uzaktan akıştaki kurallarla doğrular (`view.registration`). Sertifika geçersizse ya da YOKSA kişiye sorulmadan ret (ADR-0056
+ * K10, 0.7.0: tarihe bağlı "uyarı + Paylaşma" geçişi kaldırıldı). Cüzdandan cüzdana gösterimde (karşı taraf bir kişi) bu denetim
+ * yapılmaz.
+ *
+ * Kopya (WL5): okuyucunun kalıcı bir kimliği yoktur (oturum anahtarı her seferinde yenidir), bu yüzden her oturum YENİ bir kopya
+ * harcar ve kullanılmamış mdoc kopyası kalmayınca oturum hatayla biter (sessiz yeniden kullanım yok). Kopya, yanıt gönderilmeden
+ * önce "kullanıldı" sayılır: gönderim yarıda kalsa da dönen durumda işaretlidir (0.8.3).
  */
 import { pidSdJwtName } from "@tamga-network/core/pid";
 import { epochMillis } from "@tamga-network/core/time";
@@ -55,9 +60,9 @@ export interface ProximityRequestView {
    */
   disclosurePolicy?: DisclosurePolicyResult;
   /**
-   * 0.6.0 (ADR-0026 K5): okuyucunun kayıt sertifikası denetimi. `flags` `registration_missing` ise onay ekranı uyarır ve
-   * `defaultChoice` "decline"dır; `allowedClaims` dışındaki istenen öğeler fazla istektir (uyarı). `valid: false` istekte
-   * `approve` çağrılmaz (cüzdan reddeder). Cüzdandan cüzdana gösterimde yok.
+   * 0.6.0 (ADR-0026 K5): okuyucunun kayıt sertifikası denetimi. `allowedClaims` dışındaki istenen öğeler fazla istektir (uyarı).
+   * `valid: false` istekte — sertifikasız istek dahil (`registration_missing`, ADR-0056 K10) — `approve` çağrılmaz: cüzdan
+   * reddeder, görünüm yalnız sonucu açıklamak içindir. Cüzdandan cüzdana gösterimde yok.
    */
   registration?: ProximityRegistrationCheck;
 }
@@ -84,7 +89,8 @@ export async function presentProximity(p: {
   now?: number;
   /**
    * ADR-0026 K5: kayıt kurumu anahtarları (`fetchRegistrarKeys`). `false` = kayıt sertifikası denetimi yok (yalnız cüzdandan
-   * cüzdana: karşı taraf bir kişi). Verilmezse boş liste: sertifikasız istek uyarıyla, sertifikalı istek doğrulanamaz → ret.
+   * cüzdana: karşı taraf bir kişi). Verilmezse boş liste: sertifikasız istek de (ADR-0056 K10), doğrulanamayan sertifikalı istek
+   * de kişiye sorulmadan reddedilir.
    */
   registrarKeys?: string[] | false;
   /**
@@ -137,6 +143,8 @@ export async function presentProximity(p: {
     }
   });
   let timer: ReturnType<typeof setTimeout> | undefined;
+  /** hata dönüşünün durumu: kopya imzalandıktan sonra işaretli + günlüklü durum (WL5; gönderim yarıda kalsa da) */
+  let stateOnError: WalletState = p.state;
   const offClose = p.transport.onClose?.((reason) => rejectMsg(new Error(reason)));
   const cleanup = async () => {
     offChunk();
@@ -185,11 +193,13 @@ export async function presentProximity(p: {
     }
     const [namespace, els] = Object.entries(item.nameSpaces)[0] ?? ["", {}];
     const requested = Object.keys(els);
-    // uzaktan sunumla aynı kural (matchDcql): iptal edilmiş VE askıdaki belge önerilmez
+    // uzaktan sunumla aynı kural (matchDcql): iptal edilmiş, askıdaki VE süresi dolmuş belge önerilmez
+    const nowSec = Math.floor((p.now ?? Date.now()) / 1000);
     const cred =
       p.state.credentials.find(
         (c) =>
           c.vct === item.docType &&
+          !(c.exp !== undefined && c.exp <= nowSec) &&
           !c.revokedLocally &&
           c.status?.value !== "revoked" &&
           c.status?.value !== "suspended" &&
@@ -217,7 +227,7 @@ export async function presentProximity(p: {
       ...(cred ? { disclosurePolicy: offlineDisclosurePolicy(cred) } : {}),
       ...(registration ? { registration } : {}),
     };
-    // ADR-0026 K5: geçersiz kayıt sertifikası (ya da 2028-08-11'den sonra sertifikasız istek) — kişiye sorulmadan ret
+    // ADR-0026 K5 / ADR-0056 K10: geçersiz kayıt sertifikası ya da sertifikasız istek — kişiye sorulmadan ret
     const chosen = cred && registration?.valid !== false ? await p.approve(view) : null;
     const rpKey = `proximity:${eng.bleServiceUuid}`;
     const log = (outcome: "sent" | "declined" | "error", disclosed: string[], state = p.state): WalletState => ({
@@ -242,6 +252,10 @@ export async function presentProximity(p: {
     if (!copy?.mdoc) throw new Error("no unused copy with an mdoc");
     const partial = discloseMdoc(b64uDecode(copy.mdoc), { [namespace]: disclose });
     const devSig = await deviceSignAsync(hs.transcript, item.docType, (tbs) => p.keys.sign(copy.keyRef, tbs));
+    // WL5: kopya gönderimden ÖNCE kullanıldı sayılır — yanıtın bir kısmı karşıya ulaşıp taşıyıcı hata verirse aynı kopya başka
+    // okuyucuya "kullanılmamış" diye verilmez
+    const used = markCopyUsed(p.state, cred.id, copy.keyRef, rpKey);
+    stateOnError = log("error", [], used);
     await send(
       holderSendResponse(
         hs,
@@ -249,9 +263,9 @@ export async function presentProximity(p: {
       ),
     );
     await cleanup();
-    return { state: log("sent", disclose, markCopyUsed(p.state, cred.id, copy.keyRef, rpKey)), outcome: "sent", view };
+    return { state: log("sent", disclose, used), outcome: "sent", view };
   } catch (e) {
     await cleanup();
-    return { state: p.state, outcome: "error", reason: (e as Error).message };
+    return { state: stateOnError, outcome: "error", reason: (e as Error).message };
   }
 }

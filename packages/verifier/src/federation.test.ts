@@ -438,12 +438,31 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     expect(result.failed_step).toBe("B2");
   });
 
-  it("imzacı LOTL'da sabitlenen değilse liste yüklenmez → çapa tanınmaz (A3/B2 RED)", async () => {
+  it("FD3: imzacı LOTL'da sabitlenen değilse liste yüklenmez → çapa tanınmaz; bu türe kefil liste kullanılamadığı için RED değil DOĞRULANAMADI (A3)", async () => {
     const { trust, warnings } = await federated({ signer: otherSigner });
     expect(warnings.some((w) => /not registered|not loaded/.test(w))).toBe(true);
     expect(trust.externalAnchorCertsDer?.()).toEqual([]);
-    const { result } = await presentPid(trust);
-    expect(result.outcome).toBe("REJECTED");
+    const { result, claims } = await presentPid(trust);
+    expect(result).toMatchObject({
+      outcome: "INDETERMINATE",
+      failed_step: "A3",
+      indeterminate_reason: "INDEXER_STALE",
+    });
+    expect(result.failed_reason).toMatch(/^external list \S+ stale or unavailable$/);
+    expect(claims).toBeNull();
+    // kullanılamayan liste bu türe kefil değilse (güven kaynağı null der) zincir hatası RED kalır
+    const unrelated: typeof trust = Object.create(trust);
+    unrelated.unavailableExternalListFor = () => null;
+    expect((await presentPid(unrelated)).result).toMatchObject({ outcome: "REJECTED", failed_step: "A3" });
+    // FD3, B2: zincir bir köke bağlandı ama tür katalogda yok ve çapa dış kurum olarak çözülemiyor — türe kefil liste
+    // kullanılamıyorsa DOĞRULANAMADI, değilse RED
+    const anchoredElsewhere: typeof trust = Object.create(trust);
+    anchoredElsewhere.externalAnchorCertsDer = () => [pidCa.der];
+    anchoredElsewhere.externalIssuerByAnchor = () => null;
+    const b2 = (await presentPid(anchoredElsewhere)).result;
+    expect(b2).toMatchObject({ outcome: "INDETERMINATE", failed_step: "B2", indeterminate_reason: "INDEXER_STALE" });
+    anchoredElsewhere.unavailableExternalListFor = () => null;
+    expect((await presentPid(anchoredElsewhere)).result).toMatchObject({ outcome: "REJECTED", failed_step: "B2" });
   });
 
   it("bayat dış liste (NextUpdate geçmiş): o listeye bağlı soru UNKNOWN → INDETERMINATE; Tamga listesi sağlıklı kalır", async () => {
@@ -452,6 +471,13 @@ describe.skipIf(!ready)("ADR-0036 federasyon — dış LoTE listesi + AB PID", (
     // bayat listenin çapası kök kümesine girmez; zincir için çapayı elle ekleyip kararın UNKNOWN olduğunu da gösteririz
     expect(trust.externalAnchorCertsDer?.()).toEqual([]);
     expect(trust.externalIssuerByAnchor?.(fp(pidCa.der), PID_VCT, Math.floor(Date.now() / 1000))?.tri).toBe("UNKNOWN");
+    // FD3: çağıran çapayı eklemese de (olağan yol) sonuç RED değil DOĞRULANAMADI
+    const { result } = await presentPid(trust);
+    expect(result).toMatchObject({
+      outcome: "INDETERMINATE",
+      failed_step: "A3",
+      indeterminate_reason: "INDEXER_STALE",
+    });
   });
 
   it("C3: dış kurumu politikanın ülkesi tanımıyorsa RED", async () => {

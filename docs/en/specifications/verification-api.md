@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-04
+last_updated: 2026-11-11
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -59,8 +59,8 @@ Verification proceeds in five layers. This table is **canonical**; [[ARCH-0003]]
 |---|---|
 | `A1` | Split the combined string on `~`; is there a KB-JWT. A1 also carries the caller's configuration errors (2026-11-04): e.g. on the Digital Credentials API path an `aud` that differs from the one derived from the page origin, or `origin` given together with `aud` = `client_id` — REJECTED with an explicit message |
 | `A2` | Header: `alg=ES256`, `typ=dc+sd-jwt`, is `x5c` present |
-| `A3` | `x5c` chain + JWT signature; root in `RootCARegistry` **`isChainAcceptable`** (ACTIVE or RETIRED); intermediates must be CAs (`basicConstraints cA=true`), carry `keyCertSign` and stay within `pathLenConstraint`; an `iat` more than 300 s in the future is REJECTED. **mdoc:** the `x5chain` leaf is either itself one of the listed anchors (a root CA or a service certificate from an external list) or is signed directly by one — intermediates are not accepted (ISO/IEC 18013-5 Annex B: the document signer certificate is issued directly by the IACA, path length 0; the EU PID/EAA mdoc profiles use the same chain) |
-| `A3b` | **`issuerId` is derived from the fingerprint of the `x5c` leaf certificate** — NOT from the `iss` claim (§1.2) |
+| `A3` | `x5c` chain + JWT signature: the leaf chains to one of the given trust anchors (the Tamga root CA or the anchor of an external list within its freshness). Intermediates must be CAs (`basicConstraints cA=true`), **must carry the KeyUsage extension with `keyCertSign`** (an intermediate without the extension is REJECTED) and stay within `pathLenConstraint`; an `iat` more than 300 s in the future is REJECTED. The status of the root CA is checked not here but at **`C1`**: the root the institution is bound to must be `ACTIVE` or `ROLLING_OVER` at the credential's `iat` and must never have been `REVOKED` ([[SPEC-ID-0002]] §3; a root retired later does not invalidate credentials issued earlier; a credential under a revoked root is rejected with code `C1`). In a single-certificate `x5c` the leaf itself may be the anchor (a service certificate in an external list, [[ADR-0036]]); `issuerId` is still derived from the leaf and `C1` looks it up in the list. If the caller deliberately turned the chain check off (`rootCertsDer: "none"`, SD-JWT VC only), A3 appears in `checks_skipped`, not in `checks_performed`. **mdoc:** the `x5chain` leaf is either itself one of the listed anchors (a root CA or a service certificate from an external list) or is signed directly by one — intermediates are not accepted (ISO/IEC 18013-5 Annex B: the document signer certificate is issued directly by the IACA, path length 0; the EU PID/EAA mdoc profiles use the same chain) |
+| `A3b` | **`issuerId` is derived from the fingerprint of the `x5c` leaf certificate** — NOT from the `iss` claim (§1.2). The `iss` consistency check needs the trust record, so it runs after the B steps and before `C1`, and is reported with this code |
 | `A3c` | Is the leaf certificate revoked in CRL/OCSP ([[SPEC-ID-0002]]) |
 | `A3d` | Is the `cnf` claim **present** — if not, REJECT (in Tamga KB is mandatory without exception) |
 | `A4` | `_sd_alg == "sha-256"` |
@@ -92,7 +92,7 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 | `C1` | `isCredentialAcceptable(issuerId, iat)` — **iat = the credential's `iat` claim** |
 | `C2` | `isCredentialSchemaAcceptable(issuerId, schemaId, iat)` — **cannot be skipped** |
 | `C3` | `isRecognizedBy(my own state, issuerId)` |
-| `C4` | Credential `category` claim ↔ the issuer class in the record: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ no claim; mismatch → REJECT ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18) |
+| `C4` | Credential `category` claim ↔ the issuer class in the record: PUB ↔ `urn:tamga:eaa:pub`, QUALIFIED ↔ `urn:tamga:eaa:qualified`, EAA (I1–I2) ↔ no claim; mismatch → REJECT ([[ADR-0010]] K5, [[SPEC-CRED-0002]]/C18). mdoc and ZK presentations carry no `category` field: C4 is not applied to these formats and appears in `checks_skipped`; it is not applied to an institution in an external list either ([[ADR-0036]]) |
 
 ## 1.D — Revocation layer → [[SPEC-CRED-0003]] §7
 
@@ -100,9 +100,9 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 |---|---|
 | `D1` | Read `status.status_list` (`idx`, `uri`). A ZK presentation (`mso_mdoc_zk`) carries no index: if the type bound by the proof is the short-lived ZK copy (`urn:tamga:id:ShortLivedIdentityAttestation:1`, type rule ≤ 24 hours, no revocation list — [[ADR-0044]] K5) the D steps do not apply and `status.value = NOT_APPLICABLE` (reason: short validity); an unmarked ZK presentation follows the rule below. A non-ZK credential without `status`: if the type schema says `uses_status_list: true` it is REJECTED (the revocation check is never skipped silently — [[ADR-0056]] K13), otherwise `NOT_APPLICABLE` |
 | `D2` | Take the Status List Token **from the prefetch cache** |
-| `D3` | Token signature; `sub == uri`; `iss` in the same chain of trust. Before the signature check the signer is pinned to the institution's ACTIVE status keys in the trusted list (`expectedSignerFingerprints` — [[ADR-0056]] K6); without a registered key `INDETERMINATE` |
+| `D3` | Token signature; `sub == uri`; `iss` in the same chain of trust. Before the signature check the signer is pinned to the institution's ACTIVE status keys in the trusted list (`expectedSignerFingerprints` — [[ADR-0056]] K6); without a registered key `INDETERMINATE`. A status key counts as a signer only inside its validity window (`valid_from`…`valid_to`, when given). If the cached body cannot be read as a token (for example the server's error page) the result is not REJECTED but `INDETERMINATE`/`STATUS_UNREACHABLE` |
 | `D4` | Freshness: `exp` not passed, token age (`now − iat`) within the policy's `max_status_token_age_sec` |
-| `D5` | Registry anchor: `contentHash` matches, `version` has not gone back (if the cache was fetched before the anchor, `INDETERMINATE`/`STATUS_STALE`; if after, `REJECTED`) |
+| `D5` | Anchor: does the token digest (`contentHash`) match the latest row for the list in the anchor log. The token carries no version field; rollback is detected by time. If the mismatching token is **older** than the anchor: `INDETERMINATE`/`STATUS_STALE` when the cache was fetched before the anchor (or within clock tolerance), `REJECTED` when it was clearly fetched after. If the mismatching token is **newer** than the anchor, that is the normal publication order (CDN first, then the anchor — [[SPEC-CRED-0003]] §5.2) and D5 appears in `checks_skipped`; the allowance is bounded: a token newer than the latest known anchor by more than `max_anchor_lag_sec` (+ clock tolerance) has an overdue anchor → `INDETERMINATE`/`STATUS_STALE`. If the list is not in the anchor log at all, the same allowance is counted from the credential's `iat`: D5 is skipped for a freshly issued credential, and the result is `INDETERMINATE`/`STATUS_STALE` once the allowance has passed. There is no anchor log for the status list of an institution in an external list; D5 is skipped ([[ADR-0036]]). `max_anchor_lag_sec` is a freshness field of the policy (§4.4): default 3600 s (the hourly cadence of the anchor log); Tamga Verify uses 600 s |
 | `D6` | Read `idx` with `bits=2`; anything other than `0x00` → REJECT |
 
 ## 1.E — Policy layer → local
@@ -111,13 +111,15 @@ A2 `msoX5chain` · A3 chain + certificate valid at proof time · A3b · Z1. A4�
 |---|---|
 | `E1` | Assurance threshold (e.g. `category=EDUCATION && assurance>=I2`) |
 | `E2` | Have all requested claims been disclosed |
-| `E3` | No RP scope overrun ([[SPEC-PROTO-0002]] §6). The RP registration is a required input: omission is REJECTED, `null` (unregistered RP) is REJECTED; `"none"` skips the step deliberately and E3 appears in `checks_skipped` ([[ADR-0056]] K4) |
-| `E4` | Audit record written — in `checks_performed` only when an audit sink (`audit`) was given and the record was written; otherwise in `checks_skipped` ([[ADR-0056]] K11) |
+| `E3` | No RP scope overrun ([[SPEC-PROTO-0002]] §6). The RP registration is a required input: omission is REJECTED, `null` (unregistered RP) is REJECTED; `"none"` skips the step deliberately and E3 appears in `checks_skipped` ([[ADR-0056]] K4). The scope check covers every selectively disclosed claim plus those always-visible claims that the policy asks for; both appear in `disclosed_claims` |
+| `E4` | Audit record written — in `checks_performed` only when an audit sink (`audit`) was given and the record was written; otherwise in `checks_skipped` ([[ADR-0056]] K11). If the audit sink fails, the verification result is still returned and E4 appears in `checks_skipped` |
 
 **Reading a yes/no attribute:** `isYes(output, claim)` returns `true` only when the outcome is `ACCEPTED` and the disclosed value
 is exactly `true` (e.g. `age_over_18`, plain or ZK presentation); a rejection, an indeterminate result, a missing value or another
 value such as `"true"`/`1` is `false` ([[ADR-0056]]). An access pass is issued only from an `ACCEPTED` output of this process
 (`PassRegistry.issue({ verified })` — K9).
+
+The `jti` of an access pass token is a string of at most 128 characters; a non-string or longer `jti` is rejected (AP13 replay list).
 
 ## 1.1 C1/C2 are time-bound
 
@@ -135,6 +137,8 @@ That is why both queries take the credential's **`iat`** value and ask "was it a
 verification is a **retrospective** operation — the credential was issued in the past, and the state of that day, not
 today's, is decisive.
 
+**ZK presentation (`mso_mdoc_zk`).** A zero-knowledge proof does not reveal when the credential was signed. On this path `C1` and `C2` are asked with the proof timestamp (the presentation time; it must be close to the verifier clock, within the clock tolerance): the institution and its authorisation for the type must be valid at presentation time. Because a short-lived ZK copy was issued at most 24 hours earlier ([[ADR-0044]]), the two moments differ by at most one day.
+
 ## 1.2 `issuerId` is derived from the certificate
 
 `A3b` is critical. If the verifier takes `issuerId` **from the `iss` claim**, **any** institution with a valid certificate under
@@ -144,12 +148,18 @@ valid with its own certificate, the chain is valid, `iss` is forged.
 Rule: `issuerId = keccak256(stateCode, SHA-256(x5c[0] DER))` — [[SPEC-ID-0002]]. The `iss` claim is used only for a
 **consistency check**: it must match the registered issuer's `metadataURI`; if it does not, REJECT.
 
+**`iss` is mandatory (SD-JWT VC).** For types in the Tamga catalogue a missing or empty `iss` is REJECTED at `A3b`; the value must equal the `issuer_url` field of the institution's trust list record exactly. mdoc and ZK presentations have no `iss` field; the binding comes from the certificate alone. For an institution in an external list ([[ADR-0036]]) the record has no address, so this check is not applied.
+
+**Local development flag (`allowLocalIssuerUrls`).** Off by default. When on, an `iss` that is a local address — `http://localhost` or an IPv4 address in 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12 or 192.168.0.0/16 — need not equal the registered address; the same relaxation applies to the `iss` of the status token. A public IP address is not local. Tamga Verify turns the flag on only when its public address is not `https`; it is off on the live verifier.
+
 ## 1.3 Order and short-circuit
 
 The steps are run **in order**. Execution stops at the first failure and that code is returned as `failed_step`.
 
 **Exception:** `E4` always runs — a rejected verification is logged as well (in a verifier with an audit sink; without one E4 is
 reported as skipped — [[ADR-0056]] K11).
+
+**How codes are reported (implementation note, 2026-11-11).** The reference implementation reports some steps under a neighbouring code: a missing `cnf` (`A3d`) is returned as `A3`, and a duplicate digest or a collision (`A8`) as `A5` for SD-JWT VC; for mdoc and ZK, `A8` means the document type (docType) is not in the policy. `A2` (legacy `typ` on a Tamga type) and `A4` (no `_sd_alg` on a Tamga type) are checked once it is known whether the type is in the catalogue, that is after `B2`; `A3b` (`iss` consistency) is checked once the trust record has been read, that is after `B6` — for a credential with more than one defect the returned code may not be the first one in order. On an unexpected exception `failed_step` is the first code of that layer (`T0`, `A1`, `B1`, `C1`, `D1`, `E1`). The A order for mdoc: A1 · A8 · A2 · A3 · A3b · A4, A7, A5 · A3d · A6.
 
 ## 1.4 Code stability
 
@@ -234,7 +244,7 @@ The difference between "this diploma is fake" and "I cannot check right now" is 
 |---|---|
 | `SCHEMA_UNREACHABLE` | [[SPEC-SCHEMA-0001]] §7 Ş3(c) |
 | `STATUS_UNREACHABLE` | [[SPEC-CRED-0003]] §7 Ş3(c) |
-| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 freshness threshold exceeded; or, at D5, the verifier's prefetch delay / clock-tolerance window / unreadable anchor time |
+| `STATUS_STALE` | [[SPEC-CRED-0003]] §8.2 freshness threshold exceeded; or, at D5, the verifier's prefetch delay / clock-tolerance window / unreadable anchor time / anchor lag window exceeded (the token is newer than the latest anchor by more than `max_anchor_lag_sec`, or the list has never been anchored) |
 | `CHAIN_UNREACHABLE` | Chain and indexer unreachable |
 | `INDEXER_STALE` | [[ARCH-0003]]/CMP4 |
 | `SDK_VERSION_MISMATCH` | [[ARCH-0005]] §4.2 M2; also at `Z1` when the verifier's own ZK component is unavailable (circuit file missing, WASM cannot be loaded) — the verifier's shortcoming, not the presentation's |
@@ -251,6 +261,10 @@ The following also give `INDETERMINATE`, not `REJECTED`:
   `STATUS_UNREACHABLE`; only with an explicit `true` is it accepted: `status.value = NOT_APPLICABLE`, with `status.reason` set.
   **When omitted the field means `false`** (`ADR-0044/ZC4`).
 
+- **The reason is a fixed message (2026-11-11):** `failed_reason` carries no value from the credential (for example `category`, `typ`, `_sd_alg`), no free text sent by the wallet and no library exception message; it may carry a claim **name**. If a certificate or signature that came with the credential cannot be read the result is REJECTED; an unexpected error after the certificates were read (a corrupt anchor given by the caller, a library fault) is `INDETERMINATE`.
+- **Unavailable external list ([[ADR-0036]] FD3):** when the chain does not reach any of the given roots (`A3`), or the type is not in the catalogue and the anchor does not resolve to an external institution (`B2`), and an external list that could vouch for the requested type is unavailable at that moment (not loaded or expired), the result is not REJECTED but `INDETERMINATE`/`INDEXER_STALE`. At `A3` the type is read from the policy, not from the unverified credential.
+- **Attempt limit on the hosted verifier:** responses that end `INDETERMINATE` before proof of possession also count as attempts; if the presentation closes because of them its result is `INDETERMINATE`, not `REJECTED`, and `indeterminate_reason` is kept (AP2). The `last_attempt` field of a pending presentation also carries the attempt's `outcome` and `indeterminate_reason`. Results produced outside the verification pipeline (the person declined, attempt limit) are written to the audit log too and E4 appears in `checks_performed`; the audit record always carries the same outcome as the returned result. The `error` of a wallet error response is recorded only when it is one of the codes defined by OpenID4VP; any other value is written as `wallet error`.
+
 ## 2.4 `disclosed_claims` — names only
 
 **Invariant AP3:** the result object does not carry claim **values**, only their **names**. Values are given to the calling
@@ -258,6 +272,8 @@ application through a separate channel and only when explicitly requested.
 
 Rationale: the result object is written to the audit record ([[ARCH-0004]] §5.2). If values leaked there, personal data would
 spread into the logging infrastructure.
+
+**Returned values (2026-11-11).** The caller (`claims`; §4.3 on the hosted verifier) receives only the verified values of the claims the policy **asks for** (`required_claims`). A claim the wallet disclosed in addition appears in `disclosed_claims` and is checked at E3, but its value is not returned. The technical fields of the credential — `iss`, `iat`, `exp`, `vct`, `category`, the holder's copy key `cnf` and `status`, which carries the revocation index — are never returned (AP4).
 
 ## 2.5 `idx` never appears
 
@@ -377,6 +393,8 @@ record, and access to this endpoint is authorised and logged separately.
 ```
 
 The policy feeds both the DCQL query ([[SPEC-PROTO-0002]] §4) and the `E1`–`E3` steps. A single source.
+
+`freshness.max_anchor_lag_sec` (optional, s): the D5 anchor lag window; 3600 when omitted. `freshness.max_clock_skew_sec` (optional, at most 600 s): clock tolerance; 120 when omitted.
 
 **Invariant AP6:** the `required_claims` in a policy cannot exceed the `scopes[]` (`allowedScopes`) of the RP's trust list record. The service
 checks this when the policy is saved and **rejects** a policy that exceeds them — over-asking is blocked when the policy is
@@ -526,6 +544,8 @@ Path-based: `/api/v1`. A breaking change opens `/v2`; `/v1` lives in parallel fo
 `429` + `Retry-After`. Recommendation: 100/min per institution for `/offers`, 1000/min for `/presentations`. Tamga Verify
 returns `429 rate_limited` + `Retry-After` on opening presentations (`/presentations`), the wallet response (`/vp/response`) and
 gate verification (`/terminal/verify`); the client address is not stored or logged.
+
+The sample site's start endpoint (`/sample-site/start`, sandbox only) is limited as well. Because the proxy does not forward the client address, unauthenticated requests share one bucket; if the proxy sends a client key header that it sets itself on every request (`TAMGA_VERIFY_CLIENT_KEY_HEADER`), buckets are separated per client. The header is read only on requests coming from the local proxy; its value is neither stored nor logged.
 
 ---
 

@@ -92,7 +92,11 @@ export type AutoRefreshResult =
   | { ok: true; state: WalletState; newId: string; changed: string[]; removedKeyRefs: string[] }
   | { ok: false; state: WalletState; revoked: boolean; reason: string; removedKeyRefs: string[] };
 
-/** Tek belgeyi sessizce yeniler. Ağ hatasında `revoked: false` (sonra yeniden denenir); kurum reddederse bağ kaldırılır. */
+/**
+ * Tek belgeyi sessizce yeniler. Ağ hatasında `revoked: false` (sonra yeniden denenir); kurum reddederse bağ kaldırılır.
+ * Anahtar silmez: `removedKeyRefs` çağırana döner. SIRA (0.8.3 sözleşmesi, `supersedeCredential` ile aynı): çağıran önce dönen
+ * `state`'i kalıcı yazar, yazma başarıyla bitince anahtarları siler — yeni kayıt diske inmeden eski kopya anahtarı silinmez.
+ */
 export async function autoRefreshCredential(p: AutoRefreshInput): Promise<AutoRefreshResult> {
   const now = p.now ?? Math.floor(Date.now() / 1000);
   const old = p.state.credentials.find((c) => c.id === p.credentialId);

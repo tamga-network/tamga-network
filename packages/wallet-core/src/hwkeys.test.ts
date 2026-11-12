@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { p256 } from "@noble/curves/nist.js";
 import {
+  HARDWARE_UNAVAILABLE,
   HardwareKeyProvider,
   MemoryKeyStore,
   SoftwareKeyProvider,
@@ -39,7 +40,7 @@ function fakeNative(storage: "secure_enclave" | "strongbox" | "tee" | "none" = "
 }
 
 describe("HardwareKeyProvider", () => {
-  it("yeni anahtar donanımda; imza doğrulanır; seviye secure_enclave/W3", async () => {
+  it("yeni anahtar donanımda; imza doğrulanır; seviye secure_enclave/W2 (SPEC-WALLET-0001 §2.2, ADR-0047 K5)", async () => {
     const native = fakeNative();
     const sw = new SoftwareKeyProvider(new MemoryKeyStore());
     const kp = new HardwareKeyProvider(native, sw, { platform: "ios 18" });
@@ -48,7 +49,7 @@ describe("HardwareKeyProvider", () => {
     expect(await sw.publicKey("k1")).toBeNull();
     const data = new TextEncoder().encode("merhaba");
     expect(verifyEs256(await kp.sign("k1", data), data, jwk)).toBe(true);
-    expect(await kp.attestation()).toMatchObject({ storage: "secure_enclave", level: "W3" });
+    expect(await kp.attestation()).toMatchObject({ storage: "secure_enclave", level: "W2" });
   });
 
   it("donanımda olmayan eski yazılım anahtarı çalışmaya devam eder", async () => {
@@ -241,5 +242,63 @@ describe("HardwareKeyProvider — cihaz doğrulaması (a3)", () => {
       platform: "ios",
     });
     expect(await plain.authenticate("x")).toBeNull(); // eski arka uç: doğrulama işlevi yok
+  });
+});
+
+describe("ikinci inceleme 0.8.3 — seviye etiketi, arka uç hatası, silme hatası", () => {
+  const sw = () => new SoftwareKeyProvider(new MemoryKeyStore());
+
+  it("StrongBox da W2'dir (W3 = sertifikalı WSCD); arka uç 'software' bildirirse {software, W1} — hiçbir yol W3 demez", async () => {
+    expect(await new HardwareKeyProvider(fakeNative("strongbox"), sw(), { platform: "a" }).attestation()).toMatchObject(
+      {
+        storage: "strongbox",
+        level: "W2",
+      },
+    );
+    const soft = { ...fakeNative(), info: async () => ({ storage: "software" as const, platform: "t" }) };
+    expect(await new HardwareKeyProvider(soft, sw(), { platform: "a" }).attestation()).toMatchObject({
+      storage: "software",
+      level: "W1",
+    });
+  });
+
+  it("`info()` bir kez hata verirse süreç boyunca yazılım anahtarına DÜŞÜLMEZ: açık hata, sonraki çağrıda yeniden denenir", async () => {
+    const native = fakeNative();
+    let fail = true;
+    const flaky: NativeKeyBackend = {
+      ...native,
+      info: async () => {
+        if (fail) throw new Error("bridge not ready");
+        return { storage: "secure_enclave", platform: "test" };
+      },
+    };
+    const software = sw();
+    const kp = new HardwareKeyProvider(flaky, software, { platform: "ios" });
+    await expect(kp.generate("k1")).rejects.toMatchObject({ code: HARDWARE_UNAVAILABLE });
+    expect(await software.publicKey("k1")).toBeNull(); // sessizce yazılım anahtarı üretilmedi
+    await expect(kp.attestation()).rejects.toMatchObject({ code: HARDWARE_UNAVAILABLE });
+    fail = false; // geçici hata geçti: aynı sağlayıcı donanıma döner
+    await kp.generate("k1");
+    expect(native.keys.has("k1")).toBe(true);
+    expect((await kp.attestation()).storage).toBe("secure_enclave");
+  });
+
+  it("başarısız donanım anahtarı silme çağırana bildirilir; anahtar arka uçta yoksa hata sayılmaz", async () => {
+    const native = fakeNative();
+    const broken: NativeKeyBackend = {
+      ...native,
+      delete: async () => {
+        throw new Error("keystore busy");
+      },
+    };
+    const software = sw();
+    const kp = new HardwareKeyProvider(broken, software, { platform: "ios" });
+    await kp.generate("k1");
+    await expect(kp.delete("k1")).rejects.toThrow(/keystore busy/);
+    expect(native.keys.has("k1")).toBe(true);
+    // arka uçta olmayan (yazılım) anahtar: yerel silme hata verse de yazılım anahtarı silinir ve hata fırlatılmaz
+    await software.generate("eski");
+    await kp.delete("eski");
+    expect(await software.publicKey("eski")).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-29
+last_updated: 2026-11-11
 summary: >
   Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -219,7 +219,18 @@ The rationale works in both directions:
 | **Same copy to the same verifier** | The verifier already knows who the person is (the application is named). Showing a different copy gains no unlinkability, it only spends copies. |
 | **Different copy to a different verifier** | If two verifiers collude, they cannot link through `cnf` and `idx` ([[SPEC-CRED-0003]] §9.4). |
 
-`verifier_id` is the [[t:x509_hash]] client identifier ([[SPEC-PROTO-0002]] §2.1) — a stable and verifiable key.
+`verifier_id` is the verifier's **permanent identity** in the trust list: the domain name in its record (`dns_name`;
+[[ADR-0034]] CI4). The [[t:x509_hash]] client identifier in the request ([[SPEC-PROTO-0002]] §2.1) changes when the access
+certificate is renewed, so it is not the key of the mapping. It is used instead only for a verifier whose record cannot be
+resolved (an unregistered verifier), because no domain name is known for it.
+
+**When a copy counts as used:** at the moment the presentation leaves the device. The wallet marks the copy persistently
+**before** sending. If the verifier receives the presentation and answers with an error, or the answer is lost on the way, the
+copy still belongs to that verifier; it is not given to another verifier as "unused".
+
+**Proximity and wallet to wallet:** a reader has no identity that lasts across sessions (the session key is new every time).
+Every proximity session therefore uses **a new copy**. When no unused copy is left, nothing is presented — a copy is not
+silently reused; the person refreshes the credential (§4.3).
 
 ## 4.2 A consistent disclosure set
 

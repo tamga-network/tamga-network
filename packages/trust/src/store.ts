@@ -163,6 +163,12 @@ export class TrustStore {
   relying_party_states = new Map<string, Set<string>>();
   /** dns_name → ülke kodu → o ülke listesindeki kayıt (ADR-0075 devri) */
   relying_party_records = new Map<string, Map<string, RelyingParty>>();
+  /**
+   * AYNI ülke listesinde birden çok kayıtta görünen `dns_name`'ler (0.8.3; ADR-0075 RO5). Yayıncı böyle bir listeyi imzalamaz;
+   * yine de yüklenirse hangi kaydın geçerli olduğu bilinemez — ad belirsizdir (ülkeler arası kuralla aynı cevap: null, kapalı
+   * güvenli). Önceki davranış ikinci kaydın birincisini sessizce ezmesiydi.
+   */
+  relying_party_duplicates = new Set<string>();
   /** issuer_id → kaydın ülke listesi (kapı grubu kurumunun `slug`'ı ülkeyle nitelenir; 2026-11-04) */
   issuer_states = new Map<string, string>();
   wallet_provider_keys = new Set<string>();
@@ -181,6 +187,7 @@ export class TrustStore {
    * güvenli. Hepsi iptal edilmişse belirsiz değildir.
    */
   relyingPartyAmbiguous(dnsName: string): boolean {
+    if (this.relying_party_duplicates.has(dnsName)) return true;
     const records = this.relying_party_records.get(dnsName);
     // kayıtlar ülke ülke tutulmamışsa (elle kurulan depo) yalnız görüldüğü liste sayısına bakılır
     if (!records) return (this.relying_party_states.get(dnsName)?.size ?? 0) > 1;
@@ -220,7 +227,11 @@ export class TrustStore {
       this.issuer_states.set(i.issuer_id, tl.state_code);
       this.issuer_schema_auth.set(i.issuer_id, i.schema_authorizations);
     }
+    const seenDns = new Set<string>();
     for (const rp of tl.relying_parties) {
+      // ADR-0075 RO5: aynı listede aynı ad ikinci kez → belirsiz (sessizce ezme yok)
+      if (seenDns.has(rp.dns_name)) this.relying_party_duplicates.add(rp.dns_name);
+      seenDns.add(rp.dns_name);
       this.relying_parties.set(rp.client_id, rp);
       const records = this.relying_party_records.get(rp.dns_name) ?? new Map<string, RelyingParty>();
       records.set(tl.state_code, rp);
@@ -242,10 +253,17 @@ export class TrustStore {
     const warnings: string[] = [];
     let n = 0;
     for (const e of lote.entities) {
-      const revocationFps = e.services
-        .filter((s) => s.role === "revocation")
-        .flatMap((s) => s.certsDer.map((d) => sha256Hex(d)));
-      const statusHosts = supplyPointHosts(e.services.filter((s) => s.role === "revocation" || s.role === "issuance"));
+      // FD2 (0.8.3): iptal hizmeti yalnız AYNI roldeki (kind) belge verme hizmetine bağlanır — kapsam dışı bir rolün iptal
+      // sertifikası kapsamdaki kaydın iptal listesi imzacısı olamaz. Aşağıda yalnız kapsamdaki roller işlendiğinden bağlanan
+      // iptal hizmeti de kapsamdadır. Erişim noktaları (iptal sunucuları) da aynı kuralla süzülür.
+      const revocationFpsOf = (kind: ExternalEntityKind) =>
+        e.services
+          .filter((s) => s.role === "revocation" && s.kind === kind)
+          .flatMap((s) => s.certsDer.map((d) => sha256Hex(d)));
+      const statusHostsOf = (kind: ExternalEntityKind) =>
+        supplyPointHosts(
+          e.services.filter((s) => (s.role === "revocation" || s.role === "issuance") && s.kind === kind),
+        );
       for (const svc of e.services) {
         if (svc.role !== "issuance" || !svc.kind) continue;
         if (!ptr.scope.entity_kinds.includes(svc.kind)) {
@@ -256,6 +274,8 @@ export class TrustStore {
           warnings.push(`${ptr.list_id}: ${svc.kind} without credential types in scope — ignored`);
           continue;
         }
+        const revocationFps = revocationFpsOf(svc.kind);
+        const statusHosts = statusHostsOf(svc.kind);
         for (const der of svc.certsDer) {
           const fp = sha256Hex(der);
           const ent: ExternalEntity = {

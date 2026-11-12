@@ -30,7 +30,6 @@ const { combined } = await issueSdJwtVc({
 const result = await verifySdJwtVc(presentation, { aud, nonce, stateCode: "TR", rootCertsDer }); // rootCertsDer required
 ```
 
-
 ## Secure defaults (0.7.0)
 
 - `verifySdJwtVc` requires `rootCertsDer`: the trust anchors, or `"none"` to skip the chain check deliberately (only when you

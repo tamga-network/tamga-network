@@ -6,8 +6,10 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { X509Certificate, createHash } from "node:crypto";
 import { certSanDnsNames, certP256Point } from "./asn1.js";
-import { certHasDnsName, fetchRpRecord } from "./oid4vp.js";
+import { certHasDnsName, fetchRpRecord, rpRecordOf } from "./oid4vp.js";
+import { fetchRegistrarKeys, registrarKeysOf } from "./wrprc.js";
 import {
+  fetchTrustSource,
   fetchVerifiedTrust,
   resetTrustSeen,
   type ListMark,
@@ -144,5 +146,36 @@ describe.skipIf(!ready)("S-13: imzalı güven listesi (cüzdan)", () => {
     await expect(
       fetchVerifiedTrust(BASE, httpFor({ "tl-tr.jws": oldJws }), { pins: { ...pins(), versionMemory: memory } }),
     ).rejects.toThrow(/rollback|older than/);
+  });
+});
+
+describe.skipIf(!ready)("ikinci inceleme 0.8.3 — 'liste alınamadı' ile 'kayıt yok' ayrımı", () => {
+  beforeEach(() => resetTrustSeen());
+  const bad = { lotlSigners: ["00".repeat(32)] };
+
+  it("`throwOnListError`: liste doğrulanamazsa hata (trust_error); kayıt yoksa null / anahtar yoksa []", async () => {
+    await expect(
+      fetchRpRecord(BASE, VERIFY_CID(), httpFor(), bad, "tr", { throwOnListError: true }),
+    ).rejects.toMatchObject({ code: "trust_error" });
+    await expect(fetchRegistrarKeys(BASE, httpFor(), bad, "tr", { throwOnListError: true })).rejects.toMatchObject({
+      code: "trust_error",
+    });
+    // liste sağlam, kayıt yok → null (hata değil)
+    expect(
+      await fetchRpRecord(BASE, `x509_hash:${"A".repeat(43)}`, httpFor(), pins(), "tr", { throwOnListError: true }),
+    ).toBeNull();
+    // seçenek verilmezse eski davranış: hata yutulur
+    expect(await fetchRpRecord(BASE, VERIFY_CID(), httpFor(), bad)).toBeNull();
+    expect(await fetchRegistrarKeys(BASE, httpFor(), bad)).toEqual([]);
+  });
+
+  it("`rpRecordOf` / `registrarKeysOf`: doğrulanmış kaynaktan saf okuma — `fetch*` ile aynı cevap", async () => {
+    const { source, lists } = await fetchTrustSource(BASE, httpFor(), { pins: pins() });
+    const viaFetch = await fetchRpRecord(BASE, VERIFY_CID(), httpFor(), pins());
+    expect(rpRecordOf(source, VERIFY_CID())).toEqual(viaFetch);
+    expect(rpRecordOf(source, "verify.tamga.network")).toEqual(viaFetch);
+    expect(rpRecordOf(source, `x509_hash:${"A".repeat(43)}`)).toBeNull();
+    expect(registrarKeysOf(lists)).toEqual(await fetchRegistrarKeys(BASE, httpFor(), pins()));
+    expect(registrarKeysOf(lists, "zz")).toEqual([]);
   });
 });

@@ -4,7 +4,7 @@ title: "Rəqəmsal cüzdan qaydaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-29
+last_updated: 2026-11-11
 summary: >
   Rəqəmsal cüzdanın açar, yerli yaddaş, ehtiyat nüsxə və təsdiq dizaynını müəyyən edir. Mərkəzi nəticə bir ZİDDİYYƏTİN həllidir: [[SPEC-CRED-0001]] §3 sənəd sahibi açarının təhlükəsiz zonadan çıxa bilməyəcəyini bildirir, lakin layihə qeydlərindəki "24 sözlük seed ilə ehtiyat nüsxə" dizaynı açarın bərpa oluna biləcəyini nəzərdə tuturdu. İkisi eyni anda doğru ola bilməz — seed-dən törədilə bilən sənəd sahibi açarı isə rəqəmsal sənədi ÖTÜRÜLƏ BİLƏN edərək holder binding boşluğunu arxa qapıdan geri qaytarır. Qərar: açarlar seed-dən törədilmir; ehtiyat nüsxə sənədləri və manifesti daşıyır, cihaz dəyişdikdə sənədlərin YENİDƏN VERİLMƏSİ tələb olunur. Bundan əlavə, toplu verilən nüsxələrin hər yoxlayan tərəf üçün sabit ("yapışqan") istifadəsi iki açıq məsələni birdən bağlayır.
 translation_of: SPEC-WALLET-0001
@@ -225,8 +225,18 @@ verifier_map: (verifier_id, vct) → copy_index
 | **Eyni yoxlayan tərəfə eyni nüsxə** | Yoxlayan tərəf onsuz da şəxsin kim olduğunu bilir (müraciət adlıdır). Fərqli nüsxə təqdim etmək korrelyasiyaya qarşı qazanc vermir, yalnız nüsxə sərf edir. |
 | **Fərqli yoxlayan tərəfə fərqli nüsxə** | İki yoxlayan tərəf əməkdaşlıq etsə, `cnf` və `idx` vasitəsilə uyğunlaşdırma apara bilməz ([[SPEC-CRED-0003]] §9.4). |
 
-`verifier_id`, [[t:x509_hash]] client identifier-idir ([[SPEC-PROTO-0002]] §2.1) —
-sabit və yoxlanıla bilən açar.
+`verifier_id` yoxlayan tərəfin etibar siyahısındakı **daimi kimliyidir**: qeydiyyatdakı domen adı (`dns_name`; [[ADR-0034]] CI4).
+Sorğudakı [[t:x509_hash]] client identifier-i ([[SPEC-PROTO-0002]] §2.1) giriş sertifikatı yeniləndikdə dəyişir; buna görə
+uyğunlaşdırmanın açarı o deyil. Yalnız qeydiyyatı tapılmayan (qeydiyyatsız) yoxlayan tərəfdə, domen adı məlum olmadığı üçün onun
+yerinə istifadə olunur.
+
+**Nüsxə nə vaxt istifadə olunmuş sayılır:** təqdimat cihazdan çıxdığı anda. Cüzdan nüsxəni göndərmədən **əvvəl** daimi olaraq
+işarələyir. Yoxlayan tərəf təqdimatı alıb xəta qaytarsa və ya cavab yolda itsə də, nüsxə həmin yoxlayan tərəfə aid qalır; başqa
+yoxlayan tərəfə "istifadə olunmamış" kimi verilmir.
+
+**Yaxın məsafə və cüzdandan cüzdana:** oxuyucunun sessiyalar arasında daimi kimliyi yoxdur (sessiya açarı hər dəfə yenidir).
+Buna görə hər yaxın məsafə sessiyası **yeni nüsxə** istifadə edir. İstifadə olunmamış nüsxə qalmayıbsa, təqdimat edilmir — nüsxə
+səssizcə təkrar istifadə olunmur; şəxs sənədi yeniləyir (§4.3).
 
 ## 4.2 Ardıcıl açıqlama dəsti
 

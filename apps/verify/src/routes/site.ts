@@ -3,8 +3,10 @@
  *  GET  /tamga-verifier.js        site kiti: `@tamga-network/verifier/web` paketlenmiş hâli (window.TamgaVerifier; <script> ile)
  *  GET  /presentations/:id/qr.png istek QR'ı (kişisel veri yok; yalnızca request_uri)
  *  GET  /demo-site                örnek site: kayıt (site-signup) / giriş (site-signin); oturum çerezi
- *  POST /demo-site/start          {policy} → sunumu SİTE SUNUCUSU açar (ADR-0017 K5: örnek site de RP kuralına uyar)
- *  POST /demo-site/session        {presentation_id} → doğrulanmış sunumun onaylanan alanları (bir kez) → hesap → çerez
+ *  POST /demo-site/start          {policy} → sunumu SİTE SUNUCUSU açar (ADR-0017 K5: örnek site de RP kuralına uyar) ve sunumu,
+ *                                 başlatan tarayıcıya bir akış çereziyle bağlar
+ *  POST /demo-site/session        doğrulanmış sunumun onaylanan alanları (bir kez) → hesap → çerez. Sunum kimliği akış çerezinden
+ *                                 çözülür: sunumu başlatmamış tarayıcı, kimliği bilse de (QR'da açıktır) oturum açamaz
  *  POST /demo-site/logout
  * D11 adım 2 — passkey (WebAuthn; ARF Topic 11 "pseudonym" yaklaşımı):
  *  POST /demo-site/passkey/register/options|verify   oturum açıkken bu cihaza passkey ekle
@@ -34,6 +36,7 @@ import type { VerifyContext } from "../app.js";
 import { demoSitePage, langOf } from "../html.js";
 import { findPolicy } from "../policies.js";
 import { createPresentation, startedJson, webOrigin } from "./presentations.js";
+import { clientKeyOf, rateLimited } from "../rate-limit.js";
 import { sandboxSampleSiteUrl } from "../config.js";
 
 interface Account {
@@ -49,6 +52,10 @@ interface Account {
 }
 const CHALLENGE_TTL_MS = 5 * 60_000;
 const SESSION_COOKIE = "tamga_site_session";
+/** Akış çerezi: sunumu başlatan tarayıcı. Değeri rastgeledir; sunucuda çerez → bu tarayıcının açtığı sunumlar eşlemesi tutulur. */
+const FLOW_COOKIE = "tamga_site_flow";
+const FLOW_TTL_MS = 15 * 60_000; // sunum ömrü (5 dk) + sonucun işlenmesi için pay
+const MAX_FLOW_PRESENTATIONS = 8; // bir tarayıcının aynı anda bekleyen sunumu (kayıt + giriş sekmeleri); eskisi düşer
 const SESSION_TTL_MS = 60 * 60_000; // çerez Max-Age ile aynı; sunucu tarafında da uygulanır (Y3)
 const MAX_PENDING = 10_000; // bekleyen challenge üst sınırı (bellek şişirme — Y3)
 // ADR-0033: `review-site-signup` yalnız mağaza incelemesi DEMO belgesini (I1) kabul eden kayıt; giriş yine `site-signin` (takma ad)
@@ -83,6 +90,35 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     }
     sessions.set(sid, { key, exp: Date.now() + SESSION_TTL_MS });
     return `${SESSION_COOKIE}=${sid}; Path=/; HttpOnly; SameSite=Lax; Max-Age=3600${secure}`;
+  };
+  // Akışlar: çerez değeri → bu tarayıcının başlattığı sunum kimlikleri (en yenisi sonda) + son geçerlilik
+  const flows = new Map<string, { pids: string[]; exp: number }>();
+  const flowOf = (req: { headers: Record<string, unknown> }) => {
+    const m = new RegExp(`(?:^|;\\s*)${FLOW_COOKIE}=([A-Za-z0-9_-]{16,64})(?:;|$)`).exec(
+      String(req.headers.cookie ?? ""),
+    );
+    const f = m ? flows.get(m[1]) : undefined;
+    if (!m || !f) return undefined;
+    if (f.exp <= Date.now()) {
+      flows.delete(m[1]);
+      return undefined;
+    }
+    return { id: m[1], ...f };
+  };
+  /** Sunumu tarayıcının akışına ekler; akış yoksa yenisini açar ve çerezini döndürür. */
+  const bindFlow = (req: { headers: Record<string, unknown> }, pid: string): string | undefined => {
+    const cur = flowOf(req);
+    const id = cur?.id ?? randomBytes(18).toString("base64url");
+    const pids = [...(cur?.pids ?? []), pid].slice(-MAX_FLOW_PRESENTATIONS);
+    if (!cur && flows.size >= MAX_PENDING) {
+      const now = Date.now();
+      for (const [k, v] of flows) if (v.exp <= now) flows.delete(k);
+      if (flows.size >= MAX_PENDING) flows.delete(flows.keys().next().value!);
+    }
+    flows.set(id, { pids, exp: Date.now() + FLOW_TTL_MS });
+    return cur
+      ? undefined
+      : `${FLOW_COOKIE}=${id}; Path=/sample-site; HttpOnly; SameSite=Lax; Max-Age=${FLOW_TTL_MS / 1000}${secure}`;
   };
   /**
    * CSRF (Y3): durum değiştiren site uçları yalnızca JSON kabul eder (CORS yok → başka siteden JSON gönderimi ön uçuşta
@@ -195,6 +231,8 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
   app.post("/sample-site/start", async (req, reply) => {
     if (!sameSiteJson(req as never))
       return reply.code(403).send({ ok: false, reason: "istek bu siteden gelmeli (JSON)" });
+    // Her çağrı bir sunum kaydı açar: istemci başına sınır (vekil istemci anahtarı vermiyorsa uç için genel tavan)
+    if (rateLimited(ctx.limits.siteStart, clientKeyOf(req, ctx.cfg.clientKeyHeader), reply)) return reply;
     const policyId = (req.body as { policy?: string }).policy ?? "";
     const policy = SITE_POLICIES.has(policyId) ? findPolicy(policyId, ctx.policies) : undefined;
     if (!policy) return reply.code(400).send({ ok: false, reason: "bu politika site girişi için değil" });
@@ -209,14 +247,23 @@ export function registerSiteRoutes(app: FastifyInstance, ctx: VerifyContext) {
     }
     const made = await createPresentation(ctx, policy, ctx.cfg.clientId, dcApiOrigin);
     if ("error" in made) return reply.code(400).send(made);
+    // Sunum, başlatan tarayıcının akışına bağlanır: `/session` yalnız bu çerezle gelen isteğe oturum açar
+    const flowCookie = bindFlow(req as never, made.p.req.presentationId);
+    if (flowCookie) reply.header("set-cookie", flowCookie);
     return startedJson(made.p, ctx.cfg.publicBase);
   });
 
   app.post("/sample-site/session", async (req, reply) => {
     if (!sameSiteJson(req as never))
       return reply.code(403).send({ ok: false, reason: "istek bu siteden gelmeli (JSON)" });
-    const { presentation_id } = req.body as { presentation_id?: string };
-    const p = presentation_id ? ctx.presentations.get(presentation_id) : undefined;
+    // Sunum kimliği QR'da açıktır ve tek başına yetki değildir: oturum yalnız sunumu BAŞLATAN tarayıcıda açılır. Kimlik akış
+    // çerezinden çözülür; gövdede gelen kimlik yalnız bu tarayıcının sunumlarından birini seçer (birden çok sekme).
+    const flow = flowOf(req as never);
+    const asked = (req.body as { presentation_id?: unknown } | undefined)?.presentation_id;
+    const presentation_id = asked === undefined ? flow?.pids[flow.pids.length - 1] : asked;
+    if (!flow || typeof presentation_id !== "string" || !flow.pids.includes(presentation_id))
+      return reply.code(403).send({ ok: false, reason: "bu sunum bu tarayıcıda başlatılmadı" });
+    const p = ctx.presentations.get(presentation_id);
     if (!p || !p.result || p.result.outcome !== "ACCEPTED")
       return reply.code(400).send({ ok: false, reason: "doğrulanmış sunum yok" });
     if (p.consumedBySite) return reply.code(400).send({ ok: false, reason: "sunum zaten kullanıldı" });

@@ -17,7 +17,15 @@ import type { PresentationLogEntry, WalletEvent, WalletState } from "./store.js"
 
 export const TS10_ALG = "PBES2-HS256+A128KW";
 export const TS10_ENC = "A128GCM";
-export const TS10_DEFAULT_ITERATIONS = 200_000;
+/** Dışa aktarmanın varsayılan PBKDF2-HMAC-SHA256 yineleme sayısı (0.8.3: 600 000 — OWASP güncel önerisi; önce 200 000). */
+export const TS10_DEFAULT_ITERATIONS = 600_000;
+/** Dışa aktarmanın alt sınırı (ADR-0027 K1: "PBKDF2 en az 200 000 yineleme") — altı reddedilir (0.8.3; önce denetlenmiyordu). */
+export const TS10_MIN_ITERATIONS = 200_000;
+/**
+ * İçe aktarmanın alt sınırı: daha az yinelemeyle şifrelenmiş dosya açılmaz (0.8.3; önce 1 000) — zayıf türetilmiş dosya kişiye
+ * "güvenli yedek" gibi sunulmaz. 0.8.2 ve öncesinin 200 000'lik dosyaları açılır.
+ */
+export const TS10_MIN_IMPORT_ITERATIONS = 100_000;
 const MAX_ITERATIONS = 2_000_000; // içe aktarmada aşırı yüke karşı
 export const TS10_MIN_PASSWORD = 8;
 
@@ -258,11 +266,13 @@ function prepareSeal(password: string, opts: { iterations?: number; randomBytes?
   const rnd = opts.randomBytes ?? nobleRandom;
   const p2s = rnd(16);
   const p2c = opts.iterations ?? TS10_DEFAULT_ITERATIONS;
+  if (!Number.isInteger(p2c) || p2c < TS10_MIN_ITERATIONS || p2c > MAX_ITERATIONS)
+    throw new Error(`iteration count must be an integer between ${TS10_MIN_ITERATIONS} and ${MAX_ITERATIONS}`);
   const h = b64u(utf8(JSON.stringify({ alg: TS10_ALG, enc: TS10_ENC, p2s: b64u(p2s), p2c, cty: "json" })));
   return { rnd, p2s, p2c, h };
 }
 
-/** Parolayla şifreli JWE (compact). Parola en az 8 karakter; yinelemeler varsayılan 200 000. */
+/** Parolayla şifreli JWE (compact). Parola en az 8 karakter; yinelemeler varsayılan 600 000, en az 200 000 (ADR-0027 K1). */
 export function encryptTs10(
   obj: unknown,
   password: string,
@@ -295,7 +305,8 @@ function parseJwe(jwe: string) {
   }
   if (header.alg !== TS10_ALG || header.enc !== TS10_ENC || !header.p2s || typeof header.p2c !== "number")
     throw new Ts10DecryptError("unsupported algorithm");
-  if (header.p2c < 1000 || header.p2c > MAX_ITERATIONS) throw new Ts10DecryptError("iteration count out of range");
+  if (!Number.isInteger(header.p2c) || header.p2c < TS10_MIN_IMPORT_ITERATIONS || header.p2c > MAX_ITERATIONS)
+    throw new Ts10DecryptError("iteration count out of range");
   return { h, ek, ivB, ctB, tagB, p2s: b64uDecode(header.p2s), p2c: header.p2c };
 }
 function openWith<T>(j: ReturnType<typeof parseJwe>, kekBytes: Uint8Array): T {

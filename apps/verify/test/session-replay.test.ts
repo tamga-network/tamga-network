@@ -477,9 +477,10 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
       });
     const job = await open(app);
     expect((await postJwe(app, (await answer(job.req)).jwe)).statusCode).toBe(200);
+    // sunum kimliği tek başına yetki değildir: örnek sitenin başlatmadığı (akış çerezi olmayan) sunum oturum açmaz
     const s = await site(job.id);
-    expect(s.statusCode).toBe(400);
-    expect(s.json().reason).toMatch(/site girişi için değil/);
+    expect(s.statusCode).toBe(403);
+    expect(s.json().reason).toMatch(/bu tarayıcıda başlatılmadı/);
   });
 
   it("(5) süresi dolmuş deneme → RED (yanıt, ret ve istek nesnesi); yeni deneme mümkün", async () => {

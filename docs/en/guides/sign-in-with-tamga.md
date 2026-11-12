@@ -4,7 +4,7 @@ title: "Add “Sign in with Tamga”"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-11
 summary: >
   Adding sign-up and sign-in with Tamga to a website: the `@tamga-network/verifier/web` kit on the page (QR code / open the
   wallet on the phone), fetching the result from the verifier on the server and opening a session, and passkey sign-in without
@@ -60,6 +60,15 @@ const r = await fetch(`${VERIFIER}/presentations`, { method: "POST",
   body: JSON.stringify({ policy_id: policy }) }).then((x) => x.json());
 ```
 
+**Bind the presentation identifier to the session of the browser that started it.** `presentation_id` is visible in the QR code and is not an authorisation on its own. Give the browser that starts the presentation a random flow cookie, keep a cookie → presentation mapping on the server, and open the session only for the presentation in that mapping (step 3). Otherwise someone who sees the presentation identifier could turn a presentation that another person approved with their wallet into a session in their own browser.
+
+```ts
+// POST /tamga/start — right after opening the presentation
+const flow = crypto.randomBytes(18).toString("base64url");
+flows.set(flow, { presentationId: r.presentation_id, expires: Date.now() + 15 * 60_000 });
+res.setHeader("Set-Cookie", `tamga_flow=${flow}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=900`);
+```
+
 The client identifier ([[t:x509_hash]]) is computed from your certificate. The pseudonym, on the other hand, is bound to your
 site's registered domain name; it does not change when you renew the certificate ([[ADR-0034]]).
 
@@ -95,7 +104,10 @@ this does not mean the credential is invalid.
 ## 3. Server: opening the session
 
 ```ts
-// POST /oturum { presentation_id }  — accept JSON only (CSRF); Origin must be the same site
+// POST /oturum  — accept JSON only (CSRF); Origin must be the same site
+const flow = flows.get(cookies.tamga_flow);           // the presentation id comes from the flow cookie, not from the body
+if (!flow || flow.expires < Date.now()) return res.status(403).send();
+const id = flow.presentationId;
 const r = await fetch(`${VERIFIER}/presentations/${id}`, { headers: await auth() }).then((x) => x.json());
 if (r.outcome !== "ACCEPTED") return res.status(400).send();       // INDETERMINATE → "try again"
 const { claims } = await fetch(`${VERIFIER}/presentations/${id}/claims`, { headers: await auth() }).then((x) => x.json());
@@ -108,6 +120,7 @@ identifier gets `404`.
 
 What to watch for, as implemented in the sample site (`apps/verify/src/routes/site.ts`):
 
+- **Starting browser:** the session opens only in the browser that started the presentation (flow cookie → presentation mapping). Do not trust a presentation identifier sent in the request body.
 - **Single use:** one presentation opens one session.
 - **Policy check:** accept only presentations made with your own site policies.
 - **Account key:** `claims.pseudonym`. The verifier has already checked the signature, the `aud`/[[t:nonce]] values and the

@@ -48,7 +48,6 @@ import {
   writeFileSync,
   appendFileSync,
   readdirSync,
-  statSync,
   rmSync,
   renameSync,
 } from "node:fs";
@@ -94,6 +93,14 @@ import { removalChangelogLine, removedRecords } from "./removals.js";
 import { statusAnchorParams } from "./chain/projection.js";
 import { listViewBody, registrationStatusBody, viewLinesEnabled, viewSnapshotOf } from "./view-anchors.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
+import { withDirLockAt } from "./dir-lock.js";
+import {
+  listOperatorProblems,
+  lotlSourceFieldProblems,
+  missingOperatorConfigProblems,
+  relyingPartyNameProblems,
+  tlSourceFieldProblems,
+} from "./source-checks.js";
 import { checkTerminalGroups } from "./terminal-groups.js";
 import { checkProvisionalOperator, type ProvisionalOperator } from "./provisional-operator.js";
 import { buildWrprcPayloads, wrprcHeader } from "./wrprc.js";
@@ -231,12 +238,33 @@ async function signer(name = "tl-signer-1") {
     readFileSync(resolve(PKI, `${name}.cert.pem`), "utf8"),
   );
 }
-function prevInfo(file: string): { version: number; hash: string | null } {
-  const jws = resolve(DIST, `${file}.jws`),
-    json = resolve(DIST, `${file}.json`);
-  if (!existsSync(jws)) return { version: 0, hash: null };
-  const v = readJson(json).version as number;
-  return { version: v, hash: sha256Tag(utf8(readFileSync(jws, "utf8"))) };
+/**
+ * Önceki yayımlanmış liste — İMZALI `.jws`'den, imzası doğrulanarak (SPEC-TRUST-0001 §1.4: `.json` yalnız insan içindir). Sıradaki
+ * sürüm numarası, önceki sürüm özeti, şemaların kalıcı `registered_at` / `status_history`'si (TL9) ve "kayıt silinmez" karşılaştırması
+ * (TL2) buradan okunur; yanındaki imzasız `.json` kopyaya güvenilmez (0.8.3 — önce oradan okunuyordu: kopyayı değiştiren, imzalı
+ * dosyaya dokunmadan sıradaki listenin sürümünü ve kayıt zamanlarını değiştirebiliyordu). İmzacı kaynağın bugün andığı liste
+ * imzacılarından biri olmalıdır (`signerRefs`); değilse yayın durur. Dosya yoksa ilk yayın: sürüm 0, özet yok.
+ */
+async function prevPublished(
+  file: string,
+  signerRefs: string[],
+): Promise<{ version: number; hash: string | null; list: Record<string, unknown> | null }> {
+  const path = resolve(DIST, `${file}.jws`);
+  if (!existsSync(path)) return { version: 0, hash: null, list: null };
+  const jws = readFileSync(path, "utf8");
+  let list: Record<string, unknown>;
+  try {
+    list = (await verifyJws<Record<string, unknown>>(jws.trim(), new Set(signerRefs.map((n) => cert(n).fp)))).payload;
+  } catch (e) {
+    throw new Error(
+      `${file}.jws: önceki yayımlanmış listenin imzası kaynaktaki liste imzacılarıyla (${signerRefs.join(", ") || "yok"}) ` +
+        `doğrulanamadı — ${(e as Error).message}. Sürüm ve kayıt zamanları imzasız kopyadan okunmaz; yayın DURDU. ` +
+        `(Geliştirme anahtarları yeniden üretildiyse eski yayın klasörünü kaldırın: ${DIST})`,
+    );
+  }
+  if (!Number.isInteger(list.version) || (list.version as number) < 1)
+    throw new Error(`${file}.jws: önceki yayımlanmış listede geçerli sürüm numarası yok — yayın DURDU`);
+  return { version: list.version as number, hash: sha256Tag(utf8(jws)), list };
 }
 /** Atomik yazım: geçici dosya + yeniden adlandırma — servisler ve nginx yarım yazılmış liste okumasın. */
 function writeAtomic(path: string, data: string) {
@@ -244,7 +272,10 @@ function writeAtomic(path: string, data: string) {
   writeFileSync(tmp, data);
   renameSync(tmp, path);
 }
+/** Bu süreçte imzalı bir liste yayın klasörüne yazıldı mı (kayıt komutu geri alma kararını buna göre verir). */
+let listPublished = false;
 function writeVersioned(file: string, obj: Record<string, unknown>, jws: string) {
+  listPublished = true;
   mkdirSync(ARCHIVE, { recursive: true });
   const json = JSON.stringify(obj, null, 2) + "\n";
   // önce imzalı .jws (doğrulayıcılar onu okur), sonra okunabilir .json kopyası
@@ -863,16 +894,40 @@ async function build() {
   const tlSrc = readJson(resolve(REG, "tl-tr.source.json"));
   const cc: string = tlSrc.state_code;
   // ADR-0070 OP2: geçici işletmeci tek değerden; kendi kayıtları ve liste işletmecisi adı yayından önce denetlenir
+  // Değer dosyası yoksa denetim sessizce ATLANMAZ (0.8.3): gerçek ağda yayın durur; sandbox istisnası açık koşula bağlı
+  // (source-checks.ts `missingOperatorConfigProblems`).
+  const listOperators: Array<[string, unknown]> = [
+    ["tl operator", tlSrc.operator],
+    ["lotl operator", lotlSrc.operator],
+  ];
   const provisionalFile = resolve(REG, "provisional-operator.json");
-  if (existsSync(provisionalFile)) {
-    const po = checkProvisionalOperator(readJson(provisionalFile) as ProvisionalOperator, {
-      tlOperator: tlSrc.operator,
-      lotlOperator: lotlSrc.operator,
-      issuers: tlSrc.issuers,
-      relyingParties: tlSrc.relying_parties,
-    });
-    if (po.length) throw new Error(`ADR-0070: geçici işletmeci — ${po.join("; ")}`);
-  }
+  const po = existsSync(provisionalFile)
+    ? checkProvisionalOperator(readJson(provisionalFile) as ProvisionalOperator, {
+        tlOperator: tlSrc.operator,
+        lotlOperator: lotlSrc.operator,
+        issuers: tlSrc.issuers,
+        relyingParties: tlSrc.relying_parties,
+      })
+    : missingOperatorConfigProblems(ENVIRONMENT, listOperators);
+  if (po.length) throw new Error(`ADR-0070: geçici işletmeci — ${po.join("; ")}`);
+  // TL1: liste işletmecisi (ülke listesi, LOTL ve LOTL'daki etkin ülke slotları) liste aşamasında `provisional`, `on_behalf_of` dolu
+  const tl1 = listOperatorProblems([
+    ...listOperators,
+    ...(lotlSrc.national_lists as Array<Record<string, unknown>>)
+      .filter((n) => n.operator !== undefined)
+      .map((n): [string, unknown] => [`lotl national_lists ${String(n.state_code)} operator`, n.operator]),
+  ]);
+  if (tl1.length) throw new Error(`SPEC-TRUST-0001 TL1: ${tl1.join("; ")}`);
+  // ADR-0041: sandbox'ta kendi kendine açılmış test kurumları kaynağa eklenir (gece sıfırlamasında klasörle birlikte silinir — TI5)
+  const sourceIssuers: typeof tlSrc.issuers = [...tlSrc.issuers, ...selfIssuers()];
+  // TL11: imzalı listeye yalnız bilinen alanlar girer — kaynaktaki bilinmeyen alan sessizce yayımlanmaz, yayın durur. Hesaplanan
+  // alanlar (issuer_id, ca_id, rp_id, client_id, parmak izleri; ADR-0034 CI3) izin listesinde olmadığından kaynakta yazılamaz.
+  const unknownFields = [...tlSourceFieldProblems(tlSrc, selfIssuers()), ...lotlSourceFieldProblems(lotlSrc)];
+  if (unknownFields.length)
+    throw new Error(`SPEC-TRUST-0001 TL11: kayıt kaynağında bilinmeyen alan — ${unknownFields.join("; ")}`);
+  // ADR-0075 RO5: `dns_name` kaynakta tek ve liste biçiminde (harf büyüklüğü ve sondaki nokta sayılmadan yinelenemez)
+  const rpNames = relyingPartyNameProblems(tlSrc.relying_parties);
+  if (rpNames.length) throw new Error(`ADR-0075 RO5: ${rpNames.join("; ")}`);
   const rootCas = tlSrc.root_cas.map((r: Record<string, unknown>) => {
     // ADR-0066 TX2 / SPEC-ID-0002 §8.1: kök CA'nın hizmet türü nitelikli (QC) iddiası taşımaz — ETSI `Svctype/CA/PKC`
     if (/QC|granted|recognisedatnationallevel/i.test(String(r.service_type ?? "")))
@@ -880,14 +935,13 @@ async function build() {
         `root_cas ${String(r.cert)}: service_type ${String(r.service_type)} nitelikli iddia taşır (ADR-0066 TX2)`,
       );
     const c = cert(r.cert as string);
-    const { cert: _c, ...rest } = r;
+    // hesaplanan alan (`ca_id`) kaynaktan alınmaz: kaynaktaki aynı adlı alan atılır, ezemez (CI3 ile aynı kural; izin listesi ayrıca reddeder)
+    const { cert: _c, ca_id: _id, ...rest } = r;
     return { ca_id: computeCaId(cc, c.der), ...rest, cert_fingerprint_sha256: c.fp, cert_pem: c.pem.trim() };
   });
   const caIdByRef = new Map<string, string>(
     tlSrc.root_cas.map((r: { cert: string }, i: number) => [r.cert, rootCas[i].ca_id]),
   );
-  // ADR-0041: sandbox'ta kendi kendine açılmış test kurumları kaynağa eklenir (gece sıfırlamasında klasörle birlikte silinir — TI5)
-  const sourceIssuers: typeof tlSrc.issuers = [...tlSrc.issuers, ...selfIssuers()];
   const issuers = sourceIssuers.map((r: Record<string, unknown>) => {
     const c = cert(r.cert as string);
     const {
@@ -906,6 +960,7 @@ async function build() {
     const statusKey = status_cert
       ? [{ fingerprint_sha256: cert(status_cert).fp, purpose: "status_list", status: "ACTIVE" }]
       : [];
+    delete (rest as Record<string, unknown>).issuer_id; // hesaplanan alan kaynaktan alınmaz (ezilemez; izin listesi ayrıca reddeder)
     return {
       issuer_id: computeIssuerId(cc, c.der),
       ...rest,
@@ -943,11 +998,15 @@ async function build() {
       );
     // ADR-0026 K3: kayıt sertifikası erişim sertifikasındaki kurum kimlik numarasına bağlanır (writeWrprcs denetler)
     orgIdByDns.set(dns, certOrgIdentifier(c.der));
+    // ADR-0034 CI3: `client_id` (ve `rp_id`) yayıncının sertifikadan hesapladığı değerdir — kaynak kaydındaki aynı adlı alan
+    // listeye taşınmaz, hesaplananı ezemez (0.8.3; önce `...rest` hesaplanan alanlardan sonra yayılıyordu). Kaynakta bu alanlar
+    // ayrıca reddedilir (TL11 izin listesi).
+    const { rp_id: _r, client_id: _ci, access_cert_fingerprint_sha256: _f, ...fields } = rest;
     return {
       rp_id: computeRpId(cc, c.der),
       client_id: x509HashClientId(c.der),
       dns_name: dns,
-      ...rest,
+      ...fields,
       access_cert_fingerprint_sha256: c.fp,
     };
   });
@@ -958,19 +1017,41 @@ async function build() {
   // ADR-0069: kapı grupları — tek kimlik, etkin grupta kurum + politika (Tamga Verify anahtarı kurum adına buna göre verir)
   const tg = checkTerminalGroups(rps, issuers, now);
   if (tg.length) throw new Error(`ADR-0069: terminal_groups — ${tg.join("; ")}`);
-  const tlPrev = prevInfo(`tl-${cc.toLowerCase()}`);
-  // TL2: önceki yayımlanmış sürümdeki bir kayıt yeni listede yoksa yayın durur; onaylı çıkarma kaydı (removals.json) varsa
-  // yayımlanır ve CHANGELOG'a adsız satır yazılır (removals.ts). Sandbox'ta uygulanmaz (ADR-0041 TI5).
-  const tlPrevJson = resolve(DIST, `tl-${cc.toLowerCase()}.json`);
+  // Önceki yayımlanmış sürümler imzalı `.jws`'den, kaynağın andığı imzacılara karşı doğrulanarak okunur (prevPublished)
+  const tlSlot = (lotlSrc.national_lists as Array<{ state_code: string; signing_certs?: string[] }>).find(
+    (n) => n.state_code === cc,
+  );
+  const tlPrev = await prevPublished(`tl-${cc.toLowerCase()}`, tlSlot?.signing_certs ?? []);
+  const lotlPrev = await prevPublished("lotl", (lotlSrc.anchor_signing_certs as string[]) ?? []);
+  // TL2: önceki yayımlanmış sürümdeki bir kayıt (belge veren, doğrulayıcı, kapı grubu, kök CA, şema; kalan kayıtlarda kullanım,
+  // şema yetkisi, durum geçmişi satırı) yeni listede yoksa yayın durur; onaylı çıkarma kaydı (removals.json) varsa yayımlanır ve
+  // CHANGELOG'a adsız satır yazılır (removals.ts). Sandbox'ta uygulanmaz (ADR-0041 TI5).
   const removalsFile = resolve(REG, "removals.json");
-  const removalLine =
+  const approvedRemovals = existsSync(removalsFile) ? readJson(removalsFile) : [];
+  const networkSchemaIds = schemasIndex.filter((x) => x.layer === "NETWORK").map((x) => ({ schema_id: x.schema_id }));
+  const removalLines =
     ENVIRONMENT === "sandbox"
-      ? null
-      : removalChangelogLine(
-          `tl-${cc.toLowerCase()}`,
-          removedRecords(existsSync(tlPrevJson) ? readJson(tlPrevJson) : null, { issuers, relying_parties: rps }),
-          existsSync(removalsFile) ? readJson(removalsFile) : [],
-        );
+      ? []
+      : [
+          removalChangelogLine(
+            `tl-${cc.toLowerCase()}`,
+            removedRecords(tlPrev.list, {
+              root_cas: rootCas,
+              issuers,
+              relying_parties: rps,
+              national_schemas: tlSrc.national_schemas,
+            }),
+            approvedRemovals,
+          ),
+          // LOTL şemaları katalogdan yeniden kurulur: katalogdan kalkan şema listeden de sessizce kalkmasın
+          removalChangelogLine(
+            "lotl",
+            removedRecords(lotlPrev.list ? { schemas: lotlPrev.list.schemas as never } : null, {
+              schemas: networkSchemaIds,
+            }),
+            approvedRemovals,
+          ),
+        ].filter((l): l is string => l !== null);
   const tl = {
     list_format_version: tlSrc.list_format_version,
     list_type: "trusted_list",
@@ -1001,14 +1082,14 @@ async function build() {
   }
 
   // ---- lotl
-  const lotlPrev = prevInfo("lotl");
-  // Şema kayıt zamanı KALICIDIR: önceki lotl.json'dan, yoksa ilk şema çapasından (D8: çapa = kayıt anı); yeni şema → şimdi.
+  // Şema kayıt zamanı KALICIDIR: önceki yayımlanmış LOTL'dan (imzalı `lotl.jws`, imzası doğrulanmış — imzasız `lotl.json` kopyadan
+  // değil), yoksa ilk şema çapasından (D8: çapa = kayıt anı); yeni şema → şimdi.
   // Aksi hâlde her build "since = now" üretir ve eski belgeler C2'de (iat < since) düşer — sahne 10'da bulundu.
-  const prevLotlSchemas: Array<{ schema_id: string; registered_at: string; status_history: unknown[] }> = existsSync(
-    resolve(DIST, "lotl.json"),
-  )
-    ? (readJson(resolve(DIST, "lotl.json")).schemas ?? [])
-    : [];
+  const prevLotlSchemas = ((lotlPrev.list?.schemas as unknown[] | undefined) ?? []) as Array<{
+    schema_id: string;
+    registered_at: string;
+    status_history: unknown[];
+  }>;
   // TL9: ilk şema çapası arşive taşınmış olabilir → tam zincir (kontrol noktaları izlenir). Build başına bir kez okunur.
   const schemaAnchors: Array<{ schema_id: string; content_hash: string; ts: string }> = [];
   if (existsSync(ANCHORS_FILE()))
@@ -1187,7 +1268,7 @@ async function build() {
         if (!anchored.has(`${x.schema_id}|${h}`))
           await appendAnchor({ kind: "schema", schema_id: x.schema_id, vct: x.vct, content_hash: h });
   }
-  if (removalLine) changelog(removalLine);
+  for (const l of removalLines) changelog(l);
   const wps = (lotlSrc.wallet_providers as Array<{ provider_id: string; status: string }>)
     .map((w) => (w.status === "ACTIVE" ? w.provider_id : `${w.provider_id}(${w.status})`))
     .join(",");
@@ -1219,31 +1300,8 @@ async function withAnchorLock<T>(fn: () => Promise<T>): Promise<T> {
 }
 /** Aynı kilit düzeni, başka bir ad için (ADR-0041: test kurumu kaydı + liste imzası tek seferde bir süreç). */
 async function withDirLock<T>(name: string, fn: () => Promise<T>): Promise<T> {
-  const lock = resolve(DIST, name);
-  mkdirSync(DIST, { recursive: true }); // ilk derlemede (yeni klon) çıktı klasörü henüz yok
-  const t0 = Date.now();
-  for (;;) {
-    try {
-      mkdirSync(lock);
-      break;
-    } catch {
-      try {
-        if (Date.now() - statSync(lock).mtimeMs > 30_000) {
-          rmSync(lock, { recursive: true, force: true });
-          continue;
-        }
-      } catch {
-        /* yarışta silinmiş olabilir */
-      }
-      if (Date.now() - t0 > 10_000) throw new Error(`${name}: kilit alınamadı (10 sn)`);
-      await new Promise((r) => setTimeout(r, 50 + Math.floor(Math.random() * 100)));
-    }
-  }
-  try {
-    return await fn();
-  } finally {
-    rmSync(lock, { recursive: true, force: true });
-  }
+  // tutulurken 5 sn'de bir tazelenir: uzun iş (derleme, arşivleme) sürerken kilit bayat sayılıp devralınmaz (dir-lock.ts)
+  return withDirLockAt(resolve(DIST, name), fn);
 }
 const ANCHORS_FILE = () => resolve(DIST, "anchors.jsonl");
 /** Günlük bu satır sayısını aşınca kontrol noktasıyla arşivlenir (TL12). Yükleme süresi satır sayısıyla doğrusal büyür. */
@@ -1422,14 +1480,43 @@ function arg(name: string, def?: string) {
   return i >= 0 ? process.argv[i + 1] : def;
 }
 
-/** Operatör kayıt aracı (registry-ops.ts): kaynak dosyayı günceller, CHANGELOG'a yazar, listeyi yeniden imzalar. */
+/** Kayıt komutunun reddi (yazılmadı; çıkış kodu 2) — kilit bırakıldıktan sonra bildirilir. */
+class RegistryRefused extends Error {}
+
+/**
+ * Operatör kayıt aracı (registry-ops.ts): kaynak dosyayı günceller, listeyi yeniden imzalar, CHANGELOG'a yazar.
+ * 0.8.3: "oku → denetle → yaz → imzala" kayıt kilidi (`registry.lock`) altında tek süreçte yapılır (önce kilitsizdi: aynı anda
+ * çalışan iki komuttan biri ötekinin yazdığını ezebiliyordu). Liste doğrulaması (`build`) imzalı bir liste yazılmadan başarısız
+ * olursa kaynak dosya eski hâline döner ve herkese açık değişiklik günlüğüne satır yazılmaz (önce reddedilen kayıt kaynakta
+ * kalıyor, günlükte "registered" görünüyordu).
+ */
 async function registryCommand(cmd: string, args: string[]) {
   const p = resolve(REG, "tl-tr.source.json");
-  const src = readJson(p);
   if (cmd === "list") {
-    for (const l of summarize(src)) console.log(l);
+    for (const l of summarize(readJson(p))) console.log(l);
     return;
   }
+  try {
+    await withDirLock("registry.lock", () => registryWrite(cmd, args, p));
+  } catch (e) {
+    if (e instanceof RegistryError || e instanceof RegistryRefused) {
+      console.error(e.message);
+      process.exit(2);
+    }
+    throw e;
+  }
+}
+/** Herkese açık listeye (`status_history.reason`) ve değişiklik günlüğüne giren serbest metin: kişisel veri süzgeci (TL11). */
+function publicReason(reason: string): string {
+  const np = revocationNoteProblems(reason);
+  if (np.length)
+    throw new RegistryError(
+      np.map((x) => `--reason herkese açık listeye ve değişiklik günlüğüne yazılır: ${x} (kısa ve kişisiz yazın)`),
+    );
+  return reason;
+}
+async function registryWrite(cmd: string, args: string[], p: string) {
+  const src = readJson(p); // kilit altında okunur
   const env: RegistryEnv = {
     now: new Date(),
     certExists: (ref) => existsSync(resolve(PKI, `${ref}.cert.pem`)),
@@ -1447,7 +1534,7 @@ async function registryCommand(cmd: string, args: string[]) {
   let line: string;
   // O5: gerçek ağ kayıt defterine yazma yalnız TAMGA_CONFIRM_PROD bu hedeflerden biriyse (kurum kısa adı ya da doğrulayıcı alan adı)
   let targets: string[] = [pos[0] ?? ""];
-  try {
+  {
     if (cmd === "register") {
       const [kind, file] = pos;
       if (!["issuer", "rp"].includes(kind ?? "") || !file)
@@ -1481,7 +1568,7 @@ async function registryCommand(cmd: string, args: string[]) {
         throw new RegistryError([
           "kullanım: status <slug> <ACTIVE|SUSPENDED|REVOKED|RETIRED> [--reason r] [--invalidates-from <iso>|valid_from]",
         ]);
-      const reason = arg("reason", "operator");
+      const reason = publicReason(arg("reason", "operator")!);
       let inv = arg("invalidates-from");
       if (inv === "valid_from")
         inv = (src.issuers as Array<{ slug: string; valid_from: string }>).find((x) => x.slug === slug)?.valid_from;
@@ -1502,7 +1589,7 @@ async function registryCommand(cmd: string, args: string[]) {
         next = reassignRelyingPartyOut(src, dns, { toState: to, approval }, env);
         line = `relying_party ${dns}: REVOKED (reassignment to ${to}, approval ${approval}) — history kept (status_history)`;
       } else {
-        const reason = arg("reason", "operator");
+        const reason = publicReason(arg("reason", "operator")!);
         next = setRpStatus(src, dns, st, { reason }, env);
         line = `relying_party ${dns}: ${st} (${reason}) — history kept (status_history)`;
       }
@@ -1518,29 +1605,45 @@ async function registryCommand(cmd: string, args: string[]) {
       next = setAuthorization(src, slug, vct, !revoke, env);
       line = `issuer ${slug}: ${revoke ? "authorization ended" : "authorized"} for ${vct}`;
     }
-  } catch (e) {
-    if (e instanceof RegistryError) {
-      console.error(e.message);
-      process.exit(2);
-    }
-    throw e;
   }
+  // Yazılacak kaynak yayın denetimlerinden geçmeli (TL11 bilinen alanlar, ADR-0075 ad biçimi/tekliği) — `--check` de bunu görür
+  const sourceProblems = [
+    ...tlSourceFieldProblems(next),
+    ...relyingPartyNameProblems((next.relying_parties ?? []) as Array<Record<string, unknown>>),
+  ];
+  if (sourceProblems.length) throw new RegistryError(sourceProblems);
   if (check) {
     console.log(`geçerli (yazılmadı): ${line}`);
     return;
   }
   const confirm = process.env.TAMGA_CONFIRM_PROD;
   const named = targets.filter(Boolean);
-  if (ENVIRONMENT === "production" && (!confirm || !named.includes(confirm))) {
-    console.error(
+  if (ENVIRONMENT === "production" && (!confirm || !named.includes(confirm)))
+    throw new RegistryRefused(
       `gerçek ağ kayıt defterine yazılmadı: açık onay gerekir — TAMGA_CONFIRM_PROD=${named[0] ?? "<kısa ad>"} ` +
         `(yalnız bu adım için; sonra kaldırın; hafızadaki genel yetki geçmez). Kuru çalıştırma: --check`,
     );
-    process.exit(2);
+  const before = readFileSync(p, "utf8");
+  writeAtomic(p, JSON.stringify(next, null, 2) + "\n");
+  listPublished = false;
+  try {
+    await build();
+  } catch (e) {
+    if (!listPublished) {
+      // İmzalı liste yazılmadan durdu (yayın öncesi denetim): kaynak eski hâline döner, günlüğe satır yazılmaz
+      writeAtomic(p, before);
+      console.error(
+        "kayıt geri alındı: liste doğrulaması başarısız — kaynak dosya eski hâline döndü, değişiklik günlüğüne yazılmadı",
+      );
+    } else {
+      changelog(line); // imzalı liste yeni kaydı taşıyor: günlük de taşısın
+      console.error(
+        "[uyarı] liste yazıldıktan sonra hata: kaynak geri ALINMADI (imzalı liste yeni kaydı taşıyor) — hatayı giderip `build` çalıştırın",
+      );
+    }
+    throw e;
   }
-  writeFileSync(p, JSON.stringify(next, null, 2) + "\n");
   changelog(line);
-  await build();
   console.log(`tamam: ${line} — liste yeniden imzalandı`);
 }
 
@@ -1669,6 +1772,8 @@ async function walletProviderCommand(sub: string | undefined, args: string[]) {
 
   const now = new Date();
   const reason = val("reason");
+  // TL11: gerekçe imzalı LOTL'a (`status_history.reason`) girer — kişisel veri süzgeci (kayıt komutlarıyla aynı)
+  if (reason !== undefined) publicReason(reason);
   // Önce her hedef için plan (hepsi denetlenir), sonra yazım — biri hatalıysa hiçbir dosya değişmez
   const plans: Array<{
     e: WpEnvironment;

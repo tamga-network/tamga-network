@@ -4,7 +4,7 @@ title: "Güven federasyonu"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-13
+last_updated: 2026-11-11
 summary: >
   Tamga LOTL'u başka işletmecilerin (devlet, devletin yetkilendirdiği kurum, AB) yayınladığı güven listelerini gösterebilir:
   adres + LOTL'da sabitlenmiş imzacı + kapsam (hangi roller, hangi belge türleri) + onay kaydı. İlk okunan biçim ETSI TS 119 602
@@ -140,6 +140,15 @@ Uygulandı (2026-10-01):
 - `@tamga-network/schemas`: dış tür tanımları.
 - Tamga Verify: dış çapalar kök kümesinde.
 - Testler: sentetik dış LoTE ile federasyon uyum testleri; iç içe açıklama birim testleri.
+- **Uygulama notu (2026-11-11; karar içeriği değişmedi) — FD3'te "eksik / doğrulanamaz" ve FD2'de iptal hizmeti.**
+  `@tamga-network/trust` 0.8.3: LOTL'da etkin olup yüklenememiş (verilmemiş, imzası ya da ülkesi doğrulanamamış, geri sarılmış)
+  bir dış listeye bağlı sorular da UNKNOWN döner — bilinmeyen bir cüzdan sağlayıcı anahtarı (liste cüzdan sağlayıcılarına kefil
+  olabiliyorsa) ve Tamga kökü olmayan bilinmeyen bir çapa (liste o belge türüne kefil olabiliyorsa). Önce bu sorular "yok"
+  cevabı alıyordu; UNKNOWN yalnız yüklenmiş ama süresi geçmiş listede dönüyordu. Tamga listelerine bağlı sorular etkilenmez.
+  Okuma setine `unavailableExternalListFor(vct)` eklendi: bir belge türüne kefil olabilen ama şu an kullanılamayan dış listeyi
+  bildirir (zinciri hiçbir köke bağlanamayan belgede sonucun RED değil "bilinmiyor" olabilmesi için). FD2: dış kurumun iptal
+  hizmeti sertifikası ve erişim noktası yalnız aynı roldeki (kapsamdaki) belge verme hizmetine bağlanır; kapsam dışı bir rolün
+  iptal hizmeti yok sayılır.
 
 # Ek — ETSI TS 119 612 XML liste yayını (ertelenmiş karar, 2026-10-13)
 

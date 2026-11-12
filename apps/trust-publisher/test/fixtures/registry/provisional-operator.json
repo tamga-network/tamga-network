@@ -1,0 +1,12 @@
+{
+  "note": "TEST FIXTURE (ADR-0070 OP2): a made-up provisional operator for the test registry. The publisher refuses to build a production-format registry without this file. No record in this registry is an own record of the operator; only the list operator name is checked.",
+  "scheme_operator_name": "Tamga Network",
+  "name": "Example Provisional Operator Ltd (DEV)",
+  "on_behalf_of": "Tamga Network (test fixture)",
+  "identifier": { "scheme": "TR-VKN", "value": "TR9999999999" },
+  "postal_address": {
+    "street_address": "Test fixture — no real address",
+    "locality": "Istanbul",
+    "country": "TR"
+  }
+}

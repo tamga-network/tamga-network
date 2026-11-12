@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-30
-last_updated: 2026-10-30
+last_updated: 2026-11-11
 summary: >
   Tamga Network'ün tüzel kişiliği yoktur; kurulacak kâr amacı gütmeyen vakıf tüzel kişilik kazanana kadar ağın kendi hizmetlerini
   (liste yayını, kimlik servisi, Tamga Verify, siteler) Tamga Network adına bir şirket geçici işletmeci olarak
@@ -92,6 +92,11 @@ Mağaza inceleme imzacısının kaydı ([[ADR-0033]]) ve sonraki bütün kendi k
 - Kod: liste yayıncısı `provisional-operator.ts` denetimi ve `registry/provisional-operator.json`; mağaza inceleme imzacısının
   bekleyen kaydı aynı değerle tamamlandı (kayıt ve yayın işletmecinin bilgisayarında).
 - Belgeler: [[FW-TF-0001]], [[FW-RB-0001]] RB-OP-01 ve tanımlar aynı zinciri zaten yazıyor; değişiklik gerekmedi.
+- **Uygulama notu (2026-11-11; karar içeriği değişmedi) — değer dosyası yoksa.** Liste yayıncısı OP2 denetimini değer dosyası
+  (`provisional-operator.json`) yokken sessizce atlamaz: gerçek ağ kayıt defterinde dosya yoksa liste imzalanmaz. Sandbox kayıt
+  defteri (`environment: "sandbox"`, [[ADR-0038]]) açık bir istisnadır: test ağının işletmecisi kurgusaldır, değer dosyası
+  istenmez. Koşulu: liste işletmecisi adı "(TEST)" işareti taşır (bugün "Tamga Network Sandbox (TEST)") ve gerçek ağın adıyla
+  aynı değildir; aksi hâlde sandbox yayını da durur. Sandbox kayıt defterine değer dosyası konursa olağan denetim uygulanır.
 
 # Durum
 

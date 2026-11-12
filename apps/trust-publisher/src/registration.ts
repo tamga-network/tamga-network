@@ -4,10 +4,12 @@
  */
 export const REGISTRATION_ENFORCED_FROM = "2026-09-30T00:00:00Z";
 import { NON_PRESENTABLE_VCTS } from "@tamga-network/schemas";
+import { contactProblems } from "./source-checks.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Rec = Record<string, any>;
 
+/** İletişim alanı VAR mı (en az bir yol); biçimi `contactProblems` denetler (source-checks.ts). */
 const hasContact = (c: Rec | undefined) => !!c && !!(c.support_uri || c.email || c.phone);
 const hasDpaRoute = (d: Rec | undefined) => !!d && !!d.name && !!d.country && !!(d.email || d.phone || d.form_uri);
 
@@ -68,5 +70,9 @@ export function checkRegistrations(rps: Rec[], issuers: Rec[]): { errors: string
   // ADR-0031 PS3: sunulamayan tür (takma ad tohumu) hiçbir kapsamda yer alamaz — tarihe bakılmaz, yayın durur
   for (const r of rps) errors.push(...pseudonymErrors(r).map((e) => `relying_party ${r.dns_name}: ${e}`));
   for (const i of issuers.filter(live)) put(i.valid_from, `issuer ${i.slug}`, issuerGaps(i));
+  // TL11 / ADR-0024: iletişim alanı herkese açık ve kalıcı listeye girer — biçimi her kayıtta denetlenir (tarihe bakılmaz): https
+  // adresi, e-posta adresi, uluslararası telefon. Kişiye ait olup olmadığı makinece denetlenemez; yalnız biçim.
+  for (const r of rps) errors.push(...contactProblems(`relying_party ${r.dns_name}`, r.contact));
+  for (const i of issuers) errors.push(...contactProblems(`issuer ${i.slug}`, i.contact));
   return { errors, warnings };
 }

@@ -88,6 +88,38 @@ describe("PassRegistry (ADR-0012 B)", () => {
     expect((await reg.verifyToken(forged.token, { terminalGroup: "g1" })).reason).toMatch(/signature/);
   });
 
+  it("AP13: dize olmayan ya da aşırı uzun `jti` reddedilir — tekrar listesi nesne/dizi `jti` ile aşılamaz", async () => {
+    const signer = await pemRpSigner(
+      readFileSync(resolve(PKI, "rp-verify.pkcs8.pem"), "utf8"),
+      readFileSync(resolve(PKI, "rp-verify.cert.pem"), "utf8"),
+    );
+    const reg = new PassRegistry(signer, undefined, "verify.tamga.network");
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    const pres = await fakePresentation(keys, "kj");
+    const { record } = await reg.issue({
+      verified: acceptedOutput(pres),
+      presentationId: "prs_jti",
+      policy: { terminal_group: "g1", valid_days: 30 },
+    });
+    const now = Math.floor(Date.now() / 1000);
+    const token = (jti: unknown) =>
+      signJwt(
+        { typ: "tamga-pass+jwt", kid: record.cnfKid },
+        { iss: record.passId, aud: "verify.tamga.network", iat: now, exp: now + 60, jti },
+        keys,
+        "kj",
+      );
+    for (const jti of [{ a: 1 }, ["x"], 7, true, "", "j".repeat(129)]) {
+      const t = await token(jti);
+      // aynı jeton iki kez: ikisi de DUR (eskiden nesne `jti` her seferinde "yeni" sayılıp iki kez GEÇ oluyordu)
+      expect((await reg.verifyToken(t, { terminalGroup: "g1" })).ok, JSON.stringify(jti)).toBe(false);
+      expect((await reg.verifyToken(t, { terminalGroup: "g1" })).reason, JSON.stringify(jti)).toMatch(/jti/);
+    }
+    const good = await token("jti-ok-1");
+    expect((await reg.verifyToken(good, { terminalGroup: "g1" })).ok).toBe(true);
+    expect((await reg.verifyToken(good, { terminalGroup: "g1" })).reason).toMatch(/replay/);
+  });
+
   it("D10 tek kullanım (single_use): ilk GEÇ kartı tüketir (consumed), sonraki her jeton DUR — bilet kullanıldı", async () => {
     const signer = await pemRpSigner(
       readFileSync(resolve(PKI, "rp-verify.pkcs8.pem"), "utf8"),

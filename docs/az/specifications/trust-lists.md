@@ -4,7 +4,7 @@ title: "Etibar siyahıları"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-05
+last_updated: 2026-11-11
 summary: >
   Bugünkü (zəncirsiz) mərhələnin etibar lövbəri olan imzalı, versiyalı və hash zəncirli etibar siyahılarının (lotl.jws, tl-{cc}.jws) və saatlıq lövbər jurnalının (anchors.jsonl) normativ formatı, dərc tezliyi, açar intizamı, TDT-first slotları, qeydin həyat dövrü və zəncirlə ekvivalentlik qaydaları. Hər sahə bir SPEC-BC-0001 kontrakt qeydinə uyğunlaşdırılır; oxuma yalnız TrustSource interfeysi vasitəsilə aparılır.
 translation_of: SPEC-TRUST-0001
@@ -269,4 +269,34 @@ Təhvil: yalnız `operator` sahəsi dəyişir.
 istehlakçılar yeniləndikdən sonra), `bits`/`size` format qaydası və `list_view` monotonluq açarı; §6 eyni `dns_name`-in birdən
 çox milli siyahıda seçim qaydası və oxuma dəstində `relyingPartyByDnsName`; §7 təhvilin strukturlaşdırılmış qeydi
 (`reassigned_to`). Davranış `@tamga-network/trust` 0.8.1 ilə; [[ADR-0075]] qərarının məzmunu dəyişmədi.
+
+**Versiya qeydi (2026-11-11; tətbiq qeydləri — qaydaların məzmunu dəyişmədi).** `@tamga-network/trust` və siyahı dərcçisi
+0.8.3:
+
+- **§1.4, TL9 — əvvəlki versiya imzalı fayldan.** Dərcçi növbəti versiya nömrəsini, əvvəlki versiyanın xülasəsini və sxemlərin
+  daimi `registered_at` / `status_history` dəyərlərini əvvəlki dərcin **imzalı** `.jws` faylından, imzasını mənbədə göstərilən
+  siyahı imzaçılarına qarşı yoxlayaraq oxuyur. İmzasız `.json` surəti oxunmur; imzası yoxlanıla bilməyən əvvəlki siyahı ilə
+  dərc dayanır.
+- **TL1.** Dərcçi siyahı operatorunda (`lotl`, `tl-<cc>` və LOTL ölkə slotları) `status: "provisional"` və dolu `on_behalf_of`
+  tələb edir. Yükləyici sxemi `designated` dəyərini tanımağa davam edir; həmin dəyərlə dərc təhvil qərarından sonra açılır.
+- **TL2.** Qeydin silinməsi yoxlaması kök CA-nı, sxemi (ölkə siyahısı və LOTL) və siyahıda qalan qeydlərdəki istifadəni, sxem
+  səlahiyyətini və `status_history` sətirlərini də sayır; təsdiqlənmiş çıxarma qeydi bunları istəyə bağlı saylarla daşıyır
+  (`root_cas`, `schemas`, `scopes`, `schema_authorizations`, `status_history`; yazılmayıbsa 0). Versiya birdən çox atladıqda
+  yükləyici aradakı xülasələri yoxlaya bilmir; yalnız "atlayan versiya sələfi kimi son görüləni göstərir" ziddiyyətini rədd
+  edir (tam yoxlama arxivlə).
+- **TL11.** Dərcçi mənbədə hər qeyd növü üçün məlum sahələrin icazə siyahısını tətbiq edir: naməlum və ya hesablanan sahə
+  (`client_id`, `rp_id`, `issuer_id`, `ca_id`, barmaq izləri — [[ADR-0034]] CI3) dərci dayandırır, səssizcə atılmır. `contact`
+  formatı yoxlanılır (`support_uri` https ünvanı, `email` e-poçt ünvanı, `phone` beynəlxalq formatda); ünvanın bir şəxsə aid
+  olub-olmadığı maşınla yoxlanıla bilmir. Status əmrlərinin `--reason` mətni (siyahıya və dəyişiklik jurnalına daxil olur)
+  ictimai mətn süzgəcindən keçir: e-poçt, uzun rəqəm ardıcıllığı, keçid və şəxs adına bənzəyən ifadə rədd edilir.
+- **§4 — `dns_name` formatı.** Kiçik hərfli etiketlər, nöqtə ilə ayrılmış; sonda nöqtə yoxdur. Eyni siyahıda iki qeyddə
+  görünən ad qeyri-müəyyəndir ([[ADR-0075]] tətbiq qeydi).
+- **§6 — qovluq yükləyicisində lövbər aktuallığı.** `loadTrustSourceFromDir` lövbər jurnalının aktuallıq həddini verilmədikdə
+  **365 gün** götürür (əsas yükləyicidə 2 saat): bu yol saatlıq heartbeat-in işləmədiyi inkişaf və test qovluqları ilə də
+  istifadə olunur. Bu standart dəyərlə lövbər jurnalının dayanması aktuallığı pozmur (aktuallıq yalnız siyahıların
+  `next_update`-indən gəlir); lövbər jurnalının aktuallığını da şərt etmək istəyən xidmət həddi (`anchorMaxAgeMs`, məs. 2 saat) özü verir — istinad
+  xidmətləri bu gün standart dəyəri istifadə edir. Xarici siyahılar: [[ADR-0036]] tətbiq qeydi.
+- **Qeydiyyat əmrləri.** `registry.lock` altında işləyir (kilid saxlanılarkən yenilənir); siyahı yoxlaması imzalı siyahı
+  yazılmadan uğursuz olarsa mənbə faylı əvvəlki vəziyyətinə qayıdır və dəyişiklik jurnalına sətir yazılmır. Müvəqqəti operator
+  dəyəri yoxdursa real şəbəkədə dərc dayanır ([[ADR-0070]] tətbiq qeydi).
 

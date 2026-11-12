@@ -47,9 +47,15 @@ const LOCAL_ORIGIN_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 /**
  * `{ protocol: "org-iso-mdoc", data: { deviceRequest, encryptionInfo } }` + çağıran köken → onay yolunun `VpRequest`'i.
  * Bozuk istek, imzasız (readerAuth'suz) istek, başka oturumun okuyucu imzası, çok belgeli / çok ad alanlı istek reddedilir.
+ * Yerel http kökeni (`http://localhost`, `http://127.0.0.1`) yalnız `opts.allowLocalDevHost` açıkken kabul edilir (0.8.3;
+ * varsayılan KAPALI — `verifyRequestObject`'teki kapıyla aynı).
  */
-export function parseDcApiMdocRequest(data: unknown, origin: string): VpRequest {
-  if (!ORIGIN_RE.test(origin) && !LOCAL_ORIGIN_RE.test(origin))
+export function parseDcApiMdocRequest(
+  data: unknown,
+  origin: string,
+  opts: { allowLocalDevHost?: boolean } = {},
+): VpRequest {
+  if (!ORIGIN_RE.test(origin) && !(opts.allowLocalDevHost === true && LOCAL_ORIGIN_RE.test(origin)))
     throw new WalletError("unsupported", "invalid calling origin");
   if (typeof data === "string") {
     try {

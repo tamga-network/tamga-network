@@ -11,8 +11,14 @@ npm install @tamga-network/verifier
 ## Usage
 
 ```ts
-import { BranchRegistry, BranchSet, createPresentationRequest, openPresentationResponse, responseKidOf,
-  verifyPresentation } from "@tamga-network/verifier";
+import {
+  BranchRegistry,
+  BranchSet,
+  createPresentationRequest,
+  openPresentationResponse,
+  responseKidOf,
+  verifyPresentation,
+} from "@tamga-network/verifier";
 
 const registry = new BranchRegistry(); // one per process: state lookup + branch memory budget
 const content = { signer, dcql, responseUri, registrationCert };
@@ -24,16 +30,32 @@ const f = await branches.fetch(walletNonce); // f.ok → send f.requestJwt
 
 // POST /vp/response with `response` — lock the branch BEFORE decrypting, check again after; accept atomically
 const branch = branches.get(responseKidOf(jwe)!.branchId!);
-if (branch && branches.begin(branch) === "ok") try {
-  const opened = await openPresentationResponse(jwe, req, responseUri, (id) => (id === branch.branchId ? branch : undefined));
-  if (opened.kind === "response" && branches.isOpen(branch) && branches.stateMatches(branch, opened.response.state)) {
-    const { result, claims } = await verifyPresentation({ presentation: opened.response.vp_token.diploma[0],
-      aud: signer.clientId, nonce: branch.nonce, policy, policyCredentialId: "diploma", trust, statusCache, rootCertsDer,
-      rp: trust.relyingParty(signer.clientId), audit: (entry) => log(entry) });
-    if (!result.checks_performed.includes("A6")) branches.failedAttempt(branch);
-    else if (!branches.tryConsume()) { /* another branch completed the presentation first: do not accept */ }
+if (branch && branches.begin(branch) === "ok")
+  try {
+    const opened = await openPresentationResponse(jwe, req, responseUri, (id) =>
+      id === branch.branchId ? branch : undefined,
+    );
+    if (opened.kind === "response" && branches.isOpen(branch) && branches.stateMatches(branch, opened.response.state)) {
+      const { result, claims } = await verifyPresentation({
+        presentation: opened.response.vp_token.diploma[0],
+        aud: signer.clientId,
+        nonce: branch.nonce,
+        policy,
+        policyCredentialId: "diploma",
+        trust,
+        statusCache,
+        rootCertsDer,
+        rp: trust.relyingParty(signer.clientId),
+        audit: (entry) => log(entry),
+      });
+      if (!result.checks_performed.includes("A6")) branches.failedAttempt(branch);
+      else if (!branches.tryConsume()) {
+        /* another branch completed the presentation first: do not accept */
+      }
+    }
+  } finally {
+    branches.end(branch);
   }
-} finally { branches.end(branch); }
 
 // POST /vp/response with `error` + `state` (the person declined) — closes only that branch
 const hit = registry.byState(state);
@@ -47,7 +69,6 @@ explicit message. The DC API response has no request branch (`openPresentationRe
 `begin()` / `end()` without a branch (one lock per presentation) and accept with `tryConsume()`.
 
 A complete, tested version: [`examples/02-verify-own-server`](https://github.com/tamga-network/tamga-network/tree/main/examples/02-verify-own-server).
-
 
 ## Secure defaults (0.7.0)
 
@@ -65,6 +86,7 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 - `verifyPseudonym({ ..., clientStatus: "required" })` refuses a wallet instance attestation that carries no revocation entry
   (`client_status`); the default `"optional"` accepts it with `clientStatus: "NOT_APPLICABLE"`. Use `"required"` on a real
   network when a site pseudonym is accepted as a login.
+- `claims` carries only the values the policy asks for (`required_claims`); technical fields and the revocation index are never returned. `freshness.max_anchor_lag_sec` (default 3600 s) bounds how much newer than its anchor a status token may be. `iss` is mandatory for SD-JWT VC; `audit` may be async and no longer fails a verification; a custom `TrustSource` may offer `unavailableExternalListFor(vct)`.
 
 ## New in 0.8.1
 

@@ -4,7 +4,7 @@ title: "Etibar federasiyası"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-13
+last_updated: 2026-11-11
 summary: >
   Tamga LOTL-u digər operatorların (dövlət, dövlətin səlahiyyət verdiyi qurum, Avropa İttifaqı (Aİ)) dərc etdiyi etibar siyahılarını göstərə bilər: ünvan + LOTL-da sabitlənmiş imzalayan + əhatə dairəsi (hansı rollar, hansı rəqəmsal sənəd növləri) + təsdiq qeydi. İlk oxunan format ETSI TS 119 602-dir (LoTE JSON). Əhatə dairəsindəki cüzdan provayderlərinin rəqəmsal cüzdanlarına rəqəmsal sənəd verilə bilər; əhatə dairəsindəki PID/EAA provayderlərinin rəqəmsal sənədləri (Aİ PID, mDL daxil olmaqla) yoxlanıla bilər. Müəyyən xarici siyahıya etibar etmək bu ADR-in qərarı DEYİL — hər siyahı LOTL-a layihə rəhbərliyinin təsdiqi ilə daxil olur.
 domain: Trust
@@ -138,6 +138,15 @@ Tətbiq edildi (2026-10-01):
 - `@tamga-network/schemas`: xarici növ tərifləri.
 - Tamga Verify: xarici lövbərlər kök toplusundadır.
 - Testlər: sintetik xarici LoTE ilə federasiya uyğunluq testləri; iç-içə açıqlama üzrə vahid testləri.
+- **Tətbiq qeydi (2026-11-11; qərarın məzmunu dəyişmədi) — FD3-də "çatışmayan / yoxlanıla bilməyən" və FD2-də ləğv xidməti.**
+  `@tamga-network/trust` 0.8.3: LOTL-da aktiv olub yüklənə bilməmiş (verilməmiş, imzası və ya ərazisi yoxlanılmamış, geri
+  çəkilmiş) xarici siyahıya bağlı sorğular da UNKNOWN qaytarır — naməlum pul kisəsi təminatçısı açarı (siyahı pul kisəsi
+  təminatçılarına zamin ola bilirsə) və Tamga kökü olmayan naməlum lövbər (siyahı həmin sənəd növünə zamin ola bilirsə). Əvvəl
+  bu sorğular "yoxdur" cavabı alırdı; UNKNOWN yalnız yüklənmiş, lakin müddəti keçmiş siyahıda qaytarılırdı. Tamga siyahılarına
+  bağlı sorğular təsirlənmir. Oxuma dəstinə `unavailableExternalListFor(vct)` əlavə edildi: sənəd növünə zamin ola bilən, lakin
+  hazırda istifadə edilə bilməyən xarici siyahını bildirir (zənciri heç bir kökə bağlanmayan sənəddə nəticənin RƏDD yox,
+  "naməlum" ola bilməsi üçün). FD2: xarici qurumun ləğv xidməti sertifikatı və giriş nöqtəsi yalnız eyni roldakı (əhatə
+  dairəsindəki) sənəd vermə xidmətinə bağlanır; əhatə dairəsindən kənar rolun ləğv xidməti nəzərə alınmır.
 
 # Əlavə — ETSI TS 119 612 XML siyahısının dərci (təxirə salınmış qərar, 2026-10-13)
 

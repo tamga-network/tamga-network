@@ -9,7 +9,8 @@
  *  - anchors satırları: lotl.anchor_signing_keys; her satır önceki satırın sha256'sını taşır.
  *  - TL1: liste aşamasında operatör "provisional" ise `on_behalf_of` boş olamaz.
  *  - TL2 (geri sarma): lotl ve tl-<cc> için daha eski sürüm reddedilir; aynı sürüm farklı içerikle gelirse reddedilir; bir
- *    sonraki sürümde `previous_version_hash` son görülen JWS'in özetiyle (`sha256Tag(jws)`) eşleşmelidir. Bellek `versionMemory`
+ *    sonraki sürümde `previous_version_hash` son görülen JWS'in özetiyle (`sha256Tag(jws)`) eşleşmelidir; birden büyük atlamada
+ *    aradaki sürümler görülmediğinden özet karşılaştırılamaz — yalnız "öncül = son görülen" çelişkisi reddedilir. Bellek `versionMemory`
  *    (kalıcı "son görülen" kaydı); verilmezse VARSAYILAN olarak süreç içi bellek (ağ ve kök parmak izleri başına; ADR-0056) —
  *    süreç yeniden başlayınca sıfırlanır, oturumlar arası koruma için kalıcı bellek verin. `"none"` denetimi kapatır (yalnız
  *    test ve tek seferlik araçlar). Dış listelerde (`LoTESequenceNumber`)
@@ -112,6 +113,10 @@ function rollbackProblem(
     return next.hash === last.hash ? null : `TL2: ${label} version ${next.version} seen before with different content`;
   if (next.version === last.version + 1 && next.previous_version_hash !== last.hash)
     return `TL2: ${label} previous_version_hash does not match the last seen version`;
+  // Birden büyük atlama (0.8.3): aradaki sürümler görülmediğinden özet doğrulanamaz (tam denetim arşivle yapılır); ama atlayan
+  // sürüm öncülü olarak son görüleni gösteriyorsa sürüm numarası ile özet zinciri çelişir — kabul edilmez.
+  if (next.version > last.version + 1 && next.previous_version_hash === last.hash)
+    return `TL2: ${label} version jumps ${last.version} → ${next.version} but previous_version_hash points at the last seen version`;
   return null;
 }
 

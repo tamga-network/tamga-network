@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-05
+last_updated: 2026-11-11
 summary: >
   ADR-0073 K4 made the verifier identity `rpId = keccak256(dns_name)`. In the contract this identity belongs to the state that
   registers it first; another state can capture the identity of a verifier whose domain it does not own by registering it first,
@@ -111,6 +111,15 @@ Names (public ABI; following the existing naming pattern — `proposeNetworkReco
   ambiguous (`null`, fail closed). `SUSPENDED` counts as not revoked; if all are revoked, the record whose status changed last
   is returned. A re-registration after revocation in another country (RO2) stays ambiguous until a network-level record
   exists. Details [[SPEC-TRUST-0001]] §6–§7; the chain–list equivalence test shows 0 differences.
+- **Implementation note (2026-11-11; the decision is unchanged) — where RO5 is enforced.** *Registration tool*
+  (`register rp`): the name is looked up in the source ignoring letter case and a trailing dot. *Publication* (`build`): the
+  list is not signed if the source holds the same name in two records, or a name that is not in list form (lower-case labels
+  separated by dots, no trailing dot). *Loader* (`@tamga-network/trust` 0.8.3): the name form is checked by the list schema; if
+  the same name appears in two records of one national list the name is ambiguous (`null` — by domain name and by client
+  identifier; before, the second record silently replaced the first). The *cross-country* rule is applied only in the loader
+  and only across the lists that were loaded ([[SPEC-TRUST-0001]] §6): the publisher sees the source of one national list and
+  does not compare it with another country's list; a client that loads a single national list cannot see a record in another
+  list. Network-wide uniqueness comes from the chain record (RO1).
 
 # Status
 

@@ -17,14 +17,13 @@ const { source } = await fetchListTrustSource("https://trust.tamga.network", htt
   rootFingerprints: PINNED_ROOTS, // from tamga.network/trust-anchor, fixed in your configuration
   verifyJws,
 });
-source.issuers();                                // registered institutions
-source.relyingPartyByDnsName("example.com");      // a verifier's registration (permanent domain) and allowed fields
-source.relyingParty("x509_hash:…");                // the same record, by the request's client_id (HAIP 1.0)
-source.isCredentialAcceptable(issuerId, iat);    // "YES" | "NO" | "UNKNOWN" — judged on the issue date
+source.issuers(); // registered institutions
+source.relyingPartyByDnsName("example.com"); // a verifier's registration (permanent domain) and allowed fields
+source.relyingParty("x509_hash:…"); // the same record, by the request's client_id (HAIP 1.0)
+source.isCredentialAcceptable(issuerId, iat); // "YES" | "NO" | "UNKNOWN" — judged on the issue date
 ```
 
 A complete, tested version: [`examples/04-check-institution`](https://github.com/tamga-network/tamga-network/tree/main/examples/04-check-institution).
-
 
 ## Secure defaults (0.7.0)
 
@@ -41,6 +40,7 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
   cross-list rules only see the lists that are loaded: a client that loads one list cannot detect an ambiguity with another.
 - `fetchListTrustSource` throws a `TrustListError` when an `additionalStates` entry cannot be loaded: the state is not in the
   LOTL, its list is not ACTIVE, or the code is not two letters. It no longer returns with fewer lists than requested.
+- `dns_name` form is stricter (no trailing or leading dot); a name repeated inside one list answers `null`. `isWalletProviderKey` and `externalIssuerByAnchor` may answer UNKNOWN when an external list is unavailable; new `unavailableExternalListFor(vct)`. `loadTrustSourceFromDir` treats the anchor log as fresh for 365 days by default: pass `anchorMaxAgeMs` for a strict bound.
 
 ## New in 0.8.1
 

@@ -12,6 +12,8 @@ import {
   ts10MigrationData,
   ts10TransactionLog,
   Ts10DecryptError,
+  TS10_DEFAULT_ITERATIONS,
+  TS10_MIN_ITERATIONS,
   type StoredCredential,
   type Ts10Lookup,
   type WalletState,
@@ -130,24 +132,26 @@ describe("TS10 şifreleme (PBES2-HS256+A128KW / A128GCM)", () => {
   const pw = "doğru-parola-123";
   it("gidiş-dönüş; jose aynı parolayla çözer", async () => {
     const data = ts10MigrationData(state(), lookup, { includeLog: true });
-    const jwe = encryptTs10(data, pw, { iterations: 2000 });
+    const jwe = encryptTs10(data, pw, { iterations: 200_000 });
     expect(decryptTs10(jwe, pw)).toEqual(data);
     const { plaintext, protectedHeader } = await compactDecrypt(jwe, new TextEncoder().encode(pw.normalize("NFC")), {
       keyManagementAlgorithms: ["PBES2-HS256+A128KW"],
+      maxPBES2Count: 1_000_000,
     });
-    expect(protectedHeader).toMatchObject({ alg: "PBES2-HS256+A128KW", enc: "A128GCM", p2c: 2000 });
+    expect(protectedHeader).toMatchObject({ alg: "PBES2-HS256+A128KW", enc: "A128GCM", p2c: 200_000 });
     expect(JSON.parse(new TextDecoder().decode(plaintext))).toEqual(data);
   });
 
   it("jose ile şifrelenmiş TS10 nesnesini çözer", async () => {
     const jwe = await new CompactEncrypt(new TextEncoder().encode(JSON.stringify({ ok: 1 })))
-      .setProtectedHeader({ alg: "PBES2-HS256+A128KW", enc: "A128GCM", p2c: 1500 })
+      .setProtectedHeader({ alg: "PBES2-HS256+A128KW", enc: "A128GCM" })
+      .setKeyManagementParameters({ p2c: 100_000 })
       .encrypt(new TextEncoder().encode(pw));
     expect(decryptTs10(jwe, pw)).toEqual({ ok: 1 });
   });
 
   it("yanlış parola, bozuk dosya, kısa parola, aşırı yineleme", () => {
-    const jwe = encryptTs10({ a: 1 }, pw, { iterations: 1000 });
+    const jwe = encryptTs10({ a: 1 }, pw, { iterations: 200_000 });
     expect(() => decryptTs10(jwe, "yanlis-parola")).toThrow(Ts10DecryptError);
     expect(() => decryptTs10(jwe.slice(0, -4) + "AAAA", pw)).toThrow(Ts10DecryptError);
     expect(() => encryptTs10({}, "kisa")).toThrow(/8 characters/);
@@ -177,9 +181,9 @@ describe("geri yükleme", () => {
 describe("TS10 async (arayüzü dondurmayan)", () => {
   it("async şifreler, sync çözer ve tersi", async () => {
     const pw = "async-parola-1";
-    const a = await encryptTs10Async({ x: 1 }, pw, { iterations: 3000 });
+    const a = await encryptTs10Async({ x: 1 }, pw, { iterations: 200_000 });
     expect(decryptTs10(a, pw)).toEqual({ x: 1 });
-    const b = encryptTs10({ y: 2 }, pw, { iterations: 3000 });
+    const b = encryptTs10({ y: 2 }, pw, { iterations: 200_000 });
     expect(await decryptTs10Async(b, pw)).toEqual({ y: 2 });
     await expect(decryptTs10Async(b, "baska-parola")).rejects.toThrow(Ts10DecryptError);
   });
@@ -223,5 +227,28 @@ describe("TS8 bildirim eki", () => {
     });
     expect(JSON.stringify(a)).not.toContain("SHOULD-NOT-LEAK");
     expect(() => ts8ReportAttachment(s, { ...s.presentationLog[0] }, lookup)).toThrow(/not in the wallet log/);
+  });
+});
+
+describe("ikinci inceleme 0.8.3 — PBKDF2 alt sınırı (WL4, ADR-0027 K1)", () => {
+  const pw = "doğru-parola-123";
+  const header = (jwe: string) => JSON.parse(Buffer.from(jwe.split(".")[0], "base64url").toString("utf8"));
+  it("varsayılan 600 000 yineleme; 200 000'in altı dışa aktarmada reddedilir", () => {
+    expect(TS10_DEFAULT_ITERATIONS).toBe(600_000);
+    expect(TS10_MIN_ITERATIONS).toBe(200_000);
+    expect(header(encryptTs10({ a: 1 }, pw)).p2c).toBe(600_000);
+    expect(() => encryptTs10({ a: 1 }, pw, { iterations: 1000 })).toThrow(/iteration/);
+    expect(() => encryptTs10({ a: 1 }, pw, { iterations: 199_999 })).toThrow(/iteration/);
+    expect(() => encryptTs10({ a: 1 }, pw, { iterations: 200_000.5 })).toThrow(/iteration/);
+  });
+  it("içe aktarma zayıf dosyayı (1 000 yineleme) AÇMAZ; 200 000'lik eski dosyalar açılır", async () => {
+    const weak = await new CompactEncrypt(new TextEncoder().encode(JSON.stringify({ ok: 1 })))
+      .setProtectedHeader({ alg: "PBES2-HS256+A128KW", enc: "A128GCM" })
+      .setKeyManagementParameters({ p2c: 1000 })
+      .encrypt(new TextEncoder().encode(pw));
+    expect(() => decryptTs10(weak, pw)).toThrow(/iteration/);
+    await expect(decryptTs10Async(weak, pw)).rejects.toThrow(Ts10DecryptError);
+    const old = encryptTs10({ ok: 2 }, pw, { iterations: 200_000 });
+    expect(decryptTs10(old, pw)).toEqual({ ok: 2 });
   });
 });

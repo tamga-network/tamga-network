@@ -22,6 +22,7 @@ import { WalletError, type Http, readJson } from "./http.js";
 import type { StoredCredential } from "./store.js";
 import { certAuthorityKeyId, certSanDnsNames, certSubjectKeyId } from "./asn1.js";
 import { fetchTrustSource, type TrustPins } from "./trustlist.js";
+import type { ListTrustSource } from "@tamga-network/trust/core";
 import {
   MDOC_FORMAT,
   MDOC_ZK_FORMAT,
@@ -33,6 +34,7 @@ import {
 import { selectZkCopy } from "./zk-copies.js";
 import { NON_PRESENTABLE_VCTS, PSEUDONYM_FORMAT } from "./pseudonym.js";
 import { DC_API_MDOC_PROTOCOL, parseDcApiMdocRequest, sealDcApiMdocResponse, type AnnexCSession } from "./dc-mdoc.js";
+import { isAllowedWebAddress, isLocalDevHost } from "./web-address.js";
 
 export const REQUEST_TYP = "oauth-authz-req+jwt";
 
@@ -127,17 +129,8 @@ export async function fetchRequestObject(requestUri: string, http: Http): Promis
   return (await r.text()).trim();
 }
 
-/**
- * Yerel geliştirme ağı: localhost, genel DNS'te kayıt edilemeyen ayrılmış adlar (.localhost, .test — RFC 6761; .local — mDNS)
- * ya da özel IPv4 (10/8, 172.16/12, 192.168/16, 127/8). Bu adlar internette başkasına ait olamaz.
- */
-export function isLocalDevHost(host: string): boolean {
-  if (host === "localhost" || /\.(localhost|test|local)$/.test(host)) return true;
-  const m = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(host);
-  if (!m) return false;
-  const [a, b] = [Number(m[1]), Number(m[2])];
-  return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
-}
+/** Yerel geliştirme adresi mi (`web-address.ts`; `allowLocalDevHost` kapılarının ortak tanımı). */
+export { isLocalDevHost };
 
 /** SAN dNSName kontrolü: sertifikanın SubjectAltName uzantısı ayrıştırılır, dNSName'ler tam eşleşir (S-12; `asn1.ts`). */
 export function certHasDnsName(der: Uint8Array, dns: string): boolean {
@@ -273,6 +266,8 @@ export function verifyRequestObject(
  * Tarayıcının Digital Credentials API isteği (işletim sistemi cüzdana `{protocol, data}` ve çağıran kökeni verir). İmzalı
  * OpenID4VP (`openid4vp-v1-signed`, Ek A: `expected_origins`) ya da okuyucu imzalı ISO/IEC 18013-7 Ek C (`org-iso-mdoc`,
  * `parseDcApiMdocRequest`) kabul edilir — PV6: kim olduğu bilinmeyen doğrulayıcıya sunum yok; imzasız protokoller reddedilir.
+ * Çağıran köken `https://…` olmalıdır; `http://localhost` / `http://127.0.0.1` yalnız `allowLocalDevHost` açıkken (0.8.3: iki
+ * protokolde de aynı kapı — önceden yerel http kökeni koşulsuz kabul ediliyordu).
  */
 export const DC_API_PROTOCOL = "openid4vp-v1-signed";
 export { DC_API_MDOC_PROTOCOL };
@@ -281,7 +276,7 @@ export function parseDcApiRequest(
   origin: string,
   opts: Pick<VerifyRequestOptions, "allowLocalDevHost" | "now"> = {},
 ): VpRequest {
-  if (req.protocol === DC_API_MDOC_PROTOCOL) return parseDcApiMdocRequest(req.data, origin);
+  if (req.protocol === DC_API_MDOC_PROTOCOL) return parseDcApiMdocRequest(req.data, origin, opts);
   if (req.protocol !== DC_API_PROTOCOL)
     throw new WalletError("unsupported", `unsupported protocol: ${String(req.protocol)}`);
   let data = req.data;
@@ -294,7 +289,10 @@ export function parseDcApiRequest(
   }
   const jwt = (data as { request?: unknown } | null)?.request;
   if (typeof jwt !== "string") throw new WalletError("unsupported", "signed request missing");
-  if (!/^https:\/\/[^/]+$/.test(origin) && !/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
+  if (
+    !/^https:\/\/[^/]+$/.test(origin) &&
+    !(opts.allowLocalDevHost === true && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))
+  )
     throw new WalletError("unsupported", "invalid calling origin");
   return verifyRequestObject(jwt, undefined, { ...opts, origin });
 }
@@ -355,8 +353,38 @@ export interface SupervisoryAuthorityInfo {
   info_uri?: string;
 }
 /**
- * RP kaydı, İMZASI DOĞRULANMIŞ ulusal listeden (S-13). `pins`: uygulamaya gömülü LOTL imzacı parmak izleri. Liste alınamaz ya da
- * doğrulanamazsa `null` döner → onay ekranı "güven listesinde bulunamadı" uyarısı verir (PV2); sahte kayıt asla "kayıtlı" görünmez.
+ * RP kaydı, İMZASI DOĞRULANMIŞ bir güven kaynağından (`fetchTrustSource(...).source`) — ağ isteği yok, hata yutma yok: kaynağı
+ * çağıran yükledi, "liste alınamadı" onun yakaladığı ayrı bir durumdur; buradaki `null` yalnız "kayıt yok" demektir (0.8.3).
+ * TS1: yalnızca TrustSource sorgusu. ADR-0034: `x509_hash:` istemci kimliğiyle ya da kalıcı alan adıyla (günlükteki kayıtlar ve
+ * takma adlar alan adını tutar; sertifika yenilense de kayıt bulunur).
+ * ADR-0075: ülkeler arası ad belirsizliği kuralı `TrustSource`'un içindedir (0.8.3; iki arama yolu da null döner) — burada
+ * yinelenmez. KAPSAM: `fetchTrustSource` LOTL ile TEK ülke listesini (`stateCode`) yükler; aynı ad başka bir ülkenin listesinde de
+ * iptal edilmemiş duruyorsa cüzdan bunu GÖREMEZ — kural yalnız birden çok liste yükleyen çağıranda (referans doğrulayıcı, katılım
+ * aracı, `fetchListTrustSource` `additionalStates`) işler. 0.8.2 notundaki "x509_hash yolunda kapatıldı" ifadesi tek liste
+ * yükleyen cüzdan için fiilen bir şey değiştirmiyordu (0.8.3 notunda düzeltildi).
+ */
+export function rpRecordOf(
+  source: Pick<ListTrustSource, "relyingParty" | "relyingPartyByDnsName">,
+  clientId: string,
+): RpRecord | null {
+  const rec = clientId.includes(":") ? source.relyingParty(clientId) : source.relyingPartyByDnsName(clientId);
+  return (rec as unknown as RpRecord | null) ?? null;
+}
+
+/** `fetchRpRecord` / `fetchRegistrarKeys` seçeneği (0.8.3). */
+export interface TrustFetchOptions {
+  /**
+   * `true`: güven listesi alınamaz ya da doğrulanamazsa hata fırlatılır (`WalletError` `trust_error`; ağ hatası olduğu gibi) —
+   * çağıran "liste alınamadı"yı "kayıt yok"tan ayırır. Varsayılan `false` (0.8.2 davranışı: hata yutulur, `null` / `[]`).
+   */
+  throwOnListError?: boolean;
+}
+
+/**
+ * RP kaydı, İMZASI DOĞRULANMIŞ ulusal listeden (S-13); `rpRecordOf`'un listeyi kendisi yükleyen ince sarmalayıcısı. `pins`:
+ * uygulamaya gömülü LOTL imzacı parmak izleri. Liste alınamaz ya da doğrulanamazsa `null` döner → onay ekranı "güven listesinde
+ * bulunamadı" uyarısı verir (PV2); sahte kayıt asla "kayıtlı" görünmez. İki durumu ayırmak için `{ throwOnListError: true }`
+ * ya da listeyi bir kez yükleyip `rpRecordOf` kullanın.
  */
 export async function fetchRpRecord(
   trustBase: string,
@@ -364,23 +392,16 @@ export async function fetchRpRecord(
   http: Http,
   pins: TrustPins,
   stateCode = "tr",
+  opts: TrustFetchOptions = {},
 ): Promise<RpRecord | null> {
+  let source: ListTrustSource;
   try {
-    const { source } = await fetchTrustSource(trustBase, http, { pins, stateCode });
-    // TS1: yalnızca TrustSource sorgusu. ADR-0034: `x509_hash:` istemci kimliğiyle ya da kalıcı alan adıyla (günlükteki kayıtlar
-    // ve takma adlar alan adını tutar; sertifika yenilense de kayıt bulunur).
-    const byClientId = clientId.includes(":");
-    const rec = byClientId ? source.relyingParty(clientId) : source.relyingPartyByDnsName(clientId);
-    if (!rec) return null;
-    // ADR-0075: ülkeler arası ad belirsizliği kuralı `TrustSource`'un içindedir (0.8.3; iki arama yolu da null döner).
-    // KAPSAM: bu fonksiyon LOTL ile TEK ülke listesini (`stateCode`) yükler; aynı ad başka bir ülkenin listesinde de iptal
-    // edilmemiş duruyorsa cüzdan bunu GÖREMEZ — kural yalnız birden çok liste yükleyen çağıranda (referans doğrulayıcı,
-    // katılım aracı, `fetchListTrustSource` `additionalStates`) işler. 0.8.2 notundaki "x509_hash yolunda kapatıldı" ifadesi
-    // tek liste yükleyen cüzdan için fiilen bir şey değiştirmiyordu (0.8.3 notunda düzeltildi).
-    return rec as unknown as RpRecord;
-  } catch {
+    ({ source } = await fetchTrustSource(trustBase, http, { pins, stateCode }));
+  } catch (e) {
+    if (opts.throwOnListError) throw e;
     return null;
   }
+  return rpRecordOf(source, clientId);
 }
 
 export interface Match {
@@ -700,6 +721,8 @@ export interface DcqlMatchResult {
  * alanla gönderilmez; isteğe bağlı alan isteyen doğrulayıcı `claim_sets` kullanır). `claim_sets` varsa karşılanabilen ilk kombinasyon.
  * `mso_mdoc_zk` (ADR-0032) mdoc gibi eşlenir; yalnız `opts.zk` (cüzdan bu cihazda ispat üretebilir) ise önerilir — değilse sorgu
  * karşılanamaz (`zk_unavailable`) ve `credential_sets`'te klasik seçenek seçilir (ZK5).
+ * Süresi dolmuş belge (`exp` ≤ `opts.now`; varsayılan şimdi, Unix saniyesi) iptal edilmiş / askıdaki belge gibi önerilmez
+ * (0.8.3) — neden `no_credential`; "süresi doldu" iletisini vermek isteyen çağıran belgeleri kendisi ayırır.
  */
 export function matchDcql(
   dcql: DcqlQuery,
@@ -724,6 +747,7 @@ export function matchDcql(
     const cands = credentials
       .filter((c) =>
         NON_PRESENTABLE_VCTS.includes(c.vct) || // PS3: takma ad tohumu hiçbir sorguya önerilmez
+        (c.exp !== undefined && c.exp <= now) || // süresi dolmuş belge sunulmaz (0.8.3)
         c.revokedLocally ||
         c.status?.value === "revoked" ||
         c.status?.value === "suspended"
@@ -1017,12 +1041,26 @@ export interface RespondInput {
    * base64url olarak girer. Çekirdek ispatçıya bağımlı değildir; yoksa ya da hata verirse ZK sunumu yapılmaz.
    */
   zk?: (a: ZkProveRequest) => Promise<Uint8Array>;
+  /**
+   * WL5 teslim sözleşmesi (0.8.3): sunum üretildikten (imzalar atıldıktan) sonra, doğrulayıcıya GÖNDERİLMEDEN hemen önce bir
+   * kez çağrılır (DC API'de yanıt dönmeden önce). Çağıran burada kullanılan kopyaları KALICI olarak "kullanıldı" işaretler
+   * (`markCopyUsed` + depoya yazma): doğrulayıcı sunumu alıp 200 dışı dönse ya da yanıt yolda kaybolsa da aynı kopya başka
+   * doğrulayıcıya "kullanılmamış" diye verilmez. Kanca hata verirse sunum gönderilmez. Verilmezse işaretleme çağıranın
+   * sorumluluğundadır ve `respond` ÇAĞRILMADAN ÖNCE yapılmalıdır (yalnız başarıdan sonra işaretlemek WL5'i bozar).
+   */
+  beforeSend?: () => void | Promise<void>;
+  /**
+   * Doğrulayıcının yanıtındaki `redirect_uri` yalnız `https` ise döndürülür (0.8.3). `true`: yerel geliştirme adresine
+   * (`isLocalDevHost`) `http` de kabul edilir — `verifyRequestObject`'teki kapıyla aynı; varsayılan KAPALI.
+   */
+  allowLocalDevHost?: boolean;
 }
 export interface RespondOutput {
   status: number;
   /**
    * OpenID4VP 1.0 §8.2: doğrulayıcının yanıtındaki tek standart alan. Tamga Verify kabulde yüz yüze kontrol görünümünün
    * anahtarını da bu adrese koyar (ADR-0012 C, `?show=`, sonuçtan sonra 5 dk); "Kontrol ettir"de cüzdan bu adresi QR olarak gösterir.
+   * Yalnız `https` adres döner (yerel geliştirmede `RespondInput.allowLocalDevHost` ile `http`); başka şema yok sayılır (0.8.3).
    */
   redirectUri?: string;
   vpToken: Record<string, string[]>;
@@ -1030,7 +1068,11 @@ export interface RespondOutput {
   /** Digital Credentials API: sayfaya dönecek yanıt (cüzdan bunu işletim sistemine verir; POST yok). */
   dcApiResponse?: { response: string };
 }
-/** Sunumları üretir (KB-JWT aud = client_id, PV7), vp_token'ı JWE ile şifreler (PV3) ve response_uri'ye POST eder. */
+/**
+ * Sunumları üretir (KB-JWT aud = client_id, PV7), vp_token'ı JWE ile şifreler (PV3) ve response_uri'ye POST eder.
+ * WL5: kopya, sunum doğrulayıcıya ulaştığı anda "kullanılmış"tır — gönderim sonucu (200 dışı yanıt, ağ hatası) bunu geri almaz.
+ * `respond` cüzdan durumunu tutmaz; işaretleme `beforeSend` kancasında (ya da çağrıdan önce) çağıranındır.
+ */
 export async function respond(p: RespondInput): Promise<RespondOutput> {
   if (!approvedFor(p.approval, p.request))
     throw new WalletError("trust_error", "the request was not approved by checkRp (ADR-0056)");
@@ -1083,6 +1125,8 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
     randomBytes: p.randomBytes,
     enc: p.request.enc ?? "A128GCM",
   });
+  // WL5: kopyalar gönderimden ÖNCE kalıcı işaretlenir (ağ hatasında ve 200 dışı yanıtta da işaretli kalır)
+  await p.beforeSend?.();
   if (p.request.origin) return { status: 200, vpToken, dcApiResponse: { response: jwe } };
   const r = await p.http(p.request.responseUri, {
     method: "POST",
@@ -1093,8 +1137,9 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
   let redirectUri: string | undefined;
   let passGrant: string | undefined;
   try {
-    const j = (await readJson(r, "verifier")) as { redirect_uri?: string; pass_grant?: string };
-    redirectUri = j.redirect_uri;
+    const j = (await readJson(r, "verifier")) as { redirect_uri?: unknown; pass_grant?: string };
+    // yalnız https (yerel geliştirme seçeneği hariç): cüzdan bu adresi açar / QR olarak gösterir — başka şema yok sayılır
+    if (isAllowedWebAddress(j.redirect_uri, p.allowLocalDevHost)) redirectUri = j.redirect_uri;
     passGrant = j.pass_grant;
   } catch {
     /* boş gövde olabilir */
@@ -1161,6 +1206,7 @@ async function respondAnnexC(p: RespondInput, s: AnnexCSession): Promise<Respond
     keyRef: m.keyRef,
   });
   const dcApiResponse = sealDcApiMdocResponse(deviceResponse, s, p.randomBytes);
+  await p.beforeSend?.(); // WL5: yanıt tarayıcıya dönmeden önce kopya işaretlenir
   return { status: 200, vpToken: { [m.match.queryId]: [b64u(deviceResponse)] }, dcApiResponse };
 }
 

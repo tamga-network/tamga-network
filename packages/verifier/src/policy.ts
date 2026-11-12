@@ -48,6 +48,13 @@ export interface Policy {
     max_trust_age_sec: number;
     /** D5 saat karşılaştırmalarında issuer / yayıncı / doğrulayıcı saatleri arası tolerans (varsayılan 120 sn). */
     max_clock_skew_sec?: number;
+    /**
+     * D5 çapa gecikme penceresi (sn; varsayılan 3600 — `DEFAULT_MAX_ANCHOR_LAG_SEC`). İptal listesi önce yayımlanır, çapası sonra
+     * yazılır (SPEC-CRED-0003 §5.2): çapayla uyuşmayan ama çapadan YENİ belirteç en çok bu kadar (+ saat toleransı) yeni olabilir;
+     * çapa günlüğünde hiç olmayan liste yalnız bu kadar yeni verilmiş belgede kabul edilir. Aşılırsa DOĞRULANAMADI (`STATUS_STALE`).
+     * Çapa günlüğünü yerelden ve sık okuyan doğrulayıcı daraltır (Tamga Verify 600 sn).
+     */
+    max_anchor_lag_sec?: number;
   };
   /** ADR-0012 B: kabulde geçiş kartı (pass_grant) verilir. `single_use` (K4): kart ilk GEÇ'te tüketilir (bilet). */
   proximity?: {

@@ -136,6 +136,9 @@ const match: Match = {
   requested: ["is_enrolled"],
 };
 
+/** 0.8.3: isteği imzalayan erişim sertifikası güven listesindeki kayıtla eşleşiyor (bağ doğrulanmış; işaret yok) */
+const BOUND = () => ({ registeredFingerprints: [shop.fp] });
+
 describe("kayıt sertifikası durumu (ADR-0068 K5)", () => {
   it("geçerli bit → geçerli, uyarı yok; policy_id kabul edilir; liste önbelleğe yazılır", async () => {
     const req = await request(await sign(registrar, "rc-wrp+jwt", payload()));
@@ -146,7 +149,7 @@ describe("kayıt sertifikası durumu (ADR-0068 K5)", () => {
       cache,
       nowMs: epochMillis(NOW),
     });
-    const r = checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW), st);
+    const r = checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW), st, BOUND());
     expect(r).toMatchObject({ present: true, valid: true, allowedClaims: ["is_enrolled"] });
     expect(r.flags).toBeUndefined();
     expect(cache.entries().map(([u]) => u)).toEqual([URI]);
@@ -160,7 +163,7 @@ describe("kayıt sertifikası durumu (ADR-0068 K5)", () => {
       [registrar.fp],
       { nowMs: epochMillis(NOW) },
     );
-    expect(checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW), st)).toEqual({
+    expect(checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW), st, BOUND())).toEqual({
       present: true,
       valid: false,
       reason: "registration certificate revoked",
@@ -177,21 +180,21 @@ describe("kayıt sertifikası durumu (ADR-0068 K5)", () => {
         nowMs: epochMillis(NOW),
       },
     );
-    const r = checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW), st);
+    const r = checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW), st, BOUND());
     expect(r.valid).toBe(true);
     expect(r.flags).toEqual(["registration_status_unknown"]);
   });
 
   it("durumlar verilmezse (güvenli varsayılan) uyarı", async () => {
     const req = await request(await sign(registrar, "rc-wrp+jwt", payload()));
-    expect(checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW)).flags).toEqual([
+    expect(checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW), undefined, BOUND()).flags).toEqual([
       "registration_status_unknown",
     ]);
   });
 
   it("durum alanı olmayan sertifika (durum listesi tutmayan kayıt kurumu) → uyarı yok", async () => {
     const req = await request(await sign(registrar, "rc-wrp+jwt", payload({ status: undefined })));
-    const r = checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW));
+    const r = checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW), undefined, BOUND());
     expect(r.valid).toBe(true);
     expect(r.flags).toBeUndefined();
   });
@@ -275,7 +278,9 @@ describe("kayıt sertifikası durumu (ADR-0068 K5)", () => {
       { policy_id: "2.25.1" },
     ]) {
       const req = await request(await sign(registrar, "rc-wrp+jwt", payload(bad)));
-      expect(checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW)).valid).toBe(false);
+      expect(checkRegistrationCerts(req, [registrar.fp], match, epochMillis(NOW), undefined, BOUND()).valid).toBe(
+        false,
+      );
     }
     expect(wrprcStatusRef({ status: { status_list: { idx: "7", uri: URI } } })).toEqual({ uri: URI, idx: 7 });
   });

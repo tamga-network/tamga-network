@@ -24,12 +24,13 @@ import {
   verifyPseudonym,
   type Policy,
   type VerificationResult,
+  type VerifyInput,
 } from "@tamga-network/verifier";
 import type { VerifyContext } from "../app.js";
 import { MAX_RESPONSE_ATTEMPTS, type Branch, type Presentation } from "../state.js";
 import { findPolicy, statusFetchOnDemandFor } from "../policies.js";
 import { registrationCertFor, registrationCwtFor } from "../wrprc.js";
-import { rateLimited } from "../rate-limit.js";
+import { clientKeyOf, rateLimited } from "../rate-limit.js";
 import { nowSeconds } from "@tamga-network/core/time";
 import { checkPage, expiredPage, langOf, notFoundPage, pendingPage, resultPage, statusOnlyPage } from "../html.js";
 
@@ -97,9 +98,11 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     }
     const who = await callerOf(req.headers.authorization, reply);
     if (who === false) return reply;
-    // Hız sınırı kovası: doğrulanmış RP'nin kendi kovası; beyansız istekler ortak kova (vekil arkasında adres yok). Tek bir
-    // istemcinin beyansız seli RP'lerin sunum açmasını durduramaz (güvenlik turu 2026-10-19).
-    if (rateLimited(ctx.limits.presentations, who ? `rp:${who}` : (req.ip ?? ""), reply)) return reply;
+    // Hız sınırı kovası: doğrulanmış RP'nin kendi kovası; beyansız istekler istemci anahtarıyla — vekil arkasında adres gelmez,
+    // vekil istemci anahtarı başlığı yazmıyorsa hepsi tek ortak kovadır (`clientKeyOf`). Tek bir istemcinin beyansız seli RP'lerin
+    // sunum açmasını durduramaz (güvenlik turu 2026-10-19).
+    if (rateLimited(ctx.limits.presentations, who ? `rp:${who}` : clientKeyOf(req, cfg.clientKeyHeader), reply))
+      return reply;
     // Beyansız istek: sıkı kipte sunum doğrulayıcının KENDİ RP kaydına bağlanır (K5 örüntüsü, /sample-site/start gibi) — ana
     // sayfadaki "QR üret" ve cüzdanın başlattığı kontrol / geçiş kartı akışları (ADR-0012 B/C). Sonuç ve değerler hiçbir dış
     // çağırana verilmez (sahibi doğrulayıcının kendisi; HV1/HV2 değişmez); kişi yalnızca kendi kontrol bağlantısını gösterir.
@@ -155,11 +158,13 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     });
     return reply.type("application/oauth-authz-req+jwt").send(f.requestJwt);
   };
-  app.get("/vp/req/:id", async (req, reply) => serveRequestObject((req.params as { id: string }).id, req.ip, reply));
+  app.get("/vp/req/:id", async (req, reply) =>
+    serveRequestObject((req.params as { id: string }).id, clientKeyOf(req, cfg.clientKeyHeader), reply),
+  );
   app.post("/vp/req/:id", async (req, reply) =>
     serveRequestObject(
       (req.params as { id: string }).id,
-      req.ip,
+      clientKeyOf(req, cfg.clientKeyHeader),
       reply,
       (req.body as { wallet_nonce?: unknown } | undefined)?.wallet_nonce,
     ),
@@ -169,7 +174,9 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
    * Sahiplik kanıtına (A6 / Z1; yalnız takma adlı sunumda P1) ULAŞMADAN başarısız olan (çözülmüş) yanıt: sunum tüketilmez, deneme
    * sayılır. Çekim dalında sınır dolunca YALNIZ o dal kapanır; sunum tek çekimliyse REJECTED olur (ADR-0067 RQ4). DC API yolunda
    * (dal yok) sınır sunum başınadır. Sayım ve kapanma `BranchSet.failedAttempt`. Yanıt 400 `invalid_request` (AP5: doğrulama
-   * sonucu değil, istek hatası).
+   * sonucu değil, istek hatası). `ind`: deneme reddedilmedi, DOĞRULANAMADI (doğrulayıcının eksiği — bayat liste, kök yok, ZK
+   * bileşeni yok): sınır yine sayılır (taşma koruması) ama sunum bu yüzden kapanırsa sonucu REJECTED değil INDETERMINATE'tir ve
+   * neden korunur (AP2).
    */
   const failedAttempt = (
     p: Presentation,
@@ -178,8 +185,15 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     step: string | null,
     reason: string,
     branch?: Branch,
+    ind: VerificationResult["indeterminate_reason"] = null,
   ) => {
-    p.lastAttempt = { failed_step: step, failed_reason: reason, at: Date.now() };
+    p.lastAttempt = {
+      failed_step: step,
+      failed_reason: reason,
+      at: Date.now(),
+      outcome: ind ? "INDETERMINATE" : "REJECTED",
+      indeterminate_reason: ind,
+    };
     const f = p.branches.failedAttempt(branch);
     p.trace.push({
       t: Date.now(),
@@ -187,7 +201,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       detail: step ? `${step}: ${reason}` : reason,
     });
     if (f.presentationRejected) {
-      p.result = rejectedResult(pid, `too many failed responses (${f.n}); last: ${reason}`, ctx, step);
+      p.result = closedResult(pid, `too many failed responses (${f.n}); last: ${reason}`, ctx, step, ind);
       p.resultAt = Date.now();
       p.trace.push({ t: Date.now(), step: "Presentation closed: response attempt limit reached" });
     } else if (f.branchClosed && branch)
@@ -208,9 +222,15 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     const d = p.branches.decline(branch);
     if (!d.alreadyClosed) {
       if (d.presentationRejected) {
-        p.result = rejectedResult(
+        // Hata kodu yalnız OpenID4VP'nin sabit listesindense kayda geçer; başka her değer (serbest metin) "wallet error" —
+        // QR'ı gören biri sonuç alanına ve sayfaya kendi metnini yazdıramaz
+        p.result = closedResult(
           pid,
-          error === "access_denied" ? "the wallet declined" : `wallet error: ${error.slice(0, 64)}`,
+          error === "access_denied"
+            ? "the wallet declined"
+            : WALLET_ERROR_CODES.has(error)
+              ? `wallet error: ${error}`
+              : "wallet error",
           ctx,
           null,
         );
@@ -360,6 +380,15 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     }
     const dec = opened.response;
     let mine = false; // sunumu BU yanıt mı tamamladı (eşzamanlı başka dal önce tamamlamış olabilir)
+    // E4/AP9: doğrulama hattının denetim kaydı hemen yazılmaz — servis sonucu takma ad denetimiyle değiştirebilir. Kayıt, dönen
+    // (saklanan) sonuçla AYNI çıktıyla ve her çıkışta tam bir kez yazılır (`flushAudit`).
+    let pendingAudit: AuditEntry | undefined;
+    const flushAudit = (final?: Pick<AuditEntry, "outcome" | "failed_step">) => {
+      if (!pendingAudit) return;
+      const e = { ...pendingAudit, ...final };
+      pendingAudit = undefined;
+      ctx.audit(e);
+    };
     try {
       const stateMatched = stateIs(dec.state);
       p.trace.push({
@@ -399,14 +428,19 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
             ...(statusFetchOnDemandFor(cfg.network, p.policy) ? { statusFetchOnDemand: { timeoutMs: 4000 } } : {}),
             now: nowSec(),
             verificationId: `vrf_${pid.slice(4)}`,
-            audit: (e) => ctx.audit(e),
+            audit: (e) => {
+              pendingAudit = e;
+            },
             zk: ctx.zk, // ADR-0032: mso_mdoc_zk için arka uç (yerel varsa o, yoksa WASM)
           });
       // doğrulama sürerken sunum başka yoldan kapandıysa (ör. Ek C yanıtı) bu yanıt sonucu ezmez (tek yönlü durum, PV10)
-      if (!p.branches.isOpen(branch))
+      if (!p.branches.isOpen(branch)) {
+        flushAudit();
         return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
+      }
       // Sahiplik kanıtına ulaşmayan sonuç (A1–A6 / Z1 reddi ya da doğrulayıcı tarafı ZK eksiği) sunumu tüketmez
-      if (!holderBound(out.result))
+      if (!holderBound(out.result)) {
+        flushAudit();
         return failedAttempt(
           p,
           pid,
@@ -414,11 +448,15 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
           out.result.failed_step,
           out.result.failed_reason ?? out.result.outcome,
           branch,
+          out.result.outcome === "INDETERMINATE" ? out.result.indeterminate_reason : null,
         );
+      }
       // sahiplik kanıtı geçti: sunum bu yanıtla tamamlanır (B–E sonucu ne olursa olsun; PV10) — atomik: eşzamanlı başka dal önce
       // tamamladıysa bu yanıt kabul edilmez
-      if (!p.branches.tryConsume())
+      if (!p.branches.tryConsume()) {
+        flushAudit();
         return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
+      }
       mine = true;
       // ADR-0056 K9: geçiş kartı yalnız verifyPresentation'ın kendi kabul çıktısından (aşağıda `out` yeniden kurulabilir)
       const verified = out;
@@ -468,6 +506,8 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
             ts: nowSec(),
           });
       }
+      // denetim kaydı saklanan sonuçla aynı çıktıyı taşır (takma ad denetimi sonucu değiştirdiyse onunkini)
+      flushAudit({ outcome: out.result.outcome, failed_step: out.result.failed_step });
       p.result = out.result;
       p.claims = out.claims;
       p.resultAt = Date.now();
@@ -514,12 +554,20 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
     } catch (e) {
       // beklenmeyen hata (bozuk gövde vb.): sahiplik kanıtına ulaşmadıysa deneme; ulaştıysa sunum kapanır. Sunumu başka bir yanıt
       // tamamladıysa onun sonucu ezilmez
+      // İstisna iletisi sonuca, yanıta ve ize girmez (kişisel veri / iç ayrıntı taşıyabilir — AP3); yalnız hata türü
+      const kind = e instanceof Error ? e.name : typeof e;
       if (!mine) {
-        if (!p.branches.used) return failedAttempt(p, pid, reply, null, (e as Error).message, branch);
+        flushAudit();
+        if (!p.branches.used)
+          return failedAttempt(p, pid, reply, null, `response could not be processed (${kind})`, branch);
         return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
       }
-      p.trace.push({ t: Date.now(), step: "Response could not be processed", detail: (e as Error).message });
-      p.result = rejectedResult(pid, (e as Error).message, ctx);
+      // Sunum tüketildikten sonraki beklenmeyen hata belgenin kusuru değildir: RED değil DOĞRULANAMADI (AP2, §2.3). Doğrulama
+      // hattının bekleyen kaydı yazılmaz; yerine bu sonucun kaydı yazılır (kayıt ile sonuç ayrışmaz).
+      pendingAudit = undefined;
+      p.trace.push({ t: Date.now(), step: "Response could not be processed", detail: `internal error (${kind})` });
+      p.result = closedResult(pid, `internal error after verification (${kind})`, ctx, null, "INDEXER_STALE");
+      p.claims = null;
       p.resultAt = Date.now();
       return reply.code(400).send({ error: "invalid_request" }); // AP5: doğrulama SONUCU değil, istek biçimi hatası
     }
@@ -555,7 +603,7 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       // olan bir yanıt varken ret sonucu çeviremez (PV10)
       if (p.branches.busy || !p.branches.tryConsume())
         return reply.code(400).send({ error: "invalid_request", error_description: "a response is being processed" });
-      p.result = rejectedResult(pid, "the wallet returned no document", ctx, null);
+      p.result = closedResult(pid, "the wallet returned no document", ctx, null);
       p.resultAt = Date.now();
       p.trace.push({ t: Date.now(), step: "Wallet declined" });
       // RQ3: retin `redirect_uri`'si durum jetonu taşımaz (sayfa jetonu zaten tutar; ret veriye ya da sonuca erişim vermez)
@@ -590,7 +638,15 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     // sahiplik kanıtına (cihaz imzası, A6) ulaşmayan yanıt sunumu tüketmez (/vp/response ile aynı kural)
     if (!holderBound(out.result))
-      return failedAttempt(p, pid, reply, out.result.failed_step, out.result.failed_reason ?? out.result.outcome);
+      return failedAttempt(
+        p,
+        pid,
+        reply,
+        out.result.failed_step,
+        out.result.failed_reason ?? out.result.outcome,
+        undefined,
+        out.result.outcome === "INDETERMINATE" ? out.result.indeterminate_reason : null,
+      );
     if (!p.branches.tryConsume())
       return reply.code(400).send({ error: "invalid_request", error_description: "nonce already used (PV10)" });
     p.result = out.result;
@@ -772,7 +828,15 @@ function pendingView(p: Presentation) {
     state: "PENDING",
     attempts: p.branches.attempts,
     ...(p.lastAttempt
-      ? { last_attempt: { failed_step: p.lastAttempt.failed_step, failed_reason: p.lastAttempt.failed_reason } }
+      ? {
+          last_attempt: {
+            failed_step: p.lastAttempt.failed_step,
+            failed_reason: p.lastAttempt.failed_reason,
+            // AP2: deneme reddedildi mi, yoksa doğrulanamadı mı (doğrulayıcının eksiği) — RP ayrı gösterir
+            outcome: p.lastAttempt.outcome,
+            indeterminate_reason: p.lastAttempt.indeterminate_reason,
+          },
+        }
       : {}),
   };
 }
@@ -816,23 +880,50 @@ function pseudonymOnlyResult(pid: string, ctx: VerifyContext): VerificationResul
   };
 }
 
-/** Doğrulama hattına girmeyen ret (istek biçimi, kişinin reddi, deneme sınırı). `step` null: adım yok (cüzdan reddetti). */
-function rejectedResult(
+type AuditEntry = Parameters<NonNullable<VerifyInput["audit"]>>[0];
+
+/** OpenID4VP 1.0 §8.5 hata kodları (+ RFC 6749 §4.1.2.1 genel kodlar): cüzdanın hata yanıtında kayda geçen tek değerler. */
+const WALLET_ERROR_CODES: ReadonlySet<string> = new Set([
+  "invalid_scope",
+  "invalid_request",
+  "invalid_client",
+  "access_denied",
+  "vp_formats_not_supported",
+  "invalid_request_uri_method",
+  "invalid_transaction_data",
+  "wallet_unavailable",
+  "unauthorized_client",
+  "unsupported_response_type",
+  "server_error",
+  "temporarily_unavailable",
+]);
+
+/**
+ * Sunumu doğrulama hattının DIŞINDA kapatan sonuç (kişinin reddi, deneme sınırı, doğrulama sonrası iç hata). `step` null: adım
+ * yok (cüzdan reddetti). `ind` verilirse sonuç REJECTED değil INDETERMINATE'tir ve neden korunur (AP2). Sonuç denetim kaydına
+ * yazılır ve E4 `checks_performed`'te görünür (E4/AP9: kayıt ile dönen sonuç aynı); kayıt değer taşımaz (AP3/AP4).
+ */
+function closedResult(
   pid: string,
   reason: string,
   ctx: VerifyContext,
-  step: VerificationResult["failed_step"] | string | null = "A1",
+  step: VerificationResult["failed_step"] | string | null,
+  ind: VerificationResult["indeterminate_reason"] = null,
 ): VerificationResult {
   const f = ctx.trust().freshness();
+  const outcome = ind ? "INDETERMINATE" : "REJECTED";
+  const verification_id = `vrf_${pid.slice(4)}`;
+  const failed_step = step as VerificationResult["failed_step"];
+  ctx.audit({ verification_id, outcome, failed_step, disclosed: [], ts: nowSeconds() });
   return {
-    verification_id: `vrf_${pid.slice(4)}`,
-    outcome: "REJECTED",
-    failed_step: step as VerificationResult["failed_step"],
+    verification_id,
+    outcome,
+    failed_step,
     failed_reason: reason,
-    indeterminate_reason: null,
+    indeterminate_reason: ind,
     spec_version: SPEC_VERSION,
     sdk_version: SDK_VERSION,
-    checks_performed: [],
+    checks_performed: ["E4"],
     checks_skipped: [],
     issuer: null,
     schema: null,

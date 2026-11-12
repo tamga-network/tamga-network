@@ -102,11 +102,11 @@ export async function verifyMdocFormat(
   let dr: ReturnType<typeof parseDeviceResponse>;
   try {
     dr = parseDeviceResponse(b64uToBytes(presentation));
-  } catch (e) {
-    return fail("A1", `DeviceResponse could not be decoded: ${(e as Error).message}`);
+  } catch {
+    return fail("A1", "DeviceResponse could not be decoded");
   }
   // A8 — docType politikada mı (erken: yanlış tipte imza doğrulamaya gerek yok)
-  if (!opt.expectedDocTypes.includes(dr.docType)) return fail("A8", `docType not in policy: ${dr.docType}`);
+  if (!opt.expectedDocTypes.includes(dr.docType)) return fail("A8", "docType not in policy");
   // A2 — issuerAuth + x5chain
   let leafDer: Uint8Array;
   try {
@@ -116,8 +116,8 @@ export async function verifyMdocFormat(
     const x5 = parseCoseSign1(encode(ia as CborValue)).x5chain;
     if (!x5.length) return fail("A2", "x5chain missing (MD3)");
     leafDer = x5[0];
-  } catch (e) {
-    return fail("A2", `issuerAuth unreadable: ${(e as Error).message}`);
+  } catch {
+    return fail("A2", "issuerAuth unreadable");
   }
   // A3 — yaprak, verilen köklerden birine zincirlenmeli (SD-JWT A3 ile aynı kural). Ara sertifika YOK (bilinçli): ISO/IEC
   // 18013-5 Ek B belge imzacısı sertifikasını doğrudan IACA'dan verir (yol uzunluğu 0); AB PID/EAA mdoc profilleri de aynı zinciri
@@ -125,8 +125,8 @@ export async function verifyMdocFormat(
   let leaf: X509Certificate;
   try {
     leaf = new X509Certificate(toAB(leafDer));
-  } catch (e) {
-    return fail("A3", `leaf certificate unreadable: ${(e as Error).message}`);
+  } catch {
+    return fail("A3", "leaf certificate unreadable");
   }
   let anchorFingerprint: string | null = null;
   if (opt.rootCertsDer.length) {
@@ -148,7 +148,13 @@ export async function verifyMdocFormat(
       }
       if (!anchorFingerprint) return fail("A3", "x5chain leaf does not chain to any of the given roots");
     } catch (e) {
-      return fail("A3", `chain: ${(e as Error).message}`);
+      // yaprak okundu; buradaki hata çağıranın verdiği çapa sertifikasından ya da kütüphaneden: belgenin kusuru değil (AP2)
+      return {
+        ok: false,
+        failedStep: "A3",
+        reason: `chain could not be checked (${e instanceof Error ? e.name : typeof e})`,
+        indeterminate: "CHAIN_UNREACHABLE",
+      };
     }
   }
   const issuerId = computeIssuerId(opt.stateCode, leafDer); // A3b
@@ -156,8 +162,8 @@ export async function verifyMdocFormat(
   let pub: Uint8Array;
   try {
     pub = pointOf(leafDer);
-  } catch (e) {
-    return fail("A4", (e as Error).message);
+  } catch {
+    return fail("A4", "issuer key is not P-256");
   }
   const v = verifyIssuerSigned(dr.issuerSigned, {
     issuerPubRaw: pub,
@@ -167,6 +173,8 @@ export async function verifyMdocFormat(
   });
   if (!v.valid) {
     const r = v.reason ?? "invalid";
+    // neden kendi sabit iletilerimizden biridir; iki noktadan sonraki ayrıntı (varsa kütüphane iletisi) nedene girmez (AP3)
+    const shown = /^[^:]*/.exec(r)?.[0].trim() || "invalid";
     // imzalı ama okunamayan iptal girişi: D1 (status oku) RED — iptal denetimi atlanmaz (0.5.2)
     const step: Step = /^status entry malformed/.test(r)
       ? "D1"
@@ -179,7 +187,7 @@ export async function verifyMdocFormat(
             : /deviceKey/.test(r)
               ? "A3"
               : "A4";
-    return fail(step, `mdoc: ${r}`);
+    return fail(step, `mdoc: ${shown}`);
   }
   // Sertifika, belgenin imzalandığı anda (validityInfo.signed) geçerli olmalı — SD-JWT A3 ile aynı kural (D-BC-3)
   const signedMs = (v.signedEpoch ?? NaN) * 1000;

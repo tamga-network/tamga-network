@@ -146,7 +146,8 @@ export interface VerifyInput {
   verificationId?: string;
   /**
    * E4 denetim kaydı (AP9; değer/idx yok — AP3/AP4). Verilmezse kayıt yazılmaz ve E4 `checks_skipped`'te görünür (ADR-0056 K11);
-   * barındırılan doğrulayıcıda her zaman verin.
+   * barındırılan doğrulayıcıda her zaman verin. Eşzamansız olabilir (beklenir). Yazıcı hata fırlatır ya da reddederse doğrulama
+   * sonucu yine döner ve E4 `checks_skipped`'te görünür (kayıt yazılmadı).
    */
   audit?: (entry: {
     verification_id: string;
@@ -156,12 +157,16 @@ export interface VerifyInput {
     vct?: string;
     disclosed: string[];
     ts: number;
-  }) => void;
+  }) => unknown;
 }
 export interface VerifyOutput {
   result: VerificationResult;
+  /**
+   * AP3 — ayrı kanal: yalnız ACCEPTED'da ve yalnız politikanın İSTEDİĞİ alanların (`required_claims`) doğrulanmış değerleri.
+   * İstenmeyen açıklama, `iss` / `iat` / `vct` gibi teknik alanlar, kopya anahtarı (`cnf`) ve iptal sırası (`status` — AP4) dönmez.
+   */
   claims: Record<string, unknown> | null;
-} // claims: AP3 — ayrı kanal
+}
 
 export const SPEC_VERSION = "SPEC-API-0001@1.0.0"; // spec sürüm notuyla birlikte güncellenir
 export const SDK_VERSION = "@tamga-network/verifier@0.8.3"; // packages/verifier/package.json sürümüyle aynı (verifier.test.ts denetler)
@@ -264,34 +269,42 @@ export async function verifyPresentation(input: VerifyInput): Promise<VerifyOutp
     }
     if (fail)
       return fail.kind === "reject"
-        ? finish(ctx, vid, "REJECTED", fail.step, fail.reason, null)
-        : finish(ctx, vid, "INDETERMINATE", fail.step, fail.reason, fail.why);
+        ? await finish(ctx, vid, "REJECTED", fail.step, fail.reason, null)
+        : await finish(ctx, vid, "INDETERMINATE", fail.step, fail.reason, fail.why);
   }
   return finish(ctx, vid, "ACCEPTED", null, null, null);
 }
 
-function finish(
+async function finish(
   ctx: VerifyCtx,
   vid: string,
   outcome: Outcome,
   failed: Step | null,
   reason: string | null,
   ind: IndeterminateReason | null,
-): VerifyOutput {
+): Promise<VerifyOutput> {
   const { input, now, done, skipped, fr } = ctx;
-  // ADR-0056 K11: E4 yalnız denetim kaydı gerçekten yazıldıysa "yapıldı"; kayıt yeri yoksa atlandı
+  // ADR-0056 K11: E4 yalnız denetim kaydı gerçekten yazıldıysa "yapıldı"; kayıt yeri yoksa — ya da yazıcı hata verdiyse — atlandı.
+  // Yazıcının hatası doğrulamayı düşürmez (sonuç yine döner; çağıran E4'ü `checks_skipped`'te görür). Eşzamansız yazıcı beklenir.
+  let audited = false;
   if (typeof input.audit === "function") {
-    input.audit({
-      verification_id: vid,
-      outcome,
-      failed_step: failed,
-      issuer_id: ctx.issuerInfo?.issuer_id,
-      vct: ctx.schemaInfo?.vct,
-      disclosed: ctx.disclosed,
-      ts: now,
-    }); // AP9: red için de; AP3/AP4: değer/idx yok
-    done.push("E4");
-  } else skipped.push("E4");
+    try {
+      await input.audit({
+        verification_id: vid,
+        outcome,
+        failed_step: failed,
+        issuer_id: ctx.issuerInfo?.issuer_id,
+        vct: ctx.schemaInfo?.vct,
+        disclosed: ctx.disclosed,
+        ts: now,
+      }); // AP9: red için de; AP3/AP4: değer/idx yok
+      audited = true;
+    } catch {
+      /* kayıt yazılamadı: E4 atlandı olarak raporlanır */
+    }
+  }
+  if (audited) done.push("E4");
+  else skipped.push("E4");
   const out: VerifyOutput = {
     result: {
       verification_id: vid,

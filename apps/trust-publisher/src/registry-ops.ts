@@ -8,6 +8,7 @@
  */
 import { issuerGaps, issuerEntitlements, rpGaps } from "./registration.js";
 import { semanticIdentifier } from "./wrprc.js";
+import { contactProblems, normalizeDnsName } from "./source-checks.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Rec = Record<string, any>;
@@ -100,6 +101,7 @@ export function addIssuer(src: Rec, app: Rec, env: RegistryEnv): Rec {
   if (!Array.isArray(vcts) || !vcts.length) p.push("vcts: en az bir belge türü");
   for (const v of vcts) if (!env.knownVcts.has(v)) p.push(`şema katalogda yok: ${v}`);
   for (const g of issuerGaps(app)) p.push(`kayıt verisi eksik (ADR-0024): ${g}`);
+  p.push(...contactProblems("başvuru", app.contact));
   // ADR-0047 K2: kurumun ek iptal koşulları sayfası (isteğe bağlı) — yalnız https
   if (app.revocation_policy_uri !== undefined && !/^https:\/\/[^\s]+$/.test(String(app.revocation_policy_uri)))
     p.push("revocation_policy_uri: https adresi olmalı");
@@ -141,7 +143,8 @@ export function addIssuer(src: Rec, app: Rec, env: RegistryEnv): Rec {
 export function addRelyingParty(src: Rec, app: Rec, env: RegistryEnv, opts: { approval?: string } = {}): Rec {
   const p: string[] = [...placeholderProblems(app)];
   const rps = (src.relying_parties ?? []) as Rec[];
-  const prev = rps.find((r) => r.dns_name === app.dns_name);
+  // ADR-0075 RO5: ad karşılaştırması harf büyüklüğü ve sondaki nokta sayılmadan (elle düzenlenmiş kaynakta `Shop.Example.` de aynı ad)
+  const prev = rps.find((r) => normalizeDnsName(r.dns_name) === normalizeDnsName(app.dns_name));
   const reRegister = prev !== undefined && prev.status === "REVOKED" && opts.approval !== undefined;
   if (app.client_id !== undefined)
     p.push("client_id başvuruda verilmez: yayıncı erişim sertifikasından x509_hash olarak hesaplar (ADR-0034)");
@@ -172,6 +175,7 @@ export function addRelyingParty(src: Rec, app: Rec, env: RegistryEnv, opts: { ap
   if (!scopes.length) p.push("scopes: en az bir kullanım");
   p.push(...scopeProblems(scopes, env));
   for (const g of rpGaps(app)) p.push(`kayıt verisi eksik (ADR-0024): ${g}`);
+  p.push(...contactProblems("başvuru", app.contact));
   if (reRegister) {
     const old = new Set(((prev.scopes ?? []) as Rec[]).map((s) => s.scope_id));
     for (const s of scopes)

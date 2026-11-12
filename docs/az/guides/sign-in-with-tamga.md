@@ -4,7 +4,7 @@ title: "“Tamga ilə daxil ol” əlavə etmək"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-11
 summary: >
   Veb sayta Tamga ilə qeydiyyat və girişin əlavə edilməsi: səhifədə `@tamga-network/verifier/web` dəsti (QR / telefonda rəqəmsal cüzdanı açmaq), serverdə nəticənin yoxlayan tərəfdən alınıb sessiyanın açılması, qeydiyyatdan sonra passkey ilə telefonsuz giriş. İşlək nümunə sandbox-dadır: verify.sandbox.tamga.network/sample-site (apps/verify/src/routes/site.ts).
 translation_of: GUIDE-0001
@@ -55,6 +55,15 @@ const r = await fetch(`${VERIFIER}/presentations`, { method: "POST",
   body: JSON.stringify({ policy_id: policy }) }).then((x) => x.json());
 ```
 
+**Təqdimat identifikatorunu onu başladan brauzerin sessiyasına bağlayın.** `presentation_id` QR-da açıqdır və təkbaşına səlahiyyət deyil. Təqdimatı başladan brauzerə təsadüfi axın kukisi verin, serverdə kuki → təqdimat uyğunluğunu saxlayın və sessiyanı yalnız bu uyğunluqdakı təqdimat üçün açın (3-cü addım). Əks halda təqdimat identifikatorunu görən biri başqasının öz cüzdanı ilə təsdiqlədiyi təqdimatı öz brauzerində sessiyaya çevirə bilər.
+
+```ts
+// POST /tamga/start — right after opening the presentation
+const flow = crypto.randomBytes(18).toString("base64url");
+flows.set(flow, { presentationId: r.presentation_id, expires: Date.now() + 15 * 60_000 });
+res.setHeader("Set-Cookie", `tamga_flow=${flow}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=900`);
+```
+
 Müştəri identifikatoru ([[t:x509_hash]]) sertifikatınızdan hesablanır. Psevdonim isə saytınızın qeydiyyatdakı domen adına bağlıdır; sertifikatı
 yeniləsəniz də dəyişmir ([[ADR-0034]]).
 
@@ -89,7 +98,10 @@ Dəst **yoxlama aparmır** və **dəyərləri görmür**: yalnız `status_token`
 ## 3. Server: sessiyanın açılması
 
 ```ts
-// POST /oturum { presentation_id }  — accept JSON only (CSRF); Origin must be the same site
+// POST /oturum  — accept JSON only (CSRF); Origin must be the same site
+const flow = flows.get(cookies.tamga_flow);           // the presentation id comes from the flow cookie, not from the body
+if (!flow || flow.expires < Date.now()) return res.status(403).send();
+const id = flow.presentationId;
 const r = await fetch(`${VERIFIER}/presentations/${id}`, { headers: await auth() }).then((x) => x.json());
 if (r.outcome !== "ACCEPTED") return res.status(400).send();       // INDETERMINATE → "try again"
 const { claims } = await fetch(`${VERIFIER}/presentations/${id}/claims`, { headers: await auth() }).then((x) => x.json());
@@ -101,6 +113,7 @@ Nəticəni və dəyərləri yalnız təqdimatı açan sayt ala bilər; təqdimat
 
 Nümunə saytda tətbiq olunmuş formada (`apps/verify/src/routes/site.ts`) diqqət yetirilməli məqamlar:
 
+- **Başladan brauzer:** sessiya yalnız təqdimatı başladan brauzerdə açılır (axın kukisi → təqdimat uyğunluğu). Sorğu gövdəsində gələn təqdimat identifikatoruna etibar etməyin.
 - **Birdəfəlik istifadə:** bir təqdimat yalnız bir sessiya açır.
 - **Siyasət yoxlaması:** yalnız öz sayt siyasətlərinizlə edilmiş təqdimatı qəbul edin.
 - **Hesab açarı:** `claims.pseudonym`. Yoxlayan tərəf imzanı, `aud`/[[t:nonce]] dəyərlərini və [[t:WIA]] sübutunu artıq
