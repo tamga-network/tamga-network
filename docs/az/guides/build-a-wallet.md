@@ -253,7 +253,7 @@ Siyahı fayllarını özünüz şərh etməyin. Ətraflı: [[GUIDE-0006]].
 | Sahələr bir-bir göstərilir; əhatə dairəsindən kənar tələb ayrıca xəbərdarlıqla | WL8 |
 | Eyni yoxlayan tərəfə eyni nüsxə, fərqli yoxlayan tərəfə fərqli nüsxə | WL5, WL6 |
 | Təqdimetmə jurnalı cihazda qalır, serverə getmir | WL4 |
-| Ehtiyat nüsxə açar daşımır; yeni cihazda sənədlər yenidən alınır | WL2, WL10 |
+| Sənədlərin ehtiyat nüsxəsi alınmır; köçürmə faylı sənəd dəyəri və açar daşımır; yeni cihazda sənədlər yenidən alınır | WL2, WL10 |
 | Təqdimetmə anında sxem serverinə sorğu göndərilmir | WL9 |
 | Vasitəçi yoxlayan tərəf olduqda əsas sayt göstərilir və onun əhatə dairəsi yoxlanılır | [[ADR-0017]] HV6 |
 | "Etibarsız" və "yoxlanıla bilmədi" fərqli göstərilir | [[SPEC-CRED-0003]] S14 |

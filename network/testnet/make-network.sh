@@ -6,7 +6,9 @@
 #                                        [--dir DIR] [--besu-home DIR] [--java-home DIR] [--hosts "ip1 ip2 …"]
 #                                        [--block-period 2] [--force]
 #
-#   --validators N  genesis validators (default 4: QBFT 3f+1 → one faulty validator tolerated)
+#   --validators N  genesis validators (default 4: QBFT 3f+1 → one faulty validator tolerated). Governance needs two founders
+#                   (ADR-0076 GC4): with --keys generate a one-validator network has one state only, so its key map is not
+#                   written and the contracts cannot be set up on it (node-level checks only).
 #   --extra E       further nodes that start as full nodes and are voted in later (default 1; deploy-and-wire.sh uses it)
 #   --keys dev      (default) node keys = Hardhat's PUBLIC test accounts #1 #2 #6 #7 #8 — so the QBFT validator address =
 #                   the Governance validator address = the enode address (ADR-0052 K2) with the repository's local deploy
@@ -168,7 +170,7 @@ qbft_genesis_json() {
   alloc=$(printf '%s\n' "${ALLOC_ACCOUNTS[@]}" | jq -R . | jq -s 'map({key: ., value: {balance: "0x3635C9ADC5DEA00000"}}) | from_entries')
   jq -n --argjson chainId "$CHAIN_ID" --argjson period "$BLOCK_PERIOD" --argjson alloc "$alloc" '{
     config: {
-      chainId: $chainId, berlinBlock: 0, londonBlock: 0, shanghaiTime: 0, zeroBaseFee: true,
+      chainId: $chainId, berlinBlock: 0, londonBlock: 0, shanghaiTime: 0, cancunTime: 0, zeroBaseFee: true,
       qbft: { blockperiodseconds: $period, epochlength: 30000, requesttimeoutseconds: ($period * 2) }
     },
     nonce: "0x0", timestamp: "0x0", gasLimit: "0x1fffffffffffff", difficulty: "0x1",
@@ -301,8 +303,11 @@ EOF
 done
 
 # --- key map (--keys generate): role → address + private key file (relative to keys/) — TEST ONLY --------------------------
-if [ "$KEYS" = generate ]; then
-  FOUNDERS=$((N < 2 ? N : 2)) # TR + KZ as in the local deploy script; the other genesis states are admitted by 2/3 vote
+if [ "$KEYS" = generate ] && [ "$N" -lt 2 ]; then
+  # ADR-0076 GC4: Governance is founded by at least two states and a founder is a genesis validator — no key map here
+  log "key map: not written — one genesis validator, Governance needs two founders (ADR-0076 GC4); node-level checks only"
+elif [ "$KEYS" = generate ]; then
+  FOUNDERS=2 # TR + KZ as in the local deploy script; the other genesis states are admitted by 2/3 vote
   ref() { jq -n --arg a "0x$1" --arg k "$2" '{address: $a, key: $k}'; }
   for ((n = 1; n <= TOTAL; n++)); do
     s=${STATES[$((n - 1))]}

@@ -61,7 +61,7 @@ Bu səhifə [[GUIDE-0005]]-də təsvir olunan rəqəmsal cüzdanı buraxılışa
 
 ## Cihazın dəyişdirilməsi və silmə
 
-- Ehtiyat nüsxə və köçürmə faylı açar daşımır; yeni cihazda sənədlər "yenidən al" siyahısı ilə bərpa olunur (WL2, WL10).
+- Sənədlərin ehtiyat nüsxəsi alınmır; köçürmə faylı sənəd dəyəri və açar daşımır; yeni cihazda sənədlər "yenidən al" siyahısı ilə bərpa olunur (WL2, WL10).
 - Jurnalın bərpası şəxsdən soruşulur.
 - Cihaz başqasına verildikdə vahid ləğv edilir (provayderinizin vahid ləğvi əməliyyatı).
 - Tətbiqin içindən hesabın və məlumatların silinməsi işləyir (provayderinizin vahid silmə əməliyyatı, `requestIdentityErasure`); qurumdakı məlumatlar üçün müraciət yolu

@@ -1,7 +1,7 @@
 /**
  * Hardhat yapılandırması — Tamga güven katmanı kontratları (SPEC-BC-0001).
- * Derleme ayarları eski foundry.toml ile aynı: solc 0.8.24, evm shanghai (Besu QBFT ile uyumlu; cancun'a geçmeden Besu
- * sürümü doğrulanır), optimizer 200, metadata hash yok (deterministik bytecode).
+ * Derleme ayarları: solc 0.8.24, evm cancun (ADR-0077: zincir Cancun kural setiyle kurulur; genesis `cancunTime: 0`, süreç
+ * içi ağ da `cancun`), optimizer 200, metadata hash yok (deterministik bytecode).
  * Ağlar: `hardhat` (süreç içi; testler), `localhost` (`npm run node` → `npm run deploy:dev`), `besuDev` (yerel tek doğrulayıcılı
  * Besu QBFT ağı, `npm run chain:besu:start` → `npm run chain:besu:deploy`; adres TAMGA_BESU_RPC, varsayılan
  * http://127.0.0.1:8546), `besuStaging` (test/staging ağı, GUIDE-0018 yol C: `npm run deploy:network`; adres TAMGA_CHAIN_RPC_URL,
@@ -37,7 +37,7 @@ export default defineConfig({
     npmFilesToBuild: ["@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol"],
     settings: {
       optimizer: { enabled: true, runs: 200 },
-      evmVersion: "shanghai",
+      evmVersion: "cancun",
       metadata: { bytecodeHash: "none" },
       // SPEC-BC-0001 §9: depolama düzeni karşılaştırması (scripts/check-upgrade-safety.mjs → .storage/)
       outputSelection: { "*": { "*": ["storageLayout"] } },
@@ -47,6 +47,8 @@ export default defineConfig({
     hardhat: {
       type: "edr-simulated",
       chainType: "l1",
+      // ADR-0077: testler zincirle aynı kural setinde koşar (varsayılan daha yeni bir sürümdür)
+      hardfork: "cancun",
     },
     localhost: {
       type: "http",

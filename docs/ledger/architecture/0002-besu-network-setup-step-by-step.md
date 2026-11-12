@@ -4,7 +4,7 @@ title: "Besu ağı kurulumu"
 status: Draft
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-11-05
+last_updated: 2026-11-12
 summary: >
   "Hyperledger Besu ile ağ kurmak ne demek?" sorusunu adım adım, somut olarak
   yanıtlar: chain ID/genesis, QBFT validator anahtarları ve extraData, bootnode,
@@ -54,7 +54,7 @@ tek validator, herkesçe bilinen test hesapları; gerçek ağ ≥2 bağımsız i
 |---|---|
 | chainId | 31338 (Hardhat 31337'den ayrı) |
 | Uzlaşı | QBFT, blok süresi 2 sn, epoch 30000, istek zaman aşımı 4 sn |
-| Genesis | `shanghaiTime: 0` (kontratlar `evmVersion: shanghai`), `zeroBaseFee: true`; Hardhat test hesaplarına bakiye |
+| Genesis | `shanghaiTime: 0` ve `cancunTime: 0` — Cancun kural seti ([[ADR-0077]]; kontratlar `evmVersion: cancun`), `zeroBaseFee: true`; Hardhat test hesaplarına bakiye. 2026-11-12'den önce üretilmiş yerel genesis Shanghai'dir: `network/dev/genesis.json` ve `keys/` silinip `-Init` ile yeniden üretilir, zincir verisi `-Reset` ile sıfırlanır |
 | Dinleme | yalnız 127.0.0.1 — RPC 8546 (8545 Hardhat'indir), P2P 30313 (`p2p-interface` da 127.0.0.1 — `p2p-host` yalnız ilan edilen adrestir), keşif kapalı, host izin listesi localhost/127.0.0.1 |
 | RPC ad alanları | `ETH`, `NET`, `WEB3` + yalnız yerelde `QBFT` (doğrulayıcı listesi için); gaz fiyatı alt sınırı 0 |
 
@@ -258,6 +258,10 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 5. Faz geçiş eşikleri → [[PM-GOV-0001]] (planlı).
 6. **Yönetişim anahtarı ile mutabakat (düğüm) anahtarının ayrılması** — bugün aynı anahtar; karar ikinci devlet katılmadan önce yeni
    bir ADR ile verilir. O zamana kadar gerçek ağda validator düğüm anahtarı HSM'de tutulur (Adım 2).
+7. ~~Kural seti (Shanghai mı, Cancun mu)~~ — **kapandı (2026-11-12):** Cancun ([[ADR-0077]]); genesis üreticileri
+   `cancunTime: 0` yazar. Blob işlemleri kullanılmaz; KZG için ek seçenek gerekmez (Besu 26.11.0, yerel QBFT denemesi).
+8. ~~Kuruluşta kurucu sayısı~~ — **kapandı (2026-11-12):** en az iki kurucu ([[ADR-0076]] GC4); `Governance.initialize` tek
+   kurucuyu reddeder. Doğrulayıcı sayısı ayrı konudur (yerel tek doğrulayıcılı zincir de iki kurucuyla kurulur).
 
 ---
 

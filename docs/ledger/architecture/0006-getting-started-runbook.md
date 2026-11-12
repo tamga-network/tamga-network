@@ -115,8 +115,8 @@ Cüzdan bir web/PWA uygulaması **olamaz**. [[SPEC-WALLET-0001]] bağlayıcı:
 - `SPEC-WALLET-0001/WL1` — holder anahtarları cihazın **güvenli bölgesinden**
   (iOS Secure Enclave / Android StrongBox) çıkmaz; seed'den türetilmez.
 - `SPEC-WALLET-0001/WL11` — her sunum PIN/biyometri onayı gerektirir.
-- `SPEC-WALLET-0001/WL2` — yedek anahtarları taşımaz; cihaz değişince yeniden
-  ihraç gerekir.
+- `SPEC-WALLET-0001/WL2` — cüzdan belgelerin yedeğini almaz; cihaz değişince yeniden
+  ihraç gerekir (taşınan tek şey taşıma dosyasıdır).
 
 Bunun pratik sonucu: **native iOS (Swift) + Android (Kotlin) uygulaması.**
 Ortak iş mantığı `@tamga-network/wallet-core`'da (TypeScript kanonik), native kabuklar

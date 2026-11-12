@@ -6,11 +6,12 @@ version: 1.0.0
 created: 2026-09-09
 last_updated: 2026-11-12
 summary: >
-  Defines the wallet's key, storage, backup and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
+  Defines the wallet's key, storage, device change and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
   implied that the key is recoverable. Both cannot be true at once — and a holder key derivable from a seed would make the
   credential TRANSFERABLE, bringing the holder binding gap back through the back door. Decision: keys are not derived from
-  the seed; the backup carries the credentials and the manifest, and a device change requires RE-ISSUANCE. In addition,
+  the seed; the wallet takes no backup of credentials, and a device change requires RE-ISSUANCE; the only thing that leaves the
+  device is the migration file started by the person ([[ADR-0078]]). In addition,
   sticky per-verifier use of batch copies closes two open questions at once.
 translation_of: SPEC-WALLET-0001
 source_version: 1.0.0
@@ -19,7 +20,7 @@ source_version: 1.0.0
 # In brief
 
 This document sets out the rules every wallet compatible with Tamga Network must follow internally: keys, on-device storage,
-backup, the consent screen and credential copies. It is written for wallet developers; Tamga Wallet (a separate repository)
+device change, the consent screen and credential copies. It is written for wallet developers; Tamga Wallet (a separate repository)
 is the reference implementation of these rules.
 
 **When to read**
@@ -42,7 +43,7 @@ wishes, they can reset the wallet and delete their data both from Tamga's servic
 
 # Scope
 
-The **internal** design of the wallet: key management, local storage, backup and recovery, the consent surface, use of
+The **internal** design of the wallet: key management, local storage, device change and migration, the consent surface, use of
 credential copies, the schema cache.
 
 The protocols are in [[SPEC-PROTO-0001]] and [[SPEC-PROTO-0002]]. The [[t:WIA]] and the [[t:key-attestation]] are in
@@ -89,8 +90,10 @@ issuance and **reopened at recovery**. A back door is more dangerous than a fron
 
 **Invariant WL1:** holder keys are **not derived from a seed** and **never leave** the device's secure area.
 
-**Invariant WL2:** the backup carries the credential **documents** and the **manifest**; it does not carry holder keys. A
-credential restored on a new device therefore **cannot be presented** — re-issuance is required.
+**Invariant WL2:** the wallet **takes no backup** of credentials: credentials are bound to the hardware key on the device and
+do not move. On a new device re-issuance is required. The only thing the wallet carries off the device is the migration file
+started by the person (§7.5); the file contains no credential values, copies or keys. (Until 2026-11-12 this rule said "the
+backup carries the credentials and the manifest"; no such backup was ever built — [[ADR-0078]].)
 
 This is an accepted user-experience cost. The alternative is to lose the system's core security property.
 
@@ -109,19 +112,20 @@ keys** (iCloud Keychain / Google Password Manager style key classes, hardware-ba
 **Rejected.** In the expansion stage it may be reconsidered as an optional "easy recovery" mode for level W2 — if the user knowingly
 chooses lower assurance. For now it is not worth the product complexity.
 
-## 1.4 The real role of the seed
+## 1.4 No seed and no backup ([[ADR-0078]])
 
-The seed does a **narrower** job than it seems:
+The first design foresaw a backup encrypted with a key derived from a 24-word seed: the credentials themselves, a "manifest"
+(which type from which institution) and the settings. This backup was not built and is not built:
 
-| What the seed recovers | What it does not recover |
+| | |
 |---|---|
-| The wallet identity (the decryption key of the backup) | Holder keys |
-| The credentials themselves (readable, not presentable) | The ability to present |
-| The manifest: which type from which institution | — |
-| Settings, language, presentation record | — |
+| Nothing to recover | A restored credential can be read but not presented; its key stays on the old device |
+| It has a cost | A copy of the credential values exists outside the device; even encrypted, it is a leak surface |
+| Something takes its place | The list of "which credentials do I need to get again" is in the migration file (§7.5) |
 
-The manifest is critical: on the new device it offers the user a one-tap list **"request these 4 credentials again"**. It
-does not remove the pain of recovery but makes it manageable.
+The wallet has no seed words and no recovery phrase the person is asked to keep. The only thing the wallet carries is the
+migration file, encrypted with the person's own passphrase. The seed of the site pseudonyms is a different thing: it comes from
+the identity service, stays in the device's secure store and does not move (§5.4, WL15).
 
 ---
 
@@ -132,7 +136,6 @@ does not remove the pain of recovery but makes it manageable.
 | Key | Where | Exportable | Lifetime |
 |---|---|---|---|
 | **Holder keys** (N per issuance) | Secure Enclave / StrongBox | **No** | Credential lifetime |
-| **Backup encryption key** | Derived from the seed | As the seed | Permanent |
 | **Wallet instance key** | Secure area | No | Installation lifetime |
 
 ## 2.2 Wallet assurance levels
@@ -163,7 +166,7 @@ hardware does that). How the user is verified depends on where the key lives:
 |---|---|
 | Length (app PIN) | At least 6 digits |
 | Biometrics | Next to the PIN, **not instead of** it (the fallback is the PIN) |
-| Attempts | 5 wrong → 30 s delay; 10 → the wallet locks, the seed is required |
+| Attempts | 5 wrong → 30 s delay; 10 → the wallet locks; there is no recovery, the wallet is reset and the credentials are obtained again (§7.6) |
 | Presentation approval | User verification **mandatory** for every presentation: device biometrics or device passcode on secure hardware; PIN or biometrics on the software-key path |
 | Fallback | If the operating-system prompt cannot be shown for a technical or temporary reason (no foreground window, authentication service unavailable), the app PIN is asked. If the user **cancels** the prompt there is no fallback: nothing is presented |
 
@@ -236,8 +239,22 @@ resolved (an unregistered verifier), because no domain name is known for it.
 copy still belongs to that verifier; it is not given to another verifier as "unused".
 
 **Proximity and wallet to wallet:** a reader has no identity that lasts across sessions (the session key is new every time).
-Every proximity session therefore uses **a new copy**. When no unused copy is left, nothing is presented — a copy is not
-silently reused; the person refreshes the credential (§4.3).
+Every proximity session therefore uses **a new copy**.
+
+Running out of copies must not leave the person standing at the door. **Target behaviour** (decided 2026-11-12;
+**implementation: pending**, before the store release):
+
+| Situation | Wallet behaviour |
+|---|---|
+| Few unused copies left | Refreshes in the background (for credentials with a refresh token; under WL7 and the [[ADR-0023]] conditions) |
+| No copy left, device online | Refreshes right before presenting and presents with the new copy |
+| No copy left, device offline | Shows the person a warning (this presentation can be linked to the previous one); if the person accepts, reuses **the last copy** |
+
+Offline reuse is never silent: the warning and the person's consent are required. Once the device is online the copies are
+refreshed.
+
+**Today's implementation:** when no unused copy is left, nothing is presented — a copy is not reused; the person refreshes the
+credential (§4.3).
 
 ## 4.2 A consistent disclosure set
 
@@ -249,6 +266,10 @@ fields are disclosed in the first presentation and 6 in the second, the verifier
 
 If the verifier asks for fewer fields, the wallet **does not present more** — the new request itself applies, not an
 intersection; but the user is shown "you previously gave this verifier these fields".
+
+**Implementation note (2026-11-12).** The notice about earlier sharing is **not implemented yet**; it comes with the wallet's
+first update, in a plain form: a line on the consent screen, "you have shared these with this verifier before", and emphasis on
+the fields requested for the first time. The text of the rule is unchanged.
 
 ## 4.3 Running out
 
@@ -483,44 +504,37 @@ internet connection is needed" and the fetch happens **with the user's approval*
 
 ---
 
-# 7. Backup and recovery
+# 7. Device change and migration
 
-## 7.1 Backup content
+## 7.1 No backup
 
-```
-encrypted_backup = AES-GCM(
-    key     = HKDF(seed),
-    content = {
-        manifest:    [{ issuer, vct, received_at }],
-        credentials: [SD-JWT strings],
-        settings:    { language, notifications }
-    }
-)
-```
+The wallet takes no backup of credentials, copies or keys; neither off the device nor to a server (WL2, [[ADR-0078]]). The
+wallet also keeps its data out of the operating system's device backup.
 
-**Not in the backup:** holder keys (WL1), `presentation_log` (WL4), `verifier_map`.
+The only persistent data that can leave the device is the migration file started by the person (§7.5):
+
+| In the migration file | Not in it |
+|---|---|
+| The list of credentials to obtain again (type, institution, institution address) | Credential values and copies (LX2) |
+| The transaction log, if the person wants ([[ADR-0027]]) | Holder keys (WL1) |
+| | `verifier_map`, the pseudonym seed (WL15) |
 
 Why there is no `verifier_map`: new copies will be obtained on the new device anyway, so the old mapping is meaningless. It
 also records which verifiers received presentations — the same rationale as WL4.
 
 ## 7.2 Server side
 
-The backup may be uploaded to a Tamga-hosted store. The server **cannot decrypt** it — the key is derived from the seed and
-the seed never goes to the server.
-
-| What the server sees | What it does not see |
-|---|---|
-| Encrypted blob size | Content |
-| Upload time | Which credentials |
-| Wallet instance identifier | The user's identity |
+There is none. The wallet's data is not uploaded to any server: the network operates no wallet service ([[ADR-0042]]) and the
+wallet provider keeps no credentials, log or migration file. The migration file goes wherever the person chooses through the
+share menu ([[ADR-0027]] LX1).
 
 ## 7.3 Device change flow
 
 ```
-1. Install on the new device
-2. Enter the seed + set a new PIN
-3. Download and decrypt the backup
-4. The manifest is shown:
+1. On the old device: Settings → Move to a new phone → set a passphrase → migration file (§7.5)
+2. Install on the new device + set a new PIN
+3. Open the migration file (passphrase)
+4. The list is shown:
      ┌──────────────────────────────────────────┐
      │ 4 of your credentials must be re-issued  │
      │                                          │
@@ -534,13 +548,14 @@ the seed never goes to the server.
      → new holder keys, new cnf, new idx
 ```
 
-**The user is told clearly:** the old credentials can be viewed but not presented; re-issuance is needed. Hiding this is worse
-than hitting a failure at presentation time.
+**The user is told clearly:** credentials do not move; on the new phone they are obtained again from the institutions. Hiding
+this is worse than hitting a failure at presentation time.
 
-## 7.4 Losing the seed
+## 7.4 Losing the device
 
-If the seed **and** the device are lost, there is no recovery. The user **applies again** to each institution and proves
-their identity through the institution's own procedure ([[SPEC-PROTO-0001]] §11 — in-person binding).
+If the device is lost the credentials cannot be brought back; if there is a migration file, only the list of "which
+credentials" is at hand. The user **applies again** to each institution and proves their identity through the institution's own
+procedure ([[SPEC-PROTO-0001]] §11 — in-person binding).
 
 This is not a disaster: the credentials are data the institution can produce again. What is lost is **access**, not data.
 
@@ -584,9 +599,9 @@ my data").
 | # | Invariant |
 |---|---|
 | **WL1** | Holder keys are not derived from a seed; they do not leave the secure area. |
-| **WL2** | The backup carries the credentials and the manifest; it does not carry keys — a device change requires re-issuance. |
+| **WL2** | The wallet takes no backup of credentials: credentials are bound to the hardware key on the device and do not move; after a device change credentials are issued again. The only thing the wallet carries off the device is the migration file started by the person (EU TS10); the file contains no credential values, copies or keys ([[ADR-0078]]). |
 | **WL3** | W1 (software-key) wallets are not supported (except the test key for the network's own trial scenes in the sandbox list — [[ADR-0042]] K5). |
-| **WL4** | The `presentation_log` never leaves the device to a server or automatically and does not enter the server backup; it leaves the device only in an export the person starts, encrypted with the person's password (TS10) ([[ADR-0027]]). |
+| **WL4** | The `presentation_log` never leaves the device to a server or automatically; it leaves the device only in an export the person starts, encrypted with the person's password (TS10) ([[ADR-0027]]). |
 | **WL5** | Always the same batch copy to a verifier; a different copy to a different verifier. |
 | **WL6** | The disclosure set is consistent for the same verifier + the same `vct`. |
 | **WL7** | Refresh without user action happens only under the conditions AR1–AR4 of [[ADR-0023]]. |
@@ -607,11 +622,8 @@ my data").
 for easy recovery must pass the question "does this make the credential transferable?". If the answer is yes, it is
 rejected.
 
-**The backup size is a signal.** From the blob size the server can estimate how many credentials there are. Mitigation: the
-backup is padded to fixed-size blocks.
-
 **The sticky mapping keeps a list.** `verifier_map` contains the verifiers to which the user has presented — it is as sensitive
-as the `presentation_log` and subject to the same rules (it stays on the device, it does not enter the backup).
+as the `presentation_log` and subject to the same rules (it stays on the device, it does not enter the migration file).
 
 **PIN lockout is a DoS surface.** Someone who seizes the device can enter a wrong PIN 10 times and lock the wallet. Accepted
 risk — the alternative is to leave it open to brute force.
@@ -623,7 +635,7 @@ risk — the alternative is to leave it open to brute force.
 1. Re-issuance on a new device requires the institution to still recognise the person. What will the university do if a
    graduate changes device 10 years later? A question of institutional process → PM-GTM-0001.
 2. How will W3 (certified WSCD) be detected in the state stage — device attestation or separate hardware? → `SPEC-WALLET-0002`
-3. How costly is fixed-size padding of the backup? To be measured.
+3. ~~How costly is fixed-size padding of the backup?~~ — **closed (2026-11-12, [[ADR-0078]]):** there is no backup.
 4. Are multiple devices (tablet + phone) supported? Not now — every device means a separate holder key, so a separate issuance
    for every device. Batch issuance could partly solve this but has not been designed.
 5. Should `verifier_map` be shown to the user? For transparency yes, but a list of "which employers you applied to" is also
@@ -642,4 +654,8 @@ risk — the alternative is to leave it open to brute force.
 
 # Status
 
-**In force** — version 1.0.0 (2026-10-02; last updated 2026-10-04).
+**In force** — version 1.0.0 (2026-10-02; last updated 2026-11-12).
+
+**2026-11-12:** [[ADR-0078]] — no backup, the migration file is the only thing that moves (text of WL2; §1.3, §1.4, §2.1, §7,
+§8). Implementation notes: the WL6 notice about earlier sharing comes with the first update (§4.2); target behaviour when
+copies run out in proximity, implementation pending (§4.1).

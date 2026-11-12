@@ -4,6 +4,7 @@
  * test edilen kurulum ile dağıtılan kurulum aynıdır.
  *
  * Üretim dağıtımı YOKTUR: zincir ≥2 bağımsız validator operatörüyle kurulur (ADR-0009 K4). Bu dosya yalnız yerel/dev ağ içindir.
+ * Kuruluş en az iki kurucu ister (ADR-0076 GC4; `Governance.initialize` de reddeder): tek üyeli yönetişim hiçbir karar alamaz.
  */
 import type { HardhatEthers } from "@nomicfoundation/hardhat-ethers/types";
 import type { BaseContract, Signer } from "ethers";
@@ -27,6 +28,9 @@ export interface TrustLayerDeployment {
   trustQueries: BaseContract;
   addresses: Record<string, string>;
 }
+
+/** ADR-0076 GC4: kuruluşta en az kurucu sayısı (= Governance.MIN_ABSOLUTE_VOTES). */
+export const MIN_FOUNDERS = 2;
 
 /** "TR" → bytes2 (0x5452). */
 export function stateCode(ethers: HardhatEthers, code: string): string {
@@ -73,7 +77,9 @@ export async function deployTrustLayer(
   founders: Founder[],
   firstValidatorSigner: Signer,
 ): Promise<TrustLayerDeployment> {
-  if (founders.length === 0) throw new Error("en az bir kurucu gerekir");
+  // Kontrat da reddeder (`FounderMismatch`); burada dağıtımdan ÖNCE, açık iletiyle durulur.
+  if (founders.length < MIN_FOUNDERS)
+    throw new Error(`en az ${MIN_FOUNDERS} kurucu gerekir (ADR-0076 GC4) — verilen: ${founders.length}`);
   const codes = founders.map((f) => stateCode(ethers, f.code));
   const validators = founders.map((f) => f.validator);
 

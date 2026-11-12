@@ -12,7 +12,8 @@ summary: >
   kilidlənir. Çıxış hüququ (ADR-0002 #5) ilə idarəetmənin davamlılığı bu nöqtədə toqquşur. Təklif: (a) aktiv üzv sayı 2 ikən
   `withdraw` rədd edilir; çıxmaq istəyən üzv əvvəlcə üçüncü üzvün qəbulunu gözləyir. Alternativ (b): çıxış sərbəst qalır, tək üzv
   qalanda hədd 1-ə enir. Tövsiyə olunan (a). Qəbul edildi (2026-11-12): (a), tövsiyə edildiyi kimi. Çıxmaq istəyən üzvün yolu:
-  əvvəlcə üçüncü üzv qəbul edilir, sonra üzv çıxır. Tək təsisçili quruluş yalnız yerli inkişaf üçündür.
+  əvvəlcə üçüncü üzv qəbul edilir, sonra üzv çıxır. Əlavə qayda (2026-11-12, GC4): şəbəkə ən azı iki təsisçi ilə qurulur;
+  `initialize` tək təsisçini rədd edir.
 domain: Governance
 related: ["[[ADR-0002]]", "[[ADR-0009]]", "[[ADR-0055]]", "[[SPEC-BC-0001]]"]
 translation_of: ADR-0076
@@ -70,8 +71,25 @@ cədvələ köçürülür):
 
 # Qərar (2026-11-12)
 
-**(a) tövsiyə edildiyi kimi qəbul edildi.** Məcburi qaydalar aşağıdakı GC1–GC3; ad cədvəldən sonra. Tək təsisçili quruluş
-dəyişmədi: yalnız yerli inkişaf üçündür; quruluşun ən azı iki təsisçi tələb etməsi ayrıca qərarlaşdırılır.
+**(a) tövsiyə edildiyi kimi qəbul edildi.** Məcburi qaydalar aşağıdakı GC1–GC3; ad cədvəldən sonra. Quruluşun ən azı iki
+təsisçi tələb etməsi həmin gün ayrıca qərara saxlanılmışdı; elə həmin gün aşağıdakı əlavə qərarla bağlandı (GC4).
+
+## Əlavə qərar (2026-11-12): ən azı iki təsisçi
+
+Şəbəkə ən azı iki təsisçi ilə qurulur. Təsdiqlənmiş istiqamət: real şəbəkədə məcburi; tək təsisçili quraşdırma ən çoxu yerli
+inkişaf və test üçün, açıq bayraqla. İki tətbiq yolu qiymətləndirildi:
+
+| Yol | Nə | Nəticə |
+|---|---|---|
+| **(i) Kontraktda məcburi** | `Governance.initialize` ikidən az təsisçini rədd edir; testlər və yerli skriptlər iki təsisçi ilə qurur | **seçildi** |
+| (ii) Quraşdırma skriptlərində | Kontrakt tək təsisçini qəbul etməyə davam edir; quraşdırma skriptləri tək təsisçini yalnız yerli zəncir identifikatorlarında və ya açıq bayraqla qəbul edir | seçilmədi |
+
+Səbəb: (ii) yalnız bu repozitoriyanın skriptlərini bağlayır; kontraktı başqa alətlə yerləşdirən şəxs tək təsisçi ilə qura bilər
+və qayda kodda deyil, vərdişdə qalır. (i)-də qayda, GC1 kimi, kontraktın özündədir. Tək təsisçi bayrağına ehtiyac da qalmadı:
+yerli inkişaf zənciri, test şəbəkəsi və kontrakt testləri onsuz da iki və ya üç təsisçi ilə qurulurdu; tək təsisçili idarəetmə
+heç bir təklifi icra edə bilmədiyi üçün sınanacaq davranışı yoxdur. Bayraq açılmadı; gələcəkdə lazım olarsa yeni qərarla əlavə
+olunur. Yeni ad lazım olmadı: mövcud `FounderMismatch` xətası istifadə olunur (təsisçi tanınması təklifindəki "ikidən az
+təsisçi" yoxlaması ilə eyni xəta).
 
 # Dəyişməz qaydalar
 
@@ -80,6 +98,7 @@ dəyişmədi: yalnız yerli inkişaf üçündür; quruluşun ən azı iki təsis
 | GC1 | Birtərəfli çıxış (`Governance.withdraw`) yalnız şəbəkədə ən azı üç aktiv üzv olanda keçir; aktiv üzv sayı 2 və ya daha az ikən rədd edilir (`TooFewMembers`). Nə çıxış, nə də çıxarılma aktiv üzv sayını minimal mütləq səs sayından (2) aşağı endirə bilməz: idarəetmə həmişə qərar qəbul edə bilən vəziyyətdə qalır. |
 | GC2 | İki üzvlü şəbəkədə çıxmaq istəyən üzvün yolu ardıcıldır: əvvəlcə üçüncü üzv qəbul edilir (`proposeStateAdmission`, iki üzvün səsi ilə), sonra üzv `withdraw` ilə çıxır; bu ikinci addım səsvermə tələb etmir. Qəbul baş tutana qədər üzv validatorunu dayandıra və qeyd yazmağı saxlaya bilər; üzvlüyü davam edir. |
 | GC3 | [[ADR-0002]] #5 bu qeydlə oxunur: çıxış hüququ ləğv olunmur, ardıcıllığa bağlanır. Ən azı üç aktiv üzvü olan şəbəkədə birtərəflidir, səsvermə tələb etmir və kodla təmin olunur. Çıxışın rəqəmsal sənədlərə təsiri dəyişmir: verilmiş rəqəmsal sənədlər və mövcud qeydlər etibarlı qalır ([[ADR-0002]] #4). |
+| GC4 | Şəbəkə ən azı iki təsisçi ilə qurulur: `Governance.initialize` ikidən az təsisçini rədd edir (`FounderMismatch`). Quraşdırma skriptləri və açar xəritəsi eyni qaydanı yerləşdirmədən əvvəl yoxlayır; tək təsisçili quraşdırma üçün bayraq və ya istisna yoxdur. |
 
 Ad (ictimai ABI; mövcud xəta adlandırma qaydasına görə — `TooManyDelegates(count, max)` nümunəsi):
 
@@ -90,8 +109,12 @@ Ad (ictimai ABI; mövcud xəta adlandırma qaydasına görə — `TooManyDelegat
 # Nəticələr
 
 - `Governance.withdraw`: şərtin bir sətirlik dəyişikliyi (`activeMemberCount ≤ 2` → rədd). Yaddaş düzümü və funksiya imzaları
-  dəyişmir; ABI-yə bir xəta əlavə olunur. Tək üzvlü (yerli inkişaf) quruluşda da çıxış eyni xəta ilə rədd edilir;
-  `LastValidator` yalnız çıxarılma təklifində qalır.
+  dəyişmir; ABI-yə bir xəta əlavə olunur. `LastValidator` yalnız çıxarılma təklifində qalır.
+- GC4: `Governance.initialize` şərti (`founders.length < 2` → `FounderMismatch`); ABI və yaddaş düzümü dəyişmir. Quraşdırma
+  kodu eyni qaydanı yerləşdirmədən əvvəl, açıq mesajla yoxlayır (`contracts/scripts/lib/deploy.ts`, `network-setup.ts`; açar
+  xəritəsi `apps/chain-indexer/src/chain-keys.ts`, `network/testnet/testnet.mjs`). `network/testnet/make-network.sh` tək
+  validatorlu şəbəkə üçün açar xəritəsi yazmır (yalnız qovşaq səviyyəli yoxlamalar). QBFT validatorlarının sayı ilə təsisçilərin
+  sayı ayrı şeylərdir: yerli tək validatorlu inkişaf zənciri də kontraktları iki təsisçi ilə (TR, KZ) qurur.
 - Testlər (`contracts/test/review-2026-11-11-governance.test.ts`, `contracts/test/governance.test.ts`): üç üzvdən biri çıxır
   (3 → 2), iki üzvlü şəbəkədə çıxış rədd edilir (2 → 1), üçüncü üzv qəbul ediləndən sonra çıxış keçir və qalan iki üzv qərar
   qəbul etməyə davam edir.
@@ -102,5 +125,6 @@ Ad (ictimai ABI; mövcud xəta adlandırma qaydasına görə — `TooManyDelegat
 
 # Status
 
-**Accepted — 2026-11-12.** Layihə rəhbərliyinin təsdiqi ilə (2026-11-12): seçim (a), tövsiyə edildiyi kimi. DECISIONS: D-GOV-12.
-GC1–GC3 məcburidir. Tətbiq: `Governance.withdraw` ([[SPEC-BC-0001]] versiya qeydi).
+**Accepted — 2026-11-12.** Layihə rəhbərliyinin təsdiqi ilə (2026-11-12): seçim (a), tövsiyə edildiyi kimi; həmin gün əlavə
+qərar GC4 (ən azı iki təsisçi). DECISIONS: D-GOV-12. GC1–GC4 məcburidir. Tətbiq: `Governance.withdraw`,
+`Governance.initialize` ([[SPEC-BC-0001]] versiya qeydləri).

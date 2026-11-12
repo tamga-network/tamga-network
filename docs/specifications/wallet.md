@@ -6,21 +6,22 @@ version: 1.0.0
 created: 2026-09-09
 last_updated: 2026-11-12
 summary: >
-  Cüzdanın anahtar, depo, yedekleme ve onay tasarımını tanımlar. Merkezî bulgu
+  Cüzdanın anahtar, depo, cihaz değişimi ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
   bölgeden çıkamayacağını söylüyor, ama proje notlarındaki "24 kelime seed ile
   yedekleme" tasarımı anahtarın geri getirilebilir olmasını ima ediyordu. İkisi
   aynı anda doğru olamaz — ve seed'den türetilebilir bir belge sahibi anahtarı,
   belgeyi DEVREDİLEBİLİR kılarak holder binding açığını arka kapıdan geri
-  getirir. Karar: anahtarlar seed'den türetilmez; yedek belgeleri ve manifestoyu
-  taşır, cihaz değişiminde belgelerin YENİDEN VERİLMESİ gerekir. Ayrıca toplu verilen kopyaların
+  getirir. Karar: anahtarlar seed'den türetilmez; cüzdan belgelerin yedeğini almaz,
+  cihaz değişiminde belgelerin YENİDEN VERİLMESİ gerekir; cihaz dışına taşınan tek şey
+  kişinin başlattığı taşıma dosyasıdır ([[ADR-0078]]). Ayrıca toplu verilen kopyaların
   doğrulayıcı başına yapışkan kullanımı iki açık konuyu birden kapatır.
 ---
 
 # Kısaca
 
 Bu belge, Tamga Network'e uyumlu her cüzdanın kendi içinde uyması gereken kuralları anlatır: anahtarlar, telefondaki kayıt,
-yedekleme, onay ekranı ve belge kopyaları. Okuru cüzdan geliştiricileridir; Tamga Wallet (ayrı depo) bu kuralların referans
+cihaz değişimi, onay ekranı ve belge kopyaları. Okuru cüzdan geliştiricileridir; Tamga Wallet (ayrı depo) bu kuralların referans
 uygulamasıdır.
 
 **Ne zaman okunur**
@@ -41,7 +42,7 @@ ayrı bir takma ad kullanılır. Kişi isterse cüzdanı sıfırlayıp verilerin
 
 # Kapsam
 
-Cüzdanın **iç** tasarımı: anahtar yönetimi, yerel depo, yedekleme ve kurtarma,
+Cüzdanın **iç** tasarımı: anahtar yönetimi, yerel depo, cihaz değişimi ve taşıma,
 onay yüzeyi, belge kopyalarının kullanımı, şema önbelleği.
 
 Protokoller [[SPEC-PROTO-0001]] ve [[SPEC-PROTO-0002]]'dedir. [[t:WIA]] ve [[t:key-attestation]]
@@ -94,9 +95,12 @@ bakmaz.
 **Değişmez WL1:** Belge sahibi anahtarları **seed'den türetilmez** ve cihazın güvenli
 bölgesinden **asla çıkmaz.**
 
-**Değişmez WL2:** Yedek, **belgeleri** ve **manifestoyu** taşır;
-belge sahibi anahtarlarını taşımaz. Dolayısıyla yeni cihazda geri yüklenen bir
-belge **sunulamaz** — belgenin yeniden verilmesi gerekir.
+**Değişmez WL2:** Cüzdan belgelerin **yedeğini almaz**: belgeler cihazdaki
+donanım anahtarına bağlıdır ve taşınmaz. Yeni cihazda belgenin yeniden verilmesi
+gerekir. Cüzdanın cihaz dışına taşıdığı tek şey, kişinin başlattığı taşıma
+dosyasıdır (§7.5); dosya belge değeri, kopya ve anahtar içermez. (Bu kural
+2026-11-12'ye kadar "yedek belgeleri ve manifestoyu taşır" diyordu; öyle bir
+yedek hiç yapılmadı — [[ADR-0078]].)
 
 Bu, kabul edilmiş bir kullanıcı deneyimi bedelidir. Alternatifi, sistemin
 temel güvenlik özelliğini kaybetmektir.
@@ -119,20 +123,22 @@ anahtar sınıfları).
 kurtarma" kipi olarak yeniden değerlendirilebilir — kullanıcı bilinçli olarak
 düşük güvence seçiyorsa. Şu an ürün karmaşıklığına değmiyor.
 
-## 1.4 Tohumun gerçek rolü
+## 1.4 Tohum ve yedek yok ([[ADR-0078]])
 
-Tohum, sanılandan **dar** bir iş yapar:
+İlk tasarım, 24 kelimelik bir tohumdan türeyen anahtarla şifreli bir yedek
+öngörüyordu: belgelerin kendisi, bir "manifest" (hangi kurumdan hangi tür) ve
+ayarlar. Bu yedek yapılmadı ve yapılmaz:
 
-| Tohum neyi kurtarır | Neyi kurtarmaz |
+| | |
 |---|---|
-| Cüzdan kimliği (yedeğin şifre çözme anahtarı) | Belge sahibi anahtarları |
-| Belgelerin kendisi (okunabilir, sunulamaz) | Sunum yeteneği |
-| Manifest: hangi kurumdan hangi tip | — |
-| Ayarlar, dil, sunum kaydı | — |
+| Kurtarılacak bir şey yok | Geri yüklenen belge okunabilir ama sunulamaz; anahtarı eski cihazda kalır |
+| Bedeli var | Belge değerlerinin cihaz dışında bir kopyası oluşur; şifreli olsa bile sızıntı yüzeyidir |
+| Yerini tutan var | "Hangi belgeleri yeniden almalıyım" listesi taşıma dosyasındadır (§7.5) |
 
-Manifest kritiktir: yeni cihazda kullanıcıya **"şu 4 belgeyi yeniden iste"**
-diye tek dokunuşluk bir liste sunar. Kurtarma acısını ortadan kaldırmaz ama
-yönetilebilir kılar.
+Cüzdanda tohum sözcükleri ve kişiden saklaması istenen bir kurtarma ifadesi
+yoktur. Cüzdanın taşıdığı tek şey, kişinin kendi parolasıyla şifrelediği taşıma
+dosyasıdır. Site takma adlarının tohumu ayrı bir şeydir: kimlik servisinden
+gelir, cihazın güvenli deposunda kalır ve taşınmaz (§5.4, WL15).
 
 ---
 
@@ -143,7 +149,6 @@ yönetilebilir kılar.
 | Anahtar | Nerede | Dışa aktarılabilir | Ömür |
 |---|---|---|---|
 | **Belge sahibi anahtarları** (bir alımda N adet) | Secure Enclave / StrongBox | **Hayır** | Belge ömrü |
-| **Yedek şifreleme anahtarı** | Tohumdan türetilir | Tohum olarak | Kalıcı |
 | **Cüzdan örnek anahtarı** | Güvenli bölge | Hayır | Kurulum ömrü |
 
 ## 2.2 Cüzdan güvence seviyeleri
@@ -174,7 +179,7 @@ Doğrulamanın yolu anahtarın nerede durduğuna bağlıdır:
 |---|---|
 | Uzunluk (uygulama PIN'i) | En az 6 hane |
 | Biyometri | PIN'in **yerine** değil, yanında (geri düşüş PIN'dir) |
-| Deneme | 5 hatalı → 30 sn gecikme; 10 → cüzdan kilitlenir, tohum gerekir |
+| Deneme | 5 hatalı → 30 sn gecikme; 10 → cüzdan kilitlenir; kurtarma yoktur, cüzdan sıfırlanır ve belgeler yeniden alınır (§7.6) |
 | Sunum onayı | Her sunumda kullanıcı doğrulaması **zorunlu**: güvenli donanımda cihaz biyometrisi ya da cihaz parolası; yazılım anahtarı yolunda PIN ya da biyometri |
 | Geri düşüş | İşletim sistemi istemi teknik ya da geçici bir nedenle gösterilemezse (ön planda pencere yok, doğrulama hizmeti kullanılamıyor) uygulama PIN'i sorulur. Kullanıcı istemden **vazgeçerse** geri düşüş yoktur: sunum yapılmaz |
 
@@ -246,8 +251,20 @@ Doğrulayıcı sunumu alıp hata dönse ya da yanıt yolda kaybolsa da kopya o d
 "kullanılmamış" diye verilmez.
 
 **Yakın alan ve cüzdandan cüzdana:** okuyucunun oturumlar arasında kalıcı bir kimliği yoktur (oturum anahtarı her seferinde
-yenidir). Bu yüzden her yakın alan oturumu **yeni bir kopya** kullanır. Kullanılmamış kopya kalmadıysa sunum yapılmaz — kopya
-sessizce yeniden kullanılmaz; kişi belgeyi yeniler (§4.3).
+yenidir). Bu yüzden her yakın alan oturumu **yeni bir kopya** kullanır.
+
+Kopyaların bitmesi kişiyi kapıda bırakmamalıdır. **Hedef davranış** (karar 2026-11-12; **uygulama: bekliyor**, mağaza yayınından
+önce):
+
+| Durum | Cüzdan davranışı |
+|---|---|
+| Kullanılmamış kopya azaldı | Arka planda yeniler (yenileme belirteci olan belgelerde; WL7 ve [[ADR-0023]] koşullarıyla) |
+| Kopya bitti, cihaz çevrimiçi | Sunumdan önce hemen yeniler ve yeni kopyayla sunar |
+| Kopya bitti, cihaz çevrimdışı | Kişiye uyarı gösterir (bu gösterim öncekiyle eşleştirilebilir); kişi kabul ederse **son kopyayı** yeniden kullanır |
+
+Çevrimdışı yeniden kullanım sessiz yapılmaz: uyarı ve kişinin onayı şarttır. Cihaz çevrimiçi olunca kopyalar yenilenir.
+
+**Bugünkü uygulama:** kullanılmamış kopya kalmadıysa sunum yapılmaz — kopya yeniden kullanılmaz; kişi belgeyi yeniler (§4.3).
 
 ## 4.2 Tutarlı açıklama seti
 
@@ -261,6 +278,10 @@ alan açıklanırsa, doğrulayıcı ikisi arasındaki farkı çıkarabilir.
 Doğrulayıcı daha az alan isterse cüzdan **fazlasını sunmaz** — kesişim değil,
 yeni isteğin kendisi geçerlidir; ama kullanıcıya "bu doğrulayıcıya daha önce şu
 alanları vermiştiniz" bilgisi gösterilir.
+
+**Uygulama notu (2026-11-12).** Önceki paylaşım bildirimi **henüz uygulanmadı**; cüzdanın ilk güncellemesinde, sade hâliyle
+gelir: onay ekranında "bu doğrulayıcıyla daha önce şunları paylaştınız" satırı ve bu kez yeni istenen alanların vurgusu. Kuralın
+metni değişmedi.
 
 ## 4.3 Tükenme
 
@@ -491,23 +512,21 @@ kullanıcı onayıyla** yapılır.
 
 ---
 
-# 7. Yedekleme ve Kurtarma
+# 7. Cihaz Değişimi ve Taşıma
 
-## 7.1 Yedek içeriği
+## 7.1 Yedek yok
 
-```
-şifreli_yedek = AES-GCM(
-    anahtar = HKDF(seed),
-    içerik  = {
-        manifest:    [{ issuer, vct, alındığı_tarih }],
-        credentials: [SD-JWT dizeleri],
-        settings:    { dil, bildirimler }
-    }
-)
-```
+Cüzdan belgelerin, kopyaların ya da anahtarların yedeğini almaz; ne cihaz dışına
+ne bir sunucuya (WL2, [[ADR-0078]]). Cüzdan verisini işletim sisteminin cihaz
+yedeğinin de dışında tutar.
 
-**Yedekte olmayanlar:** belge sahibi anahtarları (WL1), `presentation_log` (WL4),
-`verifier_map`.
+Cihaz dışına çıkabilen tek kalıcı veri, kişinin başlattığı taşıma dosyasıdır (§7.5):
+
+| Taşıma dosyasında var | Yok |
+|---|---|
+| Yeniden alınacak belgelerin listesi (tür, kurum, kurum adresi) | Belge değerleri ve kopyalar (LX2) |
+| Kişi isterse işlem günlüğü ([[ADR-0027]]) | Belge sahibi anahtarları (WL1) |
+| | `verifier_map`, takma ad tohumu (WL15) |
 
 `verifier_map` neden yok: yeni cihazda zaten yeni kopyalar alınacak, eski
 eşleme anlamsız. Ayrıca hangi doğrulayıcılara sunum yapıldığını taşır — WL4 ile
@@ -515,22 +534,17 @@ aynı gerekçe.
 
 ## 7.2 Sunucu tarafı
 
-Yedek, Tamga barındırmalı bir depoya yüklenebilir. Sunucu **çözemez** —
-anahtar tohumdan türer ve tohum sunucuya gitmez.
-
-| Sunucunun gördüğü | Görmediği |
-|---|---|
-| Şifreli blob boyutu | İçerik |
-| Yükleme zamanı | Hangi belgeler |
-| Cüzdan örnek tanımlayıcısı | Kullanıcı kimliği |
+Yoktur. Cüzdanın verisi hiçbir sunucuya yüklenmez: ağ cüzdan servisi işletmez
+([[ADR-0042]]) ve cüzdan sağlayıcısı belge, günlük ya da taşıma dosyası tutmaz.
+Taşıma dosyası paylaşım menüsüyle kişinin seçtiği yere gider ([[ADR-0027]] LX1).
 
 ## 7.3 Cihaz değişimi akışı
 
 ```
-1. Yeni cihaza kur
-2. Seed gir + yeni PIN belirle
-3. Yedeği indir, çöz
-4. Manifest gösterilir:
+1. Eski cihazda: Ayarlar → Yeni telefona taşı → parola belirle → taşıma dosyası (§7.5)
+2. Yeni cihaza kur + yeni PIN belirle
+3. Taşıma dosyasını aç (parola)
+4. Liste gösterilir:
      ┌──────────────────────────────────────────┐
      │ 4 belgeniz yeniden alınmalı              │
      │                                          │
@@ -544,15 +558,15 @@ anahtar tohumdan türer ve tohum sunucuya gitmez.
      → yeni holder anahtarları, yeni cnf, yeni idx
 ```
 
-**Kullanıcıya açıkça söylenir:** eski belgeler görüntülenebilir ama
-sunulamaz; belgelerin yeniden verilmesi gerekir. Bunu gizlemek, sunum anında başarısızlıkla
-karşılaşmaktan kötüdür.
+**Kullanıcıya açıkça söylenir:** belgeler taşınmaz; yeni telefonda kurumlardan
+yeniden alınır. Bunu gizlemek, sunum anında başarısızlıkla karşılaşmaktan kötüdür.
 
-## 7.4 Tohum kaybı
+## 7.4 Cihaz kaybı
 
-Tohum **ve** cihaz kaybedilirse kurtarma yoktur. Kullanıcı her kuruma
-**yeniden başvurur** ve kimliğini kurumun kendi prosedürüyle kanıtlar
-([[SPEC-PROTO-0001]] §11 — yüz yüze bağlama).
+Cihaz kaybedilirse belgeler geri getirilemez; taşıma dosyası varsa yalnız
+"hangi belgeler" listesi hazırdır. Kullanıcı her kuruma **yeniden başvurur** ve
+kimliğini kurumun kendi prosedürüyle kanıtlar ([[SPEC-PROTO-0001]] §11 — yüz yüze
+bağlama).
 
 Bu bir felaket değildir: belgeler zaten kurumda yeniden üretilebilir
 verilerdir. Kaybedilen şey **erişim**, veri değil.
@@ -595,9 +609,9 @@ veri kurumdadır; yol TS7 silme talebidir (Geçmiş → "Verilerimi silmesini is
 | # | Değişmez |
 |---|---|
 | **WL1** | Belge sahibi anahtarları seed'den türetilmez; güvenli bölgeden çıkmaz. |
-| **WL2** | Yedek belgeleri ve manifestoyu taşır; anahtarları taşımaz — cihaz değişiminde belgelerin yeniden verilmesi gerekir. |
+| **WL2** | Cüzdan belgelerin yedeğini almaz: belgeler cihazdaki donanım anahtarına bağlıdır ve taşınmaz; cihaz değişiminde belgeler yeniden verilir. Cüzdanın cihaz dışına taşıdığı tek şey kişinin başlattığı taşıma dosyasıdır (AB TS10); dosya belge değeri, kopya ve anahtar içermez ([[ADR-0078]]). |
 | **WL3** | W1 (yazılım anahtarlı) cüzdan desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5). |
-| **WL4** | `presentation_log` sunucuya ve otomatik olarak hiçbir koşulda çıkmaz, sunucu yedeğine girmez; yalnız kişinin başlattığı, kişinin parolasıyla şifreli dışa aktarmada (TS10) cihazdan çıkar ([[ADR-0027]]). |
+| **WL4** | `presentation_log` sunucuya ve otomatik olarak hiçbir koşulda çıkmaz; yalnız kişinin başlattığı, kişinin parolasıyla şifreli dışa aktarmada (TS10) cihazdan çıkar ([[ADR-0027]]). |
 | **WL5** | Bir doğrulayıcıya her zaman aynı kopya; farklı doğrulayıcıya farklı kopya. |
 | **WL6** | Aynı doğrulayıcı + aynı `vct` için disclosure seti tutarlıdır. |
 | **WL7** | Kullanıcı eylemi olmadan yenileme yalnızca [[ADR-0023]] AR1–AR4 koşullarında yapılır. |
@@ -618,13 +632,9 @@ veri kurumdadır; yol TS7 silme talebidir (Geçmiş → "Verilerimi silmesini is
 tekrarlanmalıdır: kolay kurtarma isteyen her tasarım önerisi, "bu, belgeyi
 devredilebilir kılar mı?" sorusundan geçmelidir. Cevap evet ise reddedilir.
 
-**Yedek boyutu bir sinyaldir.** Sunucu, blob boyutundan kaç belge
-olduğunu tahmin edebilir. Azaltma: yedek sabit boyutlu bloklara doldurulur
-(padding).
-
 **Yapışkan eşleme bir liste tutar.** `verifier_map`, kullanıcının hangi
 doğrulayıcılara sunum yaptığını içerir — `presentation_log` kadar hassastır ve
-aynı kurallara tabidir (cihazda kalır, yedeğe girmez).
+aynı kurallara tabidir (cihazda kalır, taşıma dosyasına girmez).
 
 **PIN kilitlenmesi bir DoS yüzeyidir.** Cihazı ele geçiren biri 10 kez yanlış
 PIN girip cüzdanı kilitleyebilir. Kabul edilmiş risk — alternatifi kaba kuvvet
@@ -639,7 +649,7 @@ saldırısına açık bırakmak.
    süreç sorusu → PM-GTM-0001.
 2. W3 (sertifikalı WSCD) devlet aşamasında nasıl tespit edilecek — cihaz attestation'ı
    mı, ayrı donanım mı? → `SPEC-WALLET-0002`
-3. Yedeğin sabit boyutlu doldurulması ne kadar maliyetli? Ölçülmeli.
+3. ~~Yedeğin sabit boyutlu doldurulması ne kadar maliyetli?~~ — **kapandı (2026-11-12, [[ADR-0078]]):** yedek yok.
 4. Çoklu cihaz (tablet + telefon) destekleniyor mu? Şu an hayır — her cihaz
    ayrı belge sahibi anahtarı demek, dolayısıyla her cihaz için ayrı belge verme. Toplu alım
    bunu kısmen çözebilir ama tasarlanmadı.
@@ -659,5 +669,9 @@ saldırısına açık bırakmak.
 
 # Durum
 
-**Yürürlükte** — sürüm 1.0.0 (2026-10-02; son güncelleme 2026-10-04).
+**Yürürlükte** — sürüm 1.0.0 (2026-10-02; son güncelleme 2026-11-12).
+
+**2026-11-12:** [[ADR-0078]] — yedek yok, taşınan tek şey taşıma dosyası (WL2 metni; §1.3, §1.4, §2.1, §7, §8). Uygulama
+notları: WL6 önceki paylaşım bildirimi ilk güncellemede (§4.2); yakın alanda kopya bitince hedef davranış, uygulama bekliyor
+(§4.1).
 

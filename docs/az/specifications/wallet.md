@@ -6,7 +6,7 @@ version: 1.0.0
 created: 2026-09-09
 last_updated: 2026-11-12
 summary: >
-  Rəqəmsal cüzdanın açar, yerli yaddaş, ehtiyat nüsxə və təsdiq dizaynını müəyyən edir. Mərkəzi nəticə bir ZİDDİYYƏTİN həllidir: [[SPEC-CRED-0001]] §3 sənəd sahibi açarının təhlükəsiz zonadan çıxa bilməyəcəyini bildirir, lakin layihə qeydlərindəki "24 sözlük seed ilə ehtiyat nüsxə" dizaynı açarın bərpa oluna biləcəyini nəzərdə tuturdu. İkisi eyni anda doğru ola bilməz — seed-dən törədilə bilən sənəd sahibi açarı isə rəqəmsal sənədi ÖTÜRÜLƏ BİLƏN edərək holder binding boşluğunu arxa qapıdan geri qaytarır. Qərar: açarlar seed-dən törədilmir; ehtiyat nüsxə sənədləri və manifesti daşıyır, cihaz dəyişdikdə sənədlərin YENİDƏN VERİLMƏSİ tələb olunur. Bundan əlavə, toplu verilən nüsxələrin hər yoxlayan tərəf üçün sabit ("yapışqan") istifadəsi iki açıq məsələni birdən bağlayır.
+  Rəqəmsal cüzdanın açar, yerli yaddaş, cihaz dəyişməsi və təsdiq dizaynını müəyyən edir. Mərkəzi nəticə bir ZİDDİYYƏTİN həllidir: [[SPEC-CRED-0001]] §3 sənəd sahibi açarının təhlükəsiz zonadan çıxa bilməyəcəyini bildirir, lakin layihə qeydlərindəki "24 sözlük seed ilə ehtiyat nüsxə" dizaynı açarın bərpa oluna biləcəyini nəzərdə tuturdu. İkisi eyni anda doğru ola bilməz — seed-dən törədilə bilən sənəd sahibi açarı isə rəqəmsal sənədi ÖTÜRÜLƏ BİLƏN edərək holder binding boşluğunu arxa qapıdan geri qaytarır. Qərar: açarlar seed-dən törədilmir; cüzdan sənədlərin ehtiyat nüsxəsini almır, cihaz dəyişdikdə sənədlərin YENİDƏN VERİLMƏSİ tələb olunur; cihazdan kənara daşınan yeganə şey şəxsin başlatdığı köçürmə faylıdır ([[ADR-0078]]). Bundan əlavə, toplu verilən nüsxələrin hər yoxlayan tərəf üçün sabit ("yapışqan") istifadəsi iki açıq məsələni birdən bağlayır.
 translation_of: SPEC-WALLET-0001
 source_version: "1.0.0"
 ---
@@ -14,7 +14,7 @@ source_version: "1.0.0"
 # Qısaca
 
 Bu sənəd Tamga Network ilə uyğun hər bir rəqəmsal cüzdanın daxilində riayət etməli olduğu qaydaları izah edir: açarlar, telefondakı qeyd,
-ehtiyat nüsxə, təsdiq ekranı və sənəd nüsxələri. Oxucusu cüzdan tərtibatçılarıdır; Tamga Wallet (ayrıca repozitoriya) bu qaydaların istinad
+cihaz dəyişməsi, təsdiq ekranı və sənəd nüsxələri. Oxucusu cüzdan tərtibatçılarıdır; Tamga Wallet (ayrıca repozitoriya) bu qaydaların istinad
 tətbiqidir.
 
 **Nə vaxt oxunmalıdır**
@@ -35,7 +35,7 @@ ayrıca psevdonim istifadə olunur. Şəxs istəsə, cüzdanı sıfırlayaraq m�
 
 # Əhatə dairəsi
 
-Cüzdanın **daxili** dizaynı: açarların idarə edilməsi, yerli yaddaş, ehtiyat nüsxə və bərpa,
+Cüzdanın **daxili** dizaynı: açarların idarə edilməsi, yerli yaddaş, cihaz dəyişməsi və köçürmə,
 təsdiq interfeysi, sənəd nüsxələrinin istifadəsi, sxem keşi.
 
 Protokollar [[SPEC-PROTO-0001]] və [[SPEC-PROTO-0002]] sənədlərində verilir. [[t:WIA]] və [[t:key-attestation]]
@@ -88,9 +88,12 @@ baxmır.
 **Dəyişməz qayda WL1:** Sənəd sahibi açarları **seed-dən törədilmir** və cihazın təhlükəsiz
 zonasından **heç vaxt çıxmır.**
 
-**Dəyişməz qayda WL2:** Ehtiyat nüsxə **sənədləri** və **manifesti** daşıyır;
-sənəd sahibi açarlarını daşımır. Buna görə yeni cihazda bərpa edilmiş
-sənəd **təqdim edilə bilməz** — sənədin yenidən verilməsi tələb olunur.
+**Dəyişməz qayda WL2:** Cüzdan sənədlərin **ehtiyat nüsxəsini almır**: sənədlər
+cihazdakı aparat açarına bağlıdır və daşınmır. Yeni cihazda sənədin yenidən
+verilməsi tələb olunur. Cüzdanın cihazdan kənara daşıdığı yeganə şey şəxsin
+başlatdığı köçürmə faylıdır (§7.5); fayl sənəd dəyəri, nüsxə və açar ehtiva
+etmir. (Bu qayda 2026-11-12-yə qədər "ehtiyat nüsxə sənədləri və manifesti
+daşıyır" deyirdi; belə ehtiyat nüsxə heç vaxt hazırlanmadı — [[ADR-0078]].)
 
 Bu, qəbul edilmiş istifadəçi təcrübəsi bədəlidir. Alternativi sistemin
 əsas təhlükəsizlik xüsusiyyətini itirməkdir.
@@ -113,20 +116,22 @@ açar sinifləri).
 bərpa" rejimi kimi yenidən nəzərdən keçirilə bilər — əgər istifadəçi şüurlu şəkildə
 aşağı təminat səviyyəsini seçirsə. Hazırda bu, məhsulun mürəkkəbləşməsinə dəyməz.
 
-## 1.4 Toxumun real rolu
+## 1.4 Toxum və ehtiyat nüsxə yoxdur ([[ADR-0078]])
 
-Toxum düşünüldüyündən **daha məhdud** iş görür:
+İlk dizayn 24 sözlük toxumdan törəyən açarla şifrələnmiş ehtiyat nüsxə nəzərdə
+tuturdu: sənədlərin özü, "manifest" (hansı qurumdan hansı tip) və ayarlar. Bu
+ehtiyat nüsxə hazırlanmadı və hazırlanmır:
 
-| Toxum nəyi bərpa edir | Nəyi bərpa etmir |
+| | |
 |---|---|
-| Cüzdan identifikatoru (ehtiyat nüsxənin deşifrə açarı) | Sənəd sahibi açarları |
-| Sənədlərin özü (oxuna bilər, təqdim edilə bilməz) | Təqdimetmə imkanı |
-| Manifest: hansı qurumdan hansı tip | — |
-| Ayarlar, dil, təqdimetmə qeydi | — |
+| Bərpa ediləcək bir şey yoxdur | Bərpa edilən sənəd oxuna bilir, lakin təqdim edilə bilmir; açarı köhnə cihazda qalır |
+| Bədəli var | Sənəd dəyərlərinin cihazdan kənarda nüsxəsi yaranır; şifrələnmiş olsa belə, sızma səthidir |
+| Onu əvəz edən var | "Hansı sənədləri yenidən almalıyam" siyahısı köçürmə faylındadır (§7.5) |
 
-Manifest həlledicidir: yeni cihazda istifadəçiyə **"bu 4 sənədi yenidən istə"**
-kimi bir toxunuşla icra olunan siyahı təqdim edir. Bərpanın çətinliyini aradan qaldırmır, lakin
-onu idarəolunan edir.
+Cüzdanda toxum sözləri və şəxsdən saxlaması tələb olunan bərpa ifadəsi yoxdur.
+Cüzdanın daşıdığı yeganə şey şəxsin öz parolu ilə şifrələdiyi köçürmə faylıdır.
+Sayt təxəllüslərinin toxumu ayrı şeydir: şəxsiyyət xidmətindən gəlir, cihazın
+təhlükəsiz anbarında qalır və daşınmır (§5.4, WL15).
 
 ---
 
@@ -137,7 +142,6 @@ onu idarəolunan edir.
 | Açar | Harada | İxrac edilə bilər | Ömür |
 |---|---|---|---|
 | **Sənəd sahibi açarları** (bir alışda N ədəd) | Secure Enclave / StrongBox | **Xeyr** | Sənədin ömrü |
-| **Ehtiyat nüsxə şifrələmə açarı** | Toxumdan törədilir | Toxum şəklində | Daimi |
 | **Cüzdan nümunəsi açarı** | Təhlükəsiz zona | Xeyr | Quraşdırmanın ömrü |
 
 ## 2.2 Cüzdan təminat səviyyələri
@@ -168,7 +172,7 @@ Doğrulamanın yolu açarın harada saxlandığından asılıdır:
 |---|---|
 | Uzunluq (tətbiq PIN-i) | Ən azı 6 rəqəm |
 | Biometriya | PIN-in **əvəzinə** deyil, onunla yanaşı (ehtiyat variant PIN-dir) |
-| Cəhd | 5 səhv → 30 san gecikmə; 10 → rəqəmsal cüzdan kilidlənir, toxum tələb olunur |
+| Cəhd | 5 səhv → 30 san gecikmə; 10 → rəqəmsal cüzdan kilidlənir; bərpa yoxdur, cüzdan sıfırlanır və sənədlər yenidən alınır (§7.6) |
 | Təqdimatın təsdiqi | Yoxlayan tərəfə hər təqdimatda istifadəçinin doğrulanması **məcburidir**: təhlükəsiz aparatda cihaz biometriyası və ya cihaz parolu; proqram açarı yolunda PIN və ya biometriya |
 | Ehtiyat variant | Əməliyyat sisteminin sorğusu texniki və ya müvəqqəti səbəbdən göstərilə bilmirsə (ön planda pəncərə yoxdur, doğrulama xidməti əlçatan deyil), tətbiq PIN-i soruşulur. İstifadəçi sorğudan **imtina edərsə**, ehtiyat variant yoxdur: təqdimat edilmir |
 
@@ -242,8 +246,21 @@ işarələyir. Yoxlayan tərəf təqdimatı alıb xəta qaytarsa və ya cavab yo
 yoxlayan tərəfə "istifadə olunmamış" kimi verilmir.
 
 **Yaxın məsafə və cüzdandan cüzdana:** oxuyucunun sessiyalar arasında daimi kimliyi yoxdur (sessiya açarı hər dəfə yenidir).
-Buna görə hər yaxın məsafə sessiyası **yeni nüsxə** istifadə edir. İstifadə olunmamış nüsxə qalmayıbsa, təqdimat edilmir — nüsxə
-səssizcə təkrar istifadə olunmur; şəxs sənədi yeniləyir (§4.3).
+Buna görə hər yaxın məsafə sessiyası **yeni nüsxə** istifadə edir.
+
+Nüsxələrin bitməsi şəxsi qapıda saxlamamalıdır. **Hədəf davranış** (qərar 2026-11-12; **tətbiq: gözləyir**, mağazada dərcdən
+əvvəl):
+
+| Vəziyyət | Cüzdanın davranışı |
+|---|---|
+| İstifadə olunmamış nüsxə azalıb | Arxa planda yeniləyir (yeniləmə tokeni olan sənədlərdə; WL7 və [[ADR-0023]] şərtləri ilə) |
+| Nüsxə bitib, cihaz onlayndır | Təqdimatdan əvvəl dərhal yeniləyir və yeni nüsxə ilə təqdim edir |
+| Nüsxə bitib, cihaz oflayndır | Şəxsə xəbərdarlıq göstərir (bu təqdimat əvvəlki ilə əlaqələndirilə bilər); şəxs qəbul edərsə **son nüsxəni** təkrar istifadə edir |
+
+Oflayn təkrar istifadə səssiz edilmir: xəbərdarlıq və şəxsin razılığı şərtdir. Cihaz onlayn olanda nüsxələr yenilənir.
+
+**Bugünkü tətbiq:** istifadə olunmamış nüsxə qalmayıbsa, təqdimat edilmir — nüsxə təkrar istifadə olunmur; şəxs sənədi yeniləyir
+(§4.3).
 
 ## 4.2 Ardıcıl açıqlama dəsti
 
@@ -257,6 +274,10 @@ sahə açıqlanarsa, yoxlayan tərəf ikisi arasındakı fərqi çıxara bilər.
 Yoxlayan tərəf daha az sahə istəsə, rəqəmsal cüzdan **artığını təqdim etmir** — kəsişmə deyil,
 yeni sorğunun özü əsas götürülür; lakin istifadəçiyə "bu yoxlayan tərəfə əvvəllər bu
 sahələri vermişdiniz" məlumatı göstərilir.
+
+**Tətbiq qeydi (2026-11-12).** Əvvəlki paylaşım haqqında bildiriş **hələ tətbiq olunmayıb**; cüzdanın ilk yeniləməsində sadə
+şəkildə gəlir: təsdiq ekranında "bu yoxlayan tərəflə əvvəllər bunları paylaşmısınız" sətri və bu dəfə yeni istənilən sahələrin
+vurğulanması. Qaydanın mətni dəyişmədi.
 
 ## 4.3 Tükənmə
 
@@ -451,23 +472,21 @@ istifadəçinin təsdiqi ilə** aparılır.
 
 ---
 
-# 7. Ehtiyat nüsxə və bərpa
+# 7. Cihaz dəyişməsi və köçürmə
 
-## 7.1 Ehtiyat nüsxənin məzmunu
+## 7.1 Ehtiyat nüsxə yoxdur
 
-```
-encrypted_backup = AES-GCM(
-    key     = HKDF(seed),
-    content = {
-        manifest:    [{ issuer, vct, received_at }],
-        credentials: [SD-JWT strings],
-        settings:    { language, notifications }
-    }
-)
-```
+Cüzdan sənədlərin, nüsxələrin və ya açarların ehtiyat nüsxəsini almır; nə cihazdan
+kənara, nə də serverə (WL2, [[ADR-0078]]). Cüzdan öz məlumatını əməliyyat
+sisteminin cihaz ehtiyat nüsxəsindən də kənarda saxlayır.
 
-**Ehtiyat nüsxəyə daxil olmayanlar:** sənəd sahibinin açarları (WL1), `presentation_log` (WL4),
-`verifier_map`.
+Cihazdan kənara çıxa bilən yeganə daimi məlumat şəxsin başlatdığı köçürmə faylıdır (§7.5):
+
+| Köçürmə faylında var | Yoxdur |
+|---|---|
+| Yenidən alınacaq sənədlərin siyahısı (tip, qurum, qurumun ünvanı) | Sənəd dəyərləri və nüsxələr (LX2) |
+| Şəxs istəsə əməliyyat jurnalı ([[ADR-0027]]) | Sənəd sahibinin açarları (WL1) |
+| | `verifier_map`, təxəllüs toxumu (WL15) |
 
 `verifier_map` niyə daxil deyil: yeni cihazda onsuz da yeni nüsxələr alınacaq, köhnə
 uyğunlaşdırmanın mənası yoxdur. Bundan əlavə, o, hansı yoxlayan tərəflərə təqdimat edildiyini daşıyır — WL4 ilə
@@ -475,22 +494,17 @@ eyni əsaslandırma.
 
 ## 7.2 Server tərəfi
 
-Ehtiyat nüsxə Tamga tərəfindən saxlanılan anbara yüklənə bilər. Server onu **deşifrə edə bilməz** —
-açar toxumdan törədilir və toxum serverə göndərilmir.
-
-| Serverin gördüyü | Görmədiyi |
-|---|---|
-| Şifrələnmiş blob-un ölçüsü | Məzmun |
-| Yükləmə vaxtı | Hansı sənədlər |
-| Cüzdan nümunəsinin identifikatoru | İstifadəçinin şəxsiyyəti |
+Yoxdur. Cüzdanın məlumatı heç bir serverə yüklənmir: şəbəkə cüzdan xidməti idarə etmir
+([[ADR-0042]]) və cüzdan provayderi sənəd, jurnal və ya köçürmə faylı saxlamır.
+Köçürmə faylı paylaşım menyusu ilə şəxsin seçdiyi yerə gedir ([[ADR-0027]] LX1).
 
 ## 7.3 Cihaz dəyişmə axını
 
 ```
-1. Install on the new device
-2. Enter the seed + set a new PIN
-3. Download and decrypt the backup
-4. The manifest is shown:
+1. On the old device: Settings → Move to a new phone → set a passphrase → migration file (§7.5)
+2. Install on the new device + set a new PIN
+3. Open the migration file (passphrase)
+4. The list is shown:
      ┌──────────────────────────────────────────┐
      │ 4 of your credentials must be re-issued  │
      │                                          │
@@ -504,15 +518,15 @@ açar toxumdan törədilir və toxum serverə göndərilmir.
      → new holder keys, new cnf, new idx
 ```
 
-**İstifadəçiyə açıq şəkildə bildirilir:** köhnə sənədlərə baxmaq olar, lakin
-onları təqdim etmək olmaz; sənədlər yenidən verilməlidir. Bunu gizlətmək təqdimat anında uğursuzluqla
-üzləşməkdən daha pisdir.
+**İstifadəçiyə açıq şəkildə bildirilir:** sənədlər daşınmır; yeni telefonda qurumlardan
+yenidən alınır. Bunu gizlətmək təqdimat anında uğursuzluqla üzləşməkdən daha pisdir.
 
-## 7.4 Toxumun itirilməsi
+## 7.4 Cihazın itirilməsi
 
-Toxum **və** cihaz itirilərsə, bərpa mümkün deyil. İstifadəçi hər quruma
-**yenidən müraciət edir** və şəxsiyyətini qurumun öz proseduru ilə sübut edir
-([[SPEC-PROTO-0001]] §11 — üzbəüz bağlama).
+Cihaz itirilərsə, sənədlər geri qaytarıla bilməz; köçürmə faylı varsa, yalnız
+"hansı sənədlər" siyahısı hazırdır. İstifadəçi hər quruma **yenidən müraciət edir**
+və şəxsiyyətini qurumun öz proseduru ilə sübut edir ([[SPEC-PROTO-0001]] §11 —
+üzbəüz bağlama).
 
 Bu fəlakət deyil: sənədlər onsuz da qurumda yenidən yaradıla bilən
 məlumatlardır. İtirilən **giriş imkanıdır**, məlumat deyil.
@@ -555,9 +569,9 @@ məlumatlar qurumdadır; yol TS7 silmə tələbidir (Tarixçə → "Məlumatlar�
 | # | Dəyişməz qayda |
 |---|---|
 | **WL1** | Sənəd sahibinin açarları seed-dən törədilmir; təhlükəsiz zonanı tərk etmir. |
-| **WL2** | Ehtiyat nüsxə rəqəmsal sənədləri və manifesti daşıyır; açarları daşımır — cihaz dəyişdikdə rəqəmsal sənədlər yenidən verilməlidir. |
+| **WL2** | Cüzdan rəqəmsal sənədlərin ehtiyat nüsxəsini almır: rəqəmsal sənədlər cihazdakı aparat açarına bağlıdır və daşınmır; cihaz dəyişdikdə rəqəmsal sənədlər yenidən verilir. Cüzdanın cihazdan kənara daşıdığı yeganə şey şəxsin başlatdığı köçürmə faylıdır (Aİ TS10); fayl rəqəmsal sənəd dəyəri, nüsxə və açar ehtiva etmir ([[ADR-0078]]). |
 | **WL3** | W1 (proqram açarlı) rəqəmsal cüzdan dəstəklənmir (sandbox siyahısındakı şəbəkənin öz sınaq ssenariləri üçün test açarı istisnadır — [[ADR-0042]] K5). |
-| **WL4** | `presentation_log` heç bir halda serverə və avtomatik olaraq çıxmır, serverdəki ehtiyat nüsxəyə daxil olmur; yalnız şəxsin özünün başlatdığı, şəxsin parolu ilə şifrələnmiş ixracda (TS10) cihazdan çıxır ([[ADR-0027]]). |
+| **WL4** | `presentation_log` heç bir halda serverə və avtomatik olaraq çıxmır; yalnız şəxsin özünün başlatdığı, şəxsin parolu ilə şifrələnmiş ixracda (TS10) cihazdan çıxır ([[ADR-0027]]). |
 | **WL5** | Bir yoxlayan tərəfə həmişə eyni nüsxə; fərqli yoxlayan tərəfə fərqli nüsxə. |
 | **WL6** | Eyni yoxlayan tərəf + eyni `vct` üçün disclosure dəsti ardıcıl qalır. |
 | **WL7** | İstifadəçi əməliyyatı olmadan yeniləmə yalnız [[ADR-0023]] AR1–AR4 şərtlərində aparılır. |
@@ -578,13 +592,9 @@ məlumatlar qurumdadır; yol TS7 silmə tələbidir (Tarixçə → "Məlumatlar�
 təkrarlanmalıdır: asan bərpa tələb edən hər dizayn təklifi "bu, rəqəmsal sənədi
 ötürülə bilən edirmi?" sualından keçməlidir. Cavab bəli olarsa, təklif rədd edilir.
 
-**Ehtiyat nüsxənin ölçüsü bir siqnaldır.** Server blob ölçüsündən neçə rəqəmsal sənəd
-olduğunu təxmin edə bilər. Azaltma: ehtiyat nüsxə sabit ölçülü bloklara qədər doldurulur
-(padding).
-
 **Sabit uyğunlaşdırma siyahı saxlayır.** `verifier_map` istifadəçinin hansı
 yoxlayan tərəflərə təqdimat etdiyini ehtiva edir — `presentation_log` qədər həssasdır və
-eyni qaydalara tabedir (cihazda qalır, ehtiyat nüsxəyə daxil olmur).
+eyni qaydalara tabedir (cihazda qalır, köçürmə faylına daxil olmur).
 
 **PIN bloklanması DoS səthidir.** Cihazı ələ keçirən şəxs 10 dəfə səhv
 PIN daxil edərək rəqəmsal cüzdanı bloklaya bilər. Qəbul edilmiş riskdir — alternativi kobud güc
@@ -599,7 +609,7 @@ hücumuna açıq qoymaqdır.
    proses sualı → PM-GTM-0001.
 2. W3 (sertifikatlı WSCD) dövlət mərhələsində necə müəyyən ediləcək — cihaz attestation-ı
    ilə, yoxsa ayrıca aparatla? → `SPEC-WALLET-0002`
-3. Ehtiyat nüsxənin sabit ölçüyə qədər doldurulması nə qədər bahalıdır? Ölçülməlidir.
+3. ~~Ehtiyat nüsxənin sabit ölçüyə qədər doldurulması nə qədər bahalıdır?~~ — **bağlandı (2026-11-12, [[ADR-0078]]):** ehtiyat nüsxə yoxdur.
 4. Çoxlu cihaz (planşet + telefon) dəstəklənirmi? Hazırda xeyr — hər cihaz
    ayrıca sənəd sahibi açarı deməkdir, deməli, hər cihaz üçün ayrıca rəqəmsal sənəd verilməsi. Toplu əldəetmə
    bunu qismən həll edə bilər, lakin dizayn edilməyib.
@@ -619,5 +629,9 @@ hücumuna açıq qoymaqdır.
 
 # Status
 
-**Qüvvədədir** — versiya 1.0.0 (2026-10-02; son yenilənmə 2026-10-04).
+**Qüvvədədir** — versiya 1.0.0 (2026-10-02; son yenilənmə 2026-11-12).
+
+**2026-11-12:** [[ADR-0078]] — ehtiyat nüsxə yoxdur, daşınan yeganə şey köçürmə faylıdır (WL2-nin mətni; §1.3, §1.4, §2.1, §7,
+§8). Tətbiq qeydləri: WL6 əvvəlki paylaşım bildirişi ilk yeniləmədə (§4.2); yaxın məsafədə nüsxə bitəndə hədəf davranış, tətbiq
+gözləyir (§4.1).
 

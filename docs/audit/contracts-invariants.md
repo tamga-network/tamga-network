@@ -12,25 +12,25 @@ Rows without a test are either enforced by construction (types, schemas, data fi
 that do not cite the code, process rules (governance, documentation), or genuinely untested. Reviewers should treat
 untested rows in the parsing, signature, status and trust-list areas as priority questions.
 
-**Summary:** 51 invariants in 7 documents · 34 with at least one test reference (67%) · 3 with a direct reference.
+**Summary:** 51 invariants in 7 documents · 36 with at least one test reference (71%) · 4 with a direct reference.
 
 ## ADR-0051 — Zincir, imzalı listelerin projeksiyonudur
 
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
-| `CH1` | Zincir imzalı listelerin ve çapa günlüğünün projeksiyonudur; çelişkide imzalı liste geçerlidir; zincir cevabı doğrulama için gerekli deği… | `apps/trust-publisher/test/chain.test.ts`<br>`contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/trust-list-anchor-registry.test.ts` | scoped |
+| `CH1` | Zincir imzalı listelerin ve çapa günlüğünün projeksiyonudur; çelişkide imzalı liste geçerlidir; zincir cevabı doğrulama için gerekli deği… | `apps/trust-publisher/test/chain.test.ts`<br>`apps/verify/test/chain-health.test.ts`<br>`contracts/test/invariants-fuzz.test.ts` +1 | scoped |
 | `CH2` | Liste çapası kaydına yalnız liste sürümünün ve çapa günlüğü satırının özeti (hash, sürüm/sıra, zaman) yazılır; liste içeriği, kayıt, belg… | `apps/trust-publisher/test/chain.test.ts`<br>`contracts/test/trust-list-anchor-registry.test.ts` | scoped |
 | `CH3` | Bir çapa ancak onay eşiği kadar farklı yetkili yazıcı birebir aynı veriyi gönderince onaylıdır; üretimde eşik en az 2'dir. | `apps/trust-publisher/test/chain.test.ts`<br>`contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/trust-list-anchor-registry.test.ts` | scoped |
-| `CH4` | Liste başına sürüm monoton artar; açılmış sürüm için farklı özet ayrı aday olarak kaydedilir ve çift-konuşma işareti olarak olay yayar (A… | `apps/trust-publisher/test/chain.test.ts`<br>`contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/trust-list-anchor-registry.test.ts` | scoped |
-| `CH5` | `TAMGA_CHAIN_ENABLED` kapalıyken zincire bağlanılmaz ve yazılmaz; üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz. | `apps/trust-publisher/test/chain.test.ts` | scoped |
+| `CH4` | Liste başına sürüm monoton artar; açılmış sürüm için farklı özet ayrı aday olarak kaydedilir ve çift-konuşma işareti olarak olay yayar (A… | `apps/trust-publisher/test/chain.test.ts`<br>`contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/trust-list-anchor-registry.test.ts` +1 | scoped |
+| `CH5` | `TAMGA_CHAIN_ENABLED` kapalıyken zincire bağlanılmaz ve yazılmaz; üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz. | `apps/trust-publisher/test/chain.test.ts`<br>`apps/verify/test/chain-health.test.ts` | scoped |
 
 ## ADR-0052 — Besu yerel izinlendirme
 
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
 | `LP1` | Zincir düğümlerinde izinlendirme yereldir (`permissions_config.toml`, düğüm ve hesap izin listesi açık); zincir üstü izin kontratı ve Tes… | — | none |
-| `LP2` | İzin listeleri zincirdeki kontrat durumundan türetilir; Governance'ta aktif olmayan validator ya da hiçbir kontratta yetkisi olmayan hesa… | — | none |
-| `LP3` | Bütün validator'lar aynı hesap listesini ve aynı validator düğüm listesini taşır; fark işletme olayıdır ve giderilene kadar raporlanır. | — | none |
+| `LP2` | İzin listeleri zincirdeki kontrat durumundan türetilir; Governance'ta aktif olmayan validator ya da hiçbir kontratta yetkisi olmayan hesa… | `contracts/test/chain-permissions.test.ts` | scoped |
+| `LP3` | Bütün validator'lar aynı hesap listesini ve aynı validator düğüm listesini taşır; fark işletme olayıdır ve giderilene kadar raporlanır. | `contracts/test/chain-permissions.test.ts` | scoped |
 | `LP4` | Yazma yetkisi kontratlarda denetlenir; izin listesi bu yetkiyi genişletmez ve onun yerine geçmez. | — | none |
 | `LP5` | Düğümün JSON-RPC ucu internete açılmaz; dış erişim yalnız mTLS'li ters vekil arkasından ve okuma/işlem ad alanlarıyla; `PERM`, `ADMIN`, `… | — | none |
 
@@ -48,14 +48,14 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
 | `NS1` | Ulusal şemanın `vct`'si `urn:tamga:<cc>:<alan>:<Tür>:<ana sürüm>` biçimindedir ve `<cc>` kaydı yapan devletin kodudur; ağ şemasının `vct`… | `contracts/test/issuer-registry.test.ts`<br>`contracts/test/security-round-2026-10-19.test.ts`<br>`contracts/test/trust-queries.test.ts` +1 | direct |
-| `NS2` | Kurumun kök sertifikası ve halefi kurumla aynı devlete aittir. | `contracts/test/adr-0054-0055.test.ts` | scoped |
+| `NS2` | Kurumun kök sertifikası ve halefi kurumla aynı devlete aittir. | `contracts/test/security-round-2026-11-04.test.ts`<br>`contracts/test/adr-0054-0055.test.ts` | direct |
 | `NS3` | Devlet başına günlük yazma tavanı her kayıt kontratında ayrı sayılır; durum listesi yayın tavanı liste başınadır; kurum başına günlük yen… | `contracts/test/adr-0054-0055.test.ts` | scoped |
 
 ## ADR-0055 — Yönetişim: yükseltme bekleme süresi ve kayıt yönetimi önerileri
 
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
-| `GE1` | Protokol yükseltmesi eşik dolunca kuyruğa alınır ve en erken 7 gün sonra, eşik o anki ACTIVE üyelerden yeniden sayılarak uygulanır. | `contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/upgrade-safety.test.ts`<br>`contracts/test/adr-0054-0055.test.ts` | direct |
+| `GE1` | Protokol yükseltmesi eşik dolunca kuyruğa alınır ve en erken 7 gün sonra, eşik o anki ACTIVE üyelerden yeniden sayılarak uygulanır. | `contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/upgrade-safety.test.ts`<br>`contracts/test/adr-0054-0055.test.ts` +1 | direct |
 | `GE2` | Yükseltmeyle yapılan başlangıç çağrısı yalnız parametresiz bir fonksiyon seçicisidir; Governance önerileri serbest veri (`bytes`) taşımaz. | `contracts/test/adr-0054-0055.test.ts` | scoped |
 | `GE3` | Governance'ın kayıt yönetimi işlemleri yalnız türü belli önerilerle ve 2/3 oyla yapılır; genel çağrı önerisi yoktur. | `contracts/test/adr-0054-0055.test.ts` | scoped |
 
@@ -67,14 +67,14 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `GV1` | Çıkarma/çıkış mevcut kayıtları ve credential'ları geçersiz kılmaz. | `contracts/test/governance.test.ts`<br>`packages/trust/src/trust-source.test.ts` | scoped |
 | `GV2` | NETWORK şeması yalnızca `Governance` üzerinden kaydedilir. | `contracts/test/schema-registry.test.ts` | scoped |
 | `CA1` | `certFingerprint` bir kez yazılır; yeni sertifika = yeni `caId`. | `contracts/test/root-ca-registry.test.ts` | scoped |
-| `CA2` | `RETIRED` CA: operasyon ve eski credential'lar sürer; `REVOKED` CA: credential'lar düşer, operasyon sürer. | `contracts/test/issuer-registry.test.ts`<br>`contracts/test/root-ca-registry.test.ts` | scoped |
+| `CA2` | `RETIRED` CA: operasyon ve eski credential'lar sürer; `REVOKED` CA: credential'lar düşer, operasyon sürer. | `contracts/test/issuer-registry.test.ts`<br>`contracts/test/root-ca-registry.test.ts`<br>`contracts/test/adr-0073-migration.test.ts` | scoped |
 | `CA3` | Yeni issuer yalnızca `ACTIVE` CA'ya bağlanabilir. | `contracts/test/issuer-registry.test.ts`<br>`contracts/test/root-ca-registry.test.ts`<br>`contracts/test/security-round-2026-10-19.test.ts` | scoped |
 | `I1` | Şema yetkisi allowlist'tir; varsayılan `false`. | `contracts/test/issuer-registry.test.ts` | scoped |
 | `I2` | Doğrulama `isCredentialAcceptable(id, iat)` kullanır; `isValidIssuer` yalnızca ihraçtır. | `contracts/test/cross-recognition.test.ts`<br>`contracts/test/issuer-registry.test.ts`<br>`contracts/test/trust-queries.test.ts` | scoped |
 | `I3` | Şema yetkisi zaman penceresidir; doğrulama `iat`'a göre bakar. | `contracts/test/issuer-registry.test.ts`<br>`contracts/test/status-list-registry.test.ts` | scoped |
 | `I4` | `REVOKED` issuer'ın listesini halefi yayınlayabilir. | `contracts/test/status-list-registry.test.ts` | scoped |
-| `SC1` | Şemanın `vctURI` ve `contentHash`'i asla güncellenmez. | `contracts/test/schema-registry.test.ts` | scoped |
-| `SC3` | `DEPRECATED` şema doğrulanabilir kalır. | `contracts/test/issuer-registry.test.ts`<br>`contracts/test/schema-registry.test.ts` | scoped |
+| `SC1` | Şemanın `vctURI`'si ve yazılmış her içerik özeti asla güncellenmez ya da silinmez; yeni sürüm özeti yalnız eklenir. | `contracts/test/schema-registry.test.ts` | scoped |
+| `SC3` | `DEPRECATED` şema, kullanımdan kaldırılmadan önce verilmiş belgeler için doğrulanabilir kalır. | `contracts/test/issuer-registry.test.ts`<br>`contracts/test/schema-registry.test.ts`<br>`contracts/test/review-2026-11-11-registries.test.ts` | scoped |
 | `L1` | Status list `version` monoton artar. | `contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/status-list-registry.test.ts` | scoped |
 | `L2` | `listSize >= 100.000`. | `contracts/test/status-list-registry.test.ts` | scoped |
 | `L3` | `bitsPerEntry ∈ {1, 2, 4, 8}`, listenin kendi değeri, değişmez (ADR-0063). | `contracts/test/invariants-fuzz.test.ts`<br>`contracts/test/status-list-registry.test.ts` | scoped |

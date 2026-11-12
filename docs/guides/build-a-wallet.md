@@ -261,7 +261,7 @@ Liste dosyalarını kendiniz yorumlamayın. Ayrıntı: [[GUIDE-0006]].
 | Alanlar tek tek gösterilir; kapsam dışı talep ayrı uyarıyla | WL8 |
 | Aynı doğrulayıcıya aynı kopya, farklı doğrulayıcıya farklı kopya | WL5, WL6 |
 | Gösterim günlüğü cihazda kalır, sunucuya gitmez | WL4 |
-| Yedek anahtar taşımaz; yeni cihazda belgeler yeniden alınır | WL2, WL10 |
+| Belgelerin yedeği alınmaz; taşıma dosyası belge değeri ve anahtar taşımaz; yeni cihazda belgeler yeniden alınır | WL2, WL10 |
 | Gösterim anında şema sunucusuna istek yok | WL9 |
 | Aracı doğrulayıcıda asıl site gösterilir ve kapsamı denetlenir | [[ADR-0017]] HV6 |
 | "Geçersiz" ile "doğrulanamadı" farklı gösterilir | [[SPEC-CRED-0003]] S14 |

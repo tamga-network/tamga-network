@@ -186,6 +186,7 @@ function Invoke-Init {
       "berlinBlock": 0,
       "londonBlock": 0,
       "shanghaiTime": 0,
+      "cancunTime": 0,
       "zeroBaseFee": true,
       "qbft": { "blockperiodseconds": 2, "epochlength": 30000, "requesttimeoutseconds": 4 }
     },
@@ -336,6 +337,7 @@ function Invoke-PermInit {
     "berlinBlock": 0,
     "londonBlock": 0,
     "shanghaiTime": 0,
+    "cancunTime": 0,
     "zeroBaseFee": true,
     "qbft": { "blockperiodseconds": 2, "epochlength": 30000, "requesttimeoutseconds": 4 }
   },

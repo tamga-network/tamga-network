@@ -2,8 +2,9 @@
 pragma solidity ^0.8.24;
 
 /// @notice YALNIZ TEST (kontrat denetimi 2026-11-11, Y1): aynı adrese farklı kod koyan CREATE2 fabrikası. Başlangıç kodu
-///         sabittir (çalışma kodunu fabrikadan okur), bu yüzden adres koda bağlı değildir; Shanghai kurallarında SELFDESTRUCT
-///         kodu sildiğinden aynı tuzla yeniden dağıtım aynı adrese başka kod koyar.
+///         sabittir (çalışma kodunu fabrikadan okur), bu yüzden adres koda bağlı değildir. Shanghai kurallarında SELFDESTRUCT
+///         kodu sildiğinden aynı tuzla yeniden dağıtım aynı adrese başka kod koyardı; zincir Cancun kural setindedir
+///         (ADR-0077, EIP-6780): kod silinmez, ikinci dağıtım çarpışır — test bunu gösterir.
 contract MetamorphicFactoryMock {
     bytes public pending;
 

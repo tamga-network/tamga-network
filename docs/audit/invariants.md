@@ -12,7 +12,7 @@ Rows without a test are either enforced by construction (types, schemas, data fi
 that do not cite the code, process rules (governance, documentation), or genuinely untested. Reviewers should treat
 untested rows in the parsing, signature, status and trust-list areas as priority questions.
 
-**Summary:** 390 invariants in 72 documents · 104 with at least one test reference (27%) · 19 with a direct reference.
+**Summary:** 463 invariants in 82 documents · 126 with at least one test reference (27%) · 26 with a direct reference.
 
 ## ADR-0013 — Kimlik belgesi için mdoc
 
@@ -164,7 +164,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 |---|---|---|---|
 | `PS1` | Cüzdan bir siteye yalnız o sitenin kayıtlı `rp_id`'sinden türetilen takma adı sunar; farklı sitelere aynı takma ad gitmez. | — | none |
 | `PS2` | Takma ad tohumu kimlik servisinde saklanmaz; ayrı anahtarla (`pseudonymKey`) her doğrulamada yeniden türetilir. | — | none |
-| `PS3` | Tohum taşıyan belge türü hiçbir RP'ye sunulmaz; güven listesinde hiçbir kapsamda yer alamaz. | `apps/trust-publisher/test/registration.test.ts`<br>`packages/wallet-core/src/pseudonym.test.ts` | direct |
+| `PS3` | Tohum taşıyan belge türü hiçbir RP'ye sunulmaz; güven listesinde hiçbir kapsamda yer alamaz. | `apps/trust-publisher/test/registration.test.ts`<br>`packages/wallet-core/src/pseudonym.test.ts`<br>`packages/onboard/src/rules.test.ts` | direct |
 | `PS4` | `site-signup` / `site-signin` ve benzeri giriş politikaları `document_number_hash` ya da kimlik numarası istemez. | `apps/verify/test/verify-app.test.ts` | scoped |
 | `PS5` | Takma ad sunumu takma ad anahtarıyla imzalıdır (`aud` = site, `nonce`) ve iptal edilmemiş wallet unit kanıtı taşır. | `apps/verify/test/verify-app.test.ts`<br>`packages/verifier/src/pseudonym.test.ts` | direct |
 | `PS6` | Kullanıcının takma ada verdiği ad siteye gönderilmez. | — | none |
@@ -194,9 +194,9 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 |---|---|---|---|
 | `CI1` | Doğrulayıcı imzalı istekte yalnız `x509_hash` istemci kimliğini kullanır; değer erişim sertifikasından hesaplanır, ayardan okunmaz (HAIP… | — | none |
 | `CI2` | Cüzdan yalnız `x509_hash` öneki kabul eder; özet yaprak sertifikayla eşleşmezse istek reddedilir. Yanıt adresinin alanı imzalayan sertifi… | — | none |
-| `CI3` | Güven listesi RP kaydında `client_id` yayıncı tarafından erişim sertifikasından hesaplanır; kalıcı kayıt kimliği `dns_name`'dir ve sertif… | — | none |
+| `CI3` | Güven listesi RP kaydında `client_id` yayıncı tarafından erişim sertifikasından hesaplanır; kalıcı kayıt kimliği `dns_name`'dir ve sertif… | `apps/trust-publisher/test/cli.test.ts`<br>`apps/trust-publisher/test/source-checks.test.ts` | unique |
 | `CI4` | Kopya ayrımı, takma ad türetme, sunum günlüğü ve aracı ilişkileri `dns_name`'e bağlanır; `x509_hash`'e bağlanmaz. | — | none |
-| `CI5` | Geçiş kartı jetonunun `aud`'u RP'nin `dns_name`'idir. | — | none |
+| `CI5` | Geçiş kartı jetonunun `aud`'u RP'nin `dns_name`'idir. | `packages/wallet-core/src/second-review.test.ts` | direct |
 | `CI6` | WIA `sub`, aynı cüzdan çözümünü kullanan bütün örneklerde ortak değerdir; örneğe özgü tanımlayıcı taşımaz (HAIP 1.0 §4.4.1). | — | none |
 
 ## ADR-0035 — Konumlanma
@@ -213,8 +213,8 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
 | `FD1` | Dış liste yalnız Tamga imzalı LOTL'da adresi, sabitlenmiş imzacı parmak izi ve kapsamıyla gösterilir; imzacısı LOTL'dakiyle eşleşmeyen li… | — | none |
-| `FD2` | Dış liste kapsamı dışındaki rollere ve belge türlerine kefil olamaz; kapsam dışı kayıtlar yok sayılır. | `packages/verifier/src/federation.test.ts` | scoped |
-| `FD3` | Dış listenin eksik, bayat ya da doğrulanamaz olması Tamga listelerinin tazeliğini bozmaz; o listeye bağlı her soru UNKNOWN döner. | — | none |
+| `FD2` | Dış liste kapsamı dışındaki rollere ve belge türlerine kefil olamaz; kapsam dışı kayıtlar yok sayılır. | `packages/trust/src/second-review.test.ts`<br>`packages/verifier/src/federation.test.ts` | direct |
+| `FD3` | Dış listenin eksik, bayat ya da doğrulanamaz olması Tamga listelerinin tazeliğini bozmaz; o listeye bağlı her soru UNKNOWN döner. | `packages/trust/src/second-review.test.ts`<br>`packages/verifier/src/federation.test.ts` | direct |
 | `FD4` | Bir dış listenin LOTL'a girmesi, değişmesi ya da çıkması proje yönetimi onayıyla olur ve kayıt `approval` alanında belirtilir; yer tutucu… | — | none |
 | `FD5` | Tamga türlerinde `vct#integrity` zorunludur; dış türlerde tür güveni dış listenin imzalı kaydından gelir. | — | none |
 
@@ -230,7 +230,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
 | `SB1` | Sandbox kök sertifikası ve sandbox liste imzacıları gerçek ağın hiçbir listesinde yer almaz; gerçek ağın kök ve imza anahtarları sandbox'… | `apps/trust-publisher/test/chain.test.ts`<br>`apps/trust-publisher/test/sandbox-institutions.test.ts`<br>`apps/trust-publisher/test/wallet-provider.test.ts` | unique |
-| `SB2` | Sandbox listelerin listesi kendini test olarak işaretler; gerçek ağ için yapılandırılmış bir cüzdan ya da doğrulayıcı sandbox listesini k… | `packages/trust/src/trust-source.test.ts` | scoped |
+| `SB2` | Sandbox listelerin listesi kendini test olarak işaretler; gerçek ağ için yapılandırılmış bir cüzdan ya da doğrulayıcı sandbox listesini k… | `packages/trust/src/trust-source.test.ts`<br>`apps/chain-indexer/test/replay-plan.test.ts` | scoped |
 | `SB3` | Sandbox'ın varsayılan kimlik doğrulaması sahte sağlayıcıdır (hızlı deneme) ve örnek kimlik numaraları geçersiz biçimdedir; gerçek kişinin… | — | none |
 | `SB4` | Sandbox'ta verilen her belge ve sandbox'a bağlı her ekran test olduğunu görünür biçimde belirtir. | `apps/verify/test/policy-sets.test.ts` | direct |
 | `SB5` | Sandbox verileri her an sıfırlanabilir; sandbox'a bağlı hiçbir süreç kalıcılık varsaymaz. | — | none |
@@ -346,11 +346,11 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
-| `CH1` | Zincir imzalı listelerin ve çapa günlüğünün projeksiyonudur; çelişkide imzalı liste geçerlidir; zincir cevabı doğrulama için gerekli deği… | `apps/trust-publisher/test/chain.test.ts` | scoped |
+| `CH1` | Zincir imzalı listelerin ve çapa günlüğünün projeksiyonudur; çelişkide imzalı liste geçerlidir; zincir cevabı doğrulama için gerekli deği… | `apps/trust-publisher/test/chain.test.ts`<br>`apps/verify/test/chain-health.test.ts` | scoped |
 | `CH2` | Liste çapası kaydına yalnız liste sürümünün ve çapa günlüğü satırının özeti (hash, sürüm/sıra, zaman) yazılır; liste içeriği, kayıt, belg… | `apps/trust-publisher/test/chain.test.ts` | scoped |
 | `CH3` | Bir çapa ancak onay eşiği kadar farklı yetkili yazıcı birebir aynı veriyi gönderince onaylıdır; üretimde eşik en az 2'dir. | `apps/trust-publisher/test/chain.test.ts` | scoped |
-| `CH4` | Liste başına sürüm monoton artar; açılmış sürüm için farklı özet ayrı aday olarak kaydedilir ve çift-konuşma işareti olarak olay yayar (A… | `apps/trust-publisher/test/chain.test.ts` | scoped |
-| `CH5` | `TAMGA_CHAIN_ENABLED` kapalıyken zincire bağlanılmaz ve yazılmaz; üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz. | `apps/trust-publisher/test/chain.test.ts` | scoped |
+| `CH4` | Liste başına sürüm monoton artar; açılmış sürüm için farklı özet ayrı aday olarak kaydedilir ve çift-konuşma işareti olarak olay yayar (A… | `apps/trust-publisher/test/chain.test.ts`<br>`packages/trust/src/anchor-kinds.test.ts` | scoped |
+| `CH5` | `TAMGA_CHAIN_ENABLED` kapalıyken zincire bağlanılmaz ve yazılmaz; üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz. | `apps/trust-publisher/test/chain.test.ts`<br>`apps/verify/test/chain-health.test.ts` | scoped |
 
 ## ADR-0052 — Besu yerel izinlendirme
 
@@ -395,7 +395,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `MR2` | İptal durumunu denetlemeyen başarılı sonuç bunu açıkça taşır (`statusChecked: false`, `clientStatus: "NOT_CHECKED"`). | — | none |
 | `MR3` | Cüzdan, `checkRp`'nin bu isteğe bağlı onayı olmadan sunum yanıtı göndermez. | — | none |
 | `MR4` | Geçiş kartı yalnız doğrulama hattının kabul çıktısından ve doğrulanan sunumun anahtarına verilir. | — | none |
-| `MR5` | Kayıt sertifikası olmayan istek (cüzdandan cüzdana yakın alan dışında) reddedilir. | — | none |
+| `MR5` | Kayıt sertifikası olmayan istek (cüzdandan cüzdana yakın alan dışında) reddedilir. | `packages/wallet-core/src/wrprc.test.ts` | scoped |
 | `MR6` | E4 yalnız denetim kaydı yazıldıysa `checks_performed`'tadır. | — | none |
 | `MR7` | Zaman girdileri birimiyle işaretlidir; yanlış birim hata verir, sessizce yorumlanmaz. | — | none |
 | `MR8` | Türü iptal listesi kullanan belgede iptal girişi yoksa doğrulama reddeder. | — | none |
@@ -413,7 +413,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
-| `AC1` | Gerçek ağda erişim sertifikasının SAN'ı kayıttaki alan adını ve en az bir iletişim bilgisini (destek adresi) taşır. | — | none |
+| `AC1` | Gerçek ağda erişim sertifikasının SAN'ı kayıttaki alan adını ve en az bir iletişim bilgisini (destek adresi) taşır. | `packages/onboard/src/onboard.test.ts` | direct |
 | `AC2` | Hizmete bağlı erişim sertifikasında hizmet kimliği `OU` alanındadır ve kayıttaki hizmet kimliğiyle aynıdır. | — | none |
 | `AC3` | Erişim sertifikası, Tamga'nın beyan edemeyeceği bir AB sertifika politikası tanımlayıcısı taşımaz. | — | none |
 
@@ -514,7 +514,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
 | `OP1` | Liste işletmecisi ve şema sahibi adı "Tamga Network"tür (`status: provisional` vakıf kurulana kadar); geçici işletmecinin adı yalnız ağın… | — | none |
-| `OP2` | Geçici işletmecinin adı, kimlik numarası ve adresi tek yapılandırma değerinden gelir; liste yayıncısı bu değerden farklı bilgi taşıyan ke… | `apps/trust-publisher/test/provisional-operator.test.ts` | direct |
+| `OP2` | Geçici işletmecinin adı, kimlik numarası ve adresi tek yapılandırma değerinden gelir; liste yayıncısı bu değerden farklı bilgi taşıyan ke… | `apps/trust-publisher/test/cli.test.ts`<br>`apps/trust-publisher/test/provisional-operator.test.ts`<br>`apps/trust-publisher/test/source-checks.test.ts` | direct |
 | `OP3` | Vakfa devir yalnız bu değeri ve ona bağlı kayıtları ve sertifikaları değiştirir; liste işletmecisi adı, `ca_id`, `vct` ve kurumların kalı… | — | none |
 
 ## ADR-0071 — Geçici dönemde ağın finansmanı: hizmet ücreti yok; vakıf hibe ve devlet/üye katkısıyla
@@ -530,6 +530,71 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 |---|---|---|---|
 | `VL1` | Ağ token ihraç etmez; ödeme, mutabakat ya da değer aktarımı işlemez; değer katmanı yönetişim kurumunun kararı, bağımsız güvenlik inceleme… | — | none |
 
+## ADR-0073 — Zincir–liste eşdeğerliğinin uygulanabilirliği: göç kipi, sert iptal, şema sürümleri, doğrulayıcı kimliği, durum eşlemesi
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `CE1` | Göç kipi her kayıt kontratında Governance önerisiyle bir kez açılır; pencere en çok 30 gündür ve süre dolunca kendiliğinden kapanır; kapa… | — | none |
+| `CE2` | Sert iptal tarihi (`invalidatesFrom`) kurumun geçerlilik başlangıcı ile iptal anı arasındadır; yazıldıktan sonra silinmez, yalnız geriye… | `apps/chain-indexer/test/chain-trust-source.test.ts` | scoped |
+| `CE3` | Şemanın `vctURI`'si ve yazılmış her içerik özeti değiştirilmez ve silinmez; yeni sürüm özeti yalnız eklenir. | — | none |
+| `CE4` | Doğrulayıcının zincir ve liste kimliği `keccak256(dns_name)`'dir; erişim sertifikasının yenilenmesi kimliği değiştirmez. | — | none |
+| `CE5` | Kontrat C1/C2/C3'ü belgenin `iat` anındaki duruma göre, yarı açık aralıklarla değerlendirir (askıdaki kurumun askıdan önceki belgeleri ge… | `apps/chain-indexer/test/chain-trust-source.test.ts` | scoped |
+| `CE6` | Göç, `trust:chain-replay` eşdeğerlik testinde C1/C2/C3/D5 cevaplarında ACCEPTED/REJECTED farkı kalmadan kapanmaz. | — | none |
+
+## ADR-0074 — Projeksiyon kapsamı 0.8: imzalı listelerdeki bütün güven kayıtları zincirde
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `PJ1` | İmzalı listelerde güven kararını etkileyen her kayıt zincirde bir kayda ya da çapaya eşlenir; liste kaynak kalır ve çelişkide liste geçer… | — | none |
+| `PJ2` | Zincire kişisel veri ve serbest metin yazılmaz; kayıt ayrıntıları yalnız kanonik JSON özeti ve mevcut `metadataURI` ile temsil edilir; ye… | `apps/chain-indexer/test/replay-plan.test.ts` | scoped |
+| `PJ3` | Ağ düzeyi kayıtlar (cüzdan sağlayıcı, ZK devresi, dış liste, belge kategorisi, liste imzacısı, liste işletmecisi, slot) yalnız Governance… | — | none |
+| `PJ4` | Sandbox listeleri ve çapa günlüğü üretim zincirine yazılmaz ve yeniden oynatılmaz. | `apps/trust-publisher/test/chain.test.ts`<br>`apps/verify/test/chain-health.test.ts` | scoped |
+| `PJ5` | Liste görünümleri ve kayıt sertifikası durum listesi çapa günlüğüne satır olarak girer ve zincirde kaynak sürümüyle çapalanır; görünüm ka… | `packages/trust/src/anchor-kinds.test.ts` | scoped |
+
+## ADR-0075 — Doğrulayıcı alan adı kimliğinin sahipliği ve iptal sonrası yeniden kayıt
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `RO1` | Doğrulayıcı kimliğinin (`rpId = keccak256(dns_name)`) sahibi devlet yalnız Governance'ın türü belli **devir** önerisiyle (2/3) değişir. Ö… | `packages/trust/src/rp-reassignment.test.ts` | direct |
+| `RO2` | `REVOKED` bir dönem için kesin kalır. Aynı kimliğin **yeniden kaydı** yalnız Governance'ın türü belli yeniden kayıt önerisiyle (2/3) ve y… | `packages/trust/src/rp-reassignment.test.ts` | scoped |
+| `RO3` | Devir ve yeniden kayıt yeni bir **kayıt dönemi** başlatır (ACTIVE, yürütme anından). Kayıt silinmez; durum geçmişi ve dönem listesi yalnı… | — | none |
+| `RO4` | Sabitlemeden sonra kayda başka bir dönem eklendiyse öneri bayattır, yazılmaz; öneri türü sabitlenen içeriğin türüyle aynı olmalıdır. | — | none |
+| `RO5` | İmzalı listede de aynı kural: `dns_name` durumu ne olursa olsun ikinci kez kaydedilmez; sahiplik değişimi ve iptal sonrası yeniden kayıt… | `apps/trust-publisher/test/cli.test.ts`<br>`apps/trust-publisher/test/registry-ops.test.ts`<br>`apps/trust-publisher/test/source-checks.test.ts` +2 | direct |
+
+## ADR-0076 — İki üyeli ağda çıkış ve yönetişimin sürekliliği
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `GC1` | Tek taraflı çıkış (`Governance.withdraw`) yalnız ağda en az üç etkin üye varken geçer; etkin üye sayısı 2 ya da daha az iken reddedilir (… | — | none |
+| `GC2` | İki üyeli ağda çıkmak isteyen üyenin yolu sıralıdır: önce üçüncü bir üye kabul edilir (`proposeStateAdmission`, iki üyenin oyuyla), sonra… | — | none |
+| `GC3` | ADR-0002 #5 bu kayıtla okunur: çıkış hakkı kalkmaz, sıraya bağlanır. En az üç etkin üyeli ağda tek taraflıdır, oy gerektirmez ve kodla gü… | — | none |
+| `GC4` | Ağ en az iki kurucuyla kurulur: `Governance.initialize` ikiden az kurucuyu reddeder (`FounderMismatch`). Kurulum betikleri ve anahtar har… | — | none |
+
+## ADR-0077 — Zincir Cancun kural setiyle kurulur
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `CR1` | Zincirin kural seti genesis'te açıkça yazılır ve ilk bloktan Cancun'dur (`shanghaiTime: 0`, `cancunTime: 0`); yerel geliştirme zinciri, t… | — | none |
+| `CR2` | Kontratların derleme hedefi ve kontrat testlerinin koştuğu ağın kural seti, zincirin kural setiyle aynıdır (`cancun`). | — | none |
+| `CR3` | Yükseltme önerisi yeni implementasyonun kod özetini sabitler ve yürütmede karşılaştırır; bu denetim kural setinden bağımsız olarak kalır. | — | none |
+
+## ADR-0079 — Başka devletin ulusal şemasına yetki: şema sahibi devletin onayı
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `FS1` | Bir devlet, kendi kurumunu başka bir devletin ulusal şemasına ancak şema sahibi devletin o devlet için yazdığı, yürürlükteki onay kaydıyl… | — | none |
+| `FS2` | Onay kaydını yalnız şema sahibi devlet yazar ve geri alır; kayıt şema ve yetki alan devlet başınadır, zaman penceresi taşır ve ancak şema… | — | none |
+| `FS3` | Doğrulamada başka devletin ulusal şemasıyla verilmiş belge, belgenin `iat` anında hem kurumun şema yetkisi hem şema sahibinin onayı yürür… | — | none |
+
+## ADR-0080 — Kimlik doğrulama bağlantısının iletilmesine karşı iki katman: cüzdanda son onay ve doğrulama öncesi uyarı
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `VL1` | Kimlik belgesi, akışı başlatan cüzdanda kişi doğrulanan kimliğin maskeli özetini görüp "bu benim" diye onaylamadan verilmez. Onay yoksa y… | — | none |
+| `VL2` | Maskeli özet yalnız adın ve soyadın baş harflerinden ve doğum yılından oluşur; yalnız akışı başlatan cüzdana, o cüzdanın anahtarına bağlı… | — | none |
+| `VL3` | Kimlik doğrulama başlamadan önce, doğrulamayı yapan kişiye bu doğrulamanın hangi cüzdan için yapıldığı ve bağlantıyı kendisi açmadıysa de… | — | none |
+| `VL4` | Gerçek ağda kimlik doğrulama, VL1–VL3 uygulanmadan herkese açılmaz. | — | none |
+
 ## ARCH-0003 — Bileşen mimarisi
 
 | Code | Rule (truncated) | Tests | Match |
@@ -537,7 +602,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `CMP1` | Doğrulayıcı servisi zinciri doğrudan sorgulamaz; indeksleyiciden okur (§2.1). | — | none |
 | `CMP2` | İndeksleyici bilinmeyen bir implementasyon sürümü görünce **durur ve alarm verir** (§2.2). | `packages/trust/src/tl-reader.test.ts`<br>`packages/trust/src/trust-source.test.ts`<br>`packages/verifier/src/federation.test.ts` | unique |
 | `CMP3` | İndeksleyici kişisel veri saklamaz (§2.4). | — | none |
-| `CMP4` | Bayat indeksleyici `INDETERMINATE` üretir, `REJECTED` değil (§2.5). | `packages/trust/src/trust-source.test.ts` | unique |
+| `CMP4` | Bayat indeksleyici `INDETERMINATE` üretir, `REJECTED` değil (§2.5). | `apps/chain-indexer/test/chain-trust-source.test.ts`<br>`packages/trust/src/trust-source.test.ts` | unique |
 | `CMP5` | OBS adaptörü eşlemede karşılığı olmayan veri için belge vermeyi durdurur; tahmin üretmez (§3.2). | `packages/issuer/src/issuer.test.ts` | unique |
 | `CMP6` | Status yayını değişiklik olmasa da sabit aralıkta çalışır (§3.4). | — | none |
 | `CMP7` | Doğrulayıcı doğrulama başına status çekmez; ön çekim kullanır (§4.2). | — | none |
@@ -545,14 +610,31 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `K1` | Belge ve status imzalama anahtarları ayrıdır (§8). | — | none |
 | `CMP9` | Doğrulama sonucu üç değerlidir: ACCEPTED / REJECTED / INDETERMINATE. | — | none |
 
+## SPEC-AGENT-0001 — Ajan yetkilendirme (zincir aşaması)
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `AG1` | Agent'ın kendi kimliği yoktur; yalnızca türetilmiş işlemsel yetkisi vardır. | — | none |
+| `AG2` | Süresiz delegasyon yoktur; her delegasyon `validUntil` taşır. | — | none |
+| `AG3` | Delegasyon koşulsuz ve anında iptal edilebilir (kill switch); iptal ileriye dönük kesindir, geçmiş işlemleri geri almaz. | — | none |
+| `AG4` | Delegasyon sorumluluğu velide (principal) kalır. | — | none |
+| `AG5` | Her agent işlemi delegasyon referansıyla loglanır. | — | none |
+| `AG6` | Agent kimlik credential'ı sunamaz; yalnızca işlemsel yetki taşır. | — | none |
+| `AG7` | `scope` genişletilebilir tasarlanır; `pay:*` Faz 0'da tanımlı değildir. | — | none |
+| `AG8` | Faz 0'da zincir üstü credential-gating yoktur; hiçbir kontrat bir credential'ın geçerliliğini zincirde kontrol etmez. | — | none |
+| `AG9` | Zincir bir credential'ın iptal durumunu göremez (ADR-0008, SPEC-CRED-0003/S1); gating "credential doğrulama" olarak zincirde uygulanamaz. | — | none |
+| `AG10` | Gelecekte gating açılırsa zincir credential'ı doğrulamaz; yalnızca kayıtlı bir verifier'ın imzalı beyanına güvenir (güven kayması doküman… | — | none |
+| `AG11` | Beyanı üreten verifier RelyingPartyRegistry'de `ACTIVE` olmalıdır; beyan verifier'ın kayıtlı sertifikasıyla (`accessCertFingerprint`) doğ… | — | none |
+| `AG12` | Beyan taze olmalıdır (azami yaş, ör. ≤ 15 dk) ve tek kullanımlık nonce taşır; nonce tüketimi atomiktir. | — | none |
+
 ## SPEC-API-0001 — Doğrulama hattı ve API
 
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
 | `AP1` | Adım kodunun anlamı asla değişmez; kaldırılan kod yeniden kullanılmaz. | — | none |
-| `AP2` | `INDETERMINATE`, `REJECTED` ile aynı kovaya konmaz. | `packages/verifier/src/verifier.test.ts`<br>`packages/verifier/src/web/web.test.ts`<br>`packages/verifier/src/zk/zk.test.ts` | scoped |
-| `AP3` | Sonuç nesnesi claim değerlerini değil adlarını taşır. | `packages/verifier/src/verifier.test.ts`<br>`apps/verify/test/verify-app.test.ts` | scoped |
-| `AP4` | `idx` hiçbir API yanıtında veya kayıtta bulunmaz. | `packages/verifier/src/verifier.test.ts` | scoped |
+| `AP2` | `INDETERMINATE`, `REJECTED` ile aynı kovaya konmaz. | `packages/verifier/src/verifier.test.ts`<br>`apps/verify/test/second-review.test.ts`<br>`packages/verifier/src/second-review.test.ts` +2 | scoped |
+| `AP3` | Sonuç nesnesi claim değerlerini değil adlarını taşır. | `packages/sd-jwt/src/sd-jwt.test.ts`<br>`packages/verifier/src/verifier.test.ts`<br>`apps/verify/test/second-review.test.ts` +2 | scoped |
+| `AP4` | `idx` hiçbir API yanıtında veya kayıtta bulunmaz. | `packages/verifier/src/verifier.test.ts`<br>`apps/verify/test/second-review.test.ts`<br>`packages/verifier/src/second-review.test.ts` | scoped |
 | `AP5` | HTTP durum kodu doğrulama sonucunu kodlamaz. | — | none |
 | `AP6` | Politikanın `required_claims`'i RP'nin güven listesindeki kaydının scope'unu aşamaz. | `packages/verifier/src/verifier.test.ts`<br>`apps/verify/test/verify-app.test.ts` | scoped |
 | `AP7` | Hata `detail` alanı kişisel veri içermez. | — | none |
@@ -560,8 +642,49 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `AP11` | `C1` ve `C2` belgenin `iat`'ını alır; belge verme zamanı sorguları doğrulamada kullanılmaz. | — | none |
 | `AP12` | `issuerId` `x5c` yaprak parmak izinden türetilir, `iss` claim'inden değil. | — | none |
 | `AP13` | Geçiş kartı jetonu doğrulaması (ADR-0012 B): imza `pass_grant`'taki kopya anahtarıyla, `aud` = doğrulayıcının kalıcı kimliği (güven liste… | `packages/verifier/src/pass.test.ts` | unique |
-| `AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). | — | none |
+| `AP9` | `E4` (denetim kaydı) reddedilen doğrulamalarda da çalışır (denetim kaydı yeri olan doğrulayıcıda; barındırılan doğrulayıcıda her zaman). | `apps/verify/test/second-review.test.ts`<br>`apps/verify/test/verify-app.test.ts` | unique |
 | `AP10` | `tx_code` yanıt dışında hiçbir yerde saklanmaz. | — | none |
+
+## SPEC-BC-0001 — Güven katmanı kontratları
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `N1` | Namespace sahibi olmayan çağıran yazamaz; tek istisna `Governance` yürütmesi (NETWORK şeması, yükseltme, kayıt yönetimi önerileri). | — | none |
+| `GV1` | Çıkarma/çıkış mevcut kayıtları ve credential'ları geçersiz kılmaz. | `packages/trust/src/trust-source.test.ts` | unique |
+| `GV2` | NETWORK şeması yalnızca `Governance` üzerinden kaydedilir. | — | none |
+| `CA1` | `certFingerprint` bir kez yazılır; yeni sertifika = yeni `caId`. | — | none |
+| `CA2` | `RETIRED` CA: operasyon ve eski credential'lar sürer; `REVOKED` CA: credential'lar düşer, operasyon sürer. | — | none |
+| `CA3` | Yeni issuer yalnızca `ACTIVE` CA'ya bağlanabilir. | — | none |
+| `I1` | Şema yetkisi allowlist'tir; varsayılan `false`. | — | none |
+| `I2` | Doğrulama `isCredentialAcceptable(id, iat)` kullanır; `isValidIssuer` yalnızca ihraçtır. | — | none |
+| `I3` | Şema yetkisi zaman penceresidir; doğrulama `iat`'a göre bakar. | — | none |
+| `I4` | `REVOKED` issuer'ın listesini halefi yayınlayabilir. | — | none |
+| `SC1` | Şemanın `vctURI`'si ve yazılmış her içerik özeti asla güncellenmez ya da silinmez; yeni sürüm özeti yalnız eklenir. | — | none |
+| `SC3` | `DEPRECATED` şema, kullanımdan kaldırılmadan önce verilmiş belgeler için doğrulanabilir kalır. | — | none |
+| `L1` | Status list `version` monoton artar. | — | none |
+| `L2` | `listSize >= 100.000`. | — | none |
+| `L3` | `bitsPerEntry ∈ {1, 2, 4, 8}`, listenin kendi değeri, değişmez (ADR-0063). | — | none |
+| `R1` | Issuer delegate anahtarı ulusal kayıtlara yazamaz. | — | none |
+| `R2` | Askıya alınmış issuer status list yayınlayamaz. | — | none |
+| `GA1` | Ücretsiz gas, maliyet yokluğu değildir. | — | none |
+| `GV3` | Asgari mutlak oy 2; iki üyeli ağda çıkarma imkânsızdır. | — | none |
+| `GV4` | Çıkarılmış/çekilmiş devlet yeniden kabul edilebilir. | — | none |
+| `DP1` | Hiçbir kontrat kişisel veri, credential içeriği veya credential hash'i saklamaz. | `apps/trust-publisher/test/chain.test.ts` | unique |
+
+## SPEC-BC-0002 — Emanet ve hesap verebilir açıklama
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `GD1` | **Zincirde sır yok:** kişisel veri, eşleştirme, pay, ciphertext, düz-metin sonuç asla zincirde — yalnızca commitment/hash, kompozisyon, p… | — | none |
+| `GD2` | **Devlet-bazlı anahtar:** bir devletin seti yalnızca kendi vatandaşını çözer (kriptografik); başka devletin anahtarı çözemez. | — | none |
+| `GD3` | **3-of-5 + yürütme-dışı:** `threshold ≥ 3`, `size = 5`, `executiveSeats ≤ threshold−1`, her `execute`'ta `nonExecutiveApprovals ≥ 1`. | — | none |
+| `GD4` | **Egemenlik:** seti yalnızca home-state kurar/günceller (`onlyOwnerState`, ADR-0002); kompozisyon on-chain yayınlanır. | — | none |
+| `GD5` | **DKG + threshold:** anahtar hiç yeniden kurulmaz; merkezî üretim yok. | — | none |
+| `GD6` | **Escrow-geçerlilik:** escrow makbuzu olmayan pseudonym ağ-geçersiz; escrow verifiable-encryption ile doğrulanır. | — | none |
+| `GD7` | **Yasal tetik zorunlu:** geçerli court token olmadan `execute` yok; hukuki + kriptografik kenetli. | — | none |
+| `GD8` | **Mutlak ret / temyiz yok:** subjectState gerekçesiz reddedebilir; ağ seviyesinde üst merci yoktur. | — | none |
+| `GD9` | **Dar kapsam:** yalnızca pseudonym↔kimlik; credential/geçmiş/canlı-izleme yok. | — | none |
+| `GD10` | **Silinemez iz + bildirim:** her talep/onay/ret/açma append-only; bildirim tavanı kontratta sabit (2/3 ile değişir). | — | none |
 
 ## SPEC-CRED-0002 — SD-JWT VC profili
 
@@ -570,17 +693,17 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `C1` | `alg` her zaman `ES256`. | `packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C2` | `_sd_alg` her zaman `sha-256`, açıkça yazılır. | `packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C3` | Salt ≥ 128 bit, her disclosure için benzersiz. | — | none |
-| `C4` | Digest, disclosure **dizesinin** hash'idir; yeniden serileştirme yapılmaz. | `packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
+| `C4` | Digest, disclosure **dizesinin** hash'idir; yeniden serileştirme yapılmaz. | `packages/sd-jwt/src/property.test.ts`<br>`packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C5` | `_sd` dizisi sıralıdır. | `packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C6` | Decoy digest kullanılmaz. | `packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C7` | `x5c` zorunlu; kök sertifika dahil edilmez. | `packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C8` | KB-JWT istisnasız zorunlu. | `packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C9` | `sd_hash`, sunulan set üzerinden ve sondaki `~` dahil hesaplanır. | — | none |
-| `C10` | Eşleşmeyen disclosure reddedilir. | `packages/sd-jwt/src/sd-jwt.test.ts`<br>`packages/sd-jwt/src/property.test.ts` | scoped |
+| `C10` | Eşleşmeyen disclosure reddedilir. | `packages/sd-jwt/src/property.test.ts`<br>`packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C11` | İç içe seçici açıklama en fazla 2 seviye. | `packages/sd-jwt/src/nested.test.ts` | unique |
 | `C12` | Gizlemek = dizeden çıkarmak; JWT hiçbir zaman yeniden imzalanmaz. | — | none |
 | `C13` | `typ` her zaman `dc+sd-jwt`; Tamga belge verenlerinden `vc+sd-jwt` kabul edilmez. | `packages/sd-jwt/src/sd-jwt.test.ts`<br>`conformance/runner/conformance.test.ts`<br>`packages/verifier/src/verifier.test.ts` | scoped |
-| `C14` | Doğrulayıcı disclosure'ı çözüp yeniden serileştirmez (§3.5). | `packages/sd-jwt/src/sd-jwt.test.ts`<br>`packages/sd-jwt/src/property.test.ts` | scoped |
+| `C14` | Doğrulayıcı disclosure'ı çözüp yeniden serileştirmez (§3.5). | `packages/sd-jwt/src/property.test.ts`<br>`packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C15` | `issuerId` yaprak sertifika parmak izinden türetilir; `iss` yalnızca tutarlılık kontrolüdür. | — | none |
 | `C16` | `cnf` claim'i olmayan SD-JWT VC reddedilir. | `packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
 | `C17` | KB-JWT `iat` penceresi ±300 saniyedir. | `packages/sd-jwt/src/sd-jwt.test.ts` | scoped |
@@ -666,7 +789,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `PV4` | `origin` prefix'i istek içinde client identifier olarak kabul edilmez. | `packages/wallet-core/src/oid4vp.test.ts` | scoped |
 | `PV5` | Ret sebebi doğrulayıcıya sızmaz. | `apps/verify/test/session-replay.test.ts`<br>`packages/wallet-core/src/oid4vp.test.ts` | scoped |
 | `PV6` | İstek nesnesi imzalı olmalıdır; `redirect_uri` prefix'i reddedilir. | `packages/wallet-core/src/oid4vp.test.ts`<br>`packages/wallet-core/src/dc-mdoc.test.ts` | scoped |
-| `PV7` | KB-JWT `aud` değeri client identifier'ın tamamıdır (prefix dahil); Digital Credentials API yolunda imzalı istekte de `origin:` + sayfa kö… | `apps/verify/test/session-replay.test.ts`<br>`packages/verifier/src/verifier.test.ts` | scoped |
+| `PV7` | KB-JWT `aud` değeri client identifier'ın tamamıdır (prefix dahil); Digital Credentials API yolunda imzalı istekte de `origin:` + sayfa kö… | `apps/verify/test/session-replay.test.ts`<br>`conformance/runner/conformance.test.ts`<br>`packages/verifier/src/verifier.test.ts` | scoped |
 | `PV8` | Sunum kaydı cihazda kalır; sunucuya gönderilmez. | — | none |
 | `PV9` | Bir istekte en fazla 3 belge, 2 `credential_sets`. | — | none |
 | `PV10` | `nonce` tek kullanımlıktır; doğrulayıcı tekrar kabul etmez. | `apps/verify/test/session-replay.test.ts`<br>`apps/verify/test/verify-app.test.ts`<br>`packages/verifier/src/branches.test.ts` | scoped |
@@ -728,28 +851,28 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
-| `TL1` | Her listede `operator.status` vardır ve liste aşaması boyunca `"provisional"`dır; `on_behalf_of` boş bırakılmaz. | `packages/trust/src/trust-source.test.ts` | scoped |
-| `TL2` | Liste ve çapa günlüğü sürümleri monoton artar; her sürüm bir öncekinin hash'ini taşır; hiçbir satır/kayıt silinmez (statü değişikliği `st… | `apps/trust-publisher/test/withdraw.test.ts`<br>`apps/trust-publisher/test/cli.test.ts`<br>`packages/trust/src/trust-source.test.ts` +2 | direct |
+| `TL1` | Her listede `operator.status` vardır ve liste aşaması boyunca `"provisional"`dır; `on_behalf_of` boş bırakılmaz. | `apps/trust-publisher/test/cli.test.ts`<br>`packages/trust/src/trust-source.test.ts`<br>`apps/trust-publisher/test/source-checks.test.ts` | scoped |
+| `TL2` | Liste ve çapa günlüğü sürümleri monoton artar; her sürüm bir öncekinin hash'ini taşır; hiçbir satır/kayıt silinmez (statü değişikliği `st… | `apps/trust-publisher/test/withdraw.test.ts`<br>`apps/trust-publisher/test/cli.test.ts`<br>`packages/trust/src/trust-source.test.ts` +3 | direct |
 | `TL3` | Liste ve çapa imzası ≥2 kaydırmalı sertifikayla yapılır; rotasyon ≥30 gün önce duyurulur; yeni anahtar eskisiyle imzalanır. (Demo sapması… | — | none |
 | `TL4` | `TrustSource` dışında hiçbir bileşen liste dosyalarını yorumlamaz. | — | none |
 | `TL5` | `next_update` geçmiş veya erişilemeyen liste ile doğrulama **INDETERMINATE** üretir; asla ACCEPTED, asla REJECTED. | — | none |
 | `TL6` | Bilinmeyen `list_format_version` gören yükleyici durur ve alarm verir; kabul etmez. | — | none |
 | `TL7` | Ulusal listeyi yalnızca o namespace'in imza anahtarı imzalar; operatör vekâleti `operator.on_behalf_of` ile beyan edilir. | — | none |
 | `TL8` | Tamga PID vermez; `pid_providers[]` liste aşaması boyunca boştur. Tamga'nın geçici kimlik attestation'ı (ADR-0011) bir `issuers[]` kaydıd… | — | none |
-| `TL9` | Şema `registered_at` ve `status_history.since` kalıcıdır; yeniden derleme bunları değiştiremez (ilk çapa zamanı). | — | none |
+| `TL9` | Şema `registered_at` ve `status_history.since` kalıcıdır; yeniden derleme bunları değiştiremez (ilk çapa zamanı). | `apps/trust-publisher/test/cli.test.ts` | scoped |
 | `TL10` | Zincire geçiş, liste arşivinin replay'i ve eşdeğerlik testi geçmeden tamamlanmış sayılmaz. | `apps/trust-publisher/test/cli.test.ts` | scoped |
-| `TL11` | Hiçbir liste, çapa günlüğü veya değişiklik günlüğü kişisel veri, belge veya belge hash'i içermez. | — | none |
-| `TL12` | Çapa günlüğü yalnızca imzalı `checkpoint` ile arşivlenir: arşivlenen satırlar `archive/` altında kalır (silinmez), kontrol noktası `previ… | `apps/trust-publisher/test/cli.test.ts`<br>`packages/trust/src/trust-source.test.ts` | scoped |
+| `TL11` | Hiçbir liste, çapa günlüğü veya değişiklik günlüğü kişisel veri, belge veya belge hash'i içermez. | `apps/trust-publisher/test/cli.test.ts`<br>`apps/trust-publisher/test/registry-ops.test.ts`<br>`apps/trust-publisher/test/source-checks.test.ts` | scoped |
+| `TL12` | Çapa günlüğü yalnızca imzalı `checkpoint` ile arşivlenir: arşivlenen satırlar `archive/` altında kalır (silinmez), kontrol noktası `previ… | `apps/trust-publisher/test/cli.test.ts`<br>`packages/trust/src/trust-source.test.ts`<br>`apps/trust-publisher/test/chain.test.ts` +1 | scoped |
 
 ## SPEC-WALLET-0001 — Cüzdan kuralları
 
 | Code | Rule (truncated) | Tests | Match |
 |---|---|---|---|
 | `WL1` | Belge sahibi anahtarları seed'den türetilmez; güvenli bölgeden çıkmaz. | — | none |
-| `WL2` | Yedek belgeleri ve manifestoyu taşır; anahtarları taşımaz — cihaz değişiminde belgelerin yeniden verilmesi gerekir. | — | none |
+| `WL2` | Cüzdan belgelerin yedeğini almaz: belgeler cihazdaki donanım anahtarına bağlıdır ve taşınmaz; cihaz değişiminde belgeler yeniden verilir.… | — | none |
 | `WL3` | W1 (yazılım anahtarlı) cüzdan desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — ADR-0042 K5). | — | none |
-| `WL4` | `presentation_log` sunucuya ve otomatik olarak hiçbir koşulda çıkmaz, sunucu yedeğine girmez; yalnız kişinin başlattığı, kişinin parolası… | — | none |
-| `WL5` | Bir doğrulayıcıya her zaman aynı kopya; farklı doğrulayıcıya farklı kopya. | `apps/verify/test/verify-app.test.ts`<br>`packages/wallet-core/src/copies.test.ts`<br>`packages/wallet-core/src/wallet-core.test.ts` | unique |
+| `WL4` | `presentation_log` sunucuya ve otomatik olarak hiçbir koşulda çıkmaz; yalnız kişinin başlattığı, kişinin parolasıyla şifreli dışa aktarma… | `packages/wallet-core/src/ts10.test.ts` | unique |
+| `WL5` | Bir doğrulayıcıya her zaman aynı kopya; farklı doğrulayıcıya farklı kopya. | `packages/wallet-core/src/second-review.test.ts`<br>`apps/verify/test/verify-app.test.ts`<br>`packages/wallet-core/src/copies.test.ts` +2 | scoped |
 | `WL6` | Aynı doğrulayıcı + aynı `vct` için disclosure seti tutarlıdır. | — | none |
 | `WL7` | Kullanıcı eylemi olmadan yenileme yalnızca ADR-0023 AR1–AR4 koşullarında yapılır. | `packages/wallet-core/src/copies.test.ts` | unique |
 | `WL8` | Aşırı talep uyarısı ayrı görsel blok + gecikmeli düğme gerektirir. | — | none |
@@ -757,9 +880,9 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `WL10` | Tamga kullanıcı adına kurtarma anahtarı tutmaz. | — | none |
 | `WL11` | Her sunum kullanıcı doğrulaması gerektirir: güvenli donanım anahtarı olan cihazda cihazın biyometrisi ya da cihaz parolası (belge anahtar… | `packages/wallet-core/src/zk.test.ts` | unique |
 | `WL12` | Geçiş kartı jetonu (`tamga-pass+jwt`) kişisel veri taşımaz: yalnızca `iss` (opak pass_id), `aud`, `iat` (≤ şimdi + 30 s), `exp` (ömür ≤ 6… | `packages/verifier/src/pass.test.ts` | unique |
-| `WL13` | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsaml… | `apps/verify/test/verify-app.test.ts`<br>`packages/verifier/src/pass.test.ts`<br>`packages/wallet-core/src/hwkeys.test.ts` | unique |
+| `WL13` | Geçiş kartı yalnızca güven listesinde kayıtlı bir RP/terminal grubu için üretilir ve kayıt anında verilen rıza süreli (≤ 6 ay) ve kapsaml… | `packages/wallet-core/src/second-review.test.ts`<br>`packages/wallet-core/src/hwkeys.test.ts`<br>`apps/verify/test/verify-app.test.ts` +1 | direct |
 | `WL14` | Her geçiş kartı gösterimi `presentation_log`'a yazılır (WL4 kapsamında, cihazda); Göster ekranı canlı saat ve süre gösterir. | `packages/verifier/src/pass.test.ts` | unique |
 | `WL15` | Site takma ad anahtarları belge sahibi anahtarı değildir: yalnız ADR-0031 tohumundan site ve sıra başına türetilir, kalıcı saklanmaz; toh… | — | none |
-| `W1` | Yazılım (güvenli bölge yok) \| Desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — ADR-0042 K5) | — | none |
-| `W2` | Cihaz güvenli bölgesi (Secure Enclave / StrongBox) \| **ilk aşama asgarisi** | — | none |
-| `W3` | Sertifikalı WSCD \| Devlet aşaması | — | none |
+| `W1` | Yazılım (güvenli bölge yok) \| Desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — ADR-0042 K5) | `packages/wallet-core/src/hwkeys.test.ts` | scoped |
+| `W2` | Cihaz güvenli bölgesi (Secure Enclave / StrongBox) \| **ilk aşama asgarisi** | `packages/wallet-core/src/hwkeys.test.ts` | scoped |
+| `W3` | Sertifikalı WSCD \| Devlet aşaması | `packages/wallet-core/src/hwkeys.test.ts` | scoped |

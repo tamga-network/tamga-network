@@ -12,7 +12,7 @@
  * test ağında anahtarlar make-network.sh --keys generate ile üretilir).
  */
 import { expect } from "chai";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { HDNodeWallet } from "ethers";
@@ -98,6 +98,28 @@ describe("GUIDE-0018 yol C — test/staging kurulumu (anahtar haritası, Governa
     );
     expect(() => loadChainKeys(writeKeyMap({ anchor: { threshold: 3, anchorers: [] } }))).to.throw(/threshold/);
     expect(loadChainKeys(writeKeyMap()).map.states).to.have.length(4);
+    // ADR-0076 GC4: tek kuruculu harita reddedilir
+    const full = JSON.parse(readFileSync(writeKeyMap(), "utf8")).states as { code: string; founder: boolean }[];
+    const oneFounder = full.map((st) => ({ ...st, founder: st.code === "TR" }));
+    expect(() => loadChainKeys(writeKeyMap({ states: oneFounder }))).to.throw(/en az iki kurucu/);
+  });
+
+  it("ADR-0076 GC4: tek kurucuyla kurulum dağıtımdan önce reddedilir", async () => {
+    const s = await ethers.getSigners();
+    const before = await ethers.provider.getBlockNumber();
+    let err: unknown;
+    try {
+      await setupStagingNetwork(ethers, {
+        deployer: s[ROLE.deployer],
+        founders: [{ code: "TR", validator: s[ROLE.TR], delegate: await s[ROLE.trD].getAddress() }],
+        anchorers: [await s[ROLE.anc1].getAddress()],
+        threshold: 1,
+      });
+    } catch (e) {
+      err = e;
+    }
+    expect(String(err)).to.match(/en az 2 kurucu gerekir \(ADR-0076 GC4\)/);
+    expect(await ethers.provider.getBlockNumber()).to.equal(before); // hiçbir işlem gönderilmedi
   });
 
   it("kurulum → kabul → harita imzacılarıyla yeniden oynatma → eşdeğerlik", async () => {

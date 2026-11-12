@@ -13,7 +13,8 @@ summary: >
   conflict at this point. Proposal: (a) `withdraw` is refused while the network has 2 active members; a member that wants to leave
   first waits for a third member to be admitted. Alternative (b): exit stays free and the threshold becomes 1 when a single member
   remains. Recommended: (a). Accepted (2026-11-12): (a), as recommended. The path for a member that wants to leave: a third member
-  is admitted first, then the member withdraws. Single-founder initialisation is for local development only.
+  is admitted first, then the member withdraws. Additional rule (2026-11-12, GC4): the network is founded by at least two
+  founders; `initialize` refuses a single founder.
 domain: Governance
 related: ["[[ADR-0002]]", "[[ADR-0009]]", "[[ADR-0055]]", "[[SPEC-BC-0001]]"]
 translation_of: ADR-0076
@@ -74,9 +75,26 @@ if accepted):
 
 # Decision (2026-11-12)
 
-**(a) accepted as recommended.** The binding rules are GC1–GC3 below; the name follows the table. Single-founder initialisation
-is unchanged: it is for local development only; whether initialisation should require at least two founders is decided
-separately.
+**(a) accepted as recommended.** The binding rules are GC1–GC3 below; the name follows the table. Whether initialisation should
+require at least two founders was left to a separate decision that day; it was closed the same day by the additional decision
+below (GC4).
+
+## Additional decision (2026-11-12): at least two founders
+
+The network is founded by at least two founders. The approved direction: mandatory in the real network; a single-founder set-up
+at most for local development and tests, behind an explicit flag. Two ways of implementing it were considered:
+
+| Way | What | Result |
+|---|---|---|
+| **(i) Mandatory in the contract** | `Governance.initialize` refuses fewer than two founders; tests and local scripts set up with two founders | **chosen** |
+| (ii) In the set-up scripts | The contract keeps accepting a single founder; the set-up scripts accept a single founder only on local chain ids or with an explicit flag | not chosen |
+
+Reason: (ii) binds only this repository's scripts; someone who deploys the contract with another tool can found it with one
+founder, and the rule stays in habit, not in code. Under (i) the rule is in the contract itself, like GC1. A single-founder flag
+turned out to be unnecessary as well: the local development chain, the test network and the contract tests were already set up
+with two or three founders; a single-founder governance cannot execute any proposal, so it has no behaviour to test. No flag was
+added; if one is needed later it is added by a new decision. No new name was needed: the existing `FounderMismatch` error is used
+(the same error as the "fewer than two founders" check on the founder recognition proposal).
 
 # Invariants
 
@@ -85,6 +103,7 @@ separately.
 | GC1 | Unilateral exit (`Governance.withdraw`) passes only while the network has at least three active members; it is refused while the network has 2 or fewer active members (`TooFewMembers`). Neither exit nor removal can bring the number of active members below the absolute minimum of votes (2): governance always stays able to decide. |
 | GC2 | In a two-member network the path for a member that wants to leave is ordered: a third member is admitted first (`proposeStateAdmission`, with the votes of the two members), then the member leaves with `withdraw`; this second step needs no vote. Until the admission takes place the member can stop its validator and stop writing records; its membership continues. |
 | GC3 | [[ADR-0002]] #5 is read with this note: the right to exit is not removed, it is tied to an order. In a network with at least three active members it is unilateral, needs no vote and is guaranteed in code. The effect of an exit on credentials does not change: issued credentials and existing records stay valid ([[ADR-0002]] #4). |
+| GC4 | The network is founded by at least two founders: `Governance.initialize` refuses fewer than two founders (`FounderMismatch`). The set-up scripts and the key map check the same rule before deployment; there is no flag or exception for a single-founder set-up. |
 
 Name (public ABI; following the existing error naming pattern — `TooManyDelegates(count, max)`):
 
@@ -95,8 +114,13 @@ Name (public ABI; following the existing error naming pattern — `TooManyDelega
 # Consequences
 
 - `Governance.withdraw`: a one-line change of the condition (`activeMemberCount ≤ 2` → refused). Storage layout and function
-  signatures do not change; one error is added to the ABI. In a single-member (local development) set-up exit is refused with the
-  same error; `LastValidator` remains only on the removal proposal.
+  signatures do not change; one error is added to the ABI. `LastValidator` remains only on the removal proposal.
+- GC4: the condition in `Governance.initialize` (`founders.length < 2` → `FounderMismatch`); the ABI and the storage layout do
+  not change. The set-up code checks the same rule before deployment, with an explicit message
+  (`contracts/scripts/lib/deploy.ts`, `network-setup.ts`; key map `apps/chain-indexer/src/chain-keys.ts`,
+  `network/testnet/testnet.mjs`). `network/testnet/make-network.sh` writes no key map for a one-validator network (node-level
+  checks only). The number of QBFT validators and the number of founders are different things: the local one-validator
+  development chain also sets the contracts up with two founders (TR, KZ).
 - Tests (`contracts/test/review-2026-11-11-governance.test.ts`, `contracts/test/governance.test.ts`): one of three members
   withdraws (3 → 2), exit is refused in a two-member network (2 → 1), and once a third member has been admitted the exit passes
   and the two remaining members keep deciding.
@@ -107,5 +131,6 @@ Name (public ABI; following the existing error naming pattern — `TooManyDelega
 
 # Status
 
-**Accepted — 2026-11-12.** Approved by project management (2026-11-12): option (a), as recommended. DECISIONS: D-GOV-12. GC1–GC3
-are binding. Implementation: `Governance.withdraw` ([[SPEC-BC-0001]] version note).
+**Accepted — 2026-11-12.** Approved by project management (2026-11-12): option (a), as recommended; the same day the additional
+decision GC4 (at least two founders). DECISIONS: D-GOV-12. GC1–GC4 are binding. Implementation: `Governance.withdraw`,
+`Governance.initialize` ([[SPEC-BC-0001]] version notes).

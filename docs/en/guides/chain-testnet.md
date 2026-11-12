@@ -4,7 +4,7 @@ title: "Setting up a chain test network: Hyperledger Besu step by step"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-12
 summary: >
   A step-by-step guide, from scratch, for anyone who wants to test the chain layer while the chainless live system runs: terms
   (node, validator, QBFT and 3f+1, genesis, chainId, enode, static peers, permissioned network, RPC and P2P, Governance, anchor,
@@ -230,7 +230,7 @@ bash network/testnet/make-network.sh       # default: 4 validators + 1 extra nod
 
 | Option | Default | What |
 |---|---|---|
-| `--validators N` | 4 | Validators in the genesis |
+| `--validators N` | 4 | Validators in the genesis. The contracts need at least two founders ([[ADR-0076]] GC4): with `--keys generate` no key map is written for a one-validator network, and only node-level trials are run on it |
 | `--extra E` | 1 | Extra nodes that start as full nodes and can be voted in as validators later |
 | `--keys dev\|generate` | `dev` | `dev`: Hardhat's publicly known test accounts #1 #2 #6 #7 #8 (at most 5 nodes). `generate`: fresh random keys |
 | `--chain-id` | 31338 | Chain id (the end-to-end test works only with 31338; with `--keys generate` the default is 31339) |
@@ -266,7 +266,7 @@ user-assigned codes; they stand for no real state.
 | Field | Value | Meaning |
 |---|---|---|
 | `config.chainId` | 31338 | Chain id |
-| `config.berlinBlock`, `londonBlock`, `shanghaiTime` | 0 | Ethereum rule versions active from the first block (the contracts are compiled for `shanghai`) |
+| `config.berlinBlock`, `londonBlock`, `shanghaiTime`, `cancunTime` | 0 | Ethereum rule versions active from the first block; the chain is set up with the Cancun rule set and the contracts are compiled for `cancun` ([[ADR-0077]]). Blob transactions are not used; no extra KZG setting is needed |
 | `config.zeroBaseFee` | `true` | No transaction fee (permissioned network; nobody buys space with fees) |
 | `config.qbft.blockperiodseconds` | 2 | Time between two blocks |
 | `config.qbft.epochlength` | 30000 | Block interval after which pending votes are reset |

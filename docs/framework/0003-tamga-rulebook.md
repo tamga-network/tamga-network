@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-20
+last_updated: 2026-11-12
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -200,8 +200,8 @@ Bugün: ağı Tamga Network (kurulacak vakıf) adına bir geçici işletmeci iş
 | RB-WP-03 | Her gösterim **MUST** PIN ya da biyometri onayı gerektirmek. |
 | RB-WP-04 | Onay ekranı istenen alanları **tek tek** gösterir; doğrulayıcının kapsamını aşan ya da aşırı taleplerde ayrı bir görsel blok ve gecikmeli düğme **MUST**. |
 | RB-WP-05 | Bir doğrulayıcıya her zaman aynı kopya, farklı doğrulayıcıya farklı kopya gösterilir; aynı doğrulayıcı ve aynı tür için açılan alanlar tutarlıdır. |
-| RB-WP-06 | Gösterim günlüğü cihazda kalır; sunucu yedeğine girmez, sunucuya gitmez. Yalnızca kişi, kendi parolasıyla şifreli bir dosya olarak dışa aktarabilir (AB TS10). |
-| RB-WP-07 | Yedek yalnızca belgeleri ve listelerini taşır, anahtar taşımaz; cihaz değişiminde belgeler yeniden verilir. Cüzdan sağlayıcısı **MUST NOT** kullanıcı adına kurtarma anahtarı tutmak. |
+| RB-WP-06 | Gösterim günlüğü cihazda kalır; sunucuya gitmez. Yalnızca kişi, kendi parolasıyla şifreli bir dosya olarak dışa aktarabilir (AB TS10). |
+| RB-WP-07 | Cüzdan belgelerin yedeğini almaz; belgeler cihaza bağlıdır ve taşınmaz, cihaz değişiminde yeniden verilir. Cihaz dışına yalnızca kişinin başlattığı taşıma dosyası çıkar; dosya belge değeri ve anahtar taşımaz. Cüzdan sağlayıcısı **MUST NOT** kullanıcı adına kurtarma anahtarı tutmak. |
 | RB-WP-08 | Şemalar toplu çekilir; gösterim anında şema sunucusuna istek **MUST NOT**. Kullanıcı eylemi olmadan belge yenileme yalnızca [[ADR-0023]] koşullarında yapılır. |
 | RB-WP-09 | Cüzdan, doğrulayıcının istemci kimliğini güven kaynağında çözmeyi dener; `presentation_definition` reddedilir; şifresiz yanıt modu kullanılmaz; `origin` öneki istemci kimliği olarak kabul edilmez. |
 | RB-WP-10 | Cüzdan **MUST** "anahtarlarım nerede" açıklamasını ve güven listesindeki kaydını gösteren "Tamga Network'te listeli" göstergesini (RB-WP-18) sunmak. |

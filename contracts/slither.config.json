@@ -1,6 +1,6 @@
 {
   "solc_remaps": "@openzeppelin/=node_modules/@openzeppelin/",
-  "solc_args": "--optimize --optimize-runs 200 --evm-version shanghai",
+  "solc_args": "--optimize --optimize-runs 200 --evm-version cancun",
   "exclude_dependencies": true,
   "filter_paths": "node_modules",
   "compile_force_framework": "solc",

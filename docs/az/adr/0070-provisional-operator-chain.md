@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-30
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Tamga Network-ün hüquqi şəxsiyyəti yoxdur. Qurulacaq qeyri-kommersiya fondu hüquqi şəxsiyyət qazanana qədər şəbəkənin öz xidmətlərini (siyahıların dərci, şəxsiyyət xidməti, Tamga Verify, saytlar) Tamga Network adından bir şirkət müvəqqəti operator kimi idarə edir; hüquqi şəxs tələb edən hər qeydiyyat, sertifikat və müqavilə onun adı ilə və "Tamga Network adından" ifadəsi ilə edilir. Siyahı operatorunun və sxem sahibinin adı "Tamga Network" olaraq qalır. Müvəqqəti operatorun adı, identifikatoru və ünvanı vahid konfiqurasiya dəyərindən gəlir; siyahı dərc edən hər dərcdə yoxlayır. Təhvil mövcud təhvil aləti və runbook ilə aparılır; fond qurulana qədər iştirak müqavilələrini müvəqqəti operator imzalayır. Qəbul: 2026-10-30.
 domain: Governance
@@ -80,7 +80,7 @@ Tətbiq mağazası yoxlama imzaçısının qeydi ([[ADR-0033]]) və sonrakı bü
 | Kod | Qayda |
 |---|---|
 | OP1 | Siyahı operatorunun və sxem sahibinin adı "Tamga Network"-dür (fond qurulana qədər `status: provisional`); müvəqqəti operatorun adı yalnız şəbəkənin öz xidmət qeydlərində, onların sertifikatlarında və hüquqi şəxs tələb edən sənədlərdə yer alır. |
-| OP2 | Müvəqqəti operatorun adı, identifikatoru və ünvanı vahid konfiqurasiya dəyərindən gəlir; siyahı dərc edən bu dəyərdən fərqli məlumat daşıyan öz qeydi ilə və ya "Tamga Network"-dən başqa siyahı operatoru adı ilə dərc etmir. |
+| OP2 | Müvəqqəti operatorun adı, identifikatoru və ünvanı vahid konfiqurasiya dəyərindən gəlir; siyahı dərc edən bu dəyərdən fərqli məlumat daşıyan öz qeydi ilə və ya "Tamga Network"-dən başqa siyahı operatoru adı ilə dərc etmir. Sandbox mühiti (`environment: "sandbox"`) açıq istisnadır: sandbox-da siyahı operatorunun adı "(TEST)" işarəsini daşımalıdır və siyahı "Tamga Network Sandbox (TEST)" adı ilə dərc olunur; real şəbəkənin adı ilə sandbox siyahısı dərc olunmur. |
 | OP3 | Fonda təhvil yalnız bu dəyəri və ondan asılı qeydləri və sertifikatları dəyişir; siyahı operatorunun adı, `ca_id`, `vct` və qurumların daimi identifikatorları dəyişmir. |
 
 # Nəticələr
@@ -94,6 +94,9 @@ Tətbiq mağazası yoxlama imzaçısının qeydi ([[ADR-0033]]) və sonrakı bü
   dəyər faylı tələb olunmur. Şərti: siyahı operatorunun adı "(TEST)" işarəsi daşıyır (bu gün "Tamga Network Sandbox (TEST)") və
   real şəbəkənin adı ilə eyni deyil; əks halda sandbox dərci də dayanır. Sandbox qeydiyyat dəftərinə dəyər faylı qoyularsa adi
   yoxlama tətbiq olunur.
+- **Qayda mətni (2026-11-12).** Layihə rəhbərliyinin təsdiqi ilə (2026-11-12) sandbox istisnası OP2-nin öz mətninə yazıldı
+  (yuxarıdakı cədvəl): sandbox-da siyahı operatorunun adı "(TEST)" işarəsini daşıyır və siyahı "Tamga Network Sandbox (TEST)"
+  adı ilə dərc olunur. Real şəbəkənin qaydası dəyişmədi. Kod dəyişmədi (dərc edənin yoxlaması 2026-11-11-dən bəri belədir).
 
 # Status
 

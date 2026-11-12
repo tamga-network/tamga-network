@@ -73,6 +73,25 @@ A code review of the changes above found the following; the fixes are part of 0.
   three or more members is unchanged (unilateral, no vote). A member that wants to leave a two-member network first has a
   third member admitted, then withdraws. One error added to the ABI (the copy in `apps/chain-indexer` is regenerated);
   function signatures and storage layout unchanged; Governance is 22,918 bytes.
+- **contracts — the network is founded by at least two founders** (ADR-0076 GC4, 2026-11-12). `Governance.initialize`
+  accepted a single founder; with one member no proposal can ever be executed and no member can be admitted, so governance
+  was locked from the first block. It now reverts with the existing `FounderMismatch` error for fewer than two founders. The
+  rule is in the contract, not only in the scripts, and there is no flag for a single-founder set-up: the local development
+  chain, the test network and the tests already used two or three founders. The set-up code refuses the same case before
+  anything is deployed, with a clear message (`deployTrustLayer`, `setupStagingNetwork`, `MIN_FOUNDERS`); a test network key
+  map with fewer than two founders is refused (`loadChainKeys`, `testnet.mjs`), and `make-network.sh --keys generate` writes no
+  key map for a one-validator network (node-level checks only). The number of QBFT validators is a separate matter: the local
+  one-validator chain still sets the contracts up with two founders. ABI and storage layout unchanged.
+- **contracts, network — the chain is set up with the Cancun rule set** (ADR-0077, 2026-11-12). The genesis generators
+  (`scripts/besu-dev.ps1`, `network/testnet/make-network.sh`) write `cancunTime: 0` next to `shanghaiTime: 0`; the contracts
+  are compiled with `evmVersion: cancun` and the in-process test network runs with `hardfork: "cancun"`. Under Cancun
+  `SELFDESTRUCT` no longer removes code (EIP-6780), which closes the path behind the "upgrade proposal pins the code" fix
+  above; that check stays as a second line of defence and is now tested by replacing the code with the test node's hook, and
+  a second test shows that a self-destructing implementation keeps its code and cannot be redeployed at the same address. Blob
+  transactions are not used and no KZG option is needed (tried on a one-validator Besu 26.11.0 QBFT network). A local chain
+  created earlier has a Shanghai genesis: delete `network/dev/genesis.json` and `keys/`, run `npm run chain:besu:init`, then
+  `chain:besu:reset`. The exported ABI copies now say `"evmVersion": "cancun"`; ABI and storage layout unchanged; Governance is
+  22,920 bytes.
 - **verifier — `verifyPresentation` returns only the values the policy asks for** (`required_claims`). Technical fields of an
   SD-JWT VC (`iss`, `iat`, `exp`, `vct`, `category`, `cnf`, `status` with the revocation index) and claims disclosed beyond the
   request are no longer in `claims` (AP3/AP4). An always-visible claim that the policy asks for now counts as disclosed: it
@@ -155,6 +174,19 @@ A code review of the changes above found the following; the fixes are part of 0.
 - **docs** — SPEC-API-0001, SPEC-TRUST-0001, SPEC-WALLET-0001, ADR-0036 / ADR-0070 / ADR-0075 implementation notes and the
   sign-in guide updated in tr / en / az. SPEC-WALLET-0001 WL13 now states the exception the code already had: a single-use
   ticket is exempt from the 6-month consent ceiling (its grant ends when the event ends, ADR-0012 K4).
+- **docs — decisions of 2026-11-12** (tr / en / az; no package change). ADR-0078: the wallet takes no backup — credentials
+  are bound to the device's hardware key and are issued again on a new device; the only thing that leaves the device is the
+  migration file started by the person (EU TS10; no credential values, no keys). SPEC-WALLET-0001 (WL2 and §1.4, §7) and
+  Tamga Rulebook RB-WP-07 now describe this; the seed-encrypted backup and the hosted store in the earlier text were never
+  built. ADR-0079 (accepted, implementation before a second state joins): a state may authorise its institution for another
+  state's national schema only with a consent record written by the state that owns the schema; today the contract does not
+  check this. ADR-0080 (accepted, implementation before identity verification is opened to everyone): a final confirmation in
+  the wallet with a masked summary of the verified identity, and a warning to the person doing the verification, against a
+  relayed verification link. ADR-0070 OP2 now states the sandbox exception in the rule text (list operator name carries
+  "(TEST)", published as "Tamga Network Sandbox (TEST)"). SPEC-WALLET-0001 implementation notes: the "previously shared"
+  notice of WL6 is not implemented yet (first wallet update); target behaviour when copies run out in a proximity session
+  (background refresh, immediate refresh when online, reuse of the last copy with a warning when offline) is recorded as
+  pending.
 
 ### Correction to the 0.8.2 notes
 

@@ -111,7 +111,8 @@ export function loadChainKeys(file: string): LoadedChainKeys {
       `anchor.threshold ${String(t)} — 1 ile yazıcı sayısı (${anchorers.length}) arasında olmalı (ADR-0053 AC4)`,
     );
   const states = map.states ?? [];
-  if (!states.some((s) => s.founder)) errs.push("states: en az bir kurucu gerekir");
+  // ADR-0076 GC4: tek kurucuyla yönetişim kurulmaz (asgari mutlak oy 2; `Governance.initialize` de reddeder)
+  if (states.filter((s) => s.founder).length < 2) errs.push("states: en az iki kurucu gerekir (ADR-0076 GC4)");
   const codes = new Set<string>();
   for (const s of states) {
     if (!/^[A-Z]{2}$/.test(s.code ?? "")) errs.push(`states: devlet kodu iki büyük harf olmalı (${String(s.code)})`);

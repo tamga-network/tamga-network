@@ -1,15 +1,15 @@
 /**
  * Kontrat denetimi 2026-11-11 — Governance bulguları, süreç içi Hardhat zincirinde (her biri düzeltmeden önce kırmızı görüldü):
- *   - Y1 : yükseltme önerisi yeni implementasyonun kod özetini sabitler; aynı adrese başka kod konursa (CREATE2 +
- *          SELFDESTRUCT, Shanghai kuralları) yürütme `UpgradeImplementationChanged` ile düşer.
- *   - Y2 : `initialize` sıfır devlet kodunu reddeder. İki üyeli ağda tek taraflı çıkış reddedilir (`TooFewMembers`,
+ *   - Y1 : yükseltme önerisi yeni implementasyonun kod özetini sabitler; adresteki kod değişirse yürütme
+ *          `UpgradeImplementationChanged` ile düşer. Zincir Cancun kural setindedir (ADR-0077): bulgunun dayandığı yol
+ *          (CREATE2 + SELFDESTRUCT ile aynı adrese başka kod) EIP-6780 ile kapalıdır; bu da ayrıca sınanır.
+ *   - Y2 : `initialize` sıfır devlet kodunu ve tek kurucuyu reddeder (ADR-0076 GC4). İki üyeli ağda tek taraflı çıkış reddedilir (`TooFewMembers`,
  *          ADR-0076 GC1): tek üye kalsaydı yönetişim kalıcı kilitlenirdi. Çıkmak isteyen üye üçüncü üyenin kabulünden
  *          sonra çekilir.
  *   - O2 : öneri yükleri zincirden okunur (`getSchemaPayload`, `upgradePayloadOf`, `removalReasonOf`).
  * Kayıt kontratlarının bulguları: review-2026-11-11-registries.test.ts.
  */
 import { expect } from "chai";
-import { network } from "hardhat";
 
 import { deployTrustLayer, stateCode } from "../scripts/lib/deploy.js";
 import {
@@ -58,13 +58,11 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
   this.timeout(180_000);
 
   describe("Y1: yükseltme önerisi implementasyon kodunu sabitler", () => {
-    it("oylamadan sonra aynı adrese başka kod konursa yükseltme uygulanmaz (Shanghai: CREATE2 + SELFDESTRUCT)", async () => {
-      // Zincirle aynı kurallar: Shanghai'de SELFDESTRUCT kodu siler (Cancun'dan itibaren silmez).
-      const c = await network.create({ override: { hardfork: "shanghai" } });
-      const e = c.ethers;
-      const [deployer, tr, kz, az] = await e.getSigners();
+    /** Üç kuruculu ağ + CREATE2 fabrikasıyla dağıtılmış "incelenen" implementasyon; öneri oylanmış ve kuyruğa alınmıştır. */
+    async function queuedUpgrade() {
+      const [deployer, tr, kz, az] = await ethers.getSigners();
       const d = await deployTrustLayer(
-        e,
+        ethers,
         deployer,
         [
           { code: "TR", validator: await tr.getAddress() },
@@ -74,14 +72,15 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
         tr,
       );
       const gov = d.governance as any;
-      const factory = (await e.deployContract("MetamorphicFactoryMock")) as any;
-      const reviewed = await e.deployContract("ReviewedImplMock");
-      const swapped = await e.deployContract("SwappedImplMock");
+      const factory = (await ethers.deployContract("MetamorphicFactoryMock")) as any;
+      const reviewed = await ethers.deployContract("ReviewedImplMock");
+      const swapped = await ethers.deployContract("SwappedImplMock");
       const salt = id("impl-v2");
-      const reviewedCode = await e.provider.getCode(await reviewed.getAddress());
+      const reviewedCode = await ethers.provider.getCode(await reviewed.getAddress());
+      const swappedCode = await ethers.provider.getCode(await swapped.getAddress());
       const implAddr: string = await factory.deploy.staticCall(salt, reviewedCode);
       await (await factory.deploy(salt, reviewedCode)).wait();
-      const reviewedHash = e.keccak256(await e.provider.getCode(implAddr));
+      const reviewedHash = ethers.keccak256(await ethers.provider.getCode(implAddr));
 
       // Öneri incelenen kodla açılır, 2/3 oy alır, kuyruğa girer.
       const target = await d.issuers.getAddress();
@@ -89,20 +88,54 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       await (await gov.connect(tr).vote(pid, true)).wait();
       await (await gov.connect(kz).vote(pid, true)).wait();
       await (await gov.execute(pid)).wait(); // kuyruk
+      return { gov, factory, salt, implAddr, reviewedCode, swappedCode, reviewedHash, target, pid };
+    }
 
-      // Bekleme sürerken implementasyon kendini siler ve aynı adrese başka kod konur.
-      await (await ((await e.getContractAt("ReviewedImplMock", implAddr)) as any).retire()).wait();
-      expect(await e.provider.getCode(implAddr)).to.equal("0x");
-      await (await factory.deploy(salt, await e.provider.getCode(await swapped.getAddress()))).wait();
-      expect(e.keccak256(await e.provider.getCode(implAddr))).to.not.equal(reviewedHash);
+    it("oylamadan sonra implementasyon adresindeki kod değişirse yükseltme uygulanmaz (kod özeti denetimi)", async () => {
+      // Denetimin kendisi kural setinden bağımsızdır. Cancun'da (ADR-0077) kodu zincir içinden değiştirmenin bilinen yolu
+      // kalmadığı için kod burada test düğümünün kancasıyla (`hardhat_setCode`) değiştirilir.
+      const q = await queuedUpgrade();
+      await networkHelpers.setCode(q.implAddr, q.swappedCode);
+      expect(ethers.keccak256(await ethers.provider.getCode(q.implAddr))).to.not.equal(q.reviewedHash);
 
-      await c.networkHelpers.time.increase(7 * DAY + 1);
-      await expect(gov.execute(pid))
-        .to.be.revertedWithCustomError(gov, "UpgradeImplementationChanged")
+      await networkHelpers.time.increase(7 * DAY + 1);
+      await expect(q.gov.execute(q.pid))
+        .to.be.revertedWithCustomError(q.gov, "UpgradeImplementationChanged")
+        .withArgs(q.implAddr);
+      // kayıt eski implementasyonda kaldı; öneri oylanan kodun özetini taşımayı sürdürür
+      await expect(((await ethers.getContractAt("SwappedImplMock", q.target)) as any).backdoor()).to.be.revert(ethers);
+      expect((await q.gov.upgradePayloadOf(q.pid)).implCodehash).to.equal(q.reviewedHash);
+    });
+
+    it("kuyruğa alınmadan önce de kod değişmişse öneri kuyruğa girmez", async () => {
+      const f = await loadFixture();
+      const impl = await ethers.deployContract("IssuerRegistry");
+      const implAddr = await impl.getAddress();
+      const pid = await proposalId(
+        await f.as(f.governance, f.trValidator).proposeProtocolUpgrade(await f.issuers.getAddress(), implAddr),
+        f,
+      );
+      await pass(f, pid);
+      const other = await ethers.deployContract("SchemaRegistry");
+      await networkHelpers.setCode(implAddr, await ethers.provider.getCode(await other.getAddress()));
+      await expect(f.governance.execute(pid))
+        .to.be.revertedWithCustomError(f.governance, "UpgradeImplementationChanged")
         .withArgs(implAddr);
-      // kayıt eski implementasyonda kaldı
-      await expect(((await e.getContractAt("SwappedImplMock", target)) as any).backdoor()).to.be.revert(e);
-      expect((await gov.upgradePayloadOf(pid)).implCodehash).to.equal(reviewedHash);
+      expect(await f.governance.executableAt(pid)).to.equal(0);
+    });
+
+    it("Cancun (ADR-0077): SELFDESTRUCT kodu silmez; aynı adrese başka kod konamaz (EIP-6780)", async () => {
+      // Shanghai'de bu yol açıktı: implementasyon kendini siler, aynı tuzla (CREATE2) aynı adrese başka kod konurdu.
+      const q = await queuedUpgrade();
+      await (await ((await ethers.getContractAt("ReviewedImplMock", q.implAddr)) as any).retire()).wait();
+      expect(await ethers.provider.getCode(q.implAddr)).to.equal(q.reviewedCode); // kod yerinde
+      // adres dolu: aynı tuzla yeniden dağıtım çarpışır
+      await expect(q.factory.deploy(q.salt, q.swappedCode)).to.be.revert(ethers);
+      expect(ethers.keccak256(await ethers.provider.getCode(q.implAddr))).to.equal(q.reviewedHash);
+
+      // kod değişmediği için kod özeti denetimi geçer: bekleme dolunca yükseltme uygulanır
+      await networkHelpers.time.increase(7 * DAY + 1);
+      await expect(q.gov.execute(q.pid)).to.emit(q.gov, "ProposalExecuted").withArgs(q.pid);
     });
 
     it("kod değişmediyse yükseltme uygulanır; öneri kod özetini ve başlangıç seçicisini taşır", async () => {
@@ -127,7 +160,10 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
     it("initialize sıfır devlet kodunu reddeder", async () => {
       const impl = await ethers.deployContract("Governance");
       const [, v] = await ethers.getSigners();
-      const data = impl.interface.encodeFunctionData("initialize", [["0x0000"], [await v.getAddress()]]);
+      const data = impl.interface.encodeFunctionData("initialize", [
+        ["0x0000", stateCode(ethers, "KZ")],
+        [await v.getAddress(), ethers.Wallet.createRandom().address],
+      ]);
       await expect(
         ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), data]),
       ).to.be.revertedWithCustomError(impl, "ZeroAddress");
@@ -178,13 +214,31 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       await expect(f.governance.execute(again)).to.emit(f.governance, "ProposalExecuted").withArgs(again);
     });
 
-    it("ADR-0076 GC1: tek kuruculu (yalnız yerel geliştirme) kuruluşta da çıkış reddedilir", async () => {
+    it("ADR-0076 GC4: kuruluş en az iki kurucu ister; tek kurucu ve boş liste reddedilir", async () => {
       const impl = await ethers.deployContract("Governance");
-      const [, v] = await ethers.getSigners();
-      const data = impl.interface.encodeFunctionData("initialize", [[stateCode(ethers, "TR")], [await v.getAddress()]]);
+      const [, v, w] = await ethers.getSigners();
+      const cases: [string[], string[]][] = [
+        [[], []],
+        [[stateCode(ethers, "TR")], [await v.getAddress()]],
+        [[stateCode(ethers, "TR"), KZ], [await v.getAddress()]], // uzunluklar tutmuyor
+      ];
+      for (const [codes, validators] of cases) {
+        const data = impl.interface.encodeFunctionData("initialize", [codes, validators]);
+        await expect(
+          ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), data]),
+        ).to.be.revertedWithCustomError(impl, "FounderMismatch");
+      }
+      // iki kurucu: kuruluş geçer, ağ ilk bloktan karar alabilir (asgari mutlak oy 2)
+      const data = impl.interface.encodeFunctionData("initialize", [
+        [stateCode(ethers, "TR"), KZ],
+        [await v.getAddress(), await w.getAddress()],
+      ]);
       const proxy = await ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), data]);
-      const g = impl.attach(await proxy.getAddress()).connect(v) as any;
-      await expect(g.withdraw()).to.be.revertedWithCustomError(impl, "TooFewMembers").withArgs(1, 3);
+      const g = impl.attach(await proxy.getAddress()) as any;
+      expect(await g.activeMemberCount()).to.equal(2);
+      expect(await g.requiredVotes("0x0000")).to.equal(2);
+      // iki kuruculu ağda hiçbiri tek taraflı çekilemez (GC1)
+      await expect(g.connect(v).withdraw()).to.be.revertedWithCustomError(impl, "TooFewMembers").withArgs(2, 3);
     });
   });
 

@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 452 kodlanmış değişmez, 79 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 463 kodlanmış değişmez, 82 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -710,7 +710,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | Kod | Açıklama |
 |---|---|
 | `ADR-0070/OP1` | Liste işletmecisi ve şema sahibi adı "Tamga Network"tür (`status: provisional` vakıf kurulana kadar); geçici işletmecinin adı yalnız ağın kendi hizmet kayıtlarında, onların sertifikalarında ve tüzel kişi gerektiren belgelerde yer alır. |
-| `ADR-0070/OP2` | Geçici işletmecinin adı, kimlik numarası ve adresi tek yapılandırma değerinden gelir; liste yayıncısı bu değerden farklı bilgi taşıyan kendi kaydıyla ya da "Tamga Network" dışında bir liste işletmecisi adıyla yayın yapmaz. |
+| `ADR-0070/OP2` | Geçici işletmecinin adı, kimlik numarası ve adresi tek yapılandırma değerinden gelir; liste yayıncısı bu değerden farklı bilgi taşıyan kendi kaydıyla ya da "Tamga Network" dışında bir liste işletmecisi adıyla yayın yapmaz. Sandbox ortamı (`environment: "sandbox"`) açık istisnadır: sandbox'ta liste işletmecisi adı "(TEST)" ibaresi taşımak zorundadır ve liste "Tamga Network Sandbox (TEST)" adıyla yayımlanır; gerçek ağın adıyla sandbox listesi yayımlanmaz. |
 | `ADR-0070/OP3` | Vakfa devir yalnız bu değeri ve ona bağlı kayıtları ve sertifikaları değiştirir; liste işletmecisi adı, `ca_id`, `vct` ve kurumların kalıcı kimlikleri değişmez. |
 
 
@@ -782,6 +782,41 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0076/GC1` | Tek taraflı çıkış (`Governance.withdraw`) yalnız ağda en az üç etkin üye varken geçer; etkin üye sayısı 2 ya da daha az iken reddedilir (`TooFewMembers`). Çıkış da çıkarma da etkin üye sayısını asgari mutlak oyun (2) altına indiremez: yönetişim her zaman karar alabilir durumda kalır. |
 | `ADR-0076/GC2` | İki üyeli ağda çıkmak isteyen üyenin yolu sıralıdır: önce üçüncü bir üye kabul edilir (`proposeStateAdmission`, iki üyenin oyuyla), sonra üye `withdraw` ile çekilir; bu ikinci adım oy gerektirmez. Kabul gerçekleşene kadar üye validator'ını durdurabilir ve kayıt yazmayı bırakabilir; üyeliği sürer. |
 | `ADR-0076/GC3` | [[ADR-0002]] #5 bu kayıtla okunur: çıkış hakkı kalkmaz, sıraya bağlanır. En az üç etkin üyeli ağda tek taraflıdır, oy gerektirmez ve kodla güvence altındadır. Çıkışın belgeler üzerindeki etkisi değişmez: verilmiş belgeler ve mevcut kayıtlar geçerli kalır ([[ADR-0002]] #4). |
+| `ADR-0076/GC4` | Ağ en az iki kurucuyla kurulur: `Governance.initialize` ikiden az kurucuyu reddeder (`FounderMismatch`). Kurulum betikleri ve anahtar haritası aynı kuralı dağıtımdan önce denetler; tek kuruculu kurulum için bayrak ya da istisna yoktur. |
+
+
+## ADR-0077
+
+*"Zincir Cancun kural setiyle kurulur"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0077/CR1` | Zincirin kural seti genesis'te açıkça yazılır ve ilk bloktan Cancun'dur (`shanghaiTime: 0`, `cancunTime: 0`); yerel geliştirme zinciri, test ağı ve gerçek ağ aynı kural setini kullanır. Başka bir kural setine geçiş yeni bir karar kaydı ister. |
+| `ADR-0077/CR2` | Kontratların derleme hedefi ve kontrat testlerinin koştuğu ağın kural seti, zincirin kural setiyle aynıdır (`cancun`). |
+| `ADR-0077/CR3` | Yükseltme önerisi yeni implementasyonun kod özetini sabitler ve yürütmede karşılaştırır; bu denetim kural setinden bağımsız olarak kalır. |
+
+
+## ADR-0079
+
+*"Başka devletin ulusal şemasına yetki: şema sahibi devletin onayı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0079/FS1` | Bir devlet, kendi kurumunu başka bir devletin ulusal şemasına ancak şema sahibi devletin o devlet için yazdığı, yürürlükteki onay kaydıyla yetkilendirebilir. Ağ şemaları ve devletin kendi ulusal şemaları bu kuralın dışındadır. |
+| `ADR-0079/FS2` | Onay kaydını yalnız şema sahibi devlet yazar ve geri alır; kayıt şema ve yetki alan devlet başınadır, zaman penceresi taşır ve ancak şema sahibi devlet yetki alan devleti tanıyorken yürürlüktedir. |
+| `ADR-0079/FS3` | Doğrulamada başka devletin ulusal şemasıyla verilmiş belge, belgenin `iat` anında hem kurumun şema yetkisi hem şema sahibinin onayı yürürlükteyse kabul edilir; onayın sonradan geri alınması daha önce verilmiş belgeleri geçersiz kılmaz. |
+
+
+## ADR-0080
+
+*"Kimlik doğrulama bağlantısının iletilmesine karşı iki katman: cüzdanda son onay ve doğrulama öncesi uyarı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0080/VL1` | Kimlik belgesi, akışı başlatan cüzdanda kişi doğrulanan kimliğin maskeli özetini görüp "bu benim" diye onaylamadan verilmez. Onay yoksa ya da kişi reddederse belge verilmez, akış kapanır ve sağlayıcıdaki oturum silinir. |
+| `ADR-0080/VL2` | Maskeli özet yalnız adın ve soyadın baş harflerinden ve doğum yılından oluşur; yalnız akışı başlatan cüzdana, o cüzdanın anahtarına bağlı kanaldan döner; adrese, günlüğe ve denetim kaydına yazılmaz ve akış bitince tutulmaz. |
+| `ADR-0080/VL3` | Kimlik doğrulama başlamadan önce, doğrulamayı yapan kişiye bu doğrulamanın hangi cüzdan için yapıldığı ve bağlantıyı kendisi açmadıysa devam etmemesi gerektiği gösterilir. Sağlayıcının sayfası bu metni taşıyamıyorsa kimlik servisinin kendi ara sayfası sağlayıcının önüne konur. |
+| `ADR-0080/VL4` | Gerçek ağda kimlik doğrulama, VL1–VL3 uygulanmadan herkese açılmaz. |
 
 
 ## ARCH-0003
@@ -1105,9 +1140,9 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | Kod | Açıklama |
 |---|---|
 | `SPEC-WALLET-0001/WL1` | Belge sahibi anahtarları seed'den türetilmez; güvenli bölgeden çıkmaz. |
-| `SPEC-WALLET-0001/WL2` | Yedek belgeleri ve manifestoyu taşır; anahtarları taşımaz — cihaz değişiminde belgelerin yeniden verilmesi gerekir. |
+| `SPEC-WALLET-0001/WL2` | Cüzdan belgelerin yedeğini almaz: belgeler cihazdaki donanım anahtarına bağlıdır ve taşınmaz; cihaz değişiminde belgeler yeniden verilir. Cüzdanın cihaz dışına taşıdığı tek şey kişinin başlattığı taşıma dosyasıdır (AB TS10); dosya belge değeri, kopya ve anahtar içermez ([[ADR-0078]]). |
 | `SPEC-WALLET-0001/WL3` | W1 (yazılım anahtarlı) cüzdan desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — [[ADR-0042]] K5). |
-| `SPEC-WALLET-0001/WL4` | `presentation_log` sunucuya ve otomatik olarak hiçbir koşulda çıkmaz, sunucu yedeğine girmez; yalnız kişinin başlattığı, kişinin parolasıyla şifreli dışa aktarmada (TS10) cihazdan çıkar ([[ADR-0027]]). |
+| `SPEC-WALLET-0001/WL4` | `presentation_log` sunucuya ve otomatik olarak hiçbir koşulda çıkmaz; yalnız kişinin başlattığı, kişinin parolasıyla şifreli dışa aktarmada (TS10) cihazdan çıkar ([[ADR-0027]]). |
 | `SPEC-WALLET-0001/WL5` | Bir doğrulayıcıya her zaman aynı kopya; farklı doğrulayıcıya farklı kopya. |
 | `SPEC-WALLET-0001/WL6` | Aynı doğrulayıcı + aynı `vct` için disclosure seti tutarlıdır. |
 | `SPEC-WALLET-0001/WL7` | Kullanıcı eylemi olmadan yenileme yalnızca [[ADR-0023]] AR1–AR4 koşullarında yapılır. |
@@ -1136,12 +1171,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 452 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 463 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CT, D, DL, DP, DS, DY, E, EP, FD, FN, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, D, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-12 (`scripts/sync-invariants.mjs`). Toplam 452 kodlanmış değişmez, 79 dokümanda.
+**Üretilen dosya** — 2026-11-12 (`scripts/sync-invariants.mjs`). Toplam 463 kodlanmış değişmez, 82 dokümanda.

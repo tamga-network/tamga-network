@@ -360,7 +360,7 @@ company's separate product ([[ADR-0042]]).
 | Protocol | [[t:OpenID4VCI]] (receiving), [[t:OpenID4VP]] (presenting) |
 | Consent screen | The user **sees field by field what they share** |
 | Schema cache | Fetched **in bulk** at installation and when a type is added, not at the moment of use |
-| Backup | Encrypted on the server; the server cannot decrypt it |
+| Backup | None ([[ADR-0078]]): credentials do not move and are obtained again on a new device; only the encrypted migration file started by the person |
 
 **Why bulk schema fetching:** if the wallet fetched the schema from the server on every presentation, `schemas.tamga.network` would
 collect "who used which type of credential when" ([[SPEC-SCHEMA-0001]] security notes). The same logic mirrors the verifier's
@@ -468,7 +468,7 @@ interrupted, the integrity guarantee is not lost; only freshness drops.
    foundation **does not offer a hosted indexer**, it only publishes a reference distribution. Because verification traffic is
    heavier than revocation data, this is a stricter rule than for status hosting.
 2. Who sets the threshold for bypassing the indexer in high-risk verification — the verifier or the schema (`tamga` block)?
-3. Which component owns the server side of wallet backup? It is not on the map yet; to be defined in [[SPEC-WALLET-0001]].
+3. ~~Which component owns the server side of wallet backup?~~ — **closed (2026-11-12, [[ADR-0078]]):** there is no wallet backup and no server side.
 4. Should the operator panel's national registry operations (`registerIssuer`) live in the issuer service or in a separate state
    console? The second is cleaner but adds a component in the initial stage.
 

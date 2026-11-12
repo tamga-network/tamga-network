@@ -47,7 +47,7 @@ for (const e of EXPORTS) {
     _note: `contracts/scripts/export-abi.mjs üretir — elle düzenlenmez. Kaynak: ${e.source}.`,
     contractName: art.contractName,
     solidity: "0.8.24",
-    evmVersion: "shanghai",
+    evmVersion: "cancun",
     abi: art.abi,
   };
   const text = JSON.stringify(out, null, 2) + "\n";

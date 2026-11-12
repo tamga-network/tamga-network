@@ -4,7 +4,7 @@ title: "Zincir test ağı kurmak: Hyperledger Besu adım adım"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-12
 summary: >
   Zincirsiz canlı sistem çalışırken zincir katmanını test etmek isteyenler için sıfırdan, adım adım kurulum rehberi: terimler
   (düğüm, validator, QBFT ve 3f+1, genesis, chainId, enode, statik eşler, izinli ağ, RPC ve P2P, Governance, çapa, yeniden
@@ -225,7 +225,7 @@ bash network/testnet/make-network.sh       # varsayılan: 4 validator + 1 ek dü
 
 | Seçenek | Varsayılan | Ne |
 |---|---|---|
-| `--validators N` | 4 | Genesis'teki validator sayısı |
+| `--validators N` | 4 | Genesis'teki validator sayısı. Kontratlar en az iki kurucu ister ([[ADR-0076]] GC4): `--keys generate` ile tek validator'lı ağda anahtar haritası yazılmaz, o ağda yalnız düğüm düzeyi denemeler yapılır |
 | `--extra E` | 1 | Tam düğüm olarak başlayan, sonra oyla validator yapılabilecek ek düğüm sayısı |
 | `--keys dev\|generate` | `dev` | `dev`: Hardhat'in herkesçe bilinen test hesapları #1 #2 #6 #7 #8 (en çok 5 düğüm). `generate`: yeni rastgele anahtarlar |
 | `--chain-id` | 31338 | Zincir kimliği (uçtan uca sınama yalnız 31338 ile çalışır; `--keys generate` ile varsayılan 31339) |
@@ -261,7 +261,7 @@ kullanıcıya bırakılmış kodlarıdır; hiçbir gerçek devleti göstermez.
 | Alan | Değer | Anlamı |
 |---|---|---|
 | `config.chainId` | 31338 | Zincir kimliği |
-| `config.berlinBlock`, `londonBlock`, `shanghaiTime` | 0 | Ethereum kural sürümleri ilk bloktan açık (kontratlar `shanghai` hedefiyle derlenir) |
+| `config.berlinBlock`, `londonBlock`, `shanghaiTime`, `cancunTime` | 0 | Ethereum kural sürümleri ilk bloktan açık; zincir Cancun kural setiyle kurulur ve kontratlar `cancun` hedefiyle derlenir ([[ADR-0077]]). Blob işlemleri kullanılmaz; ek KZG ayarı gerekmez |
 | `config.zeroBaseFee` | `true` | İşlem ücreti yok (izinli ağ; kimse ücretle yer satın almaz) |
 | `config.qbft.blockperiodseconds` | 2 | İki blok arası süre |
 | `config.qbft.epochlength` | 30000 | Bekleyen oyların sıfırlandığı blok aralığı |

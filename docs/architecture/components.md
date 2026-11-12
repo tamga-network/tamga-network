@@ -380,7 +380,7 @@ Ağın kurallarına uyan her cüzdan bu katmanları taşır. Örnek: Tamga Walle
 | Protokol | OpenID4VCI (alma), OpenID4VP (gösterme) |
 | Onay ekranı | Kullanıcı **ne paylaştığını alan alan görür** |
 | Şema önbelleği | Kurulumda ve tip eklendiğinde **toplu** çekilir, kullanım anında değil |
-| Yedek | Sunucuda şifreli; sunucu çözemez |
+| Yedek | Yok ([[ADR-0078]]): belgeler taşınmaz, yeni cihazda yeniden alınır; yalnız kişinin başlattığı şifreli taşıma dosyası |
 
 **Toplu şema çekimi neden:** Cüzdan her sunumda şemayı sunucudan çekerse,
 `schemas.tamga.network` "kim hangi tip belgeyi ne zaman kullandı" bilgisini
@@ -496,8 +496,8 @@ kaybolmaz, yalnızca tazelik düşer.
    iptal verisinden yoğun olduğu için status barındırmadan daha katı bir kural.
 2. Yüksek riskli doğrulamada indeksleyiciyi atlama eşiği kim belirler —
    doğrulayıcı mi, şema mı (`tamga` bloğu)?
-3. Cüzdan yedeğinin sunucu tarafı hangi bileşene ait? Şu an haritada yok;
-   [[SPEC-WALLET-0001]]'de tanımlanacak.
+3. ~~Cüzdan yedeğinin sunucu tarafı hangi bileşene ait?~~ — **kapandı (2026-11-12, [[ADR-0078]]):** cüzdan yedeği ve sunucu
+   tarafı yoktur.
 4. Operatör panelinin ulusal kayıt işlemleri (`registerIssuer`) belge veren
    servisinde mi olmalı, yoksa devletin ayrı bir konsolunda mı? İkincisi daha
    temiz ama ilk aşamada fazladan bileşen.

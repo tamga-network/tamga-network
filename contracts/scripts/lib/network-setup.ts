@@ -2,7 +2,8 @@
  * Test/staging ağı kurulumu (GUIDE-0018 yol C; scripts/deploy-network.ts) — gerçek ağın kurulum sırasıyla, Hardhat'in herkesçe
  * bilinen hesapları OLMADAN. Testler (test/staging-setup.test.ts) aynı fonksiyonu süreç içi zincirde çağırır.
  *
- *   1) güven katmanı (scripts/lib/deploy.ts — SPEC-BC-0001 §8 sırası), kurucular oy olmadan ACTIVE (ADR-0002 #3);
+ *   1) güven katmanı (scripts/lib/deploy.ts — SPEC-BC-0001 §8 sırası), kurucular oy olmadan ACTIVE (ADR-0002 #3); en az iki
+ *      kurucu (ADR-0076 GC4);
  *   2) her kurucunun delege anahtarı (kendi doğrulayıcısıyla, `setDelegateKeys`);
  *   3) kurucular arası FULL tanıma Governance önerisiyle (`proposeFounderRecognition` → 2/3 oy → `execute`, ADR-0055 K3) —
  *      yerel betiğin (deploy-dev.ts) devlet başına `setRecognition` kısa yolu burada kullanılmaz;
@@ -14,7 +15,7 @@
 import type { HardhatEthers } from "@nomicfoundation/hardhat-ethers/types";
 import type { BaseContract, Signer } from "ethers";
 
-import { deployed, deployTrustLayer, stateCode, type TrustLayerDeployment } from "./deploy.js";
+import { MIN_FOUNDERS, deployed, deployTrustLayer, stateCode, type TrustLayerDeployment } from "./deploy.js";
 
 export interface StagingFounder {
   code: string;
@@ -34,7 +35,7 @@ export interface StagingSetup {
 export interface StagingDeployment {
   trust: TrustLayerDeployment;
   anchorRegistry: string;
-  founderRecognition: "governance" | "skipped (one founder)";
+  founderRecognition: "governance";
 }
 
 /** Governance önerisini açar (ilk imzacı), herkes oylar, yürütür. Önerinin kimliğini döndürür. */
@@ -61,7 +62,8 @@ export async function passGovernanceProposal(
 }
 
 export async function setupStagingNetwork(ethers: HardhatEthers, s: StagingSetup): Promise<StagingDeployment> {
-  if (!s.founders.length) throw new Error("en az bir kurucu gerekir");
+  if (s.founders.length < MIN_FOUNDERS)
+    throw new Error(`en az ${MIN_FOUNDERS} kurucu gerekir (ADR-0076 GC4) — verilen: ${s.founders.length}`);
   if (!Number.isInteger(s.threshold) || s.threshold < 1 || s.threshold > s.anchorers.length)
     throw new Error(`liste çapası eşiği ${s.threshold}: 1 ile yazıcı sayısı (${s.anchorers.length}) arasında olmalı`);
   const founders = await Promise.all(
@@ -74,20 +76,16 @@ export async function setupStagingNetwork(ethers: HardhatEthers, s: StagingSetup
       await (trust.governance.connect(f.validator) as any).setDelegateKeys(stateCode(ethers, f.code), [f.delegate])
     ).wait();
 
-  let founderRecognition: StagingDeployment["founderRecognition"] = "skipped (one founder)";
-  if (s.founders.length >= 2) {
-    const reg = trust.addresses.CrossRecognition;
-    const codes = s.founders.map((f) => stateCode(ethers, f.code));
-    await passGovernanceProposal(
-      trust.governance,
-      s.founders.map((f) => f.validator),
-      (g) => g.proposeFounderRecognition(reg, codes),
-    );
-    founderRecognition = "governance";
-  }
+  const reg = trust.addresses.CrossRecognition;
+  const codes = s.founders.map((f) => stateCode(ethers, f.code));
+  await passGovernanceProposal(
+    trust.governance,
+    s.founders.map((f) => f.validator),
+    (g) => g.proposeFounderRecognition(reg, codes),
+  );
 
   const impl = await deployed(ethers, "TrustListAnchorRegistry", [], s.deployer);
   const init = impl.interface.encodeFunctionData("initialize", [trust.addresses.Governance, s.anchorers, s.threshold]);
   const proxy = await deployed(ethers, "ERC1967Proxy", [await impl.getAddress(), init], s.deployer);
-  return { trust, anchorRegistry: await proxy.getAddress(), founderRecognition };
+  return { trust, anchorRegistry: await proxy.getAddress(), founderRecognition: "governance" };
 }

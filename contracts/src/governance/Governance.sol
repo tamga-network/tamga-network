@@ -98,13 +98,14 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     /**
      * @param founders Kurucu üye devlet kodları.
      * @param validators Her kurucunun validator adresi (aynı sırada).
-     * @dev   Kurucular oy olmadan ACTIVE başlar (ADR-0002 #3).
+     * @dev   Kurucular oy olmadan ACTIVE başlar (ADR-0002 #3). En az iki kurucu gerekir (ADR-0076 GC4): tek üyeyle asgari
+     *        mutlak oy (2) hiçbir zaman dolmaz, yönetişim ilk bloktan kilitli doğardı.
      */
     function initialize(bytes2[] calldata founders, address[] calldata validators)
         external
         initializer
     {
-        if (founders.length == 0 || founders.length != validators.length) revert FounderMismatch();
+        if (founders.length < MIN_ABSOLUTE_VOTES || founders.length != validators.length) revert FounderMismatch();
 
         for (uint256 i = 0; i < founders.length; i++) {
             // Kontrat denetimi 2026-11-11: sıfır devlet kodu üye olamaz (`proposeStateAdmission` ile aynı kural).
@@ -270,8 +271,9 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         id = _newProposal(ProposalKind.PROTOCOL_UPGRADE);
         _proposals[id].target = target;
         _proposals[id].newImplementation = newImplementation;
-        // Kontrat denetimi 2026-11-11: oylanan şey adres değil KODDUR. Zincir Shanghai kurallarındadır (SELFDESTRUCT kodu
-        // siler); CREATE2 ile aynı adrese başka kod konabilir. Kod özeti burada sabitlenir, `execute` karşılaştırır.
+        // Kontrat denetimi 2026-11-11: oylanan şey adres değil KODDUR. Kod özeti burada sabitlenir, `execute` karşılaştırır.
+        // Zincir Cancun kurallarındadır (ADR-0077): SELFDESTRUCT kodu silmez (EIP-6780), aynı adrese başka kod konamaz;
+        // denetim ikinci savunma hattı olarak kalır (kural seti değişirse ya da kod başka bir yoldan değişirse).
         _upgradeQueue[id].implCodehash = newImplementation.codehash;
     }
 

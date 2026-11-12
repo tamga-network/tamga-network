@@ -17,6 +17,14 @@ summary: >
   onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
 ---
 
+> **Sürüm notu 1.0.0 (2026-11-12) — en az iki kurucu, Cancun, başka devletin ulusal şemasına yetki.** (1) [[ADR-0076]] GC4:
+> `Governance.initialize` ikiden az kurucuyu reddeder (`FounderMismatch`); tek kuruculu kuruluş kalktı, kurulum betikleri ve
+> anahtar haritası aynı kuralı dağıtımdan önce denetler (§1). (2) [[ADR-0077]]: zincir Cancun kural setiyle kurulur (genesis
+> `cancunTime: 0`), kontratlar `evmVersion: cancun` ile derlenir, testler aynı kural setinde koşar; `SELFDESTRUCT` kodu silmez
+> (EIP-6780), kod özeti denetimi ikinci savunma hattı olarak kalır (§9; §14 madde 10 kapandı). (3) [[ADR-0079]]: başka devletin
+> ulusal şemasına yetki şema sahibi devletin onayını ister; karar verildi, uygulama ikinci devlet katılmadan önce (§3.4; §14
+> madde 9). ABI, fonksiyon imzaları ve depolama düzeni değişmedi.
+
 > **Sürüm notu 1.0.0 (2026-11-12) — [[ADR-0076]] iki üyeli ağda çıkış.** `Governance.withdraw` etkin üye sayısı 2 ya da daha
 > az iken reddedilir (`TooFewMembers(active, required)`; GC1): çıkış etkin üye sayısını asgari mutlak oyun (2) altına indiremez,
 > yönetişim kilitlenmez. İki üyeli ağda çıkmak isteyen üye önce üçüncü üyenin kabulünü bekler, sonra oy gerekmeden çekilir
@@ -235,13 +243,20 @@ indiremez.
 Kabul gerçekleşene kadar üye validator'ını durdurabilir ve kayıt yazmayı
 bırakabilir; üyelik kaydı sürer. Öteki üye kabule oy vermezse çıkış zincirde
 gerçekleşmez: bu, iki üyeli ağın ortaklık gibi davranmasının bilinçli sonucudur.
-[[ADR-0002]] #5 bu kayıtla okunur: çıkış hakkı kalkmaz, sıraya bağlanır. Tek
-üyeli (yalnız yerel geliştirme) kuruluşta da `withdraw` aynı hatayla reddedilir;
+[[ADR-0002]] #5 bu kayıtla okunur: çıkış hakkı kalkmaz, sıraya bağlanır.
 `LastValidator` yalnız çıkarma önerisinde (`proposeStateRemoval`) kalır.
 
-**Kuruluş (2026-11-11).** `initialize` sıfır devlet kodunu (`0x0000`) ve sıfır
-validator adresini reddeder (`ZeroAddress`). Tek kuruculu kuruluş yalnız yerel
-geliştirme içindir: tek üyeyle hiçbir öneri yürütülemez (asgari mutlak oy 2).
+**Kuruluş (2026-11-11; en az iki kurucu 2026-11-12, [[ADR-0076]] GC4).**
+`initialize` sıfır devlet kodunu (`0x0000`) ve sıfır validator adresini reddeder
+(`ZeroAddress`). Ağ **en az iki kurucuyla** kurulur: ikiden az kurucu ya da
+uzunluğu tutmayan listeler `FounderMismatch` ile reddedilir. Gerekçe: tek üyeyle
+hiçbir öneri yürütülemez (asgari mutlak oy 2), yeni üye de kabul edilemez;
+yönetişim ilk bloktan kilitli doğardı. Tek kuruculu kuruluş için bayrak ya da
+istisna yoktur; yerel geliştirme zinciri ve testler de iki ya da üç kurucuyla
+kurulur. Kurulum kodu aynı kuralı dağıtımdan önce denetler
+(`contracts/scripts/lib/deploy.ts`, `network-setup.ts`; test ağının anahtar
+haritası en az iki kurucu ister). QBFT doğrulayıcı sayısı ayrı bir konudur:
+tek doğrulayıcılı yerel zincirde de Governance iki kurucuyla kurulur.
 
 **Yeniden kabul (2.1.0 — R7):** `SUSPENDED`/`WITHDRAWN` bir devlet
 `proposeStateAdmission` ile yeniden kabul edilebilir; eski validator ve delegate
@@ -456,8 +471,18 @@ düşüyordu — SC3 ("deprecated şema doğrulanabilir kalır") ile çelişki.
 **Kayıtlı şema (2026-11-11).** `setSchemaAuthorization(…, true)` şema
 `SchemaRegistry`'de kayıtlı değilse `UnknownSchema` ile reddedilir (yazım hatası
 boş bir yetki bırakmaz; sonradan kaydedilen şema eski bir yetkiyi kendiliğinden
-devralmaz). Geri alma kayıt aramaz. Bir devletin kendi kurumunu başka bir
-devletin ulusal şemasına yetkilendirmesi kontratta engellenmez (açık konu, §14
+devralmaz). Geri alma kayıt aramaz.
+
+**Başka devletin ulusal şeması ([[ADR-0079]]; karar 2026-11-12, uygulama
+bekliyor).** Bugün yetki fonksiyonu şemanın katmanına ve sahibi olan devlete
+bakmaz: bir devlet, kendi kurumunu başka bir devletin `NATIONAL` şemasına tek
+başına yetkilendirebilir ve C2 bunu kabul eder. Karar: bu yetki ancak şema
+sahibi devletin onayıyla verilebilir (FS1). Onay, şema ve yetki alan devlet
+başına açık bir kayıttır; zaman penceresi taşır, `CrossRecognition`'da tutulur
+ve şema sahibi o devleti tanıyorken yürürlüktedir (FS2); C2 belgenin `iat`
+anına göre yetkiyle birlikte onaya da bakar (FS3). Ağ şemaları ve devletin
+kendi ulusal şemaları kuralın dışındadır. Kontrat değişikliği ikinci devlet
+katılmadan önce yapılır; o güne kadar yukarıdaki davranış geçerlidir (§14
 madde 9).
 
 `isAuthorizedForSchema` (ihraç anlamı) **üç koşulu birden** sağlamalıdır:
@@ -868,11 +893,13 @@ kontratı kalıcı olarak kilitler.
 **Oylanan şey koddur (kontrat denetimi 2026-11-11).** Öneri açılırken yeni
 implementasyonun kod özeti (`EXTCODEHASH`) saklanır (`upgradePayloadOf`);
 `execute` kuyruğa alırken ve uygularken yeniden okur, farklıysa
-`UpgradeImplementationChanged` ile düşer. Gerekçe: zincir Shanghai
-kurallarındadır, `SELFDESTRUCT` kodu siler; `CREATE2` ile dağıtılmış bir
-implementasyon bekleme süresinde silinip aynı adrese başka kodla yeniden
-dağıtılabilirdi. Oy verenler adresi değil, `implCodehash`'i incelenen derleme
-çıktısıyla karşılaştırır. Kod özeti implementasyonun bağlandığı başka
+`UpgradeImplementationChanged` ile düşer. Gerekçe (bulgunun yapıldığı gün):
+zincir Shanghai kural setiyle tasarlanmıştı, orada `SELFDESTRUCT` kodu siler;
+`CREATE2` ile dağıtılmış bir implementasyon bekleme süresinde silinip aynı
+adrese başka kodla yeniden dağıtılabilirdi. 2026-11-12'den beri zincir **Cancun**
+kural setiyle kurulur ([[ADR-0077]]): `SELFDESTRUCT` kodu silmez (EIP-6780) ve
+bu yol kapalıdır; denetim ikinci savunma hattı olarak kalır (CR3). Oy verenler
+adresi değil, `implCodehash`'i incelenen derleme çıktısıyla karşılaştırır. Kod özeti implementasyonun bağlandığı başka
 kontratların (kütüphane) kodunu kapsamaz; bugün hiçbir kontrat dış kütüphaneye
 bağlanmaz ve yükseltme incelemesi bunu denetler.
 
@@ -1125,12 +1152,15 @@ sürtünme sağlar.
    isteyen üye üçüncü üyenin kabulünden sonra çekilir (§1).
 9. **Başka devletin ulusal şemasına yetki** (2026-11-11): bir devlet kendi
    kurumunu başka bir devletin `NATIONAL` şemasına yetkilendirebilir (§3.4);
-   kontrat engellemez. İzin mi verilecek, şema sahibi devletin onayı mı
-   aranacak — karar bekler.
-10. **Zincir kuralları Shanghai** (2026-11-11): `SELFDESTRUCT` kodu siler. §9'daki
-    kod özeti denetimi yükseltme yolunu kapatır; genesis'e Cancun eklenmesi
-    (EIP-6780: `SELFDESTRUCT` kodu silmez) aynı sınıfı kökten kapatır ve derleme
-    hedefiyle birlikte ayrıca değerlendirilir (ARCH-0002).
+   kontrat engellemez. — **KARAR VERİLDİ, UYGULAMA BEKLİYOR** (2026-11-12,
+   [[ADR-0079]]): yetki ancak şema sahibi devletin onayıyla verilir; onay şema
+   başına açık kayıttır ve karşılıklı tanımaya bağlıdır; ağ şemaları kapsam
+   dışıdır. Kontrat, liste yayıncısı ve eşdeğerlik testi ikinci devlet
+   katılmadan önce uygulanır.
+10. ~~**Zincir kuralları Shanghai** (2026-11-11): `SELFDESTRUCT` kodu siler.~~ —
+    **KAPANDI** (2026-11-12, [[ADR-0077]]): zincir Cancun kural setiyle kurulur
+    (genesis `cancunTime: 0`, derleme hedefi `cancun`); `SELFDESTRUCT` kodu
+    silmez. §9'daki kod özeti denetimi kalır.
 
 ---
 
@@ -1138,7 +1168,7 @@ sürtünme sağlar.
 
 > **Yürürlükte** — [[ADR-0051]] (kabul 2026-10-19). Kod hazır, üretimde kapalıdır.
 
-**Uygulama durumu.** §1–§11'deki sekiz kontrat ilk kez derleniyor ve test ediliyor (Hardhat, solc 0.8.24, evm shanghai,
+**Uygulama durumu.** §1–§11'deki sekiz kontrat ilk kez derleniyor ve test ediliyor (Hardhat, solc 0.8.24, evm cancun — [[ADR-0077]]; 2026-11-12'ye kadar shanghai,
 OpenZeppelin 5.6; `contracts/`, `npm run contracts:test`). Derleme için tek değişiklik: OZ 5.6'da `__UUPSUpgradeable_init` yok,
 çağrılar kaldırıldı; belgelenen davranış değişmedi. `Initializable` ve `UUPSUpgradeable` 2026-11-04'ten beri doğrudan
 `@openzeppelin/contracts/proxy/utils/`'den alınır (5.6'da `contracts-upgradeable`'daki aynı adlı dosyalar bunları yeniden dışa

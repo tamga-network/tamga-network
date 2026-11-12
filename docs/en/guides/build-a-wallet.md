@@ -275,7 +275,7 @@ the list server is not trusted. Do not interpret the list files yourself. Detail
 | Fields are shown one by one; an out-of-scope request comes with a separate warning | WL8 |
 | The same copy for the same verifier, a different copy for a different verifier | WL5, WL6 |
 | The presentation log stays on the device and never goes to a server | WL4 |
-| Backups carry no keys; credentials are received again on a new device | WL2, WL10 |
+| No backup of credentials is taken; the migration file carries no credential values and no keys; credentials are received again on a new device | WL2, WL10 |
 | No request to the schema server at presentation time | WL9 |
 | With an intermediary verifier, the actual site is shown and its scope is checked | [[ADR-0017]] HV6 |
 | "Invalid" and "cannot be verified" are shown differently | [[SPEC-CRED-0003]] S14 |

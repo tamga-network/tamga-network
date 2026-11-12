@@ -76,7 +76,7 @@ NODE_SH=(bash "$TESTNET_LIB_DIR/node.sh")
 HELPER=(node "$TESTNET_LIB_DIR/testnet.mjs")
 KEYMAP=${TAMGA_CHAIN_KEYS:-$TESTNET_DIR/keys/keys.json}
 if [ "$ONLY" != permissions ]; then
-  [ -f "$KEYMAP" ] || die "no key map $KEYMAP (make-network.sh --keys generate writes it)"
+  [ -f "$KEYMAP" ] || die "no key map $KEYMAP (make-network.sh --keys generate writes it for a network of two or more validators)"
   KEYMAP="$(cd "$(dirname "$KEYMAP")" && pwd)/$(basename "$KEYMAP")" # absolute: npm --prefix changes the directory
   KEYDIR=$(dirname "$KEYMAP")
   [ -d "$REPO_ROOT/contracts/node_modules" ] || die "contract packages missing — npm run contracts:install && npm run contracts:compile"

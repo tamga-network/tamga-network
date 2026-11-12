@@ -102,7 +102,9 @@ Key paths are relative to `keys.json`; a validator's key is its node key (QBFT v
 Every reader (`apps/chain-indexer/src/chain-keys.ts`, `testnet.mjs`) refuses a map whose `purpose` is not `test`, whose chain id is
 not 31339, whose key file is missing, readable by others or belongs to another address. Environment variable: `TAMGA_CHAIN_KEYS`
 (path of the map; default `<dir>/keys/keys.json` in `bootstrap-governance.sh`). The first two genesis states (TR, KZ) are the
-founders; the others are admitted by 2/3 vote.
+founders; the others are admitted by 2/3 vote. Governance needs at least two founders (ADR-0076 GC4): a map with fewer than
+two founders is refused, and `make-network.sh --keys generate --validators 1` writes no key map (such a network is for node-level
+checks only). The genesis is Cancun (`shanghaiTime: 0`, `cancunTime: 0`; ADR-0077).
 
 ## Ports (all on 127.0.0.1)
 

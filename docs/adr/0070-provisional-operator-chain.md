@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-30
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Tamga Network'ün tüzel kişiliği yoktur; kurulacak kâr amacı gütmeyen vakıf tüzel kişilik kazanana kadar ağın kendi hizmetlerini
   (liste yayını, kimlik servisi, Tamga Verify, siteler) Tamga Network adına bir şirket geçici işletmeci olarak
@@ -84,7 +84,7 @@ Mağaza inceleme imzacısının kaydı ([[ADR-0033]]) ve sonraki bütün kendi k
 | Kod | Kural |
 |---|---|
 | OP1 | Liste işletmecisi ve şema sahibi adı "Tamga Network"tür (`status: provisional` vakıf kurulana kadar); geçici işletmecinin adı yalnız ağın kendi hizmet kayıtlarında, onların sertifikalarında ve tüzel kişi gerektiren belgelerde yer alır. |
-| OP2 | Geçici işletmecinin adı, kimlik numarası ve adresi tek yapılandırma değerinden gelir; liste yayıncısı bu değerden farklı bilgi taşıyan kendi kaydıyla ya da "Tamga Network" dışında bir liste işletmecisi adıyla yayın yapmaz. |
+| OP2 | Geçici işletmecinin adı, kimlik numarası ve adresi tek yapılandırma değerinden gelir; liste yayıncısı bu değerden farklı bilgi taşıyan kendi kaydıyla ya da "Tamga Network" dışında bir liste işletmecisi adıyla yayın yapmaz. Sandbox ortamı (`environment: "sandbox"`) açık istisnadır: sandbox'ta liste işletmecisi adı "(TEST)" ibaresi taşımak zorundadır ve liste "Tamga Network Sandbox (TEST)" adıyla yayımlanır; gerçek ağın adıyla sandbox listesi yayımlanmaz. |
 | OP3 | Vakfa devir yalnız bu değeri ve ona bağlı kayıtları ve sertifikaları değiştirir; liste işletmecisi adı, `ca_id`, `vct` ve kurumların kalıcı kimlikleri değişmez. |
 
 # Sonuçlar
@@ -97,6 +97,9 @@ Mağaza inceleme imzacısının kaydı ([[ADR-0033]]) ve sonraki bütün kendi k
   defteri (`environment: "sandbox"`, [[ADR-0038]]) açık bir istisnadır: test ağının işletmecisi kurgusaldır, değer dosyası
   istenmez. Koşulu: liste işletmecisi adı "(TEST)" işareti taşır (bugün "Tamga Network Sandbox (TEST)") ve gerçek ağın adıyla
   aynı değildir; aksi hâlde sandbox yayını da durur. Sandbox kayıt defterine değer dosyası konursa olağan denetim uygulanır.
+- **Kural metni (2026-11-12).** Sandbox istisnası, proje yönetiminin onayıyla (2026-11-12) OP2'nin kendi metnine yazıldı
+  (yukarıdaki tablo): sandbox'ta liste işletmecisi adı "(TEST)" ibaresi taşır ve "Tamga Network Sandbox (TEST)" adıyla yayımlanır.
+  Gerçek ağın kuralı değişmedi. Kod değişmedi (yayıncı denetimi 2026-11-11'den beri böyle).
 
 # Durum
 

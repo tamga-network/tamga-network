@@ -64,7 +64,7 @@ codes are in [[SPEC-WALLET-0001]], the full list in [Tamga ARF — Tamga Ruleboo
 
 ## Changing devices and deletion
 
-- Backup and migration files carry no keys; on a new device credentials come back through a "receive again" list (WL2, WL10).
+- No backup of credentials is taken; the migration file carries no credential values and no keys; on a new device credentials come back through a "receive again" list (WL2, WL10).
 - The person is asked whether to restore the log.
 - When a device is handed over, the unit is revoked (your provider's unit revocation).
 - Account and data deletion works from inside the app (your provider's unit deletion, `requestIdentityErasure`); for data institutions hold,

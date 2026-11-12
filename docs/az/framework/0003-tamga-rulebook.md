@@ -4,7 +4,7 @@ title: "Əlavə B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-20
+last_updated: 2026-11-12
 summary: >
   Tamga şəbəkəsinə qoşulan hər bir rolun (operator və siyahı operatoru, qeydiyyat qurumu, sənədi verən qurum, səlahiyyətli mənbə, cüzdan provayderi, yoxlayan tərəf, sənəd sahibi) əməl etməli olduğu məcburi, nömrələnmiş qaydalar. Hər qayda bir dəyişməzdən və ya qərardan törədilib; bu sənəd yeni qayda yaratmır, qaydaları rollar üzrə toplayır və "MUST" dili ilə ifadə edir. EUDI ARF Annex 2 (High-Level Requirements) sənədinin qarşılığıdır.
 translation_of: FW-RB-0001
@@ -199,8 +199,8 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 | RB-WP-03 | Hər təqdimat **MUST** PIN və ya biometrik təsdiq tələb etmək. |
 | RB-WP-04 | Təsdiq ekranı tələb olunan sahələri **bir-bir** göstərir; yoxlayan tərəfin əhatə dairəsini aşan və ya həddindən artıq tələblərdə ayrıca vizual blok və gecikdirilmiş düymə **MUST**. |
 | RB-WP-05 | Bir yoxlayan tərəfə həmişə eyni nüsxə, fərqli yoxlayan tərəfə fərqli nüsxə göstərilir; eyni yoxlayan tərəf və eyni növ üçün açılan sahələr ardıcıldır. |
-| RB-WP-06 | Təqdimat jurnalı cihazda qalır; server ehtiyat nüsxəsinə daxil olmur, serverə göndərilmir. Yalnız şəxs özü onu öz parolu ilə şifrələnmiş fayl kimi ixrac edə bilər (Aİ TS10). |
-| RB-WP-07 | Ehtiyat nüsxə yalnız sənədləri və onların siyahılarını daşıyır, açarları daşımır; cihaz dəyişdirildikdə sənədlər yenidən verilir. Cüzdan provayderi **MUST NOT** istifadəçi adından bərpa açarı saxlamaq. |
+| RB-WP-06 | Təqdimat jurnalı cihazda qalır; serverə göndərilmir. Yalnız şəxs özü onu öz parolu ilə şifrələnmiş fayl kimi ixrac edə bilər (Aİ TS10). |
+| RB-WP-07 | Cüzdan sənədlərin ehtiyat nüsxəsini almır; sənədlər cihaza bağlıdır və daşınmır, cihaz dəyişdirildikdə yenidən verilir. Cihazdan kənara yalnız şəxsin başlatdığı köçürmə faylı çıxır; fayl sənəd dəyəri və açar daşımır. Cüzdan provayderi **MUST NOT** istifadəçi adından bərpa açarı saxlamaq. |
 | RB-WP-08 | Sxemlər toplu şəkildə yüklənir; təqdimat zamanı sxem serverinə sorğu **MUST NOT**. İstifadəçi əməliyyatı olmadan sənədin yenilənməsi yalnız [[ADR-0023]] şərtləri ilə həyata keçirilir. |
 | RB-WP-09 | Cüzdan yoxlayan tərəfin müştəri identifikatorunu etibar mənbəyində həll etməyə çalışır; `presentation_definition` rədd edilir; şifrələnməmiş cavab rejimi istifadə edilmir; `origin` prefiksi müştəri identifikatoru kimi qəbul edilmir. |
 | RB-WP-10 | Cüzdan **MUST** "açarlarım haradadır" izahını və etibar siyahısındakı qeydini göstərən "Tamga Network-da siyahıya alınıb" göstəricisini (RB-WP-18) təqdim etmək. |

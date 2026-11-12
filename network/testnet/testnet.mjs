@@ -95,7 +95,8 @@ function loadKeyMap(file) {
   (map.anchor?.anchorers ?? []).forEach((a, i) => check(a, `anchorer[${i}]`));
   const t = map.anchor?.threshold;
   if (!Number.isInteger(t) || t < 1 || t > (map.anchor?.anchorers ?? []).length) errs.push(`anchor.threshold ${t}`);
-  if (!(map.states ?? []).some((x) => x.founder)) errs.push("states: no founder");
+  if ((map.states ?? []).filter((x) => x.founder).length < 2)
+    errs.push("states: fewer than two founders (ADR-0076 GC4)");
   for (const x of map.states ?? []) {
     if (!/^[A-Z]{2}$/.test(x.code ?? "")) errs.push(`states: bad code ${x.code}`);
     check(x.validator, `${x.code}.validator`);

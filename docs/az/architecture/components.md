@@ -375,7 +375,7 @@ ucuzlaşdırır ([[ARCH-0004]]).
 | Protokol | OpenID4VCI (alma), OpenID4VP (təqdim etmə) |
 | Təsdiq ekranı | İstifadəçi **nəyi paylaşdığını sahə-sahə görür** |
 | Sxem keşi | Quraşdırma zamanı və tip əlavə edildikdə **toplu** yüklənir, istifadə anında yox |
-| Ehtiyat nüsxə | Serverdə şifrələnmiş; server deşifrə edə bilmir |
+| Ehtiyat nüsxə | Yoxdur ([[ADR-0078]]): sənədlər daşınmır, yeni cihazda yenidən alınır; yalnız şəxsin başlatdığı şifrələnmiş köçürmə faylı |
 
 **Niyə toplu sxem yükləməsi:** Rəqəmsal cüzdan hər təqdimatda sxemi serverdən yükləsə,
 `schemas.tamga.network` "kim hansı tip rəqəmsal sənədi nə vaxt istifadə etdi" məlumatını
@@ -491,8 +491,8 @@ itmir, yalnız aktuallıq azalır.
    ləğv məlumatlarından daha intensiv olduğu üçün bu, status hostinqindən daha sərt qaydadır.
 2. Yüksək riskli yoxlamada indeksləyicini keçmə həddini kim müəyyən edir —
    yoxlayan tərəf, yoxsa sxem (`tamga` bloku)?
-3. Rəqəmsal cüzdanın ehtiyat nüsxəsinin server tərəfi hansı komponentə aiddir? Hazırda xəritədə yoxdur;
-   [[SPEC-WALLET-0001]]-də müəyyən ediləcək.
+3. ~~Rəqəmsal cüzdanın ehtiyat nüsxəsinin server tərəfi hansı komponentə aiddir?~~ — **bağlandı (2026-11-12, [[ADR-0078]]):**
+   cüzdanın ehtiyat nüsxəsi və server tərəfi yoxdur.
 4. Operator panelinin milli reyestr əməliyyatları (`registerIssuer`) sənədi verən qurumun
    xidmətində olmalıdır, yoxsa dövlətin ayrıca konsolunda? İkincisi daha
    səliqəlidir, lakin ilk mərhələdə əlavə komponent deməkdir.

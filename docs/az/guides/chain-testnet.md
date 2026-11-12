@@ -4,7 +4,7 @@ title: "Zəncir test şəbəkəsinin qurulması: Hyperledger Besu addım-addım"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-12
 summary: >
   Zəncirsiz canlı sistem işləyərkən zəncir qatını sınamaq istəyənlər üçün sıfırdan, addım-addım quraşdırma bələdçisi: terminlər
   (qovşaq, validator, QBFT və 3f+1, genesis, chainId, enode, statik həmyaşıdlar, icazəli şəbəkə, RPC və P2P, Governance, lövbər,
@@ -228,7 +228,7 @@ bash network/testnet/make-network.sh       # standart: 4 validator + 1 əlavə q
 
 | Seçim | Standart | Nə |
 |---|---|---|
-| `--validators N` | 4 | Genesis-dəki validator sayı |
+| `--validators N` | 4 | Genesis-dəki validator sayı. Kontraktlar ən azı iki təsisçi tələb edir ([[ADR-0076]] GC4): `--keys generate` ilə tək validatorlu şəbəkədə açar xəritəsi yazılmır, həmin şəbəkədə yalnız qovşaq səviyyəli sınaqlar aparılır |
 | `--extra E` | 1 | Tam qovşaq kimi başlayan, sonra səslə validator edilə bilən əlavə qovşaq sayı |
 | `--keys dev\|generate` | `dev` | `dev`: Hardhat-ın hamıya məlum test hesabları #1 #2 #6 #7 #8 (ən çox 5 qovşaq). `generate`: yeni təsadüfi açarlar |
 | `--chain-id` | 31338 | Zəncir identifikatoru (başdan sona sınaq yalnız 31338 ilə işləyir; `--keys generate` ilə standart 31339) |
@@ -264,7 +264,7 @@ Test dövlətləri: qovşaq 1 `TR`, qovşaq 2 `KZ` (yerli yerləşdirmə skripti
 | Sahə | Dəyər | Mənası |
 |---|---|---|
 | `config.chainId` | 31338 | Zəncir identifikatoru |
-| `config.berlinBlock`, `londonBlock`, `shanghaiTime` | 0 | Ethereum qayda versiyaları ilk blokdan aktiv (kontraktlar `shanghai` hədəfi ilə kompilyasiya olunur) |
+| `config.berlinBlock`, `londonBlock`, `shanghaiTime`, `cancunTime` | 0 | Ethereum qayda versiyaları ilk blokdan aktiv; zəncir Cancun qayda dəsti ilə qurulur və kontraktlar `cancun` hədəfi ilə kompilyasiya olunur ([[ADR-0077]]). Blob əməliyyatlarından istifadə olunmur; əlavə KZG parametri tələb olunmur |
 | `config.zeroBaseFee` | `true` | Əməliyyat haqqı yoxdur (icazəli şəbəkə; heç kim haqla yer almır) |
 | `config.qbft.blockperiodseconds` | 2 | İki blok arasındakı müddət |
 | `config.qbft.epochlength` | 30000 | Gözləyən səslərin sıfırlandığı blok aralığı |

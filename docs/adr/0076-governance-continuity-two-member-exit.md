@@ -11,8 +11,8 @@ summary: >
   kalan üye hiçbir öneriyi yürütemez, yeni üye kabul edemez ve kendisi de çekilemez: yönetişim kalıcı olarak kilitlenir. Çıkış hakkı
   (ADR-0002 #5) ile yönetişimin sürekliliği bu noktada çatışır. Öneri: (a) etkin üye sayısı 2 iken `withdraw` reddedilir; çıkmak
   isteyen üye önce üçüncü üyenin kabulünü bekler. Alternatif (b): çıkış serbest kalır, tek üye kalınca eşik 1'e iner. Önerilen (a).
-  Kabul edildi (2026-11-12): (a), öneriyle. Çıkmak isteyen üyenin yolu: önce üçüncü üye kabul edilir, sonra üye çekilir. Tek
-  kuruculu kuruluş yalnız yerel geliştirme içindir.
+  Kabul edildi (2026-11-12): (a), öneriyle. Çıkmak isteyen üyenin yolu: önce üçüncü üye kabul edilir, sonra üye çekilir. Ek
+  kural (2026-11-12, GC4): ağ en az iki kurucuyla kurulur; `initialize` tek kurucuyu reddeder.
 domain: Governance
 related: ["[[ADR-0002]]", "[[ADR-0009]]", "[[ADR-0055]]", "[[SPEC-BC-0001]]"]
 ---
@@ -66,8 +66,24 @@ sıraya bağlanır. Önerilen kurallar (kabul edilirse bağlayıcı tabloya taş
 
 # Karar (2026-11-12)
 
-**(a) öneriyle kabul edildi.** Bağlayıcı kurallar aşağıdaki GC1–GC3; ad tablonun altında. Tek kuruculu kuruluş değişmedi: yalnız
-yerel geliştirme içindir; kuruluşun en az iki kurucu istemesi ayrıca kararlaştırılır.
+**(a) öneriyle kabul edildi.** Bağlayıcı kurallar aşağıdaki GC1–GC3; ad tablonun altında. Kuruluşun en az iki kurucu istemesi o
+gün ayrı karara bırakılmıştı; aynı gün aşağıdaki ek kararla kapandı (GC4).
+
+## Ek karar (2026-11-12): en az iki kurucu
+
+Ağ en az iki kurucuyla kurulur. Onaylanan yön: gerçek ağda zorunlu; tek kuruculu kurulum en çok yerel geliştirme ve test için,
+açık bir bayrakla. İki uygulama yolu değerlendirildi:
+
+| Yol | Ne | Sonuç |
+|---|---|---|
+| **(i) Kontratta zorunlu** | `Governance.initialize` ikiden az kurucuyu reddeder; testler ve yerel betikler iki kurucuyla kurar | **seçildi** |
+| (ii) Kurulum betiklerinde | Kontrat tek kurucuyu kabul etmeyi sürdürür; kurulum betikleri tek kurucuyu yalnız yerel zincir kimliklerinde ya da açık bir bayrakla kabul eder | seçilmedi |
+
+Gerekçe: (ii) yalnız bu deponun betiklerini bağlar; kontratı başka bir araçla dağıtan kişi tek kurucuyla kurabilir ve kural
+kodda değil alışkanlıkta kalır. (i)'de kural, GC1 gibi, kontratın kendisindedir. Tek kurucu bayrağına gerek de kalmadı: yerel
+geliştirme zinciri, test ağı ve kontrat testleri zaten iki ya da üç kurucuyla kuruluyordu; tek kuruculu bir yönetişim hiçbir
+öneri yürütemediği için sınanacak bir davranışı yoktur. Bayrak açılmadı; ileride gerekirse yeni bir kararla eklenir. Yeni ad
+gerekmedi: mevcut `FounderMismatch` hatası kullanılır (kurucu tanıma önerisindeki "ikiden az kurucu" denetimiyle aynı hata).
 
 # Değişmezler
 
@@ -76,6 +92,7 @@ yerel geliştirme içindir; kuruluşun en az iki kurucu istemesi ayrıca kararla
 | GC1 | Tek taraflı çıkış (`Governance.withdraw`) yalnız ağda en az üç etkin üye varken geçer; etkin üye sayısı 2 ya da daha az iken reddedilir (`TooFewMembers`). Çıkış da çıkarma da etkin üye sayısını asgari mutlak oyun (2) altına indiremez: yönetişim her zaman karar alabilir durumda kalır. |
 | GC2 | İki üyeli ağda çıkmak isteyen üyenin yolu sıralıdır: önce üçüncü bir üye kabul edilir (`proposeStateAdmission`, iki üyenin oyuyla), sonra üye `withdraw` ile çekilir; bu ikinci adım oy gerektirmez. Kabul gerçekleşene kadar üye validator'ını durdurabilir ve kayıt yazmayı bırakabilir; üyeliği sürer. |
 | GC3 | [[ADR-0002]] #5 bu kayıtla okunur: çıkış hakkı kalkmaz, sıraya bağlanır. En az üç etkin üyeli ağda tek taraflıdır, oy gerektirmez ve kodla güvence altındadır. Çıkışın belgeler üzerindeki etkisi değişmez: verilmiş belgeler ve mevcut kayıtlar geçerli kalır ([[ADR-0002]] #4). |
+| GC4 | Ağ en az iki kurucuyla kurulur: `Governance.initialize` ikiden az kurucuyu reddeder (`FounderMismatch`). Kurulum betikleri ve anahtar haritası aynı kuralı dağıtımdan önce denetler; tek kuruculu kurulum için bayrak ya da istisna yoktur. |
 
 Ad (kamuya açık ABI; mevcut hata adlandırma düzenine göre — `TooManyDelegates(count, max)` deseni):
 
@@ -86,8 +103,12 @@ Ad (kamuya açık ABI; mevcut hata adlandırma düzenine göre — `TooManyDeleg
 # Sonuçlar
 
 - `Governance.withdraw`: tek satırlık koşul değişikliği (`activeMemberCount ≤ 2` → ret). Depolama düzeni ve fonksiyon imzaları
-  değişmez; ABI'ye bir hata eklenir. Tek üyeli (yerel geliştirme) kuruluşta da çıkış aynı hatayla reddedilir; `LastValidator`
-  yalnız çıkarma önerisinde kalır.
+  değişmez; ABI'ye bir hata eklenir. `LastValidator` yalnız çıkarma önerisinde kalır.
+- GC4: `Governance.initialize` koşulu (`founders.length < 2` → `FounderMismatch`); ABI ve depolama düzeni değişmez. Kurulum
+  kodu aynı kuralı dağıtımdan önce, açık iletiyle denetler (`contracts/scripts/lib/deploy.ts`, `network-setup.ts`; anahtar
+  haritası `apps/chain-indexer/src/chain-keys.ts`, `network/testnet/testnet.mjs`). `network/testnet/make-network.sh` tek
+  doğrulayıcılı ağ için anahtar haritası yazmaz (yalnız düğüm düzeyi denetimler). QBFT doğrulayıcı sayısı ile kurucu sayısı ayrı
+  şeylerdir: yerel tek doğrulayıcılı geliştirme zinciri de kontratları iki kurucuyla (TR, KZ) kurar.
 - Testler (`contracts/test/review-2026-11-11-governance.test.ts`, `contracts/test/governance.test.ts`): üç üyeden biri çekilir
   (3 → 2), iki üyeli ağda çıkış reddedilir (2 → 1), üçüncü üye kabul edilince çıkış geçer ve kalan iki üye karar almayı sürdürür.
 - [[SPEC-BC-0001]] §1 ve §14 madde 8 (kapandı); [[ADR-0002]]'ye uygulama notu.
@@ -97,5 +118,6 @@ Ad (kamuya açık ABI; mevcut hata adlandırma düzenine göre — `TooManyDeleg
 
 # Durum
 
-**Accepted — 2026-11-12.** Proje yönetiminin onayıyla (2026-11-12): seçenek (a), öneriyle. DECISIONS: D-GOV-12. GC1–GC3
-bağlayıcıdır. Uygulama: `Governance.withdraw` ([[SPEC-BC-0001]] sürüm notu).
+**Accepted — 2026-11-12.** Proje yönetiminin onayıyla (2026-11-12): seçenek (a), öneriyle; aynı gün ek karar GC4 (en az iki
+kurucu). DECISIONS: D-GOV-12. GC1–GC4 bağlayıcıdır. Uygulama: `Governance.withdraw`, `Governance.initialize`
+([[SPEC-BC-0001]] sürüm notları).

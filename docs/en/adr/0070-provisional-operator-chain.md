@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-30
-last_updated: 2026-11-11
+last_updated: 2026-11-12
 summary: >
   Tamga Network has no legal personality. Until the non-profit foundation to be established acquires one, the network's own
   services (list publication, the identity service, Tamga Verify, the websites) are operated on behalf of Tamga Network by the
@@ -89,7 +89,7 @@ The record of the app-store review signer ([[ADR-0033]]) and every later own rec
 | Code | Rule |
 |---|---|
 | OP1 | The list operator and scheme owner name is "Tamga Network" (`status: provisional` until the foundation exists); the provisional operator's name appears only in the records of the network's own services, in their certificates and in documents that need a legal person. |
-| OP2 | The provisional operator's name, identifier and address come from a single configuration value; the list publisher does not publish with an own record that carries different information, or with a list operator name other than "Tamga Network". |
+| OP2 | The provisional operator's name, identifier and address come from a single configuration value; the list publisher does not publish with an own record that carries different information, or with a list operator name other than "Tamga Network". The sandbox environment (`environment: "sandbox"`) is an explicit exception: in the sandbox the list operator name must carry the "(TEST)" mark and the list is published under the name "Tamga Network Sandbox (TEST)"; no sandbox list is published under the real network's name. |
 | OP3 | The handover to the foundation changes only this value and the records and certificates that depend on it; the list operator name, `ca_id`, `vct` and the institutions' permanent identifiers do not change. |
 
 # Consequences
@@ -103,6 +103,10 @@ The record of the app-store review signer ([[ADR-0033]]) and every later own rec
   exception: the operator of the test network is fictional and no value file is required. Its condition: the list operator name
   carries the "(TEST)" mark (today "Tamga Network Sandbox (TEST)") and is not the real network's name; otherwise sandbox
   publication stops as well. If a value file is placed in the sandbox registry, the ordinary check applies.
+- **Rule text (2026-11-12).** With the approval of project management (2026-11-12) the sandbox exception was written into the
+  text of OP2 itself (table above): in the sandbox the list operator name carries the "(TEST)" mark and the list is published as
+  "Tamga Network Sandbox (TEST)". The rule for the real network is unchanged. No code change (the publisher check has worked this
+  way since 2026-11-11).
 
 # Status
 

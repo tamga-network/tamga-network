@@ -60,7 +60,7 @@ Bu sayfa, [[GUIDE-0005]]'te anlatılan cüzdanı yayına hazırlayan ekipler iç
 
 ## Cihaz değiştirme ve silme
 
-- Yedek ve taşıma dosyası anahtar taşımıyor; yeni cihazda belgeler "yeniden al" listesiyle geri geliyor (WL2, WL10).
+- Belgelerin yedeği alınmıyor; taşıma dosyası belge değeri ve anahtar taşımıyor; yeni cihazda belgeler "yeniden al" listesiyle geri geliyor (WL2, WL10).
 - Günlüğün geri yüklenmesi kişiye soruluyor.
 - Cihaz devrinde birim iptal ediliyor (sağlayıcınızın birim iptal işlemi).
 - Uygulama içinden hesap ve veri silme çalışıyor (sağlayıcınızın birim silme işlemi, `requestIdentityErasure`); kurum verisi için başvuru yolu
