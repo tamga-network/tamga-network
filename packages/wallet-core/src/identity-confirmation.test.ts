@@ -92,6 +92,20 @@ describe("ADR-0080 — cüzdanda son onay", () => {
     expect(s.calls.map((c) => c.url)).toEqual([`${AS}/token`, `${AS}/identity-confirmation`]);
   });
 
+  it("kişi yanıt vermeden vazgeçerse ne onay ne ret gönderilir; DPoP anahtarı silinir", async () => {
+    const s = await setup(offer);
+    const deleted: string[] = [];
+    const del = s.keys.delete.bind(s.keys);
+    s.keys.delete = async (ref: string) => (deleted.push(ref), del(ref));
+    await expect(
+      run(s, async () => {
+        throw new Error("cancelled");
+      }),
+    ).rejects.toThrow("cancelled");
+    expect(s.calls.map((c) => c.url)).toEqual([`${AS}/token`]);
+    expect(deleted.some((r) => r.startsWith("dpop."))).toBe(true);
+  });
+
   it("onay ucu hata dönerse belge istenmez", async () => {
     const s = await setup(offer, 400);
     await expect(run(s, async () => true)).rejects.toThrow(/identity confirmation error/);

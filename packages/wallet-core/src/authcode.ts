@@ -397,7 +397,11 @@ export async function completeAuthorized(p: CompleteInput): Promise<RedeemOutput
     ? readConfirmationOffer(tok.identity_confirmation, p.start.as.token_endpoint)
     : undefined;
   if (offer && p.confirmIdentity) {
-    const confirmed = await p.confirmIdentity(offer.prompt);
+    // kişi yanıt vermeden vazgeçerse (işlev fırlatır) ne onay ne ret gönderilir; DPoP anahtarı telefonda kalmaz
+    const confirmed = await p.confirmIdentity(offer.prompt).catch(async (e: unknown) => {
+      await p.keys.delete(dpop.ref).catch(() => {});
+      throw e;
+    });
     const accessToken = tok.access_token;
     const cr = await dpopRequest(
       p.http,
