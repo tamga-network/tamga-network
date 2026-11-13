@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-23
+last_updated: 2026-11-13
 summary: >
   Tamga'nın kimlik servisinin verdiği kişi belgelerinin rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc),
@@ -106,7 +106,7 @@ olduğu bu yokluktan ve belge verenin güven listesindeki sınıfından anlaşı
 | `document_type` | Doğrulanan belgenin türü | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE` | `ID_CARD` |
 | `document_number_hash` | Belge numarasının anahtarlı özeti (HMAC-SHA256; anahtar yalnız kimlik servisinde); numaranın kendisi yok ve özetten geri bulunamaz | `sha256-…` | `sha256-q1…` |
 | `issuing_country` | AB PID anlamıyla belgeyi veren sağlayıcının ülkesi; bugün değer taranan kimlik belgesini veren ülkedir (§4.6) | ISO 3166-1 alpha-2 | `TR` |
-| `document_chip_verified` | NFC çip okundu mu (olgu; seviye değildir) | boolean | `true` |
+| `document_chip_verified` | Çip yolu tam geçti mi: çipin pasif doğrulaması, kopya denetimi ve çipteki fotoğrafla canlı yüz eşleşmesi birlikte (olgu; seviye değildir; ADR-0083) | boolean | `true` |
 | `verification_method` | Kimlik doğrulama yolu; `review-demo` yalnız uygulama mağazası incelemesi için verilen deneme belgesinde | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `remote-document-liveness-face` |
 
 **ZK kopyası (`ShortLivedIdentityAttestation`)**
@@ -349,7 +349,8 @@ kişiyi eşleştirmek için PID'i de kabul etmesi ayrı bir kararla açılır.
 | Yüz yüze | T2 | `in-person` |
 
 Kurallar: kimlik doğrulama yalnız kimlik servisinde yapılır; kurum [[t:issuer|belge verenleri]], cüzdan ve doğrulayıcılar uzaktan
-kimlik doğrulama sağlayıcısıyla konuşmaz (RB-AP-ID-01). Doğrulama başlamadan **aydınlatma metni gösterilir ve açık rıza alınır**
+kimlik doğrulama sağlayıcısıyla konuşmaz (RB-AP-ID-01); cüzdan yalnız kimlik belgesi çipini okuyup ham veriyi değiştirmeden kimlik
+servisine iletebilir, doğrulamayı kimlik servisi yapar (ADR-0083; uygulama hukuki görüşten sonra). Doğrulama başlamadan **aydınlatma metni gösterilir ve açık rıza alınır**
 (RB-AP-ID-02). Sağlayıcının kararı her zaman sağlayıcının karar ucundan teyit edilir; bildirim (webhook) yalnız tetikleyicidir.
 Sağlayıcı kesintisi seviyeyi düşürmez, belge verme durur. Seviye belgeye yazılmaz (RB-AP-14).
 

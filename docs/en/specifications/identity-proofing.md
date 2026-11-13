@@ -4,7 +4,7 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-04
+last_updated: 2026-11-13
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
@@ -188,7 +188,7 @@ Stored record (issuing service `data/<slug>/state.json › proofing[subjectRef]`
 |---|---|
 | **IDP1** | The holder's identity proofing level and path are not written into the credential; they are kept only in the issuer's audit record. |
 | **IDP2** | No offer is produced before the type's minimum level is reached; the level is not upgraded by guessing. |
-| **IDP3** | The IDV provider integration lives **only in the Tamga identity attestation service** (`id.tamga.network`, [[ADR-0011]]); institutional issuers, the wallet and the verifier do not talk to the provider. |
+| **IDP3** | The IDV provider integration lives **only in the Tamga identity attestation service** (`id.tamga.network`, [[ADR-0011]]); institutional issuers, the wallet and the verifier do not talk to the provider. A wallet may read the document chip on the device that started the flow and relay the raw data unchanged to the identity service ([[ADR-0083]]); it does not verify chip data and makes no identity verification decision. |
 | **IDP4** | From the IDV result the issuer keeps only the summary record; document images, portraits, video and raw OCR data are not stored. |
 | **IDP5** | A webhook is not processed before its signature and timestamp are verified; the decision is always confirmed through the decision API. |
 | **IDP6** | No personal data is written into the `vendor_data`/`metadata` fields; only an opaque reference. |
@@ -214,7 +214,7 @@ an issuer (`category: IDENTITY`, `class: EAA`, I2; no `category` claim in the cr
 | Validity / status | `exp` = issuance + 730 days; Token Status List (`id.tamga.network/status/{listId}`); when the same document is verified again, the previous one is revoked (K6) |
 | Flow | Wallet: PAR (WUA) → browser `/authorize` (**KVKK privacy notice + explicit consent**) → provider (reference adapter; demo: FAKE, deviation S-15) → `/idv/return` decision query (the webhook is only a trigger, IDP5) → `code` → token (PKCE + WUA) → 10 copies |
 | Use at an institution | The institution's issuing service requests a **presentation** of the identity credential when issuing (DCQL: Turkish ID number, date of birth, given name, family name), verifies T0 + A–E and matches it with its records (Turkish ID number + date of birth; a warning on normalised names) — [[SPEC-PROTO-0001]] §11.2 |
-| Level | Remote document + liveness + face = **T2** (ETSI 119 461 Substantial); NFC chip = `document_chip_verified: true` (technically High; legally T3 = qualified e-signature/mobile signature, IDP7) |
+| Level | Remote document + liveness + face = **T2** (ETSI 119 461 Substantial); NFC chip = `document_chip_verified: true` only when passive authentication, the clone check (AA or CA) and the match of the live face with the chip photo all succeed ([[ADR-0083]]/CV2; technically High; legally T3 = qualified e-signature/mobile signature, IDP7) |
 | Data controller | Tamga Network (K4): it keeps the record + hash; erasure request = §9.1 (the record is deleted, copies are revoked, deletion of the session at the provider is requested); the provider contract targets ≤ 30 days of image retention. **Time-based purge (2026-10-28):** an expired or revoked record is deleted automatically at the latest 30 days later together with its provider session, event-log rows after 365 days (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; the periods are a policy choice pending legal confirmation) |
 | Webhook | A single target `https://id.tamga.network/idv/webhook`, event `status.updated`; there is no per-institution webhook |
 | Age | No minimum age (2026-10-08, [[ADR-0043]]); the condition is identity verification with a valid identity document. A guardian-consent flow and the provider's limit for minors are open items |
@@ -298,3 +298,9 @@ through the always-visible `not_official_licence: true` claim.
 # Status
 
 **In force** — version 1.0.0 (2026-10-02).
+
+**Version note (2026-11-13; approved by project management).** [[ADR-0083]] was accepted: IDP3 is narrowed (a wallet may read
+the document chip and relay the raw data unchanged to the identity service; it does not verify, decide or talk to the provider)
+and §9 states the condition for `document_chip_verified: true` (CV2). The flow and the open interface of the chip path
+(ADR-0083 K10) are added to this document with the implementation, which follows a legal opinion (CV7). Today's behaviour is
+unchanged: identity verification uses the document photo path.

@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -164,7 +164,7 @@ Bugün: ağı Tamga Network (kurulacak vakıf) adına bir geçici işletmeci iş
 
 | # | Kural |
 |---|---|
-| RB-AP-ID-01 | Kimlik belgesi sağlayıcısı **MUST** uzaktan kimlik doğrulamayı yalnızca kendi servisinde yürütmek; kurumların belge verme servisleri, cüzdan ve doğrulayıcı uzaktan kimlik doğrulama sağlayıcısıyla **MUST NOT** konuşmak. |
+| RB-AP-ID-01 | Kimlik belgesi sağlayıcısı **MUST** uzaktan kimlik doğrulamayı yalnızca kendi servisinde yürütmek; kurumların belge verme servisleri, cüzdan ve doğrulayıcı uzaktan kimlik doğrulama sağlayıcısıyla **MUST NOT** konuşmak. Cüzdan, akışı başlatan cihazda kimlik belgesi çipini okuyup ham veriyi değiştirmeden kimlik belgesi sağlayıcısına **MAY** iletmek; çip verisini **MUST NOT** doğrulamak ve kimlik doğrulama kararı vermek (ADR-0083). |
 | RB-AP-ID-02 | Belge vermeden önce aydınlatma metni **MUST** gösterilmek ve açık rıza alınmak; rıza yoksa kimlik doğrulama **MUST NOT** başlatılmak. |
 | RB-AP-ID-03 | Kişi alanları belge verildikten sonra **MUST NOT** tutulmak; görüntü, özçekim, video, OCR ham verisi **MUST NOT** saklanmak; kalıcı kayıt yalnızca opak `subject_ref`, belge numarasının özeti, süre ve iptal listesi konumlarıdır. |
 | RB-AP-ID-04 | Belge **MUST** `urn:tamga:id:IdentityAttestation:1` türünde, `category` alanı olmadan, iptal listeli ve en çok 2 yıl geçerli olmak; ulusal kimlik numarası **MUST** seçici açıklamalı olmak. |

@@ -4,7 +4,7 @@ title: "Provisional identity attestation provider"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-11-04
+last_updated: 2026-11-13
 summary: >
   As long as there is no PID Provider appointed by the state, Tamga issues an identity attestation it signs itself
   (urn:tamga:id:IdentityAttestation:1) to people it has verified by remote identity verification (a remote identity verification provider: document +
@@ -153,3 +153,5 @@ number exists; both are limited in K4/K2.
 4. In the demo a fake TCKN is generated for the sandbox profile; `students.json` is updated accordingly.
 
 **Note (2026-11-04):** the trade name and API address of the remote identity verification provider were removed from the public text ("remote identity verification provider", reference adapter; the address and setting names are in the operator's configuration document); the decision content is unchanged (project management).
+
+**Note (2026-11-13):** [[ADR-0083]] (accepted 2026-11-13) narrowed IDP3: a wallet may read the identity document chip over NFC on the device that started the flow and relay the raw data unchanged to the identity service; it does not verify chip data, makes no identity verification decision and does not talk to the provider. Identity verification stays in the identity service only; open point 3 (the same type for the chip path) still holds. Code for the chip path follows a legal opinion (ADR-0083 CV7) (project management).

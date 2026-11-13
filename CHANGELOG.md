@@ -93,6 +93,11 @@ published on npm when this entry was written.
 - ADR-0082 (accepted 2026-11-12; tr / en / az): correctable issuer successor and per-state delegate keys (IS1–IS2, DK1–DK2).
   ADR-0073 implementation note (tr / en / az): the explicit-date rule of the migration window also covers the start of a record.
   Contract specification: N1, §1, §3, §7.3, §9, §16.1.
+- ADR-0083 (accepted 2026-11-13; tr / en / az): the identity document chip is read over NFC by the wallet that started the flow
+  and verified by the identity service (passive authentication and a clone check); face and liveness stay with a replaceable
+  provider (CV1–CV7). IDP3 is narrowed: a wallet may read the chip and relay the raw data unchanged. No code for the chip path
+  until a legal opinion is favourable. Identity proofing specification (IDP3, §9 `document_chip_verified`), ADR-0011 note,
+  Tamga ARF (Tamga Rulebook RB-AP-ID-01, Identity Rulebook `document_chip_verified`; release 1.0 archive refreshed).
 
 ## 0.8.3 — 2026-11-11
 

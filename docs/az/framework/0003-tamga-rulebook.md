@@ -4,7 +4,7 @@ title: "Əlavə B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 summary: >
   Tamga şəbəkəsinə qoşulan hər bir rolun (operator və siyahı operatoru, qeydiyyat qurumu, sənədi verən qurum, səlahiyyətli mənbə, cüzdan provayderi, yoxlayan tərəf, sənəd sahibi) əməl etməli olduğu məcburi, nömrələnmiş qaydalar. Hər qayda bir dəyişməzdən və ya qərardan törədilib; bu sənəd yeni qayda yaratmır, qaydaları rollar üzrə toplayır və "MUST" dili ilə ifadə edir. EUDI ARF Annex 2 (High-Level Requirements) sənədinin qarşılığıdır.
 translation_of: FW-RB-0001
@@ -163,7 +163,7 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 
 | # | Qayda |
 |---|---|
-| RB-AP-ID-01 | Şəxsiyyət sənədi provayderi **MUST** uzaqdan şəxsiyyət yoxlamasını yalnız öz xidmətində aparmaq; qurumların sənəd vermə xidmətləri, rəqəmsal cüzdan və yoxlayan tərəf uzaqdan şəxsiyyət yoxlaması provayderi ilə **MUST NOT** əlaqə qurmaq. |
+| RB-AP-ID-01 | Şəxsiyyət sənədi provayderi **MUST** uzaqdan şəxsiyyət yoxlamasını yalnız öz xidmətində aparmaq; qurumların sənəd vermə xidmətləri, rəqəmsal cüzdan və yoxlayan tərəf uzaqdan şəxsiyyət yoxlaması provayderi ilə **MUST NOT** əlaqə qurmaq. Cüzdan axını başladan cihazda şəxsiyyət sənədinin çipini oxuyub xam məlumatı dəyişdirmədən şəxsiyyət sənədi provayderinə **MAY** ötürmək; çip məlumatını **MUST NOT** yoxlamaq və şəxsiyyətin yoxlanılması barədə qərar vermək (ADR-0083). |
 | RB-AP-ID-02 | Sənəd verilməzdən əvvəl məlumatlandırma mətni **MUST** göstərilmək və açıq razılıq alınmaq; razılıq yoxdursa, şəxsiyyət yoxlaması **MUST NOT** başladılmaq. |
 | RB-AP-ID-03 | Şəxsi məlumat sahələri sənəd verildikdən sonra **MUST NOT** saxlanılmaq; şəkil, selfi, video, OCR xam məlumatları **MUST NOT** saxlanılmaq; daimi qeyd yalnız qeyri-şəffaf `subject_ref`, sənəd nömrəsinin heşi, müddət və ləğv siyahısındakı mövqelərdir. |
 | RB-AP-ID-04 | Sənəd **MUST** `urn:tamga:id:IdentityAttestation:1` növündə, `category` sahəsi olmadan, ləğv siyahısı ilə və ən çoxu 2 il etibarlı olmaq; milli şəxsiyyət nömrəsi **MUST** seçici paylaşımla olmaq. |

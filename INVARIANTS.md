@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-12
+last_updated: 2026-11-13
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 471 kodlanmış değişmez, 84 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 478 kodlanmış değişmez, 85 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -843,6 +843,21 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0082/DK2` | N1 aynen sürer: bir devletin kaydına yalnız o devletin delegesi yazar. Bir anahtar birden çok devletin listesinde bulunabilir; her devlet kendi listesinden sorumludur (başka devletin anahtarını listesine yazan devlet, o anahtara yalnız kendi kayıtları üzerinde yetki vermiş olur). Validator adresi için tek devlet kuralı (`ValidatorInUse`) değişmez. |
 
 
+## ADR-0083
+
+*"Kimlik belgesinin çipini kimlik servisi doğrular; cüzdan yalnız okuyucudur, yüz ve canlılık sağlayıcıda kalır"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0083/CV1` | Çip verisi kimlik servisinde sunucu tarafında doğrulanır (pasif doğrulama ve varsa kopya denetimi); cüzdanın ya da telefonun bildirdiği doğrulama sonucu kabul edilmez. |
+| `ADR-0083/CV2` | `document_chip_verified: true` yalnız pasif doğrulama, kopya denetimi (AA ya da CA) ve DG2 ile canlı yüz eşleşmesi birlikte başarılıysa yazılır; aksi hâlde `false`. |
+| `ADR-0083/CV3` | Etkin doğrulama (AA) sınaması kimlik servisince üretilir, tek kullanımlıktır, akışa bağlıdır ve kısa ömürlüdür. |
+| `ADR-0083/CV4` | Cüzdan çip verisini yalnız okur ve değiştirmeden kimlik servisine iletir; doğrulamaz, karar vermez, saklamaz, günlüğe yazmaz ve sağlayıcıyla konuşmaz. Çip erişim anahtarı (MRZ/CAN) telefondan çıkmaz. |
+| `ADR-0083/CV5` | Ham çip verisi ve DG2 fotoğrafı belge verme anından sonra tutulmaz, günlüğe ve denetim kaydına yazılmaz. |
+| `ADR-0083/CV6` | Yüz ve canlılık sağlayıcısı kimlik servisinde bir bağdaştırıcının arkasındadır; kimlik belgesine, güven listesine ve cüzdana sağlayıcıya özgü bir değer girmez. |
+| `ADR-0083/CV7` | Çip yolunun kodu hukuki görüş olumlu gelmeden yazılmaz. Bir ülkenin belgesi için çip yolu, o ülkenin kök sertifikası güvenilir kaynaktan alınmadan ve o ülke hukukuna göre hukuki incelemesi olumlu sonuçlanmadan gerçek ağda açılmaz. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1019,7 +1034,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 |---|---|
 | `SPEC-ID-0003/IDP1` | Belge sahibinin kimlik doğrulama seviyesi ve yolu belgeye yazılmaz; yalnızca belge verenin denetim kaydında tutulur. |
 | `SPEC-ID-0003/IDP2` | Tipin asgari seviyesi sağlanmadan teklif üretilmez; seviye tahminle yükseltilmez. |
-| `SPEC-ID-0003/IDP3` | IDV sağlayıcı entegrasyonu yalnızca **Tamga kimlik attestation servisindedir** (`id.tamga.network`, [[ADR-0011]]); kurumların belge verme servisleri, cüzdan ve doğrulayıcı sağlayıcıyla konuşmaz. |
+| `SPEC-ID-0003/IDP3` | IDV sağlayıcı entegrasyonu yalnızca **Tamga kimlik attestation servisindedir** (`id.tamga.network`, [[ADR-0011]]); kurumların belge verme servisleri, cüzdan ve doğrulayıcı sağlayıcıyla konuşmaz. Cüzdan, akışı başlatan cihazda belge çipini okuyup ham veriyi değiştirmeden kimlik servisine iletebilir ([[ADR-0083]]); çip verisini doğrulamaz ve kimlik doğrulama kararı vermez. |
 | `SPEC-ID-0003/IDP4` | Belge veren, IDV sonucundan yalnızca özet kaydı saklar; belge görüntüsü, portre, video, OCR ham verisi saklanmaz. |
 | `SPEC-ID-0003/IDP5` | Webhook imza ve zaman damgası doğrulanmadan işlenmez; karar her zaman decision API'den teyit edilir. |
 | `SPEC-ID-0003/IDP6` | `vendor_data`/`metadata` alanlarına kişisel veri yazılmaz; yalnızca opak referans. |
@@ -1195,12 +1210,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 471 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 478 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IS, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IS, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-12 (`scripts/sync-invariants.mjs`). Toplam 471 kodlanmış değişmez, 84 dokümanda.
+**Üretilen dosya** — 2026-11-13 (`scripts/sync-invariants.mjs`). Toplam 478 kodlanmış değişmez, 85 dokümanda.

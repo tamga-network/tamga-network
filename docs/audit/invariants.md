@@ -12,7 +12,7 @@ Rows without a test are either enforced by construction (types, schemas, data fi
 that do not cite the code, process rules (governance, documentation), or genuinely untested. Reviewers should treat
 untested rows in the parsing, signature, status and trust-list areas as priority questions.
 
-**Summary:** 467 invariants in 83 documents · 126 with at least one test reference (27%) · 26 with a direct reference.
+**Summary:** 478 invariants in 85 documents · 127 with at least one test reference (27%) · 26 with a direct reference.
 
 ## ADR-0013 — Kimlik belgesi için mdoc
 
@@ -604,6 +604,27 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `RR3` | İstisna, ilk katılımcı kurum (sınama amacıyla konmamış ve ağın geçici işletmecisinin kendi servisi olmayan belge veren ya da doğrulayıcı)… | — | none |
 | `RR4` | Çıkarılan kayıtları taşıyan imzalı liste sürümleri arşivde kalır ve değiştirilmez; çıkarma sürüm numarasını ve özet zincirini kesmez. | — | none |
 
+## ADR-0082 — Düzeltilebilir kurum halefi ve devlet başına delege anahtarı
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `IS1` | İptal edilmiş (`REVOKED`) bir kurumun halefini yalnız kurumun devleti sonradan yazar: düzeltir, değiştirir ya da kaldırır (`setIssuerSucc… | — | none |
+| `IS2` | Halef yalnız iptal listesi yayın yetkisini belirler (SPEC-BC-0001 I4); belgelerin kabulünü (C1/C2), kurumun durum geçmişini ve iptal anın… | — | none |
+| `DK1` | Delege anahtarı eşlemesi devlet başınadır. Bir devletin delege listesini yazması ya da boşaltması yalnız o devletin eşlemesini değiştirir… | — | none |
+| `DK2` | N1 aynen sürer: bir devletin kaydına yalnız o devletin delegesi yazar. Bir anahtar birden çok devletin listesinde bulunabilir; her devlet… | — | none |
+
+## ADR-0083 — Kimlik belgesinin çipini kimlik servisi doğrular; cüzdan yalnız okuyucudur, yüz ve canlılık sağlayıcıda kalır
+
+| Code | Rule (truncated) | Tests | Match |
+|---|---|---|---|
+| `CV1` | Çip verisi kimlik servisinde sunucu tarafında doğrulanır (pasif doğrulama ve varsa kopya denetimi); cüzdanın ya da telefonun bildirdiği d… | — | none |
+| `CV2` | `document_chip_verified: true` yalnız pasif doğrulama, kopya denetimi (AA ya da CA) ve DG2 ile canlı yüz eşleşmesi birlikte başarılıysa y… | — | none |
+| `CV3` | Etkin doğrulama (AA) sınaması kimlik servisince üretilir, tek kullanımlıktır, akışa bağlıdır ve kısa ömürlüdür. | — | none |
+| `CV4` | Cüzdan çip verisini yalnız okur ve değiştirmeden kimlik servisine iletir; doğrulamaz, karar vermez, saklamaz, günlüğe yazmaz ve sağlayıcı… | — | none |
+| `CV5` | Ham çip verisi ve DG2 fotoğrafı belge verme anından sonra tutulmaz, günlüğe ve denetim kaydına yazılmaz. | — | none |
+| `CV6` | Yüz ve canlılık sağlayıcısı kimlik servisinde bir bağdaştırıcının arkasındadır; kimlik belgesine, güven listesine ve cüzdana sağlayıcıya… | — | none |
+| `CV7` | Çip yolunun kodu hukuki görüş olumlu gelmeden yazılmaz. Bir ülkenin belgesi için çip yolu, o ülkenin kök sertifikası güvenilir kaynaktan… | — | none |
+
 ## ARCH-0003 — Bileşen mimarisi
 
 | Code | Rule (truncated) | Tests | Match |
@@ -667,7 +688,7 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `I1` | Şema yetkisi allowlist'tir; varsayılan `false`. | — | none |
 | `I2` | Doğrulama `isCredentialAcceptable(id, iat)` kullanır; `isValidIssuer` yalnızca ihraçtır. | — | none |
 | `I3` | Şema yetkisi zaman penceresidir; doğrulama `iat`'a göre bakar. | — | none |
-| `I4` | `REVOKED` issuer'ın listesini halefi yayınlayabilir. | — | none |
+| `I4` | `REVOKED` issuer'ın listesini halefi yayınlayabilir. Halefi yalnız kurumun devleti yazar; iptalden sonra da düzeltebilir (ADR-0082/IS1). | — | none |
 | `SC1` | Şemanın `vctURI`'si ve yazılmış her içerik özeti asla güncellenmez ya da silinmez; yeni sürüm özeti yalnız eklenir. | — | none |
 | `SC3` | `DEPRECATED` şema, kullanımdan kaldırılmadan önce verilmiş belgeler için doğrulanabilir kalır. | — | none |
 | `L1` | Status list `version` monoton artar. | — | none |
@@ -881,9 +902,9 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `WL2` | Cüzdan belgelerin yedeğini almaz: belgeler cihazdaki donanım anahtarına bağlıdır ve taşınmaz; cihaz değişiminde belgeler yeniden verilir.… | — | none |
 | `WL3` | W1 (yazılım anahtarlı) cüzdan desteklenmez (sandbox listesindeki ağın kendi deneme sahneleri için test anahtarı hariç — ADR-0042 K5). | — | none |
 | `WL4` | `presentation_log` sunucuya ve otomatik olarak hiçbir koşulda çıkmaz; yalnız kişinin başlattığı, kişinin parolasıyla şifreli dışa aktarma… | `packages/wallet-core/src/ts10.test.ts` | unique |
-| `WL5` | Bir doğrulayıcıya her zaman aynı kopya; farklı doğrulayıcıya farklı kopya. | `packages/wallet-core/src/second-review.test.ts`<br>`apps/verify/test/verify-app.test.ts`<br>`packages/wallet-core/src/copies.test.ts` +2 | scoped |
-| `WL6` | Aynı doğrulayıcı + aynı `vct` için disclosure seti tutarlıdır. | — | none |
-| `WL7` | Kullanıcı eylemi olmadan yenileme yalnızca ADR-0023 AR1–AR4 koşullarında yapılır. | `packages/wallet-core/src/copies.test.ts` | unique |
+| `WL5` | Bir doğrulayıcıya her zaman aynı kopya; farklı doğrulayıcıya farklı kopya. | `packages/wallet-core/src/copies.test.ts`<br>`packages/wallet-core/src/proximity.test.ts`<br>`packages/wallet-core/src/second-review.test.ts` +2 | scoped |
+| `WL6` | Aynı doğrulayıcı + aynı `vct` için disclosure seti tutarlıdır. | `packages/wallet-core/src/shared-with.test.ts` | unique |
+| `WL7` | Kullanıcı eylemi olmadan yenileme yalnızca ADR-0023 AR1–AR4 koşullarında yapılır. | `packages/wallet-core/src/copies.test.ts` | scoped |
 | `WL8` | Aşırı talep uyarısı ayrı görsel blok + gecikmeli düğme gerektirir. | — | none |
 | `WL9` | Sunum anında şema sunucusuna istek yapılmaz. | — | none |
 | `WL10` | Tamga kullanıcı adına kurtarma anahtarı tutmaz. | — | none |

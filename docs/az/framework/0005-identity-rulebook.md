@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-23
+last_updated: 2026-11-13
 summary: >
   Tamga-nın şəxsiyyət xidmətinin verdiyi şəxsi rəqəmsal sənədlərin rulebook-u (Tamga Rulebook-dan törəyir), Aİ Attestation Rulebook şablonunun bölmə strukturu ilə: Tamga şəxsiyyət sənədi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc), onun ZK nüsxəsi (`urn:tamga:id:ShortLivedIdentityAttestation:1`), psevdonim toxumu (`urn:tamga:id:PseudonymSeed:1`) və sürücülük vəsiqəsi məlumatı (`urn:tamga:id:DrivingLicenceAttestation:1`; rəsmi sürücülük vəsiqəsi deyil). Atributlar və metaməlumatlar, hüquqi kateqoriya, format üzrə kodlaşdırma, istifadə, etibar lövbərləri, etibarlılıq və ləğv, Aİ ilə uyğunluq. Şəxsiyyət sənədi PID deyil; kvalifikasiyalı olmayan EAA-dır və Aİ PID adlarından və kodlaşdırmasından istifadə edir.
 translation_of: FW-RB-0003
@@ -103,7 +103,7 @@ olduğu bu yoxluqdan və sənədi verənin etibar siyahısındakı sinfindən an
 | `document_type` | Yoxlanılan sənədin növü | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE` | `ID_CARD` |
 | `document_number_hash` | Sənəd nömrəsinin açarlı heşi (HMAC-SHA256; açar yalnız şəxsiyyət xidmətindədir); nömrənin özü yoxdur və heşdən bərpa edilə bilməz | `sha256-…` | `sha256-q1…` |
 | `issuing_country` | Aİ PID mənasında rəqəmsal sənədi verən provayderin ölkəsi; hazırda dəyər skan edilən şəxsiyyət vəsiqəsini verən ölkədir (§4.6) | ISO 3166-1 alpha-2 | `TR` |
-| `document_chip_verified` | NFC çipi oxunubmu (fakt; səviyyə deyil) | boolean | `true` |
+| `document_chip_verified` | Çip yolu tam keçdimi: çipin passiv autentifikasiyası, surət yoxlaması və canlı üzün çipdəki fotoşəkillə uyğunluğu birlikdə (fakt; səviyyə deyil; ADR-0083) | boolean | `true` |
 | `verification_method` | Kimliyin yoxlanılması üsulu; `review-demo` yalnız tətbiq mağazasının yoxlaması üçün verilən sınaq sənədində | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `remote-document-liveness-face` |
 
 **ZK nüsxəsi (`ShortLivedIdentityAttestation`)**
@@ -346,7 +346,8 @@ açıqlamadır. Kodlaşdırılmış sənəd və açıqlama nümunələri uyğunl
 | Üz-üzə | T2 | `in-person` |
 
 Qaydalar: şəxsiyyətin doğrulanması yalnız şəxsiyyət xidmətində aparılır; qurum [[t:issuer|sənədi verənləri]], rəqəmsal cüzdan və yoxlayan tərəflər məsafədən
-şəxsiyyət doğrulama provayderi ilə əlaqə qurmur (RB-AP-ID-01). Doğrulama başlamazdan əvvəl **məlumatlandırma mətni göstərilir və açıq razılıq alınır**
+şəxsiyyət doğrulama provayderi ilə əlaqə qurmur (RB-AP-ID-01); cüzdan yalnız şəxsiyyət sənədinin çipini oxuyub xam məlumatı
+dəyişdirmədən şəxsiyyət xidmətinə ötürə bilər, yoxlamanı şəxsiyyət xidməti aparır (ADR-0083; tətbiq hüquqi rəydən sonra). Doğrulama başlamazdan əvvəl **məlumatlandırma mətni göstərilir və açıq razılıq alınır**
 (RB-AP-ID-02). Provayderin qərarı həmişə provayderin qərar son nöqtəsindən təsdiqlənir; bildiriş (webhook) yalnız işə salıcıdır.
 Provayderdə fasilə səviyyəni aşağı salmır, sənəd vermə dayanır. Səviyyə sənədə yazılmır (RB-AP-14).
 

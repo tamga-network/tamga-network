@@ -4,7 +4,7 @@ title: "Geçici kimlik belgesi sağlayıcısı"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-11-04
+last_updated: 2026-11-13
 summary: >
   Devlet tarafından atanmış bir PID Provider bulunmadığı sürece Tamga, uzaktan
   kimlik doğrulama (uzaktan kimlik doğrulama sağlayıcısı: belge + canlılık + yüz eşleştirme; ileride NFC çip
@@ -135,3 +135,5 @@ olması ve kimlik numarası taşıyan bir tipin varlığı; ikisi de K4/K2'de s�
 4. Demo'da sandbox profili "Ayşe Yılmaz" için TCKN sahte üretilecek; `students.json` buna göre güncellenir.
 
 **Not (2026-11-04):** uzaktan kimlik doğrulama sağlayıcısının ticari adı ve API adresi kamuya açık metinden çıkarıldı ("uzaktan kimlik doğrulama sağlayıcısı", referans adaptör; adres ve ayar adları işletmecinin yapılandırma belgesinde); karar içeriği değişmedi (proje yönetimi).
+
+**Not (2026-11-13):** [[ADR-0083]] (kabul 2026-11-13) IDP3'ü daralttı: cüzdan, akışı başlatan cihazda kimlik belgesi çipini NFC ile okuyup ham veriyi değiştirmeden kimlik servisine iletebilir; çip verisini doğrulamaz, kimlik doğrulama kararı vermez ve sağlayıcıyla konuşmaz. Kimlik doğrulama yalnız kimlik servisinde kalır; açık nokta 3 (çip yolunda aynı tip) aynen geçerlidir. Çip yolunun kodu hukuki görüşten sonradır (ADR-0083 CV7) (proje yönetimi).

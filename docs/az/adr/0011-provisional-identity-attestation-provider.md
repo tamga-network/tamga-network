@@ -4,7 +4,7 @@ title: "Müvəqqəti şəxsiyyət sənədi provayderi"
 status: Active
 version: 1.0.0
 created: 2026-09-25
-last_updated: 2026-11-04
+last_updated: 2026-11-13
 summary: >
   Dövlət tərəfindən təyin edilmiş PID Provider olmadığı müddətdə Tamga uzaqdan şəxsiyyət yoxlaması (uzaqdan şəxsiyyət yoxlaması provayderi: sənəd + canlılıq yoxlaması + üz uyğunlaşdırması; gələcəkdə NFC çipinin oxunması) ilə yoxladığı şəxslərə özünün imzaladığı şəxsiyyət attestasiyası (urn:tamga:id:IdentityAttestation:1) verir. Bu, PID deyil, Tamga-nın sənədi verən qurum kimi verdiyi EAA-dır; dövlət PID-i gəldikdə onunla əvəz olunur (supersede). Qurumlar (universitet) rəqəmsal sənəd verərkən bu attestasiyanı təqdimat kimi qəbul edir və öz qeydləri ilə uyğunlaşdırır. Şəxsiyyətin sübutu inteqrasiyası universitetdə deyil, Tamga-nın şəxsiyyət xidmətindədir; Tamga bu məlumatlar üçün KVKK üzrə məlumat nəzarətçisi olur. TL8 qorunur (pid_providers[] boş), IDP3 yenidən ifadə edilir.
 domain: Identity
@@ -129,3 +129,5 @@ olması və şəxsiyyət nömrəsi daşıyan tipin mövcudluğu; hər ikisi K4/K
 4. Demoda sandbox profili "Ayşe Yılmaz" üçün saxta TCKN yaradılacaq; `students.json` buna uyğun yenilənir.
 
 **Qeyd (2026-11-04):** uzaqdan şəxsiyyət yoxlaması provayderinin ticarət adı və API ünvanı açıq mətndən çıxarıldı ("uzaqdan şəxsiyyət yoxlaması provayderi", istinad adapteri; ünvan və parametr adları operatorun konfiqurasiya sənədindədir); qərarın məzmunu dəyişmədi (layihə rəhbərliyi).
+
+**Qeyd (2026-11-13):** [[ADR-0083]] (qəbul 2026-11-13) IDP3-ü daraltdı: cüzdan axını başladan cihazda şəxsiyyət sənədinin çipini NFC ilə oxuyub xam məlumatı dəyişdirmədən şəxsiyyət xidmətinə ötürə bilər; çip məlumatını yoxlamır, şəxsiyyətin yoxlanılması barədə qərar vermir və provayderlə əlaqə qurmur. Şəxsiyyətin yoxlanılması yalnız şəxsiyyət xidmətində qalır; 3-cü açıq məqam (çip yolunda eyni növ) qüvvədə qalır. Çip yolunun kodu hüquqi rəydən sonradır (ADR-0083 CV7) (layihə rəhbərliyi).

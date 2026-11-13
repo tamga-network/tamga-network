@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-04
+last_updated: 2026-11-13
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
@@ -187,7 +187,7 @@ Saklanan kayıt (belge veren servis `data/<slug>/state.json › proofing[subject
 |---|---|
 | **IDP1** | Belge sahibinin kimlik doğrulama seviyesi ve yolu belgeye yazılmaz; yalnızca belge verenin denetim kaydında tutulur. |
 | **IDP2** | Tipin asgari seviyesi sağlanmadan teklif üretilmez; seviye tahminle yükseltilmez. |
-| **IDP3** | IDV sağlayıcı entegrasyonu yalnızca **Tamga kimlik attestation servisindedir** (`id.tamga.network`, [[ADR-0011]]); kurumların belge verme servisleri, cüzdan ve doğrulayıcı sağlayıcıyla konuşmaz. |
+| **IDP3** | IDV sağlayıcı entegrasyonu yalnızca **Tamga kimlik attestation servisindedir** (`id.tamga.network`, [[ADR-0011]]); kurumların belge verme servisleri, cüzdan ve doğrulayıcı sağlayıcıyla konuşmaz. Cüzdan, akışı başlatan cihazda belge çipini okuyup ham veriyi değiştirmeden kimlik servisine iletebilir ([[ADR-0083]]); çip verisini doğrulamaz ve kimlik doğrulama kararı vermez. |
 | **IDP4** | Belge veren, IDV sonucundan yalnızca özet kaydı saklar; belge görüntüsü, portre, video, OCR ham verisi saklanmaz. |
 | **IDP5** | Webhook imza ve zaman damgası doğrulanmadan işlenmez; karar her zaman decision API'den teyit edilir. |
 | **IDP6** | `vendor_data`/`metadata` alanlarına kişisel veri yazılmaz; yalnızca opak referans. |
@@ -212,7 +212,7 @@ I2; belgede `category` claim'i yok — [[ADR-0022]]) verdiği nitelikli olmayan 
 | Süre / status | `exp` = belge verme + 730 gün; Token Status List (`id.tamga.network/status/{listId}`); aynı belge yeniden doğrulanınca eskisi iptal (K6) |
 | Akış | Cüzdan: PAR (WUA) → tarayıcı `/authorize` (**KVKK aydınlatma + açık rıza**) → sağlayıcı (referans adaptör; demo: FAKE, sapma S-15) → `/idv/return` karar sorgulama (webhook yalnızca tetik, IDP5) → `code` → token (PKCE + WUA) → 10 kopya |
 | Kurumda kullanım | Kurumun belge veren servisi belge verilirken kimlik belgesinin **gösterilmesini** ister (DCQL: TCKN, doğum tarihi, ad, soyad), T0 + A–E doğrular, kayıtla eşler (TCKN + doğum tarihi; ad normalize uyarı) — [[SPEC-PROTO-0001]] §11.2 |
-| Seviye | Uzaktan belge + canlılık + yüz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` (High teknik; hukuken T3 = NES/Mobil İmza, IDP7) |
+| Seviye | Uzaktan belge + canlılık + yüz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` yalnız pasif doğrulama, kopya denetimi (AA ya da CA) ve çipteki fotoğrafla canlı yüz eşleşmesi birlikte başarılıysa ([[ADR-0083]]/CV2; High teknik; hukuken T3 = NES/Mobil İmza, IDP7) |
 | Veri sorumlusu | Tamga Network (K4): saklama kayıt + hash; silme talebi = §9.1 (kayıt silinir, kopyalar iptal, sağlayıcıda oturumun silinmesi istenir); sağlayıcı sözleşmesinde ≤ 30 gün görüntü saklama hedefi. **Zaman temelli imha (2026-10-28):** süresi dolan ya da iptal edilen kayıt en geç 30 gün sonra sağlayıcı oturumuyla, olay günlüğü satırları 365 gün sonra kendiliğinden silinir (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; süreler politika seçimi, hukuki teyit bekliyor) |
 | Webhook | Tek hedef `https://id.tamga.network/idv/webhook`, olay `status.updated`; kurum başına webhook yoktur |
 | Yaş | Asgari yaş yok (2026-10-08, [[ADR-0043]]); şart geçerli bir kimlik belgesiyle kimlik doğrulamasıdır. Veli onayı akışı ve sağlayıcının küçükler için sınırı açık konudur |
@@ -294,4 +294,9 @@ karttaki sınıfları ve tarihleri verir. Resmî sürücü belgesi / mDL değild
 # Durum
 
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+
+**Sürüm notu (2026-11-13; proje yönetimi onayıyla).** [[ADR-0083]] kabul edildi: IDP3 daraltıldı (cüzdan belge çipini okuyup ham
+veriyi değiştirmeden kimlik servisine iletebilir; doğrulamaz, karar vermez, sağlayıcıyla konuşmaz) ve §9'da
+`document_chip_verified: true`'nun koşulu yazıldı (CV2). Çip yolunun akışı ve açık arayüzü (ADR-0083 K10) uygulamayla bu belgeye
+eklenir; uygulama hukuki görüşten sonradır (CV7). Bugünkü davranış değişmedi: kimlik doğrulama belge fotoğrafı yolundan yapılır.
 

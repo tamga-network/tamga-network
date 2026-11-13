@@ -4,7 +4,7 @@ title: "Şəxsiyyətin yoxlanılması"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-04
+last_updated: 2026-11-13
 summary: >
   Sənədi verən qurumun rəqəmsal sənədi verməzdən əvvəl tətbiq etdiyi şəxsiyyətin yoxlanılması (identity proofing) yollarını müəyyən edir: hər yolun təmin etdiyi sənəd sahibi səviyyəsi (T1–T3), onun ETSI TS 119 461 ilə uyğunlaşdırılması, hansı sənəd növünün hansı səviyyəni tələb etdiyi, nəticənin harada saxlanılacağı (sənədi verən qurumun audit qeydi; heç vaxt rəqəmsal sənədin özündə deyil) və uzaqdan şəxsiyyət yoxlama provayderi (istinad adapteri) inteqrasiyasının protokol səviyyəsində qaydaları: sessiyanın yaradılması, nəticənin alınması, webhook-un yoxlanılması, məlumatların minimallaşdırılması, xəta və vaxt aşımı davranışı. D-ID-2-nin tətbiqidir. Səviyyə cədvəli və ETSI 119 461 uyğunlaşdırması D-ASSUR-2 ilə qərara alınıb (2026-09-26).
 translation_of: SPEC-ID-0003
@@ -182,7 +182,7 @@ Saxlanılan qeyd (sənədi verən qurumun xidməti `data/<slug>/state.json › p
 |---|---|
 | **IDP1** | Sənəd sahibinin şəxsiyyətinin doğrulanma səviyyəsi və üsulu sənədə yazılmır; yalnız sənədi verən qurumun audit qeydində saxlanılır. |
 | **IDP2** | Növün minimum səviyyəsi təmin edilmədən təklif yaradılmır; səviyyə ehtimal əsasında yüksəldilmir. |
-| **IDP3** | IDV provayderi inteqrasiyası yalnız **Tamga şəxsiyyət attestation xidmətindədir** (`id.tamga.network`, [[ADR-0011]]); qurumların sənəd vermə xidmətləri, rəqəmsal cüzdan və yoxlayan tərəf provayderlə əlaqə qurmur. |
+| **IDP3** | IDV provayderi inteqrasiyası yalnız **Tamga şəxsiyyət attestation xidmətindədir** (`id.tamga.network`, [[ADR-0011]]); qurumların sənəd vermə xidmətləri, rəqəmsal cüzdan və yoxlayan tərəf provayderlə əlaqə qurmur. Cüzdan axını başladan cihazda sənədin çipini oxuyub xam məlumatı dəyişdirmədən şəxsiyyət xidmətinə ötürə bilər ([[ADR-0083]]); çip məlumatını yoxlamır və şəxsiyyətin yoxlanılması barədə qərar vermir. |
 | **IDP4** | Sənədi verən qurum IDV nəticəsindən yalnız xülasə qeydini saxlayır; sənədin təsviri, portret, video, OCR xam məlumatları saxlanılmır. |
 | **IDP5** | Webhook imzası və zaman damğası yoxlanılmadan emal edilmir; qərar həmişə decision API vasitəsilə təsdiqlənir. |
 | **IDP6** | `vendor_data`/`metadata` sahələrinə fərdi məlumatlar yazılmır; yalnız qeyri-şəffaf (opaque) istinad. |
@@ -207,7 +207,7 @@ I2; rəqəmsal sənəddə `category` claim-i yoxdur — [[ADR-0022]]) verdiyi kv
 | Müddət / status | `exp` = rəqəmsal sənədin verilməsi + 730 gün; Token Status List (`id.tamga.network/status/{listId}`); eyni rəqəmsal sənəd yenidən yoxlandıqda köhnəsi ləğv edilir (K6) |
 | Axın | Rəqəmsal cüzdan: PAR (WUA) → brauzer `/authorize` (**KVKK üzrə məlumatlandırma + açıq razılıq**) → provayder (istinad adapteri; demo: FAKE, kənarlaşma S-15) → `/idv/return` qərar sorğusu (webhook yalnız tətikdir, IDP5) → `code` → token (PKCE + WUA) → 10 nüsxə |
 | Qurumda istifadə | Sənədi verən qurumun xidməti rəqəmsal sənədi verərkən şəxsiyyət sənədinin **təqdim edilməsini** tələb edir (DCQL: TCKN, doğum tarixi, ad, soyad), T0 + A–E yoxlayır, qeydlə uyğunlaşdırır (TCKN + doğum tarixi; adın normallaşdırılması ilə bağlı xəbərdarlıq) — [[SPEC-PROTO-0001]] §11.2 |
-| Səviyyə | Məsafədən sənəd + canlılıq + üz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` (texniki baxımdan High; hüquqi baxımdan T3 = NES/Mobil İmza, IDP7) |
+| Səviyyə | Məsafədən sənəd + canlılıq + üz = **T2** (ETSI 119 461 Substantial); NFC çip = `document_chip_verified: true` yalnız passiv autentifikasiya, surət yoxlaması (AA və ya CA) və canlı üzün çipdəki fotoşəkillə uyğunluğu birlikdə uğurlu olduqda ([[ADR-0083]]/CV2; texniki baxımdan High; hüquqi baxımdan T3 = NES/Mobil İmza, IDP7) |
 | Məlumat nəzarətçisi | Tamga Network (K4): saxlanılan qeyd + hash; silinmə tələbi = §9.1 (qeyd silinir, nüsxələr ləğv edilir, provayderdəki sessiyanın silinməsi tələb olunur); provayder müqaviləsində təsvirlərin saxlanması hədəfi ≤ 30 gün. **Vaxta əsaslanan silinmə (2026-10-28):** müddəti bitmiş və ya ləğv edilmiş qeyd ən gec 30 gün sonra provayder sessiyası ilə birlikdə, hadisə jurnalı sətirləri 365 gün sonra avtomatik silinir (`TAMGA_ID_RECORD_RETENTION_DAYS`, `TAMGA_ID_EVENT_LOG_DAYS`; müddətlər siyasət seçimidir, hüquqi təsdiq gözləyir) |
 | Webhook | Yeganə hədəf `https://id.tamga.network/idv/webhook`, hadisə `status.updated`; qurum üzrə ayrıca webhook yoxdur |
 | Yaş | Minimum yaş yoxdur (2026-10-08, [[ADR-0043]]); şərt etibarlı şəxsiyyət sənədi ilə şəxsiyyətin yoxlanılmasıdır. Valideyn razılığı axını və provayderin azyaşlılar üçün həddi açıq məsələdir |
@@ -289,4 +289,10 @@ kartdakı kateqoriyaları və tarixləri verir. Bu, rəsmi sürücülük vəsiq�
 # Status
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02).
+
+**Versiya qeydi (2026-11-13; layihə rəhbərliyinin təsdiqi ilə).** [[ADR-0083]] qəbul edildi: IDP3 daraldıldı (cüzdan sənədin
+çipini oxuyub xam məlumatı dəyişdirmədən şəxsiyyət xidmətinə ötürə bilər; yoxlamır, qərar vermir, provayderlə əlaqə qurmur) və
+§9-da `document_chip_verified: true` üçün şərt yazıldı (CV2). Çip yolunun axını və açıq interfeysi (ADR-0083 K10) tətbiqlə bu
+sənədə əlavə olunur; tətbiq hüquqi rəydən sonradır (CV7). Bugünkü davranış dəyişmədi: şəxsiyyətin yoxlanılması sənəd fotoşəkli
+yolu ilə aparılır.
 

@@ -110,7 +110,7 @@ follows from this absence and from the issuer's class in the trust list.
 | `document_type` | Type of the verified document | `ID_CARD` \| `PASSPORT` \| `RESIDENCE_PERMIT` \| `DRIVING_LICENSE` | `ID_CARD` |
 | `document_number_hash` | Keyed digest of the document number (HMAC-SHA256; the key stays in the identity service); the number itself is absent and cannot be recovered | `sha256-…` | `sha256-q1…` |
 | `issuing_country` | In the EU PID sense, the country of the provider that issued the credential; today the value is the country that issued the scanned identity document (§4.6) | ISO 3166-1 alpha-2 | `TR` |
-| `document_chip_verified` | Whether the NFC chip was read (a fact, not a level) | boolean | `true` |
+| `document_chip_verified` | Whether the chip path fully passed: passive authentication of the chip, the clone check and the match of the live face with the chip photo, together (a fact, not a level; ADR-0083) | boolean | `true` |
 | `verification_method` | How identity was verified; `review-demo` only in the demo credential issued for app store review | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `remote-document-liveness-face` |
 
 **ZK copy (`ShortLivedIdentityAttestation`)**
@@ -352,7 +352,8 @@ for matching, once one exists, is opened by a separate decision.
 | In person | T2 | `in-person` |
 
 Rules: identity proofing happens only in the identity service; institutional [[t:issuer|issuers]], wallets and verifiers do not talk
-to the remote identity proofing provider (RB-AP-ID-01). Before proofing starts, **the privacy notice is shown and explicit consent
+to the remote identity proofing provider (RB-AP-ID-01); a wallet may only read the identity document chip and relay the raw
+data unchanged to the identity service, which does the verification (ADR-0083; implementation after a legal opinion). Before proofing starts, **the privacy notice is shown and explicit consent
 is obtained** (RB-AP-ID-02). The provider's decision is always confirmed at the provider's decision endpoint; a notification
 (webhook) is only a trigger. A provider outage does not lower the level; issuance stops. The level is not written into the
 credential (RB-AP-14).
