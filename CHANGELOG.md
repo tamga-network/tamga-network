@@ -1,14 +1,14 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.8.3` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.8.4` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## 0.8.4 — 2026-11-12
 
 All ten packages move to 0.8.4 together (patch release). The code change in the packages is in `wallet-core` (additions only;
-without the new options the behaviour is that of 0.8.3); the other packages carry the version number and README wording. Not
-published on npm when this entry was written.
+without the new options the behaviour is that of 0.8.3); the other packages carry the version number and README wording. Published
+on npm on 2026-11-13.
 
 ### Added
 

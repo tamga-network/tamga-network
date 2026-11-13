@@ -35,7 +35,7 @@ steps (`node init | declare | check`) and the local MCP server (`tamga-onboard m
 
 Published on npm as the `0.8.4` test release (the stable `1.0.0` comes when everything is
 ready — in test releases the commands and options may change). Released together with the other `@tamga-network/*` packages.
-For now this package is published by hand without npm provenance (0.8.2 and 0.8.3); once it moves to the automated release
+For now this package is published by hand without npm provenance (0.8.2–0.8.4); once it moves to the automated release
 workflow, releases will carry provenance.
 
 ```sh
