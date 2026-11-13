@@ -350,7 +350,7 @@ kişiyi eşleştirmek için PID'i de kabul etmesi ayrı bir kararla açılır.
 
 Kurallar: kimlik doğrulama yalnız kimlik servisinde yapılır; kurum [[t:issuer|belge verenleri]], cüzdan ve doğrulayıcılar uzaktan
 kimlik doğrulama sağlayıcısıyla konuşmaz (RB-AP-ID-01); cüzdan yalnız kimlik belgesi çipini okuyup ham veriyi değiştirmeden kimlik
-servisine iletebilir, doğrulamayı kimlik servisi yapar (ADR-0083; uygulama hukuki görüşten sonra). Doğrulama başlamadan **aydınlatma metni gösterilir ve açık rıza alınır**
+servisine iletebilir, doğrulamayı kimlik servisi yapar (ADR-0083; çip yolu hukuki görüşten sonra açılır). Doğrulama başlamadan **aydınlatma metni gösterilir ve açık rıza alınır**
 (RB-AP-ID-02). Sağlayıcının kararı her zaman sağlayıcının karar ucundan teyit edilir; bildirim (webhook) yalnız tetikleyicidir.
 Sağlayıcı kesintisi seviyeyi düşürmez, belge verme durur. Seviye belgeye yazılmaz (RB-AP-14).
 

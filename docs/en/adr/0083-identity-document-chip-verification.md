@@ -16,10 +16,11 @@ summary: >
   credential's attributes come from the chip; the document photo path stays as a fallback for documents without a chip. No names
   or codes change (`document_chip_verified`, `verification_method: remote-nfc-liveness-face` already exist). IDP3 is narrowed: the
   wallet still does not talk to the provider, but it may read the chip and relay the raw data to the identity service; it makes no
-  decision. Condition for implementation: no code is written and nothing is opened on the live network until a legal opinion is
-  favourable (for Türkiye: the biometric data provision of the identity card regulation and the biometric data and cross-border
-  transfer provisions of the personal data protection law). The qualified electronic signature / mobile signature path is the
-  next step after this decision.
+  decision. Condition for opening: until a legal opinion is favourable (for Türkiye: the biometric data provision of the identity
+  card regulation and the biometric data and cross-border transfer provisions of the personal data protection law) the chip path
+  is opened neither in the sandbox nor on the live network; its code (by the 2026-11-13 amendment) is written now, but sits behind
+  a switch that is off by default and runs only in local tests with fake document data. The qualified electronic signature /
+  mobile signature path is the next step after this decision.
 domain: Identity
 related: ["[[ADR-0011]]", "[[ADR-0022]]", "[[ADR-0040]]", "[[ADR-0042]]", "[[ADR-0080]]", "[[SPEC-ID-0003]]", "[[SPEC-PROTO-0001]]", "[[SPEC-WALLET-0001]]"]
 translation_of: ADR-0083
@@ -34,8 +35,9 @@ credential from the chip instead of from a photo of the document, and checks the
 person really holds that document, face and liveness checks are still done by an external provider: the live face is compared
 with the photo on the chip. The correctness of the attributes then rests on the state's signature, not on the provider's
 software; the provider is needed only for the face part and can be replaced. For documents without a chip, today's photo path
-remains. The decision is accepted; but because processing the photo on the chip raises a legal question, the code is written
-only after a favourable legal opinion.
+remains. The decision is accepted; but because processing the photo on the chip raises a legal question, the chip path is
+opened only after a favourable legal opinion. So that the software is ready when the opinion arrives, the code is written now,
+but it is switched off everywhere: it runs only in local tests, with fake document data.
 
 # Context
 
@@ -104,8 +106,8 @@ only after a favourable legal opinion.
   path was used and the verification results (pass/fail) go into the persistent record; no raw data.
 - **K8 — Opening per country.** The chip path opens on the live network for a country's documents only when (a) that country's
   root certificate has been taken from a trusted source and (b) the legal review of a private body reading the identity chip with
-  the person's consent and processing biometric data under that country's law has a favourable outcome. Once the code is written
-  (K11) it may be tried in the sandbox with test documents.
+  the person's consent and processing biometric data under that country's law has a favourable outcome. After a favourable legal
+  opinion (K11) it may be tried in the sandbox with test documents; until then the code runs only in local tests.
 - **K9 — IDP3 narrowed.** New text: "IDV provider integration is only in the Tamga identity service; institutional issuers, the
   wallet and the verifier do not talk to the provider. A wallet may read the document chip on the device that started the flow and
   relay the raw data unchanged to the identity service ([[ADR-0083]]); it does not verify chip data and makes no identity
@@ -113,14 +115,19 @@ only after a favourable legal opinion.
 - **K10 — Open interface.** Relaying chip data to the identity service is defined as an open interface in [[SPEC-ID-0003]]; any
   conformant wallet listed by the network may implement it ([[ADR-0042]]: the network does not operate a wallet and gives no
   wallet a privilege). The details of the interface (endpoint, field and error names) are approved during implementation.
-- **K11 — Condition for implementation: legal opinion first.** The code of the chip path (identity service, wallet core, wallet
-  app) is not written before a favourable legal opinion; the chip path is opened neither in the sandbox nor on the live network.
-  For Türkiye the opinion covers: (a) Electronic Identity Verification System Regulation Art. 21(3) — whether reading the face
-  photo on the chip and using it only for a one-off match falls under that provision, and whether a person reading their own card
-  with their own phone needs a separate permission; (b) Law No. 6698 Art. 6 (biometric data, explicit consent) and Art. 9
-  (transfer to a provider abroad); (c) whether writing the identity number read from the chip only into the identity credential
-  creates a separate obligation. If the opinion is unfavourable or sets conditions, the decision is revisited with a new ADR.
-  Today's document photo path keeps working unchanged in the meantime.
+- **K11 — Condition for opening: legal opinion first; code behind a switch that is off** (as amended on 2026-11-13; see the
+  "Amendment" section below). The code of the chip path (identity service, wallet core, wallet app) may be written and merged;
+  by default it sits behind a switch that is off. The identity service refuses to run on a server (live network and sandbox)
+  while the switch is on. Store builds of the wallet contain no chip reading and no NFC permissions. The code runs only in local
+  tests, with fake document data signed by a root certificate generated in the test (and a blank test card that belongs to no
+  person); no real person's document is read, sent or processed. Until a favourable legal opinion, the chip path is opened
+  neither in the sandbox nor on the live network. For Türkiye the opinion covers: (a) Electronic Identity Verification System
+  Regulation Art. 21(3) — whether reading the face photo on the chip and using it only for a one-off match falls under that
+  provision, and whether a person reading their own card with their own phone needs a separate permission; (b) Law No. 6698
+  Art. 6 (biometric data, explicit consent) and Art. 9 (transfer to a provider abroad); (c) whether writing the identity number
+  read from the chip only into the identity credential creates a separate obligation. If the opinion is unfavourable or sets
+  conditions, the decision is taken up with a new ADR, and the switched-off code changes or is removed accordingly. Today's
+  document photo path keeps working unchanged in the meantime.
 - **K12 — The qualified electronic signature / mobile signature path is the next step.** Proving identity with a person's
   qualified electronic signature or mobile signature certificate ([[SPEC-ID-0003]] T3, IDP7) is taken up after the chip path and
   decided by a separate ADR. This decision neither opens nor closes that path.
@@ -137,6 +144,34 @@ The four open points of the draft were closed on acceptance as follows:
 3. **Chips without a clone check.** As in K5: the credential is issued from chip data, with `document_chip_verified: false`.
 4. **Platform order (iOS / Android).** Set during implementation; it does not change the content of the decision.
 
+# Amendment (2026-11-13, project management)
+
+On the day of acceptance project management amended K11 and CV7: so that the software is ready when the legal opinion arrives,
+the code of the chip path **is written now, but is switched off everywhere**. The condition for opening (the legal opinion) and
+its subject ((a)–(c)) stay the same. The version stays 1.0.0.
+
+- **Before:** "The code of the chip path is not written before a favourable legal opinion."
+- **Now (K11, CV7):** the code may be written and merged; by default it sits behind a switch that is off. The identity service
+  refuses to run on a server (live network and sandbox) while the switch is on; store builds of the wallet contain no chip
+  reading and no NFC permissions; the code runs only in local tests, with fake document data signed by a root certificate
+  generated in the test (and a blank test card that belongs to no person). No real person's document is read, sent or
+  processed. If the opinion is unfavourable or sets conditions, the switched-off code changes or is removed under a new ADR.
+
+The same approval set the following for the first implementation:
+
+5. **Clone check in the first version: AA only.** In the first version the clone check is active authentication (AA); chip
+   authentication (CA) is the next step. Until then a chip that supports only CA is handled as in K5, with
+   `document_chip_verified: false`.
+6. **No DG11, no chip path.** The full spelling of the given name and family name in the identity credential (with Turkish
+   characters) is taken from DG11 on the chip; the MRZ name without Turkish characters is not written into the credential. If the
+   chip has no DG11, the chip path is closed for that document and the document photo path is used.
+7. **Reference image for face matching.** Face matching is done in the current provider's biometric verification workflow by
+   giving the DG2 photo from the chip as the reference image (a base64 reference portrait when the session is created, at most
+   2 MB; confirmed in the provider's documentation). This provider-specific detail stays inside the adapter (K6, CV6).
+8. **Interface names** (K10): identity service endpoints `/chip/read`, `/chip/submit`, `/chip/continue`; the PAR field by which
+   a wallet says it can read a chip is `chip_reader` (value `icao9303`). The flow is written into [[SPEC-ID-0003]] with the
+   implementation.
+
 # Rationale
 
 - **Assurance rests on the state's signature.** Attributes read from a photo are a software estimate; attributes read from the
@@ -147,7 +182,8 @@ The four open points of the draft were closed on acceptance as follows:
 - **The relay attack becomes harder.** Because the chip is read on the phone that started the flow, a relayed link alone is
   useless (the residual risk of [[ADR-0080]] shrinks; K1–K4 there still apply).
 - **Law first.** Processing the photo on the chip is an open legal question in Türkiye; getting it wrong would create a personal
-  data problem that is hard to undo. So the decision is taken now and the code is written after the opinion.
+  data problem that is hard to undo. So the decision is taken now and the chip path is opened after the opinion. The
+  switched-off code processes no real person's data; it makes sure the software is ready when the opinion arrives.
 - **Cost comes second.** The saving per verification is small; this decision is taken for assurance and independence, not cost.
 
 # Options considered
@@ -159,7 +195,9 @@ The four open points of the draft were closed on acceptance as follows:
 | The provider's own chip reading (its phone component embedded in the wallet) | rejected | Ties the wallet to one provider, against IDP3 and [[ADR-0042]]; verification still stays with the provider |
 | Building face and liveness ourselves | rejected | Presentation and injection attacks need expertise and independent testing; a false accept means a fake identity |
 | A separate "identity verification" app | not chosen now | A second app for users, operated by the network. The wallet is enough as a reader |
-| Accept and start coding in the sandbox at once | rejected | No code that processes the chip photo is written before the legal opinion (K11) |
+| Write the code now, behind a switch that is off; tie opening to the legal opinion | **accepted (2026-11-13 amendment)** | The software is ready when the opinion arrives; switched-off code does not run on a server, is not in store builds and processes no real person's data (K11) |
+| Write the code only after the legal opinion (text on acceptance) | changed (2026-11-13) | Software would have been months away after the opinion; switched-off code keeps the same safeguard |
+| Accept and open in the sandbox at once | rejected | Before the legal opinion the chip photo is not processed in the sandbox either (K11) |
 | Bringing the qualified e-signature / mobile signature path forward | next step | Rests on a state-supervised certificate but requires the user to have one; after the chip path, with a separate ADR (K12) |
 | Authoritative source only (state, bank, operator) | long-term direction | No accessible path today; when it comes it is added alongside, not instead; when state PID arrives the identity credential gives way to it anyway |
 
@@ -167,9 +205,14 @@ The four open points of the draft were closed on acceptance as follows:
 
 - **Identity service (operator repository).** Chip data endpoint, passive authentication, AA challenge (and later CA), loading
   root certificates, face matching with DG2 at the provider, tests (valid document, altered data group, unknown root, failed clone
-  check, replayed challenge). After the legal opinion under K11.
+  check, replayed challenge). The code is written now, behind a switch that is off; with the switch on the service does not
+  start on a server; opening follows the legal opinion under K11.
 - **Wallet core and wallet app.** NFC reading (iOS and Android), MRZ/CAN entry or reading the MRZ with the camera, relaying the raw
-  data; NFC permission text; accessibility and a "my document has no chip" path. After the legal opinion under K11.
+  data; NFC permission text; accessibility and a "my document has no chip" path. The code is written now: the carrier in the
+  wallet core goes into the public repository, its npm release follows the legal opinion; store builds of the wallet app contain
+  no chip reading and no NFC permissions. Trying with a real card follows the legal opinion.
+- **Licence of the reader library.** On Android an LGPL-licensed open source reader library is used; the obligations of
+  distributing it with the wallet app are put to the legal opinion.
 - **Specifications.** [[SPEC-ID-0003]]: the new IDP3 text and the meaning of `document_chip_verified` were added on acceptance
   (version note 2026-11-13); the chip path flow and the open interface (K10) are written with the implementation.
   [[SPEC-PROTO-0001]] (the extra step in the identity service's flow) and [[SPEC-WALLET-0001]] (the wallet's reader role and the
@@ -194,11 +237,15 @@ The four open points of the draft were closed on acceptance as follows:
 | CV4 | The wallet only reads chip data and relays it unchanged to the identity service; it does not verify, decide on, store or log it and does not talk to the provider. The chip access key (MRZ/CAN) does not leave the phone. |
 | CV5 | Raw chip data and the DG2 photo are not kept after issuance and are not written to logs or the audit record. |
 | CV6 | The face and liveness provider sits behind an adapter in the identity service; no provider-specific value enters the identity credential, the trust list or the wallet. |
-| CV7 | The code of the chip path is not written before a favourable legal opinion. For a country's documents the chip path is not opened on the live network before that country's root certificate is taken from a trusted source and the legal review under that country's law has a favourable outcome. |
+| CV7 | The chip path is opened in no environment before a favourable legal opinion. Its code may be written, but by default it sits behind a switch that is off: the identity service refuses to run on a server while the switch is on; store builds of the wallet contain no chip reading; the code runs only in local tests with fake document data. For a country's documents the chip path is not opened on the live network before that country's root certificate is taken from a trusted source and its legal review has a favourable outcome. |
 
 # Status
 
-**Accepted — 2026-11-13.** Approved by project management (2026-11-13): accepted; code after the legal opinion; liveness and face
-matching with the current provider, replaceable; the qualified e-signature / mobile signature path after the chip path.
-DECISIONS: D-ID-16. CV1–CV7 are binding; implementation follows the legal opinion in K11. [[SPEC-ID-0003]]/IDP3 was narrowed by
-this decision.
+**Accepted — 2026-11-13.** Approved by project management (2026-11-13): accepted; liveness and face matching with the current
+provider, replaceable; the qualified e-signature / mobile signature path after the chip path. DECISIONS: D-ID-16. CV1–CV7 are
+binding. [[SPEC-ID-0003]]/IDP3 was narrowed by this decision.
+
+> **Amendment (2026-11-13):** K11 and CV7 changed — the code is written now, behind a switch that is off (it does not run on a
+> server, is not in store builds, runs only in local tests with fake document data); the chip path opens after the legal opinion
+> (unchanged). First version: clone check AA only, no DG11 closes the chip path, DG2 as the reference image for face matching.
+> Approved by project management.

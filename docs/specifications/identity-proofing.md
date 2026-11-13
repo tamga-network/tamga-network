@@ -295,6 +295,12 @@ karttaki sınıfları ve tarihleri verir. Resmî sürücü belgesi / mDL değild
 
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02).
 
+**Sürüm notu (2026-11-13, ikinci; proje yönetimi onayıyla).** [[ADR-0083]] K11 ve CV7 değişti: çip yolunun kodu şimdi yazılır,
+ama varsayılanı kapalı bir anahtarın arkasında durur — kimlik servisi anahtar açıkken sunucuda (gerçek ağ ve sandbox) çalışmayı
+reddeder, cüzdanın mağaza derlemelerinde çip okuma bulunmaz, kod yalnız yerel testlerde sahte belge verisiyle çalışır. Çip yolu
+hukuki görüş olumlu gelmeden hiçbir ortamda açılmaz. Arayüz adları: `/chip/read`, `/chip/submit`, `/chip/continue`; PAR alanı
+`chip_reader` (`icao9303`). Bugünkü davranış değişmedi.
+
 **Sürüm notu (2026-11-13; proje yönetimi onayıyla).** [[ADR-0083]] kabul edildi: IDP3 daraltıldı (cüzdan belge çipini okuyup ham
 veriyi değiştirmeden kimlik servisine iletebilir; doğrulamaz, karar vermez, sağlayıcıyla konuşmaz) ve §9'da
 `document_chip_verified: true`'nun koşulu yazıldı (CV2). Çip yolunun akışı ve açık arayüzü (ADR-0083 K10) uygulamayla bu belgeye

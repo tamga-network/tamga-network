@@ -16,6 +16,7 @@ export * from "./attestation-prefs.js";
 export * from "./erasure.js";
 export * from "./http.js";
 export * from "./authcode.js";
+export * from "./chip.js";
 export * from "./directory.js";
 export * from "./pass.js";
 export * from "./mdoc.js";

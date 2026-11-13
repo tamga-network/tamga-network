@@ -16,6 +16,16 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
+## Unreleased
+
+- **Identity document chip, carrier only — switched off** (ADR-0083): `chipReadRequestOf(url, authorizationServer)` checks the
+  identity service's `/chip/read` address (same origin, exact path) and returns the submit address, an opaque handle and the
+  8-byte active authentication challenge; `submitChipRead({ request, payload, keys, wua, http, randomBytes, now })` relays the raw
+  chip data (SOD, DG1, DG2 and, if present, DG11, DG14, DG15, the active authentication signature, CardAccess) unchanged to
+  `/chip/submit` and returns the `next` address. The wallet does not interpret the data. `CHIP_READER_PARAM` /
+  `CHIP_READER_ICAO9303` is the PAR field a chip-capable wallet sends. **Off:** not used until the switch is turned on in the
+  identity service, which does not happen before a favourable legal opinion; not in an npm release until then.
+
 ## New in 0.8.4
 
 All additions are optional; without them the behaviour is that of 0.8.3.

@@ -855,7 +855,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0083/CV4` | Cüzdan çip verisini yalnız okur ve değiştirmeden kimlik servisine iletir; doğrulamaz, karar vermez, saklamaz, günlüğe yazmaz ve sağlayıcıyla konuşmaz. Çip erişim anahtarı (MRZ/CAN) telefondan çıkmaz. |
 | `ADR-0083/CV5` | Ham çip verisi ve DG2 fotoğrafı belge verme anından sonra tutulmaz, günlüğe ve denetim kaydına yazılmaz. |
 | `ADR-0083/CV6` | Yüz ve canlılık sağlayıcısı kimlik servisinde bir bağdaştırıcının arkasındadır; kimlik belgesine, güven listesine ve cüzdana sağlayıcıya özgü bir değer girmez. |
-| `ADR-0083/CV7` | Çip yolunun kodu hukuki görüş olumlu gelmeden yazılmaz. Bir ülkenin belgesi için çip yolu, o ülkenin kök sertifikası güvenilir kaynaktan alınmadan ve o ülke hukukuna göre hukuki incelemesi olumlu sonuçlanmadan gerçek ağda açılmaz. |
+| `ADR-0083/CV7` | Çip yolu hukuki görüş olumlu gelmeden hiçbir ortamda açılmaz. Kodu yazılabilir, ama varsayılanı kapalı bir anahtarın arkasında durur: kimlik servisi anahtar açıkken sunucuda çalışmayı reddeder; cüzdanın mağaza derlemelerinde çip okuma bulunmaz; kod yalnız yerel testlerde sahte belge verisiyle çalışır. Bir ülkenin belgesi için çip yolu, o ülkenin kök sertifikası güvenilir kaynaktan alınmadan ve hukuki incelemesi olumlu sonuçlanmadan gerçek ağda açılmaz. |
 
 
 ## ARCH-0003

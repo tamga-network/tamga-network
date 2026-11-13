@@ -353,7 +353,7 @@ for matching, once one exists, is opened by a separate decision.
 
 Rules: identity proofing happens only in the identity service; institutional [[t:issuer|issuers]], wallets and verifiers do not talk
 to the remote identity proofing provider (RB-AP-ID-01); a wallet may only read the identity document chip and relay the raw
-data unchanged to the identity service, which does the verification (ADR-0083; implementation after a legal opinion). Before proofing starts, **the privacy notice is shown and explicit consent
+data unchanged to the identity service, which does the verification (ADR-0083; the chip path opens after a legal opinion). Before proofing starts, **the privacy notice is shown and explicit consent
 is obtained** (RB-AP-ID-02). The provider's decision is always confirmed at the provider's decision endpoint; a notification
 (webhook) is only a trigger. A provider outage does not lower the level; issuance stops. The level is not written into the
 credential (RB-AP-14).

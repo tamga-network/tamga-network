@@ -290,6 +290,12 @@ kartdakı kateqoriyaları və tarixləri verir. Bu, rəsmi sürücülük vəsiq�
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02).
 
+**Versiya qeydi (2026-11-13, ikinci; layihə rəhbərliyinin təsdiqi ilə).** [[ADR-0083]] K11 və CV7 dəyişdi: çip yolunun kodu
+indi yazılır, lakin standart olaraq bağlı açarın arxasında durur — açar açıq olduqda şəxsiyyət xidməti serverdə (real şəbəkə və
+sandbox) işləməkdən imtina edir, cüzdanın mağaza yığımlarında çip oxuma olmur, kod yalnız yerli testlərdə saxta sənəd məlumatı
+ilə işləyir. Müsbət hüquqi rəy gəlmədən çip yolu heç bir mühitdə açılmır. İnterfeys adları: `/chip/read`, `/chip/submit`,
+`/chip/continue`; PAR sahəsi `chip_reader` (`icao9303`). Bugünkü davranış dəyişmədi.
+
 **Versiya qeydi (2026-11-13; layihə rəhbərliyinin təsdiqi ilə).** [[ADR-0083]] qəbul edildi: IDP3 daraldıldı (cüzdan sənədin
 çipini oxuyub xam məlumatı dəyişdirmədən şəxsiyyət xidmətinə ötürə bilər; yoxlamır, qərar vermir, provayderlə əlaqə qurmur) və
 §9-da `document_chip_verified: true` üçün şərt yazıldı (CV2). Çip yolunun axını və açıq interfeysi (ADR-0083 K10) tətbiqlə bu

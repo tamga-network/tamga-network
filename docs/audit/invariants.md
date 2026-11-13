@@ -12,7 +12,7 @@ Rows without a test are either enforced by construction (types, schemas, data fi
 that do not cite the code, process rules (governance, documentation), or genuinely untested. Reviewers should treat
 untested rows in the parsing, signature, status and trust-list areas as priority questions.
 
-**Summary:** 478 invariants in 85 documents · 127 with at least one test reference (27%) · 26 with a direct reference.
+**Summary:** 478 invariants in 85 documents · 128 with at least one test reference (27%) · 26 with a direct reference.
 
 ## ADR-0013 — Kimlik belgesi için mdoc
 
@@ -620,10 +620,10 @@ untested rows in the parsing, signature, status and trust-list areas as priority
 | `CV1` | Çip verisi kimlik servisinde sunucu tarafında doğrulanır (pasif doğrulama ve varsa kopya denetimi); cüzdanın ya da telefonun bildirdiği d… | — | none |
 | `CV2` | `document_chip_verified: true` yalnız pasif doğrulama, kopya denetimi (AA ya da CA) ve DG2 ile canlı yüz eşleşmesi birlikte başarılıysa y… | — | none |
 | `CV3` | Etkin doğrulama (AA) sınaması kimlik servisince üretilir, tek kullanımlıktır, akışa bağlıdır ve kısa ömürlüdür. | — | none |
-| `CV4` | Cüzdan çip verisini yalnız okur ve değiştirmeden kimlik servisine iletir; doğrulamaz, karar vermez, saklamaz, günlüğe yazmaz ve sağlayıcı… | — | none |
+| `CV4` | Cüzdan çip verisini yalnız okur ve değiştirmeden kimlik servisine iletir; doğrulamaz, karar vermez, saklamaz, günlüğe yazmaz ve sağlayıcı… | `packages/wallet-core/src/chip.test.ts` | scoped |
 | `CV5` | Ham çip verisi ve DG2 fotoğrafı belge verme anından sonra tutulmaz, günlüğe ve denetim kaydına yazılmaz. | — | none |
 | `CV6` | Yüz ve canlılık sağlayıcısı kimlik servisinde bir bağdaştırıcının arkasındadır; kimlik belgesine, güven listesine ve cüzdana sağlayıcıya… | — | none |
-| `CV7` | Çip yolunun kodu hukuki görüş olumlu gelmeden yazılmaz. Bir ülkenin belgesi için çip yolu, o ülkenin kök sertifikası güvenilir kaynaktan… | — | none |
+| `CV7` | Çip yolu hukuki görüş olumlu gelmeden hiçbir ortamda açılmaz. Kodu yazılabilir, ama varsayılanı kapalı bir anahtarın arkasında durur: kim… | — | none |
 
 ## ARCH-0003 — Bileşen mimarisi
 

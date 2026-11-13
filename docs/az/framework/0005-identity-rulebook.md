@@ -347,7 +347,7 @@ açıqlamadır. Kodlaşdırılmış sənəd və açıqlama nümunələri uyğunl
 
 Qaydalar: şəxsiyyətin doğrulanması yalnız şəxsiyyət xidmətində aparılır; qurum [[t:issuer|sənədi verənləri]], rəqəmsal cüzdan və yoxlayan tərəflər məsafədən
 şəxsiyyət doğrulama provayderi ilə əlaqə qurmur (RB-AP-ID-01); cüzdan yalnız şəxsiyyət sənədinin çipini oxuyub xam məlumatı
-dəyişdirmədən şəxsiyyət xidmətinə ötürə bilər, yoxlamanı şəxsiyyət xidməti aparır (ADR-0083; tətbiq hüquqi rəydən sonra). Doğrulama başlamazdan əvvəl **məlumatlandırma mətni göstərilir və açıq razılıq alınır**
+dəyişdirmədən şəxsiyyət xidmətinə ötürə bilər, yoxlamanı şəxsiyyət xidməti aparır (ADR-0083; çip yolu hüquqi rəydən sonra açılır). Doğrulama başlamazdan əvvəl **məlumatlandırma mətni göstərilir və açıq razılıq alınır**
 (RB-AP-ID-02). Provayderin qərarı həmişə provayderin qərar son nöqtəsindən təsdiqlənir; bildiriş (webhook) yalnız işə salıcıdır.
 Provayderdə fasilə səviyyəni aşağı salmır, sənəd vermə dayanır. Səviyyə sənədə yazılmır (RB-AP-14).
 

@@ -299,6 +299,12 @@ through the always-visible `not_official_licence: true` claim.
 
 **In force** — version 1.0.0 (2026-10-02).
 
+**Version note (2026-11-13, second; approved by project management).** [[ADR-0083]] K11 and CV7 changed: the code of the chip
+path is written now, but by default it sits behind a switch that is off — the identity service refuses to run on a server (live
+network and sandbox) while the switch is on, store builds of the wallet contain no chip reading, and the code runs only in local
+tests with fake document data. The chip path is opened in no environment before a favourable legal opinion. Interface names:
+`/chip/read`, `/chip/submit`, `/chip/continue`; PAR field `chip_reader` (`icao9303`). Today's behaviour is unchanged.
+
 **Version note (2026-11-13; approved by project management).** [[ADR-0083]] was accepted: IDP3 is narrowed (a wallet may read
 the document chip and relay the raw data unchanged to the identity service; it does not verify, decide or talk to the provider)
 and §9 states the condition for `document_chip_verified: true` (CV2). The flow and the open interface of the chip path

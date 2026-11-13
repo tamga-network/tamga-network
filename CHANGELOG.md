@@ -4,6 +4,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-ne
 published on npm as test releases; `0.8.4` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
+## [Unreleased]
+
+### Added
+
+- **wallet-core — identity document chip carrier, switched off** (ADR-0083). `chipReadRequestOf(url, authorizationServer)`
+  checks the identity service's `/chip/read?r=…&c=…` address (same origin as the authorization server, exact path) and returns
+  the `/chip/submit` address, the opaque handle and the 8-byte active authentication challenge; `submitChipRead(…)` relays the
+  raw chip data (SOD, DG1, DG2; DG11, DG14, DG15, the active authentication signature and CardAccess if present) unchanged,
+  base64url in a JSON body with the wallet attestation headers, and returns the `next` address (same origin only). The wallet
+  does not interpret chip data (CV4); no field goes into logs or error messages. `CHIP_READER_PARAM` / `CHIP_READER_ICAO9303`:
+  the PAR field `chip_reader=icao9303`. Not used until the switch is turned on in the identity service, which does not happen
+  before a favourable legal opinion; not in an npm release until then.
+
+### Documents
+
+- ADR-0083 amendment (2026-11-13; tr / en / az): K11 and CV7 changed — the code of the chip path may be written now, behind a
+  switch that is off by default (the identity service refuses to run on a server while it is on; store builds of the wallet
+  contain no chip reading; the code runs only in local tests with fake document data). The chip path still opens only after a
+  favourable legal opinion. First version: clone check by active authentication only (chip authentication later); no DG11 on
+  the chip closes the chip path for that document; face matching gives the DG2 photo to the provider as the reference image.
+  Interface names `/chip/read`, `/chip/submit`, `/chip/continue`, PAR field `chip_reader`. Identity proofing specification
+  (version note), ADR-0011 note, Identity Rulebook wording (release 1.0 archive refreshed).
+
 ## 0.8.4 — 2026-11-12
 
 All ten packages move to 0.8.4 together (patch release). The code change in the packages is in `wallet-core` (additions only;

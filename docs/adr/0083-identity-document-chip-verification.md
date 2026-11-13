@@ -15,9 +15,10 @@ summary: >
   bir bağdaştırıcının arkasındadır ve değiştirilebilir. Kimlik belgesinin alanları çipten gelir; belge fotoğrafı yolu çipsiz
   belgeler için yedek kalır. Ad ve kod değişmez (`document_chip_verified`, `verification_method: remote-nfc-liveness-face` zaten
   tanımlı). IDP3 daraltılır: cüzdan sağlayıcıyla hâlâ konuşmaz, ama çipi okuyup ham veriyi kimlik servisine iletebilir; karar
-  vermez. Uygulama koşulu: hukuki görüş (Türkiye için kimlik kartı yönetmeliğinin biyometrik veri hükmü ve kişisel verilerin
-  korunması kanununun biyometrik veri ve yurt dışına aktarım hükümleri) olumlu gelmeden kod yazılmaz ve gerçek ağda açılmaz.
-  Güvenli e-imza / mobil imza yolu bu kararın sonraki adımıdır.
+  vermez. Açılış koşulu: hukuki görüş (Türkiye için kimlik kartı yönetmeliğinin biyometrik veri hükmü ve kişisel verilerin
+  korunması kanununun biyometrik veri ve yurt dışına aktarım hükümleri) olumlu gelmeden çip yolu ne sandbox'ta ne gerçek ağda
+  açılır; kodu (2026-11-13 değişikliğiyle) şimdi yazılır ama varsayılanı kapalı bir anahtarın arkasında durur ve yalnız yerel
+  testlerde sahte belge verisiyle çalışır. Güvenli e-imza / mobil imza yolu bu kararın sonraki adımıdır.
 domain: Identity
 related: ["[[ADR-0011]]", "[[ADR-0022]]", "[[ADR-0040]]", "[[ADR-0042]]", "[[ADR-0080]]", "[[SPEC-ID-0003]]", "[[SPEC-PROTO-0001]]", "[[SPEC-WALLET-0001]]"]
 ---
@@ -30,7 +31,8 @@ değil çipten alır ve devletin imzasını kendisi kontrol eder. Kişinin gerç
 canlılık kontrolü yine bir dış sağlayıcıda yapılır: canlı yüz, çipteki fotoğrafla karşılaştırılır. Böylece bilgilerin doğruluğu
 sağlayıcının yazılımına değil devletin imzasına dayanır, sağlayıcı yalnız yüz kısmı için gerekir ve değiştirilebilir. Çipi
 olmayan belgeler için bugünkü fotoğraf yolu kalır. Karar kabul edildi; ama çipteki fotoğrafın işlenmesi hukuki bir soru taşıdığı
-için kod, hukuki görüş olumlu geldikten sonra yazılır.
+için çip yolu, hukuki görüş olumlu geldikten sonra açılır. Görüş geldiğinde yazılımın hazır olması için kod şimdi yazılır, ama
+her yerde kapalı durur: yalnız yerel testlerde, sahte belge verisiyle çalışır.
 
 # Bağlam
 
@@ -95,20 +97,26 @@ için kod, hukuki görüş olumlu geldikten sonra yazılır.
   bilgisi ve doğrulama sonuçları (geçti/kaldı) girer; ham veri girmez.
 - **K8 — Ülke başına açılış.** Çip yolu bir ülkenin belgesi için gerçek ağda ancak (a) o ülkenin kök sertifikası güvenilir bir
   kaynaktan alınmış ve (b) o ülkenin hukukunda özel bir kuruluşun kimlik çipini kişinin rızasıyla okumasının ve biyometrik verinin
-  işlenmesinin hukuki incelemesi olumlu sonuçlanmışsa açılır. Kod yazıldıktan sonra (K11) sandbox'ta sahte belgeyle denenebilir.
+  işlenmesinin hukuki incelemesi olumlu sonuçlanmışsa açılır. Hukuki görüş olumlu geldikten sonra (K11) sandbox'ta sahte
+  belgeyle denenebilir; o güne kadar kod yalnız yerel testlerde çalışır.
 - **K9 — IDP3 daraltılır.** Yeni metin: "IDV sağlayıcı entegrasyonu yalnızca Tamga kimlik servisindedir; kurumların belge verme
   servisleri, cüzdan ve doğrulayıcı sağlayıcıyla konuşmaz. Cüzdan, akışı başlatan cihazda belge çipini okuyup ham veriyi
   değiştirmeden kimlik servisine iletebilir ([[ADR-0083]]); çip verisini doğrulamaz ve kimlik doğrulama kararı vermez."
 - **K10 — Açık arayüz.** Çip verisinin kimlik servisine iletilmesi [[SPEC-ID-0003]]'te açık bir arayüz olarak tanımlanır; ağın
   listelediği her uyumlu cüzdan uygulayabilir ([[ADR-0042]]: ağ cüzdan işletmez, tek bir cüzdana ayrıcalık tanınmaz). Arayüzün
   ayrıntısı (uç, alan ve hata adları) uygulama sırasında onaylanır.
-- **K11 — Uygulama koşulu: önce hukuki görüş.** Çip yolunun kodu (kimlik servisi, cüzdan çekirdeği, cüzdan uygulaması) hukuki
-  görüş olumlu gelmeden yazılmaz; çip yolu ne sandbox'ta ne gerçek ağda açılır. Türkiye için görüşün konusu: (a) Elektronik
-  Kimlik Doğrulama Sistemi Yönetmeliği md. 21(3) — çipteki yüz fotoğrafının okunup yalnız anlık eşleştirme için kullanılması bu
-  hükme girer mi, kişinin kendi kartını kendi telefonuyla okutması ayrı bir izin gerektirir mi; (b) 6698 sayılı Kanun md. 6
-  (biyometrik veri, açık rıza) ve md. 9 (yurt dışındaki sağlayıcıya aktarım); (c) çipten okunan kimlik numarasının yalnız kimlik
-  belgesine yazılmasının ayrı bir yükümlülük doğurup doğurmadığı. Görüş olumsuzsa ya da koşul getirirse karar yeni bir ADR ile
-  yeniden ele alınır. Bugünkü belge fotoğrafı yolu bu süre içinde aynen çalışır.
+- **K11 — Açılış koşulu: önce hukuki görüş; kod kapalı anahtarın arkasında** (2026-11-13 değişikliğiyle; aşağıdaki
+  "Değişiklik" bölümü). Çip yolunun kodu (kimlik servisi, cüzdan çekirdeği, cüzdan uygulaması) yazılabilir ve birleştirilebilir;
+  varsayılanı kapalı bir anahtarın arkasında durur. Kimlik servisi anahtar açıkken sunucuda (gerçek ağ ve sandbox) çalışmayı
+  reddeder. Cüzdanın mağaza derlemelerinde çip okuma ve NFC izinleri bulunmaz. Kod yalnız yerel testlerde, testte üretilen bir
+  kök sertifikayla imzalanmış sahte belge verisiyle (ve kişiye ait olmayan boş test kartıyla) çalışır; gerçek bir kişinin
+  belgesi okunmaz, gönderilmez, işlenmez. Hukuki görüş olumlu gelmeden çip yolu ne sandbox'ta ne gerçek ağda açılır. Türkiye
+  için görüşün konusu: (a) Elektronik Kimlik Doğrulama Sistemi Yönetmeliği md. 21(3) — çipteki yüz fotoğrafının okunup yalnız
+  anlık eşleştirme için kullanılması bu hükme girer mi, kişinin kendi kartını kendi telefonuyla okutması ayrı bir izin
+  gerektirir mi; (b) 6698 sayılı Kanun md. 6 (biyometrik veri, açık rıza) ve md. 9 (yurt dışındaki sağlayıcıya aktarım); (c)
+  çipten okunan kimlik numarasının yalnız kimlik belgesine yazılmasının ayrı bir yükümlülük doğurup doğurmadığı. Görüş olumsuzsa
+  ya da koşul getirirse karar yeni bir ADR ile ele alınır; kapalı kod buna göre değişir ya da kaldırılır. Bugünkü belge
+  fotoğrafı yolu bu süre içinde aynen çalışır.
 - **K12 — Güvenli e-imza / mobil imza yolu sonraki adımdır.** Kişinin güvenli elektronik imza ya da mobil imza sertifikasıyla
   kimlik göstermesi ([[SPEC-ID-0003]] T3, IDP7) çip yolundan sonra ele alınır; ayrı bir ADR ile karara bağlanır. Bu karar o yolu
   ne açar ne kapatır.
@@ -124,6 +132,32 @@ Taslaktaki dört açık nokta kabulle şöyle kapandı:
 3. **Kopya denetimini desteklemeyen çipler.** K5'teki gibi: belge çipten gelen verilerle verilir, `document_chip_verified: false`.
 4. **Platform sırası (iOS / Android).** Uygulama sırasında belirlenir; kararın içeriğini değiştirmez.
 
+# Değişiklik (2026-11-13, proje yönetimi)
+
+Kabulden sonra aynı gün proje yönetimi K11 ve CV7'yi değiştirdi: hukuki görüş geldiğinde yazılımın hazır olması için çip
+yolunun kodu **şimdi yazılır, ama her yerde kapalı durur**. Açılış koşulu (hukuki görüş) ve görüşün konusu ((a)–(c)) aynen
+kalır. Sürüm 1.0.0 kalır.
+
+- **Önce:** "Çip yolunun kodu hukuki görüş olumlu gelmeden yazılmaz."
+- **Şimdi (K11, CV7):** kod yazılabilir ve birleştirilebilir; varsayılanı kapalı bir anahtarın arkasındadır. Kimlik servisi
+  anahtar açıkken sunucuda (gerçek ağ ve sandbox) çalışmayı reddeder; cüzdanın mağaza derlemelerinde çip okuma ve NFC izinleri
+  bulunmaz; kod yalnız yerel testlerde, testte üretilen bir kök sertifikayla imzalanmış sahte belge verisiyle (ve kişiye ait
+  olmayan boş test kartıyla) çalışır. Gerçek bir kişinin belgesi okunmaz, gönderilmez, işlenmez. Görüş olumsuzsa ya da koşul
+  getirirse kapalı kod yeni ADR'ye göre değişir ya da kaldırılır.
+
+Aynı onayla uygulamanın ilk sürümü için şunlar belirlendi:
+
+5. **Kopya denetimi ilk sürümde yalnız AA.** İlk sürümde kopya denetimi etkin doğrulamayla (AA) yapılır; çip doğrulama (CA)
+   sonraki adımdır. Bu sürede yalnız CA destekleyen çip K5'teki gibi `document_chip_verified: false` ile işlenir.
+6. **DG11 yoksa çip yolu kapanır.** Kimlik belgesindeki ad ve soyadın tam yazımı (Türkçe karakterlerle) çipteki DG11'den
+   alınır; MRZ'deki Türkçe karaktersiz ad belgeye yazılmaz. Çipte DG11 yoksa o belge için çip yolu kapanır ve belge fotoğrafı
+   yoluna düşülür.
+7. **Yüz eşleştirmede referans görüntü.** Yüz eşleştirme, mevcut sağlayıcının biyometrik doğrulama iş akışında çipteki DG2
+   fotoğrafının referans görüntü olarak verilmesiyle yapılır (oturum açılırken referans portre, base64, en çok 2 MB; sağlayıcının
+   belgelerinde doğrulandı). Sağlayıcıya özgü bu ayrıntı bağdaştırıcının içinde kalır (K6, CV6).
+8. **Arayüz adları** (K10): kimlik servisi uçları `/chip/read`, `/chip/submit`, `/chip/continue`; cüzdanın çip okuyabildiğini
+   bildiren PAR alanı `chip_reader` (değer `icao9303`). Akışın ayrıntısı [[SPEC-ID-0003]]'e uygulamayla yazılır.
+
 # Gerekçe
 
 - **Güvence devletin imzasına dayanır.** Fotoğraftan okunan alanlar yazılımın tahminidir; çipten okunan alanlar devletin imzalı
@@ -133,7 +167,8 @@ Taslaktaki dört açık nokta kabulle şöyle kapandı:
 - **İletme saldırısı zorlaşır.** Çip akışı başlatan telefonda okunduğu için iletilen bağlantı tek başına işe yaramaz
   ([[ADR-0080]] kalan riski azalır, K1–K4 aynen geçerli).
 - **Hukuk önce.** Çipteki fotoğrafın işlenmesi Türkiye'de açık bir hukuki sorudur; yanlış okunursa geri dönüşü zor bir kişisel
-  veri sorunu doğar. Bu yüzden karar şimdi alınır, kod görüşten sonra yazılır.
+  veri sorunu doğar. Bu yüzden karar şimdi alınır, çip yolu görüşten sonra açılır. Kapalı kod gerçek kişinin verisini
+  işlemez; görüş geldiğinde yazılımın hazır olmasını sağlar.
 - **Maliyet ikinci sırada.** Doğrulama başına tasarruf küçüktür; bu karar maliyet için değil güvence ve bağımsızlık için alınır.
 
 # Değerlendirilen seçenekler
@@ -145,7 +180,9 @@ Taslaktaki dört açık nokta kabulle şöyle kapandı:
 | Sağlayıcının çip okuma özelliği (sağlayıcının telefon bileşeni cüzdana gömülür) | ret | Cüzdanı tek bir sağlayıcıya bağlar, IDP3'e ve [[ADR-0042]]'ye aykırı; doğrulama yine sağlayıcıda kalır |
 | Yüz ve canlılığı da kendimiz yapmak | ret | Sunum ve görüntü enjeksiyonu saldırıları uzmanlık ve bağımsız sınama ister; yanlış kabul doğrudan sahte kimlik demektir |
 | Ayrı bir "kimlik doğrulama" uygulaması | şimdi seçilmedi | Kullanıcı için ikinci uygulama; ağın işlettiği bir uygulama olur. Cüzdan okuyucu olarak yeterli |
-| Kabul et ve hemen sandbox'ta kodla | ret | Hukuki görüş gelmeden çipteki fotoğrafı işleyen kod yazılmaz (K11) |
+| Kodu şimdi, kapalı bir anahtarın arkasında yazmak; açılışı hukuki görüşe bağlamak | **kabul (2026-11-13 değişikliği)** | Görüş gelince yazılım hazır olur; kapalı kod sunucuda çalışmaz, mağaza derlemesine girmez, gerçek kişinin verisini işlemez (K11) |
+| Kodu hukuki görüşten sonra yazmak (ilk kabul metni) | değişti (2026-11-13) | Görüş geldikten sonra aylarca yazılım beklenirdi; kapalı kodla aynı güvence korunur |
+| Kabul et ve hemen sandbox'ta aç | ret | Hukuki görüş gelmeden çipteki fotoğraf sandbox'ta da işlenmez (K11) |
 | Güvenli e-imza / mobil imza yolunu öne almak | sonraki adım | Devletçe denetlenen sertifikaya dayanır ama kullanıcıda sertifika olmasını ister; çip yolundan sonra ayrı ADR ile (K12) |
 | Yalnız yetkili kaynak (devlet, banka, operatör) | uzun vadeli yön | Bugün erişilebilir bir yol yok; geldiğinde bu karar yerine değil yanına eklenir; devlet PID'i gelince kimlik belgesi zaten yerini ona bırakır |
 
@@ -153,9 +190,14 @@ Taslaktaki dört açık nokta kabulle şöyle kapandı:
 
 - **Kimlik servisi (operatör deposu).** Çip verisi alma ucu, pasif doğrulama, AA sınaması (ve sonra CA), kök sertifika yükleme,
   DG2 ile sağlayıcı yüz eşleştirmesi, testler (geçerli belge, değiştirilmiş veri grubu, bilinmeyen kök, kopya sınaması başarısız,
-  yeniden oynatılan sınama). K11'e göre hukuki görüşten sonra.
+  yeniden oynatılan sınama). Kod şimdi, kapalı anahtarın arkasında yazılır; anahtar açıkken servis sunucuda başlamaz; açılış
+  K11'e göre hukuki görüşten sonra.
 - **Cüzdan çekirdeği ve cüzdan uygulaması.** NFC okuma (iOS ve Android), MRZ/CAN girişi ya da MRZ'nin kamerayla okunması, ham
-  veriyi iletme; NFC izin metni; erişilebilirlik ve "çipim yok" yolu. K11'e göre hukuki görüşten sonra.
+  veriyi iletme; NFC izin metni; erişilebilirlik ve "çipim yok" yolu. Kod şimdi yazılır: cüzdan çekirdeğindeki taşıyıcı açık
+  depoya girer, npm yayını hukuki görüşten sonra; cüzdan uygulamasının mağaza derlemelerinde çip okuma ve NFC izinleri bulunmaz.
+  Gerçek bir kartla deneme hukuki görüşten sonra.
+- **Okuyucu kütüphanesinin lisansı.** Android'de LGPL lisanslı açık kaynak bir okuyucu kütüphanesi kullanılır; cüzdan
+  uygulamasıyla birlikte dağıtımının yükümlülükleri hukuki görüşe sorulur.
 - **Şartnameler.** [[SPEC-ID-0003]]: IDP3 yeni metni ve `document_chip_verified` anlamı kabulle işlendi (sürüm notu 2026-11-13);
   çip yolunun akışı ve açık arayüz (K10) uygulamayla yazılır. [[SPEC-PROTO-0001]] (kimlik servisinin akışındaki ek adım) ve
   [[SPEC-WALLET-0001]] (cüzdanın okuyucu rolü ve "değiştirmeden ilet" kuralı) uygulamayla güncellenir.
@@ -179,10 +221,14 @@ Taslaktaki dört açık nokta kabulle şöyle kapandı:
 | CV4 | Cüzdan çip verisini yalnız okur ve değiştirmeden kimlik servisine iletir; doğrulamaz, karar vermez, saklamaz, günlüğe yazmaz ve sağlayıcıyla konuşmaz. Çip erişim anahtarı (MRZ/CAN) telefondan çıkmaz. |
 | CV5 | Ham çip verisi ve DG2 fotoğrafı belge verme anından sonra tutulmaz, günlüğe ve denetim kaydına yazılmaz. |
 | CV6 | Yüz ve canlılık sağlayıcısı kimlik servisinde bir bağdaştırıcının arkasındadır; kimlik belgesine, güven listesine ve cüzdana sağlayıcıya özgü bir değer girmez. |
-| CV7 | Çip yolunun kodu hukuki görüş olumlu gelmeden yazılmaz. Bir ülkenin belgesi için çip yolu, o ülkenin kök sertifikası güvenilir kaynaktan alınmadan ve o ülke hukukuna göre hukuki incelemesi olumlu sonuçlanmadan gerçek ağda açılmaz. |
+| CV7 | Çip yolu hukuki görüş olumlu gelmeden hiçbir ortamda açılmaz. Kodu yazılabilir, ama varsayılanı kapalı bir anahtarın arkasında durur: kimlik servisi anahtar açıkken sunucuda çalışmayı reddeder; cüzdanın mağaza derlemelerinde çip okuma bulunmaz; kod yalnız yerel testlerde sahte belge verisiyle çalışır. Bir ülkenin belgesi için çip yolu, o ülkenin kök sertifikası güvenilir kaynaktan alınmadan ve hukuki incelemesi olumlu sonuçlanmadan gerçek ağda açılmaz. |
 
 # Durum
 
-**Accepted — 2026-11-13.** Proje yönetiminin onayıyla (2026-11-13): kabul; kod hukuki görüşten sonra; canlılık ve yüz eşleştirme
-mevcut sağlayıcıyla, değiştirilebilir biçimde; güvenli e-imza / mobil imza yolu çip yolundan sonra. DECISIONS: D-ID-16.
-CV1–CV7 bağlayıcıdır; uygulama K11'deki hukuki görüşten sonra yapılır. [[SPEC-ID-0003]]/IDP3 bu kararla daraltıldı.
+**Accepted — 2026-11-13.** Proje yönetiminin onayıyla (2026-11-13): kabul; canlılık ve yüz eşleştirme mevcut sağlayıcıyla,
+değiştirilebilir biçimde; güvenli e-imza / mobil imza yolu çip yolundan sonra. DECISIONS: D-ID-16. CV1–CV7 bağlayıcıdır.
+[[SPEC-ID-0003]]/IDP3 bu kararla daraltıldı.
+
+> **Değişiklik (2026-11-13):** K11 ve CV7 değişti — kod şimdi, kapalı anahtarın arkasında yazılır (sunucuda çalışmaz, mağaza
+> derlemesine girmez, yalnız yerel testte sahte belge verisiyle); çip yolunun açılışı hukuki görüşten sonra (aynen). İlk sürüm:
+> kopya denetimi yalnız AA, DG11 yoksa çip yolu kapanır, yüz eşleştirmede DG2 referans görüntü. Proje yönetimi onayıyla.
