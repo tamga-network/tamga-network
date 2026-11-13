@@ -20,6 +20,10 @@ npm install @tamga-network/wallet-core
 
 All additions are optional; without them the behaviour is that of 0.8.3.
 
+- **Final identity confirmation** (ADR-0080): `completeAuthorized({ …, confirmIdentity })` — when the identity service sends a
+  masked summary (initials, birth year), the function is called before the credential is requested; return `true` when the
+  person confirms. `false` → nothing is requested, error `identity_rejected`.
+
 - **Copies in proximity and wallet to wallet** (wallet rules §4.1). Every session still uses a new copy. The core now reports
   the copy state and makes the decision; the refresh call and the warning screen are the app's:
   - `proximityCopies(credential)` → `{ total, remaining, low, exhausted, refreshable }`;

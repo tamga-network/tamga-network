@@ -34,6 +34,14 @@ published on npm when this entry was written.
   the same copy could be given to another reader as unused. The optional hook is called once, after the response is built and
   signed and immediately before it is sent, with the state in which the copy is marked; the caller saves it. If the hook throws,
   nothing is sent and the returned state is unchanged. Same contract as `respond({ beforeSend })`.
+- **wallet-core — final identity confirmation in the authorization-code flow (`confirmIdentity`; ADR-0080).** When the
+  identity service returns a masked summary of the verified identity with the token (`identity_confirmation`: initials and birth
+  year, never full values), `completeAuthorized` calls the new optional `confirmIdentity(prompt)` before the credential is
+  requested; the app shows the summary and returns the person's decision. The decision is sent to the identity service (DPoP and
+  the wallet attestation, same as the token request). On `false` no credential is requested and the error code is the new
+  `identity_rejected`; the confirmation endpoint must be on the authorization server's origin, otherwise the access token is not
+  sent. Without the option nothing changes — an identity service that requires the confirmation then refuses the credential
+  request. Types `IdentityConfirmationPrompt`, `IdentityConfirmationSummary`.
 - **wallet-core — `sharedBefore(state, rpKey, requested, { vct? })`** for the notice about earlier sharing (WL6, wallet rules
   §4.2): from the presentation log on the device it returns how often and when something was sent to this verifier, the field
   names shared before with the date each was last sent, which requested fields were shared before (`again`) and which are
@@ -355,7 +363,7 @@ A code review of the changes above found the following; the fixes are part of 0.
   stays in the list, `scopes` and `terminal_groups` rows were compared by identifier only, so an ended use could be reopened or
   extended by editing its dates. A row that stays keeps its `valid_from`; `valid_until` may only move towards closing a period
   that is still open (no end, or an end that has not passed, set to an earlier time — what `end-use`, `rp-status
-  REVOKED|RETIRED`, re-registration and reassignment write). A period that has ended is not changed, and no end is moved later
+REVOKED|RETIRED`, re-registration and reassignment write). A period that has ended is not changed, and no end is moved later
   or removed: a new period is a new row with a new identifier. A row changed in any other way counts as removed (`scopes` /
   `terminal_groups`) and stops the build unless an approved removal entry covers it. Descriptive fields (purpose text,
   translations, requested claims, label, policies) can still be edited. The check is not applied in the sandbox, as before.

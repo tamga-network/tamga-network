@@ -292,7 +292,55 @@ export interface CompleteInput {
   now?: number;
   /** ADR-0025: anahtar kanıtı üretici (kurumun şartı ikinci değişkende — WUA_05a) */
   keyAttestor?: KeyAttestor;
+  /**
+   * ADR-0080 (0.8.4): kimlik servisi belirteç yanıtında doğrulanan kimliğin maskeli özetini verirse (`identity_confirmation`), belge
+   * istenmeden önce bu işlev çağrılır; cüzdan özeti kişiye gösterir ve kişinin kararını döndürür (`true` = bu benim). Karar kimlik
+   * servisine bildirilir; `false` ise belge alınmaz (`identity_rejected`). Verilmezse karar bildirilmez — kimlik servisi onayı
+   * zorunlu tutuyorsa belge isteği reddedilir.
+   */
+  confirmIdentity?: (c: IdentityConfirmationPrompt) => Promise<boolean>;
 }
+
+/** ADR-0080: kimlik servisinin doğruladığı kimliğin maskeli özeti (tam değer yok). Bulunamayan alan gelmez. */
+export interface IdentityConfirmationSummary {
+  given_name_initial?: string;
+  family_name_initial?: string;
+  birth_year?: number;
+}
+export interface IdentityConfirmationPrompt {
+  summary: IdentityConfirmationSummary;
+  /** kimlik servisi onayı zorunlu tutuyor mu (onaysız belge verilmez) */
+  required: boolean;
+}
+
+interface IdentityConfirmationOffer {
+  required?: unknown;
+  summary?: unknown;
+  token?: unknown;
+  endpoint?: unknown;
+}
+
+/** Belirteç yanıtındaki teklifi denetler: uç, belirteç ucuyla aynı kökende olmalı (başka sunucuya erişim belirteci gönderilmez). */
+function readConfirmationOffer(
+  o: IdentityConfirmationOffer | undefined,
+  tokenEndpoint: string,
+): { prompt: IdentityConfirmationPrompt; token: string; endpoint: string } | undefined {
+  if (!o || typeof o !== "object") return undefined;
+  if (typeof o.token !== "string" || !o.token || typeof o.endpoint !== "string") return undefined;
+  const origin = (u: string) => /^(https?:\/\/[^/?#]+)/i.exec(u)?.[1].toLowerCase();
+  if (!origin(o.endpoint) || origin(o.endpoint) !== origin(tokenEndpoint))
+    throw new WalletError("issuer_error", "identity confirmation endpoint is not on the authorization server");
+  const s = (o.summary ?? {}) as Record<string, unknown>;
+  const letter = (v: unknown) => (typeof v === "string" && [...v].length >= 1 && [...v].length <= 2 ? v : undefined);
+  const year = typeof s.birth_year === "number" && Number.isInteger(s.birth_year) ? s.birth_year : undefined;
+  const summary: IdentityConfirmationSummary = {
+    ...(letter(s.given_name_initial) ? { given_name_initial: letter(s.given_name_initial) } : {}),
+    ...(letter(s.family_name_initial) ? { family_name_initial: letter(s.family_name_initial) } : {}),
+    ...(year !== undefined ? { birth_year: year } : {}),
+  };
+  return { prompt: { summary, required: o.required === true }, token: o.token, endpoint: o.endpoint };
+}
+
 /** code → token (PKCE + WUA) → nonce → N proof → credential(lar). */
 export async function completeAuthorized(p: CompleteInput): Promise<RedeemOutput> {
   const cb = parseCallback(p.callbackUrl);
@@ -336,12 +384,45 @@ export async function completeAuthorized(p: CompleteInput): Promise<RedeemOutput
   const tok = (await readJson(tr, "yetkilendirme sunucusu")) as {
     access_token?: string;
     refresh_token?: string;
+    identity_confirmation?: IdentityConfirmationOffer;
     error?: string;
     error_description?: string;
   };
   if (tr.status !== 200 || !tok.access_token) {
     await p.keys.delete(dpop.ref).catch(() => {});
     throw new WalletError("issuer_error", `token error: ${tok.error_description ?? tok.error ?? tr.status}`);
+  }
+  // ADR-0080: belge istenmeden önce kişinin son onayı (iletilmiş doğrulama bağlantısına karşı)
+  const offer = p.confirmIdentity
+    ? readConfirmationOffer(tok.identity_confirmation, p.start.as.token_endpoint)
+    : undefined;
+  if (offer && p.confirmIdentity) {
+    const confirmed = await p.confirmIdentity(offer.prompt);
+    const accessToken = tok.access_token;
+    const cr = await dpopRequest(
+      p.http,
+      dpop,
+      offer.endpoint,
+      {
+        method: "POST",
+        headers: async () => ({
+          authorization: `DPoP ${accessToken}`,
+          "content-type": "application/json",
+          ...(await wuaHeaders({ keys: p.keys, wua, aud: p.start.issuer, now, randomBytes: p.randomBytes })),
+        }),
+        body: JSON.stringify({ token: offer.token, decision: confirmed ? "confirm" : "reject" }),
+      },
+      { now, accessToken, randomBytes: p.randomBytes },
+    );
+    if (!confirmed) {
+      await p.keys.delete(dpop.ref).catch(() => {});
+      throw new WalletError("identity_rejected", "the holder did not confirm the verified identity");
+    }
+    if (cr.status !== 200) {
+      await p.keys.delete(dpop.ref).catch(() => {});
+      const b = (await readJson(cr, "yetkilendirme sunucusu").catch(() => ({}))) as { error?: string };
+      throw new WalletError("issuer_error", `identity confirmation error: ${b.error ?? cr.status}`);
+    }
   }
   return obtainCredential({
     issuer: p.start.issuer,

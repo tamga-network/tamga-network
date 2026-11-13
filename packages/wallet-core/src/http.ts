@@ -79,7 +79,9 @@ export class WalletError extends Error {
        * Cüzdan birimi sağlayıcıda kayıtlı değil (kayıt silindi ya da sağlayıcının veritabanı yeniden kuruldu). İptal DEĞİLDİR:
        * cüzdan imzalı WIA iptal listesine (`wiaRevokedByList`) baktıktan sonra yeniden kaydolabilir.
        */
-      | "unit_unknown",
+      | "unit_unknown"
+      /** ADR-0080 (0.8.4): kişi kimlik servisinin gösterdiği doğrulanmış kimliği onaylamadı; belge alınmadı */
+      | "identity_rejected",
     message: string,
     public detail?: unknown,
   ) {
