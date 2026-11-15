@@ -1,7 +1,7 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.8.4` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.8.5` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## [Unreleased]
@@ -11,8 +11,8 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
 All ten packages move to 0.8.5 together (patch release). The code changes in the packages are in `wallet-core` (POST fetch of
 the request object, single-use approvals, the closed chip carrier), `verifier` (one optional option) and `zk` (rebuilt
 Android libraries); the other packages carry the version number and README wording. The chain tools (ADR-0084/0085/0086) and the
-access certificate revocation list (ADR-0087) are in the list publisher and the repository tools, not in the npm packages. Not
-published on npm when this entry was written.
+access certificate revocation list (ADR-0087) are in the list publisher and the repository tools, not in the npm packages.
+Published on npm on 2026-11-15.
 
 ### Migration notes (for app developers)
 
