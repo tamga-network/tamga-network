@@ -309,6 +309,14 @@ describe("çekim dalları (ADR-0067)", () => {
     const r = pr as unknown as Record<string, unknown>;
     for (const k of ["requestJwt", "encPrivateKey", "encPublicJwk", "encJwkThumbprint"]) expect(r[k]).toBeUndefined();
     expect(pr.qrPayload).toContain(encodeURIComponent(pr.requestUri));
+    // OpenID4VP 1.0 §5.10: yöntem yalnız istenirse bağlantıya yazılır
+    expect(pr.qrPayload).not.toContain("request_uri_method");
+    const post = await createPresentationRequest({
+      ...content,
+      requestUriBase: "https://rp.example.test/vp/req",
+      requestUriMethod: "post",
+    });
+    expect(post.qrPayload.endsWith("&request_uri_method=post")).toBe(true);
     const registry = new BranchRegistry();
     const set = new BranchSet({ registry, presentationId: pr.presentationId, expiresAt: pr.expiresAt, content });
     const f = await set.fetch();

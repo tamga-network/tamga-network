@@ -25,6 +25,13 @@
  *      extendedKeyUsage id-tsl-kp-tslSigning (0.4.0.2231.3.0). Yalnız XML listesini imzalar; JSON listeleri `tl-signer-1` imzalar.
  *      Gerçek ağda: `TAMGA_PROD_PKI_DIR=<gizli klasör> npx tsx ops/gen-pki.ts --prod` eksik olan bu yaprağı üretir (proje yönetimi
  *      onayıyla; ops/README.md "XML liste imzacısı").
+ *   5c. Erişim sertifikası makamı (access-ca-1, ADR-0087 K2) — kökçe imzalı ara makam: yol uzunluğu 0, keyUsage keyCertSign +
+ *      cRLSign (kritik), SKI + AKI, CRL dağıtım noktası = kökün CRL'i. Yalnız erişim sertifikası (WRPAC) verir ve onların CRL'ini
+ *      imzalar; anahtarı liste yayıncısında durur (kök çevrim dışı kalır). Erişim sertifikalarında (rp-*) CRL dağıtım noktası
+ *      uzantısı (2.5.29.31) verenin CRL adresini gösterir: `<trust kökü>/crl/<makam>.crl` (ADR-0087 K3).
+ *   5d. Kökün CRL'i (`--root-crl`, ADR-0087 K4): `root-ca.crl` kökün anahtarıyla, kökün durduğu bilgisayarda imzalanır; nextUpdate
+ *      365 gün, CRL numarası saniye cinsinden zaman (tekdüze), var olan kopyanın iptalleri korunur, `--revoke <seri>:<gerekçe>`
+ *      (virgülle birden çok) yenilerini ekler. Yayıncı bu kopyayı denetleyip `/crl/root-ca.crl` olarak yayımlar.
  *   6. Tamga Wallet sağlayıcı sertifikası (wallet-provider-tamga-wp-1) — üretilmez: depodaki `ops/pki-sandbox/` kopyasından
  *      yalnız kamu sertifikası alınır (gerçek ve sandbox listesinde aynı sertifika; anahtarı ağda yok, ADR-0042)
  *
@@ -52,6 +59,10 @@ import {
   AuthorityKeyIdentifierExtension,
   SubjectAlternativeNameExtension,
   ExtendedKeyUsageExtension,
+  CRLDistributionPointsExtension,
+  X509Crl,
+  X509CrlGenerator,
+  X509CrlReason,
   X509Certificate,
   Extension,
   Name,
@@ -113,6 +124,11 @@ mkdirSync(outDir, { recursive: true });
 
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
 const STATE = "TR";
+/** ADR-0087 K3: güven listesi alan adının altında CRL yolu (yeni alt alan adı yok). */
+const TRUST_BASE = PROFILE === "sandbox" ? "https://trust.sandbox.tamga.network" : "https://trust.tamga.network";
+const crlUri = (ca: string) => `${TRUST_BASE}/crl/${ca}.crl`;
+/** RFC 5280 §4.2.1.13: tek dağıtım noktası, tam ad = HTTPS adresi; kritik değil. */
+const cdp = (ca: string) => new CRLDistributionPointsExtension([crlUri(ca)]);
 
 const keys = () => crypto.subtle.generateKey(ALG, true, ["sign", "verify"]) as Promise<CryptoKeyPair>;
 async function pkcs8Pem(k: CryptoKey) {
@@ -250,7 +266,11 @@ async function main() {
     return { cert, privateKey: kp.privateKey };
   };
 
-  if (PROFILE === "sandbox") return finish(root, await sandboxItems(root, signedByRoot, selfSigned), notBefore);
+  if (PROFILE === "sandbox") {
+    await finish(root, await sandboxItems(root, signedByRoot, selfSigned), notBefore);
+    if (process.argv.includes("--root-crl")) await writeRootCrl(root);
+    return;
+  }
 
   // Sınama döneminin örnek kurumları (dosya adları tarihseldir): gerçek ağın listesinden 2026-11-11'de çıkarıldı. Üretim kipinde
   // asla üretilmezler ve özel anahtarları yoktur; eski sertifika dosyası duruyorsa yalnız okunur (arşivdeki eski liste sürümleri
@@ -309,8 +329,11 @@ async function main() {
           { type: "url", value: "https://tamga.network" },
           { type: "email", value: "info@tamga.network" },
         ]),
+        cdp("root-ca"), // ADR-0087 K3: veren kök (geçişte); yeni erişim sertifikaları access-ca-1'den
       ]),
     ),
+    // ADR-0087 K2: erişim sertifikası makamı (çevrim içi ara makam; CRL'i yayıncı imzalar)
+    await ensure("access-ca-1", accessCa(root, 5001, "CN=Tamga Access CA 1, O=Tamga Network, C=TR")),
     // 6) ADR-0011: Tamga geçici kimlik attestation servisi (id.tamga.network) — credential + status imza sertifikaları (K1 ayrımı)
     await ensure("issuer-id", signedByRoot(1101, "CN=Tamga Kimlik Servisi, OU=Identity, O=Tamga Network, C=TR")),
     await ensure(
@@ -336,11 +359,13 @@ async function main() {
       "rp-issuer-bilgi",
       signedByRoot(2002, "CN=issuer.tamga.network, O=Ornek Universitesi (DEV) - kimlik eslestirme, C=TR", async () => [
         new SubjectAlternativeNameExtension([{ type: "dns", value: "issuer.tamga.network" }]),
+        cdp("root-ca"),
       ]),
     )),
   ];
 
   await finish(root, items, notBefore);
+  if (process.argv.includes("--root-crl")) await writeRootCrl(root);
 }
 
 /** Geliştirme kipi: gerçek cüzdan sağlayıcı sertifikasını (yalnız kamu sertifikası) depodaki sandbox kopyasından alır. */
@@ -365,7 +390,11 @@ type SignedByRoot = (serialNo: number, subject: string, extra?: (pub: CryptoKey)
 
 /** Sandbox (ADR-0038): gerçek ağla aynı dosya adları (servis ayarları değişmesin), test konu adları, sandbox SAN'ı. */
 async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: (n: number, name: string) => Make) {
-  const san = (host: string) => async () => [new SubjectAlternativeNameExtension([{ type: "dns", value: host }])];
+  // ADR-0087 K3: erişim sertifikası (rp-*) verenin CRL'ini gösterir
+  const san = (host: string) => async () => [
+    new SubjectAlternativeNameExtension([{ type: "dns", value: host }]),
+    cdp("root-ca"),
+  ];
   return [
     root,
     await ensure(
@@ -393,8 +422,14 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
             { type: "url", value: "https://sandbox.tamga.network" },
             { type: "email", value: "info@tamga.network" },
           ]),
+          cdp("root-ca"),
         ],
       ),
+    ),
+    // ADR-0087 K2: erişim sertifikası makamı (anahtarı sandbox sunucusundaki yayıncıya gider; kök anahtarı gitmez)
+    await ensure(
+      "access-ca-1",
+      accessCa(root, 5001, "CN=Tamga Sandbox Access CA (TEST), O=Tamga Network Sandbox, C=TR"),
     ),
     await ensure(
       "issuer-id",
@@ -537,6 +572,91 @@ function tlXmlSigner(root: Item, serialNo: number, subject: string): Make {
   };
 }
 
+/**
+ * ADR-0087 K2 — erişim sertifikası makamı: kökçe imzalı ara makam; basicConstraints CA, yol uzunluğu 0 (kritik); keyUsage
+ * keyCertSign + cRLSign (kritik); SKI; AKI = kökün SKI'si; CRL dağıtım noktası = kökün CRL'i. Süre 3 yıl.
+ */
+function accessCa(root: Item, serialNo: number, subject: string): Make {
+  return async (reuse?: Reuse) => {
+    const kp = reuse?.keys ?? (await keys());
+    const cert = await X509CertificateGenerator.create({
+      serialNumber: reuse?.serialHex ?? serial(serialNo),
+      subject,
+      issuer: root.cert.subject,
+      notBefore: new Date(),
+      notAfter: years(3),
+      signingAlgorithm: ALG,
+      publicKey: kp.publicKey,
+      signingKey: root.privateKey ?? die("kök CA özel anahtarı yok — erişim sertifikası makamı imzalanamaz"),
+      extensions: [
+        new BasicConstraintsExtension(true, 0, true),
+        new KeyUsagesExtension(KeyUsageFlags.keyCertSign | KeyUsageFlags.cRLSign, true),
+        await SubjectKeyIdentifierExtension.create(kp.publicKey),
+        await AuthorityKeyIdentifierExtension.create(root.cert.publicKey),
+        cdp("root-ca"),
+      ] as never,
+    });
+    return { cert, privateKey: kp.privateKey };
+  };
+}
+
+/**
+ * ADR-0087 K4 — kökün CRL'i (`--root-crl`): kökün anahtarıyla imzalanır (kökün durduğu bilgisayarda); var olan `root-ca.crl`'in
+ * iptalleri korunur, `--revoke <seri>:<gerekçe>[,…]` eklenir (gerekçe: key_compromise | ca_compromise | superseded |
+ * cessation_of_operation | privilege_withdrawn). CRL numarası = saniye cinsinden zaman (durum dosyası gerekmeden tekdüze);
+ * nextUpdate 365 gün. AKI + CRLNumber.
+ */
+async function writeRootCrl(root: Item) {
+  const key = root.privateKey ?? die("--root-crl: kök CA özel anahtarı yok (kökün durduğu bilgisayarda çalıştırın)");
+  const file = resolve(outDir, "root-ca.crl");
+  const reasons: Record<string, X509CrlReason> = {
+    key_compromise: X509CrlReason.keyCompromise,
+    ca_compromise: X509CrlReason.cACompromise,
+    superseded: X509CrlReason.superseded,
+    cessation_of_operation: X509CrlReason.cessationOfOperation,
+    privilege_withdrawn: X509CrlReason.privilegeWithdrawn,
+  };
+  const entries = new Map<string, { serialNumber: string; revocationDate: Date; reason?: X509CrlReason }>();
+  if (existsSync(file))
+    for (const e of new X509Crl(new Uint8Array(readFileSync(file))).entries)
+      entries.set(e.serialNumber.toLowerCase(), {
+        serialNumber: e.serialNumber,
+        revocationDate: e.revocationDate,
+        reason: e.reason,
+      });
+  const revokeArg = process.argv.find((a) => a.startsWith("--revoke="))?.slice(9) ?? "";
+  for (const item of revokeArg.split(",").filter(Boolean)) {
+    const [sn, why] = item.split(":");
+    if (!/^[0-9a-fA-F]{2,64}$/.test(sn ?? "") || !(why in reasons))
+      die(`--revoke: <onaltılık seri>:<${Object.keys(reasons).join("|")}> biçiminde (${item})`);
+    if (!entries.has(sn.toLowerCase()))
+      entries.set(sn.toLowerCase(), { serialNumber: sn, revocationDate: new Date(), reason: reasons[why] });
+  }
+  const now = new Date();
+  const n = Math.floor(now.getTime() / 1000);
+  let hex = n.toString(16);
+  if (hex.length % 2) hex = `0${hex}`;
+  let num = Buffer.from(hex, "hex");
+  if (num[0] & 0x80) num = Buffer.concat([Buffer.from([0]), num]);
+  const ski = root.cert.getExtension(SubjectKeyIdentifierExtension)?.keyId;
+  const crl = await X509CrlGenerator.create({
+    issuer: root.cert.subjectName,
+    thisUpdate: now,
+    nextUpdate: new Date(now.getTime() + 365 * 86400_000),
+    signingAlgorithm: ALG,
+    signingKey: key,
+    extensions: [
+      ski
+        ? new AuthorityKeyIdentifierExtension(ski)
+        : await AuthorityKeyIdentifierExtension.create(root.cert.publicKey),
+      new Extension("2.5.29.20", false, new Uint8Array([0x02, num.length, ...num])),
+    ],
+    entries: [...entries.values()],
+  });
+  writeFileSync(file, new Uint8Array(crl.rawData));
+  console.log(`root-ca.crl: ${entries.size} iptal, CRL #${n}, nextUpdate ${crl.nextUpdate?.toISOString()}`);
+}
+
 /** ADR-0041: test kurumu yapraklarının konu adı bu ön ekle başlar (liste yayıncısı `sandbox-institutions.ts` ile aynı). */
 const TEST_INSTITUTIONS_SUBTREE = "C=TR, OU=Tamga Sandbox Test Institutions";
 /** NameConstraints (2.5.29.30, kritik): permittedSubtrees = [ directoryName(prefix) ] — DER elle (ek bağımlılık yok). */
@@ -586,7 +706,7 @@ async function finish(root: Item, items: Item[], notBefore: Date) {
       ? Object.fromEntries(
           items.map((it) => [
             it.name,
-            it === root || it.name.endsWith("-ca")
+            it === root || /-ca(-\d+)?$/.test(it.name)
               ? computeCaId(STATE, der(it.name))
               : it.name.startsWith("rp-")
                 ? computeRpId(STATE, der(it.name))

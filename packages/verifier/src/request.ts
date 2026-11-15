@@ -334,6 +334,12 @@ export interface PresentationRequestParams {
    * (eski tek nesne: aynı `state` QR'ı gören herkese açık), önerilmez ve bir sürüm sonra kaldırılır.
    */
   initialRequestObject?: boolean;
+  /**
+   * OpenID4VP 1.0 §5.10: `"post"` → QR / bağlantıda `request_uri_method=post`; destekleyen cüzdan istek nesnesini POST ile çeker ve
+   * `wallet_nonce` gönderir (nesneye geri yazılır, `createRequestBranch`). POST'u desteklemeyen cüzdan GET ile çeker (§5: varsayılan
+   * davranış), bu yüzden `request_uri` adresi iki yöntemi de sunmalıdır. Verilmezse parametre yazılmaz (GET).
+   */
+  requestUriMethod?: "post";
 }
 
 export function createPresentationRequest(
@@ -368,7 +374,9 @@ export async function createPresentationRequest(
       ? await sign({ response_mode: "dc_api.jwt", expected_origins: p.dcApi.expectedOrigins }, dc.jwk)
       : undefined;
   const requestUri = `${p.requestUriBase.replace(/\/$/, "")}/${presentationId}`;
-  const qrPayload = `openid4vp://?client_id=${encodeURIComponent(p.signer.clientId)}&request_uri=${encodeURIComponent(requestUri)}`;
+  const qrPayload =
+    `openid4vp://?client_id=${encodeURIComponent(p.signer.clientId)}&request_uri=${encodeURIComponent(requestUri)}` +
+    (p.requestUriMethod === "post" ? "&request_uri_method=post" : "");
   return {
     presentationId,
     nonce,

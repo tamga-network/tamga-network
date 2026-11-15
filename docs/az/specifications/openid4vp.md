@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-04
+last_updated: 2026-11-15
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdandan yoxlayan tərəfə necə təqdim edildiyini müəyyən edir. OpenID4VP 1.0 Final üzərində Tamga profili: DCQL sorğuları (Presentation Exchange İSTİFADƏ EDİLMİR), imzalı sorğu obyekti, cavabın şifrələnməsi, brauzerdə Digital Credentials API. Əsas tapıntı: HAIP-in məcburi etdiyi `x509_hash` client identifier prefiksi base64url(SHA-256(DER)) dəyəridir — bu, zəncirdəki `RelyingParty.accessCertFingerprint` ilə TAM EYNİ BAYTLARDIR. Buna görə rəqəmsal cüzdan sorğudakı client identifier-dən birbaşa zəncir qeydini tapa və həddindən artıq tələb nəzarətini ([[SPEC-BC-0001]] §6) protokol səviyyəsində tətbiq edə bilər. Bundan əlavə, istənilməyən sahələrin aşkarlanması, təqdimatdan sonra istifadəçi jurnalı və cavabın şifrələnməsi qaydaları.
 translation_of: SPEC-PROTO-0002
@@ -169,6 +169,7 @@ sübut etmir və həddindən artıq tələb nəzarəti mümkünsüz olur.
 | `nonce` | ≥ 128 bit entropiya, birdəfəlik; `request_uri`-nin hər çəkilişində yenisi ([[ADR-0067]]) |
 | `state` | ≥ 128 bit təsadüfi, gizli; `request_uri`-nin hər çəkilişində yenisi — QR-da, `request_uri` və `response_uri` yolunda yoxdur ([[ADR-0067]]) |
 | `request_uri` çəkilişi | Hər çəkiliş (GET və ya `request_uri_method=post` ilə POST, OpenID4VP 1.0 §5.10) yeni **çəkiliş qolu** açır: eyni məzmunla yeni imzalanmış sorğu obyekti; təzə `state`, `nonce` və efemer şifrələmə açarı (HAIP §5). POST-da `wallet_nonce` obyektə geri yazılır. Sabit qol limiti və qanuni çəkilişə 429 yoxdur; yaddaş məhduddur (yumşaq limitdə cavabsız yaşlı qol atılır, ortaq qol büdcəsi; [[ADR-0067]] dəyişiklik qeydi 2026-10-29); sürət limiti müştəri ünvanı başına |
+| `request_uri_method` | Yoxlayıcı keçidə `request_uri_method=post` yaza bilər (istinad yoxlayıcısı yazır); `request_uri` ünvanı GET və POST-u birlikdə təqdim edir. Bu halda pul kisəsi nüvəsi HTTPS POST edir (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`), gövdədə təzə `wallet_nonce` (128 bit, base64url) göndərir və sorğu obyektində eyni `wallet_nonce` yoxdursa sorğunu rədd edir (§5.10.1); http ünvanına POST edilmir; `get` və ya parametr yoxdursa GET (RFC 9101). Naməlum dəyər keçiddə rədd edilir |
 | Sorğu imzası | **Məcburi** — imzasız sorğu rədd edilir |
 | `client_metadata.jwks` | Cavab şifrələmə açarı; **məcburi** |
 | `verifier_info` | İstəyə bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — istifadənin qeydiyyat sertifikatı (ETSI TS 119 475 / 119 472-2). Varsa, rəqəmsal cüzdan qeydiyyat orqanının imzasını (LOTL `roles.registrar`), müddəti və `sub`-ın giriş sertifikatındakı `organizationIdentifier` ilə eyni olduğunu yoxlayır; uyğun gəlmirsə, məlumat göndərilmir (WRC4). Sertifikatda olmayan sahə artıq tələb sayılır (§6). |
@@ -714,3 +715,7 @@ açarı lazımdır.
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02).
 
+**Versiya qeydi (2026-11-15; layihə rəhbərliyinin təsdiqi ilə, AB uyğunluq turu 2026-11-15).** §3-ə `request_uri_method` sətri
+əlavə olundu: pul kisəsi nüvəsi OpenID4VP 1.0 §5.10 POST çəkilişini və `wallet_nonce` yoxlamasını dəstəkləyir
+(`fetchRequestObjectFor`, `verifyRequestObject` `walletNonce`); istinad yoxlayıcısının keçidi `request_uri_method=post` daşıyır.
+GET yolu dəyişmədi.

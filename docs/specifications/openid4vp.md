@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-04
+last_updated: 2026-11-15
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -176,6 +176,7 @@ kanıtlamaz ve aşırı talep denetimi imkânsız hâle gelir.
 | `nonce` | ≥ 128 bit entropi, tek kullanımlık; `request_uri`'nin her çekiminde yenisi ([[ADR-0067]]) |
 | `state` | ≥ 128 bit rastgele, gizli; `request_uri`'nin her çekiminde yenisi — QR'da, `request_uri` ve `response_uri` yolunda yer almaz ([[ADR-0067]]) |
 | `request_uri` çekimi | Her çekim (GET ya da `request_uri_method=post` ile POST, OpenID4VP 1.0 §5.10) yeni bir **çekim dalı** açar: aynı içerikle yeni imzalı istek nesnesi; taze `state`, `nonce` ve efemer şifreleme anahtarı (HAIP §5). POST'ta `wallet_nonce` nesneye geri yazılır. Sabit dal sınırı ve meşru çekime 429 yok; bellek sınırlı (yumuşak sınırda yanıtsız yaşlı dal atılır, ortak dal bütçesi; [[ADR-0067]] Değişiklik notu 2026-10-29); hız sınırı istemci adresi başına |
+| `request_uri_method` | Doğrulayıcı bağlantıya `request_uri_method=post` yazabilir (referans doğrulayıcı yazar); `request_uri` adresi GET ve POST'u birlikte sunar. Cüzdan çekirdeği bu durumda HTTPS POST yapar (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`), gövdede taze `wallet_nonce` (128 bit, base64url) gönderir ve istek nesnesinde aynı `wallet_nonce` yoksa isteği reddeder (§5.10.1); http adresine POST yapılmaz; `get` ya da parametre yoksa GET (RFC 9101). Bilinmeyen değer bağlantıda reddedilir |
 | İstek imzası | **Zorunlu** — imzasız istek reddedilir |
 | `client_metadata.jwks` | Yanıt şifreleme anahtarı; **zorunlu** |
 | `verifier_info` | İsteğe bağlı ([[ADR-0026]], 2026-09-29): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — kullanımın kayıt sertifikasını (ETSI TS 119 475 / 119 472-2). Varsa cüzdan kayıt birimi imzasını (LOTL `roles.registrar`), süreyi ve `sub`'ın erişim sertifikasındaki `organizationIdentifier` ile aynı olduğunu doğrular; tutmazsa veri gönderilmez (WRC4). Sertifikada olmayan alan fazla istek sayılır (§6). |
@@ -719,3 +720,6 @@ anahtarına ihtiyaç duyar.
 
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02).
 
+**Sürüm notu (2026-11-15; proje yönetimi onayıyla, AB uyum turu 2026-11-15).** §3'e `request_uri_method` satırı eklendi:
+cüzdan çekirdeği OpenID4VP 1.0 §5.10 POST çekimini ve `wallet_nonce` denetimini destekler (`fetchRequestObjectFor`,
+`verifyRequestObject` `walletNonce`); referans doğrulayıcının bağlantısı `request_uri_method=post` taşır. GET yolu değişmedi.

@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-04
+last_updated: 2026-11-15
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -170,6 +170,7 @@ Signed request object (JAR), `typ: oauth-authz-req+jwt`, `alg: ES256`, `x5c` cha
 | `nonce` | ≥ 128 bits of entropy, single use; a new one on every fetch of the `request_uri` ([[ADR-0067]]) |
 | `state` | ≥ 128 random bits, secret; a new one on every fetch of the `request_uri` — not in the QR code, nor in the `request_uri` or `response_uri` paths ([[ADR-0067]]) |
 | `request_uri` fetch | Every fetch (GET, or POST with `request_uri_method=post`, OpenID4VP 1.0 §5.10) opens a new **request branch**: a newly signed request object with the same content; fresh `state`, `nonce` and ephemeral encryption key (HAIP §5). With POST, `wallet_nonce` is echoed in the object. No fixed branch limit and no 429 for a legitimate fetch; memory is bounded (an old unanswered branch is evicted past a soft limit, shared branch budget; [[ADR-0067]] amendment 2026-10-29); rate limit per client address |
+| `request_uri_method` | The verifier may put `request_uri_method=post` in the link (the reference verifier does); the `request_uri` address serves both GET and POST. In that case the wallet core makes an HTTPS POST (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`), sends a fresh `wallet_nonce` (128 bits, base64url) in the body and rejects the request if the request object does not carry the same `wallet_nonce` (§5.10.1); no POST to an http address; with `get` or no parameter, GET (RFC 9101). An unknown value is rejected in the link |
 | Request signature | **Mandatory** — an unsigned request is rejected |
 | `client_metadata.jwks` | Response encryption key; **mandatory** |
 | `verifier_info` | Optional ([[ADR-0026]]): `[{"format": "registration_cert", "data": "<rc-wrp+jwt>", "credential_ids": [...]}]` — the registration certificate of the use (ETSI TS 119 475 / 119 472-2). If present, the wallet verifies the registrar signature (LOTL `roles.registrar`), the validity period and that `sub` equals the `organizationIdentifier` in the access certificate; if they do not match, no data is sent (WRC4). A field not in the certificate counts as over-asking (§6). |
@@ -696,3 +697,8 @@ verifier — it would need the private key of the certificate.
 # Status
 
 **In force** — version 1.0.0 (2026-10-02).
+
+**Version note (2026-11-15; approved by project management, EU alignment review 2026-11-15).** §3 gains the
+`request_uri_method` row: the wallet core supports the OpenID4VP 1.0 §5.10 POST fetch and the `wallet_nonce` check
+(`fetchRequestObjectFor`, `verifyRequestObject` `walletNonce`); the reference verifier's link carries `request_uri_method=post`.
+The GET path is unchanged.

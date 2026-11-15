@@ -772,6 +772,8 @@ export async function createPresentation(
   const pr = await createPresentationRequest({
     ...content,
     requestUriBase: `${cfg.publicBase}/vp/req`,
+    // OpenID4VP 1.0 §5.10: /vp/req/:id GET ve POST sunar; POST çeken cüzdanın wallet_nonce'u istek nesnesine yazılır
+    requestUriMethod: "post",
     ...(dcApiOrigin ? { dcApi: { expectedOrigins: [dcApiOrigin] } } : {}),
     // ADR-0067 K1: cihazlar arası ilk istek nesnesi üretilmez (0.8'den beri varsayılan; burada açıkça) — `request_uri`'nin her
     // çekimi aynı içerikle yeni bir dal (taze state, nonce, şifreleme anahtarı); DC API nesnesi ayrı yoldur ve sayfaya gider

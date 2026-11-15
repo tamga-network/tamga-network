@@ -57,7 +57,13 @@
         },
         "access_ca": {
           "status": "PROVISIONAL",
-          "operated_by": "Tamga Network Sandbox (TEST)"
+          "operated_by": "Tamga Network Sandbox (TEST)",
+          "crl": {
+            "issuers": [
+              { "ca": "access-ca-1", "uri": "https://trust.sandbox.tamga.network/crl/access-ca-1.crl" },
+              { "ca": "root-ca", "uri": "https://trust.sandbox.tamga.network/crl/root-ca.crl" }
+            ]
+          }
         },
         "national_root_ca": {
           "status": "ACTIVE",

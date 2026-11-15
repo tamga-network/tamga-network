@@ -71,6 +71,19 @@ describe("checkRp onayı → respond (ADR-0056 K8)", () => {
       code: "trust_error",
     });
   });
+  it("AU5 / AB #440: onay tek kullanımlık; checkRp'den sonra state ya da şifreleme anahtarı değişirse geçmez", async () => {
+    const enc = { kty: "EC", crv: "P-256", x: "x1", y: "y1", kid: "k1" };
+    const a = req({ state: "s-1", encJwk: enc } as never);
+    const once = checkRp(rp(), a, match, NOW).approval;
+    // ilk çağrı onayı geçer (bu testte şifreleme adımında durur) ve onayı tüketir
+    await expect(respondWith(a, once)).rejects.not.toMatchObject({ code: "trust_error" });
+    await expect(respondWith(a, once)).rejects.toMatchObject({ code: "trust_error" });
+    const b = checkRp(rp(), a, match, NOW).approval;
+    await expect(respondWith({ ...a, state: "s-2" } as VpRequest, b)).rejects.toMatchObject({ code: "trust_error" });
+    await expect(respondWith({ ...a, encJwk: { ...enc, x: "x2" } } as VpRequest, b)).rejects.toMatchObject({
+      code: "trust_error",
+    });
+  });
   it("zaman birimi: saniye verilirse hata (ADR-0056 K12)", () => {
     expect(() => checkRp(rp(), req(), match, Math.floor(Date.now() / 1000) as never)).toThrow(/milliseconds/);
   });

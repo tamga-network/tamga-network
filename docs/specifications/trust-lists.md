@@ -4,7 +4,7 @@ title: "Güven listeleri"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   Bugünkü (zincirsiz) aşamanın güven çapası olan imzalı, sürümlü ve hash zincirli güven listelerinin
   (lotl.jws, tl-{cc}.jws) ve saatlik çapa günlüğünün (anchors.jsonl) normatif formatı,
@@ -79,6 +79,9 @@ keys/<ad>.cert.pem            yalnız listenin andığı sertifikalar (operatör
 wrprc/index.json · wrprc/…    kayıt sertifikaları (ETSI TS 119 475 rc-wrp+jwt) ve dizini (ADR-0026)
 status/wrprc/<n>              kayıt sertifikalarının durum listesi (statuslist+jwt, 1 bit, kayıt kurumu anahtarı) ve
 wrprc-status.json             indeks ve iptal kaydı (ADR-0068; yalnız kayıt defterinde ayar varken — bugün gerçek ağ ve sandbox)
+crl/<makam>.crl               erişim sertifikalarının iptal listesi (RFC 5280 CRL, DER, application/pkix-crl; veren makam
+                              imzalar, her yayında ve saatte bir, nextUpdate 24 saat) ve access-crl-state.json (iptal kaydı;
+                              ADR-0087; yalnız kayıt defterinde roles.access_ca.crl varken — bugün sandbox)
 zk/<circuit_id>.zst           listedeki ZK devre dosyaları (ADR-0032); cüzdan indirir, `zk_circuits[].sha256` ile denetler
 lote/<tür>.json · .jws        ETSI TS 119 602 LoTE görünümleri (wallet-providers, wrpac-providers, eaa-providers);
                               yalnız LoTE yayını açıksa (lote.enabled)
@@ -320,3 +323,11 @@ listesinde seçim kuralı ve okuma setinde `relyingPartyByDnsName`; §7 devrin y
 TL2 satırı); yayıncı davranışı değişmedi. §3 `operator` satırı `designated` değerinin anlamını ve bugün neden yayımlanmadığını
 yazar ([[ADR-0070]] uygulama notu); yükleyici ve yayıncı davranışı değişmedi.
 
+**Sürüm notu (2026-11-15; proje yönetimi onayıyla) — [[ADR-0087]].** §2'ye erişim sertifikalarının iptal listesi eklendi:
+`crl/<makam>.crl` (RFC 5280 v2 CRL; AKI, CRLNumber, girdi başına reasonCode) ve `access-crl-state.json`. Ayar kayıt defterinde
+`national_lists[].roles.access_ca.crl` (`issuers[{ca, uri}]`; LOTL'e yazılmaz, TL11 izin listesinde). Doğrulayıcının kaydı
+askıya alınınca ya da iptal edilince erişim sertifikası aynı yayında `privilegeWithdrawn`, kayıt sona erince
+`cessationOfOperation`, sertifika kayıttan kalkınca `superseded` ile CRL'e girer; `certificateHold` yoktur. Etkin kayıt iptal
+edilmiş bir erişim sertifikasını gösteriyorsa liste imzalanmadan yayın durur (AR3). Makamın anahtarı yayıncıdaysa CRL her yayında
+ve saatlik heartbeat'te imzalanır; çevrim dışı makamın (kök) CRL'i makamın bilgisayarında imzalanır, yayıncı denetleyip yayımlar.
+Kayıt sertifikalarının durum listesi (§2 `status/wrprc/<n>`, [[ADR-0068]]) değişmedi; CRL'e kayıt sertifikası girmez.

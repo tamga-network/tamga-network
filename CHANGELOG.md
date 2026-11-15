@@ -8,6 +8,27 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
 
 ### Added
 
+- **Revocation list (CRL) for access certificates** (ADR-0087, AR1–AR5; ETSI TS 119 411-8 REV-6.3.9-04). The list publisher
+  issues an RFC 5280 v2 CRL per issuing authority (`crl/<authority>.crl`, DER, AKI + CRL Number, a reasonCode per entry,
+  `nextUpdate` 24 hours; re-signed on every publication and on the hourly heartbeat). When a verifier is suspended or revoked its
+  access certificate is revoked in the same publication (`privilegeWithdrawn`), on retirement with `cessationOfOperation`, when it
+  leaves the registry with `superseded`; no `certificateHold`. An active registration that points to a revoked access certificate
+  stops publication before the list is signed (AR3). New commands `crl-status` and `crl-revoke <access_cert> --reason <code>`;
+  state in `access-crl-state.json` (rebuilt from the published CRL if lost). An offline authority's CRL (the root) is signed on
+  its own computer and only checked and published. Setting `national_lists[].roles.access_ca.crl` (publisher-internal, not
+  written to the LOTL); enabled in the sandbox registry. Registration certificates keep their own status list (ADR-0068).
+- **Access certificate authority in the PKI tools** (ADR-0087 K2): `ops/gen-pki.ts` creates `access-ca-1` (root-signed, path
+  length 0, keyCertSign + cRLSign) in the development and sandbox PKI, writes the CRL Distribution Points extension into access
+  certificates, and `--root-crl [--revoke=<serial>:<reason>,…]` signs the root's CRL (365 days). `ops/pki-issue.ts` gains
+  `--ca <authority>` and `--crl-uri <url>` (mandatory for a production access certificate); the authority certificate of an
+  access certificate issued by `access-ca-1` is written to `<name>.chain.pem`.
+- **`request_uri_method=post` in the wallet core** (OpenID4VP 1.0 §5.10): `parseVpUri` returns `requestUriMethod`; new
+  `fetchRequestObjectFor` makes an HTTPS POST (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`)
+  with a fresh `wallet_nonce` (`newWalletNonce`) and optional `wallet_metadata`; `verifyRequestObject` takes `walletNonce` and
+  rejects a request object without the same `wallet_nonce`. The GET path is unchanged; an unknown `request_uri_method` is
+  rejected. `@tamga-network/verifier`: `requestUriMethod: "post"` writes the parameter into the QR / link; the reference
+  verifier (`apps/verify`) now sets it (its request URI already served GET and POST).
+
 - **Governance key separated from the node (consensus) key** (ADR-0086, KG1–KG5). Every member record in `Governance` now holds
   two addresses: the QBFT node address (`validatorAddress`) and the governance (vote) address (`governanceAddress`, with
   `governanceSince`). All on-chain authority — proposals, votes, vote and proposal retraction, the delegate list, withdrawal, the
@@ -68,7 +89,19 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
   the PAR field `chip_reader=icao9303`. Not used until the switch is turned on in the identity service, which does not happen
   before a favourable legal opinion; not in an npm release until then.
 
+### Changed
+
+- **Presentation approvals are single-use and bound to `state` and the response encryption key** (wallet core; self-audit
+  against the EU reference library's 0.32.0 fixes, #440): `respond` consumes the `checkRp` approval on its first call, and an
+  approval no longer matches a request whose `state` or encryption key was changed after `checkRp`.
+
 ### Documents
+
+- ADR-0087 (tr / en / az): revocation list (CRL) for access certificates — suspension, revocation and retirement revoke the
+  access certificate in the same publication, permanent revocation instead of `certificateHold`, online access certificate
+  authority, 24-hour CRL under the trust-list domain (`/crl/<authority>.crl`), registration certificates stay on their status list,
+  the Tamga wallet core does not fetch the CRL (rules AR1–AR5). SPEC-TRUST-0001 §2 (file layout) and version note; SPEC-PROTO-0002
+  §3 `request_uri_method` row and version note; SPEC-PROTO-0001 `issuer_info` row (the identity service publishes it too).
 
 - ADR-0084 (tr / en / az): the signed trust lists are the single, authoritative source in every chain stage and the chain is a
   witness — verification decisions only from the list, reading the chain only for cross-checking, a stopped chain does not affect

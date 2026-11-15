@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -81,6 +81,9 @@ keys/<name>.cert.pem          only certificates the list references (operator/ro
 wrprc/index.json · wrprc/…    registration certificates (ETSI TS 119 475 rc-wrp+jwt) and their index (ADR-0026)
 status/wrprc/<n>              status list of the registration certificates (statuslist+jwt, 1 bit, registrar key) and
 wrprc-status.json             index and revocation record (ADR-0068; only when configured in the registry — today the real network and the sandbox)
+crl/<authority>.crl           revocation list of access certificates (RFC 5280 CRL, DER, application/pkix-crl; signed by the
+                              issuing authority on every publication and hourly, nextUpdate 24 hours) and access-crl-state.json
+                              (revocation record; ADR-0087; only when roles.access_ca.crl is configured — today the sandbox)
 zk/<circuit_id>.zst           ZK circuit files listed in `zk_circuits` (ADR-0032); wallets download them and check `zk_circuits[].sha256`
 lote/<type>.json · .jws       ETSI TS 119 602 LoTE views (wallet-providers, wrpac-providers, eaa-providers);
                               only when LoTE publication is enabled (lote.enabled)
@@ -333,3 +336,14 @@ record (`reassigned_to`). Behaviour ships with `@tamga-network/trust` 0.8.1; the
 **Version note (2026-11-12; approved by project management).** The test-record exception to TL2 is now tied to a decision,
 [[ADR-0081]] (§4, the TL2 row); publisher behaviour is unchanged. The `operator` row in §3 states what the `designated` value
 means and why it is not published today ([[ADR-0070]] implementation note); loader and publisher behaviour are unchanged.
+
+**Version note (2026-11-15; approved by project management) — [[ADR-0087]].** §2 adds the revocation list of access
+certificates: `crl/<authority>.crl` (RFC 5280 v2 CRL; AKI, CRLNumber, a reasonCode per entry) and `access-crl-state.json`. The
+setting is in the registry at `national_lists[].roles.access_ca.crl` (`issuers[{ca, uri}]`; not written to the LOTL, on the TL11
+allow-list). When a verifier's registration is suspended or revoked, its access certificate enters the CRL in the same
+publication with `privilegeWithdrawn`; when the registration ends, with `cessationOfOperation`; when the certificate leaves the
+registry, with `superseded`; there is no `certificateHold`. If an active registration points to a revoked access certificate,
+publication stops before the list is signed (AR3). If the authority's key is at the publisher, the CRL is signed on every
+publication and on the hourly heartbeat; the CRL of an offline authority (the root) is signed on the authority's own computer and
+the publisher checks and publishes it. The status list of registration certificates (§2 `status/wrprc/<n>`, [[ADR-0068]]) is
+unchanged; registration certificates do not enter the CRL.

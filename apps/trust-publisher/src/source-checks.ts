@@ -178,7 +178,7 @@ export const SOURCE_FIELDS = {
     "roles",
     "recognition",
   ),
-  role: set("status", "operated_by", "cert", "signing_certs", "wrprc", "note"),
+  role: set("status", "operated_by", "cert", "signing_certs", "wrprc", "crl", "note"),
   recognition: set("mode", "recognizes"),
   wallet_provider: set(
     "provider_id",

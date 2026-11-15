@@ -21,6 +21,7 @@ import {
   MemoryKeyStore,
   parseVpUri,
   fetchRequestObject,
+  fetchRequestObjectFor,
   verifyRequestObject,
   parseDcApiRequest,
   matchDcql,
@@ -791,6 +792,43 @@ describe.skipIf(!ready)("apps/verify — sekiz OpenID4VP oturum/tekrar durumu (s
     // POST ile çekilen dalla yanıt kabul
     expect((await postJwe(app, (await answer(posted)).jwe)).statusCode).toBe(200);
     expect((await result(app, a.id)).outcome).toBe("ACCEPTED");
+  });
+
+  it("OpenID4VP 1.0 §5.10 cüzdan tarafı (AU4): QR request_uri_method=post taşır; cüzdan POST + wallet_nonce ile çeker, nesnede aynı nonce yoksa reddeder; GET yolu bozulmaz", async () => {
+    const a = await open(app);
+    const uri = parseVpUri(a.qr);
+    expect(uri.requestUriMethod).toBe("post");
+    // POST yalnız https adresine (§5.10): sınama sunucusu http — adres https'e çevrilip aynı uygulamaya yönlendirilir
+    const seen: Array<{ method?: string; body?: string; headers?: Record<string, string> }> = [];
+    const https: Http = async (url, init) => {
+      seen.push({ method: init?.method, body: init?.body, headers: init?.headers });
+      return http(app)(url.replace(/^https:/, "http:"), init);
+    };
+    const target = { requestUri: uri.requestUri.replace(/^http:/, "https:"), requestUriMethod: uri.requestUriMethod };
+    const bytes = (n: number) => new Uint8Array(n).fill(7);
+    const f = await fetchRequestObjectFor(target, https, { randomBytes: bytes });
+    expect(seen[0].method).toBe("POST");
+    expect(seen[0].headers?.["content-type"]).toBe("application/x-www-form-urlencoded");
+    expect(seen[0].headers?.accept).toBe("application/oauth-authz-req+jwt");
+    expect(seen[0].body).toBe(`wallet_nonce=${f.walletNonce}`);
+    const req = verifyRequestObject(f.jwt, uri.clientId, { ...LAN, walletNonce: f.walletNonce });
+    expect(req.payload.wallet_nonce).toBe(f.walletNonce);
+    // başka bir nonce için çekilmiş nesne (tekrar oynatma) reddedilir
+    expect(() => verifyRequestObject(f.jwt, uri.clientId, { ...LAN, walletNonce: "baska-nonce-AAAAAAAAAA" })).toThrow(
+      /wallet_nonce/,
+    );
+    // http adresine POST yapılmaz
+    await expect(fetchRequestObjectFor(uri, https, { randomBytes: bytes })).rejects.toThrow(/https/);
+    // yöntem yoksa GET (eski yol)
+    const g = await fetchRequestObjectFor({ requestUri: uri.requestUri }, http(app));
+    expect(g.walletNonce).toBeUndefined();
+    expect(verifyRequestObject(g.jwt, uri.clientId, LAN).clientId).toBe(uri.clientId);
+    // bilinmeyen yöntem bağlantıda reddedilir
+    expect(() => parseVpUri(`${a.qr.replace("request_uri_method=post", "request_uri_method=PUT")}`)).toThrow(
+      /request_uri_method/,
+    );
+    // POST ile çekilen dalla yanıt kabul
+    expect((await postJwe(app, (await answer(req)).jwe)).statusCode).toBe(200);
   });
 
   it("ADR-0067: DC API yolu etkilenmez — DC nesnesinin state'i bir dal değildir (ret 400), DC yanıtı dal gerektirmez", async () => {

@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 496 kodlanmış değişmez, 88 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 501 kodlanmış değişmez, 89 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -900,6 +900,19 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0086/KG5` | İki üyeli dönemde her üye yönetişim anahtarının ayrı yerde saklanan, sınanmış bir yedeğini tutar (geri yüklenen anahtarın adresi Governance'taki yönetişim adresiyle aynı, sınama imzası atılabilir); yönetişim anahtarı düğüm sunucusunda bulunmaz. |
 
 
+## ADR-0087
+
+*"Erişim sertifikası iptal listesi"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0087/AR1` | Doğrulayıcının kaydı askıya alınınca, iptal edilince ya da sona erince erişim sertifikası aynı yayında CRL'e girer; askı için de kesin iptal kullanılır (`certificateHold` yok) ve iptal edilen sertifika listeden çıkmaz. |
+| `ADR-0087/AR2` | Bu karardan sonra verilen erişim sertifikası verenin CRL'ini gösteren CRL Distribution Points uzantısını taşır; çevrim içi makamın CRL'i en geç 24 saatte bir yeniden imzalanır (nextUpdate ≤ 24 saat). |
+| `ADR-0087/AR3` | Etkin bir doğrulayıcı kaydı iptal edilmiş bir erişim sertifikasını gösteremez; yayıncı bu durumda liste imzalanmadan yayını durdurur. |
+| `ADR-0087/AR4` | Kayıt sertifikası CRL'e girmez; her sertifika türünün tek iptal yolu vardır (erişim sertifikası CRL, kayıt sertifikası [[ADR-0068]] durum listesi). |
+| `ADR-0087/AR5` | Tamga cüzdan çekirdeği ve doğrulayıcı erişim sertifikasının güvenini imzalı listeden alır; CRL onlar için ek ya da alternatif bir güven kaynağı değildir. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1252,7 +1265,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 496 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 501 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
 AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
@@ -1260,4 +1273,4 @@ AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, D
 
 # Durum
 
-**Üretilen dosya** — 2026-11-15 (`scripts/sync-invariants.mjs`). Toplam 496 kodlanmış değişmez, 88 dokümanda.
+**Üretilen dosya** — 2026-11-15 (`scripts/sync-invariants.mjs`). Toplam 501 kodlanmış değişmez, 89 dokümanda.

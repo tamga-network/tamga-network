@@ -30,6 +30,10 @@
  *   wrprc-revoke <wrprc/…jwt> --reason kod [--note n] (ADR-0068) kayıt sertifikasını elle iptal eder (kod: compromised |
  *                                                 superseded | ceased | policy_violation | other); içerik değişene kadar yeniden
  *                                                 verilmez; durum listesi yeniden imzalanır
+ *   crl-status                                    (ADR-0087) erişim sertifikası iptal listeleri: makam, CRL numarası, iptaller
+ *   crl-revoke <access_cert> --reason kod         (ADR-0087) erişim sertifikasını elle iptal eder (kod: key_compromise |
+ *                                                 affiliation_changed | superseded | cessation_of_operation | privilege_withdrawn;
+ *                                                 certificateHold yok); CRL yeniden imzalanır
  *   history-reset --reason r                      (yalnız sandbox; ADR-0038 K5) yayın geçmişini temizler: arşivde her listenin yalnız
  *                                                 son sürümü, CHANGELOG yeniden başlar, iptal edilmiş kayıt sertifikalarının yolu
  *                                                 adsızlaşır (bitler aynı); güncel listeler ve çapa günlüğü değişmez — history-reset.ts
@@ -131,6 +135,22 @@ import {
   type WrprcStatusState,
 } from "./wrprc-status.js";
 import { HISTORY_RESET_MARK, changelogIsReset, planArchivePrune } from "./history-reset.js";
+import {
+  ACCESS_CRL_REASONS,
+  accessCertFacts,
+  accessCrlConfigProblems,
+  crlFileOf,
+  crlProblems,
+  emptyAccessCrlState,
+  issuingCaOf,
+  planAccessRevocations,
+  recoverIssuerState,
+  revokeAccessCert,
+  signAccessCrl,
+  type AccessCrlConfig,
+  type AccessCrlState,
+  type RpAccessCertView,
+} from "./access-crl.js";
 import { MIN_CAPACITY, StatusBitstring } from "@tamga-network/sd-jwt";
 import {
   MAX_TEST_INSTITUTIONS,
@@ -742,6 +762,198 @@ async function wrprcStatusCommand(cmd: string, args: string[]) {
   console.log(`wrprc-revoke: ${path} idx ${r.entry.idx} iptal edildi; liste yeniden imzalandı`);
 }
 
+/** ADR-0087: kayıt defterindeki erişim sertifikası CRL ayarı (`roles.access_ca.crl`); yoksa null, hatalıysa yayın durur. */
+function accessCrlConfig(lotlSrc: Record<string, unknown>, cc: string): AccessCrlConfig | null {
+  const n = (lotlSrc.national_lists as Array<Record<string, unknown>>).find((x) => x.state_code === cc);
+  const cfg = (n?.roles as Record<string, { crl?: unknown }> | undefined)?.access_ca?.crl;
+  if (cfg === undefined) return null;
+  const base = new URL(String(n?.list_url ?? `https://trust.tamga.network/tl-${cc.toLowerCase()}.jws`)).origin;
+  const problems = accessCrlConfigProblems(cfg, base);
+  if (problems.length) throw new Error(`ADR-0087: ${problems.join("; ")}`);
+  return cfg as AccessCrlConfig;
+}
+const ACCESS_CRL_STATE_FILE = () => resolve(DIST, "access-crl-state.json");
+/**
+ * Kalıcı durum. Dosya yoksa ve bir makamın CRL'i daha önce yayımlanmışsa durum yayımlanmış CRL'den kurulur (iptaller CRL'in
+ * kendisinde imzalıdır; kaybolan yalnız "görülen sertifikalar" listesidir) ve CHANGELOG'a yazılır.
+ */
+function readAccessCrlState(cfg: AccessCrlConfig, now: Date): AccessCrlState {
+  const f = ACCESS_CRL_STATE_FILE();
+  if (existsSync(f)) return readJson(f) as AccessCrlState;
+  const st = emptyAccessCrlState();
+  for (const c of cfg.issuers) {
+    const pub = resolve(DIST, crlFileOf(c.uri));
+    if (!existsSync(pub)) continue;
+    st.issuers.push(recoverIssuerState(c.ca, c.uri, new Uint8Array(readFileSync(pub)), now));
+    changelog(`access-crl: state for ${c.ca} recovered from the published CRL (${c.uri})`);
+  }
+  return st;
+}
+function writeAccessCrlState(state: AccessCrlState, now: Date) {
+  const json = JSON.stringify(state, null, 2) + "\n";
+  const f = ACCESS_CRL_STATE_FILE();
+  const changed = !existsSync(f) || readFileSync(f, "utf8") !== json;
+  writeAtomic(f, json);
+  if (changed) {
+    mkdirSync(ARCHIVE, { recursive: true });
+    const stamp = now
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d+Z$/, "Z");
+    writeAtomic(resolve(ARCHIVE, `access-crl-state.${stamp}.json`), json);
+  }
+}
+/** Atomik ikili yazım (CRL DER). */
+function writeAtomicBytes(path: string, data: Uint8Array) {
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, data);
+  renameSync(tmp, path);
+}
+/**
+ * CRL'leri yazar (ADR-0087 K4). Makamın anahtarı PKI klasöründeyse CRL imzalanır (CRL numarası +1, nextUpdate 24 saat); yoksa
+ * makamın çevrim dışı imzaladığı `<PKI>/<ca>.crl` kopyası denetlenip yayımlanır.
+ */
+async function publishAccessCrls(cfg: AccessCrlConfig, state0: AccessCrlState, now: Date): Promise<AccessCrlState> {
+  const state: AccessCrlState = { issuers: state0.issuers.map((s) => ({ ...s })) };
+  for (const c of cfg.issuers) {
+    const s = state.issuers.find((x) => x.ca === c.ca);
+    if (!s) continue;
+    const certFile = resolve(PKI, `${c.ca}.cert.pem`);
+    if (!existsSync(certFile)) {
+      // makam henüz kurulmadı (ör. ara makam sunucuya yüklenmedi): verdiği sertifika da yoktur; iptal bekliyorsa alarm
+      if (s.revoked.length)
+        console.warn(
+          `[!] crl: ${c.ca}.cert.pem PKI klasöründe yok — ${s.revoked.length} iptal yayımlanamadı (ADR-0087)`,
+        );
+      continue;
+    }
+    const caCertPem = readFileSync(certFile, "utf8");
+    const out = resolve(DIST, crlFileOf(c.uri));
+    mkdirSync(dirname(out), { recursive: true });
+    const keyFile = resolve(PKI, `${c.ca}.pkcs8.pem`);
+    if (existsSync(keyFile)) {
+      s.crl_number += 1;
+      const der = await signAccessCrl({
+        caCertPem,
+        caKeyPem: readFileSync(keyFile, "utf8"),
+        entries: s.revoked,
+        crlNumber: s.crl_number,
+        now,
+      });
+      writeAtomicBytes(out, der);
+      continue;
+    }
+    // çevrim dışı makam (ör. kök): kopya makamın bilgisayarında imzalanır (ops/gen-pki.ts --crl), burada yalnız denetlenir
+    const offline = resolve(PKI, `${c.ca}.crl`);
+    if (!existsSync(offline)) {
+      if (s.revoked.length)
+        console.warn(
+          `[!] crl: ${c.ca} çevrim dışı ve imzalı CRL kopyası (${c.ca}.crl) yok — ${s.revoked.length} iptal yayımlanamadı (ADR-0087 AR1)`,
+        );
+      continue;
+    }
+    const der = new Uint8Array(readFileSync(offline));
+    const r = await crlProblems(
+      der,
+      caCertPem,
+      s.revoked.map((x) => x.serial),
+      now,
+    );
+    for (const w of r.warnings) console.warn(`[uyarı] crl: ${c.ca}: ${w}`);
+    if (r.problems.length) {
+      console.warn(
+        `[!] crl: ${c.ca}.crl yayımlanmadı — ${r.problems.join("; ")} (makamın bilgisayarında yeniden imzalayın)`,
+      );
+      continue;
+    }
+    writeAtomicBytes(out, der);
+  }
+  return state;
+}
+/** Doğrulayıcı kayıtlarının erişim sertifikaları — veren makam ayardaki makamlardan biriyse adıyla. */
+function rpAccessCertViews(rps: Array<Record<string, unknown>>, cfg: AccessCrlConfig): RpAccessCertView[] {
+  const cas = cfg.issuers
+    .filter((c) => existsSync(resolve(PKI, `${c.ca}.cert.pem`)))
+    .map((c) => ({ ca: c.ca, certPem: readFileSync(resolve(PKI, `${c.ca}.cert.pem`), "utf8") }));
+  return rps.map((r) => {
+    const c = cert(String(r.access_cert));
+    return {
+      dns_name: String(r.dns_name ?? "").toLowerCase(),
+      status: String(r.status ?? ""),
+      fingerprint_sha256: c.fp,
+      ca: issuingCaOf(c.pem, cas),
+      ...accessCertFacts(c.pem),
+    };
+  });
+}
+/** Yayında (build), liste imzalanmadan önce: iptalleri planla (AR1); AR3 sorununda yayın durur. Ayar yoksa null. */
+function planAccessCrls(rps: Array<Record<string, unknown>>, lotlSrc: Record<string, unknown>, cc: string, now: Date) {
+  const cfg = accessCrlConfig(lotlSrc, cc);
+  if (!cfg) return null;
+  const plan = planAccessRevocations(readAccessCrlState(cfg, now), cfg, rpAccessCertViews(rps, cfg), now);
+  if (plan.problems.length) throw new Error(`ADR-0087: ${plan.problems.join("; ")}`);
+  return { cfg, plan };
+}
+/** Liste yayımlandıktan sonra: iptalleri CHANGELOG'a, durumu ve CRL'leri yayın klasörüne yaz. */
+async function writeAccessCrls(p: NonNullable<ReturnType<typeof planAccessCrls>>, now: Date) {
+  for (const e of p.plan.revoked)
+    changelog(`access-crl: ${e.ca} serial ${e.serial} (${e.dns_name}) REVOKED — ${e.reason}`);
+  writeAccessCrlState(await publishAccessCrls(p.cfg, p.plan.state, now), now);
+}
+/** Heartbeat: CRL'leri aynı iptallerle yeniden imzalar (nextUpdate 24 saat; AR2). Ayar yoksa hiçbir şey yapmaz; durum dosyası
+ * kaybolduysa yayımlanmış CRL'den kurulur (readAccessCrlState). */
+async function refreshAccessCrls(now = new Date()) {
+  if (!existsSync(resolve(REG, "lotl.source.json")) || !existsSync(resolve(REG, "tl-tr.source.json"))) return;
+  const cc = String(readJson(resolve(REG, "tl-tr.source.json")).state_code);
+  const cfg = accessCrlConfig(readJson(resolve(REG, "lotl.source.json")), cc);
+  if (!cfg) return;
+  writeAccessCrlState(await publishAccessCrls(cfg, readAccessCrlState(cfg, now), now), now);
+}
+/** `crl-status` · `crl-revoke <access_cert> --reason <kod>` (ADR-0087 K5; ETSI TS 119 411-8 REV-6.2.4). */
+async function accessCrlCommand(cmd: string, args: string[]) {
+  const lotlSrc = readJson(resolve(REG, "lotl.source.json"));
+  const tlSrc = readJson(resolve(REG, "tl-tr.source.json"));
+  const cfg = accessCrlConfig(lotlSrc, String(tlSrc.state_code));
+  if (!cfg) throw new Error("ADR-0087: bu kayıt defterinde roles.access_ca.crl ayarı yok");
+  const now = new Date();
+  const state = readAccessCrlState(cfg, now);
+  if (cmd === "crl-status") {
+    for (const s of state.issuers) {
+      console.log(`${s.ca} — ${s.uri} · CRL #${s.crl_number} · ${s.revoked.length} iptal · ${s.known.length} geçerli`);
+      for (const r of s.revoked) console.log(`  ${r.serial} ${r.reason.padEnd(22)} ${r.dns_name} (${r.revoked_at})`);
+    }
+    return;
+  }
+  const ref = args.find((a, i) => !a.startsWith("--") && args[i - 1] !== "--reason");
+  const reason = argOf(args, "--reason") ?? "";
+  if (!ref)
+    throw new Error(`kullanım: crl-revoke <access_cert> --reason <${Object.keys(ACCESS_CRL_REASONS).join("|")}>`);
+  const rp = (tlSrc.relying_parties as Array<Record<string, unknown>>).find((r) => r.access_cert === ref);
+  const view = rpAccessCertViews(
+    [{ access_cert: ref, dns_name: rp?.dns_name ?? "(not in registry)", status: "" }],
+    cfg,
+  )[0];
+  if (!view.ca) throw new Error(`crl-revoke: ${ref} ayardaki makamlardan biri tarafından verilmemiş`);
+  const r = revokeAccessCert(
+    state,
+    view.ca,
+    {
+      serial: view.serial,
+      fingerprint_sha256: view.fingerprint_sha256,
+      dns_name: view.dns_name,
+      not_after: view.not_after,
+    },
+    reason,
+    now,
+  );
+  writeAccessCrlState(await publishAccessCrls(cfg, r.state, now), now);
+  changelog(`access-crl: ${view.ca} serial ${view.serial} (${view.dns_name}) REVOKED — ${reason}`);
+  console.log(
+    `crl-revoke: ${ref} (seri ${view.serial}) iptal edildi; CRL yeniden imzalandı` +
+      (rp?.status === "ACTIVE" ? " — kayıt hâlâ ACTIVE: yeni erişim sertifikası verilene kadar build durur (AR3)" : ""),
+  );
+}
+
 /**
  * `history-reset --reason <gerekçe>` (yalnız sandbox; ADR-0038 K5) — ayrıntı history-reset.ts. Tekrar çalıştırmak güvenlidir:
  * temizlenecek bir şey yoksa hiçbir dosya değişmez. Kayıt kilidi altında (aynı anda liste imzalanmaz).
@@ -1090,9 +1302,12 @@ async function build() {
     relying_parties: rps,
     national_schemas: tlSrc.national_schemas,
   };
+  // ADR-0087 AR3: iptal planı liste imzalanmadan ÖNCE (etkin kayıt iptal edilmiş sertifikayı gösteriyorsa hiçbir şey yayımlanmaz)
+  const crlPlan = planAccessCrls(tlSrc.relying_parties, lotlSrc, cc, now);
   const s = await signer();
   writeVersioned(`tl-${cc.toLowerCase()}`, tl, await signJson(s, tl));
   await writeWrprcs(tl, lotlSrc, cc, now);
+  if (crlPlan) await writeAccessCrls(crlPlan, now);
   // ADR-0036 (yalnız sandbox kaynağında bulunur): kayıt defterinin kendi barındırdığı dış liste kaynakları (ör. OpenID uyum
   // öz-testi için test PID sağlayıcısının imzalı LoTE'si) yayına kopyalanır; `external-fetch` onları yayın adresinden çekip
   // LOTL'daki sabit imzacıya karşı doğrular (kopya doğrulanmadan kullanılmaz)
@@ -1171,7 +1386,9 @@ async function build() {
             const { signing_certs: sc, wrprc: _w, ...rv } = v;
             return [k, { ...rv, signing_keys: (sc as string[]).map((n) => keyEntry(n)) }];
           }
-          return [k, v];
+          // ADR-0087: `crl` (erişim sertifikası iptal listesi ayarı) yayıncının iç ayarıdır, LOTL'e girmez
+          const { crl: _crl, ...rv } = v;
+          return [k, rv];
         }),
       );
     }
@@ -2069,6 +2286,7 @@ const cmd = process.argv[2];
     const a = await appendAnchor({ kind: "heartbeat" });
     console.log(JSON.stringify(a));
     await refreshWrprcStatus(); // ADR-0068: kayıt sertifikası durum listesi her saat yeniden imzalanır
+    await refreshAccessCrls(); // ADR-0087: erişim sertifikası iptal listesi her saat yeniden imzalanır (nextUpdate 24 saat)
     await afterPublish();
   } else if (cmd === "anchor") {
     const row = {
@@ -2091,6 +2309,8 @@ const cmd = process.argv[2];
     const a = await appendAnchor({ ...row, ...params });
     console.log(JSON.stringify(a));
     await afterPublish();
+  } else if (cmd === "crl-revoke" || cmd === "crl-status") {
+    await withDirLock("registry.lock", () => accessCrlCommand(cmd, process.argv.slice(3)));
   } else if (cmd === "wrprc-status" || cmd === "wrprc-revoke") {
     await wrprcStatusCommand(cmd, process.argv.slice(3));
   } else if (cmd === "history-reset") {

@@ -108,8 +108,14 @@ export interface VpRequest {
   annexC?: AnnexCSession;
 }
 
-/** QR: openid4vp://?client_id=…&request_uri=…  (veya doğrudan request_uri URL'i) */
-export function parseVpUri(input: string): { clientId?: string; requestUri: string } {
+/** OpenID4VP 1.0 §5: `request_uri_method` değerleri (büyük/küçük harf duyarlı). Yoksa GET (RFC 9101). */
+export type RequestUriMethod = "get" | "post";
+/** QR: openid4vp://?client_id=…&request_uri=…[&request_uri_method=post]  (veya doğrudan request_uri URL'i) */
+export function parseVpUri(input: string): {
+  clientId?: string;
+  requestUri: string;
+  requestUriMethod?: RequestUriMethod;
+} {
   const s = input.trim();
   if (s.startsWith("http://") || s.startsWith("https://")) return { requestUri: s };
   const q = s.indexOf("?");
@@ -121,12 +127,69 @@ export function parseVpUri(input: string): { clientId?: string; requestUri: stri
   }
   if (!params.request_uri)
     throw new WalletError("invalid_offer", "no request_uri (only signed request objects are accepted, PV6)");
-  return { clientId: params.client_id, requestUri: params.request_uri };
+  const m = params.request_uri_method;
+  if (m !== undefined && m !== "get" && m !== "post")
+    throw new WalletError("invalid_offer", `unknown request_uri_method: ${m} (get or post)`);
+  return { clientId: params.client_id, requestUri: params.request_uri, ...(m ? { requestUriMethod: m } : {}) };
 }
 export async function fetchRequestObject(requestUri: string, http: Http): Promise<string> {
   const r = await http(requestUri, { headers: { accept: "application/oauth-authz-req+jwt" } });
   if (r.status !== 200) throw new WalletError("issuer_error", `request object could not be fetched (${r.status})`);
   return (await r.text()).trim();
+}
+
+/** `wallet_nonce` (OpenID4VP 1.0 §5.10): base64url, 128 bit rastgele. */
+export const newWalletNonce = (randomBytes: (n: number) => Uint8Array): string => b64u(randomBytes(16));
+
+export interface FetchRequestOptions {
+  /** POST çekimde `wallet_nonce` için rastgelelik (verilmezse `walletNonce` gerekir). */
+  randomBytes?: (n: number) => Uint8Array;
+  /** Hazır `wallet_nonce` (testler); verilirse `randomBytes` kullanılmaz. */
+  walletNonce?: string;
+  /** §5.10 `wallet_metadata` (§10): cüzdanın desteklediği biçimler / algoritmalar — isteğe bağlı. */
+  walletMetadata?: Record<string, unknown>;
+  /** Yerel geliştirme: POST için https zorunluluğundan yalnız localhost / özel ağ adresi muaf (S11 ile aynı kapı). */
+  allowLocalDevHost?: boolean;
+}
+
+/**
+ * İstek nesnesini bağlantının istediği yöntemle çeker (OpenID4VP 1.0 §5.10). `request_uri_method=post` ise HTTPS POST,
+ * `application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`, gövdede taze `wallet_nonce` (+ varsa
+ * `wallet_metadata`); dönen `walletNonce` `verifyRequestObject`'e verilir — nesnede aynı `wallet_nonce` yoksa istek reddedilir
+ * (§5.10.1). Yöntem yoksa ya da `get` ise eski GET yolu (RFC 9101). HTTP hata yanıtında süreç biter (§5.10.2).
+ */
+export async function fetchRequestObjectFor(
+  uri: { requestUri: string; requestUriMethod?: RequestUriMethod },
+  http: Http,
+  opts: FetchRequestOptions = {},
+): Promise<{ jwt: string; walletNonce?: string }> {
+  if (uri.requestUriMethod !== "post") return { jwt: await fetchRequestObject(uri.requestUri, http) };
+  let u: URL;
+  try {
+    u = new URL(uri.requestUri);
+  } catch {
+    throw new WalletError("invalid_offer", "invalid request_uri");
+  }
+  if (u.protocol !== "https:" && !(opts.allowLocalDevHost === true && isLocalDevHost(u.hostname.toLowerCase())))
+    throw new WalletError("invalid_offer", "request_uri_method=post requires an https request_uri");
+  const walletNonce =
+    opts.walletNonce ??
+    (opts.randomBytes
+      ? newWalletNonce(opts.randomBytes)
+      : (() => {
+          throw new WalletError("unsupported", "wallet_nonce needs randomBytes");
+        })());
+  const body = [
+    `wallet_nonce=${encodeURIComponent(walletNonce)}`,
+    ...(opts.walletMetadata ? [`wallet_metadata=${encodeURIComponent(JSON.stringify(opts.walletMetadata))}`] : []),
+  ].join("&");
+  const r = await http(uri.requestUri, {
+    method: "POST",
+    headers: { accept: "application/oauth-authz-req+jwt", "content-type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  if (r.status !== 200) throw new WalletError("issuer_error", `request object could not be fetched (${r.status})`);
+  return { jwt: (await r.text()).trim(), walletNonce };
 }
 
 /** Cüzdanın kendi dönüş adresi mi: birebir, ya da hemen ardından sorgu / parça gelir (`…/cb?code=…`); boşluk içermez. */
@@ -163,6 +226,11 @@ export interface VerifyRequestOptions {
    * KAPALI — uygulama yalnız geliştirme derlemesinde ya da sandbox ağında açar; mağaza derlemesi gerçek ağda açamaz.
    */
   allowLocalDevHost?: boolean;
+  /**
+   * OpenID4VP 1.0 §5.10.1: istek nesnesi POST ile çekildiyse cüzdanın gönderdiği `wallet_nonce` (`fetchRequestObjectFor`); nesnede
+   * birebir aynı `wallet_nonce` yoksa istek reddedilir (tekrar oynatılmış nesne).
+   */
+  walletNonce?: string;
 }
 
 export function verifyRequestObject(
@@ -185,6 +253,8 @@ export function verifyRequestObject(
     throw new WalletError("unsupported", "request object issued in the future");
   if (p.aud !== undefined && p.aud !== REQUEST_AUD && !(Array.isArray(p.aud) && p.aud.includes(REQUEST_AUD)))
     throw new WalletError("unsupported", "request object aud is not for wallets");
+  if (opts.walletNonce !== undefined && p.wallet_nonce !== opts.walletNonce)
+    throw new WalletError("unsupported", "request object does not carry the wallet_nonce sent by this wallet");
   const clientId = String(p.client_id ?? "");
   if (expectedClientId && expectedClientId !== clientId)
     throw new WalletError("unsupported", "client_id differs between the QR code and the request object");
@@ -905,22 +975,30 @@ export interface RpCheck {
 
 declare const approvedBrand: unique symbol;
 /**
- * `checkRp`'nin ürettiği, bir isteğe (client_id, nonce, yanıt adresi/köken, imzalayan sertifika) bağlı onay belgesi (ADR-0056 K8).
- * Yapısal olarak taklit edilemez: `respond` yalnız bu süreçte `checkRp`'nin verdiği nesneyi kabul eder.
+ * `checkRp`'nin ürettiği, bir isteğe (client_id, nonce, `state`, yanıt adresi/köken, imzalayan sertifika, yanıt şifreleme anahtarı)
+ * bağlı onay belgesi (ADR-0056 K8). Yapısal olarak taklit edilemez: `respond` yalnız bu süreçte `checkRp`'nin verdiği nesneyi kabul
+ * eder. TEK KULLANIMLIK (AB uyum turu 2026-11-15 AU5, AB referans kütüphanesi #440 öz-denetimi): `respond` onayı ilk çağrıda
+ * tüketir — aynı onayla ikinci yanıt üretilmez; `checkRp`'den sonra istek nesnesinde `state` ya da şifreleme anahtarı
+ * değiştirilirse onay geçmez.
  */
 export type ApprovedRequest = { readonly [approvedBrand]: true };
 type ApprovalBinding = Pick<
   VpRequest,
-  "clientId" | "nonce" | "responseUri" | "origin" | "leafFingerprint" | "onBehalfOf"
->;
+  "clientId" | "nonce" | "state" | "responseUri" | "origin" | "leafFingerprint" | "onBehalfOf"
+> & { encKey: string };
 const approvals = new WeakMap<object, ApprovalBinding>();
 const bindingOf = (req: VpRequest): ApprovalBinding => ({
   clientId: req.clientId,
   nonce: req.nonce,
+  state: req.state,
   responseUri: req.responseUri,
   origin: req.origin,
   leafFingerprint: req.leafFingerprint,
   onBehalfOf: req.onBehalfOf,
+  // yanıtın şifrelendiği anahtar (Ek C'de oturum dökümü ayrıca `annexC` içinde bağlıdır)
+  encKey: req.encJwk
+    ? `${req.encJwk.kty}|${req.encJwk.crv}|${req.encJwk.x}|${req.encJwk.y}|${req.encJwk.kid ?? ""}`
+    : "",
 });
 function approvedFor(approval: unknown, req: VpRequest): boolean {
   const b = approval && typeof approval === "object" ? approvals.get(approval) : undefined;
@@ -1091,6 +1169,7 @@ export interface RespondOutput {
 export async function respond(p: RespondInput): Promise<RespondOutput> {
   if (!approvedFor(p.approval, p.request))
     throw new WalletError("trust_error", "the request was not approved by checkRp (ADR-0056)");
+  approvals.delete(p.approval as object); // tek kullanımlık (AU5 / #440): aynı onayla ikinci yanıt yok
   if (p.request.annexC) return respondAnnexC(p, p.request.annexC);
   const vpToken: Record<string, string[]> = {};
   for (const m of p.matches) {
