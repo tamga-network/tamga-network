@@ -37,6 +37,9 @@
  *                                                 zincire; bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok — src/chain/
  *   chain-replay [--dry-run] [--archive <dist>]   (ADR-0073 K1) liste arşivinin kontratlara yeniden oynatılması: plan +
  *                                                 replayPlanHash, kaldığı yerden yazım, eşdeğerlik testi — src/chain/replay-cli.ts
+ *   chain-sync [--dry-run] [--max-writes <n>]     (ADR-0085) sürekli projeksiyon: son yansıtılan liste ile şimdiki liste farkı
+ *                                                 zincire; build / heartbeat / anchor sonrası kanca yalnız TAMGA_CHAIN_ENABLED=1
+ *                                                 iken çalışır, hatası yayını durdurmaz — src/chain/sync-cli.ts
  *   chain-permissions render|check                (ADR-0052 K3) Besu yerel izin listesi zincir durumundan (belirleyici
  *                                                 permissions_config.toml + sha256) ve düğümle fark — src/chain/permissions-cli.ts
  * Kurallar: version monoton, previous_version_hash = önceki .jws'in sha256'sı; dist/ değişmez arşivi.
@@ -89,6 +92,7 @@ import {
   xmlSignerSlotProblems,
 } from "./tl119612.js";
 import { chainCommand } from "./chain/cli.js";
+import { chainAfterPublish } from "./chain/sync-cli.js";
 import { removalChangelogLine, removedRecords } from "./removals.js";
 import { statusAnchorParams } from "./chain/projection.js";
 import { listViewBody, registrationStatusBody, viewLinesEnabled, viewSnapshotOf } from "./view-anchors.js";
@@ -2044,8 +2048,12 @@ async function sandboxInstitution(sub: string | undefined) {
 const cmd = process.argv[2];
 (async () => {
   // build de kayıt kilidini alır: test kurumu kaydıyla (sandbox-institution) aynı anda liste imzalanmasın
-  if (cmd === "build") await withDirLock("registry.lock", build);
-  else if (cmd === "sandbox-institution") await sandboxInstitution(process.argv[3]);
+  // ADR-0085 SP1: yayından sonra zincir kancası — bayrak kapalıyken hiçbir şey yapmaz; hatası yayını durdurmaz (LS4, SP5)
+  const afterPublish = () => chainAfterPublish({ dist: DIST, environment: ENVIRONMENT });
+  if (cmd === "build") {
+    await withDirLock("registry.lock", build);
+    await afterPublish();
+  } else if (cmd === "sandbox-institution") await sandboxInstitution(process.argv[3]);
   else if (cmd === "wallet-provider")
     await walletProviderCommand(process.argv[3], process.argv.slice(4)).catch((e) => {
       if (!(e instanceof RegistryError)) throw e;
@@ -2056,6 +2064,7 @@ const cmd = process.argv[2];
     const a = await appendAnchor({ kind: "heartbeat" });
     console.log(JSON.stringify(a));
     await refreshWrprcStatus(); // ADR-0068: kayıt sertifikası durum listesi her saat yeniden imzalanır
+    await afterPublish();
   } else if (cmd === "anchor") {
     const row = {
       kind: "status_list" as const,
@@ -2076,6 +2085,7 @@ const cmd = process.argv[2];
       : {};
     const a = await appendAnchor({ ...row, ...params });
     console.log(JSON.stringify(a));
+    await afterPublish();
   } else if (cmd === "wrprc-status" || cmd === "wrprc-revoke") {
     await wrprcStatusCommand(cmd, process.argv.slice(3));
   } else if (cmd === "history-reset") {
@@ -2088,12 +2098,18 @@ const cmd = process.argv[2];
     console.log(cp ? JSON.stringify(cp) : "anchors: arşivlenecek satır yok");
   } else if (["register", "scope", "authorize", "list", "status", "rp-status", "end-use"].includes(cmd ?? "")) {
     await registryCommand(cmd!, process.argv.slice(3));
-  } else if (cmd === "chain-submit" || cmd === "chain-check" || cmd === "chain-replay" || cmd === "chain-permissions") {
+  } else if (
+    cmd === "chain-submit" ||
+    cmd === "chain-check" ||
+    cmd === "chain-replay" ||
+    cmd === "chain-sync" ||
+    cmd === "chain-permissions"
+  ) {
     // ADR-0051: zincir projeksiyonu — bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok (CH5)
     process.exitCode = await chainCommand(cmd, process.argv.slice(3), { dist: DIST, environment: ENVIRONMENT });
   } else {
     console.error(
-      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | history-reset --reason <gerekçe> | chain-submit [--dry-run] | chain-check <dosya> | chain-replay [--dry-run] [--archive <dist>] | chain-permissions render|check",
+      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | history-reset --reason <gerekçe> | chain-submit [--dry-run] | chain-check <dosya> | chain-replay [--dry-run] [--archive <dist>] | chain-sync [--dry-run] [--max-writes <n>] | chain-permissions render|check",
     );
     process.exit(1);
   }

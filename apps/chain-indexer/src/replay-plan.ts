@@ -237,6 +237,11 @@ export interface PlanOptions {
    * yeniden oynatma aracı adresten okur (`statusListUrisMissingParams`).
    */
   statusListParams?: (listUri: string) => { bits: number; size: number } | null;
+  /**
+   * Planın "şimdi"si (epoch saniye; varsayılan arşivdeki son liste yayını). Sürekli projeksiyon (ADR-0085 SP3) bunu koşu anı verir:
+   * listede bu andan ileri tarihli kayıt (ör. yetki bitişi) yazılmaz, zamanı gelince sonraki koşunun farkında çıkar.
+   */
+  planTime?: number;
 }
 
 /** JWS yükü (imza burada DOĞRULANMAZ; `verifyArchive` önce çalışır). */
@@ -340,7 +345,7 @@ export function buildReplayPlan(archive: ArchiveSet, opts: PlanOptions = {}): Re
       versions.push({ file, jws, issuedAt: sec(p.issued_at), version: p.version, order: 1 });
     }
   versions.sort((a, b) => a.issuedAt - b.issuedAt || a.order - b.order || a.file.localeCompare(b.file));
-  const planTime = Math.max(0, ...versions.map((v) => v.issuedAt));
+  const planTime = opts.planTime ?? Math.max(0, ...versions.map((v) => v.issuedAt));
 
   // --- izlenen durum (zincire yazılmış saydığımız) ---
   const roots = new Map<string, { applied: number }>();

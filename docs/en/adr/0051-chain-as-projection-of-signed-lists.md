@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-17
-last_updated: 2026-11-04
+last_updated: 2026-11-15
 summary: >
   The chain code is written before a production chain exists and is wired to the chainless design: the signed trust lists
   (lotl, tl-<cc>) and the anchor log remain the source; the chain is their projection. Only the digest of a list version
@@ -114,8 +114,9 @@ verifier application (a line on the health page) is separate work once the flag 
   tooling; forge is not available on the development machines). The local development chain is the Hardhat node; a Besu/QBFT
   single-validator development network is separate work (2026-11-04: set up without Docker, `scripts/besu-dev.ps1`).
 - The move to phase 0 is [[ADR-0009]] K7 and is unchanged by this ADR: the list archive is replayed into the contracts and the
-  equivalence test passes; the trust list anchor registry keeps working after that day (lists are still published in phase 0 —
-  as the chain's projection, [[ARCH-0003]] SEV1).
+  equivalence test passes; the trust list anchor registry keeps working after that day (~~lists are still published in phase 0 —
+  as the chain's projection, [[ARCH-0003]] SEV1~~ — **changed by [[ADR-0084]] (2026-11-15):** in the chain stage too the signed
+  lists stay the source and the chain stays their projection (witness)).
 
 # Options considered
 
@@ -171,3 +172,8 @@ same day ("the chain code is written now, integrated with the chainless design, 
 **Note (2026-11-04):** the "(Docker)" wording in K6 was removed: the Besu/QBFT single-validator development network was set up
 without Docker (a local JDK + the Besu binary, `scripts/besu-dev.ps1`, `npm run chain:besu:*`); that part of open item 4 is
 closed. The decision content is unchanged (project management).
+
+**Note (2026-11-15) — [[ADR-0084]]:** the provision in the last item of K6 that "lists are published in the chain stage as the
+chain's projection" was changed by the source-direction decision: the signed lists are the single, authoritative source in every
+chain stage and the chain is a witness (LS1); verification decisions are made from the list only (LS2). CH1–CH5 stand. Writing the
+list's changes to the chain after every publication: [[ADR-0085]].

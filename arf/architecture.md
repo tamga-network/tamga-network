@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-29 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-15 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -485,9 +485,9 @@ shown at EU interoperability events and with the OpenID conformance tests.
 | Phase                | Trust anchor                    | Governed by                               | Entry condition                                                             |
 | -------------------- | ------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------- |
 | List stage (today)   | Signed lists and the anchor log | Tamga, provisional operator               | —                                                                           |
-| Ledger stage         | Shared ledger                   | The first operators                       | Written acceptance of at least two independent operators; equivalence tests |
-| States join          | Shared ledger                   | The council of member states (two-thirds) | The first state operator in production                                      |
-| Institutional growth | Shared ledger                   | The council                               | Thresholds set by the council                                               |
+| Ledger stage         | Signed lists; shared ledger as witness | The first operators                | Written acceptance of at least two independent operators; equivalence tests |
+| States join          | Signed lists; shared ledger as witness | The council of member states (two-thirds) | The first state operator in production                                      |
+| Institutional growth | Signed lists; shared ledger as witness | The council                        | Thresholds set by the council                                               |
 
 **Status of the ledger stage:** precursor — code ready, off in production. The shared ledger's contracts compile and are
 tested; the list publisher is able to write only the digests of the signed lists to the ledger, but this feature is switched off
@@ -496,6 +496,13 @@ least two independent operators have written the same value, on conflict the sig
 never required for verification (decision, 2026-10-19). The ledger stays permissioned: which nodes may connect and which accounts
 may write is set by an allowlist rendered from the ledger's own governance record and kept identical on every node; the actual
 write authorization is in the contracts, and the nodes' interface is never exposed to the internet (decision, 2026-10-19).
+
+**Source and witness:** the signed lists are the single, authoritative trust source in every phase; the ledger is their witness.
+The list publisher writes the list's changes to the ledger after every publication; verification decisions are made from the list
+only and reading the ledger is a cross-check only; if the ledger stops or falls behind, lists and verification are unaffected; a
+difference between ledger and list raises an alarm. Making the ledger the source requires a separate decision. The move to the
+ledger goes through a test ledger first, then the real ledger; no servers or validator nodes are set up for now (decision,
+2026-11-15).
 
 ### 8.2 Moving to the shared ledger
 

@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   ADR-0009 K7 ties the move from signed lists to the chain to a replay of the list history into the contracts and an equivalence
   test. With today's contracts that history cannot be replayed faithfully: dates come from block time, there is no hard
@@ -168,7 +168,8 @@ void. An open window is the time during which the executor key can write dated h
   `since`, `since + 1`) and scope queries. The read side is the `ChainTrustSource` of [[ADR-0074]] K5.
 - Acceptance: no ACCEPTED/REJECTED difference in the C1/C2/C3/D5 answers. If there is one, the migration does not close; the report
   goes into the public transparency report.
-- After closing, the chain is still a projection ([[ADR-0051]] CH1); whether phase 0 makes the chain the source is a separate decision.
+- After closing, the chain is still a projection ([[ADR-0051]] CH1); whether phase 0 makes the chain the source is a separate decision —
+  **decided by [[ADR-0084]] (2026-11-15):** the chain is not made the source; the list stays the source, the chain a witness.
 
 # Rationale / alternatives
 
@@ -250,3 +251,8 @@ the window closed the behaviour is the same. [[SPEC-BC-0001]] §16.1.
 suspended issuer issued before the suspension stay valid; the remaining open questions as proposed. The command name
 `trust:chain-replay` is approved. DECISIONS: D-BC-12. CE1–CE6 are binding. Implementation in the contracts is in progress
 ([[SPEC-BC-0001]] version notes).
+
+**Note (2026-11-15).** The source direction that K6 left to a separate decision was closed by [[ADR-0084]] (list is the source,
+chain is a witness). Writing changes to the chain after the migration closes — continuous projection — is in [[ADR-0085]]; it uses
+the migration's plan engine, and outside the window the date is the block time (CE1 unchanged). When the migration finishes without
+differences, the starting point of continuous projection is written. The decision content is unchanged.

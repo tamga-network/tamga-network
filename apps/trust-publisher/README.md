@@ -142,3 +142,21 @@ Yerel deneme: `npm run contracts:node` → `npm run contracts:deploy:dev` (adres
 yazıcı = Hardhat hesabı #0, eşik 1) → yukarıdaki ortam değişkenleriyle `trust:chain-submit`. Kod `src/chain/` (plan: `projection.ts`,
 istemci: `client.ts`, koşu: `anchor.ts`, doğrulayıcı: `verify.ts`); ABI kopyası `src/chain/abi/` kontrat derlemesinden üretilir
 (`npm run contracts:check` farkı yakalar). Testler `test/chain.test.ts` (ağsız).
+
+## Sürekli projeksiyon (`chain-sync`, ad öneri) — ADR-0085, üretimde kapalı
+
+Liste kaynak, zincir tanık (ADR-0084). Göç (`trust:chain-replay`) farksız bitince başlangıç noktasını `dist/chain-sync.json`'a
+yazar; sonra her yayından sonra `chain-sync` son yansıtılan liste ile şimdiki liste arasındaki farkı (göçün plan motoruyla:
+plan(şimdi) − plan(önce)) blok anıyla zincire yazar. Aynı koşudaki ara durumlar birleşir; ileri tarihli kayıt zamanı gelince
+yazılır; ağ düzeyi kayıtlar Governance önerisiyle; yalnız tam koşu noktayı ilerletir (eksik koşu çıkış 5, fark sonraki koşuda yine
+denenir).
+
+| Komut | İş |
+| --- | --- |
+| `npm run trust:chain-sync -- --dry-run` | farkı basar, **yazmaz** (bayrak kapalıyken de) |
+| `npm run trust:chain-sync` | bayrak açıksa farkı yazar — yalnız yerel geliştirme zinciri (31337/31338) ve test/staging zinciri (31339; `TAMGA_CHAIN_KEYS`, `TAMGA_CHAIN_DEPLOYMENT`); gerçek ağa yazma yolu yok |
+
+Kanca: `build`, `heartbeat` ve `anchor` komutlarından sonra yalnız `TAMGA_CHAIN_ENABLED=1` iken `chain-sync` ve `chain-submit`
+çalışır; bayrak kapalıyken hiçbir şey yapmaz; hatası yayını durdurmaz ve çıkış kodunu değiştirmez (yalnız alarm satırı). Kod
+`src/chain/sync-plan.ts` (saf plan), `src/chain/sync-cli.ts` (komut + kanca), `apps/chain-indexer/src/sync-exec.ts` (yürütme).
+Testler `test/chain-sync.test.ts` (ağsız) ve `contracts/test/chain-sync.test.ts` (yerel zincirde sürekli eşdeğerlik).

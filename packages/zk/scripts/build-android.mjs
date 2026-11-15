@@ -9,6 +9,10 @@
  * /src, /target, ~) yazılır (packages/verifier zk-build ile aynı yöntem). Bu bayraklar CARGO_ENCODED_RUSTFLAGS ile verildiği için
  * config.toml'daki hedef bayrakları cargo'ca okunmaz; betik onları config.toml'dan okuyup ekler (tek kaynak config.toml). Mağaza derlemesi öncesi bir kez (ya da Rust kaynağı
  * değişince) çalıştırılır; Expo Go bu modülü yüklemez (ZK5: olağan yol). İlk derleme 2026-10-06 (NDK r27c, API 28 = Android 9).
+ * 16 KB sayfa boyutu (Google Play: Android 15+ hedefleyen uygulamalar, 64 bit): NDK r27 ve öncesi 4 KB hizalı bağlar; bu yüzden
+ * bütün ABI'lere `-z max-page-size=16384` ve `-z common-page-size=16384` bağlayıcı bayrakları verilir (Android geliştirici
+ * belgesi "Support 16 KB page sizes", NDK r27 ve öncesi; r28+ zaten 16 KB). Derlemeden sonra her .so'nun LOAD hizası ve
+ * GNU_RELRO sonu `elf-align.mjs` ile denetlenir; tutmazsa betik hata verir (pack-packages.mjs de aynı denetimi yapar).
  *   node scripts/build-android.mjs      (ya da: npm run zk:android -w @tamga-network/zk)
  */
 import { execFileSync } from "node:child_process";
@@ -16,6 +20,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkElf16k } from "./elf-align.mjs";
 
 const PKG = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const win = process.platform === "win32";
@@ -71,17 +76,25 @@ const REMAP = [
   [TARGET_DIR, "/target"],
   [resolve(PKG, "..", ".."), "/src"],
 ].map(([from, to]) => `--remap-path-prefix=${from}=${to}`);
+// 16 KB ELF hizası (NDK r27c ile gerekli; r28+ varsayılanı zaten bu). Rust'ta bağlayıcıya -C link-arg ile gider.
+const PAGE_16K = ["-C", "link-arg=-Wl,-z,max-page-size=16384", "-C", "link-arg=-Wl,-z,common-page-size=16384"];
 for (const [abi, rustTarget] of TARGETS) {
   execFileSync("cargo", ["build", "--release", "--target", rustTarget], {
     cwd: join(PKG, "rust"),
     env: {
       ...env,
-      CARGO_ENCODED_RUSTFLAGS: [...configRustflags(rustTarget), ...REMAP].join(String.fromCharCode(0x1f)),
+      CARGO_ENCODED_RUSTFLAGS: [...configRustflags(rustTarget), ...PAGE_16K, ...REMAP].join(String.fromCharCode(0x1f)),
     },
     stdio: "inherit",
   });
   const out = join(PKG, "android", "src", "main", "jniLibs", abi);
   mkdirSync(out, { recursive: true });
-  copyFileSync(join(TARGET_DIR, rustTarget, "release", "libtamga_zk_prover.so"), join(out, "libtamga_zk_prover.so"));
-  console.log(`✓ jniLibs/${abi}/libtamga_zk_prover.so`);
+  const so = join(out, "libtamga_zk_prover.so");
+  copyFileSync(join(TARGET_DIR, rustTarget, "release", "libtamga_zk_prover.so"), so);
+  const bad = checkElf16k(readFileSync(so));
+  if (bad.length) {
+    console.error(`✗ jniLibs/${abi}/libtamga_zk_prover.so 16 KB uyumlu değil: ${bad.join("; ")}`);
+    process.exit(1);
+  }
+  console.log(`✓ jniLibs/${abi}/libtamga_zk_prover.so (16 KB hizalı)`);
 }

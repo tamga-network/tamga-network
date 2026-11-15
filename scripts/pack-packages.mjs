@@ -7,7 +7,8 @@
  *   4) npm pack → .publish/tarballs/*.tgz
  * Kaynak depo dosyaları DEĞİŞMEZ. Yayın (npm publish) bu betiğin işi değil — CI (release.yml) ve proje yönetiminin onayıyla.
  * @tamga-network/zk (ADR-0032 Aşama 2): derlenmiş yerel kütüphaneler depoda yoktur (gitignore) ve pakete girmek ZORUNDADIR —
- *   Android `.so` (üç ABI) eksikse paketleme BAŞARISIZ olur (`npm run zk:android -w @tamga-network/zk`, NDK gerekir). iOS
+ *   Android `.so` (üç ABI) eksikse ya da 16 KB hizalı değilse (packages/zk/scripts/elf-align.mjs) paketleme BAŞARISIZ olur
+ *   (`npm run zk:android -w @tamga-network/zk`, NDK gerekir). iOS
  *   xcframework (`npm run zk:ios`, macOS gerekir) yoksa `ios/` pakete girmez ve paketteki expo-module.config.json yalnız
  *   "android" der (iOS uygulaması derlenebilir kalır; ZK5: olağan sunum); xcframework varsa iOS kendiliğinden eklenir. Paketlenen
  *   yerel dosyaların SHA-256 özetleri `lib/native-checksums.json`'a yazılır; smoke-packages.mjs kurulumdan sonra denetler.
@@ -18,9 +19,11 @@ import { execSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { builtinModules } from "node:module";
 import { join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
+// ROOT üzerinden (betik başka klasöre kopyalanıp çalıştırılabilir: cüzdan deposunun vendor eşitlemesi)
+const { checkElf16k } = await import(pathToFileURL(join(ROOT, "packages", "zk", "scripts", "elf-align.mjs")).href);
 const ALL_PKGS = ["core", "mdoc", "schemas", "sd-jwt", "trust", "issuer", "verifier", "wallet-core", "zk", "onboard"];
 const SEL = (process.env.TAMGA_PACK_PACKAGES ?? "").split(/\s+/).filter(Boolean);
 for (const s of SEL) if (!ALL_PKGS.includes(s)) throw new Error(`TAMGA_PACK_PACKAGES: bilinmeyen paket "${s}"`);
@@ -81,6 +84,12 @@ for (const p of PKGS) {
       errors.push(
         `${src.name}: yerel Android kütüphanesi eksik (${missing.join(", ")}) — önce: npm run zk:android -w @tamga-network/zk`,
       );
+    // 16 KB sayfa boyutu (Google Play, Android 15+): LOAD hizası ≥ 0x4000 ve GNU_RELRO sonu uyumlu olmalı
+    for (const f of ZK_ANDROID_ABIS.map(zkSo).filter((x) => existsSync(join(dir, x)))) {
+      const bad = checkElf16k(readFileSync(join(dir, f)));
+      if (bad.length)
+        errors.push(`${src.name}: ${f} 16 KB uyumlu değil (${bad.join("; ")}) — npm run zk:android ile yeniden derle`);
+    }
     // iOS: xcframework yoksa ios/ dışarıda kalır, modül yalnız Android'de bağlanır (podspec olmayan çerçeveyi istemesin)
     if (!existsSync(join(dir, ZK_XCFRAMEWORK))) {
       native = native.filter((n) => n !== "ios");

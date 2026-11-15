@@ -8,6 +8,23 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
 
 ### Added
 
+- **Continuous chain projection, switched off** (ADR-0085; list is the source, chain is a witness — ADR-0084). After the
+  migration window has closed, `trust:chain-sync` (proposed name) turns the difference between the last projected signed list
+  archive and the current one into chain operations with the migration's plan engine — plan(now) − plan(before) — and writes them
+  with block-time dates (hard revocation and status list publication moment keep the list's date). Intermediate states of the same
+  record within one run are merged (only the final state is written); a future-dated record (e.g. an authorisation end) is written
+  in the first run after its time has come; network-level records and network schemas go through Governance proposals; execution
+  checks the final state on the chain, so a repeated run writes nothing; at most 500 writes per run. Only a complete run advances
+  the projection point (`<dist>/chain-sync.json`, written by `trust:chain-replay` when the migration finishes without
+  differences); an incomplete run exits 5 and is retried. Writes only to the local development chain and the test/staging chain;
+  there is no write path to the real network. A post-publication hook runs `chain-sync` and `chain-submit` after `build`,
+  `heartbeat` and `anchor` only while `TAMGA_CHAIN_ENABLED=1`; with the flag off it does nothing, and its errors never stop or
+  change list publication. Pure planner `planChainSync` (apps/trust-publisher), executor `executeChainSync`
+  (apps/chain-indexer); the replay plan engine takes an optional plan time; the equivalence test takes lag intervals
+  `[list date, chain date)`. Tests: planner and hook without a network; continuous equivalence on the local chain (migration →
+  issuer added, suspension, revocation, merged suspend + reinstate, wallet provider key and access certificate change, status list
+  version, future-dated authorisation end — list = chain at every step). No contract change.
+
 - **wallet-core — identity document chip carrier, switched off** (ADR-0083). `chipReadRequestOf(url, authorizationServer)`
   checks the identity service's `/chip/read?r=…&c=…` address (same origin as the authorization server, exact path) and returns
   the `/chip/submit` address, the opaque handle and the 8-byte active authentication challenge; `submitChipRead(…)` relays the
@@ -18,6 +35,16 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
   before a favourable legal opinion; not in an npm release until then.
 
 ### Documents
+
+- ADR-0084 (tr / en / az): the signed trust lists are the single, authoritative source in every chain stage and the chain is a
+  witness — verification decisions only from the list, reading the chain only for cross-checking, a stopped chain does not affect
+  lists or verification, every difference raises an alarm; the move is a test network first, then the real network. ADR-0051's
+  provision that in the chain stage "lists are published as the chain's projection" changed; the question ADR-0073 left open is
+  closed; ADR-0074's temporary limit on the chain trust source became permanent (notes in all three, three languages).
+  ADR-0085 (tr / en / az): continuous projection (rules SP1–SP7). Tamga ARF §8.1: the trust anchor stays the signed lists in every
+  phase, the ledger is a witness (release 1.0 archive refreshed). ARCH-0002 (Besu network setup): source direction, the first
+  network with two independent operators (2 × 2 validators), current contract names, applications do not read the chain, test
+  network → real network conditions, monitoring; QBFT open point closed.
 
 - ADR-0083 amendment (2026-11-13; tr / en / az): K11 and CV7 changed — the code of the chip path may be written now, behind a
   switch that is off by default (the identity service refuses to run on a server while it is on; store builds of the wallet

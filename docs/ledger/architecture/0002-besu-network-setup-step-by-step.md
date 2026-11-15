@@ -4,13 +4,13 @@ title: "Besu ağı kurulumu"
 status: Draft
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   "Hyperledger Besu ile ağ kurmak ne demek?" sorusunu adım adım, somut olarak
   yanıtlar: chain ID/genesis, QBFT validator anahtarları ve extraData, bootnode,
   node başlatma, izinli erişim (yerel izinlendirme, ADR-0052), RPC koruması, Trust Registry EVM
-  kontratlarının deploy'u, Tamga Wallet/issuer entegrasyonu, testnet→mainnet, ve fazlı
-  validator devri (vakıf→devlet); ayrıca Docker'sız yerel tek-validator geliştirme ağı
+  kontratlarının deploy'u, uygulama entegrasyonu (liste kaynak, zincir tanık — ADR-0084), sürekli projeksiyon (ADR-0085),
+  test ağı → gerçek ağ ve fazlı validator devri (ilk işletmeciler → devlet); ayrıca Docker'sız yerel tek-validator geliştirme ağı
   (Windows + Linux, Java 25) ve iki düğümlü yerel izinli ağ (izin listesi zincirden, QBFT validator oylaması). Detaylı config/ABI'lar sonraki Specification
   dokümanlarına bırakılır; bu doküman referans kurulum akışını verir.
 ---
@@ -21,9 +21,14 @@ Bu doküman [[ARCH-0001]]'de tanımlanan ağ mimarisini **Hyperledger Besu üzer
 nasıl kurarız** sorusunu adım adım yanıtlar. "Besu ile yapmak" soyut bir tercih
 değil, aşağıdaki somut adımlar dizisidir.
 
-Amaç: bir mühendis (veya AI ajanı) bu dokümanı izleyerek Faz 0 (vakıf) ağını ayağa
-kaldırabilmeli; kesin config alanları ve kontrat arayüzleri ileride Specification
-dokümanlarında (SPEC-BC-*) kesinleşecektir.
+Amaç: bir mühendis bu dokümanı izleyerek zincir aşamasının ilk ağını (en az iki bağımsız işletmeci, [[ADR-0009]] K4) önce test
+ağı, sonra gerçek ağ olarak ayağa kaldırabilmeli; kontrat arayüzleri [[SPEC-BC-0001]]'dedir.
+
+> **Kaynak yönü ([[ADR-0084]], 2026-11-15):** imzalı güven listeleri ve çapa günlüğü ağın tek ve asıl güven kaynağıdır; zincir
+> **tanıktır**. Liste yayıncısı her yayından sonra listedeki değişiklikleri zincire yazar ([[ADR-0085]]); doğrulama kararı yalnız
+> listeden verilir, zincir okuması yalnız çapraz denetimdir; zincir durursa listeler ve doğrulama etkilenmez. Bugün zincir kodu
+> kapalı olarak tamamlanır; sunucu ve doğrulayıcı düğüm kurulmaz. Geçiş sırası: kapalı kod → test ağı (gerçek listeler bir test
+> zincirine yansıtılır) → gerçek ağ.
 
 > **"Besu ile yapmak" özeti:** Besu, kendi genesis'i + kendi chain ID'si + kendi
 > onaylı validator setiyle çalışan **bağımsız bir Ethereum-client ağıdır**. Biz
@@ -152,10 +157,14 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 - Ağ adı, blok süresi (ör. 2–5 sn) ve gaz politikası (izinli ağda ücretsiz/sabit)
   kararlaştırılır.
 
-## 2. Validator anahtarlarını üret (Faz 0: 4 validator)
+## 2. Validator anahtarlarını üret (ilk ağ: iki bağımsız işletmeci, 4 validator)
 - Her validator için node anahtar çifti üret. Adresler QBFT oy setini oluşturur.
-- Faz 0'da **4 validator = Tamga vakfı** (QBFT'de 3f+1 → f=1: bir node arızalansa
-  ağ çalışır). Anahtarlar HSM/kasada saklanır.
+- İlk ağ **en az iki bağımsız işletmeciyle** kurulur ([[ADR-0009]] K4; [[ADR-0076]] GC4: en az iki kurucu). Önerilen düzen
+  **2 işletmeci × 2 validator = 4** (QBFT'de 3f+1 → f=1: bir node arızalansa ağ çalışır; hiçbir işletmeci tek başına blok üretemez
+  — 4'te 3 imza gerekir). Bir işletmecinin iki düğümü birden düşerse zincir durur; listeler etkilenmez ([[ADR-0084]] LS4). Hedef
+  üçüncü bağımsız işletmeci. Her işletmeci ayrıca bir doğrulamayan tam düğüm (RPC, indeksleyici, yazıcı) çalıştırır; validator'ın
+  RPC'si dışarı açılmaz. Validator başka iş yükü taşımaz: canlı hizmet sunucusuna konmaz. Anahtarlar her işletmecinin kendi
+  HSM/kasasında üretilir ve saklanır.
 - **Yönetişim ve mutabakat anahtarı bugün aynıdır (açık karar, not 2026-11-11).** Validator'ın düğüm anahtarı aynı zamanda
   devletin Governance oy anahtarıdır (`Governance.StateMember.validatorAddress`). Bu iki anahtar ayrılana kadar gerçek ağda
   validator düğüm anahtarı **HSM'de tutulmak zorundadır**; dosyadaki anahtar yalnız deneme ağlarında kabul edilir. Ayrım, ikinci
@@ -165,11 +174,11 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 - `genesis.json`: chain ID, QBFT consensus config (blok süresi, epoch), başlangıç
   bakiyeleri (izinli ağda genelde 0/teknik), ve **`extraData`** alanına Faz 0
   validator adreslerini RLP kodlamasıyla göm.
-- QBFT vs IBFT 2.0 son ayarı ([[RS-FRAMEWORKS-0001]] §9) bu aşamada netleşir.
+- Uzlaşı QBFT'dir ([[ADR-0001]]); kural seti ilk bloktan Cancun ([[ADR-0077]]: `shanghaiTime: 0`, `cancunTime: 0`).
 
 ## 4. Bootnode / statik peer'ler
 - Node'ların birbirini bulması için bootnode(lar) veya statik peer listesi tanımla.
-- Faz 0'da 4 node birbirine statik bağlanır.
+- İlk ağda validator'lar ve tam düğümler birbirine statik bağlanır (keşif kapalı; izin listesi §6).
 
 ## 5. Validator node'larını başlat
 - Her node'u genesis + QBFT config + kendi anahtarıyla başlat.
@@ -200,23 +209,33 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
   nginx JSON-RPC gövdesini njs olmadan okuyamaz; yöntem süzgeci ayrı küçük bir Node süreci: `network/rpc-proxy/` (nginx örneği,
   `filter.mjs`, systemd birimi, yerel test sertifikası betiği).
 
-## 7. Trust Registry kontratlarını deploy et
-- EVM/Solidity ile [[ARCH-0001]] §5'teki kayıtları deploy et:
-  **Issuer Registry, Key Registry, Revocation (Bitstring Status List ref), Schema
-  Registry.**
-- Yönetim (kim issuer ekler/akredite eder) başta vakıf multisig, sonra devlet
-  yönetişimi (Faz 1) ile genişler.
-- Detaylı ABI/arayüz → **SPEC-BC-0001 (planlı).**
+## 7. Güven katmanı kontratlarını deploy et
+- [[SPEC-BC-0001]]'in kontratları (UUPS vekil): `Governance`, `RootCARegistry`, `SchemaRegistry`, `IssuerRegistry`,
+  `RelyingPartyRegistry`, `StatusListRegistry` (iptal listesi kaydı; liste içeriği zincire girmez — [[ADR-0008]]),
+  `CrossRecognition`, `TrustQueries`, liste çapası kaydı `TrustListAnchorRegistry` ([[ADR-0051]]) ve ağ düzeyi kayıt
+  `NetworkRegistry` ([[ADR-0074]]). Dağıtım betiği `contracts/scripts/deploy-network.ts` (bugün yalnız test/staging zincir
+  kimlikleri), Governance kurulumu `network/testnet/bootstrap-governance.sh`.
+- Yönetim baştan Governance'tadır: iki kurucu üye ([[ADR-0076]] GC4), kayıt yönetimi türü belli önerilerle (2/3, [[ADR-0055]]),
+  liste çapası yazıcı eşiği üretimde ≥ 2 ([[ADR-0051]] CH3).
+- Sonra geçmişin aktarımı (bir kez): göç penceresi önerisi (plan özetiyle) → üyelerin oyu → `trust:chain-replay` → eşdeğerlik
+  farksız → pencere kapanır ([[ADR-0073]]). Pencere bir kez açıldığı için aynı arşivle önce test ağında tam prova yapılır.
 
-## 8. Uygulama entegrasyonu (Tamga Wallet + issuer)
-- Tamga Wallet ve issuer servisleri **JSON-RPC** ile Trust Registry'yi okur.
-- Doğrulama akışı: Verifier, credential imzasını + Trust Registry'den issuer
-  anahtarı/durumunu kontrol eder (kaynağa gitmeden — [[ARCH-0001]] §5).
+## 8. Uygulama entegrasyonu: liste kaynak, zincir tanık ([[ADR-0084]])
+- Cüzdanlar, belge veren servisler ve doğrulayıcılar **zinciri okumaz**; güven kararını imzalı listelerden verir (`TrustSource`,
+  [[ADR-0015]]; paketler zincir istemcisi taşımaz).
+- Zincire yazan tek bileşen liste yayıncısıdır: her yayından ve çapa satırından sonra listedeki değişiklikleri (`trust:chain-sync`,
+  [[ADR-0085]]) ve liste özetlerini (`trust:chain-submit`, [[ADR-0051]]) yazar; yalnız `TAMGA_CHAIN_ENABLED=1` iken; hatası
+  yayını durdurmaz.
+- Zinciri okuyanlar çapraz denetim içindir: `trust:chain-check`, doğrulayıcının sağlık sayfasındaki zincir alanı, indeksleyici
+  (`apps/chain-indexer`) ve eşdeğerlik testi. Sonuç doğrulamayı hiçbir yönde değiştirmez; fark alarm üretir.
 
-## 9. Testnet → Mainnet
-- Önce **testnet**: aynı topoloji, sıfırlanabilir; pilotlar (ilk üniversite diploma
-  issuer'ı, Tamga Wallet) burada denenir.
-- Kriterler karşılanınca **mainnet** genesis dondurulur ve üretim başlar.
+## 9. Test ağı → gerçek ağ ([[ADR-0084]] LS6)
+- Önce **test ağı** (gölge zincir): aynı topoloji, sıfırlanabilir; gerçek imzalı listeler test zincirine göçle aktarılır ve her
+  yayından sonra sürekli projeksiyonla yansıtılır; eşdeğerlik bir süre farksız izlenir. Test zinciri sandbox'tan ayrıdır (sandbox
+  gerçek ağa yazılmaz, [[ADR-0074]] PJ4).
+- **Gerçek ağ** şu koşullar birlikte sağlanınca açılır: ikinci bağımsız işletmecinin yazılı kabulü, eşik ≥ 2, test ağında farksız
+  eşdeğerlik, üretim anahtar yolu (HSM) ve yönetişim–uzlaşma anahtar ayrımı için karar kayıtları, bağımsız güvenlik denetimi. Sonra
+  gerçek ağ genesis'i dondurulur; adımlar 1–8 gerçek ağın anahtarlarıyla yinelenir. Bugün gerçek ağa yazma yolu kodda yoktur.
 
 ## 10. Faz geçişi — validator devri (vakıf → devlet)
 - Devlet katılınca: QBFT **validator ekleme oylaması** ile devlet node'u sete
@@ -231,6 +250,9 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 
 ## 11. Operasyon, izleme, yedekleme
 - Metrik/log (Prometheus/Grafana), SLA, otomatik yeniden başlatma.
+- İzlenecekler: blok durması, eş sayısı, izin listesi farkı (`trust:chain-permissions check`), indeksleyici gecikmesi, liste
+  çapasında `NO` / `CONFLICT` / `CONTEST` ([[ADR-0051]]), sürekli projeksiyonun eksik koşusu ve iki saati aşan gecikmesi
+  ([[ADR-0085]] SP2, SP5). Hepsi alarm üretir ve şeffaflık raporuna girer ([[ADR-0084]] LS5); hiçbiri liste yayınını durdurmaz.
 - Anahtar rotasyonu, felaket kurtarma, node bakımı prosedürleri.
 - **Yönetişim anahtarının yedeği (iki üyeli dönemde zorunlu; [[ADR-0076]] uygulama notu, 2026-11-12).** Ağda iki etkin üye
   varken bir üyenin yönetişim anahtarı (bugün validator düğüm anahtarı — Açık Konular 6) kaybolursa hiçbir öneri geçemez, o üye
@@ -265,7 +287,7 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 
 # Açık Konular
 
-1. QBFT vs IBFT 2.0 kesin seçimi (EBSI IBFT 2.0 kullanır — RS-EBSI-0001).
+1. ~~QBFT vs IBFT 2.0 kesin seçimi~~ — **kapandı:** QBFT ([[ADR-0001]]).
 2. Blok süresi / gaz politikası kesin değerleri.
 3. ~~Permissioning: on-chain kontrat vs dosya tabanlı~~ — **kapandı (2026-10-19):** yerel izinlendirme, zincir durumundan üretilen
    dosya ([[ADR-0052]]); Besu 25.6.0 zincir üstü izinlendirmeyi kaldırdı.
@@ -295,5 +317,6 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 
 **Taslak** — sürüm 1.0.0 (2026-10-02; §6 yerel izinlendirme ve RPC koruması 2026-10-19, [[ADR-0052]]; Java 25 ve Docker'sız
 yerel geliştirme ağı 2026-11-04; iki düğümlü yerel izinli ağ, izin listesi aracı, RPC süzgeci ve validator oylaması 2026-11-05;
-Adım 11 Governance yükseltmesinden sonra oylar 2026-11-12).
+Adım 11 Governance yükseltmesinden sonra oylar 2026-11-12; kaynak yönü, ilk ağın iki bağımsız işletmeciyle kurulması, güncel kontrat
+adları, uygulama entegrasyonu, test ağı → gerçek ağ koşulları ve izleme 2026-11-15, [[ADR-0084]], [[ADR-0085]]).
 

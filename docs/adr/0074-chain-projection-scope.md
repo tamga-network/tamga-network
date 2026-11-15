@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-04
+last_updated: 2026-11-15
 summary: >
   İmzalı listelerde olup zincirde karşılığı olmayan kayıtların (kapı grupları, kayıt sertifikası durum listesi, XML ve LoTE
   görünümleri, liste imzacıları, cüzdan sağlayıcılar, ZK devreleri, dış listeler, belge kategorileri, liste işletmecisi, kurum
@@ -182,3 +182,8 @@ Kayıt sertifikası durum listesi ve liste görünümleri bugün çapa günlüğ
 `registration_status`, `list_view`, `apps/chain-indexer/`, ileride `@tamga-network/chain`; `contracts/`, `network/` ve
 `docs/ledger` herkese açık; açık soruların kalanı önerildiği gibi. DECISIONS: D-BC-13. PJ1–PJ5 bağlayıcıdır. Kontratlardaki
 uygulama sürüyor ([[SPEC-BC-0001]] sürüm notları).
+
+**Not (2026-11-15).** K5'teki "sürekli projeksiyon gelene kadar doğrulamada kullanılmaz" sınırı [[ADR-0084]] ile kalıcı oldu:
+sürekli projeksiyon geldikten sonra da zincirden okuyan güven kaynağı doğrulama kararı vermez, yalnız eşdeğerlik ve çapraz denetim
+içindir (LS2, LS3). Sürekli projeksiyon [[ADR-0085]]'te; içerik düzeyi projeksiyonun durum dosyasından gelir. PJ1–PJ5 aynen
+sürer.

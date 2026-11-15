@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-13
+last_updated: 2026-11-15
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 478 kodlanmış değişmez, 85 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 491 kodlanmış değişmez, 87 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -858,6 +858,35 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0083/CV7` | Çip yolu hukuki görüş olumlu gelmeden hiçbir ortamda açılmaz. Kodu yazılabilir, ama varsayılanı kapalı bir anahtarın arkasında durur: kimlik servisi anahtar açıkken sunucuda çalışmayı reddeder; cüzdanın mağaza derlemelerinde çip okuma bulunmaz; kod yalnız yerel testlerde sahte belge verisiyle çalışır. Bir ülkenin belgesi için çip yolu, o ülkenin kök sertifikası güvenilir kaynaktan alınmadan ve hukuki incelemesi olumlu sonuçlanmadan gerçek ağda açılmaz. |
 
 
+## ADR-0084
+
+*"Liste kaynak, zincir tanık"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0084/LS1` | İmzalı güven listeleri ve çapa günlüğü ağın tek ve asıl güven kaynağıdır; zincir tanıktır. Bu yön bütün zincir aşamalarında geçerlidir; zinciri kaynak yapmak yeni bir karar kaydı ister. |
+| `ADR-0084/LS2` | Doğrulama kararı (C1, C2, C3, D5 ve kayıtlara bakan öteki adımlar) yalnız imzalı listeden verilir; zincirden okuyan güven kaynağı hiçbir doğrulama kararında tüketilmez. |
+| `ADR-0084/LS3` | Zincir okuması yalnız çapraz denetim ve şeffaflık içindir; doğrulama sonucunu hiçbir yönde değiştirmez ve doğrulama için hiçbir zaman gerekli değildir. |
+| `ADR-0084/LS4` | Zincirin durması, erişilememesi, geride kalması ya da zincire yazımın düşmesi liste yayınını, iptal listelerini, doğrulamayı ve cüzdanları etkilemez; zincir işleri yayından sonra ve yayından bağımsız çalışır. |
+| `ADR-0084/LS5` | Zincir ile liste arasındaki her fark alarm üretir ve şeffaflık raporuna girer; düzeltme listeden zincire doğrudur, zincir kaydı silinmez. |
+| `ADR-0084/LS6` | Zincire geçiş sırası test ağı, sonra gerçek ağdır; gerçek ağ ikinci bağımsız işletmecinin yazılı kabulü, eşik ≥ 2, test ağında farksız eşdeğerlik, üretim anahtar yolu ve anahtar ayrımı kararları ve bağımsız güvenlik denetimi olmadan açılmaz. |
+
+
+## ADR-0085
+
+*"Zincire sürekli projeksiyon"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0085/SP1` | Göç penceresi kapandıktan sonra her liste yayınından ve çapa satırından sonra son yansıtılan nokta ile şimdiki liste arasındaki fark, göçün plan motoruyla zincir işlemlerine çevrilir; fark listelerdeki bütün güven kayıtlarını kapsar, kişisel veri ve serbest metin içermez. |
+| `ADR-0085/SP2` | Pencere dışında zincir tarihi blok anıdır (sert iptal ve iptal listesi yayın anı hariç); liste tarihi ile zincir tarihi arasındaki aralık eşdeğerlikte sorulmaz; yayından zincire gecikme iki saati aşarsa alarm üretir. |
+| `ADR-0085/SP3` | Aynı kayda aynı koşuda düşen ara durumlardan yalnız son hâl yazılır; ileri tarihli kayıt zamanı geldikten sonraki ilk koşuda yazılır. |
+| `ADR-0085/SP4` | Ağ düzeyi kayıtlar ve ağ şemaları pencere dışında yalnız Governance oyuyla yazılır; araç oyu atlamaz; oy bekleyen kayıt ulusal kayıtların yazımını bekletmez. |
+| `ADR-0085/SP5` | Zincire yazım hatası liste yayınını durdurmaz ve yayın komutunun sonucunu değiştirmez; alarm üretir. Yalnız tam koşu projeksiyon noktasını ilerletir; eksik koşunun farkı sonraki koşuda yine denenir; yürütme zincirdeki son hâle bakarak kaldığı yerden sürer. |
+| `ADR-0085/SP6` | Bir koşu yazım bütçesini aşmaz ve bir iptal listesi için en çok bir yayın yazar; kalan sonraki koşuya kalır. |
+| `ADR-0085/SP7` | Sürekli projeksiyon yalnız `TAMGA_CHAIN_ENABLED=1` iken, göç farksız bittikten ve göç penceresi kapandıktan sonra çalışır; bayrak kapalıyken hiçbir şey yapmaz. Yazım yalnız yerel geliştirme ve test zincirine yapılır; gerçek ağa yazma yolu, gerçek ağın anahtar yolu ve [[ADR-0084]] LS6 koşulları karara bağlanmadan kurulmaz. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1210,12 +1239,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 478 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 491 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IS, K, KC, L, LI, LP, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IS, K, KC, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-13 (`scripts/sync-invariants.mjs`). Toplam 478 kodlanmış değişmez, 85 dokümanda.
+**Üretilen dosya** — 2026-11-15 (`scripts/sync-invariants.mjs`). Toplam 491 kodlanmış değişmez, 87 dokümanda.

@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-04
+last_updated: 2026-11-15
 summary: >
   İmzalanmış siyahılarda olub zəncirdə qarşılığı olmayan qeydlərin (keçid qrupları, qeydiyyat sertifikatı status siyahısı, XML və LoTE görünüşləri, siyahı imzalayanları, cüzdan provayderləri, ZK sxemləri, xarici siyahılar, sənəd kateqoriyaları, siyahı operatoru, qurum sinfi və qeydiyyat məlumatları) hansı kontrakta, hansı sahə və hadisə ilə əks olunacağını təklif edir. Sərhəd: zəncirə şəxsi məlumat və sərbəst mətn daxil olmur; qeydiyyat təfərrüatları yalnız xülasə (`bytes32`) və mövcud `metadataURI` nümunəsi ilə; yeni `string` sahəsi yoxdur. Şəbəkə səviyyəli qeydlər Governance təklifi ilə yazılır. Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri lövbər jurnalına yeni sətir növləri ilə daxil olur. Oxu yolu `ChainTrustSource` + indeksləyici `apps/` altındadır. Sandbox zəncirə yazılmır. `contracts/`, `network/` və `docs/ledger` ictimai depoya keçir. Qəbul edildi (2026-11-04); adlar təsdiqlənib.
 domain: Trust
@@ -183,3 +183,8 @@ Qeydiyyat sertifikatı status siyahısı və siyahı görünüşləri bu gün l�
 `registration_status`, `list_view`, `apps/chain-indexer/`, gələcəkdə `@tamga-network/chain`; `contracts/`, `network/` və
 `docs/ledger` ictimaidir; açıq sualların qalanı təklif edildiyi kimi. DECISIONS: D-BC-13. PJ1–PJ5 məcburidir. Kontraktlarda
 tətbiq davam edir ([[SPEC-BC-0001]] versiya qeydləri).
+
+**Qeyd (2026-11-15).** K5-dəki "davamlı proyeksiya gələnə qədər yoxlamada istifadə edilmir" həddi [[ADR-0084]] ilə daimi oldu:
+davamlı proyeksiya gəldikdən sonra da zənciri oxuyan etibar mənbəyi yoxlama qərarı vermir, yalnız ekvivalentlik və çarpaz
+yoxlama üçündür (LS2, LS3). Davamlı proyeksiya [[ADR-0085]]-dədir; məzmun səviyyəsi proyeksiyanın vəziyyət faylından gəlir.
+PJ1–PJ5 olduğu kimi qüvvədədir.

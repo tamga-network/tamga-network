@@ -6,6 +6,8 @@
  *                                               listesi (status/<ad>) da — sürüm dist/anchors.jsonl'daki satırdan
  *   chain-replay …                              liste geçmişinin kontratlara yeniden oynatılması (ADR-0073 K1) — replay-cli.ts
  *   chain-permissions render|check              Besu yerel izin listesi zincir durumundan (ADR-0052 K3) — permissions-cli.ts
+ *   chain-sync [--dry-run] [--max-writes <n>]   sürekli projeksiyon: son yansıtılan liste ile şimdiki liste arasındaki fark
+ *                                               zincire (ADR-0085; liste kaynak, zincir tanık — ADR-0084) — sync-cli.ts
  * Ortam: TAMGA_CHAIN_ENABLED (0/1, varsayılan 0) · TAMGA_CHAIN_RPC_URL · TAMGA_CHAIN_ANCHOR_REGISTRY · TAMGA_CHAIN_ANCHORER_KEY
  * (yalnız yazma; .env'de, depoda yer tutucu). Üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz (K4).
  */
@@ -17,6 +19,7 @@ import { EthersChainClient, MemoryChainClient, type ChainClient } from "./client
 import type { Environment } from "./projection.js";
 import { chainPermissionsCommand } from "./permissions-cli.js";
 import { chainReplayCommand } from "./replay-cli.js";
+import { chainSyncCommand } from "./sync-cli.js";
 import { checkListAnchored, checkViewAnchored } from "./verify.js";
 
 export const chainEnabled = (env: NodeJS.ProcessEnv = process.env) => env.TAMGA_CHAIN_ENABLED === "1";
@@ -93,6 +96,7 @@ export async function chainCommand(
     return out.anchored === "NO" ? 3 : 0;
   }
   if (cmd === "chain-replay") return chainReplayCommand(args, { ...ctx, env });
+  if (cmd === "chain-sync") return chainSyncCommand(args, { ...ctx, env });
   if (cmd === "chain-permissions") return chainPermissionsCommand(args, env);
   throw new Error(`chain: bilinmeyen komut ${cmd}`);
 }

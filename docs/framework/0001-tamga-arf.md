@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-29
+last_updated: 2026-11-15
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -460,9 +460,9 @@ değerlendirme kuruluşları ve ulusal sertifikasyon gelir. Rol başına neyin t
 | Aşama | Güven çapası | Kim yönetir | Geçiş koşulu |
 |---|---|---|---|
 | Liste aşaması (bugün) | İmzalı listeler ve çapa günlüğü | Tamga, geçici işletmeci | — |
-| Defter aşaması | Ortak defter | İlk işletmeciler | En az iki bağımsız işletmecinin yazılı kabulü; eşdeğerlik testleri |
-| Devlet katılımı | Ortak defter | Üye devletlerin konseyi (üçte iki) | İlk devlet işletmecisinin üretime geçmesi |
-| Kurumsal genişleme | Ortak defter | Konsey | Konseyin belirlediği eşikler |
+| Defter aşaması | İmzalı listeler; ortak defter tanık | İlk işletmeciler | En az iki bağımsız işletmecinin yazılı kabulü; eşdeğerlik testleri |
+| Devlet katılımı | İmzalı listeler; ortak defter tanık | Üye devletlerin konseyi (üçte iki) | İlk devlet işletmecisinin üretime geçmesi |
+| Kurumsal genişleme | İmzalı listeler; ortak defter tanık | Konsey | Konseyin belirlediği eşikler |
 
 **Defter aşamasının durumu:** öncül — kod hazır, üretimde kapalı. Ortak defterin sözleşmeleri derlenir ve test edilir; liste
 yayıncısı imzalı listelerin yalnız özetlerini deftere yazabilecek hâldedir, ama bu özellik kapalıdır ve çalışan bir defter yoktur.
@@ -471,6 +471,12 @@ sayılır, çelişkide imzalı liste geçerlidir ve defterin cevabı doğrulama 
 Defter izinli kalır: hangi düğümün bağlanabileceği ve hangi hesabın yazabileceği, defterin kendi yönetişim kaydından üretilen ve
 her düğümde aynı tutulan bir izin listesiyle belirlenir; yazma yetkisinin asıl denetimi sözleşmelerdedir ve düğümlerin arayüzü
 internete açılmaz (karar, 2026-10-19).
+
+**Kaynak ve tanık:** imzalı listeler bütün aşamalarda tek ve asıl güven kaynağıdır; defter onların tanığıdır. Liste yayıncısı
+her yayından sonra listedeki değişiklikleri deftere yazar; doğrulama kararı yalnız listeden verilir ve defterin okunması yalnız
+çapraz denetimdir; defter durursa ya da geride kalırsa listeler ve doğrulama etkilenmez; defter ile liste arasındaki fark alarm
+üretir. Defteri kaynak yapmak ayrı bir karar ister. Deftere geçiş önce bir test defteriyle, sonra gerçek defterle yapılır;
+şimdilik sunucu ve doğrulayıcı düğüm kurulmaz (karar, 2026-11-15).
 
 ## 8.2 Ortak deftere geçiş
 

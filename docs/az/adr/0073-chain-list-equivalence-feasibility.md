@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   ADR-0009 K7 imzalanmış siyahılardan zəncirə keçidi siyahı tarixçəsinin kontraktlarda yenidən icrasına və ekvivalentlik testinə bağlayır. Bugünkü kontraktlarla bu tarixçə dəqiq yenidən icra edilə bilmir: tarixlər blok vaxtından gəlir, sərt ləğv yoxdur, sxemin bir məzmun xülasəsi var, yoxlayan tərəfin identifikatoru sertifikata bağlıdır və dayandırmadan qayıda bilmir, status dəstləri və sərhədləri fərqlidir, gündəlik kvotalar toplu yazını dayandırır. Qərar: hər reyestr kontraktında Governance-in bir dəfə açdığı, bağlandıqdan sonra yenidən açıla bilməyən birdəfəlik miqrasiya rejimi (keçmiş tarix yalnız blok vaxtına qədər, kvota yoxdur); `invalidatesFrom` ilə sərt ləğv; sxem versiya xülasələri yalnız əlavə oluna bilən massiv; `rpId = keccak256(dns_name)`, sertifikatın yenilənməsi, dayandırmadan qayıdış və incə əhatə dairələri (xülasələrlə); status uyğunlaşdırma cədvəli və sənədin `iat` anındakı statusa görə yarımaçıq intervallarla qiymətləndirmə. Yenidən icra komandası `trust:chain-replay`. Qəbul edildi (2026-11-04): dayandırılmış qurumun dayandırmadan əvvəlki sənədləri etibarlıdır, miqrasiya pəncərəsi ən çoxu 30 gündür.
 domain: Trust
@@ -157,7 +157,8 @@ bildiyi müddətdir; lazım olduğundan uzun saxlanmır.
   `since + 1`) və əhatə sorğuları. Oxu tərəfi [[ADR-0074]] K5-dəki `ChainTrustSource`-dur.
 - Qəbul: C1/C2/C3/D5 cavablarında ACCEPTED/REJECTED fərqi yoxdur. Fərq varsa miqrasiya bağlanmır; hesabat ictimai şəffaflıq
   hesabatına daxil olur.
-- Bağlanışdan sonra zəncir yenə proyeksiyadır ([[ADR-0051]] CH1); Faza 0-ın zənciri mənbə edib-etməyəcəyi ayrıca qərardır.
+- Bağlanışdan sonra zəncir yenə proyeksiyadır ([[ADR-0051]] CH1); Faza 0-ın zənciri mənbə edib-etməyəcəyi ayrıca qərardır — **qərar
+  [[ADR-0084]] (2026-11-15):** zəncir mənbə edilmir; siyahı mənbə, zəncir şahid olaraq qalır.
 
 # Əsaslandırma / alternativlər
 
@@ -236,3 +237,8 @@ başlanğıcı onsuz da açıq yazır; pəncərə bağlı ikən davranış eynid
 **Accepted — 2026-11-04.** Layihə rəhbərliyinin təsdiqi ilə (hərfi sitat xüsusi təsdiq qeydində): dayandırılmış qurumun
 dayandırmadan əvvəlki sənədləri etibarlıdır; açıq sualların qalanı təklif edildiyi kimi. Komanda adı `trust:chain-replay`
 təsdiqlənib. DECISIONS: D-BC-12. CE1–CE6 məcburidir. Kontraktlarda tətbiq davam edir ([[SPEC-BC-0001]] versiya qeydləri).
+
+**Qeyd (2026-11-15).** K6-nın ayrıca qərara buraxdığı mənbə istiqaməti [[ADR-0084]] ilə bağlandı (siyahı mənbə, zəncir şahid).
+Miqrasiya bağlandıqdan sonrakı dəyişikliklərin zəncirə yazılması — davamlı proyeksiya — [[ADR-0085]]-dədir; miqrasiyanın plan
+mühərrikindən istifadə edir, pəncərədən kənarda tarix blok anıdır (CE1 olduğu kimi). Miqrasiya fərqsiz bitəndə davamlı
+proyeksiyanın başlanğıc nöqtəsi yazılır. Qərarın məzmunu dəyişmədi.

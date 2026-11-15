@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   ADR-0009 K7, imzalı listelerden zincire geçişi liste geçmişinin kontratlara yeniden oynatılmasına ve eşdeğerlik testine bağlar.
   Bugünkü kontratlarla bu geçmiş birebir oynatılamaz: tarihler blok zamanından gelir, sert iptal yoktur, şemanın tek içerik özeti
@@ -157,7 +157,8 @@ dağıtım geçersiz sayılır. Açık pencere, yürütücü anahtarının geçm
   sürümü için kayıtlı her `(issuer_id, schema_id, iat, list_id, version)`; ayrıca sınır anları (`since − 1`, `since`, `since + 1`)
   ve kapsam sorguları. Okuma tarafı [[ADR-0074]] K5'teki `ChainTrustSource`'tur.
 - Kabul: C1/C2/C3/D5 cevaplarında ACCEPTED/REJECTED farkı yok. Fark varsa göç kapanmaz; rapor herkese açık şeffaflık raporuna girer.
-- Kapanıştan sonra zincir yine projeksiyondur ([[ADR-0051]] CH1); Faz 0'ın zinciri kaynak yapıp yapmayacağı ayrı karardır.
+- Kapanıştan sonra zincir yine projeksiyondur ([[ADR-0051]] CH1); Faz 0'ın zinciri kaynak yapıp yapmayacağı ayrı karardır — **karar
+  [[ADR-0084]] (2026-11-15):** zincir kaynak yapılmaz; liste kaynak, zincir tanık kalır.
 
 # Gerekçe / alternatifler
 
@@ -234,3 +235,8 @@ yazar; pencere kapalıyken davranış aynıdır. [[SPEC-BC-0001]] §16.1.
 **Accepted — 2026-11-04.** Proje yönetiminin onayıyla (birebir alıntı özel onay kaydında): askıdaki kurumun askıdan önceki
 belgeleri geçerli; açık soruların kalanı önerildiği gibi. Komut adı `trust:chain-replay` onaylıdır. DECISIONS: D-BC-12.
 CE1–CE6 bağlayıcıdır. Kontratlardaki uygulama sürüyor ([[SPEC-BC-0001]] sürüm notları).
+
+**Not (2026-11-15).** K6'nın ayrı karara bıraktığı kaynak yönü [[ADR-0084]] ile kapandı (liste kaynak, zincir tanık). Göç
+kapandıktan sonraki değişikliklerin zincire yazılması — sürekli projeksiyon — [[ADR-0085]]'tedir; göçün plan motorunu kullanır,
+pencere dışında tarih blok anıdır (CE1 aynen). Göç farksız bitince sürekli projeksiyonun başlangıç noktası yazılır. Karar içeriği
+değişmedi.

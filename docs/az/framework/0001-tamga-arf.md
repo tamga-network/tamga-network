@@ -4,7 +4,7 @@ title: "Arxitektura və İstinad Çərçivəsi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-29
+last_updated: 2026-11-15
 summary: >
   Tamga Network-un arxitektura və istinad çərçivəsinin əsas sənədi. Avropa İttifaqının (Aİ) EUDI ARF-i ilə eyni strukturu izləyir: istifadə ssenariləri, rollar, arxitektura, məlumat modeli, etibar modeli, təhlükəsizlik və idarəetmə. Məcburi qaydalar əlavələrdədir (A Trust Framework, B Tamga Rulebook, C rəqəmsal sənəd növü rulebook-ları); terminlər Əlavə D-də, mənbələr Əlavə E-dədir.
 translation_of: FW-ARF-0001
@@ -457,9 +457,9 @@ fəaliyyət Aİ-nin qarşılıqlı fəaliyyət tədbirlərində və OpenID uyğu
 | Mərhələ | Etibar lövbəri | Kim idarə edir | Keçid şərti |
 |---|---|---|---|
 | Siyahı mərhələsi (bu gün) | İmzalı siyahılar və lövbər jurnalı | Tamga, müvəqqəti operator | — |
-| Reyestr mərhələsi | Ümumi reyestr | İlk operatorlar | Ən azı iki müstəqil operatorun yazılı razılığı; ekvivalentlik testləri |
-| Dövlətlərin qoşulması | Ümumi reyestr | Üzv dövlətlərin şurası (üçdə iki) | İlk dövlət operatorunun istismara keçməsi |
-| İnstitusional genişlənmə | Ümumi reyestr | Şura | Şuranın müəyyən etdiyi hədlər |
+| Reyestr mərhələsi | İmzalı siyahılar; ümumi reyestr şahiddir | İlk operatorlar | Ən azı iki müstəqil operatorun yazılı razılığı; ekvivalentlik testləri |
+| Dövlətlərin qoşulması | İmzalı siyahılar; ümumi reyestr şahiddir | Üzv dövlətlərin şurası (üçdə iki) | İlk dövlət operatorunun istismara keçməsi |
+| İnstitusional genişlənmə | İmzalı siyahılar; ümumi reyestr şahiddir | Şura | Şuranın müəyyən etdiyi hədlər |
 
 **Reyestr mərhələsinin vəziyyəti:** ilkin — kod hazırdır, istismarda deaktivdir. Ümumi reyestrin müqavilələri kompilyasiya və test edilir; siyahı
 dərcçisi imzalı siyahıların yalnız xülasələrini reyestrə yaza bilən vəziyyətdədir, lakin bu funksiya deaktivdir və işləyən reyestr yoxdur.
@@ -468,6 +468,12 @@ nəzərə alınır, ziddiyyət olduqda imzalı siyahı üstündür və reyestrin
 Reyestr icazəli olaraq qalır: hansı qovşağın qoşula biləcəyi və hansı hesabın yaza biləcəyi reyestrin öz idarəetmə qeydindən yaradılan və
 hər qovşaqda eyni saxlanılan icazə siyahısı ilə müəyyən edilir; yazma səlahiyyətinin əsas nəzarəti müqavilələrdədir və qovşaqların interfeysi
 internetə açılmır (qərar, 2026-10-19).
+
+**Mənbə və şahid:** imzalı siyahılar bütün mərhələlərdə yeganə və əsas etibar mənbəyidir; reyestr onların şahididir. Siyahı
+dərcçisi hər dərcdən sonra siyahıdakı dəyişiklikləri reyestrə yazır; yoxlama qərarı yalnız siyahıdan verilir və reyestrin oxunması
+yalnız çarpaz yoxlamadır; reyestr dayanarsa və ya geri qalarsa siyahılar və yoxlama təsirlənmir; reyestr ilə siyahı arasındakı
+fərq həyəcan siqnalı yaradır. Reyestri mənbə etmək ayrıca qərar tələb edir. Reyestrə keçid əvvəl test reyestri, sonra real
+reyestrlə aparılır; hələlik server və yoxlayıcı qovşaq qurulmur (qərar, 2026-11-15).
 
 ## 8.2 Ümumi reyestrə keçid
 

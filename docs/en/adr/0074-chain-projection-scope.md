@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-04
+last_updated: 2026-11-15
 summary: >
   Defines to which contract, with which field and event, the records that are in the signed lists but have no counterpart on chain
   are projected (terminal groups, the registration certificate status list, XML and LoTE views, list signers, wallet providers, ZK
@@ -192,3 +192,8 @@ The registration certificate status list and the list views are not in the ancho
 `NetworkRegistry`, `registration_status`, `list_view`, `apps/chain-indexer/`, later `@tamga-network/chain`; `contracts/`, `network/`
 and `docs/ledger` are public; the remaining open questions as proposed. DECISIONS: D-BC-13. PJ1–PJ5 are binding. Implementation
 in the contracts is in progress ([[SPEC-BC-0001]] version notes).
+
+**Note (2026-11-15).** The limit in K5 "not used in verification until a continuous projection exists" became permanent with
+[[ADR-0084]]: even with continuous projection the trust source that reads the chain makes no verification decision; it serves
+equivalence and cross-checking only (LS2, LS3). Continuous projection is in [[ADR-0085]]; the content level comes from the
+projection's state file. PJ1–PJ5 stand.

@@ -73,6 +73,8 @@ export interface EquivalenceReport {
   decisionDifferences: number;
   /** bilinen fark sayılmadan öteki farklar */
   unexpected: number;
+  /** projeksiyon gecikmesi aralığına düştüğü için sorulmayan an sayısı (ADR-0085 SP2; `lagWindows` verildiyse) */
+  lagSkipped: number;
 }
 
 /** Bir kaydın sınır anları. */
@@ -82,8 +84,25 @@ export async function compareSources(
   store: TrustStore,
   list: ListTrustSource,
   chain: ChainTrustSource,
-  opts: { contracts?: TrustContracts; blockTag?: number; extraIats?: number[]; plan?: ReplayPlan } = {},
+  opts: {
+    contracts?: TrustContracts;
+    blockTag?: number;
+    extraIats?: number[];
+    plan?: ReplayPlan;
+    /**
+     * Sürekli projeksiyonun gecikme aralıkları `[liste tarihi, zincir tarihi)` (ADR-0085 SP2): göç penceresi dışında zincir tarihi
+     * blok anıdır; listedeki an ile yazım anı arasındaki anlar (C1/C2 `iat`, doğrulayıcının geçmiş andaki durumu) sorulmaz.
+     */
+    lagWindows?: ReadonlyArray<readonly [number, number]>;
+  } = {},
 ): Promise<EquivalenceReport> {
+  const lag = opts.lagWindows ?? [];
+  let lagSkipped = 0;
+  const inLag = (t: number) => {
+    const hit = lag.some(([from, to]) => t >= from && t < to);
+    if (hit) lagSkipped++;
+    return hit;
+  };
   const q: Record<Category, number> = {
     C1: 0,
     C2: 0,
@@ -146,7 +165,7 @@ export async function compareSources(
     // yetkisiz bir şema da sorulur (I1: varsayılan NO)
     const other = [...store.schemas.keys()].find((x) => !schemaIds.has(x));
     if (other) schemaIds.add(other);
-    const iats = [...ts].filter((t) => t > 0).sort((a, b) => a - b);
+    const iats = [...ts].filter((t) => t > 0 && !inLag(t)).sort((a, b) => a - b);
 
     for (const iat of iats) {
       q.C1++;
@@ -312,6 +331,7 @@ export async function compareSources(
         : null;
     for (const t of [...ts].filter((x) => x > 0).sort((a, b) => a - b)) {
       if (skip && t >= skip[0] && t < skip[1]) continue;
+      if (inLag(t)) continue;
       q.rp_status_at++;
       const l = records.some((r) => statusAt(r.status_history, t)?.status === "ACTIVE") ? "YES" : "NO";
       const c = chain.isRelyingPartyAcceptableAt(dns, t);
@@ -506,6 +526,7 @@ export async function compareSources(
     differences: diffs,
     decisionDifferences: decision.length,
     unexpected: diffs.filter((d) => !d.known).length,
+    lagSkipped,
   };
 }
 

@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-10-17
-last_updated: 2026-11-04
+last_updated: 2026-11-15
 summary: >
   Zincir kodu üretim zinciri kurulmadan önce yazılır ve zincirsiz tasarıma bağlanır: imzalı güven listeleri (lotl, tl-<cc>) ve
   çapa günlüğü kaynak kalır; zincir onların projeksiyonudur. Zincire yalnız liste sürümünün özeti (sürüm, içerik hash'i, önceki
@@ -105,7 +105,8 @@ sayfasında gösterim) bayrak açılınca ayrı iş.
   geliştirme makinelerinde yok). Yerel geliştirme zinciri Hardhat düğümüdür; Besu/QBFT tek-validator geliştirme ağı
   ayrı iş (2026-11-04: Docker'sız kuruldu, `scripts/besu-dev.ps1`).
 - Faz 0'a geçiş [[ADR-0009]] K7'dir ve bu ADR'yle değişmez: liste arşivi kontratlara oynatılır, eşdeğerlik testi geçer; liste
-  çapası kaydı o günden sonra da çalışır (listeler Faz 0'da da yayınlanır — zincirin projeksiyonu olarak, [[ARCH-0003]] SEV1).
+  çapası kaydı o günden sonra da çalışır (~~listeler Faz 0'da da yayınlanır — zincirin projeksiyonu olarak, [[ARCH-0003]] SEV1~~ — **[[ADR-0084]] ile değişti
+  (2026-11-15):** zincir aşamasında da imzalı listeler kaynak, zincir onların projeksiyonu (tanık) kalır).
 
 # Değerlendirilen seçenekler
 
@@ -159,3 +160,8 @@ zincirsiz tasarımla entegre olur, üretimde kapalı") üzerine yazıldı. CH1�
 **Not (2026-11-04):** K6'daki "(Docker)" ifadesi çıkarıldı: Besu/QBFT tek-validator geliştirme ağı Docker'sız kuruldu (yerel
 JDK + Besu ikilisi, `scripts/besu-dev.ps1`, `npm run chain:besu:*`); açık konu 4'ün bu kısmı kapandı. Karar içeriği değişmedi
 (proje yönetimi).
+
+**Not (2026-11-15) — [[ADR-0084]]:** K6'nın son maddesindeki "listeler zincir aşamasında zincirin projeksiyonu olarak
+yayınlanır" hükmü kaynak yönü kararıyla değişti: imzalı listeler bütün zincir aşamalarında tek ve asıl kaynaktır, zincir tanıktır
+(LS1); doğrulama kararı yalnız listeden verilir (LS2). CH1–CH5 aynen sürer. Listedeki değişikliklerin zincire her yayından sonra
+yazılması: [[ADR-0085]].

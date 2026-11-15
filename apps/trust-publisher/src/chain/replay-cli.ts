@@ -18,6 +18,8 @@
  *   - sandbox seti yalnız yerel zincire (ADR-0074 K7 / PJ4).
  *   `--open-only`: yalnız göç pencerelerini açar (plan özeti + yürütücü) ve durur — yol C'de izin listesi, yürütücü listeye girdikten
  *   sonra yeniden üretilsin diye (ADR-0052 K2 notu 2026-11-05).
+ * Eşdeğerlik farksız geçince sürekli projeksiyonun başlangıç noktası yazılır (`<arşiv>/chain-sync.json`, ADR-0085 SP7;
+ * `trust:chain-sync` buradan sürer).
  * Çıkış: 0 tamam · 2 kapı / yapılandırma · 3 eşdeğerlik farkı (göç kapanmaz) · 4 Governance oyu bekleniyor.
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -35,6 +37,7 @@ import { listSourceFromArchive, readArchiveDir, verifyArchive } from "../../../c
 import { executeReplay, openMigrationWindows, type ReplaySigners } from "../../../chain-indexer/src/replay-exec.js";
 import { buildReplayPlan, statusListUrisMissingParams } from "../../../chain-indexer/src/replay-plan.js";
 import { assertEnvironmentAllowed, statusListRegistrationOf, type Environment } from "./projection.js";
+import { SYNC_STATE_FILE, writeSyncBaseline } from "./sync-cli.js";
 
 const DEPLOYMENTS = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -186,6 +189,15 @@ export async function chainReplayCommand(
     content: { projectedLevel: plan.planTime, listLevel: () => listLevelOf(store) },
   });
   const eq = await compareSources(store, list, chain, { contracts, blockTag: block, plan });
-  console.log(JSON.stringify({ ...head, report, equivalence: eq }, null, 2));
-  return eq.decisionDifferences > 0 || eq.unexpected > 0 ? 3 : 0;
+  const ok = eq.decisionDifferences === 0 && eq.unexpected === 0;
+  // ADR-0085 SP7: göç farksız bitince sürekli projeksiyonun başlangıç noktası bu planın arşivi ve anı
+  const baseline = ok ? writeSyncBaseline(dir, archive, plan.planTime, chainId) : null;
+  console.log(
+    JSON.stringify(
+      { ...head, report, equivalence: eq, ...(baseline ? { syncBaseline: SYNC_STATE_FILE } : {}) },
+      null,
+      2,
+    ),
+  );
+  return ok ? 0 : 3;
 }

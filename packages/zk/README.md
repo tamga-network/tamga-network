@@ -48,11 +48,16 @@ Nothing leaves the device except the proof.
 | Target | Command | Needs |
 |---|---|---|
 | Desktop prover (`bin/`) | `npm run zk:build -w @tamga-network/zk` | Rust (`rust/rust-toolchain.toml`); on Windows the patched upstream clone from `tools/zk-circuit` |
-| Android (`android/src/main/jniLibs/`) | `npm run zk:android -w @tamga-network/zk` | Android NDK, `cargo-ndk` |
+| Android (`android/src/main/jniLibs/`) | `npm run zk:android -w @tamga-network/zk` | Android NDK (r27c used), Rust Android targets |
 | iOS (`ios/TamgaZkProver.xcframework`) | `npm run zk:ios -w @tamga-network/zk` | macOS, Xcode |
 
 Build outputs are not committed; the published package includes them. Packing (`scripts/pack-packages.mjs`) fails if any of the
 three Android libraries is missing, and writes their SHA-256 checksums to `lib/native-checksums.json`.
+
+**16 KB page size (Android 15+, Google Play):** the Android libraries are linked with `-z max-page-size=16384` and
+`-z common-page-size=16384` (needed with NDK r27 and earlier; r28+ does it by default). After building, `scripts/elf-align.mjs`
+checks every library (each `LOAD` segment aligned to at least 16 KB, `GNU_RELRO` safe on 16 KB pages); the build script and
+packing both fail if a library does not pass. Check by hand: `node packages/zk/scripts/elf-align.mjs <file.so>`.
 
 **iOS (for now):** the iOS library needs macOS to build and has not been built yet. Until `ios/TamgaZkProver.xcframework` exists,
 the module is Android-only: `expo-module.config.json` lists only `"android"` and the published package does not contain `ios/`, so
