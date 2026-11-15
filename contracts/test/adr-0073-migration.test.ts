@@ -39,13 +39,13 @@ async function proposalId(tx: any, f: Fixture): Promise<string> {
 }
 
 async function pass(f: Fixture, pid: string) {
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
 }
 
 /** Governance önerisiyle kipi açar (2/3) ve yürütür. */
 async function openMigration(f: Fixture, registry: any, window = 7 * DAY, executor?: string) {
-  const g = f.as(f.governance, f.trValidator);
+  const g = f.as(f.governance, f.trGov);
   const pid = await proposalId(
     await g.proposeMigrationOpen(await registry.getAddress(), PLAN, window, executor ?? ethers.ZeroAddress),
     f,
@@ -56,10 +56,7 @@ async function openMigration(f: Fixture, registry: any, window = 7 * DAY, execut
 }
 
 async function closeMigration(f: Fixture, registry: any) {
-  const pid = await proposalId(
-    await f.as(f.governance, f.trValidator).proposeMigrationClose(await registry.getAddress()),
-    f,
-  );
+  const pid = await proposalId(await f.as(f.governance, f.trGov).proposeMigrationClose(await registry.getAddress()), f);
   await pass(f, pid);
   return f.governance.execute(pid);
 }
@@ -77,7 +74,7 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
     await expect(f.as(f.issuers, f.stranger).openMigration(PLAN, t, ethers.ZeroAddress))
       .to.be.revertedWithCustomError(f.issuers, "NotGovernance")
       .withArgs(await f.stranger.getAddress());
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const reg = await f.issuers.getAddress();
     await expect(g.proposeMigrationOpen(reg, PLAN, 30 * DAY + 1, ethers.ZeroAddress)).to.be.revertedWithCustomError(
       f.governance,
@@ -105,7 +102,7 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
     // ikinci açılış: öneri geçer ama kayıt reddeder (yürütme bütünüyle geri alınır)
     const pid = await proposalId(
       await f
-        .as(f.governance, f.trValidator)
+        .as(f.governance, f.trGov)
         .proposeMigrationOpen(await f.issuers.getAddress(), PLAN, DAY, ethers.ZeroAddress),
       f,
     );
@@ -118,7 +115,7 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
   it("uzatma yalnız açıkken ve açılıştan en çok 30 güne kadar", async () => {
     await openMigration(f, f.issuers, 5 * DAY);
     const { openedAt } = await f.issuers.migrationState();
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const reg = await f.issuers.getAddress();
     const tooLate = await proposalId(await g.proposeMigrationExtend(reg, openedAt + BigInt(30 * DAY) + 1n), f);
     await pass(f, tooLate);
@@ -144,7 +141,7 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
     expect((await f.issuers.migrationState()).storedPhase).to.equal(Phase.CLOSED);
     const pid = await proposalId(
       await f
-        .as(f.governance, f.trValidator)
+        .as(f.governance, f.trGov)
         .proposeMigrationOpen(await f.issuers.getAddress(), PLAN, DAY, ethers.ZeroAddress),
       f,
     );
@@ -157,9 +154,7 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
     await expect(closeMigration(f, f.issuers)).to.emit(f.issuers, "MigrationClosed");
     expect(await f.issuers.migrationPhase()).to.equal(Phase.CLOSED);
     const pid = await proposalId(
-      await f
-        .as(f.governance, f.trValidator)
-        .proposeMigrationExtend(await f.issuers.getAddress(), (await f.now()) + DAY),
+      await f.as(f.governance, f.trGov).proposeMigrationExtend(await f.issuers.getAddress(), (await f.now()) + DAY),
       f,
     );
     await pass(f, pid);
@@ -172,7 +167,7 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
     const before = await f.issuers.migrationState();
     const bad = await ethers.deployContract("MigrationResetMock");
     const sel = bad.interface.getFunction("resetMigration")!.selector;
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const pid = await proposalId(
       await g.proposeProtocolUpgradeAndInit(await f.issuers.getAddress(), await bad.getAddress(), sel),
       f,
@@ -200,7 +195,7 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
   it("güvenlik turu 2026-11-04: pencere AÇIKKEN kayıt kontratı yükseltilemez; süre dolunca ya da kapanınca yükseltilir", async () => {
     await openMigration(f, f.issuers, 10 * DAY);
     const good = await ethers.deployContract("IssuerRegistry");
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const pid = await proposalId(
       await g.proposeProtocolUpgrade(await f.issuers.getAddress(), await good.getAddress()),
       f,
@@ -226,7 +221,7 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
   });
 
   it("güvenlik turu 2026-11-04: pencere açıkken kuyruktaki yükseltme kayıt kontratında düşer (StatusList, Network)", async () => {
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     for (const reg of [f.statusLists, f.networkRegistry] as any[]) {
       const name = reg === f.statusLists ? "StatusListRegistry" : "NetworkRegistry";
       const impl = await ethers.deployContract(name);
@@ -378,7 +373,7 @@ describe("ADR-0073 K1 — göç kipi (CE1)", function () {
     expect(await f.schemas.isSchemaAcceptableAt(sid, past - 1)).to.equal(true);
     // iptal yalnız Governance önerisiyle (2/3)
     const pid = await proposalId(
-      await f.as(f.governance, f.trValidator).proposeNetworkSchemaRevocation(sid, id("reason")),
+      await f.as(f.governance, f.trGov).proposeNetworkSchemaRevocation(sid, id("reason")),
       f,
     );
     await pass(f, pid);

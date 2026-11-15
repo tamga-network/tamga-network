@@ -24,8 +24,8 @@ async function proposalId(tx: any, f: Fixture): Promise<string> {
 
 async function passAndExecute(f: Fixture, tx: any) {
   const pid = await proposalId(tx, f);
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
   return f.governance.execute(pid);
 }
 
@@ -85,7 +85,7 @@ describe("ADR-0073 K3 — şema sürüm özetleri (CE3)", function () {
   });
 
   it("ağ şemasına yalnız Governance önerisiyle (2/3) eklenir", async () => {
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     await (
       await passAndExecute(f, await g.proposeNetworkSchema(f.schemaRecord(NET, SchemaTier.NETWORK, "0x0000")))
     ).wait();

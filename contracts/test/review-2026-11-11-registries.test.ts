@@ -27,8 +27,8 @@ async function proposalIdOf(tx: any, governance: any): Promise<string> {
 }
 const proposalId = (tx: any, f: Fixture) => proposalIdOf(tx, f.governance);
 async function pass(f: Fixture, pid: string) {
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
 }
 async function passAndExecute(f: Fixture, pid: string) {
   await pass(f, pid);
@@ -36,7 +36,7 @@ async function passAndExecute(f: Fixture, pid: string) {
 }
 async function openMigration(f: Fixture, registry: any, executor: string, window = 7 * DAY) {
   const pid = await proposalId(
-    await f.as(f.governance, f.trValidator).proposeMigrationOpen(await registry.getAddress(), PLAN, window, executor),
+    await f.as(f.governance, f.trGov).proposeMigrationOpen(await registry.getAddress(), PLAN, window, executor),
     f,
   );
   await passAndExecute(f, pid);
@@ -44,7 +44,7 @@ async function openMigration(f: Fixture, registry: any, executor: string, window
 const networkSchema = async (f: Fixture, vct: string, validFrom = 0) =>
   proposalId(
     await f
-      .as(f.governance, f.trValidator)
+      .as(f.governance, f.trGov)
       .proposeNetworkSchema({ ...f.schemaRecord(vct, SchemaTier.NETWORK, "0x0000"), validFrom }),
     f,
   );
@@ -77,10 +77,7 @@ describe("Kontrat denetimi 2026-11-11 — kayıt kontratları", function () {
       );
       expect(await f.schemas.matchesContentHash(sid, id("unvoted"))).to.equal(false);
 
-      const dep = await proposalId(
-        await f.as(f.governance, f.trValidator).proposeNetworkSchemaDeprecation(sid, ZERO),
-        f,
-      );
+      const dep = await proposalId(await f.as(f.governance, f.trGov).proposeNetworkSchemaDeprecation(sid, ZERO), f);
       await passAndExecute(f, dep);
       expect((await f.schemas.getSchema(sid)).status).to.equal(BigInt(SchemaStatus.DEPRECATED));
       expect(await f.schemas.isSchemaAcceptableAt(sid, issuedAt)).to.equal(true); // öncesi geçerli (SC3)

@@ -8,6 +8,10 @@
  *   chain-permissions render|check              Besu yerel izin listesi zincir durumundan (ADR-0052 K3) — permissions-cli.ts
  *   chain-sync [--dry-run] [--max-writes <n>]   sürekli projeksiyon: son yansıtılan liste ile şimdiki liste arasındaki fark
  *                                               zincire (ADR-0085; liste kaynak, zincir tanık — ADR-0084) — sync-cli.ts
+ *   chain-gov <alt komut> …                     yönetişim komut aracı: öneri, oy, geri çekme, yürütme, kuyruk, yeniden oy,
+ *                                               düğüm ve delege anahtarı (SPEC-BC-0001 §1, ADR-0086) — governance-cli.ts
+ *   chain-health [--monitor]                    zincir sağlığı JSON'u (blok durması, eksik / geciken eşitleme, NO / CONFLICT /
+ *                                               CONTEST); --monitor: izleme betiği için "[!] chain: …" satırları — health.ts
  * Ortam: TAMGA_CHAIN_ENABLED (0/1, varsayılan 0) · TAMGA_CHAIN_RPC_URL · TAMGA_CHAIN_ANCHOR_REGISTRY · TAMGA_CHAIN_ANCHORER_KEY
  * (yalnız yazma; .env'de, depoda yer tutucu). Üretimde bayrak ikinci bağımsız işletmeci ve eşik ≥ 2 olmadan açılmaz (K4).
  */
@@ -17,6 +21,8 @@ import { basename, relative, resolve } from "node:path";
 import { anchorDist } from "./anchor.js";
 import { EthersChainClient, MemoryChainClient, type ChainClient } from "./client.js";
 import type { Environment } from "./projection.js";
+import { chainGovCommand } from "./governance-cli.js";
+import { chainHealthCommand } from "./health.js";
 import { chainPermissionsCommand } from "./permissions-cli.js";
 import { chainReplayCommand } from "./replay-cli.js";
 import { chainSyncCommand } from "./sync-cli.js";
@@ -98,5 +104,7 @@ export async function chainCommand(
   if (cmd === "chain-replay") return chainReplayCommand(args, { ...ctx, env });
   if (cmd === "chain-sync") return chainSyncCommand(args, { ...ctx, env });
   if (cmd === "chain-permissions") return chainPermissionsCommand(args, env);
+  if (cmd === "chain-gov") return chainGovCommand(args, env);
+  if (cmd === "chain-health") return chainHealthCommand(args, { ...ctx, env });
   throw new Error(`chain: bilinmeyen komut ${cmd}`);
 }

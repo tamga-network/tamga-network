@@ -4,7 +4,7 @@
  *
  *   1) güven katmanı (scripts/lib/deploy.ts — SPEC-BC-0001 §8 sırası), kurucular oy olmadan ACTIVE (ADR-0002 #3); en az iki
  *      kurucu (ADR-0076 GC4);
- *   2) her kurucunun delege anahtarı (kendi doğrulayıcısıyla, `setDelegateKeys`);
+ *   2) her kurucunun delege anahtarı (kendi yönetişim anahtarıyla, `setDelegateKeys`; ADR-0086);
  *   3) kurucular arası FULL tanıma Governance önerisiyle (`proposeFounderRecognition` → 2/3 oy → `execute`, ADR-0055 K3) —
  *      yerel betiğin (deploy-dev.ts) devlet başına `setRecognition` kısa yolu burada kullanılmaz;
  *   4) TrustListAnchorRegistry: yönetici = Governance kontratı (yazıcı ve eşik değişikliği yalnız oyla, ADR-0055 K3), yazıcılar ve
@@ -19,8 +19,10 @@ import { MIN_FOUNDERS, deployed, deployTrustLayer, stateCode, type TrustLayerDep
 
 export interface StagingFounder {
   code: string;
-  /** devletin doğrulayıcı anahtarı (= QBFT düğüm anahtarı, ADR-0052 K2) */
-  validator: Signer;
+  /** devletin QBFT düğüm adresi (ADR-0052 K2) — zincirde yetkisi yok (ADR-0086 K1) */
+  validator: string;
+  /** devletin yönetişim (oy) anahtarı — öneri, oy, delege listesi (ADR-0086 K1) */
+  governance: Signer;
   /** devletin delege adresi */
   delegate: string;
 }
@@ -67,20 +69,24 @@ export async function setupStagingNetwork(ethers: HardhatEthers, s: StagingSetup
   if (!Number.isInteger(s.threshold) || s.threshold < 1 || s.threshold > s.anchorers.length)
     throw new Error(`liste çapası eşiği ${s.threshold}: 1 ile yazıcı sayısı (${s.anchorers.length}) arasında olmalı`);
   const founders = await Promise.all(
-    s.founders.map(async (f) => ({ code: f.code, validator: await f.validator.getAddress() })),
+    s.founders.map(async (f) => ({
+      code: f.code,
+      validator: f.validator,
+      governance: await f.governance.getAddress(),
+    })),
   );
-  const trust = await deployTrustLayer(ethers, s.deployer, founders, s.founders[0].validator);
+  const trust = await deployTrustLayer(ethers, s.deployer, founders, s.founders[0].governance);
 
   for (const f of s.founders)
     await (
-      await (trust.governance.connect(f.validator) as any).setDelegateKeys(stateCode(ethers, f.code), [f.delegate])
+      await (trust.governance.connect(f.governance) as any).setDelegateKeys(stateCode(ethers, f.code), [f.delegate])
     ).wait();
 
   const reg = trust.addresses.CrossRecognition;
   const codes = s.founders.map((f) => stateCode(ethers, f.code));
   await passGovernanceProposal(
     trust.governance,
-    s.founders.map((f) => f.validator),
+    s.founders.map((f) => f.governance),
     (g) => g.proposeFounderRecognition(reg, codes),
   );
 

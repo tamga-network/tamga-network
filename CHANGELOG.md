@@ -8,6 +8,40 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
 
 ### Added
 
+- **Governance key separated from the node (consensus) key** (ADR-0086, KG1–KG5). Every member record in `Governance` now holds
+  two addresses: the QBFT node address (`validatorAddress`) and the governance (vote) address (`governanceAddress`, with
+  `governanceSince`). All on-chain authority — proposals, votes, vote and proposal retraction, the delegate list, withdrawal, the
+  SchemaRegistry binding — moved to the current governance address (`onlyValidator` → `onlyGovernor`, `NotValidator` →
+  `NotGovernor`); the node key has no authority on the chain and leaves the Besu account allowlist (the governance key is listed
+  instead). A member changes its node address with its own governance key, without a vote (`setValidatorAddress`); the governance
+  key changes only through `proposeGovernanceKeyChange` (kind `GOVERNANCE_KEY_CHANGE`): 2/3 of active members (at least 2) **and**
+  a supporting vote cast with the changing member's current key (`KeyChangeNeedsOwnVote`), so a majority cannot take over a
+  state's delegate list. An address is used in one state and one role only (`ValidatorInUse`, `KeyInUse`); released addresses
+  stay bound to their state. `initialize(founders, validators, governors)` and `proposeStateAdmission(code, validator,
+  governance)` take the governance address. Storage: members appended to the mapping-value structs, `_governanceToState` taken
+  from `__gap` (37 → 36); the layout check passes, the baseline was renewed (no chain is running). Governance code size 23,872
+  bytes (headroom 704). Key map `tamga-chain-keys/1` gains a `governance` key per state; local development rule: governance key
+  = Hardhat node account + 10 (`deploy-dev.ts`, `testnet.mjs`, `make-network.sh`, `scripts/besu-dev.ps1` — an existing local
+  Besu development chain must be reset). SPEC-BC-0001 §1, ARCH-0002 (open issue 6 closed) and the node handbook updated.
+- **Governance command tool, switched off** (`trust:chain-gov`, proposed name): `status`, `show`, `queue`, `propose <kind>`
+  (admit, remove, key-change, upgrade, anchorer, anchor-threshold, founder-recognition, migration-open/extend/close,
+  schema-deprecate/revoke/hash, network-schema, network-record, rp-reassign, rp-reregister), `vote`, `retract`, `cancel`,
+  `execute` (an upgrade is queued first and applied after the delay), `revote` (re-casts last votes that are no longer counted
+  after an upgrade or a key change), `set-node`, `set-delegates`, `withdraw`. Signing is abstract (`GovernanceSigner`): local
+  development keys and the test/staging key map today; the hardware key store path stops with an explicit message. Writes only to
+  the local and test chain; on the real network it reads and prints the call data. With the flag off it does not connect
+  (`--dry-run` still encodes the call). A reason text is written only as its SHA-256 digest.
+- **Chain health and alarms** (`trust:chain-health`, proposed name; format `tamga-chain-health/1`): block stall, peers, incomplete
+  continuous-projection run, projection lag over two hours, list anchoring `NO` / `CONFLICT` / `CONTEST` and versions left
+  unanchored for more than two hours; `--monitor` prints one `[!] chain: <CODE> <message>` line per problem for an operator's
+  monitoring script. With the flag off: `"status": "disabled"`, exit 0. Exit codes 0 / 4 (warning) / 5 (alarm).
+- **Shadow chain setup** (`network/testnet/shadow-chain.sh`): one command on a Linux server sets up an N-validator QBFT test chain
+  with generated keys, mirrors the real network's signed lists and archive read-only (`apps/chain-indexer/scripts/mirror-lists.ts`,
+  verified), and runs the bootstrap with them (contracts, Governance, permissions, anchoring, migration window + replay of the real
+  archive + equivalence); `sync` (hourly) mirrors new versions, runs the continuous projection, anchors with each anchorer and
+  checks chain health; `report`; `--dry-run` prints every command and runs in CI (`testnet` workflow, lint job). GUIDE-0018:
+  "Shadow chain" with minimum server requirements, "Chain health" and "Governance command tool".
+
 - **Continuous chain projection, switched off** (ADR-0085; list is the source, chain is a witness — ADR-0084). After the
   migration window has closed, `trust:chain-sync` (proposed name) turns the difference between the last projected signed list
   archive and the current one into chain operations with the migration's plan engine — plan(now) − plan(before) — and writes them

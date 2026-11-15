@@ -116,6 +116,33 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "bytes2",
+          "name": "stateCode",
+          "type": "bytes2"
+        }
+      ],
+      "name": "KeyChangeNeedsOwnVote",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "key",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes2",
+          "name": "ownerState",
+          "type": "bytes2"
+        }
+      ],
+      "name": "KeyInUse",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "LastValidator",
       "type": "error"
@@ -180,6 +207,17 @@
       "type": "error"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "caller",
+          "type": "address"
+        }
+      ],
+      "name": "NotGovernor",
+      "type": "error"
+    },
+    {
       "inputs": [],
       "name": "NotInitializing",
       "type": "error"
@@ -214,17 +252,6 @@
         }
       ],
       "name": "NotProposer",
-      "type": "error"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "caller",
-          "type": "address"
-        }
-      ],
-      "name": "NotValidator",
       "type": "error"
     },
     {
@@ -486,6 +513,31 @@
       "anonymous": false,
       "inputs": [
         {
+          "indexed": true,
+          "internalType": "bytes2",
+          "name": "stateCode",
+          "type": "bytes2"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "previous",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "current",
+          "type": "address"
+        }
+      ],
+      "name": "GovernanceAddressChanged",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": false,
           "internalType": "uint64",
           "name": "version",
@@ -592,6 +644,12 @@
           "internalType": "address",
           "name": "validator",
           "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "governance",
+          "type": "address"
         }
       ],
       "name": "StateAdmitted",
@@ -640,6 +698,31 @@
         }
       ],
       "name": "Upgraded",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes2",
+          "name": "stateCode",
+          "type": "bytes2"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "previous",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "current",
+          "type": "address"
+        }
+      ],
+      "name": "ValidatorAddressChanged",
       "type": "event"
     },
     {
@@ -980,6 +1063,16 @@
               "internalType": "uint64",
               "name": "joinedAt",
               "type": "uint64"
+            },
+            {
+              "internalType": "address",
+              "name": "governanceAddress",
+              "type": "address"
+            },
+            {
+              "internalType": "uint64",
+              "name": "governanceSince",
+              "type": "uint64"
             }
           ],
           "internalType": "struct IGovernance.StateMember",
@@ -1061,6 +1154,11 @@
               "internalType": "uint32",
               "name": "againstVotes",
               "type": "uint32"
+            },
+            {
+              "internalType": "address",
+              "name": "governanceAddress",
+              "type": "address"
             }
           ],
           "internalType": "struct IGovernance.Proposal",
@@ -1142,6 +1240,11 @@
         {
           "internalType": "address[]",
           "name": "validators",
+          "type": "address[]"
+        },
+        {
+          "internalType": "address[]",
+          "name": "governors",
           "type": "address[]"
         }
       ],
@@ -1273,6 +1376,30 @@
         }
       ],
       "name": "proposeFounderRecognition",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "id",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes2",
+          "name": "stateCode",
+          "type": "bytes2"
+        },
+        {
+          "internalType": "address",
+          "name": "newGovernance",
+          "type": "address"
+        }
+      ],
+      "name": "proposeGovernanceKeyChange",
       "outputs": [
         {
           "internalType": "bytes32",
@@ -1629,6 +1756,11 @@
           "internalType": "address",
           "name": "validator",
           "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "governance",
+          "type": "address"
         }
       ],
       "name": "proposeStateAdmission",
@@ -1770,6 +1902,24 @@
         }
       ],
       "name": "setSchemaRegistry",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes2",
+          "name": "stateCode",
+          "type": "bytes2"
+        },
+        {
+          "internalType": "address",
+          "name": "validator",
+          "type": "address"
+        }
+      ],
+      "name": "setValidatorAddress",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

@@ -10,7 +10,7 @@ npm run trust:chain-permissions -- check --node-rpc http://127.0.0.1:8545   # th
 
 | List | Source |
 |---|---|
-| accounts | active members' validator addresses and delegate keys (`Governance`), delegates of operational issuers (`IssuerRegistry`), list anchorers (`TrustListAnchorRegistry`), the executor of an open migration window |
+| accounts | active members' governance addresses and delegate keys (`Governance`; the node key sends no transactions and is not listed, ADR-0086), delegates of operational issuers (`IssuerRegistry`), list anchorers (`TrustListAnchorRegistry`), the executor of an open migration window |
 | nodes | declarations in `nodes/` whose key matches an **active** validator address in `Governance`; with `--operator <CC>`, that operator's own `rpc` nodes |
 
 `render` prints `sha256` (the file) and `shared_sha256` (the file without the operator's own RPC nodes). All validators must have

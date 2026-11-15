@@ -7,7 +7,8 @@
 #   2 contracts    contracts/scripts/deploy-network.ts: founders TR + KZ and their delegates, founder recognition by Governance
 #                  vote, list anchor registry administered by Governance (anchorers and threshold from the key map)
 #                  → <dir>/deployment.json (skipped when the deployment answers on the chain)
-#   3 governance   the other genesis validators' states admitted by 2/3 vote; each sets its delegate key with its validator
+#   3 governance   the other genesis validators' states admitted by 2/3 vote; each sets its delegate key with its governance
+#                  key (ADR-0086 K1: the node key signs blocks only)
 #   4 permissions  on every node of --nodes: trust:chain-permissions render (from its own node) → load → check; shared_sha256
 #                  equal (LP3); the deployer is no longer listed (ADR-0052 K2); an unlisted account refused, a delegate mined
 #   5 anchoring    trust:chain-submit once per anchorer (threshold of the key map) → trust:chain-check YES for every list

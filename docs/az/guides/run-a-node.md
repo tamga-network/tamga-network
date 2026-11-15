@@ -4,7 +4,7 @@ title: "Qovşaq istismarı üzrə təlimat"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-15
 summary: >
   Gələcəkdə Tamga-nın ortaq reyestrində (Hyperledger Besu, QBFT) validator və ya tam qovşaq işlədəcək dövlət və operator İT
   komandaları üçün hazırlıq təlimatı: zəncirin rolu, ilkin şərtlər, avadanlıq və əməliyyat sistemi, JDK 25 və Besu, qovşaq açarı,
@@ -51,7 +51,7 @@ yazılmır ([[ADR-0074]] K7).
 
 | Rol | Nə edir | Kim |
 |---|---|---|
-| Validator | blok təklif edir və imzalayır; idarəetmədə səs verir | hər üzv dövlətin bir validatoru; açar HSM-də |
+| Validator | blok təklif edir və imzalayır (qovşaq açarı); idarəetmə səsi ayrı açarla verilir | hər üzv dövlətin bir validatoru; açar HSM-də |
 | Tam qovşaq | zənciri yoxlayır və oxuyur; imzalamır | operatorun öz oxuma qovşağı (siyahı nəşriyyatçısı, indeksləyici, yoxlayıcının oxuma yolu) |
 
 Konsensus QBFT-dir: n validatorda ən çox f = ⌊(n−1)/3⌋ nasazlığa davam gətirir. Hədəf ən azı 4 validatordur (f = 1).
@@ -126,12 +126,13 @@ yazılmır. Açar HSM-dədirsə, `node init` istifadə olunmur: açıq açarı H
 bəyan edin. Süni intellekt köməkçisi vasitəsilə eyni addım MCP aləti `generate_node_key`-dir; gizli açar heç bir cavabda
 qaytarılmır və MCP ilə sinxronlaşdırılan qovluğa heç vaxt yazılmır.
 
-::: warning Eyni açar həm blok imzalayır, həm səs verir (açıq qərar)
-Bu gün validatorun qovşaq açarı eyni zamanda dövlətin **Governance səs açarıdır**: blok imzalayan açar təklif açır və səs verir.
-Qovşaq açarı işləyən serverdə durduğu üçün bu, idarəetmə səlahiyyətini də həmin serverə bağlayır. Bu iki açar ayrılana qədər
-**real şəbəkədə validator qovşaq açarı HSM-də (və ya ekvivalent aparat seyfində) saxlanılMALIDIR**; faylda duran açar yalnız sınaq
-şəbəkələrində qəbul olunur. İdarəetmə və konsensus açarlarının ayrılması **açıq qərardır**: ikinci dövlət şəbəkəyə qoşulmazdan
-əvvəl yeni qərar qeydi (ADR) ilə həll olunacaq.
+::: tip İki açar: qovşaq açarı və idarəetmə açarı
+Hər dövlətin iki ayrı açarı var ([[ADR-0086]]). **Qovşaq açarı** (bu bölmədə yaradılan) yalnız blok imzalayır; zəncirdə başqa heç bir
+səlahiyyəti yoxdur və hesab icazə siyahısına düşmür. **İdarəetmə açarı** Governance-da təklif açır, səs verir, nümayəndə siyahısını
+yazır; qovşaq serverində **olmur**, ayrı seyfdə (real şəbəkədə aparat açar anbarı) durur. Dövlət qovşaq açarını öz idarəetmə açarı ilə
+səsvermə olmadan dəyişir (`setValidatorAddress`); idarəetmə açarı yalnız şəbəkənin səsi və dövlətin öz səsi ilə dəyişir. İki üzvlü
+dövrdə idarəetmə açarının ayrı yerdə saxlanan, sınanmış ehtiyat nüsxəsi məcburidir. Faylda duran açar yalnız sınaq şəbəkələrində
+qəbul olunur.
 :::
 
 ::: warning Şəbəkə sxemi təklifində başlanğıc tarixi (müvəqqəti)
@@ -194,7 +195,7 @@ npm run trust:chain-permissions -- check --file /var/lib/besu/permissions_config
 
 | Siyahı | Mənbəyi |
 |---|---|
-| Hesablar | aktiv üzvlərin validator ünvanları və nümayəndə açarları (Governance), fəal qurumların nümayəndələri, siyahı lövbərləyiciləri, açıq miqrasiya pəncərəsinin icraçısı |
+| Hesablar | aktiv üzvlərin idarəetmə ünvanları və nümayəndə açarları (Governance; qovşaq ünvanı yox), fəal qurumların nümayəndələri, siyahı lövbərləyiciləri, açıq miqrasiya pəncərəsinin icraçısı |
 | Qovşaqlar | bəyannaməsi Governance-dakı aktiv validator ünvanı ilə uyğun gələn validator qovşaqları; `--operator` ilə operatorun öz oxuma qovşaqları |
 
 - `render` iki həş çap edir: `sha256` (fayl) və `shared_sha256` (operatorun öz oxuma qovşaqları istisna olmaqla). **Bütün
@@ -252,8 +253,8 @@ Ardıcıllıq vacibdir; hər addım əvvəlkinin tamamlanmasını gözləyir.
 
 | # | Addım | Kim | Necə |
 |---|---|---|---|
-| 1 | Üzvlük | mövcud üzvlər | Governance-da dövlətin qəbul təklifi (`proposeStateAdmission`, validator ünvanı ilə) və 2/3 səs |
-| 2 | Nümayəndə açarları | yeni üzv | dövlətin nümayəndə açarları Governance-a yazılır (`setDelegateKeys`) |
+| 1 | Üzvlük | mövcud üzvlər | Governance-da dövlətin qəbul təklifi (`proposeStateAdmission`, qovşaq ünvanı və idarəetmə ünvanı ilə) və 2/3 səs |
+| 2 | Nümayəndə açarları | yeni üzv | dövlətin nümayəndə açarları idarəetmə açarı ilə Governance-a yazılır (`setDelegateKeys`) |
 | 3 | Bəyannamə | yeni üzv | §5 bəyannaməsi repozitoriyaya əlavə olunur |
 | 4 | İcazə siyahısı | hər operator | `render` → yükləmə → `check`; bütün validatorlarda `shared_sha256` eyni |
 | 5 | Sinxronizasiya | yeni üzv | qovşaq tam qovşaq kimi qoşulur və sinxronlaşır (`eth_syncing` = `false`) |

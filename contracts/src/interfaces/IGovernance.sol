@@ -7,8 +7,16 @@ import {ISchemaRegistry} from "./ISchemaRegistry.sol";
 /// @title IGovernance — SPEC-BC-0001 §1 / ADR-0002
 interface IGovernance is ITamgaErrors {
     enum MemberStatus {NONE, ACTIVE, SUSPENDED, WITHDRAWN}
-    /// @dev Değer yalnız SONA eklenir. REGISTRY_ADMIN: ADR-0055 K3.
-    enum ProposalKind {NONE, STATE_ADMISSION, STATE_REMOVAL, PROTOCOL_UPGRADE, NETWORK_SCHEMA, REGISTRY_ADMIN}
+    /// @dev Değer yalnız SONA eklenir. REGISTRY_ADMIN: ADR-0055 K3. GOVERNANCE_KEY_CHANGE: ADR-0086 KG4.
+    enum ProposalKind {
+        NONE,
+        STATE_ADMISSION,
+        STATE_REMOVAL,
+        PROTOCOL_UPGRADE,
+        NETWORK_SCHEMA,
+        REGISTRY_ADMIN,
+        GOVERNANCE_KEY_CHANGE
+    }
     /// @dev Güvenlik turu 2026-11-04: CANCELLED yeniden eklendi (yalnız sona) — öneren yürütülmemiş önerisini geri çeker.
     enum ProposalStatus {NONE, OPEN, EXECUTED, CANCELLED}
 
@@ -48,11 +56,18 @@ interface IGovernance is ITamgaErrors {
         // `account` OPEN_MIGRATION'da ağ düzeyi kayıtların tek göç yürütücüsüdür.
     }
 
+    /// @dev ADR-0086 KG1: iki ayrı adres. `validatorAddress` = QBFT düğüm (uzlaşma) anahtarı — zincirde hiçbir yetkisi yoktur,
+    ///      izin listesi ve doğrulayıcı kümesi ondan üretilir. `governanceAddress` = yönetişim (oy) anahtarı — öneri, oy, delege
+    ///      listesi, çıkış yalnız bu adresten. `governanceSince`: yönetişim anahtarının bu üyeye bağlandığı an (kabul ya da
+    ///      anahtar değişikliği); yürütmede yalnız bu andan sonra verilmiş oy sayılır. Yapı yalnız mapping değeridir: üyeler sona
+    ///      eklendi, düzen bozulmadı.
     struct StateMember {
         bytes2 stateCode;
         address validatorAddress;
         MemberStatus status;
         uint64 joinedAt;
+        address governanceAddress;
+        uint64 governanceSince;
     }
 
     struct Proposal {
@@ -70,9 +85,16 @@ interface IGovernance is ITamgaErrors {
         address newImplementation;
         uint32 forVotes;
         uint32 againstVotes;
+        // STATE_ADMISSION: yeni üyenin yönetişim anahtarı; GOVERNANCE_KEY_CHANGE: üyenin yeni yönetişim anahtarı (ADR-0086)
+        address governanceAddress;
     }
 
-    event StateAdmitted(bytes2 indexed stateCode, address validator);
+    /// @dev ADR-0086: olay iki adresi de taşır (düğüm ve yönetişim).
+    event StateAdmitted(bytes2 indexed stateCode, address validator, address governance);
+    /// @dev ADR-0086 KG3: üye düğüm anahtarını kendi yönetişim anahtarıyla değiştirdi (oy gerekmez).
+    event ValidatorAddressChanged(bytes2 indexed stateCode, address previous, address current);
+    /// @dev ADR-0086 KG4: üyenin yönetişim anahtarı Governance oyuyla değişti.
+    event GovernanceAddressChanged(bytes2 indexed stateCode, address previous, address current);
     /// @dev F-18: gerekçe serbest metin değil, özetidir (ADR-0074 PJ2) — öneriyle gelir.
     event StateRemoved(bytes2 indexed stateCode, bytes32 reasonHash);
     event StateWithdrawn(bytes2 indexed stateCode);
@@ -90,7 +112,12 @@ interface IGovernance is ITamgaErrors {
     /// @dev ADR-0055 GE1: yükseltme eşiği doldu, kuyruğa alındı; en erken `eta`'da uygulanır.
     event ProposalQueued(bytes32 indexed id, uint64 eta);
 
-    error NotValidator(address caller);
+    /// @dev ADR-0086: çağıran etkin bir üyenin bugünkü yönetişim anahtarı değil (düğüm anahtarının zincirde yetkisi yoktur).
+    error NotGovernor(address caller);
+    /// @dev ADR-0086 KG1: anahtar başka bir devlete ya da öteki role bağlı (düğüm ≠ yönetişim; bir adres tek devlette tek rol).
+    error KeyInUse(address key, bytes2 ownerState);
+    /// @dev ADR-0086 KG4: yönetişim anahtarı değişikliği, değişen üyenin bugünkü anahtarıyla verdiği destek oyu olmadan yürütülmez.
+    error KeyChangeNeedsOwnVote(bytes2 stateCode);
     /// @dev Yalnız öneren kendi önerisini geri çekebilir.
     error NotProposer(address caller);
     error UnknownProposal(bytes32 id);
@@ -120,7 +147,13 @@ interface IGovernance is ITamgaErrors {
     /// @dev Kontrat denetimi 2026-11-11: yeni implementasyonun kodu öneri açıldığındaki kod değil (aynı adrese başka kod).
     error UpgradeImplementationChanged(address impl);
 
-    function proposeStateAdmission(bytes2 stateCode, address validator) external returns (bytes32);
+    /// @param validator  yeni üyenin QBFT düğüm adresi; @param governance yeni üyenin yönetişim (oy) adresi — ikisi farklı olmalı.
+    function proposeStateAdmission(bytes2 stateCode, address validator, address governance) external returns (bytes32);
+    /// @notice ADR-0086 KG4: üyenin yönetişim anahtarını değiştirme önerisi (2/3, asgari 2) — değişen üyenin bugünkü anahtarıyla
+    ///         verdiği destek oyu ayrıca şarttır (`KeyChangeNeedsOwnVote`).
+    function proposeGovernanceKeyChange(bytes2 stateCode, address newGovernance) external returns (bytes32);
+    /// @notice ADR-0086 KG3: üye düğüm (uzlaşma) adresini kendi yönetişim anahtarıyla değiştirir; oy gerekmez.
+    function setValidatorAddress(bytes2 stateCode, address validator) external;
     /// @param reasonHash gerekçe metninin özeti (metin zincire yazılmaz, ADR-0074 PJ2).
     function proposeStateRemoval(bytes2 stateCode, bytes32 reasonHash) external returns (bytes32);
     function proposeProtocolUpgrade(address target, address newImplementation) external returns (bytes32);

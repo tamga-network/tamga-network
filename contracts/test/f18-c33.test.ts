@@ -68,7 +68,7 @@ describe("F-18 kalanı ve C33 (1)", function () {
   it("Governance: üye listesi, delege anahtarları olayda, SchemaRegistry bağı olayı kurulumda yayıldı", async () => {
     expect(await f.governance.memberList()).to.deep.equal([TR, KZ, AZ]);
     const keys = [await f.stranger.getAddress()];
-    await expect(f.as(f.governance, f.azValidator).setDelegateKeys(AZ, keys))
+    await expect(f.as(f.governance, f.azGov).setDelegateKeys(AZ, keys))
       .to.emit(f.governance, "DelegateKeysSet")
       .withArgs(AZ, keys);
     const filter = (f.governance as any).filters.SchemaRegistrySet();
@@ -79,9 +79,9 @@ describe("F-18 kalanı ve C33 (1)", function () {
   });
 
   it("çıkarma önerisi gerekçeyi özet olarak taşır; StateRemoved özeti yayar", async () => {
-    const pid = await proposalId(f.as(f.governance, f.kzValidator).proposeStateRemoval(AZ, id("gerekçe metni")), f);
-    await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
-    await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
+    const pid = await proposalId(f.as(f.governance, f.kzGov).proposeStateRemoval(AZ, id("gerekçe metni")), f);
+    await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
+    await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
     await expect(f.governance.execute(pid)).to.emit(f.governance, "StateRemoved").withArgs(AZ, id("gerekçe metni"));
   });
 

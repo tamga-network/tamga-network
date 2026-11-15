@@ -5,7 +5,7 @@
  * Adresler deployments/besuStaging.json (deploy-dev.ts'in besuDev.json deseni).
  *
  * Anahtarlar `TAMGA_CHAIN_KEYS` haritasından (`tamga-chain-keys/1`, apps/chain-indexer/src/chain-keys.ts; make-network.sh
- * `--keys generate` yazar): dağıtan, kurucu devletlerin doğrulayıcıları ve delegeleri, liste çapası yazıcıları ve eşik. Hardhat'in
+ * `--keys generate` yazar): dağıtan, kurucu devletlerin düğüm adresleri, yönetişim anahtarları ve delegeleri, liste çapası yazıcıları ve eşik. Hardhat'in
  * herkesçe bilinen test hesapları bu yolda KULLANILMAZ. Yalnız test/staging zinciri: 31337/31338 (yerel, Hardhat anahtarları →
  * deploy-dev.ts) ve öteki her kimlik reddedilir. Üretim dağıtımı burada tanımlı değildir (ADR-0009 K4; üretim anahtarları HSM'de).
  * Kurulum sırası: scripts/lib/network-setup.ts.
@@ -39,7 +39,12 @@ console.log(`ağ: ${conn.networkName} (chainId ${chainId}) · dağıtan: ${deplo
 
 const d = await setupStagingNetwork(ethers, {
   deployer,
-  founders: founderKeys.map((s) => ({ code: s.code, validator: wallet(s.validator), delegate: s.delegate.address })),
+  founders: founderKeys.map((s) => ({
+    code: s.code,
+    validator: s.validator.address,
+    governance: wallet(s.governance),
+    delegate: s.delegate.address,
+  })),
   anchorers: keys.map.anchor.anchorers.map((a) => a.address),
   threshold: keys.map.anchor.threshold,
 });
@@ -56,7 +61,12 @@ const out = {
   chainId,
   deployedAt: new Date().toISOString(),
   deployer: deployer.address,
-  founders: founderKeys.map((s) => ({ code: s.code, validator: s.validator.address, delegate: s.delegate.address })),
+  founders: founderKeys.map((s) => ({
+    code: s.code,
+    validator: s.validator.address,
+    governance: s.governance.address,
+    delegate: s.delegate.address,
+  })),
   contracts: { ...d.trust.addresses, TrustListAnchorRegistry: d.anchorRegistry },
   anchor: {
     registry: d.anchorRegistry,

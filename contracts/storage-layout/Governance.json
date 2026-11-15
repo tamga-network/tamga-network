@@ -114,10 +114,17 @@
     },
     {
       "contract": "Governance",
-      "label": "__gap",
+      "label": "_governanceToState",
       "slot": 16,
       "offset": 0,
-      "type": "t_array(t_uint256)37_storage"
+      "type": "t_mapping(t_address,t_bytes2)"
+    },
+    {
+      "contract": "Governance",
+      "label": "__gap",
+      "slot": 17,
+      "offset": 0,
+      "type": "t_array(t_uint256)36_storage"
     }
   ],
   "types": {
@@ -138,10 +145,10 @@
       "numberOfBytes": 32,
       "base": "t_bytes2"
     },
-    "t_array(t_uint256)37_storage": {
+    "t_array(t_uint256)36_storage": {
       "encoding": "inplace",
-      "label": "uint256[37]",
-      "numberOfBytes": 1184,
+      "label": "uint256[36]",
+      "numberOfBytes": 1152,
       "base": "t_uint256"
     },
     "t_bool": {
@@ -378,7 +385,7 @@
     "t_struct(Proposal)_storage": {
       "encoding": "inplace",
       "label": "struct IGovernance.Proposal",
-      "numberOfBytes": 160,
+      "numberOfBytes": 192,
       "members": [
         {
           "label": "id",
@@ -451,6 +458,12 @@
           "slot": 4,
           "offset": 24,
           "type": "t_uint32"
+        },
+        {
+          "label": "governanceAddress",
+          "slot": 5,
+          "offset": 0,
+          "type": "t_address"
         }
       ]
     },
@@ -512,7 +525,7 @@
     "t_struct(StateMember)_storage": {
       "encoding": "inplace",
       "label": "struct IGovernance.StateMember",
-      "numberOfBytes": 32,
+      "numberOfBytes": 64,
       "members": [
         {
           "label": "stateCode",
@@ -536,6 +549,18 @@
           "label": "joinedAt",
           "slot": 0,
           "offset": 23,
+          "type": "t_uint64"
+        },
+        {
+          "label": "governanceAddress",
+          "slot": 1,
+          "offset": 0,
+          "type": "t_address"
+        },
+        {
+          "label": "governanceSince",
+          "slot": 1,
+          "offset": 20,
           "type": "t_uint64"
         }
       ]

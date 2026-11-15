@@ -23,8 +23,8 @@ async function proposalId(tx: any, f: Fixture): Promise<string> {
   throw new Error("ProposalCreated yok");
 }
 async function pass(f: Fixture, pid: string) {
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
 }
 const blockTime = async (rc: any) => Number((await ethers.provider.getBlock(rc.blockNumber))!.timestamp);
 
@@ -35,7 +35,7 @@ describe("Kod incelemesi 2026-11-11 — kontrat bulgusu", function () {
     const propose = async (f: Fixture, vct: string, validFrom: number) =>
       proposalId(
         await f
-          .as(f.governance, f.trValidator)
+          .as(f.governance, f.trGov)
           .proposeNetworkSchema({ ...f.schemaRecord(vct, SchemaTier.NETWORK, "0x0000"), validFrom }),
         f,
       );
@@ -87,7 +87,7 @@ describe("Kod incelemesi 2026-11-11 — kontrat bulgusu", function () {
     it("göç kipinde geçmiş tarih aynen yazılır (ADR-0073 K1: listedeki ilk durum anı)", async () => {
       const f = await loadFixture();
       const VCT = "urn:tamga:edu:MigratedCredential:1";
-      const g = f.as(f.governance, f.trValidator);
+      const g = f.as(f.governance, f.trGov);
       const open = await proposalId(
         await g.proposeMigrationOpen(await f.schemas.getAddress(), PLAN, 7 * DAY, ethers.ZeroAddress),
         f,

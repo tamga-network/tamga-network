@@ -2,7 +2,8 @@
  * `trust:chain-permissions` (ADR-0052 K2/K3; LP1–LP3) — Besu yerel izin listesi zincirin kendi durumundan.
  *
  *   render  Zinciri SABİTLENMİŞ bir blokta okur (Governance, IssuerRegistry, TrustListAnchorRegistry, göç pencereleri) ve
- *           belirleyici bir `permissions_config.toml` üretir: `accounts-allowlist` (validator'lar, devlet delegeleri, çalışır
+ *           belirleyici bir `permissions_config.toml` üretir: `accounts-allowlist` (aktif üyelerin yönetişim anahtarları — ADR-0086
+ *           K4: düğüm anahtarı işlem göndermez, hesap listesine girmez —, devlet delegeleri, çalışır
  *           durumdaki kurumların delegeleri, liste çapası yazıcıları, açık göç penceresinin yürütücüsü) ve `nodes-allowlist`
  *           (bildirimi Governance'la eşleşen validator düğümleri + `--operator` verildiyse işletmecinin kendi RPC düğümleri).
  *           Sıralı, tekrarsız, küçük harf, LF; blok numarası ya da zaman dosyaya girmez → aynı zincir durumu bayt bayt aynı dosya.
@@ -22,7 +23,8 @@ import { matchDeclarations, normalizeEnode, type DeclarationMatch, type Validato
 /** Governance.MemberStatus (SPEC-BC-0001 §1; değerler yalnız sona eklenir) */
 const MEMBER_ACTIVE = 1;
 
-export type AccountReason = "validator" | "state-delegate" | "issuer-delegate" | "anchorer" | "migration-executor";
+/** Hesap listesine giriş nedeni. ADR-0086 K4: düğüm (validator) anahtarı zincirde işlem göndermez → hesap listesinde değil. */
+export type AccountReason = "governance" | "state-delegate" | "issuer-delegate" | "anchorer" | "migration-executor";
 
 /** Zincirden okunan izin kümeleri — tek bir blokta. */
 export interface PermissionsChainState {
@@ -40,7 +42,8 @@ export interface PermissionsReader {
   blockNumber(): Promise<number>;
   contracts(): Record<string, string>;
   memberCodes(block: number): Promise<string[]>;
-  member(code: string, block: number): Promise<{ validator: string; status: number }>;
+  /** `validator` = QBFT düğüm adresi (düğüm listesi eşleşmesi), `governance` = yönetişim (oy) anahtarı (hesap listesi) */
+  member(code: string, block: number): Promise<{ validator: string; governance: string; status: number }>;
   stateDelegates(code: string, block: number): Promise<string[]>;
   issuersOf(code: string, block: number): Promise<string[]>;
   issuerOperational(issuerId: string, block: number): Promise<boolean>;
@@ -71,7 +74,7 @@ export async function readPermissionsState(r: PermissionsReader, block?: number)
     const active = m.status === MEMBER_ACTIVE;
     members.push({ code, validator: m.validator.toLowerCase(), active });
     if (active) {
-      add(m.validator, "validator");
+      add(m.governance, "governance");
       // Governance.isDelegateOf yalnız AKTİF üyede doğru — askıdaki devletin delegesi yazamaz
       for (const k of await r.stateDelegates(code, b)) add(k, "state-delegate");
     }
@@ -275,7 +278,11 @@ export function ethersPermissionsReader(
     memberCodes: async (b) => ((await trust.Governance.memberList(at(b))) as string[]).map(codeOf),
     member: async (code, b) => {
       const m = await trust.Governance.getMember(stateBytes(code), at(b));
-      return { validator: String(m.validatorAddress), status: Number(m.status) };
+      return {
+        validator: String(m.validatorAddress),
+        governance: String(m.governanceAddress),
+        status: Number(m.status),
+      };
     },
     stateDelegates: async (code, b) =>
       ((await trust.Governance.delegateKeysOf(stateBytes(code), at(b))) as string[]).map(String),

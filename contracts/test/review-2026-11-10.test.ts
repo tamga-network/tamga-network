@@ -29,6 +29,7 @@ import {
   loadFixture,
   networkHelpers,
   type Fixture,
+  nodeOf,
 } from "./helpers/fixture.js";
 
 const record = (over: Record<string, unknown> = {}) => ({
@@ -281,7 +282,7 @@ describe("Kontrol 2026-11-10 — zincir bulguları", function () {
     const upgrade = async (f: Fixture) => {
       const impl = await ethers.deployContract("IssuerRegistry");
       const tx = await f
-        .as(f.governance, f.trValidator)
+        .as(f.governance, f.trGov)
         .proposeProtocolUpgrade(await f.issuers.getAddress(), await impl.getAddress());
       return pidOf(tx, f);
     };
@@ -289,77 +290,81 @@ describe("Kontrol 2026-11-10 — zincir bulguları", function () {
     it("oy çevrilir (sayaçlar taşınır), aynı yönde ikinci oy reddedilir, geri çekilen oy sayılmaz", async () => {
       const f = await loadFixture();
       const g = (s: any) => f.as(f.governance, s);
-      const pid = await pidOf(await g(f.trValidator).proposeAnchorThreshold(await f.issuers.getAddress(), 1), f);
-      await (await g(f.trValidator).vote(pid, true)).wait();
-      await (await g(f.kzValidator).vote(pid, true)).wait();
-      await expect(g(f.kzValidator).vote(pid, true)).to.be.revertedWithCustomError(f.governance, "AlreadyVoted");
+      const pid = await pidOf(await g(f.trGov).proposeAnchorThreshold(await f.issuers.getAddress(), 1), f);
+      await (await g(f.trGov).vote(pid, true)).wait();
+      await (await g(f.kzGov).vote(pid, true)).wait();
+      await expect(g(f.kzGov).vote(pid, true)).to.be.revertedWithCustomError(f.governance, "AlreadyVoted");
       expect(Number(await f.governance.countedForVotes(pid))).to.equal(2);
       // KZ fikir değiştirir: destek → karşı
-      await expect(g(f.kzValidator).vote(pid, false))
+      await expect(g(f.kzGov).vote(pid, false))
         .to.emit(f.governance, "Voted")
-        .withArgs(pid, await f.kzValidator.getAddress(), false);
+        .withArgs(pid, await f.kzGov.getAddress(), false);
       let p = await f.governance.getProposal(pid);
       expect([Number(p.forVotes), Number(p.againstVotes)]).to.deep.equal([1, 1]);
       expect(Number(await f.governance.countedForVotes(pid))).to.equal(1);
       await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(f.governance, "ThresholdNotMet");
       // KZ oyunu bütünüyle geri çeker; ikinci geri çekme reddedilir; yeniden oy verebilir
-      await expect(g(f.kzValidator).retractVote(pid))
+      await expect(g(f.kzGov).retractVote(pid))
         .to.emit(f.governance, "VoteRetracted")
-        .withArgs(pid, await f.kzValidator.getAddress());
+        .withArgs(pid, await f.kzGov.getAddress());
       p = await f.governance.getProposal(pid);
       expect([Number(p.forVotes), Number(p.againstVotes)]).to.deep.equal([1, 0]);
-      await expect(g(f.kzValidator).retractVote(pid)).to.be.revertedWithCustomError(f.governance, "NoVote");
-      await expect(g(f.stranger).retractVote(pid)).to.be.revertedWithCustomError(f.governance, "NotValidator");
-      await (await g(f.kzValidator).vote(pid, true)).wait();
+      await expect(g(f.kzGov).retractVote(pid)).to.be.revertedWithCustomError(f.governance, "NoVote");
+      await expect(g(f.stranger).retractVote(pid)).to.be.revertedWithCustomError(f.governance, "NotGovernor");
+      await (await g(f.kzGov).vote(pid, true)).wait();
       expect(Number(await f.governance.countedForVotes(pid))).to.equal(2);
     });
 
     it("yürütülmüş, geri çekilmiş ve süresi dolmuş öneride oy değişmez", async () => {
       const f = await loadFixture();
       const g = (s: any) => f.as(f.governance, s);
-      const a = await pidOf(await g(f.trValidator).proposeStateAdmission("0x555a", await f.stranger.getAddress()), f);
-      await (await g(f.trValidator).vote(a, true)).wait();
-      await (await g(f.kzValidator).vote(a, true)).wait();
-      await (await f.governance.execute(a)).wait();
-      await expect(g(f.kzValidator).retractVote(a)).to.be.revertedWithCustomError(f.governance, "ProposalNotOpen");
-      await expect(g(f.kzValidator).vote(a, false)).to.be.revertedWithCustomError(f.governance, "ProposalNotOpen");
-      const b = await pidOf(await g(f.trValidator).proposeAnchorThreshold(await f.issuers.getAddress(), 1), f);
-      await (await g(f.kzValidator).vote(b, true)).wait();
-      await networkHelpers.time.increase(30 * DAY);
-      await expect(g(f.kzValidator).retractVote(b)).to.be.revertedWithCustomError(f.governance, "ProposalExpired");
-      await expect(g(f.kzValidator).vote(b, false)).to.be.revertedWithCustomError(f.governance, "ProposalExpired");
-      await expect(g(f.trValidator).retractVote(id("yok"))).to.be.revertedWithCustomError(
-        f.governance,
-        "UnknownProposal",
+      const a = await pidOf(
+        await g(f.trGov).proposeStateAdmission(
+          "0x555a",
+          nodeOf(await f.stranger.getAddress()),
+          await f.stranger.getAddress(),
+        ),
+        f,
       );
+      await (await g(f.trGov).vote(a, true)).wait();
+      await (await g(f.kzGov).vote(a, true)).wait();
+      await (await f.governance.execute(a)).wait();
+      await expect(g(f.kzGov).retractVote(a)).to.be.revertedWithCustomError(f.governance, "ProposalNotOpen");
+      await expect(g(f.kzGov).vote(a, false)).to.be.revertedWithCustomError(f.governance, "ProposalNotOpen");
+      const b = await pidOf(await g(f.trGov).proposeAnchorThreshold(await f.issuers.getAddress(), 1), f);
+      await (await g(f.kzGov).vote(b, true)).wait();
+      await networkHelpers.time.increase(30 * DAY);
+      await expect(g(f.kzGov).retractVote(b)).to.be.revertedWithCustomError(f.governance, "ProposalExpired");
+      await expect(g(f.kzGov).vote(b, false)).to.be.revertedWithCustomError(f.governance, "ProposalExpired");
+      await expect(g(f.trGov).retractVote(id("yok"))).to.be.revertedWithCustomError(f.governance, "UnknownProposal");
     });
 
     it("kuyruktaki yükseltme: bekleme süresinde geri çekilen oyla eşik düşer, yükseltme uygulanmaz; oy dönünce uygulanır", async () => {
       const f = await loadFixture();
       const g = (s: any) => f.as(f.governance, s);
       const pid = await upgrade(f);
-      await (await g(f.trValidator).vote(pid, true)).wait();
-      await (await g(f.kzValidator).vote(pid, true)).wait();
+      await (await g(f.trGov).vote(pid, true)).wait();
+      await (await g(f.kzGov).vote(pid, true)).wait();
       await (await f.governance.execute(pid)).wait(); // kuyruk
       const eta = Number(await f.governance.executableAt(pid));
       expect(eta).to.be.greaterThan(0);
       // bekleme süresinde (oylama süresi geçmiş olsa da) KZ oyunu geri çeker
       await networkHelpers.time.increaseTo(eta - 100);
-      await (await g(f.kzValidator).retractVote(pid)).wait();
+      await (await g(f.kzGov).retractVote(pid)).wait();
       await networkHelpers.time.increaseTo(eta);
       await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(f.governance, "ThresholdNotMet");
       // AZ kuyruktayken ilk kez oy verir → eşik yeniden dolar
-      await (await g(f.azValidator).vote(pid, true)).wait();
+      await (await g(f.azGov).vote(pid, true)).wait();
       await expect(f.governance.execute(pid)).to.emit(f.governance, "ProposalExecuted").withArgs(pid);
-      await expect(g(f.azValidator).retractVote(pid)).to.be.revertedWithCustomError(f.governance, "ProposalNotOpen");
+      await expect(g(f.azGov).retractVote(pid)).to.be.revertedWithCustomError(f.governance, "ProposalNotOpen");
     });
 
     it("çıkarma oylamasında çıkarılan üye oy çeviremez / veremez (ADR-0002)", async () => {
       const f = await loadFixture();
       const g = (s: any) => f.as(f.governance, s);
-      const pid = await pidOf(await g(f.trValidator).proposeStateRemoval(KZ, id("gerekce")), f);
-      await expect(g(f.kzValidator).vote(pid, false)).to.be.revertedWithCustomError(f.governance, "NotValidator");
-      await expect(g(f.kzValidator).retractVote(pid)).to.be.revertedWithCustomError(f.governance, "NoVote");
+      const pid = await pidOf(await g(f.trGov).proposeStateRemoval(KZ, id("gerekce")), f);
+      await expect(g(f.kzGov).vote(pid, false)).to.be.revertedWithCustomError(f.governance, "NotGovernor");
+      await expect(g(f.kzGov).retractVote(pid)).to.be.revertedWithCustomError(f.governance, "NoVote");
     });
   });
 

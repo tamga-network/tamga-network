@@ -69,7 +69,7 @@ export default defineConfig({
       chainType: "l1",
       chainId: 31338,
       url: process.env.TAMGA_BESU_RPC ?? "http://127.0.0.1:8546",
-      accounts: { mnemonic: "test test test test test test test test test test test junk", count: 10 },
+      accounts: { mnemonic: "test test test test test test test test test test test junk", count: 20 },
     },
     // Test/staging ağı (network/testnet, `make-network.sh --keys generate`; zincir kimliği 31339). Hesap yok: imzacılar anahtar
     // haritasından (TAMGA_CHAIN_KEYS), Hardhat'in herkesçe bilinen anahtarları bu ağda kullanılmaz.

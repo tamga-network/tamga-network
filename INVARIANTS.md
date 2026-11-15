@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 491 kodlanmış değişmez, 87 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 496 kodlanmış değişmez, 88 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -887,6 +887,19 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0085/SP7` | Sürekli projeksiyon yalnız `TAMGA_CHAIN_ENABLED=1` iken, göç farksız bittikten ve göç penceresi kapandıktan sonra çalışır; bayrak kapalıyken hiçbir şey yapmaz. Yazım yalnız yerel geliştirme ve test zincirine yapılır; gerçek ağa yazma yolu, gerçek ağın anahtar yolu ve [[ADR-0084]] LS6 koşulları karara bağlanmadan kurulmaz. |
 
 
+## ADR-0086
+
+*"Yönetişim ve düğüm anahtarı ayrımı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0086/KG1` | Her üyenin kaydında iki adres vardır: düğüm (QBFT) adresi ve yönetişim adresi; ikisi sıfır değildir ve farklıdır. Bir adres yalnız bir devlette ve yalnız bir rolde kullanılır; bırakılan adres o devlete bağlı kalır, başka devlete verilemez. |
+| `ADR-0086/KG2` | Zincirdeki bütün yetki (öneri, oy, oy ve öneri geri çekme, delege listesi, çıkış, SchemaRegistry bağı) yalnız üyenin bugünkü yönetişim adresindedir; düğüm adresinin zincirde yetkisi yoktur ve hesap izin listesine girmez. Yürütmede oylar bugünkü yönetişim adresinden sayılır. |
+| `ADR-0086/KG3` | Düğüm adresini üye kendi yönetişim anahtarıyla, oy gerekmeden değiştirir; doğrulayıcı kümesindeki değişiklik QBFT düzeyinde doğrulayıcıların oyuyla yapılır. |
+| `ADR-0086/KG4` | Yönetişim anahtarı yalnız Governance önerisiyle değişir: etkin üyelerin 2/3'ü (en az 2) ve değişen üyenin bugünkü anahtarla verdiği destek oyu birlikte gerekir; yürütmede yeniden denetlenir; eski anahtarın yetkisi ve açık önerilerdeki oyları düşer. |
+| `ADR-0086/KG5` | İki üyeli dönemde her üye yönetişim anahtarının ayrı yerde saklanan, sınanmış bir yedeğini tutar (geri yüklenen anahtarın adresi Governance'taki yönetişim adresiyle aynı, sınama imzası atılabilir); yönetişim anahtarı düğüm sunucusunda bulunmaz. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1239,12 +1252,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 491 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 496 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IS, K, KC, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-15 (`scripts/sync-invariants.mjs`). Toplam 491 kodlanmış değişmez, 87 dokümanda.
+**Üretilen dosya** — 2026-11-15 (`scripts/sync-invariants.mjs`). Toplam 496 kodlanmış değişmez, 88 dokümanda.

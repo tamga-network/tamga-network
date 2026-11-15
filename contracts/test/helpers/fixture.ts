@@ -16,6 +16,12 @@ export const AZ = stateCode(ethers, "AZ");
 export const ZERO = ethers.ZeroHash;
 export const id = (s: string) => ethers.id(s); // keccak256(utf8)
 export const DAY = 86_400;
+/**
+ * ADR-0086 K1: kabul önerisinde yönetişim anahtarından ayrı, belirlenimli bir düğüm (QBFT) adresi. Düğüm anahtarı zincirde imza
+ * atmadığı için testlerde anahtarsız adres yeter.
+ */
+export const nodeOf = (governance: string) =>
+  ethers.getAddress(ethers.dataSlice(ethers.keccak256(ethers.concat([ethers.toUtf8Bytes("node:"), governance])), 12));
 
 export enum IssuerCategory {
   GOVERNMENT,
@@ -63,9 +69,14 @@ export enum RecognitionMode {
 
 export interface Fixture extends TrustLayerDeployment {
   deployer: Signer;
-  trValidator: Signer;
-  kzValidator: Signer;
-  azValidator: Signer;
+  /** kurucuların yönetişim (oy) anahtarları — öneri, oy, delege listesi (ADR-0086 K1) */
+  trGov: Signer;
+  kzGov: Signer;
+  azGov: Signer;
+  /** kurucuların QBFT düğüm adresleri — zincirde yetkisi yok (ADR-0086 K1) */
+  trNode: string;
+  kzNode: string;
+  azNode: string;
   trDelegate: Signer;
   kzDelegate: Signer;
   uniOperator: Signer;
@@ -88,20 +99,22 @@ export interface Fixture extends TrustLayerDeployment {
 }
 
 export async function deployFixture(): Promise<Fixture> {
-  const [deployer, trValidator, kzValidator, azValidator, trDelegate, kzDelegate, uniOperator, stranger] =
-    await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  const [deployer, trGov, kzGov, azGov, trDelegate, kzDelegate, uniOperator, stranger] = signers;
+  // ADR-0086 K1: düğüm adresleri ayrı hesaplar (#17–#19); düğüm anahtarı zincirde imza atmaz.
+  const [trNode, kzNode, azNode] = await Promise.all([17, 18, 19].map((i) => signers[i].getAddress()));
   const founders = [
-    { code: "TR", validator: await trValidator.getAddress() },
-    { code: "KZ", validator: await kzValidator.getAddress() },
-    { code: "AZ", validator: await azValidator.getAddress() },
+    { code: "TR", validator: trNode, governance: await trGov.getAddress() },
+    { code: "KZ", validator: kzNode, governance: await kzGov.getAddress() },
+    { code: "AZ", validator: azNode, governance: await azGov.getAddress() },
   ];
-  const d = await deployTrustLayer(ethers, deployer, founders, trValidator);
+  const d = await deployTrustLayer(ethers, deployer, founders, trGov);
   const as = <T>(c: T, s: Signer): T => (c as any).connect(s) as T;
   const now = async () => (await ethers.provider.getBlock("latest"))!.timestamp;
 
   // Delege anahtarları — devletin kendi iç işi, oy gerekmez
-  await (await as(d.governance, trValidator).setDelegateKeys(TR, [await trDelegate.getAddress()])).wait();
-  await (await as(d.governance, kzValidator).setDelegateKeys(KZ, [await kzDelegate.getAddress()])).wait();
+  await (await as(d.governance, trGov).setDelegateKeys(TR, [await trDelegate.getAddress()])).wait();
+  await (await as(d.governance, kzGov).setDelegateKeys(KZ, [await kzDelegate.getAddress()])).wait();
 
   const registerCA = async (st: string, who: Signer, fp: string) => {
     const t = await now();
@@ -183,9 +196,12 @@ export async function deployFixture(): Promise<Fixture> {
   return {
     ...d,
     deployer,
-    trValidator,
-    kzValidator,
-    azValidator,
+    trGov,
+    kzGov,
+    azGov,
+    trNode,
+    kzNode,
+    azNode,
     trDelegate,
     kzDelegate,
     uniOperator,

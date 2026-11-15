@@ -5,7 +5,7 @@
  */
 import { expect } from "chai";
 
-import { TR, ethers, loadFixture, networkHelpers, type Fixture } from "./helpers/fixture.js";
+import { TR, ethers, loadFixture, networkHelpers, type Fixture, nodeOf } from "./helpers/fixture.js";
 
 const UUPS_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 const UPGRADEABLE = [
@@ -53,10 +53,10 @@ describe("UUPS yükseltme güvenliği (SPEC-BC-0001 §9)", function () {
   it("Governance: kendisi dışından yükseltilemez; proxy ikinci kez initialize edilemez", async () => {
     const newImpl = await ethers.deployContract("Governance");
     await expect(
-      f.as(f.governance, f.trValidator).upgradeToAndCall(await newImpl.getAddress(), "0x"),
+      f.as(f.governance, f.trGov).upgradeToAndCall(await newImpl.getAddress(), "0x"),
     ).to.be.revertedWithCustomError(f.governance, "NotGovernance");
     await expect(
-      f.as(f.governance, f.trValidator).initialize([TR], [await f.trValidator.getAddress()]),
+      f.as(f.governance, f.trGov).initialize([TR], [f.trNode], [await f.trGov.getAddress()]),
     ).to.be.revertedWithCustomError(f.governance, "InvalidInitialization");
   });
 
@@ -68,9 +68,7 @@ describe("UUPS yükseltme güvenliği (SPEC-BC-0001 §9)", function () {
       await f.statusLists.getAddress(),
     ]);
     await expect(
-      f
-        .as(f.governance, f.trValidator)
-        .proposeProtocolUpgrade(await f.issuers.getAddress(), await notProxiable.getAddress()),
+      f.as(f.governance, f.trGov).proposeProtocolUpgrade(await f.issuers.getAddress(), await notProxiable.getAddress()),
     )
       .to.be.revertedWithCustomError(f.governance, "UpgradeTargetNotProxiable")
       .withArgs(await notProxiable.getAddress());
@@ -79,14 +77,14 @@ describe("UUPS yükseltme güvenliği (SPEC-BC-0001 §9)", function () {
   it("2/3 oyla protokol yükseltmesi: proxy yeni implementasyona geçer, depolama korunur", async () => {
     const newImpl = await ethers.deployContract("IssuerRegistry");
     const tx = await f
-      .as(f.governance, f.trValidator)
+      .as(f.governance, f.trGov)
       .proposeProtocolUpgrade(await f.issuers.getAddress(), await newImpl.getAddress());
     const rc = await tx.wait();
     const pid = rc!.logs
       .map((l: any) => f.governance.interface.parseLog(l))
       .find((e: any) => e?.name === "ProposalCreated")!.args.id;
-    await f.as(f.governance, f.trValidator).vote(pid, true);
-    await f.as(f.governance, f.kzValidator).vote(pid, true);
+    await f.as(f.governance, f.trGov).vote(pid, true);
+    await f.as(f.governance, f.kzGov).vote(pid, true);
     // ADR-0055 GE1: eşik dolunca önce kuyruğa alınır, 7 gün sonra uygulanır
     await expect(f.governance.execute(pid)).to.emit(f.governance, "ProposalQueued");
     await networkHelpers.time.increase(7 * 24 * 3600);

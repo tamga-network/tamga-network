@@ -42,6 +42,11 @@
  *                                                 iken çalışır, hatası yayını durdurmaz — src/chain/sync-cli.ts
  *   chain-permissions render|check                (ADR-0052 K3) Besu yerel izin listesi zincir durumundan (belirleyici
  *                                                 permissions_config.toml + sha256) ve düğümle fark — src/chain/permissions-cli.ts
+ *   chain-gov <alt komut> …                       yönetişim komut aracı (SPEC-BC-0001 §1, ADR-0086): öneri, oy, geri çekme,
+ *                                                 yürütme, yükseltme kuyruğu, yeniden oy, düğüm/delege anahtarı; yalnız yerel ve
+ *                                                 test zincirine yazar — src/chain/governance-cli.ts
+ *   chain-health [--monitor]                      zincir sağlığı (JSON tamga-chain-health/1; --monitor: "[!] chain: …" satırları);
+ *                                                 bayrak kapalıyken "disabled" — src/chain/health.ts
  * Kurallar: version monoton, previous_version_hash = önceki .jws'in sha256'sı; dist/ değişmez arşivi.
  */
 import {
@@ -2103,13 +2108,15 @@ const cmd = process.argv[2];
     cmd === "chain-check" ||
     cmd === "chain-replay" ||
     cmd === "chain-sync" ||
-    cmd === "chain-permissions"
+    cmd === "chain-permissions" ||
+    cmd === "chain-gov" ||
+    cmd === "chain-health"
   ) {
     // ADR-0051: zincir projeksiyonu — bayrak TAMGA_CHAIN_ENABLED=0 iken yazma yok (CH5)
     process.exitCode = await chainCommand(cmd, process.argv.slice(3), { dist: DIST, environment: ENVIRONMENT });
   } else {
     console.error(
-      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | history-reset --reason <gerekçe> | chain-submit [--dry-run] | chain-check <dosya> | chain-replay [--dry-run] [--archive <dist>] | chain-sync [--dry-run] [--max-writes <n>] | chain-permissions render|check",
+      "kullanım: cli.ts build | anchor ... | heartbeat | verify [--full] | archive | external-fetch | status <slug> <STATUS> | rp-status <dns_name> <STATUS> | end-use <dns_name> <id> | register issuer|rp <dosya> | scope <dns_name> <dosya> | authorize <slug> <vct> [--revoke] | list | history-reset --reason <gerekçe> | chain-submit [--dry-run] | chain-check <dosya> | chain-replay [--dry-run] [--archive <dist>] | chain-sync [--dry-run] [--max-writes <n>] | chain-permissions render|check | chain-gov <alt komut> | chain-health [--monitor]",
     );
     process.exit(1);
   }

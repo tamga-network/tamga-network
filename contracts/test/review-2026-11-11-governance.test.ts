@@ -24,6 +24,7 @@ import {
   networkHelpers,
   type Fixture,
   conn,
+  nodeOf,
 } from "./helpers/fixture.js";
 
 async function proposalIdOf(tx: any, governance: any): Promise<string> {
@@ -41,8 +42,8 @@ async function proposalIdOf(tx: any, governance: any): Promise<string> {
 const UZ = stateCode(ethers, "UZ");
 const proposalId = (tx: any, f: Fixture) => proposalIdOf(tx, f.governance);
 async function pass(f: Fixture, pid: string) {
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
 }
 async function passAndExecute(f: Fixture, pid: string) {
   await pass(f, pid);
@@ -51,7 +52,7 @@ async function passAndExecute(f: Fixture, pid: string) {
 const networkSchema = async (f: Fixture, vct: string, validFrom = 0) =>
   proposalId(
     await f
-      .as(f.governance, f.trValidator)
+      .as(f.governance, f.trGov)
       .proposeNetworkSchema({ ...f.schemaRecord(vct, SchemaTier.NETWORK, "0x0000"), validFrom }),
     f,
   );
@@ -66,9 +67,9 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
         ethers,
         deployer,
         [
-          { code: "TR", validator: await tr.getAddress() },
-          { code: "KZ", validator: await kz.getAddress() },
-          { code: "AZ", validator: await az.getAddress() },
+          { code: "TR", validator: nodeOf(await tr.getAddress()), governance: await tr.getAddress() },
+          { code: "KZ", validator: nodeOf(await kz.getAddress()), governance: await kz.getAddress() },
+          { code: "AZ", validator: nodeOf(await az.getAddress()), governance: await az.getAddress() },
         ],
         tr,
       );
@@ -113,7 +114,7 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       const impl = await ethers.deployContract("IssuerRegistry");
       const implAddr = await impl.getAddress();
       const pid = await proposalId(
-        await f.as(f.governance, f.trValidator).proposeProtocolUpgrade(await f.issuers.getAddress(), implAddr),
+        await f.as(f.governance, f.trGov).proposeProtocolUpgrade(await f.issuers.getAddress(), implAddr),
         f,
       );
       await pass(f, pid);
@@ -145,9 +146,7 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       const f = await loadFixture();
       const impl = await ethers.deployContract("IssuerRegistry");
       const pid = await proposalId(
-        await f
-          .as(f.governance, f.trValidator)
-          .proposeProtocolUpgrade(await f.issuers.getAddress(), await impl.getAddress()),
+        await f.as(f.governance, f.trGov).proposeProtocolUpgrade(await f.issuers.getAddress(), await impl.getAddress()),
         f,
       );
       const payload = await (f.governance as any).upgradePayloadOf(pid);
@@ -166,6 +165,7 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       const data = impl.interface.encodeFunctionData("initialize", [
         ["0x0000", stateCode(ethers, "KZ")],
         [await v.getAddress(), ethers.Wallet.createRandom().address],
+        [ethers.Wallet.createRandom().address, ethers.Wallet.createRandom().address],
       ]);
       await expect(
         ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), data]),
@@ -173,6 +173,7 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       const mixed = impl.interface.encodeFunctionData("initialize", [
         [stateCode(ethers, "TR"), "0x0000"],
         [await v.getAddress(), ethers.Wallet.createRandom().address],
+        [ethers.Wallet.createRandom().address, ethers.Wallet.createRandom().address],
       ]);
       await expect(
         ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), mixed]),
@@ -181,12 +182,12 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
 
     it("ADR-0076 GC1: üç üyeden biri çekilir (3 → 2); iki üyeli ağda çıkış reddedilir, yönetişim çalışmaya devam eder", async () => {
       const f = await loadFixture();
-      await expect(f.as(f.governance, f.azValidator).withdraw()) // 3 → 2: serbest, oy gerekmez (ADR-0002 #5)
+      await expect(f.as(f.governance, f.azGov).withdraw()) // 3 → 2: serbest, oy gerekmez (ADR-0002 #5)
         .to.emit(f.governance, "StateWithdrawn")
         .withArgs(AZ);
       expect(await f.governance.activeMemberCount()).to.equal(2);
       // 2 → 1: iki üyeden hiçbiri tek taraflı çekilemez
-      for (const v of [f.kzValidator, f.trValidator]) {
+      for (const v of [f.kzGov, f.trGov]) {
         await expect(f.as(f.governance, v).withdraw())
           .to.be.revertedWithCustomError(f.governance, "TooFewMembers")
           .withArgs(2, 3);
@@ -197,12 +198,15 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
 
     it("ADR-0076 GC1: iki üyeli ağda çıkmak isteyen üye, üçüncü üyenin kabulünden sonra çekilir", async () => {
       const f = await loadFixture();
-      await (await f.as(f.governance, f.azValidator).withdraw()).wait(); // geriye TR + KZ
-      const tr = f.as(f.governance, f.trValidator);
-      const kz = f.as(f.governance, f.kzValidator);
+      await (await f.as(f.governance, f.azGov).withdraw()).wait(); // geriye TR + KZ
+      const tr = f.as(f.governance, f.trGov);
+      const kz = f.as(f.governance, f.kzGov);
       await expect(kz.withdraw()).to.be.revertedWithCustomError(f.governance, "TooFewMembers");
       // üçüncü üye iki üyenin oyuyla kabul edilir
-      const pid = await proposalId(await tr.proposeStateAdmission(UZ, await f.stranger.getAddress()), f);
+      const pid = await proposalId(
+        await tr.proposeStateAdmission(UZ, nodeOf(await f.stranger.getAddress()), await f.stranger.getAddress()),
+        f,
+      );
       await (await tr.vote(pid, true)).wait();
       await (await kz.vote(pid, true)).wait();
       await (await f.governance.execute(pid)).wait();
@@ -211,7 +215,10 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       await expect(kz.withdraw()).to.emit(f.governance, "StateWithdrawn").withArgs(KZ);
       expect(await f.governance.activeMemberCount()).to.equal(2);
       expect(await f.governance.isActiveMember(KZ)).to.equal(false);
-      const again = await proposalId(await tr.proposeStateAdmission(KZ, await f.kzValidator.getAddress()), f);
+      const again = await proposalId(
+        await tr.proposeStateAdmission(KZ, nodeOf(await f.kzGov.getAddress()), await f.kzGov.getAddress()),
+        f,
+      );
       await (await tr.vote(again, true)).wait();
       await (await f.as(f.governance, f.stranger).vote(again, true)).wait();
       await expect(f.governance.execute(again)).to.emit(f.governance, "ProposalExecuted").withArgs(again);
@@ -219,14 +226,17 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
 
     it("ADR-0076 GC4: kuruluş en az iki kurucu ister; tek kurucu ve boş liste reddedilir", async () => {
       const impl = await ethers.deployContract("Governance");
-      const [, v, w] = await ethers.getSigners();
-      const cases: [string[], string[]][] = [
-        [[], []],
-        [[stateCode(ethers, "TR")], [await v.getAddress()]],
-        [[stateCode(ethers, "TR"), KZ], [await v.getAddress()]], // uzunluklar tutmuyor
+      const [, v, w, gs1, gs2] = await ethers.getSigners();
+      const g1 = await gs1.getAddress();
+      const g2 = await gs2.getAddress();
+      const cases: [string[], string[], string[]][] = [
+        [[], [], []],
+        [[stateCode(ethers, "TR")], [await v.getAddress()], [g1]],
+        [[stateCode(ethers, "TR"), KZ], [await v.getAddress()], [g1, g2]], // uzunluklar tutmuyor
+        [[stateCode(ethers, "TR"), KZ], [await v.getAddress(), await w.getAddress()], [g1]], // ADR-0086: yönetişim eksik
       ];
-      for (const [codes, validators] of cases) {
-        const data = impl.interface.encodeFunctionData("initialize", [codes, validators]);
+      for (const [codes, validators, governors] of cases) {
+        const data = impl.interface.encodeFunctionData("initialize", [codes, validators, governors]);
         await expect(
           ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), data]),
         ).to.be.revertedWithCustomError(impl, "FounderMismatch");
@@ -235,20 +245,23 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       const data = impl.interface.encodeFunctionData("initialize", [
         [stateCode(ethers, "TR"), KZ],
         [await v.getAddress(), await w.getAddress()],
+        [g1, g2],
       ]);
       const proxy = await ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), data]);
       const g = impl.attach(await proxy.getAddress()) as any;
       expect(await g.activeMemberCount()).to.equal(2);
       expect(await g.requiredVotes("0x0000")).to.equal(2);
       // iki kuruculu ağda hiçbiri tek taraflı çekilemez (GC1)
-      await expect(g.connect(v).withdraw()).to.be.revertedWithCustomError(impl, "TooFewMembers").withArgs(2, 3);
+      await expect(g.connect(gs1).withdraw()).to.be.revertedWithCustomError(impl, "TooFewMembers").withArgs(2, 3);
+      // ADR-0086: düğüm anahtarının zincirde yetkisi yok
+      await expect(g.connect(v).withdraw()).to.be.revertedWithCustomError(impl, "NotGovernor");
     });
   });
 
   describe("O2: öneri yükleri zincirden okunur", () => {
     it("ağ şeması yükü, yükseltme başlangıç seçicisi ve çıkarma gerekçesi", async () => {
       const f = await loadFixture();
-      const g = f.as(f.governance, f.trValidator) as any;
+      const g = f.as(f.governance, f.trGov) as any;
       const VCT = "urn:tamga:edu:ReadableCredential:1";
       const later = (await f.now()) + 40 * DAY;
       const sp = await networkSchema(f, VCT, later);
@@ -281,15 +294,21 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
     /** AZ'nin oy verdiği açık bir öneri (UZ kabulü), sonra AZ çekilir ve aynı adresle yeniden kabul edilir. */
     async function staleVote(support: boolean) {
       const f = await loadFixture();
-      const tr = f.as(f.governance, f.trValidator);
-      const kz = f.as(f.governance, f.kzValidator);
-      const az = f.as(f.governance, f.azValidator);
-      const open = await proposalId(await tr.proposeStateAdmission(UZ, await f.stranger.getAddress()), f);
+      const tr = f.as(f.governance, f.trGov);
+      const kz = f.as(f.governance, f.kzGov);
+      const az = f.as(f.governance, f.azGov);
+      const open = await proposalId(
+        await tr.proposeStateAdmission(UZ, nodeOf(await f.stranger.getAddress()), await f.stranger.getAddress()),
+        f,
+      );
       await (await az.vote(open, support)).wait();
       expect(await f.governance.countedForVotes(open)).to.equal(support ? 1 : 0);
       await (await az.withdraw()).wait(); // 3 → 2
       expect(await f.governance.countedForVotes(open)).to.equal(0); // GV3: üye değilken sayılmaz
-      const back = await proposalId(await tr.proposeStateAdmission(AZ, await f.azValidator.getAddress()), f);
+      const back = await proposalId(
+        await tr.proposeStateAdmission(AZ, nodeOf(await f.azGov.getAddress()), await f.azGov.getAddress()),
+        f,
+      );
       await (await tr.vote(back, true)).wait();
       await (await kz.vote(back, true)).wait();
       await (await f.governance.execute(back)).wait();
@@ -314,7 +333,7 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
       const before = await f.governance.getProposal(open);
       await expect(az.vote(open, true))
         .to.emit(f.governance, "Voted")
-        .withArgs(open, await f.azValidator.getAddress(), true);
+        .withArgs(open, await f.azGov.getAddress(), true);
       const after = await f.governance.getProposal(open);
       expect(after.forVotes).to.equal(before.forVotes); // ham sayaç çift artmaz
       expect(after.againstVotes).to.equal(before.againstVotes);
@@ -337,12 +356,18 @@ describe("Kontrat denetimi 2026-11-11 — Governance", function () {
 
     it("üyeliği kesilmemiş üyenin oyu etkilenmez; başka üyenin yeniden kabulü onun oyunu düşürmez", async () => {
       const f = await loadFixture();
-      const tr = f.as(f.governance, f.trValidator);
-      const kz = f.as(f.governance, f.kzValidator);
-      const open = await proposalId(await tr.proposeStateAdmission(UZ, await f.stranger.getAddress()), f);
+      const tr = f.as(f.governance, f.trGov);
+      const kz = f.as(f.governance, f.kzGov);
+      const open = await proposalId(
+        await tr.proposeStateAdmission(UZ, nodeOf(await f.stranger.getAddress()), await f.stranger.getAddress()),
+        f,
+      );
       await (await tr.vote(open, true)).wait();
-      await (await f.as(f.governance, f.azValidator).withdraw()).wait();
-      const back = await proposalId(await tr.proposeStateAdmission(AZ, await f.azValidator.getAddress()), f);
+      await (await f.as(f.governance, f.azGov).withdraw()).wait();
+      const back = await proposalId(
+        await tr.proposeStateAdmission(AZ, nodeOf(await f.azGov.getAddress()), await f.azGov.getAddress()),
+        f,
+      );
       await (await tr.vote(back, true)).wait();
       await (await kz.vote(back, true)).wait();
       await (await f.governance.execute(back)).wait();

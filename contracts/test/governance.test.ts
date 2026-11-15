@@ -3,7 +3,7 @@
  */
 import { expect } from "chai";
 
-import { AZ, KZ, TR, ZERO, id, loadFixture, networkHelpers, type Fixture } from "./helpers/fixture.js";
+import { AZ, KZ, TR, ZERO, id, loadFixture, networkHelpers, type Fixture, nodeOf } from "./helpers/fixture.js";
 
 describe("Governance / egemenlik (SPEC-BC-0001 §0–§1)", function () {
   let f: Fixture;
@@ -32,14 +32,14 @@ describe("Governance / egemenlik (SPEC-BC-0001 §0–§1)", function () {
   };
 
   const removeTR = async () => {
-    const tx = await f.as(f.governance, f.kzValidator).proposeStateRemoval(TR, id("test"));
+    const tx = await f.as(f.governance, f.kzGov).proposeStateRemoval(TR, id("test"));
     const rc = await tx.wait();
     const ev = rc!.logs
       .map((l: any) => f.governance.interface.parseLog(l))
       .find((e: any) => e?.name === "ProposalCreated");
     const pid = ev!.args.id as string;
-    await f.as(f.governance, f.kzValidator).vote(pid, true);
-    await f.as(f.governance, f.azValidator).vote(pid, true);
+    await f.as(f.governance, f.kzGov).vote(pid, true);
+    await f.as(f.governance, f.azGov).vote(pid, true);
     return pid;
   };
 
@@ -74,12 +74,12 @@ describe("Governance / egemenlik (SPEC-BC-0001 §0–§1)", function () {
   });
 
   it("GV3 (R6): tek oy yetmez — KZ tek başına TR'yi atamaz", async () => {
-    const tx = await f.as(f.governance, f.kzValidator).proposeStateRemoval(TR, id("test"));
+    const tx = await f.as(f.governance, f.kzGov).proposeStateRemoval(TR, id("test"));
     const rc = await tx.wait();
     const pid = rc!.logs
       .map((l: any) => f.governance.interface.parseLog(l))
       .find((e: any) => e?.name === "ProposalCreated")!.args.id;
-    await f.as(f.governance, f.kzValidator).vote(pid, true);
+    await f.as(f.governance, f.kzGov).vote(pid, true);
     await expect(f.governance.execute(pid))
       .to.be.revertedWithCustomError(f.governance, "ThresholdNotMet")
       .withArgs(1, 2);
@@ -93,64 +93,67 @@ describe("Governance / egemenlik (SPEC-BC-0001 §0–§1)", function () {
   it("GV4 (R7): çıkarılan devlet yeniden kabul edilebilir; eski delege düşer", async () => {
     await f.governance.execute(await removeTR());
     const newValidator = await f.stranger.getAddress();
-    const tx = await f.as(f.governance, f.kzValidator).proposeStateAdmission(TR, newValidator);
+    const tx = await f.as(f.governance, f.kzGov).proposeStateAdmission(TR, nodeOf(newValidator), newValidator);
     const rc = await tx.wait();
     const pid = rc!.logs
       .map((l: any) => f.governance.interface.parseLog(l))
       .find((e: any) => e?.name === "ProposalCreated")!.args.id;
-    await f.as(f.governance, f.kzValidator).vote(pid, true);
-    await f.as(f.governance, f.azValidator).vote(pid, true);
+    await f.as(f.governance, f.kzGov).vote(pid, true);
+    await f.as(f.governance, f.azGov).vote(pid, true);
     await f.governance.execute(pid);
     expect(await f.governance.isActiveMember(TR)).to.equal(true);
-    expect((await f.governance.getMember(TR)).validatorAddress).to.equal(newValidator);
+    expect((await f.governance.getMember(TR)).governanceAddress).to.equal(newValidator);
+    expect((await f.governance.getMember(TR)).validatorAddress).to.equal(nodeOf(newValidator));
     expect(await f.governance.isDelegateOf(await f.trDelegate.getAddress(), TR)).to.equal(false);
   });
 
   it("ADR-0002: çıkarma oylamasında çıkarılanın oyu sayılmaz", async () => {
-    const tx = await f.as(f.governance, f.kzValidator).proposeStateRemoval(TR, id("test"));
+    const tx = await f.as(f.governance, f.kzGov).proposeStateRemoval(TR, id("test"));
     const rc = await tx.wait();
     const pid = rc!.logs
       .map((l: any) => f.governance.interface.parseLog(l))
       .find((e: any) => e?.name === "ProposalCreated")!.args.id;
-    await expect(f.as(f.governance, f.trValidator).vote(pid, false)).to.be.revertedWithCustomError(
+    await expect(f.as(f.governance, f.trGov).vote(pid, false)).to.be.revertedWithCustomError(
       f.governance,
-      "NotValidator",
+      "NotGovernor",
     );
   });
 
   it("validator olmayan öneri veremez, oy kullanamaz", async () => {
     await expect(
-      f.as(f.governance, f.trDelegate).proposeStateAdmission(AZ, await f.stranger.getAddress()),
-    ).to.be.revertedWithCustomError(f.governance, "NotValidator");
+      f
+        .as(f.governance, f.trDelegate)
+        .proposeStateAdmission(AZ, nodeOf(await f.stranger.getAddress()), await f.stranger.getAddress()),
+    ).to.be.revertedWithCustomError(f.governance, "NotGovernor");
     await expect(f.as(f.governance, f.stranger).vote(ZERO, true)).to.be.revertedWithCustomError(
       f.governance,
-      "NotValidator",
+      "NotGovernor",
     );
   });
 
   it("R5: setSchemaRegistry bir kez — ikinci çağrı reddedilir", async () => {
     await expect(
-      f.as(f.governance, f.trValidator).setSchemaRegistry(await f.schemas.getAddress()),
+      f.as(f.governance, f.trGov).setSchemaRegistry(await f.schemas.getAddress()),
     ).to.be.revertedWithCustomError(f.governance, "SchemaRegistryAlreadySet");
   });
 
   it("delege anahtarını yalnız o devletin validator'ı değiştirir (MAX_DELEGATES=16)", async () => {
-    await expect(f.as(f.governance, f.kzValidator).setDelegateKeys(TR, [])).to.be.revertedWithCustomError(
+    await expect(f.as(f.governance, f.kzGov).setDelegateKeys(TR, [])).to.be.revertedWithCustomError(
       f.governance,
-      "NotValidator",
+      "NotGovernor",
     );
     const many = Array.from({ length: 17 }, (_, i) => "0x" + (i + 1).toString(16).padStart(40, "0"));
-    await expect(f.as(f.governance, f.trValidator).setDelegateKeys(TR, many)).to.be.revertedWithCustomError(
+    await expect(f.as(f.governance, f.trGov).setDelegateKeys(TR, many)).to.be.revertedWithCustomError(
       f.governance,
       "TooManyDelegates",
     );
   });
 
   it("withdraw: tek taraflı çıkış, oy gerekmez (3 → 2); iki üyeli ağda çıkış reddedilir (ADR-0076 GC1)", async () => {
-    await f.as(f.governance, f.azValidator).withdraw();
+    await f.as(f.governance, f.azGov).withdraw();
     expect(await f.governance.isActiveMember(AZ)).to.equal(false);
     expect(await f.governance.activeMemberCount()).to.equal(2);
-    for (const v of [f.kzValidator, f.trValidator]) {
+    for (const v of [f.kzGov, f.trGov]) {
       await expect(f.as(f.governance, v).withdraw())
         .to.be.revertedWithCustomError(f.governance, "TooFewMembers")
         .withArgs(2, 3);

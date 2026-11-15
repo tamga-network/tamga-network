@@ -12,8 +12,10 @@ import type { BaseContract, Signer } from "ethers";
 export interface Founder {
   /** ISO 3166-1 alpha-2, ör. "TR" */
   code: string;
-  /** QBFT validator adresi (Governance oyu bu adresten verilir) */
+  /** QBFT düğüm (uzlaşma) adresi — zincirde yetkisi yok; izin listesi ve doğrulayıcı kümesi bundan (ADR-0086 K1) */
   validator: string;
+  /** yönetişim (oy) adresi — öneri, oy, delege listesi bu adresten; düğüm adresinden farklı olmalı (ADR-0086 K1) */
+  governance: string;
 }
 
 export interface TrustLayerDeployment {
@@ -54,8 +56,8 @@ export async function deployed(
 }
 
 /**
- * Governance → SchemaRegistry bağı beklenen adreste mi (kurulum denetimi). `setSchemaRegistry` bir kez ve herhangi bir üye
- * validator'ı tarafından çağrılabilir; yanlış adrese kurulmuş bağ yalnız protokol yükseltmesiyle (2/3) düzelir — bu yüzden
+ * Governance → SchemaRegistry bağı beklenen adreste mi (kurulum denetimi). `setSchemaRegistry` bir kez ve herhangi bir üyenin
+ * yönetişim anahtarıyla çağrılabilir; yanlış adrese kurulmuş bağ yalnız protokol yükseltmesiyle (2/3) düzelir — bu yüzden
  * dağıtım ve ağ kurulumu bağı okuyup doğrular, tutmuyorsa durur.
  */
 export async function assertSchemaRegistryBound(governance: BaseContract, expected: string): Promise<void> {
@@ -68,20 +70,25 @@ export async function assertSchemaRegistryBound(governance: BaseContract, expect
 
 /**
  * Bütün kontratları UUPS (ERC1967) proxy arkasında dağıtır ve bağlar.
- * @param deployer İmplementasyon ve proxy'leri dağıtan hesap. `setSchemaRegistry` `onlyValidator` olduğundan (review R5)
- *                 ilk kurucunun validator'ı bu çağrıyı yapar; `founders[0].validator` için bir Signer verilmelidir.
+ * @param deployer İmplementasyon ve proxy'leri dağıtan hesap. `setSchemaRegistry` `onlyGovernor` olduğundan (review R5,
+ *                 ADR-0086) ilk kurucunun yönetişim anahtarı bu çağrıyı yapar; `founders[0].governance` için Signer verilmelidir.
  */
 export async function deployTrustLayer(
   ethers: HardhatEthers,
   deployer: Signer,
   founders: Founder[],
-  firstValidatorSigner: Signer,
+  firstGovernanceSigner: Signer,
 ): Promise<TrustLayerDeployment> {
   // Kontrat da reddeder (`FounderMismatch`); burada dağıtımdan ÖNCE, açık iletiyle durulur.
   if (founders.length < MIN_FOUNDERS)
     throw new Error(`en az ${MIN_FOUNDERS} kurucu gerekir (ADR-0076 GC4) — verilen: ${founders.length}`);
   const codes = founders.map((f) => stateCode(ethers, f.code));
   const validators = founders.map((f) => f.validator);
+  const governors = founders.map((f) => f.governance);
+  // ADR-0086 K1: kontrat da reddeder (`KeyInUse`); burada dağıtımdan ÖNCE, açık iletiyle durulur.
+  for (const f of founders)
+    if (!f.governance || f.governance.toLowerCase() === f.validator.toLowerCase())
+      throw new Error(`${f.code}: yönetişim adresi düğüm adresinden ayrı olmalı (ADR-0086 K1)`);
 
   const proxy = async (name: string, initArgs: unknown[]) => {
     const impl = await deployed(ethers, name, [], deployer);
@@ -91,7 +98,7 @@ export async function deployTrustLayer(
   };
 
   // 1) Governance — ISovereignty'yi de uygular; herkes ona bakar.
-  const governance = await proxy("Governance", [codes, validators]);
+  const governance = await proxy("Governance", [codes, validators, governors]);
   const gov = await governance.getAddress();
   // 2) RootCARegistry — IssuerRegistry buna bağımlı.
   const rootCAs = await proxy("RootCARegistry", [gov, gov]);
@@ -106,14 +113,14 @@ export async function deployTrustLayer(
   // ADR-0074 K3: ağ düzeyi kayıtlar (yalnız Governance önerisiyle ya da göç kipinde göç yürütücüsüyle)
   const networkRegistry = await proxy("NetworkRegistry", [gov]);
 
-  // 6) Governance → SchemaRegistry bağı (BİR KEZ, geri alınamaz; onlyValidator — R5)
-  //    Kontrol 2026-11-10: bağ dağıtım ile bu çağrı arasında başka bir validator tarafından BAŞKA bir adrese kurulmuş olabilir
+  // 6) Governance → SchemaRegistry bağı (BİR KEZ, geri alınamaz; onlyGovernor — R5, ADR-0086)
+  //    Kontrol 2026-11-10: bağ dağıtım ile bu çağrı arasında başka bir üye tarafından BAŞKA bir adrese kurulmuş olabilir
   //    (tek seferlik; geri alınamaz). Zaten kuruluysa çağrı yapılmaz; her durumda bağın beklenen kayda gittiği doğrulanır —
   //    değilse dağıtım geçersizdir (yeniden dağıtılır).
   const bound = String(await (governance as any).schemaRegistry());
   if (/^0x0+$/.test(bound))
     await (
-      await (governance.connect(firstValidatorSigner) as any).setSchemaRegistry(await schemas.getAddress())
+      await (governance.connect(firstGovernanceSigner) as any).setSchemaRegistry(await schemas.getAddress())
     ).wait();
   await assertSchemaRegistryBound(governance, await schemas.getAddress());
 

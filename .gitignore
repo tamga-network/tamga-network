@@ -95,3 +95,5 @@ network/dev/perm/
 network/rpc-proxy/dev-certs/
 # Linux çok düğümlü test ağı (network/testnet/make-network.sh): genesis, düğüm anahtarları, zincir verisi, raporlar
 network/testnet/run/
+# gölge zincir (network/testnet/shadow-chain.sh): ağ, anahtarlar, indirilen listeler, raporlar
+network/testnet/shadow/

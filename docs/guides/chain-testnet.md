@@ -4,7 +4,7 @@ title: "Zincir test ağı kurmak: Hyperledger Besu adım adım"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   Zincirsiz canlı sistem çalışırken zincir katmanını test etmek isteyenler için sıfırdan, adım adım kurulum rehberi: terimler
   (düğüm, validator, QBFT ve 3f+1, genesis, chainId, enode, statik eşler, izinli ağ, RPC ve P2P, Governance, çapa, yeniden
@@ -743,6 +743,7 @@ sunucudaki nginx yapılandırması ve systemd birimi örnekleri: `network/rpc-pr
 | İzin listesi | `trust:chain-permissions check` | Çıkış 0; `shared_sha256` her validator'da aynı |
 | Dinleme adresleri | `ss -ltnp` | JSON-RPC yalnız `127.0.0.1`; P2P yalnız beklenen arayüzde |
 | Çapa durumu | Doğrulama servisinin `/healthz` yanıtındaki `chain` alanı | `anchored`: `YES` |
+| Zincir sağlığı | `trust:chain-health` (aşağıda "Zincir sağlığı") | `status`: `ok`; alarm yok |
 
 **`/healthz` `chain` alanı.** Doğrulama servisi (`apps/verify`) yüklediği listelerin zincirde onaylı çapalanıp çapalanmadığını
 sağlık sayfasında gösterir. Bayrak kapalıyken (canlı sistemde bugün olduğu gibi) cevap `UNKNOWN`'dur ve zincire bağlanılmaz. Test
@@ -818,10 +819,113 @@ göç penceresi, yeniden oynatma ve eşdeğerlik) ve ikinci çalıştırmanın s
 
 ## Gölge zincir
 
-İleride, ayrı küçük bir test sunucusunda, canlı ağın gerçek imzalı listelerinin de her yayından sonra bir test zincirine
-çapalanması düşünülmektedir ("gölge zincir"): zincirsiz sistem kaynak kalır, gölge zincir yalnız onu izler ve iki hâlin uzun süre
-birlikte nasıl davrandığını gösterir. Bugün böyle bir zincir **yoktur**. Proje yönetimi önce GitHub'daki otomatik sınamayla
-ilerlemeye karar verdi; ayrı test sunucusu, satın alınmasına karar verildiğinde kurulur. Kurulum Yol C'nin betikleriyle yapılır.
+Gölge zincir, canlı ağın **gerçek** imzalı listelerinin her yayından sonra bir test zincirine yansıtılmasıdır: zincirsiz sistem
+kaynak kalır, gölge zincir yalnız onu izler ve iki hâlin uzun süre birlikte nasıl davrandığını gösterir ([[ADR-0084]] K6: geçişin
+ikinci adımı, test ağı). Canlı ağ yalnız **okunur** (kamuya açık imzalı listeler, HTTPS); ona hiçbir şey yazılmaz. Bugün böyle bir
+zincir **çalışmıyor**: sunucu alınmadı. Betik hazırdır; sunucu alınınca aşağıdaki adımlar yeter.
+
+**Gereken sunucu (en az).** Tek Linux sunucu (Ubuntu 24.04 LTS, x64 ya da aarch64), sabit adres gerekmez (düğümler aynı makinede
+birbirine bağlanır, dışarıdan gelen bağlantı yok):
+
+| | En az | Kaynak |
+|---|---|---|
+| İşlemci | 4 çekirdek | Yol B'nin ölçüldüğü GitHub Actions makinesi (4 doğrulayıcı + 1 ek düğüm aynı makinede) |
+| Bellek | 16 GB | aynı makine; düğüm başına ölçülen 505–568 MiB + Node.js araçları (yeniden oynatma, eşitleme) |
+| Disk | SSD | düğüm başına 404 blokta 74–76 MiB ölçüldü; uzun süreli büyüme ölçülmedi — disk doluluğunu izleyin |
+| Yazılım | Node.js 22, `bash curl jq unzip tar ss openssl sha256sum setsid pgrep` | §Gereksinimler; Java ve Besu'yu betik indirir |
+| Ağ | dışarıya HTTPS (canlı listeleri ve Java/Besu'yu indirmek için) | — |
+
+**Kurulum (bir kez).** Depo kökünden:
+
+```bash
+npm ci && npm run contracts:install && npm run contracts:compile
+bash network/testnet/shadow-chain.sh setup --dry-run          # her adımın komutunu basar, hiçbir şey çalıştırmaz
+bash network/testnet/shadow-chain.sh setup                    # 4 doğrulayıcı; --validators 7, --mode systemd (root)
+```
+
+`setup` sırasıyla: (1) Java ve Besu kurulumu; (2) `make-network.sh --keys generate` ile üretilmiş anahtarlı ağ (zincir kimliği
+31339, anahtar haritası `network/testnet/shadow/keys/keys.json`; her devlete ayrı düğüm ve yönetişim anahtarı, [[ADR-0086]]);
+(3) düğümlerin başlatılması; (4) canlı ağın imzalı listeleri ve arşivi (`mirror-lists.ts`: yalnız okur, imza, sürüm zinciri ve çapa
+zinciriyle doğrular); (5) `bootstrap-governance.sh` bu listelerle: kontratlar, Governance, her düğümde zincirden izin listesi, iki
+yazıcıyla çapa, göç penceresi oyla + **gerçek arşivin** yeniden oynatılması + eşdeğerlik testi; (6) rapor
+(`network/testnet/shadow/shadow-report.md` ve `.json`). Yeniden çalıştırmak güvenlidir: biten adımlar atlanır. Kök parmak izini
+bant dışından sabitlemek için `--expect-root <sha256>`.
+
+**Eşitleme (saatte bir).** Canlı ağın her yayınından sonra (saatlik yeter) yeni sürümleri indirip zincire yansıtır:
+
+```bash
+bash network/testnet/shadow-chain.sh sync     # yansıt → trust:chain-sync → her yazıcıyla trust:chain-submit → trust:chain-health
+bash network/testnet/shadow-chain.sh report   # son raporun özeti
+```
+
+`sync`'i cron ya da systemd zamanlayıcısıyla saatte bir çalıştırın; çıkış kodu 5 ise rapordaki alarmlara bakın. Eşdeğerlik ölçütü:
+göçte eşdeğerlik testi farksız (`equivalence.decisionDifferences = 0`), sonra her koşuda sürekli projeksiyon tam
+(`complete: true`) ve sağlık `ok`. Sürekli eşdeğerliği bağımsız bir indeksleyici servisiyle ölçmek sonraki iştir.
+
+## Zincir sağlığı
+
+`trust:chain-health` zincirin durumunu tek bir JSON'da verir (yalnız okur, hiçbir şey yazmaz, liste yayınını etkilemez —
+[[ADR-0084]] LS4). Bayrak kapalıyken (canlı sistemde bugün olduğu gibi) zincire bağlanmaz: `"status": "disabled"`, alarm yok.
+
+```bash
+TAMGA_CHAIN_ENABLED=1 TAMGA_CHAIN_RPC_URL=http://127.0.0.1:8546 TAMGA_CHAIN_ANCHOR_REGISTRY=0x… \
+  npm run -s trust:chain-health                 # JSON (tamga-chain-health/1)
+npm run -s trust:chain-health -- --monitor      # izleme betiği için: her sorun bir satır, sorun yoksa boş
+```
+
+| Alan | Anlamı |
+|---|---|
+| `format` | `tamga-chain-health/1` |
+| `status` | `disabled` · `ok` · `warn` · `alarm` |
+| `alarms[]` | `{code, severity, message}`; `severity`: `warn` ya da `alarm` |
+| `chain` | `chain_id`, `block`, `block_time`, `block_age_sec`, `peers` (ya da `error`) |
+| `sync` | `state` (`missing` · `ok` · `incomplete` · `behind`), `point_updated_at`, `last_run`, `lag_sec`, `unreflected` |
+| `anchors` | `lists[]` (`file`, `version`, `anchored`: `YES`/`NO`/`UNKNOWN`), `decisions` (`conflict`, `contest`, `pending`, `oldest_pending_age_sec`) |
+| `thresholds` | `lag_alarm_sec` (7200, [[ADR-0085]] SP2), `block_stall_sec` (60; `--block-stall-sec`) |
+
+| Kod | Düzey | Ne zaman |
+|---|---|---|
+| `CHAIN_UNREACHABLE` | alarm | düğüme ulaşılamıyor |
+| `BLOCK_STALL` | alarm | son blok sınırdan eski (blok üretimi durmuş olabilir) |
+| `PEERS_NONE` | uyarı | düğümün eşi yok |
+| `CONFIG_INCOMPLETE` | uyarı | liste çapası kaydının adresi verilmemiş |
+| `SYNC_NO_BASELINE` | uyarı | sürekli projeksiyonun başlangıç noktası yok (göç bitmemiş) |
+| `SYNC_INCOMPLETE` | alarm | son eşitleme koşusu eksik ([[ADR-0085]] SP5) |
+| `SYNC_LAG` | alarm | yayımlanmış ama zincire yansıtılmamış en eski sürüm iki saatten eski (SP2) |
+| `ANCHOR_NO` | alarm | zincirde aynı sürüm için onaylı farklı özet (çift konuşma işareti; [[ADR-0051]] CH1) |
+| `ANCHOR_CONFLICT` | alarm | çapa kararında onaylı farklı özet (liste ya da çapa günlüğü başı) |
+| `ANCHOR_CONTEST` | alarm | bekleyen rakip aday ([[ADR-0053]]) |
+| `ANCHOR_LAG` | alarm | iki saatten uzun çapalanmamış liste sürümü |
+| `DIST_UNREADABLE` | uyarı | yayın klasörü okunamadı |
+
+Çıkış kodu: 0 sağlıklı ya da kapalı, 4 uyarı, 5 alarm. `--monitor` satırlarının biçimi `[!] chain: <KOD> <ileti>`'dir; işletmecinin
+izleme betiği bu satırları kendi sorun listesine ekler. Alarm, düzeltmenin yönünü değiştirmez: liste kaynaktır, düzeltme listeden
+zincire yapılır ([[ADR-0084]] LS5).
+
+## Yönetişim komut aracı
+
+`trust:chain-gov` Governance işlemlerini yapar: öneri açma, oy, oyu geri çekme, öneriyi geri çekme, yürütme, yükseltme kuyruğu,
+yükseltmeden ya da anahtar değişikliğinden sonra yeniden oy, düğüm adresi ve delege anahtarı. Yalnız yerel geliştirme zincirine ve
+test zincirine yazar (gerçek ağda yalnız okur ve işlemin çağrı verisini basar); imza her devletin **yönetişim anahtarıyla**
+([[ADR-0086]]): Yol A/B'de Hardhat test hesabı, Yol C'de anahtar haritası.
+
+```bash
+export TAMGA_CHAIN_ENABLED=1 TAMGA_CHAIN_RPC_URL=http://127.0.0.1:8546   # Yol C: TAMGA_CHAIN_KEYS, TAMGA_CHAIN_DEPLOYMENT
+npm run -s trust:chain-gov -- status                                    # üyeler (düğüm + yönetişim adresi), eşik, açık öneriler
+npm run -s trust:chain-gov -- propose admit --as TR --state XA --node 0x… --governance 0x…
+npm run -s trust:chain-gov -- vote 0x<öneri> --yes --as KZ
+npm run -s trust:chain-gov -- execute 0x<öneri> --as TR
+npm run -s trust:chain-gov -- propose key-change --as KZ --state TR --governance 0x…   # TR de kendi oyunu verir
+npm run -s trust:chain-gov -- set-node --state TR --node 0x…            # düğüm anahtarı: oy yok
+npm run -s trust:chain-gov -- queue                                     # kuyruktaki yükseltmeler
+npm run -s trust:chain-gov -- revote --as TR                            # sayılmayan son oyları yeniden ver
+```
+
+Öneri türleri: `admit`, `remove`, `key-change`, `upgrade`, `anchorer`, `anchor-threshold`, `founder-recognition`,
+`migration-open`, `migration-extend`, `migration-close`, `schema-deprecate`, `schema-revoke`, `schema-hash`, `network-schema`,
+`network-record`, `rp-reassign`, `rp-reregister`. Her yazma `--dry-run` ile önce denenebilir (bayrak kapalıyken de çağrı verisini
+basar); gönderimden önce kontratın ret gerekçesi (ör. `KeyChangeNeedsOwnVote`) gösterilir. Gerekçe metni zincire gitmez, yalnız
+özeti.
 
 ## Kurallar
 

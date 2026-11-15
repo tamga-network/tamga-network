@@ -4,7 +4,7 @@ title: "Düğüm işletme el kitabı"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-15
 summary: >
   İleride Tamga ortak defterinde (Hyperledger Besu, QBFT) validator ya da tam düğüm çalıştıracak devlet ve işletmeci bilgi işlem
   ekipleri için hazırlık el kitabı: zincirin rolü, önkoşullar, donanım ve işletim sistemi, JDK 25 ve Besu kurulumu, düğüm anahtarı,
@@ -48,7 +48,7 @@ ya da belge özeti yazılmaz; iptal listeleri zincir dışında kalır ([[ADR-00
 
 | Rol | Ne yapar | Kim |
 |---|---|---|
-| Validator | blok önerir ve imzalar; yönetişimde oy kullanır | her üye devletin bir validator'ı; anahtar HSM'de |
+| Validator | blok önerir ve imzalar (düğüm anahtarı); yönetişim oyu ayrı anahtarla verilir | her üye devletin bir validator'ı; anahtar HSM'de |
 | Tam düğüm | zinciri doğrular ve okur; imzalamaz | işletmecinin kendi okuma düğümü (liste yayıncısı, indeksleyici, doğrulayıcı okuma yolu) |
 
 Uzlaşma QBFT'dir: n validator'da en çok f = ⌊(n−1)/3⌋ arızaya dayanır. Hedef en az 4 validator'dır (f = 1).
@@ -123,12 +123,13 @@ Anahtar HSM'deyse `node init` kullanılmaz: açık anahtarı HSM'den alıp §5't
 Yapay zekâ asistanı üzerinden aynı adım MCP aracı `generate_node_key`'dir; özel anahtar hiçbir yanıtta dönmez ve MCP ile eşitlenen
 klasöre hiç yazılmaz.
 
-::: warning Aynı anahtar hem blok imzalar hem oy verir (açık karar)
-Bugün validator'ın düğüm anahtarı aynı zamanda devletin **Governance oy anahtarıdır**: blok imzalayan anahtar öneri açar ve oy
-verir. Düğüm anahtarı çalışan sunucuda durduğu için bu, yönetişim yetkisini de o sunucuya bağlar. Bu iki anahtar ayrılana kadar
-**gerçek ağda validator düğüm anahtarı HSM'de (ya da eşdeğer donanım kasasında) tutulmak ZORUNDADIR**; dosyada duran anahtar yalnız
-deneme ağlarında kabul edilir. Yönetişim ve mutabakat anahtarlarının ayrılması **açık karardır**: ikinci bir devlet ağa katılmadan
-önce yeni bir karar kaydıyla (ADR) karara bağlanacaktır.
+::: tip İki anahtar: düğüm anahtarı ve yönetişim anahtarı
+Her devletin iki ayrı anahtarı vardır ([[ADR-0086]]). **Düğüm anahtarı** (bu bölümde üretilen) yalnız blok imzalar; zincirde başka
+hiçbir yetkisi yoktur ve hesap izin listesine girmez. **Yönetişim anahtarı** Governance'ta öneri açar, oy verir, delege listesini
+yazar; düğüm sunucusunda **bulunmaz**, ayrı kasada (gerçek ağda donanım anahtar kasası) durur. Düğüm anahtarını devlet kendi
+yönetişim anahtarıyla oy olmadan değiştirir (`setValidatorAddress`); yönetişim anahtarı yalnız ağın oyuyla ve devletin kendi oyuyla
+değişir. İki üyeli dönemde yönetişim anahtarının ayrı yerde saklanan, sınanmış bir yedeği zorunludur. Dosyada duran anahtar yalnız
+deneme ağlarında kabul edilir.
 :::
 
 ::: warning Ağ şeması önerisinde başlangıç tarihi (geçici)
@@ -190,7 +191,7 @@ npm run trust:chain-permissions -- check --file /var/lib/besu/permissions_config
 
 | Liste | Kaynağı |
 |---|---|
-| Hesaplar | aktif üyelerin validator adresleri ve delege anahtarları (Governance), çalışır kurumların delegeleri, liste çapası yazıcıları, açık bir göç penceresinin yürütücüsü |
+| Hesaplar | aktif üyelerin yönetişim adresleri ve delege anahtarları (Governance; düğüm adresi değil), çalışır kurumların delegeleri, liste çapası yazıcıları, açık bir göç penceresinin yürütücüsü |
 | Düğümler | bildirimleri Governance'taki aktif validator adresiyle eşleşen validator düğümleri; `--operator` ile işletmecinin kendi okuma düğümleri |
 
 - `render` iki özet basar: `sha256` (dosya) ve `shared_sha256` (işletmecinin kendi okuma düğümleri hariç). **Bütün validator'larda
@@ -247,8 +248,8 @@ Sıra önemlidir; her adım bir öncekinin tamamlanmasını bekler.
 
 | # | Adım | Kim | Nasıl |
 |---|---|---|---|
-| 1 | Üyelik | mevcut üyeler | Governance'ta devletin kabul önerisi (`proposeStateAdmission`, validator adresiyle) ve 2/3 oy |
-| 2 | Delege anahtarları | yeni üye | devletin delege anahtarları Governance'a yazılır (`setDelegateKeys`) |
+| 1 | Üyelik | mevcut üyeler | Governance'ta devletin kabul önerisi (`proposeStateAdmission`, düğüm adresi ve yönetişim adresiyle) ve 2/3 oy |
+| 2 | Delege anahtarları | yeni üye | devletin delege anahtarları yönetişim anahtarıyla Governance'a yazılır (`setDelegateKeys`) |
 | 3 | Bildirim | yeni üye | §5 bildirimi depoya eklenir |
 | 4 | İzin listesi | her işletmeci | `render` → yükle → `check`; bütün validator'larda `shared_sha256` aynı |
 | 5 | Eşleşme | yeni üye | düğüm tam düğüm olarak eşleşir ve senkron olur (`eth_syncing` = `false`) |

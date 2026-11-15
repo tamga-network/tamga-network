@@ -141,9 +141,12 @@ function fakeReader(order: "a" | "b"): PermissionsReader {
     contracts: () => ({ Governance: "0xAa00000000000000000000000000000000000001", IssuerRegistry: "0xbb" }),
     memberCodes: async () => flip(["TR", "KZ", "AZ"]),
     member: async (code) =>
-      ({ TR: { validator: A(1), status: 1 }, KZ: { validator: A(2), status: 1 }, AZ: { validator: A(3), status: 2 } })[
-        code
-      ]!,
+      // ADR-0086 K1: düğüm (validator) ve yönetişim adresi ayrı — #21–#23 yönetişim anahtarları
+      ({
+        TR: { validator: A(1), governance: A(21), status: 1 },
+        KZ: { validator: A(2), governance: A(22), status: 1 },
+        AZ: { validator: A(3), governance: A(23), status: 2 },
+      })[code]!,
     stateDelegates: async (code) => (code === "TR" ? flip([A(4), A(5)]) : code === "AZ" ? [A(6)] : []),
     issuersOf: async (code) => (code === "TR" ? flip(["0x01", "0x02"]) : code === "AZ" ? ["0x03"] : []),
     issuerOperational: async (id) => id !== "0x02",
@@ -166,9 +169,11 @@ describe("render — belirleyicilik ve biçim", () => {
     expect(b.sha256).toBe(a.sha256);
     expect(a.sha256).toMatch(/^[0-9a-f]{64}$/);
     const lc = (i: number) => w(i).address.toLowerCase();
-    // AZ askıda: validator'ı (#3) ve delegesi (#6) yok; AZ'nin çalışır kurumu (#12) var (kontrat yalnız kurum durumuna bakar);
-    // TR'nin askıdaki kurumu (0x02 → #11) yok
-    expect(a.accounts).toEqual([lc(0), lc(1), lc(2), lc(4), lc(5), lc(7), lc(12)].sort());
+    // Hesaplarda aktif üyelerin YÖNETİŞİM anahtarları (#21, #22) var, düğüm anahtarları (#1, #2) yok (ADR-0086 K4: düğüm
+    // anahtarı işlem göndermez). AZ askıda: yönetişim anahtarı (#23) ve delegesi (#6) yok; AZ'nin çalışır kurumu (#12) var
+    // (kontrat yalnız kurum durumuna bakar); TR'nin askıdaki kurumu (0x02 → #11) yok
+    expect(a.accounts).toEqual([lc(0), lc(21), lc(22), lc(4), lc(5), lc(7), lc(12)].sort());
+    expect(a.accounts).not.toContain(lc(1));
     expect(a.toml).not.toContain("\r");
     expect(a.toml).not.toMatch(/block|42\b/); // blok numarası dosyaya girmez
     expect(a.toml.split("\n")[0]).toMatch(/^# Tamga Network/);

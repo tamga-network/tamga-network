@@ -4,7 +4,7 @@ title: "Setting up a chain test network: Hyperledger Besu step by step"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   A step-by-step guide, from scratch, for anyone who wants to test the chain layer while the chainless live system runs: terms
   (node, validator, QBFT and 3f+1, genesis, chainId, enode, static peers, permissioned network, RPC and P2P, Governance, anchor,
@@ -759,6 +759,7 @@ configuration and the systemd unit for a real server: `network/rpc-proxy/` and [
 | Permission list | `trust:chain-permissions check` | Exit 0; `shared_sha256` the same on every validator |
 | Listening addresses | `ss -ltnp` | JSON-RPC only on `127.0.0.1`; P2P only on the expected interface |
 | Anchor status | The `chain` field of the verification service's `/healthz` answer | `anchored`: `YES` |
+| Chain health | `trust:chain-health` (below, "Chain health") | `status`: `ok`; no alarms |
 
 **The `/healthz` `chain` field.** The verification service (`apps/verify`) shows on its health page whether the lists it has loaded
 are confirmed as anchored on the chain. While the flag is off (as on the live system today) the answer is `UNKNOWN` and nothing
@@ -836,10 +837,116 @@ The measurements in this guide are from the run of 2026-11-05.
 
 ## Shadow chain
 
-Later, on a separate small test server, the live network's real signed lists may also be anchored to a test chain after every
-publication (a "shadow chain"): the chainless system stays the source, the shadow chain only follows it and shows how the two modes
-behave together over a long time. Today there is **no** such chain. Project management decided to proceed first with the automated
-test on GitHub; the separate test server is set up once its purchase is decided. It is set up with path C's scripts.
+A shadow chain projects the live network's **real** signed lists onto a test chain after every publication: the chainless system
+stays the source, the shadow chain only follows it and shows how the two modes behave together over a long time ([[ADR-0084]] K6:
+the second step of the transition, the test network). The live network is only **read** (public signed lists, HTTPS); nothing is
+ever written to it. Today no such chain **runs**: no server has been bought. The script is ready; once a server exists, the steps
+below are enough.
+
+**Server needed (minimum).** One Linux server (Ubuntu 24.04 LTS, x64 or aarch64); no fixed address is needed (the nodes connect to
+each other on the same machine, no inbound connections):
+
+| | Minimum | Source |
+|---|---|---|
+| CPU | 4 cores | the GitHub Actions machine on which path B was measured (4 validators + 1 extra node on one machine) |
+| Memory | 16 GB | same machine; 505–568 MiB measured per node + Node.js tools (replay, sync) |
+| Disk | SSD | 74–76 MiB per node measured at 404 blocks; long-term growth not measured — monitor disk usage |
+| Software | Node.js 22, `bash curl jq unzip tar ss openssl sha256sum setsid pgrep` | §Requirements; the script downloads Java and Besu |
+| Network | outbound HTTPS (to download the live lists and Java/Besu) | — |
+
+**Setup (once).** From the repository root:
+
+```bash
+npm ci && npm run contracts:install && npm run contracts:compile
+bash network/testnet/shadow-chain.sh setup --dry-run          # prints every step's command, runs nothing
+bash network/testnet/shadow-chain.sh setup                    # 4 validators; --validators 7, --mode systemd (root)
+```
+
+`setup` in order: (1) Java and Besu; (2) a network with generated keys via `make-network.sh --keys generate` (chain id 31339, key
+map `network/testnet/shadow/keys/keys.json`; a separate node and governance key per state, [[ADR-0086]]); (3) starting the nodes;
+(4) the live network's signed lists and archive (`mirror-lists.ts`: read only, verified by signature, version chain and anchor
+chain); (5) `bootstrap-governance.sh` with those lists: contracts, Governance, the allowlist from the chain on every node, anchoring
+by two anchorers, the migration window by vote + replay of the **real archive** + the equivalence test; (6) the report
+(`network/testnet/shadow/shadow-report.md` and `.json`). Re-running is safe: completed steps are skipped. To pin the root
+fingerprint out of band: `--expect-root <sha256>`.
+
+**Sync (hourly).** After every publication of the live network (hourly is enough) it downloads the new versions and projects them:
+
+```bash
+bash network/testnet/shadow-chain.sh sync     # mirror → trust:chain-sync → trust:chain-submit per anchorer → trust:chain-health
+bash network/testnet/shadow-chain.sh report   # summary of the last report
+```
+
+Run `sync` hourly from cron or a systemd timer; exit code 5 means: look at the alarms in the report. Equivalence criterion: the
+equivalence test of the migration without differences (`equivalence.decisionDifferences = 0`), then on every run a complete
+continuous projection (`complete: true`) and health `ok`. Measuring continuous equivalence with an independent indexer service is
+the next task.
+
+## Chain health
+
+`trust:chain-health` gives the state of the chain as one JSON document (read only, writes nothing, does not affect list
+publication — [[ADR-0084]] LS4). With the flag off (as on the live system today) it does not connect to the chain:
+`"status": "disabled"`, no alarms.
+
+```bash
+TAMGA_CHAIN_ENABLED=1 TAMGA_CHAIN_RPC_URL=http://127.0.0.1:8546 TAMGA_CHAIN_ANCHOR_REGISTRY=0x… \
+  npm run -s trust:chain-health                 # JSON (tamga-chain-health/1)
+npm run -s trust:chain-health -- --monitor      # for a monitoring script: one line per problem, empty when healthy
+```
+
+| Field | Meaning |
+|---|---|
+| `format` | `tamga-chain-health/1` |
+| `status` | `disabled` · `ok` · `warn` · `alarm` |
+| `alarms[]` | `{code, severity, message}`; `severity`: `warn` or `alarm` |
+| `chain` | `chain_id`, `block`, `block_time`, `block_age_sec`, `peers` (or `error`) |
+| `sync` | `state` (`missing` · `ok` · `incomplete` · `behind`), `point_updated_at`, `last_run`, `lag_sec`, `unreflected` |
+| `anchors` | `lists[]` (`file`, `version`, `anchored`: `YES`/`NO`/`UNKNOWN`), `decisions` (`conflict`, `contest`, `pending`, `oldest_pending_age_sec`) |
+| `thresholds` | `lag_alarm_sec` (7200, [[ADR-0085]] SP2), `block_stall_sec` (60; `--block-stall-sec`) |
+
+| Code | Level | When |
+|---|---|---|
+| `CHAIN_UNREACHABLE` | alarm | the node cannot be reached |
+| `BLOCK_STALL` | alarm | the latest block is older than the limit (block production may have stopped) |
+| `PEERS_NONE` | warning | the node has no peers |
+| `CONFIG_INCOMPLETE` | warning | the list anchor registry address is not configured |
+| `SYNC_NO_BASELINE` | warning | the continuous projection has no start point (migration not finished) |
+| `SYNC_INCOMPLETE` | alarm | the last sync run was incomplete ([[ADR-0085]] SP5) |
+| `SYNC_LAG` | alarm | the oldest published but unprojected version is older than two hours (SP2) |
+| `ANCHOR_NO` | alarm | a confirmed different digest for the same version on the chain (a sign of equivocation; [[ADR-0051]] CH1) |
+| `ANCHOR_CONFLICT` | alarm | a confirmed different digest in the anchoring decision (list or anchor log head) |
+| `ANCHOR_CONTEST` | alarm | a pending competing candidate ([[ADR-0053]]) |
+| `ANCHOR_LAG` | alarm | a list version left unanchored for more than two hours |
+| `DIST_UNREADABLE` | warning | the publication folder could not be read |
+
+Exit code: 0 healthy or disabled, 4 warning, 5 alarm. `--monitor` lines read `[!] chain: <CODE> <message>`; the operator's
+monitoring script adds them to its own list of problems. An alarm does not change the direction of correction: the list is the
+source, correction goes from the list to the chain ([[ADR-0084]] LS5).
+
+## Governance command tool
+
+`trust:chain-gov` performs Governance operations: opening proposals, voting, retracting a vote, cancelling a proposal, executing,
+the upgrade queue, re-voting after an upgrade or a key change, the node address and the delegate keys. It writes only to the local
+development chain and the test chain (on the real network it only reads and prints the transaction's call data); it signs with
+each state's **governance key** ([[ADR-0086]]): a Hardhat test account on paths A/B, the key map on path C.
+
+```bash
+export TAMGA_CHAIN_ENABLED=1 TAMGA_CHAIN_RPC_URL=http://127.0.0.1:8546   # path C: TAMGA_CHAIN_KEYS, TAMGA_CHAIN_DEPLOYMENT
+npm run -s trust:chain-gov -- status                                    # members (node + governance address), threshold, open proposals
+npm run -s trust:chain-gov -- propose admit --as TR --state XA --node 0x… --governance 0x…
+npm run -s trust:chain-gov -- vote 0x<proposal> --yes --as KZ
+npm run -s trust:chain-gov -- execute 0x<proposal> --as TR
+npm run -s trust:chain-gov -- propose key-change --as KZ --state TR --governance 0x…   # TR casts its own vote too
+npm run -s trust:chain-gov -- set-node --state TR --node 0x…            # node key: no vote
+npm run -s trust:chain-gov -- queue                                     # queued upgrades
+npm run -s trust:chain-gov -- revote --as TR                            # re-cast last votes that are not counted
+```
+
+Proposal kinds: `admit`, `remove`, `key-change`, `upgrade`, `anchorer`, `anchor-threshold`, `founder-recognition`,
+`migration-open`, `migration-extend`, `migration-close`, `schema-deprecate`, `schema-revoke`, `schema-hash`, `network-schema`,
+`network-record`, `rp-reassign`, `rp-reregister`. Every write can be tried first with `--dry-run` (with the flag off it still prints
+the call data); before sending, the contract's revert reason (e.g. `KeyChangeNeedsOwnVote`) is shown. A reason text never goes to
+the chain, only its digest.
 
 ## Rules
 

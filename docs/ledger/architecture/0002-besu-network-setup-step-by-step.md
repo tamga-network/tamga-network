@@ -165,10 +165,14 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
   üçüncü bağımsız işletmeci. Her işletmeci ayrıca bir doğrulamayan tam düğüm (RPC, indeksleyici, yazıcı) çalıştırır; validator'ın
   RPC'si dışarı açılmaz. Validator başka iş yükü taşımaz: canlı hizmet sunucusuna konmaz. Anahtarlar her işletmecinin kendi
   HSM/kasasında üretilir ve saklanır.
-- **Yönetişim ve mutabakat anahtarı bugün aynıdır (açık karar, not 2026-11-11).** Validator'ın düğüm anahtarı aynı zamanda
-  devletin Governance oy anahtarıdır (`Governance.StateMember.validatorAddress`). Bu iki anahtar ayrılana kadar gerçek ağda
-  validator düğüm anahtarı **HSM'de tutulmak zorundadır**; dosyadaki anahtar yalnız deneme ağlarında kabul edilir. Ayrım, ikinci
-  bir devlet katılmadan önce yeni bir karar kaydıyla (ADR) karara bağlanır (Açık Konular 6).
+- **Her devletin iki anahtarı vardır ([[ADR-0086]], 2026-11-15).** (1) **Düğüm (uzlaşma) anahtarı** — validator düğümünün
+  `key` dosyası; blok üretir, QBFT oy setinde yer alır, zincirde başka hiçbir yetkisi yoktur
+  (`Governance.StateMember.validatorAddress`). (2) **Yönetişim (oy) anahtarı** — Governance önerisi, oy, delege listesi, çıkış
+  (`governanceAddress`). Yönetişim anahtarı düğüm sunucusunda **bulunmaz**: ayrı kasada (gerçek ağda donanım anahtar kasası)
+  durur, yalnız işlem imzalarken kullanılır. Düğüm anahtarını üye kendi yönetişim anahtarıyla oy olmadan değiştirir
+  (`setValidatorAddress`); yönetişim anahtarı yalnız Governance oyuyla ve üyenin kendi oyuyla değişir
+  (`proposeGovernanceKeyChange`). İki anahtar her işletmecinin kendi donanımında üretilir; dosyadaki anahtar yalnız deneme
+  ağlarında kabul edilir.
 
 ## 3. Genesis'i oluştur (QBFT)
 - `genesis.json`: chain ID, QBFT consensus config (blok süresi, epoch), başlangıç
@@ -192,8 +196,9 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
   `--permissions-accounts-config-file-enabled`. Zincir üstü izin kontratı yoktur (Besu 25.6.0'da kaldırıldı).
 - **Düğüm izni:** validator düğümleri — enode kimliğinden türeyen adres Governance'taki aktif validator adresi olmalı; işletmecinin
   kendi RPC/full düğümleri yalnız kendi düğümlerinin listesinde.
-- **Hesap izni:** validator'lar, devlet ve kurum delege anahtarları, liste çapası yazıcıları; Faz 0 başlangıcında ayrıca dağıtım
-  hesabı (kontratlar kurulunca çıkar).
+- **Hesap izni:** etkin üyelerin yönetişim anahtarları, devlet ve kurum delege anahtarları, liste çapası yazıcıları, açık göç
+  penceresinin yürütücüsü; Faz 0 başlangıcında ayrıca dağıtım hesabı (kontratlar kurulunca çıkar). Düğüm (validator) anahtarı
+  işlem göndermez ve hesap listesine girmez ([[ADR-0086]] KG2).
 - **Liste elle yazılmaz:** zincirdeki kontrat durumundan `trust:chain-permissions render` ile üretilir (sabitlenmiş blokta okur;
   sıralı, belirleyici; blok numarası ya da zaman dosyaya girmez). İki özet basılır: `sha256` (dosya) ve `shared_sha256`
   (işletmecinin kendi RPC düğümleri hariç) — validator'lar `shared_sha256`'yı karşılaştırır. Her işletmeci dosyayı kendisi üretir
@@ -253,13 +258,18 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 - İzlenecekler: blok durması, eş sayısı, izin listesi farkı (`trust:chain-permissions check`), indeksleyici gecikmesi, liste
   çapasında `NO` / `CONFLICT` / `CONTEST` ([[ADR-0051]]), sürekli projeksiyonun eksik koşusu ve iki saati aşan gecikmesi
   ([[ADR-0085]] SP2, SP5). Hepsi alarm üretir ve şeffaflık raporuna girer ([[ADR-0084]] LS5); hiçbiri liste yayınını durdurmaz.
-- Anahtar rotasyonu, felaket kurtarma, node bakımı prosedürleri.
+- Anahtar rotasyonu ([[ADR-0086]]): **düğüm anahtarı** — yeni anahtar üret, yönetişim anahtarıyla `setValidatorAddress`, her
+  işletmecide izin listesini yeniden üret (`render` → yükle → `check`), yeni düğümü `qbft_proposeValidatorVote(<yeni>, true)` ile
+  kümeye al, eskisini `false` ile çıkar; **yönetişim anahtarı** — `proposeGovernanceKeyChange` önerisi, öteki üyeler değişikliği
+  ayrı kanaldan gelen yazılı taleple doğrulayıp oy verir, üye eski anahtarıyla destek oyu verir, `execute`; sonra açık önerilerde
+  yeni anahtarla yeniden oy ve iki üyeli dönemde yedeğin yeniden sınanması. Felaket kurtarma ve node bakımı prosedürleri.
 - **Yönetişim anahtarının yedeği (iki üyeli dönemde zorunlu; [[ADR-0076]] uygulama notu, 2026-11-12).** Ağda iki etkin üye
-  varken bir üyenin yönetişim anahtarı (bugün validator düğüm anahtarı — Açık Konular 6) kaybolursa hiçbir öneri geçemez, o üye
-  çıkarılamaz ve çekilemez: yönetişim geri dönüşsüz kilitlenir. Kural: üçüncü üye katılana kadar her üye, yönetişim anahtarının
+  varken bir üyenin yönetişim anahtarı ([[ADR-0086]]; düğüm anahtarı değil) kaybolursa hiçbir öneri geçemez, anahtar
+  değiştirilemez (değişiklik o anahtarın oyunu ister), o üye çıkarılamaz ve çekilemez: yönetişim geri dönüşsüz kilitlenir. Kural: üçüncü üye katılana kadar her üye, yönetişim anahtarının
   asıl anahtardan **ayrı bir yerde** (ayrı bina ya da ayrı kasa; HSM'de tutuluyorsa üreticinin sarılı anahtar yedeği ya da
   ikinci HSM) saklanan bir yedeğini tutar ve yedeği **sınar**: yedekten geri yüklenen anahtarın adresi Governance'taki
-  validator adresiyle aynı olmalı ve bu anahtarla bir sınama imzası atılabilmelidir. Sınama, ağ açılmadan önce ve her anahtar
+  **yönetişim adresiyle** (`governanceAddress`) aynı olmalı ve bu anahtarla bir sınama imzası atılabilmelidir ([[ADR-0086]] KG5).
+  Düğüm anahtarının yedeği şart değildir: kaybolursa üye yönetişim anahtarıyla yenisini yazar. Sınama, ağ açılmadan önce ve her anahtar
   değişiminden sonra yapılır; tarihi işletmecinin kendi kaydına yazılır. Yedek, asıl anahtarla aynı korumayı ister (erişim
   denetimi, şifreli saklama); depoya, ortak sürücüye ya da düğüm sunucusuna konmaz. Üç ve daha çok üyeli ağda yedek önerilir
   (anahtarını kaybeden üye öteki üyelerin oyuyla çıkarılıp yeni adresle yeniden kabul edilebilir).
@@ -275,7 +285,8 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 
 # Güvenlik Notları
 
-- Validator anahtarları **HSM/kasa**; tek node ele geçse f=1 toleransı korur.
+- Validator anahtarları **HSM/kasa**; tek node ele geçse f=1 toleransı korur. Ele geçirilen düğüm anahtarı oy veremez, delege
+  listesine yazamaz ([[ADR-0086]]); yönetişim anahtarı ayrı kasadadır.
 - İzin listesini değiştirmenin tek yolu zincirdeki yönetişim işlemidir (Governance oyu, devlet namespace'i, yazıcı kümesi);
   izin dosyası ondan üretilir. Düğümün `PERM`/`ADMIN` ad alanı dışarıya açılmaz ([[ADR-0052]]).
 - Kişisel veri asla zincire yazılmaz ([[PM-TRUST-0001]]); kontratlar yalnızca DID,
@@ -293,8 +304,8 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
    dosya ([[ADR-0052]]); Besu 25.6.0 zincir üstü izinlendirmeyi kaldırdı.
 4. Trust Registry kontrat arayüzleri → SPEC-BC-0001.
 5. Faz geçiş eşikleri → [[PM-GOV-0001]] (planlı).
-6. **Yönetişim anahtarı ile mutabakat (düğüm) anahtarının ayrılması** — bugün aynı anahtar; karar ikinci devlet katılmadan önce yeni
-   bir ADR ile verilir. O zamana kadar gerçek ağda validator düğüm anahtarı HSM'de tutulur (Adım 2).
+6. ~~Yönetişim anahtarı ile mutabakat (düğüm) anahtarının ayrılması~~ — **kapandı (2026-11-15):** iki ayrı adres, düğümün zincirde
+   yetkisi yok, düğüm anahtarını üye kendisi değiştirir, yönetişim anahtarı oy + üyenin kendi oyuyla ([[ADR-0086]]; Adım 2).
 7. ~~Kural seti (Shanghai mı, Cancun mu)~~ — **kapandı (2026-11-12):** Cancun ([[ADR-0077]]); genesis üreticileri
    `cancunTime: 0` yazar. Blob işlemleri kullanılmaz; KZG için ek seçenek gerekmez (Besu 26.11.0, yerel QBFT denemesi).
 8. ~~Kuruluşta kurucu sayısı~~ — **kapandı (2026-11-12):** en az iki kurucu ([[ADR-0076]] GC4); `Governance.initialize` tek
@@ -307,6 +318,7 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 - [[ARCH-0001]] — Ağ mimarisi (bu kurulumun tanımladığı yapı).
 - [[ADR-0001]] — Besu + QBFT kararı.
 - [[ADR-0052]] — Besu yerel izinlendirme ve RPC koruması.
+- [[ADR-0086]] — Yönetişim ve düğüm anahtarı ayrımı.
 - [[PM-BC-0001]] — Validator modeli ve izinli ağ ilkesi.
 - [[RS-FRAMEWORKS-0001]] — Besu neden seçildi (Cosmos karşılaştırması).
 - [[RS-FRAMEWORKS-0002]] — Besu vs kendi Rust ağı.
@@ -318,5 +330,6 @@ GitHub Actions'ta haftalık ve zincir kodu değişince çalışır (`.github/wor
 **Taslak** — sürüm 1.0.0 (2026-10-02; §6 yerel izinlendirme ve RPC koruması 2026-10-19, [[ADR-0052]]; Java 25 ve Docker'sız
 yerel geliştirme ağı 2026-11-04; iki düğümlü yerel izinli ağ, izin listesi aracı, RPC süzgeci ve validator oylaması 2026-11-05;
 Adım 11 Governance yükseltmesinden sonra oylar 2026-11-12; kaynak yönü, ilk ağın iki bağımsız işletmeciyle kurulması, güncel kontrat
-adları, uygulama entegrasyonu, test ağı → gerçek ağ koşulları ve izleme 2026-11-15, [[ADR-0084]], [[ADR-0085]]).
+adları, uygulama entegrasyonu, test ağı → gerçek ağ koşulları ve izleme 2026-11-15, [[ADR-0084]], [[ADR-0085]]; yönetişim ve düğüm anahtarı ayrımı 2026-11-15,
+[[ADR-0086]]).
 

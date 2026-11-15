@@ -4,7 +4,7 @@ title: "Node operator handbook"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-15
 summary: >
   A preparation handbook for state and operator IT teams that will later run a validator or full node on Tamga's shared ledger
   (Hyperledger Besu, QBFT): the role of the chain, prerequisites, hardware and operating system, JDK 25 and Besu, the node key,
@@ -52,7 +52,7 @@ the chain ([[ADR-0008]]). The sandbox is never written to the chain ([[ADR-0074]
 
 | Role | What it does | Who |
 |---|---|---|
-| Validator | proposes and signs blocks; votes in governance | one validator per member state; key in an HSM |
+| Validator | proposes and signs blocks (node key); the governance vote is cast with a separate key | one validator per member state; key in an HSM |
 | Full node | validates and reads the chain; does not sign | an operator's own read node (list publisher, indexer, verifier read path) |
 
 Consensus is QBFT: with n validators it tolerates at most f = ⌊(n−1)/3⌋ faults. The target is at least 4 validators (f = 1).
@@ -127,12 +127,13 @@ exists in the folder, none is written. If the key is in an HSM, `node init` is n
 declare it with `node declare --public-key …` (§5). Through an AI assistant the same step is the MCP tool `generate_node_key`; the
 private key is never returned in any response and over MCP it is never written to a synced folder.
 
-::: warning The same key signs blocks and votes (open decision)
-Today a validator's node key is also the state's **Governance voting key**: the key that signs blocks opens proposals and votes.
-Because the node key sits on the running server, this ties governance authority to that server as well. Until the two keys are
-separated, **on the real network the validator node key MUST be kept in an HSM (or an equivalent hardware vault)**; a key kept in a
-file is acceptable on trial networks only. Separating the governance key from the consensus key is an **open decision**: it will be
-settled by a new decision record (ADR) before a second state joins the network.
+::: tip Two keys: the node key and the governance key
+Every state has two separate keys ([[ADR-0086]]). The **node key** (generated in this section) only signs blocks; it has no other
+authority on the chain and is not on the account allowlist. The **governance key** opens proposals, votes and writes the delegate
+list in Governance; it is **not** on the node server but in a separate vault (on the real network a hardware key store). A state
+changes its node key with its own governance key, without a vote (`setValidatorAddress`); the governance key changes only with the
+network's vote and the state's own vote. In the two-member period a tested backup of the governance key, stored in a separate place,
+is mandatory. A key kept in a file is acceptable on trial networks only.
 :::
 
 ::: warning Start date in a network schema proposal (temporary)
@@ -195,7 +196,7 @@ npm run trust:chain-permissions -- check --file /var/lib/besu/permissions_config
 
 | List | Source |
 |---|---|
-| Accounts | active members' validator addresses and delegate keys (Governance), delegates of operational issuers, list anchorers, the executor of an open migration window |
+| Accounts | active members' governance addresses and delegate keys (Governance; not the node address), delegates of operational issuers, list anchorers, the executor of an open migration window |
 | Nodes | validator nodes whose declaration matches an active validator address in Governance; with `--operator`, the operator's own read nodes |
 
 - `render` prints two digests: `sha256` (the file) and `shared_sha256` (without the operator's own read nodes). **All validators
@@ -253,8 +254,8 @@ The order matters; each step waits for the previous one to finish.
 
 | # | Step | Who | How |
 |---|---|---|---|
-| 1 | Membership | existing members | the state's admission proposal in Governance (`proposeStateAdmission`, with the validator address) and a 2/3 vote |
-| 2 | Delegate keys | new member | the state's delegate keys are written to Governance (`setDelegateKeys`) |
+| 1 | Membership | existing members | the state's admission proposal in Governance (`proposeStateAdmission`, with the node address and the governance address) and a 2/3 vote |
+| 2 | Delegate keys | new member | the state's delegate keys are written to Governance with its governance key (`setDelegateKeys`) |
 | 3 | Declaration | new member | the §5 declaration is added to the repository |
 | 4 | Allowlist | every operator | `render` → load → `check`; `shared_sha256` the same on all validators |
 | 5 | Sync | new member | the node peers as a full node and catches up (`eth_syncing` = `false`) |

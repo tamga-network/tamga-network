@@ -12,8 +12,10 @@
 //   node network/testnet/testnet.mjs admit --rpc <url> --deployment <file> --state XA --validator-index 6 --voters 1,2
 //   node network/testnet/testnet.mjs admit --rpc <url> --deployment <file> --state XA --keys <map>
 //       Governance: proposeStateAdmission (first voter) → vote(true) by every voter → execute; prints a JSON report.
-//       With --keys: the validator comes from the map, the voters are the validators of every state of the map that is an active
-//       member on the chain, and the admitted state's delegate key is then set by its own validator (setDelegateKeys).
+//       Every state has two addresses (ADR-0086 K1): the QBFT node (validator) address and the governance (vote) key. Dev keys:
+//       --validator-index / --voters are NODE account indexes; the governance key is the node account + 10 (deploy-dev.ts).
+//       With --keys: node and governance key come from the map, the voters are the governance keys of every state of the map
+//       that is an active member on the chain, and the admitted state's delegate key is then set by its own governance key.
 //       Idempotent: an active member is not proposed again; a delegate already set is not written again.
 //   node network/testnet/testnet.mjs accounts --rpc <url> [--unlisted 9] [--listed 3]
 //   node network/testnet/testnet.mjs accounts --rpc <url> --keys <map>
@@ -48,6 +50,9 @@ const opts = (argv) => {
   return o;
 };
 const devWallet = (i) => HDNodeWallet.fromPhrase(MNEMONIC, undefined, `m/44'/60'/0'/0/${i}`);
+// ADR-0086 K1 — dev rule: a state's governance (vote) key is its node account + 10 (contracts/scripts/deploy-dev.ts, make-network.sh)
+const DEV_GOV_OFFSET = 10;
+const devGovWallet = (nodeIndex) => devWallet(Number(nodeIndex) + DEV_GOV_OFFSET);
 const ACTIVE = 1n; // Governance.MemberStatus.ACTIVE
 const code2 = (cc) => hexlify(toUtf8Bytes(cc));
 
@@ -100,6 +105,7 @@ function loadKeyMap(file) {
   for (const x of map.states ?? []) {
     if (!/^[A-Z]{2}$/.test(x.code ?? "")) errs.push(`states: bad code ${x.code}`);
     check(x.validator, `${x.code}.validator`);
+    check(x.governance, `${x.code}.governance`);
     check(x.delegate, `${x.code}.delegate`);
   }
   if (errs.length) throw new Error(`key map ${file}: ${errs.join("; ")}`);
@@ -150,6 +156,7 @@ function checkKeyMap({ keys }) {
         founder: x.founder,
         node: x.node,
         validator: x.validator.address,
+        governance: x.governance.address,
       })),
     }),
   );
@@ -165,26 +172,29 @@ async function admit({ rpc, deployment, state, "validator-index": vi, voters, ke
   const gov = new Contract(dep.contracts.Governance, abi, provider);
   const code = code2(state);
   let validator;
+  let governance;
   let signers;
   if (keys) {
     validator = keys.state(state).validator.address;
+    governance = keys.state(state).governance.address;
     signers = [];
     for (const x of keys.map.states)
       if (x.code !== state && (await gov.isActiveMember(code2(x.code))))
-        signers.push(keys.wallet(x.validator, provider));
+        signers.push(keys.wallet(x.governance, provider));
   } else {
     validator = devWallet(Number(vi)).address;
+    governance = devGovWallet(vi).address;
     signers = String(voters)
       .split(",")
-      .map((i) => devWallet(Number(i)).connect(provider));
+      .map((i) => devGovWallet(i).connect(provider));
   }
-  const report = { state, validator };
+  const report = { state, validator, governance };
   if (await gov.isActiveMember(code)) {
     report.already = true;
   } else {
     const required = Number(await gov.requiredVotes("0x0000"));
     if (signers.length < required) throw new Error(`${signers.length} voters, ${required} votes required`);
-    const rc = await (await gov.connect(signers[0]).proposeStateAdmission(code, validator, TX)).wait();
+    const rc = await (await gov.connect(signers[0]).proposeStateAdmission(code, validator, governance, TX)).wait();
     const created = rc.logs
       .map((l) => {
         try {
@@ -201,14 +211,17 @@ async function admit({ rpc, deployment, state, "validator-index": vi, voters, ke
     Object.assign(report, { proposal: id, votes: signers.length, required, executedInBlock: ex.blockNumber });
   }
   const member = await gov.getMember(code);
-  let ok = member.status === ACTIVE && member.validatorAddress.toLowerCase() === validator.toLowerCase();
+  let ok =
+    member.status === ACTIVE &&
+    member.validatorAddress.toLowerCase() === validator.toLowerCase() &&
+    member.governanceAddress.toLowerCase() === governance.toLowerCase();
   if (keys && ok) {
-    // the state's delegate key — set by the state's own validator (Governance.setDelegateKeys), as on the real network
+    // the state's delegate key — set by the state's own governance key (Governance.setDelegateKeys), as on the real network
     const delegate = keys.state(state).delegate.address;
     const has = async () => (await gov.delegateKeysOf(code)).some((a) => a.toLowerCase() === delegate.toLowerCase());
     if (!(await has())) {
-      const v = keys.wallet(keys.state(state).validator, provider);
-      await (await gov.connect(v).setDelegateKeys(code, [delegate], TX)).wait();
+      const g = keys.wallet(keys.state(state).governance, provider);
+      await (await gov.connect(g).setDelegateKeys(code, [delegate], TX)).wait();
       report.delegateSet = delegate;
     } else report.delegate = delegate;
     ok = await has();

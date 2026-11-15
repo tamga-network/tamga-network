@@ -40,13 +40,13 @@ async function proposalId(tx: any, f: Fixture): Promise<string> {
 }
 
 async function pass(f: Fixture, pid: string) {
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
 }
 
 async function openMigration(f: Fixture, registry: any, window = 7 * DAY, executor = ethers.ZeroAddress) {
   const pid = await proposalId(
-    await f.as(f.governance, f.trValidator).proposeMigrationOpen(await registry.getAddress(), PLAN, window, executor),
+    await f.as(f.governance, f.trGov).proposeMigrationOpen(await registry.getAddress(), PLAN, window, executor),
     f,
   );
   await pass(f, pid);
@@ -99,16 +99,13 @@ describe("güvenlik turu 2026-11-04 — göç penceresinde tarihsiz yazım dondu
   it("Governance pencerede tarihsiz yazar (ağ şeması deprecate önerisi); iptal listesi yayını tarih ister", async () => {
     const vct = "urn:tamga:edu:TranscriptCredential:1";
     const p1 = await proposalId(
-      await f.as(f.governance, f.trValidator).proposeNetworkSchema(f.schemaRecord(vct, SchemaTier.NETWORK, "0x0000")),
+      await f.as(f.governance, f.trGov).proposeNetworkSchema(f.schemaRecord(vct, SchemaTier.NETWORK, "0x0000")),
       f,
     );
     await pass(f, p1);
     await (await f.governance.execute(p1)).wait();
     await openMigration(f, f.schemas);
-    const p2 = await proposalId(
-      await f.as(f.governance, f.trValidator).proposeNetworkSchemaDeprecation(id(vct), ZERO),
-      f,
-    );
+    const p2 = await proposalId(await f.as(f.governance, f.trGov).proposeNetworkSchemaDeprecation(id(vct), ZERO), f);
     await pass(f, p2);
     await expect(f.governance.execute(p2)).to.emit(f.schemas, "SchemaDeprecated");
 

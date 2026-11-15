@@ -50,6 +50,11 @@ const ROLE = {
   executor: 9,
   anc1: 10,
   anc2: 11,
+  // ADR-0086 K1: QBFT düğüm anahtarları — yönetişim anahtarlarından (TR, KZ, XA, XB) ayrı
+  trN: 13,
+  kzN: 14,
+  xaN: 15,
+  xbN: 16,
 };
 
 function writeKeyMap(over: Record<string, unknown> = {}, keyOf: (i: number) => string = (i) => hd(i).privateKey) {
@@ -58,12 +63,13 @@ function writeKeyMap(over: Record<string, unknown> = {}, keyOf: (i: number) => s
     writeFileSync(join(dir, name), keyOf(i), { mode: 0o600 });
     return { address: hd(i).address, key: name };
   };
-  const state = (code: string, v: number, dl: number, node: number, founder: boolean) => ({
+  const state = (code: string, g: number, dl: number, nk: number, node: number, founder: boolean) => ({
     code,
     founder,
     genesis_validator: true,
     node,
-    validator: ref(v, `validator-${code.toLowerCase()}.key`),
+    validator: ref(nk, `validator-${code.toLowerCase()}.key`),
+    governance: ref(g, `governance-${code.toLowerCase()}.key`),
     delegate: ref(dl, `delegate-${code.toLowerCase()}.key`),
   });
   const map = {
@@ -74,10 +80,10 @@ function writeKeyMap(over: Record<string, unknown> = {}, keyOf: (i: number) => s
     migration_executor: ref(ROLE.executor, "migration-executor.key"),
     anchor: { threshold: 2, anchorers: [ref(ROLE.anc1, "anchorer-1.key"), ref(ROLE.anc2, "anchorer-2.key")] },
     states: [
-      state("TR", ROLE.TR, ROLE.trD, 1, true),
-      state("KZ", ROLE.KZ, ROLE.kzD, 2, true),
-      state("XA", ROLE.XA, ROLE.xaD, 3, false),
-      state("XB", ROLE.XB, ROLE.xbD, 4, false),
+      state("TR", ROLE.TR, ROLE.trD, ROLE.trN, 1, true),
+      state("KZ", ROLE.KZ, ROLE.kzD, ROLE.kzN, 2, true),
+      state("XA", ROLE.XA, ROLE.xaD, ROLE.xaN, 3, false),
+      state("XB", ROLE.XB, ROLE.xbD, ROLE.xbN, 4, false),
     ],
     ...over,
   };
@@ -111,7 +117,14 @@ describe("GUIDE-0018 yol C — test/staging kurulumu (anahtar haritası, Governa
     try {
       await setupStagingNetwork(ethers, {
         deployer: s[ROLE.deployer],
-        founders: [{ code: "TR", validator: s[ROLE.TR], delegate: await s[ROLE.trD].getAddress() }],
+        founders: [
+          {
+            code: "TR",
+            validator: await s[ROLE.trN].getAddress(),
+            governance: s[ROLE.TR],
+            delegate: await s[ROLE.trD].getAddress(),
+          },
+        ],
         anchorers: [await s[ROLE.anc1].getAddress()],
         threshold: 1,
       });
@@ -131,8 +144,18 @@ describe("GUIDE-0018 yol C — test/staging kurulumu (anahtar haritası, Governa
     const d = await setupStagingNetwork(ethers, {
       deployer: s[ROLE.deployer],
       founders: [
-        { code: "TR", validator: s[ROLE.TR], delegate: await s[ROLE.trD].getAddress() },
-        { code: "KZ", validator: s[ROLE.KZ], delegate: await s[ROLE.kzD].getAddress() },
+        {
+          code: "TR",
+          validator: await s[ROLE.trN].getAddress(),
+          governance: s[ROLE.TR],
+          delegate: await s[ROLE.trD].getAddress(),
+        },
+        {
+          code: "KZ",
+          validator: await s[ROLE.kzN].getAddress(),
+          governance: s[ROLE.KZ],
+          delegate: await s[ROLE.kzD].getAddress(),
+        },
       ],
       anchorers: [await s[ROLE.anc1].getAddress(), await s[ROLE.anc2].getAddress()],
       threshold: 2,
@@ -151,13 +174,16 @@ describe("GUIDE-0018 yol C — test/staging kurulumu (anahtar haritası, Governa
 
     // öteki devletler 2/3 oyla
     const voters = [s[ROLE.TR], s[ROLE.KZ]];
-    for (const [code, v, dl] of [
-      ["XA", ROLE.XA, ROLE.xaD],
-      ["XB", ROLE.XB, ROLE.xbD],
+    for (const [code, v, dl, nk] of [
+      ["XA", ROLE.XA, ROLE.xaD, ROLE.xaN],
+      ["XB", ROLE.XB, ROLE.xbD, ROLE.xbN],
     ] as const) {
       const cc = stateCode(ethers, code);
       const va = await s[v].getAddress();
-      await passGovernanceProposal(d.trust.governance, voters, (g) => g.proposeStateAdmission(cc, va));
+      const node = await s[nk].getAddress();
+      await passGovernanceProposal(d.trust.governance, voters, (g) => g.proposeStateAdmission(cc, node, va));
+      expect((await gov.getMember(cc)).governanceAddress).to.equal(va); // ADR-0086 K1
+      expect((await gov.getMember(cc)).validatorAddress).to.equal(node);
       expect(await gov.isActiveMember(cc)).to.equal(true);
       await (await gov.connect(s[v]).setDelegateKeys(cc, [await s[dl].getAddress()])).wait();
       voters.push(s[v]);

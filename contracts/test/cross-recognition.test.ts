@@ -100,7 +100,7 @@ describe("CrossRecognition (SPEC-BC-0001 §5)", function () {
   });
 
   it("bootstrapFounders yalnız Governance adresinden; kurucular arası FULL yazar", async () => {
-    await expect(f.as(f.recognition, f.trValidator).bootstrapFounders([TR, KZ, AZ])).to.be.revertedWithCustomError(
+    await expect(f.as(f.recognition, f.trGov).bootstrapFounders([TR, KZ, AZ])).to.be.revertedWithCustomError(
       f.recognition,
       "NotGovernance",
     );

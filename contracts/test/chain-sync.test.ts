@@ -33,7 +33,7 @@ import {
 } from "../../apps/trust-publisher/src/chain/sync-plan.js";
 import { SYNC_LAG_ALARM_SEC } from "../../apps/trust-publisher/src/chain/sync-cli.js";
 import { deployTrustLayer, stateCode } from "../scripts/lib/deploy.js";
-import { conn, ethers } from "./helpers/fixture.js";
+import { conn, ethers, nodeOf } from "./helpers/fixture.js";
 
 type Obj = Record<string, any>;
 const iso = (s: number) => new Date(s * 1000).toISOString();
@@ -49,9 +49,9 @@ describe("ADR-0085 — sürekli projeksiyon: her liste yayınından sonra liste 
       ethers,
       deployer,
       [
-        { code: "TR", validator: await trV.getAddress() },
-        { code: "KZ", validator: await kzV.getAddress() },
-        { code: "AZ", validator: await azV.getAddress() },
+        { code: "TR", validator: nodeOf(await trV.getAddress()), governance: await trV.getAddress() },
+        { code: "KZ", validator: nodeOf(await kzV.getAddress()), governance: await kzV.getAddress() },
+        { code: "AZ", validator: nodeOf(await azV.getAddress()), governance: await azV.getAddress() },
       ],
       trV,
     );

@@ -4,7 +4,7 @@ title: "Zəncir test şəbəkəsinin qurulması: Hyperledger Besu addım-addım"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   Zəncirsiz canlı sistem işləyərkən zəncir qatını sınamaq istəyənlər üçün sıfırdan, addım-addım quraşdırma bələdçisi: terminlər
   (qovşaq, validator, QBFT və 3f+1, genesis, chainId, enode, statik həmyaşıdlar, icazəli şəbəkə, RPC və P2P, Governance, lövbər,
@@ -748,6 +748,7 @@ serverdəki nginx konfiqurasiyası və systemd vahidi nümunələri: `network/rp
 | İcazə siyahısı | `trust:chain-permissions check` | Çıxış 0; `shared_sha256` hər validatorda eyni |
 | Dinləmə ünvanları | `ss -ltnp` | JSON-RPC yalnız `127.0.0.1`; P2P yalnız gözlənilən interfeysdə |
 | Lövbər vəziyyəti | Yoxlama xidmətinin `/healthz` cavabındakı `chain` sahəsi | `anchored`: `YES` |
+| Zəncirin sağlamlığı | `trust:chain-health` (aşağıda, "Zəncirin sağlamlığı") | `status`: `ok`; həyəcan siqnalı yoxdur |
 
 **`/healthz` `chain` sahəsi.** Yoxlama xidməti (`apps/verify`) yüklədiyi siyahıların zəncirdə təsdiqlənmiş şəkildə lövbərlənib-
 lövbərlənmədiyini sağlamlıq səhifəsində göstərir. Bayraq bağlı olanda (bu gün canlı sistemdə olduğu kimi) cavab `UNKNOWN`-dur və
@@ -823,10 +824,114 @@ soketləri və təhlükəsizlik balını verir; `staging` işinin xülasəsi `bo
 
 ## Kölgə zəncir
 
-Gələcəkdə, ayrıca kiçik test serverində, canlı şəbəkənin real imzalanmış siyahılarının da hər nəşrdən sonra test zəncirinə
-lövbərlənməsi nəzərdə tutulur ("kölgə zəncir"): zəncirsiz sistem mənbə qalır, kölgə zəncir yalnız onu izləyir və iki rejimin uzun
-müddət birlikdə necə davrandığını göstərir. Bu gün belə zəncir **yoxdur**. Layihə rəhbərliyi əvvəlcə GitHub-dakı avtomatik sınaqla
-irəliləməyə qərar verdi; ayrıca test serveri onun alınmasına qərar veriləndə qurulur. Quraşdırma Yol C-nin skriptləri ilə edilir.
+Kölgə zəncir canlı şəbəkənin **real** imzalanmış siyahılarının hər nəşrdən sonra test zəncirinə əks olunmasıdır: zəncirsiz sistem
+mənbə qalır, kölgə zəncir yalnız onu izləyir və iki rejimin uzun müddət birlikdə necə davrandığını göstərir ([[ADR-0084]] K6: keçidin
+ikinci addımı, test şəbəkəsi). Canlı şəbəkə yalnız **oxunur** (ictimai imzalanmış siyahılar, HTTPS); ona heç nə yazılmır. Bu gün
+belə zəncir **işləmir**: server alınmayıb. Skript hazırdır; server alınanda aşağıdakı addımlar kifayətdir.
+
+**Lazım olan server (ən azı).** Bir Linux server (Ubuntu 24.04 LTS, x64 və ya aarch64); sabit ünvan lazım deyil (qovşaqlar eyni
+maşında bir-birinə qoşulur, xaricdən gələn bağlantı yoxdur):
+
+| | Ən azı | Mənbə |
+|---|---|---|
+| Prosessor | 4 nüvə | Yol B-nin ölçüldüyü GitHub Actions maşını (eyni maşında 4 validator + 1 əlavə qovşaq) |
+| Yaddaş | 16 GB | eyni maşın; qovşaq başına ölçülən 505–568 MiB + Node.js alətləri (yenidən oynatma, sinxronlaşdırma) |
+| Disk | SSD | qovşaq başına 404 blokda 74–76 MiB ölçülüb; uzunmüddətli artım ölçülməyib — disk doluluğunu izləyin |
+| Proqram təminatı | Node.js 22, `bash curl jq unzip tar ss openssl sha256sum setsid pgrep` | §Tələblər; Java və Besu-nu skript yükləyir |
+| Şəbəkə | xaricə HTTPS (canlı siyahıları və Java/Besu-nu yükləmək üçün) | — |
+
+**Quraşdırma (bir dəfə).** Deponun kökündən:
+
+```bash
+npm ci && npm run contracts:install && npm run contracts:compile
+bash network/testnet/shadow-chain.sh setup --dry-run          # hər addımın əmrini çap edir, heç nə işlətmir
+bash network/testnet/shadow-chain.sh setup                    # 4 validator; --validators 7, --mode systemd (root)
+```
+
+`setup` ardıcıllıqla: (1) Java və Besu; (2) `make-network.sh --keys generate` ilə yaradılmış açarlı şəbəkə (zəncir identifikatoru
+31339, açar xəritəsi `network/testnet/shadow/keys/keys.json`; hər dövlətə ayrıca qovşaq və idarəetmə açarı, [[ADR-0086]]); (3)
+qovşaqların başladılması; (4) canlı şəbəkənin imzalanmış siyahıları və arxivi (`mirror-lists.ts`: yalnız oxuyur, imza, versiya zənciri
+və lövbər zənciri ilə yoxlayır); (5) bu siyahılarla `bootstrap-governance.sh`: kontraktlar, Governance, hər qovşaqda zəncirdən icazə
+siyahısı, iki yazıçı ilə lövbər, səsvermə ilə miqrasiya pəncərəsi + **real arxivin** yenidən oynadılması + ekvivalentlik testi; (6)
+hesabat (`network/testnet/shadow/shadow-report.md` və `.json`). Yenidən işlətmək təhlükəsizdir: bitmiş addımlar keçilir. Kök barmaq
+izini kənar kanaldan sabitləmək üçün `--expect-root <sha256>`.
+
+**Sinxronlaşdırma (saatda bir).** Canlı şəbəkənin hər nəşrindən sonra (saatda bir kifayətdir) yeni versiyaları yükləyib zəncirə əks
+etdirir:
+
+```bash
+bash network/testnet/shadow-chain.sh sync     # əks et → trust:chain-sync → hər yazıçı ilə trust:chain-submit → trust:chain-health
+bash network/testnet/shadow-chain.sh report   # son hesabatın xülasəsi
+```
+
+`sync`-i cron və ya systemd taymeri ilə saatda bir işlədin; çıxış kodu 5-dirsə hesabatdakı həyəcan siqnallarına baxın. Ekvivalentlik
+meyarı: miqrasiyada ekvivalentlik testi fərqsiz (`equivalence.decisionDifferences = 0`), sonra hər icrada davamlı proyeksiya tam
+(`complete: true`) və sağlamlıq `ok`. Davamlı ekvivalentliyi müstəqil indeksləyici xidməti ilə ölçmək növbəti işdir.
+
+## Zəncirin sağlamlığı
+
+`trust:chain-health` zəncirin vəziyyətini bir JSON-da verir (yalnız oxuyur, heç nə yazmır, siyahı dərcinə təsir etmir —
+[[ADR-0084]] LS4). Bayraq sönülü ikən (bu gün canlı sistemdə olduğu kimi) zəncirə qoşulmur: `"status": "disabled"`, həyəcan siqnalı yox.
+
+```bash
+TAMGA_CHAIN_ENABLED=1 TAMGA_CHAIN_RPC_URL=http://127.0.0.1:8546 TAMGA_CHAIN_ANCHOR_REGISTRY=0x… \
+  npm run -s trust:chain-health                 # JSON (tamga-chain-health/1)
+npm run -s trust:chain-health -- --monitor      # monitorinq skripti üçün: hər problem bir sətir, problem yoxdursa boş
+```
+
+| Sahə | Mənası |
+|---|---|
+| `format` | `tamga-chain-health/1` |
+| `status` | `disabled` · `ok` · `warn` · `alarm` |
+| `alarms[]` | `{code, severity, message}`; `severity`: `warn` və ya `alarm` |
+| `chain` | `chain_id`, `block`, `block_time`, `block_age_sec`, `peers` (və ya `error`) |
+| `sync` | `state` (`missing` · `ok` · `incomplete` · `behind`), `point_updated_at`, `last_run`, `lag_sec`, `unreflected` |
+| `anchors` | `lists[]` (`file`, `version`, `anchored`: `YES`/`NO`/`UNKNOWN`), `decisions` (`conflict`, `contest`, `pending`, `oldest_pending_age_sec`) |
+| `thresholds` | `lag_alarm_sec` (7200, [[ADR-0085]] SP2), `block_stall_sec` (60; `--block-stall-sec`) |
+
+| Kod | Səviyyə | Nə vaxt |
+|---|---|---|
+| `CHAIN_UNREACHABLE` | həyəcan | qovşağa çatmaq olmur |
+| `BLOCK_STALL` | həyəcan | son blok həddən köhnədir (blok istehsalı dayanmış ola bilər) |
+| `PEERS_NONE` | xəbərdarlıq | qovşağın həmyoldaşı yoxdur |
+| `CONFIG_INCOMPLETE` | xəbərdarlıq | siyahı lövbəri qeydinin ünvanı verilməyib |
+| `SYNC_NO_BASELINE` | xəbərdarlıq | davamlı proyeksiyanın başlanğıc nöqtəsi yoxdur (miqrasiya bitməyib) |
+| `SYNC_INCOMPLETE` | həyəcan | son sinxronlaşdırma icrası natamamdır ([[ADR-0085]] SP5) |
+| `SYNC_LAG` | həyəcan | dərc edilmiş, amma zəncirə əks olunmamış ən köhnə versiya iki saatdan köhnədir (SP2) |
+| `ANCHOR_NO` | həyəcan | zəncirdə eyni versiya üçün təsdiqlənmiş fərqli xülasə (ikili danışıq əlaməti; [[ADR-0051]] CH1) |
+| `ANCHOR_CONFLICT` | həyəcan | lövbər qərarında təsdiqlənmiş fərqli xülasə (siyahı və ya lövbər jurnalının başı) |
+| `ANCHOR_CONTEST` | həyəcan | gözləyən rəqib namizəd ([[ADR-0053]]) |
+| `ANCHOR_LAG` | həyəcan | iki saatdan çox lövbərlənməmiş siyahı versiyası |
+| `DIST_UNREADABLE` | xəbərdarlıq | dərc qovluğu oxuna bilmədi |
+
+Çıxış kodu: 0 sağlam və ya sönülü, 4 xəbərdarlıq, 5 həyəcan. `--monitor` sətirlərinin forması `[!] chain: <KOD> <ismarıc>`-dır;
+operatorun monitorinq skripti bu sətirləri öz problem siyahısına əlavə edir. Həyəcan siqnalı düzəlişin istiqamətini dəyişmir: siyahı
+mənbədir, düzəliş siyahıdan zəncirə edilir ([[ADR-0084]] LS5).
+
+## İdarəetmə əmr aləti
+
+`trust:chain-gov` Governance əməliyyatlarını aparır: təklif açmaq, səs vermək, səsi geri götürmək, təklifi geri götürmək, icra etmək,
+yeniləmə növbəsi, yeniləmədən və ya açar dəyişikliyindən sonra yenidən səs, qovşaq ünvanı və nümayəndə açarları. Yalnız lokal inkişaf
+zəncirinə və test zəncirinə yazır (real şəbəkədə yalnız oxuyur və əməliyyatın çağırış məlumatını çap edir); hər dövlətin **idarəetmə
+açarı** ilə imzalayır ([[ADR-0086]]): Yol A/B-də Hardhat test hesabı, Yol C-də açar xəritəsi.
+
+```bash
+export TAMGA_CHAIN_ENABLED=1 TAMGA_CHAIN_RPC_URL=http://127.0.0.1:8546   # Yol C: TAMGA_CHAIN_KEYS, TAMGA_CHAIN_DEPLOYMENT
+npm run -s trust:chain-gov -- status                                    # üzvlər (qovşaq + idarəetmə ünvanı), hədd, açıq təkliflər
+npm run -s trust:chain-gov -- propose admit --as TR --state XA --node 0x… --governance 0x…
+npm run -s trust:chain-gov -- vote 0x<təklif> --yes --as KZ
+npm run -s trust:chain-gov -- execute 0x<təklif> --as TR
+npm run -s trust:chain-gov -- propose key-change --as KZ --state TR --governance 0x…   # TR də öz səsini verir
+npm run -s trust:chain-gov -- set-node --state TR --node 0x…            # qovşaq açarı: səsvermə yoxdur
+npm run -s trust:chain-gov -- queue                                     # növbədəki yeniləmələr
+npm run -s trust:chain-gov -- revote --as TR                            # sayılmayan son səsləri yenidən ver
+```
+
+Təklif növləri: `admit`, `remove`, `key-change`, `upgrade`, `anchorer`, `anchor-threshold`, `founder-recognition`,
+`migration-open`, `migration-extend`, `migration-close`, `schema-deprecate`, `schema-revoke`, `schema-hash`, `network-schema`,
+`network-record`, `rp-reassign`, `rp-reregister`. Hər yazı əvvəlcə `--dry-run` ilə sınana bilər (bayraq sönülü ikən də çağırış
+məlumatını çap edir); göndərişdən əvvəl kontraktın imtina səbəbi (məs. `KeyChangeNeedsOwnVote`) göstərilir. Əsas mətni zəncirə
+getmir, yalnız xülasəsi.
 
 ## Qaydalar
 

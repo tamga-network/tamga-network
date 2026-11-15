@@ -5,8 +5,9 @@
  *   npx hardhat run scripts/deploy-dev.ts --network besuDev     # yerel Besu QBFT ağına (npm run chain:besu:deploy);
  *                                                               # adresler deployments/besuDev.json
  *
- * Kurulum: kurucular TR + KZ (Hardhat hesapları #1, #2 validator), TR delegesi #3, KZ delegesi #4; kurucular arası FULL tanıma
- * (dev betiği her devletin kendi `setRecognition` çağrısıyla kurar; gerçek ağda `proposeFounderRecognition`, ADR-0055 K3). Ortam:
+ * Kurulum: kurucular TR + KZ — QBFT düğüm adresleri Hardhat hesapları #1, #2 (yerel Besu ve make-network.sh --keys dev düğüm
+ * anahtarları), yönetişim (oy) anahtarları #11, #12 (ADR-0086 K1: düğüm + 10); TR delegesi #3, KZ delegesi #4; kurucular arası
+ * FULL tanıma (dev betiği her devletin kendi `setRecognition` çağrısıyla kurar; gerçek ağda `proposeFounderRecognition`, ADR-0055 K3). Ortam:
  *   TAMGA_CHAIN_DEV_THRESHOLD   liste çapası kaydının onay eşiği (varsayılan 1; üretimde ≥2 — ADR-0051 K3)
  * Üretim ağı burada tanımlı değildir ve bu betik üretim için KULLANILMAZ (ADR-0009 K4).
  */
@@ -18,32 +19,41 @@ import { deployed, deployTrustLayer, stateCode } from "./lib/deploy.js";
 
 const conn = await network.create();
 const { ethers } = conn;
-const [deployer, trValidator, kzValidator, trDelegate, kzDelegate] = await ethers.getSigners();
+const signers = await ethers.getSigners();
+const [deployer, trNodeAccount, kzNodeAccount, trDelegate, kzDelegate] = signers;
+// ADR-0086 K1: düğüm (QBFT) adresi yönetişim anahtarından ayrı. Düğüm anahtarı zincirde imza atmaz; yerel geliştirme kuralı:
+// yönetişim anahtarı = düğüm hesabı + 10 (network/testnet/testnet.mjs ve make-network.sh aynı kuralı kullanır).
+const trNode = await trNodeAccount.getAddress();
+const kzNode = await kzNodeAccount.getAddress();
+const [trGov, kzGov] = [signers[11], signers[12]];
+if (!trGov || !kzGov) throw new Error("yönetişim anahtarları için en az 13 test hesabı gerekir (#11, #12)");
 const chainId = Number((await ethers.provider.getNetwork()).chainId);
 console.log(`ağ: ${conn.networkName} (chainId ${chainId}) · dağıtan: ${await deployer.getAddress()}`);
 
 const founders = [
   {
     code: "TR",
-    validator: await trValidator.getAddress(),
+    validator: trNode,
+    governance: await trGov.getAddress(),
     delegate: await trDelegate.getAddress(),
-    signer: trValidator,
+    signer: trGov,
   },
   {
     code: "KZ",
-    validator: await kzValidator.getAddress(),
+    validator: kzNode,
+    governance: await kzGov.getAddress(),
     delegate: await kzDelegate.getAddress(),
-    signer: kzValidator,
+    signer: kzGov,
   },
 ];
-const d = await deployTrustLayer(ethers, deployer, founders, trValidator);
+const d = await deployTrustLayer(ethers, deployer, founders, trGov);
 for (const [name, addr] of Object.entries(d.addresses)) console.log(`  ${name.padEnd(22)} ${addr}`);
 
 // Delege anahtarları (devletin iç işi) ve kurucular arası FULL tanıma
 const TR = stateCode(ethers, "TR");
 const KZ = stateCode(ethers, "KZ");
-await (await (d.governance.connect(trValidator) as any).setDelegateKeys(TR, [founders[0].delegate])).wait();
-await (await (d.governance.connect(kzValidator) as any).setDelegateKeys(KZ, [founders[1].delegate])).wait();
+await (await (d.governance.connect(trGov) as any).setDelegateKeys(TR, [founders[0].delegate])).wait();
+await (await (d.governance.connect(kzGov) as any).setDelegateKeys(KZ, [founders[1].delegate])).wait();
 await (await (d.recognition.connect(trDelegate) as any).setRecognition(TR, KZ, 1, [])).wait();
 await (await (d.recognition.connect(kzDelegate) as any).setRecognition(KZ, TR, 1, [])).wait();
 console.log("  delege anahtarları ve TR↔KZ FULL tanıma yazıldı");
@@ -69,7 +79,7 @@ const out = {
   chainId,
   deployedAt: new Date().toISOString(),
   deployer: await deployer.getAddress(),
-  founders: founders.map(({ code, validator, delegate }) => ({ code, validator, delegate })),
+  founders: founders.map(({ code, validator, governance, delegate }) => ({ code, validator, governance, delegate })),
   contracts: { ...d.addresses, TrustListAnchorRegistry: anchorRegistry },
   anchor: { registry: anchorRegistry, requiredConfirmations: threshold, anchorers: [await deployer.getAddress()] },
   note: "Yerel geliştirme dağıtımı — üretim zinciri yok (ADR-0009 K4). Hesaplar Hardhat'ın herkese açık test hesaplarıdır.",

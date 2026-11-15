@@ -22,7 +22,7 @@ import { buildReplayPlan } from "../../apps/chain-indexer/src/replay-plan.js";
 import { listSourceFromArchive, verifyArchive } from "../../apps/chain-indexer/src/replay-archive.js";
 import { buildFixture } from "../../apps/chain-indexer/test/fixture.js";
 import { deployTrustLayer, stateCode } from "../scripts/lib/deploy.js";
-import { conn, ethers } from "./helpers/fixture.js";
+import { conn, ethers, nodeOf } from "./helpers/fixture.js";
 
 describe("ADR-0073 K6 — zincir–liste eşdeğerliği (yeniden oynatma + indeksleyici)", function () {
   this.timeout(600_000);
@@ -33,9 +33,9 @@ describe("ADR-0073 K6 — zincir–liste eşdeğerliği (yeniden oynatma + indek
       ethers,
       deployer,
       [
-        { code: "TR", validator: await trV.getAddress() },
-        { code: "KZ", validator: await kzV.getAddress() },
-        { code: "AZ", validator: await azV.getAddress() },
+        { code: "TR", validator: nodeOf(await trV.getAddress()), governance: await trV.getAddress() },
+        { code: "KZ", validator: nodeOf(await kzV.getAddress()), governance: await kzV.getAddress() },
+        { code: "AZ", validator: nodeOf(await azV.getAddress()), governance: await azV.getAddress() },
       ],
       trV,
     );

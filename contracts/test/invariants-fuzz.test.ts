@@ -16,7 +16,7 @@
 import { expect } from "chai";
 import type { Signer } from "ethers";
 
-import { DAY, ZERO, ethers, id, loadFixture, networkHelpers, type Fixture } from "./helpers/fixture.js";
+import { DAY, ZERO, ethers, id, loadFixture, networkHelpers, type Fixture, nodeOf } from "./helpers/fixture.js";
 
 const SEEDS = process.env.TAMGA_FUZZ_SEED ? [Number(process.env.TAMGA_FUZZ_SEED)] : [1, 2, 3];
 const STEPS = Number(process.env.TAMGA_FUZZ_STEPS ?? 120);
@@ -283,9 +283,9 @@ describe("K11 değişmez / fuzz — Governance yükseltme bekleme süresi (GE1)"
       const r = rng(seed);
       const proxy = await f.issuers.getAddress();
       const validators: Array<[string, Signer]> = [
-        ["TR", f.trValidator],
-        ["KZ", f.kzValidator],
-        ["AZ", f.azValidator],
+        ["TR", f.trGov],
+        ["KZ", f.kzGov],
+        ["AZ", f.azGov],
       ];
 
       // governance dışından hiçbir kayıt yükseltilemez
@@ -300,14 +300,14 @@ describe("K11 değişmez / fuzz — Governance yükseltme bekleme süresi (GE1)"
         f.networkRegistry,
         f.governance,
       ])
-        for (const s of [f.stranger, f.trValidator, f.trDelegate, f.uniOperator])
+        for (const s of [f.stranger, f.trGov, f.trDelegate, f.uniOperator])
           expect(
             await attempt(() => (c as any).connect(s).upgradeToAndCall(rogue.getAddress(), "0x")),
             "doğrudan upgradeToAndCall",
           ).to.equal(false);
 
       const impl = await ethers.deployContract("IssuerRegistry");
-      const tx = await f.as(f.governance, f.trValidator).proposeProtocolUpgrade(proxy, await impl.getAddress());
+      const tx = await f.as(f.governance, f.trGov).proposeProtocolUpgrade(proxy, await impl.getAddress());
       const rc = await tx.wait();
       const pid = rc!.logs
         .map((l: any) => {
@@ -336,7 +336,7 @@ describe("K11 değişmez / fuzz — Governance yükseltme bekleme süresi (GE1)"
           await networkHelpers.time.increase(r.pick([3600, DAY, 3 * DAY, 6 * DAY]));
         } else {
           const ts = (await latestTs()) + 1;
-          const caller = r.pick([f.stranger, f.trValidator]);
+          const caller = r.pick([f.stranger, f.trGov]);
           const ok = await attempt(() => f.as(f.governance, caller).execute(pid));
           const counted = [...votedFor].filter((s) => active.has(s)).length;
           if (ok && queuedAt === null) {
@@ -383,7 +383,7 @@ describe("K11 değişmez / fuzz — Governance üyelik ve egemenlik (GV3, N1, AD
       const all = await ethers.getSigners();
       const CODES = ["TR", "KZ", "AZ", "UZ", "KG"];
       const code = (c: string) => ethers.hexlify(ethers.toUtf8Bytes(c));
-      const validatorPool = [f.trValidator, f.kzValidator, f.azValidator, ...all.slice(8, 12)];
+      const validatorPool = [f.trGov, f.kzGov, f.azGov, ...all.slice(8, 12)];
       const keyPool = [f.trDelegate, f.kzDelegate, ...all.slice(12, 16)];
       const keyAddrs = await Promise.all(keyPool.map((s) => s.getAddress()));
       const openProposals: Array<{ pid: string; kind: "admit" | "remove" }> = [];
@@ -413,10 +413,12 @@ describe("K11 değişmez / fuzz — Governance üyelik ve egemenlik (GV3, N1, AD
         ["UZ", poolAddrs[3]],
         ["KG", poolAddrs[4]],
       ] as const) {
-        const pid = pidOf(await (await f.as(f.governance, f.trValidator).proposeStateAdmission(code(st), v)).wait());
-        await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-        await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
-        await (await f.as(f.governance, f.azValidator).vote(pid, true)).wait();
+        const pid = pidOf(
+          await (await f.as(f.governance, f.trGov).proposeStateAdmission(code(st), nodeOf(v), v)).wait(),
+        );
+        await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+        await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
+        await (await f.as(f.governance, f.azGov).vote(pid, true)).wait();
         await (await f.governance.execute(pid)).wait();
       }
       expect(await f.governance.activeMemberCount()).to.equal(5n);
@@ -427,7 +429,7 @@ describe("K11 değişmez / fuzz — Governance üyelik ve egemenlik (GV3, N1, AD
         const activeVals: Signer[] = [];
         for (const c of CODES) {
           const m = await f.governance.getMember(code(c));
-          const i = poolAddrs.indexOf(m.validatorAddress);
+          const i = poolAddrs.indexOf(m.governanceAddress); // ADR-0086: oy yönetişim anahtarından
           if (m.status === 1n) activeCodes.push(c);
           if (m.status === 1n && i >= 0) activeVals.push(validatorPool[i]);
         }
@@ -438,7 +440,7 @@ describe("K11 değişmez / fuzz — Governance üyelik ve egemenlik (GV3, N1, AD
           const st = r.pick(["UZ", "KG", "UZ", "KG", "TR"]);
           const v = await r.pick(validatorPool).getAddress();
           try {
-            const rc = await (await f.as(f.governance, s).proposeStateAdmission(code(st), v)).wait();
+            const rc = await (await f.as(f.governance, s).proposeStateAdmission(code(st), nodeOf(v), v)).wait();
             openProposals.push({ pid: pidOf(rc), kind: "admit" });
           } catch {
             /* geçersiz öneri: reddedildi */
@@ -493,13 +495,15 @@ describe("K11 değişmez / fuzz — Governance üyelik ve egemenlik (GV3, N1, AD
           for (const c of CODES) if (await f.governance.isDelegateOf(k, code(c))) owners++;
           expect(owners, `anahtar ${k}`).to.be.lte(1);
         }
-        // F-04: bir validator adresi en çok bir ETKİN devletin
+        // F-04 / ADR-0086 K1: bir düğüm ya da yönetişim adresi en çok bir ETKİN devletin, ve hiçbir adres iki rolde değil
         const seen = new Set<string>();
         for (const c of CODES) {
           const m = await f.governance.getMember(code(c));
           if (m.status !== 1n) continue;
-          expect(seen.has(m.validatorAddress), `validator ${m.validatorAddress}`).to.equal(false);
-          seen.add(m.validatorAddress);
+          for (const a of [m.validatorAddress, m.governanceAddress]) {
+            expect(seen.has(a), `adres ${a}`).to.equal(false);
+            seen.add(a);
+          }
         }
       }
       memberships.push({ seed, admissions, removals });

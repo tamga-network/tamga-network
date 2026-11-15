@@ -1,6 +1,6 @@
 /**
  * YALNIZ yerel geliştirme zinciri (Hardhat 31337, yerel Besu 31338; scripts/besu-dev.ps1, contracts/scripts/deploy-dev.ts):
- * dağıtım dosyasındaki kurucu doğrulayıcıları ve delegeleri Hardhat'in herkesçe bilinen test anımsatıcısından türetilen
+ * dağıtım dosyasındaki kurucuların yönetişim anahtarlarını ve delegelerini Hardhat'in herkesçe bilinen test anımsatıcısından türetilen
  * cüzdanlarla eşler. Gerçek ağda anahtarlar devletlerdedir ve bu dosya kullanılmaz (`LOCAL_DEV_CHAIN_IDS` dışında hata).
  */
 import { BrowserProvider, HDNodeWallet, type Eip1193Provider, type Provider, type Signer } from "ethers";
@@ -20,7 +20,7 @@ export const providerFromEip1193 = (p: Eip1193Provider) => new BrowserProvider(p
  * Test hesapları. NonceManager yok: yürütücü her işlemin makbuzunu bekler, sıra numarası her gönderimde düğümden okunur (önbellekli
  * sayaç yerel Besu duman testinde düğümle ayrıştı ve "nonce too low" verdi — 2026-11-04).
  */
-export function devWallets(provider: Provider, count = 10): Signer[] {
+export function devWallets(provider: Provider, count = 20): Signer[] {
   return Array.from({ length: count }, (_, i) =>
     HDNodeWallet.fromPhrase(DEV_MNEMONIC, undefined, `m/44'/60'/0'/0/${i}`).connect(provider),
   );
@@ -28,14 +28,15 @@ export function devWallets(provider: Provider, count = 10): Signer[] {
 
 export interface DevDeployment {
   chainId: number;
-  founders: Array<{ code: string; validator: string; delegate: string }>;
+  /** `validator` = QBFT düğüm adresi (imza atmaz); `governance` = yönetişim (oy) anahtarı (ADR-0086 K1) */
+  founders: Array<{ code: string; validator: string; governance: string; delegate: string }>;
   contracts: Record<string, string>;
   deployer: string;
 }
 
 /**
- * Dağıtım dosyasından yeniden oynatma imzacıları: devlet → delegesi, göç yürütücüsü = dağıtan (#0), Governance = kurucu
- * doğrulayıcıları (öneren ilk kurucu). Yerel olmayan zincirde hata.
+ * Dağıtım dosyasından yeniden oynatma imzacıları: devlet → delegesi, göç yürütücüsü = dağıtan (#0), Governance = kurucuların
+ * yönetişim anahtarları (öneren ilk kurucu; ADR-0086). Yerel olmayan zincirde hata.
  */
 export async function localDevSigners(provider: Provider, d: DevDeployment): Promise<ReplaySigners> {
   const chainId = Number((await provider.getNetwork()).chainId);
@@ -49,7 +50,7 @@ export async function localDevSigners(provider: Provider, d: DevDeployment): Pro
     if (!w) throw new Error(`chain: ${a} test hesaplarından değil`);
     return w;
   };
-  const validators = d.founders.map((f) => pick(f.validator));
+  const governors = d.founders.map((f) => pick(f.governance));
   return {
     state: (cc) => {
       const f = d.founders.find((x) => x.code === cc);
@@ -57,6 +58,6 @@ export async function localDevSigners(provider: Provider, d: DevDeployment): Pro
       return pick(f.delegate);
     },
     executor: pick(d.deployer),
-    governance: { proposer: validators[0], voters: validators },
+    governance: { proposer: governors[0], voters: governors },
   };
 }

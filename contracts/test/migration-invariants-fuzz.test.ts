@@ -75,13 +75,13 @@ async function proposalId(tx: any, f: Fixture): Promise<string> {
 
 async function govern(f: Fixture, tx: Promise<any>) {
   const pid = await proposalId(await tx, f);
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
   await (await f.governance.execute(pid)).wait();
 }
 
 async function openMigration(f: Fixture, registry: any, window: number, executor: string) {
-  const g = f.as(f.governance, f.trValidator);
+  const g = f.as(f.governance, f.trGov);
   await govern(f, g.proposeMigrationOpen(await registry.getAddress(), PLAN, window, executor));
 }
 

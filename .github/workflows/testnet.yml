@@ -45,6 +45,10 @@ jobs:
           shellcheck --version | sed -n 2p
           for f in network/testnet/*.sh network/rpc-proxy/gen-dev-certs.sh; do bash -n "$f"; done
           shellcheck network/testnet/*.sh network/rpc-proxy/gen-dev-certs.sh
+      - name: shadow chain — dry run (GUIDE-0018 "Gölge zincir"; every command printed, nothing executed)
+        run: |
+          bash network/testnet/shadow-chain.sh setup --dry-run
+          bash network/testnet/shadow-chain.sh sync --dry-run
 
   network:
     needs: lint

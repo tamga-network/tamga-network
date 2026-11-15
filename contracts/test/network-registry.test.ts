@@ -69,11 +69,11 @@ async function commit(f: Fixture, r: ReturnType<typeof rec>) {
   const stageId = await reg.stageIdOf(r);
   await (await reg.connect(f.stranger).stageRecord(r)).wait();
   const pid = await proposalId(
-    await f.as(f.governance, f.trValidator).proposeNetworkRecord(await reg.getAddress(), stageId),
+    await f.as(f.governance, f.trGov).proposeNetworkRecord(await reg.getAddress(), stageId),
     f,
   );
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
   return f.governance.execute(pid);
 }
 
@@ -101,11 +101,11 @@ describe("NetworkRegistry (ADR-0074 K3)", function () {
     expect((await reg.stagedRecord(stageId)).kind).to.equal(0n); // yürütülen sabitleme silinir
     // aynı sabitleme ikinci kez yürütülemez
     const pid = await proposalId(
-      await f.as(f.governance, f.trValidator).proposeNetworkRecord(await reg.getAddress(), stageId),
+      await f.as(f.governance, f.trGov).proposeNetworkRecord(await reg.getAddress(), stageId),
       f,
     );
-    await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-    await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+    await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+    await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
     await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(reg, "UnknownStage");
   });
 
@@ -162,13 +162,13 @@ describe("NetworkRegistry (ADR-0074 K3)", function () {
   it("göç kipinde tek göç yürütücüsü tarihli yazar; kip dışında ve başka hesap yazamaz", async () => {
     const exec = f.stranger;
     await expect(reg.connect(exec).writeRecord(rec(), 0)).to.be.revertedWithCustomError(reg, "NotMigrationWriter");
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const pid = await proposalId(
       await g.proposeMigrationOpen(await reg.getAddress(), id("plan"), 7 * DAY, await exec.getAddress()),
       f,
     );
-    await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-    await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+    await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+    await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
     await (await f.governance.execute(pid)).wait();
     const past = (await f.now()) - 30 * DAY;
     await expect(reg.connect(exec).writeRecord(rec(), past))
@@ -192,11 +192,11 @@ describe("NetworkRegistry (ADR-0074 K3)", function () {
       const stageId = await reg.stageIdOf(r);
       await (await reg.connect(f.stranger).stageRecord(r)).wait();
       const pid = await proposalId(
-        await f.as(f.governance, f.trValidator).proposeNetworkRecord(await reg.getAddress(), stageId),
+        await f.as(f.governance, f.trGov).proposeNetworkRecord(await reg.getAddress(), stageId),
         f,
       );
-      await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-      await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+      await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+      await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
       return { stageId, pid };
     }
 
@@ -249,24 +249,24 @@ describe("NetworkRegistry (ADR-0074 K3)", function () {
       expect((await reg.stagedRecord(first.stageId)).kind).to.equal(0n);
       // ikinci bir öneri eski kimliği taşısa da yazamaz
       const pid = await proposalId(
-        await f.as(f.governance, f.trValidator).proposeNetworkRecord(await reg.getAddress(), first.stageId),
+        await f.as(f.governance, f.trGov).proposeNetworkRecord(await reg.getAddress(), first.stageId),
         f,
       );
-      await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-      await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+      await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+      await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
       await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(reg, "UnknownStage");
       expect(await reg.revisionOf(Kind.WALLET_PROVIDER, PROVIDER)).to.equal(1n);
     });
 
     it("göç yazımı da sayacı artırır: bekleyen öneriler göçle çakışırsa yürütülemez", async () => {
       const exec = f.stranger;
-      const g = f.as(f.governance, f.trValidator);
+      const g = f.as(f.governance, f.trGov);
       const open = await proposalId(
         await g.proposeMigrationOpen(await reg.getAddress(), id("plan"), 7 * DAY, await exec.getAddress()),
         f,
       );
-      await (await f.as(f.governance, f.trValidator).vote(open, true)).wait();
-      await (await f.as(f.governance, f.kzValidator).vote(open, true)).wait();
+      await (await f.as(f.governance, f.trGov).vote(open, true)).wait();
+      await (await f.as(f.governance, f.kzGov).vote(open, true)).wait();
       await (await f.governance.execute(open)).wait();
       const pending = await staged(rec());
       await (await reg.connect(exec).writeRecord(rec({ status: St.SUSPENDED }), await f.now())).wait();
@@ -289,28 +289,28 @@ describe("NetworkRegistry (ADR-0074 K3)", function () {
       const stageId = await reg.stageIdOf(r);
       await (await reg.stageRecord(r)).wait();
       const pid = await proposalId(
-        await f.as(f.governance, f.trValidator).proposeNetworkRecord(await reg.getAddress(), stageId),
+        await f.as(f.governance, f.trGov).proposeNetworkRecord(await reg.getAddress(), stageId),
         f,
       );
-      await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-      await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
-      await expect(f.as(f.governance, f.kzValidator).cancelProposal(pid))
+      await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+      await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
+      await expect(f.as(f.governance, f.kzGov).cancelProposal(pid))
         .to.be.revertedWithCustomError(f.governance, "NotProposer")
-        .withArgs(await f.kzValidator.getAddress());
+        .withArgs(await f.kzGov.getAddress());
       await expect(f.as(f.governance, f.stranger).cancelProposal(pid)).to.be.revertedWithCustomError(
         f.governance,
-        "NotValidator",
+        "NotGovernor",
       );
-      await expect(f.as(f.governance, f.trValidator).cancelProposal(pid))
+      await expect(f.as(f.governance, f.trGov).cancelProposal(pid))
         .to.emit(f.governance, "ProposalCancelled")
         .withArgs(pid);
       expect((await f.governance.getProposal(pid)).status).to.equal(3n); // CANCELLED
       await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(f.governance, "ProposalNotOpen");
-      await expect(f.as(f.governance, f.azValidator).vote(pid, true)).to.be.revertedWithCustomError(
+      await expect(f.as(f.governance, f.azGov).vote(pid, true)).to.be.revertedWithCustomError(
         f.governance,
         "ProposalNotOpen",
       );
-      await expect(f.as(f.governance, f.trValidator).cancelProposal(pid)).to.be.revertedWithCustomError(
+      await expect(f.as(f.governance, f.trGov).cancelProposal(pid)).to.be.revertedWithCustomError(
         f.governance,
         "ProposalNotOpen",
       );
@@ -319,8 +319,9 @@ describe("NetworkRegistry (ADR-0074 K3)", function () {
 
   it("yükseltme yalnız Governance'tan", async () => {
     const impl = await ethers.deployContract("NetworkRegistry");
-    await expect(
-      reg.connect(f.trValidator).upgradeToAndCall(await impl.getAddress(), "0x"),
-    ).to.be.revertedWithCustomError(reg, "NotGovernance");
+    await expect(reg.connect(f.trGov).upgradeToAndCall(await impl.getAddress(), "0x")).to.be.revertedWithCustomError(
+      reg,
+      "NotGovernance",
+    );
   });
 });

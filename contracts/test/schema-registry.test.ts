@@ -42,13 +42,13 @@ describe("SchemaRegistry (SPEC-BC-0001 §4)", function () {
 
   it("GV2: NETWORK şeması 2/3 oyla Governance üzerinden girer", async () => {
     const rec = f.schemaRecord(NETWORK_VCT, SchemaTier.NETWORK, "0x0000");
-    const tx = await f.as(f.governance, f.trValidator).proposeNetworkSchema(rec);
+    const tx = await f.as(f.governance, f.trGov).proposeNetworkSchema(rec);
     const rc = await tx.wait();
     const pid = rc!.logs
       .map((l: any) => f.governance.interface.parseLog(l))
       .find((e: any) => e?.name === "ProposalCreated")!.args.id;
-    await f.as(f.governance, f.trValidator).vote(pid, true);
-    await f.as(f.governance, f.kzValidator).vote(pid, true);
+    await f.as(f.governance, f.trGov).vote(pid, true);
+    await f.as(f.governance, f.kzGov).vote(pid, true);
     await f.governance.execute(pid);
     const sid = id(NETWORK_VCT);
     expect(await f.schemas.isActiveSchema(sid)).to.equal(true);
@@ -57,18 +57,18 @@ describe("SchemaRegistry (SPEC-BC-0001 §4)", function () {
 
   it("NETWORK önerisi NATIONAL kayıtla açılamaz; NETWORK kaydı devlet kodu taşıyamaz", async () => {
     await expect(
-      f.as(f.governance, f.trValidator).proposeNetworkSchema(f.schemaRecord(NATIONAL_VCT, SchemaTier.NATIONAL, TR)),
+      f.as(f.governance, f.trGov).proposeNetworkSchema(f.schemaRecord(NATIONAL_VCT, SchemaTier.NATIONAL, TR)),
     ).to.be.revertedWithCustomError(f.governance, "NotNetworkTier");
     // NETWORK + stateCode: öneri açılır ama yürütme SchemaRegistry'de düşer (NetworkTierHasNoState)
     const tx = await f
-      .as(f.governance, f.trValidator)
+      .as(f.governance, f.trGov)
       .proposeNetworkSchema(f.schemaRecord(NETWORK_VCT, SchemaTier.NETWORK, TR));
     const rc = await tx.wait();
     const pid = rc!.logs
       .map((l: any) => f.governance.interface.parseLog(l))
       .find((e: any) => e?.name === "ProposalCreated")!.args.id;
-    await f.as(f.governance, f.trValidator).vote(pid, true);
-    await f.as(f.governance, f.kzValidator).vote(pid, true);
+    await f.as(f.governance, f.trGov).vote(pid, true);
+    await f.as(f.governance, f.kzGov).vote(pid, true);
     await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(f.schemas, "NetworkTierHasNoState");
   });
 

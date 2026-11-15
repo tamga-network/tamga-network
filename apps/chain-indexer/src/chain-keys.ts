@@ -1,7 +1,8 @@
 /**
  * Anahtar haritası (`tamga-chain-keys/1`) — YALNIZ test/staging zincirleri (GUIDE-0018 yol C; network/testnet/make-network.sh
  * `--keys generate` yazar). Rol → adres + özel anahtar dosyası: dağıtan, göç yürütücüsü, liste çapası yazıcıları ve eşik, her
- * devlet için doğrulayıcı (= QBFT düğüm anahtarı, ADR-0052 K2) ve delege. Ortam: `TAMGA_CHAIN_KEYS` (haritanın yolu).
+ * devlet için doğrulayıcı (= QBFT düğüm anahtarı, ADR-0052 K2; zincirde yetkisi yok), yönetişim (oy) anahtarı (ADR-0086 K1) ve
+ * delege. Ortam: `TAMGA_CHAIN_KEYS` (haritanın yolu).
  *
  * Üretim anahtarları HSM'dedir ve her devlet kendi anahtarını kendi donanımında üretir (ARCH-0002 §2); bu biçim gerçek ağda
  * KULLANILMAZ: `purpose` yalnız "test", zincir kimliği yalnız `STAGING_CHAIN_IDS` (yerel geliştirme kimlikleri 31337/31338 de
@@ -35,7 +36,10 @@ export interface StateKeys {
   genesis_validator: boolean;
   /** make-network düğüm numarası (node<n>) */
   node: number;
+  /** QBFT düğüm anahtarı (Besu `key`) — zincirde imza atmaz, izin listesi ve doğrulayıcı kümesi bundan (ADR-0086 K1) */
   validator: KeyRef;
+  /** yönetişim (oy) anahtarı — öneri, oy, delege listesi; düğüm anahtarından ayrı (ADR-0086 K1) */
+  governance: KeyRef;
   delegate: KeyRef;
 }
 export interface ChainKeyMap {
@@ -120,6 +124,7 @@ export function loadChainKeys(file: string): LoadedChainKeys {
     codes.add(s.code);
     if (s.founder && !s.genesis_validator) errs.push(`${s.code}: kurucu genesis doğrulayıcısı olmalı`);
     check(s.validator, `${s.code}.validator`);
+    check(s.governance, `${s.code}.governance`);
     check(s.delegate, `${s.code}.delegate`);
   }
   if (errs.length) throw new Error(`chain-keys: ${file} geçersiz — ${errs.join("; ")}`);
@@ -146,7 +151,7 @@ const bytes2 = (cc: string) => `0x${Buffer.from(cc, "utf8").toString("hex")}`;
 
 /**
  * Yeniden oynatma imzacıları anahtar haritasından: devlet → delegesi, göç yürütücüsü, Governance = zincirde AKTİF üye devletlerin
- * doğrulayıcıları (öneren ilk aktif kurucu). Test/staging zincirinde bütün devletlerin anahtarı tek yerdedir; gerçek ağda her devlet
+ * yönetişim anahtarları (öneren ilk aktif kurucu; ADR-0086). Test/staging zincirinde bütün devletlerin anahtarı tek yerdedir; gerçek ağda her devlet
  * kendi oyunu verir ve bu fonksiyon kullanılmaz.
  */
 export async function keyMapSigners(
@@ -162,7 +167,7 @@ export async function keyMapSigners(
   for (const s of keys.map.states) if ((await gov.isActiveMember(bytes2(s.code))) as boolean) active.push(s);
   const voters: Signer[] = [...active]
     .sort((a, b) => Number(b.founder) - Number(a.founder))
-    .map((s) => keys.wallet(s.validator, provider));
+    .map((s) => keys.wallet(s.governance, provider));
   if (!voters.length) throw new Error("chain-keys: Governance'ta haritadaki devletlerden aktif üye yok");
   return {
     state: (cc) => keys.wallet(keys.state(cc).delegate, provider),

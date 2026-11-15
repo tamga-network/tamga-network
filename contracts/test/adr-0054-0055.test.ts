@@ -39,8 +39,8 @@ async function proposalId(tx: any, f: Fixture): Promise<string> {
 }
 
 async function passWithTwo(f: Fixture, pid: string) {
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
 }
 
 describe("ADR-0054 — ad alanı, devletler arası bağ, kota", function () {
@@ -51,9 +51,7 @@ describe("ADR-0054 — ad alanı, devletler arası bağ, kota", function () {
 
   it("NS1 / F-11: ağ şeması oylanırken bir devlet aynı adı ulusal olarak kapamaz; ağ şeması yürütülür", async () => {
     const pid = await proposalId(
-      await f
-        .as(f.governance, f.trValidator)
-        .proposeNetworkSchema(f.schemaRecord(NETWORK_VCT, SchemaTier.NETWORK, "0x0000")),
+      await f.as(f.governance, f.trGov).proposeNetworkSchema(f.schemaRecord(NETWORK_VCT, SchemaTier.NETWORK, "0x0000")),
       f,
     );
     await expect(f.as(f.schemas, f.trDelegate).registerSchema(f.schemaRecord(NETWORK_VCT, SchemaTier.NATIONAL, TR)))
@@ -90,19 +88,17 @@ describe("ADR-0054 — ad alanı, devletler arası bağ, kota", function () {
   it("NS1: devlet-özel biçimdeki vct ağ şeması olarak önerilemez (öneri anında reddedilir)", async () => {
     await expect(
       f
-        .as(f.governance, f.trValidator)
+        .as(f.governance, f.trGov)
         .proposeNetworkSchema(f.schemaRecord("urn:tamga:tr:edu:DiplomaCredential:1", SchemaTier.NETWORK, "0x0000")),
     ).to.be.revertedWithCustomError(f.governance, "NetworkVctInNationalNamespace");
     // AB türü ve iki harfli alan adlı ağ türü (dört bölüm) ağ şeması olabilir
     await expect(
       f
-        .as(f.governance, f.trValidator)
+        .as(f.governance, f.trGov)
         .proposeNetworkSchema(f.schemaRecord("urn:tamga:id:IdentityAttestation:1", SchemaTier.NETWORK, "0x0000")),
     ).to.emit(f.governance, "ProposalCreated");
     await expect(
-      f
-        .as(f.governance, f.trValidator)
-        .proposeNetworkSchema(f.schemaRecord("urn:eudi:pid:1", SchemaTier.NETWORK, "0x0000")),
+      f.as(f.governance, f.trGov).proposeNetworkSchema(f.schemaRecord("urn:eudi:pid:1", SchemaTier.NETWORK, "0x0000")),
     ).to.emit(f.governance, "ProposalCreated");
   });
 
@@ -164,7 +160,7 @@ describe("ADR-0055 — yükseltme kuyruğu ve kayıt yönetimi önerileri", func
 
   async function upgradeProposal(initSelector?: string) {
     const newImpl = await ethers.deployContract("IssuerRegistry");
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const tx = initSelector
       ? await g.proposeProtocolUpgradeAndInit(await f.issuers.getAddress(), await newImpl.getAddress(), initSelector)
       : await g.proposeProtocolUpgrade(await f.issuers.getAddress(), await newImpl.getAddress());
@@ -195,7 +191,7 @@ describe("ADR-0055 — yükseltme kuyruğu ve kayıt yönetimi önerileri", func
     const { pid } = await upgradeProposal();
     await passWithTwo(f, pid);
     await (await f.governance.execute(pid)).wait(); // kuyruk
-    await (await f.as(f.governance, f.kzValidator).withdraw()).wait(); // KZ katılmıyor, çekiliyor
+    await (await f.as(f.governance, f.kzGov).withdraw()).wait(); // KZ katılmıyor, çekiliyor
     await networkHelpers.time.increase(WEEK);
     await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(f.governance, "ThresholdNotMet");
   });
@@ -244,7 +240,7 @@ describe("ADR-0055 — yükseltme kuyruğu ve kayıt yönetimi önerileri", func
     const proxy = await ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), data]);
     const reg = await ethers.getContractAt("TrustListAnchorRegistry", await proxy.getAddress());
 
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const p1 = await proposalId(await g.proposeAnchorerChange(await reg.getAddress(), await a2.getAddress(), true), f);
     await passWithTwo(f, p1);
     await expect(f.governance.execute(p1))
@@ -260,7 +256,7 @@ describe("ADR-0055 — yükseltme kuyruğu ve kayıt yönetimi önerileri", func
   });
 
   it("GE3: kurucular arası tanıma Governance önerisiyle bir kez kurulur", async () => {
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const pid = await proposalId(await g.proposeFounderRecognition(await f.recognition.getAddress(), [TR, KZ]), f);
     await passWithTwo(f, pid);
     await expect(f.governance.execute(pid)).to.emit(f.recognition, "RecognitionSet");
@@ -271,7 +267,7 @@ describe("ADR-0055 — yükseltme kuyruğu ve kayıt yönetimi önerileri", func
   });
 
   it("GE3: ağ şeması Governance önerisiyle kullanımdan kalkar ve iptal edilir", async () => {
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const reg = await proposalId(
       await g.proposeNetworkSchema(f.schemaRecord(NETWORK_VCT, SchemaTier.NETWORK, "0x0000")),
       f,
@@ -292,13 +288,13 @@ describe("ADR-0055 — yükseltme kuyruğu ve kayıt yönetimi önerileri", func
   });
 
   it("GE3: yönetim önerisinin hedefi sıfır, Governance ya da kodsuz adres olamaz; yalnız validator önerir", async () => {
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     for (const t of [ethers.ZeroAddress, await f.governance.getAddress(), await f.stranger.getAddress()]) {
       await expect(g.proposeAnchorThreshold(t, 2)).to.be.revertedWithCustomError(f.governance, "InvalidAdminTarget");
     }
     await expect(
       f.as(f.governance, f.stranger).proposeAnchorThreshold(await f.recognition.getAddress(), 2),
-    ).to.be.revertedWithCustomError(f.governance, "NotValidator");
+    ).to.be.revertedWithCustomError(f.governance, "NotGovernor");
     await expect(g.proposeFounderRecognition(await f.recognition.getAddress(), [TR])).to.be.revertedWithCustomError(
       f.governance,
       "FounderMismatch",

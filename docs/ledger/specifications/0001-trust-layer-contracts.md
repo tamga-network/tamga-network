@@ -4,7 +4,7 @@ title: "Güven katmanı kontratları"
 status: Active
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-11-12
+last_updated: 2026-11-15
 summary: >
   Hyperledger Besu (EVM) üzerinde çalışan güven katmanı kontratlarının kanonik
   veri şeması, fonksiyon arayüzleri ve değişmezleri. Sürüm 2.0.0 üç yapısal
@@ -16,6 +16,16 @@ summary: >
   politikası ve doğrulama okuma seti normatifleştirildi. Egemenlik
   onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
 ---
+
+> **Sürüm notu 1.0.0 (2026-11-15) — [[ADR-0086]] yönetişim ve düğüm anahtarı ayrımı.** Üye kaydında iki adres: QBFT düğüm
+> adresi (`validatorAddress`) ve yönetişim adresi (`governanceAddress`, + `governanceSince`); bir adres tek devlette tek rolde
+> (`ValidatorInUse`, `KeyInUse`). Zincirdeki bütün yetki yönetişim adresinde (`onlyValidator` → `onlyGovernor`, `NotValidator` →
+> `NotGovernor`); düğüm anahtarının zincirde yetkisi yok ve hesap izin listesine girmez (§16.9). Yeni: `setValidatorAddress` (üye
+> kendisi, oy yok), `proposeGovernanceKeyChange` (öneri türü `GOVERNANCE_KEY_CHANGE`, 2/3 + değişen üyenin kendi oyu,
+> `KeyChangeNeedsOwnVote`), olaylar `ValidatorAddressChanged`, `GovernanceAddressChanged`, `StateAdmitted` iki adresli.
+> `initialize(founders, validators, governors)`, `proposeStateAdmission(code, validator, governance)` (§1, §10, N1). Depolama:
+> `StateMember` ve `Proposal` yapılarına üye sona eklendi (yalnız mapping değeri), yeni eşleme `_governanceToState` `__gap`'ten
+> (37 → 36); taban çizgisi yenilendi (çalışan zincir yok). Kod boyutu: Governance 23.872 bayt (pay 704).
 
 > **Sürüm notu 1.0.0 (2026-11-12, kontrat denetiminden kalanlar) — [[ADR-0082]], göç penceresinde başlangıç.** (1) IS1:
 > iptal edilmiş kurumun halefini devleti sonradan düzeltir, değiştirir ya da kaldırır (`setIssuerSuccessor`,
@@ -167,8 +177,9 @@ modifier onlyOwnerState(bytes2 stateCode) {
 **Değişmez N1:** Hiçbir yazma fonksiyonu, namespace sahibi olmayan bir çağırana
 açık olamaz. Tek istisna `Governance` yürütmesidir (2/3 oy): `NETWORK` katmanı
 şemaları (§4.3), protokol yükseltmesi (§9) ve türü belli kayıt yönetimi önerileri
-(§1, [[ADR-0055]]). Bir validator adresi yalnız bir devlete ait olabilir
-(`ValidatorInUse`). Delege anahtarı eşlemesi devlet başınadır ([[ADR-0082]]/DK1):
+(§1, [[ADR-0055]]). Bir validator (düğüm) adresi yalnız bir devlete ait olabilir
+(`ValidatorInUse`); yönetişim adresi de öyle, ve hiçbir adres iki rolde kullanılamaz
+(`KeyInUse`, [[ADR-0086]]/KG1). Delege anahtarı eşlemesi devlet başınadır ([[ADR-0082]]/DK1):
 bir devletin delege listesi yalnız o devletin kayıtlarına yetki verir, başka
 devletin atamasını engelleyemez ve yetkisini düşüremez. Bir devletin kayıtları
 başka bir devletin kaydına bağlanamaz ([[ADR-0054]]/NS2).
@@ -185,33 +196,42 @@ enum MemberStatus { NONE, ACTIVE, SUSPENDED, WITHDRAWN }
 
 struct StateMember {
     bytes2       stateCode;
-    address      validatorAddress;   // QBFT validator node adresi
-    address[]    delegateKeys;       // registry yazma yetkisi
+    address      validatorAddress;   // QBFT düğüm (uzlaşma) adresi — zincirde yetkisi yok (ADR-0086 KG2)
     MemberStatus status;
     uint64       joinedAt;
+    address      governanceAddress;  // yönetişim (oy) adresi — öneri, oy, delege listesi, çıkış (ADR-0086 KG1/KG2)
+    uint64       governanceSince;    // yönetişim anahtarının bağlandığı an (kabul / anahtar değişikliği); oylar bundan sonra sayılır
 }
+// delegateKeys ayrı eşlemede (`delegateKeysOf`); registry yazma yetkisi
 
-function proposeStateAdmission(bytes2 stateCode, address validator) external onlyValidator returns (bytes32);
-function proposeStateRemoval(bytes2 stateCode, bytes32 reasonHash) external onlyValidator returns (bytes32);
-function proposeProtocolUpgrade(address target, address newImplementation) external onlyValidator returns (bytes32);
-function proposeNetworkSchema(ISchemaRegistry.SchemaRecord calldata rec) external onlyValidator returns (bytes32);
+/// Kurucular iki adresle girer; düğüm ≠ yönetişim, adres tek devlette tek rolde (KeyInUse / ValidatorInUse)
+function initialize(bytes2[] calldata founders, address[] calldata validators, address[] calldata governors) external;
+function proposeStateAdmission(bytes2 stateCode, address validator, address governance) external onlyGovernor returns (bytes32);
+/// ADR-0086 KG4 — yönetişim anahtarı yalnız oyla: 2/3 (en az 2) + değişen üyenin bugünkü anahtarla destek oyu
+/// (yürütmede KeyChangeNeedsOwnVote); yürütmede yeniden denetlenir; eski anahtarın yetkisi ve açık oyları düşer
+function proposeGovernanceKeyChange(bytes2 stateCode, address newGovernance) external onlyGovernor returns (bytes32);
+/// ADR-0086 KG3 — üye düğüm adresini kendi yönetişim anahtarıyla değiştirir (oy yok) → ValidatorAddressChanged
+function setValidatorAddress(bytes2 stateCode, address validator) external;
+function proposeStateRemoval(bytes2 stateCode, bytes32 reasonHash) external onlyGovernor returns (bytes32);
+function proposeProtocolUpgrade(address target, address newImplementation) external onlyGovernor returns (bytes32);
+function proposeNetworkSchema(ISchemaRegistry.SchemaRecord calldata rec) external onlyGovernor returns (bytes32);
 
 /// ADR-0055 K2 — yükseltme + yeni sürümün PARAMETRESİZ başlangıç fonksiyonu (yalnız 4 baytlık seçici)
 function proposeProtocolUpgradeAndInit(address target, address newImplementation, bytes4 initSelector)
-    external onlyValidator returns (bytes32);
+    external onlyGovernor returns (bytes32);
 
 /// ADR-0055 K3 — türü belli kayıt yönetimi önerileri (REGISTRY_ADMIN; 2/3, bekleme yok)
-function proposeAnchorerChange(address registry, address anchorer, bool allowed) external onlyValidator returns (bytes32);
-function proposeAnchorThreshold(address registry, uint8 required) external onlyValidator returns (bytes32);
-function proposeFounderRecognition(address registry, bytes2[] calldata founders) external onlyValidator returns (bytes32);
-function proposeNetworkSchemaDeprecation(bytes32 schemaId, bytes32 supersededBy) external onlyValidator returns (bytes32);
-function proposeNetworkSchemaRevocation(bytes32 schemaId, bytes32 reasonHash) external onlyValidator returns (bytes32);
+function proposeAnchorerChange(address registry, address anchorer, bool allowed) external onlyGovernor returns (bytes32);
+function proposeAnchorThreshold(address registry, uint8 required) external onlyGovernor returns (bytes32);
+function proposeFounderRecognition(address registry, bytes2[] calldata founders) external onlyGovernor returns (bytes32);
+function proposeNetworkSchemaDeprecation(bytes32 schemaId, bytes32 supersededBy) external onlyGovernor returns (bytes32);
+function proposeNetworkSchemaRevocation(bytes32 schemaId, bytes32 reasonHash) external onlyGovernor returns (bytes32);
 
 /// Oy verir; öneri yürütülene kadar (kuyruktaki yükseltme dahil) öteki yöne ÇEVİREBİLİR. Aynı yönde ikinci oy AlreadyVoted.
-function vote(bytes32 proposalId, bool support) external onlyValidator;
+function vote(bytes32 proposalId, bool support) external onlyGovernor;
 /// 2026-11-11: verdiği oyu geri çeker (yürütülene kadar; kuyruktaki yükseltmede uygulama penceresinin sonuna kadar) → VoteRetracted;
 /// oyu yoksa NoVote. Eşik her `execute`'ta o anki oylardan sayılır: geri çekilen oyla eşik düşerse yürütme ThresholdNotMet.
-function retractVote(bytes32 proposalId) external onlyValidator;
+function retractVote(bytes32 proposalId) external onlyGovernor;
 /// PROTOCOL_UPGRADE: ilk çağrı kuyruğa alır (ProposalQueued), en erken UPGRADE_DELAY (7 gün) sonra uygular (ADR-0055 GE1)
 function execute(bytes32 proposalId) external;
 function countedForVotes(bytes32 proposalId) external view returns (uint32);  // yürütmede sayılacak destek (GV3)
@@ -221,24 +241,25 @@ function getSchemaPayload(bytes32 proposalId) external view returns (ISchemaRegi
 function upgradePayloadOf(bytes32 proposalId) external view returns (bytes4 initSelector, bytes32 implCodehash);
 function removalReasonOf(bytes32 proposalId) external view returns (bytes32);
 /// Güvenlik turu 2026-11-04: öneren, yürütülmemiş (açık ya da kuyruktaki) önerisini geri çeker → CANCELLED
-function cancelProposal(bytes32 proposalId) external onlyValidator;   // yalnız öneren (NotProposer); ProposalCancelled
+function cancelProposal(bytes32 proposalId) external onlyGovernor;   // yalnız öneren (NotProposer); ProposalCancelled
 
 /// Tek taraflı çıkış — oy gerekmez (ADR-0002 #5). Etkin üye sayısı 2 ya da daha az iken reddedilir:
 /// TooFewMembers(active, required = 3) — ADR-0076 GC1; iki üyeli ağda önce üçüncü üye kabul edilir
-function withdraw() external onlyValidator;
+function withdraw() external onlyGovernor;
 
-/// Devletin kendi iç işi — oy gerekmez. Yalnız o devletin VALIDATOR adresi çağırır. Eşleme devlet başınadır
+/// Devletin kendi iç işi — oy gerekmez. Yalnız o devletin YÖNETİŞİM adresi çağırır (ADR-0086). Eşleme devlet başınadır
 /// (ADR-0082 DK1): liste yalnız bu devletin eşlemesini yazar ve siler; başka devletin listesindeki anahtar reddedilmez.
 function setDelegateKeys(bytes2 stateCode, address[] calldata keys) external;
 ```
 
 **Eşikler ([[ADR-0002]]):** kabul **2/3**; çıkarma **2/3** (çıkarılanın oyu
 sayılmaz); protokol yükseltme **2/3**; NETWORK şeması **2/3** (§4.3); kayıt
-yönetimi önerileri **2/3** ([[ADR-0055]]). Yürütmede destek oyları bugünkü
-`ACTIVE` üyelerin validator adresinden yeniden sayılır: çekilen ya da çıkarılan
+yönetimi önerileri **2/3** ([[ADR-0055]]); yönetişim anahtarı değişikliği **2/3 +
+değişen üyenin kendi oyu** ([[ADR-0086]]). Yürütmede destek oyları bugünkü
+`ACTIVE` üyelerin bugünkü yönetişim adresinden yeniden sayılır: çekilen ya da çıkarılan
 üyenin eski oyu eşiği dolduramaz (GV3; 2026-10-19 güvenlik turu). Oy ayrıca
-üyenin **son kabulünden sonra** verilmiş olmalıdır (oy zamanı ≥ üyenin `joinedAt`
-değeri; 2026-11-12): yeniden kabul edilen üyenin önceki üyelik dönemindeki oyu
+yönetişim anahtarının üyeye **son bağlanışından sonra** verilmiş olmalıdır (oy zamanı ≥
+`governanceSince`; kabulde ve anahtar değişikliğinde yazılır; 2026-11-12, [[ADR-0086]]): yeniden kabul edilen üyenin önceki üyelik dönemindeki oyu
 sayılmaz, üye oyunu yeniden verir (aynı yönde yeniden verilebilir; ham
 `forVotes` / `againstVotes` sayaçları değişmez). Protokol
 yükseltmesi eşik dolunca kuyruğa alınır ve en erken 7 gün sonra, eşik yeniden
@@ -275,8 +296,8 @@ gerçekleşmez: bu, iki üyeli ağın ortaklık gibi davranmasının bilinçli s
 `LastValidator` yalnız çıkarma önerisinde (`proposeStateRemoval`) kalır.
 
 **Kuruluş (2026-11-11; en az iki kurucu 2026-11-12, [[ADR-0076]] GC4).**
-`initialize` sıfır devlet kodunu (`0x0000`) ve sıfır validator adresini reddeder
-(`ZeroAddress`). Ağ **en az iki kurucuyla** kurulur: ikiden az kurucu ya da
+`initialize` sıfır devlet kodunu (`0x0000`), sıfır düğüm ve yönetişim adresini reddeder
+(`ZeroAddress`); düğüm adresi yönetişim adresiyle aynı olamaz (`KeyInUse`, [[ADR-0086]]). Ağ **en az iki kurucuyla** kurulur: ikiden az kurucu ya da
 uzunluğu tutmayan listeler `FounderMismatch` ile reddedilir. Gerekçe: tek üyeyle
 hiçbir öneri yürütülemez (asgari mutlak oy 2), yeni üye de kabul edilemez;
 yönetişim ilk bloktan kilitli doğardı. Tek kuruculu kuruluş için bayrak ya da
@@ -287,12 +308,25 @@ haritası en az iki kurucu ister). QBFT doğrulayıcı sayısı ayrı bir konudu
 tek doğrulayıcılı yerel zincirde de Governance iki kurucuyla kurulur.
 
 **Yeniden kabul (2.1.0 — R7):** `SUSPENDED`/`WITHDRAWN` bir devlet
-`proposeStateAdmission` ile yeniden kabul edilebilir; eski validator ve delegate
-eşlemeleri temizlenir. 2.0.0'da `MemberExists` kontrolü `NONE` dışındaki her
+`proposeStateAdmission` ile yeniden kabul edilebilir; eski delegate eşlemeleri
+temizlenir; eski düğüm ve yönetişim adresleri o devlete bağlı kalır (başka devlet
+alamaz, [[ADR-0086]]/KG1). 2.0.0'da `MemberExists` kontrolü `NONE` dışındaki her
 durumda revert ediyordu — çıkarılan bir devlet **asla** geri dönemiyordu.
 
 **`setSchemaRegistry` erişimi (2.1.0 — R5):** 2.0.0'da bu fonksiyon
-**herkese açıktı** (ilk çağıran kazanıyordu). `onlyValidator` oldu.
+**herkese açıktı** (ilk çağıran kazanıyordu). `onlyValidator` oldu; [[ADR-0086]] ile `onlyGovernor`.
+
+**Yönetişim ve düğüm anahtarı ([[ADR-0086]] KG1–KG5; 2026-11-15).** Düğüm anahtarı sürekli
+çevrimiçi sunucudadır ve yalnız blok üretir; zincirde hiçbir yetkisi yoktur (bütün
+`onlyGovernor` çağrıları, `setDelegateKeys`, `withdraw` düğüm anahtarından `NotGovernor`
+ile reddedilir) ve Besu hesap izin listesine girmez (§16.9). Düğüm adresini üye kendi
+yönetişim anahtarıyla oy olmadan değiştirir (`setValidatorAddress`); bırakılan adres
+o devlete bağlı kalır. Yönetişim anahtarı yalnız `proposeGovernanceKeyChange` ile
+değişir: eşik 2/3 (en az 2) ve değişen üyenin bugünkü anahtarla verdiği destek oyu
+birlikte gerekir — öteki üyeler bir devletin anahtarını onun rızası olmadan değiştirip
+delege listesini ele geçiremez (N1). İki üyeli ağda kaybolan yönetişim anahtarı zincir
+üstünde kurtarılamaz; iki üyeli dönemde yönetişim anahtarının sınanmış yedeği zorunludur
+([[ARCH-0002]] Adım 11, KG5).
 
 **Değişmezler:**
 
@@ -992,12 +1026,13 @@ dış arayüz ve depolama düzeni değişmedi).
 
 | Rol | Kaynak | Ne yapar |
 |---|---|---|
-| **Validator** | `Governance.StateMember.validatorAddress` | Öneri verir, oy kullanır |
+| **Yönetişim** | `Governance.StateMember.governanceAddress` | Öneri verir, oy kullanır, delege listesini yazar, çekilir ([[ADR-0086]]) |
+| **Validator (düğüm)** | `Governance.StateMember.validatorAddress` | Yalnız blok üretir; zincirde yetkisi yok, hesap izin listesinde değil |
 | **State delegate** | `Governance.StateMember.delegateKeys` | Ulusal kayıtlara yazar (`onlyOwnerState`) |
 | **Issuer delegate** | `IssuerRegistry.setIssuerDelegates` | Günlük operasyon: status list yayını (`onlyIssuerDelegate`) |
 
 ```solidity
-modifier onlyValidator() { ... }
+modifier onlyGovernor() { ... }   // ADR-0086: bugünkü yönetişim adresi
 modifier onlyOwnerState(bytes2 stateCode) { ... }
 modifier onlyIssuerDelegate(bytes32 issuerId) {
     if (!issuerRegistry.isIssuerDelegate(issuerId, msg.sender)) revert NotIssuerDelegate(issuerId, msg.sender);
@@ -1551,7 +1586,7 @@ Kontrat değişmedi; araç §16.7 okuma görünümlerini kullanır.
 
 | Liste | Kaynak (o bloktaki durum) |
 |---|---|
-| hesap | `Governance.memberList()` → `getMember`: `ACTIVE` üyenin `validatorAddress`'i ve `delegateKeysOf` (askıdaki devletin delegesi yazamaz, `isDelegateOf`) |
+| hesap | `Governance.memberList()` → `getMember`: `ACTIVE` üyenin `governanceAddress`'i ([[ADR-0086]]; düğüm adresi işlem göndermez, hesap listesine girmez) ve `delegateKeysOf` (askıdaki devletin delegesi yazamaz, `isDelegateOf`) |
 | hesap | her üye devletin `IssuerRegistry.getIssuersByState` → `isOperational` olan kurumun `issuerDelegatesOf` (§7: `StatusListRegistry` yalnız kurum durumuna bakar, devletin üyelik durumuna değil) |
 | hesap | `TrustListAnchorRegistry.anchorers()` |
 | hesap | göç penceresi açık (`isMigrationOpen`) kayıtların `migrationState().executor`'ı ([[ADR-0073]] K1; pencere kapanınca listeden çıkar) |

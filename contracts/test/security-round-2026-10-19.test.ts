@@ -14,6 +14,7 @@ import {
   loadFixture,
   networkHelpers,
   type Fixture,
+  nodeOf,
 } from "./helpers/fixture.js";
 
 const UZ = "0x555a";
@@ -35,21 +36,21 @@ describe("Güvenlik turu 2026-10-19 — regresyonlar", function () {
 
   describe("Governance", () => {
     it("F-01: çıkarma önerisi açıkken hedef çekilirse yürütme reddedilir; üye sayacı iki kez düşmez (GV3)", async () => {
-      const pid = await proposalId(f.as(f.governance, f.kzValidator).proposeStateRemoval(TR, id("x")));
-      await f.as(f.governance, f.kzValidator).vote(pid, true);
-      await f.as(f.governance, f.azValidator).vote(pid, true);
-      await f.as(f.governance, f.trValidator).withdraw();
+      const pid = await proposalId(f.as(f.governance, f.kzGov).proposeStateRemoval(TR, id("x")));
+      await f.as(f.governance, f.kzGov).vote(pid, true);
+      await f.as(f.governance, f.azGov).vote(pid, true);
+      await f.as(f.governance, f.trGov).withdraw();
       expect(await f.governance.activeMemberCount()).to.equal(2);
       await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(f.governance, "UnknownMember");
       expect(await f.governance.activeMemberCount()).to.equal(2);
     });
 
     it("F-01: aynı devlet için iki çıkarma önerisi — ikincisi yürütülemez", async () => {
-      const p1 = await proposalId(f.as(f.governance, f.kzValidator).proposeStateRemoval(TR, id("x")));
-      const p2 = await proposalId(f.as(f.governance, f.azValidator).proposeStateRemoval(TR, id("y")));
+      const p1 = await proposalId(f.as(f.governance, f.kzGov).proposeStateRemoval(TR, id("x")));
+      const p2 = await proposalId(f.as(f.governance, f.azGov).proposeStateRemoval(TR, id("y")));
       for (const p of [p1, p2]) {
-        await f.as(f.governance, f.kzValidator).vote(p, true);
-        await f.as(f.governance, f.azValidator).vote(p, true);
+        await f.as(f.governance, f.kzGov).vote(p, true);
+        await f.as(f.governance, f.azGov).vote(p, true);
       }
       await f.governance.execute(p1);
       expect(await f.governance.activeMemberCount()).to.equal(2);
@@ -60,12 +61,14 @@ describe("Güvenlik turu 2026-10-19 — regresyonlar", function () {
     it("F-01: çekilen üyenin eski oyu eşiği dolduramaz (oylar yürütmede yeniden sayılır)", async () => {
       const [, , , , , , , , newValidator] = await ethers.getSigners();
       const pid = await proposalId(
-        f.as(f.governance, f.trValidator).proposeStateAdmission(UZ, await newValidator.getAddress()),
+        f
+          .as(f.governance, f.trGov)
+          .proposeStateAdmission(UZ, nodeOf(await newValidator.getAddress()), await newValidator.getAddress()),
       );
-      await f.as(f.governance, f.trValidator).vote(pid, true);
-      await f.as(f.governance, f.kzValidator).vote(pid, true);
+      await f.as(f.governance, f.trGov).vote(pid, true);
+      await f.as(f.governance, f.kzGov).vote(pid, true);
       expect(await f.governance.countedForVotes(pid)).to.equal(2);
-      await f.as(f.governance, f.kzValidator).withdraw();
+      await f.as(f.governance, f.kzGov).withdraw();
       expect(await f.governance.countedForVotes(pid)).to.equal(1);
       await expect(f.governance.execute(pid))
         .to.be.revertedWithCustomError(f.governance, "ThresholdNotMet")
@@ -73,10 +76,10 @@ describe("Güvenlik turu 2026-10-19 — regresyonlar", function () {
     });
 
     it("F-01: GV3 — iki üye kalınca çıkarma yürütülemez (çekilenin oyu sayılmaz)", async () => {
-      const pid = await proposalId(f.as(f.governance, f.trValidator).proposeStateRemoval(AZ, id("x")));
-      await f.as(f.governance, f.trValidator).vote(pid, true);
-      await f.as(f.governance, f.kzValidator).vote(pid, true);
-      await f.as(f.governance, f.kzValidator).withdraw(); // geriye TR + AZ (hedef)
+      const pid = await proposalId(f.as(f.governance, f.trGov).proposeStateRemoval(AZ, id("x")));
+      await f.as(f.governance, f.trGov).vote(pid, true);
+      await f.as(f.governance, f.kzGov).vote(pid, true);
+      await f.as(f.governance, f.kzGov).withdraw(); // geriye TR + AZ (hedef)
       await expect(f.governance.execute(pid)).to.be.revertedWithCustomError(f.governance, "ThresholdNotMet");
       expect((await f.governance.getMember(AZ)).status).to.equal(1); // ACTIVE
     });
@@ -84,34 +87,41 @@ describe("Güvenlik turu 2026-10-19 — regresyonlar", function () {
     it("F-02: bir devletin validator'ı başka devletin delege anahtarını listesine yazınca o devletin yetkisi düşmez (N1)", async () => {
       // ADR-0082 DK1: eşleme devlet başınadır — yazım reddedilmez (kapma kapısıydı), ama öteki devletin eşlemesine dokunamaz
       const kzKey = await f.kzDelegate.getAddress();
-      await f.as(f.governance, f.trValidator).setDelegateKeys(TR, [kzKey]);
+      await f.as(f.governance, f.trGov).setDelegateKeys(TR, [kzKey]);
       expect(await f.governance.isDelegateOf(kzKey, KZ)).to.equal(true);
-      await f.as(f.governance, f.trValidator).setDelegateKeys(TR, []);
+      await f.as(f.governance, f.trGov).setDelegateKeys(TR, []);
       expect(await f.governance.isDelegateOf(kzKey, KZ)).to.equal(true);
       expect(await f.governance.isDelegateOf(kzKey, TR)).to.equal(false);
     });
 
     it("F-02: anahtar devirde eski devletin listesi yeni sahibinin eşlemesini silmez", async () => {
       const key = await f.trDelegate.getAddress();
-      await f.as(f.governance, f.trValidator).setDelegateKeys(TR, []); // TR bıraktı
-      await f.as(f.governance, f.kzValidator).setDelegateKeys(KZ, [key]); // KZ aldı
-      await f.as(f.governance, f.trValidator).setDelegateKeys(TR, []); // TR listesini yeniden sıfırlar
+      await f.as(f.governance, f.trGov).setDelegateKeys(TR, []); // TR bıraktı
+      await f.as(f.governance, f.kzGov).setDelegateKeys(KZ, [key]); // KZ aldı
+      await f.as(f.governance, f.trGov).setDelegateKeys(TR, []); // TR listesini yeniden sıfırlar
       expect(await f.governance.isDelegateOf(key, KZ)).to.equal(true);
     });
 
     it("F-04: başka devletin validator adresiyle kabul önerisi açılmaz", async () => {
-      const kzV = await f.kzValidator.getAddress();
-      await expect(f.as(f.governance, f.trValidator).proposeStateAdmission(UZ, kzV))
+      const kzV = f.kzNode;
+      const fresh = await f.stranger.getAddress();
+      await expect(f.as(f.governance, f.trGov).proposeStateAdmission(UZ, kzV, fresh))
         .to.be.revertedWithCustomError(f.governance, "ValidatorInUse")
         .withArgs(kzV, KZ);
+      // ADR-0086 K1: başka devletin yönetişim anahtarı da alınamaz
+      const kzG = await f.kzGov.getAddress();
+      await expect(f.as(f.governance, f.trGov).proposeStateAdmission(UZ, nodeOf(fresh), kzG))
+        .to.be.revertedWithCustomError(f.governance, "KeyInUse")
+        .withArgs(kzG, KZ);
     });
 
     it("F-04: initialize aynı validator'ı iki kurucuya veremez", async () => {
       const impl = await ethers.deployContract("Governance");
-      const v = await f.trValidator.getAddress();
+      const v = f.trNode;
       const data = impl.interface.encodeFunctionData("initialize", [
         [TR, KZ],
         [v, v],
+        [await f.trGov.getAddress(), await f.kzGov.getAddress()],
       ]);
       await expect(
         ethers.deployContract("ERC1967Proxy", [await impl.getAddress(), data]),

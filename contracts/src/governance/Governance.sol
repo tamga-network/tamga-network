@@ -38,6 +38,13 @@ interface IUpgradeableTarget {
  *         UPGRADE_DELAY sonra, eşik yeniden sayılarak uygulanır (GE1); başlangıç
  *         çağrısı yalnız parametresiz seçicidir (GE2). Kayıt yönetimi türü belli
  *         önerilerle yapılır, genel çağrı yoktur (GE3).
+ *
+ *         ADR-0086: her üyenin iki ayrı adresi vardır — QBFT düğüm (uzlaşma) adresi
+ *         ve yönetişim (oy) adresi. Zincirdeki bütün yetki yönetişim adresindedir
+ *         (öneri, oy, delege listesi, çıkış); düğüm adresinin zincirde yetkisi
+ *         yoktur (KG2). Düğüm adresini üye kendi yönetişim anahtarıyla değiştirir
+ *         (KG3); yönetişim anahtarı yalnız Governance oyuyla ve üyenin kendi oyuyla
+ *         değişir (KG4).
  */
 contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty {
     uint256 public constant MAX_DELEGATES = 16;
@@ -96,7 +103,11 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     ///      sayılmaz (ikinci kontrol 2026-11-12). `__gap`'ten bir slot alındı (38 → 37).
     mapping(bytes32 => mapping(address => uint64)) private _votedAt;
 
-    uint256[37] private __gap;
+    /// @dev ADR-0086 KG1: yönetişim anahtarı → devlet. Bırakılan anahtar eşlemede kalır (başka devlete geçemez); yetki her zaman
+    ///      üye kaydındaki BUGÜNKÜ `governanceAddress` ile denetlenir. `__gap`'ten bir slot alındı (37 → 36).
+    mapping(address => bytes2) private _governanceToState;
+
+    uint256[36] private __gap;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -105,33 +116,23 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /**
      * @param founders Kurucu üye devlet kodları.
-     * @param validators Her kurucunun validator adresi (aynı sırada).
+     * @param validators Her kurucunun QBFT düğüm adresi (aynı sırada).
+     * @param governors  Her kurucunun yönetişim (oy) adresi (aynı sırada; düğüm adresinden farklı — ADR-0086 KG1).
      * @dev   Kurucular oy olmadan ACTIVE başlar (ADR-0002 #3). En az iki kurucu gerekir (ADR-0076 GC4): tek üyeyle asgari
      *        mutlak oy (2) hiçbir zaman dolmaz, yönetişim ilk bloktan kilitli doğardı.
      */
-    function initialize(bytes2[] calldata founders, address[] calldata validators)
+    function initialize(bytes2[] calldata founders, address[] calldata validators, address[] calldata governors)
         external
         initializer
     {
-        if (founders.length < MIN_ABSOLUTE_VOTES || founders.length != validators.length) revert FounderMismatch();
+        uint256 n = founders.length;
+        if (n < MIN_ABSOLUTE_VOTES || n != validators.length || n != governors.length) revert FounderMismatch();
 
-        for (uint256 i = 0; i < founders.length; i++) {
+        for (uint256 i = 0; i < n; i++) {
             // Kontrat denetimi 2026-11-11: sıfır devlet kodu üye olamaz (`proposeStateAdmission` ile aynı kural).
-            if (founders[i] == bytes2(0) || validators[i] == address(0)) revert ZeroAddress();
+            if (founders[i] == bytes2(0)) revert ZeroAddress();
             if (_members[founders[i]].status != MemberStatus.NONE) revert MemberExists(founders[i]);
-            bytes2 used = _validatorToState[validators[i]];
-            if (used != bytes2(0)) revert ValidatorInUse(validators[i], used);
-
-            _members[founders[i]] = StateMember({
-                stateCode: founders[i],
-                validatorAddress: validators[i],
-                status: MemberStatus.ACTIVE,
-                joinedAt: uint64(block.timestamp)
-            });
-            _validatorToState[validators[i]] = founders[i];
-            _memberList.push(founders[i]);
-            _activeCount++;
-            emit StateAdmitted(founders[i], validators[i]);
+            _admit(founders[i], validators[i], governors[i]);
         }
     }
 
@@ -145,7 +146,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
      *         anahtar NETWORK şema kaydını sahte bir kontrata yönlendirebilirdi.
      *         Değişmesi gerekirse protokol yükseltmesiyle (2/3 oy) yapılır.
      */
-    function setSchemaRegistry(address registry) external onlyValidator {
+    function setSchemaRegistry(address registry) external onlyGovernor {
         if (address(schemaRegistry) != address(0)) revert SchemaRegistryAlreadySet();
         if (registry == address(0)) revert ZeroAddress();
         schemaRegistry = ISchemaRegistry(registry);
@@ -175,8 +176,8 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     function setDelegateKeys(bytes2 stateCode, address[] calldata keys) external {
         StateMember storage m = _members[stateCode];
         if (m.status != MemberStatus.ACTIVE) revert UnknownMember(stateCode);
-        // Yalnızca o devletin validator'ı kendi delegate listesini değiştirebilir.
-        if (msg.sender != m.validatorAddress) revert NotValidator(msg.sender);
+        // Yalnızca o devletin yönetişim anahtarı kendi delegate listesini değiştirebilir (ADR-0086: düğüm anahtarı değil).
+        if (msg.sender != m.governanceAddress) revert NotGovernor(msg.sender);
         if (keys.length > MAX_DELEGATES) revert TooManyDelegates(keys.length, MAX_DELEGATES);
 
         _clearDelegates(stateCode);
@@ -201,10 +202,20 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         delete _delegateKeys[stateCode];
     }
 
-    /// @dev Validator adresi başka bir devlete aitse reddeder (yeniden kabulde aynı devletin eski adresi serbesttir).
-    function _requireValidatorFree(address validator, bytes2 stateCode) private view {
+    /// @dev ADR-0086 KG1: düğüm ve yönetişim adresi sıfır değil ve birbirinden farklı; düğüm adresi başka devletin düğüm adresi
+    ///      değil (`ValidatorInUse`, N1), yönetişim adresi başka devletin yönetişim adresi değil; hiçbir adres herhangi bir
+    ///      devlette öteki rolde kullanılmamış (`KeyInUse`). Aynı devletin kendi eski adresi aynı rolde serbesttir (yeniden kabul).
+    function _requireKeysFree(address validator, address governor, bytes2 stateCode) private view {
+        if (validator == address(0) || governor == address(0)) revert ZeroAddress();
+        if (validator == governor) revert KeyInUse(governor, stateCode);
         bytes2 used = _validatorToState[validator];
         if (used != bytes2(0) && used != stateCode) revert ValidatorInUse(validator, used);
+        used = _governanceToState[governor];
+        if (used != bytes2(0) && used != stateCode) revert KeyInUse(governor, used);
+        used = _governanceToState[validator];
+        if (used != bytes2(0)) revert KeyInUse(validator, used);
+        used = _validatorToState[governor];
+        if (used != bytes2(0)) revert KeyInUse(governor, used);
     }
 
     // -----------------------------------------------------------------
@@ -212,14 +223,18 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     // -----------------------------------------------------------------
 
     /// @dev Gövde ayrı fonksiyondadır: değiştirici her kullanımda satır içine kopyalanır (EIP-170 bayt payı).
-    modifier onlyValidator() {
-        _requireValidator();
+    modifier onlyGovernor() {
+        _requireGovernor();
         _;
     }
 
-    function _requireValidator() private view {
-        bytes2 s = _validatorToState[msg.sender];
-        if (s == bytes2(0) || _members[s].status != MemberStatus.ACTIVE) revert NotValidator(msg.sender);
+    /// @dev ADR-0086: çağıran, etkin bir üyenin BUGÜNKÜ yönetişim adresi olmalı (bırakılmış eski anahtar ve düğüm anahtarı değil).
+    function _requireGovernor() private view returns (bytes2 s) {
+        s = _governanceToState[msg.sender];
+        StateMember storage m = _members[s];
+        if (s == bytes2(0) || m.status != MemberStatus.ACTIVE || m.governanceAddress != msg.sender) {
+            revert NotGovernor(msg.sender);
+        }
     }
 
     function _newProposal(ProposalKind kind) private returns (bytes32 id) {
@@ -235,20 +250,59 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @inheritdoc IGovernance
-    function proposeStateAdmission(bytes2 stateCode, address validator)
-        external onlyValidator returns (bytes32 id)
+    function proposeStateAdmission(bytes2 stateCode, address validator, address governance)
+        external onlyGovernor returns (bytes32 id)
     {
-        if (stateCode == bytes2(0) || validator == address(0)) revert ZeroAddress();
+        if (stateCode == bytes2(0)) revert ZeroAddress();
         // Review R7: ACTIVE ise zaten üye; SUSPENDED/WITHDRAWN ise YENİDEN KABUL mümkün.
         if (_members[stateCode].status == MemberStatus.ACTIVE) revert MemberExists(stateCode);
-        _requireValidatorFree(validator, stateCode);
+        _requireKeysFree(validator, governance, stateCode);
         id = _newProposal(ProposalKind.STATE_ADMISSION);
-        _proposals[id].stateCode = stateCode;
-        _proposals[id].validatorAddress = validator;
+        Proposal storage p = _proposals[id];
+        p.stateCode = stateCode;
+        p.validatorAddress = validator;
+        p.governanceAddress = governance;
     }
 
     /// @inheritdoc IGovernance
-    function proposeStateRemoval(bytes2 stateCode, bytes32 reasonHash) external onlyValidator returns (bytes32 id) {
+    /// @dev ADR-0086 KG4: yönetişim anahtarı yalnız oyla değişir; eşik öteki önerilerle aynı (2/3, asgari 2) ve değişen üyenin
+    ///      bugünkü anahtarla verdiği destek oyu ayrıca şarttır (yürütmede denetlenir). Yeni anahtar başka bir devlete ya da
+    ///      herhangi bir devletin düğüm rolüne bağlı olamaz.
+    function proposeGovernanceKeyChange(bytes2 stateCode, address newGovernance)
+        external onlyGovernor returns (bytes32 id)
+    {
+        _requireGovernorChange(stateCode, newGovernance);
+        id = _newProposal(ProposalKind.GOVERNANCE_KEY_CHANGE);
+        Proposal storage p = _proposals[id];
+        p.stateCode = stateCode;
+        p.governanceAddress = newGovernance;
+    }
+
+    /// @dev Öneri açılırken ve yürütülürken aynı denetim (arada üye çıkmış ya da anahtar başka yere bağlanmış olabilir).
+    function _requireGovernorChange(bytes2 stateCode, address governor) private view {
+        StateMember storage m = _members[stateCode];
+        if (m.status != MemberStatus.ACTIVE) revert UnknownMember(stateCode);
+        if (governor == m.governanceAddress) revert KeyInUse(governor, stateCode);
+        _requireKeysFree(m.validatorAddress, governor, stateCode);
+    }
+
+    /// @inheritdoc IGovernance
+    /// @dev ADR-0086 KG3: düğüm anahtarı sürekli çevrimiçi sunucudadır ve zincirde yetkisi yoktur; değiştirilmesi devletin iç
+    ///      işidir (delege listesi gibi), oy gerekmez. Doğrulayıcı kümesinin kendisi QBFT düzeyinde düğümlerin oyuyla değişir.
+    function setValidatorAddress(bytes2 stateCode, address validator) external {
+        StateMember storage m = _members[stateCode];
+        if (m.status != MemberStatus.ACTIVE) revert UnknownMember(stateCode);
+        if (msg.sender != m.governanceAddress) revert NotGovernor(msg.sender);
+        address previous = m.validatorAddress;
+        if (validator == previous) revert ValidatorInUse(validator, stateCode);
+        _requireKeysFree(validator, msg.sender, stateCode);
+        m.validatorAddress = validator;
+        _validatorToState[validator] = stateCode;
+        emit ValidatorAddressChanged(stateCode, previous, validator);
+    }
+
+    /// @inheritdoc IGovernance
+    function proposeStateRemoval(bytes2 stateCode, bytes32 reasonHash) external onlyGovernor returns (bytes32 id) {
         if (_members[stateCode].status != MemberStatus.ACTIVE) revert UnknownMember(stateCode);
         if (_activeCount <= 1) revert LastValidator();
         id = _newProposal(ProposalKind.STATE_REMOVAL);
@@ -258,7 +312,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function proposeProtocolUpgrade(address target, address newImplementation)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         id = _proposeUpgrade(target, newImplementation);
     }
@@ -287,7 +341,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function proposeProtocolUpgradeAndInit(address target, address newImplementation, bytes4 initSelector)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         id = _proposeUpgrade(target, newImplementation);
         _upgradeQueue[id].initSelector = initSelector;
@@ -295,7 +349,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function proposeNetworkSchema(ISchemaRegistry.SchemaRecord calldata rec)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         if (rec.tier != ISchemaRegistry.SchemaTier.NETWORK) revert NotNetworkTier();
         // ADR-0054 NS1: devlet-özel ad alanındaki bir vct ağ şeması olarak önerilemez
@@ -335,7 +389,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function proposeAnchorerChange(address registry, address anchorer, bool allowed)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         if (anchorer == address(0)) revert ZeroAddress();
         AdminPayload storage a;
@@ -345,7 +399,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @inheritdoc IGovernance
-    function proposeAnchorThreshold(address registry, uint8 required) external onlyValidator returns (bytes32 id) {
+    function proposeAnchorThreshold(address registry, uint8 required) external onlyGovernor returns (bytes32 id) {
         AdminPayload storage a;
         (id, a) = _newAdmin(AdminAction.SET_ANCHOR_THRESHOLD, registry);
         a.required = required;
@@ -353,7 +407,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function proposeFounderRecognition(address registry, bytes2[] calldata founders)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         if (founders.length < 2 || founders.length > MAX_FOUNDERS) revert FounderMismatch();
         AdminPayload storage a;
@@ -363,7 +417,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function proposeNetworkSchemaDeprecation(bytes32 schemaId, bytes32 supersededBy)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         AdminPayload storage a;
         (id, a) = _newSchemaAdmin(AdminAction.DEPRECATE_NETWORK_SCHEMA, schemaId);
@@ -372,7 +426,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function proposeNetworkSchemaRevocation(bytes32 schemaId, bytes32 reasonHash)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         AdminPayload storage a;
         (id, a) = _newSchemaAdmin(AdminAction.REVOKE_NETWORK_SCHEMA, schemaId);
@@ -385,7 +439,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
 
     /// @inheritdoc IGovernance
     function proposeMigrationOpen(address registry, bytes32 replayPlanHash, uint64 window, address executor)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         if (replayPlanHash == bytes32(0) || window == 0 || window > MAX_MIGRATION_WINDOW) {
             revert InvalidMigrationProposal();
@@ -398,20 +452,20 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @inheritdoc IGovernance
-    function proposeMigrationExtend(address registry, uint64 deadline) external onlyValidator returns (bytes32 id) {
+    function proposeMigrationExtend(address registry, uint64 deadline) external onlyGovernor returns (bytes32 id) {
         AdminPayload storage a;
         (id, a) = _newAdmin(AdminAction.EXTEND_MIGRATION, registry);
         a.window = deadline;
     }
 
     /// @inheritdoc IGovernance
-    function proposeMigrationClose(address registry) external onlyValidator returns (bytes32 id) {
+    function proposeMigrationClose(address registry) external onlyGovernor returns (bytes32 id) {
         (id, ) = _newAdmin(AdminAction.CLOSE_MIGRATION, registry);
     }
 
     /// @inheritdoc IGovernance
     function proposeNetworkSchemaContentHash(bytes32 schemaId, bytes32 contentHash)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         AdminPayload storage a;
         (id, a) = _newSchemaAdmin(AdminAction.ADD_NETWORK_SCHEMA_HASH, schemaId);
@@ -419,20 +473,20 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @inheritdoc IGovernance
-    function proposeNetworkRecord(address registry, bytes32 stageId) external onlyValidator returns (bytes32 id) {
+    function proposeNetworkRecord(address registry, bytes32 stageId) external onlyGovernor returns (bytes32 id) {
         id = _proposeStaged(AdminAction.NETWORK_RECORD, registry, stageId);
     }
 
     /// @inheritdoc IGovernance
     function proposeRelyingPartyReassignment(address registry, bytes32 stageId)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         id = _proposeStaged(AdminAction.REASSIGN_RELYING_PARTY, registry, stageId);
     }
 
     /// @inheritdoc IGovernance
     function proposeRelyingPartyReRegistration(address registry, bytes32 stageId)
-        external onlyValidator returns (bytes32 id)
+        external onlyGovernor returns (bytes32 id)
     {
         id = _proposeStaged(AdminAction.REREGISTER_RELYING_PARTY, registry, stageId);
     }
@@ -449,22 +503,23 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     // -----------------------------------------------------------------
 
     /// @inheritdoc IGovernance
-    function vote(bytes32 proposalId, bool support) external onlyValidator {
+    function vote(bytes32 proposalId, bool support) external {
+        bytes2 voter = _requireGovernor();
         Proposal storage p = _openProposal(proposalId);
         _requireVotable(p, proposalId);
 
         // ADR-0002: çıkarma oylamasında çıkarılanın oyu SAYILMAZ.
-        if (p.kind == ProposalKind.STATE_REMOVAL && _validatorToState[msg.sender] == p.stateCode) {
-            revert NotValidator(msg.sender);
+        if (p.kind == ProposalKind.STATE_REMOVAL && voter == p.stateCode) {
+            revert NotGovernor(msg.sender);
         }
 
         if (_hasVoted[proposalId][msg.sender]) {
             // Oy değiştirme (kontrol 2026-11-10): öneri yürütülene kadar — kuyruktaki yükseltme dahil — üye oyunu çevirebilir.
             // Aynı yönde ikinci oy yine reddedilir (çift sayım yok).
-            // Tek istisna: üyenin son kabulünden ÖNCE verilmiş (artık sayılmayan) oy aynı yönde yeniden verilebilir — sayaçlar
-            // değişmez, yalnız oyun zamanı tazelenir.
+            // Tek istisna: anahtarın bu üyeye son bağlanışından (kabul ya da anahtar değişikliği) ÖNCE verilmiş, artık sayılmayan
+            // oy aynı yönde yeniden verilebilir — sayaçlar değişmez, yalnız oyun zamanı tazelenir.
             if (_support[proposalId][msg.sender] == support) {
-                if (_votedAt[proposalId][msg.sender] >= _members[_validatorToState[msg.sender]].joinedAt) {
+                if (_votedAt[proposalId][msg.sender] >= _members[voter].governanceSince) {
                     revert AlreadyVoted(proposalId, msg.sender);
                 }
             } else if (support) {
@@ -485,7 +540,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @inheritdoc IGovernance
-    function retractVote(bytes32 proposalId) external onlyValidator {
+    function retractVote(bytes32 proposalId) external onlyGovernor {
         Proposal storage p = _openProposal(proposalId);
         _requireVotable(p, proposalId);
         if (!_hasVoted[proposalId][msg.sender]) revert NoVote(proposalId, msg.sender);
@@ -563,7 +618,9 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         emit ProposalExecuted(proposalId);
 
         if (p.kind == ProposalKind.STATE_ADMISSION) {
-            _admit(p.stateCode, p.validatorAddress);
+            _readmitOrAdmit(p.stateCode, p.validatorAddress, p.governanceAddress);
+        } else if (p.kind == ProposalKind.GOVERNANCE_KEY_CHANGE) {
+            _changeGovernor(proposalId, p.stateCode, p.governanceAddress);
         } else if (p.kind == ProposalKind.STATE_REMOVAL) {
             _remove(p.stateCode, _removalReason[proposalId]);
         } else if (p.kind == ProposalKind.PROTOCOL_UPGRADE) {
@@ -584,7 +641,7 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     }
 
     /// @inheritdoc IGovernance
-    function cancelProposal(bytes32 proposalId) external onlyValidator {
+    function cancelProposal(bytes32 proposalId) external onlyGovernor {
         Proposal storage p = _proposals[proposalId];
         if (p.status != ProposalStatus.OPEN) revert ProposalNotOpen(proposalId);
         if (msg.sender != p.proposer) revert NotProposer(msg.sender);
@@ -631,17 +688,18 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
         if (ok && state.length != 160) ok = false; // beş sözcük: (phase, openedAt, deadline, replayPlanHash, executor)
     }
 
-    /// @dev Destek oylarını bugünkü ACTIVE üyelerin bugünkü validator adresinden sayar; çıkarma hedefi sayılmaz.
-    ///      Oy, üyenin son kabulünden sonra verilmiş olmalıdır (`_votedAt` ≥ `joinedAt`): yeniden kabul edilen üyenin önceki
-    ///      üyelik dönemindeki oyu sayılmaz; üye oyunu yeniden verir. Üye sayısı küçüktür (devlet sayısı); döngü sınırlıdır.
+    /// @dev Destek oylarını bugünkü ACTIVE üyelerin bugünkü YÖNETİŞİM adresinden sayar (ADR-0086); çıkarma hedefi sayılmaz.
+    ///      Oy, anahtarın bu üyeye son bağlanışından sonra verilmiş olmalıdır (`_votedAt` ≥ `governanceSince`; kabulde ve anahtar
+    ///      değişikliğinde yazılır): yeniden kabul edilen üyenin önceki dönemdeki oyu da, değiştirilen eski anahtarın oyu da
+    ///      sayılmaz; üye oyunu yeni anahtarla yeniden verir. Üye sayısı küçüktür (devlet sayısı); döngü sınırlıdır.
     function _countedForVotes(bytes32 proposalId, bytes2 excluded) private view returns (uint32 n) {
         uint256 len = _memberList.length;
         for (uint256 i = 0; i < len; i++) {
             bytes2 s = _memberList[i];
             StateMember storage m = _members[s];
             if (m.status != MemberStatus.ACTIVE || s == excluded) continue;
-            address v = m.validatorAddress;
-            if (_hasVoted[proposalId][v] && _support[proposalId][v] && _votedAt[proposalId][v] >= m.joinedAt) n++;
+            address v = m.governanceAddress;
+            if (_hasVoted[proposalId][v] && _support[proposalId][v] && _votedAt[proposalId][v] >= m.governanceSince) n++;
         }
     }
 
@@ -655,27 +713,49 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     // Üyelik
     // -----------------------------------------------------------------
 
-    function _admit(bytes2 stateCode, address validator) private {
+    /// @dev Kabul yürütmesi: öneri ile yürütme arasında üye başka bir öneriyle kabul edilmiş olabilir. Yeniden kabulde eski
+    ///      delegate anahtarları düşer; eski düğüm ve yönetişim adresleri bu devlete bağlı kalır (başka devlet alamaz), yeni dönemde
+    ///      aynı adresler aynı rolde yeniden verilebilir.
+    function _readmitOrAdmit(bytes2 stateCode, address validator, address governor) private {
+        MemberStatus st = _members[stateCode].status;
+        if (st == MemberStatus.ACTIVE) revert MemberExists(stateCode);
+        if (st != MemberStatus.NONE) _clearDelegates(stateCode);
+        _admit(stateCode, validator, governor);
+    }
+
+    function _admit(bytes2 stateCode, address validator, address governor) private {
+        _requireKeysFree(validator, governor, stateCode); // öneri ile yürütme arasında adres başka devlete geçmiş olabilir
         StateMember storage m = _members[stateCode];
-        if (m.status == MemberStatus.ACTIVE) revert MemberExists(stateCode);
-        _requireValidatorFree(validator, stateCode); // öneri ile yürütme arasında adres başka devlete geçmiş olabilir
-
-        bool readmission = (m.status != MemberStatus.NONE);
-        if (readmission) {
-            // Eski validator eşlemesini temizle; eski delegate anahtarları da düşer.
-            if (_validatorToState[m.validatorAddress] == stateCode) delete _validatorToState[m.validatorAddress];
-            _clearDelegates(stateCode);
-        } else {
-            _memberList.push(stateCode);
-        }
-
+        if (m.status == MemberStatus.NONE) _memberList.push(stateCode);
+        uint64 now_ = uint64(block.timestamp);
         m.stateCode = stateCode;
         m.validatorAddress = validator;
         m.status = MemberStatus.ACTIVE;
-        m.joinedAt = uint64(block.timestamp);
+        m.joinedAt = now_;
+        m.governanceAddress = governor;
+        m.governanceSince = now_;
         _validatorToState[validator] = stateCode;
+        _governanceToState[governor] = stateCode;
         _activeCount++;
-        emit StateAdmitted(stateCode, validator);
+        emit StateAdmitted(stateCode, validator, governor);
+    }
+
+    /// @dev ADR-0086 KG4. Eşiğe ek olarak değişen üyenin BUGÜNKÜ anahtarıyla verdiği destek oyu şarttır (KG4): öteki üyeler bir
+    ///      devletin anahtarını onun rızası olmadan değiştirip delege listesini (ulusal kayıtlarını, N1) ele geçiremez. Eski anahtar
+    ///      eşlemede kalır ama yetkisi düşer (`_requireGovernor` bugünkü adrese bakar); eski anahtarla verilmiş açık oylar sayılmaz
+    ///      (`governanceSince`), üye yeni anahtarla yeniden oy verir.
+    function _changeGovernor(bytes32 proposalId, bytes2 stateCode, address governor) private {
+        _requireGovernorChange(stateCode, governor);
+        StateMember storage m = _members[stateCode];
+        address g = m.governanceAddress;
+        if (!(_hasVoted[proposalId][g] && _support[proposalId][g] && _votedAt[proposalId][g] >= m.governanceSince)) {
+            revert KeyChangeNeedsOwnVote(stateCode);
+        }
+        address previous = m.governanceAddress;
+        m.governanceAddress = governor;
+        m.governanceSince = uint64(block.timestamp);
+        _governanceToState[governor] = stateCode;
+        emit GovernanceAddressChanged(stateCode, previous, governor);
     }
 
     /**
@@ -697,8 +777,8 @@ contract Governance is Initializable, UUPSUpgradeable, IGovernance, ISovereignty
     /// @dev ADR-0076 GC1: çıkıştan sonra etkin üye sayısı asgari mutlak oyun (2) altına inemez. İki üyeli ağda tek üye
     ///      kalsaydı hiçbir öneri yürütülemez, yeni üye kabul edilemezdi (yönetişim kalıcı kilitlenirdi); çıkmak isteyen
     ///      üye önce üçüncü üyenin kabulünü bekler.
-    function withdraw() external onlyValidator {
-        bytes2 s = _validatorToState[msg.sender];
+    function withdraw() external {
+        bytes2 s = _requireGovernor();
         if (_activeCount <= MIN_ABSOLUTE_VOTES) revert TooFewMembers(_activeCount, MIN_ABSOLUTE_VOTES + 1);
         _members[s].status = MemberStatus.WITHDRAWN;
         _activeCount--;

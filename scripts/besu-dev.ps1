@@ -51,7 +51,9 @@ $DevAccounts = @(
   "3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", "90F79bf6EB2c4f870365E785982E1f101E93b906",
   "15d34AAf54267DB7D7c367839AAf71A00a2C6A65", "9965507D1a55bcC2695C58ba16FB37d819B0A4dc",
   "976EA74026E726554dB657fA54763abd0C3a0aa9", "14dC79964da2C08b23698B3D3cc7Ca32193d9955",
-  "23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f", "a0Ee7A142d267C1f36714E4a8F75612F20a79720"
+  "23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f", "a0Ee7A142d267C1f36714E4a8F75612F20a79720",
+  # ADR-0086 K1: kurucuların yönetişim (oy) anahtarları #11 (TR), #12 (KZ) — düğüm hesabı + 10 (contracts/scripts/deploy-dev.ts)
+  "71bE63f3384f5fb98995898A86B02Fb2426c5788", "FABB0ac9d68B0B445fB7357272Ff202C5651694a"
 )
 
 # --- Yollar -------------------------------------------------------------------------------------------------------------
@@ -378,7 +380,8 @@ $alloc
 
 # Kontratlardan önceki ilk izin dosyası (ADR-0052 K2 "Başlangıç"): kurucu doğrulayıcının düğümü + yerel dağıtımın hesapları
 function Write-PermBootstrap($n) {
-  $accts = ($DevAccounts[0..4] | ForEach-Object { "  `"0x$($_.ToLower())`"," }) -join "`n"
+  # dağıtan #0, düğüm hesapları #1 #2, delegeler #3 #4 ve kurucuların yönetişim anahtarları #11 #12 (ADR-0086 K1)
+  $accts = (($DevAccounts[0..4] + $DevAccounts[10..11]) | ForEach-Object { "  `"0x$($_.ToLower())`"," }) -join "`n"
   $toml = "# BASLANGIC (kontratlardan once) - kontratlar kurulunca -Apply zincirden yeniden uretir`n" +
     "accounts-allowlist=[`n$accts`n]`nnodes-allowlist=[`n  `"$(PermEnode 1)`",`n]`n"
   Write-Utf8NoBom (PermConfig $n) $toml

@@ -1,6 +1,6 @@
 /**
  * ADR-0052 K2/K3 (LP2, LP3) — `trust:chain-permissions render` gerçek kontrat durumundan (süreç içi Hardhat zinciri, C33 (2)):
- *   - hesap listesi = aktif validator'lar + aktif devletlerin delegeleri + çalışır durumdaki kurumların delegeleri + liste çapası
+ *   - hesap listesi = aktif üyelerin yönetişim anahtarları (ADR-0086 K4; düğüm anahtarı değil) + aktif devletlerin delegeleri + çalışır durumdaki kurumların delegeleri + liste çapası
  *     yazıcıları; yetkisiz hesap yok;
  *   - düğüm listesi = bildirimi Governance'taki validator adresiyle eşleşen validator düğümleri; eşleşmeyen reddedilir;
  *   - belirleyicilik: aynı zincir durumu (aynı blok ya da durum değişmeden ilerleyen bloklar, farklı okuma sırası) → bayt bayt
@@ -53,23 +53,24 @@ describe("ADR-0052 — trust:chain-permissions render (kontrat durumundan)", fun
     const c = connectTrustContracts(f.addresses as any, provider);
     return ethersPermissionsReader(c, anchorAddr, provider);
   };
-  // fikstür: #1 TR, #2 KZ, #3 AZ validator; #4 TR delegesi, #5 KZ delegesi, #6 üniversite delegesi, #7 yabancı
+  // fikstür: #1 TR, #2 KZ, #3 AZ yönetişim anahtarı; #17 TR, #18 KZ, #19 AZ düğüm (validator) anahtarı (ADR-0086 K1);
+  // #4 TR delegesi, #5 KZ delegesi, #6 üniversite delegesi, #7 yabancı
   const declarations = () => [
-    { file: "az.json", decl: decl("AZ", 3, 30305) },
-    { file: "kz.json", decl: decl("KZ", 2, 30304) },
-    { file: "tr.json", decl: decl("TR", 1, 30303) },
+    { file: "az.json", decl: decl("AZ", 19, 30305) },
+    { file: "kz.json", decl: decl("KZ", 18, 30304) },
+    { file: "tr.json", decl: decl("TR", 17, 30303) },
     { file: "tr-rpc.json", decl: decl("TR", 8, 30310, "rpc") },
     { file: "kz-wrong.json", decl: { ...decl("KZ", 9, 30399), state: "KZ" } }, // #9 KZ validator'ı değil
   ];
 
-  it("hesaplar: validator + devlet delegesi + kurum delegesi + yazıcı; yabancı yok; düğümler eşleşmeyle", async () => {
+  it("hesaplar: yönetişim anahtarı + devlet delegesi + kurum delegesi + yazıcı; düğüm anahtarı ve yabancı yok", async () => {
     const st = await readPermissionsState(reader());
     const r = renderPermissions(st, declarations(), "TR");
     const addr = async (s: { getAddress(): Promise<string> }) => (await s.getAddress()).toLowerCase();
     const expected = [
-      await addr(f.trValidator),
-      await addr(f.kzValidator),
-      await addr(f.azValidator),
+      await addr(f.trGov),
+      await addr(f.kzGov),
+      await addr(f.azGov),
       await addr(f.trDelegate),
       await addr(f.kzDelegate),
       await addr(f.uniOperator),
@@ -77,6 +78,9 @@ describe("ADR-0052 — trust:chain-permissions render (kontrat durumundan)", fun
     ];
     expect(r.accounts).to.deep.equal([...new Set(expected)].sort());
     expect(r.accounts).to.not.include(await addr(f.stranger));
+    // ADR-0086 K4: düğüm anahtarı zincirde işlem göndermez → hesap listesinde değil
+    expect(r.accounts).to.not.include(f.trNode.toLowerCase());
+    expect(st.accounts.get(await addr(f.trGov))).to.deep.equal(new Set(["governance"]));
     expect(st.accounts.get(await addr(f.uniOperator))).to.deep.equal(new Set(["issuer-delegate"]));
     // düğümler: üç validator + TR'nin kendi RPC düğümü; #9 reddedildi
     expect(r.nodes).to.have.length(4);
@@ -113,7 +117,7 @@ describe("ADR-0052 — trust:chain-permissions render (kontrat durumundan)", fun
 
   it("liste zinciri izler: kurum askısı, yazıcı kaldırma ve devlet çıkarılması", async () => {
     const uni = (await f.uniOperator.getAddress()).toLowerCase();
-    const azV = (await f.azValidator.getAddress()).toLowerCase();
+    const azV = (await f.azGov.getAddress()).toLowerCase();
     await (await f.as(f.issuers, f.trDelegate).suspendIssuer(f.uniIssuer)).wait();
     let r = renderPermissions(await readPermissionsState(reader()), declarations(), null);
     expect(r.accounts).to.not.include(uni);
@@ -124,7 +128,7 @@ describe("ADR-0052 — trust:chain-permissions render (kontrat durumundan)", fun
     r = renderPermissions(await readPermissionsState(reader()), declarations(), null);
     expect(r.accounts).to.not.include(anchorers[1].toLowerCase());
 
-    const rc = await (await f.as(f.governance, f.kzValidator).proposeStateRemoval(AZ, id("gerekçe"))).wait();
+    const rc = await (await f.as(f.governance, f.kzGov).proposeStateRemoval(AZ, id("gerekçe"))).wait();
     const pid = rc!.logs
       .map((l: any) => {
         try {
@@ -134,8 +138,8 @@ describe("ADR-0052 — trust:chain-permissions render (kontrat durumundan)", fun
         }
       })
       .find((e: any) => e?.name === "ProposalCreated")!.args.id;
-    await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
-    await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
+    await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
+    await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
     await (await (f.governance as any).execute(pid)).wait();
     r = renderPermissions(await readPermissionsState(reader()), declarations(), null);
     expect(r.accounts).to.not.include(azV);

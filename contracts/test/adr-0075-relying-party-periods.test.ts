@@ -86,7 +86,7 @@ describe("ADR-0075 — doğrulayıcı kimliğinin sahipliği ve kayıt dönemler
     await expect(reg.connect(f.stranger).stagePeriodChange(c))
       .to.emit(reg, "PeriodChangeStaged")
       .withArgs(stageId, c.rpId, c.action, (await reg.registrationPeriodsOf(c.rpId)).length);
-    const g = f.as(f.governance, f.trValidator) as any;
+    const g = f.as(f.governance, f.trGov) as any;
     const target = await reg.getAddress();
     const pid = await proposalId(
       kind === "reassign"
@@ -94,8 +94,8 @@ describe("ADR-0075 — doğrulayıcı kimliğinin sahipliği ve kayıt dönemler
         : await g.proposeRelyingPartyReRegistration(target, stageId),
       f,
     );
-    await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-    await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+    await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+    await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
     return { pid, stageId };
   }
 
@@ -127,12 +127,12 @@ describe("ADR-0075 — doğrulayıcı kimliğinin sahipliği ve kayıt dönemler
     const stageId = await reg.periodChangeIdOf(c);
     await (await reg.connect(f.stranger).stagePeriodChange(c)).wait();
     const pid1 = await proposalId(
-      await (f.as(f.governance, f.trValidator) as any).proposeRelyingPartyReassignment(await reg.getAddress(), stageId),
+      await (f.as(f.governance, f.trGov) as any).proposeRelyingPartyReassignment(await reg.getAddress(), stageId),
       f,
     );
-    await (await f.as(f.governance, f.trValidator).vote(pid1, true)).wait();
+    await (await f.as(f.governance, f.trGov).vote(pid1, true)).wait();
     await expect(f.governance.execute(pid1)).to.be.revertedWithCustomError(f.governance, "ThresholdNotMet");
-    await (await f.as(f.governance, f.kzValidator).vote(pid1, true)).wait();
+    await (await f.as(f.governance, f.kzGov).vote(pid1, true)).wait();
 
     await networkHelpers.time.increase(60);
     await expect(f.governance.execute(pid1))
@@ -286,13 +286,13 @@ describe("ADR-0075 — doğrulayıcı kimliğinin sahipliği ve kayıt dönemler
 
   it("göç penceresi: Governance pencerede tarihsiz yazar; yeniden oynatılan geçmiş dönem 0'da kalır, yeni dönem bugünden başlar", async () => {
     const plan = id("replay-plan-v1");
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const open = await proposalId(
       await g.proposeMigrationOpen(await reg.getAddress(), plan, 7 * DAY, ethers.ZeroAddress),
       f,
     );
-    await (await f.as(f.governance, f.trValidator).vote(open, true)).wait();
-    await (await f.as(f.governance, f.kzValidator).vote(open, true)).wait();
+    await (await f.as(f.governance, f.trGov).vote(open, true)).wait();
+    await (await f.as(f.governance, f.kzGov).vote(open, true)).wait();
     await (await f.governance.execute(open)).wait();
     expect(await reg.isMigrationOpen()).to.equal(true);
 
@@ -346,13 +346,13 @@ describe("ADR-0075 — doğrulayıcı kimliğinin sahipliği ve kayıt dönemler
 
     // göç kipinde: listedeki geçmiş an (askı → dönüş → iptal), sıralı ve blok zamanından ileri değil
     const RP2 = id("shop.example.tr");
-    const g = f.as(f.governance, f.trValidator);
+    const g = f.as(f.governance, f.trGov);
     const open = await proposalId(
       await g.proposeMigrationOpen(await reg.getAddress(), id("replay-plan-v2"), 7 * DAY, ethers.ZeroAddress),
       f,
     );
-    await (await f.as(f.governance, f.trValidator).vote(open, true)).wait();
-    await (await f.as(f.governance, f.kzValidator).vote(open, true)).wait();
+    await (await f.as(f.governance, f.trGov).vote(open, true)).wait();
+    await (await f.as(f.governance, f.kzGov).vote(open, true)).wait();
     await (await f.governance.execute(open)).wait();
     const now = await f.now();
     const reg0 = now - 90 * DAY;

@@ -28,6 +28,7 @@ import {
   loadFixture,
   networkHelpers,
   type Fixture,
+  nodeOf,
 } from "./helpers/fixture.js";
 
 const PLAN = id("plan-2026-11-12-contracts");
@@ -46,12 +47,12 @@ async function proposalId(tx: any, f: Fixture): Promise<string> {
   throw new Error("ProposalCreated yok");
 }
 async function pass(f: Fixture, pid: string) {
-  await (await f.as(f.governance, f.trValidator).vote(pid, true)).wait();
-  await (await f.as(f.governance, f.kzValidator).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.trGov).vote(pid, true)).wait();
+  await (await f.as(f.governance, f.kzGov).vote(pid, true)).wait();
 }
 async function openMigration(f: Fixture, registry: any, executor = ethers.ZeroAddress) {
   const pid = await proposalId(
-    await f.as(f.governance, f.trValidator).proposeMigrationOpen(await registry.getAddress(), PLAN, 7 * DAY, executor),
+    await f.as(f.governance, f.trGov).proposeMigrationOpen(await registry.getAddress(), PLAN, 7 * DAY, executor),
     f,
   );
   await pass(f, pid);
@@ -194,13 +195,13 @@ describe("Kontrat denetimi 2026-11-12", function () {
       const key = await fresh.getAddress();
       const gov = f.governance as any;
       // KZ, TR'nin kullanacağı anahtarı önce kendi listesine yazar (önden koşma)
-      await (await f.as(gov, f.kzValidator).setDelegateKeys(KZ, [await f.kzDelegate.getAddress(), key])).wait();
+      await (await f.as(gov, f.kzGov).setDelegateKeys(KZ, [await f.kzDelegate.getAddress(), key])).wait();
       // TR yine de atar (önce: DelegateKeyInUse ile düşerdi)
-      await (await f.as(gov, f.trValidator).setDelegateKeys(TR, [await f.trDelegate.getAddress(), key])).wait();
+      await (await f.as(gov, f.trGov).setDelegateKeys(TR, [await f.trDelegate.getAddress(), key])).wait();
       expect(await gov.isDelegateOf(key, TR)).to.equal(true);
       await (await f.as(f.rootCAs, fresh).updateCrlURI(f.trCA, "https://pki.example/tr.crl")).wait();
       // KZ listesini boşaltır: TR'nin eşlemesi durur
-      await (await f.as(gov, f.kzValidator).setDelegateKeys(KZ, [])).wait();
+      await (await f.as(gov, f.kzGov).setDelegateKeys(KZ, [])).wait();
       expect(await gov.isDelegateOf(key, KZ)).to.equal(false);
       expect(await gov.isDelegateOf(key, TR)).to.equal(true);
       expect(await gov.delegateKeysOf(TR)).to.deep.equal([await f.trDelegate.getAddress(), key]);
@@ -210,7 +211,7 @@ describe("Kontrat denetimi 2026-11-12", function () {
       const f = await loadFixture();
       const gov = f.governance as any;
       const kzKey = await f.kzDelegate.getAddress();
-      await (await f.as(gov, f.trValidator).setDelegateKeys(TR, [await f.trDelegate.getAddress(), kzKey])).wait();
+      await (await f.as(gov, f.trGov).setDelegateKeys(TR, [await f.trDelegate.getAddress(), kzKey])).wait();
       expect(await gov.isDelegateOf(kzKey, KZ)).to.equal(true); // KZ'nin yetkisi yerinde
       // TR'nin kendi delegesi KZ adına yazamaz (N1)
       await expect(f.registerCA(KZ, f.trDelegate, id("KZ-ROOT-BY-TR"))).to.be.revertedWithCustomError(
@@ -218,7 +219,7 @@ describe("Kontrat denetimi 2026-11-12", function () {
         "NotOwnerState",
       );
       // TR listesini değiştirince yalnız TR'nin eşlemesi düşer
-      await (await f.as(gov, f.trValidator).setDelegateKeys(TR, [])).wait();
+      await (await f.as(gov, f.trGov).setDelegateKeys(TR, [])).wait();
       expect(await gov.isDelegateOf(kzKey, TR)).to.equal(false);
       expect(await gov.isDelegateOf(kzKey, KZ)).to.equal(true);
       expect(await gov.isDelegateOf(await f.trDelegate.getAddress(), TR)).to.equal(false);
@@ -293,7 +294,7 @@ describe("Kontrat denetimi 2026-11-12", function () {
       // Governance (kipin yöneticisi) pencere açıkken de tarihsiz ağ şeması kaydeder
       const pid = await proposalId(
         await f
-          .as(f.governance, f.trValidator)
+          .as(f.governance, f.trGov)
           .proposeNetworkSchema(f.schemaRecord("urn:tamga:edu:Voted:1", SchemaTier.NETWORK, "0x0000")),
         f,
       );
@@ -325,14 +326,16 @@ describe("Kontrat denetimi 2026-11-12", function () {
       const [, , , , , , , , newValidator] = await ethers.getSigners();
       const gov = f.governance as any;
       const pid = await proposalId(
-        await f.as(gov, f.trValidator).proposeStateAdmission(UZ, await newValidator.getAddress()),
+        await f
+          .as(gov, f.trGov)
+          .proposeStateAdmission(UZ, nodeOf(await newValidator.getAddress()), await newValidator.getAddress()),
         f,
       );
       await pass(f, pid);
       expect(await gov.countedForVotes(pid)).to.equal(2);
       // oy zamanını tutmayan sürümden yükseltilmiş gibi: oylar duruyor, zamanları yok
-      await clearVoteTime(f, pid, await f.trValidator.getAddress());
-      await clearVoteTime(f, pid, await f.kzValidator.getAddress());
+      await clearVoteTime(f, pid, await f.trGov.getAddress());
+      await clearVoteTime(f, pid, await f.kzGov.getAddress());
       expect(await gov.countedForVotes(pid)).to.equal(0);
       await expect(gov.execute(pid)).to.be.revertedWithCustomError(gov, "ThresholdNotMet").withArgs(0, 2);
       // kilit değil: aynı yönde yeniden oy kabul edilir (AlreadyVoted yok), ham sayaç şişmez
@@ -348,13 +351,13 @@ describe("Kontrat denetimi 2026-11-12", function () {
       const gov = f.governance as any;
       const impl = await ethers.deployContract("IssuerRegistry");
       const pid = await proposalId(
-        await f.as(gov, f.trValidator).proposeProtocolUpgrade(await f.issuers.getAddress(), await impl.getAddress()),
+        await f.as(gov, f.trGov).proposeProtocolUpgrade(await f.issuers.getAddress(), await impl.getAddress()),
         f,
       );
       await pass(f, pid);
       await (await gov.execute(pid)).wait(); // kuyruk
-      await clearVoteTime(f, pid, await f.trValidator.getAddress());
-      await clearVoteTime(f, pid, await f.kzValidator.getAddress());
+      await clearVoteTime(f, pid, await f.trGov.getAddress());
+      await clearVoteTime(f, pid, await f.kzGov.getAddress());
       await networkHelpers.time.increase(7 * DAY + 1);
       await expect(gov.execute(pid)).to.be.revertedWithCustomError(gov, "ThresholdNotMet");
       await pass(f, pid); // bekleme süresi dolduktan sonra da (eta + 30 gün içinde) oy verilebilir

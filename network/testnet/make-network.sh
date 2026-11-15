@@ -11,11 +11,12 @@
 #                   written and the contracts cannot be set up on it (node-level checks only).
 #   --extra E       further nodes that start as full nodes and are voted in later (default 1; deploy-and-wire.sh uses it)
 #   --keys dev      (default) node keys = Hardhat's PUBLIC test accounts #1 #2 #6 #7 #8 — so the QBFT validator address =
-#                   the Governance validator address = the enode address (ADR-0052 K2) with the repository's local deploy
-#                   script. TEST ONLY: everybody knows these keys.
+#                   the Governance validator (node) address = the enode address (ADR-0052 K2) with the repository's local deploy
+#                   script; each state's governance (vote) key is the node account + 10 (#11 #12 #16 #17 #18, ADR-0086 K1).
+#                   TEST ONLY: everybody knows these keys.
 #   --keys generate fresh random keys (`besu operator generate-blockchain-config`) — test servers (GUIDE-0018 path C): node keys
 #                   AND the role keys of the key map <dir>/keys/keys.json (tamga-chain-keys/1: deployer, migration executor,
-#                   two list anchorers, one delegate per state; 0600). Chain id 31339 (default in this mode; 31337/31338 are
+#                   two list anchorers, one governance key and one delegate per state; 0600). Chain id 31339 (default in this mode; 31337/31338 are
 #                   refused — they are the local ids of the public test keys). Governance is then set up by
 #                   bootstrap-governance.sh (deploy-and-wire.sh refuses this mode). TEST ONLY — production keys live in HSMs.
 #   --hosts         one IP per node (real test servers, one node per host): P2P listens on that IP, ports 30303 / RPC 8545.
@@ -119,14 +120,26 @@ declare -A DEV_ADDR=(
   [7]=14dc79964da2c08b23698b3d3cc7ca32193d9955
   [8]=23618e81e3f5cdf7f54c3d65f7fbc0abf5b21e8f
 )
+# ADR-0086 K1: each state's governance (vote) key — Hardhat account node index + 10 (testnet.mjs and deploy-dev.ts use the same
+# rule). They sign Governance transactions, so they are funded and on the start-up account list; node keys only sign blocks.
+declare -A DEV_GOV_ADDR=(
+  [1]=71be63f3384f5fb98995898a86b02fb2426c5788
+  [2]=fabb0ac9d68b0b445fb7357272ff202c5651694a
+  [6]=2546bcd3c84621e976d8185a91a922ae77ecec30
+  [7]=bda5747bfd65f08deb54cb465eb87d40e51b197e
+  [8]=dd2fd4581271e230360230f9337d5c0430bf44c0
+)
 # accounts allowed before the contracts exist (ADR-0052 K2 "start-up"): deployer #0 and the TR/KZ delegates #3/#4 of the local
 # deploy script; the validators' own addresses are added below. --keys generate: the generated deployer only (below).
 BOOT_ACCOUNTS=(f39fd6e51aad88f6f4ce6ab8827279cfffb92266 90f79bf6eb2c4f870365e785982e1f101e93b906 15d34aaf54267db7d7c367839aaf71a00a2c6a65)
 ALLOC_ACCOUNTS=(f39fd6e51aad88f6f4ce6ab8827279cfffb92266 70997970c51812dc3a010c7d01b50e0d17dc79c8
   3c44cdddb6a900fa2b585dd299e03d12fa4293bc 90f79bf6eb2c4f870365e785982e1f101e93b906 15d34aaf54267db7d7c367839aaf71a00a2c6a65
   9965507d1a55bcc2695c58ba16fb37d819b0a4dc 976ea74026e726554db657fa54763abd0c3a0aa9 14dc79964da2c08b23698b3d3cc7ca32193d9955
-  23618e81e3f5cdf7f54c3d65f7fbc0abf5b21e8f a0ee7a142d267c1f36714e4a8f75612f20a79720)
+  23618e81e3f5cdf7f54c3d65f7fbc0abf5b21e8f a0ee7a142d267c1f36714e4a8f75612f20a79720
+  "${DEV_GOV_ADDR[@]}")
 if [ "$KEYS" = dev ]; then
+  # governance keys of every node's state (ADR-0086 K1) — needed before the contracts render the list (deploy, admission)
+  for i in "${DEV_INDEX[@]}"; do BOOT_ACCOUNTS+=("${DEV_GOV_ADDR[$i]}"); done
   [ "$TOTAL" -le "${#DEV_INDEX[@]}" ] || die "--keys dev supports at most ${#DEV_INDEX[@]} nodes (validators + extra)"
   [ "$CHAIN_ID" = "$DEFAULT_CHAIN_ID" ] || log "WARNING: chain id $CHAIN_ID — deploy-and-wire.sh works only with $DEFAULT_CHAIN_ID"
 fi
@@ -190,13 +203,14 @@ if [ "$KEYS" = dev ]; then
     printf '%s\n' "${DEV_PUB[$i]}" >"$d/key.pub"
     printf '%s\n' "${DEV_ADDR[$i]}" >"$d/address"
     printf '%s\n' "$i" >"$d/dev-index"
+    printf '%s\n' "${DEV_GOV_ADDR[$i]}" >"$d/governance-address"
   done
   qbft_genesis_json >"$work/genesis.base.json"
 else
   # besu operator generate-blockchain-config: keys for every node (genesis validators + extra nodes) and for the roles of the key
-  # map (deployer, migration executor, two anchorers, one delegate per state)
+  # map (deployer, migration executor, two anchorers, one governance key and one delegate per state — ADR-0086 K1)
   ROLES=(deployer migration-executor anchorer-1 anchorer-2)
-  for ((n = 1; n <= TOTAL; n++)); do ROLES+=("delegate-${STATES[$((n - 1))],,}"); done
+  for ((n = 1; n <= TOTAL; n++)); do ROLES+=("delegate-${STATES[$((n - 1))],,}" "governance-${STATES[$((n - 1))],,}"); done
   KEYCOUNT=$((TOTAL + ${#ROLES[@]}))
   jq -n --argjson g "$(qbft_genesis_json)" --argjson count "$KEYCOUNT" \
     '{genesis: $g, blockchain: {nodes: {generate: true, count: $count}}}' >"$work/qbft-config.json"
@@ -225,6 +239,11 @@ else
     ROLE_ADDR[${ROLES[$r]}]=$(basename "$kd" | sed 's/^0x//' | tr '[:upper:]' '[:lower:]')
   done
   BOOT_ACCOUNTS=("${ROLE_ADDR[deployer]}")
+  # governance keys (ADR-0086 K1) sign the deployment's Governance calls and the admissions before the list is rendered
+  for ((n = 1; n <= TOTAL; n++)); do
+    BOOT_ACCOUNTS+=("${ROLE_ADDR[governance-${STATES[$((n - 1))],,}]}")
+    printf '%s\n' "${ROLE_ADDR[governance-${STATES[$((n - 1))],,}]}" >"$TESTNET_DIR/node$n/governance-address"
+  done
   # balances for the generated accounts only (validators + roles; ethers prices transactions above zero) — no Hardhat account
   alloc=$({
     for ((n = 1; n <= TOTAL; n++)); do cat "$TESTNET_DIR/node$n/address"; done
@@ -317,8 +336,9 @@ elif [ "$KEYS" = generate ]; then
     [ "$n" -le "$N" ] && g=true
     jq -n --arg c "$s" --argjson node "$n" --argjson f "$f" --argjson g "$g" \
       --argjson v "$(ref "$(cat "$TESTNET_DIR/node$n/address")" "../node$n/key")" \
+      --argjson gv "$(ref "${ROLE_ADDR[governance-${s,,}]}" "governance-${s,,}.key")" \
       --argjson d "$(ref "${ROLE_ADDR[delegate-${s,,}]}" "delegate-${s,,}.key")" \
-      '{code: $c, founder: $f, genesis_validator: $g, node: $node, validator: $v, delegate: $d}'
+      '{code: $c, founder: $f, genesis_validator: $g, node: $node, validator: $v, governance: $gv, delegate: $d}'
   done | jq -s . >"$TESTNET_DIR/keys/states.json"
   jq -n --argjson chainId "$CHAIN_ID" --slurpfile states "$TESTNET_DIR/keys/states.json" \
     --argjson dep "$(ref "${ROLE_ADDR[deployer]}" deployer.key)" \

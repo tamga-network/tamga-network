@@ -12,6 +12,7 @@
 | `besu@.service` | systemd unit template with hardening (own user, read-only system, only its data directory writable, no capabilities, syscall filter) |
 | `deploy-and-wire.sh` | the end-to-end test with the public test keys (below) |
 | `bootstrap-governance.sh` | path C: contracts + Governance with **generated** keys (key map), permissions, anchoring, replay (below) |
+| `shadow-chain.sh` | shadow chain on one server: `setup` (network with generated keys + the REAL network's signed lists, read only, replayed + equivalence), `sync` (hourly: mirror → continuous projection → anchoring → chain health), `report`; `--dry-run` prints every command (GUIDE-0018 "Shadow chain") |
 | `rpc-proxy-check.sh` | `network/rpc-proxy` in front of a node: method filter + nginx mutual TLS |
 | `testnet.mjs` | chain-side helpers (Governance admission, account permissioning, key and key-map check) — public test keys on 31337/31338, the key map on 31339; nothing else |
 | `lib.sh` | shared helpers and the pinned versions |
@@ -64,7 +65,8 @@ other id is the real network: replay needs `TAMGA_CONFIRM_PROD` there and stops,
 `make-network.sh` refuses `--keys generate` with 31337/31338 and `--keys dev` with 31339. Do not run the Windows development chain
 and a path B network on the same machine at the same time (same deployment file, same ports 8546/8547).
 
-With `--keys dev` the QBFT validator address equals the Governance validator address and the enode address. Test state codes are
+With `--keys dev` the QBFT validator address equals the Governance node (validator) address and the enode address; each state's
+governance (vote) key is the Hardhat account node index + 10 (#11 #12 #16 #17 #18; ADR-0086 K1 — the node key signs blocks only). Test state codes are
 user-assigned ISO codes (`XA`…) — no real state is implied.
 
 ### Key map (`--keys generate`) — test and staging networks only
@@ -80,7 +82,8 @@ user-assigned ISO codes (`XA`…) — no real state is implied.
 | `deployer.key` | deploys the contracts; allowed only by the start-up permissions file and drops out once the list is rendered from the chain (ADR-0052 K2) |
 | `migration-executor.key` | the executor named by the migration-window vote (ADR-0073); listed while a window is open |
 | `anchorer-1.key`, `anchorer-2.key` | list anchorers; threshold 2 (ADR-0051 K3) |
-| `delegate-<cc>.key` | one delegate per state, set by the state's own validator (`setDelegateKeys`) |
+| `governance-<cc>.key` | one governance (vote) key per state: proposals, votes, the delegate list (ADR-0086); never the node key |
+| `delegate-<cc>.key` | one delegate per state, set by the state's own governance key (`setDelegateKeys`) |
 | `keys.json` | the key map (`tamga-chain-keys/1`), below |
 
 ```json
@@ -93,12 +96,14 @@ user-assigned ISO codes (`XA`…) — no real state is implied.
   "anchor": { "threshold": 2, "anchorers": [{ "address": "0x…", "key": "anchorer-1.key" }, { "address": "0x…", "key": "anchorer-2.key" }] },
   "states": [
     { "code": "TR", "founder": true, "genesis_validator": true, "node": 1,
-      "validator": { "address": "0x…", "key": "../node1/key" }, "delegate": { "address": "0x…", "key": "delegate-tr.key" } }
+      "validator": { "address": "0x…", "key": "../node1/key" }, "governance": { "address": "0x…", "key": "governance-tr.key" },
+      "delegate": { "address": "0x…", "key": "delegate-tr.key" } }
   ]
 }
 ```
 
-Key paths are relative to `keys.json`; a validator's key is its node key (QBFT validator = Governance validator, ADR-0052 K2).
+Key paths are relative to `keys.json`; a validator's key is its node key (QBFT validator = Governance node address, ADR-0052 K2);
+the governance key is separate (ADR-0086).
 Every reader (`apps/chain-indexer/src/chain-keys.ts`, `testnet.mjs`) refuses a map whose `purpose` is not `test`, whose chain id is
 not 31339, whose key file is missing, readable by others or belongs to another address. Environment variable: `TAMGA_CHAIN_KEYS`
 (path of the map; default `<dir>/keys/keys.json` in `bootstrap-governance.sh`). The first two genesis states (TR, KZ) are the
@@ -206,5 +211,10 @@ zincir katmanını gerçekçi bir Linux ortamında kurup sınamak; aynı betikle
   oyuyla) → öteki devletlerin 2/3 oyla kabulü → her düğümde izin listesi zincirden (dağıtan listeden düşer) → iki yazıcıyla çapa
   (eşik 2) → göç penceresi oyla açılır, yürütücü izin listesine girer → yeniden oynatma + eşdeğerlik → özet. Her adım günlüklü;
   yeniden çalıştırma kaldığı yerden sürer.
+- `shadow-chain.sh` (gölge zincir) — tek sunucuda: `setup` (üretilmiş anahtarlı ağ + canlı ağın imzalı listeleri yalnız okunarak,
+  yeniden oynatma + eşdeğerlik), `sync` (saatte bir: yansıtma → sürekli projeksiyon → çapa → zincir sağlığı), `report`;
+  `--dry-run` her komutu basar, hiçbir şey çalıştırmaz.
+- Anahtarlar (ADR-0086): her devletin düğüm anahtarı yalnız blok imzalar; öneri, oy ve delege listesi ayrı yönetişim anahtarıyla
+  (`--keys dev`: düğüm hesabı + 10; `--keys generate`: `keys/governance-<cc>.key`).
 - Kaynak gereksinimi CI'da ölçüldü (2026-11-05, 4 CPU / 16 GiB, yığın `-Xmx768m`): düğüm başına 505–568 MiB bellek, 74–76 MiB
   disk (404 blok), 10–37 sn işlemci zamanı; uçtan uca sınama 921 sn. Adım adım anlatım: GUIDE-0018 (`docs/guides/chain-testnet.md`).
