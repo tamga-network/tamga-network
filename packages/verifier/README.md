@@ -81,6 +81,13 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 - A credential without a status entry is rejected at D1 when its type uses a status list; the status list signer is pinned to the
   institution's registered status keys.
 
+## New in 0.8.5
+
+- `createPresentationRequest({ ..., requestUriMethod: "post" })` writes `request_uri_method=post` into the QR / link (OpenID4VP 1.0
+  §5.10); a wallet that supports it fetches the request object with POST and sends a `wallet_nonce`, which the branch writes back
+  into the request object. Wallets without POST fetch with GET, so the request URI must serve both methods. Without the option
+  nothing changes.
+
 ## New in 0.8.3
 
 - `verifyPseudonym({ ..., clientStatus: "required" })` refuses a wallet instance attestation that carries no revocation entry
@@ -147,7 +154,7 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 
 ## Status
 
-Published on npm as the `0.8.4` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

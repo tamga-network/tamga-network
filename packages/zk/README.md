@@ -43,6 +43,12 @@ does not change trust: bundle them with the app, or fetch them with `httpCircuit
 The device signature is made the usual way (hardware key, phone lock — WL11); the prover only takes the signed response as input.
 Nothing leaves the device except the proof.
 
+## New in 0.8.5
+
+- The Android libraries in the package are aligned for 16 KB memory pages (Android 15+ devices; required by Google Play for apps
+  targeting Android 15+). Earlier releases shipped 4 KB-aligned libraries. No API change. Packing now refuses a library that is
+  not 16 KB aligned (see below).
+
 ## Building the native parts
 
 | Target | Command | Needs |
@@ -67,7 +73,7 @@ as the verifier (`packages/verifier/zk`).
 
 ## Status
 
-Published on npm as the `0.8.4` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Unlike the other eight packages, `zk` is published by hand without npm provenance: its Android native libraries
 cannot yet be built in CI.
 

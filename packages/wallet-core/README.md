@@ -16,15 +16,24 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
-## Unreleased
+## New in 0.8.5
 
+- **`request_uri_method=post`** (OpenID4VP 1.0 §5.10): `parseVpUri` returns `requestUriMethod` and rejects an unknown value;
+  `fetchRequestObjectFor(uri, http, { randomBytes | walletNonce, walletMetadata? })` fetches the request object with an HTTPS POST
+  and a fresh `wallet_nonce` (`newWalletNonce`) when the link asks for it, otherwise with GET as before; pass the returned
+  `walletNonce` to `verifyRequestObject(…, { walletNonce })`, which rejects a request object without the same `wallet_nonce`.
+  Optional: `fetchRequestObject` (GET) is unchanged, and a verifier that asks for POST must still serve GET.
+- **Approvals are single-use** (behaviour change): `respond` consumes the `checkRp` approval on its first call — also when that
+  call then fails — so a retry needs a new `checkRp`. The approval is now also bound to `state` and the response encryption key;
+  changing either after `checkRp` makes `respond` fail with `trust_error`.
 - **Identity document chip, carrier only — switched off** (ADR-0083): `chipReadRequestOf(url, authorizationServer)` checks the
   identity service's `/chip/read` address (same origin, exact path) and returns the submit address, an opaque handle and the
   8-byte active authentication challenge; `submitChipRead({ request, payload, keys, wua, http, randomBytes, now })` relays the raw
   chip data (SOD, DG1, DG2 and, if present, DG11, DG14, DG15, the active authentication signature, CardAccess) unchanged to
   `/chip/submit` and returns the `next` address. The wallet does not interpret the data. `CHIP_READER_PARAM` /
-  `CHIP_READER_ICAO9303` is the PAR field a chip-capable wallet sends. **Off:** not used until the switch is turned on in the
-  identity service, which does not happen before a favourable legal opinion; not in an npm release until then.
+  `CHIP_READER_ICAO9303` is the PAR field a chip-capable wallet sends. **Off:** the code ships in the package, but nothing calls
+  it until the chip path is turned on in the identity service, which waits for the identity service's key and a favourable legal
+  opinion.
 
 ## New in 0.8.4
 
@@ -94,7 +103,7 @@ cache, offline })` fetches each registrar status list once (signer must be a lis
 
 ## Status
 
-Published on npm as the `0.8.4` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

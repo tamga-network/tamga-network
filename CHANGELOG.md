@@ -6,7 +6,55 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+## 0.8.5 — 2026-11-15
+
+All ten packages move to 0.8.5 together (patch release). The code changes in the packages are in `wallet-core` (POST fetch of
+the request object, single-use approvals, the closed chip carrier), `verifier` (one optional option) and `zk` (rebuilt
+Android libraries); the other packages carry the version number and README wording. The chain tools (ADR-0084/0085/0086) and the
+access certificate revocation list (ADR-0087) are in the list publisher and the repository tools, not in the npm packages. Not
+published on npm when this entry was written.
+
+### Migration notes (for app developers)
+
+- **wallet-core approvals are single-use.** Call `checkRp` again before retrying a failed `respond`, and do not change the
+  request's `state` or response encryption key between `checkRp` and `respond` (both now give `trust_error`).
+- **`request_uri_method=post` is optional.** A wallet that keeps calling `fetchRequestObject` (GET) works as before. To support
+  POST: `parseVpUri` → `fetchRequestObjectFor(uri, http, { randomBytes })` → `verifyRequestObject(…, { walletNonce })` with the
+  returned `walletNonce`. A verifier that sets `requestUriMethod: "post"` must keep serving GET on the request URI.
+- **zk:** rebuild the app after updating (the native libraries changed); no code change.
+- **Chip carrier:** nothing to do; it stays closed (see below).
+
 ### Added
+
+- **`request_uri_method=post` in the wallet core** (OpenID4VP 1.0 §5.10): `parseVpUri` returns `requestUriMethod`; new
+  `fetchRequestObjectFor` makes an HTTPS POST (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`)
+  with a fresh `wallet_nonce` (`newWalletNonce`) and optional `wallet_metadata`; `verifyRequestObject` takes `walletNonce` and
+  rejects a request object without the same `wallet_nonce`. The GET path is unchanged; an unknown `request_uri_method` is
+  rejected. `@tamga-network/verifier`: `requestUriMethod: "post"` writes the parameter into the QR / link (a wallet without
+  POST fetches with GET, so the request URI must serve both). The reference verifier (`apps/verify`) now sets it (its request
+  URI already served GET and POST).
+- **wallet-core — identity document chip carrier, switched off** (ADR-0083). `chipReadRequestOf(url, authorizationServer)`
+  checks the identity service's `/chip/read?r=…&c=…` address (same origin as the authorization server, exact path) and returns
+  the `/chip/submit` address, the opaque handle and the 8-byte active authentication challenge; `submitChipRead(…)` relays the
+  raw chip data (SOD, DG1, DG2; DG11, DG14, DG15, the active authentication signature and CardAccess if present) unchanged,
+  base64url in a JSON body with the wallet attestation headers, and returns the `next` address (same origin only). The wallet
+  does not interpret chip data (CV4); no field goes into logs or error messages. `CHIP_READER_PARAM` / `CHIP_READER_ICAO9303`:
+  the PAR field `chip_reader=icao9303`. **Closed:** the code ships in this release, but nothing calls it until the
+  chip path is turned on in the identity service; opening depends on the identity service's key and a favourable legal opinion
+  (ADR-0083 K11, CV7).
+
+### Changed
+
+- **Presentation approvals are single-use and bound to `state` and the response encryption key** (wallet core; self-audit
+  against the EU reference library's 0.32.0 fixes, #440): `respond` consumes the `checkRp` approval on its first call, and an
+  approval no longer matches a request whose `state` or encryption key was changed after `checkRp`. The approval is consumed
+  before the response is built, so a failed `respond` cannot be retried with the same approval.
+- **zk — Android libraries aligned for 16 KB pages** (Android 15+ devices; Google Play requires it for apps targeting Android
+  15+). The three native libraries are linked with `-z max-page-size=16384` and `-z common-page-size=16384` (NDK r27c); the
+  build script and packing check every library with `packages/zk/scripts/elf-align.mjs` (each `LOAD` segment aligned to at least
+  16 KB, `GNU_RELRO` safe) and fail on a 4 KB-aligned one. Earlier releases shipped 4 KB-aligned libraries. No API change.
+
+### Applications and repository (not part of the npm packages)
 
 - **Revocation list (CRL) for access certificates** (ADR-0087, AR1–AR5; ETSI TS 119 411-8 REV-6.3.9-04). The list publisher
   issues an RFC 5280 v2 CRL per issuing authority (`crl/<authority>.crl`, DER, AKI + CRL Number, a reasonCode per entry,
@@ -22,13 +70,6 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
   certificates, and `--root-crl [--revoke=<serial>:<reason>,…]` signs the root's CRL (365 days). `ops/pki-issue.ts` gains
   `--ca <authority>` and `--crl-uri <url>` (mandatory for a production access certificate); the authority certificate of an
   access certificate issued by `access-ca-1` is written to `<name>.chain.pem`.
-- **`request_uri_method=post` in the wallet core** (OpenID4VP 1.0 §5.10): `parseVpUri` returns `requestUriMethod`; new
-  `fetchRequestObjectFor` makes an HTTPS POST (`application/x-www-form-urlencoded`, `Accept: application/oauth-authz-req+jwt`)
-  with a fresh `wallet_nonce` (`newWalletNonce`) and optional `wallet_metadata`; `verifyRequestObject` takes `walletNonce` and
-  rejects a request object without the same `wallet_nonce`. The GET path is unchanged; an unknown `request_uri_method` is
-  rejected. `@tamga-network/verifier`: `requestUriMethod: "post"` writes the parameter into the QR / link; the reference
-  verifier (`apps/verify`) now sets it (its request URI already served GET and POST).
-
 - **Governance key separated from the node (consensus) key** (ADR-0086, KG1–KG5). Every member record in `Governance` now holds
   two addresses: the QBFT node address (`validatorAddress`) and the governance (vote) address (`governanceAddress`, with
   `governanceSince`). All on-chain authority — proposals, votes, vote and proposal retraction, the delegate list, withdrawal, the
@@ -39,7 +80,7 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
   a supporting vote cast with the changing member's current key (`KeyChangeNeedsOwnVote`), so a majority cannot take over a
   state's delegate list. An address is used in one state and one role only (`ValidatorInUse`, `KeyInUse`); released addresses
   stay bound to their state. `initialize(founders, validators, governors)` and `proposeStateAdmission(code, validator,
-  governance)` take the governance address. Storage: members appended to the mapping-value structs, `_governanceToState` taken
+governance)` take the governance address. Storage: members appended to the mapping-value structs, `_governanceToState` taken
   from `__gap` (37 → 36); the layout check passes, the baseline was renewed (no chain is running). Governance code size 23,872
   bytes (headroom 704). Key map `tamga-chain-keys/1` gains a `governance` key per state; local development rule: governance key
   = Hardhat node account + 10 (`deploy-dev.ts`, `testnet.mjs`, `make-network.sh`, `scripts/besu-dev.ps1` — an existing local
@@ -62,7 +103,6 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
   archive + equivalence); `sync` (hourly) mirrors new versions, runs the continuous projection, anchors with each anchorer and
   checks chain health; `report`; `--dry-run` prints every command and runs in CI (`testnet` workflow, lint job). GUIDE-0018:
   "Shadow chain" with minimum server requirements, "Chain health" and "Governance command tool".
-
 - **Continuous chain projection, switched off** (ADR-0085; list is the source, chain is a witness — ADR-0084). After the
   migration window has closed, `trust:chain-sync` (proposed name) turns the difference between the last projected signed list
   archive and the current one into chain operations with the migration's plan engine — plan(now) − plan(before) — and writes them
@@ -80,21 +120,6 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
   issuer added, suspension, revocation, merged suspend + reinstate, wallet provider key and access certificate change, status list
   version, future-dated authorisation end — list = chain at every step). No contract change.
 
-- **wallet-core — identity document chip carrier, switched off** (ADR-0083). `chipReadRequestOf(url, authorizationServer)`
-  checks the identity service's `/chip/read?r=…&c=…` address (same origin as the authorization server, exact path) and returns
-  the `/chip/submit` address, the opaque handle and the 8-byte active authentication challenge; `submitChipRead(…)` relays the
-  raw chip data (SOD, DG1, DG2; DG11, DG14, DG15, the active authentication signature and CardAccess if present) unchanged,
-  base64url in a JSON body with the wallet attestation headers, and returns the `next` address (same origin only). The wallet
-  does not interpret chip data (CV4); no field goes into logs or error messages. `CHIP_READER_PARAM` / `CHIP_READER_ICAO9303`:
-  the PAR field `chip_reader=icao9303`. Not used until the switch is turned on in the identity service, which does not happen
-  before a favourable legal opinion; not in an npm release until then.
-
-### Changed
-
-- **Presentation approvals are single-use and bound to `state` and the response encryption key** (wallet core; self-audit
-  against the EU reference library's 0.32.0 fixes, #440): `respond` consumes the `checkRp` approval on its first call, and an
-  approval no longer matches a request whose `state` or encryption key was changed after `checkRp`.
-
 ### Documents
 
 - ADR-0087 (tr / en / az): revocation list (CRL) for access certificates — suspension, revocation and retirement revoke the
@@ -102,7 +127,6 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
   authority, 24-hour CRL under the trust-list domain (`/crl/<authority>.crl`), registration certificates stay on their status list,
   the Tamga wallet core does not fetch the CRL (rules AR1–AR5). SPEC-TRUST-0001 §2 (file layout) and version note; SPEC-PROTO-0002
   §3 `request_uri_method` row and version note; SPEC-PROTO-0001 `issuer_info` row (the identity service publishes it too).
-
 - ADR-0084 (tr / en / az): the signed trust lists are the single, authoritative source in every chain stage and the chain is a
   witness — verification decisions only from the list, reading the chain only for cross-checking, a stopped chain does not affect
   lists or verification, every difference raises an alarm; the move is a test network first, then the real network. ADR-0051's
@@ -112,7 +136,6 @@ published on npm as test releases; `0.8.4` is the current one on npm (the API ma
   phase, the ledger is a witness (release 1.0 archive refreshed). ARCH-0002 (Besu network setup): source direction, the first
   network with two independent operators (2 × 2 validators), current contract names, applications do not read the chain, test
   network → real network conditions, monitoring; QBFT open point closed.
-
 - ADR-0083 amendment (2026-11-13; tr / en / az): K11 and CV7 changed — the code of the chip path may be written now, behind a
   switch that is off by default (the identity service refuses to run on a server while it is on; store builds of the wallet
   contain no chip reading; the code runs only in local tests with fake document data). The chip path still opens only after a
