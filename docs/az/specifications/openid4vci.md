@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdana necə daxil olduğunu müəyyən edir. OpenID4VCI 1.0 Final üzərində Tamga profili: issuer metadata, credential offer (QR + tx_code), pre-authorized və authorization code axını seçimi, Nonce Endpoint-dən c_nonce, openid4vci-proof+jwt açar sübutu, credential endpoint, təxirə salınmış sənəd verilməsi və bildiriş ucunun bugünkü vəziyyəti (hər ikisi təqdim edilmir). İki açıq məsələ bağlanır: batch partiyasının ölçüsü 10 olaraq sabitlənir və batch nüsxələrinin HƏR BİRİ FƏRQLİ cihaz açarından istifadə edir — eyni `cnf` istifadə edilsəydi, nüsxələr bir-biri ilə əlaqələndirilə bilərdi və batch-in bütün mənası itərdi. Bundan əlavə, sənəd verilməsi anındakı holder binding üsulunun holder assurance səviyyəsinə (T1/T2/T3) uyğunluğu verilir.
 translation_of: SPEC-PROTO-0001
@@ -294,8 +294,8 @@ DPoP açarına bağlanır. Cüzdan hər əməliyyatda yeni WIA açarı istifadə
 təminatçıdan bu açara təzə WIA istəyir ([[ADR-0060]] K2). Qeydi səlahiyyətli mənbədən yenidən oxuyur;
 qeyd yoxdursa, `invalid_grant` qaytarır və token qüvvədən düşür. Şəxs reyestrdən silindikdə həmin şəxsin bütün tokenləri silinir.
 Cavab yeni giriş tokeni və **yeni** `refresh_token` daşıyır (rotation). Sənəd sorğusu §7 ilə eynidir. Əlaqə sənədləri
-token vermir (şəxs sahəsi saxlanmır); şəxsiyyət xidməti yalnız ZK nüsxəsi tokeni verir (§4.2). AS metadata-sı
-`grant_types_supported` `refresh_token` ehtiva edir.
+token vermir (şəxs sahəsi saxlanmır); şəxsiyyət xidmətinin tokeni şəxsiyyət sənədini təqdimatla yeniləyir (§4.3) və istənibsə ZK
+nüsxəsi alır (§4.2). AS metadata-sı `grant_types_supported` `refresh_token` ehtiva edir.
 
 ## 4.2 Şəxsiyyət xidməti: ZK nüsxəsi tokeni ([[ADR-0044]], 2026-10-09)
 
@@ -310,8 +310,9 @@ yalnız qısa ömürlü ZK nüsxəsi alır ([[ADR-0023]] AR4-ün yeganə istisna
 }
 ```
 
-- **Nə vaxt ([[ADR-0062]]):** yalnız cüzdan PAR `scope`-unda şəxsiyyət sənədi əhatəsinin yanında ZK nüsxəsi əhatəsini
-  (`urn:tamga:id:ShortLivedIdentityAttestation:1`) də istəyərsə; əhatə yalnız şəxsiyyət sənədi ilə istənə bilər (ZS1).
+- **Nə vaxt ([[ADR-0062]], [[ADR-0089]] ilə genişləndi):** yeniləmə tokeni hər şəxsiyyət icazəsində verilir (§4.3); ZK nüsxəsi
+  əhatəsi yalnız cüzdan PAR `scope`-unda şəxsiyyət sənədi əhatəsinin yanında `urn:tamga:id:ShortLivedIdentityAttestation:1`-i də
+  istəyərsə verilir (tokendəki əhatə siyahısı); əhatə yalnız şəxsiyyət sənədi ilə istənə bilər (ZS1).
 - **Token:** cüzdan üçün qeyri-şəffafdır (opaque); məzmunu yalnız şəxsiyyət xidmətinin açarı ilə açılan autentifikasiyalı şifrələmə (JWE `dir` +
   A256GCM) ilə qorunur: bağlı şəxsiyyət qeydi, nəsil sayğacı, ilk buraxılışdakı müştəri nümunəsi açarının (WIA `cnf`) barmaq izi ([[ADR-0060]]), bitmə tarixi (≤ şəxsiyyət sənədinin
   bitmə tarixi) və ZK nüsxəsinə daxil ediləcək **minimal** elementlər (şəxsiyyət sənədinin yaş sahələri `age_over_18`, `age_over_15`; [[ADR-0064]]). Serverdə token və şəxs sahəsi saxlanmır; birdəfəlik istifadə
@@ -327,6 +328,28 @@ yalnız qısa ömürlü ZK nüsxəsi alır ([[ADR-0023]] AR4-ün yeganə istisna
   çəkilir (pəncərə yenə də ≤ 24 saat). Giriş tokeni başqa konfiqurasiya üçün istifadə edilə bilməz.
 - **Jurnal:** yalnız say və imtina səbəbi; fərdi məlumatlar, token və qeyd identifikatoru yazılmır. Qalıq risk: xidmət yeniləmə
   tezliyindən cüzdanın aktiv olduğunu öyrənir, nəyin kimə göstərildiyini öyrənmir ([[ADR-0044]] Nəticələr).
+
+## 4.3 Şəxsiyyət xidməti: şəxsiyyət sənədinin yenilənməsi və mdoc konfiqurasiyası ([[ADR-0089]], 2026-11-16)
+
+- **mdoc konfiqurasiyası (IR1):** metadata şəxsiyyət sənədi üçün ikinci konfiqurasiya elan edir — identifikator
+  `urn:tamga:id:IdentityAttestation:1:mso_mdoc` (ad təsdiq gözləyir), `format: mso_mdoc`, `doctype`
+  `urn:tamga:id:IdentityAttestation:1`, `scope` SD-JWT konfiqurasiyasınınkı ilə eyni, `credential_reuse_policy` eyni. Tək icazə və
+  eyni giriş tokeni hər iki formatı əhatə edir; cüzdan iki standart sənəd sorğusu edir (§7.4). Cavab standartdır
+  (`credentials[i].credential` = base64url IssuerSigned). Eyni tokenlə eyni açara verilən iki format eyni ləğv indeksini daşıyır (IR7;
+  uyğunlaşdırma yalnız yaddaşda). Tamga cüzdanı mdoc sorğusunda SD-JWT nüsxələrinin açarlarını eyni ardıcıllıqla istifadə edir.
+- **Etibarlılıq (IR2):** nüsxənin `exp` / `validUntil`-ı ≤ 30 gün (`TAMGA_ID_COPY_TTL_DAYS`) və ≤ qeydin bitməsi; qeydin bitməsi
+  (inzibati etibarlılıq) hər nüsxədə `date_of_expiry` kimidir (mdoc `expiry_date`, `full-date`).
+- **Yeniləmə sorğusu:** §4.1-dəki `grant_type=refresh_token` + DPoP + eyni müştəri nümunəsi açarlı WIA, əlavə olaraq `scope` =
+  `urn:tamga:id:IdentityAttestation:1` və `identity_presentation` = cüzdandakı bu qeydə aid bir nüsxənin **bütün sahələri açıq**
+  təqdimatı (SD-JWT VC + KB-JWT, `aud` = xidmət, `nonce` = `/nonce`). Xidmət yoxlayır: öz imzası, KB-JWT, növ, ləğv siyahısı ünvanı,
+  indeks bu qeydə aiddir, açılmamış xülasə yoxdur; qeyd ləğv edilməyib, inzibati müddəti bitməyib, bitləri 0, cüzdan provayderi
+  dayandırılmayıb (IR4). Texniki müddəti bitmiş nüsxə qəbul edilir. Cavab: şəxsiyyət sənədi üçün giriş tokeni + yeni `refresh_token`
+  (dəyişdirmə §4.2-dəki kimi, eyni zəncir), `scope` = şəxsiyyət sənədi. Sənəd sorğuları §7 ilə eynidir (iki konfiqurasiya); yeni
+  nüsxələr eyni qeydə əlavə olunur; yaş sahələri doğum tarixindən yenidən hesablanır (IR5); sahələr yalnız giriş tokeninin ömrü
+  ərzində yaddaşdadır (IR3).
+- **Xətalar:** token etibarsızdır / qeyd ləğv edilib və ya müddəti bitib → `invalid_grant`; təqdimat qüsurludur → `invalid_request`;
+  token şəxsiyyət əhatəsini daşımır → `invalid_scope`; cüzdan provayderi siyahıda dayandırılıb → HTTP 503
+  `temporarily_unavailable` (IR6).
 
 ---
 
@@ -456,7 +479,9 @@ Giriş tokeni ömrü (≤ 5 dəqiqə, PR9) ərzində bir neçə sənəd sorğusu
 sənəd verəni kimi). Hədlər: yalnız tokenin əhatə etdiyi konfiqurasiya (AT1); token başına cəmi nüsxə ≤ toplu verilmə ölçüsü, 10
 (AT2; həddi aşan sorğu HTTP 401 `invalid_token` + `WWW-Authenticate: DPoP` alır, §13); hər sorğu tokenin bağlı olduğu DPoP açarı ilə, ömür uzanmır (AT3). Şəxsiyyət
 xidmətində sonrakı sorğu ilk sorğunun qeydinə nüsxə əlavə edir, əvvəlki paketi ləğv etmir (AT4); şəxsi sahələr tokenin ömrü
-bitəndə və ya nüsxə haqqı dolanda silinir (AT5). ZK nüsxəsi tokeni (§4.2) və bilet bir paket olaraq qalır.
+bitəndə və ya nüsxə haqqı dolanda silinir (AT5). ZK nüsxəsi tokeni (§4.2) və bilet bir paket olaraq qalır. **[[ADR-0089]]
+(2026-11-16):** şəxsiyyət sənədində nüsxə haqqı konfiqurasiya üzrədir (SD-JWT və mdoc konfiqurasiyalarında ayrı-ayrılıqda ≤ 10);
+şəxsi sahələr hər ikisinin haqqı dolanda və ya tokenin ömrü bitəndə silinir.
 
 ## 7.5 Psevdonim toxumu: ayrıca konfiqurasiya ([[ADR-0061]], 2026-10-22)
 
@@ -812,7 +837,7 @@ tapılmadı" əvəzinə `credential_request_denied` qaytarılır; təfərrüat y
 | **PR17** | Giriş tokeni DPoP-a bağlıdır (RFC 9449): `/token` etibarlı DPoP sübutu olmadan token vermir; `/credential` yalnız `Authorization: DPoP` ilə və eyni açarla, bu son nöqtə və bu token (`ath`) üçün yaradılmış, əvvəllər görülməmiş sübutla işləyir (§4, §7.1). |
 | **PR18** | Yeniləmə tokeni birdəfəlikdir, hər istifadədə yenilənir, sənəd vermə əməliyyatındakı müştəri nümunəsi açarına (WIA `cnf`) bağlıdır, DPoP açarı dəyişə bilər ([[ADR-0060]]); sənədi verən qurum yeniləmə zamanı qeydi səlahiyyətli mənbədən yenidən oxuyur və qeyd yoxdursa, sənəd vermir ([[ADR-0023]] AR2–AR3, §4.1). |
 | **PR19** | WIA ilə gələn sorğuda `client_status` ləğv edilibsə, sənəd verilmir; KA-lı proof-da KA provayder tərəfindən imzalanmış, ləğv edilməmiş, proof `attested_keys[0]` ilə imzalanmış olmalı və nonce etibarlı olmalıdır; açar anbarının minimum həddi KA səviyyəsinə görə tətbiq edilir ([[ADR-0025]], §11.1.1). |
-| **PR16** | Kimlik attestation-ı cavabında hər `credentials[]` obyekti `credential` (SD-JWT VC) ilə **eyni proof açarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) daşıyır; iki təqdimat forması eyni sorğuda yaradılır və eyni status bitini paylaşır; rəqəmsal cüzdan mdoc-u SD-JWT nüsxəsi ilə çarpaz yoxlamadan (eyni sənədi verən qurum sertifikatı, eyni sahələr, `deviceKey` = `cnf`) saxlamır ([[ADR-0013]] MD1–MD3). **Şüurlu sapma:** OpenID4VCI 1.0 §8.3 `credentials[]` obyektində yalnız `credential` təyin edir; `mso_mdoc` Tamga profilinin əlavəsidir (ADR-0013 — iki təqdimat forması tək sorğuda, çünki şəxsi sahələr verilmədən dərhal sonra silinir). Standart cüzdan naməlum sahəni nəzərə almır və yalnız SD-JWT nüsxəsini alır; Tamga cüzdanı hər ikisini saxlayır. |
+| **PR16** | ~~Şəxsiyyət attestation-ının mdoc-u SD-JWT cavabında qeyri-standart `mso_mdoc` sahəsi ilə~~ — **2026-11-16-da götürüldü ([[ADR-0089]] IR1):** şəxsiyyət sənədinin mdoc nüsxəsi metadata-dakı ayrıca `mso_mdoc` konfiqurasiyası ilə, eyni icazə və giriş tokeni ilə standart sənəd sorğusundan verilir; sənəd cavabında qeyri-standart sahə yoxdur; eyni açara verilən iki format eyni ləğv indeksini daşıyır; rəqəmsal cüzdan mdoc-u SD-JWT nüsxəsi ilə çarpaz yoxlamadan (eyni sənədi verən qurum sertifikatı, eyni sahələr, `deviceKey` = `cnf`) saxlamır ([[ADR-0013]] MD1–MD3). |
 
 ---
 

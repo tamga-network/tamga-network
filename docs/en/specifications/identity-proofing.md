@@ -305,6 +305,16 @@ the credential has it; when the card carries an identity number (today TR) the k
 and without the disclosure the credential is not issued. The number is never written to the credential, stored or logged (DL2,
 PR14); the match digests use a separate subkey.
 
+**Version note (2026-11-16; approved by project management).** [[ADR-0089]] accepted: the identity record is the logical
+credential, its end is the administrative validity (730 days, bounded by ISSU_12c) and is carried in every copy as
+`date_of_expiry`; the technical validity of copies is at most 30 days and the wallet renews its copies silently by presenting a
+copy of this record with all claims disclosed — person fields are still not stored (IDP9), they stay in memory only for the
+lifetime of the renewal access token; the age attributes are recomputed on renewal. The mdoc copy of the identity credential is
+issued through a separate standard configuration. The identity service writes into the record the trust list id of the wallet
+provider that signed the WIA at issuance and, in the 6-hourly unit check, first looks at that provider's status in the list:
+`REVOKED` / `RETIRED` / not in the list → the record is revoked (`wallet-provider-invalid`); `SUSPENDED` → suspension (no new
+copy, no renewal, no ZK; it resumes when the suspension is lifted); the list cannot be read → no change (IR6).
+
 **Version note (2026-11-13, second; approved by project management).** [[ADR-0083]] K11 and CV7 changed: the code of the chip
 path is written now, but by default it sits behind a switch that is off — the identity service refuses to run on a server (live
 network and sandbox) while the switch is on, store builds of the wallet contain no chip reading, and the code runs only in local

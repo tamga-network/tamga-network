@@ -4,7 +4,7 @@ title: "OpenID4VCI profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   Defines how a credential enters the wallet. The Tamga profile on top of OpenID4VCI 1.0 Final: issuer metadata, credential
   offer (QR + tx_code), choice between the pre-authorized and authorization code flows, c_nonce from the Nonce Endpoint,
@@ -293,8 +293,8 @@ credential and, on refresh, asks the provider for a fresh WIA for that key ([[AD
 the authentic source; if there is no record it returns `invalid_grant` and the token is dropped. When a person is deleted
 from the register, all of that person's tokens are deleted. The response carries a new access token and a **new**
 `refresh_token` (rotation). The credential request is the same as in §7. The contact credentials issue no refresh token (no
-person field is stored); the identity service issues only the ZK copy token (§4.2). The AS metadata `grant_types_supported`
-includes `refresh_token`.
+person field is stored); the identity service's token renews the identity credential through a presentation (§4.3) and, if
+requested, obtains ZK copies (§4.2). The AS metadata `grant_types_supported` includes `refresh_token`.
 
 ## 4.2 Identity service: the ZK copy token ([[ADR-0044]], 2026-10-09)
 
@@ -309,8 +309,10 @@ identity service's metadata announces the ZK copy as a separate `mso_mdoc` confi
 }
 ```
 
-- **When ([[ADR-0062]]):** only if the wallet requests the ZK copy scope (`urn:tamga:id:ShortLivedIdentityAttestation:1`)
-  next to the identity credential scope in the PAR `scope`; the scope can only be requested with the identity credential (ZS1).
+- **When ([[ADR-0062]], extended by [[ADR-0089]]):** the refresh token is issued with every identity authorization (§4.3); the
+  ZK copy scope is granted only if the wallet also requests `urn:tamga:id:ShortLivedIdentityAttestation:1` next to the identity
+  credential scope in the PAR `scope` (the scope list in the token); the scope can only be requested with the identity
+  credential (ZS1).
 - **Token:** opaque to the wallet; its content is protected by authenticated encryption that only the identity service's key
   opens (JWE `dir` + A256GCM): the linked identity record, a generation counter, the thumbprint of the client instance key (WIA `cnf`) from
   the first issuance ([[ADR-0060]]), the expiry (≤ the identity credential's expiry) and the **minimum** elements for the ZK copy (the
@@ -328,6 +330,30 @@ identity service's metadata announces the ZK copy as a separate `mso_mdoc` confi
   access token cannot be used for any other configuration.
 - **Log:** only counts and rejection reasons; no personal data, no token and no record id. Residual risk: from the refresh
   frequency the service learns that the wallet is active, not what was shown to whom ([[ADR-0044]] Consequences).
+
+## 4.3 Identity service: identity credential renewal and mdoc configuration ([[ADR-0089]], 2026-11-16)
+
+- **mdoc configuration (IR1):** the metadata announces a second configuration for the identity credential — id
+  `urn:tamga:id:IdentityAttestation:1:mso_mdoc` (name pending approval), `format: mso_mdoc`, `doctype`
+  `urn:tamga:id:IdentityAttestation:1`, `scope` the same as the SD-JWT configuration's, the same `credential_reuse_policy`. One
+  authorization and the same access token cover both formats; the wallet makes two standard credential requests (§7.4). The
+  response is standard (`credentials[i].credential` = base64url IssuerSigned). The two formats issued with the same token to the
+  same key carry the same revocation index (IR7; matching only in memory). The Tamga wallet uses the keys of the SD-JWT copies
+  in the same order in the mdoc request.
+- **Validity (IR2):** a copy's `exp` / `validUntil` is ≤ 30 days (`TAMGA_ID_COPY_TTL_DAYS`) and ≤ the record's expiry; the
+  record's expiry (administrative validity) is in every copy as `date_of_expiry` (mdoc `expiry_date`, `full-date`).
+- **Renewal request:** the `grant_type=refresh_token` + DPoP + WIA with the same client instance key of §4.1, plus `scope` =
+  `urn:tamga:id:IdentityAttestation:1` and `identity_presentation` = a presentation of a copy of this record in the wallet with
+  **all claims disclosed** (SD-JWT VC + KB-JWT, `aud` = the service, `nonce` = `/nonce`). The service checks: its own signature,
+  the KB-JWT, the type, the status list URI, that the index belongs to this record, that no digest is left undisclosed; that the
+  record is not revoked, its administrative validity has not ended, its bits are 0 and its wallet provider is not suspended
+  (IR4). A copy whose technical validity has ended is accepted. Response: an access token for the identity credential + a new
+  `refresh_token` (rotation as in §4.2, the same chain), `scope` = the identity credential. The credential requests are the same
+  as in §7 (two configurations); the new copies are added to the same record; the age attributes are recomputed from the date
+  of birth (IR5); the claims stay in memory only for the lifetime of the access token (IR3).
+- **Errors:** invalid token / record revoked or expired → `invalid_grant`; defective presentation → `invalid_request`; the token
+  does not carry the identity scope → `invalid_scope`; the wallet provider is suspended in the list → HTTP 503
+  `temporarily_unavailable` (IR6).
 
 ---
 
@@ -457,7 +483,9 @@ the EU reference issuer). Limits: only the configuration the token covers (AT1);
 (AT2; a request beyond it gets HTTP 401 `invalid_token` + `WWW-Authenticate: DPoP`, §13); every request with the DPoP key the token is bound to, and the lifetime is not
 extended (AT3). In the identity service a later request adds copies to the first request's record and does not revoke the
 earlier package (AT4); personal fields are deleted when the token expires or the copy allowance is used up (AT5). The ZK copy
-token (§4.2) and tickets stay one package.
+token (§4.2) and tickets stay one package. **[[ADR-0089]] (2026-11-16):** for the identity credential the copy allowance is per
+configuration (≤ 10 each for the SD-JWT and mdoc configurations); personal fields are deleted when both allowances are used up or
+when the token expires.
 
 ## 7.5 Pseudonym seed: a separate configuration ([[ADR-0061]], 2026-10-22)
 
@@ -808,7 +836,7 @@ The token endpoint's codes are in §4 (`invalid_grant`, `invalid_request`, `inva
 | **PR17** | The access token is bound to DPoP (RFC 9449): `/token` issues no token without a valid DPoP proof; `/credential` works only with `Authorization: DPoP` and a previously unseen proof made with the same key for this endpoint and this token (`ath`) (§4, §7.1). |
 | **PR18** | The refresh token is single-use, renewed on every use, and bound to the client instance key (WIA `cnf`) of the issuance, the DPoP key may change ([[ADR-0060]]); on renewal the issuer rereads the record from the authentic source and issues nothing if there is no record ([[ADR-0023]] AR2–AR3, §4.1). |
 | **PR19** | In a request with a WIA, no credential is issued if `client_status` is revoked; in a proof with a KA, the KA must be signed by the provider and not revoked, the proof signed with `attested_keys[0]` and the nonce valid; the key storage lower bound is applied according to the KA level ([[ADR-0025]], §11.1.1). |
-| **PR16** | In the identity attestation response every `credentials[]` object carries, alongside `credential` (SD-JWT VC), an `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) **bound to the same proof key**; both representations are produced in the same request and share the same status bit; the wallet does not store the mdoc without cross-checking it against the SD-JWT copy (same issuer certificate, same fields, `deviceKey` = `cnf`) ([[ADR-0013]] MD1–MD3). **Deliberate deviation:** OpenID4VCI 1.0 §8.3 defines only `credential` in a `credentials[]` object; `mso_mdoc` is a Tamga-profile extension (ADR-0013 — both representations in one request because person fields are deleted right after issuance). A standard wallet ignores the unknown member and keeps only the SD-JWT copy; the Tamga wallet stores both. |
+| **PR16** | ~~The identity attestation's mdoc in the SD-JWT response through the non-standard `mso_mdoc` member~~ — **removed on 2026-11-16 ([[ADR-0089]] IR1):** the identity credential's mdoc copy is issued from a standard credential request through the separate `mso_mdoc` configuration in the metadata, with the same authorization and access token; the credential response has no non-standard member; the two formats issued to the same key carry the same revocation index; the wallet does not store the mdoc without cross-checking it against the SD-JWT copy (same issuer certificate, same fields, `deviceKey` = `cnf`) ([[ADR-0013]] MD1–MD3). |
 
 ---
 

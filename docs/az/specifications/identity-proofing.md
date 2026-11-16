@@ -295,6 +295,15 @@ adaş riski) tətbiqi — şəxsiyyət təqdimatında sənəddə varsa `personal
 varsa (bu gün TR) nömrənin açarlı xülasəsi də uyğun gəlməlidir, açılmayıbsa sənəd verilmir. Nömrə sənədə yazılmır, saxlanılmır,
 jurnala düşmür (DL2, PR14); uyğunluq xülasələri ayrıca alt açarla.
 
+**Versiya qeydi (2026-11-16; layihə rəhbərliyinin təsdiqi ilə).** [[ADR-0089]] qəbul edildi: şəxsiyyət qeydi məntiqi sənəddir,
+bitməsi inzibati etibarlılıqdır (730 gün, ISSU_12c həddi ilə) və hər nüsxədə `date_of_expiry` kimi daşınır; nüsxələrin texniki
+etibarlılığı ən çox 30 gündür və cüzdan nüsxələri bu qeydin bir nüsxəsini bütün sahələri ilə təqdim edərək səssizcə yeniləyir —
+şəxsi sahələr yenə saxlanılmır (IDP9), yalnız yeniləmə giriş tokeninin ömrü ərzində yaddaşda qalır; yaş sahələri yeniləmədə yenidən
+hesablanır. Şəxsiyyətin mdoc nüsxəsi ayrıca standart konfiqurasiya ilə verilir. Şəxsiyyət xidməti qeydə verilişdəki WIA-nı
+imzalayan cüzdan provayderinin siyahı identifikatorunu yazır və 6 saatlıq vahid yoxlamasında əvvəlcə onun siyahıdakı statusuna
+baxır: `REVOKED` / `RETIRED` / siyahıda yoxdur → qeyd ləğv edilir (`wallet-provider-invalid`); `SUSPENDED` → dayandırma (yeni
+nüsxə, yeniləmə, ZK yoxdur; dayandırma götürüləndə davam edir); siyahı oxunmur → dəyişiklik yoxdur (IR6).
+
 **Versiya qeydi (2026-11-13, ikinci; layihə rəhbərliyinin təsdiqi ilə).** [[ADR-0083]] K11 və CV7 dəyişdi: çip yolunun kodu
 indi yazılır, lakin standart olaraq bağlı açarın arxasında durur — açar açıq olduqda şəxsiyyət xidməti serverdə (real şəbəkə və
 sandbox) işləməkdən imtina edir, cüzdanın mağaza yığımlarında çip oxuma olmur, kod yalnız yerli testlərdə saxta sənəd məlumatı
