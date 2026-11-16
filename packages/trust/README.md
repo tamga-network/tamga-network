@@ -32,6 +32,14 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 - Rollback protection is on by default: a load without `versionMemory` uses an in-process memory per network and root fingerprints;
   pass a persistent memory to keep it across restarts, or `"none"` to turn it off.
 
+## New in 0.8.6
+
+- `TrustSource.isIssuerSuspended(issuerId)` (optional): `YES` while the issuer is suspended. `isCredentialAcceptable` now answers
+  `NO` for every credential of a suspended issuer, regardless of issuance time (ADR-0088); revocation, retirement and expiry keep
+  the issuance-time rule.
+- `TrustSource.walletProviderOfKey(fingerprintHex)` (optional): the wallet provider that owns a wallet attestation signing key,
+  whatever its status (ADR-0089).
+
 ## New in 0.8.3
 
 - `ListTrustSource.relyingParty(clientId)` returns `null` when the record's `dns_name` is ambiguous between the loaded national
@@ -76,7 +84,7 @@ A complete, tested version: [`examples/04-check-institution`](https://github.com
 
 ## Status
 
-Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.6` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

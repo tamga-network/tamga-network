@@ -32,9 +32,13 @@ Annex C (HPKE) for browser presentation · status list and identifier list token
 `verifyIssuerSigned` returns `valid: false` for a document without a device key; `clockSkewSec` is capped at 600 s; `now` is
 `EpochSeconds`.
 
+## New in 0.8.6
+
+- `expiry_date` is encoded as a `full-date` element (`PID_FULL_DATE_ELEMENTS`), like `birth_date`.
+
 ## Status
 
-Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.6` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

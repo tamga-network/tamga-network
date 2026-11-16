@@ -30,9 +30,15 @@ A complete, tested version: [`examples/03-issue-hosted`](https://github.com/tamg
 - `verifyKeyAttestation`, `verifyKaProof` and `verifyAttestationProof` require `statusOf` (or `"none"`); results carry
   `statusChecked`. `WalletStatusChecker` pins the status list signer to a wallet provider key in the trusted list.
 
+## New in 0.8.6
+
+- `buildCredentials` writes `nbf` (default: the issuance time `iat`; pass `nbf` for a future start, never before `iat`).
+- `issuerMetadata({ mdocConfigurations })`: each entry takes an optional `scope` (default: its `id`) so an mdoc configuration can
+  share the SD-JWT configuration's scope, and `reusePolicy` to publish `credential_reuse_policy` (ADR-0089).
+
 ## Status
 
-Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.6` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

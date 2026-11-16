@@ -6,6 +6,31 @@ published on npm as test releases; `0.8.5` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+## 0.8.6 — 2026-11-16
+
+All ten packages move to 0.8.6 together (patch release). The code changes are in `wallet-core` (standard mdoc path for the
+identity credential, identity renewal, future-dated credentials, `credentialValidity`), `trust` (`isIssuerSuspended`,
+`walletProviderOfKey`), `verifier` (suspended issuer at C1, `verifier/zk` fixes), `issuer`, `sd-jwt`, `mdoc` and `schemas` (`nbf`,
+mdoc configuration scope, `expiry_date`, `date_of_expiry`) and `zk` (Android libraries rebuilt with `ruzstd` 0.9.1); `core` and
+`onboard` carry the version number (and, for `onboard`, a test time limit). The single-credential rule for presentations is in
+the reference verifier (`apps/verify`), not in the packages. Not published on npm when this entry was written.
+
+### Migration notes (for app developers)
+
+- **Schema hashes changed.** Every credential type's type metadata hash (`vct#integrity`) is new (`nbf`, `date_of_expiry`, name
+  length). Issuers and verifiers must use the current catalog and trust list (already published on the live network, list
+  v266); a hash pinned in your own code must be updated.
+- **A suspended issuer's credentials are now `REJECTED`** at C1 (`failed_reason: "issuer suspended"`), also those issued before
+  the suspension. Before, only credentials issued during the suspension were dropped. Show "temporarily not accepted" rather than
+  "invalid"; once the suspension is lifted, the earlier credentials are accepted again. A custom `TrustSource` should implement
+  `isIssuerSuspended` so the reason can be told apart.
+- **Wallet developers:** the identity credential's mdoc copy now comes from the issuer's separate `mso_mdoc` configuration; an
+  issuer that only put the mdoc into the non-standard `mso_mdoc` response field gives a credential without an mdoc copy. Show
+  validity with `credentialValidity` (`not_yet_valid` and `issuer_suspended` are new states) and schedule identity renewal with
+  `scheduleIdentityRenewals` / `identityRenewalDue` → `renewIdentityCredential`; a future-dated credential is kept but not
+  offered for presentation until its `nbf`.
+- **zk:** rebuild the app after updating (the native libraries changed); no code change.
+
 ### Changed
 
 - **Identity credential: standard mdoc configuration, renewal of short-lived copies, wallet provider suspension (ADR-0089).**
@@ -32,25 +57,32 @@ published on npm as test releases; `0.8.5` is the current one on npm (the API ma
   `issueSdJwtVc` takes an optional `nbf` (integer, `≥ iat`, `< exp`).
 - `schemas`: every credential type schema allows `nbf`; in `IdentityAttestation` `family_name` / `given_name` are limited to 150
   characters (EU PID mdoc text rule). The type metadata hashes change (development stage, ADR-0029).
-- `apps/verify`: a presentation is verified for one credential only (plus an optional pseudonym); a policy with a second
-  credential is refused instead of silently checking the first (ARF discussion #775, credential pooling; SPEC-API-0001 §1.5).
 
 ### Added
 
 - `wallet-core`: `credentialValidity(cred, { now, trust })` → `valid` · `not_yet_valid` · `expired` · `revoked` · `suspended` ·
   `issuer_suspended` (with `validFrom`, `validUntil`, `presentable`) and `isNotYetValid`; receipt from a suspended issuer gives a
   distinct message.
-- Docs: ADR-0088; Tamga ARF Risk Register (FW-RISK-0001, self-assessment against the CIR 2024/2981 risk register); Annex D terms
-  (Wallet Instance, LoTE, Access CA, RP Instance, registration certificate provider, scheme owner, logical / technical
-  credential; "verifier" = EU Relying Party); Annex E: eight EU sources; Identity Rulebook PID mapping rows (`place_of_birth`,
-  `issuing_authority` without counterpart, `issuing_country` meaning).
 
 ### Fixed
 
 - `verifier/zk`: the native backend no longer lets a write to a dead prover process crash the host (`stdin` error listener).
-- `verifier/zk`: the bundled WASM verifier is rebuilt with `ruzstd` 0.9.1 (RUSTSEC-2026-0344). The Android libraries in `zk`
-  still carry 0.8.3 and will move in the next `zk` rebuild.
+- `verifier/zk`: the bundled WASM verifier is rebuilt with `ruzstd` 0.9.1 (RUSTSEC-2026-0344).
+- `zk`: the three Android libraries are rebuilt with `ruzstd` 0.9.1 (RUSTSEC-2026-0344; 0.8.5 shipped 0.8.3), still 16 KB
+  aligned. No API change.
 - `onboard`: the security test has a longer time limit (cold CLI starts under load).
+
+### Applications and repository (not part of the npm packages)
+
+- `apps/verify`: a presentation is verified for one credential only (plus an optional pseudonym); a policy with a second
+  credential is refused instead of silently checking the first (ARF discussion #775, credential pooling; SPEC-API-0001 §1.5).
+
+### Documents
+
+- ADR-0088; Tamga ARF Risk Register (FW-RISK-0001, self-assessment against the CIR 2024/2981 risk register); Annex D terms
+  (Wallet Instance, LoTE, Access CA, RP Instance, registration certificate provider, scheme owner, logical / technical
+  credential; "verifier" = EU Relying Party); Annex E: eight EU sources; Identity Rulebook PID mapping rows (`place_of_birth`,
+  `issuing_authority` without counterpart, `issuing_country` meaning).
 
 ## 0.8.5 — 2026-11-15
 

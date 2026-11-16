@@ -38,9 +38,13 @@ const result = await verifySdJwtVc(presentation, { aud, nonce, stateCode: "TR", 
   fingerprints of the expected signer certificates (or a function). Another signer fails with `D3` before the signature is checked.
 - `now` is `EpochSeconds` (`@tamga-network/core`).
 
+## New in 0.8.6
+
+- `issueSdJwtVc({ ..., nbf })`: optional validity start (integer, `≥ iat`, `< exp`), written in the clear.
+
 ## Status
 
-Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.6` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

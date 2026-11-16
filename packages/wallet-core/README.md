@@ -16,6 +16,22 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
+## New in 0.8.6
+
+- **Identity credential mdoc over the standard path** (behaviour change): `obtainCredential` fetches the mdoc copy with a second
+  standard credential request to the issuer's `mso_mdoc` configuration (same `scope`, `doctype` = vct; `mdocCompanionConfigId`),
+  with the same keys in the same order. The non-standard `mso_mdoc` field of the credential response is no longer read; if the
+  mdoc request fails the credential is kept without an mdoc copy.
+- **Identity credential renewal** (new): `renewIdentityCredential` (refresh token + DPoP + wallet attestation + a full
+  presentation of a stored copy → a new batch replaces the old one; `invalid_grant` removes the binding,
+  `temporarily_unavailable` means the provider is suspended and keeps it), `identityRenewalDue`, `identityRenewable`,
+  `scheduleIdentityRenewals` (default: 2 unused copies left or 7 days, random delay up to 6 h), `fullIdentityPresentation`;
+  `StoredCredential.renewDueAt`. Institution silent refresh no longer covers the identity credential.
+- **Future-dated credentials** (behaviour change): a credential whose `nbf` is ahead is accepted and stored with `nbf`, and is
+  skipped by remote and proximity presentation until it is valid. A malformed `nbf` or `nbf ≥ exp` is rejected.
+- `credentialValidity(cred, { now, trust })` → `valid` · `not_yet_valid` · `expired` · `revoked` · `suspended` ·
+  `issuer_suspended`, with `validFrom`, `validUntil`, `presentable`; `isNotYetValid`.
+
 ## New in 0.8.5
 
 - **`request_uri_method=post`** (OpenID4VP 1.0 §5.10): `parseVpUri` returns `requestUriMethod` and rejects an unknown value;
@@ -103,7 +119,7 @@ cache, offline })` fetches each registrar status list once (signer must be a lis
 
 ## Status
 
-Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.6` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

@@ -15,10 +15,15 @@ import { ALL, CATALOGUE_BASE } from "@tamga-network/schemas"; // definitions (ru
 import { build } from "@tamga-network/schemas/build"; // Node only: writes the static catalogue to dist/
 ```
 
+## New in 0.8.6
+
+- Every credential type schema allows `nbf`. `IdentityAttestation` gains an optional `date_of_expiry` (administrative validity)
+  and limits `family_name` / `given_name` to 150 characters. The type metadata hashes (`vct#integrity`) change; use the
+  catalog's current values.
 
 ## Status
 
-Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.6` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

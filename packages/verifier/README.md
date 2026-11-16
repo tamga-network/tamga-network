@@ -81,6 +81,14 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 - A credential without a status entry is rejected at D1 when its type uses a status list; the status list signer is pinned to the
   institution's registered status keys.
 
+## New in 0.8.6
+
+- **Suspended issuer → `REJECTED` at C1** (behaviour change, ADR-0088): while an issuer is `SUSPENDED` in the trust list, every
+  credential it issued is rejected regardless of issuance time (`failed_reason: "issuer suspended"` when the trust source
+  implements `isIssuerSuspended`). After the suspension is lifted, credentials issued before it are accepted again.
+- `verifier/zk`: the native backend no longer crashes the host when it writes to a prover process that has exited; the bundled
+  WASM verifier is rebuilt with `ruzstd` 0.9.1 (RUSTSEC-2026-0344).
+
 ## New in 0.8.5
 
 - `createPresentationRequest({ ..., requestUriMethod: "post" })` writes `request_uri_method=post` into the QR / link (OpenID4VP 1.0
@@ -154,7 +162,7 @@ A complete, tested version: [`examples/02-verify-own-server`](https://github.com
 
 ## Status
 
-Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.6` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 

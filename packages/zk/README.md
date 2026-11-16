@@ -43,6 +43,11 @@ does not change trust: bundle them with the app, or fetch them with `httpCircuit
 The device signature is made the usual way (hardware key, phone lock — WL11); the prover only takes the signed response as input.
 Nothing leaves the device except the proof.
 
+## New in 0.8.6
+
+- The Android libraries are rebuilt with `ruzstd` 0.9.1 (RUSTSEC-2026-0344; 0.8.5 shipped 0.8.3), still 16 KB aligned. No API
+  change; rebuild the app after updating.
+
 ## New in 0.8.5
 
 - The Android libraries in the package are aligned for 16 KB memory pages (Android 15+ devices; required by Google Play for apps
@@ -73,7 +78,7 @@ as the verifier (`packages/verifier/zk`).
 
 ## Status
 
-Published on npm as the `0.8.5` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.6` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Unlike the other eight packages, `zk` is published by hand without npm provenance: its Android native libraries
 cannot yet be built in CI.
 
