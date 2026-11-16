@@ -364,6 +364,8 @@ export class NativeZkBackend implements ZkBackend {
       if (this.child === child) this.child = null;
     });
     child.on("error", () => undefined); // başlatma hatası ask() içinde ele alınır
+    // İkili ölünce stdin'e yazma EPIPE/EOF verir; dinleyici yoksa süreci düşürür. Sonuç "exit" ile ask() içinde ele alınır.
+    child.stdin.on("error", () => undefined);
     child.stderr.resume(); // ikili stderr'e yazmaz; tampon dolmasın
     this.child = child;
     return child;

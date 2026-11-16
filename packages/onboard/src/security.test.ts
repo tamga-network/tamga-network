@@ -2,7 +2,7 @@
  * Katılım aracı — 2026-11-04 ikinci güvenlik turu: yol sınırı ve bağlar (O3/D1/D2), yerel ağa istek (O4), özel anahtar dosyası
  * (O6: Windows izni, bulut eşitleme klasörü, parolasız üretim), MCP parola değişkeni (D3), pin (D4), kayıt sertifikası imzası (D5).
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
@@ -29,6 +29,11 @@ import {
   type Http,
 } from "./index.js";
 import { createServer } from "./mcp.js";
+
+// Bu dosya yavaş işler yapar: CLI'yi tsx ile ayrı süreçte birkaç kez soğuk başlatır (her biri TypeScript derler), parolalı
+// anahtar üretir (scrypt) ve Windows'ta icacls çağırır. Tam pakette (çok işçi, yük altında) genel 20 sn sınırını aralıklı
+// aşıyordu (kararsız test, hazırlık denetimi 2026-11-16) — yalnız bu dosyada sınır 90 sn.
+vi.setConfig({ testTimeout: 90_000 });
 
 const ROOT = resolve(import.meta.dirname, "../../..");
 const tmp = mkdtempSync(join(tmpdir(), "tamga-onboard-sec-"));

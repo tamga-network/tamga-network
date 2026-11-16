@@ -153,7 +153,7 @@ function theme(l: Loc): DefaultTheme.Config {
       },
       {
         text: t.nav.policies,
-        items: [12, 13].map((i) => ({ text: t.doc[i], link: link(i) })),
+        items: [12, 13, 14].map((i) => ({ text: t.doc[i], link: link(i) })),
       },
       { text: t.nav.joining, items: [8, 9, 10].map((i) => ({ text: t.doc[i], link: link(i) })) },
       { text: t.nav.changes, link: changes },

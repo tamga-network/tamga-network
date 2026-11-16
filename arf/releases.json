@@ -4,7 +4,7 @@
     {
       "id": "1.0",
       "date": "2026-10-16",
-      "languages": ["en", "tr"],
+      "languages": ["en", "tr", "az"],
       "docs": {
         "FW-ARF-0001": "1.0.0",
         "FW-TF-0001": "1.0.0",
@@ -24,10 +24,10 @@
       },
       "notes": {
         "en": [
-          "Current release: the main document, the Trust Framework, the Tamga Rulebook with the credential-type rulebooks in the EU Attestation Rulebook template (Education, Identity, Event Ticket, Contact), the Revocation Policy, the Wallet Attestation Policy and the Registration Certificate Policy, definitions and references, and the supporting pages Reading path, Roles and Onboarding. It includes the decisions up to ADR-0055 and the first EU alignment review. Until the public announcement, changes are made in this release."
+          "Current release: the main document, the Trust Framework, the Tamga Rulebook with the credential-type rulebooks in the EU Attestation Rulebook template (Education, Identity, Event Ticket, Contact), the Revocation Policy, the Wallet Attestation Policy and the Registration Certificate Policy, definitions and references, and the supporting pages Reading path, Roles and Onboarding. It includes the decisions up to ADR-0087 and the EU alignment reviews so far. The texts are available in English, Turkish and Azerbaijani. Until the public announcement, changes are made in this release."
         ],
         "tr": [
-          "Güncel yayın: ana belge, Trust Framework, Tamga Rulebook ve AB Attestation Rulebook şablonundaki belge türü rulebook'ları (Education, Identity, Event Ticket, Contact), İptal Politikası, Cüzdan Kanıtı Politikası ve Kayıt Sertifikası Politikası, tanımlar ve kaynaklar; ayrıca Okuma yolu, Roller ve Katılım süreci sayfaları. ADR-0055'e kadarki kararları ve ilk AB uyum turunu içerir. Kamuya duyuruya kadar değişiklikler bu yayının içinde yapılır."
+          "Güncel yayın: ana belge, Trust Framework, Tamga Rulebook ve AB Attestation Rulebook şablonundaki belge türü rulebook'ları (Education, Identity, Event Ticket, Contact), İptal Politikası, Cüzdan Kanıtı Politikası ve Kayıt Sertifikası Politikası, tanımlar ve kaynaklar; ayrıca Okuma yolu, Roller ve Katılım süreci sayfaları. ADR-0087'ye kadarki kararları ve bugüne kadarki AB uyum turlarını içerir. Metinler İngilizce, Türkçe ve Azerbaycanca okunabilir. Kamuya duyuruya kadar değişiklikler bu yayının içinde yapılır."
         ]
       }
     }

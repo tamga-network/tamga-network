@@ -100,7 +100,7 @@
   ],
   "eaa_categories": {
     "urn:tamga:eaa:pub": "Issued by or on behalf of a member-state public body / authentic source (PuB-EAA equivalent)",
-    "urn:tamga:eaa:qualified": "Issuer accredited in the Tamga Trust Framework (I3; QEAA equivalent)"
+    "urn:tamga:eaa:qualified": "Issuer accredited in the Tamga Trust Framework (I3; Tamga level corresponding to QEAA)"
   },
   "wallet_providers": [
     {

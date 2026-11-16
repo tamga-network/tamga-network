@@ -1,8 +1,9 @@
 # Tamga Network
 
-Tamga Network is a not-for-profit digital trust network for Türkiye and the Turkic world, built on the EU digital identity
-profiles (eIDAS 2.0 / EUDI). Institutions issue credentials to a person's wallet, the person shares only the fields that are
-asked for, and a verifier checks the credential in seconds without contacting the issuer. Trust is anchored in signed,
+Tamga Network is a digital trust network for Türkiye and the Turkic world, being set up to be handed to a not-for-profit
+foundation, and built on the EU digital identity profiles (eIDAS 2.0 / EUDI). Institutions issue credentials to a person's
+wallet, the person shares only the fields that are asked for, and a verifier checks the credential in seconds without
+contacting the issuer. Trust is anchored in signed,
 versioned trust lists (ETSI TS 119 612 model) and a public anchor log; no personal data is ever written to them.
 
 This repository holds the open-source `@tamga-network/*` packages, the reference verifier, the trust list publisher and the

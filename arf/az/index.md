@@ -8,12 +8,12 @@ aside: false
 <span class="arf-release">Buraxılış 1.0 · 16 oktyabr 2026</span>
 
 **Tamga Network-un Arxitektura və İstinad Çərçivəsi** — türk dünyası üçün, [[t:eIDAS]] 2.0 və Avropa Rəqəmsal Şəxsiyyət
-Cüzdanı ekosistemi ilə uyğun rəqəmsal etibar infrastrukturu. Tamga [[t:ARF]] kimin, hansı qaydalarla və hansı arxitektura ilə
+Cüzdanı ekosisteminin standartları ilə uzlaşdırılmış rəqəmsal etibar infrastrukturu. Tamga [[t:ARF]] kimin, hansı qaydalarla və hansı arxitektura ilə
 iştirak etdiyini izah edir: istifadə halları, rollar, arxitektura, məlumat modeli, etibar modeli, təhlükəsizlik və idarəetmə,
 həmçinin hər iştirakçının məcburi qaydaları.
 
 Avropa İttifaqının (Aİ) ARF-inin quruluşunu izləyir: bir əsas sənəd və beş əlavə (Əlavə C dörd rulebook-dan ibarətdir; onların
-quruluşu Aİ Attestation Rulebook şablonunu izləyir) və iki siyasət. Məcburi qaydalar vahid əsas kitabda — **Tamga
+quruluşu Aİ Attestation Rulebook şablonunu izləyir) və üç siyasət. Məcburi qaydalar vahid əsas kitabda — **Tamga
 [[t:rulebook|Rulebook]]**-da toplanır; hər sənəd növünün bu kitabdan ayrılan öz rulebook-u var.
 
 ## Sənədlər
@@ -32,6 +32,7 @@ quruluşu Aİ Attestation Rulebook şablonunu izləyir) və iki siyasət. Məcbu
 | [Əlavə E — Mənbələr](/az/references) | 1.0.0 | standartlar, Tamga sənədləri və hər qaydanın mənbəyi |
 | [Ləğv Siyasəti](/az/policies/revocation) | 1.0.0 | sənədi verən qurumlar, yoxlayan tərəflər, şəxslər: sənəd hansı hallarda ləğv edilir |
 | [Cüzdan Attestasiyası Siyasəti](/az/policies/wallet-attestation) | 1.0.0 | cüzdan provayderləri və sənədi verən qurumlar: WIA və KA-nın verilməsi və ləğvi |
+| [Qeydiyyat Sertifikatı Siyasəti](/az/policies/registration-certificate) | 1.0.0 | yoxlayan tərəflər və sənədi verən qurumlar: qeydiyyat sertifikatlarının verilməsi və ləğvi |
 | [Oxu yolu](/az/reading-path) | 1.0.0 | rolunuza görə nəyi hansı ardıcıllıqla oxumalı olduğunuz |
 | [Rollar](/az/roles) | 1.0.0 | hər rolun təfərrüatı: nə edir, qaydaları, nəyə ehtiyac duyur |
 | [Qoşulma prosesi](/az/onboarding) | 1.0.0 | qoşulmanın addımları, fəaliyyətin dayandırılması və çıxış |

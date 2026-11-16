@@ -6,6 +6,13 @@ published on npm as test releases; `0.8.5` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+### Fixed
+
+- `verifier/zk`: the native backend no longer lets a write to a dead prover process crash the host (`stdin` error listener).
+- `verifier/zk`: the bundled WASM verifier is rebuilt with `ruzstd` 0.9.1 (RUSTSEC-2026-0344). The Android libraries in `zk`
+  still carry 0.8.3 and will move in the next `zk` rebuild.
+- `onboard`: the security test has a longer time limit (cold CLI starts under load).
+
 ## 0.8.5 — 2026-11-15
 
 All ten packages move to 0.8.5 together (patch release). The code changes in the packages are in `wallet-core` (POST fetch of
