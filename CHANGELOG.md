@@ -1,7 +1,7 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.8.5` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.8.6` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## [Unreleased]
@@ -13,7 +13,8 @@ identity credential, identity renewal, future-dated credentials, `credentialVali
 `walletProviderOfKey`), `verifier` (suspended issuer at C1, `verifier/zk` fixes), `issuer`, `sd-jwt`, `mdoc` and `schemas` (`nbf`,
 mdoc configuration scope, `expiry_date`, `date_of_expiry`) and `zk` (Android libraries rebuilt with `ruzstd` 0.9.1); `core` and
 `onboard` carry the version number (and, for `onboard`, a test time limit). The single-credential rule for presentations is in
-the reference verifier (`apps/verify`), not in the packages. Not published on npm when this entry was written.
+the reference verifier (`apps/verify`), not in the packages.
+Published on npm on 2026-11-16.
 
 ### Migration notes (for app developers)
 
