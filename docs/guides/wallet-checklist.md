@@ -4,7 +4,7 @@ title: "Cüzdan yayın öncesi kontrol listesi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tamga uyumlu bir cüzdanı mağazaya göndermeden önce geçilecek kontrol listesi: anahtarlar ve cihaz kanıtı, kayıt, belge alma,
   gösterme ve onay ekranı, gizlilik ve günlük, cihaz değiştirme ve silme, güven listesi, uyum testleri ve mağaza.
@@ -54,7 +54,7 @@ Bu sayfa, [[GUIDE-0005]]'te anlatılan cüzdanı yayına hazırlayan ekipler iç
 ## Gizlilik ve günlük
 
 - İşlem günlüğü cihazda; değer değil yalnız alan adları; sunucuya ve otomatik yedeğe gitmiyor (WL4).
-- Günlük dışa aktarma yalnız kişinin başlattığı ve kendi parolasıyla şifreli (TS10, parola en az 8 karakter).
+- Günlük dışa aktarma yalnız kişinin başlattığı ve kendi parolasıyla şifreli (TS10, parola en az 12 karakter).
 - Hata kayıtlarında, analitikte ve çökme raporlarında kişisel veri, belge içeriği ya da belge yok.
 - Geçiş kartı QR'ı kişisel veri taşımıyor; jeton ömrü en çok 60 saniye (WL12).
 

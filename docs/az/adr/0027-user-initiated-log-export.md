@@ -4,7 +4,7 @@ title: "Əməliyyat jurnalının ixracı"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-11-16
 summary: >
   SPEC-WALLET-0001/WL4 təqdimat jurnalının cihazdan heç vaxt çıxmamasını tələb edir. Avropa İttifaqı (Aİ) (CIR 2024/2979 maddə 9 və 13, TS10) isə rəqəmsal cüzdanın əməliyyat jurnalını və köçürmə obyektini şəxsin istəyi ilə ixrac edə bilməsini məcburi edir. Qərar: jurnal cihazdan yalnız şəxsin özünün başlatdığı, öz parolu ilə şifrələnmiş (PBES2 + A128GCM) ixracda çıxır; avtomatik və ya Tamga serverinə heç vaxt çıxmır. WL4 bu şəkildə daraldıldı.
 domain: Wallet
@@ -85,3 +85,4 @@ Tətbiq:
 - rəqəmsal cüzdanda jurnal ixracı aktivdir (TS10 §4.1, parolla),
 - köçürmə faylı jurnalı ehtiva edir; idxal zamanı şəxsdən jurnalın bərpa edilib-edilməyəcəyi soruşulur (ARF Mig_07b),
 - sadə JSON ixracı yoxdur.
+- ixracda parolun minimum uzunluğu 12 simvola qaldırıldı (2026-11-16; K1-in "ən azı 8" həddindən yuxarı, qərarın məzmunu dəyişməyib); idxal köhnə faylları açmağa davam edir.

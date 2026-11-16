@@ -58,3 +58,39 @@ export function checkTerminalGroups(rps: Rec[], issuers: Rec[], now = new Date()
   }
   return errors;
 }
+
+/**
+ * Y9 (ADR-0069 TG1/TG2, ADR-0088): bir kuruma (`institution_id` = belge veren `slug`'ı ya da doğrulayıcı `dns_name`'i) bağlı,
+ * bugün etkin (geri çekilmemiş) kapı grupları. Kurum askıya alınır, iptal edilir ya da emekliye ayrılırken bu gruplar önce
+ * `end-use <dns_name> <group_id>` ile geri çekilmelidir; çekilmezse yayın durur (`checkTerminalGroups`).
+ */
+export function activeGroupsOfInstitution(
+  rps: Rec[],
+  institutionId: string,
+  now = new Date(),
+): Array<{ dns_name: string; group_id: string }> {
+  const out: Array<{ dns_name: string; group_id: string }> = [];
+  for (const rp of rps) {
+    if (!Array.isArray(rp.terminal_groups)) continue;
+    for (const g of rp.terminal_groups as Rec[]) {
+      if (g.institution_id !== institutionId) continue;
+      if (typeof g.valid_until === "string" && Date.parse(g.valid_until) <= now.getTime()) continue;
+      out.push({ dns_name: String(rp.dns_name ?? ""), group_id: String(g.group_id ?? "") });
+    }
+  }
+  return out;
+}
+
+/** Y9: askı / iptal / emeklilik öncesi işletmeciye gösterilen uyarı satırları (boşsa uyarı yok). */
+export function groupWithdrawalWarnings(rps: Rec[], institutionId: string, status: string, now = new Date()): string[] {
+  if (status === "ACTIVE") return [];
+  const groups = activeGroupsOfInstitution(rps, institutionId, now);
+  if (!groups.length) return [];
+  return [
+    `[uyarı] ${institutionId} ${status} olacak ama kuruma bağlı ${groups.length} etkin kapı grubu var — önce geri çekin ` +
+      `(ADR-0069 TG1/TG2; çekilmezse liste yayımlanmaz ve kayıt geri alınır):`,
+    ...groups.map((g) => `  npx tsx apps/trust-publisher/src/cli.ts end-use ${g.dns_name} ${g.group_id}`),
+    `  Askı süresince kurumun belgeleri kabul edilmez (ADR-0088). Askı kalkınca kapılar yeni group_id'li grupla (yeni başvuru) ve ` +
+      `yeni terminal anahtarlarıyla açılır; geri çekilen grup tarih kaydı olarak kalır.`,
+  ];
+}

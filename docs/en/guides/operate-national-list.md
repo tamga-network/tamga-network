@@ -4,7 +4,7 @@ title: "Operate a national trust list"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-16
 summary: >
   The setup guide for the chainless mode: for the IT team that will run a country's signed trust list — keys and the root
   certificate (HSM note), the registry, producing, signing, verifying and publishing the list with the list publisher
@@ -354,6 +354,21 @@ the institution's side: [[GUIDE-0014]].
 
 When an institution is withdrawn its record is not deleted; its status changes. A record that should never have been valid is
 withdrawn with `--invalidates-from valid_from`: no credential issued by that institution verifies.
+
+**Gate groups before suspension.** Before suspending (`SUSPENDED`), revoking or retiring an institution, withdraw the gate groups
+bound to it (`terminal_groups[]`, `institution_id` = the institution's short name or the verifier's domain name):
+
+```sh
+npx tsx apps/trust-publisher/src/cli.ts end-use <dns_name of the verifier publishing the group> <group_id>
+npm run trust:status -- <slug> SUSPENDED --reason <reason>
+```
+
+If an active gate group stays bound to an institution that is not ACTIVE, the publisher does not publish the list ([[ADR-0069]]
+TG1) and the status change is rolled back; `trust:status` prints such groups and the withdrawal commands as a warning beforehand.
+While suspended, all of the institution's credentials are rejected at verification ([[ADR-0088]]); the gate keys of a withdrawn
+group no longer pass at the gate either (TG3). When the suspension is lifted (`ACTIVE`) the credentials are accepted again; the
+gates reopen with a new group id (a new application) and terminal keys created again in the Institution Console — the withdrawn
+group stays as a history record.
 
 ## 8. When the chain is on
 

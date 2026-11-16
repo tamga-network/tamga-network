@@ -7,7 +7,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { removalChangelogLine, removedRecords } from "../src/removals.js";
+import { participantRecords, removalChangelogLine, removedRecords } from "../src/removals.js";
+import { isOwn, type ProvisionalOperator } from "../src/provisional-operator.js";
 import {
   addRelyingParty,
   addScope,
@@ -623,4 +624,34 @@ describe("TL2: listeden kayıt çıkarma", () => {
       }
     },
   );
+});
+
+describe("ADR-0081 RR3: ilk katılımcı kurum girince çıkarma istisnası kapanır", () => {
+  const op: ProvisionalOperator = {
+    scheme_operator_name: "Tamga Network",
+    name: "Example Operator Ltd",
+    on_behalf_of: "Tamga Network",
+    identifier: { scheme: "TR-VKN", value: "TR0000000000" },
+    postal_address: { street_address: "x", locality: "y", country: "TR" },
+  };
+  const own = (r: Record<string, unknown>) => isOwn(op, r);
+  const ownIssuer = { slug: "tamga-id", identifiers: [{ scheme: "TR-VKN", value: "TR0000000000" }] };
+  const ownRp = { dns_name: "verify.example", operator: { name: "Example Operator Ltd" } };
+  const member = { slug: "example-university", identifiers: [{ scheme: "TR-VKN", value: "TR1111111111" }] };
+  const memberRp = { dns_name: "shop.example", identifiers: [{ scheme: "TR-VKN", value: "TR2222222222" }] };
+  it("katılımcı: geçici işletmecinin kendi kaydı olmayan belge veren ya da doğrulayıcı (önceki liste ya da yeni kaynak)", () => {
+    expect(participantRecords([{ issuers: [ownIssuer], relying_parties: [ownRp] }, null], own)).toEqual([]);
+    expect(participantRecords([{ issuers: [ownIssuer, member] }, { relying_parties: [memberRp] }], own)).toEqual([
+      "issuer example-university",
+      "relying_party shop.example",
+    ]);
+  });
+  it("katılımcı varken onaylı çıkarma kaydı da geçmez; çıkarma yoksa denetim sessiz", () => {
+    const counts = removedRecords(prev, next);
+    expect(removalChangelogLine("tl-tr", counts, approved, at, [])).not.toBeNull();
+    expect(() => removalChangelogLine("tl-tr", counts, approved, at, ["issuer example-university"])).toThrow(
+      /ADR-0081 RR3.*DURDU/s,
+    );
+    expect(removalChangelogLine("tl-tr", removedRecords(prev, prev), [], at, ["issuer example-university"])).toBeNull();
+  });
 });

@@ -4,7 +4,7 @@ title: "İşlem günlüğünü dışa aktarma"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-11-16
 summary: >
   SPEC-WALLET-0001/WL4 sunum günlüğünün cihazdan hiç çıkmamasını ister. AB (CIR 2024/2979 md. 9 ve 13, TS10) ise cüzdanın işlem
   günlüğünü ve taşıma nesnesini kişinin isteğiyle dışa aktarabilmesini zorunlu tutar. Karar: günlük yalnız kişinin kendi
@@ -86,3 +86,4 @@ Uygulama:
 - cüzdanda günlük dışa aktarımı açık (TS10 §4.1, parolalı),
 - taşıma dosyası günlüğü içerir; içe aktarmada kişiye günlüğün geri yüklenip yüklenmeyeceği sorulur (ARF Mig_07b),
 - düz JSON dışa aktarma yok.
+- parolanın alt sınırı dışa aktarmada 12 karaktere çıkarıldı (2026-11-16; K1'in "en az 8" sınırının üstünde, karar içeriği değişmedi); içe aktarma eski dosyaları açmaya devam eder.

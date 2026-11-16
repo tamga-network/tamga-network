@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-12
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Etibar siyahısından qeyd silinmir (SPEC-TRUST-0001 TL2): qurumun qeydi bağlananda statusu dəyişir, tarixçəsi siyahıda qalır. Bu
   qərar qaydaya tək və dar bir istisna müəyyən edir: qurumların qoşulmasından əvvəl sınaq məqsədilə daxil edilmiş, heç bir real
@@ -101,6 +101,11 @@ gəlir. Sandbox-da bu yoxlama tətbiq edilmir (sınaq qurumları orada hər gec�
   şərti və RR3-ün bağlanması qərar səviyyəsində yoxlanılır. İlk iştirakçı qurum siyahıya daxil olduqdan sonra real şəbəkənin
   reyestrinə yeni çıxarma qeydi yazılmır. Bağlanmanın dərcçidə maşınla məcbur edilməsi ilk qurumun qoşulması ilə birlikdə ələ
   alınır.
+- **Tətbiq qeydi (2026-11-16; qərarın məzmunu dəyişməyib) — RR3 maşınla məcbur edilir.** Dərcçi əvvəlki imzalı siyahıda və ya
+  yeni mənbədə müvəqqəti operatorun öz qeydi ([[ADR-0070]] OP2 dəyəri ilə tanınan) olmayan sənəd verən və ya yoxlayıcı görərsə,
+  istisnanı bağlanmış sayır: həmin dərcdən başlayaraq təsdiqlənmiş çıxarma qeydi olsa belə, qeydi azaldan siyahı dərc edilmir
+  (real şəbəkə; sandbox-da tətbiq olunmur). RR3-ə görə real şəbəkənin siyahısında sınaq qeydi olmadığından operatorun öz qeydi
+  olmayan hər qeyd iştirakçı sayılır.
 - **Tətbiq qeydi (2026-11-12, ikinci yoxlama; qərarın məzmunu dəyişməyib) — çıxarma qeydi tək keçidə bağlıdır.** Təsdiqlənmiş
   çıxarma qeydi etibarlı olduğu versiya keçidini də daşıyır: çıxarmadan əvvəlki imzalı siyahı versiyasının nömrəsi
   (`previous_version`, məcburi) və istəyə bağlı olaraq həmin versiyanın imzalı faylının xülasəsi (`previous_version_hash`).

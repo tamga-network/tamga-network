@@ -27,7 +27,11 @@ export const TS10_MIN_ITERATIONS = 200_000;
  */
 export const TS10_MIN_IMPORT_ITERATIONS = 100_000;
 const MAX_ITERATIONS = 2_000_000; // içe aktarmada aşırı yüke karşı
-export const TS10_MIN_PASSWORD = 8;
+/**
+ * Dışa aktarmada parolanın alt sınırı (karakter). 2026-11-16: 8 → 12 (taşıma dosyası cihaz dışına çıkar ve çevrim dışı
+ * denenebilir; kısa parola PBKDF2'ye rağmen zayıf kalır). İçe aktarmada uzunluk denetlenmez: eski 8+ karakterli dosyalar açılır.
+ */
+export const TS10_MIN_PASSWORD = 12;
 
 export interface Ts10Identifier {
   type: string;
@@ -272,7 +276,7 @@ function prepareSeal(password: string, opts: { iterations?: number; randomBytes?
   return { rnd, p2s, p2c, h };
 }
 
-/** Parolayla şifreli JWE (compact). Parola en az 8 karakter; yinelemeler varsayılan 600 000, en az 200 000 (ADR-0027 K1). */
+/** Parolayla şifreli JWE (compact). Parola en az 12 karakter (`TS10_MIN_PASSWORD`); yinelemeler varsayılan 600 000, en az 200 000 (ADR-0027 K1). */
 export function encryptTs10(
   obj: unknown,
   password: string,

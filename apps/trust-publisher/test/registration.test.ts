@@ -58,3 +58,17 @@ describe("katılımcı kayıt verisi (ADR-0024)", () => {
     expect(issuerEntitlements("PUB")).toEqual(["pub_eaa_provider"]);
   });
 });
+
+describe("gerçek ağ kayıt defteri: ağın kendi doğrulayıcısı (A41, ADR-0024 RPR3)", () => {
+  it("Tamga Verify'ın bütün kullanımlarında ağın gizlilik sayfası var; kayıt verisi eksiği yok", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const tl = JSON.parse(
+      readFileSync(resolve(import.meta.dirname, "..", "registry", "tl-tr.source.json"), "utf8"),
+    ) as { relying_parties: Array<{ dns_name: string; scopes: Array<{ privacy_policy_uri?: string }> }> };
+    const verify = tl.relying_parties.find((r) => r.dns_name === "verify.tamga.network")!;
+    expect(verify.scopes.length).toBeGreaterThan(0);
+    for (const s of verify.scopes) expect(s.privacy_policy_uri).toBe("https://tamga.network/privacy");
+    expect(rpGaps(verify)).toEqual([]);
+  });
+});

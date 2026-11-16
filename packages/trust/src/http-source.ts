@@ -56,6 +56,13 @@ export async function fetchListTrustSource(
      * İmza her iki durumda LOTL'da sabitlenmiş imzacıya karşı doğrulanır; kopya içeriği değiştiremez.
      */
     externalLists?: boolean;
+    /**
+     * Yayıncının kopyası yoksa dış listeyi özgün adresinden (`list_url`) doğrudan çek (varsayılan `true`). Gizlilik notu: doğrudan
+     * çekmede dış listenin sunucusu (Tamga dışı bir işletmeci) istemcinin IP adresini ve çekme zamanını görür; istek kişiye ya da
+     * belgeye bağlı değildir (toplu liste çekimi, TS3). `false`: yalnız yayıncının kopyası kullanılır, kopyası olmayan dış liste
+     * yüklenmez (o listeye dayanan belgeler doğrulanamaz).
+     */
+    externalListsDirect?: boolean;
     anchorMaxAgeMs?: number;
     /** ADR-0038: beklenen ağ (varsayılan "production"); sandbox listesi gerçek ağ istemcisinde reddedilir. */
     environment?: "production" | "sandbox";
@@ -116,9 +123,11 @@ export async function fetchListTrustSource(
       const mirror = await get(`external/${ptr.list_id}.${ext}`).catch(() => "");
       const body =
         mirror ||
-        (await http(ptr.list_url)
-          .then(async (r) => (r.status === 200 ? (await r.text()).trim() : ""))
-          .catch(() => ""));
+        (opts.externalListsDirect === false
+          ? ""
+          : await http(ptr.list_url)
+              .then(async (r) => (r.status === 200 ? (await r.text()).trim() : ""))
+              .catch(() => ""));
       if (body) jwsMap[ptr.list_id] = body;
     }
     report.warnings.push(

@@ -2,7 +2,9 @@
  * ADR-0039 — sürücü belgesi bilgisi (`urn:tamga:id:DrivingLicenceAttestation:1`), cüzdan tarafı yardımcıları (SPEC-ID-0003 §9.3).
  *  - Tür yalnız kimlik servisi metadata'da ilan ediyorsa gösterilir (sağlayıcı akışı ayarlı değilse ilan edilmez; K7).
  *  - Ön koşul (K4): PAR'a cüzdandaki Tamga kimlik belgesinin SUNUMU eklenir — SD-JWT VC + KB-JWT, `aud` = kimlik servisi,
- *    `nonce` = servisin `POST /nonce` ucundan (tek kullanımlık); YALNIZ ad, soyad ve doğum tarihi açılır. Ayrı OpenID4VP turu yok.
+ *    `nonce` = servisin `POST /nonce` ucundan (tek kullanımlık); ad, soyad ve doğum tarihi açılır, belgede varsa kimlik numarası
+ *    (`personal_administrative_number`) da — yalnız belgeyi veren servise, yalnız kart eşleşmesi için (ADR-0039 açık soru 1, A19:
+ *    servis numarayı anahtarlı özete çevirir, saklamaz, sürücü belgesine yazmaz). Ayrı OpenID4VP turu yok.
  *  - `access_denied` açıklamaları (servisin İngilizce metinleri) neden koduna çevrilir; ekran kendi dilinde sade ileti gösterir.
  * Protokol/kripto burada; ekran cüzdanda. Kişisel veri döndürmez, loglamaz.
  */
@@ -15,9 +17,10 @@ import type { StoredCredential } from "./store.js";
 
 /** PAR alanı: kimlik belgesinin sunumu (kimlik servisi `IDENTITY_PRESENTATION_PARAM` ile aynı ad). */
 export const IDENTITY_PRESENTATION_PARAM = "identity_presentation";
-/** K4: kimlik belgesinden açılan alanlar — başka hiçbir alan açılmaz (servis fazlasını reddeder). */
-/** ADR-0045: kimlik belgesinin AB PID adları (SD-JWT VC). */
+/** K4: kimlik belgesinden her zaman açılan alanlar (ADR-0045: AB PID adları, SD-JWT VC). */
 export const DRIVING_IDENTITY_CLAIMS: readonly string[] = ["given_name", "family_name", "birthdate"];
+/** A19: belgede varsa ayrıca açılan tek alan (kart eşleşmesi; servis fazlasını reddeder). */
+const DRIVING_NUMBER_CLAIM = "personal_administrative_number";
 
 /** Kimlik servisi sürücü belgesi bilgisini bugün veriyor mu (metadata'da `dc+sd-jwt` olarak ilan ediyor mu)? */
 export const drivingOffered = (md: IssuerMetadata): boolean =>
@@ -25,7 +28,7 @@ export const drivingOffered = (md: IssuerMetadata): boolean =>
 
 /**
  * Kimlik belgesinin kimlik servisine sunumu (PAR `identity_presentation`): servisin /nonce ucundan tek kullanımlık nonce alır,
- * yalnız ad/soyad/doğum tarihi açılmış SD-JWT VC + KB-JWT üretir. Kopya 0 kullanılır ve kullanım sayacına işlenmez: sunum,
+ * ad/soyad/doğum tarihi (+ belgede varsa kimlik numarası, A19) açılmış SD-JWT VC + KB-JWT üretir. Kopya 0 kullanılır ve kullanım sayacına işlenmez: sunum,
  * belgeyi VEREN servise yapılır — servis zaten bütün kopyaların anahtarını bilir, yeni bir bağlanabilirlik doğmaz (silme isteğiyle
  * aynı desen). WL5 sayacı doğrulayıcılara yapılan sunumlar içindir.
  */
@@ -58,7 +61,10 @@ export async function identityPresentationForIssuer(p: {
   const copy = id.copies[0];
   return presentSdJwt({
     combined: copy.combined,
-    discloseClaims: [...DRIVING_IDENTITY_CLAIMS],
+    discloseClaims: [
+      ...DRIVING_IDENTITY_CLAIMS,
+      ...(id.disclosureNames.includes(DRIVING_NUMBER_CLAIM) ? [DRIVING_NUMBER_CLAIM] : []),
+    ],
     keys: p.keys,
     keyRef: copy.keyRef,
     aud: base,

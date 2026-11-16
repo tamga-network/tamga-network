@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { checkTerminalGroups } from "../src/terminal-groups.js";
+import { activeGroupsOfInstitution, checkTerminalGroups, groupWithdrawalWarnings } from "../src/terminal-groups.js";
 
 const NOW = new Date("2026-10-29T00:00:00Z");
 const issuers = [{ slug: "example-events" }, { slug: "example-university" }, { slug: "eski-kurum", status: "REVOKED" }];
@@ -78,5 +78,41 @@ describe("ADR-0069 checkTerminalGroups", () => {
       };
       expect(checkTerminalGroups(tl.relying_parties, tl.issuers, NOW), dir).toEqual([]);
     }
+  });
+});
+
+describe("Y9 kurumu askıya almadan önce kapı gruplarının geri çekilmesi", () => {
+  const rps = [
+    rp([group(), group({ group_id: "example-events-old", valid_until: "2026-10-04T00:00:00Z" })]),
+    rp([group({ group_id: "uni-gate", institution_id: "example-university" })], "other.example"),
+  ];
+  it("yalnız kuruma bağlı ve geri çekilmemiş gruplar listelenir", () => {
+    expect(activeGroupsOfInstitution(rps, "example-events", NOW)).toEqual([
+      { dns_name: "verify.sandbox.tamga.network", group_id: "example-events-gate" },
+    ]);
+    expect(activeGroupsOfInstitution(rps, "yok-boyle", NOW)).toEqual([]);
+  });
+  it("askı / iptal / emeklilikte uyarı ve end-use komutu; ACTIVE'e dönüşte ve grupsuz kurumda uyarı yok", () => {
+    const w = groupWithdrawalWarnings(rps, "example-events", "SUSPENDED", NOW).join(" | ");
+    expect(w).toMatch(/1 etkin kapı grubu/);
+    expect(w).toContain("end-use verify.sandbox.tamga.network example-events-gate");
+    expect(w).toMatch(/ADR-0088/);
+    expect(groupWithdrawalWarnings(rps, "example-university", "REVOKED", NOW).join(" ")).toContain(
+      "end-use other.example uni-gate",
+    );
+    expect(groupWithdrawalWarnings(rps, "example-events", "ACTIVE", NOW)).toEqual([]);
+    expect(groupWithdrawalWarnings(rps, "yok-boyle", "SUSPENDED", NOW)).toEqual([]);
+  });
+  it("uyarı söylediğini yapar: grubu geri çekmeden askı yayın denetiminden geçmez, çekince geçer", () => {
+    const suspended = [{ slug: "example-events", status: "SUSPENDED" }, { slug: "example-university" }];
+    expect(checkTerminalGroups(rps, suspended, NOW).join(" ")).toMatch(/SUSPENDED/);
+    const withdrawn = [
+      rp([
+        group({ valid_until: NOW.toISOString() }),
+        group({ group_id: "example-events-old", valid_until: "2026-10-04T00:00:00Z" }),
+      ]),
+      rps[1],
+    ];
+    expect(checkTerminalGroups(withdrawn, suspended, NOW)).toEqual([]);
   });
 });

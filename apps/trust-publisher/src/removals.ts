@@ -11,6 +11,10 @@
  * bir kurumun kaydı için bu yol kullanılmaz. Bu koşulu yayıncı bilemez — karar düzeyinde denetlenir; yayıncı sayıları denetler.
  * Sandbox'ta uygulanmaz (test kurumları orada her gece kaldırılır — ADR-0041 TI5).
  *
+ * ADR-0081 RR3 (makinece kapanış): önceki imzalı listede ya da yeni kaynakta geçici işletmecinin kendi kaydı OLMAYAN bir belge
+ * veren ya da doğrulayıcı varsa (ilk katılımcı kurum; RR3 gereği gerçek ağın listesine sınama kaydı konmadığından kendi kaydı
+ * olmayan her kayıt katılımcı sayılır) istisna kapanmıştır: onaylı çıkarma kaydı olsa da hiçbir çıkarma yayımlanmaz.
+ *
  * 0.8.3: denetim kaydın İÇİNE de bakar. Önceki sürümde olup yenisinde olmayan kök CA, şema (ülke listesinde `national_schemas`,
  * LOTL'da `schemas`) ve — listede KALAN kayıtlarda — kullanım (`scopes`), şema yetkisi (`schema_authorizations`) ve durum geçmişi
  * satırı (`status_history`) de sayılır; biri eksikse yayın aynı kuralla durur. Bunlar çıkarma kaydında isteğe bağlı sayılardır
@@ -320,6 +324,25 @@ export function removedRecords(
   };
 }
 
+type Rec = Record<string, unknown>;
+/**
+ * ADR-0081 RR3: listelerdeki katılımcı kayıtlar — geçici işletmecinin kendi kaydı (`isOwn`, ADR-0070) olmayan belge veren
+ * (`slug`) ve doğrulayıcılar (`dns_name`). Biri bile varsa çıkarma istisnası kapanmıştır.
+ */
+export function participantRecords(
+  lists: Array<{ issuers?: unknown[]; relying_parties?: unknown[] } | null | undefined>,
+  isOwnRecord: (r: Rec) => boolean,
+): string[] {
+  const out = new Set<string>();
+  for (const l of lists) {
+    for (const i of (l?.issuers ?? []) as Rec[])
+      if (!isOwnRecord(i)) out.add(`issuer ${String(i.slug ?? i.issuer_id)}`);
+    for (const r of (l?.relying_parties ?? []) as Rec[])
+      if (!isOwnRecord(r)) out.add(`relying_party ${String(r.dns_name ?? r.rp_id)}`);
+  }
+  return [...out].sort();
+}
+
 export const anyRemoved = (c: RemovalCounts) =>
   c.issuers + c.relying_parties + c.terminal_groups + DETAIL_KEYS.reduce((n, k) => n + (c[k] ?? 0), 0) > 0;
 
@@ -332,8 +355,17 @@ export function removalChangelogLine(
   counts: RemovalCounts,
   approved: unknown,
   prev: PreviousVersion | null | undefined,
+  /** ADR-0081 RR3: katılımcı kayıtlar (`participantRecords`); boş değilse çıkarma istisnası kapanmıştır */
+  participants: string[] = [],
 ): string | null {
   if (!anyRemoved(counts)) return null;
+  if (participants.length)
+    throw new Error(
+      `ADR-0081 RR3: ${list} — ilk katılımcı kurum listeye girdi (${participants.length} kayıt: ` +
+        `${participants.slice(0, 3).join(", ")}${participants.length > 3 ? ", …" : ""}); gerçek ağın listesinden artık hiçbir ` +
+        `kayıt çıkarılmaz, onaylı çıkarma kaydı (removals.json) da geçmez. Durum değişikliği için status / rp-status / end-use ` +
+        `kullanın — DURDU`,
+    );
   const rows = (Array.isArray(approved) ? approved : []) as Array<Partial<ApprovedRemoval>>;
   const hit = rows.find(
     (r) =>

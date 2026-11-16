@@ -4,7 +4,7 @@ title: "Ulusal güven listesi işletmek"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-16
 summary: >
   Zincirsiz hâlin kurulum rehberi: bir ülkenin imzalı güven listesini işletecek bilgi işlem ekibi için anahtarlar ve kök sertifika
   (HSM notu), kayıt defteri, liste yayıncısıyla (trust-publisher) listeyi üretme, imzalama, doğrulama ve yayımlama (JSON-JWS,
@@ -347,6 +347,20 @@ adımlar: [[GUIDE-0014]].
 
 Bir kurum geri çekilirken kaydı silinmez; durumu değişir. Hiç geçerli olmaması gereken bir kayıt
 `--invalidates-from valid_from` ile çekilir: o kurumun verdiği hiçbir belge doğrulanmaz.
+
+**Askıya almadan önce kapı grupları.** Bir kurumu askıya almadan (`SUSPENDED`), iptal etmeden ya da emekliye ayırmadan önce o kuruma
+bağlı kapı gruplarını (`terminal_groups[]`, `institution_id` = kurumun kısa adı ya da doğrulayıcının alan adı) geri çekin:
+
+```sh
+npx tsx apps/trust-publisher/src/cli.ts end-use <grubu yayımlayan doğrulayıcının dns_name'i> <group_id>
+npm run trust:status -- <slug> SUSPENDED --reason <gerekçe>
+```
+
+Etkin bir kapı grubu ACTIVE olmayan bir kuruma bağlı kalırsa yayıncı listeyi yayımlamaz ([[ADR-0069]] TG1) ve durum değişikliği
+geri alınır; `trust:status` böyle grupları ve geri çekme komutlarını önceden uyarı olarak basar. Askı süresince kurumun bütün
+belgeleri doğrulamada reddedilir ([[ADR-0088]]); geri çekilen grubun kapı anahtarları da kapıda geçmez (TG3). Askı kalkınca
+(`ACTIVE`) belgeler yeniden kabul edilir; kapılar ise yeni grup kimliğiyle (yeni başvuru) ve Kurum Konsolu'nda yeniden oluşturulan
+terminal anahtarlarıyla açılır — geri çekilen grup tarih kaydı olarak kalır.
 
 ## 8. Zincir açıkken
 

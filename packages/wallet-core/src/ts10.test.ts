@@ -1,5 +1,5 @@
 /** AB TS10: işlem günlüğü ve taşıma nesnesi — veri modeli, PBES2-HS256+A128KW/A128GCM (jose ile çözülür), geri yükleme. */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { compactDecrypt, CompactEncrypt } from "jose";
 import {
   applyMigration,
@@ -14,6 +14,7 @@ import {
   Ts10DecryptError,
   TS10_DEFAULT_ITERATIONS,
   TS10_MIN_ITERATIONS,
+  TS10_MIN_PASSWORD,
   type StoredCredential,
   type Ts10Lookup,
   type WalletState,
@@ -86,6 +87,10 @@ const lookup: Ts10Lookup = {
   }),
 };
 
+// PBKDF2 200 000–600 000 yinelemeli şifreleme/çözme (async yol arayüz iş parçacığını bırakarak ilerler) tam pakette (çok işçi,
+// yük altında) genel 20 sn sınırını aralıklı aşıyordu ("async şifreler" testi, 2026-11-16) — yalnız bu dosyada sınır 90 sn.
+vi.setConfig({ testTimeout: 90_000 });
+
 describe("TS10 işlem günlüğü", () => {
   it("sunum: istenen ≠ gönderilen, reddedilen NotCompleted; alım ve KVKK bildirimi; zamana göre", () => {
     const log = ts10TransactionLog(state(), lookup);
@@ -142,6 +147,18 @@ describe("TS10 şifreleme (PBES2-HS256+A128KW / A128GCM)", () => {
     expect(JSON.parse(new TextDecoder().decode(plaintext))).toEqual(data);
   });
 
+  it("içe aktarma eski kısa parolalı (8 karakter) dosyayı açmaya devam eder; 12 karakter dışa aktarılır", async () => {
+    const old = await new CompactEncrypt(new TextEncoder().encode(JSON.stringify({ old: 1 })))
+      .setProtectedHeader({ alg: "PBES2-HS256+A128KW", enc: "A128GCM" })
+      .setKeyManagementParameters({ p2c: 200_000 })
+      .encrypt(new TextEncoder().encode("sekiz-8k"));
+    expect(decryptTs10(old, "sekiz-8k")).toEqual({ old: 1 });
+    expect(await decryptTs10Async(old, "sekiz-8k")).toEqual({ old: 1 });
+    expect(decryptTs10(encryptTs10({ n: 1 }, "on-iki-harf1", { iterations: 200_000 }), "on-iki-harf1")).toEqual({
+      n: 1,
+    });
+  });
+
   it("jose ile şifrelenmiş TS10 nesnesini çözer", async () => {
     const jwe = await new CompactEncrypt(new TextEncoder().encode(JSON.stringify({ ok: 1 })))
       .setProtectedHeader({ alg: "PBES2-HS256+A128KW", enc: "A128GCM" })
@@ -154,7 +171,9 @@ describe("TS10 şifreleme (PBES2-HS256+A128KW / A128GCM)", () => {
     const jwe = encryptTs10({ a: 1 }, pw, { iterations: 200_000 });
     expect(() => decryptTs10(jwe, "yanlis-parola")).toThrow(Ts10DecryptError);
     expect(() => decryptTs10(jwe.slice(0, -4) + "AAAA", pw)).toThrow(Ts10DecryptError);
-    expect(() => encryptTs10({}, "kisa")).toThrow(/8 characters/);
+    expect(() => encryptTs10({}, "kisa")).toThrow(/12 characters/);
+    expect(() => encryptTs10({}, "onbir-harf1")).toThrow(/12 characters/); // 11 karakter
+    expect(TS10_MIN_PASSWORD).toBe(12);
     const [, ...rest] = jwe.split(".");
     const h = Buffer.from(
       JSON.stringify({ alg: "PBES2-HS256+A128KW", enc: "A128GCM", p2s: "AAAAAAAAAAAAAAAAAAAAAA", p2c: 1e9 }),

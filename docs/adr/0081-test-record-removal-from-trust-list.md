@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-12
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Güven listesinden kayıt silinmez (SPEC-TRUST-0001 TL2): bir kurumun kaydı kapanınca durumu değişir, geçmişi listede kalır. Bu
   karar kurala tek ve dar bir istisna tanımlar: kurum katılımından önce sınama amacıyla konmuş, hiçbir gerçek kişiye belge
@@ -98,6 +98,11 @@ Sandbox'ta bu denetim uygulanmaz (test kurumları orada her gece kaldırılır).
 - Yayıncı bir kaydın "sınama kaydı" olup olmadığını ve ilk katılımcı kurumun listeye girip girmediğini kendisi bilemez; RR2'nin
   koşulu ve RR3'ün kapanışı karar düzeyinde denetlenir. İlk katılımcı kurum listeye girdikten sonra gerçek ağın kayıt defterine
   yeni çıkarma kaydı yazılmaz. Kapanışın yayıncıda makinece zorlanması ilk kurum katılımıyla birlikte ele alınır.
+- **Uygulama notu (2026-11-16; karar içeriği değişmedi) — RR3 makinece zorlanır.** Yayıncı, önceki imzalı listede ya da yeni
+  kaynakta geçici işletmecinin kendi kaydı ([[ADR-0070]] OP2 değeriyle tanınan) olmayan bir belge veren ya da doğrulayıcı
+  görürse istisnayı kapanmış sayar: o yayından başlayarak onaylı çıkarma kaydı olsa da kayıt eksilten liste yayımlanmaz (gerçek
+  ağ; sandbox'ta uygulanmaz). RR3 gereği gerçek ağın listesinde sınama kaydı olmadığından kendi kaydı olmayan her kayıt
+  katılımcı sayılır.
 - **Uygulama notu (2026-11-12, ikinci inceleme; karar içeriği değişmedi) — çıkarma kaydı tek geçişe bağlıdır.** Onaylı çıkarma
   kaydı, geçerli olduğu sürüm geçişini de taşır: çıkarmadan önceki imzalı liste sürümünün numarası (`previous_version`, zorunlu)
   ve isteğe bağlı olarak o sürümün imzalı dosyasının özeti (`previous_version_hash`). Yayıncı kaydı yalnız önceki yayımlanmış

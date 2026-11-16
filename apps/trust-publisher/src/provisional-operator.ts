@@ -20,7 +20,7 @@ export interface ProvisionalOperator {
  * Kendi kaydı: kimlik numarası notunda "provisional operator" geçen, `operator.name`'i değerdeki adla aynı olan YA DA kimlik numarası
  * değerdeki numarayla aynı olan kayıt (kontrol 2026-11-03, K28: notu unutulmuş ya da farklı yazılmış kendi kaydı denetimden kaçamaz).
  */
-const isOwn = (cfg: ProvisionalOperator, r: Rec) => {
+export const isOwn = (cfg: ProvisionalOperator, r: Rec) => {
   const ids = (r.identifiers as Array<{ scheme?: string; value?: string; note?: string }> | undefined) ?? [];
   if (ids.some((x) => /provisional operator/i.test(x.note ?? ""))) return true;
   if (((r.operator ?? {}) as Rec).name === cfg.name) return true;

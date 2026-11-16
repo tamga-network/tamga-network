@@ -4,7 +4,7 @@ title: "Exporting the transaction log"
 status: Active
 version: 1.0.0
 created: 2026-09-29
-last_updated: 2026-10-02
+last_updated: 2026-11-16
 summary: >
   SPEC-WALLET-0001/WL4 requires the presentation log never to leave the device. The EU (CIR 2024/2979 Art. 9 and 13, TS10) requires
   the wallet to export its transaction log and a migration object at the person's request. Decision: the log leaves the device only
@@ -90,3 +90,4 @@ Implementation:
 - log export is enabled in the wallet (TS10 §4.1, password-protected),
 - the migration file includes the log; on import the person is asked whether to restore the log (ARF Mig_07b),
 - there is no plain JSON export.
+- the password minimum for export was raised to 12 characters (2026-11-16; above K1's "at least 8", the decision is unchanged); import keeps opening older files.

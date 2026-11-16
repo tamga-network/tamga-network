@@ -4,7 +4,7 @@ title: "Rəqəmsal cüzdanın buraxılışdan əvvəl yoxlama siyahısı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tamga ilə uyğun rəqəmsal cüzdanı mağazaya göndərməzdən əvvəl keçilməli olan yoxlama siyahısı: açarlar və cihaz attestasiyası, qeydiyyat, rəqəmsal sənədin alınması, təqdimat və təsdiq ekranı, məxfilik və jurnal, cihazın dəyişdirilməsi və silmə, etibar siyahısı, uyğunluq testləri və mağaza.
 translation_of: GUIDE-0010
@@ -55,7 +55,7 @@ Bu səhifə [[GUIDE-0005]]-də təsvir olunan rəqəmsal cüzdanı buraxılışa
 ## Məxfilik və jurnal
 
 - Əməliyyat jurnalı cihazdadır; dəyərlər deyil, yalnız sahə adları; serverə və avtomatik ehtiyat nüsxəyə getmir (WL4).
-- Jurnalın ixracı yalnız şəxsin özü başlatdıqda və onun öz parolu ilə şifrələnmiş şəkildə mümkündür (TS10, parol ən azı 8 simvol).
+- Jurnalın ixracı yalnız şəxsin özü başlatdıqda və onun öz parolu ilə şifrələnmiş şəkildə mümkündür (TS10, parol ən azı 12 simvol).
 - Xəta qeydlərində, analitikada və çökmə hesabatlarında fərdi məlumatlar, sənədin məzmunu və ya sənədin özü yoxdur.
 - Keçid kartının QR kodu fərdi məlumat daşımır; tokenin ömrü ən çoxu 60 saniyədir (WL12).
 

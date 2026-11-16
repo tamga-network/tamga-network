@@ -4,7 +4,7 @@ title: "Şəxsiyyətin yoxlanılması"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 summary: >
   Sənədi verən qurumun rəqəmsal sənədi verməzdən əvvəl tətbiq etdiyi şəxsiyyətin yoxlanılması (identity proofing) yollarını müəyyən edir: hər yolun təmin etdiyi sənəd sahibi səviyyəsi (T1–T3), onun ETSI TS 119 461 ilə uyğunlaşdırılması, hansı sənəd növünün hansı səviyyəni tələb etdiyi, nəticənin harada saxlanılacağı (sənədi verən qurumun audit qeydi; heç vaxt rəqəmsal sənədin özündə deyil) və uzaqdan şəxsiyyət yoxlama provayderi (istinad adapteri) inteqrasiyasının protokol səviyyəsində qaydaları: sessiyanın yaradılması, nəticənin alınması, webhook-un yoxlanılması, məlumatların minimallaşdırılması, xəta və vaxt aşımı davranışı. D-ID-2-nin tətbiqidir. Səviyyə cədvəli və ETSI 119 461 uyğunlaşdırması D-ASSUR-2 ilə qərara alınıb (2026-09-26).
 translation_of: SPEC-ID-0003
@@ -256,9 +256,9 @@ kartdakı kateqoriyaları və tarixləri verir. Bu, rəsmi sürücülük vəsiq�
 
 | Element | Dəyər |
 |---|---|
-| Ön şərt | PAR-da `identity_presentation`: cüzdandakı Tamga şəxsiyyət sənədinin SD-JWT VC + KB-JWT təqdimatı (`aud` = xidmət, `nonce` = `POST /nonce`, birdəfəlik; yalnız `given_name`, `family_name`, `birthdate` açılır). Xidmət imzanı, qeydin aktiv olduğunu və yalnız üç sahənin açıldığını yoxlayır; axın qeydində şəxsə aid sahə deyil, açarlı **uyğunluq xülasəsi** (HMAC) və bağlı şəxsiyyət qeydinin identifikatoru saxlanılır |
-| Axın | `/authorize` sürücülük vəsiqəsinə xas məlumatlandırma + açıq razılıq (yoxlama kodu sahəsi yoxdur) → provayderdə sürücülük vəsiqəsi axını (ayar: ayrıca axın identifikatoru; ayarlanmayıbsa, növ elan edilmir) → `/idv/return`: sənəd növü sürücülük vəsiqəsidirmi, kartın müddəti bitibmi, kateqoriya oxunubmu, kartdakı ad + doğum tarixi xülasəyə uyğun gəlirmi → `code` → token → 10 nüsxə |
-| Provayderdən oxunan | ad, soyad, doğum tarixi, verən ölkə, sənəd nömrəsi (yalnız HMAC xülasəsi qalır), verilmə/bitmə tarixi, müddətin bitməsi faktı, kateqoriya üzrə başlanğıc/bitmə (`extra_fields.dl_class_code_<sınıf>_from/_to`). **Oxunmayan:** `_notes` sahələri, məhdudiyyət kodları, təsvir, bal |
+| Ön şərt | PAR-da `identity_presentation`: cüzdandakı Tamga şəxsiyyət sənədinin SD-JWT VC + KB-JWT təqdimatı (`aud` = xidmət, `nonce` = `POST /nonce`, birdəfəlik; `given_name`, `family_name`, `birthdate` və sənəddə varsa `personal_administrative_number` açılır — nömrə yalnız kartın uyğunlaşdırılması üçün, ADR-0039 açıq sual 1). Xidmət imzanı, qeydin aktiv olduğunu və bu sahələrdən başqa sahənin açılmadığını yoxlayır; axın qeydində şəxsə aid sahə deyil, açarlı **uyğunluq xülasələri** (HMAC; açar sənəd nömrəsi xülasəsinin açarından törədilmiş ayrıca alt açardır, jurnala yazılmır) və bağlı şəxsiyyət qeydinin identifikatoru saxlanılır |
+| Axın | `/authorize` sürücülük vəsiqəsinə xas məlumatlandırma + açıq razılıq (yoxlama kodu sahəsi yoxdur) → provayderdə sürücülük vəsiqəsi axını (ayar: ayrıca axın identifikatoru; ayarlanmayıbsa, növ elan edilmir) → `/idv/return`: sənəd növü sürücülük vəsiqəsidirmi, kartın müddəti bitibmi, kateqoriya oxunubmu, kartdakı ad + doğum tarixi xülasəyə uyğun gəlirmi, kartda şəxsiyyət nömrəsi varsa (bu gün TR, 11 rəqəm) nömrə xülasəsi də uyğun gəlirmi (şəxsiyyət təqdimatında nömrə açılmayıbsa, sənəd verilmir; nömrəsiz kartda ad + doğum tarixi uyğunluğu kifayətdir) → `code` → token → 10 nüsxə |
+| Provayderdən oxunan | ad, soyad, doğum tarixi, verən ölkə, sənəd nömrəsi (yalnız HMAC xülasəsi qalır), TR kartında şəxsiyyət nömrəsi (yalnız uyğunlaşdırma üçün yaddaşda; sənədə yazılmır, saxlanılmır — DL2), verilmə/bitmə tarixi, müddətin bitməsi faktı, kateqoriya üzrə başlanğıc/bitmə (`extra_fields.dl_class_code_<sınıf>_from/_to`). **Oxunmayan:** `_notes` sahələri, məhdudiyyət kodları, təsvir, bal |
 | Claim-lər | `given_name`, `family_name`, `birth_date`, `issuing_country`, `document_number_hash`, `driving_privileges[]`, `licence_issue_date?`, `licence_expiry_date`, `verified_at`, `verification_method` (`remote-document-liveness-face`), `age_over_18`, `not_official_licence` |
 | İmtina | `access_denied`: sürücülük vəsiqəsi deyil · kartın müddəti bitib · kateqoriya oxunmadı · bütün kateqoriyaların müddəti bitib (müddəti bitmiş kateqoriyalar sənədə daxil edilmir) · ad və ya verən ölkə oxunmadı (təxmin yoxdur) · şəxsiyyətlə uyğun gəlmir · bağlı şəxsiyyət artıq aktiv deyil (PAR-dan sonra ləğv / yenidən vermə / silmə; `/idv/return` və `/credential`-də yenidən yoxlanılır). İzahda fərdi məlumat yoxdur; jurnala yalnız səbəb kodu yazılır. Sənəd verilməyən hər nəticədə (provayderin imtinası/yoxlaması daxil olmaqla) provayderdəki sessiya (kart təsviri, selfi) dərhal silinir; yarımçıq qalan axınların sessiyası zibil toplama zamanı, identifikatoru unudulmazdan əvvəl silinir |
 | Müddət / ləğv | `exp` = min(kartın bitməsi, yoxlama + 1 il, bağlı şəxsiyyət sənədinin bitməsi; DL3/DL5); yalnız SD-JWT VC; status list; qeyd `parentId` ilə şəxsiyyət qeydinə bağlıdır — şəxsiyyətin ləğvi/yenidən verilməsi/silinməsi bağlı sənədi də əhatə edir; silmə əvvəllər ləğv edilmiş bağlı qeydləri və provayder sessiyalarını da silir (DL5) |
@@ -289,6 +289,11 @@ kartdakı kateqoriyaları və tarixləri verir. Bu, rəsmi sürücülük vəsiq�
 # Status
 
 **Qüvvədədir** — versiya 1.0.0 (2026-10-02).
+
+**Versiya qeydi (2026-11-16, ikinci).** §9.3 sürücülük vəsiqəsi məlumatı: D-ID-8 qeydinin (2026-10-30, [[ADR-0039]] açıq sual 1,
+adaş riski) tətbiqi — şəxsiyyət təqdimatında sənəddə varsa `personal_administrative_number` də açılır; kartda şəxsiyyət nömrəsi
+varsa (bu gün TR) nömrənin açarlı xülasəsi də uyğun gəlməlidir, açılmayıbsa sənəd verilmir. Nömrə sənədə yazılmır, saxlanılmır,
+jurnala düşmür (DL2, PR14); uyğunluq xülasələri ayrıca alt açarla.
 
 **Versiya qeydi (2026-11-13, ikinci; layihə rəhbərliyinin təsdiqi ilə).** [[ADR-0083]] K11 və CV7 dəyişdi: çip yolunun kodu
 indi yazılır, lakin standart olaraq bağlı açarın arxasında durur — açar açıq olduqda şəxsiyyət xidməti serverdə (real şəbəkə və

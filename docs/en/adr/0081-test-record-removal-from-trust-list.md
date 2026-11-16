@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-12
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   A record is never deleted from the trust list (SPEC-TRUST-0001 TL2): when an institution's record is closed its status changes
   and its history stays in the list. This decision defines a single, narrow exception to the rule: records that were entered for
@@ -106,6 +106,11 @@ night).
   entered the list; the condition of RR2 and the closing of RR3 are enforced at decision level. After the first participant
   institution enters the list, no new removal entry is written to the real network's registry. Enforcing the closing by machine
   in the publisher is taken up together with the first institution's onboarding.
+- **Implementation note (2026-11-16; the decision is unchanged) — RR3 is machine-enforced.** When the publisher sees, in the
+  previous signed list or in the new source, an issuer or relying party that is not the provisional operator's own record
+  (recognised by the [[ADR-0070]] OP2 value), it treats the exception as closed: from that publication on, a list that drops a
+  record is not published even with an approved removal record (production; not applied in the sandbox). Since under RR3 the
+  production list carries no test record, every record that is not the operator's own counts as a participant.
 - **Implementation note (2026-11-12, second review; the decision is unchanged) — a removal entry is bound to one transition.**
   The approved removal entry also carries the version transition it is valid for: the number of the signed list version before
   the removal (`previous_version`, required) and optionally the digest of that version's signed file

@@ -4,7 +4,7 @@ title: "Build a wallet"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Building a wallet that receives, stores and presents Tamga credentials: registering as a wallet provider, device keys,
   device attestation (App Attest, Android key attestation), the Wallet Unit Attestation (WUA), receiving credentials with
@@ -225,7 +225,7 @@ export it, encrypted with their own password. The format is the EU common format
 import { ts10TransactionLog, encryptTs10Async } from "@tamga-network/wallet-core";
 
 const log = ts10TransactionLog(state, lookup); // lookup: verifier and institution details from the signed list (ts10LookupFromTrust)
-const file = await encryptTs10Async(log, password); // PBES2-HS256+A128KW + A128GCM; password of at least 8 characters
+const file = await encryptTs10Async(log, password); // PBES2-HS256+A128KW + A128GCM; password of at least 12 characters
 ```
 
 When the person reports a verifier to a data protection authority (EU TS8), the report gets a machine-readable attachment: the

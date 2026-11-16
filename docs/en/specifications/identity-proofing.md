@@ -4,7 +4,7 @@ title: "Identity proofing"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 summary: >
   Defines the identity proofing paths an issuer applies before issuance: the holder level each path produces (T1–T3), its
   mapping to ETSI TS 119 461, which credential type requires which level, where the result is kept (the issuer's audit
@@ -265,9 +265,9 @@ through the always-visible `not_official_licence: true` claim.
 
 | Item | Value |
 |---|---|
-| Prerequisite | `identity_presentation` in the PAR: an SD-JWT VC + KB-JWT presentation of the Tamga identity credential in the wallet (`aud` = the service, `nonce` = `POST /nonce`, single use; only `given_name`, `family_name`, `birthdate` disclosed). The service checks the signature, that the record is active and that only the three claims are disclosed; the flow record holds no personal attribute, only a keyed **match digest** (HMAC) and the id of the linked identity record |
-| Flow | `/authorize` driving-licence-specific notice + explicit consent (no review code field) → the provider's driving licence flow (setting: separate flow id; without it the type is not announced) → `/idv/return`: is the document a driving licence, has the card expired, were categories read, do the name + date of birth on the card match the digest → `code` → token → 10 copies |
-| Read from the provider | given name, family name, date of birth, issuing country, document number (only its HMAC digest is kept), issue/expiry dates, expired fact, per-category from/to dates (`extra_fields.dl_class_code_<category>_from/_to`). **Never read:** `_notes` fields, restriction codes, images, scores |
+| Prerequisite | `identity_presentation` in the PAR: an SD-JWT VC + KB-JWT presentation of the Tamga identity credential in the wallet (`aud` = the service, `nonce` = `POST /nonce`, single use; `given_name`, `family_name`, `birthdate` and, when the credential has it, `personal_administrative_number` are disclosed — the number only for matching the card, ADR-0039 open question 1). The service checks the signature, that the record is active and that no other claim is disclosed; the flow record holds no personal attribute, only keyed **match digests** (HMAC; the key is a separate subkey derived from the document number digest key, never logged) and the id of the linked identity record |
+| Flow | `/authorize` driving-licence-specific notice + explicit consent (no review code field) → the provider's driving licence flow (setting: separate flow id; without it the type is not announced) → `/idv/return`: is the document a driving licence, has the card expired, were categories read, do the name + date of birth on the card match the digest and, when the card carries an identity number (today TR, 11 digits), does the number digest match too (if the identity presentation did not disclose the number the credential is not issued; on a card without a number the name + date of birth match is enough) → `code` → token → 10 copies |
+| Read from the provider | given name, family name, date of birth, issuing country, document number (only its HMAC digest is kept), the identity number on a TR card (in memory for matching only; never written to the credential or stored — DL2), issue/expiry dates, expired fact, per-category from/to dates (`extra_fields.dl_class_code_<category>_from/_to`). **Never read:** `_notes` fields, restriction codes, images, scores |
 | Claims | `given_name`, `family_name`, `birth_date`, `issuing_country`, `document_number_hash`, `driving_privileges[]`, `licence_issue_date?`, `licence_expiry_date`, `verified_at`, `verification_method` (`remote-document-liveness-face`), `age_over_18`, `not_official_licence` |
 | Refusal | `access_denied`: not a driving licence · card expired · categories could not be read · all categories expired (expired categories are not written into the credential) · name or issuing country could not be read (no guessing) · does not match the identity · the linked identity is no longer active (revoked / re-issued / erased after the PAR; re-checked at `/idv/return` and `/credential`). No personal data in the description; only the reason code is logged. On every outcome without issuance (including provider decline/review) the provider session (card images, selfie) is deleted at once; sessions of abandoned flows are deleted during garbage collection before their id is forgotten |
 | Validity / revocation | `exp` = min(card expiry, inspection + 1 year, expiry of the linked identity credential; DL3/DL5); SD-JWT VC only; status list; the record is linked to the identity record via `parentId` — revocation, re-issuance or erasure of the identity covers the linked credential; erasure also removes previously revoked linked records and their provider sessions (DL5) |
@@ -298,6 +298,12 @@ through the always-visible `not_official_licence: true` claim.
 # Status
 
 **In force** — version 1.0.0 (2026-10-02).
+
+**Version note (2026-11-16, second).** §9.3 driving licence attestation: implementation of the D-ID-8 note (2026-10-30,
+[[ADR-0039]] open question 1, namesake risk) — the identity presentation also discloses `personal_administrative_number` when
+the credential has it; when the card carries an identity number (today TR) the keyed digest of the number must match as well,
+and without the disclosure the credential is not issued. The number is never written to the credential, stored or logged (DL2,
+PR14); the match digests use a separate subkey.
 
 **Version note (2026-11-13, second; approved by project management).** [[ADR-0083]] K11 and CV7 changed: the code of the chip
 path is written now, but by default it sits behind a switch that is off — the identity service refuses to run on a server (live

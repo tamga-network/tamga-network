@@ -4,7 +4,7 @@ title: "Rəqəmsal cüzdan hazırlamaq"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tamga rəqəmsal sənədlərini qəbul edən, saxlayan və təqdim edən rəqəmsal cüzdan hazırlamaq: cüzdan provayderi kimi qeydiyyat, cihaz açarları, cihaz sübutu (App Attest, Android açar attestasiyası), Wallet Unit Attestation (WUA), OpenID4VCI ilə sənəd almaq, OpenID4VP ilə selective disclosure, razılıq ekranı, əməliyyat jurnalı və ixrac, cihaz dəyişmə, nəşrdən əvvəl yoxlama və riayət edilməli qaydalar. Şəbəkənin ilk cüzdanı olan Tamga Wallet (bir şirkətin ayrıca məhsulu; ayrıca repozitoriya, Expo) bu paketdən istifadə edir.
 translation_of: GUIDE-0005
@@ -214,7 +214,7 @@ ixrac edə bilər. Format Avropa İttifaqının (Aİ) ümumi formatıdır (TS10)
 import { ts10TransactionLog, encryptTs10Async } from "@tamga-network/wallet-core";
 
 const log = ts10TransactionLog(state, lookup); // lookup: verifier and institution details from the signed list (ts10LookupFromTrust)
-const file = await encryptTs10Async(log, password); // PBES2-HS256+A128KW + A128GCM; password of at least 8 characters
+const file = await encryptTs10Async(log, password); // PBES2-HS256+A128KW + A128GCM; password of at least 12 characters
 ```
 
 ## 10. Cihazın dəyişdirilməsi və silinmə

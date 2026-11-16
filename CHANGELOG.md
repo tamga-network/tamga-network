@@ -6,6 +6,35 @@ published on npm as test releases; `0.8.6` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+### Changed
+
+- **wallet-core — driving licence attestation: the identity presentation also discloses the identity number** (ADR-0039 open
+  question 1, D-ID-8 note). `identityPresentationForIssuer` discloses `personal_administrative_number` in addition to
+  `given_name`, `family_name` and `birthdate` when the identity credential has it; the identity service compares it only as a
+  keyed digest with the number on the card (TR) and never writes it to the credential. Without it, a card that carries an
+  identity number is refused ("identity number not disclosed").
+- **wallet-core — TS10 migration file password at least 12 characters** (`TS10_MIN_PASSWORD` 8 → 12; ADR-0027 note). Only export
+  checks it; import keeps opening older files protected with 8+ characters.
+- **trust-publisher — ADR-0081 RR3 is enforced:** once the previous signed list or the new source contains an issuer or relying
+  party that is not the provisional operator's own record (the first participant institution), no removal is published, even
+  with an approved removal record (`participantRecords`; production only).
+- **trust-publisher — gate groups before suspension (Y9):** `status` and `rp-status` print the active gate groups bound to the
+  institution and the `end-use` commands to withdraw them first (ADR-0069 TG1; the build still refuses such a list).
+- **Registry — Tamga Verify's uses carry the network privacy page** (`privacy_policy_uri: https://tamga.network/privacy`, ADR-0024
+  RPR3); it reaches the signed list and the registration certificates with the next publication.
+
+### Added
+
+- **trust / wallet-core — `externalListsDirect`** (default `true`, behaviour unchanged): `false` uses only the publisher's copy of
+  an external list and never contacts the external list server directly (that server would see the client's IP address and the
+  fetch time).
+
+### Documentation
+
+- SPEC-ID-0003 §9.3 (driving licence prerequisite and match), GUIDE-0017 §7 (withdraw gate groups before suspending), ADR-0081
+  implementation note (RR3), ADR-0027 note (password 12), wallet guides (password 12) — tr/en/az. RS-EIDAS-0001 §9.1
+  intermediate steps for non-EU countries (TC AdES LOTL pilot, regional recognition).
+
 ## 0.8.6 — 2026-11-16
 
 All ten packages move to 0.8.6 together (patch release). The code changes are in `wallet-core` (standard mdoc path for the

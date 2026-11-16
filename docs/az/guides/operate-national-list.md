@@ -4,7 +4,7 @@ title: "Milli etibar siyahısının idarə edilməsi"
 status: Active
 version: 1.0.0
 created: 2026-11-05
-last_updated: 2026-11-05
+last_updated: 2026-11-16
 summary: >
   Zəncirsiz rejimin quraşdırma bələdçisi: ölkənin imzalanmış etibar siyahısını idarə edəcək İT komandası üçün açarlar və kök
   sertifikat (HSM qeydi), qeyd reyestri, siyahı nəşriyyatçısı (trust-publisher) ilə siyahının yaradılması, imzalanması,
@@ -353,6 +353,20 @@ tərəfindəki addımlar: [[GUIDE-0014]].
 
 Qurum geri çəkilərkən qeydi silinmir; vəziyyəti dəyişir. Heç vaxt etibarlı olmamalı olan qeyd `--invalidates-from valid_from` ilə
 geri çəkilir: həmin qurumun verdiyi heç bir sənəd yoxlamadan keçmir.
+
+**Dayandırmadan əvvəl giriş qrupları.** Qurumu dayandırmazdan (`SUSPENDED`), ləğv etməzdən və ya təqaüdə çıxarmazdan əvvəl həmin
+quruma bağlı giriş qruplarını (`terminal_groups[]`, `institution_id` = qurumun qısa adı və ya yoxlayıcının domen adı) geri çəkin:
+
+```sh
+npx tsx apps/trust-publisher/src/cli.ts end-use <qrupu dərc edən yoxlayıcının dns_name-i> <group_id>
+npm run trust:status -- <slug> SUSPENDED --reason <səbəb>
+```
+
+Aktiv giriş qrupu ACTIVE olmayan quruma bağlı qalarsa, dərc edən siyahını dərc etmir ([[ADR-0069]] TG1) və vəziyyət dəyişikliyi
+geri alınır; `trust:status` belə qrupları və geri çəkmə əmrlərini əvvəlcədən xəbərdarlıq kimi çap edir. Dayandırma müddətində
+qurumun bütün sənədləri yoxlamada rədd edilir ([[ADR-0088]]); geri çəkilmiş qrupun terminal açarları da girişdə qəbul olunmur (TG3).
+Dayandırma qalxanda (`ACTIVE`) sənədlər yenidən qəbul edilir; girişlər isə yeni qrup identifikatoru (yeni müraciət) və Qurum
+Konsolunda yenidən yaradılan terminal açarları ilə açılır — geri çəkilmiş qrup tarix qeydi kimi qalır.
 
 ## 8. Zəncir açıq olduqda
 

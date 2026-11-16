@@ -4,7 +4,7 @@ title: "Wallet pre-release checklist"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   The checklist to go through before submitting a Tamga-compatible wallet to the app stores: keys and device attestation,
   registration, receiving credentials, presenting and the consent screen, privacy and the transaction log, changing devices and
@@ -58,7 +58,7 @@ codes are in [[SPEC-WALLET-0001]], the full list in [Tamga ARF — Tamga Ruleboo
 ## Privacy and the log
 
 - The transaction log stays on the device; it holds only field names, not values; it does not go to a server or to automatic backup (WL4).
-- Exporting the log is only started by the person and encrypted with their own password (TS10, password of at least 8 characters).
+- Exporting the log is only started by the person and encrypted with their own password (TS10, password of at least 12 characters).
 - Error logs, analytics and crash reports contain no personal data, credential content or credentials.
 - The pass QR carries no personal data; the token lives for at most 60 seconds (WL12).
 

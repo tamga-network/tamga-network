@@ -102,7 +102,7 @@ import {
 } from "./tl119612.js";
 import { chainCommand } from "./chain/cli.js";
 import { chainAfterPublish } from "./chain/sync-cli.js";
-import { removalChangelogLine, removedRecords } from "./removals.js";
+import { participantRecords, removalChangelogLine, removedRecords } from "./removals.js";
 import { statusAnchorParams } from "./chain/projection.js";
 import { listViewBody, registrationStatusBody, viewLinesEnabled, viewSnapshotOf } from "./view-anchors.js";
 import { checkRegistrations, issuerEntitlements } from "./registration.js";
@@ -114,8 +114,8 @@ import {
   relyingPartyNameProblems,
   tlSourceFieldProblems,
 } from "./source-checks.js";
-import { checkTerminalGroups } from "./terminal-groups.js";
-import { checkProvisionalOperator, type ProvisionalOperator } from "./provisional-operator.js";
+import { checkTerminalGroups, groupWithdrawalWarnings } from "./terminal-groups.js";
+import { checkProvisionalOperator, isOwn, type ProvisionalOperator } from "./provisional-operator.js";
 import { buildWrprcPayloads, wrprcHeader } from "./wrprc.js";
 import {
   assignWrprcStatus,
@@ -1258,6 +1258,18 @@ async function build() {
   const removalsFile = resolve(REG, "removals.json");
   const approvedRemovals = existsSync(removalsFile) ? readJson(removalsFile) : [];
   const networkSchemaIds = schemasIndex.filter((x) => x.layer === "NETWORK").map((x) => ({ schema_id: x.schema_id }));
+  // ADR-0081 RR3: önceki imzalı listede ya da yeni kaynakta geçici işletmecinin kendi kaydı olmayan bir kurum varsa çıkarma
+  // istisnası kapanmıştır (gerçek ağda değer dosyası zorunlu — yukarıdaki ADR-0070 denetimi; yoksa yayın zaten durdu)
+  const poCfg =
+    ENVIRONMENT !== "sandbox" && existsSync(provisionalFile)
+      ? (readJson(provisionalFile) as ProvisionalOperator)
+      : null;
+  const participants = poCfg
+    ? participantRecords(
+        [tlPrev.list as never, { issuers: tlSrc.issuers, relying_parties: tlSrc.relying_parties }],
+        (r) => isOwn(poCfg, r),
+      )
+    : [];
   const removalLines =
     ENVIRONMENT === "sandbox"
       ? []
@@ -1273,6 +1285,7 @@ async function build() {
             }),
             approvedRemovals,
             tlPrev,
+            participants,
           ),
           // LOTL şemaları katalogdan yeniden kurulur: katalogdan kalkan şema listeden de sessizce kalkmasın
           removalChangelogLine(
@@ -1285,6 +1298,7 @@ async function build() {
             }),
             approvedRemovals,
             lotlPrev,
+            participants,
           ),
         ].filter((l): l is string => l !== null);
   const tl = {
@@ -1813,6 +1827,14 @@ async function registryWrite(cmd: string, args: string[], p: string) {
       if (inv === "valid_from")
         inv = (src.issuers as Array<{ slug: string; valid_from: string }>).find((x) => x.slug === slug)?.valid_from;
       next = setIssuerStatus(src, slug, st, { reason, invalidatesFrom: inv }, env);
+      // Y9: kuruma bağlı etkin kapı grubu varsa önce geri çekilmeli (yayın denetimi TG1/TG2 aksi hâlde yayını durdurur)
+      for (const w of groupWithdrawalWarnings(
+        (src.relying_parties ?? []) as Array<Record<string, unknown>>,
+        slug,
+        st,
+        env.now,
+      ))
+        console.warn(w);
       line = `issuer ${slug}: ${st} (${reason}${inv ? `; credentials issued from ${inv} invalid` : ""}) — history kept (status_history)`;
     } else if (cmd === "rp-status") {
       const [dns, st] = pos;
@@ -1831,6 +1853,14 @@ async function registryWrite(cmd: string, args: string[], p: string) {
       } else {
         const reason = publicReason(arg("reason", "operator")!);
         next = setRpStatus(src, dns, st, { reason }, env);
+        // Y9: doğrulayıcı bir kapı grubunda kurum olarak geçiyorsa (kendi kaydında ya da başka kayıtta) grup önce geri çekilmeli
+        for (const w of groupWithdrawalWarnings(
+          (next.relying_parties ?? []) as Array<Record<string, unknown>>,
+          dns,
+          st,
+          env.now,
+        ))
+          console.warn(w);
         line = `relying_party ${dns}: ${st} (${reason}) — history kept (status_history)`;
       }
     } else if (cmd === "end-use") {

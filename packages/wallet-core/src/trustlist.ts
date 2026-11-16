@@ -80,6 +80,11 @@ export async function fetchTrustSource(
      * sabitlenmiştir; yayıncının kopyası içeriği değiştiremez. Bir dış liste doğrulanamazsa yalnız o yüklenmez.
      */
     externalLists?: boolean;
+    /**
+     * Yayıncının kopyası yoksa dış listeyi özgün adresinden doğrudan çek (varsayılan `true`). `false`: cüzdan Tamga dışı liste
+     * sunucusuna hiç bağlanmaz (o sunucu IP adresini ve zamanı göremez); kopyası olmayan dış liste yüklenmez.
+     */
+    externalListsDirect?: boolean;
   },
 ): Promise<{ source: ListTrustSource; lists: VerifiedTrust }> {
   if (!opts.pins?.lotlSigners?.length) throw new WalletError("trust_error", "no trust anchor (pin) configured");
@@ -92,6 +97,7 @@ export async function fetchTrustSource(
       now: new Date(opts.now ?? Date.now()),
       environment: opts.pins.environment,
       externalLists: opts.externalLists,
+      ...(opts.externalListsDirect !== undefined ? { externalListsDirect: opts.externalListsDirect } : {}),
       ...(opts.pins.versionMemory ? { versionMemory: opts.pins.versionMemory } : {}),
     });
     const tl = store.national.get(cc)!.list;

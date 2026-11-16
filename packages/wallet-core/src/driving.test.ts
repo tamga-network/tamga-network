@@ -1,4 +1,4 @@
-/** ADR-0039 cüzdan yardımcıları: tür ilanı, PAR için kimlik sunumu (yalnız 3 alan, aud/nonce), ret nedenleri, sınıf dizisi. */
+/** ADR-0039 cüzdan yardımcıları: tür ilanı, PAR için kimlik sunumu (3 alan + varsa kimlik numarası, aud/nonce), ret nedenleri, sınıf dizisi. */
 import { describe, it, expect } from "vitest";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { b64u, b64uToUtf8, utf8 } from "./b64.js";
@@ -61,7 +61,7 @@ describe("drivingOffered", () => {
 });
 
 describe("identityPresentationForIssuer", () => {
-  it("nonce alır; yalnız ad, soyad, doğum tarihini açar; KB-JWT aud = servis, nonce = servisin verdiği", async () => {
+  it("nonce alır; ad, soyad, doğum tarihi + kimlik numarasını açar (A19), uyruğu açmaz; KB-JWT aud = servis, nonce = servisin verdiği", async () => {
     const keys = new SoftwareKeyProvider(new MemoryKeyStore());
     await keys.generate("k0");
     const calls: string[] = [];
@@ -85,15 +85,26 @@ describe("identityPresentationForIssuer", () => {
     expect(calls).toEqual([`${ID}/nonce`]);
     const parts = splitCombined(vp);
     const names = parts.disclosures.map((d) => decodeDisclosure(d).name).sort();
-    expect(names).toEqual([...DRIVING_IDENTITY_CLAIMS].sort());
+    expect(names).toEqual([...DRIVING_IDENTITY_CLAIMS, "personal_administrative_number"].sort());
     const kb = decodeJwt(parts.kb);
     expect(kb.header.typ).toBe("kb+jwt");
     expect(kb.payload.aud).toBe(ID);
     expect(kb.payload.nonce).toBe("n-123");
     expect(typeof kb.payload.sd_hash).toBe("string");
-    // kimlik numarası sunumda yok (IDP10)
-    expect(vp).not.toContain(b64u(utf8("12345678901")).slice(0, 8));
+    expect(names).not.toContain("nationalities");
     expect(b64uToUtf8(parts.jwt.split(".")[1])).toContain(IDENTITY_VCT);
+  });
+  it("belgede kimlik numarası yoksa yalnız ad, soyad, doğum tarihi açılır", async () => {
+    const keys = new SoftwareKeyProvider(new MemoryKeyStore());
+    await keys.generate("k0");
+    const http: Http = async () => ({ status: 200, text: async () => JSON.stringify({ c_nonce: "n-1" }) });
+    const combined = fakeIdentitySdJwt({ given_name: "Ad", family_name: "Soyad", birthdate: "2000-01-01" });
+    const id = { ...identity(combined, "k0"), disclosureNames: ["given_name", "family_name", "birthdate"] };
+    const vp = await identityPresentationForIssuer({ issuer: ID, identity: id, keys, http });
+    const names = splitCombined(vp)
+      .disclosures.map((d) => decodeDisclosure(d).name)
+      .sort();
+    expect(names).toEqual([...DRIVING_IDENTITY_CLAIMS].sort());
   });
   it("kimlik belgesi yoksa, iptal edilmişse ya da başka servistense sunum üretmez", async () => {
     const keys = new SoftwareKeyProvider(new MemoryKeyStore());

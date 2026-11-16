@@ -261,9 +261,9 @@ karttaki sınıfları ve tarihleri verir. Resmî sürücü belgesi / mDL değild
 
 | Öğe | Değer |
 |---|---|
-| Ön koşul | PAR'da `identity_presentation`: cüzdandaki Tamga kimlik belgesinin SD-JWT VC + KB-JWT sunumu (`aud` = servis, `nonce` = `POST /nonce`, tek kullanımlık; yalnız `given_name`, `family_name`, `birthdate` açılır). Servis imzayı, kaydın etkin olduğunu ve yalnız üç alanın açıldığını denetler; akış kaydında kişi alanı değil anahtarlı **eşleşme özeti** (HMAC) ve bağlı kimlik kaydının kimliği durur |
-| Akış | `/authorize` sürücü belgesine özel aydınlatma + açık rıza (inceleme kodu alanı yok) → sağlayıcıda sürücü belgesi akışı (ayar: ayrı akış kimliği; ayarsızsa tür ilan edilmez) → `/idv/return`: belge türü sürücü belgesi mi, kart süresi geçmiş mi, sınıf okunmuş mu, karttaki ad + doğum tarihi özete eşleşiyor mu → `code` → token → 10 kopya |
-| Sağlayıcıdan okunan | ad, soyad, doğum tarihi, veren ülke, belge numarası (yalnız HMAC özeti kalır), veriliş/bitiş tarihi, süresi geçmiş olgusu, sınıf başına başlangıç/bitiş (`extra_fields.dl_class_code_<sınıf>_from/_to`). **Okunmayan:** `_notes` alanları, kısıtlama kodları, görüntü, skor |
+| Ön koşul | PAR'da `identity_presentation`: cüzdandaki Tamga kimlik belgesinin SD-JWT VC + KB-JWT sunumu (`aud` = servis, `nonce` = `POST /nonce`, tek kullanımlık; `given_name`, `family_name`, `birthdate` ve belgede varsa `personal_administrative_number` açılır — numara yalnız kart eşleşmesi için, ADR-0039 açık soru 1). Servis imzayı, kaydın etkin olduğunu ve bu alanlar dışında alan açılmadığını denetler; akış kaydında kişi alanı değil anahtarlı **eşleşme özetleri** (HMAC; anahtar belge numarası özetinin anahtarından türetilmiş ayrı alt anahtar, günlüğe yazılmaz) ve bağlı kimlik kaydının kimliği durur |
+| Akış | `/authorize` sürücü belgesine özel aydınlatma + açık rıza (inceleme kodu alanı yok) → sağlayıcıda sürücü belgesi akışı (ayar: ayrı akış kimliği; ayarsızsa tür ilan edilmez) → `/idv/return`: belge türü sürücü belgesi mi, kart süresi geçmiş mi, sınıf okunmuş mu, karttaki ad + doğum tarihi özete eşleşiyor mu, kartta kimlik numarası varsa (bugün TR, 11 hane) numara özeti de eşleşiyor mu (kimlik sunumunda numara açılmadıysa belge verilmez; numarasız kartta ad + doğum tarihi eşleşmesi yeter) → `code` → token → 10 kopya |
+| Sağlayıcıdan okunan | ad, soyad, doğum tarihi, veren ülke, belge numarası (yalnız HMAC özeti kalır), TR kartında kimlik numarası (yalnız eşleşme için bellekte; belgeye yazılmaz, saklanmaz — DL2), veriliş/bitiş tarihi, süresi geçmiş olgusu, sınıf başına başlangıç/bitiş (`extra_fields.dl_class_code_<sınıf>_from/_to`). **Okunmayan:** `_notes` alanları, kısıtlama kodları, görüntü, skor |
 | Claim'ler | `given_name`, `family_name`, `birth_date`, `issuing_country`, `document_number_hash`, `driving_privileges[]`, `licence_issue_date?`, `licence_expiry_date`, `verified_at`, `verification_method` (`remote-document-liveness-face`), `age_over_18`, `not_official_licence` |
 | Ret | `access_denied`: sürücü belgesi değil · kart süresi geçmiş · sınıf okunamadı · bütün sınıfların süresi geçmiş (süresi geçmiş sınıflar belgeye girmez) · ad ya da veren ülke okunamadı (tahmin yok) · kimlikle eşleşmiyor · bağlı kimlik artık etkin değil (PAR'dan sonra iptal / yeniden verme / silme; `/idv/return` ve `/credential`'da yeniden denetlenir). Açıklamada kişi verisi yok; günlüğe yalnız neden kodu. Belge verilmeyen her sonuçta (sağlayıcı reddi/incelemesi dahil) sağlayıcıdaki oturum (kart görüntüsü, özçekim) hemen silinir; yarım kalan akışların oturumu çöp toplamada, kimliği unutulmadan önce silinir |
 | Süre / iptal | `exp` = min(kart bitişi, inceleme + 1 yıl, bağlı kimlik belgesinin bitişi; DL3/DL5); yalnız SD-JWT VC; status list; kayıt `parentId` ile kimlik kaydına bağlı — kimlik iptal/yeniden verme/silme bağlı belgeyi de kapsar; silme, daha önce iptal edilmiş bağlı kayıtları ve sağlayıcı oturumlarını da siler (DL5) |
@@ -294,6 +294,11 @@ karttaki sınıfları ve tarihleri verir. Resmî sürücü belgesi / mDL değild
 # Durum
 
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+
+**Sürüm notu (2026-11-16, ikinci).** §9.3 sürücü belgesi bilgisi: D-ID-8 notunun (2026-10-30, [[ADR-0039]] açık soru 1, adaş
+riski) uygulaması — kimlik sunumunda belgede varsa `personal_administrative_number` de açılır; kartta kimlik numarası varsa
+(bugün TR) numaranın anahtarlı özeti de eşleşmeli, açılmadıysa belge verilmez. Numara belgeye yazılmaz, saklanmaz, günlüğe
+girmez (DL2, PR14); eşleşme özetleri ayrı alt anahtarla.
 
 **Sürüm notu (2026-11-16; proje yönetimi onayıyla).** [[ADR-0089]] kabul edildi: kimlik kaydı mantıksal belgedir, bitişi idari
 geçerliliktir (730 gün, ISSU_12c sınırıyla) ve her kopyada `date_of_expiry` olarak taşınır; kopyaların teknik geçerliliği en çok 30

@@ -159,6 +159,7 @@
             "family_name",
             "given_name"
           ],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-09-24T00:00:00Z",
           "valid_until": "2026-10-04T16:49:44.098Z"
         },
@@ -171,6 +172,7 @@
           },
           "vct": "urn:tamga:edu:StudentCredential:1",
           "claims": ["is_enrolled", "awarding_body_name"],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-09-24T00:00:00Z",
           "valid_until": "2026-10-04T16:49:46.049Z"
         },
@@ -183,6 +185,7 @@
           },
           "vct": "urn:tamga:edu:StudentCredential:1",
           "claims": ["is_enrolled"],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-09-25T00:00:00Z",
           "valid_until": "2026-10-04T16:49:47.925Z"
         },
@@ -195,6 +198,7 @@
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
           "claims": [],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-09-25T00:00:00Z",
           "valid_until": "2026-10-04T16:49:49.886Z"
         },
@@ -207,6 +211,7 @@
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
           "claims": ["given_name", "family_name"],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-09-25T00:00:00Z",
           "valid_until": "2027-09-25T00:00:00Z"
         },
@@ -219,6 +224,7 @@
           },
           "vct": "urn:tamga:tkt:EventTicket:1",
           "claims": ["event_id", "ticket_class"],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-09-26T00:00:00Z",
           "valid_until": "2026-10-04T16:49:51.829Z"
         },
@@ -233,6 +239,7 @@
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
           "claims": ["age_over_18"],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-09-26T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z"
         },
@@ -247,6 +254,7 @@
           },
           "vct": "urn:tamga:id:ShortLivedIdentityAttestation:1",
           "claims": ["age_over_18"],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-10-09T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z"
         },
@@ -261,6 +269,7 @@
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
           "claims": ["age_over_15"],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-10-23T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z"
         },
@@ -275,6 +284,7 @@
           },
           "vct": "urn:tamga:id:ShortLivedIdentityAttestation:1",
           "claims": ["age_over_15"],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-10-23T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z"
         },
@@ -287,6 +297,7 @@
           },
           "vct": "urn:tamga:id:DrivingLicenceAttestation:1",
           "claims": ["driving_privileges", "age_over_18"],
+          "privacy_policy_uri": "https://tamga.network/privacy",
           "valid_from": "2026-10-04T00:00:00Z",
           "valid_until": "2026-10-04T16:49:53.764Z"
         }

@@ -4,7 +4,7 @@ title: "Cüzdan geliştirmek"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tamga belgelerini alan, saklayan ve gösteren bir cüzdan geliştirmek: cüzdan sağlayıcısı olarak kayıt, cihaz anahtarları,
   cihaz kanıtı (App Attest, Android anahtar kanıtı), Wallet Unit Attestation (WUA), OpenID4VCI ile belge alma, OpenID4VP ile
@@ -213,7 +213,7 @@ dışa aktarabilir. Biçim AB'nin ortak biçimidir (TS10):
 import { ts10TransactionLog, encryptTs10Async } from "@tamga-network/wallet-core";
 
 const log = ts10TransactionLog(state, lookup); // lookup: doğrulayıcı ve kurum bilgisi imzalı listeden (ts10LookupFromTrust)
-const file = await encryptTs10Async(log, password); // PBES2-HS256+A128KW + A128GCM; parola en az 8 karakter
+const file = await encryptTs10Async(log, password); // PBES2-HS256+A128KW + A128GCM; parola en az 12 karakter
 ```
 
 Kişi bir doğrulayıcıyı veri koruma kurumuna bildirirken (AB TS8) bildirime makine okunur ek konur: bildirilen isteğin aynı
