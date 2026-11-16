@@ -4,7 +4,7 @@ title: "Ləğv Siyasəti"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tamga şəbəkəsində sənədi verənlərin (şəxsiyyət xidməti və qurumlar) verdiyi rəqəmsal sənədlərin hansı şərtlərlə ləğv edildiyini, ləğvi kimin tələb edə biləcəyini, müvəqqəti dayandırmanı, ləğv siyahısının necə dərc edildiyini və ləğvin nə qədər müddətdə qüvvəyə mindiyini bir yerdə toplayan siyasət (Avropa İttifaqı (Aİ) ARF VCR_05). Sənəd növlərinin rulebook-larındakı ləğv qaydalarını və onların əsaslandığı qərarları toplayır; yeni qayda müəyyən etmir. Cüzdan sübutlarının (WIA, KA) ləğvi Cüzdan Sübutu Siyasətində verilib.
 translation_of: FW-POL-0001
@@ -90,8 +90,11 @@ Bu siyasət bütün sənədi verənlər üçün ümumidir. Qurum öz sənədlər
 
 ## 3.5 Ləğv səbəbi olmayan hallar
 
-- **Sənədi verən qurumun fəaliyyətinin dayandırılması və ya siyahıdan çıxarılması** köhnə sənədləri etibarsız etmir; yalnız yeni sənədlərin verilməsi dayanır. Yoxlama
+- **Sənədi verən qurumun siyahıdan çıxarılması** köhnə sənədləri etibarsız etmir; yalnız yeni sənədlərin verilməsi dayanır. Yoxlama
   sənədin verildiyi ana (`iat`) görə aparılır (RB-REG-07, RB-ENF-02, RB-RP-03).
+- **Sənədi verən qurumun fəaliyyətinin dayandırılması** sənədləri ləğv etmir: ləğv siyahısındakı status dəyişmir. Lakin
+  dayandırma davam etdikcə qurumun sənədləri yoxlamada qəbul edilmir; qaldırılanda dayandırmadan əvvəl verilmiş sənədlər
+  yenidən qəbul edilir ([[ADR-0088]]).
 - **Sənədi verən qurumun sertifikatını yeniləməsi** köhnə sənədlərə təsir etmir; onlar köhnə `issuer_id` qeydi ilə yoxlanılır.
 - **Sənəd növünün `DEPRECATED` olması** sənədləri ləğv etmir; növ yoxlanıla bilən qalır (RB-SCH-06).
 

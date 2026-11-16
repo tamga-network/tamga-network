@@ -88,3 +88,5 @@ kapsar; taşıma [[ADR-0012]] Faz 1'de.
 Taslak 2026-09-26 (Proposed, paket + 15 test); aynı gün kabul ve D12 faz 2 uygulaması. ADR-0006'yı değiştirmez, genişletir.
 
 2026-10-09: K2 ve MD1'deki ad kuralı [[ADR-0045]] ile değişti (AB PID kodlaması, D-ID-11).
+
+2026-11-16: **K1 ve MD2 [[ADR-0089]] ile değişti** (D-ID-17) — mdoc kopyası artık metadata'daki ayrı `mso_mdoc` yapılandırmasıyla, aynı yetki ve aynı erişim belirteciyle standart istekten verilir (belge yanıtındaki standart dışı alan kalktı); `deviceKey` = `cnf` cüzdan kuralıdır, servis aynı anahtara aynı iptal indeksini verir.

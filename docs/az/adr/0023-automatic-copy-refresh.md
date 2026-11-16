@@ -111,3 +111,5 @@ Bu, Aİ modeli ilə eyni balansdır. Layihə rəhbərliyi bunu qəbul etdi.
 
 2026-10-22: **K2 və AR2 [[ADR-0060]] ilə dəyişdi** — bağ DPoP açarından müştəri nümunəsi açarına (WIA `cnf`) keçdi; DPoP açarı
 yeniləmədə dəyişə bilər (D-PROTO-4). Seçimlər cədvəlindəki "DPoP + WUA bağlı" sətri tarixidir.
+
+2026-11-16: **AR4 [[ADR-0089]] ilə daraldı** (D-ID-17) — şəxsiyyət sənədi də səssiz yenilənir: şəxsi sahələr yenə saxlanmır, cüzdan bu qeydə aid nüsxəni bütün sahələri ilə təqdim edir.

@@ -55,6 +55,8 @@ export interface StoredCredential {
   leafFingerprint: string;
   iat: number;
   exp?: number;
+  /** geçerlilik başlangıcı (`nbf`); ileride ise belge "henüz geçerli değil" — `credentialValidity` (ARF "Issued") */
+  nbf?: number;
   statusUri?: string;
   category?: string;
   claims: Record<string, unknown>; // görüntüleme için (cihazda; yedeğe şifreli girer)
@@ -70,6 +72,11 @@ export interface StoredCredential {
   network?: "production" | "sandbox";
   /** ADR-0044: kimlik belgesinin ZK kopyaları ve yenileme bağı (yalnız kimlik servisi ZK kopyası ilan ediyorsa) */
   zk?: ZkCopyBinding;
+  /**
+   * ADR-0089 K4: kimlik belgesi yenileme zamanı (rastgele gecikmeyle; `scheduleIdentityRenewals`). Yenileme belirteci ZK bağında
+   * (`zk.token`) ya da yoksa `refresh` bağındadır — tek yerde.
+   */
+  renewDueAt?: number;
   /**
    * ADR-0046 K2 (EDP_10): kurumun gömülü açıklama politikası — belge alınırken imzalı metadata'dan; sunumda ağsız değerlendirilir
    * (`checkDisclosurePolicy`). Yoksa belge kısıt taşımaz.
@@ -255,12 +262,18 @@ export function receiveCredentials(
         throw new Error(
           c1 === "UNKNOWN"
             ? "the trusted list could not be checked; try again later"
-            : "the issuer is not in the trusted list (C1)",
+            : opt.trust.isIssuerSuspended?.(v.issuerId) === "YES"
+              ? "the issuer is suspended in the trusted list (C1, ADR-0088)"
+              : "the issuer is not in the trusted list (C1)",
         );
     }
     first ??= v;
     // D-CRED-5: mdoc ikinci temsil — SD-JWT kopyasıyla çapraz doğrulanır (MD1–MD3); tutarsızsa kopya reddedilir
-    if (c.mdoc) verifyReceivedMdoc(c.mdoc, { sdjwt: v, cnf: c.cnf, now: opt.now });
+    // İleri tarihli belge (ARF "Issued"): mdoc kopyası geçerlilik başlangıcı anına göre denetlenir — `validFrom`'u SD-JWT
+    // kopyasının `nbf`'inden sonra olan (tutarsız) mdoc yine reddedilir
+    const mdocAt =
+      v.notYetValid && v.nbf !== undefined ? Math.max(opt.now ?? Math.floor(Date.now() / 1000), v.nbf) : opt.now;
+    if (c.mdoc) verifyReceivedMdoc(c.mdoc, { sdjwt: v, cnf: c.cnf, now: mdocAt });
     copies.push({
       keyRef: c.keyRef,
       cnf: c.cnf,
@@ -285,6 +298,7 @@ export function receiveCredentials(
     leafFingerprint: first.leafFingerprint,
     iat: first.iat,
     exp: first.exp,
+    ...(first.nbf !== undefined ? { nbf: first.nbf } : {}),
     statusUri: first.status?.status_list.uri,
     category: first.category,
     claims: first.claims,

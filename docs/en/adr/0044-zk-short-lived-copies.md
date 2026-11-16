@@ -141,3 +141,5 @@ copies, validity ≤ 24 hours and ≤ the main credential's expiry ([[SPEC-PROTO
 ([[SPEC-WALLET-0001]] §4.5). Verifier: a marked ZK presentation is `NOT_APPLICABLE` (reason: short validity), an unmarked one
 needs `accept_unrevocable_zk` ([[SPEC-API-0001]] D1); Tamga Verify's `age-over-18-zk` policy asks for the ZK copy type and the
 flag was removed.
+
+2026-11-16: **changed by [[ADR-0089]]** (D-ID-17) — identity credential copies are now valid for at most 30 days and are silently renewed against a presentation; the same refresh token renews both the identity credential (with a presentation) and the ZK copy (if the ZK scope was granted); the token carries the granted scopes.

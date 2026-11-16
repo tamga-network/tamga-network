@@ -4,7 +4,7 @@ title: "Education Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Təhsil sahəsindəki iki ümumi rəqəmsal sənəd növünün (tələbə sənədi, diplom) rulebook-u, Aİ Attestation Rulebook şablonunun bölmə strukturu ilə: atributlar və metaməlumatlar, hüquqi kateqoriya, SD-JWT VC kodlaşdırması və seçici paylaşım, istifadə və sənəd vermə şərtləri, autentifikasiya səviyyəsi, yoxlama siyasətləri, etibar lövbərləri, etibarlılıq və ləğv, semantik əsas (ELM v3 / ISCED-F / EQF) və Aİ ilə uyğunluq. Tamga Rulebook-dan ([[FW-RB-0001]]) törəyir; texniki sxem SPEC-SCHEMA-0002 sənədindədir.
 translation_of: FW-RB-0002
@@ -128,7 +128,11 @@ Yoxdur.
 
 ## 2.6 İxtiyari metaməlumatlar
 
-Yoxdur. Tələbə sənədində `status`, diplomda isə `exp` **yoxdur** (§6).
+| Məlumat identifikatoru | Tərif | Məlumat növü | Nümunə dəyər |
+|---|---|---|---|
+| `nbf` | Texniki etibarlılığın başlanğıcı; sənədi verən qurum onu verilmə anında yazır: dəyər `iat` ilə eyni (saat başına aşağı yuvarlaqlaşdırılmış) andır, gələcək tarixli sənəddə isə etibarlılığın başladığı andır. Başlanğıcı çatmamış sənəd rəqəmsal cüzdanda "hələ etibarlı deyil" kimi saxlanılır və təqdim edilə bilməz; yoxlayan tərəf onu rədd edir | NumericDate | `1791763200` |
+
+Tələbə sənədində `status`, diplomda isə `exp` **yoxdur** (§6).
 
 ## 2.7 Şərti metaməlumatlar
 
@@ -355,7 +359,7 @@ Cüzdan sənədi alarkən eyni qeyd vasitəsilə qurumun bu növü verməyə sə
 | ELM JSON-LD ixracı | Aİ təhsil sahəsində qarşılıqlı fəaliyyət üçün açıq məsələ |
 | Etibar lövbərinin yerinin sənəddə göstərilməsi (ARB_21) | **Qərar (2026-10-12, [[ADR-0047]] K7):** sənədə sahə əlavə edilmir; sənəddəki yer sənədi verən qurumun öz bəyanatı olardı və yoxlayan tərəf lövbəri yalnız özünün seçdiyi siyahıdan götürür |
 | Kvalifikasiyalı olmayan EAA göstəricisi (ARB_12) | **Qərar (2026-10-12, [[ADR-0047]] K6):** yazılmır; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 kvalifikasiyalı olmayan EAA-da `category` olmamasını tələb edir |
-| `nbf` və diplomda `exp` | ETSI TS 119 472-1 hər ikisini tələb edir; Tamga hazırda `nbf` yazmır və diplom müddətsizdir |
+| `nbf` və diplomda `exp` | ETSI TS 119 472-1 hər ikisini tələb edir; Tamga `nbf`-i verilmə anında yazır (§2.6), diplom müddətsizdir |
 | Attestation Revocation List | Tamga-da sənədi verən qurumlar Status List dərc edir (Aİ VCR_11-ə görə biri kifayətdir); yoxlayan tərəf və cüzdan nüvəsi identifikator siyahısını da yoxlayır (paketlər 0.5.0; [[FW-POL-0001]] §8) |
 
 ---

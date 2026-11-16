@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   ADR-0009 K7 imzalanmış siyahılardan zəncirə keçidi siyahı tarixçəsinin kontraktlarda yenidən icrasına və ekvivalentlik testinə bağlayır. Bugünkü kontraktlarla bu tarixçə dəqiq yenidən icra edilə bilmir: tarixlər blok vaxtından gəlir, sərt ləğv yoxdur, sxemin bir məzmun xülasəsi var, yoxlayan tərəfin identifikatoru sertifikata bağlıdır və dayandırmadan qayıda bilmir, status dəstləri və sərhədləri fərqlidir, gündəlik kvotalar toplu yazını dayandırır. Qərar: hər reyestr kontraktında Governance-in bir dəfə açdığı, bağlandıqdan sonra yenidən açıla bilməyən birdəfəlik miqrasiya rejimi (keçmiş tarix yalnız blok vaxtına qədər, kvota yoxdur); `invalidatesFrom` ilə sərt ləğv; sxem versiya xülasələri yalnız əlavə oluna bilən massiv; `rpId = keccak256(dns_name)`, sertifikatın yenilənməsi, dayandırmadan qayıdış və incə əhatə dairələri (xülasələrlə); status uyğunlaşdırma cədvəli və sənədin `iat` anındakı statusa görə yarımaçıq intervallarla qiymətləndirmə. Yenidən icra komandası `trust:chain-replay`. Qəbul edildi (2026-11-04): dayandırılmış qurumun dayandırmadan əvvəlki sənədləri etibarlıdır, miqrasiya pəncərəsi ən çoxu 30 gündür.
 domain: Trust
@@ -141,7 +141,7 @@ bildiyi müddətdir; lazım olduğundan uzun saxlanmır.
 |---|---|---|---|---|---|
 | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | |
 | `ROLLING_OVER` | `ACTIVE` + varis hadisəsi | — | — | — | Siyahı C1-də aktiv sayır |
-| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Yalnız dayandırma müddətində verilən sənəd düşür; dayandırmadan əvvəlkilər etibarlıdır (siyahı qaydası) |
+| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Dayandırma müddətində verilən sənəd düşür. **2026-11-16-dan ([[ADR-0088]]):** qurum dayandırıldığı müddətdə bütün sənədləri düşür; qaldırılanda əvvəlkilər etibarlıdır |
 | `RETIRED` | `RETIRED` | `REVOKED`, yumşaq (`revokedAt` = `since`) | — | `REVOKED` | Əvvəlki sənədlər etibarlı qalır (GV1) |
 | `REVOKED` | `REVOKED` | `REVOKED`; `invalidates_from` varsa K2 | `REVOKED` | `REVOKED` | |
 | `DEPRECATED` | — | — | `DEPRECATED` | — | SC3 |
@@ -181,13 +181,14 @@ bildiyi müddətdir; lazım olduğundan uzun saxlanmır.
 | CE2 | Sərt ləğv tarixi (`invalidatesFrom`) qurumun etibarlılıq başlanğıcı ilə ləğv anı arasındadır; yazıldıqdan sonra silinmir, yalnız geriyə çəkilə bilər; `iat` bu tarixə bərabər və ya ondan sonra olan sənəd qəbul edilmir. |
 | CE3 | Sxemin `vctURI`-si və yazılmış hər məzmun xülasəsi dəyişdirilmir və silinmir; yeni versiya xülasəsi yalnız əlavə edilir. |
 | CE4 | Yoxlayan tərəfin zəncir və siyahı identifikatoru `keccak256(dns_name)`-dir; giriş sertifikatının yenilənməsi identifikatoru dəyişmir. |
-| CE5 | Kontrakt C1/C2/C3-ü sənədin `iat` anındakı statusa görə, yarımaçıq intervallarla qiymətləndirir (dayandırılmış qurumun dayandırmadan əvvəlki sənədləri etibarlıdır); siyahı statusları kontrakta uyğunlaşdırma cədvəli ilə yazılır. |
+| CE5 | Kontrakt C1/C2/C3-ü sənədin `iat` anındakı statusa görə, yarımaçıq intervallarla qiymətləndirir (dayandırma qaldırılanda ondan əvvəlki sənədlər etibarlıdır; qurum dayandırıldığı müddətdə bütün sənədləri RƏDD — [[ADR-0088]] SI1); siyahı statusları kontrakta uyğunlaşdırma cədvəli ilə yazılır. |
 | CE6 | Miqrasiya `trust:chain-replay` ekvivalentlik testində C1/C2/C3/D5 cavablarında ACCEPTED/REJECTED fərqi qalmayana qədər bağlanmır. |
 
 # Açıq suallar üzrə qərarlar (2026-11-04)
 
 1. **Dayandırılmış qurumun köhnə sənədləri:** siyahı qaydası. Dayandırmadan əvvəl verilmiş sənəd etibarlıdır; yalnız dayandırma
-   müddətində verilən sənəd düşür (K5). [[SPEC-BC-0001]] §3.3 buna uyğunlaşır.
+   müddətində verilən sənəd düşür (K5). [[SPEC-BC-0001]] §3.3 buna uyğunlaşır. **Dəyişdi (2026-11-16, [[ADR-0088]]):** qurum
+   dayandırıldığı müddətdə ondan əvvəlki sənədlər də qəbul edilmir (Aİ qaydası); qaldırılanda yenidən qəbul edilir.
 2. **Miqrasiyada şəbəkə səviyyəli yazılar:** açılış təklifinin səlahiyyət verdiyi tək miqrasiya icraçısı yazır (K1).
 3. **Miqrasiya müddətinin tavanı:** ən çoxu 30 gün; Governance yalnız rejim açıq olarkən və tavan daxilində uzadır; müddət bitəndə
    rejim özü-özünə bağlanmış sayılır (K1, CE1).

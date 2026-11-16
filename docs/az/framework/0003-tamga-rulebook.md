@@ -4,7 +4,7 @@ title: "Əlavə B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 summary: >
   Tamga şəbəkəsinə qoşulan hər bir rolun (operator və siyahı operatoru, qeydiyyat qurumu, sənədi verən qurum, səlahiyyətli mənbə, cüzdan provayderi, yoxlayan tərəf, sənəd sahibi) əməl etməli olduğu məcburi, nömrələnmiş qaydalar. Hər qayda bir dəyişməzdən və ya qərardan törədilib; bu sənəd yeni qayda yaratmır, qaydaları rollar üzrə toplayır və "MUST" dili ilə ifadə edir. EUDI ARF Annex 2 (High-Level Requirements) sənədinin qarşılığıdır.
 translation_of: FW-RB-0001
@@ -103,7 +103,7 @@ Bu gün: şəbəkəni Tamga Network (yaradılacaq fond) adından müvəqqəti op
 | RB-REG-04 | Sənəd növü üzrə səlahiyyət icazə siyahısı ilə verilir, defolt olaraq bağlıdır; zaman pəncərəsi ilə verilir; sənəd növü rulebook-unun "kim sənəd verə bilər" qaydasına əsasən verilir. |
 | RB-REG-05 | Qeyd sinfi və təminat (`class`, `assurance`) iştirak qapısına uyğun yazılır; `category` işarəsi yalnız dövlət və kvalifikasiyalı sinif üçündür. |
 | RB-REG-06 | Sertifika dəyişikliyi **MUST** yeni `issuer_id` və `successor_id` ilə qeydə alınmaq; köhnə qeyd silinmir. |
-| RB-REG-07 | Çıxarma və ya çıxış mövcud qeydləri və rəqəmsal sənədləri **MUST NOT** etibarsız etmək; `REVOKED` statusunda olan sənədi verən qurumun ləğv siyahısını varisi dərc edə bilər. |
+| RB-REG-07 | Çıxarma və ya çıxış mövcud qeydləri və rəqəmsal sənədləri **MUST NOT** etibarsız etmək; `REVOKED` statusunda olan sənədi verən qurumun ləğv siyahısını varisi dərc edə bilər. Dayandırma fərqlidir: dayandırılmış sənəd verənin sənədləri dayandırma davam etdikcə **MUST NOT** qəbul edilmək; qaldırılanda əvvəlkilər yenidən qəbul edilir ([[ADR-0088]]). |
 | RB-REG-08 | Yoxlayan tərəfin qeydiyyatı müəyyən əhatə ilə aparılır; əhatə məlumatların minimallaşdırılması yoxlamasından keçir (**SHOULD**). |
 | RB-REG-09 | Qeyd dəyişikliyi **SHOULD** ən geci 5 iş günü ərzində edilmək. |
 

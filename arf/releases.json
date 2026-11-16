@@ -20,14 +20,15 @@
         "FW-RB-0005": "1.0.0",
         "FW-POL-0001": "1.0.0",
         "FW-POL-0002": "1.0.0",
-        "FW-POL-0003": "1.0.0"
+        "FW-POL-0003": "1.0.0",
+        "FW-RISK-0001": "1.0.0"
       },
       "notes": {
         "en": [
-          "Current release: the main document, the Trust Framework, the Tamga Rulebook with the credential-type rulebooks in the EU Attestation Rulebook template (Education, Identity, Event Ticket, Contact), the Revocation Policy, the Wallet Attestation Policy and the Registration Certificate Policy, definitions and references, and the supporting pages Reading path, Roles and Onboarding. It includes the decisions up to ADR-0087 and the EU alignment reviews so far. The texts are available in English, Turkish and Azerbaijani. Until the public announcement, changes are made in this release."
+          "Current release: the main document, the Trust Framework, the Tamga Rulebook with the credential-type rulebooks in the EU Attestation Rulebook template (Education, Identity, Event Ticket, Contact), the Revocation Policy, the Wallet Attestation Policy and the Registration Certificate Policy, the Risk Register (a self-assessment against the EU wallet risk register), definitions and references, and the supporting pages Reading path, Roles and Onboarding. It includes the decisions up to ADR-0088 and the EU alignment reviews so far. The texts are available in English, Turkish and Azerbaijani. Until the public announcement, changes are made in this release."
         ],
         "tr": [
-          "Güncel yayın: ana belge, Trust Framework, Tamga Rulebook ve AB Attestation Rulebook şablonundaki belge türü rulebook'ları (Education, Identity, Event Ticket, Contact), İptal Politikası, Cüzdan Kanıtı Politikası ve Kayıt Sertifikası Politikası, tanımlar ve kaynaklar; ayrıca Okuma yolu, Roller ve Katılım süreci sayfaları. ADR-0087'ye kadarki kararları ve bugüne kadarki AB uyum turlarını içerir. Metinler İngilizce, Türkçe ve Azerbaycanca okunabilir. Kamuya duyuruya kadar değişiklikler bu yayının içinde yapılır."
+          "Güncel yayın: ana belge, Trust Framework, Tamga Rulebook ve AB Attestation Rulebook şablonundaki belge türü rulebook'ları (Education, Identity, Event Ticket, Contact), İptal Politikası, Cüzdan Kanıtı Politikası ve Kayıt Sertifikası Politikası, Risk kaydı (AB cüzdan risk kaydına göre öz değerlendirme), tanımlar ve kaynaklar; ayrıca Okuma yolu, Roller ve Katılım süreci sayfaları. ADR-0088'e kadarki kararları ve bugüne kadarki AB uyum turlarını içerir. Metinler İngilizce, Türkçe ve Azerbaycanca okunabilir. Kamuya duyuruya kadar değişiklikler bu yayının içinde yapılır."
         ]
       }
     }

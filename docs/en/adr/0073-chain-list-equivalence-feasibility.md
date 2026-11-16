@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   ADR-0009 K7 ties the move from signed lists to the chain to a replay of the list history into the contracts and an equivalence
   test. With today's contracts that history cannot be replayed faithfully: dates come from block time, there is no hard
@@ -152,7 +152,7 @@ void. An open window is the time during which the executor key can write dated h
 |---|---|---|---|---|---|
 | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | |
 | `ROLLING_OVER` | `ACTIVE` + successor event | — | — | — | The list treats it as active in C1 |
-| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Only credentials issued during the suspension fail; those issued before stay valid (list rule) |
+| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Credentials issued during the suspension fail. **From 2026-11-16 ([[ADR-0088]]):** while the issuer is suspended all its credentials fail; once lifted, those issued before are valid |
 | `RETIRED` | `RETIRED` | `REVOKED`, soft (`revokedAt` = `since`) | — | `REVOKED` | Earlier credentials stay valid (GV1) |
 | `REVOKED` | `REVOKED` | `REVOKED`; K2 if `invalidates_from` | `REVOKED` | `REVOKED` | |
 | `DEPRECATED` | — | — | `DEPRECATED` | — | SC3 |
@@ -192,13 +192,14 @@ void. An open window is the time during which the executor key can write dated h
 | CE2 | The hard revocation date (`invalidatesFrom`) lies between the issuer's start of validity and the revocation moment; once written it is not removed and can only be moved earlier; a credential whose `iat` is equal to or later than this date is not accepted. |
 | CE3 | A schema's `vctURI` and every written content digest are never changed or removed; a new version digest is only appended. |
 | CE4 | A relying party's chain and list identity is `keccak256(dns_name)`; renewing the access certificate does not change the identity. |
-| CE5 | The contract evaluates C1/C2/C3 by the status at the credential's `iat`, with half-open intervals (credentials a suspended issuer issued before the suspension stay valid); list statuses are written to the contract by the mapping table. |
+| CE5 | The contract evaluates C1/C2/C3 by the status at the credential's `iat`, with half-open intervals (once the suspension is lifted, credentials issued before it are valid; while the issuer is suspended all its credentials are REJECTED — [[ADR-0088]] SI1); list statuses are written to the contract by the mapping table. |
 | CE6 | The migration does not close until the `trust:chain-replay` equivalence test shows no ACCEPTED/REJECTED difference in the C1/C2/C3/D5 answers. |
 
 # Decisions on the open questions (2026-11-04)
 
 1. **Old credentials of a suspended issuer:** the list rule. A credential issued before the suspension is valid; only credentials
-   issued during the suspension fail (K5). [[SPEC-BC-0001]] §3.3 follows this.
+   issued during the suspension fail (K5). [[SPEC-BC-0001]] §3.3 follows this. **Changed (2026-11-16, [[ADR-0088]]):** while the
+   issuer is suspended, credentials issued before the suspension are not accepted either (EU rule); once lifted they are again.
 2. **Network-level writes in the migration:** a single migration executor authorised by the opening proposal writes them (K1).
 3. **Migration time cap:** at most 30 days; Governance extends only while the mode is open and within the cap; when the time runs out
    the mode counts as closed by itself (K1, CE1).

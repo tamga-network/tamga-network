@@ -65,7 +65,7 @@ const bound = { projectedLevel: T - 10, listLevel: () => T - 10 };
 const src = (ix = index(), now = T) => new ChainTrustSource(ix, { now: () => new Date(now * 1000), content: bound });
 
 describe("ChainTrustSource — kontrat okuma kuralları", () => {
-  it("C1: iat anındaki durum, yarı açık; askıdan önceki belge kabul, askıda ret, dönüşten sonra kabul", () => {
+  it("C1: iat anındaki durum, yarı açık; askı kalktıktan sonra askıdan önceki belge kabul, askıda verilen ret", () => {
     const s = src();
     expect([99, 100, 199, 200, 299, 300].map((t) => s.isCredentialAcceptable(ISS, t))).toEqual([
       "NO",
@@ -76,6 +76,18 @@ describe("ChainTrustSource — kontrat okuma kuralları", () => {
       "YES",
     ]);
     expect(s.isCredentialAcceptable("0x" + "99".repeat(32), 150)).toBe("NO");
+  });
+  it("ADR-0088 SI1/SI2: şu an askıdaki kurumun bütün belgeleri ret; askı kalkınca askıdan önceki belge yeniden kabul", () => {
+    const ix = index();
+    ix.issuers[ISS].history.push([T - 100, 2]); // şu an askıda
+    const s = src(ix);
+    expect(s.isIssuerSuspended(ISS)).toBe("YES");
+    expect([150, 350].map((t) => s.isCredentialAcceptable(ISS, t))).toEqual(["NO", "NO"]);
+    ix.issuers[ISS].history.push([T - 50, 1]); // askı kalktı
+    const r = src(ix);
+    expect(r.isIssuerSuspended(ISS)).toBe("NO");
+    expect([150, 250, 350].map((t) => r.isCredentialAcceptable(ISS, t))).toEqual(["YES", "NO", "YES"]);
+    expect(r.isIssuerSuspended("0x" + "99".repeat(32))).toBe("NO");
   });
   it("C1: sert iptal (iat ≥ invalidatesFrom ret) ve kök bir kez REVOKED olunca bütün altı düşer", () => {
     const ix = index();

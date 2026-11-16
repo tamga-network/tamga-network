@@ -4,7 +4,7 @@ title: "Event Ticket Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tədbir biletinin (`urn:tamga:tkt:EventTicket:1`) rulebook-u (Tamga Rulebook-dan şaxələnir), Avropa İttifaqının (Aİ) Attestation Rulebook şablonunun bölmə strukturu ilə: fərdi məlumatlar daşımayan, cihaza bağlı, girişdə birdəfəlik rəqəmsal sənəd. Atributlar və metaməlumatlar, hüquqi kateqoriya, SD-JWT VC kodlaşdırması, kim verir, girişdə birdəfəlik istifadə, yoxlama siyasəti, etibar lövbərləri, etibarlılıq, ləğv və ötürmə. Mənbələr ADR-0012, ADR-0014 və sxem kataloqudur.
 translation_of: FW-RB-0004
@@ -101,7 +101,9 @@ Yoxdur.
 
 ## 2.6 İstəyə bağlı metaməlumatlar
 
-Yoxdur.
+| Məlumat identifikatoru | Tərif | Məlumat növü | Nümunə dəyər |
+|---|---|---|---|
+| `nbf` | Texniki etibarlılığın başlanğıcı; sənədi verən qurum onu verilmə anında yazır: dəyər `iat` ilə eyni (saat başına aşağı yuvarlaqlaşdırılmış) andır, gələcək tarixli sənəddə isə etibarlılığın başladığı andır. Başlanğıcı çatmamış sənəd rəqəmsal cüzdanda "hələ etibarlı deyil" kimi saxlanılır və təqdim edilə bilməz; yoxlayan tərəf onu rədd edir | NumericDate | `1791763200` |
 
 ## 2.7 Şərti metaməlumatlar
 

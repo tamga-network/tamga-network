@@ -4,7 +4,7 @@ title: "Rəqəmsal cüzdan qaydaları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Rəqəmsal cüzdanın açar, yerli yaddaş, cihaz dəyişməsi və təsdiq dizaynını müəyyən edir. Mərkəzi nəticə bir ZİDDİYYƏTİN həllidir: [[SPEC-CRED-0001]] §3 sənəd sahibi açarının təhlükəsiz zonadan çıxa bilməyəcəyini bildirir, lakin layihə qeydlərindəki "24 sözlük seed ilə ehtiyat nüsxə" dizaynı açarın bərpa oluna biləcəyini nəzərdə tuturdu. İkisi eyni anda doğru ola bilməz — seed-dən törədilə bilən sənəd sahibi açarı isə rəqəmsal sənədi ÖTÜRÜLƏ BİLƏN edərək holder binding boşluğunu arxa qapıdan geri qaytarır. Qərar: açarlar seed-dən törədilmir; cüzdan sənədlərin ehtiyat nüsxəsini almır, cihaz dəyişdikdə sənədlərin YENİDƏN VERİLMƏSİ tələb olunur; cihazdan kənara daşınan yeganə şey şəxsin başlatdığı köçürmə faylıdır ([[ADR-0078]]). Bundan əlavə, toplu verilən nüsxələrin hər yoxlayan tərəf üçün sabit ("yapışqan") istifadəsi iki açıq məsələni birdən bağlayır.
 translation_of: SPEC-WALLET-0001
@@ -330,6 +330,23 @@ Kod: `@tamga-network/wallet-core` `refreshZkCopies`, `scheduleZkRefreshes`, `sel
 [[SPEC-PROTO-0001]] §4.1.
 
 ---
+
+## 4.6 Sənədin etibarlılıq statusu
+
+Cüzdan nüvəsi hər saxlanılan sənəd üçün göstərilmə statusunu hesablayır (`credentialValidity`; şəbəkə sorğusu yoxdur).
+Prioritet sırası ilə:
+
+| Status | Nə vaxt | Təqdim edilir |
+|---|---|---|
+| `revoked` | Ləğv siyahısında və ya lokal olaraq ləğv edilib | xeyr |
+| `expired` | `exp` keçib | xeyr |
+| `issuer_suspended` | Sənədi verən qurum etibar siyahısında hazırda dayandırılıb ([[ADR-0088]]); sənəd silinmir, kartda xəbərdarlıq; dayandırma qaldırılanda yenidən `valid` | xeyr |
+| `suspended` | Ləğv siyahısında dayandırılıb | xeyr |
+| `not_yet_valid` | Etibarlılığın başlanğıcı (`nbf`) gələcəkdədir (ARF "Issued"); sənəd alınır və saxlanılır, kartda başlanğıc tarixi | xeyr |
+| `valid` | — | bəli |
+
+Gələcək tarixli sənəd alınarkən rədd edilmir; mdoc nüsxəsi başlanğıc anına görə yoxlanılır. Təqdimat seçimi başlanğıcı gəlməmiş
+sənədi təklif etmir. Dayandırılmış qurumdan yeni sənəd alınmır (C1).
 
 # 5. Təsdiq interfeysi
 

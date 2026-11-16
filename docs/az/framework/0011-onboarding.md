@@ -4,7 +4,7 @@ title: "Qoşulma prosesi"
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tamga Network-a qoşulmanın addımları: sənədi verən qurum, yoxlayan tərəf, cüzdan provayderi və dövlət üçün müraciət, tələb olunan sənədlər, baxış, uyğunluq testləri, siyahıya daxil olma; daha sonra qeydiyyat dəyişikliyi, fəaliyyətin dayandırılması və çıxış. Qaydalar Əlavə A §3.2–§3.3 və Əlavə B-də, texniki addımlar isə tərtibatçı sənədlərindədir.
 translation_of: FW-ONB-0001
@@ -109,7 +109,8 @@ Təhvil heç bir rəqəmsal sənədi, qeydiyyatı və ya identifikatoru etibars�
 
 İnsident, audit nəticəsi və ya müqavilənin pozulması sanksiya pilləkənini işə salır (Əlavə A §4.5): əvvəlcə xəbərdarlıq və 30 günlük aradan qaldırma
 müddəti, sonra rəqəmsal sənəd növü səlahiyyətinin məhdudlaşdırılması, sonra fəaliyyətin dayandırılması. Fəaliyyəti dayandırılmış qurum yeni rəqəmsal sənəd verə və ləğv siyahısı
-dərc edə bilməz; əvvəllər verdiyi rəqəmsal sənədlər verildikləri tarixə görə etibarlı qalır. Problem aradan qaldırıldıqda qurum yenidən aktivləşir.
+dərc edə bilməz; dayandırma davam etdikcə əvvəllər verdiyi rəqəmsal sənədlər də yoxlamada qəbul edilmir ([[ADR-0088]]). Problem
+aradan qaldırıldıqda qurum yenidən aktivləşir və dayandırmadan əvvəl verdiyi sənədlər yenidən qəbul edilir.
 Kritik insidentlərdə (məsələn, imza açarının sızması) qurumun fəaliyyəti dərhal dayandırılır (Əlavə A §4.6).
 
 # 8. Çıxış

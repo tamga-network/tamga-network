@@ -35,6 +35,7 @@ export const ARF_PAGES: Record<string, string> = {
   "FW-POL-0001": "policies/revocation",
   "FW-POL-0002": "policies/wallet-attestation",
   "FW-POL-0003": "policies/registration-certificate",
+  "FW-RISK-0001": "risk-register",
 };
 
 /**

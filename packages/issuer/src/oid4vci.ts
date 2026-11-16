@@ -242,7 +242,18 @@ export function issuerMetadata(p: {
    * ISO 18013-5 mdoc yapılandırmaları (`format: mso_mdoc`, `doctype`). ADR-0044: kimlik servisinin ZK kopyası — yalnız yenileme
    * belirteciyle alınır (PAR ile başlatılamaz).
    */
-  mdocConfigurations?: Array<{ id: string; doctype: string; display: unknown[] }>;
+  mdocConfigurations?: Array<{
+    id: string;
+    doctype: string;
+    display: unknown[];
+    /**
+     * ADR-0089 K1: yapılandırmanın kapsamı (yoksa `id`). Kimlik belgesinin mdoc yapılandırması SD-JWT yapılandırmasıyla aynı kapsamı
+     * taşır — tek yetki iki biçimi kapsar (OpenID4VCI 1.0 §12.2.4 aynı `scope`'un birden çok yapılandırmada kullanılmasına izin verir).
+     */
+    scope?: string;
+    /** ADR-0089: kopya politikası (`credential_reuse_policy`) ilan edilsin mi (ZK kopyası gibi kısa ömürlü türlerde yok) */
+    reusePolicy?: boolean;
+  }>;
   /**
    * OpenID4VCI 1.0 §12.2.4 belge verenin görünümü (`display`): kurumun imzalı güven listesindeki kayıtlı adı ve varsa dildeki
    * karşılıkları, her girdi kendi `locale`'iyle (`issuerDisplayFrom`). Verilmezse adsız, yerelsiz tek girdi yazılır — belge
@@ -300,12 +311,15 @@ export function issuerMetadata(p: {
         c.id,
         {
           format: "mso_mdoc",
-          scope: c.id,
+          scope: c.scope ?? c.id,
           doctype: c.doctype,
           cryptographic_binding_methods_supported: ["cose_key"],
           credential_signing_alg_values_supported: [-7],
           proof_types_supported: proofTypes,
-          credential_metadata: { display: credentialDisplay(c.display) },
+          credential_metadata: {
+            display: credentialDisplay(c.display),
+            ...(c.reusePolicy ? { credential_reuse_policy: REUSE_POLICY } : {}),
+          },
         },
       ]),
     ]),

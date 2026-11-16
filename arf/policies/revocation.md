@@ -102,8 +102,11 @@ prevails.
 
 ### 3.5 Not reasons for revocation
 
-- **Suspension or removal of the issuer** does not invalidate earlier credentials; only new issuance stops. The check is made against
-  the time the credential was issued (`iat`) (RB-REG-07, RB-ENF-02, RB-RP-03).
+- **Removal of the issuer** does not invalidate earlier credentials; only new issuance stops. The check is made against the time
+  the credential was issued (`iat`) (RB-REG-07, RB-ENF-02, RB-RP-03).
+- **Suspension of the issuer** does not revoke credentials: their status in the status list does not change. But while the
+  suspension lasts, the issuer's credentials are not accepted in verification; once it is lifted, credentials issued before the
+  suspension are accepted again ([[ADR-0088]]).
 - **Renewal of the issuer's certificate** does not affect earlier credentials; they are verified with the old `issuer_id` entry.
 - **A credential type becoming `DEPRECATED`** does not revoke credentials; the type remains verifiable (RB-SCH-06).
 

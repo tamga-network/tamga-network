@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0004 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
+**Document** FW-RB-0004 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -19,9 +19,9 @@ in the section structure of the EU Attestation Rulebook template: a device-bound
 personal data. Attributes and metadata, legal category, SD-JWT VC encoding, who issues it, single use at the gate, verification
 policy, trust anchors, validity, [[t:revocation]] and transfer. The sources are ADR-0012, ADR-0014 and the schema catalogue.
 
-| Version | Date | Description |
-| --- | --- | --- |
-| 1.0.0 | 2026-10-16 | Current text of Tamga ARF 1.0, in the section structure of the EU Attestation Rulebook template (version 1.5). |
+| Version | Date       | Description                                                                                                    |
+| ------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| 1.0.0   | 2026-10-16 | Current text of Tamga ARF 1.0, in the section structure of the EU Attestation Rulebook template (version 1.5). |
 
 **Scheme owner:** Tamga Network (today the provisional operator). **Feedback:** <https://github.com/tamga-network/tamga-network/issues>
 
@@ -29,8 +29,8 @@ policy, trust anchors, validity, [[t:revocation]] and transfer. The sources are 
 
 ### 1.1 Scope and purpose
 
-| Type | `vct` | Catalogue |
-| --- | --- | --- |
+| Type         | `vct`                         | Catalogue                                        |
+| ------------ | ----------------------------- | ------------------------------------------------ |
 | Event ticket | `urn:tamga:tkt:EventTicket:1` | `schemas.tamga.network/v1/tkt/EventTicket/1.0.0` |
 
 **Purpose:** the ticket seller or organiser issues the ticket into the wallet, and the gate lets the ticket through once without
@@ -55,13 +55,13 @@ Terms are in Annex D; EU terms have the meaning of ARF Annex 1.
 
 ### 2.0 EU requirements and where they are met
 
-| Requirement | Where |
-| --- | --- |
-| Indication that it is an EAA (ARB_12) | §2.1 |
-| Identity of the issuer, Annex V b (ARB_15) | `iss`, the `x5c` leaf certificate; also `organizer_name` |
-| Identity of the subject, Annex V c (ARB_17) | Deliberately absent: the ticket binds the device, not the person ([[ADR-0014]]); if the person is needed, the identity credential is requested separately |
-| Start and end of validity, Annex V e (ARB_19) | `iat`, `exp` (§6.1); the event time is `event_start`, `event_end` |
-| Location of the trust anchor, Annex V h (ARB_21) | No separate attribute in the credential; the location is the issuer's certificate chain and the Tamga trust lists (§5) |
+| Requirement                                      | Where                                                                                                                                                     |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Indication that it is an EAA (ARB_12)            | §2.1                                                                                                                                                      |
+| Identity of the issuer, Annex V b (ARB_15)       | `iss`, the `x5c` leaf certificate; also `organizer_name`                                                                                                  |
+| Identity of the subject, Annex V c (ARB_17)      | Deliberately absent: the ticket binds the device, not the person ([[ADR-0014]]); if the person is needed, the identity credential is requested separately |
+| Start and end of validity, Annex V e (ARB_19)    | `iat`, `exp` (§6.1); the event time is `event_start`, `event_end`                                                                                         |
+| Location of the trust anchor, Annex V h (ARB_21) | No separate attribute in the credential; the location is the issuer's certificate chain and the Tamga trust lists (§5)                                    |
 
 ### 2.1 Introduction and legal category
 
@@ -73,22 +73,22 @@ is the indication that follows the ETSI TS 119 472-1 rule (`category` by the EU 
 
 ### 2.2 Mandatory attributes
 
-| Data identifier | Definition | Data type | Example value |
-| --- | --- | --- | --- |
-| `event_id` | Event code | text (1–64) | `KONSER-2026-11-21` |
-| `event_name` | Event name | text (1–200) | `Kış Konseri` |
-| `event_start`, `event_end` | Start and end | date-time (RFC 3339) | `2026-11-21T19:00:00+03:00` |
-| `venue_name` | Venue | text (1–200) | `Kültür Merkezi` |
-| `organizer_name` | Organiser | text (1–200) | `Örnek Etkinlik A.Ş.` |
-| `ticket_class` | Ticket class (e.g. STANDARD, VIP, STUDENT) | text (1–64) | `STANDARD` |
-| `ticket_no_hash` | Digest of the seller's ticket number; the seller matches it with its own record | `sha256-…` | `sha256-…` |
-| `gate` | The verifier from which the gate pass is obtained: `verifier_client_id`, `terminal_group`, optional `policy_id` | object | `{"verifier_client_id":"x509_hash:…","terminal_group":"ana-giris"}` |
+| Data identifier            | Definition                                                                                                      | Data type            | Example value                                                       |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------------------------- |
+| `event_id`                 | Event code                                                                                                      | text (1–64)          | `KONSER-2026-11-21`                                                 |
+| `event_name`               | Event name                                                                                                      | text (1–200)         | `Kış Konseri`                                                       |
+| `event_start`, `event_end` | Start and end                                                                                                   | date-time (RFC 3339) | `2026-11-21T19:00:00+03:00`                                         |
+| `venue_name`               | Venue                                                                                                           | text (1–200)         | `Kültür Merkezi`                                                    |
+| `organizer_name`           | Organiser                                                                                                       | text (1–200)         | `Örnek Etkinlik A.Ş.`                                               |
+| `ticket_class`             | Ticket class (e.g. STANDARD, VIP, STUDENT)                                                                      | text (1–64)          | `STANDARD`                                                          |
+| `ticket_no_hash`           | Digest of the seller's ticket number; the seller matches it with its own record                                 | `sha256-…`           | `sha256-…`                                                          |
+| `gate`                     | The verifier from which the gate pass is obtained: `verifier_client_id`, `terminal_group`, optional `policy_id` | object               | `{"verifier_client_id":"x509_hash:…","terminal_group":"ana-giris"}` |
 
 ### 2.3 Optional attributes
 
-| Data identifier | Definition | Data type | Example value |
-| --- | --- | --- | --- |
-| `seat` | Seat | text (≤ 32) | `B-14` |
+| Data identifier | Definition | Data type   | Example value |
+| --------------- | ---------- | ----------- | ------------- |
+| `seat`          | Seat       | text (≤ 32) | `B-14`        |
 
 ### 2.4 Conditional attributes
 
@@ -96,23 +96,25 @@ None.
 
 ### 2.5 Mandatory metadata
 
-| Data identifier | Definition | Data type | Example value |
-| --- | --- | --- | --- |
-| `iss` | The issuer's address | URI | `https://issuer.tamga.network/ornek-bilet` |
-| `vct`, `vct#integrity` | Type and the digest of the type definition | URN, `sha256-…` | `urn:tamga:tkt:EventTicket:1` |
-| `iat`, `exp` | Time of issuance and end of validity | NumericDate | — |
-| `cnf` | The wallet's device key | JWK | — |
-| `status` | Reference to the list for revocation and the "used" bit | object | `{"status_list":{"idx":701,"uri":"https://status.tamga.network/c41f9a07"}}` |
+| Data identifier        | Definition                                              | Data type       | Example value                                                               |
+| ---------------------- | ------------------------------------------------------- | --------------- | --------------------------------------------------------------------------- |
+| `iss`                  | The issuer's address                                    | URI             | `https://issuer.tamga.network/ornek-bilet`                                  |
+| `vct`, `vct#integrity` | Type and the digest of the type definition              | URN, `sha256-…` | `urn:tamga:tkt:EventTicket:1`                                               |
+| `iat`, `exp`           | Time of issuance and end of validity                    | NumericDate     | —                                                                           |
+| `cnf`                  | The wallet's device key                                 | JWK             | —                                                                           |
+| `status`               | Reference to the list for revocation and the "used" bit | object          | `{"status_list":{"idx":701,"uri":"https://status.tamga.network/c41f9a07"}}` |
 
 ### 2.6 Optional metadata
 
-None.
+| Data identifier | Definition                                                                                                                                                                                                                                                                                                                            | Data type   | Example value |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------- |
+| `nbf`           | Technical start of validity; the issuer writes it at issuance: the value is the same moment as `iat` (rounded down to the hour), or the moment validity starts for a future-dated credential. A credential whose start has not been reached is stored in the wallet as "not yet valid" and cannot be presented; a verifier rejects it | NumericDate | `1791763200`  |
 
 ### 2.7 Conditional metadata
 
-| Data identifier | Condition | Data type |
-| --- | --- | --- |
-| `category` | Only for an issuer whose registered class is qualified or public (§2.1) | `urn:tamga:eaa:qualified` \| `urn:tamga:eaa:pub` |
+| Data identifier | Condition                                                               | Data type                                        |
+| --------------- | ----------------------------------------------------------------------- | ------------------------------------------------ |
+| `category`      | Only for an issuer whose registered class is qualified or public (§2.1) | `urn:tamga:eaa:qualified` \| `urn:tamga:eaa:pub` |
 
 ## 3. Encoding
 
@@ -128,12 +130,12 @@ The ticket is issued as an [[t:SD-JWT-VC]] following the SD-JWT VC profile of HA
 `x5c`, `vct#integrity` mandatory. All claim names are Tamga-specific names (ARB_06b). The "Selective disclosure" column is the `sd`
 value in the Type Metadata (ARB_30).
 
-| Data identifier | Claim name | Encoding | Note | Selective disclosure |
-| --- | --- | --- | --- | --- |
-| `event_id`, `event_name`, `venue_name`, `organizer_name`, `ticket_class`, `seat`, `ticket_no_hash` | same | string | Tamga-specific | MUST |
-| `event_start`, `event_end` | same | string (RFC 3339 date-time) | Tamga-specific | MUST |
-| `gate` | `gate` | object | Tamga-specific; not personal data | MUST NOT |
-| `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status`, `category` | same | — | transport profile | MUST NOT |
+| Data identifier                                                                                    | Claim name | Encoding                    | Note                              | Selective disclosure |
+| -------------------------------------------------------------------------------------------------- | ---------- | --------------------------- | --------------------------------- | -------------------- |
+| `event_id`, `event_name`, `venue_name`, `organizer_name`, `ticket_class`, `seat`, `ticket_no_hash` | same       | string                      | Tamga-specific                    | MUST                 |
+| `event_start`, `event_end`                                                                         | same       | string (RFC 3339 date-time) | Tamga-specific                    | MUST                 |
+| `gate`                                                                                             | `gate`     | object                      | Tamga-specific; not personal data | MUST NOT             |
+| `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status`, `category`                           | same       | —                           | transport profile                 | MUST NOT             |
 
 **Example (JWT claim set, with disclosures resolved):**
 
@@ -173,15 +175,15 @@ is not defined.
 
 ### 4.2 Issuance policy: who issues
 
-| Requirement | Value |
-| --- | --- |
-| Issuer | Ticket seller or organiser (e.g. a ticketing platform) |
-| Category | `EVENTS` |
-| Minimum accreditation | I2 |
-| Credential type authorisation | An allow-list entry for this `vct` |
-| Identity proofing | Not required (T0) — the ticket is bound to a device, not a person |
-| Wallet | Before issuance the WIA and KA are verified against the `wallet_providers[]` list (RB-AP-10) |
-| Embedded disclosure policy | Published in the signed issuer metadata if the institution wishes ([[ADR-0046]], RB-AP-26) |
+| Requirement                   | Value                                                                                        |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| Issuer                        | Ticket seller or organiser (e.g. a ticketing platform)                                       |
+| Category                      | `EVENTS`                                                                                     |
+| Minimum accreditation         | I2                                                                                           |
+| Credential type authorisation | An allow-list entry for this `vct`                                                           |
+| Identity proofing             | Not required (T0) — the ticket is bound to a device, not a person                            |
+| Wallet                        | Before issuance the WIA and KA are verified against the `wallet_providers[]` list (RB-AP-10) |
+| Embedded disclosure policy    | Published in the signed issuer metadata if the institution wishes ([[ADR-0046]], RB-AP-26)   |
 
 Note: the `EventTicket:1` type definition (an immutable file) gives the [[t:issuer]] category as `OTHER`; registrations are in the
 `EVENTS` category under [[ADR-0014]]. The correction in the definition comes with `EventTicket:2` (a published file does not change,
@@ -207,8 +209,8 @@ RB-SCH-02).
 
 ### 4.4 Verification policy (the verifier's obligations)
 
-| Policy | Required |
-| --- | --- |
+| Policy                     | Required                                                                                                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `event-ticket` (reference) | `vct = EventTicket:1`; issuer in the `EVENTS` category and authorised for this type, at least I2; not revoked and not used; the requested attributes are only `event_id` and `ticket_class` |
 
 Verification goes through the canonical pipeline (RB-RP-03). The result is three-valued; `INDETERMINATE` is not a pass.
@@ -234,12 +236,12 @@ and its own verifier's key in advance.
 
 ### 6.2 Revocation
 
-| Topic | Rule |
-| --- | --- |
-| Revocable | **Yes, mandatory** — Token Status List (the EU's Attestation Status List): revocation **and** the "used" bit at the gate |
-| Revocation conditions | Refund, cancellation of the event, erroneous sale, transfer (§6.3) — details in [[FW-POL-0001]] §3 |
+| Topic                  | Rule                                                                                                                                                                                                         |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Revocable              | **Yes, mandatory** — Token Status List (the EU's Attestation Status List): revocation **and** the "used" bit at the gate                                                                                     |
+| Revocation conditions  | Refund, cancellation of the event, erroneous sale, transfer (§6.3) — details in [[FW-POL-0001]] §3                                                                                                           |
 | List address (ARB_24a) | `status.status_list.uri` in the credential; under `https://status.tamga.network/` on the network-hosted service, on the seller's status server for a seller that runs its own service; the address is opaque |
-| Publication | At a fixed interval, even without changes (RB-AP-17) |
+| Publication            | At a fixed interval, even without changes (RB-AP-17)                                                                                                                                                         |
 
 ### 6.3 Transfer
 

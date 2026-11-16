@@ -4,7 +4,7 @@ title: "Rəqəmsal sənəd formatı və protokollar"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-11-04
+last_updated: 2026-11-16
 summary: >
   Tamga rəqəmsal sənədlərinin kanonik formatını, sənədin verilməsi və təqdim edilməsi protokollarını müəyyən edir. Əsas format SD-JWT VC-dir (selective disclosure daxilidir, EUDI ARF-in əsas formatıdır), ikinci format mdoc/ISO 18013-5-dir (şəxsiyyət tiplərində aktiv, digərlərində planlaşdırılır; oflayn/fiziki təqdimat). Sənədin verilməsi OpenID4VCI, təqdimat OpenID4VP, imza ES256 (P-256) ilə həyata keçirilir. Holder binding MƏCBURİDİR: credential həmişə rəqəmsal cüzdanın cihaz açarına `cnf` (key binding) ilə bağlanır — bu, "universitet ideyasındakı gizli səhvin" (rəqəmsal sənədin başqasının cüzdanına yazılması) yeganə həllidir. Qısa ömürlü cüzdan nümunəsi sübutu (WIA) və açar attestasiyası (KA) rəqəmsal cüzdanın həqiqiliyini və açar anbarını bəyan edir ([[ADR-0025]]). Ləğv Token Status List-ə ([[SPEC-BC-0001]] §5) həvalə olunur. Zəncirə credential və ya onun məzmunu HEÇ VAXT yazılmır ([[PM-TRUST-0001]]).
 translation_of: SPEC-CRED-0001
@@ -77,7 +77,9 @@ SD-JWT VC üç hissədən ibarətdir:
 
 Sənədi verən qurumun məcburi claim-ləri: `iss`, `iat`, `vct` (sənəd tipi), `cnf` (sənəd sahibinin public
 key-i), `status` (Token Status List pointer-i). `exp` sənəd tipinə görə müəyyən edilir (tələbə sənədi
-üçün qısa TTL, diplom üçün uzun).
+üçün qısa TTL, diplom üçün uzun). `nbf` (etibarlılığın başlanğıcı) sənəd verənin kitabxanasında standart olaraq verilmə anı
+(`iat`) ilə eyni yazılır; gələcək tarixli sənəddə (bilet, semestri başlamamış tələbə sənədi) başlanğıc anıdır. Başlanğıcı
+gəlməmiş sənəd cüzdanda "hələ etibarlı deyil" kimi saxlanılır və təqdim edilmir; yoxlayıcı `A7`-də rədd edir (ARF 3.0 §4.6.6 "Issued").
 
 > **Məlumatların minimallaşdırılması:** TCKN kimi identifikatorlar yalnız zəruri olduqda və selective disclosure ilə açıqlana bilən
 > claim kimi daxil edilir; [[t:verifier]] siyasəti ([[PM-ASSUR-0001]]) bunları "tələb edilməyənlər" siyahısına

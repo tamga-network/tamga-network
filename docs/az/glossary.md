@@ -185,7 +185,7 @@ abbreviaturalar ingiliscə qalır: salted hash, selective disclosure, holder bin
 
 **Passkey** — İstifadəçinin cihazında saxlanılan, fişinqə davamlı giriş açarı (WebAuthn/FIDO2).
 
-**Wallet unit** — Rəqəmsal cüzdanın müəyyən cihazdakı quraşdırılması.
+**Wallet unit** — Şəxsə verilən rəqəmsal cüzdanın müəyyən cihazdakı tam konfiqurasiyası: cüzdan tətbiqi (wallet instance) və açarları qoruyan təhlükəsiz aparat hissəsi birlikdə.
 
 **WIA** (Wallet Instance Attestation) — Cüzdan provayderinin imzaladığı, cüzdan quraşdırılmasının həqiqi olduğunu bildirən qısamüddətli bəyanat; sənədi verən qurum rəqəmsal sənədi verməzdən əvvəl onu yoxlayır.
 

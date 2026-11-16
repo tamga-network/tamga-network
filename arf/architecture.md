@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-15 · **Licence** CC BY 4.0
+**Document** FW-ARF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -467,6 +467,9 @@ shown, is in Annex A §4.3. Interoperability with the EU is
 shown at EU interoperability events and with the OpenID conformance tests.
 
 ### 7.4 Known limits and residual risks
+
+Tamga's measure and status for every risk and threat of the EU wallet risk register are in the risk register
+([[FW-RISK-0001]]; a self-assessment). The limits below are the residual risks declared openly today.
 
 | #   | Limit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

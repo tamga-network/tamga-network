@@ -4,7 +4,7 @@ title: "Ek A — Trust Framework"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-30
+last_updated: 2026-11-16
 summary: >
   Tamga ekosisteminin yönetişim çerçevesi. World Bank "Digital Wallets: Trust Frameworks" beş katmanlı modeliyle
   yapılandırılmıştır: strateji (vizyon, ilkeler, hukuki bağlam, risk, yönetişim organları), teknoloji (ana belgeye işaret),
@@ -74,7 +74,8 @@ Ana belgedeki yedi ilke (§1.6, P1–P7) bu çerçevenin de ilkeleridir. Yöneti
 
 ## 1.5 Risk yaklaşımı
 
-Riskler ekosistem düzeyinde ve orantılı ele alınır. Risk kaydı AB ARF'sinin risk listesinden türetilir. Bugün açıkça beyan
+Riskler ekosistem düzeyinde ve orantılı ele alınır. Risk kaydı ([[FW-RISK-0001]]) AB'nin cüzdan risk kaydının (Uygulama Tüzüğü (AB) 2024/2981 Ek I) iskeletini izler; bir öz
+değerlendirmedir, bağımsız denetim ya da sertifika değildir. Bugün açıkça beyan
 edilen artık riskler ana belgededir (§6.6 ve §7.4): tek işletmecinin imzasına dayanan çapa, iptalin etkili olma süresi, aynı
 [[t:issuer|belge verenin]] belgelerinin birleştirilmesiyle kişinin eşleştirilebilmesi.
 
@@ -214,8 +215,9 @@ tablosu (ör. ISCED-F) tutulur ve "eşlemede karşılığı olmayan veri için b
 
 ## 3.3 Yaşam döngüsü kuralları
 
-- **Askıya alma:** olay, denetim bulgusu ya da sözleşme ihlali durumunda kurum askıya alınır; yeni belge verilmez, eski
-  belgeler verildikleri tarihe göre geçerli kalır. Sorun giderilince kurum yeniden etkinleşir.
+- **Askıya alma:** olay, denetim bulgusu ya da sözleşme ihlali durumunda kurum askıya alınır; yeni belge verilmez ve askı
+  sürdükçe kurumun hiçbir belgesi doğrulamada kabul edilmez (AB kuralı; [[ADR-0088]]). Askı belgeleri iptal etmez: sorun giderilince
+  kurum yeniden etkinleşir ve askıdan önce verdiği belgeler yeniden kabul edilir; askıdayken verilmiş belge hiçbir zaman.
 - **Çıkarma:** kurum listeden çıkarılır (halefi varsa halef bağlantısıyla); ETSI görünümünde "geri çekildi" olarak yer alır;
   geçmiş silinmez; halef iptal listesini yayınlamayı sürdürebilir.
 - **Anahtar ya da sertifika yenileme:** yeni kurum kimliği eskisine halef olarak bağlanır; eski belgeler eski kayıtla

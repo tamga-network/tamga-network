@@ -362,7 +362,12 @@ export function stepC(ctx: VerifyCtx): StepFail | undefined {
   }
   const c1 = input.trust.isCredentialAcceptable(a.issuerId, a.iat);
   if (c1 === "UNKNOWN") return indet("C1", "INDEXER_STALE", "issuer sorgusu UNKNOWN");
-  if (c1 === "NO") return reject("C1", "issuer not acceptable at iat");
+  // ADR-0088 SI1: askıdaki kurumun belgesi verilme anından bağımsız RED; nedeni ayrı yazılır (askı geçicidir — kalkınca kabul)
+  if (c1 === "NO")
+    return reject(
+      "C1",
+      input.trust.isIssuerSuspended?.(a.issuerId) === "YES" ? "issuer suspended" : "issuer not acceptable at iat",
+    );
   ctx.done.push("C1");
   const c2 = input.trust.isCredentialSchemaAcceptable(a.issuerId, ctx.schemaId!, a.iat);
   if (c2 === "UNKNOWN") return indet("C2", "INDEXER_STALE", "schema authorisation UNKNOWN");

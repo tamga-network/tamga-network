@@ -4,7 +4,7 @@ title: "Qurum kimi şəbəkəyə qoşulmaq"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-05
+last_updated: 2026-11-16
 summary: >
   Qurumun sənədi verən qurum kimi Tamga Network-a qoşulması, ilk təmasdan canlı istifadəyə qədər addım-addım: sandbox-da sınaq, müraciət faylı və Aİ-nin ümumi qeydiyyat məlumatları (yoxlama siyahısı), açarlar və sertifikat sorğusu (CSR), qurumun sorğu nöqtəsi, etibar siyahısına daxil olma və sənəd növü səlahiyyəti, Qurum Konsolu hesabı, ilk sənəd, ləğv və qeydiyyat dəyişiklikləri.
 translation_of: GUIDE-0007
@@ -213,7 +213,7 @@ sonra rədd edir.
 | Qurum qeydiyyatının statusu | Nə baş verir |
 |---|---|
 | `ACTIVE` | Rəqəmsal sənəd verə bilər; verdiyi sənədlər qəbul edilir |
-| `SUSPENDED` | Müvəqqəti olaraq sənəd verə bilməz; dayandırılma dövründə verilən sənəd qəbul edilmir, dayandırılmadan əvvəl verilənlərə təsir etmir. Problem aradan qaldırıldıqda yenidən aktivləşir |
+| `SUSPENDED` | Müvəqqəti olaraq sənəd verə bilməz; dayandırma davam etdikcə qurumun heç bir sənədi qəbul edilmir (əvvəlkilər də). Problem aradan qaldırıldıqda yenidən aktivləşir; dayandırmadan əvvəl verilənlər yenidən qəbul edilir, dayandırmada verilənlər heç vaxt ([[ADR-0088]]) |
 | `RETIRED` | Sənəd verməyi dayandırıb (könüllü çıxış); əvvəllər verdiyi sənədlər qəbul edilməyə davam edir |
 | `REVOKED` | Qeydiyyat bağlanıb; açar ələ keçirilibsə, göstərilən tarixdən (`invalidates_from`) sonra verilənlər etibarsız sayılır. Qurumun yerini varis (`successor_id`) tuta bilər |
 

@@ -36,7 +36,7 @@ Zincir imzalı listelerin ve çapa günlüğünün **projeksiyonudur**, kaynağ�
 
 Defter açılırsa listelerin bütün geçmişi kontratlara **bir kez** yeniden oynatılır (`trust:chain-replay`): devletlerin oyuyla açılan,
 en çok 30 gün süren ve geri açılamayan bir göç penceresinde, listedeki tarihlerle ([[ADR-0073]]). Kontratlar belgeyi verildiği
-andaki (`iat`) duruma göre değerlendirir; askıdan önceki belge geçerli kalır, sert iptal (`invalidatesFrom`) sonraki belgeleri
+andaki (`iat`) duruma göre değerlendirir; askıdaki kurumun belgeleri askı sürdükçe reddedilir, askı kalkınca askıdan öncekiler yeniden geçerlidir ([[ADR-0088]]), sert iptal (`invalidatesFrom`) sonraki belgeleri
 düşürür. Doğrulayıcı kimliği alan adından türer ve devri ortak oyla yapılır ([[ADR-0075]]). Göç, aynı sorular liste kaynağına ve
 zincir kaynağına sorulup kabul/ret farkı çıkmadan kapanmaz. Verilmiş belgeler yeniden verilmez; cüzdan ve doğrulayıcı değişmez.
 

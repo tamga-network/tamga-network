@@ -4,7 +4,7 @@ title: "Wallet rules"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Defines the wallet's key, storage, device change and consent design. The central finding resolves a TENSION: [[SPEC-CRED-0001]] §3
   says the holder key cannot leave the secure area, while the "back up with a 24-word seed" design in the project notes
@@ -326,6 +326,24 @@ Code: `@tamga-network/wallet-core` `refreshZkCopies`, `scheduleZkRefreshes`, `se
 [[SPEC-PROTO-0001]] §4.1.
 
 ---
+
+## 4.6 Validity state of a credential
+
+The wallet core computes a display state for each stored credential (`credentialValidity`; no network call). In order of
+priority:
+
+| State | When | Presented |
+|---|---|---|
+| `revoked` | Revoked in the status list or locally | no |
+| `expired` | `exp` has passed | no |
+| `issuer_suspended` | The issuing institution is currently suspended in the trust list ([[ADR-0088]]); the credential is not deleted, the card shows a warning; it becomes `valid` again when the suspension is lifted | no |
+| `suspended` | Suspended in the status list | no |
+| `not_yet_valid` | The start of validity (`nbf`) is in the future (ARF "Issued"); the credential is received and stored, the card shows the start date | no |
+| `valid` | — | yes |
+
+A future-dated credential is not rejected on receipt; its mdoc copy is checked against the start time. Presentation selection
+(remote and proximity) does not offer a credential whose start has not come. No new credential is received from a suspended
+institution (C1).
 
 # 5. Consent surface
 

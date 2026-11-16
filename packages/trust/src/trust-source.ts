@@ -4,8 +4,10 @@
  *
  * Zaman kuralı (D-BC-3, R1/R3): C1/C2 belgenin `iat`'ına göre bakar — "o zaman verebilir miydi?"
  *  - Issuer: iat anındaki statü ACTIVE olmalı; iat, valid_from..valid_until içinde olmalı.
- *    Sonraki SUSPENDED/RETIRED/withdraw eski belgeleri düşürmez (GV1).
- *    REVOKED + `invalidates_from` ≤ iat ise düşer (ele geçirilme, CA2 mantığı).
+ *    Sonraki RETIRED/REVOKED/withdraw eski belgeleri düşürmez (GV1); REVOKED + `invalidates_from` ≤ iat ise düşer (ele
+ *    geçirilme, CA2 mantığı).
+ *  - Askı (ADR-0088 SI1/SI2): kurum ŞU AN (doğrulama anında) SUSPENDED ise verdiği hiçbir belge kabul edilmez — verilme anından
+ *    bağımsız; askı kalkınca askıdan önce verilmiş belgeler yeniden kabul edilir (askıda verilmiş olanlar hiçbir zaman).
  *  - Şema yetkisi: allowed && valid_from ≤ iat < valid_until (I3).
  *  - Şema: REVOKED → NO; DEPRECATED → yalnızca deprecation anından önce verilmişse YES (SC3).
  *
@@ -19,7 +21,16 @@ import type { Issuer, RelyingParty, SchemaEntry, StatusHistoryEntry, TerminalGro
 export type Tri = "YES" | "NO" | "UNKNOWN";
 
 export interface TrustSource {
+  /**
+   * C1 — belge veren, belgenin `iat` anında belge verebilir miydi VE şu an askıda değil mi (ADR-0088 SI1). Askıdaki kurumun
+   * belgesi için NO; nedeni ayırmak için `isIssuerSuspended`.
+   */
   isCredentialAcceptable(issuerId: string, iat: number): Tri;
+  /**
+   * ADR-0088: kurum şu an (doğrulama anında) güven listesinde askıda mı. YES → o kurumun bütün belgeleri reddedilir (C1 NO);
+   * askı kalkınca NO döner ve askıdan önce verilmiş belgeler yeniden kabul edilir. Kayıt yoksa NO; kaynak bayatsa UNKNOWN.
+   */
+  isIssuerSuspended?(issuerId: string): Tri;
   isCredentialSchemaAcceptable(issuerId: string, schemaId: string, iat: number): Tri;
   isRecognizedBy(stateCode: string, issuerId: string): Tri;
   schemaContentHash(schemaId: string): string | null;
@@ -57,6 +68,12 @@ export interface TrustSource {
   walletProviderMinKeyStorage?(fingerprintHex: string): string | null;
   /** ADR-0049 (0.6.0): "Tamga Network'te listeli" göstergesi için imzalı listedeki cüzdan sağlayıcısı kaydı. */
   walletProviderListing?(providerId: string, opts?: WalletProviderListingOptions): WalletProviderListing;
+  /**
+   * ADR-0089 K5: WIA/KA imza anahtarının (sertifika SHA-256 parmak izi, onaltılık) ait olduğu Tamga listesindeki cüzdan sağlayıcısının
+   * kimliği — anahtarın ve sağlayıcının durumundan bağımsız (askıdaki/iptal edilmiş sağlayıcının anahtarı da bulunur). Liste bayatsa,
+   * anahtar bir dış listeden geliyorsa ya da hiçbir kayıtta yoksa null. Durum için `walletProviderListing`.
+   */
+  walletProviderOfKey?(fingerprintHex: string): string | null;
   /**
    * ADR-0012 K5 / ADR-0069: imzalı listedeki kapı grubu (doğrulayıcı kaydının `terminal_groups[]`'i). Listede yoksa ya da liste
    * bayatsa null. `active` = doğrulayıcı ACTIVE ve grup şu an geçerlilik aralığında (geri çekilmiş grup `active: false`).
@@ -155,6 +172,8 @@ export class ListTrustSource implements TrustSource {
     const st = statusAt(i.status_history, iat);
     if (!st || st.status !== "ACTIVE") return "NO";
     if (laterCompromise(i.status_history, iat)) return "NO";
+    // ADR-0088 SI1: kurum şu an askıdaysa verilme anından bağımsız ret (askı kalkınca yeniden kabul — SI2)
+    if (this.suspendedNow(i)) return "NO";
     // Kök CA: iat anında ACTIVE/ROLLING_OVER olmalı; REVOKED kök tüm altını düşürür (CA2)
     const ca = this.store.root_cas.get(i.parent_ca_id);
     if (!ca) return "NO";
@@ -162,6 +181,18 @@ export class ListTrustSource implements TrustSource {
     if (!cst || !["ACTIVE", "ROLLING_OVER"].includes(cst.status)) return "NO";
     if (ca.status_history.some((h) => h.status === "REVOKED")) return "NO";
     return "YES";
+  }
+
+  isIssuerSuspended(issuerId: string): Tri {
+    if (this.unhealthy()) return "UNKNOWN";
+    const i = this.store.issuers.get(issuerId);
+    if (!i) return "NO";
+    return this.suspendedNow(i) ? "YES" : "NO";
+  }
+  /** Doğrulama anındaki durum `SUSPENDED` mı (durum geçmişinden: `since` ≤ şimdi olan son değişiklik). */
+  private suspendedNow(i: Issuer): boolean {
+    const nowSec = Math.floor(this.now().getTime() / 1000);
+    return statusAt(i.status_history, nowSec)?.status === "SUSPENDED";
   }
 
   isCredentialSchemaAcceptable(issuerId: string, schemaId: string, iat: number): Tri {
@@ -483,6 +514,19 @@ export class ListTrustSource implements TrustSource {
       (i) => i.slug === id && (state === undefined || this.store.issuer_states.get(i.issuer_id) === state),
     );
     return hits.length === 1 && hits[0].status === "ACTIVE";
+  }
+
+  walletProviderOfKey(fp: string): string | null {
+    if (this.unhealthy() || this.store.external_wallet_keys.has(fp)) return null;
+    const lotl = this.store.lotl as unknown as
+      | { wallet_providers?: Array<{ provider_id: string; wua_signing_keys?: Array<{ fingerprint_sha256: string }> }> }
+      | undefined;
+    const fpl = fp.toLowerCase();
+    return (
+      lotl?.wallet_providers?.find((w) =>
+        (w.wua_signing_keys ?? []).some((k) => k.fingerprint_sha256.toLowerCase() === fpl),
+      )?.provider_id ?? null
+    );
   }
 
   walletProviderMinKeyStorage(fp: string): string | null {

@@ -4,7 +4,7 @@ title: "Credential format and protocols"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-11-04
+last_updated: 2026-11-16
 summary: >
   Defines the canonical format of Tamga credentials and the issuance and presentation protocols. The primary format is
   SD-JWT VC (selective disclosure built in, the main EUDI ARF format); the secondary format is mdoc / ISO 18013-5 (active for identity types, planned for
@@ -81,7 +81,10 @@ An SD-JWT VC has three parts:
 - **Key Binding JWT ([[t:KB-JWT]]):** the presentation-specific part signed by the holder with the device key (§3).
 
 Mandatory issuer claims: `iss`, `iat`, `vct` (credential type), `cnf` (holder public key), `status` (Token Status List
-pointer). `exp` depends on the credential type (short TTL for a student certificate, long for a diploma).
+pointer). `exp` depends on the credential type (short TTL for a student certificate, long for a diploma). `nbf` (start of validity) is written
+by the issuer library by default equal to the issuance time (`iat`); for a future-dated credential (a ticket, a student
+certificate for a term not yet started) it is the start time. A credential whose start has not come is stored in the wallet as
+"not yet valid" and is not presented; the verifier rejects it at `A7` (ARF 3.0 §4.6.6 "Issued").
 
 > **Data minimisation:** identifiers such as the national ID number (TCKN) are included only when mandatory, and then as a
 > selectively disclosable claim; the [[t:verifier]] policy ([[PM-ASSUR-0001]]) can put them on its "not requested" list.

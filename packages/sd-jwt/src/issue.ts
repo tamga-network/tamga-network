@@ -45,6 +45,8 @@ export interface IssueInput {
   vct: string; // urn:tamga:…
   vctIntegrity: string; // sha256-… (zorunlu)
   iat: number;
+  /** geçerlilik başlangıcı (RFC 7519 `nbf`); verilirse açıkta yazılır. `iat`tan önce olamaz; ileri tarih = ARF "Issued" */
+  nbf?: number;
   exp?: number;
   cnfJwk: JWK; // holder açık anahtarı (C16)
   status?: { status_list: { idx: number; uri: string } };
@@ -92,6 +94,11 @@ export async function issueSdJwtVc(input: IssueInput): Promise<IssueOutput> {
     "vct#integrity": input.vctIntegrity,
     iat: input.iat,
   };
+  if (input.nbf !== undefined) {
+    if (!Number.isInteger(input.nbf) || input.nbf < input.iat) throw new Error("nbf must be an integer ≥ iat");
+    if (input.exp !== undefined && input.nbf >= input.exp) throw new Error("nbf must be before exp");
+    plain.nbf = input.nbf;
+  }
   if (input.exp !== undefined) plain.exp = input.exp;
   plain.cnf = { jwk: input.cnfJwk };
   if (input.status) plain.status = input.status;

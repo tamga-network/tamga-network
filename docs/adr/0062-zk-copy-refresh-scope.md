@@ -67,3 +67,5 @@ ADR-0044'ün geri kalanı (ZC1–ZC3, kuşak sayacı, iki aşamalı döndürme),
 **Accepted — 2026-10-23.** Proje yönetiminin genel uyum onayı kapsamında ("AB standartlarına uyumlu olalım, eksiklerimizi
 giderelim, olması gerektiği gibi yapalım"): ADR-0044 K3'ü standarda göre daraltan düzeltme; Tamga cüzdanının davranışı değişmedi.
 DECISIONS: D-ZK-3.
+
+2026-11-16: **ZS1 [[ADR-0089]] ile genişledi** (D-ID-17) — yenileme belirteci artık her kimlik yetkisinde verilir (kapsam: kimlik belgesi, sunumla yenileme); ZK kopyası yalnız ZK kapsamı da verilmişse alınır.

@@ -2,8 +2,8 @@
  * `ChainTrustSource` — `TrustSource(chain)` (ADR-0015 K3; ADR-0074 K5; SPEC-BC-0001 §11.2). İndeksleyicinin dizininden (sabitlenmiş
  * blok) aynı arayüzü sunar; liste kaynağıyla aynı soruya aynı cevabı vermesi ADR-0009 K7 / ADR-0073 K6 eşdeğerlik testiyle
  * kanıtlanır. Kurallar kontratın okuma kurallarının aynısıdır:
- *   C1 `isCredentialAcceptable`  = IssuerRegistry.isCredentialAcceptable (iat anındaki durum, yarı açık, sert iptal, kök iat anında
- *                                  ACTIVE ve hiç REVOKED değil)
+ *   C1 `isCredentialAcceptable`  = IssuerRegistry.isCredentialAcceptable (iat anındaki durum, yarı açık, sert iptal, şu an askıda
+ *                                  değil — ADR-0088, kök iat anında ACTIVE ve hiç REVOKED değil)
  *   C2 `isCredentialSchemaAcceptable` = şema iat anında ACTIVE ve hiç REVOKED değil ∧ yetki penceresi [since, until)
  *   C3 `isRecognizedBy`          = CrossRecognition.isRecognizedBy (kendi devleti, engel, FULL / kategori)
  *   D5 `statusAnchor`            = StatusListRegistry çapası (liste kimliği doğrulayıcının araması: adresin son parçası)
@@ -128,9 +128,21 @@ export class ChainTrustSource implements TrustSource {
     if (iat < i.validFrom || iat > i.validUntil) return "NO";
     if (statusAtChain(i.history, iat) !== 1) return "NO";
     if (i.invalidatesFrom !== 0 && iat >= i.invalidatesFrom) return "NO";
+    if (this.suspendedNow(i.history)) return "NO"; // ADR-0088 SI1: şu an askıdaki kurumun hiçbir belgesi kabul edilmez
     const ca = this.ix.rootCAs[i.parentCA];
     if (!ca || ever(ca.history, 4) || statusAtChain(ca.history, iat) !== 1) return "NO";
     return "YES";
+  }
+
+  /** ADR-0088: kurum şu an (blok zamanına göre değil, doğrulama anına göre) askıda mı — liste kaynağıyla aynı soru. */
+  isIssuerSuspended(issuerId: string): Tri {
+    if (this.unhealthy()) return "UNKNOWN";
+    const i = this.ix.issuers[issuerId.toLowerCase()];
+    if (!i) return "NO";
+    return this.suspendedNow(i.history) ? "YES" : "NO";
+  }
+  private suspendedNow(h: Hist): boolean {
+    return statusAtChain(h, Math.floor(this.now().getTime() / 1000)) === 2; // IssuerStatus.SUSPENDED
   }
 
   isCredentialSchemaAcceptable(issuerId: string, schemaId: string, iat: number): Tri {

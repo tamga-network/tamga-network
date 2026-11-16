@@ -74,6 +74,9 @@ const NON_SELECTIVE = new Set([
   "prototype",
 ]);
 
+/** `nbf` için saat payı (sn): telefonun saati belge verenden birkaç saniye geride olabilir (önceki A5 kuralıyla aynı pay). */
+export const NOT_YET_VALID_SKEW_SEC = 60;
+
 export type Step = "A1" | "A2" | "A3" | "A4" | "A5" | "B4";
 export interface LocalVerifyOptions {
   expectedCnf?: PublicJwk; // cüzdanın kendi anahtarı (kopya bu anahtara mı bağlı?)
@@ -95,6 +98,13 @@ export interface LocalVerifyOk {
   vctIntegrity: string;
   iat: number;
   exp?: number;
+  /**
+   * Geçerlilik başlangıcı (`nbf`; yoksa undefined). İleri tarihli belge ALINIR ve saklanır (ARF 4.6.6 "Issued" durumu):
+   * başlangıca kadar `notYetValid` doğrudur ve belge sunulmaz; doğrulayıcı A7'de zaten reddeder.
+   */
+  nbf?: number;
+  /** `nbf` şimdiden `NOT_YET_VALID_SKEW_SEC` paydan fazla ileride — "henüz geçerli değil" */
+  notYetValid: boolean;
   status?: { status_list: { idx: number; uri: string } };
   category?: string;
   cnf: PublicJwk;
@@ -164,7 +174,10 @@ export function verifyIssuedSdJwt(combined: string, opt: LocalVerifyOptions = {}
     return fail("A5", e instanceof SdStructureError ? e.message : (e as Error).message);
   }
   if (typeof p.exp === "number" && p.exp < now) return fail("A5", "expired (Ş9)");
-  if (typeof p.nbf === "number" && p.nbf > now + 60) return fail("A5", "nbf gelecekte");
+  // İleri tarihli belge (`nbf` ileride) reddedilmez: "henüz geçerli değil" olarak döner (ARF 4.6.6 "Issued"). Bozuk `nbf`
+  // sessizce yok sayılmaz; başlangıcı bitişinden sonra olan belge reddedilir.
+  if (p.nbf !== undefined && (typeof p.nbf !== "number" || !Number.isFinite(p.nbf))) return fail("A5", "nbf malformed");
+  if (typeof p.nbf === "number" && typeof p.exp === "number" && p.nbf >= p.exp) return fail("A5", "nbf not before exp");
   checks.push("A5");
   if (opt.catalogueHash) {
     const want = opt.catalogueHash(p.vct as string);
@@ -187,6 +200,8 @@ export function verifyIssuedSdJwt(combined: string, opt: LocalVerifyOptions = {}
     vctIntegrity: p["vct#integrity"] as string,
     iat: p.iat as number,
     exp: p.exp as number | undefined,
+    ...(typeof p.nbf === "number" ? { nbf: p.nbf } : {}),
+    notYetValid: typeof p.nbf === "number" && p.nbf > now + NOT_YET_VALID_SKEW_SEC,
     status: p.status as LocalVerifyOk["status"],
     category: p.category as string | undefined,
     cnf,

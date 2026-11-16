@@ -41,6 +41,7 @@ export const BASE: SchemaDef = {
       vct: { type: "string", pattern: "^urn:tamga:" },
       "vct#integrity": { type: "string", pattern: "^sha256-" },
       iat: { type: "integer" },
+      nbf: { type: "integer" }, // geçerlilik başlangıcı (verme anı ya da ileri tarih — ARF "Issued")
       exp: { type: "integer" },
       cnf: { type: "object" },
       status: { type: "object" },
@@ -118,6 +119,7 @@ export const STUDENT: SchemaDef = {
       vct: { const: "urn:tamga:edu:StudentCredential:1" },
       "vct#integrity": { type: "string", pattern: "^sha256-" },
       iat: { type: "integer" },
+      nbf: { type: "integer" }, // geçerlilik başlangıcı (verme anı ya da ileri tarih — ARF "Issued")
       exp: { type: "integer" },
       cnf: { type: "object" },
       category: { enum: ["urn:tamga:eaa:pub", "urn:tamga:eaa:qualified"] },
@@ -265,6 +267,7 @@ export const DIPLOMA: SchemaDef = {
       vct: { const: "urn:tamga:edu:DiplomaCredential:1" },
       "vct#integrity": { type: "string", pattern: "^sha256-" },
       iat: { type: "integer" },
+      nbf: { type: "integer" }, // geçerlilik başlangıcı (verme anı ya da ileri tarih — ARF "Issued")
       cnf: { type: "object" },
       category: { enum: ["urn:tamga:eaa:pub", "urn:tamga:eaa:qualified"] },
       status: {
@@ -427,6 +430,7 @@ export const IDENTITY: SchemaDef = {
       vct: { const: "urn:tamga:id:IdentityAttestation:1" },
       "vct#integrity": { type: "string", pattern: "^sha256-" },
       iat: { type: "integer" },
+      nbf: { type: "integer" }, // geçerlilik başlangıcı (verme anı ya da ileri tarih — ARF "Issued")
       exp: { type: "integer" },
       cnf: { type: "object" },
       status: {
@@ -440,8 +444,9 @@ export const IDENTITY: SchemaDef = {
           },
         },
       },
-      family_name: { type: "string", minLength: 1, maxLength: 200 },
-      given_name: { type: "string", minLength: 1, maxLength: 200 },
+      // AB PID mdoc kuralı: metin (tstr) en çok 150 karakter (CIR 2026/1731; ARF 3.0 PID kural kitabı) — mdoc kopyası da verilir
+      family_name: { type: "string", minLength: 1, maxLength: 150 },
+      given_name: { type: "string", minLength: 1, maxLength: 150 },
       // ADR-0045: AB PID SD-JWT VC kodlaması (CIR 2026/1731 Tablo 7) — `birthdate`, `nationalities` (ISO 3166-1 alpha-2 dizisi;
       // bilinmiyorsa "QU", uyruksuz "QS")
       birthdate: DATE,
@@ -463,6 +468,8 @@ export const IDENTITY: SchemaDef = {
       // ADR-0064: yaş eşikleri ISO/IEC 18013-5 `age_over_NN` deseni, kapalı küme {15, 18} (yeni eşik yalnız ADR ile)
       age_over_18: { type: "boolean" },
       age_over_15: { type: "boolean" },
+      // ADR-0089 K2: idari geçerlilik (kaydın bitişi; AB PID `date_of_expiry`, mdoc `expiry_date`) — kopyanın teknik `exp`'inden ayrı
+      date_of_expiry: DATE,
     },
     additionalProperties: false,
   },
@@ -543,6 +550,14 @@ export const IDENTITY: SchemaDef = {
           { lang: "en-US", label: "Over 15" },
         ],
       },
+      {
+        path: ["date_of_expiry"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Geçerlilik sonu" },
+          { lang: "en-US", label: "Date of expiry" },
+        ],
+      },
       { path: ["status"], sd: "never" },
     ],
     tamga: {
@@ -552,9 +567,9 @@ export const IDENTITY: SchemaDef = {
       uses_status_list: true,
       min_issuer_assurance: "I2", // ADR-0022: nitelikli olmayan EAA
       min_binding_level: "T2",
-      derived_claims: ["age_over_18", "age_over_15", "document_number_hash"],
+      derived_claims: ["age_over_18", "age_over_15", "document_number_hash", "date_of_expiry"],
       status: "ACTIVE",
-      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact). ADR-0045: attribute names and encodings follow the EU PID encoding of Implementing Regulation (EU) 2026/1731 (SD-JWT VC: birthdate, nationalities[]; mdoc namespace tamga.id.1: birth_date as full-date, nationality as an array); age_over_18 is a Tamga attribute (not in the EU PID set) with the ISO/IEC 18013-5 name in both formats. ADR-0064: age attributes follow the ISO/IEC 18013-5 age_over_NN pattern; the threshold set is closed ({15, 18}) and changes only by ADR; each is derived from the date of birth at issuance and selectively disclosable.",
+      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact). ADR-0045: attribute names and encodings follow the EU PID encoding of Implementing Regulation (EU) 2026/1731 (SD-JWT VC: birthdate, nationalities[]; mdoc namespace tamga.id.1: birth_date as full-date, nationality as an array); age_over_18 is a Tamga attribute (not in the EU PID set) with the ISO/IEC 18013-5 name in both formats. ADR-0064: age attributes follow the ISO/IEC 18013-5 age_over_NN pattern; the threshold set is closed ({15, 18}) and changes only by ADR; each is derived from the date of birth at issuance and selectively disclosable. ADR-0089: default_ttl_days is the administrative validity of the logical credential, carried in every copy as date_of_expiry (mdoc expiry_date); renewable copies have a technical validity of at most 30 days and are re-issued against a presentation of a current copy (age attributes are recomputed at renewal).",
     },
   },
 };
@@ -597,6 +612,7 @@ export const TICKET: SchemaDef = {
       vct: { const: "urn:tamga:tkt:EventTicket:1" },
       "vct#integrity": { type: "string", pattern: "^sha256-" },
       iat: { type: "integer" },
+      nbf: { type: "integer" }, // geçerlilik başlangıcı (verme anı ya da ileri tarih — ARF "Issued")
       exp: { type: "integer" },
       cnf: { type: "object" },
       category: { enum: ["urn:tamga:eaa:pub", "urn:tamga:eaa:qualified"] },
@@ -708,6 +724,7 @@ export const EMAIL: SchemaDef = {
       vct: { const: "urn:tamga:contact:EmailAddress:1" },
       "vct#integrity": { type: "string", pattern: "^sha256-" },
       iat: { type: "integer" },
+      nbf: { type: "integer" }, // geçerlilik başlangıcı (verme anı ya da ileri tarih — ARF "Issued")
       exp: { type: "integer" },
       cnf: { type: "object" },
       status: contactStatus,
@@ -757,6 +774,7 @@ export const PHONE: SchemaDef = {
       vct: { const: "urn:tamga:contact:PhoneNumber:1" },
       "vct#integrity": { type: "string", pattern: "^sha256-" },
       iat: { type: "integer" },
+      nbf: { type: "integer" }, // geçerlilik başlangıcı (verme anı ya da ileri tarih — ARF "Issued")
       exp: { type: "integer" },
       cnf: { type: "object" },
       status: contactStatus,
@@ -811,6 +829,7 @@ export const PSEUDONYM_SEED: SchemaDef = {
       vct: { const: "urn:tamga:id:PseudonymSeed:1" },
       "vct#integrity": { type: "string", pattern: "^sha256-" },
       iat: { type: "integer" },
+      nbf: { type: "integer" }, // geçerlilik başlangıcı (verme anı ya da ileri tarih — ARF "Issued")
       exp: { type: "integer" },
       cnf: { type: "object" },
       // 32 bayt, base64url (dolgusuz)
@@ -883,6 +902,7 @@ export const DRIVING_LICENCE: SchemaDef = {
       vct: { const: "urn:tamga:id:DrivingLicenceAttestation:1" },
       "vct#integrity": { type: "string", pattern: "^sha256-" },
       iat: { type: "integer" },
+      nbf: { type: "integer" }, // geçerlilik başlangıcı (verme anı ya da ileri tarih — ARF "Issued")
       exp: { type: "integer" },
       cnf: { type: "object" },
       status: contactStatus,

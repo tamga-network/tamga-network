@@ -128,3 +128,5 @@ sayacı, DPoP parmak izi, bitiş, yalnız `age_over_18`); sunucuda yalnız kayı
 (pencere: bitişe 8 saat; rastgele gecikme en çok 6 saat), ZK sorgusu yalnız ZK kopyasıyla ([[SPEC-WALLET-0001]] §4.5).
 Doğrulayıcı: işaretli ZK sunumu `NOT_APPLICABLE` (gerekçe kısa ömür), işaretsiz sunum `accept_unrevocable_zk` ister
 ([[SPEC-API-0001]] D1); Tamga Verify'ın `age-over-18-zk` politikası ZK kopyası türünü ister, bayrak kaldırıldı.
+
+2026-11-16: **[[ADR-0089]] ile değişti** (D-ID-17) — kimlik belgesinin kopyaları artık en çok 30 gün geçerlidir ve sunumla sessiz yenilenir; aynı yenileme belirteci hem kimlik belgesini (sunumla) hem ZK kopyasını (ZK kapsamı verilmişse) yeniler; belirteç verilen kapsamları taşır.

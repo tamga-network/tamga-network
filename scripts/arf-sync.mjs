@@ -123,6 +123,13 @@ const DOCS = [
     tr: "Kayıt Sertifikası Politikası",
     en: "Registration Certificate Policy",
   },
+  {
+    id: "FW-RISK-0001",
+    file: "0016-risk-register.md",
+    page: "risk-register",
+    tr: "Risk kaydı",
+    en: "Risk Register",
+  },
 ];
 /**
  * Azerbaycanca (2026-10-20, makine çevirisi; yalnız güncel yayın, resmî değil): kaynak docs/az/framework/<dosya>
@@ -145,6 +152,7 @@ const AZ_TITLE = {
   "FW-POL-0001": "Ləğv Siyasəti",
   "FW-POL-0002": "Cüzdan Attestasiyası Siyasəti",
   "FW-POL-0003": "Qeydiyyat Sertifikatı Siyasəti",
+  "FW-RISK-0001": "Risk reyestri",
 };
 // Yayınlanan metinde özel depo yolu, kişi adı ya da araç adı olmaz (DY3; onay alıntıları operatörün onay kaydında).
 const PRIVATE_BASE = /tamga-platform\/|_reports\/|\.local\.json|\.env\b|TOPARLAMA/;

@@ -35,7 +35,7 @@ Zəncir imzalanmış siyahıların və lövbər jurnalının **proyeksiyasıdır
 
 Reyestr açılarsa, siyahıların bütün tarixçəsi müqavilələrə **bir dəfə** təkrar oynadılır (`trust:chain-replay`): dövlətlərin səsi ilə
 açılan, ən çox 30 gün davam edən və yenidən açıla bilməyən miqrasiya pəncərəsində, siyahıdakı tarixlərlə ([[ADR-0073]]). Müqavilələr
-sənədi verildiyi andakı (`iat`) statusa görə qiymətləndirir; dayandırmadan əvvəl verilmiş sənəd keçərli qalır, sərt ləğv
+sənədi verildiyi andakı (`iat`) statusa görə qiymətləndirir; dayandırılmış qurumun sənədləri dayandırma davam etdikcə rədd edilir, qaldırılanda əvvəlkilər yenidən keçərlidir ([[ADR-0088]]), sərt ləğv
 (`invalidatesFrom`) sonrakıları düşürür. Yoxlayan tərəfin kimliyi domen adından törəyir və dövlətlər arasında yalnız ortaq səslə
 keçir ([[ADR-0075]]). Eyni suallar siyahı mənbəyinə və zəncir mənbəyinə verilib qəbul/rədd fərqi çıxmayana qədər miqrasiya bağlanmır.
 Verilmiş sənədlər yenidən verilmir; rəqəmsal cüzdan və yoxlayan tərəf dəyişmir.

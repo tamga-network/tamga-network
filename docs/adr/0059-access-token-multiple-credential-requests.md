@@ -92,3 +92,5 @@ ZK kopyası erişim belirteci ([[ADR-0044]]) ve bilet (etkinlik başına tek bel
 
 **Accepted — 2026-10-21.** Proje yönetimi onayıyla (OpenID uyum öz-testi bulgusu G7; AB referans belge vereniyle aynı yaklaşım).
 DECISIONS: D-PROTO-3.
+
+2026-11-16: **AT2 [[ADR-0089]] ile yapılandırma başına okunur** (D-ID-17) — kimlik belgesinin SD-JWT ve mdoc yapılandırmalarında belirteç başına ayrı ayrı en çok 10 kopya; kişi alanları ikisinin de hakkı dolunca ya da belirtecin ömrü bitince silinir.

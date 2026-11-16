@@ -6,8 +6,8 @@
 import { CBOR_TAG_FULL_DATE, CBOR_TAG_TDATE, pidMdocName } from "@tamga-network/core/pid";
 import { CborTag, type CborValue } from "./cbor.js";
 
-/** CIR 2026/1731 Tablo 6: kodlaması `full-date` olan mdoc öznitelikleri. */
-export const PID_FULL_DATE_ELEMENTS: ReadonlySet<string> = new Set(["birth_date"]);
+/** CIR 2026/1731 Tablo 6: kodlaması `full-date` olan mdoc öznitelikleri (ADR-0089: idari bitiş `expiry_date`). */
+export const PID_FULL_DATE_ELEMENTS: ReadonlySet<string> = new Set(["birth_date", "expiry_date"]);
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

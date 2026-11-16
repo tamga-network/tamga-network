@@ -4,7 +4,7 @@ title: "Doğrulama hattı ve API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Doğrulamanın kanonik algoritmasını ve issuer/verifier servislerinin HTTP
   yüzeyini tanımlar. Merkezî katkı ADIM KODU KAYIT DEFTERİdir: A1…E4, dört
@@ -130,6 +130,7 @@ doğrulamada kullanılsaydı iki sessiz hata çıkardı:
 | Senaryo | Belge verme zamanı sorusuyla | Doğrusu |
 |---|---|---|
 | Bakanlık kapandı (`REVOKED`, halefi var) | Tüm diplomaları `C1`'de RED | Kapanıştan önce verilenler kabul ([[ADR-0002]] #4) |
+| Kurum askıya alındı (`SUSPENDED`), sonra yeniden etkinleşti | Askıdayken bütün belgeler `C1`'de RED, sonra kabul | Askıdayken RED ("issuer suspended"); askı kalkınca askıdan önce verilenler kabul, askıda verilenler RED ([[ADR-0088]]) |
 | Şema `DEPRECATED` oldu (yeni sürüm çıktı) | Eski şemayla verilen her belge `C2`'de RED | Kabul — şema kaydının durumu, [[SPEC-TRUST-0001]] |
 | CA planlı rotasyon | `A3` + `C1` RED | Kabul — rotasyon ele geçirilme değildir |
 
@@ -137,6 +138,11 @@ Bu yüzden her iki sorgu belgenin **`iat`** değerini alır ve "o an kabul
 edilebilir miydi" diye sorar. Bu, doğrulamanın **geçmişe dönük** bir işlem
 olduğunu kabul eder — belge geçmişte verilmiştir, bugünkü durum değil o
 günkü durum belirleyicidir.
+
+**Askı (istisna, [[ADR-0088]]).** `C1` bir tek durumda bugüne de bakar: kurum doğrulama anında güven listesinde `SUSPENDED`
+ise belge verilme anından bağımsız reddedilir (`failed_reason: "issuer suspended"`; SI1). Askı geçicidir ve belgeleri iptal etmez:
+kurum yeniden etkinleşince askıdan önce verilmiş belgeler yeniden kabul edilir (SI2). İptal, emeklilik ve kayıt süresinin dolması
+verilme anı kuralıyla değerlendirilir (SI3). Bu, AB çerçevesinin (ARF 3.0 §4.6.5) askı kuralıdır.
 
 **ZK sunumu (`mso_mdoc_zk`).** Sıfır bilgi ispatında belgenin imza anı açıklanmaz. Bu yolda `C1` ve `C2` ispatın zaman damgasıyla (sunum anı; doğrulayıcı saatine saat toleransı içinde yakın olmalıdır) sorulur: kurum ve tür yetkisi sunum anında geçerli olmalıdır. Kısa ömürlü ZK kopyası en çok 24 saat önce verildiğinden ([[ADR-0044]]) iki an arasındaki fark en çok bir gündür. Bu, AP11'in ZK sunumu için açık istisnasıdır ([[ADR-0032]] uygulama notu, 2026-11-12). İki sonucu vardır: kurum belgeyi verdikten sonra kapandıysa ZK sunumu reddedilir; kurum belgenin verildiği anda kabul edilebilir değildiyse ama sunum anında kabul edilebilirse sunum bu adımlardan geçer. İşaretsiz ZK sunumunda (yalnız `accept_unrevocable_zk: true` ile kabul edilir) bir günlük sınır yoktur.
 
@@ -174,6 +180,18 @@ Gerekçe: `failed_step` denetim kayıtlarında yıllarca saklanır. `C2`'nin anl
 2029'da değişirse, 2027 kayıtları yanlış okunur.
 
 ---
+
+## 1.5 Çok belgeli sunum
+
+Bir yanıttaki her sunum aynı `nonce` ve `aud` ile ayrı ayrı doğrulanır; bu, belgelerin başka bir oturumdan alınıp karıştırılmasını
+engeller. Belgelerin **aynı kişiye ya da aynı cüzdan birimine** ait olduğu ise bugünkü standart araçlarla (SD-JWT VC ve mdoc,
+belge başına ayrı cihaz anahtarı) kanıtlanamaz: iki kişi bir aracı üzerinden oturumu paylaşıp her biri kendi belgesinin sahiplik
+kanıtını imzalarsa doğrulayıcı iki belgeyi tek kişiden gelmiş gibi görür (AB ARF tartışması "credential pooling"; konu AB'de
+açıktır). Bütün belgeleri tek anahtara bağlamak bağlanamazlığı bozar; kanıtlayıcı yöntemler (sıfır bilgi ispatı ya da cüzdan
+biriminin imzaladığı ortak bağ) henüz standart değildir. Bu yüzden barındırılan doğrulayıcı (Tamga Verify) sunum başına **tek
+belge** doğrular (isteğe bağlı takma ad onunla birlikte gelir ve yalnız siteye özgü bir tanımlayıcıdır, kişi hakkında bir nitelik
+taşımaz); politikada ikinci belge varsa sunumu kapalı tutar. Birden çok belgeyi kendi sunucusunda birleştiren güvenen taraf bu
+sınırı bilmelidir: aynı yanıttaki belgelerin aynı kişiye ait olduğu varsayılmamalıdır.
 
 # 2. Doğrulama Sonucu
 

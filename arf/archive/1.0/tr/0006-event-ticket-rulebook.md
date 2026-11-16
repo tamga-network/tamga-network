@@ -4,7 +4,7 @@ title: "Event Ticket Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Etkinlik biletinin (`urn:tamga:tkt:EventTicket:1`) rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: kişisel veri taşımayan, cihaza bağlı, kapıda tek kullanımlık bir belge. Öznitelikler ve üst
@@ -102,7 +102,9 @@ Yok.
 
 ## 2.6 İsteğe bağlı üst veri
 
-Yok.
+| Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|
+| `nbf` | Teknik geçerliliğin başlangıcı; belge veren verme anında yazar: değer `iat` ile aynı (saat başına yuvarlanmış) andır, ileri tarihli belgede geçerliliğin başladığı andır. Başlangıcı gelmemiş belge cüzdanda "henüz geçerli değil" olarak saklanır ve gösterilemez; doğrulayıcı reddeder | NumericDate | `1791763200` |
 
 ## 2.7 Koşullu üst veri
 

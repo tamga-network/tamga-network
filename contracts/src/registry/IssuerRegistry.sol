@@ -411,8 +411,11 @@ contract IssuerRegistry is TamgaRegistryBase, IIssuerRegistry {
         Issuer storage i = _issuers[issuerId];
         if (i.status == IssuerStatus.NONE) return false;
         if (iat < i.validFrom || iat > i.validUntil) return false;     // pencere dışı
-        // ADR-0073 K5: iat anındaki durum ACTIVE olmalı. Askı yalnız askı süresinde verilen belgeyi düşürür; iptal anında ya
-        // da sonra verilmiş belge ret (yarı açık sınır: iat < revokedAt — önceki `iat <= revokedAt` bir saniyelik farkı kapandı).
+        // ADR-0088 SI1: kurum ŞU AN askıdaysa verilme anından bağımsız ret; askı kalkınca (reinstate) askıdan önceki belgeler
+        // yeniden kabul (SI2). Liste kaynağıyla aynı soru (ADR-0084: karar listeden; zincir tanık).
+        if (i.status == IssuerStatus.SUSPENDED) return false;
+        // ADR-0073 K5: iat anındaki durum ACTIVE olmalı (askı süresinde verilen belge hiçbir zaman kabul edilmez); iptal anında
+        // ya da sonra verilmiş belge ret (yarı açık sınır: iat < revokedAt — önceki `iat <= revokedAt` bir saniyelik farkı kapandı).
         if (_history[issuerId].statusAt(iat) != uint8(IssuerStatus.ACTIVE)) return false;
         // ADR-0073 K2: sert iptal — `invalidatesFrom` ≤ iat olan belge düşer (liste: `invalidates_from ≤ iat` → NO).
         uint64 inv = _invalidatesFrom[issuerId];

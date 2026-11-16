@@ -32,6 +32,8 @@ export * from "./pseudonym.js";
 export * from "./shared-with.js";
 export * from "./driving.js";
 export * from "./zk-copies.js";
+export * from "./identity-renewal.js";
 export * from "./disclosure-policy.js";
 export * from "./w2w.js";
 export * from "./log.js";
+export * from "./validity.js";

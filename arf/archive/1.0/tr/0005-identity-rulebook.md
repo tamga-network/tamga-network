@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 summary: >
   Tamga'nın kimlik servisinin verdiği kişi belgelerinin rulebook'u (Tamga Rulebook'tan dallanır), AB Attestation Rulebook
   şablonunun bölüm yapısıyla: Tamga kimlik belgesi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc),
@@ -98,8 +98,8 @@ olduğu bu yokluktan ve belge verenin güven listesindeki sınıfından anlaşı
 
 | Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
 |---|---|---|---|
-| `family_name` | Soyadı | metin (1–200) | `Yılmaz` |
-| `given_name` | Adı | metin (1–200) | `Ayşe` |
+| `family_name` | Soyadı | metin (1–150) | `Yılmaz` |
+| `given_name` | Adı | metin (1–150) | `Ayşe` |
 | `birthdate` | Doğum tarihi | tarih (YYYY-MM-DD) | `1990-04-12` |
 | `nationalities` | Uyruklar; bilinmiyorsa `QU`, uyruksuz `QS` | ISO 3166-1 alpha-2 dizisi (en az bir öğe) | `["TR"]` |
 | `personal_administrative_number` | Ulusal kimlik numarası; yalnız bu türde | metin (5–32) | `12345678901` |
@@ -168,7 +168,9 @@ Belge verenin kimliği (Ek V b) imza başlığındadır: `x5c` (yaprak + ara ser
 
 ## 2.6 İsteğe bağlı üst veri
 
-Yok. `nbf` bugün yazılmaz (§7.2).
+| Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|
+| `nbf` | Teknik geçerliliğin başlangıcı; mdoc'ta `validityInfo.validFrom`; belge veren verme anında yazar: değer `iat` ile aynı (saat başına yuvarlanmış) andır, ileri tarihli belgede geçerliliğin başladığı andır. Başlangıcı gelmemiş belge cüzdanda "henüz geçerli değil" olarak saklanır ve gösterilemez; doğrulayıcı reddeder | NumericDate | `1791763200` |
 
 ## 2.7 Koşullu üst veri
 
@@ -407,11 +409,23 @@ Tamga doğrulayıcıları AB'nin kişi kimlik belgesini (PID) ve ISO ehliyetini 
 | `age_over_18` | `age_over_18` | — (ayrı yaş doğrulama belgesi) | — |
 | `age_over_15` | `age_over_15` | — (ayrı yaş doğrulama belgesi) | — |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | aynı | karşılığı yok (Tamga'ya özgü) | karşılığı yok |
+| karşılığı yok | karşılığı yok | `place_of_birth` (doğum yeri: ülke, bölge, yer; zorunlu) | `place_of_birth` |
+| karşılığı yok (belge veren `iss` ve `x5c` sertifikasından anlaşılır) | karşılığı yok | `issuing_authority` (zorunlu üst veri) | `issuing_authority` |
+| `date_of_expiry` (idari bitiş; kopyanın teknik `exp`'inden ayrı) | `expiry_date` | `date_of_expiry` (isteğe bağlı) | `expiry_date` |
+| karşılığı yok | karşılığı yok | `date_of_issuance` (isteğe bağlı) | `issuance_date` |
 
 > **`issuing_country` (2026-10-11, proje yönetimi kararı).** Alanın anlamı AB PID'deki anlamdır: belgeyi veren kimlik
 > sağlayıcısının ülkesi (Uygulama Tüzüğü (AB) 2026/1731). Bugün belgeyi Tamga'nın kimlik servisi, taranan bir kimlik belgesine
 > dayanarak kendisi verdiği için değer **taranan kimlik belgesini veren ülkeyi** yansıtır. Bir devletin PID sağlayıcısı PID verdiğinde
-> alan AB anlamını taşır ve belgeler alanı AB'nin tanımıyla anlatır. Kod ve şema bugün değişmez.
+> alan AB anlamını taşır ve belgeler alanı AB'nin tanımıyla anlatır. Kod ve şema bugün değişmez. Anlam farkı açıkça: AB PID'de
+> değer PID'i veren devletin ülkesidir; Tamga'da belgeyi veren kimlik servisi (Tamga) olduğundan değer kimlik kartını ya da
+> pasaportu düzenleyen devleti gösterir.
+
+> **Karşılığı olmayan PID alanları (2026-11-16).** `place_of_birth` ve `issuing_authority` AB PID'de zorunludur; Tamga kimlik
+> belgesinde bugün yoktur. Doğum yerinin eklenmesi, kimlik doğrulama sağlayıcısının bu bilgiyi güvenilir biçimde verip vermediğine
+> bağlı ayrı bir karardır; `issuing_authority` bir devletin PID sağlayıcısı geldiğinde onun adıyla doldurulur (§4.7). Bu yüzden bir
+> doğrulayıcı Tamga kimlik belgesini AB PID'i yerine koyamaz. İdari bitiş `date_of_expiry` (mdoc `expiry_date`) olarak
+> yazılır ve kopyanın teknik `exp`'inden ayrıdır ([[ADR-0089]] K2); `date_of_issuance` yazılmaz (§6.1).
 
 ## 4.7 Devir — devlet PID sağlayıcısı
 
@@ -467,11 +481,14 @@ yalnız dış listeden gelir.
 
 | Tür | Geçerlilik |
 |---|---|
-| Kimlik belgesi | `exp` = verildiği an + 730 gün (en çok 2 yıl); süresi dolunca yeniden doğrulama |
+| Kimlik belgesi | İdari: verildiği an + 730 gün (en çok 2 yıl, `date_of_expiry`); süresi dolunca yeniden doğrulama. Teknik: kopyanın `exp`'i en çok 30 gün, cüzdan kopyaları bir kopyanın sunumuyla sessizce yeniler; cüzdan sağlayıcısı listede askıdayken yenileme durur, iptal edilince kayıt iptal ([[ADR-0089]]) |
 | ZK kopyası | En çok 24 saat ve ana belgenin bitişini geçmez (RB-AP-ID-11) |
 | Takma ad tohumu | 730 gün; kimlik belgesiyle birlikte yenilenir |
 | Sürücü belgesi bilgisi | `exp` = kartın bitişi ile incelemeden 1 yıl sonrasından erken olanı; otomatik yenileme süreyi uzatmaz (RB-AP-ID-09) |
 | Deneme belgesi (`review-demo`) | En çok 7 gün |
+
+Teknik ve idari geçerlilik ayrıdır: kimlik belgesinin idari bitişi `date_of_expiry` (mdoc `expiry_date`) alanındadır; kopyanın `exp`'i
+teknik geçerliliktir ve daha kısa olabilir ([[ADR-0089]] K2; §4.6).
 
 ## 6.2 İptal
 
@@ -514,7 +531,7 @@ yalnız dış listeden gelir.
 |---|---|
 | Nitelikli olmayan EAA göstergesi (ARB_12) | **Karar (2026-10-12, [[ADR-0047]] K6):** AB şablonu `category` için `eaa:eu:non-qualified` değerini önerir; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 ise nitelikli olmayan EAA'da `category` bulunmamasını ister. Tamga ETSI'yi izler; şablonun değeri kullanılmaz |
 | Güven çapası konumu belgede (ARB_21) | **Karar (2026-10-12, [[ADR-0047]] K7):** belgeye konum alanı eklenmez; konum §5'teki listelerdir. Belgedeki bir konum belge verenin kendi beyanı olurdu; doğrulayıcı çapayı yalnız kendi seçtiği, imzası sabitlenmiş listeden alır |
-| `nbf` (ETSI TS 119 472-1 teknik geçerlilik başlangıcı) | Bugün yazılmaz; geçerlilik başlangıcı `iat`'tır. Eklenmesi bir uygulama işidir |
+| `nbf` (ETSI TS 119 472-1 teknik geçerlilik başlangıcı) | Belge veren verme anında yazar (§2.6); başlangıcı gelmemiş belge cüzdanda saklanır, gösterilmez |
 | Attestation Revocation List | Tamga belge verenleri Status List yayımlar (AB VCR_11'e göre biri yeter); doğrulayıcı ve cüzdan çekirdeği tanımlayıcı listesini de doğrular (paketler 0.5.0; [[FW-POL-0001]] §8) |
 
 ---

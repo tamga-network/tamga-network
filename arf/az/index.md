@@ -30,6 +30,7 @@ quruluşu Aİ Attestation Rulebook şablonunu izləyir) və üç siyasət. Məcb
 | · [Contact Rulebook](/az/rulebooks/contact) | 1.0.0 | saytlar və qurumlar: təsdiqlənmiş e-poçt ünvanı və telefon nömrəsi |
 | [Əlavə D — Təriflər](/az/definitions) | 1.0.0 | terminlər və qısaltmalar |
 | [Əlavə E — Mənbələr](/az/references) | 1.0.0 | standartlar, Tamga sənədləri və hər qaydanın mənbəyi |
+| [Risk reyestri](/az/risk-register) | 1.0.0 | tənzimləyicilər və auditorlar: Aİ rəqəmsal cüzdan risk reyestrindəki hər risk və təhdid, Tamga-nın tədbiri və statusu (özünüqiymətləndirmə) |
 | [Ləğv Siyasəti](/az/policies/revocation) | 1.0.0 | sənədi verən qurumlar, yoxlayan tərəflər, şəxslər: sənəd hansı hallarda ləğv edilir |
 | [Cüzdan Attestasiyası Siyasəti](/az/policies/wallet-attestation) | 1.0.0 | cüzdan provayderləri və sənədi verən qurumlar: WIA və KA-nın verilməsi və ləğvi |
 | [Qeydiyyat Sertifikatı Siyasəti](/az/policies/registration-certificate) | 1.0.0 | yoxlayan tərəflər və sənədi verən qurumlar: qeydiyyat sertifikatlarının verilməsi və ləğvi |

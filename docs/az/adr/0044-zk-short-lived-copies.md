@@ -125,3 +125,5 @@ sayğacı, DPoP barmaq izi, bitmə vaxtı, yalnız `age_over_18`); serverdə yal
 (pəncərə: bitməyə 8 saat; təsadüfi gecikmə ən çoxu 6 saat), ZK sorğusu yalnız ZK nüsxəsi ilə ([[SPEC-WALLET-0001]] §4.5).
 Yoxlayan tərəf: işarəli ZK təqdimatı `NOT_APPLICABLE` (əsaslandırma: qısa ömür), işarəsiz təqdimat `accept_unrevocable_zk` tələb edir
 ([[SPEC-API-0001]] D1); Tamga Verify-ın `age-over-18-zk` siyasəti ZK nüsxəsi növünü tələb edir, bayraq ləğv edildi.
+
+2026-11-16: **[[ADR-0089]] ilə dəyişdi** (D-ID-17) — şəxsiyyət sənədinin nüsxələri artıq ən çox 30 gün etibarlıdır və təqdimatla səssiz yenilənir; eyni yeniləmə tokeni həm şəxsiyyət sənədini (təqdimatla), həm də ZK nüsxəsini (ZK əhatəsi verilibsə) yeniləyir; token verilən əhatələri daşıyır.

@@ -4,7 +4,7 @@ title: "Education Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Eğitim alanındaki iki ortak belge türünün (öğrenci belgesi, diploma) rulebook'u, AB Attestation Rulebook şablonunun bölüm
   yapısıyla: öznitelikler ve üst veri, hukuki kategori, SD-JWT VC kodlaması ve seçici açıklama, kullanım ve belge verme
@@ -129,7 +129,11 @@ Yok.
 
 ## 2.6 İsteğe bağlı üst veri
 
-Yok. Öğrenci belgesinde `status`, diplomada `exp` **yoktur** (§6).
+| Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|
+| `nbf` | Teknik geçerliliğin başlangıcı; belge veren verme anında yazar: değer `iat` ile aynı (saat başına yuvarlanmış) andır, ileri tarihli belgede geçerliliğin başladığı andır. Başlangıcı gelmemiş belge cüzdanda "henüz geçerli değil" olarak saklanır ve gösterilemez; doğrulayıcı reddeder | NumericDate | `1791763200` |
+
+Öğrenci belgesinde `status`, diplomada `exp` **yoktur** (§6).
 
 ## 2.7 Koşullu üst veri
 
@@ -354,7 +358,7 @@ Cüzdan belge alırken aynı kayıtla kurumun bu türü vermeye yetkili olduğun
 | ELM JSON-LD dışa aktarımı | AB eğitim birlikte çalışabilirliği için açık konu |
 | Güven çapası konumu belgede (ARB_21) | **Karar (2026-10-12, [[ADR-0047]] K7):** belgeye alan eklenmez; belgedeki bir konum belge verenin kendi beyanı olurdu ve doğrulayıcı çapayı yalnız kendi seçtiği listeden alır |
 | Nitelikli olmayan EAA göstergesi (ARB_12) | **Karar (2026-10-12, [[ADR-0047]] K6):** yazılmaz; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 nitelikli olmayan EAA'da `category` bulunmamasını ister |
-| `nbf` ve diplomada `exp` | ETSI TS 119 472-1 ikisini de ister; Tamga bugün `nbf` yazmaz ve diploma süresizdir |
+| `nbf` ve diplomada `exp` | ETSI TS 119 472-1 ikisini de ister; Tamga `nbf`'yi verme anında yazar (§2.6), diploma süresizdir |
 | Attestation Revocation List | Tamga belge verenleri Status List yayımlar (AB VCR_11'e göre biri yeter); doğrulayıcı ve cüzdan çekirdeği tanımlayıcı listesini de doğrular (paketler 0.5.0; [[FW-POL-0001]] §8) |
 
 ---

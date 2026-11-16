@@ -4,7 +4,7 @@ title: "Cüzdan kuralları"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Cüzdanın anahtar, depo, cihaz değişimi ve onay tasarımını tanımlar. Merkezî bulgu
   bir GERİLİMİN çözümüdür: [[SPEC-CRED-0001]] §3 belge sahibi anahtarının güvenli
@@ -334,6 +334,37 @@ Kod: `@tamga-network/wallet-core` `refreshZkCopies`, `scheduleZkRefreshes`, `sel
 [[SPEC-PROTO-0001]] §4.1.
 
 ---
+
+## 4.5b Kimlik belgesinin yenilenmesi ([[ADR-0089]], 2026-11-16)
+
+Kimlik belgesinin kopyaları en çok 30 gün geçerlidir; idari bitiş `date_of_expiry` alanındadır. Cüzdan çekirdeği:
+- `scheduleIdentityRenewals(state, now)` — kullanılmamış kopya ≤ 2 ya da teknik bitişe ≤ 7 gün (servisin `credential_reuse_policy`'si)
+  olunca rastgele gecikmeyle (en çok 6 saat, [[ADR-0023]] K1) `renewDueAt` atar, zamanı gelenleri döndürür; kurum belgelerinin
+  sessiz yenilemesi kimlik belgesini kapsamaz.
+- `renewIdentityCredential(…)` — yenileme belirteci (ZK bağı varsa `zk.token`, yoksa `refresh.token`; tek yerde) + DPoP + WIA +
+  bir kopyanın bütün alanları açık sunumu → yeni paket (SD-JWT + mdoc, standart istekler) → eski kaydın yerini alır (ZK kopyaları ve
+  geçiş kartları taşınır). `invalid_grant` → bağ kalkar (`revoked: true`); `temporarily_unavailable` → sağlayıcı askıda
+  (`suspended: true`), bağ kalır; öteki hatalar yeniden denenir. Teknik süresi dolmuş kopya da sunulur (çevrim dışı kalan kişi).
+- Ayar kapalıysa ya da kopyaların hepsinin süresi dolmuşsa uygulama kişiye "kimlik belgesini yenile" gösterir; aynı işlev kişinin
+  dokunuşuyla çağrılır.
+- Belge alınırken mdoc kopyası, servis ilan ediyorsa (`mdocCompanionConfigId`) aynı belirteçle ikinci standart istekle, SD-JWT
+  kopyalarının anahtarlarıyla aynı sırada alınır; alınamazsa belge mdoc'suz saklanır ve sonraki yenilemede yeniden denenir.
+
+## 4.6 Belgenin geçerlilik durumu
+
+Cüzdan çekirdeği her saklanan belge için gösterim durumunu hesaplar (`credentialValidity`; ağ çağrısı yok). Öncelik sırasıyla:
+
+| Durum | Ne zaman | Sunulur mu |
+|---|---|---|
+| `revoked` | Belge iptal listesinde iptal ya da yerel olarak iptal | hayır |
+| `expired` | `exp` geçti | hayır |
+| `issuer_suspended` | Belgeyi veren kurum güven listesinde şu an askıda ([[ADR-0088]]); belge silinmez, kartta uyarı; askı kalkınca kendiliğinden `valid` | hayır |
+| `suspended` | Belge iptal listesinde askıda | hayır |
+| `not_yet_valid` | Geçerlilik başlangıcı (`nbf`) ileride (ARF "Issued"); belge alınır ve saklanır, kartta başlangıç tarihi | hayır |
+| `valid` | — | evet |
+
+İleri tarihli belge alınırken reddedilmez; mdoc kopyası başlangıç anına göre denetlenir. Sunum seçimi (uzaktan ve yakın alan)
+başlangıcı gelmemiş belgeyi önermez. Askıdaki kurumdan yeni belge alınmaz (C1).
 
 # 5. Onay Yüzeyi
 

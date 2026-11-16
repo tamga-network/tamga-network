@@ -114,3 +114,5 @@ Bu, AB modeliyle aynı dengedir. Proje yönetimi kabul etti.
 
 2026-10-22: **K2 ve AR2 [[ADR-0060]] ile değişti** — bağ DPoP anahtarından istemci örneği anahtarına (WIA `cnf`) taşındı; DPoP
 anahtarı yenilemede değişebilir (D-PROTO-4). Değerlendirilen seçenekler tablosundaki "DPoP + WUA bağlı" satırı tarihseldir.
+
+2026-11-16: **AR4 [[ADR-0089]] ile daraldı** (D-ID-17) — kimlik belgesi de sessiz yenilenir: kişi alanları yine saklanmaz, cüzdan bu kayda ait bir kopyayı bütün alanlarıyla sunar.

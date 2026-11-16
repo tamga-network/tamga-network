@@ -87,6 +87,11 @@ export interface BuildInput {
   claims: Record<string, unknown>; // adaptörden gelen alan seti (kişisel veri dahil; hiçbir yerde loglanmaz)
   cnfJwks: JWK[]; // batch: her kopya için farklı holder anahtarı (PR6)
   iat: number;
+  /**
+   * Geçerlilik başlangıcı (`nbf`). Verilmezse verme anı (`iat`, yuvarlanmış) yazılır — AB PID/EAA teknik geçerliliği `nbf` + `exp`.
+   * İleri tarihli belge (bilet, dönemi başlayacak öğrenci belgesi) için başlangıç anı; `iat`tan önce olamaz.
+   */
+  nbf?: number;
   exp?: number;
   statusFor?: (copyIndex: number) => { idx: number; uri: string }; // uses_status_list ise zorunlu
   category?: "urn:tamga:eaa:pub" | "urn:tamga:eaa:qualified";
@@ -125,6 +130,7 @@ export async function buildCredentials(input: BuildInput): Promise<BuiltCredenti
     vct: input.vct,
     "vct#integrity": input.vctIntegrity,
     iat: input.iat,
+    nbf: input.nbf ?? input.iat,
     ...(input.exp ? { exp: input.exp } : {}),
     cnf: {},
     ...(tamga.uses_status_list ? { status: { status_list: { idx: 0, uri: "https://status.tamga.network/x" } } } : {}),
@@ -154,6 +160,7 @@ export async function buildCredentials(input: BuildInput): Promise<BuiltCredenti
       vct: input.vct,
       vctIntegrity: input.vctIntegrity,
       iat: input.iat,
+      nbf: input.nbf ?? input.iat,
       exp: input.exp,
       cnfJwk: jwk,
       status: st ? { status_list: st } : undefined,

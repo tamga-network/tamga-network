@@ -37,8 +37,8 @@ The chain is a **projection** of the signed lists and the anchor log, not their 
 
 If the ledger opens, the full history of the lists is replayed into the contracts **once** (`trust:chain-replay`): inside a
 migration window opened by a vote of the states, lasting at most 30 days and never reopened, with the dates from the lists
-([[ADR-0073]]). Contracts judge a credential by the status at its issuance time (`iat`); a credential issued before a suspension
-stays valid, a hard revocation (`invalidatesFrom`) drops later ones. A verifier's identity derives from its domain name and moves
+([[ADR-0073]]). Contracts judge a credential by the status at its issuance time (`iat`); a suspended issuer's credentials are rejected
+while the suspension lasts and those issued before it are valid again once it is lifted ([[ADR-0088]]), a hard revocation (`invalidatesFrom`) drops later ones. A verifier's identity derives from its domain name and moves
 between states only by a joint vote ([[ADR-0075]]). The migration does not close until the same questions, asked of the list source
 and the chain source, show no accept/reject difference. Issued credentials are not reissued; wallets and verifiers do not change.
 

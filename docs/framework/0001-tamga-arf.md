@@ -4,7 +4,7 @@ title: "Mimari ve Referans Çerçevesi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   Tamga Network'ün mimari ve referans çerçevesinin ana belgesi. Avrupa Birliği'nin EUDI ARF'si ile aynı yapıyı izler:
   kullanım durumları, roller, mimari, veri modeli, güven modeli, güvenlik ve yönetişim. Bağlayıcı kurallar eklerdedir
@@ -442,6 +442,9 @@ değerlendirme kuruluşları ve ulusal sertifikasyon gelir. Rol başına neyin t
 çalışabilirlik etkinliklerinde ve OpenID uyum testleriyle gösterilir.
 
 ## 7.4 Bilinen sınırlar ve artık riskler
+
+AB cüzdan risk kaydının her riski ve tehdidi için Tamga'nın önlemi ve durumu risk kaydındadır ([[FW-RISK-0001]]; öz
+değerlendirme). Aşağıdaki sınırlar bugün açıkça beyan edilen artık risklerdir.
 
 | # | Sınır |
 |---|---|

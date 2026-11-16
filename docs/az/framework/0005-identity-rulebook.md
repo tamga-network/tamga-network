@@ -4,7 +4,7 @@ title: "Identity Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-27
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 summary: >
   Tamga-nın şəxsiyyət xidmətinin verdiyi şəxsi rəqəmsal sənədlərin rulebook-u (Tamga Rulebook-dan törəyir), Aİ Attestation Rulebook şablonunun bölmə strukturu ilə: Tamga şəxsiyyət sənədi (`urn:tamga:id:IdentityAttestation:1`; SD-JWT VC + ISO/IEC 18013-5 mdoc), onun ZK nüsxəsi (`urn:tamga:id:ShortLivedIdentityAttestation:1`), psevdonim toxumu (`urn:tamga:id:PseudonymSeed:1`) və sürücülük vəsiqəsi məlumatı (`urn:tamga:id:DrivingLicenceAttestation:1`; rəsmi sürücülük vəsiqəsi deyil). Atributlar və metaməlumatlar, hüquqi kateqoriya, format üzrə kodlaşdırma, istifadə, etibar lövbərləri, etibarlılıq və ləğv, Aİ ilə uyğunluq. Şəxsiyyət sənədi PID deyil; kvalifikasiyalı olmayan EAA-dır və Aİ PID adlarından və kodlaşdırmasından istifadə edir.
 translation_of: FW-RB-0003
@@ -95,8 +95,8 @@ olduğu bu yoxluqdan və sənədi verənin etibar siyahısındakı sinfindən an
 
 | Məlumat identifikatoru | Tərif | Məlumat növü | Nümunə dəyər |
 |---|---|---|---|
-| `family_name` | Soyadı | mətn (1–200) | `Yılmaz` |
-| `given_name` | Adı | mətn (1–200) | `Ayşe` |
+| `family_name` | Soyadı | mətn (1–150) | `Yılmaz` |
+| `given_name` | Adı | mətn (1–150) | `Ayşe` |
 | `birthdate` | Doğum tarixi | tarix (YYYY-MM-DD) | `1990-04-12` |
 | `nationalities` | Vətəndaşlıqlar; məlum deyilsə `QU`, vətəndaşlığı olmayan şəxs üçün `QS` | ISO 3166-1 alpha-2 massivi (ən azı bir element) | `["TR"]` |
 | `personal_administrative_number` | Milli şəxsiyyət nömrəsi; yalnız bu növdə | mətn (5–32) | `12345678901` |
@@ -165,7 +165,9 @@ Sənədi verənin kimliyi (Əlavə V b) imza başlığındadır: `x5c` (yarpaq +
 
 ## 2.6 İxtiyari metaməlumatlar
 
-Yoxdur. `nbf` hazırda yazılmır (§7.2).
+| Məlumat identifikatoru | Tərif | Məlumat növü | Nümunə dəyər |
+|---|---|---|---|
+| `nbf` | Texniki etibarlılığın başlanğıcı; mdoc-da `validityInfo.validFrom`; sənədi verən qurum onu verilmə anında yazır: dəyər `iat` ilə eyni (saat başına aşağı yuvarlaqlaşdırılmış) andır, gələcək tarixli sənəddə isə etibarlılığın başladığı andır. Başlanğıcı çatmamış sənəd rəqəmsal cüzdanda "hələ etibarlı deyil" kimi saxlanılır və təqdim edilə bilməz; yoxlayan tərəf onu rədd edir | NumericDate | `1791763200` |
 
 ## 2.7 Şərti metaməlumatlar
 
@@ -404,11 +406,23 @@ Tamga yoxlayan tərəfləri Aİ-nin şəxsiyyət sənədini (PID) və ISO sürü
 | `age_over_18` | `age_over_18` | — (yoxlayan tərəf üçün ayrıca yaş təsdiqi rəqəmsal sənədi) | — |
 | `age_over_15` | `age_over_15` | — (yoxlayan tərəf üçün ayrıca yaş təsdiqi rəqəmsal sənədi) | — |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | eyni | qarşılığı yoxdur (Tamga-ya xasdır) | qarşılığı yoxdur |
+| qarşılığı yoxdur | qarşılığı yoxdur | `place_of_birth` (doğum yeri: ölkə, region, yaşayış məntəqəsi; məcburi) | `place_of_birth` |
+| qarşılığı yoxdur (sənədi verən qurum `iss` və `x5c` sertifikatından bilinir) | qarşılığı yoxdur | `issuing_authority` (məcburi metaməlumat) | `issuing_authority` |
+| `date_of_expiry` (inzibati bitmə tarixi; nüsxənin texniki `exp`-indən ayrı) | `expiry_date` | `date_of_expiry` (ixtiyari) | `expiry_date` |
+| qarşılığı yoxdur | qarşılığı yoxdur | `date_of_issuance` (ixtiyari) | `issuance_date` |
 
 > **`issuing_country` (2026-10-11, layihə rəhbərliyinin qərarı).** Sahənin mənası Aİ PID-dəki mənadır: sənədi verən şəxsiyyət
 > provayderinin ölkəsi (İcra Reqlamenti (Aİ) 2026/1731). Bu gün sənədi Tamga-nın şəxsiyyət xidməti skan edilmiş şəxsiyyət sənədinə
 > əsaslanaraq özü verdiyi üçün dəyər **skan edilmiş şəxsiyyət sənədini verən ölkəni** əks etdirir. Dövlətin PID provayderi PID verdikdə
-> sahə Aİ mənasını daşıyır və sənədlər sahəni Aİ-nin tərifi ilə izah edir. Kod və sxem bu gün dəyişmir.
+> sahə Aİ mənasını daşıyır və sənədlər sahəni Aİ-nin tərifi ilə izah edir. Kod və sxem bu gün dəyişmir. Məna fərqi açıq şəkildə:
+> Aİ PID-də dəyər PID-i verən dövlətin ölkəsidir; Tamga-da sənədi verən şəxsiyyət xidməti (Tamga) olduğundan dəyər şəxsiyyət
+> vəsiqəsini və ya pasportu verən dövləti göstərir.
+
+> **Qarşılığı olmayan PID sahələri (2026-11-16).** `place_of_birth` və `issuing_authority` Aİ PID-də məcburidir; Tamga şəxsiyyət
+> sənədində bu gün yoxdur. Doğum yerinin əlavə edilməsi şəxsiyyəti yoxlayan provayderin bu məlumatı etibarlı şəkildə verib-vermədiyindən
+> asılı ayrıca qərardır; `issuing_authority` dövlətin PID provayderi gəldikdə onun adı ilə doldurulur (§4.7). Buna görə yoxlayan
+> tərəf Tamga şəxsiyyət sənədini Aİ PID-in yerinə qoya bilməz. İnzibati bitmə tarixi `date_of_expiry` (mdoc `expiry_date`)
+> kimi yazılır və nüsxənin texniki `exp`-indən ayrıdır ([[ADR-0089]] K2); `date_of_issuance` yazılmır (§6.1).
 
 ## 4.7 Ötürmə — dövlət PID provayderi
 
@@ -470,6 +484,9 @@ yalnız xarici siyahıdan gəlir.
 | Sürücülük vəsiqəsi məlumatı | `exp` = kartın bitmə tarixi ilə yoxlamadan 1 il sonrakı tarixdən hansı daha tezdirsə; avtomatik yeniləmə müddəti uzatmır (RB-AP-ID-09) |
 | Sınaq sənədi (`review-demo`) | Ən çoxu 7 gün |
 
+Texniki və inzibati etibarlılıq ayrıdır: şəxsiyyət sənədinin inzibati bitmə tarixi `date_of_expiry` (mdoc `expiry_date`) sahəsindədir;
+nüsxənin `exp`-i texniki etibarlılıqdır və daha qısa ola bilər ([[ADR-0089]] K2; §4.6).
+
 ## 6.2 Ləğv
 
 | Növ | Ləğv edilə bilərmi | Mexanizm |
@@ -511,7 +528,7 @@ yalnız xarici siyahıdan gəlir.
 |---|---|
 | Kvalifikasiyalı olmayan EAA göstəricisi (ARB_12) | **Qərar (2026-10-12, [[ADR-0047]] K6):** Aİ şablonu `category` üçün `eaa:eu:non-qualified` dəyərini təklif edir; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 isə kvalifikasiyalı olmayan EAA-da `category` olmamasını tələb edir. Tamga ETSI-ni izləyir; şablonun dəyəri istifadə olunmur |
 | Etibar lövbərinin yeri sənəddə (ARB_21) | **Qərar (2026-10-12, [[ADR-0047]] K7):** sənədə yer sahəsi əlavə edilmir; yer §5-dəki siyahılardır. Sənəddəki yer sənədi verən qurumun öz bəyanatı olardı; yoxlayan tərəf lövbəri yalnız özünün seçdiyi, imzası sabitlənmiş siyahıdan götürür |
-| `nbf` (ETSI TS 119 472-1 texniki etibarlılığın başlanğıcı) | Bu gün yazılmır; etibarlılığın başlanğıcı `iat`-dır. Əlavə edilməsi icra işidir |
+| `nbf` (ETSI TS 119 472-1 texniki etibarlılığın başlanğıcı) | Sənədi verən qurum onu verilmə anında yazır (§2.6); başlanğıcı çatmamış sənəd rəqəmsal cüzdanda saxlanılır, təqdim edilmir |
 | Attestation Revocation List | Tamga-nın sənədi verən qurumları Status List dərc edir (Aİ VCR_11-ə görə biri kifayətdir); yoxlayan tərəf və rəqəmsal cüzdan nüvəsi identifikator siyahısını da yoxlayır (paketlər 0.5.0; [[FW-POL-0001]] §8) |
 
 ---

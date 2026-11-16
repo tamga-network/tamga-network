@@ -46,6 +46,7 @@ import {
 import { offlineDisclosurePolicy, type DisclosurePolicyResult } from "./disclosure-policy.js";
 import { checkProximityRegistration, type ProximityRegistrationCheck, type ReaderTrust } from "./wrprc.js";
 import type { RegistrationStatusLookup } from "./wrprc-status.js";
+import { isNotYetValid } from "./validity.js";
 
 export interface ProximityTransport {
   start(serviceUuid: string): Promise<void>;
@@ -240,6 +241,7 @@ export async function presentProximity(p: {
         (c) =>
           c.vct === item.docType &&
           !(c.exp !== undefined && c.exp <= nowSec) &&
+          !isNotYetValid(c, nowSec) &&
           !c.revokedLocally &&
           c.status?.value !== "revoked" &&
           c.status?.value !== "suspended" &&

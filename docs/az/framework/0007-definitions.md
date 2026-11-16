@@ -4,7 +4,7 @@ title: "Əlavə D — Təriflər"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tamga ARF-də istifadə olunan terminlərin və qısaltmaların tərifləri. Avropa İttifaqı (Aİ) ARF-inin təriflər əlavəsinin qarşılığıdır; Aİ-dəki ad ilə Tamga-dakı qarşılığı birlikdə verilir.
 translation_of: FW-DEF-0001
@@ -24,30 +24,37 @@ source_version: "1.0.0"
 | Sənədi verən qurum (Attestation Provider) | Rəqəmsal sənədi verən qurum: universitet, peşə təşkilatı, dövlət qurumu, şirkət. |
 | Cihaz sübutu | Telefonun əməliyyat sisteminin, açarın cihazın təhlükəsiz zonasında yaradıldığını və tətbiqin dəyişdirilmədiyini təsdiqləyən imzalı bəyanatı (Apple App Attest, Android key attestation). |
 | Rəqəmsal cüzdan | Şəxsin rəqəmsal sənədlərini saxlayan və göstərən tətbiq. Şəbəkənin qaydalarına uyğun hər rəqəmsal cüzdan şəbəkədə istifadə oluna bilər; Tamga Wallet şəbəkənin ilk rəqəmsal cüzdanıdır. |
-| Cüzdan vahidi (Wallet unit) | Rəqəmsal cüzdanın müəyyən cihazdakı quraşdırılması. |
+| Cüzdan vahidi (Wallet unit) | Şəxsə verilən rəqəmsal cüzdanın müəyyən cihazdakı tam konfiqurasiyası: cüzdan nümunəsi (tətbiq), açarları qoruyan təhlükəsiz aparat hissəsi (WSCD) və ondan istifadə edən proqram təminatı (WSCA) birlikdə. Tamga-da təhlükəsiz aparat hissəsi telefonun öz təhlükəsiz zonasıdır; ayrıca sertifikatlaşdırılmış WSCA yoxdur. |
+| Cüzdan nümunəsi (Wallet Instance) | Cihazda quraşdırılmış rəqəmsal cüzdan tətbiqi (veb-tətbiq də ola bilər); cüzdan vahidinin proqram hissəsi. Cüzdan nümunəsi sübutu bu nümunə üçün verilir. |
 | Cüzdan nümunəsi sübutu (Wallet Instance Attestation, WIA) | Cüzdan provayderinin cüzdan vahidi üçün imzaladığı, ən çoxu 24 saat etibarlı bəyanat: cüzdan versiyası, açarın aparat hissəsində olması, PIN və ya biometriyanın aktiv olması. Sənədi verən qurum rəqəmsal sənədi verməzdən əvvəl onu yoxlayır. |
 | Cüzdan provayderi | Rəqəmsal cüzdanı təqdim edən, cüzdan vahidlərini qeydiyyata alan və cüzdan nümunəsi sübutunu və açar attestasiyasını imzalayan təşkilat. |
 | Lövbər jurnalı | Ləğv siyahısı dərclərini və sənəd növü təriflərinin heş dəyərlərini saatlıq imzalı qeydlərlə saxlayan, hamıya açıq jurnal. |
 | Reyestr mərhələsi | Etibar qeydlərinin bir neçə müstəqil operatorun apardığı ortaq reyestrə köçürüldüyü mərhələ. Ən azı iki müstəqil operator yazılı razılıq verdikdə başlayır. |
 | Yoxlama xətti | Yoxlayan tərəfin təqdimatı yoxladığı sabit addımlar: ilkin şərt, struktur, növ, etibar, status, siyasət. Nəticə qəbul, rədd və ya "hazırda yoxlanıla bilmədi" olur. |
 | Yoxlayan tərəf (Relying Party) | Rəqəmsal cüzdandan rəqəmsal sənəd tələb edən və onu yoxlayan, qeydiyyatdan keçmiş təşkilat: işəgötürən, veb-sayt, qurum. |
+| Yoxlayan tərəfin nümunəsi (Relying Party Instance) | Yoxlayan tərəfin rəqəmsal cüzdanla əlaqə quran sistemi: server, tətbiq və ya oxuyucu. Aİ-də hər nümunəyə ayrıca giriş sertifikatı verilir; Tamga-da bu gün hər yoxlayan tərəf üçün bir giriş sertifikatı var və etibar siyahısındakı qeydlə uyğunlaşdırılır. |
 | Giriş sertifikatı | Yoxlayan tərəfin sorğularını imzaladığı X.509 sertifikatı; müştəri identifikatoru bu sertifikatın heş dəyəridir. |
+| Giriş sertifikatı orqanı (Access CA) | Giriş sertifikatlarını verən sertifikat orqanı; Aİ-də dövlətin səlahiyyət verdiyi, etibar lövbəri LoTE-də dərc edilən orqan. Tamga-da şəbəkənin kökü ilə imzalanmış, yalnız yoxlayan tərəflərə giriş sertifikatı verən aralıq orqan (`access-ca-1`) və onun ləğv siyahısı (CRL). Sənədi verən qurumlara giriş sertifikatı verilmir; onlar etibar siyahısındakı sənəd imza sertifikatı ilə tanınır. |
 | Federasiya | Ölkə etibar siyahılarının öz sahibləri tərəfindən idarə olunduğu və siyahıların siyahısında bir araya gətirildiyi model. |
 | Müvəqqəti operator | İdarəetmə qurumu yaradılana qədər şəbəkəni və şəbəkənin öz xidmətlərini idarə edən hüquqi şəxs. Bu gün bu rolu Tamga Network (yaradılacaq fond) adından müvəqqəti operator daşıyır. Siyahılarda operatorun adı "Tamga Network" yazılır (`status = "provisional"`). Fond yaradıldıqda operatorluq ona ötürülür. |
 | Keçid kartı | Yaxın məsafədə təqdimatın daimi həlli tətbiq olunana qədər istifadə edilən, qısamüddətli və əhatəsi məhdud rəqəmsal sənəd təqdimatı. |
-| Etibar siyahısı | Bir ölkənin kök sertifikatlarını, sənədi verən qurumlarını və qeydiyyatdan keçmiş yoxlayan tərəflərini əhatə edən imzalı siyahı. |
+| Etibar siyahısı | Bir ölkənin kök sertifikatlarını, sənədi verən qurumlarını və qeydiyyatdan keçmiş yoxlayan tərəflərini əhatə edən imzalı siyahı. Aİ-də "Trusted List" (ETSI TS 119 612) yalnız ixtisaslı etibar xidməti provayderlərini əhatə edir; Tamga-nın etibar siyahısı daha genişdir: bütün növləri bir siyahıda toplayan, LoTE-yə bənzəyən birləşmiş siyahıdır. |
 | Etibar siyahısı operatoru (Trusted List Scheme Operator) | Milli etibar siyahısını tərtib edən, imzalayan və dərc edən təşkilat. Bu gün Türkiyə üçün dövlət adından müvəqqəti olaraq Tamga. |
 | Təminat səviyyəsi | Şəxsin identifikasiyasının (T), sənədi verən qurumun akkreditasiyasının (I) və rəqəmsal cüzdanın təhlükəsizliyinin (W) səviyyəsi. |
 | Qeydiyyat orqanı (Registrar) | Sənədi verən qurumları, yoxlayan tərəfləri və cüzdan provayderlərini qeydiyyata alan təşkilat; hüquqi səlahiyyət vermir. |
 | Qeydiyyat sertifikatı | Qeydiyyat orqanının yoxlayan tərəfin hər istifadə halı üçün (sənədi verən qurumlarda isə qurum başına) yaratdığı, tələb oluna bilən sahələri və məqsədi əks etdirən imzalı sənəd (ən çoxu 12 ay). |
+| Qeydiyyat sertifikatı provayderi (Provider of registration certificates) | Qeydiyyat sertifikatlarını imzalayan təşkilat; Aİ-də dövlətin səlahiyyət verdiyi, qeydiyyat orqanına bağlı ayrıca rol. Tamga-da ayrıca rol deyil: qeydiyyat sertifikatlarını qeydiyyat orqanının etibar siyahısında dərc edilən qeydiyyat vahidi açarı imzalayır; onların ləğvi ləğv siyahısında qeyd olunur. |
 | Şəxsiyyət sənədi (Tamga) | Şəxsin identifikasiya məlumatları provayderi olmadıqda Tamga şəxsiyyət xidmətinin məsafədən identifikasiya ilə verdiyi müvəqqəti şəxsiyyət sənədi. PID deyil. |
 | Şəxsin identifikasiya məlumatları (PID) | Dövlətin ən yüksək təminat səviyyəsində verdiyi şəxsin identifikasiya məlumatları. Tamga bu rolu öz üzərinə götürmür. |
 | Nüsxə | Eyni rəqəmsal sənədin ayrı açarlara bağlı nüsxələrindən biri; rəqəmsal cüzdan hər yoxlayan tərəfə ayrı nüsxə göstərir. |
 | Siyahı mərhələsi | Etibarın imzalı etibar siyahılarına və lövbər jurnalına əsaslandığı hazırkı mərhələ. |
+| Məntiqi sənəd / texniki sənəd (Logical / technical attestation) | Şəxsin rəqəmsal cüzdanda bir sənəd kimi gördüyü qeyd məntiqi sənəddir; onun cüzdanda saxlanılan, ayrı açarlara bağlı və müxtəlif formatlarda (SD-JWT VC, mdoc) olan nümunələri texniki sənədlərdir. Tamga-da texniki sənədə "nüsxə" deyilir. |
 | Siyahıların siyahısı (LoTL) | Ölkə etibar siyahılarının ünvanlarını, imzalayanlarını və tanınma statuslarını göstərən imzalı siyahı. |
+| LoTE (List of Trusted Entities) | ETSI TS 119 602-yə əsasən müəyyən növdən olan etibarlı təşkilatların (cüzdan provayderləri, şəxsin identifikasiya məlumatları provayderləri, giriş sertifikatı orqanları, qeydiyyat sertifikatı provayderləri) imzalı siyahısı; Aİ-də hər növ üçün ayrıca siyahı var və onu Komissiya dərc edir. Tamga-da bütün növlər bir ölkə etibar siyahısındadır; eyni mənbədən LoTE görünüşü də dərc edilir. |
 | Ortaq reyestr | Etibar qeydlərinin bir neçə müstəqil operator tərəfindən aparıldığı reyestr (blokçeyn). Reyestr mərhələsində yaradılır. |
 | Seçici açıqlama (Selective disclosure) | Şəxsin rəqəmsal sənəddən yalnız tələb olunan sahələri göstərməsi. Sinonim: seçici paylaşım. |
 | Sıfır bilik sübutu | Bir məlumatın doğru olduğunu məlumatın özünü göstərmədən təsdiqləyən sübut; məsələn, doğum tarixini göstərmədən "18 yaşdan böyüyəm". |
+| Sxem sahibi (Attestation Scheme Provider) | Sənəd növünün qaydalar kitabını və maşınla oxunan sxemini yazan, dərc edən və saxlayan təşkilat. Tamga-da şəbəkə səviyyəli sənəd növləri üçün şəbəkə, milli sənəd növləri üçün həmin növün dövləti. |
 | Psevdonim | Rəqəmsal cüzdanın hər veb-sayt üçün ayrıca yaratdığı, sabit, lakin saytlar arasında uyğunlaşdırıla bilməyən hesab identifikatoru. |
 | Psevdonim toxumu | Şəxsiyyət xidmətinin şəxsin kimliyindən onu saxlamadan törətdiyi və yalnız rəqəmsal cüzdanda qalan gizli dəyər; psevdonimlər bundan törədilir. Göstərilə bilməyən ayrıca sənəd növü ilə verilir. |
 | Tamga Network | Bu çərçivənin müəyyən etdiyi etibar şəbəkəsi: qaydalar, etibar siyahıları, rəqəmsal sənəd növləri kataloqu və açıq mənbəli paketlər. Şəbəkə məhsul satmır. |
@@ -55,6 +62,9 @@ source_version: "1.0.0"
 | Tamga Wallet | Şəbəkənin ilk rəqəmsal cüzdanı; ayrıca məhsuldur və açıq mənbə lisenziyası (EUPL-1.2) ilə hazırlanır. Şəbəkənin qaydalarına hər rəqəmsal cüzdan kimi əməl edir. |
 | Səlahiyyətli mənbə | Rəqəmsal sənəddəki məlumatın əsl sahibi olan sistem; məsələn, universitetin tələbə informasiya sistemi. |
 | İdarəetmə qurumu | Dövlətlər qoşulduqda yaradılan şura və ya fond; siyahıları və şəbəkə qaydalarını idarə edir. |
+
+**Termin qeydi — yoxlayan tərəf.** Tamga-da "yoxlayan tərəf (verifier)" Aİ-dəki "Relying Party" deməkdir. Aİ ARF-ində "Verifier"
+yalnız cüzdandan cüzdana qarşılıqlı əlaqədə başqa şəxsdən sənəd tələb edən şəxsdir; Aİ mətni ilə yanaşı oxuyarkən bu fərq nəzərə alınmalıdır.
 
 # 2. Qısaltmalar
 
@@ -68,8 +78,10 @@ source_version: "1.0.0"
 | KA | Key Attestation — açar attestasiyası |
 | KVKK | 6698 saylı Fərdi Məlumatların Qorunması Haqqında Qanun |
 | LoTL | List of Trusted Lists — siyahıların siyahısı |
+| LoTE | List of Trusted Entities — etibarlı təşkilatlar siyahısı |
 | mdoc | ISO/IEC 18013-5 mobil sənəd formatı |
 | PID | Person Identification Data — şəxsiyyət məlumatları |
+| RP | Relying Party — yoxlayan tərəf |
 | SD-JWT VC | Selective Disclosure JWT Verifiable Credential |
 | TDT | Türk Dövlətləri Təşkilatı |
 | WIA | Wallet Instance Attestation — cüzdan nümunəsi attestasiyası |

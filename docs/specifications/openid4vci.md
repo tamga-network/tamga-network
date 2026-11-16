@@ -4,7 +4,7 @@ title: "OpenID4VCI profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   Bir belgenin cüzdana nasıl girdiğini tanımlar. OpenID4VCI 1.0 Final
   üzerine Tamga profili: issuer metadata, credential offer (QR + tx_code),
@@ -303,7 +303,8 @@ yeni DPoP anahtarına bağlanır. Cüzdan her işlemde yeni WIA anahtarı kullan
 yenilemede sağlayıcıdan bu anahtara taze WIA ister ([[ADR-0060]] K2). Kaydı yetkili kaynaktan yeniden okur;
 kayıt yoksa `invalid_grant` döner ve belirteç düşer. Kişi kayıt defterinden silinince o kişinin bütün belirteçleri silinir.
 Yanıt yeni erişim belirteci ve **yeni** `refresh_token` taşır (rotation). Belge isteği §7 ile aynıdır. İletişim belgeleri
-belirteç vermez (kişi alanı saklanmaz); kimlik servisi yalnız ZK kopyası belirteci verir (§4.2). AS metadata
+belirteç vermez (kişi alanı saklanmaz); kimlik servisinin belirteci kimlik belgesini sunumla yeniler (§4.3) ve istenmişse ZK
+kopyası alır (§4.2). AS metadata
 `grant_types_supported` `refresh_token` içerir.
 
 ## 4.2 Kimlik servisi: ZK kopyası belirteci ([[ADR-0044]], 2026-10-09)
@@ -319,8 +320,9 @@ yalnız kısa ömürlü ZK kopyası alır ([[ADR-0023]] AR4'ün tek istisnası).
 }
 ```
 
-- **Ne zaman ([[ADR-0062]]):** yalnız cüzdan PAR `scope`'unda kimlik belgesi kapsamının yanında ZK kopyası kapsamını
-  (`urn:tamga:id:ShortLivedIdentityAttestation:1`) da isterse; kapsam yalnız kimlik belgesiyle istenebilir (ZS1).
+- **Ne zaman ([[ADR-0062]], [[ADR-0089]] ile genişledi):** yenileme belirteci her kimlik yetkisinde verilir (§4.3); ZK kopyası
+  kapsamı yalnız cüzdan PAR `scope`'unda kimlik belgesi kapsamının yanında `urn:tamga:id:ShortLivedIdentityAttestation:1`'i de
+  isterse verilir (belirteçteki kapsam listesi); kapsam yalnız kimlik belgesiyle istenebilir (ZS1).
 - **Belirteç:** cüzdana opaktır; içeriği yalnız kimlik servisinin anahtarıyla açılan doğrulanmış şifrelemeyle (JWE `dir` +
   A256GCM) korunur: bağlı kimlik kaydı, kuşak sayacı, ilk ihraçtaki istemci örneği anahtarının (WIA `cnf`) parmak izi ([[ADR-0060]]), bitiş (≤ kimlik belgesinin
   bitişi) ve ZK kopyasına girecek **asgari** öğeler (kimlik belgesinin yaş alanları `age_over_18`, `age_over_15`; [[ADR-0064]]). Sunucuda belirteç ve kişi alanı tutulmaz; tek kullanım
@@ -336,6 +338,26 @@ yalnız kısa ömürlü ZK kopyası alır ([[ADR-0023]] AR4'ün tek istisnası).
   alınır (pencere yine ≤ 24 saat). Erişim belirteci başka bir yapılandırma için kullanılamaz.
 - **Günlük:** yalnız sayı ve red nedeni; kişi verisi, belirteç ve kayıt kimliği yazılmaz. Kalıntı risk: servis yenileme
   sıklığından cüzdanın etkin olduğunu öğrenir, neyin kime gösterildiğini öğrenmez ([[ADR-0044]] Sonuçlar).
+
+## 4.3 Kimlik servisi: kimlik belgesinin yenilenmesi ve mdoc yapılandırması ([[ADR-0089]], 2026-11-16)
+
+- **mdoc yapılandırması (IR1):** metadata kimlik belgesi için ikinci yapılandırma ilan eder — kimlik
+  `urn:tamga:id:IdentityAttestation:1:mso_mdoc` (ad onay bekliyor), `format: mso_mdoc`, `doctype`
+  `urn:tamga:id:IdentityAttestation:1`, `scope` SD-JWT yapılandırmasınınkiyle aynı, `credential_reuse_policy` aynı. Tek yetki ve aynı
+  erişim belirteci iki biçimi kapsar; cüzdan iki standart belge isteği yapar (§7.4). Yanıt standarttır (`credentials[i].credential`
+  = base64url IssuerSigned). Aynı belirteçle aynı anahtara verilen iki biçim aynı iptal indeksini taşır (IR7; eşleşme yalnız
+  bellekte). Tamga cüzdanı mdoc isteğinde SD-JWT kopyalarının anahtarlarını aynı sırayla kullanır.
+- **Geçerlilik (IR2):** kopyanın `exp` / `validUntil`'ı ≤ 30 gün (`TAMGA_ID_COPY_TTL_DAYS`) ve ≤ kaydın bitişi; kaydın bitişi
+  (idari geçerlilik) her kopyada `date_of_expiry` (mdoc `expiry_date`, `full-date`).
+- **Yenileme isteği:** §4.1'deki `grant_type=refresh_token` + DPoP + aynı istemci örneği anahtarlı WIA, ek olarak `scope` =
+  `urn:tamga:id:IdentityAttestation:1` ve `identity_presentation` = cüzdandaki bu kayda ait bir kopyanın **bütün alanları açık**
+  sunumu (SD-JWT VC + KB-JWT, `aud` = servis, `nonce` = `/nonce`). Servis: kendi imzası, KB-JWT, tür, iptal listesi adresi, indeks
+  bu kayda ait, açılmamış özet yok; kayıt iptal edilmemiş, idari süresi dolmamış, bitleri 0, sağlayıcısı askıda değil (IR4).
+  Teknik süresi dolmuş kopya kabul edilir. Yanıt: kimlik belgesi için erişim belirteci + yeni `refresh_token` (döndürme §4.2'deki
+  gibi, aynı zincir), `scope` = kimlik belgesi. Belge istekleri §7 ile aynı (iki yapılandırma); yeni kopyalar aynı kayda eklenir;
+  yaş alanları doğum tarihinden yeniden hesaplanır (IR5); alanlar yalnız erişim belirtecinin ömründe bellekte (IR3).
+- **Hatalar:** belirteç geçersiz / kayıt iptal ya da süresi dolmuş → `invalid_grant`; sunum kusurlu → `invalid_request`; belirteç
+  kimlik kapsamını taşımıyor → `invalid_scope`; cüzdan sağlayıcısı listede askıda → HTTP 503 `temporarily_unavailable` (IR6).
 
 ---
 
@@ -465,7 +487,9 @@ Erişim belirteci ömrü (≤ 5 dakika, PR9) boyunca birden çok belge isteğind
 vereni gibi). Sınırlar: yalnız belirtecin kapsadığı yapılandırma (AT1); belirteç başına toplam kopya ≤ toplu ihraç büyüklüğü, 10
 (AT2; aşan istek HTTP 401 `invalid_token` + `WWW-Authenticate: DPoP`, §13); her istek belirtecin bağlı olduğu DPoP anahtarıyla, ömür uzamaz (AT3). Kimlik servisinde
 sonraki istek ilk isteğin kaydına kopya ekler, önceki paketi iptal etmez (AT4); kişi alanları belirtecin ömrü bitince ya da kopya
-hakkı dolunca silinir (AT5). ZK kopyası belirteci (§4.2) ve bilet tek paket kalır.
+hakkı dolunca silinir (AT5). ZK kopyası belirteci (§4.2) ve bilet tek paket kalır. **[[ADR-0089]] (2026-11-16):** kimlik belgesinde
+kopya hakkı yapılandırma başınadır (SD-JWT ve mdoc yapılandırmalarında ayrı ayrı ≤ 10); kişi alanları ikisinin de hakkı dolunca
+ya da belirtecin ömrü bitince silinir.
 
 ## 7.5 Takma ad tohumu: ayrı yapılandırma ([[ADR-0061]], 2026-10-22)
 
@@ -821,7 +845,7 @@ kendi denetim kaydındadır.
 | **PR17** | Erişim belirteci DPoP'a bağlıdır (RFC 9449): `/token` geçerli bir DPoP kanıtı olmadan belirteç vermez; `/credential` yalnızca `Authorization: DPoP` ve aynı anahtarla, bu uç ve bu belirteç (`ath`) için üretilmiş, daha önce görülmemiş kanıtla çalışır (§4, §7.1). |
 | **PR18** | Yenileme belirteci tek kullanımlıktır, her kullanımda yenilenir, belge verme işlemindeki istemci örneği anahtarına (WIA `cnf`) bağlıdır, DPoP anahtarı değişebilir ([[ADR-0060]]); belge veren yenilemede kaydı yetkili kaynaktan yeniden okur ve kayıt yoksa belge vermez ([[ADR-0023]] AR2–AR3, §4.1). |
 | **PR19** | WIA ile gelen istekte `client_status` iptal edilmişse belge verilmez; KA'lı proof'ta KA sağlayıcı imzalı, iptal edilmemiş, proof `attested_keys[0]` ile imzalı ve nonce geçerli olmalıdır; anahtar deposu alt sınırı KA seviyesine göre uygulanır ([[ADR-0025]], §11.1.1). |
-| **PR16** | Kimlik attestation'ı yanıtında her `credentials[]` nesnesi, `credential` (SD-JWT VC) ile **aynı proof anahtarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) taşır; iki temsil aynı istekte üretilir, aynı status bitini paylaşır; cüzdan mdoc'u SD-JWT kopyasıyla çapraz doğrulamadan (aynı belge veren sertifikası, aynı alanlar, `deviceKey` = `cnf`) saklamaz ([[ADR-0013]] MD1–MD3). **Bilinçli sapma:** OpenID4VCI 1.0 §8.3 `credentials[]` nesnesinde yalnız `credential` tanımlar; `mso_mdoc` Tamga profilinin ekidir (ADR-0013 — iki temsil tek istekte, çünkü kişi alanları ihraçtan hemen sonra silinir). Standart bir cüzdan bilinmeyen alanı yok sayar ve yalnız SD-JWT kopyasını alır; Tamga cüzdanı ikisini de saklar. |
+| **PR16** | ~~Kimlik attestation'ının mdoc'u SD-JWT yanıtında standart dışı `mso_mdoc` alanıyla~~ — **2026-11-16'da kalktı ([[ADR-0089]] IR1):** kimlik belgesinin mdoc kopyası metadata'daki ayrı `mso_mdoc` yapılandırmasıyla, aynı yetki ve erişim belirteciyle standart belge isteğinden verilir; belge yanıtında standart dışı alan yoktur; aynı anahtara verilen iki biçim aynı iptal indeksini taşır; cüzdan mdoc'u SD-JWT kopyasıyla çapraz doğrulamadan (aynı belge veren sertifikası, aynı alanlar, `deviceKey` = `cnf`) saklamaz ([[ADR-0013]] MD1–MD3). |
 
 ---
 

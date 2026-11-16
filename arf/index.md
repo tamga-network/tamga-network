@@ -17,24 +17,25 @@ the **Tamga Rulebook**, and each [[t:credential]] type has its own rulebook that
 
 ## Documents
 
-| Document                                                              | Version | For                                                                                         |
-| --------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------- |
-| [Architecture and Reference Framework](/architecture)                 | 1.0.0   | everyone — start here                                                                       |
-| [Annex A — Trust Framework](/trust-framework)                         | 1.0.0   | regulators, states, institutions: governance, onboarding, compliance, agreements, hand-over |
-| [Annex B — Tamga Rulebook](/rulebook)                                 | 1.0.0   | every participant: the common, numbered rules per role                                      |
-| Annex C — Rulebooks                                                   |         | credential-type rules that branch from the Tamga Rulebook:                                  |
-| · [Education Rulebook](/rulebooks/education)                          | 1.0.0   | universities and verifiers: student certificate and diploma                                 |
-| · [Identity Rulebook](/rulebooks/identity)                            | 1.0.0   | institutions and verifiers: the provisional identity credential                             |
-| · [Event Ticket Rulebook](/rulebooks/event-ticket)                    | 1.0.0   | ticket sellers and gates                                                                    |
-| · [Contact Rulebook](/rulebooks/contact)                              | 1.0.0   | websites and institutions: verified email address and phone number                          |
-| [Annex D — Definitions](/definitions)                                 | 1.0.0   | terms and abbreviations                                                                     |
-| [Annex E — References](/references)                                   | 1.0.0   | standards, Tamga documents and the source of every rule                                     |
-| [Revocation Policy](/policies/revocation)                             | 1.0.0   | issuers, verifiers, people: when a credential is revoked                                    |
-| [Wallet Attestation Policy](/policies/wallet-attestation)             | 1.0.0   | wallet providers and issuers: issuing and revoking WIA and KA                               |
-| [Registration Certificate Policy](/policies/registration-certificate) | 1.0.0   | verifiers and issuers: issuing and revoking registration certificates                       |
-| [Reading path](/reading-path)                                         | 1.0.0   | what to read, in which order, for your role                                                 |
-| [Roles](/roles)                                                       | 1.0.0   | each role in detail: what it does, its rules, what it needs                                 |
-| [Onboarding](/onboarding)                                             | 1.0.0   | the steps of joining, suspension and exit                                                   |
+| Document                                                              | Version | For                                                                                                   |
+| --------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------- |
+| [Architecture and Reference Framework](/architecture)                 | 1.0.0   | everyone — start here                                                                                 |
+| [Annex A — Trust Framework](/trust-framework)                         | 1.0.0   | regulators, states, institutions: governance, onboarding, compliance, agreements, hand-over           |
+| [Annex B — Tamga Rulebook](/rulebook)                                 | 1.0.0   | every participant: the common, numbered rules per role                                                |
+| Annex C — Rulebooks                                                   |         | credential-type rules that branch from the Tamga Rulebook:                                            |
+| · [Education Rulebook](/rulebooks/education)                          | 1.0.0   | universities and verifiers: student certificate and diploma                                           |
+| · [Identity Rulebook](/rulebooks/identity)                            | 1.0.0   | institutions and verifiers: the provisional identity credential                                       |
+| · [Event Ticket Rulebook](/rulebooks/event-ticket)                    | 1.0.0   | ticket sellers and gates                                                                              |
+| · [Contact Rulebook](/rulebooks/contact)                              | 1.0.0   | websites and institutions: verified email address and phone number                                    |
+| [Annex D — Definitions](/definitions)                                 | 1.0.0   | terms and abbreviations                                                                               |
+| [Annex E — References](/references)                                   | 1.0.0   | standards, Tamga documents and the source of every rule                                               |
+| [Risk Register](/risk-register)                                       | 1.0.0   | regulators and auditors: each EU wallet risk and threat, Tamga's measure and status (self-assessment) |
+| [Revocation Policy](/policies/revocation)                             | 1.0.0   | issuers, verifiers, people: when a credential is revoked                                              |
+| [Wallet Attestation Policy](/policies/wallet-attestation)             | 1.0.0   | wallet providers and issuers: issuing and revoking WIA and KA                                         |
+| [Registration Certificate Policy](/policies/registration-certificate) | 1.0.0   | verifiers and issuers: issuing and revoking registration certificates                                 |
+| [Reading path](/reading-path)                                         | 1.0.0   | what to read, in which order, for your role                                                           |
+| [Roles](/roles)                                                       | 1.0.0   | each role in detail: what it does, its rules, what it needs                                           |
+| [Onboarding](/onboarding)                                             | 1.0.0   | the steps of joining, suspension and exit                                                             |
 
 ## How to read
 

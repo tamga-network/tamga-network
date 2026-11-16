@@ -4,7 +4,7 @@ title: "Kimlik doğrulama"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 summary: >
   Belge verenin, belge vermeden önce uyguladığı kimlik doğrulama (identity proofing) yollarını
   tanımlar: her yolun ürettiği belge sahibi seviyesi (T1–T3), ETSI TS 119 461 ile eşlemesi,
@@ -294,6 +294,15 @@ karttaki sınıfları ve tarihleri verir. Resmî sürücü belgesi / mDL değild
 # Durum
 
 **Yürürlükte** — sürüm 1.0.0 (2026-10-02).
+
+**Sürüm notu (2026-11-16; proje yönetimi onayıyla).** [[ADR-0089]] kabul edildi: kimlik kaydı mantıksal belgedir, bitişi idari
+geçerliliktir (730 gün, ISSU_12c sınırıyla) ve her kopyada `date_of_expiry` olarak taşınır; kopyaların teknik geçerliliği en çok 30
+gündür ve cüzdan kopyaları bu kaydın bir kopyasını bütün alanlarıyla sunarak sessizce yeniler — kişi alanları yine saklanmaz (IDP9),
+yalnız yenileme erişim belirtecinin ömründe bellekte durur; yaş alanları yenilemede yeniden hesaplanır. Kimliğin mdoc kopyası ayrı
+standart yapılandırmayla verilir. Kimlik servisi kayda ihraçtaki WIA'yı imzalayan cüzdan sağlayıcısının liste kimliğini yazar ve
+6 saatlik birim denetiminde önce onun listedeki durumuna bakar: `REVOKED` / `RETIRED` / listede yok → kayıt iptal
+(`wallet-provider-invalid`); `SUSPENDED` → askı (yeni kopya, yenileme, ZK yok; askı kalkınca sürer); liste okunamıyor → değişiklik
+yok (IR6).
 
 **Sürüm notu (2026-11-13, ikinci; proje yönetimi onayıyla).** [[ADR-0083]] K11 ve CV7 değişti: çip yolunun kodu şimdi yazılır,
 ama varsayılanı kapalı bir anahtarın arkasında durur — kimlik servisi anahtar açıkken sunucuda (gerçek ağ ve sandbox) çalışmayı

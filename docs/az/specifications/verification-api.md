@@ -4,7 +4,7 @@ title: "Yoxlama xətti və API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Yoxlamanın kanonik alqoritmini və issuer/verifier servislərinin HTTP səthini müəyyən edir. Əsas töhfə ADDIM KODLARI REYESTRİdir: A1…E4, dörd spesifikasiyaya paylanmış yoxlama addımlarının vahid normativ siyahısı. Bu kodlar `failed_step` sahəsində maşınla oxunan formada ötürülür, beləliklə "yoxlama uğursuz oldu" əvəzinə "C2-də dayandı — issuer bu sxem üçün səlahiyyətli deyil" demək mümkündür. İkinci qayda: HTTP status kodu yoxlama nəticəsini KODLAŞDIRMIR — rədd edilmiş credential uğurlu API çağırışıdır; 4xx yalnız nəqliyyat/sorğu xətasıdır. Üçüncüsü: nəticə üçqiymətlidir və INDETERMINATE ayrıca səbəb sahəsi daşıyır.
 translation_of: SPEC-API-0001
@@ -125,6 +125,7 @@ yoxlamada istifadə olunsaydı, iki səssiz xəta yaranardı:
 | Ssenari | Sənəd vermə zamanı sualı ilə | Düzgün yanaşma |
 |---|---|---|
 | Nazirlik bağlandı (`REVOKED`, varisi var) | Bütün diplomlar `C1`-də RƏDD | Bağlanmadan əvvəl verilənlər qəbul edilir ([[ADR-0002]] #4) |
+| Qurum dayandırıldı (`SUSPENDED`), sonra yenidən aktiv oldu | Dayandırma müddətində bütün sənədlər `C1`-də RƏDD, sonra qəbul | Dayandırma müddətində RƏDD ("issuer suspended"); qaldırılanda əvvəl verilənlər qəbul, dayandırmada verilənlər RƏDD ([[ADR-0088]]) |
 | Sxem `DEPRECATED` oldu (yeni versiya çıxdı) | Köhnə sxemlə verilmiş hər sənəd `C2`-də RƏDD | Qəbul — sxem qeydinin statusu, [[SPEC-TRUST-0001]] |
 | CA-nın planlı rotasiyası | `A3` + `C1` RƏDD | Qəbul — rotasiya ələ keçirilmə deyil |
 
@@ -132,6 +133,11 @@ Buna görə hər iki sorğu sənədin **`iat`** dəyərini götürür və "həmi
 edilə bilən idimi" deyə soruşur. Bu, yoxlamanın **retrospektiv** əməliyyat
 olduğunu qəbul edir — sənəd keçmişdə verilib, bugünkü vəziyyət deyil, həmin
 günkü vəziyyət həlledicidir.
+
+**Dayandırma (istisna, [[ADR-0088]]).** `C1` bir halda bugünə də baxır: qurum yoxlama anında etibar siyahısında `SUSPENDED`-dirsə
+sənəd verilmə anından asılı olmayaraq rədd edilir (`failed_reason: "issuer suspended"`; SI1). Dayandırma müvəqqətidir və
+sənədləri ləğv etmir: qurum yenidən aktiv olanda dayandırmadan əvvəl verilmiş sənədlər yenidən qəbul edilir (SI2). Ləğv, təqaüd və
+qeydiyyat müddətinin bitməsi verilmə anı qaydası ilə qiymətləndirilir (SI3). Bu, Aİ çərçivəsinin (ARF 3.0 §4.6.5) qaydasıdır.
 
 **ZK təqdimatı (`mso_mdoc_zk`).** Sıfır bilgi sübutunda sənədin imzalanma anı açıqlanmır. Bu yolda `C1` və `C2` sübutun vaxt damğası ilə (təqdimat anı; yoxlayan tərəfin saatına saat tolerantlığı daxilində yaxın olmalıdır) soruşulur: qurum və növ səlahiyyəti təqdimat anında etibarlı olmalıdır. Qısa ömürlü ZK nüsxəsi ən çox 24 saat əvvəl verildiyi üçün ([[ADR-0044]]) iki an arasındakı fərq ən çox bir gündür. Bu, AP11-in ZK təqdimatı üçün açıq istisnasıdır ([[ADR-0032]] tətbiq qeydi, 2026-11-12). İki nəticəsi var: qurum sənədi verdikdən sonra bağlanıbsa, ZK təqdimatı rədd edilir; qurum sənədin verildiyi anda qəbul edilə bilən deyildisə, amma təqdimat anında qəbul edilə biləndirsə, təqdimat bu addımlardan keçir. İşarəsiz ZK təqdimatında (yalnız `accept_unrevocable_zk: true` ilə qəbul edilir) bir günlük hədd yoxdur.
 
@@ -169,6 +175,15 @@ buraxılmış kimi bildirilir — [[ADR-0056]] K11).
 2029-da dəyişərsə, 2027-ci il qeydləri yanlış oxunar.
 
 ---
+
+## 1.5 Bir neçə sənədli təqdimat
+
+Cavabdakı hər təqdimat eyni `nonce` və `aud` ilə ayrıca yoxlanılır; bu, başqa sessiyadan sənədlərin qarışdırılmasının qarşısını
+alır. Sənədlərin **eyni şəxsə və ya eyni cüzdan vahidinə** aid olması isə bugünkü standart vasitələrlə sübut edilə bilmir: iki
+şəxs vasitəçi ilə sessiyanı paylaşıb hər biri öz sənədinin sahiblik sübutunu imzalasa, yoxlayıcı iki sənədi bir şəxsdən gəlmiş
+kimi görür (Aİ ARF müzakirəsi "credential pooling"; mövzu Aİ-də açıqdır). Buna görə yerləşdirilmiş yoxlayıcı (Tamga Verify)
+təqdimat başına **bir sənəd** yoxlayır (ixtiyari təxəllüs yalnız sayta xas identifikatordur); siyasətdə ikinci sənəd varsa
+təqdimat qapalı qalır. Bir neçə sənədi öz serverində birləşdirən etibar edən tərəf bu həddi bilməlidir.
 
 # 2. Yoxlama Nəticəsi
 

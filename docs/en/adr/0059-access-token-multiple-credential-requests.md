@@ -101,3 +101,5 @@ The ZK copy access token ([[ADR-0044]]) and tickets (one credential per ticket) 
 
 **Accepted — 2026-10-21.** Approved by project management (OpenID conformance self-test finding G7; same approach as the EU
 reference issuer). DECISIONS: D-PROTO-3.
+
+2026-11-16: **AT2 is read per configuration by [[ADR-0089]]** (D-ID-17) — for the identity credential's SD-JWT and mdoc configurations, at most 10 copies each per token; personal fields are deleted when both allowances are used up or the token expires.

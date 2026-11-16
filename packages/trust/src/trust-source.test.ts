@@ -6,7 +6,7 @@
  *  T4 kurcalanmış payload → imza hatası
  *  T5 kayıtsız imzacı → red
  *  T6 hash zinciri kırık anchors → DUR
- *  T7 iat-zamanlı: SUSPENDED sonrası ihraç NO, öncesi YES (D-BC-3 / GV1)
+ *  T7 iat-zamanlı + askı (ADR-0088): şu an askıdaki kurumun bütün belgeleri NO; askı kalkınca öncesi YES, askıdaki NO
  *  T8 şema yetkisi penceresi ve allowlist varsayılanı false (I1/I3/D9)
  *  SB2 sandbox listesi gerçek ağ istemcisinde DURUR; sandbox istemcisi kabul eder (ADR-0038)
  */
@@ -59,6 +59,7 @@ async function mkCert(cn: string) {
 
 const T0 = "2026-01-01T00:00:00Z";
 const SUSP = "2026-06-01T00:00:00Z";
+const RESUMED = "2026-08-01T00:00:00Z";
 const sec = (s: string) => Math.floor(new Date(s).getTime() / 1000);
 const VCT_D = "urn:tamga:edu:DiplomaCredential:1",
   VCT_S = "urn:tamga:edu:StudentCredential:1";
@@ -136,13 +137,15 @@ async function makeSet(
         cert_fingerprint_sha256: issuer.fp,
         issuer_url: "https://issuer.example-university.tamga.network",
         status_list_base: "https://status.example-university.tamga.network/",
-        status: "SUSPENDED",
+        status: "ACTIVE",
         valid_from: T0,
         valid_until: "2028-01-01T00:00:00Z",
         successor_id: null,
+        // askıya alındı ve askı kalktı (ADR-0088: şu an askıda olsaydı hiçbir belgesi kabul edilmezdi — T7)
         status_history: [
           { status: "ACTIVE", since: T0 },
           { status: "SUSPENDED", since: SUSP },
+          { status: "ACTIVE", since: RESUMED },
         ],
         schema_authorizations: [
           { schema_id: computeSchemaId(VCT_D), allowed: true, valid_from: T0, valid_until: "2026-03-01T00:00:00Z" },
@@ -308,12 +311,30 @@ describe("TrustSource(list) taahhüt testleri", () => {
     expect(ts.zkCircuit("ea4c66add149cbc8fcbf3546bc3e7da1c8ddf28a330881871e28b3edbc971ca4")).toBeNull();
     expect(ts.zkCircuit("0".repeat(64))).toBeNull();
   });
-  it("T7: SUSPENDED sonrası ihraç NO, öncesi YES (D-BC-3, GV1)", async () => {
+  it("T7 + ADR-0088 SI2: askı kalktıktan sonra askıdan önce verilen YES, askı süresinde verilen NO (iptal değil)", async () => {
     const { store } = await ctx.load();
     const ts = new ListTrustSource(store, () => ctx.now);
-    expect(ts.isCredentialAcceptable(ctx.issuerId, sec("2026-07-01T00:00:00Z"))).toBe("NO");
+    expect(ts.isIssuerSuspended(ctx.issuerId)).toBe("NO");
     expect(ts.isCredentialAcceptable(ctx.issuerId, sec("2026-05-01T00:00:00Z"))).toBe("YES");
+    expect(ts.isCredentialAcceptable(ctx.issuerId, sec("2026-07-01T00:00:00Z"))).toBe("NO");
+    expect(ts.isCredentialAcceptable(ctx.issuerId, sec("2026-08-02T00:00:00Z"))).toBe("YES");
     expect(ts.isCredentialAcceptable("0x" + "0".repeat(64), sec("2026-02-01T00:00:00Z"))).toBe("NO");
+    expect(ts.isIssuerSuspended("0x" + "0".repeat(64))).toBe("NO");
+  });
+  it("ADR-0088 SI1: kurum şu an askıda → verilme anından bağımsız NO; isIssuerSuspended YES", async () => {
+    const { store } = await ctx.load();
+    const iss = store.issuers.get(ctx.issuerId)!;
+    const since = new Date(ctx.now.getTime() - 3600_000).toISOString();
+    iss.status_history = [...iss.status_history, { status: "SUSPENDED", since }];
+    iss.status = "SUSPENDED";
+    const ts = new ListTrustSource(store, () => ctx.now);
+    expect(ts.isIssuerSuspended(ctx.issuerId)).toBe("YES");
+    for (const t of ["2026-05-01T00:00:00Z", "2026-08-02T00:00:00Z"])
+      expect(ts.isCredentialAcceptable(ctx.issuerId, sec(t))).toBe("NO");
+    // askı henüz başlamadıysa (gelecek tarihli kayıt) şu anki durum belirleyicidir
+    const early = new ListTrustSource(store, () => new Date(ctx.now.getTime() - 7200_000));
+    expect(early.isIssuerSuspended(ctx.issuerId)).toBe("NO");
+    expect(early.isCredentialAcceptable(ctx.issuerId, sec("2026-05-01T00:00:00Z"))).toBe("YES");
   });
   it("T8: şema yetkisi zaman pencereli; allowlist varsayılanı false", async () => {
     const { store } = await ctx.load();

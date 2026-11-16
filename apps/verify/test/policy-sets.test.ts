@@ -256,3 +256,11 @@ describe("OpenID uyum öz-testi politikası (V1)", () => {
     ).toEqual(["oidf-selftest-eu-pid"]);
   });
 });
+
+// ARF tartışması #775 (belge havuzlama): servis sunum başına tek belge doğrular; ikinci belgeli politika yayına girmez
+describe("#775 — sunum başına tek belge", () => {
+  it("bütün politikalar (gerçek ağ + sandbox) en çok bir belge ister", () => {
+    for (const p of [...policiesFor("production"), ...policiesFor("sandbox"), ...POLICIES])
+      expect(p.credentials.length, p.policy_id).toBeLessThanOrEqual(1);
+  });
+});

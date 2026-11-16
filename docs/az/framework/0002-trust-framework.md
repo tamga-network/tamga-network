@@ -4,7 +4,7 @@ title: "Əlavə A — Trust Framework"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-10-30
+last_updated: 2026-11-16
 summary: >
   Tamga ekosisteminin idarəetmə çərçivəsi. World Bank-ın "Digital Wallets: Trust Frameworks" beşqatlı modeli əsasında qurulmuşdur: strategiya (vizyon, prinsiplər, hüquqi kontekst, risk, idarəetmə orqanları), texnologiya (əsas sənədə istinad), sxem qaydaları (rollar, qoşulma qapıları, həyat dövrü, təminat), uyğunluq (rejim, ISO/IEC 17000 rolları, uyğunluq testi, nəzarət, sanksiyalar, insidentlərə cavab) və müqavilələr (müqavilələr toplusu, xidmət səviyyələri, məsuliyyət, müqaviləyə xitam, varislik). eIDAS 2.0 və onun icra aktları qatının Türk dünyasındakı qarşılığıdır və dövlət öz üzərinə götürdükdə ona təhvil veriləcək aktivdir.
 translation_of: FW-TF-0001
@@ -72,7 +72,7 @@ qat Avropa İttifaqı (Aİ) standartları ilə eynidir, idarəetmə isə Türk d
 
 ## 1.5 Riskə yanaşma
 
-Risklər ekosistem səviyyəsində və mütənasib şəkildə nəzərdən keçirilir. Risk reyestri Aİ ARF-nin risk siyahısından törədilir. Bu gün açıq şəkildə bəyan
+Risklər ekosistem səviyyəsində və mütənasib şəkildə nəzərdən keçirilir. Risk reyestri ([[FW-RISK-0001]]) Aİ-nin rəqəmsal cüzdan risk reyestrinin (İcra Reqlamenti (Aİ) 2024/2981 Əlavə I) skeletini izləyir; özünüqiymətləndirmədir, müstəqil audit və ya sertifikat deyil. Bu gün açıq şəkildə bəyan
 edilən qalıq risklər əsas sənəddədir (§6.6 və §7.4): yeganə operatorun imzasına əsaslanan lövbər, ləğvin qüvvəyə minmə müddəti, eyni
 [[t:issuer|sənəd verən qurumun]] rəqəmsal sənədlərinin birləşdirilməsi yolu ilə şəxsin əlaqələndirilə bilməsi.
 
@@ -211,8 +211,10 @@ cədvəli (məs., ISCED-F) aparılır və "uyğunlaşdırmada qarşılığı olm
 
 ## 3.3 Həyat dövrü qaydaları
 
-- **Fəaliyyətin dayandırılması:** insident, audit nəticəsi və ya müqavilənin pozulması halında qurumun fəaliyyəti dayandırılır; yeni sənəd verilmir, köhnə
-  sənədlər verildikləri tarixə görə etibarlı qalır. Problem aradan qaldırıldıqda qurum yenidən aktivləşir.
+- **Fəaliyyətin dayandırılması:** insident, audit nəticəsi və ya müqavilənin pozulması halında qurumun fəaliyyəti dayandırılır; yeni sənəd verilmir və
+  dayandırma davam etdikcə qurumun heç bir sənədi yoxlamada qəbul edilmir (Aİ qaydası; [[ADR-0088]]). Dayandırma sənədləri ləğv
+  etmir: problem aradan qaldırıldıqda qurum yenidən aktivləşir və dayandırmadan əvvəl verdiyi sənədlər yenidən qəbul edilir;
+  dayandırma müddətində verilmiş sənəd heç vaxt.
 - **Çıxarılma:** qurum siyahıdan çıxarılır (varisi varsa, varis əlaqəsi ilə); ETSI görünüşündə "geri çəkilib" kimi göstərilir;
   tarixçə silinmir; varis ləğv siyahısını dərc etməyə davam edə bilər.
 - **Açarın və ya sertifikatın yenilənməsi:** yeni qurum identifikatoru köhnəsinə varis kimi bağlanır; köhnə sənədlər köhnə qeydlə

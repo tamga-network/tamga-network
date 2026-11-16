@@ -33,6 +33,7 @@ artınca aynı çalışmada İngilizcesi de güncellenir.
 | `FW-POL-0001` | `0013-revocation-policy.md` | **İptal Politikası**: belgelerin hangi koşullarda iptal edildiği, askı, yayın (ARF VCR_05) | Sağlayıcının iptal politikası (VCR_05) | 1.0.0 · Active |
 | `FW-POL-0002` | `0014-wallet-attestation-policy.md` | **Cüzdan Kanıtı Politikası**: WIA ve KA'nın verilmesi ve iptali (ARF WURevocation_03/09a) | Cüzdan sağlayıcısının WIA/KA politikası | 1.0.0 · Active |
 | `FW-POL-0003` | `0015-registration-certificate-policy.md` | **Kayıt Sertifikası Politikası**: kayıt sertifikalarının politika kimliği, PKI hiyerarşisi, iptal koşulları ve durum listesi (ARF RPRC_01b; ETSI TS 119 475 §6) | Kayıt sertifikası sağlayıcısının politikası | 1.0.0 · Active |
+| `FW-RISK-0001` | `0016-risk-register.md` | **Risk kaydı**: AB cüzdan risk kaydının (CIR 2024/2981 Ek I; ARF Ek 6) R1–R14, SR1–SR3, TT1–TT5 ve TR1–TR133 iskeletiyle Tamga'nın önlemleri ve durumu; öz değerlendirme | CIR 2024/2981 Ek I risk kaydı (ARF Ek 6) | 1.0.0 · Active |
 | `FW-DEF-0001` | `0007-definitions.md` | **Ek D — Tanımlar** | ARF Annex 1 | 1.0.0 · Active |
 | `FW-REF-0001` | `0008-references.md` | **Ek E — Kaynaklar**: standartlar, karar kayıtları, kural kaynakları | — | 1.0.0 · Active |
 | `FW-READ-0001` | `0009-reading-path.md` | **Okuma yolu**: rol başına okuma sırası (ARF, sonra geliştirici belgeleri) | — | 1.0.0 · Active |
@@ -42,8 +43,7 @@ artınca aynı çalışmada İngilizcesi de güncellenir.
 Belge türü rulebook'ları Tamga Rulebook'tan dallanır: ortak kuralların hepsini devralır, yalnızca türe özgü kuralları ekler. Yapıları AB Attestation Rulebook şablonunun (1.5) bölümlerini izler (Tamga Rulebook §11). Politika belgeleri (`FW-POL-*`)
 kuralları konu başına toplar (iptal; cüzdan kanıtları).
 
-Planlı: `FW-RISK-0001` Tamga Risk Register (ARF R1–R14 türevi);
-`FW-RB-0006+` diğer belge türü rulebook'ları (tüzel kişilik, oda üyeliği) — `SPEC-SCHEMA-0003`
+Planlı: `FW-RB-0006+` diğer belge türü rulebook'ları (tüzel kişilik, oda üyeliği) — `SPEC-SCHEMA-0003`
 kontrol listesi (SG1–SG7) geçildikçe.
 
 ---

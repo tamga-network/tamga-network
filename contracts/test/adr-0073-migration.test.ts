@@ -1,6 +1,6 @@
 /**
  * ADR-0073 K1 (CE1) — tek seferlik göç kipi; K5 (CE5) — C1/C2 belgenin `iat` anındaki duruma göre, yarı açık sınırlar,
- * askıdaki kurumun askıdan önceki belgeleri geçerli; iki sınır hatası (bir saniyelik `<=`, emekli kök) düzeltildi.
+ * askıdaki kurumun askıdan önceki belgeleri askı kalkınca geçerli (askıdayken hepsi ret — ADR-0088); iki sınır hatası (bir saniyelik `<=`, emekli kök) düzeltildi.
  * Son bölüm: rastgele durum dizisinde kontratın C1 cevabı imzalı listenin kuralıyla (TrustSource `statusAt`) aynı.
  */
 import { expect } from "chai";
@@ -623,8 +623,10 @@ describe("ADR-0073 K6 öncüsü — kontrat C1 = liste kuralı (rastgele tarihli
       if (inv) [inv - 1, inv, inv + 1].forEach((x) => probes.add(x));
       for (let k = 0; k < 20; k++) probes.add(now - Math.floor(rnd() * 32 * DAY));
       for (const iat of probes) {
-        // TrustSource.isCredentialAcceptable: pencere, iat anındaki durum ACTIVE, invalidates_from ≤ iat → NO
+        // TrustSource.isCredentialAcceptable: pencere, iat anındaki durum ACTIVE, invalidates_from ≤ iat → NO, şu an askıda → NO
+        // (ADR-0088 SI1)
         const model =
+          status !== Status.SUSPENDED &&
           iat >= lo &&
           iat <= Number(i.validUntil) &&
           listStatusAt(history, iat) === Status.ACTIVE &&

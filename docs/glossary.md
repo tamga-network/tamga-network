@@ -183,7 +183,7 @@ gelince (telefonda dokununca) kısa bir açıklama açılır.
 
 **Passkey** — Kullanıcının cihazında duran, oltalamaya dayanıklı oturum açma anahtarı (WebAuthn/FIDO2).
 
-**Wallet unit** — Bir cüzdanın belirli bir cihazdaki kurulumu.
+**Wallet unit** — Kişiye verilen cüzdanın belirli bir cihazdaki bütün yapılandırması: cüzdan uygulaması (wallet instance) ve anahtarları koruyan güvenli donanım birlikte.
 
 **WIA** (Wallet Instance Attestation) — Cüzdan sağlayıcısının imzaladığı, cüzdan kurulumunun gerçek olduğunu bildiren kısa ömürlü beyan; belge veren, belgeyi vermeden önce denetler.
 

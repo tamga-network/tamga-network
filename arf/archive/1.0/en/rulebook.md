@@ -111,7 +111,7 @@ Today: operated by a provisional operator on behalf of Tamga Network (foundation
 | RB-REG-04 | Credential type authority is granted through an allow-list, closed by default; it is granted for a time window and according to the "who may issue" rule of the credential type rulebook. |
 | RB-REG-05 | The registration class and assurance (`class`, `assurance`) are written according to the onboarding gate; the `category` mark only for the public and qualified classes.                  |
 | RB-REG-06 | A certificate change **MUST** be recorded with a new `issuer_id` and a `successor_id`; the old entry is not deleted.                                                                      |
-| RB-REG-07 | Removal or exit **MUST NOT** invalidate existing entries and credentials; the revocation list of an issuer in `REVOKED` status may be published by its successor.                         |
+| RB-REG-07 | Removal or exit **MUST NOT** invalidate existing entries and credentials; the revocation list of an issuer in `REVOKED` status may be published by its successor. Suspension differs: credentials of a suspended issuer **MUST NOT** be accepted while the suspension lasts; once it is lifted, those issued before it are accepted again ([[ADR-0088]]). |
 | RB-REG-08 | A verifier is registered with a scope; the scope goes through a data minimisation review (**SHOULD**).                                                                                    |
 | RB-REG-09 | A registration change **SHOULD** be made within 5 working days.                                                                                                                           |
 

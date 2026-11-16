@@ -69,3 +69,5 @@ The rest of ADR-0044 (ZC1–ZC3, generation counter, two-phase rotation) and ADR
 **Accepted — 2026-10-23.** Within project management's general conformance approval ("let us be compatible with EU standards,
 close our gaps, do it the way it should be done"): a fix that narrows ADR-0044 K3 in line with the standard; the Tamga wallet's
 behaviour did not change. DECISIONS: D-ZK-3.
+
+2026-11-16: **ZS1 widened by [[ADR-0089]]** (D-ID-17) — a refresh token is now issued with every identity authorization (scope: identity credential, renewal with a presentation); ZK copies are obtained only if the ZK scope was also granted.

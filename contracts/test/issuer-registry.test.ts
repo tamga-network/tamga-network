@@ -98,12 +98,12 @@ describe("IssuerRegistry (SPEC-BC-0001 §3)", function () {
     expect(await f.issuers.isCredentialAcceptable(f.uniIssuer, revokedAt + 1)).to.equal(false);
   });
 
-  it("ADR-0073 K5: askıdan ÖNCE verilmiş belge kabul, askı süresinde verilen ret; reinstate sonrası yeni belge kabul", async () => {
+  it("ADR-0088 SI1/SI2 + ADR-0073 K5: askıdayken bütün belgeler ret; reinstate sonrası askıdan önceki kabul, askıdaki ret", async () => {
     const before = await f.now();
     await networkHelpers.time.increase(10);
     await f.as(f.issuers, f.trDelegate).suspendIssuer(f.uniIssuer);
     const suspendedAt = await f.now();
-    expect(await f.issuers.isCredentialAcceptable(f.uniIssuer, before)).to.equal(true); // liste kuralı
+    expect(await f.issuers.isCredentialAcceptable(f.uniIssuer, before)).to.equal(false); // ADR-0088: askıda hepsi ret
     expect(await f.issuers.isCredentialAcceptable(f.uniIssuer, suspendedAt)).to.equal(false); // yarı açık: askı anı ret
     expect(await f.issuers.isOperational(f.uniIssuer)).to.equal(false); // yeni yayın yok
     await networkHelpers.time.increase(10);

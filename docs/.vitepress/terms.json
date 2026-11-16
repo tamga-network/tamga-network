@@ -548,9 +548,9 @@
   },
   "wallet-unit": {
     "label": "wallet unit",
-    "en": "One installation of a wallet on a specific device.",
-    "tr": "Bir cüzdanın belirli bir cihazdaki kurulumu.",
-    "az": "Rəqəmsal cüzdanın müəyyən bir cihazdakı bir quraşdırılması."
+    "en": "The complete configuration of a wallet given to a person on a specific device: the wallet application (wallet instance) together with the secure hardware that protects the keys.",
+    "tr": "Kişiye verilen cüzdanın belirli bir cihazdaki bütün yapılandırması: cüzdan uygulaması (wallet instance) ve anahtarları koruyan güvenli donanım birlikte.",
+    "az": "Şəxsə verilən rəqəmsal cüzdanın müəyyən cihazdakı tam konfiqurasiyası: cüzdan tətbiqi (wallet instance) və açarları qoruyan təhlükəsiz aparat hissəsi birlikdə."
   },
   "WIA": {
     "label": "WIA",

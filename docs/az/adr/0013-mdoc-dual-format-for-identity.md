@@ -86,3 +86,5 @@ Layihə rəhbərliyinin istiqaməti (2026-09-26): turniket və bilet axınları 
 Layihə 2026-09-26 (Proposed, paket + 15 test); həmin gün qəbul və D12 faza 2 icrası. ADR-0006-nı dəyişmir, genişləndirir.
 
 2026-10-09: K2 və MD1-dəki ad qaydası [[ADR-0045]] ilə dəyişdi (Aİ PID kodlaşdırması, D-ID-11).
+
+2026-11-16: **K1 və MD2 [[ADR-0089]] ilə dəyişdi** (D-ID-17) — mdoc nüsxəsi artıq metadata-dakı ayrıca `mso_mdoc` konfiqurasiyası ilə, eyni icazə və eyni giriş tokeni ilə standart sorğudan verilir (sənəd cavabındakı qeyri-standart sahə götürüldü); `deviceKey` = `cnf` cüzdan qaydasıdır, xidmət eyni açara eyni ləğv indeksini verir.

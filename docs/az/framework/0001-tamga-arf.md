@@ -4,7 +4,7 @@ title: "Arxitektura və İstinad Çərçivəsi"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   Tamga Network-un arxitektura və istinad çərçivəsinin əsas sənədi. Avropa İttifaqının (Aİ) EUDI ARF-i ilə eyni strukturu izləyir: istifadə ssenariləri, rollar, arxitektura, məlumat modeli, etibar modeli, təhlükəsizlik və idarəetmə. Məcburi qaydalar əlavələrdədir (A Trust Framework, B Tamga Rulebook, C rəqəmsal sənəd növü rulebook-ları); terminlər Əlavə D-də, mənbələr Əlavə E-dədir.
 translation_of: FW-ARF-0001
@@ -439,6 +439,8 @@ qiymətləndirilməsi qurumları və milli sertifikasiya tətbiq olunacaq. Hər 
 fəaliyyət Aİ-nin qarşılıqlı fəaliyyət tədbirlərində və OpenID uyğunluq testləri ilə nümayiş etdirilir.
 
 ## 7.4 Məlum məhdudiyyətlər və qalıq risklər
+
+Aİ rəqəmsal cüzdan risk reyestrinin hər riski və təhdidi üçün Tamga-nın tədbiri və statusu risk reyestrindədir ([[FW-RISK-0001]]; özünüqiymətləndirmə). Aşağıdakı məhdudiyyətlər bu gün açıq şəkildə bəyan edilən qalıq risklərdir.
 
 | # | Məhdudiyyət |
 |---|---|

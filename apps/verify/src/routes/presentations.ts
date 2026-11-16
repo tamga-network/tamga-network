@@ -407,6 +407,11 @@ export function registerPresentationRoutes(app: FastifyInstance, ctx: VerifyCont
       // Gönderildiyse yine eşleşmeli. Cihazlar arası yolda `state` zorunlu kalır ve çekim dalının `state`'idir (ADR-0067).
       const stateOk = stateMatched || (opened.path === "dc_api" && dec.state === undefined);
       if (!stateOk) return failedAttempt(p, pid, reply, null, "state mismatch", branch);
+      // ARF tartışması #775 (belge havuzlama): aynı yanıttaki iki belgenin aynı kişiye ait olduğu bugünkü standart araçlarla
+      // kanıtlanamaz (cihaz anahtarları birbirine bağlı değil). Bu servis bu yüzden sunum başına TEK belge doğrular (+ isteğe bağlı
+      // takma ad); politikada ikinci belge varsa sessizce yalnız ilkini doğrulamaz, kapalı kalır (SPEC-API-0001 §1.5).
+      if (p.policy.credentials.length > 1)
+        return failedAttempt(p, pid, reply, null, "multi-credential policies are not supported (#775)", branch);
       const pc = p.policy.credentials[0];
       const pres = pc ? dec.vp_token[pc.id]?.[0] : undefined;
       if (pc && !pres) return failedAttempt(p, pid, reply, null, `${pc.id} missing in vp_token`, branch);

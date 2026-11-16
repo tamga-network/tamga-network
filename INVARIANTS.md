@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 501 kodlanmış değişmez, 89 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 512 kodlanmış değişmez, 91 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -743,7 +743,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0073/CE2` | Sert iptal tarihi (`invalidatesFrom`) kurumun geçerlilik başlangıcı ile iptal anı arasındadır; yazıldıktan sonra silinmez, yalnız geriye çekilebilir; `iat` bu tarihe eşit ya da sonraysa belge kabul edilmez. |
 | `ADR-0073/CE3` | Şemanın `vctURI`'si ve yazılmış her içerik özeti değiştirilmez ve silinmez; yeni sürüm özeti yalnız eklenir. |
 | `ADR-0073/CE4` | Doğrulayıcının zincir ve liste kimliği `keccak256(dns_name)`'dir; erişim sertifikasının yenilenmesi kimliği değiştirmez. |
-| `ADR-0073/CE5` | Kontrat C1/C2/C3'ü belgenin `iat` anındaki duruma göre, yarı açık aralıklarla değerlendirir (askıdaki kurumun askıdan önceki belgeleri geçerlidir); liste durumları kontrata eşleme tablosuyla yazılır. |
+| `ADR-0073/CE5` | Kontrat C1/C2/C3'ü belgenin `iat` anındaki duruma göre, yarı açık aralıklarla değerlendirir (askı kalkınca askıdan önceki belgeler geçerlidir; kurum askıdayken bütün belgeleri RED — [[ADR-0088]] SI1); liste durumları kontrata eşleme tablosuyla yazılır. |
 | `ADR-0073/CE6` | Göç, `trust:chain-replay` eşdeğerlik testinde C1/C2/C3/D5 cevaplarında ACCEPTED/REJECTED farkı kalmadan kapanmaz. |
 
 
@@ -911,6 +911,33 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0087/AR3` | Etkin bir doğrulayıcı kaydı iptal edilmiş bir erişim sertifikasını gösteremez; yayıncı bu durumda liste imzalanmadan yayını durdurur. |
 | `ADR-0087/AR4` | Kayıt sertifikası CRL'e girmez; her sertifika türünün tek iptal yolu vardır (erişim sertifikası CRL, kayıt sertifikası [[ADR-0068]] durum listesi). |
 | `ADR-0087/AR5` | Tamga cüzdan çekirdeği ve doğrulayıcı erişim sertifikasının güvenini imzalı listeden alır; CRL onlar için ek ya da alternatif bir güven kaynağı değildir. |
+
+
+## ADR-0088
+
+*"Askıdaki kurumun belgeleri"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0088/SI1` | Belge veren kurum doğrulama anında güven listesinde `SUSPENDED` ise o kurumun verdiği hiçbir belge kabul edilmez (C1 `NO`; doğrulayıcı sonucu `REJECTED`, neden "issuer suspended"); belgenin verilme anı sonucu değiştirmez. |
+| `ADR-0088/SI2` | Askı belgeleri iptal etmez: kurum yeniden `ACTIVE` olunca askıdan önce verilmiş belgeler yeniden kabul edilir; askı süresinde verilmiş belge hiçbir zaman kabul edilmez. |
+| `ADR-0088/SI3` | İptal edilmiş (`REVOKED`), emekli (`RETIRED`) ve kayıt süresi dolmuş kurum için verilme anı kuralı sürer: önceden verilmiş belgeler kabul edilir, ele geçirilmede `invalidates_from`'dan itibaren verilmiş belgeler reddedilir. |
+| `ADR-0088/SI4` | Liste kaynağı, zincir kontratı ve zincir güven kaynağı askıda aynı cevabı verir. |
+
+
+## ADR-0089
+
+*"Kimlik belgesi: standart mdoc yapılandırması, kopyaların düzenli yenilenmesi, cüzdan sağlayıcısı askısı"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0089/IR1` | Kimlik belgesinin mdoc kopyası metadata'da ilan edilen ayrı `mso_mdoc` yapılandırmasıyla standart belge isteğinden verilir; belge yanıtında standart dışı alan yoktur; tek yetki iki biçimi kapsar ve kopya hakkı yapılandırma başınadır. |
+| `ADR-0089/IR2` | Yenileme belirteciyle verilen kimlik belgesinde her kopyanın teknik geçerliliği en çok 30 gündür ve kaydın idari bitişini aşmaz; idari bitiş her kopyada `date_of_expiry` (mdoc `expiry_date`) olarak taşınır. |
+| `ADR-0089/IR3` | Kimlik belgesinin yenilenmesi kişi alanlarını sunucuda saklamadan yapılır: alanlar cüzdanın bu kayda ait, bütün alanları açık ve belge sahibi anahtarıyla bağlı kopya sunumundan okunur ve yalnız erişim belirtecinin ömrü içinde bellekte durur. |
+| `ADR-0089/IR4` | Yenileme yalnız kayıt iptal edilmemiş, idari süresi dolmamış, bütün iptal bitleri 0 ve sağlayıcısı askıda değilken; aynı istemci örneği anahtarına verilmiş geçerli WIA ve tek kullanımlık, döndürülen yenileme belirteciyle yapılır. |
+| `ADR-0089/IR5` | Yenilenen kopyada yaş alanları doğum tarihinden yenileme anında yeniden hesaplanır; öteki kişi alanları sunulan kopyadakiyle aynıdır. |
+| `ADR-0089/IR6` | Cüzdan sağlayıcısı güven listesinde `REVOKED`, `RETIRED` ya da listede yoksa kimlik servisi o sağlayıcının birimlerine bağlı kayıtları iptal eder; `SUSPENDED` ise kayıtları askıya alır (yeni kopya, yenileme ve ZK kopyası yok) ve askı kalkınca yenileme sürer; liste okunamıyorsa hiçbir şey değişmez. |
+| `ADR-0089/IR7` | Aynı erişim belirteciyle aynı anahtara verilen iki biçimin kopyası aynı iptal indeksini taşır; eşleşme yalnız belirtecin ömrü içinde bellekte yapılır, anahtar parmak izi kalıcı yazılmaz. |
 
 
 ## ARCH-0003
@@ -1124,7 +1151,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `SPEC-PROTO-0001/PR17` | Erişim belirteci DPoP'a bağlıdır (RFC 9449): `/token` geçerli bir DPoP kanıtı olmadan belirteç vermez; `/credential` yalnızca `Authorization: DPoP` ve aynı anahtarla, bu uç ve bu belirteç (`ath`) için üretilmiş, daha önce görülmemiş kanıtla çalışır (§4, §7.1). |
 | `SPEC-PROTO-0001/PR18` | Yenileme belirteci tek kullanımlıktır, her kullanımda yenilenir, belge verme işlemindeki istemci örneği anahtarına (WIA `cnf`) bağlıdır, DPoP anahtarı değişebilir ([[ADR-0060]]); belge veren yenilemede kaydı yetkili kaynaktan yeniden okur ve kayıt yoksa belge vermez ([[ADR-0023]] AR2–AR3, §4.1). |
 | `SPEC-PROTO-0001/PR19` | WIA ile gelen istekte `client_status` iptal edilmişse belge verilmez; KA'lı proof'ta KA sağlayıcı imzalı, iptal edilmemiş, proof `attested_keys[0]` ile imzalı ve nonce geçerli olmalıdır; anahtar deposu alt sınırı KA seviyesine göre uygulanır ([[ADR-0025]], §11.1.1). |
-| `SPEC-PROTO-0001/PR16` | Kimlik attestation'ı yanıtında her `credentials[]` nesnesi, `credential` (SD-JWT VC) ile **aynı proof anahtarına bağlı** bir `mso_mdoc` (base64url IssuerSigned, ISO 18013-5) taşır; iki temsil aynı istekte üretilir, aynı status bitini paylaşır; cüzdan mdoc'u SD-JWT kopyasıyla çapraz doğrulamadan (aynı belge veren sertifikası, aynı alanlar, `deviceKey` = `cnf`) saklamaz ([[ADR-0013]] MD1–MD3). **Bilinçli sapma:** OpenID4VCI 1.0 §8.3 `credentials[]` nesnesinde yalnız `credential` tanımlar; `mso_mdoc` Tamga profilinin ekidir (ADR-0013 — iki temsil tek istekte, çünkü kişi alanları ihraçtan hemen sonra silinir). Standart bir cüzdan bilinmeyen alanı yok sayar ve yalnız SD-JWT kopyasını alır; Tamga cüzdanı ikisini de saklar. |
+| `SPEC-PROTO-0001/PR16` | ~~Kimlik attestation'ının mdoc'u SD-JWT yanıtında standart dışı `mso_mdoc` alanıyla~~ — **2026-11-16'da kalktı ([[ADR-0089]] IR1):** kimlik belgesinin mdoc kopyası metadata'daki ayrı `mso_mdoc` yapılandırmasıyla, aynı yetki ve erişim belirteciyle standart belge isteğinden verilir; belge yanıtında standart dışı alan yoktur; aynı anahtara verilen iki biçim aynı iptal indeksini taşır; cüzdan mdoc'u SD-JWT kopyasıyla çapraz doğrulamadan (aynı belge veren sertifikası, aynı alanlar, `deviceKey` = `cnf`) saklamaz ([[ADR-0013]] MD1–MD3). |
 
 
 ## SPEC-PROTO-0002
@@ -1265,12 +1292,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 501 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 512 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-15 (`scripts/sync-invariants.mjs`). Toplam 501 kodlanmış değişmez, 89 dokümanda.
+**Üretilen dosya** — 2026-11-16 (`scripts/sync-invariants.mjs`). Toplam 512 kodlanmış değişmez, 91 dokümanda.

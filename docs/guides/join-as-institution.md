@@ -4,7 +4,7 @@ title: "Kurum olarak ağa katılmak"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-05
+last_updated: 2026-11-16
 summary: >
   Bir kurumun belge veren olarak Tamga Network'e katılması, ilk temastan canlıya adım adım: sandbox denemesi, başvuru
   dosyası ve AB ortak kayıt verileri (kontrol listesi), anahtarlar ve sertifika isteği (CSR), kurumun sorgu ucu, güven
@@ -213,7 +213,7 @@ sonra reddeder.
 | Kurum kaydının durumu | Ne olur |
 |---|---|
 | `ACTIVE` | Belge verebilir; verdiği belgeler kabul edilir |
-| `SUSPENDED` | Geçici olarak belge veremez; askıdayken verilen belge kabul edilmez, askıdan önce verilenler etkilenmez. Sorun giderilince yeniden etkinleşir |
+| `SUSPENDED` | Geçici olarak belge veremez; askı sürdükçe kurumun hiçbir belgesi kabul edilmez (askıdan önce verilenler de). Sorun giderilince yeniden etkinleşir; askıdan önce verilenler yeniden kabul edilir, askıdayken verilenler hiçbir zaman ([[ADR-0088]]) |
 | `RETIRED` | Belge vermeyi bıraktı (gönüllü çıkış); önceden verdiği belgeler kabul edilmeye devam eder |
 | `REVOKED` | Kayıt kapandı; anahtar ele geçirildiyse belirtilen tarihten (`invalidates_from`) sonra verilenler düşer. Kurumun yerini bir halef (`successor_id`) alabilir |
 

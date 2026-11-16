@@ -46,6 +46,7 @@ const T: Record<
       "Revocation Policy",
       "Wallet Attestation Policy",
       "Registration Certificate Policy",
+      "Risk Register",
     ],
     nav: {
       framework: "Framework",
@@ -78,6 +79,7 @@ const T: Record<
       "İptal Politikası",
       "Cüzdan Kanıtı Politikası",
       "Kayıt Sertifikası Politikası",
+      "Risk kaydı",
     ],
     nav: {
       framework: "Çerçeve",
@@ -111,6 +113,7 @@ const T: Record<
       "Ləğv Siyasəti",
       "Cüzdan Attestasiyası Siyasəti",
       "Qeydiyyat Sertifikatı Siyasəti",
+      "Risk reyestri",
     ],
     nav: {
       framework: "Çərçivə",
@@ -149,7 +152,7 @@ function theme(l: Loc): DefaultTheme.Config {
       { text: t.nav.framework, link: link(0) },
       {
         text: t.nav.annexes,
-        items: [1, 2, 3, 4, 5, 11, 6, 7].map((i) => ({ text: t.doc[i], link: link(i) })),
+        items: [1, 2, 3, 4, 5, 11, 6, 7, 15].map((i) => ({ text: t.doc[i], link: link(i) })),
       },
       {
         text: t.nav.policies,
@@ -181,7 +184,7 @@ function theme(l: Loc): DefaultTheme.Config {
               ...(r.docs[IDS[12]]
                 ? [{ text: t.nav.policies, collapsed: false, items: docItems(r.docs, docRoot, [12, 13, 14]) }]
                 : []),
-              ...docItems(r.docs, docRoot, [6, 7]),
+              ...docItems(r.docs, docRoot, [6, 7, 15]),
               ...(r.docs[IDS[9]]
                 ? [{ text: t.nav.joining, collapsed: false, items: docItems(r.docs, docRoot, [9, 10]) }]
                 : []),

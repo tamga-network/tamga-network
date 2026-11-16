@@ -4,7 +4,7 @@ title: "Belge biçimi ve protokoller"
 status: Active
 version: 1.0.0
 created: 2026-09-03
-last_updated: 2026-11-04
+last_updated: 2026-11-16
 summary: >
   Tamga belgelerinin kanonik biçimini ve belge verme/gösterme protokollerini tanımlar.
   Birincil format SD-JWT VC (selective disclosure yerleşik, EUDI ARF ana formatı),
@@ -82,7 +82,9 @@ Bir SD-JWT VC üç parçadan oluşur:
 
 Zorunlu belge veren claim'leri: `iss`, `iat`, `vct` (belge tipi), `cnf` (belge sahibi public
 key), `status` (Token Status List pointer). `exp` belge tipine göre (öğrenci belgesi
-kısa TTL, diploma uzun).
+kısa TTL, diploma uzun). `nbf` (geçerlilik başlangıcı) belge verenin kütüphanesinde varsayılan olarak verme anıyla (`iat`) aynı
+yazılır; ileri tarihli belgede (bilet, dönemi başlayacak öğrenci belgesi) başlangıç anıdır. Başlangıcı gelmemiş belge cüzdanda
+"henüz geçerli değil" olarak saklanır ve sunulmaz; doğrulayıcı `A7`'de reddeder (ARF 3.0 §4.6.6 "Issued").
 
 > **Veri minimizasyonu:** TCKN gibi tanımlayıcılar yalnızca zorunluysa ve selective disclosure ile açıklanabilir
 > claim olarak konur; [[t:verifier]] politikası ([[PM-ASSUR-0001]]) bunları "istemeyen" listesine

@@ -10,6 +10,7 @@ import { wuaForBinding, type WuaRecord } from "./wua.js";
 import { wuaHeaders } from "./authcode.js";
 import { dpopRequest, type DpopSigner } from "./dpop.js";
 import { fetchIssuerMetadata, obtainCredential } from "./oid4vci.js";
+import { IDENTITY_VCT } from "./directory.js";
 import {
   instanceKeysInUse,
   receiveCredentials,
@@ -49,7 +50,8 @@ const unused = (c: StoredCredential) => c.copies.filter((k) => !k.usedBy.length)
 /** Eşik aşıldı mı (kurumun ilan ettiği değerlerle)? */
 export function refreshThresholdReached(c: StoredCredential, now: number): boolean {
   const r = c.refresh;
-  if (!r || c.revokedLocally || c.status?.value === "revoked") return false;
+  // ADR-0089: kimlik belgesi kendi yolundan yenilenir (`renewIdentityCredential` — kopya sunumu gerekir)
+  if (!r || c.revokedLocally || c.status?.value === "revoked" || c.vct === IDENTITY_VCT) return false;
   if (r.unusedTrigger !== undefined && unused(c) <= r.unusedTrigger) return true;
   if (r.lifetimeTrigger !== undefined && c.exp !== undefined && c.exp - now <= r.lifetimeTrigger) return true;
   return false;

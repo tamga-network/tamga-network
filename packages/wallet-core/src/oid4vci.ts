@@ -461,6 +461,17 @@ export interface ObtainInput {
   retainDpop?: boolean;
 }
 
+/**
+ * ADR-0089 K1: SD-JWT yapılandırması `vct` olan belgenin mdoc yapılandırması — `format: mso_mdoc`, `doctype` = vct ve aynı `scope`
+ * (tek yetki iki biçimi kapsar). Kimliği servisin ilan ettiği addır; ad sabit kodlanmaz. Yoksa undefined.
+ */
+export function mdocCompanionConfigId(md: IssuerMetadata, vct: string): string | undefined {
+  const scope = md.credential_configurations_supported[vct]?.scope ?? vct;
+  return Object.entries(md.credential_configurations_supported).find(
+    ([id, c]) => id !== vct && c.format === "mso_mdoc" && c.doctype === vct && (c.scope ?? id) === scope,
+  )?.[0];
+}
+
 /** credential_reuse_policy (ETSI TS 119 472-3 §4.2.4.2) → yenileme eşikleri */
 function reuseTriggers(md: IssuerMetadata, vct: string) {
   const o = md.credential_configurations_supported[vct]?.credential_metadata?.credential_reuse_policy?.options?.[0];
@@ -543,7 +554,7 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
       return {
         cr: r,
         body: (await readJson(r, "issuer")) as {
-          credentials?: Array<{ credential: string; mso_mdoc?: string }>;
+          credentials?: Array<{ credential: string }>;
           error?: string;
           error_description?: string;
         },
@@ -564,8 +575,21 @@ export async function obtainCredential(p: ObtainInput): Promise<RedeemOutput> {
       throw new WalletError("issuer_error", "number of copies does not match the number of proofs");
     body.credentials.forEach((c, i) => {
       copies[i].combined = c.credential;
-      if (c.mso_mdoc) copies[i].mdoc = c.mso_mdoc; // Tamga profili PR16: kopya başına ikinci temsil
     });
+    // ADR-0089 K1 (IR1): belgenin mdoc yapılandırması ilan edilmişse (`mso_mdoc`, doctype = vct — kimlik belgesi) aynı belirteçle
+    // ikinci STANDART belge isteği, AYNI anahtarlarla aynı sırada (MD2 cüzdan kuralı; servis aynı anahtara aynı iptal indeksini
+    // verir — IR7). Alınamazsa belge mdoc'suz saklanır (sonraki yenilemede yeniden denenir); SD-JWT kopyaları yine alınmıştır.
+    const mdocCfgId = mdocCompanionConfigId(md, vct);
+    if (mdocCfgId) {
+      try {
+        const m = await requestCredential(await fetchNonce(), mdocCfgId);
+        const list = m.cr.status === 200 ? m.body.credentials : undefined;
+        if (list && list.length === copies.length && list.every((c) => typeof c.credential === "string"))
+          list.forEach((c, i) => (copies[i].mdoc = c.credential));
+      } catch {
+        /* mdoc isteğe bağlı: ağ ya da kurum hatası belgeyi düşürmez */
+      }
+    }
     // ADR-0061 (ADR-0031 K1'in teslim biçimi): kimlik servisi takma ad tohumunu ayrı yapılandırma olarak ilan ediyorsa, aynı
     // belirteçle ikinci standart belge isteği — tek kanıt, kimlik belgesinin ilk kopyasının anahtarıyla (tohum ona bağlanır).
     // Tohum alınamazsa kimlik belgesi yine alınmış sayılır (tohum isteğe bağlı; takma ad sonra yeniden doğrulamayla gelir).

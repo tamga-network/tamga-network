@@ -102,3 +102,5 @@ Drafted 2026-09-26 (Proposed, package + 15 tests); accepted the same day and imp
 without changing it.
 
 2026-10-09: the naming rule in K2 and MD1 changed with [[ADR-0045]] (EU PID encoding, D-ID-11).
+
+2026-11-16: **K1 and MD2 changed by [[ADR-0089]]** (D-ID-17) — the mdoc copy is now issued through a separate `mso_mdoc` configuration in the metadata, from a standard request with the same authorization and access token (the non-standard field in the credential response is gone); `deviceKey` = `cnf` is a wallet rule, and the service gives the same key the same status index.

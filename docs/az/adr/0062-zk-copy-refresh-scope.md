@@ -64,3 +64,5 @@ ADR-0044-ün qalan hissəsi (ZC1–ZC3, nəsil sayğacı, iki mərhələli rotas
 **Accepted — 2026-10-23.** Layihə rəhbərliyinin ümumi uyğunluq təsdiqi çərçivəsində ("Aİ standartlarına uyğun olaq,
 çatışmazlıqlarımızı aradan qaldıraq, olması lazım olduğu kimi edək"): ADR-0044 K3-ü standarta görə daraldan düzəliş; Tamga
 cüzdanının davranışı dəyişmədi. DECISIONS: D-ZK-3.
+
+2026-11-16: **ZS1 [[ADR-0089]] ilə genişləndi** (D-ID-17) — yeniləmə tokeni artıq hər şəxsiyyət icazəsində verilir (əhatə: şəxsiyyət sənədi, təqdimatla yeniləmə); ZK nüsxəsi yalnız ZK əhatəsi də verilibsə alınır.

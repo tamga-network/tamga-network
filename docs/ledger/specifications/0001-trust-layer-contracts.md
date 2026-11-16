@@ -4,7 +4,7 @@ title: "Güven katmanı kontratları"
 status: Active
 version: 1.0.0
 created: 2026-08-05
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   Hyperledger Besu (EVM) üzerinde çalışan güven katmanı kontratlarının kanonik
   veri şeması, fonksiyon arayüzleri ve değişmezleri. Sürüm 2.0.0 üç yapısal
@@ -16,6 +16,10 @@ summary: >
   politikası ve doğrulama okuma seti normatifleştirildi. Egemenlik
   onlyOwnerState ile kodda; zincir kişisel veri tutmaz ([[PM-TRUST-0001]]).
 ---
+
+> **Sürüm notu 1.0.0 (2026-11-16) — [[ADR-0088]] askıdaki kurumun belgeleri.** `isCredentialAcceptable` kurumun bugünkü durumu
+> `SUSPENDED` ise `false` döner (verilme anından bağımsız; SI1); askı kalkınca askıdan önceki belgeler yeniden kabul (SI2). GV1
+> kurum askısını kapsamaz; iptal, emeklilik ve çıkarmada verilme anı kuralı sürer (SI3). §3.3 formülü ve askı paragrafı güncellendi.
 
 > **Sürüm notu 1.0.0 (2026-11-15) — [[ADR-0086]] yönetişim ve düğüm anahtarı ayrımı.** Üye kaydında iki adres: QBFT düğüm
 > adresi (`validatorAddress`) ve yönetişim adresi (`governanceAddress`, + `governanceSince`); bir adres tek devlette tek rolde
@@ -331,7 +335,8 @@ delege listesini ele geçiremez (N1). İki üyeli ağda kaybolan yönetişim ana
 **Değişmezler:**
 
 - **GV1** — Çıkarma/çıkış yalnızca yeni yazımı ve blok üretimini durdurur;
-  **mevcut kayıtları ve credential'ları geçersiz kılmaz** ([[ADR-0002]] #4).
+  **mevcut kayıtları ve credential'ları geçersiz kılmaz** ([[ADR-0002]] #4). Kurum askısını kapsamaz: askıdaki kurumun belgeleri
+  askı sürdükçe kabul edilmez ([[ADR-0088]] SI1).
 - **GV2** — `proposeNetworkSchema` 2.0.0'da eklendi; NETWORK katmanı şemalarının
   tek giriş yoludur.
 
@@ -483,16 +488,18 @@ isOperational(id) =                                   // status yayını
    && now ∈ [validFrom, validUntil]
    // CA'ya BAKMAZ — rotasyon yayını durdurmamalı
 
-isCredentialAcceptable(id, iat) =                     // doğrulama C1 (ADR-0073 K5)
-      statusAt(id, iat) == ACTIVE                     // durum iat anında; aralık yarı açık [since, sonraki since)
+isCredentialAcceptable(id, iat) =                     // doğrulama C1 (ADR-0073 K5, ADR-0088)
+      status(id) != SUSPENDED                         // kurum ŞU AN askıdaysa bütün belgeleri ret (SI1)
+   && statusAt(id, iat) == ACTIVE                     // durum iat anında; aralık yarı açık [since, sonraki since)
    && iat ∈ [validFrom, validUntil]
    && (invalidatesFrom == 0 || iat < invalidatesFrom) // sert iptal (ADR-0073 K2)
    && RootCARegistry.isChainAcceptableAt(parentCA, iat) // kök iat anında ACTIVE ve hiç REVOKED değil
 ```
 
-**Askı (2026-11-04, liste kuralı):** askı yalnız askı süresinde verilen belgeyi düşürür; askıdan **önce** verilmiş belge
-geçerlidir ([[ADR-0073]] K5, [[ADR-0009]] D-BC-3 `iat` kuralı, GV1). Önceki metindeki "SUSPENDED → false (ihtiyati)" kuralı
-kalktı; imzalı liste ile zincir aynı cevabı verir.
+**Askı (2026-11-16, [[ADR-0088]]; AB kuralı):** kurum askıdayken verdiği bütün belgeler reddedilir — verilme anından bağımsız
+(SI1). Askı kalkınca askıdan **önce** verilmiş belgeler yeniden kabul edilir; askı süresinde verilen belge hiçbir zaman (SI2;
+[[ADR-0073]] K5, [[ADR-0009]] D-BC-3 `iat` kuralı). Askı belgeleri iptal etmez. İmzalı liste ile zincir aynı cevabı verir (SI4).
+(2026-11-04 metnindeki "askıdan önce verilmiş belge askıdayken de geçerlidir" kuralı bu kayıtla değişti.)
 
 **Yumuşak iptalin anlamı artık kesin:** `revokedAt`'ten **önce** verilmiş
 credential kabul edilir (`iat < revokedAt`); iptal anında ya da sonra verilmiş (sahte tarihli) reddedilir.

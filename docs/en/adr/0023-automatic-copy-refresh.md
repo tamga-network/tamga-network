@@ -123,3 +123,5 @@ This is the same balance as the EU model. Project management accepted it.
 
 2026-10-22: **K2 and AR2 were changed by [[ADR-0060]]** — the binding moved from the DPoP key to the client-instance key (WIA
 `cnf`); the DPoP key may change at renewal (D-PROTO-4). The "DPoP + WUA bound" row in the options table is historical.
+
+2026-11-16: **AR4 narrowed by [[ADR-0089]]** (D-ID-17) — the identity credential is now silently renewed too: personal fields are still not stored; the wallet presents a copy of that record with all claims disclosed.

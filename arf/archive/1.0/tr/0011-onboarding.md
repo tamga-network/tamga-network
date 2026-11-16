@@ -4,7 +4,7 @@ title: "Katılım süreci"
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tamga Network'e katılımın adımları: belge veren, doğrulayıcı, cüzdan sağlayıcısı ve devlet için başvuru, gereken belgeler,
   inceleme, uyum testleri, listeye giriş; ardından kayıt değişikliği, askıya alma ve çıkış. Kurallar Ek A §3.2–§3.3 ve Ek B'de,
@@ -109,7 +109,8 @@ Devir hiçbir belgeyi, kaydı ya da kimliği geçersiz kılmaz (Ek A §7). Tekni
 
 Bir olay, denetim bulgusu ya da sözleşme ihlali yaptırım merdivenini başlatır (Ek A §4.5): önce uyarı ve 30 günlük giderme
 süresi, sonra belge türü yetkisinin daraltılması, sonra askıya alma. Askıdaki kurum yeni belge veremez ve iptal listesi
-yayınlayamaz; daha önce verdiği belgeler verildikleri tarihe göre geçerli kalır. Sorun giderilince kurum yeniden etkinleşir.
+yayınlayamaz; askı sürdükçe daha önce verdiği belgeler de doğrulamada kabul edilmez ([[ADR-0088]]). Sorun giderilince kurum
+yeniden etkinleşir ve askıdan önce verdiği belgeler yeniden kabul edilir.
 Kritik olaylarda (örneğin imza anahtarının sızması) kurum hemen askıya alınır (Ek A §4.6).
 
 # 8. Çıkış

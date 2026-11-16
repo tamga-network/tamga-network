@@ -118,8 +118,9 @@ No hand-over invalidates any credential, entry or identifier (Annex A §7). Tech
 
 An incident, an audit finding or a breach of agreement starts the sanctions ladder (Annex A §4.5): first a warning and a
 30-day period to fix, then narrowing of the credential type authority, then suspension. A suspended institution cannot issue
-new credentials or publish a revocation list; the credentials it issued earlier remain valid according to their issue date.
-Once the issue is fixed, the institution is reactivated. In critical incidents (for example a leaked signing key) the
+new credentials or publish a revocation list; while the suspension lasts, the credentials it issued earlier are not accepted in
+verification either ([[ADR-0088]]). Once the issue is fixed, the institution is reactivated and the credentials it issued before
+the suspension are accepted again. In critical incidents (for example a leaked signing key) the
 institution is suspended immediately (Annex A §4.6).
 
 ## 8. Exit

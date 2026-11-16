@@ -183,7 +183,7 @@ page gathers the same terms in reading order.
 
 **Passkey** — A phishing-resistant sign-in credential (WebAuthn/FIDO2) stored on the user's device.
 
-**Wallet unit** — One installation of a wallet on a specific device.
+**Wallet unit** — The complete configuration of a wallet given to a person on a specific device: the wallet application (wallet instance) together with the secure hardware that protects the keys.
 
 **WIA** (Wallet Instance Attestation) — A short-lived statement signed by the wallet provider that a wallet installation is genuine; issuers check it before issuing.
 

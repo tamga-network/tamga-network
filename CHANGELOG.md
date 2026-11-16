@@ -6,6 +6,45 @@ published on npm as test releases; `0.8.5` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+### Changed
+
+- **Identity credential: standard mdoc configuration, renewal of short-lived copies, wallet provider suspension (ADR-0089).**
+  `wallet-core`: `obtainCredential` requests the mdoc copy through the issuer's separate `mso_mdoc` configuration (same scope,
+  `doctype` = vct; new `mdocCompanionConfigId`) with a second standard credential request using the same keys in the same order;
+  the non-standard `mso_mdoc` field of the credential response is no longer read. New `identity-renewal` module:
+  `renewIdentityCredential` (refresh token + DPoP + WIA + a presentation of a copy with all claims disclosed →
+  new batch replaces the old credential; ZK copies and passes are kept; `invalid_grant` removes the binding, `temporarily_unavailable`
+  = provider suspended, binding kept), `identityRenewalDue`, `scheduleIdentityRenewals` (2 unused copies / 7 days, random delay ≤ 6 h),
+  `fullIdentityPresentation`; `StoredCredential.renewDueAt`; institution silent refresh no longer covers the identity credential.
+  `schemas`: optional `date_of_expiry` (administrative validity) on `IdentityAttestation` (type metadata hash changes).
+  `mdoc`: `expiry_date` is a `full-date` element. `issuer`: `mdocConfigurations[]` take an optional `scope` and `reusePolicy`.
+  `trust`: optional `TrustSource.walletProviderOfKey` (provider id of a WIA/KA signing key, regardless of status).
+- **Credentials of a suspended issuer are not accepted (ADR-0088).** While an issuer is `SUSPENDED` in the trust list, C1
+  rejects all of its credentials regardless of issuance time (`REJECTED`, `failed_step: "C1"`, `failed_reason: "issuer
+  suspended"`); once the suspension is lifted, credentials issued before it are accepted again, those issued during it never.
+  Revocation, retirement and expiry keep the issuance-time rule. `trust`: new optional `TrustSource.isIssuerSuspended`;
+  `ListTrustSource`, the chain trust source (`apps/chain-indexer`) and `IssuerRegistry.isCredentialAcceptable` give the same
+  answer. Earlier the suspension only dropped credentials issued during it (ADR-0073 K5, changed).
+- `wallet-core`: a future-dated credential (`nbf` ahead) is no longer rejected on receipt; `verifyIssuedSdJwt` returns `nbf`
+  and `notYetValid`, the stored credential keeps `nbf`, its mdoc copy is checked at the start time, and remote and proximity
+  presentation selection skip it until it is valid (ARF 3.0 "Issued"). A malformed `nbf` or `nbf ≥ exp` is rejected.
+- `issuer`: `buildCredentials` writes `nbf` (default: the issuance time `iat`; optional `nbf` for a future start). `sd-jwt`:
+  `issueSdJwtVc` takes an optional `nbf` (integer, `≥ iat`, `< exp`).
+- `schemas`: every credential type schema allows `nbf`; in `IdentityAttestation` `family_name` / `given_name` are limited to 150
+  characters (EU PID mdoc text rule). The type metadata hashes change (development stage, ADR-0029).
+- `apps/verify`: a presentation is verified for one credential only (plus an optional pseudonym); a policy with a second
+  credential is refused instead of silently checking the first (ARF discussion #775, credential pooling; SPEC-API-0001 §1.5).
+
+### Added
+
+- `wallet-core`: `credentialValidity(cred, { now, trust })` → `valid` · `not_yet_valid` · `expired` · `revoked` · `suspended` ·
+  `issuer_suspended` (with `validFrom`, `validUntil`, `presentable`) and `isNotYetValid`; receipt from a suspended issuer gives a
+  distinct message.
+- Docs: ADR-0088; Tamga ARF Risk Register (FW-RISK-0001, self-assessment against the CIR 2024/2981 risk register); Annex D terms
+  (Wallet Instance, LoTE, Access CA, RP Instance, registration certificate provider, scheme owner, logical / technical
+  credential; "verifier" = EU Relying Party); Annex E: eight EU sources; Identity Rulebook PID mapping rows (`place_of_birth`,
+  `issuing_authority` without counterpart, `issuing_country` meaning).
+
 ### Fixed
 
 - `verifier/zk`: the native backend no longer lets a write to a dead prover process crash the host (`stdin` error listener).

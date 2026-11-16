@@ -35,6 +35,7 @@ import { selectZkCopy } from "./zk-copies.js";
 import { NON_PRESENTABLE_VCTS, PSEUDONYM_FORMAT } from "./pseudonym.js";
 import { DC_API_MDOC_PROTOCOL, parseDcApiMdocRequest, sealDcApiMdocResponse, type AnnexCSession } from "./dc-mdoc.js";
 import { isAllowedWebAddress, isLocalDevHost } from "./web-address.js";
+import { isNotYetValid } from "./validity.js";
 
 export const REQUEST_TYP = "oauth-authz-req+jwt";
 
@@ -825,6 +826,7 @@ export function matchDcql(
       .filter((c) =>
         NON_PRESENTABLE_VCTS.includes(c.vct) || // PS3: takma ad tohumu hiçbir sorguya önerilmez
         (c.exp !== undefined && c.exp <= now) || // süresi dolmuş belge sunulmaz (0.8.3)
+        isNotYetValid(c, now) || // geçerliliği ileride başlayan belge sunulmaz (ARF "Issued")
         c.revokedLocally ||
         c.status?.value === "revoked" ||
         c.status?.value === "suspended"

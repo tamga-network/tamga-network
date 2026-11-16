@@ -4,7 +4,7 @@ title: "Verification pipeline and API"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-12
+last_updated: 2026-11-16
 summary: >
   Defines the canonical verification algorithm and the HTTP surface of the issuer/verifier services. Its central contribution
   is the STEP CODE REGISTRY: A1…E4, the single normative list of the verification steps spread across four specifications.
@@ -130,12 +130,19 @@ were used in verification, they would cause two silent errors:
 | Scenario | With an issuance-time question | Correct |
 |---|---|---|
 | Ministry closed (`REVOKED`, with a successor) | Every diploma REJECTED at `C1` | Those issued before the closure accepted ([[ADR-0002]] #4) |
+| Issuer suspended (`SUSPENDED`), later active again | All credentials REJECTED at `C1` while suspended, then accepted | REJECTED while suspended ("issuer suspended"); once lifted, those issued before the suspension accepted, those issued during it REJECTED ([[ADR-0088]]) |
 | Schema became `DEPRECATED` (a new version was released) | Every credential issued with the old schema REJECTED at `C2` | Accept — status of the schema record, [[SPEC-TRUST-0001]] |
 | Planned CA rotation | `A3` + `C1` REJECT | Accept — a rotation is not a compromise |
 
 That is why both queries take the credential's **`iat`** value and ask "was it acceptable at that moment". This accepts that
 verification is a **retrospective** operation — the credential was issued in the past, and the state of that day, not
 today's, is decisive.
+
+**Suspension (exception, [[ADR-0088]]).** In one case `C1` also looks at today: if the issuer is `SUSPENDED` in the trust list
+at verification time, the credential is rejected regardless of when it was issued (`failed_reason: "issuer suspended"`; SI1).
+Suspension is temporary and does not revoke credentials: once the issuer is active again, credentials issued before the suspension
+are accepted again (SI2). Revocation, retirement and expiry of the registration are evaluated by the issuance-time rule (SI3).
+This is the suspension rule of the EU framework (ARF 3.0 §4.6.5).
 
 **ZK presentation (`mso_mdoc_zk`).** A zero-knowledge proof does not reveal when the credential was signed. On this path `C1` and `C2` are asked with the proof timestamp (the presentation time; it must be close to the verifier clock, within the clock tolerance): the institution and its authorisation for the type must be valid at presentation time. Because a short-lived ZK copy was issued at most 24 hours earlier ([[ADR-0044]]), the two moments differ by at most one day. This is the explicit exception to AP11 for ZK presentations ([[ADR-0032]] implementation note, 2026-11-12). It has two consequences: if the institution was closed after it issued the credential, the ZK presentation is rejected; if the institution was not acceptable when the credential was issued but is acceptable at presentation time, the presentation passes these steps. For an unmarked ZK presentation (accepted only with `accept_unrevocable_zk: true`) the one-day bound does not exist.
 
@@ -170,6 +177,19 @@ Rationale: `failed_step` is kept in audit records for years. If the meaning of `
 read wrongly.
 
 ---
+
+## 1.5 Presentations with several credentials
+
+Each presentation in a response is verified separately with the same `nonce` and `aud`; this prevents credentials from another
+session being mixed in. That the credentials belong to **the same person or the same wallet unit**, however, cannot be proven with
+today's standard tools (SD-JWT VC and mdoc, a separate device key per credential): if two people share a session through a proxy
+and each signs the proof of possession of their own credential, the verifier sees the two credentials as coming from one person
+(EU ARF discussion "credential pooling"; the topic is open in the EU). Binding all credentials to one key breaks unlinkability;
+proving methods (zero-knowledge proofs or a common binding signed by the wallet unit) are not standard yet. The hosted verifier
+(Tamga Verify) therefore verifies **one credential** per presentation (an optional pseudonym comes with it and is only a
+site-specific identifier, carrying no attribute about the person); if a policy has a second credential the presentation stays
+closed. A relying party combining several credentials on its own server should know this limit: it should not assume that the
+credentials in one response belong to the same person.
 
 # 2. Verification result
 

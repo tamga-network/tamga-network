@@ -4,7 +4,7 @@ title: "Ek B — Tamga Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 summary: >
   Tamga ağına katılan her rolün (işletmeci ve liste işletmecisi, kayıt kurumu, belge veren, yetkili kaynak, cüzdan
   sağlayıcısı, doğrulayıcı, belge sahibi) uyması gereken bağlayıcı, numaralı kurallar. Her kural bir değişmezden ya da
@@ -104,7 +104,7 @@ Bugün: ağı Tamga Network (kurulacak vakıf) adına bir geçici işletmeci iş
 | RB-REG-04 | Belge türü yetkisi bir izin listesiyle verilir, varsayılan kapalıdır; zaman pencereli verilir; belge türü rulebook'unun "kim belge verebilir" kuralına göre verilir. |
 | RB-REG-05 | Kayıt sınıfı ve güvence (`class`, `assurance`) katılım kapısına göre yazılır; `category` işareti yalnızca kamu ve nitelikli sınıf için. |
 | RB-REG-06 | Sertifika değişikliği **MUST** yeni `issuer_id` ve `successor_id` ile kaydedilmek; eski kayıt silinmez. |
-| RB-REG-07 | Çıkarma ya da çıkış **MUST NOT** mevcut kayıtları ve belgeleri geçersiz kılmak; `REVOKED` durumundaki belge verenin iptal listesini halef yayınlayabilir. |
+| RB-REG-07 | Çıkarma ya da çıkış **MUST NOT** mevcut kayıtları ve belgeleri geçersiz kılmak; `REVOKED` durumundaki belge verenin iptal listesini halef yayınlayabilir. Askı farklıdır: askıdaki belge verenin belgeleri askı sürdükçe **MUST NOT** kabul edilmek; askı kalkınca askıdan öncekiler yeniden kabul edilir ([[ADR-0088]]). |
 | RB-REG-08 | Doğrulayıcı kaydı bir kapsamla yapılır; kapsam veri azaltma incelemesinden geçer (**SHOULD**). |
 | RB-REG-09 | Kayıt değişikliği **SHOULD** en geç 5 iş gününde yapılmak. |
 

@@ -4,7 +4,7 @@ title: "Contact Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Kimlik servisinin verdiği iki iletişim belgesinin (doğrulanmış e-posta adresi `urn:tamga:contact:EmailAddress:1`, doğrulanmış
   telefon numarası `urn:tamga:contact:PhoneNumber:1`) rulebook'u, AB Attestation Rulebook şablonunun bölüm yapısıyla: öznitelikler
@@ -94,7 +94,9 @@ Yok.
 
 ## 2.6 İsteğe bağlı üst veri
 
-Yok.
+| Veri tanımlayıcısı | Tanım | Veri türü | Örnek değer |
+|---|---|---|---|
+| `nbf` | Teknik geçerliliğin başlangıcı; belge veren verme anında yazar: değer `iat` ile aynı (saat başına yuvarlanmış) andır, ileri tarihli belgede geçerliliğin başladığı andır. Başlangıcı gelmemiş belge cüzdanda "henüz geçerli değil" olarak saklanır ve gösterilemez; doğrulayıcı reddeder | NumericDate | `1791763200` |
 
 ## 2.7 Koşullu üst veri
 

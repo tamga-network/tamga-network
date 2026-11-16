@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-RB-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-16 · **Licence** CC BY 4.0
+**Document** FW-RB-0002 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -20,9 +20,9 @@ issuance conditions, identity proofing level, verification policies, trust ancho
 (ELM v3 / ISCED-F / EQF) and EU compliance. It branches from the Tamga [[t:rulebook|Rulebook]] ([[FW-RB-0001]]); the technical
 schema is in SPEC-SCHEMA-0002.
 
-| Version | Date | Description |
-| --- | --- | --- |
-| 1.0.0 | 2026-10-16 | Current text of Tamga ARF 1.0, in the section structure of the EU Attestation Rulebook template (version 1.5). |
+| Version | Date       | Description                                                                                                    |
+| ------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| 1.0.0   | 2026-10-16 | Current text of Tamga ARF 1.0, in the section structure of the EU Attestation Rulebook template (version 1.5). |
 
 **Scheme owner:** Tamga Network (today the provisional operator). **Feedback:** <https://github.com/tamga-network/tamga-network/issues>
 
@@ -32,10 +32,10 @@ schema is in SPEC-SCHEMA-0002.
 
 This rulebook covers two credential types:
 
-| Type | `vct` | Catalogue |
-| --- | --- | --- |
+| Type                | `vct`                               | Catalogue                                              |
+| ------------------- | ----------------------------------- | ------------------------------------------------------ |
 | Student certificate | `urn:tamga:edu:StudentCredential:1` | `schemas.tamga.network/v1/edu/StudentCredential/1.0.0` |
-| Diploma | `urn:tamga:edu:DiplomaCredential:1` | `schemas.tamga.network/v1/edu/DiplomaCredential/1.0.0` |
+| Diploma             | `urn:tamga:edu:DiplomaCredential:1` | `schemas.tamga.network/v1/edu/DiplomaCredential/1.0.0` |
 
 Both extend the root type `urn:tamga:core:TamgaBaseCredential:1`. **Purpose:** a higher education institution issues enrolment
 and graduation information to the person's wallet as a selectively disclosable, verifiable credential; an employer, a discount
@@ -63,13 +63,13 @@ Terms are in Annex D; EU terms have their meaning in ARF Annex 1.
 
 ### 2.0 EU requirements and where they are met
 
-| Requirement | Where |
-| --- | --- |
-| Indication that it is an EAA (ARB_12) | §2.1 — `category` for issuers in the qualified or public class; no `category` in a non-qualified EAA, and the template's value `eaa:eu:non-qualified` is not used (ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01; [[ADR-0047]] K6) |
-| Identity of the issuer, Annex V b (ARB_15) | `iss` and the `x5c` leaf certificate in the signature header; also `awarding_body_name`, `awarding_body_id`, `awarding_body_country` |
-| Identity of the subject, Annex V c (ARB_17) | `family_name`, `given_name`, `birth_date`; deliberately no national identity number (RB-SCH-04) |
-| Start and end of validity, Annex V e (ARB_19) | `iat`, `exp`; the diploma has no `exp` (a credential without expiry) |
-| Location of the trust anchor, Annex V h (ARB_21) | No separate attribute, and none is added; the location is the issuer's certificate chain and the Tamga trust lists, the lists are the single source of trust anchors (§5; [[ADR-0047]] K7) |
+| Requirement                                      | Where                                                                                                                                                                                                                        |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Indication that it is an EAA (ARB_12)            | §2.1 — `category` for issuers in the qualified or public class; no `category` in a non-qualified EAA, and the template's value `eaa:eu:non-qualified` is not used (ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01; [[ADR-0047]] K6) |
+| Identity of the issuer, Annex V b (ARB_15)       | `iss` and the `x5c` leaf certificate in the signature header; also `awarding_body_name`, `awarding_body_id`, `awarding_body_country`                                                                                         |
+| Identity of the subject, Annex V c (ARB_17)      | `family_name`, `given_name`, `birth_date`; deliberately no national identity number (RB-SCH-04)                                                                                                                              |
+| Start and end of validity, Annex V e (ARB_19)    | `iat`, `exp`; the diploma has no `exp` (a credential without expiry)                                                                                                                                                         |
+| Location of the trust anchor, Annex V h (ARB_21) | No separate attribute, and none is added; the location is the issuer's certificate chain and the Tamga trust lists, the lists are the single source of trust anchors (§5; [[ADR-0047]] K7)                                   |
 
 ### 2.1 Introduction and legal category
 
@@ -85,39 +85,39 @@ ETSI TS 119 472-1 (EAA-5.2.2.1-01).
 
 ### 2.2 Mandatory attributes
 
-| Data identifier | Definition | Data type | Example value | Student | Diploma |
-| --- | --- | --- | --- | --- | --- |
-| `family_name` | Family name | string (1–200) | `Yılmaz` | ✓ | ✓ |
-| `given_name` | Given name | string (1–200) | `Ayşe` | ✓ | ✓ |
-| `birth_date` | Date of birth | date (YYYY-MM-DD) | `2001-03-09` | ✓ | ✓ |
-| `awarding_body_name` | Official name of the institution | multilingual string | `{"en-US":"Example University"}` | ✓ | ✓ |
-| `awarding_body_id` | Institution identifier (ELM; not the `issuer_id`) | string (1–64) | `TR-ORNEK-UNI` | ✓ | ✓ |
-| `awarding_body_country` | Country of the institution | ISO 3166-1 alpha-2 | `TR` | ✓ | ✓ |
-| `isced_f_code` | Field code (ISCED-F 2013, 2–4 digits) | string | `0613` | ✓ | ✓ |
-| `student_status` | Enrolment status; never "graduated" | `ACTIVE` \| `ON_LEAVE` | `ACTIVE` | ✓ | — |
-| `enrollment_year` | Year of enrolment | integer | `2022` | ✓ | — |
-| `study_level` | Level (EQF 5–8) | integer | `6` | ✓ | — |
-| `programme_title` | Programme name | multilingual string | `{"en-US":"Computer Engineering"}` | ✓ | — |
-| `is_enrolled` | Derived: enrolled student (`true`) | boolean | `true` | ✓ | — |
-| `qualification_title` | Name of the qualification | multilingual string | `{"en-US":"Bachelor's degree"}` | — | ✓ |
-| `eqf_level` | European Qualifications Framework level (5–8) | integer | `6` | — | ✓ |
-| `awarding_date` | Date of graduation | date | `2026-06-30` | — | ✓ |
-| `is_graduate` | Derived, constant `true` | constant `true` | `true` | — | ✓ |
+| Data identifier         | Definition                                        | Data type              | Example value                      | Student | Diploma |
+| ----------------------- | ------------------------------------------------- | ---------------------- | ---------------------------------- | ------- | ------- |
+| `family_name`           | Family name                                       | string (1–200)         | `Yılmaz`                           | ✓       | ✓       |
+| `given_name`            | Given name                                        | string (1–200)         | `Ayşe`                             | ✓       | ✓       |
+| `birth_date`            | Date of birth                                     | date (YYYY-MM-DD)      | `2001-03-09`                       | ✓       | ✓       |
+| `awarding_body_name`    | Official name of the institution                  | multilingual string    | `{"en-US":"Example University"}`   | ✓       | ✓       |
+| `awarding_body_id`      | Institution identifier (ELM; not the `issuer_id`) | string (1–64)          | `TR-ORNEK-UNI`                     | ✓       | ✓       |
+| `awarding_body_country` | Country of the institution                        | ISO 3166-1 alpha-2     | `TR`                               | ✓       | ✓       |
+| `isced_f_code`          | Field code (ISCED-F 2013, 2–4 digits)             | string                 | `0613`                             | ✓       | ✓       |
+| `student_status`        | Enrolment status; never "graduated"               | `ACTIVE` \| `ON_LEAVE` | `ACTIVE`                           | ✓       | —       |
+| `enrollment_year`       | Year of enrolment                                 | integer                | `2022`                             | ✓       | —       |
+| `study_level`           | Level (EQF 5–8)                                   | integer                | `6`                                | ✓       | —       |
+| `programme_title`       | Programme name                                    | multilingual string    | `{"en-US":"Computer Engineering"}` | ✓       | —       |
+| `is_enrolled`           | Derived: enrolled student (`true`)                | boolean                | `true`                             | ✓       | —       |
+| `qualification_title`   | Name of the qualification                         | multilingual string    | `{"en-US":"Bachelor's degree"}`    | —       | ✓       |
+| `eqf_level`             | European Qualifications Framework level (5–8)     | integer                | `6`                                | —       | ✓       |
+| `awarding_date`         | Date of graduation                                | date                   | `2026-06-30`                       | —       | ✓       |
+| `is_graduate`           | Derived, constant `true`                          | constant `true`        | `true`                             | —       | ✓       |
 
 ### 2.3 Optional attributes
 
-| Data identifier | Definition | Data type | Example value | Student | Diploma |
-| --- | --- | --- | --- | --- | --- |
-| `faculty_name` | Faculty | multilingual string | `{"en-US":"Faculty of Engineering"}` | ✓ | — |
-| `expected_graduation_year` | Expected year of graduation | integer | `2026` | ✓ | — |
-| `enrollment_date` | Date of enrolment | date | `2022-09-19` | ✓ | — |
-| `credit_points` | ECTS credits | number (0–1000) | `240` | ✓ | ✓ |
-| `nqf_level` | National qualifications level (TYÇ) | string (≤ 16) | `6` | — | ✓ |
-| `mode_of_study` | Mode of study | `FULL_TIME` \| `PART_TIME` \| `DISTANCE` \| `BLENDED` | `FULL_TIME` | — | ✓ |
-| `grade` | Grade | string (≤ 32) | `3.41` | — | ✓ |
-| `grading_scheme` | Grading scheme | multilingual string | `{"en-US":"4-point scale"}` | — | ✓ |
-| `thesis_title` | Thesis title | multilingual string | `{"en-US":"…"}` | — | ✓ |
-| `graduated_before` | Derived: graduated before this year | integer | `2027` | — | ✓ |
+| Data identifier            | Definition                          | Data type                                             | Example value                        | Student | Diploma |
+| -------------------------- | ----------------------------------- | ----------------------------------------------------- | ------------------------------------ | ------- | ------- |
+| `faculty_name`             | Faculty                             | multilingual string                                   | `{"en-US":"Faculty of Engineering"}` | ✓       | —       |
+| `expected_graduation_year` | Expected year of graduation         | integer                                               | `2026`                               | ✓       | —       |
+| `enrollment_date`          | Date of enrolment                   | date                                                  | `2022-09-19`                         | ✓       | —       |
+| `credit_points`            | ECTS credits                        | number (0–1000)                                       | `240`                                | ✓       | ✓       |
+| `nqf_level`                | National qualifications level (TYÇ) | string (≤ 16)                                         | `6`                                  | —       | ✓       |
+| `mode_of_study`            | Mode of study                       | `FULL_TIME` \| `PART_TIME` \| `DISTANCE` \| `BLENDED` | `FULL_TIME`                          | —       | ✓       |
+| `grade`                    | Grade                               | string (≤ 32)                                         | `3.41`                               | —       | ✓       |
+| `grading_scheme`           | Grading scheme                      | multilingual string                                   | `{"en-US":"4-point scale"}`          | —       | ✓       |
+| `thesis_title`             | Thesis title                        | multilingual string                                   | `{"en-US":"…"}`                      | —       | ✓       |
+| `graduated_before`         | Derived: graduated before this year | integer                                               | `2027`                               | —       | ✓       |
 
 ### 2.4 Conditional attributes
 
@@ -125,24 +125,28 @@ None.
 
 ### 2.5 Mandatory metadata
 
-| Data identifier | Definition | Data type | Example value | Student | Diploma |
-| --- | --- | --- | --- | --- | --- |
-| `iss` | The issuer's address | URI | `https://issuer.tamga.network/ornek-uni` | ✓ | ✓ |
-| `vct`, `vct#integrity` | Type and digest of the type definition | URN, `sha256-…` | `urn:tamga:edu:DiplomaCredential:1` | ✓ | ✓ |
-| `iat` | Moment of issuance | NumericDate | `1782777600` | ✓ | ✓ |
-| `cnf` | The wallet's device key | JWK | — | ✓ | ✓ |
-| `exp` | End of validity; `exp − iat` ≤ 90 days | NumericDate | `1790553600` | ✓ | — |
-| `status` | Status list reference `status_list {idx, uri}` | object | `{"status_list":{"idx":9921,"uri":"https://status.tamga.network/2b8e01d4"}}` | — | ✓ |
+| Data identifier        | Definition                                     | Data type       | Example value                                                                | Student | Diploma |
+| ---------------------- | ---------------------------------------------- | --------------- | ---------------------------------------------------------------------------- | ------- | ------- |
+| `iss`                  | The issuer's address                           | URI             | `https://issuer.tamga.network/ornek-uni`                                     | ✓       | ✓       |
+| `vct`, `vct#integrity` | Type and digest of the type definition         | URN, `sha256-…` | `urn:tamga:edu:DiplomaCredential:1`                                          | ✓       | ✓       |
+| `iat`                  | Moment of issuance                             | NumericDate     | `1782777600`                                                                 | ✓       | ✓       |
+| `cnf`                  | The wallet's device key                        | JWK             | —                                                                            | ✓       | ✓       |
+| `exp`                  | End of validity; `exp − iat` ≤ 90 days         | NumericDate     | `1790553600`                                                                 | ✓       | —       |
+| `status`               | Status list reference `status_list {idx, uri}` | object          | `{"status_list":{"idx":9921,"uri":"https://status.tamga.network/2b8e01d4"}}` | —       | ✓       |
 
 ### 2.6 Optional metadata
 
-None. The student certificate has **no** `status` and the diploma **no** `exp` (§6).
+| Data identifier | Definition                                                                                                                                                                                                                                                                                                                            | Data type   | Example value |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------- |
+| `nbf`           | Technical start of validity; the issuer writes it at issuance: the value is the same moment as `iat` (rounded down to the hour), or the moment validity starts for a future-dated credential. A credential whose start has not been reached is stored in the wallet as "not yet valid" and cannot be presented; a verifier rejects it | NumericDate | `1791763200`  |
+
+The student certificate has **no** `status` and the diploma **no** `exp` (§6).
 
 ### 2.7 Conditional metadata
 
-| Data identifier | Condition | Data type | Example value |
-| --- | --- | --- | --- |
-| `category` | Only for issuers whose registered class is qualified or public, with the registered value (§2.1) | `urn:tamga:eaa:qualified` \| `urn:tamga:eaa:pub` | `urn:tamga:eaa:pub` |
+| Data identifier | Condition                                                                                        | Data type                                        | Example value       |
+| --------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ | ------------------- |
+| `category`      | Only for issuers whose registered class is qualified or public, with the registered value (§2.1) | `urn:tamga:eaa:qualified` \| `urn:tamga:eaa:pub` | `urn:tamga:eaa:pub` |
 
 ## 3. Encoding
 
@@ -160,15 +164,15 @@ The credentials are issued as [[t:SD-JWT-VC]] following the SD-JWT VC profile of
 **MAY** = `allowed`, **MUST NOT** = `never` (ARB_30). The reference issuance service also issues the `allowed` attributes as
 separate disclosures.
 
-| Data identifier | Claim name | Encoding | Reference / notes | Disclosable |
-| --- | --- | --- | --- | --- |
-| `family_name`, `given_name` | same | string | OpenID Connect Core §5.1 (IANA) | MUST |
-| `birth_date` | `birth_date` | string, YYYY-MM-DD | ELM `dateOfBirth`; Tamga-specific name | MUST |
-| `grade`, `thesis_title` | same | string / multilingual object | Tamga-specific (ELM mapping) | MUST |
-| `awarding_body_name`, `awarding_body_id`, `awarding_body_country` | same | multilingual object / string | Tamga-specific (ELM mapping) | MAY |
-| Student: `student_status`, `enrollment_year`, `study_level`, `programme_title`, `isced_f_code`, `faculty_name`, `expected_graduation_year`, `credit_points`, `enrollment_date`, `is_enrolled` | same | types in §2 | Tamga-specific (ELM mapping) | MAY |
-| Diploma: `qualification_title`, `eqf_level`, `nqf_level`, `isced_f_code`, `awarding_date`, `mode_of_study`, `credit_points`, `grading_scheme`, `is_graduate`, `graduated_before` | same | types in §2 | Tamga-specific (ELM mapping) | MAY |
-| `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status`, `category` | same | — | transport profile | MUST NOT |
+| Data identifier                                                                                                                                                                               | Claim name   | Encoding                     | Reference / notes                      | Disclosable |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------- | -------------------------------------- | ----------- |
+| `family_name`, `given_name`                                                                                                                                                                   | same         | string                       | OpenID Connect Core §5.1 (IANA)        | MUST        |
+| `birth_date`                                                                                                                                                                                  | `birth_date` | string, YYYY-MM-DD           | ELM `dateOfBirth`; Tamga-specific name | MUST        |
+| `grade`, `thesis_title`                                                                                                                                                                       | same         | string / multilingual object | Tamga-specific (ELM mapping)           | MUST        |
+| `awarding_body_name`, `awarding_body_id`, `awarding_body_country`                                                                                                                             | same         | multilingual object / string | Tamga-specific (ELM mapping)           | MAY         |
+| Student: `student_status`, `enrollment_year`, `study_level`, `programme_title`, `isced_f_code`, `faculty_name`, `expected_graduation_year`, `credit_points`, `enrollment_date`, `is_enrolled` | same         | types in §2                  | Tamga-specific (ELM mapping)           | MAY         |
+| Diploma: `qualification_title`, `eqf_level`, `nqf_level`, `isced_f_code`, `awarding_date`, `mode_of_study`, `credit_points`, `grading_scheme`, `is_graduate`, `graduated_before`              | same         | types in §2                  | Tamga-specific (ELM mapping)           | MAY         |
+| `iss`, `vct`, `vct#integrity`, `iat`, `exp`, `cnf`, `status`, `category`                                                                                                                      | same         | —                            | transport profile                      | MUST NOT    |
 
 A multilingual string is an object from a language tag (`tr-TR`, `en-US` …) to text (at least one language; every common schema
 carries at least `tr-TR` and `en-US` display information, RB-SCH-03).
@@ -217,14 +221,14 @@ high-risk transaction that needs face matching, the identity credential or a PID
 
 ### 4.2 Issuance policy: who issues
 
-| Requirement | Student certificate | Diploma |
-| --- | --- | --- |
-| Issuer category | `EDUCATION` | `EDUCATION` |
-| Minimum accreditation | I2 (under contract) | I2; **I3 SHOULD** |
-| Type authorisation | This `vct` in `schema_authorizations` (time-windowed allow-list) | same |
-| Legal authority | The authority to issue diplomas and student certificates lies outside the network (YÖK); the registrar **records it, does not approve it** | same |
-| Authentic source | The institution's student information system (OBS) or its contracted connection | same |
-| Key | Under the institution's control; at I3 in an HSM or e-seal | same |
+| Requirement           | Student certificate                                                                                                                        | Diploma           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- |
+| Issuer category       | `EDUCATION`                                                                                                                                | `EDUCATION`       |
+| Minimum accreditation | I2 (under contract)                                                                                                                        | I2; **I3 SHOULD** |
+| Type authorisation    | This `vct` in `schema_authorizations` (time-windowed allow-list)                                                                           | same              |
+| Legal authority       | The authority to issue diplomas and student certificates lies outside the network (YÖK); the registrar **records it, does not approve it** | same              |
+| Authentic source      | The institution's student information system (OBS) or its contracted connection                                                            | same              |
+| Key                   | Under the institution's control; at I3 in an HSM or e-seal                                                                                 | same              |
 
 An institution cannot authorise itself; authorisation comes with the registrar's entry.
 
@@ -242,11 +246,11 @@ An institution cannot authorise itself; authorisation comes with the registrar's
 
 The level is not written into the [[t:credential]]; it is a prerequisite of the type.
 
-| Type | Minimum level | Accepted routes |
-| --- | --- | --- |
-| Student certificate | **T1** | offer by email and transaction code by SMS; offer on the OBS screen |
-| Diploma | **T2** | offer after multi-factor sign-in to OBS; the institution's registration desk (in person); licensed remote identity proofing |
-| Additional option | T3 | Qualified electronic signature or mobile signature — only with the authorisation code flow or in person; **forbidden** with the pre-authorised flow |
+| Type                | Minimum level | Accepted routes                                                                                                                                     |
+| ------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Student certificate | **T1**        | offer by email and transaction code by SMS; offer on the OBS screen                                                                                 |
+| Diploma             | **T2**        | offer after multi-factor sign-in to OBS; the institution's registration desk (in person); licensed remote identity proofing                         |
+| Additional option   | T3            | Qualified electronic signature or mobile signature — only with the authorisation code flow or in person; **forbidden** with the pre-authorised flow |
 
 **No diploma is issued** with email and SMS alone.
 
@@ -291,12 +295,12 @@ The level is not written into the [[t:credential]]; it is a prerequisite of the 
 Verification follows the canonical pipeline in the specification (RB-RP-03): freshness of the trust source, signature, issuer, type
 authorisation, revocation, wallet binding. Type-specific rules:
 
-| Policy | Required |
-| --- | --- |
+| Policy                                      | Required                                                                                                                                                                                                                                                        |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `job-application-degree` (graduation check) | `vct = DiplomaCredential:1`; issuer in the `EDUCATION` category and authorised for this type; class at least I2 (**I3 SHOULD**); not revoked; `is_graduate = true`, `eqf_level ≥ 6`; there is no holder assurance attribute — the diploma type is bound with T2 |
-| `student-discount` | `vct = StudentCredential:1`; issuer at least I2; not expired; only `is_enrolled = true` |
-| `campus-access` | Same as `student-discount` plus the access pass registration; time-limited consent of at most 6 months |
-| High-risk (public sector, banks) | The above plus face matching with the identity credential or a PID (the verifier's responsibility) |
+| `student-discount`                          | `vct = StudentCredential:1`; issuer at least I2; not expired; only `is_enrolled = true`                                                                                                                                                                         |
+| `campus-access`                             | Same as `student-discount` plus the access pass registration; time-limited consent of at most 6 months                                                                                                                                                          |
+| High-risk (public sector, banks)            | The above plus face matching with the identity credential or a PID (the verifier's responsibility)                                                                                                                                                              |
 
 Policy names are those of the reference verifier. The result has three values; `INDETERMINATE` is not acceptance; the user is told
 "could not be verified", not "invalid".
@@ -325,21 +329,21 @@ At issuance the wallet checks against the same entry that the institution is aut
 
 ### 6.1 Validity policy
 
-| Topic | Student certificate | Diploma |
-| --- | --- | --- |
-| Validity | At most 90 days; before expiry the copies in the wallet refresh themselves with a refresh token ([[ADR-0023]]) and the institution re-reads its record | No expiry (no `exp`) |
-| Institution suspended | No new credentials; existing credentials stay valid until they expire | No new credentials; old diplomas stay valid according to their date of issuance |
-| Certificate renewal | Old credentials are verified with the old `issuer_id` entry | same |
+| Topic                 | Student certificate                                                                                                                                    | Diploma                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| Validity              | At most 90 days; before expiry the copies in the wallet refresh themselves with a refresh token ([[ADR-0023]]) and the institution re-reads its record | No expiry (no `exp`)                                                            |
+| Institution suspended | No new credentials; existing credentials stay valid until they expire                                                                                  | No new credentials; old diplomas stay valid according to their date of issuance |
+| Certificate renewal   | Old credentials are verified with the old `issuer_id` entry                                                                                            | same                                                                            |
 
 ### 6.2 Revocation
 
-| Topic | Student certificate | Diploma |
-| --- | --- | --- |
-| Revocable | No — the short lifetime (≤ 90 days) replaces revocation; an unexpired credential that is no longer accurate is an accepted risk | **Yes, mandatory** — Token Status List (the EU Attestation Status List), `status.status_list {uri, idx}` |
-| Revocation conditions | — (not re-issued) | Revocation of the diploma (forgery, court decision), incorrect credential (by re-issuance), withdrawal of consent, report of a device breach, the person's objection to the "your credential was added to a wallet" notice, a change of the disclosure rule — details in [[FW-POL-0001]] §3 |
-| Suspension | — | `SUSPENDED` (2-bit value) — during a review; the schema carries `suspension_allowed: true` ([[ADR-0048]] K2) |
-| Publication | — | Fixed interval (today 2 minutes), even without changes; a list is valid for 6 hours; no emergency publication; revocation takes effect within minutes |
-| List address (ARB_24a) | — | `status.status_list.uri` in the credential; under `https://status.tamga.network/` for the issuance service hosted by the network, on the institution's status server for an institution running its own service; the address is opaque (RB-AP-18) |
+| Topic                  | Student certificate                                                                                                             | Diploma                                                                                                                                                                                                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Revocable              | No — the short lifetime (≤ 90 days) replaces revocation; an unexpired credential that is no longer accurate is an accepted risk | **Yes, mandatory** — Token Status List (the EU Attestation Status List), `status.status_list {uri, idx}`                                                                                                                                                                                    |
+| Revocation conditions  | — (not re-issued)                                                                                                               | Revocation of the diploma (forgery, court decision), incorrect credential (by re-issuance), withdrawal of consent, report of a device breach, the person's objection to the "your credential was added to a wallet" notice, a change of the disclosure rule — details in [[FW-POL-0001]] §3 |
+| Suspension             | —                                                                                                                               | `SUSPENDED` (2-bit value) — during a review; the schema carries `suspension_allowed: true` ([[ADR-0048]] K2)                                                                                                                                                                                |
+| Publication            | —                                                                                                                               | Fixed interval (today 2 minutes), even without changes; a list is valid for 6 hours; no emergency publication; revocation takes effect within minutes                                                                                                                                       |
+| List address (ARB_24a) | —                                                                                                                               | `status.status_list.uri` in the credential; under `https://status.tamga.network/` for the issuance service hosted by the network, on the institution's status server for an institution running its own service; the address is opaque (RB-AP-18)                                           |
 
 ## 7. Compliance
 
@@ -353,14 +357,14 @@ At issuance the wallet checks against the same entry that the institution is aut
 
 ### 7.2 Known differences and open decisions
 
-| Topic | Status |
-| --- | --- |
+| Topic                                             | Status                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Making I3 accreditation mandatory for the diploma | **Deferred decision** ([[ADR-0047]] K9): today the minimum is I2, I3 **SHOULD**. Trigger (whichever comes first): the education pilot's final report, the first diploma application from an institution other than the first institution, or a state's education authority joining the network |
-| ELM JSON-LD export | Open topic for EU education interoperability |
-| Trust anchor location in the credential (ARB_21) | **Decision (2026-10-12, [[ADR-0047]] K7):** no field is added; a location in the credential would be the issuer's own claim, and a verifier takes the anchor only from a list it chose itself |
-| Indication of a non-qualified EAA (ARB_12) | **Decision (2026-10-12, [[ADR-0047]] K6):** not written; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires that a non-qualified EAA has no `category` |
-| `nbf` and `exp` in the diploma | ETSI TS 119 472-1 requires both; Tamga does not write `nbf` today and the diploma has no expiry |
-| Attestation Revocation List | Tamga issuers publish the Status List (one is enough under EU VCR_11); the verifier and the wallet core also verify the identifier list (packages 0.5.0; [[FW-POL-0001]] §8) |
+| ELM JSON-LD export                                | Open topic for EU education interoperability                                                                                                                                                                                                                                                   |
+| Trust anchor location in the credential (ARB_21)  | **Decision (2026-10-12, [[ADR-0047]] K7):** no field is added; a location in the credential would be the issuer's own claim, and a verifier takes the anchor only from a list it chose itself                                                                                                  |
+| Indication of a non-qualified EAA (ARB_12)        | **Decision (2026-10-12, [[ADR-0047]] K6):** not written; ETSI TS 119 472-1 V1.2.1 EAA-5.2.2.1-01 requires that a non-qualified EAA has no `category`                                                                                                                                           |
+| `nbf` and `exp` in the diploma                    | ETSI TS 119 472-1 requires both; Tamga writes `nbf` at issuance (§2.6) and the diploma has no expiry                                                                                                                                                                                           |
+| Attestation Revocation List                       | Tamga issuers publish the Status List (one is enough under EU VCR_11); the verifier and the wallet core also verify the identifier list (packages 0.5.0; [[FW-POL-0001]] §8)                                                                                                                   |
 
 ## 8. Semantic basis and versioning
 

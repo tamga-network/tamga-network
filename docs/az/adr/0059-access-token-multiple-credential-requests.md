@@ -91,3 +91,5 @@ ZK nüsxəsi giriş tokeni ([[ADR-0044]]) və bilet (tədbir başına tək sən�
 
 **Accepted — 2026-10-21.** Layihə rəhbərliyinin təsdiqi ilə (OpenID uyğunluq öz-testi tapıntısı G7; Aİ istinad sənəd verəni ilə
 eyni yanaşma). DECISIONS: D-PROTO-3.
+
+2026-11-16: **AT2 [[ADR-0089]] ilə konfiqurasiya üzrə oxunur** (D-ID-17) — şəxsiyyət sənədinin SD-JWT və mdoc konfiqurasiyalarında token başına ayrı-ayrılıqda ən çox 10 nüsxə; şəxsi sahələr hər ikisinin haqqı bitəndə və ya tokenin ömrü bitəndə silinir.

@@ -4,7 +4,7 @@ title: "Join the network as an institution"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-05
+last_updated: 2026-11-16
 summary: >
   How an institution joins Tamga Network as an issuer, from first contact to live, step by step: the sandbox trial, the
   application file and the EU common registration data (checklist), keys and the certificate signing request (CSR), the
@@ -224,7 +224,7 @@ refuse the credential from then on.
 | Status of the institution's entry | What happens |
 |---|---|
 | `ACTIVE` | May issue; its credentials are accepted |
-| `SUSPENDED` | Temporarily may not issue; credentials issued while suspended are not accepted, earlier ones are unaffected. It becomes active again once the issue is resolved |
+| `SUSPENDED` | Temporarily may not issue; while the suspension lasts none of the institution's credentials is accepted (earlier ones included). It becomes active again once the issue is resolved; credentials issued before the suspension are then accepted again, those issued during it never ([[ADR-0088]]) |
 | `RETIRED` | Stopped issuing (voluntary exit); credentials issued earlier remain accepted |
 | `REVOKED` | Entry closed; if the key was compromised, credentials issued from the stated date (`invalidates_from`) on are dropped. A successor (`successor_id`) may take the institution's place |
 

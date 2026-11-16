@@ -4,7 +4,7 @@ title: "İptal Politikası"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Tamga ağındaki belge verenlerin (kimlik servisi ve kurumlar) verdiği belgelerin hangi koşullarda iptal edildiğini, kimin
   iptal isteyebileceğini, askıya almayı, iptal listesinin nasıl yayımlandığını ve iptalin ne kadar sürede etkili olduğunu tek
@@ -91,8 +91,10 @@ Bu politika bütün belge verenler için ortaktır. Kurum, kendi belgeleri için
 
 ## 3.5 İptal sebebi olmayanlar
 
-- **Belge verenin askıya alınması ya da çıkarılması** eski belgeleri geçersiz kılmaz; yalnız yeni belge verilmesi durur. Denetim
-  belgenin verildiği ana (`iat`) göre yapılır (RB-REG-07, RB-ENF-02, RB-RP-03).
+- **Belge verenin çıkarılması** eski belgeleri geçersiz kılmaz; yalnız yeni belge verilmesi durur. Denetim belgenin verildiği
+  ana (`iat`) göre yapılır (RB-REG-07, RB-ENF-02, RB-RP-03).
+- **Belge verenin askıya alınması** belgeleri iptal etmez: belgelerin iptal listesindeki durumu değişmez. Ama askı sürdükçe
+  kurumun belgeleri doğrulamada kabul edilmez; askı kalkınca askıdan önce verilmiş belgeler yeniden kabul edilir ([[ADR-0088]]).
 - **Belge verenin sertifika yenilemesi** eski belgeleri etkilemez; onlar eski `issuer_id` kaydıyla doğrulanır.
 - **Belge türünün `DEPRECATED` olması** belgeleri iptal etmez; tür doğrulanabilir kalır (RB-SCH-06).
 

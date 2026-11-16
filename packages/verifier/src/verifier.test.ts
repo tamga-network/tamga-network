@@ -7,7 +7,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { issueSdJwtVc, pemIssuerSigner } from "@tamga-network/sd-jwt";
 import { signStatusListToken, StatusBitstring, MIN_CAPACITY, StatusValue } from "@tamga-network/sd-jwt";
-import { loadTrustSourceFromDir, pemToDer, x509HashClientId, type ListTrustSource } from "@tamga-network/trust";
+import {
+  loadTrustSourceFromDir,
+  pemToDer,
+  x509HashClientId,
+  type ListTrustSource,
+  type TrustSource,
+} from "@tamga-network/trust";
 import { SoftwareKeyProvider, MemoryKeyStore, presentSdJwt } from "@tamga-network/wallet-core";
 import {
   verifyPresentation,
@@ -182,6 +188,44 @@ describe.skipIf(!ready)("verifyPresentation (dev PKI + dist)", () => {
     const none = await verifyPresentation({ ...base });
     expect(none.result.failed_step).toBe("A1");
     expect(none.result.failed_reason).toMatch(/aud required/);
+  });
+  it("ADR-0088 SI1: kurum şu an askıdaysa C1 RED, neden 'issuer suspended'; askı kalkınca aynı sunum kabul", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { combined, ref } = await issue(15, now);
+    const cache = new MemoryStatusCache();
+    cache.set(STATUS_URI, await statusToken(now), now);
+    const pres = await presentSdJwt({
+      combined,
+      discloseClaims: ["is_graduate", "eqf_level", "qualification_title", "awarding_body_name"],
+      keys,
+      keyRef: ref,
+      aud: AUD,
+      nonce: "n-susp",
+      iat: now,
+    });
+    // askı TrustSource'un sorusudur (liste kuralı packages/trust testlerinde); burada doğrulayıcının sonucu ve nedeni
+    const suspended = Object.assign(Object.create(trust) as TrustSource, {
+      isCredentialAcceptable: () => "NO" as const,
+      isIssuerSuspended: () => "YES" as const,
+    });
+    const base = {
+      rp: "none" as const,
+      presentation: pres,
+      aud: AUD,
+      nonce: "n-susp",
+      policy,
+      policyCredentialId: "diploma",
+      statusCache: cache,
+      rootCertsDer: rootDer,
+      now: epochSeconds(now),
+    };
+    const r = (await verifyPresentation({ ...base, trust: suspended })).result;
+    expect(r).toMatchObject({ outcome: "REJECTED", failed_step: "C1", failed_reason: "issuer suspended" });
+    const other = Object.assign(Object.create(trust) as TrustSource, { isCredentialAcceptable: () => "NO" as const });
+    expect((await verifyPresentation({ ...base, trust: other })).result.failed_reason).toBe(
+      "issuer not acceptable at iat",
+    );
+    expect((await verifyPresentation({ ...base, trust })).result.outcome).toBe("ACCEPTED");
   });
   it("D3: iptal listesini kurumun kayıtlı iptal anahtarı dışında bir anahtar imzalamışsa RED (S11)", async () => {
     const now = Math.floor(Date.now() / 1000);

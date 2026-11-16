@@ -5,7 +5,7 @@ status: Active
 review_status: Completed
 version: 1.0.0
 created: 2026-11-04
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 summary: >
   ADR-0009 K7, imzalı listelerden zincire geçişi liste geçmişinin kontratlara yeniden oynatılmasına ve eşdeğerlik testine bağlar.
   Bugünkü kontratlarla bu geçmiş birebir oynatılamaz: tarihler blok zamanından gelir, sert iptal yoktur, şemanın tek içerik özeti
@@ -142,7 +142,7 @@ dağıtım geçersiz sayılır. Açık pencere, yürütücü anahtarının geçm
 |---|---|---|---|---|---|
 | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | `ACTIVE` | |
 | `ROLLING_OVER` | `ACTIVE` + halef olayı | — | — | — | Liste C1'de etkin sayar |
-| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Yalnız askı süresinde verilen belge düşer; askıdan önceki belgeler geçerlidir (liste kuralı) |
+| `SUSPENDED` | `SUSPENDED` | `SUSPENDED` | — | `SUSPENDED` | Askı süresinde verilen belge düşer. **2026-11-16'dan ([[ADR-0088]]):** kurum askıdayken bütün belgeleri düşer; askı kalkınca askıdan öncekiler geçerli |
 | `RETIRED` | `RETIRED` | `REVOKED`, yumuşak (`revokedAt` = `since`) | — | `REVOKED` | Önceki belgeler geçerli kalır (GV1) |
 | `REVOKED` | `REVOKED` | `REVOKED`; `invalidates_from` varsa K2 | `REVOKED` | `REVOKED` | |
 | `DEPRECATED` | — | — | `DEPRECATED` | — | SC3 |
@@ -181,13 +181,14 @@ dağıtım geçersiz sayılır. Açık pencere, yürütücü anahtarının geçm
 | CE2 | Sert iptal tarihi (`invalidatesFrom`) kurumun geçerlilik başlangıcı ile iptal anı arasındadır; yazıldıktan sonra silinmez, yalnız geriye çekilebilir; `iat` bu tarihe eşit ya da sonraysa belge kabul edilmez. |
 | CE3 | Şemanın `vctURI`'si ve yazılmış her içerik özeti değiştirilmez ve silinmez; yeni sürüm özeti yalnız eklenir. |
 | CE4 | Doğrulayıcının zincir ve liste kimliği `keccak256(dns_name)`'dir; erişim sertifikasının yenilenmesi kimliği değiştirmez. |
-| CE5 | Kontrat C1/C2/C3'ü belgenin `iat` anındaki duruma göre, yarı açık aralıklarla değerlendirir (askıdaki kurumun askıdan önceki belgeleri geçerlidir); liste durumları kontrata eşleme tablosuyla yazılır. |
+| CE5 | Kontrat C1/C2/C3'ü belgenin `iat` anındaki duruma göre, yarı açık aralıklarla değerlendirir (askı kalkınca askıdan önceki belgeler geçerlidir; kurum askıdayken bütün belgeleri RED — [[ADR-0088]] SI1); liste durumları kontrata eşleme tablosuyla yazılır. |
 | CE6 | Göç, `trust:chain-replay` eşdeğerlik testinde C1/C2/C3/D5 cevaplarında ACCEPTED/REJECTED farkı kalmadan kapanmaz. |
 
 # Açık soruların kararları (2026-11-04)
 
 1. **Askıdaki kurumun eski belgeleri:** liste kuralı. Askıdan önce verilmiş belge geçerlidir; yalnız askı süresinde verilen belge
-   düşer (K5). [[SPEC-BC-0001]] §3.3 buna uyar.
+   düşer (K5). [[SPEC-BC-0001]] §3.3 buna uyar. **Değişti (2026-11-16, [[ADR-0088]]):** kurum askıdayken askıdan önceki belgeler de
+   kabul edilmez (AB kuralı); askı kalkınca yeniden kabul edilir.
 2. **Göçte ağ düzeyi yazımlar:** açılış önerisinin yetkilendirdiği tek göç yürütücüsü yazar (K1).
 3. **Göç süresi tavanı:** en çok 30 gün; Governance yalnız kip açıkken ve tavan içinde uzatır; süre dolunca kip kendiliğinden
    kapanmış sayılır (K1, CE1).

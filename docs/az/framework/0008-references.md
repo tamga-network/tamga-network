@@ -4,7 +4,7 @@ title: "Əlavə E — Mənbələr"
 status: Active
 version: 1.0.0
 created: 2026-10-01
-last_updated: 2026-10-20
+last_updated: 2026-11-16
 summary: >
   Tamga ARF-in əsaslandığı standartlar və normativ aktlar, Tamga qərar qeydləri və spesifikasiyaları, eləcə də əlavələrdəki hər məcburi qaydanın mənbəyi.
 translation_of: FW-REF-0001
@@ -19,6 +19,14 @@ source_version: "1.0.0"
 | EUDI Wallet Architecture and Reference Framework (ARF) | <https://eu-digital-identity-wallet.github.io/eudi-doc-architecture-and-reference-framework/> |
 | EUDI attestation rulebook kataloqu — Attestation Rulebook şablonu (1.5), PID Rulebook, mDL Rulebook | <https://github.com/eu-digital-identity-wallet/eudi-doc-attestation-rulebooks-catalog> |
 | Commission Implementing Regulation (EU) 2026/1731 (PID və EAA kodlaşdırılması) | <https://eur-lex.europa.eu/> |
+| Commission Implementing Regulation (EU) 2024/2981 (rəqəmsal cüzdanların sertifikatlaşdırılması; I Əlavə risk reyestri) | <https://eur-lex.europa.eu/eli/reg_impl/2024/2981/oj> |
+| Commission Implementing Regulation (EU) 2025/847 (rəqəmsal cüzdanlarda təhlükəsizlik pozuntularına reaksiya) | <https://eur-lex.europa.eu/> |
+| Commission Implementing Regulation (EU) 2025/848 (rəqəmsal cüzdana etibar edən tərəflərin qeydiyyatı) | <https://eur-lex.europa.eu/> |
+| Commission Implementing Regulation (EU) 2026/798 (rəqəmsal cüzdana məsafədən qeydiyyat üçün istinad standartları və spesifikasiyalar) | <https://eur-lex.europa.eu/eli/reg_impl/2026/798/oj> |
+| Commission Implementing Regulation (EU) 2026/2266 (mobil sürücülük vəsiqəsi; Directive (EU) 2025/2205-in tətbiqi) | <https://eur-lex.europa.eu/eli/reg_impl/2026/2266/oj> |
+| Directive (EU) 2019/882 (Avropa Əlçatanlıq Aktı — məhsul və xidmətlərin əlçatanlıq tələbləri) | <https://eur-lex.europa.eu/eli/dir/2019/882/oj> |
+| ETSI EN 301 549 — Accessibility requirements for ICT products and services | <https://www.etsi.org/standards> |
+| Aİ funksional uyğunluğun qiymətləndirilməsi çərçivəsi (Functional Conformance Assessment Framework, FCAF) | <https://conformance.eudi.dev> |
 | OpenID for Verifiable Credential Issuance 1.0 | <https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html> |
 | OpenID for Verifiable Presentations 1.0 | <https://openid.net/specs/openid-4-verifiable-presentations-1_0.html> |
 | OpenID4VC High Assurance Interoperability Profile (HAIP) 1.0 | <https://openid.net/specs/openid4vc-high-assurance-interoperability-profile-1_0.html> |
@@ -39,7 +47,7 @@ sənədlərdən toplanmışdır.
 
 | Sahə | Sənədlər |
 |---|---|
-| Etibar modeli və idarəetmə | [[ADR-0009]] · [[ADR-0010]] · [[ADR-0035]] · [[ADR-0036]] · [[ADR-0037]] · [[ADR-0050]] · [[SPEC-TRUST-0001]] · [[SPEC-ID-0002]] · [[PM-GOV-0001]] · [[PM-ASSUR-0001]] |
+| Etibar modeli və idarəetmə | [[ADR-0009]] · [[ADR-0010]] · [[ADR-0035]] · [[ADR-0036]] · [[ADR-0037]] · [[ADR-0050]] · [[ADR-0088]] · [[SPEC-TRUST-0001]] · [[SPEC-ID-0002]] · [[PM-GOV-0001]] · [[PM-ASSUR-0001]] |
 | Qeydiyyat | [[ADR-0024]] · [[ADR-0026]] · [[ADR-0034]] |
 | Rəqəmsal sənəd formatları və növləri | [[SPEC-CRED-0002]] · [[SPEC-CRED-0003]] · [[ADR-0013]] · [[ADR-0048]] · [[SPEC-SCHEMA-0001]] · [[SPEC-SCHEMA-0002]] |
 | Rəqəmsal sənədin verilməsi | [[SPEC-PROTO-0001]] · [[ADR-0016]] · [[ADR-0020]] · [[ADR-0021]] · [[ADR-0023]] · [[ADR-0046]] |
@@ -99,7 +107,7 @@ bir-birinə zidd olarsa, mənbə üstünlük təşkil edir.
 | RB-REG-04 | [[SPEC-BC-0001]]/I1, I3 |
 | RB-REG-05 | [[ADR-0010]] K5 |
 | RB-REG-06 | [[SPEC-ID-0002]]/XC2, [[SPEC-BC-0001]]/CA1 |
-| RB-REG-07 | [[SPEC-BC-0001]]/GV1, I4 |
+| RB-REG-07 | [[SPEC-BC-0001]]/GV1, I4; [[ADR-0088]]/SI1, SI2 |
 | RB-REG-08 | [[SPEC-API-0001]]/AP6 |
 | RB-REG-09 | [[FW-TF-0001]] §5.2 |
 | RB-AP-01 | [[SPEC-ID-0002]]/XC1, [[SPEC-CRED-0002]]/C15 |

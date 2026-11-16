@@ -4,7 +4,7 @@ title: "Contact Rulebook"
 status: Active
 version: 1.0.0
 created: 2026-10-11
-last_updated: 2026-10-16
+last_updated: 2026-11-16
 summary: >
   Şəxsiyyət xidmətinin verdiyi iki əlaqə rəqəmsal sənədinin (yoxlanılmış e-poçt ünvanı `urn:tamga:contact:EmailAddress:1`, yoxlanılmış telefon nömrəsi `urn:tamga:contact:PhoneNumber:1`) rulebook-u, Aİ Attestation Rulebook şablonunun bölmə quruluşu ilə: atributlar və metaməlumatlar, hüquqi kateqoriya, SD-JWT VC kodlaşdırması, sahiblik sübutu, istifadə, etibar ankerləri, etibarlılıq müddəti və ləğv. Tamga Rulebook-dan şaxələnir; mənbəyi ADR-0021-dir.
 translation_of: FW-RB-0005
@@ -93,7 +93,9 @@ Yoxdur.
 
 ## 2.6 İstəyə bağlı metaməlumatlar
 
-Yoxdur.
+| Məlumat identifikatoru | Tərif | Məlumat növü | Nümunə dəyər |
+|---|---|---|---|
+| `nbf` | Texniki etibarlılığın başlanğıcı; sənədi verən qurum onu verilmə anında yazır: dəyər `iat` ilə eyni (saat başına aşağı yuvarlaqlaşdırılmış) andır, gələcək tarixli sənəddə isə etibarlılığın başladığı andır. Başlanğıcı çatmamış sənəd rəqəmsal cüzdanda "hələ etibarlı deyil" kimi saxlanılır və təqdim edilə bilməz; yoxlayan tərəf onu rədd edir | NumericDate | `1791763200` |
 
 ## 2.7 Şərti metaməlumatlar
 

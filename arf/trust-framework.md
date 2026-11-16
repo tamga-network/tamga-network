@@ -9,7 +9,7 @@ outline: [2, 3]
 
 <div class="arf-meta">
 
-**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-10-30 · **Licence** CC BY 4.0
+**Document** FW-TF-0001 · **Version** 1.0.0 · **Status** Active · **Updated** 2026-11-16 · **Licence** CC BY 4.0
 Official English translation of the Turkish source text; in case of conflict the Turkish text prevails.
 
 </div>
@@ -85,8 +85,9 @@ Before the pilot, the framework and its contract annexes are reviewed by a lawye
 
 ### 1.5 Risk approach
 
-Risks are handled at the level of the ecosystem and in proportion. The risk register is derived from the risk list of the EU
-ARF. The residual risks declared openly today are in the main document (§6.6 and §7.4): an anchor resting on a single
+Risks are handled at the level of the ecosystem and in proportion. The risk register ([[FW-RISK-0001]]) follows the skeleton of the EU wallet
+risk register (Implementing Regulation (EU) 2024/2981, Annex I); it is a self-assessment, not an independent audit or a
+certificate. The residual risks declared openly today are in the main document (§6.6 and §7.4): an anchor resting on a single
 operator's signature, the time a revocation takes to take effect, and the possibility of linking a person when credentials
 from the same [[t:issuer]] are combined.
 
@@ -230,8 +231,9 @@ mapping" applies.
 ### 3.3 Lifecycle rules
 
 - **Suspension:** after an incident, an audit finding or a breach of agreement, the institution is suspended; no new credentials
-  are issued, earlier credentials stay valid according to their issue date. Once the issue is fixed, the institution is
-  reactivated.
+  are issued and, while the suspension lasts, none of the institution's credentials is accepted in verification (EU rule;
+  [[ADR-0088]]). Suspension does not revoke credentials: once the issue is fixed, the institution is reactivated and the
+  credentials it issued before the suspension are accepted again; a credential issued during the suspension never is.
 - **Removal:** the institution is removed from the list (with a successor link where there is a successor); in the ETSI view
   it appears as "withdrawn"; history is never deleted; the successor may continue publishing the revocation list.
 - **Key or certificate renewal:** the new institution identifier is linked to the old one as its successor; earlier credentials
