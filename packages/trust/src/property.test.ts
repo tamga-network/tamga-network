@@ -156,6 +156,12 @@ describe("K11 ETSI XML güven listesi — düşmanca girdi", () => {
     timed(() => expectListError(() => readTrustedListXml(`<r ${attrs}/>`, new Set([fp]))), 6000);
   });
 
+  it("ayrıştırıcının doğrudan fırlattığı girdiler (CDATA dışında ']]>') de tek hata türüne çevrilir", () => {
+    // CI'da rastgele testin bulduğu karşı örnek (0.8.6 yayını, seed -2115329798)
+    for (const s of ["<![CDATA[ ]]><", "]]>", "<a>]]></a>", "<a><![CDATA[x]]>]]></a>"])
+      expectListError(() => readTrustedListXml(s, new Set([fp])));
+  });
+
   it("rastgele dize ve rastgele XML benzeri metin: yalnız XmlSignatureError / LoteParseError", () => {
     const xmlish = fc
       .array(

@@ -66,6 +66,8 @@ the reference verifier (`apps/verify`), not in the packages. Not published on np
 
 ### Fixed
 
+- `trust`: malformed XML that the parser rejects by throwing directly (for example `]]>` outside a CDATA section) now surfaces
+  as `XmlSignatureError` like every other malformed list, instead of a plain `Error` (found by the property test in CI).
 - `verifier/zk`: the native backend no longer lets a write to a dead prover process crash the host (`stdin` error listener).
 - `verifier/zk`: the bundled WASM verifier is rebuilt with `ruzstd` 0.9.1 (RUSTSEC-2026-0344).
 - `zk`: the three Android libraries are rebuilt with `ruzstd` 0.9.1 (RUSTSEC-2026-0344; 0.8.5 shipped 0.8.3), still 16 KB

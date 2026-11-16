@@ -294,13 +294,19 @@ export interface XmlSignatureResult {
 export function parseXml(xml: string): XNode {
   if (/<!DOCTYPE/i.test(xml)) throw new XmlSignatureError("DTD not allowed");
   const errors: string[] = [];
-  const doc = new DOMParser({
-    errorHandler: {
-      warning: () => {},
-      error: (m: string) => errors.push(m),
-      fatalError: (m: string) => errors.push(m),
-    },
-  }).parseFromString(xml, "application/xml");
+  let doc: ReturnType<DOMParser["parseFromString"]>;
+  try {
+    doc = new DOMParser({
+      errorHandler: {
+        warning: () => {},
+        error: (m: string) => errors.push(m),
+        fatalError: (m: string) => errors.push(m),
+      },
+    }).parseFromString(xml, "application/xml");
+  } catch (e) {
+    // Ayrıştırıcı bazı bozuk girdilerde (ör. CDATA dışında "]]>") hata işleyicisini atlayıp doğrudan fırlatır; tek hata türüne çevrilir.
+    throw new XmlSignatureError(`XML not well-formed: ${e instanceof Error ? e.message : String(e)}`);
+  }
   if (errors.length || !doc?.documentElement)
     throw new XmlSignatureError(`XML not well-formed: ${errors[0] ?? "empty"}`);
   return doc;
