@@ -4,7 +4,7 @@ title: "Sandbox: test ağı"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-04
+last_updated: 2026-11-18
 summary: >
   Gerçek ağdan ayrı test ağı sandbox.tamga.network ile uçtan uca deneme: adresler, güven çapasını sabitlemek, cüzdanı
   sandbox'a bağlamak, cüzdan geliştiricisi olarak kendi cüzdan sağlayıcını sandbox listesine kaydettirmek, örnek kişilerle belge almak, örnek doğrulayıcılarda göstermek, iptal ve askı durumlarını denemek,
@@ -50,6 +50,7 @@ Sandbox, gerçek ağın adres düzenini `sandbox` alt adıyla tekrarlar. Bir cü
 | `https://trust.sandbox.tamga.network` | test güven listeleri (`lotl.jws`, `tl-tr.jws`), çapa günlüğü (`anchors.jsonl`), `keys/` | `trust.tamga.network` |
 | `https://issuer.sandbox.tamga.network/{kurum}` | örnek kurumların belge verme servisi ([[t:OpenID4VCI]]) | `issuer.tamga.network` |
 | `https://status.sandbox.tamga.network` | iptal listeleri (Token Status List) | `status.tamga.network` |
+| `http(s)://crl.sandbox.tamga.network/<makam>.crl` | erişim sertifikalarının iptal listesi (RFC 5280 CRL; `http` ve `https`, [[ADR-0090]]) | `crl.tamga.network` |
 | `https://verify.sandbox.tamga.network` | test doğrulayıcısı ([[t:OpenID4VP]]) | `verify.tamga.network` |
 | `https://id.sandbox.tamga.network` | kimlik ve iletişim belgeleri; hızlı deneme (sahte kişi) ya da gerçek kimlikle doğrulama | `id.tamga.network` |
 | `https://console.sandbox.tamga.network` | Kurum Konsolu — yalnız sandbox'ta açılan test kurumları için | `console.tamga.network` |

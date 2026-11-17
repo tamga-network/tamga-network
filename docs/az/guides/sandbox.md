@@ -4,7 +4,7 @@ title: "Sandbox: test şəbəkəsi"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-04
+last_updated: 2026-11-18
 summary: >
   Real şəbəkədən ayrı olan test şəbəkəsi sandbox.tamga.network ilə başdan-sona sınaq: ünvanlar, etibar lövbərinin sabitlənməsi, rəqəmsal cüzdanın sandbox-a qoşulması, cüzdan tərtibatçısı kimi öz cüzdan provayderinizin sandbox siyahısında qeydiyyata alınması, nümunə şəxslərlə rəqəmsal sənəd alınması, nümunə yoxlayan tərəflərdə təqdim edilməsi, ləğv və dayandırma vəziyyətlərinin sınanması, qurumunuzun test qurumu kimi sınanması, real şəxsiyyətinizlə şəxsiyyətin təsdiqi addımları, qaydalar və sıfırlama.
 translation_of: GUIDE-0013
@@ -50,6 +50,7 @@ lövbərini dəyişməklə keçid edir.
 | `https://trust.sandbox.tamga.network` | test etibar siyahıları (`lotl.jws`, `tl-tr.jws`), lövbər jurnalı (`anchors.jsonl`), `keys/` | `trust.tamga.network` |
 | `https://issuer.sandbox.tamga.network/{kurum}` | nümunə qurumların sənəd vermə xidməti ([[t:OpenID4VCI]]) | `issuer.tamga.network` |
 | `https://status.sandbox.tamga.network` | ləğv siyahıları (Token Status List) | `status.tamga.network` |
+| `http(s)://crl.sandbox.tamga.network/<authority>.crl` | giriş sertifikatlarının ləğv siyahısı (RFC 5280 CRL; `http` və `https`, [[ADR-0090]]) | `crl.tamga.network` |
 | `https://verify.sandbox.tamga.network` | test yoxlayan tərəfi ([[t:OpenID4VP]]) | `verify.tamga.network` |
 | `https://id.sandbox.tamga.network` | şəxsiyyət və əlaqə sənədləri; sürətli sınaq (saxta şəxs) və ya real şəxsiyyətlə təsdiq | `id.tamga.network` |
 | `https://console.sandbox.tamga.network` | Qurum Konsolu — yalnız sandbox-da açılan test qurumları üçün | `console.tamga.network` |

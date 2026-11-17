@@ -4,7 +4,7 @@ title: "Sandbox: the test network"
 status: Active
 version: 1.0.0
 created: 2026-10-03
-last_updated: 2026-11-04
+last_updated: 2026-11-18
 summary: >
   End-to-end testing on sandbox.tamga.network, the test network kept apart from the real network: addresses, pinning the
   trust anchor, connecting a wallet to the sandbox, registering your own wallet provider in the sandbox list as a wallet
@@ -54,6 +54,7 @@ only the addresses and the trust anchor.
 | `https://trust.sandbox.tamga.network` | test trusted lists (`lotl.jws`, `tl-tr.jws`), anchor log (`anchors.jsonl`), `keys/` | `trust.tamga.network` |
 | `https://issuer.sandbox.tamga.network/{institution}` | issuance service of the example institutions ([[t:OpenID4VCI]]) | `issuer.tamga.network` |
 | `https://status.sandbox.tamga.network` | status lists (Token Status List) | `status.tamga.network` |
+| `http(s)://crl.sandbox.tamga.network/<authority>.crl` | revocation list of access certificates (RFC 5280 CRL; `http` and `https`, [[ADR-0090]]) | `crl.tamga.network` |
 | `https://verify.sandbox.tamga.network` | test verifier ([[t:OpenID4VP]]) | `verify.tamga.network` |
 | `https://id.sandbox.tamga.network` | identity and contact credentials; quick trial (made-up person) or verification with your real identity | `id.tamga.network` |
 | `https://console.sandbox.tamga.network` | Institution Console — only for test institutions opened in the sandbox | `console.tamga.network` |
