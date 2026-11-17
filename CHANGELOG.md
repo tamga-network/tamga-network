@@ -11,6 +11,7 @@ published on npm as test releases; `0.8.6` is the current one on npm (the API ma
 All ten packages move to 0.8.7 together (patch release). The code changes are in `wallet-core` (identity number in the driving
 licence attestation, TS10 password 12, `externalListsDirect`) and `trust` (`externalListsDirect`); the other eight packages
 carry the version number.
+Published on npm on 2026-11-17.
 
 ### Changed
 
