@@ -25,8 +25,8 @@
  *   `--contact-email <adres>` kayıttaki kurumsal e-postayı `rfc822Name` olarak ekler (kişisel adres yazılmaz); `--service-id
  *   <kimlik>` hizmete bağlı sertifikada hizmet kimliğini `OU`'ya yazar (GEN-6.6.1-08, AB TS5 `serviceIdentifier`).
  * Erişim sertifikası makamı ve iptal listesi (ADR-0087): `--ca <makam>` sertifikayı kök yerine PKI klasöründeki ara makamla
- *   imzalar (ör. `access-ca-1`; yalnız erişim sertifikası, rp-*); `--crl-uri <https://…/crl/<makam>.crl>` CRL dağıtım noktası
- *   uzantısını (2.5.29.31) yazar — verenin CRL'i olmalı. `--prod` erişim sertifikasında `--crl-uri` ZORUNLU (AR2). Ara makamla
+ *   imzalar (ör. `access-ca-1`; yalnız erişim sertifikası, rp-*); `--crl-uri <http://crl.<ağ>/<makam>.crl>` CRL dağıtım noktası
+ *   uzantısını (2.5.29.31) yazar — tek nokta, iki ad: bu `http` adresi ve aynı yolun `https` adresi (ADR-0090); verenin CRL'i olmalı. `--prod` erişim sertifikasında `--crl-uri` ZORUNLU (AR2). Ara makamla
  *   verilen sertifikanın makam sertifikası `<ad>.chain.pem`'e yazılır (servis x5c'ye yapraktan sonra ekler; kök hariç zincir).
  * Aynı anahtarla yenileme (ADR-0034 yenileme sırası, ADR-0058): `--key <name.pkcs8.pem>` CSR yerine var olan özel anahtarı kullanır
  *   (açık anahtar ondan; anahtar dosyası değişmez) ve `--replace` var olan `<name>.cert.pem`'i `_yedek-<tarih>/` altına taşıyıp
@@ -44,13 +44,13 @@ import {
   SubjectKeyIdentifierExtension,
   AuthorityKeyIdentifierExtension,
   SubjectAlternativeNameExtension,
-  CRLDistributionPointsExtension,
   X509Certificate,
 } from "@peculiar/x509";
 import { webcrypto, randomBytes } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CRL_URI_RE, cdpExtension } from "./crl-dp.js";
 import { certFingerprintSha256Hex, computeIssuerId, computeRpId, pemToDer } from "@tamga-network/core";
 import { prodConfirmProblem, resolveSubject, SubjectError } from "./pki-subject.js";
 
@@ -133,16 +133,9 @@ async function main() {
   if (caName !== "root-ca" && !name.startsWith("rp-")) fail("--ca yalnız erişim sertifikasında (rp-*; ADR-0087 K2)");
   const crlUri = arg("crl-uri");
   if (crlUri !== undefined) {
-    let u: URL | undefined;
-    try {
-      u = new URL(crlUri);
-    } catch {
-      /* aşağıda */
-    }
-    if (!u || u.protocol !== "https:" || !/^\/crl\/[a-z0-9][a-z0-9-]*\.crl$/.test(u.pathname))
-      fail("--crl-uri: https://<güven listesi alan adı>/crl/<makam>.crl biçiminde olmalı (ADR-0087 K3)");
-    if (!u?.pathname.endsWith(`/${caName}.crl`))
-      fail(`--crl-uri: verenin (${caName}) CRL'i olmalı (/crl/${caName}.crl)`);
+    const m = CRL_URI_RE.exec(crlUri);
+    if (!m) fail("--crl-uri: http://crl.<ağ>/<makam>.crl biçiminde olmalı (ADR-0090; https eşi otomatik eklenir)");
+    else if (m[1] !== caName) fail(`--crl-uri: verenin (${caName}) CRL'i olmalı (/${caName}.crl)`);
   }
   if (crlUri !== undefined && !name.startsWith("rp-")) fail("--crl-uri yalnız erişim sertifikasında (rp-*)");
 
@@ -217,7 +210,7 @@ async function main() {
         "--prod erişim sertifikası (rp-*): --contact-uri <kayıttaki support_uri> zorunlu (ETSI TS 119 411-8 GEN-6.6.1-07; ADR-0058 AC1)",
       );
     if (crlUri === undefined)
-      fail("--prod erişim sertifikası (rp-*): --crl-uri <https://trust.…/crl/<makam>.crl> zorunlu (ADR-0087 AR2)");
+      fail("--prod erişim sertifikası (rp-*): --crl-uri <http://crl.…/<makam>.crl> zorunlu (ADR-0087 AR2, ADR-0090)");
   }
   const san = [
     ...(dns ? [{ type: "dns" as const, value: dns }] : []),
@@ -244,8 +237,8 @@ async function main() {
       // RFC 5280 §4.2.1.1 / ADR-0050: AKI = kökün SKI'si (HAIP trusted_authorities `aki` eşleşmesi)
       await AuthorityKeyIdentifierExtension.create(root.publicKey),
       ...(san.length ? [new SubjectAlternativeNameExtension(san)] : []),
-      // ADR-0087 K3: CRL dağıtım noktası (verenin CRL'i)
-      ...(crlUri !== undefined ? [new CRLDistributionPointsExtension([crlUri])] : []),
+      // ADR-0087 K3 + ADR-0090: CRL dağıtım noktası (verenin CRL'i; http + https)
+      ...(crlUri !== undefined ? [cdpExtension(crlUri)] : []),
     ],
   });
   const certFile = resolve(PKI, `${name}.cert.pem`);

@@ -86,6 +86,9 @@ outputs are separate.
 
 ## K3 — Address and distribution point
 
+> The address rule is replaced by [[ADR-0090]] (2026-11-18): the CRL is on a separate host (`crl.tamga.network`), `http` +
+> `https`, with two names in the distribution point. The format, profile and extension rules below remain in force.
+
 - The address is at the publication root, without a new subdomain: `<trust list domain>/crl/<authority>.crl`. Real network
   `https://trust.tamga.network/crl/access-ca-1.crl` and `…/crl/root-ca.crl`; sandbox `https://trust.sandbox.tamga.network/crl/…`.
 - Format DER, response type `application/pkix-crl` (RFC 2585), public, CORS open.

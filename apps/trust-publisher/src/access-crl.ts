@@ -1,8 +1,10 @@
 /**
  * ADR-0087 — erişim sertifikalarının (WRPAC, X.509) iptal listesi: RFC 5280 v2 CRL, ETSI TS 119 411-8 REV-6.3.9-04.
  *
- * - Ayar (K3): kayıt defterinin `roles.access_ca.crl` ayarı (`issuers[]`: `ca` = PKI'daki makam sertifikasının adı, `uri` = yayın
- *   kökünde `/crl/<ad>.crl`). Ayar yoksa hiçbir şey yapılmaz; ayar LOTL'e yazılmaz (yayıncının iç ayarıdır).
+ * - Ayar (K3; adres ADR-0090): kayıt defterinin `roles.access_ca.crl` ayarı (`issuers[]`: `ca` = PKI'daki makam sertifikasının adı,
+ *   `uri` = CRL'in `http` adresi, ayrı CRL alan adının kökünde: `http://crl.<ağ>/<ad>.crl`; `https` eşi aynı yoldan türetilir,
+ *   `crlUrisOf`). Dosya yayın klasöründe `crl/<ad>.crl` olarak durur; CRL alan adı o klasörü iki şemadan yönlendirmesiz sunar.
+ *   Ayar yoksa hiçbir şey yapılmaz; ayar LOTL'e yazılmaz (yayıncının iç ayarıdır).
  * - İptal (K5, her yayında): doğrulayıcının kaydı askıya alınınca ya da iptal edilince erişim sertifikası `privilegeWithdrawn`,
  *   kayıt sona erince (`RETIRED`) `cessationOfOperation`, sertifika kayıttan kalkınca (yenisiyle değişti) `superseded` ile iptal
  *   edilir. Askı için `certificateHold` KULLANILMAZ (K6): iptal kesindir, kayıt yeniden etkin olunca yeni sertifika verilir.
@@ -85,7 +87,21 @@ export interface RpAccessCertView {
 
 const NAME_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
-/** Ayar denetimi; boş dizi = geçerli. `publicBase` = yayın kökü (ör. https://trust.tamga.network). */
+/**
+ * ADR-0090 K1: güven listesi alan adından CRL alan adı — `trust.tamga.network` → `crl.tamga.network`,
+ * `trust.sandbox.tamga.network` → `crl.sandbox.tamga.network` (`trust.` öneki yoksa ad başına `crl.` eklenir).
+ */
+export function crlHostOf(publicBase: string): string {
+  const h = new URL(publicBase).hostname;
+  return "crl." + (h.startsWith("trust.") ? h.slice("trust.".length) : h);
+}
+/** ADR-0090 K3: dağıtım noktasının iki adresi, bu sırayla — önce `http`, sonra aynı yolun `https` adresi. */
+export function crlUrisOf(uri: string): [string, string] {
+  const u = new URL(uri);
+  return [`http://${u.host}${u.pathname}`, `https://${u.host}${u.pathname}`];
+}
+
+/** Ayar denetimi; boş dizi = geçerli. `publicBase` = güven listesi yayın kökü (ör. https://trust.tamga.network). */
 export function accessCrlConfigProblems(cfg: unknown, publicBase: string): string[] {
   const p: string[] = [];
   const c = cfg as Partial<AccessCrlConfig> | null;
@@ -110,18 +126,19 @@ export function accessCrlConfigProblems(cfg: unknown, publicBase: string): strin
       p.push(`${w}.uri: geçersiz adres`);
     }
     if (!u) continue;
-    if (u.origin !== new URL(publicBase).origin)
-      p.push(`${w}.uri: yayın kökünde olmalı (${new URL(publicBase).origin})`);
-    if (!/^\/crl\/[a-z0-9][a-z0-9-]*\.crl$/.test(u.pathname) || u.search || u.hash)
-      p.push(`${w}.uri: yol /crl/<ad>.crl biçiminde (küçük harf, rakam, tire)`);
+    const host = crlHostOf(publicBase);
+    if (u.protocol !== "http:" || u.host !== host || u.username || u.password)
+      p.push(`${w}.uri: CRL alan adında http adresi olmalı (http://${host}/<ad>.crl; https eşi türetilir — ADR-0090)`);
+    if (!/^\/[a-z0-9][a-z0-9-]*\.crl$/.test(u.pathname) || u.search || u.hash)
+      p.push(`${w}.uri: yol /<ad>.crl biçiminde, alan adının kökünde (küçük harf, rakam, tire)`);
     if (seenUri.has(u.href)) p.push(`${w}.uri: ${u.href} iki kez`);
     seenUri.add(u.href);
   }
   return p;
 }
 
-/** CRL'in yayın klasöründeki dosyası (adresin yolu). */
-export const crlFileOf = (uri: string) => new URL(uri).pathname.slice(1);
+/** CRL'in yayın klasöründeki dosyası: `crl/<ad>.crl` (CRL alan adının kökü bu klasördür; ADR-0090). */
+export const crlFileOf = (uri: string) => "crl" + new URL(uri).pathname;
 
 export const emptyAccessCrlState = (): AccessCrlState => ({ issuers: [] });
 

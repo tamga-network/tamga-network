@@ -81,6 +81,9 @@ ləğv edilir. Tətik birdir (reyestrdəki status dəyişikliyi), nəticələr a
 
 ## K3 — Ünvan və paylama nöqtəsi
 
+> Ünvan qaydasını [[ADR-0090]] əvəz etdi (2026-11-18): CRL ayrı domendədir (`crl.tamga.network`), `http` + `https`, paylama
+> nöqtəsində iki ad. Aşağıdakı format, profil və uzantı qaydaları qüvvədədir.
+
 - Ünvan dərc kökündə, yeni alt domen olmadan: `<etibar siyahısı domeni>/crl/<orqan>.crl`. Real şəbəkə
   `https://trust.tamga.network/crl/access-ca-1.crl` və `…/crl/root-ca.crl`; sandbox `https://trust.sandbox.tamga.network/crl/…`.
 - Format DER, cavab tipi `application/pkix-crl` (RFC 2585), hamıya açıq, CORS açıq.

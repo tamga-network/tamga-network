@@ -60,8 +60,8 @@
           "operated_by": "Tamga Network Sandbox (TEST)",
           "crl": {
             "issuers": [
-              { "ca": "access-ca-1", "uri": "https://trust.sandbox.tamga.network/crl/access-ca-1.crl" },
-              { "ca": "root-ca", "uri": "https://trust.sandbox.tamga.network/crl/root-ca.crl" }
+              { "ca": "access-ca-1", "uri": "http://crl.sandbox.tamga.network/access-ca-1.crl" },
+              { "ca": "root-ca", "uri": "http://crl.sandbox.tamga.network/root-ca.crl" }
             ]
           }
         },

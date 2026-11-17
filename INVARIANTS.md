@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-16
+last_updated: 2026-11-17
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 512 kodlanmış değişmez, 91 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 514 kodlanmış değişmez, 92 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -940,6 +940,16 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0089/IR7` | Aynı erişim belirteciyle aynı anahtara verilen iki biçimin kopyası aynı iptal indeksini taşır; eşleşme yalnız belirtecin ömrü içinde bellekte yapılır, anahtar parmak izi kalıcı yazılmaz. |
 
 
+## ADR-0090
+
+*"CRL için ayrı alan adı: crl.tamga.network, http ve https"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0090/CH1` | Erişim sertifikası ve makam sertifikasındaki dağıtım noktası iki adres taşır: önce `http://crl.<ağ>/<makam>.crl`, sonra aynı yolun `https://` adresi. |
+| `ADR-0090/CH2` | CRL alan adı iki şemada aynı dosyayı yönlendirmesiz sunar ve CRL dışında içerik yayımlamaz; `https` sertifikası Tamga PKI'ından gelmez. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1292,7 +1302,7 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 512 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 514 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
 AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
@@ -1300,4 +1310,4 @@ AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, D
 
 # Durum
 
-**Üretilen dosya** — 2026-11-16 (`scripts/sync-invariants.mjs`). Toplam 512 kodlanmış değişmez, 91 dokümanda.
+**Üretilen dosya** — 2026-11-17 (`scripts/sync-invariants.mjs`). Toplam 514 kodlanmış değişmez, 92 dokümanda.

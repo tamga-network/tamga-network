@@ -26,7 +26,10 @@ import {
 import {
   ACCESS_CRL_NEXT_UPDATE_SEC,
   accessCrlConfigProblems,
+  crlFileOf,
+  crlHostOf,
   crlNumberOf,
+  crlUrisOf,
   crlProblems,
   emptyAccessCrlState,
   issuingCaOf,
@@ -38,6 +41,7 @@ import {
   type AccessCrlConfig,
   type RpAccessCertView,
 } from "../src/access-crl.js";
+import { cdpExtension } from "../../../ops/crl-dp.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 const crypto = webcrypto as unknown as Crypto;
@@ -45,7 +49,8 @@ const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
 const ROOT = resolve(import.meta.dirname, "../../..");
 const PKI = resolve(ROOT, "ops/pki");
 const BASE = "https://trust.tamga.network";
-const CFG: AccessCrlConfig = { issuers: [{ ca: "access-ca-1", uri: `${BASE}/crl/access-ca-1.crl` }] };
+const CRL = "http://crl.tamga.network"; // ADR-0090: ayrı CRL alan adı, ayardaki adres http
+const CFG: AccessCrlConfig = { issuers: [{ ca: "access-ca-1", uri: `${CRL}/access-ca-1.crl` }] };
 const t0 = new Date("2026-11-15T00:00:00Z");
 const ready =
   existsSync(resolve(PKI, "access-ca-1.pkcs8.pem")) &&
@@ -62,19 +67,51 @@ const view = (dns: string, status: string, fp: string, serial = fp.slice(0, 8)):
 });
 
 describe("ADR-0087 ayar", () => {
-  it("yol /crl/<ad>.crl, yayın kökünde; makam adı biçimi; yinelenen makam reddedilir", () => {
+  it("ADR-0090: http adresi, CRL alan adının kökünde /<ad>.crl; makam adı biçimi; yinelenen makam reddedilir", () => {
     expect(accessCrlConfigProblems(CFG, BASE)).toEqual([]);
     expect(accessCrlConfigProblems({ issuers: [] }, BASE).length).toBe(1);
+    // eski yer (güven listesi alan adı) ve https ayarı reddedilir: ayardaki adres http, https eşi türetilir
     expect(
-      accessCrlConfigProblems({ issuers: [{ ca: "access-ca-1", uri: "https://crl.tamga.network/crl/a.crl" }] }, BASE),
-    ).toEqual([expect.stringMatching(/yayın kökünde/)]);
-    expect(accessCrlConfigProblems({ issuers: [{ ca: "access-ca-1", uri: `${BASE}/status/a.crl` }] }, BASE)).toEqual([
-      expect.stringMatching(/\/crl\/<ad>\.crl/),
+      accessCrlConfigProblems({ issuers: [{ ca: "access-ca-1", uri: `${BASE}/crl/access-ca-1.crl` }] }, BASE),
+    ).toEqual([expect.stringMatching(/CRL alan adında http/), expect.stringMatching(/alan adının kökünde/)]);
+    expect(
+      accessCrlConfigProblems(
+        { issuers: [{ ca: "access-ca-1", uri: "https://crl.tamga.network/access-ca-1.crl" }] },
+        BASE,
+      ),
+    ).toEqual([expect.stringMatching(/CRL alan adında http/)]);
+    expect(
+      accessCrlConfigProblems(
+        { issuers: [{ ca: "access-ca-1", uri: "http://crl.example.org/access-ca-1.crl" }] },
+        BASE,
+      ),
+    ).toEqual([expect.stringMatching(/http:\/\/crl\.tamga\.network/)]);
+    expect(accessCrlConfigProblems({ issuers: [{ ca: "access-ca-1", uri: `${CRL}/crl/a.crl` }] }, BASE)).toEqual([
+      expect.stringMatching(/alan adının kökünde/),
     ]);
     expect(
-      accessCrlConfigProblems({ issuers: [CFG.issuers[0], { ca: "access-ca-1", uri: `${BASE}/crl/b.crl` }] }, BASE),
+      accessCrlConfigProblems({ issuers: [CFG.issuers[0], { ca: "access-ca-1", uri: `${CRL}/b.crl` }] }, BASE),
     ).toEqual([expect.stringMatching(/iki kez/)]);
-    expect(accessCrlConfigProblems({ issuers: [{ ca: "Root CA", uri: `${BASE}/crl/r.crl` }] }, BASE).length).toBe(1);
+    expect(accessCrlConfigProblems({ issuers: [{ ca: "Root CA", uri: `${CRL}/r.crl` }] }, BASE).length).toBe(1);
+  });
+  it("ADR-0090: CRL alan adı güven listesi alan adından; iki ad önce http sonra https; dosya yayın klasöründe crl/", () => {
+    expect(crlHostOf("https://trust.tamga.network")).toBe("crl.tamga.network");
+    expect(crlHostOf("https://trust.sandbox.tamga.network")).toBe("crl.sandbox.tamga.network");
+    expect(crlUrisOf(`${CRL}/access-ca-1.crl`)).toEqual([
+      "http://crl.tamga.network/access-ca-1.crl",
+      "https://crl.tamga.network/access-ca-1.crl",
+    ]);
+    expect(crlFileOf(`${CRL}/access-ca-1.crl`)).toBe("crl/access-ca-1.crl");
+  });
+  it("ADR-0090 CH1: sertifikadaki dağıtım noktası tek nokta, iki ad (http, https)", () => {
+    const ext = cdpExtension(`${CRL}/access-ca-1.crl`);
+    expect(ext.distributionPoints).toHaveLength(1);
+    const names = ext.distributionPoints[0].distributionPoint?.fullName?.map((g) => g.uniformResourceIdentifier);
+    expect(names).toEqual(["http://crl.tamga.network/access-ca-1.crl", "https://crl.tamga.network/access-ca-1.crl"]);
+    expect(ext.critical).toBe(false);
+    // DER'den yeniden okununca da aynı
+    const back = new CRLDistributionPointsExtension(ext.rawData);
+    expect(back.distributionPoints[0].distributionPoint?.fullName?.length).toBe(2);
   });
 });
 
@@ -253,7 +290,7 @@ describe.skipIf(!ready)("ADR-0087 yayıncı (geçici klasörde)", { timeout: 240
           { type: "dns", value: dns },
           { type: "url", value: "https://tamga.network" },
         ]),
-        new CRLDistributionPointsExtension([`${BASE}/crl/access-ca-1.crl`]),
+        cdpExtension(`${CRL}/access-ca-1.crl`),
       ],
     });
     writeFileSync(join(TPKI, `${name}.cert.pem`), cert.toString("pem") + "\n");

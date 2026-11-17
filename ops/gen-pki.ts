@@ -28,10 +28,11 @@
  *   5c. Erişim sertifikası makamı (access-ca-1, ADR-0087 K2) — kökçe imzalı ara makam: yol uzunluğu 0, keyUsage keyCertSign +
  *      cRLSign (kritik), SKI + AKI, CRL dağıtım noktası = kökün CRL'i. Yalnız erişim sertifikası (WRPAC) verir ve onların CRL'ini
  *      imzalar; anahtarı liste yayıncısında durur (kök çevrim dışı kalır). Erişim sertifikalarında (rp-*) CRL dağıtım noktası
- *      uzantısı (2.5.29.31) verenin CRL adresini gösterir: `<trust kökü>/crl/<makam>.crl` (ADR-0087 K3).
+ *      uzantısı (2.5.29.31) verenin CRL adresini gösterir: tek dağıtım noktası, iki ad — `http://crl.<ağ>/<makam>.crl` ve aynı yolun
+ *      `https` adresi (ADR-0090; `ops/crl-dp.ts`).
  *   5d. Kökün CRL'i (`--root-crl`, ADR-0087 K4): `root-ca.crl` kökün anahtarıyla, kökün durduğu bilgisayarda imzalanır; nextUpdate
  *      365 gün, CRL numarası saniye cinsinden zaman (tekdüze), var olan kopyanın iptalleri korunur, `--revoke <seri>:<gerekçe>`
- *      (virgülle birden çok) yenilerini ekler. Yayıncı bu kopyayı denetleyip `/crl/root-ca.crl` olarak yayımlar.
+ *      (virgülle birden çok) yenilerini ekler. Yayıncı bu kopyayı denetleyip `crl.<ağ>/root-ca.crl` olarak yayımlar (ADR-0090).
  *   6. Tamga Wallet sağlayıcı sertifikası (wallet-provider-tamga-wp-1) — üretilmez: depodaki `ops/pki-sandbox/` kopyasından
  *      yalnız kamu sertifikası alınır (gerçek ve sandbox listesinde aynı sertifika; anahtarı ağda yok, ADR-0042)
  *
@@ -59,7 +60,6 @@ import {
   AuthorityKeyIdentifierExtension,
   SubjectAlternativeNameExtension,
   ExtendedKeyUsageExtension,
-  CRLDistributionPointsExtension,
   X509Crl,
   X509CrlGenerator,
   X509CrlReason,
@@ -71,6 +71,7 @@ import { webcrypto } from "node:crypto";
 import { mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from "node:fs";
 import { resolve, dirname, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
+import { cdpExtension, crlHttpUri } from "./crl-dp.js";
 import { computeCaId, computeIssuerId, computeRpId, certFingerprintSha256Hex, pemToDer } from "@tamga-network/core";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
@@ -124,11 +125,10 @@ mkdirSync(outDir, { recursive: true });
 
 const ALG = { name: "ECDSA", namedCurve: "P-256", hash: "SHA-256" } as const;
 const STATE = "TR";
-/** ADR-0087 K3: güven listesi alan adının altında CRL yolu (yeni alt alan adı yok). */
+/** ADR-0090: CRL ayrı alan adında (`crl.tamga.network` / `crl.sandbox.tamga.network`), `http` + `https`. */
 const TRUST_BASE = PROFILE === "sandbox" ? "https://trust.sandbox.tamga.network" : "https://trust.tamga.network";
-const crlUri = (ca: string) => `${TRUST_BASE}/crl/${ca}.crl`;
-/** RFC 5280 §4.2.1.13: tek dağıtım noktası, tam ad = HTTPS adresi; kritik değil. */
-const cdp = (ca: string) => new CRLDistributionPointsExtension([crlUri(ca)]);
+/** RFC 5280 §4.2.1.13 + ADR-0090 K3: tek dağıtım noktası, iki ad (önce http, sonra https); kritik değil. */
+const cdp = (ca: string) => cdpExtension(crlHttpUri(TRUST_BASE, ca));
 
 const keys = () => crypto.subtle.generateKey(ALG, true, ["sign", "verify"]) as Promise<CryptoKeyPair>;
 async function pkcs8Pem(k: CryptoKey) {

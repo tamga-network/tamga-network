@@ -4,7 +4,7 @@ title: "Etibar siyahıları"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 summary: >
   Bugünkü (zəncirsiz) mərhələnin etibar lövbəri olan imzalı, versiyalı və hash zəncirli etibar siyahılarının (lotl.jws, tl-{cc}.jws) və saatlıq lövbər jurnalının (anchors.jsonl) normativ formatı, dərc tezliyi, açar intizamı, TDT-first slotları, qeydin həyat dövrü və zəncirlə ekvivalentlik qaydaları. Hər sahə bir SPEC-BC-0001 kontrakt qeydinə uyğunlaşdırılır; oxuma yalnız TrustSource interfeysi vasitəsilə aparılır.
 translation_of: SPEC-TRUST-0001
@@ -80,7 +80,9 @@ status/wrprc/<n>              status list of the registration certificates (stat
 wrprc-status.json             index and revocation record (ADR-0068; only when configured in the registry — today the real network and the sandbox)
 crl/<authority>.crl           revocation list of access certificates (RFC 5280 CRL, DER, application/pkix-crl; signed by the
                               issuing authority on every publication and hourly, nextUpdate 24 hours) and access-crl-state.json
-                              (revocation record; ADR-0087; only when roles.access_ca.crl is configured — today the sandbox)
+                              (revocation record; ADR-0087; only when roles.access_ca.crl is configured — today the sandbox).
+                              Served not on the trusted-list host but on a separate CRL host: http(s)://crl.<network>/<authority>.crl
+                              (ADR-0090)
 zk/<circuit_id>.zst           ZK circuit files listed in `zk_circuits` (ADR-0032); wallets download them and check `zk_circuits[].sha256`
 lote/<type>.json · .jws       ETSI TS 119 602 LoTE views (wallet-providers, wrpac-providers, eaa-providers);
                               only when LoTE publication is enabled (lote.enabled)
@@ -335,3 +337,9 @@ icazə siyahısındadır). Yoxlayıcının qeydiyyatı dayandırılanda və ya l
 Səlahiyyətli orqanın açarı dərcçidədirsə, CRL hər dərcdə və saatlıq heartbeat-də imzalanır; oflayn orqanın (kök) CRL-i orqanın
 öz kompüterində imzalanır, dərcçi yoxlayıb dərc edir. Qeydiyyat sertifikatlarının status siyahısı (§2 `status/wrprc/<n>`,
 [[ADR-0068]]) dəyişmədi; qeydiyyat sertifikatları CRL-ə düşmür.
+
+**Versiya qeydi (2026-11-18; layihə rəhbərliyinin təsdiqi ilə) — [[ADR-0090]].** CRL-in dərc ünvanı etibar siyahısı domenindən
+ayrı domenə köçürüldü: `crl.tamga.network` (sandbox `crl.sandbox.tamga.network`), yol `/<authority>.crl`; eyni fayl `http` və
+`https` üzərindən yönləndirmə olmadan təqdim olunur, etibar siyahısı domenindəki `/crl/` yolu bağlandı. Fayl dərc qovluğunda yenə
+`crl/<authority>.crl`-dir. Tənzimləmədəki `uri` CRL-in `http` ünvanıdır; sertifikatdakı paylama nöqtəsi iki adlı tək nöqtədir
+(əvvəl `http`, sonra eyni yolun `https` ünvanı; EN 319 412-2 GEN-4.3.11-4).

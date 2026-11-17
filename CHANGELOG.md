@@ -6,6 +6,15 @@ published on npm as test releases; `0.8.6` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+### Changed
+- **CRL on a separate host (ADR-0090).** Access certificate revocation lists move from `trust.<network>/crl/` to
+  `crl.<network>/<authority>.crl`, served over both `http` and `https` without redirection. The CRL Distribution Points extension
+  now holds a single distribution point with two names, `http` first, then `https` (ETSI EN 319 412-2 GEN-4.3.11-4; clients that
+  block cleartext use the second). The registry setting `roles.access_ca.crl.issuers[].uri` is the `http` address; the publisher
+  derives the `https` twin (`crlUrisOf`) and checks the host against the trusted-list host (`crlHostOf`). New `ops/crl-dp.ts`;
+  `gen-pki.ts` and `pki-issue.ts --crl-uri http://crl.…/<authority>.crl` write both names. The sandbox access CA certificate was
+  reissued with the same key.
+
 ## 0.8.7 — 2026-11-17
 
 All ten packages move to 0.8.7 together (patch release). The code changes are in `wallet-core` (identity number in the driving

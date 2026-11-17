@@ -76,6 +76,9 @@ edilir. Tetik tektir (kayıt defterindeki durum değişikliği), çıktılar ayr
 
 ## K3 — Adres ve dağıtım noktası
 
+> Adres kuralının yerini [[ADR-0090]] aldı (2026-11-18): CRL ayrı alan adında (`crl.tamga.network`), `http` + `https`, dağıtım
+> noktasında iki ad. Aşağıdaki biçim, profil ve uzantı kuralları geçerli.
+
 - Adres yayın kökünde, yeni alt alan adı olmadan: `<güven listesi alan adı>/crl/<makam>.crl`. Gerçek ağ
   `https://trust.tamga.network/crl/access-ca-1.crl` ve `…/crl/root-ca.crl`; sandbox `https://trust.sandbox.tamga.network/crl/…`.
 - Biçim DER, yanıt türü `application/pkix-crl` (RFC 2585), herkese açık, CORS açık.

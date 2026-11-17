@@ -4,7 +4,7 @@ title: "Trust lists"
 status: Active
 version: 1.0.0
 created: 2026-09-24
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 summary: >
   The normative format of the signed, versioned and hash-chained trust lists (lotl.jws, tl-{cc}.jws) that are the trust anchor
   of today's (chainless) stage, and of the hourly anchor log (anchors.jsonl): publication cadence, key discipline, TDT-first
@@ -83,7 +83,9 @@ status/wrprc/<n>              status list of the registration certificates (stat
 wrprc-status.json             index and revocation record (ADR-0068; only when configured in the registry — today the real network and the sandbox)
 crl/<authority>.crl           revocation list of access certificates (RFC 5280 CRL, DER, application/pkix-crl; signed by the
                               issuing authority on every publication and hourly, nextUpdate 24 hours) and access-crl-state.json
-                              (revocation record; ADR-0087; only when roles.access_ca.crl is configured — today the sandbox)
+                              (revocation record; ADR-0087; only when roles.access_ca.crl is configured — today the sandbox).
+                              Served not on the trusted-list host but on a separate CRL host: http(s)://crl.<network>/<authority>.crl
+                              (ADR-0090)
 zk/<circuit_id>.zst           ZK circuit files listed in `zk_circuits` (ADR-0032); wallets download them and check `zk_circuits[].sha256`
 lote/<type>.json · .jws       ETSI TS 119 602 LoTE views (wallet-providers, wrpac-providers, eaa-providers);
                               only when LoTE publication is enabled (lote.enabled)
@@ -347,3 +349,10 @@ publication stops before the list is signed (AR3). If the authority's key is at 
 publication and on the hourly heartbeat; the CRL of an offline authority (the root) is signed on the authority's own computer and
 the publisher checks and publishes it. The status list of registration certificates (§2 `status/wrprc/<n>`, [[ADR-0068]]) is
 unchanged; registration certificates do not enter the CRL.
+
+**Version note (2026-11-18; approved by project management) — [[ADR-0090]].** The CRL's publication address moved from the
+trusted-list host to a separate host: `crl.tamga.network` (sandbox `crl.sandbox.tamga.network`), path `/<authority>.crl`; the same
+file is served over `http` and `https` without redirection, and the `/crl/` path on the trusted-list host is closed. The file is
+still `crl/<authority>.crl` in the publication folder. The `uri` setting is the CRL's `http` address; the distribution point in
+certificates is a single point with two names (first `http`, then the `https` address of the same path; EN 319 412-2
+GEN-4.3.11-4).
