@@ -6,6 +6,12 @@ published on npm as test releases; `0.8.6` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+## 0.8.7 — 2026-11-17
+
+All ten packages move to 0.8.7 together (patch release). The code changes are in `wallet-core` (identity number in the driving
+licence attestation, TS10 password 12, `externalListsDirect`) and `trust` (`externalListsDirect`); the other eight packages
+carry the version number.
+
 ### Changed
 
 - **wallet-core — driving licence attestation: the identity presentation also discloses the identity number** (ADR-0039 open
@@ -76,7 +82,7 @@ Published on npm on 2026-11-16.
   `trust`: optional `TrustSource.walletProviderOfKey` (provider id of a WIA/KA signing key, regardless of status).
 - **Credentials of a suspended issuer are not accepted (ADR-0088).** While an issuer is `SUSPENDED` in the trust list, C1
   rejects all of its credentials regardless of issuance time (`REJECTED`, `failed_step: "C1"`, `failed_reason: "issuer
-  suspended"`); once the suspension is lifted, credentials issued before it are accepted again, those issued during it never.
+suspended"`); once the suspension is lifted, credentials issued before it are accepted again, those issued during it never.
   Revocation, retirement and expiry keep the issuance-time rule. `trust`: new optional `TrustSource.isIssuerSuspended`;
   `ListTrustSource`, the chain trust source (`apps/chain-indexer`) and `IssuerRegistry.isCredentialAcceptable` give the same
   answer. Earlier the suspension only dropped credentials issued during it (ADR-0073 K5, changed).

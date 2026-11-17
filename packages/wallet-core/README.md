@@ -16,6 +16,16 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
+## New in 0.8.7
+
+- **Driving licence attestation** (behaviour change): `identityPresentationForIssuer` also discloses
+  `personal_administrative_number` when the identity credential has it. The identity service compares it only as a keyed
+  digest with the number on the card and never writes it to the credential; without it, a card that carries an identity
+  number is refused.
+- **TS10 migration file password at least 12 characters** (`TS10_MIN_PASSWORD` 8 → 12). Only export checks it; import still
+  opens older files protected with 8+ characters.
+- `externalListsDirect` trust list option (default `true`), passed through to `@tamga-network/trust`.
+
 ## New in 0.8.6
 
 - **Identity credential mdoc over the standard path** (behaviour change): `obtainCredential` fetches the mdoc copy with a second
@@ -119,7 +129,7 @@ cache, offline })` fetches each registrar status list once (signer must be a lis
 
 ## Status
 
-Published on npm as the `0.8.6` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.7` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 
