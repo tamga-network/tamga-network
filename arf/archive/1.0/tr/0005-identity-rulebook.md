@@ -210,7 +210,7 @@ sertifikasıdır.
 | `document_type` | `document_type` | tstr | `tamga.id.1` |
 | `document_number_hash` | `document_number_hash` | tstr | `tamga.id.1` |
 | `issuing_country` | `issuing_country` | tstr | `tamga.id.1` |
-| `place_of_birth` | `place_of_birth` | map {? country, ? region, ? locality} | `tamga.id.1` |
+| `place_of_birth` | `place_of_birth` | `map {? country, ? region, ? locality}` | `tamga.id.1` |
 | `issuing_authority` | `issuing_authority` | tstr | `tamga.id.1` |
 | `document_chip_verified` | `document_chip_verified` | bool | `tamga.id.1` |
 | `verification_method` | `verification_method` | tstr | `tamga.id.1` |
