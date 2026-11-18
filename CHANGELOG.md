@@ -1,10 +1,16 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.8.6` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.8.7` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## [Unreleased]
+
+## 0.8.8 — 2026-11-18
+
+All ten packages move to 0.8.8 together (patch release). The code changes are in `wallet-core` (`tws2`, transaction data, MD1
+key order, TS7/TS8 log fields), `sd-jwt` and `verifier` (transaction data), `mdoc` (`place_of_birth` map) and `schemas`
+(`rulebookURI`, identity `place_of_birth` and `issuing_authority`); the other five packages carry the version number.
 
 ### Added
 

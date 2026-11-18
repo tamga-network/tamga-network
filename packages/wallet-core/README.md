@@ -16,6 +16,17 @@ npm install @tamga-network/wallet-core
   is unchanged.
 - `checkRp`, the registration certificate checks and the disclosure policy take `now` as `EpochMillis` (`@tamga-network/core/time`).
 
+## New in 0.8.8
+
+- **Wallet store encryption `tws2`** (ADR-0091 K2): each write uses its own HKDF-SHA-256 subkey; `tws1` records are still read
+  and move to `tws2` on the next write.
+- **Transaction data** (OpenID4VP `transaction_data`, ADR-0091 K4) (behaviour change): a request carrying transaction data is
+  rejected (`invalid_transaction_data`) unless its type is listed in `transactionDataTypes` (empty by default); `respond`
+  signs it only after `confirmTransactionData(approval, shownItems)`.
+- **Identity credential with `place_of_birth`** (ADR-0091 K3): the mdoc copy check (MD1) compares object values independent of
+  key order, so the identity credential's place of birth is accepted in both copies.
+- Data-deletion requests record the requested claim names; presentations through an intermediary record it (TS7, TS8).
+
 ## New in 0.8.7
 
 - **Driving licence attestation** (behaviour change): `identityPresentationForIssuer` also discloses
@@ -129,7 +140,7 @@ cache, offline })` fetches each registrar status list once (signer must be a lis
 
 ## Status
 
-Published on npm as the `0.8.7` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
+Published on npm as the `0.8.8` test release; the stable `1.0.0` comes when everything is ready. In test releases the API
 may change. Every release is built from this repository by GitHub Actions and carries npm provenance (verifiable link to
 the source commit).
 
