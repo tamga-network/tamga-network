@@ -20,6 +20,10 @@ describe("AB PID ad tablosu (core/pid)", () => {
 });
 
 describe("toPidMdocElements / plainElementValue", () => {
+  it("ADR-0091: nesne değerli öğe (place_of_birth) CBOR haritası olarak gider, düz nesne olarak döner", () => {
+    const el = toPidMdocElements({ place_of_birth: { locality: "Madrid", country: "ES" } });
+    expect(plainElementValue(decode(encode(el.place_of_birth)))).toEqual({ locality: "Madrid", country: "ES" });
+  });
   it("birthdate → birth_date #6.1004(tstr); nationalities → nationality dizisi; öteki claim'ler aynen", () => {
     const el = toPidMdocElements({
       given_name: "Ayşe",

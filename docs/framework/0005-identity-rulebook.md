@@ -108,6 +108,8 @@ olduğu bu yokluktan ve belge verenin güven listesindeki sınıfından anlaşı
 | `issuing_country` | AB PID anlamıyla belgeyi veren sağlayıcının ülkesi; bugün değer taranan kimlik belgesini veren ülkedir (§4.6) | ISO 3166-1 alpha-2 | `TR` |
 | `document_chip_verified` | Çip yolu tam geçti mi: çipin pasif doğrulaması, kopya denetimi ve çipteki fotoğrafla canlı yüz eşleşmesi birlikte (olgu; seviye değildir; ADR-0083) | boolean | `true` |
 | `verification_method` | Kimlik doğrulama yolu; `review-demo` yalnız uygulama mağazası incelemesi için verilen deneme belgesinde | `remote-document-liveness-face` \| `remote-nfc-liveness-face` \| `in-person` \| `review-demo` | `remote-document-liveness-face` |
+| `place_of_birth` | Doğum yeri; yalnız doğrulanan belge taşıyorsa (ADR-0091) — belgedeki metin `locality` olarak | nesne `{country?, region?, locality?}` (en az biri; metin ≤ 150) | `{"locality": "MADRID, MADRID"}` |
+| `issuing_authority` | Belgeyi veren makam: geçici işletmecinin adı; her kopyada (ADR-0091) | metin (1–150) | `Tamga Network (provisional)` |
 
 **ZK kopyası (`ShortLivedIdentityAttestation`)**
 
@@ -208,6 +210,8 @@ sertifikasıdır.
 | `document_type` | `document_type` | tstr | `tamga.id.1` |
 | `document_number_hash` | `document_number_hash` | tstr | `tamga.id.1` |
 | `issuing_country` | `issuing_country` | tstr | `tamga.id.1` |
+| `place_of_birth` | `place_of_birth` | map {? country, ? region, ? locality} | `tamga.id.1` |
+| `issuing_authority` | `issuing_authority` | tstr | `tamga.id.1` |
 | `document_chip_verified` | `document_chip_verified` | bool | `tamga.id.1` |
 | `verification_method` | `verification_method` | tstr | `tamga.id.1` |
 | `age_over_18` | `age_over_18` | bool | `tamga.id.1` |
@@ -249,6 +253,8 @@ ağda tektir (ARB_05); tür tanımı (Type Metadata) katalogdan gelir ve `vct#in
 |---|---|---|---|---|
 | `personal_administrative_number` | `personal_administrative_number` | string | AB PID adı | MUST |
 | `issuing_country` | `issuing_country` | string (alpha-2) | AB PID adı (§4.6) | MUST |
+| `place_of_birth` | `place_of_birth` | JSON nesnesi | AB PID adı; belgede varsa (ADR-0091) | MUST |
+| `issuing_authority` | `issuing_authority` | string | AB PID üst verisi (ADR-0091) | MUST |
 | `document_type` | `document_type` | string (küme) | Tamga'ya özgü | MUST |
 | `document_number_hash` | `document_number_hash` | string `sha256-…` | Tamga'ya özgü | MUST |
 | `document_chip_verified` | `document_chip_verified` | boolean | Tamga'ya özgü | MUST |
@@ -409,8 +415,8 @@ Tamga doğrulayıcıları AB'nin kişi kimlik belgesini (PID) ve ISO ehliyetini 
 | `age_over_18` | `age_over_18` | — (ayrı yaş doğrulama belgesi) | — |
 | `age_over_15` | `age_over_15` | — (ayrı yaş doğrulama belgesi) | — |
 | `document_type`, `document_number_hash`, `document_chip_verified`, `verification_method` | aynı | karşılığı yok (Tamga'ya özgü) | karşılığı yok |
-| karşılığı yok | karşılığı yok | `place_of_birth` (doğum yeri: ülke, bölge, yer; zorunlu) | `place_of_birth` |
-| karşılığı yok (belge veren `iss` ve `x5c` sertifikasından anlaşılır) | karşılığı yok | `issuing_authority` (zorunlu üst veri) | `issuing_authority` |
+| `place_of_birth` (yalnız doğrulanan belge taşıyorsa; ADR-0091) | `place_of_birth` | `place_of_birth` (doğum yeri: ülke, bölge, yer; zorunlu) | `place_of_birth` |
+| `issuing_authority` (`Tamga Network (provisional)`; ADR-0091) | `issuing_authority` | `issuing_authority` (zorunlu üst veri) | `issuing_authority` |
 | `date_of_expiry` (idari bitiş; kopyanın teknik `exp`'inden ayrı) | `expiry_date` | `date_of_expiry` (isteğe bağlı) | `expiry_date` |
 | karşılığı yok | karşılığı yok | `date_of_issuance` (isteğe bağlı) | `issuance_date` |
 

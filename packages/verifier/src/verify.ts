@@ -118,6 +118,11 @@ export interface VerifyInput {
    */
   aud?: string;
   nonce: string; // KB-JWT bağlaması (client_id tam dize — PV7)
+  /**
+   * OpenID4VP 1.0 §5.1 / Ek B.3.3.1 (ADR-0091): istekte BU belge sorgusu için gönderilen `transaction_data` dizgileri (geldiği
+   * gibi). Yalnız SD-JWT VC: KB-JWT bunların özetlerini taşımalı; mdoc biçiminde verilirse sunum reddedilir (bağlama tanımlı değil).
+   */
+  transactionData?: string[];
   policy: Policy;
   policyCredentialId: string;
   trust: TrustSource;

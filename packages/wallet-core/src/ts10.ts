@@ -86,6 +86,18 @@ function party(p: Ts10Party | undefined, fallbackName: string) {
   };
 }
 
+/** AB TS10 §3.3: aracı varsa `isIntermediary` TRUE ve aracının adı / kimliği / iletişimi; asıl doğrulayıcı `interactingParty*`. */
+function intermediaryOf(e: PresentationLogEntry, lookup: Ts10Lookup) {
+  if (!e.intermediary) return { isIntermediary: false };
+  const im = lookup.relyingParty?.(e.intermediary, e.vct);
+  return {
+    isIntermediary: true,
+    ...(im?.identifier ? { intermediaryIdentifier: im.identifier } : {}),
+    intermediaryName: im?.name ?? e.intermediary,
+    ...(im?.contact?.length ? { intermediaryContact: im.contact } : {}),
+  };
+}
+
 function presentationTx(e: PresentationLogEntry, i: number, lookup: Ts10Lookup) {
   const rp = lookup.relyingParty?.(e.clientId, e.vct);
   const presented = e.outcome === "sent" ? e.disclosed : [];
@@ -93,7 +105,7 @@ function presentationTx(e: PresentationLogEntry, i: number, lookup: Ts10Lookup) 
     presentation: {
       ...party(rp, e.clientId),
       interactingPartyType: "ServiceProvider",
-      isIntermediary: false,
+      ...intermediaryOf(e, lookup),
       ...(rp?.registrarURL ? { registrarURL: rp.registrarURL } : {}),
       ...(rp?.purpose ? { purpose: rp.purpose } : {}),
       ...(rp?.privacyPolicy
@@ -136,7 +148,7 @@ function eventTx(e: WalletEvent, i: number, state: WalletState, lookup: Ts10Look
       dataDeletionRequest: {
         ...(rp?.identifier ? { interactingPartyIdentifier: rp.identifier } : {}),
         interactingPartyName: rp?.name ?? e.clientId ?? "",
-        listOfClaims: [{ credentialIdentifier: e.vct, claims: [] }],
+        listOfClaims: [{ credentialIdentifier: e.vct, claims: e.claims ?? [] }],
       },
     };
   }

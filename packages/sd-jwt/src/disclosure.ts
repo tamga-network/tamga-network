@@ -81,3 +81,12 @@ export function sdHashOf(presentationWithoutKb: string): string {
   if (!presentationWithoutKb.endsWith("~")) throw new Error("C9: sd_hash input must end with ~");
   return b64u(sha256(new TextEncoder().encode(presentationWithoutKb)));
 }
+
+/**
+ * OpenID4VP 1.0 Ek B.3.3.1 (ADR-0091): KB-JWT `transaction_data_hashes` öğesi — istekteki `transaction_data` dizgisinin GELDİĞİ
+ * GİBİ (base64url çözülmeden) SHA-256 özeti, base64url. Desteklenen tek algoritma `sha-256` (varsayılan; uygulamalar desteklemek
+ * zorunda).
+ */
+export function transactionDataHashOf(transactionData: string): string {
+  return b64u(sha256(new TextEncoder().encode(transactionData)));
+}

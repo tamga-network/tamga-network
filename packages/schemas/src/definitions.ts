@@ -470,6 +470,20 @@ export const IDENTITY: SchemaDef = {
       age_over_15: { type: "boolean" },
       // ADR-0089 K2: idari geçerlilik (kaydın bitişi; AB PID `date_of_expiry`, mdoc `expiry_date`) — kopyanın teknik `exp`'inden ayrı
       date_of_expiry: DATE,
+      // ADR-0091: AB PID doğum yeri (CIR 2026/1731 §4.1 (j), Tablo 7 — `place_of_birth` {country?, region?, locality?}, en az biri);
+      // yalnız kaynak belge taşıyorsa yazılır (TR kimlik kartında çoğu zaman yok)
+      place_of_birth: {
+        type: "object",
+        minProperties: 1,
+        properties: {
+          country: { type: "string", pattern: "^[A-Z]{2}$" },
+          region: { type: "string", minLength: 1, maxLength: 150 },
+          locality: { type: "string", minLength: 1, maxLength: 150 },
+        },
+        additionalProperties: false,
+      },
+      // ADR-0091: AB PID zorunlu üst verisi `issuing_authority` (belgeyi veren idari makamın adı) — her belgeye yazılır
+      issuing_authority: { type: "string", minLength: 1, maxLength: 150 },
     },
     additionalProperties: false,
   },
@@ -558,6 +572,22 @@ export const IDENTITY: SchemaDef = {
           { lang: "en-US", label: "Date of expiry" },
         ],
       },
+      {
+        path: ["place_of_birth"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Doğum yeri" },
+          { lang: "en-US", label: "Place of birth" },
+        ],
+      },
+      {
+        path: ["issuing_authority"],
+        sd: "always",
+        display: [
+          { lang: "tr-TR", label: "Veren makam" },
+          { lang: "en-US", label: "Issuing authority" },
+        ],
+      },
       { path: ["status"], sd: "never" },
     ],
     tamga: {
@@ -569,7 +599,7 @@ export const IDENTITY: SchemaDef = {
       min_binding_level: "T2",
       derived_claims: ["age_over_18", "age_over_15", "document_number_hash", "date_of_expiry"],
       status: "ACTIVE",
-      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact). ADR-0045: attribute names and encodings follow the EU PID encoding of Implementing Regulation (EU) 2026/1731 (SD-JWT VC: birthdate, nationalities[]; mdoc namespace tamga.id.1: birth_date as full-date, nationality as an array); age_over_18 is a Tamga attribute (not in the EU PID set) with the ISO/IEC 18013-5 name in both formats. ADR-0064: age attributes follow the ISO/IEC 18013-5 age_over_NN pattern; the threshold set is closed ({15, 18}) and changes only by ADR; each is derived from the date of birth at issuance and selectively disclosable. ADR-0089: default_ttl_days is the administrative validity of the logical credential, carried in every copy as date_of_expiry (mdoc expiry_date); renewable copies have a technical validity of at most 30 days and are re-issued against a presentation of a current copy (age attributes are recomputed at renewal).",
+      note: "ADR-0011 K2: the national ID number exists ONLY in this type and only selectively disclosable; no portrait; no holder LoA claim (document_chip_verified is a fact). ADR-0045: attribute names and encodings follow the EU PID encoding of Implementing Regulation (EU) 2026/1731 (SD-JWT VC: birthdate, nationalities[]; mdoc namespace tamga.id.1: birth_date as full-date, nationality as an array); age_over_18 is a Tamga attribute (not in the EU PID set) with the ISO/IEC 18013-5 name in both formats. ADR-0064: age attributes follow the ISO/IEC 18013-5 age_over_NN pattern; the threshold set is closed ({15, 18}) and changes only by ADR; each is derived from the date of birth at issuance and selectively disclosable. ADR-0089: default_ttl_days is the administrative validity of the logical credential, carried in every copy as date_of_expiry (mdoc expiry_date); renewable copies have a technical validity of at most 30 days and are re-issued against a presentation of a current copy (age attributes are recomputed at renewal). ADR-0091: place_of_birth (EU PID structure country/region/locality; written only when the source document carries it) and issuing_authority (EU PID metadata; the name of the provisional operator) follow Implementing Regulation (EU) 2026/1731.",
     },
   },
 };
@@ -1193,3 +1223,27 @@ export function suspensionAllowed(vct: string): boolean | undefined {
 export const NON_PRESENTABLE_VCTS: readonly string[] = ALL.filter(
   (d) => (d.typeMetadata.tamga as { presentable?: boolean } | undefined)?.presentable === false,
 ).map((d) => d.vct);
+
+/**
+ * ARF R27 / AB TS11 §4.3 `rulebookURI`: katalogdaki her tür insan okunur kural kitabına bağlanır (Tamga ARF sitesi). Yalnız katalog
+ * girdisine yazılır; tür metadata'sı ve şema özetleri değişmez. Kendi kural kitabı olmayan tür ana Tamga Rulebook'a bağlanır.
+ */
+export const RULEBOOK_BASE = "https://arf.tamga.network";
+const RULEBOOK_PATH: Record<string, string> = {
+  [BASE.vct]: "rulebook",
+  [STUDENT.vct]: "rulebooks/education",
+  [DIPLOMA.vct]: "rulebooks/education",
+  [IDENTITY.vct]: "rulebooks/identity",
+  [PSEUDONYM_SEED.vct]: "rulebooks/identity",
+  [DRIVING_LICENCE.vct]: "rulebooks/identity",
+  [ZK_COPY.vct]: "rulebooks/identity",
+  [TICKET.vct]: "rulebooks/event-ticket",
+  [EMAIL.vct]: "rulebooks/contact",
+  [PHONE.vct]: "rulebooks/contact",
+};
+/** Katalogdaki türün kural kitabı adresi; eşlemesi olmayan tür HATA (yeni tür eklenirken kural kitabı unutulmasın). */
+export function rulebookUriOf(vct: string): string {
+  const p = RULEBOOK_PATH[vct];
+  if (!p) throw new Error(`no rulebook mapped for ${vct} (ARF R27)`);
+  return `${RULEBOOK_BASE}/${p}`;
+}

@@ -4,7 +4,7 @@ title: "Şema kataloğu"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-11-18
 summary: >
   [[ADR-0007]] kararlarının normatif uygulaması. schemas.tamga.network URL şemasını
   ve isim alanlarını, her vct adresinde yayınlanan SD-JWT VC Type Metadata
@@ -56,7 +56,7 @@ metadata dize biçimi).
 
 ## 1.1 Genel biçim
 
-> **Geliştirme evresi ([[ADR-0029]]):** beta yayınına kadar şemalar aynı sürüm yolunda yerinde düzeltilir; D1 ve küçük sürüm kuralı beta (`SCHEMA_STAGE = "stable"`) ile uygulanır. Katalog ve `lotl.schemas[]` girdisi `content_hashes` alanını taşır; doğrulayıcı (B4) ve cüzdan belgenin `vct#integrity`'sini bu listede arar. Geliştirme evresinde listede yalnız güncel özet vardır.
+> **Geliştirme evresi ([[ADR-0029]]):** beta yayınına kadar şemalar aynı sürüm yolunda yerinde düzeltilir; D1 ve küçük sürüm kuralı beta (`SCHEMA_STAGE = "stable"`) ile uygulanır. Katalog ve `lotl.schemas[]` girdisi `content_hashes` alanını taşır; doğrulayıcı (B4) ve cüzdan belgenin `vct#integrity`'sini bu listede arar. Geliştirme evresinde listede yalnız güncel özet vardır. Katalog girdisi ayrıca `rulebookURI` taşır: türün Tamga ARF sitesindeki kural kitabı (AB TS11 adı, ARF R27; [[ADR-0091]] K1). Yalnız katalogdadır; tür metadata'sına ve `lotl.schemas[]`'a girmez, özetleri değiştirmez.
 
 > **ADR-0010 (D-SCHEMA-4):** Tip **kimliği** `vct = urn:tamga:<domain>:<Type>:<major>` (devlet aşaması devlet-özel `urn:tamga:<cc>:<domain>:<Type>:<major>`), `schemaId = keccak256(vct)`. Aşağıdaki HTTPS yolları kimlik değil, **`metadata_url` / `schema_uri`** (barındırma adresi; katalog `schemas.tamga.network/v1/catalogue.json` `vct → metadata_url + content_hash` verir, IETF SD-JWT VC-19 §5.3.2 registry yolu). `vct#integrity` zorunludur (ETSI TS 119 472-1). Alan adı değişse kimlik değişmez (D-NAME-1).
 

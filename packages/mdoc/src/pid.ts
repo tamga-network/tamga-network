@@ -27,9 +27,18 @@ export function toPidMdocElements(claims: Record<string, unknown>): Record<strin
   return out;
 }
 
-/** mdoc öğe değeri → düz değer (JSON): `full-date` (1004) ve `tdate` (0) etiketleri dizgiye; öteki değerler aynen. */
+/**
+ * mdoc öğe değeri → düz değer (JSON): `full-date` (1004) ve `tdate` (0) etiketleri dizgiye; CBOR haritası (ör. AB PID
+ * `place_of_birth`, ADR-0091) dizgi anahtarlı düz nesneye, dizi öğeleri de aynı kuralla (iç içe); öteki değerler aynen.
+ */
 export function plainElementValue(v: unknown): unknown {
   if (v instanceof CborTag && (v.tag === CBOR_TAG_FULL_DATE || v.tag === CBOR_TAG_TDATE) && typeof v.value === "string")
     return v.value;
+  if (v instanceof Map) {
+    const o: Record<string, unknown> = {};
+    for (const [k, x] of v) if (typeof k === "string") o[k] = plainElementValue(x);
+    return o;
+  }
+  if (Array.isArray(v)) return v.map(plainElementValue);
   return v;
 }

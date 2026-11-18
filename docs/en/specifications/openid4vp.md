@@ -4,7 +4,7 @@ title: "OpenID4VP profile"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 summary: >
   Defines how a credential is presented from the wallet to the verifier. The Tamga profile on top of OpenID4VP 1.0 Final:
   DCQL queries (Presentation Exchange is NOT used), a signed request object, response encryption, the Digital Credentials API
@@ -526,8 +526,21 @@ application".
 Use: the transaction text approved by the user is bound to the KB-JWT as a hash. The presentation cannot then be reused for
 another transaction.
 
-**In Tamga:** not used in the initial stage (the education scenario does not need transaction binding). It will be needed in finance and
-authorisation scenarios ([[PM-AUTH-0001]]). The profile will be written then.
+**In Tamga ([[ADR-0091]] K4, 2026-11-18):** the mechanism is in the packages; no transaction type is defined.
+
+- Request: each item is a base64url JSON object; `type` and non-empty `credential_ids` are required, each id is the `id` of a
+  `dc+sd-jwt` query (holder binding cannot be disabled), and `transaction_data_hashes_alg`, if given, contains `sha-256` (OpenID4VP 1.0
+  §5.1, Annex B.3.3). The verifier builds items with `transactionDataItem`.
+- Wallet: a single unrecognised type rejects the request with `invalid_transaction_data` (the field is not ignored; §5, §8.5).
+  Recognised types are the wallet's list; the network defines none and the default list is empty. Transaction data not shown to the
+  person is not signed: the approval is recorded with the items shown (`confirmTransactionData`). Each item binds to the first suitable
+  selected SD-JWT VC presentation (§5.1). At most 10 items, 8 KB per item; a repeated item is rejected.
+- KB-JWT: `transaction_data_hashes` = SHA-256 digests (base64url) of the strings as received (no base64url decoding); if the request
+  gave `transaction_data_hashes_alg`, `transaction_data_hashes_alg: "sha-256"` (then mandatory).
+- Verification (A6): with `VerifyInput.transactionData` a KB-JWT is required and the digests must match exactly; without it the KB-JWT
+  must carry no digests. In the Tamga profile transaction data is not bound to an mdoc presentation (the OpenID4VP mdoc path is not
+  used). A response-level "every item bound to a presentation" check is written when the first type is added.
+- Payment ([[PM-AUTH-0001]]) and qualified signature types are added by a separate decision with naming approval.
 
 ---
 

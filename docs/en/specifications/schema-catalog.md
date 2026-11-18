@@ -4,7 +4,7 @@ title: "Schema catalogue"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-11-18
 summary: >
   The normative implementation of the [[ADR-0007]] decisions. Defines the schemas.tamga.network URL scheme and namespaces,
   the structure of the SD-JWT VC Type Metadata document published at every vct address, how the vct#integrity value is
@@ -56,7 +56,9 @@ W3C Subresource Integrity (the integrity metadata string format).
 > **Development stage ([[ADR-0029]]):** until the beta release, schemas are corrected in place on the same version path; D1
 > and the minor-version rule apply from the beta (`SCHEMA_STAGE = "stable"`). The catalogue and the `lotl.schemas[]` entry
 > carry a `content_hashes` field; the verifier (B4) and the wallet look up the credential's `vct#integrity` in this list.
-> During the development stage the list holds only the current digest.
+> During the development stage the list holds only the current digest. A catalogue entry also carries `rulebookURI`: the type's
+> rulebook on the Tamga ARF site (EU TS11 name, ARF R27; [[ADR-0091]] K1). It is catalogue-only; it enters neither the type metadata
+> nor `lotl.schemas[]` and does not change the digests.
 
 > **ADR-0010 (D-SCHEMA-4):** the type **identifier** is `vct = urn:tamga:<domain>:<Type>:<major>` (in the state stage, state-specific
 > `urn:tamga:<cc>:<domain>:<Type>:<major>`), `schemaId = keccak256(vct)`. The HTTPS paths below are not identifiers but the

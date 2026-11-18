@@ -6,7 +6,32 @@ published on npm as test releases; `0.8.6` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+### Added
+
+- **wallet-core: claim names on a data-deletion request (EU TS7 DATA_DLT_06).** `WalletEvent.claims` (names only, no values) records
+  which attributes the person asked the relying party to erase; the TS10 export fills `dataDeletionRequest.listOfClaims[].claims`
+  from it (empty list = everything shared in that presentation, DATA_DLT_09). Optional field; older logs export as before.
+- **wallet-core: intermediary in the presentation log (EU TS10 §3.3, TS8 RPT_DPA_08/09).** `PresentationLogEntry.intermediary`
+  (the signing intermediary's `client_id` when the request came `tamga_on_behalf_of`); the TS10 export and the TS8 report attachment
+  set `isIntermediary: true` with `intermediaryName`, `intermediaryIdentifier` and `intermediaryContact` from the trusted list.
+- **Transaction data (`transaction_data`, OpenID4VP 1.0 §5.1, Annex B.3.3; ADR-0091 K4).** `wallet-core`: `parseTransactionData`
+  checks each item (`type`, `credential_ids` → a `dc+sd-jwt` query with holder binding, `sha-256`) and rejects an unrecognised type
+  with the new error code `invalid_transaction_data`; recognised types come from `VerifyRequestOptions.transactionDataTypes`
+  (default empty, so a request carrying transaction data is rejected instead of silently ignored); `respond` signs only with
+  `confirmTransactionData(approval, shownItems)` (bound to the exact items shown) and binds the KB-JWT with `transaction_data_hashes`. `sd-jwt`: `presentSdJwtVc({ transactionData })`
+  and `verifySdJwtVc({ transactionData })` (A6: digests must match exactly; an unexpected digest is rejected). `verifier`:
+  `transactionDataItem`, `RequestContent.transactionData`, `VerifyInput.transactionData`. The network defines no transaction type.
+- **schemas: `rulebookURI` in catalogue entries (EU TS11, ARF R27; ADR-0091 K1).** Each entry links the type's rulebook on the Tamga
+  ARF site; type metadata and `content_hash` values are unchanged.
+- **schemas: `place_of_birth` and `issuing_authority` in the identity attestation (EU PID, CIR 2026/1731; ADR-0091 K3).** Both
+  optional in the schema and selectively disclosable; `place_of_birth` only when the source document carries it.
+
 ### Changed
+
+- **wallet-core: wallet store encryption `tws2` (ECCG ACM v2 §3.5; ADR-0091 K2).** Each write encrypts under its own HKDF-SHA-256
+  subkey (random 32-byte salt), so no GCM IV is ever reused under one key. `tws1` records are still read and move to `tws2` on the
+  next write.
+
 - **CRL on a separate host (ADR-0090).** Access certificate revocation lists move from `trust.<network>/crl/` to
   `crl.<network>/<authority>.crl`, served over both `http` and `https` without redirection. The CRL Distribution Points extension
   now holds a single distribution point with two names, `http` first, then `https` (ETSI EN 319 412-2 GEN-4.3.11-4; clients that

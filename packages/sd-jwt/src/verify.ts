@@ -22,7 +22,16 @@ import {
   type EpochSeconds,
 } from "@tamga-network/core";
 import { decodeDisclosures, resolveSdPayload, SdStructureError } from "@tamga-network/core/sd-structure";
-import { digestOf, KB_IAT_WINDOW_SEC, KB_JWT_TYP, SD_ALG, SD_JWT_TYP, sdHashOf, splitCombined } from "./disclosure.js";
+import {
+  digestOf,
+  KB_IAT_WINDOW_SEC,
+  KB_JWT_TYP,
+  SD_ALG,
+  SD_JWT_TYP,
+  sdHashOf,
+  splitCombined,
+  transactionDataHashOf,
+} from "./disclosure.js";
 
 cryptoProvider.set(webcrypto as unknown as Crypto);
 /**
@@ -104,6 +113,12 @@ export interface VerifyOptions {
    * ve öteki adımlar aynen denetlenir; sonuçta `checksPerformed` A7 içermez. Doğrulamada (kabul kararı) KULLANILMAZ.
    */
   skipValidityPeriod?: boolean;
+  /**
+   * OpenID4VP 1.0 Ek B.3.3.1 (ADR-0091): doğrulayıcının bu belge için istekte gönderdiği `transaction_data` dizgileri. Verilirse
+   * KB-JWT `transaction_data_hashes` bunların SHA-256 özetlerini (sıra fark etmez, eksiksiz ve fazlasız) taşımalı;
+   * `transaction_data_hashes_alg` varsa yalnız `sha-256`. Verilmezse KB-JWT'de `transaction_data_hashes` bulunmamalı.
+   */
+  transactionData?: string[];
 }
 
 export interface VerifyOk {
@@ -298,6 +313,8 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
 
   // A6 — KB-JWT
   let kb: VerifyOk["kb"];
+  // ADR-0091: işlem verisi yalnız KB-JWT ile bağlanır — beklenip KB yoksa (`requireKb: false` ile bile) RED
+  if (opt.transactionData?.length && !parts.kb) return fail("A6", "transaction data requires a KB-JWT");
   if (parts.kb) {
     // Beklenen değerler boşsa (ör. nonce deposu undefined döndü) karşılaştırma anlamsızdır: KB-JWT kabul edilmez
     if (typeof opt.aud !== "string" || !opt.aud || typeof opt.nonce !== "string" || !opt.nonce)
@@ -312,6 +329,8 @@ export async function verifySdJwtVc(combined: string, opt: VerifyOptions): Promi
         return fail("A6", "KB-JWT iat outside the allowed window (C17)");
       const withoutKb = combined.slice(0, combined.length - parts.kb.length);
       if (kbp.sd_hash !== sdHashOf(withoutKb)) return fail("A6", "sd_hash mismatch (C9)");
+      const tdFail = transactionDataMismatch(kbp, opt.transactionData);
+      if (tdFail) return fail("A6", tdFail);
       kb = { aud: opt.aud, nonce: opt.nonce, iat: kbp.iat };
     } catch (e) {
       if (e instanceof errors.JWTClaimValidationFailed)
@@ -369,4 +388,30 @@ export async function peekSdJwtVc(combined: string): Promise<{
       value: x.value,
     })),
   };
+}
+
+const requestedHashesAlg = (s: string): boolean => {
+  try {
+    const o = JSON.parse(Buffer.from(s, "base64url").toString("utf8")) as Record<string, unknown>;
+    return !!o && typeof o === "object" && o.transaction_data_hashes_alg !== undefined;
+  } catch {
+    return false;
+  }
+};
+
+/** ADR-0091: KB-JWT `transaction_data_hashes` ↔ beklenen dizgiler; uyuşmazlıkta sabit neden, uyuşursa null. */
+function transactionDataMismatch(kbp: Record<string, unknown>, expected: string[] | undefined): string | null {
+  const got = kbp.transaction_data_hashes;
+  if (!expected?.length) return got === undefined ? null : "unexpected transaction_data_hashes";
+  if (kbp.transaction_data_hashes_alg !== undefined && kbp.transaction_data_hashes_alg !== "sha-256")
+    return "unsupported transaction_data_hashes_alg";
+  // Ek B.3.3.1: istekteki öğe `transaction_data_hashes_alg` taşıdıysa KB-JWT'de alan ZORUNLU
+  if (kbp.transaction_data_hashes_alg === undefined && expected.some(requestedHashesAlg))
+    return "transaction_data_hashes_alg missing";
+  if (!Array.isArray(got) || got.some((h) => typeof h !== "string")) return "transaction_data_hashes missing";
+  const want = new Set(expected.map(transactionDataHashOf));
+  const have = new Set(got as string[]);
+  if (have.size !== got.length || want.size !== have.size || [...want].some((h) => !have.has(h)))
+    return "transaction_data_hashes mismatch";
+  return null;
 }

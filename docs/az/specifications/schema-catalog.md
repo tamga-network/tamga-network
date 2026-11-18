@@ -4,7 +4,7 @@ title: "Sxem kataloqu"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-10-16
+last_updated: 2026-11-18
 summary: >
   [[ADR-0007]] qərarlarının normativ tətbiqi. schemas.tamga.network URL sxemini və ad sahələrini, hər vct ünvanında dərc edilən SD-JWT VC Type Metadata sənədinin strukturunu, vct#integrity dəyərinin necə hesablandığını, kök tip TamgaBaseCredential-ı, SchemaRegistry və IssuerRegistry müqavilə interfeyslərini, sxemlərin dərc xəttini (repo → CI → hash → CDN → zəncir), yoxlayan tərəfdəki altı addımlı həll etmə alqoritmini, versiyalaşdırma və istifadədən çıxarma qaydalarını, çoxdilli sahə strukturunu və doqquz invariantı müəyyən edir.
 translation_of: SPEC-SCHEMA-0001
@@ -52,7 +52,7 @@ metadata sətir formatı).
 
 ## 1.1 Ümumi format
 
-> **İnkişaf mərhələsi ([[ADR-0029]]):** beta buraxılışına qədər sxemlər eyni versiya yolunda yerində düzəldilir; D1 və kiçik versiya qaydası beta (`SCHEMA_STAGE = "stable"`) ilə tətbiq edilir. Kataloq və `lotl.schemas[]` qeydi `content_hashes` sahəsini daşıyır; yoxlayan tərəf (B4) və rəqəmsal cüzdan sənədin `vct#integrity` dəyərini bu siyahıda axtarır. İnkişaf mərhələsində siyahıda yalnız aktual heş olur.
+> **İnkişaf mərhələsi ([[ADR-0029]]):** beta buraxılışına qədər sxemlər eyni versiya yolunda yerində düzəldilir; D1 və kiçik versiya qaydası beta (`SCHEMA_STAGE = "stable"`) ilə tətbiq edilir. Kataloq və `lotl.schemas[]` qeydi `content_hashes` sahəsini daşıyır; yoxlayan tərəf (B4) və rəqəmsal cüzdan sənədin `vct#integrity` dəyərini bu siyahıda axtarır. İnkişaf mərhələsində siyahıda yalnız aktual heş olur. Kataloq qeydi həmçinin `rulebookURI` daşıyır: növün Tamga ARF saytındakı qaydalar kitabı (AB TS11 adı, ARF R27; [[ADR-0091]] K1). Yalnız kataloqdadır; növ metadatasına və `lotl.schemas[]`-a daxil olmur, heşləri dəyişmir.
 
 > **ADR-0010 (D-SCHEMA-4):** Tipin **identifikatoru** `vct = urn:tamga:<domain>:<Type>:<major>` (dövlət mərhələsində dövlətə məxsus `urn:tamga:<cc>:<domain>:<Type>:<major>`), `schemaId = keccak256(vct)`. Aşağıdakı HTTPS yolları identifikator deyil, **`metadata_url` / `schema_uri`**-dir (yerləşdirmə ünvanı; kataloq `schemas.tamga.network/v1/catalogue.json` `vct → metadata_url + content_hash` verir, IETF SD-JWT VC-19 §5.3.2 registry yolu). `vct#integrity` məcburidir (ETSI TS 119 472-1). Domen adı dəyişsə də, identifikator dəyişmir (D-NAME-1).
 

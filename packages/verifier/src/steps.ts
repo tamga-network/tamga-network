@@ -845,6 +845,9 @@ export function expectedSdJwtAud(
 
 /** A adımının format seçimi: sonucu ortak biçime indirir (B–E iki format için aynı). */
 async function formatStep(input: VerifyInput, now: EpochSeconds): Promise<FormatResult> {
+  // ADR-0091: işlem verisinin bağlaması OpenID4VP 1.0'da yalnız SD-JWT VC için tanımlı (Ek B.3.3)
+  if (input.transactionData?.length && input.format !== undefined && input.format !== "dc+sd-jwt")
+    return { ok: false, failedStep: "A1", reason: "transaction_data is bound only to SD-JWT VC presentations" };
   if (input.format === "mso_mdoc_zk") {
     if (!input.responseUri && !input.origin)
       return { ok: false, failedStep: "A1", reason: "responseUri or origin required for mso_mdoc_zk" };
@@ -906,6 +909,7 @@ async function formatStep(input: VerifyInput, now: EpochSeconds): Promise<Format
     now,
     rootCertsDer: input.rootCertsDer,
     requireKb: true,
+    transactionData: input.transactionData,
     allowMissingVctIntegrity: true, // B4 karar verir: Tamga türünde zorunlu, dış türde (AB PID) isteğe bağlı
     allowMissingSdAlg: true, // RFC 9901 §4.1.1 varsayılanı sha-256; B adımı karar verir: Tamga türünde zorunlu (C2), dış türde isteğe bağlı
   });

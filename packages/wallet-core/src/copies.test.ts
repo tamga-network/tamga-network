@@ -186,6 +186,24 @@ describe("depo şifrelemesi", () => {
     expect(() => openText(rnd(32), s)).toThrow();
     expect(() => openText(k, s.slice(0, -2) + (s.endsWith("A") ? "BB" : "AA"))).toThrow();
   });
+
+  it("tws2: her yazım ayrı alt anahtar (ECCG ACM v2 GCM IV); eski tws1 kayıtları okunur", async () => {
+    const { sealText, openText } = await import("./seal.js");
+    const { gcm } = await import("@noble/ciphers/aes.js");
+    const { b64u, concat, utf8 } = await import("./b64.js");
+    const rnd = (n: number) => crypto.getRandomValues(new Uint8Array(n));
+    const k = rnd(32);
+    const a = sealText(k, "aynı metin", rnd);
+    const b = sealText(k, "aynı metin", rnd);
+    expect(a.startsWith("tws2.")).toBe(true);
+    expect(a).not.toBe(b);
+    expect(openText(k, a)).toBe("aynı metin");
+    // eski biçim: rastgele IV + ana anahtar, AAD "tws1."
+    const iv = rnd(12);
+    const legacy = "tws1." + b64u(concat(iv, gcm(k, iv, utf8("tws1.")).encrypt(utf8("eski kayıt"))));
+    expect(openText(k, legacy)).toBe("eski kayıt");
+    expect(() => openText(k, "xyz.abc")).toThrow(/not an encrypted store/);
+  });
 });
 
 describe("yakın alan kopya tüketimi (SPEC-WALLET-0001 §4.1; 0.8.4)", () => {

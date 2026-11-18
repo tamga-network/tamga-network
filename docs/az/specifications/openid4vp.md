@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 summary: >
   Rəqəmsal sənədin rəqəmsal cüzdandan yoxlayan tərəfə necə təqdim edildiyini müəyyən edir. OpenID4VP 1.0 Final üzərində Tamga profili: DCQL sorğuları (Presentation Exchange İSTİFADƏ EDİLMİR), imzalı sorğu obyekti, cavabın şifrələnməsi, brauzerdə Digital Credentials API. Əsas tapıntı: HAIP-in məcburi etdiyi `x509_hash` client identifier prefiksi base64url(SHA-256(DER)) dəyəridir — bu, zəncirdəki `RelyingParty.accessCertFingerprint` ilə TAM EYNİ BAYTLARDIR. Buna görə rəqəmsal cüzdan sorğudakı client identifier-dən birbaşa zəncir qeydini tapa və həddindən artıq tələb nəzarətini ([[SPEC-BC-0001]] §6) protokol səviyyəsində tətbiq edə bilər. Bundan əlavə, istənilməyən sahələrin aşkarlanması, təqdimatdan sonra istifadəçi jurnalı və cavabın şifrələnməsi qaydaları.
 translation_of: SPEC-PROTO-0002
@@ -538,9 +538,13 @@ gördüm" deyil, "bu diplomu filan iş müraciəti üçün gördüm".
 İstifadə: istifadəçinin təsdiqlədiyi əməliyyat mətni KB-JWT-yə heş kimi
 bağlanır. Beləliklə, təqdimat başqa bir əməliyyat üçün təkrar istifadə edilə bilməz.
 
-**Tamga-da:** ilk mərhələdə istifadə olunmur (təhsil ssenarisində əməliyyat bağlaması
-tələb olunmur). Maliyyə və səlahiyyətləndirmə ssenarilərində ([[PM-AUTH-0001]])
-zəruri olacaq. Profil o zaman yazılacaq.
+**Tamga-da ([[ADR-0091]] K4, 2026-11-18):** mexanizm paketlərdədir; əməliyyat növü müəyyən edilməyib.
+
+- Cüzdan tanımadığı bir növ olduqda sorğunu `invalid_transaction_data` ilə rədd edir (sahə nəzərə alınmamış qalmır); defolt siyahı
+  boşdur. Şəxsə göstərilməmiş əməliyyat məlumatı imzalanmır (`confirmTransactionData`).
+- KB-JWT: `transaction_data_hashes` = sorğuda gələn sətirlərin SHA-256 heşləri. Doğrulama (A6): heşlər tam uyğun gəlməlidir.
+- Tamga profilində mdoc təqdimatına əməliyyat məlumatı bağlanmır. Ödəniş ([[PM-AUTH-0001]]) və ixtisaslı imza növləri ayrıca qərarla
+  əlavə edilir.
 
 ---
 

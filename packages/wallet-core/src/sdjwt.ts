@@ -9,6 +9,7 @@ import { keccak_256 } from "@noble/hashes/sha3.js";
 import { b64Decode, b64u, b64uDecode, b64uToUtf8, concat, toHex, utf8 } from "./b64.js";
 import { sameJwk, verifyEs256, type KeyProvider, type PublicJwk } from "./keys.js";
 import { decodeJwt, signJwt } from "./jws.js";
+import { transactionDataHash } from "./transaction-data.js";
 import {
   decodeDisclosures,
   resolveSdPayload,
@@ -218,6 +219,8 @@ export async function presentSdJwt(input: {
   aud: string;
   nonce: string;
   iat?: number;
+  /** ADR-0091 / OpenID4VP Ek B.3.3.1: bu sunuma bağlanan `transaction_data` dizgileri (istekte geldiği gibi) */
+  transactionData?: { values: string[]; hashesAlg?: boolean };
 }): Promise<string> {
   const { jwt, disclosures } = splitCombined(input.combined);
   // ADR-0036: istenen ad bir yol olabilir (`address.locality`); iç içe disclosure'lar atası ve alt alanlarıyla birlikte seçilir
@@ -242,6 +245,12 @@ export async function presentSdJwt(input: {
       aud: input.aud,
       iat: input.iat ?? Math.floor(Date.now() / 1000),
       sd_hash: sdHashOf(withoutKb),
+      ...(input.transactionData?.values.length
+        ? {
+            transaction_data_hashes: input.transactionData.values.map(transactionDataHash),
+            ...(input.transactionData.hashesAlg ? { transaction_data_hashes_alg: "sha-256" } : {}),
+          }
+        : {}),
     },
     input.keys,
     input.keyRef,

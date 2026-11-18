@@ -4,7 +4,7 @@ title: Bağlayıcı kurallar
 status: Active
 version: 1.0.0
 created: 2026-10-02
-last_updated: 2026-11-17
+last_updated: 2026-11-18
 summary: >
   Tüm spesifikasyon ve mimari dokümanlarındaki değişmezlerin (invariant) tek
   indeksi. ÜRETİLEN DOSYADIR — kaynak, her dokümanın kendi "Değişmezler"
@@ -32,7 +32,7 @@ da değişmez değildir; kaynak koda atıf verirler (D-GOV-6).
 **Bu dosya üretilir.** Bir değişmezi değiştirmek için kaynak dokümanı
 değiştir, sonra `node scripts/sync-invariants.mjs` ile bu indeksi yeniden üret. Elle düzenleme yapılmaz.
 
-**Toplam: 514 kodlanmış değişmez, 92 dokümanda.** Ayrıca bir Draft spec
+**Toplam: 518 kodlanmış değişmez, 93 dokümanda.** Ayrıca bir Draft spec
 (SPEC-ID-0001) doküman-kapsamlı **kısa kod atanmamış** numaralı değişmez listesi
 taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 "Kodlanmamış Değişmez Listeleri" altında not olarak izlenir (sayıya dahil değil).
@@ -950,6 +950,18 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 | `ADR-0090/CH2` | CRL alan adı iki şemada aynı dosyayı yönlendirmesiz sunar ve CRL dışında içerik yayımlamaz; `https` sertifikası Tamga PKI'ından gelmez. |
 
 
+## ADR-0091
+
+*"AB uyum eşlemesi 2026-11: kural kitabı bağlantısı, uzun ömürlü anahtarla şifreleme, PID alanları, işlem verisi"*
+
+| Kod | Açıklama |
+|---|---|
+| `ADR-0091/EA1` | Katalogdaki her türün `rulebookURI`'si vardır; alan tür metadata'sına girmez. |
+| `ADR-0091/EA2` | Aynı uzun ömürlü anahtarla AES-GCM şifrelemesi yapılmaz: her şifreleme tek kullanımlık (türetilmiş ya da sarılmış) anahtarla yapılır. |
+| `ADR-0091/EA3` | `place_of_birth` yalnız kaynak belgeden gelir, tahmin edilmez; `issuing_authority` her kimlik belgesi kopyasında bulunur. |
+| `ADR-0091/EA4` | İşlem verisi taşıyan istekte cüzdan tanımadığı türü reddeder; kişiye gösterilmemiş işlem verisi imzalanmaz; ağ işlem türü tanımlamaz. |
+
+
 ## ARCH-0003
 
 *"Bileşen mimarisi"*
@@ -1302,12 +1314,12 @@ taşır; [[SPEC-ID-0002]] ile superseded olduğu için kodlanmadı ve aşağıda
 
 # Kod Çakışmaları
 
-Şu an **çakışma yok**. 514 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
+Şu an **çakışma yok**. 518 kodlanmış değişmezin `DOC-ID/KOD` uzayında yinelenen giriş yoktur
 (üretici aynı dokümanda aynı kodu iki kez kabul etmez). Prefix uzayı (doküman kapsamlı):
-AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
+AC, AG, AP, AR, AS, AT, BL, C, CA, CE, CH, CI, CMP, CP, CR, CT, CV, D, DK, DL, DP, DS, DY, E, EA, EP, FD, FN, FS, GA, GC, GD, GE, GV, HA, HV, I, IC, IDC, IDP, IR, IS, K, KC, KG, L, LI, LP, LS, LX, MD, MR, N, NS, NW, OP, PD, PJ, PN, PO, PR, PS, PV, R, RI, RO, RPR, RQ, RR, RS, RT, RV, S, SB, SC, SD, SG, SI, SK, SP, SU, TG, TI, TK, TL, TS, TX, VL, W, WIA, WL, WR, WRC, WRS, XC, YE, YS, ZC, ZK, ZS.
 
 ---
 
 # Durum
 
-**Üretilen dosya** — 2026-11-17 (`scripts/sync-invariants.mjs`). Toplam 514 kodlanmış değişmez, 92 dokümanda.
+**Üretilen dosya** — 2026-11-18 (`scripts/sync-invariants.mjs`). Toplam 518 kodlanmış değişmez, 93 dokümanda.

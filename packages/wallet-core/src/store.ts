@@ -92,6 +92,11 @@ export interface PresentationLogEntry {
   requested?: string[];
   outcome: "sent" | "declined" | "error";
   /**
+   * Aracı üzerinden gelen istekte (`tamga_on_behalf_of`, ADR-0034 K7) isteği imzalayan aracının kimliği (`client_id`); `clientId`
+   * asıl doğrulayıcıdır. AB TS10 `isIntermediary` / `intermediary*`, TS8 RPT_DPA_08/09 (bildirimde aracı da yazılır). Değer yok.
+   */
+  intermediary?: string;
+  /**
    * 0.8.4 (§4.1): yakın alanda kopya bittiği için son kopya, kişinin onayıyla YENİDEN kullanıldı (bu gösterim öncekiyle
    * eşleştirilebilir). Yalnız yeniden kullanımda yazılır.
    */
@@ -121,6 +126,11 @@ export interface WalletEvent {
   channel?: "web" | "email" | "phone";
   /** dpa_report: kurum adı */
   authority?: string;
+  /**
+   * deletion_request: silinmesi istenen alanların ADLARI (değer yok; AB TS7 DATA_DLT_06). Yoksa ya da boşsa o paylaşımda
+   * verilen bütün veriler için talep edilmiştir (DATA_DLT_09).
+   */
+  claims?: string[];
   /** issuance_failed / reissued: kurumun adresi (credential_issuer) */
   issuer?: string;
   /** issuance_failed: neden kodu (`IssuanceFailureReason`; sunucu iletisi yok) */

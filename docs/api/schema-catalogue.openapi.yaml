@@ -151,3 +151,9 @@ components:
         version: { type: string, example: 1.0.0 }
         layer: { type: string, enum: [NETWORK, NATIONAL] }
         status: { type: string, example: ACTIVE }
+        rulebookURI:
+          type: string
+          format: uri
+          example: "https://arf.tamga.network/rulebooks/education"
+          description: Human-readable rulebook of the credential type (ARF R27; EU TS11 `rulebookURI`). Catalogue entry only — not part of the type metadata, so `content_hash` does not change.
+          x-tr: Belge türünün insan okunur kural kitabı (ARF R27; AB TS11 `rulebookURI`). Yalnız katalog girdisinde — tür metadata'sına girmez, `content_hash` değişmez.

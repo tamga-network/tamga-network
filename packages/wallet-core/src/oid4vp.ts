@@ -19,6 +19,7 @@ import type { KeyProvider } from "./keys.js";
 import { chooseEnc, encryptJwe, type EncJwk, type JweEnc } from "./jwe.js";
 import { certFingerprintHex, p256PointFromCertDer, presentSdJwt } from "./sdjwt.js";
 import { WalletError, type Http, readJson } from "./http.js";
+import { parseTransactionData, transactionDataHash, type TransactionDataItem } from "./transaction-data.js";
 import type { StoredCredential } from "./store.js";
 import { certAuthorityKeyId, certSanDnsNames, certSubjectKeyId } from "./asn1.js";
 import { fetchTrustSource, type TrustPins } from "./trustlist.js";
@@ -63,6 +64,8 @@ export interface DcqlCredential {
   trusted_authorities?: DcqlTrustedAuthority[];
   /** Alan seçenekleri: `claims` id'lerinin kombinasyonları, doğrulayıcının tercih sırasıyla (§6.1, §6.4.1) */
   claim_sets?: string[][];
+  /** OpenID4VP 1.0 §6.1 (varsayılan true); işlem verisi bağlanan sorguda false olamaz (Ek B.3.3) */
+  require_cryptographic_holder_binding?: boolean;
 }
 /** Belge seçenekleri (§6.2): `options` = birlikte karşılayan sorgu id'leri listeleri; `required` yoksa true. */
 export interface DcqlCredentialSet {
@@ -107,6 +110,8 @@ export interface VpRequest {
    * DeviceResponse'tur ve cihaz imzası Ek C dökümüyle atılır. `encJwk`/`enc` bu istekte kullanılmaz.
    */
   annexC?: AnnexCSession;
+  /** ADR-0091: denetlenmiş işlem verisi (OpenID4VP 1.0 §5.1) — kişiye gösterilir, onaylanırsa KB-JWT'ye özetleri girer */
+  transactionData?: TransactionDataItem[];
 }
 
 /** OpenID4VP 1.0 §5: `request_uri_method` değerleri (büyük/küçük harf duyarlı). Yoksa GET (RFC 9101). */
@@ -232,6 +237,11 @@ export interface VerifyRequestOptions {
    * birebir aynı `wallet_nonce` yoksa istek reddedilir (tekrar oynatılmış nesne).
    */
   walletNonce?: string;
+  /**
+   * ADR-0091 / OpenID4VP 1.0 §5.1: cüzdanın tanıdığı ve kişiye gösterebildiği işlem verisi türleri. Varsayılan BOŞ: işlem verisi
+   * taşıyan her istek `invalid_transaction_data` ile reddedilir (alan yok sayılmaz).
+   */
+  transactionDataTypes?: readonly string[];
 }
 
 export function verifyRequestObject(
@@ -292,6 +302,7 @@ export function verifyRequestObject(
   if (dcql.credentials.length > 3 || (dcql.credential_sets?.length ?? 0) > 2)
     throw new WalletError("unsupported", "request too large (PV9)");
   checkDcqlShape(dcql);
+  const transactionData = parseTransactionData(p.transaction_data, dcql.credentials, opts.transactionDataTypes);
   const jwks = (p.client_metadata as { jwks?: { keys?: EncJwk[] } } | undefined)?.jwks?.keys ?? [];
   const encJwk = jwks.find((k) => k.kty === "EC" && k.crv === "P-256" && (k.use === "enc" || !k.use));
   if (!encJwk) throw new WalletError("unsupported", "client_metadata.jwks has no encryption key (PV3)");
@@ -337,6 +348,7 @@ export function verifyRequestObject(
     rpKey: onBehalfOf ?? clientId,
     ...(dcApi ? { origin: opts.origin } : {}),
     ...(p.pass_grant_offered === true ? { passGrantOffered: true } : {}),
+    ...(transactionData ? { transactionData } : {}),
   };
 }
 
@@ -989,6 +1001,19 @@ type ApprovalBinding = Pick<
   "clientId" | "nonce" | "state" | "responseUri" | "origin" | "leafFingerprint" | "onBehalfOf"
 > & { encKey: string };
 const approvals = new WeakMap<object, ApprovalBinding>();
+/** ADR-0091 EA4: onaya bağlı, kişiye gösterilip onaylanan işlem verisi öğelerinin özeti (`confirmTransactionData`). */
+const tdConfirmed = new WeakMap<object, string>();
+const tdDigest = (items: readonly TransactionDataItem[]) => items.map((t) => transactionDataHash(t.raw)).join(".");
+
+/**
+ * ADR-0091 EA4: kişi isteğin işlem verisini ekranda GÖRDÜ ve onayladı — çağıran, gösterdiği öğelerle (isteğin `transactionData`'sı)
+ * çağırır. `respond` yalnız bu onayla ve aynı öğelerle imzalar; başka istekteki işlem verisi ya da onaysız işlem verisi imzalanmaz.
+ */
+export function confirmTransactionData(approval: unknown, shownItems: readonly TransactionDataItem[]): void {
+  if (!approval || typeof approval !== "object" || !approvals.has(approval))
+    throw new WalletError("trust_error", "unknown approval (checkRp first)");
+  tdConfirmed.set(approval, tdDigest(shownItems));
+}
 const bindingOf = (req: VpRequest): ApprovalBinding => ({
   clientId: req.clientId,
   nonce: req.nonce,
@@ -1171,7 +1196,29 @@ export interface RespondOutput {
 export async function respond(p: RespondInput): Promise<RespondOutput> {
   if (!approvedFor(p.approval, p.request))
     throw new WalletError("trust_error", "the request was not approved by checkRp (ADR-0056)");
+  const td = p.request.transactionData;
+  const shown = tdConfirmed.get(p.approval as object);
+  if (td?.length && shown !== tdDigest(td))
+    throw new WalletError("invalid_transaction_data", "transaction data was not shown to and confirmed by the user");
+  // OpenID4VP 1.0 §5.1: birden çok `credential_ids` varsa yalnız BİR belge kullanılır — her öğe seçilen ilk uygun SD-JWT VC
+  // sunumuna bağlanır (Ek B.3.3); bağlanamayan öğe varsa imzalanmaz
+  const tdBinding = new Map<string, TransactionDataItem[]>();
+  for (const t of td ?? []) {
+    const m = p.matches.find(
+      (x) =>
+        t.credentialIds.includes(x.match.queryId) &&
+        x.match.format !== MDOC_FORMAT &&
+        x.match.format !== MDOC_ZK_FORMAT,
+    );
+    if (!m)
+      throw new WalletError(
+        "invalid_transaction_data",
+        "transaction data is not bound to a selected SD-JWT VC presentation",
+      );
+    tdBinding.set(m.match.queryId, [...(tdBinding.get(m.match.queryId) ?? []), t]);
+  }
   approvals.delete(p.approval as object); // tek kullanımlık (AU5 / #440): aynı onayla ikinci yanıt yok
+  tdConfirmed.delete(p.approval as object);
   if (p.request.annexC) return respondAnnexC(p, p.request.annexC);
   const vpToken: Record<string, string[]> = {};
   for (const m of p.matches) {
@@ -1210,6 +1257,14 @@ export async function respond(p: RespondInput): Promise<RespondOutput> {
       aud: p.request.origin ? `origin:${p.request.origin}` : p.request.clientId,
       nonce: p.request.nonce,
       iat: p.now,
+      ...(tdBinding.get(m.match.queryId)?.length
+        ? {
+            transactionData: {
+              values: tdBinding.get(m.match.queryId)!.map((t) => t.raw),
+              hashesAlg: tdBinding.get(m.match.queryId)!.some((t) => t.hashesAlgRequested),
+            },
+          }
+        : {}),
     });
     vpToken[m.match.queryId] = [pres];
   }

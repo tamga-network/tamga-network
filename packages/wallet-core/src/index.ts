@@ -6,6 +6,7 @@ export * from "./oid4vci.js";
 export * from "./store.js";
 export * from "./jwe.js";
 export * from "./oid4vp.js";
+export * from "./transaction-data.js";
 export * from "./wrprc.js";
 export * from "./wrprc-status.js";
 export * from "./ts10.js";

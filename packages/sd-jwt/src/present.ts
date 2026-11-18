@@ -15,7 +15,7 @@ import {
   selectDisclosuresForPaths,
 } from "@tamga-network/core/sd-structure";
 import type { SigningKey } from "./issue.js";
-import { digestOf, KB_JWT_TYP, sdHashOf, splitCombined } from "./disclosure.js";
+import { digestOf, KB_JWT_TYP, sdHashOf, splitCombined, transactionDataHashOf } from "./disclosure.js";
 
 export interface PresentInput {
   combined: string; // ihraç biçimi "<jwt>~d1~…~"
@@ -24,6 +24,11 @@ export interface PresentInput {
   aud: string; // verifier client_id
   nonce: string;
   iat?: number;
+  /**
+   * OpenID4VP 1.0 Ek B.3.3.1 (ADR-0091): bu sunumun bağlandığı `transaction_data` dizgileri (istekte geldiği gibi). Verilirse
+   * KB-JWT `transaction_data_hashes` taşır; `hashesAlg: true` (istek `transaction_data_hashes_alg` verdiyse) `["sha-256"]` da.
+   */
+  transactionData?: { values: string[]; hashesAlg?: boolean };
 }
 
 export async function presentSdJwtVc(input: PresentInput): Promise<string> {
@@ -49,6 +54,12 @@ export async function presentSdJwtVc(input: PresentInput): Promise<string> {
     aud: input.aud,
     iat: input.iat ?? Math.floor(Date.now() / 1000),
     sd_hash,
+    ...(input.transactionData?.values.length
+      ? {
+          transaction_data_hashes: input.transactionData.values.map(transactionDataHashOf),
+          ...(input.transactionData.hashesAlg ? { transaction_data_hashes_alg: "sha-256" } : {}),
+        }
+      : {}),
   })
     .setProtectedHeader({ alg: "ES256", typ: KB_JWT_TYP })
     .sign(input.holderKey);

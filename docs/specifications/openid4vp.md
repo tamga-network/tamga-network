@@ -4,7 +4,7 @@ title: "OpenID4VP profili"
 status: Active
 version: 1.0.0
 created: 2026-09-09
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 summary: >
   Bir belgenin cüzdandan doğrulayıcıya nasıl gösterildiğini tanımlar. OpenID4VP
   1.0 Final üzerine Tamga profili: DCQL sorguları (Presentation Exchange
@@ -545,9 +545,21 @@ gördüm" değil, "şu iş başvurusu için bu diplomayı gördüm".
 Kullanım: kullanıcının onayladığı işlem metni, KB-JWT'ye karma olarak
 bağlanır. Böylece sunum, başka bir işlem için yeniden kullanılamaz.
 
-**Tamga'da:** ilk aşamada kullanılmaz (eğitim senaryosunda işlem bağlaması
-gerekmiyor). Finans ve yetkilendirme senaryolarında ([[PM-AUTH-0001]])
-gerekli olacak. Profil o zaman yazılacak.
+**Tamga'da ([[ADR-0091]] K4, 2026-11-18):** mekanizma paketlerde, işlem türü yok.
+
+- İstek: her öğe base64url JSON nesnesi; `type` ve boş olmayan `credential_ids` zorunlu, her kimlik bir `dc+sd-jwt` sorgusunun
+  `id`'si (sahip bağı kapatılamaz), `transaction_data_hashes_alg` verilirse `sha-256` içerir (OpenID4VP 1.0 §5.1, Ek B.3.3).
+  Doğrulayıcı `transactionDataItem` ile üretir.
+- Cüzdan: tanımadığı tek bir tür bile varsa isteği `invalid_transaction_data` ile reddeder (alan yok sayılmaz; §5, §8.5). Tanınan
+  türler cüzdanın listesidir, ağ tür tanımlamaz; varsayılan liste boştur. Kişiye gösterilmemiş işlem verisi imzalanmaz: onay,
+  gösterilen öğelerle kaydedilir (`confirmTransactionData`). Her öğe seçilen ilk uygun SD-JWT VC sunumuna bağlanır (§5.1). En çok 10
+  öğe, öğe başına 8 KB; tekrar eden öğe reddedilir.
+- KB-JWT: `transaction_data_hashes` = istekte gelen dizgilerin (base64url çözülmeden) SHA-256 özetleri (base64url); istek
+  `transaction_data_hashes_alg` verdiyse `transaction_data_hashes_alg: "sha-256"` (bu durumda zorunlu).
+- Doğrulama (A6): `VerifyInput.transactionData` verilirse KB-JWT zorunlu ve özetler eksiksiz ve fazlasız eşleşmeli; verilmezse KB-JWT
+  özet taşımamalı. Tamga profilinde mdoc sunumuna işlem verisi bağlanmaz (OpenID4VP'nin mdoc yolu kullanılmaz). Yanıt düzeyinde "her öğe
+  bir sunuma bağlandı" denetimi ilk tür eklenirken yazılır.
+- Ödeme ([[PM-AUTH-0001]]) ve nitelikli imza türleri ayrı kararla ve ad onayıyla eklenir.
 
 ---
 

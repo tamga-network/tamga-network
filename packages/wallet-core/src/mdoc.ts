@@ -44,7 +44,18 @@ function leafOf(issuerSigned: Uint8Array): Uint8Array {
   return x5chainOf(issuerSigned)[0];
 }
 
-const eqVal = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+/** Değer eşitliği; nesnelerde anahtar sırası önemsiz (kanonik CBOR haritası anahtarları bayt sırasıyla dizer, JSON ekleme sırasıyla). */
+const canon = (v: unknown): unknown =>
+  Array.isArray(v)
+    ? v.map(canon)
+    : v && typeof v === "object"
+      ? Object.fromEntries(
+          Object.keys(v as Record<string, unknown>)
+            .sort()
+            .map((k) => [k, canon((v as Record<string, unknown>)[k])]),
+        )
+      : v;
+const eqVal = (a: unknown, b: unknown) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
 
 /**
  * Alınan mdoc'u SD-JWT kopyasıyla çapraz doğrular; tutarsızlıkta hata fırlatır (kopya reddedilir).

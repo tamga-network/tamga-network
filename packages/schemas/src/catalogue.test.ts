@@ -7,12 +7,17 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sha256Sri, computeSchemaId } from "@tamga-network/core";
-import { ALL, CATALOGUE_BASE, suspensionAllowed } from "./definitions.js";
+import { ALL, CATALOGUE_BASE, RULEBOOK_BASE, rulebookUriOf, suspensionAllowed } from "./definitions.js";
 
 const DIST = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 const VCT_URN = /^urn:tamga:[a-z]+:[A-Za-z]+:\d+$/;
 
 describe("şema tanımları", () => {
+  it("her tür bir kural kitabına bağlı (ARF R27, AB TS11 rulebookURI); bilinmeyen tür hata", () => {
+    for (const d of ALL) expect(rulebookUriOf(d.vct).startsWith(`${RULEBOOK_BASE}/rulebook`)).toBe(true);
+    expect(() => rulebookUriOf("urn:tamga:x:Unknown:1")).toThrow(/no rulebook/);
+  });
+
   it("her vct URN biçiminde ve tekil", () => {
     const vcts = ALL.map((s) => s.vct);
     for (const v of vcts) expect(v).toMatch(VCT_URN);

@@ -11,7 +11,7 @@
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ALL, CATALOGUE_BASE, SCHEMA_STAGE, type SchemaDef } from "./definitions.js";
+import { ALL, CATALOGUE_BASE, SCHEMA_STAGE, rulebookUriOf, type SchemaDef } from "./definitions.js";
 import { sha256Sri, utf8, computeSchemaId } from "@tamga-network/core";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -82,6 +82,7 @@ export function build() {
     version: string;
     layer: string;
     status: string;
+    rulebookURI: string;
   }> = [];
   // Ebeveynler önce (extends#integrity için): topolojik sıra — çok düzeyli `extends` zincirinde de ata her zaman önce; döngü ya
   // da katalogda olmayan ebeveyn HATA
@@ -120,6 +121,7 @@ export function build() {
       version: def.metadataVersion,
       layer: def.layer,
       status: "ACTIVE",
+      rulebookURI: rulebookUriOf(def.vct),
     });
   }
   const catalogue = {

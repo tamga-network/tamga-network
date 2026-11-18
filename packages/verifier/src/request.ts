@@ -199,6 +199,12 @@ export interface RequestContent {
   registrationCert?: string;
   /** ADR-0012 B */
   passGrantOffered?: boolean;
+  /**
+   * OpenID4VP 1.0 §5.1 (ADR-0091): işlem verisi — her öğe base64url kodlu JSON nesnesi (`type`, `credential_ids`, isteğe bağlı
+   * `transaction_data_hashes_alg`); `transactionDataItem` ile üretilir. Yanıtı doğrularken aynı dizgiler `VerifyInput.transactionData`
+   * olarak verilir.
+   */
+  transactionData?: string[];
 }
 
 /** ES256 / `oauth-authz-req+jwt` istek nesnesi (JAR) — çekim dalları, DC API nesnesi ve (eski) ilk istek ortak. */
@@ -223,6 +229,7 @@ function signRequestObject(
       ...(c.registrationCert ? { verifier_info: [{ format: "registration_cert", data: c.registrationCert }] } : {}),
       ...(c.onBehalfOf && c.onBehalfOf !== c.signer.clientId ? { tamga_on_behalf_of: c.onBehalfOf } : {}),
       ...(c.passGrantOffered ? { pass_grant_offered: true } : {}),
+      ...(c.transactionData?.length ? { transaction_data: c.transactionData } : {}),
       ...extra,
     })
       // REDIRECTS_RO-02/03: x5c yaprak + ara sertifikalar (kök hariç); iat korumalı başlıkta da
@@ -535,4 +542,19 @@ export async function openPresentationResponse<B extends BranchKeys = RequestBra
   const base = { path, binding, ...(branch ? { branch } : {}) };
   if (err) return { kind: "error", ...err, ...base };
   return { kind: "response", response: checkResponseBody(raw), ...base };
+}
+
+/**
+ * OpenID4VP 1.0 §5.1 (ADR-0091): bir işlem verisi öğesi → istekteki dizgi (base64url(JSON)). `type` değerini çağıran verir (ağ bir
+ * tür tanımlamaz; tür kendi kural belgesinden gelir); `credential_ids` DCQL sorgusundaki belge kimlikleri, boş olamaz.
+ */
+export function transactionDataItem(item: {
+  type: string;
+  credential_ids: string[];
+  transaction_data_hashes_alg?: string[];
+  [k: string]: unknown;
+}): string {
+  if (!item.type) throw new Error("transaction_data: type required");
+  if (!item.credential_ids?.length) throw new Error("transaction_data: credential_ids must be a non-empty array");
+  return Buffer.from(JSON.stringify(item), "utf8").toString("base64url");
 }

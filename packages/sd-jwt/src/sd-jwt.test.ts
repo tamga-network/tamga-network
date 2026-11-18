@@ -215,6 +215,28 @@ describe("@tamga-network/sd-jwt — SPEC-CRED-0002", () => {
     expect(late.ok).toBe(false);
     if (!late.ok) expect(late.failedStep).toBe("A6");
   });
+  it("ADR-0091: işlem verisi özetleri KB-JWT'de; eksik, fazla, yanlış ve beklenmeyen özet A6'da RED", async () => {
+    const out = await issueDiploma();
+    const td = [Buffer.from(JSON.stringify({ type: "example", credential_ids: ["q"] })).toString("base64url")];
+    const present = (values?: string[], hashesAlg?: boolean) =>
+      presentSdJwtVc({
+        combined: out.combined,
+        discloseClaims: ["is_graduate"],
+        holderKey: holder.priv,
+        aud: AUD,
+        nonce: NONCE,
+        iat: NOW,
+        ...(values ? { transactionData: { values, hashesAlg } } : {}),
+      });
+    const base = { rootCertsDer: "none" as const, aud: AUD, nonce: NONCE, stateCode: "TR", now: epochSeconds(NOW) };
+    expect((await verifySdJwtVc(await present(td, true), { ...base, transactionData: td })).ok).toBe(true);
+    const plain = await present();
+    expect(await verifySdJwtVc(plain, { ...base, transactionData: td })).toMatchObject({ ok: false, failedStep: "A6" });
+    const other = await present([td[0] + "A"]);
+    expect(await verifySdJwtVc(other, { ...base, transactionData: td })).toMatchObject({ ok: false, failedStep: "A6" });
+    expect(await verifySdJwtVc(await present(td), base)).toMatchObject({ ok: false, failedStep: "A6" });
+    expect((await verifySdJwtVc(plain, base)).ok).toBe(true);
+  });
   it("güvenlik turu 2026-10-19: boş beklenen nonce/aud KB-JWT'yi geçirmez; KB yokken A6 yapılmış sayılmaz", async () => {
     const out = await issueDiploma();
     const pres = await presentSdJwtVc({

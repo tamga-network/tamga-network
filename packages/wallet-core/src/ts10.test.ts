@@ -11,6 +11,7 @@ import {
   ts10Identifier,
   ts10MigrationData,
   ts10TransactionLog,
+  ts8ReportAttachment,
   Ts10DecryptError,
   TS10_DEFAULT_ITERATIONS,
   TS10_MIN_ITERATIONS,
@@ -115,6 +116,74 @@ describe("TS10 işlem günlüğü", () => {
     expect(log[1].time).toBe("2026-09-02T00:00:00");
     expect(log[2]).toMatchObject({ transactionResult: "NotCompleted" });
     expect((log[2].presentation as Record<string, unknown>).reasonOfNoncompletion).toBe("declined by user");
+  });
+
+  it("TS7 silme talebi: silinmesi istenen alan adları günlükte ve TS10 kaydında (DATA_DLT_06); yoksa boş liste", () => {
+    const s = state();
+    const withReq: WalletState = {
+      ...s,
+      events: [
+        {
+          ts: Date.UTC(2026, 9, 1),
+          kind: "deletion_request",
+          vct: "urn:tamga:edu:StudentCredential:1",
+          typeName: "",
+          clientId: "shop",
+          channel: "email",
+          claims: ["is_enrolled"],
+        },
+        {
+          ts: Date.UTC(2026, 9, 2),
+          kind: "deletion_request",
+          vct: "urn:tamga:edu:StudentCredential:1",
+          typeName: "",
+          clientId: "shop",
+          channel: "web",
+        },
+      ],
+    };
+    const del = ts10TransactionLog(withReq, lookup).filter((t) => t.transactionType === "DataDeletionRequest");
+    expect(del.map((t) => (t.dataDeletionRequest as { listOfClaims: unknown }).listOfClaims)).toEqual([
+      [{ credentialIdentifier: "urn:tamga:edu:StudentCredential:1", claims: ["is_enrolled"] }],
+      [{ credentialIdentifier: "urn:tamga:edu:StudentCredential:1", claims: [] }],
+    ]);
+  });
+
+  it("aracı üzerinden gelen istek: isIntermediary TRUE ve aracının adı (TS10 §3.3, TS8 RPT_DPA_08/09); aracısız FALSE", () => {
+    const s = state();
+    const via: WalletState = {
+      ...s,
+      presentationLog: [
+        { ...s.presentationLog[0], clientId: "shop.example", intermediary: "x509_san_dns:broker.example" },
+      ],
+    };
+    const lk: Ts10Lookup = {
+      relyingParty: (id) =>
+        id === "x509_san_dns:broker.example"
+          ? { name: "Broker", contact: ["TR", "ops@broker.example"] }
+          : { name: "Shop", contact: ["TR"] },
+    };
+    const p = ts10TransactionLog(via, lk).find((t) => t.transactionType === "Presentation")!.presentation as Record<
+      string,
+      unknown
+    >;
+    expect(p).toMatchObject({
+      interactingPartyName: "Shop",
+      isIntermediary: true,
+      intermediaryName: "Broker",
+      intermediaryContact: ["TR", "ops@broker.example"],
+    });
+    const att = ts8ReportAttachment(via, via.presentationLog[0], lk).transactionLog[0].presentation as Record<
+      string,
+      unknown
+    >;
+    expect(att.intermediaryName).toBe("Broker");
+    const plain = ts10TransactionLog(s, lk).find((t) => t.transactionType === "Presentation")!.presentation as Record<
+      string,
+      unknown
+    >;
+    expect(plain.isIntermediary).toBe(false);
+    expect(plain).not.toHaveProperty("intermediaryName");
   });
 
   it("taşıma verisi: belge değeri ve anahtarı girmez", () => {

@@ -81,7 +81,9 @@ export class WalletError extends Error {
        */
       | "unit_unknown"
       /** ADR-0080 (0.8.4): kişi kimlik servisinin gösterdiği doğrulanmış kimliği onaylamadı; belge alınmadı */
-      | "identity_rejected",
+      | "identity_rejected"
+      /** OpenID4VP 1.0 §8.5 (ADR-0091): işlem verisi tanınmadı, kurala uymuyor ya da isteğin belgelerine bağlanamıyor */
+      | "invalid_transaction_data",
     message: string,
     public detail?: unknown,
   ) {
