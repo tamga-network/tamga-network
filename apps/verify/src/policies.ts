@@ -290,6 +290,76 @@ export const POLICIES: Policy[] = [
     trust: TRUST_ID,
     freshness: FRESH,
   },
+  // 2026-11-19: sandbox kurgusal doğrulayıcılarının senaryoları (yalnız sandbox; portal her birini kendi kaydıyla açar,
+  // doğrulayıcı aracıdır — ADR-0017 K7). Her politika yalnız o kullanımın gerektirdiği alanları ister.
+  {
+    policy_id: "bank-account-opening",
+    purpose: {
+      "en-US": "Opening a bank account — only the identity details needed for the account",
+      "tr-TR": "Banka hesabı açma — yalnız hesap için gereken kimlik bilgileri",
+    },
+    credentials: [
+      {
+        id: "identity",
+        vct_values: ["urn:tamga:id:IdentityAttestation:1"],
+        required_claims: ["given_name", "family_name", "birthdate", "nationalities", "personal_administrative_number"],
+      },
+    ],
+    trust: TRUST_ID,
+    freshness: FRESH,
+  },
+  {
+    policy_id: "library-membership",
+    purpose: {
+      "en-US": "Library membership — student status only",
+      "tr-TR": "Kütüphane üyeliği — yalnız öğrencilik durumu",
+    },
+    credentials: [
+      {
+        id: "student",
+        vct_values: ["urn:tamga:edu:StudentCredential:1"],
+        required_claims: ["is_enrolled"],
+        constraints: { is_enrolled: true },
+      },
+    ],
+    trust: TRUST_EDU,
+    freshness: FRESH,
+  },
+  {
+    policy_id: "hotel-check-in",
+    purpose: {
+      "en-US": "Hotel check-in — guest registration",
+      "tr-TR": "Otel girişi — konuk kaydı",
+    },
+    credentials: [
+      {
+        id: "identity",
+        vct_values: ["urn:tamga:id:IdentityAttestation:1"],
+        required_claims: ["given_name", "family_name", "nationalities", "personal_administrative_number"],
+      },
+    ],
+    trust: TRUST_ID,
+    freshness: FRESH,
+  },
+  // Yurt başvurusu tek belgeyle: öğrenci belgesi ad, soyad ve doğum tarihini de taşır. "Kimlik + öğrenci belgesi birlikte" bu servisin
+  // sınırı dışında — sunum başına tek belge (aşağıdaki yanıt ucu, SPEC-API-0001 §1.5; ARF tartışması #775).
+  {
+    policy_id: "dormitory-application",
+    purpose: {
+      "en-US": "Student dormitory application — name, birth date and student status",
+      "tr-TR": "Öğrenci yurdu başvurusu — ad, doğum tarihi ve öğrencilik durumu",
+    },
+    credentials: [
+      {
+        id: "student",
+        vct_values: ["urn:tamga:edu:StudentCredential:1"],
+        required_claims: ["given_name", "family_name", "birth_date", "is_enrolled", "awarding_body_name"],
+        constraints: { is_enrolled: true },
+      },
+    ],
+    trust: TRUST_EDU,
+    freshness: FRESH,
+  },
   // OpenID uyum öz-testi (yalnız sandbox; 2026-10-13 karar 11): OpenID Foundation aracı AB PID'ini (SD-JWT VC) kendi test
   // anahtarıyla imzalar; imzacı sandbox dış listesinde (ADR-0036, `oidf-test-pid`). Tek `dc+sd-jwt` belgesi, ad ve soyad; takma ad
   // yok (araç `tamga-pseudonym` biçimini tanımaz).

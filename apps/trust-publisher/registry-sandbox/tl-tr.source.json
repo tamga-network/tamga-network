@@ -998,7 +998,16 @@
         "street_address": "Sandbox (test) — no real address",
         "locality": "Istanbul",
         "country": "TR"
-      }
+      },
+      "served_relying_parties": [
+        "bitbahce.example",
+        "sikkebank.example",
+        "sayfalik.example",
+        "kampuskart.example",
+        "yolgezer.example",
+        "gecekonak.example",
+        "kampusyuva.example"
+      ]
     },
     {
       "access_cert": "rp-issuer-example-university",
@@ -1062,6 +1071,484 @@
       "is_public_sector_body": false,
       "entitlements": [
         "service_provider"
+      ]
+    },
+    {
+      "access_cert": "rp-bitbahce",
+      "dns_name": "bitbahce.example",
+      "legal_name": "Bitbahçe Yazılım (TEST)",
+      "status": "ACTIVE",
+      "registered_at": "2026-11-19T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "hiring-1",
+          "service_id": "hiring",
+          "purpose": "Hiring — proof of graduation for a job application",
+          "purpose_localized": {
+            "tr-TR": "İşe alım — iş başvurusunda mezuniyet teyidi",
+            "tk-TM": "Işe almak — iş arzasy üçin uçurymlygy tassyklamak"
+          },
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "claims": [
+            "is_graduate",
+            "eqf_level",
+            "qualification_title",
+            "awarding_body_name"
+          ],
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": "2027-11-19T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        }
+      ],
+      "trade_name": "Bitbahçe Yazılım (TEST)",
+      "info_uri": "https://sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "service_description": {
+        "en-US": "Hiring: checks job applicants' diplomas. Fictional sandbox verifier (ADR-0038).",
+        "tr-TR": "İşe alım: iş başvurularında diploma doğrular. Kurgusal sandbox doğrulayıcısı (ADR-0038)."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ],
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000013",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Istanbul",
+        "country": "TR"
+      },
+      "uses_intermediaries": [
+        "verify.sandbox.tamga.network"
+      ]
+    },
+    {
+      "access_cert": "rp-sikkebank",
+      "dns_name": "sikkebank.example",
+      "legal_name": "Sikke Bank (TEST)",
+      "status": "ACTIVE",
+      "registered_at": "2026-11-19T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "account-opening-1",
+          "service_id": "account-opening",
+          "purpose": "Opening a bank account — only the identity details needed for the account",
+          "purpose_localized": {
+            "tr-TR": "Banka hesabı açma — yalnız hesap için gereken kimlik bilgileri",
+            "tk-TM": "Bank hasabyny açmak — diňe hasap üçin zerur şahsyýet maglumatlary"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [
+            "given_name",
+            "family_name",
+            "birthdate",
+            "nationalities",
+            "personal_administrative_number"
+          ],
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": "2027-11-19T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        }
+      ],
+      "trade_name": "Sikke Bank (TEST)",
+      "info_uri": "https://sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "service_description": {
+        "en-US": "Bank: opens accounts with a verified identity. Fictional sandbox verifier (ADR-0038).",
+        "tr-TR": "Banka: doğrulanmış kimlikle hesap açar. Kurgusal sandbox doğrulayıcısı (ADR-0038)."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ],
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000014",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Istanbul",
+        "country": "TR"
+      },
+      "uses_intermediaries": [
+        "verify.sandbox.tamga.network"
+      ]
+    },
+    {
+      "access_cert": "rp-sayfalik",
+      "dns_name": "sayfalik.example",
+      "legal_name": "Sayfalık Kütüphanesi (TEST)",
+      "status": "ACTIVE",
+      "registered_at": "2026-11-19T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "library-membership-1",
+          "service_id": "membership",
+          "purpose": "Library membership — student status only",
+          "purpose_localized": {
+            "tr-TR": "Kütüphane üyeliği — yalnız öğrencilik durumu",
+            "tk-TM": "Kitaphana agzalygy — diňe talyplyk ýagdaýy"
+          },
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "claims": [
+            "is_enrolled"
+          ],
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": "2027-11-19T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        }
+      ],
+      "trade_name": "Sayfalık Kütüphanesi (TEST)",
+      "info_uri": "https://sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "service_description": {
+        "en-US": "Library: student membership. Fictional sandbox verifier (ADR-0038).",
+        "tr-TR": "Kütüphane: öğrenci üyeliği. Kurgusal sandbox doğrulayıcısı (ADR-0038)."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ],
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000015",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Ankara",
+        "country": "TR"
+      },
+      "uses_intermediaries": [
+        "verify.sandbox.tamga.network"
+      ]
+    },
+    {
+      "access_cert": "rp-kampuskart",
+      "dns_name": "kampuskart.example",
+      "legal_name": "Kampüskart İndirim Mağazası (TEST)",
+      "status": "ACTIVE",
+      "registered_at": "2026-11-19T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "student-discount-1",
+          "service_id": "discount",
+          "purpose": "Student discount",
+          "purpose_localized": {
+            "tr-TR": "Öğrenci indirimi",
+            "tk-TM": "Talyp arzanladyşy"
+          },
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "claims": [
+            "is_enrolled",
+            "awarding_body_name"
+          ],
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": "2027-11-19T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        }
+      ],
+      "trade_name": "Kampüskart İndirim Mağazası (TEST)",
+      "info_uri": "https://sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "service_description": {
+        "en-US": "Shop: student discounts. Fictional sandbox verifier (ADR-0038).",
+        "tr-TR": "Mağaza: öğrenci indirimi. Kurgusal sandbox doğrulayıcısı (ADR-0038)."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ],
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000016",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Izmir",
+        "country": "TR"
+      },
+      "uses_intermediaries": [
+        "verify.sandbox.tamga.network"
+      ]
+    },
+    {
+      "access_cert": "rp-yolgezer",
+      "dns_name": "yolgezer.example",
+      "legal_name": "Yolgezer Araç Kiralama (TEST)",
+      "status": "ACTIVE",
+      "registered_at": "2026-11-19T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "car-rental-driving-1",
+          "service_id": "rental",
+          "purpose": "Car rental — driving licence categories and over-18 (verified driving licence information; not an official driving licence)",
+          "purpose_localized": {
+            "tr-TR": "Araç kiralama — sürücü belgesi sınıfları ve 18 yaş üstü (doğrulanmış sürücü belgesi bilgisi; resmî sürücü belgesi yerine geçmez)",
+            "tk-TM": "Awtoulag kärendesi — sürüjilik şahadatnamasynyň derejeleri we 18 ýaşdan uly (barlanan sürüjilik şahadatnamasy maglumaty; resmi sürüjilik şahadatnamasynyň ornuny tutmaýar)"
+          },
+          "vct": "urn:tamga:id:DrivingLicenceAttestation:1",
+          "claims": [
+            "driving_privileges",
+            "age_over_18"
+          ],
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": "2027-11-19T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        }
+      ],
+      "trade_name": "Yolgezer Araç Kiralama (TEST)",
+      "info_uri": "https://sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "service_description": {
+        "en-US": "Car rental: checks driving licence categories and age. Fictional sandbox verifier (ADR-0038).",
+        "tr-TR": "Araç kiralama: sürücü belgesi sınıflarını ve yaşı doğrular. Kurgusal sandbox doğrulayıcısı (ADR-0038)."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ],
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000017",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Antalya",
+        "country": "TR"
+      },
+      "uses_intermediaries": [
+        "verify.sandbox.tamga.network"
+      ]
+    },
+    {
+      "access_cert": "rp-gecekonak",
+      "dns_name": "gecekonak.example",
+      "legal_name": "Gecekonak Otel (TEST)",
+      "status": "ACTIVE",
+      "registered_at": "2026-11-19T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "hotel-check-in-1",
+          "service_id": "check-in",
+          "purpose": "Hotel check-in — guest registration",
+          "purpose_localized": {
+            "tr-TR": "Otel girişi — konuk kaydı",
+            "tk-TM": "Myhmanhana girişi — myhmany hasaba almak"
+          },
+          "vct": "urn:tamga:id:IdentityAttestation:1",
+          "claims": [
+            "given_name",
+            "family_name",
+            "nationalities",
+            "personal_administrative_number"
+          ],
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": "2027-11-19T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        }
+      ],
+      "trade_name": "Gecekonak Otel (TEST)",
+      "info_uri": "https://sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "service_description": {
+        "en-US": "Hotel: guest registration at check-in. Fictional sandbox verifier (ADR-0038).",
+        "tr-TR": "Otel: girişte konuk kaydı. Kurgusal sandbox doğrulayıcısı (ADR-0038)."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ],
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000018",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Nevsehir",
+        "country": "TR"
+      },
+      "uses_intermediaries": [
+        "verify.sandbox.tamga.network"
+      ]
+    },
+    {
+      "access_cert": "rp-kampusyuva",
+      "dns_name": "kampusyuva.example",
+      "legal_name": "Kampüsyuva Öğrenci Yurdu (TEST)",
+      "status": "ACTIVE",
+      "registered_at": "2026-11-19T00:00:00Z",
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z"
+        }
+      ],
+      "scopes": [
+        {
+          "scope_id": "dormitory-application-1",
+          "service_id": "dormitory-application",
+          "purpose": "Student dormitory application — name, birth date and student status",
+          "purpose_localized": {
+            "tr-TR": "Öğrenci yurdu başvurusu — ad, doğum tarihi ve öğrencilik durumu",
+            "tk-TM": "Talyp ýaşaýyş jaýyna arza — ady, doglan senesi we talyplyk ýagdaýy"
+          },
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "claims": [
+            "given_name",
+            "family_name",
+            "birth_date",
+            "is_enrolled",
+            "awarding_body_name"
+          ],
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": "2027-11-19T00:00:00Z",
+          "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
+        }
+      ],
+      "trade_name": "Kampüsyuva Öğrenci Yurdu (TEST)",
+      "info_uri": "https://sandbox.tamga.network",
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "service_description": {
+        "en-US": "Student dormitory: applications with the student credential. Fictional sandbox verifier (ADR-0038).",
+        "tr-TR": "Öğrenci yurdu: öğrenci belgesiyle başvuru. Kurgusal sandbox doğrulayıcısı (ADR-0038)."
+      },
+      "is_public_sector_body": false,
+      "entitlements": [
+        "service_provider"
+      ],
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      },
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000019",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Eskisehir",
+        "country": "TR"
+      },
+      "uses_intermediaries": [
+        "verify.sandbox.tamga.network"
       ]
     }
   ],

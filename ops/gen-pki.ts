@@ -396,6 +396,54 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
     new SubjectAlternativeNameExtension([{ type: "dns", value: host }]),
     cdp("root-ca"),
   ];
+  // ADR-0087 K2: erişim sertifikası makamı (anahtarı sandbox sunucusundaki yayıncıya gider; kök anahtarı gitmez)
+  const accessCa1 = await ensure(
+    "access-ca-1",
+    accessCa(root, 5001, "CN=Tamga Sandbox Access CA (TEST), O=Tamga Network Sandbox, C=TR"),
+  );
+  /**
+   * ADR-0087 K2: yeni erişim sertifikaları makamdan verilir (kökten değil); CRL dağıtım noktası makamın CRL'i. SAN: kayıttaki
+   * `dns_name` (ADR-0034) + kayıttaki destek adresi (ADR-0058 K2).
+   */
+  const byAccessCa =
+    (serialNo: number, subject: string, dns: string): Make =>
+    async (reuse?: Reuse) => {
+      const kp = reuse?.keys ?? (await keys());
+      const cert = await X509CertificateGenerator.create({
+        serialNumber: reuse?.serialHex ?? serial(serialNo),
+        subject,
+        issuer: accessCa1.cert.subject,
+        notBefore: new Date(),
+        notAfter: years(2),
+        signingAlgorithm: ALG,
+        publicKey: kp.publicKey,
+        signingKey: accessCa1.privateKey ?? die("access-ca-1 özel anahtarı yok — erişim sertifikası imzalanamaz"),
+        extensions: (await leafExt(kp.publicKey, [
+          await AuthorityKeyIdentifierExtension.create(accessCa1.cert.publicKey),
+          new SubjectAlternativeNameExtension([
+            { type: "dns", value: dns },
+            { type: "url", value: "https://sandbox.tamga.network" },
+          ]),
+          cdp("access-ca-1"),
+        ])) as never,
+      });
+      return { cert, privateKey: kp.privateKey };
+    };
+  // 2026-11-19 (proje yönetimi onayı): sandbox kurgusal doğrulayıcıları. Alan adları `.example` (RFC 2606; hiçbir
+  // zaman gerçek site olamaz). ADR-0058 K1: CN ticari ad. ADR-0026 K3: organizationIdentifier = registry-sandbox TR-VKN
+  // TR0000000013…TR0000000019.
+  const verifiers: Array<[string, number, string, string, string]> = [
+    ["rp-bitbahce", 2101, "Bitbahçe Yazılım (TEST)", "0000000013", "bitbahce.example"],
+    ["rp-sikkebank", 2102, "Sikke Bank (TEST)", "0000000014", "sikkebank.example"],
+    ["rp-sayfalik", 2103, "Sayfalık Kütüphanesi (TEST)", "0000000015", "sayfalik.example"],
+    ["rp-kampuskart", 2104, "Kampüskart İndirim Mağazası (TEST)", "0000000016", "kampuskart.example"],
+    ["rp-yolgezer", 2105, "Yolgezer Araç Kiralama (TEST)", "0000000017", "yolgezer.example"],
+    ["rp-gecekonak", 2106, "Gecekonak Otel (TEST)", "0000000018", "gecekonak.example"],
+    ["rp-kampusyuva", 2107, "Kampüsyuva Öğrenci Yurdu (TEST)", "0000000019", "kampusyuva.example"],
+  ];
+  const verifierItems: Item[] = [];
+  for (const [name, no, org, vkn, dns] of verifiers)
+    verifierItems.push(await ensure(name, byAccessCa(no, `CN=${org}, O=${org}, 2.5.4.97=VATTR-${vkn}, C=TR`, dns)));
   return [
     root,
     await ensure(
@@ -427,11 +475,8 @@ async function sandboxItems(root: Item, signedByRoot: SignedByRoot, selfSigned: 
         ],
       ),
     ),
-    // ADR-0087 K2: erişim sertifikası makamı (anahtarı sandbox sunucusundaki yayıncıya gider; kök anahtarı gitmez)
-    await ensure(
-      "access-ca-1",
-      accessCa(root, 5001, "CN=Tamga Sandbox Access CA (TEST), O=Tamga Network Sandbox, C=TR"),
-    ),
+    accessCa1,
+    ...verifierItems,
     await ensure(
       "issuer-id",
       // ADR-0050: organizationIdentifier = kayıt sertifikasının `sub`'ı (registry-sandbox tamga-id TR-VKN TR0000000002)

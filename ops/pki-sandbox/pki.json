@@ -40,6 +40,48 @@
     "not_after": "2029-11-17T22:21:10.000Z",
     "created_at": "2026-11-17T22:21:10.253Z"
   },
+  "rp-bitbahce": {
+    "subject": "CN=Bitbahçe Yazılım (TEST), O=Bitbahçe Yazılım (TEST), 2.5.4.97=VATTR-0000000013, C=TR",
+    "fingerprint_sha256": "238e514a469cecabdcc7164e0d3a1a57afb2671ba50372aaffb64def90946482",
+    "not_after": "2028-11-19T20:46:06.000Z",
+    "created_at": "2026-11-19T20:46:06.393Z"
+  },
+  "rp-sikkebank": {
+    "subject": "CN=Sikke Bank (TEST), O=Sikke Bank (TEST), 2.5.4.97=VATTR-0000000014, C=TR",
+    "fingerprint_sha256": "8f8831340d4595ad6b8bf092049ea100325ffaf3ce883356ee608c6afb4cd0d2",
+    "not_after": "2028-11-19T20:46:06.000Z",
+    "created_at": "2026-11-19T20:46:06.393Z"
+  },
+  "rp-sayfalik": {
+    "subject": "CN=Sayfalık Kütüphanesi (TEST), O=Sayfalık Kütüphanesi (TEST), 2.5.4.97=VATTR-0000000015, C=TR",
+    "fingerprint_sha256": "80d0ce50b97169f5eaf2981ab48c35372138eaeaf4178e10d3c3ce8c30a23589",
+    "not_after": "2028-11-19T20:46:06.000Z",
+    "created_at": "2026-11-19T20:46:06.393Z"
+  },
+  "rp-kampuskart": {
+    "subject": "CN=Kampüskart İndirim Mağazası (TEST), O=Kampüskart İndirim Mağazası (TEST), 2.5.4.97=VATTR-0000000016, C=TR",
+    "fingerprint_sha256": "aa1a71ab6e61e9e8955879c92050e7c6f0a917ff8b1d3092bc131b037160a89a",
+    "not_after": "2028-11-19T20:46:06.000Z",
+    "created_at": "2026-11-19T20:46:06.393Z"
+  },
+  "rp-yolgezer": {
+    "subject": "CN=Yolgezer Araç Kiralama (TEST), O=Yolgezer Araç Kiralama (TEST), 2.5.4.97=VATTR-0000000017, C=TR",
+    "fingerprint_sha256": "546c7df11f5c2992a5b01b3c2d40398c9917bf069a0bb0b71f5486b69090334f",
+    "not_after": "2028-11-19T20:46:06.000Z",
+    "created_at": "2026-11-19T20:46:06.393Z"
+  },
+  "rp-gecekonak": {
+    "subject": "CN=Gecekonak Otel (TEST), O=Gecekonak Otel (TEST), 2.5.4.97=VATTR-0000000018, C=TR",
+    "fingerprint_sha256": "4836af463477cd9b978d19d663550ff3e250e28c51d3f69a03bb8c9708dd6b39",
+    "not_after": "2028-11-19T20:46:06.000Z",
+    "created_at": "2026-11-19T20:46:06.393Z"
+  },
+  "rp-kampusyuva": {
+    "subject": "CN=Kampüsyuva Öğrenci Yurdu (TEST), O=Kampüsyuva Öğrenci Yurdu (TEST), 2.5.4.97=VATTR-0000000019, C=TR",
+    "fingerprint_sha256": "c43c752b5876ab5e20c4f78d8818b6927fa177f06817a3a5f9b9e69063a9cd4b",
+    "not_after": "2028-11-19T20:46:06.000Z",
+    "created_at": "2026-11-19T20:46:06.393Z"
+  },
   "issuer-id": {
     "subject": "CN=Tamga Sandbox Kimlik (TEST), OU=Identity, O=Tamga Network Sandbox, 2.5.4.97=VATTR-0000000002, C=TR",
     "fingerprint_sha256": "965a58d36bca495ec3b1f2ab50b212c93c0698285526ea9aa4242525c8f3b874",
@@ -174,6 +216,13 @@
     "tl-xml-signer-1": "0xff13d95fd4b5414e6da840a0d3530773e3e0b6930fc7e6b619d7404ff8a9a29f",
     "rp-verify": "0xf47e99105565b687dd100aad8c4f3aaab1831b12b37c92e3a0d41ba2aa764e1f",
     "access-ca-1": "0x783793435f6bcb76bce1ca58a7a7436ecea7bd6765749cc35eef722d1548c769",
+    "rp-bitbahce": "0xd2e0071ab7ebff72710f90f289ccd223bba8778a2c4a1367a668c251ec43651d",
+    "rp-sikkebank": "0x2ceced5db693ea64c6f6e7303081019117bf4d1a6fae00933aaeb251506d9bcd",
+    "rp-sayfalik": "0xe593b6cf5702113249ee3ed4e6f317875945167f00295fd0c4d70297ef345d24",
+    "rp-kampuskart": "0xe1715971edfa098c16c28ea750a6676897e7f82fd5b0c6c888f42ccc8976db02",
+    "rp-yolgezer": "0x26d711a3f5ae2e0aedd7c3dca04bcd1450404a95df8ab0f0cf71ccc94547ae29",
+    "rp-gecekonak": "0x4a9f9e0ae175cc6f2a59813589e6016e6e3dbdcf4d998e384f87ab6f805c23d2",
+    "rp-kampusyuva": "0x1ca2944836382c845c5b9922b6e7683f8b9ae7a9f85e7e486013b3fa7418f86b",
     "issuer-id": "0xf880116803bef8a4482b20354f11119ec4cbc79ced19c0ce2b0df0029b023b0a",
     "issuer-id-status": "0x06cbc1c557a9de66ca63ab958cb928387ac0c86e8e404bc5521b951bdb6964d7",
     "issuer-id-review": "0xa6f8595d2f12643b51c660a45b071f24dd819e1504765edd4d5a1fff2fde78f5",

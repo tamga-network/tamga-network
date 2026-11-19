@@ -11,6 +11,11 @@ published on npm as test releases; `0.8.9` is the current one on npm (the API ma
 - Changed: the sandbox example institutions now have made-up proper names (Ulubilim Üniversitesi, Kervanyolu Etkinlik, Işıkperde Sineması;
   addresses `/ulubilim`, `/kervanyolu`, `/isikperde`); their certificates were re-signed with the same keys, the sandbox root is unchanged.
 - Added: five more fictional sandbox institutions (three universities, a sports venue and a congress centre).
+- Added: seven fictional sandbox verifiers (hiring, bank, library, student shop, car rental, hotel, student dormitory) with
+  `.example` domains and access certificates from the sandbox access CA. The sandbox verifier opens their requests as an
+  intermediary (`tamga_on_behalf_of`; both records list the relationship), so wallets show the actual verifier's name; only the
+  verifier that opened a presentation reads its result. New sandbox-only policies: `bank-account-opening`, `library-membership`,
+  `hotel-check-in`, `dormitory-application` (one credential per presentation, as before).
 
 ### Trust publisher
 

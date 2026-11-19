@@ -22,6 +22,11 @@ const SCENARIOS = [
   "event-ticket",
   "car-rental-driving",
   "oidf-selftest-eu-pid",
+  // 2026-11-19: sandbox kurgusal doğrulayıcılarının senaryoları
+  "bank-account-opening",
+  "library-membership",
+  "hotel-check-in",
+  "dormitory-application",
 ];
 const GENERAL = [
   "age-over-18-mdoc",
