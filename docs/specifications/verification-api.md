@@ -231,7 +231,7 @@ arasındaki fark, bir insanın işe alınıp alınmamasıdır.
   "indeterminate_reason": null,
 
   "spec_version": "SPEC-API-0001@1.0.0",
-  "sdk_version": "@tamga-network/verifier@0.8.8",
+  "sdk_version": "@tamga-network/verifier@0.8.9",
   "checks_performed": ["T0",
                        "A1","A2","A3","A3b","A3d","A4","A5","A6","A7","A8",
                        "B1","B2","B3","B4","B6",

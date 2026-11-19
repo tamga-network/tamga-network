@@ -1,12 +1,14 @@
 # Changelog — tamga-network
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The `@tamga-network/*` packages are versioned together and
-published on npm as test releases; `0.8.8` is the current one on npm (the API may change until the stable `1.0.0`). The documents
+published on npm as test releases; `0.8.9` is the current one on npm (the API may change until the stable `1.0.0`). The documents
 (docs, Tamga ARF) stay at 1.0.0 until the public announcement; their changes are folded into that release (last entry).
 
 ## [Unreleased]
 
 ## 0.8.9 — 2026-11-19
+
+Published on npm on 2026-11-19.
 
 All ten packages move to 0.8.9 together. This test release is **breaking** for callers: it carries the fixes of the
 2026-11 audit round (safer package defaults, protocol checks) and the EU alignment decisions of 2026-11-19. Before updating,
