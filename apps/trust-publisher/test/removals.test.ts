@@ -520,8 +520,18 @@ describe("TL2: listeden kayıt çıkarma", () => {
       expect(removedRecords(asList(src), asList(src))).toEqual(NONE);
       expect(removedRecords(lotl, lotl)).toEqual(NONE);
 
+      // Komut tarihleri kayıt defterindeki en yeni `valid_from`'dan sonraya kaydırılır: kayıt defterine sonradan eklenen bir kayıt
+      // (2026-11-19: sandbox kapı grupları) komutların "şimdi"sinden ileride kalıp kapatılamıyor, sınama sahte çıkarma buluyordu.
+      const validFroms: number[] = [];
+      JSON.stringify(src, (k, v) => (k === "valid_from" && typeof v === "string" && validFroms.push(Date.parse(v)), v));
+      const DAY = 86_400_000;
+      const shift = Math.max(
+        0,
+        Math.ceil((Math.max(...validFroms) - Date.parse("2026-11-11T00:00:00.000Z")) / DAY) * DAY,
+      );
+      const D = (iso: string) => new Date(Date.parse(iso) + shift);
       const env: RegistryEnv = {
-        now: new Date("2026-11-12T10:00:00.000Z"),
+        now: D("2026-11-12T10:00:00.000Z"),
         certExists: () => true,
         knownVcts: new Set<string>([
           "urn:tamga:test:New:1",
@@ -529,11 +539,11 @@ describe("TL2: listeden kayıt çıkarma", () => {
           ...(src.relying_parties as Src[]).flatMap((r) => (r.scopes as Src[]).map((s) => s.vct as string)),
         ]),
       };
-      const later = { ...env, now: new Date("2026-11-13T10:00:00.000Z") };
-      const much = { ...env, now: new Date("2026-11-14T10:00:00.000Z") };
-      const last = { ...env, now: new Date("2026-11-15T10:00:00.000Z") };
+      const later = { ...env, now: D("2026-11-13T10:00:00.000Z") };
+      const much = { ...env, now: D("2026-11-14T10:00:00.000Z") };
+      const last = { ...env, now: D("2026-11-15T10:00:00.000Z") };
       // önceki imzalı listenin yayın anı: komutlardan önce (0.8.4 — karşılaştırmanın dayanağı yeni yayın anı değil)
-      const publishAt = new Date("2026-11-12T00:00:00.000Z");
+      const publishAt = D("2026-11-12T00:00:00.000Z");
       const issuer = (src.issuers as Src[]).find((i) => i.status === "ACTIVE")!;
       const slug = issuer.slug as string;
       const openVct = (issuer.schema_authorizations as Src[]).find((a) => a.allowed && !a.valid_until)!.vct as string;

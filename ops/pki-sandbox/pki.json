@@ -59,46 +59,106 @@
     "created_at": "2026-10-13T11:26:02.919Z"
   },
   "issuer-example-university": {
-    "subject": "CN=Ornek Universitesi (TEST), OU=Ogrenci Isleri, O=Ornek Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
-    "fingerprint_sha256": "52fb5107fcad0bf17703bef59700efb48d7120478460a06834cea920841b21e6",
-    "not_after": "2028-11-04T11:11:25.000Z",
-    "created_at": "2026-11-04T11:11:25.258Z"
+    "subject": "CN=Ulubilim Üniversitesi (TEST), OU=Öğrenci İşleri, O=Ulubilim Üniversitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
+    "fingerprint_sha256": "72bb7c18d7eb3aaf07239eec4b4e1d8d525405c14b29a950c7d6ec27bb318b0c",
+    "not_after": "2028-11-19T14:25:30.000Z",
+    "created_at": "2026-11-19T14:25:30.375Z"
   },
   "issuer-example-university-status": {
-    "subject": "CN=Ornek Universitesi - Status List (TEST), OU=Status, O=Ornek Universitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
-    "fingerprint_sha256": "cc6ad9f03fe40d2acdf43f4b56f9de4c730373636abc094bb4bf7969b5c26115",
-    "not_after": "2028-11-04T11:11:25.000Z",
-    "created_at": "2026-11-04T11:11:25.258Z"
+    "subject": "CN=Ulubilim Üniversitesi - Status List (TEST), OU=Status, O=Ulubilim Üniversitesi (TEST), 2.5.4.97=VATTR-0000000001, C=TR",
+    "fingerprint_sha256": "00cd4104df62c23af4eb9c567643bedbe6cf87b2b253298983adfd51173f03e4",
+    "not_after": "2028-11-19T14:25:30.000Z",
+    "created_at": "2026-11-19T14:25:30.375Z"
   },
   "rp-issuer-example-university": {
-    "subject": "CN=issuer.sandbox.tamga.network, O=Ornek Universitesi - kimlik eslestirme (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
-    "fingerprint_sha256": "29cedd2e133ddcb426ee1ed43402a934589570f404699fc64b64600a91e62cde",
-    "not_after": "2028-11-04T11:11:25.000Z",
-    "created_at": "2026-11-04T11:11:25.258Z"
+    "subject": "CN=issuer.sandbox.tamga.network, O=Ulubilim Üniversitesi - kimlik eşleme (TEST), 2.5.4.97=VATTR-0000000005, C=TR",
+    "fingerprint_sha256": "7ac18515e670a42a246ae6109f2efe9a3935099b0f88540eac204f26d6bb7aec",
+    "not_after": "2028-11-19T14:25:30.000Z",
+    "created_at": "2026-11-19T14:25:30.375Z"
   },
   "issuer-example-events": {
-    "subject": "CN=Ornek Etkinlik (TEST), OU=Bilet Satisi, O=Ornek Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
-    "fingerprint_sha256": "bdaca843d21b469a62edd096b9255b7bd5de5f54f56e86edadb8caf1add978fe",
-    "not_after": "2028-11-04T11:11:25.000Z",
-    "created_at": "2026-11-04T11:11:25.258Z"
+    "subject": "CN=Kervanyolu Etkinlik (TEST), OU=Bilet Satışı, O=Kervanyolu Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
+    "fingerprint_sha256": "3cb240b56e10651a36285ba239e1fd4720f18ba3ca0d22ce7b6bede24130f0b0",
+    "not_after": "2028-11-19T14:25:30.000Z",
+    "created_at": "2026-11-19T14:25:30.375Z"
   },
   "issuer-example-events-status": {
-    "subject": "CN=Ornek Etkinlik - Status List (TEST), OU=Status, O=Ornek Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
-    "fingerprint_sha256": "9d6ab6d7203d4b00cffd69c838cf98c6233e5b2e2001f3a834e89cf9e2626d93",
-    "not_after": "2028-11-04T11:11:25.000Z",
-    "created_at": "2026-11-04T11:11:25.258Z"
+    "subject": "CN=Kervanyolu Etkinlik - Status List (TEST), OU=Status, O=Kervanyolu Etkinlik (TEST), 2.5.4.97=VATTR-0000000003, C=TR",
+    "fingerprint_sha256": "13d8bce1024476d84a8167aa263e9e99e148c8cadff4b587b7a049a409e4477a",
+    "not_after": "2028-11-19T14:25:30.000Z",
+    "created_at": "2026-11-19T14:25:30.375Z"
   },
   "issuer-example-cinema": {
-    "subject": "CN=Ornek Sinema (TEST), OU=Bilet Satisi, O=Ornek Sinema (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
-    "fingerprint_sha256": "622d62660fd343716e1276588ba01a2ca5f23b9b44554bcb8c4c1e1bb53baac7",
-    "not_after": "2028-11-04T11:11:25.000Z",
-    "created_at": "2026-11-04T11:11:25.258Z"
+    "subject": "CN=Işıkperde Sineması (TEST), OU=Bilet Satışı, O=Işıkperde Sineması (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+    "fingerprint_sha256": "86dc1f7d49a2c3320d494a9d332324b5efda5874fc3dd907106981f8e4155bcc",
+    "not_after": "2028-11-19T14:25:30.000Z",
+    "created_at": "2026-11-19T14:25:30.375Z"
   },
   "issuer-example-cinema-status": {
-    "subject": "CN=Ornek Sinema - Status List (TEST), OU=Status, O=Ornek Sinema (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
-    "fingerprint_sha256": "57b569050105559cafa48feb4f203dbe5e64d3dddb45eb949e90ed6a068a3bd2",
-    "not_after": "2028-11-04T11:11:25.000Z",
-    "created_at": "2026-11-04T11:11:25.258Z"
+    "subject": "CN=Işıkperde Sineması - Status List (TEST), OU=Status, O=Işıkperde Sineması (TEST), 2.5.4.97=VATTR-0000000006, C=TR",
+    "fingerprint_sha256": "4ccbe1e73f28abe58bb7bb5b576b4f9b4cbe60b51feb40147fdd6b422f537ed3",
+    "not_after": "2028-11-19T14:25:30.000Z",
+    "created_at": "2026-11-19T14:25:30.375Z"
+  },
+  "issuer-gokbilge": {
+    "subject": "CN=Gökbilge Teknik Üniversitesi (TEST), OU=Öğrenci İşleri, O=Gökbilge Teknik Üniversitesi (TEST), 2.5.4.97=VATTR-0000000008, C=TR",
+    "fingerprint_sha256": "db53ebfd3b9d7d0213b98c9f256c87ed4c9f2a5e0810e1e13f7e06a625b5820e",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
+  },
+  "issuer-gokbilge-status": {
+    "subject": "CN=Gökbilge Teknik Üniversitesi - Status List (TEST), OU=Status, O=Gökbilge Teknik Üniversitesi (TEST), 2.5.4.97=VATTR-0000000008, C=TR",
+    "fingerprint_sha256": "dc6911ac6c81d15b886a2663ff0ec764cbe589ba70c684e8ad8b18a904daa620",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
+  },
+  "issuer-akcinar": {
+    "subject": "CN=Akçınar Sağlık Bilimleri Üniversitesi (TEST), OU=Öğrenci İşleri, O=Akçınar Sağlık Bilimleri Üniversitesi (TEST), 2.5.4.97=VATTR-0000000009, C=TR",
+    "fingerprint_sha256": "35a8ea17d57e7cd470cc2e1e5da97665e9d62f236244ca43421455ce1eba477e",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
+  },
+  "issuer-akcinar-status": {
+    "subject": "CN=Akçınar Sağlık Bilimleri Üniversitesi - Status List (TEST), OU=Status, O=Akçınar Sağlık Bilimleri Üniversitesi (TEST), 2.5.4.97=VATTR-0000000009, C=TR",
+    "fingerprint_sha256": "d52f4a804f3511223a1aef647a17e396450511ac92ad1941726682b459c87726",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
+  },
+  "issuer-uzakyol": {
+    "subject": "CN=Uzakyol Açıköğretim Üniversitesi (TEST), OU=Öğrenci İşleri, O=Uzakyol Açıköğretim Üniversitesi (TEST), 2.5.4.97=VATTR-0000000010, C=TR",
+    "fingerprint_sha256": "160671ac27d58aced418236908c67419e5e9f626eff0d5dec95274cace2768eb",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
+  },
+  "issuer-uzakyol-status": {
+    "subject": "CN=Uzakyol Açıköğretim Üniversitesi - Status List (TEST), OU=Status, O=Uzakyol Açıköğretim Üniversitesi (TEST), 2.5.4.97=VATTR-0000000010, C=TR",
+    "fingerprint_sha256": "521bba9a696e6faab6c7dad7b291e6bdf34ce8b0c535ac3eb113e800531122c1",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
+  },
+  "issuer-gokkapi": {
+    "subject": "CN=Gökkapı Arena (TEST), OU=Bilet Satışı, O=Gökkapı Arena (TEST), 2.5.4.97=VATTR-0000000011, C=TR",
+    "fingerprint_sha256": "c021ba2f130fe1f68251ea9278cc419069abbf326929cfa9fdb0df89e2a0bf49",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
+  },
+  "issuer-gokkapi-status": {
+    "subject": "CN=Gökkapı Arena - Status List (TEST), OU=Status, O=Gökkapı Arena (TEST), 2.5.4.97=VATTR-0000000011, C=TR",
+    "fingerprint_sha256": "b7b08865a46d01af528247e621c55eba973abccb481bf02358b012dc53798ea0",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
+  },
+  "issuer-kopruyaka": {
+    "subject": "CN=Köprüyaka Kongre Merkezi (TEST), OU=Bilet Satışı, O=Köprüyaka Kongre Merkezi (TEST), 2.5.4.97=VATTR-0000000012, C=TR",
+    "fingerprint_sha256": "60b901ef3ac2b6c68c0ae99b2e68e7cbc13523dc85d296f1b9df29fd98e89166",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
+  },
+  "issuer-kopruyaka-status": {
+    "subject": "CN=Köprüyaka Kongre Merkezi - Status List (TEST), OU=Status, O=Köprüyaka Kongre Merkezi (TEST), 2.5.4.97=VATTR-0000000012, C=TR",
+    "fingerprint_sha256": "7737f7c57026fc4a351c9e133e9af46a9baa54f82d83323ac202bb235f7f5b7e",
+    "not_after": "2028-11-19T14:41:51.000Z",
+    "created_at": "2026-11-19T14:41:51.154Z"
   },
   "test-institutions-ca": {
     "subject": "CN=Tamga Sandbox Test Institutions CA (TEST), O=Tamga Network Sandbox, C=TR",
@@ -117,13 +177,23 @@
     "issuer-id": "0xf880116803bef8a4482b20354f11119ec4cbc79ced19c0ce2b0df0029b023b0a",
     "issuer-id-status": "0x06cbc1c557a9de66ca63ab958cb928387ac0c86e8e404bc5521b951bdb6964d7",
     "issuer-id-review": "0xa6f8595d2f12643b51c660a45b071f24dd819e1504765edd4d5a1fff2fde78f5",
-    "issuer-example-university": "0x33e392e1904e6819da3f3263e41614b45ff171ad2ad0fa97c8cb2e7d7ce64bc3",
-    "issuer-example-university-status": "0xfba19b089605688bad029e972b0b4cdc6fd368ecfc2cc779ab0d4ffed399de9b",
-    "rp-issuer-example-university": "0x3d58cf982ce0a384691c4473dd3e1f08e0e364cfde933035bf0fa6d36f6b744c",
-    "issuer-example-events": "0x81915f880f15924289d0cf630768ff749e54617d1cdaa81c14b43ddb1ea9da7d",
-    "issuer-example-events-status": "0xd4ea5651de413504fbc932a52df21563b86a3f46874e8f7ce2ef85b94093ee69",
-    "issuer-example-cinema": "0x00a1d81710d575adce51aebf09b8328f8c8bc5cdcd5bcce79e5039609fa63905",
-    "issuer-example-cinema-status": "0x91eda98577ba6f5e811dcfa5af5ca0c8d0d712fd5d4ef74a81f0f5499542643a",
+    "issuer-example-university": "0x07c049dcfcca7928cdaa96f2ec6076a9bf37fe84ebfd7b154f38873b0bdd3019",
+    "issuer-example-university-status": "0xceeb2140526646b666f2bbebe6476c42f22c1f64032b3ef1405b72a67ad32474",
+    "rp-issuer-example-university": "0x7913da4d2fc31d0e68a0487e4c00612860916d7a2bef41e5cbd45afa7866d2a5",
+    "issuer-example-events": "0xbb6552d9cea649e044dff149ffdef90eeee90a2d182c34bd31e7c8e934a9c2b3",
+    "issuer-example-events-status": "0x6bf32d03b7e8314ab4a193a9a74c6ec2aa1716abd070c22243e853bb85ab5f26",
+    "issuer-example-cinema": "0xcb8f8a6463fcf2e64ac207f1d26a8d2a97005dad3515ee4a15d4f780859fbf23",
+    "issuer-example-cinema-status": "0xe945a1b51b3eb5ea044ec0d397c70afc163d589427d3ca0d94a104034f06593f",
+    "issuer-gokbilge": "0xf25b19e085d9599d7494880bfa55caa51be023218a8108140b26d6e6a40fd41e",
+    "issuer-gokbilge-status": "0xd8561eafaee57564e92d39d6bde661d96585b7f860c2809f50cb7d16bec3d83e",
+    "issuer-akcinar": "0x9b8c896d025ba0067873e36297dfb36c1e2b6f3a1da86b9aae12dd07c0911a4d",
+    "issuer-akcinar-status": "0xb0609bacc95669dac98f15cc8578204acdc0ad703ec04f7a3f15e715c4b96141",
+    "issuer-uzakyol": "0xe5099982d2666427495e6f69ee6fa3da4c1a463ec7395bf8c07f94847921a8bc",
+    "issuer-uzakyol-status": "0xd86546e1785ee656fcd24de6dfd4e7d0fc521548d3f2d8c014390fdff4695e7d",
+    "issuer-gokkapi": "0x6e6bbde116126c65fdd028d61b9d112a90bd2462036d6bf7be790cbf1fd9c841",
+    "issuer-gokkapi-status": "0xa3378fe2a873731b59a8ff94988bac0eb144a084aaabcb7ee7e2dc20fe214ada",
+    "issuer-kopruyaka": "0x7522512f8cb754ec00b62061271afe5c36adb4684599f26fef3998e4dd60f4d8",
+    "issuer-kopruyaka-status": "0x293f90d57b82b1023f0de2add92359576856c08381abf0d392e6e6d23c56c3b5",
     "test-institutions-ca": "0x746b935c11d2a9bba85643e12c91f2e0d1071ecf10d99b1465ad6718b4f3826a"
   }
 }

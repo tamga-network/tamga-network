@@ -148,7 +148,7 @@ describe.skipIf(!ready)("history-reset uçtan uca (sandbox kayıt defteri, geçi
     const lotl0 = read("lotl.jws"),
       tl0 = read("tl-tr.jws"),
       v0 = JSON.parse(read("tl-tr.json")).version as number;
-    const valid = "wrprc/issuer/example-university.jwt";
+    const valid = "wrprc/issuer/ulubilim.jwt";
     const cert0 = read(valid);
     const validIdx = payload(valid).status.status_list.idx as number;
     expect(bits().get(old.idx)).toBe(1);

@@ -33,7 +33,7 @@ yalnız etibar kökü, açarlar, etibar siyahıları və məlumatlar ayrıdır v
   (`ADR-0038/SB2`).
 - Şəxslər, tədbirlər və rəqəmsal sənədlər nümunədir; real fərdi məlumatlar yoxdur. Şəxsiyyətin təsdiqi standart olaraq saxta
   provayderlə aparılır (`ADR-0038/SB3`); istəyən hər kəs real şəxsiyyət təsdiqi addımlarını da sınaya bilər (§8, [[ADR-0040]]).
-  Nümunə qurumlar real qurum adlarını daşıyır (aşağıdakı qeydə baxın).
+  Nümunə qurumların adları uydurmadır; heç bir real qurumu təmsil etmir (aşağıdakı qeydə baxın).
 - Hər sandbox səhifəsi və sandbox-a qoşulmuş hər cüzdan ekranı "SANDBOX · test" işarəsini göstərir (`ADR-0038/SB4`).
 - Məlumatlar hər gecə ilkin vəziyyətinə qaytarılır (`ADR-0038/SB5`).
 
@@ -129,9 +129,14 @@ Sandbox-dakı qurumlar yalnız sınaq üçündür; heç biri real qurumla əlaq�
 
 | Qurum | Sənəd növləri (`vct`) |
 |---|---|
-| Nümunə universitet (TEST) — `issuer.sandbox.tamga.network/example-university` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
-| Nümunə tədbir şirkəti (TEST) — `issuer.sandbox.tamga.network/example-events` | `urn:tamga:tkt:EventTicket:1` (uydurma konsertlər) |
-| Nümunə kinoteatr operatoru (TEST) — `issuer.sandbox.tamga.network/example-cinema` | `urn:tamga:tkt:EventTicket:1` (uydurma film seansları; kino bileti ayrıca növ deyil: film və seans `event_name`, zal `venue_name` sahəsindədir) |
+| Ulubilim Üniversitesi, universitet (TEST) — `issuer.sandbox.tamga.network/ulubilim` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Kervanyolu Etkinlik, tədbir şirkəti (TEST) — `issuer.sandbox.tamga.network/kervanyolu` | `urn:tamga:tkt:EventTicket:1` (uydurma konsertlər) |
+| Işıkperde Sineması, kinoteatr operatoru (TEST) — `issuer.sandbox.tamga.network/isikperde` | `urn:tamga:tkt:EventTicket:1` (uydurma film seansları; kino bileti ayrıca növ deyil: film və seans `event_name`, zal `venue_name` sahəsindədir) |
+| Gökbilge Teknik Üniversitesi, texniki universitet (TEST) — `issuer.sandbox.tamga.network/gokbilge` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Akçınar Sağlık Bilimleri Üniversitesi, səhiyyə elmləri universiteti (TEST) — `issuer.sandbox.tamga.network/akcinar` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Uzakyol Açıköğretim Üniversitesi, açıq universitet (TEST) — `issuer.sandbox.tamga.network/uzakyol` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Gökkapı Arena, idman məkanı (TEST) — `issuer.sandbox.tamga.network/gokkapi` | `urn:tamga:tkt:EventTicket:1` (uydurma oyunlar) |
+| Köprüyaka Kongre Merkezi, konqres mərkəzi (TEST) — `issuer.sandbox.tamga.network/kopruyaka` | `urn:tamga:tkt:EventTicket:1` (uydurma konfranslar) |
 | Şəxsiyyət xidməti — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, psevdonim toxumu (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Nümunə şəxslər
@@ -185,9 +190,9 @@ səhifədə görünür.
 
 **Giriş (turniket / bilet girişi):** `https://verify.sandbox.tamga.network/terminal?group=<qrup>` sınaq girişidir; cüzdanın
 “Göstər” ekranındakı keçid kartı QR kodunu kamerayla oxuyur. Giriş özünü terminal açarı ilə təqdim edir; sandbox-un sınaq
-açarları hamıya açıqdır: `example-university-campus` → `sandbox-gate-campus`, `example-events-gate` → `sandbox-gate-ticket`. Sandbox
-siyahısında hər giriş qrupu öz qurumuna bağlıdır ([[ADR-0069]]): `example-university-campus` → `example-university`, `example-events-gate` →
-`example-events`, `example-cinema-gate` → `example-cinema`. Real şəbəkədə açarı qurumun inzibatçısı Qurum Konsolunun **Giriş
+açarları hamıya açıqdır: `ulubilim-campus` → `sandbox-gate-campus`, `kervanyolu-gate` → `sandbox-gate-ticket`. Sandbox
+siyahısında hər giriş qrupu öz qurumuna bağlıdır ([[ADR-0069]]): `ulubilim-campus` → `ulubilim`, `kervanyolu-gate` →
+`kervanyolu`, `isikperde-gate` → `isikperde`. Real şəbəkədə açarı qurumun inzibatçısı Qurum Konsolunun **Giriş
 terminalları** ekranında yaradır.
 
 Öz yoxlayan tərəfinizi sınamaq üçün: yoxlayan tərəfinizi sandbox siyahısına və sandbox pinlərinə bağlayın, sandbox-da alınmış

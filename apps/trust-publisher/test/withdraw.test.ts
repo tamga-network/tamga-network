@@ -188,9 +188,7 @@ describe("gerçek ağ kayıt defteri: test/demo kurumu yok (2026-10-04)", () => 
   it("sandbox listesi aynı senaryoları taşır (örnek kurumlar + kurgusal kullanımlar ACTIVE)", () => {
     const sb = read("registry-sandbox");
     const active = sb.issuers.filter((i) => i.status === "ACTIVE").map((i) => i.slug);
-    expect(active).toEqual(
-      expect.arrayContaining(["example-university", "example-events", "example-cinema", "tamga-id-review"]),
-    );
+    expect(active).toEqual(expect.arrayContaining(["ulubilim", "kervanyolu", "isikperde", "tamga-id-review"]));
     const v = sb.relying_parties.find((r) => r.dns_name === "verify.sandbox.tamga.network")!;
     const ids = v.scopes.filter((s) => Date.parse(s.valid_until) > Date.now()).map((s) => s.scope_id);
     expect(ids).toEqual(expect.arrayContaining(DEMO_SCOPES));

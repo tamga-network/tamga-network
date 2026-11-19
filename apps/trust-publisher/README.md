@@ -19,6 +19,7 @@ Liste biçimi: [[SPEC-TRUST-0001]]. Dış listeler (federasyon, ETSI TS 119 602)
 | `npm run trust:verify`                                                  | `dist/`'i yükleyiciyle doğrular (`-- --full`: arşivle birlikte tam zincir)          |
 | `npm run trust:heartbeat`                                               | çapa günlüğüne boş satır (saatlik)                                                  |
 | `npm run trust:anchor`                                                  | iptal listesi çapası ekler                                                          |
+| `npm run trust:anchor -- --batch <dosya.json>`                          | sıradaki çapaları tek seferde ekler (servislerin kuyruğu; satır başına sonuç)       |
 | `npm run trust:archive`                                                 | çapa günlüğünü arşivler                                                             |
 | `npm run trust:register -- issuer\|rp <başvuru.json>`                   | kurum ya da doğrulayıcı ekler                                                       |
 | `npm run trust:scope -- <dns_name> <kullanım.json>`                     | doğrulayıcıya yeni kullanım ekler                                                   |
@@ -126,11 +127,11 @@ hazır olsun ve zincirsiz tasarıma bağlı kalsın diye yayıncı, imzalı list
 veri zincire **gitmez** (SPEC-BC-0001 DP1, SPEC-TRUST-0001 TL11). Zincir projeksiyondur: çelişkide imzalı liste geçerlidir;
 zincir cevabı doğrulama için gerekli değildir.
 
-| Komut | İş |
-| --- | --- |
-| `npm run trust:chain-submit -- --dry-run` | planı basar (bayrak kapalıyken bellek içi boş zincire göre; açıkken zinciri okur), **yazmaz** |
-| `npm run trust:chain-submit` | bayrak açıksa `dist/` setini yükleyiciyle doğrular (sağlıksız set çapalanmaz) ve yalnız özetleri yazar; aynı sürüm aynı özet → `SKIP`, onaylı farklı özet → `CONFLICT` (yazılmaz, çıkış 3, işletmeci bakar) |
-| `npm run trust:chain-check -- dist/lotl.jws` | doğrulayıcı tarafı: listenin özeti zincirde **onaylı** mı? `YES` / `NO` (farklı özet — çift konuşma işareti) / `UNKNOWN` (kapalı, erişilemez, çapa yok ya da eşik dolmadı) |
+| Komut                                        | İş                                                                                                                                                                                                          |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run trust:chain-submit -- --dry-run`    | planı basar (bayrak kapalıyken bellek içi boş zincire göre; açıkken zinciri okur), **yazmaz**                                                                                                               |
+| `npm run trust:chain-submit`                 | bayrak açıksa `dist/` setini yükleyiciyle doğrular (sağlıksız set çapalanmaz) ve yalnız özetleri yazar; aynı sürüm aynı özet → `SKIP`, onaylı farklı özet → `CONFLICT` (yazılmaz, çıkış 3, işletmeci bakar) |
+| `npm run trust:chain-check -- dist/lotl.jws` | doğrulayıcı tarafı: listenin özeti zincirde **onaylı** mı? `YES` / `NO` (farklı özet — çift konuşma işareti) / `UNKNOWN` (kapalı, erişilemez, çapa yok ya da eşik dolmadı)                                  |
 
 Ortam (`.env`; depoda yer tutucu, gerçek değerler sunucuda): `TAMGA_CHAIN_ENABLED` (varsayılan **0** — kapalıyken hiçbir zincir
 bağlantısı kurulmaz, hiçbir şey yazılmaz), `TAMGA_CHAIN_RPC_URL`, `TAMGA_CHAIN_ANCHOR_REGISTRY` (kayıt adresi),
@@ -151,10 +152,10 @@ plan(şimdi) − plan(önce)) blok anıyla zincire yazar. Aynı koşudaki ara du
 yazılır; ağ düzeyi kayıtlar Governance önerisiyle; yalnız tam koşu noktayı ilerletir (eksik koşu çıkış 5, fark sonraki koşuda yine
 denenir).
 
-| Komut | İş |
-| --- | --- |
-| `npm run trust:chain-sync -- --dry-run` | farkı basar, **yazmaz** (bayrak kapalıyken de) |
-| `npm run trust:chain-sync` | bayrak açıksa farkı yazar — yalnız yerel geliştirme zinciri (31337/31338) ve test/staging zinciri (31339; `TAMGA_CHAIN_KEYS`, `TAMGA_CHAIN_DEPLOYMENT`); gerçek ağa yazma yolu yok |
+| Komut                                   | İş                                                                                                                                                                                 |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run trust:chain-sync -- --dry-run` | farkı basar, **yazmaz** (bayrak kapalıyken de)                                                                                                                                     |
+| `npm run trust:chain-sync`              | bayrak açıksa farkı yazar — yalnız yerel geliştirme zinciri (31337/31338) ve test/staging zinciri (31339; `TAMGA_CHAIN_KEYS`, `TAMGA_CHAIN_DEPLOYMENT`); gerçek ağa yazma yolu yok |
 
 Kanca: `build`, `heartbeat` ve `anchor` komutlarından sonra yalnız `TAMGA_CHAIN_ENABLED=1` iken `chain-sync` ve `chain-submit`
 çalışır; bayrak kapalıyken hiçbir şey yapmaz; hatası yayını durdurmaz ve çıkış kodunu değiştirmez (yalnız alarm satırı). Kod

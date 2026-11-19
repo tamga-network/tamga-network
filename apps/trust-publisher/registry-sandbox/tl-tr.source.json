@@ -36,13 +36,13 @@
       "cert": "issuer-example-university",
       "status_cert": "issuer-example-university-status",
       "parent_ca": "root-ca",
-      "slug": "example-university",
-      "legal_name": "Example University (TEST)",
+      "slug": "ulubilim",
+      "legal_name": "Ulubilim Üniversitesi (TEST)",
       "category": "EDUCATION",
       "assurance": "I2",
       "class": "EAA",
       "assurance_basis": "Sandbox example institution with a fictional name (ADR-0038). Records come from the university's own student information system through the institution source endpoint (ADR-0020); credentials and the status list are signed through the university's remote signing service (CSC API v2, ADR-0057) with test keys and are not valid anywhere.",
-      "issuer_url": "https://issuer.sandbox.tamga.network/example-university",
+      "issuer_url": "https://issuer.sandbox.tamga.network/ulubilim",
       "status_list_base": "https://status.sandbox.tamga.network/",
       "status": "ACTIVE",
       "valid_from": "2026-10-03T00:00:00Z",
@@ -70,10 +70,10 @@
         }
       ],
       "authentic_source": {
-        "name": "Example University Student Information System (TEST)",
+        "name": "Ulubilim Üniversitesi öğrenci bilgi sistemi (TEST)",
         "mode": "REMOTE"
       },
-      "trade_name": "Example University (TEST)",
+      "trade_name": "Ulubilim Üniversitesi (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -257,13 +257,13 @@
       "cert": "issuer-example-events",
       "status_cert": "issuer-example-events-status",
       "parent_ca": "root-ca",
-      "slug": "example-events",
-      "legal_name": "Example Event Service (TEST)",
+      "slug": "kervanyolu",
+      "legal_name": "Kervanyolu Etkinlik (TEST)",
       "category": "EVENTS",
       "assurance": "I2",
       "class": "EAA",
       "assurance_basis": "Sandbox example ticket seller with a fictional name (concert tickets; ADR-0038). Tickets carry no personal data. Credentials are signed with test keys and are not valid anywhere.",
-      "issuer_url": "https://issuer.sandbox.tamga.network/example-events",
+      "issuer_url": "https://issuer.sandbox.tamga.network/kervanyolu",
       "status_list_base": "https://status.sandbox.tamga.network/",
       "status": "ACTIVE",
       "valid_from": "2026-10-03T00:00:00Z",
@@ -288,7 +288,7 @@
         "name": "Sandbox example sales system",
         "mode": "TICKET_SALES"
       },
-      "trade_name": "Example Event Service (TEST)",
+      "trade_name": "Kervanyolu Etkinlik (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -316,13 +316,13 @@
       "cert": "issuer-example-cinema",
       "status_cert": "issuer-example-cinema-status",
       "parent_ca": "root-ca",
-      "slug": "example-cinema",
-      "legal_name": "Example Cinema (TEST)",
+      "slug": "isikperde",
+      "legal_name": "Işıkperde Sineması (TEST)",
       "category": "EVENTS",
       "assurance": "I2",
       "class": "EAA",
       "assurance_basis": "Sandbox example cinema ticket seller with a fictional name (film screenings; ADR-0038). Tickets carry no personal data. Credentials are signed with test keys and are not valid anywhere.",
-      "issuer_url": "https://issuer.sandbox.tamga.network/example-cinema",
+      "issuer_url": "https://issuer.sandbox.tamga.network/isikperde",
       "status_list_base": "https://status.sandbox.tamga.network/",
       "status": "ACTIVE",
       "valid_from": "2026-10-03T00:00:00Z",
@@ -347,7 +347,7 @@
         "name": "Sandbox example sales system",
         "mode": "TICKET_SALES"
       },
-      "trade_name": "Example Cinema (TEST)",
+      "trade_name": "Işıkperde Sineması (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -358,6 +358,319 @@
       "postal_address": {
         "street_address": "Sandbox (test) — no real address",
         "locality": "Istanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
+    },
+    {
+      "cert": "issuer-gokbilge",
+      "status_cert": "issuer-gokbilge-status",
+      "parent_ca": "root-ca",
+      "slug": "gokbilge",
+      "legal_name": "Gökbilge Teknik Üniversitesi (TEST)",
+      "category": "EDUCATION",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox example institution with a fictional name (technical university; ADR-0038). Records come from the sandbox example registry (made-up people only). Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/gokbilge",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-11-19T00:00:00Z",
+      "valid_until": "2028-11-19T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z",
+          "reason": "initial-registration (sandbox demo network)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "allowed": true,
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "allowed": true,
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Gökbilge Teknik Üniversitesi öğrenci kayıtları (TEST, örnek kayıt defteri)",
+        "mode": "PORTAL_DB"
+      },
+      "trade_name": "Gökbilge Teknik Üniversitesi (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000008",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Ankara",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
+    },
+    {
+      "cert": "issuer-akcinar",
+      "status_cert": "issuer-akcinar-status",
+      "parent_ca": "root-ca",
+      "slug": "akcinar",
+      "legal_name": "Akçınar Sağlık Bilimleri Üniversitesi (TEST)",
+      "category": "EDUCATION",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox example institution with a fictional name (health sciences university; ADR-0038). Records come from the sandbox example registry (made-up people only). Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/akcinar",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-11-19T00:00:00Z",
+      "valid_until": "2028-11-19T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z",
+          "reason": "initial-registration (sandbox demo network)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "allowed": true,
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "allowed": true,
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Akçınar Sağlık Bilimleri Üniversitesi öğrenci kayıtları (TEST, örnek kayıt defteri)",
+        "mode": "PORTAL_DB"
+      },
+      "trade_name": "Akçınar Sağlık Bilimleri Üniversitesi (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000009",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "İzmir",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
+    },
+    {
+      "cert": "issuer-uzakyol",
+      "status_cert": "issuer-uzakyol-status",
+      "parent_ca": "root-ca",
+      "slug": "uzakyol",
+      "legal_name": "Uzakyol Açıköğretim Üniversitesi (TEST)",
+      "category": "EDUCATION",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox example institution with a fictional name (open and distance learning university; ADR-0038). Records come from the sandbox example registry (made-up people only). Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/uzakyol",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-11-19T00:00:00Z",
+      "valid_until": "2028-11-19T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z",
+          "reason": "initial-registration (sandbox demo network)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:edu:StudentCredential:1",
+          "allowed": true,
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": null
+        },
+        {
+          "vct": "urn:tamga:edu:DiplomaCredential:1",
+          "allowed": true,
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Uzakyol Açıköğretim Üniversitesi öğrenci kayıtları (TEST, örnek kayıt defteri)",
+        "mode": "PORTAL_DB"
+      },
+      "trade_name": "Uzakyol Açıköğretim Üniversitesi (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000010",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "Eskişehir",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
+    },
+    {
+      "cert": "issuer-gokkapi",
+      "status_cert": "issuer-gokkapi-status",
+      "parent_ca": "root-ca",
+      "slug": "gokkapi",
+      "legal_name": "Gökkapı Arena (TEST)",
+      "category": "EVENTS",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox example ticket seller with a fictional name (match tickets; ADR-0038). Tickets carry no personal data. Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/gokkapi",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-11-19T00:00:00Z",
+      "valid_until": "2028-11-19T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z",
+          "reason": "initial-registration (sandbox demo network)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:tkt:EventTicket:1",
+          "allowed": true,
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Sandbox example sales system",
+        "mode": "TICKET_SALES"
+      },
+      "trade_name": "Gökkapı Arena (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000011",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "İstanbul",
+        "country": "TR"
+      },
+      "contact": {
+        "support_uri": "https://sandbox.tamga.network",
+        "email": "info@tamga.network"
+      },
+      "supervisory_authority": {
+        "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
+        "country": "TR",
+        "info_uri": "https://www.kvkk.gov.tr",
+        "form_uri": "https://www.kvkk.gov.tr"
+      }
+    },
+    {
+      "cert": "issuer-kopruyaka",
+      "status_cert": "issuer-kopruyaka-status",
+      "parent_ca": "root-ca",
+      "slug": "kopruyaka",
+      "legal_name": "Köprüyaka Kongre Merkezi (TEST)",
+      "category": "EVENTS",
+      "assurance": "I2",
+      "class": "EAA",
+      "assurance_basis": "Sandbox example ticket seller with a fictional name (conference tickets; ADR-0038). Tickets carry no personal data. Credentials are signed with test keys and are not valid anywhere.",
+      "issuer_url": "https://issuer.sandbox.tamga.network/kopruyaka",
+      "status_list_base": "https://status.sandbox.tamga.network/",
+      "status": "ACTIVE",
+      "valid_from": "2026-11-19T00:00:00Z",
+      "valid_until": "2028-11-19T00:00:00Z",
+      "successor_id": null,
+      "status_history": [
+        {
+          "status": "ACTIVE",
+          "since": "2026-11-19T00:00:00Z",
+          "reason": "initial-registration (sandbox demo network)"
+        }
+      ],
+      "schema_authorizations": [
+        {
+          "vct": "urn:tamga:tkt:EventTicket:1",
+          "allowed": true,
+          "valid_from": "2026-11-19T00:00:00Z",
+          "valid_until": null
+        }
+      ],
+      "authentic_source": {
+        "name": "Sandbox example sales system",
+        "mode": "TICKET_SALES"
+      },
+      "trade_name": "Köprüyaka Kongre Merkezi (TEST)",
+      "identifiers": [
+        {
+          "scheme": "TR-VKN",
+          "value": "TR0000000012",
+          "note": "sandbox test value"
+        }
+      ],
+      "postal_address": {
+        "street_address": "Sandbox (test) — no real address",
+        "locality": "İstanbul",
         "country": "TR"
       },
       "contact": {
@@ -395,7 +708,10 @@
             "tk-TM": "Uçurymlar toruna agzalyk (diňe uçurymlar)"
           },
           "vct": "urn:tamga:edu:DiplomaCredential:1",
-          "claims": ["is_graduate", "awarding_body_name"],
+          "claims": [
+            "is_graduate",
+            "awarding_body_name"
+          ],
           "valid_from": "2026-10-11T00:00:00Z",
           "valid_until": "2027-09-24T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -429,7 +745,10 @@
             "tk-TM": "Talyp arzanladyşy"
           },
           "vct": "urn:tamga:edu:StudentCredential:1",
-          "claims": ["is_enrolled", "awarding_body_name"],
+          "claims": [
+            "is_enrolled",
+            "awarding_body_name"
+          ],
           "valid_from": "2026-10-03T00:00:00Z",
           "valid_until": "2027-09-24T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -442,7 +761,9 @@
             "tk-TM": "Kampusa giriş (turniket) — geçiş kartyny hasaba almak"
           },
           "vct": "urn:tamga:edu:StudentCredential:1",
-          "claims": ["is_enrolled"],
+          "claims": [
+            "is_enrolled"
+          ],
           "valid_from": "2026-10-03T00:00:00Z",
           "valid_until": "2027-09-25T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -468,7 +789,10 @@
             "tk-TM": "Saýta agza bolmak — ady, familiýasy (saýt özüne degişli lakamy alýar)"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": ["given_name", "family_name"],
+          "claims": [
+            "given_name",
+            "family_name"
+          ],
           "valid_from": "2026-10-03T00:00:00Z",
           "valid_until": "2027-09-25T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -481,7 +805,10 @@
             "tk-TM": "Çäre derwezesi — bilet geçiş kartysy (bir gezeklik)"
           },
           "vct": "urn:tamga:tkt:EventTicket:1",
-          "claims": ["event_id", "ticket_class"],
+          "claims": [
+            "event_id",
+            "ticket_class"
+          ],
           "valid_from": "2026-10-03T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -496,7 +823,9 @@
             "tk-TM": "18 ýaşdan ulydygyny barlamak — diňe hawa/ýok"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": ["age_over_18"],
+          "claims": [
+            "age_over_18"
+          ],
           "valid_from": "2026-10-03T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -511,7 +840,9 @@
             "tk-TM": "Hawa/ýok subutnamasy bilen 18 ýaşdan ulydygyny barlamak — diňe hawa/ýok"
           },
           "vct": "urn:tamga:id:ShortLivedIdentityAttestation:1",
-          "claims": ["age_over_18"],
+          "claims": [
+            "age_over_18"
+          ],
           "valid_from": "2026-10-09T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -526,7 +857,9 @@
             "tk-TM": "15 ýaşdan ulydygyny barlamak — diňe hawa/ýok"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": ["age_over_15"],
+          "claims": [
+            "age_over_15"
+          ],
           "valid_from": "2026-10-23T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -541,7 +874,9 @@
             "tk-TM": "Hawa/ýok subutnamasy bilen 15 ýaşdan ulydygyny barlamak — diňe hawa/ýok"
           },
           "vct": "urn:tamga:id:ShortLivedIdentityAttestation:1",
-          "claims": ["age_over_15"],
+          "claims": [
+            "age_over_15"
+          ],
           "valid_from": "2026-10-23T00:00:00Z",
           "valid_until": "2027-09-26T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -554,7 +889,10 @@
             "tk-TM": "Awtoulag kärendesi — sürüjilik şahadatnamasynyň derejeleri we 18 ýaşdan uly (barlanan sürüjilik şahadatnamasy maglumaty; resmi sürüjilik şahadatnamasynyň ornuny tutmaýar)"
           },
           "vct": "urn:tamga:id:DrivingLicenceAttestation:1",
-          "claims": ["driving_privileges", "age_over_18"],
+          "claims": [
+            "driving_privileges",
+            "age_over_18"
+          ],
           "valid_from": "2026-10-04T00:00:00Z",
           "valid_until": "2027-10-04T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -567,7 +905,10 @@
             "tk-TM": "OpenID laýyklyk öz-synagy — EU PID ady we familiýasy (diňe synag guraly)"
           },
           "vct": "urn:eudi:pid:1",
-          "claims": ["given_name", "family_name"],
+          "claims": [
+            "given_name",
+            "family_name"
+          ],
           "valid_from": "2026-10-13T00:00:00Z",
           "valid_until": "2027-04-13T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
@@ -575,28 +916,54 @@
       ],
       "terminal_groups": [
         {
-          "group_id": "example-university-campus",
-          "institution_id": "example-university",
-          "allowed_policies": ["campus-access"],
-          "label": "Example University campus turnstiles (TEST)",
+          "group_id": "ulubilim-campus",
+          "institution_id": "ulubilim",
+          "allowed_policies": [
+            "campus-access"
+          ],
+          "label": "Ulubilim Üniversitesi campus turnstiles (TEST)",
           "offline_allowed": true,
           "valid_from": "2026-10-03T00:00:00Z"
         },
         {
-          "group_id": "example-events-gate",
-          "institution_id": "example-events",
-          "allowed_policies": ["event-ticket"],
-          "label": "Example Event Service gates (TEST)",
+          "group_id": "kervanyolu-gate",
+          "institution_id": "kervanyolu",
+          "allowed_policies": [
+            "event-ticket"
+          ],
+          "label": "Kervanyolu Etkinlik gates (TEST)",
           "offline_allowed": false,
           "valid_from": "2026-10-03T00:00:00Z"
         },
         {
-          "group_id": "example-cinema-gate",
-          "institution_id": "example-cinema",
-          "allowed_policies": ["event-ticket"],
-          "label": "Example Cinema gates (TEST)",
+          "group_id": "isikperde-gate",
+          "institution_id": "isikperde",
+          "allowed_policies": [
+            "event-ticket"
+          ],
+          "label": "Işıkperde Sineması gates (TEST)",
           "offline_allowed": false,
           "valid_from": "2026-10-03T00:00:00Z"
+        },
+        {
+          "group_id": "gokkapi-gate",
+          "institution_id": "gokkapi",
+          "allowed_policies": [
+            "event-ticket"
+          ],
+          "label": "Gökkapı Arena gates (TEST)",
+          "offline_allowed": false,
+          "valid_from": "2026-11-19T00:00:00Z"
+        },
+        {
+          "group_id": "kopruyaka-gate",
+          "institution_id": "kopruyaka",
+          "allowed_policies": [
+            "event-ticket"
+          ],
+          "label": "Köprüyaka Kongre Merkezi gates (TEST)",
+          "offline_allowed": false,
+          "valid_from": "2026-11-19T00:00:00Z"
         }
       ],
       "trade_name": "Tamga Sandbox Verify",
@@ -610,7 +977,9 @@
         "tr-TR": "Deneme için sandbox doğrulama hizmeti (ADR-0038)."
       },
       "is_public_sector_body": false,
-      "entitlements": ["service_provider"],
+      "entitlements": [
+        "service_provider"
+      ],
       "supervisory_authority": {
         "name": "Kişisel Verileri Koruma Kurumu (KVKK)",
         "country": "TR",
@@ -634,7 +1003,7 @@
     {
       "access_cert": "rp-issuer-example-university",
       "dns_name": "issuer.sandbox.tamga.network",
-      "legal_name": "Example University — identity matching at issuance (TEST)",
+      "legal_name": "Ulubilim Üniversitesi — identity matching at issuance (TEST)",
       "status": "ACTIVE",
       "registered_at": "2026-10-03T00:00:00Z",
       "status_history": [
@@ -645,20 +1014,25 @@
       ],
       "scopes": [
         {
-          "scope_id": "example-university-identity-matching-1",
+          "scope_id": "ulubilim-identity-matching-1",
           "purpose": "Identity matching for issuance: national ID number and birth date are compared with the institution record and not stored",
           "purpose_localized": {
             "tr-TR": "Belge ihracı için kimlik eşleştirme: T.C. kimlik no ve doğum tarihi kurum kaydıyla karşılaştırılır, saklanmaz",
             "tk-TM": "Resminama bermek üçin şahsyýeti deňeşdirmek: şahsyýet belgisi we doglan senesi edaranyň ýazgysy bilen deňeşdirilýär, saklanmaýar"
           },
           "vct": "urn:tamga:id:IdentityAttestation:1",
-          "claims": ["personal_administrative_number", "birthdate", "given_name", "family_name"],
+          "claims": [
+            "personal_administrative_number",
+            "birthdate",
+            "given_name",
+            "family_name"
+          ],
           "valid_from": "2026-10-03T00:00:00Z",
           "valid_until": "2027-09-25T00:00:00Z",
           "privacy_policy_uri": "https://sandbox.tamga.network/privacy"
         }
       ],
-      "trade_name": "Example University (TEST)",
+      "trade_name": "Ulubilim Üniversitesi (TEST)",
       "identifiers": [
         {
           "scheme": "TR-VKN",
@@ -686,7 +1060,9 @@
         "tr-TR": "Sandbox belge verirken kimlik eşleştirme (test)."
       },
       "is_public_sector_body": false,
-      "entitlements": ["service_provider"]
+      "entitlements": [
+        "service_provider"
+      ]
     }
   ],
   "national_schemas": [],

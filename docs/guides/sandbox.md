@@ -33,7 +33,7 @@ yalnız güven kökü, anahtarlar, güven listeleri ve veriler ayrıdır ve saht
   (`ADR-0038/SB2`).
 - Kişiler, etkinlikler ve belgeler örnektir; gerçek kişisel veri yoktur. Kimlik doğrulama varsayılan olarak sahte bir
   sağlayıcıyla yapılır (`ADR-0038/SB3`); isteyen herkes gerçek kimlik doğrulama adımlarını da deneyebilir (§8, [[ADR-0040]]).
-  Örnek kurumlar gerçek kurum adlarını taşır (aşağıdaki nota bakın).
+  Örnek kurumların adları uydurmadır; gerçek bir kurumu temsil etmez (aşağıdaki nota bakın).
 - Her sandbox sayfası ve sandbox'a bağlı her cüzdan ekranı "SANDBOX · test" işaretini gösterir (`ADR-0038/SB4`).
 - Veriler her gece ilk hâline döner (`ADR-0038/SB5`).
 
@@ -129,9 +129,14 @@ kısa adlar (`slug`) yalnız teknik tanımlayıcıdır. Buradaki belgeler test a
 
 | Kurum | Belge türleri (`vct`) |
 |---|---|
-| Örnek üniversite (TEST) — `issuer.sandbox.tamga.network/example-university` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
-| Örnek etkinlik şirketi (TEST) — `issuer.sandbox.tamga.network/example-events` | `urn:tamga:tkt:EventTicket:1` (kurgusal konserler) |
-| Örnek sinema işletmesi (TEST) — `issuer.sandbox.tamga.network/example-cinema` | `urn:tamga:tkt:EventTicket:1` (kurgusal film seansları; sinema bileti ayrı bir tür değildir: film ve seans `event_name`, salon `venue_name` alanındadır) |
+| Ulubilim Üniversitesi (TEST) — `issuer.sandbox.tamga.network/ulubilim` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Kervanyolu Etkinlik (TEST) — `issuer.sandbox.tamga.network/kervanyolu` | `urn:tamga:tkt:EventTicket:1` (kurgusal konserler) |
+| Işıkperde Sineması (TEST) — `issuer.sandbox.tamga.network/isikperde` | `urn:tamga:tkt:EventTicket:1` (kurgusal film seansları; sinema bileti ayrı bir tür değildir: film ve seans `event_name`, salon `venue_name` alanındadır) |
+| Gökbilge Teknik Üniversitesi (TEST) — `issuer.sandbox.tamga.network/gokbilge` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Akçınar Sağlık Bilimleri Üniversitesi (TEST) — `issuer.sandbox.tamga.network/akcinar` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Uzakyol Açıköğretim Üniversitesi (TEST) — `issuer.sandbox.tamga.network/uzakyol` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Gökkapı Arena (TEST) — `issuer.sandbox.tamga.network/gokkapi` | `urn:tamga:tkt:EventTicket:1` (kurgusal maçlar) |
+| Köprüyaka Kongre Merkezi (TEST) — `issuer.sandbox.tamga.network/kopruyaka` | `urn:tamga:tkt:EventTicket:1` (kurgusal konferanslar) |
 | Kimlik servisi — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, takma ad tohumu (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Örnek kişiler
@@ -185,10 +190,10 @@ sayfada görünür.
 
 **Kapı (turnike / bilet kapısı):** `https://verify.sandbox.tamga.network/terminal?group=<grup>` deneme kapısıdır; cüzdanın “Göster”
 ekranındaki geçiş kartı QR'ını kameraya tutar. Kapı kendini terminal anahtarıyla tanıtır ([[ADR-0065]]); sandbox'ın deneme
-anahtarları herkese açıktır ve sayfadaki alana yazılır: `example-university-campus` → `sandbox-gate-campus`, `example-events-gate` →
+anahtarları herkese açıktır ve sayfadaki alana yazılır: `ulubilim-campus` → `sandbox-gate-campus`, `kervanyolu-gate` →
 `sandbox-gate-ticket`. Gerçek ağda anahtarı kapının işletmecisi verir. Sandbox listesinde her kapı grubu kurumuna bağlıdır
-([[ADR-0069]]): `example-university-campus` → `example-university`, `example-events-gate` → `example-events`, `example-cinema-gate` →
-`example-cinema`; kendi kapıları olan bir kurumun yöneticisi anahtarları Kurum Konsolu'nun **Kapı terminalleri** ekranından
+([[ADR-0069]]): `ulubilim-campus` → `ulubilim`, `kervanyolu-gate` → `kervanyolu`, `isikperde-gate` →
+`isikperde`; kendi kapıları olan bir kurumun yöneticisi anahtarları Kurum Konsolu'nun **Kapı terminalleri** ekranından
 oluşturur ve iptal eder (anahtar bir kez gösterilir).
 
 Kendi doğrulayıcınızı denemek için: doğrulayıcınızı sandbox listesine ve sandbox pinlerine bağlayın, sandbox'ta alınmış

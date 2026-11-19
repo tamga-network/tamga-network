@@ -6,6 +6,18 @@ published on npm as test releases; `0.8.9` is the current one on npm (the API ma
 
 ## [Unreleased]
 
+### Sandbox
+
+- Changed: the sandbox example institutions now have made-up proper names (Ulubilim Üniversitesi, Kervanyolu Etkinlik, Işıkperde Sineması;
+  addresses `/ulubilim`, `/kervanyolu`, `/isikperde`); their certificates were re-signed with the same keys, the sandbox root is unchanged.
+- Added: five more fictional sandbox institutions (three universities, a sports venue and a congress centre).
+
+### Trust publisher
+
+- Added: `anchor --batch <file>` writes several status list anchors in one run (same rows and checks as `anchor`; each row is
+  checked and appended on its own, the last output line reports per-row results). Services queue their anchors and write them
+  together, so the number of lists no longer multiplies the process start-up cost.
+
 ## 0.8.9 — 2026-11-19
 
 Published on npm on 2026-11-19.

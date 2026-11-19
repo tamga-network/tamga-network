@@ -1720,6 +1720,67 @@ function fullAnchorsJsonl(): { jsonl: string; archives: string[] } {
   return { jsonl: lines.join("\n") + (lines.length ? "\n" : ""), archives };
 }
 
+/**
+ * İptal listesi çapa gövdesi — kilit altında günlüğün güncel dilimiyle (baştaki durumlu kontrol noktası dahil) denetlenir: aynı
+ * listenin sürümü öncekinden büyük olmalı (S3/L1). Yükleyici geri giden ya da tekrarlanan sürümü bütün güven setiyle reddeder
+ * (store.ts), bu yüzden böyle bir satır hiç yazılmaz (2026-11-19, toplu yazımla birlikte).
+ */
+function statusAnchorBody(body: Extract<AnchorBody, { kind: "status_list" }>) {
+  return (payloads: Anchor[]): AnchorBody => {
+    let prev = -1;
+    for (const p of payloads) {
+      if (p.kind === "checkpoint" && p.state)
+        for (const r of p.state.status_lists) if (r.list_id === body.list_id) prev = Math.max(prev, r.list_version);
+      if (p.kind === "status_list" && p.list_id === body.list_id) prev = Math.max(prev, p.list_version);
+    }
+    if (body.list_version <= prev)
+      throw new Error(`anchor: list_version not monotonic (${body.list_id}: ${prev} → ${body.list_version}) — L1/S3`);
+    return body;
+  };
+}
+
+/**
+ * `anchor --batch <dosya>`: sırada bekleyen iptal listesi çapaları tek süreçte (servislerin çapa kuyruğu; 2026-11-19). Her çapa
+ * için ayrı süreç açmak (npx + tsx, ~3 sn) kısa yayın aralığında 10 listeyle kuyruğu doyuruyordu; yazılan satırlar ve denetimler
+ * tek tek `anchor` ile aynıdır. Dosya: `[{list_id, issuer_id, list_uri, content_hash, list_version, token?}]` (token = JWS; bit
+ * sayısı ve boyut ondan, özet ve adres denetlenir). Satırlar sırayla, her biri kendi kilidiyle eklenir; bir satırın hatası
+ * ötekileri durdurmaz. Çıktının son satırı `{"batch":[{list_id, list_version, ok, error?}]}`; hepsi yazılmadıysa çıkış 1.
+ */
+async function anchorBatch(file: string) {
+  const items = JSON.parse(readFileSync(resolve(file), "utf8")) as unknown;
+  if (!Array.isArray(items) || !items.length) throw new Error("anchor --batch: dosya boş ya da dizi değil");
+  const results: Array<{ list_id: string; list_version: number; ok: boolean; error?: string }> = [];
+  for (const it of items as Array<Record<string, unknown>>) {
+    const str = (k: string) => {
+      if (typeof it[k] !== "string" || !it[k]) throw new Error(`anchor --batch: ${k} eksik`);
+      return it[k] as string;
+    };
+    try {
+      const row = {
+        kind: "status_list" as const,
+        list_id: str("list_id"),
+        issuer_id: str("issuer_id"),
+        list_uri: str("list_uri"),
+        content_hash: str("content_hash"),
+        list_version: Number(it.list_version),
+        published_at: iso(new Date()),
+      };
+      const params = typeof it.token === "string" ? statusAnchorParams(it.token, row) : {};
+      await appendAnchor(statusAnchorBody({ ...row, ...params }));
+      results.push({ list_id: row.list_id, list_version: row.list_version, ok: true });
+    } catch (e) {
+      results.push({
+        list_id: String(it.list_id),
+        list_version: Number(it.list_version),
+        ok: false,
+        error: (e as Error).message.slice(0, 300),
+      });
+    }
+  }
+  console.log(JSON.stringify({ batch: results }));
+  if (!results.every((r) => r.ok)) process.exitCode = 1;
+}
+
 function arg(name: string, def?: string) {
   const i = process.argv.indexOf(`--${name}`);
   return i >= 0 ? process.argv[i + 1] : def;
@@ -2311,6 +2372,9 @@ const cmd = process.argv[2];
     // çalışan `crl-revoke` / `build` ile durum dosyası ve CRL numarası yarışmasın (iptal kaybolmasın, iki CRL aynı numarayı almasın)
     await withDirLock("registry.lock", () => refreshAccessCrls());
     await afterPublish();
+  } else if (cmd === "anchor" && arg("batch")) {
+    await anchorBatch(arg("batch")!);
+    await afterPublish();
   } else if (cmd === "anchor") {
     const row = {
       kind: "status_list" as const,
@@ -2329,7 +2393,7 @@ const cmd = process.argv[2];
           content_hash: row.content_hash,
         })
       : {};
-    const a = await appendAnchor({ ...row, ...params });
+    const a = await appendAnchor(statusAnchorBody({ ...row, ...params }));
     console.log(JSON.stringify(a));
     await afterPublish();
   } else if (cmd === "crl-revoke" || cmd === "crl-status") {

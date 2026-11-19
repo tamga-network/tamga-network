@@ -37,7 +37,7 @@ same code as the real network; only the trust root, the keys, the trusted lists 
   (`ADR-0038/SB2`).
 - People, events and credentials are examples; there is no real personal data. Identity verification uses a fake provider
   by default (`ADR-0038/SB3`); anyone who wants can also try the real identity verification steps (§8,
-  [[ADR-0040]]). The example institutions carry real institution names (see the note below).
+  [[ADR-0040]]). The example institutions have made-up names and represent no real institution (see the note below).
 - Every sandbox page and every wallet screen connected to the sandbox shows a "SANDBOX · test" mark (`ADR-0038/SB4`).
 - The data returns to its initial state every night (`ADR-0038/SB5`).
 
@@ -135,9 +135,14 @@ short names in the addresses (`slug`) are technical identifiers only. The creden
 
 | Institution | Credential types (`vct`) |
 |---|---|
-| Example university (TEST) — `issuer.sandbox.tamga.network/example-university` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
-| Example events company (TEST) — `issuer.sandbox.tamga.network/example-events` | `urn:tamga:tkt:EventTicket:1` (fictional concerts) |
-| Example cinema operator (TEST) — `issuer.sandbox.tamga.network/example-cinema` | `urn:tamga:tkt:EventTicket:1` (fictional film screenings; a cinema ticket is not a separate type: the film and screening are in `event_name`, the hall in `venue_name`) |
+| Ulubilim Üniversitesi, a university (TEST) — `issuer.sandbox.tamga.network/ulubilim` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Kervanyolu Etkinlik, an events company (TEST) — `issuer.sandbox.tamga.network/kervanyolu` | `urn:tamga:tkt:EventTicket:1` (fictional concerts) |
+| Işıkperde Sineması, a cinema operator (TEST) — `issuer.sandbox.tamga.network/isikperde` | `urn:tamga:tkt:EventTicket:1` (fictional film screenings; a cinema ticket is not a separate type: the film and screening are in `event_name`, the hall in `venue_name`) |
+| Gökbilge Teknik Üniversitesi, a technical university (TEST) — `issuer.sandbox.tamga.network/gokbilge` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Akçınar Sağlık Bilimleri Üniversitesi, a health sciences university (TEST) — `issuer.sandbox.tamga.network/akcinar` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Uzakyol Açıköğretim Üniversitesi, an open university (TEST) — `issuer.sandbox.tamga.network/uzakyol` | `urn:tamga:edu:StudentCredential:1`, `urn:tamga:edu:DiplomaCredential:1` |
+| Gökkapı Arena, a sports venue (TEST) — `issuer.sandbox.tamga.network/gokkapi` | `urn:tamga:tkt:EventTicket:1` (fictional matches) |
+| Köprüyaka Kongre Merkezi, a congress centre (TEST) — `issuer.sandbox.tamga.network/kopruyaka` | `urn:tamga:tkt:EventTicket:1` (fictional conferences) |
 | Identity service — `id.sandbox.tamga.network` | `urn:tamga:id:IdentityAttestation:1`, pseudonym seed (PseudonymSeed), `urn:tamga:contact:EmailAddress:1`, `urn:tamga:contact:PhoneNumber:1` |
 
 ## 4. Example people
@@ -191,10 +196,10 @@ same page.
 
 **Gate (turnstile / ticket gate):** `https://verify.sandbox.tamga.network/terminal?group=<group>` is the demo gate; it reads the
 pass QR from the wallet's “Show” screen with the camera. The gate identifies itself with a terminal key ([[ADR-0065]]); the
-sandbox's demo keys are public and go into the field on the page: `example-university-campus` → `sandbox-gate-campus`, `example-events-gate`
+sandbox's demo keys are public and go into the field on the page: `ulubilim-campus` → `sandbox-gate-campus`, `kervanyolu-gate`
 → `sandbox-gate-ticket`. On the production network the gate's operator issues the key. In the sandbox list each gate group is
-bound to its institution ([[ADR-0069]]): `example-university-campus` → `example-university`, `example-events-gate` → `example-events`,
-`example-cinema-gate` → `example-cinema`; the admin of an institution with its own gates creates and revokes keys on the
+bound to its institution ([[ADR-0069]]): `ulubilim-campus` → `ulubilim`, `kervanyolu-gate` → `kervanyolu`,
+`isikperde-gate` → `isikperde`; the admin of an institution with its own gates creates and revokes keys on the
 **Gate terminals** screen of the Institution Console (a key is shown once).
 
 To try your own verifier: connect it to the sandbox list and the sandbox pins, then present credentials received in the

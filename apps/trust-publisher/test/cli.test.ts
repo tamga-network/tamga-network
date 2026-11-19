@@ -6,6 +6,8 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { deflateSync } from "node:zlib";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -126,6 +128,76 @@ describe.skipIf(!ready)("trust-publisher CLI (geçici klasörde)", { timeout: 18
     expect(full.code, full.err).toBe(0);
     expect(full.report.healthy).toBe(true);
   }, 240_000); // alt süreç zinciri: yük altında 20 sn sınırını aşabilir
+
+  it("anchor --batch: sıradaki çapalar tek süreçte; her satır ayrı denetlenir, hatalı satır ötekileri durdurmaz", () => {
+    const statusRows = () =>
+      readFileSync(join(DIST, "anchors.jsonl"), "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(Buffer.from(l.split(".")[1], "base64url").toString("utf8")) as Record<string, unknown>)
+        .filter((p) => p.kind === "status_list");
+    const before = statusRows().length;
+    const item = (n: number) => ({
+      list_id: "0x" + String(n).padStart(64, "0"),
+      issuer_id: "0x" + "ab".repeat(32),
+      list_uri: `https://issuer.example/status/batch-${n}`,
+      content_hash: "sha256:" + String(n).repeat(64),
+      list_version: 1,
+    });
+    const file = join(tmp, "batch.json");
+    // ikinci satırda issuer_id yok → yalnız o satır yazılmaz
+    writeFileSync(file, JSON.stringify([item(1), { ...item(2), issuer_id: undefined }, item(3)]));
+    const r = run(["anchor", "--batch", file]);
+    expect(r.code, r.err).toBe(1);
+    const out = JSON.parse(r.out.trim().split("\n").pop()!) as { batch: Array<{ ok: boolean; error?: string }> };
+    expect(out.batch.map((x) => x.ok)).toEqual([true, false, true]);
+    expect(out.batch[1].error).toMatch(/issuer_id/);
+    expect(
+      statusRows()
+        .slice(before)
+        .map((p) => [p.list_uri, p.list_version]),
+    ).toEqual([
+      [item(1).list_uri, 1],
+      [item(3).list_uri, 1],
+    ]);
+    // hepsi yazılınca çıkış 0; günlük zinciri sağlam
+    writeFileSync(file, JSON.stringify([{ ...item(1), list_version: 2, content_hash: "sha256:" + "c".repeat(64) }]));
+    const ok = run(["anchor", "--batch", file]);
+    expect(ok.code, ok.err).toBe(0);
+    // tekrarlanan sürüm yazılmaz (yükleyici bütün güven setini reddederdi — S3/L1); belirteçli satır bit sayısı ve boyutu taşır,
+    // özeti tutmayan belirteç reddedilir
+    const token = (uri: string) => {
+      const b64 = (o: unknown) => Buffer.from(JSON.stringify(o)).toString("base64url");
+      const lst = deflateSync(Buffer.alloc(16)).toString("base64url"); // 16 bayt × 8 / 1 bit = 128 kayıt
+      return `${b64({ alg: "ES256", typ: "statuslist+jwt" })}.${b64({ sub: uri, status_list: { bits: 1, lst } })}.c2ln`;
+    };
+    const hashOf = (t: string) => "sha256:" + createHash("sha256").update(t).digest("hex");
+    const t4 = token(item(4).list_uri);
+    const t5 = token(item(5).list_uri);
+    writeFileSync(
+      file,
+      JSON.stringify([
+        { ...item(1), list_version: 2, content_hash: "sha256:" + "d".repeat(64) },
+        { ...item(4), content_hash: hashOf(t4), token: t4 },
+        { ...item(5), token: t5 },
+      ]),
+    );
+    const mixed = run(["anchor", "--batch", file]);
+    expect(mixed.code).toBe(1);
+    const res = (JSON.parse(mixed.out.trim().split("\n").pop()!) as { batch: Array<{ ok: boolean; error?: string }> })
+      .batch;
+    expect(res.map((x) => x.ok)).toEqual([false, true, false]);
+    expect(res[0].error).toMatch(/monotonic/);
+    expect(res[2].error).toMatch(/özeti/);
+    const row4 = statusRows().find((p) => p.list_uri === item(4).list_uri)!;
+    expect([row4.bits, row4.size]).toEqual([1, 128]);
+    expect(
+      statusRows()
+        .filter((p) => p.list_uri === item(1).list_uri)
+        .map((p) => p.list_version),
+    ).toEqual([1, 2]);
+    expect(verify(true).report.healthy).toBe(true);
+  });
 
   it("ADR-0074 K4: zincir projeksiyonu kapalıyken yeni satır türü yazılmaz; açıkken görünüm ve kayıt sertifikası durum listesi satırları yazılır, kontrol noktası taşır", () => {
     const kinds = () =>
